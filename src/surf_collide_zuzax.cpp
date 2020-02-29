@@ -304,6 +304,9 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, SurfState* surf
 {
   int ntimestep = update->ntimestep;
   double dt = update->dt;
+  double fnum = update->fnum;
+  Particle::Species* species = particle->species;
+
   
   // Increment the counter for the number of collisions handled by this collider model
   // in the current time step (multiple surfaces).
@@ -317,23 +320,63 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, SurfState* surf
   int ispecies = ip->ispecies;
 
   // Translate identity into Zuzax species number
-  int kZ = zuzax_setup->ZutoSp_speciesMap[ispecies];
+  int kGas = zuzax_setup->SptoZu_speciesMap[ispecies];
 
   // We are given the surface state object. Install the state into net.
   surfState->setState(ntimestep, dt);
 
   int irxn;   //(-1 specular, -2 diffusive)
   int idir;
-  int kGas;
   bool doChanges = true;
 
   // Since the event occurred from a gas phase collision of a particle
   //  -> determine what happend from the particle surface collision
   rollDiceOnParticleSurfInteraction(ip, surfState, irxn, idir);
 
+  // Notes about Energy and temperature:
+  /* 
+   *    Right now we don't track the change in energy that is being dumped into the surface
+   *    T_incoming is ignored within net right now. We should start with calculating the
+   *    change , i.e., dump of internal energy into the surface due to 
+   *    When we get there:
+   *      Express  T_incoming as the measure of the incoming molecule  with the corresponding Energy level.
+   *      The reaction will occur at T_surf. Any gas molecules created will be ejected at T_surf.
+   *      The energy deposited to the surface from this reaction is deltaIntEnergy() for the reaction.
+   *      If the particle leaves with a different energy than T_surf, the deltaIntEnergy will have to
+   *      be adjusted accordingly. 
+   *      We need Ezero's to calculate all of this to translate between Sparta and NasaPoly/Zuzax formulations.
+   */
+  double KE = (ip->v[0]*ip->v[0] +ip->v[1]*ip->v[1] +ip->v[2]*ip->v[2])* species[ispecies].mass; 
+  double T_incoming_tran = update->mvv2e / (3.0  * update->boltz);
+  double n_int_dofs = species[ispecies].rotdof + species[ispecies].vibdof;
+  double T_incoming_int = 2.0 * (ip->erot + ip->evib) / (n_int_dofs *update->boltz);
+  double T_incoming = (3.0 *  T_incoming_tran +  n_int_dofs * T_incoming_int) / (3.0 + n_int_dofs);
 
-  // if surface chemistry defined, attempt reaction
-  // reaction = 1 if reaction took place
+
+  // Do the reaction within the surface tracker.
+  int iPos;
+  size_t kGasOut[3]; 
+  int spGasOut[3];
+  bool ok = net->doExplicitReaction(doChanges, kGas, irxn, idir, fnum, T_incoming, iPos, kGasOut);
+
+  // If the event can't be carried out, do the alternate event. -> usually a diffusive non-reacting collision
+  if (!ok) {
+    ok = net->doAltThing(doChanges, kGas, irxn, idir, fnum, T_incoming, iPos, kGasOut);
+    if (!ok) {
+      throw Zuzax::ZuzaxError("doTimeStepOutside", "Alt thing failed too: %d %d", (int) irxn, idir);
+    }
+  }
+
+  for (int i = 0; i < iPos ; ++i) {
+     spGasOut[i] = zuzax_setup->ZutoSp_speciesMap[kGasOut[i]];
+  }
+
+  printf("Gas input: spec %d -> rxn %d dir %d, outSpec: ", kGas, irxn, idir);
+  for (int i = 0; i < iPos ; ++i) {
+    printf(" %d ", kGasOut[i]);
+  }
+  printf("\n");
+
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
@@ -342,18 +385,45 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, SurfState* surf
   // At this point we have a particle collision with a surface
 
   if (isr >= 0) {
-    // Save the original particle
+    // Save the original particle ?? why?
     if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
     // Call the surface reaction capability assigned to this surface
-    reaction = surf->sr[isr]->react(ip,norm,jp);
-    if (reaction) surf->nreact_one++;
+    //reaction = surf->sr[isr]->react(ip,norm,jp);
+    if (irxn >= 0) surf->nreact_one++;
   }
+
+  // Possibly save change the original particle
+  if (iPos > 0) {
+     if (spGasOut[0] != ip->ispecies) {
+        ip->ispecies = spGasOut[0];
+     }
+     if (iPos >= 2) {
+        nsingle++;
+        double x[3],v[3];
+        int id = MAXSMALLINT*random->uniform();
+        memcpy(x,ip->x,3*sizeof(double));
+        memcpy(v,ip->v,3*sizeof(double));
+        Particle::OnePart *particles = particle->particles;
+        int reallocflag = particle->add_particle(id, spGasOut[1],ip->icell,x,v,0.0,0.0);
+        if (reallocflag) ip = particle->particles + (ip - particles);
+        jp = &particle->particles[particle->nlocal-1];
+     }
+  }
+  
+ 
 
   // diffuse reflection for each particle
   // resets v, roteng, vibeng
   // if new particle J created, also need to trigger any fixes
 
-  if (ip) diffuse(ip,norm);
+  if (ip) {
+    if (irxn == -1) {
+      // Insert a specular reflection if irxn is -1 
+      MathExtra::reflect3(ip->v,norm);
+    } else {
+      diffuse(ip,norm);
+    }
+  }
   if (jp) {
     diffuse(jp,norm);
     if (modify->n_add_particle) {
@@ -387,19 +457,6 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, SurfState* surf
 }
 
 /* ---------------------------------------------------------------------- */
-/*
-const struct Zuzax::probEvent& rollEvenDice(const std::vector < struct Zuzax::probEvent >& pm, double droll)
-{
-    for (const struct Zuzax::probEvent& pe : pm) {
-        if (droll <= pe.probULvl) {
-            return pe;
-        }
-    }
-    return pm.back();
-}
-*/
-
-/* ---------------------------------------------------------------------- */
 
 void SurfCollideZuzax::
 rollDiceOnParticleSurfInteraction(Particle::OnePart *&ip, SurfState* surfState, 
@@ -409,7 +466,7 @@ rollDiceOnParticleSurfInteraction(Particle::OnePart *&ip, SurfState* surfState,
   int ispecies = ip->ispecies;
 
   // Translate identity into Zuzax species number
-  int kZ = zuzax_setup->ZutoSp_speciesMap[ispecies];
+  int kZ = zuzax_setup->SptoZu_speciesMap[ispecies];
 
   // Get the probability table for this Surface and pick out the correct species
   Zuzax::ProbMap& pm = surfState->m_probMapGasSpecies[kZ];

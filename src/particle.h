@@ -36,8 +36,10 @@ class Particle : protected Pointers {
     double vibtemp[4];      // vibrational temperature(s)
     double vibrel[4];       // inverse vibrational relaxation number(s)
     int vibdegen[4];        // vibrational mode degeneracies
-    int rotdof,vibdof;      // rotational/vibrational DOF
-    int nrottemp,nvibmode;  // # of rotational/vibrational temps/modes defined
+    int rotdof;             // rotational DOF
+    int vibdof;             // vibrational DOF
+    int nrottemp;           // # of rotational temps modes defined
+    int nvibmode;           // # of vibrational modes defined = vibdof/2
     int internaldof;        // 1 if either rotdof or vibdof != 0
     int vibdiscrete_read;   // 1 if species.vib file read for this species
 #ifdef USE_ZUZAX
@@ -96,7 +98,7 @@ class Particle : protected Pointers {
 #ifdef USE_ZSURF
     double ezero;
 #endif
-    double erot;            // rotational energy
+    double erot;            // rotational energy (units?)
     double evib;            // vibrational energy
     int flag;               // used for migration status
     double dtremain;        // portion of move timestep remaining

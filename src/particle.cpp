@@ -1129,11 +1129,13 @@ void Particle::read_species_file()
 
     // error checks
     // NOTE: allow rotdof = 3 when implement rotate = DISCRETE
+    // -> HKM why? rotdof just means a nonlinear molecule with 3 moments of inertia,
+    //           all probably handled by a continuum partition function.
 
-    if (fsp->rotdof != 0 && fsp->rotdof != 2)
-      error->all(FLERR,"Invalid rotational DOF in species file");
-    //if (fsp->rotdof != 0 && fsp->rotdof != 2 && fsp->rotdof != 3)
+    //if (fsp->rotdof != 0 && fsp->rotdof != 2)
     //  error->all(FLERR,"Invalid rotational DOF in species file");
+    if (fsp->rotdof != 0 && fsp->rotdof != 2 && fsp->rotdof != 3)
+      error->all(FLERR,"Invalid rotational DOF in species file");
 
     if (fsp->vibdof < 0 || fsp->vibdof > 8 || fsp->vibdof % 2)
       error->all(FLERR,"Invalid vibrational DOF in species file");

@@ -71,7 +71,6 @@ public:
                                            int& irxn, int& idir);
 
 
-
  private:
 
     char* inputAssocSurfCollideID;

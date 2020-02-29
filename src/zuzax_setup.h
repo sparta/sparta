@@ -80,6 +80,7 @@ public:
     //! Pointer to the Gas ThermoPhase object
     Zuzax::thermo_t_double* gasThermo_;
 
+ public:
     //! Sparta to Zuzax species map
     /*!
      *  Maps the sparta species index into the Zuzax species index within the gasThermo ThermoPhase routine
@@ -89,7 +90,6 @@ public:
      */
     int* SptoZu_speciesMap;
 
- public:
     //! Zuzax to Sparta species map
     /*!
      *  Maps the zuzax species index into the sparta species index within the gasThermo ThermoPhase routine
