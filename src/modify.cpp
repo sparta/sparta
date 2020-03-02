@@ -303,7 +303,8 @@ void Modify::add_fix(int narg, char **arg)
     }
   }
 
-  // create the Fix
+  // create the Fix by calling its constructor and assigning into the fix[]
+  // vector.
 
   int found = 0;
   if (sparta->suffix_enable) {

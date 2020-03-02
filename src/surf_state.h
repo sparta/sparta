@@ -82,6 +82,12 @@ class SurfState {
    */
   std::vector<Zuzax::ProbMap> m_probMapGasSpecies;
 
+  //! Vector of tasks that must be carried out
+  /*!
+   *  Note that currently this is not used for anything!
+   */
+  std::vector< struct Zuzax::ZTask > surfInitTaskList;
+
   //! Vector of surface initiated events to be handled by this surface in this time step
   /*!
    *  This is unexpanded list of events where each type of event is listed with a number of times
@@ -96,6 +102,7 @@ class SurfState {
   std::vector< struct Zuzax::PartToSurf > m_surfInitPSTaskList;
 
 
+  
 
 };
 

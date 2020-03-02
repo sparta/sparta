@@ -88,7 +88,7 @@ variable            tstep equal 2.5E-6
 
 ############################################################################################################################
 # Print variable values to log file
-############################################################################################################################
+###########################################################################################################################
 print               " Density  = ${rho}"
 print               " Number Density  = ${nden} molecules per m3"
 print               " Pressure  = ${P_pa} Pa"
@@ -202,7 +202,6 @@ bound_modify xlo react 1RZ
 
 fix 1FZ emit/zface all xlo zuzaxReact 1RZ
 
-# fix 1FZ emit/zsurf all xlo zuzaxReact 1RZ
 
 
 

@@ -30,6 +30,8 @@
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
+#include "surf_state.h"
+#include "zuzax_setup.h"
 
 using namespace SPARTA_NS;
 using namespace MathConst;
@@ -54,10 +56,19 @@ FixEmitZFace::FixEmitZFace(SPARTA *sparta, int narg, char **arg) :
   imix = particle->find_mixture(arg[2]);
   if (imix < 0) error->all(FLERR,"Fix emit/face mixture ID does not exist");
 
-  // flag specified faces
+  // Too complicated to figure out mixtures, Keep the sparta species
+  // vectors simple.
+  if (strcmp(arg[2], "all") != 0) {
+    error->all(FLERR,"Fix emit/Zface mixture ID must equal \"all\"");
+  }
+
+  // flag specified faces on which this boundary fix will be applied
 
   faces[XLO] = faces[XHI] = faces[YLO] = faces[YHI] =
     faces[ZLO] = faces[ZHI] = 0;
+
+  // perspecies is always turned on
+  perspecies = 1;
 
   int iarg = 3;
   while (iarg < narg) {
@@ -76,12 +87,20 @@ FixEmitZFace::FixEmitZFace(SPARTA *sparta, int narg, char **arg) :
     iarg++;
   }
 
+  int numF = 0;
+  for (int i = 0; i < 6; ++i) {
+    numF += faces[i];
+    if (faces[i] != 0) {
+      iFaceReact = i;
+    }
+  }
+  if (numF != 1) {
+     error->allf(FLERR,"Allowed number of faces on each fix emit/zface is equal to one, Number found= %d", numF);
+  }
+
   // optional args
 
   np = 0;
-  subsonic = 0;
-  subsonic_style = NOSUBSONIC;
-  subsonic_warning = 0;
   twopass = 0;
 
   options(narg-iarg,&arg[iarg]);
@@ -96,8 +115,6 @@ FixEmitZFace::FixEmitZFace(SPARTA *sparta, int narg, char **arg) :
                "axisymmetric model");
   if (np > 0 && perspecies) 
     error->all(FLERR,"Cannot use fix emit/face n > 0 with perspecies yes");
-  if (np > 0 && subsonic) 
-    error->all(FLERR,"Cannot use fix emit/face n > 0 with subsonic");
 
   // task list and subsonic data structs
 
@@ -115,13 +132,10 @@ FixEmitZFace::~FixEmitZFace()
   if (copymode) return;
 
   if (tasks) {
-    for (int i = 0; i < ntaskmax; i++) {
-      delete [] tasks[i].ntargetsp;
-      delete [] tasks[i].vscale;
-    }
     memory->sfree(tasks);
   }
   memory->destroy(activecell);
+  delete [] vscale;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -140,6 +154,12 @@ void FixEmitZFace::init()
 
   lines = surf->lines;
   tris = surf->tris;
+
+  ssFaceReact = domain->boundSurfState[iFaceReact];
+  if (!ssFaceReact) {
+     error->allf(FLERR,"Face indicated for emit/Zface, %i, doesn't have an active surface state object", iFaceReact);
+  }
+  net = ssFaceReact->net;
 
   // subsonic prefactor
 
@@ -174,6 +194,7 @@ void FixEmitZFace::init()
     error->all(FLERR,"Cannot use fix emit on axisymmetric yhi "
                "if streaming velocity has a y-component");
 
+
   // warn if any inflow face does not have an inward normal
   //   in direction of streaming velocity
 
@@ -194,16 +215,20 @@ void FixEmitZFace::init()
     error->warning(FLERR,
                    "One or more fix inflow faces oppose streaming velocity");
 
-  // if used, reallocate ntargetsp and vscale for each task
+  // if used, reallocate ntargetsp for each task
   // b/c nspecies count of mixture may have changed
 
   realloc_nspecies();
 
-  // invoke FixEmit::init() to populate task list
+  areaLocal = 0.0;
+
+  // invoke FixEmit::init() to popuate task list
   // it calls create_task() for each grid cell
 
   ntask = 0;
   FixEmit::init();
+
+  printf(" total area of task list areas = %g\n", areaLocal);
 
   // if Np > 0, nper = # of insertions per task
   // set nthresh so as to achieve exactly Np insertions
@@ -227,7 +252,8 @@ void FixEmitZFace::init()
 }
 
 /* ---------------------------------------------------------------------- */
-
+// Here we determine if the cell borders the corresponding border face
+//  -> only a few cell/faces will  have this property
 int FixEmitZFace::create_task(int icell)
 {
   int i,j,n,iface,flag,isp,extflag;
@@ -253,6 +279,8 @@ int FixEmitZFace::create_task(int icell)
 
   int ntaskorig = ntask;
   int nmask = cells[icell].nmask;
+
+  // keep a local total of the area
 
   for (i = 0; i < 6; i++) {
     if (i == 0) iface = XLO;
@@ -390,9 +418,13 @@ int FixEmitZFace::create_task(int icell)
     }      
     tasks[ntask].area = area;
 
+    // debug addition of areas
+    areaLocal += area;
+
     // set ntarget and ntargetsp via mol_inflow()
     // skip task if final ntarget = 0.0, due to large outbound vstream
     // do not skip for subsonic since it resets ntarget every step
+    // -> HKM create_task() doesn't get called except on the setup!!!
 
     tasks[ntask].ntarget = 0.0;
     for (isp = 0; isp < nspecies; isp++) {
@@ -400,15 +432,12 @@ int FixEmitZFace::create_task(int icell)
       ntargetsp *= nrho*area*dt / fnum;
       ntargetsp /= cinfo[icell].weight;
       tasks[ntask].ntarget += ntargetsp;
-      if (perspecies) tasks[ntask].ntargetsp[isp] = ntargetsp;
     }
 
-    if (!subsonic) {
-      if (tasks[ntask].ntarget == 0.0) continue;
-      if (tasks[ntask].ntarget >= MAXSMALLINT) 
-        error->one(FLERR,
-                   "Fix emit/face insertion count exceeds 32-bit int");
-    }
+    if (tasks[ntask].ntarget == 0.0) continue;
+    if (tasks[ntask].ntarget >= MAXSMALLINT) 
+      error->one(FLERR,
+                 "Fix emit/face insertion count exceeds 32-bit int");
 
     // initialize other task values with mixture properties
     // may be overwritten by subsonic methods
@@ -437,6 +466,7 @@ int FixEmitZFace::create_task(int icell)
 
 void FixEmitZFace::perform_task()
 {
+  // twopass not implemented yet
   if (!twopass) perform_task_onepass();
   else perform_task_twopass();
 }
@@ -460,10 +490,6 @@ void FixEmitZFace::perform_task_onepass()
   dt = update->dt;
   int *species = particle->mixture[imix]->species;
 
-  // if subsonic, re-compute particle inflow counts for each task
-  // also computes current per-task temp_thermal and vstream
-
-  if (subsonic) subsonic_inflow();
 
   // insert particles for each task = cell/face pair
   // ntarget/ninsert is either perspecies or for all species
@@ -481,8 +507,28 @@ void FixEmitZFace::perform_task_onepass()
   //   shift Maxwellian distribution by stream velocity component
   //   see Bird 1994, p 259, eq 12.5
 
+  // Locate the  face and the created surf_state  object
+
+  std::vector< struct Zuzax::PartToSurf > &surfInitPSTaskList = ssFaceReact->m_surfInitPSTaskList;
+  
+  std::vector< struct Zuzax::ZTask >& surfInitTaskList = ssFaceReact->surfInitTaskList;
+
+  // Indexing in the next loop is ok because we are using mix "all" by design
+  for (int i = 0; i < nspecies; i++) {
+    vscale[i] = sqrt(2.0 * update->boltz * temp_thermal / particle->species[i].mass);
+  }
+
+  // Zero counters for the events that actually occured.
+  for (struct Zuzax::ZTask & zt : surfInitTaskList) {
+     zt.nintervalActual = 0;  
+  }
+
+  // Translate this into the total number of particles created on the surface
+
+
   int nfix_add_particle = modify->n_add_particle;
 
+  // Loop over the cells/faces on the surface
   for (int i = 0; i < ntask; i++) {
     pcell = tasks[i].pcell;
     ndim = tasks[i].ndim;
@@ -497,119 +543,91 @@ void FixEmitZFace::perform_task_onepass()
     temp_vib = tasks[i].temp_vib;
     vstream = tasks[i].vstream;
 
-    if (subsonic_style == PONLY) vscale = tasks[i].vscale;
-    else vscale = particle->mixture[imix]->vscale;
-
     indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
 
-    if (perspecies) {
-      for (isp = 0; isp < nspecies; isp++) {
-        ispecies = species[isp];
-	ntarget = tasks[i].ntargetsp[isp]+random->uniform();
-	ninsert = static_cast<int> (ntarget);
-        scosine = indot / vscale[isp];
+    // Loop over reactions that create gas phase particle creation events
+    for (struct Zuzax::ZTask & zt : surfInitTaskList) {
+     
+      // Calculate the area-corrected # of events to occur on that surface
+      double neventsCorrect = zt.nCAvgEvents * tasks[i].area / zt.area;
+      // Add the random factor before doing the int cutoff
+      ntarget = neventsCorrect + random->uniform();
+      // This is the number of discrete reaction events that will be inserted
+      ninsert = static_cast<int> (ntarget);
 
-        nactual = 0;
-	for (int m = 0; m < ninsert; m++) {
-	  x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-	  x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
-	  if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
-          else x[2] = 0.0;
+      if (ninsert > 0) {
 
-          if (region && !region->match(x)) continue;
+        // Do the reaction within the surface tracker.
+        int iPos; // not used
+        size_t kGasOut[3];  // not used
+        for (int itimes = 0; itimes < ninsert; ++itimes) {
+        
+        bool ok = net->doExplicitReaction(true, Zuzax::npos, zt.irxn, zt.rxn_dir, 
+                                          update->fnum, temp_thermal, iPos, kGasOut);
+        // If the reaction doesn't occur then don't register it, do nothing
+        if (!ok) {
+          printf("REACTION DIDNOT OCCUR\n"); 
+        }
+        if (ok) { 
+        // Now carry out the particle creation events
+        for (Zuzax::SpeciesAmount& sa : zt.ntargetsp) {
+          size_t kGas = sa.first;
+          double stoich = sa.second;
 
-	  do {
-	    do beta_un = (6.0*random->uniform() - 3.0);
-	    while (beta_un + scosine < 0.0);
-	    normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
-	      (scosine + sqrt(scosine*scosine + 2.0)) *
-	      exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
-		  beta_un*beta_un);
-	  } while (normalized_distbn_fn < random->uniform());
+          int ispecies = zuzax_setup->ZutoSp_speciesMap[kGas];
+        
+          int nCreate = stoich;
+
+          // details of particle creation 
+
+          scosine = indot / vscale[isp];
+
+          for (int m = 0; m < nCreate; m++) {
+  	    x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
+	    x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+            if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+            else x[2] = 0.0;
+
+            if (region && !region->match(x)) continue;
+
+            do {
+	      do {
+                beta_un = (6.0*random->uniform() - 3.0);
+	      } while (beta_un + scosine < 0.0);
+	      normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
+	        (scosine + sqrt(scosine*scosine + 2.0)) *
+	        exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
+                beta_un*beta_un);
+	    } while (normalized_distbn_fn < random->uniform());
 	  
-          v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
+            v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
 
-          theta = MY_2PI * random->uniform();
-          vr = vscale[isp] * sqrt(-log(random->uniform()));
-          v[pdim] = vr * sin(theta) + vstream[pdim];
-          v[qdim] = vr * cos(theta) + vstream[qdim];
-          erot = particle->erot(ispecies,temp_rot,random);
-          evib = particle->evib(ispecies,temp_vib,random);
-          id = MAXSMALLINT*random->uniform();
+            theta = MY_2PI * random->uniform();
+            vr = vscale[isp] * sqrt(-log(random->uniform()));
+            v[pdim] = vr * sin(theta) + vstream[pdim];
+            v[qdim] = vr * cos(theta) + vstream[qdim];
+            erot = particle->erot(ispecies,temp_rot,random);
+            evib = particle->evib(ispecies,temp_vib,random);
+            id = MAXSMALLINT*random->uniform();
 
-	  particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
-          nactual++;
+            // add the particle
+	    particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
 
-          p = &particle->particles[particle->nlocal-1];
-          p->flag = PINSERT;
-          p->dtremain = dt * random->uniform();
+            p = &particle->particles[particle->nlocal-1];
+            p->flag = PINSERT;
+            p->dtremain = dt * random->uniform();
 
-          if (nfix_add_particle) 
-            modify->add_particle(particle->nlocal-1,temp_thermal,
-                                 temp_rot,temp_vib,vstream);
-	}
+            if (nfix_add_particle) 
+              modify->add_particle(particle->nlocal-1,temp_thermal,
+                                   temp_rot,temp_vib,vstream);
+	  } // loop over single particle insertion
 
-	nsingle += nactual;
-      }
-
-    } else {
-      if (np == 0) {
-	ntarget = tasks[i].ntarget+random->uniform();
-	ninsert = static_cast<int> (ntarget);
-      } else {
-	ninsert = npertask;
-	if (i >= nthresh) ninsert++;
-      }
-
-      nactual = 0;
-      for (int m = 0; m < ninsert; m++) {
-	rn = random->uniform();
-	isp = 0;
-	while (cummulative[isp] < rn) isp++;
-        ispecies = species[isp];
-        scosine = indot / vscale[isp];
-
-	x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-	x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
-        if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
-        else x[2] = 0.0;
-
-        if (region && !region->match(x)) continue;
-
-	do {
-	  do {
-	    beta_un = (6.0*random->uniform() - 3.0);
-	  } while (beta_un + scosine < 0.0);
-	  normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
-	    (scosine + sqrt(scosine*scosine + 2.0)) *
-	    exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
-		beta_un*beta_un);
-	} while (normalized_distbn_fn < random->uniform());
-	
-        v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
-
-        theta = MY_2PI * random->uniform();
-        vr = vscale[isp] * sqrt(-log(random->uniform()));
-        v[pdim] = vr * sin(theta) + vstream[pdim];
-        v[qdim] = vr * cos(theta) + vstream[qdim];
-        erot = particle->erot(ispecies,temp_rot,random);
-        evib = particle->evib(ispecies,temp_vib,random);
-        id = MAXSMALLINT*random->uniform();
-
-	particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
-        nactual++;
-
-        p = &particle->particles[particle->nlocal-1];
-        p->flag = PINSERT;
-        p->dtremain = dt * random->uniform();
-
-        if (nfix_add_particle) 
-          modify->add_particle(particle->nlocal-1,temp_thermal,
-                               temp_rot,temp_vib,vstream);
-      }
-
-      nsingle += nactual;
-    }
+          nsingle += nCreate;
+        } // loop over gas phase species
+        } // ok
+        } // itimes
+      } // if (ninsert > 0)
+    } // Loop over reactions that create gas phase particle creation events
   }
 }
 
@@ -627,15 +645,12 @@ void FixEmitZFace::perform_task_twopass()
   double x[3],v[3];
   double *lo,*hi,*normal,*vstream,*vscale;
   Particle::OnePart *p;
+  error->all(FLERR,"FixEmitZFace::perform_task_twopass() not implemnted yet");
 
   dt = update->dt;
   int *species = particle->mixture[imix]->species;
 
-  // if subsonic, re-compute particle inflow counts for each task
-  // also computes current per-task temp_thermal and vstream
-
-  if (subsonic) subsonic_inflow();
-
+  
   // insert particles for each task = cell/face pair
   // ntarget/ninsert is either perspecies or for all species
   // for one particle:
@@ -658,10 +673,17 @@ void FixEmitZFace::perform_task_twopass()
   int** ninsert_values;
   memory->create(ninsert_values, ntask, ninsert_dim1, "fix_emit_face:ninsert");
 
+  // Indexing in the next loop is ok because we are using mix "all" by design
+  for (int i = 0; i < nspecies; i++) {
+    vscale[i] = sqrt(2.0 * update->boltz * temp_thermal / particle->species[i].mass);
+  }
+
+
+
   for (int i = 0; i < ntask; i++) {
     if (perspecies) {
       for (isp = 0; isp < nspecies; isp++) {
-        ntarget = tasks[i].ntargetsp[isp]+random->uniform();
+        //ntarget = tasks[i].ntargetsp[isp]+random->uniform();
         ninsert = static_cast<int> (ntarget);
         ninsert_values[i][isp] = ninsert;
       }
@@ -691,8 +713,6 @@ void FixEmitZFace::perform_task_twopass()
     temp_vib = tasks[i].temp_vib;
     vstream = tasks[i].vstream;
 
-    if (subsonic_style == PONLY) vscale = tasks[i].vscale;
-    else vscale = particle->mixture[imix]->vscale;
 
     indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
 
@@ -836,227 +856,6 @@ int FixEmitZFace::split(int icell, int iface)
 }
 
 /* ----------------------------------------------------------------------
-   recalculate task properties based on subsonic BC
-------------------------------------------------------------------------- */
-
-void FixEmitZFace::subsonic_inflow()
-{
-  // for grid cells that are part of tasks:
-  // calculate local nrho, vstream, and thermal temperature
-  // if needed sort particles for grid cells with tasks
-
-  if (!particle->sorted) subsonic_sort();
-  subsonic_grid();
-
-  // recalculate particle insertion counts for each task
-  // recompute mixture vscale, since depends on temp_thermal
-
-  int isp,icell;
-  double mass,indot,area,nrho,temp_thermal,vscale,ntargetsp;
-  double *vstream,*normal;
-  
-  Particle::Species *species = particle->species;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-  int *mspecies = particle->mixture[imix]->species;
-  double fnum = update->fnum;
-  double boltz = update->boltz;
-
-  for (int i = 0; i < ntask; i++) {
-    vstream = tasks[i].vstream;
-    normal = tasks[i].normal;
-    indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
-
-    area = tasks[i].area;
-    nrho = tasks[i].nrho;
-    temp_thermal = tasks[i].temp_thermal;
-    icell = tasks[i].icell;
-      
-    tasks[i].ntarget = 0.0;
-    for (isp = 0; isp < nspecies; isp++) {
-      mass = species[mspecies[isp]].mass;
-      vscale = sqrt(2.0 * boltz * temp_thermal / mass);
-      ntargetsp = mol_inflow(indot,vscale,fraction[isp]);
-      ntargetsp *= nrho*area*dt / fnum;
-      ntargetsp /= cinfo[icell].weight;
-      tasks[i].ntarget += ntargetsp;
-      if (perspecies) tasks[i].ntargetsp[isp] = ntargetsp;
-    }
-    if (tasks[i].ntarget >= MAXSMALLINT) 
-      error->one(FLERR,
-                 "Fix emit/face subsonic insertion count exceeds 32-bit int");
-  }
-}
-
-/* ----------------------------------------------------------------------
-   identify particles in grid cells associated with a task
-   store count and linked list, same as for particle sorting
-------------------------------------------------------------------------- */
-
-void FixEmitZFace::subsonic_sort()
-{
-  int i,icell;
-
-  // initialize particle sort lists for grid cells assigned to tasks
-  // use task pcell, not icell
-
-  Grid::ChildInfo *cinfo = grid->cinfo;
-
-  for (i = 0; i < ntask; i++) {
-    icell = tasks[i].pcell;
-    cinfo[icell].first = -1;
-    cinfo[icell].count = 0;
-  }
-
-  // reallocate particle next list if necessary
-
-  particle->sort_allocate();
-
-  // update list of active grid cells if necessary
-  // active cells = those assigned to tasks
-  // active_current flag set by parent class
-
-  if (!active_current) {
-    if (grid->nlocal > maxactive) {
-      memory->destroy(activecell);
-      maxactive = grid->nlocal;
-      memory->create(activecell,maxactive,"emit/face:active");
-    }
-    memset(activecell,0,maxactive*sizeof(int));
-    for (i = 0; i < ntask; i++) activecell[tasks[i].pcell] = 1;
-    active_current = 1;
-  }
-
-  // loop over particles to store linked lists for active cells
-  // not using reverse loop like Particle::sort(),
-  //   since this should only be created/used occasionally
-
-  Particle::OnePart *particles = particle->particles;
-  int *next = particle->next;
-  int nlocal = particle->nlocal;
-
-  for (i = 0; i < nlocal; i++) {
-    icell = particles[i].icell;
-    if (!activecell[icell]) continue;
-    next[i] = cinfo[icell].first;
-    cinfo[icell].first = i;
-    cinfo[icell].count++;
-  }
-}
-
-/* ----------------------------------------------------------------------
-   compute number density, thermal temperature, stream velocity
-   only for grid cells associated with a task
-   first compute for grid cells, then adjust due to boundary conditions
-------------------------------------------------------------------------- */
-
-void FixEmitZFace::subsonic_grid()
-{
-  int m,ip,np,icell,ispecies,ndim;
-  double mass,masstot,gamma,ke,sign;
-  double nrho_cell,massrho_cell,temp_thermal_cell,press_cell;
-  double mass_cell,gamma_cell,soundspeed_cell;
-  double mv[4];
-  double *v,*vstream,*vscale;
-
-  Grid::ChildInfo *cinfo = grid->cinfo;
-  Particle::OnePart *particles = particle->particles;
-  int *next = particle->next;
-  Particle::Species *species = particle->species;
-  double boltz = update->boltz;
-
-  int temp_exceed_flag = 0;
-  double tempmax = 0.0;
-
-  for (int i = 0; i < ntask; i++) {
-    icell = tasks[i].pcell;
-    np = cinfo[icell].count;
-
-    // accumulate needed per-particle quantities
-    // mv = mass*velocity terms, masstot = total mass
-    // gamma = rotational/tranlational DOFs
-
-    mv[0] = mv[1] = mv[2] = mv[3] = 0.0;
-    masstot = gamma = 0.0;
-
-    ip = cinfo[icell].first;
-    while (ip >= 0) {
-      ispecies = particles[ip].ispecies;
-      mass = species[ispecies].mass;
-      v = particles[ip].v;
-      mv[0] += mass*v[0];
-      mv[1] += mass*v[1];
-      mv[2] += mass*v[2];
-      mv[3] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
-      masstot += mass;
-      gamma += 1.0 + 2.0 / (3.0 + species[ispecies].rotdof);
-      ip = next[ip];
-    }
-
-    // compute/store nrho, 3 temps, vstream for task
-    // also vscale for PONLY
-    // if sound speed = 0.0 due to <= 1 particle in cell or 
-    //   all particles having COM velocity, set via mixture properties
-
-    vstream = tasks[i].vstream;
-    if (np) {
-      vstream[0] = mv[0] / masstot;
-      vstream[1] = mv[1] / masstot;
-      vstream[2] = mv[2] / masstot;
-    } else vstream[0] = vstream[1] = vstream[2] = 0.0;
-
-    if (subsonic_style == PTBOTH) {
-      tasks[i].nrho = nsubsonic;
-      temp_thermal_cell = tsubsonic;
-
-    } else {
-      nrho_cell = np * fnum / cinfo[icell].volume;
-      massrho_cell = masstot * fnum / cinfo[icell].volume;
-      if (np > 1) {
-        ke = mv[3]/np - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
-        temp_thermal_cell = tprefactor * ke;
-      } else temp_thermal_cell = particle->mixture[imix]->temp_thermal;
-      
-      press_cell = nrho_cell * boltz * temp_thermal_cell;
-      if (np) {
-        mass_cell = masstot / np;
-        gamma_cell = gamma / np;
-        soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
-      } else soundspeed_cell = soundspeed_mixture;
-      
-      tasks[i].nrho = nrho_cell + 
-        (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
-      temp_thermal_cell = psubsonic / (boltz * tasks[i].nrho);
-      if (temp_thermal_cell > TEMPLIMIT) {
-        temp_exceed_flag = 1;
-        tempmax = MAX(tempmax,temp_thermal_cell);
-      }
-
-      if (np)  {
-        ndim = tasks[i].ndim;
-        sign = tasks[i].normal[ndim];
-        vstream[ndim] += sign * 
-          (psubsonic - press_cell) / (massrho_cell*soundspeed_cell);
-      }
-
-      vscale = tasks[i].vscale;
-      for (m = 0; m < nspecies; m++) {
-        ispecies = particle->mixture[imix]->species[m];
-        vscale[m] = sqrt(2.0 * update->boltz * temp_thermal_cell /
-                         species[ispecies].mass);
-      }
-    }
-
-    tasks[i].temp_thermal = temp_thermal_cell;
-    tasks[i].temp_rot = tasks[i].temp_vib = temp_thermal_cell;
-  }
-
-  // test if any task has invalid thermal temperature for first time
-
-  if (!subsonic_warning)
-    subsonic_warning = subsonic_temperature_check(temp_exceed_flag,tempmax);
-}
-
-/* ----------------------------------------------------------------------
    pack one task into buf
    return # of bytes packed
    if not memflag, only return count, do not fill buf
@@ -1072,10 +871,6 @@ int FixEmitZFace::pack_task(int itask, char *buf, int memflag)
   // pack task vectors
   // vscale is allocated, but not communicated, since updated every step
 
-  if (perspecies) {
-    if (memflag) memcpy(ptr,tasks[itask].ntargetsp,nspecies*sizeof(double));
-    ptr += nspecies*sizeof(double);
-  }
 
   return ptr-buf;
 }
@@ -1089,8 +884,6 @@ int FixEmitZFace::unpack_task(char *buf, int icell)
   char *ptr = buf;
 
   if (ntask == ntaskmax) grow_task();
-  double *ntargetsp = tasks[ntask].ntargetsp;
-  double *vscale = tasks[ntask].vscale;
 
   memcpy(&tasks[ntask],ptr,sizeof(Task));
   ptr += sizeof(Task);
@@ -1099,13 +892,7 @@ int FixEmitZFace::unpack_task(char *buf, int icell)
   // unpack task vectors
   // vscale is allocated, but not communicated, since updated every step
 
-  if (perspecies) {
-    memcpy(ntargetsp,ptr,nspecies*sizeof(double));
-    ptr += nspecies*sizeof(double);
-  }
 
-  tasks[ntask].ntargetsp = ntargetsp;
-  tasks[ntask].vscale = vscale;
 
   // reset task icell and pcell
   // if a split cell, set pcell via split() which calls update->split()
@@ -1137,15 +924,9 @@ void FixEmitZFace::copy_task(int icell, int n, int first, int oldfirst)
 
   } else {
     for (int i = 0; i < n; i++) {
-      double *ntargetsp = tasks[first].ntargetsp;
-      double *vscale = tasks[first].vscale;
 
       memcpy(&tasks[first],&tasks[oldfirst],sizeof(Task));
-      if (perspecies)
-        memcpy(ntargetsp,tasks[oldfirst].ntargetsp,nspecies*sizeof(double));
 
-      tasks[first].ntargetsp = ntargetsp;
-      tasks[first].vscale = vscale;
 
       tasks[first].icell = icell;
       first++;
@@ -1174,21 +955,7 @@ void FixEmitZFace::grow_task()
 
   // allocate vectors in each new task or set to NULL
 
-  if (perspecies) {
-    for (int i = oldmax; i < ntaskmax; i++)
-      tasks[i].ntargetsp = new double[nspecies];
-  } else {
-    for (int i = oldmax; i < ntaskmax; i++)
-      tasks[i].ntargetsp = NULL;
-  }
 
-  if (subsonic_style == PONLY) {
-    for (int i = oldmax; i < ntaskmax; i++)
-      tasks[i].vscale = new double[nspecies];
-  } else {
-    for (int i = oldmax; i < ntaskmax; i++)
-      tasks[i].vscale = NULL;
-  }
 }
 
 /* ----------------------------------------------------------------------
@@ -1197,18 +964,8 @@ void FixEmitZFace::grow_task()
 
 void FixEmitZFace::realloc_nspecies()
 {
-  if (perspecies) {
-    for (int i = 0; i < ntask; i++) {
-      delete [] tasks[i].ntargetsp;
-      tasks[i].ntargetsp = new double[nspecies];
-    }
-  }
-  if (subsonic_style == PONLY) {
-    for (int i = 0; i < ntask; i++) {
-      delete [] tasks[i].vscale;
-      tasks[i].vscale = new double[nspecies];
-    }
-  }
+  delete [] vscale;
+  vscale = new double[nspecies];
 }
 
 /* ----------------------------------------------------------------------

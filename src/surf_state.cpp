@@ -117,6 +117,7 @@ void SurfState::setupNewTimeStep(int ntimestep, double dt, double fnum)
      */
   m_surfInitPSTaskList = net->m_surfInitPSTaskList;
 
+  surfInitTaskList = net->m_surfInitTaskList;
 
 }
 

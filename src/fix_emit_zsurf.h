@@ -25,9 +25,14 @@ FixStyle(emit/zsurf,FixEmitZSurf)
 
 
 
+
 #include "fix_emit.h"
 #include "surf.h"
 #include "grid.h"
+
+#ifdef USE_ZSURF
+#include "zuzax/zeroD/SurfPropagationSparta.h"
+#endif
 
 namespace SPARTA_NS {
 
@@ -42,9 +47,8 @@ class FixEmitZSurf : public FixEmit {
   void post_compress_grid();
 
  private:
-  int imix,groupbit,np,normalflag,subsonic,subsonic_style,subsonic_warning;
+  int imix,groupbit,np,normalflag;
   int npertask,nthresh;
-  double psubsonic,tsubsonic,nsubsonic;
   double tprefactor,soundspeed_mixture;
 
   // copies of data from other classes
@@ -56,6 +60,13 @@ class FixEmitZSurf : public FixEmit {
 
   Surf::Line *lines;
   Surf::Tri *tris;
+
+
+  Zuzax::SurfPropagationSparta* net {nullptr};
+
+  double* vscale;              // vscale for each species, 
+                               // evaluated at surface temperature
+                               // which is obtained from surface state.
 
   class Cut2d *cut2d;
   class Cut3d *cut3d;
@@ -108,9 +119,6 @@ class FixEmitZSurf : public FixEmit {
   int create_task(int);
   void perform_task();
 
-  void subsonic_inflow();
-  void subsonic_sort();
-  void subsonic_grid();
 
   int pack_task(int, char *, int);
   int unpack_task(char *, int);

@@ -59,13 +59,12 @@ FixEmitZSurf::FixEmitZSurf(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Fix emit/surf group ID does not exist");
   groupbit = surf->bitmask[igroup];
   
+  // Always perspecies defined
+  perspecies = 1;
   // optional args
   
   np = 0;
   normalflag = 0;
-  subsonic = 0;
-  subsonic_style = NOSUBSONIC;
-  subsonic_warning = 0;
 
   int iarg = 4;
   options(narg-iarg,&arg[iarg]);
@@ -164,12 +163,6 @@ void FixEmitZSurf::init()
     for (int i = 0; i < ntask; i++) {
       delete [] tasks[i].ntargetsp;
       tasks[i].ntargetsp = new double[nspecies];
-    }
-  }
-  if (subsonic_style == PONLY) {
-    for (int i = 0; i < ntask; i++) {
-      delete [] tasks[i].vscale;
-      tasks[i].vscale = new double[nspecies];
     }
   }
   
@@ -380,12 +373,10 @@ int FixEmitZSurf::create_task(int icell)
       if (perspecies) tasks[ntask].ntargetsp[isp] = ntargetsp;
     }
 
-    if (!subsonic) {
-      if (tasks[ntask].ntarget == 0.0) continue;
-      if (tasks[ntask].ntarget >= MAXSMALLINT) 
-        error->one(FLERR,
-                   "Fix emit/surf insertion count exceeds 32-bit int");
-    }
+    if (tasks[ntask].ntarget == 0.0) continue;
+    if (tasks[ntask].ntarget >= MAXSMALLINT) 
+      error->one(FLERR,
+                 "Fix emit/surf insertion count exceeds 32-bit int");
     
     // initialize other task values with mixture properties
     // may be overwritten by subsonic methods
@@ -425,10 +416,6 @@ void FixEmitZSurf::perform_task()
   double dt = update->dt;
   int *species = particle->mixture[imix]->species;
 
-  // if subsonic, re-compute particle inflow counts for each task
-  // also computes current per-task temp_thermal and vstream
-  
-  if (subsonic) subsonic_inflow();
   
   // insert particles for each task = cell/surf pair
   // ntarget/ninsert is either perspecies or for all species
@@ -463,8 +450,7 @@ void FixEmitZSurf::perform_task()
     temp_vib = tasks[i].temp_vib;
     vstream = tasks[i].vstream;
     
-    if (subsonic_style == PONLY) vscale = tasks[i].vscale;
-    else vscale = particle->mixture[imix]->vscale;
+    vscale = particle->mixture[imix]->vscale;
     
     if (!normalflag) indot = vstream[0]*normal[0] + vstream[1]*normal[1] + 
                        vstream[2]*normal[2];
@@ -648,253 +634,6 @@ void FixEmitZSurf::perform_task()
   }
 }
 
-/* ----------------------------------------------------------------------
-   recalculate task properties based on subsonic BC
-------------------------------------------------------------------------- */
-
-void FixEmitZSurf::subsonic_inflow()
-{
-  // for grid cells that are part of tasks:
-  // calculate local nrho, vstream, and thermal temperature
-  // if needed sort particles for grid cells with tasks
-  
-  if (!particle->sorted) subsonic_sort();
-  subsonic_grid();
-  
-  // recalculate particle insertion counts for each task
-  // recompute mixture vscale, since depends on temp_thermal
-  
-  int isp,icell;
-  double mass,indot,area,nrho,temp_thermal,vscale,ntargetsp;
-  double *vstream,*normal;
-  
-  Particle::Species *species = particle->species;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-  int *mspecies = particle->mixture[imix]->species;
-  double fnum = update->fnum;
-  double boltz = update->boltz;
-  
-  for (int i = 0; i < ntask; i++) {
-    vstream = tasks[i].vstream;
-    
-    // indot depends on normalflag
-    
-    if (dimension == 2) {
-      if (normalflag) indot = magvstream;
-      else {
-        normal = lines[tasks[i].isurf].norm;
-        indot = vstream[0]*normal[0] + vstream[1]*normal[1];
-      }
-    } else {
-      if (normalflag) indot = magvstream;
-      else {
-        normal = tris[tasks[i].isurf].norm;
-        indot = vstream[0]*normal[0] + vstream[1]*normal[1] + 
-          vstream[2]*normal[2];
-      }
-    }
-    
-    area = tasks[i].area;
-    nrho = tasks[i].nrho;
-    temp_thermal = tasks[i].temp_thermal;
-    icell = tasks[i].icell;
-    
-    tasks[i].ntarget = 0.0;
-    for (isp = 0; isp < nspecies; isp++) {
-      mass = species[mspecies[isp]].mass;
-      vscale = sqrt(2.0 * boltz * temp_thermal / mass);
-      ntargetsp = mol_inflow(indot,vscale,fraction[isp]);
-      ntargetsp *= nrho*area*dt / fnum;
-      ntargetsp /= cinfo[icell].weight;
-      tasks[i].ntarget += ntargetsp;
-      if (perspecies) tasks[i].ntargetsp[isp] = ntargetsp;
-    }
-    if (tasks[i].ntarget >= MAXSMALLINT) 
-      error->one(FLERR,
-                 "Fix emit/surf subsonic insertion count exceeds 32-bit int");
-  }
-}
-
-/* ----------------------------------------------------------------------
-   identify particles in grid cells associated with a task
-   store count and linked list, same as for particle sorting
-------------------------------------------------------------------------- */
-
-void FixEmitZSurf::subsonic_sort()
-{
-  int i,icell;
-  
-  // initialize particle sort lists for grid cells assigned to tasks
-  // use task pcell, not icell
-  
-  Grid::ChildInfo *cinfo = grid->cinfo;
-  
-  for (i = 0; i < ntask; i++) {
-    icell = tasks[i].pcell;
-    cinfo[icell].first = -1;
-    cinfo[icell].count = 0;
-  }
-
-  // reallocate particle next list if necessary
-  
-  particle->sort_allocate();
-  
-  // update list of active grid cells if necessary
-  // active cells = those assigned to tasks
-  // active_current flag set by parent class
-  
-  if (!active_current) {
-    if (grid->nlocal > maxactive) {
-      memory->destroy(activecell);
-      maxactive = grid->nlocal;
-      memory->create(activecell,maxactive,"emit/face:active");
-    }
-    memset(activecell,0,maxactive*sizeof(int));
-    for (i = 0; i < ntask; i++) activecell[tasks[i].pcell] = 1;
-    active_current = 1;
-  }
-  
-  // loop over particles to store linked lists for active cells
-  // not using reverse loop like Particle::sort(),
-  //   since this should only be created/used occasionally
-  
-  Particle::OnePart *particles = particle->particles;
-  int *next = particle->next;
-  int nlocal = particle->nlocal;
-  
-  for (i = 0; i < nlocal; i++) {
-    icell = particles[i].icell;
-    if (!activecell[icell]) continue;
-    next[i] = cinfo[icell].first;
-    cinfo[icell].first = i;
-    cinfo[icell].count++;
-  }
-}
-
-/* ----------------------------------------------------------------------
-   compute number density, thermal temperature, stream velocity
-   only for grid cells associated with a task
-   first compute for grid cells, then adjust due to boundary conditions
-------------------------------------------------------------------------- */
-
-void FixEmitZSurf::subsonic_grid()
-{
-  int m,ip,np,icell,ispecies;
-  double mass,masstot,gamma,ke;
-  double nrho_cell,massrho_cell,temp_thermal_cell,press_cell;
-  double mass_cell,gamma_cell,soundspeed_cell,vsmag;
-  double mv[4];
-  double *v,*vstream,*vscale,*normal;
-  
-  Grid::ChildInfo *cinfo = grid->cinfo;
-  Particle::OnePart *particles = particle->particles;
-  int *next = particle->next;
-  Particle::Species *species = particle->species;
-  double boltz = update->boltz;
-  
-  int temp_exceed_flag = 0;
-  double tempmax = 0.0;
-
-  for (int i = 0; i < ntask; i++) {
-    icell = tasks[i].pcell;
-    np = cinfo[icell].count;
-    
-    // accumulate needed per-particle quantities
-    // mv = mass*velocity terms, masstot = total mass
-    // gamma = rotational/tranlational DOFs
-    
-    mv[0] = mv[1] = mv[2] = mv[3] = 0.0;
-    masstot = gamma = 0.0;
-    
-    ip = cinfo[icell].first;
-
-    while (ip >= 0) {
-      ispecies = particles[ip].ispecies;
-      mass = species[ispecies].mass;
-      v = particles[ip].v;
-      mv[0] += mass*v[0];
-      mv[1] += mass*v[1];
-      mv[2] += mass*v[2];
-      mv[3] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
-      masstot += mass;
-      gamma += 1.0 + 2.0 / (3.0 + species[ispecies].rotdof);
-      ip = next[ip];
-    }
-
-    // compute/store nrho, 3 temps, vstream for task
-    // also vscale for PONLY
-    // if sound speed = 0.0 due to <= 1 particle in cell or 
-    //   all particles having COM velocity, set via mixture properties
-    
-    vstream = tasks[i].vstream;
-    if (np) {
-      vstream[0] = mv[0] / masstot;
-      vstream[1] = mv[1] / masstot;
-      vstream[2] = mv[2] / masstot;
-    } else vstream[0] = vstream[1] = vstream[2] = 0.0;
-    
-    if (subsonic_style == PTBOTH) {
-      tasks[i].nrho = nsubsonic;
-      temp_thermal_cell = tsubsonic;
-      
-    } else {
-      nrho_cell = np * fnum / cinfo[icell].volume;
-      massrho_cell = masstot * fnum / cinfo[icell].volume;
-      if (np > 1) {
-        ke = mv[3]/np - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
-        temp_thermal_cell = tprefactor * ke;
-      } else temp_thermal_cell = particle->mixture[imix]->temp_thermal;
-      press_cell = nrho_cell * boltz * temp_thermal_cell;
-      if (np) {
-        mass_cell = masstot / np;
-        gamma_cell = gamma / np;
-        soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
-      } else soundspeed_cell = soundspeed_mixture;
-      
-      tasks[i].nrho = nrho_cell + 
-        (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
-      temp_thermal_cell = psubsonic / (boltz * tasks[i].nrho);
-      if (temp_thermal_cell > TEMPLIMIT) {
-        temp_exceed_flag = 1;
-        tempmax = MAX(tempmax,temp_thermal_cell);
-      }
-
-      // adjust COM vstream by difference bewteen
-      //   cell pressure and subsonic target pressure
-      // normal = direction of difference which depends on normalflag
-      
-      if (dimension == 2) {
-        if (normalflag) normal = lines[tasks[i].isurf].norm;
-        else normal = norm_vstream;
-      } else {
-        if (normalflag) normal = tris[tasks[i].isurf].norm;
-        else normal = norm_vstream;
-      }
-      
-      if (np) {
-        vsmag = (psubsonic - press_cell) / (massrho_cell*soundspeed_cell);
-        vstream[0] += vsmag*normal[0];
-        vstream[1] += vsmag*normal[1];
-        vstream[2] += vsmag*normal[2];
-      }
-
-      vscale = tasks[i].vscale;
-      for (m = 0; m < nspecies; m++) {
-        ispecies = particle->mixture[imix]->species[m];
-        vscale[m] = sqrt(2.0 * update->boltz * temp_thermal_cell /
-                         species[ispecies].mass);
-      }
-    }
-    
-    tasks[i].temp_thermal = temp_thermal_cell;
-    tasks[i].temp_rot = tasks[i].temp_vib = temp_thermal_cell;
-  }
-
-  // test if any task has invalid thermal temperature for first time
-
-  if (!subsonic_warning)
-    subsonic_warning = subsonic_temperature_check(temp_exceed_flag,tempmax);
-}
 
 /* ----------------------------------------------------------------------
    pack one task into buf
@@ -1071,13 +810,8 @@ void FixEmitZSurf::grow_task()
       tasks[i].ntargetsp = NULL;
   }
   
-  if (subsonic_style == PONLY) {
-    for (int i = oldmax; i < ntaskmax; i++)
-      tasks[i].vscale = new double[nspecies];
-  } else {
-    for (int i = oldmax; i < ntaskmax; i++)
-      tasks[i].vscale = NULL;
-  }
+  for (int i = oldmax; i < ntaskmax; i++)
+    tasks[i].vscale = NULL;
   
   for (int i = oldmax; i < ntaskmax; i++) {
     tasks[i].path = NULL;
