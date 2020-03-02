@@ -48,7 +48,7 @@ class FixEmitZFace : public FixEmit {
     double hi[3];               // upper-right corner of face
     double normal[3];           // inward normal from external boundary
     double area;                // area of cell face
-    double ntarget;             // # of mols to insert for all species
+    //double ntarget;             // # of mols to insert for all species
     double nrho;                // from mixture or adjacent subsonic cell
     double temp_thermal;        // from mixture or adjacent subsonic cell
     double temp_rot;            // from mixture or subsonic temp_thermal
@@ -86,7 +86,8 @@ class FixEmitZFace : public FixEmit {
 
   // copies of data from other classes
 
-  int dimension,nspecies;
+  int dimension;
+  int nspecies;
   double fnum,dt;
   double *fraction,*cummulative;
 

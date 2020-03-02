@@ -36,8 +36,6 @@ variable            gamma equal 1.4
 # density of gas in kg / m3
 variable            rho equal ${nden}*${mass}
 
-
-
 ###################################
 # Simulation initialization standards
 ###################################
@@ -156,7 +154,6 @@ mixture             mix N2 frac 0.9
 mixture             mix O2 frac 0.1
 mixture             mix group species
 mixture             mix vstream 0.0 0.0 0.0 temp 300. trot 300. tvib 300.
-
 
 #
 # Read the circle geometry from the file, data.circle,

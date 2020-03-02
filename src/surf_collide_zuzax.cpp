@@ -61,6 +61,7 @@ SurfCollideZuzax::SurfCollideZuzax(SPARTA *sparta, int narg, char **arg) :
   allowreact = 1;
 
   tstr = NULL;
+  tflag = rflag = 0;
 
   hasState = 1;
 
@@ -102,6 +103,11 @@ SurfCollideZuzax::SurfCollideZuzax(SPARTA *sparta, int narg, char **arg) :
   random = new RanPark(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,comm->me,100);
+
+  if (tflag && rflag) error->all(FLERR,"Illegal surf_collide_zuzax diffuse command");
+  if (tflag || rflag) trflag = 1;
+  else trflag = 0;
+
 }
 
 /* ---------------------------------------------------------------------- */

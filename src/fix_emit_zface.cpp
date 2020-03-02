@@ -218,6 +218,14 @@ void FixEmitZFace::init()
   // if used, reallocate ntargetsp for each task
   // b/c nspecies count of mixture may have changed
 
+  
+  vscale = new double [nspecies];
+  double temp_thermal = particle->mixture[imix]->temp_thermal;
+  for (int i = 0; i < nspecies; i++) {
+    vscale[i] = sqrt(2.0 * update->boltz * temp_thermal / particle->species[i].mass);
+  }
+
+
   realloc_nspecies();
 
   areaLocal = 0.0;
@@ -265,7 +273,6 @@ int FixEmitZFace::create_task(int icell)
 
   double nrho = particle->mixture[imix]->nrho;
   double *vstream = particle->mixture[imix]->vstream;
-  double *vscale = particle->mixture[imix]->vscale;
 
   // corners[i][j] = J corner points of face I of a grid cell
   // works for 2d quads and 3d hexes
@@ -426,18 +433,7 @@ int FixEmitZFace::create_task(int icell)
     // do not skip for subsonic since it resets ntarget every step
     // -> HKM create_task() doesn't get called except on the setup!!!
 
-    tasks[ntask].ntarget = 0.0;
-    for (isp = 0; isp < nspecies; isp++) {
-      ntargetsp = mol_inflow(indot,vscale[isp],fraction[isp]);
-      ntargetsp *= nrho*area*dt / fnum;
-      ntargetsp /= cinfo[icell].weight;
-      tasks[ntask].ntarget += ntargetsp;
-    }
 
-    if (tasks[ntask].ntarget == 0.0) continue;
-    if (tasks[ntask].ntarget >= MAXSMALLINT) 
-      error->one(FLERR,
-                 "Fix emit/face insertion count exceeds 32-bit int");
 
     // initialize other task values with mixture properties
     // may be overwritten by subsonic methods
@@ -484,12 +480,14 @@ void FixEmitZFace::perform_task_onepass()
   double beta_un,normalized_distbn_fn,theta,erot,evib;
   double temp_thermal,temp_rot,temp_vib;
   double x[3],v[3];
-  double *lo,*hi,*normal,*vstream,*vscale;
+  double *lo,*hi,*normal,*vstream;
   Particle::OnePart *p;
 
   dt = update->dt;
   int *species = particle->mixture[imix]->species;
 
+  // Go get the surface temperature
+  temp_thermal = ssFaceReact->Temp;
 
   // insert particles for each task = cell/face pair
   // ntarget/ninsert is either perspecies or for all species
@@ -679,7 +677,7 @@ void FixEmitZFace::perform_task_twopass()
   }
 
 
-
+/*
   for (int i = 0; i < ntask; i++) {
     if (perspecies) {
       for (isp = 0; isp < nspecies; isp++) {
@@ -698,6 +696,7 @@ void FixEmitZFace::perform_task_twopass()
       ninsert_values[i][0] = ninsert;
     }
   }
+ */
 
   for (int i = 0; i < ntask; i++) {
     pcell = tasks[i].pcell;
