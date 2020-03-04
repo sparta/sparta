@@ -49,7 +49,8 @@ collide(Particle::OnePart *&ip, double &,
   nsingle++;
 
   // if surface chemistry defined, attempt reaction
-  // reaction > 0 if reaction took place
+  // reaction = 1 if reaction took place, but post-collision v not yet reset
+  // reaction = 2 if reaction took place, and post-collision v already reset
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
@@ -64,8 +65,17 @@ collide(Particle::OnePart *&ip, double &,
   // specular reflection for each particle
   // reflect incident v around norm
 
-  if (ip) MathExtra::reflect3(ip->v,norm);
-  if (jp) MathExtra::reflect3(jp->v,norm);
+  if (reaction < 2) {
+    if (ip) MathExtra::reflect3(ip->v,norm);
+    if (jp) MathExtra::reflect3(jp->v,norm);
+  }
+
+  // if new particle J created, also need to trigger any fixes
+
+  if (jp && modify->n_add_particle) {
+    int j = jp - particle->particles;
+    modify->add_particle(j,twall,twall,twall,vstream);
+  }
 
   // call any fixes with a surf_react() method
   // they may reset j to -1, e.g. fix ambipolar
@@ -97,4 +107,3 @@ void SurfCollideSpecular::wrapper(Particle::OnePart *p, double *norm,
 { 
   MathExtra::reflect3(p->v,norm);
 }
-
