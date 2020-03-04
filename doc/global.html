@@ -379,7 +379,8 @@ will allocate extra memory limited to that many MBytes on each
 processor. <I>Bytes</I> can be specified as a floating point value or an 
 integer, e.g. 0.5 if you want to use 1/2 MByte of extra memory or 100 
 for a 100 MByte buffer. Specifying a value of 0 (the default) means no 
-limit is used. 
+limit is used. The value used for <I>mem/limit</I> must not exceed 2GB or an
+error will occur.
 </P>
 <P>For load-balancing, the communication of grid and particle data to new 
 processors will then be performed in multiple passes (if necessary) so 
