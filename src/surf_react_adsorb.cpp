@@ -671,7 +671,8 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
                 wrapper(ip,norm,r->cmodel_flags,r->cmodel_coeffs);
             //cll(ip,norm,r->coeff[3],r->coeff[4],r->coeff[5]);              
           }
-          return 1;
+          if (r->cmodel == NOMODEL) return 1;
+          return 2;
           break; 
         }
 
@@ -711,7 +712,8 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
             cmodels[r->cmodel]->
               wrapper(ip,norm,r->cmodel_flags,r->cmodel_coeffs);
           //cll(ip,norm,r->coeff[3],r->coeff[4],r->coeff[5]); 
-          return 1;
+          if (r->cmodel == NOMODEL) return 1;
+          return 2;
           break;
         }          
           
@@ -753,7 +755,8 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           else
             energy_barrier_scatter(jp,norm,r->coeff[10],r->coeff[8],r->coeff[9]);
           
-          return 1;
+          if (r->cmodel == NOMODEL) return 1;
+          return 2;
           break;
         }
       }
