@@ -62,6 +62,7 @@ class SurfReactAdsorb : public SurfReact {
   // GS react model
   
   struct OneReaction_GS {
+    char *id;                      // reaction ID (formula)
     int active;                    // 1 if reaction is active
     int type;                      // reaction type = DISSOCIATION, etc
     int style;                     // reaction style = ARRHENIUS, etc
@@ -77,7 +78,9 @@ class SurfReactAdsorb : public SurfReact {
     int *reactants_ad_index,*products_ad_index;
     double *coeff;                 // numerical coeffs for reaction
     double k_react;
-    char *id;                      // reaction ID (formula)
+    int cmodel;                    // style for post-reaction surf collisions
+    int *cmodel_flags;             // integer flags to pass to SC class
+    double *cmodel_coeffs;         // double coeffs to pass to SC class
   };
 
   OneReaction_GS *rlist_gs;           // list of all reactions read from file
@@ -121,6 +124,11 @@ class SurfReactAdsorb : public SurfReact {
   int nactive_ps;
   int n_PS_react;
 
+  // surface collision models, one per supported style
+  // only if appears in reaction file
+
+  class SurfCollide **cmodels;
+
   // GS methods
 
   void init_reactions_gs();
@@ -145,8 +153,8 @@ class SurfReactAdsorb : public SurfReact {
 
   double stoich_pow(int, int);
   int find_surf_species(char *);
-  void print_reaction(char *, char *);
-  int readone(char *, char *, int &, int &);
+  void print_reaction(char *, char *, char *);
+  int readone(char *, char *, char *, int &, int &, int &);
 };
 
 }

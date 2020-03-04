@@ -85,3 +85,16 @@ collide(Particle::OnePart *&ip, double &,
     
   return jp;
 }
+
+/* ----------------------------------------------------------------------
+   wrapper on specular() method to perform collision for a single particle
+   pass in 0 coefficients to match command-line args for style specular
+   called by SurfReactAdsorb
+------------------------------------------------------------------------- */
+
+void SurfCollideSpecular::wrapper(Particle::OnePart *p, double *norm, 
+                                  int *flags, double *coeffs)
+{ 
+  MathExtra::reflect3(p->v,norm);
+}
+

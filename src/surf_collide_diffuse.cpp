@@ -148,7 +148,8 @@ collide(Particle::OnePart *&ip, double &,
   nsingle++;
 
   // if surface chemistry defined, attempt reaction
-  // reaction > 0 if reaction took place
+  // reaction = 1 if reaction took place, but post-collision v not yet reset
+  // reaction = 2 if reaction took place, and post-collision v already reset
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
@@ -162,15 +163,17 @@ collide(Particle::OnePart *&ip, double &,
 
   // diffuse reflection for each particle
   // resets v, roteng, vibeng
+
+  if (reaction < 2) {
+    if (ip) diffuse(ip,norm);
+    if (jp) diffuse(jp,norm);
+  }
+
   // if new particle J created, also need to trigger any fixes
 
-  if (ip) diffuse(ip,norm);
-  if (jp) {
-    diffuse(jp,norm);
-    if (modify->n_add_particle) {
-      int j = jp - particle->particles;
-      modify->add_particle(j,twall,twall,twall,vstream);
-    }
+  if (jp && modify->n_add_particle) {
+    int j = jp - particle->particles;
+    modify->add_particle(j,twall,twall,twall,vstream);
   }
 
   // call any fixes with a surf_react() method
@@ -301,6 +304,31 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm)
     p->erot = particle->erot(ispecies,twall,random);
     p->evib = particle->evib(ispecies,twall,random);
   }
+}
+
+/* ----------------------------------------------------------------------
+   wrapper on diffuse() method to perform collision for a single particle
+   pass in 2 coefficients to match command-line args for style diffuse 
+   called by SurfReactAdsorb
+------------------------------------------------------------------------- */
+
+void SurfCollideDiffuse::wrapper(Particle::OnePart *p, double *norm, 
+                                 int *flags, double *coeffs)
+{ 
+  twall = coeffs[0];
+  acc = coeffs[1];
+
+  diffuse(p,norm);
+}
+
+/* ----------------------------------------------------------------------
+   return flags and coeffs for this SurfCollide instance to caller
+------------------------------------------------------------------------- */
+
+void SurfCollideDiffuse::flags_and_coeffs(int *flags, double *coeffs)
+{ 
+  coeffs[0] = twall;
+  coeffs[1] = acc;
 }
 
 /* ----------------------------------------------------------------------
