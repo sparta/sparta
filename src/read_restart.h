@@ -65,7 +65,7 @@ class ReadRestart : protected Pointers {
   char *read_string();
   void read_int_vec(int, int *);
   void read_double_vec(int, double *);
-  void read_char_vec(int, char *);
+  void read_char_vec(bigint, char *);
 };
 
 }

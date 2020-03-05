@@ -1395,6 +1395,20 @@ int Particle::size_restart()
 }
 
 /* ----------------------------------------------------------------------
+   return size of particle restart info for this proc
+------------------------------------------------------------------------- */
+
+bigint Particle::size_restart_big()
+{
+  bigint n = sizeof(int);
+  n = BIROUNDUP(n);
+  n += nlocal * sizeof(OnePartRestart);
+  n += nlocal * sizeof_custom();
+  n = BIROUNDUP(n);
+  return n;
+}
+
+/* ----------------------------------------------------------------------
    pack my particle info into buf
    use OnePartRestart data struct for permanent info and to encode cell ID
    include per-particle custom attributes if defined

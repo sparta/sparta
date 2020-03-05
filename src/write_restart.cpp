@@ -356,8 +356,8 @@ void WriteRestart::write_less_memory(char *file)
   // max_size = largest buffer needed by any proc
 
   int grid_send_size = grid->size_restart();
-  int particle_send_size = particle->size_restart();
-  int send_size = grid_send_size + particle_send_size;
+  bigint particle_send_size = particle->size_restart_big();
+  bigint send_size = grid_send_size + particle_send_size;
 
   int max_size = MAX(grid_send_size,update->global_mem_limit);
   max_size = MAX(max_size,sizeof(Particle::OnePartRestart));
@@ -373,7 +373,8 @@ void WriteRestart::write_less_memory(char *file)
 
   // all procs write file layout info which may include per-proc sizes
 
-  file_layout(send_size);
+  int dummy = 0;
+  file_layout(dummy);
 
   // header info is complete
   // if multiproc output:
@@ -419,11 +420,11 @@ void WriteRestart::write_less_memory(char *file)
   MPI_Request request;
   
   if (filewriter) {
-    int total_recv_size = 0;
+    bigint total_recv_size = 0;
     int npasses = 0;
     for (int iproc = 0; iproc < nclusterprocs; iproc++) {
       if (iproc) {
-        MPI_Recv(&total_recv_size,1,MPI_INT,me+iproc,0,world,&status);
+        MPI_Recv(&total_recv_size,1,MPI_SPARTA_BIGINT,me+iproc,0,world,&status);
         MPI_Recv(&npasses,1,MPI_INT,me+iproc,0,world,&status);
       } else {
         total_recv_size = send_size;
@@ -453,7 +454,7 @@ void WriteRestart::write_less_memory(char *file)
     fclose(fp);
 
   } else {
-    MPI_Isend(&send_size,1,MPI_INT,fileproc,0,world,&request);
+    MPI_Isend(&send_size,1,MPI_SPARTA_BIGINT,fileproc,0,world,&request);
     MPI_Isend(&my_npasses,1,MPI_INT,fileproc,0,world,&request);
     for (int i = 0; i < my_npasses; i++) {
       int n = 0;
@@ -683,10 +684,10 @@ void WriteRestart::write_double_vec(int flag, int n, double *vec)
    write a flag and vector of N chars into restart file
 ------------------------------------------------------------------------- */
 
-void WriteRestart::write_char_vec(int flag, int n, char *vec)
+void WriteRestart::write_char_vec(int flag, bigint n, char *vec)
 {
   fwrite(&flag,sizeof(int),1,fp);
-  fwrite(&n,sizeof(int),1,fp);
+  fwrite(&n,sizeof(bigint),1,fp);
   fwrite(vec,sizeof(char),n,fp);
 }
 
@@ -694,10 +695,10 @@ void WriteRestart::write_char_vec(int flag, int n, char *vec)
    write a flag and vector of N chars into restart file
 ------------------------------------------------------------------------- */
 
-void WriteRestart::write_char_vec(int flag, int total, int n, char *vec)
+void WriteRestart::write_char_vec(int flag, bigint total, int n, char *vec)
 {
   fwrite(&flag,sizeof(int),1,fp);
-  fwrite(&total,sizeof(int),1,fp);
+  fwrite(&total,sizeof(bigint),1,fp);
   fwrite(vec,sizeof(char),n,fp);
 }
 
