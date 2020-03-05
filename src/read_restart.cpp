@@ -166,7 +166,8 @@ void ReadRestart::command(int narg, char **arg)
 
   // read per-proc info, grid cells and particles
 
-  int n,flag,value,tmp,procmatch_check,procmatch;
+  int flag,value,tmp,procmatch_check,procmatch;
+  bigint n;
   long filepos;
   MPI_Status status;
   MPI_Request request;
@@ -196,7 +197,7 @@ void ReadRestart::command(int narg, char **arg)
 
         if (iproc == 0) filepos = ftell(fp);
 
-        fread(&n,sizeof(int),1,fp);
+        fread(&n,sizeof(bigint),1,fp);
         if (n > maxbuf) {
           maxbuf = n;
           memory->destroy(buf);
@@ -205,7 +206,7 @@ void ReadRestart::command(int narg, char **arg)
 
         if (iproc > 0) {
           fread(buf,sizeof(char),n,fp);
-          MPI_Send(&n,1,MPI_INT,iproc,0,world);
+          MPI_Send(&n,1,MPI_SPARTA_BIGINT,iproc,0,world);
           MPI_Recv(&tmp,0,MPI_INT,iproc,0,world,&status);
           MPI_Send(buf,n,MPI_CHAR,iproc,0,world);
         } else fseek(fp,filepos+sizeof(int)+n,SEEK_SET);
@@ -214,13 +215,13 @@ void ReadRestart::command(int narg, char **arg)
       // rewind and read my chunk
 
       fseek(fp,filepos,SEEK_SET);
-      fread(&n,sizeof(int),1,fp);
+      fread(&n,sizeof(bigint),1,fp);
       fread(buf,sizeof(char),n,fp);
 
       fclose(fp);
 
     } else {
-      MPI_Recv(&n,1,MPI_INT,0,0,world,&status);
+      MPI_Recv(&n,1,MPI_SPARTA_BIGINT,0,0,world,&status);
       if (n > maxbuf) {
         maxbuf = n;
         memory->destroy(buf);
@@ -251,7 +252,7 @@ void ReadRestart::command(int narg, char **arg)
       if (value != PERPROC)
         error->one(FLERR,"Invalid flag in peratom section of restart file");
 
-      n = read_int();
+      n = read_bigint();
       if (n > maxbuf) {
         maxbuf = n;
         memory->destroy(buf);
@@ -301,7 +302,7 @@ void ReadRestart::command(int narg, char **arg)
         if (flag != PERPROC) 
           error->one(FLERR,"Invalid flag in peratom section of restart file");
         
-        fread(&n,sizeof(int),1,fp);
+        fread(&n,sizeof(bigint),1,fp);
         if (n > maxbuf) {
           maxbuf = n;
           memory->destroy(buf);
@@ -395,13 +396,13 @@ void ReadRestart::command(int narg, char **arg)
         if (flag != PERPROC) 
           error->one(FLERR,"Invalid flag in peratom section of restart file");
 
-        fread(&n,sizeof(int),1,fp);
+        fread(&n,sizeof(bigint),1,fp);
 
         int grid_nlocal;
         fread(&grid_nlocal,sizeof(int),1,fp);
         fseek(fp,-sizeof(int),SEEK_CUR);
         int grid_read_size = grid->size_restart(grid_nlocal);
-        int particle_read_size = n - grid_read_size;
+        bigint particle_read_size = n - grid_read_size;
         int particle_nlocal;
         fseek(fp,grid_read_size,SEEK_CUR);
         fread(&particle_nlocal,sizeof(int),1,fp);
@@ -434,7 +435,7 @@ void ReadRestart::command(int narg, char **arg)
         }
 
         int nlocal_restart = 0;
-        int total_read_part = 0;
+        bigint total_read_part = 0;
         for (int ii = 0; ii < npasses; ii++) {
           if (ii == 0)
             n = grid_read_size;
@@ -557,7 +558,7 @@ void ReadRestart::command(int narg, char **arg)
         if (flag != PERPROC) 
           error->one(FLERR,"Invalid flag in peratom section of restart file");
 
-        fread(&n,sizeof(int),1,fp);
+        fread(&n,sizeof(bigint),1,fp);
         if (n > maxbuf) {
           maxbuf = n;
           memory->destroy(buf);
@@ -1271,8 +1272,8 @@ void ReadRestart::read_double_vec(int n, double *vec)
    read vector of N chars from restart file and bcast them
 ------------------------------------------------------------------------- */
 
-void ReadRestart::read_char_vec(int n, char *vec)
+void ReadRestart::read_char_vec(bigint n, char *vec)
 {
   if (me == 0) fread(vec,sizeof(char),n,fp);
-  MPI_Bcast(vec,n,MPI_CHAR,0,world);
+  MPI_Bcast(vec,(int)n,MPI_CHAR,0,world);
 }

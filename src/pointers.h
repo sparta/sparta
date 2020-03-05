@@ -41,6 +41,7 @@ namespace SPARTA_NS {
 
 #define ROUNDUP(A) (char *) (((uint64_t) (A) + 7) & ~7);
 #define IROUNDUP(A) ((((int) (A) + 7) / 8) * 8);
+#define BIROUNDUP(A) ((((bigint) (A) + 7) / 8) * 8);
 
 class Pointers {
  public:
