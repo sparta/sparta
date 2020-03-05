@@ -31,7 +31,9 @@ class Domain : protected Pointers {
                                  // for assign of collision models to boundaries
 
   double boxlo[3],boxhi[3];         // box global bounds
+  //! deltaX, deltaY, and deltaZ of the box
   double xprd,yprd,zprd;            // global box dimensions
+  //! this is xprd, yprd, zprd arranged as a vector
   double prd[3];                    // array form of dimensions
 
   int bflag[6];                     // boundary flags
@@ -66,6 +68,7 @@ class Domain : protected Pointers {
   int surf_react[6];                // index of SurfReact model
                                     // for each bflag = SURFACE boundary
   SurfState* boundSurfState[6] {0, 0, 0, 0, 0, 0}; // Pointer to the surface state object, if any
+  double areaSides[6];
 };
 
 }

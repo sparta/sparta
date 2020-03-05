@@ -137,8 +137,9 @@ void SurfCollideZuzax::init()
     if (!input->variable->equal_style(tvar))
       error->all(FLERR,"Surf_collide diffuse variable is invalid style");
   }
-
-  initNetwork();
+  if  (!baseNet) {
+    initNetwork();
+  }
 }
 //==================================================================================================================================
 void SurfCollideZuzax::initNetwork()
@@ -209,7 +210,7 @@ void SurfCollideZuzax::initNetwork()
   Zuzax::RBdry* abFace_rrr = new Zuzax::RBdry("AirGraphite_rrr");
 
   // Define the area
-  abFace_rrr->setArea(1.0E-7);
+  abFace_rrr->setArea(areaOfSurface);
 
   // Turn on extended ROP analysis
   abFace_rrr->setKinBreakdownToggle(true);
@@ -229,6 +230,7 @@ void SurfCollideZuzax::initNetwork()
 
   // Install the interface so that the equations reside in the SubstrateElement
   abFace_rrr->install(ablateFilm, gasR);
+  abFace_rrr->setState_TP(twall, pwall);
 
   double scl = 1;
   baseNet->setTMScaleFactor(scl);
@@ -377,12 +379,13 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, SurfState* surf
      spGasOut[i] = zuzax_setup->ZutoSp_speciesMap[kGasOut[i]];
   }
 
+#ifdef DEBUG_PRINTS
   printf("Gas input: spec %d -> rxn %d dir %d, outSpec: ", kGas, irxn, idir);
   for (int i = 0; i < iPos ; ++i) {
     printf(" %d ", kGasOut[i]);
   }
   printf("\n");
-
+#endif
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
@@ -457,6 +460,7 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, SurfState* surf
   // Update and save the state of this surface (this object may be
   // called on another surface during the next collision incident).
 
+  // Note, if net were unique to each surface this would not be necessary
   surfState->saveState();
 
   return jp;
@@ -610,9 +614,9 @@ void SurfCollideZuzax::dynamic()
     Provides a surface state object
 ------------------------------------------------------------------------- */
 
-SurfState* SurfCollideZuzax::provideStateObject() const
+SurfState* SurfCollideZuzax::provideStateObject(double area) const
 {
-    SurfState *ss = new SurfState();
+    SurfState *ss = new SurfState(area);
     ss->net = baseNet;
     ss->init();
     return ss; 

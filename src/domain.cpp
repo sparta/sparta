@@ -27,6 +27,7 @@
 #include "comm.h"
 #include "memory.h"
 #include "error.h"
+#include "math_const.h"
 
 using namespace SPARTA_NS;
 
@@ -125,6 +126,23 @@ void Domain::set_global_box()
   prd[0] = xprd = boxhi[0] - boxlo[0];
   prd[1] = yprd = boxhi[1] - boxlo[1];
   prd[2] = zprd = boxhi[2] - boxlo[2];
+  // Calculate the areas of the bounding surfaces
+  areaSides[XLO] = yprd * zprd;
+  areaSides[XHI] = yprd * zprd;
+  areaSides[YLO] = xprd * zprd;
+  areaSides[YHI] = xprd * zprd;
+  areaSides[ZLO] = xprd * yprd;
+  areaSides[ZHI] = xprd * yprd;
+  if (axisymmetric) {
+    // y is the r coordinate, and x is the z coordinate, and z is the theta coordinate
+    double r = boxhi[1];
+    areaSides[XLO] = MathConst::MY_PI * r * r;
+    areaSides[XHI] = MathConst::MY_PI * r * r;
+    areaSides[YLO] = 0.0;
+    areaSides[YHI] = 2.0 * MathConst::MY_PI * r * xprd;
+    areaSides[ZLO] = 0.0;
+    areaSides[ZHI] = 0.0;
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -242,7 +260,8 @@ void Domain::boundary_modify(int narg, char **arg)
           error->all(FLERR,"Bound_modify surf requires boundary be a surface");
         surf_collide[faces[i]] = index;
         if (surf->sc[index]->hasState) {
-          boundSurfState[faces[i]] = surf->sc[index]->provideStateObject();
+          double area = areaSides[faces[i]];
+          boundSurfState[faces[i]] = surf->sc[index]->provideStateObject(area);
         }
       }
       iarg += 2;

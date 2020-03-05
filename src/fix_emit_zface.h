@@ -125,6 +125,15 @@ class FixEmitZFace : public FixEmit {
   int split(int, int);
 
 
+  virtual int setmask() override;
+
+  //! Carry out final steps for Surface here
+  /*!
+   *
+   */
+  virtual void end_of_step() override;
+
+
   virtual int pack_task(int, char *, int);
   virtual int unpack_task(char *, int);
   virtual void copy_task(int, int, int, int);

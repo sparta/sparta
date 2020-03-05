@@ -119,6 +119,13 @@ class FixEmitZSurf : public FixEmit {
   int create_task(int);
   void perform_task();
 
+  //! Carry out final steps for Surface here
+  /*!
+   *
+   */
+  virtual void end_of_step() override;
+
+  virtual int setmask() override;  
 
   int pack_task(int, char *, int);
   int unpack_task(char *, int);

@@ -507,6 +507,10 @@ void FixEmitZFace::perform_task_onepass()
 
   // Locate the  face and the created surf_state  object
 
+  // restore the net object to the state of this face
+  ssFaceReact->setState(update->ntimestep, dt);
+
+
   std::vector< struct Zuzax::PartToSurf > &surfInitPSTaskList = ssFaceReact->m_surfInitPSTaskList;
   
   std::vector< struct Zuzax::ZTask >& surfInitTaskList = ssFaceReact->surfInitTaskList;
@@ -627,6 +631,9 @@ void FixEmitZFace::perform_task_onepass()
       } // if (ninsert > 0)
     } // Loop over reactions that create gas phase particle creation events
   }
+
+  // Save the state of the surface, we've changed it by calling doExplicitReaction
+  ssFaceReact->saveState();
 }
 
 /* ----------------------------------------------------------------------
@@ -819,6 +826,34 @@ void FixEmitZFace::perform_task_twopass()
   }
 
   memory->destroy(ninsert_values);
+}
+
+/* ----------------------------------------------------------------------- */
+
+int FixEmitZFace::setmask()
+{
+  int mask = 0;
+  mask |= START_OF_STEP;
+  mask |= END_OF_STEP;
+  return mask;
+}
+
+
+/* ----------------------------------------------------------------------
+   end_of_step() hook
+------------------------------------------------------------------------- */
+void FixEmitZFace::end_of_step()
+{
+  // printf("FixEmitZFace::end_of_step() we are here\n");
+   double deltaT = update->dt;
+   double time = deltaT * update->ntimestep;
+   int n = update->ntimestep;
+
+   ssFaceReact->setState(n, deltaT);
+
+   net->finalizeTimeStepArrays(deltaT);
+
+   net->write_step_results(time, deltaT); 
 }
 
 /* ----------------------------------------------------------------------

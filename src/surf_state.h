@@ -29,7 +29,7 @@ namespace SPARTA_NS {
 class SurfState {
   public:
 
-  SurfState();
+  SurfState(double area);
 
   virtual ~SurfState();
 
@@ -58,11 +58,18 @@ class SurfState {
    */
   virtual void setState(int ntimestep, double dt) const;
 
+  //! Special purpose writing routine
+  void write_step_results(int ntimestep, double dt);
+
   // ----------------------------------------------- DATA -----------------------------------------
   //! Surface temperature
   double Temp {300.0};
 
   double Press {1.0E5};
+
+  //! Putting a copy of the area here, because surface evolver ALWAYS needs to know this
+  //! to initialize itself.
+  double Area {1.0};
 
   //! Unknowns in the substrate element problem
   double* yUnknowns {nullptr};

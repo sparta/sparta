@@ -62,9 +62,11 @@ class SurfCollideZuzax : public SurfCollide {
   /*!
    *  (virtual from surf_collide)
    *
+   *  @param[in]             area                Area of the surface or fase
+   *
    *  @return                                    Returns a pointer to void that will be used
    */
-  virtual SurfState* provideStateObject() const override;
+  virtual SurfState* provideStateObject(double area) const override;
 
 
   //! Initialize the Network model with all of the ThermoPhase classes
@@ -104,7 +106,7 @@ class SurfCollideZuzax : public SurfCollide {
 
   //! Pointer to a malloced net that will be used as a base in a copy constructor
   //! to malloc state objects for all surfaces
-  Zuzax::SurfPropagationSparta* baseNet;
+  Zuzax::SurfPropagationSparta* baseNet {nullptr};
 
   //! If this is true, the surface site fractions are adjusted to a pseudo-steady
   //! state condition at the start of the calculation.

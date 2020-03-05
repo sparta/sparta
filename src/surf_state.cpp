@@ -24,8 +24,9 @@ namespace SPARTA_NS
 {
 /* ---------------------------------------------------------------------- */
 
-SurfState::SurfState()
+SurfState::SurfState(double area)
 {
+  Area = area;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -39,6 +40,7 @@ void SurfState::init()
 
   Temp = net->reactor(0).temperature();
   Press = net->reactor(0).pressure();
+  net->reactor(0).reactingBoundary(0).setArea(Area);
 
   int nsp =       net->reservoir(0).thermo(0).nSpecies();
   gasState  = new double[nsp + 2];
@@ -134,6 +136,7 @@ void SurfState::saveState()
 
   int nsp = net->reservoir(0).thermo(0).nSpecies();
   net->reservoir(0).thermo(0).saveState(nsp +2, gasState);
+  Area = net->reactor(0).reactingBoundary(0).area();
 
   double t0 = 0.0;
   net->getInitialConditions(t0, nun, yUnknowns);
@@ -151,15 +154,27 @@ void SurfState::setState(int ntimestep, double dt) const
 
   net->reactor(0).setState_TP(Temp, Press);
 
+  net->reactor(0).reactingBoundary(0).setArea(Area);
+  
+
   int nsp = net->reservoir(0).thermo(0).nSpecies();
   net->reservoir(0).thermo(0).restoreState(nsp +2, gasState);
 
   
   double tcurr = ntimestep * dt;
   net->updateState(tcurr,  yUnknowns);
+
   
 #endif
 
+}
+/* ---------------------------------------------------------------------- */
+// Read the state into the net object
+void SurfState::write_step_results(int ntimestep, double dt) 
+{
+  setState(ntimestep, dt);
+  double time = ntimestep * dt;
+  net->write_step_results(time, dt);
 }
 
 

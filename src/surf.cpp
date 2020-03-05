@@ -183,16 +183,19 @@ void Surf::modify_params(int narg, char **arg)
           if (lines[i].mask & groupbit) {
             lines[i].isc = isc;
             if (surf->sc[isc]->hasState) {
-              lines[i].surfaceState = surf->sc[isc]->provideStateObject();
+              double area = line_size(lines + i) * domain->zprd;
+              lines[i].surfaceState = surf->sc[isc]->provideStateObject(area);
             }
           }
       }
+      double lenone;
       if (dim == 3) {
         for (int i = 0; i < nlocal+nghost; i++)
           if (tris[i].mask & groupbit) {
             tris[i].isc = isc;
             if (surf->sc[isc]->hasState) {
-              tris[i].surfaceState = surf->sc[isc]->provideStateObject();
+              double area = tri_size(tris + i, lenone);
+              tris[i].surfaceState = surf->sc[isc]->provideStateObject(area);
             }
           }
       }
@@ -866,7 +869,7 @@ double Surf::line_size(Line *line)
 }
 
 /* ----------------------------------------------------------------------
-   return length of line bewteen 2 points
+   return length of line between 2 points
 ------------------------------------------------------------------------- */
 
 double Surf::line_size(double *p1, double *p2)

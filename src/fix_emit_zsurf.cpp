@@ -634,6 +634,24 @@ void FixEmitZSurf::perform_task()
   }
 }
 
+/* ---------------------------------------------------------------------- */
+
+int FixEmitZSurf::setmask()
+{
+  int mask = 0;
+  mask |= START_OF_STEP;
+  mask |= END_OF_STEP;
+  return mask;
+}
+
+
+/* ----------------------------------------------------------------------
+   end_of_step() hook
+------------------------------------------------------------------------- */
+void FixEmitZSurf::end_of_step() 
+{
+  // printf("FixEmitZSurf::end_of_step() we are here\n");
+}
 
 /* ----------------------------------------------------------------------
    pack one task into buf

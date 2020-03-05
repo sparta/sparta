@@ -64,9 +64,11 @@ class SurfCollide : protected Pointers {
   /*!
    *  (virtual from surf_collide)
    *
+   *  @param[in]             area                Area of the surface or face
+   *
    *  @return                                    Returns a pointer to void that will be used
    */
-  virtual SurfState* provideStateObject() const { return nullptr; }
+  virtual SurfState* provideStateObject(double area) const { return nullptr; }
 
   //! Tally up the running total of the particle collisions from the last step and add it to ntotal
   void tally_update();

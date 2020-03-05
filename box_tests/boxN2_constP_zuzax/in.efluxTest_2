@@ -15,12 +15,12 @@ variable            V equal 2072.640
 # nden is the number density in # per m3
 variable            P_pa equal 1.0E2
 #variable            nden equal 1.0E30
-variable            temp equal 300.
+variable            temp equal 1300.
 # plug that into P_pa = nden * boltz * T = 2.2235 Pa
 
 variable            nden equal ${P_pa}/(${boltz}*${temp})
 
-variable            surftemp equal 1000.00
+variable            surftemp equal 1300.00
 variable            Lbody equal 1.000
 variable            beta equal 0
 
@@ -40,6 +40,7 @@ variable            rho equal ${nden}*${mass}
 # Simulation initialization standards
 ###################################
 #  (not sure what ppc is!)
+#  ppc is the particles per cell
 variable            ppc equal 100
 #variable            nmfp equal 200
 # ( not sure what cpmfp is)
@@ -66,6 +67,7 @@ variable            xmax equal 1.0E-4
 variable            ymin equal 0.0
 variable            ymax equal 1.0E-4
 variable            delz equal ${xmax}/10.
+variable            volDomain equal (${xmax}*${ymax}*${delz}
 
 # Number of cells is set so that cell distance is 0.1 of the mean free path -> flow is resolved wrt mean free path
 #         ( therefore, particles will mostly go through a single  cell without a collision)
@@ -100,6 +102,8 @@ print               " x-min = ${xmin}"
 print               " x-max = ${xmax}"
 print               " y-min = 0.0"
 print               " y-max = ${ymax}"
+print               " delz  = ${delz}"
+print               " volDomain = ${volDomain}"
 print               " x-cells = ${xncells}"
 print               " y-cells = ${yncells}"
 print               " Simulation Ratio = ${Fnum}"
@@ -153,7 +157,7 @@ zuzax_gas_species   gasAblate.xml
 mixture             mix N2 frac 0.9
 mixture             mix O2 frac 0.1
 mixture             mix group species
-mixture             mix vstream 0.0 0.0 0.0 temp 300. trot 300. tvib 300.
+mixture             mix vstream 0.0 0.0 0.0 temp 1300. trot 1300. tvib 1300.
 
 #
 # Read the circle geometry from the file, data.circle,
