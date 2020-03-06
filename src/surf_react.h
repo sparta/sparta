@@ -38,7 +38,8 @@ class SurfReact : protected Pointers {
   virtual int match_reactant(char *, int) = 0;
   virtual int match_product(char *, int) = 0;
 
-  void tally_update();
+  void tally_reset();
+  virtual void tally_update();
   double compute_vector(int i);
 
  protected:

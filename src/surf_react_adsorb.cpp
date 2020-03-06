@@ -42,6 +42,8 @@ using namespace MathConst;
 enum{INT,DOUBLE};                      // several files
 enum{FACE,SURF};
 
+#define DELTA_TALLY 1024
+
 // GS react
 
 enum{DISSOCIATION,EXCHANGE,RECOMBINATION,AA,DA,LH1,LH3,CD,ER,CI1,CI2}; 
@@ -71,7 +73,7 @@ enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 #define MAXLINE 1024
 #define DELTALIST 10
 
-// Syntax: surf_react ID adsorb gs/ps filename 
+// Syntax: surf_react ID adsorb gs/ps filename Nsync
 //                    face/surf Tsurf max_cover O CO CO_a CO_b ...
 
 /* ---------------------------------------------------------------------- */
@@ -83,25 +85,34 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,
                "Cannot yet use surf_react adsorb with distributed surf elements");
 
-  if (narg < 8) error->all(FLERR,"Illegal surf_react adsorb command");
+  if (narg < 9) error->all(FLERR,"Illegal surf_react adsorb command");
+
+  me = comm->me;
+  nprocs = comm->nprocs;
 
   if (strcmp(arg[2],"gs") == 0) model = GS;
   //else if (strcmp(arg[2],"ps") == 0) model = PS;
   else error->all(FLERR,"Illegal surf_react adsorb command");
 
-  if (strcmp(arg[4],"face") == 0) mode = FACE;
-  else if (strcmp(arg[4],"surf") == 0) mode = SURF;
+  nsync = input->numeric(FLERR,arg[4]);
+  if (nsync < 1) error->all(FLERR,"Illegal surf_react adsorb command");
+
+  if (strcmp(arg[5],"face") == 0) mode = FACE;
+  else if (strcmp(arg[5],"surf") == 0) mode = SURF;
   else error->all(FLERR,"Illegal surf_react adsorb command");
 
-  twall = input->numeric(FLERR,arg[5]);
-  max_cover = input->numeric(FLERR,arg[6]);
+  if (mode == SURF && surf->nsurf == 0)
+    error->all(FLERR,"Cannot use urf_react adsorb when no surfs exist");
+
+  twall = input->numeric(FLERR,arg[6]);
+  max_cover = input->numeric(FLERR,arg[7]);
 
   // species_surf = list of surface species IDs
 
-  species_surf = new char*[narg-7];
+  species_surf = new char*[narg-8];
   nspecies_surf = 0;
 
-  int iarg = 7;
+  int iarg = 8;
   while (iarg < narg) {
     int isp = particle->find_species(arg[iarg]);
     if (isp < 0) error->all(FLERR,"Surf_react adsorb species is not defined");
@@ -155,7 +166,7 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
 
   random = new RanPark(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
-  random->reset(seed,comm->me,100);
+  random->reset(seed,me,100);
 
   // create and initialize per-face or custom per-surf attributes
 
@@ -245,13 +256,36 @@ SurfReactAdsorb::~SurfReactAdsorb()
 
   // delete per-face attributes
 
-  if (mode == FACE) memory->destroy(nstick_face);
+  if (mode == FACE) {
+    memory->destroy(nstick_face);
+    memory->destroy(nstick_face_archive);
+    memory->destroy(inface);
+    memory->destroy(outface);
+  }
 
-  // delete custom per-surf attributes
-  // this must be done exactly once by custom_owner,
+  // delete local per-surf attributes
+
+  if (mode == SURF) {
+    memory->destroy(nstick_archive);
+    memory->destroy(nstick_total_archive);
+  }
+
+  // delete data strucs for periodic sync
+
+  if (mode == SURF) {
+    memory->destroy(mark);
+    memory->destroy(tally2surf);
+    memory->destroy(intally);
+    memory->destroy(outtally);
+    memory->destroy(incollate);
+    memory->destroy(outcollate);
+  }
+
+  // delete custom per-surf attributes owned by Surf class
+  // this must be done exactly once by first_owner,
   // even if multiple surf react/adsorb models are used
 
-  if (mode == SURF && custom_owner) {
+  if (mode == SURF && first_owner) {
     surf->remove_custom(nstick_index);
     surf->remove_custom(nstick_total_index);
     surf->remove_custom(area_index);
@@ -267,10 +301,12 @@ void SurfReactAdsorb::create_per_face_state()
 {
   nface = 2 * domain->dimension;
   memory->create(nstick_face,nface,nspecies_surf,"nstick_face");
+  memory->create(nstick_face_archive,nface,nspecies_surf,"nstick_face_archive");
 
   for (int iface = 0; iface < nface; iface++) {
     for (int isp = 0; isp < nspecies_surf; isp++)
       nstick_face[iface][isp] = 0;
+    nstick_total_face[iface] = 0;
     nstick_total_face[iface] = 0;
     if (domain->dimension == 2) {
       if (iface < 2) area_face[iface] = domain->prd[1];
@@ -282,6 +318,18 @@ void SurfReactAdsorb::create_per_face_state()
     }
     weight_face[iface] = 1.0;
   }
+
+  // set ptrs used by react() to per-face data structs
+
+  nstick = nstick_face;
+  nstick_total = &nstick_total_face[0];
+  area = &area_face[0];
+  weight = &weight_face[0];
+
+  // allocate data structs for periodic sync
+
+  memory->create(inface,nface,nspecies_surf+1,"react/adsorb:inface");
+  memory->create(outface,nface,nspecies_surf+1,"react/adsorb:outface");
 }
 
 /* ----------------------------------------------------------------------
@@ -292,17 +340,17 @@ void SurfReactAdsorb::create_per_face_state()
 
 void SurfReactAdsorb::create_per_surf_state()
 {
-  // fix with custom_owner = 1 "owns" the custom per-surf data
+  // SR instance with first_owner = 1 "owns" the custom per-surf data
 
   if (surf->find_custom((char *) "nstick") < 0) {
-    custom_owner = 1;
+    first_owner = 1;
     nstick_index = surf->add_custom((char *) "nstick",INT,nspecies_surf);
     nstick_total_index = surf->add_custom((char *) "nstick_total",INT,0);
     area_index = surf->add_custom((char *) "area",DOUBLE,0);
     weight_index = surf->add_custom((char *) "weight",DOUBLE,0);
 
   } else {
-    custom_owner = 0;
+    first_owner = 0;
     nstick_index = surf->find_custom((char *) "nstick");
     nstick_total_index = surf->find_custom((char *) "nstick_total");
     area_index = surf->find_custom((char *) "area");
@@ -313,42 +361,34 @@ void SurfReactAdsorb::create_per_surf_state()
   nstick_total_direct = surf->ewhich[nstick_total_index];
   area_direct = surf->ewhich[area_index];
   weight_direct = surf->ewhich[weight_index];
-  
-  // initialize custom per-surf attributes
-  // only set for surf elements assigned to this model
-  // b/c there may be multiple instances of this model, each for different surfs
 
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
+  nstick = surf->eiarray[nstick_direct];
+  nstick_total = surf->eivec[nstick_total_direct];
+  area = surf->edvec[area_direct];
+  weight = surf->edvec[weight_direct];
+
   int nlocal = surf->nlocal;
+  memory->create(nstick_archive,nlocal,nspecies_surf,
+                 "react/adsorb:nstick_archive");
+  memory->create(nstick_total_archive,nlocal,
+                 "react/adsorb:nstick_total_archive");
 
-  int **nstick = surf->eiarray[nstick_direct];
-  int *nstick_total = surf->eivec[nstick_total_direct];
-  double *area = surf->edvec[area_direct];
-  double *weight = surf->edvec[weight_direct];
+  // allocate data structs for periodic sync
 
-  int isr;
+  int nown = surf->nown;
 
-  if (domain->dimension == 2) {
-    for (int isurf = 0; isurf < nlocal; isurf++) {
-      isr = lines[isurf].isr;
-      if (surf->sr[isr] != this) return;
-      for (int isp = 0; isp < nspecies_surf; isp++) nstick[isurf][isp] = 0;
-      nstick_total[isurf] = 0;
-      area[isurf] = surf->line_size(&lines[isurf]);
-      weight[isurf] = 1.0;
-    }
-  } else {
-    double tmp;
-    for (int isurf = 0; isurf < nlocal; isurf++) {
-      isr = tris[isurf].isr;
-      if (surf->sr[isr] != this) return;
-      for (int isp = 0; isp < nspecies_surf; isp++) nstick[isurf][isp] = 0;
-      nstick_total[isurf] = 0;
-      area[isurf] = surf->tri_size(&tris[isurf],tmp);
-      weight[isurf] = 1.0;
-    }
-  }
+  memory->create(mark,nlocal,"react/adsorb:mark");
+  memory->create(tally2surf,nlocal,"react/adsorb:tally2surf");
+  memory->create(intally,nlocal,nspecies_surf+1,"react/adsorb:intally");
+  memory->create(outtally,nlocal,nspecies_surf+1,"react/adsorb:outtally");
+  memory->create(outcollate,nown,nspecies_surf+1,"react/adsorb:outcollate");
+
+  maxtally = 0;
+  incollate = NULL;
+
+  // clear mark vector
+
+  for (int isurf = 0; isurf < nlocal; isurf++) mark[isurf] = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -359,7 +399,51 @@ void SurfReactAdsorb::init()
   if (model == GS) init_reactions_gs();
   //if (model == PS) init_reactions_ps();
 
-  // NOTE: should check that surf count has not changed since constructor
+  // NOTE: must check that surf count has not changed since constructor
+  //       b/c have lots of internal surf arrays
+  //       else wait to allocate them until 1st init, then check
+  //       count has not changed on subsequent init()
+
+
+  // onte-time initialize of custom per-surf attributes
+  // only set for surf elements assigned to this model
+  // b/c there may be multiple instances of this model, each for different surfs
+  // cannot do until now b/c surf->sr[isr] not set until after constructor
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  int nlocal = surf->nlocal;
+
+  int isr;
+
+  if (domain->dimension == 2) {
+    for (int isurf = 0; isurf < nlocal; isurf++) {
+      isr = lines[isurf].isr;
+      if (surf->sr[isr] != this) return;
+      for (int isp = 0; isp < nspecies_surf; isp++) {
+        nstick[isurf][isp] = 0;
+        nstick_archive[isurf][isp] = 0;
+      }
+      nstick_total[isurf] = 0;
+      nstick_total_archive[isurf] = 0;
+      area[isurf] = surf->line_size(&lines[isurf]);
+      weight[isurf] = 1.0;
+    }
+  } else {
+    double tmp;
+    for (int isurf = 0; isurf < nlocal; isurf++) {
+      isr = tris[isurf].isr;
+      if (surf->sr[isr] != this) return;
+      for (int isp = 0; isp < nspecies_surf; isp++) {
+        nstick[isurf][isp] = 0;
+        nstick_archive[isurf][isp] = 0;
+      }
+      nstick_total[isurf] = 0;
+      nstick_total_archive[isurf] = 0;
+      area[isurf] = surf->tri_size(&tris[isurf],tmp);
+      weight[isurf] = 1.0;
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -374,26 +458,9 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
   if (isurf >= 0 && mode == FACE)
     error->one(FLERR,"Surf_react adsorb face used with surface elements");
 
-  // create pointers to per-surf or per-face state data
+  // convert face index from negative value to 0 to 5 inclusive
 
-  int **nstick;
-  int *nstick_total;
-  double *area,*weight;
-
-  if (mode == SURF) {
-    nstick = surf->eiarray[nstick_direct];
-    nstick_total = surf->eivec[nstick_total_direct];
-    area = surf->edvec[area_direct];
-    weight = surf->edvec[weight_direct];
-  } else {
-    isurf = -(isurf+1);
-    nstick = nstick_face;
-    nstick_total = &nstick_total_face[0];
-    area = &area_face[0];
-    weight = &weight_face[0];
-  }
-
-  Particle::Species *species = particle->species;
+  if (mode == FACE) isurf = -(isurf+1);
 
   // n = # of possible reactions for particle IP
 
@@ -407,6 +474,8 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
   double ms_inv = factor / max_cover;
   
   // loop over possible reactions for this species
+
+  Particle::Species *species = particle->species;
 
   OneReaction_GS *r;
   double prob_value[n], sum_prob = 0.0;
@@ -575,6 +644,9 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
   
   if (react_prob > random_prob) return 0;
   else {
+    // NOTE: at this point it is guaranteed a reaction will take place?
+
+    mark[isurf] = 1;
 
     // NOTE: why summing to previous react_prob?
 
@@ -595,6 +667,8 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           switch(r->state_reactants[j][0]) {
           case 's':
             {
+              // NOTE: insure counts do not go negative ??
+              //       do this everywhere in this method
               nstick[isurf][r->reactants_ad_index[j]] -= r->stoich_reactants[j];
               nstick_total[isurf] -= r->stoich_reactants[j]; 
               break; 
@@ -782,6 +856,157 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
 
 /* ---------------------------------------------------------------------- */
 
+void SurfReactAdsorb::tally_update()
+{
+  ntotal += nsingle;
+  for (int i = 0; i < nlist; i++) tally_total[i] += tally_single[i];
+
+  // sync surface state across all procs once every Nsync steps
+
+  if (update->ntimestep % nsync) return;
+
+  if (mode == FACE) update_state_face();
+  if (mode == SURF) update_state_surf();
+}
+
+/* ---------------------------------------------------------------------- */
+
+void SurfReactAdsorb::update_state_face()
+{
+  int i,j;
+
+  // inface = array of tallies for each face: nstick_total + nstick vec
+  // tally the difference between current state and archived state (last sync)
+
+  int nface = 2 * domain->dimension;
+
+  for (int i = 0; i < nface; i++) {
+    inface[i][0] = nstick_total[i] - nstick_total_face_archive[i];
+    for (j = 0; j < nspecies_surf; j++)
+      inface[i][j+1] = nstick[i][j] - nstick_face_archive[i][j];
+  }
+
+  // sum differences across all procs
+
+  MPI_Allreduce(&inface[0][0],&outface[0][0],(nspecies_surf+1)*nface,
+                MPI_INT,MPI_SUM,world);
+
+  // set new archived surf state values = outface + old archive
+  // set current values = new archived values
+  // insure no counts < 0
+
+  for (i = 0; i < nface; i++) {
+    nstick_total_face_archive[i] += outface[i][0];
+    nstick_total_face_archive[i] = MAX(0,nstick_total_face_archive[i]);
+    nstick_total[i] = nstick_total_face_archive[i];
+    for (j = 0; j < nspecies_surf; j++) {
+      nstick_face_archive[i][j] += outface[i][j+1];
+      nstick_face_archive[i][j] = MAX(0,nstick_face_archive[i][j]);
+      nstick[i][j] = nstick_face_archive[i][j];
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void SurfReactAdsorb::update_state_surf()
+{
+  int i,j,m,isr;
+
+  // incollate = array of tallies for surfs I marked: nstick_total + nstick vec
+  // tally2surf = global surf index (1 to Nsurf) for each row of array
+  // tally the difference between current state and archived state (last sync)
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  int nlocal = surf->nlocal;
+
+  int ntally = 0;
+
+  if (domain->dimension == 2) {
+    for (int i = 0; i < nlocal; i++) {
+      isr = lines[i].isr;
+      if (surf->sr[isr] != this) continue;
+      if (!mark[i]) continue;
+
+      if (ntally == maxtally) {
+        maxtally += DELTA_TALLY;
+        memory->grow(tally2surf,maxtally,"react/adsorb:tally2surf");
+        memory->grow(incollate,maxtally,nspecies_surf+1,
+                     "react/adsorb:incollate");
+      }
+
+      tally2surf[ntally] = i+1;     // only for non-distributed surfs
+      incollate[ntally][0] = nstick_total[i] - nstick_total_archive[i];
+      for (j = 0; j < nspecies_surf; j++)
+        incollate[ntally][j+1] = nstick[i][j] - nstick_archive[i][j];
+      ntally++;
+    }
+
+  } else {
+    for (int i = 0; i < nlocal; i++) {
+      isr = lines[i].isr;
+      if (surf->sr[isr] != this) continue;
+      if (!mark[i]) continue;
+
+      if (ntally == maxtally) {
+        maxtally += DELTA_TALLY;
+        memory->grow(tally2surf,maxtally,"react/adsorb:tally2surf");
+        memory->grow(incollate,maxtally,nspecies_surf+1,
+                     "react/adsorb:incollate");
+      }
+
+      tally2surf[ntally] = i+1;     // only for non-distributed surfs
+      incollate[ntally][0] = nstick_total[i] - nstick_total_archive[i];
+      for (j = 0; j < nspecies_surf; j++)
+        incollate[ntally][j+1] = nstick[i][j] - nstick_archive[i][j];
+      ntally++;
+    }
+  }
+
+  // perform the collate
+  // outcollate = values only for owned surfs
+
+  surf->collate_array(ntally,nspecies_surf+1,tally2surf,incollate,outcollate);
+
+  // must MPI_Allreduce out so all procs know new state of all surfs
+  // NOTE: allreduce is inefficient
+
+  for (i = 0; i < nlocal; i++)
+    for (j = 0; j < nspecies_surf+1; j++) intally[i][j] = 0;
+
+  m = 0;
+  for (i = me; i < nlocal; i += nprocs) {
+    for (j = 0; j < nspecies_surf+1; j++) 
+      intally[i][j] = static_cast<int> (outcollate[m][j]);
+    m++;
+  }
+  
+  MPI_Allreduce(&intally[0][0],&outtally[0][0],(nspecies_surf+1)*nlocal,
+                MPI_INT,MPI_SUM,world);
+
+  // set new archived surf state values = outtally + old archive
+  // set current values = new archived values
+  // insure no counts < 0
+
+  for (i = 0; i < nlocal; i++) {
+    nstick_total_archive[i] += outtally[i][0];
+    nstick_total_archive[i] = MAX(0,nstick_total_archive[i]);
+    nstick_total[i] = nstick_total_archive[i];
+    for (j = 0; j < nspecies_surf; j++) {
+      nstick_archive[i][j] += outtally[i][j+1];
+      nstick_archive[i][j] = MAX(0,nstick_archive[i][j]);
+      nstick[i][j] = nstick_archive[i][j];
+    }
+  }
+
+  // clear mark vector
+
+  for (i = 0; i < nlocal; i++) mark[i] = 0;
+}
+
+/* ---------------------------------------------------------------------- */
+
 void SurfReactAdsorb::init_reactions_gs() 
 {
   // convert species IDs to species indices
@@ -878,7 +1103,7 @@ void SurfReactAdsorb::init_reactions_gs()
 
 void SurfReactAdsorb::readfile_gs(char *fname) 
 {
-  int n,n1,n2,n3,eof;
+  int n,n1,n2,eof;
   char line1[MAXLINE],line2[MAXLINE];
   char copy1[MAXLINE],copy2[MAXLINE],copy3[MAXLINE],copy4[MAXLINE];
   char *word;
@@ -886,7 +1111,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
   
   // proc 0 opens file
 
-  if (comm->me == 0) {
+  if (me == 0) {
     fp = fopen(fname,"r");
     if (fp == NULL) {
       char str[128];
@@ -898,7 +1123,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
   // read reactions one at a time and store their info in rlist_gs
 
   while (1) {
-    if (comm->me == 0) eof = readone(line1,line2,n1,n2);
+    if (me == 0) eof = readone(line1,line2,n1,n2);
     MPI_Bcast(&eof,1,MPI_INT,0,world);
     if (eof) break;
     
@@ -967,6 +1192,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
           print_reaction(copy1,copy2);
           error->all(FLERR,"Invalid reaction formula in file");
         }
+        break;
       }
 
       if (species) {
@@ -1054,7 +1280,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
         if (strcmp(word,"-->") != 0) {
           print_reaction(copy1,copy2);
           error->all(FLERR,"Invalid reaction formula in file");
-          }
+        }
         side = 1;
       }
 
@@ -1184,7 +1410,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
     // nextra = # of extra lines to read in this reaction: 0,1,2
     // please add some code that computes nextra based on gas species count
 
-    int nextra;
+    int nextra = 1;
 
     // NOTE: END of ADDED CODE
 
@@ -1193,7 +1419,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
       continue;
     }
 
-    if (comm->me == 0) eof = readextra(nextra,line1,line2,n1,n2);
+    if (me == 0) eof = readextra(nextra,line1,line2,n1,n2);
     MPI_Bcast(&eof,1,MPI_INT,0,world);
     if (eof) error->all(FLERR,"Missing line(s) for collision model to use");
     
@@ -1318,7 +1544,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
 
   // close reaction file
 
-  if (comm->me == 0) fclose(fp);
+  if (me == 0) fclose(fp);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1415,7 +1641,7 @@ void SurfReactAdsorb::readfile_ps(char *fname)
   
   // proc 0 opens file
 
-  if (comm->me == 0) {
+  if (me == 0) {
     fp = fopen(fname,"r");
     if (fp == NULL) {
       char str[128];
@@ -1427,7 +1653,7 @@ void SurfReactAdsorb::readfile_ps(char *fname)
   // read reactions one at a time and store their info in rlist_ps
 
   while (1) {
-    if (comm->me == 0) eof = readone(line1,line2,n1,n2);
+    if (me == 0) eof = readone(line1,line2,n1,n2);
     MPI_Bcast(&eof,1,MPI_INT,0,world);
     if (eof) break;
     
@@ -1626,7 +1852,7 @@ void SurfReactAdsorb::readfile_ps(char *fname)
     nlist_ps++;
   }
 
-  if (comm->me == 0) fclose(fp);
+  if (me == 0) fclose(fp);
 }
 */
 
@@ -2277,7 +2503,7 @@ int SurfReactAdsorb::readextra(int nextra, char *line1, char *line2,
 
 void SurfReactAdsorb::print_reaction(char *line1, char *line2) 
 {
-  if (comm->me) return;
+  if (me) return;
   printf("Bad reaction format:\n");
   printf("%s%s",line1,line2);
 };

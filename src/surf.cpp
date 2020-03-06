@@ -2799,7 +2799,6 @@ int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
    nrow,ncol = # of entries and columns in input array
    tally2surf = global surf index of each entry in input array
    in = input array of tallies
-   instride = stride between entries in input array
    return out = summed tallies for explicit surfs I own
 ------------------------------------------------------------------------- */
 
@@ -2840,8 +2839,8 @@ void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
   memory->create(one,nglobal,ncol,"surf:one");
   memory->create(all,nglobal,ncol,"surf:all");
 
-  // zero all values and add in values I accumulated
-  
+  // zero all values and set values I accumulated
+
   for (i = 0; i < nglobal; i++)
     for (j = 0; j < ncol; j++)
       one[i][j] = 0.0;
@@ -2949,6 +2948,7 @@ int Surf::rendezvous_array(int n, char *inbuf,
   int me = sptr->comm->me;
   
   // zero my owned surf values
+  // NOTE: is this needed if caller zeroes ?
 
   int ntotal = nown*ncol;
   for (m = 0; m < ntotal; m++) out[m] = 0.0;

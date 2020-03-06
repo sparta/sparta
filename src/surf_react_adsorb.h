@@ -36,8 +36,11 @@ class SurfReactAdsorb : public SurfReact {
   int match_reactant(char *, int);
   int match_product(char *, int);
 
+  void tally_update();
+
  private:
-  int model,mode,nsp,nface;
+  int me,nprocs;
+  int model,mode,nsync,nsp,nface;
   double twall,max_cover;
   int nspecies_surf;
   char **species_surf;       // list of surface species
@@ -48,16 +51,34 @@ class SurfReactAdsorb : public SurfReact {
   // surface state
   // either for box faces or per surface element, depending on mode
 
-  int custom_owner;
+  int first_owner;           // 1 if this instance allocates per-surf state
   int nstick_index,nstick_direct;
   int nstick_total_index,nstick_total_direct;
   int area_index,area_direct;
   int weight_index,weight_direct;
 
-  int **nstick_face;
+  int **nstick_face;        // state for faces
+  int **nstick_face_archive;
   int nstick_total_face[6];
+  int nstick_total_face_archive[6];
   double area_face[6];
   double weight_face[6];
+
+  int **nstick;             // state for surfs
+  int **nstick_archive;
+  int *nstick_total;
+  int *nstick_total_archive;
+  double *area;
+  double *weight;
+
+  // data structs for syncing surface state periodically
+
+  int maxtally;
+  int *mark;
+  int *tally2surf;
+  int **intally,**outtally;
+  double **incollate,**outcollate;
+  int **inface,**outface;
 
   // GS react model
   
@@ -148,6 +169,11 @@ class SurfReactAdsorb : public SurfReact {
 
   void create_per_face_state();
   void create_per_surf_state();
+
+  void update_state_face();
+  void update_state_surf();
+
+  // NOTE: can remove these 3 at some point
   void energy_barrier_scatter(Particle::OnePart*, double *, 
                               double, double, double);
   void non_thermal_scatter(Particle::OnePart*, double *, 

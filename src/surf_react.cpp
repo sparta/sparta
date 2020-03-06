@@ -80,17 +80,19 @@ void SurfReact::init()
 
 /* ---------------------------------------------------------------------- */
 
+void SurfReact::tally_reset()
+{
+  nsingle = 0;
+  for (int i = 0; i < nlist; i++) tally_single[i] = 0;
+  tally_two_flag = tally_single_flag = tally_total_flag = 0;
+}
+
+/* ---------------------------------------------------------------------- */
+
 void SurfReact::tally_update()
 {
   ntotal += nsingle;
-  nsingle = 0;
-
-  for (int i = 0; i < nlist; i++) {
-    tally_total[i] += tally_single[i];
-    tally_single[i] = 0;
-  }
-
-  tally_two_flag = tally_single_flag = tally_total_flag = 0;
+  for (int i = 0; i < nlist; i++) tally_total[i] += tally_single[i];
 }
 
 /* ---------------------------------------------------------------------- */

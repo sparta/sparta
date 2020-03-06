@@ -112,6 +112,7 @@ class Update : protected Pointers {
   int boundary_pre_tally;   // 1 to log particle stats before boundary collide
 
   int collide_react_setup();
+  void collide_react_reset();
   void collide_react_update();
 
   int bounce_setup();
