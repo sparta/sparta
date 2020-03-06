@@ -78,9 +78,12 @@ class SurfReactAdsorb : public SurfReact {
     int *reactants_ad_index,*products_ad_index;
     double *coeff;                 // numerical coeffs for reaction
     double k_react;
-    int cmodel;                    // style for post-reaction surf collisions
-    int *cmodel_flags;             // integer flags to pass to SC class
-    double *cmodel_coeffs;         // double coeffs to pass to SC class
+    int cmodel_ip;                  // style for I's post-reaction surf collision
+    int *cmodel_ip_flags;           // integer flags to pass to SC class
+    double *cmodel_ip_coeffs;       // double coeffs to pass to SC class
+    int cmodel_jp;                  // difto for J particle
+    int *cmodel_jp_flags;
+    double *cmodel_jp_coeffs;
   };
 
   OneReaction_GS *rlist_gs;           // list of all reactions read from file
@@ -153,8 +156,9 @@ class SurfReactAdsorb : public SurfReact {
 
   double stoich_pow(int, int);
   int find_surf_species(char *);
-  void print_reaction(char *, char *, char *);
-  int readone(char *, char *, char *, int &, int &, int &);
+  void print_reaction(char *, char *);
+  int readone(char *, char *, int &, int &);
+  int readextra(int, char *, char *, int &, int &);
 };
 
 }

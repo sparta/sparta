@@ -199,8 +199,10 @@ SurfReactAdsorb::~SurfReactAdsorb()
     delete [] rlist_gs[i].reactants_ad_index;
     delete [] rlist_gs[i].products_ad_index;
     delete [] rlist_gs[i].coeff;
-    delete [] rlist_gs[i].cmodel_flags;
-    delete [] rlist_gs[i].cmodel_coeffs;
+    delete [] rlist_gs[i].cmodel_ip_flags;
+    delete [] rlist_gs[i].cmodel_ip_coeffs;
+    delete [] rlist_gs[i].cmodel_jp_flags;
+    delete [] rlist_gs[i].cmodel_jp_coeffs;
   }
   memory->destroy(rlist_gs);
 
@@ -666,12 +668,12 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           }
           else {                             
             ip->ispecies = r->products[1];
-            if (r->cmodel != NOMODEL) 
-              cmodels[r->cmodel]->
-                wrapper(ip,norm,r->cmodel_flags,r->cmodel_coeffs);
+            if (r->cmodel_ip != NOMODEL) 
+              cmodels[r->cmodel_ip]->
+                wrapper(ip,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
             //cll(ip,norm,r->coeff[3],r->coeff[4],r->coeff[5]);              
           }
-          if (r->cmodel == NOMODEL) return 1;
+          if (r->cmodel_ip == NOMODEL) return 1;
           return 2;
           break; 
         }
@@ -680,14 +682,18 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
         {
           if (r->state_products[0][0] == 'g') {
             ip->ispecies = r->products[0];
-            
-            if (random->uniform() < r->coeff[9])
-              non_thermal_scatter(ip,norm,r->coeff[10],r->coeff[11],
-                                  r->coeff[12],r->coeff[13]);
-            else
-              energy_barrier_scatter(ip,norm,r->coeff[8],r->coeff[6],r->coeff[7]);
+            if (r->cmodel_ip != NOMODEL) 
+              cmodels[r->cmodel_ip]->
+                wrapper(ip,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
+
+            //if (random->uniform() < r->coeff[9])
+            //  non_thermal_scatter(ip,norm,r->coeff[10],r->coeff[11],
+            //                      r->coeff[12],r->coeff[13]);
+            //else
+            //  energy_barrier_scatter(ip,norm,r->coeff[8],r->coeff[6],r->coeff[7]);
           }
-          return 1;
+          if (r->cmodel_ip == NOMODEL) return 1;
+          return 2;
           break;
         }
           
@@ -708,11 +714,11 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
       case ER:
         {
           ip->ispecies = r->products[0];
-          if (r->cmodel != NOMODEL) 
-            cmodels[r->cmodel]->
-              wrapper(ip,norm,r->cmodel_flags,r->cmodel_coeffs);
+          if (r->cmodel_ip != NOMODEL) 
+            cmodels[r->cmodel_ip]->
+              wrapper(ip,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
           //cll(ip,norm,r->coeff[3],r->coeff[4],r->coeff[5]); 
-          if (r->cmodel == NOMODEL) return 1;
+          if (r->cmodel_ip == NOMODEL) return 1;
           return 2;
           break;
         }          
@@ -721,12 +727,17 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
         {
           ip->ispecies = r->products[0];
           
-          if (random->uniform() < r->coeff[8])
-            non_thermal_scatter(ip,norm,r->coeff[9],r->coeff[10],
-                                r->coeff[11],r->coeff[12]);
-          else
-            energy_barrier_scatter(ip,norm,r->coeff[7],r->coeff[5],r->coeff[6]); 
-          return 1;
+          if (r->cmodel_ip != NOMODEL) 
+            cmodels[r->cmodel_ip]->
+              wrapper(ip,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
+
+          //if (random->uniform() < r->coeff[8])
+          //  non_thermal_scatter(ip,norm,r->coeff[9],r->coeff[10],
+          //                      r->coeff[11],r->coeff[12]);
+          //else
+          //  energy_barrier_scatter(ip,norm,r->coeff[7],r->coeff[5],r->coeff[6]); 
+          if (r->cmodel_ip == NOMODEL) return 1;
+          return 2;
           break;
         }
         
@@ -744,18 +755,21 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           jp = &particle->particles[particle->nlocal-1];
           jp->ispecies = r->products[1];
 
-          if (r->cmodel != NOMODEL) 
-            cmodels[r->cmodel]->
-              wrapper(ip,norm,r->cmodel_flags,r->cmodel_coeffs);
-          //cll(ip,norm,r->coeff[5],r->coeff[6],r->coeff[7]);
+          if (r->cmodel_ip != NOMODEL) 
+            cmodels[r->cmodel_ip]->
+              wrapper(jp,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
+          if (r->cmodel_jp != NOMODEL) 
+            cmodels[r->cmodel_jp]->
+              wrapper(jp,norm,r->cmodel_jp_flags,r->cmodel_jp_coeffs);
 
-          if (random->uniform() < r->coeff[11])
-            non_thermal_scatter(jp,norm,r->coeff[12],r->coeff[13],
-                                r->coeff[14],r->coeff[15]);
-          else
-            energy_barrier_scatter(jp,norm,r->coeff[10],r->coeff[8],r->coeff[9]);
+          //cll(ip,norm,r->coeff[5],r->coeff[6],r->coeff[7]);
+          //if (random->uniform() < r->coeff[11])
+          // non_thermal_scatter(jp,norm,r->coeff[12],r->coeff[13],
+          //                      r->coeff[14],r->coeff[15]);
+          //else
+          //  energy_barrier_scatter(jp,norm,r->coeff[10],r->coeff[8],r->coeff[9]);
           
-          if (r->cmodel == NOMODEL) return 1;
+          if (r->cmodel_ip == NOMODEL) return 1;
           return 2;
           break;
         }
@@ -865,8 +879,8 @@ void SurfReactAdsorb::init_reactions_gs()
 void SurfReactAdsorb::readfile_gs(char *fname) 
 {
   int n,n1,n2,n3,eof;
-  char line1[MAXLINE],line2[MAXLINE],line3[MAXLINE];
-  char copy1[MAXLINE],copy2[MAXLINE],copy3[MAXLINE];
+  char line1[MAXLINE],line2[MAXLINE];
+  char copy1[MAXLINE],copy2[MAXLINE],copy3[MAXLINE],copy4[MAXLINE];
   char *word;
   OneReaction_GS *r;
   
@@ -884,16 +898,14 @@ void SurfReactAdsorb::readfile_gs(char *fname)
   // read reactions one at a time and store their info in rlist_gs
 
   while (1) {
-    if (comm->me == 0) eof = readone(line1,line2,line3,n1,n2,n3);
+    if (comm->me == 0) eof = readone(line1,line2,n1,n2);
     MPI_Bcast(&eof,1,MPI_INT,0,world);
     if (eof) break;
     
     MPI_Bcast(&n1,1,MPI_INT,0,world);
     MPI_Bcast(&n2,1,MPI_INT,0,world);
-    MPI_Bcast(&n3,1,MPI_INT,0,world);
     MPI_Bcast(line1,n1,MPI_CHAR,0,world);
     MPI_Bcast(line2,n2,MPI_CHAR,0,world);
-    MPI_Bcast(line3,n3,MPI_CHAR,0,world);
 
     if (nlist_gs == maxlist_gs) {
       maxlist_gs += DELTALIST;
@@ -918,15 +930,17 @@ void SurfReactAdsorb::readfile_gs(char *fname)
         r->reactants_ad_index = new int[MAXREACTANT_GS];        
         r->products_ad_index = new int[MAXPRODUCT_GS];
         r->coeff = new double[MAXCOEFF_GS];
-        r->cmodel = NOMODEL;
-        r->cmodel_flags = NULL;
-        r->cmodel_coeffs = NULL;
+        r->cmodel_ip = NOMODEL;
+        r->cmodel_ip_flags = NULL;
+        r->cmodel_ip_coeffs = NULL;
+        r->cmodel_jp = NOMODEL;
+        r->cmodel_jp_flags = NULL;
+        r->cmodel_jp_coeffs = NULL;
       }
     }
     
     strcpy(copy1,line1);
     strcpy(copy2,line2);
-    strcpy(copy3,line3);
 
     r = &rlist_gs[nlist_gs];
 
@@ -946,21 +960,20 @@ void SurfReactAdsorb::readfile_gs(char *fname)
     while (1) {
       if (!word) {
         if (side == 0) {
-          print_reaction(copy1,copy2,copy3);
+          print_reaction(copy1,copy2);
           error->all(FLERR,"Invalid reaction formula in file");
         }    
         if (species) {
-          print_reaction(copy1,copy2,copy3);
+          print_reaction(copy1,copy2);
           error->all(FLERR,"Invalid reaction formula in file");
         }
-        break;
       }
 
       if (species) {
         species = 0;
         if (side == 0) {
           if (r->nreactant == MAXREACTANT_GS) {
-            print_reaction(copy1,copy2,copy3);
+            print_reaction(copy1,copy2);
             error->all(FLERR,"Too many reactants in a reaction formula");
             }
           n = strlen(word) + 1;
@@ -968,7 +981,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
           r->part_reactants[r->nreactant] = 1;
           r->stoich_reactants[r->nreactant] = 1;
           if (word[n-2] != ')') {
-            print_reaction(copy1,copy2,copy3);
+            print_reaction(copy1,copy2);
             error->all(FLERR,"Specify the state of the reactants");
           }
           if (word[n-3] == 'c') {
@@ -976,15 +989,15 @@ void SurfReactAdsorb::readfile_gs(char *fname)
             n--;
           }
           if (r->nreactant == 0 && word[n-3] != 'g') {
-            print_reaction(copy1,copy2,copy3); 
+            print_reaction(copy1,copy2);
             error->all(FLERR,"The first reactant must be gas phase");
           }
           if (r->nreactant != 0 && word[n-3] == 'g') {
-            print_reaction(copy1,copy2,copy3);
+            print_reaction(copy1,copy2);
             error->all(FLERR,"Only one gas phase reactant can be present");
           }
           if (r->part_reactants[r->nreactant] == 0 && word[n-3] == 'g') {
-            print_reaction(copy1,copy2,copy3);
+            print_reaction(copy1,copy2);
             error->all(FLERR,"Gas phase reactants cannot be catalytic");
           }
           if (isdigit(word[0])) {
@@ -1000,7 +1013,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
 
         } else {
           if (r->nproduct == MAXPRODUCT_GS) { 
-            print_reaction(copy1,copy2,copy3);
+            print_reaction(copy1,copy2);
             error->all(FLERR,"Too many products in a reaction formula");
           }
           
@@ -1009,7 +1022,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
           r->part_products[r->nproduct] = 1;
           r->stoich_products[r->nproduct] = 1;
           if (word[n-2] != ')') {
-            print_reaction(copy1,copy2,copy3);
+            print_reaction(copy1,copy2);
             error->all(FLERR,"Specify the state of the products");
           }
           if (word[n-3] == 'c') {
@@ -1017,7 +1030,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
             n--;
           }
           if (r->part_products[r->nproduct] == 0 && word[n-3] == 'g') {
-            print_reaction(copy1,copy2,copy3);
+            print_reaction(copy1,copy2);
             error->all(FLERR,"Gas phase products cannot be catalytic");
           }
           if (isdigit(word[0])) {
@@ -1039,7 +1052,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
           continue;
         }
         if (strcmp(word,"-->") != 0) {
-          print_reaction(copy1,copy2,copy3);
+          print_reaction(copy1,copy2);
           error->all(FLERR,"Invalid reaction formula in file");
           }
         side = 1;
@@ -1060,7 +1073,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
 
     word = strtok(line2," \t\n");
     if (!word) {
-      print_reaction(copy1,copy2,copy3);
+      print_reaction(copy1,copy2);
         error->all(FLERR,"Invalid reaction type in file");
     }
     
@@ -1098,13 +1111,13 @@ void SurfReactAdsorb::readfile_gs(char *fname)
       r->type = CI2;
       r->ncoeff = 16;
     } else { 
-      print_reaction(copy1,copy2,copy3);
+      print_reaction(copy1,copy2);
       error->all(FLERR,"Invalid reaction type in file");
     }    
 
     word = strtok(NULL," \t\n");
     if (!word) {
-      print_reaction(copy1,copy2,copy3);
+      print_reaction(copy1,copy2);
         error->all(FLERR,"Invalid reaction type in file");
     }
 
@@ -1112,22 +1125,22 @@ void SurfReactAdsorb::readfile_gs(char *fname)
     else if (word[0] == 'A' || word[0] == 'a') {r->style = ARRHENIUS;}
     else if (word[0] == 'P' || word[0] == 'p') {r->style = PARTICULAR;}
     else {
-      print_reaction(copy1,copy2,copy3);
-        error->all(FLERR,"Invalid reaction type in file");
+      print_reaction(copy1,copy2);
+      error->all(FLERR,"Invalid reaction type in file");
     }
 
     for (int i = 0; i < r->ncoeff; i++) {
       word = strtok(NULL," \t\n"); 
       if (!word) {
-        print_reaction(copy1,copy2,copy3);
-      error->all(FLERR,"Invalid reaction coefficients in file");
+        print_reaction(copy1,copy2);
+        error->all(FLERR,"Invalid reaction coefficients in file");
       }
       r->coeff[i] = input->numeric(FLERR,word);
     }
 
     word = strtok(NULL," \t\n");
     if (word) {
-      print_reaction(copy1,copy2,copy3);
+      print_reaction(copy1,copy2);
       error->all(FLERR,"Too many coefficients in a reaction formula");
     }
     
@@ -1142,22 +1155,22 @@ void SurfReactAdsorb::readfile_gs(char *fname)
 
     if (r->type == DISSOCIATION) {
       if (r->nreactant != 1 || r->nproduct != 2) {
-        print_reaction(copy1,copy2,copy3);
+        print_reaction(copy1,copy2);
         error->all(FLERR,"Invalid reaction type in file");
       }
     } else if (r->type == EXCHANGE) {
       if (r->nreactant != 1 || r->nproduct != 1) {
-        print_reaction(copy1,copy2,copy3);
+        print_reaction(copy1,copy2);
         error->all(FLERR,"Invalid reaction type in file");
       }
     } else if (r->type == RECOMBINATION) {
       if (r->nreactant != 1 || r->nproduct != 0) {
-        print_reaction(copy1,copy2,copy3);
+        print_reaction(copy1,copy2);
         error->all(FLERR,"Invalid reaction type in file");
       }
     } else if (r->type == AA) {
       if (r->state_products[0][0] != 's')  {
-        print_reaction(copy1,copy2,copy3);
+        print_reaction(copy1,copy2);
         error->all(FLERR,"The first product must be solid phase in AA reaction");
       }
     }   
@@ -1166,91 +1179,138 @@ void SurfReactAdsorb::readfile_gs(char *fname)
       exp(-r->coeff[2]/(twall));
 
     // process 3rd line of reaction
+    // NOTE: RIGHT HERE
 
-    int nwords = input->count_words(line3);
-    if (nwords == 0) {
-      print_reaction(copy1,copy2,copy3);
-      error->all(FLERR,"Invalid reaction collide style in file");
+    // nextra = # of extra lines to read in this reaction: 0,1,2
+    // please add some code that computes nextra based on gas species count
+
+    int nextra;
+
+    // NOTE: END of ADDED CODE
+
+    if (nextra == 0) {
+      nlist_gs++;
+      continue;
     }
 
-    // convert line into char **words
-    // leave space for leading ID arg = "react_adsorb"
-    // doesn't matter that all saved models will have same ID
-
-    nwords++;
-    char **words = new char*[nwords];
-    words[0] = (char *) "react_adsorb";
-
-    int narg = 1;
-    words[narg] = strtok(line3," \t\n");
-    narg++;
-
-    while (narg < nwords) {
-      words[narg] = strtok(NULL," \t\n");
-      narg++;
-    }
-
-    // create an instance of a SurfCollide model
-    // supported models are in enum above and in this if/then/else block
-
-    int model,nflags,ncoeffs;
-    int *flags = NULL;
-    double *coeffs = NULL;
-    SurfCollide *sc;
-
-    if (strcmp(words[1],"none") == 0) {
-      model = NOMODEL;
-      nflags = ncoeffs = 0;
-      sc = NULL;
-    } else if (strcmp(words[1],"specular") == 0) {
-      model = SPECULAR;
-      nflags = ncoeffs = 0;
-      sc = new SurfCollideSpecular(sparta,nwords,words);
-    } else if (strcmp(words[1],"diffuse") == 0) {
-      model = DIFFUSE;
-      nflags = 0;
-      ncoeffs = 2;
-      sc = new SurfCollideDiffuse(sparta,nwords,words);
-    } else if (strcmp(words[1],"cll") == 0) {
-      model = CLL;
-      nflags = 1;
-      ncoeffs = 5;
-      sc = new SurfCollideCLL(sparta,nwords,words);
-    } else if (strcmp(words[1],"td") == 0) {
-      model = TD;
-      nflags = 3;
-      ncoeffs = 8;
-      sc = new SurfCollideTD(sparta,nwords,words);
-    } else if (strcmp(words[1],"impulsive") == 0) {
-      model = IMPULSIVE;
-      nflags = 4;
-      ncoeffs = 11;
-      sc = new SurfCollideImpulsive(sparta,nwords,words);
-    } else {
-      print_reaction(copy1,copy2,copy3);
-      error->all(FLERR,"Invalid reaction collide style in file");
-    }
-
-    delete [] words;
-
-    // use parsing from SurfCollide instance to fill flags, coeffs
+    if (comm->me == 0) eof = readextra(nextra,line1,line2,n1,n2);
+    MPI_Bcast(&eof,1,MPI_INT,0,world);
+    if (eof) error->all(FLERR,"Missing line(s) for collision model to use");
     
-    if (nflags) flags = new int[nflags];
-    if (ncoeffs) coeffs = new double[ncoeffs];
-    if (model != NOMODEL) sc->flags_and_coeffs(flags,coeffs);
+    MPI_Bcast(&n1,1,MPI_INT,0,world);
+    MPI_Bcast(line1,n1,MPI_CHAR,0,world);
+    if (nextra == 2) {
+      MPI_Bcast(&n2,1,MPI_INT,0,world);
+      MPI_Bcast(line2,n2,MPI_CHAR,0,world);
+    }
 
-    // if first SurfCollide instance of a particular style, save in cmodels
-    // else delete it
+    // process reactions for particles IP and JP, if they exist
 
-    if (cmodels[model] == NULL) cmodels[model] = sc;
-    else delete sc;
+    for (int m = 1; m <= nextra; m++) {
+      int nwords;
+      if (m == 1) nwords = input->count_words(line1);
+      if (m == 2) nwords = input->count_words(line2);
 
-    // populate reaction-specific collision model settings
+      if (nwords == 0) {
+        print_reaction(copy1,copy2);
+        error->all(FLERR,"Invalid reaction collide style in file");
+      }
 
-    r->cmodel = model;
-    r->cmodel_flags = flags;
-    r->cmodel_coeffs = coeffs;
+      // convert line into char **words
+      // leave space for leading ID arg = "react_adsorb"
+      // doesn't matter that all saved models will have same ID
 
+      nwords++;
+      char **words = new char*[nwords];
+      words[0] = (char *) "react_adsorb";
+
+      int narg = 1;
+      if (m == 1) words[narg] = strtok(line1," \t\n");
+      if (m == 2) words[narg] = strtok(line2," \t\n");
+      narg++;
+
+      while (narg < nwords) {
+        words[narg] = strtok(NULL," \t\n");
+        narg++;
+      }
+
+      // create an instance of a SurfCollide model
+      // supported models are in enum above and in this if/then/else block
+
+      int model,nflags,ncoeffs;
+      int *flags = NULL;
+      double *coeffs = NULL;
+      SurfCollide *sc;
+
+      if (strcmp(words[1],"none") == 0) {
+        model = NOMODEL;
+        nflags = ncoeffs = 0;
+        sc = NULL;
+      } else if (strcmp(words[1],"specular") == 0) {
+        model = SPECULAR;
+        nflags = ncoeffs = 0;
+        sc = new SurfCollideSpecular(sparta,nwords,words);
+      } else if (strcmp(words[1],"diffuse") == 0) {
+        model = DIFFUSE;
+        nflags = 0;
+        ncoeffs = 2;
+        sc = new SurfCollideDiffuse(sparta,nwords,words);
+      } else if (strcmp(words[1],"cll") == 0) {
+        model = CLL;
+        nflags = 1;
+        ncoeffs = 5;
+        sc = new SurfCollideCLL(sparta,nwords,words);
+      } else if (strcmp(words[1],"td") == 0) {
+        model = TD;
+        nflags = 3;
+        ncoeffs = 8;
+        sc = new SurfCollideTD(sparta,nwords,words);
+      } else if (strcmp(words[1],"impulsive") == 0) {
+        model = IMPULSIVE;
+        nflags = 4;
+        ncoeffs = 11;
+        sc = new SurfCollideImpulsive(sparta,nwords,words);
+      } else {
+        print_reaction(copy1,copy2);
+        error->all(FLERR,"Invalid reaction collide style in file");
+      }
+
+      delete [] words;
+
+      // use parsing from SurfCollide instance to fill flags, coeffs
+    
+      if (nflags) flags = new int[nflags];
+      if (ncoeffs) coeffs = new double[ncoeffs];
+      if (model != NOMODEL) sc->flags_and_coeffs(flags,coeffs);
+
+      // if first SurfCollide instance of a particular style, save in cmodels
+      // else delete it
+
+      if (cmodels[model] == NULL) cmodels[model] = sc;
+      else delete sc;
+
+      // populate reaction-specific collision model settings
+
+      if (m == 1) {
+        r->cmodel_ip = model;
+        r->cmodel_ip_flags = flags;
+        r->cmodel_ip_coeffs = coeffs;
+      } else if (m == 2) {
+        r->cmodel_jp = model;
+        r->cmodel_jp_flags = flags;
+        r->cmodel_jp_coeffs = coeffs;
+      }
+    }
+
+    // if nextra == 2, check that IP and JP models are both defined or neither
+    
+    if (nextra == 2)
+      if ((r->cmodel_ip == NOMODEL && r->cmodel_jp != NOMODEL) ||
+          (r->cmodel_ip != NOMODEL && r->cmodel_jp == NOMODEL)) {
+        print_reaction(copy1,copy2);
+        error->all(FLERR,"Both or neither collide styles must be defined");
+      }
+        
     // increment reaction count
 
     nlist_gs++;
@@ -2169,12 +2229,12 @@ int SurfReactAdsorb::find_surf_species(char *id)
 
 /* ----------------------------------------------------------------------
    read one reaction from file
+   just first 2 lines, any extra are read by readextra()
    reaction = 2 lines of length n1 and n2
    return 1 if end-of-file, else return 0
 ------------------------------------------------------------------------- */
 
-int SurfReactAdsorb::readone(char *line1, char *line2, char *line3,
-                             int &n1, int &n2, int &n3) 
+int SurfReactAdsorb::readone(char *line1, char *line2, int &n1, int &n2) 
 {
   char *eof;
   while ((eof = fgets(line1,MAXLINE,fp))) {
@@ -2182,22 +2242,42 @@ int SurfReactAdsorb::readone(char *line1, char *line2, char *line3,
     if (pre == strlen(line1) || line1[pre] == '#') continue;
     eof = fgets(line2,MAXLINE,fp);
     if (!eof) break;
-    eof = fgets(line3,MAXLINE,fp);
-    if (!eof) break;
     n1 = strlen(line1) + 1;
     n2 = strlen(line2) + 1;
-    n3 = strlen(line3) + 1;
     return 0;
   }
 
   return 1;
 }
 
+/* ----------------------------------------------------------------------
+   read nextra lines of a reaction, for surf collide models
+   nextra = # of extra lines = 1 or 2
+   line1 and line2 are extra lines of length n1 and n2
+   return 1 if end-of-file, else return 0
+------------------------------------------------------------------------- */
+
+int SurfReactAdsorb::readextra(int nextra, char *line1, char *line2, 
+                               int &n1, int &n2) 
+{
+  char *eof = fgets(line1,MAXLINE,fp);
+  if (!eof) return 1;
+  n1 = strlen(line1) + 1;
+
+  if (nextra == 2) {
+    eof = fgets(line2,MAXLINE,fp);
+    if (!eof) return 1;
+    n2 = strlen(line2) + 1;
+  }
+
+  return 0;
+}
+
 /* ---------------------------------------------------------------------- */
 
-void SurfReactAdsorb::print_reaction(char *line1, char *line2, char *line3) 
+void SurfReactAdsorb::print_reaction(char *line1, char *line2) 
 {
   if (comm->me) return;
   printf("Bad reaction format:\n");
-  printf("%s%s%s",line1,line2,line3);
+  printf("%s%s",line1,line2);
 };

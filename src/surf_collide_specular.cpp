@@ -74,7 +74,10 @@ collide(Particle::OnePart *&ip, double &,
 
   if (jp && modify->n_add_particle) {
     int j = jp - particle->particles;
-    modify->add_particle(j,twall,twall,twall,vstream);
+    // NOTE: need to add a twall arg to this fix ??
+    //       to support 2 fixes that handle created particles
+    //       fix vibmode and fix ambipolar
+    //modify->add_particle(j,twall,twall,twall,vstream);
   }
 
   // call any fixes with a surf_react() method
