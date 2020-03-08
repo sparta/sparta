@@ -1,4 +1,4 @@
-dump*
+dump_nrhod.*
 image.100.ppm
 image.1000.ppm
 image.150.ppm
@@ -24,8 +24,3 @@ spa_serial
 spa_serial_debug
 grid.out
 .nfs*
-nrhod.0
-partCol_XLO.txt
-tmp
-tmp.boundary
-
