@@ -1,0 +1,357 @@
+<?xml version="1.0"?>
+<ctml>
+  <validate reactions="yes" species="yes"/>
+
+  <!-- phase carbon_surf     -->
+  <phase dim="2" id="carbon_surf">
+    <elementArray datasrc="elements.xml"> H C O N </elementArray>
+    <speciesArray datasrc="#species_data"> O(s) (s)  N(s) </speciesArray>
+    <reactionArray datasrc="#reaction_data"/>
+    <state>
+      <temperature units="K">1200.0</temperature>
+      <coverages> (s):0.2857144 O(s):0.3571428 N(s):0.3571428 </coverages>
+    </state>
+    <thermo model="Surface">
+      <site_density units="gmol/cm2"> 5.811886e-09 </site_density>
+      <!--  The site density is take to be 3.5E19 m-2 from the ZA paper, 2.85 Angstrom^2 per site
+            Reference given for this is Blyholder, G, H. Eyring "Kinetics of Graphite Oxidation," 
+            J Phys. Chem. 61,5 1957 682-688.
+               (This is equal to 5.811886E-8 kmol/m2.)
+       -->
+    </thermo>
+    <kinetics model="Interface"/>
+    <transport model="None"/>
+    <phaseArray> air Graphite(s) </phaseArray>
+  </phase>
+
+  <!--  ..............................  species definitions  ..............................  -->
+
+  <speciesData id="species_data">
+
+    <!-- species (s)    -->
+    <species name="(s)">
+      <atomArray> C:0 </atomArray>
+      <notes>
+          This is the empty site species. We assign it a zero thermodynamics condition.
+          All other surface sites's thermo are in relation to this basis. 
+      </notes>
+      <standardState model="covalentSite">
+         <concentrationCondition model="pure phase"/>
+      </standardState>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol"> 0 </h0>
+           <s0 units="J/mol/K"> 0 </s0>
+           <cp0 units="J/mol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+    </species>
+
+
+    <!-- species H(s)   -->
+    <species name="H(s)">
+      <atomArray>H:1 </atomArray>
+      <standardState model="covalentSite">
+         <concentrationCondition model="dilute"/>
+      </standardState>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol">  46.1</h0>
+           <s0 units="J/mol/K"> 0.0</s0>
+           <cp0 units="J/mol/K">  0.0</cp0>
+        </const_cp>
+      </thermo>
+    </species>
+
+    <!-- species O(s)    -->
+    <species name="O(s)">
+      <atomArray> O:1 </atomArray>
+      <note>
+           This is an oxygen species attached to a carbon surface site
+      </note>
+      <standardState model="covalentSite">
+         <concentrationCondition model="dilute"/>
+      </standardState>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K"> 298.15 </t0>
+           <h0 units="kJ/mol">  -131.1745  </h0>
+           <s0 units="J/mol/K"> 18.2687 </s0>
+           <cp0 units="J/mol/K">  0.0 </cp0>
+        </const_cp>
+      </thermo>
+    </species>
+
+    <!--  species N(s)   -->
+    <species name="N(s)">
+      <atomArray> N:1 </atomArray>
+      <note>
+           This is a nitrogen species attached to a carbon surface site
+      </note>
+      <standardState model="covalentSite">
+         <concentrationCondition model="dilute"/>
+      </standardState>
+      <thermo>
+        <const_cp Tmax="5000.0" Tmin="100.0">
+           <t0 units="K">298.15</t0>
+           <h0 units="kJ/mol"> 162.1707 </h0>
+           <s0 units="J/mol/K"> 11.52628 </s0>
+           <cp0 units="J/mol/K">0.0</cp0>
+        </const_cp>
+      </thermo>
+    </species>
+
+
+  </speciesData>
+
+  <!-- ............................................................................................................. -->
+
+
+  <!-- .................................... O dissociative adsorption system ..................... -->
+
+  <reactionData id="reaction_data">
+
+    <!-- reaction 00  Oxygen reversible adsorption onto the surface 
+         Sticking coefficient of O set at 1.0 by ZA
+     -->
+    <reaction reversible="yes" type="surface" id="ZA01">
+      <equation>O + (s) [=] O(s) </equation>
+      <rateCoeff>
+        <Arrhenius type="stick" species="O">
+           <A>1.000000E+00</A>
+           <b>0</b>
+           <E units="J/mol">0.000000</E>
+        </Arrhenius>
+
+      </rateCoeff>
+      <reactants> O:1.0 (s):1.0 </reactants>
+      <products> O(s):1.0 </products>
+    </reaction>
+
+    <!-- reaction 01  Molecular Oxygen reversible adsorption onto a surface 
+             ZA calculates reat constant from O(s) desorption rate constant (REGULAR FORMULATION)
+     -->
+    <reaction reversible="yes" type="surface" id="ZA02">
+      <equation> 2 O(s) [=] O2 + 2 (s)  </equation>
+      <rateCoeff>
+        <Arrhenius>
+           <A units="m2/kmol/s"> 4.934953E21 </A>
+           <b> 0.5 </b>
+           <E units="kJ/gmol"> 249.9542 </E>
+        </Arrhenius>
+        <!--  ZA paper has  T_a2 as
+              T_a2 =  2 T_d1 - T_DO2
+                  T_d1 = 
+                 Hf298(O) = 249.1736 kJ/gmol, I'm assumging that T_DO2 is twice the O heat of formation
+                 T_d1 = 45000 K = 374.1507 kJ/gmol
+                Therefore T_a2 = 2(374.1507) - 2(249.1736)  = 249.9542 kJ/gmol
+              epsilon_2 = 8.0E-4
+              Standard conc of surf is Lambda = kmol / m2. That's why the units are what they are.
+         -->
+      </rateCoeff>
+      <reactants> O(s):2.0 </reactants>
+      <products>   (s):2.0  O2:1.0 </products>
+    </reaction>
+
+    <!-- reaction 02  Molecular Oxygen reactive dissociative adsorption onto a surface
+         Sticking coefficient of O2 set at 1.0 for O2 by ZA 
+           -> HKM Not sure about this one. Why not apply the sticking coefficient formulation
+                  to the reverse direction. It will probably be more independent of temperature,
+                  and I would suspect that the sticking coefficient would not be exactly one.
+                  This reaction seems important, because the surface will fill up with O groups
+                  speedily from this reaction, and produce reactive O radicals in the gas phase to boot.
+      -->
+    <reaction reversible="yes" type="surface" id="ZA03">
+      <equation> O2 + (s) [=] O(s) + O </equation>
+      <rateCoeff>
+        <Arrhenius type="stick" species="O2">
+           <A> 1.0 </A>
+           <b>0</b>
+           <E units="kJ/gmol"> 124.1964 </E>
+        </Arrhenius>
+        <!--
+             The activation energy is described as T_a3 = T_DO2 - T_d1
+                Hf298(O) = 249.1736 kJ/gmol, I'm assumging that T_DO2 is twice the O heat of formation
+                T_d1 = 45000 K = 374.1507 kJ/gmol
+                Therefore T_a3 = 2(249.1736) - 374.1507 = 124.1964 kJ/gmol
+         -->
+      </rateCoeff>
+      <reactants> O2:1.0 (s):1.0 </reactants>
+      <products> O(s):1.0 O:1.0 </products>
+    </reaction>
+
+    <!-- .................................. CO and CO2 Leaving groups ........................ -->
+
+
+    <!-- reaction 03  Molecular Oxygen reactive dissociative etching  of a surface 
+     -->
+    <reaction reversible="yes" type="surface" id="ZA04">
+      <equation>  CO2 + (s) [=] CO + O(s) </equation>
+      <rateCoeff>
+        <Arrhenius type="stick" species="CO2">
+           <A> 0.9 </A>
+           <b>0</b>
+           <E units="J/mol">0.000000</E>
+        </Arrhenius>
+      </rateCoeff>
+      <reactants> CO2:1.0  (s):1.0 </reactants>
+      <products>  CO:1.0  O(s):1.0 </products>
+    </reaction>
+
+    <!-- reaction 04  CO thermal desorption (REGULAR FORMULATION) -->
+    <reaction reversible="yes" type="surface" id="ZA05">
+      <equation> O(s) + C(gr) [=] (s) + CO </equation>
+      <rateCoeff>
+        <Arrhenius>
+       <!--
+           <A units="1/s"> 3.585173E16  </A>
+           <E units="kJ/gmol"> 224.4904 </E>
+        -->
+           <A units="1/s"> 3.585173E11  </A>
+           <b> 0.5 </b>
+           <E units="kJ/gmol"> 287.168 </E>
+        </Arrhenius>
+        <!--  ZA paper has three numbers for E: T_a5 = 40000 K = 337.8448 kJ/gmol
+                                                       34000 K = 287.1680 kJ/gmol
+                                                       27000 K = 224.4904 kJ/gmol
+              epsilon_5 = 0.1
+              Standard conc of surf is Lambda = kmol / m2. That's why the units are what they are.
+         -->
+      </rateCoeff>
+      <reactants> O(s):1.0 C(gr):1.0 </reactants>
+      <products> (s):1.0 CO:1.0 </products>
+    </reaction>
+
+
+    <!-- reaction 05  CO2 reactive desorption -->
+    <reaction reversible="yes" type="surface" id="ZA06">
+      <equation> O +  O(s) + C(gr) [=] (s) + CO2 </equation>
+      <rateCoeff>
+        <Arrhenius type="stick" species="O">
+           <A> 0.8 </A>
+           <b> 0.0 </b>
+           <E units="kJ/gmol"> 16.62892 </E>
+        </Arrhenius>
+        <!--  ZA paper has two numbers for E: T_a6 = 2000 K = 16.62892 kJ/gmol
+                                                     1000 K = 8.3144621 kJ/gmol 
+         -->
+      </rateCoeff>
+      <reactants> O:1.0 O(s):1.0 C(gr):1.0 </reactants>
+      <products> (s):1.0 CO2:1.0 </products>
+    </reaction>
+
+    <!-- reaction 06  CO2 thermal desorption (REGULAR FORMULATION) -->
+    <reaction reversible="yes" type="surface" id="ZA07">
+      <equation>  2 O(s) + C(gr) [=] CO2 + 2 (s) </equation>
+      <rateCoeff>
+        <Arrhenius>
+      <!--
+           <A units="m2/kmol/s"> 6.168692E24 </A>
+      -->
+           <A units="m2/kmol/s"> 6.168692E21 </A>
+           <b> 0.5 </b>
+           <E units="kJ/gmol"> 337.8448 </E>
+        </Arrhenius>
+        <!--  ZA paper has three numbers for E: T_a7 = 40000 K = 337.8448 kJ/gmol
+                                                       34000 K = 287.1680
+                                                       13700 K = 115.7118
+              Standard conc of surf is Lambda = kmol / m2. That's why the units are what they are.
+         -->
+      </rateCoeff>
+      <reactants> O(s):2.0 C(gr):1.0 </reactants>
+      <products> (s):2.0 CO2:1.0 </products>
+    </reaction>
+
+   <!-- ............................ Straight C sublimation System .......................................... -->
+
+    <!-- reaction 07  C thermal desorption -->
+    <reaction reversible="yes" type="surface" id="ZA08">
+      <equation>  C + (s) [=] (s) + C(gr) </equation>
+      <rateCoeff>
+        <Arrhenius type="stick" species="C">
+           <A> 0.24 </A>
+           <b> 0.0 </b>
+           <E units="J/mol">0.000000</E>
+        </Arrhenius>
+      </rateCoeff>
+      <reactants> (s):1.0 C:1.0 </reactants>
+      <products> (s):1.0 C(gr):1.0 </products>
+    </reaction>
+
+
+    <!-- reaction 08  C2 thermal desorption -->
+    <reaction reversible="yes" type="surface" id="ZA09">
+      <equation>  2 (s) + C2 [=] 2 (s) + 2 C(gr) </equation>
+      <rateCoeff>
+        <Arrhenius type="stick" species="C2">
+           <A> 0.5 </A>
+           <b> 0.0 </b>
+           <E units="J/mol">0.000000</E>
+        </Arrhenius>
+      </rateCoeff>
+      <reactants> (s):2.0 C2:1.0 </reactants>
+      <products> (s):2.0 C(gr):2.0 </products>
+    </reaction>
+
+
+    <!-- reaction 09  C3 thermal desorption -->
+    <reaction reversible="yes" type="surface" id="ZA10">
+      <equation>3 (s) + C3 [=] 3 (s) + 3 C(gr) </equation>
+      <rateCoeff>
+        <Arrhenius type="stick" species="C3">
+           <A> 0.023 </A>
+           <b> 0.0 </b>
+           <E units="J/mol">0.000000</E>
+        </Arrhenius>
+      </rateCoeff>
+      <reactants> (s):3.0 C3:1.0 </reactants>
+      <products> (s):3.0 C(gr):3.0 </products>
+    </reaction>
+
+   <!-- ............................ N System .......................................... -->
+
+    <!-- reaction 010  N adsorption -->
+    <reaction reversible="yes" type="surface" id="ZA11">
+      <equation> N + (s) [=]  N(s) </equation>
+      <rateCoeff>
+        <Arrhenius type="stick" species="N">
+           <A> 1.0 </A>
+           <b> 0.0 </b>
+           <E units="J/mol">0.000000</E>
+        </Arrhenius>
+      </rateCoeff>
+      <reactants>  N:1.0 (s):1.0 </reactants>
+      <products> N(s):1.0 </products>
+    </reaction>
+
+    <!-- reaction 011  N2 desorption   
+              HKM Note -> Looks like it would make more sense to model the N + N(s) reaction for which
+                          there are probably some gas phase analogs.
+      -->
+    <reaction reversible="yes" type="surface" id="ZA12">
+      <equation> N2 + (s) [=] N + N(s) </equation>
+      <rateCoeff>
+        <Arrhenius type="stick" species="N2">
+           <A> 1.0 </A>
+           <b> 0.0 </b>
+           <E units="kJ/gmol"> 641.0453 </E>
+         <!--    Large enough at 1000K to not happen    -->
+        </Arrhenius>
+        <!--  ZA paper has  T_a12 as
+           <E units="kJ/gmol"> 641.0453 </E>
+              T_a12 =  T_DN2 - Td11  (ZA eq.8)
+                  T_d11 = 36600 K = 304.3093 kJ/gmol
+                 Hf298(N) = 472.6773 kJ/gmol, I'm assuming that T_DN2 is twice the N heat of formation
+                Therefore T_a12 = 2(472.6773) - 304.3093  = 641.0453 kJ/gmol
+              epsilon_12 = 1.0
+         -->
+      </rateCoeff>
+      <reactants> N2:1.0  (s):1.0 </reactants>
+      <products>  N:1.0 N(s):1.0 </products>
+    </reaction>
+
+  </reactionData>
+</ctml>
+

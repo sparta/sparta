@@ -78,16 +78,16 @@ class FixEmitZSurf : public FixEmit {
    */
   struct Task {
     double area;                // area of overlap of surf with cell
-    double ntarget;             // # of mols to insert for all species
+    //double ntarget;             // # of mols to insert for all species
     double tan1[3],tan2[3];     // 2 normalized tangent vectors to surf normal
     double nrho;                // from mixture or adjacent subsonic cell
     double temp_thermal;        // from mixture or adjacent subsonic cell
     double temp_rot;            // from mixture or subsonic temp_thermal
     double temp_vib;            // from mixture or subsonic temp_thermal
     double vstream[3];          // from mixture or adjacent subsonic cell
-    double *ntargetsp;          // # of mols to insert for each species,
+    //double *ntargetsp;          // # of mols to insert for each species,
                                 //   only defined for PERSPECIES
-    double *vscale;             // vscale for each species,
+   // double *vscale;             // vscale for each species,
                                 //   only defined for subsonic_style PONLY
 
     double *path;               // path of points for overlap of surf with cell
@@ -100,9 +100,9 @@ class FixEmitZSurf : public FixEmit {
     int npoint;                 // # of points in path
   };
 
-  int isrZuzax;          // int representing the Zuzax reaction mechanism
+  int isrZuzax;          // int representing the Zuzax reaction mechanism 
+                         // assigned to this surface
 
-                         // ntask = # of tasks is stored by parent class, fix
   Task *tasks;           // List of particle insertion tasks
   int ntaskmax;          // max # of tasks allocated
 
@@ -114,10 +114,17 @@ class FixEmitZSurf : public FixEmit {
   int maxactive;
   int *activecell;
 
-  // private methods
+  //! Create a list of tasks to perform each time step
+  /*!
+   *  (virtual from FixEmit)
+   */
+  virtual int create_task(int) override;
 
-  int create_task(int);
-  void perform_task();
+  //! Perform the list of tasks to perform each time step
+  /*!
+   *  (virtual from FixEmit)
+   */
+  virtual void perform_task() override;
 
   //! Carry out final steps for Surface here
   /*!
@@ -127,9 +134,9 @@ class FixEmitZSurf : public FixEmit {
 
   virtual int setmask() override;  
 
-  int pack_task(int, char *, int);
-  int unpack_task(char *, int);
-  void copy_task(int, int, int, int);
+  virtual int pack_task(int, char *, int) override;
+  virtual int unpack_task(char *, int) override;
+  virtual void copy_task(int, int, int, int) override;
   void grow_task();
 
   int option(int, char **);

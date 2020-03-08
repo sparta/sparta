@@ -93,8 +93,6 @@ FixEmitZSurf::FixEmitZSurf(SPARTA *sparta, int narg, char **arg) :
 FixEmitZSurf::~FixEmitZSurf()
 {
   for (int i = 0; i < ntaskmax; i++) {
-    delete [] tasks[i].ntargetsp;
-    delete [] tasks[i].vscale;
     delete [] tasks[i].path;
     delete [] tasks[i].fracarea;
   }
@@ -159,12 +157,12 @@ void FixEmitZSurf::init()
   // if used, reallocate ntargetsp and vscale for each task
   // b/c nspecies count of mixture may have changed
   
-  if (perspecies) {
-    for (int i = 0; i < ntask; i++) {
-      delete [] tasks[i].ntargetsp;
-      tasks[i].ntargetsp = new double[nspecies];
-    }
-  }
+  //if (perspecies) {
+  //  for (int i = 0; i < ntask; i++) {
+      //delete [] tasks[i].ntargetsp;
+      //tasks[i].ntargetsp = new double[nspecies];
+  //  }
+  //}
   
   // invoke FixEmit::init() to populate task list
   // it calls create_task() for each grid cell
@@ -364,19 +362,19 @@ int FixEmitZSurf::create_task(int icell)
     // skip task if final ntarget = 0.0, due to large outbound vstream
     // do not skip for subsonic since it resets ntarget every step
     
-    tasks[ntask].ntarget = 0.0;
+    //tasks[ntask].ntarget = 0.0;
     for (isp = 0; isp < nspecies; isp++) {
       ntargetsp = mol_inflow(indot,vscale[isp],fraction[isp]);
       ntargetsp *= nrho*area*dt / fnum;
       ntargetsp /= cinfo[icell].weight;
-      tasks[ntask].ntarget += ntargetsp;
-      if (perspecies) tasks[ntask].ntargetsp[isp] = ntargetsp;
+      //tasks[ntask].ntarget += ntargetsp;
+      //if (perspecies) tasks[ntask].ntargetsp[isp] = ntargetsp;
     }
 
-    if (tasks[ntask].ntarget == 0.0) continue;
-    if (tasks[ntask].ntarget >= MAXSMALLINT) 
-      error->one(FLERR,
-                 "Fix emit/surf insertion count exceeds 32-bit int");
+    //if (tasks[ntask].ntarget == 0.0) continue;
+    //if (tasks[ntask].ntarget >= MAXSMALLINT) 
+    //  error->one(FLERR,
+    //             "Fix emit/surf insertion count exceeds 32-bit int");
     
     // initialize other task values with mixture properties
     // may be overwritten by subsonic methods
@@ -458,7 +456,7 @@ void FixEmitZSurf::perform_task()
     if (perspecies) {
       for (isp = 0; isp < nspecies; isp++) {
         ispecies = species[isp];
-        ntarget = tasks[i].ntargetsp[isp]+random->uniform();
+        //ntarget = tasks[i].ntargetsp[isp]+random->uniform();
         ninsert = static_cast<int> (ntarget);
         scosine = indot / vscale[isp];
         
@@ -541,7 +539,7 @@ void FixEmitZSurf::perform_task()
       
     } else {
       if (np == 0) {
-        ntarget = tasks[i].ntarget+random->uniform();
+        //ntarget = tasks[i].ntarget+random->uniform();
         ninsert = static_cast<int> (ntarget);
       } else {
         ninsert = npertask;
@@ -669,10 +667,10 @@ int FixEmitZSurf::pack_task(int itask, char *buf, int memflag)
   // pack task vectors
   // vscale is allocated, but not communicated, since updated every step
   
-  if (perspecies) {
-    if (memflag) memcpy(ptr,tasks[itask].ntargetsp,nspecies*sizeof(double));
-    ptr += nspecies*sizeof(double);
-  }
+  //if (perspecies) {
+    //if (memflag) memcpy(ptr,tasks[itask].ntargetsp,nspecies*sizeof(double));
+   // ptr += nspecies*sizeof(double);
+  //}
   
   int npoint = tasks[itask].npoint;
   if (memflag) memcpy(ptr,tasks[itask].path,npoint*3*sizeof(double));
@@ -692,8 +690,8 @@ int FixEmitZSurf::unpack_task(char *buf, int icell)
   char *ptr = buf;
   
   if (ntask == ntaskmax) grow_task();
-  double *ntargetsp = tasks[ntask].ntargetsp;
-  double *vscale = tasks[ntask].vscale;
+  //double *ntargetsp = tasks[ntask].ntargetsp;
+  //double *vscale = tasks[ntask].vscale;
   double *path = tasks[ntask].path;
   double *fracarea = tasks[ntask].fracarea;
   
@@ -704,10 +702,10 @@ int FixEmitZSurf::unpack_task(char *buf, int icell)
   // unpack task vectors
   // vscale is allocated, but not communicated, since updated every step
   
-  if (perspecies) {
-    memcpy(ntargetsp,ptr,nspecies*sizeof(double));
-    ptr += nspecies*sizeof(double);
-  }
+  //if (perspecies) {
+    //memcpy(ntargetsp,ptr,nspecies*sizeof(double));
+  //  ptr += nspecies*sizeof(double);
+  //}
   
   int npoint = tasks[ntask].npoint;
   delete [] path;
@@ -720,8 +718,8 @@ int FixEmitZSurf::unpack_task(char *buf, int icell)
   memcpy(fracarea,ptr,(npoint-2)*sizeof(double));
   ptr += (npoint-2)*sizeof(double);
   
-  tasks[ntask].ntargetsp = ntargetsp;
-  tasks[ntask].vscale = vscale;
+  //tasks[ntask].ntargetsp = ntargetsp;
+  //tasks[ntask].vscale = vscale;
   tasks[ntask].path = path;
   tasks[ntask].fracarea = fracarea;
   
@@ -768,15 +766,15 @@ void FixEmitZSurf::copy_task(int icell, int n, int first, int oldfirst)
   } else {
     int npoint;
     for (int i = 0; i < n; i++) {
-      double *ntargetsp = tasks[first].ntargetsp;
-      double *vscale = tasks[first].vscale;
+      // double *ntargetsp = tasks[first].ntargetsp;
+      //double *vscale = tasks[first].vscale;
       double *path = tasks[first].path;
       double *fracarea = tasks[first].fracarea;
       
       memcpy(&tasks[first],&tasks[oldfirst],sizeof(Task));
       
-      if (perspecies)
-        memcpy(ntargetsp,tasks[oldfirst].ntargetsp,nspecies*sizeof(double));
+     // if (perspecies)
+     //   memcpy(ntargetsp,tasks[oldfirst].ntargetsp,nspecies*sizeof(double));
       
       npoint = tasks[first].npoint;
       delete [] path;
@@ -787,8 +785,8 @@ void FixEmitZSurf::copy_task(int icell, int n, int first, int oldfirst)
       fracarea = new double[npoint-2];
       memcpy(fracarea,tasks[oldfirst].fracarea,(npoint-2)*sizeof(double));
       
-      tasks[first].ntargetsp = ntargetsp;
-      tasks[first].vscale = vscale;
+      //tasks[first].ntargetsp = ntargetsp;
+      //tasks[first].vscale = vscale;
       tasks[first].path = path;
       tasks[first].fracarea = fracarea;
       
@@ -820,16 +818,16 @@ void FixEmitZSurf::grow_task()
   // allocate vectors in each new task or set to NULL
   // path and fracarea are allocated later to specific sizes
   
-  if (perspecies) {
-    for (int i = oldmax; i < ntaskmax; i++)
-      tasks[i].ntargetsp = new double[nspecies];
-  } else {
-    for (int i = oldmax; i < ntaskmax; i++)
-      tasks[i].ntargetsp = NULL;
-  }
+  //if (perspecies) {
+  //   for (int i = oldmax; i < ntaskmax; i++)
+  //    tasks[i].ntargetsp = new double[nspecies];
+  //} else {
+  //  for (int i = oldmax; i < ntaskmax; i++)
+  //   tasks[i].ntargetsp = NULL;
+  // }
   
-  for (int i = oldmax; i < ntaskmax; i++)
-    tasks[i].vscale = NULL;
+  //for (int i = oldmax; i < ntaskmax; i++)
+  //  tasks[i].vscale = NULL;
   
   for (int i = oldmax; i < ntaskmax; i++) {
     tasks[i].path = NULL;

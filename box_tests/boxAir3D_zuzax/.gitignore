@@ -1,0 +1,15 @@
+dump_nrhod.*
+image.*
+log.sparta
+spa_serial
+spa_serial_debug
+grid.out
+.nfs*
+nrhod.0
+partCol_XLO.txt
+tmp
+tmp.boundary
+step_results*
+partCol_Surf.txt
+*breakpoints
+reactor_results.*

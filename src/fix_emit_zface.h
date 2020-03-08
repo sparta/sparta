@@ -134,10 +134,10 @@ class FixEmitZFace : public FixEmit {
   virtual void end_of_step() override;
 
 
-  virtual int pack_task(int, char *, int);
-  virtual int unpack_task(char *, int);
-  virtual void copy_task(int, int, int, int);
-  virtual void grow_task();
+  virtual int pack_task(int, char *, int) override;
+  virtual int unpack_task(char *, int) override;
+  virtual void copy_task(int, int, int, int) override;
+  void grow_task();
   virtual void realloc_nspecies();
 
   int option(int, char **);
