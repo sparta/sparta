@@ -77,7 +77,7 @@ class SurfState {
   //! State of the gas
   double* gasState {nullptr};
 
-
+#ifdef USE_ZSURF
   //! Probability map for all the gas phase species
   /*!
    *  This is a map from 0 to one containing the probabilities of what happens when a species collides with this surface
@@ -108,7 +108,7 @@ class SurfState {
    */
   std::vector< struct Zuzax::PartToSurf > m_surfInitPSTaskList;
 
-
+#endif
   
 
 };

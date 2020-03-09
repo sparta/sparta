@@ -77,6 +77,7 @@ void SurfState::setupNewTimeStep(int ntimestep, double dt, double fnum)
   // Restore the state within the net object to that of this surface
   setState(ntimestep, dt); 
 
+#ifdef USE_ZSURF
   // Zero various arrays and counters and update counters that need to be updated at the start of a time step
   net->initTimeStepArrays();
 
@@ -120,6 +121,8 @@ void SurfState::setupNewTimeStep(int ntimestep, double dt, double fnum)
   m_surfInitPSTaskList = net->m_surfInitPSTaskList;
 
   surfInitTaskList = net->m_surfInitTaskList;
+
+#endif
 
 }
 
@@ -174,7 +177,9 @@ void SurfState::write_step_results(int ntimestep, double dt)
 {
   setState(ntimestep, dt);
   double time = ntimestep * dt;
+#ifdef USE_ZSURF
   net->write_step_results(time, dt);
+#endif
 }
 
 

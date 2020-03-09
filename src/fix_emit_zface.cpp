@@ -148,6 +148,7 @@ void FixEmitZFace::init()
   fnum = update->fnum;
   dt = update->dt;
 
+#ifdef USE_ZSURF
   nspecies = particle->mixture[imix]->nspecies;
   fraction = particle->mixture[imix]->fraction;
   cummulative = particle->mixture[imix]->cummulative;
@@ -257,6 +258,11 @@ void FixEmitZFace::init()
     else if (tasks_with_no_extra >= nupto) nthresh = ntask;
     else nthresh = tasks_with_no_extra - (nupto-ntask);
   }
+
+#else
+  error->all(FLERR,"trying to use zface when zuzax not being used");
+
+#endif
 }
 
 /* ---------------------------------------------------------------------- */
@@ -510,6 +516,7 @@ void FixEmitZFace::perform_task_onepass()
   // Restore the net object to the state of this face
   ssFaceReact->setState(update->ntimestep, dt);
 
+#ifdef USE_ZSURF
 
   std::vector< struct Zuzax::PartToSurf > &surfInitPSTaskList = ssFaceReact->m_surfInitPSTaskList;
   
@@ -634,6 +641,10 @@ void FixEmitZFace::perform_task_onepass()
 
   // Save the state of the surface, we've changed it by calling doExplicitReaction
   ssFaceReact->saveState();
+
+#endif
+
+
 }
 
 /* ----------------------------------------------------------------------
@@ -823,6 +834,7 @@ int FixEmitZFace::setmask()
 void FixEmitZFace::end_of_step()
 {
   // printf("FixEmitZFace::end_of_step() we are here\n");
+#ifdef USE_ZSURF
    double deltaT = update->dt;
    double time = deltaT * update->ntimestep;
    int n = update->ntimestep;
@@ -832,6 +844,7 @@ void FixEmitZFace::end_of_step()
    net->finalizeTimeStepArrays(deltaT);
 
    net->write_step_results(time, deltaT); 
+#endif
 }
 
 /* ----------------------------------------------------------------------

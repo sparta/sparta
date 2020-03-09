@@ -61,7 +61,6 @@ class FixEmitZSurf : public FixEmit {
   Surf::Line *lines {nullptr};
   Surf::Tri *tris {nullptr};
 
-
   Zuzax::SurfPropagationSparta* net {nullptr};
 
   double* vscale {nullptr};    // vscale for each species, 
