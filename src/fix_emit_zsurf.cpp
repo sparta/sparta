@@ -240,7 +240,7 @@ void FixEmitZSurf::setup()
 
 /* ---------------------------------------------------------------------- */
 
-int FixEmitZSurf::create_task(int icell)
+void FixEmitZSurf::create_task(int icell)
 {
   int i,m,isurf,isp,npoint,isplit,subcell;
   double indot,area,areaone,ntargetsp;
@@ -258,7 +258,7 @@ int FixEmitZSurf::create_task(int icell)
   // no tasks if no surfs in cell
 
   if (cells[icell].nsurf == 0) {
-    return 0;
+    return;
   }
 
   // loop over surfs in cell
@@ -455,9 +455,8 @@ int FixEmitZSurf::create_task(int icell)
     ntask++;
   }
 
-  // return # of tasks for this cell
 
-  return ntask-ntaskorig;
+  return;
 }
 
 /* ----------------------------------------------------------------------

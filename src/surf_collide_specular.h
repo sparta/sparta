@@ -32,7 +32,7 @@ class SurfCollideSpecular : public SurfCollide {
   SurfCollideSpecular(class SPARTA *sparta) : SurfCollide(sparta) {}
   virtual ~SurfCollideSpecular() {}
   virtual Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int,
-                                     SurfState* surfState) override;
+                                     SurfState* surfState, int& reaction, int& dir) override;
 };
 
 }

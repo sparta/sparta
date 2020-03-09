@@ -294,10 +294,10 @@ void Domain::boundary_modify(int narg, char **arg)
 ------------------------------------------------------------------------- */
 
 int Domain::collide(Particle::OnePart *&ip, int face, int icell, double *xnew, 
-                    double &dtremain, Particle::OnePart *&jp, int &reaction)
+                    double &dtremain, Particle::OnePart *&jp, int &irxn, int& idir)
 {
   jp = NULL;
-  reaction = 0;
+  irxn = -2;
 
   switch (bflag[face]) {
 
@@ -374,7 +374,7 @@ int Domain::collide(Particle::OnePart *&ip, int face, int icell, double *xnew,
   case SURFACE: 
     {
       jp = surf->sc[surf_collide[face]]->
-        collide(ip,norm[face],dtremain,surf_react[face], boundSurfState[face]);
+        collide(ip,norm[face],dtremain,surf_react[face], boundSurfState[face], irxn, idir);
       
       if (ip) {
         double *x = ip->x;

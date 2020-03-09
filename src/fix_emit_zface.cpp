@@ -268,7 +268,7 @@ void FixEmitZFace::init()
 /* ---------------------------------------------------------------------- */
 // Here we determine if the cell borders the corresponding border face
 //  -> only a few cell/faces will  have this property
-int FixEmitZFace::create_task(int icell)
+void FixEmitZFace::create_task(int icell)
 {
   int i,j,n,iface,flag,isp,extflag;
   int *cflags;
@@ -457,9 +457,7 @@ int FixEmitZFace::create_task(int icell)
     ntask++;
   }
 
-  // return # of tasks for this cell
-
-  return ntask-ntaskorig;
+  return;
 }
 
 /* ----------------------------------------------------------------------

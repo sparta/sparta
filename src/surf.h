@@ -68,8 +68,8 @@ class Surf : protected Pointers {
     double p1[3],p2[3];     // end points of line segment
                             // rhand rule: Z x (p2-p1) = outward normal
     double norm[3];         // outward normal to line segment
-    //double lineLength;      // Length of the line will compute this on the file 
-    //double area;            // area of the triangle
+    int transparent {0};    // 1 if surf is transparent
+
     SurfState* surfaceState {nullptr};     // Pointer to a malloced structure that describes the surface
                             // state of the Tri
   };
@@ -84,9 +84,7 @@ class Surf : protected Pointers {
     double p1[3],p2[3],p3[3];  // corner points of triangle
                             // rhand rule: (p2-p1) x (p3-p1) = outward normal
     double norm[3];         // outward normal to triangle
-
-    //double area;            // Area of the triangle -> will compute this on the fly
-                              // using spart tri_size() routines, though might as well keep a copy of area!
+    int transparent {0};    // 1 if surf is transparent
     
     SurfState* surfaceState {nullptr};// Pointer to a malloced structure that describes the surface
                             // state of the Tri

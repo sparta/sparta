@@ -31,9 +31,9 @@ class SurfCollidePiston : public SurfCollide {
   SurfCollidePiston(class SPARTA *, int, char **);
   SurfCollidePiston(class SPARTA *sparta) : SurfCollide(sparta) {}
   virtual ~SurfCollidePiston() {}
-  void init();
+  virtual void init() override;
   virtual Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int, 
-                                     SurfState* surfaceState) override;
+                                     SurfState* surfaceState, int& reaction, int& dir) override;
 
  protected:
   double vwall;

@@ -114,7 +114,7 @@ class FixEmitZSurf : public FixEmit {
   /*!
    *  (virtual from FixEmit)
    */
-  virtual int create_task(int) override;
+  virtual void create_task(int) override;
 
   //! Perform the list of tasks to perform each time step
   /*!
@@ -130,9 +130,9 @@ class FixEmitZSurf : public FixEmit {
 
   virtual int setmask() override;  
 
-  virtual int pack_task(int, char *, int) override;
-  virtual int unpack_task(char *, int) override;
-  virtual void copy_task(int, int, int, int) override;
+  virtual int pack_task(int, char *, int);
+  virtual int unpack_task(char *, int);
+  virtual void copy_task(int, int, int, int);
   void grow_task();
 
   int option(int, char **);

@@ -51,9 +51,9 @@ class SurfCollideZuzax : public SurfCollide {
   SurfCollideZuzax(class SPARTA *, int, char **);
   SurfCollideZuzax(class SPARTA *sparta) : SurfCollide(sparta) {}
   virtual ~SurfCollideZuzax();
-  void init();
+  virtual void init() override;
   virtual Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int,
-                                     SurfState* surfaceState) override;
+                                     SurfState* surfaceState, int& reaction, int& dir) override;
 
   virtual void dynamic();
 

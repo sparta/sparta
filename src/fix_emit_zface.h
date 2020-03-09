@@ -111,13 +111,13 @@ class FixEmitZFace : public FixEmit {
   /*!
    *  @return              Returns the # of tasks for this cell created
    */
-  int create_task(int icell);
+  virtual void create_task(int icell) override;
 
   //! perform_task() gets called during the modify->start_of_step() process
   /*!
    *  This loops over the previously created tasks, which are cell/face specific.
    */
-  virtual void perform_task();
+  virtual void perform_task() override;
 
   void perform_task_onepass();
   virtual void perform_task_twopass();
@@ -134,9 +134,9 @@ class FixEmitZFace : public FixEmit {
   virtual void end_of_step() override;
 
 
-  virtual int pack_task(int, char *, int) override;
-  virtual int unpack_task(char *, int) override;
-  virtual void copy_task(int, int, int, int) override;
+  virtual int pack_task(int, char *, int);
+  virtual int unpack_task(char *, int);
+  virtual void copy_task(int, int, int, int);
   void grow_task();
   virtual void realloc_nspecies();
 

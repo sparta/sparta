@@ -1,1 +1,1 @@
-spa_serial_debug < in.efluxTest_3
+spa_serial < in.efluxTest_3 > out.efluxTest_3

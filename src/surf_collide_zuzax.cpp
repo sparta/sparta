@@ -308,7 +308,7 @@ void SurfCollideZuzax::setupNewTimeStep()
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideZuzax::
-collide(Particle::OnePart *&ip, double *norm, double &, int isr, SurfState* surfState)
+collide(Particle::OnePart *&ip, double *norm, double &, int isr, SurfState* surfState, int& irxn, int& idir)
 {
   int ntimestep = update->ntimestep;
   double dt = update->dt;
@@ -333,8 +333,8 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, SurfState* surf
   // We are given the surface state object. Install the state into net.
   surfState->setState(ntimestep, dt);
 
-  int irxn;   //(-1 specular, -2 diffusive)
-  int idir;
+  //int irxn;   //(-1 specular, -2 diffusive)
+  //int idir;
   bool doChanges = true;
 
   // Since the event occurred from a gas phase collision of a particle

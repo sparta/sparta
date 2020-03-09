@@ -143,7 +143,8 @@ void SurfCollideDiffuse::init()
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideDiffuse::
-collide(Particle::OnePart *&ip, double *norm, double &, int isr, SurfState* surfState)
+collide(Particle::OnePart *&ip, double *norm, double &, int isr, SurfState* surfState, 
+        int& reaction, int& idir)
 {
   nsingle++;
 

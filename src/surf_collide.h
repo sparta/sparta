@@ -53,9 +53,13 @@ class SurfCollide : protected Pointers {
    *  @param[in,out]  dtremain    Remaining time
    *  @param[in]      isr         Index of the surface collision model
    *  @param[in,out]  surfaceState   Pointer to the surface state
+   *  @param[out]     reaction    index of the reaction that took place (-1 or 2 for 
+   *                                no reaction specular or diffusive)
+   *  @param[out]     dir         direction of the reaction (1 = forward, -1 reverse)
    */
   virtual Particle::OnePart *collide(Particle::OnePart *& ipart, double * norm, 
-                                     double & dtremain, int isr, SurfState* surfaceState) = 0;
+                                     double & dtremain, int isr, SurfState* surfaceState, 
+                                     int& reaction, int& dir) = 0;
 
   virtual void dynamic() {}
 

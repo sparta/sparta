@@ -49,8 +49,9 @@ void Error::universe_all(const char *file, int line, const char *str)
     if (logfile) fclose(logfile);
   }
   if (universe->ulogfile) fclose(universe->ulogfile);
-
+#ifdef SPARTA_KOKKOS
   if (sparta->kokkos) Kokkos::finalize();
+#endif
   MPI_Finalize();
   exit(1);
 }
@@ -126,8 +127,9 @@ void Error::all(const char *file, int line, const char *str)
   if (output) delete output;
   if (screen && screen != stdout) fclose(screen);
   if (logfile) fclose(logfile);
-
+#ifdef SPARTA_KOKKOS
   if (sparta->kokkos) Kokkos::finalize();
+#endif
   MPI_Finalize();
   exit(1);
 }
@@ -190,8 +192,9 @@ void Error::done()
   if (output) delete output;
   if (screen && screen != stdout) fclose(screen);
   if (logfile) fclose(logfile);
-
+#ifdef SPARTA_KOKKOS
   if (sparta->kokkos) Kokkos::finalize();
+#endif
   MPI_Finalize();
   exit(1);
 }

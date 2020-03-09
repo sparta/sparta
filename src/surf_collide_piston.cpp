@@ -92,7 +92,7 @@ void SurfCollidePiston::init()
 
 Particle::OnePart *SurfCollidePiston::
 collide(Particle::OnePart *&ip, double *norm, double &dtremain, int isr,
-        SurfState* surfState)
+        SurfState* surfState, int& reaction, int& idir)
 {
   nsingle++;
 
@@ -102,6 +102,7 @@ collide(Particle::OnePart *&ip, double *norm, double &dtremain, int isr,
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
   reaction = 0;
+  idir = 1;
 
   if (isr >= 0) {
     if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
