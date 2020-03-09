@@ -507,7 +507,7 @@ void FixEmitZFace::perform_task_onepass()
 
   // Locate the  face and the created surf_state  object
 
-  // restore the net object to the state of this face
+  // Restore the net object to the state of this face
   ssFaceReact->setState(update->ntimestep, dt);
 
 
@@ -682,28 +682,6 @@ void FixEmitZFace::perform_task_twopass()
   for (int i = 0; i < nspecies; i++) {
     vscale[i] = sqrt(2.0 * update->boltz * temp_thermal / particle->species[i].mass);
   }
-
-
-/*
-  for (int i = 0; i < ntask; i++) {
-    if (perspecies) {
-      for (isp = 0; isp < nspecies; isp++) {
-        //ntarget = tasks[i].ntargetsp[isp]+random->uniform();
-        ninsert = static_cast<int> (ntarget);
-        ninsert_values[i][isp] = ninsert;
-      }
-    } else {
-      if (np == 0) {
-        ntarget = tasks[i].ntarget+random->uniform();
-        ninsert = static_cast<int> (ntarget);
-      } else {
-        ninsert = npertask;
-        if (i >= nthresh) ninsert++;
-      }
-      ninsert_values[i][0] = ninsert;
-    }
-  }
- */
 
   for (int i = 0; i < ntask; i++) {
     pcell = tasks[i].pcell;

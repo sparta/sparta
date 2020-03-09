@@ -58,38 +58,34 @@ class FixEmitZSurf : public FixEmit {
   double nrho,temp_thermal,temp_rot,temp_vib;
   double *fraction,*cummulative;
 
-  Surf::Line *lines;
-  Surf::Tri *tris;
+  Surf::Line *lines {nullptr};
+  Surf::Tri *tris {nullptr};
 
 
   Zuzax::SurfPropagationSparta* net {nullptr};
 
-  double* vscale;              // vscale for each species, 
+  double* vscale {nullptr};    // vscale for each species, 
                                // evaluated at surface temperature
                                // which is obtained from surface state.
 
-  class Cut2d *cut2d;
-  class Cut3d *cut3d;
+  class Cut2d *cut2d {nullptr};
+  class Cut3d *cut3d {nullptr};
 
   //! The Task structure holds one insertion task for a single cell and a surf
   //! combination
   /*!
-   *
+   *  The particle insertion task will consist of inserting all particles needed
+   *  for implementation of reactions initiated by the surface by its itself,
+   *  e.g. adsorbate dissociation, sublimation events.
    */
   struct Task {
     double area;                // area of overlap of surf with cell
-    //double ntarget;             // # of mols to insert for all species
     double tan1[3],tan2[3];     // 2 normalized tangent vectors to surf normal
     double nrho;                // from mixture or adjacent subsonic cell
     double temp_thermal;        // from mixture or adjacent subsonic cell
     double temp_rot;            // from mixture or subsonic temp_thermal
     double temp_vib;            // from mixture or subsonic temp_thermal
     double vstream[3];          // from mixture or adjacent subsonic cell
-    //double *ntargetsp;          // # of mols to insert for each species,
-                                //   only defined for PERSPECIES
-   // double *vscale;             // vscale for each species,
-                                //   only defined for subsonic_style PONLY
-
     double *path;               // path of points for overlap of surf with cell
     double *fracarea;           // fractional area for each sub tri in path
 
@@ -103,7 +99,8 @@ class FixEmitZSurf : public FixEmit {
   int isrZuzax;          // int representing the Zuzax reaction mechanism 
                          // assigned to this surface
 
-  Task *tasks;           // List of particle insertion tasks
+  Task *tasks;           // List of particle insertion tasks.
+                         
   int ntaskmax;          // max # of tasks allocated
 
   double magvstream;       // magnitude of mixture vstream
