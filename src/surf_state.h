@@ -48,17 +48,25 @@ class SurfState {
   //! Write the state from the net object to the SurfState object
   /*!
    *  We need to store the state of the surface after every operation, because
-   *  the implementation object is reused.
+   *  the implementation object is reused. So we transfer the state of the surface
+   *  from the net object to the SurfState object
    */
   virtual void saveState();
 
   //! Read in the state of the surface into the net object
   /*!
+   *  Transfer the state information from the SurfState object into the net object
    *
+   *  @param[in]             ntimestep           time step number
+   *  @param[in]             dt                  Delta time step
    */
   virtual void setState(int ntimestep, double dt) const;
 
   //! Special purpose writing routine
+  /*!
+   *  @param[in]             ntimestep           time step number
+   *  @param[in]             dt                  Delta time step
+   */
   void write_step_results(int ntimestep, double dt);
 
   // ----------------------------------------------- DATA -----------------------------------------

@@ -142,6 +142,11 @@ FixEmitZFace::~FixEmitZFace()
 
 void FixEmitZFace::init()
 {
+
+  // invoke FixEmit::init() to set flags
+
+  FixEmit::init();
+
   // copies of class data before invoking parent init() and count_task()
 
   dimension = domain->dimension;
@@ -227,15 +232,16 @@ void FixEmitZFace::init()
   }
 
 
-  realloc_nspecies();
-
   areaLocal = 0.0;
 
-  // invoke FixEmit::init() to popuate task list
-  // it calls create_task() for each grid cell
+  // if used, reallocate ntargetsp and vscale for each task
+  // b/c nspecies count of mixture may have changed
 
-  ntask = 0;
-  FixEmit::init();
+  realloc_nspecies();
+
+  // create tasks for all grid cells
+
+  create_tasks();
 
   printf(" total area of task list areas = %g\n", areaLocal);
 
@@ -438,7 +444,6 @@ void FixEmitZFace::create_task(int icell)
     // skip task if final ntarget = 0.0, due to large outbound vstream
     // do not skip for subsonic since it resets ntarget every step
     // -> HKM create_task() doesn't get called except on the setup!!!
-
 
 
     // initialize other task values with mixture properties

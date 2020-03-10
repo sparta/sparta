@@ -157,7 +157,7 @@ species		    air.species N2 O2 CO CO2 C C2 C3 N O
 #     
 zuzax_gas_species   gasAblate.xml 
 #
-#  Set the mixture to be 90% N2 10% O2
+#  Set the mixture to be 79% N2 21% O2
 #  Note without the frac keyword, the N and O mole fractions are 0.5 respectively
 #
 mixture             mix N2 frac 0.79

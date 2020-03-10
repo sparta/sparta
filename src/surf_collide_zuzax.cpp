@@ -166,21 +166,21 @@ void SurfCollideZuzax::initNetwork()
   /*
    *  Geometry of simulation (meters)
    */
-  // This should be obtained from the geometry of the surface
-  // TODO - connect
+
+  // Define a default area -> The Area will be overwritten on each particular surface 
+  //    when the surface state is read in.
   double areaOfSurface = 1.0E-4;
+
   // The film depth will be needed eventually but is not significant now. We don't change the depth of the surface
   double filmDepth = 0.001;
 
   // Each bulk phase has a volume fraction associated with it. Here, we just assign the volume fraction
   // of the first phase to 1 and the rest to zero.
-  double volumeFraction[10];
+  std::vector<double> volumeFraction(pl->nVolPhases());
   volumeFraction[0] = 1.0;
-  volumeFraction[1] = 0.0;
-  volumeFraction[2] = 0.0;
-  volumeFraction[3] = 0.0;
-
-
+  for (size_t i = 1; i < pl->nVolPhases(); ++i) {
+     volumeFraction[i] = 0.0;
+  }
   
   size_t nVolPhases = pl->nVolPhases();
   for (size_t i = 1; i < nVolPhases; ++i) {
@@ -209,7 +209,8 @@ void SurfCollideZuzax::initNetwork()
   // -> this will be a RBdry element which connects two reactors with an interfacial element
   Zuzax::RBdry* abFace_rrr = new Zuzax::RBdry("AirGraphite_rrr");
 
-  // Define the area
+  // Define the default area -> The Area will be overwritten on each particular surface 
+  //    when the surface state is read in.
   abFace_rrr->setArea(areaOfSurface);
 
   // Turn on extended ROP analysis
@@ -234,6 +235,7 @@ void SurfCollideZuzax::initNetwork()
 
   double scl = 1;
   baseNet->setTMScaleFactor(scl);
+  baseNet->setFnum(update->fnum);
 
   // The gas phase is added in as a reservoir
   baseNet->addReservoir(*gasR, true);

@@ -102,7 +102,7 @@ void SurfState::setupNewTimeStep(int ntimestep, double dt, double fnum)
       */
   net->createProbabilityTable();
 
-  // Save probabilty map
+  // Save the probabilty map to the SurfState object
   m_probMapGasSpecies = net->m_probMapGasSpecies;
 
 
@@ -148,7 +148,7 @@ void SurfState::saveState()
 
 }
 /* ---------------------------------------------------------------------- */
-// Read the state into the net object
+// Read the state into the net object from the SurfState object
 void SurfState::setState(int ntimestep, double dt) const
 {
 #ifdef USE_ZSURF
