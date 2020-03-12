@@ -1,10 +1,13 @@
+########## BEGIN TARGET_SPARTA ##########
+
 ########## BEGIN RECURSE COMMANDS ##########
 # Required dependencies
-## add_subdirectory(STUBS)
+# TODO: cmake,ccc,
+add_subdirectory(STUBS)
 
 # Optional Dependencies
-## add_subdirectory(FFT)
-## add_subdirectory(KOKKOS)
+## ADD_SUBDIRECTORY(FFT)
+## ADD_SUBDIRECTORY(KOKKOS)
 ########## END   RECURSE COMMANDS ##########
 
 ########## START SETUP COMMANDS ##########
@@ -17,11 +20,16 @@ file(GLOB SPA_SRC_FILES
 
 # List out include directories
 set(SPA_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
-set(sparta_target spa_${__CMAKE_SPARTA_CONFIG})
 ########## END   SETUP COMMANDS ##########
 
 ########## START GENERATION COMMANDS ##########
-add_executable(${sparta_target} ${SPA_SRC_FILES})
-#add_executable(SPA ALIAS spa_${__CMAKE_SPARTA_CONFIG})
-target_include_directories(${sparta_target} PRIVATE ${SPA_INCLUDE_DIRS})
+add_executable(${TARGET_SPARTA} ${SPA_SRC_FILES})
+
+target_include_directories(${TARGET_SPARTA} PRIVATE ${SPA_INCLUDE_DIRS})
+
+target_link_libraries(${TARGET_SPARTA} LINK_PRIVATE ${TARGET_SPARTA_MPI_STUBS})
+
+add_custom_command(TARGET ${TARGET_SPARTA} POST_BUILD COMMAND size ${TARGET_SPARTA})
 ########## END   GENERATION COMMANDS ##########
+
+########## END   TARGET_SPARTA ##########
