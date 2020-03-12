@@ -3,7 +3,9 @@
 ########## BEGIN RECURSE COMMANDS ##########
 # Required dependencies
 # TODO: cmake,ccc,
+message(VERBOSE "${CMAKE_CURRENT_SOURCE_DIR}: CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
 add_subdirectory(STUBS)
+message(VERBOSE "${CMAKE_CURRENT_SOURCE_DIR}: CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
 
 # Optional Dependencies
 ## ADD_SUBDIRECTORY(FFT)
@@ -19,7 +21,8 @@ file(GLOB SPA_SRC_FILES
     )
 
 # List out include directories
-set(SPA_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
+set(SPA_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+message(VERBOSE "SPA_INCLUDE_DIRS=${SPA_INCLUDE_DIRS}")
 ########## END   SETUP COMMANDS ##########
 
 ########## START GENERATION COMMANDS ##########
@@ -28,6 +31,12 @@ add_executable(${TARGET_SPARTA} ${SPA_SRC_FILES})
 target_include_directories(${TARGET_SPARTA} PRIVATE ${SPA_INCLUDE_DIRS})
 
 target_link_libraries(${TARGET_SPARTA} LINK_PRIVATE ${TARGET_SPARTA_MPI_STUBS})
+
+set_target_properties(${TARGET_SPARTA} PROPERTIES COMPILE_FLAGS ${SPARTA_CXX_COMPILE_FLAGS})
+
+add_custom_target(${TARGET_SPARTA}_PRE_BUILD COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/Make.sh style)
+
+add_dependencies(${TARGET_SPARTA} ${TARGET_SPARTA}_PRE_BUILD)
 
 add_custom_command(TARGET ${TARGET_SPARTA} POST_BUILD COMMAND size ${TARGET_SPARTA})
 ########## END   GENERATION COMMANDS ##########
