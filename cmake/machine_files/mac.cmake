@@ -7,7 +7,13 @@
 # md5 of executable doesn't match. Not clear if this is due to .a and exe file
 # name differences between the old build and this cmake build. Need to verify.
 
-set(SPARTA_CXX_COMPILE_FLAGS "-fPIC -DSPARTA_GZIP -DSPARTA_UNORDERED_MAP" CACHE STRING "")
+#get_property(SPARTA_CXX_COMPILE_FLAGS_DOCSTRING CACHE SPARTA_CXX_COMPILE_FLAGS PROPERTY DOCSTRING)
+set(SPARTA_CXX_COMPILE_FLAGS 
+    "-fPIC -DSPARTA_UNORDERED_MAP" 
+    CACHE 
+    STRING 
+    "Compiler flags use when building .o files for spa_*"
+    )
 
 set(CMAKE_C_COMPILER "cc" CACHE STRING "")
 set(CMAKE_CXX_COMPILER "c++" CACHE STRING "")

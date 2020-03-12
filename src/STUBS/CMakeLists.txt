@@ -9,7 +9,7 @@ if(SPARTA_ENABLE_MPI_STUBS)
     set(CMAKE_AR "ar")
     
     message(VERBOSE "${CMAKE_CURRENT_SOURCE_DIR}: CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
-    
+
     set_source_files_properties(mpi.c PROPERTIES LANGUAGE CXX)
     add_library(${TARGET_SPARTA_MPI_STUBS} STATIC mpi.c)
     set_target_properties(${TARGET_SPARTA_MPI_STUBS} PROPERTIES LINKER_LANGUAGE CXX)

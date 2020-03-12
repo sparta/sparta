@@ -2,16 +2,19 @@
 cmake_minimum_required(VERSION 3.13.0)
 project(SPARTA)
 
-########## BEGIN SET CMAKE DEFAULTS ##########
-
-########## END   SET CMAKE DEFAULTS ##########
-
+########## BEGIN SET COMMON DIRS ##########
 set(SPARTA_CMAKE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(SPARTA_CMAKE_COMMON_DIR ${SPARTA_CMAKE_DIR}/common)
+########## END   SET COMMON DIRS ##########
 
-# Load in sparta's ENABLE/DISABLE options
+########## BEGIN SET CMAKE DEFAULTS ##########
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/common/sparta_cmake_defaults.cmake)
+########## END   SET CMAKE DEFAULTS ##########
+
+########## BEGIN SET SPARTA OPTIONS ##########
 include(${SPARTA_CMAKE_COMMON_DIR}/sparta_options.cmake)
-#include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/common/sparta_compiler_flags.cmake)
+########## END   SET SPARTA OPTIONS ##########
+
 #include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/machine_files/default.cmake)
 # TODO: process SpArTA variables?
 
