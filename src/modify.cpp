@@ -53,6 +53,11 @@ Modify::Modify(SPARTA *sparta) : Pointers(sparta)
 
   ncompute = maxcompute = 0;
   compute = NULL;
+
+  // n_pergrid needs to be initialized here because ReadSurf calls
+  //  Modify::reset_grid_count without calling Modify::init
+
+  n_pergrid = 0;
 }
 
 /* ---------------------------------------------------------------------- */

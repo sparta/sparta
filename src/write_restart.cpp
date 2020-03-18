@@ -175,7 +175,7 @@ void WriteRestart::multiproc_options(int multiproc_caller,
 void WriteRestart::write(char *file)
 {
   if (update->mem_limit_grid_flag)
-    update->global_mem_limit = grid->nlocal*sizeof(Grid::ChildCell);
+    update->set_mem_limit_grid();
   if (update->global_mem_limit > 0 || 
       (update->mem_limit_grid_flag && !grid->nlocal))
     return write_less_memory(file);

@@ -23,6 +23,7 @@ namespace SPARTA_NS {
 class React : protected Pointers {
  public:
   char *style;
+  int nlist;                 // # of reactions read from file
 
   int recombflag;            // 1 if any recombination reactions defined
   int recombflag_user;       // 0 if user has turned off recomb reactions
@@ -43,6 +44,8 @@ class React : protected Pointers {
   virtual void ambi_check() = 0;
   virtual int attempt(Particle::OnePart *, Particle::OnePart *, 
                       double, double, double, double &, int &) = 0;
+  virtual char *reactionID(int) = 0;
+  virtual double extract_tally(int) = 0;
 
   void modify_params(int, char **);
   RanPark* get_random() { return random; }

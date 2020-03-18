@@ -42,9 +42,10 @@ elements in group-ID will be computed by the surface collision model
 with {sc-ID}.
 
 The {react} keyword is used to assign a surface reaction model.
-Surface reaction models are defined by the"surf_react"_surf_react.html
-command, which assigns each a surface reaction ID, specified here as
-{sr-ID} or the word "none".  The latter means no reaction model.
+Surface reaction models are defined by the
+"surf_react"_surf_react.html command, which assigns each a surface
+reaction ID, specified here as {sr-ID} or the word "none".  The latter
+means no reaction model.
 
 The effect of this keyword is that particle collisions with surface
 elements in group-ID will induce reactions which are computed by the
@@ -61,6 +62,8 @@ to a particular surface element.
 All surface elements must be assigned to a surface collision model via
 the {collide} keyword before a simlulation can be performed.  Using a
 surface reaction model is optional.
+
+This command cannot be used before surfaces exist.
 
 [Related commands:]
 

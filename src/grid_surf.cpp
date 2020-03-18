@@ -88,7 +88,7 @@ void Grid::surf2grid(int subflag, int outflag)
 
 void Grid::surf2grid_cell_algorithm(int outflag)
 {
-  int nsurf;
+  int i,nsurf,nontrans;
   double t1,t2;
   surfint *ptr;
   double *lo,*hi;
@@ -111,6 +111,9 @@ void Grid::surf2grid_cell_algorithm(int outflag)
   // compute overlap of surfs with each cell I own
   // info stored in nsurf,csurfs
   // skip if nsplit <= 0 b/c split cells could exist if restarting
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
 
   int max = 0;
   
@@ -137,7 +140,25 @@ void Grid::surf2grid_cell_algorithm(int outflag)
       csurfs->vgot(nsurf);
       cells[icell].nsurf = nsurf;
       cells[icell].csurfs = ptr;
-      cinfo[icell].type = OVERLAP;
+
+      // only mark cell as OVERLAP if has a non-transparent surf element
+
+      nontrans = 0;
+
+      if (dim == 2) {
+ 
+        for (i = 0; i < nsurf; i++) {
+          if (!lines[ptr[i]].transparent) nontrans = 1;
+          break;
+        }
+      } else {
+        for (i = 0; i < nsurf; i++) {
+          if (!tris[ptr[i]].transparent) nontrans = 1;
+          break;
+        }
+      }
+
+      if (nontrans) cinfo[icell].type = OVERLAP;
     }
   }
 
@@ -173,8 +194,9 @@ void Grid::surf2grid_cell_algorithm(int outflag)
 
 void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
 {
-  int i,j,m,icell,isurf;
+  int i,j,m,n,icell,isurf,nontrans;
   double t1,t2,t3,t4;
+  surfint *list;
 
   int dim = domain->dimension;
   int distributed = surf->distributed;
@@ -382,9 +404,31 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
       cells[icell].csurfs[cells[icell].nsurf++] = outbuf[m].surfID;
     }
 
+    Surf::Line *lines = surf->lines;
+    Surf::Tri *tris = surf->tris;
+
     for (icell = 0; icell < nlocal; icell++)
       if (cells[icell].nsurf) {
-        cinfo[icell].type = OVERLAP;
+
+        // only mark cell as OVERLAP if has a non-transparent surf element
+
+        list = cells[icell].csurfs;
+        n = cells[icell].nsurf;
+        nontrans = 0;
+
+        if (dim == 2) {
+          for (i = 0; i < n; i++) {
+            if (!lines[list[i]].transparent) nontrans = 1;
+            break;
+          }
+        } else {
+          for (i = 0; i < n; i++) {
+            if (!tris[list[i]].transparent) nontrans = 1;
+            break;
+          }
+        }
+
+        if (nontrans) cinfo[icell].type = OVERLAP;
         qsort(cells[icell].csurfs,cells[icell].nsurf,
               sizeof(surfint),compare_surfIDs);
       }
@@ -475,14 +519,15 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
 
     // reset Surf hash to point to surf list in lines/tris
 
+    Surf::Line *lines = surf->lines;
+    Surf::Tri *tris = surf->tris;
+
     if (dim == 2) {
-      Surf::Line *lines = surf->lines;
       for (i = 0; i < nreturn2; i++) {
         surfID = lines[i].id;
         shash[surfID] = i;
       }
     } else {
-      Surf::Tri *tris = surf->tris;
       for (i = 0; i < nreturn2; i++) {
         surfID = tris[i].id;
         shash[surfID] = i;
@@ -501,7 +546,26 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
 
     for (icell = 0; icell < nlocal; icell++)
       if (cells[icell].nsurf) {
-        cinfo[icell].type = OVERLAP;
+
+        // only mark cell as OVERLAP if has a non-transparent surf element
+
+        list = cells[icell].csurfs;
+        n = cells[icell].nsurf;
+        nontrans = 0;
+
+        if (dim == 2) {
+          for (i = 0; i < n; i++) {
+            if (!lines[list[i]].transparent) nontrans = 1;
+            break;
+          }
+        } else {
+          for (i = 0; i < n; i++) {
+            if (!tris[list[i]].transparent) nontrans = 1;
+            break;
+          }
+        }
+
+        if (nontrans) cinfo[icell].type = OVERLAP;
         qsort(cells[icell].csurfs,cells[icell].nsurf,
               sizeof(surfint),compare_surfIDs);
       }

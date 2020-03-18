@@ -345,7 +345,31 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
 
       jp = NULL;
       p3 = react->recomb_part3;
+
+      // Properly account for 3rd body energy
+      double *vp3 = p3->v;
+      double du  = vi[0] - vp3[0];
+      double dv  = vi[1] - vp3[1];
+      double dw  = vi[2] - vp3[2];
+      double vr2 = du*du + dv*dv + dw*dw;
+      // setup_collision will need the relative velocity between recombined species and 3rd body
+      precoln.vr2 = vr2;
+
+      double partial_energy =  postcoln.etotal + p3->erot + p3->evib;
+      // internal energy of ip particle is already included in the
+      // postcoln.etotal value returned from react->attempt(...)
+      // but we still need to add the 3rd body internal energy before we clean up that data
+      ip->erot = 0;
+      ip->evib = 0;
+      p3->erot = 0;
+      p3->evib = 0;
+	    
+      // returned postcoln.etotal will increment only the relative translational
+      // energy between recombined species and 3rd body
       setup_collision(ip,p3);
+      //this is the actual total energy
+      postcoln.etotal += partial_energy;
+
       if (precoln.ave_dof > 0.0) EEXCHANGE_ReactingEDisposal(ip,p3,jp);
       SCATTER_TwoBodyScattering(ip,p3);
 
@@ -820,12 +844,12 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
   // new velocities for the products
 
   double divisor = 1.0 / (mass_ij + mass_k);
-  vi[0] = precoln.ucmf + (mass_ij*divisor)*ua;
-  vi[1] = precoln.vcmf + (mass_ij*divisor)*vb;
-  vi[2] = precoln.wcmf + (mass_ij*divisor)*wc;
-  vk[0] = precoln.ucmf - (mass_k*divisor)*ua;
-  vk[1] = precoln.vcmf - (mass_k*divisor)*vb;
-  vk[2] = precoln.wcmf - (mass_k*divisor)*wc;
+  vi[0] = precoln.ucmf + (mass_k*divisor)*ua;
+  vi[1] = precoln.vcmf + (mass_k*divisor)*vb;
+  vi[2] = precoln.wcmf + (mass_k*divisor)*wc;
+  vk[0] = precoln.ucmf - (mass_ij*divisor)*ua;
+  vk[1] = precoln.vcmf - (mass_ij*divisor)*vb;
+  vk[2] = precoln.wcmf - (mass_ij*divisor)*wc;
   vj[0] = vi[0];
   vj[1] = vi[1];
   vj[2] = vi[2];

@@ -205,7 +205,7 @@ void ComputeISurfGrid::clear()
 
 /* ----------------------------------------------------------------------
    tally values for a single particle in icell 
-     colliding with surface element isurf
+     colliding with surface element isurf, performing reaction (1 to N)
    iorig = particle ip before collision
    ip,jp = particles after collision
    ip = NULL means no particles after collision
@@ -215,7 +215,7 @@ void ComputeISurfGrid::clear()
      except sum tally to to per-grid-cell array_grid
 ------------------------------------------------------------------------- */
 
-void ComputeISurfGrid::surf_tally(int isurf, int icell, 
+void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction, 
                                    Particle::OnePart *iorig, 
                                    Particle::OnePart *ip, Particle::OnePart *jp)
 {

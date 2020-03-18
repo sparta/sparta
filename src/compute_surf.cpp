@@ -92,6 +92,8 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
   combined = 0;
 
   hash = new MyHash;
+
+  dim = domain->dimension;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -103,6 +105,7 @@ ComputeSurf::~ComputeSurf()
   delete [] which;
   memory->destroy(array_surf_tally);
   memory->destroy(tally2surf);
+  memory->destroy(array_surf);
   memory->destroy(normflux);
   delete hash;
 }
@@ -118,10 +121,6 @@ void ComputeSurf::init()
 
   if (ngroup != particle->mixture[imix]->ngroup)
     error->all(FLERR,"Number of groups in compute surf mixture has changed");
-
-  // local copies
-
-  dim = domain->dimension;
 
   // set normflux for all owned + ghost surfs
 
@@ -205,7 +204,7 @@ void ComputeSurf::clear()
 
 /* ----------------------------------------------------------------------
    tally values for a single particle in icell
-     colliding with surface element isurf
+     colliding with surface element isurf, performing reaction (1 to N)
    iorig = particle ip before collision
    ip,jp = particles after collision
    ip = NULL means no particles after collision
@@ -213,7 +212,8 @@ void ComputeSurf::clear()
    jp != NULL means two particles after collision
 ------------------------------------------------------------------------- */
 
-void ComputeSurf::surf_tally(int isurf, int icell, Particle::OnePart *iorig, 
+void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
+                             Particle::OnePart *iorig, 
                              Particle::OnePart *ip, Particle::OnePart *jp)
 {
   // skip if isurf not in surface group
@@ -234,12 +234,17 @@ void ComputeSurf::surf_tally(int isurf, int icell, Particle::OnePart *iorig,
   // if 1st particle hitting isurf, add surf ID to hash
   // grow tally list if needed
 
-  int itally;
+  int itally,transparent;
   double *vec;
 
   surfint surfID;
-  if (dim == 2) surfID = lines[isurf].id;
-  else surfID = tris[isurf].id;
+  if (dim == 2) {
+    surfID = lines[isurf].id;
+    transparent = lines[isurf].transparent;
+  } else {
+    surfID = tris[isurf].id;
+    transparent = tris[isurf].transparent;
+  }
 
   if (hash->find(surfID) != hash->end()) itally = (*hash)[surfID];
   else {
@@ -259,6 +264,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, Particle::OnePart *iorig,
   // particle weight used for all keywords except NUM
   // forcescale factor applied for keywords FX,FY,FZ
   // fluxscale factor applied for all keywords except NUM,FX,FY,FZ
+  // if surf is transparent, all flux tallying is for incident particle only
 
   double vsqpre,ivsqpost,jvsqpost;
   double ierot,jerot,ievib,jevib,iother,jother,otherpre,etot;
@@ -293,8 +299,10 @@ void ComputeSurf::surf_tally(int isurf, int icell, Particle::OnePart *iorig,
       break;
     case MFLUX:
       vec[k++] += origmass;
-      if (ip) vec[k++] -= imass;
-      if (jp) vec[k++] -= jmass;
+      if (!transparent) {
+        if (ip) vec[k++] -= imass;
+        if (jp) vec[k++] -= jmass;
+      }
       break;
     case FX:
       if (!fflag) {
@@ -398,21 +406,30 @@ void ComputeSurf::surf_tally(int isurf, int icell, Particle::OnePart *iorig,
       else ivsqpost = 0.0;
       if (jp) jvsqpost = jmass * MathExtra::lensq3(jp->v);
       else jvsqpost = 0.0;
-      vec[k++] -= 0.5*mvv2e * (ivsqpost + jvsqpost - vsqpre) * fluxscale;
+      if (transparent)
+        vec[k++] += 0.5*mvv2e * vsqpre * fluxscale;
+      else
+        vec[k++] -= 0.5*mvv2e * (ivsqpost + jvsqpost - vsqpre) * fluxscale;
       break;
     case EROT:
       if (ip) ierot = ip->erot;
       else ierot = 0.0;
       if (jp) jerot = jp->erot;
       else jerot = 0.0;
-      vec[k++] -= weight * (ierot + jerot - iorig->erot) * fluxscale;
+      if (transparent)
+        vec[k++] += weight * iorig->erot * fluxscale;
+      else
+        vec[k++] -= weight * (ierot + jerot - iorig->erot) * fluxscale;
       break;
     case EVIB:
       if (ip) ievib = ip->evib;
       else ievib = 0.0;
       if (jp) jevib = jp->evib;
       else jevib = 0.0;
-      vec[k++] -= weight * (ievib + jevib - iorig->evib) * fluxscale;
+      if (transparent)
+        vec[k++] += weight * iorig->evib * fluxscale;
+      else
+        vec[k++] -= weight * (ievib + jevib - iorig->evib) * fluxscale;
       break;
     case ETOT:
       vsqpre = origmass * MathExtra::lensq3(vorig);
@@ -425,8 +442,11 @@ void ComputeSurf::surf_tally(int isurf, int icell, Particle::OnePart *iorig,
 	jvsqpost = jmass * MathExtra::lensq3(jp->v);
 	jother = jp->erot + jp->evib;
       } else jvsqpost = jother = 0.0;
-      etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
-        weight * (iother + jother - otherpre);
+      if (transparent)
+        etot = -0.5*mvv2e*vsqpre - weight*otherpre;
+      else
+        etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
+          weight * (iother + jother - otherpre);
       vec[k++] -= etot * fluxscale;
       break;
     }

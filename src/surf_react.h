@@ -27,19 +27,32 @@ class SurfReact : protected Pointers {
 
   int vector_flag;          // 0/1 if compute_vector() function exists
   int size_vector;          // length of global vector
+  int nlist;                // # of reactions defined or read from file
 
   SurfReact(class SPARTA *, int, char **);
   virtual ~SurfReact();
   virtual void init();
   virtual int react(Particle::OnePart *&, double *, Particle::OnePart *&) = 0;
 
+  virtual char *reactionID(int);
+  virtual int match_reactant(char *, int);
+  virtual int match_product(char *, int);
+
   void tally_update();
   double compute_vector(int i);
 
  protected:
   FILE *fp;
+
+  // tallies for reactions
+
   int nsingle,ntotal;
   double one[2],all[2];
+  int *tally_single,*tally_total;
+  int *tally_single_all,*tally_total_all;
+  int tally_two_flag,tally_single_flag,tally_total_flag;
+
+  // reaction info, as read from file
 
   struct OneReaction {
     int active;                    // 1 if reaction is active
@@ -50,10 +63,10 @@ class SurfReact : protected Pointers {
     char **id_reactants,**id_products;  // species IDs of reactants/products
     int *reactants,*products;      // species indices of reactants/products
     double *coeff;                 // numerical coeffs for reaction
+    char *id;                      // reaction ID (formula)
   };
 
   OneReaction *rlist;              // list of all reactions read from file
-  int nlist;                       // # of reactions read from file
   int maxlist;                     // max # of reactions in rlist
 
   // possible reactions a reactant species is part of

@@ -53,7 +53,7 @@ class Domain : protected Pointers {
   int periodic(int *);
   void boundary_modify(int, char **);
   virtual int collide(Particle::OnePart *&, int, int, double *, double &, 
-              Particle::OnePart *&);
+                      Particle::OnePart *&, int &);
   virtual void uncollide(int, double *);
   void add_region(int, char **);
   void delete_region(int, char **);

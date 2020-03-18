@@ -174,7 +174,7 @@ void ParticleKokkos::sort_kokkos()
   sorted_kk = 1;
   int reorder_scheme = COPYPARTICLELIST;
   if (update->mem_limit_grid_flag)
-    update->global_mem_limit = grid->nlocal*sizeof(Grid::ChildCell);
+    update->set_mem_limit_grid();
   if (update->global_mem_limit > 0 || (update->mem_limit_grid_flag && !grid->nlocal))
     reorder_scheme = FIXEDMEMORY;
 

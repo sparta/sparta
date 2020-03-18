@@ -136,6 +136,11 @@ struct AtomicView<1> {
   enum {value = Kokkos::Atomic|Kokkos::Unmanaged};
 };
 
+template<>
+struct AtomicView<-1> {
+  enum {value = Kokkos::Atomic|Kokkos::Unmanaged};
+};
+
 // Determine memory traits for array
 // Do atomic trait when running with CUDA
 template<int NEED_ATOMICS, class DeviceType>
@@ -148,6 +153,11 @@ template<>
 struct AtomicDup<1,Kokkos::Cuda> {
   enum {value = Kokkos::Experimental::ScatterAtomic};
 };
+
+template<>
+struct AtomicDup<-1,Kokkos::Cuda> {
+  enum {value = Kokkos::Experimental::ScatterAtomic};
+};
 #endif
 
 #ifdef SPARTA_KOKKOS_USE_ATOMICS
@@ -157,11 +167,21 @@ template<>
 struct AtomicDup<1,Kokkos::OpenMP> {
   enum {value = Kokkos::Experimental::ScatterAtomic};
 };
+
+template<>
+struct AtomicDup<-1,Kokkos::OpenMP> {
+  enum {value = Kokkos::Experimental::ScatterAtomic};
+};
 #endif
 
 #ifdef KOKKOS_ENABLE_THREADS
 template<>
 struct AtomicDup<1,Kokkos::Threads> {
+  enum {value = Kokkos::Experimental::ScatterAtomic};
+};
+
+template<>
+struct AtomicDup<-1,Kokkos::Threads> {
   enum {value = Kokkos::Experimental::ScatterAtomic};
 };
 #endif
@@ -183,11 +203,21 @@ template<>
 struct NeedDup<1,Kokkos::OpenMP> {
   enum {value = Kokkos::Experimental::ScatterDuplicated};
 };
+
+template<>
+struct NeedDup<-1,Kokkos::OpenMP> {
+  enum {value = Kokkos::Experimental::ScatterDuplicated};
+};
 #endif
 
 #ifdef KOKKOS_ENABLE_THREADS
 template<>
 struct NeedDup<1,Kokkos::Threads> {
+  enum {value = Kokkos::Experimental::ScatterDuplicated};
+};
+
+template<>
+struct NeedDup<-1,Kokkos::Threads> {
   enum {value = Kokkos::Experimental::ScatterDuplicated};
 };
 #endif

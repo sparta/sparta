@@ -14,7 +14,7 @@ compute surf/kk command :h3
 compute ID surf group-ID mix-ID value1 value2 ... :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
-boundary = style name of this compute command :l
+surf = style name of this compute command :l
 group-ID = group ID for which surface elements to perform calculation on :l
 mix-ID = mixture ID for particles to perform calculation on :l
 one or more values can be appended :l
@@ -58,7 +58,7 @@ stats_style step cpu np c_2\[1\] c_2\[2\] :pre
 
 Define a computation that calculates one or more values for each
 explicit surface element in a surface element group, based on the
-particles that collide with that element.  The values are summed for
+particles that collide with that element. The values are summed for
 each group of species in the specified mixture.  See the
 "mixture"_mixture.html command for how a set of species can be
 partitioned into groups.  Only surface elements in the surface group
@@ -72,8 +72,9 @@ explicit triangle or line segment may span multiple grid cells.  See
 the "read_surf"_read_surf.html command for details.
 
 This command can only be used for simulations with explicit surface
-elements.  See the similar "compute isurf/grid"_compute_isurfrid.html
-command for use with simulations with implicit surface elements.
+elements.  See the similar "compute
+isurf/grid"_compute_isurf_grid.html command for use with simulations
+with implicit surface elements.
 
 Note that when a particle collides with a surface element, it can
 bounce off (possibly as a different species), be captured by the
@@ -84,6 +85,11 @@ a positive contribution from the incoming particle and negative
 contributions from 0, 1, or 2 outgoing particles.  The exception is
 the {n} and {nwt} values which simply tally counts of particles
 colliding with the surface element.
+
+If the surface element is transparent, the particle will pass through
+the surface unaltered.  The flux of particle count, mass, or energy to
+the surface can still be tallied by this compute.  See details on
+transparent surface elements below.
 
 Also note that all values for a collision are tallied based on the
 species group of the incident particle.  Quantities associated with
@@ -236,6 +242,32 @@ surface element by particles in the group, such that energy lost by a
 particle is a positive flux.  This is simply the sum of kinetic,
 rotational, and vibrational energies.  Thus the total energy flux is
 the sum of what is computed by the {ke}, {erot}, and {evib} values.
+
+:line
+
+[Transparent surface elements:]
+
+This compute will tally information on particles that pass through
+transparent surface elements.  The "Section
+6.15"_Section_howto.html#howto_15 doc page provides an overview of
+transparent surfaces and how to create them.
+
+The {n} and {nwt} value are calculated the same for transparent
+surfaces.  I.e. they are the count and weighted count of particles
+passing through the surface.
+
+The {mflux}, {ke}, {erot}. {evib}, and {etot} values are fluxes.  For
+transparent surfaces, they are calculated for the incident particle as
+if they had struck the surface.  The outgoing particle is ignored.
+This means the tally quantity is the flux of particles onto the
+outward face of the surface.  No tallying is done for particles
+hitting the inward face of the surface.  See "Section
+6.15"_Section_howto.html#howto_15 for how to do tallying in both
+directions.
+
+All the other values are calculated as described above.  This means
+they will be zero, since the incident particle and outgoing particle
+have the same mass and velocity.
 
 :line
 

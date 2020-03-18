@@ -35,7 +35,7 @@ class ComputeSurf : public Compute {
   virtual void init();
   void compute_per_surf();
   virtual void clear();
-  virtual void surf_tally(int, int, Particle::OnePart *, 
+  virtual void surf_tally(int, int, int, Particle::OnePart *, 
                           Particle::OnePart *, Particle::OnePart *);
   virtual int tallyinfo(surfint *&);
   virtual void post_process_surf();
@@ -73,7 +73,7 @@ class ComputeSurf : public Compute {
   double *normflux;        // normalization factor for each surf element
 
   virtual void init_normflux();
-  void grow_tally();
+  virtual void grow_tally();
 };
 
 }

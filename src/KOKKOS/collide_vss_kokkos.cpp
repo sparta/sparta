@@ -892,7 +892,33 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
       vi[2] = wcmf;
 
       jp = NULL;
+
+      // account for 3rd body energy via another call to setup_collision()
+      // set precoln.vr2 = relative velocity between ip and 3rd body p3
+
+      const double *vp3 = p3->v;
+      const double du  = vi[0] - vp3[0];
+      const double dv  = vi[1] - vp3[1];
+      const double dw  = vi[2] - vp3[2];
+      const double vr2 = du*du + dv*dv + dw*dw;
+      precoln.vr2 = vr2;
+
+      // save postcoln.etotal from previous setup_collision()
+      // add 3rd body internal energy to it
+      // ip internal energy is already included in postcoln.etotal
+
+      double partial_energy =  postcoln.etotal + p3->erot + p3->evib;
+      ip->erot = 0.0;
+      ip->evib = 0.0;
+      p3->erot = 0.0;
+      p3->evib = 0.0;
+
+      // 2nd call to setup_collision() sets new postcoln.etotal
+      // then add saved partial_energy to it
+
       setup_collision_kokkos(ip,p3,precoln,postcoln);
+      postcoln.etotal += partial_energy;
+
       if (precoln.ave_dof > 0.0) EEXCHANGE_ReactingEDisposal(ip,p3,jp,precoln,postcoln,rand_gen);
       SCATTER_TwoBodyScattering(ip,p3,precoln,postcoln,rand_gen);
 
@@ -1141,12 +1167,12 @@ void CollideVSSKokkos::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
   // new velocities for the products
 
   double divisor = 1.0 / (mass_ij + mass_k);
-  vi[0] = precoln.ucmf + (mass_ij*divisor)*ua;
-  vi[1] = precoln.vcmf + (mass_ij*divisor)*vb;
-  vi[2] = precoln.wcmf + (mass_ij*divisor)*wc;
-  vk[0] = precoln.ucmf - (mass_k*divisor)*ua;
-  vk[1] = precoln.vcmf - (mass_k*divisor)*vb;
-  vk[2] = precoln.wcmf - (mass_k*divisor)*wc;
+  vi[0] = precoln.ucmf + (mass_k*divisor)*ua;
+  vi[1] = precoln.vcmf + (mass_k*divisor)*vb;
+  vi[2] = precoln.wcmf + (mass_k*divisor)*wc;
+  vk[0] = precoln.ucmf - (mass_ij*divisor)*ua;
+  vk[1] = precoln.vcmf - (mass_ij*divisor)*vb;
+  vk[2] = precoln.wcmf - (mass_ij*divisor)*wc;
   vj[0] = vi[0];
   vj[1] = vi[1];
   vj[2] = vi[2];

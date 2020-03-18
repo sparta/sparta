@@ -37,6 +37,7 @@ class ComputeBoundaryKokkos : public ComputeBoundary, public KokkosBase {
   void compute_array();
   void clear();
   void pre_boundary_tally();
+  void post_boundary_tally();
 
   enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
   enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
@@ -51,8 +52,9 @@ class ComputeBoundaryKokkos : public ComputeBoundary, public KokkosBase {
    jp != NULL means two particles after collision
 ------------------------------------------------------------------------- */
 
+template <int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
-void boundary_tally_kk(int iface, int istyle,
+void boundary_tally_kk(int iface, int istyle, int reaction,
                        Particle::OnePart *iorig, 
                        Particle::OnePart *ip, 
                        Particle::OnePart *jp,
@@ -68,6 +70,9 @@ void boundary_tally_kk(int iface, int istyle,
   // set nflag and tflag if normal and tangent computation already done once
   // particle weight used for all keywords except NUM
   // styles PERIODIC and OUTFLOW do not have post-bounce velocity
+
+  auto v_myarray = ScatterViewHelper<NeedDup<ATOMIC_REDUCTION,DeviceType>::value,decltype(dup_myarray),decltype(ndup_myarray)>::get(dup_myarray,ndup_myarray);
+  auto a_myarray = v_myarray.template access<AtomicDup<ATOMIC_REDUCTION,DeviceType>::value>();
 
   double vsqpre,ivsqpost,jvsqpost;
   double ierot,jerot,ievib,jevib,iother,jother,otherpre;
@@ -87,8 +92,8 @@ void boundary_tally_kk(int iface, int istyle,
 
   if (istyle == PERIODIC) {
     for (int m = 0; m < nvalue; m++) {
-      if (d_which[m] == NUM) d_myarray(iface,k++) += 1.0;
-      else if (d_which[m] == NUMWT) d_myarray(iface,k++) += weight;
+      if (d_which[m] == NUM) a_myarray(iface,k++) += 1.0;
+      else if (d_which[m] == NUMWT) a_myarray(iface,k++) += weight;
       else k++;
     }
 
@@ -96,20 +101,20 @@ void boundary_tally_kk(int iface, int istyle,
     for (int m = 0; m < nvalue; m++) {
       switch (d_which[m]) {
       case NUM:
-        d_myarray(iface,k++) += 1.0;
+        a_myarray(iface,k++) += 1.0;
         break;
       case NUMWT:
-        d_myarray(iface,k++) += weight;
+        a_myarray(iface,k++) += weight;
         break;
       case MFLUX:
-        d_myarray(iface,k++) += origmass;
+        a_myarray(iface,k++) += origmass;
         break;
       case PRESS:
         if (!nflag) {
           nflag = 1;
           pre = MathExtraKokkos::dot3(vorig,norm);
         }
-        d_myarray(iface,k++) -= origmass * pre;
+        a_myarray(iface,k++) -= origmass * pre;
         break;
       case XSHEAR:
         if (!tflag) {
@@ -117,7 +122,7 @@ void boundary_tally_kk(int iface, int istyle,
           MathExtraKokkos::scale3(MathExtraKokkos::dot3(vorig,norm),norm,vnorm);
           MathExtraKokkos::sub3(vorig,vnorm,vtang);
         }
-        d_myarray(iface,k++) += origmass * vtang[0];
+        a_myarray(iface,k++) += origmass * vtang[0];
         break;
       case YSHEAR:
         if (!tflag) {
@@ -125,7 +130,7 @@ void boundary_tally_kk(int iface, int istyle,
           MathExtraKokkos::scale3(MathExtraKokkos::dot3(vorig,norm),norm,vnorm);
           MathExtraKokkos::sub3(vorig,vnorm,vtang);
         }
-        d_myarray(iface,k++) += origmass * vtang[1];
+        a_myarray(iface,k++) += origmass * vtang[1];
         break;
       case ZSHEAR:
         if (!tflag) {
@@ -133,21 +138,21 @@ void boundary_tally_kk(int iface, int istyle,
           MathExtraKokkos::scale3(MathExtraKokkos::dot3(vorig,norm),norm,vnorm);
           MathExtraKokkos::sub3(vorig,vnorm,vtang);
         }
-        d_myarray(iface,k++) += origmass * vtang[2];
+        a_myarray(iface,k++) += origmass * vtang[2];
         break;
       case KE:
         vsqpre = MathExtraKokkos::lensq3(vorig);
-        d_myarray(iface,k++) += 0.5 * mvv2e * origmass * vsqpre;
+        a_myarray(iface,k++) += 0.5 * mvv2e * origmass * vsqpre;
         break;
       case EROT:
-        d_myarray(iface,k++) += weight * iorig->erot;
+        a_myarray(iface,k++) += weight * iorig->erot;
         break;
       case EVIB:
-        d_myarray(iface,k++) += weight * iorig->evib;
+        a_myarray(iface,k++) += weight * iorig->evib;
         break;
       case ETOT:
         vsqpre = MathExtraKokkos::lensq3(vorig);
-        d_myarray(iface,k++) += 0.5*mvv2e*origmass*vsqpre + 
+        a_myarray(iface,k++) += 0.5*mvv2e*origmass*vsqpre + 
           weight*(iorig->erot+iorig->evib);
         break;
       }
@@ -157,21 +162,21 @@ void boundary_tally_kk(int iface, int istyle,
     for (int m = 0; m < nvalue; m++) {
       switch (d_which[m]) {
       case NUM:
-        d_myarray(iface,k++) += 1.0;
+        a_myarray(iface,k++) += 1.0;
         break;
       case NUMWT:
-        d_myarray(iface,k++) += weight;
+        a_myarray(iface,k++) += weight;
         break;
       case MFLUX:
-        d_myarray(iface,k++) += origmass;
-        if (ip) d_myarray(iface,k++) -= imass;
-        if (jp) d_myarray(iface,k++) -= jmass;
+        a_myarray(iface,k++) += origmass;
+        if (ip) a_myarray(iface,k++) -= imass;
+        if (jp) a_myarray(iface,k++) -= jmass;
         break;
       case PRESS:
         MathExtraKokkos::scale3(-origmass,vorig,pdelta);
         if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta);
         if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta);
-        d_myarray(iface,k++) += MathExtraKokkos::dot3(pdelta,norm);
+        a_myarray(iface,k++) += MathExtraKokkos::dot3(pdelta,norm);
         break;
       case XSHEAR:
         if (!tflag) {
@@ -182,7 +187,7 @@ void boundary_tally_kk(int iface, int istyle,
           MathExtraKokkos::scale3(MathExtraKokkos::dot3(pdelta,norm),norm,pnorm);
           MathExtraKokkos::sub3(pdelta,pnorm,ptang);
         }
-        d_myarray(iface,k++) -= ptang[0];
+        a_myarray(iface,k++) -= ptang[0];
         break;
       case YSHEAR:
         if (!tflag) {
@@ -193,7 +198,7 @@ void boundary_tally_kk(int iface, int istyle,
           MathExtraKokkos::scale3(MathExtraKokkos::dot3(pdelta,norm),norm,pnorm);
           MathExtraKokkos::sub3(pdelta,pnorm,ptang);
         }
-        d_myarray(iface,k++) -= ptang[1];
+        a_myarray(iface,k++) -= ptang[1];
         break;
       case ZSHEAR:
         if (!tflag) {
@@ -204,7 +209,7 @@ void boundary_tally_kk(int iface, int istyle,
           MathExtraKokkos::scale3(MathExtraKokkos::dot3(pdelta,norm),norm,pnorm);
           MathExtraKokkos::sub3(pdelta,pnorm,ptang);
         }
-        d_myarray(iface,k++) -= ptang[2];
+        a_myarray(iface,k++) -= ptang[2];
         break;
       case KE:
         vsqpre = origmass * MathExtraKokkos::lensq3(vorig);
@@ -212,21 +217,21 @@ void boundary_tally_kk(int iface, int istyle,
         else ivsqpost = 0.0;
         if (jp) jvsqpost = jmass * MathExtraKokkos::lensq3(jp->v);
         else jvsqpost = 0.0;
-        d_myarray(iface,k++) -= 0.5*mvv2e * (ivsqpost + jvsqpost - vsqpre);
+        a_myarray(iface,k++) -= 0.5*mvv2e * (ivsqpost + jvsqpost - vsqpre);
         break;
       case EROT:
         if (ip) ierot = ip->erot;
         else ierot = 0.0;
         if (jp) jerot = jp->erot;
         else jerot = 0.0;
-        d_myarray(iface,k++) -= weight * (ierot + jerot - iorig->erot);
+        a_myarray(iface,k++) -= weight * (ierot + jerot - iorig->erot);
         break;
       case EVIB:
         if (ip) ievib = ip->evib;
         else ievib = 0.0;
         if (jp) jevib = jp->evib;
         else jevib = 0.0;
-        d_myarray(iface,k++) -= weight * (ievib + jevib - iorig->evib);
+        a_myarray(iface,k++) -= weight * (ievib + jevib - iorig->evib);
         break;
       case ETOT:
         vsqpre = origmass * MathExtraKokkos::lensq3(vorig);
@@ -239,7 +244,7 @@ void boundary_tally_kk(int iface, int istyle,
           jvsqpost = jmass * MathExtraKokkos::lensq3(jp->v);
           jother = jp->erot + jp->evib;
         } else jvsqpost = jother = 0.0;
-        d_myarray(iface,k++) -= 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
+        a_myarray(iface,k++) -= 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
           weight * (iother + jother - otherpre);
         break;
       }
@@ -254,6 +259,10 @@ void boundary_tally_kk(int iface, int istyle,
 
   DAT::tdual_float_2d_lr k_myarray; // local accumulator array
   DAT::t_float_2d_lr d_myarray;
+
+  int need_dup;
+  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterDuplicated> dup_myarray;
+  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterNonDuplicated> ndup_myarray;
 
   t_species_1d d_species;
   DAT::t_int_2d d_s2g;

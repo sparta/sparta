@@ -84,11 +84,11 @@ in different species groups.
 </P>
 <P>The results of this compute can be used by different commands in
 different ways.  The values for a single timestep can be output by the
-<A HREF = "dump.html">stats_style</A> command.
+<A HREF = "stats_style.html">stats_style</A> command.
 </P>
-<P>The values over many sampling timesteps can be averaged by the <A HREF = "fix_ave_surf.html">fix
-ave/surf</A> command.  It does its averaging as if the
-particles striking the surface element at each sampling timestep were
+<P>The values over many sampling timesteps can be averaged by the <A HREF = "fix_ave_time.html">fix
+ave/time</A> command.  It does its averaging as if the
+particles striking the boundary at each sampling timestep were
 combined together into one large set to compute the formulas below.
 The answer is then divided by the number of sampling timesteps if it
 is not otherwise normalized by the number of particles.  Note that in

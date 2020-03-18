@@ -126,4 +126,18 @@ void ComputeBoundaryKokkos::pre_boundary_tally()
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
   d_species = particle_kk->k_species.d_view;
   d_s2g = particle_kk->k_species2group.view<DeviceType>();
+
+  need_dup = sparta->kokkos->need_dup<DeviceType>();
+  if (need_dup)
+    dup_myarray = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterDuplicated>(d_myarray);
+  else
+    ndup_myarray = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterNonDuplicated>(d_myarray);
+}
+
+void ComputeBoundaryKokkos::post_boundary_tally()
+{
+  if (need_dup) {
+    Kokkos::Experimental::contribute(d_myarray, dup_myarray);
+    dup_myarray = decltype(dup_myarray)(); // free duplicated memory
+  }
 }

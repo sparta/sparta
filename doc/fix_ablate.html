@@ -37,7 +37,8 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>fix 1 ablate surfcells 
+<PRE>fix 1 ablate surfcells 0 0.0 random 10
+fix 1 ablate surfcells 1000 10.0 c_tally 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -103,6 +104,47 @@ and 1.0.  The second is a random integer between 1 and maxrandom.  If
 the first random # < <I>scale</I>, then the second random integer is the
 decrement value for the cell.  Thus <I>scale</I> is effectively the
 fraction of grid cells whose corner point values are decremented.
+</P>
+<HR>
+
+<P>Here is an example of commands that will couple ablation to surface
+reaction statistics to modulate ablation of a set of implicit
+surfaces.  These lines are taken from the
+examples/ablation/in.ablation.3d.reactions input script:
+</P>
+<PRE>surf_collide	    1 diffuse 300.0 1.0
+surf_react	    2 prob air.surf 
+</PRE>
+<PRE>compute             10 react/isurf/grid all 2
+fix                 10 ave/grid all 1 100 100 c_10<B>*</B>
+dump                10 grid all 100 tmp.grid id c_10<B>1</B> 
+</PRE>
+<PRE>global              surfs implicit
+fix                 ablate ablate all 100 2.0 c_10<B>1</B>   # could be f_10
+read_isurf          all 20 20 20 binary.21x21x21 99.5 ablate 
+</PRE>
+<PRE>surf_modify         all collide 1 react 2 
+</PRE>
+<P>The order of these commands matter, so here is the explanation.
+</P>
+<P>The <A HREF = "surf_modify.html">surf_modify</A> command must come after the
+<A HREF = "read_isurf.html">read_isurf</A> command, because surfaces must exist
+before assigning collision and reaction models to them.  The <A HREF = "fix_ablate.html">fix
+ablate</A> command must come before the
+<A HREF = "read_isurf.html">read_isurf</A> command, since it uses the ID of the <A HREF = "fix_ablate">fix
+ablate</A> command as an argument to create implicit surfaces.
+The <A HREF = "fix_ablate.html">fix ablate</A> command takes a compute or fix as an
+argument, in this case the ID of the <A HREF = "compute_react_isurf_grid.html">compute
+react/isurf/grid</A> command.  This is to
+specify what calculation drives the ablation.  In this case, it is the
+<A HREF = "compute_react_isurf_grid.html">compute react/isurf/grid</A> command (or
+could be the <A HREF = "fix_ave_grid.html">fix ave/grid</A> command) which tallies
+counts of surface reactions for implicit triangles in each grid cell.
+The <A HREF = "compute">compute react/isurf/grid</A> react/isurf/grid command
+requires the ID of a surface reaction model, so that it knows the list
+of possible reactions to tally.  In this case the reaction is set by
+the <A HREF = "surf_react.html">surf_react</A> command, which must therefore comes
+near the beginning of this list of commands.
 </P>
 <HR>
 

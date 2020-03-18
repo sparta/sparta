@@ -1,0 +1,98 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+compute react/boundary command :h3
+
+[Syntax:]
+
+compute ID react/boundary reaction-ID value1 value2 ... :pre
+
+ID is documented in "compute"_compute.html command :ulb,l
+react/boundary = style name of this compute command :l
+reaction-ID = surface reaction ID which defines surface reactions :l
+zero or more values can be appended :l
+value = {r:s1/s2/s3 ...} or {p:s1/s2/s3 ...} :l
+  r: or p: = list of reactant species or product species
+  s1,s2,s3 = one or more species IDs, separated by "/" character :pre
+:ule
+
+[Examples:]
+
+surf_react air prob air.surf
+compute 1 react/boundary air
+compute 2 react/boundary air r:N/O/N2/O2 p:N/O/NO :pre
+
+These commands will time average the reaction tallies for each face
+and output the results as part of statistical output:
+
+compute 2 react/boundary air r:N/O/N2/O2 p:N/O/NO :pre
+fix 1 ave/time all 10 100 1000 c_2\[*\]
+stats_style step np f_1\[1\]\[*\] f_1\[2\]\[*\] f_1\[3\]\[*\] f_1\[4\]\[*\] :pre
+
+[Description:]
+
+Define a computation that tallies counts of reactions for each
+boundary (i.e. face) of the simulation box, based on the particles
+that collide with the boundary.  Only faces assigned to the surface
+reaction model specified by {reaction-ID} are included in the
+tallying.
+
+Note that when a particle collides with a face, it can bounce off
+(possibly as a different species), be captured by the surface
+(vanish), or a 2nd particle can also be emitted.
+
+The doc page for the "surf_react"_surf_react.html command explains the
+different reactions that can occur for each specified style.
+
+If no values are specified each reaction specified by the
+"surf_react"_surf_react.html style is tallied individually for each
+boundary.
+
+If M values are specified, then M tallies are made for each face, one
+per value.  If the value starts with "r:" then any reaction which
+occurs with one (or more) of the listed species as a reactant is
+counted as part of that tally.  If the value starts with "p:" then any
+reaction which occurs with one (or more) of the listed species as a
+product is counted as part of that tally.  Note that these rules mean
+that a single reaction may be tallied multiple times depending on
+which values it matches.
+
+The results of this compute can be used by different commands in
+different ways.  The values for a single timestep can be output by the
+"stats_style"_stats_style.html command.  The values over many sampling
+timesteps can be averaged by the "fix ave/time"_fix_ave_time.html
+command.
+
+:line
+
+[Output info:]
+
+This compute calculates a global array, with the number of columns
+either equal to the number of reactions defined by the
+"surf_react"_surf_react style (if no values are specified) or equal to
+M = the # of values specified.  The number of rows is 4 for a 2d
+simulation for the 4 faces (xlo, xhi, ylo, yhi), and it is 6 for a 3d
+simulation (xlo, xhi, ylo, yhi, zlo, zhi).
+
+The array can be accessed by any command that uses global array values
+from a compute as input.  See "Section 6.4"_Section_howto.html#howto_4
+for an overview of SPARTA output options.
+
+The array values are counts of the number of reactions that occurred
+on each face.
+
+:line
+
+[Restrictions:] none
+
+[Related commands:]
+
+"fix ave/time"_fix_ave_time.html, "compute
+react/surf"_compute_react_surf.html
+
+[Default:] none
