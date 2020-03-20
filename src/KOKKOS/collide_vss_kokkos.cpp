@@ -1607,8 +1607,8 @@ void CollideVSSKokkos::adapt_grid()
 
 void CollideVSSKokkos::grow_percell(int n)
 {
-  if (nglocal+n < nglocalmax) return;
-  nglocalmax += DELTAGRID;
+  if (nglocal+n < nglocalmax || !ngroups) return;
+  while (nglocal+n < nglocalmax) nglocalmax += DELTAGRID;
 
   this->sync(Device,ALL_MASK); // force resize on device
 
