@@ -1874,11 +1874,19 @@ void ReadSurf::clip3d()
           memory->grow(discard,maxdiscard,"readsurf:discard");
         }
 
+        // can't use "in1" pointer in surf->add_tri because it points to
+        //   surf->tris, which may be realloc'd in surf->add_tri
+
+        double in1_copy[3];
+        in1_copy[0] = in1[0];
+        in1_copy[1] = in1[1];
+        in1_copy[2] = in1[2];
+
         if (distributed) {
-          surf->add_tri_own_clip(tris[i].id,tris[i].type,in1,x2,x1);
+          surf->add_tri_own_clip(tris[i].id,tris[i].type,in1_copy,x2,x1);
           tris = surf->mytris;
         } else {
-          surf->add_tri(tris[i].id,tris[i].type,in1,x2,x1);
+          surf->add_tri(tris[i].id,tris[i].type,in1_copy,x2,x1);
           tris = surf->tris;
         }
 
