@@ -20,6 +20,8 @@
 
 namespace SPARTA_NS {
 
+class SurfState;
+
 class Domain : protected Pointers {
  public:
   int box_exist;                    // 0 = not yet created, 1 = exists
@@ -29,7 +31,9 @@ class Domain : protected Pointers {
                                  // for assign of collision models to boundaries
 
   double boxlo[3],boxhi[3];         // box global bounds
+  //! deltaX, deltaY, and deltaZ of the box
   double xprd,yprd,zprd;            // global box dimensions
+  //! this is xprd, yprd, zprd arranged as a vector
   double prd[3];                    // array form of dimensions
 
   int bflag[6];                     // boundary flags
@@ -52,8 +56,10 @@ class Domain : protected Pointers {
   void set_boundary(int, char **);
   int periodic(int *);
   void boundary_modify(int, char **);
+
   virtual int collide(Particle::OnePart *&, int, int, double *, double &, 
-                      Particle::OnePart *&, int &);
+                      Particle::OnePart *&, int & irxn, int& idir);
+
   virtual void uncollide(int, double *);
   void add_region(int, char **);
   void delete_region(int, char **);
@@ -63,6 +69,8 @@ class Domain : protected Pointers {
   int surf_collide[6];              // index of SurfCollide model
   int surf_react[6];                // index of SurfReact model
                                     // for each bflag = SURFACE boundary
+  SurfState* boundSurfState[6] {0, 0, 0, 0, 0, 0}; // Pointer to the surface state object, if any
+  double areaSides[6];
 };
 
 }

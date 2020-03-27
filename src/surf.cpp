@@ -29,6 +29,13 @@
 #include "hash3.h"
 #include "memory.h"
 #include "error.h"
+#include "surf_state.h"
+
+#include <new>
+
+#ifndef SAFE_DELETE
+#define SAFE_DELETE(x) if (x) { delete x; x = nullptr ; }
+#endif
 
 using namespace SPARTA_NS;
 using namespace MathConst;
@@ -103,8 +110,20 @@ Surf::~Surf()
   memory->sfree(bitmask);
   memory->sfree(inversemask);
 
+  if (lines) {
+    for (int i = 0; i < nlocal; ++i) {
+       SAFE_DELETE(lines[i].surfaceState);
+    }
+  }
+  if (tris) {
+    for (int i = 0; i < nlocal; ++i) {
+       SAFE_DELETE(tris[i].surfaceState);
+    }
+  }
+
   memory->sfree(lines);
   memory->sfree(tris);
+
   memory->sfree(mylines);
   memory->sfree(mytris);
 
@@ -161,11 +180,24 @@ void Surf::modify_params(int narg, char **arg)
 
       if (dim == 2) {
         for (int i = 0; i < nlocal+nghost; i++)
-          if (lines[i].mask & groupbit) lines[i].isc = isc;
+          if (lines[i].mask & groupbit) {
+            lines[i].isc = isc;
+            if (surf->sc[isc]->hasState) {
+              double area = line_size(lines + i) * domain->zprd;
+              lines[i].surfaceState = surf->sc[isc]->provideStateObject(area);
+            }
+          }
       }
+      double lenone;
       if (dim == 3) {
         for (int i = 0; i < nlocal+nghost; i++)
-          if (tris[i].mask & groupbit) tris[i].isc = isc;
+          if (tris[i].mask & groupbit) {
+            tris[i].isc = isc;
+            if (surf->sc[isc]->hasState) {
+              double area = tri_size(tris + i, lenone);
+              tris[i].surfaceState = surf->sc[isc]->provideStateObject(area);
+            }
+          }
       }
 
       iarg += 2;
@@ -837,7 +869,7 @@ double Surf::line_size(Line *line)
 }
 
 /* ----------------------------------------------------------------------
-   return length of line bewteen 2 points
+   return length of line between 2 points
 ------------------------------------------------------------------------- */
 
 double Surf::line_size(double *p1, double *p2)
@@ -876,7 +908,7 @@ double Surf::axi_line_size(Line *line)
 }
 
 /* ----------------------------------------------------------------------
-   compute side length and area of triangle M from tri list (not mytri)
+   compute side length and area of triangle m from tri list (not mytri)
    return len = length of shortest edge of triangle M
    return area = area of triangle M
 ------------------------------------------------------------------------- */

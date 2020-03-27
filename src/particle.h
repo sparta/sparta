@@ -36,10 +36,31 @@ class Particle : protected Pointers {
     double vibtemp[4];      // vibrational temperature(s)
     double vibrel[4];       // inverse vibrational relaxation number(s)
     int vibdegen[4];        // vibrational mode degeneracies
-    int rotdof,vibdof;      // rotational/vibrational DOF
-    int nrottemp,nvibmode;  // # of rotational/vibrational temps/modes defined
+    int rotdof;             // rotational DOF
+    int vibdof;             // vibrational DOF
+    int nrottemp;           // # of rotational temps modes defined
+    int nvibmode;           // # of vibrational modes defined = vibdof/2
     int internaldof;        // 1 if either rotdof or vibdof != 0
     int vibdiscrete_read;   // 1 if species.vib file read for this species
+#ifdef USE_ZUZAX
+    double ezero;           // Zero point energy that corresponds to NASA thermochemical conventions
+    int zuzax_indexGasPhase; // Index 
+    int numElectronicStates;
+
+    //! Degeneracy of each of the electronic states
+    /*!
+     *   defaults to 1. Length 5 until there needs to be more electronic states
+     */
+    double degenElectronicStates[5];
+
+    //! Energy levels of all electronic states (units of Kelvin)
+    /*!
+     *  The ground state, i.e. the first state, defaults to a theta of 0.0;
+     *  The other states are defined as relative to the ground state energy level.
+     */
+    double thetaElectronicStates[5];
+
+#endif
   };
 
   struct RotFile {          // extra rotation info read from rotfile
@@ -47,6 +68,10 @@ class Particle : protected Pointers {
     double rottemp[4];
     int ntemp;
   };
+
+#ifdef USE_ZSURF
+
+#endif
 
   struct VibFile {          // extra vibration info read from vibfile
     char id[16];
@@ -70,7 +95,10 @@ class Particle : protected Pointers {
     int icell;              // which local Grid::cells the particle is in
     double x[3];            // particle position
     double v[3];            // particle velocity
-    double erot;            // rotational energy
+#ifdef USE_ZSURF
+    double ezero;
+#endif
+    double erot;            // rotational energy (units?)
     double evib;            // vibrational energy
     int flag;               // used for migration status
     double dtremain;        // portion of move timestep remaining
@@ -85,6 +113,9 @@ class Particle : protected Pointers {
                             // else neg of sub cell index (0 to Nsplit-1)
     double x[3];            // particle position
     double v[3];            // particle velocity
+#ifdef USE_ZSURF
+    double ezero;
+#endif
     double erot;            // rotational energy
     double evib;            // vibrational energy
   };

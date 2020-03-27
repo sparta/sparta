@@ -594,7 +594,7 @@ void Particle::grow(int nextra)
   while (newmax < target) newmax += DELTA;
   
   if (newmax > MAXSMALLINT) 
-    error->one(FLERR,"Per-processor particle count is too big");
+    error->one(FLERR,"Per-processor particle count is too big\n");
 
   maxlocal = newmax;
   particles = (OnePart *)
@@ -702,7 +702,7 @@ int Particle::clone_particle(int index)
 
 void Particle::add_species(int narg, char **arg)
 {
-  int i,j,k,n;;
+  int i,j,k,n;
 
   if (narg < 2) error->all(FLERR,"Illegal species command");
 
@@ -802,7 +802,7 @@ void Particle::add_species(int narg, char **arg)
     for (j = 0; j < nfile; j++)
       if (strcmp(names[i],filespecies[j].id) == 0) break;
     if (j == nfile)
-      error->all(FLERR,"Species ID does not appear in species file");
+      error->allf(FLERR,"Species ID, %s, does not appear in species file", names[i]);
     memcpy(&species[nspecies],&filespecies[j],sizeof(Species));
     nspecies++;
 
@@ -1048,6 +1048,8 @@ double Particle::evib(int isp, double temp_thermal, RanPark *erandom)
   eng = 0.0;
 
   if (vibstyle == DISCRETE && species[isp].vibdof == 2) {
+    // This will give the harmonic oscillator partition function exactly except for the
+    // zero point energy.
     int ivib = -log(erandom->uniform()) * temp_thermal / 
       particle->species[isp].vibtemp[0];
     eng = ivib * update->boltz * particle->species[isp].vibtemp[0];
@@ -1064,6 +1066,9 @@ double Particle::evib(int isp, double temp_thermal, RanPark *erandom)
       }
       eng = erm * update->boltz * temp_thermal;
     }
+    // Note -> there doesn't seem to be an option to include sets of vibrational energies
+    //         given by the harmonic oscillator partition function.
+    //         Therefore, the Cp for many multiatom molecules can't be reproduced.
   }
 
   return eng;
@@ -1124,11 +1129,13 @@ void Particle::read_species_file()
 
     // error checks
     // NOTE: allow rotdof = 3 when implement rotate = DISCRETE
+    // -> HKM why? rotdof just means a nonlinear molecule with 3 moments of inertia,
+    //           all probably handled by a continuum partition function.
 
-    if (fsp->rotdof != 0 && fsp->rotdof != 2)
-      error->all(FLERR,"Invalid rotational DOF in species file");
-    //if (fsp->rotdof != 0 && fsp->rotdof != 2 && fsp->rotdof != 3)
+    //if (fsp->rotdof != 0 && fsp->rotdof != 2)
     //  error->all(FLERR,"Invalid rotational DOF in species file");
+    if (fsp->rotdof != 0 && fsp->rotdof != 2 && fsp->rotdof != 3)
+      error->all(FLERR,"Invalid rotational DOF in species file");
 
     if (fsp->vibdof < 0 || fsp->vibdof > 8 || fsp->vibdof % 2)
       error->all(FLERR,"Invalid vibrational DOF in species file");

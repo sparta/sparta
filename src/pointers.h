@@ -59,6 +59,9 @@ class Pointers {
     surf(ptr->surf),
     collide(ptr->collide),
     react(ptr->react),
+#ifdef USE_ZUZAX
+    zuzax_setup(ptr->zuzax_setup),
+#endif
     output(ptr->output),
     timer(ptr->timer),
     memoryKK(ptr->memoryKK),
@@ -85,6 +88,9 @@ class Pointers {
   Surf *&surf;
   Collide *&collide;
   React *&react;
+#ifdef USE_ZUZAX
+  ZuzaxSetup *& zuzax_setup;
+#endif
   Output *&output;
   Timer *&timer;
 

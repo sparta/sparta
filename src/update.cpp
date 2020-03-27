@@ -385,7 +385,7 @@ template < int DIM, int SURF > void Update::move()
   bool hitflag;
   int m,icell,icell_original,nmask,outface,bflag,nflag,pflag,itmp;
   int side,minside,minsurf,nsurf,cflag,isurf,exclude,stuck_iterate;
-  int pstart,pstop,entryexit,any_entryexit,reaction;
+  int pstart,pstop,entryexit,any_entryexit,reaction, idir;
   surfint *csurfs;
   cellint *neigh;
   double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
@@ -846,10 +846,10 @@ template < int DIM, int SURF > void Update::move()
 
               if (DIM == 3)
                 jpart = surf->sc[tri->isc]->
-                  collide(ipart,tri->norm,dtremain,tri->isr,reaction);
+                  collide(ipart,tri->norm,dtremain,tri->isr, tri->surfaceState, reaction, idir);
               if (DIM != 3)
                 jpart = surf->sc[line->isc]->
-                  collide(ipart,line->norm,dtremain,line->isr,reaction);
+                  collide(ipart,line->norm,dtremain,line->isr, line->surfaceState, reaction, idir);
 
               if (jpart) {
                 particles = particle->particles;
@@ -1035,7 +1035,7 @@ template < int DIM, int SURF > void Update::move()
             memcpy(&iorig,&particles[i],sizeof(Particle::OnePart));
 
           bflag = domain->collide(ipart,outface,icell,xnew,dtremain,
-                                  jpart,reaction);
+                                  jpart, reaction, idir);
 
           if (jpart) {
             particles = particle->particles;
@@ -1343,13 +1343,19 @@ int Update::collide_react_setup()
 }
 
 /* ----------------------------------------------------------------------
-   zero counters in all computes that tally surface collision/reaction info
+  collide_react_update() runs the tally_update on all collide and react
+  models. Then, it runs setupNewTimeStep which does initializations
+  for the current time step. 
 ------------------------------------------------------------------------- */
 
 void Update::collide_react_update()
 {
   for (int i = 0; i < nsc; i++) sc[i]->tally_update();
   for (int i = 0; i < nsr; i++) sr[i]->tally_update();
+
+  for (int i = 0; i < nsc; ++i) {
+    sc[i]->setupNewTimeStep();
+  }
 }
 
 /* ----------------------------------------------------------------------

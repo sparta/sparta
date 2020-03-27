@@ -143,7 +143,8 @@ void SurfCollideDiffuse::init()
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideDiffuse::
-collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
+collide(Particle::OnePart *&ip, double *norm, double &, int isr, SurfState* surfState, 
+        int& reaction, int& idir)
 {
   nsingle++;
 
@@ -155,7 +156,9 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
   reaction = 0;
 
   if (isr >= 0) {
+    // Save the original particle
     if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
+    // Call the surface reaction capability assigned to this surface
     reaction = surf->sr[isr]->react(ip,norm,jp);
     if (reaction) surf->nreact_one++;
   }

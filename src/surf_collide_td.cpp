@@ -135,9 +135,11 @@ void SurfCollideTD::init()
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideTD::
-collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
+collide(Particle::OnePart *&ip, double *norm, double &, int isr, SurfState* surfState, 
+        int &reaction, int& idir)
 {
   nsingle++;
+  idir = 1;
 
   // if surface chemistry defined, attempt reaction
   // reaction = 1 if reaction took place

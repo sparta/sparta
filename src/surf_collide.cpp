@@ -79,6 +79,12 @@ void SurfCollide::tally_update()
 
 /* ---------------------------------------------------------------------- */
 
+void SurfCollide::setupNewTimeStep()
+{
+}
+
+/* ---------------------------------------------------------------------- */
+
 double SurfCollide::compute_vector(int i)
 {
   one[0] = nsingle;

@@ -157,6 +157,7 @@ void Modify::end_of_step()
   for (int i = 0; i < n_end_of_step; i++)
     if (update->ntimestep % end_of_step_every[i] == 0)
       fix[list_end_of_step[i]]->end_of_step();
+
 }
 
 /* ----------------------------------------------------------------------
@@ -303,7 +304,8 @@ void Modify::add_fix(int narg, char **arg)
     }
   }
 
-  // create the Fix
+  // create the Fix by calling its constructor and assigning into the fix[]
+  // vector.
 
   int found = 0;
   if (sparta->suffix_enable) {

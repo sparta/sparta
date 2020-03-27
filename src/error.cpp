@@ -18,7 +18,8 @@
 #include "universe.h"
 #include "output.h"
 #include "memory.h"
-#include "accelerator_kokkos.h"
+#include <cstdarg>
+
 
 using namespace SPARTA_NS;
 
@@ -48,8 +49,9 @@ void Error::universe_all(const char *file, int line, const char *str)
     if (logfile) fclose(logfile);
   }
   if (universe->ulogfile) fclose(universe->ulogfile);
-
+#ifdef SPARTA_KOKKOS
   if (sparta->kokkos) Kokkos::finalize();
+#endif
   MPI_Finalize();
   exit(1);
 }
@@ -69,7 +71,44 @@ void Error::universe_one(const char *file, int line, const char *str)
 }
 
 /* ----------------------------------------------------------------------
-   called by all procs in one world
+   called by all procs in one world, works like printf
+   close all output, screen, and log files in world
+------------------------------------------------------------------------- */
+
+void Error::allf(const char *file, int line, const char *fmt, ...)
+{
+    static char sbuf[1024];
+    va_list args;
+    va_start(args, fmt);
+#ifdef _MSC_VER
+    int n = _vsnprintf(sbuf, 1023, fmt, args);
+#else
+    int n = vsnprintf(sbuf, 1023, fmt, args);
+#endif
+    if (n < 1023) {
+        // if n is negative, we just go ahead and put a zero at the end of the buffer and write anyway
+        va_end(args);
+        sbuf[1023] = '\0';
+        all(file, line, sbuf);
+    } else {
+        int sze = n + 1;
+        char *mbuf = (char *) malloc(sizeof(char) * (sze));
+        va_start(args, fmt);
+#ifdef _MSC_VER
+        n = _vsnprintf(mbuf, sze-1, fmt, args);
+#else
+        n = vsnprintf(mbuf, sze-1, fmt, args);
+#endif
+        // Negative n is not trapped. We just print anyway.
+        va_end(args);
+        mbuf[sze-1] = '\0';
+        all(file, line, mbuf);
+        free(mbuf);
+    }
+}
+
+/* ----------------------------------------------------------------------
+   called by all procs in one world, works like printf
    close all output, screen, and log files in world
 ------------------------------------------------------------------------- */
 
@@ -88,8 +127,9 @@ void Error::all(const char *file, int line, const char *str)
   if (output) delete output;
   if (screen && screen != stdout) fclose(screen);
   if (logfile) fclose(logfile);
-
+#ifdef SPARTA_KOKKOS
   if (sparta->kokkos) Kokkos::finalize();
+#endif
   MPI_Finalize();
   exit(1);
 }
@@ -152,8 +192,9 @@ void Error::done()
   if (output) delete output;
   if (screen && screen != stdout) fclose(screen);
   if (logfile) fclose(logfile);
-
+#ifdef SPARTA_KOKKOS
   if (sparta->kokkos) Kokkos::finalize();
+#endif
   MPI_Finalize();
   exit(1);
 }

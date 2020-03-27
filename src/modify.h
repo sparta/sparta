@@ -24,7 +24,10 @@ class Modify : protected Pointers {
  public:
   int nfix,maxfix;
   int n_start_of_step,n_end_of_step;
-  int n_pergrid,n_add_particle,n_gas_react,n_surf_react;
+  int n_pergrid;
+  int n_add_particle;
+  int n_gas_react;
+  int n_surf_react;
 
   class Fix **fix;           // list of fixes
   int *fmask;                // bit mask for when each fix is applied

@@ -20,6 +20,8 @@
 
 namespace SPARTA_NS {
 
+class SurfState;
+
 class SurfCollide : protected Pointers {
  public:
   char *id;
@@ -31,21 +33,65 @@ class SurfCollide : protected Pointers {
   int vector_flag;          // 0/1 if compute_vector() function exists
   int size_vector;          // length of global vector
 
+  //! True if the surface has a state
+  /*!
+   *  If it has a state, then it has a surface site concentration and a bulk growth
+   *  rate and depth. It has a SurfState object associated with each surface
+   */
+  int hasState {0};         // 1 if the surface has a state object 
+
   SurfCollide(class SPARTA *, int, char **);
   SurfCollide(class SPARTA *sparta) : Pointers(sparta) {}
   virtual ~SurfCollide();
   virtual void init();
-  virtual Particle::OnePart *collide(Particle::OnePart *&, double *, 
-                                     double &, int, int &) = 0;
+
+  //! Main member function for SurfCollide class where one particle 
+  //! collides with a surface.
+  /*!
+   *  @param[in,out]  ipart       Reference to the pointer to the incoming particle
+   *  @param[in]      norm        value of the surface normal
+   *  @param[in,out]  dtremain    Remaining time
+   *  @param[in]      isr         Index of the surface collision model
+   *  @param[in,out]  surfaceState   Pointer to the surface state
+   *  @param[out]     reaction    index of the reaction that took place (-1 or 2 for 
+   *                                no reaction specular or diffusive)
+   *  @param[out]     dir         direction of the reaction (1 = forward, -1 reverse)
+   */
+  virtual Particle::OnePart *collide(Particle::OnePart *& ipart, double * norm, 
+                                     double & dtremain, int isr, SurfState* surfaceState, 
+                                     int& reaction, int& dir) = 0;
 
   virtual void dynamic() {}
+
+  //! Provide a state object that will be assigned to each surface that will hold the state of 
+  //! of the surface
+  /*!
+   *  (virtual from surf_collide)
+   *
+   *  @param[in]             area                Area of the surface or face
+   *
+   *  @return                                    Returns a pointer to void that will be used
+   */
+  virtual SurfState* provideStateObject(double area) const { return nullptr; }
+
+  //! Tally up the running total of the particle collisions from the last step and add it to ntotal
   void tally_update();
+
+  //! Setup a new time step
+  /*!
+   *  Zuzax uses this hook to calculate the probability table for reactions on a surface
+   */
+  virtual void setupNewTimeStep();
+
   double compute_vector(int i);
 
   int copy,copymode;
 
  protected:
-  int nsingle,ntotal;
+  //! Number of collisions during the current time step
+  int nsingle;
+  //! Number of total collisions
+  int ntotal;
   double one[2],all[2];
 };
 

@@ -23,6 +23,8 @@
 
 namespace SPARTA_NS {
 
+class SurfState;
+
 class Surf : protected Pointers {
  public:
   int exist;                // 1 if any surfaces are defined, else 0
@@ -56,6 +58,7 @@ class Surf : protected Pointers {
 
   bigint nsurf;             // total # of surf elements, lines or tris
 
+  //! Structure that actually identifies each surface in 2D space
   struct Line {
     surfint id;             // unique ID for explicit surf
                             // cell ID for implicit surf
@@ -65,9 +68,13 @@ class Surf : protected Pointers {
     double p1[3],p2[3];     // end points of line segment
                             // rhand rule: Z x (p2-p1) = outward normal
     double norm[3];         // outward normal to line segment
-    int transparent;        // 1 if surf is transparent
+    int transparent {0};    // 1 if surf is transparent
+
+    SurfState* surfaceState {nullptr};     // Pointer to a malloced structure that describes the surface
+                            // state of the Tri
   };
 
+  //! Structure that actually identifies each surface in 3D space
   struct Tri {
     surfint id;             // unique ID for explicit surf
                             // cell ID for implicit surf
@@ -77,7 +84,10 @@ class Surf : protected Pointers {
     double p1[3],p2[3],p3[3];  // corner points of triangle
                             // rhand rule: (p2-p1) x (p3-p1) = outward normal
     double norm[3];         // outward normal to triangle
-    int transparent;        // 1 if surf is transparent
+    int transparent {0};    // 1 if surf is transparent
+    
+    SurfState* surfaceState {nullptr};// Pointer to a malloced structure that describes the surface
+                            // state of the Tri
   };
 
   Line *lines;              // list of lines for surface collisions

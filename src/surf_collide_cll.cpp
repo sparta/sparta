@@ -164,7 +164,8 @@ void SurfCollideCLL::init()
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideCLL::
-collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
+collide(Particle::OnePart *&ip, double *norm, double &, int isr, 
+        SurfState* surfState,int &reaction, int& idir)
 {
   nsingle++;
 
@@ -173,6 +174,7 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
+  idir = 1;
 
   if (isr >= 0) {
     if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));

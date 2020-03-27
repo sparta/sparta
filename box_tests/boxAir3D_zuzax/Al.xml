@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<ctml>
+  <validate reactions="yes" species="yes"/>
+                   
+ <!-- phase Al(S)    -->
+  <phase dim="3" id="Al(S)">
+    <elementArray datasrc="elements.xml">
+      Al
+    </elementArray>
+    <speciesArray datasrc="#species_Al(S)"> Al(S) </speciesArray>
+    <thermo model="StoichSubstance">
+      <density units="g/cm3">2.702</density>
+    </thermo>
+    <transport model="None"/>
+    <kinetics model="none"/>
+  </phase>
+
+ <!-- species definitions     -->
+  <speciesData id="species_Al(S)">
+
+    <!-- species Al(S)   -->
+    <species name="Al(S)">
+      <atomArray> Al:1  </atomArray>
+      <thermo>
+        <Shomate Pref="1 bar" Tmax="1075.0" Tmin="250.0">
+          <floatArray size="7">
+            28.08920,
+            -5.414849,
+             8.560423,
+             3.427370,
+            -0.277375,
+            -9.146887,
+            61.90981
+          </floatArray>
+        </Shomate>
+      </thermo>
+      <density units="g/cm3">2.702</density>
+    </species>
+
+  </speciesData>
+
+</ctml>
+<!--  -9.147187 -->

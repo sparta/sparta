@@ -27,6 +27,7 @@
 #include "comm.h"
 #include "memory.h"
 #include "error.h"
+#include "math_const.h"
 
 using namespace SPARTA_NS;
 
@@ -125,6 +126,23 @@ void Domain::set_global_box()
   prd[0] = xprd = boxhi[0] - boxlo[0];
   prd[1] = yprd = boxhi[1] - boxlo[1];
   prd[2] = zprd = boxhi[2] - boxlo[2];
+  // Calculate the areas of the bounding surfaces
+  areaSides[XLO] = yprd * zprd;
+  areaSides[XHI] = yprd * zprd;
+  areaSides[YLO] = xprd * zprd;
+  areaSides[YHI] = xprd * zprd;
+  areaSides[ZLO] = xprd * yprd;
+  areaSides[ZHI] = xprd * yprd;
+  if (axisymmetric) {
+    // y is the r coordinate, and x is the z coordinate, and z is the theta coordinate
+    double r = boxhi[1];
+    areaSides[XLO] = MathConst::MY_PI * r * r;
+    areaSides[XHI] = MathConst::MY_PI * r * r;
+    areaSides[YLO] = 0.0;
+    areaSides[YHI] = 2.0 * MathConst::MY_PI * r * xprd;
+    areaSides[ZLO] = 0.0;
+    areaSides[ZHI] = 0.0;
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -236,11 +254,15 @@ void Domain::boundary_modify(int narg, char **arg)
       if (iarg + 2 > narg) error->all(FLERR,"Illegal bound_modify command");
       int index = surf->find_collide(arg[iarg+1]);
       if (index < 0) 
-        error->all(FLERR,"Bound_modify surf_collide ID is unknown");
+        error->allf(FLERR,"Bound_modify surf_collide ID, %s, is unknown", arg[iarg+1]);
       for (int i = 0; i < nface; i++) {
         if (bflag[faces[i]] != SURFACE)
           error->all(FLERR,"Bound_modify surf requires boundary be a surface");
         surf_collide[faces[i]] = index;
+        if (surf->sc[index]->hasState) {
+          double area = areaSides[faces[i]];
+          boundSurfState[faces[i]] = surf->sc[index]->provideStateObject(area);
+        }
       }
       iarg += 2;
     } else if (strcmp(arg[iarg],"react") == 0) {
@@ -272,10 +294,10 @@ void Domain::boundary_modify(int narg, char **arg)
 ------------------------------------------------------------------------- */
 
 int Domain::collide(Particle::OnePart *&ip, int face, int icell, double *xnew, 
-                    double &dtremain, Particle::OnePart *&jp, int &reaction)
+                    double &dtremain, Particle::OnePart *&jp, int &irxn, int& idir)
 {
   jp = NULL;
-  reaction = 0;
+  irxn = -2;
 
   switch (bflag[face]) {
 
@@ -352,7 +374,7 @@ int Domain::collide(Particle::OnePart *&ip, int face, int icell, double *xnew,
   case SURFACE: 
     {
       jp = surf->sc[surf_collide[face]]->
-        collide(ip,norm[face],dtremain,surf_react[face],reaction);
+        collide(ip,norm[face],dtremain,surf_react[face], boundSurfState[face], irxn, idir);
       
       if (ip) {
         double *x = ip->x;
