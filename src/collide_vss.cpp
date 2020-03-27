@@ -1028,8 +1028,8 @@ double CollideVSS::vibrel_serial(int isp, double Ec)
   double omega = params[isp].omega;
   double diam = params[isp].diam;
   double tref = params[isp].tref;
-  double vibphi = 4.0 * MY_PIS * pow(diam,2.0)*pow(tref,omega)
-                  * pow(Tr,-omega-0.5)*101325.0*exp(params[isp].vibc1
+  double vibphi = 4.0 * MY_PIS * pow(diam,2.0)*pow(tref,omega-0.5)
+                  * pow(Tr,-omega)*101325.0*exp(params[isp].vibc1
                   * (pow(Tr,-1.0/3.0)-params[isp].vibc2)-18.42)/sqrt(species[isp].mass*update->boltz);
   return vibphi;
 }
@@ -1056,8 +1056,8 @@ double CollideVSS::vibrel_prohibdouble(int isp, double Ec, double doftot)
 {
   Particle::Species *species = particle->species;
   double Tr = 2.0 * Ec / (update->boltz * doftot);
-  double Zmw = 4.0*MY_PIS * pow(params[isp].diam,2.0)*pow(params[isp].tref,params[isp].omega)
-                  * pow(Tr,-params[isp].omega-0.5)*101325.0*exp(params[isp].vibc1
+  double Zmw = 4.0*MY_PIS * pow(params[isp].diam,2.0)*pow(params[isp].tref,params[isp].omega-0.5)
+                  * pow(Tr,-params[isp].omega)*101325.0*exp(params[isp].vibc1
                   * (pow(Tr,-1.0/3.0)-params[isp].vibc2)-18.42)/sqrt(species[isp].mass*update->boltz);
   double Zpark = 4.0*MY_PI*pow(params[isp].diam,2.0)*pow(params[isp].tref,params[isp].omega-0.5)
                           *pow(Tr,2.5-params[isp].omega)/(2.5e9*params[isp].park);
