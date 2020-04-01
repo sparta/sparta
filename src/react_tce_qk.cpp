@@ -124,9 +124,7 @@ int ReactTCEQK::attempt_tce(Particle::OnePart *ip, Particle::OnePart *jp,
   // 1: Bird's implementation from DS1V using the translational + weighted rotational energy
   // 2: Using the sum of translational, rotationa and vibrational energies
    
-  if (birdflag) {
-     ecc = pre_etrans; 
-     if (pre_ave_rotdof > 0.1) ecc += pre_erot*r->coeff[0]/pre_ave_rotdof;}
+  if (birdflag) ecc = pre_etrans + pre_erot;
   else {
      ecc = pre_etotal;
      if (pre_etotal+r->coeff[4] <= 0.0) return 0; // Cover cases where coeff[1].neq.coeff[4]
