@@ -246,7 +246,9 @@ void ReactBird::init()
 
     // average DOFs participating in the reaction
 
-    double z = r->coeff[0];
+    double z = 0.0;
+    if (birdflag) z = (species[isp].rotdof + species[jsp].rotdof)/2.0;
+    else z = (species[isp].rotdof + species[jsp].rotdof + species[isp].vibdof + species[jsp].vibdof)/2.0;
     
     // add additional coeff for effective DOF
     // added MAX() limit, 24Aug18
