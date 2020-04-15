@@ -121,6 +121,10 @@ void CollideVSSKokkos::init()
   if (nparams != particle->nspecies)
     error->all(FLERR,"VSS parameters do not match current species");
 
+  if (sparta->kokkos && vibstyle == DISCRETE)
+    error->all(FLERR,"Cannot (yet) use KOKKOS package with "
+      "'collide_modify vibrate discrete'");
+
   //if (ambiflag && nearcp) 
   //  error->all(FLERR,"Ambipolar collision model does not yet support "
   //             "near-neighbor collisions");
