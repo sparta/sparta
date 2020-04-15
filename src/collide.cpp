@@ -158,10 +158,6 @@ void Collide::init()
     error->all(FLERR,"Must use Kokkos-supported collision style if "
                "Kokkos is enabled");
 
-  if (sparta->kokkos && vibstyle == DISCRETE)
-    error->all(FLERR,"Cannot (yet) use KOKKOS package with "
-      "'collide_modify vibrate discrete'");
-
   // if rotstyle or vibstyle = DISCRETE,
   // check that extra rotation/vibration info is defined
   // for species that require it
