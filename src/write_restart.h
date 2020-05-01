@@ -62,8 +62,8 @@ class WriteRestart : protected Pointers {
   void write_string(int, char *);
   void write_int_vec(int, int, int *);
   void write_double_vec(int, int, double *);
-  void write_char_vec(int, int, char *);
-  void write_char_vec(int, int, int, char *);
+  void write_char_vec(int, bigint, char *);
+  void write_char_vec(int, bigint, int, char *);
   void write_char_vec(int, char *);
 };
 
