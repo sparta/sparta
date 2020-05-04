@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -40,14 +40,14 @@ ComputeDistSurfGrid(SPARTA *sparta, int narg, char **arg) :
   size_per_grid_cols = 0;
 
   int igroup = grid->find_group(arg[2]);
-  if (igroup < 0) 
+  if (igroup < 0)
     error->all(FLERR,"Compute distsurf/grid group ID does not exist");
   groupbit = grid->bitmask[igroup];
 
   igroup = surf->find_group(arg[3]);
   if (igroup < 0)
     error->all(FLERR,"Compute distsurf/grid command surface group "
-               "does not exist");
+	       "does not exist");
   sgroupbit = surf->bitmask[igroup];
 
   // optional args
@@ -61,8 +61,8 @@ ComputeDistSurfGrid(SPARTA *sparta, int narg, char **arg) :
       sdir[0] = input->numeric(FLERR,arg[iarg+1]);
       sdir[1] = input->numeric(FLERR,arg[iarg+2]);
       sdir[2] = input->numeric(FLERR,arg[iarg+3]);
-      if (domain->dimension == 2 && sdir[2] != 0.0) 
-        error->all(FLERR,"Illegal adapt command");
+      if (domain->dimension == 2 && sdir[2] != 0.0)
+	error->all(FLERR,"Illegal adapt command");
       iarg += 4;
     } else error->all(FLERR,"Illegal compute distsurf/grid command");
   }
@@ -77,6 +77,7 @@ ComputeDistSurfGrid(SPARTA *sparta, int narg, char **arg) :
 
 ComputeDistSurfGrid::~ComputeDistSurfGrid()
 {
+  if (copymode) return;
   memory->destroy(vector_grid);
 }
 
@@ -119,8 +120,8 @@ void ComputeDistSurfGrid::compute_per_grid()
       eflag[i] = 0;
       if (!(lines[i].mask & sgroupbit)) continue;
       if (MathExtra::dot3(lines[i].norm,sdir) <= 0.0) {
-        eflag[i] = 1;
-        slist[nsurf++] = i;
+	eflag[i] = 1;
+	slist[nsurf++] = i;
       }
     }
   } else {
@@ -130,8 +131,8 @@ void ComputeDistSurfGrid::compute_per_grid()
       eflag[i] = 0;
       if (!(tris[i].mask & sgroupbit)) continue;
       if (MathExtra::dot3(tris[i].norm,sdir) <= 0.0) {
-        eflag[i] = 1;
-        slist[nsurf++] = i;
+	eflag[i] = 1;
+	slist[nsurf++] = i;
       }
     }
   }
@@ -180,24 +181,24 @@ void ComputeDistSurfGrid::compute_per_grid()
       n = cells[icell].nsurf;
       csurfs = cells[icell].csurfs;
       for (i = 0; i < n; i++) {
-        m = csurfs[i];
-        if (eflag[m]) break;
+	m = csurfs[i];
+	if (eflag[m]) break;
       }
 
       // cell is overlapped, set dist = 0.0 and return
       // if split cell, also set vector_grid = 0.0 for sub-cells
 
       if (i < n) {
-        vector_grid[icell] = 0.0;
-        if (cells[icell].nsplit > 1) {
-          n = cells[icell].nsplit;
-          csubs = sinfo[cells[icell].isplit].csubs;
-          for (i = 0; i < n; i++) {
-            m = csubs[i];
-            vector_grid[m] = 0.0;
-          }
-        }
-        continue;
+	vector_grid[icell] = 0.0;
+	if (cells[icell].nsplit > 1) {
+	  n = cells[icell].nsplit;
+	  csubs = sinfo[cells[icell].isplit].csubs;
+	  for (i = 0; i < n; i++) {
+	    m = csubs[i];
+	    vector_grid[m] = 0.0;
+	  }
+	}
+	continue;
       }
     }
 
@@ -211,23 +212,23 @@ void ComputeDistSurfGrid::compute_per_grid()
     mindist = BIG;
     for (i = 0; i < nsurf; i++) {
       m = slist[i];
-      
+
       cell2surf[0] = sctr[i][0] - cctr[0];
       cell2surf[1] = sctr[i][1] - cctr[1];
       cell2surf[2] = sctr[i][2] - cctr[2];
 
       if (dim == 2) {
-        if (MathExtra::dot3(cell2surf,lines[m].norm) > 0.0) continue;
-        dist = Geometry::dist_line_quad(lines[m].p1,lines[m].p2,lo,hi);
+	if (MathExtra::dot3(cell2surf,lines[m].norm) > 0.0) continue;
+	dist = Geometry::dist_line_quad(lines[m].p1,lines[m].p2,lo,hi);
       } else {
-        if (MathExtra::dot3(cell2surf,tris[m].norm) > 0.0) continue;
-        dist = Geometry::dist_tri_hex(tris[m].p1,tris[m].p2,tris[m].p3,
-                                      tris[m].norm,lo,hi);
+	if (MathExtra::dot3(cell2surf,tris[m].norm) > 0.0) continue;
+	dist = Geometry::dist_tri_hex(tris[m].p1,tris[m].p2,tris[m].p3,
+				      tris[m].norm,lo,hi);
       }
 
       mindist = MIN(mindist,dist);
     }
-    
+
     vector_grid[icell] = mindist;
   }
 
