@@ -24,6 +24,7 @@
 #include "memory_kokkos.h"
 #include "error.h"
 #include "kokkos.h"
+#include "sparta_masks.h"
 
 using namespace SPARTA_NS;
 
@@ -61,10 +62,18 @@ ComputePropertyGridKokkos::~ComputePropertyGridKokkos()
 
 void ComputePropertyGridKokkos::compute_per_grid()
 {
-  if (sparta->kokkos->prewrap)
+  if (sparta->kokkos->prewrap) {
     ComputePropertyGrid::compute_per_grid();
-  else
+  } else {
     compute_per_grid_kokkos();
+    if (nvalues == 1) {
+      k_vector_grid.modify<DeviceType>();
+      k_vector_grid.sync<SPAHostType>();
+    } else {
+      k_array_grid.modify<DeviceType>();
+      k_array_grid.sync<SPAHostType>();
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -73,6 +82,8 @@ void ComputePropertyGridKokkos::compute_per_grid_kokkos()
   GridKokkos* grid_kk = ((GridKokkos*)grid);  
   d_cells = grid_kk->k_cells.d_view;
   d_cinfo = grid_kk->k_cinfo.d_view;
+  grid_kk->sync(Device,CELL_MASK|CINFO_MASK);
+
   copymode = 1;
   if (nvalues == 1)
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputePropertyGrid_ComputePerGrid_vector>(0,nglocal),*this);
