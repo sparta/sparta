@@ -29,7 +29,7 @@ input = one or more grid attributes :l
 
 [Examples:]
 
-compute 1 all property/grid id xc yc zc :pre
+compute 1 property/grid all id xc yc zc :pre
 
 [Description:]
 
