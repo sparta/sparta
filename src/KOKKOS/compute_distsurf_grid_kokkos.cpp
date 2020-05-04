@@ -58,6 +58,8 @@ void ComputeDistSurfGridKokkos::compute_per_grid()
     ComputeDistSurfGrid::compute_per_grid();
   } else {
     compute_per_grid_kokkos();
+    k_vector_grid.modify<DeviceType>();
+    k_vector_grid.sync<SPAHostType>();
   }
 }
 
