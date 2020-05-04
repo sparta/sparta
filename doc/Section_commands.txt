@@ -406,7 +406,7 @@ letters in parenthesis: k = KOKKOS.
 
 "boundary (k)"_compute_boundary.html,
 "count (k)"_compute_count.html,
-"distsurf/grid"_compute_distsurf_grid.html,
+"distsurf/grid (k)"_compute_distsurf_grid.html,
 "eflux/grid (k)"_compute_eflux_grid.html,
 "fft/grid"_compute_fft_grid.html,
 "grid (k)"_compute_grid.html,
