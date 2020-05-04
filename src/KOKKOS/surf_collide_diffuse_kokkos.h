@@ -57,7 +57,6 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
   SurfCollideDiffuseKokkos(class SPARTA *);
   ~SurfCollideDiffuseKokkos();
 
-  Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int) { return NULL; }
   void pre_collide();
 
 #ifndef SPARTA_KOKKOS_EXACT
