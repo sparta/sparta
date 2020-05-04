@@ -51,6 +51,8 @@ action compute_boundary_kokkos.cpp
 action compute_boundary_kokkos.h
 action compute_count_kokkos.cpp
 action compute_count_kokkos.h
+action compute_distsurf_grid_kokkos.cpp
+action compute_distsurf_grid_kokkos.h
 action compute_eflux_grid_kokkos.cpp
 action compute_eflux_grid_kokkos.h
 action compute_grid_kokkos.cpp
