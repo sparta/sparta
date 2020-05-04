@@ -14,46 +14,45 @@
 
 #ifdef COMPUTE_CLASS
 
-ComputeStyle(property/grid,ComputePropertyGrid)
+ComputeStyle(property/grid/kk,ComputePropertyGridKokkos)
 
 #else
 
-#ifndef SPARTA_COMPUTE_PROPERTY_GRID_H
-#define SPARTA_COMPUTE_PROPERTY_GRID_H
+#ifndef SPARTA_COMPUTE_PROPERTY_GRID_KOKKOS_H
+#define SPARTA_COMPUTE_PROPERTY_GRID_KOKKOS_H
 
-#include "compute.h"
+#include "compute_property_grid.h"
+#include "kokkos_base.h"
+#include "kokkos_type.h"
 
 namespace SPARTA_NS {
 
-class ComputePropertyGrid : public Compute {
+  struct TagComputePropertyGrid_ComputePerGrid_vector{};
+  struct TagComputePropertyGrid_ComputePerGrid_array{};  
+
+ class ComputePropertyGridKokkos : public ComputePropertyGrid, public KokkosBase {
  public:
-  ComputePropertyGrid(class SPARTA *, int, char **);
-  ~ComputePropertyGrid();
-  void init();
+  ComputePropertyGridKokkos(class SPARTA *, int, char **);
+  ~ComputePropertyGridKokkos();
+
   void compute_per_grid();
+  void compute_per_grid_kokkos();
   void reallocate();
-  bigint memory_usage();
 
- protected:
-  int groupbit,nvalues,nglocal;
-  int *index;
-  double *buf;
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagComputePropertyGrid_ComputePerGrid_vector, const int&) const;
 
-  typedef void (ComputePropertyGrid::*FnPtrPack)(int);
-  FnPtrPack *pack_choice;              // ptrs to pack functions
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagComputePropertyGrid_ComputePerGrid_array, const int&) const;  
 
-  void pack_id(int);
-  void pack_proc(int);
-  void pack_xlo(int);
-  void pack_ylo(int);
-  void pack_zlo(int);
-  void pack_xhi(int);
-  void pack_yhi(int);
-  void pack_zhi(int);
-  void pack_xc(int);
-  void pack_yc(int);
-  void pack_zc(int);
-  void pack_vol(int);
+  DAT::tdual_float_1d k_vector_grid;
+  DAT::tdual_float_2d_lr k_array_grid;
+
+ private:
+  t_cell_1d d_cells;
+  t_cinfo_1d d_cinfo;
+  DAT::tdual_int_1d k_index;
+  DAT::t_int_1d d_index;
 };
 
 }
