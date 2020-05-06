@@ -63,6 +63,7 @@ CollideVSS::CollideVSS(SPARTA *sparta, int narg, char **arg) :
       relaxTflag = CELL;
       T_compute_name = new char[strlen(arg[iarg+1]) + 1];
       strcpy(T_compute_name,arg[iarg+1]);
+      iarg += 2;
     } else error->all(FLERR,"Illegal collide command");
   }
 
