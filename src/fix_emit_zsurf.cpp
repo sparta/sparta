@@ -434,13 +434,8 @@ void FixEmitZSurf::create_task(int icell)
       //if (perspecies) tasks[ntask].ntargetsp[isp] = ntargetsp;
     }
 
-    //if (tasks[ntask].ntarget == 0.0) continue;
-    //if (tasks[ntask].ntarget >= MAXSMALLINT)
-    //  error->one(FLERR,
-    //             "Fix emit/surf insertion count exceeds 32-bit int");
-
-    // initialize other task values with mixture properties
-    // may be overwritten by subsonic methods
+    // Initialize other task values with mixture properties
+    // HKM Need vstream because a set of surfaces may be moving wrt the gas phase
 
     tasks[ntask].nrho = particle->mixture[imix]->nrho;
     tasks[ntask].temp_thermal = particle->mixture[imix]->temp_thermal;
@@ -454,7 +449,6 @@ void FixEmitZSurf::create_task(int icell)
 
     ntask++;
   }
-
 
   return;
 }
@@ -741,10 +735,6 @@ int FixEmitZSurf::pack_task(int itask, char* buf, int memflag)
   // pack task vectors
   // vscale is allocated, but not communicated, since updated every step
 
-  //if (perspecies) {
-  //if (memflag) memcpy(ptr,tasks[itask].ntargetsp,nspecies*sizeof(double));
-  // ptr += nspecies*sizeof(double);
-  //}
 
   int npoint = tasks[itask].npoint;
   if (memflag) {
