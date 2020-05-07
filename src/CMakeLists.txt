@@ -1,16 +1,5 @@
 ########## BEGIN TARGET_SPARTA ##########
 
-########## BEGIN RECURSE COMMANDS ##########
-# Required dependencies
-# TODO: cmake,ccc,
-add_subdirectory(STUBS)
-message(VERBOSE "${CMAKE_CURRENT_SOURCE_DIR}: CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
-
-# Optional Dependencies
-## ADD_SUBDIRECTORY(FFT)
-## ADD_SUBDIRECTORY(KOKKOS)
-########## END   RECURSE COMMANDS ##########
-
 ########## START SETUP COMMANDS ##########
 # GLOB together all source files
 file(GLOB SPA_SRC_FILES
@@ -24,12 +13,25 @@ set(SPA_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 message(VERBOSE "SPA_INCLUDE_DIRS=${SPA_INCLUDE_DIRS}")
 ########## END   SETUP COMMANDS ##########
 
+########## BEGIN RECURSE COMMANDS ##########
+# Required dependencies
+# TODO: cmake,ccc,
+add_subdirectory(STUBS)
+add_subdirectory(FFT)
+message(VERBOSE "${CMAKE_CURRENT_SOURCE_DIR}: CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
+
+# Optional Dependencies
+## ADD_SUBDIRECTORY(FFT)
+## ADD_SUBDIRECTORY(KOKKOS)
+########## END   RECURSE COMMANDS ##########
+
 ########## START GENERATION COMMANDS ##########
 add_executable(${TARGET_SPARTA} ${SPA_SRC_FILES})
 
 target_include_directories(${TARGET_SPARTA} PRIVATE ${SPA_INCLUDE_DIRS})
 
-target_link_libraries(${TARGET_SPARTA} LINK_PRIVATE ${TARGET_SPARTA_MPI})
+target_link_libraries(${TARGET_SPARTA} LINK_PRIVATE ${TARGET_SPARTA_BUILD_TPLS})
+target_link_libraries(${TARGET_SPARTA} LINK_PRIVATE ${TARGET_SPARTA_PACKAGES})
 
 set_target_properties(${TARGET_SPARTA} PROPERTIES COMPILE_FLAGS "${SPARTA_CXX_COMPILE_FLAGS} ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS}")
 
