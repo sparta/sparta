@@ -11,6 +11,6 @@ make
 
 # Quick start build triaging
 ``bash
-cmake --log-level=VERBOSE [-C ../cmake/machine_files/FILE.cmake] ..
+cmake --log-level=VERBOSE [-C ../cmake/presets/FILE.cmake] ..
 make VERBOSE=1
 ```

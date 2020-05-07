@@ -1,0 +1,7 @@
+if(BUILD_MPI_TPL AND NOT PACKAGE_MPI_STUBS)
+    find_package(MPI REQUIRED)
+    set(TARGET_SPARTA_MPI MPI::MPI_CXX)
+else()
+    set(PACKAGE_MPI_STUBS ON)
+    set(TARGET_SPARTA_MPI mpi_stubs)
+endif()

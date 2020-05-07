@@ -8,11 +8,11 @@ set(SPARTA_CMAKE_COMMON_DIR ${SPARTA_CMAKE_DIR}/common)
 ########## END   SET COMMON DIRS ##########
 
 ########## BEGIN SET CMAKE DEFAULTS ##########
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/common/sparta_cmake_defaults.cmake)
+include(${SPARTA_CMAKE_COMMON_DIR}/set/sparta_cmake_defaults.cmake)
 ########## END   SET CMAKE DEFAULTS ##########
 
 ########## BEGIN SET SPARTA OPTIONS ##########
-include(${SPARTA_CMAKE_COMMON_DIR}/sparta_options.cmake)
+include(${SPARTA_CMAKE_COMMON_DIR}/set/sparta_options.cmake)
 ########## END   SET SPARTA OPTIONS ##########
 
 #include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/machine_files/default.cmake)
@@ -39,7 +39,9 @@ include(${SPARTA_CMAKE_COMMON_DIR}/sparta_options.cmake)
 
 # Setup sparta targets
 set(TARGET_SPARTA spa_${SPARTA_CMAKE_CONFIG_STRING})
-set(TARGET_SPARTA_MPI_STUBS mpi_stubs)
+
+include(${SPARTA_CMAKE_COMMON_DIR}/process/sparta_build_options.cmake)
+#include(${SPARTA_CMAKE_COMMON_DIR}/sparta_process_tpl_options.cmake)
 
 add_subdirectory(src)
 #ADD_SUBDIRECTORY(lib)?
