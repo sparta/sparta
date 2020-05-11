@@ -7,7 +7,7 @@ if(PKG_FFT)
     file(GLOB SPARTA_PKG_FFT_SRC_FILES
         LIST_DIRECTORIES false
         CONFIGURE_DEPENDS
-        *.cpp
+        *.cpp *.hpp *.h
     )
 
     add_library(${TARGET_SPARTA_PKG_FFT} STATIC ${SPARTA_PKG_FFT_SRC_FILES})
@@ -26,5 +26,5 @@ if(PKG_FFT)
     
     # Add include dependencies for building TARGET_SPARTA_PKG_FFT
     target_include_directories(${TARGET_SPARTA_PKG_FFT} PRIVATE ${SPA_INCLUDE_DIRS})
-    ########## END   TARGET_SPARTA_FFT ##########
+    ########## END   TARGET_SPARTA_PKG_FFT ##########
 endif()

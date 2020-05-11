@@ -1,10 +1,6 @@
-# SPARTA_ENABLE_MPICH_TPL:BOOL
-# SPARTA_ENABLE_OMPI_TPL:BOOL
-# SPARTA_ENABLE_MPICH_TPL:BOOL
-# SPARTA_ENABLE_OPENMP_TPL:BOOL
-
-# SPARTA_ENABLE_KOKKOS:BOOL
-# SPARTA_ENABLE_FFT:BOOL
+################################################################################
+# This file sets sparta boolean options listed via `cmake -L`
+################################################################################
 
 ########## BEGIN SPARTA OPTIONAL DEPENDENCIES ##########
 option(PKG_MPI_STUBS
@@ -25,5 +21,10 @@ option(PKG_KOKKOS
 option(BUILD_MPI_TPL
         "Enable or disable MPI TPL. Assumes environment has MPI_ROOT set. Default: ON."
         ON
+      )
+
+option(BUILD_KOKKOS_TPL
+        "Enable or disable KOKKOS TPL. Default: OFF."
+        OFF
       )
 ########## END   SPARTA TPL DEPENDENCIES ##########

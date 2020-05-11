@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.13.0)
 project(SPARTA)
 
 ########## BEGIN SET COMMON DIRS ##########
+set(SPARTA_TPL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 set(SPARTA_CMAKE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(SPARTA_CMAKE_COMMON_DIR ${SPARTA_CMAKE_DIR}/common)
 ########## END   SET COMMON DIRS ##########

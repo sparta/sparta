@@ -16,8 +16,9 @@ message(VERBOSE "SPA_INCLUDE_DIRS=${SPA_INCLUDE_DIRS}")
 ########## BEGIN RECURSE COMMANDS ##########
 # Required dependencies
 # TODO: cmake,ccc,
-add_subdirectory(STUBS)
 add_subdirectory(FFT)
+add_subdirectory(KOKKOS)
+add_subdirectory(STUBS)
 message(VERBOSE "${CMAKE_CURRENT_SOURCE_DIR}: CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
 
 # Optional Dependencies
