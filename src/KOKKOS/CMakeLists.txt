@@ -29,7 +29,7 @@ if(PKG_KOKKOS)
     
     # Make include public so that targets which links against this can find the includes
     target_include_directories(${TARGET_SPARTA_PKG_KOKKOS} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-    target_include_directories(${TARGET_SPARTA_PKG_KOKKOS} PUBLIC ${Kokkos_INCLUDE_DIRS_RET})
+    target_include_directories(${TARGET_SPARTA_PKG_KOKKOS} SYSTEM PUBLIC ${Kokkos_INCLUDE_DIRS_RET})
     
     # Add include dependencies for building TARGET_SPARTA_PKG_KOKKOS
     target_include_directories(${TARGET_SPARTA_PKG_KOKKOS} PRIVATE ${SPA_INCLUDE_DIRS})
