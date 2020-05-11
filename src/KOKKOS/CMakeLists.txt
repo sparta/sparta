@@ -1,9 +1,9 @@
 if(PKG_KOKKOS)
     ########## BEGIN TARGET_SPARTA_PKG_KOKKOS ##########
-    #set(CMAKE_CXX_COMPILER "c++")
     message(VERBOSE "${CMAKE_CURRENT_SOURCE_DIR}: CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
     
     if(BUILD_KOKKOS_TPL)
+        include(${SPARTA_CMAKE_COMMON_DIR}/set/kokkos_cmake_defaults.cmake)
         add_subdirectory(${SPARTA_TPL_DIR}/kokkos ${CMAKE_CURRENT_BINARY_DIR}/lib/kokkos)
         
         message(VERBOSE "Kokkos_INCLUDE_DIRS_RET: ${Kokkos_INCLUDE_DIRS_RET}")
