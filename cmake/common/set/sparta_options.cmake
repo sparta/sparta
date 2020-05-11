@@ -7,15 +7,15 @@
 # SPARTA_ENABLE_FFT:BOOL
 
 ########## BEGIN SPARTA OPTIONAL DEPENDENCIES ##########
-option(PACKAGE_MPI_STUBS
+option(PKG_MPI_STUBS
         "Enable or disable sparta mpi stubs package. Default: OFF."
         OFF
       )
-option(PACKAGE_FFT
+option(PKG_FFT
         "Enable or disable sparta fft package. Default: OFF."
         OFF
       )
-option(PACKAGE_KOKKOS
+option(PKG_KOKKOS
         "Enable or disable sparta kokkos package. Default: OFF."
         OFF
       )

@@ -2,7 +2,7 @@
 # Seems like kitware doesn't want anyone using ar flags other than qc
 # set(CMAKE_STATIC_LINKER_FLAGS "rs")
 
-if(PACKAGE_MPI_STUBS)
+if(PKG_MPI_STUBS)
     ########## BEGIN TARGET_SPARTA_BUILD_MPI_TPL_STUBS ##########
     set(CMAKE_CXX_COMPILER "g++")
     set(CMAKE_CXX_FLAGS "-O -fPIC")
