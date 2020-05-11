@@ -1,5 +1,5 @@
 if(PKG_FFT)
-    ########## BEGIN TARGET_SPARTA_FFT ##########
+    ########## BEGIN TARGET_SPARTA_PKG_FFT ##########
     #set(CMAKE_CXX_COMPILER "c++")
 
     message(VERBOSE "${CMAKE_CURRENT_SOURCE_DIR}: CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
@@ -15,11 +15,16 @@ if(PKG_FFT)
 
     # Get MPI header files
     target_link_libraries(${TARGET_SPARTA_PKG_FFT} LINK_PRIVATE ${TARGET_SPARTA_BUILD_MPI_TPL})
+    #get_target_property(TARGET_SPARTA_BUILD_MPI_TPL_INCLUDE_DIRECTORUES ${TARGET_SPARTA_BUILD_MPI_TPL} INTERFACE_INCLUDE_DIRECTORIES)
+    #message(VERBOSE "TARGET_SPARTA_BUILD_MPI_TPL_INCLUDE_DIRECTORUES=${TARGET_SPARTA_BUILD_MPI_TPL_INCLUDE_DIRECTORUES}")
+    #target_include_directories(${TARGET_SPARTA_PKG_FFT} PRIVATE ${TARGET_SPARTA_BUILD_MPI_TPL_INCLUDE_DIRECTORUES})
     
     set_target_properties(${TARGET_SPARTA_PKG_FFT} PROPERTIES COMPILE_FLAGS "${SPARTA_CXX_COMPILE_FLAGS} ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS}")
     
     # Make include public so that targets which links against this can find the includes
     target_include_directories(${TARGET_SPARTA_PKG_FFT} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+    
+    # Add include dependencies for building TARGET_SPARTA_PKG_FFT
     target_include_directories(${TARGET_SPARTA_PKG_FFT} PRIVATE ${SPA_INCLUDE_DIRS})
     ########## END   TARGET_SPARTA_FFT ##########
 endif()
