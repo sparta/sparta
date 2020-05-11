@@ -13,18 +13,12 @@ set(SPA_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 message(VERBOSE "SPA_INCLUDE_DIRS=${SPA_INCLUDE_DIRS}")
 ########## END   SETUP COMMANDS ##########
 
-########## BEGIN RECURSE COMMANDS ##########
-# Required dependencies
-# TODO: cmake,ccc,
-add_subdirectory(FFT)
-add_subdirectory(KOKKOS)
-add_subdirectory(STUBS)
+########## BEGIN PROCESSING PACKAGES - RECURSE COMMANDS ##########
+add_subdirectory(${SPARTA_PKG_DIR}/FFT)
+add_subdirectory(${SPARTA_PKG_DIR}/KOKKOS)
+add_subdirectory(${SPARTA_PKG_DIR}/STUBS)
 message(VERBOSE "${CMAKE_CURRENT_SOURCE_DIR}: CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
-
-# Optional Dependencies
-## ADD_SUBDIRECTORY(FFT)
-## ADD_SUBDIRECTORY(KOKKOS)
-########## END   RECURSE COMMANDS ##########
+########## END   PROCESSING PACKAGES - RECURSE COMMANDS ##########
 
 ########## START GENERATION COMMANDS ##########
 add_executable(${TARGET_SPARTA} ${SPA_SRC_FILES})
