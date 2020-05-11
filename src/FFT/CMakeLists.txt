@@ -23,6 +23,3 @@ if(PACKAGE_FFT)
     target_include_directories(${TARGET_SPARTA_PACKAGE_FFT} PRIVATE ${SPA_INCLUDE_DIRS})
     ########## END   TARGET_SPARTA_FFT ##########
 endif()
-
-#cd /Users/eharvey/dev/SPARTA.base/sparta/build/src && /usr/bin/c++   -I/Users/eharvey/dev/SPARTA.base/sparta/src -I/Users/eharvey/dev/SPARTA.base/sparta/build/src -I/Users/eharvey/dev/SPARTA.base/sparta/src/STUBS  -O -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk   -fPIC -DSPARTA_UNORDERED_MAP -DSPARTA_GZIP -o CMakeFiles/spa_.dir/collide.cpp.o -c /Users/eharvey/dev/SPARTA.base/sparta/src/collide.cpp
-#/Users/eharvey/dev/SPARTA.base/sparta/build/src/FFT && /usr/bin/c++   -I/Users/eharvey/dev/SPARTA.base/sparta/src/FFT -I/Users/eharvey/dev/SPARTA.base/sparta/src -I/Users/eharvey/dev/SPARTA.base/sparta/build/src -I/Users/eharvey/dev/SPARTA.base/sparta/src/STUBS  -O -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk   -o CMakeFiles/fft.dir/compute_fft_grid.cpp.o -c /Users/eharvey/dev/SPARTA.base/sparta/src/FFT/compute_fft_grid.cpp
