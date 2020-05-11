@@ -40,9 +40,9 @@ include(${SPARTA_CMAKE_COMMON_DIR}/set/sparta_options.cmake)
 
 # Setup sparta targets
 set(TARGET_SPARTA spa_${SPARTA_CMAKE_CONFIG_STRING})
+#set(CMAKE_CXX_FLAGS CACHE "${CMAKE_CXX_FLAGS} ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS}" FORCE)
+#add_compile_options(${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
 
 include(${SPARTA_CMAKE_COMMON_DIR}/process/sparta_build_options.cmake)
-#include(${SPARTA_CMAKE_COMMON_DIR}/sparta_process_tpl_options.cmake)
 
 add_subdirectory(src)
-#ADD_SUBDIRECTORY(lib)?

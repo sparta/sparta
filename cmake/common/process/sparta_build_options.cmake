@@ -9,11 +9,13 @@
 if(BUILD_MPI_TPL AND NOT PKG_MPI_STUBS)
     find_package(MPI REQUIRED)
     set(TARGET_SPARTA_BUILD_MPI_TPL MPI::MPI_CXX)
+    target_compile_options(${TARGET_SPARTA_BUILD_MPI_TPL} INTERFACE ${SPARTA_CXX_COMPILE_FLAGS} ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
 else()
     set(PKG_MPI_STUBS ON)
     set(TARGET_SPARTA_BUILD_MPI_TPL pkg_mpi_stubs)
 endif()
 list(APPEND TARGET_SPARTA_BUILD_TPLS ${TARGET_SPARTA_BUILD_MPI_TPL})
+
 #################### END PROCESS MPI TPL/PKG ####################
 
 #################### BEGIN PROCESS PKGS ####################

@@ -27,8 +27,6 @@ if(PKG_KOKKOS)
     # are actually returned via Kokkos_INCLUDE_DIRS_RET.
     target_link_libraries(${TARGET_SPARTA_PKG_KOKKOS} LINK_PRIVATE ${TARGET_SPARTA_BUILD_KOKKOS_TPL})
     
-    set_target_properties(${TARGET_SPARTA_PKG_KOKKOS} PROPERTIES COMPILE_FLAGS "${SPARTA_CXX_COMPILE_FLAGS} ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS}")
-    
     # Make include public so that targets which links against this can find the includes
     target_include_directories(${TARGET_SPARTA_PKG_KOKKOS} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
     target_include_directories(${TARGET_SPARTA_PKG_KOKKOS} PUBLIC ${Kokkos_INCLUDE_DIRS_RET})
