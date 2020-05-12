@@ -5,6 +5,10 @@
 # This file is also responsible for handeling depencies among boolean options.
 ################################################################################
 
+#################### BEGIN COMBINE CXX FLAGS ####################
+set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS ${SPARTA_CXX_COMPILE_FLAGS} ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
+#################### BEGIN COMBINE CXX FLAGS ####################
+
 #################### BEGIN PROCESS MPI TPL/PKG ####################
 if(BUILD_MPI_TPL AND NOT PKG_MPI_STUBS)
     find_package(MPI REQUIRED)
@@ -43,7 +47,3 @@ if(BUILD_KOKKOS_TPL)
     # BUILD_KOKKOS_TPL does not depend on PKG_KOKKOS, do not attempt to resolve dependency
 endif()
 #################### END PROCESS TPLS ####################
-
-#################### BEGIN COMBINE CXX FLAGS ####################
-set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS ${SPARTA_CXX_COMPILE_FLAGS} ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
-#################### BEGIN COMBINE CXX FLAGS ####################

@@ -1,5 +1,6 @@
+# astra_kokkos = Arm ThunderX2 architecture, KOKKOS package with OpenMP backend, MPI compiler, default MPI
+
 #################### BEGIN SPARTA OPTIONS ####################
-#get_property(SPARTA_CXX_COMPILE_FLAGS_DOCSTRING CACHE SPARTA_CXX_COMPILE_FLAGS PROPERTY DOCSTRING)
 set(SPARTA_CMAKE_CONFIG_STRING
     astra_kokkos
     CACHE

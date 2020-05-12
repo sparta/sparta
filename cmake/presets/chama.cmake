@@ -1,5 +1,6 @@
+# chama = mpic++, OpenMPI (with default modules)
+
 #################### BEGIN SPARTA OPTIONS ####################
-#get_property(SPARTA_CXX_COMPILE_FLAGS_DOCSTRING CACHE SPARTA_CXX_COMPILE_FLAGS PROPERTY DOCSTRING)
 set(SPARTA_CMAKE_CONFIG_STRING
     chama
     CACHE

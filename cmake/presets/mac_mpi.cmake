@@ -1,3 +1,5 @@
+# mac_mpi = Apple PowerBook laptop, mpic++
+
 include(${CMAKE_SOURCE_DIR}/cmake/presets/mac.cmake)
 
 #################### BEGIN SPARTA OPTIONS ####################
@@ -8,6 +10,10 @@ set(SPARTA_CMAKE_CONFIG_STRING
     FORCE
     )
 #################### END SPARTA OPTIONS ####################
+
+#################### BEGIN CMAKE OPTIONS ####################
+set(CMAKE_CXX_COMPILER "mpic++" CACHE STRING "" FORCE)
+#################### END CMAKE OPTIONS ####################
 
 #################### BEGIN TPL OPTIONS ####################
 set(BUILD_MPI_TPL

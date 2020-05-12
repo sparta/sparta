@@ -1,11 +1,6 @@
-# TODOs:
-# set(CMAKE_OSX_SYSROOT "" CACHE STRING "")
-#
-# md5 of executable doesn't match. Not clear if this is due to .a and exe file
-# name differences between the old build and this cmake build. Need to verify.
+# mac = Apple PowerBook laptop, c++, serial (no MPI)
 
 #################### BEGIN SPARTA OPTIONS ####################
-#get_property(SPARTA_CXX_COMPILE_FLAGS_DOCSTRING CACHE SPARTA_CXX_COMPILE_FLAGS PROPERTY DOCSTRING)
 set(SPARTA_CMAKE_CONFIG_STRING
     mac
     CACHE
