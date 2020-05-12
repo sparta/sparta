@@ -23,8 +23,7 @@ if(PKG_KOKKOS)
 
     target_link_libraries(${TARGET_SPARTA_PKG_KOKKOS} LINK_PRIVATE ${TARGET_SPARTA_BUILD_MPI_TPL})
     
-    # This should handle resolving include directories, but these include paths
-    # are actually returned via Kokkos_INCLUDE_DIRS_RET.
+    # This should handle resolving include directories when kokkos is updated.
     target_link_libraries(${TARGET_SPARTA_PKG_KOKKOS} LINK_PRIVATE ${TARGET_SPARTA_BUILD_KOKKOS_TPL})
     
     # Make include public so that targets which links against this can find the includes

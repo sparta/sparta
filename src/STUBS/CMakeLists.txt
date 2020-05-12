@@ -1,6 +1,5 @@
-#TODOs
-# Seems like kitware doesn't want anyone using ar flags other than qc
-# set(CMAKE_STATIC_LINKER_FLAGS "rs")
+# TODO: Do we need set(CMAKE_STATIC_LINKER_FLAGS "rs")?
+# Seems like kitware doesn't want anyone using ar flags other than "qc"
 
 if(PKG_MPI_STUBS)
     ########## BEGIN TARGET_SPARTA_BUILD_MPI_TPL_STUBS ##########

@@ -15,7 +15,6 @@ else()
     set(TARGET_SPARTA_BUILD_MPI_TPL pkg_mpi_stubs)
 endif()
 list(APPEND TARGET_SPARTA_BUILD_TPLS ${TARGET_SPARTA_BUILD_MPI_TPL})
-
 #################### END PROCESS MPI TPL/PKG ####################
 
 #################### BEGIN PROCESS PKGS ####################

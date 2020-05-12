@@ -5,7 +5,7 @@
 file(GLOB SPA_SRC_FILES
         LIST_DIRECTORIES false
         CONFIGURE_DEPENDS
-        *.cpp
+        *.cpp *.hpp *.h
     )
 
 # List out include directories
