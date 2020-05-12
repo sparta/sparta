@@ -6,29 +6,35 @@
 
 #################### BEGIN SPARTA OPTIONS ####################
 #get_property(SPARTA_CXX_COMPILE_FLAGS_DOCSTRING CACHE SPARTA_CXX_COMPILE_FLAGS PROPERTY DOCSTRING)
+set(SPARTA_CMAKE_CONFIG_STRING
+    mac
+    CACHE
+    STRING "Descriptive string to describe \"spa_\" executable configuration"
+    )
 set(SPARTA_CXX_COMPILE_FLAGS 
     -fPIC -DSPARTA_UNORDERED_MAP
     CACHE 
     STRING 
     "Compiler flags use when building .o files for spa_*"
     )
-set(SPARTA_CMAKE_CONFIG_STRING
-    mac
-    CACHE
-    STRING "Descriptive string to describe \"spa_\" executable configuration"
-    )
+#################### END SPARTA OPTIONS ####################
+
+#################### BEGIN TPL OPTIONS ####################
 set(BUILD_MPI_TPL
     OFF
     CACHE
     BOOL
     "Enable or disable MPI TPL. Assumes environment has MPI_ROOT set. Default: ON."
     )
+#################### END   TPL OPTIONS ####################
+
+#################### BEGIN PACKAGE OPTIONS ####################
 set(PKG_MPI_STUBS
     ON
     CACHE
     BOOL
     "Enable or disable sparta mpi stubs package. Default: OFF.")
-#################### END SPARTA OPTIONS ####################
+#################### END   PACKAGE OPTIONS ####################
 
 #################### BEGIN CMAKE OPTIONS ####################
 set(CMAKE_C_COMPILER "cc" CACHE STRING "")
