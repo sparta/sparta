@@ -9,7 +9,7 @@
 if(BUILD_MPI_TPL AND NOT PKG_MPI_STUBS)
     find_package(MPI REQUIRED)
     set(TARGET_SPARTA_BUILD_MPI_TPL MPI::MPI_CXX)
-    target_compile_options(${TARGET_SPARTA_BUILD_MPI_TPL} INTERFACE ${SPARTA_CXX_COMPILE_FLAGS} ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
+    target_compile_options(${TARGET_SPARTA_BUILD_MPI_TPL} INTERFACE ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
 else()
     set(PKG_MPI_STUBS ON)
     set(BUILD_MPI_TPL OFF)
@@ -43,3 +43,7 @@ if(BUILD_KOKKOS_TPL)
     # BUILD_KOKKOS_TPL does not depend on PKG_KOKKOS, do not attempt to resolve dependency
 endif()
 #################### END PROCESS TPLS ####################
+
+#################### BEGIN COMBINE CXX FLAGS ####################
+set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS ${SPARTA_CXX_COMPILE_FLAGS} ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
+#################### BEGIN COMBINE CXX FLAGS ####################

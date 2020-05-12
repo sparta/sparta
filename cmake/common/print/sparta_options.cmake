@@ -1,5 +1,5 @@
 message(STATUS "")
-message(STATUS "****************** Sparta Settings ******************")
+message(STATUS "****************** Begin SPARTA Settings ******************")
 
 message(STATUS "Enabled packages")
 foreach(opt IN LISTS SPARTA_PKG_LIST)
@@ -17,3 +17,9 @@ foreach(opt IN LISTS SPARTA_BUILD_TPL_LIST)
         message(STATUS "  ${opt}")
     endif()
 endforeach()
+
+message(STATUS "")
+
+message(STATUS "SPARTA_DEFAULT_CXX_COMPILE_FLAGS: ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS}")
+message(STATUS "SPARTA_CXX_COMPILE_FLAGS: ${SPARTA_CXX_COMPILE_FLAGS}")
+message(STATUS "****************** End   SPARTA Settings ******************")
