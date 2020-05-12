@@ -944,13 +944,14 @@ The first is during gas-phase collisions and chemistry.  The ionized
 ambipolar particles in a grid cell are each split into two particles
 (ion and electron) and each can participate in two-body collisions
 with any other particle in the cell.  Electron/electron collisions are
-actually not performed, but are tallied in the overall collision
-count.  If gas-phase chemistry is turned on, reactions involving ions
-and electrons can be specified, which include dissociation,
-ionization, exchange, and recombination reactions.  At the end of the
-collision/chemsitry operations for the grid cell, there is still a
-one-to-one pairing between ambipolar ions and electrons.  Each pair is
-recombined into a single particle.
+actually not performed, but are tallied in the overall collision count
+(if using a collision mixture with a single group, not when using
+multiple groups).  If gas-phase chemistry is turned on, reactions
+involving ions and electrons can be specified, which include
+dissociation, ionization, exchange, and recombination reactions.  At
+the end of the collision/chemsitry operations for the grid cell, there
+is still a one-to-one pairing between ambipolar ions and electrons.
+Each pair is recombined into a single particle.
 
 The second is during collisions with surface (or the boundaries of the
 simulation box) if a surface reaction model is defined for the surface
@@ -982,15 +983,13 @@ destroyed) internally, as described above.
 
 Use the "collide_modify ambipolar yes"_collide_modify.html command if
 you want to perform gas-phase collisions using the ambipolar model.
-This is not required.  If you do this, DO use a mixture which includes
-the ambipolar electron species, so that electrons will participate in
-the collisions and reactions (if defined).  You may also want to
-specify a mixture for the collide command which has two or more
-groups.  If this is the case, the ambipolar electron species must be
-in a group of its own.  The other groups can contain combinations of
-ion or neutral species.  Note that putting the ambipolar electron
-species in its own group should improve the efficiency of the code due
-to the large disparity in electron versus ion/neutral velocities.
+This is not required.  If you do this, you may also want to specify a
+mixture for the collide command which has two or more groups.  If this
+is the case, the ambipolar electron species must be in a group by
+itself.  The other group(s) can contain any combination of ion or
+neutral species.  Note that putting the ambipolar electron species in
+its own group should improve the efficiency of the code due to the
+large disparity in electron versus ion/neutral velocities.
 
 If you want to perform gas-phase chemistry for reactions involving
 ambipolar ions and electrons, use the "react"_react.html command with

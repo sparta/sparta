@@ -300,6 +300,16 @@ void Collide::init()
     ions = afix->ions;
   }
 
+  // if ambipolar and multiple groups in mixture, ambispecies must be its own group
+
+  if (ambiflag && mixture->ngroup > 1) {
+    int *species2group = mixture->species2group;
+    int egroup = species2group[ambispecies];
+    if (mixture->groupsize[egroup] != 1)
+      error->all(FLERR,"Multigroup ambipolar collisions require "
+		 "electrons be their own group");
+  }
+
   // vre_next = next timestep to zero vremax & remain, based on vre_every
 
   if (vre_every) vre_next = (update->ntimestep/vre_every)*vre_every + vre_every;
@@ -1242,8 +1252,9 @@ void Collide::collisions_group_ambipolar()
     // nattempt = rounded attempt with RN
     // NOTE: not using RN for rounding of nattempt
     // gpair = list of group pairs when nattempt > 0
-    // egroup/egroup collisions are not included
-    
+    //         flip igroup/jgroup if igroup = egroup
+    // egroup/egroup collisions are not included in gpair
+
     npair = 0;
     for (igroup = 0; igroup < ngroups; igroup++)
       for (jgroup = igroup; jgroup < ngroups; jgroup++) {
@@ -1252,8 +1263,13 @@ void Collide::collisions_group_ambipolar()
 	nattempt = static_cast<int> (attempt);
 
 	if (nattempt) {
-	  gpair[npair][0] = igroup;
-	  gpair[npair][1] = jgroup;
+	  if (igroup == egroup) {
+	      gpair[npair][0] = jgroup;
+	      gpair[npair][1] = igroup;
+	    } else {
+	      gpair[npair][0] = igroup;
+	      gpair[npair][1] = jgroup;
+	    }
 	  gpair[npair][2] = nattempt;
 	  nattempt_one += nattempt;
 	  npair++;
@@ -1306,29 +1322,6 @@ void Collide::collisions_group_ambipolar()
         //  ncollide_one++;
         //  continue;
 	//}
-
-        // if particle I is electron
-        // swap with J, since electron must be 2nd in any ambipolar reaction
-        // need to swap i/j, igroup/jgroup, ni/nj ptrs, ilist/jlist, ipart/jpart
-        // don't have to worry if an ambipolar ion is I or J
-
-        if (ipart->ispecies == ambispecies) {
-          tmp = i;
-          i = j;
-          j = tmp;
-          tmp = igroup;
-          igroup = jgroup;
-          jgroup = tmp;
-          tmpvec = ni;
-          ni = nj;
-          nj = tmpvec;
-          tmpvec = ilist;
-          ilist = jlist;
-          jlist = tmpvec;
-          p = ipart;
-          ipart = jpart;
-          jpart = p;
-        }
 
         // test if collision actually occurs
 	
