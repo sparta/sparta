@@ -17,6 +17,17 @@ set(SPARTA_CMAKE_CONFIG_STRING
     CACHE
     STRING "Descriptive string to describe \"spa_\" executable configuration"
     )
+set(BUILD_MPI_TPL
+    OFF
+    CACHE
+    BOOL
+    "Enable or disable MPI TPL. Assumes environment has MPI_ROOT set. Default: ON."
+    )
+set(PKG_MPI_STUBS
+    ON
+    CACHE
+    BOOL
+    "Enable or disable sparta mpi stubs package. Default: OFF.")
 #################### END SPARTA OPTIONS ####################
 
 #################### BEGIN CMAKE OPTIONS ####################

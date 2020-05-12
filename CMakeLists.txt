@@ -19,7 +19,6 @@ include(${SPARTA_CMAKE_COMMON_DIR}/set/sparta_options.cmake)
 set(TARGET_SPARTA spa_${SPARTA_CMAKE_CONFIG_STRING})
 
 include(${SPARTA_CMAKE_COMMON_DIR}/process/sparta_build_options.cmake)
-#set(SPARTA_PKG_LIST "")
 include(${SPARTA_CMAKE_COMMON_DIR}/print/sparta_options.cmake)
 
 add_subdirectory(src)
