@@ -677,6 +677,23 @@ int Particle::add_particle(int id, int ispecies, int icell,
 }
 
 /* ----------------------------------------------------------------------
+   add an empty particle to particle list, caller will fill it
+   return 1 if particle array was reallocated, else 0
+------------------------------------------------------------------------- */
+
+int Particle::add_particle()
+{
+  int reallocflag = 0;
+  if (nlocal == maxlocal) {
+    grow(1);
+    reallocflag = 1;
+  }
+
+  nlocal++;
+  return reallocflag;
+}
+
+/* ----------------------------------------------------------------------
    clone particle Index and add to end of particle list
    return 1 if particle array was reallocated, else 0
 ------------------------------------------------------------------------- */

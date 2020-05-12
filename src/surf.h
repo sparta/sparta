@@ -121,7 +121,7 @@ class Surf : protected Pointers {
   typedef std::map<OnePoint2d,int> MyHashPoint;
   typedef std::map<OnePoint2d,int>::iterator MyPointIt;
   typedef std::map<TwoPoint3d,int> MyHash2Point;
-  typedef std::map<TwoPoint3d,int>::iterator My2PointIt;#
+  typedef std::map<TwoPoint3d,int>::iterator My2PointIt;
   typedef std::map<cellint,int> MyCellHash;
 #elif defined SPARTA_UNORDERED_MAP
   typedef std::unordered_map<surfint,int> MySurfHash;

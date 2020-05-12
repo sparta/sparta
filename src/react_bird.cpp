@@ -500,30 +500,34 @@ void ReactBird::ambi_check()
     }
 
     // exchange must match one of these
+    // E: AB+ + e -> A + B
     // E: AB+ + C -> A + BC+
     // E: C + AB+ -> A + BC+
 
     else if (r->type == EXCHANGE) {
       if (r->nreactant == 2 && r->nproduct == 2) {
-        if (ions[r->reactants[0]] == 1 && ions[r->reactants[1]] == 0 &&
+        if (ions[r->reactants[0]] == 1 && r->reactants[1] == especies &&
+            ions[r->products[0]] == 0 && ions[r->products[1]] == 0) flag = 0;
+        else if (ions[r->reactants[0]] == 1 && ions[r->reactants[1]] == 0 &&
             ions[r->products[0]] == 0 && ions[r->products[1]] == 1) flag = 0;
         else if (ions[r->reactants[0]] == 0 && ions[r->reactants[1]] == 1 &&
             ions[r->products[0]] == 0 && ions[r->products[1]] == 1) flag = 0;
       }
     }
 
-    // recombination must match this
+    // recombination must match one of these
     // R: A+ + e -> A
-    // NOTE allow for 3 forms?
-    // NOTE: disallow RECOMBINATION with ambipolar for now
+    // R: A + B+ -> AB+
+    // R: A+ + B -> AB+
 
     else if (r->type == RECOMBINATION) {
-      error->all(FLERR,"Recombination reactions are currently "
-                 "not allowed for ambipolar model");
-
       if (r->nreactant == 2 && r->nproduct == 1) {
         if (ions[r->reactants[0]] == 1 && r->reactants[1] == especies &&
             ions[r->products[0]] == 0) flag = 0;
+        else if (ions[r->reactants[0]] == 0 && ions[r->reactants[1]] == 1 && 
+            ions[r->products[0]] == 1) flag = 0;
+        else if (ions[r->reactants[0]] == 1 && ions[r->reactants[1]] == 0 && 
+            ions[r->products[0]] == 1) flag = 0;
       }
     }
 

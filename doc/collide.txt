@@ -76,6 +76,13 @@ not is a function of the relative velocities of the two particles,
 their respectives species, and other parameters of the collision
 style; see equation 11.4 in "(Bird94)"_#Bird94.
 
+NOTE: If you are using charged species with the ambipolar
+approximation, as described in "Section
+6.11"_doc/Section_howto.html#howto_11, and you specify a mixture ID
+with multiple groups and which includes the ambipolar electron species
+(not required), then the ambipolar electron species must be in its own
+group.
+
 :line
 
 The {none} style means that no particle-particle collisions will be

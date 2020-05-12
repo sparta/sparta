@@ -149,21 +149,19 @@ double CollideVSS::vremax_init(int igroup, int jgroup)
 
 double CollideVSS::attempt_collision(int icell, int np, double volume)
 {
- double fnum = update->fnum;
- double dt = update->dt;
+  double fnum = update->fnum;
+  double dt = update->dt;
 
- double nattempt;
+  double nattempt;
 
- if (remainflag) {
-   nattempt = 0.5 * np * (np-1) *
-     vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
-   remain[icell][0][0] = nattempt - static_cast<int> (nattempt);
- } else 
-   nattempt = 0.5 * np * (np-1) *
-     vremax[icell][0][0] * dt * fnum / volume + random->uniform();
-
- // DEBUG
- //nattempt = 10;
+  if (remainflag) {
+    nattempt = 0.5 * np * (np-1) *
+      vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
+    remain[icell][0][0] = nattempt - static_cast<int> (nattempt);
+  } else {
+    nattempt = 0.5 * np * (np-1) *
+      vremax[icell][0][0] * dt * fnum / volume + random->uniform();
+  }
 
   return nattempt;
 }

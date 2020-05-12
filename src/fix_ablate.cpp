@@ -1462,7 +1462,6 @@ double FixAblate::compute_scalar()
 
 double FixAblate::compute_vector(int i)
 {
-
   if (i == 0) return sum_delta;
   if (i == 1) return 1.0*ndelete;
 }

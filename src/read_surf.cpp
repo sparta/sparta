@@ -1957,7 +1957,7 @@ void ReadSurf::clip3d()
   }
 
   // check that surf IDs are still 1 to N
-
+  
   check_consecutive();
 
   // stats
@@ -2007,6 +2007,8 @@ void ReadSurf::check_consecutive()
   Surf::Line *lines;
   Surf::Tri *tris;
 
+  if (surf->nsurf == 0) return;
+  
   bigint smin = surf->nsurf;
   bigint smax = 0;
 
@@ -2026,7 +2028,6 @@ void ReadSurf::check_consecutive()
     else tris = surf->tris;
     for (int i = 0; i < n; i++) {
       id = tris[i].id;
-      //if (id == 0) printf("ID %d %d: %d %d\n",id,me,i,n);
       smin = MIN(smin,id);
       smax = MAX(smax,id);
     }
@@ -2037,7 +2038,6 @@ void ReadSurf::check_consecutive()
   MPI_Allreduce(&smax,&smaxall,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
 
   if (sminall != 1) {
-    printf("SMINALL %d\n",sminall);
     char str[128];
     sprintf(str,"Read_surf minimum surface ID is " BIGINT_FORMAT,sminall);
     error->all(FLERR,str);

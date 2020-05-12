@@ -21,12 +21,6 @@
 #include "random_park.h"
 #include "error.h"
 
-
-// DEBUG
-#include "update.h"
-
-
-
 using namespace SPARTA_NS;
 
 enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};   // other files
@@ -125,7 +119,7 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
       
     // test against random number to see if this reaction occurs
     // if it does, reset species of I,J and optional K to product species
-    // J particle can be destroyed in recombination reaction, set species = -1
+    // J particle is destroyed in recombination reaction, set species = -1
     // K particle can be created in a dissociation or ionization reaction,
     //   set its kspecies, parent will create it
     // important NOTE:
@@ -134,20 +128,16 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
     //   for two reasons:
     //   a) list of N possible reactions above includes all reactions
     //      that I,J species are in, regardless of order
-    //   b) properties of pre-reaction state, stored in precoln,
-    //      as computed by setup_collision(),
-    //      and used by perform_collision() after reaction has taken place,
-    //      only store combined properties of I,J,
+    //   b) properties of pre-reaction state are stored in precoln:
+    //      computed by setup_collision()
+    //      used by perform_collision() after reaction has taken place
+    //      precoln only stores combined properties of I,J
     //      nothing that is I-specific or J-specific
 
     if (react_prob > random_prob) {
       tally_reactions[list[i]]++;
       ip->ispecies = r->products[0];
 
-      // Previous statment did not destroy the 2nd species (B) if
-      //   recombination was specified as A+B->AB+M (which has nproductus=2)
-      //   but only for the A+B->AB specication form (which has nproductus=1)
-       
       switch (r->type) {
       case DISSOCIATION:
       case IONIZATION:
