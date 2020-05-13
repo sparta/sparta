@@ -217,10 +217,6 @@ E: Global mem/limit setting cannot exceed 2GB
 
 Self-expanatory, prevents 32-bit interger overflow
 
-E: Global mem/limit setting must be greater than 0
-
-Self-expanatory
-
 E: Timestep must be >= 0
 
 Reset_timestep cannot be used to set a negative timestep.
