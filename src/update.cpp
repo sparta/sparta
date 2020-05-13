@@ -1688,3 +1688,4 @@ void Update::set_mem_limit_grid(int gnlocal)
 
   global_mem_limit = global_mem_limit_big;
 }
+
