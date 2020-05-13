@@ -1,6 +1,6 @@
 # kokkos_omp = KOKKOS package with OpenMP backend, MPI compiler, default MPI
 
-include(${CMAKE_SOURCE_DIR}/cmake/presets/astra_kokkos.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/presets/kokkos_common.cmake)
 #################### BEGIN SPARTA OPTIONS ####################
 set(SPARTA_CMAKE_CONFIG_STRING
     kokkos_omp
@@ -11,5 +11,4 @@ set(SPARTA_CMAKE_CONFIG_STRING
 #################### END   SPARTA OPTIONS ####################
 
 #################### BEGIN KOKKOS OPTIONS ####################
-set(KOKKOS_ARCH "" CACHE STRING "" FORCE)
 #################### END   KOKKOS OPTIONS ####################

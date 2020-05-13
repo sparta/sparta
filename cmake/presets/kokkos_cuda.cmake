@@ -1,6 +1,6 @@
 # kokkos_cuda = KOKKOS package with CUDA backend, default MPI, nvcc/mpicxx compiler with OpenMPI or MPICH
 
-include(${CMAKE_SOURCE_DIR}/cmake/presets/astra_kokkos.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/presets/kokkos_common.cmake)
 #################### BEGIN SPARTA OPTIONS ####################
 set(SPARTA_CMAKE_CONFIG_STRING
     kokkos_cuda
@@ -17,7 +17,6 @@ set(CMAKE_CXX_COMPILER ${CMAKE_SOURCE_DIR}lib/kokkos/bin/nvcc_wrapper CACHE STRI
 #################### END CMAKE OPTIONS ####################
 
 #################### BEGIN KOKKOS OPTIONS ####################
-set(Kokkos_ENABLE_OpenMP OFF CACHE STRING "" FORCE)
 set(Kokkos_ENABLE_Cuda ON CACHE STRING "")
-set(KOKKOS_ARCH "Kepler35" CACHE STRING "" FORCE)
+set(KOKKOS_ARCH "Kepler35" CACHE STRING "")
 #################### END   KOKKOS OPTIONS ####################
