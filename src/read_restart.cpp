@@ -212,7 +212,7 @@ void ReadRestart::command(int narg, char **arg)
           MPI_Send(&n,1,MPI_SPARTA_BIGINT,iproc,0,world);
           MPI_Recv(&tmp,0,MPI_INT,iproc,0,world,&status);
           MPI_Send(buf,n,MPI_CHAR,iproc,0,world);
-        } else fseek(fp,filepos+sizeof(int)+n,SEEK_SET);
+        } else fseek(fp,filepos+sizeof(bigint)+n,SEEK_SET);
       }
 
       // rewind and read my chunk
