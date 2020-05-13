@@ -19,5 +19,7 @@ if(PKG_FFT)
     
     # Add include dependencies for building TARGET_SPARTA_PKG_FFT
     target_include_directories(${TARGET_SPARTA_PKG_FFT} PRIVATE ${SPA_INCLUDE_DIRS})
+    
+    install(TARGETS ${TARGET_SPARTA_PKG_FFT} DESTINATION lib/sparta/${SPARTA_CMAKE_CONFIG_STRING}/pkgs)
     ########## END   TARGET_SPARTA_PKG_FFT ##########
 endif()

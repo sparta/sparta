@@ -42,5 +42,7 @@ if(PKG_KOKKOS)
     
     # Add include dependencies for building TARGET_SPARTA_PKG_KOKKOS
     target_include_directories(${TARGET_SPARTA_PKG_KOKKOS} PRIVATE ${SPA_INCLUDE_DIRS})
+    
+    install(TARGETS ${TARGET_SPARTA_PKG_KOKKOS} DESTINATION lib/sparta/${SPARTA_CMAKE_CONFIG_STRING}/pkgs)
     ########## END   TARGET_SPARTA_PKG_KOKKOS ##########
 endif()

@@ -16,5 +16,7 @@ if(PKG_MPI_STUBS)
 
     # Make include public so that targets which link against this can find the includes
     target_include_directories(${TARGET_SPARTA_BUILD_MPI_TPL} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+    
+    install(TARGETS ${TARGET_SPARTA_BUILD_MPI_TPL} DESTINATION lib/sparta/${SPARTA_CMAKE_CONFIG_STRING}/pkgs)
     ########## END   TARGET_SPARTA_BUILD_MPI_TPL_STUBS ##########
 endif()

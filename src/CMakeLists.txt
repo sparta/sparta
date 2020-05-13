@@ -28,11 +28,12 @@ target_include_directories(${TARGET_SPARTA} PRIVATE ${SPA_INCLUDE_DIRS})
 target_link_libraries(${TARGET_SPARTA} LINK_PRIVATE ${TARGET_SPARTA_BUILD_TPLS})
 target_link_libraries(${TARGET_SPARTA} LINK_PRIVATE ${TARGET_SPARTA_PKGS})
 
+# TODO: Eliminate PRE_BUILD target
 add_custom_target(${TARGET_SPARTA}_PRE_BUILD COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/Make.sh style)
-
 add_dependencies(${TARGET_SPARTA} ${TARGET_SPARTA}_PRE_BUILD)
 
 add_custom_command(TARGET ${TARGET_SPARTA} POST_BUILD COMMAND size ${TARGET_SPARTA})
 ########## END   GENERATION COMMANDS ##########
 
+install(TARGETS ${TARGET_SPARTA} DESTINATION bin)
 ########## END   TARGET_SPARTA ##########
