@@ -372,7 +372,7 @@ void ReadRestart::command(int narg, char **arg)
         fseek(fp,-(sizeof(int)+grid_read_size),SEEK_CUR);
 
         if (update->mem_limit_grid_flag)
-          update->set_mem_limit_grid();
+          update->set_mem_limit_grid(grid_nlocal);
 
         int maxbuf_new = MAX(grid_read_size,update->global_mem_limit);
         maxbuf_new = MAX(maxbuf_new,sizeof(Particle::OnePartRestart));
@@ -509,7 +509,7 @@ void ReadRestart::command(int narg, char **arg)
         fseek(fp,-(sizeof(int)+grid_read_size),SEEK_CUR);
 
         if (update->mem_limit_grid_flag)
-          update->set_mem_limit_grid();
+          update->set_mem_limit_grid(grid_nlocal);
 
         int maxbuf_new = MAX(grid_read_size,update->global_mem_limit);
         maxbuf_new = MAX(maxbuf_new,sizeof(Particle::OnePartRestart));

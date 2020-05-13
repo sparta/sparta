@@ -1677,12 +1677,15 @@ void Update::reset_timestep(bigint newstep)
    get mem/limit based on grid memory
 ------------------------------------------------------------------------- */
 
-void Update::set_mem_limit_grid()
+void Update::set_mem_limit_grid(int gnlocal)
 {
-  bigint global_mem_limit_big = static_cast<bigint> (grid->nlocal*sizeof(Grid::ChildCell));
+  if (gnlocal == 0) gnlocal = grid->nlocal;
+
+  bigint global_mem_limit_big = static_cast<bigint> (gnlocal*sizeof(Grid::ChildCell));
 
   if (global_mem_limit_big > MAXSMALLINT)
     error->all(FLERR,"Global mem/limit setting cannot exceed 2GB");
+  else if (global_mem_limit_big <= 0)
+    error->all(FLERR,"Global mem/limit setting must be greater than 0");
   global_mem_limit = global_mem_limit_big;
 }
-
