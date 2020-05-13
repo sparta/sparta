@@ -1,8 +1,9 @@
 ################################################################################
 # This file sets sparta boolean options listed via `cmake -L`
 ################################################################################
+
 #-------------------------------------------------------------------------------
-# function(sparta_pkg_option)
+# macro(sparta_option)
 # Adds a sparta package option by invoking cmake's option routine and appends the option
 # to OPTIONS_LIST
 #

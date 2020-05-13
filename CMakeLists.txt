@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.10.0)
+
 project(SPARTA)
 
 ########## BEGIN SET COMMON DIRS ##########
@@ -18,7 +19,12 @@ include(${SPARTA_CMAKE_COMMON_DIR}/set/sparta_options.cmake)
 
 set(TARGET_SPARTA spa_${SPARTA_CMAKE_CONFIG_STRING})
 
+########## BEGIN PROCESS SPARTA OPTIONS ##########
 include(${SPARTA_CMAKE_COMMON_DIR}/process/sparta_build_options.cmake)
+########## END   PROCESS SPARTA OPTIONS ##########
+
+########## BEGIN PRINT SPARTA OPTIONS ##########
 include(${SPARTA_CMAKE_COMMON_DIR}/print/sparta_options.cmake)
+########## END   PRINT SPARTA OPTIONS ##########
 
 add_subdirectory(src)
