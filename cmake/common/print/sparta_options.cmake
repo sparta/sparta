@@ -3,7 +3,6 @@ message(STATUS "****************** Begin SPARTA Settings ******************")
 
 message(STATUS "Enabled packages")
 foreach(opt IN LISTS SPARTA_PKG_LIST)
-    message(VERBOSE "opt=${${opt}}")
     if(${${opt}})
         message(STATUS "  ${opt}")
     endif()
