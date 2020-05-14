@@ -89,7 +89,7 @@ void ComputePropertyGridKokkos::compute_per_grid_kokkos()
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputePropertyGrid_ComputePerGrid_vector>(0,nglocal),*this);
   else
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputePropertyGrid_ComputePerGrid_array>(0,nglocal),*this);    
-  DeviceType::fence();
+  DeviceType().fence();
   copymode = 0;
 }
 
