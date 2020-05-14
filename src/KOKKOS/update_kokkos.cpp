@@ -400,7 +400,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     int nlocal = particle->nlocal;
     copymode = 1;
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagSetParticleOptMoveFlags<DIM,SURF> >(0,nlocal),*this);
-    DeviceType::fence();
+    DeviceType().fence();
     copymode = 0;
   }
 
@@ -436,10 +436,10 @@ void UpdateKokkos::setCellMinDistToSurfDriver() {
   int nlocal = grid->nlocal;
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagSetCellMinDistToSurf<DIM,SURF> >(0,nlocal),*this);
-  DeviceType::fence();
+  DeviceType().fence();
   if (grid->nsplit > 0) {
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCheckCellMinDistToSplitCell<DIM,SURF> >(0,nlocal),*this);
-    DeviceType::fence();
+    DeviceType().fence();
   }
   copymode = 0;
 }
@@ -1014,7 +1014,7 @@ template < int DIM, int SURF > void UpdateKokkos::standardMove() {
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,1> >(pstart,pstop),*this);
     else
       Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,-1> >(pstart,pstop),*this,reduce);
-    DeviceType::fence();
+    DeviceType().fence();
     copymode = 0;
 
 
@@ -1187,7 +1187,7 @@ void UpdateKokkos::optSingleStepMove() {
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateOptSingleStepMove<DIM,1> >(pstart,pstop),*this);
   else
     Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagUpdateOptSingleStepMove<DIM,-1> >(pstart,pstop),*this,reduce);
-  DeviceType::fence();
+  DeviceType().fence();
   copymode = 0;
 
   Kokkos::deep_copy(h_scalars,d_scalars);
