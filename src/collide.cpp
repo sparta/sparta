@@ -158,10 +158,6 @@ void Collide::init()
     error->all(FLERR,"Must use Kokkos-supported collision style if "
                "Kokkos is enabled");
 
-  if (sparta->kokkos && vibstyle == DISCRETE)
-    error->all(FLERR,"Cannot (yet) use KOKKOS package with "
-      "'collide_modify vibrate discrete'");
-
   // if rotstyle or vibstyle = DISCRETE,
   // check that extra rotation/vibration info is defined
   // for species that require it
@@ -1687,8 +1683,8 @@ void Collide::adapt_grid()
 
 void Collide::grow_percell(int n)
 {
-  if (nglocal+n < nglocalmax) return;
-  nglocalmax += DELTAGRID;
+  if (nglocal+n < nglocalmax || !ngroups) return;
+  while (nglocal+n >= nglocalmax) nglocalmax += DELTAGRID;
   memory->grow(vremax,nglocalmax,ngroups,ngroups,"collide:vremax");
   if (remainflag) 
     memory->grow(remain,nglocalmax,ngroups,ngroups,"collide:remain");

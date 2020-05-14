@@ -406,7 +406,7 @@ letters in parenthesis: k = KOKKOS.
 
 "boundary (k)"_compute_boundary.html,
 "count (k)"_compute_count.html,
-"distsurf/grid"_compute_distsurf_grid.html,
+"distsurf/grid (k)"_compute_distsurf_grid.html,
 "eflux/grid (k)"_compute_eflux_grid.html,
 "fft/grid"_compute_fft_grid.html,
 "grid (k)"_compute_grid.html,
@@ -414,7 +414,7 @@ letters in parenthesis: k = KOKKOS.
 "ke/particle (k)"_compute_ke_particle.html,
 "lambda/grid (k)"_compute_lambda_grid.html,
 "pflux/grid (k)"_compute_pflux_grid.html,
-"property/grid"_compute_property_grid.html,
+"property/grid (k)"_compute_property_grid.html,
 "react/boundary"_compute_react_boundary.html,
 "react/surf"_compute_react_surf.html,
 "react/isurf/grid"_compute_react_isurf_grid.html,

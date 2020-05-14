@@ -145,7 +145,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateParticles<1> >(0,nmigrate),*this);
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateParticles<0> >(0,nmigrate),*this);
-    DeviceType::fence();
+    DeviceType().fence();
     //pack_serial(0,nmigrate);
     copymode = 0;
 
@@ -218,7 +218,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
         Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateUnpackParticles<1> >(0,nrecv),*this);
       else
         Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateUnpackParticles<0> >(0,nrecv),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       copymode = 0;
     }
 

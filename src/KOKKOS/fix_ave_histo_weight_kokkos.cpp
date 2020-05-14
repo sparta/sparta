@@ -297,7 +297,7 @@ void FixAveHistoWeightKokkos::bin_vector(
 
   auto policy = Kokkos::RangePolicy<TagFixAveHistoWeight_BinVector,DeviceType>(0, n);
   Kokkos::parallel_reduce(policy, *this, reducer);
-  DeviceType::fence();
+  DeviceType().fence();
 }
 
 /* ----------------------------------------------------------------------
@@ -336,7 +336,7 @@ void FixAveHistoWeightKokkos::bin_particles(
       auto policy = RangePolicy<TagFixAveHistoWeight_BinParticlesX4,DeviceType>(0, n);
       Kokkos::parallel_reduce(policy, *this, reducer);
     }
-    DeviceType::fence();
+    DeviceType().fence();
 
   } else if (attribute == V) {
 
@@ -353,7 +353,7 @@ void FixAveHistoWeightKokkos::bin_particles(
       auto policy = RangePolicy<TagFixAveHistoWeight_BinParticlesV4,DeviceType>(0, n);
       Kokkos::parallel_reduce(policy, *this, reducer);
     }
-    DeviceType::fence();
+    DeviceType().fence();
   }
 }
 
@@ -393,7 +393,7 @@ void FixAveHistoWeightKokkos::bin_particles(
     auto policy = RangePolicy<TagFixAveHistoWeight_BinParticles4,DeviceType>(0, n);
     Kokkos::parallel_reduce(policy, *this, reducer);
   }
-  DeviceType::fence();
+  DeviceType().fence();
 }
 
 /* ----------------------------------------------------------------------
@@ -419,7 +419,7 @@ void FixAveHistoWeightKokkos::bin_grid_cells(
     auto policy = RangePolicy<TagFixAveHistoWeight_BinGridCells2,DeviceType>(0, n);
     Kokkos::parallel_reduce(policy, *this, reducer);
   }
-  DeviceType::fence();
+  DeviceType().fence();
 }
 
 /* ------------------------------------------------------------------------- */

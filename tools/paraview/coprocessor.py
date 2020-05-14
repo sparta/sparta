@@ -19,7 +19,7 @@ def initialize():
     import paraview
     paraview.options.batch = True
     paraview.options.symmetric = True
-    from paraview.vtk import vtkPVCatalyst as catalyst
+    from paraview.modules import vtkPVCatalyst as catalyst
     coProcessor = catalyst.vtkCPProcessor()
 
 def finalize():
@@ -28,14 +28,14 @@ def finalize():
 
 def addscript(name):
     global coProcessor
-    from paraview.vtk import vtkPVPythonCatalystPython as pythoncatalyst
+    from paraview.modules import vtkPVPythonCatalyst as pythoncatalyst
     pipeline = pythoncatalyst.vtkCPPythonScriptPipeline()
     pipeline.Initialize(name)
     coProcessor.AddPipeline(pipeline)
 
 def coprocess(time, timeStep, grid, inputName):
     global coProcessor
-    from paraview.vtk import vtkPVCatalyst as catalyst
+    from paraview.modules import vtkPVCatalyst as catalyst
     dataDescription = catalyst.vtkCPDataDescription()
     dataDescription.SetTimeData(time, timeStep)
     dataDescription.AddInput(inputName)

@@ -128,7 +128,7 @@ void ComputeGridKokkos::compute_per_grid_kokkos()
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_compute_per_grid_atomic<0> >(0,nlocal),*this);
   }
-  DeviceType::fence();
+  DeviceType().fence();
   copymode = 0;
 
   if (need_dup) {
@@ -354,7 +354,7 @@ void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
     {
       count = emap[0];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_NUM>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -363,7 +363,7 @@ void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
       mass = emap[0];
       count = emap[1];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_MASS>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -371,7 +371,7 @@ void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
     {
       count = emap[0];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_NRHO>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -379,7 +379,7 @@ void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
     {
       mass = emap[0];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_MASSRHO>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -389,7 +389,7 @@ void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
       count_or_mass = emap[0];
       cell_count_or_mass = emap[1];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_NFRAC>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -403,7 +403,7 @@ void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
       velocity = emap[0];
       mass = emap[1];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_U>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -412,7 +412,7 @@ void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
       mvsq = emap[0];
       count = emap[1];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_KE>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -421,7 +421,7 @@ void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
       mvsq = emap[0];
       count = emap[1];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_TEMPERATURE>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -431,7 +431,7 @@ void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
       eng = emap[0];
       count = emap[1];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_EROT>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -441,7 +441,7 @@ void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
       eng = emap[0];
       dof = emap[1];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_TROT>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -451,7 +451,7 @@ void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
     {
       mom = emap[0];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_PXRHO>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -459,7 +459,7 @@ void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
     {
       ke = emap[0];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_KERHO>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
   }

@@ -35,7 +35,6 @@ class SurfCollidePistonKokkos : public SurfCollidePiston {
   SurfCollidePistonKokkos(class SPARTA *);
   ~SurfCollidePistonKokkos() {}
 
-  Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int) { return NULL; }
   void init();
 
   /* ----------------------------------------------------------------------

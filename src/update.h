@@ -70,6 +70,7 @@ class Update : protected Pointers {
   int reorder_period;        // # of timesteps between particle reordering
   int global_mem_limit;      // max # of bytes in arrays for rebalance and reordering
   int mem_limit_grid_flag;   // 1 if using size of grid as memory limit
+  void set_mem_limit_grid();
 
   int copymode;          // 1 if copy of class (prevents deallocation of
                          //  base class when child copy is destroyed)
@@ -225,6 +226,10 @@ E: Cannot set global surfmax when surfaces already exist
 
 This setting must be made before any surfac elements are
 read via the read_surf command.
+
+E: Global mem/limit setting cannot exceed 2GB
+
+Self-expanatory, prevents 32-bit interger overflow
 
 E: Timestep must be >= 0
 

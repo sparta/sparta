@@ -151,26 +151,24 @@ void RemoveSurf::remove_2d(int groupbit)
 {
   int i;
 
+  // remove lines in group
+
   Surf::Line *lines = surf->lines;
-  int nline_old = surf->nsurf;
-
-  // remove lines not in group
-
   int nline = surf->nsurf;
   int nbytes = sizeof(Surf::Line);
 
   int n = 0;
   for (i = 0; i < nline; i++) {
-    if (lines[i].mask & groupbit) continue;
+    if (!(lines[i].mask & groupbit)) continue;
     if (i != n) memcpy(&lines[n],&lines[i],nbytes);
     n++;
   }
 
-  surf->nsurf = nline = n;
+  surf->nsurf = surf->nlocal = nline - n;
 
   // print stats after removal
 
-  int nline_remove = nline_old - surf->nsurf;
+  int nline_remove = nline - surf->nsurf;
 
   if (comm->me == 0) {
     if (screen) {
@@ -185,7 +183,7 @@ void RemoveSurf::remove_2d(int groupbit)
 }
 
 /* ----------------------------------------------------------------------
-   remove all triangels in surf group
+   remove all triangles in surf group
    condense data structures by removing deleted points & triangles
 ------------------------------------------------------------------------- */
 
@@ -193,26 +191,24 @@ void RemoveSurf::remove_3d(int groupbit)
 {
   int i;
 
+  // remove triangles in group
+
   Surf::Tri *tris = surf->tris;
-  int ntri_old = surf->nsurf;
-
-  // remove triangles not in group
-
   int ntri = surf->nsurf;
   int nbytes = sizeof(Surf::Tri);
 
   int n = 0;
   for (i = 0; i < ntri; i++) {
-    if (tris[i].mask & groupbit) continue;
+    if (!(tris[i].mask & groupbit)) continue;
     if (i != n) memcpy(&tris[n],&tris[i],nbytes);
     n++;
   }
 
-  surf->nsurf = ntri = n;
+  surf->nsurf = surf->nlocal = ntri - n;
 
   // print stats after removal
 
-  int ntri_remove = ntri_old - surf->nsurf;
+  int ntri_remove = ntri - surf->nsurf;
 
   if (comm->me == 0) {
     if (screen) {

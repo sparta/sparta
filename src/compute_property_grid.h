@@ -34,7 +34,7 @@ class ComputePropertyGrid : public Compute {
   void reallocate();
   bigint memory_usage();
 
- private:
+ protected:
   int groupbit,nvalues,nglocal;
   int *index;
   double *buf;

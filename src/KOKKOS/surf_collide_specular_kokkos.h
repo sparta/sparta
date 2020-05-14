@@ -34,7 +34,6 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
   SurfCollideSpecularKokkos(class SPARTA *, int, char **);
   SurfCollideSpecularKokkos(class SPARTA *);
   ~SurfCollideSpecularKokkos() {}
-  Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int) { return NULL; }
 
   /* ----------------------------------------------------------------------
      particle collision with surface with optional chemistry

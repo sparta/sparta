@@ -944,7 +944,7 @@ void FixAveGrid::grow_percell(int nnew)
       vector_grid[i] = 0.0;
   else
     for (int i = maxgridold; i < maxgrid; i++)
-      for (int j = 0; i < nvalues; j++)
+      for (int j = 0; j < nvalues; j++)
         array_grid[i][j] = 0.0;
 }
 
