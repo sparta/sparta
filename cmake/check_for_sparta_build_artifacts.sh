@@ -16,6 +16,6 @@ if [ $installed_style_files -eq 0 ]; then
     #if [ $2 == "y" ]; then
 	#rm -f style_*.h
     #else
-	echo "CMake may not build properly! Please remove the 'style_*.h' files from $1."
+	echo "CMake may not build properly! Please run 'make purge' from $1."
     #fi
 fi
