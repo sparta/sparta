@@ -1,7 +1,7 @@
 #!/bin/bash
 cd $1
 
-installed_packages=$(make package-status | grep "Installed YES"; echo $?)
+installed_packages=$(make package-status | grep "Installed YES" 2>&1 > /dev/null; echo $?)
 installed_style_files=$([ $(ls -lat style_*.h 2> /dev/null | wc -l) -ge 1 ] && true || false; echo $?)
 
 if [ $installed_packages -eq 0 ]; then
