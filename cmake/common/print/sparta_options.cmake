@@ -21,4 +21,20 @@ message(STATUS "")
 
 message(STATUS "SPARTA_DEFAULT_CXX_COMPILE_FLAGS: ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS}")
 message(STATUS "SPARTA_CXX_COMPILE_FLAGS: ${SPARTA_CXX_COMPILE_FLAGS}")
+
+########## BEGIN CHECK FOR OLD BUILD ARTIFACTS ##########
+message(STATUS "Checking for old sparta build artifacts")
+execute_process(
+    COMMAND ${SPARTA_CMAKE_DIR}/check_for_sparta_build_artifacts.sh ${CMAKE_SOURCE_DIR}/src
+    OUTPUT_VARIABLE GNUMAKE_STDOUT
+)
+
+if (DEFINED GNUMAKE_STDOUT)
+    if (NOT ${GNUMAKE_STDOUT} STREQUAL "")
+        message(FATAL_ERROR "${GNUMAKE_STDOUT}")
+    endif()
+endif()
+message(STATUS "Checking for old sparta build artifacts - done")
+########## END CHECK FOR OLD BUILD ARTIFACTS ##########
+
 message(STATUS "****************** End   SPARTA Settings ******************")
