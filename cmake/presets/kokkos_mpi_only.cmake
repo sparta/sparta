@@ -11,5 +11,5 @@ set(SPARTA_CMAKE_CONFIG_STRING
 #################### END   SPARTA OPTIONS ####################
 
 #################### BEGIN KOKKOS OPTIONS ####################
-set(Kokkos_ENABLE_OpenMP OFF CACHE STRING "")
+set(Kokkos_ENABLE_OPENMP OFF CACHE STRING "")
 #################### END   KOKKOS OPTIONS ####################

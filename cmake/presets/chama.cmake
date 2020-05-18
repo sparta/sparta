@@ -52,5 +52,5 @@ set(CMAKE_SHARED_LINKER_FLAGS "-fPIC -shared" CACHE STRING "")
 #################### END   MPI OPTIONS ####################
 
 #################### BEGIN KOKKOS OPTIONS ####################
-set(Kokkos_ENABLE_OpenMP OFF CACHE STRING "")
+set(Kokkos_ENABLE_OPENMP OFF CACHE STRING "")
 #################### END   KOKKOS OPTIONS ####################
