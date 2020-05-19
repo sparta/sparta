@@ -25,7 +25,7 @@ message(STATUS "SPARTA_CXX_COMPILE_FLAGS: ${SPARTA_CXX_COMPILE_FLAGS}")
 ########## BEGIN CHECK FOR OLD BUILD ARTIFACTS ##########
 message(STATUS "Checking for old sparta build artifacts")
 execute_process(
-    COMMAND ${SPARTA_CMAKE_DIR}/check_for_sparta_build_artifacts.sh ${CMAKE_SOURCE_DIR}/src
+    COMMAND ${SPARTA_CMAKE_DIR}/check_for_sparta_build_artifacts.sh ${SPARTA_SRC_DIR}
     OUTPUT_VARIABLE GNUMAKE_STDOUT
 )
 

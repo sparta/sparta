@@ -3,9 +3,9 @@ cmake_minimum_required(VERSION 3.10.0)
 project(SPARTA)
 
 ########## BEGIN SET COMMON DIRS ##########
-set(SPARTA_TPL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib)
-set(SPARTA_PKG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-set(SPARTA_CMAKE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+set(SPARTA_TPL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../lib)
+set(SPARTA_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+set(SPARTA_CMAKE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(SPARTA_CMAKE_COMMON_DIR ${SPARTA_CMAKE_DIR}/common)
 ########## END   SET COMMON DIRS ##########
 
@@ -27,4 +27,4 @@ include(${SPARTA_CMAKE_COMMON_DIR}/process/sparta_build_options.cmake)
 include(${SPARTA_CMAKE_COMMON_DIR}/print/sparta_options.cmake)
 ########## END   PRINT SPARTA OPTIONS ##########
 
-add_subdirectory(src)
+add_subdirectory(${SPARTA_SRC_DIR} ${CMAKE_CURRENT_BINARY_DIR}/src)

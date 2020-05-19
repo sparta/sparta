@@ -8,13 +8,13 @@ mkdir build install
 cd build
 
 # Configure the build system
-cmake -DCMAKE_INSTALL_PREFIX=../install ..
+cmake -DCMAKE_INSTALL_PREFIX=../install ../cmake
 
 # List project-specific options
-cmake -L ..
+cmake -L ../cmake
 
 # List project-specific options and help strings
-cmake -LH ..
+cmake -LH ../cmake
 
 # List all options and help strings
 cmake -LAH
@@ -32,7 +32,7 @@ configuration knobs before building sparta.
 ## Examples
 ### Using a preset file
 ```bash
-cmake -C /path/to/<NAME>.cmake /path/to/sparta
+cmake -C /path/to/<NAME>.cmake /path/to/sparta/cmake
 ```
 
 # Sparta Keyword Listing
@@ -61,17 +61,17 @@ cmake -C /path/to/<NAME>.cmake /path/to/sparta
 ## Examples
 ### Selecting packages via the command line
 ```bash
-cmake -DPKG_<NAME>=[ON|OFF] /path/to/sparta
+cmake -DPKG_<NAME>=[ON|OFF] /path/to/sparta/cmake
 ```
 
 ### Selecting TPLs via the command line
 ```bash
-cmake -DBUILD_<NAME>_TPL=[ON|OFF] /path/to/sparta
+cmake -DBUILD_<NAME>_TPL=[ON|OFF] /path/to/sparta/cmake
 ```
 
 ### Specifying build flags via the command line
 ```bash
-cmake -DSPARTA_DEFAULT_CXX_COMPILE_FLAGS=<FLAGS> /path/to/sparta
+cmake -DSPARTA_DEFAULT_CXX_COMPILE_FLAGS=<FLAGS> /path/to/sparta/cmake
 ```
 
 # Build system design
