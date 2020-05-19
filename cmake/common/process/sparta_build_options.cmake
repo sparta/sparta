@@ -23,9 +23,15 @@ list(APPEND TARGET_SPARTA_BUILD_TPLS ${TARGET_SPARTA_BUILD_MPI})
 #################### END PROCESS MPI TPL/PKG ####################
 
 #################### BEGIN PROCESS PKGS ####################
-if(PKG_FFT)
-    set(TARGET_SPARTA_PKG_FFT pkg_fft)
+if(DEFINED FFT)
+    find_package(${FFT} REQUIRED)
+    set(TARGET_SPARTA_PKG_FFT ${FFT}::${FFT})
     list(APPEND TARGET_SPARTA_PKGS ${TARGET_SPARTA_PKG_FFT})
+else()
+    if(PKG_FFT)
+        set(TARGET_SPARTA_PKG_FFT pkg_fft)
+        list(APPEND TARGET_SPARTA_PKGS ${TARGET_SPARTA_PKG_FFT})
+    endif()
 endif()
 
 if(PKG_KOKKOS)
