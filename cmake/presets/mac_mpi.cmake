@@ -16,7 +16,7 @@ set(CMAKE_CXX_COMPILER "mpic++" CACHE STRING "" FORCE)
 #################### END CMAKE OPTIONS ####################
 
 #################### BEGIN TPL OPTIONS ####################
-set(BUILD_MPI_TPL
+set(BUILD_MPI
     ON
     CACHE
     BOOL

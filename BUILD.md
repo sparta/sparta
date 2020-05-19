@@ -45,9 +45,9 @@ cmake -C /path/to/<NAME>.cmake /path/to/sparta/cmake
   * Whether to enable the Sparta MPI_STUBS package.
 
 ## Third Party Library (TPL) options
-* BUILD_KOKKOS_TPL
+* BUILD_KOKKOS
   * Whether to enable the Sparta KOKKOS TPL.
-* BUILD_MPI_TPL
+* BUILD_MPI
   * Whether to enable the Sparta MPI TPL.
 
 ## Other options

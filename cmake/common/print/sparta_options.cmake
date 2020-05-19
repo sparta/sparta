@@ -38,3 +38,4 @@ message(STATUS "Checking for old sparta build artifacts - done")
 ########## END CHECK FOR OLD BUILD ARTIFACTS ##########
 
 message(STATUS "****************** End   SPARTA Settings ******************")
+message(STATUS "")

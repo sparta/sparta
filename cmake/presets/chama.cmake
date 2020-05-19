@@ -15,7 +15,7 @@ set(SPARTA_CXX_COMPILE_FLAGS
 #################### END   SPARTA OPTIONS ####################
 
 #################### BEGIN TPL OPTIONS ####################
-set(BUILD_MPI_TPL
+set(BUILD_MPI
     ON
     CACHE
     BOOL

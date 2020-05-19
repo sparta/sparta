@@ -12,7 +12,7 @@ if(PKG_FFT)
     set_target_properties(${TARGET_SPARTA_PKG_FFT} PROPERTIES LINKER_LANGUAGE CXX)
 
     # Get MPI header files
-    target_link_libraries(${TARGET_SPARTA_PKG_FFT} LINK_PRIVATE ${TARGET_SPARTA_BUILD_MPI_TPL})
+    target_link_libraries(${TARGET_SPARTA_PKG_FFT} LINK_PRIVATE ${TARGET_SPARTA_BUILD_MPI})
     
     # Make include public so that targets which links against this can find the includes
     target_include_directories(${TARGET_SPARTA_PKG_FFT} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

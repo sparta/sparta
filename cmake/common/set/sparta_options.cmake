@@ -45,13 +45,13 @@ sparta_option(PKG_KOKKOS
 ########## END   SPARTA OPTIONAL DEPENDENCIES ##########
 
 ########## BEGIN SPARTA TPL DEPENDENCIES ##########
-sparta_option(BUILD_MPI_TPL
+sparta_option(BUILD_MPI
               "Enable or disable MPI TPL. Assumes environment has MPI_ROOT set. Default: ON."
               ON
               SPARTA_BUILD_TPL_LIST
              )
 
-sparta_option(BUILD_KOKKOS_TPL
+sparta_option(BUILD_KOKKOS
               "Enable or disable KOKKOS TPL. Default: OFF."
               OFF
               SPARTA_BUILD_TPL_LIST
