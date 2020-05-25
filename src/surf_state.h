@@ -116,6 +116,12 @@ class SurfState {
    */
   std::vector< struct Zuzax::PartToSurf > m_surfInitPSTaskList;
 
+  std::vector< int > localReactionEventsF;
+  std::vector< int > localReactionEventsR;
+
+  std::vector< int > GlobalReactionEventsF;
+  std::vector< int > GlobalReactionEventsR;
+
 #endif
   
 

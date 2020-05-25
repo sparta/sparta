@@ -2650,7 +2650,11 @@ int Variable::find_matching_paren(char *str, int i,char *&contents)
     else if (str[i] == ')' && ilevel) ilevel--;
     else if (str[i] == ')') break;
   }
-  if (!str[i]) error->all(FLERR,"Invalid syntax in variable formula");
+  if (!str[i]) {
+    error->allf(FLERR,
+                "Invalid syntax in variable formula, mismatched parentheses in string: %s",
+                str);
+  }
   int istop = i;
 
   int n = istop - istart - 1;

@@ -844,12 +844,38 @@ void FixEmitZFace::end_of_step()
 
    ssFaceReact->setState(n, deltaT);
 
+   getGlobalReactionEventsFromLocalEvents();
+
+   double Tsurf = ssFaceReact->Temp; 
+
+   net->deriveGlobalSurfaceStateStartingWithLocalState(Tsurf, 
+            ssFaceReact->GlobalReactionEventsF, ssFaceReact->GlobalReactionEventsR);
+
+   
+
    net->finalizeTimeStepArrays(deltaT);
 
    net->write_step_results(time, deltaT); 
 #endif
 }
+//=========================================================================================================
+void FixEmitZFace::getGlobalReactionEventsFromLocalEvents()
+{
 
+  // sum tallies across processors
+  int* myArray = ssFaceReact->localReactionEventsF.data();
+  int* globalArray = ssFaceReact->GlobalReactionEventsF.data();
+  int sze = net->nReactions();
+  MPI_Allreduce(myArray, globalArray, sze, MPI_INT, MPI_SUM, world);
+
+  myArray = ssFaceReact->localReactionEventsR.data();
+  globalArray = ssFaceReact->GlobalReactionEventsR.data();
+  MPI_Allreduce(myArray, globalArray, sze, MPI_INT, MPI_SUM, world);
+
+
+}
+
+//=========================================================================================================
 /* ----------------------------------------------------------------------
    inserting into split cell icell on face iface
    determine which sub cell the face is part of

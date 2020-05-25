@@ -105,21 +105,22 @@ class FixEmitZFace : public FixEmit {
 
   // protected methods
 
-  //! the routine, create_task() is run during the sparta initialization routines to
-  //! create a placeholder task for eacc cell/face combination that needs a fix process
+  //! The routine, create_task() is run during the sparta initialization routines to
+  //! create a placeholder task for each cell/face combination that needs a fix process
   //! to be run.
   /*!
    *  @return              Returns the # of tasks for this cell created
    */
   virtual void create_task(int icell) override;
 
-  //! perform_task() gets called during the modify->start_of_step() process
+  //! Perform_task() gets called during the modify->start_of_step() process
   /*!
    *  This loops over the previously created tasks, which are cell/face specific.
    */
   virtual void perform_task() override;
 
   void perform_task_onepass();
+
   virtual void perform_task_twopass();
 
   int split(int, int);
@@ -132,6 +133,9 @@ class FixEmitZFace : public FixEmit {
    *
    */
   virtual void end_of_step() override;
+
+  void getGlobalReactionEventsFromLocalEvents();
+
 
 
   virtual int pack_task(int, char *, int);

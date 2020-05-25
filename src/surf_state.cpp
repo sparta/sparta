@@ -36,6 +36,7 @@ void SurfState::init()
 #ifdef USE_ZSURF
 
   int nun = net->neq();
+  int nrxn = net->nReactions();
   yUnknowns = new double[nun];
 
   Temp = net->reactor(0).temperature();

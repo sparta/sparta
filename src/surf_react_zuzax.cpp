@@ -29,8 +29,6 @@
 #include "math_extra.h"
 #include "surf.h"
 
-enum{DISSOCIATION,EXCHANGE,RECOMBINATION};        // other surf react files
-enum{SIMPLE};                                     // other surf react files
 
 #define MAXREACTANT 1
 #define MAXPRODUCT 2
@@ -41,7 +39,11 @@ enum{SIMPLE};                                     // other surf react files
 
 #ifdef USE_ZSURF
 
+//-------------------------------------------------------------------------------------------------
 namespace SPARTA_NS {
+
+enum{DISSOCIATION,EXCHANGE,RECOMBINATION};        // other surf react files
+enum{SIMPLE};                                     // other surf react files
 
 
 //=================================================================================================
