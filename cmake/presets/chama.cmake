@@ -1,7 +1,7 @@
 # chama = mpic++, OpenMPI (with default modules)
 
 #################### BEGIN SPARTA OPTIONS ####################
-set(SPARTA_CMAKE_CONFIG_STRING
+set(SPARTA_MACHINE
     chama
     CACHE
     STRING "Descriptive string to describe \"spa_\" executable configuration"

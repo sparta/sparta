@@ -2,7 +2,7 @@
 
 include(${CMAKE_SOURCE_DIR}/cmake/presets/kokkos_common.cmake)
 #################### BEGIN SPARTA OPTIONS ####################
-set(SPARTA_CMAKE_CONFIG_STRING
+set(SPARTA_MACHINE
     kokkos_mpi_only
     CACHE
     STRING "Descriptive string to describe \"spa_\" executable configuration"

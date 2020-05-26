@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.10.0)
 
 project(SPARTA)
 
+set(SPARTA_BUILD_VER "1.0.0")
+set(SPARTA_API_VER "1")
+
 ########## BEGIN SET COMMON DIRS ##########
 set(SPARTA_TPL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../lib)
 set(SPARTA_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../src)
@@ -18,7 +21,9 @@ include(${SPARTA_CMAKE_COMMON_DIR}/set/sparta_cmake_defaults.cmake)
 include(${SPARTA_CMAKE_COMMON_DIR}/set/sparta_options.cmake)
 ########## END   SET SPARTA OPTIONS ##########
 
-set(TARGET_SPARTA spa_${SPARTA_CMAKE_CONFIG_STRING})
+set(TARGET_SPARTA spa_${SPARTA_MACHINE})
+set(TARGET_SPARTA_LIB sparta)
+# TODO: Do we need set(TARGET_SPARTA_LIB sparta_${SPARTA_MACHINE})?
 
 ########## BEGIN PROCESS SPARTA OPTIONS ##########
 include(${SPARTA_CMAKE_COMMON_DIR}/process/sparta_build_options.cmake)

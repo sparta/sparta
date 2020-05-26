@@ -51,12 +51,12 @@ cmake -C /path/to/<NAME>.cmake /path/to/sparta/cmake
   * Whether to enable the Sparta MPI TPL.
 
 ## Other options
-* SPARTA_CMAKE_CONFIG_STRING
-  * String to form the `spa_$SPARTA_CMAKE_CONFIG_STRING` binary file name.
+* SPARTA_MACHINE
+  * String to form the `spa_$SPARTA_MACHINE` binary file name.
 * SPARTA_CXX_COMPILE_FLAGS
-  * Selected compiler flags used when building object files for `spa_$SPARTA_CMAKE_CONFIG_STRING`.
+  * Selected compiler flags used when building object files for `spa_$SPARTA_MACHINE`.
 * SPARTA_DEFAULT_CXX_COMPILE_FLAGS
-  * Default compiler flags used when building object files for `spa_$SPARTA_CMAKE_CONFIG_STRING`.
+  * Default compiler flags used when building object files for `spa_$SPARTA_MACHINE`.
 
 ## Examples
 ### Selecting packages via the command line

@@ -1,7 +1,7 @@
 # mac = Apple PowerBook laptop, c++, serial (no MPI)
 
 #################### BEGIN SPARTA OPTIONS ####################
-set(SPARTA_CMAKE_CONFIG_STRING
+set(SPARTA_MACHINE
     mac
     CACHE
     STRING "Descriptive string to describe \"spa_\" executable configuration"

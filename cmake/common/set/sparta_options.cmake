@@ -57,3 +57,17 @@ sparta_option(BUILD_KOKKOS
               SPARTA_BUILD_TPL_LIST
              )
 ########## END   SPARTA TPL DEPENDENCIES ##########
+
+########## BEGIN SPARTA EXTRA OPTIONS ##########
+sparta_option(BUILD_SHARED_LIBS
+              "Enable or disable building of sparta as a shared library. Default: OFF."
+              OFF
+              SPARTA_EXTRA_OPTIONS_LIST
+             )
+
+sparta_option(SPARTA_MACHINE
+              "Suffix to append to spa binary (WON'T enable any features automatically)"
+              ""
+              SPARTA_EXTRA_OPTIONS_LIST
+              )
+########## END   SPARTA EXTRA OPTIONS ##########

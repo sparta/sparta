@@ -1,7 +1,7 @@
 # kokkos_common = KOKKOS package with default settings
 
 #################### BEGIN SPARTA OPTIONS ####################
-set(SPARTA_CMAKE_CONFIG_STRING
+set(SPARTA_MACHINE
     kokkos_common
     CACHE
     STRING "Descriptive string to describe \"spa_\" executable configuration"

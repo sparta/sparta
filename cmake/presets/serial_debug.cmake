@@ -3,7 +3,7 @@
 include(${CMAKE_SOURCE_DIR}/cmake/presets/serial.cmake)
 
 #################### BEGIN SPARTA OPTIONS ####################
-set(SPARTA_CMAKE_CONFIG_STRING
+set(SPARTA_MACHINE
     serial_debug
     CACHE
     STRING "Descriptive string to describe \"spa_\" executable configuration"

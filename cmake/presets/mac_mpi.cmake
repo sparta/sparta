@@ -3,7 +3,7 @@
 include(${CMAKE_SOURCE_DIR}/cmake/presets/mac.cmake)
 
 #################### BEGIN SPARTA OPTIONS ####################
-set(SPARTA_CMAKE_CONFIG_STRING
+set(SPARTA_MACHINE
     mac_mpi
     CACHE
     STRING "Descriptive string to describe \"spa_\" executable configuration"

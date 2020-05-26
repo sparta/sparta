@@ -1,7 +1,7 @@
 # mpi = Linux box/cluster, g++, installed MPI
 
 #################### BEGIN SPARTA OPTIONS ####################
-set(SPARTA_CMAKE_CONFIG_STRING
+set(SPARTA_MACHINE
     mpi
     CACHE
     STRING "Descriptive string to describe \"spa_\" executable configuration"

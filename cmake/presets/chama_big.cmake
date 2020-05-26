@@ -2,7 +2,7 @@
 
 include(${CMAKE_SOURCE_DIR}/cmake/presets/chama.cmake)
 #################### BEGIN SPARTA OPTIONS ####################
-set(SPARTA_CMAKE_CONFIG_STRING
+set(SPARTA_MACHINE
     chama_big
     CACHE
     STRING "Descriptive string to describe \"spa_\" executable configuration"
