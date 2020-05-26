@@ -67,7 +67,7 @@ class SurfState {
    *  @param[in]             ntimestep           time step number
    *  @param[in]             dt                  Delta time step
    */
-  void write_step_results(int ntimestep, double dt);
+  void write_step_results(int ntimestep, double dt, int iproc, int nRxnEvents);
 
   // ----------------------------------------------- DATA -----------------------------------------
   //! Surface temperature

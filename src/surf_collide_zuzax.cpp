@@ -376,6 +376,13 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, SurfState* surf
       throw Zuzax::ZuzaxError("doTimeStepOutside", "Alt thing failed too: %d %d", (int) irxn, idir);
     }
   }
+  if (irxn >= 0) {
+    if (idir == 1) {
+      surfState->localReactionEventsF[irxn]++;
+    } else if (idir == -1) {
+      surfState->localReactionEventsR[irxn]++;
+    }
+  }
 
   for (int i = 0; i < iPos ; ++i) {
      spGasOut[i] = zuzax_setup->ZutoSp_speciesMap[kGasOut[i]];

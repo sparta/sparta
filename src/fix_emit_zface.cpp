@@ -484,7 +484,7 @@ void FixEmitZFace::perform_task()
 
 void FixEmitZFace::perform_task_onepass()
 {
-  int pcell,ninsert,nactual,isp,ispecies,ndim,pdim,qdim,id;
+  int pcell,ninsert,nactual,isp,ndim,pdim,qdim,id;
   double indot,scosine,rn,ntarget,vr;
   double beta_un,normalized_distbn_fn,theta,erot,evib;
   double temp_thermal,temp_rot,temp_vib;
@@ -497,6 +497,8 @@ void FixEmitZFace::perform_task_onepass()
 
   // Go get the surface temperature
   temp_thermal = ssFaceReact->Temp;
+  std::vector< int >& lrF = ssFaceReact->localReactionEventsF;
+  std::vector< int >& lrR = ssFaceReact->localReactionEventsR;
 
   // insert particles for each task = cell/face pair
   // ntarget/ninsert is either perspecies or for all species
@@ -581,61 +583,66 @@ void FixEmitZFace::perform_task_onepass()
           printf("REACTION DIDNOT OCCUR\n"); 
         }
         if (ok) { 
-        // Now carry out the particle creation events
-        for (Zuzax::SpeciesAmount& sa : zt.ntargetsp) {
-          size_t kGas = sa.first;
-          double stoich = sa.second;
-
-          int ispecies = zuzax_setup->ZutoSp_speciesMap[kGas];
+          if (zt.rxn_dir == 1) {
+            lrF[zt.irxn]++;
+          } else if (zt.rxn_dir == -1) {
+            lrR[zt.irxn]++;
+          }
+          // Now carry out the particle creation events
+          for (Zuzax::SpeciesAmount& sa : zt.ntargetsp) {
+            size_t kGas = sa.first;
+            double stoich = sa.second;
+  
+            isp = zuzax_setup->ZutoSp_speciesMap[kGas];
         
-          int nCreate = stoich;
+            int nCreate = stoich;
 
-          // details of particle creation 
+            // details of particle creation 
 
-          scosine = indot / vscale[isp];
+            scosine = indot / vscale[isp];
 
-          for (int m = 0; m < nCreate; m++) {
-  	    x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-	    x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
-            if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
-            else x[2] = 0.0;
+            for (int m = 0; m < nCreate; m++) {
+              x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
+              x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+              if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+              else x[2] = 0.0;
 
-            if (region && !region->match(x)) continue;
+              if (region && !region->match(x)) continue;
 
-            do {
-	      do {
-                beta_un = (6.0*random->uniform() - 3.0);
-	      } while (beta_un + scosine < 0.0);
-	      normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
+              do {
+	        do {
+                  beta_un = (6.0*random->uniform() - 3.0);
+	        } while (beta_un + scosine < 0.0);
+	        normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
 	        (scosine + sqrt(scosine*scosine + 2.0)) *
 	        exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
                 beta_un*beta_un);
-	    } while (normalized_distbn_fn < random->uniform());
+              } while (normalized_distbn_fn < random->uniform());
 	  
-            v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
+              v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
 
-            theta = MY_2PI * random->uniform();
-            vr = vscale[isp] * sqrt(-log(random->uniform()));
-            v[pdim] = vr * sin(theta) + vstream[pdim];
-            v[qdim] = vr * cos(theta) + vstream[qdim];
-            erot = particle->erot(ispecies,temp_rot,random);
-            evib = particle->evib(ispecies,temp_vib,random);
-            id = MAXSMALLINT*random->uniform();
+              theta = MY_2PI * random->uniform();
+              vr = vscale[isp] * sqrt(-log(random->uniform()));
+              v[pdim] = vr * sin(theta) + vstream[pdim];
+              v[qdim] = vr * cos(theta) + vstream[qdim];
+              erot = particle->erot(isp,temp_rot,random);
+              evib = particle->evib(isp,temp_vib,random);
+              id = MAXSMALLINT*random->uniform();
 
-            // add the particle
-	    particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+              // add the particle
+	      particle->add_particle(id,isp,pcell,x,v,erot,evib);
 
-            p = &particle->particles[particle->nlocal-1];
-            p->flag = PINSERT;
-            p->dtremain = dt * random->uniform();
+              p = &particle->particles[particle->nlocal-1];
+              p->flag = PINSERT;
+              p->dtremain = dt * random->uniform();
 
-            if (nfix_add_particle) 
-              modify->add_particle(particle->nlocal-1,temp_thermal,
-                                   temp_rot,temp_vib,vstream);
-	  } // loop over single particle insertion
+              if (nfix_add_particle) 
+                modify->add_particle(particle->nlocal-1,temp_thermal,
+                                     temp_rot,temp_vib,vstream);
+            } // loop over single particle insertion
 
-          nsingle += nCreate;
-        } // loop over gas phase species
+            nsingle += nCreate;
+          } // loop over gas phase species
         } // ok
         } // itimes
       } // if (ninsert > 0)
@@ -849,13 +856,27 @@ void FixEmitZFace::end_of_step()
    double Tsurf = ssFaceReact->Temp; 
 
    net->deriveGlobalSurfaceStateStartingWithLocalState(Tsurf, 
+            ssFaceReact->localReactionEventsF, ssFaceReact->localReactionEventsR, 
             ssFaceReact->GlobalReactionEventsF, ssFaceReact->GlobalReactionEventsR);
-
-   
+   int nrxn = net->nReactions();
+   int nRxnEvents = 0;
+   for (size_t irxn = 0; irxn < nrxn; irxn++) {
+     nRxnEvents += ssFaceReact->GlobalReactionEventsF[irxn] + ssFaceReact->GlobalReactionEventsR[irxn];
+   }
 
    net->finalizeTimeStepArrays(deltaT);
 
-   net->write_step_results(time, deltaT); 
+   ssFaceReact->saveState();
+
+   //if (comm->me == 0) {
+   net->write_step_results(time, deltaT, comm->me, nRxnEvents); 
+  // }
+
+   // zero the local reaction counters.
+   Zuzax::zeroInt(net->nReactions(), ssFaceReact->localReactionEventsF.data());
+   Zuzax::zeroInt(net->nReactions(), ssFaceReact->localReactionEventsR.data());
+   Zuzax::zeroInt(net->nReactions(), ssFaceReact->GlobalReactionEventsF.data());
+   Zuzax::zeroInt(net->nReactions(), ssFaceReact->GlobalReactionEventsR.data());
 #endif
 }
 //=========================================================================================================

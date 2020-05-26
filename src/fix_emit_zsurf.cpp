@@ -705,6 +705,11 @@ void FixEmitZSurf::end_of_step()
     } else {
       surfState = tris[isurf].surfaceState;
     }
+    int nrxn = net->nReactions();
+    int nRxnEvents = 0;
+    for (size_t irxn = 0; irxn < nrxn; irxn++) {
+      nRxnEvents += surfState->GlobalReactionEventsF[irxn] + surfState->GlobalReactionEventsR[irxn]; 
+    }
 
     // Reset the surface into net
     surfState->setState(n, dt);
@@ -713,7 +718,7 @@ void FixEmitZSurf::end_of_step()
     net->finalizeTimeStepArrays(deltaT);
 
     // Writing of special CSV file that dumps the surface state at each time step
-    net->write_step_results(time, deltaT);
+    net->write_step_results(time, deltaT, comm->me, nRxnEvents);
   }
 }
 

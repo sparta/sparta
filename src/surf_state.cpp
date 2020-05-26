@@ -39,6 +39,11 @@ void SurfState::init()
   int nrxn = net->nReactions();
   yUnknowns = new double[nun];
 
+  localReactionEventsF.resize(nrxn, 0);
+  localReactionEventsR.resize(nrxn, 0);
+  GlobalReactionEventsF.resize(nrxn, 0);
+  GlobalReactionEventsR.resize(nrxn, 0);
+
   Temp = net->reactor(0).temperature();
   Press = net->reactor(0).pressure();
   net->reactor(0).reactingBoundary(0).setArea(Area);
@@ -50,6 +55,8 @@ void SurfState::init()
   net->getInitialConditions(0.0, nun, yUnknowns);
 
   saveState();
+
+
   
 #endif
 
@@ -174,12 +181,12 @@ void SurfState::setState(int ntimestep, double dt) const
 }
 /* ---------------------------------------------------------------------- */
 // Read the state into the net object
-void SurfState::write_step_results(int ntimestep, double dt) 
+void SurfState::write_step_results(int ntimestep, double dt, int iproc, int nRxnEvents) 
 {
   setState(ntimestep, dt);
   double time = ntimestep * dt;
 #ifdef USE_ZSURF
-  net->write_step_results(time, dt);
+  net->write_step_results(time, dt, iproc, nRxnEvents);
 #endif
 }
 
