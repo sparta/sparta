@@ -695,6 +695,13 @@ void FixEmitZSurf::end_of_step()
   int n = update->ntimestep;
   SurfState* surfState;
 
+  // sum tallies across processors
+  
+  getGlobalReactionEventsFromLocalEvents();
+
+
+
+
   for (int i = 0; i < ntask; i++) {
     pcell = tasks[i].pcell;
     isurf = tasks[i].isurf;
@@ -714,14 +721,75 @@ void FixEmitZSurf::end_of_step()
     // Reset the surface into net
     surfState->setState(n, dt);
 
+    double Tsurf = surfState->Temp;
+
+    net->deriveGlobalSurfaceStateStartingWithLocalState(Tsurf,
+            surfState->localReactionEventsF, surfState->localReactionEventsR,
+            surfState->GlobalReactionEventsF, surfState->GlobalReactionEventsR);
+
+
     // Zero final counters
     net->finalizeTimeStepArrays(deltaT);
 
     // Writing of special CSV file that dumps the surface state at each time step
     net->write_step_results(time, deltaT, comm->me, nRxnEvents);
+
+      // zero the local reaction counters.
+    Zuzax::zeroInt(net->nReactions(), surfState->localReactionEventsF.data());
+    Zuzax::zeroInt(net->nReactions(), surfState->localReactionEventsR.data());
+    Zuzax::zeroInt(net->nReactions(), surfState->GlobalReactionEventsF.data());
+    Zuzax::zeroInt(net->nReactions(), surfState->GlobalReactionEventsR.data());
+
   }
 }
 
+//=========================================================================================================
+void FixEmitZSurf::getGlobalReactionEventsFromLocalEvents()
+{
+  int mask, isc, isr;
+  SurfState* ss;
+  int dim = domain->dimension;
+  // I am assuming that the correct processor's surface state is always given to the collision model
+  // for implicit surfaces. If this is not so, then there is an error.
+  if (!surf->implicit) {
+    // I have no idea how distributed explicit surfaces work!
+    if (!surf->distributed) {
+
+      // Loop through all surfaces and combine data over all processors. Oh yeah, this is going to be
+      // efficient.
+
+      
+      for (int isurf = 0; isurf < surf->nsurf; ++isurf) {
+        // check to see if this surf is in the surface group that is associated with this fix.
+        // This is done by checking out the mask of the surf
+        if (dim == 3) {
+          mask = tris[isurf].mask;
+          isc = tris[isurf].isc;
+          isr = tris[isurf].isr;
+          ss = tris[isurf].surfaceState;
+        } else if (dim == 2) {
+          mask = lines[isurf].mask;
+          isr = lines[isurf].isr;
+          ss = lines[isurf].surfaceState;
+        }
+        // Also, should check to see if this surf belongs to this reaction mechanism.
+        // TODO
+
+        // Ok, now do an all-to-all to get the sums
+        int* myArray = ss->localReactionEventsF.data();
+        int* globalArray = ss->GlobalReactionEventsF.data();
+        int sze = net->nReactions();
+        MPI_Allreduce(myArray, globalArray, sze, MPI_INT, MPI_SUM, world);
+
+        myArray = ss->localReactionEventsR.data();
+        globalArray = ss->GlobalReactionEventsR.data();
+        MPI_Allreduce(myArray, globalArray, sze, MPI_INT, MPI_SUM, world);
+
+      }
+    }
+
+  }
+}
 /* ----------------------------------------------------------------------
    pack one task into buf
    return # of bytes packed
@@ -912,6 +980,8 @@ void FixEmitZSurf::grow_task()
     tasks[i].fracarea = NULL;
   }
 }
+
+//=========================================================================================================
 
 /* ----------------------------------------------------------------------
    reset pcell for all compress task entries

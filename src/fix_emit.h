@@ -37,8 +37,8 @@ class FixEmit : public Fix {
   class RanPark *random;
   int nsingle,ntotal;
 
-  int ntask;           // # of insert tasks in underlying child class
-
+  int ntask;           // # of insert tasks in underlying child class 
+                       // on this processor
   int active_current;  // set to 0 if grid cell data struct changes
                        // triggers rebuild of active cell list in child classes
 

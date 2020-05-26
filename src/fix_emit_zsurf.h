@@ -46,6 +46,7 @@ class FixEmitZSurf : public FixEmit {
   void setup();
   void post_compress_grid();
 
+
  private:
   int imix,groupbit,np,normalflag;
   int npertask,nthresh;
@@ -127,6 +128,8 @@ class FixEmitZSurf : public FixEmit {
    *
    */
   virtual void end_of_step() override;
+
+  void getGlobalReactionEventsFromLocalEvents();
 
   virtual int setmask() override;  
 

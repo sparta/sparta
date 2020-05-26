@@ -538,11 +538,11 @@ void Surf::add_tri_copy(int ownflag, Tri *tri)
 }
 
 /* ----------------------------------------------------------------------
-   add a triangls's info to mytris list
+   add a triangle's info to mytris list
    called by ReadSurf for distributed surfs
-   NOT adding one tri at a time, rather inserting at location M based on ID
-   assume mytris has been pre-allocated to correct length
-   caller sets surf->nown
+   NOT adding one tri at a time, rather inserting at location, m, based on ID
+   assume mytris has been pre-allocated to correct length.
+   Caller sets surf->nown
 ------------------------------------------------------------------------- */
 
 void Surf::add_tri_own(surfint id, int itype, double *p1, double *p2, double *p3)
@@ -566,7 +566,7 @@ void Surf::add_tri_own(surfint id, int itype, double *p1, double *p2, double *p3
 }
 
 /* ----------------------------------------------------------------------
-   add a triangls's info to mytris list
+   add a triangle's info to mytris list
    called by ReadSurf for distributed surfs when clip3d adds one
    ARE adding one tri at a time, IDs will be renumbered after
      and tris re-distributed to procs
