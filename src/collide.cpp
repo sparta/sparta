@@ -1459,11 +1459,13 @@ void Collide::collisions_group_ambipolar()
 	    }
 	    plist[np++] = index;
 	    addgroup(newgroup,np-1);
+	    ilist = glist[igroup];
+	    jlist = glist[jgroup];
 	  }
 	}
       
 	if (!jpart && jspecies == ambispecies) {
-	  if (nelectron-1 != j-np) memcpy(&elist[j-np],&elist[nelectron-1],nbytes);
+	  if (nelectron-1 != j) memcpy(&elist[j],&elist[nelectron-1],nbytes);
 	  nelectron--;
 	  ngroup[egroup]--;
 	
@@ -1504,6 +1506,8 @@ void Collide::collisions_group_ambipolar()
 	    }
 	    plist[np++] = particle->nlocal-1;
 	    addgroup(newgroup,np-1);
+	    ilist = glist[igroup];
+	    jlist = glist[jgroup];
 	  
 	  } else {
 	    if (nelectron == maxelectron) {
@@ -1747,7 +1751,6 @@ void Collide::copy_grid_one(int icell, int jcell)
 {
   int nbytes = ngroups*ngroups*sizeof(double);
 
-  //printf("COLL CGO %d %d %d\n",icell,jcell,nglocal);
   memcpy(&vremax[jcell][0][0],&vremax[icell][0][0],nbytes);
   if (remainflag) 
     memcpy(&remain[jcell][0][0],&remain[icell][0][0],nbytes);

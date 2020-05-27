@@ -588,11 +588,11 @@ void Particle::grow(int nextra)
 {
   bigint target = (bigint) nlocal + nextra;
   if (target <= maxlocal) return;
-  
+
   int oldmax = maxlocal;
   bigint newmax = maxlocal;
   while (newmax < target) newmax += DELTA;
-  
+
   if (newmax > MAXSMALLINT) 
     error->one(FLERR,"Per-processor particle count is too big");
 
