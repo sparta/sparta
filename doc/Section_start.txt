@@ -49,7 +49,8 @@ tools: pre- and post-processing tools :tb(s=:)
 This section has the following sub-sections:
 
 "Read this first"_#start_2_1
-"Steps to build a SPARTA executable"_#start_2_2
+"Steps to build a SPARTA executable using make"_#start_2_2_1
+"Steps to build a SPARTA executable using cmake"_#start_2_2_2
 "Common errors that can occur when making SPARTA"_#start_2_3
 "Additional build tips"_#start_2_4
 "Building for a Mac"_#start_2_5
@@ -64,7 +65,7 @@ there are compiler options to consider, additional libraries can be
 used (MPI, JPEG).
 
 Please read this section carefully.  If you are not comfortable with
-makefiles, or building codes on a Linux platform, or running an MPI
+cmake, makefiles, or building codes on a Linux platform, or running an MPI
 job on your machine, please find a local expert to help you.
 
 If you have a build problem that you are convinced is a SPARTA issue
@@ -73,13 +74,13 @@ please send an email to the
 "developers"_http://sparta.sandia.gov/authors.html.
 
 If you succeed in building SPARTA on a new kind of machine, for which
-there isn't a similar Makefile in the src/MAKE directory, send it to
-the "developers"_http://sparta.sandia.gov/authors.html and we'll
-include it in future SPARTA releases.
+there isn't a similar Makefile in the src/MAKE directory or .cmake file
+in cmake/presets, send it to the 
+"developers"_http://sparta.sandia.gov/authors.html and we'll include it in future SPARTA releases.
 
 :line
 
-[{Steps to build a SPARTA executable:}] :link(start_2_2)
+[{Steps to build a SPARTA executable using make:}] :link(start_2_2_1)
 
 [Step 0]
 
@@ -369,6 +370,280 @@ is the number of cores the build runs on.
 You should get the executable spa_foo when the build is complete.
 
 :line
+
+[{Steps to build a SPARTA executable using cmake:}] :link(start_2_2_2)
+
+:line
+
+[Step 0]
+
+Please review https://github.com/sparta/sparta/blob/master/BUILD.md and ensure that
+CMake version 3.10.0 or greater is installed:
+
+which cmake
+which cmake3
+cmake --version
+
+On clusters and supercomputers one can use modules to load cmake:
+
+module avail cmake
+module load <CMAKE>
+
+On Linux one may use apt, yum, or pacman to install cmake.
+
+On Mac one may use brew or macports to install cmake.
+
+[Step 1]
+
+The cmake directory contains the CMake source files for SPARTA. Create a build
+directory and from within the build directory, run cmake:
+
+mkdir build
+cd build
+cmake -LH -DSPARTA_MACHINE=tutorial /path/to/sparta/cmake
+
+This will generate the default Makefiles and print the SPARTA CMake options. To
+list the generated targets, do:
+
+make help
+
+Now you can try to build the SPARTA binaries with:
+
+make
+
+If everything works, an executable named spa_tutorial and a library named
+libsparta.a will be produced in build/src.
+
+[Step 2]
+
+If Step 1 did not work, see if you can use any system presets from
+/path/to/sparta/cmake/presets. To select a preset:
+
+cd build
+
+# Clear the CMake files
+rm -rf CMake*
+
+cmake -C /path/to/sparta/cmake/presets/<NAME>.cmake -DSPARTA_MACHINE=tutorial /path/to/sparta/cmake
+make
+
+[Step 3]
+
+If Step 2 did not work, look at cmake -LH for a list of SPARTA CMake options and their
+meaning, then modify one or more of those options by doing:
+
+cd build
+rm -rf CMake*
+cmake -C /path/to/sparta/cmake/presets/<NAME>.cmake -D<OPTION_NAME>=<VALUE> /path/to/sparta/cmake
+make
+
+where <OPTION_NAME> and <VALUE> correspond to valid option value pairs listed by
+cmake -LH. For the SPARTA_DEFAULT_CXX_COMPILE_FLAGS option, see Step 4.
+
+For a full list of CMake option value pairs, see cmake -LAH. The most relevant
+CMake options (with example values) for our purposes here are:
+
+-DCMAKE_C_COMPILER=gcc
+-DCMAKE_CXX_COMPILER=/usr/local/bin/g++
+-DCMAKE_CXX_FLAGS=-O3
+
+If you're cmake command line is getting too long, consider placing it in a bash
+script and escaping newlines. For example:
+
+cmake \
+-C  /path/to/sparta/cmake/presets/<NAME>.cmake \
+-D  -D<OPTION_NAME>=<VALUE> \
+/path/to/sparta/cmake
+
+[Step 4]
+
+The SPARTA_DEFAULT_CXX_COMPILE_FLAGS option passes flags to the compiler when
+building object files.  Note that if you change any -D setting in this section,
+you should do a full re-compile, after typing "make clean".
+
+The SPARTA_DEFAULT_CXX_COMPILE_FLAGS option is typically used to include options
+that turn on ifdefs within the SPARTA code.  The options that are currently recogized are:
+
+-DSPARTA_GZIP
+-DSPARTA_JPEG
+-DSPARTA_PNG
+-DSPARTA_FFMPEG
+-DSPARTA_MAP
+-DSPARTA_UNORDERED_MAP
+-DSPARTA_SMALL
+-DSPARTA_BIG
+-DSPARTA_BIGBIG
+-DSPARTA_LONGLONG_TO_LONG :ul
+
+The read_data and dump commands will read/write gzipped files if you
+compile with -DSPARTA_GZIP.  It requires that your Linux support the
+"popen" command.
+
+If you use -DSPARTA_JPEG and/or -DSPARTA_PNG, the "dump
+image"_dump.html command will be able to write out JPEG and/or PNG
+image files respectively. If not, it will only be able to write out
+PPM image files.  For JPEG files, you must also link SPARTA with a
+JPEG library, as described below.  For PNG files, you must also link
+SPARTA with a PNG library, as described below.
+
+If you use -DSPARTA_FFMPEG, the "dump movie"_dump_image.html command
+will be available to support on-the-fly generation of rendered movies
+the need to store intermediate image files.  It requires that your
+machines supports the "popen" function in the standard runtime library
+and that an FFmpeg executable can be found by SPARTA during the run.
+
+If you use -DSPARTA_MAP, SPARTA will use the STL map class for hash
+tables.  This is less efficient than the unordered map class which is
+not yet supported by all C++ compilers.  If you use
+-DSPARTA_UNORDERED_MAP, SPARTA will use the unordered_map class for
+hash tables and will assume it is part of the STL (e.g. this works for
+Clang++).  The default is to use the unordered map class from the
+"tri1" extension to the STL which is supported by most compilers.  So
+only use either of these options if the build complains that unordered
+maps are not recognized.
+
+Use at most one of the -DSPARTA_SMALL, -DSPARTA_BIG, -DSPARTA_BIGBIG
+settings.  The default is -DSPARTA_BIG.  These refer to use of 4-byte
+(small) vs 8-byte (big) integers within SPARTA, as described in
+src/spatype.h.  The only reason to use the BIGBIG setting is if you
+have a regular grid with more than ~2 billion grid cells or a
+hierarchical grid with enough levels that grid cell IDs cannot fit in
+a 32-bit integer.  In either case, SPARTA will generate an error
+message for "Cell ID has too many bits".  See "Section
+4.8"_Section_howto.html#howto_8 of the manual for details on how cell
+IDs are formatted.  The only reason to use the SMALL setting is if
+your machine does not support 64-bit integers.
+
+In all cases, the size of problem that can be run on a per-processor
+basis is limited by 4-byte integer storage to about 2 billion
+particles per processor (2^31), which should not normally be a
+restriction since such a problem would have a huge per-processor
+memory and would run very slowly in terms of CPU secs/timestep.
+
+The -DSPARTA_LONGLONG_TO_LONG setting may be needed if your system or
+MPI version does not recognize "long long" data types.  In this case a
+"long" data type is likely already 64-bits, in which case this setting
+will use that data type.
+
+Using one of the -DPACK_ARRAY, -DPACK_POINTER, and -DPACK_MEMCPY
+options can make for faster parallel FFTs on some platforms.  The
+-DPACK_ARRAY setting is the default.  See the "compute
+fft/grid"_compute_fft_grid.html command for info about FFTs.  See STEP
+??? below for info about building SPPARKS with an FFT library.
+
+[Step 5]
+
+This step is optional. Once you get Steps 3 and 4 working by modifying the
+options to the cmake command, try setting the same options in
+/path/to/sparta/cmake/presets/<NEW>.cmake by copying 
+/path/to/sparta/cmake/presets/<NAME>.cmake and modifying the cmake
+source code. Note that the CMake cache is sticky and will only evict a 
+cached option value pair if you use -D or the FORCE argument to CMake's set
+routine.
+
+Now just do:
+
+cd build
+rm -rf CMake*
+cmake -C /path/to/sparta/cmake/presets/<NEW>.cmake /path/to/sparta/cmake
+make
+
+consider sharing and vetting <NEW>.cmake by opening a pull request at
+https://github.com/sparta/sparta/.
+
+[Step 6]
+
+This step explains how to enable and select MPI in the SPARTA CMake
+configuration. There may already be a preset in 
+/path/to/sparta/cmake/presets that selects the correct MPI installation.
+
+By default, SPARTA configures with MPI enabled and cmake will print which MPI
+was selected. To build serial binaries, use SPARTA's MPI_STUBS package:
+
+cmake -DPKG_MPI_STUBS=ON /path/to/sparta/cmake
+
+You may want a different MPI installation than CMake finds. CMake uses module
+files such as FindMPI.cmake to handle wiring in a given installation of a 
+library and its headers. If you're on a cluster or supercomputer, use module 
+before running cmake so that cmake finds the MPI installation you'd like to
+use:
+
+# Show which modules are loaded
+module list
+
+# Show which modules are available
+module avail
+
+module load <MPI>
+
+On Linux one may use apt, yum, or pacman to install MPI.
+
+On Mac one may use brew or macports to install MPI.
+
+Verify that cmake found the correct MPI installation:
+
+cd build
+rm -rf CMake*
+
+# cmake should print "Found MPI*" strings
+cmake [options] /path/to/sparta/cmake
+
+Note that if the preset file you're using enables PKG_MPI_STUBS, MPI will not be
+searched for unless you explicitly disable PKG_MPI_STUBS in the preset file.
+
+If you'd like to use a custom MPI installation or cmake is not locating the MPI
+installation you've selected via the module command or package manager, please see
+https://cmake.org/cmake/help/v3.10/module/FindMPI.html#variables-for-locating-mpi.
+Note that this documentation link is for CMake version 3.10.
+
+[Step 7]
+
+You may select between 3 thiry party libraries (TPL) for FFT which SPARTA uses when
+configured with cmake -DFFT={FFTW2,FFTW3,MKL}. SPARTA also provides a FFT
+package which can be selected with cmake -DPKG_FFT=ON.
+
+You may need to install the FFT TPL you're interested in using. If you're on a
+cluster or supercomputer, use module before running cmake so that cmake finds
+the FFT installation you'd like to use:
+
+# Show which modules are loaded
+module list
+
+# Show which modules are available
+module avail
+
+module load <FFT>
+
+On Linux one may use apt, yum, or pacman to install FFT.
+
+On Mac one may use brew or macports to install FFT.
+
+Verify that cmake found the correct MPI installation:
+
+cd build
+rm -rf CMake*
+
+# cmake should print "Found FFT*" strings
+cmake [options] /path/to/sparta/cmake
+
+Note that if the preset file you're using enables PKG_FFT, FFT will not be
+searched for unless you explicitly disable PKG_FFT in the preset file.
+
+If you'd like to use a custom FFT installation or cmake is not locating the FFT
+installation you've selected via the module command or package manager, please
+open an issue at https://github.com/sparta/sparta/issues.
+
+[Step 8]
+
+TODO - JPG
+
+[Step 9]
+
+TODO - OPTIONAL PACKAGES
+
+[Step 10]
+
+TODO - FINAL CONFIGURE AND BUILD STEP
 
 [{Errors that can occur when making SPARTA:}] :link(start_2_3)
 
