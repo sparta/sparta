@@ -9,8 +9,8 @@ set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS
     STRING "Compiler flags used when building object files for the \"spa_\" executable"
     )
 
-set(SPARTA_CMAKE_CONFIG_STRING
-    nopreset
+set(SPARTA_MACHINE
+    ""
     CACHE
-    STRING "Descriptive string to describe \"spa_\" executable configuration"
+    STRING "Suffix to append to spa binary (WON'T enable any features automatically)"
     )

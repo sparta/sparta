@@ -17,6 +17,10 @@ foreach(opt IN LISTS SPARTA_BUILD_TPL_LIST)
     endif()
 endforeach()
 
+if (FFT)
+    message(STATUS "  ${FFT}")
+endif()
+
 message(STATUS "")
 
 message(STATUS "Enabled extra options")

@@ -10,8 +10,14 @@ set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS ${SPARTA_CXX_COMPILE_FLAGS} ${SPARTA_DEFAUL
 #################### BEGIN COMBINE CXX FLAGS ####################
 
 #################### BEGIN PROCESS MPI TPL/PKG ####################
+if(BUILD_MPI AND PKG_MPI_STUBS)
+    message(WARNING "Both BUILD_MPI: ${BUILD_MPI} and PKG_MPI_STUBS: "
+                    "${PKG_MPI_STUBS} are selected. Defaulting to PKG_MPI_STUBS.")
+endif()
+
 if(BUILD_MPI AND NOT PKG_MPI_STUBS)
     find_package(MPI REQUIRED)
+    # TODO: if NOT MPI_FOUND, handle finding mpi installs
     set(TARGET_SPARTA_BUILD_MPI MPI::MPI_CXX)
     target_compile_options(${TARGET_SPARTA_BUILD_MPI} INTERFACE ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
 else()
@@ -23,15 +29,27 @@ list(APPEND TARGET_SPARTA_BUILD_TPLS ${TARGET_SPARTA_BUILD_MPI})
 #################### END PROCESS MPI TPL/PKG ####################
 
 #################### BEGIN PROCESS PKGS ####################
-if(DEFINED FFT)
-    find_package(${FFT} REQUIRED)
-    set(TARGET_SPARTA_PKG_FFT ${FFT}::${FFT})
+if(FFT AND PKG_FFT)
+    message(WARNING "Both FFT: ${FFT} and PKG_FFT: ${PKG_FFT} are selected. "
+                    "Defaulting to PKG_FFT.")
+endif()
+
+if(PKG_FFT)
+    set(FFT OFF CACHE STRING "" FORCE)
+    set(TARGET_SPARTA_PKG_FFT pkg_fft)
     list(APPEND TARGET_SPARTA_PKGS ${TARGET_SPARTA_PKG_FFT})
-else()
-    if(PKG_FFT)
-        set(TARGET_SPARTA_PKG_FFT pkg_fft)
-        list(APPEND TARGET_SPARTA_PKGS ${TARGET_SPARTA_PKG_FFT})
-    endif()
+    set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS -DFFT_NONE ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
+endif()
+
+if(FFT AND NOT PKG_FFT)
+    find_package(${FFT} REQUIRED)
+    set(TARGET_SPARTA_BUILD_FFT ${FFT}::${FFT})
+    set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS -DFFT_${FFT} ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
+    list(APPEND TARGET_SPARTA_BUILD_TPLS ${TARGET_SPARTA_BUILD_FFT})
+    
+    set(PKG_FFT ON CACHE STRING "" FORCE)
+    set(TARGET_SPARTA_PKG_FFT pkg_fft)
+    list(APPEND TARGET_SPARTA_PKGS ${TARGET_SPARTA_PKG_FFT})
 endif()
 
 if(PKG_KOKKOS)

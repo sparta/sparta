@@ -56,6 +56,11 @@ sparta_option(BUILD_KOKKOS
               OFF
               SPARTA_BUILD_TPL_LIST
              )
+
+option(FFT
+       "Select a FFT TPL from FFTW2, FFTW3, and MKL. Default: OFF."
+       OFF
+      )
 ########## END   SPARTA TPL DEPENDENCIES ##########
 
 ########## BEGIN SPARTA EXTRA OPTIONS ##########

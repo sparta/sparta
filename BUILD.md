@@ -19,6 +19,9 @@ cmake -LH ../cmake
 # List all options and help strings
 cmake -LAH
 
+# Show all generated targets
+make help
+
 # Build the project
 make
 
@@ -49,6 +52,8 @@ cmake -C /path/to/<NAME>.cmake /path/to/sparta/cmake
   * Whether to enable the Sparta KOKKOS TPL.
 * BUILD_MPI
   * Whether to enable the Sparta MPI TPL.
+* FFT
+  * Which Sparta FFT TPL to enable: FFTW2, FFTW3, or MKL.
 
 ## Other options
 * SPARTA_MACHINE
