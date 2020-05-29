@@ -28,6 +28,8 @@
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
+#include "modify.h"
+#include "compute.h"
 
 using namespace SPARTA_NS;
 using namespace MathConst;
@@ -455,7 +457,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal_Serial(Particle::OnePart *ip,
 						Particle::OnePart *jp)
 {
 
-  double State_prob,Fraction_Rot,Fraction_Vib,E_Dispose;
+  double State_prob,Fraction_Rot,Fraction_Vib,E_Dispose,phi,transdof;
   int i,rotdof,vibdof,max_level,ivib,irot;
 
   Particle::OnePart *p;
@@ -464,7 +466,8 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal_Serial(Particle::OnePart *ip,
   double AdjustFactor = 0.99999999;
   postcoln.erot = 0.0;
   postcoln.evib = 0.0;
-  double pevib = 0.0;   
+  double pevib = 0.0;
+  phi = 0.0;
 
   // handle each kind of energy disposal for non-reacting reactants
 
@@ -485,11 +488,13 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal_Serial(Particle::OnePart *ip,
       else p = jp;
 
       int sp = p->ispecies;
+      transdof = 5.0-2.0*params[sp].omega;
       rotdof = species[sp].rotdof;
       double rotn_phi = 1.0/species[sp].rotrel; 
 
       if (rotdof) {
-        if (relaxflag == VARIABLE) rotn_phi = 1.0/rotrel_serial(sp,E_Dispose);
+//        if (relaxflag == VARIABLE) rotn_phi = 1.0/rotrel_serial(sp,E_Dispose);
+        if (relaxflag == VARIABLE) rotn_phi = (1.0 + rotdof/transdof)/rotrel_prohibdouble(sp,E_Dispose);
         if (rotn_phi >= random->uniform()) {
           if (rotstyle == NONE) {
             p->erot = 0.0; 
@@ -514,7 +519,8 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal_Serial(Particle::OnePart *ip,
       double vibn_phi = 1.0/species[sp].vibrel[0]; 
 
       if (vibdof) {
-        if (relaxflag == VARIABLE) vibn_phi = 1.0/vibrel_serial(sp,E_Dispose+p->evib);
+//        if (relaxflag == VARIABLE) vibn_phi = 1.0/vibrel_serial(sp,E_Dispose+p->evib);
+        if (relaxflag == VARIABLE) vibn_phi = (1.0 + vibdof/transdof)/vibrel_serial(sp,E_Dispose+p->evib);
         if (vibn_phi >= random->uniform()) {
           if (vibstyle == NONE) {
             p->evib = 0.0; 
@@ -597,8 +603,8 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal_ProhibDouble(Particle::OnePart *
 {
 
   double State_prob,Fraction_Vib,E_Dispose;
-  double phi,factor,transdof,pevib,Tt,vibdof_dis,A;
-  int i,sp,rotdof,vibdof,max_level,ivib,imode,relaxflag1;
+  double phi,factor,transdof,pevib,Tt,vibdof_dis,A,x;
+  int i,sp,isp,jsp,rotdof,vibdof,max_level,ivib,imode,relaxflag1;
 
   Particle::OnePart *p1,*p2,*p;
   Particle::Species *species = particle->species;
@@ -609,6 +615,11 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal_ProhibDouble(Particle::OnePart *
   relaxflag1 = 0;
   phi = 0.0;
   factor= 1.0;
+    
+  double aveomega = 0.5*(params[ip->ispecies].omega + params[jp->ispecies].omega);
+  double avediam = 0.5*(params[ip->ispecies].diam + params[jp->ispecies].diam);
+  double avetref = 0.5*(params[ip->ispecies].tref + params[jp->ispecies].tref);
+  double mr = (species[ip->ispecies].mass * species[jp->ispecies].mass)/(species[ip->ispecies].mass + species[jp->ispecies].mass);
 
   // handle each kind of energy disposal for non-reacting reactants
 
@@ -635,11 +646,11 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal_ProhibDouble(Particle::OnePart *
         else if (i == 1) p = p2;
 
           sp = p->ispecies;
+          isp = ip->ispecies;
+          jsp = jp->ispecies;
           vibdof = species[sp].vibdof;
           transdof = 5.0-2.0*params[sp].omega;
-
-          Tt = (E_Dispose+p->evib) / (update->boltz * (transdof+vibdof));
-
+          
           if (vibdof) {
               if (vibstyle == NONE) {
                 p->evib = 0.0;
@@ -647,9 +658,18 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal_ProhibDouble(Particle::OnePart *
               } else if (vibstyle == SMOOTH) {
 
                   factor *= 1/(1-phi);
-                  if (relaxflag == VARIABLE) phi = factor*(1.0 + vibdof/transdof)/
-			  vibrel_prohibdouble(sp,E_Dispose+p->evib,vibdof+transdof);
-                  else phi = factor*(1.0 + vibdof/transdof)/species[sp].vibrel[0];
+                  if (relaxflag == VARIABLE) {
+//                      Tt = modify->compute[0]->vector_grid[0];
+//                      if (((isp == 0) && ((jsp == 2) || (jsp == 3) || (jsp == 4))) || (((isp == 2) || (isp == 3) || (isp == 4)) && (jsp == 0))) {
+//                          x = pow(Tt,-1./3.);
+//                          phi = sqrt(2.0*mr*update->boltz)
+//                          / (4.0 * MY_PIS * pow(avediam,2.0)*pow(avetref,aveomega-0.5)
+//                             * pow(Tt,-aveomega)*101325.0*(exp(246.747*(x-0.1193))+exp(46.9888*(x-0.41714))));
+//                      } else if (((isp == 1) && ((jsp == 2) || (jsp == 3) || (jsp == 4))) || (((isp == 2) || (isp == 3) || (isp == 4)) && (jsp == 1))) {
+//                          phi = 1/(exp(5.228 - 0.1405*log(Tt)));
+//                      } else
+                          phi = factor*(1.0 + vibdof/transdof)/vibrel_prohibdouble(sp,E_Dispose+p->evib,vibdof+transdof);
+                  } else phi = factor*(1.0 + vibdof/transdof)/species[sp].vibrel[0];
 
                   if (phi >= random->uniform()) {
                       E_Dispose += p->evib;
@@ -666,14 +686,30 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal_ProhibDouble(Particle::OnePart *
                   }
 
               } else if (vibstyle == DISCRETE) {
+                  
+//                  Tt = modify->compute[0]->vector_grid[0];
+                  Tt = (E_Dispose+p->evib) / (update->boltz * (transdof+vibdof));
+//                  fprintf(screen," Tt = %f\n",Tt);
+
                   if (vibdof == 2) {
 
                       vibdof_dis = 2.0*(species[sp].vibtemp[0]/Tt) / (exp(species[sp].vibtemp[0]/Tt)-1);
                       A = pow(vibdof_dis,2)*exp(species[sp].vibtemp[0]/Tt)/2.0;
 
                       factor *= 1/(1-phi);
-                      if (relaxflag == VARIABLE) phi = factor*(1.0 + A/transdof)/
-			      vibrel_prohibdouble(sp,E_Dispose+p->evib,vibdof_dis+transdof);
+                      if (relaxflag == VARIABLE) {
+//                          if (((isp == 0) && ((jsp == 2) || (jsp == 3) || (jsp == 4))) || (((isp == 2) || (isp == 3) || (isp == 4)) && (jsp == 0))) {
+////                          if (((isp == 0) && (jsp == 1)) || ((isp == 1) && (jsp == 0))) {
+//                              x = pow(Tt,-1./3.);
+//                              phi = sqrt(2.0*mr*update->boltz)
+//                              / (4.0 * MY_PIS * pow(avediam,2.0)*pow(avetref,aveomega-0.5)
+//                                 * pow(Tt,-aveomega)*101325.0*(exp(246.747*(x-0.1193))+exp(46.9888*(x-0.41714))));
+//                          } else if (((isp == 1) && ((jsp == 2) || (jsp == 3) || (jsp == 4))) || (((isp == 2) || (isp == 3) || (isp == 4)) && (jsp == 1))) {
+//                              phi = 1/(exp(5.228 - 0.1405*log(Tt)));
+//                          } else {
+                              phi = factor*(1.0 + A/transdof)/vibrel_prohibdouble(sp,E_Dispose+p->evib,vibdof_dis+transdof);
+//                          }
+                      }
                       else phi = factor*(1.0 + A/transdof)/species[sp].vibrel[0];
 
                       if (phi >= random->uniform()) {
@@ -1023,14 +1059,17 @@ double CollideVSS::rotrel_serial(int isp, double Ec)
 
 double CollideVSS::vibrel_serial(int isp, double Ec)
 {
-	Particle::Species *species = particle->species;
+  Particle::Species *species = particle->species;
   double Tr = Ec /(update->boltz * (3.5-params[isp].omega));
   double omega = params[isp].omega;
   double diam = params[isp].diam;
   double tref = params[isp].tref;
-  double vibphi = 4.0 * MY_PIS * pow(diam,2.0)*pow(tref,omega-0.5)
+  double Zmw = 4.0 * MY_PIS * pow(diam,2.0)*pow(tref,omega-0.5)
                   * pow(Tr,-omega)*101325.0*exp(params[isp].vibc1
                   * (pow(Tr,-1.0/3.0)-params[isp].vibc2)-18.42)/sqrt(species[isp].mass*update->boltz);
+  double Zpark = 4.0*MY_PI*pow(params[isp].diam,2.0)*pow(params[isp].tref,params[isp].omega-0.5)
+                 *pow(Tr,2.5-params[isp].omega)/(2.5e9*params[isp].park);
+  double vibphi = Zmw + Zpark;
   return vibphi;
 }
 
@@ -1056,12 +1095,15 @@ double CollideVSS::vibrel_prohibdouble(int isp, double Ec, double doftot)
 {
   Particle::Species *species = particle->species;
   double Tr = 2.0 * Ec / (update->boltz * doftot);
+//  double Tr = modify->compute[0]->vector_grid[0];
+//  fprintf(screen," Tt = %f\n",Tr);
   double Zmw = 4.0*MY_PIS * pow(params[isp].diam,2.0)*pow(params[isp].tref,params[isp].omega-0.5)
                   * pow(Tr,-params[isp].omega)*101325.0*exp(params[isp].vibc1
                   * (pow(Tr,-1.0/3.0)-params[isp].vibc2)-18.42)/sqrt(species[isp].mass*update->boltz);
   double Zpark = 4.0*MY_PI*pow(params[isp].diam,2.0)*pow(params[isp].tref,params[isp].omega-0.5)
                           *pow(Tr,2.5-params[isp].omega)/(2.5e9*params[isp].park);
   double vibphi = Zmw + Zpark;
+//  fprintf(screen," Tr = %f, Zvib CO2 = %f\n",Tr,vibphi);
   return vibphi;
 }
 
@@ -1089,10 +1131,8 @@ void CollideVSS::read_param_file(char *fname)
   // all other lines must have at least NWORDS 
 
   int NWORDS = 5;
-  if (relaxflag == VARIABLE) {
-    if (relaxtypeflag == PROHIBDOUBLE) NWORDS = 10;
-    else NWORDS = 9;
-  }
+  if (relaxflag == VARIABLE) NWORDS = 10;
+
   char **words = new char*[NWORDS];
   char line[MAXLINE],copy[MAXLINE];
   int isp;
@@ -1121,7 +1161,7 @@ void CollideVSS::read_param_file(char *fname)
       params[isp].rotc2 =  (MY_PI*MY_PIS/2.)*sqrt(params[isp].rotc2);
       params[isp].vibc1 = atof(words[7]);
       params[isp].vibc2 = atof(words[8]);
-      if (relaxtypeflag == PROHIBDOUBLE) params[isp].park = atof(words[9]);
+      params[isp].park = atof(words[9]);
     }
   }
 

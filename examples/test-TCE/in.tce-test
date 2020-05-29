@@ -1,0 +1,32 @@
+# thermal gas in a 3d box with collisions and chemistry
+# particles reflect off global box boundaries
+
+seed	    	    12345
+dimension   	    3
+global              fnum 1e12
+
+boundary	    r r r
+
+create_box  	    -0.5 0.5 -0.5 0.5 -0.5 0.5
+create_grid 	    1 1 1
+
+balance_grid        rcb part
+
+species		    air.species CO2 CO N2 O2 O N NO
+mixture		    air CO2 CO N2 O2 O N NO temp 6500.0 trot 6500.0 tvib 6500.0
+mixture             air N2 frac 1.0
+
+collide		    vss air air.vss
+collide_modify      vibrate smooth
+react               tce air.tce
+react_modify        bird
+
+create_particles    air n 1000000
+
+compute             temp temp
+
+stats		    10
+stats_style	    step cpu np nattempt ncoll nreactave c_temp
+
+timestep 	    5e-4
+run 		    1000
