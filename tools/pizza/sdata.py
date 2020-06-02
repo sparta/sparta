@@ -385,6 +385,7 @@ class sdata:
     surf.select = 1
     surf.points = points
     surf.triangles = triangles
+    surf.triflags = [[] for i in xrange(len(triangles))]
     surf.center = [x,y,z]
     self.ids[id] = len(self.surfs)
     self.surfs.append(surf)
@@ -411,6 +412,7 @@ class sdata:
     surf.select = 1
     surf.points = points
     surf.triangles = triangles
+    surf.triflags = [[] for i in xrange(len(triangles))]
     surf.center = [0.5*(x0+x1),0.5*(y0+y1),0.5*(z0+z1)]
     self.ids[id] = len(self.surfs)
     self.surfs.append(surf)
@@ -466,6 +468,7 @@ class sdata:
     surf.select = 1
     surf.points = points
     surf.triangles = triangles
+    surf.triflags = [[] for i in xrange(len(triangles))]
     surf.center = [x,y,z]
     self.ids[id] = len(self.surfs)
     self.surfs.append(surf)
@@ -498,6 +501,7 @@ class sdata:
     surf.select = 1
     surf.points = plist
     surf.triangles = tlist
+    surf.triflags = [[] for i in xrange(len(triangles))]
     surf.center = [0.0,0.0,0.0]
     self.ids[id] = len(self.surfs)
     self.surfs.append(surf)
