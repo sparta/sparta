@@ -52,6 +52,12 @@ cmake -C /path/to/<NAME>.cmake /path/to/sparta/cmake
   * Whether to enable the Sparta KOKKOS TPL.
 * BUILD_MPI
   * Whether to enable the Sparta MPI TPL.
+* BUILD_JPEG
+  * Whether to enable the Sparta JPEG TPL.
+* BUILD_PNG
+  * Whether to enable the Sparta PNG TPL.
+* BUILD_MPI
+  * Whether to enable the Sparta MPI TPL.
 * FFT
   * Which Sparta FFT TPL to enable: FFTW2, FFTW3, or MKL.
 

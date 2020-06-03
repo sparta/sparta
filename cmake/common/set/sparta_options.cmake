@@ -57,6 +57,18 @@ sparta_option(BUILD_KOKKOS
               SPARTA_BUILD_TPL_LIST
              )
 
+sparta_option(BUILD_JPEG
+              "Enable or disable JPEG TPL. Default: OFF."
+              OFF
+              SPARTA_BUILD_TPL_LIST
+             )
+
+sparta_option(BUILD_PNG
+              "Enable or disable PNG TPL. Default: OFF."
+              OFF
+              SPARTA_BUILD_TPL_LIST
+             )
+
 option(FFT
        "Select a FFT TPL from FFTW2, FFTW3, and MKL. Default: OFF."
        OFF

@@ -635,7 +635,19 @@ open an issue at https://github.com/sparta/sparta/issues.
 
 [Step 8]
 
-TODO - JPG
+You may select between 2 TPLs, JPEG or PNG, for writing out JPEG or PNG files
+via the "dump image"_dump_image.html command. To select a TPL, use:
+
+cmake -DBUILD_JPEG=ON
+
+Or:
+
+cmake -DBUILD_PNG=ON
+
+If you'd like to use a custom jpeg or png installation, please see 
+https://cmake.org/cmake/help/v3.10/module/FindJPEG.html or
+https://cmake.org/cmake/help/v3.10/module/FindPNG.html. Note that these
+documentation links are for CMake version 3.10.
 
 [Step 9]
 
