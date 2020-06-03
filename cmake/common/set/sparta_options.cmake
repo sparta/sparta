@@ -87,4 +87,16 @@ sparta_option(SPARTA_MACHINE
               ""
               SPARTA_EXTRA_OPTIONS_LIST
               )
+
+sparta_option(SPARTA_LIST_PKGS
+              "List available packages and quit. Default: OFF."
+              ""
+              SPARTA_EXTRA_OPTIONS_LIST
+              )
+
+sparta_option(SPARTA_LIST_TPLS
+              "List available packages and quit. Default: OFF."
+              ""
+              SPARTA_EXTRA_OPTIONS_LIST
+              )
 ########## END   SPARTA EXTRA OPTIONS ##########

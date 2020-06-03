@@ -25,6 +25,29 @@ set(TARGET_SPARTA spa_${SPARTA_MACHINE})
 set(TARGET_SPARTA_LIB sparta)
 # TODO: Do we need set(TARGET_SPARTA_LIB sparta_${SPARTA_MACHINE})?
 
+if(SPARTA_LIST_PKGS OR SPARTA_LIST_TPLS)
+    if(SPARTA_LIST_PKGS)
+        message(STATUS "SPARTA Packages:")
+        foreach(opt IN LISTS SPARTA_PKG_LIST)
+            get_property(opt_help CACHE ${opt} PROPERTY HELPSTRING)
+            message(STATUS "  // ${opt_help}")
+            message(STATUS "  ${opt}=${${opt}}")
+        endforeach()
+        message(STATUS "")
+    endif()
+    
+    if(SPARTA_LIST_TPLS)
+        message(STATUS "SPARTA TPLs:")
+        foreach(opt IN LISTS SPARTA_BUILD_TPL_LIST)
+            get_property(opt_help CACHE ${opt} PROPERTY HELPSTRING)
+            message(STATUS "  // ${opt_help}")
+            message(STATUS "  ${opt}=${${opt}}")
+        endforeach()
+    endif()
+    # EXIT
+    return()
+endif()
+
 ########## BEGIN PROCESS SPARTA OPTIONS ##########
 include(${SPARTA_CMAKE_COMMON_DIR}/process/sparta_build_options.cmake)
 ########## END   PROCESS SPARTA OPTIONS ##########

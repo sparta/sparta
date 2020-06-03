@@ -5,6 +5,10 @@
 # This file is also responsible for handeling depencies among boolean options.
 ################################################################################
 
+#################### BEGIN PROCESS EXTRA OPTIONS ####################
+
+#################### END   PROCESS EXTRA OPTIONS ####################
+
 #################### BEGIN COMBINE CXX FLAGS ####################
 set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS ${SPARTA_CXX_COMPILE_FLAGS} ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
 #################### BEGIN COMBINE CXX FLAGS ####################
@@ -85,7 +89,3 @@ if(BUILD_PNG)
     set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS -DSPARTA_PNG ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
 endif()
 #################### END PROCESS TPLS ####################
-
-#################### BEGIN PROCESS EXTRA OPTIONS ####################
-
-#################### END   PROCESS EXTRA OPTIONS ####################

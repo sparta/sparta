@@ -68,6 +68,10 @@ cmake -C /path/to/<NAME>.cmake /path/to/sparta/cmake
   * Selected compiler flags used when building object files for `spa_$SPARTA_MACHINE`.
 * SPARTA_DEFAULT_CXX_COMPILE_FLAGS
   * Default compiler flags used when building object files for `spa_$SPARTA_MACHINE`.
+* SPARTA_LIST_PKGS
+  * Print the sparta packages and exit.
+* SPARTA_LIST_TPLS
+  * Print the sparta TPLs and exit.  
 
 ## Examples
 ### Selecting packages via the command line

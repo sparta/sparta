@@ -50,9 +50,10 @@ This section has the following sub-sections:
 
 "Read this first"_#start_2_1
 "Steps to build a SPARTA executable using make"_#start_2_2_1
-"Steps to build a SPARTA executable using cmake"_#start_2_2_2
+"Steps to build a SPARTA executable using CMake"_#start_2_2_2
 "Common errors that can occur when making SPARTA"_#start_2_3
-"Additional build tips"_#start_2_4
+"Additional build tips using make"_#start_2_4_1
+"Additional build tips using CMake"_#start_2_4_2
 "Building for a Mac"_#start_2_5
 "Building for Windows"_#start_2_6 :ul
 
@@ -371,7 +372,7 @@ You should get the executable spa_foo when the build is complete.
 
 :line
 
-[{Steps to build a SPARTA executable using cmake:}] :link(start_2_2_2)
+[{Steps to build a SPARTA executable using CMake:}] :link(start_2_2_2)
 
 :line
 
@@ -718,7 +719,7 @@ above in Step 4.
 
 :line
 
-[{Additional build tips:}] :link(start_2_4)
+[{Additional build tips using make:}] :link(start_2_4_1)
 
 (1) Building SPARTA for multiple platforms.
 
@@ -734,9 +735,28 @@ particular machine.
 
 :line
 
+[{Additional build tips using CMake:}] :link(start_2_4_2)
+
+(1) Building SPARTA for multiple platforms.
+
+It's best to build SPARTA for multiple platforms from different
+build directories. However, each target creates its own spa_TARGET binary and
+multiple targets can be built from the same build directory. Note that the *.o
+object files will reflective of the most recent build configuration. Also not
+that if BUILD_SHARED_LIBS was enabled, libsparta.so will be reflective of the
+most recent build configuration.
+
+(2) Cleaning up.
+
+Typing "make clean" will delete all binary files for the most recent build
+configuration.
+
+:line
+
 [{Building for a Mac:}] :link(start_2_5)
 
-OS X is BSD Unix, so it should just work.  See the Makefile.mac file.
+OS X is BSD Unix, so it should just work.  See the Makefile.mac or
+cmake/presets/mac.cmake file.
 
 :line
 
@@ -747,7 +767,7 @@ for SPARTA.  Until then you will need to build an executable from
 source files.
 
 One way to do this is install and use cygwin to build SPARTA with a
-standard Linux make, just as you would on any Linux box.
+standard Linux make or CMake, just as you would on any Linux box.
 
 You can also import the *.cpp and *.h files into Microsoft Visual
 Studio.  If someone does this and wants to provide project files or
@@ -774,9 +794,14 @@ files that enable a specific set of features.  For example, the FFT
 package which includes a "compute fft/grid"_compute_fft_grid.html
 command and a 2d and 3d FFT library.
 
+For make:
 You can see the list of all packages by typing "make package" from
-within the src directory of the SPARTA distribution.  This also lists
+within the src directory of the SPARTA distribution. This also lists
 various make commands that can be used to manipulate packages.
+
+for CMake:
+You can see the list of all packages by typing "cmake -DSPARTA_LIST_PKGS=ON"
+from within the build directory.
 
 If you use a command in a SPARTA input script that is part of a
 package, you must have built SPARTA with that package, else you will
