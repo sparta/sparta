@@ -447,7 +447,7 @@ CMake options (with example values) for our purposes here are:
 -DCMAKE_CXX_COMPILER=/usr/local/bin/g++
 -DCMAKE_CXX_FLAGS=-O3
 
-If you're cmake command line is getting too long, consider placing it in a bash
+If your cmake command line is getting too long, consider placing it in a bash
 script and escaping newlines. For example:
 
 cmake \
@@ -638,11 +638,11 @@ open an issue at https://github.com/sparta/sparta/issues.
 You may select between 2 TPLs, JPEG or PNG, for writing out JPEG or PNG files
 via the "dump image"_dump_image.html command. To select a TPL, use:
 
-cmake -DBUILD_JPEG=ON
+cmake -DBUILD_JPEG=ON /path/to/sparta/cmake
 
 Or:
 
-cmake -DBUILD_PNG=ON
+cmake -DBUILD_PNG=ON /path/to/sparta/cmake
 
 If you'd like to use a custom jpeg or png installation, please see 
 https://cmake.org/cmake/help/v3.10/module/FindJPEG.html or
@@ -651,11 +651,36 @@ documentation links are for CMake version 3.10.
 
 [Step 9]
 
-TODO - OPTIONAL PACKAGES
+By default, none of the SPARTA optional packages are installed. To build SPARTA
+with optional packages, use:
+
+cmake -DPKG_XXX=ON /path/to/sparta/cmake
+
+Where XXX is the package to enable. For a full list of optional packages, see:
+
+cmake -LH /path/to/sparta/cmake
 
 [Step 10]
 
-TODO - FINAL CONFIGURE AND BUILD STEP
+Once you have a correct cmake command line or the <NAME>.cmake preset file, just
+do:
+
+cd build
+cmake [OPTIONS] /path/to/sparta/cmake
+
+or:
+
+cd build
+cmake -C /path/to/sparta/cmake/presets/<NAME>.cmake -DSPARTA_MACHINE=tutorial /path/to/sparta/cmake
+
+
+make -j N
+
+The -j or -j N switches perform a parallel build which can be much faster, 
+depending on how many cores your compilation machine has. N is the number of
+cores the build runs on.
+
+You should get build/src/spa_tutorial and build/src/libsparta.a.
 
 [{Errors that can occur when making SPARTA:}] :link(start_2_3)
 
