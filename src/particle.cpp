@@ -1502,8 +1502,14 @@ int Particle::pack_restart(char *buf, int step, int pass)
     ptr += nbytes_custom;
   }
 
-  if (end == nlocal)
-    ptr = ROUNDUP(ptr);
+  if (end == nlocal) {
+    int nbytes_particle = sizeof(OnePartRestart);
+    int nbytes_custom = sizeof_custom();
+    int nbytes = nbytes_particle + nbytes_custom;
+
+    bigint total_bytes = nlocal*nbytes + ((sizeof(int) + 7) & ~7);
+    ptr += ((total_bytes + 7) & ~7) - total_bytes; // ROUNDUP(total)
+  }
 
   return ptr - buf;
 }
@@ -1567,8 +1573,10 @@ int Particle::unpack_restart(char *buf, int &nlocal_restart, int step, int pass)
   memcpy(particle_restart,ptr,step*nbytes);
   ptr += step * sizeof(OnePartRestart);
 
-  if (end == nlocal_restart)
-    ptr = ROUNDUP(ptr);
+  if (end == nlocal_restart) {
+    bigint total_bytes = nlocal_restart*nbytes + ((sizeof(int) + 7) & ~7);
+    ptr += ((total_bytes + 7) & ~7) - total_bytes; // ROUNDUP(total)
+  }
 
   this->nlocal_restart = step;
   return ptr - buf;

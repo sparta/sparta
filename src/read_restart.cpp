@@ -374,8 +374,12 @@ void ReadRestart::command(int narg, char **arg)
         if (update->mem_limit_grid_flag)
           update->set_mem_limit_grid(grid_nlocal);
 
+        int nbytes_particle = sizeof(Particle::OnePartRestart);
+        int nbytes_custom = particle->sizeof_custom();
+        int nbytes = nbytes_particle + nbytes_custom;
+
         int maxbuf_new = MAX(grid_read_size,update->global_mem_limit);
-        maxbuf_new = MAX(maxbuf_new,sizeof(Particle::OnePartRestart));
+        maxbuf_new = MAX(maxbuf_new,sizeof(nbytes));
         maxbuf_new += 128; // extra for size and ROUNDUP(ptr)
         if (maxbuf_new > maxbuf) {
           maxbuf = maxbuf_new;
@@ -385,11 +389,12 @@ void ReadRestart::command(int narg, char **arg)
 
         // number of particles per pass
 
-        step_size = update->global_mem_limit/sizeof(Particle::OnePartRestart);
+        step_size = update->global_mem_limit/nbytes;
 
         // extra pass for grid
 
         npasses = ceil((double)particle_nlocal/step_size)+1;
+        if (particle_nlocal == 0) npasses++;
 
         int nlocal_restart = 0;
         bigint total_read_part = 0;
@@ -397,10 +402,9 @@ void ReadRestart::command(int narg, char **arg)
           if (ii == 0)
             n = grid_read_size;
           else {
-            n = step_size*sizeof(Particle::OnePartRestart);
+            n = step_size*nbytes;
             if (ii == 1) n += ((sizeof(int) + 7) & ~7); // ROUNDUP(ptr)
-            if (total_read_part + n > particle_read_size)
-              n = particle_read_size - total_read_part;
+            if (ii == npasses-1) n = particle_read_size - total_read_part;
             total_read_part += n;
           }
           fread(buf,sizeof(char),n,fp);
@@ -511,8 +515,12 @@ void ReadRestart::command(int narg, char **arg)
         if (update->mem_limit_grid_flag)
           update->set_mem_limit_grid(grid_nlocal);
 
+        int nbytes_particle = sizeof(Particle::OnePartRestart);
+        int nbytes_custom = particle->sizeof_custom();
+        int nbytes = nbytes_particle + nbytes_custom;
+
         int maxbuf_new = MAX(grid_read_size,update->global_mem_limit);
-        maxbuf_new = MAX(maxbuf_new,sizeof(Particle::OnePartRestart));
+        maxbuf_new = MAX(maxbuf_new,nbytes);
         maxbuf_new += 128; // extra for size and ROUNDUP(ptr)
         if (maxbuf_new > maxbuf) {
           maxbuf = maxbuf_new;
@@ -522,11 +530,12 @@ void ReadRestart::command(int narg, char **arg)
 
         // number of particles per pass
 
-        step_size = update->global_mem_limit/sizeof(Particle::OnePartRestart);
+        step_size = update->global_mem_limit/nbytes;
 
         // extra pass for grid
 
-        npasses = ceil((double)particle_nlocal/step_size)+1; 
+        npasses = ceil((double)particle_nlocal/step_size)+1;
+        if (particle_nlocal == 0) npasses++;
 
         if (i % nclusterprocs) {
           iproc = me + (i % nclusterprocs);
@@ -540,10 +549,9 @@ void ReadRestart::command(int narg, char **arg)
           if (ii == 0)
             n = grid_read_size;
           else {
-            n = step_size*sizeof(Particle::OnePartRestart);
+            n = step_size*nbytes;
             if (ii == 1) n += ((sizeof(int) + 7) & ~7); // ROUNDUP(ptr)
-            if (total_read_part + n > particle_read_size)
-              n = particle_read_size - total_read_part;
+            if (ii == npasses-1) n = particle_read_size - total_read_part;
             total_read_part += n;
           }
           fread(buf,sizeof(char),n,fp);
