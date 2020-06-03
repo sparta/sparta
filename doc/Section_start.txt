@@ -374,8 +374,6 @@ You should get the executable spa_foo when the build is complete.
 
 [{Steps to build a SPARTA executable using CMake:}] :link(start_2_2_2)
 
-:line
-
 [Step 0]
 
 Please review https://github.com/sparta/sparta/blob/master/BUILD.md and ensure that
@@ -683,6 +681,8 @@ cores the build runs on.
 
 You should get build/src/spa_tutorial and build/src/libsparta.a.
 
+:line
+
 [{Errors that can occur when making SPARTA:}] :link(start_2_3)
 
 IMPORTANT NOTE: If an error occurs when building SPARTA, the compiler
@@ -782,7 +782,8 @@ them in the distribution.
 This section has the following sub-sections:
 
 "Package basics"_#start_3_1
-"Including/excluding packages"_#start_3_2
+"Including/excluding packages with make"_#start_3_2_1
+"Including/excluding packages with CMake"_#start_3_2_2
 
 :line
 
@@ -799,7 +800,7 @@ You can see the list of all packages by typing "make package" from
 within the src directory of the SPARTA distribution. This also lists
 various make commands that can be used to manipulate packages.
 
-for CMake:
+For CMake:
 You can see the list of all packages by typing "cmake -DSPARTA_LIST_PKGS=ON"
 from within the build directory.
 
@@ -810,7 +811,7 @@ Every command's doc page specfies if it is part of a package.
 
 :line
 
-[{Including/excluding packages:}] :link(start_3_2)
+[{Including/excluding packages with make:}] :link(start_3_2_1)
 
 To use (or not use) a package you must include it (or exclude it)
 before building SPARTA.  From the src directory, this is typically as
@@ -872,6 +873,49 @@ files that are different in the src directory and package
 sub-directory.  Typing "make package-diff" lists all differences
 between these files.  Again, type "make package" to see all of the
 package-related make options.
+
+:line
+
+[{Including/excluding packages with CMake:}] :link(start_3_2_1)
+
+To use (or not use) a package you must include it (or exclude it)
+before building SPARTA.  From the build directory, do:
+
+cmake -DPKG_FFT=ON /path/to/sparta/cmake
+make -j
+
+or
+
+cmake -DPKG_FFT=OFF /path/to/sparta/cmake
+make -j
+
+Some packages have individual files that depend on other packages
+being included.  SPARTA checks for this and does the right thing.
+I.e. individual files are only included if their dependencies are
+already included.  Likewise, if a package is excluded, other files
+dependent on that package are also excluded.
+
+If you will never run simulations that use the features in a
+particular packages, there is no reason to include it in your build.
+
+When you download a SPARTA tarball, no packages are pre-installed in
+the build/src directory.
+
+Packages are included or excluded by typing "cmake -DPKG_NAME=ON" or 
+"cmake -DPKG_NAME=OFF", where "NAME" is the name of the package in upper-case, 
+e.g. name = FFT for the FFT package. You can also type "cmake
+-DSPARTA_ENABLE_ALL_PKGS=ON", or "cmake -DSPARTA_DISABLE_ALL_PKGS=ON" to 
+include or exclude all packages. Type "cmake -DSPARTA_LIST_PKGS=ON" to
+see all of the package-related CMake options.
+
+NOTE: Inclusion or exclusion of a package works by setting CMake boolean
+variables to generate the correct Makefile targets and dependencies. After you
+have included or excluded a package, you must re-build SPARTA.
+
+If a SPARTA package has source code changes, simply run "make" to rebuild SPARTA
+with these changes.
+
+Typing "cmake" will show which packages are currently included.
 
 :line
 

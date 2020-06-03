@@ -6,7 +6,33 @@
 ################################################################################
 
 #################### BEGIN PROCESS EXTRA OPTIONS ####################
+if(SPARTA_ENABLE_ALL_PKGS AND SPARTA_DISABLE_ALL_PKGS)
+    message(FATAL_ERROR "SPARTA_ENABLE_ALL_PKGS=SPARTA_DISABLE_ALL_PKGS=ON")
+endif()
 
+if(SPARTA_ENABLE_ALL_PKGS)
+    foreach(pkg IN LISTS SPARTA_PKG_LIST)
+        get_property(pkg_help CACHE ${pkg} PROPERTY HELPSTRING)
+        set(${pkg}
+            ON
+            CACHE
+            STRING "${pkg_help}"
+            FORCE
+        )
+    endforeach()
+endif()
+
+if(SPARTA_DISABLE_ALL_PKGS)
+    foreach(pkg IN LISTS SPARTA_PKG_LIST)
+        get_property(pkg_help CACHE ${pkg} PROPERTY HELPSTRING)
+        set(${pkg}
+            OFF
+            CACHE
+            STRING "${pkg_help}"
+            FORCE
+        )
+    endforeach()
+endif()
 #################### END   PROCESS EXTRA OPTIONS ####################
 
 #################### BEGIN COMBINE CXX FLAGS ####################

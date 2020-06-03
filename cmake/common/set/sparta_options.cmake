@@ -88,6 +88,18 @@ sparta_option(SPARTA_MACHINE
               SPARTA_EXTRA_OPTIONS_LIST
               )
 
+sparta_option(SPARTA_ENABLE_ALL_PKGS
+              "Enable all sparta packages. Default: OFF"
+              ""
+              SPARTA_EXTRA_OPTIONS_LIST
+              )
+
+sparta_option(SPARTA_DISABLE_ALL_PKGS
+              "Disable all sparta packages. Default: OFF"
+              ""
+              SPARTA_EXTRA_OPTIONS_LIST
+              )
+
 sparta_option(SPARTA_LIST_PKGS
               "List available packages and quit. Default: OFF."
               ""
