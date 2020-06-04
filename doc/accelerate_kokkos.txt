@@ -376,7 +376,7 @@ see cmake -LH | grep -i kokkos.
 For all Kokkos_* options, values = {ON}, {OFF}
 
 Kokkos_ENABLE_{TYPE}, TYPE = {SERIAL}, {OPENMP}, {PTHREADS}, {CUDA}
-Kokkos_ARCH_{TYPE}, TYPE = {KNC}, {SNB}, {HSW}, {Kepler30}, {Kepler32}, {Kepler35}, {Kepler37}, {Maxwell50}, {Maxwell52}, {Maxwell53}, {Pascal60}, {Pascal61}, {ARMv80}, {ARMv81}, {ARMv81}, {ARMv8-ThunderX}, {BGQ}, {Power7}, {Power8}, {Power9}, {KNL}, {BDW}, {SKX}, default = {none}
+Kokkos_ARCH_{TYPE}, TYPE = {KNC}, {SNB}, {HSW}, {KEPLER30}, {KEPLER32}, {KEPLER35}, {KEPLER37}, {MAXWELL50}, {MAXWELL52}, {MAXWELL53}, {PASCAL60}, {PASCAL61}, {ARMV80}, {ARMV81}, {ARMV81}, {ARMV8-THUNDERX}, {ARMV8-THUNDERX2} {BGQ}, {POWER7}, {POWER8}, {POWER9}, {KNL}, {BDW}, {SKX}, default = {none}
 Kokkos_ENABLE_DEBUG
 Kokkos_ENABLE_{TPL}, TPL = {HWLOC}, {LIBRT}, {EXPERIMENTAL_MEMKIND}
 Kokkos_CXX_STANDARD, values = {c++11}, {c++1z}, default = {c++11}

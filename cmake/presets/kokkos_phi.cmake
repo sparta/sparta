@@ -16,5 +16,5 @@ set(CMAKE_CXX_COMPILER "CC" CACHE STRING "" FORCE)
 #################### END CMAKE OPTIONS ####################
 
 #################### BEGIN KOKKOS OPTIONS ####################
-set(KOKKOS_ARCH "KNL" CACHE STRING "")
+set(Kokkos_ARCH_KNL ON CACHE STRING "")
 #################### END   KOKKOS OPTIONS ####################

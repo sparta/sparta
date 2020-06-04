@@ -11,5 +11,5 @@ set(SPARTA_MACHINE
 #################### END   SPARTA OPTIONS ####################
 
 #################### BEGIN KOKKOS OPTIONS ####################
-set(KOKKOS_ARCH "ARMv8-TX2" CACHE STRING "")
+set(Kokkos_ARCH_ARMV8_THUNDERX2 ON CACHE STRING "")
 #################### END   KOKKOS OPTIONS ####################

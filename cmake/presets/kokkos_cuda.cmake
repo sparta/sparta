@@ -18,5 +18,5 @@ set(CMAKE_CXX_COMPILER ${CMAKE_SOURCE_DIR}lib/kokkos/bin/nvcc_wrapper CACHE STRI
 
 #################### BEGIN KOKKOS OPTIONS ####################
 set(Kokkos_ENABLE_Cuda ON CACHE STRING "")
-set(KOKKOS_ARCH "Kepler35" CACHE STRING "")
+set(Kokkos_ARCH_KEPLER35 ON CACHE STRING "")
 #################### END   KOKKOS OPTIONS ####################
