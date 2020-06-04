@@ -1,1 +1,3 @@
-set(Kokkos_ENABLE_OPENMP ON CACHE STRING "")
+set(Kokkos_ENABLE_OPENMP
+    ON
+    CACHE STRING "")
