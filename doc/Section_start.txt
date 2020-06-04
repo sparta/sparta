@@ -956,7 +956,7 @@ make foo mode=shlib :pre
 
 or:
 
-cmake -DBUILD_SHARED_LIBS=ON /path/to/sparta/cmake
+cmake -C /path/to/sparta/cmake/presets/foo.cmake -DBUILD_SHARED_LIBS=ON /path/to/sparta/cmake
 make :pre
 
 where foo is the machine name.  This kind of library is required when
