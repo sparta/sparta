@@ -23,7 +23,9 @@ set(BUILD_MPI
 set(PKG_MPI_STUBS
     OFF
     CACHE BOOL "Enable or disable sparta mpi stubs package. Default: OFF.")
-set(PKG_KOKKOS ON CACHE BOOL "Enable or disable sparta kokkos package. Default: OFF.")
+set(PKG_KOKKOS
+    ON
+    CACHE BOOL "Enable or disable sparta kokkos package. Default: OFF.")
 # ################### END   PACKAGE OPTIONS ####################
 
 # ################### BEGIN CMAKE OPTIONS ####################
