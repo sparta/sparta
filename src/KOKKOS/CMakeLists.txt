@@ -1,26 +1,26 @@
 if(PKG_KOKKOS)
     ########## BEGIN TARGET_SPARTA_PKG_KOKKOS ##########
-    message(VERBOSE "${CMAKE_CURRENT_SOURCE_DIR}: CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
+    #message(VERBOSE "${CMAKE_CURRENT_SOURCE_DIR}: CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
     
     if(BUILD_KOKKOS)
         include(${SPARTA_CMAKE_COMMON_DIR}/set/kokkos_cmake_defaults.cmake)
 
-        message(VERBOSE "Checking Kokkos_ENABLE_Cuda: ${Kokkos_ENABLE_Cuda}")
+        #message(VERBOSE "Checking Kokkos_ENABLE_Cuda: ${Kokkos_ENABLE_Cuda}")
         # With the old kokkos build system, these env vars must be set.
         if(Kokkos_ENABLE_Cuda OR KOKKOS_ENABLE_CUDA)
             include(${SPARTA_CMAKE_COMMON_DIR}/set/kokkos_cuda_cmake_defaults.cmake)
             set(ENV{MPICH_CXX} ${SPARTA_TPL_DIR}/kokkos/bin/nvcc_wrapper)
             set(ENV{OMPI_CXX} $ENV{MPICH_CXX})
-            message(VERBOSE "MPICH_CXX: $ENV{MPICH_CXX}")
-            message(VERBOSE "OMPI_CXX: $ENV{OMPI_CXX}")
+            #message(VERBOSE "MPICH_CXX: $ENV{MPICH_CXX}")
+            #message(VERBOSE "OMPI_CXX: $ENV{OMPI_CXX}")
         endif()
 
         add_subdirectory(${SPARTA_TPL_DIR}/kokkos ${CMAKE_CURRENT_BINARY_DIR}/lib/kokkos)
         
-        message(VERBOSE "Kokkos_INCLUDE_DIRS_RET: ${Kokkos_INCLUDE_DIRS_RET}")
-        message(VERBOSE "TARGET_SPARTA_BUILD_KOKKOS: ${TARGET_SPARTA_BUILD_KOKKOS}")
+        #message(VERBOSE "Kokkos_INCLUDE_DIRS_RET: ${Kokkos_INCLUDE_DIRS_RET}")
+        #message(VERBOSE "TARGET_SPARTA_BUILD_KOKKOS: ${TARGET_SPARTA_BUILD_KOKKOS}")
         get_target_property(TARGET_SPARTA_BUILD_KOKKOS_INCLUDE_DIRECTORUES ${TARGET_SPARTA_BUILD_KOKKOS} INTERFACE_INCLUDE_DIRECTORIES)
-        message(VERBOSE "TARGET_SPARTA_BUILD_KOKKOS_INCLUDE_DIRECTORUES: ${TARGET_SPARTA_BUILD_KOKKOS_INCLUDE_DIRECTORUES}")
+        #message(VERBOSE "TARGET_SPARTA_BUILD_KOKKOS_INCLUDE_DIRECTORUES: ${TARGET_SPARTA_BUILD_KOKKOS_INCLUDE_DIRECTORUES}")
     endif()
 
     file(GLOB SPARTA_PKG_KOKKOS_SRC_FILES

@@ -7,7 +7,7 @@ if(PKG_MPI_STUBS)
     set(CMAKE_CXX_FLAGS "-O -fPIC")
     set(CMAKE_AR "ar")
     
-    message(VERBOSE "${CMAKE_CURRENT_SOURCE_DIR}: CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
+    #message(VERBOSE "${CMAKE_CURRENT_SOURCE_DIR}: CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
 
     set_source_files_properties(mpi.c PROPERTIES LANGUAGE CXX)
     add_library(${TARGET_SPARTA_BUILD_MPI} STATIC mpi.c)
