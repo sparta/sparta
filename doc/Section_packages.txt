@@ -16,7 +16,8 @@ each of them.  Packages are groups of files that enable a specific set
 of features.  For example, the KOKKOS package provides styles that
 can run on different hardware such as GPUs.  You can see the list of all
 packages and "make" commands to manage them by typing "make package"
-from within the src directory of the SPARTA distribution.  "Section
+from within the src directory of the SPARTA distribution or
+"cmake -DSPARTA_LIST_PKGS" from within a build directory.  "Section
 2.3"_Section_start.html#start_3 gives general info on how to install
 and un-install packages as part of the SPARTA build process.
 
@@ -69,13 +70,22 @@ use the internal KISS FFT library that is included with SPARTA. See the see disc
 in doc/Section_start.html#2_2 (step 6).
 
 
-[Install or un-install:]
+[Install or un-install with make:]
 
 make yes-fft
 make machine :pre
 
 make no-fft
 make machine :pre
+
+[Install or un-install with CMake:]
+
+cd build
+cmake -C /path/to/sparta/cmake/presets/machine.cmake -DPKG_FFT=ON /path/to/sparta/cmake
+make :pre
+
+cmake -C /path/to/sparta/cmake/presets/machine.cmake -DPKG_FFT=OFF /path/to/sparta/cmake
+make :pre
 
 [Supporting info:]
 
@@ -110,9 +120,11 @@ lib/kokkos.
 
 For the KOKKOS package, you have 3 choices when building.  You can
 build with either CPU or KNL or GPU support.  Each choice requires
-additional settings in your Makefile.machine for the KOKKOS_DEVICES
-and KOKKOS_ARCH settings.  See the src/MAKE/OPTIONS/Makefile.kokkos*
-files for examples.
+additional settings in your Makefile.machine or machine.cmake file 
+for the KOKKOS_DEVICES and KOKKOS_ARCH settings. See the 
+src/MAKE/OPTIONS/Makefile.kokkos* or cmake/presets/*kokkos*.cmake
+files for examples. For CMake, it's best to start by copying
+cmake/presets/kokkos_cuda.cmake to cmake/presets/machine.cmake.
 
 For multicore CPUs using OpenMP:
 
@@ -130,27 +142,40 @@ KOKKOS_DEVICES = Cuda
 KOKKOS_ARCH = Pascal60,Power8     # P100 hosted by an IBM Power8, etc
 KOKKOS_ARCH = Kepler37,Power8     # K80 hosted by an IBM Power8, etc :pre
 
-For GPUs, you also need these 2 lines in your Makefile.machine before
-the CC line is defined, in this case for use with OpenMPI mpicxx.  The
-2 lines define a nvcc wrapper compiler, which will use nvcc for
-compiling CUDA files or use a C++ compiler for non-Kokkos, non-CUDA
+For GPUs, you also need these set in your Makefile.machine (before the CC line
+is defined) or machine.cmake files, in this case for use with OpenMPI mpicxx.  
+
+For make, the following 2 lines define a nvcc wrapper compiler, which will use
+nvcc for compiling CUDA files or use a C++ compiler for non-Kokkos, non-CUDA
 files.
 
 KOKKOS_ABSOLUTE_PATH = $(shell cd $(KOKKOS_PATH); pwd)
 export OMPI_CXX = $(KOKKOS_ABSOLUTE_PATH)/bin/nvcc_wrapper
 CC =		mpicxx :pre
 
-Once you have an appropriate Makefile.machine, you can
+For CMake, copy cmake/presets/kokkos_cuda.cmake so OMPI_CXX and CC are set
+properly.
+
+Once you have an appropriate Makefile.machine or machine.cmake, you can
 install/un-install the package and build SPARTA in the usual manner.
 Note that you cannot build one executable to run on multiple hardware
 targets (CPU or KNL or GPU).  You need to build SPARTA once for each
 hardware target, to produce a separate executable.
+
+Using make:
 
 make yes-kokkos
 make machine :pre
 
 make no-kokkos
 make machine :pre
+
+Using CMake:
+cmake -C /path/to/sparta/cmake/presets/machine.cmake /path/to/sparta/cmake
+make :pre
+
+cmake -C /path/to/sparta/cmake/presets/machine.cmake -DPKG_KOKKOS=OFF /path/to/sparta/cmake
+make :pre
 
 [Supporting info:]
 
