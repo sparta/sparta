@@ -591,7 +591,8 @@ Note that if the preset file you're using enables PKG_MPI_STUBS, MPI will not be
 searched for unless you explicitly disable PKG_MPI_STUBS in the preset file.
 
 If you'd like to use a custom MPI installation or cmake is not locating the MPI
-installation you've selected via the module command or package manager, please see
+installation you've selected via the module command or package manager, try
+export MPI_ROOT=/path/to/mpi/install before running cmake. Otherwise, please see
 https://cmake.org/cmake/help/v3.10/module/FindMPI.html#variables-for-locating-mpi.
 Note that this documentation link is for CMake version 3.10.
 
@@ -629,7 +630,8 @@ Note that if the preset file you're using enables PKG_FFT, FFT will not be
 searched for unless you explicitly disable PKG_FFT in the preset file.
 
 If you'd like to use a custom FFT installation or cmake is not locating the FFT
-installation you've selected via the module command or package manager, please
+installation you've selected via the module command or package manager, try
+export FFT_ROOT=/path/to/fft/install before running cmake. Otherwise, please
 open an issue at https://github.com/sparta/sparta/issues.
 
 [Step 8]

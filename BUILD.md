@@ -61,6 +61,9 @@ cmake -C /path/to/<NAME>.cmake /path/to/sparta/cmake
 * FFT
   * Which Sparta FFT TPL to enable: FFTW2, FFTW3, or MKL.
 
+Note: To point to a TPL installation, export <TPL>_ROOT=/path/to/tpl/install
+before running cmake.
+
 ## Other options
 * SPARTA_MACHINE
   * String to form the `spa_$SPARTA_MACHINE` binary file name.
@@ -69,9 +72,9 @@ cmake -C /path/to/<NAME>.cmake /path/to/sparta/cmake
 * SPARTA_DEFAULT_CXX_COMPILE_FLAGS
   * Default compiler flags used when building object files for `spa_$SPARTA_MACHINE`.
 * SPARTA_LIST_PKGS
-  * Print the sparta packages and exit.
+  * Print the Sparta packages and exit.
 * SPARTA_LIST_TPLS
-  * Print the sparta TPLs and exit.  
+  * Print the Sparta TPLs and exit.  
 
 ## Examples
 ### Selecting packages via the command line
