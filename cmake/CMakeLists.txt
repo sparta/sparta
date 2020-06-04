@@ -5,6 +5,11 @@ project(SPARTA)
 set(SPARTA_BUILD_VER "1.0.0")
 set(SPARTA_API_VER "1")
 
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12.0")
+  message(STATUS "Setting policy CMP0074 to use <TPL>_ROOT variables")
+  cmake_policy(SET CMP0074 NEW)
+endif()
+
 ########## BEGIN SET COMMON DIRS ##########
 set(SPARTA_TPL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../lib)
 set(SPARTA_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../src)
