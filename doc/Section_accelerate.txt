@@ -117,12 +117,22 @@ any accelerated variants available for that style.
 To use an accelerator package in SPARTA, and one or more of the styles
 it provides, follow these general steps:
 
+using make:
 install the accelerator package |
   make yes-fft, make yes-kokkos, etc |
 add compile/link flags to Makefile.machine in src/MAKE |
   KOKKOS_ARCH=Pascal60 |
 re-build SPARTA |
-  make kokkos_cuda |
+  make kokkos_cuda
+
+or, using CMake from a build directory:
+install the accelerator package |
+  cmake -DPKG_FFT=ON -DPKG_KOKKOS=ON, etc |
+add compile/link flags |
+  cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake -DKOKKOS_ARCH=Pascal60 |
+re-build SPARTA |
+  make
+
 prepare and test a regular SPARTA simulation |
   lmp_kokkos_cuda -in in.script; mpirun -np 32 lmp_kokkos_cuda -in in.script |
 enable specific accelerator support via '-k on' "command-line switch"_Section_start.html#start_6, |
