@@ -6,9 +6,8 @@ if(PKG_KOKKOS)
   if(BUILD_KOKKOS)
     include(${SPARTA_CMAKE_COMMON_DIR}/set/kokkos_cmake_defaults.cmake)
 
-    # message(VERBOSE "Checking Kokkos_ENABLE_Cuda: ${Kokkos_ENABLE_Cuda}") With
-    # the old kokkos build system, these env vars must be set.
-    if(Kokkos_ENABLE_Cuda OR KOKKOS_ENABLE_CUDA)
+    # message(VERBOSE "Checking Kokkos_ENABLE_CUDA: ${Kokkos_ENABLE_CUDA}")
+    if(Kokkos_ENABLE_CUDA)
       include(${SPARTA_CMAKE_COMMON_DIR}/set/kokkos_cuda_cmake_defaults.cmake)
       set(ENV{MPICH_CXX} ${SPARTA_TPL_DIR}/kokkos/bin/nvcc_wrapper)
       set(ENV{OMPI_CXX} $ENV{MPICH_CXX})

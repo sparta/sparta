@@ -14,12 +14,12 @@ set(SPARTA_MACHINE
 # TODO: Should CMAKE_CXX_COMPILER be set to nvcc_wrapper
 # src/KOKKOS/CMakeLists.txt? set(CMAKE_CXX_COMPILER "mpicxx" CACHE STRING "")
 set(CMAKE_CXX_COMPILER
-    ${CMAKE_SOURCE_DIR}lib/kokkos/bin/nvcc_wrapper
+    ${CMAKE_CURRENT_LIST_DIR}/../../lib/kokkos/bin/nvcc_wrapper
     CACHE STRING "" FORCE)
 # ################### END CMAKE OPTIONS ####################
 
 # ################### BEGIN KOKKOS OPTIONS ####################
-set(Kokkos_ENABLE_Cuda
+set(Kokkos_ENABLE_CUDA
     ON
     CACHE STRING "")
 set(Kokkos_ARCH_KEPLER35
