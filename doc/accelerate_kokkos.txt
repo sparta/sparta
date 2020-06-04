@@ -64,9 +64,17 @@ Use a C++11 compatible compiler and set KOKKOS_ARCH variable in
 /src/MAKE/Makefile.kokkos_mpi_only as described above.  The do the
 following:
 
+using make:
+
 cd sparta/src
 make yes-kokkos
 make kokkos_mpi_only :pre
+
+using CMake:
+
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_mpi_only.cmake
+make :pre
 
 [Compile for CPU-only (MPI plus OpenMP threading):]
 
@@ -79,17 +87,33 @@ Use a C++11 compatible compiler and set KOKKOS_ARCH variable in
 /src/MAKE/Makefile.kokkos_omp as described above.  Then do the
 following:
 
+using make:
+
 cd sparta/src
 make yes-kokkos
 make kokkos_omp :pre
+
+using CMake:
+
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_omp.cmake
+make :pre
 
 [Compile for Intel KNL Xeon Phi (Intel Compiler, OpenMPI):]
 
 Use a C++11 compatible compiler and do the following:
 
+using make:
+
 cd sparta/src
 make yes-kokkos
 make kokkos_phi :pre
+
+using CMake:
+
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_phi.cmake
+make :pre
 
 [Compile for CPUs and GPUs (with OpenMPI or MPICH):]
 
@@ -100,9 +124,17 @@ Use a C++11 compatible compiler and set KOKKOS_ARCH variable in
 /src/MAKE/Makefile.kokkos_cuda_mpi for both GPU and CPU as described
 above.  Then do the following:
 
+using make:
+
 cd sparta/src
 make yes-kokkos
-make kokkos_cuda_mpi :pre
+make kokkos_cuda :pre
+
+using CMake:
+
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake
+make :pre
 
 [Running SPARTA with the KOKKOS package:]
 
@@ -334,26 +366,30 @@ hardware.
 [Advanced Kokkos options:]
 
 There are other allowed options when building with the KOKKOS package.
-As above, they can be set either as variables on the make command line
-or in Makefile.machine. This is the full list of options, including
-those discussed above. Each takes a value shown below. The default
-value is listed, which is set in the /lib/kokkos/Makefile.kokkos file.
+As above, they can be set either as variables on the make command line,
+in Makefile.machine, on the cmake command line, or in machine.cmake.
+This is the full list of options, including those discussed above.
+Each takes a value shown below. These options are set in the the
+/lib/kokkos/Makefile.kokkos or the kokkos.cmake file. For default values,
+see cmake -LH | grep -i kokkos.
 
-KOKKOS_DEVICES, values = {Serial}, {OpenMP}, {Pthreads}, {Cuda}, default = {OpenMP}
-KOKKOS_ARCH, values = {KNC}, {SNB}, {HSW}, {Kepler30}, {Kepler32}, {Kepler35}, {Kepler37}, {Maxwell50}, {Maxwell52}, {Maxwell53}, {Pascal60}, {Pascal61}, {ARMv80}, {ARMv81}, {ARMv81}, {ARMv8-ThunderX}, {BGQ}, {Power7}, {Power8}, {Power9}, {KNL}, {BDW}, {SKX}, default = {none}
-KOKKOS_DEBUG, values = {yes}, {no}, default = {no}
-KOKKOS_USE_TPLS, values = {hwloc}, {librt}, {experimental_memkind}, default = {none}
-KOKKOS_CXX_STANDARD, values = {c++11}, {c++1z}, default = {c++11}
-KOKKOS_OPTIONS, values = {aggressive_vectorization}, {disable_profiling}, default = {none}
-KOKKOS_CUDA_OPTIONS, values = {force_uvm}, {use_ldg}, {rdc}, {enable_lambda}, default = {enable_lambda} :ul
+For all Kokkos_* options, values = {ON}, {OFF}
 
-KOKKOS_DEVICES sets the parallelization method used for Kokkos code
-(within SPARTA). KOKKOS_DEVICES=Serial means that no threading will be
-used.  KOKKOS_DEVICES=OpenMP means that OpenMP threading will be
-used. KOKKOS_DEVICES=Pthreads means that pthreads will be used.
-KOKKOS_DEVICES=Cuda means an NVIDIA GPU running CUDA will be used.
+Kokkos_ENABLE_{TYPE}, TYPE = {SERIAL}, {OPENMP}, {PTHREADS}, {CUDA}
+Kokkos_ARCH_{TYPE}, TYPE = {KNC}, {SNB}, {HSW}, {Kepler30}, {Kepler32}, {Kepler35}, {Kepler37}, {Maxwell50}, {Maxwell52}, {Maxwell53}, {Pascal60}, {Pascal61}, {ARMv80}, {ARMv81}, {ARMv81}, {ARMv8-ThunderX}, {BGQ}, {Power7}, {Power8}, {Power9}, {KNL}, {BDW}, {SKX}, default = {none}
+Kokkos_ENABLE_DEBUG
+Kokkos_ENABLE_{TPL}, TPL = {HWLOC}, {LIBRT}, {EXPERIMENTAL_MEMKIND}
+Kokkos_CXX_STANDARD, values = {c++11}, {c++1z}, default = {c++11}
+Kokkos_ENABLE_{TYPE}, TYPE = {AGGRESSIVE_VECTORIZATION}, {PROFILING}
+Kokkos_ENABLE_CUDA_{TYPE}, TYPE = {FORCE_UVM}, {USE_LDG}, {RDC}, {ENABLE_LAMBDA}, {ENABLE_LAMBDA} :ul
 
-KOKKOS_ARCH enables compiler switches needed when compiling for a
+Kokkos_ENABLE_{TYPE} sets the parallelization method used for Kokkos code
+(within SPARTA). Kokkos_ENABLE_SERIAL=ON means that no threading will be
+used.  Kokkos_ENABLE_OPENMP=ON means that OpenMP threading will be
+used. Kokkos_ENABLE_PTHREAD=ON means that pthreads will be used.
+Kokkos_ENABLE_CUDA=ON means an NVIDIA GPU running CUDA will be used.
+
+Kokkos_ARCH_{TYPE} enables compiler switches needed when compiling for a
 specific hardware:
 
 ARMv80 = ARMv8.0 Compatible CPU
@@ -378,28 +414,28 @@ BGQ = IBM Blue Gene/Q CPUs
 Power8 = IBM POWER8 CPUs
 Power9 = IBM POWER9 CPUs :ul
 
-KOKKOS_USE_TPLS=hwloc binds threads to hardware cores, so they do not
-migrate during a simulation. KOKKOS_USE_TPLS=hwloc should always be
-used if running with KOKKOS_DEVICES=Pthreads for pthreads. It is not
-necessary for KOKKOS_DEVICES=OpenMP for OpenMP, because OpenMP
+Kokkos_ENABLE_HWLOC=ON binds threads to hardware cores, so they do not
+migrate during a simulation. Kokkos_ENABLE_HWLOC=ON should always be
+used if running with Kokkos_ENABLE_PTHREAD=ON for pthreads. It is not
+necessary forKokkos_ENABLE_OPENMP=ON for OpenMP, because OpenMP
 provides alternative methods via environment variables for binding
 threads to hardware cores. More info on binding threads to cores is
 given in the "Accelerating SPARTA"_Section_accelerate.html#acc_3.
 
-KOKKOS_USE_TPLS=librt enables use of a more accurate timer mechanism
+Kokkos_ENABLE_LIBRT=ON enables use of a more accurate timer mechanism
 on most Unix platforms. This library is not available on all
 platforms.
 
-KOKKOS_DEBUG is only useful when developing a Kokkos-enabled style
-within SPARTA. KOKKOS_DEBUG=yes enables printing of run-time debugging
+Kokkos_ENABLE_DEBUG=ON is only useful when developing a Kokkos-enabled style
+within SPARTA. Kokkos_ENABLE_DEBUG=ON enables printing of run-time debugging
 information that can be useful. It also enables runtime bounds
 checking on Kokkos data structures.
 
-KOKKOS_CXX_STANDARD and KOKKOS_OPTIONS are typically not changed when
-building SPARTA.
+Kokkos_CXX_STANDARD, Kokkos_ENABLE_AGGRESSIVE_VECTORIZATION, and 
+Kokkos_ENABLE_PROFILING are typically not changed when building SPARTA.
 
-KOKKOS_CUDA_OPTIONS are additional options for CUDA. The SPARTA KOKKOS
-package must be compiled with the {enable_lambda} option when using
+Kokkos_ENABLE_CUDA_{TYPE} are additional options for CUDA. The SPARTA KOKKOS
+package must be compiled with the {ENABLE_LAMBDA} option when using
 GPUs.
 
 [Restrictions:]
