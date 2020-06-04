@@ -39,8 +39,14 @@ set(PKG_KOKKOS
 #################### END   PACKAGE OPTIONS ####################
 
 #################### BEGIN CMAKE OPTIONS ####################
-set(CMAKE_C_COMPILER "mpicc" CACHE STRING "")
-set(CMAKE_CXX_COMPILER "mpicxx" CACHE STRING "")
+set(CRAYPE_VERSION $ENV{CRAYPE_VERSION})
+if(CRAYPE_VERSION)
+    set(CMAKE_C_COMPILER "cc" CACHE STRING "")
+    set(CMAKE_CXX_COMPILER "CC" CACHE STRING "")
+else()
+    set(CMAKE_C_COMPILER "mpicc" CACHE STRING "")
+    set(CMAKE_CXX_COMPILER "mpicxx" CACHE STRING "")
+endif()
 set(CMAKE_CXX_FLAGS "-g -O3" CACHE STRING "")
 set(CMAKE_AR "ar" CACHE STRING "")
 set(CMAKE_SHARED_LINKER_FLAGS "-fPIC -shared" CACHE STRING "")
