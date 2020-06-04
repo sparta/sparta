@@ -1,6 +1,6 @@
 # kokkos_phi = KOKKOS package with OpenMP backend, KNL Xeon Phi support, Cray System, default MPI
 
-include(${CMAKE_SOURCE_DIR}/cmake/presets/kokkos_common.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/kokkos_common.cmake)
 #################### BEGIN SPARTA OPTIONS ####################
 set(SPARTA_MACHINE
     kokkos_phi

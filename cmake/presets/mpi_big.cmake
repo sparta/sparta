@@ -1,6 +1,6 @@
 # mpi = Linux box/cluster, g++, installed MPI
 
-include(${CMAKE_SOURCE_DIR}/cmake/presets/mpi.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/mpi.cmake)
 #################### BEGIN SPARTA OPTIONS ####################
 set(SPARTA_MACHINE
     mpi_big

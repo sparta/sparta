@@ -1,6 +1,6 @@
 # mac_mpi = Apple PowerBook laptop, mpic++
 
-include(${CMAKE_SOURCE_DIR}/cmake/presets/mac.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/mac.cmake)
 
 #################### BEGIN SPARTA OPTIONS ####################
 set(SPARTA_MACHINE

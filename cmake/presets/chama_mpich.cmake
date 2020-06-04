@@ -1,6 +1,6 @@
 # chama_mpich = mpicxx, MPICH (with MVAPICH module loaded)
 
-include(${CMAKE_SOURCE_DIR}/cmake/presets/chama.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/chama.cmake)
 #################### BEGIN SPARTA OPTIONS ####################
 set(SPARTA_MACHINE
     chama_mpich

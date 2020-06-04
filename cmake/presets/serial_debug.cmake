@@ -1,6 +1,6 @@
 # serial_debug = Linux box, g++, serial (no MPI)
 
-include(${CMAKE_SOURCE_DIR}/cmake/presets/serial.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/serial.cmake)
 
 #################### BEGIN SPARTA OPTIONS ####################
 set(SPARTA_MACHINE

@@ -1,6 +1,6 @@
 # kokkos_mpi_only = KOKKOS package with Serial backend (no OpenMP support), MPI compiler, default MPI
 
-include(${CMAKE_SOURCE_DIR}/cmake/presets/kokkos_common.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/kokkos_common.cmake)
 #################### BEGIN SPARTA OPTIONS ####################
 set(SPARTA_MACHINE
     kokkos_mpi_only

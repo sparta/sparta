@@ -1,6 +1,6 @@
 # astra_kokkos = Arm ThunderX2 architecture, KOKKOS package with OpenMP backend, MPI compiler, default MPI
 
-include(${CMAKE_SOURCE_DIR}/cmake/presets/kokkos_common.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/kokkos_common.cmake)
 #################### BEGIN SPARTA OPTIONS ####################
 set(SPARTA_MACHINE
     astra_kokkos
