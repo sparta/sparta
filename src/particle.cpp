@@ -1503,9 +1503,7 @@ int Particle::pack_restart(char *buf, int step, int pass)
   }
 
   if (end == nlocal) {
-    int nbytes_particle = sizeof(OnePartRestart);
-    int nbytes_custom = sizeof_custom();
-    int nbytes = nbytes_particle + nbytes_custom;
+    int nbytes = sizeof(OnePartRestart) + nbytes_custom;
 
     bigint total_bytes = nlocal*nbytes + ((sizeof(int) + 7) & ~7);
     ptr += ((total_bytes + 7) & ~7) - total_bytes; // ROUNDUP(total)
