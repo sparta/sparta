@@ -1,0 +1,38 @@
+# test of vibrational energy modes
+# thermal gas in a 3d box with collisions
+# particles reflect off global box boundaries
+
+seed	    	    54345
+dimension   	    3
+timestep 	    7e-9
+
+boundary	    p p p 
+create_box  	    0 1e-6 0 1e-6 0 1e-6
+create_grid 	    2 2 2
+
+species		    o2.species O2
+mixture             mix O2 group all temp 20000.0 trot 10.0 tvib 10.0
+
+collide		    vss all o2.vss relax variable relaxtype prohibdouble
+collide_modify      vibrate smooth rotate smooth
+
+create_particles    mix n 100000
+
+#variable            collrate equal "ncoll*step*2/np"
+
+compute             1 temp
+
+compute             5 thermal/grid all all temp
+compute             St reduce ave c_5[1]
+
+compute             7 grid all all trot tvib 
+compute             Sr reduce ave c_7[1] 
+compute             Sv reduce ave c_7[2] 
+
+#variable            tempdiff equal "c_St-c_Sr"
+
+stats_style	    step cpu np nattempt ncoll c_St c_Sr c_Sv
+stats		    1
+stats_modify        flush yes
+
+run 		    1000

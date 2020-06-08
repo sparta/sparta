@@ -1,0 +1,42 @@
+# thermal gas in a 3d box with collisions and chemistry
+# particles reflect off global box boundaries
+
+seed	    	    12345
+dimension   	    3
+global              nrho 7e22 fnum 1.09375e5
+
+boundary	    s s s
+
+create_box  	    0 2.5e-5 0 2.5e-5 0 2.5e-5
+create_grid 	    2 2 1
+
+balance_grid        rcb part
+
+species		    venus.species O2 O CO CO2 C C2
+mixture		    air O2 O CO CO2 C C2 temp 295.0 trot 295.0 tvib 295.0
+mixture             air O2 frac 0.11
+mixture             air O frac 0.29
+mixture             air CO frac 0.57
+mixture             air CO2 frac 0.03
+
+collide		    vss air venus.vss relax variable relaxtype prohibdouble
+collide_modify      vibrate smooth
+react               tce venus-allDOF.tce
+react_modify        recomb yes 
+
+surf_collide        1 diffuse 295.0 1.0
+bound_modify        xlo xhi ylo yhi zlo zhi collide 1
+
+create_particles    air n 0
+
+#compute             1 grid all all nrho temp trot tvib
+compute             2 grid all species nfrac
+compute             3 reduce ave c_2[*] #c_1[*]
+
+variable            time equal "dt * step"
+
+stats		    10000
+stats_style	    v_time c_3[*]
+
+timestep 	    1e-8
+run 		    10000000

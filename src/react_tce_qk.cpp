@@ -109,6 +109,7 @@ int ReactTCEQK::attempt_tce(Particle::OnePart *ip, Particle::OnePart *jp,
   Particle::Species *species = particle->species;
   int isp = ip->ispecies;
   int jsp = jp->ispecies;
+  double ecc;
 
   double pre_ave_rotdof = (species[isp].rotdof + species[jsp].rotdof)/2.;
 
@@ -119,8 +120,15 @@ int ReactTCEQK::attempt_tce(Particle::OnePart *ip, Particle::OnePart *jp,
 
   double pre_etotal = pre_etrans + pre_erot + pre_evib;
 
-  double ecc = pre_etrans;
-  if (pre_ave_rotdof > 0.1) ecc += pre_erot*r->coeff[0]/pre_ave_rotdof;
+  // two options for total energy in TCE model
+  // 1: Bird's implementation from DS1V using the translational + weighted rotational energy
+  // 2: Using the sum of translational, rotationa and vibrational energies
+   
+  if (birdflag) ecc = pre_etrans + pre_erot;
+  else {
+     ecc = pre_etotal;
+     if (pre_etotal+r->coeff[4] <= 0.0) return 0; // Cover cases where coeff[1].neq.coeff[4]
+  }
 
   double e_excess = ecc - r->coeff[1];
   if (e_excess > 0.0) return 0;

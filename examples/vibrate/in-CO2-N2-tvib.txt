@@ -1,0 +1,37 @@
+# thermal gas in a 3d box with collisions and chemistry
+# particles reflect off global box boundaries
+
+seed	    	    12345
+dimension   	    3
+global              nrho 1e25 fnum 1e20
+
+boundary	    r r r
+
+create_box  	    -0.5 0.5 -0.5 0.5 -0.5 0.5
+create_grid 	    2 2 2
+
+balance_grid        rcb part
+
+species		    co2.species CO2 N2 vibfile co2.species.vib
+mixture		    air CO2 N2 temp 20000.0 trot 20000.0 tvib 300.0
+mixture             air CO2 frac 0.5
+mixture             air N2 frac 0.5
+
+collide		    vss air co2.vss relax variable relaxtype prohibdouble
+collide_modify      vibrate discrete
+fix                 0 vibmode
+
+create_particles    air n 0
+
+compute             1 grid all all temp trot
+compute             1b tvib/grid all all
+#compute             2 grid all all ke erot evib
+compute             3 reduce ave c_1[*] c_1b[*] #c_2[*]
+
+variable            time equal "dt * step"
+
+stats		    1
+stats_style	    v_time c_3[*]
+
+timestep 	    1e-9
+run 		    1000

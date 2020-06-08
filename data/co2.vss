@@ -6,8 +6,9 @@
 # alpha (unitless)
 # Zrotinf (unitless)
 # T* (temperature)
-# C1 (temperature)
-# C2 (temperature^(1/3))
+# a (temperature)
+# b (temperature^(1/3))
+# sigma_v (m^2)
 
-CO2  5.62E-10    0.8   273.0   1.0   18.1 91.5 25.48 177.98
-N2   4.07E-10    0.74  273.15  1.6   18.1 91.5 9.1 220.0
+CO2  5.62E-10    0.8   273.0   1.0   15.0 195.36.5 -0.0193 1.0e-20
+N2   4.07E-10    0.74  273.15  1.6   15.7 80.0 221.0 0.0290 3.0e-21

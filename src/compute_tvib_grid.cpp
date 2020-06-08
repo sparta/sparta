@@ -273,6 +273,7 @@ void ComputeTvibGrid::compute_per_grid()
 
   Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::OnePart *particles = particle->particles;
+  Particle::Species *species = particle->species;
   int *s2g = particle->mixture[imix]->species2group;
   int nlocal = particle->nlocal;
 
@@ -290,8 +291,9 @@ void ComputeTvibGrid::compute_per_grid()
 
   if (modeflag == 0) {
     for (i = 0; i < nlocal; i++) {
-      if (particles[i].evib == 0) continue;
+//      if (particles[i].evib == 0) continue;
       ispecies = particles[i].ispecies;
+      if (!(species[ispecies].vibdof)) continue;
       igroup = s2g[ispecies];
       if (igroup < 0) continue;
       icell = particles[i].icell;
@@ -308,6 +310,7 @@ void ComputeTvibGrid::compute_per_grid()
 
     for (i = 0; i < nlocal; i++) {
       ispecies = particles[i].ispecies;
+      if (!(species[ispecies].vibdof)) continue;
       igroup = s2g[ispecies];
       if (igroup < 0) continue;
       icell = particles[i].icell;
@@ -317,9 +320,11 @@ void ComputeTvibGrid::compute_per_grid()
 
       nmode = particle->species[ispecies].nvibmode;
       for (imode = 0; imode < nmode; imode++) {
-        if (vibmode[i][imode] == 0) continue;
+//        if (vibmode[i][imode] == 0) continue;
         j = s2t_mode[ispecies][imode];
-        tally[icell][j] += vibmode[i][imode];
+        if (nmode > 1) tally[icell][j] += vibmode[i][imode];
+        else tally[icell][j] += (particles[i].evib /
+               (update->boltz * species[ispecies].vibtemp[0]));
         tally[icell][j+1] += 1.0;
       }
     }
@@ -382,7 +387,7 @@ void ComputeTvibGrid::post_process_grid(int index, int nsample,
 
   Particle::Species *species = particle->species;
 
-  int isp,evib,count,ispecies,imode;
+  int isp,evib,count,ispecies,imode,nmode;
   double theta,ibar,numer,denom;
   double boltz = update->boltz;
 
@@ -445,7 +450,7 @@ void ComputeTvibGrid::post_process_grid(int index, int nsample,
     int nsp = nmap[index] / maxmode / 2;
     int **vibmode = 
       particle->eiarray[particle->ewhich[index_vibmode]];
-
+      
     for (int icell = lo; icell < hi; icell++) {
       evib = emap[0];
       count = evib+1;
@@ -503,7 +508,7 @@ void ComputeTvibGrid::post_process_grid(int index, int nsample,
     imode = index % maxmode;
     int **vibmode = 
       particle->eiarray[particle->ewhich[index_vibmode]];
-
+      
     for (int icell = lo; icell < hi; icell++) {
       evib = emap[2*imode];
       count = evib+1;

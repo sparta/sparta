@@ -6,7 +6,7 @@ seed	    	    54345
 dimension   	    3
 timestep 	    5e-9
 global              nrho 1.E22
-global              fnum 10000 comm/sort yes
+global              fnum 100 comm/sort yes
 
 boundary	    r r r 
 create_box  	    0 1e-5 0 1e-5 0 1e-5
@@ -20,7 +20,7 @@ mixture             mix N2 frac 0.1
 mixture             mix group all
 mixture		    mix vstream 0.0 0.0 0.0 temp 20000 trot 20000.00 tvib 10.0
 
-collide		    vss all co2.vss
+collide		    vss all co2.vss relax variable relaxtype prohibdouble
 collide_modify      vibrate discrete rotate smooth
 fix                 1 vibmode 
 
@@ -45,4 +45,4 @@ variable            tempdiff equal "c_St-c_Sr"
 stats_style	    step cpu np nattempt ncoll c_St c_Sr c_Srv c_Sv
 stats		    10
 
-run 		    100
+run 		    10000

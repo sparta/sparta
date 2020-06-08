@@ -1,0 +1,41 @@
+# 2d flow profile input from file
+
+seed	    	    12345
+dimension   	    2
+global              gridcut 2e-4
+
+boundary	    or p p
+
+create_box  	    -0.5 0.5 0 0.0002 -0.5 0.5
+create_grid 	    5000 1 1 
+balance_grid        rcb cell
+
+global		    nrho 1.6094165e21 fnum 3.21883e12
+
+species		    venus.species CO2 N2 CO O2 O N NO CN C2 C vibfile co2.species.vib
+mixture		    all CO2 N2 CO O2 O N NO CN C2 C vstream 7400.0 0 0 temp 300.0
+mixture             all CO2 frac 0.94
+mixture             all N2 frac 0.06
+
+collide             vss all venus.vss relax variable relaxtype prohibdouble
+collide_modify      vremax 2000 yes vibrate discrete
+fix                 0 vibmode
+react               tce venus.tce
+
+create_particles    all n 0
+fix		    in emit/face all xlo
+
+timestep 	    2e-8
+
+fix                 1 balance 2000 1.1 rcb time
+
+compute             1 thermal/grid all all temp press
+compute             2 grid all all u nrho trot
+compute             3 tvib/grid all all
+
+dump                1 grid all 1000 std_flow.* xc c_1[*] c_2[*] c_3[*]
+
+stats		    1000
+stats_style	    step cpu np nattempt ncoll nreact nbound
+
+run 		    100000
