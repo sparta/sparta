@@ -359,8 +359,12 @@ void WriteRestart::write_less_memory(char *file)
   bigint particle_send_size = particle->size_restart_big();
   bigint send_size = grid_send_size + particle_send_size;
 
+  int nbytes_particle = sizeof(Particle::OnePartRestart);
+  int nbytes_custom = particle->sizeof_custom();
+  int nbytes = nbytes_particle + nbytes_custom;
+
   int max_size = MAX(grid_send_size,update->global_mem_limit);
-  max_size = MAX(max_size,sizeof(Particle::OnePartRestart));
+  max_size = MAX(max_size,nbytes);
   max_size += 128; // extra for size and ROUNDUP(ptr)
 
   int max_size_global;
@@ -406,9 +410,13 @@ void WriteRestart::write_less_memory(char *file)
   // pack my child grid and particle data into buf
 
   // number of particles per pass
-  int step_size = update->global_mem_limit/sizeof(Particle::OnePartRestart);
 
-  int my_npasses = ceil((double)particle->nlocal/step_size)+1; // extra pass for grid
+  int step_size = update->global_mem_limit/nbytes;
+
+  // extra pass for grid
+
+  int my_npasses = ceil((double)particle->nlocal/step_size)+1;
+  if (particle->nlocal == 0) my_npasses++;
 
   // output of one or more native files
   // filewriter = 1 = this proc writes to file
