@@ -1502,14 +1502,17 @@ int Particle::pack_restart(char *buf, int step, int pass)
     ptr += nbytes_custom;
   }
 
+  int value = ptr - buf;
   if (end == nlocal) {
-    int nbytes = sizeof(OnePartRestart) + nbytes_custom;
+    ROUNDUP(ptr);
 
-    bigint total_bytes = nlocal*nbytes + ((sizeof(int) + 7) & ~7);
-    ptr += ((total_bytes + 7) & ~7) - total_bytes; // ROUNDUP(total)
+    int nbytes = sizeof(OnePartRestart) + nbytes_custom;
+    bigint total_bytes = nlocal*nbytes + IROUNDUP(sizeof(int));
+    int offset = BIROUNDUP(total_bytes) - total_bytes;
+    value += offset;
   }
 
-  return ptr - buf;
+  return value;
 }
 
 /* ----------------------------------------------------------------------
@@ -1571,13 +1574,18 @@ int Particle::unpack_restart(char *buf, int &nlocal_restart, int step, int pass)
   memcpy(particle_restart,ptr,step*nbytes);
   ptr += step * sizeof(OnePartRestart);
 
-  if (end == nlocal_restart) {
-    bigint total_bytes = nlocal_restart*nbytes + ((sizeof(int) + 7) & ~7);
-    ptr += ((total_bytes + 7) & ~7) - total_bytes; // ROUNDUP(total)
+  int value = ptr - buf;
+  if (end == nlocal) {
+    ROUNDUP(ptr);
+
+    int nbytes = sizeof(OnePartRestart) + nbytes_custom;
+    bigint total_bytes = nlocal*nbytes + IROUNDUP(sizeof(int));
+    int offset = BIROUNDUP(total_bytes) - total_bytes;
+    value += offset;
   }
 
   this->nlocal_restart = step;
-  return ptr - buf;
+  return value;
 }
 
 // ----------------------------------------------------------------------

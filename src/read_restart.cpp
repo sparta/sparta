@@ -403,7 +403,7 @@ void ReadRestart::command(int narg, char **arg)
             n = grid_read_size;
           else {
             n = step_size*nbytes;
-            if (ii == 1) n += ((sizeof(int) + 7) & ~7); // ROUNDUP(ptr)
+            if (ii == 1) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
             if (ii == npasses-1) n = particle_read_size - total_read_part;
             total_read_part += n;
           }
@@ -550,7 +550,7 @@ void ReadRestart::command(int narg, char **arg)
             n = grid_read_size;
           else {
             n = step_size*nbytes;
-            if (ii == 1) n += ((sizeof(int) + 7) & ~7); // ROUNDUP(ptr)
+            if (ii == 1) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
             if (ii == npasses-1) n = particle_read_size - total_read_part;
             total_read_part += n;
           }
