@@ -1239,7 +1239,14 @@ void Collide::collisions_group_ambipolar()
         memcpy(ep->v,velambi[ip],3*sizeof(double));
         ep->ispecies = ambispecies;
 	nelectron++;
-        ngroup[egroup]++;
+
+	if (ngroup[egroup] == maxgroup[egroup]) {
+	  maxgroup[egroup] += DELTAPART;
+	  memory->grow(glist[egroup],maxgroup[egroup],"collide:grouplist");
+	}
+	ng = ngroup[egroup];
+	glist[egroup][ng] = nelectron-1;
+	ngroup[egroup]++;
       }
       
       n++;
