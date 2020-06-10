@@ -2,7 +2,7 @@
 # This file process boolean options set by
 # cmake/common/set/sparta_build_options.cmake and sets up the correct SPARTA
 # targets based on those options. This file is also responsible for handeling
-# depencies among boolean options.
+# dependencies among boolean options.
 # ##############################################################################
 
 # ################### BEGIN PROCESS EXTRA OPTIONS ####################

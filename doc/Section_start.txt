@@ -154,7 +154,7 @@ re-compile, after typing "make clean", which will describe different
 clean options.
 
 The SPA_INC variable is used to include options that turn on ifdefs
-within the SPARTA code.  The options that are currently recogized are:
+within the SPARTA code.  The options that are currently recognized are:
 
 -DSPARTA_GZIP
 -DSPARTA_JPEG
