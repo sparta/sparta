@@ -376,7 +376,7 @@ You should get the executable spa_foo when the build is complete.
 
 [Step 0]
 
-Please review https://github.com/sparta/sparta/blob/master/BUILD.md and ensure that
+Please review https://github.com/sparta/sparta/blob/master/BUILD_CMAKE.md and ensure that
 CMake version 3.10.0 or greater is installed:
 
 which cmake
