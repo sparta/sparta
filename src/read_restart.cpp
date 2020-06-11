@@ -414,7 +414,7 @@ void ReadRestart::command(int narg, char **arg)
             n = grid->unpack_restart(buf);
             create_child_cells(0);
           } else {
-            n = particle->unpack_restart(&buf[n],nlocal_restart,step_size,ii-1);
+            particle->unpack_restart(buf,nlocal_restart,step_size,ii-1);
             assign_particles(0);
           }
         }
@@ -567,7 +567,7 @@ void ReadRestart::command(int narg, char **arg)
               n = grid->unpack_restart(buf);
               create_child_cells(0);
             } else {
-              n = particle->unpack_restart(&buf[n],nlocal_restart,step_size,ii-1);
+              particle->unpack_restart(buf,nlocal_restart,step_size,ii-1);
               assign_particles(0);
             }
           }
@@ -593,7 +593,7 @@ void ReadRestart::command(int narg, char **arg)
             n = grid->unpack_restart(buf);
             create_child_cells(0);
           } else {
-            n = particle->unpack_restart(&buf[n],nlocal_restart,step_size,ii-1);
+            particle->unpack_restart(buf,nlocal_restart,step_size,ii-1);
             assign_particles(0);
           }
         }

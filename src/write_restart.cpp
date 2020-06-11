@@ -439,6 +439,7 @@ void WriteRestart::write_less_memory(char *file)
         npasses = my_npasses;
       }
 
+      bigint total_write_part = 0;
       for (int i = 0; i < npasses; i++) {
         if (iproc) {
             MPI_Irecv(buf,max_size,MPI_CHAR,me+iproc,0,world,&request);
@@ -449,8 +450,13 @@ void WriteRestart::write_less_memory(char *file)
           int n = 0;
           if (i == 0)
             n = grid->pack_restart(buf);
-          else
-            n = particle->pack_restart(&buf[n],step_size,i-1);
+          else {
+            n = step_size*nbytes;
+            if (i == 1) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
+            if (i == npasses-1) n = particle_send_size - total_write_part;
+            total_write_part += n;
+            particle->pack_restart(buf,step_size,i-1);
+          }
           recv_size = n;
         }
         if (i == 0)
@@ -462,14 +468,20 @@ void WriteRestart::write_less_memory(char *file)
     fclose(fp);
 
   } else {
+    bigint total_write_part = 0;
     MPI_Isend(&send_size,1,MPI_SPARTA_BIGINT,fileproc,0,world,&request);
     MPI_Isend(&my_npasses,1,MPI_INT,fileproc,0,world,&request);
     for (int i = 0; i < my_npasses; i++) {
       int n = 0;
       if (i == 0)
         n = grid->pack_restart(buf);
-      else
-        n = particle->pack_restart(&buf[n],step_size,i-1);
+      else {
+        n = step_size*nbytes;
+        if (i == 1) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
+        if (i == my_npasses-1) n = particle_send_size - total_write_part;
+        total_write_part += n;
+        particle->pack_restart(buf,step_size,i-1);
+      }
       MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
       MPI_Rsend(buf,n,MPI_CHAR,fileproc,0,world);
     }

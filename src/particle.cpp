@@ -1459,9 +1459,10 @@ int Particle::pack_restart(char *buf)
    use multiple passes to reduce memory use
    use OnePartRestart data struct for permanent info and to encode cell ID
    include per-particle custom attributes if defined
+   NOTE: does not ROUNDUP(ptr) at the end
 ------------------------------------------------------------------------- */
 
-int Particle::pack_restart(char *buf, int step, int pass)
+void Particle::pack_restart(char *buf, int step, int pass)
 {
   Grid::ChildCell *cells = grid->cells;
   OnePart *p;
@@ -1501,18 +1502,6 @@ int Particle::pack_restart(char *buf, int step, int pass)
     pack_custom(i,ptr);
     ptr += nbytes_custom;
   }
-
-  int value = ptr - buf;
-  if (end == nlocal) {
-    ROUNDUP(ptr);
-
-    int nbytes = sizeof(OnePartRestart) + nbytes_custom;
-    bigint total_bytes = nlocal*nbytes + IROUNDUP(sizeof(int));
-    int offset = BIROUNDUP(total_bytes) - total_bytes;
-    value += offset;
-  }
-
-  return value;
 }
 
 /* ----------------------------------------------------------------------
@@ -1548,9 +1537,10 @@ int Particle::unpack_restart(char *buf)
    use multiple passes to reduce memory use
    allocate data structure here, will be deallocated by ReadRestart
    include per-particle custom attributes if defined
+   NOTE: does not ROUNDUP(ptr) at the end
 ------------------------------------------------------------------------- */
 
-int Particle::unpack_restart(char *buf, int &nlocal_restart, int step, int pass)
+void Particle::unpack_restart(char *buf, int &nlocal_restart, int step, int pass)
 {
   int nbytes_particle = sizeof(OnePartRestart);
   int nbytes_custom = sizeof_custom();
@@ -1573,19 +1563,6 @@ int Particle::unpack_restart(char *buf, int &nlocal_restart, int step, int pass)
 
   memcpy(particle_restart,ptr,step*nbytes);
   ptr += step * sizeof(OnePartRestart);
-
-  int value = ptr - buf;
-  if (end == nlocal) {
-    ROUNDUP(ptr);
-
-    int nbytes = sizeof(OnePartRestart) + nbytes_custom;
-    bigint total_bytes = nlocal*nbytes + IROUNDUP(sizeof(int));
-    int offset = BIROUNDUP(total_bytes) - total_bytes;
-    value += offset;
-  }
-
-  this->nlocal_restart = step;
-  return value;
 }
 
 // ----------------------------------------------------------------------
