@@ -409,9 +409,8 @@ void ReadRestart::command(int narg, char **arg)
           }
           fread(buf,sizeof(char),n,fp);
 
-          int n = 0;
           if (ii == 0) {
-            n = grid->unpack_restart(buf);
+            grid->unpack_restart(buf);
             create_child_cells(0);
           } else {
             particle->unpack_restart(buf,nlocal_restart,step_size,ii-1);
@@ -562,9 +561,8 @@ void ReadRestart::command(int narg, char **arg)
             MPI_Recv(&tmp,0,MPI_INT,iproc,0,world,&status);
             MPI_Rsend(buf,n,MPI_CHAR,iproc,0,world);
           } else if (i % nclusterprocs == me - fileproc) {
-            int n = 0;
             if (ii == 0) {
-              n = grid->unpack_restart(buf);
+              grid->unpack_restart(buf);
               create_child_cells(0);
             } else {
               particle->unpack_restart(buf,nlocal_restart,step_size,ii-1);
@@ -588,9 +586,8 @@ void ReadRestart::command(int narg, char **arg)
           MPI_Send(&tmp,0,MPI_INT,fileproc,0,world);
           MPI_Wait(&request,&status);
 
-          int n = 0;
           if (ii == 0) {
-            n = grid->unpack_restart(buf);
+            grid->unpack_restart(buf);
             create_child_cells(0);
           } else {
             particle->unpack_restart(buf,nlocal_restart,step_size,ii-1);

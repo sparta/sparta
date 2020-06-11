@@ -1563,6 +1563,8 @@ void Particle::unpack_restart(char *buf, int &nlocal_restart, int step, int pass
 
   memcpy(particle_restart,ptr,step*nbytes);
   ptr += step * sizeof(OnePartRestart);
+
+  this->nlocal_restart = step;
 }
 
 // ----------------------------------------------------------------------
