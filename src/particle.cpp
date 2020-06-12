@@ -1459,9 +1459,10 @@ int Particle::pack_restart(char *buf)
    use multiple passes to reduce memory use
    use OnePartRestart data struct for permanent info and to encode cell ID
    include per-particle custom attributes if defined
+   NOTE: does not ROUNDUP(ptr) at the end, this is done by caller
 ------------------------------------------------------------------------- */
 
-int Particle::pack_restart(char *buf, int step, int pass)
+void Particle::pack_restart(char *buf, int step, int pass)
 {
   Grid::ChildCell *cells = grid->cells;
   OnePart *p;
@@ -1501,11 +1502,6 @@ int Particle::pack_restart(char *buf, int step, int pass)
     pack_custom(i,ptr);
     ptr += nbytes_custom;
   }
-
-  if (end == nlocal)
-    ptr = ROUNDUP(ptr);
-
-  return ptr - buf;
 }
 
 /* ----------------------------------------------------------------------
@@ -1541,9 +1537,10 @@ int Particle::unpack_restart(char *buf)
    use multiple passes to reduce memory use
    allocate data structure here, will be deallocated by ReadRestart
    include per-particle custom attributes if defined
+   NOTE: does not ROUNDUP(ptr) at the end, this is done by caller
 ------------------------------------------------------------------------- */
 
-int Particle::unpack_restart(char *buf, int &nlocal_restart, int step, int pass)
+void Particle::unpack_restart(char *buf, int &nlocal_restart, int step, int pass)
 {
   int nbytes_particle = sizeof(OnePartRestart);
   int nbytes_custom = sizeof_custom();
@@ -1567,11 +1564,7 @@ int Particle::unpack_restart(char *buf, int &nlocal_restart, int step, int pass)
   memcpy(particle_restart,ptr,step*nbytes);
   ptr += step * sizeof(OnePartRestart);
 
-  if (end == nlocal_restart)
-    ptr = ROUNDUP(ptr);
-
   this->nlocal_restart = step;
-  return ptr - buf;
 }
 
 // ----------------------------------------------------------------------
