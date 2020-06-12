@@ -1459,7 +1459,7 @@ int Particle::pack_restart(char *buf)
    use multiple passes to reduce memory use
    use OnePartRestart data struct for permanent info and to encode cell ID
    include per-particle custom attributes if defined
-   NOTE: does not ROUNDUP(ptr) at the end
+   NOTE: does not ROUNDUP(ptr) at the end, this is done by caller
 ------------------------------------------------------------------------- */
 
 void Particle::pack_restart(char *buf, int step, int pass)
@@ -1537,7 +1537,7 @@ int Particle::unpack_restart(char *buf)
    use multiple passes to reduce memory use
    allocate data structure here, will be deallocated by ReadRestart
    include per-particle custom attributes if defined
-   NOTE: does not ROUNDUP(ptr) at the end
+   NOTE: does not ROUNDUP(ptr) at the end, this is done by caller
 ------------------------------------------------------------------------- */
 
 void Particle::unpack_restart(char *buf, int &nlocal_restart, int step, int pass)
