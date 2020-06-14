@@ -42,7 +42,7 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      SPECIES,MIXTURE,PARTICLE_CUSTOM,GRID,SURF,
-     MULTIPROC,PROCSPERFILE,PERPROC};    // new fields added after PERPROC
+     MULTIPROC,PROCSPERFILE,PERPROC, CELLMAX};    // new fields added after PERPROC
 
 /* ---------------------------------------------------------------------- */
 
@@ -522,6 +522,7 @@ void WriteRestart::header()
   write_int(NSPLIT,grid->nsplit);
   write_int(NSUB,grid->nsub);
   write_bigint(NSURF,surf->nsurf);
+  write_int(CELLMAX, grid->maxcellpersurf);
 
   // -1 flag signals end of header
 

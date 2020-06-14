@@ -45,9 +45,9 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      SPECIES,MIXTURE,PARTICLE_CUSTOM,GRID,SURF,
-     MULTIPROC,PROCSPERFILE,PERPROC};    // new fields added after PERPROC
+     MULTIPROC,PROCSPERFILE,PERPROC, CELLMAX};    // new fields added after PERPROC
 
-/* ---------------------------------------------------------------------- */
+/*------------------------------------------------------------------------*/
 
 ReadRestart::ReadRestart(SPARTA *spa) : Pointers(spa) {}
 
@@ -1029,6 +1029,9 @@ void ReadRestart::header(int incompatible)
       nsub_file = read_int();
     } else if (flag == NSURF) {
       nsurf_file = read_bigint();
+    } else if (flag == CELLMAX) {
+      grid->maxcellpersurf = read_int();
+
 
     } else error->all(FLERR,"Invalid flag in header section of restart file");
 
