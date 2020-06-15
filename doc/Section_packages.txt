@@ -126,26 +126,42 @@ src/MAKE/OPTIONS/Makefile.kokkos* or cmake/presets/*kokkos*.cmake
 files for examples. For CMake, it's best to start by copying
 cmake/presets/kokkos_cuda.cmake to cmake/presets/machine.cmake.
 
-For multicore CPUs using OpenMP:
+[For multicore CPUs using OpenMP:]
+
+Using Makefiles:
 
 KOKKOS_DEVICES = OpenMP
 KOKKOS_ARCH = HSW           # HSW = Haswell, SNB = SandyBridge, BDW = Broadwell, etc :pre
 
-For Intel KNLs using OpenMP:
+Using CMake:
+
+-DKokkos_ENABLE_OPENMP=ON
+-DKokkos_ARCH_HSW=ON
+
+[For Intel KNLs using OpenMP:]
+
+Using Makefiles:
 
 KOKKOS_DEVICES = OpenMP
 KOKKOS_ARCH = KNL :pre
 
-For NVIDIA GPUs using CUDA:
+Using CMake:
+
+-DKokkos_ENABLE_OPENMP=ON
+-DKokkos_ARCH_KNL=ON :pre
+
+[For NVIDIA GPUs using CUDA:]
 
 KOKKOS_DEVICES = Cuda
-KOKKOS_ARCH = Pascal60,Power8     # P100 hosted by an IBM Power8, etc
-KOKKOS_ARCH = Kepler37,Power8     # K80 hosted by an IBM Power8, etc :pre
+KOKKOS_ARCH = PASCAL60,Power8     # P100 hosted by an IBM Power8, etc
+KOKKOS_ARCH = KEPLER37,Power8     # K80 hosted by an IBM Power8, etc :pre
 
-For GPUs, you also need these set in your Makefile.machine (before the CC line
-is defined) or machine.cmake files, in this case for use with OpenMPI mpicxx.  
+Using CMake:
 
-For make, the following 2 lines define a nvcc wrapper compiler, which will use
+-DKokkos_ENABLE_CUDA=ON
+-DKokkos_ARCH_PASCAL60=ON -DKokkos_ARCH_POWER8=ON :pre
+
+For make with GPUs, the following 2 lines define a nvcc wrapper compiler, which will use
 nvcc for compiling CUDA files or use a C++ compiler for non-Kokkos, non-CUDA
 files.
 
@@ -171,6 +187,7 @@ make no-kokkos
 make machine :pre
 
 Using CMake:
+
 cmake -C /path/to/sparta/cmake/presets/machine.cmake /path/to/sparta/cmake
 make :pre
 

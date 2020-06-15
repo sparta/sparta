@@ -40,31 +40,41 @@ OpenMP (threading for many-core CPUs and Intel Phi), and CUDA (for
 NVIDIA GPUs). You choose the mode at build time to produce an
 executable compatible with specific hardware.
 
-[Building SPARTA with the KOKKOS package:]
-
 NOTE: Kokkos support within SPARTA must be built with a C++11
 compatible compiler. This means GCC version 4.7.2 or later, Intel
 14.0.4 or later, or Clang 3.5.2 or later is required.
 
-To build with the KOKKOS package start with the provided Kokkos
+[Building SPARTA with the KOKKOS package with Makefiles:]
+
+To build with the KOKKOS package, start with the provided Kokkos
 Makefiles in /src/MAKE/. You may need to modify the KOKKOS_ARCH
 variable in the Makefile to match your specific hardware. For example:
 
 for Sandy Bridge CPUs, set KOKKOS_ARCH=SNB
 for Broadwell CPUs, set KOKKOS_ARCH=BWD
-for K80 GPUs, set KOKKOS_ARCH=Kepler37
-for P100 GPUs and Power8 CPUs, set KOKKOS_ARCH=Pascal60,Power8 :ul
+for K80 GPUs, set KOKKOS_ARCH=KEPLER37
+for P100 GPUs and Power8 CPUs, set KOKKOS_ARCH=PASCAL60,POWER8 :ul
+
+[Building SPARTA with the KOKKOS package with CMake:]
+
+To build with the KOKKOS package, start with the provided preset files
+in /cmake/presets/. You may need to set -D Kokkos_ARCH_{TYPE}=ON
+to match your specific hardware. For example:
+
+for Sandy Bridge CPUs, set -D Kokkos_ARCH_SNB=ON
+for Broadwell CPUs, set -D Kokkos_ARCH_BWD=ON
+for K80 GPUs, set -D Kokkos_ARCH_KEPLER37=ON
+for P100 GPUs and Power8 CPUs, set -D Kokkos_ARCH_PASCAL60=ON, -D Kokkos_ARCH_POWER8=ON :ul
 
 See the [Advanced Kokkos Options] section below for a listing of all
-KOKKOS_ARCH options.
+Kokkos architecture options.
 
 [Compile for CPU-only (MPI only, no threading):]
 
-Use a C++11 compatible compiler and set KOKKOS_ARCH variable in
-/src/MAKE/Makefile.kokkos_mpi_only as described above.  The do the
+Use a C++11 compatible compiler and set Kokkos architicture variable in as described above.  The do the
 following:
 
-using make:
+using Makefiles:
 
 cd sparta/src
 make yes-kokkos
@@ -83,11 +93,11 @@ must support the OpenMP interface. You should have one or more
 multi-core CPUs so that multiple threads can be launched by each MPI
 task running on a CPU.
 
-Use a C++11 compatible compiler and set KOKKOS_ARCH variable in
-/src/MAKE/Makefile.kokkos_omp as described above.  Then do the
+Use a C++11 compatible compiler and set Kokkos architecture variable in
+as described above.  Then do the
 following:
 
-using make:
+using Makefiles:
 
 cd sparta/src
 make yes-kokkos
@@ -103,7 +113,7 @@ make :pre
 
 Use a C++11 compatible compiler and do the following:
 
-using make:
+using Makefiles:
 
 cd sparta/src
 make yes-kokkos
@@ -120,11 +130,11 @@ make :pre
 NOTE: To build with Kokkos support for NVIDIA GPUs, NVIDIA CUDA
 software version 7.5 or later must be installed on your system.
 
-Use a C++11 compatible compiler and set KOKKOS_ARCH variable in
-/src/MAKE/Makefile.kokkos_cuda_mpi for both GPU and CPU as described
+Use a C++11 compatible compiler and set Kokkos architecture variable in
+for both GPU and CPU as described
 above.  Then do the following:
 
-using make:
+using Makefiles:
 
 cd sparta/src
 make yes-kokkos
@@ -353,11 +363,9 @@ The performance of KOKKOS running in different modes is a function of
 your hardware, which KOKKOS-enable styles are used, and the problem
 size.
 
-Generally speaking, the following rules of thumb apply:
-
-When running on CPUs only, with a single thread per MPI task, the
+Generally speaking, when running on CPUs only, with a single thread per MPI task, the
 performance difference of a KOKKOS style and (un-accelerated) styles
-(MPI-only mode)is typically small (less than 20%). :ulb,l
+(MPI-only mode) is typically small (less than 20%).
 
 See the "Benchmark page"_http://sparta.sandia.gov/bench.html of the
 SPARTA web site for performance of the KOKKOS package on different
@@ -366,93 +374,63 @@ hardware.
 [Advanced Kokkos options:]
 
 There are other allowed options when building with the KOKKOS package.
-As above, they can be set either as variables on the make command line,
-in Makefile.machine, on the cmake command line, or in machine.cmake.
-This is the full list of options, including those discussed above.
-Each takes a value shown below. These options are set in the the
-/lib/kokkos/Makefile.kokkos or the kokkos.cmake file. For default values,
+A few options are listed here; for a full list of all options,
+please refer to the Kokkos documentation.
+As above, these options can be set as variables on the command line,
+in a Makefile, or in a CMake presets file. For default CMake values,
 see cmake -LH | grep -i kokkos.
 
-All Kokkos_* options are for CMake and values = {ON}, {OFF}.
-All KOKKOS_* options are for make.
-
-KOKKOS_DEVICES={TYPE}, 
-or Kokkos_ENABLE_{TYPE}, TYPE = {SERIAL}, {OPENMP}, {PTHREADS}, {CUDA}
-KOKKOS_ARCH={TYPE}, 
-or Kokkos_ARCH_{TYPE}, TYPE = {KNC}, {SNB}, {HSW}, {KEPLER30}, {KEPLER32}, {KEPLER35}, {KEPLER37}, {MAXWELL50}, {MAXWELL52}, {MAXWELL53}, {PASCAL60}, {PASCAL61}, {ARMV80}, {ARMV81}, {ARMV81}, {ARMV8-THUNDERX}, {ARMV8-THUNDERX2} {BGQ}, {POWER7}, {POWER8}, {POWER9}, {KNL}, {BDW}, {SKX}, default = {none}
-KOKKOS_DEBUG, values = {yes}, {no}, default = {no},
-or Kokkos_ENABLE_DEBUG
-KOKKOS_USE_TPLS={TPL}, 
-or Kokkos_ENABLE_{TPL}, TPL = {HWLOC}, {LIBRT}, {EXPERIMENTAL_MEMKIND}
-KOKKOS_CXX_STANDARD, 
-or Kokkos_CXX_STANDARD, values = {c++11}, {c++1z}, default = {c++11}
-KOKKOS_OPTIONS=${TYPE},
-or Kokkos_ENABLE_{TYPE}, TYPE = {AGGRESSIVE_VECTORIZATION},{PROFILING}
-KOKKOS_CUDA_OPTIONS={TYPE},
-or Kokkos_ENABLE_CUDA_{TYPE}, TYPE = {FORCE_UVM}, {USE_LDG}, {RDC}, {ENABLE_LAMBDA}, {ENABLE_LAMBDA} :ul
-
-Kokkos_ENABLE_{TYPE} or the makefile setting KOKKOS_OPTIONS sets the 
+The CMake option Kokkos_ENABLE_{OPTION} or the makefile setting KOKKOS_DEVICE={OPTION} sets the 
 parallelization method used for Kokkos code (within SPARTA). 
-Kokkos_ENABLE_SERIAL=ON or the makefile setting KOKKOS_DEVICES=SERIAL
-means that no threading will be used.  Kokkos_ENABLE_OPENMP=ON or the 
+For example, the CMake option Kokkos_ENABLE_SERIAL=ON or the makefile setting KOKKOS_DEVICES=SERIAL
+means that no threading will be used.  The CMake option Kokkos_ENABLE_OPENMP=ON or the 
 makefile setting KOKKOS_DEVICES=OPENMP means that OpenMP threading will be
-used. Kokkos_ENABLE_PTHREAD=ON or the makefile setting KOKKOS_DEVICES=PTHREAD
-means that pthreads will be used. Kokkos_ENABLE_CUDA=ON or the makefile setting
+used. The CMake option Kokkos_ENABLE_CUDA=ON or the makefile setting
 KOKKOS_DEVICES=CUDA means an NVIDIA GPU running CUDA will be used.
 
-Kokkos_ARCH_{TYPE} or the makefile settings KOKKOS_ARCH={TYPE} enables compiler
-switches needed when compiling for a specific hardware:
+As described above, the CMake option Kokkos_ARCH_{TYPE}=ON or the makefile setting KOKKOS_ARCH={TYPE} enables compiler switches needed when compiling for a specific hardware:
 
-ARMv80 = ARMv8.0 Compatible CPU
-ARMv81 = ARMv8.1 Compatible CPU
-ARMv8-ThunderX = ARMv8 Cavium ThunderX CPU
-SNB = Intel Sandy/Ivy Bridge CPUs
-HSW = Intel Haswell CPUs
-BDW = Intel Broadwell Xeon E-class CPUs
-SKX = Intel Sky Lake Xeon E-class HPC CPUs (AVX512)
-KNC = Intel Knights Corner Xeon Phi
-KNL = Intel Knights Landing Xeon Phi
-Kepler30 = NVIDIA Kepler generation CC 3.0
-Kepler32 = NVIDIA Kepler generation CC 3.2
-Kepler35 = NVIDIA Kepler generation CC 3.5
-Kepler37 = NVIDIA Kepler generation CC 3.7
-Maxwell50 = NVIDIA Maxwell generation CC 5.0
-Maxwell52 = NVIDIA Maxwell generation CC 5.2
-Maxwell53 = NVIDIA Maxwell generation CC 5.3
-Pascal60 = NVIDIA Pascal generation CC 6.0
-Pascal61 = NVIDIA Pascal generation CC 6.1
-BGQ = IBM Blue Gene/Q CPUs
-Power8 = IBM POWER8 CPUs
-Power9 = IBM POWER9 CPUs :ul
+[Arch-ID]	| [HOST or GPU] |	[Description] |
+AMDAVX	| HOST |	AMD 64-bit x86 CPU (AVX 1) |
+EPYC	| HOST |	AMD EPYC Zen class CPU (AVX 2) |
+ARMV80	| HOST |	ARMv8.0 Compatible CPU |
+ARMV81	| HOST |	ARMv8.1 Compatible CPU |
+ARMV8_THUNDERX	| HOST |	ARMv8 Cavium ThunderX CPU |
+ARMV8_THUNDERX2	| HOST |	ARMv8 Cavium ThunderX2 CPU |
+WSM	| HOST |	Intel Westmere CPU (SSE 4.2) |
+SNB	| HOST |	Intel Sandy/Ivy Bridge CPU (AVX 1) |
+HSW	| HOST |	Intel Haswell CPU (AVX 2) |
+BDW	| HOST |	Intel Broadwell Xeon E-class CPU (AVX 2 + transactional mem) |
+SKX	| HOST |	Intel Sky Lake Xeon E-class HPC CPU (AVX512 + transactional mem) |
+KNC	| HOST |	Intel Knights Corner Xeon Phi |
+KNL	| HOST |	Intel Knights Landing Xeon Phi |
+BGQ	| HOST |	IBM Blue Gene/Q CPU |
+POWER7	| HOST |	IBM POWER7 CPU |
+POWER8	| HOST |	IBM POWER8 CPU |
+POWER9	| HOST |	IBM POWER9 CPU |
+KEPLER30	| GPU |	NVIDIA Kepler generation CC 3.0 GPU |
+KEPLER32	| GPU |	NVIDIA Kepler generation CC 3.2 GPU |
+KEPLER35	| GPU |	NVIDIA Kepler generation CC 3.5 GPU |
+KEPLER37	| GPU |	NVIDIA Kepler generation CC 3.7 GPU |
+MAXWELL50	| GPU |	NVIDIA Maxwell generation CC 5.0 GPU |
+MAXWELL52	| GPU |	NVIDIA Maxwell generation CC 5.2 GPU |
+MAXWELL53	| GPU |	NVIDIA Maxwell generation CC 5.3 GPU |
+PASCAL60	| GPU |	NVIDIA Pascal generation CC 6.0 GPU |
+PASCAL61	| GPU |	NVIDIA Pascal generation CC 6.1 GPU |
+VOLTA70	| GPU |	NVIDIA Volta generation CC 7.0 GPU |
+VOLTA72	| GPU |	NVIDIA Volta generation CC 7.2 GPU |
+TURING75	| GPU |	NVIDIA Turing generation CC 7.5 GPU |
+VEGA900	| GPU |	AMD GPU MI25 GFX900 |
+VEGA906	| GPU |	AMD GPU MI50/MI60 GFX906
+:tb(c=3,s=|)
 
-Kokkos_ENABLE_HWLOC=ON or the makefile setting KOKKOS_ENABLE_TPL=HWLOC
-binds threads to hardware cores, so they do not migrate during a simulation.
-Kokkos_ENABLE_HWLOC=ON or the makefile setting KOKKOS_ENABLE_TPL=HWLOC should 
-always be used if running with Kokkos_ENABLE_PTHREAD=ON or the makefile setting
-KOKKOS_DEVICES=PTHREAD for pthreads. It is not necessary for 
-Kokkos_ENABLE_OPENMP=ON or the makefile setting KOKKOS_DEVICES=OPENMP for
-OpenMP, because OpenMP provides alternative methods via environment variables 
-for binding threads to hardware cores. More info on binding threads to cores is
-given in the "Accelerating SPARTA"_Section_accelerate.html#acc_3.
+The CMake option Kokkos_ENABLE_CUDA_{OPTION} or the makefile setting KOKKOS_CUDA_OPTIONS={OPTION} are 
+additional options for CUDA. For example, the CMake option Kokkos_ENABLE_CUDA_UVM=ON or the makefile setting KOKKOS_CUDA_OPTIONS="enable_lambda,force_uvm" enables the use of CUDA "Unified Virtual Memory" (UVM) in Kokkos. UVM allows to one to use the host CPU memory to supplement the memory used on the GPU (with some performance penalty) and thus enables running larger problems that would otherwise not fit into the RAM on the GPU. Please note, that the SPARTA KOKKOS package must always be compiled with the CMake option Kokkos_ENABLE_CUDA_LAMBDA=ON or the makefile setting KOKKOS_CUDA_OPTIONS=enable_lambda when using GPUs. The CMake configuration will thus always enable it.
 
-Kokkos_ENABLE_LIBRT=ON or the makefile setting KOKKOS_ENABLE_TPL=LIBRT enables
-use of a more accurate timer mechanism on most Unix platforms. This library
-is not available on all platforms.
-
-Kokkos_ENABLE_DEBUG=ON or the makefile setting KOKKOS_DEBUG=yes is only useful
-when developing a Kokkos-enabled style within SPARTA. Kokkos_ENABLE_DEBUG=ON 
-or the makefile setting KOKKOS_DEBUG=yes enables printing of run-time debugging
-information that can be useful. It also enables runtime bounds
-checking on Kokkos data structures.
-
-Kokkos_CXX_STANDARD or the makefile setting KOKKOS_CXX_STANDARD, 
-Kokkos_ENABLE_AGGRESSIVE_VECTORIZATION, and 
-Kokkos_ENABLE_PROFILING or the makefile setting KOKKOS_OPTIONS are typically
-not changed when building SPARTA.
-
-Kokkos_ENABLE_CUDA_{TYPE} or the makefile setting KOKKOS_CUDA_OPTIONS are 
-additional options for CUDA. The SPARTA KOKKOS package must be compiled
-with the {ENABLE_LAMBDA} option when using GPUs.
+The CMake option Kokkos_ENABLE_DEBUG=ON or the makefile setting KOKKOS_DEBUG=yes is useful
+when developing a Kokkos-enabled style within SPARTA. This option enables printing of run-time debugging
+information that can be useful and also enables runtime bounds
+checking on Kokkos data structures, but may slow down performance.
 
 [Restrictions:]
 

@@ -118,20 +118,26 @@ To use an accelerator package in SPARTA, and one or more of the styles
 it provides, follow these general steps:
 
 using make:
+
 install the accelerator package |
   make yes-fft, make yes-kokkos, etc |
 add compile/link flags to Makefile.machine in src/MAKE |
-  KOKKOS_ARCH=Pascal60 |
+  KOKKOS_ARCH=PASCAL60 |
 re-build SPARTA |
   make kokkos_cuda
+:tb(c=2,s=|)
 
 or, using CMake from a build directory:
+
 install the accelerator package |
   cmake -DPKG_FFT=ON -DPKG_KOKKOS=ON, etc |
 add compile/link flags |
-  cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake -DKOKKOS_ARCH=Pascal60 |
+  cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake -DKokkos_ARCH_PASCAL60=ON |
 re-build SPARTA |
   make
+:tb(c=2,s=|)
+
+Then do the following:
 
 prepare and test a regular SPARTA simulation |
   lmp_kokkos_cuda -in in.script; mpirun -np 32 lmp_kokkos_cuda -in in.script |
