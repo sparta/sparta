@@ -153,8 +153,8 @@ Using CMake:
 [For NVIDIA GPUs using CUDA:]
 
 KOKKOS_DEVICES = Cuda
-KOKKOS_ARCH = PASCAL60,Power8     # P100 hosted by an IBM Power8, etc
-KOKKOS_ARCH = KEPLER37,Power8     # K80 hosted by an IBM Power8, etc :pre
+KOKKOS_ARCH = PASCAL60,POWER8     # P100 hosted by an IBM Power8, etc
+KOKKOS_ARCH = KEPLER37,POWER8     # K80 hosted by an IBM Power8, etc :pre
 
 Using CMake:
 

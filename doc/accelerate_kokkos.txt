@@ -71,7 +71,7 @@ Kokkos architecture options.
 
 [Compile for CPU-only (MPI only, no threading):]
 
-Use a C++11 compatible compiler and set Kokkos architicture variable in as described above.  The do the
+Use a C++11 compatible compiler and set Kokkos architicture variable in as described above.  Then do the
 following:
 
 using Makefiles:
