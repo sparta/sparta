@@ -449,7 +449,7 @@ void ComputeTvibGrid::post_process_grid(int index, int nsample,
     int nsp = nmap[index] / maxmode / 2;
     int **vibmode = 
       particle->eiarray[particle->ewhich[index_vibmode]];
-      
+
     for (int icell = lo; icell < hi; icell++) {
       evib = emap[0];
       count = evib+1;
@@ -507,7 +507,7 @@ void ComputeTvibGrid::post_process_grid(int index, int nsample,
     imode = index % maxmode;
     int **vibmode = 
       particle->eiarray[particle->ewhich[index_vibmode]];
-      
+
     for (int icell = lo; icell < hi; icell++) {
       evib = emap[2*imode];
       count = evib+1;
