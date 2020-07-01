@@ -299,7 +299,7 @@ void CollideVSSKokkos::reset_vremax()
 
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideResetVremax>(0,nglocal),*this);
-  DeviceType::fence();
+  DeviceType().fence();
   copymode = 0;
 
   this->modify(Device,ALL_MASK);
@@ -539,7 +539,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
   particle->nlocal = h_nlocal();
 
-  DeviceType::fence();
+  DeviceType().fence();
   copymode = 0;
 
   if (h_error_flag())

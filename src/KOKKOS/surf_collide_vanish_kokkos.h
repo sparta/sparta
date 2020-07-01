@@ -33,7 +33,6 @@ class SurfCollideVanishKokkos : public SurfCollideVanish {
   SurfCollideVanishKokkos(class SPARTA *, int, char **);
   SurfCollideVanishKokkos(class SPARTA *);
   ~SurfCollideVanishKokkos() {}
-  Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int) { return NULL; }
 
   DAT::tdual_int_scalar k_nsingle;
   typename AT::t_int_scalar d_nsingle;

@@ -336,28 +336,32 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
       jp = NULL;
       p3 = react->recomb_part3;
 
-      // Properly account for 3rd body energy
+      // properly account for 3rd body energy with another call to setup_collision()
+      // it needs relative velocity of recombined species and 3rd body
+      
       double *vp3 = p3->v;
       double du  = vi[0] - vp3[0];
       double dv  = vi[1] - vp3[1];
       double dw  = vi[2] - vp3[2];
       double vr2 = du*du + dv*dv + dw*dw;
-      // setup_collision will need the relative velocity between recombined species and 3rd body
       precoln.vr2 = vr2;
 
+      // internal energy of ip particle is already included
+      //   in postcoln.etotal returned from react->attempt()
+      // but still need to add 3rd body internal energy
+
       double partial_energy =  postcoln.etotal + p3->erot + p3->evib;
-      // internal energy of ip particle is already included in the
-      // postcoln.etotal value returned from react->attempt(...)
-      // but we still need to add the 3rd body internal energy before we clean up that data
+      
       ip->erot = 0;
       ip->evib = 0;
       p3->erot = 0;
       p3->evib = 0;
 	    
-      // returned postcoln.etotal will increment only the relative translational
-      // energy between recombined species and 3rd body
+      // returned postcoln.etotal will increment only the
+      //   relative translational energy between recombined species and 3rd body
+      // add back partial_energy to get full total energy
+      
       setup_collision(ip,p3);
-      //this is the actual total energy
       postcoln.etotal += partial_energy;
 
       if (precoln.ave_dof > 0.0) EEXCHANGE_ReactingEDisposal(ip,p3,jp);

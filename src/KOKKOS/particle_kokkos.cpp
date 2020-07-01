@@ -143,7 +143,7 @@ void ParticleKokkos::compress_migrate(int ndelete, int *dellist)
 
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagParticleCompressReactions>(0,ncopy),*this);
-  DeviceType::fence();
+  DeviceType().fence();
   copymode = 0;
 
   this->modify(Device,PARTICLE_MASK);
@@ -189,7 +189,7 @@ void ParticleKokkos::sort_kokkos()
   } else {
     copymode = 1;
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagParticleZero_cellcount>(0,d_cellcount.extent(0)),*this);
-    DeviceType::fence();
+    DeviceType().fence();
     copymode = 0;
   }
 
@@ -215,7 +215,7 @@ void ParticleKokkos::sort_kokkos()
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagParticleSort<1> >(0,nlocal),*this);
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagParticleSort<0> >(0,nlocal),*this);
-    DeviceType::fence();
+    DeviceType().fence();
     copymode = 0;
 
     Kokkos::deep_copy(h_fail_flag,d_fail_flag);
@@ -223,7 +223,7 @@ void ParticleKokkos::sort_kokkos()
     if (h_fail_flag()) {
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagParticleZero_cellcount>(0,ngrid),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       copymode = 0;
       maxcellcount += DELTACELLCOUNT;
       grid_kk->d_plist = typename AT::t_int_2d(); // destroy reference to reduce memory use
@@ -263,7 +263,7 @@ void ParticleKokkos::sort_kokkos()
       // the variable naming.
       copymode = 1;
       Kokkos::parallel_scan(Kokkos::RangePolicy<DeviceType, TagCopyParticleReorderDestinations>(0,ngrid),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       copymode = 0;
 
       int npasses = (nlocal-1)/nParticlesWksp + 1;
@@ -276,20 +276,20 @@ void ParticleKokkos::sort_kokkos()
         // identify next set of particles to reorder
         copymode = 1;
         Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixedMemoryReorderInit>(0,nParticlesWksp),*this);
-        DeviceType::fence();
+        DeviceType().fence();
         copymode = 0;
 
         // reorder this set of particles
         copymode = 1;
         Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixedMemoryReorder>(0,nParticlesWksp),*this);
-        DeviceType::fence();
+        DeviceType().fence();
         copymode = 0;
       }
 
       // reset the icell values in the particle list
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagSetIcellFromPlist>(0,ngrid),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       copymode = 0;
       this->modify(Device,PARTICLE_MASK);
 

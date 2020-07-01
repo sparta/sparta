@@ -103,7 +103,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeLambdaGrid_LoadNrhoVecFromArray>(0,nglocal),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       copymode = 0;
     }
   } else if (nrhowhich == FIX){
@@ -116,7 +116,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeLambdaGrid_LoadNrhoVecFromArray>(0,nglocal),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       copymode = 0;
     }
   }
@@ -139,7 +139,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeLambdaGrid_LoadTempVecFromArray>(0,nglocal),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       copymode = 0;
     }
   } else if (tempwhich == FIX){
@@ -152,7 +152,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeLambdaGrid_LoadTempVecFromArray>(0,nglocal),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       copymode = 0;
     }
   }
@@ -162,7 +162,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
   dimension = domain->dimension;
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeLambdaGrid_ComputePerGrid>(0,nglocal),*this);
-  DeviceType::fence();
+  DeviceType().fence();
   copymode = 0;
 
   if (kflag == KNONE) {
