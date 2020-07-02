@@ -1,4 +1,3 @@
 #!/bin/bash
 cd $1
-sh Make.sh style
-mv style_*.h $2
+sh $2/Make.sh style

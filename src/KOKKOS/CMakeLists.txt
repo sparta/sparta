@@ -33,6 +33,8 @@ if(PKG_KOKKOS)
     LIST_DIRECTORIES false
     CONFIGURE_DEPENDS *.cpp *.hpp *.h)
 
+  include(${SPARTA_CMAKE_COMMON_DIR}/set/style_file_glob.cmake)
+
   add_library(${TARGET_SPARTA_PKG_KOKKOS} STATIC ${SPARTA_PKG_KOKKOS_SRC_FILES})
   set_target_properties(${TARGET_SPARTA_PKG_KOKKOS} PROPERTIES LINKER_LANGUAGE
                                                                CXX)
