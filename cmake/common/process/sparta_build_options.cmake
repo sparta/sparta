@@ -35,11 +35,6 @@ if(SPARTA_DISABLE_ALL_PKGS)
 endif()
 # ################### END   PROCESS EXTRA OPTIONS ####################
 
-# ################### BEGIN COMBINE CXX FLAGS ####################
-set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS ${SPARTA_CXX_COMPILE_FLAGS}
-                                     ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
-# ################### BEGIN COMBINE CXX FLAGS ####################
-
 # ################### BEGIN PROCESS MPI TPL/PKG ####################
 if(BUILD_MPI AND PKG_MPI_STUBS)
   message(WARNING "Both BUILD_MPI: ${BUILD_MPI} and PKG_MPI_STUBS: "
@@ -50,11 +45,6 @@ if(BUILD_MPI AND NOT PKG_MPI_STUBS)
   find_package(MPI REQUIRED)
   # TODO: if NOT MPI_FOUND, handle finding mpi installs
   set(TARGET_SPARTA_BUILD_MPI MPI::MPI_CXX)
-  set(CRAYPE_VERSION $ENV{CRAYPE_VERSION})
-  if(NOT CRAYPE_VERSION)
-    target_compile_options(${TARGET_SPARTA_BUILD_MPI}
-                           INTERFACE ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
-  endif()
 else()
   set(PKG_MPI_STUBS ON)
   set(BUILD_MPI OFF)
@@ -130,3 +120,16 @@ if(BUILD_PNG)
                                        ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
 endif()
 # ################### END PROCESS TPLS ####################
+
+# ################### BEGIN COMBINE CXX FLAGS ####################
+set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS ${SPARTA_CXX_COMPILE_FLAGS}
+                                     ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
+# ################### BEGIN COMBINE CXX FLAGS ####################
+
+if(BUILD_MPI)
+  set(CRAYPE_VERSION $ENV{CRAYPE_VERSION})
+  if(NOT CRAYPE_VERSION)
+    target_compile_options(${TARGET_SPARTA_BUILD_MPI}
+                           INTERFACE ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
+  endif()
+endif()
