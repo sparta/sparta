@@ -33,8 +33,10 @@ target_link_libraries(${TARGET_SPARTA_LIB} LINK_PUBLIC
                       ${TARGET_SPARTA_BUILD_TPLS})
 target_link_libraries(${TARGET_SPARTA_LIB} LINK_PUBLIC ${TARGET_SPARTA_PKGS})
 # TODO: Eliminate PRE_BUILD target
-add_custom_target(${TARGET_SPARTA_LIB}_PRE_BUILD
-                  COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/Make.sh style)
+add_custom_target(
+  ${TARGET_SPARTA_LIB}_PRE_BUILD
+  COMMAND sh ${SPARTA_CMAKE_DIR}/make_style.sh ${CMAKE_CURRENT_SOURCE_DIR}
+          ${CMAKE_CURRENT_BINARY_DIR})
 add_dependencies(${TARGET_SPARTA_LIB} ${TARGET_SPARTA_LIB}_PRE_BUILD)
 add_custom_command(
   TARGET ${TARGET_SPARTA_LIB}
