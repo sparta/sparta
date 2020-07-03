@@ -225,8 +225,11 @@ void WriteRestart::write(char *file)
   // communication buffer for my per-proc info = child grid cells and particles
   // max_size = largest buffer needed by any proc
 
-  int send_size = grid->size_restart();
-  send_size += particle->size_restart();
+  bigint send_size_big = grid->size_restart();
+  send_size_big += particle->size_restart_big();
+  if (send_size_big > MAXSMALLINT)
+    error->one(FLERR,"Restart file write buffer too large, use global mem/limit");
+  int send_size = send_size_big;
 
   int max_size;
   MPI_Allreduce(&send_size,&max_size,1,MPI_INT,MPI_MAX,world);
