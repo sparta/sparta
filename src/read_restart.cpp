@@ -170,7 +170,8 @@ void ReadRestart::command(int narg, char **arg)
   // read per-proc info, grid cells and particles
 
   int flag,value,tmp,procmatch_check,procmatch;
-  bigint n;
+  bigint n_big;
+  int n;
   long filepos;
   MPI_Status status;
   MPI_Request request;
@@ -200,7 +201,10 @@ void ReadRestart::command(int narg, char **arg)
 
         if (iproc == 0) filepos = ftell(fp);
 
-        fread(&n,sizeof(bigint),1,fp);
+        fread(&n_big,sizeof(bigint),1,fp);
+        if (n_big > MAXSMALLINT)
+          error->one(FLERR,"Restart file read buffer too large, use global mem/limit");
+        n = n_big;
         if (n > maxbuf) {
           maxbuf = n;
           memory->destroy(buf);
@@ -209,7 +213,7 @@ void ReadRestart::command(int narg, char **arg)
 
         if (iproc > 0) {
           fread(buf,sizeof(char),n,fp);
-          MPI_Send(&n,1,MPI_SPARTA_BIGINT,iproc,0,world);
+          MPI_Send(&n,1,MPI_INT,iproc,0,world);
           MPI_Recv(&tmp,0,MPI_INT,iproc,0,world,&status);
           MPI_Send(buf,n,MPI_CHAR,iproc,0,world);
         } else fseek(fp,filepos+sizeof(bigint)+n,SEEK_SET);
@@ -218,13 +222,16 @@ void ReadRestart::command(int narg, char **arg)
       // rewind and read my chunk
 
       fseek(fp,filepos,SEEK_SET);
-      fread(&n,sizeof(bigint),1,fp);
+      fread(&n_big,sizeof(bigint),1,fp);
+      if (n_big > MAXSMALLINT)
+        error->one(FLERR,"Restart file read buffer too large, use global mem/limit");
+      n = n_big;
       fread(buf,sizeof(char),n,fp);
 
       fclose(fp);
 
     } else {
-      MPI_Recv(&n,1,MPI_SPARTA_BIGINT,0,0,world,&status);
+      MPI_Recv(&n,1,MPI_INT,0,0,world,&status);
       if (n > maxbuf) {
         maxbuf = n;
         memory->destroy(buf);
@@ -255,7 +262,10 @@ void ReadRestart::command(int narg, char **arg)
       if (value != PERPROC)
         error->one(FLERR,"Invalid flag in peratom section of restart file");
 
-      n = read_bigint();
+      n_big = read_bigint();
+      if (n_big > MAXSMALLINT)
+        error->one(FLERR,"Restart file read buffer too large, use global mem/limit");
+      n = n_big;
       if (n > maxbuf) {
         maxbuf = n;
         memory->destroy(buf);
@@ -308,7 +318,10 @@ void ReadRestart::command(int narg, char **arg)
         if (flag != PERPROC) 
           error->one(FLERR,"Invalid flag in peratom section of restart file");
         
-        fread(&n,sizeof(bigint),1,fp);
+        fread(&n_big,sizeof(bigint),1,fp);
+        if (n_big > MAXSMALLINT)
+          error->one(FLERR,"Restart file read buffer too large, use global mem/limit");
+        n = n_big;
         if (n > maxbuf) {
           maxbuf = n;
           memory->destroy(buf);
@@ -359,13 +372,13 @@ void ReadRestart::command(int narg, char **arg)
         if (flag != PERPROC)
           error->one(FLERR,"Invalid flag in peratom section of restart file");
 
-        fread(&n,sizeof(bigint),1,fp);
+        fread(&n_big,sizeof(bigint),1,fp);
 
         int grid_nlocal;
         fread(&grid_nlocal,sizeof(int),1,fp);
         fseek(fp,-sizeof(int),SEEK_CUR);
         int grid_read_size = grid->size_restart(grid_nlocal);
-        bigint particle_read_size = n - grid_read_size;
+        bigint particle_read_size = n_big - grid_read_size;
         int particle_nlocal;
         fseek(fp,grid_read_size,SEEK_CUR);
         fread(&particle_nlocal,sizeof(int),1,fp);
@@ -499,13 +512,13 @@ void ReadRestart::command(int narg, char **arg)
         if (flag != PERPROC) 
           error->one(FLERR,"Invalid flag in peratom section of restart file");
 
-        fread(&n,sizeof(bigint),1,fp);
+        fread(&n_big,sizeof(bigint),1,fp);
 
         int grid_nlocal;
         fread(&grid_nlocal,sizeof(int),1,fp);
         fseek(fp,-sizeof(int),SEEK_CUR);
         int grid_read_size = grid->size_restart(grid_nlocal);
-        bigint particle_read_size = n - grid_read_size;
+        bigint particle_read_size = n_big - grid_read_size;
         int particle_nlocal;
         fseek(fp,grid_read_size,SEEK_CUR);
         fread(&particle_nlocal,sizeof(int),1,fp);
@@ -663,7 +676,10 @@ void ReadRestart::command(int narg, char **arg)
         if (flag != PERPROC) 
           error->one(FLERR,"Invalid flag in peratom section of restart file");
 
-        fread(&n,sizeof(bigint),1,fp);
+        fread(&n_big,sizeof(bigint),1,fp);
+        if (n_big > MAXSMALLINT)
+          error->one(FLERR,"Restart file read buffer too large, use global mem/limit");
+        n = n_big;
         if (n > maxbuf) {
           maxbuf = n;
           memory->destroy(buf);
