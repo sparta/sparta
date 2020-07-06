@@ -85,6 +85,13 @@ not is a function of the relative velocities of the two particles,
 their respectives species, and other parameters of the collision
 style; see equation 11.4 in <A HREF = "#Bird94">(Bird94)</A>.
 </P>
+<P>NOTE: If you are using the ambipolar approximation with charged
+species, as described in <A HREF = "Section_howto.html#howto_11">Section 6.11</A>,
+and you have used the <A HREF = "collide_modify.html">collide_modify ambipolar
+yes</A> command to enable ambipolar collisions (not
+required), and you are using a mixture ID with multiple groups, then
+the ambipolar electron species must be in a group by itself.
+</P>
 <HR>
 
 <P>The <I>none</I> style means that no particle-particle collisions will be

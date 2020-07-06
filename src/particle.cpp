@@ -588,11 +588,11 @@ void Particle::grow(int nextra)
 {
   bigint target = (bigint) nlocal + nextra;
   if (target <= maxlocal) return;
-  
+
   int oldmax = maxlocal;
   bigint newmax = maxlocal;
   while (newmax < target) newmax += DELTA;
-  
+
   if (newmax > MAXSMALLINT) 
     error->one(FLERR,"Per-processor particle count is too big");
 
@@ -671,6 +671,23 @@ int Particle::add_particle(int id, int ispecies, int icell,
 
   //p->dtremain = 0.0;    not needed due to memset in grow() ??
   //p->weight = 1.0;      not needed due to memset in grow() ??
+
+  nlocal++;
+  return reallocflag;
+}
+
+/* ----------------------------------------------------------------------
+   add an empty particle to particle list, caller will fill it
+   return 1 if particle array was reallocated, else 0
+------------------------------------------------------------------------- */
+
+int Particle::add_particle()
+{
+  int reallocflag = 0;
+  if (nlocal == maxlocal) {
+    grow(1);
+    reallocflag = 1;
+  }
 
   nlocal++;
   return reallocflag;
