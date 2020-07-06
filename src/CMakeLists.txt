@@ -8,8 +8,12 @@ file(
   CONFIGURE_DEPENDS *.cpp *.hpp *.h)
 list(REMOVE_ITEM SPA_SRC_FILES "main.cpp")
 
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
+
 # List out include directories
-set(SPA_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+set(SPA_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
+                     ${CMAKE_CURRENT_BINARY_DIR}/include)
+set(SPARTA_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 # ######### END   SETUP COMMANDS ##########
 
 # ######### BEGIN PROCESSING PACKAGES - RECURSE COMMANDS ##########
@@ -32,9 +36,14 @@ target_include_directories(${TARGET_SPARTA_LIB} PRIVATE ${SPA_INCLUDE_DIRS})
 target_link_libraries(${TARGET_SPARTA_LIB} LINK_PUBLIC
                       ${TARGET_SPARTA_BUILD_TPLS})
 target_link_libraries(${TARGET_SPARTA_LIB} LINK_PUBLIC ${TARGET_SPARTA_PKGS})
-# TODO: Eliminate PRE_BUILD target
-add_custom_target(${TARGET_SPARTA_LIB}_PRE_BUILD
-                  COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/Make.sh style)
+
+include(${SPARTA_CMAKE_COMMON_DIR}/set/style_file_glob.cmake)
+
+add_custom_target(
+  ${TARGET_SPARTA_LIB}_PRE_BUILD
+  COMMAND sh ${SPARTA_CMAKE_DIR}/make_style.sh ${SPARTA_BINARY_DIR}/include
+          ${CMAKE_CURRENT_SOURCE_DIR})
+
 add_dependencies(${TARGET_SPARTA_LIB} ${TARGET_SPARTA_LIB}_PRE_BUILD)
 add_custom_command(
   TARGET ${TARGET_SPARTA_LIB}
