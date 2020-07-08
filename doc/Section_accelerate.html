@@ -123,10 +123,25 @@ any accelerated variants available for that style.
 <P>To use an accelerator package in SPARTA, and one or more of the styles
 it provides, follow these general steps:
 </P>
+<P>using make:
+</P>
 <DIV ALIGN=center><TABLE  BORDER=1 >
 <TR><TD >install the accelerator package </TD><TD >  make yes-fft, make yes-kokkos, etc </TD></TR>
-<TR><TD >add compile/link flags to Makefile.machine in src/MAKE </TD><TD >  KOKKOS_ARCH=Pascal60 </TD></TR>
-<TR><TD >re-build SPARTA </TD><TD >  make kokkos_cuda </TD></TR>
+<TR><TD >add compile/link flags to Makefile.machine in src/MAKE </TD><TD >  KOKKOS_ARCH=PASCAL60 </TD></TR>
+<TR><TD >re-build SPARTA </TD><TD >  make kokkos_cuda
+</TD></TR></TABLE></DIV>
+
+<P>or, using CMake from a build directory:
+</P>
+<DIV ALIGN=center><TABLE  BORDER=1 >
+<TR><TD >install the accelerator package </TD><TD >  cmake -DPKG_FFT=ON -DPKG_KOKKOS=ON, etc </TD></TR>
+<TR><TD >add compile/link flags </TD><TD >  cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake -DKokkos_ARCH_PASCAL60=ON </TD></TR>
+<TR><TD >re-build SPARTA </TD><TD >  make
+</TD></TR></TABLE></DIV>
+
+<P>Then do the following:
+</P>
+<DIV ALIGN=center><TABLE  BORDER=1 >
 <TR><TD >prepare and test a regular SPARTA simulation </TD><TD >  lmp_kokkos_cuda -in in.script; mpirun -np 32 lmp_kokkos_cuda -in in.script </TD></TR>
 <TR><TD >enable specific accelerator support via '-k on' <A HREF = "Section_start.html#start_6">command-line switch</A>, </TD><TD >  -k on g 1 </TD></TR>
 <TR><TD >set any needed options for the package via "-pk" <A HREF = "Section_start.html#start_6">command-line switch</A> or <A HREF = "package.html">package</A> command, </TD><TD >  only if defaults need to be changed, -pk kokkos reduction atomic </TD></TR>
