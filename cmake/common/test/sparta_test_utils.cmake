@@ -1,7 +1,7 @@
 if(SPARTA_DSMC_TESTING_PATH)
   get_filename_component(SPARTA_DSMC_TESTING_ABSOLUTE_PATH
                          ${SPARTA_DSMC_TESTING_PATH} ABSOLUTE)
-  message("dsmc_testing=${SPARTA_DSMC_TESTING_ABSOLUTE_PATH}")
+  # message("dsmc_testing=${SPARTA_DSMC_TESTING_ABSOLUTE_PATH}")
   set(SPARTA_TEST_DRIVER python
                          ${SPARTA_DSMC_TESTING_ABSOLUTE_PATH}/regression.py)
 endif()
@@ -24,6 +24,7 @@ function(sparta_add_test sparta_in_file mpi_ranks)
   endif()
 
   if(SPARTA_TEST_DRIVER)
+    # message("Adding test \"${__test_name}\" with test driver!")
     set(__sparta_test_driver_postfix_args
         ${CMAKE_CURRENT_BINARY_DIR} -logread ${CMAKE_CURRENT_BINARY_DIR} olog
         -customtest ${sparta_in_file})
@@ -34,7 +35,7 @@ function(sparta_add_test sparta_in_file mpi_ranks)
       ${__test_name} PROPERTIES PASS_REGULAR_EXPRESSION "passed;no failures"
                                 FAIL_REGULAR_EXPRESSION "FAILED")
   else()
-    message("Adding test \"${__test_name}\" without test driver!")
+    # message("Adding test \"${__test_name}\" without test driver!")
     add_test(NAME ${__test_name}
              COMMAND ${__sparta_command} -in ${sparta_in_file} -log
                      ${SPARTA_MACHINE}.${sparta_in_file}.log)
@@ -42,5 +43,38 @@ function(sparta_add_test sparta_in_file mpi_ranks)
       ${__test_name}
       PROPERTIES PASS_REGULAR_EXPRESSION "" FAIL_REGULAR_EXPRESSION
                  "Error;ERROR;exited on signal")
+  endif()
+endfunction()
+
+#
+# sparta_add_tests: Add the tests listed in in_file_list for all ranks listed in
+# mpi_ranks
+#
+function(sparta_add_tests in_file_list mpi_ranks)
+  foreach(mpi_rank IN LISTS mpi_ranks)
+    foreach(in_file IN LISTS in_file_list)
+      sparta_add_test(${in_file} ${mpi_rank})
+    endforeach()
+  endforeach()
+endfunction()
+
+#
+# sparta_all_all_tests: Add all the tests (*.in) in the current working
+# directory with 1 and 4 mpi ranks
+#
+function(sparta_add_all_tests)
+  file(
+    GLOB __in_file_list
+    LIST_DIRECTORIES false
+    RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+    CONFIGURE_DEPENDS in.*)
+
+  list(APPEND __default_mpi_ranks "1")
+  list(APPEND __default_mpi_ranks "4")
+
+  if(BUILD_MPI)
+    sparta_add_tests("${__in_file_list}" "${__default_mpi_ranks}")
+  else()
+    sparta_add_tests("${__in_file_list}" "none")
   endif()
 endfunction()

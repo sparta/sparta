@@ -1,5 +1,1 @@
-if(BUILD_MPI)
-    sparta_add_test(in.ablation.2d 1)
-else()
-    sparta_add_test(in.ablation.2d "none")
-endif()
+sparta_add_all_tests()
