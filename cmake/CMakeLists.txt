@@ -5,9 +5,17 @@ project(SPARTA)
 set(SPARTA_BUILD_VER "1.0.0")
 set(SPARTA_API_VER "1")
 
+# ######### BEGIN CMAKE POLICY SETTINGS ##########
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12.0")
   message(STATUS "Setting policy CMP0074 to use <TPL>_ROOT variables")
   cmake_policy(SET CMP0074 NEW)
+endif()
+# ######### END CMAKE POLICY SETTINGS ##########
+
+# Include CTest in top-level CMakeLists. Tests are configured and added in
+# examples/CMakeLists.txt
+if(SPARTA_ENABLE_TESTING)
+  include(CTest)
 endif()
 
 # ######### BEGIN SET COMMON DIRS ##########
@@ -39,6 +47,7 @@ else()
       "libsparta_${SPARTA_MACHINE}${CMAKE_STATIC_LIBRARY_SUFFIX}")
 endif()
 
+# ######### BEGIN LIST AND EXIT ##########
 if(SPARTA_LIST_PKGS OR SPARTA_LIST_TPLS)
   if(SPARTA_LIST_PKGS)
     message(STATUS "SPARTA Packages:")
@@ -67,6 +76,7 @@ if(SPARTA_LIST_PKGS OR SPARTA_LIST_TPLS)
   # EXIT
   return()
 endif()
+# ######### END LIST AND EXIT ##########
 
 # ######### BEGIN PROCESS SPARTA OPTIONS ##########
 include(${SPARTA_CMAKE_COMMON_DIR}/process/sparta_build_options.cmake)
@@ -77,5 +87,4 @@ include(${SPARTA_CMAKE_COMMON_DIR}/print/sparta_options.cmake)
 # ######### END   PRINT SPARTA OPTIONS ##########
 
 add_subdirectory(${SPARTA_SRC_DIR} ${CMAKE_CURRENT_BINARY_DIR}/src)
-
 add_subdirectory(${SPARTA_EXAMPLES_DIR} ${CMAKE_CURRENT_BINARY_DIR}/examples)
