@@ -19,7 +19,8 @@ each of them.  Packages are groups of files that enable a specific set
 of features.  For example, the KOKKOS package provides styles that
 can run on different hardware such as GPUs.  You can see the list of all
 packages and "make" commands to manage them by typing "make package"
-from within the src directory of the SPARTA distribution.  <A HREF = "Section_start.html#start_3">Section
+from within the src directory of the SPARTA distribution or
+"cmake -DSPARTA_LIST_PKGS" from within a build directory.  <A HREF = "Section_start.html#start_3">Section
 2.3</A> gives general info on how to install
 and un-install packages as part of the SPARTA build process.
 </P>
@@ -73,13 +74,22 @@ FFTW2, FFTW3, and MKL.If no FFT library is specified in the Makefile, SPARTA wil
 use the internal KISS FFT library that is included with SPARTA. See the see discussion
 in doc/Section_start.html#2_2 (step 6).
 </P>
-<P><B>Install or un-install:</B>
+<P><B>Install or un-install with make:</B>
 </P>
 <PRE>make yes-fft
 make machine 
 </PRE>
 <PRE>make no-fft
 make machine 
+</PRE>
+<P><B>Install or un-install with CMake:</B>
+</P>
+<PRE>cd build
+cmake -C /path/to/sparta/cmake/presets/machine.cmake -DPKG_FFT=ON /path/to/sparta/cmake
+make 
+</PRE>
+<PRE>cmake -C /path/to/sparta/cmake/presets/machine.cmake -DPKG_FFT=OFF /path/to/sparta/cmake
+make 
 </PRE>
 <P><B>Supporting info:</B>
 </P>
@@ -114,47 +124,79 @@ lib/kokkos.
 </P>
 <P>For the KOKKOS package, you have 3 choices when building.  You can
 build with either CPU or KNL or GPU support.  Each choice requires
-additional settings in your Makefile.machine for the KOKKOS_DEVICES
-and KOKKOS_ARCH settings.  See the src/MAKE/OPTIONS/Makefile.kokkos*
-files for examples.
+additional settings in your Makefile.machine or machine.cmake file 
+for the KOKKOS_DEVICES and KOKKOS_ARCH settings. See the 
+src/MAKE/OPTIONS/Makefile.kokkos* or cmake/presets/*kokkos*.cmake
+files for examples. For CMake, it's best to start by copying
+cmake/presets/kokkos_cuda.cmake to cmake/presets/machine.cmake.
 </P>
-<P>For multicore CPUs using OpenMP:
+<P><B>For multicore CPUs using OpenMP:</B>
+</P>
+<P>Using Makefiles:
 </P>
 <PRE>KOKKOS_DEVICES = OpenMP
 KOKKOS_ARCH = HSW           # HSW = Haswell, SNB = SandyBridge, BDW = Broadwell, etc 
 </PRE>
-<P>For Intel KNLs using OpenMP:
+<P>Using CMake:
+</P>
+<P>-DKokkos_ENABLE_OPENMP=ON
+-DKokkos_ARCH_HSW=ON
+</P>
+<P><B>For Intel KNLs using OpenMP:</B>
+</P>
+<P>Using Makefiles:
 </P>
 <PRE>KOKKOS_DEVICES = OpenMP
 KOKKOS_ARCH = KNL 
 </PRE>
-<P>For NVIDIA GPUs using CUDA:
+<P>Using CMake:
+</P>
+<PRE>-DKokkos_ENABLE_OPENMP=ON
+-DKokkos_ARCH_KNL=ON 
+</PRE>
+<P><B>For NVIDIA GPUs using CUDA:</B>
 </P>
 <PRE>KOKKOS_DEVICES = Cuda
-KOKKOS_ARCH = Pascal60,Power8     # P100 hosted by an IBM Power8, etc
-KOKKOS_ARCH = Kepler37,Power8     # K80 hosted by an IBM Power8, etc 
+KOKKOS_ARCH = PASCAL60,POWER8     # P100 hosted by an IBM Power8, etc
+KOKKOS_ARCH = KEPLER37,POWER8     # K80 hosted by an IBM Power8, etc 
 </PRE>
-<P>For GPUs, you also need these 2 lines in your Makefile.machine before
-the CC line is defined, in this case for use with OpenMPI mpicxx.  The
-2 lines define a nvcc wrapper compiler, which will use nvcc for
-compiling CUDA files or use a C++ compiler for non-Kokkos, non-CUDA
+<P>Using CMake:
+</P>
+<PRE>-DKokkos_ENABLE_CUDA=ON
+-DKokkos_ARCH_PASCAL60=ON -DKokkos_ARCH_POWER8=ON 
+</PRE>
+<P>For make with GPUs, the following 2 lines define a nvcc wrapper compiler, which will use
+nvcc for compiling CUDA files or use a C++ compiler for non-Kokkos, non-CUDA
 files.
 </P>
 <PRE>KOKKOS_ABSOLUTE_PATH = $(shell cd $(KOKKOS_PATH); pwd)
 export OMPI_CXX = $(KOKKOS_ABSOLUTE_PATH)/bin/nvcc_wrapper
 CC =		mpicxx 
 </PRE>
-<P>Once you have an appropriate Makefile.machine, you can
+<P>For CMake, copy cmake/presets/kokkos_cuda.cmake so OMPI_CXX and CC are set
+properly.
+</P>
+<P>Once you have an appropriate Makefile.machine or machine.cmake, you can
 install/un-install the package and build SPARTA in the usual manner.
 Note that you cannot build one executable to run on multiple hardware
 targets (CPU or KNL or GPU).  You need to build SPARTA once for each
 hardware target, to produce a separate executable.
+</P>
+<P>Using make:
 </P>
 <PRE>make yes-kokkos
 make machine 
 </PRE>
 <PRE>make no-kokkos
 make machine 
+</PRE>
+<P>Using CMake:
+</P>
+<PRE>cmake -C /path/to/sparta/cmake/presets/machine.cmake /path/to/sparta/cmake
+make 
+</PRE>
+<PRE>cmake -C /path/to/sparta/cmake/presets/machine.cmake -DPKG_KOKKOS=OFF /path/to/sparta/cmake
+make 
 </PRE>
 <P><B>Supporting info:</B>
 </P>
