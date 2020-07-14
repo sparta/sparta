@@ -17,26 +17,41 @@ endif()
 #
 # cmake-format: on
 function(sparta_add_test sparta_in_file mpi_ranks)
+  if(SPARTA_DSMC_TESTING_SPA_ARGS)
+    string(REPLACE " " ";" __dsmc_testing_spa_args
+                   ${SPARTA_DSMC_TESTING_SPA_ARGS})
+  endif()
   if(NOT BUILD_MPI)
     set(__test_name ${SPARTA_MACHINE}.${sparta_in_file})
-    set(__sparta_command $<TARGET_FILE:${TARGET_SPARTA}>)
+    set(__sparta_command $<TARGET_FILE:${TARGET_SPARTA}>
+                         ${__dsmc_testing_spa_args})
   else()
     set(__test_name ${SPARTA_MACHINE}.${sparta_in_file}.mpi_${mpi_ranks})
-    set(__sparta_command ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${mpi_ranks}
-                         $<TARGET_FILE:${TARGET_SPARTA}>)
+    set(__sparta_command
+        ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${mpi_ranks}
+        $<TARGET_FILE:${TARGET_SPARTA}> ${__dsmc_testing_spa_args})
   endif()
 
   if(SPARTA_DSMC_TESTING_PATH)
     # message("Adding test \"${__test_name}\" with test driver!")
     string(REPLACE ";" " " __sparta_driver_command "${__sparta_command}")
+    if(SPARTA_DSMC_TESTING_DRIVER_ARGS)
+      string(REPLACE " " ";" __dsmc_testing_driver_args
+                     ${SPARTA_DSMC_TESTING_DRIVER_ARGS})
+    endif()
     set(__sparta_test_driver_postfix_args
-        ${CMAKE_CURRENT_BINARY_DIR} -logread ${CMAKE_CURRENT_BINARY_DIR} olog
-        -customtest ${sparta_in_file})
+        ${CMAKE_CURRENT_BINARY_DIR}
+        -logread
+        ${CMAKE_CURRENT_BINARY_DIR}
+        olog
+        -customtest
+        ${sparta_in_file}
+        ${__dsmc_testing_driver_args})
     add_test(
       NAME ${__test_name}
       COMMAND ${SPARTA_TEST_DRIVER} mpi_${mpi_ranks}
               "${__sparta_driver_command}" ${__sparta_test_driver_postfix_args})
-    #unable to compile regex: ^\*{3} test .* passed
+    # unable to compile regex: ^\*{3} test .* passed
     set_tests_properties(
       ${__test_name} PROPERTIES PASS_REGULAR_EXPRESSION "passed;no failures"
                                 FAIL_REGULAR_EXPRESSION "FAILED")
