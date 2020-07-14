@@ -25,8 +25,8 @@ message(STATUS "")
 
 message(STATUS "Enabled extra options")
 foreach(opt IN LISTS SPARTA_EXTRA_OPTIONS_LIST)
-  if(${${opt}})
-    message(STATUS "  ${opt}")
+  if(${opt})
+    message(STATUS "  ${opt}: ${${opt}}")
   endif()
 endforeach()
 
@@ -40,7 +40,6 @@ if(SPARTA_ENABLE_TESTING AND NOT SPARTA_DSMC_TESTING_PATH)
   message(STATUS "")
 endif()
 
-message(STATUS "SPARTA_MACHINE: ${SPARTA_MACHINE}")
 message(
   STATUS "SPARTA_DEFAULT_CXX_COMPILE_FLAGS: ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS}"
 )

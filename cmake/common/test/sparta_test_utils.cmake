@@ -17,27 +17,23 @@ endif()
 #
 # cmake-format: on
 function(sparta_add_test sparta_in_file mpi_ranks)
-  if(SPARTA_DSMC_TESTING_SPA_ARGS)
-    string(REPLACE " " ";" __dsmc_testing_spa_args
-                   ${SPARTA_DSMC_TESTING_SPA_ARGS})
+  if(SPARTA_SPA_ARGS)
+    string(REPLACE " " ";" __spa_args ${SPARTA_SPA_ARGS})
   endif()
   if(NOT BUILD_MPI)
     set(__test_name ${SPARTA_MACHINE}.${sparta_in_file})
-    set(__sparta_command $<TARGET_FILE:${TARGET_SPARTA}>
-                         ${__dsmc_testing_spa_args})
+    set(__sparta_command $<TARGET_FILE:${TARGET_SPARTA}> ${__spa_args})
   else()
     set(__test_name ${SPARTA_MACHINE}.${sparta_in_file}.mpi_${mpi_ranks})
-    set(__sparta_command
-        ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${mpi_ranks}
-        $<TARGET_FILE:${TARGET_SPARTA}> ${__dsmc_testing_spa_args})
+    set(__sparta_command ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${mpi_ranks}
+                         $<TARGET_FILE:${TARGET_SPARTA}> ${__spa_args})
   endif()
 
   if(SPARTA_DSMC_TESTING_PATH)
     # message("Adding test \"${__test_name}\" with test driver!")
     string(REPLACE ";" " " __sparta_driver_command "${__sparta_command}")
     if(SPARTA_DSMC_TESTING_DRIVER_ARGS)
-      string(REPLACE " " ";" __dsmc_testing_driver_args
-                     ${SPARTA_DSMC_TESTING_DRIVER_ARGS})
+      string(REPLACE " " ";" __driver_args ${SPARTA_DSMC_TESTING_DRIVER_ARGS})
     endif()
     set(__sparta_test_driver_postfix_args
         ${CMAKE_CURRENT_BINARY_DIR}
@@ -46,7 +42,7 @@ function(sparta_add_test sparta_in_file mpi_ranks)
         olog
         -customtest
         ${sparta_in_file}
-        ${__dsmc_testing_driver_args})
+        ${__driver_args})
     add_test(
       NAME ${__test_name}
       COMMAND ${SPARTA_TEST_DRIVER} mpi_${mpi_ranks}

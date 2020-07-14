@@ -80,6 +80,11 @@ before running cmake.
 * SPARTA_DSMC_TESTING_PATH
   * Add tests in SPARTA_DSMC_TESTING_PATH/examples to be run via ctest.
   * Run all tests via SPARTA_DSMC_TESTING_PATH/regression.py.
+* SPARTA_SPA_ARGS
+  * Additional arguments for the sparta binary. Only applied if SPARTA_ENABLE_TESTING or
+  SPARTA_DSMC_TESTING_PATH are enabled.
+* SPARTA_DSMC_TESTING_DRIVER_ARGS
+  * Additional arguments for SPARTA_DSMC_TESTING_PATH/regression.py
 
 ## Examples
 ### Selecting packages via the command line
