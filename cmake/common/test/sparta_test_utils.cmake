@@ -36,6 +36,7 @@ function(sparta_add_test sparta_in_file mpi_ranks)
       NAME ${__test_name}
       COMMAND ${SPARTA_TEST_DRIVER} mpi_${mpi_ranks}
               "${__sparta_driver_command}" ${__sparta_test_driver_postfix_args})
+    #unable to compile regex: ^\*{3} test .* passed
     set_tests_properties(
       ${__test_name} PROPERTIES PASS_REGULAR_EXPRESSION "passed;no failures"
                                 FAIL_REGULAR_EXPRESSION "FAILED")
