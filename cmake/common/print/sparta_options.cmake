@@ -32,6 +32,10 @@ endforeach()
 
 message(STATUS "")
 
+if(SPARTA_ENABLE_TESTING AND NOT SPARTA_DSMC_TESTING_PATH)
+  message(STATUS "Test correctness verfication is limited without SPARTA_DSMC_TESTING_PATH set!")
+endif()
+
 message(STATUS "SPARTA_MACHINE: ${SPARTA_MACHINE}")
 message(
   STATUS "SPARTA_DEFAULT_CXX_COMPILE_FLAGS: ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS}"
