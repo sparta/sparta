@@ -74,7 +74,12 @@ before running cmake.
 * SPARTA_LIST_PKGS
   * Print the Sparta packages and exit.
 * SPARTA_LIST_TPLS
-  * Print the Sparta TPLs and exit.  
+  * Print the Sparta TPLs and exit.
+* SPARTA_ENABLE_TESTING
+  * Add tests in examples to be run via ctest.
+* SPARTA_DSMC_TESTING_PATH
+  * Add tests in SPARTA_DSMC_TESTING_PATH/examples to be run via ctest.
+  * Run all tests via SPARTA_DSMC_TESTING_PATH/regression.py.
 
 ## Examples
 ### Selecting packages via the command line

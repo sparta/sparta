@@ -26,7 +26,7 @@ function(sparta_add_test sparta_in_file mpi_ranks)
                          $<TARGET_FILE:${TARGET_SPARTA}>)
   endif()
 
-  if(SPARTA_TEST_DRIVER)
+  if(SPARTA_DSMC_TESTING_PATH)
     # message("Adding test \"${__test_name}\" with test driver!")
     string(REPLACE ";" " " __sparta_driver_command "${__sparta_command}")
     set(__sparta_test_driver_postfix_args

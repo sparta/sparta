@@ -25,7 +25,7 @@ if(SPARTA_ENABLE_TESTING)
       "surf_collide"
       "surf"
       "step"
-      "spiky"
+      # "spiky"
       "sphere"
       "jagged"
       "implicit"

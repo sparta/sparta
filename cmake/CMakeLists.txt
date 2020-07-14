@@ -14,7 +14,7 @@ endif()
 
 # Include CTest in top-level CMakeLists. Tests are configured and added in
 # examples/CMakeLists.txt
-if(SPARTA_ENABLE_TESTING)
+if(SPARTA_ENABLE_TESTING OR SPARTA_DSMC_TESTING_PATH)
   include(CTest)
 endif()
 
@@ -22,6 +22,7 @@ endif()
 set(SPARTA_TPL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../lib)
 set(SPARTA_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 set(SPARTA_EXAMPLES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../examples)
+set(SPARTA_DSMC_TESTING_EXAMPLES_DIR ${SPARTA_DSMC_TESTING_PATH}/examples)
 set(SPARTA_CMAKE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Modules)
 set(SPARTA_CMAKE_COMMON_DIR ${SPARTA_CMAKE_DIR}/common)
@@ -88,3 +89,7 @@ include(${SPARTA_CMAKE_COMMON_DIR}/print/sparta_options.cmake)
 
 add_subdirectory(${SPARTA_SRC_DIR} ${CMAKE_CURRENT_BINARY_DIR}/src)
 add_subdirectory(${SPARTA_EXAMPLES_DIR} ${CMAKE_CURRENT_BINARY_DIR}/examples)
+if(SPARTA_DSMC_TESTING_PATH)
+  add_subdirectory(${SPARTA_DSMC_TESTING_EXAMPLES_DIR}
+                   ${CMAKE_CURRENT_BINARY_DIR}/dsmc_testing/examples)
+endif()

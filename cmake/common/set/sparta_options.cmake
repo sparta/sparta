@@ -73,4 +73,8 @@ sparta_option(
 
 sparta_option(SPARTA_ENABLE_TESTING "Enable sparta testing. Default: OFF" OFF
               SPARTA_EXTRA_OPTIONS_LIST)
+
+sparta_option(
+  SPARTA_DSMC_TESTING_PATH "Enable sparta dsmc_testing. Default: OFF" OFF
+  SPARTA_EXTRA_OPTIONS_LIST)
 # ######### END   SPARTA EXTRA OPTIONS ##########

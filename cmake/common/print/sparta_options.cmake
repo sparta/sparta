@@ -37,6 +37,7 @@ if(SPARTA_ENABLE_TESTING AND NOT SPARTA_DSMC_TESTING_PATH)
     STATUS
       "Test correctness verfication is limited without SPARTA_DSMC_TESTING_PATH set!"
   )
+  message(STATUS "")
 endif()
 
 message(STATUS "SPARTA_MACHINE: ${SPARTA_MACHINE}")
