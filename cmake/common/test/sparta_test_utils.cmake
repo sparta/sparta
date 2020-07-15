@@ -12,11 +12,14 @@ endif()
 # "${SPARTA_MACHINE}.${sparta_in_file}.mpi_${mpi_ranks}"
 # @param sparta_in_file: The input file for the test being 
 #                        added argument to sparta's "-in" option.
-# @param mpi_ranks: A positive integer which is ignored if 
-#                   BUILD_MPI is false.
+# @param mpi_ranks:      A positive integer which is ignored if 
+#                        BUILD_MPI is false.
+# @param config_name:    A string describing the configuration to add
+#                        this test to. Setting config_name to "" will
+#                        add the test to the default configuration.
 #
 # cmake-format: on
-function(sparta_add_test sparta_in_file mpi_ranks)
+function(sparta_add_test sparta_in_file mpi_ranks config_name)
   if(SPARTA_SPA_ARGS)
     string(REPLACE " " ";" __spa_args ${SPARTA_SPA_ARGS})
   endif()
@@ -45,6 +48,7 @@ function(sparta_add_test sparta_in_file mpi_ranks)
         ${__driver_args})
     add_test(
       NAME ${__test_name}
+      CONFIGURATIONS ${config_name}
       COMMAND ${SPARTA_TEST_DRIVER} mpi_${mpi_ranks}
               "${__sparta_driver_command}" ${__sparta_test_driver_postfix_args})
     # unable to compile regex: ^\*{3} test .* passed
@@ -53,9 +57,11 @@ function(sparta_add_test sparta_in_file mpi_ranks)
                                 FAIL_REGULAR_EXPRESSION "FAILED")
   else()
     # message("Adding test \"${__test_name}\" without test driver!")
-    add_test(NAME ${__test_name}
-             COMMAND ${__sparta_command} -in ${sparta_in_file} -log
-                     ${SPARTA_MACHINE}.${sparta_in_file}.log)
+    add_test(
+      NAME ${__test_name}
+      CONFIGURATIONS ${config_name}
+      COMMAND ${__sparta_command} -in ${sparta_in_file} -log
+              ${SPARTA_MACHINE}.${sparta_in_file}.log)
     set_tests_properties(
       ${__test_name}
       PROPERTIES PASS_REGULAR_EXPRESSION "" FAIL_REGULAR_EXPRESSION
@@ -65,28 +71,40 @@ endfunction()
 
 # cmake-format: off
 #
-# sparta_add_tests: Add the tests listed in in_file_list for all ranks listed in
-# mpi_ranks
-# @param in_file_list: a list of in.* files
-# @param mpi_ranks:    a list of positive integers or "none"
+# sparta_add_tests_to_config: Add the tests listed in in_file_list for all ranks listed in
+#                             mpi_ranks to the specified configuration.
+# @param in_file_list: A list of in.* files
+# @param mpi_ranks:    A list of positive integers or "none"
+# @param config_name:  A string describing the configuration to add
+#                      this test to. Setting config_name to "" will
+#                      add the test to the default configuration.
 #
 # cmake-format: on
-function(sparta_add_tests in_file_list mpi_ranks)
+function(sparta_add_tests_to_config in_file_list mpi_ranks config_name)
   foreach(mpi_rank IN LISTS mpi_ranks)
     foreach(in_file IN LISTS in_file_list)
       # message("sparta_add_test(${in_file} ${mpi_rank})")
-      sparta_add_test(${in_file} ${mpi_rank})
+      sparta_add_test(${in_file} ${mpi_rank} "${config_name}")
     endforeach()
   endforeach()
+endfunction()
+
+# Wrapper to sparta_add_tests_to_config
+function(sparta_add_tests in_file_list mpi_ranks)
+  sparta_add_test_to_config("${__in_file_list}" "${mpi_ranks}" "")
 endfunction()
 
 # cmake-format: off
 #
 # sparta_add_all_tests: Add all the tests (*.in) in the current working
-# directory with 1 and 4 mpi ranks
+#                       directory with all specified mpi_ranks.
+# @param mpi_ranks:    A list of positive integers or "none"
+# @param config_name:  A string describing the configuration to add
+#                      this test to. Setting config_name to "" will
+#                      add the test to the default configuration.
 #
 # cmake-format: on
-function(sparta_add_all_tests mpi_ranks)
+function(sparta_add_all_tests_to_config mpi_ranks config_name)
   file(
     GLOB __in_file_list
     LIST_DIRECTORIES false
@@ -94,8 +112,14 @@ function(sparta_add_all_tests mpi_ranks)
     CONFIGURE_DEPENDS in.*)
 
   if(BUILD_MPI)
-    sparta_add_tests("${__in_file_list}" "${mpi_ranks}")
+    sparta_add_tests_to_config("${__in_file_list}" "${mpi_ranks}"
+                               "${config_name}")
   else()
-    sparta_add_tests("${__in_file_list}" "none")
+    sparta_add_tests_to_config("${__in_file_list}" "none" "${config_name}")
   endif()
+endfunction()
+
+# Wrapper to sparta_add_all_tests_to_config
+function(sparta_add_all_tests mpi_ranks)
+  sparta_add_all_tests_to_config("${mpi_ranks}" "")
 endfunction()
