@@ -79,6 +79,12 @@ sparta_option(
   SPARTA_EXTRA_OPTIONS_LIST)
 
 sparta_option(
+  SPARTA_CTEST_CONFIGS
+  "Additional ctest configurations, separtaed by \"\;\", that allow SPARTA_SPA_ARGS_<CONFIG_NAME> or SPARTA_DSMC_TESTING_DRIVER_ARGS_<CONFIG_NAME> to be specified. Default: \"\""
+  ""
+  SPARTA_EXTRA_OPTIONS_LIST)
+
+sparta_option(
   SPARTA_SPA_ARGS "Additional arguments for the sparta binary. Default: OFF"
   OFF SPARTA_EXTRA_OPTIONS_LIST)
 

@@ -136,3 +136,7 @@ if(BUILD_MPI)
                            INTERFACE ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
   endif()
 endif()
+
+if(SPARTA_CTEST_CONFIGS)
+  string(REPLACE " " ";" SPARTA_CTEST_CONFIGS "${SPARTA_CTEST_CONFIGS}")
+endif()

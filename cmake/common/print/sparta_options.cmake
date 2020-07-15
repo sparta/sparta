@@ -27,6 +27,15 @@ message(STATUS "Enabled extra options")
 foreach(opt IN LISTS SPARTA_EXTRA_OPTIONS_LIST)
   if(${opt})
     message(STATUS "  ${opt}: ${${opt}}")
+
+    if("${opt}" STREQUAL "SPARTA_SPA_ARGS" OR "${opt}" STREQUAL
+                                              "SPARTA_DSMC_TESTING_DRIVER_ARGS")
+      if(SPARTA_CTEST_CONFIGS)
+        foreach(config ${SPARTA_CTEST_CONFIGS})
+          message(STATUS "  ${opt}_${config}: ${${opt}_${config}}")
+        endforeach()
+      endif()
+    endif()
   endif()
 endforeach()
 

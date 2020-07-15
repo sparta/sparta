@@ -84,7 +84,9 @@ before running cmake.
   * Additional arguments for the sparta binary. Only applied if SPARTA_ENABLE_TESTING or
   SPARTA_DSMC_TESTING_PATH are enabled.
 * SPARTA_DSMC_TESTING_DRIVER_ARGS
-  * Additional arguments for SPARTA_DSMC_TESTING_PATH/regression.py
+  * Additional arguments for SPARTA_DSMC_TESTING_PATH/regression.py.
+* SPARTA_CTEST_CONFIGS
+  * Additional ctest configurations, separated by `;`, that allow `SPARTA_SPA_ARGS_<CONFIG_NAME>` or `SPARTA_DSMC_TESTING_DRIVER_ARGS_<CONFIG_NAME>` to be specified.
 
 ## Examples
 ### Selecting packages via the command line
@@ -100,6 +102,19 @@ cmake -DBUILD_<NAME>_TPL=[ON|OFF] /path/to/sparta/cmake
 ### Specifying build flags via the command line
 ```bash
 cmake -DSPARTA_DEFAULT_CXX_COMPILE_FLAGS=<FLAGS> /path/to/sparta/cmake
+```
+
+### Specifying multiple ctest configurations via the command line
+```bash
+cmake -DSPARTA_CTEST_CONFIGS="PARALLEL;SERIAL" \
+      -DSPARTA_SPA_ARGS_SERIAL=spa_args \
+      -DSPARTA_DSMC_TESTING_DRIVER_ARGS_PARALLEL=driver_args \
+      /path/to/sparta/cmake
+
+make -j
+
+ctest -C SERIAL
+ctest -C PARALLEL
 ```
 
 # Build system design
