@@ -77,6 +77,8 @@ function(sparta_add_test sparta_in_file mpi_ranks config_name)
       PROPERTIES PASS_REGULAR_EXPRESSION "" FAIL_REGULAR_EXPRESSION
                  "Error;ERROR;exited on signal")
   endif()
+
+  set_property(TEST ${__test_name} PROPERTY PROCESSORS "${mpi_ranks}")
 endfunction()
 
 # cmake-format: off
