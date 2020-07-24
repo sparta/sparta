@@ -93,4 +93,13 @@ sparta_option(
   "Additional arguments for ${SPARTA_DSMC_TESTING_PATH}/regression.py. Default: OFF"
   OFF
   SPARTA_EXTRA_OPTIONS_LIST)
+
+if(SPARTA_CTEST_CONFIGS)
+  foreach(config ${SPARTA_CTEST_CONFIGS})
+    list(APPEND SPARTA_EXTRA_OPTIONS_LIST SPARTA_SPA_ARGS_${config})
+    list(APPEND SPARTA_EXTRA_OPTIONS_LIST
+         SPARTA_DSMC_TESTING_DRIVER_ARGS_${config})
+  endforeach()
+endif()
+
 # ######### END   SPARTA EXTRA OPTIONS ##########
