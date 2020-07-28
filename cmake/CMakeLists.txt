@@ -15,6 +15,10 @@ endif()
 # Include CTest in top-level CMakeLists. Tests are configured and added in
 # examples/CMakeLists.txt
 if(SPARTA_ENABLE_TESTING OR SPARTA_DSMC_TESTING_PATH)
+  if(SPARTA_DSMC_TESTING_PATH)
+    file(COPY ${SPARTA_DSMC_TESTING_PATH}/cmake/CTestConfig.cmake
+         DESTINATION ${CMAKE_CURRENT_SOURCE_DIR})
+  endif()
   include(CTest)
 endif()
 
