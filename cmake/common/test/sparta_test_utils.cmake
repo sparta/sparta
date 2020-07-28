@@ -78,7 +78,12 @@ function(sparta_add_test sparta_in_file mpi_ranks config_name)
                  "Error;ERROR;exited on signal")
   endif()
 
-  set_property(TEST ${__test_name} PROPERTY PROCESSORS "${mpi_ranks}")
+  if(NOT SPARTA_DSMC_TESTING_THREADS_PER_RANK)
+    set(SPARTA_DSMC_TESTING_THREADS_PER_RANK 1)
+  endif()
+  math(EXPR processors "${mpi_ranks} * ${SPARTA_DSMC_TESTING_THREADS_PER_RANK}")
+  # message("processors=${processors}")
+  set_property(TEST ${__test_name} PROPERTY PROCESSORS "${processors}")
 endfunction()
 
 # cmake-format: off
