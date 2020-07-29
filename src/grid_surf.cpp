@@ -1406,7 +1406,6 @@ int Grid::find_overlaps(int isurf, cellint *list)
     if (surf->distributed) tri = &surf->mytris[isurf];
     else tri = &surf->tris[isurf];
 
-    double sbox[2][3];
     slo[0] = MIN(tri->p1[0],tri->p2[0]);
     slo[0] = MIN(tri->p3[0],slo[0]);
     slo[1] = MIN(tri->p1[1],tri->p2[1]);
