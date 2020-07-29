@@ -79,9 +79,16 @@ function(sparta_add_test sparta_in_file mpi_ranks config_name)
   endif()
 
   if(NOT SPARTA_DSMC_TESTING_THREADS_PER_RANK)
+    #message(WARNING "SPARTA_DSMC_TESTING_THREADS_PER_RANK is uset! Defaulting to 1.")
     set(SPARTA_DSMC_TESTING_THREADS_PER_RANK 1)
   endif()
-  math(EXPR processors "${mpi_ranks} * ${SPARTA_DSMC_TESTING_THREADS_PER_RANK}")
+
+  if (BUILD_MPI)
+    math(EXPR processors "${mpi_ranks} * ${SPARTA_DSMC_TESTING_THREADS_PER_RANK}")
+  else()
+      set(processors ${SPARTA_DSMC_TESTING_THREADS_PER_RANK})
+  endif()
+
   # message("processors=${processors}")
   set_property(TEST ${__test_name} PROPERTY PROCESSORS "${processors}")
 endfunction()
