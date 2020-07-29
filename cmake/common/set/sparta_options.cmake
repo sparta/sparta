@@ -94,6 +94,18 @@ sparta_option(
   OFF
   SPARTA_EXTRA_OPTIONS_LIST)
 
+sparta_option(
+  SPARTA_MULTIBUILD_CONFIGS
+  "Additional sparta build configurations, separtaed by \"\;\", that allow multiple build configurations to be built from a single build directory. Default: \"\""
+  ""
+  SPARTA_EXTRA_OPTIONS_LIST)
+
+sparta_option(
+  SPARTA_MULTIBUILD_PRESET_DIR
+  "The path to your preset files at ${SPARTA_MULTIBUILD_PRESET_DIR}/${SPARTA_MULTIBUILD_CONFIG}.cmake. Default: \"\""
+  ""
+  SPARTA_EXTRA_OPTIONS_LIST)
+
 if(SPARTA_CTEST_CONFIGS)
   foreach(config ${SPARTA_CTEST_CONFIGS})
     list(APPEND SPARTA_EXTRA_OPTIONS_LIST SPARTA_SPA_ARGS_${config})

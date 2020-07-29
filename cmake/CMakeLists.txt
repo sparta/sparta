@@ -40,7 +40,32 @@ include(${SPARTA_CMAKE_COMMON_DIR}/set/sparta_cmake_defaults.cmake)
 include(${SPARTA_CMAKE_COMMON_DIR}/set/sparta_options.cmake)
 # ######### END   SET SPARTA OPTIONS ##########
 
+if(SPARTA_MULTIBUILD_CONFIGS)
+  include(ExternalProject)
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/CTestTestFile.cmake
+       "#Auto-generated ctest file for SPARTA multi-builds\n")
+  get_filename_component(SPARTA_MULTIBUILD_PRESET_DIR_ABSOLUTE
+                         ${SPARTA_MULTIBUILD_PRESET_DIR} ABSOLUTE)
+
+  foreach(BUILD_TYPE ${SPARTA_MULTIBUILD_CONFIGS})
+    message("Adding ${BUILD_TYPE}...")
+    ExternalProject_Add(
+      ${BUILD_TYPE}
+      SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
+      CONFIGURE_COMMAND
+        ${CMAKE_COMMAND} -C
+        ${SPARTA_MULTIBUILD_PRESET_DIR_ABSOLUTE}/${BUILD_TYPE}.cmake
+        ${SPARTA_CMAKE_DIR}
+      INSTALL_COMMAND "")
+    file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/CTestTestFile.cmake
+         "subdirs(\"${BUILD_TYPE}-prefix/src/${BUILD_TYPE}-build/\")\n")
+  endforeach()
+
+  return()
+endif()
+
 set(TARGET_SPARTA spa_${SPARTA_MACHINE})
+
 set(TARGET_SPARTA_LIB sparta_${SPARTA_MACHINE})
 if(BUILD_SHARED_LIBS)
   set(TARGET_SPARTA_LIB_LINK "libsparta${CMAKE_SHARED_LIBRARY_SUFFIX}")
