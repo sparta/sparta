@@ -12,16 +12,6 @@ if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12.0")
 endif()
 # ######### END CMAKE POLICY SETTINGS ##########
 
-# Include CTest in top-level CMakeLists. Tests are configured and added in
-# examples/CMakeLists.txt
-if(SPARTA_ENABLE_TESTING OR SPARTA_DSMC_TESTING_PATH)
-  if(SPARTA_DSMC_TESTING_PATH)
-    file(COPY ${SPARTA_DSMC_TESTING_PATH}/cmake/CTestConfig.cmake
-         DESTINATION ${CMAKE_CURRENT_SOURCE_DIR})
-  endif()
-  include(CTest)
-endif()
-
 # ######### BEGIN SET COMMON DIRS ##########
 set(SPARTA_TPL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../lib)
 set(SPARTA_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../src)
@@ -40,10 +30,24 @@ include(${SPARTA_CMAKE_COMMON_DIR}/set/sparta_cmake_defaults.cmake)
 include(${SPARTA_CMAKE_COMMON_DIR}/set/sparta_options.cmake)
 # ######### END   SET SPARTA OPTIONS ##########
 
+# Include CTest in top-level CMakeLists. Tests are configured and added in
+# examples/CMakeLists.txt
+if(SPARTA_ENABLE_TESTING OR SPARTA_DSMC_TESTING_PATH)
+  if(SPARTA_DSMC_TESTING_PATH)
+    file(COPY ${SPARTA_DSMC_TESTING_PATH}/cmake/CTestConfig.cmake
+         DESTINATION ${CMAKE_CURRENT_SOURCE_DIR})
+  endif()
+  include(CTest)
+endif()
+
 if(SPARTA_MULTIBUILD_CONFIGS)
   include(ExternalProject)
-  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/CTestTestFile.cmake
-       "#Auto-generated ctest file for SPARTA multi-builds\n")
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/CTestTestfile.cmake
+       "# CMake generated Testfile for\n")
+  file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/CTestTestfile.cmake
+       "# Source directory: ${SPARTA_CMAKE_DIR}\n")
+  file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/CTestTestfile.cmake
+       "# Build directory: ${CMAKE_CURRENT_BINARY_DIR}\n")
   get_filename_component(SPARTA_MULTIBUILD_PRESET_DIR_ABSOLUTE
                          ${SPARTA_MULTIBUILD_PRESET_DIR} ABSOLUTE)
 
@@ -53,12 +57,12 @@ if(SPARTA_MULTIBUILD_CONFIGS)
       ${BUILD_TYPE}
       SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
       CONFIGURE_COMMAND
-        ${CMAKE_COMMAND} -C
+        ${CMAKE_COMMAND} -DSPARTA_CMAKE_DIR=${SPARTA_CMAKE_DIR} -C
         ${SPARTA_MULTIBUILD_PRESET_DIR_ABSOLUTE}/${BUILD_TYPE}.cmake
         ${SPARTA_CMAKE_DIR}
       INSTALL_COMMAND "")
-    file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/CTestTestFile.cmake
-         "subdirs(\"${BUILD_TYPE}-prefix/src/${BUILD_TYPE}-build/\")\n")
+    file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/CTestTestfile.cmake
+         "subdirs(\"${BUILD_TYPE}-prefix/src/${BUILD_TYPE}-build\")\n")
   endforeach()
 
   return()
