@@ -87,6 +87,10 @@ before running cmake.
   * Additional arguments for SPARTA_DSMC_TESTING_PATH/regression.py.
 * SPARTA_CTEST_CONFIGS
   * Additional ctest configurations, separated by `;`, that allow `SPARTA_SPA_ARGS_<CONFIG_NAME>` or `SPARTA_DSMC_TESTING_DRIVER_ARGS_<CONFIG_NAME>` to be specified.
+* SPARTA_MULTIBUILD_CONFIGS
+  * Additional build configurations, separated by `;`, build sparta with the cache file from `SPARTA_MULTIBUILD_PRESET_DIR/<CONFIG_NAME>.cmake`.
+* SPARTA_MULTIBUILD_PRESET_DIR
+  * The path to custom preset files when using `SPARTA_MULTIBUILD_CONFIGS`. Only applied if `SPARTA_MULTIBUILD_CONFIGS` is enabled.
 
 ## Examples
 ### Selecting packages via the command line
@@ -115,6 +119,18 @@ make -j
 
 ctest -C SERIAL
 ctest -C PARALLEL
+```
+
+### Specifying multiple build configurations via the command line
+```bash
+# Assumes that /path/to/sparta/cmake/presets/{test_mac_mpi,test_mac}.cmake exist
+cmake -DSPARTA_MULTIBUILD_CONFIGS="test_mac;test_mac_mpi" \
+      -DSPARTA_MULTIBUILD_PRESET_DIR=/path/to/sparta/cmake/presets/ \
+      /path/to/sparta/cmake
+
+make -j
+
+ctest -VV
 ```
 
 # Build system design
