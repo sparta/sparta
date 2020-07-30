@@ -8,13 +8,13 @@ mkdir build install
 cd build
 
 # Configure the build system
-cmake -DCMAKE_INSTALL_PREFIX=../install ../cmake
+cmake -DCMAKE_INSTALL_PREFIX=../install /path/to/sparta/cmake
 
 # List project-specific options
-cmake -L ../cmake
+cmake -L /path/to/sparta/cmake
 
 # List project-specific options and help strings
-cmake -LH ../cmake
+cmake -LH /path/to/sparta/cmake
 
 # List all options and help strings
 cmake -LAH
@@ -163,6 +163,6 @@ process those build options, and finally print the settings that were selected.
 # Build system triaging
 ## Quick start
 ```bash
-cmake --log-level=VERBOSE [-C ../cmake/presets/<NAME>.cmake] ..
+cmake --log-level=VERBOSE [-C /path/to/sparta/cmake/presets/<NAME>.cmake] /path/to/sparta/cmake
 make VERBOSE=1
 ```
