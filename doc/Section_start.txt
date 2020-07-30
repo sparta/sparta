@@ -1074,13 +1074,12 @@ cmake -C /path/to/sparta/cmake/presets/NAME.cmake \
 Setting SPARTA_ENABLE_TESTING to ON, adds tests in 
 /path/to/sparta/examples/**/in.* to be run via ctest. Each in.* file corresponds
 to an individual test. If BUILD_MPI is ON, tests will be configured to run with 
-both 1 and 4 mpi ranks. If you build the binaries, you can run the tests via
-ctest:
+both 1 and 4 mpi ranks. If the binaries are built, tests can be run via ctest:
 
 make
 ctest
 
-This will run all the tests in serial. To run the tests in parallel, we use -j:
+This will run all the tests in serial. To run the tests in parallel, use -j:
 
 ctest -j4
 
@@ -1091,12 +1090,12 @@ See ctest --help for more information.
 
 [Adding and Removing tests]
 
-You can add more tests by creating one or more input decks in 
+Add more tests by creating one or more input decks in 
 /path/to/sparta/examples/SUITE. Each in.* file in 
 /path/to/sparta/examples/SUITE corresponds to an individual test and
 will be picked up by the CMake build system if SPARTA_ENABLE_TESTING is ON.
 
-To disable tests, you can remove the in.* file or remove the in. prefix from
+To disable tests, remove the in.* file or remove the in. prefix from
 the in.TEST file by renaming the file to DISABLED.in.TEST, for example.
 
 [Advanced Testing]
@@ -1113,20 +1112,19 @@ Setting SPARTA_DSMC_TESTING_PATH to a valid dsmc_testing path adds tests in
 SPARTA_DSMC_TESTING_PATH to be run by SPARTA_DSMC_TESTING_PATH/regression.py
 via ctest.
 
-Now you can build the binaries and run the tests via ctest:
+After configuring, build the binaries and run the tests via ctest:
 
 make
 ctest
 
 This will run all tests found in SPARTA_DSMC_TESTING_PATH/examples by
-SPARTA_DSMC_TESTING_PATH/regression.py. If tou set SPARTA_ENABLE_TESTING to ON,
+SPARTA_DSMC_TESTING_PATH/regression.py. If SPARTA_ENABLE_TESTING is ON,
 all tests found in /path/to/sparta/examples will configured to run by
 SPARTA_DSMC_TESTING_PATH/regression.py.
 
 [SPARTA CMake Testing options]
 
-To allow the user more control over how tests are run, we've added the
-following cmake options for testing sparta:
+The following options allow the user more control over how the tests are run:
 
 SPARTA_SPA_ARGS can be specified to add additional arguments for the sparta 
 binaries being run by ctest. This option is only applied if
@@ -1135,8 +1133,8 @@ SPARTA_ENABLE_TESTING or SPARTA_DSMC_TESTING_PATH are enabled.
 SPARTA_DSMC_TESTING_DRIVER_ARGS can be specified to add additional arguments to
 the SPARTA_DSMC_TESTING_PATH/regression.py script.
 
-To allow the user to run the same set of binaries with different arguments, we
-added the SPARTA_CTEST_CONFIGS option. This lets the user add additional ctest
+The SPARTA_CTEST_CONFIGS option allows the user to run the same set of binaries
+with different arguments. SPARTA_CTEST_CONFIGS lets the user add additional ctest
 configurations, seperated by ';', that allow SPARTA_SPA_ARGS_CONFIG_NAME
 or SPARTA_DSMC_TESTING_DRIVER_ARGS_CONFIG_NAME to be specified. For example:
 
@@ -1156,10 +1154,11 @@ make
 ctest -C SERIAL -VV
 ctest -C PARALLEL -VV
 
-To allow the user to run different sets of binaries, we added the
-SPARTA_MULTIBUILD_CONFIGS option. This lets the user add additional build
-configurations, separated by ';', that will build sparta with the cache file
-located in `SPARTA_MULTIBUILD_PRESET_DIR/CONFIG_NAME.cmake`. For example:
+The SPARTA_MULTIBUILD_CONFIGS option allows the user to run different sets of
+binaries for the same input decks. SPARTA_MULTIBUILD_CONFIGS lets the user add
+additional build configurations, separated by ';', that will build sparta 
+with the cache file located in 
+`SPARTA_MULTIBUILD_PRESET_DIR/CONFIG_NAME.cmake`. For example:
 
 cmake -DSPARTA_MULTIBUILD_CONFIGS="test_mac;test_mac_mpi" \
       -DSPARTA_MULTIBUILD_PRESET_DIR=/path/to/sparta/cmake/presets/ \
