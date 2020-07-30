@@ -41,6 +41,8 @@ if(SPARTA_ENABLE_TESTING OR SPARTA_DSMC_TESTING_PATH)
 endif()
 
 if(SPARTA_MULTIBUILD_CONFIGS)
+  message(STATUS "SPARTA multibuild detected")
+
   include(ExternalProject)
   file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/CTestTestfile.cmake
        "# CMake generated Testfile for\n")
@@ -52,7 +54,7 @@ if(SPARTA_MULTIBUILD_CONFIGS)
                          ${SPARTA_MULTIBUILD_PRESET_DIR} ABSOLUTE)
 
   foreach(BUILD_TYPE ${SPARTA_MULTIBUILD_CONFIGS})
-    message("Adding ${BUILD_TYPE}...")
+    message(STATUS "Adding multibuild configuration: ${BUILD_TYPE}...")
     ExternalProject_Add(
       ${BUILD_TYPE}
       SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
