@@ -76,14 +76,14 @@ class ReactBirdKokkos : public ReactBird {
  protected:
 
   typedef Kokkos::
-    DualView<OneReactionKokkos*, SPADeviceType::array_layout, DeviceType> tdual_reaction_1d;
+    DualView<OneReactionKokkos*, DeviceType::array_layout, DeviceType> tdual_reaction_1d;
   typedef tdual_reaction_1d::t_dev t_reaction_1d;
   typedef tdual_reaction_1d::t_host t_host_reaction_1d;
 
   t_reaction_1d d_rlist;              // list of all reactions read from file
 
   typedef Kokkos::
-    DualView<ReactionIJKokkos**, SPADeviceType::array_layout, DeviceType> tdual_reactionIJ_2d;
+    DualView<ReactionIJKokkos**, DeviceType::array_layout, DeviceType> tdual_reactionIJ_2d;
   typedef tdual_reactionIJ_2d::t_dev t_reactionIJ_2d;
   typedef tdual_reactionIJ_2d::t_host t_host_reactionIJ_2d;
 

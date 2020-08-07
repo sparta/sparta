@@ -200,8 +200,8 @@ void CollideVSSKokkos::init()
       }
     }
 
-    k_vremax_initial.modify<SPAHostType>();
-    k_vremax_initial.sync<DeviceType>();
+    k_vremax_initial.modify_host();
+    k_vremax_initial.sync_device();
     d_vremax_initial = k_vremax_initial.d_view;
   }
 
@@ -273,12 +273,12 @@ void CollideVSSKokkos::init()
       k_prefactor.h_view(i,j) = prefactor[i][j];
   }
 
-  k_params.modify<SPAHostType>();
-  k_params.sync<DeviceType>();
+  k_params.modify_host();
+  k_params.sync_device();
   d_params = k_params.d_view;
 
-  k_prefactor.modify<SPAHostType>();
-  k_prefactor.sync<DeviceType>();
+  k_prefactor.modify_host();
+  k_prefactor.sync_device();
   d_prefactor = k_prefactor.d_view;
 
   // initialize running stats before each run
@@ -364,8 +364,8 @@ void CollideVSSKokkos::collisions()
 
 
   if (ndelete) {
-    k_dellist.modify<DeviceType>();
-    k_dellist.sync<SPAHostType>();
+    k_dellist.modify_device();
+    k_dellist.sync_host();
     ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
 #ifndef SPARTA_KOKKOS_EXACT
     particle_kk->compress_migrate(ndelete,dellist);
@@ -433,7 +433,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
   if (NEARCP) {
     if (int(d_nn_last_partner.extent(0)) < nglocal || int(d_nn_last_partner.extent(1)) < maxcellcount_kk)
-      d_nn_last_partner = typename AT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount_kk);
+      d_nn_last_partner = DAT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount_kk);
     //Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideZeroNN>(0,nglocal),*this);
   }
 
@@ -465,7 +465,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
       Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
       d_plist = grid_kk->d_plist;
       if (NEARCP)
-        d_nn_last_partner = typename AT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount+3);
+        d_nn_last_partner = DAT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount+3);
       maxcellcount_kk = maxcellcount_extra;
     }
 
@@ -521,7 +521,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
         Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_kk);
         d_plist = grid_kk->d_plist;
         if (NEARCP)
-          d_nn_last_partner = typename AT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount_kk);
+          d_nn_last_partner = DAT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount_kk);
         particle_kk->set_maxcellcount(maxcellcount_kk);
       }
 
@@ -1633,13 +1633,13 @@ void CollideVSSKokkos::sync(ExecutionSpace space, unsigned int mask)
   if (space == Device) {
     if (sparta->kokkos->auto_sync)
       modify(Host,mask);
-    if (mask & VREMAX_MASK) k_vremax.sync<SPADeviceType>();
+    if (mask & VREMAX_MASK) k_vremax.sync_device();
     if (remainflag)
-      if (mask & REMAIN_MASK) k_remain.sync<SPADeviceType>();
+      if (mask & REMAIN_MASK) k_remain.sync_device();
   } else {
-    if (mask & VREMAX_MASK) k_vremax.sync<SPAHostType>();
+    if (mask & VREMAX_MASK) k_vremax.sync_host();
     if (remainflag)
-      if (mask & REMAIN_MASK) k_remain.sync<SPAHostType>();
+      if (mask & REMAIN_MASK) k_remain.sync_host();
   }
 }
 
@@ -1648,15 +1648,15 @@ void CollideVSSKokkos::sync(ExecutionSpace space, unsigned int mask)
 void CollideVSSKokkos::modify(ExecutionSpace space, unsigned int mask)
 {
   if (space == Device) {
-    if (mask & VREMAX_MASK) k_vremax.modify<SPADeviceType>();
+    if (mask & VREMAX_MASK) k_vremax.modify_device();
     if (remainflag)
-      if (mask & REMAIN_MASK) k_remain.modify<SPADeviceType>();
+      if (mask & REMAIN_MASK) k_remain.modify_device();
     if (sparta->kokkos->auto_sync)
       sync(Host,mask);
   } else {
-    if (mask & VREMAX_MASK) k_vremax.modify<SPAHostType>();
+    if (mask & VREMAX_MASK) k_vremax.modify_host();
     if (remainflag)
-      if (mask & REMAIN_MASK) k_remain.modify<SPAHostType>();
+      if (mask & REMAIN_MASK) k_remain.modify_host();
   }
 }
 

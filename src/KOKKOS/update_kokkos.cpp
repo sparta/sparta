@@ -287,7 +287,7 @@ void UpdateKokkos::run(int nsteps)
 
     if (nmigrate) {
       k_mlist_small = Kokkos::subview(k_mlist,std::make_pair(0,nmigrate));
-      k_mlist_small.sync<SPAHostType>();
+      k_mlist_small.sync_host();
     }
     auto mlist_small = k_mlist_small.h_view.data();
 
@@ -487,7 +487,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
 
     Kokkos::deep_copy(d_scalars,h_scalars);
 
-    //k_mlist.sync<SPADeviceType>();
+    //k_mlist.sync_device();
     copymode = 1;
     if (!sparta->kokkos->need_atomics)
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,0> >(pstart,pstop),*this);
@@ -502,7 +502,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     particle_kk->modify(Device,PARTICLE_MASK);
     d_particles = t_particle_1d(); // destroy reference to reduce memory use
 
-    k_mlist.modify<DeviceType>();
+    k_mlist.modify_device();
 
     // END of pstart/pstop loop advecting all particles
 
@@ -557,7 +557,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     if (any_entryexit) {
       if (nmigrate) {
         k_mlist_small = Kokkos::subview(k_mlist,std::make_pair(0,nmigrate));
-        k_mlist_small.sync<SPAHostType>();
+        k_mlist_small.sync_host();
       }
       auto mlist_small = k_mlist_small.h_view.data();
       timer->stamp(TIME_MOVE);

@@ -141,7 +141,7 @@ void CreateParticlesKokkos::create_local(bigint np)
 
   double vstream_variable[3];
 
-  Kokkos::View<int*, SPADeviceType> d_npercell("npercell", nglocal);
+  Kokkos::View<int*, DeviceType> d_npercell("npercell", nglocal);
   auto h_npercell = Kokkos::create_mirror_view(d_npercell);
 
   for (int i = 0; i < nglocal; i++) {
@@ -184,16 +184,16 @@ void CreateParticlesKokkos::create_local(bigint np)
   auto h_cells2cands = Kokkos::create_mirror_view(d_cells2cands);
   Kokkos::deep_copy(h_cells2cands, d_cells2cands);
 
-  Kokkos::View<int*, SPADeviceType> d_keep("cand_keep", ncands);
-  Kokkos::View<int*, SPADeviceType> d_isp("cand_x", ncands);
-  Kokkos::View<double*[3], SPADeviceType> d_x("cand_x", ncands);
-  Kokkos::View<double*, SPADeviceType> d_vn("cand_vn", ncands);
-  Kokkos::View<double*, SPADeviceType> d_vr("cand_vr", ncands);
-  Kokkos::View<double*[2], SPADeviceType> d_theta("cand_theta", ncands);
-  Kokkos::View<double*, SPADeviceType> d_erot("cand_erot", ncands);
-  Kokkos::View<double*, SPADeviceType> d_evib("cand_evib", ncands);
-  Kokkos::View<int*, SPADeviceType> d_id("cand_id", ncands);
-  Kokkos::View<double*[3], SPADeviceType> d_v("cand_v", ncands);
+  Kokkos::View<int*, DeviceType> d_keep("cand_keep", ncands);
+  Kokkos::View<int*, DeviceType> d_isp("cand_x", ncands);
+  Kokkos::View<double*[3], DeviceType> d_x("cand_x", ncands);
+  Kokkos::View<double*, DeviceType> d_vn("cand_vn", ncands);
+  Kokkos::View<double*, DeviceType> d_vr("cand_vr", ncands);
+  Kokkos::View<double*[2], DeviceType> d_theta("cand_theta", ncands);
+  Kokkos::View<double*, DeviceType> d_erot("cand_erot", ncands);
+  Kokkos::View<double*, DeviceType> d_evib("cand_evib", ncands);
+  Kokkos::View<int*, DeviceType> d_id("cand_id", ncands);
+  Kokkos::View<double*[3], DeviceType> d_v("cand_v", ncands);
   auto h_keep = Kokkos::create_mirror_view(d_keep);
   auto h_isp = Kokkos::create_mirror_view(d_isp);
   auto h_x = Kokkos::create_mirror_view(d_x);
@@ -287,8 +287,8 @@ void CreateParticlesKokkos::create_local(bigint np)
   auto particleKK = dynamic_cast<ParticleKokkos*>(particle);
   particleKK->grow(nnew);
   particleKK->sync(Device, PARTICLE_MASK | SPECIES_MASK);
-  auto d_particles = particleKK->k_particles.view<SPADeviceType>();
-  Kokkos::View<int*, SPADeviceType> d_species("species", nspecies);
+  auto d_particles = particleKK->k_particles.d_view;
+  Kokkos::View<int*, DeviceType> d_species("species", nspecies);
   auto h_species = Kokkos::create_mirror_view(d_species);
   for (int i = 0; i < nspecies; ++i) h_species(i) = species[i];
   Kokkos::deep_copy(d_species, h_species);

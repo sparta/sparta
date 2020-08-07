@@ -58,7 +58,7 @@ ParticleKokkos::ParticleKokkos(SPARTA *sparta) : Particle(sparta)
   h_fail_flag = HAT::t_int_scalar("particle:fail_flag_mirror");
 
   k_reorder_pass = DAT::tdual_int_scalar("particle:reorder_pass");
-  d_reorder_pass = k_reorder_pass.view<DeviceType>();
+  d_reorder_pass = k_reorder_pass.d_view;
   h_reorder_pass = k_reorder_pass.h_view;
 
   sorted_kk = 0;
@@ -184,7 +184,7 @@ void ParticleKokkos::sort_kokkos()
   d_plist = grid_kk->d_plist;
 
   if (ngrid > int(d_cellcount.extent(0))) {
-    grid_kk->d_cellcount = typename AT::t_int_1d("particle:cellcount",ngrid);
+    grid_kk->d_cellcount = DAT::t_int_1d("particle:cellcount",ngrid);
     d_cellcount = grid_kk->d_cellcount;
   } else {
     copymode = 1;
@@ -194,8 +194,8 @@ void ParticleKokkos::sort_kokkos()
   }
 
   if (ngrid > int(d_plist.extent(0)) || maxcellcount > int(d_plist.extent(1))) {
-    grid_kk->d_plist = typename AT::t_int_2d(); // destroy reference to reduce memory use
-    grid_kk->d_plist = typename AT::t_int_2d(Kokkos::view_alloc("particle:plist",Kokkos::WithoutInitializing),ngrid,maxcellcount);
+    grid_kk->d_plist = DAT::t_int_2d(); // destroy reference to reduce memory use
+    grid_kk->d_plist = DAT::t_int_2d(Kokkos::view_alloc("particle:plist",Kokkos::WithoutInitializing),ngrid,maxcellcount);
     d_plist = grid_kk->d_plist;
   }
 
@@ -226,8 +226,8 @@ void ParticleKokkos::sort_kokkos()
       DeviceType().fence();
       copymode = 0;
       maxcellcount += DELTACELLCOUNT;
-      grid_kk->d_plist = typename AT::t_int_2d(); // destroy reference to reduce memory use
-      grid_kk->d_plist = typename AT::t_int_2d(Kokkos::view_alloc("particle:plist",Kokkos::WithoutInitializing),ngrid,maxcellcount);
+      grid_kk->d_plist = DAT::t_int_2d(); // destroy reference to reduce memory use
+      grid_kk->d_plist = DAT::t_int_2d(Kokkos::view_alloc("particle:plist",Kokkos::WithoutInitializing),ngrid,maxcellcount);
       d_plist = grid_kk->d_plist;
 
       Kokkos::deep_copy(d_fail_flag,0);
@@ -270,8 +270,8 @@ void ParticleKokkos::sort_kokkos()
       for (int ipass=0; ipass < npasses; ++ipass) {
 
         h_reorder_pass() = ipass;
-        k_reorder_pass.modify<SPAHostType>();
-        k_reorder_pass.sync<DeviceType>();
+        k_reorder_pass.modify_host();
+        k_reorder_pass.sync_device();
 
         // identify next set of particles to reorder
         copymode = 1;
@@ -594,8 +594,8 @@ void ParticleKokkos::wrap_kokkos()
 
   if (species != k_species.h_view.data()) {
     memoryKK->wrap_kokkos(k_species,species,nspecies,"particle:species");
-    k_species.modify<SPAHostType>();
-    k_species.sync<DeviceType>();
+    k_species.modify_host();
+    k_species.sync_device();
     memory->sfree(species);
     species = k_species.h_view.data();
   }
@@ -606,13 +606,13 @@ void ParticleKokkos::wrap_kokkos()
   for (int i = 0; i < nmixture; i++)
     for (int j = 0; j < nspecies; j++)
       k_species2group.h_view(i,j) = mixture[i]->species2group[j];
-  k_species2group.modify<SPAHostType>();
-  k_species2group.sync<DeviceType>();
+  k_species2group.modify_host();
+  k_species2group.sync_device();
 
   //if (mixtures != k_mixtures.h_view.data()) {
   //  memoryKK->wrap_kokkos(k_mixtures,mixture,nmixture,"particle:mixture");
-  //  k_mixtures.modify<SPAHostType>();
-  //  k_mixtures.sync<DeviceType>();
+  //  k_mixtures.modify_host();
+  //  k_mixtures.sync_device();
   //  memory->sfree(mixtures);
   //  mixtures = k_mixtures.h_view.data();
   //}
@@ -625,11 +625,11 @@ void ParticleKokkos::sync(ExecutionSpace space, unsigned int mask)
   if (space == Device) {
     if (sparta->kokkos->auto_sync)
       modify(Host,mask);
-    if (mask & PARTICLE_MASK) k_particles.sync<SPADeviceType>();
-    if (mask & SPECIES_MASK) k_species.sync<SPADeviceType>();
+    if (mask & PARTICLE_MASK) k_particles.sync_device();
+    if (mask & SPECIES_MASK) k_species.sync_device();
   } else {
-    if (mask & PARTICLE_MASK) k_particles.sync<SPAHostType>();
-    if (mask & SPECIES_MASK) k_species.sync<SPAHostType>();
+    if (mask & PARTICLE_MASK) k_particles.sync_host();
+    if (mask & SPECIES_MASK) k_species.sync_host();
   }
 }
 
@@ -638,12 +638,12 @@ void ParticleKokkos::sync(ExecutionSpace space, unsigned int mask)
 void ParticleKokkos::modify(ExecutionSpace space, unsigned int mask)
 {
   if (space == Device) {
-    if (mask & PARTICLE_MASK) k_particles.modify<SPADeviceType>();
-    if (mask & SPECIES_MASK) k_species.modify<SPADeviceType>();
+    if (mask & PARTICLE_MASK) k_particles.modify_device();
+    if (mask & SPECIES_MASK) k_species.modify_device();
     if (sparta->kokkos->auto_sync)
       sync(Host,mask);
   } else {
-    if (mask & PARTICLE_MASK) k_particles.modify<SPAHostType>();
-    if (mask & SPECIES_MASK) k_species.modify<SPAHostType>();
+    if (mask & PARTICLE_MASK) k_particles.modify_host();
+    if (mask & SPECIES_MASK) k_species.modify_host();
   }
 }

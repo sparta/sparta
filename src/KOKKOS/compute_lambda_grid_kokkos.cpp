@@ -166,11 +166,11 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
   copymode = 0;
 
   if (kflag == KNONE) {
-    k_vector_grid.modify<DeviceType>();
-    k_vector_grid.sync<SPAHostType>();
+    k_vector_grid.modify_device();
+    k_vector_grid.sync_host();
   } else {
-    k_array_grid.modify<DeviceType>();
-    k_array_grid.sync<SPAHostType>();
+    k_array_grid.modify_device();
+    k_array_grid.sync_host();
   }
 }
 

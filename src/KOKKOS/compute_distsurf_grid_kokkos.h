@@ -57,8 +57,8 @@ struct TagComputeDistSurfGrid_surf_distance{};
   DAT::t_float_1d_3 d_sctr;
   t_cinfo_1d d_cinfo;
   t_cell_1d d_cells;
-  Kokkos::Crs<int, SPADeviceType, void, int> d_csurfs;
-  Kokkos::Crs<int, SPADeviceType, void, int> d_csubs;
+  Kokkos::Crs<int, DeviceType, void, int> d_csurfs;
+  Kokkos::Crs<int, DeviceType, void, int> d_csubs;
 
   t_line_1d d_lines;
   t_tri_1d d_tris;

@@ -381,16 +381,16 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
   // pack buf with list of datums
   // m = index of datum in sendbuf
 
-  k_index_send.modify<SPAHostType>();
-  k_index_send.sync<DeviceType>();
+  k_index_send.modify_host();
+  k_index_send.sync_device();
 
-  k_index_self.modify<SPAHostType>();
-  k_index_self.sync<DeviceType>();
+  k_index_self.modify_host();
+  k_index_self.sync_device();
 
   k_n.h_view() = 0;
-  k_n.modify<SPAHostType>();
-  k_n.sync<DeviceType>();
-  d_n = k_n.view<DeviceType>();
+  k_n.modify_host();
+  k_n.sync_device();
+  d_n = k_n.d_view;
 
   for (int isend = 0; isend < nsend; isend++) {
     count = num_send[isend];

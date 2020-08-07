@@ -29,7 +29,6 @@ namespace SPARTA_NS {
 
 class SurfCollidePistonKokkos : public SurfCollidePiston {
  public:
-  typedef ArrayTypes<DeviceType> AT;
 
   SurfCollidePistonKokkos(class SPARTA *, int, char **);
   SurfCollidePistonKokkos(class SPARTA *);
@@ -139,7 +138,7 @@ class SurfCollidePistonKokkos : public SurfCollidePiston {
   };
 
   DAT::tdual_int_scalar k_nsingle;
-  typename AT::t_int_scalar d_nsingle;
+  DAT::t_int_scalar d_nsingle;
   HAT::t_int_scalar h_nsingle;
 
 };
