@@ -104,8 +104,10 @@
   };
 #endif
 // set SPAHostype and DeviceType from Kokkos Default Types
-typedef Kokkos::DefaultExecutionSpace DeviceType;
+typedef Kokkos::DefaultExecutionSpace SPADeviceType;
 typedef Kokkos::HostSpace::execution_space SPAHostType;
+
+typedef SPADeviceType DeviceType;
 
 // set ExecutionSpace stuct with variable "space"
 
