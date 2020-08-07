@@ -51,13 +51,13 @@ ComputeSonineGridKokkos::ComputeSonineGridKokkos(SPARTA *sparta, int narg, char 
     k_moment.h_view(n) = moment[n];
     k_order.h_view(n) = order[n];
   }
-  k_which.modify<SPAHostType>();
-  k_moment.modify<SPAHostType>();
-  k_order.modify<SPAHostType>();
+  k_which.modify_host();
+  k_moment.modify_host();
+  k_order.modify_host();
 
-  k_which.sync<DeviceType>();
-  k_moment.sync<DeviceType>();
-  k_order.sync<DeviceType>();
+  k_which.sync_device();
+  k_moment.sync_device();
+  k_order.sync_device();
 
   d_which = k_which.d_view;
   d_moment = k_moment.d_view;
@@ -84,8 +84,8 @@ void ComputeSonineGridKokkos::compute_per_grid()
     ComputeSonineGrid::compute_per_grid();
   } else {
     compute_per_grid_kokkos();
-    k_tally.modify<DeviceType>();
-    k_tally.sync<SPAHostType>();
+    k_tally.modify_device();
+    k_tally.sync_host();
   }
 }
 
@@ -104,7 +104,7 @@ void ComputeSonineGridKokkos::compute_per_grid_kokkos()
   d_plist = grid_kk->d_plist;
   grid_kk->sync(Device,CINFO_MASK);
   d_cinfo = grid_kk->k_cinfo.d_view;
-  d_s2g = particle_kk->k_species2group.view<DeviceType>();
+  d_s2g = particle_kk->k_species2group.d_view;
   int nlocal = particle->nlocal;
 
   // zero all accumulators

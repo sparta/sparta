@@ -92,8 +92,8 @@ double ComputeCountKokkos::compute_scalar()
   invoked_scalar = update->ntimestep;
 
   per_species_tally_kokkos();
-  k_count.modify<DeviceType>();
-  k_count.sync<SPAHostType>();
+  k_count.modify_device();
+  k_count.sync_host();
   for (int m=0; m<maxspecies; ++m)
     count[m] = k_count.h_view(m);
 
@@ -122,8 +122,8 @@ void ComputeCountKokkos::compute_vector()
   invoked_scalar = update->ntimestep;
 
   per_species_tally_kokkos();
-  k_count.modify<DeviceType>();
-  k_count.sync<SPAHostType>();
+  k_count.modify_device();
+  k_count.sync_host();
   for (int m=0; m<maxspecies; ++m)
     count[m] = k_count.h_view(m);
 

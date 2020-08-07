@@ -88,11 +88,11 @@ void ComputeBoundaryKokkos::compute_array()
   if (sparta->kokkos->gpu_direct_flag) {
     MPI_Allreduce(d_myarray.data(),d_array.data(),nrow*ntotal,
                   MPI_DOUBLE,MPI_SUM,world);
-    k_array.modify<DeviceType>();
-    k_array.sync<SPAHostType>();
+    k_array.modify_device();
+    k_array.sync_host();
   } else {
-    k_myarray.modify<DeviceType>();
-    k_myarray.sync<SPAHostType>();
+    k_myarray.modify_device();
+    k_myarray.sync_host();
     MPI_Allreduce(k_myarray.h_view.data(),k_array.h_view.data(),nrow*ntotal,
                   MPI_DOUBLE,MPI_SUM,world);
   }
@@ -125,7 +125,7 @@ void ComputeBoundaryKokkos::pre_boundary_tally()
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
   d_species = particle_kk->k_species.d_view;
-  d_s2g = particle_kk->k_species2group.view<DeviceType>();
+  d_s2g = particle_kk->k_species2group.d_view;
 
   need_dup = sparta->kokkos->need_dup<DeviceType>();
   if (need_dup)

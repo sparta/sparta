@@ -64,8 +64,8 @@ void ComputeThermalGridKokkos::compute_per_grid()
     ComputeThermalGrid::compute_per_grid();
   } else {
     compute_per_grid_kokkos();
-    k_tally.modify<DeviceType>();
-    k_tally.sync<SPAHostType>();
+    k_tally.modify_device();
+    k_tally.sync_host();
   }
 }
 
@@ -86,7 +86,7 @@ void ComputeThermalGridKokkos::compute_per_grid_kokkos()
   grid_kk->sync(Device,CINFO_MASK);
   d_cinfo = grid_kk->k_cinfo.d_view;
 
-  d_s2g = particle_kk->k_species2group.view<DeviceType>();
+  d_s2g = particle_kk->k_species2group.d_view;
   int nlocal = particle->nlocal;
 
   // zero all accumulators

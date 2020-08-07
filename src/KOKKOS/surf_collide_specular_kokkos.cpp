@@ -28,7 +28,7 @@ SurfCollideSpecularKokkos::SurfCollideSpecularKokkos(SPARTA *sparta, int narg, c
   SurfCollideSpecular(sparta, narg, arg)
 {
   k_nsingle = DAT::tdual_int_scalar("SurfCollide:nsingle");
-  d_nsingle = k_nsingle.view<DeviceType>();
+  d_nsingle = k_nsingle.d_view;
   h_nsingle = k_nsingle.h_view;
 }
 
@@ -66,6 +66,6 @@ SurfCollideSpecularKokkos::SurfCollideSpecularKokkos(SPARTA *sparta) :
   allowreact = 1;
 
   k_nsingle = DAT::tdual_int_scalar("SurfCollide:nsingle");
-  d_nsingle = k_nsingle.view<DeviceType>();
+  d_nsingle = k_nsingle.d_view;
   h_nsingle = k_nsingle.h_view;
 }

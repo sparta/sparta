@@ -30,7 +30,6 @@ struct TagCommMigrateUnpackParticles{};
 
 class CommKokkos : public Comm {
  public:
-  typedef ArrayTypes<DeviceType> AT;
 
   CommKokkos(class SPARTA *);
   ~CommKokkos();

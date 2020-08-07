@@ -39,7 +39,7 @@ CommKokkos::CommKokkos(SPARTA *sparta) : Comm(sparta)
   iparticle = new IrregularKokkos(sparta);
 
   k_nsend = DAT::tdual_int_scalar("comm:nsend");
-  d_nsend = k_nsend.view<DeviceType>();
+  d_nsend = k_nsend.d_view;
   h_nsend = k_nsend.h_view;
   d_nlocal = DAT::t_int_scalar("comm:nlocal");
 }
@@ -127,8 +127,8 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
   //int offset = 0;
 
   h_nsend() = 0;
-  k_nsend.modify<SPAHostType>();
-  k_nsend.sync<DeviceType>();
+  k_nsend.modify_host();
+  k_nsend.sync_device();
 
   particle_kk->sync(Device,PARTICLE_MASK);
   grid_kk->sync(Device,CELL_MASK);
@@ -167,8 +167,8 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
 
   Kokkos::deep_copy(h_pproc,d_pproc);
 
-  k_nsend.modify<DeviceType>();
-  k_nsend.sync<SPAHostType>();
+  k_nsend.modify_device();
+  k_nsend.sync_host();
   nsend = h_nsend();
 
   // compress my list of particles

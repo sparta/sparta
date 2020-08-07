@@ -24,7 +24,7 @@ SurfCollideVanishKokkos::SurfCollideVanishKokkos(SPARTA *sparta, int narg, char 
   SurfCollideVanish(sparta, narg, arg)
 {
   k_nsingle = DAT::tdual_int_scalar("SurfCollide:nsingle");
-  d_nsingle = k_nsingle.view<DeviceType>();
+  d_nsingle = k_nsingle.d_view;
   h_nsingle = k_nsingle.h_view;
 }
 
@@ -60,6 +60,6 @@ SurfCollideVanishKokkos::SurfCollideVanishKokkos(SPARTA *sparta) :
   if (narg != 2) error->all(FLERR,"Illegal surf_collide vanish command");
 
   k_nsingle = DAT::tdual_int_scalar("SurfCollide:nsingle");
-  d_nsingle = k_nsingle.view<DeviceType>();
+  d_nsingle = k_nsingle.d_view;
   h_nsingle = k_nsingle.h_view;
 }

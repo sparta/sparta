@@ -51,8 +51,8 @@ ComputeGridKokkos::ComputeGridKokkos(SPARTA *sparta, int narg, char **arg) :
   k_unique = DAT::tdual_int_1d("compute/grid:unique",npergroup);
   for (int m = 0; m < npergroup; m++)
     k_unique.h_view(m) = unique[m];
-  k_unique.modify<SPAHostType>();
-  k_unique.sync<DeviceType>();
+  k_unique.modify_host();
+  k_unique.sync_device();
   d_unique = k_unique.d_view;
 }
 
@@ -76,8 +76,8 @@ void ComputeGridKokkos::compute_per_grid()
     ComputeGrid::compute_per_grid();
   } else {
     compute_per_grid_kokkos();
-    k_tally.modify<DeviceType>();
-    k_tally.sync<SPAHostType>();
+    k_tally.modify_device();
+    k_tally.sync_host();
   }
 }
 
@@ -98,7 +98,7 @@ void ComputeGridKokkos::compute_per_grid_kokkos()
   grid_kk->sync(Device,CINFO_MASK);
   d_cinfo = grid_kk->k_cinfo.d_view;
 
-  d_s2g = particle_kk->k_species2group.view<DeviceType>();
+  d_s2g = particle_kk->k_species2group.d_view;
   int nlocal = particle->nlocal;
 
   // zero all accumulators

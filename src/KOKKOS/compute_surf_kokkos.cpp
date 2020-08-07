@@ -129,7 +129,7 @@ void ComputeSurfKokkos::pre_surf_tally()
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,SPECIES_MASK);
   d_species = particle_kk->k_species.d_view;
-  d_s2g = particle_kk->k_species2group.view<DeviceType>();
+  d_s2g = particle_kk->k_species2group.d_view;
 
   SurfKokkos* surf_kk = (SurfKokkos*) surf;
   surf_kk->sync(Device,ALL_MASK);
@@ -152,8 +152,8 @@ void ComputeSurfKokkos::post_surf_tally()
     dup_array_surf_tally = decltype(dup_array_surf_tally)(); // free duplicated memory
   }
 
-  k_tally2surf.modify<DeviceType>();
-  k_array_surf_tally.modify<DeviceType>();
+  k_tally2surf.modify_device();
+  k_array_surf_tally.modify_device();
 }
 
 /* ----------------------------------------------------------------------
@@ -162,10 +162,10 @@ void ComputeSurfKokkos::post_surf_tally()
 
 int ComputeSurfKokkos::tallyinfo(surfint *&ptr)
 {
-  k_tally2surf.sync<SPAHostType>();
+  k_tally2surf.sync_host();
   ptr = tally2surf;
 
-  k_array_surf_tally.sync<SPAHostType>();
+  k_array_surf_tally.sync_host();
 
   auto h_ntally = Kokkos::create_mirror_view(d_ntally);
   Kokkos::deep_copy(h_ntally,d_ntally);

@@ -70,8 +70,8 @@ void SurfKokkos::wrap_kokkos()
     if (lines != NULL && nmax > 0) {
       if (lines != k_lines.h_view.data()) {
         memoryKK->wrap_kokkos(k_lines,lines,nmax,"surf:lines");
-        k_lines.modify<SPAHostType>();
-        k_lines.sync<DeviceType>();
+        k_lines.modify_host();
+        k_lines.sync_device();
         memory->sfree(lines);
         lines = k_lines.h_view.data();
       }
@@ -79,8 +79,8 @@ void SurfKokkos::wrap_kokkos()
     if (mylines != NULL && nown > 0) {
       if (mylines != k_mylines.h_view.data()) {
         memoryKK->wrap_kokkos(k_mylines,mylines,nown,"surf:lines");
-        k_mylines.modify<SPAHostType>();
-        k_mylines.sync<DeviceType>();
+        k_mylines.modify_host();
+        k_mylines.sync_device();
         memory->sfree(mylines);
         mylines = k_mylines.h_view.data();
       }
@@ -89,8 +89,8 @@ void SurfKokkos::wrap_kokkos()
     if (tris != NULL && nmax > 0) {
       if (tris != k_tris.h_view.data()) {
         memoryKK->wrap_kokkos(k_tris,tris,nmax,"surf:tris");
-        k_tris.modify<SPAHostType>();
-        k_tris.sync<DeviceType>();
+        k_tris.modify_host();
+        k_tris.sync_device();
         memory->sfree(tris);
         tris = k_tris.h_view.data();
       }
@@ -98,8 +98,8 @@ void SurfKokkos::wrap_kokkos()
     if (mytris != NULL && nown > 0) {
       if (mytris != k_mytris.h_view.data()) {
         memoryKK->wrap_kokkos(k_mytris,mytris,nown,"surf:mytris");
-        k_mytris.modify<SPAHostType>();
-        k_mytris.sync<DeviceType>();
+        k_mytris.modify_host();
+        k_mytris.sync_device();
         memory->sfree(mytris);
         mytris = k_mytris.h_view.data();
       }
@@ -186,11 +186,11 @@ void SurfKokkos::sync(ExecutionSpace space, unsigned int mask)
   if (space == Device) {
     if (sparta->kokkos->auto_sync)
       modify(Host,mask);
-    if (mask & LINE_MASK) k_lines.sync<SPADeviceType>();
-    if (mask & TRI_MASK) k_tris.sync<SPADeviceType>();
+    if (mask & LINE_MASK) k_lines.sync_device();
+    if (mask & TRI_MASK) k_tris.sync_device();
   } else {
-    if (mask & LINE_MASK) k_lines.sync<SPAHostType>();
-    if (mask & TRI_MASK) k_tris.sync<SPAHostType>();
+    if (mask & LINE_MASK) k_lines.sync_host();
+    if (mask & TRI_MASK) k_tris.sync_host();
   }
 }
 
@@ -206,12 +206,12 @@ void SurfKokkos::modify(ExecutionSpace space, unsigned int mask)
   }
 
   if (space == Device) {
-    if (mask & LINE_MASK) k_lines.modify<SPADeviceType>();
-    if (mask & TRI_MASK) k_tris.modify<SPADeviceType>();
+    if (mask & LINE_MASK) k_lines.modify_device();
+    if (mask & TRI_MASK) k_tris.modify_device();
     if (sparta->kokkos->auto_sync)
       sync(Host,mask);
   } else {
-    if (mask & LINE_MASK) k_lines.modify<SPAHostType>();
-    if (mask & TRI_MASK) k_tris.modify<SPAHostType>();
+    if (mask & LINE_MASK) k_lines.modify_host();
+    if (mask & TRI_MASK) k_tris.modify_host();
   }
 }

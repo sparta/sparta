@@ -51,7 +51,6 @@ enum{NONE,DISCRETE,SMOOTH};            // several files
 
 class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
  public:
-  typedef ArrayTypes<DeviceType> AT;
 
   SurfCollideDiffuseKokkos(class SPARTA *, int, char **);
   SurfCollideDiffuseKokkos(class SPARTA *);
@@ -123,7 +122,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
   };
 
   DAT::tdual_int_scalar k_nsingle;
-  typename AT::t_int_scalar d_nsingle;
+  DAT::t_int_scalar d_nsingle;
   HAT::t_int_scalar h_nsingle;
 
  private:

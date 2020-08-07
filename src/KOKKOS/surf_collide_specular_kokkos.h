@@ -29,7 +29,6 @@ namespace SPARTA_NS {
 
 class SurfCollideSpecularKokkos : public SurfCollideSpecular {
  public:
-  typedef ArrayTypes<DeviceType> AT;
 
   SurfCollideSpecularKokkos(class SPARTA *, int, char **);
   SurfCollideSpecularKokkos(class SPARTA *);
@@ -90,7 +89,7 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
   };
 
   DAT::tdual_int_scalar k_nsingle;
-  typename AT::t_int_scalar d_nsingle;
+  DAT::t_int_scalar d_nsingle;
   HAT::t_int_scalar h_nsingle;
 };
 

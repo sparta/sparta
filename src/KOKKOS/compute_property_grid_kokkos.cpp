@@ -40,8 +40,8 @@ ComputePropertyGridKokkos::ComputePropertyGridKokkos(SPARTA *sparta, int narg, c
   for (int n = 0; n < nvalues; n++){
     k_index.h_view(n) = index[n];
   }
-  k_index.modify<SPAHostType>();
-  k_index.sync<DeviceType>();
+  k_index.modify_host();
+  k_index.sync_device();
   d_index = k_index.d_view;
 }
 
@@ -67,11 +67,11 @@ void ComputePropertyGridKokkos::compute_per_grid()
   } else {
     compute_per_grid_kokkos();
     if (nvalues == 1) {
-      k_vector_grid.modify<DeviceType>();
-      k_vector_grid.sync<SPAHostType>();
+      k_vector_grid.modify_device();
+      k_vector_grid.sync_host();
     } else {
-      k_array_grid.modify<DeviceType>();
-      k_array_grid.sync<SPAHostType>();
+      k_array_grid.modify_device();
+      k_array_grid.sync_host();
     }
   }
 }

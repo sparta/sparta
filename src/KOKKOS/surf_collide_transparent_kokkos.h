@@ -28,14 +28,13 @@ namespace SPARTA_NS {
 
 class SurfCollideTransparentKokkos : public SurfCollideTransparent {
  public:
-  typedef ArrayTypes<DeviceType> AT;
 
   SurfCollideTransparentKokkos(class SPARTA *, int, char **);
   SurfCollideTransparentKokkos(class SPARTA *);
   ~SurfCollideTransparentKokkos() {}
 
   DAT::tdual_int_scalar k_nsingle;
-  typename AT::t_int_scalar d_nsingle;
+  DAT::t_int_scalar d_nsingle;
   HAT::t_int_scalar h_nsingle;
 
   /* ----------------------------------------------------------------------

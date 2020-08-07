@@ -89,16 +89,16 @@ FixAveGridKokkos::FixAveGridKokkos(SPARTA *sparta, int narg, char **arg) :
       k_uomap.h_view(i,j) = uomap[i][j];
     }
   }
-  k_numap.modify<SPAHostType>();
-  k_numap.sync<DeviceType>();
+  k_numap.modify_host();
+  k_numap.sync_device();
   d_numap = k_numap.d_view;
 
-  k_umap.modify<SPAHostType>();
-  k_umap.sync<DeviceType>();
+  k_umap.modify_host();
+  k_umap.sync_device();
   d_umap = k_umap.d_view;
 
-  k_uomap.modify<SPAHostType>();
-  k_uomap.sync<DeviceType>();
+  k_uomap.modify_host();
+  k_uomap.sync_device();
   d_uomap = k_uomap.d_view;
 }
 
@@ -300,11 +300,11 @@ void FixAveGridKokkos::end_of_step()
   }
 
   if (nvalues == 1) {
-    k_vector_grid.modify<DeviceType>();
-    k_vector_grid.sync<SPAHostType>();
+    k_vector_grid.modify_device();
+    k_vector_grid.sync_host();
   } else {
-    k_array_grid.modify<DeviceType>();
-    k_array_grid.sync<SPAHostType>();
+    k_array_grid.modify_device();
+    k_array_grid.sync_host();
   }
 
   // set values for grid cells not in group to zero
@@ -413,11 +413,11 @@ void FixAveGridKokkos::grow_percell(int nnew)
   if (nvalues == 1) {
     memoryKK->grow_kokkos(k_vector_grid,vector_grid,n,"ave/grid:vector_grid");
     d_vector = k_vector_grid.d_view;
-    k_vector_grid.sync<SPAHostType>();
+    k_vector_grid.sync_host();
   } else {
     memoryKK->grow_kokkos(k_array_grid,array_grid,n,nvalues,"ave/grid:array_grid");
     d_array_grid = k_array_grid.d_view;
-    k_array_grid.sync<SPAHostType>();
+    k_array_grid.sync_host();
   }
 
   memoryKK->grow_kokkos(k_tally,tally,n,ntotal,"ave/grid:tally");
