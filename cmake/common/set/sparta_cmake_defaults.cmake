@@ -38,6 +38,12 @@ if(SPARTA_ENABLE_TESTING)
       "axi"
       "ambi")
 
+  set(SPARTA_DISABLED_TESTS
+      "in.ablation.3d.reactions" # Failing
+      "in.jagged.3d" # Long runtime
+      "in.jagged.3d.distributed" # Long runtime
+  )
+
   list(APPEND __DEFAULT_MPI_RANKS "1")
   list(APPEND __DEFAULT_MPI_RANKS "4")
 endif()

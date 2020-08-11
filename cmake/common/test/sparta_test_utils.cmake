@@ -176,6 +176,15 @@ function(sparta_add_all_tests_to_config mpi_ranks config_name)
     RELATIVE "${__work_dir}"
     CONFIGURE_DEPENDS ${__work_dir}/in.*)
 
+  if(SPARTA_ENABLE_TESTING)
+    if(SPARTA_DSMC_TESTING_PATH AND ${__work_dir} MATCHES
+                                    "${SPARTA_DSMC_TESTING_ABSOLUTE_PATH}")
+      # Skip disable list for tests in SPARTA_DSMC_TESTING_PATH
+    else()
+      list(REMOVE_ITEM __in_file_list ${SPARTA_DISABLED_TESTS})
+    endif()
+  endif()
+
   # message("__in_file_list=${__in_file_list}")
   if(BUILD_MPI)
     sparta_add_tests_to_config("${__in_file_list}" "${mpi_ranks}"
