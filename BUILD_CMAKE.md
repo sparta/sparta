@@ -8,13 +8,13 @@ mkdir build install
 cd build
 
 # Configure the build system
-cmake -DCMAKE_INSTALL_PREFIX=../install ../cmake
+cmake -DCMAKE_INSTALL_PREFIX=../install /path/to/sparta/cmake
 
 # List project-specific options
-cmake -L ../cmake
+cmake -L /path/to/sparta/cmake
 
 # List project-specific options and help strings
-cmake -LH ../cmake
+cmake -LH /path/to/sparta/cmake
 
 # List all options and help strings
 cmake -LAH
@@ -74,7 +74,23 @@ before running cmake.
 * SPARTA_LIST_PKGS
   * Print the Sparta packages and exit.
 * SPARTA_LIST_TPLS
-  * Print the Sparta TPLs and exit.  
+  * Print the Sparta TPLs and exit.
+* SPARTA_ENABLE_TESTING
+  * Add tests in examples to be run via ctest.
+* SPARTA_DSMC_TESTING_PATH
+  * Add tests in SPARTA_DSMC_TESTING_PATH/examples to be run via ctest.
+  * Run all tests via SPARTA_DSMC_TESTING_PATH/regression.py.
+* SPARTA_SPA_ARGS
+  * Additional arguments for the sparta binary. Only applied if SPARTA_ENABLE_TESTING or
+  SPARTA_DSMC_TESTING_PATH are enabled.
+* SPARTA_DSMC_TESTING_DRIVER_ARGS
+  * Additional arguments for SPARTA_DSMC_TESTING_PATH/regression.py.
+* SPARTA_CTEST_CONFIGS
+  * Additional ctest configurations, separated by `;`, that allow `SPARTA_SPA_ARGS_<CONFIG_NAME>` or `SPARTA_DSMC_TESTING_DRIVER_ARGS_<CONFIG_NAME>` to be specified.
+* SPARTA_MULTIBUILD_CONFIGS
+  * Additional build configurations, separated by `;`, build sparta with the cache file from `SPARTA_MULTIBUILD_PRESET_DIR/<CONFIG_NAME>.cmake`.
+* SPARTA_MULTIBUILD_PRESET_DIR
+  * The path to custom preset files when using `SPARTA_MULTIBUILD_CONFIGS`. Only applied if `SPARTA_MULTIBUILD_CONFIGS` is enabled.
 
 ## Examples
 ### Selecting packages via the command line
@@ -90,6 +106,31 @@ cmake -DBUILD_<NAME>_TPL=[ON|OFF] /path/to/sparta/cmake
 ### Specifying build flags via the command line
 ```bash
 cmake -DSPARTA_DEFAULT_CXX_COMPILE_FLAGS=<FLAGS> /path/to/sparta/cmake
+```
+
+### Specifying multiple ctest configurations via the command line
+```bash
+cmake -DSPARTA_CTEST_CONFIGS="PARALLEL;SERIAL" \
+      -DSPARTA_SPA_ARGS_SERIAL=spa_args \
+      -DSPARTA_DSMC_TESTING_DRIVER_ARGS_PARALLEL=driver_args \
+      /path/to/sparta/cmake
+
+make -j
+
+ctest -C SERIAL
+ctest -C PARALLEL
+```
+
+### Specifying multiple build configurations via the command line
+```bash
+# Assumes that /path/to/sparta/cmake/presets/{test_mac_mpi,test_mac}.cmake exist
+cmake -DSPARTA_MULTIBUILD_CONFIGS="test_mac;test_mac_mpi" \
+      -DSPARTA_MULTIBUILD_PRESET_DIR=/path/to/sparta/cmake/presets/ \
+      /path/to/sparta/cmake
+
+make -j
+
+ctest -VV
 ```
 
 # Build system design
@@ -122,6 +163,6 @@ process those build options, and finally print the settings that were selected.
 # Build system triaging
 ## Quick start
 ```bash
-cmake --log-level=VERBOSE [-C ../cmake/presets/<NAME>.cmake] ..
+cmake --log-level=VERBOSE [-C /path/to/sparta/cmake/presets/<NAME>.cmake] /path/to/sparta/cmake
 make VERBOSE=1
 ```

@@ -70,4 +70,48 @@ sparta_option(
 sparta_option(
   SPARTA_LIST_TPLS "List available packages and quit. Default: OFF." ""
   SPARTA_EXTRA_OPTIONS_LIST)
+
+sparta_option(SPARTA_ENABLE_TESTING "Enable sparta testing. Default: OFF" OFF
+              SPARTA_EXTRA_OPTIONS_LIST)
+
+sparta_option(
+  SPARTA_DSMC_TESTING_PATH "Enable sparta dsmc_testing. Default: OFF" OFF
+  SPARTA_EXTRA_OPTIONS_LIST)
+
+sparta_option(
+  SPARTA_CTEST_CONFIGS
+  "Additional ctest configurations, separtaed by \"\;\", that allow SPARTA_SPA_ARGS_<CONFIG_NAME> or SPARTA_DSMC_TESTING_DRIVER_ARGS_<CONFIG_NAME> to be specified. Default: \"\""
+  ""
+  SPARTA_EXTRA_OPTIONS_LIST)
+
+sparta_option(
+  SPARTA_SPA_ARGS "Additional arguments for the sparta binary. Default: OFF"
+  OFF SPARTA_EXTRA_OPTIONS_LIST)
+
+sparta_option(
+  SPARTA_DSMC_TESTING_DRIVER_ARGS
+  "Additional arguments for ${SPARTA_DSMC_TESTING_PATH}/regression.py. Default: OFF"
+  OFF
+  SPARTA_EXTRA_OPTIONS_LIST)
+
+sparta_option(
+  SPARTA_MULTIBUILD_CONFIGS
+  "Additional sparta build configurations, separtaed by \"\;\", that allow multiple build configurations to be built from a single build directory. Default: \"\""
+  ""
+  SPARTA_EXTRA_OPTIONS_LIST)
+
+sparta_option(
+  SPARTA_MULTIBUILD_PRESET_DIR
+  "The path to your preset files at ${SPARTA_MULTIBUILD_PRESET_DIR}/${SPARTA_MULTIBUILD_CONFIG}.cmake. Default: \"\""
+  ""
+  SPARTA_EXTRA_OPTIONS_LIST)
+
+if(SPARTA_CTEST_CONFIGS)
+  foreach(config ${SPARTA_CTEST_CONFIGS})
+    list(APPEND SPARTA_EXTRA_OPTIONS_LIST SPARTA_SPA_ARGS_${config})
+    list(APPEND SPARTA_EXTRA_OPTIONS_LIST
+         SPARTA_DSMC_TESTING_DRIVER_ARGS_${config})
+  endforeach()
+endif()
+
 # ######### END   SPARTA EXTRA OPTIONS ##########

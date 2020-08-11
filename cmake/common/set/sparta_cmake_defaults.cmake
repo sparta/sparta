@@ -16,3 +16,34 @@ set(SPARTA_MACHINE
       STRING
       "Suffix to append to spa binary (WON'T enable any features automatically)"
 )
+
+if(SPARTA_ENABLE_TESTING)
+  set(SPARTA_ENABLED_TEST_SUITES
+      "ablation"
+      "adapt"
+      "vibrate"
+      "surf_collide"
+      "surf"
+      "step"
+      "spiky"
+      "sphere"
+      "jagged"
+      # FAILING."implicit"
+      "free"
+      "flowfile"
+      "emit"
+      "collide"
+      "circle"
+      "chem"
+      "axi"
+      "ambi")
+
+  set(SPARTA_DISABLED_TESTS
+      "in.ablation.3d.reactions" # Failing
+      "in.jagged.3d" # Long runtime
+      "in.jagged.3d.distributed" # Long runtime
+  )
+
+  list(APPEND __DEFAULT_MPI_RANKS "1")
+  list(APPEND __DEFAULT_MPI_RANKS "4")
+endif()
