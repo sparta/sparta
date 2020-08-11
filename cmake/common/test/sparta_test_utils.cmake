@@ -17,9 +17,21 @@ endif()
 # @param config_name:    A string describing the configuration to add
 #                        this test to. Setting config_name to "" will
 #                        add the test to the default configuration.
+# @param work_dir:       A optional working directory argument where
+#                        the test will be run.
 #
 # cmake-format: on
 function(sparta_add_test sparta_in_file mpi_ranks config_name)
+  set(__total_params 4)
+  if(${ARGC} EQUAL ${__total_params})
+    math(EXPR ARGC "${ARGC}-1")
+    set(__work_dir "${ARGV${ARGC}}")
+  else()
+    set(__work_dir ${CMAKE_CURRENT_SOURCE_DIR})
+  endif()
+
+  # message("sparta_add_test: __work_dir=${__work_dir}")
+
   if(config_name STREQUAL "")
     set(__config_name "${config_name}")
   else()
@@ -60,7 +72,8 @@ function(sparta_add_test sparta_in_file mpi_ranks config_name)
       NAME ${__test_name}
       CONFIGURATIONS ${config_name}
       COMMAND ${SPARTA_TEST_DRIVER} mpi_${mpi_ranks}
-              "${__sparta_driver_command}" ${__sparta_test_driver_postfix_args})
+              "${__sparta_driver_command}" ${__sparta_test_driver_postfix_args}
+      WORKING_DIRECTORY ${__work_dir})
     # unable to compile regex: ^\*{3} test .* passed
     set_tests_properties(
       ${__test_name} PROPERTIES PASS_REGULAR_EXPRESSION "passed;no failures"
@@ -71,7 +84,8 @@ function(sparta_add_test sparta_in_file mpi_ranks config_name)
       NAME ${__test_name}
       CONFIGURATIONS ${config_name}
       COMMAND ${__sparta_command} -in ${sparta_in_file} -log
-              ${SPARTA_MACHINE}.${sparta_in_file}.log)
+              ${SPARTA_MACHINE}.${sparta_in_file}.log
+      WORKING_DIRECTORY ${__work_dir})
     set_tests_properties(
       ${__test_name}
       PROPERTIES PASS_REGULAR_EXPRESSION "" FAIL_REGULAR_EXPRESSION
@@ -104,13 +118,26 @@ endfunction()
 # @param config_name:  A string describing the configuration to add
 #                      this test to. Setting config_name to "" will
 #                      add the test to the default configuration.
+# @param work_dir:     A optional working directory argument where
+#                      the test will be run.
 #
 # cmake-format: on
 function(sparta_add_tests_to_config in_file_list mpi_ranks config_name)
+  # Too bad cmake uses ARGC/ARGV for macros too.
+  set(__total_params 4)
+  if(${ARGC} EQUAL ${__total_params})
+    math(EXPR ARGC "${ARGC}-1")
+    set(__work_dir "${ARGV${ARGC}}")
+  else()
+    set(__work_dir ${CMAKE_CURRENT_SOURCE_DIR})
+  endif()
+
+  # message("sparta_add_tests_to_config: __work_dir=${__work_dir}")
+
   foreach(mpi_rank IN LISTS mpi_ranks)
     foreach(in_file IN LISTS in_file_list)
       # message("sparta_add_test(${in_file} ${mpi_rank})")
-      sparta_add_test(${in_file} ${mpi_rank} "${config_name}")
+      sparta_add_test(${in_file} ${mpi_rank} "${config_name}" ${__work_dir})
     endforeach()
   endforeach()
 endfunction()
@@ -128,20 +155,34 @@ endfunction()
 # @param config_name:  A string describing the configuration to add
 #                      this test to. Setting config_name to "" will
 #                      add the test to the default configuration.
+# @param work_dir:     A optional working directory argument where
+#                      the test will be run.
 #
 # cmake-format: on
 function(sparta_add_all_tests_to_config mpi_ranks config_name)
+  set(__total_params 3)
+  if(${ARGC} EQUAL ${__total_params})
+    math(EXPR ARGC "${ARGC}-1")
+    set(__work_dir "${ARGV${ARGC}}")
+  else()
+    set(__work_dir ${CMAKE_CURRENT_SOURCE_DIR})
+  endif()
+
+  # message("sparta_add_all_tests_to_config: __work_dir=${__work_dir}")
+
   file(
     GLOB __in_file_list
     LIST_DIRECTORIES false
-    RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
-    CONFIGURE_DEPENDS in.*)
+    RELATIVE "${__work_dir}"
+    CONFIGURE_DEPENDS ${__work_dir}/in.*)
 
+  # message("__in_file_list=${__in_file_list}")
   if(BUILD_MPI)
     sparta_add_tests_to_config("${__in_file_list}" "${mpi_ranks}"
-                               "${config_name}")
+                               "${config_name}" ${__work_dir})
   else()
-    sparta_add_tests_to_config("${__in_file_list}" "none" "${config_name}")
+    sparta_add_tests_to_config("${__in_file_list}" "none" "${config_name}"
+                               ${__work_dir})
   endif()
 endfunction()
 
