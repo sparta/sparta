@@ -4,6 +4,8 @@ if(SPARTA_DSMC_TESTING_PATH)
   # message("dsmc_testing=${SPARTA_DSMC_TESTING_ABSOLUTE_PATH}")
   set(SPARTA_TEST_DRIVER python
                          ${SPARTA_DSMC_TESTING_ABSOLUTE_PATH}/regression.py)
+else()
+  set(SPARTA_TEST_DRIVER python ${SPARTA_TOOLS_DIR}/testing/regression.py)
 endif()
 
 # cmake-format: off
@@ -26,8 +28,11 @@ function(sparta_add_test sparta_in_file mpi_ranks config_name)
   if(${ARGC} EQUAL ${__total_params})
     math(EXPR ARGC "${ARGC}-1")
     set(__work_dir "${ARGV${ARGC}}")
+    get_filename_component(__work_dir_basename "${__work_dir}" NAME)
+    set(__run_dir ${CMAKE_CURRENT_BINARY_DIR}/${__work_dir_basename})
   else()
     set(__work_dir ${CMAKE_CURRENT_SOURCE_DIR})
+    set(__run_dir ${CMAKE_CURRENT_BINARY_DIR})
   endif()
 
   # message("sparta_add_test: __work_dir=${__work_dir}")
@@ -53,44 +58,30 @@ function(sparta_add_test sparta_in_file mpi_ranks config_name)
         $<TARGET_FILE:${TARGET_SPARTA}> ${__spa_args})
   endif()
 
-  if(SPARTA_DSMC_TESTING_PATH)
-    # message("Adding test \"${__test_name}\" with test driver!")
-    string(REPLACE ";" " " __sparta_driver_command "${__sparta_command}")
-    if(SPARTA_DSMC_TESTING_DRIVER_ARGS${__config_name})
-      string(REPLACE " " ";" __driver_args
-                     ${SPARTA_DSMC_TESTING_DRIVER_ARGS${__config_name}})
-    endif()
-    set(__sparta_test_driver_postfix_args
-        ${CMAKE_CURRENT_BINARY_DIR}
-        -logread
-        ${CMAKE_CURRENT_BINARY_DIR}
-        olog
-        -customtest
-        ${sparta_in_file}
-        ${__driver_args})
-    add_test(
-      NAME ${__test_name}
-      CONFIGURATIONS ${config_name}
-      COMMAND ${SPARTA_TEST_DRIVER} mpi_${mpi_ranks}
-              "${__sparta_driver_command}" ${__sparta_test_driver_postfix_args}
-      WORKING_DIRECTORY ${__work_dir})
-    # unable to compile regex: ^\*{3} test .* passed
-    set_tests_properties(
-      ${__test_name} PROPERTIES PASS_REGULAR_EXPRESSION "passed;no failures"
-                                FAIL_REGULAR_EXPRESSION "FAILED")
-  else()
-    # message("Adding test \"${__test_name}\" without test driver!")
-    add_test(
-      NAME ${__test_name}
-      CONFIGURATIONS ${config_name}
-      COMMAND ${__sparta_command} -in ${sparta_in_file} -log
-              ${SPARTA_MACHINE}.${sparta_in_file}.log
-      WORKING_DIRECTORY ${__work_dir})
-    set_tests_properties(
-      ${__test_name}
-      PROPERTIES PASS_REGULAR_EXPRESSION "" FAIL_REGULAR_EXPRESSION
-                 "Error;ERROR;exited on signal")
+  # message("Adding test \"${__test_name}\" with test driver!")
+  string(REPLACE ";" " " __sparta_driver_command "${__sparta_command}")
+  if(SPARTA_DSMC_TESTING_DRIVER_ARGS${__config_name})
+    string(REPLACE " " ";" __driver_args
+                   ${SPARTA_DSMC_TESTING_DRIVER_ARGS${__config_name}})
   endif()
+  set(__sparta_test_driver_postfix_args
+      ${__run_dir}
+      -logread
+      ${__run_dir}
+      olog
+      -customtest
+      ${sparta_in_file}
+      ${__driver_args})
+  add_test(
+    NAME ${__test_name}
+    CONFIGURATIONS ${config_name}
+    COMMAND ${SPARTA_TEST_DRIVER} mpi_${mpi_ranks} "${__sparta_driver_command}"
+            ${__sparta_test_driver_postfix_args}
+    WORKING_DIRECTORY ${__run_dir})
+  # unable to compile regex: ^\*{3} test .* passed
+  set_tests_properties(
+    ${__test_name} PROPERTIES PASS_REGULAR_EXPRESSION "passed;no failures"
+                              FAIL_REGULAR_EXPRESSION "FAILED")
 
   if(NOT SPARTA_DSMC_TESTING_THREADS_PER_RANK)
     # message(WARNING "SPARTA_DSMC_TESTING_THREADS_PER_RANK is uset! Defaulting
