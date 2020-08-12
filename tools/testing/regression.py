@@ -280,7 +280,7 @@ def add_test(test,lmps,descriptor):
     return msg
   dmy = time.strftime("%d%b%y")
   system_name = platform.system()
-  shutil.copyfile(log,"log."+dmy+"."+system_name.lower()+"."+descriptor+"."+test)
+  shutil.copyfile(log,"log.archive."+dmy+"."+system_name.lower()+"."+descriptor+"."+test)
   return msg
 
 #====================================================
