@@ -96,6 +96,8 @@ usage = """
       -customonly <file1 file2* ...>
         only run tests from sub-dirs that contain these files
         default = none
+      -customtest in.test
+        only run a single test with this "in" file
       -custom <file_prefix>
         read options from this file_prefix plus test name in each sub-dir, if it exists
         valid options are: launch, descriptors, tolerance, error_norm, relative_error
@@ -450,11 +452,12 @@ def init() :
   exclude_dirs = []
   only_dirs = []
   only_files = []
+  only_tests = []
   os.chdir(top_dir)
   home = os.getcwd()
   cnt = 4
   keywords = ["-auto-rebless","-min-same-rows","-exclude","-only",
-              "-customonly","-custom","-error_norm",
+              "-customonly","-customtest","-custom","-error_norm",
               "-relative_error","-tolerance","-logread"]
   while (cnt < len(sys.argv)): 
     option = sys.argv[cnt]
@@ -496,6 +499,11 @@ def init() :
         only_files.append(sys.argv[cnt])
         cnt += 1
         if cnt == len(sys.argv): break
+    elif ("-customtest" == option):
+      cnt += 1
+      only_tests.append(sys.argv[cnt])
+      cnt += 1
+      if cnt == len(sys.argv): break
     elif ("-custom" == option):
       custom_file = sys.argv[cnt+1]
       cnt += 2
@@ -520,43 +528,52 @@ def init() :
     else:
       raise Exception("Invalid optional arguements for regression.py")
 
-  # recursively loop through directories to get tests
-  for x in os.walk(top_dir):
-    dir = x[0];
-    if ".svn" in dir: continue
+  if len(only_tests) == 0:
+    # recursively loop through directories to get tests
+    for x in os.walk(top_dir):
+      dir = x[0];
+      if ".svn" in dir: continue
 
-    # exclude these directories
-    if len(exclude_dirs) > 0:
-      skip = False
-      for i in exclude_dirs:
-        for y in os.walk(i):
-          if y[0] == dir: skip = True
-      if skip: continue
+      # exclude these directories
+      if len(exclude_dirs) > 0:
+        skip = False
+        for i in exclude_dirs:
+          for y in os.walk(i):
+            if y[0] == dir: skip = True
+        if skip: continue
 
-    # only include these directories
-    if len(only_dirs) > 0:
-      skip = True
-      for i in only_dirs:
-        for y in os.walk(i):
-          if y[0] == dir: skip = False
-      if skip: continue
+      # only include these directories
+      if len(only_dirs) > 0:
+        skip = True
+        for i in only_dirs:
+          for y in os.walk(i):
+            if y[0] == dir: skip = False
+        if skip: continue
 
-    # only include directories with these files
-    if len(only_files) > 0:
-      skip = True
-      for name in only_files:
-        for path in glob(os.path.join(dir,name)):
-          if os.path.isfile(path):
-            skip = False
-      if skip: continue
+      # only include directories with these files
+      if len(only_files) > 0:
+        skip = True
+        for name in only_files:
+          for path in glob(os.path.join(dir,name)):
+            if os.path.isfile(path):
+              skip = False
+        if skip: continue
 
-    os.chdir(dir);
-    for path in glob("./in.*"):
-      test = path[5:];
-      tests.append([dir,test])
+      os.chdir(dir);
+      for path in glob("./in.*"):
+        test = path[5:];
+        tests.append([dir,test])
+      os.chdir(home)
+    ntests = len(tests)
+    #tests.sort()
+  else:
+    ntests = 1
+    os.chdir(top_dir)
+    path = glob("./"+only_tests[0])[0]
+    test = os.path.basename(path)[3:]
+    dir = os.path.dirname(top_dir+"/"+path)
+    tests.append([dir,test])
     os.chdir(home)
-  ntests = len(tests)
-  #tests.sort()
 
   # print header
   print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
