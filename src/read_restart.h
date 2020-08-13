@@ -39,6 +39,13 @@ class ReadRestart : protected Pointers {
   int multiproc;             // 0 = proc 0 writes for all
                              // else # of procs writing files
 
+  // MPI-IO values
+
+  int mpiioflag;               // 1 for MPIIO output, else 0
+  class RestartMPIIO *mpiio;   // MPIIO for restart file input
+  bigint assignedChunkSize;
+  MPI_Offset assignedChunkOffset,headerOffset;
+
   bigint nparticle_file;
   bigint nunsplit_file;
   int nsplit_file,nsub_file;
@@ -91,6 +98,10 @@ E: Cannot open restart file %s
 The specified file cannot be opened.  Check that the path and name are
 correct.  If the file is a compressed file, also check that the gzip
 executable can be found and run.
+
+E: Reading from MPI-IO filename when MPIIO package is not installed
+
+Self-explanatory.
 
 E: Invalid flag in peratom section of restart file
 

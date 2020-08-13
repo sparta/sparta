@@ -40,7 +40,7 @@ endif
 
 # Package variables
 
-PACKAGE = fft kokkos
+PACKAGE = fft kokkos mpiio
 
 PACKALL = $(PACKAGE)
 
