@@ -1,0 +1,140 @@
+name: CI
+
+on:
+#  push:
+#    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+# Define jobs: mpi, mpi-stubs-fft, mpi-stubs-kokkos-exact-fft, and bigbig
+# Each jobs runs on ubuntu-18.04 and uses the cmake build system
+# All jobs except for bigbig run ctest
+jobs:
+  mpi:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install Dependencies
+      run: sudo apt install openmpi-bin libopenmpi-dev
+
+    - name: Configure
+      run: |
+        mkdir build
+        cd build
+        cmake -C ../cmake/presets/mpi.cmake \
+          -DSPARTA_ENABLE_TESTING=ON \
+          ../cmake
+
+    - name: Build
+      run: cd build; make -j4
+
+    # Cannot download artifacts from previous workflows
+    #- uses: actions/download-artifact@v2
+    #  with:
+    #    name: mpi-Artifacts
+    #    path: build/examples/
+
+    - name: Test
+      run: |
+        cd build
+        find -name 'log.archive*'
+        sudo rm /bin/sh
+        sudo ln -s /bin/bash /bin/sh
+        ctest --output-on-failure -j4
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: 'mpi-Artifacts'
+        path: 'build/examples/**/log.archive*'
+  mpi-stubs-fft:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Configure
+      run: |
+        mkdir build
+        cd build
+        cmake -C ../cmake/presets/serial.cmake \
+          -DSPARTA_ENABLE_TESTING=ON \
+          -DPKG_FFT=ON \
+           ../cmake
+
+    - name: Build
+      run: cd build; make -j4
+
+    # Cannot download artifacts from previous workflows
+    #- uses: actions/download-artifact@v2
+    #  with:
+    #    name: mpi-stubs-fft-Artifacts
+    #    path: build/examples/
+
+    - name: Test
+      run: |
+        cd build
+        find -name 'log.archive*'
+        sudo rm /bin/sh
+        sudo ln -s /bin/bash /bin/sh
+        ctest --output-on-failure -j4
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: 'mpi-stubs-fft-Artifacts'
+        path: 'build/examples/**/log.archive*'
+  mpi-stubs-kokkos-exact-fft:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Configure
+      run: |
+        mkdir build
+        cd build
+        cmake -C ../cmake/presets/serial.cmake \
+          -DSPARTA_ENABLE_TESTING=ON \
+          -DSPARTA_DEFAULT_CXX_COMPILE_FLAGS='-DSPARTA_KOKKOS_EXACT' \
+          -DPKG_KOKKOS=ON \
+          -DPKG_FFT=ON \
+          ../cmake
+
+    - name: Build
+      run: cd build; make -j4
+
+    # Cannot download artifacts from previous workflows
+    #- uses: actions/download-artifact@v2
+    #  with:
+    #    name: mpi-stubs-kokkos-exact-fft-Artifacts
+    #    path: build/examples/
+
+    - name: Test
+      run: |
+        cd build
+        find -name 'log.archive*'
+        sudo rm /bin/sh
+        sudo ln -s /bin/bash /bin/sh
+        ctest --output-on-failure -j4
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: 'mpi-stubs-kokkos-exact-fft-Artifacts'
+        path: 'build/examples/**/log.archive*'
+  bigbig:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install Dependencies
+      run: sudo apt install openmpi-bin libopenmpi-dev
+
+    - name: Configure
+      run: |
+        mkdir build
+        cd build
+        cmake -C ../cmake/presets/kokkos_omp.cmake \
+          -DPKG_FFT=ON \
+          -DSPARTA_DEFAULT_CXX_COMPILE_FLAGS='-DSPARTA_BIGBIG' \
+          ../cmake
+
+    - name: Build
+      run: cd build; make -j4
