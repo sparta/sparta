@@ -1,4 +1,11 @@
+################################################################################
 # thermal gas in a 3d box with free molecular flow (no collisions)
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
 # particles reflect off global box boundaries
 
 seed	    	    12345
@@ -18,7 +25,7 @@ mixture		    air Ar vstream 0.0 0.0 0.0 temp 273.15
 global              nrho 7.07043E22
 global              fnum 7.07043E6
 
-create_particles    air n 10000
+create_particles    air n 10000 twopass
 
 stats		    100
 compute             temp temp

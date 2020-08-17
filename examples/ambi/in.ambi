@@ -1,4 +1,11 @@
+################################################################################
 # flow around a cylinder with ambipolar reactions
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
 
 seed	    	    12345
 dimension   	    2
@@ -31,9 +38,9 @@ collide_modify      vremax 1000 yes vibrate discrete rotate smooth
 collide_modify      ambipolar yes
 react               tce air.tce
 
-create_particles    noelectron n 0
+create_particles    noelectron n 0 twopass
 
-fix                 in emit/face noelectron xlo yhi
+fix                 in emit/face noelectron xlo yhi twopass
 fix                 load balance 100 1.1 rcb part
 
 # too large a timestep, but want to induce ambipolar reactions
