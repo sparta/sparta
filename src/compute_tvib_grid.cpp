@@ -538,14 +538,12 @@ void ComputeTvibGrid::post_process_grid(int index, int nsample,
       // to accumulate numerator & denominator
 
       numer = denom = 0.0;
-      evib = emap[2*imode];
-      count = evib+1;
+      count = emap[2*imode+1];
       for (isp = 0; isp < nsp; isp++) {
-        ispecies = t2s_mode[evib-emap[0]];
+        ispecies = t2s[evib-emap[0]];
         numer += tspecies_mode[isp][imode]*etally[icell][count];
         denom += etally[icell][count];
-        evib += 2*maxmode;
-        count = evib+1;
+        count += 2*maxmode;
       }
       
       if (denom == 0.0) vec[k] = 0.0;
