@@ -1,0 +1,149 @@
+SPARTA (6 Jul 2020)
+################################################################################
+# 2d flow around porous media
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+global              gridcut 0.0 comm/sort yes
+
+boundary	    o r p
+
+create_box  	    0 150 0 150 -0.5 0.5
+Created orthogonal box = (0 0 -0.5) to (150 150 0.5)
+create_grid 	    150 150 1
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/Users/eharvey/dev/SPARTA.base/sparta/src/grid.cpp:415)
+Created 22500 child grid cells
+  parent cells = 1
+  CPU time = 0.001099 secs
+  create/ghost percent = 93.7216 6.27843
+
+balance_grid        rcb cell
+Balance grid migrated 16876 cells
+  CPU time = 0.004609 secs
+  reassign/sort/migrate/ghost percent = 27.5331 0.282057 26.3832 45.8017
+
+global		    nrho 1.0 fnum 0.01
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0
+
+region              inner block 25.5 124.5 25.5 124.5 INF INF
+group               inner grid region inner one
+10000 grid cells in group inner
+
+compute             COMP isurf/grid all all n
+fix                 FIX ave/grid all 10 10 100 c_COMP[*]
+fix                 ablate ablate inner 100 0.2 f_FIX
+
+global              surfs implicit
+read_isurf          inner 100 100 1 binary.101x101 180.5 ablate
+  10201 corner points
+  28744 11256 pushed corner pt values
+  25.7078 124.292 xlo xhi
+  25.7078 124.292 ylo yhi
+  0 0 zlo zhi
+  0.413172 min line length
+  7213 = cells with surfs
+  8006 = total surfs in all grid cells
+  2 = max surfs in one grid cell
+  0.413172 = min surf-size/cell-size ratio
+  0 0 = number of pushed cells
+  7213 0 = cells overlapping surfs, overlap cells with unmarked corner pts
+  15211 76 7213 = cells outside/inside/overlapping surfs
+  7213 = surf cells with 1,2,etc splits
+  21209.8 21209.8 = cell-wise and global flow volume
+  CPU time = 0.005881 secs
+  read/create-surfs percent = 24.7407 75.2593
+
+surf_collide	    1 diffuse 300.0 1.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+fix		    in emit/face air xlo twopass
+
+fix                 check grid/check 1 error
+
+timestep 	    0.0001
+
+#dump                2 image all 100 image.*.ppm type type pdiam 0.05 #                    size 1024 1024 zoom 1.75 grid proc sline yes 0.005 #                    # surf proc 0.004
+#dump_modify	    2 pad 5
+
+fix                 bal balance 100 1.001 rcb part
+
+stats		    100
+stats_style	    step cpu np nattempt ncoll nscoll nscheck                     f_bal f_bal[2] f_ablate
+
+# run 10-20x longer for a better movie
+
+run                 500
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 0 0 0
+  grid      (ave,min,max) = 1.51388 1.51388 1.51388
+  surf      (ave,min,max) = 0.198513 0.19519 0.203522
+  total     (ave,min,max) = 2.2261 2.22277 2.23111
+Step CPU Np Natt Ncoll Nscoll Nscheck f_bal f_bal[2] f_ablate 
+       0            0        0        0        0        0        0            1            1       717570 
+     100      0.04708    31593        0        0        0        0    1.0678315    2.0019625       717570 
+     200     0.130111    63227        0        0        0       36    1.0314581    1.4609581       717570 
+     300     0.267031    94805        0        0       20      942    1.0195665     1.297864       717376 
+     400     0.584533   126417        0        0       54     3815    1.0141041    1.2065466     716540.6 
+     500     0.832559   158085        0        0      124     8637    1.0103172    1.1562893    714585.06 
+Loop time of 0.83267 on 4 procs for 500 steps with 158085 particles
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.19858    | 0.23028    | 0.26647    |   6.6 | 27.66
+Coll    | 0.038858   | 0.057062   | 0.076188   |   7.6 |  6.85
+Sort    | 0.091034   | 0.11021    | 0.12886    |   5.4 | 13.24
+Comm    | 0.015061   | 0.017613   | 0.018689   |   1.1 |  2.12
+Modify  | 0.25872    | 0.27567    | 0.29374    |   3.2 | 33.11
+Output  | 0.000899   | 0.0009315  | 0.00102    |   0.0 |  0.11
+Other   |            | 0.1409     |            |       | 16.92
+
+Particle moves    = 39586320 (39.6M)
+Cells touched     = 42783677 (42.8M)
+Particle comms    = 141803 (0.142M)
+Boundary collides = 8098 (8.1K)
+Boundary exits    = 18 (0.018K)
+SurfColl checks   = 877924 (0.878M)
+SurfColl occurs   = 14092 (14.1K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+
+Particle-moves/CPUsec/proc: 1.18854e+07
+Particle-moves/step: 79172.6
+Cell-touches/particle/step: 1.08077
+Particle comm iterations/step: 1.978
+Particle fraction communicated: 0.00358212
+Particle fraction colliding with boundary: 0.000204566
+Particle fraction exiting boundary: 4.54703e-07
+Surface-checks/particle/step: 0.0221775
+Surface-collisions/particle/step: 0.000355982
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Particles: 39521.2 ave 39929 max 39095 min
+Histogram: 2 0 0 0 0 0 0 0 0 2
+Cells:      5625 ave 10596 max 805 min
+Histogram: 2 0 0 0 0 0 0 0 0 2
+GhostCell: 207.75 ave 324 max 89 min
+Histogram: 1 1 0 0 0 0 0 0 1 1
+EmptyCell: 151.75 ave 217 max 86 min
+Histogram: 2 0 0 0 0 0 0 0 0 2
+Surfs:    2001.5 ave 4125 max 0 min
+Histogram: 2 0 0 0 0 0 0 0 0 2
+GhostSurf: 19 ave 57 max 0 min
+Histogram: 2 0 0 1 0 0 0 0 0 1

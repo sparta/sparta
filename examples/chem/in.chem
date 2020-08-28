@@ -1,5 +1,12 @@
+################################################################################
 # thermal gas in a 3d box with collisions and chemistry
 # particles reflect off global box boundaries
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
 
 seed	    	    12345
 dimension   	    3
@@ -23,7 +30,7 @@ global              fnum 7.07043E5
 collide		    vss air air.vss
 react               tce air.tce
 
-create_particles    air n 10000
+create_particles    air n 10000 twopass
 
 stats		    100
 compute             temp temp

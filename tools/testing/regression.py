@@ -194,7 +194,7 @@ def run_test(test,lmps,descriptor):
 
   # check if gold standard exists, if not create it
   system_name = platform.system()
-  gold_standard = glob("log.*"+system_name.lower()+"."+descriptor+"."+test)
+  gold_standard = glob("log.*"+"."+descriptor+"."+test)
   if (len(gold_standard) > 0):
     ref = (gold_standard)[0];
     print "gold standard =",ref
@@ -202,7 +202,7 @@ def run_test(test,lmps,descriptor):
   else:
     new_flag = True
     msg += add_test(test,lmps,descriptor)
-    gold_standard = glob("log.*"+system_name.lower()+"."+descriptor+"."+test)
+    gold_standard = glob("log.*"+"."+descriptor+"."+test)
     if not (len(gold_standard) > 0):
       raise Exception("No logfile found")
     ref = (gold_standard)[0];
@@ -251,12 +251,12 @@ def run_test(test,lmps,descriptor):
       msg += "\nAll rows are identical\n"
     else:
       msg += "\nWARNING: Only "+str(nsame_rows)+" out of "+str(nrows)+" rows are identical\n"
-      if (auto_rebless_flag):
-        dmy = time.strftime("%d%b%y")
-        hms = time.strftime("%H:%M:%S")
-        shutil.copyfile(ref,"old_"+ref+"_"+dmy+"_"+hms)
-        shutil.copyfile(log,ref)
-        msg += "WARNING: Gold standard for test "+test+" has been auto-reblessed\n"
+    if (auto_rebless_flag):
+      dmy = time.strftime("%d%b%y")
+      hms = time.strftime("%H:%M:%S")
+      shutil.copyfile(ref,"old_"+ref+"_"+dmy+"_"+hms)
+      shutil.copyfile(log,ref)
+      msg += "WARNING: Gold standard for test "+test+" has been auto-reblessed\n"
   if (fail) :
     msg += "!!! test "+test+" FAILED\n"
   else : 
@@ -280,7 +280,7 @@ def add_test(test,lmps,descriptor):
     return msg
   dmy = time.strftime("%d%b%y")
   system_name = platform.system()
-  shutil.copyfile(log,"log.archive."+dmy+"."+system_name.lower()+"."+descriptor+"."+test)
+  shutil.copyfile(log,"log.archive."+dmy+"."+descriptor+"."+test)
   return msg
 
 #====================================================
@@ -463,9 +463,9 @@ def init() :
     option = sys.argv[cnt]
     if ("-auto-rebless" == option):
       flag = sys.argv[cnt+1]
-      if (flag == "True"):
+      if (flag.lower() == "true"):
         auto_rebless_flag = True
-      elif (flag == "False"):
+      elif (flag.lower() == "false"):
         auto_rebless_flag = False
       else:
         raise Exception("Invalid optional arguements for regression.py")

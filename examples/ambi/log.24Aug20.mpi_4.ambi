@@ -1,0 +1,208 @@
+SPARTA (6 Jul 2020)
+################################################################################
+# flow around a cylinder with ambipolar reactions
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+boundary	    o o p
+global              gridcut 0.01 comm/sort yes
+create_box  	    -2.0 2.0 -2.0 2.0 -0.5 0.5
+Created orthogonal box = (-2 -2 -0.5) to (2 2 0.5)
+create_grid         50 50 1
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/Users/eharvey/dev/SPARTA.base/sparta/src/grid.cpp:415)
+Created 2500 child grid cells
+  parent cells = 1
+  CPU time = 0.001026 secs
+  create/ghost percent = 95.809 4.19103
+balance_grid        rcb cell
+Balance grid migrated 1874 cells
+  CPU time = 0.001408 secs
+  reassign/sort/migrate/ghost percent = 62.0739 0.284091 15.4119 22.2301
+
+global		    fnum 2.6404E16
+
+mixture		    species nrho 2.6404e20 vstream 12500.0 0 0 temp 217.63
+
+species             air.species N2 O2 N O NO N2+ O2+ N+ O+ NO+ e
+
+mixture             species copy noelectron
+mixture             noelectron delete e
+mixture             noelectron N2 frac 0.8
+mixture             noelectron O2 frac 0.2
+
+read_surf           data.circle invert
+  1001 points
+  1001 lines
+  -0.999995 1 xlo xhi
+  -0.999999 0.999999 ylo yhi
+  0 0 zlo zhi
+  0.0062769 min line length
+  100 = cells with surfs
+  1102 = total surfs in all grid cells
+  16 = max surfs in one grid cell
+  0.0784612 = min surf-size/cell-size ratio
+  0 0 = number of pushed cells
+  100 0 = cells overlapping surfs, overlap cells with unmarked corner pts
+  1960 440 100 = cells outside/inside/overlapping surfs
+  100 = surf cells with 1,2,etc splits
+  12.8584 12.8584 = cell-wise and global flow volume
+  CPU time = 0.001691 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 41.0999 19.2194 0.591366 25.1331 13.9562 4.25784 0.0591366
+  surf2grid time = 0.000425 secs
+  map/rvous1/rvous2/split percent = 27.5294 57.1765 0.235294 9.88235
+surf_collide	    1 diffuse 615.0 1.0
+surf_react          1 prob air.surf
+surf_modify         all collide 1 react 1
+
+fix                 ambi ambipolar e N+ N2+ NO+ O+ O2+
+
+collide		    vss species air.vss relax variable
+collide_modify      vremax 1000 yes vibrate discrete rotate smooth
+collide_modify      ambipolar yes
+react               tce air.tce
+
+create_particles    noelectron n 0
+Created 128584 particles
+  CPU time = 0.008142 secs
+
+fix                 in emit/face noelectron xlo yhi
+fix                 load balance 100 1.1 rcb part
+
+# too large a timestep, but want to induce ambipolar reactions
+
+timestep 	    1.e-7
+
+compute             10 count species
+compute             temp temp
+stats_style         step cpu np nattempt ncoll nsreact c_temp                     c_10[6] c_10[7] c_10[8] c_10[9] c_10[10] c_10[11]
+
+#dump                2 image all 50 image.*.ppm type type #                    surf proc 0.01 size 512 512 zoom 1.75
+#dump_modify	    2 pad 4 pdiam 6*10 0.2 pdiam 1*5 0.01
+
+stats               100
+
+run                 1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 4.25 4.25 4.25
+  grid      (ave,min,max) = 1.51388 1.51388 1.51388
+  surf      (ave,min,max) = 0.1031 0.1031 0.1031
+  total     (ave,min,max) = 5.86698 5.86698 5.86698
+Step CPU Np Natt Ncoll Nsreact c_temp c_10[6] c_10[7] c_10[8] c_10[9] c_10[10] c_10[11] 
+       0            0   128584        0        0        0    180581.75            0            0            0            0            0            0 
+     100     0.142196   128588      909      605        0    178395.72            0            0            0            0            0            0 
+     200     0.322995   129187     1402      905        0    173749.17            0            0            0            0            0            0 
+     300     0.522191   130368     2401     1474        0    168703.07            2            1            0            2            3            0 
+     400     0.723424   131761     3944     2269        0    163489.15           10            0            1           11            5            0 
+     500     0.968373   133359     7499     3930        1    158285.73           14            0           12           57            5            0 
+     600     1.340072   135274    12367     6309        0    152812.05           14            2           22          123            6            0 
+     700     1.779188   137242    20713    10054        1    147485.85           24            5           33          253           13            0 
+     800     2.273231   139610    29702    13831        0    142286.21           27            5           61          390           17            0 
+     900     2.822814   142724    40839    18711        2     137535.2           32            2           74          554           25            0 
+    1000     3.404903   146527    10349     7371        0    133293.02           44            4          113          769           27            0 
+Loop time of 3.40493 on 4 procs for 1000 steps with 146527 particles
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.57318    | 0.83249    | 1.094      |  28.4 | 24.45
+Coll    | 0.95171    | 1.4849     | 2.0318     |  43.5 | 43.61
+Sort    | 0.20264    | 0.20867    | 0.21477    |   1.2 |  6.13
+Comm    | 0.014252   | 0.01518    | 0.015722   |   0.5 |  0.45
+Modify  | 0.017851   | 0.019458   | 0.020894   |   0.9 |  0.57
+Output  | 0.006014   | 0.0060643  | 0.006214   |   0.1 |  0.18
+Other   |            | 0.8382     |            |       | 24.62
+
+Particle moves    = 134560873 (135M)
+Cells touched     = 136474925 (136M)
+Particle comms    = 34043 (34K)
+Boundary collides = 0 (0K)
+Boundary exits    = 48888 (48.9K)
+SurfColl checks   = 194094653 (194M)
+SurfColl occurs   = 105035 (0.105M)
+Surf reactions    = 250 (0.25K)
+Collide attempts  = 14692967 (14.7M)
+Collide occurs    = 7002417 (7M)
+Reactions         = 23122 (23.1K)
+Particles stuck   = 0
+
+Particle-moves/CPUsec/proc: 9.87986e+06
+Particle-moves/step: 134561
+Cell-touches/particle/step: 1.01422
+Particle comm iterations/step: 1
+Particle fraction communicated: 0.000252993
+Particle fraction colliding with boundary: 0
+Particle fraction exiting boundary: 0.000363315
+Surface-checks/particle/step: 1.44243
+Surface-collisions/particle/step: 0.000780576
+Surf-reactions/particle/step: 1.8579e-06
+Collision-attempts/particle/step: 0.109192
+Collisions/particle/step: 0.052039
+Reactions/particle/step: 0.000171833
+
+Gas reaction tallies:
+  style tce #-of-reactions 45
+  reaction O2 + N --> O + O + N: 2423
+  reaction O2 + NO --> O + O + NO: 10
+  reaction O2 + N2 --> O + O + N2: 1299
+  reaction O2 + O2 --> O + O + O2: 110
+  reaction O2 + O --> O + O + O: 1455
+  reaction N2 + O --> N + N + O: 2948
+  reaction N2 + O2 --> N + N + O2: 227
+  reaction N2 + NO --> N + N + NO: 24
+  reaction N2 + N2 --> N + N + N2: 1975
+  reaction N2 + N --> N + N + N: 5163
+  reaction NO + N2 --> N + O + N2: 605
+  reaction NO + O2 --> N + O + O2: 21
+  reaction NO + NO --> N + O + NO: 4
+  reaction NO + O --> N + O + O: 423
+  reaction NO + N --> N + O + N: 804
+  reaction NO + O --> O2 + N: 45
+  reaction N2 + O --> NO + N: 2263
+  reaction O2 + N --> NO + O: 351
+  reaction NO + N --> N2 + O: 236
+  reaction O + N --> NO+ + e: 572
+  reaction N + N --> N2+ + e: 533
+  reaction O + O --> O2+ + e: 33
+  reaction NO+ + N --> O + N2+: 18
+  reaction N2+ + O --> N + NO+: 17
+  reaction N2 + N+ --> N + N2+: 221
+  reaction N2+ + N --> N2 + N+: 243
+  reaction NO+ + N --> N2 + O+: 501
+  reaction NO+ + O --> O2 + N+: 38
+  reaction NO+ + O --> N + O2+: 4
+  reaction O2+ + N --> O + NO+: 11
+  reaction O2+ + N --> O2 + N+: 22
+  reaction O+ + O2 --> O + O2+: 1
+  reaction O2+ + N2 --> O2 + N2+: 1
+  reaction O+ + N2 --> O + N2+: 2
+  reaction N2+ + O --> N2 + O+ : 448
+  reaction O+ + NO --> O2 + N+ : 2
+  reaction O + e --> O+ + e + e: 19
+  reaction N + e --> N+ + e + e: 50
+
+Surface reaction tallies:
+  id 1 style prob #-of-reactions 5
+    reaction all: 250
+    reaction O+ --> O: 194
+    reaction N+ --> N: 21
+    reaction N2+ --> N2: 23
+    reaction NO+ --> NO: 12
+
+Particles: 36631.8 ave 40129 max 33026 min
+Histogram: 2 0 0 0 0 0 0 0 0 2
+Cells:      625 ave 844 max 425 min
+Histogram: 2 0 0 0 0 0 0 0 0 2
+GhostCell: 59.5 ave 78 max 43 min
+Histogram: 2 0 0 0 0 0 0 0 1 1
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+Surfs:    1001 ave 1001 max 1001 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostSurf: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0

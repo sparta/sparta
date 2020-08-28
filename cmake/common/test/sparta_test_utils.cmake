@@ -185,7 +185,7 @@ function(sparta_add_all_tests_to_config mpi_ranks config_name)
     sparta_add_tests_to_config("${__in_file_list}" "${mpi_ranks}"
                                "${config_name}" ${__work_dir})
   else()
-    sparta_add_tests_to_config("${__in_file_list}" "none" "${config_name}"
+    sparta_add_tests_to_config("${__in_file_list}" "1" "${config_name}"
                                ${__work_dir})
   endif()
 endfunction()

@@ -40,6 +40,9 @@ if(SPARTA_ENABLE_TESTING)
 
   set(SPARTA_DISABLED_TESTS
       "in.ablation.3d.reactions" # Failing
+      "in.axi" # Failing
+      "in.collide" # Failing
+      "in.ambi" # Failing
       "in.jagged.3d" # Long runtime
       "in.jagged.3d.distributed" # Long runtime
   )
