@@ -67,6 +67,7 @@ help:
 	@echo 'make no-all              remove all pkgs from src dir'
 	@echo ''
 	@echo 'make package-status (ps)  status of all packages'
+	@echo 'make package-installed (pi)  list of installed packages'
 	@echo 'make package-update (pu)  replace src files with package files'
 	@echo 'make package-overwrite    replace package files with src files'
 	@echo 'make package-diff (pd)    diff src files against package file'
@@ -181,6 +182,7 @@ package:
 	@echo 'make no-all                  remove all pkgs from src dir'
 	@echo ''
 	@echo 'make package-status (ps)  status of all packages'
+	@echo 'make package-installed (pi)  list of installed packages'
 	@echo 'make package-update (pu)  replace src files with package files'
 	@echo 'make package-overwrite    replace package files with src files'
 	@echo 'make package-diff (pd)    diff src files against package file'
@@ -227,6 +229,10 @@ package-status ps:
 	@for p in $(PACKAGEUC); do $(SHELL) Package.sh $$p status; done
 #	@echo ''
 #	@for p in $(PACKUSERUC); do $(SHELL) Package.sh $$p status; done
+
+package-installed pi:
+	@for p in $(PACKAGEUC); do $(SHELL) Package.sh $$p installed; done
+#        @for p in $(PACKUSERUC); do $(SHELL) Package.sh $$p installed; done
 
 package-update pu:
 	@for p in $(PACKAGEUC); do $(SHELL) Package.sh $$p update; done
