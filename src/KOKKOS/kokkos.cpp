@@ -54,7 +54,7 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
 
     } else if (strcmp(arg[iarg],"g") == 0 ||
                strcmp(arg[iarg],"gpus") == 0) {
-#ifndef KOKKOS_HAVE_CUDA
+#ifndef KOKKOS_ENABLE_CUDA
       error->all(FLERR,"GPUs are requested but Kokkos has not been compiled for CUDA");
 #endif
       if (iarg+2 > narg) error->all(FLERR,"Invalid Kokkos command-line args");
@@ -67,22 +67,36 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
       }
       iarg += 2;
 
+      int set_flag = 0;
       char *str;
       if ((str = getenv("SLURM_LOCALID"))) {
         int local_rank = atoi(str);
         device = local_rank % ngpus;
         if (device >= skip_gpu) device++;
+        set_flag = 1;
+      }
+      if ((str = getenv("MPT_LRANK"))) {
+        int local_rank = atoi(str);
+        device = local_rank % ngpus;
+        if (device >= skip_gpu) device++;
+        set_flag = 1;
       }
       if ((str = getenv("MV2_COMM_WORLD_LOCAL_RANK"))) {
         int local_rank = atoi(str);
         device = local_rank % ngpus;
         if (device >= skip_gpu) device++;
+        set_flag = 1;
       }
       if ((str = getenv("OMPI_COMM_WORLD_LOCAL_RANK"))) {
         int local_rank = atoi(str);
         device = local_rank % ngpus;
         if (device >= skip_gpu) device++;
+        set_flag = 1;
       }
+
+      if (ngpus > 1 && !set_flag)
+        error->all(FLERR,"Could not determine local MPI rank for multiple "
+                           "GPUs with Kokkos CUDA because MPI library not recognized");
 
     } else if (strcmp(arg[iarg],"t") == 0 ||
                strcmp(arg[iarg],"threads") == 0) {
@@ -107,9 +121,16 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
     if (logfile) fprintf(logfile,"  using %d thread(s) per MPI task\n",nthreads);
   }
 
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
   if (ngpus <= 0)
     error->all(FLERR,"Kokkos has been compiled for CUDA but no GPUs are requested");
+#endif
+
+#ifndef KOKKOS_ENABLE_SERIAL
+  if (nthreads == 1 && me == 0)
+    error->warning(FLERR,"When using a single thread, the Kokkos Serial backend "
+                         "(i.e. Makefile.kokkos_mpi_only) gives better performance "
+                         "than the OpenMP backend");
 #endif
 
   Kokkos::InitArguments args;

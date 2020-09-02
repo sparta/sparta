@@ -135,21 +135,19 @@ double CollideVSS::vremax_init(int igroup, int jgroup)
 
 double CollideVSS::attempt_collision(int icell, int np, double volume)
 {
- double fnum = update->fnum;
- double dt = update->dt;
+  double fnum = update->fnum;
+  double dt = update->dt;
 
- double nattempt;
+  double nattempt;
 
- if (remainflag) {
-   nattempt = 0.5 * np * (np-1) *
-     vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
-   remain[icell][0][0] = nattempt - static_cast<int> (nattempt);
- } else 
-   nattempt = 0.5 * np * (np-1) *
-     vremax[icell][0][0] * dt * fnum / volume + random->uniform();
-
- // DEBUG
- //nattempt = 10;
+  if (remainflag) {
+    nattempt = 0.5 * np * (np-1) *
+      vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
+    remain[icell][0][0] = nattempt - static_cast<int> (nattempt);
+  } else {
+    nattempt = 0.5 * np * (np-1) *
+      vremax[icell][0][0] * dt * fnum / volume + random->uniform();
+  }
 
   return nattempt;
 }
@@ -319,7 +317,35 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
 
       jp = NULL;
       p3 = react->recomb_part3;
+
+      // properly account for 3rd body energy with another call to setup_collision()
+      // it needs relative velocity of recombined species and 3rd body
+      
+      double *vp3 = p3->v;
+      double du  = vi[0] - vp3[0];
+      double dv  = vi[1] - vp3[1];
+      double dw  = vi[2] - vp3[2];
+      double vr2 = du*du + dv*dv + dw*dw;
+      precoln.vr2 = vr2;
+
+      // internal energy of ip particle is already included
+      //   in postcoln.etotal returned from react->attempt()
+      // but still need to add 3rd body internal energy
+
+      double partial_energy =  postcoln.etotal + p3->erot + p3->evib;
+      
+      ip->erot = 0;
+      ip->evib = 0;
+      p3->erot = 0;
+      p3->evib = 0;
+	    
+      // returned postcoln.etotal will increment only the
+      //   relative translational energy between recombined species and 3rd body
+      // add back partial_energy to get full total energy
+      
       setup_collision(ip,p3);
+      postcoln.etotal += partial_energy;
+
       if (precoln.ave_dof > 0.0) EEXCHANGE_ReactingEDisposal(ip,p3,jp);
       SCATTER_TwoBodyScattering(ip,p3);
 
@@ -378,20 +404,20 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
                                          vrc[0]*vrc[2]*sin(eps))/d );
     } else {
       ua = scale * ( cosX*vrc[0] ); 
-      vb = scale * ( sinX*vrc[1]*cos(eps) ); 
-      wc = scale * ( sinX*vrc[2]*sin(eps) );
+      vb = scale * ( sinX*vrc[0]*cos(eps) ); 
+      wc = scale * ( sinX*vrc[0]*sin(eps) );
     }
   }
   
   // new velocities for the products
 
   double divisor = 1.0 / (mass_i + mass_j);
-  vi[0] = precoln.ucmf - (mass_j*divisor)*ua;
-  vi[1] = precoln.vcmf - (mass_j*divisor)*vb;
-  vi[2] = precoln.wcmf - (mass_j*divisor)*wc;
-  vj[0] = precoln.ucmf + (mass_i*divisor)*ua;
-  vj[1] = precoln.vcmf + (mass_i*divisor)*vb;
-  vj[2] = precoln.wcmf + (mass_i*divisor)*wc;
+  vi[0] = precoln.ucmf + (mass_j*divisor)*ua;
+  vi[1] = precoln.vcmf + (mass_j*divisor)*vb;
+  vi[2] = precoln.wcmf + (mass_j*divisor)*wc;
+  vj[0] = precoln.ucmf - (mass_i*divisor)*ua;
+  vj[1] = precoln.vcmf - (mass_i*divisor)*vb;
+  vj[2] = precoln.wcmf - (mass_i*divisor)*wc;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -582,20 +608,20 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
                                         vrc[0]*vrc[2]*sin(eps))/d);
     } else {
       ua = scale * cosX*vrc[0]; 
-      vb = scale * sinX*vrc[1]*cos(eps); 
-      wc = scale * sinX*vrc[2]*sin(eps);
+      vb = scale * sinX*vrc[0]*cos(eps); 
+      wc = scale * sinX*vrc[0]*sin(eps);
     }
   }
 
   // new velocities for the products
 
   double divisor = 1.0 / (mass_ij + mass_k);
-  vi[0] = precoln.ucmf - (mass_ij*divisor)*ua;
-  vi[1] = precoln.vcmf - (mass_ij*divisor)*vb;
-  vi[2] = precoln.wcmf - (mass_ij*divisor)*wc;
-  vk[0] = precoln.ucmf + (mass_k*divisor)*ua;
-  vk[1] = precoln.vcmf + (mass_k*divisor)*vb;
-  vk[2] = precoln.wcmf + (mass_k*divisor)*wc;
+  vi[0] = precoln.ucmf + (mass_k*divisor)*ua;
+  vi[1] = precoln.vcmf + (mass_k*divisor)*vb;
+  vi[2] = precoln.wcmf + (mass_k*divisor)*wc;
+  vk[0] = precoln.ucmf - (mass_ij*divisor)*ua;
+  vk[1] = precoln.vcmf - (mass_ij*divisor)*vb;
+  vk[2] = precoln.wcmf - (mass_ij*divisor)*wc;
   vj[0] = vi[0];
   vj[1] = vi[1];
   vj[2] = vi[2];

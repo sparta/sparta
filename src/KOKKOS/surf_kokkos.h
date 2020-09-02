@@ -29,10 +29,14 @@ class SurfKokkos : public Surf {
   void wrap_kokkos();
   void sync(ExecutionSpace, unsigned int);
   void modify(ExecutionSpace, unsigned int);
-  void grow();
+  void grow(int);
+  void grow_own(int);
 
   tdual_line_1d k_lines;
   tdual_tri_1d k_tris;
+
+  tdual_line_1d k_mylines;
+  tdual_tri_1d k_mytris;
 
  private:
 

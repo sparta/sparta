@@ -15,6 +15,8 @@
 #include "string.h"
 #include "grid.h"
 #include "particle.h"
+#include "domain.h"
+#include "surf.h"
 #include "collide.h"
 #include "modify.h"
 #include "adapt_grid.h"
@@ -27,34 +29,65 @@ using namespace SPARTA_NS;
    pack single icell into buf
    only called for owned unsplit and split cells, not for sub cells
    include its cinfo, surfs, split info, sub cells if necessary
-   ownflag = 1/0 = owned or ghost cell
+   ownflag = 1/0 = receiver stores cell as owned or ghost
      for owned cell, also pack cinfo and auxiliary collision/fix info
-     if nsplit < 0, is an empty ghost cell, pack only cells
-   molflag = 0/1 = no/yes to also pack particles
+     if nsurf < 0, is an empty ghost cell, pack only the cell
+   partflag = 0/1 = no/yes to also pack particles
+   surfflag = 0/1 = no/yes to also pack surface info
+     surfflag = no always called with and ownflag = 0 and partflag = 0
    memflag = 0/1 = no/yes to actually pack into buf, 0 = just length
    return length of packing in bytes
+   called from Grid::acquire_ghosts(), Comm::migrate_cells()
 ------------------------------------------------------------------------- */
 
 int Grid::pack_one(int icell, char *buf, 
-                   int ownflag, int molflag, int memflag)
+                   int ownflag, int partflag, int surfflag, int memflag)
 {
   char *ptr = buf;
 
-  // pack child cell and its csurfs and cinfo
-  // just pack child cell if nsurf < 0 since is EMPTY ghost
-  //   unpack_one() will reset other fields (csurfs, nsplit, isplit)
+  // pack child cell data struct, csurf ptr will be reset when unpacked
 
   if (memflag) memcpy(ptr,&cells[icell],sizeof(ChildCell));
   ptr += sizeof(ChildCell);
   ptr = ROUNDUP(ptr);
 
+  // no surfs or any other info
+  // ditto for sending empty ghost
+
+  if (!surfflag) return ptr - buf;
   if (cells[icell].nsurf < 0) return ptr - buf;
 
-  if (cells[icell].nsurf) {
-    int nsurf = cells[icell].nsurf;
-    if (memflag) memcpy(ptr,cells[icell].csurfs,nsurf*sizeof(int));
-    ptr += nsurf*sizeof(int);
-    ptr = ROUNDUP(ptr);
+  // if nsurfs, pack different info for explicit vs implicit surfs
+  // explicit all: just list of csurf indices
+  // explicit distributed and implicit: list of lines or triangles
+  
+  int nsurf = cells[icell].nsurf;
+  if (nsurf) {
+    if (!surf->implicit && !surf->distributed) {
+      if (memflag) memcpy(ptr,cells[icell].csurfs,nsurf*sizeof(surfint));
+      ptr += nsurf*sizeof(surfint);
+      ptr = ROUNDUP(ptr);
+    } else if (domain->dimension == 2) {
+      Surf::Line *lines = surf->lines;
+      int sizesurf = sizeof(Surf::Line);
+      surfint *csurfs = cells[icell].csurfs;
+      for (int m = 0; m < nsurf; m++) {
+	int isurf = csurfs[m];
+	if (memflag) memcpy(ptr,&lines[isurf],sizesurf);
+	ptr += sizesurf;
+	ptr = ROUNDUP(ptr);
+      }
+    } else {
+      Surf::Tri *tris = surf->tris;
+      int sizesurf = sizeof(Surf::Tri);
+      surfint *csurfs = cells[icell].csurfs;
+      for (int m = 0; m < nsurf; m++) {
+	int isurf = csurfs[m];
+	if (memflag) memcpy(ptr,&tris[isurf],sizesurf);
+	ptr += sizesurf;
+	ptr = ROUNDUP(ptr);
+      }
+    }
   }
 
   if (ownflag) {
@@ -106,7 +139,7 @@ int Grid::pack_one(int icell, char *buf,
 
   // pack particles for unsplit cell or split cell
 
-  if (!molflag) return ptr - buf;
+  if (!partflag) return ptr - buf;
 
   ptr += pack_particles(icell,ptr,memflag);
 
@@ -129,27 +162,33 @@ int Grid::pack_one(int icell, char *buf,
    unpack received ghost cells into cell lists
 ------------------------------------------------------------------------- */
 
-void Grid::unpack_ghosts(int nsize, char *buf)
+void Grid::unpack_ghosts(int nsize, char *buf, void *ptr)
 {
+  Grid *gptr = (Grid *) ptr;
+  int surfflag = gptr->unpack_ghosts_surfflag;
+
   int n = 0;
   while (n < nsize)
-    n += gptr->unpack_one(&buf[n],0,0);
+    n += gptr->unpack_one(&buf[n],0,0,surfflag);
 }
 
 /* ----------------------------------------------------------------------
    unpack single icell from buf
    include its cinfo, surfs, split info, sub cells if necessary
-   ownflag = 1/0 = owned or ghost cell
+   ownflag = 1/0 = receiver stores cell as owned or ghost
      for owned cell, also unpack cinfo and auxiliary collision/fix info
-   molflag = 0/1 = no/yes to also unpack particles
+   partflag = 0/1 = no/yes to also unpack particles
+   surfflag = 0/1 = no/yes to also unpack surface info
+     surfflag = 0 always called with ownflag = 0 and partflag = 0
    return length of unpacking in bytes
 ------------------------------------------------------------------------- */
 
-int Grid::unpack_one(char *buf, int ownflag, int molflag, int sortflag)
+int Grid::unpack_one(char *buf, 
+                     int ownflag, int partflag, int surfflag, int sortflag)
 {
   char *ptr = buf;
 
-  // unpack child cell and its csurfs and cinfo, add to ghost cells
+  // unpack child cell as owned or ghost
 
   int icell;
   if (ownflag) icell = nlocal;
@@ -162,30 +201,107 @@ int Grid::unpack_one(char *buf, int ownflag, int molflag, int sortflag)
   ptr += sizeof(ChildCell);
   ptr = ROUNDUP(ptr);
 
-  // if nsurf < 0 since is EMPTY ghost
+  if (ownflag) {
+    cells[icell].proc = me;
+    cells[icell].ilocal = icell;
+  }
+
+  // no surfs or any other info
+  // ditto for EMPTY ghost with nsurf < 0
   // reset other fields for ghost cell (csurfs, nsplit, isplit)
 
-  if (cells[icell].nsurf < 0) {
+  if (!surfflag || cells[icell].nsurf < 0) {
     cells[icell].csurfs = NULL;
     cells[icell].nsplit = 1;
     cells[icell].isplit = -1;
     return ptr - buf;
   }
 
-  if (ownflag) {
-    cells[icell].proc = me;
-    cells[icell].ilocal = icell;
-  }
+  // if nsurfs, unpack different info for explicit vs implicit
+  // explicit all: list of csurf indices
+  // implicit: add entire list of lines or triangles
+  // explicit distributed:
+  //    list of lines or triangles
+  //    check hash each to see if can skip b/c already have it
+  //    add new surfs to hash
 
-  if (cells[icell].nsurf) {
-    int nsurf = cells[icell].nsurf;
+  int nsurf = cells[icell].nsurf;
+  if (nsurf) {
     cells[icell].csurfs = csurfs->vget();
-    memcpy(cells[icell].csurfs,ptr,nsurf*sizeof(int));
-    csurfs->vgot(nsurf);
-    ptr += nsurf*sizeof(int);
-    ptr = ROUNDUP(ptr);
-  }
 
+    // explicit all surfs
+
+    if (!surf->implicit && !surf->distributed) {
+      memcpy(cells[icell].csurfs,ptr,nsurf*sizeof(surfint));
+      ptr += nsurf*sizeof(surfint);
+      ptr = ROUNDUP(ptr);
+
+    // implicit surfs
+
+    } else if (surf->implicit) {
+      if (domain->dimension == 2) {
+        int sizesurf = sizeof(Surf::Line);
+        surfint *csurfs = cells[icell].csurfs;
+        for (int m = 0; m < nsurf; m++) {
+          Surf::Line *line = (Surf::Line *) ptr;
+          surf->add_line_copy(ownflag,line);
+          if (ownflag) csurfs[m] = surf->nlocal-1;
+          else csurfs[m] = surf->nlocal+surf->nghost-1;
+          ptr += sizesurf;
+          ptr = ROUNDUP(ptr);
+        }
+      } else {
+        int sizesurf = sizeof(Surf::Tri);
+        surfint *csurfs = cells[icell].csurfs;
+        for (int m = 0; m < nsurf; m++) {
+          Surf::Tri *tri = (Surf::Tri *) ptr;
+          surf->add_tri_copy(ownflag,tri);
+          if (ownflag) csurfs[m] = surf->nlocal-1;
+          else csurfs[m] = surf->nlocal+surf->nghost-1;
+          ptr += sizesurf;
+          ptr = ROUNDUP(ptr);
+        }
+      }
+
+    // explicit distributed surfs
+
+    } else {    
+      Surf::MySurfHash *shash = surf->hash;
+
+      if (domain->dimension == 2) {
+        int sizesurf = sizeof(Surf::Line);
+        surfint *csurfs = cells[icell].csurfs;
+        for (int m = 0; m < nsurf; m++) {
+          Surf::Line *line = (Surf::Line *) ptr;
+          if (shash->find(line->id) == shash->end()) {  
+            surf->add_line_copy(ownflag,line);
+            if (ownflag) csurfs[m] = surf->nlocal-1;
+            else csurfs[m] = surf->nlocal+surf->nghost-1;
+            (*shash)[line->id] = csurfs[m];
+          } else csurfs[m] = (*shash)[line->id];
+          ptr += sizesurf;
+          ptr = ROUNDUP(ptr);
+        }
+      } else {
+        int sizesurf = sizeof(Surf::Tri);
+        surfint *csurfs = cells[icell].csurfs;
+        for (int m = 0; m < nsurf; m++) {
+          Surf::Tri *tri = (Surf::Tri *) ptr;
+          if (shash->find(tri->id) == shash->end()) {
+            surf->add_tri_copy(ownflag,tri);
+            if (ownflag) csurfs[m] = surf->nlocal-1;
+            else csurfs[m] = surf->nlocal+surf->nghost-1;
+            (*shash)[tri->id] = csurfs[m];
+          } else csurfs[m] = (*shash)[tri->id];
+          ptr += sizesurf;
+          ptr = ROUNDUP(ptr);
+        }
+      }
+    }
+
+    csurfs->vgot(nsurf);
+  }
+  
   if (ownflag) {
     memcpy(&cinfo[icell],ptr,sizeof(ChildInfo));
     ptr += sizeof(ChildInfo);
@@ -257,10 +373,10 @@ int Grid::unpack_one(char *buf, int ownflag, int molflag, int sortflag)
       ptr = ROUNDUP(ptr);
     }
   }
-  
+
   // unpack particles, for unsplit cell or split cell
 
-  if (!molflag) return ptr - buf;
+  if (!partflag) return ptr - buf;
 
   ptr += unpack_particles(ptr,icell,sortflag);
 
@@ -303,8 +419,8 @@ int Grid::pack_one_adapt(char *inbuf, char *buf, int memflag)
 
   if (s->nsurf) {
     int nsurf = s->nsurf;
-    if (memflag) memcpy(ptr,cells[icell].csurfs,nsurf*sizeof(int));
-    ptr += nsurf*sizeof(int);
+    if (memflag) memcpy(ptr,cells[icell].csurfs,nsurf*sizeof(surfint));
+    ptr += nsurf*sizeof(surfint);
     ptr = ROUNDUP(ptr);
   }
 
@@ -496,16 +612,10 @@ void Grid::unpack_particles_adapt(int np, char *buf)
 
 void Grid::compress()
 {
-  // must compress per-cell arrays in collide and fixes before
-  // cells data structure changes
-
-  if (collide) collide->compress_grid();
-  if (modify->n_pergrid) modify->compress_grid(0);
-
   // copy of integer lists
   // create new lists
 
-  MyPage<int> *csurfs_old = csurfs;
+  MyPage<surfint> *csurfs_old = csurfs;
   MyPage<int> *csplits_old = csplits;
   MyPage<int> *csubs_old = csubs;
 
@@ -515,13 +625,15 @@ void Grid::compress()
   // compress cells and cinfo and sinfo arrays
   // 4 cases:
   // discard unsplit or sub cell:
+  //   b/c assigned to another procs
   //   continue
   // keep unsplit or sub cell:
   //   memcpy of cells and cinfo, setup csurfs
   //   reset cells.ilocal and sinfo.csubs
   //   increment nlocal, nunsplitlocal, nsublocal
   // discard split cell:
-  //   flag all sub cells with other proc
+  //   b/c assigned to another proc
+  //   flag all its sub cells with other proc (come later in list)
   //   continue
   // keep split cell:
   //   memcpy of cells and cinfo and sinfo, setup csurfs/csplits/csubs
@@ -541,9 +653,14 @@ void Grid::compress()
     if (cells[icell].nsplit <= 1) {
       if (cells[icell].proc != me) continue;
 
+      // copy cell from nlocal to icell
+      // collide and fixes also need to do the same
+
       if (icell != nlocal) {
         memcpy(&cells[nlocal],&cells[icell],sizeof(ChildCell));
         memcpy(&cinfo[nlocal],&cinfo[icell],sizeof(ChildInfo));
+        if (collide) collide->copy_grid_one(icell,nlocal);
+        if (modify->n_pergrid) modify->copy_grid_one(icell,nlocal);
       }
 
       cells[nlocal].ilocal = nlocal;
@@ -553,10 +670,10 @@ void Grid::compress()
 
       if (cells[nlocal].nsurf) {
         if (cells[nlocal].nsplit == 1) {
-          int *oldcsurfs = cells[icell].csurfs;
+          surfint *oldcsurfs = cells[icell].csurfs;
           cells[nlocal].csurfs = csurfs->vget();
           memcpy(cells[nlocal].csurfs,oldcsurfs,
-                 cells[nlocal].nsurf*sizeof(int));
+                 cells[nlocal].nsurf*sizeof(surfint));
           csurfs->vgot(cells[nlocal].nsurf);
         } else
           cells[nlocal].csurfs = 
@@ -573,6 +690,9 @@ void Grid::compress()
     // split cells
 
     } else {
+
+      // discard and mark sub cells (appear later in list) with other proc
+
       if (cells[icell].proc != me) {
         int isplit = cells[icell].isplit;
         int nsplit = cells[icell].nsplit;
@@ -583,19 +703,24 @@ void Grid::compress()
         continue;
       }
 
+      // copy cell from nlocal to icell
+      // collide and fixes also need to do the same
+
       if (icell != nlocal) {
         memcpy(&cells[nlocal],&cells[icell],sizeof(ChildCell));
         memcpy(&cinfo[nlocal],&cinfo[icell],sizeof(ChildInfo));
+        if (collide) collide->copy_grid_one(icell,nlocal);
+        if (modify->n_pergrid) modify->copy_grid_one(icell,nlocal);
       }
 
       cells[nlocal].ilocal = nlocal;
       
       // new copy of all csurfs indices
 
-      int *oldcsurfs = cells[icell].csurfs;
+      surfint *oldcsurfs = cells[icell].csurfs;
       cells[nlocal].csurfs = csurfs->vget();
       memcpy(cells[nlocal].csurfs,oldcsurfs,
-             cells[nlocal].nsurf*sizeof(int));
+             cells[nlocal].nsurf*sizeof(surfint));
       csurfs->vgot(cells[nlocal].nsurf);
 
       // compress sinfo
@@ -632,7 +757,10 @@ void Grid::compress()
     }
   }
 
-  hashfilled = 0;
+  // reset final grid cell count in collide and fixes
+
+  if (collide) collide->reset_grid_count(nlocal);
+  if (modify->n_pergrid) modify->reset_grid_count(nlocal);
 
   // delete old integer lists
 
@@ -656,8 +784,4 @@ void Grid::compress()
       ip = next[ip];
     }
   }
-
-  // some fixes have post-compress operations to perform
-
-  if (modify->n_pergrid) modify->compress_grid(1);
 }

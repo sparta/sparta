@@ -52,7 +52,7 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta, int narg, cha
 #endif
 
   k_nsingle = DAT::tdual_int_scalar("SurfCollide:nsingle");
-  d_nsingle = k_nsingle.view<DeviceType>();
+  d_nsingle = k_nsingle.d_view;
   h_nsingle = k_nsingle.h_view;
 }
 
@@ -79,6 +79,7 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta) :
       error->all(FLERR,"Surf_collide ID must be alphanumeric or "
                  "underscore characters");
 
+  dynamicflag = 1;
   n = strlen(arg[1]) + 1;
   style = new char[n];
   strcpy(style,arg[1]);
@@ -91,6 +92,8 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta) :
   copy = 0;
 
   if (narg < 4) error->all(FLERR,"Illegal surf_collide diffuse command");
+
+  allowreact = 1;
 
   tstr = NULL;
 
@@ -146,7 +149,7 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta) :
   random = NULL;
 
   k_nsingle = DAT::tdual_int_scalar("SurfCollide:nsingle");
-  d_nsingle = k_nsingle.view<DeviceType>();
+  d_nsingle = k_nsingle.d_view;
   h_nsingle = k_nsingle.h_view;
 }
 

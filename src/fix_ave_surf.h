@@ -22,6 +22,7 @@ FixStyle(ave/surf,FixAveSurf)
 #define SPARTA_FIX_AVE_SURF_H
 
 #include "fix.h"
+#include "hash3.h"
 
 namespace SPARTA_NS {
 
@@ -43,23 +44,34 @@ class FixAveSurf : public Fix {
   int *which,*argindex,*value2index;
   char **ids;
 
-  int nsurf;               // # of global surfs, lines or triangles
-  int nslocal;             // # of surfs I own
+  int nsurf;               // # of explicit surfs I store = surf->nlocal+nghost
+  int nown;                // # of explicit surfs I own = surf->nown
   double *accvec;          // accumulation vector
   double **accarray;       // accumulation array
-  double *buflocal;        // surf collate vector for surfs I own
+  double *bufvec;          // surf collate vector for surfs I own
+  double **bufarray;       // surf collate array for surfs I own
   int *masks;              // surface element group masks for surfs I own
 
-  int nlocal;              // # of local surf tallies
-  int maxlocal;            // # of local surf tallies currently allocated
-  int *glob2loc;           // glob2loc[I] = local index of Ith global surf
-  int *loc2glob;           // loc2glob[I] = global index of Ith local surf
+  int ntally;              // # of surfs I have tallies for
+  int maxtally;            // # of tallies currently allocated
+  surfint *tally2surf;     // tally2surf[I] = surf ID of Ith tally
+  double *vec_tally;       // tally values, maxtally in length
+  double **array_tally;
 
-  double *vec_local;
-  double **array_local;
+  // hash for surf IDs
+
+#ifdef SPARTA_MAP
+  typedef std::map<surfint,int> MyHash;
+#elif defined SPARTA_UNORDERED_MAP
+  typedef std::unordered_map<surfint,int> MyHash;
+#else
+  typedef std::tr1::unordered_map<surfint,int> MyHash;
+#endif
+
+  MyHash *hash;
 
   void options(int, int, char **);
-  void grow_local();
+  void grow_tally();
   bigint nextvalid();
 };
 

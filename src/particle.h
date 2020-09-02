@@ -33,7 +33,7 @@ class Particle : protected Pointers {
     double charge;          // multiple of electron charge
     double rotrel;          // inverse rotational relaxation number
     double rottemp[3];      // rotational temperature(s)
-    double vibtemp[4];      // vibrational tempearture(s)
+    double vibtemp[4];      // vibrational temperature(s)
     double vibrel[4];       // inverse vibrational relaxation number(s)
     int vibdegen[4];        // vibrational mode degeneracies
     int rotdof,vibdof;      // rotational/vibrational DOF
@@ -146,6 +146,7 @@ class Particle : protected Pointers {
   virtual void post_weight();
 
   virtual int add_particle(int, int, int, double *, double *, double, double);
+  virtual int add_particle();
   int clone_particle(int);
   void add_species(int, char **);
   void add_mixture(int, char **);
@@ -160,8 +161,11 @@ class Particle : protected Pointers {
   void read_restart_mixture(FILE *fp);
 
   int size_restart();
+  bigint size_restart_big();
   int pack_restart(char *);
+  void pack_restart(char *, int, int);
   int unpack_restart(char *);
+  void unpack_restart(char *, int &, int, int);
 
   int find_custom(char *);
   void error_custom();

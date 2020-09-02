@@ -72,6 +72,8 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
   
   if (!surf->exist) 
     error->all(FLERR,"Fix emit/surf requires surface elements");
+  if (surf->implicit) 
+    error->all(FLERR,"Fix emit/surf not allowed for implicits surfaces");
   if (np > 0 && perspecies) 
     error->all(FLERR,"Cannot use fix emit/face n > 0 with perspecies yes");
   
@@ -102,6 +104,10 @@ FixEmitSurf::~FixEmitSurf()
 
 void FixEmitSurf::init()
 {
+  // invoke FixEmit::init() to set flags
+  
+  FixEmit::init();
+
   // copies of class data before invoking parent init() and count_task()
   
   dimension = domain->dimension;
@@ -111,9 +117,6 @@ void FixEmitSurf::init()
   nspecies = particle->mixture[imix]->nspecies;
   fraction = particle->mixture[imix]->fraction;
   cummulative = particle->mixture[imix]->cummulative;
-  
-  lines = surf->lines;
-  tris = surf->tris;
   
   // subsonic prefactor
   
@@ -168,11 +171,9 @@ void FixEmitSurf::init()
     }
   }
   
-  // invoke FixEmit::init() to populate task list
-  // it calls create_task() for each grid cell
+  // create tasks for all grid cells
   
-  ntask = 0;
-  FixEmit::init();
+  create_tasks();
   
   // if Np > 0, nper = # of insertions per task
   // set nthresh so as to achieve exactly Np insertions
@@ -206,19 +207,25 @@ void FixEmitSurf::setup()
 {
   // needed for Kokkos because pointers are changed in UpdateKokkos::setup()
 
-  lines = surf->lines;
-  tris = surf->tris;
+  //lines = surf->lines;
+  //tris = surf->tris;
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   create task for one grid cell
+   add them to tasks list and increment ntasks
+------------------------------------------------------------------------- */
 
-int FixEmitSurf::create_task(int icell)
+void FixEmitSurf::create_task(int icell)
 {
   int i,m,isurf,isp,npoint,isplit,subcell;
   double indot,area,areaone,ntargetsp;
   double *normal,*p1,*p2,*p3,*path;
   double cpath[36],delta[3],e1[3],e2[3];
   
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   Grid::SplitInfo *sinfo = grid->sinfo;
@@ -229,8 +236,8 @@ int FixEmitSurf::create_task(int icell)
   
   // no tasks if no surfs in cell
   
-  if (cells[icell].nsurf == 0) return 0;
-  
+  if (cells[icell].nsurf == 0) return;
+
   // loop over surfs in cell
   // use Cut2d/Cut3d to find overlap area and geoemtry of overlap
   
@@ -238,7 +245,7 @@ int FixEmitSurf::create_task(int icell)
   
   double *lo = cells[icell].lo;
   double *hi = cells[icell].hi;
-  int *csurfs = cells[icell].csurfs;
+  surfint *csurfs = cells[icell].csurfs;
   int nsurf = cells[icell].nsurf;
   
   for (i = 0; i < nsurf; i++) {
@@ -397,10 +404,6 @@ int FixEmitSurf::create_task(int icell)
     
     ntask++;
   }
-
-  // return # of tasks for this cell
-  
-  return ntask-ntaskorig;
 }
 
 /* ----------------------------------------------------------------------
@@ -422,7 +425,7 @@ void FixEmitSurf::perform_task()
 
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current per-task temp_thermal and vstream
-  
+
   if (subsonic) subsonic_inflow();
   
   // insert particles for each task = cell/surf pair
@@ -441,13 +444,17 @@ void FixEmitSurf::perform_task()
   // outer do-while loop:
   //   shift Maxwellian distribution by stream velocity component
   //   see Bird 1994, p 259, eq 12.5
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
   
   int nfix_add_particle = modify->n_add_particle;
   indot = magvstream;
-  
+
   for (i = 0; i < ntask; i++) {
     pcell = tasks[i].pcell;
     isurf = tasks[i].isurf;
+    if (isurf >= surf->nlocal) error->one(FLERR,"BAD surf index\n");
     if (dimension == 2) normal = lines[isurf].norm;
     else normal = tris[isurf].norm;
     atan = tasks[i].tan1;
@@ -460,7 +467,6 @@ void FixEmitSurf::perform_task()
     
     if (subsonic_style == PONLY) vscale = tasks[i].vscale;
     else vscale = particle->mixture[imix]->vscale;
-    
     if (!normalflag) indot = vstream[0]*normal[0] + vstream[1]*normal[1] + 
                        vstream[2]*normal[2];
     
@@ -663,6 +669,9 @@ void FixEmitSurf::subsonic_inflow()
   double mass,indot,area,nrho,temp_thermal,vscale,ntargetsp;
   double *vstream,*normal;
   
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+
   Particle::Species *species = particle->species;
   Grid::ChildInfo *cinfo = grid->cinfo;
   int *mspecies = particle->mixture[imix]->species;
@@ -781,6 +790,9 @@ void FixEmitSurf::subsonic_grid()
   double mv[4];
   double *v,*vstream,*vscale,*normal;
   
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+
   Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
@@ -892,154 +904,6 @@ void FixEmitSurf::subsonic_grid()
 }
 
 /* ----------------------------------------------------------------------
-   pack one task into buf
-   return # of bytes packed
-   if not memflag, only return count, do not fill buf
-------------------------------------------------------------------------- */
-
-int FixEmitSurf::pack_task(int itask, char *buf, int memflag)
-{
-  char *ptr = buf;
-  if (memflag) memcpy(ptr,&tasks[itask],sizeof(Task));
-  ptr += sizeof(Task);
-  ptr = ROUNDUP(ptr);
-  
-  // pack task vectors
-  // vscale is allocated, but not communicated, since updated every step
-  
-  if (perspecies) {
-    if (memflag) memcpy(ptr,tasks[itask].ntargetsp,nspecies*sizeof(double));
-    ptr += nspecies*sizeof(double);
-  }
-  
-  int npoint = tasks[itask].npoint;
-  if (memflag) memcpy(ptr,tasks[itask].path,npoint*3*sizeof(double));
-  ptr += npoint*3*sizeof(double);
-  if (memflag) memcpy(ptr,tasks[itask].fracarea,(npoint-2)*sizeof(double));
-  ptr += (npoint-2)*sizeof(double);
-  
-  return ptr-buf;
-}
-
-/* ----------------------------------------------------------------------
-   unpack one task from buf
-------------------------------------------------------------------------- */
-
-int FixEmitSurf::unpack_task(char *buf, int icell)
-{
-  char *ptr = buf;
-  
-  if (ntask == ntaskmax) grow_task();
-  double *ntargetsp = tasks[ntask].ntargetsp;
-  double *vscale = tasks[ntask].vscale;
-  double *path = tasks[ntask].path;
-  double *fracarea = tasks[ntask].fracarea;
-  
-  memcpy(&tasks[ntask],ptr,sizeof(Task));
-  ptr += sizeof(Task);
-  ptr = ROUNDUP(ptr);
-  
-  // unpack task vectors
-  // vscale is allocated, but not communicated, since updated every step
-  
-  if (perspecies) {
-    memcpy(ntargetsp,ptr,nspecies*sizeof(double));
-    ptr += nspecies*sizeof(double);
-  }
-  
-  int npoint = tasks[ntask].npoint;
-  delete [] path;
-  path = new double[npoint*3];
-  memcpy(path,ptr,npoint*3*sizeof(double));
-  ptr += npoint*3*sizeof(double);
-  
-  delete [] fracarea;
-  fracarea = new double[npoint-2];
-  memcpy(fracarea,ptr,(npoint-2)*sizeof(double));
-  ptr += (npoint-2)*sizeof(double);
-  
-  tasks[ntask].ntargetsp = ntargetsp;
-  tasks[ntask].vscale = vscale;
-  tasks[ntask].path = path;
-  tasks[ntask].fracarea = fracarea;
-  
-  // reset task icell and pcell
-  // if a split cell, set pcell via scan of icell csurfs, extract from sinfo
-  
-  Grid::ChildCell *cells = grid->cells;
-  Grid::SplitInfo *sinfo = grid->sinfo;
-  
-  tasks[ntask].icell = icell;
-  if (cells[icell].nsplit == 1) tasks[ntask].pcell = icell;
-  else {
-    int isurf = tasks[ntask].isurf;
-    int nsurf = cells[icell].nsurf;
-    int *csurfs = cells[icell].csurfs;
-    int i;
-    for (i = 0; i < nsurf; i++)
-      if (csurfs[i] == isurf) break;
-    int isplit = cells[icell].isplit;
-    int subcell = sinfo[isplit].csplits[i];
-    tasks[ntask].pcell = sinfo[isplit].csubs[subcell];
-  }
-  
-  ntask++;
-  return ptr-buf;
-}
-
-/* ----------------------------------------------------------------------
-   copy N tasks starting at index oldfirst to index first
-------------------------------------------------------------------------- */
-
-void FixEmitSurf::copy_task(int icell, int n, int first, int oldfirst)
-{
-  // reset icell in each copied task
-  // copy task vectors
-  // vscale is allocated, but not copied, since updated every step
-  
-  if (first == oldfirst) {
-    for (int i = 0; i < n; i++) {
-      tasks[first].icell = icell;
-      first++;
-    }
-    
-  } else {
-    int npoint;
-    for (int i = 0; i < n; i++) {
-      double *ntargetsp = tasks[first].ntargetsp;
-      double *vscale = tasks[first].vscale;
-      double *path = tasks[first].path;
-      double *fracarea = tasks[first].fracarea;
-      
-      memcpy(&tasks[first],&tasks[oldfirst],sizeof(Task));
-      
-      if (perspecies)
-        memcpy(ntargetsp,tasks[oldfirst].ntargetsp,nspecies*sizeof(double));
-      
-      npoint = tasks[first].npoint;
-      delete [] path;
-      path = new double[npoint*3];
-      memcpy(path,tasks[oldfirst].path,npoint*3*sizeof(double));
-      
-      delete [] fracarea;
-      fracarea = new double[npoint-2];
-      memcpy(fracarea,tasks[oldfirst].fracarea,(npoint-2)*sizeof(double));
-      
-      tasks[first].ntargetsp = ntargetsp;
-      tasks[first].vscale = vscale;
-      tasks[first].path = path;
-      tasks[first].fracarea = fracarea;
-      
-      tasks[first].icell = icell;
-      first++;
-      oldfirst++;
-    }
-  }
-  
-  ntask += n;
-}
-
-/* ----------------------------------------------------------------------
    grow task list
 ------------------------------------------------------------------------- */
 
@@ -1081,43 +945,13 @@ void FixEmitSurf::grow_task()
 }
 
 /* ----------------------------------------------------------------------
-   reset pcell for all compress task entries
-   called from Grid::compress() after grid cells have been compressed
-   wait to do this until now b/c split cells and their sinfo
-     are setup in Grid::compress() between compress_grid() 
-     and post_compress_grid()
-------------------------------------------------------------------------- */
-
-void FixEmitSurf::post_compress_grid()
-{
-  Grid::ChildCell *cells = grid->cells;
-  Grid::SplitInfo *sinfo = grid->sinfo;
-  
-  for (int i = 0; i < ntask; i++) {
-    int icell = tasks[i].icell;
-    if (cells[icell].nsplit == 1) tasks[i].pcell = icell;
-    else {
-      int isurf = tasks[i].isurf;
-      int nsurf = cells[icell].nsurf;
-      int *csurfs = cells[icell].csurfs;
-      int j;
-      for (j = 0; j < nsurf; j++)
-        if (csurfs[j] == isurf) break;
-      int isplit = cells[icell].isplit;
-      int subcell = sinfo[isplit].csplits[j];
-      tasks[i].pcell = sinfo[isplit].csubs[subcell];
-    }
-  }
-}
-
-/* ----------------------------------------------------------------------
    process keywords specific to this class
 ------------------------------------------------------------------------- */
 
 int FixEmitSurf::option(int narg, char **arg)
 {
   if (strcmp(arg[0],"n") == 0) {
-    if (2 > narg) error->all(FLERR,"Illegal fix emit/surf/normal command");
+    if (2 > narg) error->all(FLERR,"Illegal fix emit/]surf/normal command");
     np = atoi(arg[1]);
     if (np <= 0) error->all(FLERR,"Illegal fix emit/surf/normal command");
     return 2;

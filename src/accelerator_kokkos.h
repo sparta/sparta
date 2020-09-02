@@ -60,12 +60,16 @@ class KokkosSPARTA {
   //int neigh_count(int) {return 0;}
 };
 
+class Kokkos {
+ public:
+  static void finalize() {}
+};
+
 class UpdateKokkos : public Update {
  public:
   UpdateKokkos(class SPARTA *sparta) : Update(sparta) {}
   ~UpdateKokkos() {}
 };
-
 
 class ParticleKokkos : public Particle {
  public:

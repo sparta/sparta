@@ -113,9 +113,6 @@ void FixAdapt::init()
 
 void FixAdapt::end_of_step()
 {
-  // DEBUG
-  //if (update->ntimestep > 140) return;
-
   // wrap adaptivity with clearstep/addstep since it may invoke computes
 
   modify->clearstep_compute();
@@ -138,7 +135,7 @@ void FixAdapt::end_of_step()
   if (action2 == REFINE) nrefine = adapt->refine();
   else if (action2 == COARSEN) ncoarsen = adapt->coarsen(pstop);
 
-  // if no refine or coarsen, just reghost/reneighbor and return
+  // if no refinement or coarsening, just reghost/reneighbor and return
 
   //if (comm->me == 0) printf("NREF COARSE %d %d nlocal %d\n",nrefine,ncoarsen,
   //                          grid->nlocal);
@@ -190,20 +187,9 @@ void FixAdapt::end_of_step()
     grid->type_check(0);
   }
 
-  // final update of any per grid fixes for all new child cells
+  // notify all classes that store per-grid data that grid may have changed
   
-  if (modify->n_pergrid) adapt->add_grid_fixes();
-
-  // reallocate per grid cell arrays in per grid computes
-
-  Compute **compute = modify->compute;
-  for (int i = 0; i < modify->ncompute; i++)
-    if (compute[i]->per_grid_flag) compute[i]->reallocate();
-
-  // reallocate per grid arrays in per grid dumps
-
-  for (int i = 0; i < output->ndump; i++)
-    output->dump[i]->reset_grid();
+  grid->notify_changed();
 
   // write out new parent grid file
 

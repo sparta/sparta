@@ -139,7 +139,7 @@ int quad_line_intersect_point(double *v0, double *v1, double *norm,
    return 1 if touches, else 0
 ------------------------------------------------------------------------- */
 
-int line_quad_face_touch(double *v0, double *v1, int iface,
+int line_touch_quad_face(double *v0, double *v1, int iface,
 			 double *lo, double *hi)
 {
   // value = position of face
@@ -492,7 +492,7 @@ int hex_tri_intersect_point(double *v0, double *v1, double *v2, double *norm,
    return 1 if touches, else 0
 ------------------------------------------------------------------------- */
 
-int tri_hex_face_touch(double *v0, double *v1, double *v2, int iface,
+int tri_touch_hex_face(double *v0, double *v1, double *v2, int iface,
 		       double *lo, double *hi)
 {
   // value = position of face
@@ -526,6 +526,84 @@ int tri_hex_face_touch(double *v0, double *v1, double *v2, int iface,
   return 0;
 }
 
+/* ----------------------------------------------------------------------
+   compute whether triangle sits on any face of orthogonal 3d hex cell
+   return 0 to 5 = XLO,XHI,YLO,YHI,ZLO,ZHI face
+   else return -1
+------------------------------------------------------------------------- */
+
+int tri_on_hex_face(double *v0, double *v1, double *v2, double *lo, double *hi)
+{
+  double vmin[3],vmax[3];
+
+  vmin[0] = MIN(v0[0],v1[0]);
+  vmin[0] = MIN(v2[0],vmin[0]);
+  vmin[1] = MIN(v0[1],v1[1]);
+  vmin[1] = MIN(v2[1],vmin[1]);
+  vmin[2] = MIN(v0[2],v1[2]);
+  vmin[2] = MIN(v2[2],vmin[2]);
+
+  vmax[0] = MAX(v0[0],v1[0]);
+  vmax[0] = MAX(v2[0],vmax[0]);
+  vmax[1] = MAX(v0[1],v1[1]);
+  vmax[1] = MAX(v2[1],vmax[1]);
+  vmax[2] = MAX(v0[2],v1[2]);
+  vmax[2] = MAX(v2[2],vmax[2]);
+
+  if (vmin[0] == vmax[0]) {
+    if (vmin[0] == lo[0]) return 0;
+    if (vmin[0] == hi[0]) return 1;
+  }
+
+  if (vmin[1] == vmax[1]) {
+    if (vmin[1] == lo[1]) return 2;
+    if (vmin[1] == hi[1]) return 3;
+  }
+
+  if (vmin[2] == vmax[2]) {
+    if (vmin[2] == lo[2]) return 4;
+    if (vmin[2] == hi[2]) return 5;
+  }
+
+  return -1;
+}
+
+/* ----------------------------------------------------------------------
+   compute whether triangle edge sits on any face of orthogonal 3d hex cell
+   return 0 to 5 = XLO,XHI,YLO,YHI,ZLO,ZHI face
+   else return -1
+------------------------------------------------------------------------- */
+
+int edge_on_hex_face(double *v0, double *v1, double *lo, double *hi)
+{
+  double vmin[3],vmax[3];
+
+  vmin[0] = MIN(v0[0],v1[0]);
+  vmin[1] = MIN(v0[1],v1[1]);
+  vmin[2] = MIN(v0[2],v1[2]);
+
+  vmax[0] = MAX(v0[0],v1[0]);
+  vmax[1] = MAX(v0[1],v1[1]);
+  vmax[2] = MAX(v0[2],v1[2]);
+
+  if (vmin[0] == vmax[0]) {
+    if (vmin[0] == lo[0]) return 0;
+    if (vmin[0] == hi[0]) return 1;
+  }
+
+  if (vmin[1] == vmax[1]) {
+    if (vmin[1] == lo[1]) return 2;
+    if (vmin[1] == hi[1]) return 3;
+  }
+
+  if (vmin[2] == vmax[2]) {
+    if (vmin[2] == lo[2]) return 4;
+    if (vmin[2] == hi[2]) return 5;
+  }
+
+  return -1;
+}
+	
 /* ----------------------------------------------------------------------
    detect intersection between a directed line segment A and line segment B
    intersection is defined as any A pt (including end pts)
@@ -600,7 +678,7 @@ bool line_line_intersect(double *start, double *stop,
   if (MathExtra::dot3(edge,pvec) > EPSSQ) return false;
 
   // there is a valid intersection with line B
-  // set side to ONSUFR, OUTSIDE, or INSIDE
+  // set side to ONSURF, OUTSIDE, or INSIDE
   // if start point is inside or outside then side = same
   // if particle started on line B, side = ONSURF OUT/IN based on dotstop
 

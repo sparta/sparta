@@ -45,7 +45,7 @@ class AdaptGrid : protected Pointers {
   };
 
   SendAdapt **sa_header;    // communicated coarsening info, so Grid can access
-  int **sa_csurfs;
+  surfint **sa_csurfs;
   char **sa_particles;
 
   AdaptGrid(class SPARTA *);
@@ -56,7 +56,6 @@ class AdaptGrid : protected Pointers {
   void setup(int);
   int refine();
   int coarsen(int);
-  void add_grid_fixes();
   void cleanup();
   void write_file();
 

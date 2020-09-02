@@ -38,9 +38,13 @@ class Comm : protected Pointers {
   int migrate_particles(int, int *);
   virtual void migrate_cells(int);
   int send_cells_adapt(int, int *, char *, char **);
+  int irregular_uniform_neighs(int, int *, char *, int, char **);
   int irregular_uniform(int, int *, char *, int, char **);
-  void ring(int, int, void *, int, void (*)(int, char *), 
-            void *, int self = 1);
+  void ring(int, int, void *, int, void (*)(int, char *, void *),
+            void *, int, void *);
+  int rendezvous(int, int, char *, int, int, int *, 
+                 int (*)(int, char *, int &, int *&, char *&, void *), 
+                 int, char *&, int, void *, int statflag=0);
 
  protected:
   class Irregular *iparticle,*igrid,*iuniform;
@@ -48,6 +52,7 @@ class Comm : protected Pointers {
   int maxsendbuf,maxrecvbuf;
   int *pproc,*gproc,*gsize;
   int maxpproc,maxgproc;
+  bigint rvous_bytes;
   
   int neighflag;                    // 1 if nearest-neighbor particle comm
   int nneigh;                       // # of procs I own ghost cells of
@@ -57,6 +62,13 @@ class Comm : protected Pointers {
                                 // base class when child copy is destroyed)
 
   void migrate_cells_less_memory(int);  // small memory version of migrate_cells
+  int rendezvous_irregular(int, char *, int, int, int *, 
+                           int (*)(int, char *, int &, int *&, char *&, void *), 
+                           int, char *&, int, void *, int);
+  int rendezvous_all2all(int, char *, int, int, int *, 
+                         int (*)(int, char *, int &, int *&, char *&, void *), 
+                         int, char *&, int, void *, int);
+  void rendezvous_stats(int, int, int, int, int, int);
 };
 
 }

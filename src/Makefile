@@ -58,6 +58,7 @@ help:
 	@echo 'make mpi-stubs           build dummy MPI library in STUBS'
 	@echo 'make install-python      install SPARTA wrapper in Python'
 	@echo 'make tar                 create spa_src.tar.gz of src dir and packages'
+	@echo 'make purge               purge obsolete copies of source files'
 	@echo ''
 	@echo 'make package             list available packages'
 	@echo 'make yes-package         install a single pgk in src dir'
@@ -242,8 +243,8 @@ package-diff pd:
 #	@echo ''
 #	@for p in $(PACKUSERUC); do $(SHELL) Package.sh $$p diff; done
 
-package-purge: Purge.list
-	@echo 'Purging obsolete and auto-generated source files'
+purge: Purge.list
+	@echo 'Purging auto-generated source files'
 	@for f in `grep -v '#' Purge.list` ;		\
 	    do test -f $$f && rm $$f && echo $$f || : ;		\
 	done

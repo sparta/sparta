@@ -1,0 +1,45 @@
+################################################################################
+# 2d flow around a jagged object
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+global              gridcut 0.0 comm/sort yes
+
+boundary	    o r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    100 100 1 
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.001
+global              surfmax 1000
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0 
+
+read_surf           sdata.100x100 &
+                    origin 0.5 0.5 0.0 trans 4.5 4.5 0.0 scale 9 9 1
+
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+fix		    in emit/face air xlo twopass # subsonic 0.1 NULL
+
+timestep 	    0.0001
+
+#dump                2 image all 50 image.*.ppm type type pdiam 0.1 &
+#                    surf proc 0.005 size 1024 1024 zoom 1.75 &
+#                    #gline yes 0.005 
+#dump_modify	    2 pad 4
+
+stats		    100
+stats_style	    step cpu np nattempt ncoll nscoll nscheck
+run 		    1000

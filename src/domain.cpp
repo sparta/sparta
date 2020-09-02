@@ -267,13 +267,15 @@ void Domain::boundary_modify(int narg, char **arg)
    called by Update::move()
    xnew = final position of particle at end of move
    return boundary type of global boundary
+   return reaction = index of reaction (1 to N) that took place, 0 = no reaction
    if needed, update particle x,v,xnew due to collision
 ------------------------------------------------------------------------- */
 
 int Domain::collide(Particle::OnePart *&ip, int face, int icell, double *xnew, 
-                    double &dtremain, Particle::OnePart *&jp)
+                    double &dtremain, Particle::OnePart *&jp, int &reaction)
 {
   jp = NULL;
+  reaction = 0;
 
   switch (bflag[face]) {
 
@@ -350,7 +352,7 @@ int Domain::collide(Particle::OnePart *&ip, int face, int icell, double *xnew,
   case SURFACE: 
     {
       jp = surf->sc[surf_collide[face]]->
-        collide(ip,norm[face],dtremain,surf_react[face]);
+        collide(ip,norm[face],dtremain,surf_react[face],reaction);
       
       if (ip) {
         double *x = ip->x;

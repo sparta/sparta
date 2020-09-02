@@ -273,7 +273,9 @@ void ComputeTvibGrid::compute_per_grid()
 
   Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::OnePart *particles = particle->particles;
+  Particle::Species *species = particle->species;
   int *s2g = particle->mixture[imix]->species2group;
+  double boltz = update->boltz;
   int nlocal = particle->nlocal;
 
   int i,j,ispecies,igroup,icell,imode,nmode;
@@ -291,6 +293,7 @@ void ComputeTvibGrid::compute_per_grid()
   if (modeflag == 0) {
     for (i = 0; i < nlocal; i++) {
       ispecies = particles[i].ispecies;
+      if (!species[ispecies].vibdof) continue;
       igroup = s2g[ispecies];
       if (igroup < 0) continue;
       icell = particles[i].icell;
@@ -307,6 +310,7 @@ void ComputeTvibGrid::compute_per_grid()
 
     for (i = 0; i < nlocal; i++) {
       ispecies = particles[i].ispecies;
+      if (!species[ispecies].vibdof) continue;
       igroup = s2g[ispecies];
       if (igroup < 0) continue;
       icell = particles[i].icell;
@@ -317,7 +321,9 @@ void ComputeTvibGrid::compute_per_grid()
       nmode = particle->species[ispecies].nvibmode;
       for (imode = 0; imode < nmode; imode++) {
         j = s2t_mode[ispecies][imode];
-        tally[icell][j] += vibmode[i][imode];
+        if (nmode > 1) tally[icell][j] += vibmode[i][imode];
+        else tally[icell][j] +=
+	       particles[i].evib / (boltz*species[ispecies].vibtemp[0]);
         tally[icell][j+1] += 1.0;
       }
     }
@@ -345,9 +351,8 @@ int ComputeTvibGrid::query_tally_grid(int index, double **&array, int *&cols)
    index = which column of output (0 for vec, 1 to N for array)
    for etally = NULL:
      use internal tallied info for single timestep, set nsample = 1
-     if onecell = -1, compute values for all grid cells
+     compute values for all grid cells
        store results in vector_grid with nstride = 1 (single col of array_grid)
-     if onecell >= 0, compute single value for onecell and return it
    for etally = ptr to caller array:
      use external tallied info for many timesteps
      nsample = additional normalization factor used by some values
@@ -356,9 +361,9 @@ int ComputeTvibGrid::query_tally_grid(int index, double **&array, int *&cols)
    if norm = 0.0, set result to 0.0 directly so do not divide by 0.0
 ------------------------------------------------------------------------- */
 
-double ComputeTvibGrid::post_process_grid(int index, int onecell, int nsample,
-                                          double **etally, int *emap,
-                                          double *vec, int nstride)
+void ComputeTvibGrid::post_process_grid(int index, int nsample,
+                                        double **etally, int *emap,
+                                        double *vec, int nstride)
 {
   index--;
   
@@ -372,11 +377,6 @@ double ComputeTvibGrid::post_process_grid(int index, int onecell, int nsample,
     emap = map[index];
     vec = vector_grid;
     nstride = 1;
-    if (onecell >= 0) {
-      lo = onecell;
-      hi = lo + 1;
-      k = lo;
-    }
   }
 
   // compute normalized single Tgroup value for each grid cell
@@ -402,7 +402,7 @@ double ComputeTvibGrid::post_process_grid(int index, int onecell, int nsample,
       evib = emap[0];
       count = evib+1;
       for (isp = 0; isp < nsp; isp++) {
-        ispecies = t2s[evib];
+        ispecies = t2s[evib-emap[0]];
         theta = species[ispecies].vibtemp[0];
         if (theta == 0.0 || etally[icell][count] == 0.0) {
           tspecies[isp] = 0.0;
@@ -454,7 +454,7 @@ double ComputeTvibGrid::post_process_grid(int index, int onecell, int nsample,
       evib = emap[0];
       count = evib+1;
       for (isp = 0; isp < nsp; isp++) {
-        ispecies = t2s_mode[evib];
+        ispecies = t2s_mode[evib-emap[0]];
         for (imode = 0; imode < maxmode; imode++) {
           theta = species[ispecies].vibtemp[imode];
           if (theta == 0.0 || etally[icell][count] == 0.0) {
@@ -512,7 +512,7 @@ double ComputeTvibGrid::post_process_grid(int index, int onecell, int nsample,
       evib = emap[2*imode];
       count = evib+1;
       for (isp = 0; isp < nsp; isp++) {
-        ispecies = t2s_mode[evib];
+        ispecies = t2s_mode[evib-emap[0]];
         theta = species[ispecies].vibtemp[imode];
         if (theta == 0.0 || etally[icell][count] == 0.0) {
           tspecies_mode[isp][imode] = 0.0;
@@ -540,7 +540,6 @@ double ComputeTvibGrid::post_process_grid(int index, int onecell, int nsample,
       numer = denom = 0.0;
       count = emap[2*imode+1];
       for (isp = 0; isp < nsp; isp++) {
-        ispecies = t2s[evib];
         numer += tspecies_mode[isp][imode]*etally[icell][count];
         denom += etally[icell][count];
         count += 2*maxmode;
@@ -551,9 +550,6 @@ double ComputeTvibGrid::post_process_grid(int index, int onecell, int nsample,
       k += nstride;
     }
   }
-
-  if (onecell < 0) return 0.0;
-  return vec[onecell];
 }
 
 /* ----------------------------------------------------------------------

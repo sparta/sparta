@@ -416,7 +416,7 @@ void FixAveTime::invoke_scalar(bigint ntimestep)
     
     if (which[i] == COMPUTE) {
       Compute *compute = modify->compute[m];
-      
+
       if (argindex[i] == 0) {
 	if (!(compute->invoked_flag & INVOKED_SCALAR)) {
 	  compute->compute_scalar();

@@ -25,6 +25,7 @@
 #include "surf_collide_specular_kokkos.h"
 #include "surf_collide_vanish_kokkos.h"
 #include "surf_collide_piston_kokkos.h"
+#include "surf_collide_transparent_kokkos.h"
 #include "compute_boundary_kokkos.h"
 #include "compute_surf_kokkos.h"
 
@@ -83,10 +84,10 @@ struct TagUpdateMove{};
 
 class UpdateKokkos : public Update {
  public:
-  typedef ArrayTypes<DeviceType> AT;
   typedef UPDATE_REDUCE value_type;
 
   DAT::tdual_int_1d k_mlist;
+  DAT::tdual_int_1d k_mlist_small;
   //DAT::t_int_1d d_mlist_small;
   //HAT::t_int_scalar h_mlist_small;
   //int* mlist_small;
@@ -112,9 +113,9 @@ class UpdateKokkos : public Update {
   t_cell_1d d_cells;
   t_sinfo_1d d_sinfo;
 
-  Kokkos::Crs<int, SPADeviceType, void, int> d_csurfs;
-  Kokkos::Crs<int, SPADeviceType, void, int> d_csplits;
-  Kokkos::Crs<int, SPADeviceType, void, int> d_csubs;
+  Kokkos::Crs<int, DeviceType, void, int> d_csurfs;
+  Kokkos::Crs<int, DeviceType, void, int> d_csplits;
+  Kokkos::Crs<int, DeviceType, void, int> d_csubs;
 
   t_line_1d d_lines;
   t_tri_1d d_tris;
@@ -130,51 +131,48 @@ class UpdateKokkos : public Update {
   KKCopy<SurfCollideDiffuseKokkos> sc_kk_diffuse_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<SurfCollideVanishKokkos> sc_kk_vanish_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<SurfCollidePistonKokkos> sc_kk_piston_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
+  KKCopy<SurfCollideTransparentKokkos> sc_kk_transparent_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<ComputeBoundaryKokkos> blist_active_copy[KOKKOS_MAX_BLIST];
   KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];
 
-  DAT::tdual_int_scalar k_ntouch_one;
-  typename AT::t_int_scalar d_ntouch_one;
+
+  typedef Kokkos::DualView<int[11], DeviceType::array_layout, DeviceType> tdual_int_11;
+  typedef tdual_int_11::t_dev t_int_11;
+  typedef tdual_int_11::t_host t_host_int_11;
+  t_int_11 d_scalars;
+  t_host_int_11 h_scalars;
+
+  DAT::t_int_scalar d_ntouch_one;
   HAT::t_int_scalar h_ntouch_one;
 
-  DAT::tdual_int_scalar k_nexit_one;
-  typename AT::t_int_scalar d_nexit_one;
+  DAT::t_int_scalar d_nexit_one;
   HAT::t_int_scalar h_nexit_one;
 
-  DAT::tdual_int_scalar k_nboundary_one;
-  typename AT::t_int_scalar d_nboundary_one;
+  DAT::t_int_scalar d_nboundary_one;
   HAT::t_int_scalar h_nboundary_one;
 
-  DAT::tdual_int_scalar k_nmigrate;
-  typename AT::t_int_scalar d_nmigrate;
+  DAT::t_int_scalar d_nmigrate;
   HAT::t_int_scalar h_nmigrate;
 
-  DAT::tdual_int_scalar k_entryexit;
-  typename AT::t_int_scalar d_entryexit;
+  DAT::t_int_scalar d_entryexit;
   HAT::t_int_scalar h_entryexit;
 
-  DAT::tdual_int_scalar k_ncomm_one;
-  typename AT::t_int_scalar d_ncomm_one;
+  DAT::t_int_scalar d_ncomm_one;
   HAT::t_int_scalar h_ncomm_one;
 
-  DAT::tdual_int_scalar k_nscheck_one;
-  typename AT::t_int_scalar d_nscheck_one;
+  DAT::t_int_scalar d_nscheck_one;
   HAT::t_int_scalar h_nscheck_one;
 
-  DAT::tdual_int_scalar k_nscollide_one;
-  typename AT::t_int_scalar d_nscollide_one;
+  DAT::t_int_scalar d_nscollide_one;
   HAT::t_int_scalar h_nscollide_one;
 
-  DAT::tdual_int_scalar k_nreact_one;
-  typename AT::t_int_scalar d_nreact_one;
+  DAT::t_int_scalar d_nreact_one;
   HAT::t_int_scalar h_nreact_one;
 
-  DAT::tdual_int_scalar k_nstuck;
-  typename AT::t_int_scalar d_nstuck;
+  DAT::t_int_scalar d_nstuck;
   HAT::t_int_scalar h_nstuck;
 
-  DAT::tdual_int_scalar k_error_flag;
-  typename AT::t_int_scalar d_error_flag;
+  DAT::t_int_scalar d_error_flag;
   HAT::t_int_scalar h_error_flag;
 
   void bounce_set(bigint);

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -40,7 +40,7 @@ ComputeDistSurfGrid(SPARTA *sparta, int narg, char **arg) :
   size_per_grid_cols = 0;
 
   int igroup = grid->find_group(arg[2]);
-  if (igroup < 0) 
+  if (igroup < 0)
     error->all(FLERR,"Compute distsurf/grid group ID does not exist");
   groupbit = grid->bitmask[igroup];
 
@@ -61,7 +61,7 @@ ComputeDistSurfGrid(SPARTA *sparta, int narg, char **arg) :
       sdir[0] = input->numeric(FLERR,arg[iarg+1]);
       sdir[1] = input->numeric(FLERR,arg[iarg+2]);
       sdir[2] = input->numeric(FLERR,arg[iarg+3]);
-      if (domain->dimension == 2 && sdir[2] != 0.0) 
+      if (domain->dimension == 2 && sdir[2] != 0.0)
         error->all(FLERR,"Illegal adapt command");
       iarg += 4;
     } else error->all(FLERR,"Illegal compute distsurf/grid command");
@@ -77,6 +77,7 @@ ComputeDistSurfGrid(SPARTA *sparta, int narg, char **arg) :
 
 ComputeDistSurfGrid::~ComputeDistSurfGrid()
 {
+  if (copymode) return;
   memory->destroy(vector_grid);
 }
 
@@ -92,7 +93,8 @@ void ComputeDistSurfGrid::init()
 void ComputeDistSurfGrid::compute_per_grid()
 {
   int i,m,n;
-  int *csurfs,*csubs;
+  int *csubs;
+  surfint *csurfs;
   double dist,mindist;
   double *p1,*p2,*p3,*lo,*hi;
   double cctr[3],cell2surf[3];
@@ -102,8 +104,7 @@ void ComputeDistSurfGrid::compute_per_grid()
   int dim = domain->dimension;
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
-  int nline = surf->nline;
-  int ntri = surf->ntri;
+  int ntotal = surf->nsurf;
 
   // nsurf = # of eligible surfs, based on group and sdir setting
   // slist = list of Nsurf eligible surf indices to use for computing distances
@@ -113,9 +114,9 @@ void ComputeDistSurfGrid::compute_per_grid()
   int nsurf = 0;
 
   if (dim == 2) {
-    memory->create(eflag,nline,"distsurf/grid:eflag");
-    memory->create(slist,nline,"distsurf/grid:slist");
-    for (i = 0; i < nline; i++) {
+    memory->create(eflag,ntotal,"distsurf/grid:eflag");
+    memory->create(slist,ntotal,"distsurf/grid:slist");
+    for (i = 0; i < ntotal; i++) {
       eflag[i] = 0;
       if (!(lines[i].mask & sgroupbit)) continue;
       if (MathExtra::dot3(lines[i].norm,sdir) <= 0.0) {
@@ -124,9 +125,9 @@ void ComputeDistSurfGrid::compute_per_grid()
       }
     }
   } else {
-    memory->create(eflag,ntri,"distsurf/grid:eflag");
-    memory->create(slist,ntri,"distsurf/grid:slist");
-    for (i = 0; i < ntri; i++) {
+    memory->create(eflag,ntotal,"distsurf/grid:eflag");
+    memory->create(slist,ntotal,"distsurf/grid:slist");
+    for (i = 0; i < ntotal; i++) {
       eflag[i] = 0;
       if (!(tris[i].mask & sgroupbit)) continue;
       if (MathExtra::dot3(tris[i].norm,sdir) <= 0.0) {
@@ -211,7 +212,7 @@ void ComputeDistSurfGrid::compute_per_grid()
     mindist = BIG;
     for (i = 0; i < nsurf; i++) {
       m = slist[i];
-      
+
       cell2surf[0] = sctr[i][0] - cctr[0];
       cell2surf[1] = sctr[i][1] - cctr[1];
       cell2surf[2] = sctr[i][2] - cctr[2];
@@ -227,7 +228,7 @@ void ComputeDistSurfGrid::compute_per_grid()
 
       mindist = MIN(mindist,dist);
     }
-    
+
     vector_grid[icell] = mindist;
   }
 

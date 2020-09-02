@@ -1,0 +1,110 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>compute react/boundary command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>compute ID react/boundary reaction-ID value1 value2 ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
+
+<LI>react/boundary = style name of this compute command 
+
+<LI>reaction-ID = surface reaction ID which defines surface reactions 
+
+<LI>zero or more values can be appended 
+
+<LI>value = <I>r:s1/s2/s3 ...</I> or <I>p:s1/s2/s3 ...</I> 
+
+<PRE>  r: or p: = list of reactant species or product species
+  s1,s2,s3 = one or more species IDs, separated by "/" character 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>surf_react air prob air.surf
+compute 1 react/boundary air
+compute 2 react/boundary air r:N/O/N2/O2 p:N/O/NO 
+</PRE>
+<P>These commands will time average the reaction tallies for each face
+and output the results as part of statistical output:
+</P>
+<PRE>compute 2 react/boundary air r:N/O/N2/O2 p:N/O/NO 
+</PRE>
+<PRE>fix 1 ave/time all 10 100 1000 c_2[*]
+stats_style step np f_1[1][*] f_1[2][*] f_1[3][*] f_1[4][*] 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Define a computation that tallies counts of reactions for each
+boundary (i.e. face) of the simulation box, based on the particles
+that collide with the boundary.  Only faces assigned to the surface
+reaction model specified by <I>reaction-ID</I> are included in the
+tallying.
+</P>
+<P>Note that when a particle collides with a face, it can bounce off
+(possibly as a different species), be captured by the surface
+(vanish), or a 2nd particle can also be emitted.
+</P>
+<P>The doc page for the <A HREF = "surf_react.html">surf_react</A> command explains the
+different reactions that can occur for each specified style.
+</P>
+<P>If no values are specified each reaction specified by the
+<A HREF = "surf_react.html">surf_react</A> style is tallied individually for each
+boundary.
+</P>
+<P>If M values are specified, then M tallies are made for each face, one
+per value.  If the value starts with "r:" then any reaction which
+occurs with one (or more) of the listed species as a reactant is
+counted as part of that tally.  If the value starts with "p:" then any
+reaction which occurs with one (or more) of the listed species as a
+product is counted as part of that tally.  Note that these rules mean
+that a single reaction may be tallied multiple times depending on
+which values it matches.
+</P>
+<P>The results of this compute can be used by different commands in
+different ways.  The values for a single timestep can be output by the
+<A HREF = "stats_style.html">stats_style</A> command.  The values over many sampling
+timesteps can be averaged by the <A HREF = "fix_ave_time.html">fix ave/time</A>
+command.
+</P>
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>This compute calculates a global array, with the number of columns
+either equal to the number of reactions defined by the
+<A HREF = "surf_react">surf_react</A> style (if no values are specified) or equal to
+M = the # of values specified.  The number of rows is 4 for a 2d
+simulation for the 4 faces (xlo, xhi, ylo, yhi), and it is 6 for a 3d
+simulation (xlo, xhi, ylo, yhi, zlo, zhi).
+</P>
+<P>The array can be accessed by any command that uses global array values
+from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 6.4</A>
+for an overview of SPARTA output options.
+</P>
+<P>The array values are counts of the number of reactions that occurred
+on each face.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "fix_ave_time.html">fix ave/time</A>, <A HREF = "compute_react_surf.html">compute
+react/surf</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

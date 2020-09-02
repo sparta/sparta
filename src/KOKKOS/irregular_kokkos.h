@@ -27,7 +27,6 @@ struct TagIrregularUnpackBuffer{};
 
 class IrregularKokkos : public Irregular {
  public:
-  typedef ArrayTypes<DeviceType> AT;
 
   IrregularKokkos(class SPARTA *);
   ~IrregularKokkos();
@@ -52,7 +51,7 @@ class IrregularKokkos : public Irregular {
   DAT::t_int_1d d_index_self;
 
   DAT::tdual_int_scalar k_n;
-  typename AT::t_int_scalar d_n;
+  DAT::t_int_scalar d_n;
   HAT::t_int_scalar h_n;
 
   DAT::t_char_1d d_sendbuf;

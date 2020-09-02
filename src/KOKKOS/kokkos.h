@@ -37,6 +37,15 @@ class KokkosSPARTA : protected Pointers {
   KokkosSPARTA(class SPARTA *, int, char **);
   ~KokkosSPARTA();
   void accelerator(int, char **);
+
+  template<class DeviceType>
+  int need_dup()
+  {
+    int value = 0;
+    if (need_atomics)
+      value = NeedDup<1,DeviceType>::value;
+    return value;
+  }
 };
 
 }
@@ -48,6 +57,10 @@ class KokkosSPARTA : protected Pointers {
 E: Invalid Kokkos command-line args
 
 Self-explanatory.  See Section ? of the manual for details.
+
+E: Could not determine local MPI rank for multiple GPUs with Kokkos CUDA because MPI library not recognized
+
+The local MPI rank was not found in one of four supported environment variables.
 
 E: GPUs are requested but Kokkos has not been compiled for CUDA
 

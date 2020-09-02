@@ -32,6 +32,14 @@
   <I>rcb</I> args = weight
     weight = <I>cell</I> or <I>part</I> or <I>time</I> 
 </PRE>
+<LI>zero or more keyword/value(s) pairs may be appended 
+
+<LI>keyword = <I>axes</I> or <I>flip</I> 
+
+<PRE>  <I>axes</I> value = dims
+    dims = string with any of "x", "y", or "z" characters in it
+  <I>flip</I> value = yes or no 
+</PRE>
 
 </UL>
 <P><B>Examples:</B>
@@ -126,21 +134,10 @@ weighting by the relative number of particles in the grid cells. If no
 timing data has yet been collected at the point in a script where this
 command is issued, a <I>cell</I> style weight will be used instead of
 <I>time</I>.  A small warmup run (for example 100 timesteps) can be used
-before the balance command so that timer data is available. The timers
-used for balancing tally time from the move, sort, collide, and modify
-portions of each timestep.
-</P>
-<P>If the <I>weight</I> argument is specified as <I>time</I>, then timers are used
-to estimate the cost of each grid cell.  The cost from the timers is
-given on a per processor basis, and then assigned to grid cells by
-weighting by the relative number of particles in the grid cells. If no
-timing data has yet been collected on a given timestep, a <I>cell</I> style
-weight will be used instead of <I>time</I>.  The number of timesteps
-<I>Nfreq</I> between balancing steps should be large enough to give eliable
-timings.  For example, re-balancing every timestep will likely not
-give accurate timings for small problems.  The timers used for
-balancing tally time from the move, sort, collide, and modify
-portions of each timestep.
+before the balance command so that timer data is available. The number
+of timesteps <I>Nfreq</I> between balancing steps also needs to be large
+enough to give reliable timings. The timers used for balancing tally
+time from the move, sort, collide, and modify portions of each timestep.
 </P>
 <P>Here is an example of an RCB partitioning for 24 processors, of a 2d
 hierarchical grid with 5 levels, refined around a tilted ellipsoidal
@@ -155,6 +152,27 @@ image.
 </P>
 <CENTER><A HREF = "JPG/partition.jpg"><IMG SRC = "JPG/partition_small.jpg"></A>
 </CENTER>
+<HR>
+
+<P>The optional keywords <I>axes</I> and <I>flip</I> only apply to the <I>rcb</I>
+style.  Otherwise they are ignored.
+</P>
+<P>The <I>axes</I> keyword allows limiting the partitioning created by the RCB
+algorithm to a subset of dimensions.  The default is to allow cuts in
+all dimension, e.g. x,y,z for 3d simulations.  The dims value is a
+string with 1, 2, or 3 characters.  The characters must be one of "x",
+"y", or "z".  They can be in any order and must be unique.  For
+example, in 3d, a dims = xz would only partition the 3d grid only in
+the x and z dimensions.
+</P>
+<P>The <I>flip</I> keyword is useful for debugging.  If it is set to <I>yes</I>
+then each time an RCB partitioning is done, the coordinates of grid
+cells will (internally only) undergo a sign flip to insure that the
+new owner of each grid cell is a different processor than the previous
+owner, at least when more than a few processors are used.  This will
+insure all particle and grid data moves to new processors, fully
+exercising the rebalancing code.
+</P>
 <HR>
 
 <P><B>Restart, output info:</B>

@@ -51,13 +51,11 @@ enum{NONE,DISCRETE,SMOOTH};            // several files
 
 class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
  public:
-  typedef ArrayTypes<DeviceType> AT;
 
   SurfCollideDiffuseKokkos(class SPARTA *, int, char **);
   SurfCollideDiffuseKokkos(class SPARTA *);
   ~SurfCollideDiffuseKokkos();
 
-  Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int) { return NULL; }
   void pre_collide();
 
 #ifndef SPARTA_KOKKOS_EXACT
@@ -77,20 +75,21 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
      isr = index of reaction model if >= 0, -1 for no chemistry
      ip = set to NULL if destroyed by chemsitry
      return jp = new particle if created by chemistry
+     return reaction = index of reaction (1 to N) that took place, 0 = no reaction
      resets particle(s) to post-collision outward velocity
   ------------------------------------------------------------------------- */
   
   KOKKOS_INLINE_FUNCTION
-  Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, const double *norm, double &, int) const
+  Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, const double *norm, double &, int, int &) const
   {
     Kokkos::atomic_fetch_add(&d_nsingle(),1);
   
     // if surface chemistry defined, attempt reaction
-    // reaction = 1 if reaction took place
+    // reaction > 0 if reaction took place
   
     //Particle::OnePart iorig;
     Particle::OnePart *jp = NULL;
-    //int reaction = 0;
+    //reaction = 0;
   
     //if (isr >= 0) {
     //  if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
@@ -123,7 +122,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
   };
 
   DAT::tdual_int_scalar k_nsingle;
-  typename AT::t_int_scalar d_nsingle;
+  DAT::t_int_scalar d_nsingle;
   HAT::t_int_scalar h_nsingle;
 
  private:

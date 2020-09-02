@@ -82,10 +82,15 @@ Instructions on how to build SPARTA as a shared library are given in
 that is dynamically loadable, which is what Python requires.  On Linux
 this is a library file that ends in ".so", not ".a".
 
-From the src directory, type
+For make, from the src directory, type
 
 make makeshlib
 make -f Makefile.shlib foo :pre
+
+For CMake, from the build directory, tyoe
+
+cmake -C /path/to/sparta/cmake/presets/foo.cmake -DBUILD_SHARED_LIBS=ON /path/to/sparta/cmake
+make :pre
 
 where foo is the machine target name, such as icc or g++ or serial.
 This should create the file libsparta_foo.so in the src directory, as

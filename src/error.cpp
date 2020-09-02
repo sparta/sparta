@@ -18,6 +18,7 @@
 #include "universe.h"
 #include "output.h"
 #include "memory.h"
+#include "accelerator_kokkos.h"
 
 using namespace SPARTA_NS;
 
@@ -48,6 +49,7 @@ void Error::universe_all(const char *file, int line, const char *str)
   }
   if (universe->ulogfile) fclose(universe->ulogfile);
 
+  if (sparta->kokkos) Kokkos::finalize();
   MPI_Finalize();
   exit(1);
 }
@@ -58,9 +60,11 @@ void Error::universe_all(const char *file, int line, const char *str)
 
 void Error::universe_one(const char *file, int line, const char *str)
 {
-  if (universe->uscreen)
+  if (universe->uscreen) {
     fprintf(universe->uscreen,"ERROR on proc %d: %s (%s:%d)\n",
 	    universe->me,str,file,line);
+    fflush(universe->uscreen);
+  }
   MPI_Abort(universe->uworld,1);
 }
 
@@ -85,6 +89,7 @@ void Error::all(const char *file, int line, const char *str)
   if (screen && screen != stdout) fclose(screen);
   if (logfile) fclose(logfile);
 
+  if (sparta->kokkos) Kokkos::finalize();
   MPI_Finalize();
   exit(1);
 }
@@ -99,11 +104,16 @@ void Error::one(const char *file, int line, const char *str)
 {
   int me;
   MPI_Comm_rank(world,&me);
-  if (screen) fprintf(screen,"ERROR on proc %d: %s (%s:%d)\n",
-		      me,str,file,line);
-  if (universe->nworlds > 1)
+  if (screen) {
+    fprintf(screen,"ERROR on proc %d: %s (%s:%d)\n",
+            me,str,file,line);
+    fflush(screen);
+  }
+  if (universe->nworlds > 1) {
     fprintf(universe->uscreen,"ERROR on proc %d: %s (%s:%d)\n",
 	    universe->me,str,file,line);
+    fflush(universe->uscreen);
+  }
   MPI_Abort(world,1);
 }
 
@@ -143,6 +153,7 @@ void Error::done()
   if (screen && screen != stdout) fclose(screen);
   if (logfile) fclose(logfile);
 
+  if (sparta->kokkos) Kokkos::finalize();
   MPI_Finalize();
   exit(1);
 }

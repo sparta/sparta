@@ -74,19 +74,23 @@ class Cut2d : protected Pointers {
 
   Cut2d(class SPARTA *, int);
   ~Cut2d() {}
-  int surf2grid(cellint, double *, double *, int *, int);
-  int surf2grid_list(cellint, double *, double *, int, int *, int *, int);
-  int split(cellint, double *, double *, int, int *,
+  int surf2grid(cellint, double *, double *, surfint *, int);
+  int surf2grid_list(cellint, double *, double *, int, surfint *, 
+                     surfint *, int);
+  int surf2grid_one(double *, double *, double *, double *);
+  int split(cellint, double *, double *, int, surfint *,
             double *&, int *, int *, int &, double *);
   int split_face(int, int, double *, double *);
   int clip_external(double *, double *, double *, double *, double *);
 
  private:
   int axisymmetric;
+  int implicit;
+
   cellint id;            // ID of cell being worked on
   double *lo,*hi;        // opposite corner pts of cell
   int nsurf;             // # of surf elements in cell
-  int *surfs;            // indices of surf elements in cell
+  surfint *surfs;        // indices of surf elements in cell
 
   int pushflag;          // 0 for no push, else push surf points near cell surf
   double pushlo,pushhi;  // lo/hi ranges to push on
@@ -102,7 +106,8 @@ class Cut2d : protected Pointers {
   void weiler_loops();
   int loop2pg();
   void create_surfmap(int *);
-  int split_point(int *, double *, int &);
+  int split_point_explicit(int *, double *, int &);
+  int split_point_implicit(int *, double *, int &);
 
   int cliptest(double *, double *);
   void clip(double *, double *, double *, double *);

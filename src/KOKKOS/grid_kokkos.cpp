@@ -172,8 +172,10 @@ void GridKokkos::wrap_kokkos_graphs()
     int nsurf = cells[icell].nsurf;
     if (nsurf < 0) nsurf = 0;
     else if (fill) {
-      int* csurfs = cells[icell].csurfs;
-      for (int j = 0; j < nsurf; ++j) fill[j] = csurfs[j];
+      surfint* csurfs = cells[icell].csurfs;
+      // d_csurfs doesn't need to be surfint because at this point there are only
+      //   local (not global) ids stored in csurfs
+      for (int j = 0; j < nsurf; ++j) fill[j] = (int) csurfs[j];
     }
     return nsurf;
   };
@@ -238,8 +240,8 @@ void GridKokkos::wrap_kokkos()
 
   if (cells != k_cells.h_view.data()) {
     memoryKK->wrap_kokkos(k_cells,cells,maxcell,"grid:cells");
-    k_cells.modify<SPAHostType>();
-    k_cells.sync<DeviceType>();
+    k_cells.modify_host();
+    k_cells.sync_device();
     memory->sfree(cells);
     cells = k_cells.h_view.data();
   }
@@ -248,8 +250,8 @@ void GridKokkos::wrap_kokkos()
 
   if (cinfo != k_cinfo.h_view.data()) {
     memoryKK->wrap_kokkos(k_cinfo,cinfo,maxlocal,"grid:cinfo");
-    k_cinfo.modify<SPAHostType>();
-    k_cinfo.sync<DeviceType>();
+    k_cinfo.modify_host();
+    k_cinfo.sync_device();
     memory->sfree(cinfo);
     cinfo = k_cinfo.h_view.data();
   }
@@ -258,8 +260,8 @@ void GridKokkos::wrap_kokkos()
 
   if (sinfo != k_sinfo.h_view.data()) {
     memoryKK->wrap_kokkos(k_sinfo,sinfo,maxsplit,"grid:sinfo");
-    k_sinfo.modify<SPAHostType>();
-    k_sinfo.sync<DeviceType>();
+    k_sinfo.modify_host();
+    k_sinfo.sync_device();
     memory->sfree(sinfo);
     sinfo = k_sinfo.h_view.data();
   }
@@ -270,8 +272,8 @@ void GridKokkos::wrap_kokkos()
 
   if (pcells != k_pcells.h_view.data()) {
     memoryKK->wrap_kokkos(k_pcells,pcells,maxparent,"grid:pcells");
-    k_pcells.modify<SPAHostType>();
-    k_pcells.sync<DeviceType>();
+    k_pcells.modify_host();
+    k_pcells.sync_device();
     memory->sfree(pcells);
     pcells = k_pcells.h_view.data();
   }
@@ -291,15 +293,15 @@ void GridKokkos::sync(ExecutionSpace space, unsigned int mask)
   if (space == Device) {
     if (sparta->kokkos->auto_sync)
       modify(Host,mask);
-    if (mask & CELL_MASK) k_cells.sync<SPADeviceType>();
-    if (mask & CINFO_MASK) k_cinfo.sync<SPADeviceType>();
-    if (mask & PCELL_MASK) k_pcells.sync<SPADeviceType>();
-    if (mask & SINFO_MASK) k_sinfo.sync<SPADeviceType>();
+    if (mask & CELL_MASK) k_cells.sync_device();
+    if (mask & CINFO_MASK) k_cinfo.sync_device();
+    if (mask & PCELL_MASK) k_pcells.sync_device();
+    if (mask & SINFO_MASK) k_sinfo.sync_device();
   } else {
-    if (mask & CELL_MASK) k_cells.sync<SPAHostType>();
-    if (mask & CINFO_MASK) k_cinfo.sync<SPAHostType>();
-    if (mask & PCELL_MASK) k_pcells.sync<SPAHostType>();
-    if (mask & SINFO_MASK) k_sinfo.sync<SPAHostType>();
+    if (mask & CELL_MASK) k_cells.sync_host();
+    if (mask & CINFO_MASK) k_cinfo.sync_host();
+    if (mask & PCELL_MASK) k_pcells.sync_host();
+    if (mask & SINFO_MASK) k_sinfo.sync_host();
   }
 }
 
@@ -315,16 +317,16 @@ void GridKokkos::modify(ExecutionSpace space, unsigned int mask)
   }
 
   if (space == Device) {
-    if (mask & CELL_MASK) k_cells.modify<SPADeviceType>();
-    if (mask & CINFO_MASK) k_cinfo.modify<SPADeviceType>();
-    if (mask & PCELL_MASK) k_pcells.modify<SPADeviceType>();
-    if (mask & SINFO_MASK) k_sinfo.modify<SPADeviceType>();
+    if (mask & CELL_MASK) k_cells.modify_device();
+    if (mask & CINFO_MASK) k_cinfo.modify_device();
+    if (mask & PCELL_MASK) k_pcells.modify_device();
+    if (mask & SINFO_MASK) k_sinfo.modify_device();
     if (sparta->kokkos->auto_sync)
       sync(Host,mask);
   } else {
-    if (mask & CELL_MASK) k_cells.modify<SPAHostType>();
-    if (mask & CINFO_MASK) k_cinfo.modify<SPAHostType>();
-    if (mask & PCELL_MASK) k_pcells.modify<SPAHostType>();
-    if (mask & SINFO_MASK) k_sinfo.modify<SPAHostType>();
+    if (mask & CELL_MASK) k_cells.modify_host();
+    if (mask & CINFO_MASK) k_cinfo.modify_host();
+    if (mask & PCELL_MASK) k_pcells.modify_host();
+    if (mask & SINFO_MASK) k_sinfo.modify_host();
   }
 }

@@ -51,8 +51,8 @@ ComputeGridKokkos::ComputeGridKokkos(SPARTA *sparta, int narg, char **arg) :
   k_unique = DAT::tdual_int_1d("compute/grid:unique",npergroup);
   for (int m = 0; m < npergroup; m++)
     k_unique.h_view(m) = unique[m];
-  k_unique.modify<SPAHostType>();
-  k_unique.sync<DeviceType>();
+  k_unique.modify_host();
+  k_unique.sync_device();
   d_unique = k_unique.d_view;
 }
 
@@ -76,8 +76,8 @@ void ComputeGridKokkos::compute_per_grid()
     ComputeGrid::compute_per_grid();
   } else {
     compute_per_grid_kokkos();
-    k_tally.modify<DeviceType>();
-    k_tally.sync<SPAHostType>();
+    k_tally.modify_device();
+    k_tally.sync_host();
   }
 }
 
@@ -98,7 +98,7 @@ void ComputeGridKokkos::compute_per_grid_kokkos()
   grid_kk->sync(Device,CINFO_MASK);
   d_cinfo = grid_kk->k_cinfo.d_view;
 
-  d_s2g = particle_kk->k_species2group.view<DeviceType>();
+  d_s2g = particle_kk->k_species2group.d_view;
   int nlocal = particle->nlocal;
 
   // zero all accumulators
@@ -110,6 +110,15 @@ void ComputeGridKokkos::compute_per_grid_kokkos()
   // perform all tallies needed for each particle
   // depends on its species group and the user-requested values
 
+  need_dup = sparta->kokkos->need_dup<DeviceType>();
+  if (particle_kk->sorted_kk && sparta->kokkos->need_atomics && !sparta->kokkos->atomic_reduction)
+    need_dup = 0;
+
+  if (need_dup)
+    dup_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterDuplicated>(d_tally);
+  else
+    ndup_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterNonDuplicated>(d_tally);
+
   copymode = 1;
   if (particle_kk->sorted_kk && sparta->kokkos->need_atomics && !sparta->kokkos->atomic_reduction)
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_compute_per_grid>(0,nglocal),*this);
@@ -119,8 +128,13 @@ void ComputeGridKokkos::compute_per_grid_kokkos()
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_compute_per_grid_atomic<0> >(0,nlocal),*this);
   }
-  DeviceType::fence();
+  DeviceType().fence();
   copymode = 0;
+
+  if (need_dup) {
+    Kokkos::Experimental::contribute(d_tally, dup_tally);
+    dup_tally = decltype(dup_tally)(); // free duplicated memory
+  }
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
   d_plist = DAT::t_int_2d(); // destroy reference to reduce memory use
@@ -132,8 +146,10 @@ template<int NEED_ATOMICS>
 KOKKOS_INLINE_FUNCTION
 void ComputeGridKokkos::operator()(TagComputeGrid_compute_per_grid_atomic<NEED_ATOMICS>, const int &i) const {
 
-  // The tally array is atomic
-  Kokkos::View<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,Kokkos::MemoryTraits<AtomicView<NEED_ATOMICS>::value> > a_tally = d_tally;
+  // The tally array is duplicated for OpenMP, atomic for CUDA, and neither for Serial
+
+  auto v_tally = ScatterViewHelper<NeedDup<NEED_ATOMICS,DeviceType>::value,decltype(dup_tally),decltype(ndup_tally)>::get(dup_tally,ndup_tally);
+  auto a_tally = v_tally.template access<AtomicDup<NEED_ATOMICS,DeviceType>::value>();
 
   const int ispecies = d_particles[i].ispecies;
   const int igroup = d_s2g(imix,ispecies);
@@ -299,7 +315,7 @@ int ComputeGridKokkos::query_tally_grid_kokkos(DAT::t_float_2d_lr &d_array)
    if norm = 0.0, set result to 0.0 directly so do not divide by 0.0
 ------------------------------------------------------------------------- */
 
-double ComputeGridKokkos::post_process_grid_kokkos(int index, int onecell, int nsample,
+void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
                                       DAT::t_float_2d_lr d_etally, int *emap,
                                       DAT::t_float_1d_strided d_vec)
 {
@@ -315,10 +331,6 @@ double ComputeGridKokkos::post_process_grid_kokkos(int index, int onecell, int n
     emap = map[index];
     d_vec = d_vector;
     nstride = 1;
-    if (onecell >= 0) {
-      lo = onecell;
-      hi = lo + 1;
-    }
   }
 
   this->nsample = nsample;
@@ -342,7 +354,7 @@ double ComputeGridKokkos::post_process_grid_kokkos(int index, int onecell, int n
     {
       count = emap[0];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_NUM>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -351,7 +363,7 @@ double ComputeGridKokkos::post_process_grid_kokkos(int index, int onecell, int n
       mass = emap[0];
       count = emap[1];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_MASS>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -359,7 +371,7 @@ double ComputeGridKokkos::post_process_grid_kokkos(int index, int onecell, int n
     {
       count = emap[0];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_NRHO>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -367,7 +379,7 @@ double ComputeGridKokkos::post_process_grid_kokkos(int index, int onecell, int n
     {
       mass = emap[0];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_MASSRHO>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -377,7 +389,7 @@ double ComputeGridKokkos::post_process_grid_kokkos(int index, int onecell, int n
       count_or_mass = emap[0];
       cell_count_or_mass = emap[1];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_NFRAC>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -391,7 +403,7 @@ double ComputeGridKokkos::post_process_grid_kokkos(int index, int onecell, int n
       velocity = emap[0];
       mass = emap[1];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_U>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -400,7 +412,7 @@ double ComputeGridKokkos::post_process_grid_kokkos(int index, int onecell, int n
       mvsq = emap[0];
       count = emap[1];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_KE>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -409,7 +421,7 @@ double ComputeGridKokkos::post_process_grid_kokkos(int index, int onecell, int n
       mvsq = emap[0];
       count = emap[1];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_TEMPERATURE>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -419,7 +431,7 @@ double ComputeGridKokkos::post_process_grid_kokkos(int index, int onecell, int n
       eng = emap[0];
       count = emap[1];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_EROT>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -429,7 +441,7 @@ double ComputeGridKokkos::post_process_grid_kokkos(int index, int onecell, int n
       eng = emap[0];
       dof = emap[1];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_TROT>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -439,7 +451,7 @@ double ComputeGridKokkos::post_process_grid_kokkos(int index, int onecell, int n
     {
       mom = emap[0];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_PXRHO>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
 
@@ -447,14 +459,11 @@ double ComputeGridKokkos::post_process_grid_kokkos(int index, int onecell, int n
     {
       ke = emap[0];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_KERHO>(lo,hi),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       break;
     }
   }
   copymode = 0;
-
-  if (onecell < 0) return 0.0;
-  return d_vec[onecell];
 }
 
 /* ---------------------------------------------------------------------- */
@@ -587,8 +596,8 @@ void ComputeGridKokkos::reallocate()
   memoryKK->destroy_kokkos(k_vector_grid,vector_grid);
   memoryKK->destroy_kokkos(k_tally,tally);
   nglocal = grid->nlocal;
-  memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"thermal/grid:vector_grid");
+  memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"compute_grid:vector_grid");
   d_vector = k_vector_grid.d_view;
-  memoryKK->create_kokkos(k_tally,tally,nglocal,ntotal,"thermal/grid:tally");
+  memoryKK->create_kokkos(k_tally,tally,nglocal,ntotal,"compute_grid:tally");
   d_tally = k_tally.d_view;
 }

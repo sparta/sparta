@@ -272,15 +272,6 @@ void AdaptGrid::command(int narg, char **arg)
     grid->type_check();
   }
 
-  // final update of any per grid fixes for all new child cells
-  
-  if (modify->n_pergrid) add_grid_fixes();
-
-  // reallocate per grid arrays in per grid dumps
-
-  for (int i = 0; i < output->ndump; i++)
-    output->dump[i]->reset_grid();
-
   // write out new parent grid file
 
   if (file) write_file();
@@ -591,7 +582,6 @@ void AdaptGrid::check_args(int nevery)
 void AdaptGrid::setup(int iter)
 {
   // zero new child cell counter on first iteration
-  // used in add_grid_fixes after all new child cells have been added
 
   if (iter == 0) nnew = 0;
 
@@ -676,6 +666,8 @@ int AdaptGrid::refine()
       }
   }
 
+  grid->rehash();
+
   return nrefine;
 }
 
@@ -685,6 +677,10 @@ int AdaptGrid::refine()
 
 int AdaptGrid::coarsen(int pstop)
 {
+  if (surf->exist && surf->distributed)
+    error->all(FLERR,"Grid adapt coarsen does not yet support "
+               "distributed surface elements");
+  
   // NOTE: why is grid not really hashed at this point even though it says so?
   // WHEN done with adapt, do I need to mark it hashed or unhashed?
   // NOTE: does fix balance always do a sort?  yes it does
@@ -728,6 +724,8 @@ int AdaptGrid::coarsen(int pstop)
         compute[i]->invoked_flag = 0;
       }
   }
+
+  grid->rehash();
 
   return ncoarsen;
 }
@@ -804,7 +802,7 @@ void AdaptGrid::refine_particle()
 void AdaptGrid::refine_surf()
 {
   int m,icell,flag,nsurf;
-  int *csurfs;
+  surfint *csurfs;
   double *norm,*lo,*hi;
 
   int dim = domain->dimension;
@@ -897,7 +895,7 @@ void AdaptGrid::refine_value()
       }
     }
 
-    //printf("AAA %d %d: %g %g\n",
+    //printf("REF VALUE %d %d: %g %g\n",
     //       icell,cells[icell].id,value,rvalue);
 
     if (rdecide == LESS) {
@@ -929,27 +927,6 @@ void AdaptGrid::refine_random()
   rnum = n;
 
   //printf("RNUM2 %d: %d\n",me,rnum);
-}
-
-/* ----------------------------------------------------------------------
-   final add of new child cells to fixes
-   allow for each cell ID to no longer exist or be for a parent cell
-     due to subsequent iterations
-   NOTE: first stage must happen earlier so fix memory for new cell is valid
-------------------------------------------------------------------------- */
-
-void AdaptGrid::add_grid_fixes()
-{
-  Grid::MyHash *hash = grid->hash;
-  grid->rehash();
-
-  int icell;
-  for (int i = 0; i < nnew; i++) {
-    if (hash->find(newcells[i]) == hash->end()) continue;
-    icell = (*hash)[newcells[i]];
-    if (icell < 0) continue;
-    modify->add_grid_one(icell-1,1);
-  }
 }
 
 /* ----------------------------------------------------------------------
@@ -1460,8 +1437,8 @@ void AdaptGrid::candidates_coarsen(int pstop)
 
   sa_header = (SendAdapt **) 
     memory->smalloc(nrecv*sizeof(SendAdapt *),"adapt_grid::sa_header");
-  sa_csurfs = (int **) 
-    memory->smalloc(nrecv*sizeof(int *),"adapt_grid::sa_csurfs");
+  sa_csurfs = (surfint **) 
+    memory->smalloc(nrecv*sizeof(surfint *),"adapt_grid::sa_csurfs");
   sa_particles = (char **) 
     memory->smalloc(nrecv*sizeof(char *),"adapt_grid::sa_particles");
   int nbytes_total = sizeof(Particle::OnePart) + particle->sizeof_custom();
@@ -1474,8 +1451,8 @@ void AdaptGrid::candidates_coarsen(int pstop)
     ptr += sizeof(SendAdapt);
     ptr = ROUNDUP(ptr);
 
-    sa_csurfs[i] = (int *) ptr;
-    ptr += sa_header[i]->nsurf * sizeof(int);
+    sa_csurfs[i] = (surfint *) ptr;
+    ptr += sa_header[i]->nsurf * sizeof(surfint);
     ptr = ROUNDUP(ptr);
 
     sa_particles[i] = (char *) ptr;
@@ -1632,7 +1609,8 @@ void AdaptGrid::coarsen_particle()
 void AdaptGrid::coarsen_surf()
 {
   int i,j,m,iparent,nchild,icell,nsurf,flag;
-  int *proc,*index,*recv,*csurfs;
+  int *proc,*index,*recv;
+  surfint *csurfs;
   double *lo,*hi,*norm;
 
   int dim = domain->dimension;
@@ -2131,9 +2109,10 @@ void AdaptGrid::gather_parents_coarsen(int delta, int nrefine)
   memory->sfree(delparentall);
 }
 
-
 /* ----------------------------------------------------------------------
    extract a value for icell,valindex from a compute
+   NOTE: post_process_grid_old() is a NO-OP at this point
+         how to insure that compute value in vec/array is current
 ------------------------------------------------------------------------- */
 
 double AdaptGrid::value_compute(int icell)

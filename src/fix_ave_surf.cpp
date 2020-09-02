@@ -21,12 +21,14 @@
 #include "particle.h"
 #include "update.h"
 #include "domain.h"
+#include "comm.h"
 #include "modify.h"
 #include "compute.h"
 #include "input.h"
 #include "variable.h"
 #include "memory.h"
 #include "error.h"
+#include "sparta_masks.h"
 
 using namespace SPARTA_NS;
 
@@ -34,7 +36,7 @@ enum{COMPUTE,FIX,VARIABLE};
 enum{ONE,RUNNING};
 
 #define INVOKED_PER_SURF 32
-#define DELTA 8;
+#define DELTA 1024;
 
 /* ---------------------------------------------------------------------- */
 
@@ -42,6 +44,9 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
   if (narg < 7) error->all(FLERR,"Illegal fix ave/surf command");
+
+  if (surf->implicit) 
+    error->all(FLERR,"Cannot use fix ave/surf with implicit surfs");
 
   int igroup = surf->find_group(arg[2]);
   if (igroup < 0) error->all(FLERR,"Could not find fix ave/surf group ID");
@@ -173,6 +178,15 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
     }
   }
 
+  // if any input is a compute, all must be
+
+  int cflag = 0;
+  for (int i = 0; i < nvalues; i++)
+    if (which[i] == COMPUTE) cflag++;
+
+  if (cflag && cflag != nvalues)
+    error->all(FLERR,"Fix ave/surf inputs must be all computes or no computes");
+
   // this fix produces either a per-surf vector or array
 
   per_surf_flag = 1;
@@ -182,44 +196,43 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
   // allocate accumulators for owned surfaces
   // if ave = RUNNING, allocate extra set of accvec/accarray
 
-  nslocal = surf->nlocal;
+  nown = surf->nown;
+  memory->create(masks,nown,"ave/surf:masks");
 
-  memory->create(buflocal,nslocal,"ave/surf:buflocal");
-  memory->create(masks,nslocal,"ave/surf:masks");
+  if (cflag) {
+    bufvec = NULL;
+    bufarray = NULL;
+    if (nvalues == 1) memory->create(bufvec,nown,"ave/surf:bufvec");
+    else memory->create(bufarray,nown,nvalues,"ave/surf:bufarray");
+  }
 
-  if (nvalues == 1) memory->create(vector_surf,nslocal,"ave/surf:vector_surf");
-  else memory->create(array_surf,nslocal,nvalues,"ave/surf:array_surf");
+  if (nvalues == 1) memory->create(vector_surf,nown,"ave/surf:vector_surf");
+  else memory->create(array_surf,nown,nvalues,"ave/surf:array_surf");
 
   if (ave == RUNNING) {
-    if (nvalues == 1) memory->create(accvec,nslocal,"ave/surf:accvec");
-    else memory->create(accarray,nslocal,nvalues,"ave/surf:accarray");
+    if (nvalues == 1) memory->create(accvec,nown,"ave/surf:accvec");
+    else memory->create(accarray,nown,nvalues,"ave/surf:accarray");
   } else {
     if (nvalues == 1) accvec = vector_surf;
     else accarray = array_surf;
   }
 
-  // allocate accumulators for local surfaces
+  // tally accumulators
 
-  if (domain->dimension == 2) nsurf = surf->nline;
-  else nsurf = surf->ntri;
-
-  memory->create(glob2loc,nsurf,"surf:glob2loc");
-  for (int i = 0; i < nsurf; i++) glob2loc[i] = -1;
-
-  nlocal = maxlocal = 0;
-  loc2glob = NULL;
-  vec_local = NULL;
-  array_local = NULL;
+  ntally = maxtally = 0;
+  tally2surf = NULL;
+  vec_tally = NULL;
+  array_tally = NULL;
 
   // zero accumulators one time if ave = RUNNING
 
   if (ave == RUNNING) {
     if (nvalues == 1)
-      for (int i = 0; i < nslocal; i++)
+      for (int i = 0; i < nown; i++)
 	accvec[i] = 0.0;
     else {
       int m;
-      for (int i = 0; i < nslocal; i++)
+      for (int i = 0; i < nown; i++)
 	for (m = 0; m < nvalues; m++)
 	  accarray[i][m] = 0.0;
     }
@@ -229,27 +242,42 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
   // zero vector/array since a variable may access it before first run
 
   if (nvalues == 1) {
-    for (int i = 0; i < nslocal; i++)
+    for (int i = 0; i < nown; i++)
       vector_surf[i] = 0.0;
   } else {
     int m;
-    for (int i = 0; i < nslocal; i++)
+    for (int i = 0; i < nown; i++)
       for (m = 0; m < nvalues; m++)
 	array_surf[i][m] = 0.0;
   }
 
-  // local storage of surf element masks
+  // set surf element masks for owned surfs
 
-  int *mysurfs = surf->mysurfs;
+  if (surf->distributed) {
+    if (domain->dimension == 2) {
+      Surf::Line *lines = surf->mylines;
+      for (int i = 0; i < nown; i++)
+        masks[i] = lines[i].mask;
+    } else {
+      Surf::Tri *tris = surf->mytris;
+      for (int i = 0; i < nown; i++)
+      masks[i] = tris[i].mask;
+    }
 
-  if (domain->dimension == 2) {
-    Surf::Line *lines = surf->lines;
-    for (int i = 0; i < nslocal; i++)
-      masks[i] = lines[mysurfs[i]].mask;
   } else {
-    Surf::Tri *tris = surf->tris;
-    for (int i = 0; i < nslocal; i++)
-      masks[i] = tris[mysurfs[i]].mask;
+    int me = comm->me;
+    int nprocs = comm->nprocs;
+    int nsurf = surf->nsurf;
+    int m = 0;
+    if (domain->dimension == 2) {
+      Surf::Line *lines = surf->lines;
+      for (int i = me; i < nsurf; i += nprocs)
+        masks[m++] = lines[i].mask;
+    } else {
+      Surf::Tri *tris = surf->tris;
+      for (int i = me; i < nsurf; i += nprocs)
+        masks[m++] = tris[i].mask;
+    }
   }
 
   // nvalid = next step on which end_of_step does something
@@ -261,6 +289,13 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
   irepeat = 0;
   nvalid = nextvalid();
   modify->addstep_compute_all(nvalid);
+
+  // hash for mapping surfIDs to tally indices
+
+  hash = new MyHash;
+
+  datamask_read = EMPTY_MASK;
+  datamask_modify = EMPTY_MASK;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -273,7 +308,8 @@ FixAveSurf::~FixAveSurf()
   for (int i = 0; i < nvalues; i++) delete [] ids[i];
   delete [] ids;
 
-  memory->destroy(buflocal);
+  memory->destroy(bufvec);
+  memory->destroy(bufarray);
   memory->destroy(masks);
 
   if (nvalues == 1) memory->destroy(vector_surf);
@@ -283,10 +319,11 @@ FixAveSurf::~FixAveSurf()
     else memory->destroy(accarray);
   }
 
-  memory->destroy(glob2loc);
-  memory->destroy(loc2glob);
-  memory->destroy(vec_local);
-  memory->destroy(array_local);
+  memory->destroy(tally2surf);
+  memory->destroy(vec_tally);
+  memory->destroy(array_tally);
+
+  delete hash;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -302,10 +339,6 @@ int FixAveSurf::setmask()
 
 void FixAveSurf::init()
 {
-  if ((domain->dimension == 2 && nsurf != surf->nline) || 
-      (domain->dimension == 3 && nsurf != surf->ntri)) 
-    error->all(FLERR,"Number of surface elements changed in dump surf");
-
   // set indices and check validity of all computes,fixes,variables
 
   for (int m = 0; m < nvalues; m++) {
@@ -344,7 +377,8 @@ void FixAveSurf::setup()
 
 void FixAveSurf::end_of_step()
 {
-  int i,j,k,m,n,isurf,ilocal;
+  int i,j,k,m,n,isurf,itally;
+  surfint surfID;
   double *vec;
 
   // skip if not step which requires doing something
@@ -352,28 +386,27 @@ void FixAveSurf::end_of_step()
   bigint ntimestep = update->ntimestep;
   if (ntimestep != nvalid) return;
 
-  // zero accumulators and norms if ave = ONE and first sample
+  // zero accumulators if ave = ONE and first sample
 
   if (ave == ONE && irepeat == 0) {
     if (nvalues == 1)
-      for (i = 0; i < nslocal; i++)
+      for (i = 0; i < nown; i++)
 	accvec[i] = 0.0;
     else
-      for (i = 0; i < nslocal; i++)
+      for (i = 0; i < nown; i++)
 	for (m = 0; m < nvalues; m++)
 	  accarray[i][m] = 0.0;
   }
 
-  // reset all set glob2loc values to -1 and nlocal to 0 if first sample
+  // clear hash of tallied surf IDs if first sample
 
   if (irepeat == 0) {
-    for (i = 0; i < nlocal; i++) glob2loc[loc2glob[i]] = -1;
-    nlocal = 0;
+    hash->clear();
+    ntally = 0;
   }
 
   // accumulate results of computes,fixes,variables
   // compute/fix/variable may invoke computes so wrap with clear/add
-  // NOTE: need to add logic for fixes and variables if enable them
 
   modify->clearstep_compute();
 
@@ -381,7 +414,7 @@ void FixAveSurf::end_of_step()
     n = value2index[m];
     j = argindex[m];
 
-    // invoke compute if not previously invoked
+    // access list of tallies from compute, add to my list
     
     if (which[m] == COMPUTE) {
       Compute *compute = modify->compute[n];
@@ -389,68 +422,72 @@ void FixAveSurf::end_of_step()
         compute->compute_per_surf();
         compute->invoked_flag |= INVOKED_PER_SURF;
       }
-      int *loc2glob_compute;
-      int nlocal_compute = compute->surfinfo(loc2glob_compute);
+      surfint *tally2surf_compute;
+      int ntally_compute = compute->tallyinfo(tally2surf_compute);
       
       if (j == 0) {
         double *vector = compute->vector_surf_tally;
         if (nvalues == 1) {
-          for (i = 0; i < nlocal_compute; i++) {
-            isurf = loc2glob_compute[i];
-            ilocal = glob2loc[isurf];
-            if (ilocal < 0) {
-              if (nlocal == maxlocal) grow_local();
-              ilocal = nlocal++;
-              loc2glob[ilocal] = isurf;
-              glob2loc[isurf] = ilocal;
-              vec_local[ilocal] = 0.0;
+          for (i = 0; i < ntally_compute; i++) {
+            surfID = tally2surf_compute[i];
+            if (hash->find(surfID) != hash->end()) itally = (*hash)[surfID];
+            else {
+              if (ntally == maxtally) grow_tally();
+              itally = ntally;
+              (*hash)[surfID] = itally;
+              tally2surf[itally] = surfID;
+              vec_tally[itally] = 0.0;
+              ntally++;
             }
-            vec_local[ilocal] += vector[i];
+            vec_tally[itally] += vector[i];
           }
         } else {
-          for (i = 0; i < nlocal_compute; i++) {
-            isurf = loc2glob_compute[i];
-            ilocal = glob2loc[isurf];
-            if (ilocal < 0) {
-              if (nlocal == maxlocal) grow_local();
-              ilocal = nlocal++;
-              loc2glob[ilocal] = isurf;
-              glob2loc[isurf] = ilocal;
-              vec = array_local[ilocal];
+          for (i = 0; i < ntally_compute; i++) {
+            surfID = tally2surf_compute[i];
+            if (hash->find(surfID) != hash->end()) itally = (*hash)[surfID];
+            else {
+              if (ntally == maxtally) grow_tally();
+              itally = ntally;
+              (*hash)[surfID] = itally;
+              tally2surf[itally] = surfID;
+              vec = array_tally[itally];
               for (k = 0; k < nvalues; k++) vec[k] = 0.0;
+              ntally++;
             }
-            array_local[ilocal][m] += vector[i];
+            array_tally[itally][m] += vector[i];
           }
         }
       } else {
         int jm1 = j - 1;
         double **array = compute->array_surf_tally;
         if (nvalues == 1) {
-          for (i = 0; i < nlocal_compute; i++) {
-            isurf = loc2glob_compute[i];
-            ilocal = glob2loc[isurf];
-            if (ilocal < 0) {
-              if (nlocal == maxlocal) grow_local();
-              ilocal = nlocal++;
-              loc2glob[ilocal] = isurf;
-              glob2loc[isurf] = ilocal;
-              vec_local[ilocal] = 0.0;
+          for (i = 0; i < ntally_compute; i++) {
+            surfID = tally2surf_compute[i];
+            if (hash->find(surfID) != hash->end()) itally = (*hash)[surfID];
+            else {
+              if (ntally == maxtally) grow_tally();
+              itally = ntally;
+              (*hash)[surfID] = itally;
+              tally2surf[itally] = surfID;
+              vec_tally[itally] = 0.0;
+              ntally++;
             }
-            vec_local[ilocal] += array[i][jm1];
+            vec_tally[itally] += array[i][jm1];
           }
         } else {
-          for (i = 0; i < nlocal_compute; i++) {
-            isurf = loc2glob_compute[i];
-            ilocal = glob2loc[isurf];
-            if (ilocal < 0) {
-              if (nlocal == maxlocal) grow_local();
-              ilocal = nlocal++;
-              loc2glob[ilocal] = isurf;
-              glob2loc[isurf] = ilocal;
-              vec = array_local[ilocal];
+          for (i = 0; i < ntally_compute; i++) {
+            surfID = tally2surf_compute[i];
+            if (hash->find(surfID) != hash->end()) itally = (*hash)[surfID];
+            else {
+              if (ntally == maxtally) grow_tally();
+              itally = ntally;
+              (*hash)[surfID] = itally;
+              tally2surf[itally] = surfID;
+              vec = array_tally[itally];
               for (k = 0; k < nvalues; k++) vec[k] = 0.0;
+              ntally++;
             }
-            array_local[ilocal][m] += array[i][jm1];
+            array_tally[itally][m] += array[i][jm1];
           }
         }
       }
@@ -461,19 +498,19 @@ void FixAveSurf::end_of_step()
       if (j == 0) {
         double *fix_vector = modify->fix[n]->vector_surf;
         if (nvalues == 1)
-          for (i = 0; i < nslocal; i++) accvec[i] += fix_vector[i];
+          for (i = 0; i < nown; i++) accvec[i] += fix_vector[i];
         else
-          for (i = 0; i < nslocal; i++) accarray[i][m] += fix_vector[i];
+          for (i = 0; i < nown; i++) accarray[i][m] += fix_vector[i];
       } else {
         int jm1 = j - 1;
         double **fix_array = modify->fix[n]->array_surf;
         if (nvalues == 1) 
-          for (i = 0; i < nslocal; i++) accvec[i] += fix_array[i][jm1];
+          for (i = 0; i < nown; i++) accvec[i] += fix_array[i][jm1];
         else
-          for (i = 0; i < nslocal; i++) accarray[i][m] += fix_array[i][jm1];
+          for (i = 0; i < nown; i++) accarray[i][m] += fix_array[i][jm1];
       }
 
-    // evaluete surf-style variable
+    // evaluate surf-style variable
       
     } else if (which[m] == VARIABLE) {
     }
@@ -494,45 +531,35 @@ void FixAveSurf::end_of_step()
   nvalid = ntimestep+per_surf_freq - (nrepeat-1)*nevery;
   modify->addstep_compute(nvalid);
 
-  // for values from computes, merge local values across all procs
-  // returns surf element values I own in buflocal
-  // then sum buflocal into accvec and accarray
-  //   do not sum for surf elements not in surf group
-  //   so those values stay 0.0 even if compute's surf group is different
-  // NOTE: could test if all values are from COMPUTE and do collate_array()
+  // invoke surf->collate() on tallies this fix stores for multiple steps
+  // this merges tallies to owned surfs
 
-  for (m = 0; m < nvalues; m++) {
-    if (which[m] != COMPUTE) continue;
-    if (nvalues == 1) {
-      surf->collate_vector(nlocal,loc2glob,vec_local,1,buflocal);
-      for (i = 0; i < nslocal; i++) accvec[i] += buflocal[i];
-    } else {
-      if (nlocal)
-        surf->collate_vector(nlocal,loc2glob,&array_local[0][m],
-                             nvalues,buflocal);
-      else
-        surf->collate_vector(nlocal,loc2glob,NULL,nvalues,buflocal);
-      for (i = 0; i < nslocal; i++) accarray[i][m] += buflocal[i];
-    }
+  if (nvalues == 1) {
+    surf->collate_vector(ntally,tally2surf,vec_tally,1,bufvec);
+    for (i = 0; i < nown; i++) accvec[i] += bufvec[i];
+  } else {
+    surf->collate_array(ntally,nvalues,tally2surf,array_tally,bufarray);
+    for (i = 0; i < nown; i++)
+      for (m = 0; m < nvalues; m++)
+        accarray[i][m] += bufarray[i][m];
   }
 
   // normalize the accumulators for output on Nfreq timestep
-  // normindex < 0, just normalize by # of samples
-  // normindex >= 0, normalize by accumulated norm vector
+  // everything is just normalized by # of samples
 
   if (ave == ONE) {
     if (nvalues == 1)
-      for (i = 0; i < nslocal; i++) vector_surf[i] /= nsample;
+      for (i = 0; i < nown; i++) vector_surf[i] /= nsample;
     else
-      for (i = 0; i < nslocal; i++)
+      for (i = 0; i < nown; i++)
         for (m = 0; m < nvalues; m++)
           array_surf[i][m] /= nsample;
   } else {
     if (nvalues == 1)
-      for (i = 0; i < nslocal; i++)
+      for (i = 0; i < nown; i++)
         vector_surf[i] = accvec[i]/nsample;
     else
-      for (i = 0; i < nslocal; i++)
+      for (i = 0; i < nown; i++)
         for (m = 0; m < nvalues; m++)
           array_surf[i][m] = accarray[i][m]/nsample;
   }
@@ -541,10 +568,10 @@ void FixAveSurf::end_of_step()
 
   if (groupbit != 1) {
     if (nvalues == 1) {
-      for (i = 0; i < nslocal; i++)
+      for (i = 0; i < nown; i++)
         if (!(masks[i] & groupbit)) vector_surf[i] = 0.0;
     } else {
-      for (i = 0; i < nslocal; i++)
+      for (i = 0; i < nown; i++)
         if (!(masks[i] & groupbit))
           for (m = 0; m < nvalues; m++) array_surf[i][m] = 0.0;
     }
@@ -580,14 +607,14 @@ void FixAveSurf::options(int iarg, int narg, char **arg)
 
 /* ---------------------------------------------------------------------- */
 
-void FixAveSurf::grow_local()
+void FixAveSurf::grow_tally()
 {
-  maxlocal += DELTA;
-  memory->grow(loc2glob,maxlocal,"ave/surf:loc2glob");
+  maxtally += DELTA;
+  memory->grow(tally2surf,maxtally,"ave/surf:tally2surf");
   if (nvalues == 1)
-    memory->grow(vec_local,maxlocal,"ave/surf:vec_local");
+    memory->grow(vec_tally,maxtally,"ave/surf:vec_tally");
   else
-    memory->grow(array_local,maxlocal,nvalues,"ave/surf:array_local");
+    memory->grow(array_tally,maxtally,nvalues,"ave/surf:array_tally");
 }
 
 /* ----------------------------------------------------------------------
@@ -597,9 +624,8 @@ void FixAveSurf::grow_local()
 double FixAveSurf::memory_usage()
 {
   double bytes = 0.0;
-  bytes += nslocal*nvalues * sizeof(double);
-  if (ave == RUNNING) bytes += nslocal*nvalues * sizeof(double);
-  //bytes += nslocal*nnorm * sizeof(double);
+  bytes += nown*nvalues * sizeof(double);
+  if (ave == RUNNING) bytes += nown*nvalues * sizeof(double);
   return bytes;
 }
 

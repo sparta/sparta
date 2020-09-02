@@ -23,45 +23,57 @@ ComputeStyle(surf,ComputeSurf)
 
 #include "compute.h"
 #include "surf.h"
+#include "hash3.h"
 
 namespace SPARTA_NS {
 
 class ComputeSurf : public Compute {
  public:
   ComputeSurf(class SPARTA *, int, char **);
-  ComputeSurf(class SPARTA* sparta) : Compute(sparta) {}
+  ComputeSurf(class SPARTA* sparta) : Compute(sparta) {} // needed for Kokkos
   ~ComputeSurf();
   virtual void init();
   void compute_per_surf();
   virtual void clear();
-  virtual void surf_tally(int, Particle::OnePart *, 
+  virtual void surf_tally(int, int, int, Particle::OnePart *, 
                           Particle::OnePart *, Particle::OnePart *);
-  double *normptr(int);
-  virtual int surfinfo(int *&);
+  virtual int tallyinfo(surfint *&);
+  virtual void post_process_surf();
+  void reallocate();
   bigint memory_usage();
 
  protected:
   int groupbit,imix,nvalue,ngroup,ntotal;
+  int maxsurf,combined;
+  double nfactor_inverse;
   int *which;
 
-  int nsurf;               // # of global surfs, lines or triangles
-  int nlocal;              // # of local surfs I have tallied for
-  int maxlocal;            // # of local surfs currently allocated
-  double **array;          // tally values for local surfs
-  int *glob2loc;           // glob2loc[I] = local index of Ith global surf
-  int *loc2glob;           // loc2glob[I] = global index of Ith local surf
+  int ntally;              // # of surfs I have tallied for
+  int maxtally;            // # of tallies currently allocated
+  surfint *tally2surf;     // tally2surf[I] = surf ID of Ith tally
 
-  int dimension;           // local copies
+  // hash for surf IDs
+
+#ifdef SPARTA_MAP
+  typedef std::map<surfint,int> MyHash;
+#elif defined SPARTA_UNORDERED_MAP
+  typedef std::unordered_map<surfint,int> MyHash;
+#else
+  typedef std::tr1::unordered_map<surfint,int> MyHash;
+#endif
+
+  MyHash *hash;
+
+  int dim;                 // local copies
   Surf::Line *lines;
   Surf::Tri *tris;
 
   int weightflag;          // 1 if cell weighting is enabled
   double weight;           // particle weight, based on initial cell
-  double nfactor;          // dt/fnum for normalization
-  double nfactor_inverse;  // fnum/dt for normalization
   double *normflux;        // normalization factor for each surf element
-  double nfactor_previous; // nfactor from previous run
-  void grow();
+
+  virtual void init_normflux();
+  virtual void grow_tally();
 };
 
 }

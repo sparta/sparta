@@ -30,7 +30,6 @@ struct TagCommMigrateUnpackParticles{};
 
 class CommKokkos : public Comm {
  public:
-  typedef ArrayTypes<DeviceType> AT;
 
   CommKokkos(class SPARTA *);
   ~CommKokkos();
@@ -65,8 +64,8 @@ class CommKokkos : public Comm {
   t_particle_1d d_particles;
 
   DAT::t_int_1d d_plist;
-  DAT::tdual_int_1d k_pproc;
   DAT::t_int_1d d_pproc;
+  HAT::t_int_1d h_pproc;
   DAT::t_char_1d d_sbuf;
   DAT::t_char_1d d_rbuf;
 

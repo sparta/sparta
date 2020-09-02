@@ -39,6 +39,9 @@
 #include "memory.h"
 #include "error.h"
 
+// DEBUG
+#include "fix_ablate.h"
+
 using namespace SPARTA_NS;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
@@ -46,7 +49,8 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};      // several files
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
-enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Surf
+enum{TALLYAUTO,TALLYREDUCE,TALLYRVOUS};         // same as Surf
+enum{PERAUTO,PERCELL,PERSURF};                  // several files
 
 #define MAXSTUCK 20
 #define EPSPARAM 1.0e-7
@@ -54,10 +58,10 @@ enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Surf
 // either set ID or PROC/INDEX, set other to -1
 
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID 537898343   // particle ID
-#define MOVE_DEBUG_PROC 0        // owning proc
-#define MOVE_DEBUG_INDEX 16617       // particle index on owning proc
-#define MOVE_DEBUG_STEP 16    // timestep
+#define MOVE_DEBUG_ID 707672596  // particle ID
+#define MOVE_DEBUG_PROC -1        // owning proc
+#define MOVE_DEBUG_INDEX -1   // particle index on owning proc
+#define MOVE_DEBUG_STEP 94    // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -87,6 +91,9 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   slist_compute = blist_compute = NULL;
   slist_active = blist_active = NULL;
 
+  nulist_surfcollide  = 0;
+  ulist_surfcollide = NULL;
+
   ranmaster = new RanMars(sparta);
 
   reorder_period = 0;
@@ -108,6 +115,7 @@ Update::~Update()
   delete [] blist_compute;
   delete [] slist_active;
   delete [] blist_active;
+  delete [] ulist_surfcollide;
   delete ranmaster;
 }
 
@@ -201,6 +209,9 @@ void Update::setup()
   collide_react = collide_react_setup();
   bounce_tally = bounce_setup();
 
+  dynamic = 0;
+  dynamic_setup();
+
   modify->setup();
   output->setup(1);
 }
@@ -211,7 +222,6 @@ void Update::run(int nsteps)
 {
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
-  //int dynamic = 0;
 
   // cellweightflag = 1 if grid-based particle weighting is ON
 
@@ -229,14 +239,16 @@ void Update::run(int nsteps)
 
     timer->stamp();
 
+    // dynamic parameter updates
+
+    if (dynamic) dynamic_update();
+
     // start of step fixes
 
     if (n_start_of_step) {
       modify->start_of_step();
       timer->stamp(TIME_MODIFY);
     }
-
-    //if (dynamic) domain->dynamic();
 
     // move particles
 
@@ -271,6 +283,93 @@ void Update::run(int nsteps)
       output->write(ntimestep);
       timer->stamp(TIME_OUTPUT);
     }
+
+    // DEBUG
+
+    /*
+    if (ntimestep == 3600) {
+      Grid::ChildCell *cells = grid->cells;
+      Grid::ChildInfo *cinfo = grid->cinfo;
+      int nglocal = grid->nlocal;
+
+      int ifix = modify->find_fix("FOO");
+      FixAblate *ablate = (FixAblate *) modify->fix[ifix];
+      int groupbit = grid->bitmask[ablate->igroup];
+
+      for (int icell = 0; icell < nglocal; icell++) {
+        if (!(cinfo[icell].mask & groupbit)) continue;
+        if (cells[icell].nsplit <= 0) continue;
+        cellint id = cells[icell].id;
+        char prefix[32],bif[8],pad[16],fname[32];
+        sprintf(prefix,"corners.%d.%ld.",comm->nprocs,update->ntimestep);
+        strcpy(bif,CELLINT_FORMAT);
+        sprintf(pad,"%%s%%0%d%s",6,&bif[1]);
+        sprintf(fname,pad,prefix,id);
+        FILE *fp = fopen(fname,"w");
+        fprintf(fp,"%d: %g %g %g %g %g %g %g %g\n",id,
+                ablate->array_grid[icell][0],
+                ablate->array_grid[icell][1],
+                ablate->array_grid[icell][2],
+                ablate->array_grid[icell][3],
+                ablate->array_grid[icell][4],
+                ablate->array_grid[icell][5],
+                ablate->array_grid[icell][6],
+                ablate->array_grid[icell][7]);
+        fclose(fp);
+      }
+    }
+
+    if (ntimestep == 3600) {
+      Surf::Tri *tris = surf->tris;
+      Grid::ChildCell *cells = grid->cells;
+      Grid::ChildInfo *cinfo = grid->cinfo;
+      int nglocal = grid->nlocal;
+
+      int ifix = modify->find_fix("FOO");
+      FixAblate *ablate = (FixAblate *) modify->fix[ifix];
+      int groupbit = grid->bitmask[ablate->igroup];
+
+      for (int icell = 0; icell < nglocal; icell++) {
+        if (!(cinfo[icell].mask & groupbit)) continue;
+        if (cells[icell].nsplit <= 0) continue;
+        if (cells[icell].nsurf == 0) continue;
+        cellint id = cells[icell].id;
+        char prefix[32],bif[8],pad[16],fname[32];
+        sprintf(prefix,"impsurf.%d.%ld.",comm->nprocs,update->ntimestep);
+        strcpy(bif,CELLINT_FORMAT);
+        sprintf(pad,"%%s%%0%d%s",6,&bif[1]);
+        sprintf(fname,pad,prefix,id);
+        FILE *fp = fopen(fname,"w");
+        fprintf(fp,"%d: %d\n",id,cells[icell].nsurf);
+        for (int j = 0; j < cells[icell].nsurf; j++) {
+          int m = cells[icell].csurfs[j];
+          fprintf(fp,"  %d: id %d tmii %d %d %d %d\n",j+1,
+                  tris[m].id,
+                  tris[m].type,
+                  tris[m].mask,
+                  tris[m].isc,
+                  tris[m].isr);
+          fprintf(fp,"  %d: p1 %20.15g %20.15g %20.15g\n",j+1,
+                  tris[m].p1[0],
+                  tris[m].p1[1],
+                  tris[m].p1[2]);
+          fprintf(fp,"  %d: p2 %20.15g %20.15g %20.15g\n",j+1,
+                  tris[m].p2[0],
+                  tris[m].p2[1],
+                  tris[m].p2[2]);
+          fprintf(fp,"  %d: p3 %20.15g %20.15g %20.15g\n",j+1,
+                  tris[m].p3[0],
+                  tris[m].p3[1],
+                  tris[m].p3[2]);
+          fprintf(fp,"  %d: norm %20.15g %20.15g %20.15g\n",j+1,
+                  tris[m].norm[0],
+                  tris[m].norm[1],
+                  tris[m].norm[2]);
+        }
+        fclose(fp);
+      }
+    }
+    */
   }
 }
 
@@ -286,8 +385,8 @@ template < int DIM, int SURF > void Update::move()
   bool hitflag;
   int m,icell,icell_original,nmask,outface,bflag,nflag,pflag,itmp;
   int side,minside,minsurf,nsurf,cflag,isurf,exclude,stuck_iterate;
-  int pstart,pstop,entryexit,any_entryexit;
-  int *csurfs;
+  int pstart,pstop,entryexit,any_entryexit,reaction;
+  surfint *csurfs;
   cellint *neigh;
   double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
   double xnew[3],xhold[3],xc[3],vc[3],minxc[3],minvc[3];
@@ -699,31 +798,6 @@ template < int DIM, int SURF > void Update::move()
 #endif
               
               if (hitflag && param < minparam && side == OUTSIDE) {
-
-                // NOTE: these were the old checks
-                //       think it is now sufficient to test for particle
-                //       in an INSIDE cell in fix grid/check
-
-              //if (hitflag && side != ONSURF2OUT && param <= minparam) {
-
-                // this if test is to avoid case where particle
-                // previously hit 1 of 2 (or more) touching angled surfs at
-                // common edge/corner, on this iteration first surf
-                // is excluded, but others may be hit on inside:
-                // param will be epsilon and exclude must be set
-                // skip the hits of other touching surfs
-
-                //if (side == INSIDE && param < EPSPARAM && exclude >= 0) 
-                // continue;
-
-                // this if test is to avoid case where particle
-                // hits 2 touching angled surfs at common edge/corner
-                // from far away:
-                // param is same, but hits one on outside, one on inside
-                // only keep surf hit on outside
-
-                //if (param == minparam && side == INSIDE) continue;
-
                 cflag = 1;
                 minparam = param;
                 minside = side;
@@ -742,16 +816,6 @@ template < int DIM, int SURF > void Update::move()
             nscheck_one += nsurf;
             
             if (cflag) {
-              // NOTE: this check is no longer needed?
-              if (minside == INSIDE) {
-                char str[128];
-                sprintf(str,
-                        "Particle %d on proc %d hit inside of "
-                        "surf %d on step " BIGINT_FORMAT,
-                        i,me,minsurf,update->ntimestep);
-                error->one(FLERR,str);
-              }
-
               if (DIM == 3) tri = &tris[minsurf];
               if (DIM != 3) line = &lines[minsurf];
 
@@ -782,10 +846,10 @@ template < int DIM, int SURF > void Update::move()
 
               if (DIM == 3)
                 jpart = surf->sc[tri->isc]->
-                  collide(ipart,tri->norm,dtremain,tri->isr);
+                  collide(ipart,tri->norm,dtremain,tri->isr,reaction);
               if (DIM != 3)
                 jpart = surf->sc[line->isc]->
-                  collide(ipart,line->norm,dtremain,line->isr);
+                  collide(ipart,line->norm,dtremain,line->isr,reaction);
 
               if (jpart) {
                 particles = particle->particles;
@@ -799,7 +863,8 @@ template < int DIM, int SURF > void Update::move()
 
               if (nsurf_tally)
                 for (m = 0; m < nsurf_tally; m++)
-                  slist_active[m]->surf_tally(minsurf,&iorig,ipart,jpart);
+                  slist_active[m]->surf_tally(minsurf,icell,reaction,
+                                              &iorig,ipart,jpart);
               
               // nstuck = consective iterations particle is immobile
 
@@ -969,7 +1034,8 @@ template < int DIM, int SURF > void Update::move()
           if (nboundary_tally) 
             memcpy(&iorig,&particles[i],sizeof(Particle::OnePart));
 
-          bflag = domain->collide(ipart,outface,icell,xnew,dtremain,jpart);
+          bflag = domain->collide(ipart,outface,icell,xnew,dtremain,
+                                  jpart,reaction);
 
           if (jpart) {
             particles = particle->particles;
@@ -980,7 +1046,7 @@ template < int DIM, int SURF > void Update::move()
           if (nboundary_tally)
             for (m = 0; m < nboundary_tally; m++)
               blist_active[m]->
-                boundary_tally(outface,bflag,&iorig,ipart,jpart);
+                boundary_tally(outface,bflag,reaction,&iorig,ipart,jpart);
 
           if (DIM == 1) {
             xnew[0] = x[0] + dtremain*v[0];
@@ -1174,17 +1240,19 @@ int Update::split3d(int icell, double *x)
   // only consider tris that are mapped via csplits to a split cell
   //   unmapped tris only touch cell surf at xnew
   //   another mapped tri should include same xnew
+  // NOTE: these next 2 lines do not seem correct compared to code
   // not considered a collision if particles starts on surf, moving out
   // not considered a collision if 2 params are tied and one is INSIDE surf
 
   int nsurf = cells[icell].nsurf;
-  int *csurfs = cells[icell].csurfs;
+  surfint *csurfs = cells[icell].csurfs;
   int isplit = cells[icell].isplit;
   int *csplits = sinfo[isplit].csplits;
   double *xnew = sinfo[isplit].xsplit;
 
   cflag = 0;
   minparam = 2.0;
+
   for (m = 0; m < nsurf; m++) {
     if (csplits[m] < 0) continue;
     isurf = csurfs[m];
@@ -1192,7 +1260,7 @@ int Update::split3d(int icell, double *x)
     hitflag = Geometry::
       line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
                          tri->norm,xc,param,side);
-    
+
     if (hitflag && side != INSIDE && param < minparam) {
       cflag = 1;
       minparam = param;
@@ -1226,12 +1294,13 @@ int Update::split2d(int icell, double *x)
   // find 1st surface hit via minparam
   // only consider lines that are mapped via csplits to a split cell
   //   unmapped lines only touch cell surf at xnew
-  //   another mapped line should include same xnew
+  //   another mapped line should include same xnew 
+  // NOTE: these next 2 lines do not seem correct compared to code
   // not considered a collision if particle starts on surf, moving out
   // not considered a collision if 2 params are tied and one is INSIDE surf
 
   int nsurf = cells[icell].nsurf;
-  int *csurfs = cells[icell].csurfs;
+  surfint *csurfs = cells[icell].csurfs;
   int isplit = cells[icell].isplit;
   int *csplits = sinfo[isplit].csplits;
   double *xnew = sinfo[isplit].xsplit;
@@ -1258,7 +1327,7 @@ int Update::split2d(int icell, double *x)
 }
 
 /* ----------------------------------------------------------------------
-   setup lists of all computes that tally surface and boundary bounce info
+   setup lists of all computes that tally surface collision/reaction info
    return 1 if there are any, 0 if not
 ------------------------------------------------------------------------- */
 
@@ -1274,8 +1343,7 @@ int Update::collide_react_setup()
 }
 
 /* ----------------------------------------------------------------------
-   setup lists of all computes that tally surface and boundary bounce info
-   return 1 if there are any, 0 if not
+   zero counters in all computes that tally surface collision/reaction info
 ------------------------------------------------------------------------- */
 
 void Update::collide_react_update()
@@ -1295,8 +1363,8 @@ int Update::bounce_setup()
   delete [] blist_compute;
   delete [] slist_active;
   delete [] blist_active;
-
   slist_compute = blist_compute = NULL;
+
   nslist_compute = nblist_compute = 0;
   for (int i = 0; i < modify->ncompute; i++) {
     if (modify->compute[i]->surf_tally_flag) nslist_compute++;
@@ -1323,7 +1391,8 @@ int Update::bounce_setup()
 
 /* ----------------------------------------------------------------------
    set bounce tally flags for current timestep
-   nsurf_tally = # of computes needing bounce info on this step
+   nsurf_tally = # of surface computes needing bounce info on this step
+   nboundary_tally = # of boundary computes needing bounce info on this step
    clear accumulators in computes that will be invoked this step
 ------------------------------------------------------------------------- */
 
@@ -1347,6 +1416,43 @@ void Update::bounce_set(bigint ntimestep)
         blist_active[nboundary_tally++] = blist_compute[i];
         blist_compute[i]->clear();
       }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   make list of classes that reset dynamic parameters
+   currently only surf collision models
+------------------------------------------------------------------------- */
+
+void Update::dynamic_setup()
+{
+  delete [] ulist_surfcollide;
+  ulist_surfcollide = NULL;
+
+  nulist_surfcollide = 0;
+  for (int i = 0; i < surf->nsc; i++)
+    if (surf->sc[i]->dynamicflag) nulist_surfcollide++;
+
+  if (nulist_surfcollide) 
+    ulist_surfcollide = new SurfCollide*[nulist_surfcollide];
+
+  nulist_surfcollide = 0;
+  for (int i = 0; i < surf->nsc; i++)
+    if (surf->sc[i]->dynamicflag) 
+      ulist_surfcollide[nulist_surfcollide++] = surf->sc[i];
+
+  if (nulist_surfcollide) dynamic = 1;
+}
+
+/* ----------------------------------------------------------------------
+   invoke class methods that reset dynamic parameters
+------------------------------------------------------------------------- */
+
+void Update::dynamic_update()
+{
+  if (nulist_surfcollide) {
+    for (int i = 0; i < nulist_surfcollide; i++)
+      ulist_surfcollide[i]->dynamic();
   }
 }
 
@@ -1395,6 +1501,22 @@ void Update::global(int narg, char **arg)
       else gravity[0] = gravity[1] = gravity[2] = 0.0;
       iarg += 5;
 
+    } else if (strcmp(arg[iarg],"surfs") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
+      surf->global(arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"surfgrid") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
+      if (surf->exist) 
+        error->all(FLERR,
+                   "Cannot set global surfgrid when surfaces already exist");
+      if (strcmp(arg[iarg+1],"auto") == 0) grid->surfgrid_algorithm = PERAUTO;
+      else if (strcmp(arg[iarg+1],"percell") == 0) 
+        grid->surfgrid_algorithm = PERCELL;
+      else if (strcmp(arg[iarg+1],"persurf") == 0) 
+        grid->surfgrid_algorithm = PERSURF;
+      else error->all(FLERR,"Illegal global command");
+      iarg += 2;
     } else if (strcmp(arg[iarg],"surfmax") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       if (surf->exist) 
@@ -1402,7 +1524,27 @@ void Update::global(int narg, char **arg)
                    "Cannot set global surfmax when surfaces already exist");
       grid->maxsurfpercell = atoi(arg[iarg+1]);
       if (grid->maxsurfpercell <= 0) error->all(FLERR,"Illegal global command");
-      // reallocate paged data structs for variable-length surf into
+      // reallocate paged data structs for variable-length surf info
+      grid->allocate_surf_arrays();
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"cellmax") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
+      if (surf->exist) 
+        error->all(FLERR,
+                   "Cannot set global cellmax when surfaces already exist");
+      grid->maxcellpersurf = atoi(arg[iarg+1]);
+      if (grid->maxcellpersurf <= 0) error->all(FLERR,"Illegal global command");
+      // reallocate paged data structs for variable-length cell info
+      grid->allocate_cell_arrays();
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"splitmax") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
+      if (surf->exist) 
+        error->all(FLERR,
+                   "Cannot set global splitmax when surfaces already exist");
+      grid->maxsplitpercell = atoi(arg[iarg+1]);
+      if (grid->maxsplitpercell <= 0) error->all(FLERR,"Illegal global command");
+      // reallocate paged data structs for variable-length cell info
       grid->allocate_surf_arrays();
       iarg += 2;
     } else if (strcmp(arg[iarg],"surfpush") == 0) {
@@ -1445,11 +1587,11 @@ void Update::global(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"all") == 0) comm->commpartstyle = 0;
       else error->all(FLERR,"Illegal global command");
       iarg += 2;
-    } else if (strcmp(arg[iarg],"surf/comm") == 0) {
+    } else if (strcmp(arg[iarg],"surftally") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       if (strcmp(arg[iarg+1],"auto") == 0) surf->tally_comm = TALLYAUTO;
-      else if (strcmp(arg[iarg+1],"all") == 0) surf->tally_comm = TALLYREDUCE;
-      else if (strcmp(arg[iarg+1],"local") == 0) surf->tally_comm = TALLYLOCAL;
+      else if (strcmp(arg[iarg+1],"reduce") == 0) surf->tally_comm = TALLYREDUCE;
+      else if (strcmp(arg[iarg+1],"rvous") == 0) surf->tally_comm = TALLYRVOUS;
       else error->all(FLERR,"Illegal global command");
       iarg += 2;
 
@@ -1469,8 +1611,11 @@ void Update::global(int narg, char **arg)
       if (strcmp(arg[iarg+1],"grid") == 0) mem_limit_grid_flag = 1;
       else {
         double factor = input->numeric(FLERR,arg[iarg+1]);
-        global_mem_limit = static_cast<int> (factor * 1024*1024);
-        if (global_mem_limit < 0) error->all(FLERR,"Illegal global command");
+        bigint global_mem_limit_big = static_cast<bigint> (factor * 1024*1024);
+        if (global_mem_limit_big < 0) error->all(FLERR,"Illegal global command");
+        if (global_mem_limit_big > MAXSMALLINT)
+          error->all(FLERR,"Global mem/limit setting cannot exceed 2GB");
+        global_mem_limit = global_mem_limit_big;
       }
       iarg += 2;
     } else error->all(FLERR,"Illegal global command");
@@ -1527,3 +1672,20 @@ void Update::reset_timestep(bigint newstep)
   for (int i = 0; i < modify->ncompute; i++)
     if (modify->compute[i]->timeflag) modify->compute[i]->clearstep();
 }
+
+/* ----------------------------------------------------------------------
+   get mem/limit based on grid memory
+------------------------------------------------------------------------- */
+
+void Update::set_mem_limit_grid(int gnlocal)
+{
+  if (gnlocal == 0) gnlocal = grid->nlocal;
+
+  bigint global_mem_limit_big = static_cast<bigint> (gnlocal*sizeof(Grid::ChildCell));
+
+  if (global_mem_limit_big > MAXSMALLINT)
+    error->one(FLERR,"Global mem/limit setting cannot exceed 2GB");
+
+  global_mem_limit = global_mem_limit_big;
+}
+

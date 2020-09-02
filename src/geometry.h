@@ -20,13 +20,15 @@ namespace Geometry {
 			  double *, double *);
   int quad_line_intersect_point(double *, double *, double *,
 				double *, double *, double *);
-  int line_quad_face_touch(double *, double *, int, double *, double *);
+  int line_touch_quad_face(double *, double *, int, double *, double *);
 
   int tri_hex_intersect(double *, double *, double *, double *,
 			double *, double *);
   int hex_tri_intersect_point(double *, double *, double *, double *,
 			      double *, double *, double *);
-  int tri_hex_face_touch(double *, double *, double *, int, double *, double *);
+  int tri_touch_hex_face(double *, double *, double *, int, double *, double *);
+  int tri_on_hex_face(double *, double *, double *, double *, double *);
+  int edge_on_hex_face(double *, double *, double *, double *);
 
   bool line_line_intersect(double *, double *, 
 			   double *, double *, double *,

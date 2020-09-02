@@ -17,6 +17,7 @@ identical answers to those in the included log files.
 These are the sample problems in the various sub-directories.  Many
 are 2d problems so that they run quickly and can be easily visualized.
 
+ablation = 2d and 3d ablation of implicit surfaces
 adapt = static and on-the-fly grid adaptation
 ambi = amibpolar approxiation for ionized flow around a cylinder
 axi = axisymmetric flow around a sphere
@@ -31,6 +32,7 @@ sphere = 3d flow around a sphere
 spiky = 2d flow around a spiky circle
 step = 2d flow around a staircase of steps
 surf = change surfaces between or during runs
+surf_collide = variety of surface collision models
 vibrate = vibrational energy modes in collisions
 
 Here is an example of how one of the sample problems can be run and

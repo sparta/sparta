@@ -28,15 +28,13 @@ namespace SPARTA_NS {
 
 class SurfCollideVanishKokkos : public SurfCollideVanish {
  public:
-  typedef ArrayTypes<DeviceType> AT;
 
   SurfCollideVanishKokkos(class SPARTA *, int, char **);
   SurfCollideVanishKokkos(class SPARTA *);
   ~SurfCollideVanishKokkos() {}
-  Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int) { return NULL; }
 
   DAT::tdual_int_scalar k_nsingle;
-  typename AT::t_int_scalar d_nsingle;
+  DAT::t_int_scalar d_nsingle;
   HAT::t_int_scalar h_nsingle;
 
   /* ----------------------------------------------------------------------
@@ -44,11 +42,12 @@ class SurfCollideVanishKokkos : public SurfCollideVanish {
      ip = particle with current x = collision pt, current v = incident v
      norm = surface normal unit vector
      simply return ip = NULL to delete particle
+     return reaction = 0 = no reaction took place
   ------------------------------------------------------------------------- */
   
   KOKKOS_INLINE_FUNCTION
   Particle::OnePart*
-  collide_kokkos(Particle::OnePart *&ip, const double *, double &, int) const
+  collide_kokkos(Particle::OnePart *&ip, const double *, double &, int, int&) const
   {
     Kokkos::atomic_fetch_add(&d_nsingle(),1);
 

@@ -86,10 +86,15 @@ check which version of Python you have installed, by simply typing
 that is dynamically loadable, which is what Python requires.  On Linux
 this is a library file that ends in ".so", not ".a".
 </P>
-<P>From the src directory, type
+<P>For make, from the src directory, type
 </P>
 <PRE>make makeshlib
 make -f Makefile.shlib foo 
+</PRE>
+<P>For CMake, from the build directory, tyoe
+</P>
+<PRE>cmake -C /path/to/sparta/cmake/presets/foo.cmake -DBUILD_SHARED_LIBS=ON /path/to/sparta/cmake
+make 
 </PRE>
 <P>where foo is the machine target name, such as icc or g++ or serial.
 This should create the file libsparta_foo.so in the src directory, as

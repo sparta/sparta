@@ -23,7 +23,6 @@ namespace SPARTA_NS {
 
 class GridKokkos : public Grid {
  public:
-  typedef ArrayTypes<DeviceType> AT;
 
   // make into a view
   //ChildCell *cells;           // list of owned and ghost child cells
@@ -103,12 +102,12 @@ class GridKokkos : public Grid {
   tdual_sinfo_1d k_sinfo;
   tdual_pcell_1d k_pcells;
 
-  Kokkos::Crs<int, SPADeviceType, void, int> d_csurfs;
-  Kokkos::Crs<int, SPADeviceType, void, int> d_csplits;
-  Kokkos::Crs<int, SPADeviceType, void, int> d_csubs;
+  Kokkos::Crs<int, DeviceType, void, int> d_csurfs;
+  Kokkos::Crs<int, DeviceType, void, int> d_csplits;
+  Kokkos::Crs<int, DeviceType, void, int> d_csubs;
 
-  typename AT::t_int_1d d_cellcount;
-  typename AT::t_int_2d d_plist;
+  DAT::t_int_1d d_cellcount;
+  DAT::t_int_2d d_plist;
 
  private:
   void grow_cells(int, int);

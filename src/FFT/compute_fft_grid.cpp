@@ -382,7 +382,7 @@ void ComputeFFTGrid::compute_per_grid()
       }
 
       if (c->post_process_grid_flag) 
-        c->post_process_grid(aidx,-1,1,NULL,NULL,NULL,1);
+        c->post_process_grid(aidx,1,NULL,NULL,NULL,1);
       
       if (aidx == 0 || c->post_process_grid_flag) {
         ingridptr = c->vector_grid;

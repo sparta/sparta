@@ -12,9 +12,10 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#include "spatype.h"
 #include "mpi.h"
+#include "spatype.h"
 #include "string.h"
+#include "stdlib.h"
 #include "write_restart.h"
 #include "universe.h"
 #include "update.h"
@@ -173,6 +174,12 @@ void WriteRestart::multiproc_options(int multiproc_caller,
 
 void WriteRestart::write(char *file)
 {
+  if (update->mem_limit_grid_flag)
+    update->set_mem_limit_grid();
+  if (update->global_mem_limit > 0 || 
+      (update->mem_limit_grid_flag && !grid->nlocal))
+    return write_less_memory(file);
+
   // open single restart file or base file for multiproc case
 
   if (me == 0) {
@@ -218,8 +225,11 @@ void WriteRestart::write(char *file)
   // communication buffer for my per-proc info = child grid cells and particles
   // max_size = largest buffer needed by any proc
 
-  int send_size = grid->size_restart();
-  send_size += particle->size_restart();
+  bigint send_size_big = grid->size_restart();
+  send_size_big += particle->size_restart_big();
+  if (send_size_big > MAXSMALLINT)
+    error->one(FLERR,"Restart file write buffer too large, use global mem/limit");
+  int send_size = send_size_big;
 
   int max_size;
   MPI_Allreduce(&send_size,&max_size,1,MPI_INT,MPI_MAX,world);
@@ -297,6 +307,195 @@ void WriteRestart::write(char *file)
 }
 
 /* ----------------------------------------------------------------------
+   called from command() and directly from output within run/minimize loop
+   file = final file name to write, except may contain a "%"
+------------------------------------------------------------------------- */
+
+void WriteRestart::write_less_memory(char *file)
+{
+  // open single restart file or base file for multiproc case
+
+  if (me == 0) {
+    char *hfile;
+    if (multiproc) {
+      hfile = new char[strlen(file) + 16];
+      char *ptr = strchr(file,'%');
+      *ptr = '\0';
+      sprintf(hfile,"%s%s%s",file,"base",ptr+1);
+      *ptr = '%';
+    } else hfile = file;
+    fp = fopen(hfile,"wb");
+    if (fp == NULL) {
+      char str[128];
+      sprintf(str,"Cannot open restart file %s",hfile);
+      error->one(FLERR,str);
+    }
+    if (multiproc) delete [] hfile;
+  }
+
+  // proc 0 writes magic string, endian flag, numeric version
+
+  if (me == 0) {
+    magic_string();
+    endian();
+    version_numeric();
+  }
+
+  // proc 0 writes header info
+  // also simulation box, particle species, parent grid cells, surf info
+
+  bigint btmp = particle->nlocal;
+  MPI_Allreduce(&btmp,&particle->nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+
+  if (me == 0) {
+    header();
+    box_params();
+    particle_params();
+    grid_params();
+    surf_params();
+  }
+
+  // communication buffer for my per-proc info = child grid cells and particles
+  // max_size = largest buffer needed by any proc
+
+  int grid_send_size = grid->size_restart();
+  bigint particle_send_size = particle->size_restart_big();
+  bigint send_size = grid_send_size + particle_send_size;
+
+  int nbytes_particle = sizeof(Particle::OnePartRestart);
+  int nbytes_custom = particle->sizeof_custom();
+  int nbytes = nbytes_particle + nbytes_custom;
+
+  int max_size = MAX(grid_send_size,update->global_mem_limit);
+  max_size = MAX(max_size,nbytes);
+  max_size += 128; // extra for size and ROUNDUP(ptr)
+
+  int max_size_global;
+  MPI_Allreduce(&max_size,&max_size_global,1,MPI_INT,MPI_MAX,world);
+  max_size = max_size_global;
+
+  char *buf;
+  memory->create(buf,max_size,"write_restart:buf");
+  memset(buf,0,max_size);
+
+  // all procs write file layout info which may include per-proc sizes
+
+  int dummy = 0;
+  file_layout(dummy);
+
+  // header info is complete
+  // if multiproc output:
+  //   close header file, open multiname file on each writing proc,
+  //   write PROCSPERFILE into new file
+
+  if (multiproc) {
+    if (me == 0) fclose(fp);
+
+    char *multiname = new char[strlen(file) + 16];
+    char *ptr = strchr(file,'%');
+    *ptr = '\0';
+    sprintf(multiname,"%s%d%s",file,icluster,ptr+1);
+    *ptr = '%';
+
+    if (filewriter) {
+      fp = fopen(multiname,"wb");
+      if (fp == NULL) {
+        char str[128];
+        sprintf(str,"Cannot open restart file %s",multiname);
+        error->one(FLERR,str);
+      }
+      write_int(PROCSPERFILE,nclusterprocs);
+    }
+
+    delete [] multiname;
+  }
+
+  // pack my child grid and particle data into buf
+
+  // number of particles per pass
+
+  int step_size = update->global_mem_limit/nbytes;
+
+  // extra pass for grid
+
+  int my_npasses = ceil((double)particle->nlocal/step_size)+1;
+  if (particle->nlocal == 0) my_npasses++;
+
+  // output of one or more native files
+  // filewriter = 1 = this proc writes to file
+  // ping each proc in my cluster, receive its data, write data to file
+  // else wait for ping from fileproc, send my data to fileproc
+  
+  int tmp,recv_size;
+  MPI_Status status;
+  MPI_Request request;
+  
+  if (filewriter) {
+    bigint total_recv_size = 0;
+    int npasses = 0;
+    for (int iproc = 0; iproc < nclusterprocs; iproc++) {
+      if (iproc) {
+        MPI_Recv(&total_recv_size,1,MPI_SPARTA_BIGINT,me+iproc,0,world,&status);
+        MPI_Recv(&npasses,1,MPI_INT,me+iproc,0,world,&status);
+      } else {
+        total_recv_size = send_size;
+        npasses = my_npasses;
+      }
+
+      bigint total_write_part = 0;
+      for (int i = 0; i < npasses; i++) {
+        if (iproc) {
+            MPI_Irecv(buf,max_size,MPI_CHAR,me+iproc,0,world,&request);
+            MPI_Send(&tmp,0,MPI_INT,me+iproc,0,world);
+            MPI_Wait(&request,&status);
+            MPI_Get_count(&status,MPI_CHAR,&recv_size);
+        } else {
+          int n = 0;
+          if (i == 0)
+            n = grid->pack_restart(buf);
+          else {
+            n = step_size*nbytes;
+            if (i == 1) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
+            if (i == npasses-1) n = particle_send_size - total_write_part;
+            total_write_part += n;
+            particle->pack_restart(buf,step_size,i-1);
+          }
+          recv_size = n;
+        }
+        if (i == 0)
+          write_char_vec(PERPROC,total_recv_size,recv_size,buf);
+        else
+          write_char_vec(recv_size,buf);
+      }
+    }
+    fclose(fp);
+
+  } else {
+    bigint total_write_part = 0;
+    MPI_Isend(&send_size,1,MPI_SPARTA_BIGINT,fileproc,0,world,&request);
+    MPI_Isend(&my_npasses,1,MPI_INT,fileproc,0,world,&request);
+    for (int i = 0; i < my_npasses; i++) {
+      int n = 0;
+      if (i == 0)
+        n = grid->pack_restart(buf);
+      else {
+        n = step_size*nbytes;
+        if (i == 1) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
+        if (i == my_npasses-1) n = particle_send_size - total_write_part;
+        total_write_part += n;
+        particle->pack_restart(buf,step_size,i-1);
+      }
+      MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
+      MPI_Rsend(buf,n,MPI_CHAR,fileproc,0,world);
+    }
+  }
+
+  // clean up
+
+  memory->destroy(buf);
+}
+
+/* ----------------------------------------------------------------------
    proc 0 writes out problem description
 ------------------------------------------------------------------------- */
 
@@ -325,8 +524,7 @@ void WriteRestart::header()
   write_bigint(NUNSPLIT,grid->nunsplit);
   write_int(NSPLIT,grid->nsplit);
   write_int(NSUB,grid->nsub);
-  if (domain->dimension == 2) write_int(NSURF,surf->nline);
-  else write_int(NSURF,surf->ntri);
+  write_bigint(NSURF,surf->nsurf);
 
   // -1 flag signals end of header
 
@@ -509,9 +707,29 @@ void WriteRestart::write_double_vec(int flag, int n, double *vec)
    write a flag and vector of N chars into restart file
 ------------------------------------------------------------------------- */
 
-void WriteRestart::write_char_vec(int flag, int n, char *vec)
+void WriteRestart::write_char_vec(int flag, bigint n, char *vec)
 {
   fwrite(&flag,sizeof(int),1,fp);
-  fwrite(&n,sizeof(int),1,fp);
+  fwrite(&n,sizeof(bigint),1,fp);
+  fwrite(vec,sizeof(char),n,fp);
+}
+
+/* ----------------------------------------------------------------------
+   write a flag and vector of N chars into restart file
+------------------------------------------------------------------------- */
+
+void WriteRestart::write_char_vec(int flag, bigint total, int n, char *vec)
+{
+  fwrite(&flag,sizeof(int),1,fp);
+  fwrite(&total,sizeof(bigint),1,fp);
+  fwrite(vec,sizeof(char),n,fp);
+}
+
+/* ----------------------------------------------------------------------
+   write a vector of N chars into restart file
+------------------------------------------------------------------------- */
+
+void WriteRestart::write_char_vec(int n, char *vec)
+{
   fwrite(vec,sizeof(char),n,fp);
 }

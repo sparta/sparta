@@ -106,14 +106,6 @@ void FixAveHistoKokkos::init()
       value2index[i] = ivariable;
     }
   }
-
-  // need to reset nvalid if nvalid < ntimestep b/c minimize was performed
-
-  if (nvalid < update->ntimestep) {
-    irepeat = 0;
-    nvalid = nextvalid();
-    modify->addstep_compute_all(nvalid);
-  }
 }
 
 /* ----------------------------------------------------------------------
@@ -145,19 +137,19 @@ void FixAveHistoKokkos::end_of_step()
   particle_kk->sync(Device, PARTICLE_MASK|SPECIES_MASK);
   d_particles = particle_kk->k_particles.d_view;
 
-  d_s2g = particle_kk->k_species2group.view<DeviceType>();
+  d_s2g = particle_kk->k_species2group.d_view;
 
   copymode = 1;
 
   // zero if first step
   if (irepeat == 0) {
     for (int i=0; i<4; i++) k_stats.h_view(i) = 0.0;
-    k_stats.modify<SPAHostType>();
-    k_stats.sync<DeviceType>();
+    k_stats.modify_host();
+    k_stats.sync_device();
 
     for (int i=0; i<nbins; i++) k_bin.h_view(i) = 0.0;
-    k_bin.modify<SPAHostType>();
-    k_bin.sync<DeviceType>();
+    k_bin.modify_host();
+    k_bin.sync_device();
   }
 
   minmax_type::value_type minmax;
@@ -237,12 +229,16 @@ void FixAveHistoKokkos::end_of_step()
         if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
           computeKKBase->compute_per_grid_kokkos();
           compute->invoked_flag |= INVOKED_PER_GRID;
-          if (compute->post_process_grid_flag) {
-            DAT::t_float_2d_lr d_etally;
-            DAT::t_float_1d_strided d_vec;
-            computeKKBase->post_process_grid_kokkos(j,-1,1,d_etally,NULL,d_vec);
-          }
         }
+
+        if (compute->post_process_grid_flag) {
+          DAT::t_float_2d_lr d_etally;
+          DAT::t_float_1d_strided d_vec;
+          computeKKBase->post_process_grid_kokkos(j,1,d_etally,NULL,d_vec);
+        }
+        else if (compute->post_process_isurf_grid_flag) 
+          compute->post_process_isurf_grid();
+
         if (j == 0 || compute->post_process_grid_flag)
           bin_grid_cells(reducer, computeKKBase->d_vector);
         else if (computeKKBase->d_array_grid.data())
@@ -327,11 +323,11 @@ void FixAveHistoKokkos::end_of_step()
     }
   }
 
-  k_stats.modify<DeviceType>();
-  k_stats.sync<SPAHostType>();
+  k_stats.modify_device();
+  k_stats.sync_host();
 
-  k_bin.modify<DeviceType>();
-  k_bin.sync<SPAHostType>();
+  k_bin.modify_device();
+  k_bin.sync_host();
 
   // Copy data back
   stats[0] = k_stats.h_view(0);
@@ -492,7 +488,7 @@ void FixAveHistoKokkos::bin_vector(
 
   auto policy = Kokkos::RangePolicy<TagFixAveHisto_BinVector,DeviceType>(0, n);
   Kokkos::parallel_reduce(policy, *this, reducer);
-  DeviceType::fence();
+  DeviceType().fence();
 }
 
 /* ----------------------------------------------------------------------
@@ -530,7 +526,7 @@ void FixAveHistoKokkos::bin_particles(
       auto policy = RangePolicy<TagFixAveHisto_BinParticlesX4,DeviceType>(0, n);
       Kokkos::parallel_reduce(policy, *this, reducer);
     }
-    DeviceType::fence();
+    DeviceType().fence();
 
   } else if (attribute == V) {
 
@@ -547,7 +543,7 @@ void FixAveHistoKokkos::bin_particles(
       auto policy = RangePolicy<TagFixAveHisto_BinParticlesV4,DeviceType>(0, n);
       Kokkos::parallel_reduce(policy, *this, reducer);
     }
-    DeviceType::fence();
+    DeviceType().fence();
   }
 }
 
@@ -587,7 +583,7 @@ void FixAveHistoKokkos::bin_particles(
     auto policy = RangePolicy<TagFixAveHisto_BinParticles4,DeviceType>(0, n);
     Kokkos::parallel_reduce(policy, *this, reducer);
   }
-  DeviceType::fence();
+  DeviceType().fence();
 }
 
 /* ----------------------------------------------------------------------
@@ -612,7 +608,7 @@ void FixAveHistoKokkos::bin_grid_cells(
     auto policy = RangePolicy<TagFixAveHisto_BinGridCells2,DeviceType>(0, n);
     Kokkos::parallel_reduce(policy, *this, reducer);
   }
-  DeviceType::fence();
+  DeviceType().fence();
 }
 
 

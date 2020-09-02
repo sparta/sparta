@@ -38,6 +38,10 @@ FixMoveSurf::FixMoveSurf(SPARTA *sparta, int narg, char **arg) :
   if (!surf->exist)
     error->all(FLERR,"Cannot fix move/surf with no surf elements are defined");
 
+  if (surf->distributed)
+    error->all(FLERR,
+               "Cannot yet use fix move/surf with distributed surf elements");
+
   scalar_flag = 1;
   global_freq = 1;
 
@@ -74,20 +78,18 @@ FixMoveSurf::FixMoveSurf(SPARTA *sparta, int narg, char **arg) :
   // make copy of original lines or tris
   // to pass to movesurf->move_lines() or movesurf->move_tris()
 
-  nline = ntri = 0;
+  nsurf = surf->nsurf;
   origlines = NULL;
   origtris = NULL;
 
   if (dim == 2) {
-    nline = surf->nline;
     origlines = (Surf::Line *) 
-      memory->smalloc(nline*sizeof(Surf::Line),"fix/move/surf:origlines");
-    memcpy(origlines,surf->lines,nline*sizeof(Surf::Line));
+      memory->smalloc(nsurf*sizeof(Surf::Line),"fix/move/surf:origlines");
+    memcpy(origlines,surf->lines,nsurf*sizeof(Surf::Line));
   } else if (dim == 3) {
-    ntri = surf->ntri;
     origtris = (Surf::Tri *) 
-      memory->smalloc(ntri*sizeof(Surf::Tri),"fix/move/surf:origtris");
-    memcpy(origtris,surf->tris,ntri*sizeof(Surf::Tri));
+      memory->smalloc(nsurf*sizeof(Surf::Tri),"fix/move/surf:origtris");
+    memcpy(origtris,surf->tris,nsurf*sizeof(Surf::Tri));
   }
 
   // initial output
@@ -117,11 +119,7 @@ int FixMoveSurf::setmask()
 
 void FixMoveSurf::init()
 {
-  int flag = 0;
-  if (dim == 2 && surf->nline != nline) flag = 1;
-  if (dim == 3 && surf->ntri != ntri) flag = 1;
-
-  if (flag)
+  if (nsurf != surf->nsurf)
     error->all(FLERR,"Number of surface elements changed in fix move/surf");
 
   // NOTE: first read of file ?
@@ -149,11 +147,8 @@ void FixMoveSurf::end_of_step()
   if (dim == 2) movesurf->move_lines(fraction,origlines);
   else movesurf->move_tris(fraction,origtris);
 
-  // remake list of surf elements I own
   // assign split cell particles to parent split cell
   // assign surfs to grid cells
-
-  surf->setup_surf();
 
   grid->unset_neighbors();
   grid->remove_ghosts();
@@ -167,6 +162,7 @@ void FixMoveSurf::end_of_step()
   }
 
   grid->clear_surf();
+
   grid->surf2grid(1,0);
 
   // re-setup owned and ghost cell info

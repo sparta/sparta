@@ -66,7 +66,6 @@ struct TagCollideCollisionsOne{};
 
 class CollideVSSKokkos : public CollideVSS {
  public:
-  typedef ArrayTypes<DeviceType> AT;
   typedef COLLIDE_REDUCE value_type;
 
   CollideVSSKokkos(class SPARTA *, int, char **);
@@ -117,7 +116,9 @@ class CollideVSSKokkos : public CollideVSS {
  private:
   int pack_grid_one(int, char *, int);
   int unpack_grid_one(int, char *);
-  void compress_grid();
+  void copy_grid_one(int, int);
+  void reset_grid_count(int);
+  void add_grid_one();
   void adapt_grid();
   void grow_percell(int);
 
@@ -126,52 +127,64 @@ class CollideVSSKokkos : public CollideVSS {
 
   t_particle_1d d_particles;
   t_species_1d_const d_species;
-  typename AT::t_int_2d d_plist;
+  DAT::t_int_2d d_plist;
 
   DAT::tdual_float_2d k_vremax_initial;
-  typename AT::t_float_2d d_vremax_initial;
+  DAT::t_float_2d d_vremax_initial;
   DAT::tdual_float_3d k_vremax;
-  typename AT::t_float_3d d_vremax;
+  DAT::t_float_3d d_vremax;
   DAT::tdual_float_3d k_remain;
-  typename AT::t_float_3d d_remain;
+  DAT::t_float_3d d_remain;
 
-  DAT::tdual_int_scalar k_nattempt_one;
-  typename AT::t_int_scalar d_nattempt_one;
+  typedef Kokkos::DualView<int[10], DeviceType::array_layout, DeviceType> tdual_int_10;
+  typedef tdual_int_10::t_dev t_int_10;
+  typedef tdual_int_10::t_host t_host_int_10;
+  t_int_10 d_scalars;
+  t_host_int_10 h_scalars;
+
+  DAT::t_int_scalar d_nattempt_one;
   HAT::t_int_scalar h_nattempt_one;
 
-  DAT::tdual_int_scalar k_ncollide_one;
-  typename AT::t_int_scalar d_ncollide_one;
+  DAT::t_int_scalar d_ncollide_one;
   HAT::t_int_scalar h_ncollide_one;
 
-  DAT::tdual_int_scalar k_nreact_one;
-  typename AT::t_int_scalar d_nreact_one;
+  DAT::t_int_scalar d_nreact_one;
   HAT::t_int_scalar h_nreact_one;
 
-  DAT::tdual_int_scalar k_error_flag;
-  typename AT::t_int_scalar d_error_flag;
+  DAT::t_int_scalar d_error_flag;
   HAT::t_int_scalar h_error_flag;
 
   DAT::t_int_scalar d_retry;
+  HAT::t_int_scalar h_retry;
+
   DAT::t_int_scalar d_maxdelete;
+  HAT::t_int_scalar h_maxdelete;
+
   DAT::t_int_scalar d_maxcellcount;
+  HAT::t_int_scalar h_maxcellcount;
+
   DAT::t_int_scalar d_part_grow;
+  HAT::t_int_scalar h_part_grow;
 
   DAT::t_int_scalar d_ndelete;
+  HAT::t_int_scalar h_ndelete;
+
   DAT::t_int_scalar d_nlocal;
+  HAT::t_int_scalar h_nlocal;
 
   DAT::tdual_int_1d k_dellist;
   DAT::t_int_1d d_dellist;
 
   DAT::t_float_2d d_recomb_ijflag;
 
-  typename AT::t_int_2d d_nn_last_partner;
+  DAT::t_int_2d d_nn_last_partner;
 
   template < int NEARCP > void collisions_one(COLLIDE_REDUCE&);
 
   // VSS specific
 
   DAT::tdual_float_2d k_prefactor;
-  typename AT::t_float_2d d_prefactor;
+  DAT::t_float_2d d_prefactor;
 
   typedef Kokkos::
     DualView<Params**, Kokkos::LayoutRight, DeviceType> tdual_params_2d;
@@ -218,10 +231,10 @@ class CollideVSSKokkos : public CollideVSS {
   void restore();
 
   t_particle_1d d_particles_backup;
-  typename AT::t_int_2d d_plist_backup;
-  typename AT::t_float_3d d_vremax_backup;
-  typename AT::t_float_3d d_remain_backup;
-  typename AT::t_int_2d d_nn_last_partner_backup;
+  DAT::t_int_2d d_plist_backup;
+  DAT::t_float_3d d_vremax_backup;
+  DAT::t_float_3d d_remain_backup;
+  DAT::t_int_2d d_nn_last_partner_backup;
   RanPark* random_backup;
   RanPark* react_random_backup;
 };

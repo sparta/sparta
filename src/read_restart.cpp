@@ -60,6 +60,9 @@ void ReadRestart::command(int narg, char **arg)
   if (domain->box_exist)
     error->all(FLERR,"Cannot read_restart after simulation box is defined");
 
+  int mem_limit_flag = update->global_mem_limit > 0 ||
+           (update->mem_limit_grid_flag && !grid->nlocal); 
+
   MPI_Comm_rank(world,&me);
   MPI_Comm_size(world,&nprocs);
 
@@ -129,8 +132,8 @@ void ReadRestart::command(int narg, char **arg)
   int incompatible = version_numeric();
 
   // read header info which creates simulation box
-  // also defines particle params: species, mixture, custom attributes
-  // also defines grid, surfs
+  // also read particle params: species, mixture, custom attributes
+  // also read parent grid and surfs
 
   header(incompatible);
 
@@ -166,7 +169,9 @@ void ReadRestart::command(int narg, char **arg)
 
   // read per-proc info, grid cells and particles
 
-  int n,flag,value,tmp,procmatch_check,procmatch;
+  int flag,value,tmp,procmatch_check,procmatch;
+  bigint n_big;
+  int n;
   long filepos;
   MPI_Status status;
   MPI_Request request;
@@ -196,7 +201,10 @@ void ReadRestart::command(int narg, char **arg)
 
         if (iproc == 0) filepos = ftell(fp);
 
-        fread(&n,sizeof(int),1,fp);
+        fread(&n_big,sizeof(bigint),1,fp);
+        if (n_big > MAXSMALLINT)
+          error->one(FLERR,"Restart file read buffer too large, use global mem/limit");
+        n = n_big;
         if (n > maxbuf) {
           maxbuf = n;
           memory->destroy(buf);
@@ -208,13 +216,16 @@ void ReadRestart::command(int narg, char **arg)
           MPI_Send(&n,1,MPI_INT,iproc,0,world);
           MPI_Recv(&tmp,0,MPI_INT,iproc,0,world,&status);
           MPI_Send(buf,n,MPI_CHAR,iproc,0,world);
-        } else fseek(fp,filepos+sizeof(int)+n,SEEK_SET);
+        } else fseek(fp,filepos+sizeof(bigint)+n,SEEK_SET);
       }
 
       // rewind and read my chunk
 
       fseek(fp,filepos,SEEK_SET);
-      fread(&n,sizeof(int),1,fp);
+      fread(&n_big,sizeof(bigint),1,fp);
+      if (n_big > MAXSMALLINT)
+        error->one(FLERR,"Restart file read buffer too large, use global mem/limit");
+      n = n_big;
       fread(buf,sizeof(char),n,fp);
 
       fclose(fp);
@@ -251,7 +262,10 @@ void ReadRestart::command(int narg, char **arg)
       if (value != PERPROC)
         error->one(FLERR,"Invalid flag in peratom section of restart file");
 
-      n = read_int();
+      n_big = read_bigint();
+      if (n_big > MAXSMALLINT)
+        error->one(FLERR,"Restart file read buffer too large, use global mem/limit");
+      n = n_big;
       if (n > maxbuf) {
         maxbuf = n;
         memory->destroy(buf);
@@ -273,8 +287,11 @@ void ReadRestart::command(int narg, char **arg)
   // # of files = multiproc_file
   // each proc reads a subset of files, striding by nprocs
   // each proc keeps all cells/particles in all perproc chunks in its files
+  // 2 versions of this: limited memory and unlimimited memory
 
-  else if (nprocs <= multiproc_file) {
+  else if (nprocs <= multiproc_file && !mem_limit_flag) {
+
+    // unlimited-memory version
 
     char *procfile = new char[strlen(file) + 16];
     char *ptr = strchr(file,'%');
@@ -301,7 +318,10 @@ void ReadRestart::command(int narg, char **arg)
         if (flag != PERPROC) 
           error->one(FLERR,"Invalid flag in peratom section of restart file");
         
-        fread(&n,sizeof(int),1,fp);
+        fread(&n_big,sizeof(bigint),1,fp);
+        if (n_big > MAXSMALLINT)
+          error->one(FLERR,"Restart file read buffer too large, use global mem/limit");
+        n = n_big;
         if (n > maxbuf) {
           maxbuf = n;
           memory->destroy(buf);
@@ -321,15 +341,281 @@ void ReadRestart::command(int narg, char **arg)
     delete [] procfile;
   }
 
+  else if (nprocs <= multiproc_file && mem_limit_flag) {
+
+    // limited-memory version
+
+    char *procfile = new char[strlen(file) + 16];
+    char *ptr = strchr(file,'%');
+
+    for (int iproc = me; iproc < multiproc_file; iproc += nprocs) {
+      *ptr = '\0';
+      sprintf(procfile,"%s%d%s",file,iproc,ptr+1);
+      *ptr = '%';
+      fp = fopen(procfile,"rb");
+      if (fp == NULL) {
+        char str[128];
+        sprintf(str,"Cannot open restart file %s",procfile);
+        error->one(FLERR,str);
+      }
+
+      fread(&flag,sizeof(int),1,fp);
+      if (flag != PROCSPERFILE)
+        error->one(FLERR,"Invalid flag in peratom section of restart file");
+      int procsperfile;
+      fread(&procsperfile,sizeof(int),1,fp);
+
+      int step_size,npasses;
+
+      for (int i = 0; i < procsperfile; i++) {
+        fread(&flag,sizeof(int),1,fp);
+        if (flag != PERPROC)
+          error->one(FLERR,"Invalid flag in peratom section of restart file");
+
+        fread(&n_big,sizeof(bigint),1,fp);
+
+        int grid_nlocal;
+        fread(&grid_nlocal,sizeof(int),1,fp);
+        fseek(fp,-sizeof(int),SEEK_CUR);
+        int grid_read_size = grid->size_restart(grid_nlocal);
+        bigint particle_read_size = n_big - grid_read_size;
+        int particle_nlocal;
+        fseek(fp,grid_read_size,SEEK_CUR);
+        fread(&particle_nlocal,sizeof(int),1,fp);
+        fseek(fp,-(sizeof(int)+grid_read_size),SEEK_CUR);
+
+        if (update->mem_limit_grid_flag)
+          update->set_mem_limit_grid(grid_nlocal);
+
+        int nbytes_particle = sizeof(Particle::OnePartRestart);
+        int nbytes_custom = particle->sizeof_custom();
+        int nbytes = nbytes_particle + nbytes_custom;
+
+        int maxbuf_new = MAX(grid_read_size,update->global_mem_limit);
+        maxbuf_new = MAX(maxbuf_new,sizeof(nbytes));
+        maxbuf_new += 128; // extra for size and ROUNDUP(ptr)
+        if (maxbuf_new > maxbuf) {
+          maxbuf = maxbuf_new;
+          memory->destroy(buf);
+          memory->create(buf,maxbuf,"read_restart:buf");
+        }
+
+        // number of particles per pass
+
+        step_size = update->global_mem_limit/nbytes;
+
+        // extra pass for grid
+
+        npasses = ceil((double)particle_nlocal/step_size)+1;
+        if (particle_nlocal == 0) npasses++;
+
+        int nlocal_restart = 0;
+        bigint total_read_part = 0;
+        for (int ii = 0; ii < npasses; ii++) {
+          if (ii == 0)
+            n = grid_read_size;
+          else {
+            n = step_size*nbytes;
+            if (ii == 1) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
+            if (ii == npasses-1) n = particle_read_size - total_read_part;
+            total_read_part += n;
+          }
+          fread(buf,sizeof(char),n,fp);
+
+          if (ii == 0) {
+            grid->unpack_restart(buf);
+            create_child_cells(0);
+          } else {
+            particle->unpack_restart(buf,nlocal_restart,step_size,ii-1);
+            assign_particles(0);
+          }
+        }
+
+      }
+
+      fclose(fp);
+    }
+
+    delete [] procfile;
+  }
+
   // input of multiple native files with procs > files
   // # of files = multiproc_file
   // cluster procs based on # of files
   // 1st proc in each cluster reads per-proc chunks from file
   // sends chunks round-robin to other procs in its cluster
   // each proc keeps all cells/particles in its perproc chunks in file
+  // 2 versions of this: limited memory and unlimimited memory
 
-  else {
+  else if (mem_limit_flag) { 
 
+    // limited-memory version
+    // nclusterprocs = # of procs in my cluster that read from one file
+    // filereader = 1 if this proc reads file, else 0
+    // fileproc = ID of proc in my cluster who reads from file
+    // clustercomm = MPI communicator within my cluster of procs
+    // procmatch = 1 if each proc in cluster gets one chunk
+
+    int nfile = multiproc_file;
+    int icluster = static_cast<int> ((bigint) me * nfile/nprocs);
+    int fileproc = static_cast<int> ((bigint) icluster * nprocs/nfile);
+    int fcluster = static_cast<int> ((bigint) fileproc * nfile/nprocs);
+    if (fcluster < icluster) fileproc++;
+    int fileprocnext = 
+      static_cast<int> ((bigint) (icluster+1) * nprocs/nfile);
+    fcluster = static_cast<int> ((bigint) fileprocnext * nfile/nprocs);
+    if (fcluster < icluster+1) fileprocnext++;
+    int nclusterprocs = fileprocnext - fileproc;
+    int filereader = 0;
+    if (me == fileproc) filereader = 1;
+    MPI_Comm clustercomm;
+    MPI_Comm_split(world,icluster,0,&clustercomm);
+
+    if (filereader) {
+      char *procfile = new char[strlen(file) + 16];
+      char *ptr = strchr(file,'%');
+      *ptr = '\0';
+      sprintf(procfile,"%s%d%s",file,icluster,ptr+1);
+      *ptr = '%';
+      fp = fopen(procfile,"rb");
+      if (fp == NULL) {
+        char str[128];
+        sprintf(str,"Cannot open restart file %s",procfile);
+        error->one(FLERR,str);
+      }
+      delete [] procfile;
+    }
+
+    int flag,procsperfile;
+
+    if (filereader) {
+      fread(&flag,sizeof(int),1,fp);
+      if (flag != PROCSPERFILE) 
+        error->one(FLERR,"Invalid flag in peratom section of restart file");
+      fread(&procsperfile,sizeof(int),1,fp);
+    }
+    MPI_Bcast(&procsperfile,1,MPI_INT,0,clustercomm);
+
+    procmatch_check = 1;
+    if (procsperfile == nclusterprocs) procmatch = 1;
+    else procmatch = 0;
+
+    int tmp,iproc;
+    MPI_Status status;
+    MPI_Request request;
+
+    int step_size,npasses;
+
+    for (int i = 0; i < procsperfile; i++) {
+      if (filereader) {
+        fread(&flag,sizeof(int),1,fp);
+        if (flag != PERPROC) 
+          error->one(FLERR,"Invalid flag in peratom section of restart file");
+
+        fread(&n_big,sizeof(bigint),1,fp);
+
+        int grid_nlocal;
+        fread(&grid_nlocal,sizeof(int),1,fp);
+        fseek(fp,-sizeof(int),SEEK_CUR);
+        int grid_read_size = grid->size_restart(grid_nlocal);
+        bigint particle_read_size = n_big - grid_read_size;
+        int particle_nlocal;
+        fseek(fp,grid_read_size,SEEK_CUR);
+        fread(&particle_nlocal,sizeof(int),1,fp);
+        fseek(fp,-(sizeof(int)+grid_read_size),SEEK_CUR);
+
+        if (update->mem_limit_grid_flag)
+          update->set_mem_limit_grid(grid_nlocal);
+
+        int nbytes_particle = sizeof(Particle::OnePartRestart);
+        int nbytes_custom = particle->sizeof_custom();
+        int nbytes = nbytes_particle + nbytes_custom;
+
+        int maxbuf_new = MAX(grid_read_size,update->global_mem_limit);
+        maxbuf_new = MAX(maxbuf_new,nbytes);
+        maxbuf_new += 128; // extra for size and ROUNDUP(ptr)
+        if (maxbuf_new > maxbuf) {
+          maxbuf = maxbuf_new;
+          memory->destroy(buf);
+          memory->create(buf,maxbuf,"read_restart:buf");
+        }
+
+        // number of particles per pass
+
+        step_size = update->global_mem_limit/nbytes;
+
+        // extra pass for grid
+
+        npasses = ceil((double)particle_nlocal/step_size)+1;
+        if (particle_nlocal == 0) npasses++;
+
+        if (i % nclusterprocs) {
+          iproc = me + (i % nclusterprocs);
+          MPI_Send(&npasses,1,MPI_INT,iproc,0,world);
+          MPI_Send(&step_size,1,MPI_INT,iproc,0,world);
+        }
+
+        int nlocal_restart = 0;
+        bigint total_read_part = 0;
+        for (int ii = 0; ii < npasses; ii++) {
+          if (ii == 0)
+            n = grid_read_size;
+          else {
+            n = step_size*nbytes;
+            if (ii == 1) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
+            if (ii == npasses-1) n = particle_read_size - total_read_part;
+            total_read_part += n;
+          }
+          fread(buf,sizeof(char),n,fp);
+
+          if (i % nclusterprocs) {
+            iproc = me + (i % nclusterprocs);
+            MPI_Send(&n,1,MPI_INT,iproc,0,world);
+            MPI_Recv(&tmp,0,MPI_INT,iproc,0,world,&status);
+            MPI_Rsend(buf,n,MPI_CHAR,iproc,0,world);
+          } else if (i % nclusterprocs == me - fileproc) {
+            if (ii == 0) {
+              grid->unpack_restart(buf);
+              create_child_cells(0);
+            } else {
+              particle->unpack_restart(buf,nlocal_restart,step_size,ii-1);
+              assign_particles(0);
+            }
+          }
+        }
+
+      } else if (i % nclusterprocs == me - fileproc) {
+        MPI_Recv(&npasses,1,MPI_INT,fileproc,0,world,&status);
+        MPI_Recv(&step_size,1,MPI_INT,fileproc,0,world,&status);
+        int nlocal_restart = 0;
+        for (int ii = 0; ii < npasses; ii++) {
+          MPI_Recv(&n,1,MPI_INT,fileproc,0,world,&status);
+          if (n > maxbuf) {
+            maxbuf = n;
+            memory->destroy(buf);
+            memory->create(buf,maxbuf,"read_restart:buf");
+          }
+          MPI_Irecv(buf,n,MPI_CHAR,fileproc,0,world,&request);
+          MPI_Send(&tmp,0,MPI_INT,fileproc,0,world);
+          MPI_Wait(&request,&status);
+
+          if (ii == 0) {
+            grid->unpack_restart(buf);
+            create_child_cells(0);
+          } else {
+            particle->unpack_restart(buf,nlocal_restart,step_size,ii-1);
+            assign_particles(0);
+          }
+        }
+      }
+    }
+
+    if (filereader) fclose(fp);
+    MPI_Comm_free(&clustercomm);
+
+  } else {
+
+    // unlimited-memory version
     // nclusterprocs = # of procs in my cluster that read from one file
     // filereader = 1 if this proc reads file, else 0
     // fileproc = ID of proc in my cluster who reads from file
@@ -390,7 +676,10 @@ void ReadRestart::command(int narg, char **arg)
         if (flag != PERPROC) 
           error->one(FLERR,"Invalid flag in peratom section of restart file");
 
-        fread(&n,sizeof(int),1,fp);
+        fread(&n_big,sizeof(bigint),1,fp);
+        if (n_big > MAXSMALLINT)
+          error->one(FLERR,"Restart file read buffer too large, use global mem/limit");
+        n = n_big;
         if (n > maxbuf) {
           maxbuf = n;
           memory->destroy(buf);
@@ -489,11 +778,15 @@ void ReadRestart::command(int narg, char **arg)
 
   if (me == 0 && surf->exist) {
     if (domain->dimension == 2) {
-      if (screen) fprintf(screen,"  %d surf lines\n",surf->nline);
-      if (logfile) fprintf(logfile,"  %d surf lines\n",surf->nline);
+      if (screen) fprintf(screen,"  " BIGINT_FORMAT " surf lines\n",
+                          surf->nsurf);
+      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " surf lines\n",
+                           surf->nsurf);
     } else {
-      if (screen) fprintf(screen,"  %d surf triangles\n",surf->ntri);
-      if (logfile) fprintf(logfile,"  %d surf triangles\n",surf->ntri);
+      if (screen) fprintf(screen,"  " BIGINT_FORMAT " surf triangles\n",
+                          surf->nsurf);
+      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " surf triangles\n",
+                           surf->nsurf);
     }
   }
 
@@ -504,7 +797,7 @@ void ReadRestart::command(int narg, char **arg)
   double time2 = MPI_Wtime();
 
   if (surf->exist) {
-    surf->setup_surf();
+    surf->setup_owned();
     grid->clear_surf_restart();
     grid->surf2grid(0);
   }
@@ -751,7 +1044,7 @@ void ReadRestart::header(int incompatible)
     } else if (flag == NSUB) {
       nsub_file = read_int();
     } else if (flag == NSURF) {
-      nsurf_file = read_int();
+      nsurf_file = read_bigint();
 
     } else error->all(FLERR,"Invalid flag in header section of restart file");
 
@@ -883,9 +1176,10 @@ void ReadRestart::create_child_cells(int skipflag)
     id = ids[i];
     nsplit = nsplits[i];
 
-    // NOTE: need more doc of this method
-
     // unsplit or split cell
+    // for skipflag, add only if I own this cell
+    // add as child cell to grid->cells
+    // if split cell, also add split cell to sinfo
     // add unsplit/split cells (not sub cells) to Grid::hash as create them
 
     if (nsplit > 0) {
@@ -907,6 +1201,8 @@ void ReadRestart::create_child_cells(int skipflag)
 
     // sub cell
     // for skipflag, add only if I also own the corresponding split cell
+    // add as sub cell to grid->cells
+    // set nsplit for new sub cell and csubs in owning cell's sinfo
 
     } else {
       if (skipflag && hash->find(id) == hash->end()) continue;
@@ -1097,8 +1393,8 @@ void ReadRestart::read_double_vec(int n, double *vec)
    read vector of N chars from restart file and bcast them
 ------------------------------------------------------------------------- */
 
-void ReadRestart::read_char_vec(int n, char *vec)
+void ReadRestart::read_char_vec(bigint n, char *vec)
 {
   if (me == 0) fread(vec,sizeof(char),n,fp);
-  MPI_Bcast(vec,n,MPI_CHAR,0,world);
+  MPI_Bcast(vec,(int)n,MPI_CHAR,0,world);
 }

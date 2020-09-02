@@ -48,7 +48,7 @@ class ComputeSonineGridKokkos : public ComputeSonineGrid, public KokkosBase {
   void compute_per_grid();
   void compute_per_grid_kokkos();
   int query_tally_grid_kokkos(DAT::t_float_2d_lr &);
-  double post_process_grid_kokkos(int, int, int, DAT::t_float_2d_lr, int *,
+  void post_process_grid_kokkos(int, int, DAT::t_float_2d_lr, int *,
                                   DAT::t_float_1d_strided);
   void reallocate();
 
@@ -74,8 +74,14 @@ class ComputeSonineGridKokkos : public ComputeSonineGrid, public KokkosBase {
 
  private:
   DAT::t_float_3d d_vcom;
+  Kokkos::Experimental::ScatterView<F_FLOAT***, typename DAT::t_float_3d::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterDuplicated> dup_vcom_tally;
+  Kokkos::Experimental::ScatterView<F_FLOAT***, typename DAT::t_float_3d::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterNonDuplicated> ndup_vcom_tally;
+
   DAT::tdual_float_2d_lr k_tally;
   DAT::t_float_2d_lr d_tally;
+  int need_dup;
+  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterDuplicated> dup_tally;
+  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterNonDuplicated> ndup_tally;
 
   DAT::t_float_2d_lr d_etally;
   DAT::t_float_1d_strided d_vec;

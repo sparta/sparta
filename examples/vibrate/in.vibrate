@@ -1,6 +1,13 @@
+################################################################################
 # test of vibrational energy modes
 # thermal gas in a 3d box with collisions
 # particles reflect off global box boundaries
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
 
 seed	    	    54345
 dimension   	    3
@@ -24,7 +31,7 @@ collide		    vss all co2.vss
 collide_modify      vibrate discrete rotate smooth
 fix                 1 vibmode 
 
-create_particles    mix n 0
+create_particles    mix n 0 twopass
 
 variable            collrate equal "ncoll*step*2/np"
 

@@ -588,11 +588,11 @@ void Particle::grow(int nextra)
 {
   bigint target = (bigint) nlocal + nextra;
   if (target <= maxlocal) return;
-  
+
   int oldmax = maxlocal;
   bigint newmax = maxlocal;
   while (newmax < target) newmax += DELTA;
-  
+
   if (newmax > MAXSMALLINT) 
     error->one(FLERR,"Per-processor particle count is too big");
 
@@ -671,6 +671,23 @@ int Particle::add_particle(int id, int ispecies, int icell,
 
   //p->dtremain = 0.0;    not needed due to memset in grow() ??
   //p->weight = 1.0;      not needed due to memset in grow() ??
+
+  nlocal++;
+  return reallocflag;
+}
+
+/* ----------------------------------------------------------------------
+   add an empty particle to particle list, caller will fill it
+   return 1 if particle array was reallocated, else 0
+------------------------------------------------------------------------- */
+
+int Particle::add_particle()
+{
+  int reallocflag = 0;
+  if (nlocal == maxlocal) {
+    grow(1);
+    reallocflag = 1;
+  }
 
   nlocal++;
   return reallocflag;
@@ -1395,6 +1412,20 @@ int Particle::size_restart()
 }
 
 /* ----------------------------------------------------------------------
+   return size of particle restart info for this proc
+------------------------------------------------------------------------- */
+
+bigint Particle::size_restart_big()
+{
+  bigint n = sizeof(int);
+  n = BIROUNDUP(n);
+  n += nlocal * sizeof(OnePartRestart);
+  n += nlocal * sizeof_custom();
+  n = BIROUNDUP(n);
+  return n;
+}
+
+/* ----------------------------------------------------------------------
    pack my particle info into buf
    use OnePartRestart data struct for permanent info and to encode cell ID
    include per-particle custom attributes if defined
@@ -1441,6 +1472,56 @@ int Particle::pack_restart(char *buf)
 }
 
 /* ----------------------------------------------------------------------
+   pack my particle info into buf
+   use multiple passes to reduce memory use
+   use OnePartRestart data struct for permanent info and to encode cell ID
+   include per-particle custom attributes if defined
+   NOTE: does not ROUNDUP(ptr) at the end, this is done by caller
+------------------------------------------------------------------------- */
+
+void Particle::pack_restart(char *buf, int step, int pass)
+{
+  Grid::ChildCell *cells = grid->cells;
+  OnePart *p;
+  OnePartRestart *pr;
+  int nbytes_custom = sizeof_custom();
+
+  char *ptr = buf;
+  if (pass == 0) {
+    int *ibuf = (int *) ptr;
+    *ibuf = nlocal;
+    ptr += sizeof(int);
+    ptr = ROUNDUP(ptr);
+  }
+
+  int start = step*pass;
+  int end = start+step;
+  end = MIN(nlocal,end);
+  for (int i = start; i < end; i++) {
+    p = &particles[i];
+    pr = (OnePartRestart *) ptr;
+    pr->id = p->id;
+    pr->ispecies = p->ispecies;
+    pr->icell = cells[p->icell].id;
+    pr->nsplit = cells[p->icell].nsplit;
+    pr->x[0] = p->x[0];
+    pr->x[1] = p->x[1];
+    pr->x[2] = p->x[2];
+    pr->v[0] = p->v[0];
+    pr->v[1] = p->v[1];
+    pr->v[2] = p->v[2];
+    pr->erot = p->erot;
+    pr->evib = p->evib;
+
+    ptr += sizeof(OnePartRestart);
+    if (!ncustom) continue;
+
+    pack_custom(i,ptr);
+    ptr += nbytes_custom;
+  }
+}
+
+/* ----------------------------------------------------------------------
    unpack particle info into restart storage
    allocate data structure here, will be deallocated by ReadRestart
    include per-particle custom attributes if defined
@@ -1466,6 +1547,41 @@ int Particle::unpack_restart(char *buf)
   ptr = ROUNDUP(ptr);
 
   return ptr - buf;
+}
+
+/* ----------------------------------------------------------------------
+   unpack particle info into restart storage
+   use multiple passes to reduce memory use
+   allocate data structure here, will be deallocated by ReadRestart
+   include per-particle custom attributes if defined
+   NOTE: does not ROUNDUP(ptr) at the end, this is done by caller
+------------------------------------------------------------------------- */
+
+void Particle::unpack_restart(char *buf, int &nlocal_restart, int step, int pass)
+{
+  int nbytes_particle = sizeof(OnePartRestart);
+  int nbytes_custom = sizeof_custom();
+  int nbytes = nbytes_particle + nbytes_custom;
+
+  char *ptr = buf;
+  if (pass == 0) {
+    int *ibuf = (int *) buf;
+    nlocal_restart = *ibuf;
+    ptr += sizeof(int);
+    ptr = ROUNDUP(ptr);
+  }
+  int start = step*pass;
+  int end = start+step;
+  end = MIN(nlocal_restart,end);
+  step = end - start;
+
+  particle_restart = (char *) 
+    memory->smalloc(step*nbytes,"grid:particle_restart");
+
+  memcpy(particle_restart,ptr,step*nbytes);
+  ptr += step * sizeof(OnePartRestart);
+
+  this->nlocal_restart = step;
 }
 
 // ----------------------------------------------------------------------

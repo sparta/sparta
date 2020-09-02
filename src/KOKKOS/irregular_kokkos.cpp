@@ -373,22 +373,24 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
   if (sendmax*nbytes > bufmax) {
     bufmax = sendmax*nbytes;
     d_buf = DAT::t_char_1d("Irregular:buf",bufmax);
+  } else if (d_buf.extent(0) < bufmax) {
+    d_buf = DAT::t_char_1d("Irregular:buf",bufmax);
   }
 
   // send each message
   // pack buf with list of datums
   // m = index of datum in sendbuf
 
-  k_index_send.modify<SPAHostType>();
-  k_index_send.sync<DeviceType>();
+  k_index_send.modify_host();
+  k_index_send.sync_device();
 
-  k_index_self.modify<SPAHostType>();
-  k_index_self.sync<DeviceType>();
+  k_index_self.modify_host();
+  k_index_self.sync_device();
 
   k_n.h_view() = 0;
-  k_n.modify<SPAHostType>();
-  k_n.sync<DeviceType>();
-  d_n = k_n.view<DeviceType>();
+  k_n.modify_host();
+  k_n.sync_device();
+  d_n = k_n.d_view;
 
   for (int isend = 0; isend < nsend; isend++) {
     count = num_send[isend];
@@ -406,7 +408,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagIrregularPackBuffer<1> >(0,count),*this);
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagIrregularPackBuffer<0> >(0,count),*this);
-    DeviceType::fence();
+    DeviceType().fence();
     //pack_buffer_serial(0,count);
     copymode = 0;
 
@@ -422,7 +424,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
 
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagIrregularUnpackBuffer>(0,num_self),*this);
-  DeviceType::fence();
+  DeviceType().fence();
   copymode = 0;
 
   // wait on all incoming messages
