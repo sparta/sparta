@@ -877,6 +877,9 @@ sub-directory.  Typing "make package-diff" lists all differences
 between these files.  Again, type "make package" to see all of the
 package-related make options.
 
+Typing "make package-installed" or "make pi" will show which packages are
+currently installed in the src directory.
+
 :line
 
 [{Including/excluding packages with CMake:}] :link(start_3_2_2)
