@@ -928,18 +928,16 @@ def write_pvd_file(time_steps_dict, file_name, num_chunks):
       fh.write('    <DataSet timestep="' + str(time) + '" group="" part="0"   \n')
       filepath = os.path.join(file_name, file_name + '_'  + str(time) + '.pvtu')
       fh.write('             file="' + filepath + '"/>\n')
+      array_names = []
       file_list = time_steps_dict[time]
       if file_list:
         try:
           afh = open(file_list[0], "r")
+          read_array_names(afh, array_names)
+          afh.close()
         except IOError:
           print("Unable to open SPARTA result file: ", f)
           return
-      else:
-          return
-      array_names = []
-      read_array_names(afh, array_names)
-      afh.close()
       write_pvtu_file(array_names, file_name, num_chunks, time)
   fh.write('   </Collection>    \n')
   fh.write('</VTKFile>    \n')
