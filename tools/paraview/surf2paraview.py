@@ -162,11 +162,13 @@ def read_time_steps(result_file_list, time_steps_dict):
     for line in fh:
       s = clean_line(line)
       if s.lower().replace(" ", "") == "item:timestep":
-        time = int(fh.readline())
-        if time in time_steps_dict.keys():
-          time_steps_dict[time].append(f)
-        else:
-          time_steps_dict[time] = [f]
+        for line in fh:
+          time = int(line)
+          if time in time_steps_dict.keys():
+            time_steps_dict[time].append(f)
+          else:
+            time_steps_dict[time] = [f]
+          break
         break
 
     fh.close()
