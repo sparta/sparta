@@ -239,9 +239,9 @@ void ComputeLambdaGrid::init()
   if (ispecies < 0) 
     error->all(FLERR,"Compute lambda/grid species is not defined");
 
-  dref = collide->extract(ispecies,"diam");
-  tref = collide->extract(ispecies,"tref");
-  omega = collide->extract(ispecies,"omega");
+  dref = collide->extract(ispecies,ispecies,"diam");
+  tref = collide->extract(ispecies,ispecies,"tref");
+  omega = collide->extract(ispecies,ispecies,"omega");
   prefactor = sqrt(2.0) * MY_PI * dref*dref;
 }
 
