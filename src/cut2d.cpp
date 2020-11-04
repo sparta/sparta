@@ -1248,26 +1248,6 @@ int Cut2d::whichside(double *pt)
 void Cut2d::failed_cell()
 {
   printf("Cut2d failed on proc %d in cell ID: " CELLINT_FORMAT "\n",comm->me,id);
-
-  /*
-  cellint ichild;
-  int iparent = grid->id_find_parent(id,ichild);
-  while (iparent >= 0) {
-    int nx = grid->level_xyz[grid->pcells[iparent].level][0];
-    int ny = grid->level_xyz[grid->pcells[iparent].level][1];
-    int ix = (ichild-1) % nx;
-    int iy = ((ichild-1)/nx) % ny;
-    int iz = (ichild-1) / (nx*ny);
-    printf("  parent " CELLINT_FORMAT " level %d: NxNyNz %d %d: "
-           "child " CELLINT_FORMAT " %d %d %d\n",
-           grid->pcells[iparent].id,
-           grid->pcells[iparent].level,
-           nx,ny,ichild,ix,iy,iz);
-    if (iparent == 0) break;
-    iparent = grid->id_find_parent(grid->pcells[iparent].id,ichild);
-  }
-  */
-
   printf("  lo corner %g %g\n",lo[0],lo[1]);
   printf("  hi corner %g %g\n",hi[0],hi[1]);
   printf("  # of surfs = %d out of " BIGINT_FORMAT "\n",nsurf,surf->nsurf);

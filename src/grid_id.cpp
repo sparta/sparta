@@ -21,6 +21,11 @@ using namespace SPARTA_NS;
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 
 // operations with grid cell IDs
+// IMPORTANT: must be careful to use cellint (32 or 64 bit) in these cases
+//   any cell ID, child or parent
+//   any mask for bitwise operations
+//   for ichild = 1 to Nxyz for subcell index within a parent cell
+//   to multiply 2 or 3 nx,ny,nz indices
 
 /* ----------------------------------------------------------------------
    find child cell within parentID which contains pt X
@@ -322,10 +327,12 @@ int Grid::id_bits(int nx, int ny, int nz)
   bigint n = (bigint) nx*ny*nz;
   bigint nstore = 1;
   int nbits = 1;
+  
   while (nstore < n) {
     nstore = 2*nstore + 1;
     nbits++;
   }
+  
   return nbits;
 }
 

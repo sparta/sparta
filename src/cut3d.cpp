@@ -2185,29 +2185,7 @@ void Cut3d::push(double *pt)
 void Cut3d::failed_cell()
 {
   printf("Cut3d failed on proc %d in cell ID: " CELLINT_FORMAT "\n",comm->me,id);
-
-  /*  
-  cellint ichild;
-  int iparent = grid->id_find_parent(id,ichild);
-  while (iparent >= 0) {
-    int nx = grid->level_xyz[grid->pcells[iparent].level][0];
-    int ny = grid->level_xyz[grid->pcells[iparent].level][1];
-    int nz = grid->level_xyz[grid->pcells[iparent].level][2];
-    int ix = (ichild-1) % nx;
-    int iy = ((ichild-1)/nx) % ny;
-    int iz = (ichild-1) / (nx*ny);
-    printf("  parent " CELLINT_FORMAT " level %d: NxNyNz %d %d %d: "
-           "child " CELLINT_FORMAT " %d %d %d\n",
-           grid->pcells[iparent].id,
-           grid->pcells[iparent].level,
-           nx,ny,nz,ichild,ix,iy,iz);
-    if (iparent == 0) break;
-    iparent = grid->id_find_parent(grid->pcells[iparent].id,ichild);
-  }
-  */
-  
   Surf::Tri *tris = surf->tris;
-
   printf("  lo corner %g %g %g\n",lo[0],lo[1],lo[2]);
   printf("  hi corner %g %g %g\n",hi[0],hi[1],hi[2]);
   printf("  # of surfs = %d out of " BIGINT_FORMAT "\n",nsurf,surf->nsurf);
