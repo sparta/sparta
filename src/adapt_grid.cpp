@@ -1007,11 +1007,12 @@ void AdaptGrid::candidates_coarsen()
       }
       clist[cnum].parentID = parentID;
       clist[cnum].plevel = outbuf[i].plevel;
-      clist[cnum].nchild = plevels[outbuf[i].plevel].nxyz;
+      nchild = plevels[outbuf[i].plevel].nxyz;
+      clist[cnum].nchild = nchild;
       clist[cnum].nexist = 0;
-      clist[cnum].proc = new int[nxyz];
-      clist[cnum].index = new int[nxyz];
-      clist[cnum].value = new double[nxyz];
+      clist[cnum].proc = new int[nchild];
+      clist[cnum].index = new int[nchild];
+      clist[cnum].value = new double[nchild];
       m = cnum++;
     } else m = (*clhash)[parentID];
 
