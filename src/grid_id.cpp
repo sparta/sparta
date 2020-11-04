@@ -329,101 +329,9 @@ int Grid::id_bits(int nx, int ny, int nz)
   return nbits;
 }
 
-
 /* ----------------------------------------------------------------------
-   find parent of a child or parent ID
-   loop from root thru parents until match the input ID
-   return local index of parent cell
-   also return ichild = 1 to Nx*Ny*Nz for index of child within parent
-   ichild is cellint in case Nx*Ny*Nz exceeds 32-bit int
-------------------------------------------------------------------------- */
-
-int Grid::id_find_parent(cellint id, cellint &ichild)
-{
-  // TMP
-  /*
-  int level,nbits,newbits,index;
-  cellint idparent,idnew,mask;
-  ParentCell *p;
-
-  int iparent = 0;
-  while (1) {
-    p = &pcells[iparent];
-    idparent = p->id;
-    level = p->level;
-    nbits = level_nbits[level];
-    newbits = level_newbits[level];
-
-    // ichild = the newbits above nbits in id
-
-    mask = (1L << newbits) - 1;
-    ichild = (id >> nbits) & mask;
-    idnew = idparent | (ichild << nbits);
-    if (idnew == id) break;
-    if (hash->find(idnew) == hash->end())
-      error->one(FLERR,"Grid::id_find_new() not in hash");
-    index = (*hash)[idnew];
-    iparent = -index-1;
-  }
-
-  return iparent;
-  */
-  
-  return 0;
-}
-
-/* ----------------------------------------------------------------------
-   convert cell ID from string to number and return it
-   idstr = "0" is special case, return 0
-   otherwise, walk hierarchy from root to child so can shift bits correctly
-   return 0 if error:
-     parent cell does not exist
-     field exceeds bit count of parent
-------------------------------------------------------------------------- */
-
-cellint Grid::id_str2num(char *idstr)
-{
-  // TMP
-  /*
-  int iparent,level;
-  cellint ichild,nxyz;
-  ParentCell *p;
-  
-  if (idstr[0] == '0') return 0;
-
-  cellint id = 0;
-  char *word = idstr;
-  char *ptr = strchr(word,'-');
-
-  while (1) {
-    if (hash->find(id) == hash->end()) return -1;
-    iparent = (*hash)[id];
-    p = &pcells[iparent];
-    if (ptr) *ptr = '\0';
-    ichild = ATOCELLINT(word);
-    level = p->level;
-    nxyz = (cellint) level_xyz[level][0] * 
-      level_xyz[level][0] * level_xyz[level][0];
-    if (ichild == 0 || ichild > nxyz) {
-      if (ptr) *ptr = '-';
-      return 0;
-    }
-    id |= ichild << level_nbits[level];
-    if (!ptr) break;
-    *ptr = '-';
-    word = ptr+1;
-    ptr = strchr(word,'-');
-  }
-
-  return id;
-  */
-
-  return 0;
-}
-
-/* ----------------------------------------------------------------------
-   convert cell ID from number to string
-   walk hierarchy from root to child so can shift bits correctly
+   convert cell ID from number to string with levels separated by dashes
+   walk grid hierarchy from root to ID, generating one substr at each level
    NOTE: should append letter for sub cells, but not enough info to do it
          don't know the parent cell (which might be on a different proc)
          one way to do it would be for dump_grid to have a pack_idstr
@@ -433,90 +341,23 @@ cellint Grid::id_str2num(char *idstr)
 
 void Grid::id_num2str(cellint id, char *str)
 {
-  // TMP
-  /*
-  int index,level;
-  cellint mask,idlevel;
+  int newbits;
+  cellint mask,ichild;
 
-  cellint idparent = 0;
-  int iparent = 0;
+  // sprintf child bits one level at a time until id = 0
+  
   int offset = 0;
+  int level = 0;
 
   while (1) {
-    level = pcells[iparent].level;
-    mask = (1L << level_newbits[level]) - 1;
-    idlevel = id & mask;
-    sprintf(&str[offset],"%d",idlevel);
+    newbits = plevels[level].newbits;
+    mask = (1L << newbits) - 1;
+    ichild = id & mask;
+    sprintf(&str[offset],"%d",ichild);
     offset = strlen(str);
-    id = id >> level_newbits[level];
+    id = id >> newbits;
     if (!id) return;
     str[offset++] = '-';
-    idparent = idparent | (idlevel << level_nbits[level]);
-    index = (*hash)[idparent];
-    iparent = -index-1;
+    level++;
   }
-  */
-}
-
-/* ----------------------------------------------------------------------
-   split cell ID string into parent ID and child ID strings
-   if ID = "0", return parent as empty string
-   if ID has only a child field, return "0" as parent
-------------------------------------------------------------------------- */
-
-void Grid::id_pc_split(char *idstr, char *parent, char *child)
-{
-  if (idstr[0] == '0') {
-    parent[0] = '\0';
-    strcpy(child,idstr);
-    return;
-  }
-
-  char *ptr = strrchr(idstr,'-');
-
-  if (!ptr) {
-    strcpy(parent,"0");
-    strcpy(child,idstr);
-    return;
-  }
-
-  *ptr = '\0';
-  strcpy(parent,idstr);
-  strcpy(child,ptr+1);
-  *ptr = '-';
-  return;
-}
-
-/* ----------------------------------------------------------------------
-   return index of child cell that is in icorner of iparent cell
-   recurse down thru grid hierarchy until find child cell
-   hash contains all owned/ghost child cells and parent cells
-   if I don't store child cell as owned or ghost, return -1 for unknown
-------------------------------------------------------------------------- */
-
-int Grid::id_child_from_parent_corner(int iparent, int icorner)
-{
-  // TMP
-  /*
-  ParentCell *p = &pcells[iparent];
-
-  int level = p->level;
-  int nx = level_xyz[level][0];
-  int ny = level_xyz[level][1];
-  int nz = level_xyz[level][2];
-
-  int ix = (icorner % 2) ? nx-1 : 0;
-  int iy = ((icorner/2) % 2) ? ny-1 : 0;
-  int iz = (icorner / 4) ? nz-1 : 0;
-  
-  cellint ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
-  cellint idchild = p->id | (ichild << level_nbits[level]);
-
-  if (hash->find(idchild) == hash->end()) return -1;
-  int index = (*hash)[idchild];
-  if (index > 0) return index-1;
-  return id_child_from_parent_corner(-index-1,icorner);
-  */
-
-  return 0;
 }

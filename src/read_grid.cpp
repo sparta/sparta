@@ -197,14 +197,16 @@ void ReadGrid::create_parents(int n, char *buf)
     // error if parent cell already exists or its parent does not
     // NOTE: add more error checks on values[1]
 
-    id = grid->id_str2num(values[1]);
+    // TMP
+    //id = grid->id_str2num(values[1]);
     if (id < 0) error->all(FLERR,"Invalid cell ID in grid file");
 
     if (id) {
       if (hash->find(id) != hash->end()) 
         error->all(FLERR,"Duplicate cell ID in grid file");
-      grid->id_pc_split(values[1],pstr,cstr);
-      idparent = grid->id_str2num(pstr);
+      // TMP
+      //grid->id_pc_split(values[1],pstr,cstr);
+      //idparent = grid->id_str2num(pstr);
       ichild = ATOCELLINT(cstr);
       iparent = (*hash)[idparent];
       if (iparent < 0) 

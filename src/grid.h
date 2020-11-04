@@ -87,7 +87,7 @@ class Grid : protected Pointers {
 
   struct ChildCell {          
     cellint id;               // ID of child cell
-    int level;                // level of cell in hierarchical grid
+    int level;                // level of cell in hierarchical grid, 0 = root
     int proc;                 // proc that owns this cell
     int ilocal;               // index of this cell on owning proc
                               // must be correct for all ghost cells
@@ -96,18 +96,19 @@ class Grid : protected Pointers {
                               //   that fully overlap face
                               // order = XLO,XHI,YLO,YHI,ZLO,ZHI
                               // nmask stores flags for what the values represent
-                              // if child, stores index into cells
-                              // if parent, stores index into parentinfo
+                              // for 0,3: index of child cell I store (own or ghost)
+                              // for 1,4: parentID
+                              // for 2,5: neigh is unknown so value is ignored
                               // if unknown or non-PBC boundary or 2d ZLO/ZHI, ignored
-                              // needs to be cellint, b/c unset/reset_neigh store ID
+                              // must be cellint, b/c stores cell IDs
     
     int nmask;                // 3 bits for each of 6 values in neigh
-                              // 0 = child cell
-                              // 1 = parent cell
-                              // 2 = unknown
-                              // 3 = child cell across periodic boundary
-                              // 4 = parent cell across periodic boundary
-                              // 5 = unknown, but across periodic boundary
+                              // 0 = index of child neighbor I own
+                              // 1 = ID of parent neighbor
+                              // 2 = unknown child neighbor
+                              // 3 = PBC child neighbor
+                              // 4 = ID of PBC parent neighbor
+                              // 5 = unknown PBC child neighbor
                               // 6 = non-PBC boundary or ZLO/ZHI in 2d
 
     double lo[3],hi[3];       // opposite corner pts of cell
@@ -275,8 +276,6 @@ class Grid : protected Pointers {
   cellint id_coarsen(cellint, int);
   cellint id_ichild(cellint, cellint, int);
   
-  int id_find_parent(cellint, cellint &);
-  cellint id_str2num(char *);
   void id_num2str(cellint, char *);
   void id_pc_split(char *, char *, char *);
   
@@ -285,7 +284,6 @@ class Grid : protected Pointers {
   
   int id_bits(int, int, int);
   cellint id_find_face(double *, int, int, double *, double *);
-  int id_child_from_parent_corner(int, int);
 
   // extract/return neighbor flag for iface from per-cell nmask
   // inlined for efficiency
