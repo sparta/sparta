@@ -728,6 +728,8 @@ void AdaptGrid::refine_value()
   if (valuewhich == COMPUTE) {
     compute = modify->compute[icompute];
     compute->compute_per_grid();
+    if (compute->post_process_grid_flag) 
+      compute->post_process_grid(valindex,1,NULL,NULL,NULL,1);
   } else if (valuewhich == FIX) fix = modify->fix[ifix];
 
   Grid::ChildCell *cells = grid->cells;
@@ -863,6 +865,8 @@ void AdaptGrid::candidates_coarsen()
     if (valuewhich == COMPUTE) {
       compute = modify->compute[icompute];
       compute->compute_per_grid();
+      if (compute->post_process_grid_flag) 
+	compute->post_process_grid(valindex,1,NULL,NULL,NULL,1);
     } else if (valuewhich == FIX) fix = modify->fix[ifix];
   }
 
@@ -1518,7 +1522,8 @@ double AdaptGrid::value_compute(int icell)
 {
   double value;
 
-  if (valindex == 0) value = compute->vector_grid[icell];
+  if (valindex == 0 || compute->post_process_grid_flag)
+    value = compute->vector_grid[icell];
   else value = compute->array_grid[icell][valindex-1];
 
   return value;
