@@ -36,6 +36,7 @@ class Grid : protected Pointers {
   int nsub;             // global count of split sub cells
 
   int maxlevel;         // max level of any child cell in grid, 0 = root
+  
   int uniform;          // 1 if all child cells are at same level, else 0
   int unx,uny,unz;      // if uniform, effective global Nx,Ny,Nz of finest grid
   double cutoff;        // cutoff for ghost cells, -1.0 = infinite
@@ -57,7 +58,7 @@ class Grid : protected Pointers {
   int copy,copymode;    // 1 if copy of class (prevents deallocation of
                         //  base class when child copy is destroyed)
 
-  // hash for all cell IDs (owned,ghost,parent)
+  // hash for all cell IDs (owned + ghost, no sub-cells)
 
 #ifdef SPARTA_MAP
   typedef std::map<cellint,int> MyHash;
@@ -68,7 +69,7 @@ class Grid : protected Pointers {
 #endif
 
   MyHash *hash;
-  int hashfilled;             // 1 if hash is filled with parent/child IDs
+  int hashfilled;             // 1 if hash is filled with cell IDs
 
   // list data structs
 
@@ -85,29 +86,32 @@ class Grid : protected Pointers {
   // ghost cells are appended to owned
 
   struct ChildCell {          
-    cellint id;               // cell ID in bitwise format
-    int iparent;              // index of parent in pcells
+    cellint id;               // ID of child cell
+    int level;                // level of cell in hierarchical grid
     int proc;                 // proc that owns this cell
     int ilocal;               // index of this cell on owning proc
-                              // must be correct for all kinds of ghost cells
+                              // must be correct for all ghost cells
 
     cellint neigh[6];         // info on 6 neighbor cells in cells/pcells
                               //   that fully overlap face
                               // order = XLO,XHI,YLO,YHI,ZLO,ZHI
-                              // nmask stores flags for what all 6 represent
-                              // if an index, store index into cells or pcells
-                              // if unknown, store ID of neighbor child cell
-                              // if non-periodic global boundary, ignored
+                              // nmask stores flags for what the values represent
+                              // if child, stores index into cells
+                              // if parent, stores index into parentinfo
+                              // if unknown or non-PBC boundary or 2d ZLO/ZHI, ignored
+                              // needs to be cellint, b/c unset/reset_neigh store ID
+    
     int nmask;                // 3 bits for each of 6 values in neigh
-                              // 0 = index of child neighbor
-                              // 1 = index of parent neighbor
-                              // 2 = unknown child neighbor
-                              // 3 = index of PBC child neighbor
-                              // 4 = index of PBC parent neighbor
-                              // 5 = unknown PBC child neighbor
+                              // 0 = child cell
+                              // 1 = parent cell
+                              // 2 = unknown
+                              // 3 = child cell across periodic boundary
+                              // 4 = parent cell across periodic boundary
+                              // 5 = unknown, but across periodic boundary
                               // 6 = non-PBC boundary or ZLO/ZHI in 2d
 
     double lo[3],hi[3];       // opposite corner pts of cell
+    
     int nsurf;                // # of surf elements in cell
                               // -1 = empty ghost cell
     surfint *csurfs;          // indices of surf elements in cell
@@ -154,18 +158,15 @@ class Grid : protected Pointers {
     int *csubs;               // indices in cells of Nsplit sub cells
   };
 
-  // parent cell
-  // global list of parent cells is stored by all procs
-
+  struct ParentLevel {
+    int nbits;                // nbits = # of bits to store parent ID at this level
+    int newbits;              // newbits = extra bits to store children of this parent
+    int nx,ny,nz;             // child grid below this parent level
+    bigint nxyz;              // # of child cells of this parent level
+  };
+  
   struct ParentCell {
-    cellint id;               // cell ID in bitwise format, 0 = root
-    int mask;                 // grid group mask
-    int level;                // level in hierarchical grid, 0 = root
-    int nbits;                // # of bits to encode my ID, also my siblings
-    int newbits;              // # of additional bits to encode my children
-    int iparent;              // index of parent, -1 if id=root
-    int grandparent;          // 1 if this cell is a grandparent, 0 if not
-    int nx,ny,nz;             // sub grid within cell
+    cellint id;               // ID of parent cell
     double lo[3],hi[3];       // opposite corner pts of cell
   };
 
@@ -178,20 +179,23 @@ class Grid : protected Pointers {
   int nsplitghost;            // # of ghost split cells I store
   int nsublocal;              // # of sub cells I own
   int nsubghost;              // # of ghost sub cells I store
-  int nparent;                // # of parent cells
+  int nparent;                // # of parent cell neighbors I store
 
   int maxlocal;               // size of cinfo
-
+  int maxparent;              // size of pcells
+  
   ChildCell *cells;           // list of owned and ghost child cells
   ChildInfo *cinfo;           // extra info for nlocal owned cells
   SplitInfo *sinfo;           // extra info for owned and ghost split cells
-  ParentCell *pcells;         // global list of parent cells
+
+  ParentLevel *plevels;       // list of parent levels, level = root = simulation box
+  ParentCell *pcells;         // list of parent cell neighbors
 
   // restart buffers, filled by read_restart
 
   int nlocal_restart;
   cellint *id_restart;
-  int *nsplit_restart;
+  int *level_restart,*nsplit_restart;
 
   // methods
 
@@ -200,10 +204,10 @@ class Grid : protected Pointers {
   void remove();
   void init();
   void add_child_cell(cellint, int, double *, double *);
-  void add_parent_cell(cellint, int, int, int, int, double *, double *);
   void add_split_cell(int);
   void add_sub_cell(int, int);
   void notify_changed();
+  void set_maxlevel(); 
   void setup_owned(); 
   void remove_ghosts();
   void acquire_ghosts(int surfflag=1);
@@ -217,17 +221,15 @@ class Grid : protected Pointers {
   void weight(int, char **);
   void weight_one(int);
   
-  void refine_cell(int, int, int, int, int, int *, 
-                   class Cut2d *, class Cut3d *);
-  void coarsen_cell(int, int, int *, int *, int *, class AdaptGrid *,
-                    class Cut2d *, class Cut3d *);
+  void refine_cell(int, int *, class Cut2d *, class Cut3d *);
+  void coarsen_cell(cellint, int, double *, double *,
+		    int, int *, int *, int *, surfint **, char **,
+		    class Cut2d *, class Cut3d *);
 
   void group(int, char **);
   int add_group(const char *);
   int find_group(const char *);
   int check_uniform_group(int, int *, double *, double *);
-
-  virtual void grow_pcells(int);
 
   void write_restart(FILE *);
   void read_restart(FILE *);
@@ -266,12 +268,21 @@ class Grid : protected Pointers {
 
   // grid_id.cpp
 
-  int id_find_child(int, double *);
+  int id_find_child(cellint, int, double *, double *, double *);
+  cellint id_neigh_same_parent(cellint, int, int);
+  cellint id_neigh_same_level(cellint, int, int);
+  cellint id_refine(cellint, int, int);
+  cellint id_coarsen(cellint, int);
+  cellint id_ichild(cellint, cellint, int);
+  
   int id_find_parent(cellint, cellint &);
   cellint id_str2num(char *);
   void id_num2str(cellint, char *);
   void id_pc_split(char *, char *, char *);
-  void id_child_lohi(int, cellint, double *, double *);
+  
+  void id_child_lohi(int, double *, double *, cellint, double *, double *);
+  void id_lohi(cellint, int, double *, double *, double *, double *);
+  
   int id_bits(int, int, int);
   cellint id_find_face(double *, int, int, double *, double *);
   int id_child_from_parent_corner(int, int);
@@ -298,7 +309,6 @@ class Grid : protected Pointers {
   int me;
   int maxcell;             // size of cells
   int maxsplit;            // size of sinfo
-  int maxparent;           // size of pcells
   int maxbits;             // max bits allowed in a cell ID
 
   int neighmask[6];        // bit-masks for each face in nmask

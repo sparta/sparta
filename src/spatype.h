@@ -20,7 +20,7 @@
 
 // smallint must be an int, as defined by C compiler
 // bigint can be 32-bit or 64-bit int, must be >= smallint
-// cellint can be 32-bit or 64-bit int
+// cellint can be unsigned 32-bit or 64-bit int
 
 // MPI_SPARTA_BIGINT = MPI data type corresponding to a bigint
 
@@ -68,14 +68,14 @@ enum ExecutionSpace{Host,Device};
 #ifdef SPARTA_BIG
 
 typedef int smallint;
-typedef int cellint;
+typedef uint32_t cellint;
 typedef int surfint;
 typedef int64_t bigint;
 
 #define MAXSMALLINT INT_MAX
 #define MAXBIGINT INT64_MAX
 #define MPI_SPARTA_BIGINT MPI_LL
-#define CELLINT_FORMAT "%d"
+#define CELLINT_FORMAT "%u"
 #define SURFINT_FORMAT "%d"
 #define BIGINT_FORMAT "%" PRId64
 #define ATOCELLINT atoi
@@ -90,14 +90,14 @@ typedef int64_t bigint;
 #ifdef SPARTA_BIGBIG
 
 typedef int smallint;
-typedef int64_t cellint;
+typedef uint64_t cellint;
 typedef int64_t surfint;
 typedef int64_t bigint;
 
 #define MAXSMALLINT INT_MAX
 #define MAXBIGINT INT64_MAX
 #define MPI_SPARTA_BIGINT MPI_LL
-#define CELLINT_FORMAT "%" PRId64
+#define CELLINT_FORMAT "%" PRIu64
 #define SURFINT_FORMAT "%" PRId64
 #define BIGINT_FORMAT "%" PRId64
 #define ATOCELLINT ATOLL
@@ -112,14 +112,14 @@ typedef int64_t bigint;
 #ifdef SPARTA_SMALL
 
 typedef int smallint;
-typedef int cellint;
+typedef uint32_t cellint;
 typedef int surfint;
 typedef int bigint;
 
 #define MAXSMALLINT INT_MAX
 #define MAXBIGINT INT_MAX
 #define MPI_SPARTA_BIGINT MPI_INT
-#define CELLINT_FORMAT "%d"
+#define CELLINT_FORMAT "%u"
 #define SURFINT_FORMAT "%d"
 #define BIGINT_FORMAT "%d"
 #define ATOCELLINT atoi

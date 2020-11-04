@@ -220,7 +220,8 @@ void ReadGrid::create_parents(int n, char *buf)
       error->all(FLERR,"Nz value in read_grid file must be 1 "
                  "for a 2d simulation");
 
-    if (id) grid->id_child_lohi(iparent,ichild,lo,hi);
+    // TMP
+    //if (id) grid->id_child_lohi(iparent,ichild,lo,hi);
     else {
       lo[0] = domain->boxlo[0]; 
       lo[1] = domain->boxlo[1];
@@ -230,9 +231,10 @@ void ReadGrid::create_parents(int n, char *buf)
       hi[2] = domain->boxhi[2];
     } 
 
-    grid->add_parent_cell(id,iparent,nx,ny,nz,lo,hi);
-    (*hash)[id] = grid->nparent - 1;
-    if (iparent >= 0) grid->pcells[iparent].grandparent = 1;
+    // TMP
+    //grid->add_parent_cell(id,iparent,nx,ny,nz,lo,hi);
+    //(*hash)[id] = grid->nparent - 1;
+    //if (iparent >= 0) grid->pcells[iparent].grandparent = 1;
 
     buf = next + 1;
   }
@@ -246,6 +248,8 @@ void ReadGrid::create_parents(int n, char *buf)
 
 void ReadGrid::create_children()
 {
+  // TMP
+  /*
   Grid::MyHash *hash = grid->hash;
   Grid::ParentCell *pcells = grid->pcells;
   int nparent = grid->nparent;
@@ -260,7 +264,9 @@ void ReadGrid::create_children()
   // NOTE: change this to assign child to proc based on mod of cell ID
   //       could do this only when adapt grid invokes it
 
-  int ix,iy,iz,nx,ny,nz,nbits;
+  int *level_xyz = &grid->level_xyz[0][0];
+  int *level_nbits = grid->level_nbits;
+  int ix,iy,iz,nx,ny,nz,level,nbits;
   cellint m,idparent,idchild;
   double lo[3],hi[3];
   Grid::ParentCell *p;
@@ -268,10 +274,11 @@ void ReadGrid::create_children()
   for (int iparent = 0; iparent < nparent; iparent++) {
     p = &pcells[iparent];
     idparent = p->id;
-    nbits = p->nbits;
-    nx = p->nx;
-    ny = p->ny;
-    nz = p->nz;
+    level = p->level;
+    nx = level_xyz[3*level+0];
+    ny = level_xyz[3*level+1];
+    nz = level_xyz[3*level+2];
+    nbits = level_nbits[level];
 
     m = 0;
     for (iz = 0; iz < nz; iz++)
@@ -288,6 +295,7 @@ void ReadGrid::create_children()
           }
         }
   }
+  */
 }
 
 /* ----------------------------------------------------------------------

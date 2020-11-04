@@ -43,8 +43,8 @@ int compare_surfIDs(const void *, const void *);
 #define CHUNK 16
 #define EPSSURF 1.0e-4
 
-enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // several files
-enum{PERAUTO,PERCELL,PERSURF};          // several files
+enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};         // several files
+enum{PERAUTO,PERCELL,PERSURF};                // several files
 enum{SOUTSIDE,SINSIDE,ONSURF2OUT,ONSURF2IN};  // several files (changed 2 words)
 
 // operations for surfaces in grid cells
@@ -62,17 +62,23 @@ enum{SOUTSIDE,SINSIDE,ONSURF2OUT,ONSURF2IN};  // several files (changed 2 words)
 
 void Grid::surf2grid(int subflag, int outflag)
 {
-  if (surf->distributed)
+  if (surf->distributed) {
+    // TMP
+    error->all(FLERR,"PERSURF for distributed surfs is temporarily not enabled");
     surf2grid_surf_algorithm(subflag,outflag);
-  else if (surfgrid_algorithm == PERAUTO) {
-    if (comm->nprocs > surf->nsurf) surf2grid_cell_algorithm(outflag);
-    else surf2grid_surf_algorithm(subflag,outflag);
+  } else if (surfgrid_algorithm == PERAUTO) {
+    // TMP
+    surf2grid_cell_algorithm(outflag);
+    //if (comm->nprocs > surf->nsurf) surf2grid_cell_algorithm(outflag);
+    //else surf2grid_surf_algorithm(subflag,outflag);
   } else if (surfgrid_algorithm == PERCELL) {
     surf2grid_cell_algorithm(outflag);
   } else if (surfgrid_algorithm == PERSURF) {
+    // TMP
+    error->all(FLERR,"PERSURF option is temporarily not enabled");
     surf2grid_surf_algorithm(subflag,outflag);
   }
-  
+
   // now have nsurf,csurfs list of local surfs that overlap each cell
   // compute cut volume and split info for each cell
 
@@ -302,7 +308,7 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
   memory->create(proclist,ncount,"surf2grid2:proclist");
   InRvous *inbuf = (InRvous *) memory->smalloc((bigint) ncount*sizeof(InRvous),
                                                "surf2grid:inbuf");
-
+    
   // setup input buf to rendezvous comm
   // input datums = pairs of surfIDs and cellIDs
   // owning proc for each datum = random hash of cellID
@@ -1440,8 +1446,10 @@ int Grid::find_overlaps(int isurf, cellint *list)
 void Grid::recurse2d(int iline, double *slo, double *shi, int iparent, 
                      int &n, cellint *list)
 {
-  int ix,iy,newparent,index,parentflag,overlap;
-  cellint ichild,idchild;
+  // TMP
+  /*
+  int ix,iy,ichild,newparent,index,parentflag,overlap;
+  cellint idchild;
   double celledge;
   double newslo[2],newshi[2];
   double clo[3],chi[3];
@@ -1458,8 +1466,10 @@ void Grid::recurse2d(int iline, double *slo, double *shi, int iparent,
   ParentCell *p = &pcells[iparent];
   double *plo = p->lo;
   double *phi = p->hi;
-  int nx = p->nx;
-  int ny = p->ny;
+  int level = p->level;
+  int nbits = level_nbits[level];
+  int nx = level_xyz[level][0];
+  int ny = level_xyz[level][1];
 
   // ilo,ihi jlo,jhi = indices for range of grid cells overlapped by surf bbox
   // overlap means point is inside grid cell or touches boundary
@@ -1501,8 +1511,8 @@ void Grid::recurse2d(int iline, double *slo, double *shi, int iparent,
 
   for (iy = jlo; iy <= jhi; iy++) {
     for (ix = ilo; ix <= ihi; ix++) {
-      ichild = (cellint) iy*nx + ix + 1;
-      idchild = p->id | (ichild << p->nbits);
+      ichild = iy*nx + ix + 1;
+      idchild = p->id | ((cellint) ichild << nbits);
       grid->id_child_lohi(iparent,ichild,clo,chi);
 
       if (hash->find(idchild) == hash->end()) parentflag = 0;
@@ -1525,6 +1535,7 @@ void Grid::recurse2d(int iline, double *slo, double *shi, int iparent,
       }
     }
   }
+  */
 }
 
 /* ----------------------------------------------------------------------
@@ -1540,8 +1551,10 @@ void Grid::recurse2d(int iline, double *slo, double *shi, int iparent,
 void Grid::recurse3d(int itri, double *slo, double *shi, int iparent, 
                      int &n, cellint *list)
 {
-  int ix,iy,iz,newparent,index,parentflag,overlap;
-  cellint ichild,idchild;
+  // TMP
+  /*
+  int ix,iy,iz,ichild,newparent,index,parentflag,overlap;
+  cellint idchild;
   double celledge;
   double newslo[3],newshi[3];
   double clo[3],chi[3];
@@ -1560,9 +1573,11 @@ void Grid::recurse3d(int itri, double *slo, double *shi, int iparent,
   ParentCell *p = &pcells[iparent];
   double *plo = p->lo;
   double *phi = p->hi;
-  int nx = p->nx;
-  int ny = p->ny;
-  int nz = p->nz;
+  int level = p->level;
+  int nbits = level_nbits[level];
+  int nx = level_xyz[level][0];
+  int ny = level_xyz[level][1];
+  int nz = level_xyz[level][2];
 
   // ilo,ihi jlo,jhi = indices for range of grid cells overlapped by surf bbox
   // overlap means point is inside grid cell or touches boundary
@@ -1617,7 +1632,7 @@ void Grid::recurse3d(int itri, double *slo, double *shi, int iparent,
     for (iy = jlo; iy <= jhi; iy++) {
       for (ix = ilo; ix <= ihi; ix++) {
         ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
-        idchild = p->id | (ichild << p->nbits);
+        idchild = p->id | ((cellint) ichild << nbits);
         grid->id_child_lohi(iparent,ichild,clo,chi);
 
         if (hash->find(idchild) == hash->end()) parentflag = 0;
@@ -1643,6 +1658,7 @@ void Grid::recurse3d(int itri, double *slo, double *shi, int iparent,
       }
     }
   }
+  */
 }
 
 /* ----------------------------------------------------------------------
@@ -1812,7 +1828,7 @@ void Grid::flow_stats()
    compute flow volume for entire box, using list of surfs
    volume for one surf is projection to lower z face (3d) or y face (2d)
    NOTE: this does not work if any surfs are clipped to zlo or zhi faces in 3d
-         this does not work if any surfs are clipped to ylo or yhi faces in 2d
+         this does not work if any surfs are clipped to ylo or yhi faces in 3d
          need to add contribution due to closing surfs on those faces
          fairly easy to add in 2d, not so easy in 3d
 ------------------------------------------------------------------------- */

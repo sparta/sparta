@@ -18,41 +18,317 @@
 
 using namespace SPARTA_NS;
 
+enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
+
 // operations with grid cell IDs
 
 /* ----------------------------------------------------------------------
-   find child cell within iparent cell assumed to be contain pt x
-   recurse down thru parents until reach a child cell
-   pt can be on any boundary of parent cell
-   if I don't store child cell as owned or ghost, return -1 for unknown
-   else return local index of child cell
+   find child cell within parentID which contains pt X
+   level = level of parent cell
+   oplo/ophi = original parent cell corner pts
+   pt X can be inside or on any boundary of parent cell
+   recurse from parent downward until find a child cell or reach maxlevel
+   if find child cell this proc stores (owned or ghost), return its local index
+   else return -1 for unknown
 ------------------------------------------------------------------------- */
 
-int Grid::id_find_child(int iparent, double *x)
+int Grid::id_find_child(cellint parentID, int plevel,
+			double *oplo, double *ophi, double *x)
 {
-  while (1) {
-    ParentCell *p = &pcells[iparent];
-    double *lo = p->lo;
-    double *hi = p->hi;
-    int nx = p->nx;
-    int ny = p->ny;
-    int nz = p->nz;
-    int ix = static_cast<int> ((x[0]-lo[0]) * nx/(hi[0]-lo[0]));
-    int iy = static_cast<int> ((x[1]-lo[1]) * ny/(hi[1]-lo[1]));
-    int iz = static_cast<int> ((x[2]-lo[2]) * nz/(hi[2]-lo[2]));
+  int ix,iy,iz,nx,ny,nz;
+  double plo[3],phi[3],clo[3],chi[3];
+  cellint childID,ichild;
+  
+  cellint id = parentID;
+  int level = plevel;
+  double *lo = oplo;
+  double *hi = ophi;
+
+  while (level < maxlevel) {
+    nx = plevels[level].nx;
+    ny = plevels[level].ny;
+    nz = plevels[level].nz;
+    ix = static_cast<int> ((x[0]-lo[0]) * nx/(hi[0]-lo[0]));
+    iy = static_cast<int> ((x[1]-lo[1]) * ny/(hi[1]-lo[1]));
+    iz = static_cast<int> ((x[2]-lo[2]) * nz/(hi[2]-lo[2]));
     if (ix == nx) ix--;
     if (iy == ny) iy--;
     if (iz == nz) iz--;
 
-    cellint ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
-    cellint idchild = p->id | (ichild << p->nbits);
+    ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
+    childID = (ichild << plevels[level].nbits) | id;
 
-    if (hash->find(idchild) == hash->end()) return -1;
-    int index = (*hash)[idchild];
-    if (index > 0) return index-1;
-    iparent = -index-1;
+    if (hash->find(childID) != hash->end()) return (*hash)[childID];
+    
+    id = childID;
+    id_child_lohi(level,lo,hi,ichild,clo,chi);
+    plo[0] = clo[0]; plo[1] = clo[1]; plo[2] = clo[2];
+    phi[0] = chi[0]; phi[1] = chi[1]; phi[2] = chi[2];
+    lo = plo; hi = phi;
+    level++;
+  }
+
+  return -1;
+}
+
+/* ----------------------------------------------------------------------
+   calculate ID of neighbor cell of childID across its face
+   neighbor cell is at same level
+   assume neigbor cell has same parent
+   return neighID if that is the case (doesn't check for periodic BC)
+   return 0 if not same parent
+------------------------------------------------------------------------- */
+
+cellint Grid::id_neigh_same_parent(cellint id, int level, int face)
+{
+  int ixyz[3];
+  int *nxyz;
+
+  // mask = all 1s for parent bits of ID
+
+  int parentbits = plevels[level-1].nbits;
+  cellint mask = (1L << parentbits) - 1;
+  cellint parent = id & mask;
+
+  // mask = all 1s for child bits of ID
+
+  int childbits = plevels[level-1].newbits;
+  mask = (1L << childbits) - 1;
+  cellint ichild = (id >> plevels[level-1].nbits) & mask;
+
+  nxyz = &plevels[level-1].nx;
+
+  ichild--;
+  ixyz[0] = ichild % nxyz[0];
+  ixyz[1] = (ichild / nxyz[0]) % nxyz[1];
+  ixyz[2] = ichild / ((cellint) nxyz[0]*nxyz[1]);
+
+  int dim = face / 2;
+  if (face % 2) ixyz[dim]++;
+  else ixyz[dim]--;
+  if (ixyz[dim] < 0) return 0;
+  if (ixyz[dim] == nxyz[dim]) return 0;
+
+
+  ichild = (cellint) ixyz[2]*nxyz[1]*nxyz[0] +
+    (cellint) ixyz[1]*nxyz[0] + ixyz[0] + 1;
+  cellint neighID = (ichild << parentbits) | parent;
+
+  return neighID;
+}
+
+/* ----------------------------------------------------------------------
+   calculate ID of neighbor cell of cell ID across its face
+   neighbor cell is at same level
+   no assumption that neighbor cell has same parent
+   assume periodic BC
+   return neighID
+------------------------------------------------------------------------- */
+
+cellint Grid::id_neigh_same_level(cellint id, int level, int face)
+{
+  int ix,iy,iz,childbits,parentbits;
+  cellint ichild,mask;
+  int ixyz[3],fullxyz[3];
+  int *nxyz;
+  
+  // ixyz[3] = indices of cell ID in fully resolved fullxyz grid at level
+  // each index = 0 to N-1
+  
+  ixyz[0] = ixyz[1] = ixyz[2] = 0;
+  fullxyz[0] = fullxyz[1] = fullxyz[2] = 1;
+
+  for (int ilevel = 0; ilevel < level; ilevel++) {
+    nxyz = &plevels[ilevel].nx;
+
+    fullxyz[0] *= nxyz[0];
+    fullxyz[1] *= nxyz[1];
+    fullxyz[2] *= nxyz[2];
+
+    ixyz[0] *= nxyz[0];
+    ixyz[1] *= nxyz[1];
+    ixyz[2] *= nxyz[2];
+    
+    // mask = all 1s for child bits at ilevel
+
+    childbits = plevels[ilevel].newbits;
+    mask = (1L << childbits) - 1;
+    ichild = (id >> plevels[ilevel].nbits) & mask;
+
+    ichild--;
+    ixyz[0] += ichild % nxyz[0];
+    ixyz[1] += (ichild / nxyz[0]) % nxyz[1];
+    ixyz[2] += ichild / ((cellint) nxyz[0]*nxyz[1]);
+  }
+
+  // alter ixyz[3] to be indices of neighbor cell
+  // apply periodic boundary conditions based on fullxyz[3]
+  // each altered index = 0 to N-1
+
+  int dim = face / 2;
+  if (face % 2) ixyz[dim]++;
+  else ixyz[dim]--;
+  if (ixyz[dim] < 0) ixyz[dim] = fullxyz[dim] - 1;
+  if (ixyz[dim] == fullxyz[dim]) ixyz[dim] = 0;
+
+  // neighID = neighbor cell ID generated from ixyz[3]
+
+  cellint neighID = 0;
+  
+  for (int ilevel = level-1; ilevel >= 0; ilevel--) {
+    nxyz = &plevels[ilevel].nx;
+
+    ix = ixyz[0] % nxyz[0];
+    iy = ixyz[1] % nxyz[1];
+    iz = ixyz[2] % nxyz[2];
+
+    ichild = (cellint) iz*nxyz[1]*nxyz[0] + (cellint) iy*nxyz[0] + ix + 1;
+    parentbits = plevels[ilevel].nbits;
+    neighID |= ichild << parentbits;
+
+    ixyz[0] /= nxyz[0];
+    ixyz[1] /= nxyz[1];
+    ixyz[2] /= nxyz[2];
+  }
+
+  return neighID;
+}
+
+/* ----------------------------------------------------------------------
+   calculate a child ID of parent cell at level
+   choose child in center of face of parent
+   return child ID
+------------------------------------------------------------------------- */
+
+cellint Grid::id_refine(cellint parentID, int plevel, int face)
+{
+  int *nxyz = &plevels[plevel].nx;
+
+  int ixyz[3];
+  ixyz[0] = nxyz[0] / 2;
+  ixyz[1] = nxyz[1] / 2;
+  ixyz[2] = nxyz[2] / 2;
+
+  if (face % 2) ixyz[face/2] = nxyz[face/2] - 1;
+  else ixyz[face/2] = 0;
+
+  cellint ichild = (cellint) ixyz[2]*nxyz[1]*nxyz[0] +
+    (cellint) ixyz[1]*nxyz[0] + ixyz[0] + 1;
+
+  int parentbits = plevels[plevel].nbits;
+  cellint childID = parentID | (ichild << parentbits);
+  return childID;
+}
+
+/* ----------------------------------------------------------------------
+   calculate parent ID of child cell at level
+   return parent ID
+------------------------------------------------------------------------- */
+
+cellint Grid::id_coarsen(cellint childID, int level)
+{
+  // mask = all 1s for parent bits of child
+  
+  int parentbits = plevels[level-1].nbits;
+  cellint mask = (1L << parentbits) - 1;
+  cellint parentID = childID & mask;
+  return parentID;
+}
+
+/* ----------------------------------------------------------------------
+   calculate which ichild the childID of parentID is
+   plevel = grid level of parent, not child
+   return ichild = 1 to Nxyz
+   return a cellint in case Nxyz is huge, e.g. at level 1
+------------------------------------------------------------------------- */
+
+cellint Grid::id_ichild(cellint childID, cellint parentID, int plevel)
+{
+  int parentbits = plevels[plevel].nbits;
+  cellint ichild = childID >> parentbits;
+  return ichild;
+}
+
+/* ----------------------------------------------------------------------
+   compute lo/hi extent of a specific child cell within a parent cell
+   plevel = level of parent
+   plo/phi = parent cell corner points
+   ichild ranges from 1 to Nx*Ny*Nz within parent cell
+   return clo/chi corner points, caller must allocate them
+------------------------------------------------------------------------- */
+
+void Grid::id_child_lohi(int plevel, double *plo, double *phi,
+			 cellint ichild, double *clo, double *chi)
+{
+  int nx = plevels[plevel].nx;
+  int ny = plevels[plevel].ny;
+  int nz = plevels[plevel].nz;
+
+  ichild--;
+  int ix = ichild % nx;
+  int iy = (ichild/nx) % ny;
+  int iz = ichild / ((cellint) nx*ny);
+
+  clo[0] = plo[0] + ix*(phi[0]-plo[0])/nx;
+  clo[1] = plo[1] + iy*(phi[1]-plo[1])/ny;
+  clo[2] = plo[2] + iz*(phi[2]-plo[2])/nz;
+
+  chi[0] = plo[0] + (ix+1)*(phi[0]-plo[0])/nx;
+  chi[1] = plo[1] + (iy+1)*(phi[1]-plo[1])/ny;
+  chi[2] = plo[2] + (iz+1)*(phi[2]-plo[2])/nz;
+
+  if (ix == nx-1) chi[0] = phi[0];
+  if (iy == ny-1) chi[1] = phi[1];
+  if (iz == nz-1) chi[2] = phi[2];
+}
+
+/* ----------------------------------------------------------------------
+   compute lo/hi extent of cell ID at level
+   boxlo/boxhi = global simulation box (level 0)
+   return lo/hi corner points, caller must allocate them
+------------------------------------------------------------------------- */
+
+void Grid::id_lohi(cellint id, int level, double *boxlo, double *boxhi,
+		   double *lo, double *hi)
+{
+  int childbits;
+  cellint ichild,mask;
+  double plo[3],phi[3];
+
+  plo[0] = boxlo[0]; plo[1] = boxlo[1]; plo[2] = boxlo[2];
+  phi[0] = boxhi[0]; phi[1] = boxhi[1]; phi[2] = boxhi[2];
+  
+  for (int ilevel = 0; ilevel < level; ilevel++) {
+
+    // mask = all 1s for child bits at ilevel
+    
+    childbits = plevels[ilevel].newbits;
+    mask = (1L << childbits) - 1;
+    ichild = (id >> plevels[ilevel].nbits) & mask;
+
+    id_child_lohi(ilevel,plo,phi,ichild,lo,hi);
+
+    plo[0] = lo[0]; plo[1] = lo[1]; plo[2] = lo[2];
+    phi[0] = hi[0]; phi[1] = hi[1]; phi[2] = hi[2];
   }
 }
+
+/* ----------------------------------------------------------------------
+   calculate # of bits needed to store values from 1 to Nx*Ny*Nz
+------------------------------------------------------------------------- */
+
+int Grid::id_bits(int nx, int ny, int nz)
+{
+  bigint n = (bigint) nx*ny*nz;
+  bigint nstore = 1;
+  int nbits = 1;
+  while (nstore < n) {
+    nstore = 2*nstore + 1;
+    nbits++;
+  }
+  return nbits;
+}
+
 
 /* ----------------------------------------------------------------------
    find parent of a child or parent ID
@@ -64,7 +340,9 @@ int Grid::id_find_child(int iparent, double *x)
 
 int Grid::id_find_parent(cellint id, cellint &ichild)
 {
-  int nbits,newbits,index;
+  // TMP
+  /*
+  int level,nbits,newbits,index;
   cellint idparent,idnew,mask;
   ParentCell *p;
 
@@ -72,8 +350,9 @@ int Grid::id_find_parent(cellint id, cellint &ichild)
   while (1) {
     p = &pcells[iparent];
     idparent = p->id;
-    nbits = p->nbits;
-    newbits = p->newbits;
+    level = p->level;
+    nbits = level_nbits[level];
+    newbits = level_newbits[level];
 
     // ichild = the newbits above nbits in id
 
@@ -88,19 +367,28 @@ int Grid::id_find_parent(cellint id, cellint &ichild)
   }
 
   return iparent;
+  */
+  
+  return 0;
 }
 
 /* ----------------------------------------------------------------------
    convert cell ID from string to number and return it
    idstr = "0" is special case, return 0
    otherwise, walk hierarchy from root to child so can shift bits correctly
-   return -1 if error:
+   return 0 if error:
      parent cell does not exist
      field exceeds bit count of parent
 ------------------------------------------------------------------------- */
 
 cellint Grid::id_str2num(char *idstr)
 {
+  // TMP
+  /*
+  int iparent,level;
+  cellint ichild,nxyz;
+  ParentCell *p;
+  
   if (idstr[0] == '0') return 0;
 
   cellint id = 0;
@@ -109,15 +397,18 @@ cellint Grid::id_str2num(char *idstr)
 
   while (1) {
     if (hash->find(id) == hash->end()) return -1;
-    int iparent = (*hash)[id];
-    ParentCell *p = &pcells[iparent];
+    iparent = (*hash)[id];
+    p = &pcells[iparent];
     if (ptr) *ptr = '\0';
-    cellint ichild = ATOCELLINT(word);
-    if (ichild == 0 || ichild > ((cellint) p->nx*p->ny*p->nz)) {
+    ichild = ATOCELLINT(word);
+    level = p->level;
+    nxyz = (cellint) level_xyz[level][0] * 
+      level_xyz[level][0] * level_xyz[level][0];
+    if (ichild == 0 || ichild > nxyz) {
       if (ptr) *ptr = '-';
-      return -1;
+      return 0;
     }
-    id |= ichild << p->nbits;
+    id |= ichild << level_nbits[level];
     if (!ptr) break;
     *ptr = '-';
     word = ptr+1;
@@ -125,6 +416,9 @@ cellint Grid::id_str2num(char *idstr)
   }
 
   return id;
+  */
+
+  return 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -139,6 +433,9 @@ cellint Grid::id_str2num(char *idstr)
 
 void Grid::id_num2str(cellint id, char *str)
 {
+  // TMP
+  /*
+  int index,level;
   cellint mask,idlevel;
 
   cellint idparent = 0;
@@ -146,17 +443,19 @@ void Grid::id_num2str(cellint id, char *str)
   int offset = 0;
 
   while (1) {
-    mask = (1L << pcells[iparent].newbits) - 1;
+    level = pcells[iparent].level;
+    mask = (1L << level_newbits[level]) - 1;
     idlevel = id & mask;
     sprintf(&str[offset],"%d",idlevel);
     offset = strlen(str);
-    id = id >> pcells[iparent].newbits;
+    id = id >> level_newbits[level];
     if (!id) return;
     str[offset++] = '-';
-    idparent = idparent | (idlevel << pcells[iparent].nbits);
-    int index = (*hash)[idparent];
+    idparent = idparent | (idlevel << level_nbits[level]);
+    index = (*hash)[idparent];
     iparent = -index-1;
   }
+  */
 }
 
 /* ----------------------------------------------------------------------
@@ -189,121 +488,6 @@ void Grid::id_pc_split(char *idstr, char *parent, char *child)
 }
 
 /* ----------------------------------------------------------------------
-   compute lo/hi extent of a specific child cell within a parent cell
-   iparent = index of parent cell, has Nx by Ny by Nz children
-   ichild ranges from 1 to Nx*Ny*Nz
-------------------------------------------------------------------------- */
-
-void Grid::id_child_lohi(int iparent, cellint ichild, double *lo, double *hi)
-{
-  ParentCell *p = &pcells[iparent];
-  ichild--;
-
-  int nx = p->nx;
-  int ny = p->ny;
-  int nz = p->nz;
-
-  int ix = ichild % nx;
-  int iy = (ichild/nx) % ny;
-  int iz = ichild / ((bigint) nx*ny);
-
-  double *plo = p->lo;
-  double *phi = p->hi;
-
-  lo[0] = plo[0] + ix*(phi[0]-plo[0])/nx;
-  lo[1] = plo[1] + iy*(phi[1]-plo[1])/ny;
-  lo[2] = plo[2] + iz*(phi[2]-plo[2])/nz;
-
-  hi[0] = plo[0] + (ix+1)*(phi[0]-plo[0])/nx;
-  hi[1] = plo[1] + (iy+1)*(phi[1]-plo[1])/ny;
-  hi[2] = plo[2] + (iz+1)*(phi[2]-plo[2])/nz;
-
-  if (ix == nx-1) hi[0] = phi[0];
-  if (iy == ny-1) hi[1] = phi[1];
-  if (iz == nz-1) hi[2] = phi[2];
-}
-
-/* ----------------------------------------------------------------------
-   determine # of bits needed to store values from 1 to Nx*Ny*Nz
-------------------------------------------------------------------------- */
-
-int Grid::id_bits(int nx, int ny, int nz)
-{
-  bigint n = (bigint) nx*ny*nz;
-  bigint nstore = 1;
-  int nbits = 1;
-  while (nstore < n) {
-    nstore = 2*nstore + 1;
-    nbits++;
-  }
-  return nbits;
-}
-
-/* ----------------------------------------------------------------------
-   recurse to find smallest child or parent cell that contains pt x and 
-     fully covers face in dim of olo/ohi cell
-   only called with x that is inside simulation box
-   icell = parent cell index
-   return ID of child or parent cell
-------------------------------------------------------------------------- */
-
-cellint Grid::id_find_face(double *x, int icell, int dim, 
-                           double *olo, double *ohi)
-{
-  ParentCell *p = &pcells[icell];
-  double *lo = p->lo;
-  double *hi = p->hi;
-
-  // go down a level to find (ix,iy,iz) of new cell that contains pt x
-
-  int nx = p->nx;
-  int ny = p->ny;
-  int nz = p->nz;
-  int ix = static_cast<int> ((x[0]-lo[0]) * nx/(hi[0]-lo[0]));
-  int iy = static_cast<int> ((x[1]-lo[1]) * ny/(hi[1]-lo[1]));
-  int iz = static_cast<int> ((x[2]-lo[2]) * nz/(hi[2]-lo[2]));
-  if (ix == nx) ix--;
-  if (iy == ny) iy--;
-  if (iz == nz) iz--;
-
-  // calculate lo/hi of new cell
-  // exact same math as in id_child_lohi()
-
-  double newlo[3],newhi[3];
-
-  newlo[0] = lo[0] + ix*(hi[0]-lo[0])/nx;
-  newlo[1] = lo[1] + iy*(hi[1]-lo[1])/ny;
-  newlo[2] = lo[2] + iz*(hi[2]-lo[2])/nz;
-
-  newhi[0] = lo[0] + (ix+1)*(hi[0]-lo[0])/nx;
-  newhi[1] = lo[1] + (iy+1)*(hi[1]-lo[1])/ny;
-  newhi[2] = lo[2] + (iz+1)*(hi[2]-lo[2])/nz;
-
-  if (ix == nx-1) newhi[0] = hi[0];
-  if (iy == ny-1) newhi[1] = hi[1];
-  if (iz == nz-1) newhi[2] = hi[2];
-
-  // if new cell does not fully overlap olo/ohi face, return parent ID
-
-  if (dim != 0 && (newlo[0] > olo[0] || newhi[0] < ohi[0])) return p->id;
-  if (dim != 1 && (newlo[1] > olo[1] || newhi[1] < ohi[1])) return p->id;
-  if (dim != 2 && (newlo[2] > olo[2] || newhi[2] < ohi[2])) return p->id;
-
-  // id = ID of new cell
-  // if I don't store new ID, it's a child ID, return it
-  // if I do store new ID, determine if parent or child cell
-  // if child, return it
-  // if parent, recurse
-
-  cellint ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
-  cellint id = p->id | (ichild << p->nbits);
-  if (hash->find(id) == hash->end()) return id;
-  icell = (*hash)[id];
-  if (icell > 0) return id;
-  return id_find_face(x,-icell-1,dim,olo,ohi);
-}
-
-/* ----------------------------------------------------------------------
    return index of child cell that is in icorner of iparent cell
    recurse down thru grid hierarchy until find child cell
    hash contains all owned/ghost child cells and parent cells
@@ -312,17 +496,27 @@ cellint Grid::id_find_face(double *x, int icell, int dim,
 
 int Grid::id_child_from_parent_corner(int iparent, int icorner)
 {
+  // TMP
+  /*
   ParentCell *p = &pcells[iparent];
 
-  int ix = (icorner % 2) ? p->nx-1 : 0;
-  int iy = ((icorner/2) % 2) ? p->ny-1 : 0;
-  int iz = (icorner / 4) ? p->nz-1 : 0;
+  int level = p->level;
+  int nx = level_xyz[level][0];
+  int ny = level_xyz[level][1];
+  int nz = level_xyz[level][2];
+
+  int ix = (icorner % 2) ? nx-1 : 0;
+  int iy = ((icorner/2) % 2) ? ny-1 : 0;
+  int iz = (icorner / 4) ? nz-1 : 0;
   
-  cellint ichild = (cellint) iz*p->nx*p->ny + (cellint) iy*p->nx + ix + 1;
-  cellint idchild = p->id | (ichild << p->nbits);
+  cellint ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
+  cellint idchild = p->id | (ichild << level_nbits[level]);
 
   if (hash->find(idchild) == hash->end()) return -1;
   int index = (*hash)[idchild];
   if (index > 0) return index-1;
   return id_child_from_parent_corner(-index-1,icorner);
+  */
+
+  return 0;
 }

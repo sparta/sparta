@@ -108,6 +108,13 @@ void FixGridCheck::init()
 
 /* ---------------------------------------------------------------------- */
 
+void FixGridCheck::setup()
+{
+  end_of_step();
+}
+
+/* ---------------------------------------------------------------------- */
+
 void FixGridCheck::end_of_step()
 {
   if (update->ntimestep % nevery) return;

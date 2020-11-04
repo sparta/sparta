@@ -31,10 +31,46 @@ class CreateGrid : protected Pointers {
   void command(int, char **);
 
  private:
+  int me,nprocs;
   int dimension;
+  int nx,ny,nz;          // top level grid
+  int nlevels;           // # of grid levels
+  int pstyle;            // partitioning style
+  int px,py,pz;          // proc grid for pstyle = BLOCK
+  int order;             // xyz ordering for pstyle = CLUMP or STRIDE
+  int inside;            // ANY or ALL for grid level REGION criterion
+  
+  // grid level info
 
+  struct Level {
+    int setflag;                         // setflag = 1 if specified
+    int style;                           // NOSTYLE or SUBSET or REGION
+    int cx,cy,cz;                        // grid of child cells at this level
+    int ixlo,ixhi,iylo,iyhi,izlo,izhi;   // parent bounds for SUBSET style
+    class Region *region;                // region for REGION style
+  };
+
+  // stack of recursing cells
+  
+  struct Stack {
+    cellint id;               // ID of grid cell
+    int level;                // level of grid cell
+    double lo[3],hi[3];       // lo/hi bounds of grid cell
+  };
+
+  Level *levels;
+  Stack *stack;
+
+  // private methods
+  
+  void create_block();
+  void create_clump();
+  void create_stride();
+  void create_random();
+  void recurse_levels(int);
+  
   void bounds(char *, int, int &, int &);
-  int cell_in_region(double *, double *, class Region *, int);
+  int cell_in_region(double *, double *, class Region *);
   void procs2grid(int, int, int, int &, int &, int &);
 };
 

@@ -31,6 +31,7 @@ class FixGridCheck : public Fix {
   ~FixGridCheck();
   int setmask();
   void init();
+  void setup();
   void end_of_step();
   double compute_scalar();
 

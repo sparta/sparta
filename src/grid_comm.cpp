@@ -397,6 +397,7 @@ int Grid::unpack_one(char *buf,
 /* ----------------------------------------------------------------------
    pack single icell into buf with grid adaptation info
    memflag = 0/1 = no/yes to actually pack into buf, 0 = just length
+   flag all packed particles for deletion
    return length of packing in bytes
 ------------------------------------------------------------------------- */
 
@@ -407,28 +408,36 @@ int Grid::pack_one_adapt(char *inbuf, char *buf, int memflag)
   AdaptGrid::SendAdapt *s = (AdaptGrid::SendAdapt *) inbuf;
   char *ptr = buf;
 
+  int owner = s->owner;
+  int icell = s->icell;
+  int nsurf = s->nsurf;
+  int np = s->np;
+
   // pack SendAdapt data struct
 
   if (memflag) memcpy(ptr,s,sizeof(AdaptGrid::SendAdapt));
   ptr += sizeof(AdaptGrid::SendAdapt);
   ptr = ROUNDUP(ptr);
 
-  int icell = s->icell;
+  // if parent cell owner also owns the child cell being packed, then done
+  // otherwise pack surfs and particles for comm to another proc
 
+  if (owner == me) return ptr-buf;
+  
   // pack list of surf indices
 
-  if (s->nsurf) {
-    int nsurf = s->nsurf;
+  if (nsurf) {
     if (memflag) memcpy(ptr,cells[icell].csurfs,nsurf*sizeof(surfint));
     ptr += nsurf*sizeof(surfint);
     ptr = ROUNDUP(ptr);
   }
 
-  if (s->np == 0) return ptr-buf;
+  if (np == 0) return ptr-buf;
 
   if (memflag) {
 
     // pack particles for unsplit cell
+    // flag each particle for deletion
 
     Particle::OnePart *particles = particle->particles;
     int *next = particle->next;
@@ -442,10 +451,12 @@ int Grid::pack_one_adapt(char *inbuf, char *buf, int memflag)
           particle->pack_custom(ip,ptr);
           ptr += nbytes_custom;
         }
+	particles[ip].icell = -1;
         ip = next[ip];
       }
 
     // pack particles for all sub cells
+    // flag each particle for deletion
 
     } else {
       int isplit = cells[icell].isplit;
@@ -461,12 +472,13 @@ int Grid::pack_one_adapt(char *inbuf, char *buf, int memflag)
             particle->pack_custom(ip,ptr);
             ptr += nbytes_custom;
           }
+	  particles[ip].icell = -1;
           ip = next[ip];
         }
       }
     } 
 
-  } else ptr += s->np * nbytes_total;
+  } else ptr += np * nbytes_total;
 
   ptr = ROUNDUP(ptr);
   return ptr-buf;
@@ -566,7 +578,6 @@ int Grid::unpack_particles(char *buf, int icell, int sortflag)
   return ptr-buf;
 }
 
-
 /* ----------------------------------------------------------------------
    unpack Np particles from buf
    called from AdaptGrid for one cell's particles sent to another proc
@@ -608,6 +619,9 @@ void Grid::unpack_particles_adapt(int np, char *buf)
    operates on cells, cinfo, sinfo
    integer lists (csurfs,csplits,csubs) are re-created from scratch
      copy old info from kept cells into new data structs
+   also resets particle cells
+     particles MUST be sorted and uncompressed
+     when done, particles are still sorted in new compressed grid cells
 ------------------------------------------------------------------------- */
 
 void Grid::compress()

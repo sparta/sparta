@@ -391,6 +391,7 @@ template < int DIM, int SURF > void Update::move()
   double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
   double xnew[3],xhold[3],xc[3],vc[3],minxc[3],minvc[3];
   double *x,*v,*lo,*hi;
+  Grid::ParentCell *pcell;
   Surf::Tri *tri;
   Surf::Line *line;
   Particle::OnePart iorig;
@@ -424,6 +425,7 @@ template < int DIM, int SURF > void Update::move()
   // move/migrate iterations
 
   Grid::ChildCell *cells = grid->cells;
+  Grid::ParentCell *pcells = grid->pcells;
   Surf::Tri *tris = surf->tris;
   Surf::Line *lines = surf->lines;
   double dt = update->dt;
@@ -984,10 +986,11 @@ template < int DIM, int SURF > void Update::move()
 
         // nflag = type of neighbor cell: child, parent, unknown, boundary
         // if parent, use id_find_child to identify child cell
-        //   result of id_find_child could be unknown:
-        //     particle is hitting face of a ghost child cell which extends
-        //     beyond my ghost halo, cell on other side of face is a parent,
-        //     it's child which the particle is in is entirely beyond my halo
+        //   result can be -1 for unknown cell, occurs when:
+        //   (a) particle hits face of ghost child cell
+	//   (b) the ghost cell extends beyond ghost halo
+	//   (c) cell on other side of face is a parent
+        //   (d) its child, which the particle is in, is entirely beyond my halo
         // if new cell is child and surfs exist, check if a split cell
 
         nflag = grid->neigh_decode(nmask,outface);
@@ -1004,7 +1007,9 @@ template < int DIM, int SURF > void Update::move()
               icell = split2d(icell,x);
           }
         } else if (nflag == NPARENT) {
-          icell = grid->id_find_child(neigh[outface],x);
+	  pcell = &pcells[neigh[outface]];
+          icell = grid->id_find_child(pcell->id,cells[icell].level,
+				      pcell->lo,pcell->hi,x);
           if (icell >= 0) {
             if (DIM == 3 && SURF) {
               if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
@@ -1026,7 +1031,7 @@ template < int DIM, int SURF > void Update::move()
         // if jpart, add new particle to this iteration via pstop++
         // OUTFLOW: exit with particle flag = PDISCARD
         // PERIODIC: new cell via same logic as above for child/parent/unknown
-        // other = reflected particle stays in same grid cell
+        // OTHER: reflected particle stays in same grid cell
 
         else {
           ipart = &particles[i];
@@ -1071,7 +1076,9 @@ template < int DIM, int SURF > void Update::move()
                   icell = split2d(icell,x);
               }
             } else if (nflag == NPBPARENT) {
-              icell = grid->id_find_child(neigh[outface],x);
+	      pcell = &pcells[neigh[outface]];
+	      icell = grid->id_find_child(pcell->id,cells[icell].level,
+					  pcell->lo,pcell->hi,x);
               if (icell >= 0) {
                 if (DIM == 3 && SURF) {
                   if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)

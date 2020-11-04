@@ -2186,13 +2186,13 @@ void Cut3d::failed_cell()
 {
   printf("Cut3d failed on proc %d in cell ID: " CELLINT_FORMAT "\n",comm->me,id);
 
-  Surf::Tri *tris = surf->tris;
-  
+  /*  
   cellint ichild;
   int iparent = grid->id_find_parent(id,ichild);
   while (iparent >= 0) {
-    int nx = grid->pcells[iparent].nx;
-    int ny = grid->pcells[iparent].ny;
+    int nx = grid->level_xyz[grid->pcells[iparent].level][0];
+    int ny = grid->level_xyz[grid->pcells[iparent].level][1];
+    int nz = grid->level_xyz[grid->pcells[iparent].level][2];
     int ix = (ichild-1) % nx;
     int iy = ((ichild-1)/nx) % ny;
     int iz = (ichild-1) / (nx*ny);
@@ -2200,33 +2200,22 @@ void Cut3d::failed_cell()
            "child " CELLINT_FORMAT " %d %d %d\n",
            grid->pcells[iparent].id,
            grid->pcells[iparent].level,
-           grid->pcells[iparent].nx,
-           grid->pcells[iparent].ny,
-           grid->pcells[iparent].nz,
-           ichild,ix,iy,iz);
+           nx,ny,nz,ichild,ix,iy,iz);
     if (iparent == 0) break;
     iparent = grid->id_find_parent(grid->pcells[iparent].id,ichild);
   }
+  */
+  
+  Surf::Tri *tris = surf->tris;
 
   printf("  lo corner %g %g %g\n",lo[0],lo[1],lo[2]);
   printf("  hi corner %g %g %g\n",hi[0],hi[1],hi[2]);
   printf("  # of surfs = %d out of " BIGINT_FORMAT "\n",nsurf,surf->nsurf);
   printf("  surfs:");
-  for (int i = 0; i < nsurf; i++) printf(" " SURFINT_FORMAT " %g",tris[surfs[i]].id,tris[surfs[i]].p1[0]);
+  for (int i = 0; i < nsurf; i++)
+    printf(" " SURFINT_FORMAT " %g",tris[surfs[i]].id,tris[surfs[i]].p1[0]);
   //for (int i = 0; i < nsurf; i++) printf(" %d",surfs[i]+1);
   printf("\n");
-
-  /*
-  Surf::Tri *tris = surf->tris;
-  for (int i = 0; i < nsurf; i++) {
-    int itri = surfs[i];
-    printf("  surf %d: p1 %15.12g %15.12g %15.12g: p2 %15.12g %15.12g %15.12g: p3 %15.12g %15.12g %15.12g\n",
-           itri+1,
-           tris[itri].p1[0],tris[itri].p1[1],tris[itri].p1[2],
-           tris[itri].p2[0],tris[itri].p2[1],tris[itri].p2[2],
-           tris[itri].p3[0],tris[itri].p3[1],tris[itri].p3[2]);
-  }
-  */
 }
 
 /* ----------------------------------------------------------------------

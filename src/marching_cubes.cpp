@@ -480,7 +480,7 @@ void MarchingCubes::cleanup()
 {
   int i,j,k,m,icell,iface,nsurf,idim,nflag,inwardnorm;
   int ntri_other,othercell,otherface,otherproc,otherlocal,othernsurf;
-  cellint *oldcsurfs;
+  surfint *oldcsurfs;
   surfint *ptr,*csurfs_other;
   cellint cellID;
   double *lo,*hi;
