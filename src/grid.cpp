@@ -96,14 +96,16 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   nsublocal = nsubghost = 0;
   nparent = maxparent = 0;
   maxlevel = 0;
+  plevel_limit = MAXLEVEL;
   
   cells = NULL;
   cinfo = NULL;
   sinfo = NULL;
   pcells = NULL;
 
-  plevels = new ParentLevel[32];
-  
+  plevels = new ParentLevel[MAXLEVEL];
+  memset(plevels,0,MAXLEVEL*sizeof(ParentLevel));
+
   surfgrid_algorithm = PERAUTO;
   maxsurfpercell = MAXSURFPERCELL;
   maxsplitpercell = MAXSPLITPERCELL;
@@ -2148,6 +2150,8 @@ int Grid::size_restart()
   n = IROUNDUP(n);
   n += nlocal * sizeof(int);
   n = IROUNDUP(n);
+  n += nlocal * sizeof(int);
+  n = IROUNDUP(n);
   return n;
 }
 
@@ -2161,6 +2165,8 @@ int Grid::size_restart(int nlocal_restart)
   int n = 2*sizeof(int);
   n = IROUNDUP(n);
   n += nlocal_restart * sizeof(cellint);
+  n = IROUNDUP(n);
+  n += nlocal_restart * sizeof(int);
   n = IROUNDUP(n);
   n += nlocal_restart * sizeof(int);
   n = IROUNDUP(n);

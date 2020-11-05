@@ -255,6 +255,30 @@ cellint Grid::id_ichild(cellint childID, cellint parentID, int plevel)
 }
 
 /* ----------------------------------------------------------------------
+   return level the cell ID is at from 1 to Nlevels
+   calculate by recursing from root until id = 0
+   if id still not 0 at maxlevel, return -1
+------------------------------------------------------------------------- */
+
+int Grid::id_level(cellint id)
+{
+  int newbits;
+  cellint mask,ichild;
+  
+  int level = 0;
+  while (level < maxlevel) {
+    newbits = plevels[level].newbits;
+    mask = (1L << newbits) - 1;
+    ichild = id & mask;
+    id = id >> newbits;
+    if (!id) break;
+    level++;
+  }
+
+  return level+1;
+}
+
+/* ----------------------------------------------------------------------
    compute lo/hi extent of a specific child cell within a parent cell
    plevel = level of parent
    plo/phi = parent cell corner points

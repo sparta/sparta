@@ -36,6 +36,7 @@ class Grid : protected Pointers {
   int nsub;             // global count of split sub cells
 
   int maxlevel;         // max level of any child cell in grid, 0 = root
+  int plevel_limit;     // allocation bound of plevels
   
   int uniform;          // 1 if all child cells are at same level, else 0
   int unx,uny,unz;      // if uniform, effective global Nx,Ny,Nz of finest grid
@@ -275,15 +276,11 @@ class Grid : protected Pointers {
   cellint id_refine(cellint, int, int);
   cellint id_coarsen(cellint, int);
   cellint id_ichild(cellint, cellint, int);
-  
-  void id_num2str(cellint, char *);
-  void id_pc_split(char *, char *, char *);
-  
+  int id_level(cellint);
   void id_child_lohi(int, double *, double *, cellint, double *, double *);
   void id_lohi(cellint, int, double *, double *, double *, double *);
-  
   int id_bits(int, int, int);
-  cellint id_find_face(double *, int, int, double *, double *);
+  void id_num2str(cellint, char *);
 
   // extract/return neighbor flag for iface from per-cell nmask
   // inlined for efficiency

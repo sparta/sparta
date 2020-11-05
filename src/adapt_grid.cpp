@@ -57,7 +57,6 @@ enum{ONE,RUNNING};                      // also in FixAveGrid
 #define DELTA_SEND 1024
 #define DELTA_LIST 1014
 #define BIG 1.0e20
-#define MAXLEVEL 32
 
 /* ---------------------------------------------------------------------- */
 
@@ -168,7 +167,7 @@ void AdaptGrid::command(int narg, char **arg)
     grid->type_check();
   }
 
-  // write out new parent grid file
+  // write out new grid file
 
   if (file) write_file();
 
@@ -381,7 +380,7 @@ void AdaptGrid::process_args(int narg, char **arg)
 
   Grid::ParentLevel *plevels = grid->plevels;
   
-  if (maxlevel == 0) maxlevel = MAXLEVEL;
+  if (maxlevel == 0) maxlevel = grid->plevel_limit;
   int level = MIN(maxlevel,grid->maxlevel);
   int newbits = grid->id_bits(nx,ny,nz);
 
@@ -1669,7 +1668,7 @@ void AdaptGrid::cleanup()
 }
 
 /* ----------------------------------------------------------------------
-   write out new parent grid file via WriteGrid
+   write out new grid file via WriteGrid
 ------------------------------------------------------------------------- */
 
 void AdaptGrid::write_file()
@@ -1692,7 +1691,7 @@ void AdaptGrid::write_file()
 
   wg->command(narg,args);
 
-  // NOTE: could persist wg for fix adapt
+  // NOTE: could persist WriteGrid instance for fix adapt
 
   delete [] expandfile;
   delete [] args;

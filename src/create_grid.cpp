@@ -116,6 +116,8 @@ void CreateGrid::command(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal create_grid command");
       nlevels = atoi(arg[iarg+1]);
       if (nlevels < 2) error->all(FLERR,"Create_grid nlevels must be > 1");
+      if (nlevels > grid->plevel_limit)
+	error->all(FLERR,"Create_grid nlevels exceeds MAXLEVEL");
       stack = new Stack[nlevels];
       levels = new Level[nlevels];
       for (int i = 0; i < nlevels; i++) levels[i].setflag = 0;
@@ -194,6 +196,8 @@ void CreateGrid::command(int narg, char **arg)
     if (!levels[i].setflag) error->all(FLERR,"Create_grid level was not set");
     if (dimension == 2 && levels[i].cz != 1)
       error->all(FLERR,"Create_grid cz value must be 1 for a 2d simulation");
+    if (levels[i].cx < 1 || levels[i].cy < 1 || levels[i].cz < 1)
+      error->all(FLERR,"Read_grid cx,cy,cz cannot be < 1");
     if (levels[i].cx == 1 && levels[i].cy == 1 && levels[i].cz == 1)
       error->all(FLERR,"Create_grid cx,cy,cz cannot all be one");
   }
@@ -225,12 +229,12 @@ void CreateGrid::command(int narg, char **arg)
 
   int nbits = plevels[nlevels-1].nbits + plevels[nlevels-1].newbits;
   if (nbits > sizeof(cellint)*8) {
-    if (sizeof(cellint) == 4)
-      error->all(FLERR,"Hierarchical grid induces cell IDs that exceed 32 bits");
-    if (sizeof(cellint) == 8)
-      error->all(FLERR,"Hierarchical grid induces cell IDs that exceed 64 bits");
+    char str[128];
+    sprintf(str,"Hierarchical grid induces cell IDs that exceed %d bits",
+	    (int) sizeof(cellint)*8);
+    error->all(FLERR,str);
   }
-  
+
   // create grid with specified partitioning style
 
   MPI_Barrier(world);
@@ -247,45 +251,17 @@ void CreateGrid::command(int narg, char **arg)
   Grid::ChildCell *cells = grid->cells;
   int nglocal = grid->nlocal;
 
-  /*
-  for (int i = 0; i < nglocal; i++) {
-    printf("CELL me %d i %d ID %d lo %g %g %g hi %g %g %g\n",me,i,cells[i].id,
-	   cells[i].lo[0],cells[i].lo[1],cells[i].lo[2],
-	   cells[i].hi[0],cells[i].hi[1],cells[i].hi[2]);
-  }
-  */
-  
   // invoke grid methods to complete grid setup
   
   if (nprocs == 1 || pstyle == CLUMP || pstyle == BLOCK) grid->clumped = 1;
   else grid->clumped = 0;
 
-  //printf("NLOCAL me %d nlocal %d\n",me,grid->nlocal);
   grid->set_maxlevel();
-  //printf("MAXLEVEL me %d nlocal %d\n",me,grid->maxlevel);
   grid->setup_owned();
-  //printf("NCELL me %d ncell " BIGINT_FORMAT "\n",me,grid->ncell);
   grid->acquire_ghosts();
-  //printf("NGHOST me %d nghost %d\n",me,grid->nghost);
   grid->find_neighbors();
-  //printf("NPARENT me %d nghost %d\n",me,grid->nparent);
   grid->check_uniform();
-  //printf("UNIFORM me %d uniform %d\n",me,grid->uniform);
   comm->reset_neighbors();
-
-  /*
-  for (int i = 0; i < nglocal; i++) {
-    printf("CELL info: i %d ID %d level %d proc %d ilocal %d\n",
-	   i,cells[i].id,cells[i].level,cells[i].proc,cells[i].ilocal);
-    printf("  box: lo %g %g %g: hi %g %g %g\n",
-	   cells[i].lo[0],cells[i].lo[1],cells[i].lo[2],
-	   cells[i].hi[0],cells[i].hi[1],cells[i].hi[2]);
-    for (int j = 0; j < 6; j++) {
-      printf("  neigh: face %d neigh %d mask %d\n",
-	     j,cells[i].neigh[j],grid->neigh_decode(cells[i].nmask,j));
-    }
-  }
-  */
   
   MPI_Barrier(world);
   double time3 = MPI_Wtime();

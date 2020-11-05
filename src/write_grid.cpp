@@ -78,12 +78,12 @@ void WriteGrid::command(int narg, char **arg)
 
   if (comm->me == 0 && !silent) {
     if (screen) {
-      fprintf(screen,"  parent cells = %d\n",grid->nparent);
+      fprintf(screen,"  grid cells = " BIGINT_FORMAT "\n",grid->ncell);
       fprintf(screen,"  CPU time = %g secs\n",time_total);
     }
 
     if (logfile) {
-      fprintf(logfile,"  parent cells = %d\n",grid->nparent);
+      fprintf(logfile,"  grid cells = " BIGINT_FORMAT "\n",grid->ncell);
       fprintf(logfile,"  CPU time = %g secs\n",time_total);
     }
   }

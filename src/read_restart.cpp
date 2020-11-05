@@ -716,6 +716,7 @@ void ReadRestart::command(int narg, char **arg)
   // setup the grid
 
   if (grid->cellweightflag) grid->weight(-1,NULL);
+  grid->set_maxlevel();
   grid->setup_owned();
 
   // clumped decomposition is maintained (if original file had it)
@@ -1102,6 +1103,19 @@ void ReadRestart::grid_params()
     error->all(FLERR,"Invalid flag in grid section of restart file");
   read_int();
   grid->read_restart(fp);
+
+  // error check on too many bits for cell IDs
+  // could occur if restart file was written with 64-bit IDs and
+  //   read by code compiled for 32-bit IDs
+
+  int maxlevel = grid->maxlevel;
+  int nbits = grid->plevels[maxlevel-1].nbits + grid->plevels[maxlevel-1].newbits;
+  if (nbits > sizeof(cellint)*8) {
+    char str[128];
+    sprintf(str,"Hierarchical grid induces cell IDs that exceed %d bits",
+	    (int) sizeof(cellint)*8);
+    error->all(FLERR,str);
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1209,6 +1223,7 @@ void ReadRestart::create_child_cells(int skipflag)
   // deallocate memory in Grid
 
   memory->destroy(grid->id_restart);
+  memory->destroy(grid->level_restart);
   memory->destroy(grid->nsplit_restart);
 }
 
