@@ -674,7 +674,7 @@ void FixAblate::set_delta_random()
     rn2 = static_cast<int> (random->uniform()*maxrandom) + 1.0;
     cellID = i+1;
     if (hash->find(cellID) == hash->end()) continue;
-    icell = (*hash)[cellID] - 1;
+    icell = (*hash)[cellID];
     if (icell >= nglocal) continue;     // ghost cell
     if (rn1 > scale) celldelta[icell] = 0.0;
     else celldelta[icell] = rn2;
@@ -1177,7 +1177,7 @@ void FixAblate::comm_neigh_corners(int which)
   m = 0;
   for (i = 0; i < nrecv; i++) {
     cellID = static_cast<cellint> (rbuf[m++]);   // NOTE: need ubuf logic
-    ilocal = (*hash)[cellID] - 1;
+    ilocal = (*hash)[cellID];
     icell = ilocal - nglocal;
     for (j = 0; j < ncorner; j++)
       cdelta_ghost[icell][j] = rbuf[m++];

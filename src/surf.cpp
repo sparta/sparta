@@ -2549,7 +2549,7 @@ void Surf::compress_implicit_rebalance()
 
   if (domain->dimension == 2) {
     for (int i = 0; i < nlocal; i++) {
-      icell = (*ghash)[lines[i].id] - 1;
+      icell = (*ghash)[lines[i].id];
       if (cells[icell].proc != me) continue;
       if (i != n) {
         // compress my surf list
@@ -2568,7 +2568,7 @@ void Surf::compress_implicit_rebalance()
 
   } else {
     for (int i = 0; i < nlocal; i++) {
-      icell = (*ghash)[tris[i].id] - 1;
+      icell = (*ghash)[tris[i].id];
       if (cells[icell].proc != me) continue;
       if (i != n) {
         // compress my surf list
@@ -2977,7 +2977,7 @@ void Surf::collate_vector_implicit(int nrow, surfint *tally2surf,
   for (i = 0; i < nrow; i++) {
     if (hash.find(tally2cell[i]) == hash.end()) nsend++;
     else {
-      icell = hash[tally2cell[i]] - 1;
+      icell = hash[tally2cell[i]];
       out[icell] += in[i];
     }
   }
@@ -3051,7 +3051,7 @@ void Surf::collate_vector_implicit(int nrow, surfint *tally2surf,
   m = 0;
   for (i = 0; i < nout; i++) {
     cellID = out_rvous[m++];      // NOTE: should use ubuf
-    icell = hash[cellID] - 1;     // subtract one for child cell index
+    icell = hash[cellID];
     out[icell] += out_rvous[m++];
   }
 
@@ -3090,7 +3090,7 @@ void Surf::collate_array_implicit(int nrow, int ncol, surfint *tally2surf,
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
-    hash[cells[icell].id] = icell+1;
+    hash[cells[icell].id] = icell;
   }
 
   // for implicit surfs, tally2surf stores cellIDs
@@ -3104,7 +3104,7 @@ void Surf::collate_array_implicit(int nrow, int ncol, surfint *tally2surf,
   for (i = 0; i < nrow; i++) {
     if (hash.find(tally2cell[i]) == hash.end()) nsend++;
     else {
-      icell = hash[tally2cell[i]] - 1;
+      icell = hash[tally2cell[i]];
       for (j = 0; j < ncol; j++)
         out[icell][j] += in[i][j];
     }

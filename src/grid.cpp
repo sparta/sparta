@@ -769,12 +769,12 @@ int Grid::box_periodic(double *lo, double *hi, Box *box)
 }
 
 /* ----------------------------------------------------------------------
-   hash all my child (owned and ghost} and parent cells
+   hash all my child IDs, owned + ghost
 ------------------------------------------------------------------------- */
 
 void Grid::rehash()
 {
-  // hash all owned/ghost child and parent cell IDs
+  // hash all owned/ghost child cell IDs
   // key = ID, value = index for child cells
   // skip sub cells
 

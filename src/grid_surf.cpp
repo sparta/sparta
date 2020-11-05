@@ -377,7 +377,7 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
   }
 
   for (m = 0; m < nreturn; m++) {
-    icell = (*hash)[outbuf[m].cellID] - 1;
+    icell = (*hash)[outbuf[m].cellID];
     cells[icell].nsurf++;
   }
 
@@ -406,7 +406,7 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
 
   if (!distributed) {
     for (m = 0; m < nreturn; m++) {
-      icell = (*hash)[outbuf[m].cellID] - 1;
+      icell = (*hash)[outbuf[m].cellID];
       cells[icell].csurfs[cells[icell].nsurf++] = outbuf[m].surfID;
     }
 
@@ -545,7 +545,7 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
     // for performance, sort each cell's csurfs list, same order as cell alg
     
     for (m = 0; m < nreturn; m++) {
-      icell = (*hash)[outbuf[m].cellID] - 1;
+      icell = (*hash)[outbuf[m].cellID];
       isurf = shash[outbuf[m].surfID];
       cells[icell].csurfs[cells[icell].nsurf++] = isurf;
     }

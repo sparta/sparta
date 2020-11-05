@@ -132,8 +132,13 @@ void CreateGrid::command(int narg, char **arg)
       if (nlevels == 1) error->all(FLERR,"Illegal create_grid command");
       if (iarg+8 > narg) error->all(FLERR,"Illegal create_grid command");
       int nlo,nhi;
-      bounds(arg[iarg+1],nlevels,nlo,nhi);
-      nlo = MAX(nlo,2);
+      if (strchr(arg[iarg+1],'*')) {
+	bounds(arg[iarg+1],nlevels,nlo,nhi);
+	nlo = MAX(nlo,2);
+      } else {
+	nlo = nhi = atoi(arg[iarg+1]);
+	if (nlo < 2) error->all(FLERR,"Create grid subset level < 2");
+      }
       for (int i = nlo-1; i <= nhi-1; i++) {
 	if (levels[i].setflag)
 	  error->all(FLERR,"Create_grid subset is resetting a level");
@@ -152,11 +157,16 @@ void CreateGrid::command(int narg, char **arg)
       if (nlevels == 1) error->all(FLERR,"Illegal create_grid command");
       if (iarg+6 > narg) error->all(FLERR,"Illegal create_grid command");
       int nlo,nhi;
-      bounds(arg[iarg+1],nlevels,nlo,nhi);
-      nlo = MAX(nlo,2);
+      if (strchr(arg[iarg+1],'*')) {
+	bounds(arg[iarg+1],nlevels,nlo,nhi);
+	nlo = MAX(nlo,2);
+      } else {
+	nlo = nhi = atoi(arg[iarg+1]);
+	if (nlo < 2) error->all(FLERR,"Create grid region level < 2");
+      }
       for (int i = nlo-1; i <= nhi-1; i++) {
 	if (levels[i].setflag)
-	  error->all(FLERR,"Create_grid subset is resetting a level");
+	  error->all(FLERR,"Create_grid region is resetting a level");
 	levels[i].setflag = 1;
 	levels[i].style = REGION;
 	int iregion = domain->find_region(arg[iarg+2]);
