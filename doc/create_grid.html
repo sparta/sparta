@@ -19,21 +19,22 @@
 
 <LI>zero or more keywords/args pairs may be appended 
 
-<LI>keyword = <I>level</I> or <I>region</I> or <I>stride</I> or <I>clump</I> or <I>block</I> or <I>random</I> or <I>inside</I> 
+<LI>keyword = <I>block</I> or <I>clump</I> or <I>random</I> or <I>stride</I> or <I>levels</I> or <I>subset</I> or <I>region</I> or <I>inside</I> 
 
-<PRE>  <I>level</I> args = Nlevel Px Py Pz Cx Cy Cz 
-    Nlevel = level from 2 to M, must be in ascending order
-    Px Py Pz = range of parent cells in each dimension in which to create child cells
-    Cx Cy Cz = size of child grid in each dimension within parent cells
-  <I>region</I> args = Nlevel reg-ID Cx Cy Cz 
-    Nlevel = level from 2 to M, must be in ascending order
-    reg-ID = ID of region which parent cells must be in to create child cells
-    Cx Cy Cz = size of child grid in each dimension within parent cells
-  <I>stride</I> arg = <I>xyz</I> or <I>xzy</I> or <I>yxz</I> or <I>yzx</I> or <I>zxy</I> or <I>zyx</I>
+<PRE>  <I>block</I> args = Px Py Pz
+    Px,Py,Pz = # of processors in each dimension, any can be * (see below)
   <I>clump</I> arg = <I>xyz</I> or <I>xzy</I> or <I>yxz</I> or <I>yzx</I> or <I>zxy</I> or <I>zyx</I>
-  <I>block</I> args = Px Py Pz
-    Px,Py,Pz = # of processors in each dimension
   <I>random</I> args = none
+  <I>stride</I> arg = <I>xyz</I> or <I>xzy</I> or <I>yxz</I> or <I>yzx</I> or <I>zxy</I> or <I>zyx</I>
+  <I>levels</I> arg = Nlevels
+  <I>subset) args = Ilevel Px Py Pz Cx Cy Cz
+    Ilevel = which level(s) to define, see syntax below
+    Px Py Pz = extent of parent cells in each dimension in which to create child cells
+    Cx Cy Cz = size of child sub-grid in each dimension within parent cells
+  <I>region</I> args = Ilevel reg-ID Cx Cy Cz 
+    Ilevel = which level(s) to define, see syntax below
+    reg-ID = ID of region which parent cells must be in to create child cells
+    Cx Cy Cz = size of child sub-grid in each dimension within parent cells
   <I>inside</I> args = <I>any</I> or <I>all</I> 
 </PRE>
 
@@ -43,11 +44,11 @@
 <PRE>create_grid 10 10 10
 create_grid 10 10 10 block * * *
 create_grid 10 10 10 block 4 2 5
-create_grid 10 10 10 level 2 * * * 2 2 3
-create_grid 20 10 1 level 2 10*15 3*7 1 2 2 1
-create_grid 20 10 1 region 2 b2 2 2 1 region 3 b3 2 3 1 inside any
-create_grid 20 10 1 level 2 10*15 3*7 1 2 2 1 region 3 b3 2 3 1
-create_grid 8 8 10 level 2 5* * * 4 4 4 level 3 1 2*3 3* 2 2 1 
+create_grid 10 10 10 levels 4 level 2*4 * * * 2 2 3
+create_grid 20 10 1 levels 2 level 2 10*15 3*7 1 2 2 1
+create_grid 20 10 1 levels 3 region 2 b2 2 2 1 region 3 b3 2 3 1 inside any
+create_grid 20 10 1 levels 2 level 2 10*15 3*7 1 2 2 1 region 3 b3 2 3 1
+create_grid 8 8 10 levels 3 level 2 5* * * 4 4 4 level 3 1 2*3 3* 2 2 1 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -62,22 +63,19 @@ Nz cells at level 1.  Each of those cells can be a child cell (no
 further sub-division) or can be a parent cell which is further
 subdivided into Nx by Ny by Nz cells at level 2.  This can recurse to
 as many levels as desired.  Different cells can stop recursing at
-different levels.  Each parent cell can define its own unique Nx, Ny,
-Nz values for subdivision.  Note that a grid with a single level is
+different levels.  Each level can define its own unique Nx, Ny, Nz
+values for subdivision.  Note that a grid with a single level is
 simply a uniform grid with Nx by Ny by Nz cells in each dimension.
 </P>
-<P>In the current SPARTA implementation, all processors own a copy of all
-parent cells.  Each child cell is owned by a unique processor.  The
-details of how child cells are assigned to processors by the various
-options of this command are described below.  The cells assigned to
-each processor will either be "clumped" or "dispersed".
+<P>Each child grid cell is owned by a unique processor.  The details of
+how child cells are assigned to processors by the various options of
+this command are described below.  The cells assigned to each
+processor will either be "clumped" or "dispersed".
 </P>
-<P>The <I>clump</I> and <I>block</I> keywords will produce clumped assignments of
-child cells to each processor.  This means each processor's cells will
-be geometrically compact.  The <I>stride</I> and <I>random</I> keywords, as well
-as the round-robin assignment scheme for grids with multiple levels
-(described below), will produce dispersed assignments of child cells
-to each processor.
+<P>The <I>block</I> and <I>clump</I> keywords produce clumped assignments of child
+cells to each processor.  This means each processor's cells will be
+geometrically compact.  The <I>random</I> and <I>stride</I> keywords, produce
+dispersed assignments of child cells to each processor.
 </P>
 <P>IMPORTANT NOTE: See <A HREF = "Section_howto.html#howto_8">Section 6.8</A> of the
 manual for an explanation of clumped and dispersed grid cell
@@ -90,38 +88,14 @@ manner periodically during a running simulation.
 <HR>
 
 <P>A single-level grid is defined by specifying only the arguments <I>Nx</I>,
-<I>Ny</I>, <I>Nz</I>, with no additional <I>level</I> or <I>region</I> keywords.  This
-will create a uniform Nx by Ny by Nz grid of child cells.  For 2d
-simulations, <I>Nz</I> must equal 1.
+<I>Ny</I>, <I>Nz</I>, with no additional <I>levels</I> keyword.  This will create a
+uniform Nx by Ny by Nz grid of child cells.  For 2d simulations, <I>Nz</I>
+must equal 1.
 </P>
-<P>For single-level grids, one of the keywords <I>stride</I>, <I>clump</I>,
-<I>block</I>, or <I>random</I> can be used to determine which processors are
-assigned which cells in the grid.  The <I>inside</I> keyword is ignored for
-single-level grids.  If no keyword is used, the cells are assigned in
-round-robin fashion, so that each processor is assigned every Pth grid
-cell, where P = the number of processors.  This is the same as "stride
-xyz" in the discussion below.
-</P>
-<P>The <I>stride</I> keyword means that every Pth cell is assigned to the same
-processor, where P is the number of processors.  E.g. if there are 100
-cells and 10 processors, then the 1st processor (proc 0) will be
-assigned cells 1,11,21, ..., 91.  The 2nd processor (proc 1) will be
-assigned cells 2,12,22 ..., 92.  The 10th processor (proc 9) will be
-assigned cells 10,20,30, ..., 100.
-</P>
-<P>The <I>clump</I> keyword means that the Pth clump of cells is assigned to
-the same processor, where P is the number of processors.  E.g. if
-there are N = 100 cells and 10 processors, then the 1st processor
-(proc 0) will be assigned cells 1 to 10.  The 2nd processor (proc 1)
-will be assigned cells 11 to 20.  And The 10th processor (proc 9) will
-be assigned cells 91 to 100.
-</P>
-<P>The argument for <I>stride</I> and <I>clump</I> determines how the N grid cells
-are ordered and is some permutation of the letters <I>x</I>, <I>y</I>, and <I>z</I>.
-Each of the N cells has 3 indices (I,J,K) to describe its location in
-the 3d grid.  If the stride argument is yxz, then the cells will be
-ordered from 1 to N with the y dimension (J index) varying fastest,
-the x dimension next (I index), and the z dimension slowest (K index).
+<P>One of the keywords <I>block</I>, <I>clump</I>, <I>random</I>, or <I>strided</I> can be
+used to determine which processors are assigned which cells in the
+grid.  The <I>inside</I> keyword is ignored for single-level grids.  If no
+keyword is used, a setting of block 0 0 0 is the default.
 </P>
 <P>The <I>block</I> keyword maps the P processors to a <I>Px</I> by <I>Py</I> by <I>Pz</I>
 logical grid that overlays the actual <I>Nx</I> by <I>Ny</I> by <I>Nz</I> grid.  This
@@ -129,10 +103,10 @@ effectively assigns a contiguous 3d sub-block of cells to each
 processor.
 </P>
 <P>Any of the <I>Px</I>, <I>Py</I>, <I>Pz</I> parameters can be specified with an
-asterisk "*", in which case SPARTA will choose the number of processors
-in that dimension.  It will do this based on the size and shape of the
-global grid so as to minimize the surface-to-volume ratio of each
-processor's sub-block of cells.
+asterisk "*", in which case SPARTA will choose the number of
+processors in that dimension.  It will do this based on the size and
+shape of the global grid so as to minimize the surface-to-volume ratio
+of each processor's sub-block of cells.
 </P>
 <P>The product of Px, Py, Pz must equal P, the total # of processors
 SPARTA is running on.  For a 2d simulation, Pz must equal 1. If
@@ -149,38 +123,65 @@ randomly to one of the processors.  Note that in this case different
 processors will typically not be assigned exactly the same number of
 cells.
 </P>
+<P>The <I>clump</I> keyword means that the Pth clump of cells is assigned to
+the same processor, where P is the number of processors.  E.g. if
+there are N = 100 cells and 10 processors, then the 1st processor
+(proc 0) will be assigned cells 1 to 10.  The 2nd processor (proc 1)
+will be assigned cells 11 to 20.  And The 10th processor (proc 9) will
+be assigned cells 91 to 100.
+</P>
+<P>The <I>stride</I> keyword means that every Pth cell is assigned to the same
+processor, where P is the number of processors.  E.g. if there are 100
+cells and 10 processors, then the 1st processor (proc 0) will be
+assigned cells 1,11,21, ..., 91.  The 2nd processor (proc 1) will be
+assigned cells 2,12,22 ..., 92.  The 10th processor (proc 9) will be
+assigned cells 10,20,30, ..., 100.
+</P>
+<P>The argument for <I>stride</I> and <I>clump</I> determines how the N grid cells
+are ordered and is some permutation of the letters <I>x</I>, <I>y</I>, and <I>z</I>.
+Each of the N cells has 3 indices (I,J,K) to describe its location in
+the 3d grid.  If the stride argument is yxz, then the cells will be
+ordered from 1 to N with the y dimension (J index) varying fastest,
+the x dimension next (I index), and the z dimension slowest (K index).
+</P>
 <HR>
 
 <P>A hierarchical grid with more than one level can be defined using the
-<I>level</I> or <I>region</I> keywords one or more times with <I>Nlevel</I> in
-ascending order, starting with <I>Nlevel</I> = 2.  At each level the
-<I>level</I> or <I>region</I> keyword can be used interchangeably.  Child cells
-(at any level) are assigned to processors in round-robin fashion, so
-that each processor is assigned every Pth grid cell, where P = the
-number of processors.
+<I>levels</I> keyword.  The <I>Nlevels</I> argument is the number of levels
+which must be 2 or more.  The entire simulation box is level 0 in the
+hierarchy.  The settings for Nx,Ny,Nz specify the level 1 grid.  All
+other levels must be defined by using either the <I>subset</I> or <I>region</I>
+keyword in addition to the <I>levels</I> keyword.
 </P>
-<P>Note that the keywords <I>stride</I>, <I>clump</I>, <I>block</I>, or <I>random</I> cannot
-be used with a hierarchical grid.  The keyword <I>inside</I> can be used,
-but it must come after all the <I>level</I> or <I>region</I> keywords.
+<P>A <I>block</I>, <I>clump</I>, <I>random</I>, or <I>stride</I> keyword can be specified in
+addition to the <I>levels</I> keyword for a hierarchical grid.  As
+described above, they determine how level 1 grid cells are assigned to
+processors, as described above.  In the hierarchical case all grid
+cells of level 2 or higher that are within a single level 1 cells are
+assigned to the processor that owns the level 1 cell.
 </P>
-<P>For the <I>level</I> keyword, the Px, Py, Pz arguments specify which cells
+<P>The settings for every level, from 2 to Nlevels, must be specified
+exactly once via the <I>Ilevel</I> argument to either a <I>subset</I> or
+<I>region</I> keyword.  <I>Ilevel</I> can be specfied as a single number or use
+a wildcard asterisk in place of or in conjuction with one or two
+integers to specify multiple levels at the same time.  This takes the
+form “*” or “*n” or “n*” or “m*n”.  An asterisk with no numeric values
+means all levels from 2 to Nlevels.  A leading asterisk means all
+levels from 2 to n (inclusive). A trailing asterisk means all levels
+from n to Nlevels (inclusive). A middle asterisk means all levels from
+m to n (inclusive).
+</P>
+<P>For the <I>subset</I> keyword, the Px, Py, Pz arguments specify which cells
 in the previous level are flagged as parents and sub-divided to create
 cells at the new level.  For example, if the level 1 grid is
 100x100x100, then Px, Py, Pz for level 2 could select any contiguous
 range of cells from 1 to 100 in x, y, or z.  If the level 2 grid is
 4x4x2 within any level 1 cell (as set by Cx, Cy, Cz), then Px, Py, Pz
 for level 3 could select any contiguous range of cells from 1 to 4 in
-x, y and 1 to 2 in z.
-</P>
-<P>Each of the Px, Py, Pz arguments can be a single number or be
-specified with a wildcard asterisk, as in the examples above.  For
-example, Px can be specified as "*" or "*n" or "n*" or "m*n".  If N =
-the number of grid cells in the x-direction in the previous level as
-defined by Nx (or Cx), then an asterisk with no numeric values means
-all cells with indices from 1 to N.  A leading asterisk means all
-indices from 1 to n (inclusive).  A trailing asterisk means all
-indices from n to N (inclusive).  A middle asterisk means all indices
-from m to n (inclusive).
+x, y and 1 to 2 in z.  Each of the Px, Py, Pz arguments can be a
+single number or be specified with a wildcard asterisk, the same as
+described above for <I>Ilevel</I>, where the bounds of Px (for example) are
+1 to Cx in the preceeding parent level.
 </P>
 <P>The Cx, Cy, Cz arguments are the number of new cells (in each
 dimension) to partition each selected parent cell into.  For 2d
@@ -189,33 +190,28 @@ grid cells that exist in the previous level are partitioned further.
 E.g. level 3 cells are only added to level 2 cells that exist, since
 some level 1 cells may not have been partitioned into level 2 cells.
 </P>
-<P>This command creates a two-level grid:
+<P>For example this command creates a two-level grid:
 </P>
-<PRE>create_grid 10 10 10 level 2 * * * 2 2 3 
+<PRE>create_grid 10 10 10 levels 2 level 2 * * * 2 2 3 
 </PRE>
 <P>The 1st level is 10x10x10.  Each of the 1000 level 1 cells is further
-partitioned into 2x2x3 cells.  This means the total number of level 2
-cells is 1000 * 12 = 12000.  The resulting grid thus has 1001 parent
-cells (the simulation box plus the 1000 level 1 cells), and 12000
-child cells.
+partitioned into 2x2x3 cells.  This means the total number of
+resulting grid cells is 1000 * 12 = 12000.
 </P>
 <P>This command creates a 3-level grid:
 </P>
-<PRE>create_grid 8 8 10 level 2 5* * * 4 4 4 level 3 1 2*3 3* 2 2 1 
+<PRE>create_grid 8 8 10 levels 3 level 2 5* * * 4 4 4 level 3 1 2*3 3* 2 2 1 
 </PRE>
-<P>The last example above creates a 3-level grid.  The first level is
-8x8x10.  The second level is 4x4x4 within each 1st level cell, but
-only half or 320 of the 640 level 1 cells are partitioned, namely
-those with x indices from 5 to 8.  Those with x indices from 1 to 4
-remain as level 1 cells.  Some of the level 2 cells are further
-partitioned into 2x2x1 level 3 cells.  For the 4x4x4 level 2 grid
-within 320 or the level 1 cells, only the level 2 cells with x index =
-1, y index = 2-3, and z-index = 3-4 are further partitioned into level
-3 cells, which is just 4 of the 64 level 2 cells.
-</P>
-<P>The resulting grid thus has 1601 parent cells: 1 for the simulation
-box, 320 level 1 cells, and 1280 level 2 cells.  It has 24640 child
-cells: 320 level 1 cells, 19200 level 2 cells, and 5120 level 3 cells.
+<P>The first level is 8x8x10.  The second level is 4x4x4 within each
+level 1 cell, but only half or 320 of the 640 level 1 cells are
+sub-divided, namely those with x indices from 5 to 8.  Those with x
+indices from 1 to 4 remain as level 1 cells.  Some of the level 2
+cells are further partitioned into 2x2x1 level 3 cells.  For the 4x4x4
+level 2 grid within 320 or the level 1 cells, only the level 2 cells
+with x index = 1, y index = 2-3, and z-index = 3-4 are further
+partitioned into level 3 cells, which is just 4 of the 64 level 2
+cells.  The resulting grid thus has 24640 grid cells: 320 level 1
+cells, 19200 level 2 cells, and 5120 level 3 cells.
 </P>
 <P>For the <I>region</I> keyword, the subset of cells in the previous level
 which are flagged as parents and sub-divided is determined by which of
@@ -229,17 +225,17 @@ portion of the simulation domain can be refined to a new level.
 </P>
 <P>Each grid cell at the previous level is tested to see whether it is
 "in" the region.  The <I>inside</I> keyword determines how this is done.
-If <I>inside</I> is set to <I>any</I> which is the default, then the grid cell
-is in the region if any of its corner points (4 in 2d, 8 in 3d) is in
-the region.  If <I>inside</I> is set to <I>all</I>, then all 4 or 8 corner
-points must be in the region for the grid cell itself to be in the
-region.  Note that the <I>side</I> option for the <A HREF = "region.html">region</A>
-command can be used to define whether the inside or outside of the
-geometric region is considered to be "in" the region.
+If <I>inside</I> is set to <I>any</I>, which is the default, then a grid cell is
+in the region if any of its corner points (4 in 2d, 8 in 3d) is in the
+region.  If <I>inside</I> is set to <I>all</I>, then all 4 or 8 of its corner
+points must be in the region for a grid cell to be in the region.
+Note that the <I>side</I> option for the <A HREF = "region.html">region</A> command can
+be used to define whether the inside or outside of the geometric
+region is considered to be "in" the region.
 </P>
 <P>If the grid cell is in the region, then it is refined using the Cx,
-Cy, Cz arguments in the same manner that the <I>level</I> keyword uses
-them.  Examples for the use of the <I>region</I> keyword are given above.
+Cy, Cz arguments in the same way the <I>subset</I> keyword uses them.
+Examples using the <I>region</I> keyword are given above.
 </P>
 <HR>
 
@@ -248,21 +244,14 @@ them.  Examples for the use of the <I>region</I> keyword are given above.
 <P>This command can only be used after the simulation box is defined by
 the <A HREF = "create_box.html">create_box</A> command.
 </P>
-<P>The hierarchical grid used by SPARTA is encoded in a 32-bit or 64-bit
-integer ID.  The precision is set by the -DSPARTA_BIG or
--DSPARTA_SMALL or -DSPARTA_BIGBIG compiler switch, as described in
-<A HREF = "Section_start.html#start_2">Section 2.2</A>.  The number of grid levels
-that can be used depends on the resolution of the grid at each level.
-For a minimal refinement of 2x2x2, a level uses 4 bits of the integer
-ID.  Thus for this style of refinement a maximum of 7 levels can be
-used for 32-bit IDs and 15 levels for 64-bit IDs.
-</P>
 <P><B>Related commands:</B>
 </P>
 <P><A HREF = "create_box.html">create_box</A>, <A HREF = "read_grid.html">read_grid</A>
 </P>
 <P><B>Default:</B>
 </P>
-<P>The only keyword with a default setting is inside = any.
+<P>The default setting for block vs clump vs random vs stride is block
+with Px = Py = Pz = *.  The inside keyword has a default setting of
+any.
 </P>
 </HTML>

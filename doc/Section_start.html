@@ -18,9 +18,10 @@ experienced users.
 2.2 <A HREF = "#start_2">Making SPARTA</A><BR>
 2.3 <A HREF = "#start_3">Making SPARTA with optional packages</A><BR>
 2.4 <A HREF = "#start_4">Building SPARTA as a library</A><BR>
-2.5 <A HREF = "#start_5">Running SPARTA</A><BR>
-2.6 <A HREF = "#start_6">Command-line options</A><BR>
-2.7 <A HREF = "#start_7">Screen output</A> <BR>
+2.5 <A HREF = "#start_5">Testing SPARTA</A><BR>
+2.6 <A HREF = "#start_6">Running SPARTA</A><BR>
+2.7 <A HREF = "#start_7">Command-line options</A><BR>
+2.8 <A HREF = "#start_8">Screen output</A> <BR>
 
 <HR>
 
@@ -428,7 +429,7 @@ libsparta.a will be produced in build/src.
 <P># Clear the CMake files
 rm -rf CMake*
 </P>
-<PRE>cmake -C /path/to/sparta/cmake/presets/<NAME>.cmake -DSPARTA_MACHINE=tutorial /path/to/sparta/cmake
+<PRE>cmake -C /path/to/sparta/cmake/presets/NAME.cmake -DSPARTA_MACHINE=tutorial /path/to/sparta/cmake
 make 
 </PRE>
 <P><B>Step 3</B>
@@ -438,7 +439,7 @@ meaning, then modify one or more of those options by doing:
 </P>
 <PRE>cd build
 rm -rf CMake*
-cmake -C /path/to/sparta/cmake/presets/<NAME>.cmake -D<OPTION_NAME>=<VALUE> /path/to/sparta/cmake
+cmake -C /path/to/sparta/cmake/presets/NAME.cmake -D<OPTION_NAME>=<VALUE> /path/to/sparta/cmake
 make 
 </PRE>
 <P>where <OPTION_NAME> and <VALUE> correspond to valid option value pairs listed by
@@ -454,7 +455,7 @@ CMake options (with example values) for our purposes here are:
 <P>If your cmake command line is getting too long, consider placing it in a bash
 script and escaping newlines. For example:
 </P>
-<PRE>cmake -C  /path/to/sparta/cmake/presets/<NAME>.cmake -D  -D<OPTION_NAME>=<VALUE> /path/to/sparta/cmake 
+<PRE>cmake -C  /path/to/sparta/cmake/presets/NAME.cmake -D  -D<OPTION_NAME>=<VALUE> /path/to/sparta/cmake 
 </PRE>
 <P><B>Step 4</B>
 </P>
@@ -536,8 +537,8 @@ fft/grid</A> command for info about FFTs.  See STEP
 </P>
 <P>This step is optional. Once you get Steps 3 and 4 working by modifying the
 options to the cmake command, try setting the same options in
-/path/to/sparta/cmake/presets/<NEW>.cmake by copying 
-/path/to/sparta/cmake/presets/<NAME>.cmake and modifying the cmake
+/path/to/sparta/cmake/presets/NEW.cmake by copying 
+/path/to/sparta/cmake/presets/NAME.cmake and modifying the cmake
 source code. Note that the CMake cache is sticky and will only evict a 
 cached option value pair if you use -D or the FORCE argument to CMake's set
 routine.
@@ -546,10 +547,10 @@ routine.
 </P>
 <PRE>cd build
 rm -rf CMake*
-cmake -C /path/to/sparta/cmake/presets/<NEW>.cmake /path/to/sparta/cmake
+cmake -C /path/to/sparta/cmake/presets/NEW.cmake /path/to/sparta/cmake
 make 
 </PRE>
-<P>consider sharing and vetting <NEW>.cmake by opening a pull request at
+<P>consider sharing and vetting NEW.cmake by opening a pull request at
 https://github.com/sparta/sparta/.
 </P>
 <P><B>Step 6</B>
@@ -665,7 +666,7 @@ with optional packages, use:
 </PRE>
 <P><B>Step 10</B>
 </P>
-<P>Once you have a correct cmake command line or the <NAME>.cmake preset file, just
+<P>Once you have a correct cmake command line or the NAME.cmake preset file, just
 do:
 </P>
 <PRE>cd build
@@ -674,7 +675,7 @@ cmake <B>OPTIONS</B> /path/to/sparta/cmake
 <P>or:
 </P>
 <P>cd build
-cmake -C /path/to/sparta/cmake/presets/<NAME>.cmake -DSPARTA_MACHINE=tutorial /path/to/sparta/cmake
+cmake -C /path/to/sparta/cmake/presets/NAME.cmake -DSPARTA_MACHINE=tutorial /path/to/sparta/cmake
 </P>
 <PRE>make -j N 
 </PRE>
@@ -877,6 +878,9 @@ sub-directory.  Typing "make package-diff" lists all differences
 between these files.  Again, type "make package" to see all of the
 package-related make options.
 </P>
+<P>Typing "make package-installed" or "make pi" will show which packages are
+currently installed in the src directory.
+</P>
 <HR>
 
 <A NAME = "start_3_2_2"></A><B><I>Including/excluding packages with CMake:</I></B> 
@@ -1057,7 +1061,108 @@ interface and how to extend it for your needs.
 </P>
 <HR>
 
-<H4><A NAME = "start_5"></A>2.5 Running SPARTA 
+<H4><A NAME = "start_5"></A>2.5 Testing SPARTA 
+</H4>
+<P>SPARTA can be tested by using the CMake build system.
+</P>
+<P><B>Basic Testing</B>
+</P>
+<P>To enable basic testing, use the SPARTA_ENABLE_TESTING option when configuring
+sparta:
+</P>
+<P>cmake -C /path/to/sparta/cmake/presets/NAME.cmake   -DSPARTA_MACHINE=basic-test-tutorial   -DSPARTA_ENABLE_TESTING=ON   /path/to/sparta/cmake
+</P>
+<P>Setting SPARTA_ENABLE_TESTING to ON, adds tests in 
+/path/to/sparta/examples/**/in.* to be run via ctest. Each in.* file corresponds
+to an individual test. If BUILD_MPI is ON, tests will be configured to run with 
+both 1 and 4 mpi ranks. If the binaries are built, tests can be run via ctest:
+</P>
+<P>make
+ctest
+</P>
+<P>This will run all the tests in serial. To run the tests in parallel, use -j:
+</P>
+<P>ctest -j4
+</P>
+<P>This will run up to four single rank, single thread per rank mpi_1 tests in parallel
+or up to one 4 rank, single thread per rank mpi_4 tests. ctest has many options
+including regex filters for running tests that only match the specified regex.
+See ctest --help for more information.
+</P>
+<P><B>Adding and Removing tests</B>
+</P>
+<P>Add more tests by creating one or more input decks in 
+/path/to/sparta/examples/SUITE. Each in.* file in 
+/path/to/sparta/examples/SUITE corresponds to an individual test and
+will be picked up by the CMake build system if SPARTA_ENABLE_TESTING is ON.
+</P>
+<P>To disable tests, remove the in.* file or remove the in. prefix from
+the in.TEST file by renaming the file to DISABLED.in.TEST, for example.
+</P>
+<P><B>Advanced Testing</B>
+</P>
+<P>To enable advanced testing, use the SPARTA_DSMC_TESTING_PATH option when
+configuring sparta:
+</P>
+<P>cmake -C /path/to/sparta/cmake/presets/NAME.cmake   -DSPARTA_MACHINE=advanced-test-tutorial   -DSPARTA_DSMC_TESTING_PATH=/path/to/dsmc_testing   /path/to/sparta/cmake
+</P>
+<P>Setting SPARTA_DSMC_TESTING_PATH to a valid dsmc_testing path adds tests in
+SPARTA_DSMC_TESTING_PATH to be run by SPARTA_DSMC_TESTING_PATH/regression.py
+via ctest.
+</P>
+<P>After configuring, build the binaries and run the tests via ctest:
+</P>
+<P>make
+ctest
+</P>
+<P>This will run all tests found in SPARTA_DSMC_TESTING_PATH/examples by
+SPARTA_DSMC_TESTING_PATH/regression.py. If SPARTA_ENABLE_TESTING is ON,
+all tests found in /path/to/sparta/examples will configured to run by
+SPARTA_DSMC_TESTING_PATH/regression.py.
+</P>
+<P><B>SPARTA CMake Testing options</B>
+</P>
+<P>The following options allow the user more control over how the tests are run:
+</P>
+<P>SPARTA_SPA_ARGS can be specified to add additional arguments for the sparta 
+binaries being run by ctest. This option is only applied if
+SPARTA_ENABLE_TESTING or SPARTA_DSMC_TESTING_PATH are enabled.
+</P>
+<P>SPARTA_DSMC_TESTING_DRIVER_ARGS can be specified to add additional arguments to
+the SPARTA_DSMC_TESTING_PATH/regression.py script.
+</P>
+<P>The SPARTA_CTEST_CONFIGS option allows the user to run the same set of binaries
+with different arguments. SPARTA_CTEST_CONFIGS lets the user add additional ctest
+configurations, seperated by ';', that allow SPARTA_SPA_ARGS_CONFIG_NAME
+or SPARTA_DSMC_TESTING_DRIVER_ARGS_CONFIG_NAME to be specified. For example:
+</P>
+<P>cmake -C /path/to/sparta/cmake/presets/NAME.cmake   -DSPARTA_MACHINE=advanced-test-tutorial   -DSPARTA_DSMC_TESTING_PATH=/path/to/dsmc_testing   -DSPARTA_CTEST_CONFIGS="PARALLEL;SERIAL"   -DSPARTA_SPA_ARGS_SERIAL=spa_serial_args   -DSPARTA_SPA_ARGS_PARALLEL=spa_parallel_args   -DSPARTA_DSMC_TESTING_DRIVER_ARGS_PARALLEL=driver_parallel_args   -DSPARTA_DSMC_TESTING_DRIVER_ARGS_PARALLEL=driver_serial_args   /path/to/sparta/cmake
+</P>
+<P>To verify that the binaries are being run with the proper arguments:
+</P>
+<P>make
+ctest -C SERIAL -VV
+ctest -C PARALLEL -VV
+</P>
+<P>The SPARTA_MULTIBUILD_CONFIGS option allows the user to run different sets of
+binaries for the same input decks. SPARTA_MULTIBUILD_CONFIGS lets the user add
+additional build configurations, separated by ';', that will build sparta 
+with the cache file located in 
+`SPARTA_MULTIBUILD_PRESET_DIR/CONFIG_NAME.cmake`. For example:
+</P>
+<P>cmake -DSPARTA_MULTIBUILD_CONFIGS="test_mac;test_mac_mpi"       -DSPARTA_MULTIBUILD_PRESET_DIR=/path/to/sparta/cmake/presets/       /path/to/sparta/cmake
+</P>
+<P>This cmake command assumes that 
+/path/to/sparta/cmake/presets/<I>test_mac_mpi,test_mac</I>.cmake exist.
+</P>
+<P>To verify that the correct binaries are being run:
+</P>
+<P>make
+ctest -VV
+</P>
+<HR>
+
+<H4><A NAME = "start_6"></A>2.6 Running SPARTA 
 </H4>
 <P>By default, SPARTA runs by reading commands from standard input.  Thus
 if you run the SPARTA executable by itself, e.g.
@@ -1134,7 +1239,7 @@ more processors or setup a smaller problem.
 </P>
 <HR>
 
-<H4><A NAME = "start_6"></A>2.6 Command-line options 
+<H4><A NAME = "start_7"></A>2.7 Command-line options 
 </H4>
 <P>At run time, SPARTA recognizes several optional command-line switches
 which may be used in any order.  Either the full word or a one-or-two
@@ -1400,7 +1505,7 @@ negative numeric value. It is OK if the first value1 starts with a
 </P>
 <HR>
 
-<H4><A NAME = "start_7"></A>2.7 SPARTA screen output 
+<H4><A NAME = "start_8"></A>2.8 SPARTA screen output 
 </H4>
 <P>As SPARTA reads an input script, it prints information to both the
 screen and a log file about significant actions it takes to setup a
