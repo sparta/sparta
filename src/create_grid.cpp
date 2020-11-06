@@ -191,8 +191,10 @@ void CreateGrid::command(int narg, char **arg)
   // default pstyle = BLOCK
 
   if (pstyle == NOSTYLE) {
-    pstyle = BLOCK;
-    px = py = pz = 0;
+    //pstyle = BLOCK;
+    //px = py = pz = 0;
+    pstyle = STRIDE;
+    order = XYZ;
   }
     
   // check that grid levels are valid
