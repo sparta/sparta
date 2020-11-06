@@ -31,17 +31,18 @@
 #define CINFO_MASK     0x00000008
 #define PCELL_MASK     0x00000016
 #define SINFO_MASK     0x00000032
+#define PLEVEL_MASK    0x00000064
 
 // collide
 
-#define VREMAX_MASK   0x00000064
-#define REMAIN_MASK   0x00000128
+#define VREMAX_MASK   0x00000128
+#define REMAIN_MASK   0x00000256
 
 // surf
 
-#define PT_MASK      0x00000256
-#define LINE_MASK    0x00000512
-#define TRI_MASK     0x00001024
+#define PT_MASK      0x00000512
+#define LINE_MASK    0x00001024
+#define TRI_MASK     0x00002048
 
 
 #endif

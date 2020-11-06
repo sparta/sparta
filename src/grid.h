@@ -387,6 +387,7 @@ class Grid : protected Pointers {
   int box_periodic(double *, double *, Box *);
 
   virtual void grow_cells(int, int);
+  virtual void grow_pcells();
   virtual void grow_sinfo(int);
 
   void surf2grid_stats();

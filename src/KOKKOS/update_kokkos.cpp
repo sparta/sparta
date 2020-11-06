@@ -401,6 +401,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     GridKokkos* grid_kk = ((GridKokkos*)grid);
     d_cells = grid_kk->k_cells.d_view;
     d_sinfo = grid_kk->k_sinfo.d_view;
+    d_pcells = grid_kk->k_pcells.d_view;
 
     d_csurfs = grid_kk->d_csurfs;
     d_csplits = grid_kk->d_csplits;
@@ -1141,7 +1142,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           icell = split2d(icell,x);
       }
     } else if (nflag == NPARENT) {
-      icell = grid_kk_copy.obj.id_find_child(neigh[outface],x);
+      auto pcell = &d_pcells[neigh[outface]];
+      icell = grid_kk_copy.obj.id_find_child(pcell->id,d_cells[icell].level,
+                                             pcell->lo,pcell->hi,x);
       if (icell >= 0) {
         if (DIM == 3 && SURF) {
           if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
@@ -1163,7 +1166,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     // if jpart, add new particle to this iteration via pstop++
     // OUTFLOW: exit with particle flag = PDISCARD
     // PERIODIC: new cell via same logic as above for child/parent/unknown
-    // other = reflected particle stays in same grid cell
+    // OTHER = reflected particle stays in same grid cell
 
     else {
       ipart = &particle_i;
@@ -1252,7 +1255,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
               icell = split2d(icell,x);
           }
         } else if (nflag == NPBPARENT) {
-          icell = grid_kk_copy.obj.id_find_child(neigh[outface],x);
+          auto pcell = &d_pcells[neigh[outface]];
+          icell = grid_kk_copy.obj.id_find_child(pcell->id,d_cells[icell].level,
+                                                 pcell->lo,pcell->hi,x);
           if (icell >= 0) {
             if (DIM == 3 && SURF) {
               if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
