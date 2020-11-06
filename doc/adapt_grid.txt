@@ -258,9 +258,8 @@ value is the minimum or maximum of all the child values.
 
 The {cells} keyword determines how many new child cells are created
 when a single grid cell is refined.  Nx by Ny by Nz new child cells
-are created.  Nz must be 1 for 2d simulations.  In the future we plan
-to allow for variable refinement by allowing wild cards to be used for
-Nx, Ny, and Nz.
+are created.  {Nz} must be one for 2d.  Any of Nx, Ny, Nz may have a
+value of 1, but they cannot all be 1.
 
 The {region} keyword can be used to limit which grid cells are
 eligible for adapation.  It applies to both child cells for refinment

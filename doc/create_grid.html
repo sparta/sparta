@@ -184,11 +184,12 @@ described above for <I>Ilevel</I>, where the bounds of Px (for example) are
 1 to Cx in the preceeding parent level.
 </P>
 <P>The Cx, Cy, Cz arguments are the number of new cells (in each
-dimension) to partition each selected parent cell into.  For 2d
-simulations, <I>Cz</I> must equal 1.  Note that for each new level, only
-grid cells that exist in the previous level are partitioned further.
-E.g. level 3 cells are only added to level 2 cells that exist, since
-some level 1 cells may not have been partitioned into level 2 cells.
+dimension) to partition each selected parent cell into.  <I>Cz</I> must be
+one for 2d.  Any of Cx, Cy, Cz may have a value of 1, but they cannot
+all be 1.  Note that for each new level, only grid cells that exist in
+the previous level are partitioned further.  E.g. level 3 cells are
+only added to level 2 cells that exist, since some level 1 cells may
+not have been partitioned into level 2 cells.
 </P>
 <P>For example this command creates a two-level grid:
 </P>
