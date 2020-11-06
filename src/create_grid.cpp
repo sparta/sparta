@@ -209,7 +209,7 @@ void CreateGrid::command(int narg, char **arg)
     if (dimension == 2 && levels[i].cz != 1)
       error->all(FLERR,"Create_grid cz value must be 1 for a 2d simulation");
     if (levels[i].cx < 1 || levels[i].cy < 1 || levels[i].cz < 1)
-      error->all(FLERR,"Read_grid cx,cy,cz cannot be < 1");
+      error->all(FLERR,"Create_grid cx,cy,cz cannot be < 1");
     if (levels[i].cx == 1 && levels[i].cy == 1 && levels[i].cz == 1)
       error->all(FLERR,"Create_grid cx,cy,cz cannot all be one");
   }

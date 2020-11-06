@@ -341,7 +341,11 @@ void AdaptGrid::process_args(int narg, char **arg)
       if (nx < 1 || ny < 1 || nz < 1) 
         error->all(FLERR,"Illegal adapt command");
       if (domain->dimension == 2 && nz != 1)
-        error->all(FLERR,"Adapt cells nz must be 1 for 2d simulation");
+        error->all(FLERR,"Adapt cells nz must be 1 for a 2d simulation");
+      if (nx < 1 || ny < 1 || nz < 1)
+	error->all(FLERR,"Adapt cells nx,ny,nz cannot be < 1");
+      if (nx == 1 && ny == 1 && nz == 1)
+	error->all(FLERR,"Adapt cells nx,ny,nz cannot all be one");
       iarg += 4;
 
     } else if (strcmp(arg[iarg],"region") == 0) {

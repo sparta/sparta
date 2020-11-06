@@ -2963,7 +2963,7 @@ void Surf::collate_vector_implicit(int nrow, surfint *tally2surf,
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
-    hash[cells[icell].id] = icell+1;
+    hash[cells[icell].id] = icell;
   }
 
   // for implicit surfs, tally2surf stores cellIDs

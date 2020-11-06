@@ -733,8 +733,9 @@ void FixAblate::set_delta()
 
     if (argindex == 0) {
       double *fvec = f->vector_grid;
-      for (i = 0; i < nglocal; i++)
+      for (i = 0; i < nglocal; i++) {
         celldelta[i] = prefactor * fvec[i];
+      }
     } else {
       double **farray = f->array_grid;
       int im1 = argindex - 1;
