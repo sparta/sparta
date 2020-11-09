@@ -74,7 +74,7 @@ with each other, in the following manner.
 on its species, each particle is assigned to one of the M groups.
 Each unique pair of groups is considered, including each group paired
 with itself.  For each pair of groups a value <I>Nattempt</I> 
-(see equation 11.3 in <A HREF = "#Bird94">(Bird94)</A>) is calcualted  
+(see equation 11.3 in <A HREF = "#Bird94">(Bird94)</A>) is calculated  
 which is the number of collisions to attempt.  This is a function of
 N1 and N2 (the number of particles in each group), the grid cell
 volume, and other parameters of the collision style.
@@ -82,7 +82,7 @@ volume, and other parameters of the collision style.
 <P>For each collision attempt, a random pair of particles is selected,
 with one particle from each group.  Whether the collision occurs or
 not is a function of the relative velocities of the two particles,
-their respectives species, and other parameters of the collision
+their respective species, and other parameters of the collision
 style; see equation 11.4 in <A HREF = "#Bird94">(Bird94)</A>.
 </P>
 <P>NOTE: If you are using the ambipolar approximation with charged
@@ -147,7 +147,7 @@ The meaning of additional properties is as follows:
 <LI>tref = reference temperature (temperature units)
 <LI>alpha = angular scattering parameter (unitless) 
 </UL>
-<P>The methodolgy for deriving VSS/VHS parameters from these properties
+<P>The methodology for deriving VSS/VHS parameters from these properties
 is explained in Chapter 3 of <A HREF = "#Bird94">(Bird94)</A>.  Parameter values for
 the most common gases are given in Appendix A of the same book.  These
 values are based on the first-order approximation of the
@@ -183,6 +183,26 @@ follows:
 (per species) can be used when the <I>relax</I> keyword is specified as
 <I>constant</I>.  In that case, the extra parameters are simply ignored.
 </P>
+<P>For interspecies collisions, the collision parameters default to
+the average of the parameters for each involved species.  To override
+this default, lines specific to each interspecies pair can be added
+anywhere in the collision data file.  The format for these lines is as
+described above, with the addition of a second species name.  For
+example, with the <I>relax</I> keyword specified, an interspecies
+collision line would contain the following information for collisions
+between species-ID and species-ID1:
+</P>
+<PRE>species-ID species-ID1 diam omega tref alpha Zrotinf T* C1 C2 
+</PRE>
+<P>
+In an interspecies line, a specific parameter can be returned to the
+default behavior (an average) by making it negative.  For example, to
+override only <I>omega</I> for the above case, the line could appear as
+follows:
+</P>
+<PRE>species-ID species-ID1 -1 omega -1 -1 -1 -1 -1 -1 
+</PRE>
+
 <HR>
 
 <P>Styles with a <I>kk</I> suffix are functionally the same as the

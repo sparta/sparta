@@ -39,13 +39,12 @@ class CollideVSS : public Collide {
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *);
   virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&, 
                         Particle::OnePart *&);
-  double extract(int, const char *);
+  double extract(int, int, const char *);
 
   struct State {      // two-particle state
     double vr2;
     double vr;
     double imass,jmass;
-    double mr;
     double ave_rotdof;
     double ave_vibdof;
     double ave_dof;
@@ -70,6 +69,7 @@ class CollideVSS : public Collide {
     double rotc3;
     double vibc1;
     double vibc2;
+    double mr;
   };
 
  protected:
@@ -80,7 +80,7 @@ class CollideVSS : public Collide {
   struct State precoln;       // state before collision
   struct State postcoln;      // state after collision
 
-  Params *params;             // VSS params for each species
+  Params **params;             // VSS params for each species
   int nparams;                // # of per-species params read in
 
   void SCATTER_TwoBodyScattering(Particle::OnePart *, 
@@ -99,8 +99,7 @@ class CollideVSS : public Collide {
   double vibrel (int, double);  
 
   void read_param_file(char *);
-  int wordcount(char *);
-  void wordparse(int, char *, char **);
+  int wordparse(int, char *, char **);
 };
 
 }

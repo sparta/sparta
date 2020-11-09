@@ -264,13 +264,14 @@ void CollideVSSKokkos::init()
 
   // VSS specific
 
-  k_params = tdual_params_1d("collide_vss:params",nparams);
+  k_params = tdual_params_2d("collide_vss:params",nparams,nparams);
   k_prefactor = DAT::tdual_float_2d("collide_vss:prefactor",nparams,nparams);
 
   for (int i=0; i<nparams; i++) {
-    k_params.h_view[i] = params[i];
-    for (int j=0; j<nparams; j++)
+    for (int j=0; j<nparams; j++){
+      k_params.h_view(i,j) = params[i][j];
       k_prefactor.h_view(i,j) = prefactor[i][j];
+    }
   }
 
   k_params.modify_host();
@@ -767,10 +768,7 @@ int CollideVSSKokkos::test_collision_kokkos(int icell, int igroup, int jgroup,
   double dv  = vi[1] - vj[1];
   double dw  = vi[2] - vj[2];
   double vr2 = du*du + dv*dv + dw*dw;
-  double omega1 = d_params[ispecies].omega;
-  double omega2 = d_params[jspecies].omega;
-  double omega = 0.5 * (omega1+omega2);
-  double vro  = pow(vr2,1.0-omega);
+  double vro  = pow(vr2,1.0-d_params(ispecies,jspecies).omega);
 
   // although the vremax is calcualted for the group,
   // the individual collisions calculated species dependent vre
@@ -797,11 +795,10 @@ void CollideVSSKokkos::setup_collision_kokkos(Particle::OnePart *ip, Particle::O
   precoln.ave_vibdof = 0.5 * (d_species[isp].vibdof + d_species[jsp].vibdof);
   precoln.ave_dof = (precoln.ave_rotdof  + precoln.ave_vibdof)/2.;
 
-  double imass = precoln.imass = d_species[isp].mass;
-  double jmass = precoln.jmass = d_species[jsp].mass;
-  precoln.mr = imass * jmass / (imass+jmass);
+  precoln.imass = d_species[isp].mass;
+  precoln.jmass = d_species[jsp].mass;
 
-  precoln.etrans = 0.5 * precoln.mr * precoln.vr2;
+  precoln.etrans = 0.5 * d_params(isp,jsp).mr * precoln.vr2;
   precoln.erot = ip->erot + jp->erot;
   precoln.evib = ip->evib + jp->evib;
 
@@ -958,20 +955,18 @@ void CollideVSSKokkos::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
   double mass_i = d_species[isp].mass;
   double mass_j = d_species[jsp].mass;
 
-  double alpha_r = 2.0 / (d_params[isp].alpha + d_params[jsp].alpha);
-  double mr = d_species[isp].mass * d_species[jsp].mass /
-    (d_species[isp].mass + d_species[jsp].mass);
+  double alpha_r = 1.0 / d_params(isp,jsp).alpha;
 
   double eps = rand_gen.drand() * 2*MY_PI;
   if (fabs(alpha_r - 1.0) < 0.001) { 
-    double vr = sqrt(2.0 * postcoln.etrans / mr);
+    double vr = sqrt(2.0 * postcoln.etrans / d_params(isp,jsp).mr);
     double cosX = 2.0*rand_gen.drand() - 1.0;
     double sinX = sqrt(1.0 - cosX*cosX);
     ua = vr*cosX;
     vb = vr*sinX*cos(eps);
     wc = vr*sinX*sin(eps); 
   } else {
-    double scale = sqrt((2.0 * postcoln.etrans) / (mr * precoln.vr2));
+    double scale = sqrt((2.0 * postcoln.etrans) / (d_params(isp,jsp).mr * precoln.vr2));
     double cosX = 2.0*pow(rand_gen.drand(),alpha_r) - 1.0;
     double sinX = sqrt(1.0 - cosX*cosX);
     vrc[0] = vi[0]-vj[0];
@@ -1030,9 +1025,6 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   } else {
     E_Dispose = precoln.etrans;
 
-    const double aveomega = 0.5*(d_params[ip->ispecies].omega + 
-                                 d_params[jp->ispecies].omega);
-
     for (i = 0; i < 2; i++) {
       if (i == 0) p = ip; 
       else p = jp;
@@ -1050,14 +1042,15 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
           } else if (rotstyle != NONE && rotdof == 2) {
             E_Dispose += p->erot;
             Fraction_Rot = 
-              1- pow(rand_gen.drand(),(1/(2.5-aveomega)));
+              1- pow(rand_gen.drand(),
+		     (1/(2.5-d_params(ip->ispecies,jp->ispecies).omega)));
             p->erot = Fraction_Rot * E_Dispose;
             E_Dispose -= p->erot;
           } else {
             E_Dispose += p->erot;
             p->erot = E_Dispose * 
               sample_bl(rand_gen,0.5*d_species[sp].rotdof-1.0,
-                        1.5-aveomega);
+                        1.5-d_params(ip->ispecies,jp->ispecies).omega);
             E_Dispose -= p->erot;
           }
         }
@@ -1082,14 +1075,15 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
                 (rand_gen.drand()*(max_level+AdjustFactor));
               p->evib = ivib * boltz * d_species[sp].vibtemp[0];
               State_prob = pow((1.0 - p->evib / E_Dispose),
-                             (1.5 - aveomega));
+			       (1.5 - d_params(ip->ispecies,jp->ispecies).omega));
             } while (State_prob < rand_gen.drand());
             E_Dispose -= p->evib;
 
           } else if (vibdof == 2 && vibstyle == SMOOTH) {
             E_Dispose += p->evib;
             Fraction_Vib = 
-              1.0 - pow(rand_gen.drand(),(1.0/(2.5-aveomega)));
+              1.0 - pow(rand_gen.drand(),
+			(1.0/(2.5-d_params(ip->ispecies,jp->ispecies).omega)));
             p->evib= Fraction_Vib * E_Dispose;
             E_Dispose -= p->evib;
 
@@ -1097,7 +1091,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
             E_Dispose += p->evib;
             p->evib = E_Dispose * 
               sample_bl(rand_gen,0.5*d_species[sp].vibdof-1.0,
-                        1.5-aveomega);
+                        1.5-d_params(ip->ispecies,jp->ispecies).omega);
             E_Dispose -= p->evib;
           }
 
@@ -1135,7 +1129,7 @@ void CollideVSSKokkos::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
   double *vj = jp->v;
   double *vk = kp->v;
 
-  double alpha_r = 2.0 / (d_params[isp].alpha + d_params[jsp].alpha);
+  double alpha_r = 1.0 / d_params(isp,jsp).alpha;
   double mr = mass_ij * mass_k / (mass_ij + mass_k);
   postcoln.eint = ip->erot + jp->erot + ip->evib + jp->evib 
                 + kp->erot + kp->evib;
@@ -1203,7 +1197,7 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     ip->evib = 0.0;
     jp->evib = 0.0;
     numspecies = 2;
-    aveomega = 0.5*(d_params[ip->ispecies].omega + d_params[jp->ispecies].omega);
+    aveomega = d_params(ip->ispecies,jp->ispecies).omega;
   } else {
     ip->erot = 0.0;
     jp->erot = 0.0;
@@ -1212,8 +1206,8 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     jp->evib = 0.0;
     kp->evib = 0.0;
     numspecies = 3;
-    aveomega = (d_params[ip->ispecies].omega + d_params[jp->ispecies].omega +
-                d_params[kp->ispecies].omega)/3.0;
+    aveomega = (d_params(ip->ispecies,ip->ispecies).omega + d_params(jp->ispecies,jp->ispecies).omega +
+                d_params(kp->ispecies,kp->ispecies).omega)/3.0;
   }
 
   // handle each kind of energy disposal for non-reacting reactants
@@ -1316,9 +1310,9 @@ double CollideVSSKokkos::sample_bl(rand_type &rand_gen, double Exp_1, double Exp
 KOKKOS_INLINE_FUNCTION
 double CollideVSSKokkos::rotrel(int isp, double Ec) const
 {
-  double Tr = Ec /(boltz * (2.5-d_params[isp].omega));
-  double rotphi = (1.0+d_params[isp].rotc2/sqrt(Tr) + d_params[isp].rotc3/Tr)
-                / d_params[isp].rotc1; 
+  double Tr = Ec /(boltz * (2.5-d_params(isp,isp).omega));
+  double rotphi = (1.0+d_params(isp,isp).rotc2/sqrt(Tr) + d_params(isp,isp).rotc3/Tr)
+                / d_params(isp,isp).rotc1; 
   return rotphi;
 }
 
@@ -1329,10 +1323,10 @@ double CollideVSSKokkos::rotrel(int isp, double Ec) const
 KOKKOS_INLINE_FUNCTION
 double CollideVSSKokkos::vibrel(int isp, double Ec) const
 {
-  double Tr = Ec /(boltz * (3.5-d_params[isp].omega));
-  double omega = d_params[isp].omega;
-  double vibphi = 1.0 / (d_params[isp].vibc1/pow(Tr,omega) * 
-                         exp(d_params[isp].vibc2/pow(Tr,1.0/3.0)));
+  double Tr = Ec /(boltz * (3.5-d_params(isp,isp).omega));
+  double omega = d_params(isp,isp).omega;
+  double vibphi = 1.0 / (d_params(isp,isp).vibc1/pow(Tr,omega) * 
+                         exp(d_params(isp,isp).vibc2/pow(Tr,1.0/3.0)));
   return vibphi;
 }
 
