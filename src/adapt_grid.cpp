@@ -1388,9 +1388,6 @@ void AdaptGrid::particle_surf_comm()
 
   char *ptr = spbuf;
 
-  // DEBUG
-  //if (update->ntimestep == 100 && me == 2) {
-    
   for (int i = 0; i < nrecv; i++) {
     s = (SendAdapt *) ptr;
     parentID = s->parentID;

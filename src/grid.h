@@ -93,22 +93,21 @@ class Grid : protected Pointers {
     int ilocal;               // index of this cell on owning proc
                               // must be correct for all ghost cells
 
-    cellint neigh[6];         // info on 6 neighbor cells in cells/pcells
-                              //   that fully overlap face
+    cellint neigh[6];         // info on 6 neighbor cells that fully overlap faces
                               // order = XLO,XHI,YLO,YHI,ZLO,ZHI
-                              // nmask stores flags for what the values represent
-                              // for 0,3: index of child cell I store (own or ghost)
-                              // for 1,4: parentID
-                              // for 2,5: neigh is unknown so value is ignored
+                              // nmask has flags for what the values represent
+                              // for nmask 0,3: index into cells (own or ghost)
+                              // for nmask 1,4: index into pcells
+                              // for nmask 2,5: neigh is unknown, value ignored
                               // if unknown or non-PBC boundary or 2d ZLO/ZHI, ignored
-                              // must be cellint, b/c stores cell IDs
-    
+                              // must be cellint, b/c sometimes stores cell IDs
+
     int nmask;                // 3 bits for each of 6 values in neigh
                               // 0 = index of child neighbor I own
-                              // 1 = ID of parent neighbor
+                              // 1 = index of parent neighbor in pcells
                               // 2 = unknown child neighbor
-                              // 3 = PBC child neighbor
-                              // 4 = ID of PBC parent neighbor
+                              // 3 = index of PBC child neighbor I own
+                              // 4 = index of PBC parent neighbor in pcells
                               // 5 = unknown PBC child neighbor
                               // 6 = non-PBC boundary or ZLO/ZHI in 2d
 
