@@ -115,7 +115,7 @@ class GridKokkos : public Grid {
       childID = (ichild << plevels[level].nbits) | id;
 
       size_type h_index = hash_kk.find(static_cast<key_type>(childID));
-      if (hash_kk.valid_at(h_index)) return h_index;
+      if (hash_kk.valid_at(h_index)) return static_cast<int>(hash_kk.value_at(h_index));
 
       id = childID;
       id_child_lohi(level,lo,hi,ichild,clo,chi);
