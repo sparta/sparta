@@ -112,6 +112,7 @@ class UpdateKokkos : public Update {
 
   t_cell_1d d_cells;
   t_sinfo_1d d_sinfo;
+  t_pcell_1d d_pcells;
 
   Kokkos::Crs<int, DeviceType, void, int> d_csurfs;
   Kokkos::Crs<int, DeviceType, void, int> d_csplits;

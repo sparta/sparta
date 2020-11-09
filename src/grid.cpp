@@ -883,11 +883,7 @@ void Grid::find_neighbors()
 	  if (!boundary) nmask = neigh_encode(NPARENT,nmask,iface);
 	  else nmask = neigh_encode(NPBPARENT,nmask,iface);
 	  
-	  if (nparent == maxparent) {
-	    maxparent += DELTAPARENT;
-	    pcells = (ParentCell *)
-	      memory->srealloc(pcells,maxparent*sizeof(ParentCell),"grid:pcells");
-	  }
+	  if (nparent == maxparent) grow_pcells();
 	  pcells[nparent].id = neighID;
 	  id_lohi(neighID,level,boxlo,boxhi,pcells[nparent].lo,pcells[nparent].hi);
 	  nparent++;
@@ -1023,11 +1019,7 @@ void Grid::reset_neighbors()
         } else neigh[i] = (*hash)[neigh[i]]; 
 
       } else if (nflag == NPARENT || nflag == NPBPARENT) {
-	if (nparent == maxparent) {
-	  maxparent += DELTAPARENT;
-	  pcells = (ParentCell *)
-	    memory->srealloc(pcells,maxparent*sizeof(ParentCell),"grid:pcells");
-	}
+	if (nparent == maxparent) grow_pcells();
 	pcells[nparent].id = neigh[i];
 	id_lohi(neigh[i],level,boxlo,boxhi,pcells[nparent].lo,pcells[nparent].hi);
         neigh[i] = nparent;
@@ -1694,6 +1686,18 @@ void Grid::grow_cells(int n, int m)
       memory->srealloc(cinfo,maxlocal*sizeof(ChildInfo),"grid:cinfo");
     memset(&cinfo[oldmax],0,(maxlocal-oldmax)*sizeof(ChildInfo));
   }
+}
+
+/* ----------------------------------------------------------------------
+   grow pcells
+   NOTE: need this function for Kokkos
+------------------------------------------------------------------------- */
+
+void Grid::grow_pcells()
+{
+  maxparent += DELTAPARENT;
+  pcells = (ParentCell *)
+     memory->srealloc(pcells,maxparent*sizeof(ParentCell),"grid:pcells");
 }
 
 /* ----------------------------------------------------------------------
