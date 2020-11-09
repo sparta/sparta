@@ -50,7 +50,7 @@ class Collide : protected Pointers {
   virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&, 
                                 Particle::OnePart *&) = 0;
 
-  virtual double extract(int, const char *) {return 0.0;}
+  virtual double extract(int, int, const char *) {return 0.0;}
 
   virtual int pack_grid_one(int, char *, int);
   virtual int unpack_grid_one(int, char *);

@@ -316,12 +316,12 @@ FixAveTime::FixAveTime(SPARTA *sparta, int narg, char **arg) :
 
 FixAveTime::~FixAveTime()
 {
-  memory->destroy(which);
-  memory->destroy(argindex);
-  memory->destroy(value2index);
-  memory->destroy(offcol);
+  delete [] which;
+  delete [] argindex;
+  delete [] value2index;
+  delete [] offcol;
   for (int i = 0; i < nvalues; i++) delete [] ids[i];
-  memory->sfree(ids);
+  delete [] ids;
 
   if (fp && me == 0) fclose(fp);
 
