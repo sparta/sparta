@@ -841,7 +841,7 @@ void ComputeFFTGrid::irregular_create()
   memory->create(map2,nglocal,"fft/grid:map1");
   for (i = 0; i < nglocal; i++) {
     gid = idrecv[i];
-    map2[i] = (*hash)[gid] - 1;
+    map2[i] = (*hash)[gid];
   }
 
   // clean up
