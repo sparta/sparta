@@ -415,7 +415,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     }
 
     particle_kk->sync(Device,PARTICLE_MASK);
-    grid_kk->sync(Device,CELL_MASK|SINFO_MASK);
+    grid_kk->sync(Device,CELL_MASK|PCELL_MASK|SINFO_MASK|PLEVEL_MASK);
 
     // may be able to move this outside of the while loop
     grid_kk_copy.copy(grid_kk);
@@ -1122,10 +1122,11 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
     // nflag = type of neighbor cell: child, parent, unknown, boundary
     // if parent, use id_find_child to identify child cell
-    //   result of id_find_child could be unknown:
-    //     particle is hitting face of a ghost child cell which extends
-    //     beyond my ghost halo, cell on other side of face is a parent,
-    //     it's child which the particle is in is entirely beyond my halo
+        //   result can be -1 for unknown cell, occurs when:
+        //   (a) particle hits face of ghost child cell
+        //   (b) the ghost cell extends beyond ghost halo
+ 	//   (c) cell on other side of face is a parent
+        //   (d) its child, which the particle is in, is entirely beyond my halo
     // if new cell is child and surfs exist, check if a split cell
 
     nflag = grid_kk_copy.obj.neigh_decode(nmask,outface);

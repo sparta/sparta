@@ -112,10 +112,10 @@ class GridKokkos : public Grid {
       if (iz == nz) iz--;
 
       ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
-      childID = (ichild << plevels[level].nbits) | id;
+      childID = (ichild << k_plevels.d_view[level].nbits) | id;
 
       size_type h_index = hash_kk.find(static_cast<key_type>(childID));
-      if (hash_kk.valid_at(h_index)) return h_index;
+      if (hash_kk.valid_at(h_index)) return static_cast<int>(hash_kk.value_at(h_index));
 
       id = childID;
       id_child_lohi(level,lo,hi,ichild,clo,chi);
