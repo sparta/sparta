@@ -818,11 +818,12 @@ void Grid::find_neighbors()
   nparent = 0;
   
   // set neigh flags and nmask for each owned and ghost child cell
-  // sub cells have same lo/hi as split cell, so their neigh info is the same
+  // skip sub cells, loop below copies their info from original split cell
 
   int nunknown = 0;
   
   for (icell = 0; icell < nlocal+nghost; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
     
     id = cells[icell].id;
     level = cells[icell].level;
@@ -927,6 +928,18 @@ void Grid::find_neighbors()
     
     cells[icell].nmask = nmask;
     if (unknownflag) nunknown++;
+  }
+
+  // for sub cells, copy neighbor info from original split cell
+
+  int m,splitcell;
+  
+  for (icell = 0; icell < nlocal+nghost; icell++) {
+    if (cells[icell].nsplit >= 1) continue;
+    splitcell = sinfo[cells[icell].isplit].icell;
+    for (m = 0; m < 6; m++)
+      cells[icell].neigh[m] = cells[splitcell].neigh[m];
+    cells[icell].nmask = cells[splitcell].nmask;
   }
 
   // error if any UNKNOWN neighbors for an owned cell

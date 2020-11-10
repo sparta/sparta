@@ -55,10 +55,10 @@ enum{PERAUTO,PERCELL,PERSURF};                  // several files
 // either set ID or PROC/INDEX, set other to -1
 
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID 181257002  // particle ID
+#define MOVE_DEBUG_ID 308143534  // particle ID
 #define MOVE_DEBUG_PROC -1        // owning proc
 #define MOVE_DEBUG_INDEX -1   // particle index on owning proc
-#define MOVE_DEBUG_STEP 1    // timestep
+#define MOVE_DEBUG_STEP 4107    // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -341,6 +341,8 @@ template < int DIM, int SURF > void Update::move()
   double dt = update->dt;
   int notfirst = 0;
 
+  // DEBUG
+
   while (1) {
 
     // loop over particles
@@ -580,7 +582,16 @@ template < int DIM, int SURF > void Update::move()
 
         if (SURF) {
 
+	  // skip surf checks if particle flagged as EXITing this cell
+	  // then unset pflag so not checked again for this particle
+
           nsurf = cells[icell].nsurf;
+	  if (pflag == PEXIT) {
+	    nsurf = 0;
+	    pflag = 0;
+	  }
+	  nscheck_one += nsurf;
+
           if (nsurf) {
 
             // particle crosses cell face, reset xnew exactly on face of cell
@@ -622,8 +633,10 @@ template < int DIM, int SURF > void Update::move()
             cflag = 0;
             minparam = 2.0;
             csurfs = cells[icell].csurfs;
+	    
             for (m = 0; m < nsurf; m++) {
               isurf = csurfs[m];
+	      
               if (DIM > 1) {
                 if (isurf == exclude) continue;
               }
@@ -725,8 +738,8 @@ template < int DIM, int SURF > void Update::move()
 
             } // END of for loop over surfs
 
-            nscheck_one += nsurf;
-            
+	    // tri/line = surf that particle hit first
+	    
             if (cflag) {
               if (DIM == 3) tri = &tris[minsurf];
               if (DIM != 3) line = &lines[minsurf];
