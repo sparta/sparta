@@ -796,7 +796,7 @@ void Grid::rehash()
 
 void Grid::find_neighbors()
 {
-  int icell,iface,ilevel,level,nmask,boundary,periodic;
+  int icell,idim,iface,ilevel,level,nmask,boundary,periodic;
   int found,face_touching,unknownflag;
   cellint id,neighID,refineID,coarsenID;
   cellint *neigh;
@@ -804,7 +804,7 @@ void Grid::find_neighbors()
 
   if (!exist_ghost) return;
 
-  int dim = domain->dimension;
+  int dimension = domain->dimension;
   int *bflag = domain->bflag;
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
@@ -833,20 +833,21 @@ void Grid::find_neighbors()
     unknownflag = 0;
 
     for (iface = 0; iface < 6; iface++) {
-      dim = iface/2;
+      idim = iface/2;
 
       // set boundary and periodic flags for this face
       // treat 2d Z boundaries as non-periodic
       
-      if (iface % 2 == 0 && lo[dim] == boxlo[dim]) boundary = 1;
-      else if (iface % 2 == 1 && hi[dim] == boxhi[dim]) boundary = 1;
+      if (iface % 2 == 0 && lo[idim] == boxlo[idim]) boundary = 1;
+      else if (iface % 2 == 1 && hi[idim] == boxhi[idim]) boundary = 1;
       else boundary = 0;
       if (bflag[iface] == PERIODIC) periodic = 1;
       else periodic = 0;
-      if (dim == 2 && (iface == ZLO || iface == ZHI)) periodic = 0;
+      if (dimension == 2 && (iface == ZLO || iface == ZHI))
+	periodic = 0;
 
       // face = non-periodic boundary, neighbor is BOUND
-      
+
       if (boundary && !periodic) {
 	neigh[iface] = 0;
 	nmask = neigh_encode(NBOUND,nmask,iface);
