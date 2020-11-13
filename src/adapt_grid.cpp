@@ -588,11 +588,18 @@ bigint AdaptGrid::coarsen()
   bigint ncoarsen;
   MPI_Allreduce(&nme,&ncoarsen,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
+  // if any coarsening
+  // compress() removes child cells that vanished
+  // surf->compress() removes surfs no longer referenced by owned cells
+  //   can be needed when owned cells are removed by coarsening
+  //   no need to call in refine() since new child cells own same surfs
+  
   if (ncoarsen) {
     if (collide) collide->adapt_grid();
     grid->compress();
     if (particle->exist) particle->compress_rebalance();
-
+    if (surf->distributed) surf->compress_explicit();
+    
     // reallocate per grid cell arrays in per grid computes
     // also unset their invoked_flag so that if needed on this timestep
     //   by any other caller, it will be invoked again with changed grid
@@ -1383,6 +1390,9 @@ void AdaptGrid::particle_surf_comm()
 
   int nbytes_total = sizeof(Particle::OnePart) + particle->sizeof_custom();
 
+  int dim = domain->dimension;
+  int distributed = surf->distributed;
+
   alist = NULL;
   anum = anummax = 0;
 
@@ -1408,7 +1418,7 @@ void AdaptGrid::particle_surf_comm()
       alist[m].index = new int[nchild];
       alist[m].nsurf = new int[nchild];
       alist[m].np = new int[nchild];
-      alist[m].surfs = new surfint*[nchild];
+      alist[m].surfs = new void*[nchild];
       alist[m].particles = new char*[nchild];
     } else m = (*alhash)[parentID];
 
@@ -1426,9 +1436,14 @@ void AdaptGrid::particle_surf_comm()
 
     if (s->proc == me) continue;
 
+    // surfs are packed differently for distributed vs non-distributed
+    // non = indices, dist = line/tri data
+    
     alist[m].nsurf[ichild] = s->nsurf;
-    alist[m].surfs[ichild] = (surfint *) ptr;
-    ptr += s->nsurf * sizeof(surfint);
+    alist[m].surfs[ichild] = (void *) ptr;
+    if (!distributed) ptr += s->nsurf * sizeof(surfint);
+    else if (dim == 2) ptr += s->nsurf * sizeof(Surf::Line);
+    else ptr += s->nsurf * sizeof(Surf::Tri);
     ptr = ROUNDUP(ptr);
 
     alist[m].np[ichild] = s->np;
@@ -1461,6 +1476,11 @@ int AdaptGrid::perform_coarsen()
 
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
+
+  // coarsening with distributed surfs requires use of hash
+  // used by grid->coarsen_cell() method to add new unique surfs
+  
+  if (surf->distributed) surf->rehash();
 
   // loop over coarsening action list
 
@@ -1507,6 +1527,13 @@ int AdaptGrid::perform_coarsen()
     // add ID of new coarsened cell to chash
 
     (*chash)[parentID] = 0;
+  }
+
+  // done with surf hash
+  
+  if (surf->distributed) {
+    surf->hash->clear();
+    surf->hashfilled = 0;
   }
 
   // return # of cells this proc coarsened

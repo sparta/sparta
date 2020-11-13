@@ -46,20 +46,20 @@ class Grid : protected Pointers {
 
   int surfgrid_algorithm;  // algorithm for overlap of surfs & grid cells
   int maxsurfpercell;   // max surf elements in one child cell
-  int maxcellpersurf;   // max cells overlapping one surf element
   int maxsplitpercell;  // max split cells in one child cell
   
-  int ngroup;               // # of defined groups
-  char **gnames;            // name of each group
-  int *bitmask;             // one-bit mask for each group
-  int *inversemask;         // inverse mask for each group
+  int ngroup;           // # of defined groups
+  char **gnames;        // name of each group
+  int *bitmask;         // one-bit mask for each group
+  int *inversemask;     // inverse mask for each group
 
-  double tmap,trvous1,trvous2,tsplit;    // timing breakdown of grid2surf()
-
+  double tmap,tsplit;   // timing breakdowns of both grid2surf() algs
+  double tcomm1,tcomm2,tcomm3,tcomm4;
+  
   int copy,copymode;    // 1 if copy of class (prevents deallocation of
                         //  base class when child copy is destroyed)
 
-  // hash for all cell IDs (owned + ghost, no sub-cells)
+  // cell ID hash (owned + ghost, no sub-cells)
 
 #ifdef SPARTA_MAP
   typedef std::map<cellint,int> MyHash;
@@ -80,7 +80,6 @@ class Grid : protected Pointers {
                               // owned + ghost split info
   MyPage<int> *csubs;         // lists of sub cell indices for
                               // owned + ghost split info
-  MyPage<cellint> *cpsurf;    // lists of cell IDs that overlap with my surfs
 
   // owned or ghost child cell
   // includes unsplit cells, split cells, sub cells in any order
@@ -208,6 +207,7 @@ class Grid : protected Pointers {
   void add_split_cell(int);
   void add_sub_cell(int, int);
   void notify_changed();
+  int set_minlevel(); 
   void set_maxlevel(); 
   void setup_owned(); 
   void remove_ghosts();
@@ -224,7 +224,7 @@ class Grid : protected Pointers {
   
   void refine_cell(int, int *, class Cut2d *, class Cut3d *);
   void coarsen_cell(cellint, int, double *, double *,
-		    int, int *, int *, int *, surfint **, char **,
+		    int, int *, int *, int *, void **, char **,
 		    class Cut2d *, class Cut3d *);
 
   void group(int, char **);
@@ -264,12 +264,14 @@ class Grid : protected Pointers {
   void assign_split_cell_particles(int);
   int outside_surfs(int, double *, class Cut3d *, class Cut2d *);
   void allocate_surf_arrays();
-  void allocate_cell_arrays();
   int *csubs_request(int);
 
   // grid_id.cpp
 
   int id_find_child(cellint, int, double *, double *, double *);
+  cellint id_uniform_level(int, int, int, int);
+  void id_find_child_uniform_level(int, int, double *, double *, double *,
+				   int &, int &, int &);
   cellint id_neigh_same_parent(cellint, int, int);
   cellint id_neigh_same_level(cellint, int, int);
   cellint id_refine(cellint, int, int);
@@ -326,32 +328,29 @@ class Grid : protected Pointers {
     int proc;              // proc that owns it
   };
 
+  // tree of RCB cuts for a partitioned uniform block of grid cells
+  
+  struct GridTree {
+    int dim,cut;
+  };
+
   // data structs for rendezvous comm
 
   struct InRvous {
     int proc;
-    cellint cellID;
     surfint surfID;
   };
 
-  struct OutRvous {
-    cellint cellID;
-    surfint surfID;
-  };
-
-  struct InRvous2 {
-    int proc;
-    surfint surfID;
-  };
-
-  struct OutRvous2line {
+  struct OutRvousLine {
     Surf::Line line;
   };
 
-  struct OutRvous2tri {
+  struct OutRvousTri {
     Surf::Tri tri;
   };
 
+  // surf ID hashes
+  
 #ifdef SPARTA_MAP
     typedef std::map<surfint,int> MySurfHash;
     typedef std::map<surfint,int>::iterator MyIterator;
@@ -371,12 +370,15 @@ class Grid : protected Pointers {
   // private methods
 
   void surf2grid_cell_algorithm(int);
+  void surf2grid_new_algorithm(int);
   void surf2grid_surf_algorithm(int, int);
   void surf2grid_split(int, int);
-  int find_overlaps(int, cellint *);
-  void recurse2d(int, double *, double *, int, int &, cellint *);
-  void recurse3d(int, double *, double *, int, int &, cellint *);
 
+  void partition_grid(int, int, int, int, int, int, int, int, GridTree *);
+  void mybox(int, int, int, int &, int &, int &, int &, int &, int &,
+	     GridTree *);
+  void box_drop(int *, int *, int, int, GridTree *, int &, int *);
+  
   void acquire_ghosts_all(int);
   void acquire_ghosts_near(int);
 
@@ -400,7 +402,6 @@ class Grid : protected Pointers {
 
   // callback functions for rendezvous communication
 
-  static int rendezvous_surflist(int, char *, int &, int *&, char *&, void *);
   static int rendezvous_surfrequest(int, char *, int &, int *&, char *&, void *);
 };
 

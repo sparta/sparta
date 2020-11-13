@@ -299,9 +299,9 @@ void Comm::migrate_cells(int nmigrate)
   //   since compress_rebalance() unsets it
 
   if (nmigrate) {
-    if (surf->implicit) surf->compress_implicit_rebalance();
+    if (surf->implicit) surf->compress_implicit();
     grid->compress();
-    if (surf->distributed && !surf->implicit) surf->compress_explicit_rebalance();
+    if (surf->distributed && !surf->implicit) surf->compress_explicit();
     particle->compress_rebalance();
   } else particle->sorted = 0;
 
@@ -464,14 +464,14 @@ void Comm::migrate_cells_less_memory(int nmigrate)
   // compress my list of owned grid cells to remove migrated cells
 
   if (nmigrate) {
-    if (surf->implicit) surf->compress_implicit_rebalance();
+    if (surf->implicit) surf->compress_implicit();
     grid->compress();
-    if (surf->distributed && !surf->implicit) surf->compress_explicit_rebalance();
+    if (surf->distributed && !surf->implicit) surf->compress_explicit();
   }
 }
 
 /* ----------------------------------------------------------------------
-   send grid cell info with their particles needed for possible grid adaptation
+   send grid cell info with their surfs/particles needed for grid adaptation
    return # of received cells and buf = ptr to received cell info
    called from AdaptGrid
 ------------------------------------------------------------------------- */

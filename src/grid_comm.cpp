@@ -424,16 +424,43 @@ int Grid::pack_one_adapt(char *inbuf, char *buf, int memflag)
 
   if (owner == me) return ptr-buf;
   
-  // pack list of surf indices
+  // pack explicit surf info
+  // for non-distributed, just pack indices, since every proc stores all surfs
+  // for distributed, pack the surfs themselves
 
   if (nsurf) {
-    if (memflag) memcpy(ptr,cells[icell].csurfs,nsurf*sizeof(surfint));
-    ptr += nsurf*sizeof(surfint);
+    int isurf;
+    if (!surf->distributed) {
+      if (memflag) memcpy(ptr,cells[icell].csurfs,nsurf*sizeof(surfint));
+      ptr += nsurf*sizeof(surfint);
+    } else if (domain->dimension == 2) {
+      Surf::Line *lines = surf->lines;
+      int sizesurf = sizeof(Surf::Line);
+      surfint *csurfs = cells[icell].csurfs;
+      for (int m = 0; m < nsurf; m++) {
+	isurf = csurfs[m];
+	if (memflag) memcpy(ptr,&lines[isurf],sizesurf);
+	ptr += sizesurf;
+      }
+    } else {
+      Surf::Tri *tris = surf->tris;
+      int sizesurf = sizeof(Surf::Tri);
+      surfint *csurfs = cells[icell].csurfs;
+      for (int m = 0; m < nsurf; m++) {
+	isurf = csurfs[m];
+	if (memflag) memcpy(ptr,&tris[isurf],sizesurf);
+	ptr += sizesurf;
+      }
+    }
     ptr = ROUNDUP(ptr);
   }
-
+  
+  // done if no particles
+  
   if (np == 0) return ptr-buf;
 
+  // pack particles
+  
   if (memflag) {
 
     // pack particles for unsplit cell

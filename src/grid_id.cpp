@@ -28,10 +28,10 @@ enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 //   to multiply 2 or 3 nx,ny,nz indices
 
 /* ----------------------------------------------------------------------
-   find child cell within parentID which contains pt X
+   find child cell within parentID which contains point X
    level = level of parent cell
    oplo/ophi = original parent cell corner pts
-   pt X can be inside or on any boundary of parent cell
+   pt X must be inside or on any boundary of parent cell
    recurse from parent downward until find a child cell or reach maxlevel
    if find child cell this proc stores (owned or ghost), return its local index
    else return -1 for unknown
@@ -74,6 +74,114 @@ int Grid::id_find_child(cellint parentID, int plevel,
   }
 
   return -1;
+}
+
+/* ----------------------------------------------------------------------
+   compute cell ID of the child cell in a full-box uniform grid at level
+   xyz grid = indices (0 to N-1) of the child cell within full-box grid
+   return the cell ID
+------------------------------------------------------------------------- */
+
+cellint Grid::id_uniform_level(int level, int xgrid, int ygrid, int zgrid)
+{
+  int ix,iy,iz,nx,ny,nz;
+  int parentbits;
+  cellint ichild;
+  
+  cellint childID = 0;
+  
+  for (int ilevel = level-1; ilevel >= 0; ilevel--) {
+    nx = plevels[ilevel].nx;
+    ny = plevels[ilevel].ny;
+    nz = plevels[ilevel].nz;
+
+    ix = xgrid % nx;
+    iy = ygrid % ny;
+    iz = zgrid % nz;
+
+    ichild = (cellint) iz*ny*nx + (cellint) iy*nx + ix + 1;
+    parentbits = plevels[ilevel].nbits;
+    childID |= ichild << parentbits;
+
+    xgrid /= nx;
+    ygrid /= ny;
+    zgrid /= nz;
+  }
+
+  return childID;
+}
+
+/* ----------------------------------------------------------------------
+   find child cell within a uniform grid at level which contains point X
+     definition of "contains" depends on lohi flag
+   level = level of uniform grid og child cells
+   lohi = 0 for lower boundary, 1 for upper boundary
+     for 0: if pt is on lower boundary (in any dim) of child cell,
+            return index of adjacent cell (index is decremented)
+     for 1: if pt is on upper boundary (in any dim) of child cell,
+            return index of adjacent cell (index is incremented)
+     incremented/decremented indices cannot be outside simulation box
+   boxlo/boxhi = root level simulation box
+   pt X must be inside or on any boundary of simulation box
+   recurse downward to level
+   return xyz grid = indices (0 to N-1) of child cell
+     in full-box uniform grid at level
+------------------------------------------------------------------------- */
+
+void Grid::id_find_child_uniform_level(int level, int lohi,
+				       double *boxlo, double *boxhi, double *x,
+				       int &xgrid, int &ygrid, int &zgrid)
+{
+  int ix,iy,iz,nx,ny,nz;
+  double plo[3],phi[3],clo[3],chi[3];
+  cellint childID,ichild;
+  
+  cellint id = 0;
+  int plevel = 0;
+  double *lo = boxlo;
+  double *hi = boxhi;
+  xgrid = ygrid = zgrid = 0;
+
+  while (plevel < level) {
+    nx = plevels[plevel].nx;
+    ny = plevels[plevel].ny;
+    nz = plevels[plevel].nz;
+    ix = static_cast<int> ((x[0]-lo[0]) * nx/(hi[0]-lo[0]));
+    iy = static_cast<int> ((x[1]-lo[1]) * ny/(hi[1]-lo[1]));
+    iz = static_cast<int> ((x[2]-lo[2]) * nz/(hi[2]-lo[2]));
+    if (ix == nx) ix--;
+    if (iy == ny) iy--;
+    if (iz == nz) iz--;
+
+    xgrid = nx*xgrid + ix;
+    ygrid = ny*ygrid + iy;
+    zgrid = nz*zgrid + iz;
+    
+    ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
+    childID = (ichild << plevels[plevel].nbits) | id;
+    
+    id = childID;
+    id_child_lohi(plevel,lo,hi,ichild,clo,chi);
+    plo[0] = clo[0]; plo[1] = clo[1]; plo[2] = clo[2];
+    phi[0] = chi[0]; phi[1] = chi[1]; phi[2] = chi[2];
+    lo = plo; hi = phi;
+    plevel++;
+  }
+
+  // at this stage, indices match pt >= lower edge and < upper edge
+  // if pt = either edge, account for lohi flag by
+  //  decrement or increment of index
+  // but 0 <= index <= N-1 is still required
+
+  if (lohi == 0) {
+    if (x[0] == lo[0] && x[0] != boxlo[0]) xgrid--;
+    if (x[1] == lo[1] && x[1] != boxlo[1]) ygrid--;
+    if (x[2] == lo[2] && x[2] != boxlo[2]) zgrid--;
+  } else {
+    if (x[0] == hi[0] && x[0] != boxhi[0]) xgrid++;
+    if (x[1] == hi[1] && x[1] != boxhi[1]) ygrid++;
+    if (x[2] == hi[2] && x[2] != boxhi[2]) zgrid++;
+  }
 }
 
 /* ----------------------------------------------------------------------

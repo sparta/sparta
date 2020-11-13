@@ -101,7 +101,7 @@ class AdaptGrid : protected Pointers {
     int *index;             // local icell if I own each child cell, else -1
     int *nsurf;             // # of surfs in each child cell
     int *np;                // # of particles in each child cell
-    surfint **surfs;        // list of surfs in each child cell
+    void **surfs;           // list of surf info per cell (indices or lines/tris)
     char **particles;       // list of particles in each child cell
   };
 

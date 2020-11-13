@@ -308,9 +308,11 @@ void ReadSurf::command(int narg, char **arg)
               100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total,
               100.0*(time8-time7)/time_total);
       fprintf(screen,"  surf2grid time = %g secs\n",time_s2g);
-      fprintf(screen,"  map/rvous1/rvous2/split percent = %g %g %g %g\n",
-              100.0*grid->tmap/time_s2g,100.0*grid->trvous1/time_s2g,
-              100.0*grid->trvous2/time_s2g,100.0*grid->tsplit/time_s2g);
+      fprintf(screen,"  map/comm1/comm2/comm3/comm4/split percent = "
+	      "%g %g %g %g %g %g\n",
+	      100.0*grid->tmap/time_s2g,100.0*grid->tcomm1/time_s2g,
+	      100.0*grid->tcomm2/time_s2g,100.0*grid->tcomm3/time_s2g,
+	      100.0*grid->tcomm4/time_s2g,100.0*grid->tsplit/time_s2g);
     }
 
     if (logfile) {
@@ -325,9 +327,11 @@ void ReadSurf::command(int narg, char **arg)
               100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total,
               100.0*(time8-time7)/time_total);
       fprintf(logfile,"  surf2grid time = %g secs\n",time_s2g);
-      fprintf(logfile,"  map/rvous1/rvous2/split percent = %g %g %g %g\n",
-              100.0*grid->tmap/time_s2g,100.0*grid->trvous1/time_s2g,
-              100.0*grid->trvous2/time_s2g,100.0*grid->tsplit/time_s2g);
+      fprintf(logfile,"  map/comm1/comm2/comm3/comm4/split percent = "
+	      "%g %g %g %g %g %g\n",
+	      100.0*grid->tmap/time_s2g,100.0*grid->tcomm1/time_s2g,
+	      100.0*grid->tcomm2/time_s2g,100.0*grid->tcomm3/time_s2g,
+	      100.0*grid->tcomm4/time_s2g,100.0*grid->tsplit/time_s2g);
     }
   }
 }
@@ -749,10 +753,11 @@ void ReadSurf::base(char *file)
    read a single input file, header and post-header sections
    proc with filereader = 1 reads the file
    filecomm = MPI communicator for all procs who share this file
-   storeflag = 0/1/2 is passed to read points/lines/tris
-     0 = store surfs in lines/tris
-     1 = store surfs in mylines/mytris
-     2 = store surfs in tmplines/tmptris
+   storeflag = 0/1/2/3 = LOCAL/MINE/TEMPALL/TEMPSTRIDE
+     is passed to read points/lines/tris
+     LOCAL = store surfs in lines/tris
+     MINE = store surfs in mylines/mytris
+     TEMPALL/TEMPSTRIDE = store surfs in tmplines/tmptris
 ------------------------------------------------------------------------- */
 
 void ReadSurf::read_file(char *file, int storeflag)
@@ -881,8 +886,7 @@ void ReadSurf::read_points()
 
 /* ----------------------------------------------------------------------
    read Lines section of file
-   store copy of all lines on each proc
-   store in local Lines data struct
+   storeflag determines how each line is stored
 ------------------------------------------------------------------------- */
 
 void ReadSurf::read_lines(int storeflag)
@@ -1010,8 +1014,7 @@ void ReadSurf::read_lines(int storeflag)
 
 /* ----------------------------------------------------------------------
    read Triangles section of file
-   store copy of all tris on each proc
-   store in local Triangles data struct
+   storeflag determines how each tri is stored
 ------------------------------------------------------------------------- */
 
 void ReadSurf::read_tris(int storeflag)

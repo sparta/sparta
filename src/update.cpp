@@ -1457,16 +1457,6 @@ void Update::global(int narg, char **arg)
       // reallocate paged data structs for variable-length surf info
       grid->allocate_surf_arrays();
       iarg += 2;
-    } else if (strcmp(arg[iarg],"cellmax") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      if (surf->exist) 
-        error->all(FLERR,
-                   "Cannot set global cellmax when surfaces already exist");
-      grid->maxcellpersurf = atoi(arg[iarg+1]);
-      if (grid->maxcellpersurf <= 0) error->all(FLERR,"Illegal global command");
-      // reallocate paged data structs for variable-length cell info
-      grid->allocate_cell_arrays();
-      iarg += 2;
     } else if (strcmp(arg[iarg],"splitmax") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       if (surf->exist) 

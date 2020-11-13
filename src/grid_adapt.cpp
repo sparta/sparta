@@ -193,10 +193,11 @@ void Grid::refine_cell(int icell, int *childlist, Cut2d *cut2d, Cut3d *cut3d)
 void Grid::coarsen_cell(cellint parentID, int plevel, double *plo, double *phi,
 			int nchild, int *index,
 			int *nsurf_child, int *npart_child, 
-			surfint **csurfs_child, char **part_child,
+			void **surf_child, char **part_child,
                         Cut2d *cut2d, Cut3d *cut3d)
 {
   int i,j,k,m,icell,jcell,ns,ip,ipnew;
+  
   int dim = domain->dimension;
   int maxsurfpercell = grid->maxsurfpercell;
 
@@ -212,30 +213,111 @@ void Grid::coarsen_cell(cellint parentID, int plevel, double *plo, double *phi,
   
   if (modify->n_pergrid) modify->add_grid_one();
 
-  // if any children have surfs, add union to new child cell
-  // NOTE: worry about N^2 loop for unique surfs?
+  // if any children have surfs, add union of surfs to new child cell
+  // shash enables union by storing surfIDs added to new cell
+  // process explicit surf info in surf_child vectors
 
   int nsurf = 0;
-  surfint *cs;
   surfint *ptr = csurfs->vget();
+
+  // for non-distributed surfs:
+  // surf_child = vectors of indices into global list owned by all procs
+
+  if (!surf->distributed) {
+    MySurfHash shash;
+    Surf::Line *lines = surf->lines;
+    Surf::Tri *tris = surf->tris;
+    surfint *cs;
+    surfint surfID;
+    int ns;
+    
+    for (m = 0; m < nchild; m++) {
+      if (index[m] >= 0) {
+	icell = index[m];
+	ns = cells[icell].nsurf;
+	cs = cells[icell].csurfs;
+      } else {
+	ns = nsurf_child[m];
+	cs = (surfint *) surf_child[m];
+      }
   
-  for (m = 0; m < nchild; m++) {
-    if (index[m] >= 0) {
-      icell = index[m];
-      ns = cells[icell].nsurf;
-      cs = cells[icell].csurfs;
-    } else {
-      ns = nsurf_child[m];
-      cs = csurfs_child[m];
+      for (i = 0; i < ns; i++) {
+	if (dim == 2) surfID = lines[cs[i]].id;
+	else surfID = tris[cs[i]].id;
+	if (shash.find(surfID) == shash.end()) {
+	  shash[surfID] = 0;
+	  if (nsurf == maxsurfpercell)
+	    error->one(FLERR,"Too many surfs in coarsened cell");
+	  ptr[nsurf++] = cs[i];
+	}
+      }
     }
-  
-    for (j = 0; j < ns; j++) {
-      for (k = 0; k < nsurf; k++)
-        if (ptr[k] == cs[j]) break;
-      if (k < nsurf) continue;
-      if (nsurf == maxsurfpercell)
-        error->one(FLERR,"Too many surfs in coarsened cell");
-      ptr[nsurf++] = cs[j];
+
+  // for distributed surfs:
+  // if this proc owns child:
+  //   surf_child = vector of indices into nlocal list owned by this proc
+  // if this proc does not own child:
+  //   surf_child = list of lines or tris
+  //   add surf to this proc's nlocal list if not already owned
+
+  } else {
+    MySurfHash shash;
+    Surf::Line *lines;
+    Surf::Tri *tris;
+    Surf::MySurfHash *surfhash = surf->hash;
+    surfint *cs;
+    surfint surfID;
+    int ilocal;
+    int ns;
+    
+    for (m = 0; m < nchild; m++) {
+
+      // locally owned cell, so indices
+      
+      if (index[m] >= 0) {
+	icell = index[m];
+	ns = cells[icell].nsurf;
+	cs = cells[icell].csurfs;
+	if (dim == 2) lines = surf->lines;
+	else tris = surf->tris;
+
+	for (i = 0; i < ns; i++) {
+	  if (dim == 2) surfID = lines[cs[i]].id;
+	  else surfID = tris[cs[i]].id;
+	  if (shash.find(surfID) == shash.end()) {
+	    shash[surfID] = 0;
+	    if (nsurf == maxsurfpercell)
+	      error->one(FLERR,"Too many surfs in coarsened cell");
+	    ptr[nsurf++] = cs[i];
+	  }
+	}
+
+      // communicated cell, so lines or tris
+
+      } else {
+	
+	ns = nsurf_child[m];
+	if (dim == 2) lines = (Surf::Line *) surf_child[m];
+	else tris = (Surf::Tri *) surf_child[m];
+	
+	for (i = 0; i < ns; i++) {
+	  if (dim == 2) surfID = lines[i].id;
+	  else surfID = tris[i].id;
+	  if (shash.find(surfID) == shash.end()) {
+	    shash[surfID] = 0;
+	    if (surfhash->find(surfID) != surfhash->end())
+	      ilocal = (*surfhash)[surfID];
+	    else {
+	      if (dim == 2) surf->add_line_copy(1,&lines[i]);
+	      else surf->add_tri_copy(1,&tris[i]);
+	      ilocal = surf->nlocal-1;
+	    }
+	    if (nsurf == maxsurfpercell)
+	      error->one(FLERR,"Too many surfs in coarsened cell");
+	    ptr[nsurf++] = ilocal;
+	  }
+	}
+      }
     }
   }
 

@@ -45,7 +45,6 @@ using namespace MathConst;
 // default values, can be overridden by global command
 
 #define MAXSURFPERCELL  100
-#define MAXCELLPERSURF  100
 #define MAXSPLITPERCELL 10
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
@@ -112,10 +111,6 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   csurfs = NULL; csplits = NULL; csubs = NULL;
   allocate_surf_arrays();
 
-  maxcellpersurf = MAXCELLPERSURF;
-  cpsurf = NULL;
-  allocate_cell_arrays();
-
   neighshift[XLO] = 0;
   neighshift[XHI] = 3;
   neighshift[YLO] = 6;
@@ -162,7 +157,6 @@ Grid::~Grid()
   delete csurfs;
   delete csplits;
   delete csubs;
-  delete cpsurf;
   delete hash;
 }
 
@@ -323,6 +317,21 @@ void Grid::notify_changed()
 
   for (int i = 0; i < output->ndump; i++)
     output->dump[i]->reset_grid_count();
+}
+
+/* ----------------------------------------------------------------------
+   return minlevel = minlevel of any grid cell
+------------------------------------------------------------------------- */
+
+int Grid::set_minlevel()
+{
+  int mylevel = MAXLEVEL;
+  for (int i = 0; i < nlocal; i++)
+    mylevel = MIN(mylevel,cells[i].level);
+
+  int minlevel;
+  MPI_Allreduce(&mylevel,&minlevel,1,MPI_INT,MPI_MIN,world);
+  return minlevel;
 }
 
 /* ----------------------------------------------------------------------
