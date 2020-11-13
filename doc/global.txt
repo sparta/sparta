@@ -13,7 +13,7 @@ global command :h3
 global keyword values ... :pre
 
 one or more keyword/value pairs :ulb,l
-keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {surfgrid} or {surfmax} or {cellmax} or {splitmax} or {surftally} or {surfpush} or {gridcut} or {comm/sort} or {comm/style} or {weight} or {particle/reorder} or {mem/limit} :l
+keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {surfgrid} or {surfmax} or {splitmax} or {surftally} or {surfpush} or {gridcut} or {comm/sort} or {comm/style} or {weight} or {particle/reorder} or {mem/limit} :l
   {fnum} value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
   {nrho} value = density
@@ -37,8 +37,6 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {su
     auto = choose percell or persurf based on surface element and proc count
   {surfmax} value = Nsurf
     Nsurf = max # of surface elements allowed in single grid cell
-  {cellmax} value = Ncell
-    Ncell = max # of grid cells a single surf can overlap
   {splitmax} value = Nsplit
     Nsplit = max # of sub-cells one grid cell can be split into by surface elements
   {surftally} value = {reduce} or {rvous} or {auto}
@@ -143,14 +141,6 @@ elements (lines in 2d, triangles in 3d) that can overlap a single grid
 cell.  The default is 100, which should be large enough for any
 simulation, unless you define very coarse grid cells relative to the
 size of surface elements they contain.
-
-The {cellmax} keyword determines the maximum number of grid cells that
-a single surface element (lines in 2d, tringles in 3d) can overlap.
-This keyword is only used if the {persurf} algorithm defined by the
-{surfgrid} keyword is invoked.  The default is 100, which should be
-large enough for most simulations, unless you define one or more very
-large surface elements relative to the size of grid cells they
-intersect.
 
 The {splitmax} keyword determines the maximum number of sub-cells a
 single grid cell can be split into as a result of its intersection
@@ -405,7 +395,6 @@ defined, e.g. via the "read_surf"_read_surf.html command.
 
 The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
 0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfs = explicit,
-surfgrid = auto, surfmax = 100, cellmax = 100, splitmax = 10,
-surftally = auto, surfpush = yes, gridcut = -1.0, comm/sort = no,
-comm/style = neigh, weight = cell none, particle/reorder = 0,
-mem/limit = 0.
+surfgrid = auto, surfmax = 100, splitmax = 10, surftally = auto,
+surfpush = yes, gridcut = -1.0, comm/sort = no, comm/style = neigh,
+weight = cell none, particle/reorder = 0, mem/limit = 0.
