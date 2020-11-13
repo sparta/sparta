@@ -531,7 +531,6 @@ void Grid::surf2grid_new_algorithm(int outflag)
     // set nsurf and csurfs for each cell (only ones at this level)
     // 1st pass: count surfs in each cell, then allocate csurfs in each cell
     // 2nd pass: fill each cell's csurf list
-    // NOTE: check for too many surfs in a cell
     
     for (i = 0; i < nrecv3; i++) {
       icell = rbuf3[i].icell;
@@ -543,8 +542,11 @@ void Grid::surf2grid_new_algorithm(int outflag)
     for (icell = 0; icell < nlocal; icell++) {
       if (cells[icell].level != level) continue;
       if (cells[icell].nsplit <= 0) continue;
-      if (cells[icell].nsurf) {
-	cells[icell].csurfs = csurfs->get(cells[icell].nsurf);
+      nsurf = cells[icell].nsurf;
+      if (nsurf) {
+	if (nsurf > maxsurfpercell)
+	  error->one(FLERR,"Too many surfs in one cell - set global surfmax");
+	cells[icell].csurfs = csurfs->get(nsurf);
 	cells[icell].nsurf = 0;
       }
     }

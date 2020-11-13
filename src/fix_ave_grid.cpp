@@ -504,9 +504,8 @@ void FixAveGrid::end_of_step()
           k = umap[m][0];
           if (j == 0) {
             double *compute_vector = compute->vector_grid;
-            for (i = 0; i < nglocal; i++) {
+            for (i = 0; i < nglocal; i++)
               tally[i][k] += compute_vector[i];
-	    }
           } else {
             int jm1 = j - 1;
             double **compute_array = compute->array_grid;
