@@ -501,8 +501,6 @@ void Grid::surf2grid_new_algorithm(int outflag)
 
     int surfindex,cellindex;
     
-    sbuf3 = (Send3 *) memory->smalloc(nsend*sizeof(Send3),"surf2grid:sbuf3");
-
     nsend = 0;
 
     for (i = 0; i < npair; i++) {
@@ -514,7 +512,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
       }
 
       surfindex = pairs[i][0];
-      cellindex = pairs[i][1]; 
+      cellindex = pairs[i][1];
       proclist3[i] = rbuf2[cellindex].proc;
       if (dim == 2) sbuf3[i].surfID = rcblines[surfindex].id;
       else sbuf3[i].surfID = rcbtris[surfindex].id;
