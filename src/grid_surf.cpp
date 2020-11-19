@@ -42,7 +42,7 @@ int compare_surfIDs(const void *, const void *);
 #define BIG 1.0e20
 #define CHUNK 16
 #define EPSSURF 1.0e-4
-#define DELTA_SEND 4       // NOTE: make this much bigger
+#define DELTA_SEND 16384
 
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};         // several files
 enum{PERAUTO,PERCELL,PERSURF};                // several files
@@ -314,7 +314,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
     //   compute its bbox as a brick of uniform grid cells at this level
     //   drop its bbox down RCB tree to identify set of RCB procs to send to
     // send the surf info via irregular comm
-    // NOTE: probably better as Rvous comm
+    // NOTE: this comm might be faster as Rvous comm?
 
     int sxlo,sxhi,sylo,syhi,szlo,szhi;
     
@@ -496,7 +496,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
       tmap += t4-t3;
     }
 
-    // final irregular comm
+    // third irregular comm
     // send each surf/grid intersection back to proc that owns grid cell
 
     int surfindex,cellindex;

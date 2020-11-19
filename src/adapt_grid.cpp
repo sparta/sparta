@@ -53,9 +53,7 @@ enum{SUM,MINIMUM,MAXIMUM};
 enum{ONE,RUNNING};                      // also in FixAveGrid
 
 #define INVOKED_PER_GRID 16
-#define DELTA_NEW 1024
-#define DELTA_SEND 1024
-#define DELTA_LIST 1014
+#define DELTA_LIST 1024
 #define BIG 1.0e20
 
 /* ---------------------------------------------------------------------- */
@@ -383,7 +381,8 @@ void AdaptGrid::process_args(int narg, char **arg)
   // if necessary, limit maxlevel to what is allowed by cellint size
 
   Grid::ParentLevel *plevels = grid->plevels;
-  
+
+  int maxlevel_request = maxlevel;
   if (maxlevel == 0) maxlevel = grid->plevel_limit;
   int level = MIN(maxlevel,grid->maxlevel);
   int newbits = grid->id_bits(nx,ny,nz);
@@ -402,6 +401,13 @@ void AdaptGrid::process_args(int narg, char **arg)
     plevels[level].nz = nz;
     plevels[level].nxyz = (bigint) nx * ny * nz;
     level++;
+  }
+
+  if (maxlevel_request && maxlevel < maxlevel_request && me == 0) {
+    char str[128];
+    sprintf(str,"Reduced maxlevel because it induces "
+	    "cell IDs that exceed %d bits",(int) sizeof(cellint)*8);
+    error->warning(FLERR,str);
   }
 }
 
