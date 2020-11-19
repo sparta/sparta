@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -99,7 +99,7 @@ void WriteSurf::command(int narg, char **arg)
                    "without % in surface file name");
       int nper = atoi(arg[iarg+1]);
       if (nper <= 0) error->all(FLERR,"Illegal write_surf command");
-      
+
       multiproc = nprocs/nper;
       if (nprocs % nper) multiproc++;
       fileproc = me/nper * nper;
@@ -124,7 +124,7 @@ void WriteSurf::command(int narg, char **arg)
       fileproc = static_cast<int> ((bigint) icluster * nprocs/nfile);
       int fcluster = static_cast<int> ((bigint) fileproc * nfile/nprocs);
       if (fcluster < icluster) fileproc++;
-      int fileprocnext = 
+      int fileprocnext =
         static_cast<int> ((bigint) (icluster+1) * nprocs/nfile);
       fcluster = static_cast<int> ((bigint) fileprocnext * nfile/nprocs);
       if (fcluster < icluster+1) fileprocnext++;
@@ -253,7 +253,7 @@ void WriteSurf::write_file_all_points(char *file)
       m += 2;
     }
   }
-  
+
   // triangles
 
   if (dim == 3) {
@@ -261,7 +261,7 @@ void WriteSurf::write_file_all_points(char *file)
     fprintf(fp,"\nTriangles\n\n");
     bigint m = 0;
     for (int i = istart; i < istop; i++) {
-      fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " 
+      fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " "
               BIGINT_FORMAT " " BIGINT_FORMAT "\n",
               tris[i].id,tris[i].type,m+1,m+2,m+3);
       m += 3;
@@ -316,7 +316,7 @@ void WriteSurf::write_file_all_nopoints(char *file)
               lines[i].p1[0],lines[i].p1[1],
               lines[i].p2[0],lines[i].p2[1]);
   }
-  
+
   // triangles
 
   if (dim == 3) {
@@ -368,7 +368,7 @@ void WriteSurf::write_file_distributed_points(char *file)
     nchar = (bigint) nmine * sizeof(SurfIDType);
   }
 
-  if (ndouble > MAXSMALLINT || nchar > MAXSMALLINT) 
+  if (ndouble > MAXSMALLINT || nchar > MAXSMALLINT)
     error->one(FLERR,"Too much distributed data to communicate");
 
   // write header info
@@ -457,7 +457,7 @@ void WriteSurf::write_file_distributed_points(char *file)
         MPI_Wait(&request,&status);
         MPI_Get_count(&status,MPI_DOUBLE,&recv_size);
       } else recv_size = npoint*dim;
-      
+
       ncount = recv_size/dim;
       m = 0;
 
@@ -492,7 +492,7 @@ void WriteSurf::write_file_distributed_points(char *file)
 
   // sbuf = local buf for my surface IDs and types
 
-  SurfIDType *sbuf = (SurfIDType *) 
+  SurfIDType *sbuf = (SurfIDType *)
     memory->smalloc(max_size_surf*nper,"writesurf:sbuf");
 
   // pack my line/tri IDs/types into sbuf
@@ -526,7 +526,7 @@ void WriteSurf::write_file_distributed_points(char *file)
         MPI_Wait(&request,&status);
         MPI_Get_count(&status,MPI_CHAR,&recv_size);
       } else recv_size = nmine*nper;
-      
+
       ncount = recv_size/nper;
       if (dim == 2) {
 	for (int i = 0; i < ncount; i++) {
@@ -536,7 +536,7 @@ void WriteSurf::write_file_distributed_points(char *file)
 	}
       } else {
 	for (int i = 0; i < ncount; i++) {
-	  fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT " " 
+	  fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT " "
 		  BIGINT_FORMAT "\n",
 		  sbuf[i].id,sbuf[i].type,index+1,index+2,index+3);
 	  index += 3;
@@ -567,7 +567,7 @@ void WriteSurf::write_file_distributed_nopoints(char *file)
   // open single surface file or multi file for multiproc
 
   if (filewriter) open(file);
- 
+
   // nmine = # of surfs I contribute to this file
   // nown/nlocal depending on explicit/implicit
 
@@ -582,7 +582,7 @@ void WriteSurf::write_file_distributed_nopoints(char *file)
   if (dim == 2) nchar = (bigint) nmine * sizeof(Surf::Line);
   else nchar = (bigint) nmine * sizeof(Surf::Tri);
 
-  if (nchar > MAXSMALLINT) 
+  if (nchar > MAXSMALLINT)
     error->one(FLERR,"Too much distributed data to communicate");
 
   // write header info
@@ -637,7 +637,7 @@ void WriteSurf::write_file_distributed_nopoints(char *file)
   int recv_size,ncount,tmp;
   MPI_Request request;
   MPI_Status status;
-  
+
   if (filewriter) {
     if (dim == 2) fprintf(fp,"\nLines\n\n");
     else fprintf(fp,"\nTriangles\n\n");
@@ -649,7 +649,7 @@ void WriteSurf::write_file_distributed_nopoints(char *file)
         MPI_Wait(&request,&status);
         MPI_Get_count(&status,MPI_CHAR,&recv_size);
       } else recv_size = nmine*nper;
-      
+
       ncount = recv_size/nper;
       if (dim == 2) {
 	lines = (Surf::Line *) buf;
@@ -698,7 +698,7 @@ void WriteSurf::write_base(char *file)
     sprintf(str,"Cannot open surface base file %s",hfile);
     error->one(FLERR,str);
   }
-  
+
   delete [] hfile;
 
   fprintf(fp,"# Surface element multiproc file written by SPARTA\n\n");
@@ -727,7 +727,7 @@ void WriteSurf::open(char *file)
     sprintf(onefile,"%s%d%s",file,icluster,ptr+1);
     *ptr = '%';
   }
-    
+
   fp = fopen(onefile,"w");
   if (fp == NULL) {
     char str[128];

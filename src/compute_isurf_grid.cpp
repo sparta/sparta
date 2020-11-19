@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -115,7 +115,7 @@ void ComputeISurfGrid::init()
 {
   if (!surf->exist)
     error->all(FLERR,"Cannot use compute isurf/grid when surfs do not exist");
-  if (!surf->implicit) 
+  if (!surf->implicit)
     error->all(FLERR,"Cannot use compute isurf/grid with explicit surfs");
 
   if (ngroup != particle->mixture[imix]->ngroup)
@@ -204,7 +204,7 @@ void ComputeISurfGrid::clear()
 }
 
 /* ----------------------------------------------------------------------
-   tally values for a single particle in icell 
+   tally values for a single particle in icell
      colliding with surface element isurf, performing reaction (1 to N)
    iorig = particle ip before collision
    ip,jp = particles after collision
@@ -215,8 +215,8 @@ void ComputeISurfGrid::clear()
      except sum tally to to per-grid-cell array_grid
 ------------------------------------------------------------------------- */
 
-void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction, 
-                                   Particle::OnePart *iorig, 
+void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
+                                   Particle::OnePart *iorig,
                                    Particle::OnePart *ip, Particle::OnePart *jp)
 {
   // skip if species not in mixture group
@@ -273,7 +273,7 @@ void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
   double *vorig = iorig->v;
   double mvv2e = update->mvv2e;
 
-  vec = array_surf_tally[itally];      
+  vec = array_surf_tally[itally];
   int k = igroup*nvalue;
   int fflag = 0;
   int nflag = 0;
@@ -421,7 +421,7 @@ void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
 	jvsqpost = jmass * MathExtra::lensq3(jp->v);
 	jother = jp->erot + jp->evib;
       } else jvsqpost = jother = 0.0;
-      etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
+      etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
         weight * (iother + jother - otherpre);
       vec[k++] -= etot * fluxscale;
       break;
@@ -471,7 +471,7 @@ void ComputeISurfGrid::post_process_isurf_grid()
 
   surf->collate_array_implicit(ntally,ntotal,tally2surf,
                                array_surf_tally,array_grid);
-  
+
   // zero out result if icell not in grid group
   // can't apply until now, b/c tally included surfs in ghost cells and
   // cinfo does not have mask values for ghost cells

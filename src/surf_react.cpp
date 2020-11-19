@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -39,7 +39,7 @@ enum{SIMPLE};                                     // other surf react files
 
 /* ---------------------------------------------------------------------- */
 
-SurfReact::SurfReact(SPARTA *sparta, int, char **arg) : 
+SurfReact::SurfReact(SPARTA *sparta, int, char **arg) :
   Pointers(sparta)
 {
   // ID and style
@@ -60,7 +60,7 @@ SurfReact::SurfReact(SPARTA *sparta, int, char **arg) :
 
   vector_flag = 1;
   size_vector = 2;
-    
+
   // tallies
 
   nsingle = ntotal = 0;
@@ -116,7 +116,7 @@ void SurfReact::init()
 
 /* ---------------------------------------------------------------------- */
 
-void SurfReact::init_reactions() 
+void SurfReact::init_reactions()
 {
   // convert species IDs to species indices
   // flag reactions as active/inactive depending on whether all species exist
@@ -148,7 +148,7 @@ void SurfReact::init_reactions()
                              "surf_react:reactions");
 
   for (int i = 0; i < nspecies; i++) reactions[i].n = 0;
-  
+
   int n = 0;
   for (int m = 0; m < nlist; m++) {
     OneReaction *r = &rlist[m];
@@ -170,11 +170,11 @@ void SurfReact::init_reactions()
     reactions[i].list = &indices[offset];
     offset += reactions[i].n;
   }
-  
+
   // reactions[i].list = indices of possible reactions for each species
 
   for (int i = 0; i < nspecies; i++) reactions[i].n = 0;
- 
+
   for (int m = 0; m < nlist; m++) {
     OneReaction *r = &rlist[m];
     if (!r->active) continue;
@@ -189,14 +189,14 @@ void SurfReact::init_reactions()
     sum = 0.0;
     for (int j = 0; j < reactions[i].n; j++)
       sum += rlist[reactions[i].list[j]].coeff[0];
-    if (sum > 1.0) 
+    if (sum > 1.0)
       error->all(FLERR,"Surface reaction probability for a species > 1.0");
   }
 }
 
 /* ---------------------------------------------------------------------- */
 
-void SurfReact::readfile(char *fname) 
+void SurfReact::readfile(char *fname)
 {
   int n,n1,n2,eof;
   char line1[MAXLINE],line2[MAXLINE];
@@ -220,7 +220,7 @@ void SurfReact::readfile(char *fname)
     if (comm->me == 0) eof = readone(line1,line2,n1,n2);
     MPI_Bcast(&eof,1,MPI_INT,0,world);
     if (eof) break;
-    
+
     MPI_Bcast(&n1,1,MPI_INT,0,world);
     MPI_Bcast(&n2,1,MPI_INT,0,world);
     MPI_Bcast(line1,n1,MPI_CHAR,0,world);
@@ -228,7 +228,7 @@ void SurfReact::readfile(char *fname)
 
     if (nlist == maxlist) {
       maxlist += DELTALIST;
-      rlist = (OneReaction *) 
+      rlist = (OneReaction *)
         memory->srealloc(rlist,maxlist*sizeof(OneReaction),"surf_react:rlist");
       for (int i = nlist; i < maxlist; i++) {
         r = &rlist[i];
@@ -263,14 +263,14 @@ void SurfReact::readfile(char *fname)
       if (species) {
         species = 0;
         if (side == 0) {
-          if (r->nreactant == MAXREACTANT) 
+          if (r->nreactant == MAXREACTANT)
             error->all(FLERR,"Too many reactants in a reaction formula");
           n = strlen(word) + 1;
           r->id_reactants[r->nreactant] = new char[n];
           strcpy(r->id_reactants[r->nreactant],word);
           r->nreactant++;
         } else {
-          if (r->nreactant == MAXPRODUCT) 
+          if (r->nreactant == MAXPRODUCT)
             error->all(FLERR,"Too many products in a reaction formula");
           n = strlen(word) + 1;
           r->id_products[r->nproduct] = new char[n];
@@ -283,7 +283,7 @@ void SurfReact::readfile(char *fname)
           word = strtok(NULL," \t\n");
           continue;
         }
-        if (strcmp(word,"-->") != 0) 
+        if (strcmp(word,"-->") != 0)
           error->all(FLERR,"Invalid reaction formula in file");
         side = 1;
       }
@@ -333,7 +333,7 @@ void SurfReact::readfile(char *fname)
 
     word = strtok(NULL," \t\n");
     if (word) error->all(FLERR,"Too many coefficients in a reaction formula");
-    
+
     nlist++;
   }
 
@@ -346,7 +346,7 @@ void SurfReact::readfile(char *fname)
    return 1 if end-of-file, else return 0
 ------------------------------------------------------------------------- */
 
-int SurfReact::readone(char *line1, char *line2, int &n1, int &n2) 
+int SurfReact::readone(char *line1, char *line2, int &n1, int &n2)
 {
   char *eof;
   while ((eof = fgets(line1,MAXLINE,fp))) {
@@ -415,7 +415,7 @@ double SurfReact::compute_vector(int i)
     }
     return all[i];
   }
-    
+
   if (i < 2+nlist) {
     if (!tally_single_flag) {
       tally_single_flag = 1;

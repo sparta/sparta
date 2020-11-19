@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -69,17 +69,17 @@ ComputeFFTGrid::ComputeFFTGrid(SPARTA *sparta, int narg, char **arg) :
   if (!pflag and me == 0)
     error->warning(FLERR,"Grid is not periodic for compute fft/grid");
 
-  if (grid->maxlevel != 1) 
+  if (grid->maxlevel != 1)
     error->all(FLERR,"Compute fft/grid require uniform one-level grid");
-  if (grid->nsplit) 
+  if (grid->nsplit)
     error->all(FLERR,"Compute fft/grid cannot use grid with split cells");
-  if (grid->unx % 2 || grid->uny % 2) 
+  if (grid->unx % 2 || grid->uny % 2)
     error->all(FLERR,"Compute fft/grid cannot use grid "
                "with odd cell count in a dimension");
-  if (dimension == 3 && grid->unz % 2) 
+  if (dimension == 3 && grid->unz % 2)
     error->all(FLERR,"Compute fft/grid cannot use grid "
                "with odd cell count in a dimension");
-  
+
   // parse input values
 
   nvalues = narg - 2;
@@ -181,7 +181,7 @@ ComputeFFTGrid::ComputeFFTGrid(SPARTA *sparta, int narg, char **arg) :
 
   // setup and error check
 
-  if (kz && dimension == 2) 
+  if (kz && dimension == 2)
     error->all(FLERR,"Compute fft/grid cannot use kz for 2d simulation");
 
   for (int i = 0; i < nvalues; i++) {
@@ -222,7 +222,7 @@ ComputeFFTGrid::ComputeFFTGrid(SPARTA *sparta, int narg, char **arg) :
       int ivariable = input->variable->find(ids[i]);
       if (ivariable < 0)
         error->all(FLERR,"Variable name for compute fft/grid does not exist");
-      if (!input->variable->grid_style(ivariable)) 
+      if (!input->variable->grid_style(ivariable))
         error->all(FLERR,"Compute fft/grid requires a grid-style variable");
     }
   }
@@ -297,9 +297,9 @@ void ComputeFFTGrid::init()
   // check that grid has not adapted
   // check that grid still has no split cells
 
-  if (grid->maxlevel != 1) 
+  if (grid->maxlevel != 1)
     error->all(FLERR,"Compute fft/grid require uniform one-level grid");
-  if (grid->nsplit) 
+  if (grid->nsplit)
     error->all(FLERR,"Compute fft/grid cannot use grid with split cells");
 
   // create two irregular comm patterns for moving data
@@ -347,7 +347,7 @@ void ComputeFFTGrid::compute_per_grid()
   // check that grid has not adapted
   // NOTE: also need to check it has not been re-balanced?
 
-  if (grid->maxlevel != 1) 
+  if (grid->maxlevel != 1)
     error->all(FLERR,"Compute fft/grid require uniform one-level grid");
 
   // if sumflag set, zero output vector/array, but not K-space indices
@@ -381,9 +381,9 @@ void ComputeFFTGrid::compute_per_grid()
         c->invoked_flag |= INVOKED_PER_GRID;
       }
 
-      if (c->post_process_grid_flag) 
+      if (c->post_process_grid_flag)
         c->post_process_grid(aidx,1,NULL,NULL,NULL,1);
-      
+
       if (aidx == 0 || c->post_process_grid_flag) {
         ingridptr = c->vector_grid;
       } else {
@@ -464,23 +464,23 @@ void ComputeFFTGrid::compute_per_grid()
       if (sumflag) {
         if (ncol == 1) {
           int n = grid->nlocal;
-          for (i = 0; i < n; i++) 
+          for (i = 0; i < n; i++)
             vector_grid[map2[i]] += gridwork[i];
         } else {
           icol = startcol;
           int n = grid->nlocal;
-          for (i = 0; i < n; i++) 
+          for (i = 0; i < n; i++)
             array_grid[map2[i]][icol] += gridwork[i];
         }
       } else {
         if (ncol == 1) {
           int n = grid->nlocal;
-          for (i = 0; i < n; i++) 
+          for (i = 0; i < n; i++)
             vector_grid[map2[i]] = gridwork[i];
         } else {
           icol = m + startcol;
           int n = grid->nlocal;
-          for (i = 0; i < n; i++) 
+          for (i = 0; i < n; i++)
             array_grid[map2[i]][icol] = gridwork[i];
         }
       }
@@ -553,7 +553,7 @@ void ComputeFFTGrid::reallocate()
   gridwork = NULL;
   gridworkcomplex = NULL;
 
-  if (startcol || conjugate) 
+  if (startcol || conjugate)
     memory->create(gridwork,nglocal,"fft/grid:gridwork");
   if (!conjugate) memory->create(gridworkcomplex,2*nglocal,
                                  "fft/grid:gridworkcomplex");
@@ -609,7 +609,7 @@ void ComputeFFTGrid::reallocate()
 
     irregular2->exchange_uniform((char *) fftwork,sizeof(double),
                                  (char *) gridwork);
-    
+
     for (i = 0; i < nglocal; i++)
       array_grid[map2[i]][icol] = gridwork[i];
 
@@ -651,7 +651,7 @@ void ComputeFFTGrid::fft_create()
   nz = grid->unz;
 
   // warn if any grid dimension is not factorable by 2,3,5
-  
+
   int flag = 0;
   if (!factorable(nx)) flag = 1;
   if (!factorable(ny)) flag = 1;
@@ -688,14 +688,14 @@ void ComputeFFTGrid::fft_create()
   nzfft = nzhi - nzlo + 1;
 
   nfft = nxfft * nyfft * nzfft;
-  
+
   //printf("FFT %d: nxyz %d %d %d np xyz %d %d %d: "
   //       "x %d %d y %d %d z %d %d: %d\n",
   //       me,nx,ny,nz,npx,npy,npz,nxlo,nxhi,nylo,nyhi,nzlo,nzhi,nfft);
 
   bigint nfft2 = nfft;
   nfft2 *= 2;
-  if (nfft2 > MAXSMALLINT) 
+  if (nfft2 > MAXSMALLINT)
     error->all(FLERR,"Compute fft/grid FFT is too large per-processor");
 
   // create FFT plan
@@ -773,7 +773,7 @@ void ComputeFFTGrid::irregular_create()
 
   int nrecv = irregular1->create_data_uniform(nglocal,proclist1);
 
-  if (nrecv != nfft) 
+  if (nrecv != nfft)
     error->one(FLERR,"Compute fft/grid FFT mapping is inconsistent");
 
   memory->create(sbuf1,nglocal*sizeof(cellint),"fft/grid:sbuf1");
@@ -813,7 +813,7 @@ void ComputeFFTGrid::irregular_create()
   for (i = 0; i < nfft; i++) proclist2[map1[i]] = proclist3[i];
 
   nrecv = irregular2->create_data_uniform(nfft,proclist2);
-  if (nrecv != nglocal) 
+  if (nrecv != nglocal)
     error->one(FLERR,"Compute fft/grid FFT mapping is inconsistent");
 
   memory->create(sbuf2,nfft*sizeof(cellint),"fft/grid:sbuf2");
@@ -921,7 +921,7 @@ int ComputeFFTGrid::factorable(int n)
    debug by printing out vectors involved in grid <-> FFT remapping
 ------------------------------------------------------------------------- */
 
-void ComputeFFTGrid::debug(const char *str, int n, 
+void ComputeFFTGrid::debug(const char *str, int n,
                            double *dx, int *ix, cellint *cx, int stride)
 {
   int i,j;

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -37,7 +37,7 @@ class Grid : protected Pointers {
 
   int maxlevel;         // max level of any child cell in grid, 0 = root
   int plevel_limit;     // allocation bound of plevels
-  
+
   int uniform;          // 1 if all child cells are at same level, else 0
   int unx,uny,unz;      // if uniform, effective global Nx,Ny,Nz of finest grid
   double cutoff;        // cutoff for ghost cells, -1.0 = infinite
@@ -47,7 +47,7 @@ class Grid : protected Pointers {
   int surfgrid_algorithm;  // algorithm for overlap of surfs & grid cells
   int maxsurfpercell;   // max surf elements in one child cell
   int maxsplitpercell;  // max split cells in one child cell
-  
+
   int ngroup;           // # of defined groups
   char **gnames;        // name of each group
   int *bitmask;         // one-bit mask for each group
@@ -55,7 +55,7 @@ class Grid : protected Pointers {
 
   double tmap,tsplit;   // timing breakdowns of both grid2surf() algs
   double tcomm1,tcomm2,tcomm3,tcomm4;
-  
+
   int copy,copymode;    // 1 if copy of class (prevents deallocation of
                         //  base class when child copy is destroyed)
 
@@ -85,7 +85,7 @@ class Grid : protected Pointers {
   // includes unsplit cells, split cells, sub cells in any order
   // ghost cells are appended to owned
 
-  struct ChildCell {          
+  struct ChildCell {
     cellint id;               // ID of child cell
     int level;                // level of cell in hierarchical grid, 0 = root
     int proc;                 // proc that owns this cell
@@ -111,7 +111,7 @@ class Grid : protected Pointers {
                               // 6 = non-PBC boundary or ZLO/ZHI in 2d
 
     double lo[3],hi[3];       // opposite corner pts of cell
-    
+
     int nsurf;                // # of surf elements in cell
                               // -1 = empty ghost cell
     surfint *csurfs;          // indices of surf elements in cell
@@ -164,7 +164,7 @@ class Grid : protected Pointers {
     int nx,ny,nz;             // child grid below this parent level
     bigint nxyz;              // # of child cells of this parent level
   };
-  
+
   struct ParentCell {
     cellint id;               // ID of parent cell
     double lo[3],hi[3];       // opposite corner pts of cell
@@ -183,7 +183,7 @@ class Grid : protected Pointers {
 
   int maxlocal;               // size of cinfo
   int maxparent;              // size of pcells
-  
+
   ChildCell *cells;           // list of owned and ghost child cells
   ChildInfo *cinfo;           // extra info for nlocal owned cells
   SplitInfo *sinfo;           // extra info for owned and ghost split cells
@@ -207,9 +207,9 @@ class Grid : protected Pointers {
   void add_split_cell(int);
   void add_sub_cell(int, int);
   void notify_changed();
-  int set_minlevel(); 
-  void set_maxlevel(); 
-  void setup_owned(); 
+  int set_minlevel();
+  void set_maxlevel();
+  void setup_owned();
   void remove_ghosts();
   void acquire_ghosts(int surfflag=1);
   void rehash();
@@ -221,7 +221,7 @@ class Grid : protected Pointers {
   void type_check(int flag=1);
   void weight(int, char **);
   void weight_one(int);
-  
+
   void refine_cell(int, int *, class Cut2d *, class Cut3d *);
   void coarsen_cell(cellint, int, double *, double *,
 		    int, int *, int *, int *, void **, char **,
@@ -329,7 +329,7 @@ class Grid : protected Pointers {
   };
 
   // tree of RCB cuts for a partitioned uniform block of grid cells
-  
+
   struct GridTree {
     int dim,cut;
   };
@@ -350,7 +350,7 @@ class Grid : protected Pointers {
   };
 
   // surf ID hashes
-  
+
 #ifdef SPARTA_MAP
     typedef std::map<surfint,int> MySurfHash;
     typedef std::map<surfint,int>::iterator MyIterator;
@@ -378,11 +378,11 @@ class Grid : protected Pointers {
   void mybox(int, int, int, int &, int &, int &, int &, int &, int &,
 	     GridTree *);
   void box_drop(int *, int *, int, int, GridTree *, int &, int *);
-  
+
   void acquire_ghosts_all(int);
   void acquire_ghosts_near(int);
 
-  void box_intersect(double *, double *, double *, double *, 
+  void box_intersect(double *, double *, double *, double *,
                      double *, double *);
   int box_overlap(double *, double *, double *, double *);
   int box_periodic(double *, double *, Box *);

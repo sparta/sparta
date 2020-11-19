@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -105,8 +105,8 @@ void FixAmbipolar::init()
    if an ion, set ionambi and velambi for particle
 ------------------------------------------------------------------------- */
 
-void FixAmbipolar::add_particle(int index, double temp_thermal, 
-                                double, double, 
+void FixAmbipolar::add_particle(int index, double temp_thermal,
+                                double, double,
                                 double *vstream)
 {
   int *ionambi = particle->eivec[particle->ewhich[ionindex]];
@@ -133,7 +133,7 @@ void FixAmbipolar::add_particle(int index, double temp_thermal,
   double vr = vscale * sqrt(-log(random->uniform()));
   double theta1 = MY_2PI * random->uniform();
   double theta2 = MY_2PI * random->uniform();
-    
+
   velambi[index][0] = vstream[0] + vn*cos(theta1);
   velambi[index][1] = vstream[1] + vr*cos(theta2);
   velambi[index][2] = vstream[2] + vr*sin(theta2);

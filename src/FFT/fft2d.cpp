@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -36,9 +36,9 @@
    my subsection must not overlap with any other proc's subsection,
      i.e. the union of all proc's input (or output) subsections must
      exactly tile the global Nfast x Nslow data set
-   when called from C, all subsection indices are 
+   when called from C, all subsection indices are
      C-style from 0 to N-1 where N = Nfast or Nslow
-   when called from F77, all subsection indices are 
+   when called from F77, all subsection indices are
      F77-style from 1 to N where N = Nfast or Nslow
    a proc can own 0 elements on input or output
      by specifying hi index < lo index
@@ -80,7 +80,7 @@ void fft_2d(FFT_DATA *in, FFT_DATA *out, int flag, struct fft_plan_2d *plan)
   if (plan->pre_plan) {
     if (plan->pre_target == 0) copy = out;
     else copy = plan->copy;
-    remap_2d((FFT_SCALAR *) in, (FFT_SCALAR *) copy, 
+    remap_2d((FFT_SCALAR *) in, (FFT_SCALAR *) copy,
              (FFT_SCALAR *) plan->scratch, plan->pre_plan);
     data = copy;
   } else data = in;
@@ -120,7 +120,7 @@ void fft_2d(FFT_DATA *in, FFT_DATA *out, int flag, struct fft_plan_2d *plan)
 
   if (plan->mid_target == 0) copy = out;
   else copy = plan->copy;
-  remap_2d((FFT_SCALAR *) data, (FFT_SCALAR *) copy, 
+  remap_2d((FFT_SCALAR *) data, (FFT_SCALAR *) copy,
            (FFT_SCALAR *) plan->scratch, plan->mid_plan);
   data = copy;
 
@@ -158,7 +158,7 @@ void fft_2d(FFT_DATA *in, FFT_DATA *out, int flag, struct fft_plan_2d *plan)
   // destination is always out
 
   if (plan->post_plan)
-    remap_2d((FFT_SCALAR *) data, (FFT_SCALAR *) out, 
+    remap_2d((FFT_SCALAR *) data, (FFT_SCALAR *) out,
              (FFT_SCALAR *) plan->scratch,plan->post_plan);
 
   // scaling if required
@@ -291,7 +291,7 @@ struct fft_plan_2d *fft_2d_create_plan(
 
   plan->length2 = nslow;
   plan->total2 = (second_ihi-second_ilo+1) * nslow;
-  
+
   // remap from 2nd FFT to final distribution
   // not needed if permute = 1 and second indices = out indices on all procs
 
@@ -366,7 +366,7 @@ struct fft_plan_2d *fft_2d_create_plan(
   }
   else plan->scratch = NULL;
 
-  // system specific pre-computation of 1d FFT coeffs 
+  // system specific pre-computation of 1d FFT coeffs
   // and scaling normalization
 
 #if defined(FFT_MKL)

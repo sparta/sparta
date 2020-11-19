@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -92,7 +92,7 @@ FixBalance::FixBalance(SPARTA *sparta, int narg, char **arg) :
       if (strchr(eligible,'z')) zdim = 1;
       if (zdim && domain->dimension == 2)
         error->all(FLERR,"Illegal balance_grid command");
-      if (xdim+ydim+zdim != strlen(eligible)) 
+      if (xdim+ydim+zdim != strlen(eligible))
         error->all(FLERR,"Illegal fix balance command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"flip") == 0) {
@@ -117,8 +117,8 @@ FixBalance::FixBalance(SPARTA *sparta, int narg, char **arg) :
   random = NULL;
   rcb = NULL;
 
-  if (bstyle == RANDOM || bstyle == PROC) 
-    random = new RanPark(update->ranmaster->uniform()); 
+  if (bstyle == RANDOM || bstyle == PROC)
+    random = new RanPark(update->ranmaster->uniform());
   if (bstyle == BISECTION) rcb = new RCB(sparta);
 
   // compute initial outputs
@@ -273,7 +273,7 @@ void FixBalance::end_of_step()
   comm->reset_neighbors();
 
   // notify all classes that store per-grid data that grid may have changed
-  
+
   grid->notify_changed();
 
   // final imbalance factor
@@ -381,7 +381,7 @@ void FixBalance::timer_cell_weights(double *weight)
     wttotal += localwt[nbalance-1];
   }
 
-  for (int icell = 0; icell < nglocal; icell++) 
+  for (int icell = 0; icell < nglocal; icell++)
     weight[icell] = my_timer_cost*localwt[icell]/wttotal;
 
   memory->destroy(localwt);

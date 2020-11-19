@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -105,7 +105,7 @@ ReactBird::~ReactBird()
 
 /* ---------------------------------------------------------------------- */
 
-void ReactBird::init() 
+void ReactBird::init()
 {
   for (int i = 0; i < nlist; i++) tally_reactions[i] = 0;
 
@@ -198,7 +198,7 @@ void ReactBird::init()
   for (int i = 0; i < nspecies; i++)
     for (int j = 0; j < nspecies; j++)
       reactions[i][j].n = 0;
- 
+
   for (int m = 0; m < nlist; m++) {
     OneReaction *r = &rlist[m];
     if (!r->active) continue;
@@ -226,7 +226,7 @@ void ReactBird::init()
 
     // symmetry parameter
 
-    double epsilon = 1.0;         
+    double epsilon = 1.0;
     if (isp == jsp) epsilon = 2.0;
 
     double diam = collide->extract(isp,jsp,"diam");
@@ -241,7 +241,7 @@ void ReactBird::init()
     // average DOFs participating in the reaction
 
     double z = r->coeff[0];
-    
+
     // add additional coeff for effective DOF
     // added MAX() limit, 24Aug18
 
@@ -269,7 +269,7 @@ void ReactBird::init()
         mspec = r->products[1];
         aspec = r->products[0];
       }
-              
+
       int ncount = 0;
       if (mspec >= 0) {
         momega = collide->extract(mspec,mspec,"omega");
@@ -344,7 +344,7 @@ void ReactBird::init()
     }
 
   // loop over species K for each IJ pair
-  // if the IJ pair has any recombination reactions, 
+  // if the IJ pair has any recombination reactions,
   //   then fill in its reactions[i][j].sp2recomb entries,
   //   which are indices into rlist of specific recomb reaction
   //   for each 3rd particle species
@@ -436,7 +436,7 @@ void ReactBird::ambi_check()
   FixAmbipolar *afix = (FixAmbipolar *) modify->fix[ifix];
   int especies = afix->especies;
   int *ions = afix->ions;
-  
+
   // loop over active reactions
 
   for (int i = 0; i < nlist; i++) {
@@ -464,10 +464,10 @@ void ReactBird::ambi_check()
     if (r->type == DISSOCIATION) {
       if (r->nreactant == 2 && r->nproduct == 3) {
         if (ions[r->reactants[0]] == 0 && r->reactants[1] == especies &&
-            ions[r->products[0]] == 0 && r->products[1] == especies && 
+            ions[r->products[0]] == 0 && r->products[1] == especies &&
             ions[r->products[2]] == 0) flag = 0;
         else if (ions[r->reactants[0]] == 1 && r->reactants[1] == especies &&
-                 ions[r->products[0]] == 1 && r->products[1] == especies && 
+                 ions[r->products[0]] == 1 && r->products[1] == especies &&
                  ions[r->products[2]] == 0) flag = 0;
       }
     }
@@ -478,7 +478,7 @@ void ReactBird::ambi_check()
     else if (r->type == IONIZATION && r->nproduct == 3) {
       if (r->nreactant == 2 && r->nproduct == 3) {
         if (ions[r->reactants[0]] == 0 && r->reactants[1] == especies &&
-            ions[r->products[0]] == 1 && r->products[1] == especies && 
+            ions[r->products[0]] == 1 && r->products[1] == especies &&
             r->products[2] == especies) flag = 0;
       }
     }
@@ -518,9 +518,9 @@ void ReactBird::ambi_check()
       if (r->nreactant == 2 && r->nproduct == 1) {
         if (ions[r->reactants[0]] == 1 && r->reactants[1] == especies &&
             ions[r->products[0]] == 0) flag = 0;
-        else if (ions[r->reactants[0]] == 0 && ions[r->reactants[1]] == 1 && 
+        else if (ions[r->reactants[0]] == 0 && ions[r->reactants[1]] == 1 &&
             ions[r->products[0]] == 1) flag = 0;
-        else if (ions[r->reactants[0]] == 1 && ions[r->reactants[1]] == 0 && 
+        else if (ions[r->reactants[0]] == 1 && ions[r->reactants[1]] == 0 &&
             ions[r->products[0]] == 1) flag = 0;
       }
     }
@@ -536,7 +536,7 @@ void ReactBird::ambi_check()
 
 /* ---------------------------------------------------------------------- */
 
-void ReactBird::readfile(char *fname) 
+void ReactBird::readfile(char *fname)
 {
   int n,n1,n2,eof;
   char line1[MAXLINE],line2[MAXLINE];
@@ -561,7 +561,7 @@ void ReactBird::readfile(char *fname)
     if (comm->me == 0) eof = readone(line1,line2,n1,n2);
     MPI_Bcast(&eof,1,MPI_INT,0,world);
     if (eof) break;
-    
+
     MPI_Bcast(&n1,1,MPI_INT,0,world);
     MPI_Bcast(&n2,1,MPI_INT,0,world);
     MPI_Bcast(line1,n1,MPI_CHAR,0,world);
@@ -569,7 +569,7 @@ void ReactBird::readfile(char *fname)
 
     if (nlist == maxlist) {
       maxlist += DELTALIST;
-      rlist = (OneReaction *) 
+      rlist = (OneReaction *)
         memory->srealloc(rlist,maxlist*sizeof(OneReaction),"react/bird:rlist");
       for (int i = nlist; i < maxlist; i++) {
         r = &rlist[i];
@@ -713,7 +713,7 @@ void ReactBird::readfile(char *fname)
       print_reaction(copy1,copy2);
       error->all(FLERR,"Too many coefficients in a reaction formula");
     }
-    
+
     nlist++;
   }
 
@@ -726,7 +726,7 @@ void ReactBird::readfile(char *fname)
    return 1 if end-of-file, else return 0
 ------------------------------------------------------------------------- */
 
-int ReactBird::readone(char *line1, char *line2, int &n1, int &n2) 
+int ReactBird::readone(char *line1, char *line2, int &n1, int &n2)
 {
   char *eof;
   while ((eof = fgets(line1,MAXLINE,fp))) {
@@ -747,7 +747,7 @@ int ReactBird::readone(char *line1, char *line2, int &n1, int &n2)
    error if any exist
 ------------------------------------------------------------------------- */
 
-void ReactBird::check_duplicate() 
+void ReactBird::check_duplicate()
 {
   OneReaction *r,*s;
 
@@ -763,10 +763,10 @@ void ReactBird::check_duplicate()
       if (r->nproduct != s->nproduct) continue;
 
       int reactant_match = 0;
-      if (strcmp(r->id_reactants[0],s->id_reactants[0]) == 0 && 
-          strcmp(r->id_reactants[1],s->id_reactants[1]) == 0) 
+      if (strcmp(r->id_reactants[0],s->id_reactants[0]) == 0 &&
+          strcmp(r->id_reactants[1],s->id_reactants[1]) == 0)
         reactant_match = 1;
-      else if (strcmp(r->id_reactants[0],s->id_reactants[1]) == 0 && 
+      else if (strcmp(r->id_reactants[0],s->id_reactants[1]) == 0 &&
                strcmp(r->id_reactants[1],s->id_reactants[0]) == 0)
         reactant_match = 2;
       if (!reactant_match) continue;
@@ -802,7 +802,7 @@ void ReactBird::check_duplicate()
    only proc 0 performs output
 ------------------------------------------------------------------------- */
 
-void ReactBird::print_reaction(char *line1, char *line2) 
+void ReactBird::print_reaction(char *line1, char *line2)
 {
   if (comm->me) return;
   printf("Bad reaction format:\n");
@@ -814,7 +814,7 @@ void ReactBird::print_reaction(char *line1, char *line2)
    only proc 0 performs output
 ------------------------------------------------------------------------- */
 
-void ReactBird::print_reaction(OneReaction *r) 
+void ReactBird::print_reaction(OneReaction *r)
 {
   if (comm->me) return;
   printf("Bad reaction:\n");
@@ -848,7 +848,7 @@ void ReactBird::print_reaction(OneReaction *r)
    only proc 0 performs output
 ------------------------------------------------------------------------- */
 
-void ReactBird::print_reaction_ambipolar(OneReaction *r) 
+void ReactBird::print_reaction_ambipolar(OneReaction *r)
 {
   if (comm->me) return;
   printf("Bad ambipolar reaction format:\n");
@@ -871,7 +871,7 @@ void ReactBird::print_reaction_ambipolar(OneReaction *r)
    return reaction ID = chemical formula
 ------------------------------------------------------------------------- */
 
-char *ReactBird::reactionID(int m) 
+char *ReactBird::reactionID(int m)
 {
   return rlist[m].id;
 };
@@ -880,7 +880,7 @@ char *ReactBird::reactionID(int m)
    return tally associated with a reaction
 ------------------------------------------------------------------------- */
 
-double ReactBird::extract_tally(int m) 
+double ReactBird::extract_tally(int m)
 {
   if (!tally_flag) {
     tally_flag = 1;

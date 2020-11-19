@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -24,7 +24,7 @@ using namespace SPARTA_NS;
 
 /* ---------------------------------------------------------------------- */
 
-ComputeTemp::ComputeTemp(SPARTA *sparta, int narg, char **arg) : 
+ComputeTemp::ComputeTemp(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
 {
   if (narg != 2) error->all(FLERR,"Illegal compute temp command");
@@ -47,7 +47,7 @@ double ComputeTemp::compute_scalar()
 
   for (int i = 0; i < nlocal; i++) {
     v = particles[i].v;
-    t += (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]) * 
+    t += (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]) *
       species[particles[i].ispecies].mass;
   }
 

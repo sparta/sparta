@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -78,12 +78,12 @@ void CreateParticlesKokkos::create_local(bigint np)
       continue;
 
     if (dimension == 3) volone = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
-    else if (domain->axisymmetric) 
+    else if (domain->axisymmetric)
       volone = (hi[0]-lo[0]) * (hi[1]*hi[1]-lo[1]*lo[1])*MY_PI;
     else volone = (hi[0]-lo[0]) * (hi[1]-lo[1]);
     volme += volone / cinfo[i].weight;
   }
-  
+
   double volupto;
   MPI_Scan(&volme,&volupto,1,MPI_DOUBLE,MPI_SUM,world);
 
@@ -98,7 +98,7 @@ void CreateParticlesKokkos::create_local(bigint np)
   // enforce that by brute force
 
   for (int i = 1; i < nprocs; i++)
-    if (vols[i] != vols[i-1] && 
+    if (vols[i] != vols[i-1] &&
         fabs(vols[i]-vols[i-1])/vols[nprocs-1] < EPSZERO)
       vols[i] = vols[i-1];
 
@@ -171,7 +171,7 @@ void CreateParticlesKokkos::create_local(bigint np)
 
     if (ncreate < 0) ncreate = 0;
     h_npercell(i) = ncreate;
-  
+
     // increment count without effect of density variation
     // so that target insertion count is undisturbed
 

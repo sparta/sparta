@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -127,16 +127,16 @@ void FixAveGridKokkos::init()
       if (icompute < 0)
     error->all(FLERR,"Compute ID for fix ave/grid does not exist");
       value2index[m] = icompute;
-      
+
     } else if (which[m] == FIX) {
       int ifix = modify->find_fix(ids[m]);
-      if (ifix < 0) 
+      if (ifix < 0)
     error->all(FLERR,"Fix ID for fix ave/grid does not exist");
       value2index[m] = ifix;
 
     } else if (which[m] == VARIABLE) {
       int ivariable = input->variable->find(ids[m]);
-      if (ivariable < 0) 
+      if (ivariable < 0)
     error->all(FLERR,"Variable name for fix ave/grid does not exist");
       value2index[m] = ivariable;
 
@@ -246,7 +246,7 @@ void FixAveGridKokkos::end_of_step()
       //k = umap[m][0];
       //input->variable->compute_grid(n,&tally[0][k],ntotal,1); // need Kokkos version
     }
-   
+
   }
 
   // done if irepeat < nrepeat

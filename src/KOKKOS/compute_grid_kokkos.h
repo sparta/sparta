@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -51,7 +51,7 @@ class ComputeGridKokkos : public ComputeGrid, public KokkosBase {
   void compute_per_grid();
   void compute_per_grid_kokkos();
   int query_tally_grid_kokkos(DAT::t_float_2d_lr &);
-  void post_process_grid_kokkos(int, int, DAT::t_float_2d_lr, int *, 
+  void post_process_grid_kokkos(int, int, DAT::t_float_2d_lr, int *,
                                   DAT::t_float_1d_strided);
   void reallocate();
 

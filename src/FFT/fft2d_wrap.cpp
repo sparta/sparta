@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -23,7 +23,7 @@ using namespace SPARTA_NS;
 FFT2D::FFT2D(SPARTA *spa, MPI_Comm comm, int nfast, int nslow,
              int in_ilo, int in_ihi, int in_jlo, int in_jhi,
              int out_ilo, int out_ihi, int out_jlo, int out_jhi,
-             int scaled, int permute, int *nbuf, int usecollective) : 
+             int scaled, int permute, int *nbuf, int usecollective) :
   Pointers(spa)
 {
   plan = fft_2d_create_plan(comm,nfast,nslow,

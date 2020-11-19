@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -338,13 +338,13 @@ void FixAveHistoWeight::bin_particles(int attribute, int index)
       }
     } else if (regionflag) {
       for (int i = 0; i < nlocal; i++) {
-        if (region->match(particles[i].x)) 
+        if (region->match(particles[i].x))
           bin_one_weight(particles[i].x[index],weights[mwt]);
         mwt += stridewt;
       }
     } else if (mixflag) {
       for (int i = 0; i < nlocal; i++) {
-        if (s2g[particles[i].ispecies] >= 0) 
+        if (s2g[particles[i].ispecies] >= 0)
           bin_one_weight(particles[i].x[index],weights[mwt]);
         mwt += stridewt;
       }
@@ -365,13 +365,13 @@ void FixAveHistoWeight::bin_particles(int attribute, int index)
       }
     } else if (regionflag) {
       for (int i = 0; i < nlocal; i++) {
-        if (region->match(particles[i].x)) 
+        if (region->match(particles[i].x))
           bin_one_weight(particles[i].v[index],weights[mwt]);
         mwt += stridewt;
       }
     } else if (mixflag) {
       for (int i = 0; i < nlocal; i++) {
-        if (s2g[particles[i].ispecies] >= 0) 
+        if (s2g[particles[i].ispecies] >= 0)
           bin_one_weight(particles[i].v[index],weights[mwt]);
         mwt += stridewt;
       }
@@ -403,15 +403,15 @@ void FixAveHistoWeight::bin_particles(double *values, int stride)
 
   if (regionflag && mixflag) {
     for (int i = 0; i < nlocal; i++) {
-      if (region->match(particles[i].x) && 
-          s2g[particles[i].ispecies] >= 0) 
+      if (region->match(particles[i].x) &&
+          s2g[particles[i].ispecies] >= 0)
         bin_one_weight(values[m],weights[mwt]);
       m += stride;
       mwt += stridewt;
     }
   } else if (regionflag) {
     for (int i = 0; i < nlocal; i++) {
-      if (region->match(particles[i].x)) 
+      if (region->match(particles[i].x))
         bin_one_weight(values[m],weights[mwt]);
       m += stride;
       mwt += stridewt;
@@ -446,7 +446,7 @@ void FixAveHistoWeight::bin_grid_cells(double *values, int stride)
 
   if (groupflag) {
     for (int i = 0; i < nglocal; i++) {
-      if (cinfo[i].mask & groupbit) 
+      if (cinfo[i].mask & groupbit)
         bin_one_weight(values[m],weights[mwt]);
       m += stride;
       mwt += stridewt;

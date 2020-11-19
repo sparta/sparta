@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -76,7 +76,7 @@ class Variable : protected Pointers {
   int *maxlen_storage;     // allocated length of each vector
 
   struct Tree {            // parse tree for particle-style variables
-    double value;          // single scalar  
+    double value;          // single scalar
     double *array;         // per-atom or per-type list of doubles
     char *carray;          // ptr into data struct with nstride = sizeof(struct)
     int type;              // operation, see enum{} in variable.cpp
@@ -95,7 +95,7 @@ class Variable : protected Pointers {
   void free_tree(Tree *);
   int find_matching_paren(char *, int, char *&);
   int math_function(char *, char *, Tree **, Tree **, int &, double *, int &);
-  int special_function(char *, char *, Tree **, Tree **, 
+  int special_function(char *, char *, Tree **, Tree **,
 		       int &, double *, int &);
   int is_particle_vector(char *);
   void particle_vector(char *, Tree **, Tree **, int &);

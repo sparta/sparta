@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -75,7 +75,7 @@ class Compute : protected Pointers {
   bigint invoked_per_surf;     // ditto for compute_per_surf()
 
   Compute(class SPARTA *, int, char **);
-  Compute(class SPARTA* sparta) : Pointers(sparta) {} 
+  Compute(class SPARTA* sparta) : Pointers(sparta) {}
   virtual ~Compute();
   virtual void init() {}
 
@@ -86,7 +86,7 @@ class Compute : protected Pointers {
   virtual void compute_per_grid() {}
   virtual void compute_per_surf() {}
   virtual void clear() {}
-  virtual void surf_tally(int, int, int, Particle::OnePart *,  
+  virtual void surf_tally(int, int, int, Particle::OnePart *,
                           Particle::OnePart *, Particle::OnePart *) {}
   virtual void boundary_tally(int, int, int, Particle::OnePart *,
                               Particle::OnePart *, Particle::OnePart *) {}

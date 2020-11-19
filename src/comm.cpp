@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -97,21 +97,21 @@ void Comm::reset_neighbors()
   Grid::ChildCell *cells = grid->cells;
   int nglocal = grid->nlocal;
   int ntotal = nglocal + grid->nghost;
-  
+
   for (int icell = nglocal; icell < ntotal; icell++)
     neighlist[cells[icell].proc] = 1;
   neighlist[me] = 0;
-  
+
   nneigh = 0;
   for (int i = 0; i < nprocs; i++)
     if (neighlist[i]) neighlist[nneigh++] = i;
-  
+
   iparticle->create_procs(nneigh,neighlist,commsortflag);
 }
 
 /* ----------------------------------------------------------------------
    migrate particles to new procs after particle move
-   return particle nlocal after compression, 
+   return particle nlocal after compression,
      so Update can iterate on particle move
 ------------------------------------------------------------------------- */
 
@@ -180,11 +180,11 @@ int Comm::migrate_particles(int nmigrate, int *plist)
 
   // create or augment irregular communication plan
   // nrecv = # of incoming particles
-  
+
   int nrecv;
   if (neighflag)
     nrecv = iparticle->augment_data_uniform(nsend,pproc);
-  else 
+  else
     nrecv = iparticle->create_data_uniform(nsend,pproc,commsortflag);
 
   // extend particle list if necessary
@@ -235,7 +235,7 @@ void Comm::migrate_cells(int nmigrate)
   if (update->mem_limit_grid_flag)
     update->set_mem_limit_grid();
 
-  if (update->global_mem_limit > 0 || 
+  if (update->global_mem_limit > 0 ||
       (update->mem_limit_grid_flag && !grid->nlocal))
     return migrate_cells_less_memory(nmigrate);
 
@@ -268,7 +268,7 @@ void Comm::migrate_cells(int nmigrate)
     boffset += n;
   }
 
-  if (boffset > MAXSMALLINT) 
+  if (boffset > MAXSMALLINT)
     error->one(FLERR,"Migrate cells send buffer exceeds 2 GB");
   int offset = boffset;
 
@@ -383,7 +383,7 @@ void Comm::migrate_cells_less_memory(int nmigrate)
       boffset += n;
     }
 
-    if (boffset > MAXSMALLINT) 
+    if (boffset > MAXSMALLINT)
       error->one(FLERR,"Migrate cells send buffer exceeds 2 GB");
     int offset = boffset;
 
@@ -457,7 +457,7 @@ void Comm::migrate_cells_less_memory(int nmigrate)
 
     icell_start = icell_end;
     int not_done_local = icell_start < nglocal;
-    MPI_Allreduce(&not_done_local,&not_done,1,MPI_INT,MPI_SUM,world); 
+    MPI_Allreduce(&not_done_local,&not_done,1,MPI_INT,MPI_SUM,world);
   }
 
   // compress my list of owned implicit surfs, resets csurfs in kept cells
@@ -502,7 +502,7 @@ int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
     boffset += n;
   }
 
-  if (boffset > MAXSMALLINT) 
+  if (boffset > MAXSMALLINT)
     error->one(FLERR,"Adapt grid send buffer exceeds 2 GB");
   int offset = boffset;
 
@@ -530,7 +530,7 @@ int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
 
   if (!igrid) igrid = new Irregular(sparta);
   int recvsize;
-  int nrecv = 
+  int nrecv =
     igrid->create_data_variable(nsend,procsend,gsize,recvsize,commsortflag);
 
   // reallocate rbuf as needed
@@ -561,7 +561,7 @@ int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
    called from FixAblate
 ------------------------------------------------------------------------- */
 
-int Comm::irregular_uniform_neighs(int nsend, int *procsend, 
+int Comm::irregular_uniform_neighs(int nsend, int *procsend,
                                    char *inbuf, int nsize, char **outbuf)
 {
   // if neighflag, use iparticle
@@ -573,7 +573,7 @@ int Comm::irregular_uniform_neighs(int nsend, int *procsend,
   int nrecv;
   if (neighflag)
     nrecv = iparticle->augment_data_uniform(nsend,procsend);
-  else 
+  else
     nrecv = iuniform->create_data_uniform(nsend,procsend,commsortflag);
 
   // reallocate rbuf as needed
@@ -589,7 +589,7 @@ int Comm::irregular_uniform_neighs(int nsend, int *procsend,
 
   if (neighflag)
     iparticle->exchange_uniform(inbuf,nsize,rbuf);
-  else 
+  else
     iuniform->exchange_uniform(inbuf,nsize,rbuf);
 
   // return rbuf and grid cell count
@@ -605,7 +605,7 @@ int Comm::irregular_uniform_neighs(int nsend, int *procsend,
    called from AdaptGrid
 ------------------------------------------------------------------------- */
 
-int Comm::irregular_uniform(int nsend, int *procsend, 
+int Comm::irregular_uniform(int nsend, int *procsend,
                             char *inbuf, int nsize, char **outbuf)
 {
   // one-time create of irregular comm plan with constant size datums
@@ -643,7 +643,7 @@ int Comm::irregular_uniform(int nsend, int *procsend,
 ------------------------------------------------------------------------- */
 
 void Comm::ring(int n, int nper, void *inbuf, int messtag,
-                void (*callback)(int, char *, void *), void *outbuf, int self, 
+                void (*callback)(int, char *, void *), void *outbuf, int self,
                 void *ptr)
 {
   MPI_Request request;
@@ -692,7 +692,7 @@ void Comm::ring(int n, int nper, void *inbuf, int messtag,
      inbuf = vector of input datums
      insize = byte size of each input datum
      inorder = 0 for inbuf in random proc order, 1 for datums ordered by proc
-     procs: inorder 0 = proc to send each datum to, 1 = # of datums/proc, 
+     procs: inorder 0 = proc to send each datum to, 1 = # of datums/proc,
      callback = caller function to invoke in rendezvous decomposition
                 takes input datums, returns output datums
      outorder = same as inorder, but for datums returned by callback()
@@ -736,11 +736,11 @@ rendezvous(int which, int n, char *inbuf, int insize,
 int Comm::
 rendezvous_irregular(int n, char *inbuf, int insize, int inorder, int *procs,
                      int (*callback)(int, char *, int &, int *&, char *&, void *),
-                     int outorder, char *&outbuf, 
+                     int outorder, char *&outbuf,
                      int outsize, void *ptr, int statflag)
 {
   // irregular comm of inbuf from caller decomp to rendezvous decomp
-  
+
   Irregular *irregular = new Irregular(sparta);
 
   int nrvous;
@@ -760,7 +760,7 @@ rendezvous_irregular(int n, char *inbuf, int insize, int inorder, int *procs,
     outbuf = inbuf_rvous;
     return nrvous;
   }
-  
+
   // peform rendezvous computation via callback()
   // callback() allocates/populates proclist_rvous and outbuf_rvous
 
@@ -777,9 +777,9 @@ rendezvous_irregular(int n, char *inbuf, int insize, int inorder, int *procs,
   // caller will free outbuf
 
   irregular = new Irregular(sparta);
-  
+
   int nout;
-  if (outorder) 
+  if (outorder)
     nout = irregular->create_data_uniform_grouped(nrvous_out,procs_rvous);
   else nout = irregular->create_data_uniform(nrvous_out,procs_rvous);
 
@@ -828,7 +828,7 @@ rendezvous_all2all(int n, char *inbuf, int insize, int inorder, int *procs,
   char *inbuf_a2a,*outbuf_a2a;
 
   // create procs and inbuf for All2all if necesary
-  
+
   if (!inorder) {
     memory->create(procs_a2a,nprocs,"rendezvous:procs");
     inbuf_a2a = (char *) memory->smalloc((bigint) n*insize,
@@ -859,10 +859,10 @@ rendezvous_all2all(int n, char *inbuf, int insize, int inorder, int *procs,
   }
 
   // create args for MPI_Alltoallv() on input data
-  
+
   memory->create(sendcount,nprocs,"rendezvous:sendcount");
   memcpy(sendcount,procs_a2a,nprocs*sizeof(int));
-  
+
   memory->create(recvcount,nprocs,"rendezvous:recvcount");
   MPI_Alltoall(sendcount,1,MPI_INT,recvcount,1,MPI_INT,world);
 
@@ -877,14 +877,14 @@ rendezvous_all2all(int n, char *inbuf, int insize, int inorder, int *procs,
 
   // test for overflow of input data due to imbalance or insize
   // means that individual sdispls or rdispls values overflow
-  
+
   int overflow = 0;
   if ((bigint) n*insize > MAXSMALLINT) overflow = 1;
   if ((bigint) nrvous*insize > MAXSMALLINT) overflow = 1;
   int overflowall;
   MPI_Allreduce(&overflow,&overflowall,1,MPI_INT,MPI_MAX,world);
   if (overflowall) error->all(FLERR,"Overflow input size in rendezvous_a2a");
-  
+
   for (int i = 0; i < nprocs; i++) {
     sendcount[i] *= insize;
     sdispls[i] *= insize;
@@ -937,7 +937,7 @@ rendezvous_all2all(int n, char *inbuf, int insize, int inorder, int *procs,
   }
 
   // create procs and outbuf for All2all if necesary
-  
+
   if (!outorder) {
     memory->create(procs_a2a,nprocs,"rendezvous_a2a:procs");
 
@@ -959,8 +959,8 @@ rendezvous_all2all(int n, char *inbuf, int insize, int inorder, int *procs,
       offsets[iproc] += outsize;
       offset += outsize;
     }
-    
-    all2all2_bytes = nprocs*sizeof(int) + nprocs*sizeof(bigint) + 
+
+    all2all2_bytes = nprocs*sizeof(int) + nprocs*sizeof(bigint) +
       nrvous_out*outsize;
 
   } else {
@@ -972,9 +972,9 @@ rendezvous_all2all(int n, char *inbuf, int insize, int inorder, int *procs,
   // comm outbuf from rendezvous decomposition back to caller
 
   memcpy(sendcount,procs_a2a,nprocs*sizeof(int));
-  
+
   MPI_Alltoall(sendcount,1,MPI_INT,recvcount,1,MPI_INT,world);
-  
+
   sdispls[0] = rdispls[0] = 0;
   for (int i = 1; i < nprocs; i++) {
     sdispls[i] = sdispls[i-1] + sendcount[i-1];
@@ -984,13 +984,13 @@ rendezvous_all2all(int n, char *inbuf, int insize, int inorder, int *procs,
 
   // test for overflow of outbuf due to imbalance or outsize
   // means that individual sdispls or rdispls values overflow
-  
+
   overflow = 0;
   if ((bigint) nrvous*outsize > MAXSMALLINT) overflow = 1;
   if ((bigint) nout*outsize > MAXSMALLINT) overflow = 1;
   MPI_Allreduce(&overflow,&overflowall,1,MPI_INT,MPI_MAX,world);
   if (overflowall) error->all(FLERR,"Overflow output in rendezvous_a2a");
-  
+
   for (int i = 0; i < nprocs; i++) {
     sendcount[i] *= outsize;
     sdispls[i] *= outsize;
@@ -1046,7 +1046,7 @@ rendezvous_all2all(int n, char *inbuf, int insize, int inorder, int *procs,
    memory info for caller and rendezvous decompositions
 ------------------------------------------------------------------------- */
 
-void Comm::rendezvous_stats(int n, int insize, int nout, int outsize, 
+void Comm::rendezvous_stats(int n, int insize, int nout, int outsize,
                             int nrvous, int nrvous_out)
 {
   bigint size_in_all,size_in_max,size_in_min;

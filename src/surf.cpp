@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -121,7 +121,7 @@ Surf::~Surf()
 
 void Surf::global(char *arg)
 {
-  if (exist) 
+  if (exist)
     error->all(FLERR,"Cannot set global surfs when surfaces already exist");
 
   if (strcmp(arg,"explicit") == 0) {
@@ -206,7 +206,7 @@ void Surf::init()
   //   and grid->cutoff < 0.0, since each proc will have copy of all cells
 
   if (exist && distributed && grid->cutoff < 0.0)
-    if (comm->me == 0) 
+    if (comm->me == 0)
       error->warning(FLERR,"Surfs are distributed with infinite grid cutoff");
 
   // check that every element is assigned to a surf collision model
@@ -220,7 +220,7 @@ void Surf::init()
     if (dim == 2) {
       for (int i = 0; i < nlocal+nghost; i++)
         if (lines[i].isc < 0) flag++;
-    } 
+    }
     if (dim == 3) {
       for (int i = 0; i < nlocal+nghost; i++)
         if (tris[i].isc < 0) flag++;
@@ -232,7 +232,7 @@ void Surf::init()
 
     if (allflag) {
       char str[64];
-      sprintf(str,BIGINT_FORMAT 
+      sprintf(str,BIGINT_FORMAT
               " surface elements not assigned to a collision model",allflag);
       error->all(FLERR,str);
     }
@@ -246,11 +246,11 @@ void Surf::init()
     if (dim == 2) {
       for (int i = 0; i < nlocal+nghost; i++)
         if (lines[i].isr >= 0 && sc[lines[i].isc]->allowreact == 0) flag++;
-    } 
+    }
     if (dim == 3) {
       for (int i = 0; i < nlocal+nghost; i++)
         if (tris[i].isr >= 0 && sc[tris[i].isc]->allowreact == 0) flag++;
-    } 
+    }
 
     if (distributed)
       MPI_Allreduce(&flag,&allflag,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
@@ -276,14 +276,14 @@ void Surf::init()
         if (!sc[lines[i].isc]->transparent) flag++;
         if (lines[i].isr >= 0) flag++;
       }
-    } 
+    }
     if (dim == 3) {
       for (int i = 0; i < nlocal+nghost; i++) {
         if (!tris[i].transparent) continue;
         if (!sc[tris[i].isc]->transparent) flag++;
         if (tris[i].isr >= 0) flag++;
       }
-    } 
+    }
 
     if (distributed)
       MPI_Allreduce(&flag,&allflag,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
@@ -339,7 +339,7 @@ void Surf::add_line(surfint id, int itype, double *p1, double *p2)
     nmax += DELTA;
     grow(nmax-DELTA);
   }
-  
+
   lines[nlocal].id = id;
   lines[nlocal].type = itype;
   lines[nlocal].mask = 1;
@@ -362,7 +362,7 @@ void Surf::add_line(surfint id, int itype, double *p1, double *p2)
 void Surf::add_line_copy(int ownflag, Line *line)
 {
   int index;
-  
+
   if (ownflag) {
     if (nlocal == nmax) {
       if ((bigint) nmax + DELTA > MAXSMALLINT)
@@ -372,7 +372,7 @@ void Surf::add_line_copy(int ownflag, Line *line)
     }
     index = nlocal;
     nlocal++;
-    
+
   } else {
     if (nlocal+nghost == nmax) {
       if ((bigint) nmax + DELTA > MAXSMALLINT)
@@ -383,7 +383,7 @@ void Surf::add_line_copy(int ownflag, Line *line)
     index = nlocal+nghost;
     nghost++;
   }
-  
+
   memcpy(&lines[index],line,sizeof(Line));
 }
 
@@ -480,7 +480,7 @@ void Surf::add_tri(surfint id, int itype, double *p1, double *p2, double *p3)
 void Surf::add_tri_copy(int ownflag, Tri *tri)
 {
   int index;
-  
+
   if (ownflag) {
     if (nlocal == nmax) {
       if ((bigint) nmax + DELTA > MAXSMALLINT)
@@ -490,7 +490,7 @@ void Surf::add_tri_copy(int ownflag, Tri *tri)
     }
     index = nlocal;
     nlocal++;
-    
+
   } else {
     if (nlocal+nghost == nmax) {
       if ((bigint) nmax + DELTA > MAXSMALLINT)
@@ -501,7 +501,7 @@ void Surf::add_tri_copy(int ownflag, Tri *tri)
     index = nlocal+nghost;
     nghost++;
   }
-  
+
   memcpy(&tris[index],tri,sizeof(Tri));
 }
 
@@ -574,7 +574,7 @@ void Surf::add_tri_own_clip(surfint id, int itype,
    called by ReadSurf for mutliple file input
 ------------------------------------------------------------------------- */
 
-void Surf::add_tri_temporary(surfint id, int itype, 
+void Surf::add_tri_temporary(surfint id, int itype,
                              double *p1, double *p2, double *p3)
 {
   if (ntmp == nmaxtmp) {
@@ -642,12 +642,12 @@ int Surf::all_transparent()
   if (domain->dimension == 2) {
     for (int i = 0; i < nlocal; i++)
       if (!lines[i].transparent) flag = 1;
-  } 
+  }
   if (domain->dimension == 3) {
     for (int i = 0; i < nlocal; i++)
       if (!tris[i].transparent) flag = 1;
-  } 
-  
+  }
+
   int allflag;
   if (distributed)
     MPI_Allreduce(&flag,&allflag,1,MPI_INT,MPI_SUM,world);
@@ -687,7 +687,7 @@ void Surf::bbox_all()
     bblo_one[j] = BIG;
     bbhi_one[j] = -BIG;
   }
-  
+
   int dim = domain->dimension;
   double *x;
 
@@ -742,7 +742,7 @@ void Surf::bbox_all()
 void Surf::bbox_one(void *ptr, double *lo, double *hi)
 {
   double *p1,*p2,*p3;
-  
+
   if (domain->dimension == 2) {
     Line *line = (Line *) ptr;
     p1 = line->p1; p2 = line->p2;
@@ -752,7 +752,7 @@ void Surf::bbox_one(void *ptr, double *lo, double *hi)
     hi[0] = MAX(p1[0],p2[0]);
     hi[1] = MAX(p1[1],p2[1]);
     hi[2] = 0.0;
-    
+
   } else {
     Tri *tri = (Tri *) ptr;
     p1 = tri->p1; p2 = tri->p2; p3 = tri->p3;
@@ -1015,7 +1015,7 @@ void Surf::check_watertight_2d_all()
       else ndup++;
     }
   }
-  
+
   if (ndup) {
     char str[128];
     sprintf(str,"Watertight check failed with %d duplicate points",ndup);
@@ -1069,10 +1069,10 @@ void Surf::check_watertight_2d_distributed()
 
   int *proclist;
   memory->create(proclist,n*2,"surf:proclist");
-  InRvousPoint *inpoint = 
+  InRvousPoint *inpoint =
     (InRvousPoint *) memory->smalloc((bigint) n*2*sizeof(InRvousPoint),
                                      "surf:inpoint");
-  
+
   // create rvous inputs
   // proclist = owner of each point
   // each line end point is sent with flag indicating first/second
@@ -1148,7 +1148,7 @@ int Surf::rendezvous_watertight_2d(int n, char *inbuf, int &flag, int *&proclist
       else ndup++;               // value = which, this is duplicate point
     }
   }
-  
+
   int alldup;
   MPI_Allreduce(&ndup,&alldup,1,MPI_INT,MPI_SUM,world);
   if (alldup) {
@@ -1218,7 +1218,7 @@ void Surf::check_watertight_3d_all()
   // insert each edge into hash
   // should appear once in each direction
   // error if any duplicate edges
-  
+
   double *p1,*p2,*p3;
   TwoPoint3d key,keyinv;
   int value;
@@ -1266,7 +1266,7 @@ void Surf::check_watertight_3d_all()
 	value = phash[keyinv];
 	if (value == 1) phash[keyinv] = 2;
 	else ndup++;
-      } 
+      }
     } else ndup++;
   }
 
@@ -1321,10 +1321,10 @@ void Surf::check_watertight_3d_distributed()
 
   int *proclist;
   memory->create(proclist,n*6,"surf:proclist");
-  InRvousEdge *inedge = 
+  InRvousEdge *inedge =
     (InRvousEdge *) memory->smalloc((bigint) n*6*sizeof(InRvousEdge),
                                      "surf:inedge");
-  
+
   // create rvous inputs
   // proclist = owner of each point
   // each triangle edge is sent twice with flag indicating
@@ -1450,7 +1450,7 @@ int Surf::rendezvous_watertight_3d(int n, char *inbuf, int &flag, int *&proclist
       else ndup++;               // value = which, this is duplicate edge
     }
   }
-  
+
   int alldup;
   MPI_Allreduce(&ndup,&alldup,1,MPI_INT,MPI_SUM,world);
   alldup /= 2;              // avoid double counting
@@ -1766,7 +1766,7 @@ void Surf::output_extent(int old)
   extentall[1][0] = -extentall[1][0];
   extentall[2][0] = -extentall[2][0];
 
-  double minlen,minarea; 
+  double minlen,minarea;
   if (dim == 2) minlen = shortest_line(old);
   if (dim == 3) smallest_tri(old,minlen,minarea);
 
@@ -1872,7 +1872,7 @@ void Surf::point_line_compare(double *pt, double *p1, double *p2,
 
 void Surf::point_tri_compare(double *pt, double *p1, double *p2, double *p3,
                              double *norm, double epssq, int &nerror, int &nwarn,
-                             int, int, int) 
+                             int, int, int)
 {
   if (pt[0] == p1[0] && pt[1] == p1[1] && pt[2] == p1[2]) return;
   if (pt[0] == p2[0] && pt[1] == p2[1] && pt[2] == p2[2]) return;
@@ -2038,7 +2038,7 @@ void Surf::group(int narg, char **arg)
     else if (strcmp(arg[2],"id") == 0) category = ID;
 
     // args = logical condition
-    
+
     if (narg > 4 &&
         (strcmp(arg[3],"<") == 0 || strcmp(arg[3],">") == 0 ||
          strcmp(arg[3],"<=") == 0 || strcmp(arg[3],">=") == 0 ||
@@ -2069,162 +2069,162 @@ void Surf::group(int narg, char **arg)
       if (category == ID) {
         if (condition == LT) {
           if (dim == 2) {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id < bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id < bound1) tris[i].mask |= bit;
           }
         } else if (condition == LE) {
           if (dim == 2) {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id <= bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id <= bound1) tris[i].mask |= bit;
           }
         } else if (condition == GT) {
           if (dim == 2) {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id > bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id > bound1) tris[i].mask |= bit;
           }
         } else if (condition == GE) {
           if (dim == 2) {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id >= bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id >= bound1) tris[i].mask |= bit;
           }
         } else if (condition == EQ) {
           if (dim == 2) {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id == bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id == bound1) tris[i].mask |= bit;
           }
         } else if (condition == NEQ) {
           if (dim == 2) {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id != bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id != bound1) tris[i].mask |= bit;
           }
         } else if (condition == BETWEEN) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
-              if (lines[i].id >= bound1 && lines[i].id <= bound2) 
+              if (lines[i].id >= bound1 && lines[i].id <= bound2)
                 lines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
-              if (tris[i].id >= bound1 && tris[i].id <= bound2) 
+              if (tris[i].id >= bound1 && tris[i].id <= bound2)
                 tris[i].mask |= bit;
           }
         }
       } else if (category == TYPE) {
         if (condition == LT) {
           if (dim == 2) {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type < bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type < bound1) lines[i].mask |= bit;
           }
         } else if (condition == LE) {
           if (dim == 2) {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type <= bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type <= bound1) lines[i].mask |= bit;
           }
         } else if (condition == GT) {
           if (dim == 2) {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type > bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type > bound1) lines[i].mask |= bit;
           }
         } else if (condition == GE) {
           if (dim == 2) {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type >= bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type >= bound1) lines[i].mask |= bit;
           }
         } else if (condition == EQ) {
           if (dim == 2) {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type == bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type == bound1) lines[i].mask |= bit;
           }
         } else if (condition == NEQ) {
           if (dim == 2) {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type != bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < nlocal+nghost; i++) 
+            for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type != bound1) lines[i].mask |= bit;
           }
         } else if (condition == BETWEEN) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
-              if (lines[i].type >= bound1 && lines[i].type <= bound2) 
+              if (lines[i].type >= bound1 && lines[i].type <= bound2)
                 lines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
-              if (tris[i].type >= bound1 && tris[i].type <= bound2) 
+              if (tris[i].type >= bound1 && tris[i].type <= bound2)
                 tris[i].mask |= bit;
           }
         }
       }
 
     // args = list of values
-      
+
     } else {
       char *ptr;
       int start,stop;
 
       for (int iarg = 3; iarg < narg; iarg++) {
         if (strchr(arg[iarg],':')) {
-          ptr = strchr(arg[iarg],':'); 
+          ptr = strchr(arg[iarg],':');
           *ptr = '\0';
-          start = input->inumeric(FLERR,arg[iarg]); 
+          start = input->inumeric(FLERR,arg[iarg]);
           *ptr = ':';
-          stop = input->inumeric(FLERR,ptr+1); 
+          stop = input->inumeric(FLERR,ptr+1);
         } else {
           start = stop = input->inumeric(FLERR,arg[iarg]);
         }
 
         // add surf to group if type/id matches value or sequence
-      
+
         if (category == ID) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
-              if (lines[i].id >= start && lines[i].id <= stop) 
+              if (lines[i].id >= start && lines[i].id <= stop)
                 lines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
-              if (tris[i].id >= start && tris[i].id <= stop) 
+              if (tris[i].id >= start && tris[i].id <= stop)
                 tris[i].mask |= bit;
           }
         } else if (category == TYPE) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
-              if (lines[i].type >= start && lines[i].type <= stop) 
+              if (lines[i].type >= start && lines[i].type <= stop)
                 lines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
-              if (tris[i].type >= start && tris[i].type <= stop) 
+              if (tris[i].type >= start && tris[i].type <= stop)
                 tris[i].mask |= bit;
           }
         }
@@ -2433,7 +2433,7 @@ void Surf::group(int narg, char **arg)
 
   bigint n = 0;
   if (dim == 2) {
-    for (i = 0; i < nlocal; i++) 
+    for (i = 0; i < nlocal; i++)
       if (lines[i].mask & bit) n++;
   } else {
     for (i = 0; i < nlocal; i++)
@@ -2445,7 +2445,7 @@ void Surf::group(int narg, char **arg)
   else nall = n;
 
   if (comm->me == 0) {
-    if (screen) 
+    if (screen)
       fprintf(screen,BIGINT_FORMAT " surfaces in group %s\n",
               nall,gnames[igroup]);
     if (logfile)
@@ -2460,7 +2460,7 @@ void Surf::group(int narg, char **arg)
 
 int Surf::add_group(const char *id)
 {
-  if (ngroup == MAXGROUP) 
+  if (ngroup == MAXGROUP)
     error->all(FLERR,"Cannot have more than 32 surface groups");
 
   int n = strlen(id) + 1;
@@ -2641,13 +2641,13 @@ void Surf::compress_implicit()
    return out = summed tallies for explicit surfs I own
 ------------------------------------------------------------------------- */
 
-void Surf::collate_vector(int nrow, surfint *tally2surf, 
+void Surf::collate_vector(int nrow, surfint *tally2surf,
                           double *in, int instride, double *out)
 {
   // collate version depends on tally_comm setting
 
   if (tally_comm == TALLYAUTO) {
-    if (nprocs > nsurf) 
+    if (nprocs > nsurf)
       collate_vector_reduce(nrow,tally2surf,in,instride,out);
     else collate_vector_rendezvous(nrow,tally2surf,in,instride,out);
   } else if (tally_comm == TALLYREDUCE) {
@@ -2661,7 +2661,7 @@ void Surf::collate_vector(int nrow, surfint *tally2surf,
    allreduce version of collate
 ------------------------------------------------------------------------- */
 
-void Surf::collate_vector_reduce(int nrow, surfint *tally2surf, 
+void Surf::collate_vector_reduce(int nrow, surfint *tally2surf,
                                  double *in, int instride, double *out)
 {
   int i,j,m;
@@ -2669,7 +2669,7 @@ void Surf::collate_vector_reduce(int nrow, surfint *tally2surf,
   if (nsurf > MAXSMALLINT)
     error->all(FLERR,"Two many surfs to tally reduce - "
                "use global surf/comm auto or rvous");
-  
+
   int nglobal = nsurf;
 
   double *one,*all;
@@ -2677,7 +2677,7 @@ void Surf::collate_vector_reduce(int nrow, surfint *tally2surf,
   memory->create(all,nglobal,"surf:all");
 
   // zero all values and add in values I accumulated
-  
+
   for (i = 0; i < nglobal; i++) one[i] = 0.0;
 
   Surf::Line *lines = surf->lines;
@@ -2693,7 +2693,7 @@ void Surf::collate_vector_reduce(int nrow, surfint *tally2surf,
   }
 
   // global allreduce
-  
+
   MPI_Allreduce(one,all,nglobal,MPI_DOUBLE,MPI_SUM,world);
 
   // out = only surfs I own
@@ -2703,7 +2703,7 @@ void Surf::collate_vector_reduce(int nrow, surfint *tally2surf,
     out[m++] = all[i];
 
   // NOTE: could persist these for multiple invocations
-  
+
   memory->destroy(one);
   memory->destroy(all);
 }
@@ -2712,28 +2712,28 @@ void Surf::collate_vector_reduce(int nrow, surfint *tally2surf,
    rendezvous version of collate
 ------------------------------------------------------------------------- */
 
-void Surf::collate_vector_rendezvous(int nrow, surfint *tally2surf, 
+void Surf::collate_vector_rendezvous(int nrow, surfint *tally2surf,
                                      double *in, int instride, double *out)
 {
   // allocate memory for rvous input
 
   int *proclist;
   memory->create(proclist,nrow,"surf:proclist");
-  InRvousVec *in_rvous = 
+  InRvousVec *in_rvous =
     (InRvousVec *) memory->smalloc((bigint) nrow*sizeof(InRvousVec),
                                    "surf:in_rvous");
 
   // create rvous inputs
   // proclist = owner of each surf
-  // logic of (id-1) % nprocs sends 
+  // logic of (id-1) % nprocs sends
   //   surf IDs 1,11,21,etc on 10 procs to proc 0
 
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
   int dim = domain->dimension;
-  
+
   surfint id;
-  
+
   int m = 0;
   for (int i = 0; i < nrow; i++) {
     id = tally2surf[i];
@@ -2748,7 +2748,7 @@ void Surf::collate_vector_rendezvous(int nrow, surfint *tally2surf,
   // receives all tally contributions to surfs it owns
 
   out_rvous = out;
-  
+
   char *buf;
   int nout = comm->rendezvous(1,nrow,(char *) in_rvous,sizeof(InRvousVec),
 			      0,proclist,rendezvous_vector,
@@ -2778,11 +2778,11 @@ int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
   // zero my owned surf values
 
   for (int i = 0; i < nown; i++) out[i] = 0.0;
-  
+
   // accumulate per-surf values from different procs to my owned surfs
-  // logic of (id-1-me) / nprocs maps 
+  // logic of (id-1-me) / nprocs maps
   //   surf IDs [1,11,21,...] on 10 procs to [0,1,2,...] on proc 0
-  
+
   Surf::InRvousVec *in_rvous = (Surf::InRvousVec *) inbuf;
 
   int m;
@@ -2806,13 +2806,13 @@ int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
    return out = summed tallies for explicit surfs I own
 ------------------------------------------------------------------------- */
 
-void Surf::collate_array(int nrow, int ncol, surfint *tally2surf, 
+void Surf::collate_array(int nrow, int ncol, surfint *tally2surf,
                          double **in, double **out)
 {
   // collate version depends on tally_comm setting
 
   if (tally_comm == TALLYAUTO) {
-    if (nprocs > nsurf) 
+    if (nprocs > nsurf)
       collate_array_reduce(nrow,ncol,tally2surf,in,out);
     else collate_array_rendezvous(nrow,ncol,tally2surf,in,out);
   } else if (tally_comm == TALLYREDUCE) {
@@ -2826,7 +2826,7 @@ void Surf::collate_array(int nrow, int ncol, surfint *tally2surf,
    allreduce version of collate
 ------------------------------------------------------------------------- */
 
-void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf, 
+void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
                                 double **in, double **out)
 {
   int i,j,m;
@@ -2836,7 +2836,7 @@ void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
   if (ntotal > MAXSMALLINT)
     error->all(FLERR,"Two many surfs to tally reduce - "
                "use global surf/comm auto or rvous");
-  
+
   int nglobal = nsurf;
 
   double **one,**all;
@@ -2844,7 +2844,7 @@ void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
   memory->create(all,nglobal,ncol,"surf:all");
 
   // zero all values and add in values I accumulated
-  
+
   for (i = 0; i < nglobal; i++)
     for (j = 0; j < ncol; j++)
       one[i][j] = 0.0;
@@ -2855,7 +2855,7 @@ void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
 
   for (i = 0; i < nrow; i++) {
     m = (int) tally2surf[i] - 1;
-    for (j = 0; j < ncol; j++) 
+    for (j = 0; j < ncol; j++)
       one[m][j] = in[i][j];
   }
 
@@ -2870,9 +2870,9 @@ void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
     for (j = 0; j < ncol; j++) out[m][j] = all[i][j];
     m++;
   }
-  
+
   // NOTE: could persist these for multiple invocations
-  
+
   memory->destroy(one);
   memory->destroy(all);
 }
@@ -2881,7 +2881,7 @@ void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
    rendezvous version of collate
 ------------------------------------------------------------------------- */
 
-void Surf::collate_array_rendezvous(int nrow, int ncol, surfint *tally2surf, 
+void Surf::collate_array_rendezvous(int nrow, int ncol, surfint *tally2surf,
                                     double **in, double **out)
 {
   int i,j,m;
@@ -2895,14 +2895,14 @@ void Surf::collate_array_rendezvous(int nrow, int ncol, surfint *tally2surf,
 
   // create rvous inputs
   // proclist = owner of each surf
-  // logic of (id-1) % nprocs sends 
+  // logic of (id-1) % nprocs sends
   //   surf IDs 1,11,21,etc on 10 procs to proc 0
 
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
   int dim = domain->dimension;
   surfint id;
-  
+
   m = 0;
   for (int i = 0; i < nrow; i++) {
     id = tally2surf[i];
@@ -2950,16 +2950,16 @@ int Surf::rendezvous_array(int n, char *inbuf,
   double *out = sptr->out_rvous;
   int nprocs = sptr->comm->nprocs;
   int me = sptr->comm->me;
-  
+
   // zero my owned surf values
 
   int ntotal = nown*ncol;
   for (m = 0; m < ntotal; m++) out[m] = 0.0;
-  
+
   // accumulate per-surf values from different procs to my owned surfs
-  // logic of (id-1-me) / nprocs maps 
+  // logic of (id-1-me) / nprocs maps
   //   surf IDs [1,11,21,...] on 10 procs to [0,1,2,...] on proc 0
-  
+
   double *in_rvous = (double *) inbuf;
   surfint id;
 
@@ -3242,7 +3242,7 @@ void Surf::collate_array_implicit(int nrow, int ncol, surfint *tally2surf,
    send cellID + Ncol values back to owning proc of each grid cell
 ------------------------------------------------------------------------- */
 
-int Surf::rendezvous_implicit(int n, char *inbuf, 
+int Surf::rendezvous_implicit(int n, char *inbuf,
                               int &flag, int *&proclist, char *&outbuf, void *ptr)
 {
   int i,j,k,m,proc,iout;
@@ -3251,7 +3251,7 @@ int Surf::rendezvous_implicit(int n, char *inbuf,
   Surf *sptr = (Surf *) ptr;
   Memory *memory = sptr->memory;
   int ncol = sptr->ncol_rvous;
-  
+
   // scan inbuf for (proc,cellID) entries
   // create phash so can lookup the proc for each cellID
 
@@ -3289,7 +3289,7 @@ int Surf::rendezvous_implicit(int n, char *inbuf,
       m += ncol;                         // skip entries with novalues
       continue;
     }
-    if (ohash.find(cellID) == phash.end()) {  
+    if (ohash.find(cellID) == phash.end()) {
       ohash[cellID] = nout;              // add a new set of out values
       proclist[nout] = phash[cellID];
       out[k++] = cellID;
@@ -3334,7 +3334,7 @@ void Surf::redistribute_lines_clip(int nold, int nnew)
   // proclist = owner of each surf = (id-1) % nprocs
 
   surfint id;
-  
+
   int i = nold;
   for (int m = 0; m < nsend; m++) {
     id = mylines[i].id;
@@ -3387,7 +3387,7 @@ void Surf::redistribute_lines_temporary(int nnew)
   // proclist = owner of each surf = (id-1) % nprocs
 
   surfint id;
-  
+
   for (int i = 0; i < nsend; i++) {
     id = tmplines[i].id;
     proclist[i] = (id-1) % nprocs;
@@ -3396,7 +3396,7 @@ void Surf::redistribute_lines_temporary(int nnew)
 
   // insure mylines is allocated sufficient for new lines
   // reset nown to new value after rendezvous
-  
+
   if (nnew > maxown) {
     int old = maxown;
     maxown = nnew;
@@ -3476,7 +3476,7 @@ void Surf::redistribute_tris_clip(int nold, int nnew)
   // proclist = owner of each surf = (id-1) % nprocs
 
   surfint id;
-  
+
   int i = nold;
   for (int m = 0; m < nsend; m++) {
     id = mytris[i].id;
@@ -3529,7 +3529,7 @@ void Surf::redistribute_tris_temporary(int nnew)
   // proclist = owner of each surf = (id-1) % nprocs
 
   surfint id;
-  
+
   for (int i = 0; i < nsend; i++) {
     id = tmptris[i].id;
     proclist[i] = (id-1) % nprocs;
@@ -3601,7 +3601,7 @@ int Surf::rendezvous_tris(int n, char *inbuf,
 
 void Surf::write_restart(FILE *fp)
 {
-  if (distributed || implicit) 
+  if (distributed || implicit)
     error->all(FLERR,
                "Restart files with distributed surfaces are not yet supported");
 
@@ -3646,7 +3646,7 @@ void Surf::write_restart(FILE *fp)
 
 void Surf::read_restart(FILE *fp)
 {
-  if (distributed || implicit) 
+  if (distributed || implicit)
     error->all(FLERR,
                "Restart files with distributed surfaces are not yet supported");
 
@@ -3723,11 +3723,11 @@ void Surf::read_restart(FILE *fp)
 void Surf::grow(int old)
 {
   if (domain->dimension == 2) {
-    lines = (Surf::Line *) 
+    lines = (Surf::Line *)
       memory->srealloc(lines,nmax*sizeof(Line),"surf:lines");
     memset(&lines[old],0,(nmax-old)*sizeof(Line));
   } else {
-    tris = (Surf::Tri *) 
+    tris = (Surf::Tri *)
       memory->srealloc(tris,nmax*sizeof(Tri),"surf:tris");
     memset(&tris[old],0,(nmax-old)*sizeof(Tri));
   }
@@ -3738,11 +3738,11 @@ void Surf::grow(int old)
 void Surf::grow_own(int old)
 {
   if (domain->dimension == 2) {
-    mylines = (Surf::Line *) 
+    mylines = (Surf::Line *)
       memory->srealloc(mylines,maxown*sizeof(Line),"surf:mylines");
     memset(&mylines[old],0,(maxown-old)*sizeof(Line));
   } else {
-    mytris = (Surf::Tri *) 
+    mytris = (Surf::Tri *)
       memory->srealloc(mytris,maxown*sizeof(Tri),"surf:mytris");
     memset(&mytris[old],0,(maxown-old)*sizeof(Tri));
   }
@@ -3753,11 +3753,11 @@ void Surf::grow_own(int old)
 void Surf::grow_temporary(int old)
 {
   if (domain->dimension == 2) {
-    tmplines = (Surf::Line *) 
+    tmplines = (Surf::Line *)
       memory->srealloc(tmplines,nmaxtmp*sizeof(Line),"surf:lines");
     memset(&tmplines[old],0,(nmaxtmp-old)*sizeof(Line));
   } else {
-    tmptris = (Surf::Tri *) 
+    tmptris = (Surf::Tri *)
       memory->srealloc(tmptris,nmaxtmp*sizeof(Tri),"surf:tris");
     memset(&tmptris[old],0,(nmaxtmp-old)*sizeof(Tri));
   }

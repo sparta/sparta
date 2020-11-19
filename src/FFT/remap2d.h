@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -63,5 +63,5 @@ struct remap_plan_2d *remap_2d_create_plan(MPI_Comm,
                                            int, int, int, int,
                                            int, int, int, int);
 void remap_2d_destroy_plan(struct remap_plan_2d *);
-int remap_2d_collide(struct extent_2d *, 
+int remap_2d_collide(struct extent_2d *,
 		     struct extent_2d *, struct extent_2d *);

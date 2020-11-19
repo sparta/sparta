@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -34,7 +34,7 @@ SurfCollidePiston::SurfCollidePiston(SPARTA *sparta, int narg, char **arg) :
 
   allowreact = 1;
 
-  vwall = input->numeric(FLERR,arg[2]); 
+  vwall = input->numeric(FLERR,arg[2]);
   if (vwall <= 0.0) error->all(FLERR,"Surf_collide piston velocity <= 0.0");
 }
 
@@ -61,7 +61,7 @@ void SurfCollidePiston::init()
     for (int i = 0; i < nsurf; i++)
       if (lines[i].isc == index) {
         if (lines[i].norm[0] != 0.0 && lines[i].norm[1] != 0.0) flag++;
-      } 
+      }
   }
 
   if (domain->dimension == 3) {
@@ -73,7 +73,7 @@ void SurfCollidePiston::init()
         if (tris[i].norm[1] != 0.0 && tris[i].norm[2] != 0.0) flag++;
         if (tris[i].norm[2] != 0.0 && tris[i].norm[0] != 0.0) flag++;
       }
-  } 
+  }
 
   if (flag) error->all(FLERR,"Surf_collide piston assigned to "
                        "surface with non axis-aligned normal");
@@ -91,7 +91,7 @@ void SurfCollidePiston::init()
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollidePiston::
-collide(Particle::OnePart *&ip, double *norm, double &dtremain, 
+collide(Particle::OnePart *&ip, double *norm, double &dtremain,
         int isr, int & reaction)
 {
   nsingle++;
@@ -183,6 +183,6 @@ collide(Particle::OnePart *&ip, double *norm, double &dtremain,
       particle->nlocal--;
     }
   }
-    
+
   return jp;
 }

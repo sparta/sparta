@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -39,7 +39,7 @@ class CreateGrid : protected Pointers {
   int px,py,pz;          // proc grid for pstyle = BLOCK
   int order;             // xyz ordering for pstyle = CLUMP or STRIDE
   int inside;            // ANY or ALL for grid level REGION criterion
-  
+
   // grid level info
 
   struct Level {
@@ -51,7 +51,7 @@ class CreateGrid : protected Pointers {
   };
 
   // stack of recursing cells
-  
+
   struct Stack {
     cellint id;               // ID of grid cell
     int level;                // level of grid cell
@@ -62,13 +62,13 @@ class CreateGrid : protected Pointers {
   Stack *stack;
 
   // private methods
-  
+
   void create_block();
   void create_clump();
   void create_stride();
   void create_random();
   void recurse_levels(int);
-  
+
   void bounds(char *, int, int &, int &);
   int cell_in_region(double *, double *, class Region *);
   void procs2grid(int, int, int, int &, int &, int &);

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -97,7 +97,7 @@ void WriteGrid::command(int narg, char **arg)
 void WriteGrid::header()
 {
   Grid::ParentLevel *plevels = grid->plevels;
-  
+
   fprintf(fp,"# Grid file of cell IDs written by SPARTA\n\n");
   fprintf(fp,BIGINT_FORMAT " cells\n",grid->ncell);
   fprintf(fp,"%d levels\n",grid->maxlevel);
@@ -154,12 +154,12 @@ void WriteGrid::write()
         MPI_Wait(&request,&status);
         MPI_Get_count(&status,MPI_DOUBLE,&nlines);
       } else nlines = nme;
-      
+
       for (i = 0; i < nlines; i++) {
         fprintf(fp,BIGINT_FORMAT "\n",buf[i]);
       }
     }
-    
+
   } else {
     MPI_Recv(&tmp,0,MPI_INT,0,0,world,&status);
     MPI_Rsend(buf,nme,MPI_SPARTA_BIGINT,0,0,world);

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -43,7 +43,7 @@ enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 /* ---------------------------------------------------------------------- */
 
 MarchingCubes::MarchingCubes(SPARTA *sparta, int ggroup_caller,
-                             double thresh_caller) : 
+                             double thresh_caller) :
   Pointers(sparta)
 {
   MPI_Comm_rank(world,&me);
@@ -73,32 +73,32 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
 {
   int i,j,ipt,isurf,nsurf,icase,which;
   surfint *ptr;
-    
+
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   MyPage<surfint> *csurfs = grid->csurfs;
   int nglocal = grid->nlocal;
   int groupbit = grid->bitmask[ggroup];
-    
+
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
     lo = cells[icell].lo;
     hi = cells[icell].hi;
-        
+
     // nsurf = # of tris in cell
     // cvalues[8] = 8 corner point values, each is 0 to 255 inclusive
     // thresh = value between 0 and 255 to threshhold on
     // lo[3] = lower left corner pt of grid cell
     // hi[3] = upper right corner pt of grid cell
     // pt = list of 3*nsurf points that are the corner pts of each tri
-    
+
     // cvalues are ordered
-    // bottom-lower-left, bottom-lower-right, 
+    // bottom-lower-left, bottom-lower-right,
     // bottom-upper-left, bottom-upper-right
     // top-lower-left, top-lower-right, top-upper-left, top-upper-right
     // Vzyx encodes this as 0/1 in each dim
-        
+
     v000 = cvalues[icell][0];
     v001 = cvalues[icell][1];
     v010 = cvalues[icell][2];
@@ -107,7 +107,7 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
     v101 = cvalues[icell][5];
     v110 = cvalues[icell][6];
     v111 = cvalues[icell][7];
-     
+
     v000iso = v000 - thresh;
     v001iso = v001 - thresh;
     v010iso = v010 - thresh;
@@ -116,9 +116,9 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
     v101iso = v101 - thresh;
     v110iso = v110 - thresh;
     v111iso = v111 - thresh;
-        
+
     // make bits 2, 3, 6 and 7 consistent with Lewiner paper (see NOTE above)
-        
+
     bit0 = v000 <= thresh ? 0 : 1;
     bit1 = v001 <= thresh ? 0 : 1;
     bit2 = v011 <= thresh ? 0 : 1;
@@ -127,47 +127,47 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
     bit5 = v101 <= thresh ? 0 : 1;
     bit6 = v111 <= thresh ? 0 : 1;
     bit7 = v110 <= thresh ? 0 : 1;
-    
-    which = (bit7 << 7) + (bit6 << 6) + (bit5 << 5) + (bit4 << 4) + 
+
+    which = (bit7 << 7) + (bit6 << 6) + (bit5 << 5) + (bit4 << 4) +
       (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
-        
+
     // icase = case of the active cube in [0..15]
 
     icase = cases[which][0];
     config = cases[which][1];
     subconfig = 0;
-    
+
     switch (icase) {
     case  0:
       nsurf = 0;
       break;
-                
+
     case  1:
       nsurf = add_triangle(tiling1[config], 1);
       break;
-                
+
     case  2:
       nsurf = add_triangle(tiling2[config], 2);
       break;
-                
+
     case  3:
       if (test_face(test3[config]))
         nsurf = add_triangle(tiling3_2[config], 4); // 3.2
       else
         nsurf = add_triangle(tiling3_1[config], 2); // 3.1
       break;
-                
+
     case  4:
       if (modified_test_interior(test4[config],icase))
         nsurf = add_triangle(tiling4_1[config], 2); // 4.1.1
       else
         nsurf = add_triangle(tiling4_2[config], 6); // 4.1.2
       break;
-                
+
     case  5:
       nsurf = add_triangle(tiling5[config], 3);
       break;
-                
+
     case  6:
       if (test_face(test6[config][0]))
         nsurf = add_triangle(tiling6_2[config], 5); // 6.2
@@ -179,7 +179,7 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
         }
       }
       break;
-                
+
     case  7:
       if (test_face(test7[config][0])) subconfig +=  1;
       if (test_face(test7[config][1])) subconfig +=  2;
@@ -207,15 +207,15 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
         break;
       };
       break;
-                
+
     case  8:
       nsurf = add_triangle(tiling8[config], 2);
       break;
-                
+
     case  9:
       nsurf = add_triangle(tiling9[config], 4);
       break;
-                
+
     case 10:
       if (test_face(test10[config][0])) {
         if (test_face(test10[config][1]))
@@ -234,11 +234,11 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
         }
       }
       break;
-                
+
     case 11:
       nsurf = add_triangle(tiling11[config], 4);
       break;
-                
+
     case 12:
       if (test_face(test12[config][0])) {
         if (test_face(test12[config][1]))
@@ -257,7 +257,7 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
         }
       }
       break;
-                
+
     case 13:
       if (test_face(test13[config][0])) subconfig +=  1;
       if (test_face(test13[config][1])) subconfig +=  2;
@@ -265,7 +265,7 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
       if (test_face(test13[config][3])) subconfig +=  8;
       if (test_face(test13[config][4])) subconfig += 16;
       if (test_face(test13[config][5])) subconfig += 32;
-                               
+
       switch (subconfig13[subconfig]) {
       case 0:/* 13.1 */
         nsurf = add_triangle(tiling13_1[config], 4); break;
@@ -307,7 +307,7 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
         nsurf = add_triangle(tiling13_3[config][10], 10); break;
       case 18:/* 13.3 */
         nsurf = add_triangle(tiling13_3[config][11], 10); break;
-        
+
       case 19:/* 13.4 */
         nsurf = add_triangle(tiling13_4[config][0], 12); break;
       case 20:/* 13.4 */
@@ -373,7 +373,7 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
         nsurf = add_triangle(tiling13_3_[config][10], 10); break;
       case 38:/* 13.3 */
         nsurf = add_triangle(tiling13_3_[config][11], 10); break;
-        
+
       case 39:/* 13.2 */
         nsurf = add_triangle(tiling13_2_[config][0], 6); break;
       case 40:/* 13.2 */
@@ -386,21 +386,21 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
         nsurf = add_triangle(tiling13_2_[config][4], 6); break;
       case 44:/* 13.2 */
         nsurf = add_triangle(tiling13_2_[config][5], 6); break;
-        
+
       case 45:/* 13.1 */
         nsurf = add_triangle(tiling13_1_[config], 4); break;
-        
+
       default:
         print_cube();
         error->one(FLERR,"Marching cubes - impossible case 13");
       }
       break;
-                
+
     case 14:
       nsurf = add_triangle(tiling14[config], 4);
       break;
     };
-       
+
     // store 4 MC labels for FixAblate caller
 
     mcflags[icell][0] = icase;
@@ -411,9 +411,9 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
     // populate Grid and Surf data structs
     // points will be duplicated, not unique
     // surf ID = cell ID for all surfs in cell
-        
+
     ptr = csurfs->get(nsurf);
-        
+
     ipt = 0;
     for (i = 0; i < nsurf; i++) {
       if (svalues) surf->add_tri(cells[icell].id,svalues[icell],
@@ -423,7 +423,7 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
       isurf = surf->nlocal - 1;
       ptr[i] = isurf;
     }
-        
+
     cells[icell].nsurf = nsurf;
     if (nsurf) {
       cells[icell].csurfs = ptr;
@@ -511,7 +511,7 @@ void MarchingCubes::cleanup()
   memory->create(facetris,nglocal,6,2,"readisurf:facetris");
 
   for (icell = 0; icell < nglocal; icell++) {
-    nfacetri[icell][0] = nfacetri[icell][1] = nfacetri[icell][2] = 
+    nfacetri[icell][0] = nfacetri[icell][1] = nfacetri[icell][2] =
       nfacetri[icell][3] = nfacetri[icell][4] = nfacetri[icell][5] = 0;
 
     if (cells[icell].nsplit <= 0) continue;
@@ -541,7 +541,7 @@ void MarchingCubes::cleanup()
 
   int flagall;
   MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
-  if (flagall) 
+  if (flagall)
     error->all(FLERR,"Some cell faces do not have zero or 2 triangles");
 
   // loop over all cell faces
@@ -573,7 +573,7 @@ void MarchingCubes::cleanup()
       // other cell/face/proc = info for matching face in adjacent cell
 
       nflag = grid->neigh_decode(cells[icell].nmask,iface);
-      if (nflag != NCHILD && nflag != NPBCHILD) 
+      if (nflag != NCHILD && nflag != NPBCHILD)
         error->one(FLERR,"Invalid neighbor cell in cleanup_MC()");
 
       norm = tris[facetris[icell][iface][0]].norm;
@@ -601,7 +601,7 @@ void MarchingCubes::cleanup()
         // add 2 tris to othercell
         // reset tri IDs to new owning cell
 
-        if (ntri_other == 0) { 
+        if (ntri_other == 0) {
           othernsurf = cells[othercell].nsurf;
           oldcsurfs = cells[othercell].csurfs;
           ptr = csurfs->get(othernsurf+2);
@@ -627,14 +627,14 @@ void MarchingCubes::cleanup()
           m = facetris[othercell][otherface][0];
           for (k = 0; k < othernsurf; k++)
             if (ptr[k] == m) break;
-          if (k == othernsurf) 
+          if (k == othernsurf)
             error->one(FLERR,"Could not find surf in cleanup_MC");
           cells[othercell].csurfs[k] = cells[othercell].csurfs[othernsurf-1];
           othernsurf--;
           m = facetris[othercell][otherface][1];
           for (k = 0; k < othernsurf; k++)
             if (ptr[k] == m) break;
-          if (k == othernsurf) 
+          if (k == othernsurf)
             error->one(FLERR,"Could not find surf in cleanup_MC");
           cells[othercell].csurfs[k] = cells[othercell].csurfs[othernsurf-1];
           othernsurf--;
@@ -682,10 +682,10 @@ void MarchingCubes::cleanup()
       } else {
         if (nsend == maxsend) {
           maxsend += DELTA;
-          proclist = (int *) 
+          proclist = (int *)
             memory->srealloc(proclist,maxsend*sizeof(int),
                              "readisurf:proclist");
-          bufsend = (SendDatum *) 
+          bufsend = (SendDatum *)
             memory->srealloc(bufsend,maxsend*sizeof(SendDatum),
                              "readisurf:bufsend");
         }
@@ -737,7 +737,7 @@ void MarchingCubes::cleanup()
   Irregular *irregular = new Irregular(sparta);
   int nrecv = irregular->create_data_uniform(nsend,proclist,1);
 
-  SendDatum *bufrecv = (SendDatum *) 
+  SendDatum *bufrecv = (SendDatum *)
     memory->smalloc(nrecv*sizeof(SendDatum),"readisurf:bufrecv");
 
   irregular->exchange_uniform((char *) bufsend,sizeof(SendDatum),
@@ -765,7 +765,7 @@ void MarchingCubes::cleanup()
     if (nfacetri[icell][iface] == 0) {
       int nslocal = surf->nlocal;
       surf->add_tri(cells[icell].id,1,
-                    bufrecv[i].tri1.p1,bufrecv[i].tri1.p2,bufrecv[i].tri1.p3);  
+                    bufrecv[i].tri1.p1,bufrecv[i].tri1.p2,bufrecv[i].tri1.p3);
       memcpy(&surf->tris[nslocal],&bufrecv[i].tri1,sizeof(Surf::Tri));
       surf->tris[nslocal].id = cells[icell].id;
       surf->add_tri(cells[icell].id,1,
@@ -823,7 +823,7 @@ void MarchingCubes::cleanup()
       dellist[ndelete++] = facetris[icell][iface][0];
       dellist[ndelete++] = facetris[icell][iface][1];
     }
-  }    
+  }
 
   memory->sfree(bufrecv);
   memory->destroy(nfacetri);
@@ -1088,7 +1088,7 @@ int MarchingCubes::add_triangle(int *trig, int n)
 bool MarchingCubes::test_face(int face)
 {
   double A,B,C,D;
-    
+
   switch (face) {
   case -1:
   case 1:
@@ -1133,12 +1133,12 @@ bool MarchingCubes::test_face(int face)
     D = v101iso;
     break;
 
-  default: 
+  default:
     A = B = C = D = 0.0;
     print_cube();
     error->one(FLERR,"Invalid face code");
   };
-    
+
   if (fabs(A*C - B*D) < EPSILON) return face >= 0;
   return face * A * (A*C - B*D) >= 0 ;  // face and A invert signs
 }
@@ -1155,13 +1155,13 @@ bool MarchingCubes::test_interior(int s, int icase)
   double t,a,b,At=0.0,Bt=0.0,Ct=0.0,Dt=0.0;
   int test = 0;
   int edge = -1;   // reference edge of the triangulation
-    
+
   switch (icase) {
   case  4 :
   case 10 :
-    a = ( v100iso - v000iso ) * ( v111iso - v011iso ) - 
+    a = ( v100iso - v000iso ) * ( v111iso - v011iso ) -
       ( v110iso - v010iso ) * ( v101iso - v001iso ) ;
-    b =  v011iso * ( v100iso - v000iso ) + v000iso * ( v111iso - v011iso ) - 
+    b =  v011iso * ( v100iso - v000iso ) + v000iso * ( v111iso - v011iso ) -
       v001iso * ( v110iso - v010iso ) - v010iso * ( v101iso - v001iso ) ;
     t = - b / (2*a) ;
     if (t < 0 || t > 1) return s>0 ;
@@ -1268,17 +1268,17 @@ bool MarchingCubes::test_interior(int s, int icase)
       Dt = v000iso + ( v100iso - v000iso ) * t ;
       break ;
 
-    default: 
+    default:
       print_cube();
       error->one(FLERR,"Marching cubes - invalid edge");
     }
     break;
-      
-  default: 
+
+  default:
     print_cube();
     error->one(FLERR,"Marching cubes - invalid ambiguous case");
   }
-    
+
   if (At >= 0.0) test ++;
   if (Bt >= 0.0) test += 2;
   if (Ct >= 0.0) test += 4;
@@ -1289,14 +1289,14 @@ bool MarchingCubes::test_interior(int s, int icase)
   case  2: return s>0;
   case  3: return s>0;
   case  4: return s>0;
-  case  5: 
+  case  5:
     if (At * Ct - Bt * Dt <  EPSILON) return s>0;
     break;
   case  6: return s>0;
   case  7: return s<0;
   case  8: return s>0;
   case  9: return s>0;
-  case 10: 
+  case 10:
     if (At * Ct - Bt * Dt >= EPSILON) return s>0;
     break;
   case 11: return s<0;
@@ -1305,7 +1305,7 @@ bool MarchingCubes::test_interior(int s, int icase)
   case 14: return s<0;
   case 15: return s<0;
   }
-  
+
   return s<0;
 }
 
@@ -1802,11 +1802,11 @@ bool MarchingCubes::interior_test_case13()
     Bt2 = v101iso + (v100iso - v101iso) * t2;
     Ct2 = v111iso + (v110iso - v111iso) * t2;
     Dt2 = v011iso + (v010iso - v011iso) * t2;
-    
+
     double x2 = (At2 - Dt2)/(At2 + Ct2 - Bt2 - Dt2);
     double y2 = (At2 - Bt2)/(At2 + Ct2 - Bt2 - Dt2);
 
-    if ((x1 < 1)&&(x1>0) &&(x2 < 1)&&(x2 > 0) && 
+    if ((x1 < 1)&&(x1>0) &&(x2 < 1)&&(x2 > 0) &&
         (y1 < 1)&&(y1>0) &&(y2 < 1)&&(y2 > 0)) return false;
   }
 
@@ -1833,7 +1833,7 @@ int compare_indices(const void *iptr, const void *jptr)
 ------------------------------------------------------------------------- */
 
 void MarchingCubes::print_cube()
-{ 
+{
   fprintf(screen,"\t %d %d %d %d %d %d %d %d\n",
          v000,v001,v011,v010,v100,v101,v111,v110);
 }

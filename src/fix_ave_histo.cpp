@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -213,7 +213,7 @@ FixAveHisto::FixAveHisto(SPARTA *spa, int narg, char **arg) :
       if (ivariable < 0)
         error->all(FLERR,"Variable name for fix ave/histo does not exist");
       if (input->variable->equal_style(ivariable)) kindflag = GLOBAL;
-      else if (input->variable->particle_style(ivariable)) 
+      else if (input->variable->particle_style(ivariable))
         kindflag = PERPARTICLE;
       else if (input->variable->grid_style(ivariable)) kindflag = PERGRID;
       else error->all(FLERR,"Fix ave/histo input is invalid variable");
@@ -368,7 +368,7 @@ FixAveHisto::FixAveHisto(SPARTA *spa, int narg, char **arg) :
       if (argindex[i] == 0 && input->variable->particle_style(ivariable) == 0)
         error->all(FLERR,
                    "Fix ave/histo variable is not particle-style variable");
-      if (argindex[i]) 
+      if (argindex[i])
         error->all(FLERR,"Fix ave/histo variable cannot be indexed");
 
     } else if (which[i] == VARIABLE && kind == PERGRID) {
@@ -376,7 +376,7 @@ FixAveHisto::FixAveHisto(SPARTA *spa, int narg, char **arg) :
       if (argindex[i] == 0 && input->variable->grid_style(ivariable) == 0)
         error->all(FLERR,
                    "Fix ave/histo variable is not grid-style variable");
-      if (argindex[i]) 
+      if (argindex[i])
         error->all(FLERR,"Fix ave/histo variable cannot be indexed");
     }
   }
@@ -559,7 +559,7 @@ void FixAveHisto::end_of_step()
 
   // for fix ave/histo/weight, nvalues will be 2
   // first calculate weight factors, then histogram single value
- 
+
   int ncount = nvalues;
   if (weightflag) {
     calculate_weights();
@@ -623,9 +623,9 @@ void FixAveHisto::end_of_step()
           compute->invoked_flag |= INVOKED_PER_GRID;
         }
 
-        if (compute->post_process_grid_flag) 
+        if (compute->post_process_grid_flag)
           compute->post_process_grid(j,1,NULL,NULL,NULL,1);
-        else if (compute->post_process_isurf_grid_flag) 
+        else if (compute->post_process_isurf_grid_flag)
           compute->post_process_isurf_grid();
 
         if (j == 0 || compute->post_process_grid_flag)
@@ -938,7 +938,7 @@ void FixAveHisto::bin_particles(double *values, int stride)
   if (regionflag && mixflag) {
     int *s2g = particle->mixture[imix]->species2group;
     for (int i = 0; i < nlocal; i++) {
-      if (region->match(particles[i].x) && 
+      if (region->match(particles[i].x) &&
           s2g[particles[i].ispecies] >= 0) bin_one(values[m]);
       m += stride;
     }

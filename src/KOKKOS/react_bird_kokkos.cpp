@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -91,7 +91,7 @@ ReactBirdKokkos::~ReactBirdKokkos()
 
 /* ---------------------------------------------------------------------- */
 
-void ReactBirdKokkos::init() 
+void ReactBirdKokkos::init()
 {
   ReactBird::init();
 
@@ -152,7 +152,7 @@ void ReactBirdKokkos::init()
    return tally associated with a reaction
 ------------------------------------------------------------------------- */
 
-double ReactBirdKokkos::extract_tally(int m) 
+double ReactBirdKokkos::extract_tally(int m)
 {
   if (!tally_flag) {
     tally_flag = 1;

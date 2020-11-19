@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -52,7 +52,7 @@ ReadGrid::~ReadGrid()
 
 void ReadGrid::command(int narg, char **arg)
 {
-  if (!domain->box_exist) 
+  if (!domain->box_exist)
     error->all(FLERR,"Cannot read grid before simulation box is defined");
   if (grid->exist)
     error->all(FLERR,"Cannot read grid when grid is already defined");
@@ -78,15 +78,15 @@ void ReadGrid::read(char *filename, int external)
 
   me = comm->me;
   nprocs = comm->nprocs;
-  
+
   if (me == 0) {
-    if (!external && screen) 
+    if (!external && screen)
       fprintf(screen,"Reading grid file ... %s\n",filename);
     open(filename);
   }
 
   // read header and Cells section
-  
+
   header();
   parse_keyword(1);
   if (strcmp(keyword,"Cells") != 0)
@@ -153,7 +153,7 @@ void ReadGrid::read_cells()
 
   whichproc = 0;
   bigint nread = 0;
-  
+
   while (nread < ncell) {
     if (ncell-nread > CHUNK) nchunk = CHUNK;
     else nchunk = ncell-nread;
@@ -191,10 +191,10 @@ void ReadGrid::create_cells(int n, char *buf)
   cellint id;
   char *next,*idptr;
   double lo[3],hi[3];
-  
+
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
-  
+
   // create one child cell for each line
   // assign to procs in round-robin fasion
 
@@ -270,7 +270,7 @@ void ReadGrid::header()
   ncell = 0;
   nlevels = 0;
   Level *levels = NULL;
-  
+
   while (1) {
 
     // read a line and bcast length
@@ -327,7 +327,7 @@ void ReadGrid::header()
   }
 
   // error checks
-  
+
   if (ncell == 0) error->all(FLERR,"Grid file does not set cells keyword");
   if (nlevels == 0) error->all(FLERR,"Grid file does not set nlevels keyword");
   for (int i = 0; i < nlevels; i++) {
@@ -339,7 +339,7 @@ void ReadGrid::header()
     if (levels[i].cx == 1 && levels[i].cy == 1 && levels[i].cz == 1)
       error->all(FLERR,"Read_grid nx,ny,nz cannot all be one");
   }
-  
+
   // transfer level info into Grid data structs
 
   Grid::ParentLevel *plevels = grid->plevels;
@@ -418,7 +418,7 @@ void ReadGrid::parse_keyword(int first)
 
   int start = strspn(line," \t\n\r");
   int stop = strlen(line) - 1;
-  while (line[stop] == ' ' || line[stop] == '\t' 
+  while (line[stop] == ' ' || line[stop] == '\t'
 	 || line[stop] == '\n' || line[stop] == '\r') stop--;
   line[stop+1] = '\0';
   strcpy(keyword,&line[start]);

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -62,7 +62,7 @@ FixAdapt::FixAdapt(SPARTA *sparta, int narg, char **arg) :
   action2 = adapt->action2;
   file = adapt->file;
 
-  if (file && strchr(file,'*') == NULL) 
+  if (file && strchr(file,'*') == NULL)
     error->all(FLERR,"Fix adapt filename must contain '*' character");
 
   // compute initial outputs
@@ -94,14 +94,14 @@ void FixAdapt::init()
   // re-check args in case computes or fixes changed
 
   adapt->check_args(nevery);
-  
+
   // if any fix ave/grid exists, insure it comes before this fix
   // so that its output values are up-to-date on timesteps adaptation occurs
 
   int fixme = modify->find_fix(id);
   for (int i = 0; i < modify->nfix; i++) {
     if (strcmp(modify->fix[i]->style,"ave/grid") == 0) {
-      if (i > fixme) 
+      if (i > fixme)
         error->all(FLERR,"Fix adapt must come after fix ave/grid");
     }
   }
@@ -128,7 +128,7 @@ void FixAdapt::end_of_step()
   // perform adaptation
 
   if (action1 == REFINE || action2 == REFINE) grid->maxlevel++;
-  
+
   if (action1 == REFINE) nrefine = adapt->refine();
   else if (action1 == COARSEN) ncoarsen = adapt->coarsen();
 
@@ -167,7 +167,7 @@ void FixAdapt::end_of_step()
   }
 
   // notify all classes that store per-grid data that grid may have changed
-  
+
   grid->notify_changed();
 
   // write out new grid file

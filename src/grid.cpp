@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -65,7 +65,7 @@ enum{NOWEIGHT,VOLWEIGHT,RADWEIGHT};
 // corners[i][j] = J corner points of face I of a grid cell
 // works for 2d quads and 3d hexes
 
-int corners[6][4] = {{0,2,4,6}, {1,3,5,7}, {0,1,4,5}, {2,3,6,7}, 
+int corners[6][4] = {{0,2,4,6}, {1,3,5,7}, {0,1,4,5}, {2,3,6,7},
                      {0,1,2,3}, {4,5,6,7}};
 
 /* ---------------------------------------------------------------------- */
@@ -96,7 +96,7 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   nparent = maxparent = 0;
   maxlevel = 0;
   plevel_limit = MAXLEVEL;
-  
+
   cells = NULL;
   cinfo = NULL;
   sinfo = NULL;
@@ -153,7 +153,7 @@ Grid::~Grid()
   memory->sfree(pcells);
 
   delete [] plevels;
-  
+
   delete csurfs;
   delete csplits;
   delete csubs;
@@ -246,7 +246,7 @@ void Grid::add_child_cell(cellint id, int level, double *lo, double *hi)
   for (int i = 0; i < ncorner; i++) ci->corner[i] = UNKNOWN;
   ci->weight = 1.0;
 
-  if (domain->dimension == 3) 
+  if (domain->dimension == 3)
     ci->volume = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
   else if (domain->axisymmetric)
     ci->volume = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
@@ -406,7 +406,7 @@ void Grid::acquire_ghosts(int surfflag)
 
   if (cutoff < 0.0) acquire_ghosts_all(surfflag);
   else if (clumped) acquire_ghosts_near(surfflag);
-  else if (comm->me == 0) 
+  else if (comm->me == 0)
     error->warning(FLERR,"Could not acquire nearby ghost cells b/c "
                    "grid partition is not clumped");
 
@@ -427,7 +427,7 @@ void Grid::acquire_ghosts_all(int surfflag)
   nempty = 0;
 
   // compute total # of ghosts so can pre-allocate cells array
-  // issue a memory warning if grid cell count >= LARGE and 
+  // issue a memory warning if grid cell count >= LARGE and
   //   user has not specified a grid cutoff
 
   int nghost_new;
@@ -490,7 +490,7 @@ void Grid::acquire_ghosts_near(int surfflag)
     bblo[i] = BIG;
     bbhi[i] = -BIG;
   }
-  
+
   for (int icell = 0; icell < nlocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
     lo = cells[icell].lo;
@@ -760,7 +760,7 @@ int Grid::box_periodic(double *lo, double *hi, Box *box)
         plo[1] = lo[1] + j*prd[1];
         phi[1] = hi[1] + j*prd[1];
         plo[2] = lo[2] + k*prd[2];
-        phi[2] = hi[2] + k*prd[2]; 
+        phi[2] = hi[2] + k*prd[2];
         box_intersect(plo,phi,boxlo,boxhi,olo,ohi);
         if (olo[0] >= ohi[0] || olo[1] >= ohi[1] || olo[2] >= ohi[2]) continue;
 
@@ -825,15 +825,15 @@ void Grid::find_neighbors()
   // clear parent cells data structure since will (re)build it here
 
   nparent = 0;
-  
+
   // set neigh flags and nmask for each owned and ghost child cell
   // skip sub cells, loop below copies their info from original split cell
 
   int nunknown = 0;
-  
+
   for (icell = 0; icell < nlocal+nghost; icell++) {
     if (cells[icell].nsplit <= 0) continue;
-    
+
     id = cells[icell].id;
     level = cells[icell].level;
     lo = cells[icell].lo;
@@ -847,7 +847,7 @@ void Grid::find_neighbors()
 
       // set boundary and periodic flags for this face
       // treat 2d Z boundaries as non-periodic
-      
+
       if (iface % 2 == 0 && lo[idim] == boxlo[idim]) boundary = 1;
       else if (iface % 2 == 1 && hi[idim] == boxhi[idim]) boundary = 1;
       else boundary = 0;
@@ -865,7 +865,7 @@ void Grid::find_neighbors()
       }
 
       // neighID = ID of neighbor cell at same level as icell
-      
+
       neighID = id_neigh_same_parent(id,level,iface);
       if (neighID == 0) neighID = id_neigh_same_level(id,level,iface);
 
@@ -881,24 +881,24 @@ void Grid::find_neighbors()
       // refine from neighID until reach maxlevel
       // look for a child cell on touching face I do own (or ghost)
       // if find one, neighbor is PARENT, add its ID and lo/hi to local pcells
-      
+
       face_touching = iface % 2 ? iface-1 : iface+1;
       refineID = neighID;
       ilevel = level;
       found = 0;
-      
+
       while (ilevel < maxlevel) {
 	refineID = id_refine(refineID,ilevel,face_touching);
 	if (hash->find(refineID) != hash->end()) {
 	  neigh[iface] = nparent;
 	  if (!boundary) nmask = neigh_encode(NPARENT,nmask,iface);
 	  else nmask = neigh_encode(NPBPARENT,nmask,iface);
-	  
+	
 	  if (nparent == maxparent) grow_pcells();
 	  pcells[nparent].id = neighID;
 	  id_lohi(neighID,level,boxlo,boxhi,pcells[nparent].lo,pcells[nparent].hi);
 	  nparent++;
-	  
+	
 	  found = 1;
 	  break;
 	} else ilevel++;
@@ -934,7 +934,7 @@ void Grid::find_neighbors()
 
       if (icell < nlocal) unknownflag = 1;
     }
-    
+
     cells[icell].nmask = nmask;
     if (unknownflag) nunknown++;
   }
@@ -942,7 +942,7 @@ void Grid::find_neighbors()
   // for sub cells, copy neighbor info from original split cell
 
   int m,splitcell;
-  
+
   for (icell = 0; icell < nlocal+nghost; icell++) {
     if (cells[icell].nsplit >= 1) continue;
     splitcell = sinfo[cells[icell].isplit].icell;
@@ -986,13 +986,13 @@ void Grid::unset_neighbors()
   for (int icell = 0; icell < nlocal; icell++) {
     neigh = cells[icell].neigh;
     nmask = cells[icell].nmask;
-    
+
     for (i = 0; i < 6; i++) {
       index = neigh[i];
       nflag = neigh_decode(nmask,i);
-      if (nflag == NCHILD || nflag == NPBCHILD) 
+      if (nflag == NCHILD || nflag == NPBCHILD)
         neigh[i] = cells[index].id;
-      else if (nflag == NPARENT || nflag == NPBPARENT) 
+      else if (nflag == NPARENT || nflag == NPBPARENT)
         neigh[i] = pcells[neigh[i]].id;
     }
   }
@@ -1039,7 +1039,7 @@ void Grid::reset_neighbors()
         if (hash->find(neigh[i]) == hash->end()) {
           if (nflag == NCHILD) nmask = neigh_encode(NUNKNOWN,nmask,i);
           else nmask = neigh_encode(NPBUNKNOWN,nmask,i);
-        } else neigh[i] = (*hash)[neigh[i]]; 
+        } else neigh[i] = (*hash)[neigh[i]];
 
       } else if (nflag == NPARENT || nflag == NPBPARENT) {
 	if (nparent == maxparent) grow_pcells();
@@ -1050,7 +1050,7 @@ void Grid::reset_neighbors()
 
       } else if (nflag == NUNKNOWN || nflag == NPBUNKNOWN) {
         if (hash->find(neigh[i]) != hash->end()) {
-          neigh[i] = (*hash)[neigh[i]]; 
+          neigh[i] = (*hash)[neigh[i]];
           if (nflag == NUNKNOWN) nmask = neigh_encode(NCHILD,nmask,i);
           else nmask = neigh_encode(NPBCHILD,nmask,i);
         }
@@ -1096,8 +1096,8 @@ void Grid::set_inout()
   double xcorner[3];
   ParentCell *pcell;
   Connect *sbuf,*rbuf;
-  
-  if (!exist_ghost) 
+
+  if (!exist_ghost)
     error->all(FLERR,"Cannot mark grid cells as inside/outside surfs because "
                "ghost cells do not exist");
 
@@ -1172,7 +1172,7 @@ void Grid::set_inout()
         for (iface = 0; iface < nface; iface++) {
 
           // if I am an OUTSIDE/INSIDE cell: marktype = my itype
-          // if I am an OVERLAP cell: 
+          // if I am an OVERLAP cell:
           //   can only mark neighbor if all corner pts on face are same
           //   marktype = value of those corner pts = OUTSIDE or INSIDE
 
@@ -1202,7 +1202,7 @@ void Grid::set_inout()
             //     set jcell corner pts = marktype = OUTSIDE/INSIDE
             //     also set its volume to full cell or zero
             //     do not add jcell to new set, since is OVERLAP cell
-            //       maybe could add, but not sure need to, 
+            //       maybe could add, but not sure need to,
             //       and could be marked wrong ?
             // (3) else jcell = OUTSIDE/INSIDE:
             //     if jcell mark is different than marktype,
@@ -1225,11 +1225,11 @@ void Grid::set_inout()
                 else if (marktype == OUTSIDE) {
                   double *lo = cells[jcell].lo;
                   double *hi = cells[jcell].hi;
-                  if (dimension == 3) 
-                    cinfo[jcell].volume = 
+                  if (dimension == 3)
+                    cinfo[jcell].volume =
                       (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
                   else if (domain->axisymmetric)
-                    cinfo[jcell].volume = 
+                    cinfo[jcell].volume =
                       MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
                   else
                     cinfo[jcell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
@@ -1248,12 +1248,12 @@ void Grid::set_inout()
 
             // this proc does not own neighbor cell
             // pack sbuf with info to send
-              
+
             } else {
               if (nsend == maxsend) {
                 maxsend += DELTA;
                 memory->grow(proclist,maxsend,"grid:proclist");
-                sbuf = (Connect *) 
+                sbuf = (Connect *)
                   memory->srealloc(sbuf,maxsend*sizeof(Connect),"grid:sbuf");
               }
               proclist[nsend] = cells[jcell].proc;
@@ -1280,7 +1280,7 @@ void Grid::set_inout()
               if (ic/4) xcorner[2] = cells[icell].hi[2];
               else xcorner[2] = cells[icell].lo[2];
 
-              if (nflag == NPBPARENT) 
+              if (nflag == NPBPARENT)
                 domain->uncollide(faceflip[iface],xcorner);
 
               jcell = id_find_child(pcell->id,cells[icell].level,
@@ -1307,11 +1307,11 @@ void Grid::set_inout()
                   else if (marktype == OUTSIDE) {
                     double *lo = cells[jcell].lo;
                     double *hi = cells[jcell].hi;
-                    if (dimension == 3) 
-                      cinfo[jcell].volume = 
+                    if (dimension == 3)
+                      cinfo[jcell].volume =
                         (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
                     else if (domain->axisymmetric)
-                      cinfo[jcell].volume = 
+                      cinfo[jcell].volume =
                         MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
                     else
                       cinfo[jcell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
@@ -1320,7 +1320,7 @@ void Grid::set_inout()
                   //setnew[nsetnew++] = jcell;
                 } else {
                   if (jtype != marktype) {
-                    printf("CELL2 proc %d icell %d id " CELLINT_FORMAT 
+                    printf("CELL2 proc %d icell %d id " CELLINT_FORMAT
                            " iface %d "
                            "jcell %d id " CELLINT_FORMAT " marktype %d "
                            "jtype %d\n",
@@ -1338,7 +1338,7 @@ void Grid::set_inout()
                 if (nsend == maxsend) {
                   maxsend += DELTA;
                   memory->grow(proclist,maxsend,"grid:proclist");
-                  sbuf = (Connect *) 
+                  sbuf = (Connect *)
                     memory->srealloc(sbuf,maxsend*sizeof(Connect),"grid:sbuf");
                 }
                 proclist[nsend] = cells[jcell].proc;
@@ -1384,7 +1384,7 @@ void Grid::set_inout()
 
     // this proc received info to mark neighbor cell it owns
     // perform same marking logic as above
-    
+
     for (i = 0; i < nrecv; i++) {
       itype = rbuf[i].itype;
       marktype = rbuf[i].marktype;
@@ -1405,11 +1405,11 @@ void Grid::set_inout()
         else if (marktype == OUTSIDE) {
           double *lo = cells[jcell].lo;
           double *hi = cells[jcell].hi;
-          if (dimension == 3) 
-            cinfo[jcell].volume = 
+          if (dimension == 3)
+            cinfo[jcell].volume =
               (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
           else if (domain->axisymmetric)
-            cinfo[jcell].volume = 
+            cinfo[jcell].volume =
               MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
           else
             cinfo[jcell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
@@ -1418,13 +1418,13 @@ void Grid::set_inout()
         //set[nset++] = jcell;
       } else {
         if (marktype != jtype) {
-          printf("CELL3 me %d jcell %d id " CELLINT_FORMAT 
+          printf("CELL3 me %d jcell %d id " CELLINT_FORMAT
                  " marktype %d jtype %d\n",
                  me,jcell,cells[jcell].id,marktype,jtype);
           error->one(FLERR,"Cell type mis-match when marking on neigh proc");
         }
       }
-    }  
+    }
   }
 
   // NOTE: at this point could make a final attempt to mark
@@ -1508,7 +1508,7 @@ void Grid::check_uniform()
   MPI_Allreduce(&myuniform,&uniform,1,MPI_INT,MPI_MIN,world);
 
   // if grid is uniform, compute grid extent in each dimension
-  
+
   if (uniform) {
     unx = uny = unz = 1;
     for (int i = 0; i < maxlevel; i++) {
@@ -1651,7 +1651,7 @@ void Grid::weight(int narg, char **arg)
     else error->all(FLERR,"Illegal weight command");
   }
 
-  if (cellweightflag == RADWEIGHT && !domain->axisymmetric) 
+  if (cellweightflag == RADWEIGHT && !domain->axisymmetric)
     error->all(FLERR,"Cannot use weight cell radius unless axisymmetric");
 
   // set per-cell weights
@@ -1671,7 +1671,7 @@ void Grid::weight_one(int icell)
   } else if (cellweightflag == VOLWEIGHT) {
     lo = cells[icell].lo;
     hi = cells[icell].hi;
-    if (dimension == 3) 
+    if (dimension == 3)
       cinfo[icell].weight = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
     else if (axisymmetric)
       cinfo[icell].weight = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
@@ -1961,14 +1961,14 @@ void Grid::group(int narg, char **arg)
   // print stats for changed group
 
   bigint n = 0;
-  for (i = 0; i < nlocal; i++) 
+  for (i = 0; i < nlocal; i++)
     if (cinfo[i].mask & bit) n++;
 
   bigint nall;
   MPI_Allreduce(&n,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
   if (comm->me == 0) {
-    if (screen) 
+    if (screen)
       fprintf(screen,BIGINT_FORMAT " grid cells in group %s\n",
               nall,gnames[igroup]);
     if (logfile)
@@ -1983,7 +1983,7 @@ void Grid::group(int narg, char **arg)
 
 int Grid::add_group(const char *id)
 {
-  if (ngroup == MAXGROUP) 
+  if (ngroup == MAXGROUP)
     error->all(FLERR,"Cannot have more than 32 surface groups");
 
   int n = strlen(id) + 1;
@@ -2018,7 +2018,7 @@ int Grid::find_group(const char *id)
    set xyzsize = size of one grid cell (all are same size)
 ------------------------------------------------------------------------- */
 
-int Grid::check_uniform_group(int igroup, int *nxyz, 
+int Grid::check_uniform_group(int igroup, int *nxyz,
                               double *corner, double *xyzsize)
 {
   double lo[3],hi[3],onesize[3];
@@ -2052,7 +2052,7 @@ int Grid::check_uniform_group(int igroup, int *nxyz,
   }
 
   // check that no cells already have surfs
-  
+
   int allsflag;
   MPI_Allreduce(&sflag,&allsflag,1,MPI_INT,MPI_SUM,world);
   if (allsflag) {
@@ -2064,7 +2064,7 @@ int Grid::check_uniform_group(int igroup, int *nxyz,
   }
 
   // check that all cells are at same level
-  
+
   int allminlev,allmaxlev;
   MPI_Allreduce(&minlev,&allminlev,1,MPI_INT,MPI_MIN,world);
   MPI_Allreduce(&maxlev,&allmaxlev,1,MPI_INT,MPI_MAX,world);
@@ -2083,7 +2083,7 @@ int Grid::check_uniform_group(int igroup, int *nxyz,
     xyzsize[1] /= plevels[ilevel].ny;
     xyzsize[2] /= plevels[ilevel].nz;
   }
-  
+
   double alllo[3],allhi[3];
   MPI_Allreduce(lo,&alllo,3,MPI_DOUBLE,MPI_MIN,world);
   MPI_Allreduce(hi,&allhi,3,MPI_DOUBLE,MPI_MAX,world);

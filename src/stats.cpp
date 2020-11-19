@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -220,7 +220,7 @@ void Stats::header()
   for (int i = 0; i < nfield; i++)
     loc += sprintf(&line[loc],"%s ",keyword[i]);
   sprintf(&line[loc],"\n");
-  
+
   if (me == 0) {
     if (screen) fprintf(screen,"%s",line);
     if (logfile) fprintf(logfile,"%s",line);
@@ -262,7 +262,7 @@ void Stats::compute(int flag)
     (this->*vfunc[ifield])();
     if (vtype[ifield] == FLOAT)
       loc += sprintf(&line[loc],format[ifield],dvalue);
-    else if (vtype[ifield] == INT) 
+    else if (vtype[ifield] == INT)
       loc += sprintf(&line[loc],format[ifield],ivalue);
     else if (vtype[ifield] == BIGINT) {
       loc += sprintf(&line[loc],format[ifield],bivalue);
@@ -586,7 +586,7 @@ void Stats::set_fields(int narg, char **arg)
     // count trailing [] and store int arguments
     // copy = at most 8 chars of ID to pass to addfield
 
-    } else if ((strncmp(arg[i],"s_",2) == 0) || 
+    } else if ((strncmp(arg[i],"s_",2) == 0) ||
 	       (strncmp(arg[i],"r_",2) == 0)) {
 
       int n = strlen(arg[i]);
@@ -635,14 +635,14 @@ void Stats::set_fields(int narg, char **arg)
 	field2index[nfield] = add_surf_react(id);
 	addfield(arg[i],&Stats::compute_surf_react,FLOAT);
       }
-      
+
       delete [] id;
 
     // compute value = c_ID, fix value = f_ID, variable value = v_ID
     // count trailing [] and store int arguments
     // copy = at most 8 chars of ID to pass to addfield
 
-    } else if ((strncmp(arg[i],"c_",2) == 0) || 
+    } else if ((strncmp(arg[i],"c_",2) == 0) ||
 	       (strncmp(arg[i],"f_",2) == 0) ||
 	       (strncmp(arg[i],"v_",2) == 0)) {
 
@@ -688,7 +688,7 @@ void Stats::set_fields(int narg, char **arg)
 	  field2index[nfield] = add_compute(id,SCALAR);
 	else if (argindex2[nfield] == 0)
 	  field2index[nfield] = add_compute(id,VECTOR);
-	else 
+	else
 	  field2index[nfield] = add_compute(id,ARRAY);
 	addfield(arg[i],&Stats::compute_compute,FLOAT);
 
@@ -719,7 +719,7 @@ void Stats::set_fields(int narg, char **arg)
 	if (n < 0) error->all(FLERR,"Could not find stats variable name");
 	if (input->variable->equal_style(n) == 0)
 	  error->all(FLERR,"Stats variable is not equal-style variable");
-	if (argindex1[nfield]) 
+	if (argindex1[nfield])
 	  error->all(FLERR,"Stats variable cannot be indexed");
 
 	field2index[nfield] = add_variable(id);
@@ -761,7 +761,7 @@ int Stats::add_compute(const char *id, int which)
 {
   int icompute;
   for (icompute = 0; icompute < ncompute; icompute++)
-    if ((strcmp(id,id_compute[icompute]) == 0) && 
+    if ((strcmp(id,id_compute[icompute]) == 0) &&
 	which == compute_which[icompute]) break;
   if (icompute < ncompute) return icompute;
 
@@ -842,14 +842,14 @@ int Stats::evaluate_keyword(char *word, double *answer)
     dvalue = bivalue;
 
   } else if (strcmp(word,"elapsed") == 0) {
-    if (update->runflag == 0) 
+    if (update->runflag == 0)
       error->all(FLERR,
 		 "Variable stats keyword cannot be used between runs");
     compute_elapsed();
     dvalue = bivalue;
 
   } else if (strcmp(word,"elaplong") == 0) {
-    if (update->runflag == 0) 
+    if (update->runflag == 0)
       error->all(FLERR,
 		 "Variable stats keyword cannot be used between runs");
     compute_elaplong();
@@ -859,19 +859,19 @@ int Stats::evaluate_keyword(char *word, double *answer)
     compute_dt();
 
   } else if (strcmp(word,"cpu") == 0) {
-    if (update->runflag == 0) 
+    if (update->runflag == 0)
       error->all(FLERR,
 		 "Variable stats keyword cannot be used between runs");
     compute_cpu();
 
   } else if (strcmp(word,"tpcpu") == 0) {
-    if (update->runflag == 0) 
+    if (update->runflag == 0)
       error->all(FLERR,
 		 "Variable stats keyword cannot be used between runs");
     compute_tpcpu();
 
   } else if (strcmp(word,"spcpu") == 0) {
-    if (update->runflag == 0) 
+    if (update->runflag == 0)
       error->all(FLERR,
 		 "Variable stats keyword cannot be used between runs");
     compute_spcpu();

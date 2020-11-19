@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -168,7 +168,7 @@ int Cut3d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
    called by AdaptGrid via Grid::surf2grid_one
 ------------------------------------------------------------------------- */
 
-int Cut3d::surf2grid_list(cellint id_caller, 
+int Cut3d::surf2grid_list(cellint id_caller,
                           double *lo_caller, double *hi_caller,
                           int nlist, surfint *list,
                           surfint *surfs_caller, int max)
@@ -376,7 +376,7 @@ int Cut3d::clip_external(double *p0, double *p1, double *p2,
     }
     if (!nnew) return 0;
   }
-  
+
   // copy path points to cpath
   // delete any duplicate points while copying
   // inner-loop check is to not add a point that duplicates previous point
@@ -387,7 +387,7 @@ int Cut3d::clip_external(double *p0, double *p1, double *p2,
   nnew = 0;
   for (i = 0; i < n; i++) {
     if (m) {
-      if (path1[i][0] == cpath[m-3] && path1[i][1] == cpath[m-2] && 
+      if (path1[i][0] == cpath[m-3] && path1[i][1] == cpath[m-2] &&
           path1[i][2] == cpath[m-1]) continue;
     }
     cpath[m++] = path1[i][0];
@@ -396,7 +396,7 @@ int Cut3d::clip_external(double *p0, double *p1, double *p2,
     nnew++;
   }
   if (nnew > 1)
-    if (cpath[0] == cpath[m-3] && cpath[1] == cpath[m-2] && 
+    if (cpath[0] == cpath[m-3] && cpath[1] == cpath[m-2] &&
         cpath[2] == cpath[m-1]) nnew--;
 
   return nnew;
@@ -416,9 +416,9 @@ int Cut3d::clip_external(double *p0, double *p1, double *p2,
      xsplit = coords of a point in the split cell
 ------------------------------------------------------------------------- */
 
-int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller, 
+int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
                  int nsurf_caller, surfint *surfs_caller,
-                 double *&vols_caller, int *surfmap, 
+                 double *&vols_caller, int *surfmap,
                  int *corners, int &xsub, double *xsplit)
 {
   id = id_caller;
@@ -469,7 +469,7 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
       int mark = UNKNOWN;
       if (grazeflag || inout == INSIDE) mark = INSIDE;
       else if (inout == OUTSIDE) mark = OUTSIDE;
-      corners[0] = corners[1] = corners[2] = corners[3] = 
+      corners[0] = corners[1] = corners[2] = corners[3] =
         corners[4] = corners[5] = corners[6] = corners[7] = mark;
 
 
@@ -479,10 +479,10 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
       ctr[1] = 0.5*(lo[1]+hi[1]);
       ctr[2] = 0.5*(lo[2]+hi[2]);
       int check = 0;
-      if (mark == INSIDE && 
+      if (mark == INSIDE &&
           (fabs(ctr[0]) > 1.0 || fabs(ctr[1]) > 1.0 || fabs(ctr[2]) > 1.0))
         check = 1;
-      if (mark == OUTSIDE && 
+      if (mark == OUTSIDE &&
           (fabs(ctr[0]) < 1.0 && fabs(ctr[1]) < 1.0 && fabs(ctr[2]) < 1.0))
         check = 1;
       if (mark == UNKNOWN) check = 1;
@@ -574,7 +574,7 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
     int icorner;
     double *p1,*p2;
 
-    corners[0] = corners[1] = corners[2] = corners[3] = 
+    corners[0] = corners[1] = corners[2] = corners[3] =
       corners[4] = corners[5] = corners[6] = corners[7] = INSIDE;
 
     int nedge = edges.n;
@@ -605,20 +605,20 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
   if (errflag) {
     failed_cell();
 
-    if (errflag == 1) 
+    if (errflag == 1)
       error->one(FLERR,"FE: Found edge in same direction");
-    if (errflag == 2) 
+    if (errflag == 2)
       error->one(FLERR,"EF: Singlet BPG edge not on cell face");
-    if (errflag == 3) 
+    if (errflag == 3)
       error->one(FLERR,"EF: BPG edge on more than 2 faces");
-    if (errflag == 4) 
+    if (errflag == 4)
       error->one(FLERR,"LP: No positive volumes in cell");
-    if (errflag == 5) 
+    if (errflag == 5)
       error->one(FLERR,"LP: More than one positive volume with "
                  "a negative volume");
-    if (errflag == 6) 
+    if (errflag == 6)
       error->one(FLERR,"LP: Single volume is negative, inverse donut");
-    if (errflag == 7) 
+    if (errflag == 7)
       error->one(FLERR,"SP: Could not find split point in split cell");
 
     if (errflag == 11)
@@ -757,7 +757,7 @@ int Cut3d::add_tris()
 
   verts.n = nvert;
   return 0;
-} 
+}
 
 /* ----------------------------------------------------------------------
 ------------------------------------------------------------------------- */
@@ -771,7 +771,7 @@ int Cut3d::clip_tris()
   Edge *edge,*newedge;
 
   // loop over all 6 faces of cell
-  
+
   int nvert = verts.n;
 
   for (int iface = 0; iface < 6; iface++) {
@@ -782,14 +782,14 @@ int Cut3d::clip_tris()
 
     // mark all edges as unclipped
     // some may have been clipped and not cleared on previous face
-      
+
     nedge = edges.n;
     for (iedge = 0; iedge < nedge; iedge++)
       if (edges[iedge].active) edges[iedge].clipped = 0;
 
     // loop over vertices, clip each of its edges to face
     // if edge already clipped, unset clip flag and keep edge as-is
-  
+
     for (ivert = 0; ivert < nvert; ivert++) {
       iedge = verts[ivert].first;
       idir = verts[ivert].dirfirst;
@@ -881,7 +881,7 @@ int Cut3d::clip_tris()
       // iedge = this edge, jedge = next edge
       // p1 = last pt in iedge, pt = first pt in jedge
       // if p1 != p2, add edge between them
-  
+
       edges.grow(edges.n + verts[ivert].nedge);
       iedge = verts[ivert].first;
       idir = verts[ivert].dirfirst;
@@ -941,14 +941,14 @@ int Cut3d::clip_tris()
       edge_remove(edge);
     }
   }
-  
+
   // remove vertices (triangles) which now have less than 3 edges
   // do this after deleting zero-length edges so vertices are updated
   // removals should have 2 or 0 edges, no verts should have 1 edge
   // if all triangles are removed, BPG will be empty,
   //   which will result in cell corner pts being left UNKNOWN in split()
   // to try and avoid this, tally the in/out orientation of all removed tris
-  // "out" orientation means tri norm from tri ctr points towards cell ctr 
+  // "out" orientation means tri norm from tri ctr points towards cell ctr
   // "in" orientation means tri norm from tri ctr points away from cell ctr
   // some triangles may not follow this rule, but majority should
   // cbox = cell center pt, ctri = triangle center pt, t2b = cbox-ctri
@@ -1028,7 +1028,7 @@ int Cut3d::clip_tris()
    when called, only clipped triangles exist
 ------------------------------------------------------------------------- */
 
-void Cut3d::ctri_volume() 
+void Cut3d::ctri_volume()
 {
   int i,iedge,idir,nedge;
   double zarea,volume;
@@ -1041,7 +1041,7 @@ void Cut3d::ctri_volume()
     iedge = verts[ivert].first;
     idir = verts[ivert].dirfirst;
     nedge = verts[ivert].nedge;
-    
+
     if (idir == 0) p0 = edges[iedge].p1;
     else p0 = edges[iedge].p2;
 
@@ -1116,7 +1116,7 @@ int Cut3d::edge2face()
       if (edge->nvert == 1) ivert = edge->verts[0];
       else ivert = edge->verts[1];
       trinorm = verts[ivert].norm;
-      dot = norm_inward[0]*trinorm[0] + norm_inward[1]*trinorm[1] + 
+      dot = norm_inward[0]*trinorm[0] + norm_inward[1]*trinorm[1] +
         norm_inward[2]*trinorm[2];
       if (dot > 0.0) iface = faces[1];
     } else return 3;
@@ -1138,7 +1138,7 @@ int Cut3d::edge2face()
 ------------------------------------------------------------------------- */
 
 void Cut3d::edge2clines(int iface)
-{      
+{
   int iedge;
   double *p1,*p2;
   Edge *edge;
@@ -1302,7 +1302,7 @@ int Cut3d::add_face_pgons(int iface)
    caller sets outerflag2d if cut2d requires adding perimeter face edges
 ------------------------------------------------------------------------- */
 
-int Cut3d::add_face(int iface, double *lo2d, double *hi2d) 
+int Cut3d::add_face(int iface, double *lo2d, double *hi2d)
 {
   int i,j,iedge,dir,prev,dirprev;
   double p1[3],p2[3];
@@ -1392,7 +1392,7 @@ int Cut3d::add_face(int iface, double *lo2d, double *hi2d)
    unconnected means the edge is only part of this vertex
    mark vertex as inactive, decrement their edges,
      also set edges inactive if they are no longer attached to vertices
-   iterate twice since another face may become unconnected 
+   iterate twice since another face may become unconnected
 ------------------------------------------------------------------------- */
 
 void Cut3d::remove_faces()
@@ -1435,7 +1435,7 @@ int Cut3d::check()
 
   // mark all edges as unclipped
   // use for detecting duplicate edges in same vertex
-      
+
   nedge = edges.n;
   for (iedge = 0; iedge < nedge; iedge++)
     if (edges[iedge].active) edges[iedge].clipped = 0;
@@ -1601,7 +1601,7 @@ int Cut3d::loop2ph()
     if (loops[i].volume > 0.0) positive++;
     else negative++;
   if (positive == 0) return 4;
-  if (positive > 1 && negative) return 5; 
+  if (positive > 1 && negative) return 5;
 
   phs.grow(positive);
 
@@ -1758,7 +1758,7 @@ int Cut3d::split_point_implicit(int *surfmap, double *xsplit, int &xsub)
    also update vertex info for added edge
 ------------------------------------------------------------------------- */
 
-void Cut3d::edge_insert(int iedge, int dir, int ivert, 
+void Cut3d::edge_insert(int iedge, int dir, int ivert,
                         int iprev, int dirprev, int inext, int dirnext)
 {
   Edge *edge = &edges[iedge];
@@ -1811,7 +1811,7 @@ void Cut3d::edge_insert(int iedge, int dir, int ivert,
    will leave edge marked inactive
 ------------------------------------------------------------------------- */
 
-void Cut3d::edge_remove(Edge *edge) 
+void Cut3d::edge_remove(Edge *edge)
 {
   if (edge->verts[0] >= 0) edge_remove(edge,0);
   if (edge->verts[1] >= 0) edge_remove(edge,1);
@@ -1823,7 +1823,7 @@ void Cut3d::edge_remove(Edge *edge)
    mark edge inactive if its nvert -> 0
 ------------------------------------------------------------------------- */
 
-void Cut3d::edge_remove(Edge *edge, int dir) 
+void Cut3d::edge_remove(Edge *edge, int dir)
 {
   int ivert = edge->verts[dir];
   edge->verts[dir] = -1;
@@ -1864,7 +1864,7 @@ void Cut3d::edge_remove(Edge *edge, int dir)
    remove a vertex and all edges it includes
 ------------------------------------------------------------------------- */
 
-void Cut3d::vertex_remove(Vertex *vert) 
+void Cut3d::vertex_remove(Vertex *vert)
 {
   Edge *edge;
 
@@ -1891,7 +1891,7 @@ void Cut3d::vertex_remove(Vertex *vert)
    return 1 if grazing else 0
 ------------------------------------------------------------------------- */
 
-int Cut3d::grazing(Vertex *vert) 
+int Cut3d::grazing(Vertex *vert)
 {
   int count[6];
   double *p;
@@ -2021,7 +2021,7 @@ int Cut3d::findedge(double *x, double *y, int flag, int &dir)
 
   for (int i = 0; i < nedge; i++) {
     if (!edges[i].active) continue;
-    if (flag && (edges[i].style == CTRI || edges[i].style == CTRIFACE)) 
+    if (flag && (edges[i].style == CTRI || edges[i].style == CTRIFACE))
       continue;
     p1 = edges[i].p1;
     p2 = edges[i].p2;
@@ -2036,7 +2036,7 @@ int Cut3d::findedge(double *x, double *y, int flag, int &dir)
       return i;
     }
   }
-  
+
   dir = -1;
   return -1;
 }
@@ -2046,7 +2046,7 @@ int Cut3d::findedge(double *x, double *y, int flag, int &dir)
    guaranteed to intersect by caller
    C can be same as A or B, will just overwrite
 ------------------------------------------------------------------------- */
-  
+
 void Cut3d::between(double *a, double *b, int dim, double value, double *c)
 {
   if (dim == 0) {
@@ -2067,7 +2067,7 @@ void Cut3d::between(double *a, double *b, int dim, double value, double *c)
 /* ----------------------------------------------------------------------
    return 1 if x,y are same point, else 0
 ------------------------------------------------------------------------- */
-  
+
 int Cut3d::samepoint(double *x, double *y)
 {
   if (x[0] == y[0] && x[1] == y[1] && x[2] == y[2]) return 1;
@@ -2078,7 +2078,7 @@ int Cut3d::samepoint(double *x, double *y)
    return 0-7 if pt is a corner pt of grid cell
    else return -1
 ------------------------------------------------------------------------- */
-  
+
 int Cut3d::corner(double *pt)
 {
   if (pt[2] == lo[2]) {
@@ -2125,7 +2125,7 @@ int Cut3d::ptflag(double *pt)
 ------------------------------------------------------------------------- */
 
 int Cut3d::push_increment()
-{  
+{
   if (pushflag == npushmax) return 0;
   pushlo = pushlo_vec[pushflag];
   pushhi = pushhi_vec[pushflag];;
@@ -2151,7 +2151,7 @@ void Cut3d::push(double *pt)
   double epsy = EPSCELL * (hi[1]-lo[1]);
   double epsz = EPSCELL * (hi[2]-lo[2]);
 
-  //if (x < lo[0]-pushhi*epsx || x > hi[0]+pushhi*epsx || 
+  //if (x < lo[0]-pushhi*epsx || x > hi[0]+pushhi*epsx ||
   //    y < lo[1]-pushhi*epsy || y > hi[1]+pushhi*epsy ||
   //    z < lo[2]-pushhi*epsz || z > hi[2]+pushhi*epsz) return;
 

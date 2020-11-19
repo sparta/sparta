@@ -37,7 +37,7 @@ class ReactBirdKokkos : public ReactBird {
                                           ) {};
   virtual ~ReactBirdKokkos();
   virtual void init();
-  virtual int attempt(Particle::OnePart *, Particle::OnePart *, 
+  virtual int attempt(Particle::OnePart *, Particle::OnePart *,
                       double, double, double, double &, int &) = 0;
   double extract_tally(int);
 
@@ -61,7 +61,7 @@ class ReactBirdKokkos : public ReactBird {
   // all reactions a pair of reactant species is part of
 
   struct ReactionIJKokkos {
-    DAT::t_int_1d d_list;       // N-length list of rlist indices 
+    DAT::t_int_1d d_list;       // N-length list of rlist indices
                      //   for reactions defined for this IJ pair,
                      //   just a ptr into sub-section of long list_ij vector
                      //   for all pairs

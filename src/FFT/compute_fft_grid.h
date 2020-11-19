@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -69,7 +69,7 @@ class ComputeFFTGrid : public Compute {
   FFT_SCALAR *gridworkcomplex;  // work buf in grid decomp, length = nglocal
 
   int *map1;            // mapping of received SPARTA grid values to FFT grid
-                        // map1[i] = index into ordered FFT grid of 
+                        // map1[i] = index into ordered FFT grid of
                         //           Ith value in buffer received
                         //           from SPARTA decomp via irregular comm
   int *map2;            // mapping of received FFT grid values to SPARTA grid

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -30,26 +30,26 @@ class SurfCollideImpulsive : public SurfCollide {
   SurfCollideImpulsive(class SPARTA *, int, char **);
   ~SurfCollideImpulsive();
   void init();
-  Particle::OnePart *collide(Particle::OnePart *&, double *, 
+  Particle::OnePart *collide(Particle::OnePart *&, double *,
                              double &, int, int &);
-  
+
   void dynamic();
 
  private:
   double twall;                   // surface temperature
   double eng_ratio,eff_mass;      // energy ratio and effective mass of the surface for soft-sphere model
-  double u0_a, u0_b;              // u0 values for the direct case within impulsive model      
-  double v_f_avg;                           
-  double var_alpha,var_alpha_sq;     // alpha value related to variance from Rettner's expression 
+  double u0_a, u0_b;              // u0 values for the direct case within impulsive model
+  double v_f_avg;
+  double var_alpha,var_alpha_sq;     // alpha value related to variance from Rettner's expression
   double theta_peak,cos_theta_pow;   // cosine power law varaition for theta
   double cos_phi_pow;                // cosine power law varaition for phi
   double step_size,cos_theta_pow_2;  // step_size and double cosine power
-  double rot_frac, vib_frac;         // Rotational and vibrational energy fraction 
+  double rot_frac, vib_frac;         // Rotational and vibrational energy fraction
 
   double vx,vy,vz;                 // translational velocity of surface
   double wx,wy,wz;                 // angular velocity of surface
   double px,py,pz;                 // point to rotate surface around
-  
+
   int softsphere_flag;                 // flags for direct or soft sphere model
   int step_flag,double_flag;
   int intenergy_flag;              // optional model flags

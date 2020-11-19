@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -55,8 +55,8 @@ class ComputeBoundaryKokkos : public ComputeBoundary, public KokkosBase {
 template <int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
 void boundary_tally_kk(int iface, int istyle, int reaction,
-                       Particle::OnePart *iorig, 
-                       Particle::OnePart *ip, 
+                       Particle::OnePart *iorig,
+                       Particle::OnePart *ip,
                        Particle::OnePart *jp,
                        const double* norm) const
 {
@@ -152,7 +152,7 @@ void boundary_tally_kk(int iface, int istyle, int reaction,
         break;
       case ETOT:
         vsqpre = MathExtraKokkos::lensq3(vorig);
-        a_myarray(iface,k++) += 0.5*mvv2e*origmass*vsqpre + 
+        a_myarray(iface,k++) += 0.5*mvv2e*origmass*vsqpre +
           weight*(iorig->erot+iorig->evib);
         break;
       }
@@ -244,7 +244,7 @@ void boundary_tally_kk(int iface, int istyle, int reaction,
           jvsqpost = jmass * MathExtraKokkos::lensq3(jp->v);
           jother = jp->erot + jp->evib;
         } else jvsqpost = jother = 0.0;
-        a_myarray(iface,k++) -= 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
+        a_myarray(iface,k++) -= 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
           weight * (iother + jother - otherpre);
         break;
       }

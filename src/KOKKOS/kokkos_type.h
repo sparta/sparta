@@ -385,12 +385,12 @@ namespace SPARTA_NS {
   typedef tdual_species_1d::t_dev t_species_1d;
   typedef tdual_species_1d::t_dev_const t_species_1d_const;
   typedef tdual_species_1d::t_host t_host_species_1d;
-  
+
   typedef Kokkos::
     DualView<Grid::ChildCell*, DeviceType::array_layout, DeviceType> tdual_cell_1d;
   typedef tdual_cell_1d::t_dev t_cell_1d;
   typedef tdual_cell_1d::t_host t_host_cell_1d;
-  
+
   typedef Kokkos::
     DualView<Grid::ChildInfo*, DeviceType::array_layout, DeviceType> tdual_cinfo_1d;
   typedef tdual_cinfo_1d::t_dev t_cinfo_1d;
@@ -438,7 +438,7 @@ typedef tdual_int_scalar::t_dev_um t_int_scalar_um;
 typedef tdual_int_scalar::t_dev_const_um t_int_scalar_const_um;
 
 typedef Kokkos::
-  DualView<SPARTA_FLOAT, DeviceType::array_layout, DeviceType> 
+  DualView<SPARTA_FLOAT, DeviceType::array_layout, DeviceType>
   tdual_float_scalar;
 typedef tdual_float_scalar::t_dev t_float_scalar;
 typedef tdual_float_scalar::t_dev_const t_float_scalar_const;
@@ -582,7 +582,7 @@ typedef tdual_xfloat_2d::t_dev_um t_xfloat_2d_um;
 typedef tdual_xfloat_2d::t_dev_const_um t_xfloat_2d_const_um;
 typedef tdual_xfloat_2d::t_dev_const_randomread t_xfloat_2d_randomread;
 
-//2d X_FLOAT array n*4 
+//2d X_FLOAT array n*4
 #ifdef SPARTA_KOKKOS_NO_LEGACY
 typedef Kokkos::DualView<X_FLOAT*[3], Kokkos::LayoutLeft, DeviceType> tdual_x_array;
 #else
@@ -677,7 +677,7 @@ typedef tdual_efloat_2d::t_dev_um t_efloat_2d_um;
 typedef tdual_efloat_2d::t_dev_const_um t_efloat_2d_const_um;
 typedef tdual_efloat_2d::t_dev_const_randomread t_efloat_2d_randomread;
 
-//2d E_FLOAT array n*3 
+//2d E_FLOAT array n*3
 
 typedef Kokkos::DualView<E_FLOAT*[3], Kokkos::LayoutRight, DeviceType> tdual_e_array;
 typedef tdual_e_array::t_dev t_e_array;

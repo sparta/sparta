@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -42,7 +42,7 @@ void ReactTCE::init()
 
 /* ---------------------------------------------------------------------- */
 
-int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp, 
+int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
                       double pre_etrans, double pre_erot, double pre_evib,
                       double &post_etotal, int &kspecies)
 {
@@ -62,7 +62,7 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
   // probablity to compare to reaction probability
 
   double react_prob = 0.0;
-  double random_prob = random->uniform(); 
+  double random_prob = random->uniform();
 
   // loop over possible reactions for these 2 species
 
@@ -73,20 +73,20 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
     pre_etotal = pre_etrans + pre_erot + pre_evib;
 
-    ecc = pre_etrans; 
+    ecc = pre_etrans;
     if (pre_ave_rotdof > 0.1) ecc += pre_erot*r->coeff[0]/pre_ave_rotdof;
 
     e_excess = ecc - r->coeff[1];
     if (e_excess <= 0.0) continue;
-        
+
     // compute probability of reaction
-        
+
     switch (r->type) {
     case DISSOCIATION:
     case IONIZATION:
     case EXCHANGE:
       {
-        react_prob += r->coeff[2] * 
+        react_prob += r->coeff[2] *
           pow(ecc-r->coeff[1],r->coeff[3]) *
           pow(1.0-r->coeff[1]/ecc,r->coeff[5]);
         break;
@@ -96,9 +96,9 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
       {
         // skip if no 3rd particle chosen by Collide::collisions()
         //   this includes effect of boost factor to skip recomb reactions
-        // check if this recomb reaction is the same one 
+        // check if this recomb reaction is the same one
         //   that the 3rd particle species maps to, else skip it
-        // this effectively skips all recombinations reactions 
+        // this effectively skips all recombinations reactions
         //   if selected a 3rd particle species that matches none of them
         // scale probability by boost factor to restore correct stats
 
@@ -116,7 +116,7 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
       error->one(FLERR,"Unknown outcome in reaction");
       break;
     }
-      
+
     // test against random number to see if this reaction occurs
     // if it does, reset species of I,J and optional K to product species
     // J particle is destroyed in recombination reaction, set species = -1
@@ -157,12 +157,12 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
       if (r->nproduct > 2) kspecies = r->products[2];
       else kspecies = -1;
-      
+
       post_etotal = pre_etotal + r->coeff[4];
 
       return 1;
     }
   }
-  
+
   return 0;
 }

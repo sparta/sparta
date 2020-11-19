@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -30,7 +30,7 @@ using namespace SPARTA_NS;
 enum{ERROR,WARNING,SILENT};
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
 
-FixGridCheckKokkos::FixGridCheckKokkos(SPARTA *sparta, int narg, char **arg) : 
+FixGridCheckKokkos::FixGridCheckKokkos(SPARTA *sparta, int narg, char **arg) :
   FixGridCheck(sparta, narg, arg)
 {
   kokkos_flag = 1;
@@ -148,7 +148,7 @@ void FixGridCheckKokkos::end_of_step()
     //    if (outflag == ERROR) {
     //      char str[128];
     //      sprintf(str,
-    //              "Particle %d,%d on proc %d is in wrong sub cell %d not %d" 
+    //              "Particle %d,%d on proc %d is in wrong sub cell %d not %d"
     //              " on timestep " BIGINT_FORMAT,
     //              i,particles[i].id,comm->me,icell,subcell,
     //              update->ntimestep);
@@ -169,7 +169,7 @@ void FixGridCheckKokkos::end_of_step()
     MPI_Allreduce(&nflag,&all,1,MPI_INT,MPI_SUM,world);
     if (all && comm->me == 0) {
       char str[128];
-      sprintf(str,"%d particles were in wrong cells on timestep " 
+      sprintf(str,"%d particles were in wrong cells on timestep "
               BIGINT_FORMAT,all,update->ntimestep);
       error->warning(FLERR,str);
     }
@@ -191,7 +191,7 @@ void FixGridCheckKokkos::end_of_step()
       }
       if (h_particle_problems(i) & IS_OUTSIDE_CELL) {
         sprintf(str,
-                "Particle %d,%d on proc %d is outside cell " CELLINT_FORMAT 
+                "Particle %d,%d on proc %d is outside cell " CELLINT_FORMAT
                 " on timestep " BIGINT_FORMAT,
                 i,particles[i].id,comm->me,cells[icell].id,
                 update->ntimestep);
@@ -199,7 +199,7 @@ void FixGridCheckKokkos::end_of_step()
       }
       if (h_particle_problems(i) & IS_IN_SPLIT_CELL) {
         sprintf(str,
-                "Particle %d,%d on proc %d is in split cell " CELLINT_FORMAT 
+                "Particle %d,%d on proc %d is in split cell " CELLINT_FORMAT
                 " on timestep " BIGINT_FORMAT,
                 i,particles[i].id,comm->me,cells[icell].id,
                 update->ntimestep);

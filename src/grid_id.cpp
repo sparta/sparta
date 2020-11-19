@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -43,7 +43,7 @@ int Grid::id_find_child(cellint parentID, int plevel,
   int ix,iy,iz,nx,ny,nz;
   double plo[3],phi[3],clo[3],chi[3];
   cellint childID,ichild;
-  
+
   cellint id = parentID;
   int level = plevel;
   double *lo = oplo;
@@ -64,7 +64,7 @@ int Grid::id_find_child(cellint parentID, int plevel,
     childID = (ichild << plevels[level].nbits) | id;
 
     if (hash->find(childID) != hash->end()) return (*hash)[childID];
-    
+
     id = childID;
     id_child_lohi(level,lo,hi,ichild,clo,chi);
     plo[0] = clo[0]; plo[1] = clo[1]; plo[2] = clo[2];
@@ -87,9 +87,9 @@ cellint Grid::id_uniform_level(int level, int xgrid, int ygrid, int zgrid)
   int ix,iy,iz,nx,ny,nz;
   int parentbits;
   cellint ichild;
-  
+
   cellint childID = 0;
-  
+
   for (int ilevel = level-1; ilevel >= 0; ilevel--) {
     nx = plevels[ilevel].nx;
     ny = plevels[ilevel].ny;
@@ -135,7 +135,7 @@ void Grid::id_find_child_uniform_level(int level, int lohi,
   int ix,iy,iz,nx,ny,nz;
   double plo[3],phi[3],clo[3],chi[3];
   cellint childID,ichild;
-  
+
   cellint id = 0;
   int plevel = 0;
   double *lo = boxlo;
@@ -156,10 +156,10 @@ void Grid::id_find_child_uniform_level(int level, int lohi,
     xgrid = nx*xgrid + ix;
     ygrid = ny*ygrid + iy;
     zgrid = nz*zgrid + iz;
-    
+
     ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
     childID = (ichild << plevels[plevel].nbits) | id;
-    
+
     id = childID;
     id_child_lohi(plevel,lo,hi,ichild,clo,chi);
     plo[0] = clo[0]; plo[1] = clo[1]; plo[2] = clo[2];
@@ -244,10 +244,10 @@ cellint Grid::id_neigh_same_level(cellint id, int level, int face)
   cellint ichild,mask;
   int ixyz[3],fullxyz[3];
   int *nxyz;
-  
+
   // ixyz[3] = indices of cell ID in fully resolved fullxyz grid at level
   // each index = 0 to N-1
-  
+
   ixyz[0] = ixyz[1] = ixyz[2] = 0;
   fullxyz[0] = fullxyz[1] = fullxyz[2] = 1;
 
@@ -261,7 +261,7 @@ cellint Grid::id_neigh_same_level(cellint id, int level, int face)
     ixyz[0] *= nxyz[0];
     ixyz[1] *= nxyz[1];
     ixyz[2] *= nxyz[2];
-    
+
     // mask = all 1s for child bits at ilevel
 
     childbits = plevels[ilevel].newbits;
@@ -287,7 +287,7 @@ cellint Grid::id_neigh_same_level(cellint id, int level, int face)
   // neighID = neighbor cell ID generated from ixyz[3]
 
   cellint neighID = 0;
-  
+
   for (int ilevel = level-1; ilevel >= 0; ilevel--) {
     nxyz = &plevels[ilevel].nx;
 
@@ -341,7 +341,7 @@ cellint Grid::id_refine(cellint parentID, int plevel, int face)
 cellint Grid::id_coarsen(cellint childID, int level)
 {
   // mask = all 1s for parent bits of child
-  
+
   int parentbits = plevels[level-1].nbits;
   cellint mask = (1L << parentbits) - 1;
   cellint parentID = childID & mask;
@@ -372,7 +372,7 @@ int Grid::id_level(cellint id)
 {
   int newbits;
   cellint mask,ichild;
-  
+
   int level = 0;
   while (level < maxlevel) {
     newbits = plevels[level].newbits;
@@ -434,11 +434,11 @@ void Grid::id_lohi(cellint id, int level, double *boxlo, double *boxhi,
 
   plo[0] = boxlo[0]; plo[1] = boxlo[1]; plo[2] = boxlo[2];
   phi[0] = boxhi[0]; phi[1] = boxhi[1]; phi[2] = boxhi[2];
-  
+
   for (int ilevel = 0; ilevel < level; ilevel++) {
 
     // mask = all 1s for child bits at ilevel
-    
+
     childbits = plevels[ilevel].newbits;
     mask = (1L << childbits) - 1;
     ichild = (id >> plevels[ilevel].nbits) & mask;
@@ -459,12 +459,12 @@ int Grid::id_bits(int nx, int ny, int nz)
   bigint n = (bigint) nx*ny*nz;
   bigint nstore = 1;
   int nbits = 1;
-  
+
   while (nstore < n) {
     nstore = 2*nstore + 1;
     nbits++;
   }
-  
+
   return nbits;
 }
 
@@ -484,7 +484,7 @@ void Grid::id_num2str(cellint id, char *str)
   cellint mask,ichild;
 
   // sprintf child bits one level at a time until id = 0
-  
+
   int offset = 0;
   int level = 0;
 

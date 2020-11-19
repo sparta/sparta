@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -55,7 +55,7 @@ enum{NOWEIGHT,VOLWEIGHT,RADWEIGHT};
 // corners[i][j] = J corner points of face I of a grid cell
 // works for 2d quads and 3d hexes
 
-//int corners[6][4] = {{0,2,4,6}, {1,3,5,7}, {0,1,4,5}, {2,3,6,7}, 
+//int corners[6][4] = {{0,2,4,6}, {1,3,5,7}, {0,1,4,5}, {2,3,6,7},
 //                     {0,1,2,3}, {4,5,6,7}};
 
 /* ---------------------------------------------------------------------- */

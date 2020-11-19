@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -92,7 +92,7 @@ int IrregularKokkos::create_data_uniform(int n, int *proclist, int sort)
 #ifdef SPARTA_RS_ALLREDUCE_INPLACE
   MPI_Allreduce(MPI_IN_PLACE,work1,nprocs,MPI_INT,MPI_SUM,world);
   nrecv = work1[me];
-#else 
+#else
 #ifdef SPARTA_RS_ALLREDUCE
   MPI_Allreduce(work1,work2,nprocs,MPI_INT,MPI_SUM,world);
   nrecv = work2[me];

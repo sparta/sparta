@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -129,7 +129,7 @@ void WriteRestart::multiproc_options(int multiproc_caller,
                    "without % in restart file name");
       int nper = atoi(arg[iarg+1]);
       if (nper <= 0) error->all(FLERR,"Illegal write_restart command");
-      
+
       multiproc = nprocs/nper;
       if (nprocs % nper) multiproc++;
       fileproc = me/nper * nper;
@@ -154,7 +154,7 @@ void WriteRestart::multiproc_options(int multiproc_caller,
       fileproc = static_cast<int> ((bigint) icluster * nprocs/nfile);
       int fcluster = static_cast<int> ((bigint) fileproc * nfile/nprocs);
       if (fcluster < icluster) fileproc++;
-      int fileprocnext = 
+      int fileprocnext =
         static_cast<int> ((bigint) (icluster+1) * nprocs/nfile);
       fcluster = static_cast<int> ((bigint) fileprocnext * nfile/nprocs);
       if (fcluster < icluster+1) fileprocnext++;
@@ -176,7 +176,7 @@ void WriteRestart::write(char *file)
 {
   if (update->mem_limit_grid_flag)
     update->set_mem_limit_grid();
-  if (update->global_mem_limit > 0 || 
+  if (update->global_mem_limit > 0 ||
       (update->mem_limit_grid_flag && !grid->nlocal))
     return write_less_memory(file);
 
@@ -291,7 +291,7 @@ void WriteRestart::write(char *file)
         MPI_Wait(&request,&status);
         MPI_Get_count(&status,MPI_CHAR,&recv_size);
       } else recv_size = send_size;
-      
+
       write_char_vec(PERPROC,recv_size,buf);
     }
     fclose(fp);
@@ -425,11 +425,11 @@ void WriteRestart::write_less_memory(char *file)
   // filewriter = 1 = this proc writes to file
   // ping each proc in my cluster, receive its data, write data to file
   // else wait for ping from fileproc, send my data to fileproc
-  
+
   int tmp,recv_size;
   MPI_Status status;
   MPI_Request request;
-  
+
   if (filewriter) {
     bigint total_recv_size = 0;
     int npasses = 0;
@@ -640,7 +640,7 @@ void WriteRestart::version_numeric()
 }
 
 /* ----------------------------------------------------------------------
-   write a flag and an int into restart file 
+   write a flag and an int into restart file
 ------------------------------------------------------------------------- */
 
 void WriteRestart::write_int(int flag, int value)
@@ -650,7 +650,7 @@ void WriteRestart::write_int(int flag, int value)
 }
 
 /* ----------------------------------------------------------------------
-   write a flag and a bigint into restart file 
+   write a flag and a bigint into restart file
 ------------------------------------------------------------------------- */
 
 void WriteRestart::write_bigint(int flag, bigint value)
@@ -660,7 +660,7 @@ void WriteRestart::write_bigint(int flag, bigint value)
 }
 
 /* ----------------------------------------------------------------------
-   write a flag and a double into restart file 
+   write a flag and a double into restart file
 ------------------------------------------------------------------------- */
 
 void WriteRestart::write_double(int flag, double value)

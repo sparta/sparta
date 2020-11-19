@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -51,11 +51,11 @@ void Grid::refine_cell(int icell, int *childlist, Cut2d *cut2d, Cut3d *cut3d)
   int nx = plevels[plevel].nx;
   int ny = plevels[plevel].ny;
   int nz = plevels[plevel].nz;
-  
+
   // loop over creation of new child cells
   // add new children to hash, so id_find_child() for particles will work
   // set plo/phi inside loop b/c cells can be realloced by add_child_cell()
-  
+
   m = 0;
   for (iz = 0; iz < nz; iz++)
     for (iy = 0; iy < ny; iy++)
@@ -85,9 +85,9 @@ void Grid::refine_cell(int icell, int *childlist, Cut2d *cut2d, Cut3d *cut3d)
           ichild = nlocal - 1;
           cinfo[ichild].type = UNKNOWN;
           surf2grid_one(0,ichild,icell,-1,cut3d,cut2d);
-          
+
           // update any per grid fixes for the newly created sub cells
-          
+
           if (modify->n_pergrid)
             for (i = ichild+1; i < nlocal; i++)
               modify->add_grid_one();
@@ -126,10 +126,10 @@ void Grid::refine_cell(int icell, int *childlist, Cut2d *cut2d, Cut3d *cut3d)
 
   // if parent was a split cell,
   // add all its sub cell particles to parent split cell
-  
+
   if (cells[icell].nsplit > 1)
     combine_split_cell_particles(icell,0);
-  
+
   // assign particles in parent cell to many new child cells
   // build linked list of particles within each new child cell
   //   via particle next and cinfo count and first and mask
@@ -137,7 +137,7 @@ void Grid::refine_cell(int icell, int *childlist, Cut2d *cut2d, Cut3d *cut3d)
   //   caller will reset cinfo->mask for newly created child cells
   // must allow for each new child cell to be a split cell
   // NOTE: may not need to build new linked lists if will re-sort anyway
-  
+
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
   Particle::OnePart *p;
@@ -152,22 +152,22 @@ void Grid::refine_cell(int icell, int *childlist, Cut2d *cut2d, Cut3d *cut3d)
     // ichild = index of new unsplit or split child cell the particle is now in
 
     ichild = id_find_child(parentID,plevel,plo,phi,p->x);
-    
+
     if (ichild < 0) {
       printf("BAD CHILD %d: %d " CELLINT_FORMAT ": %g %g %g\n",
              me,icell,parentID,p->x[0],p->x[1],p->x[2]);
       error->one(FLERR,"Adapt refine particle could not be mapped to child cell");
     }
-    
+
     // if ichild is split cell:
     //   use split2d/3d to find which sub cell particle is in
     // reset ichild = index of sub cell
-    
+
     if (cells[ichild].nsplit > 1) {
       if (dim == 3) ichild = update->split3d(ichild,p->x);
       else ichild = update->split2d(ichild,p->x);
     }
-    
+
     // re-assign particle to ichild
 
     particles[ip].icell = ichild;
@@ -192,25 +192,25 @@ void Grid::refine_cell(int icell, int *childlist, Cut2d *cut2d, Cut3d *cut3d)
 
 void Grid::coarsen_cell(cellint parentID, int plevel, double *plo, double *phi,
 			int nchild, int *index,
-			int *nsurf_child, int *npart_child, 
+			int *nsurf_child, int *npart_child,
 			void **surf_child, char **part_child,
                         Cut2d *cut2d, Cut3d *cut3d)
 {
   int i,j,k,m,icell,jcell,ns,ip,ipnew;
-  
+
   int dim = domain->dimension;
   int maxsurfpercell = grid->maxsurfpercell;
 
   // add parent as new child cell at end of my cells
   // add new child to hash
-  
+
   add_child_cell(parentID,plevel,plo,phi);
   weight_one(nlocal-1);
   (*hash)[parentID] = nlocal-1;
   int newcell = nlocal - 1;
 
   // update any per grid fixes for the new child cell
-  
+
   if (modify->n_pergrid) modify->add_grid_one();
 
   // if any children have surfs, add union of surfs to new child cell
@@ -230,7 +230,7 @@ void Grid::coarsen_cell(cellint parentID, int plevel, double *plo, double *phi,
     surfint *cs;
     surfint surfID;
     int ns;
-    
+
     for (m = 0; m < nchild; m++) {
       if (index[m] >= 0) {
 	icell = index[m];
@@ -240,7 +240,7 @@ void Grid::coarsen_cell(cellint parentID, int plevel, double *plo, double *phi,
 	ns = nsurf_child[m];
 	cs = (surfint *) surf_child[m];
       }
-  
+
       for (i = 0; i < ns; i++) {
 	if (dim == 2) surfID = lines[cs[i]].id;
 	else surfID = tris[cs[i]].id;
@@ -269,11 +269,11 @@ void Grid::coarsen_cell(cellint parentID, int plevel, double *plo, double *phi,
     surfint surfID;
     int ilocal;
     int ns;
-    
+
     for (m = 0; m < nchild; m++) {
 
       // locally owned cell, so indices
-      
+
       if (index[m] >= 0) {
 	icell = index[m];
 	ns = cells[icell].nsurf;
@@ -331,11 +331,11 @@ void Grid::coarsen_cell(cellint parentID, int plevel, double *plo, double *phi,
     cells[newcell].nsurf = nsurf;
     cells[newcell].csurfs = ptr;
     csurfs->vgot(nsurf);
-    
+
     surf2grid_one(1,newcell,-1,nsurf,cut3d,cut2d);
-    
+
     // update any per grid fixes for newly created sub cells
-      
+
     if (modify->n_pergrid)
       for (i = newcell+1; i < nlocal; i++)
         modify->add_grid_one();
@@ -366,15 +366,15 @@ void Grid::coarsen_cell(cellint parentID, int plevel, double *plo, double *phi,
         // else:
         //   use split2d/3d to find which sub cell particle is in
         //   assign particle to sub cell
-        
+
         if (cells[newcell].nsplit == 1) icell = newcell;
         else {
           if (dim == 3) icell = update->split3d(newcell,p->x);
           else icell = update->split2d(newcell,p->x);
         }
-        
+
         // re-assign particle to icell
-        
+
         particles[ip].icell = icell;
 
 	// create new linked list for all particles in icell (newcell)
@@ -397,9 +397,9 @@ void Grid::coarsen_cell(cellint parentID, int plevel, double *plo, double *phi,
       particles = particle->particles;
       next = particle->next;
       int nplocal = particle->nlocal;
-      
+
       for (ip = nplocal-np; ip < nplocal; ip++) {
-        
+
 	// if new child is not split: assign particle to icell
 	// else:
 	//   use split2d/3d to find which sub cell particle is in
@@ -410,9 +410,9 @@ void Grid::coarsen_cell(cellint parentID, int plevel, double *plo, double *phi,
 	  if (dim == 3) icell = update->split3d(newcell,particles[ip].x);
 	  else icell = update->split2d(newcell,particles[ip].x);
 	}
-        
+
 	// assign particle to icell
-      
+
 	particles[ip].icell = icell;
 
 	// create new linked list for all particles in newcell

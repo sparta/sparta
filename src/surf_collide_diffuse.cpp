@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -51,12 +51,12 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
     tstr = new char[n];
     strcpy(tstr,&arg[2][2]);
   } else {
-    twall = input->numeric(FLERR,arg[2]); 
+    twall = input->numeric(FLERR,arg[2]);
     if (twall <= 0.0) error->all(FLERR,"Surf_collide diffuse temp <= 0.0");
   }
 
-  acc = input->numeric(FLERR,arg[3]); 
-  if (acc < 0.0 || acc > 1.0) 
+  acc = input->numeric(FLERR,arg[3]);
+  if (acc < 0.0 || acc > 1.0)
     error->all(FLERR,"Illegal surf_collide diffuse command");
 
   // optional args
@@ -66,7 +66,7 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
   int iarg = 4;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"translate") == 0) {
-      if (iarg+4 > narg) 
+      if (iarg+4 > narg)
         error->all(FLERR,"Illegal surf_collide diffuse command");
       tflag = 1;
       vx = atof(arg[iarg+1]);
@@ -74,7 +74,7 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
       vz = atof(arg[iarg+3]);
       iarg += 4;
     } else if (strcmp(arg[iarg],"rotate") == 0) {
-      if (iarg+7 > narg) 
+      if (iarg+7 > narg)
         error->all(FLERR,"Illegal surf_collide diffuse command");
       rflag = 1;
       px = atof(arg[iarg+1]);
@@ -83,7 +83,7 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
       wx = atof(arg[iarg+4]);
       wy = atof(arg[iarg+5]);
       wz = atof(arg[iarg+6]);
-      if (domain->dimension == 2 && pz != 0.0) 
+      if (domain->dimension == 2 && pz != 0.0)
         error->all(FLERR,"Surf_collide diffuse rotation invalid for 2d");
       if (domain->dimension == 2 && (wx != 0.0 || wy != 0.0))
         error->all(FLERR,"Surf_collide diffuse rotation invalid for 2d");
@@ -124,7 +124,7 @@ void SurfCollideDiffuse::init()
 
   if (tstr) {
     tvar = input->variable->find(tstr);
-    if (tvar < 0) 
+    if (tvar < 0)
       error->all(FLERR,"Surf_collide diffuse variable name does not exist");
     if (!input->variable->equal_style(tvar))
       error->all(FLERR,"Surf_collide diffuse variable is invalid style");
@@ -258,7 +258,7 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm)
       if (tflag) {
         vxdelta = vx; vydelta = vy; vzdelta = vz;
         double dot = vxdelta*norm[0] + vydelta*norm[1] + vzdelta*norm[2];
-     
+
         if (fabs(dot) > 0.001) {
           dot /= vrm;
           do {
@@ -283,7 +283,7 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm)
         vydelta -= dot*norm[1];
         vzdelta -= dot*norm[2];
       }
-      
+
       v[0] = vperp*norm[0] + vtan1*tangent1[0] + vtan2*tangent2[0] + vxdelta;
       v[1] = vperp*norm[1] + vtan1*tangent1[1] + vtan2*tangent2[1] + vydelta;
       v[2] = vperp*norm[2] + vtan1*tangent1[2] + vtan2*tangent2[2] + vzdelta;

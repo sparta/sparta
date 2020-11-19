@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -56,13 +56,13 @@ SurfCollideSpecularKokkos::SurfCollideSpecularKokkos(SPARTA *sparta) :
 
   vector_flag = 1;
   size_vector = 2;
-    
+
   nsingle = ntotal = 0;
 
   copy = 0;
 
   if (narg != 2) error->all(FLERR,"Illegal surf_collide specular command");
- 
+
   allowreact = 1;
 
   k_nsingle = DAT::tdual_int_scalar("SurfCollide:nsingle");
