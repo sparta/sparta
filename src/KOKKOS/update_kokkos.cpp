@@ -765,7 +765,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     }
 
     if (DIM == 1) {
-      if (pflag == PEXIT && x[1] == lo[1]) {
+      if (x[1] == lo[1] && (pflag == PEXIT || v[1] < 0.0)) {
         frac = 0.0;
         outface = YLO;
       } else if (GeometryKokkos::
@@ -777,7 +777,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
         }
       }
 
-      if (pflag == PEXIT && x[1] == hi[1]) {
+      if (x[1] == hi[1] && (pflag == PEXIT || v[1] > 0.0)) {
         frac = 0.0;
         outface = YHI;
       } else {
@@ -815,7 +815,17 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
     if (SURF) {
 
+      // skip surf checks if particle flagged as EXITing this cell
+      // then unset pflag so not checked again for this particle
+
       nsurf = d_cells[icell].nsurf;
+      if (ATOMIC_REDUCTION == 1)
+        Kokkos::atomic_fetch_add(&d_nscheck_one(),nsurf);
+      else if (ATOMIC_REDUCTION == 0)
+        d_nscheck_one() += nsurf;
+      else
+        reduce.nscheck_one += nsurf;
+
       if (nsurf) {
 
         // particle crosses cell face, reset xnew exactly on face of cell
@@ -857,8 +867,10 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
         cflag = 0;
         minparam = 2.0;
         auto csurfs_begin = d_csurfs.row_map(icell);
+
         for (int m = 0; m < nsurf; m++) {
           isurf = d_csurfs.entries(csurfs_begin + m);
+
           if (DIM > 1) {
             if (isurf == exclude) continue;
           }
@@ -926,25 +938,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
         } // END of for loop over surfs
 
-
-        if (ATOMIC_REDUCTION == 1)
-          Kokkos::atomic_fetch_add(&d_nscheck_one(),nsurf);
-        else if (ATOMIC_REDUCTION == 0)
-          d_nscheck_one() += nsurf;
-        else
-          reduce.nscheck_one += nsurf;
+        // tri/line = surf that particle hit first
 
         if (cflag) {
-          // NOTE: this check is no longer needed?
-          /**if (minside == INSIDE) {
-            char str[128];
-            sprintf(str,
-                    "Particle %d on proc %d hit inside of "
-                    "surf %d on step " BIGINT_FORMAT,
-                    i,me,minsurf,update->ntimestep);
-            error->one(FLERR,str);
-          }**/
-
           if (DIM == 3) tri = &d_tris[minsurf];
           if (DIM != 3) line = &d_lines[minsurf];
 
