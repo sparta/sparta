@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -35,7 +35,7 @@ RemoveSurf::~RemoveSurf() {}
 
 void RemoveSurf::command(int narg, char **arg)
 {
-  if (!surf->exist) 
+  if (!surf->exist)
     error->all(FLERR,"Cannot remove_surf before surf elements are defined");
 
   if (surf->distributed)

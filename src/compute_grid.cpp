@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -56,7 +56,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
 
   nvalue = narg - 4;
   value = new int[nvalue];
-  
+
   npergroup = cellmass = cellcount = 0;
   unique = new int[LASTSIZE];
   nmap = new int[nvalue];
@@ -331,7 +331,7 @@ void ComputeGrid::post_process_grid(int index, int nsample,
 {
   index--;
   int ivalue = index % nvalue;
-  
+
   int lo = 0;
   int hi = nglocal;
   int k = 0;

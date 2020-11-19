@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -149,7 +149,7 @@ void ComputeThermalGridKokkos::operator()(TagComputeThermalGrid_compute_per_grid
   // 6 tallies per particle: N, Mass, mVx, mVy, mVz, mV^2
 
   int k = igroup*npergroup;
-  
+
   a_tally(icell,k++) += 1.0;
   a_tally(icell,k++) += mass;
   a_tally(icell,k++) += mass*v[0];

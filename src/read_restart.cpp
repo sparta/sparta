@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -61,7 +61,7 @@ void ReadRestart::command(int narg, char **arg)
     error->all(FLERR,"Cannot read_restart after simulation box is defined");
 
   int mem_limit_flag = update->global_mem_limit > 0 ||
-           (update->mem_limit_grid_flag && !grid->nlocal); 
+           (update->mem_limit_grid_flag && !grid->nlocal);
 
   MPI_Comm_rank(world,&me);
   MPI_Comm_size(world,&nprocs);
@@ -298,16 +298,16 @@ void ReadRestart::command(int narg, char **arg)
       }
 
       fread(&flag,sizeof(int),1,fp);
-      if (flag != PROCSPERFILE) 
+      if (flag != PROCSPERFILE)
         error->one(FLERR,"Invalid flag in peratom section of restart file");
       int procsperfile;
       fread(&procsperfile,sizeof(int),1,fp);
 
       for (int i = 0; i < procsperfile; i++) {
         fread(&flag,sizeof(int),1,fp);
-        if (flag != PERPROC) 
+        if (flag != PERPROC)
           error->one(FLERR,"Invalid flag in peratom section of restart file");
-        
+
         fread(&n_big,sizeof(bigint),1,fp);
         if (n_big > MAXSMALLINT)
           error->one(FLERR,"Restart file read buffer too large, use global mem/limit");
@@ -437,7 +437,7 @@ void ReadRestart::command(int narg, char **arg)
   // each proc keeps all cells/particles in its perproc chunks in file
   // 2 versions of this: limited memory and unlimimited memory
 
-  else if (mem_limit_flag) { 
+  else if (mem_limit_flag) {
 
     // limited-memory version
     // nclusterprocs = # of procs in my cluster that read from one file
@@ -451,7 +451,7 @@ void ReadRestart::command(int narg, char **arg)
     int fileproc = static_cast<int> ((bigint) icluster * nprocs/nfile);
     int fcluster = static_cast<int> ((bigint) fileproc * nfile/nprocs);
     if (fcluster < icluster) fileproc++;
-    int fileprocnext = 
+    int fileprocnext =
       static_cast<int> ((bigint) (icluster+1) * nprocs/nfile);
     fcluster = static_cast<int> ((bigint) fileprocnext * nfile/nprocs);
     if (fcluster < icluster+1) fileprocnext++;
@@ -480,7 +480,7 @@ void ReadRestart::command(int narg, char **arg)
 
     if (filereader) {
       fread(&flag,sizeof(int),1,fp);
-      if (flag != PROCSPERFILE) 
+      if (flag != PROCSPERFILE)
         error->one(FLERR,"Invalid flag in peratom section of restart file");
       fread(&procsperfile,sizeof(int),1,fp);
     }
@@ -499,7 +499,7 @@ void ReadRestart::command(int narg, char **arg)
     for (int i = 0; i < procsperfile; i++) {
       if (filereader) {
         fread(&flag,sizeof(int),1,fp);
-        if (flag != PERPROC) 
+        if (flag != PERPROC)
           error->one(FLERR,"Invalid flag in peratom section of restart file");
 
         fread(&n_big,sizeof(bigint),1,fp);
@@ -617,7 +617,7 @@ void ReadRestart::command(int narg, char **arg)
     int fileproc = static_cast<int> ((bigint) icluster * nprocs/nfile);
     int fcluster = static_cast<int> ((bigint) fileproc * nfile/nprocs);
     if (fcluster < icluster) fileproc++;
-    int fileprocnext = 
+    int fileprocnext =
       static_cast<int> ((bigint) (icluster+1) * nprocs/nfile);
     fcluster = static_cast<int> ((bigint) fileprocnext * nfile/nprocs);
     if (fcluster < icluster+1) fileprocnext++;
@@ -646,7 +646,7 @@ void ReadRestart::command(int narg, char **arg)
 
     if (filereader) {
       fread(&flag,sizeof(int),1,fp);
-      if (flag != PROCSPERFILE) 
+      if (flag != PROCSPERFILE)
         error->one(FLERR,"Invalid flag in peratom section of restart file");
       fread(&procsperfile,sizeof(int),1,fp);
     }
@@ -663,7 +663,7 @@ void ReadRestart::command(int narg, char **arg)
     for (int i = 0; i < procsperfile; i++) {
       if (filereader) {
         fread(&flag,sizeof(int),1,fp);
-        if (flag != PERPROC) 
+        if (flag != PERPROC)
           error->one(FLERR,"Invalid flag in peratom section of restart file");
 
         fread(&n_big,sizeof(bigint),1,fp);
@@ -744,11 +744,11 @@ void ReadRestart::command(int narg, char **arg)
                         grid->ncell);
   }
 
-  if (grid->nunsplit != nunsplit_file) 
+  if (grid->nunsplit != nunsplit_file)
     error->all(FLERR,"Did not assign all restart unsplit grid cells correctly");
-  if (grid->nsplit != nsplit_file) 
+  if (grid->nsplit != nsplit_file)
     error->all(FLERR,"Did not assign all restart split grid cells correctly");
-  if (grid->nsub != nsub_file) 
+  if (grid->nsub != nsub_file)
     error->all(FLERR,"Did not assign all restart sub grid cells correctly");
 
   bigint btmp = particle->nlocal;
@@ -761,7 +761,7 @@ void ReadRestart::command(int narg, char **arg)
                          particle->nglobal);
   }
 
-  if (particle->nglobal != nparticle_file) 
+  if (particle->nglobal != nparticle_file)
     error->all(FLERR,"Did not assign all restart particles correctly");
 
   if (me == 0 && surf->exist) {
@@ -961,7 +961,7 @@ void ReadRestart::header(int incompatible)
         if (screen) fprintf(screen,"  restart file = %s, SPARTA = %s\n",
                             version,universe->version);
       }
-      if (incompatible) 
+      if (incompatible)
         error->all(FLERR,"Restart file incompatible with current version");
       delete [] version;
 
@@ -1077,18 +1077,18 @@ void ReadRestart::box_params()
 void ReadRestart::particle_params()
 {
   int flag = read_int();
-  if (flag != SPECIES) 
+  if (flag != SPECIES)
     error->all(FLERR,"Invalid flag in particle section of restart file");
   read_int();
   particle->read_restart_species(fp);
 
   flag = read_int();
-  if (flag != MIXTURE) 
+  if (flag != MIXTURE)
     error->all(FLERR,"Invalid flag in particle section of restart file");
   read_int();
   particle->read_restart_mixture(fp);
   flag = read_int();
-  if (flag != PARTICLE_CUSTOM) 
+  if (flag != PARTICLE_CUSTOM)
     error->all(FLERR,"Invalid flag in particle section of restart file");
   read_int();
   particle->read_restart_custom(fp);
@@ -1099,7 +1099,7 @@ void ReadRestart::particle_params()
 void ReadRestart::grid_params()
 {
   int flag = read_int();
-  if (flag != GRID) 
+  if (flag != GRID)
     error->all(FLERR,"Invalid flag in grid section of restart file");
   read_int();
   grid->read_restart(fp);
@@ -1123,7 +1123,7 @@ void ReadRestart::grid_params()
 int ReadRestart::surf_params()
 {
   int flag = read_int();
-  if (flag != SURF) 
+  if (flag != SURF)
     error->all(FLERR,"Invalid flag in surf section of restart file");
   int surfexist = read_int();
   if (surfexist) surf->read_restart(fp);
@@ -1163,11 +1163,11 @@ void ReadRestart::create_child_cells(int skipflag)
 
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
-  
+
   int level,nsplit,icell,isplit,index;
   cellint id,ichild;
   double lo[3],hi[3];
-  
+
   // for skipflag = 0, add all child cells in Grid restart to my Grid::cells
   // for skipflag = 1, only add every Pth cell in list
 
@@ -1259,7 +1259,7 @@ void ReadRestart::assign_particles(int skipflag)
       continue;
     }
     icell = (*hash)[p->icell];
-    if (p->nsplit <= 0) 
+    if (p->nsplit <= 0)
       icell = sinfo[cells[icell].isplit].csubs[-p->nsplit];
     particle->add_particle(p->id,p->ispecies,icell,p->x,p->v,p->erot,p->evib);
     ptr += nbytes_particle;
@@ -1291,10 +1291,10 @@ void ReadRestart::magic_string()
   int count;
   if (me == 0) count = fread(str,sizeof(char),n,fp);
   MPI_Bcast(&count,1,MPI_INT,0,world);
-  if (count < n) 
+  if (count < n)
     error->all(FLERR,"Invalid SPARTA restart file");
   MPI_Bcast(str,n,MPI_CHAR,0,world);
-  if (strcmp(str,MAGIC_STRING) != 0) 
+  if (strcmp(str,MAGIC_STRING) != 0)
     error->all(FLERR,"Invalid SPARTA restart file");
   delete [] str;
 }

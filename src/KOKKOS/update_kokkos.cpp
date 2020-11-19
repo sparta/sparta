@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -170,7 +170,7 @@ void UpdateKokkos::init()
 
   if (domain->dimension == 2 && gravity[2] != 0.0)
     error->all(FLERR,"Gravity in z not allowed for 2d");
-  if (domain->axisymmetric && gravity[1] != 0.0) 
+  if (domain->axisymmetric && gravity[1] != 0.0)
     error->all(FLERR,"Gravity in y not allowed for axi-symmetric model");
 
   // moveperturb method is set if particle motion is perturbed
@@ -397,7 +397,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     niterate++;
 
     d_particles = particle_kk->k_particles.d_view;
-    
+
     GridKokkos* grid_kk = ((GridKokkos*)grid);
     d_cells = grid_kk->k_cells.d_view;
     d_sinfo = grid_kk->k_sinfo.d_view;
@@ -543,7 +543,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
               update->ntimestep);
       error->one(FLERR,str);
     }
-    
+
     // if gridcut >= 0.0, check if another iteration of move is required
     // only the case if some particle flag = PENTRY/PEXIT
     //   in which case perform particle migration
@@ -796,7 +796,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
       pflag = 0;
     }
-      
+
     if (DIM == 3) {
       if (xnew[2] < lo[2]) {
         newfrac = (lo[2]-x[2]) / (xnew[2]-x[2]);
@@ -836,13 +836,13 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           xhold[0] = xnew[0];
           xhold[1] = xnew[1];
           if (DIM != 2) xhold[2] = xnew[2];
-          
+
           xnew[0] = x[0] + frac*(xnew[0]-x[0]);
           xnew[1] = x[1] + frac*(xnew[1]-x[1]);
           if (DIM != 2) xnew[2] = x[2] + frac*(xnew[2]-x[2]);
 
           if (outface == XLO) xnew[0] = lo[0];
-          else if (outface == XHI) xnew[0] = hi[0]; 
+          else if (outface == XHI) xnew[0] = hi[0];
           else if (outface == YLO) xnew[1] = lo[1];
           else if (outface == YHI) xnew[1] = hi[1];
           else if (outface == ZLO) xnew[2] = lo[2];
@@ -912,7 +912,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
             // param will be epsilon and exclude must be set
             // skip the hits of other touching surfs
 
-            //if (side == INSIDE && param < EPSPARAM && exclude >= 0) 
+            //if (side == INSIDE && param < EPSPARAM && exclude >= 0)
             // continue;
 
             // this if test is to avoid case where particle
@@ -966,7 +966,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           ipart->icell = icell;
           dtremain *= 1.0 - minparam*frac;
 
-          if (nsurf_tally) 
+          if (nsurf_tally)
             iorig = particle_i;
           int n = DIM == 3 ? tri->isc : line->isc;
           int sc_type = sc_type_list[n];
@@ -1059,7 +1059,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
         } // END of cflag if section that performed collision
 
         // no collision, so restore saved xnew if changed it above
-        
+
         if (outface != INTERIOR) {
           xnew[0] = xhold[0];
           xnew[1] = xhold[1];
@@ -1079,7 +1079,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     // for axisymmetry, must first remap linear xnew and v
     // if migrating to another proc,
     //   flag as PDONE so new proc won't move it more on this step
-    
+
     if (outface == INTERIOR) {
       if (DIM == 1) axi_remap(xnew,v);
       x[0] = xnew[0];
@@ -1088,7 +1088,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       if (d_cells[icell].proc != me) particle_i.flag = PDONE;
       break;
     }
-      
+
     // particle crosses cell face
     // decrement dtremain in case particle is passed to another proc
     // for axisymmetry, must then remap linear x and v
@@ -1104,11 +1104,11 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     if (DIM == 1) axi_remap(x,v);
 
     if (outface == XLO) x[0] = lo[0];
-    else if (outface == XHI) x[0] = hi[0]; 
+    else if (outface == XHI) x[0] = hi[0];
     else if (outface == YLO) x[1] = lo[1];
     else if (outface == YHI) x[1] = hi[1];
     else if (outface == ZLO) x[2] = lo[2];
-    else if (outface == ZHI) x[2] = hi[2]; 
+    else if (outface == ZHI) x[2] = hi[2];
 
     if (DIM == 1) {
       xnew[0] = x[0] + dtremain*v[0];
@@ -1169,7 +1169,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       ipart = &particle_i;
 
       Particle::OnePart iorig;
-      if (nboundary_tally) 
+      if (nboundary_tally)
         memcpy(&iorig,&particle_i,sizeof(Particle::OnePart));
 
       Particle::OnePart* ipart = &particle_i;
@@ -1310,7 +1310,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
     // if nsurf < 0, new cell is EMPTY ghost
     // exit with particle flag = PENTRY, so receiver can continue move
-    
+
     if (d_cells[icell].nsurf < 0) {
       particle_i.flag = PENTRY;
       particle_i.dtremain = dtremain;
@@ -1340,7 +1340,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
   // if discarding, migration will delete particle
 
   particle_i.icell = icell;
-  
+
   if (particle_i.flag != PKEEP) {
     int index;
     if (ATOMIC_REDUCTION == 0) {
@@ -1405,7 +1405,7 @@ int UpdateKokkos::split3d(int icell, double *x) const
       line_tri_intersect(x,xnew,
                          tri->p1,tri->p2,tri->p3,
                          tri->norm,xc,param,side);
-    
+
     if (hitflag && side != INSIDE && param < minparam) {
       cflag = 1;
       minparam = param;

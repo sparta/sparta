@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -117,7 +117,7 @@ void AdaptGrid::command(int narg, char **arg)
     setup(iter);
 
     if (action1 == REFINE || action2 == REFINE) grid->maxlevel++;
-    
+
     if (action1 == REFINE) nrefine = refine();
     else if (action1 == COARSEN) ncoarsen = coarsen();
 
@@ -129,7 +129,7 @@ void AdaptGrid::command(int narg, char **arg)
 
     nrefine_total += nrefine;
     ncoarsen_total += ncoarsen;
-    
+
     cleanup();
 
     if (nrefine == 0 && ncoarsen == 0) break;
@@ -178,7 +178,7 @@ void AdaptGrid::command(int narg, char **arg)
 
   if (me == 0) {
     if (screen) {
-      fprintf(screen,"  " BIGINT_FORMAT " cells refined, " BIGINT_FORMAT 
+      fprintf(screen,"  " BIGINT_FORMAT " cells refined, " BIGINT_FORMAT
               " cells coarsened\n",nrefine_total,ncoarsen_total);
       fprintf(screen,"  adapted to " BIGINT_FORMAT " grid cells\n",grid->ncell);
       fprintf(screen,"  CPU time = %g secs\n",time_total);
@@ -187,7 +187,7 @@ void AdaptGrid::command(int narg, char **arg)
     }
 
     if (logfile) {
-      fprintf(logfile,"  " BIGINT_FORMAT " cells refined, " BIGINT_FORMAT 
+      fprintf(logfile,"  " BIGINT_FORMAT " cells refined, " BIGINT_FORMAT
               " cells coarsened\n",nrefine_total,ncoarsen_total);
       fprintf(logfile,"  adapted to " BIGINT_FORMAT " grid cells\n",grid->ncell);
       fprintf(logfile,"  CPU time = %g secs\n",time_total);
@@ -215,7 +215,7 @@ void AdaptGrid::process_args(int narg, char **arg)
   else if (strcmp(arg[1],"coarsen") == 0) action1 = COARSEN;
   else error->all(FLERR,"Illegal adapt command");
   int iarg = 2;
-  
+
   if (strcmp(arg[2],"refine") == 0) {
     action2 = REFINE;
     iarg = 3;
@@ -336,7 +336,7 @@ void AdaptGrid::process_args(int narg, char **arg)
       nx = input->inumeric(FLERR,arg[iarg+1]);
       ny = input->inumeric(FLERR,arg[iarg+2]);
       nz = input->inumeric(FLERR,arg[iarg+3]);
-      if (nx < 1 || ny < 1 || nz < 1) 
+      if (nx < 1 || ny < 1 || nz < 1)
         error->all(FLERR,"Illegal adapt command");
       if (domain->dimension == 2 && nz != 1)
         error->all(FLERR,"Adapt cells nz must be 1 for a 2d simulation");
@@ -349,7 +349,7 @@ void AdaptGrid::process_args(int narg, char **arg)
     } else if (strcmp(arg[iarg],"region") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal adapt command");
       int iregion = domain->find_region(arg[iarg+1]);
-      if (iregion == -1) 
+      if (iregion == -1)
         error->all(FLERR,"Adapt region ID does not exist");
       region = domain->regions[iregion];
       if (strcmp(arg[iarg+2],"all") == 0) regstyle = REGION_ALL;
@@ -363,7 +363,7 @@ void AdaptGrid::process_args(int narg, char **arg)
       sdir[0] = input->numeric(FLERR,arg[iarg+1]);
       sdir[1] = input->numeric(FLERR,arg[iarg+2]);
       sdir[2] = input->numeric(FLERR,arg[iarg+3]);
-      if (domain->dimension == 2 && sdir[2] != 0.0) 
+      if (domain->dimension == 2 && sdir[2] != 0.0)
         error->all(FLERR,"Illegal adapt command");
       iarg += 4;
 
@@ -393,7 +393,7 @@ void AdaptGrid::process_args(int narg, char **arg)
       maxlevel = level;
       break;
     }
-    
+
     plevels[level].nbits = plevels[level-1].nbits + plevels[level-1].newbits;
     plevels[level].newbits = newbits;
     plevels[level].nx = nx;
@@ -451,7 +451,7 @@ void AdaptGrid::check_args(int nevery)
       error->all(FLERR,"Adapt compute does not calculate a per-grid array");
     if (valindex && valindex > modify->compute[icompute]->size_per_grid_cols)
       error->all(FLERR,"Adapt compute array is accessed out-of-range");
-    
+
   } else if (valuewhich == FIX) {
     ifix = modify->find_fix(valueID);
     if (ifix < 0)
@@ -474,7 +474,7 @@ void AdaptGrid::check_args(int nevery)
     if (mode == 0) {
       if (update->ntimestep % modify->fix[ifix]->per_grid_freq)
         error->all(FLERR,"Fix for adapt not computed at compatible time");
-      if (niterate > 1) 
+      if (niterate > 1)
         error->all(FLERR,"Adapt_grid can not perform multiple iterations "
                    "if using fix as a value");
     } else {
@@ -532,7 +532,7 @@ void AdaptGrid::setup(int iter)
 bigint AdaptGrid::refine()
 {
   grid->rehash();
-  particle->sort();      
+  particle->sort();
 
   candidates_refine();
 
@@ -577,7 +577,7 @@ bigint AdaptGrid::refine()
 bigint AdaptGrid::coarsen()
 {
   grid->rehash();
-  particle->sort();      
+  particle->sort();
 
   candidates_coarsen();
 
@@ -599,13 +599,13 @@ bigint AdaptGrid::coarsen()
   // surf->compress() removes surfs no longer referenced by owned cells
   //   can be needed when owned cells are removed by coarsening
   //   no need to call in refine() since new child cells own same surfs
-  
+
   if (ncoarsen) {
     if (collide) collide->adapt_grid();
     grid->compress();
     if (particle->exist) particle->compress_rebalance();
     if (surf->distributed) surf->compress_explicit();
-    
+
     // reallocate per grid cell arrays in per grid computes
     // also unset their invoked_flag so that if needed on this timestep
     //   by any other caller, it will be invoked again with changed grid
@@ -617,7 +617,7 @@ bigint AdaptGrid::coarsen()
         compute[i]->invoked_flag = 0;
       }
   }
-  
+
   return ncoarsen;
 }
 
@@ -740,11 +740,11 @@ void AdaptGrid::refine_value()
 
   // invoke compute each time refinement is done
   // grid could have changed from previous refinement or coarsening
-  
+
   if (valuewhich == COMPUTE) {
     compute = modify->compute[icompute];
     compute->compute_per_grid();
-    if (compute->post_process_grid_flag) 
+    if (compute->post_process_grid_flag)
       compute->post_process_grid(valindex,1,NULL,NULL,NULL,1);
   } else if (valuewhich == FIX) fix = modify->fix[ifix];
 
@@ -770,14 +770,14 @@ void AdaptGrid::refine_value()
           if (valuewhich == COMPUTE) value += value_compute(jcell);
           else if (valuewhich == FIX) value += value_fix(jcell);
         } else if (combine == MINIMUM) {
-          if (valuewhich == COMPUTE) 
+          if (valuewhich == COMPUTE)
             value = MIN(value,value_compute(jcell));
-          else if (valuewhich == FIX) 
+          else if (valuewhich == FIX)
             value = MIN(value,value_fix(jcell));
         } else if (combine == MAXIMUM) {
-          if (valuewhich == COMPUTE) 
+          if (valuewhich == COMPUTE)
             value = MAX(value,value_compute(jcell));
-          else if (valuewhich == FIX) 
+          else if (valuewhich == FIX)
             value = MAX(value,value_fix(jcell));
         }
       }
@@ -808,7 +808,7 @@ void AdaptGrid::refine_random()
     if (random->uniform() >= rfrac) continue;
     rlist[n++] = icell;
   }
-  
+
   rnum = n;
 }
 
@@ -820,7 +820,7 @@ int AdaptGrid::perform_refine()
 {
   int icell,jcell;
   int nglocal,nglocalprev;
-  
+
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
@@ -830,7 +830,7 @@ int AdaptGrid::perform_refine()
     // add cell ID being refined to rhash
 
     (*rhash)[cells[icell].id] = 0;
-    
+
     // flag icell for deletion
     // don't need to flag sub cells, since grid compress will do that
 
@@ -847,7 +847,7 @@ int AdaptGrid::perform_refine()
 
     // set each new child cell group mask to same value as parent
     // for unsplit and split and sub cells
-    
+
     for (jcell = nglocalprev; jcell < nglocal; jcell++)
       cinfo[jcell].mask = cinfo[icell].mask;
   }
@@ -881,7 +881,7 @@ void AdaptGrid::candidates_coarsen()
     if (valuewhich == COMPUTE) {
       compute = modify->compute[icompute];
       compute->compute_per_grid();
-      if (compute->post_process_grid_flag) 
+      if (compute->post_process_grid_flag)
 	compute->post_process_grid(valindex,1,NULL,NULL,NULL,1);
     } else if (valuewhich == FIX) fix = modify->fix[ifix];
   }
@@ -891,7 +891,7 @@ void AdaptGrid::candidates_coarsen()
   // phash = unique parent cells of my children
   //         key = parentID, value = # of child cells I own
   // active = 1 for participating child cells
-  
+
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
   Grid::ChildCell *cells = grid->cells;
@@ -899,15 +899,15 @@ void AdaptGrid::candidates_coarsen()
   int nglocal = grid->nlocal;
 
   int *active;
-  memory->create(active,nglocal,"adapt_grid:active"); 
+  memory->create(active,nglocal,"adapt_grid:active");
   MyHash *phash = new MyHash();
- 
+
   for (int icell = 0; icell < nglocal; icell++) {
     active[icell] = 0;
 
     // exclude child cells from consideration
     // check with rhash skips a child cell created by refining
-    
+
     if (cells[icell].nsplit < 1) continue;
     if (cells[icell].level <= minlevel) continue;
     if (!(cinfo[icell].mask & groupbit)) continue;
@@ -917,7 +917,7 @@ void AdaptGrid::candidates_coarsen()
       grid->id_lohi(parentID,cells[icell].level-1,boxlo,boxhi,lo,hi);
       if (!region_check(lo,hi)) continue;
     }
-    
+
     active[icell] = 1;
     if (phash->find(parentID) != phash->end()) (*phash)[parentID]++;
     else (*phash)[parentID] = 1;
@@ -951,7 +951,7 @@ void AdaptGrid::candidates_coarsen()
 
     // this proc owns all children of parentID
     // create a clist entry, and add parentID to clhash
-    
+
     if (nchild == nxyz) {
       if (clhash->find(parentID) == clhash->end()) {
 	if (cnum == cnummax) {
@@ -969,7 +969,7 @@ void AdaptGrid::candidates_coarsen()
 	clist[m].index = new int[nxyz];
 	clist[m].value = new double[nxyz];
       } else m = (*clhash)[parentID];
-      
+
       n = clist[m].nexist;
       clist[m].proc[n] = me;
       clist[m].index[n] = icell;
@@ -981,7 +981,7 @@ void AdaptGrid::candidates_coarsen()
 
     // this proc does not own all children of parentID
     // add cell info to inbuf to perform rendezvous comm with
-      
+
     } else {
       proclist[nsend] = hashlittle(&parentID,sizeof(cellint),0) % nprocs;
       inbuf[nsend].parentID = parentID;
@@ -1015,7 +1015,7 @@ void AdaptGrid::candidates_coarsen()
 
   // scan received outbuf to add child cell data to 2nd portion of clist
   // if new parentIDs to clhash
-  
+
   for (int i = 0; i < nreturn; i++) {
     parentID = outbuf[i].parentID;
     if (clhash->find(parentID) == clhash->end()) {
@@ -1053,7 +1053,7 @@ void AdaptGrid::candidates_coarsen()
   }
 
   // clean up
-  
+
   memory->sfree(outbuf);
   delete phash;
   delete clhash;
@@ -1093,7 +1093,7 @@ double AdaptGrid::coarsen_particle_cell(int icell)
 double AdaptGrid::coarsen_surf_cell(int icell)
 {
   double *norm;
-  
+
   int dim = domain->dimension;
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
@@ -1134,27 +1134,27 @@ double AdaptGrid::coarsen_value_cell(int icell)
     if (valuewhich == COMPUTE) return value_compute(icell);
     else if (valuewhich == FIX) return value_fix(icell);
   }
-  
+
   int *csubs = sinfo[cells[icell].isplit].csubs;
   int nsplit = cells[icell].nsplit;
 
   int jcell;
   double value = 0.0;
-  
+
   for (int i = 0; i < nsplit; i++) {
     jcell = csubs[i];
     if (combine == SUM) {
       if (valuewhich == COMPUTE) value += value_compute(jcell);
       else if (valuewhich == FIX) value += value_fix(jcell);
     } else if (combine == MINIMUM) {
-      if (valuewhich == COMPUTE) 
+      if (valuewhich == COMPUTE)
 	value = MIN(value,value_compute(jcell));
-      else if (valuewhich == FIX) 
+      else if (valuewhich == FIX)
 	value = MIN(value,value_fix(jcell));
     } else if (combine == MAXIMUM) {
-      if (valuewhich == COMPUTE) 
+      if (valuewhich == COMPUTE)
 	value = MAX(value,value_compute(jcell));
-      else if (valuewhich == FIX) 
+      else if (valuewhich == FIX)
 	value = MAX(value,value_fix(jcell));
     }
   }
@@ -1170,13 +1170,13 @@ void AdaptGrid::coarsen_particle()
 {
   int m,nchild,np;
   double *values;
-  
+
   for (int i = 0; i < cnum; i++) {
     if (clist[i].flag == 0) continue;
 
     values = clist[i].value;
     nchild = clist[i].nchild;
-    
+
     np = 0;
     for (m = 0; m < nchild; m++) np += static_cast<int> (values[m]);
     if (np < ccount) clist[i].flag = 1;
@@ -1194,13 +1194,13 @@ void AdaptGrid::coarsen_surf()
 {
   int m,nchild,anysurf;
   double *values;
-  
+
   for (int i = 0; i < cnum; i++) {
     if (clist[i].flag == 0) continue;
 
     values = clist[i].value;
     nchild = clist[i].nchild;
-    
+
     anysurf = 0;
     for (m = 0; m < nchild; m++) anysurf += static_cast<int> (values[m]);
     if (anysurf) clist[i].flag = 1;
@@ -1220,7 +1220,7 @@ void AdaptGrid::coarsen_value()
 
   for (int i = 0; i < cnum; i++) {
     if (clist[i].flag == 0) continue;
-    
+
     values = clist[i].value;
     nchild = clist[i].nchild;
 
@@ -1231,12 +1231,12 @@ void AdaptGrid::coarsen_value()
     for (m = 0; m < nchild; m++) {
       onevalue = values[m];
       if (combine == SUM) allvalues += onevalue;
-      else if (combine == MINIMUM) 
+      else if (combine == MINIMUM)
 	allvalues = MIN(allvalues,onevalue);
-      else if (combine == MAXIMUM) 
+      else if (combine == MAXIMUM)
 	allvalues = MAX(allvalues,onevalue);
     }
-    
+
     if (cdecide == LESS) {
       if (allvalues < cvalue) clist[i].flag = 1;
       else clist[i].flag = 0;
@@ -1288,20 +1288,20 @@ void AdaptGrid::particle_surf_comm()
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   Grid::SplitInfo *sinfo = grid->sinfo;
-  
+
   // count child cells for parents flagged for coarsening
   // children will be notified via rendezvous comm, owned by this proc or others
-  
+
   int nsend = 0;
   for (int i = 0; i < cnum; i++) {
     if (!clist[i].flag) continue;
     nsend += clist[i].nchild;
   }
-    
+
   // assign clist parent cells to an owning proc
   // owning proc = one that owns center cell of child sub-grid
   // fill inbuf with info to send to each child cell of coarsened parents
-  
+
   int *proclist;
   memory->create(proclist,nsend,"adapt_grid:proclist");
   Rvous2 *inbuf = (Rvous2 *) memory->smalloc((bigint) nsend*sizeof(Rvous2),
@@ -1353,7 +1353,7 @@ void AdaptGrid::particle_surf_comm()
   for (int i = 0; i < nreturn; i++) {
     icell = outbuf[i].icell;
     cells[icell].proc = -1;
-    
+
     proclist[i] = outbuf[i].owner;
     sadapt[i].parentID = outbuf[i].parentID;
     sadapt[i].plevel = cells[icell].level - 1;
@@ -1436,7 +1436,7 @@ void AdaptGrid::particle_surf_comm()
 
     alist[m].np[ichild] = s->nsurf;
     alist[m].nsurf[ichild] = s->np;
-    
+
     ptr += sizeof(SendAdapt);
     ptr = ROUNDUP(ptr);
 
@@ -1444,7 +1444,7 @@ void AdaptGrid::particle_surf_comm()
 
     // surfs are packed differently for distributed vs non-distributed
     // non = indices, dist = line/tri data
-    
+
     alist[m].nsurf[ichild] = s->nsurf;
     alist[m].surfs[ichild] = (void *) ptr;
     if (!distributed) ptr += s->nsurf * sizeof(surfint);
@@ -1485,7 +1485,7 @@ int AdaptGrid::perform_coarsen()
 
   // coarsening with distributed surfs requires use of hash
   // used by grid->coarsen_cell() method to add new unique surfs
-  
+
   if (surf->distributed) surf->rehash();
 
   // loop over coarsening action list
@@ -1536,14 +1536,14 @@ int AdaptGrid::perform_coarsen()
   }
 
   // done with surf hash
-  
+
   if (surf->distributed) {
     surf->hash->clear();
     surf->hashfilled = 0;
   }
 
   // return # of cells this proc coarsened
-  
+
   return anum;
 }
 

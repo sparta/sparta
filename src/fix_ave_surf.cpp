@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -45,7 +45,7 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
 {
   if (narg < 7) error->all(FLERR,"Illegal fix ave/surf command");
 
-  if (surf->implicit) 
+  if (surf->implicit)
     error->all(FLERR,"Cannot use fix ave/surf with implicit surfs");
 
   int igroup = surf->find_group(arg[2]);
@@ -64,8 +64,8 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
 
   int iarg = 6;
   while (iarg < narg) {
-    if ((strncmp(arg[iarg],"c_",2) == 0) || 
-	(strncmp(arg[iarg],"f_",2) == 0) || 
+    if ((strncmp(arg[iarg],"c_",2) == 0) ||
+	(strncmp(arg[iarg],"f_",2) == 0) ||
 	(strncmp(arg[iarg],"v_",2) == 0)) {
       nvalues++;
       iarg++;
@@ -140,14 +140,14 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
       if (modify->compute[icompute]->per_surf_flag == 0)
 	error->all(FLERR,
 		   "Fix ave/surf compute does not calculate per-surf values");
-      if (argindex[i] == 0 && 
+      if (argindex[i] == 0 &&
 	  modify->compute[icompute]->size_per_surf_cols != 0)
 	error->all(FLERR,"Fix ave/surf compute does not "
 		   "calculate a per-surf vector");
       if (argindex[i] && modify->compute[icompute]->size_per_surf_cols == 0)
 	error->all(FLERR,"Fix ave/surf compute does not "
 		   "calculate a per-surf array");
-      if (argindex[i] && 
+      if (argindex[i] &&
 	  argindex[i] > modify->compute[icompute]->size_per_surf_cols)
 	error->all(FLERR,"Fix ave/surf compute array is accessed out-of-range");
 
@@ -347,16 +347,16 @@ void FixAveSurf::init()
       if (icompute < 0)
 	error->all(FLERR,"Compute ID for fix ave/surf does not exist");
       value2index[m] = icompute;
-      
+
     } else if (which[m] == FIX) {
       int ifix = modify->find_fix(ids[m]);
-      if (ifix < 0) 
+      if (ifix < 0)
 	error->all(FLERR,"Fix ID for fix ave/surf does not exist");
       value2index[m] = ifix;
 
     } else if (which[m] == VARIABLE) {
       int ivariable = input->variable->find(ids[m]);
-      if (ivariable < 0) 
+      if (ivariable < 0)
 	error->all(FLERR,"Variable name for fix ave/surf does not exist");
       value2index[m] = ivariable;
 
@@ -415,7 +415,7 @@ void FixAveSurf::end_of_step()
     j = argindex[m];
 
     // access list of tallies from compute, add to my list
-    
+
     if (which[m] == COMPUTE) {
       Compute *compute = modify->compute[n];
       if (!(compute->invoked_flag & INVOKED_PER_SURF)) {
@@ -424,7 +424,7 @@ void FixAveSurf::end_of_step()
       }
       surfint *tally2surf_compute;
       int ntally_compute = compute->tallyinfo(tally2surf_compute);
-      
+
       if (j == 0) {
         double *vector = compute->vector_surf_tally;
         if (nvalues == 1) {
@@ -491,7 +491,7 @@ void FixAveSurf::end_of_step()
           }
         }
       }
-      
+
     // access fix fields, guaranteed to be ready
 
     } else if (which[m] == FIX) {
@@ -504,14 +504,14 @@ void FixAveSurf::end_of_step()
       } else {
         int jm1 = j - 1;
         double **fix_array = modify->fix[n]->array_surf;
-        if (nvalues == 1) 
+        if (nvalues == 1)
           for (i = 0; i < nown; i++) accvec[i] += fix_array[i][jm1];
         else
           for (i = 0; i < nown; i++) accarray[i][m] += fix_array[i][jm1];
       }
 
     // evaluate surf-style variable
-      
+
     } else if (which[m] == VARIABLE) {
     }
   }
@@ -637,7 +637,7 @@ double FixAveSurf::memory_usage()
 
 bigint FixAveSurf::nextvalid()
 {
-  bigint nvalid = (update->ntimestep/per_surf_freq)*per_surf_freq + 
+  bigint nvalid = (update->ntimestep/per_surf_freq)*per_surf_freq +
     per_surf_freq;
   if (nvalid-per_surf_freq == update->ntimestep && nrepeat == 1)
     nvalid = update->ntimestep;

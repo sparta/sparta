@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -44,7 +44,7 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 #define EPSILON_NORM 1.0e-12
 #define EPSILON_GRID 1.0e-3
 #define BIG 1.0e20
-#define DELTA 128           // must be 2 or greater 
+#define DELTA 128           // must be 2 or greater
 
 /* ---------------------------------------------------------------------- */
 

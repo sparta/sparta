@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -61,7 +61,7 @@ int line_quad_intersect(double *v0, double *v1, double *norm,
   sum += whichside(v0,norm,xhi,ylo,0.0);
   sum += whichside(v0,norm,xlo,yhi,0.0);
   sum += whichside(v0,norm,xhi,yhi,0.0);
-  
+
   if (sum == 4 || sum == -4) return 0;
 	
   // test 4 quad edges for intersection with line
@@ -196,7 +196,7 @@ int tri_hex_intersect(double *v0, double *v1, double *v2, double *norm,
 
   if (v2[0] >= xlo && v2[0] <= xhi && v2[1] >= ylo && v2[1] <= yhi &&
       v2[2] >= zlo && v2[2] <= zhi) return 1;
-  
+
   // if all 8 hex pts are on same side of tri plane, no intersection
 
   sum = whichside(v0,norm,xlo,ylo,zlo);
@@ -208,7 +208,7 @@ int tri_hex_intersect(double *v0, double *v1, double *v2, double *norm,
   sum += whichside(v0,norm,xlo,yhi,zhi);
   sum += whichside(v0,norm,xhi,yhi,zhi);
   if (sum == 8 || sum == -8) return 0;
-  
+
   // test 12 hex edges for intersection with tri
   // b,e = begin/end of hex edge line segment
 
@@ -264,13 +264,13 @@ int tri_hex_intersect(double *v0, double *v1, double *v2, double *norm,
   // h0,h1,h2,h3 = 4 corner pts of hex face
   // n = normal to xyz faces, depends on vertex ordering
   // each face is treated as 2 triangles -> 6 tests per face
-  
+
   h0[0] = xlo;  h0[1] = ylo;  h0[2] = zlo;
   h1[0] = xlo;  h1[1] = yhi;  h1[2] = zlo;
   h2[0] = xlo;  h2[1] = yhi;  h2[2] = zhi;
   h3[0] = xlo;  h3[1] = ylo;  h3[2] = zhi;
   n[0]  = 1.0;  n[1]  = 0.0;  n[2]  = 0.0;
-  
+
   if (line_tri_intersect(v0,v1,h0,h1,h2,n,point,param,side) ||
       line_tri_intersect(v1,v2,h0,h1,h2,n,point,param,side) ||
       line_tri_intersect(v2,v0,h0,h1,h2,n,point,param,side) ||
@@ -292,7 +292,7 @@ int tri_hex_intersect(double *v0, double *v1, double *v2, double *norm,
   h2[0] = xhi;  h2[1] = ylo;  h2[2] = zhi;
   h3[0] = xlo;  h3[1] = ylo;  h3[2] = zhi;
   n[0]  = 0.0;  n[1]  = -1.0;  n[2]  = 0.0;
-  
+
   if (line_tri_intersect(v0,v1,h0,h1,h2,n,point,param,side) ||
       line_tri_intersect(v1,v2,h0,h1,h2,n,point,param,side) ||
       line_tri_intersect(v2,v0,h0,h1,h2,n,point,param,side) ||
@@ -314,7 +314,7 @@ int tri_hex_intersect(double *v0, double *v1, double *v2, double *norm,
   h2[0] = xhi;  h2[1] = yhi;  h2[2] = zlo;
   h3[0] = xlo;  h3[1] = yhi;  h3[2] = zlo;
   n[0]  = 0.0;  n[1]  = 0.0;  n[2]  = 1.0;
-  
+
   if (line_tri_intersect(v0,v1,h0,h1,h2,n,point,param,side) ||
       line_tri_intersect(v1,v2,h0,h1,h2,n,point,param,side) ||
       line_tri_intersect(v2,v0,h0,h1,h2,n,point,param,side) ||
@@ -323,7 +323,7 @@ int tri_hex_intersect(double *v0, double *v1, double *v2, double *norm,
       line_tri_intersect(v2,v0,h0,h2,h3,n,point,param,side)) return 1;
 
   h0[2] = h1[2] = h2[2] = h3[2] = zhi;
-  
+
   if (line_tri_intersect(v0,v1,h0,h1,h2,n,point,param,side) ||
       line_tri_intersect(v1,v2,h0,h1,h2,n,point,param,side) ||
       line_tri_intersect(v2,v0,h0,h1,h2,n,point,param,side) ||
@@ -412,13 +412,13 @@ int hex_tri_intersect_point(double *v0, double *v1, double *v2, double *norm,
   // h0,h1,h2,h3 = 4 corner pts of hex face
   // n = normal to xyz faces, depends on vertex ordering
   // each face is treated as 2 triangles -> 6 tests per face
-  
+
   h0[0] = xlo;  h0[1] = ylo;  h0[2] = zlo;
   h1[0] = xlo;  h1[1] = yhi;  h1[2] = zlo;
   h2[0] = xlo;  h2[1] = yhi;  h2[2] = zhi;
   h3[0] = xlo;  h3[1] = ylo;  h3[2] = zhi;
   n[0]  = 1.0;  n[1]  = 0.0;  n[2]  = 0.0;
-  
+
   if (line_tri_intersect(v0,v1,h0,h1,h2,n,xc,param,side) ||
       line_tri_intersect(v1,v2,h0,h1,h2,n,xc,param,side) ||
       line_tri_intersect(v2,v0,h0,h1,h2,n,xc,param,side) ||
@@ -440,7 +440,7 @@ int hex_tri_intersect_point(double *v0, double *v1, double *v2, double *norm,
   h2[0] = xhi;  h2[1] = ylo;  h2[2] = zhi;
   h3[0] = xlo;  h3[1] = ylo;  h3[2] = zhi;
   n[0]  = 0.0;  n[1]  = -1.0;  n[2]  = 0.0;
-  
+
   if (line_tri_intersect(v0,v1,h0,h1,h2,n,xc,param,side) ||
       line_tri_intersect(v1,v2,h0,h1,h2,n,xc,param,side) ||
       line_tri_intersect(v2,v0,h0,h1,h2,n,xc,param,side) ||
@@ -462,7 +462,7 @@ int hex_tri_intersect_point(double *v0, double *v1, double *v2, double *norm,
   h2[0] = xhi;  h2[1] = yhi;  h2[2] = zlo;
   h3[0] = xlo;  h3[1] = yhi;  h3[2] = zlo;
   n[0]  = 0.0;  n[1]  = 0.0;  n[2]  = 1.0;
-  
+
   if (line_tri_intersect(v0,v1,h0,h1,h2,n,xc,param,side) ||
       line_tri_intersect(v1,v2,h0,h1,h2,n,xc,param,side) ||
       line_tri_intersect(v2,v0,h0,h1,h2,n,xc,param,side) ||
@@ -471,7 +471,7 @@ int hex_tri_intersect_point(double *v0, double *v1, double *v2, double *norm,
       line_tri_intersect(v2,v0,h0,h2,h3,n,xc,param,side)) return 1;
 
   h0[2] = h1[2] = h2[2] = h3[2] = zhi;
-  
+
   if (line_tri_intersect(v0,v1,h0,h1,h2,n,xc,param,side) ||
       line_tri_intersect(v1,v2,h0,h1,h2,n,xc,param,side) ||
       line_tri_intersect(v2,v0,h0,h1,h2,n,xc,param,side) ||
@@ -623,7 +623,7 @@ int edge_on_hex_face(double *v0, double *v1, double *lo, double *hi)
 ------------------------------------------------------------------------- */
 
 bool line_line_intersect(double *start, double *stop,
-			 double *v0, double *v1, double *norm, 
+			 double *v0, double *v1, double *norm,
 			 double *point, double &param, int &side, int)
 {
   double vec[3],start2stop[3],edge[3],pvec[3];
@@ -721,7 +721,7 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
 
   int nc;
   double t1,t2;
-    
+
   // vertical line segment
   // no collision if starting on surface
 
@@ -761,7 +761,7 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
     double a = x21sq*(v[1]*v[1] + v[2]*v[2]) - y21sq*v[0]*v[0];
     if (a == 0.0) return false;
     double b = x21sq*x[1]*v[1] - y21sq*x[0]*v[0] - y21*v[0]*dconst;
-    double c = x21sq*x[1]*x[1] - y21sq*x[0]*x[0] - 
+    double c = x21sq*x[1]*x[1] - y21sq*x[0]*x[0] -
       2.0*y21*x[0]*dconst - dconst*dconst;
 
     double arg = b*b - a*c;
@@ -825,7 +825,7 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
     xc[1] = sqrt(ynew*ynew + znew*znew);
     if (v1[1] == v2[1]) xc[1] = v1[1];
     xc[2] = 0.0;
-    
+
     double rn = ynew / xc[1];
     double wn = znew / xc[1];
     vc[0] = v[0];
@@ -900,7 +900,7 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
    if crosses, also return nc, t1, t2 (can be two collisions)
 ------------------------------------------------------------------------- */
 
-bool axi_horizontal_line(double tdelta, double *x, double *v, 
+bool axi_horizontal_line(double tdelta, double *x, double *v,
                          double yhoriz, int &nc, double &t1, double &t2)
 {
   double a = v[1]*v[1] + v[2]*v[2];
@@ -916,7 +916,7 @@ bool axi_horizontal_line(double tdelta, double *x, double *v,
   t1 = MIN(tone,ttwo);
   t2 = MAX(tone,ttwo);
 
-  // if particle starts on line, 
+  // if particle starts on line,
   // discard crossing at time = 0.0 or +/- epsilon (due to round-off)
   // due to cell crossing or selfflag in axi_line_intersect() caller
 
@@ -955,7 +955,7 @@ bool axi_horizontal_line(double tdelta, double *x, double *v,
 ------------------------------------------------------------------------- */
 
 bool line_tri_intersect(double *start, double *stop,
-			double *v0, double *v1, double *v2, double *norm, 
+			double *v0, double *v1, double *v2, double *norm,
 			double *point, double &param, int &side)
 {
   double vec[3],start2stop[3],edge[3],pvec[3],xproduct[3];
@@ -1058,13 +1058,13 @@ int whichside(double *v, double *norm, double x, double y, double z)
 
 int point_on_hex(double *x, double *lo, double *hi)
 {
-  if ((x[0] == lo[0] || x[0] == hi[0]) && 
+  if ((x[0] == lo[0] || x[0] == hi[0]) &&
       x[1] >= lo[1] && x[1] <= hi[1] && x[2] >= lo[2] && x[2] <= hi[2])
     return 1;
-  if ((x[1] == lo[1] || x[1] == hi[1]) && 
+  if ((x[1] == lo[1] || x[1] == hi[1]) &&
       x[0] >= lo[0] && x[0] <= hi[0] && x[2] >= lo[2] && x[2] <= hi[2])
     return 1;
-  if ((x[2] == lo[2] || x[2] == hi[2]) && 
+  if ((x[2] == lo[2] || x[2] == hi[2]) &&
       x[0] >= lo[0] && x[0] <= hi[0] && x[1] >= lo[1] && x[1] <= hi[1])
     return 1;
   return 0;
@@ -1077,8 +1077,8 @@ int point_on_hex(double *x, double *lo, double *hi)
 
 int point_in_hex(double *x, double *lo, double *hi)
 {
-  if (x[0] >= lo[0] && x[0] <= hi[0] && 
-      x[1] >= lo[1] && x[1] <= hi[1] && 
+  if (x[0] >= lo[0] && x[0] <= hi[0] &&
+      x[1] >= lo[1] && x[1] <= hi[1] &&
       x[2] >= lo[2] && x[2] <= hi[2]) return 1;
   return 0;
 }
@@ -1137,7 +1137,7 @@ double distsq_point_line(double *x, double *p1, double *p2)
   // let P = projected point on infinite P1 to P2 line that is closest to X
   // alpha = fraction of distance from P1 to P2 that P is at
   // alpha can be < 0, or between 0 to 1, or > 1
- 
+
   double alpha = MathExtra::dot3(a,b)/MathExtra::lensq3(b);
 
   // C = vector from point on P1P2 line to X
@@ -1274,7 +1274,7 @@ double dist_tri_hex(double *x, double *y, double *z, double *norm,
   double pt[8][3],face[3];
 
   // convert lo/hi to 8 corner pts
-  
+
   pt[0][0] = lo[0]; pt[0][1] = lo[1]; pt[0][2] = lo[2];
   pt[1][0] = hi[0]; pt[1][1] = lo[1]; pt[1][2] = lo[2];
   pt[2][0] = lo[0]; pt[2][1] = hi[1]; pt[2][2] = lo[2];

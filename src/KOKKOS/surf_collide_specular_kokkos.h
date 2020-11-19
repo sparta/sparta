@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -44,35 +44,35 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
      return reaction = index of reaction (1 to N) that took place, 0 = no reaction
      resets particle(s) to post-collision outward velocity
   ------------------------------------------------------------------------- */
-  
+
   KOKKOS_INLINE_FUNCTION
   Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, const double *norm, double &, int, int &) const
   {
     Kokkos::atomic_fetch_add(&d_nsingle(),1);
-  
+
     // if surface chemistry defined, attempt reaction
     // reaction > 0 if reaction took place
-  
+
     //Particle::OnePart iorig;
     Particle::OnePart *jp = NULL;
     //reaction = 0;
-  
+
     //if (isr >= 0) {
     //  if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
     //  reaction = surf->sr[isr]->react(ip,norm,jp);
     //  if (reaction) surf->nreact_one++;
     //}
-  
+
     // specular reflection for each particle
     // reflect incident v around norm
-  
+
     if (ip) MathExtraKokkos::reflect3(ip->v,norm);
     //if (jp) MathExtra::reflect3(jp->v,norm);
-  
+
     // call any fixes with a surf_react() method
     // they may reset j to -1, e.g. fix ambipolar
     //   in which case newly created j is deleted
-  
+
     //if (reaction && modify->n_surf_react) {
     //  int i = -1;
     //  if (ip) i = ip - particle->particles;
@@ -84,7 +84,7 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
     //    particle->nlocal--;
     //  }
     //}
-      
+
     return jp;
   };
 

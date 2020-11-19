@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -86,7 +86,7 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta) :
 
   vector_flag = 1;
   size_vector = 2;
-    
+
   nsingle = ntotal = 0;
 
   copy = 0;
@@ -102,12 +102,12 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta) :
     tstr = new char[n];
     strcpy(tstr,&arg[2][2]);
   } else {
-    twall = input->numeric(FLERR,(char*)arg[2]); 
+    twall = input->numeric(FLERR,(char*)arg[2]);
     if (twall <= 0.0) error->all(FLERR,"Surf_collide diffuse temp <= 0.0");
   }
 
   acc = input->numeric(FLERR,arg[3]);
-  if (acc < 0.0 || acc > 1.0) 
+  if (acc < 0.0 || acc > 1.0)
     error->all(FLERR,"Illegal surf_collide diffuse command");
 
   // optional args
@@ -117,7 +117,7 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta) :
   int iarg = 4;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"translate") == 0) {
-      if (iarg+4 > narg) 
+      if (iarg+4 > narg)
         error->all(FLERR,"Illegal surf_collide diffuse command");
       tflag = 1;
       vx = atof(arg[iarg+1]);
@@ -125,7 +125,7 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta) :
       vz = atof(arg[iarg+3]);
       iarg += 4;
     } else if (strcmp(arg[iarg],"rotate") == 0) {
-      if (iarg+7 > narg) 
+      if (iarg+7 > narg)
         error->all(FLERR,"Illegal surf_collide diffuse command");
       rflag = 1;
       px = atof(arg[iarg+1]);
@@ -134,7 +134,7 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta) :
       wx = atof(arg[iarg+4]);
       wy = atof(arg[iarg+5]);
       wz = atof(arg[iarg+6]);
-      if (domain->dimension == 2 && pz != 0.0) 
+      if (domain->dimension == 2 && pz != 0.0)
         error->all(FLERR,"Surf_collide diffuse rotation invalid for 2d");
       if (domain->dimension == 2 && (wx != 0.0 || wy != 0.0))
         error->all(FLERR,"Surf_collide diffuse rotation invalid for 2d");
@@ -170,11 +170,11 @@ void SurfCollideDiffuseKokkos::pre_collide()
 {
   if (random == NULL) {
     // initialize RNG
-    
+
     random = new RanPark(update->ranmaster->uniform());
     double seed = update->ranmaster->uniform();
     random->reset(seed,comm->me,100);
-    
+
 #ifdef SPARTA_KOKKOS_EXACT
     rand_pool.init(random);
 #endif

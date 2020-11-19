@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -61,13 +61,13 @@ FixMoveSurf::FixMoveSurf(SPARTA *sparta, int narg, char **arg) :
 
   nevery = input->inumeric(FLERR,arg[3]);
   if (nevery < 0) error->all(FLERR,"Illegal fix move/surf command");
-  if (update->ntimestep % nevery) 
+  if (update->ntimestep % nevery)
     error->all(FLERR,"Current timestep must be multiple of "
                "fix move/surf nevery");
 
   nlarge = input->inumeric(FLERR,arg[4]);
   if (nlarge < 0) error->all(FLERR,"Illegal fix move/surf command");
-  if (nlarge % nevery) 
+  if (nlarge % nevery)
     error->all(FLERR,"Fix move/surf nlarge must be multiple of nevery");
 
   movesurf->process_args(narg-5,&arg[5]);
@@ -83,11 +83,11 @@ FixMoveSurf::FixMoveSurf(SPARTA *sparta, int narg, char **arg) :
   origtris = NULL;
 
   if (dim == 2) {
-    origlines = (Surf::Line *) 
+    origlines = (Surf::Line *)
       memory->smalloc(nsurf*sizeof(Surf::Line),"fix/move/surf:origlines");
     memcpy(origlines,surf->lines,nsurf*sizeof(Surf::Line));
   } else if (dim == 3) {
-    origtris = (Surf::Tri *) 
+    origtris = (Surf::Tri *)
       memory->smalloc(nsurf*sizeof(Surf::Tri),"fix/move/surf:origtris");
     memcpy(origtris,surf->tris,nsurf*sizeof(Surf::Tri));
   }

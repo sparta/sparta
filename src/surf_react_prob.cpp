@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -71,7 +71,7 @@ void SurfReactProb::init()
    if dissociation, add particle and return ptr JP
 ------------------------------------------------------------------------- */
 
-int SurfReactProb::react(Particle::OnePart *&ip, double *, 
+int SurfReactProb::react(Particle::OnePart *&ip, double *,
                          Particle::OnePart *&jp)
 {
   int n = reactions[ip->ispecies].n;
@@ -82,7 +82,7 @@ int SurfReactProb::react(Particle::OnePart *&ip, double *,
   // probablity to compare to reaction probability
 
   double react_prob = 0.0;
-  double random_prob = random->uniform(); 
+  double random_prob = random->uniform();
 
   // loop over possible reactions for this species
   // if dissociation performs a realloc:
@@ -106,9 +106,9 @@ int SurfReactProb::react(Particle::OnePart *&ip, double *,
           ip->ispecies = r->products[0];
           int id = MAXSMALLINT*random->uniform();
           memcpy(x,ip->x,3*sizeof(double));
-          memcpy(v,ip->v,3*sizeof(double));  
+          memcpy(v,ip->v,3*sizeof(double));
           Particle::OnePart *particles = particle->particles;
-          int reallocflag = 
+          int reallocflag =
             particle->add_particle(id,r->products[1],ip->icell,x,v,0.0,0.0);
           if (reallocflag) ip = particle->particles + (ip - particles);
           jp = &particle->particles[particle->nlocal-1];

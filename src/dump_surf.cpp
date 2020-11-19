@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -207,7 +207,7 @@ void DumpSurf::init_style()
   int icompute;
   for (int i = 0; i < ncompute; i++) {
     icompute = modify->find_compute(id_compute[i]);
-    if (icompute < 0) 
+    if (icompute < 0)
       error->all(FLERR,"Could not find dump surf compute ID");
     compute[i] = modify->compute[icompute];
   }
@@ -224,7 +224,7 @@ void DumpSurf::init_style()
   int ivariable;
   for (int i = 0; i < nvariable; i++) {
     ivariable = input->variable->find(id_variable[i]);
-    if (ivariable < 0) 
+    if (ivariable < 0)
       error->all(FLERR,"Could not find dump surf variable name");
     variable[i] = ivariable;
   }
@@ -431,7 +431,7 @@ int DumpSurf::parse_fields(int narg, char **arg)
       pack_choice[i] = &DumpSurf::pack_v1y;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v1z") == 0) {
-      if (dimension == 2) 
+      if (dimension == 2)
 	error->all(FLERR,"Invalid dump surf field for 2d simulation");
       pack_choice[i] = &DumpSurf::pack_v1z;
       vtype[i] = DOUBLE;
@@ -442,22 +442,22 @@ int DumpSurf::parse_fields(int narg, char **arg)
       pack_choice[i] = &DumpSurf::pack_v2y;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v2z") == 0) {
-      if (dimension == 2) 
+      if (dimension == 2)
 	error->all(FLERR,"Invalid dump surf field for 2d simulation");
       pack_choice[i] = &DumpSurf::pack_v2z;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v3x") == 0) {
-      if (dimension == 2) 
+      if (dimension == 2)
 	error->all(FLERR,"Invalid dump surf field for 2d simulation");
       pack_choice[i] = &DumpSurf::pack_v3x;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v3y") == 0) {
-      if (dimension == 2) 
+      if (dimension == 2)
 	error->all(FLERR,"Invalid dump surf field for 2d simulation");
       pack_choice[i] = &DumpSurf::pack_v3y;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v3z") == 0) {
-      if (dimension == 2) 
+      if (dimension == 2)
 	error->all(FLERR,"Invalid dump surf field for 2d simulation");
       pack_choice[i] = &DumpSurf::pack_v3z;
       vtype[i] = DOUBLE;
@@ -483,7 +483,7 @@ int DumpSurf::parse_fields(int narg, char **arg)
 
       n = modify->find_compute(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump surf compute ID");
-      if (surf->implicit) 
+      if (surf->implicit)
         error->all(FLERR,"Cannot use dump surf compute with implicit surfs");
       if (modify->compute[n]->per_surf_flag == 0)
 	error->all(FLERR,"Dump surf compute does not compute per-surf info");
@@ -492,7 +492,7 @@ int DumpSurf::parse_fields(int narg, char **arg)
       if (argindex[i] > 0 && modify->compute[n]->size_per_surf_cols == 0)
 	error->all(FLERR,
 		   "Dump surf compute does not calculate per-surf array");
-      if (argindex[i] > 0 && 
+      if (argindex[i] > 0 &&
           argindex[i] > modify->compute[n]->size_per_surf_cols)
 	error->all(FLERR,"Dump surf compute array is accessed out-of-range");
 
@@ -521,7 +521,7 @@ int DumpSurf::parse_fields(int narg, char **arg)
 
       n = modify->find_fix(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump surf fix ID");
-      if (surf->implicit) 
+      if (surf->implicit)
         error->all(FLERR,"Cannot use dump surf fix with implicit surfs");
       if (modify->fix[n]->per_surf_flag == 0)
 	error->all(FLERR,"Dump surf fix does not compute per-surf info");
@@ -573,7 +573,7 @@ int DumpSurf::add_compute(char *id)
   for (icompute = 0; icompute < ncompute; icompute++)
     if (strcmp(id,id_compute[icompute]) == 0) break;
   if (icompute < ncompute) return icompute;
-  
+
   id_compute = (char **)
     memory->srealloc(id_compute,(ncompute+1)*sizeof(char *),"dump:id_compute");
   delete [] compute;
@@ -598,7 +598,7 @@ int DumpSurf::add_fix(char *id)
   for (ifix = 0; ifix < nfix; ifix++)
     if (strcmp(id,id_fix[ifix]) == 0) break;
   if (ifix < nfix) return ifix;
-  
+
   id_fix = (char **)
     memory->srealloc(id_fix,(nfix+1)*sizeof(char *),"dump:id_fix");
   delete [] fix;
@@ -623,7 +623,7 @@ int DumpSurf::add_variable(char *id)
   for (ivariable = 0; ivariable < nvariable; ivariable++)
     if (strcmp(id,id_variable[ivariable]) == 0) break;
   if (ivariable < nvariable) return ivariable;
-  
+
   id_variable = (char **)
     memory->srealloc(id_variable,(nvariable+1)*sizeof(char *),
 		     "dump:id_variable");

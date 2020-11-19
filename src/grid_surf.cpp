@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -119,7 +119,7 @@ void Grid::surf2grid_cell_algorithm(int outflag)
   Surf::Tri *tris = surf->tris;
 
   int max = 0;
-  
+
   for (int icell = 0; icell < nlocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
 
@@ -149,7 +149,7 @@ void Grid::surf2grid_cell_algorithm(int outflag)
       nontrans = 0;
 
       if (dim == 2) {
- 
+
         for (i = 0; i < nsurf; i++) {
           if (!lines[ptr[i]].transparent) nontrans = 1;
           break;
@@ -175,7 +175,7 @@ void Grid::surf2grid_cell_algorithm(int outflag)
   }
 
   // timing info
-  
+
   if (outflag) {
     MPI_Barrier(world);
     t2 = MPI_Wtime();
@@ -188,7 +188,7 @@ void Grid::surf2grid_cell_algorithm(int outflag)
 
 /* ----------------------------------------------------------------------
    find surfs that overlap owned grid cells
-   algorithm: 
+   algorithm:
    in cells: set nsurf, csurfs
    in cinfo: set type=OVERLAP for cells with surfs
 ------------------------------------------------------------------------- */
@@ -202,7 +202,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
   double t1,t2,t3,t4,t5;
   double bblo[3],bbhi[3],ctr[3];
   Irregular *irregular;
-  
+
   struct Send2 {
     cellint childID;
     int proc,icell;
@@ -239,7 +239,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
     (GridTree *) memory->smalloc(nprocs*sizeof(GridTree),"surf2grid:gtree");
 
   // data structs for 3 irregular comms
-  
+
   int *proclist1 = NULL;
   int *proclist2 = NULL;
   int *proclist3 = NULL;
@@ -253,11 +253,11 @@ void Grid::surf2grid_new_algorithm(int outflag)
   int maxpair = 0;
 
   // which set of Lines or Tris to process
-  
+
   Surf::Line *lines;
   Surf::Tri *tris;
   int nsurf,istart,istop,idelta,nbytes_surf;
-  
+
   if (distributed) {
     lines = surf->mylines;
     tris = surf->mytris;
@@ -283,7 +283,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
   // operate only on child cells at one level at each iteration
 
   tmap = tcomm1 = tcomm2 = tcomm3 = 0.0;
-  
+
   int minlevel = set_minlevel();
 
   for (int level = minlevel; level <= maxlevel; level++) {
@@ -295,7 +295,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
 
     // compute extent of uniform grid at level which overlaps surf bbox
     // xyz lo/hi = inclusive range of overlapping grid box
-    
+
     id_find_child_uniform_level(level,0,boxlo,boxhi,slo,xlo,ylo,zlo);
     id_find_child_uniform_level(level,1,boxlo,boxhi,shi,xhi,yhi,zhi);
 
@@ -317,7 +317,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
     // NOTE: this comm might be faster as Rvous comm?
 
     int sxlo,sxhi,sylo,syhi,szlo,szhi;
-    
+
     int nsend = 0;
 
     for (isurf = istart; isurf < istop; isurf += idelta) {
@@ -359,7 +359,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
 	nsend++;
       }
     }
-    
+
     irregular = new Irregular(sparta);
     int nrecv1 = irregular->create_data_uniform(nsend,proclist1,1);
     char *rbuf1 = (char *) memory->smalloc(nrecv1*nbytes_surf,"surf2grid:rbuf");
@@ -378,7 +378,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
 
     int cx,cy,cz;
     double ctr[3];
-    
+
     nsend = 0;
 
     for (icell = 0; icell < nlocal; icell++) {
@@ -393,7 +393,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
       ilo[0] = cx; ihi[0] = cx;
       ilo[1] = cy; ihi[1] = cy;
       ilo[2] = cz; ihi[2] = cz;
-      
+
       int np = 0;
       box_drop(ilo,ihi,0,nprocs-1,gtree,np,plist);
       if (np != 1) error->one(FLERR,"Box drop of grid cell failed");
@@ -404,14 +404,14 @@ void Grid::surf2grid_new_algorithm(int outflag)
 	sbuf2 = (Send2 *) memory->srealloc(sbuf2,maxsend2*sizeof(Send2),
 					  "surf2grid:sbuf2");
       }
-      
+
       proclist2[nsend] = plist[0];
       sbuf2[nsend].childID = cells[icell].id;
       sbuf2[nsend].proc = me;
       sbuf2[nsend].icell = icell;
       nsend++;
     }
-    
+
     irregular = new Irregular(sparta);
     int nrecv2 = irregular->create_data_uniform(nsend,proclist2,1);
     Send2 *rbuf2 = (Send2 *) memory->smalloc(nrecv2*sizeof(Send2),"surf2grid:rbuf2");
@@ -430,13 +430,13 @@ void Grid::surf2grid_new_algorithm(int outflag)
     MyHash *rcbhash = new MyHash();
     RCBlohi *rcblohi =
       (RCBlohi *) memory->smalloc(nrecv2*sizeof(RCBlohi),"surf2grid:rcblohi");
-    
+
     for (i = 0; i < nrecv2; i++) {
       childID = rbuf2[i].childID;
       (*rcbhash)[childID] = i;
       id_lohi(childID,level,boxlo,boxhi,rcblohi[i].lo,rcblohi[i].hi);
     }
-    
+
     // in RCB decomp, compute intersections between:
     //   my RCB grid cells that exist and my set of surfs
     // append results to my list of surf/grid intersections
@@ -447,7 +447,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
     //     check for actual overlap via cut2d/cut3d
     //   build pairs list = one surf, one cell
     //     as indices into received RCB data
-    
+
     Surf::Line *rcblines;
     Surf::Tri *rcbtris;
     if (dim == 2) rcblines = (Surf::Line *) rbuf1;
@@ -455,7 +455,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
 
     int npair = 0;
     int overlap;
-    
+
     for (i = 0; i < nrecv1; i++) {
       if (dim == 2) surf->bbox_one(&rcblines[i],bblo,bbhi);
       else surf->bbox_one(&rcbtris[i],bblo,bbhi);
@@ -468,7 +468,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
 	    childID = id_uniform_level(level,ix,iy,iz);
 	    if (rcbhash->find(childID) == rcbhash->end()) continue;
 	    j = (*rcbhash)[childID];
-	    
+	
 	    if (dim == 2)
 	      overlap = cut2d->surf2grid_one(rcblines[i].p1,rcblines[i].p2,
 					     rcblohi[j].lo,rcblohi[j].hi);
@@ -477,7 +477,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
 					     rcbtris[i].p3,
 					     rcblohi[j].lo,rcblohi[j].hi);
 	    if (!overlap) continue;
-	    
+	
 	    if (npair == maxpair) {
 	      maxpair += DELTA_SEND;
 	      memory->grow(pairs,maxpair,2,"surf2grid:pairs");
@@ -500,7 +500,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
     // send each surf/grid intersection back to proc that owns grid cell
 
     int surfindex,cellindex;
-    
+
     nsend = 0;
 
     for (i = 0; i < npair; i++) {
@@ -531,14 +531,14 @@ void Grid::surf2grid_new_algorithm(int outflag)
     // set nsurf and csurfs for each cell (only ones at this level)
     // 1st pass: count surfs in each cell, then allocate csurfs in each cell
     // 2nd pass: fill each cell's csurf list
-    
+
     for (i = 0; i < nrecv3; i++) {
       icell = rbuf3[i].icell;
       cells[icell].nsurf++;
     }
 
     // skip sub cells since may exist in a restart
-    
+
     for (icell = 0; icell < nlocal; icell++) {
       if (cells[icell].level != level) continue;
       if (cells[icell].nsplit <= 0) continue;
@@ -579,7 +579,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
   }
 
   // clean up after all iterations
-  
+
   memory->destroy(proclist1);
   memory->destroy(proclist2);
   memory->destroy(proclist3);
@@ -599,7 +599,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
     lines = surf->lines;
     tris = surf->tris;
     int nslocal = surf->nlocal;
-      
+
     MySurfHash shash;
     surfint *list;
 
@@ -610,7 +610,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
       for (i = 0; i < nslocal; i++)
 	shash[tris[i].id] = i;
     }
-    
+
     for (icell = 0; icell < nlocal; icell++) {
       if (!cells[icell].nsurf) continue;
       if (cells[icell].nsplit <= 0) continue;
@@ -622,7 +622,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
 	list[i] = shash[list[i]];
     }
   }
-  
+
   // distributed surfs:
   // rendezvous operation to obtain nlocal surfs for each proc
   // each grid cell requests a surf from proc that owns surf in mylines/mytris
@@ -638,7 +638,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
     MyIterator it;
     surfint *list;
     int ncount = 0;
-    
+
     for (icell = 0; icell < nlocal; icell++) {
       if (!cells[icell].nsurf) continue;
       if (cells[icell].nsplit <= 0) continue;
@@ -657,7 +657,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
 
     int *proclist;
     memory->create(proclist,ncount,"surf2grid:proclist2");
-    InRvous *inbuf = 
+    InRvous *inbuf =
       (InRvous *) memory->smalloc((bigint) ncount*sizeof(InRvous),
 				  "surf2grid:inbuf");
 
@@ -665,7 +665,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
     // proclist = owner of each surf
 
     surfint surfID;
-    
+
     ncount = 0;
     for (it = shash.begin(); it != shash.end(); ++it) {
       surfID = it->first;
@@ -678,7 +678,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
     // perform rendezvous operation
     // each proc owns subset of surfs
     // receives all surf requests to return surf to each proc who needs it
-    
+
     char *outbuf;
     int outbytes;
     if (dim == 2) outbytes = sizeof(OutRvousLine);
@@ -687,7 +687,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
     int nreturn = comm->rendezvous(1,ncount,(char *) inbuf,sizeof(InRvous),
 				   0,proclist,rendezvous_surfrequest,
 				   0,outbuf,outbytes,(void *) this);
-    
+
     memory->destroy(proclist);
     memory->sfree(inbuf);
 
@@ -722,7 +722,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
 
     // reset csurfs list for each of my owned cells
     // from storing surfID to storing local index of that surfID
-    
+
     for (icell = 0; icell < nlocal; icell++) {
       if (!cells[icell].nsurf) continue;
       if (cells[icell].nsplit <= 0) continue;
@@ -743,11 +743,11 @@ void Grid::surf2grid_new_algorithm(int outflag)
 
   surfint *list;
   int nontrans;
-  
+
   for (icell = 0; icell < nlocal; icell++) {
     if (!cells[icell].nsurf) continue;
     if (cells[icell].nsplit <= 0) continue;
-    
+
     qsort(cells[icell].csurfs,cells[icell].nsurf,
 	  sizeof(surfint),compare_surfIDs);
 
@@ -766,7 +766,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
 	break;
       }
     }
-      
+
     if (nontrans) cinfo[icell].type = OVERLAP;
   }
 
@@ -796,7 +796,7 @@ void Grid::partition_grid(int proclower, int procupper,
   int procmid = proclower + (procupper-proclower) / 2 + 1;
   int nplower = procmid-proclower;
   int npupper = procupper-procmid + 1;
-    
+
   int xrange = xhi-xlo + 1;
   int yrange = yhi-ylo + 1;
   int zrange = zhi-zlo + 1;
@@ -833,7 +833,7 @@ void Grid::partition_grid(int proclower, int procupper,
 void Grid::mybox(int me, int proclower, int procupper,
 		 int &xlo, int &xhi, int &ylo, int &yhi, int &zlo, int &zhi,
 		 GridTree *gtree)
-{ 
+{
   // end recursion when partition is a single proc
 
   if (proclower == procupper) return;
@@ -903,7 +903,7 @@ int Grid::rendezvous_surfrequest(int n, char *inbuf, int &flag,
                                  void *ptr)
 {
   int i,m;
-  
+
   Grid *gptr = (Grid *) ptr;
   Surf::Line *mylines = gptr->surf->mylines;
   Surf::Tri *mytris = gptr->surf->mytris;
@@ -971,7 +971,7 @@ void Grid::surf2grid_implicit(int subflag, int outflag)
      called from ReadRestart
    outflag = 1 for timing and statistics info
    in cells: set nsplit, isplit
-   in cinfo: set corner, volume 
+   in cinfo: set corner, volume
    initialize sinfo as needed
 ------------------------------------------------------------------------- */
 
@@ -999,7 +999,7 @@ void Grid::surf2grid_split(int subflag, int outflag)
 
   int max = 0;
   int ncurrent = nlocal;
-  
+
   for (int icell = 0; icell < ncurrent; icell++) {
     if (cells[icell].nsplit <= 0) continue;
     if (cinfo[icell].type != OVERLAP) continue;
@@ -1016,7 +1016,7 @@ void Grid::surf2grid_split(int subflag, int outflag)
 
     if (nsplitone == 1) {
       cinfo[icell].volume = vols[0];
-    
+
     } else if (subflag) {
       if (nsplitone > maxsplitpercell) {
 	max = MAX(max,nsplitone);
@@ -1025,7 +1025,7 @@ void Grid::surf2grid_split(int subflag, int outflag)
       } else {
 	cells[icell].nsplit = nsplitone;
 	nunsplitlocal--;
-      
+
 	cells[icell].isplit = nsplitlocal;
 	add_split_cell(1);
 	s = &sinfo[nsplitlocal-1];
@@ -1055,7 +1055,7 @@ void Grid::surf2grid_split(int subflag, int outflag)
 	csubs->vgot(nsplitone);
 	csplits->vgot(cells[icell].nsurf);
       }
-      
+
     } else {
       if (cells[icell].nsplit != nsplitone) {
         printf("BAD %d %d: %d %d\n",icell,cells[icell].id,
@@ -1079,7 +1079,7 @@ void Grid::surf2grid_split(int subflag, int outflag)
         cells[isub].csurfs = cells[icell].csurfs;
         cinfo[isub].volume = vols[i];
       }
-      
+
       csplits->vgot(cells[icell].nsurf);
     }
   }
@@ -1141,11 +1141,11 @@ void Grid::surf2grid_split(int subflag, int outflag)
     MPI_Allreduce(&bnoverlap,&noverlapall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
     if (comm->me == 0) {
-      if (screen) fprintf(screen,"  " BIGINT_FORMAT " " BIGINT_FORMAT 
+      if (screen) fprintf(screen,"  " BIGINT_FORMAT " " BIGINT_FORMAT
                           " = cells overlapping surfs, "
                           "overlap cells with unmarked corner pts\n",
                           noverlapall,ncornerall);
-      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " " BIGINT_FORMAT 
+      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " " BIGINT_FORMAT
                            " = cells overlapping surfs, "
                            "overlap cells with unmarked corner pts\n",
                            noverlapall,ncornerall);
@@ -1204,19 +1204,19 @@ void Grid::surf2grid_one(int flag, int icell, int iparent, int nsurf_caller,
       printf("Surfs in one refined cell = %d\n",nsurf);
       error->one(FLERR,"Too many surfs in one refined cell - set global surfmax");
     }
-    
+
     cinfo[icell].type = OVERLAP;
     cells[icell].nsurf = nsurf;
     cells[icell].csurfs = sptr;
     csurfs->vgot(nsurf);
 
   } else nsurf = nsurf_caller;
-  
+
   // split check done for both refinement and coarsening
-  
+
   int *surfmap = csplits->vget();
   ChildCell *c = &cells[icell];
-  
+
   if (dim == 3)
     nsplitone = cut3d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
                              vols,surfmap,cinfo[icell].corner,
@@ -1225,15 +1225,15 @@ void Grid::surf2grid_one(int flag, int icell, int iparent, int nsurf_caller,
     nsplitone = cut2d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
                              vols,surfmap,cinfo[icell].corner,
                              xsub,xsplit);
-  
+
   if (nsplitone == 1) {
     if (cinfo[icell].corner[0] != UNKNOWN)
       cinfo[icell].volume = vols[0];
-    
+
   } else {
     c->nsplit = nsplitone;
     nunsplitlocal--;
-    
+
     c->isplit = grid->nsplitlocal;
     add_split_cell(1);
     SplitInfo *s = &sinfo[nsplitlocal-1];
@@ -1244,7 +1244,7 @@ void Grid::surf2grid_one(int flag, int icell, int iparent, int nsurf_caller,
     s->xsplit[1] = xsplit[1];
     if (dim == 3) s->xsplit[2] = xsplit[2];
     else s->xsplit[2] = 0.0;
-    
+
     iptr = s->csubs = csubs->vget();
 
     // add nsplitone sub cells
@@ -1259,7 +1259,7 @@ void Grid::surf2grid_one(int flag, int icell, int iparent, int nsurf_caller,
       cinfo[isub].volume = vols[i];
       iptr[i] = isub;
     }
-    
+
     csplits->vgot(nsurf);
     csubs->vgot(nsplitone);
   }
@@ -1314,7 +1314,7 @@ void Grid::clear_surf()
       for (int m = 0; m < ncorner; m++) cinfo[icell].corner[m] = UNKNOWN;
       lo = cells[icell].lo;
       hi = cells[icell].hi;
-      if (dimension == 3) 
+      if (dimension == 3)
         cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
       else if (domain->axisymmetric)
         cinfo[icell].volume = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
@@ -1334,7 +1334,7 @@ void Grid::clear_surf()
   // assumes particles are sorted,
   //   so count/first values in compressed cinfo data struct are still valid
   // when done, particles are still sorted
-  
+
   if (particle->exist && nlocal < nlocal_prev) {
     Particle::OnePart *particles = particle->particles;
     int *next = particle->next;
@@ -1356,7 +1356,7 @@ void Grid::clear_surf()
   csubs->reset();
 
   // reset all cell counters
-  
+
   nunsplitlocal = nlocal;
   nsplitlocal = nsublocal = 0;
 }
@@ -1385,7 +1385,7 @@ void Grid::clear_surf_restart()
     for (int m = 0; m < ncorner; m++) cinfo[icell].corner[m] = UNKNOWN;
     lo = cells[icell].lo;
     hi = cells[icell].hi;
-    if (dimension == 3) 
+    if (dimension == 3)
       cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
     else if (domain->axisymmetric)
       cinfo[icell].volume = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
@@ -1415,10 +1415,10 @@ void Grid::combine_split_cell_particles(int icell, int relabel)
     jcell = mycsubs[i];
     count += cinfo[jcell].count;
     if (cinfo[jcell].first < 0) continue;
-    
+
     if (first < 0) first = cinfo[jcell].first;
     else next[iplast] = cinfo[jcell].first;
-    
+
     ip = cinfo[jcell].first;
     while (ip >= 0) {
       iplast = ip;
@@ -1474,7 +1474,7 @@ void Grid::assign_split_cell_particles(int icell)
    // NOTE: make this only for implicit surfs
 ------------------------------------------------------------------------- */
 
-int Grid::outside_surfs(int icell, double *x, 
+int Grid::outside_surfs(int icell, double *x,
                         Cut3d *cut3d_caller, Cut2d *cut2d_caller)
 {
   if (cells[icell].nsurf == 0) {
@@ -1512,11 +1512,11 @@ int Grid::outside_surfs(int icell, double *x,
 
   } else {
     double onethird = 1.0/3.0;
-    xnew[0] = onethird * 
+    xnew[0] = onethird *
       (tris[isurf].p1[0] + tris[isurf].p2[0] + tris[isurf].p3[0]);
-    xnew[1] = onethird * 
+    xnew[1] = onethird *
       (tris[isurf].p1[1] + tris[isurf].p2[1] + tris[isurf].p3[1]);
-    xnew[2] = onethird * 
+    xnew[2] = onethird *
       (tris[isurf].p1[2] + tris[isurf].p2[2] + tris[isurf].p3[2]);
 
     MathExtra::sub3(tris[isurf].p1,tris[isurf].p2,edge);
@@ -1533,7 +1533,7 @@ int Grid::outside_surfs(int icell, double *x,
   xnew[0] += displace*tris[isurf].norm[0];
   xnew[1] += displace*tris[isurf].norm[1];
   xnew[2] += displace*tris[isurf].norm[2];
-  
+
   // loop over surfs, ray-trace from x to xnew, see which surf is hit first
   // if no surf is hit (roundoff), assume particle is outside
 
@@ -1637,12 +1637,12 @@ void Grid::surf2grid_stats()
     if (cells[icell].nsurf) scount++;
     stotal += cells[icell].nsurf;
     smax = MAX(smax,cells[icell].nsurf);
-    
+
     cmax = MAX(cells[icell].hi[0] - cells[icell].lo[0],
 	       cells[icell].hi[1] - cells[icell].lo[1]);
-    if (dimension == 3) 
+    if (dimension == 3)
       cmax = MAX(cmax,cells[icell].hi[2] - cells[icell].lo[2]);
-    
+
     if (dimension == 2) {
       for (int i = 0; i < cells[icell].nsurf; i++) {
 
@@ -1661,7 +1661,7 @@ void Grid::surf2grid_stats()
       }
     }
   }
-  
+
   bigint bscount = scount;
   bigint bstotal = stotal;
   bigint scountall,stotalall;
@@ -1671,18 +1671,18 @@ void Grid::surf2grid_stats()
   MPI_Allreduce(&bstotal,&stotalall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   MPI_Allreduce(&smax,&smaxall,1,MPI_INT,MPI_MAX,world);
   MPI_Allreduce(&sratio,&sratioall,1,MPI_DOUBLE,MPI_MIN,world);
-  
+
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"  " BIGINT_FORMAT " = cells with surfs\n",scountall);
-      fprintf(screen,"  " BIGINT_FORMAT 
+      fprintf(screen,"  " BIGINT_FORMAT
               " = total surfs in all grid cells\n",stotalall);
       fprintf(screen,"  %d = max surfs in one grid cell\n",smaxall);
       fprintf(screen,"  %g = min surf-size/cell-size ratio\n",sratioall);
     }
     if (logfile) {
       fprintf(logfile,"  " BIGINT_FORMAT " = cells with surfs\n",scountall);
-      fprintf(logfile,"  " BIGINT_FORMAT 
+      fprintf(logfile,"  " BIGINT_FORMAT
               " = total surfs in all grid cells\n",stotalall);
       fprintf(logfile,"  %d = max surfs in one grid cell\n",smaxall);
       fprintf(logfile,"  %g = min surf-size/cell-size ratio\n",sratioall);
@@ -1820,10 +1820,10 @@ double Grid::flow_volume()
       MPI_Allreduce(&volume,&volall,1,MPI_DOUBLE,MPI_SUM,world);
     else volall = volume;
 
-    if (volall <= 0.0) 
-      volall += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]) * 
-        (boxhi[2]-boxlo[2]); 
- 
+    if (volall <= 0.0)
+      volall += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]) *
+        (boxhi[2]-boxlo[2]);
+
   // axisymmetric "volume" of line segment = volume of truncated cone
   // PI/3 (y1^2 + y1y2 + y2^2) (x2-x1)
 
@@ -1831,7 +1831,7 @@ double Grid::flow_volume()
     for (int i = 0; i < n; i++) {
       p1 = lines[i].p1;
       p2 = lines[i].p2;
-      volume -= 
+      volume -=
         MY_PI3 * (p1[1]*p1[1] + p1[1]*p2[1] + p2[1]*p2[1]) * (p2[0]-p1[0]);
     }
 
@@ -1839,7 +1839,7 @@ double Grid::flow_volume()
       MPI_Allreduce(&volume,&volall,1,MPI_DOUBLE,MPI_SUM,world);
     else volall = volume;
 
-    if (volall <= 0.0) 
+    if (volall <= 0.0)
       volall += MY_PI * boxhi[1]*boxhi[1] * (boxhi[0]-boxlo[0]);
 
   } else {
@@ -1853,7 +1853,7 @@ double Grid::flow_volume()
       MPI_Allreduce(&volume,&volall,1,MPI_DOUBLE,MPI_SUM,world);
     else volall = volume;
 
-    if (volall <= 0.0) volall += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]); 
+    if (volall <= 0.0) volall += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]);
   }
 
   return volall;

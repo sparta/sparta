@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -33,7 +33,7 @@ class Collide : protected Pointers {
 
   int ncollide_one,nattempt_one,nreact_one;
   bigint ncollide_running,nattempt_running,nreact_running;
- 
+
   Collide(class SPARTA *, int, char **);
   virtual ~Collide();
   virtual void init();
@@ -44,10 +44,10 @@ class Collide : protected Pointers {
   virtual double vremax_init(int, int) = 0;
   virtual double attempt_collision(int, int, double) = 0;
   virtual double attempt_collision(int, int, int, double) = 0;
-  virtual int test_collision(int, int, int, 
+  virtual int test_collision(int, int, int,
 			     Particle::OnePart *, Particle::OnePart *) = 0;
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *) = 0;
-  virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&, 
+  virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
                                 Particle::OnePart *&) = 0;
 
   virtual double extract(int, int, const char *) {return 0.0;}
@@ -71,7 +71,7 @@ class Collide : protected Pointers {
   int *maxgroup;      // max # of particles allocated per group
   int **glist;        // indices into plist of particles in each group
   int **p2g;          // for each plist entry: 0 = igroup, 1 = index within glist
-  
+
   int npair;          // # of group pairs to do collisions for
   int **gpair;        // Npairx3 list of group pairs to do collisions for
                       // 0 = igroup, 1 = jgroup, 2 = # of attempt collisions
@@ -131,7 +131,7 @@ class Collide : protected Pointers {
   // inline functions
   // add particle N to Igroup and set its g2p entry in plist to K
   // delete Ith entry in Igroup and reset g2p entries as well
-  
+
   inline void addgroup(int igroup, int pindex)
   {
     if (ngroup[igroup] == maxgroup[igroup]) {
@@ -161,7 +161,7 @@ class Collide : protected Pointers {
   template < int > void collisions_group();
   void collisions_one_ambipolar();
   void collisions_group_ambipolar();
-  void ambi_reset(int, int, int, Particle::OnePart *, Particle::OnePart *, 
+  void ambi_reset(int, int, int, Particle::OnePart *, Particle::OnePart *,
                   Particle::OnePart *, int *);
   void ambi_check();
   void grow_percell(int);

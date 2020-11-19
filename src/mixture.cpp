@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -126,7 +126,7 @@ void Mixture::copy(Mixture *old)
 
   nspecies = maxspecies = old->nspecies;
   allocate();
-  
+
   for (int i = 0; i < nspecies; i++) {
     species[i] = old->species[i];
     fraction[i] = old->fraction[i];
@@ -206,14 +206,14 @@ void Mixture::init()
   else temp_rot = temp_thermal;
   if (temp_vib_flag) temp_vib = temp_vib_user;
   else temp_vib = temp_thermal;
-  
+
   // mixture temperarate cannot be 0.0 if streaming velocity is 0.0
 
-  if (temp_thermal == 0.0 && 
+  if (temp_thermal == 0.0 &&
       vstream[0] == 0.0 && vstream[1] == 0.0 && vstream[2] == 0.0)
     error->all(FLERR,"Mixture streaming velocity and "
                "temperature cannot both be zero");
-    
+
   // initialize all per-species fraction and cummulative values
   // account for both explicitly and implicitly set fractions
 
@@ -260,7 +260,7 @@ void Mixture::init()
   memory->create_ragged(groupspecies,ngroup,groupsize,"mixture:groupspecies");
 
   for (int i = 0; i < ngroup; i++) groupsize[i] = 0;
-  for (int i = 0; i < nspecies; i++) 
+  for (int i = 0; i < nspecies; i++)
     groupspecies[mix2group[i]][groupsize[mix2group[i]]++] = species[i];
 }
 
@@ -391,7 +391,7 @@ void Mixture::params(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
       temp_thermal_flag = 1;
       temp_thermal_user = atof(arg[iarg+1]);
-      if (temp_thermal_user <= 0.0) 
+      if (temp_thermal_user <= 0.0)
         error->all(FLERR,"Illegal mixture command");
       iarg += 2;
 
@@ -399,7 +399,7 @@ void Mixture::params(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
       temp_rot_flag = 1;
       temp_rot_user = atof(arg[iarg+1]);
-      if (temp_rot_user <= 0.0) 
+      if (temp_rot_user <= 0.0)
         error->all(FLERR,"Illegal mixture command");
       iarg += 2;
 
@@ -407,7 +407,7 @@ void Mixture::params(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
       temp_vib_flag = 1;
       temp_vib_user = atof(arg[iarg+1]);
-      if (temp_vib_user <= 0.0) 
+      if (temp_vib_user <= 0.0)
         error->all(FLERR,"Illegal mixture command");
       iarg += 2;
 
@@ -415,7 +415,7 @@ void Mixture::params(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
       fracflag = 1;
       fracvalue = atof(arg[iarg+1]);
-      if (fracvalue < 0.0 || fracvalue > 1.0) 
+      if (fracvalue < 0.0 || fracvalue > 1.0)
 	error->all(FLERR,"Illegal mixture command");
       iarg += 2;
 
@@ -459,11 +459,11 @@ void Mixture::params(int narg, char **arg)
     int m,ispecies;
     for (iarg = 1; iarg < narg; iarg++) {
       ispecies = particle->find_species(arg[iarg]);
-      if (ispecies < 0) 
+      if (ispecies < 0)
         error->all(FLERR,"Mixture delete species is not recognized");
       for (m = 0; m < nspecies; m++)
         if (species[m] == ispecies) break;
-      if (m == nspecies) 
+      if (m == nspecies)
         error->all(FLERR,"Mixture delete species is not in mixture");
       active[m] = 1;
     }
@@ -684,7 +684,7 @@ void Mixture::write_restart(FILE *fp)
 void Mixture::read_restart(FILE *fp)
 {
   int me = comm->me;
-  
+
   if (me == 0) fread(&nspecies,sizeof(int),1,fp);
   MPI_Bcast(&nspecies,1,MPI_INT,0,world);
 
@@ -728,7 +728,7 @@ void Mixture::read_restart(FILE *fp)
   MPI_Bcast(fraction_flag,nspecies,MPI_INT,0,world);
   if (me == 0) fread(fraction_user,sizeof(double),nspecies,fp);
   MPI_Bcast(fraction_user,nspecies,MPI_DOUBLE,0,world);
-  
+
   int ngroup_file;
   if (me == 0) fread(&ngroup_file,sizeof(int),1,fp);
   MPI_Bcast(&ngroup_file,1,MPI_INT,0,world);

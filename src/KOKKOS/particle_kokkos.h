@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -177,7 +177,7 @@ int ParticleKokkos::add_particle_kokkos(t_particle_1d particles, int index, int 
     realloc = 1;
   }
 
-  return realloc; 
+  return realloc;
 }
 
 
@@ -225,7 +225,7 @@ double ParticleKokkos::evib(int isp, double temp_thermal, rand_type &erandom) co
 
   eng = 0.0;
   if (vibstyle == DISCRETE && d_species[isp].vibdof == 2) {
-    int ivib = static_cast<int> (-log(erandom.drand()) * temp_thermal / 
+    int ivib = static_cast<int> (-log(erandom.drand()) * temp_thermal /
                                  d_species[isp].vibtemp[0]);
     eng = ivib * boltz * d_species[isp].vibtemp[0];
   } else if (vibstyle == SMOOTH || d_species[isp].vibdof >= 2) {

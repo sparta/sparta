@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -124,7 +124,7 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     if (modify->compute[icompute]->post_process_isurf_grid_flag == 0)
       error->all(FLERR,
                  "Fix ablate compute does not calculate isurf per-grid values");
-    if (argindex == 0 && 
+    if (argindex == 0 &&
         modify->compute[icompute]->size_per_grid_cols != 0)
       error->all(FLERR,"Fix ablate compute does not "
                  "calculate per-grid vector");
@@ -188,7 +188,7 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   proclist = NULL;
   locallist = NULL;
   maxsend = 0;
-  
+
   sbuf = NULL;
   maxbuf = 0;
 
@@ -260,7 +260,7 @@ int FixAblate::setmask()
 ------------------------------------------------------------------------- */
 
 void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
-                              double *cornerlo_caller, double *xyzsize_caller, 
+                              double *cornerlo_caller, double *xyzsize_caller,
                               double **cvalues_caller, int *tvalues_caller,
                               double thresh_caller, char *sgroupID, int pushflag)
 {
@@ -298,7 +298,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   // copy caller values into local values of FixAblate
 
   for (int icell = 0; icell < nglocal; icell++) {
-    for (int m = 0; m < ncorner; m++) 
+    for (int m = 0; m < ncorner; m++)
       cvalues[icell][m] = cvalues_caller[icell][m];
     if (tvalues_flag) tvalues[icell] = tvalues_caller[icell];
   }
@@ -313,11 +313,11 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
 
-    ixyz[icell][0] = 
+    ixyz[icell][0] =
       static_cast<int> ((cells[icell].lo[0]-cornerlo[0]) / xyzsize[0] + 0.5) + 1;
-    ixyz[icell][1] = 
+    ixyz[icell][1] =
       static_cast<int> ((cells[icell].lo[1]-cornerlo[1]) / xyzsize[1] + 0.5) + 1;
-    ixyz[icell][2] = 
+    ixyz[icell][2] =
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
 
@@ -340,16 +340,16 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
 
 void FixAblate::init()
 {
-  if (!storeflag) 
+  if (!storeflag)
     error->all(FLERR,"Fix ablate corner point values not stored");
 
   if (which == COMPUTE) {
     icompute = modify->find_compute(idsource);
-    if (icompute < 0) 
+    if (icompute < 0)
       error->all(FLERR,"Compute ID for fix ablate does not exist");
   } else if (which == FIX) {
     ifix = modify->find_fix(idsource);
-    if (ifix < 0) 
+    if (ifix < 0)
       error->all(FLERR,"Fix ID for fix ablate does not exist");
   }
 
@@ -386,14 +386,14 @@ void FixAblate::end_of_step()
 
 void FixAblate::create_surfs(int outflag)
 {
-  // DEBUG 
+  // DEBUG
   // store copy of last ablation's per-cell MC flags before a new ablation
 
   int **mcflags_old = mcflags;
   memory->create(mcflags,maxgrid,4,"ablate:mcflags");
   for (int i = 0; i < maxgrid; i++)
     mcflags[i][0] = mcflags[i][1] = mcflags[i][2] = mcflags[i][3] = -1;
-  
+
   // sort existing particles since may be clearing split cells
 
   if (!particle->sorted) particle->sort();
@@ -468,7 +468,7 @@ void FixAblate::create_surfs(int outflag)
   }
 
   // assign surf collision/reaction models to newly created surfs
-  // this assignment can be made in input script via surf_modify 
+  // this assignment can be made in input script via surf_modify
   //   after implicit surfs are created
   // for active ablation, must be re-assigned at every ablation atep
   // for now just assume all surfs are assigned to first collide/react model
@@ -596,7 +596,7 @@ void FixAblate::create_surfs(int outflag)
       mcell = splitcell = sinfo[cells[icell].isplit].icell;
       flag = grid->outside_surfs(splitcell,x,cut3d,cut2d);
     } else flag = grid->outside_surfs(icell,x,cut3d,cut2d);
-    
+
     if (!flag) {
       particles[i].flag = PDISCARD;
       // DEBUG - print message about MC flags for cell of deleted particle
@@ -660,7 +660,7 @@ void FixAblate::set_delta_random()
 {
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
-  
+
   // enforce same decrement no matter who owns which cells
   // NOTE: could change this at some point, use differnet RNG for each proc
 
@@ -798,7 +798,7 @@ void FixAblate::decrement()
       imin = -1;
       minvalue = 256.0;
       for (i = 0; i < ncorner; i++) {
-        if (corners[i] > 0.0 && corners[i] < minvalue && 
+        if (corners[i] > 0.0 && corners[i] < minvalue &&
             cdelta[icell][i] == 0.0) {
           imin = i;
           minvalue = corners[i];
@@ -875,15 +875,15 @@ void FixAblate::sync()
             jcorner--;
 
             // check if neighbor cell is within bounds of ablate grid
-            
+
             if (ix+jx < 1 || ix+jx > nx) continue;
             if (iy+jy < 1 || iy+jy > ny) continue;
             if (iz+jz < 1 || iz+jz > nz) continue;
 
             // jcell = local index of (jx,jy,jz) neighbor cell of icell
-            
+
             jcell = walk_to_neigh(icell,jx,jy,jz);
-            
+
             // update total with one corner point of jcell
             // jcorner descends from ncorner
 
@@ -992,26 +992,26 @@ void FixAblate::push_lohi()
             jcorner--;
 
             // check if neighbor cell is within bounds of ablate grid
-            
+
             if (ix+jx < 1 || ix+jx > nx) continue;
             if (iy+jy < 1 || iy+jy > ny) continue;
             if (iz+jz < 1 || iz+jz > nz) continue;
 
             // jcell = local index of (jx,jy,jz) neighbor cell of icell
-            
+
             jcell = walk_to_neigh(icell,jx,jy,jz);
 
             // set pushflag to 0 if jcorner pt of jcell is not
             //   on same side of threshold as icorner or icell
-            
+
             if (jcell < nglocal) {
               if ((pushflag == -1 && cvalues[jcell][jcorner] > thresh) ||
                   (pushflag == 1 && cvalues[jcell][jcorner] < thresh))
                 pushflag = 0;
             } else {
-              if ((pushflag == -1 && cdelta_ghost[jcell-nglocal][jcorner] > 
+              if ((pushflag == -1 && cdelta_ghost[jcell-nglocal][jcorner] >
                    thresh) ||
-                  (pushflag == 1 && cdelta_ghost[jcell-nglocal][jcorner] < 
+                  (pushflag == 1 && cdelta_ghost[jcell-nglocal][jcorner] <
                    thresh))
                 pushflag = 0;
             }
@@ -1036,10 +1036,10 @@ void FixAblate::push_lohi()
 
   if (me == 0) {
     if (screen)
-      fprintf(screen,"  " BIGINT_FORMAT " " BIGINT_FORMAT 
+      fprintf(screen,"  " BIGINT_FORMAT " " BIGINT_FORMAT
               " pushed corner pt values\n",ploall,phiall);
-    if (logfile) 
-      fprintf(logfile,"  " BIGINT_FORMAT " " BIGINT_FORMAT 
+    if (logfile)
+      fprintf(logfile,"  " BIGINT_FORMAT " " BIGINT_FORMAT
               " pushed corner pt values\n",ploall,phiall);
   }
 }
@@ -1232,7 +1232,7 @@ int FixAblate::walk_to_neigh(int icell, int jx, int jy, int jz)
 
 /* ----------------------------------------------------------------------
    pack icell values for per-cell arrays into buf
-   if icell is a split cell, also pack all sub cell values 
+   if icell is a split cell, also pack all sub cell values
    return byte count of amount packed
    if memflag, only return count, do not fill buf
 ------------------------------------------------------------------------- */

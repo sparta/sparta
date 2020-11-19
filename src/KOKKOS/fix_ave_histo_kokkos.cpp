@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -236,7 +236,7 @@ void FixAveHistoKokkos::end_of_step()
           DAT::t_float_1d_strided d_vec;
           computeKKBase->post_process_grid_kokkos(j,1,d_etally,NULL,d_vec);
         }
-        else if (compute->post_process_isurf_grid_flag) 
+        else if (compute->post_process_isurf_grid_flag)
           compute->post_process_isurf_grid();
 
         if (j == 0 || compute->post_process_grid_flag)

@@ -31,7 +31,7 @@ class ReactTCEKokkos : public ReactBirdKokkos {
   ReactTCEKokkos(class SPARTA *, int, char **);
   ReactTCEKokkos(class SPARTA* sparta) : ReactBirdKokkos(sparta) {};
   void init();
-  int attempt(Particle::OnePart *, Particle::OnePart *, 
+  int attempt(Particle::OnePart *, Particle::OnePart *,
               double, double, double, double &, int &) { return 0; }
 
 /* ---------------------------------------------------------------------- */
@@ -39,7 +39,7 @@ class ReactTCEKokkos : public ReactBirdKokkos {
 enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};   // other files
 
 KOKKOS_INLINE_FUNCTION
-int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp, 
+int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
          double pre_etrans, double pre_erot, double pre_evib,
          double &post_etotal, int &kspecies,
          int &recomb_species, double &recomb_density, const t_species_1d_const &d_species) const
@@ -71,20 +71,20 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 
     const double pre_etotal = pre_etrans + pre_erot + pre_evib;
 
-    double ecc = pre_etrans; 
+    double ecc = pre_etrans;
     if (pre_ave_rotdof > 0.1) ecc += pre_erot*r->d_coeff[0]/pre_ave_rotdof;
 
     const double e_excess = ecc - r->d_coeff[1];
     if (e_excess <= 0.0) continue;
-        
+
     // compute probability of reaction
-        
+
     switch (r->type) {
     case DISSOCIATION:
     case IONIZATION:
     case EXCHANGE:
       {
-        react_prob += r->d_coeff[2] * 
+        react_prob += r->d_coeff[2] *
           pow(ecc-r->d_coeff[1],r->d_coeff[3]) *
           pow(1.0-r->d_coeff[1]/ecc,r->d_coeff[5]);
         break;
@@ -94,9 +94,9 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
       {
         // skip if no 3rd particle chosen by Collide::collisions()
         //   this includes effect of boost factor to skip recomb reactions
-        // check if this recomb reaction is the same one 
+        // check if this recomb reaction is the same one
         //   that the 3rd particle species maps to, else skip it
-        // this effectively skips all recombinations reactions 
+        // this effectively skips all recombinations reactions
         //   if selected a 3rd particle species that matches none of them
         // scale probability by boost factor to restore correct stats
 
@@ -116,7 +116,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
       Kokkos::abort("ReactTCEKokkos: Unknown outcome in reaction\n");
       break;
     }
-      
+
     // test against random number to see if this reaction occurs
     // if it does, reset species of I,J and optional K to product species
     // J particle can be destroyed in recombination reaction, set species = -1
@@ -141,7 +141,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
       // Previous statment did not destroy the 2nd species (B) if
       //   recombination was specified as A+B->AB+M (which has nproductus=2)
       //   but only for the A+B->AB specication form (which has nproductus=1)
-       
+
       switch (r->type) {
       case DISSOCIATION:
       case IONIZATION:
@@ -161,13 +161,13 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 
       if (r->nproduct > 2) kspecies = r->d_products[2];
       else kspecies = -1;
-      
+
       post_etotal = pre_etotal + r->d_coeff[4];
 
       return 1;
     }
   }
-  
+
   return 0;
 }
 

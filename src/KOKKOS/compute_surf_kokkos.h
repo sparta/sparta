@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -58,7 +58,7 @@ enum{NUM,NUMWT,MFLUX,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
 template <int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
 void surf_tally_kk(int isurf, int icell, int reaction,
-                   Particle::OnePart *iorig, 
+                   Particle::OnePart *iorig,
                    Particle::OnePart *ip, Particle::OnePart *jp) const
 {
   // skip if isurf not in surface group
@@ -295,7 +295,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       if (transparent)
         etot = -0.5*mvv2e*vsqpre - weight*otherpre;
       else
-        etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
+        etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
           weight * (iother + jother - otherpre);
       a_array_surf_tally(itally,k++) -= etot * fluxscale;
       break;
@@ -315,7 +315,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
   int need_dup;
   Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterDuplicated> dup_array_surf_tally;
   Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterNonDuplicated> ndup_array_surf_tally;
- 
+
   DAT::t_surfint_1d d_tally2surf;           // tally2surf[I] = surf ID of Ith tally
   DAT::tdual_surfint_1d k_tally2surf;
   DAT::t_int_1d d_surf2tally;         // using Kokkos::UnorderedMap::insert uses too many registers on GPUs

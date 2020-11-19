@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -40,7 +40,7 @@ CreateGrid::CreateGrid(SPARTA *sparta) : Pointers(sparta) {}
 
 void CreateGrid::command(int narg, char **arg)
 {
-  if (!domain->box_exist) 
+  if (!domain->box_exist)
     error->all(FLERR,"Cannot create grid before simulation box is defined");
   if (grid->exist)
     error->all(FLERR,"Cannot create grid when grid is already defined");
@@ -63,7 +63,7 @@ void CreateGrid::command(int narg, char **arg)
   levels = NULL;
   stack = NULL;
   inside = ANY;
-  
+
   int iarg = 3;
 
   while (iarg < narg) {
@@ -91,7 +91,7 @@ void CreateGrid::command(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"zyx") == 0) order = ZYX;
       else error->all(FLERR,"Illegal create_grid command");
       iarg += 2;
-      
+
     } else if (strcmp(arg[iarg],"stride") == 0) {
       if (pstyle != NOSTYLE) error->all(FLERR,"Illegal create_grid command");
       if (iarg+2 > narg) error->all(FLERR,"Illegal create_grid command");
@@ -104,13 +104,13 @@ void CreateGrid::command(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"zyx") == 0) order = ZYX;
       else error->all(FLERR,"Illegal create_grid command");
       iarg += 2;
-      
+
     } else if (strcmp(arg[iarg],"random") == 0) {
       if (pstyle != NOSTYLE) error->all(FLERR,"Illegal create_grid command");
       if (iarg+1 > narg) error->all(FLERR,"Illegal create_grid command");
       pstyle = RANDOM;
       iarg += 1;
-      
+
     } else if (strcmp(arg[iarg],"levels") == 0) {
       if (nlevels > 1) error->all(FLERR,"Illegal create_grid command");
       if (iarg+2 > narg) error->all(FLERR,"Illegal create_grid command");
@@ -177,14 +177,14 @@ void CreateGrid::command(int narg, char **arg)
 	levels[i].cz = atoi(arg[iarg+5]);
       }
       iarg += 6;
-      
+
     } else if (strcmp(arg[iarg],"inside") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal create_grid command");
       if (strcmp(arg[iarg+1],"any") == 0) inside = ANY;
       else if (strcmp(arg[iarg+1],"all") == 0) inside = ALL;
       else error->all(FLERR,"Illegal create_grid command");
       iarg += 2;
-      
+
     } else error->all(FLERR,"Illegal create_grid command");
   }
 
@@ -196,7 +196,7 @@ void CreateGrid::command(int narg, char **arg)
     pstyle = STRIDE;
     order = XYZ;
   }
-    
+
   // check that grid levels are valid
 
   if (nx < 1 || ny < 1 || nz < 1)
@@ -264,7 +264,7 @@ void CreateGrid::command(int narg, char **arg)
   int nglocal = grid->nlocal;
 
   // invoke grid methods to complete grid setup
-  
+
   if (nprocs == 1 || pstyle == CLUMP || pstyle == BLOCK) grid->clumped = 1;
   else grid->clumped = 0;
 
@@ -274,7 +274,7 @@ void CreateGrid::command(int narg, char **arg)
   grid->find_neighbors();
   grid->check_uniform();
   comm->reset_neighbors();
-  
+
   MPI_Barrier(world);
   double time3 = MPI_Wtime();
 
@@ -282,7 +282,7 @@ void CreateGrid::command(int narg, char **arg)
 
   delete [] levels;
   delete [] stack;
-  
+
   // stats
 
   double time_total = time3-time1;
@@ -314,7 +314,7 @@ void CreateGrid::create_block()
   cellint childID;
   double lo[3],hi[3];
   Stack *s;
-  
+
   // partition single-level grid across procs
 
   procs2grid(nx,ny,nz,px,py,pz);
@@ -338,7 +338,7 @@ void CreateGrid::create_block()
 
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
-  
+
   for (iz = izlo; iz <= izhi; iz++) {
     for (iy = iylo; iy <= iyhi; iy++) {
       for (ix = ixlo; ix <= ixhi; ix++) {
@@ -369,7 +369,7 @@ void CreateGrid::create_clump()
   cellint childID;
   double lo[3],hi[3];
   Stack *s;
-  
+
   if (order == XYZ) {
     n1 = nx; n2 = ny; n3 = nz;
   } else if (order == XZY) {
@@ -383,9 +383,9 @@ void CreateGrid::create_clump()
   } else if (order == ZYX) {
     n1 = nz; n2 = ny; n3 = nx;
   }
-  
+
   // loop over my clump of ordered cells in requested order
-  
+
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
 
@@ -411,7 +411,7 @@ void CreateGrid::create_clump()
     } else if (order == ZYX) {
       ix = i3; iy = i2; iz = i1;
     }
-    
+
     childID = (cellint) iz*ny*nx + (cellint) iy*nx + ix + 1;
     grid->id_child_lohi(0,boxlo,boxhi,childID,lo,hi);
 
@@ -451,7 +451,7 @@ void CreateGrid::create_stride()
   } else if (order == ZYX) {
     n1 = nz; n2 = ny; n3 = nx;
   }
-  
+
   // stride over all ntotal cells in requested order
 
   double *boxlo = domain->boxlo;
@@ -477,12 +477,12 @@ void CreateGrid::create_stride()
     } else if (order == ZYX) {
       ix = i3; iy = i2; iz = i1;
     }
-    
+
     childID = (cellint) iz*ny*nx + (cellint) iy*nx + ix + 1;
     grid->id_child_lohi(0,boxlo,boxhi,childID,lo,hi);
 
     //printf("MMM m %d ixyz %d %d %d childID %d\n",m,ix,iy,iz,childID);
-    
+
     if (nlevels == 1) {
       grid->add_child_cell(childID,1,lo,hi);
     } else {
@@ -504,7 +504,7 @@ void CreateGrid::create_random()
   cellint childID;
   double lo[3],hi[3];
   Stack *s;
-  
+
   RanPark *random = new RanPark(update->ranmaster->uniform());
 
   // loop over all ntotal cells
@@ -518,10 +518,10 @@ void CreateGrid::create_random()
   for (cellint m = 0; m < ntotal; m++) {
     proc = static_cast<int> (nprocs*random->uniform());
     if (proc != me) continue;
-    
+
     childID = m+1;
     grid->id_child_lohi(0,boxlo,boxhi,childID,lo,hi);
-    
+
     if (nlevels == 1) {
       grid->add_child_cell(childID,1,lo,hi);
     } else {
@@ -585,7 +585,7 @@ void CreateGrid::recurse_levels(int istack)
   int nz = plevels[level].nz;
   nbits = plevels[level].nbits;
   Stack *sc = &stack[istack+1];
-  
+
   cellint m = 0;
   for (iz = 0; iz < nz; iz++) {
     for (iy = 0; iy < ny; iy++) {
@@ -629,7 +629,7 @@ void CreateGrid::bounds(char *str, int nmax, int &nlo, int &nhi)
     nhi = atoi(ptr+1);
   }
 
-  if (nlo < 1 || nhi > nmax || nlo > nhi) 
+  if (nlo < 1 || nhi > nmax || nlo > nhi)
     error->all(FLERR,"Create_grid subset index is out of bounds");
 }
 
@@ -645,7 +645,7 @@ int CreateGrid::cell_in_region(double *lo, double *hi, Region *region)
   double x[3];
 
   int n = 0;
-  
+
   x[0] = lo[0]; x[1] = lo[1]; x[2] = lo[2];
   n += region->match(x);
   x[0] = hi[0]; x[1] = lo[1]; x[2] = lo[2];
@@ -677,7 +677,7 @@ int CreateGrid::cell_in_region(double *lo, double *hi, Region *region)
 }
 
 /* ----------------------------------------------------------------------
-   assign nprocs to 3d grid so as to minimize surface area 
+   assign nprocs to 3d grid so as to minimize surface area
    area = surface area of each of 3 faces of simulation box
 ------------------------------------------------------------------------- */
 
@@ -742,7 +742,7 @@ void CreateGrid::procs2grid(int nx, int ny, int nz, int &px, int &py, int &pz)
 	ipy++;
 	continue;
       }
-      
+
       ipz = nprocs/ipx/ipy;
       valid = 1;
       if (upz && ipz != upz) valid = 0;
@@ -751,7 +751,7 @@ void CreateGrid::procs2grid(int nx, int ny, int nz, int &px, int &py, int &pz)
 	ipy++;
 	continue;
       }
-      
+
       surf = area[0]/ipx/ipy + area[1]/ipx/ipz + area[2]/ipy/ipz;
       if (surf < bestsurf) {
 	bestsurf = surf;

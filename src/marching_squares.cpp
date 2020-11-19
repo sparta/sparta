@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -23,7 +23,7 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 /* ---------------------------------------------------------------------- */
 
 MarchingSquares::MarchingSquares(SPARTA *sparta, int ggroup_caller,
-                                 double thresh_caller) : 
+                                 double thresh_caller) :
   Pointers(sparta)
 {
   ggroup = ggroup_caller;
@@ -85,13 +85,13 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
     bit1 = v01 <= thresh ? 0 : 1;
     bit2 = v11 <= thresh ? 0 : 1;
     bit3 = v10 <= thresh ? 0 : 1;
-    
+
     which = (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
     splitflag = 0;
 
     switch (which) {
 
-    case 0: 
+    case 0:
       nsurf = 0;
       break;
 
@@ -225,14 +225,14 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
       pt[1][1] = interpolate(v00,v10,lo[1],hi[1]);
       break;
 
-    case 13: 
+    case 13:
       nsurf = 1;
       pt[0][0] = hi[0];
       pt[0][1] = interpolate(v01,v11,lo[1],hi[1]);
       pt[1][0] = interpolate(v00,v01,lo[0],hi[0]);
       pt[1][1] = lo[1];
       break;
-    
+
     case 14:
       nsurf = 1;
       pt[0][0] = interpolate(v00,v01,lo[0],hi[0]);
@@ -240,7 +240,7 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
       pt[1][0] = lo[0];
       pt[1][1] = interpolate(v00,v10,lo[1],hi[1]);
       break;
-    
+
     case 15:
       nsurf = 0;
       break;
@@ -249,7 +249,7 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
     // populate Grid and Surf data structs
     // points will be duplicated, not unique
     // surf ID = cell ID for all surfs in cell
-    
+
     ptr = csurfs->get(nsurf);
 
     ipt = 0;

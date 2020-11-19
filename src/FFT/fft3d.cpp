@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -81,7 +81,7 @@ void fft_3d(FFT_DATA *in, FFT_DATA *out, int flag, struct fft_plan_3d *plan)
   if (plan->pre_plan) {
     if (plan->pre_target == 0) copy = out;
     else copy = plan->copy;
-    remap_3d((FFT_SCALAR *) in, (FFT_SCALAR *) copy, 
+    remap_3d((FFT_SCALAR *) in, (FFT_SCALAR *) copy,
              (FFT_SCALAR *) plan->scratch, plan->pre_plan);
     data = copy;
   }
@@ -123,7 +123,7 @@ void fft_3d(FFT_DATA *in, FFT_DATA *out, int flag, struct fft_plan_3d *plan)
 
   if (plan->mid1_target == 0) copy = out;
   else copy = plan->copy;
-  remap_3d((FFT_SCALAR *) data, (FFT_SCALAR *) copy, 
+  remap_3d((FFT_SCALAR *) data, (FFT_SCALAR *) copy,
            (FFT_SCALAR *) plan->scratch, plan->mid1_plan);
   data = copy;
 
@@ -162,7 +162,7 @@ void fft_3d(FFT_DATA *in, FFT_DATA *out, int flag, struct fft_plan_3d *plan)
 
   if (plan->mid2_target == 0) copy = out;
   else copy = plan->copy;
-  remap_3d((FFT_SCALAR *) data, (FFT_SCALAR *) copy, 
+  remap_3d((FFT_SCALAR *) data, (FFT_SCALAR *) copy,
            (FFT_SCALAR *) plan->scratch, plan->mid2_plan);
   data = copy;
 
@@ -200,7 +200,7 @@ void fft_3d(FFT_DATA *in, FFT_DATA *out, int flag, struct fft_plan_3d *plan)
   // destination is always out
 
   if (plan->post_plan)
-    remap_3d((FFT_SCALAR *) data, (FFT_SCALAR *) out, 
+    remap_3d((FFT_SCALAR *) data, (FFT_SCALAR *) out,
              (FFT_SCALAR *) plan->scratch, plan->post_plan);
 
   // scaling if required
@@ -408,7 +408,7 @@ struct fft_plan_3d *fft_3d_create_plan(
 
   // configure plan memory pointers and allocate work space
   // out_size = amount of memory given to FFT by user
-  // first/second/third_size = 
+  // first/second/third_size =
   //   amount of memory needed after pre,mid1,mid2 remaps
   // copy_size = amount needed internally for extra copy of data
   // scratch_size = amount needed internally for remap scratch space
@@ -478,27 +478,27 @@ struct fft_plan_3d *fft_3d_create_plan(
   // and scaling normalization
 
 #if defined(FFT_MKL)
-  DftiCreateDescriptor( &(plan->handle_fast), FFT_MKL_PREC, DFTI_COMPLEX, 1, 
+  DftiCreateDescriptor( &(plan->handle_fast), FFT_MKL_PREC, DFTI_COMPLEX, 1,
                         (MKL_LONG)nfast);
-  DftiSetValue(plan->handle_fast, DFTI_NUMBER_OF_TRANSFORMS, 
+  DftiSetValue(plan->handle_fast, DFTI_NUMBER_OF_TRANSFORMS,
                (MKL_LONG)plan->total1/nfast);
   DftiSetValue(plan->handle_fast, DFTI_PLACEMENT,DFTI_INPLACE);
   DftiSetValue(plan->handle_fast, DFTI_INPUT_DISTANCE, (MKL_LONG)nfast);
   DftiSetValue(plan->handle_fast, DFTI_OUTPUT_DISTANCE, (MKL_LONG)nfast);
   DftiCommitDescriptor(plan->handle_fast);
 
-  DftiCreateDescriptor( &(plan->handle_mid), FFT_MKL_PREC, DFTI_COMPLEX, 1, 
+  DftiCreateDescriptor( &(plan->handle_mid), FFT_MKL_PREC, DFTI_COMPLEX, 1,
                         (MKL_LONG)nmid);
-  DftiSetValue(plan->handle_mid, DFTI_NUMBER_OF_TRANSFORMS, 
+  DftiSetValue(plan->handle_mid, DFTI_NUMBER_OF_TRANSFORMS,
                (MKL_LONG)plan->total2/nmid);
   DftiSetValue(plan->handle_mid, DFTI_PLACEMENT,DFTI_INPLACE);
   DftiSetValue(plan->handle_mid, DFTI_INPUT_DISTANCE, (MKL_LONG)nmid);
   DftiSetValue(plan->handle_mid, DFTI_OUTPUT_DISTANCE, (MKL_LONG)nmid);
   DftiCommitDescriptor(plan->handle_mid);
 
-  DftiCreateDescriptor( &(plan->handle_slow), FFT_MKL_PREC, DFTI_COMPLEX, 1, 
+  DftiCreateDescriptor( &(plan->handle_slow), FFT_MKL_PREC, DFTI_COMPLEX, 1,
                         (MKL_LONG)nslow);
-  DftiSetValue(plan->handle_slow, DFTI_NUMBER_OF_TRANSFORMS, 
+  DftiSetValue(plan->handle_slow, DFTI_NUMBER_OF_TRANSFORMS,
                (MKL_LONG)plan->total3/nslow);
   DftiSetValue(plan->handle_slow, DFTI_PLACEMENT,DFTI_INPLACE);
   DftiSetValue(plan->handle_slow, DFTI_INPUT_DISTANCE, (MKL_LONG)nslow);
@@ -760,7 +760,7 @@ void bifactor(int n, int *factor1, int *factor2)
    plan         plan returned by previous call to fft_3d_create_plan
 ------------------------------------------------------------------------- */
 
-void fft_3d_1d_only(FFT_DATA *data, int nsize, int flag, 
+void fft_3d_1d_only(FFT_DATA *data, int nsize, int flag,
                     struct fft_plan_3d *plan)
 {
   int i,num;

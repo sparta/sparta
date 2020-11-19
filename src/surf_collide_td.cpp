@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -66,7 +66,7 @@ SurfCollideTD::SurfCollideTD(SPARTA *sparta, int narg, char **arg) :
       if (iarg+2 > narg) error->all(FLERR,"Illegal surf_collide td command");
       barrier_flag = 1;
       barrier_val = atof(arg[iarg+1]);
-      if (barrier_val < 0.0) 
+      if (barrier_val < 0.0)
         error->all(FLERR,"Illegal surf_collide td barrier value");
       iarg += 2;
     } else if (strcmp(arg[iarg],"initenergy") == 0) {
@@ -75,7 +75,7 @@ SurfCollideTD::SurfCollideTD(SPARTA *sparta, int narg, char **arg) :
       initen_trans = atof(arg[iarg+1]);
       initen_rot = atof(arg[iarg+2]);
       initen_vib = atof(arg[iarg+3]);
-      if (initen_trans < 0.0 || initen_rot < 0.0 || initen_vib < 0.0) 
+      if (initen_trans < 0.0 || initen_rot < 0.0 || initen_vib < 0.0)
         error->all(FLERR,"Illegal surf_collide td initenergy value");
       iarg += 4;
     } else if (strcmp(arg[iarg],"bond") == 0) {
@@ -84,7 +84,7 @@ SurfCollideTD::SurfCollideTD(SPARTA *sparta, int narg, char **arg) :
       bond_trans = atof(arg[iarg+1]);
       bond_rot = atof(arg[iarg+2]);
       bond_vib = atof(arg[iarg+3]);
-      if (bond_trans < 0.0 || bond_rot < 0.0 || bond_vib < 0.0) 
+      if (bond_trans < 0.0 || bond_rot < 0.0 || bond_vib < 0.0)
         error->all(FLERR,"Illegal surf_collide td bond value");
       iarg += 4;
     } else error->all(FLERR,"Illegal surf_collide td command");
@@ -93,7 +93,7 @@ SurfCollideTD::SurfCollideTD(SPARTA *sparta, int narg, char **arg) :
   vstream[0] = vstream[1] = vstream[2] = 0.0;
 
   // initialize RNG
-  
+
   random = new RanPark(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,comm->me,100);
@@ -117,7 +117,7 @@ void SurfCollideTD::init()
 
   if (tstr) {
     tvar = input->variable->find(tstr);
-    if (tvar < 0) 
+    if (tvar < 0)
       error->all(FLERR,"Surf_collide td variable name does not exist");
     if (!input->variable->equal_style(tvar))
       error->all(FLERR,"Surf_collide td variable is invalid style");
@@ -166,7 +166,7 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
   // call any fixes with a surf_react() method
   // they may reset j to -1, e.g. fix ambipolar
   //   in which case newly created j is deleted
-  
+
   if (reaction && modify->n_surf_react) {
     int i = -1;
     if (ip) i = ip - particle->particles;
@@ -199,10 +199,10 @@ void SurfCollideTD::td(Particle::OnePart *p, double *norm)
   Particle::Species *species = particle->species;
   int ispecies = p->ispecies;
   double boltz = update->boltz;
-    
+
   double *v = p->v;
   double dot = MathExtra::dot3(v,norm);
-        
+
   tangent1[0] = v[0] - dot*norm[0];
   tangent1[1] = v[1] - dot*norm[1];
   tangent1[2] = v[2] - dot*norm[2];
@@ -212,21 +212,21 @@ void SurfCollideTD::td(Particle::OnePart *p, double *norm)
     tangent2[1] = random->uniform();
     tangent2[2] = random->uniform();
     MathExtra::cross3(norm,tangent2,tangent1);
-  } 
+  }
 
   MathExtra::norm3(tangent1);
   MathExtra::cross3(norm,tangent1,tangent2);
-  
+
   double mass = species[ispecies].mass;
   double E_i = 0.5 * mass * MathExtra::lensq3(v);
-  
+
   double E_t = boltz*twall;
   if (bond_flag) E_t += boltz*bond_trans;
   if (initen_flag) E_t += E_i*initen_trans;
-  
+
   double E_n = E_t;
   if (barrier_flag) E_n += boltz*barrier_val;
-  
+
   double vrm_n = sqrt(2.0*E_n / mass);
   double vrm_t = sqrt(2.0*E_t / mass);
   double vperp = vrm_n * sqrt(-log(random->uniform()));
@@ -239,10 +239,10 @@ void SurfCollideTD::td(Particle::OnePart *p, double *norm)
   v[0] = vperp*norm[0] + vtan1*tangent1[0] + vtan2*tangent2[0];
   v[1] = vperp*norm[1] + vtan1*tangent1[1] + vtan2*tangent2[1];
   v[2] = vperp*norm[2] + vtan1*tangent1[2] + vtan2*tangent2[2];
-  
+
   double twall_rot = twall;
   double twall_vib = twall;
-  
+
   if (bond_flag) {
     twall_rot += bond_rot;
     twall_vib += bond_vib;
@@ -252,8 +252,8 @@ void SurfCollideTD::td(Particle::OnePart *p, double *norm)
     twall_rot += E_i*initen_rot/boltz;
     twall_vib += E_i*initen_vib/boltz;
   }
-  
-  p->erot = particle->erot(ispecies,twall_rot,random); 
+
+  p->erot = particle->erot(ispecies,twall_rot,random);
   p->evib = particle->evib(ispecies,twall_vib,random);
 }
 

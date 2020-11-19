@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -418,9 +418,9 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
         do {
           do beta_un = (6.0*rand_gen.drand() - 3.0);
           while (beta_un + scosine < 0.0);
-          normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
+          normalized_distbn_fn = 2.0 * (beta_un + scosine) /
             (scosine + sqrt(scosine*scosine + 2.0)) *
-            exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
+            exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) -
                 beta_un*beta_un);
         } while (normalized_distbn_fn < rand_gen.drand());
 
@@ -468,9 +468,9 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
         do {
           beta_un = (6.0*rand_gen.drand() - 3.0);
         } while (beta_un + scosine < 0.0);
-        normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
+        normalized_distbn_fn = 2.0 * (beta_un + scosine) /
           (scosine + sqrt(scosine*scosine + 2.0)) *
-          exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
+          exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) -
               beta_un*beta_un);
       } while (normalized_distbn_fn < rand_gen.drand());
 
@@ -521,7 +521,7 @@ void FixEmitFaceKokkos::grow_task()
     for (int i = 0; i < ntaskmax; i++)
       tasks[i].ntargetsp = k_ntargetsp.h_view.data() + i*k_ntargetsp.h_view.extent(1);
   }
-  
+
   if (subsonic_style == PONLY) {
     k_vscale.modify_host(); // force resize on host
     k_vscale.sync_host();

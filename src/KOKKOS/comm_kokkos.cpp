@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -57,7 +57,7 @@ CommKokkos::~CommKokkos()
 
 /* ----------------------------------------------------------------------
    migrate particles to new procs after particle move
-   return particle nlocal after compression, 
+   return particle nlocal after compression,
      so Update can iterate on particle move
 ------------------------------------------------------------------------- */
 
@@ -109,7 +109,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
     h_pproc = HAT::t_int_1d(Kokkos::view_alloc("comm:pproc_mirror",Kokkos::WithoutInitializing),maxpproc);
     pproc = h_pproc.data();
   }
-  //if (maxsendbuf == 0 || nmigrate*nbytes > maxsendbuf) { // this doesn't work, not sure why 
+  //if (maxsendbuf == 0 || nmigrate*nbytes > maxsendbuf) { // this doesn't work, not sure why
     int maxsendbuf = nmigrate*nbytes;
     if (maxsendbuf > int(d_sbuf.extent(0)))
       d_sbuf = DAT::t_char_1d(Kokkos::view_alloc("comm:sbuf",Kokkos::WithoutInitializing),maxsendbuf);
@@ -184,7 +184,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
   int nrecv;
   if (neighflag)
     nrecv = iparticle_kk->augment_data_uniform(nsend,pproc);
-  else 
+  else
     nrecv = iparticle_kk->create_data_uniform(nsend,pproc,commsortflag);
 
   // extend particle list if necessary

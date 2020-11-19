@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -96,7 +96,7 @@ void ComputeSurfKokkos::init_normflux()
     h_normflux(n) = normflux[n];
   Kokkos::deep_copy(d_normflux,h_normflux);
 
-  // Cannot realloc inside a Kokkos parallel region, so size tally2surf as nsurf 
+  // Cannot realloc inside a Kokkos parallel region, so size tally2surf as nsurf
   memoryKK->grow_kokkos(k_tally2surf,tally2surf,nsurf,"surf:tally2surf");
   d_tally2surf = k_tally2surf.d_view;
   d_surf2tally = DAT::t_int_1d("surf:surf2tally",nsurf);
@@ -176,7 +176,7 @@ int ComputeSurfKokkos::tallyinfo(surfint *&ptr)
 
 void ComputeSurfKokkos::grow_tally()
 {
-  // Cannot realloc inside a Kokkos parallel region, so size tally2surf the 
+  // Cannot realloc inside a Kokkos parallel region, so size tally2surf the
   //  same as surf2tally
 
   int nsurf = surf->nlocal + surf->nghost;

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -46,7 +46,7 @@ ComputeEFluxGrid::ComputeEFluxGrid(SPARTA *sparta, int narg, char **arg) :
   if (narg < 5) error->all(FLERR,"Illegal compute eflux/grid command");
 
   int igroup = grid->find_group(arg[2]);
-  if (igroup < 0) 
+  if (igroup < 0)
     error->all(FLERR,"Compute eflux/grid group ID does not exist");
   groupbit = grid->bitmask[igroup];
 
@@ -57,7 +57,7 @@ ComputeEFluxGrid::ComputeEFluxGrid(SPARTA *sparta, int narg, char **arg) :
 
   nvalue = narg - 4;
   value = new int[nvalue];
-  
+
   npergroup = 0;
   unique = new int[LASTSIZE];
   nmap = new int[nvalue];
@@ -304,7 +304,7 @@ void ComputeEFluxGrid::post_process_grid(int index, int nsample,
 {
   index--;
   int ivalue = index % nvalue;
-  
+
   int lo = 0;
   int hi = nglocal;
   int k = 0;
@@ -321,19 +321,19 @@ void ComputeEFluxGrid::post_process_grid(int index, int nsample,
   // Vcm = Sum mv / Sum m = (Wx,Wy,Wz)
   // Wi = Sum mVi / M
   // heati = 0.5 * F/V Sum m (Vi - Wi) (V - W)^2
-  // (Vi - Wi) (V - W)^2 = (Vi - Wi) 
+  // (Vi - Wi) (V - W)^2 = (Vi - Wi)
   //                       [ (Vi - Wi)^2 + (V1 - W1)^2 + (V2 - W2)^2 ]
   // i = xyz and 1,2 = xyx indices different than i
   // heati = 3 terms = h+h1+h2 where h2 is same as h1 with V1 replaced by V2
   // h = F/V Sum m (Vi-Wi)^3
   //   (Vi-Wi)^3 = Vi^3 - 3WiVi^2 + 3Wi^2Vi - Wi^3
-  //   Sum m (Vi-Wi)^3 = Sum(mVi^3) - 3 Sum(mVi^2) Sum(mVi) / M + 
+  //   Sum m (Vi-Wi)^3 = Sum(mVi^3) - 3 Sum(mVi^2) Sum(mVi) / M +
   //                     2 Sum(mVi)^3 / M^2
   // h1 = F/V Sum m (Vi-Wi) (V1-W1)^2
   //   (Vi-Wi) (V1-W1)^2 = ViV1^2 - 2ViV1W1 + ViW1^2 - WiV1^2 + 2V1WiW1 - WiW1^2
   //   3 terms in previous equation combine to 1 term in next equation
   //   Sum m (Vi-Wi) (V1-W1)^2 = Sum(mViV1^2) - 2 Sum(mViV1) Sum(mV1) / M -
-  //                             Sum(mVi) Sum(mV1^2) / M + 
+  //                             Sum(mVi) Sum(mV1^2) / M +
   //                             2 Sum(mVi) Sum(mV1)^2 / M^2
 
   double summass,h,h1,h2,wt;
@@ -360,11 +360,11 @@ void ComputeEFluxGrid::post_process_grid(int index, int nsample,
     summass = t[mass];
     if (summass == 0.0) vec[k] = 0.0;
     else {
-      h = t[mvvv] - 3.0*t[mv]*t[mvv]/summass + 
+      h = t[mvvv] - 3.0*t[mv]*t[mvv]/summass +
         2.0*t[mv]*t[mv]*t[mv]/summass/summass;
-      h1 = t[mvv1v1] - 2.0*t[mvv1]*t[mv1]/summass - t[mv]*t[mv1v1]/summass + 
+      h1 = t[mvv1v1] - 2.0*t[mvv1]*t[mv1]/summass - t[mv]*t[mv1v1]/summass +
 	2.0*t[mv]*t[mv1]*t[mv1]/summass/summass;
-      h2 = t[mvv2v2] - 2.0*t[mvv2]*t[mv2]/summass - t[mv]*t[mv2v2]/summass + 
+      h2 = t[mvv2v2] - 2.0*t[mvv2]*t[mv2]/summass - t[mv]*t[mv2v2]/summass +
 	2.0*t[mv]*t[mv2]*t[mv2]/summass/summass;
       wt = 0.5 * fnum * cinfo[icell].weight / cinfo[icell].volume;
       vec[k] = wt * (h + h1 + h2);
