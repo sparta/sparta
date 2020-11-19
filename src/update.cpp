@@ -562,15 +562,18 @@ template < int DIM, int SURF > void Update::move()
         // frac = fraction of move completed before hitting cell face
         // this section should be as efficient as possible,
         //   since most particles won't do anything else
-        // axisymmetric cell face crossings:
-        //   use linear xnew to check vertical faces
-        //   must always check move against curved lower y face of cell
-        //   use remapped rnew to check horizontal lines
-        //   for y faces, if pflag = PEXIT, particle was just received
-        //     from another proc and is exiting this cell from face:
-        //       axi_horizontal_line() will not detect correct crossing,
-        //       so set frac and outface directly to move into adjacent cell,
-        //       then unset pflag so not checked again for this particle
+        // axisymmetric y cell face crossings:
+        //   these faces are curved cylindrical shells
+        //   axi_horizontal_line() checks for intersection of
+        //     straight-line y,z move with circle in y,z
+        //   always check move against lower y face
+        //     except when particle starts on face and
+        //     PEXIT is set (just received) or particle is moving downward in y
+        //   only check move against upper y face
+        //     if remapped final y position (rnew) is within cell,
+        //     or except when particle starts on face and 
+        //     PEXIT is set (just received) or particle is moving upward in y
+        //   unset pflag so not checked again for this particle
 
         outface = INTERIOR;
         frac = 1.0;
@@ -600,7 +603,7 @@ template < int DIM, int SURF > void Update::move()
         }
 
         if (DIM == 1) {
-          if (pflag == PEXIT && x[1] == lo[1]) {
+          if (x[1] == lo[1] && (pflag == PEXIT || v[1] < 0.0)) {
             frac = 0.0;
             outface = YLO;
           } else if (Geometry::
@@ -612,7 +615,7 @@ template < int DIM, int SURF > void Update::move()
             }
           }
 
-          if (pflag == PEXIT && x[1] == hi[1]) {
+          if (x[1] == hi[1] && (pflag == PEXIT || v[1] > 0.0)) {
             frac = 0.0;
             outface = YHI;
           } else {
