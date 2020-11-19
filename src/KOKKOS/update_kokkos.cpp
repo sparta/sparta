@@ -819,6 +819,11 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       // then unset pflag so not checked again for this particle
 
       nsurf = d_cells[icell].nsurf;
+      if (pflag == PEXIT) {
+        nsurf = 0;
+        pflag = 0;
+      }
+
       if (ATOMIC_REDUCTION == 1)
         Kokkos::atomic_fetch_add(&d_nscheck_one(),nsurf);
       else if (ATOMIC_REDUCTION == 0)
