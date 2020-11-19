@@ -78,7 +78,7 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
     v01 = cvalues[icell][1];
     v10 = cvalues[icell][2];
     v11 = cvalues[icell][3];
-    
+
     // make last 2 bits consistent with Wiki page (see NOTE above)
 
     bit0 = v00 <= thresh ? 0 : 1;

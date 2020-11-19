@@ -33,6 +33,7 @@
 #include "write_grid.h"
 #include "random_mars.h"
 #include "random_park.h"
+#include "hashlittle.h"
 #include "my_page.h"
 #include "math_extra.h"
 #include "math_const.h"
@@ -52,8 +53,7 @@ enum{SUM,MINIMUM,MAXIMUM};
 enum{ONE,RUNNING};                      // also in FixAveGrid
 
 #define INVOKED_PER_GRID 16
-#define DELTA_NEW 1024
-#define DELTA_SEND 1024
+#define DELTA_LIST 1024
 #define BIG 1.0e20
 
 /* ---------------------------------------------------------------------- */
@@ -64,8 +64,6 @@ AdaptGrid::AdaptGrid(SPARTA *sparta) : Pointers(sparta)
   nprocs = comm->nprocs;
 
   valueID = NULL;
-  maxnew = 0;
-  newcells = NULL;
   file = NULL;
 }
 
@@ -74,7 +72,6 @@ AdaptGrid::AdaptGrid(SPARTA *sparta) : Pointers(sparta)
 AdaptGrid::~AdaptGrid()
 {
   delete [] valueID;
-  memory->destroy(newcells);
   delete [] file;
 }
 
@@ -109,67 +106,35 @@ void AdaptGrid::command(int narg, char **arg)
   sparta->init();
   grid->remove_ghosts();
 
-  /*
-  printf("PRE ADAPT\n",grid->nlocal);
-  for (int i = 0; i < grid->nlocal; i++) {
-    Grid::ChildCell *g = &grid->cells[i];
-    if (g->nsplit <= 1)
-    printf("ICELL %d id %d iparent %d proc %d nsplit %d isplit %d lo %g %g "
-           "hi %g %g inout %d parts %d %d\n",
-           i,g->id,g->iparent,g->proc,g->nsplit,g->isplit,
-           g->lo[0],
-           g->lo[1],
-           g->hi[0],
-           g->hi[1],
-           grid->cinfo[i].type,grid->cinfo[i].first,grid->cinfo[i].count);
-    else
-    printf("ICELLSPLIT %d id %d iparent %d proc %d nsplit %d isplit %d "
-           "spicell %d csubs %d %d lo %g %g "
-           "hi %g %g inout %d parts %d %d\n",
-           i,g->id,g->iparent,g->proc,g->nsplit,g->isplit,
-           grid->sinfo[g->isplit].icell,
-           grid->sinfo[g->isplit].csubs[0],grid->sinfo[g->isplit].csubs[1],
-           g->lo[0],
-           g->lo[1],
-           g->hi[0],
-           g->hi[1],
-           grid->cinfo[i].type,grid->cinfo[i].first,grid->cinfo[i].count);
-  }
-  */
-
   // iterate over refinement and coarsening actions
-  // use of shrinking pstop prevents any new parent created by refinement
-  //   ever being considered for coarsening
-  // use of chash prevents any new child created by coarsening
-  //   ever being considered for refinement
 
   bigint nrefine_total = 0;
   bigint ncoarsen_total = 0;
-  int nrefine = 0;
-  int ncoarsen = 0;
-
-  int pstop = grid->nparent;
+  bigint nrefine = 0;
+  bigint ncoarsen = 0;
 
   for (int iter = 0; iter < niterate; iter++) {
     setup(iter);
 
+    if (action1 == REFINE || action2 == REFINE) grid->maxlevel++;
+    
     if (action1 == REFINE) nrefine = refine();
-    else if (action1 == COARSEN) ncoarsen = coarsen(pstop);
+    else if (action1 == COARSEN) ncoarsen = coarsen();
 
     if (action2 == REFINE) nrefine = refine();
-    else if (action2 == COARSEN) ncoarsen = coarsen(pstop);
+    else if (action2 == COARSEN) ncoarsen = coarsen();
 
-    if (nrefine == 0 && ncoarsen == 0) break;
+    grid->set_maxlevel();
+    grid->rehash();
+
     nrefine_total += nrefine;
     ncoarsen_total += ncoarsen;
-    pstop -= ncoarsen;
-
-    // NOTE: if mode = value, need to trigger computes to realloc to new grid
-    //       for subsequent iterations - done below at very end
-
+    
     cleanup();
+
+    if (nrefine == 0 && ncoarsen == 0) break;
   }
-  
+
   // if no refine or coarsen, just reghost/reneighbor and return
 
   if (nrefine_total == 0 && ncoarsen_total == 0) {
@@ -183,56 +148,6 @@ void AdaptGrid::command(int narg, char **arg)
     return;
   }
 
-  // DEBUG
-
-  /*
-  char str[32];
-  printf("POST GATHER %d: %d\n",comm->me,grid->nparent);
-  for (int i = 0; i < grid->nparent; i++) {
-    Grid::ParentCell *p = &grid->pcells[i];
-    grid->id_num2str(p->id,str);
-    printf("PCELL %d: %d id %d %s iparent %d level %d "
-           "nxyz %d %d %d lo %g %g %g "
-           "hi %g %g %g\n",
-           comm->me,i,p->id,str,p->iparent,p->level,
-           p->nx,p->ny,p->nz,
-           p->lo[0],
-           p->lo[1],
-           p->lo[2],
-           p->hi[0],
-           p->hi[1],
-           p->hi[2]);
-  }
-
-  printf("POST ADAPT %d: %d\n",comm->me,grid->nlocal);
-  for (int i = 0; i < grid->nlocal; i++) {
-    Grid::ChildCell *g = &grid->cells[i];
-    if (g->nsplit <= 1)
-    printf("ICELL %d: %d id %d iparent %d proc %d nsplit %d isplit %d "
-           "lo %g %g %g "
-           "hi %g %g %g parts %d %d\n",
-           comm->me,i,g->id,g->iparent,g->proc,g->nsplit,g->isplit,
-           g->lo[0],
-           g->lo[1],
-           g->lo[2],
-           g->hi[0],
-           g->hi[1],
-           g->hi[2],grid->cinfo[i].first,grid->cinfo[i].count);
-    else
-    printf("ICELLSPLIT %d id %d iparent %d proc %d nsplit %d isplit %d "
-           "spicell %d csubs %d %d lo %g %g "
-           "hi %g %g inout %d\n",
-           i,g->id,g->iparent,g->proc,g->nsplit,g->isplit,
-           grid->sinfo[g->isplit].icell,
-           grid->sinfo[g->isplit].csubs[0],grid->sinfo[g->isplit].csubs[1],
-           g->lo[0],
-           g->lo[1],
-           g->hi[0],
-           g->hi[1],
-           grid->cinfo[i].type);
-  }
-  */
-
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
 
@@ -245,56 +160,14 @@ void AdaptGrid::command(int narg, char **arg)
   grid->check_uniform();
   comm->reset_neighbors();
 
-  // DEBUG
-
-  /*
-  printf("PRE INOUT %d: %d\n",comm->me,grid->nlocal);
-  Grid::ParentCell *pcells = grid->pcells;
-  for (int i = 0; i < grid->nlocal; i++) {
-    Grid::ChildCell *g = &grid->cells[i];
-    printf("ICELL %d: %d id %d pid %d lo %g %g "
-           "hi %g %g type %d corners %d %d %d %d\n",
-           comm->me,i,g->id,pcells[g->iparent].id,
-           g->lo[0],
-           g->lo[1],
-           g->hi[0],
-           g->hi[1],
-           grid->cinfo[i].type,
-           grid->cinfo[i].corner[0],
-           grid->cinfo[i].corner[1],
-           grid->cinfo[i].corner[2],
-           grid->cinfo[i].corner[3]);
-  }
-  */
-
   if (surf->exist) {
     grid->set_inout();
     grid->type_check();
   }
 
-  // write out new parent grid file
+  // write out new grid file
 
   if (file) write_file();
-
-  /*
-  printf("POST INOUT %d: %d\n",comm->me,grid->nlocal);
-  Grid::ParentCell *pcells = grid->pcells;
-  for (int i = 0; i < grid->nlocal; i++) {
-    Grid::ChildCell *g = &grid->cells[i];
-    printf("ICELL %d: %d id %d pid %d lo %g %g "
-           "hi %g %g type %d corners %d %d %d %d vol %g\n",
-           comm->me,i,g->id,pcells[g->iparent].id,
-           g->lo[0],
-           g->lo[1],
-           g->hi[0],
-           g->hi[1],
-           grid->cinfo[i].type,
-           grid->cinfo[i].corner[0],
-           grid->cinfo[i].corner[1],
-           grid->cinfo[i].corner[2],
-           grid->cinfo[i].corner[3],grid->cinfo[i].volume);
-  }
-  */
 
   MPI_Barrier(world);
   double time3 = MPI_Wtime();
@@ -307,8 +180,7 @@ void AdaptGrid::command(int narg, char **arg)
     if (screen) {
       fprintf(screen,"  " BIGINT_FORMAT " cells refined, " BIGINT_FORMAT 
               " cells coarsened\n",nrefine_total,ncoarsen_total);
-      fprintf(screen,"  adapted to " BIGINT_FORMAT " child grid cells, "
-              "%d parent cells\n",grid->ncell,grid->nparent);
+      fprintf(screen,"  adapted to " BIGINT_FORMAT " grid cells\n",grid->ncell);
       fprintf(screen,"  CPU time = %g secs\n",time_total);
       fprintf(screen,"  adapt/redo percent = %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total);
@@ -317,8 +189,7 @@ void AdaptGrid::command(int narg, char **arg)
     if (logfile) {
       fprintf(logfile,"  " BIGINT_FORMAT " cells refined, " BIGINT_FORMAT 
               " cells coarsened\n",nrefine_total,ncoarsen_total);
-      fprintf(logfile,"  adapted to " BIGINT_FORMAT " child grid cells, "
-              "%d parent cells\n",grid->ncell,grid->nparent);
+      fprintf(logfile,"  adapted to " BIGINT_FORMAT " grid cells\n",grid->ncell);
       fprintf(logfile,"  CPU time = %g secs\n",time_total);
       fprintf(logfile,"  adapt/redo percent = %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total);
@@ -468,7 +339,11 @@ void AdaptGrid::process_args(int narg, char **arg)
       if (nx < 1 || ny < 1 || nz < 1) 
         error->all(FLERR,"Illegal adapt command");
       if (domain->dimension == 2 && nz != 1)
-        error->all(FLERR,"Adapt cells nz must be 1 for 2d simulation");
+        error->all(FLERR,"Adapt cells nz must be 1 for a 2d simulation");
+      if (nx < 1 || ny < 1 || nz < 1)
+	error->all(FLERR,"Adapt cells nx,ny,nz cannot be < 1");
+      if (nx == 1 && ny == 1 && nz == 1)
+	error->all(FLERR,"Adapt cells nx,ny,nz cannot all be one");
       iarg += 4;
 
     } else if (strcmp(arg[iarg],"region") == 0) {
@@ -501,6 +376,39 @@ void AdaptGrid::process_args(int narg, char **arg)
 
     } else error->all(FLERR,"Illegal adapt command");
   }
+
+  // use maxlevel and nx,ny,nz to set params for Grid::plevels
+  // if necessary, limit maxlevel to what is allowed by cellint size
+
+  Grid::ParentLevel *plevels = grid->plevels;
+
+  int maxlevel_request = maxlevel;
+  if (maxlevel == 0) maxlevel = grid->plevel_limit;
+  int level = MIN(maxlevel,grid->maxlevel);
+  int newbits = grid->id_bits(nx,ny,nz);
+
+  while (level < maxlevel) {
+    if (plevels[level-1].nbits + plevels[level-1].newbits +
+	newbits > 8*sizeof(cellint)) {
+      maxlevel = level;
+      break;
+    }
+    
+    plevels[level].nbits = plevels[level-1].nbits + plevels[level-1].newbits;
+    plevels[level].newbits = newbits;
+    plevels[level].nx = nx;
+    plevels[level].ny = ny;
+    plevels[level].nz = nz;
+    plevels[level].nxyz = (bigint) nx * ny * nz;
+    level++;
+  }
+
+  if (maxlevel_request && maxlevel < maxlevel_request && me == 0) {
+    char str[128];
+    sprintf(str,"Reduced maxlevel because it induces "
+	    "cell IDs that exceed %d bits",(int) sizeof(cellint)*8);
+    error->warning(FLERR,str);
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -510,14 +418,15 @@ void AdaptGrid::process_args(int narg, char **arg)
 
 void AdaptGrid::check_args(int nevery)
 {
-  // for every fix ave/grid defined, require that:
-  // (1) fix adapt Nevery is multiple of fix ave Nfreq
-  // (2) fix ave/grid is not a running ave
-  // (3) fix ave/grid is defined before this fix (checked in fix adapt)
+  // if fix ave/grid used require that:
+  //   (1) fix adapt Nevery is multiple of fix ave Nfreq
+  //   (2) fix ave/grid is defined before fix adapt (checked in fix adapt)
+  // if any fix ave/grid defined require that:
+  //   (3) fix ave/grid is not a running ave
   // this insures fix ave/grid values will be up-to-date before
-  //   this adaptation changes the grid
+  //   adaptation changes the grid
   // NOTE: at some point could make fix ave/grid do full interpolation
-  //       for new grid cells so this restriction is not needed
+  //       for new grid cells some of these restrictions are not needed
 
   for (int i = 0; i < modify->nfix; i++) {
     if (strcmp(modify->fix[i]->style,"ave/grid") == 0) {
@@ -566,7 +475,7 @@ void AdaptGrid::check_args(int nevery)
       if (update->ntimestep % modify->fix[ifix]->per_grid_freq)
         error->all(FLERR,"Fix for adapt not computed at compatible time");
       if (niterate > 1) 
-        error->all(FLERR,"Adapt can not perform multiple iterations "
+        error->all(FLERR,"Adapt_grid can not perform multiple iterations "
                    "if using fix as a value");
     } else {
       if (nevery % modify->fix[ifix]->per_grid_freq)
@@ -581,10 +490,6 @@ void AdaptGrid::check_args(int nevery)
 
 void AdaptGrid::setup(int iter)
 {
-  // zero new child cell counter on first iteration
-
-  if (iter == 0) nnew = 0;
-
   // create RNG for style = RANDOM
 
   if (style == RANDOM) {
@@ -597,6 +502,13 @@ void AdaptGrid::setup(int iter)
 
   childlist = new int[nx*ny*nz];
 
+  // rlist and clist for refine/coarsen
+
+  rlist = NULL;
+  clist = NULL;
+  alist = NULL;
+  cnummax = anummax = 0;
+
   // for cut/split of new cells by surfaces
 
   cut3d = NULL;
@@ -606,15 +518,10 @@ void AdaptGrid::setup(int iter)
     else cut2d = new Cut2d(sparta,domain->axisymmetric);
   }
 
-  // data structs
+  // allocate rhash for new parent cell IDs created by refining
+  // allocate chash for new child cell IDs created by coarsening
 
-  rlist = NULL;
-  ctask = NULL;
-  sadapt = NULL;
-  delparent = NULL;
-
-  // allocate chash for child cell IDs created by coarsening a parent
-
+  rhash = new MyHash();
   chash = new MyHash();
 }
 
@@ -622,16 +529,8 @@ void AdaptGrid::setup(int iter)
    perform refinement
 ------------------------------------------------------------------------- */
 
-int AdaptGrid::refine()
+bigint AdaptGrid::refine()
 {
-  // NOTE: why is grid not really hashed at this point even though it says so?
-  // WHEN done with adapt, do I need to mark it hashed or unhashed?
-  // NOTE: does fix balance always do a sort?  yes it does
-  // NOTE: collisions with chemistry may have un-sorted the particles
-
-  //if (!grid->hashfilled) grid->rehash();
-  //if (particle->exist && !particle->sorted) particle->sort();      
-
   grid->rehash();
   particle->sort();      
 
@@ -642,15 +541,17 @@ int AdaptGrid::refine()
   else if (style == VALUE) refine_value();
   else if (style == RANDOM) refine_random();
 
-  int delta = perform_refine();
+  bigint nme = perform_refine();
 
-  // nrefine = # of new parents across all processors
+  // nrefine = # of refined cells across all processors
 
-  int nrefine;
-  MPI_Allreduce(&delta,&nrefine,1,MPI_INT,MPI_SUM,world);
+  bigint nrefine;
+  MPI_Allreduce(&nme,&nrefine,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+
+  // if any refinement
+  // compress() removes child cells that became parents
 
   if (nrefine) {
-    gather_parents_refine(delta,nrefine);
     if (collide) collide->adapt_grid();
     grid->compress();
 
@@ -665,8 +566,6 @@ int AdaptGrid::refine()
         compute[i]->invoked_flag = 0;
       }
   }
-
-  grid->rehash();
 
   return nrefine;
 }
@@ -675,44 +574,38 @@ int AdaptGrid::refine()
    perform coarsening
 ------------------------------------------------------------------------- */
 
-int AdaptGrid::coarsen(int pstop)
+bigint AdaptGrid::coarsen()
 {
-  if (surf->exist && surf->distributed)
-    error->all(FLERR,"Grid adapt coarsen does not yet support "
-               "distributed surface elements");
-  
-  // NOTE: why is grid not really hashed at this point even though it says so?
-  // WHEN done with adapt, do I need to mark it hashed or unhashed?
-  // NOTE: does fix balance always do a sort?  yes it does
-
-  //if (!grid->hashfilled) grid->rehash();
-  //if (particle->exist && !particle->sorted) particle->sort();      
-
   grid->rehash();
   particle->sort();      
 
-  assign_parents_coarsen(pstop);
-  candidates_coarsen(pstop);
-  coarsen_group();
+  candidates_coarsen();
 
   if (style == PARTICLE) coarsen_particle();
   else if (style == SURF) coarsen_surf();
   else if (style == VALUE) coarsen_value();
   else if (style == RANDOM) coarsen_random();
 
-  int delta = perform_coarsen();
+  particle_surf_comm();
+  bigint nme = perform_coarsen();
 
-  // ncoarsen = # of removed parents across all processors
+  // ncoarsen = # of coarsened cells across all processors
 
-  int ncoarsen;
-  MPI_Allreduce(&delta,&ncoarsen,1,MPI_INT,MPI_SUM,world);
+  bigint ncoarsen;
+  MPI_Allreduce(&nme,&ncoarsen,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
+  // if any coarsening
+  // compress() removes child cells that vanished
+  // surf->compress() removes surfs no longer referenced by owned cells
+  //   can be needed when owned cells are removed by coarsening
+  //   no need to call in refine() since new child cells own same surfs
+  
   if (ncoarsen) {
-    gather_parents_coarsen(delta,ncoarsen);
     if (collide) collide->adapt_grid();
     grid->compress();
-    if (particle->exist && replyany) particle->compress_rebalance();
-
+    if (particle->exist) particle->compress_rebalance();
+    if (surf->distributed) surf->compress_explicit();
+    
     // reallocate per grid cell arrays in per grid computes
     // also unset their invoked_flag so that if needed on this timestep
     //   by any other caller, it will be invoked again with changed grid
@@ -724,21 +617,18 @@ int AdaptGrid::coarsen(int pstop)
         compute[i]->invoked_flag = 0;
       }
   }
-
-  grid->rehash();
-
+  
   return ncoarsen;
 }
 
 /* ----------------------------------------------------------------------
    create list of child cells I will possibly refine
    check grid group, split status, maxlevel, INSIDE status, region
-   chash check skips child cells created by coarsening a parent cell
+   check with chash skips a child cell created by coarsening
 ------------------------------------------------------------------------- */
 
 void AdaptGrid::candidates_refine()
 {
-  Grid::ParentCell *pcells = grid->pcells;
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
@@ -749,14 +639,12 @@ void AdaptGrid::candidates_refine()
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
-    if (maxlevel && pcells[cells[icell].iparent].level >= maxlevel-1) continue;
+    if (cells[icell].level >= maxlevel) continue;
     if (cinfo[icell].type == INSIDE) continue;
-    if (region && !region_check(cells[icell].lo,cells[icell].hi)) continue;
     if (chash->find(cells[icell].id) != chash->end()) continue;
+    if (region && !region_check(cells[icell].lo,cells[icell].hi)) continue;
     rlist[rnum++] = icell;
   }
-
-  //printf("RNUM %d\n",rnum);
 }
 
 /* ----------------------------------------------------------------------
@@ -801,7 +689,7 @@ void AdaptGrid::refine_particle()
 
 void AdaptGrid::refine_surf()
 {
-  int m,icell,flag,nsurf;
+  int j,m,icell,flag,nsurf;
   surfint *csurfs;
   double *norm,*lo,*hi;
 
@@ -816,17 +704,18 @@ void AdaptGrid::refine_surf()
     if (!cells[icell].nsurf) continue;
     nsurf = cells[icell].nsurf;
     csurfs = cells[icell].csurfs;
-    for (m = 0; m < nsurf; m++) {
+    for (j = 0; j < nsurf; j++) {
+      m = csurfs[j];
       if (dim == 2) {
         if (!(lines[m].mask & sgroupbit)) continue;
       } else {
         if (!(tris[m].mask & sgroupbit)) continue;
       }
-      if (dim == 2) norm = lines[csurfs[m]].norm;
-      else norm = tris[csurfs[m]].norm;
-      if (MathExtra::dot3(norm,sdir) < 0.0) break;
+      if (dim == 2) norm = lines[m].norm;
+      else norm = tris[m].norm;
+      if (MathExtra::dot3(norm,sdir) <= 0.0) break;
     }
-    if (m == nsurf) continue;
+    if (j == nsurf) continue;
 
     lo = cells[icell].lo;
     hi = cells[icell].hi;
@@ -837,13 +726,10 @@ void AdaptGrid::refine_surf()
     if (flag) rlist[n++] = icell;
   }
   rnum = n;
-
-  //printf("RNUM2 %d: %d\n",me,rnum);
 }
 
 /* ----------------------------------------------------------------------
    refine based on compute or fix value
-   // NOTE: insure fix ave/grid comes before fix adapt at end of step
 ------------------------------------------------------------------------- */
 
 void AdaptGrid::refine_value()
@@ -852,12 +738,14 @@ void AdaptGrid::refine_value()
   double value;
   int *csubs;
 
-  // NOTE: always invoke compute - is there someway to check more carefully?
-  // needed if iterating, needed if refine follows coarsen
+  // invoke compute each time refinement is done
+  // grid could have changed from previous refinement or coarsening
   
   if (valuewhich == COMPUTE) {
     compute = modify->compute[icompute];
     compute->compute_per_grid();
+    if (compute->post_process_grid_flag) 
+      compute->post_process_grid(valindex,1,NULL,NULL,NULL,1);
   } else if (valuewhich == FIX) fix = modify->fix[ifix];
 
   Grid::ChildCell *cells = grid->cells;
@@ -895,9 +783,6 @@ void AdaptGrid::refine_value()
       }
     }
 
-    //printf("REF VALUE %d %d: %g %g\n",
-    //       icell,cells[icell].id,value,rvalue);
-
     if (rdecide == LESS) {
       if (value < rvalue) rlist[n++] = icell;
     } else {
@@ -921,12 +806,10 @@ void AdaptGrid::refine_random()
   for (int i = 0; i < rnum; i++) {
     icell = rlist[i];
     if (random->uniform() >= rfrac) continue;
-    //if (grid->cells[icell].id != 6) continue;
     rlist[n++] = icell;
   }
+  
   rnum = n;
-
-  //printf("RNUM2 %d: %d\n",me,rnum);
 }
 
 /* ----------------------------------------------------------------------
@@ -935,668 +818,369 @@ void AdaptGrid::refine_random()
 
 int AdaptGrid::perform_refine()
 {
-  int icell,jcell,iparent;
+  int icell,jcell;
   int nglocal,nglocalprev;
   
-  Grid::ParentCell *pcells = grid->pcells;
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  int nxyz = nx*ny*nz;
-  int newparent = 0;
-  
   for (int ilist = 0; ilist < rnum; ilist++) {
     icell = rlist[ilist];
 
+    // add cell ID being refined to rhash
+
+    (*rhash)[cells[icell].id] = 0;
+    
     // flag icell for deletion
-    // refine_cell() will remove it from grid hash
     // don't need to flag sub cells, since grid compress will do that
 
     cells[icell].proc = -1;
-
-    // add new parent cell at end of my pcells
-    // set new parent group mask to same value as child cell
-
-    grid->add_parent_cell(cells[icell].id,cells[icell].iparent,
-                          nx,ny,nz,cells[icell].lo,cells[icell].hi);
-    newparent++;
-    pcells = grid->pcells;
-    iparent = grid->nparent - 1;
-    pcells[iparent].mask = cinfo[icell].mask;
 
     // add Nx by Ny by Nz child cells to replace icell
     // refine_cell() adds all new unsplit/split cells to grid hash
 
     nglocalprev = grid->nlocal;
-    grid->refine_cell(icell,iparent,nx,ny,nz,childlist,cut2d,cut3d);
+    grid->refine_cell(icell,childlist,cut2d,cut3d);
     cells = grid->cells;
     cinfo = grid->cinfo;
     nglocal = grid->nlocal;
 
-    // set each new child cell group mask to same value as original child
-    //   for all unsplit/split/sub cells
-    // add each new child cell to newcells list
-    //   only for unsplit/split cells, not sub cells
-
-    if (nnew + nxyz > maxnew) {
-      while (nnew + nxyz > maxnew) maxnew += DELTA_NEW;
-      memory->grow(newcells,maxnew,"adapt_grid:newcells");
-    }
-
-    for (jcell = nglocalprev; jcell < nglocal; jcell++) {
+    // set each new child cell group mask to same value as parent
+    // for unsplit and split and sub cells
+    
+    for (jcell = nglocalprev; jcell < nglocal; jcell++)
       cinfo[jcell].mask = cinfo[icell].mask;
-      if (cells[jcell].nsplit < 1) continue;
-      newcells[nnew++] = cells[jcell].id;
-    }
   }
 
-  // return # of new parents on this proc
-
-  return newparent;
+  return rnum;
 }
 
 /* ----------------------------------------------------------------------
-   gather refined parent cells from all procs, on each proc
-   must end up with same list, in same order, on every proc
-   must repoint child cells to new parent
-   also point child cells that became parent to new parent
-     this is so can reassign particles to correct new child cells
+   build clist = list of candidate parent cells this proc may coarsen
+   consists of 3 kinds of parent cells
+   (a) ones where this proc owns all its child cells and they exist
+   (b) ones where multiple procs own all its child cells and they exist
+       the parent is assigned to this proc via random hash()
+   (c) ones where all its child cells do not exist
+       parent is assigned same as in (b)
+   for a,b: clist->flag = 1 (possible coarsening)
+   for c: clist->flag = 0 (no coarsening will be done)
+   final decision on which to coarsen depends on child cell attributes
 ------------------------------------------------------------------------- */
 
-void AdaptGrid::gather_parents_refine(int delta, int nrefine)
+void AdaptGrid::candidates_coarsen()
 {
-  int i,j,m,icell,nx,ny,nz,nsplit;
-  cellint id;
-  Grid::ParentCell *p;
+  int m,n,proc,level,nxyz,nchild;
+  cellint parentID;
+  double lo[3],hi[3];
 
-  // pcell_mine = copy of parent cells I added via refinement
-
-  Grid::ParentCell *pcells = grid->pcells;
-  int psize = sizeof(Grid::ParentCell);
-  int nprev = grid->nparent - delta;
-
-  Grid::ParentCell *pcells_mine = (Grid::ParentCell *)
-    memory->smalloc(delta*psize,"adapt_grid:pcell_mine");
-  memcpy(pcells_mine,&pcells[nprev],delta*psize);
-
-  // perform Allgatherv of added parent cells from all procs
-  // append to end of original pcells list
-
-  int *recvcounts,*displs;
-  memory->create(recvcounts,nprocs,"adapt_grid:recvcounts");
-  memory->create(displs,nprocs,"adapt_grid:displs");
-
-  int nsend = delta * psize;
-  MPI_Allgather(&nsend,1,MPI_INT,recvcounts,1,MPI_INT,world);
-  displs[0] = 0;
-  for (i = 1; i < nprocs; i++) displs[i] = displs[i-1] + recvcounts[i-1];
-
-  grid->grow_pcells(nrefine-delta);
-  pcells = grid->pcells;
-
-  MPI_Allgatherv(pcells_mine,nsend,MPI_CHAR,
-                 &pcells[nprev],recvcounts,displs,MPI_CHAR,world);
-  grid->nparent = nprev + nrefine;
-  
-  // loop over all added pcells
-  // repoint any child cells I own to new parent
-
-  int myfirst = nprev + displs[me]/psize;
-  int mylast = myfirst + recvcounts[me]/psize;
-
-  Grid::MyHash *hash = grid->hash;
-  Grid::ChildCell *cells = grid->cells;
-  Grid::SplitInfo *sinfo = grid->sinfo;
-  int nparent = grid->nparent;
-  int *csubs;
-
-  //printf("GATHER: %d %d %d\n",nprev,delta,nrefine);
-  //printf("GATHER: myfirst mylast %d %d\n",myfirst,mylast);
-
-  for (i = nprev; i < nparent; i++) {
-    p = &pcells[i];
-    (*hash)[p->id] = -(i+1);
-    pcells[p->iparent].grandparent = 1;
-
-    // not a new parent cell I contributed, just continue
-
-    if (i < myfirst || i >= mylast) continue;
-
-    // this is new parent cell I contributed
-    // repoint new child cells of this parent to new iparent value
-    // do this for sub cells of new child cells as well
-
-    nx = p->nx;
-    ny = p->ny;
-    nz = p->nz;
-
-    m = 0;
-    for (int iz = 0; iz < nz; iz++)
-      for (int iy = 0; iy < ny; iy++)
-        for (int ix = 0; ix < nx; ix++) {
-          m++;
-          id = p->id | ((cellint) m << p->nbits);
-          icell = (*hash)[id] - 1;
-          cells[icell].iparent = i;
-
-          if (cells[icell].nsplit > 1) {
-            nsplit = cells[icell].nsplit;
-            csubs = sinfo[cells[icell].isplit].csubs;
-            for (j = 0; j < nsplit; j++) cells[csubs[j]].iparent = i;
-          }
-        }
-  }
-
-  // clean up
-
-  memory->sfree(pcells_mine);
-  memory->destroy(recvcounts);
-  memory->destroy(displs);
-}
-
-/* ----------------------------------------------------------------------
-   assign each parent to an owning proc
-   for non-clumped distribution use rendezvous proc = round robin
-   for clumped distribution assign to proc owning central child cell
-     use rendezvous comm to figure that out
-   observe minlevel and region restrictions
-------------------------------------------------------------------------- */
-
-void AdaptGrid::assign_parents_coarsen(int pstop)
-{
-  int i,m,n,icell,iparent,nxyz;
-  cellint id;
-
-  Grid::ParentCell *pcells = grid->pcells;
-  Grid::ChildCell *cells = grid->cells;
-  int nglocal = grid->nlocal;
-
-  // pcount = number of children I own for each parent
-  // only tabulate for eligible parents < pstop
-  // only tally unsplit/split child cells, not sub cells
-
-  memory->create(pcount,pstop,"adapt_grid:pcount");
-  for (i = 0; i < pstop; i++) pcount[i] = 0;
-
-  for (icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsplit < 1) continue;
-    iparent = cells[icell].iparent;
-    if (iparent >= pstop) continue;
-    pcount[iparent]++;
-  }
-
-  memory->create(powner,pstop,"adapt_grid:powner");
-  for (i = 0; i < pstop; i++) powner[i] = -1;
-
-  for (i = 0; i < pstop; i++) {
-    if (pcells[i].grandparent) continue;
-    if (pcells[i].level < minlevel) continue;
-    if (region && !region_check(pcells[i].lo,pcells[i].hi)) continue;
-
-    nxyz = pcells[i].nx * pcells[i].ny * pcells[i].nz;
-    if (pcount[i] == nxyz) powner[i] = me;
-    else powner[i] = i % nprocs;
-  }
-
-  cnummax = 0;
-  for (i = 0; i < pstop; i++) 
-    if (powner[i] == me) cnummax++;
-
-  if (nprocs == 1 || !grid->clumped) return;
-
-  // to insure grid decomposition stays clumped,
-  //   need to insure any coarsened parents are assigned to a proc
-  //   that owns at least one of its children
-  // redezvous procs do not do that
-  // so use rendezvous procs to choose an owner and communicate
-  //   the owner to all the child cells of the coarsened parent
-
-  // send 4 values per child cell to rendezvous proc
-  // sending proc, local icell, iparent, ichild (0 to Nxyz-1)
-
-  Grid::MyHash *hash = grid->hash;
-  int *sbuf = NULL;
-  int *procsend = NULL;
-  int sendmax = 0;
-  int nsend = 0;
-
-  n = 0;
-  for (i = 0; i < pstop; i++) {
-    if (pcount[i] == 0) continue;
-    if (powner[i] < 0 || powner[i] == me) continue;
-    nxyz = pcells[i].nx * pcells[i].ny * pcells[i].nz;
-
-    for (m = 0; m < nxyz; m++) {
-      id = pcells[i].id | ((cellint) (m+1) << pcells[i].nbits);
-      if (hash->find(id) == hash->end()) continue;
-      icell = (*hash)[id] - 1;
-      
-      if (nsend == sendmax) {
-        sendmax += DELTA_SEND;
-        memory->grow(sbuf,4*sendmax,"adapt_grid:sbuf");
-        memory->grow(procsend,sendmax,"adapt_grid:procsend");
-      }
-      
-      procsend[nsend] = powner[i];
-      sbuf[n] = me;
-      sbuf[n+1] = icell;
-      sbuf[n+2] = i;
-      sbuf[n+3] = m;
-      nsend++;
-      n += 4;
-    }
-  }
-
-  // perform irregular comm
-
-  int nsize = 4*sizeof(int);
-  int *rbuf;
-  int nrecv = comm->irregular_uniform(nsend,procsend,(char *) sbuf,
-                                      nsize,(char **) &rbuf);
-
-  // scan received child cells,
-  // looking for one which determines owner of parent cell
-  // NOTE: make it central child of parent
-
-  m = 0;
-  for (i = 0; i < nrecv; i++) {
-    if (rbuf[m+3] == 0) powner[rbuf[m+2]] = rbuf[m];
-    m += 4;
-  }
-
-  // send new owning proc for parent of child cells back to senders
-
-  memory->grow(sbuf,2*nrecv,"adapt_grid:sbuf");
-  memory->grow(procsend,nrecv,"adapt_grid:procsend");
-  nsend = 0;
-
-  m = n = 0;
-  for (i = 0; i < nrecv; i++) {
-    procsend[nsend] = rbuf[m];
-    sbuf[n] = rbuf[m+1];
-    //    printf("AAA %d %d %d: %d %d %d %d\n",
-    //       me,i,nrecv,rbuf[m],rbuf[m+1],rbuf[m+2],rbuf[m+3]);
-    sbuf[n+1] = powner[rbuf[m+2]];
-    nsend++;
-    n += 2;
-    m += 4;
-  }
-
-  // perform irregular comm
-
-  nsize = 2*sizeof(int);
-  nrecv = comm->irregular_uniform(nsend,procsend,(char *) sbuf,
-                                  nsize,(char **) &rbuf);
-
-  // scan received child cells and set powner of their parent
-
-  m = 0;
-  for (i = 0; i < nrecv; i++) {
-    iparent = cells[rbuf[m]].iparent;
-    powner[iparent] = rbuf[m+1];
-    m += 2;
-  }
-
-  // udpate cnummax to reflect new parent owners
-
-  cnummax = 0;
-  for (i = 0; i < pstop; i++) 
-    if (powner[i] == me) cnummax++;
-
-  // clean up
-
-  memory->destroy(sbuf);
-  memory->destroy(procsend);
-}
-
-/* ----------------------------------------------------------------------
-   create list of parent cells I will attempt to coarsen
-------------------------------------------------------------------------- */
-
-void AdaptGrid::candidates_coarsen(int pstop)
-{
-  int i,m,icell,jcell,iparent,nxyz,oproc;
-  cellint id;
-  double value;
-  int *proc,*index;
-
-  // for style = VALUE, setup compute or fix values
-  // NOTE: always invoke compute - is there someway to check more carefully?
-  // needed if iterating, needed if refine follows coarsen
+  // for style = VALUE, invoke compute each time coarsening is done
+  // grid could have changed from previous refinement or coarsening
 
   if (style == VALUE) {
     if (valuewhich == COMPUTE) {
       compute = modify->compute[icompute];
       compute->compute_per_grid();
+      if (compute->post_process_grid_flag) 
+	compute->post_process_grid(valindex,1,NULL,NULL,NULL,1);
     } else if (valuewhich == FIX) fix = modify->fix[ifix];
   }
 
-  Grid::ParentCell *pcells = grid->pcells;
+  // scan my child cells to identify possible parents cells to coarsen
+  // exclude sub-cells and parents which do not meet level/mask/region criteria
+  // phash = unique parent cells of my children
+  //         key = parentID, value = # of child cells I own
+  // active = 1 for participating child cells
+  
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
+
+  int *active;
+  memory->create(active,nglocal,"adapt_grid:active"); 
+  MyHash *phash = new MyHash();
+ 
+  for (int icell = 0; icell < nglocal; icell++) {
+    active[icell] = 0;
+
+    // exclude child cells from consideration
+    // check with rhash skips a child cell created by refining
+    
+    if (cells[icell].nsplit < 1) continue;
+    if (cells[icell].level <= minlevel) continue;
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    parentID = grid->id_coarsen(cells[icell].id,cells[icell].level);
+    if (rhash->find(parentID) != rhash->end()) continue;
+    if (region) {
+      grid->id_lohi(parentID,cells[icell].level-1,boxlo,boxhi,lo,hi);
+      if (!region_check(lo,hi)) continue;
+    }
+    
+    active[icell] = 1;
+    if (phash->find(parentID) != phash->end()) (*phash)[parentID]++;
+    else (*phash)[parentID] = 1;
+  }
+
+  // create 1st portion of clist = data struct for parentIDs assigned to me
+  //   1st portion = I own all children of the parent, so I own the parent
+  // parent cells where children are owned by multiple procs
+  //   these are assigned randomly to rendezvous procs via hashlittle()
+  //   the ones assined to this proc will become 2nd portion of clist
+  // inbuf = datums to send to owners of 2nd portion parents, one datum per child cell
+  // clhash = list of parentIDs assigned to me, only for 1st portion at this point
+  //          key = parentID, value = index into clist
+
+  Grid::ParentLevel *plevels = grid->plevels;
+  MyHash *clhash = new MyHash();
+
+  int *proclist;
+  memory->create(proclist,nglocal,"adapt_grid:proclist");
+  Rvous1 *inbuf = (Rvous1 *) memory->smalloc((bigint) nglocal*sizeof(Rvous1),
+					     "adapt_grid:inbuf");
+  cnum = 0;
+  int nsend = 0;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!active[icell]) continue;
+    level = cells[icell].level;
+    parentID = grid->id_coarsen(cells[icell].id,level);
+    nxyz = plevels[level-1].nxyz;
+    nchild = (*phash)[parentID];
+
+    // this proc owns all children of parentID
+    // create a clist entry, and add parentID to clhash
+    
+    if (nchild == nxyz) {
+      if (clhash->find(parentID) == clhash->end()) {
+	if (cnum == cnummax) {
+	  cnummax += DELTA_LIST;
+	  clist = (CList *) memory->srealloc(clist,cnummax*sizeof(CList),
+					     "adapt_grid:clist");
+	}
+	(*clhash)[parentID] = cnum;
+	m = cnum++;
+	clist[m].parentID = parentID;
+	clist[m].plevel = level-1;
+	clist[m].nchild = nxyz;
+	clist[m].nexist = 0;
+	clist[m].proc = new int[nxyz];
+	clist[m].index = new int[nxyz];
+	clist[m].value = new double[nxyz];
+      } else m = (*clhash)[parentID];
+      
+      n = clist[m].nexist;
+      clist[m].proc[n] = me;
+      clist[m].index[n] = icell;
+      if (style == PARTICLE) clist[m].value[n] = coarsen_particle_cell(icell);
+      else if (style == SURF) clist[m].value[n] = coarsen_surf_cell(icell);
+      else if (style == VALUE) clist[m].value[n] = coarsen_value_cell(icell);
+      else if (style == RANDOM) clist[m].value[n] = 0.0;
+      clist[m].nexist++;
+
+    // this proc does not own all children of parentID
+    // add cell info to inbuf to perform rendezvous comm with
+      
+    } else {
+      proclist[nsend] = hashlittle(&parentID,sizeof(cellint),0) % nprocs;
+      inbuf[nsend].parentID = parentID;
+      inbuf[nsend].plevel = level-1;
+      inbuf[nsend].proc = me;
+      inbuf[nsend].icell = icell;
+      inbuf[nsend].ichild = grid->id_ichild(cells[icell].id,parentID,level-1) - 1;
+      if (style == PARTICLE) inbuf[nsend].value = coarsen_particle_cell(icell);
+      else if (style == SURF) inbuf[nsend].value = coarsen_surf_cell(icell);
+      else if (style == VALUE) inbuf[nsend].value = coarsen_value_cell(icell);
+      else if (style == RANDOM) inbuf[nsend].value = 0.0;
+      nsend++;
+    }
+  }
+
+  memory->destroy(active);
+
+  // perform rendezvous communication to acquire inbuf data
+  // each Rvous proc receives child cell data from SPARTA decomp for
+  //   all children of parent cells assigned to it
+  // callback() method is NULL, just receive data via MPI_All2allv()
+
+  char *buf;
+  int nreturn = comm->rendezvous(1,nsend,(char *) inbuf,sizeof(Rvous1),
+				 0,proclist,NULL,0,buf,0,this,0);
+
+  Rvous1 *outbuf = (Rvous1 *) buf;
+
+  memory->destroy(proclist);
+  memory->sfree(inbuf);
+
+  // scan received outbuf to add child cell data to 2nd portion of clist
+  // if new parentIDs to clhash
+  
+  for (int i = 0; i < nreturn; i++) {
+    parentID = outbuf[i].parentID;
+    if (clhash->find(parentID) == clhash->end()) {
+      (*clhash)[parentID] = cnum;
+      if (cnum == cnummax) {
+	cnummax += DELTA_LIST;
+	clist = (CList *) memory->srealloc(clist,cnummax*sizeof(CList),
+					   "adapt_grid:clist");
+      }
+      clist[cnum].parentID = parentID;
+      clist[cnum].plevel = outbuf[i].plevel;
+      nchild = plevels[outbuf[i].plevel].nxyz;
+      clist[cnum].nchild = nchild;
+      clist[cnum].nexist = 0;
+      clist[cnum].proc = new int[nchild];
+      clist[cnum].index = new int[nchild];
+      clist[cnum].value = new double[nchild];
+      m = cnum++;
+    } else m = (*clhash)[parentID];
+
+    n = outbuf[i].ichild;
+    clist[m].proc[n] = outbuf[i].proc;
+    clist[m].index[n] = outbuf[i].icell;
+    clist[m].value[n] = outbuf[i].value;
+    clist[m].nexist++;
+  }
+
+  // can now determine whether all the child cells of 2nd portion parent cells exist
+  // flag = 1 if all children of a parentID exist
+  // flag = 0 if they do not
+
+  for (int i = 0; i < cnum; i++) {
+    if (clist[i].nexist == clist[i].nchild) clist[i].flag = 1;
+    else clist[i].flag = 0;
+  }
+
+  // clean up
+  
+  memory->sfree(outbuf);
+  delete phash;
+  delete clhash;
+}
+
+/* ----------------------------------------------------------------------
+   return particle count for one child cell
+------------------------------------------------------------------------- */
+
+double AdaptGrid::coarsen_particle_cell(int icell)
+{
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   Grid::SplitInfo *sinfo = grid->sinfo;
-  Grid::MyHash *hash = grid->hash;
 
-  // create ctask entries = list of parents I will possibly coarsen
-  // create sadapt = list of child cells I will send to other procs
+  int np = 0;
 
-  ctask = (CTask *) memory->smalloc(cnummax*sizeof(CTask),"adapt_grid:ctask");
-  cnum = 0;
-
-  int *parent2task;
-  memory->create(parent2task,pstop,"adapt_grid:parent2task");
-  for (i = 0; i < pstop; i++) parent2task[i] = -1;
-
-  int *procsend = NULL;
-  int sendmax = 0;
-  nsend = 0;
-
-  for (i = 0; i < pstop; i++) {
-
-    if (powner[i] < 0) continue;
-    nxyz = pcells[i].nx * pcells[i].ny * pcells[i].nz;
-
-    // add to clist, b/c I am owner
-
-    if (powner[i] == me) {
-      //printf("AAA %d: %d %d\n",me,i,pcells[i].id);
-      ctask[cnum].iparent = i;
-      ctask[cnum].id = pcells[i].id;
-      ctask[cnum].nchild = nxyz;
-      ctask[cnum].ncomplete = pcount[i];
-      proc = ctask[cnum].proc = new int[nxyz];
-      index = ctask[cnum].index = new int[nxyz];
-      ctask[cnum].recv = new int[nxyz];
-      parent2task[i] = cnum;
-      cnum++;
-
-      if (pcount[i]) {
-        for (m = 0; m < nxyz; m++) {
-          id = pcells[i].id | ((cellint) (m+1) << pcells[i].nbits);
-          if (hash->find(id) == hash->end()) proc[m] = index[m] = -1;
-          else {
-            icell = (*hash)[id] - 1;
-            proc[m] = me;
-            index[m] = icell;
-          }
-        }
-      }
-
-    // another proc is the owner
-    // fill sadapt with info on child cells I own to send to that proc
-
-    } else if (pcount[i]) {
-      //printf("CCC %d: %d %d\n",me,i,pcells[i].id);
-      oproc = powner[i];
-      for (m = 0; m < nxyz; m++) {
-        id = pcells[i].id | ((cellint) (m+1) << pcells[i].nbits);
-        if (hash->find(id) == hash->end()) continue;
-        icell = (*hash)[id] - 1;
-
-        if (nsend == sendmax) {
-          sendmax += DELTA_SEND;
-          sadapt = (SendAdapt *) 
-            memory->srealloc(sadapt,sendmax*sizeof(SendAdapt),
-                             "adapt_grid:sadapt");
-          memory->grow(procsend,sendmax,"adapt_grid:procsend");
-        }
-
-        procsend[nsend] = oproc;
-        sadapt[nsend].proc = me;
-        sadapt[nsend].icell = icell;
-        sadapt[nsend].ichild = m;
-        sadapt[nsend].iparent = i;
-        sadapt[nsend].type = cinfo[icell].type;
-        sadapt[nsend].mask = cinfo[icell].mask;
-        sadapt[nsend].nsurf = cells[icell].nsurf;
-        if (cells[icell].nsplit == 1) {
-          sadapt[nsend].np = cinfo[icell].count;
-          if (style == VALUE) {
-            if (valuewhich == COMPUTE) value = value_compute(icell);
-            else if (valuewhich == FIX) value = value_fix(icell);
-            sadapt[nsend].value = value;
-          } else sadapt[nsend].value = 0.0;
-
-        } else {
-          int nsplit = cells[icell].nsplit;
-          int isplit = cells[icell].isplit;
-          int *csubs = sinfo[isplit].csubs;
-          int np = 0;
-          if (combine == SUM) value = 0.0;
-          else if (combine == MINIMUM) value = BIG;
-          else if (combine == MAXIMUM) value = -BIG;
-          for (int j = 0; j < nsplit; j++) {
-            jcell = csubs[j];
-            np += cinfo[jcell].count;
-            if (style == VALUE) {
-              if (combine == SUM) {
-                if (valuewhich == COMPUTE) value += value_compute(jcell);
-                else if (valuewhich == FIX) value += value_fix(jcell);
-              } else if (combine == MINIMUM) {
-                if (valuewhich == COMPUTE) 
-                  value = MIN(value,value_compute(jcell));
-                else if (valuewhich == FIX) 
-                  value = MIN(value,value_fix(jcell));
-              } else if (combine == MAXIMUM) {
-                if (valuewhich == COMPUTE) 
-                  value = MAX(value,value_compute(jcell));
-                else if (valuewhich == FIX) 
-                  value = MAX(value,value_fix(jcell));
-              }
-            }
-          }
-          sadapt[nsend].np = np;
-          if (style == VALUE) sadapt[nsend].value = value;
-          else sadapt[nsend].value = 0.0;
-        }
-
-        nsend++;
-      }
+  if (cells[icell].nsplit == 1) np = cinfo[icell].count;
+  else {
+    int jcell;
+    int nsplit = cells[icell].nsplit;
+    int *csubs = sinfo[cells[icell].isplit].csubs;
+    for (int j = 0; j < nsplit; j++) {
+      jcell = csubs[j];
+      np += cinfo[jcell].count;
     }
   }
 
-  /*
-  printf("NCOMPLETE %d:",me);
-  for (i = 0; i < cnum; i++) printf(" %d",ctask[i].ncomplete);
-  printf("\n");
-  */
-
-  // clean up
-
-  memory->destroy(pcount);
-  memory->destroy(powner);
-
-  // return if no one has any child cell info to send to another proc
-
-  int sendany;
-  MPI_Allreduce(&nsend,&sendany,1,MPI_INT,MPI_SUM,world);
-  if (!sendany) {
-    for (i = 0; i < cnum; i++) {
-      if (ctask[i].ncomplete) ctask[i].flag = 1;
-      else ctask[i].flag = 0;
-    }
-    memory->destroy(parent2task);
-    memory->destroy(procsend);
-    sa_header = NULL;
-    sa_csurfs = NULL;
-    sa_particles = NULL;
-    nrecv = 0;
-
-    //printf("CNUM1a %d: %d %d\n",me,cnum,nrecv);
-
-    return;
-  }
-
-  // perform irregular comm to rendezvous procs
-  // scan received buf with nrecv grid cells to fill in ctask fields
-
-  char *buf;
-  nrecv = comm->send_cells_adapt(nsend,procsend,(char *) sadapt,&buf);
-
-  //printf("NSEND me %d: nsend %d nrecv %d \n",me,nsend,nrecv);
-
-  sa_header = (SendAdapt **) 
-    memory->smalloc(nrecv*sizeof(SendAdapt *),"adapt_grid::sa_header");
-  sa_csurfs = (surfint **) 
-    memory->smalloc(nrecv*sizeof(surfint *),"adapt_grid::sa_csurfs");
-  sa_particles = (char **) 
-    memory->smalloc(nrecv*sizeof(char *),"adapt_grid::sa_particles");
-  int nbytes_total = sizeof(Particle::OnePart) + particle->sizeof_custom();
-
-  int inum;
-
-  char *ptr = buf;
-  for (i = 0; i < nrecv; i++) {
-    sa_header[i] = (SendAdapt *) ptr;
-    ptr += sizeof(SendAdapt);
-    ptr = ROUNDUP(ptr);
-
-    sa_csurfs[i] = (surfint *) ptr;
-    ptr += sa_header[i]->nsurf * sizeof(surfint);
-    ptr = ROUNDUP(ptr);
-
-    sa_particles[i] = (char *) ptr;
-    ptr += sa_header[i]->np * nbytes_total;
-
-    iparent = sa_header[i]->iparent;
-    inum = parent2task[iparent];
-    if (inum < 0) error->one(FLERR,"Parent cell has no coarsen task");
-
-    m = sa_header[i]->ichild;
-    ctask[inum].proc[m] = sa_header[i]->proc;
-    ctask[inum].index[m] = sa_header[i]->icell;
-    ctask[inum].recv[m] = i;
-    ctask[inum].ncomplete++;
-
-    /*
-    printf("BUF %d %d inum %d: proc %d icell %d ichild %d iparentID %d\n",
-           me,i,inum,
-           sa_header[i]->proc,
-           sa_header[i]->icell,
-           sa_header[i]->ichild,
-           pcells[sa_header[i]->iparent].id);
-    */
-  }
-
-  // flag = 1 if my tasks now have all necessary child cell info
-  // flag = 0 if they do not, b/c some other proc owns all child cells
-  // error if ncompete is non-zero but not equal to nxyz
-
-  // DEBUG
-
-  /*
-  for (i = 0; i < cnum; i++) {
-    //if (!ctask[i].flag) continue;
-    if (ctask[i].ncomplete == 4)
-      printf("CAND %d: %d: parent %d: %d %d %d %d: %d %d %d %d\n",
-             me,i,pcells[ctask[i].iparent].id,
-             ctask[i].proc[0],
-             ctask[i].proc[1],
-             ctask[i].proc[2],
-             ctask[i].proc[3],
-             ctask[i].index[0],
-             ctask[i].index[1],
-             ctask[i].index[2],
-             ctask[i].index[3]);
-    else
-      printf("CAND %d: %d: parent %d: ncomplete %d\n",
-             me,i,pcells[ctask[i].iparent].id,ctask[i].ncomplete);
-  }
-  */
-
-  for (i = 0; i < cnum; i++) {
-    if (ctask[i].ncomplete == ctask[i].nchild) ctask[i].flag = 1;
-    else if (ctask[i].ncomplete == 0) ctask[i].flag = 0;
-    else error->one(FLERR,"Parent cell to coarsen has incomplete info");
-  }
-
-  // clean up
-
-  //printf("DESTROY AAA %d\n",me);
-  memory->destroy(parent2task);
-  memory->destroy(procsend);
-
-  //printf("CNUM1b %d: %d %d\n",me,cnum,nrecv);
+  return (double) np;
 }
 
 /* ----------------------------------------------------------------------
-   coarsen based on child grid cell group criteria
-   all child cells must be in group to allow coarsening
-   checked before specified style
+   return 1 if any surf in child cell meets coarsening criterion
+   else return 0
 ------------------------------------------------------------------------- */
 
-void AdaptGrid::coarsen_group()
+double AdaptGrid::coarsen_surf_cell(int icell)
 {
-  int m,nchild,nmatch,icell,mask;
-  int *proc,*index,*recv;
+  double *norm;
+  
+  int dim = domain->dimension;
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  Grid::ChildCell *cells = grid->cells;
+  int nsurf = cells[icell].nsurf;
+  surfint *csurfs = cells[icell].csurfs;
 
-  Grid::ChildInfo *cinfo = grid->cinfo;
+  int anysurf = 0;
 
-  for (int i = 0; i < cnum; i++) {
-    if (ctask[i].flag == 0) continue;
-    ctask[i].flag = 0;
-
-    nchild = ctask[i].nchild;
-    proc = ctask[i].proc;
-    index = ctask[i].index;
-    recv = ctask[i].recv;
-
-    nmatch = 0;
-
-    for (m = 0; m < nchild; m++) {
-      if (proc[m] == me) {
-        icell = index[m];
-        if (cinfo[icell].mask & groupbit) nmatch++;
-      } else {
-        mask = sa_header[recv[m]]->mask;
-        if (mask & groupbit) nmatch++;
-      }
+  for (int i = 0; i < nsurf; i++) {
+    if (dim == 2) {
+      if (!(lines[i].mask & sgroupbit)) continue;
+    } else {
+      if (!(tris[i].mask & sgroupbit)) continue;
     }
-
-    if (nmatch == nchild) ctask[i].flag = 1;
+    if (dim == 2) norm = lines[csurfs[i]].norm;
+    else norm = tris[csurfs[i]].norm;
+    if (MathExtra::dot3(norm,sdir) < 0.0) {
+      anysurf = 1;
+      break;
+    }
   }
+
+  return (double) anysurf;
 }
 
 /* ----------------------------------------------------------------------
-   coarsen based on particle count
+   return compute or fix value for child cell
+   if child cell is split cell, accumulate value over sub cells
+------------------------------------------------------------------------- */
+
+double AdaptGrid::coarsen_value_cell(int icell)
+{
+  Grid::ChildCell *cells = grid->cells;
+  Grid::SplitInfo *sinfo = grid->sinfo;
+
+  if (cells[icell].nsplit == 1) {
+    if (valuewhich == COMPUTE) return value_compute(icell);
+    else if (valuewhich == FIX) return value_fix(icell);
+  }
+  
+  int *csubs = sinfo[cells[icell].isplit].csubs;
+  int nsplit = cells[icell].nsplit;
+
+  int jcell;
+  double value = 0.0;
+  
+  for (int i = 0; i < nsplit; i++) {
+    jcell = csubs[i];
+    if (combine == SUM) {
+      if (valuewhich == COMPUTE) value += value_compute(jcell);
+      else if (valuewhich == FIX) value += value_fix(jcell);
+    } else if (combine == MINIMUM) {
+      if (valuewhich == COMPUTE) 
+	value = MIN(value,value_compute(jcell));
+      else if (valuewhich == FIX) 
+	value = MIN(value,value_fix(jcell));
+    } else if (combine == MAXIMUM) {
+      if (valuewhich == COMPUTE) 
+	value = MAX(value,value_compute(jcell));
+      else if (valuewhich == FIX) 
+	value = MAX(value,value_fix(jcell));
+    }
+  }
+
+  return value;
+}
+
+/* ----------------------------------------------------------------------
+   coarsen clist cells based on particle count
 ------------------------------------------------------------------------- */
 
 void AdaptGrid::coarsen_particle()
 {
-  int m,nchild,np,icell,nsplit,jcell;
-  int *proc,*index,*recv,*csubs;
-
-  Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-  Grid::SplitInfo *sinfo = grid->sinfo;
-
+  int m,nchild,np;
+  double *values;
+  
   for (int i = 0; i < cnum; i++) {
-    if (ctask[i].flag == 0) continue;
-    ctask[i].flag = 0;
+    if (clist[i].flag == 0) continue;
 
-    nchild = ctask[i].nchild;
-    proc = ctask[i].proc;
-    index = ctask[i].index;
-    recv = ctask[i].recv;
-
+    values = clist[i].value;
+    nchild = clist[i].nchild;
+    
     np = 0;
-
-    for (m = 0; m < nchild; m++) {
-      if (proc[m] == me) {
-        icell = index[m];
-        if (cells[icell].nsplit == 1) np += cinfo[icell].count;
-        else {
-          nsplit = cells[icell].nsplit;
-          csubs = sinfo[cells[icell].isplit].csubs;
-          for (int j = 0; j < nsplit; j++) {
-            jcell = csubs[j];
-            np += cinfo[jcell].count;
-          }
-        }
-      } else np += sa_header[recv[m]]->np;
-    }
-
-    if (np < ccount) ctask[i].flag = 1;
+    for (m = 0; m < nchild; m++) np += static_cast<int> (values[m]);
+    if (np < ccount) clist[i].flag = 1;
+    else clist[i].flag = 0;
   }
 }
 
@@ -1608,161 +1192,57 @@ void AdaptGrid::coarsen_particle()
 
 void AdaptGrid::coarsen_surf()
 {
-  int i,j,m,iparent,nchild,icell,nsurf,flag;
-  int *proc,*index,*recv;
-  surfint *csurfs;
-  double *lo,*hi,*norm;
+  int m,nchild,anysurf;
+  double *values;
+  
+  for (int i = 0; i < cnum; i++) {
+    if (clist[i].flag == 0) continue;
 
-  int dim = domain->dimension;
-  Grid::ParentCell *pcells = grid->pcells;
-  Grid::ChildCell *cells = grid->cells;
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
-
-  for (i = 0; i < cnum; i++) {
-    if (ctask[i].flag == 0) continue;
-    ctask[i].flag = 0;
-
-    iparent = ctask[i].iparent;
-    nchild = ctask[i].nchild;
-    proc = ctask[i].proc;
-    index = ctask[i].index;
-    recv = ctask[i].recv;
-
-    lo = pcells[iparent].lo;
-    hi = pcells[iparent].hi;
-    flag = 0;
-    if (fabs(hi[0]-lo[0])/pcells[iparent].nx < surfsize) flag = 1;
-    if (fabs(hi[1]-lo[1])/pcells[iparent].ny < surfsize) flag = 1;
-    if (dim == 3 && fabs(hi[2]-lo[2])/pcells[iparent].nz < surfsize) flag = 1;
-    if (!flag) continue;
-
-    flag = 0;
-    for (m = 0; m < nchild; m++) {
-      if (proc[m] == me) {
-        icell = index[m];
-        if (!cells[icell].nsurf) continue;
-        nsurf = cells[icell].nsurf;
-        csurfs = cells[icell].csurfs;
-        for (j = 0; j < nsurf; j++) {
-          if (dim == 2) {
-            if (!(lines[j].mask & sgroupbit)) continue;
-          } else {
-            if (!(tris[j].mask & sgroupbit)) continue;
-          }
-          if (dim == 2) norm = lines[csurfs[j]].norm;
-          else norm = tris[csurfs[j]].norm;
-          if (MathExtra::dot3(norm,sdir) < 0.0) break;
-        }
-        if (j < nsurf) {
-          flag = 1;
-          break;
-        }
-      } else {
-	nsurf = sa_header[recv[m]]->nsurf;
-        if (!nsurf) continue;
-	csurfs = sa_csurfs[recv[m]];
-        for (j = 0; j < nsurf; j++) {
-          if (dim == 2) {
-            if (!(lines[j].mask & sgroupbit)) continue;
-          } else {
-            if (!(tris[j].mask & sgroupbit)) continue;
-          }
-          if (dim == 2) norm = lines[csurfs[j]].norm;
-          else norm = tris[csurfs[j]].norm;
-          if (MathExtra::dot3(norm,sdir) < 0.0) break;
-        }
-        if (j < nsurf) {
-          flag = 1;
-          break;
-        }
-      }
-    }
-
-    if (flag) ctask[i].flag = 1;
+    values = clist[i].value;
+    nchild = clist[i].nchild;
+    
+    anysurf = 0;
+    for (m = 0; m < nchild; m++) anysurf += static_cast<int> (values[m]);
+    if (anysurf) clist[i].flag = 1;
+    else clist[i].flag = 0;
   }
 }
 
 /* ----------------------------------------------------------------------
    coarsen based on compute or fix value
-   NOTE: insure fix ave/grid comes before fix adapt at end of step
 ------------------------------------------------------------------------- */
 
 void AdaptGrid::coarsen_value()
 {
-  int m,nchild,icell,jcell,nsplit;
-  int *proc,*index,*recv,*csubs;
-  double value;
-
-  Grid::ChildCell *cells = grid->cells;
-  Grid::SplitInfo *sinfo = grid->sinfo;
+  int m,nchild;
+  double onevalue,allvalues;
+  double *values;
 
   for (int i = 0; i < cnum; i++) {
-    if (ctask[i].flag == 0) continue;
-    ctask[i].flag = 0;
+    if (clist[i].flag == 0) continue;
+    
+    values = clist[i].value;
+    nchild = clist[i].nchild;
 
-    nchild = ctask[i].nchild;
-    proc = ctask[i].proc;
-    index = ctask[i].index;
-    recv = ctask[i].recv;
-
-    if (combine == SUM) value = 0.0;
-    else if (combine == MINIMUM) value = BIG;
-    else if (combine == MAXIMUM) value = -BIG;
+    if (combine == SUM) allvalues = 0.0;
+    else if (combine == MINIMUM) allvalues = BIG;
+    else if (combine == MAXIMUM) allvalues = -BIG;
 
     for (m = 0; m < nchild; m++) {
-      if (proc[m] == me) {
-        icell = index[m];
-        if (cells[icell].nsplit == 1) {
-          if (combine == SUM) {
-            if (valuewhich == COMPUTE) value += value_compute(icell);
-            else if (valuewhich == FIX) value += value_fix(icell);
-          } else if (combine == MINIMUM) {
-            if (valuewhich == COMPUTE) 
-              value = MIN(value,value_compute(icell));
-            else if (valuewhich == FIX) 
-              value = MIN(value,value_fix(icell));
-          } else if (combine == MAXIMUM) {
-            if (valuewhich == COMPUTE) 
-              value = MAX(value,value_compute(icell));
-            else if (valuewhich == FIX) 
-              value = MAX(value,value_fix(icell));
-          }
-        } else {
-
-          nsplit = cells[icell].nsplit;
-          csubs = sinfo[cells[icell].isplit].csubs;
-          for (int j = 0; j < nsplit; j++) {
-            jcell = csubs[j];
-            if (combine == SUM) {
-              if (valuewhich == COMPUTE) value += value_compute(jcell);
-              else if (valuewhich == FIX) value += value_fix(jcell);
-            } else if (combine == MINIMUM) {
-              if (valuewhich == COMPUTE) 
-                value = MIN(value,value_compute(jcell));
-              else if (valuewhich == FIX) 
-                value = MIN(value,value_fix(jcell));
-            } else if (combine == MAXIMUM) {
-              if (valuewhich == COMPUTE) 
-                value = MAX(value,value_compute(jcell));
-              else if (valuewhich == FIX) 
-                value = MAX(value,value_fix(jcell));
-            }
-          }
-        }
-      } else {
-        if (combine == SUM) value += sa_header[recv[m]]->value;
-        else if (combine == MINIMUM) 
-          value = MIN(value,sa_header[recv[m]]->value);
-        else if (combine == MAXIMUM) 
-          value = MAX(value,sa_header[recv[m]]->value);
-      }
+      onevalue = values[m];
+      if (combine == SUM) allvalues += onevalue;
+      else if (combine == MINIMUM) 
+	allvalues = MIN(allvalues,onevalue);
+      else if (combine == MAXIMUM) 
+	allvalues = MAX(allvalues,onevalue);
     }
     
     if (cdecide == LESS) {
-      if (value < cvalue) ctask[i].flag = 1;
+      if (allvalues < cvalue) clist[i].flag = 1;
+      else clist[i].flag = 0;
     } else {
-      if (value > cvalue) ctask[i].flag = 1;
+      if (allvalues > cvalue) clist[i].flag = 1;
+      else clist[i].flag = 0;
     }
   }
 }
@@ -1779,356 +1259,305 @@ void AdaptGrid::coarsen_random()
   // decide whether to coarsen or not, flag accordingly
 
   for (int i = 0; i < cnum; i++) {
-    if (ctask[i].flag == 0) continue;
-    ctask[i].flag = 0;
+    if (clist[i].flag == 0) continue;
+    clist[i].flag = 0;
     if (random->uniform() >= cfrac) continue;
-    ctask[i].flag = 1;
+    clist[i].flag = 1;
   }
 }
 
 /* ----------------------------------------------------------------------
-   perform coarsening of parent cells in ctask
+   now have clist with flag=1 for each parent cell that will be coarsened
+   (1) 1st portion of clist can be coarsened by this proc (owns all child cells)
+   (2) assign 2nd portion of clist to procs that own center child of each parent
+   (3) rendezvous comm that owning proc to owners of all child cells in clist
+   (4) child cells can then communicate their particles and surfs to new parent owner
+       this step is performed by comm->send_cells_adapt()
+   (5) create alist with info for only parent cell that will be coarsened
+       using data received from step (4)
+------------------------------------------------------------------------- */
+
+void AdaptGrid::particle_surf_comm()
+{
+  int j,m,plevel,ihalf,jhalf,khalf,ichild,nchild,owner;
+  int icell,jcell,np,nsplit;
+  cellint parentID;
+  int *csubs;
+
+  Grid::ParentLevel *plevels = grid->plevels;
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  Grid::SplitInfo *sinfo = grid->sinfo;
+  
+  // count child cells for parents flagged for coarsening
+  // children will be notified via rendezvous comm, owned by this proc or others
+  
+  int nsend = 0;
+  for (int i = 0; i < cnum; i++) {
+    if (!clist[i].flag) continue;
+    nsend += clist[i].nchild;
+  }
+    
+  // assign clist parent cells to an owning proc
+  // owning proc = one that owns center cell of child sub-grid
+  // fill inbuf with info to send to each child cell of coarsened parents
+  
+  int *proclist;
+  memory->create(proclist,nsend,"adapt_grid:proclist");
+  Rvous2 *inbuf = (Rvous2 *) memory->smalloc((bigint) nsend*sizeof(Rvous2),
+					     "adapt_grid:inbuf");
+  nsend = 0;
+
+  for (int i = 0; i < cnum; i++) {
+    if (!clist[i].flag) continue;
+    plevel = clist[i].plevel;
+    ihalf = plevels[plevel].nx / 2;
+    jhalf = plevels[plevel].ny / 2;
+    khalf = plevels[plevel].nz / 2;
+    ichild = khalf*plevels[plevel].ny*plevels[plevel].nx +
+      jhalf*plevels[plevel].nx + ihalf;
+    owner = clist[i].proc[ichild];
+    nchild = clist[i].nchild;
+
+    for (m = 0; m < nchild; m++) {
+      proclist[nsend] = clist[i].proc[m];
+      inbuf[nsend].parentID = clist[i].parentID;
+      inbuf[nsend].owner = owner;
+      inbuf[nsend].icell = clist[i].index[m];
+      inbuf[nsend].ichild = m;
+      nsend++;
+    }
+  }
+
+  // perform rendezvous communication to acquire inbuf data
+  // each SPARTA proc receives child cell data from Rvous decomp for
+  //   all children it owns in parent cells that are being coarsened
+  // callback() method is NULL, just receive data via MPI_All2allv()
+
+  char *buf;
+  int nreturn = comm->rendezvous(1,nsend,(char *) inbuf,sizeof(Rvous2),
+				 0,proclist,NULL,0,buf,0,this,0);
+
+  Rvous2 *outbuf = (Rvous2 *) buf;
+
+  memory->destroy(proclist);
+  memory->sfree(inbuf);
+
+  // use outbuf to fill SendAdapt data struct for my requested child cells
+  // flag my child cells for deletion
+
+  nsend = nreturn;
+  memory->create(proclist,nsend,"adapt_grid:proclist");
+  SendAdapt *sadapt = (SendAdapt *) memory->smalloc(nsend*sizeof(SendAdapt),
+						    "adapt_grid:sadapt");
+  for (int i = 0; i < nreturn; i++) {
+    icell = outbuf[i].icell;
+    cells[icell].proc = -1;
+    
+    proclist[i] = outbuf[i].owner;
+    sadapt[i].parentID = outbuf[i].parentID;
+    sadapt[i].plevel = cells[icell].level - 1;
+    sadapt[i].owner = outbuf[i].owner;
+    sadapt[i].proc = me;
+    sadapt[i].icell = icell;
+    sadapt[i].type = cinfo[icell].type;
+    sadapt[i].ichild = outbuf[i].ichild;
+    sadapt[i].nsurf = cells[icell].nsurf;
+
+    nsplit = cells[icell].nsplit;
+    if (nsplit == 1) sadapt[i].np = cinfo[icell].count;
+    else {
+      csubs = sinfo[cells[icell].isplit].csubs;
+      np = 0;
+      for (int j = 0; j < nsplit; j++) {
+	jcell = csubs[j];
+	np += cinfo[jcell].count;
+      }
+      sadapt[i].np = np;
+    }
+  }
+
+  memory->sfree(outbuf);
+
+  // use Comm::send_cells_adapt()
+  //   sends SendAdapt + surfs/particles for each cell to parent cell owner
+  // it invokes Grid::pack_one_adapt()
+  //   if this proc is parent owner, no surfs/particles are sent to self
+
+  int nrecv = comm->send_cells_adapt(nsend,proclist,(char *) sadapt,&spbuf);
+
+  memory->destroy(proclist);
+  memory->sfree(sadapt);
+
+  // create alist = list of parent cells I will coarsen in perform_coarsen()
+
+  MyHash *alhash = new MyHash();
+  SendAdapt *s;
+
+  int nbytes_total = sizeof(Particle::OnePart) + particle->sizeof_custom();
+
+  int dim = domain->dimension;
+  int distributed = surf->distributed;
+
+  alist = NULL;
+  anum = anummax = 0;
+
+  char *ptr = spbuf;
+
+  for (int i = 0; i < nrecv; i++) {
+    s = (SendAdapt *) ptr;
+    parentID = s->parentID;
+
+    if (alhash->find(parentID) == alhash->end()) {
+      if (anum == anummax) {
+	anummax += DELTA_LIST;
+	alist = (ActionList *) memory->srealloc(alist,anummax*sizeof(ActionList),
+						"adapt_grid:alist");
+      }
+      (*alhash)[parentID] = anum;
+      m = anum++;
+      alist[m].parentID = s->parentID;
+      alist[m].plevel = s->plevel;
+      alist[m].anyinside = 0;
+      nchild = plevels[s->plevel].nxyz;
+      alist[m].nchild = nchild;
+      alist[m].index = new int[nchild];
+      alist[m].nsurf = new int[nchild];
+      alist[m].np = new int[nchild];
+      alist[m].surfs = new void*[nchild];
+      alist[m].particles = new char*[nchild];
+    } else m = (*alhash)[parentID];
+
+    if (s->type == INSIDE) alist[m].anyinside = 1;
+
+    ichild = s->ichild;
+    if (s->proc == me) alist[m].index[ichild] = s->icell;
+    else alist[m].index[ichild] = -1;
+
+    alist[m].np[ichild] = s->nsurf;
+    alist[m].nsurf[ichild] = s->np;
+    
+    ptr += sizeof(SendAdapt);
+    ptr = ROUNDUP(ptr);
+
+    if (s->proc == me) continue;
+
+    // surfs are packed differently for distributed vs non-distributed
+    // non = indices, dist = line/tri data
+    
+    alist[m].nsurf[ichild] = s->nsurf;
+    alist[m].surfs[ichild] = (void *) ptr;
+    if (!distributed) ptr += s->nsurf * sizeof(surfint);
+    else if (dim == 2) ptr += s->nsurf * sizeof(Surf::Line);
+    else ptr += s->nsurf * sizeof(Surf::Tri);
+    ptr = ROUNDUP(ptr);
+
+    alist[m].np[ichild] = s->np;
+    alist[m].particles[ichild] = (char *) ptr;
+    ptr += s->np * nbytes_total;
+    ptr = ROUNDUP(ptr);
+  }
+
+  // clean up
+  // spbuf is onwed by Comm, so no need to delete in AdaptGrid
+
+  delete alhash;
+}
+
+/* ----------------------------------------------------------------------
+   perform coarsening of flagged parent cells in clist
 ------------------------------------------------------------------------- */
 
 int AdaptGrid::perform_coarsen()
 {
-  int i,m,icell,iparent,nchild,inew,mask;
-  int nsplit,jcell,ip;
-  int *proc,*index,*recv,*csubs;
+  int i,m,icell,nchild,newcell,mask;
+  int plevel,nsplit,jcell,ip;
+  cellint parentID;
+  double plo[3],phi[3];
+  int *csubs;
 
-  Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-  Grid::SplitInfo *sinfo = grid->sinfo;
-  Grid::MyHash *hash = grid->hash;
+  Grid::ChildCell *cells;
+  Grid::ChildInfo *cinfo;;
+  Grid::SplitInfo *sinfo;
 
-  // loop over coarsening tasks
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
 
-  int *procreply,*cellreply;
-  memory->create(procreply,nrecv,"adapt_grid:procreply");
-  memory->create(cellreply,nrecv,"adapt_grid:cellreply");
-  int nreply = 0;
+  // coarsening with distributed surfs requires use of hash
+  // used by grid->coarsen_cell() method to add new unique surfs
+  
+  if (surf->distributed) surf->rehash();
 
-  int removeparent = 0;
-  memory->create(delparent,cnum,"adapt_grid:delparent");
+  // loop over coarsening action list
 
-  // DEBUG
+  for (i = 0; i < anum; i++) {
+    parentID = alist[i].parentID;
+    plevel = alist[i].plevel;
+    grid->id_lohi(parentID,plevel,boxlo,boxhi,plo,phi);
+    nchild = alist[i].nchild;
 
-  /*
-  for (i = 0; i < cnum; i++) {
-    if (!ctask[i].flag) continue;
-    printf("CT %d: %d: parent %d\n",me,i,pcells[ctask[i].iparent].id);
-  }
-  */
+    // coarsen parentID to become a new child cell
 
-  for (i = 0; i < cnum; i++) {
+    grid->coarsen_cell(parentID,plevel,plo,phi,nchild,
+		       alist[i].index,alist[i].nsurf,alist[i].np,
+		       alist[i].surfs,alist[i].particles,cut2d,cut3d);
 
-    // skip if not selected
-    // no need to notify owners of children of this parent
-
-    if (!ctask[i].flag) continue;
-
-    iparent = ctask[i].iparent;
-    nchild = ctask[i].nchild;
-    proc = ctask[i].proc;
-    index = ctask[i].index;
-    recv = ctask[i].recv;
-    delparent[removeparent++] = iparent;
-
-    // flag children for deletion
-    // for mine, set proc = -1 and remove from grid hash
-    // for others, add to reply list
-
-    for (m = 0; m < nchild; m++) {
-      //if (me == 0 && pcells[iparent].id == 3)
-      //  printf("DELETING CHILD m %d index %d proc %d cellID %d\n",
-      //         m,index[m],proc[m],cells[index[m]].id);
-      if (proc[m] == me) {
-	icell = index[m];
-	cells[icell].proc = -1;
-	hash->erase(cells[icell].id);
-      } else {
-        procreply[nreply] = proc[m];
-        cellreply[nreply] = index[m];
-        nreply++;
-      }
-    }
-
-    // coarsen iparent to a new child cell
-    // coarsen_cell() will add new child to grid hash
-    //   also add it to chash to prevent it from being refined
-    // set group mask of all new children to groupbit + all
-    //   new children = one child + all its sub cells (if any)
-    //   NOTE: could set mask to intersection of all old children
-    //         to attempt to preserve other group settings
-
-    grid->coarsen_cell(iparent,nchild,proc,index,recv,this,cut2d,cut3d);
     cells = grid->cells;
     cinfo = grid->cinfo;
-    (*chash)[ctask[i].id] = 0;
+    sinfo = grid->sinfo;
+    newcell = grid->nlocal - 1;
 
-    inew = grid->nlocal - 1;
+    // if new child has no surfs and any of its children was INSIDE
+    // then type of new child cell = INSIDE
+
+    if (cells[newcell].nsurf == 0 && alist[i].anyinside)
+      cinfo[newcell].type = INSIDE;
+
+    // set group mask of new child and its sub-cells to groupbit + all
+    // NOTE: could set mask to intersection of all old children
+    //       to attempt to preserve other group settings
+
     mask = groupbit | 1;
-    cinfo[inew].mask = mask;
-    if (cells[inew].nsplit > 1) {
+    cinfo[newcell].mask = mask;
+
+    if (cells[newcell].nsplit > 1) {
       sinfo = grid->sinfo;
-      nsplit = cells[inew].nsplit;
-      csubs = sinfo[cells[inew].isplit].csubs;
+      nsplit = cells[newcell].nsplit;
+      csubs = sinfo[cells[newcell].isplit].csubs;
       for (int j = 0; j < nsplit; j++) {
         jcell = csubs[j];
         cinfo[jcell].mask = mask;
       }
     }
 
-    // add new child cell to newcells list
+    // add ID of new coarsened cell to chash
 
-    if (nnew == maxnew) {
-      maxnew += DELTA_NEW;
-      memory->grow(newcells,maxnew,"adapt_grid:newcells");
-    }
-    newcells[nnew++] = ctask[i].id;
+    (*chash)[parentID] = 0;
   }
 
-  // return if no one has any child cell info to reply to another proc
-
-  MPI_Allreduce(&nreply,&replyany,1,MPI_INT,MPI_SUM,world);
-  if (!replyany) {
-    memory->sfree(sa_header);
-    memory->sfree(sa_csurfs);
-    memory->sfree(sa_particles);
-    memory->destroy(procreply);
-    memory->destroy(cellreply);
-    nrecv = 0;
-
-    //printf("CNUM3 %d: %d %d\n",me,removeparent,nrecv);
-
-    return removeparent;
+  // done with surf hash
+  
+  if (surf->distributed) {
+    surf->hash->clear();
+    surf->hashfilled = 0;
   }
 
-  // perform irregular comm from rendezvous procs
-  // recv list of my cells coarsened into new child cell on another proc
-  // scan received buf to mark my grid cells for deletion 
-  //   and remove from grid hash
-  // don't need to flag sub cells, since grid compress will do that
-  // also mark particles of cell for deletion
-  // if cell is split, mark particles in all its sub cells for deletion
-
-  sinfo = grid->sinfo;
-  Particle::OnePart *particles = particle->particles;
-  int *next = particle->next;
-
-  char *buf;
-  nrecv = comm->irregular_uniform(nreply,procreply,
-                                  (char *) cellreply,sizeof(int),&buf);
-  int *ibuf = (int *) buf;
-
-  for (i = 0; i < nrecv; i++) {
-    icell = ibuf[i];
-    cells[icell].proc = -1;
-    hash->erase(cells[icell].id);
-
-    if (cells[icell].nsplit == 1) {
-      ip = cinfo[icell].first;
-      while (ip >= 0) {
-        particles[ip].icell = -1;
-        ip = next[ip];
-      }
-    } else {
-      nsplit = cells[icell].nsplit;
-      csubs = sinfo[cells[icell].isplit].csubs;
-      for (m = 0; m < nsplit; m++) {
-        jcell = csubs[m];
-        ip = cinfo[jcell].first;
-        while (ip >= 0) {
-          particles[ip].icell = -1;
-          ip = next[ip];
-        }
-      }
-    }
-  }
-
-  // clean up
-
-  memory->sfree(sa_header);
-  memory->sfree(sa_csurfs);
-  memory->sfree(sa_particles);
-  memory->destroy(procreply);
-  memory->destroy(cellreply);
-
-  // return # of parents removed by this proc
-
-  //printf("CNUM3 %d: %d %d\n",me,removeparent,nrecv);
-
-  return removeparent;
-}
-
-/* ----------------------------------------------------------------------
-   gather deleted parent cells from all procs, on each proc
-   must end up with same list, in same order, on every proc
-   must repoint child cells to new parent
-   also point child cells that became parent to new parent
-     this is so can reassign particles to correct new child cells
-------------------------------------------------------------------------- */
-
-void AdaptGrid::gather_parents_coarsen(int delta, int nrefine)
-{
-  int i,m,iparent,nsplit;
-  cellint tmp;
-  int *csubs;
-
-  // perform Allgatherv of removed parent cells from all procs
-
-  int *recvcounts,*displs;
-  memory->create(recvcounts,nprocs,"adapt_grid:recvcounts");
-  memory->create(displs,nprocs,"adapt_grid:displs");
-
-  MPI_Allgather(&delta,1,MPI_INT,recvcounts,1,MPI_INT,world);
-  displs[0] = 0;
-  for (i = 1; i < nprocs; i++) displs[i] = displs[i-1] + recvcounts[i-1];
-
-  int deltaall;
-  MPI_Allreduce(&delta,&deltaall,1,MPI_INT,MPI_SUM,world);
-  int *delparentall;
-  memory->create(delparentall,deltaall,"adapt_grid:delparentall");
-
-  MPI_Allgatherv(delparent,delta,MPI_INT,
-                 delparentall,recvcounts,displs,MPI_INT,world);
-
-  // flag all parent cells to remove with id = 0
-  // remove parent cell from hash
-
-  Grid::ParentCell *pcells = grid->pcells;
-  Grid::MyHash *hash = grid->hash;
-
-  for (i = 0; i < deltaall; i++) {
-    iparent = delparentall[i];
-    hash->erase(pcells[iparent].id);
-    pcells[iparent].id = 0;
-  }
-
-  // remove all flagged parent cells
-  // shift cells that are kept downward to preserve original ordering
-  // reset hash to new location in pcells
-
-  int psize = sizeof(Grid::ParentCell);
-
-  int ncurrent = grid->nparent;
-  int nparent = 1;
-  for (i = 1; i < ncurrent; i++) {
-    if (pcells[i].id) {
-      if (i > nparent) memcpy(&pcells[nparent],&pcells[i],psize);
-      (*hash)[pcells[i].id] = -(nparent+1);
-      nparent++;
-    }
-  }
-
-  grid->nparent = nparent;
-
-  // loop over all parent cells
-  // reset their iparent field and grandparent flag
-
-  for (i = 1; i < nparent; i++) {
-    iparent = grid->id_find_parent(pcells[i].id,tmp);
-    pcells[i].iparent = iparent;
-    pcells[i].grandparent = 0;
-    pcells[pcells[i].iparent].grandparent = 1;
-  }
-
-  // DEBUG
-
-  /*
-  char str[32];
-  printf("POST COARSEN PARENT %d: %d\n",comm->me,grid->nparent);
-  for (int i = 0; i < grid->nparent; i++) {
-    Grid::ParentCell *p = &grid->pcells[i];
-    grid->id_num2str(p->id,str);
-    printf("PCELL %d: %d id %d %s iparent %d %d level %d "
-           "nxyz %d %d %d lo %g %g %g "
-           "hi %g %g %g\n",
-           comm->me,i,p->id,str,p->iparent,p->grandparent,p->level,
-           p->nx,p->ny,p->nz,
-           p->lo[0],
-           p->lo[1],
-           p->lo[2],
-           p->hi[0],
-           p->hi[1],
-           p->hi[2]);
-  }
-
-
-  printf("POST COARSEN CHILD %d: %d\n",comm->me,grid->nlocal);
-  for (int i = 0; i < grid->nlocal; i++) {
-    Grid::ChildCell *g = &grid->cells[i];
-    if (g->nsplit <= 1) {
-      grid->id_num2str(g->id,str);
-      printf("ICELL %d: %d id %d iparent %d proc %d\n",
-             comm->me,i,g->id,g->iparent,g->proc);
-    } else
-      printf("ICELLSPLIT %d id %d iparent %d proc %d nsplit %d isplit %d "
-             "spicell %d csubs %d %d lo %g %g "
-             "hi %g %g inout %d\n",
-             i,g->id,g->iparent,g->proc,g->nsplit,g->isplit,
-             grid->sinfo[g->isplit].icell,
-             grid->sinfo[g->isplit].csubs[0],grid->sinfo[g->isplit].csubs[1],
-             g->lo[0],
-             g->lo[1],
-             g->hi[0],
-             g->hi[1],
-             grid->cinfo[i].type);
-  }
-  */
-
-  // loop over all child cells and reset their iparent field
-  // skip cells with proc < 0 that are marked for deletion
-  // skip sub cells since parent no longer exists for ones about to be deleted
-  // set non-deleted sub cells via parent split cell
-
-  Grid::ChildCell *cells = grid->cells;
-  Grid::SplitInfo *sinfo = grid->sinfo;
-  int nglocal = grid->nlocal;
-
-  for (i = 0; i < nglocal; i++) {
-    if (cells[i].proc < 0) continue;
-    if (cells[i].nsplit <= 0) continue;
-
-    //printf("FIND PARENT %d %d: %d iparent %d\n",me,i,cells[i].id,
-    //       cells[i].iparent);
-    iparent = grid->id_find_parent(cells[i].id,tmp);
-    //printf("  found PARENT %d %d: %d %d\n",me,i,cells[i].id,iparent);
-    cells[i].iparent = iparent;
-    if (cells[i].nsplit > 1) {
-      nsplit = cells[i].nsplit;
-      csubs = sinfo[cells[i].isplit].csubs;
-      for (m = 0; m < nsplit; m++) cells[csubs[m]].iparent = iparent;
-    }
-  }
-
-  // clean up
-
-  memory->destroy(recvcounts);
-  memory->destroy(displs);
-  memory->sfree(delparentall);
+  // return # of cells this proc coarsened
+  
+  return anum;
 }
 
 /* ----------------------------------------------------------------------
    extract a value for icell,valindex from a compute
-   NOTE: post_process_grid_old() is a NO-OP at this point
-         how to insure that compute value in vec/array is current
 ------------------------------------------------------------------------- */
 
 double AdaptGrid::value_compute(int icell)
 {
   double value;
 
-  if (valindex == 0) {
-    if (compute->post_process_grid_flag) 
-      compute->post_process_grid_old(NULL,NULL,icell,0,&value,1);
-    else value = compute->vector_grid[icell];
-
-  } else {
-    if (compute->post_process_grid_flag)
-      compute->post_process_grid_old(NULL,NULL,icell,valindex,&value,1);
-    else value = compute->array_grid[icell][valindex-1];
-  }
+  if (valindex == 0 || compute->post_process_grid_flag)
+    value = compute->vector_grid[icell];
+  else value = compute->array_grid[icell][valindex-1];
 
   return value;
 }
@@ -2245,26 +1674,35 @@ void AdaptGrid::cleanup()
   delete random;
   delete [] childlist;
 
+  memory->destroy(rlist);
+  if (clist) {
+    for (int i = 0; i < cnum; i++) {
+      delete [] clist[i].proc;
+      delete [] clist[i].index;
+      delete [] clist[i].value;
+    }
+    memory->sfree(clist);
+  }
+  if (alist) {
+    for (int i = 0; i < anum; i++) {
+      delete [] alist[i].index;
+      delete [] alist[i].nsurf;
+      delete [] alist[i].np;
+      delete [] alist[i].surfs;
+      delete [] alist[i].particles;
+    }
+    memory->sfree(alist);
+  }
+
   if (domain->dimension == 3) delete cut3d;
   else delete cut2d;
 
-  memory->destroy(rlist);
-  if (ctask) {
-    for (int i = 0; i < cnum; i++) {
-      delete [] ctask[i].proc;
-      delete [] ctask[i].index;
-      delete [] ctask[i].recv;
-    }
-    memory->sfree(ctask);
-  }
-  memory->sfree(sadapt);
-  memory->sfree(delparent);
-
+  delete rhash;
   delete chash;
 }
 
 /* ----------------------------------------------------------------------
-   write out new parent grid file via WriteGrid
+   write out new grid file via WriteGrid
 ------------------------------------------------------------------------- */
 
 void AdaptGrid::write_file()
@@ -2272,9 +1710,8 @@ void AdaptGrid::write_file()
   WriteGrid *wg = new WriteGrid(sparta);
   wg->silent = 1;
 
-  int narg = 2;
+  int narg = 1;
   char **args = new char*[narg];
-  args[0] = (char *) "parent";
 
   char *expandfile = NULL;
   if (strchr(file,'*')) {
@@ -2283,12 +1720,12 @@ void AdaptGrid::write_file()
     *ptr = '\0';
     sprintf(expandfile,"%s" BIGINT_FORMAT "%s",file,update->ntimestep,ptr+1);
     *ptr = '*';
-    args[1] = expandfile;
-  } else args[1] = file;
+    args[0] = expandfile;
+  } else args[0] = file;
 
   wg->command(narg,args);
 
-  // NOTE: could persist wg for fix adapt
+  // NOTE: could persist WriteGrid instance for fix adapt
 
   delete [] expandfile;
   delete [] args;

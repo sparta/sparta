@@ -39,9 +39,6 @@
 #include "memory.h"
 #include "error.h"
 
-// DEBUG
-#include "fix_ablate.h"
-
 using namespace SPARTA_NS;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
@@ -58,10 +55,10 @@ enum{PERAUTO,PERCELL,PERSURF};                  // several files
 // either set ID or PROC/INDEX, set other to -1
 
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID 707672596  // particle ID
+#define MOVE_DEBUG_ID 308143534  // particle ID
 #define MOVE_DEBUG_PROC -1        // owning proc
 #define MOVE_DEBUG_INDEX -1   // particle index on owning proc
-#define MOVE_DEBUG_STEP 94    // timestep
+#define MOVE_DEBUG_STEP 4107    // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -283,93 +280,6 @@ void Update::run(int nsteps)
       output->write(ntimestep);
       timer->stamp(TIME_OUTPUT);
     }
-
-    // DEBUG
-
-    /*
-    if (ntimestep == 3600) {
-      Grid::ChildCell *cells = grid->cells;
-      Grid::ChildInfo *cinfo = grid->cinfo;
-      int nglocal = grid->nlocal;
-
-      int ifix = modify->find_fix("FOO");
-      FixAblate *ablate = (FixAblate *) modify->fix[ifix];
-      int groupbit = grid->bitmask[ablate->igroup];
-
-      for (int icell = 0; icell < nglocal; icell++) {
-        if (!(cinfo[icell].mask & groupbit)) continue;
-        if (cells[icell].nsplit <= 0) continue;
-        cellint id = cells[icell].id;
-        char prefix[32],bif[8],pad[16],fname[32];
-        sprintf(prefix,"corners.%d.%ld.",comm->nprocs,update->ntimestep);
-        strcpy(bif,CELLINT_FORMAT);
-        sprintf(pad,"%%s%%0%d%s",6,&bif[1]);
-        sprintf(fname,pad,prefix,id);
-        FILE *fp = fopen(fname,"w");
-        fprintf(fp,"%d: %g %g %g %g %g %g %g %g\n",id,
-                ablate->array_grid[icell][0],
-                ablate->array_grid[icell][1],
-                ablate->array_grid[icell][2],
-                ablate->array_grid[icell][3],
-                ablate->array_grid[icell][4],
-                ablate->array_grid[icell][5],
-                ablate->array_grid[icell][6],
-                ablate->array_grid[icell][7]);
-        fclose(fp);
-      }
-    }
-
-    if (ntimestep == 3600) {
-      Surf::Tri *tris = surf->tris;
-      Grid::ChildCell *cells = grid->cells;
-      Grid::ChildInfo *cinfo = grid->cinfo;
-      int nglocal = grid->nlocal;
-
-      int ifix = modify->find_fix("FOO");
-      FixAblate *ablate = (FixAblate *) modify->fix[ifix];
-      int groupbit = grid->bitmask[ablate->igroup];
-
-      for (int icell = 0; icell < nglocal; icell++) {
-        if (!(cinfo[icell].mask & groupbit)) continue;
-        if (cells[icell].nsplit <= 0) continue;
-        if (cells[icell].nsurf == 0) continue;
-        cellint id = cells[icell].id;
-        char prefix[32],bif[8],pad[16],fname[32];
-        sprintf(prefix,"impsurf.%d.%ld.",comm->nprocs,update->ntimestep);
-        strcpy(bif,CELLINT_FORMAT);
-        sprintf(pad,"%%s%%0%d%s",6,&bif[1]);
-        sprintf(fname,pad,prefix,id);
-        FILE *fp = fopen(fname,"w");
-        fprintf(fp,"%d: %d\n",id,cells[icell].nsurf);
-        for (int j = 0; j < cells[icell].nsurf; j++) {
-          int m = cells[icell].csurfs[j];
-          fprintf(fp,"  %d: id %d tmii %d %d %d %d\n",j+1,
-                  tris[m].id,
-                  tris[m].type,
-                  tris[m].mask,
-                  tris[m].isc,
-                  tris[m].isr);
-          fprintf(fp,"  %d: p1 %20.15g %20.15g %20.15g\n",j+1,
-                  tris[m].p1[0],
-                  tris[m].p1[1],
-                  tris[m].p1[2]);
-          fprintf(fp,"  %d: p2 %20.15g %20.15g %20.15g\n",j+1,
-                  tris[m].p2[0],
-                  tris[m].p2[1],
-                  tris[m].p2[2]);
-          fprintf(fp,"  %d: p3 %20.15g %20.15g %20.15g\n",j+1,
-                  tris[m].p3[0],
-                  tris[m].p3[1],
-                  tris[m].p3[2]);
-          fprintf(fp,"  %d: norm %20.15g %20.15g %20.15g\n",j+1,
-                  tris[m].norm[0],
-                  tris[m].norm[1],
-                  tris[m].norm[2]);
-        }
-        fclose(fp);
-      }
-    }
-    */
   }
 }
 
@@ -391,6 +301,7 @@ template < int DIM, int SURF > void Update::move()
   double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
   double xnew[3],xhold[3],xc[3],vc[3],minxc[3],minvc[3];
   double *x,*v,*lo,*hi;
+  Grid::ParentCell *pcell;
   Surf::Tri *tri;
   Surf::Line *line;
   Particle::OnePart iorig;
@@ -424,10 +335,13 @@ template < int DIM, int SURF > void Update::move()
   // move/migrate iterations
 
   Grid::ChildCell *cells = grid->cells;
+  Grid::ParentCell *pcells = grid->pcells;
   Surf::Tri *tris = surf->tris;
   Surf::Line *lines = surf->lines;
   double dt = update->dt;
   int notfirst = 0;
+
+  // DEBUG
 
   while (1) {
 
@@ -671,7 +585,16 @@ template < int DIM, int SURF > void Update::move()
 
         if (SURF) {
 
+	  // skip surf checks if particle flagged as EXITing this cell
+	  // then unset pflag so not checked again for this particle
+
           nsurf = cells[icell].nsurf;
+	  if (pflag == PEXIT) {
+	    nsurf = 0;
+	    pflag = 0;
+	  }
+	  nscheck_one += nsurf;
+
           if (nsurf) {
 
             // particle crosses cell face, reset xnew exactly on face of cell
@@ -713,8 +636,10 @@ template < int DIM, int SURF > void Update::move()
             cflag = 0;
             minparam = 2.0;
             csurfs = cells[icell].csurfs;
+	    
             for (m = 0; m < nsurf; m++) {
               isurf = csurfs[m];
+	      
               if (DIM > 1) {
                 if (isurf == exclude) continue;
               }
@@ -816,8 +741,8 @@ template < int DIM, int SURF > void Update::move()
 
             } // END of for loop over surfs
 
-            nscheck_one += nsurf;
-            
+	    // tri/line = surf that particle hit first
+	    
             if (cflag) {
               if (DIM == 3) tri = &tris[minsurf];
               if (DIM != 3) line = &lines[minsurf];
@@ -987,10 +912,11 @@ template < int DIM, int SURF > void Update::move()
 
         // nflag = type of neighbor cell: child, parent, unknown, boundary
         // if parent, use id_find_child to identify child cell
-        //   result of id_find_child could be unknown:
-        //     particle is hitting face of a ghost child cell which extends
-        //     beyond my ghost halo, cell on other side of face is a parent,
-        //     it's child which the particle is in is entirely beyond my halo
+        //   result can be -1 for unknown cell, occurs when:
+        //   (a) particle hits face of ghost child cell
+	//   (b) the ghost cell extends beyond ghost halo
+	//   (c) cell on other side of face is a parent
+        //   (d) its child, which the particle is in, is entirely beyond my halo
         // if new cell is child and surfs exist, check if a split cell
 
         nflag = grid->neigh_decode(nmask,outface);
@@ -1007,7 +933,9 @@ template < int DIM, int SURF > void Update::move()
               icell = split2d(icell,x);
           }
         } else if (nflag == NPARENT) {
-          icell = grid->id_find_child(neigh[outface],x);
+	  pcell = &pcells[neigh[outface]];
+          icell = grid->id_find_child(pcell->id,cells[icell].level,
+				      pcell->lo,pcell->hi,x);
           if (icell >= 0) {
             if (DIM == 3 && SURF) {
               if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
@@ -1029,7 +957,7 @@ template < int DIM, int SURF > void Update::move()
         // if jpart, add new particle to this iteration via pstop++
         // OUTFLOW: exit with particle flag = PDISCARD
         // PERIODIC: new cell via same logic as above for child/parent/unknown
-        // other = reflected particle stays in same grid cell
+        // OTHER: reflected particle stays in same grid cell
 
         else {
           ipart = &particles[i];
@@ -1074,7 +1002,9 @@ template < int DIM, int SURF > void Update::move()
                   icell = split2d(icell,x);
               }
             } else if (nflag == NPBPARENT) {
-              icell = grid->id_find_child(neigh[outface],x);
+	      pcell = &pcells[neigh[outface]];
+	      icell = grid->id_find_child(pcell->id,cells[icell].level,
+					  pcell->lo,pcell->hi,x);
               if (icell >= 0) {
                 if (DIM == 3 && SURF) {
                   if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
@@ -1529,16 +1459,6 @@ void Update::global(int narg, char **arg)
       if (grid->maxsurfpercell <= 0) error->all(FLERR,"Illegal global command");
       // reallocate paged data structs for variable-length surf info
       grid->allocate_surf_arrays();
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"cellmax") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      if (surf->exist) 
-        error->all(FLERR,
-                   "Cannot set global cellmax when surfaces already exist");
-      grid->maxcellpersurf = atoi(arg[iarg+1]);
-      if (grid->maxcellpersurf <= 0) error->all(FLERR,"Illegal global command");
-      // reallocate paged data structs for variable-length cell info
-      grid->allocate_cell_arrays();
       iarg += 2;
     } else if (strcmp(arg[iarg],"splitmax") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");

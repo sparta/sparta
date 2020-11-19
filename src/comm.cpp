@@ -299,9 +299,9 @@ void Comm::migrate_cells(int nmigrate)
   //   since compress_rebalance() unsets it
 
   if (nmigrate) {
-    if (surf->implicit) surf->compress_implicit_rebalance();
+    if (surf->implicit) surf->compress_implicit();
     grid->compress();
-    if (surf->distributed && !surf->implicit) surf->compress_explicit_rebalance();
+    if (surf->distributed && !surf->implicit) surf->compress_explicit();
     particle->compress_rebalance();
   } else particle->sorted = 0;
 
@@ -464,14 +464,14 @@ void Comm::migrate_cells_less_memory(int nmigrate)
   // compress my list of owned grid cells to remove migrated cells
 
   if (nmigrate) {
-    if (surf->implicit) surf->compress_implicit_rebalance();
+    if (surf->implicit) surf->compress_implicit();
     grid->compress();
-    if (surf->distributed && !surf->implicit) surf->compress_explicit_rebalance();
+    if (surf->distributed && !surf->implicit) surf->compress_explicit();
   }
 }
 
 /* ----------------------------------------------------------------------
-   send grid cell info with their particles needed for possible grid adaptation
+   send grid cell info with their surfs/particles needed for grid adaptation
    return # of received cells and buf = ptr to received cell info
    called from AdaptGrid
 ------------------------------------------------------------------------- */
@@ -531,8 +531,7 @@ int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
   if (!igrid) igrid = new Irregular(sparta);
   int recvsize;
   int nrecv = 
-    igrid->create_data_variable(nsend,procsend,gsize,
-                                recvsize,commsortflag);
+    igrid->create_data_variable(nsend,procsend,gsize,recvsize,commsortflag);
 
   // reallocate rbuf as needed
 
@@ -755,6 +754,13 @@ rendezvous_irregular(int n, char *inbuf, int insize, int inorder, int *procs,
   bigint irregular1_bytes = 0;   // irregular->irregular_bytes;
   delete irregular;
 
+  // done if callback is NULL, return inbuf_rvous
+
+  if (!callback) {
+    outbuf = inbuf_rvous;
+    return nrvous;
+  }
+  
   // peform rendezvous computation via callback()
   // callback() allocates/populates proclist_rvous and outbuf_rvous
 
@@ -898,6 +904,17 @@ rendezvous_all2all(int n, char *inbuf, int insize, int inorder, int *procs,
     memory->destroy(procs_a2a);
     memory->sfree(inbuf_a2a);
     memory->destroy(offsets);
+  }
+
+  // done if callback is NULL, return inbuf_rvous
+
+  if (!callback) {
+    memory->destroy(sendcount);
+    memory->destroy(recvcount);
+    memory->destroy(sdispls);
+    memory->destroy(rdispls);
+    outbuf = inbuf_rvous;
+    return nrvous;
   }
 
   // peform rendezvous computation via callback()

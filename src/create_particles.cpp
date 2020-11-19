@@ -558,6 +558,7 @@ void CreateParticles::create_local(bigint np)
 
     ntarget = nme * volsum/volme - nprev;
     npercell = static_cast<int> (ntarget);
+
     if (random->uniform() < ntarget-npercell) npercell++;
     ncreate = npercell;
 
@@ -570,6 +571,7 @@ void CreateParticles::create_local(bigint np)
 
     for (int m = 0; m < ncreate; m++) {
       rn = random->uniform();
+
       isp = 0;
       while (cummulative[isp] < rn) isp++;
       ispecies = species[isp];

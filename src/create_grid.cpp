@@ -22,11 +22,13 @@
 #include "comm.h"
 #include "random_mars.h"
 #include "random_park.h"
+#include "memory.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
 
-enum{NONE,LEVEL,STRIDE,CLUMP,BLOCK,RANDOM};
+enum{NOSTYLE,BLOCK,CLUMP,RANDOM,STRIDE};
+enum{NOLEVEL,SUBSET,REGION};
 enum{XYZ,XZY,YXZ,YZX,ZXY,ZYX};
 enum{ANY,ALL};
 
@@ -43,85 +45,32 @@ void CreateGrid::command(int narg, char **arg)
   if (grid->exist)
     error->all(FLERR,"Cannot create grid when grid is already defined");
 
+  me = comm->me;
+  nprocs = comm->nprocs;
   grid->exist = 1;
+  dimension = domain->dimension;
 
   if (narg < 3) error->all(FLERR,"Illegal create_grid command");
 
-  int nx = atoi(arg[0]);
-  int ny = atoi(arg[1]);
-  int nz = atoi(arg[2]);
+  nx = atoi(arg[0]);
+  ny = atoi(arg[1]);
+  nz = atoi(arg[2]);
 
-  if (nx < 1 || ny < 1 || nz < 1)
-    error->all(FLERR,"Illegal create_grid command");
-  if (domain->dimension == 2 && nz != 1)
-    error->all(FLERR,"Create_grid nz value must be 1 for a 2d simulation");
+  // pstyle and args
 
-  // optional args
-
-  dimension = domain->dimension;
-
-  int nlevels = 1;
-  int bstyle = NONE;
-  int px = 0;
-  int py = 0;
-  int pz = 0;
-  int order;
-  int inside = ANY;
-
+  pstyle = NOSTYLE;
+  nlevels = 1;
+  levels = NULL;
+  stack = NULL;
+  inside = ANY;
+  
   int iarg = 3;
+
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"level") == 0) {
-      if (iarg+8 > narg) error->all(FLERR,"Illegal create_grid command");
-      if (bstyle != NONE && bstyle != LEVEL)
-        error->all(FLERR,"Illegal create_grid command");
-      bstyle = LEVEL;
-      if (atoi(arg[iarg+1]) != nlevels+1) 
-        error->all(FLERR,"Illegal create_grid command");
-      nlevels++;
-      iarg += 8;
-
-    } else if (strcmp(arg[iarg],"region") == 0) {
-      if (iarg+6 > narg) error->all(FLERR,"Illegal create_grid command");
-      if (bstyle != NONE && bstyle != LEVEL)
-        error->all(FLERR,"Illegal create_grid command");
-      bstyle = LEVEL;
-      if (atoi(arg[iarg+1]) != nlevels+1) 
-        error->all(FLERR,"Illegal create_grid command");
-      if (domain->find_region(arg[iarg+2]) < 0)
-        error->all(FLERR,"Create_grid region ID does not exist");
-      nlevels++;
-      iarg += 6;
-
-    } else if (strcmp(arg[iarg],"stride") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal create_grid command");
-      if (bstyle != NONE) error->all(FLERR,"Illegal create_grid command");
-      bstyle = STRIDE;
-      if (strcmp(arg[iarg+1],"xyz") == 0) order = XYZ;
-      else if (strcmp(arg[iarg+1],"xzy") == 0) order = XZY;
-      else if (strcmp(arg[iarg+1],"yxz") == 0) order = YXZ;
-      else if (strcmp(arg[iarg+1],"yzx") == 0) order = YZX;
-      else if (strcmp(arg[iarg+1],"zxy") == 0) order = ZXY;
-      else if (strcmp(arg[iarg+1],"zyx") == 0) order = ZYX;
-      else error->all(FLERR,"Illegal create_grid command");
-      iarg += 2;
-
-    } else if (strcmp(arg[iarg],"clump") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal create_grid command");
-      if (bstyle != NONE) error->all(FLERR,"Illegal create_grid command");
-      bstyle = CLUMP;
-      if (strcmp(arg[iarg+1],"xyz") == 0) order = XYZ;
-      else if (strcmp(arg[iarg+1],"xzy") == 0) order = XZY;
-      else if (strcmp(arg[iarg+1],"yxz") == 0) order = YXZ;
-      else if (strcmp(arg[iarg+1],"yzx") == 0) order = YZX;
-      else if (strcmp(arg[iarg+1],"zxy") == 0) order = ZXY;
-      else if (strcmp(arg[iarg+1],"zyx") == 0) order = ZYX;
-      else error->all(FLERR,"Illegal create_grid command");
-      iarg += 2;
-
-    } else if (strcmp(arg[iarg],"block") == 0) {
+    if (strcmp(arg[iarg],"block") == 0) {
+      if (pstyle != NOSTYLE) error->all(FLERR,"Illegal create_grid command");
       if (iarg+4 > narg) error->all(FLERR,"Illegal create_grid command");
-      if (bstyle != NONE) error->all(FLERR,"Illegal create_grid command");
-      bstyle = BLOCK;
+      pstyle = BLOCK;
       if (strcmp(arg[iarg+1],"*") == 0) px = 0;
       else px = atoi(arg[iarg+1]);
       if (strcmp(arg[iarg+2],"*") == 0) py = 0;
@@ -130,278 +79,210 @@ void CreateGrid::command(int narg, char **arg)
       else pz = atoi(arg[iarg+3]);
       iarg += 4;
 
+    } else if (strcmp(arg[iarg],"clump") == 0) {
+      if (pstyle != NOSTYLE) error->all(FLERR,"Illegal create_grid command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal create_grid command");
+      pstyle = CLUMP;
+      if (strcmp(arg[iarg+1],"xyz") == 0) order = XYZ;
+      else if (strcmp(arg[iarg+1],"xzy") == 0) order = XZY;
+      else if (strcmp(arg[iarg+1],"yxz") == 0) order = YXZ;
+      else if (strcmp(arg[iarg+1],"yzx") == 0) order = YZX;
+      else if (strcmp(arg[iarg+1],"zxy") == 0) order = ZXY;
+      else if (strcmp(arg[iarg+1],"zyx") == 0) order = ZYX;
+      else error->all(FLERR,"Illegal create_grid command");
+      iarg += 2;
+      
+    } else if (strcmp(arg[iarg],"stride") == 0) {
+      if (pstyle != NOSTYLE) error->all(FLERR,"Illegal create_grid command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal create_grid command");
+      pstyle = STRIDE;
+      if (strcmp(arg[iarg+1],"xyz") == 0) order = XYZ;
+      else if (strcmp(arg[iarg+1],"xzy") == 0) order = XZY;
+      else if (strcmp(arg[iarg+1],"yxz") == 0) order = YXZ;
+      else if (strcmp(arg[iarg+1],"yzx") == 0) order = YZX;
+      else if (strcmp(arg[iarg+1],"zxy") == 0) order = ZXY;
+      else if (strcmp(arg[iarg+1],"zyx") == 0) order = ZYX;
+      else error->all(FLERR,"Illegal create_grid command");
+      iarg += 2;
+      
     } else if (strcmp(arg[iarg],"random") == 0) {
+      if (pstyle != NOSTYLE) error->all(FLERR,"Illegal create_grid command");
       if (iarg+1 > narg) error->all(FLERR,"Illegal create_grid command");
-      if (bstyle != NONE) error->all(FLERR,"Illegal create_grid command");
-      bstyle = RANDOM;
+      pstyle = RANDOM;
       iarg += 1;
+      
+    } else if (strcmp(arg[iarg],"levels") == 0) {
+      if (nlevels > 1) error->all(FLERR,"Illegal create_grid command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal create_grid command");
+      nlevels = atoi(arg[iarg+1]);
+      if (nlevels < 2) error->all(FLERR,"Create_grid nlevels must be > 1");
+      if (nlevels > grid->plevel_limit)
+	error->all(FLERR,"Create_grid nlevels exceeds MAXLEVEL");
+      stack = new Stack[nlevels];
+      levels = new Level[nlevels];
+      for (int i = 0; i < nlevels; i++) levels[i].setflag = 0;
+      levels[0].setflag = 1;
+      levels[0].style = NOLEVEL;
+      levels[0].cx = nx;
+      levels[0].cy = ny;
+      levels[0].cz = nz;
+      iarg += 2;
 
+    } else if (strcmp(arg[iarg],"subset") == 0) {
+      if (nlevels == 1) error->all(FLERR,"Illegal create_grid command");
+      if (iarg+8 > narg) error->all(FLERR,"Illegal create_grid command");
+      int nlo,nhi;
+      if (strchr(arg[iarg+1],'*')) {
+	bounds(arg[iarg+1],nlevels,nlo,nhi);
+	nlo = MAX(nlo,2);
+      } else {
+	nlo = nhi = atoi(arg[iarg+1]);
+	if (nlo < 2) error->all(FLERR,"Create grid subset level < 2");
+      }
+      for (int i = nlo-1; i <= nhi-1; i++) {
+	if (levels[i].setflag)
+	  error->all(FLERR,"Create_grid subset is resetting a level");
+	levels[i].setflag = 1;
+	levels[i].style = SUBSET;
+	bounds(arg[iarg+2],levels[i-1].cx,levels[i].ixlo,levels[i].ixhi);
+	bounds(arg[iarg+3],levels[i-1].cy,levels[i].iylo,levels[i].iyhi);
+	bounds(arg[iarg+4],levels[i-1].cz,levels[i].izlo,levels[i].izhi);
+	levels[i].cx = atoi(arg[iarg+5]);
+	levels[i].cy = atoi(arg[iarg+6]);
+	levels[i].cz = atoi(arg[iarg+7]);
+      }
+      iarg += 8;
+	
+    } else if (strcmp(arg[iarg],"region") == 0) {
+      if (nlevels == 1) error->all(FLERR,"Illegal create_grid command");
+      if (iarg+6 > narg) error->all(FLERR,"Illegal create_grid command");
+      int nlo,nhi;
+      if (strchr(arg[iarg+1],'*')) {
+	bounds(arg[iarg+1],nlevels,nlo,nhi);
+	nlo = MAX(nlo,2);
+      } else {
+	nlo = nhi = atoi(arg[iarg+1]);
+	if (nlo < 2) error->all(FLERR,"Create grid region level < 2");
+      }
+      for (int i = nlo-1; i <= nhi-1; i++) {
+	if (levels[i].setflag)
+	  error->all(FLERR,"Create_grid region is resetting a level");
+	levels[i].setflag = 1;
+	levels[i].style = REGION;
+	int iregion = domain->find_region(arg[iarg+2]);
+	if (iregion < 0) error->all(FLERR,"Create_grid region ID does not exist");
+	levels[i].region = domain->regions[iregion];
+	levels[i].cx = atoi(arg[iarg+3]);
+	levels[i].cy = atoi(arg[iarg+4]);
+	levels[i].cz = atoi(arg[iarg+5]);
+      }
+      iarg += 6;
+      
     } else if (strcmp(arg[iarg],"inside") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal create_grid command");
       if (strcmp(arg[iarg+1],"any") == 0) inside = ANY;
       else if (strcmp(arg[iarg+1],"all") == 0) inside = ALL;
       else error->all(FLERR,"Illegal create_grid command");
       iarg += 2;
-
+      
     } else error->all(FLERR,"Illegal create_grid command");
   }
-  
-  if (bstyle == NONE) bstyle = LEVEL;
 
-  // partition domain across procs, only for BLOCK style
+  // default pstyle = BLOCK
 
-  if (bstyle == BLOCK) {
-    procs2grid(nx,ny,nz,px,py,pz);
-    if (px*py*pz != comm->nprocs)
-      error->all(FLERR,"Bad grid of processors for create_grid");
+  if (pstyle == NOSTYLE) {
+    //pstyle = BLOCK;
+    //px = py = pz = 0;
+    pstyle = STRIDE;
+    order = XYZ;
+  }
+    
+  // check that grid levels are valid
+
+  if (nx < 1 || ny < 1 || nz < 1)
+    error->all(FLERR,"Illegal create_grid command");
+  if (dimension == 2 && nz != 1)
+    error->all(FLERR,"Create_grid nz value must be 1 for a 2d simulation");
+
+  for (int i = 1; i < nlevels; i++) {
+    if (!levels[i].setflag) error->all(FLERR,"Create_grid level was not set");
+    if (dimension == 2 && levels[i].cz != 1)
+      error->all(FLERR,"Create_grid cz value must be 1 for a 2d simulation");
+    if (levels[i].cx < 1 || levels[i].cy < 1 || levels[i].cz < 1)
+      error->all(FLERR,"Create_grid cx,cy,cz cannot be < 1");
+    if (levels[i].cx == 1 && levels[i].cy == 1 && levels[i].cz == 1)
+      error->all(FLERR,"Create_grid cx,cy,cz cannot all be one");
   }
 
-  // create root parent cell
-  // treat first 3 args as if specified as "level 1 * * * Nx Ny Nz"
+  // transfer level info into Grid data structs
+
+  Grid::ParentLevel *plevels = grid->plevels;
+  grid->maxlevel = nlevels;
+
+  plevels[0].nx = nx;
+  plevels[0].ny = ny;
+  plevels[0].nz = nz;
+  plevels[0].nxyz = (bigint) nx * ny * nz;
+
+  for (int i = 1; i < nlevels; i++) {
+    plevels[i].nx = levels[i].cx;
+    plevels[i].ny = levels[i].cy;
+    plevels[i].nz = levels[i].cz;
+    plevels[i].nxyz = (bigint) levels[i].cx * levels[i].cy * levels[i].cz;
+  }
+
+  for (int i = 0; i < nlevels; i++) {
+    if (i == 0) plevels[i].nbits = 0;
+    else plevels[i].nbits = plevels[i-1].nbits + plevels[i-1].newbits;
+    plevels[i].newbits = grid->id_bits(plevels[i].nx,plevels[i].ny,plevels[i].nz);
+  }
+
+  // error check on too many bits for cell IDs
+
+  int nbits = plevels[nlevels-1].nbits + plevels[nlevels-1].newbits;
+  if (nbits > sizeof(cellint)*8) {
+    char str[128];
+    sprintf(str,"Hierarchical grid induces cell IDs that exceed %d bits",
+	    (int) sizeof(cellint)*8);
+    error->all(FLERR,str);
+  }
+
+  // create grid with specified partitioning style
 
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
 
-  int level = 1;
-  int xlo,xhi,ylo,yhi,zlo,zhi;
-  xlo = xhi = ylo = yhi = zlo = zhi = 1;
-  iarg = 3;
-  Region *region = NULL;
-
-  // loop over levels
-  // new level determines assignment of previous-level cells
-  //   to be parent cells vs child cells
-  // parent cells are those which are further partitioned by new level
-  // child cells are those that are not
-  // add all cells in previous level as either parent or child cells
-  // if this is last level, also add all current level cells as child cells
-
-  int me = comm->me;
-  int nprocs = comm->nprocs;
-  bigint count = 0;
-
-  int pnx,pny,pnz,ix,iy,iz,nbits,pflag,proc;
-  cellint m,nth,idgrandparent,idparent,idchild;
-  double lo[3],hi[3];
-  Grid::ParentCell *p;
-
-  while (1) {
-
-    // add previous level cells as parent or child cells
-    // loop over all parent cells to find ones two levels up
-    // use their info to generate parent or child cells at previous level
-    // decision on parent vs child in previous level depends on 
-    //   pxyz lo/hi bounds in this level
-    //   or on whether parent is in/out of region
-
-    if (level == 1) {
-      grid->add_parent_cell(0,-1,nx,ny,nz,domain->boxlo,domain->boxhi);
-
-    } else {
-      int nparent = grid->nparent;
-      int prevlevel = level-2;
-      
-      for (int igrandparent = 0; igrandparent < nparent; igrandparent++) {
-        if (grid->pcells[igrandparent].level != prevlevel) continue;
-        p = &grid->pcells[igrandparent];
-
-        idgrandparent = p->id;
-        nbits = p->nbits;
-        pnx = p->nx;
-        pny = p->ny;
-        pnz = p->nz;
-
-        m = 0;
-        for (iz = 0; iz < pnz; iz++)
-          for (iy = 0; iy < pny; iy++)
-            for (ix = 0; ix < pnx; ix++) {
-              m++;
-              idparent = idgrandparent | (m << nbits);
-              grid->id_child_lohi(igrandparent,m,lo,hi);
-              if (region) pflag = cell_in_region(lo,hi,region,inside);
-              else {
-                pflag = 1;
-                if (ix+1 < xlo || ix+1 > xhi) pflag = 0;
-                if (iy+1 < ylo || iy+1 > yhi) pflag = 0;
-                if (iz+1 < zlo || iz+1 > zhi) pflag = 0;
-              }
-              if (pflag)
-                grid->add_parent_cell(idparent,igrandparent,nx,ny,nz,lo,hi);
-              else {
-                if (count % nprocs == me)
-                  grid->add_child_cell(idparent,igrandparent,lo,hi);
-                count++;
-              }
-            }
-      }
-    }
-
-    // final level, add current level cells as child cells
-    // loop over all parent cells to find ones at previous level
-    // use their info to generate my child cells at this level
-    // if BSTYLE is set, there is only 1 level, create proc's cells directly
-
-    if (level == nlevels) {
-      Grid::ParentCell *pcells = grid->pcells;
-      int nparent = grid->nparent;
-      int prevlevel = level-1;
-      
-      for (int iparent = 0; iparent < nparent; iparent++) {
-        if (pcells[iparent].level != prevlevel) continue;
-        p = &pcells[iparent];
-        idparent = p->id;
-        nbits = p->nbits;
-        nx = p->nx;
-        ny = p->ny;
-        nz = p->nz;
-
-        if (bstyle == LEVEL) {
-          cellint ntotal = (cellint) nx * ny * nz;
-          int firstproc = count % nprocs;
-          cellint ifirst = me - firstproc + 1;
-          if (ifirst <= 0) ifirst += nprocs;
-          for (m = ifirst; m <= ntotal; m += nprocs) {
-            idchild = idparent | (m << nbits);
-            grid->id_child_lohi(iparent,m,lo,hi);
-            grid->add_child_cell(idchild,iparent,lo,hi);
-          }
-          count += ntotal;
-
-        // loop over all child cells
-        // convert M to Nth based on order
-        // assign each cell to proc based on Nth and STRIDE or CLUMP
-
-        } else if (bstyle == STRIDE || bstyle == CLUMP) {
-          cellint ntotal = (cellint) nx * ny * nz;
-          for (m = 0; m < ntotal; m++) {
-            ix = m % nx;
-            iy = (m / nx) % ny;
-            iz = m / ((cellint) nx*ny);
-            if (order == XYZ) 
-              nth = (cellint) iz*nx*ny + (cellint) iy*nx + ix;
-            else if (order == XZY) 
-              nth = (cellint) iy*nx*nz + (cellint) iz*nx + ix;
-            else if (order == YXZ) 
-              nth = (cellint) iz*ny*nx + (cellint) ix*ny + iy;
-            else if (order == YZX) 
-              nth = (cellint) ix*ny*nz + (cellint) iz*ny + iy;
-            else if (order == ZXY) 
-              nth = (cellint) iy*nz*nx + (cellint) ix*nz + iz;
-            else if (order == ZYX) 
-              nth = (cellint) ix*nz*ny + (cellint) iy*nz + iz;
-            nth++;
-            if (bstyle == STRIDE) proc = nth % nprocs;
-            else proc = static_cast<int> (1.0*nth/ntotal * nprocs);
-            if (proc != me) continue;
-            idchild = idparent | (nth << nbits);
-            grid->id_child_lohi(iparent,nth,lo,hi);
-            grid->add_child_cell(idchild,iparent,lo,hi);
-          }
-          count += ntotal;
-
-        // loop over subset of cells in my BLOCK
-
-        } else if (bstyle == BLOCK) {
-          int ipx = me % px;
-          int ipy = (me / px) % py;
-          int ipz = me / (px*py);
-
-          int ixstart = static_cast<int> (1.0*ipx/px*nx);
-          int ixstop = static_cast<int> (1.0*(ipx+1)/px*nx);
-          int iystart = static_cast<int> (1.0*ipy/py*ny);
-          int iystop = static_cast<int> (1.0*(ipy+1)/py*ny);
-          int izstart = static_cast<int> (1.0*ipz/pz*nz);
-          int izstop = static_cast<int> (1.0*(ipz+1)/pz*nz);
-
-          for (iz = izstart; iz < izstop; iz++) {
-            for (iy = iystart; iy < iystop; iy++) {
-              for (ix = ixstart; ix < ixstop; ix++) {
-                m = (cellint) iz*nx*ny + (cellint) iy*nx + ix;
-                m++;
-                idchild = idparent | (m << nbits);
-                grid->id_child_lohi(iparent,m,lo,hi);
-                grid->add_child_cell(idchild,iparent,lo,hi);
-              }
-            }
-          }
-
-        // loop over all child cells, assign randomly to a proc
-
-        } else if (bstyle == RANDOM) {
-          RanPark *random = new RanPark(update->ranmaster->uniform());
-          cellint ntotal = (cellint) nx * ny * nz;
-          for (m = 0; m < ntotal; m++) {
-            proc = static_cast<int> (nprocs*random->uniform());
-            if (proc != me) continue;
-            idchild = idparent | ((m+1) << nbits);
-            grid->id_child_lohi(iparent,m+1,lo,hi);
-            grid->add_child_cell(idchild,iparent,lo,hi);
-          }
-          count += ntotal;
-          delete random;
-        }
-
-      }
-      break;
-    }
-    
-    if (level == nlevels) break;
-
-    // args for next level
-    // levels must be in ascending order starting at beginning of arg list
-
-    level++;
-
-    if (strcmp(arg[iarg],"level") == 0) {
-      bounds(arg[iarg+2],nx,xlo,xhi);
-      bounds(arg[iarg+3],ny,ylo,yhi);
-      bounds(arg[iarg+4],nz,zlo,zhi);
-      nx = atoi(arg[iarg+5]);
-      ny = atoi(arg[iarg+6]);
-      nz = atoi(arg[iarg+7]);
-      iarg += 8;
-    } else if (strcmp(arg[iarg],"region") == 0) {
-      int iregion = domain->find_region(arg[iarg+2]);
-      region = domain->regions[iregion];
-      nx = atoi(arg[iarg+3]);
-      ny = atoi(arg[iarg+4]);
-      nz = atoi(arg[iarg+5]);
-      iarg += 6;
-    } else error->all(FLERR,"Illegal create_grid command");
-
-    if (nx < 1 || ny < 1 || nz < 1)
-      error->all(FLERR,"Illegal create_grid command");
-    if (dimension == 2) {
-      if (zlo != 1 || zhi != 1 || nz != 1) 
-        error->all(FLERR,"Illegal create_grid command");
-    }
-  }
-
-  // set grandparent flag for all parent cells
-  
-  Grid::ParentCell *pcells = grid->pcells;
-  int nparent = grid->nparent;
-
-  for (int i = 1; i < nparent; i++)
-    pcells[pcells[i].iparent].grandparent = 1;
-
-  // invoke grid methods to complete grid setup
-
-  if (nprocs == 1 || bstyle == CLUMP || bstyle == BLOCK) grid->clumped = 1;
-  else grid->clumped = 0;
+  if (pstyle == BLOCK) create_block();
+  else if (pstyle == CLUMP) create_clump();
+  else if (pstyle == STRIDE) create_stride();
+  else if (pstyle == RANDOM) create_random();
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
 
+  Grid::ChildCell *cells = grid->cells;
+  int nglocal = grid->nlocal;
+
+  // invoke grid methods to complete grid setup
+  
+  if (nprocs == 1 || pstyle == CLUMP || pstyle == BLOCK) grid->clumped = 1;
+  else grid->clumped = 0;
+
+  grid->set_maxlevel();
   grid->setup_owned();
   grid->acquire_ghosts();
   grid->find_neighbors();
   grid->check_uniform();
   comm->reset_neighbors();
-
+  
   MPI_Barrier(world);
   double time3 = MPI_Wtime();
 
+  // clean up
+
+  delete [] levels;
+  delete [] stack;
+  
   // stats
 
   double time_total = time3-time1;
@@ -410,7 +291,6 @@ void CreateGrid::command(int narg, char **arg)
     if (screen) {
       fprintf(screen,"Created " BIGINT_FORMAT " child grid cells\n",
               grid->ncell);
-      fprintf(screen,"  parent cells = %d\n",grid->nparent);
       fprintf(screen,"  CPU time = %g secs\n",time_total);
       fprintf(screen,"  create/ghost percent = %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total);
@@ -419,10 +299,303 @@ void CreateGrid::command(int narg, char **arg)
     if (logfile) {
       fprintf(logfile,"Created " BIGINT_FORMAT " child grid cells\n",
               grid->ncell);
-      fprintf(logfile,"  parent cells = %d\n",grid->nparent);
       fprintf(logfile,"  CPU time = %g secs\n",time_total);
       fprintf(logfile,"  create/ghost percent = %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total);
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void CreateGrid::create_block()
+{
+  int ix,iy,iz,level;
+  cellint childID;
+  double lo[3],hi[3];
+  Stack *s;
+  
+  // partition single-level grid across procs
+
+  procs2grid(nx,ny,nz,px,py,pz);
+  if (px*py*pz != comm->nprocs)
+    error->all(FLERR,"Bad grid of processors for create_grid block");
+
+  // my subset of block
+
+  int ipx = me % px;
+  int ipy = (me / px) % py;
+  int ipz = me / (px*py);
+
+  int ixlo = static_cast<int> (1.0*ipx/px*nx);
+  int ixhi = static_cast<int> (1.0*(ipx+1)/px*nx) - 1;
+  int iylo = static_cast<int> (1.0*ipy/py*ny);
+  int iyhi = static_cast<int> (1.0*(ipy+1)/py*ny) - 1;
+  int izlo = static_cast<int> (1.0*ipz/pz*nz);
+  int izhi = static_cast<int> (1.0*(ipz+1)/pz*nz) - 1;
+
+  // create my subset of cells
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+  
+  for (iz = izlo; iz <= izhi; iz++) {
+    for (iy = iylo; iy <= iyhi; iy++) {
+      for (ix = ixlo; ix <= ixhi; ix++) {
+        childID = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
+	grid->id_child_lohi(0,boxlo,boxhi,childID,lo,hi);
+
+	if (nlevels == 1) {
+	  grid->add_child_cell(childID,1,lo,hi);
+	} else {
+	  s = &stack[0];
+	  s->id = childID;
+	  s->level = 1;
+	  s->lo[0] = lo[0]; s->lo[1] = lo[1]; s->lo[2] = lo[2];
+	  s->hi[0] = hi[0]; s->hi[1] = hi[1]; s->hi[2] = hi[2];
+	  recurse_levels(0);
+	}
+      }
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void CreateGrid::create_clump()
+{
+  int ix,iy,iz,level;
+  int i1,i2,i3,n1,n2,n3;
+  cellint childID;
+  double lo[3],hi[3];
+  Stack *s;
+  
+  if (order == XYZ) {
+    n1 = nx; n2 = ny; n3 = nz;
+  } else if (order == XZY) {
+    n1 = nx; n2 = nz; n3 = ny;
+  } else if (order == YXZ) {
+    n1 = ny; n2 = nx; n3 = nz;
+  } else if (order == YZX) {
+    n1 = ny; n2 = nz; n3 = nx;
+  } else if (order == ZXY) {
+    n1 = nz; n2 = nx; n3 = ny;
+  } else if (order == ZYX) {
+    n1 = nz; n2 = ny; n3 = nx;
+  }
+  
+  // loop over my clump of ordered cells in requested order
+  
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  cellint ntotal = (cellint) nx * ny * nz;
+  cellint clumplo = static_cast<int> (1.0*me/nprocs * ntotal);
+  cellint clumphi = static_cast<int> (1.0*(me+1)/nprocs * ntotal) - 1;
+
+  for (cellint m = clumplo; m <= clumphi; m++) {
+    i1 = m % n1;
+    i2 = (m / n1) % n2;
+    i3 = m / ((cellint) n1*n2);
+
+    if (order == XYZ) {
+      ix = i1; iy = i2; iz = i3;
+    } else if (order == XZY) {
+      ix = i1; iy = i3; iz = i2;
+    } else if (order == YXZ) {
+      ix = i2; iy = i1; iz = i3;
+    } else if (order == YZX) {
+      ix = i3; iy = i1; iz = i2;
+    } else if (order == ZXY) {
+      ix = i2; iy = i3; iz = i1;
+    } else if (order == ZYX) {
+      ix = i3; iy = i2; iz = i1;
+    }
+    
+    childID = (cellint) iz*ny*nx + (cellint) iy*nx + ix + 1;
+    grid->id_child_lohi(0,boxlo,boxhi,childID,lo,hi);
+
+    if (nlevels == 1) {
+      grid->add_child_cell(childID,1,lo,hi);
+    } else {
+      s = &stack[0];
+      s->id = childID;
+      s->level = 1;
+      s->lo[0] = lo[0]; s->lo[1] = lo[1]; s->lo[2] = lo[2];
+      s->hi[0] = hi[0]; s->hi[1] = hi[1]; s->hi[2] = hi[2];
+      recurse_levels(0);
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void CreateGrid::create_stride()
+{
+  int ix,iy,iz,level;
+  int i1,i2,i3,n1,n2,n3;
+  cellint childID;
+  double lo[3],hi[3];
+  Stack *s;
+
+  if (order == XYZ) {
+    n1 = nx; n2 = ny; n3 = nz;
+  } else if (order == XZY) {
+    n1 = nx; n2 = nz; n3 = ny;
+  } else if (order == YXZ) {
+    n1 = ny; n2 = nx; n3 = nz;
+  } else if (order == YZX) {
+    n1 = ny; n2 = nz; n3 = nx;
+  } else if (order == ZXY) {
+    n1 = nz; n2 = nx; n3 = ny;
+  } else if (order == ZYX) {
+    n1 = nz; n2 = ny; n3 = nx;
+  }
+  
+  // stride over all ntotal cells in requested order
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  cellint ntotal = (cellint) nx * ny * nz;
+
+  for (cellint m = me; m < ntotal; m += nprocs) {
+    i1 = m % n1;
+    i2 = (m / n1) % n2;
+    i3 = m / ((cellint) n1*n2);
+
+    if (order == XYZ) {
+      ix = i1; iy = i2; iz = i3;
+    } else if (order == XZY) {
+      ix = i1; iy = i3; iz = i2;
+    } else if (order == YXZ) {
+      ix = i2; iy = i1; iz = i3;
+    } else if (order == YZX) {
+      ix = i3; iy = i1; iz = i2;
+    } else if (order == ZXY) {
+      ix = i2; iy = i3; iz = i1;
+    } else if (order == ZYX) {
+      ix = i3; iy = i2; iz = i1;
+    }
+    
+    childID = (cellint) iz*ny*nx + (cellint) iy*nx + ix + 1;
+    grid->id_child_lohi(0,boxlo,boxhi,childID,lo,hi);
+
+    //printf("MMM m %d ixyz %d %d %d childID %d\n",m,ix,iy,iz,childID);
+    
+    if (nlevels == 1) {
+      grid->add_child_cell(childID,1,lo,hi);
+    } else {
+      s = &stack[0];
+      s->id = childID;
+      s->level = 1;
+      s->lo[0] = lo[0]; s->lo[1] = lo[1]; s->lo[2] = lo[2];
+      s->hi[0] = hi[0]; s->hi[1] = hi[1]; s->hi[2] = hi[2];
+      recurse_levels(0);
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void CreateGrid::create_random()
+{
+  int proc,level;
+  cellint childID;
+  double lo[3],hi[3];
+  Stack *s;
+  
+  RanPark *random = new RanPark(update->ranmaster->uniform());
+
+  // loop over all ntotal cells
+  // only add cell if this proc is the random owner
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  cellint ntotal = (cellint) nx * ny * nz;
+
+  for (cellint m = 0; m < ntotal; m++) {
+    proc = static_cast<int> (nprocs*random->uniform());
+    if (proc != me) continue;
+    
+    childID = m+1;
+    grid->id_child_lohi(0,boxlo,boxhi,childID,lo,hi);
+    
+    if (nlevels == 1) {
+      grid->add_child_cell(childID,1,lo,hi);
+    } else {
+      s = &stack[0];
+      s->id = childID;
+      s->level = 1;
+      s->lo[0] = lo[0]; s->lo[1] = lo[1]; s->lo[2] = lo[2];
+      s->hi[0] = hi[0]; s->hi[1] = hi[1]; s->hi[2] = hi[2];
+      recurse_levels(0);
+    }
+  }
+
+  delete random;
+}
+
+/* ----------------------------------------------------------------------
+   recurse through grid strucure to find and add child cells
+   istack = index to current top of stack
+------------------------------------------------------------------------- */
+
+void CreateGrid::recurse_levels(int istack)
+{
+  int ix,iy,iz;
+  double lo[3],hi[3];
+
+  Grid::ParentLevel *plevels = grid->plevels;
+  Stack *s = &stack[istack];
+
+  int level = s->level;
+  int nbits = plevels[level-1].nbits;
+  cellint ichild = s->id >> nbits;
+
+  int parentflag;
+  if (level == nlevels) {
+    parentflag = 0;
+  } else if (levels[level].style == SUBSET) {
+    parentflag = 1;
+    ichild--;
+    int nx = plevels[level-1].nx;
+    int ny = plevels[level-1].ny;
+    ix = ichild % nx;
+    iy = (ichild / nx) % ny;
+    iz = ichild / ((cellint) nx*ny);
+    if (ix+1 < levels[level].ixlo) parentflag = 0;
+    if (ix+1 > levels[level].ixhi) parentflag = 0;
+    if (iy+1 < levels[level].iylo) parentflag = 0;
+    if (iy+1 > levels[level].iyhi) parentflag = 0;
+    if (iz+1 < levels[level].izlo) parentflag = 0;
+    if (iz+1 > levels[level].izhi) parentflag = 0;
+  } else if (levels[level].style == REGION) {
+    parentflag = cell_in_region(s->lo,s->hi,levels[level].region);
+  }
+
+  if (!parentflag) {
+    grid->add_child_cell(s->id,level,s->lo,s->hi);
+    return;
+  }
+
+  int nx = plevels[level].nx;
+  int ny = plevels[level].ny;
+  int nz = plevels[level].nz;
+  nbits = plevels[level].nbits;
+  Stack *sc = &stack[istack+1];
+  
+  cellint m = 0;
+  for (iz = 0; iz < nz; iz++) {
+    for (iy = 0; iy < ny; iy++) {
+      for (ix = 0; ix < nx; ix++) {
+	m++;
+	sc->id = (m << nbits) | s->id;
+	sc->level = level+1;
+	grid->id_child_lohi(level,s->lo,s->hi,m,sc->lo,sc->hi);
+	recurse_levels(istack+1);
+      }
     }
   }
 }
@@ -456,10 +629,8 @@ void CreateGrid::bounds(char *str, int nmax, int &nlo, int &nhi)
     nhi = atoi(ptr+1);
   }
 
-  //printf("BOUNDS %s nmax %d nlo/hi %d %d\n",str,nmax,nlo,nhi);
-
   if (nlo < 1 || nhi > nmax || nlo > nhi) 
-    error->all(FLERR,"Numeric index is out of bounds");
+    error->all(FLERR,"Create_grid subset index is out of bounds");
 }
 
 /* ----------------------------------------------------------------------
@@ -469,8 +640,7 @@ void CreateGrid::bounds(char *str, int nmax, int &nlo, int &nhi)
    return 1 if inside, 0 if not
 ------------------------------------------------------------------------- */
 
-int CreateGrid::cell_in_region(double *lo, double *hi, 
-                               Region *region, int inside)
+int CreateGrid::cell_in_region(double *lo, double *hi, Region *region)
 {
   double x[3];
 
@@ -595,4 +765,3 @@ void CreateGrid::procs2grid(int nx, int ny, int nz, int &px, int &py, int &pz)
     ipx++;
   }
 }
-

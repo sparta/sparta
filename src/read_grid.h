@@ -34,20 +34,27 @@ class ReadGrid : protected Pointers {
   void read(char *, int);
 
  private:
-  int me;
+  int me,nprocs;
   char *line,*keyword,*buffer;
   FILE *fp;
   int compressed;
 
-  int nparents;
+  bigint ncell;
+  int nlevels;
+  int whichproc;
 
-  void create_parents(int, char *);
-  void create_children();
+  // grid level info
+
+  struct Level {
+    int setflag;                         // setflag = 1 if specified
+    int cx,cy,cz;                        // grid of child cells at this level
+  };
+
+  void read_cells();
+  void create_cells(int, char *);
   void open(char *);
   void header();
   void parse_keyword(int);
-  int count_words(char *);
-  void read_parents();
 };
 
 }

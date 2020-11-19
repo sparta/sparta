@@ -258,7 +258,7 @@ void Particle::compress_migrate(int nmigrate, int *mlist)
    all particles MUST be in owned cells
    overwrite deleted particle with particle from end of nlocal list
    called from Comm::migrate_cells() when cells+particles migrate on rebalance
-   called from AdaptGrid when particles are sent to other procs
+   called from AdaptGrid when coarsening occurs
    called from ReadSurf to remove particles from cells with surfs
    this does NOT preserve particle sorting
 ------------------------------------------------------------------------- */
@@ -445,8 +445,6 @@ void Particle::sort()
   for (int icell = 0; icell < nglocal; icell++) {
     cinfo[icell].first = -1;
     cinfo[icell].count = 0;
-    //cellcount[i] = 0;
-    //first[i] = -1;
   }
 
   // reverse loop over partlcles to store linked lists in forward order
@@ -458,13 +456,6 @@ void Particle::sort()
     next[i] = cinfo[icell].first;
     cinfo[icell].first = i;
     cinfo[icell].count++;
-
-    // NOTE: this method seems much slower for some reason
-    // uses separate, smaller vectors for first & cellcount
-    //icell = cells[particles[i].icell].local;
-    //next[i] = first[icell];
-    //first[icell] = i;
-    //cellcount[icell]++;
   }
 }
 

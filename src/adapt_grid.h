@@ -33,20 +33,16 @@ class AdaptGrid : protected Pointers {
   char *file;               // output file name, so FixAdapt can access
 
   struct SendAdapt {
-    int proc;               // proc that is sending
-    int icell;              // index of my cell to send
-    int ichild;             // which child cell (0 to NxNyNz-1) within parent
-    int iparent;            // index of cell's parent cell
-    int type;               // cinfo type of cell
-    int mask;               // cinfo mask of cell
-    int nsurf;              // # of surfs in cell
-    int np;                 // # of particles in cell or all its sub cells
-    double value;           // per-cell value to coarsen on
+    cellint parentID;       // parentID this child cell info is for
+    int plevel;             // grid level of parentID
+    int owner;              // proc which owns the parent cell for coarsening
+    int proc;               // proc which owns this child cell
+    int icell;              // local index of child cell
+    int type;               // type of child cell
+    int ichild;             // which child within parent cell (0 to Nxyz-1)
+    int nsurf;              // # of surfs in child cell
+    int np;                 // # of particles in child cell or all its sub cells
   };
-
-  SendAdapt **sa_header;    // communicated coarsening info, so Grid can access
-  surfint **sa_csurfs;
-  char **sa_particles;
 
   AdaptGrid(class SPARTA *);
   ~AdaptGrid();
@@ -54,8 +50,8 @@ class AdaptGrid : protected Pointers {
   void process_args(int, char **);
   void check_args(int);
   void setup(int);
-  int refine();
-  int coarsen(int);
+  bigint refine();
+  bigint coarsen();
   void cleanup();
   void write_file();
 
@@ -75,46 +71,49 @@ class AdaptGrid : protected Pointers {
 
   int *childlist;
   class RanPark *random;
-  int *delparent;
   class Cut3d *cut3d;
   class Cut2d *cut2d;
 
-  // rlist = list of child cells I may refine
+  // rlist = list of child cells I will refine
 
   int *rlist;
   int rnum;
 
-  // parent cell info for coarsening
+  // clist = list of parent cells I may coarsen
+  // action = list of parent cells I will coarsen
 
-  int *pcount,*powner;
-
-  // ctask = list of coarsen tasks I will perform on parent cells
-
-  struct CTask {
-    cellint id;             // id of parent cell
-    int iparent;            // index of parent cell
+  struct CList {
+    cellint parentID;       // ID of parent cell
     int flag;               // 1 if coarsen, 0 if not
+    int plevel;             // level of parent cell
     int nchild;             // # of children of parent cell
-    int ncomplete;          // # which info is complete for (owned or recvd)
+    int nexist;             // # of identified children (owned or recvd)
     int *proc;              // proc that owns each child
     int *index;             // local index of each child on owning proc
-    int *recv;              // index into recv list of children from other procs
+    double *value;          // style value for each child
   };
 
-  struct CTask *ctask;
+  struct ActionList {
+    cellint parentID;       // ID of parent cell
+    int plevel;             // level of parent cell
+    int anyinside;          // 1 if any children are an INSIDE cell
+    int nchild;             // # of children of parent cell
+    int *index;             // local icell if I own each child cell, else -1
+    int *nsurf;             // # of surfs in each child cell
+    int *np;                // # of particles in each child cell
+    void **surfs;           // list of surf info per cell (indices or lines/tris)
+    char **particles;       // list of particles in each child cell
+  };
+
+  struct CList *clist;
+  struct ActionList *alist;
   int cnum,cnummax;
+  int anum,anummax;
 
-  // newcells = IDs of new child cells I create, either via refine or coarsen
+  char *spbuf;                // buf allocated by Comm::send_cells_adapt
+                              // for child cell surf and particle data
 
-  cellint *newcells;
-  int nnew,maxnew;
-
-  // sadapt = list of child cell info to send to other procs for coarsening
-
-  struct SendAdapt *sadapt;
-  int nsend,nrecv,replyany;
-
-  // hash for child cell IDs created by converting a coarsened parent cell
+  // hash for child cell IDs created by refinement or coarsening
 
 #ifdef SPARTA_MAP
   typedef std::map<cellint,int> MyHash;
@@ -124,7 +123,22 @@ class AdaptGrid : protected Pointers {
   typedef std::tr1::unordered_map<cellint,int> MyHash;
 #endif
 
-  MyHash *chash;
+  MyHash *chash,*rhash;
+
+  // Rvous1 send info
+
+  struct Rvous1 {
+    cellint parentID;
+    int plevel,proc,icell,ichild;     // ichild = 0 to Nxyz-1
+    double value;
+  };
+
+  // Rvous2 send info
+
+  struct Rvous2 {
+    cellint parentID;
+    int owner,icell,ichild;
+  };
 
   // methods
 
@@ -134,17 +148,17 @@ class AdaptGrid : protected Pointers {
   void refine_value();
   void refine_random();
   int perform_refine();
-  void gather_parents_refine(int, int);
 
-  void assign_parents_coarsen(int);
-  void candidates_coarsen(int);
-  void coarsen_group();
+  void candidates_coarsen();
+  double coarsen_particle_cell(int);
+  double coarsen_surf_cell(int);
+  double coarsen_value_cell(int);
   void coarsen_particle();
   void coarsen_surf();
   void coarsen_value();
   void coarsen_random();
+  void particle_surf_comm();
   int perform_coarsen();
-  void gather_parents_coarsen(int, int);
 
   double value_compute(int);
   double value_fix(int);

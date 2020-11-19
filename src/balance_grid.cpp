@@ -373,28 +373,6 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
 
   particle->sort();
 
-  // DEBUG
-
-  /*
-  char file[32];
-  sprintf(file,"tmp.bef.%d",comm->me);
-  FILE *fp = fopen(file,"w");
-
-  fprintf(fp,"Cells %d %d\n",grid->nlocal,grid->nghost);
-  for (int i = 0; i < grid->nlocal+grid->nghost; i++) {
-    fprintf(fp,"cell %d " CELLINT_FORMAT ": %d : %d %d %d %d %d %d\n",
-           i,grid->cells[i].id,
-           grid->cells[i].nmask,
-           grid->cells[i].neigh[0],
-           grid->cells[i].neigh[1],
-           grid->cells[i].neigh[2],
-           grid->cells[i].neigh[3],
-           grid->cells[i].neigh[4],
-           grid->cells[i].neigh[5]);
-  }
-  fclose(fp);
-  */
-
   MPI_Barrier(world);
   double time3 = MPI_Wtime();
 

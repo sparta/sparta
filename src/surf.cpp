@@ -356,7 +356,7 @@ void Surf::add_line(surfint id, int itype, double *p1, double *p2)
 
 /* ----------------------------------------------------------------------
    add a line to owned or ghost lines list, depending on ownflag
-   called by Grid::unpack_one
+   called by Grid::unpack_one() or Grid::coarsen_cell()
 ------------------------------------------------------------------------- */
 
 void Surf::add_line_copy(int ownflag, Line *line)
@@ -673,11 +673,12 @@ void Surf::setup_owned()
 
 /* ----------------------------------------------------------------------
    set bounding box around all surfs based on their pts
+   sets surf->bblo and surf->bbhi
    for 2d, set zlo,zhi to box bounds
    only called when surfs = explict (all or distributed)
 ------------------------------------------------------------------------- */
 
-void Surf::setup_bbox()
+void Surf::bbox_all()
 {
   int i,j;
   double bblo_one[3],bbhi_one[3];
@@ -728,6 +729,46 @@ void Surf::setup_bbox()
 
   MPI_Allreduce(bblo_one,bblo,3,MPI_DOUBLE,MPI_MIN,world);
   MPI_Allreduce(bbhi_one,bbhi,3,MPI_DOUBLE,MPI_MAX,world);
+}
+
+/* ----------------------------------------------------------------------
+   set bounding box around one surf based on their pts
+   caller passes in the Line or Tri, can be from lines/tris or mylines/mytris
+   returns lo,hi which are allocated by caller
+   for 2d, set zlo,zhi to box bounds
+   only called when surfs = explict (all or distributed)
+------------------------------------------------------------------------- */
+
+void Surf::bbox_one(void *ptr, double *lo, double *hi)
+{
+  double *p1,*p2,*p3;
+  
+  if (domain->dimension == 2) {
+    Line *line = (Line *) ptr;
+    p1 = line->p1; p2 = line->p2;
+    lo[0] = MIN(p1[0],p2[0]);
+    lo[1] = MIN(p1[1],p2[1]);
+    lo[2] = 0.0;
+    hi[0] = MAX(p1[0],p2[0]);
+    hi[1] = MAX(p1[1],p2[1]);
+    hi[2] = 0.0;
+    
+  } else {
+    Tri *tri = (Tri *) ptr;
+    p1 = tri->p1; p2 = tri->p2; p3 = tri->p3;
+    lo[0] = MIN(p1[0],p2[0]);
+    lo[0] = MIN(lo[0],p3[0]);
+    lo[1] = MIN(p1[1],p2[1]);
+    lo[1] = MIN(lo[1],p3[1]);
+    lo[2] = MIN(p1[2],p2[2]);
+    lo[2] = MIN(lo[2],p3[2]);
+    hi[0] = MAX(p1[0],p2[0]);
+    hi[0] = MAX(hi[0],p3[0]);
+    hi[1] = MAX(p1[1],p2[1]);
+    hi[1] = MAX(hi[1],p3[1]);
+    hi[2] = MAX(p1[2],p2[2]);
+    hi[2] = MAX(hi[2],p3[2]);
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -2450,14 +2491,16 @@ int Surf::find_group(const char *id)
 }
 
 /* ----------------------------------------------------------------------
-   compress owned explicit distributed surfs to account for migrating grid cells
-   called from Comm::migrate_cells() AFTER grid cells are compressed
+   compress owned explicit distributed surfs to account for deleted grid cells
+     either due to load-balancing migration or grid adapt coarsening
+   called from Comm::migrate_cells() and AdaptGrid::coarsen()
+     AFTER grid cells are compressed
    discard nlocal surfs that are no longer referenced by owned grid cells
    use hash to store referenced surfs
    only called for explicit distributed surfs
 ------------------------------------------------------------------------- */
 
-void Surf::compress_explicit_rebalance()
+void Surf::compress_explicit()
 {
   int i,m,ns;
   surfint *csurfs;
@@ -2534,7 +2577,7 @@ void Surf::compress_explicit_rebalance()
    only called for implicit surfs
 ------------------------------------------------------------------------- */
 
-void Surf::compress_implicit_rebalance()
+void Surf::compress_implicit()
 {
   int j,ns,icell;
   cellint cellID;
@@ -2549,7 +2592,7 @@ void Surf::compress_implicit_rebalance()
 
   if (domain->dimension == 2) {
     for (int i = 0; i < nlocal; i++) {
-      icell = (*ghash)[lines[i].id] - 1;
+      icell = (*ghash)[lines[i].id];
       if (cells[icell].proc != me) continue;
       if (i != n) {
         // compress my surf list
@@ -2568,7 +2611,7 @@ void Surf::compress_implicit_rebalance()
 
   } else {
     for (int i = 0; i < nlocal; i++) {
-      icell = (*ghash)[tris[i].id] - 1;
+      icell = (*ghash)[tris[i].id];
       if (cells[icell].proc != me) continue;
       if (i != n) {
         // compress my surf list
@@ -2963,7 +3006,7 @@ void Surf::collate_vector_implicit(int nrow, surfint *tally2surf,
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
-    hash[cells[icell].id] = icell+1;
+    hash[cells[icell].id] = icell;
   }
 
   // for implicit surfs, tally2surf stores cellIDs
@@ -2977,7 +3020,7 @@ void Surf::collate_vector_implicit(int nrow, surfint *tally2surf,
   for (i = 0; i < nrow; i++) {
     if (hash.find(tally2cell[i]) == hash.end()) nsend++;
     else {
-      icell = hash[tally2cell[i]] - 1;
+      icell = hash[tally2cell[i]];
       out[icell] += in[i];
     }
   }
@@ -3051,7 +3094,7 @@ void Surf::collate_vector_implicit(int nrow, surfint *tally2surf,
   m = 0;
   for (i = 0; i < nout; i++) {
     cellID = out_rvous[m++];      // NOTE: should use ubuf
-    icell = hash[cellID] - 1;     // subtract one for child cell index
+    icell = hash[cellID];
     out[icell] += out_rvous[m++];
   }
 
@@ -3090,7 +3133,7 @@ void Surf::collate_array_implicit(int nrow, int ncol, surfint *tally2surf,
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
-    hash[cells[icell].id] = icell+1;
+    hash[cells[icell].id] = icell;
   }
 
   // for implicit surfs, tally2surf stores cellIDs
@@ -3104,7 +3147,7 @@ void Surf::collate_array_implicit(int nrow, int ncol, surfint *tally2surf,
   for (i = 0; i < nrow; i++) {
     if (hash.find(tally2cell[i]) == hash.end()) nsend++;
     else {
-      icell = hash[tally2cell[i]] - 1;
+      icell = hash[tally2cell[i]];
       for (j = 0; j < ncol; j++)
         out[icell][j] += in[i][j];
     }

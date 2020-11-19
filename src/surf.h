@@ -164,7 +164,8 @@ class Surf : protected Pointers {
   int all_transparent();
 
   void setup_owned();
-  void setup_bbox();
+  void bbox_all();
+  void bbox_one(void *, double *, double *);
 
   void compute_line_normal(int);
   void compute_tri_normal(int);
@@ -199,8 +200,8 @@ class Surf : protected Pointers {
   int add_group(const char *);
   int find_group(const char *);
   
-  void compress_implicit_rebalance();
-  void compress_explicit_rebalance();
+  void compress_explicit();
+  void compress_implicit();
 
   void collate_vector(int, surfint *, double *, int, double *);
   void collate_vector_reduce(int, surfint *, double *, int, double *);

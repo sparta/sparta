@@ -203,7 +203,7 @@ void ReadParticles::process_particles(int n, int, double **fields)
     // assumes x is inside or on surface of parent cell
     // returned icell can be owned or ghost cell
 
-    icell = grid->id_find_child(0,x);
+    icell = grid->id_find_child(0,0,boxlo,boxhi,x);
     if (icell < 0 || cells[icell].proc != me) continue;
         
     id = static_cast<int> (fields[i][0]);

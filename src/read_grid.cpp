@@ -65,7 +65,8 @@ void ReadGrid::command(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-   called from command() and directly from AdaptGrid
+   called from command()
+   use of external = 1 would allow calling it from another command
 ------------------------------------------------------------------------- */
 
 void ReadGrid::read(char *filename, int external)
@@ -76,27 +77,24 @@ void ReadGrid::read(char *filename, int external)
   double time1 = MPI_Wtime();
 
   me = comm->me;
+  nprocs = comm->nprocs;
+  
   if (me == 0) {
     if (!external && screen) 
       fprintf(screen,"Reading grid file ... %s\n",filename);
     open(filename);
   }
 
+  // read header and Cells section
+  
   header();
-
-  // clear Grid::hash before re-populating it
-
-  Grid::MyHash *hash = grid->hash;
-  hash->clear();
-
-  // read Parents section
-  // create one parent cell per line
-
   parse_keyword(1);
-  if (strcmp(keyword,"Parents") != 0)
+  if (strcmp(keyword,"Cells") != 0)
     error->all(FLERR,
-	       "Read_grid did not find parents section of grid file");
-  read_parents();
+	       "Read_grid did not find Cells section of grid file");
+  read_cells();
+
+  grid->ncell = ncell;
 
   // close file
 
@@ -105,20 +103,12 @@ void ReadGrid::read(char *filename, int external)
     else fclose(fp);
   }
 
-  // induce child cells from parent cells
-
-  create_children();
-
-  // clear Grid::hash since overwrote it and now done using it
-
-  hash->clear();
-  grid->hashfilled = 0;
-
   // invoke grid methods to complete grid setup
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
 
+  grid->set_maxlevel();
   grid->setup_owned();
   grid->acquire_ghosts();
   grid->find_neighbors();
@@ -136,157 +126,96 @@ void ReadGrid::read(char *filename, int external)
 
   if (comm->me == 0) {
     if (screen) {
-      fprintf(screen,"  child cells = " BIGINT_FORMAT "\n",grid->ncell);
+      fprintf(screen,"  grid cells = " BIGINT_FORMAT "\n",grid->ncell);
       fprintf(screen,"  CPU time = %g secs\n",time_total);
-      fprintf(screen,"  read/ghost percent = %g %g\n",
+      fprintf(screen,"  read/setup percent = %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total);
     }
 
     if (logfile) {
-      fprintf(logfile,"  child cells = " BIGINT_FORMAT "\n",grid->ncell);
+      fprintf(logfile,"  grid cells = " BIGINT_FORMAT "\n",grid->ncell);
       fprintf(logfile,"  CPU time = %g secs\n",time_total);
-      fprintf(logfile,"  read/ghost percent = %g %g\n",
+      fprintf(logfile,"  read/setup percent = %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total);
     }
   }
 }
 
 /* ----------------------------------------------------------------------
-   create one parent cell per line of Parents section of grid file
+   read/store all child cells
 ------------------------------------------------------------------------- */
 
-void ReadGrid::create_parents(int n, char *buf)
+void ReadGrid::read_cells()
 {
-  int j;
-  char *next;
+  int i,m,nchunk;
 
-  next = strchr(buf,'\n');
-  *next = '\0';
-  int nwords = input->count_words(buf);
-  *next = '\n';
+  // read and broadcast one CHUNK of lines at a time
 
-  if (nwords != 5)
-    error->all(FLERR,"Incorrect format of parent cell in grid file");
+  whichproc = 0;
+  bigint nread = 0;
+  
+  while (nread < ncell) {
+    if (ncell-nread > CHUNK) nchunk = CHUNK;
+    else nchunk = ncell-nread;
+    if (me == 0) {
+      char *eof;
+      m = 0;
+      for (i = 0; i < nchunk; i++) {
+	eof = fgets(&buffer[m],MAXLINE,fp);
+	if (eof == NULL) error->one(FLERR,"Unexpected end of grid file");
+	m += strlen(&buffer[m]);
+      }
+      if (buffer[m-1] != '\n') strcpy(&buffer[m++],"\n");
+      m++;
+    }
+    MPI_Bcast(&m,1,MPI_INT,0,world);
+    MPI_Bcast(buffer,m,MPI_CHAR,0,world);
 
-  char **values = new char*[nwords];
+    create_cells(nchunk,buffer);
+    nread += nchunk;
+  }
 
-  // loop over lines of parents
-  // tokenize the line into values
-  // create one parent cell for each line
+  if (me == 0) {
+    if (screen) fprintf(screen,"  " BIGINT_FORMAT " grid cells\n",grid->ncell);
+    if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " grid cells\n",grid->ncell);
+  }
+}
 
-  cellint id,idparent,ichild;
-  int iparent,nx,ny,nz;
-  char pstr[32],cstr[32];
+/* ----------------------------------------------------------------------
+   create one child cell per line of Cells section of grid file
+------------------------------------------------------------------------- */
+
+void ReadGrid::create_cells(int n, char *buf)
+{
+  int level;
+  cellint id;
+  char *next,*idptr;
   double lo[3],hi[3];
-
-  // use Grid hash to store key = parent ID, value = index in pcells
-  // NOTE: could prealloc hash to size nparents here
-
-  Grid::MyHash *hash = grid->hash;
-  int dimension = domain->dimension;
+  
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+  
+  // create one child cell for each line
+  // assign to procs in round-robin fasion
 
   for (int i = 0; i < n; i++) {
     next = strchr(buf,'\n');
 
-    values[0] = strtok(buf," \t\n\r\f");
-    for (j = 1; j < nwords; j++)
-      values[j] = strtok(NULL," \t\n\r\f");
+    if (me == whichproc) {
+      idptr = strtok(buf," \t\n\r\f");
+      id = ATOCELLINT(idptr);
+      if (id < 0) error->all(FLERR,"Invalid cell ID in grid file");
 
-    // convert values[1] into id
-    // create parent cell from id
-    // error if parent cell already exists or its parent does not
-    // NOTE: add more error checks on values[1]
+      level = grid->id_level(id);
+      if (level < 0) error->one(FLERR,"Cell ID in grid file exceeds maxlevel");
+      grid->id_lohi(id,level,boxlo,boxhi,lo,hi);
+      grid->add_child_cell(id,level,lo,hi);
+    }
 
-    id = grid->id_str2num(values[1]);
-    if (id < 0) error->all(FLERR,"Invalid cell ID in grid file");
-
-    if (id) {
-      if (hash->find(id) != hash->end()) 
-        error->all(FLERR,"Duplicate cell ID in grid file");
-      grid->id_pc_split(values[1],pstr,cstr);
-      idparent = grid->id_str2num(pstr);
-      ichild = ATOCELLINT(cstr);
-      iparent = (*hash)[idparent];
-      if (iparent < 0) 
-        error->all(FLERR,"Parent cell's parent does not exist in grid file");
-    } else iparent = -1;
-
-    nx = atoi(values[2]);
-    ny = atoi(values[3]);
-    nz = atoi(values[4]);
-    if (nx <= 0 || ny <= 0 || nz <= 0)
-      error->all(FLERR,"Invalid Nx,Ny,Nz values in grid file");
-    if (dimension == 2 && nz != 1) 
-      error->all(FLERR,"Nz value in read_grid file must be 1 "
-                 "for a 2d simulation");
-
-    if (id) grid->id_child_lohi(iparent,ichild,lo,hi);
-    else {
-      lo[0] = domain->boxlo[0]; 
-      lo[1] = domain->boxlo[1];
-      lo[2] = domain->boxlo[2];
-      hi[0] = domain->boxhi[0]; 
-      hi[1] = domain->boxhi[1];
-      hi[2] = domain->boxhi[2];
-    } 
-
-    grid->add_parent_cell(id,iparent,nx,ny,nz,lo,hi);
-    (*hash)[id] = grid->nparent - 1;
-    if (iparent >= 0) grid->pcells[iparent].grandparent = 1;
+    whichproc++;
+    if (whichproc == nprocs) whichproc = 0;
 
     buf = next + 1;
-  }
-
-  delete [] values;
-}
-
-/* ----------------------------------------------------------------------
-   create child cells from parent cells whose children are not parents
-------------------------------------------------------------------------- */
-
-void ReadGrid::create_children()
-{
-  Grid::MyHash *hash = grid->hash;
-  Grid::ParentCell *pcells = grid->pcells;
-  int nparent = grid->nparent;
-
-  int nprocs = comm->nprocs;
-  bigint count = 0;
-
-  // loop over parent cells and its 3d array of child cells
-  // if a child does not exist as a parent, create it as a child cell
-  // assign child cells to procs in round-robin fashion via count
-
-  // NOTE: change this to assign child to proc based on mod of cell ID
-  //       could do this only when adapt grid invokes it
-
-  int ix,iy,iz,nx,ny,nz,nbits;
-  cellint m,idparent,idchild;
-  double lo[3],hi[3];
-  Grid::ParentCell *p;
-
-  for (int iparent = 0; iparent < nparent; iparent++) {
-    p = &pcells[iparent];
-    idparent = p->id;
-    nbits = p->nbits;
-    nx = p->nx;
-    ny = p->ny;
-    nz = p->nz;
-
-    m = 0;
-    for (iz = 0; iz < nz; iz++)
-      for (iy = 0; iy < ny; iy++)
-        for (ix = 0; ix < nx; ix++) {
-          m++;
-          idchild = idparent | (m << nbits);
-          if (hash->find(idchild) == hash->end()) {
-            if (count % nprocs == me) {
-              grid->id_child_lohi(iparent,m,lo,hi);
-              grid->add_child_cell(idchild,iparent,lo,hi);
-            }
-            count++;
-          }
-        }
   }
 }
 
@@ -328,7 +257,7 @@ void ReadGrid::open(char *file)
 
 void ReadGrid::header()
 {
-  int n;
+  int n,ilevel,nx,ny,nz;
   char *ptr;
 
   // skip 1st line of file
@@ -338,8 +267,10 @@ void ReadGrid::header()
     if (eof == NULL) error->one(FLERR,"Unexpected end of grid file");
   }
 
-  nparents = 0;
-
+  ncell = 0;
+  nlevels = 0;
+  Level *levels = NULL;
+  
   while (1) {
 
     // read a line and bcast length
@@ -367,13 +298,79 @@ void ReadGrid::header()
     if ((ptr = strchr(line,'#'))) *ptr = '\0';
     if (strspn(line," \t\n\r") == strlen(line)) continue;
 
-    // search line for header keyword and set corresponding variable
+    // search line for header keywords and set corresponding variables
 
-    if (strstr(line,"parents")) sscanf(line,"%d",&nparents);
-    else break;
+    if (strstr(line,"cells")) {
+      sscanf(line,BIGINT_FORMAT,&ncell);
+    } else if (strstr(line,"levels")) {
+      sscanf(line,"%d",&nlevels);
+      if (nlevels <= 0) error->all(FLERR,"Grid file levels must be > 0");
+      if (nlevels > grid->plevel_limit)
+	error->all(FLERR,"Grid file levels exceeds MAXLEVEL");
+      levels = new Level[nlevels];
+      for (int i = 0; i < nlevels; i++) levels[i].setflag = 0;
+    } else if (strstr(line,"level-")) {
+      if (!levels) error->all(FLERR,"Grid file levels is not set");
+      ptr = strstr(line,"level-");
+      ptr += strlen("level-");
+      ilevel = atoi(ptr);
+      if (ilevel < 1 || ilevel > nlevels)
+	error->all(FLERR,"Grid file level-N is invalid");
+      sscanf(line,"%d %d %d",&nx,&ny,&nz);
+      if (levels[ilevel-1].setflag == 1)
+	error->all(FLERR,"Grid file level-N is already set");
+      levels[ilevel-1].setflag = 1;
+      levels[ilevel-1].cx = nx;
+      levels[ilevel-1].cy = ny;
+      levels[ilevel-1].cz = nz;
+    } else break;
   }
 
-  if (nparents == 0) error->all(FLERR,"Grid file does not contain parents");
+  // error checks
+  
+  if (ncell == 0) error->all(FLERR,"Grid file does not set cells keyword");
+  if (nlevels == 0) error->all(FLERR,"Grid file does not set nlevels keyword");
+  for (int i = 0; i < nlevels; i++) {
+    if (!levels[i].setflag) error->all(FLERR,"Grid file does not set all levels");
+    if (domain->dimension == 2 && levels[i].cz != 1)
+      error->all(FLERR,"Read_grid nz value must be 1 for a 2d simulation");
+    if (levels[i].cx < 1 || levels[i].cy < 1 || levels[i].cz < 1)
+      error->all(FLERR,"Read_grid nx,ny,nz cannot be < 1");
+    if (levels[i].cx == 1 && levels[i].cy == 1 && levels[i].cz == 1)
+      error->all(FLERR,"Read_grid nx,ny,nz cannot all be one");
+  }
+  
+  // transfer level info into Grid data structs
+
+  Grid::ParentLevel *plevels = grid->plevels;
+  grid->maxlevel = nlevels;
+
+  for (int i = 0; i < nlevels; i++) {
+    plevels[i].nx = levels[i].cx;
+    plevels[i].ny = levels[i].cy;
+    plevels[i].nz = levels[i].cz;
+    plevels[i].nxyz = (bigint) levels[i].cx * levels[i].cy * levels[i].cz;
+  }
+
+  for (int i = 0; i < nlevels; i++) {
+    if (i == 0) plevels[i].nbits = 0;
+    else plevels[i].nbits = plevels[i-1].nbits + plevels[i-1].newbits;
+    plevels[i].newbits = grid->id_bits(plevels[i].nx,plevels[i].ny,plevels[i].nz);
+  }
+
+  // error check on too many bits for cell IDs
+
+  int nbits = plevels[nlevels-1].nbits + plevels[nlevels-1].newbits;
+  if (nbits > sizeof(cellint)*8) {
+    char str[128];
+    sprintf(str,"Hierarchical grid induces cell IDs that exceed %d bits",
+	    (int) sizeof(cellint)*8);
+    error->all(FLERR,str);
+  }
+
+  // clean up
+
+  delete [] levels;
 }
 
 /* ----------------------------------------------------------------------
@@ -425,43 +422,4 @@ void ReadGrid::parse_keyword(int first)
 	 || line[stop] == '\n' || line[stop] == '\r') stop--;
   line[stop+1] = '\0';
   strcpy(keyword,&line[start]);
-}
-
-/* ----------------------------------------------------------------------
-   read/store all parents
-------------------------------------------------------------------------- */
-
-void ReadGrid::read_parents()
-{
-  int i,m,nchunk;
-
-  // read and broadcast one CHUNK of lines at a time
-
-  int nread = 0;
-  
-  while (nread < nparents) {
-    if (nparents-nread > CHUNK) nchunk = CHUNK;
-    else nchunk = nparents-nread;
-    if (me == 0) {
-      char *eof;
-      m = 0;
-      for (i = 0; i < nchunk; i++) {
-	eof = fgets(&buffer[m],MAXLINE,fp);
-	if (eof == NULL) error->one(FLERR,"Unexpected end of grid file");
-	m += strlen(&buffer[m]);
-      }
-      if (buffer[m-1] != '\n') strcpy(&buffer[m++],"\n");
-      m++;
-    }
-    MPI_Bcast(&m,1,MPI_INT,0,world);
-    MPI_Bcast(buffer,m,MPI_CHAR,0,world);
-
-    create_parents(nchunk,buffer);
-    nread += nchunk;
-  }
-
-  if (me == 0) {
-    if (screen) fprintf(screen,"  %d parent cells\n",nparents);
-    if (logfile) fprintf(logfile,"  %d parent cells\n",nparents);
-  }
 }

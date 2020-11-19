@@ -157,16 +157,6 @@ void ReadRestart::command(int narg, char **arg)
 
   if (multiproc && me == 0) fclose(fp);
 
-  // add parent cells to Grid::hash
-
-  Grid::MyHash *hash = grid->hash;
-  Grid::ParentCell *pcells = grid->pcells;
-  int nparent = grid->nparent;
-
-  hash->clear();
-  for (int icell = 0; icell < nparent; icell++)
-    (*hash)[pcells[icell].id] = -(icell+1);
-
   // read per-proc info, grid cells and particles
 
   int flag,value,tmp,procmatch_check,procmatch;
@@ -723,12 +713,10 @@ void ReadRestart::command(int narg, char **arg)
   delete [] file;
   memory->destroy(buf);
 
-  // clear Grid::hash since overwrote it and now done using it
-
-  hash->clear();
-  grid->hashfilled = 0;
+  // setup the grid
 
   if (grid->cellweightflag) grid->weight(-1,NULL);
+  grid->set_maxlevel();
   grid->setup_owned();
 
   // clumped decomposition is maintained (if original file had it)
@@ -1115,6 +1103,19 @@ void ReadRestart::grid_params()
     error->all(FLERR,"Invalid flag in grid section of restart file");
   read_int();
   grid->read_restart(fp);
+
+  // error check on too many bits for cell IDs
+  // could occur if restart file was written with 64-bit IDs and
+  //   read by code compiled for 32-bit IDs
+
+  int maxlevel = grid->maxlevel;
+  int nbits = grid->plevels[maxlevel-1].nbits + grid->plevels[maxlevel-1].newbits;
+  if (nbits > sizeof(cellint)*8) {
+    char str[128];
+    sprintf(str,"Hierarchical grid induces cell IDs that exceed %d bits",
+	    (int) sizeof(cellint)*8);
+    error->all(FLERR,str);
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1160,33 +1161,37 @@ void ReadRestart::create_child_cells(int skipflag)
 {
   int nprocs = comm->nprocs;
 
-  int nsplit,iparent,icell,isplit,index;
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+  
+  int level,nsplit,icell,isplit,index;
   cellint id,ichild;
   double lo[3],hi[3];
-
+  
   // for skipflag = 0, add all child cells in Grid restart to my Grid::cells
   // for skipflag = 1, only add every Pth cell in list
 
   Grid::MyHash *hash = grid->hash;
   int nlocal = grid->nlocal_restart;
   cellint *ids = grid->id_restart;
+  int *levels = grid->level_restart;
   int *nsplits = grid->nsplit_restart;
 
   for (int i = 0; i < nlocal; i++) {
     id = ids[i];
+    level = levels[i];
     nsplit = nsplits[i];
 
     // unsplit or split cell
-    // for skipflag, add only if I own this cell
+    // for skipflag == 1, add only if I own this cell
     // add as child cell to grid->cells
     // if split cell, also add split cell to sinfo
     // add unsplit/split cells (not sub cells) to Grid::hash as create them
 
     if (nsplit > 0) {
       if (skipflag && (i % nprocs != me)) continue;
-      iparent = grid->id_find_parent(id,ichild);
-      grid->id_child_lohi(iparent,ichild,lo,hi);
-      grid->add_child_cell(id,iparent,lo,hi);
+      grid->id_lohi(id,level,boxlo,boxhi,lo,hi);
+      grid->add_child_cell(id,level,lo,hi);
       icell = grid->nlocal - 1;
       (*hash)[id] = icell;
       grid->cells[icell].nsplit = nsplit;
@@ -1218,6 +1223,7 @@ void ReadRestart::create_child_cells(int skipflag)
   // deallocate memory in Grid
 
   memory->destroy(grid->id_restart);
+  memory->destroy(grid->level_restart);
   memory->destroy(grid->nsplit_restart);
 }
 

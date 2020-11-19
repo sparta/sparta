@@ -17,7 +17,7 @@
 </PRE>
 <UL><LI>one or more keyword/value pairs 
 
-<LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>gravity</I> or <I>surfs</I> or <I>surfgrid</I> or <I>surfmax</I> or <I>cellmax</I> or <I>splitmax</I> or <I>surftally</I> or <I>surfpush</I> or <I>gridcut</I> or <I>comm/sort</I> or <I>comm/style</I> or <I>weight</I> or <I>particle/reorder</I> or <I>mem/limit</I> 
+<LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>gravity</I> or <I>surfs</I> or <I>surfgrid</I> or <I>surfmax</I> or <I>splitmax</I> or <I>surftally</I> or <I>surfpush</I> or <I>gridcut</I> or <I>comm/sort</I> or <I>comm/style</I> or <I>weight</I> or <I>particle/reorder</I> or <I>mem/limit</I> 
 
 <PRE>  <I>fnum</I> value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
@@ -42,8 +42,6 @@
     auto = choose percell or persurf based on surface element and proc count
   <I>surfmax</I> value = Nsurf
     Nsurf = max # of surface elements allowed in single grid cell
-  <I>cellmax</I> value = Ncell
-    Ncell = max # of grid cells a single surf can overlap
   <I>splitmax</I> value = Nsplit
     Nsplit = max # of sub-cells one grid cell can be split into by surface elements
   <I>surftally</I> value = <I>reduce</I> or <I>rvous</I> or <I>auto</I>
@@ -149,14 +147,6 @@ elements (lines in 2d, triangles in 3d) that can overlap a single grid
 cell.  The default is 100, which should be large enough for any
 simulation, unless you define very coarse grid cells relative to the
 size of surface elements they contain.
-</P>
-<P>The <I>cellmax</I> keyword determines the maximum number of grid cells that
-a single surface element (lines in 2d, tringles in 3d) can overlap.
-This keyword is only used if the <I>persurf</I> algorithm defined by the
-<I>surfgrid</I> keyword is invoked.  The default is 100, which should be
-large enough for most simulations, unless you define one or more very
-large surface elements relative to the size of grid cells they
-intersect.
 </P>
 <P>The <I>splitmax</I> keyword determines the maximum number of sub-cells a
 single grid cell can be split into as a result of its intersection
@@ -411,9 +401,8 @@ defined, e.g. via the <A HREF = "read_surf.html">read_surf</A> command.
 </P>
 <P>The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
 0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfs = explicit,
-surfgrid = auto, surfmax = 100, cellmax = 100, splitmax = 10,
-surftally = auto, surfpush = yes, gridcut = -1.0, comm/sort = no,
-comm/style = neigh, weight = cell none, particle/reorder = 0,
-mem/limit = 0.
+surfgrid = auto, surfmax = 100, splitmax = 10, surftally = auto,
+surfpush = yes, gridcut = -1.0, comm/sort = no, comm/style = neigh,
+weight = cell none, particle/reorder = 0, mem/limit = 0.
 </P>
 </HTML>
