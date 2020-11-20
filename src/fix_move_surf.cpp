@@ -181,6 +181,10 @@ void FixMoveSurf::end_of_step()
   // set ndeleted for scalar output
 
   if (particle->exist) ndeleted = movesurf->remove_particles();
+
+  // notify all classes that store per-grid data that grid may have changed
+
+  grid->notify_changed();
 }
 
 /* ----------------------------------------------------------------------
