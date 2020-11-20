@@ -896,6 +896,13 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
      uses one or two collisions, it will discard collisions outside segment
    horizontal line is at yhoriz
    move starting at x with v for tdelta
+   equations: solve for intersetion of line with circle in y,z plane
+     line: y = y0 + t*vy; z = t*vz since z0 = 0
+     circle: y^2 + z^2 = ylo^2
+     solve for t = time or intersection, via quadractic equation
+     special case in caller and here when y0 = ylo
+     otherwise 0 or 2 intersections of line with circle
+     first intersection has to happen within tdelta to be relevant
    return 1 if crosses with 0.0 <= t <= tdelta
    if crosses, also return nc, t1, t2 (can be two collisions)
 ------------------------------------------------------------------------- */
