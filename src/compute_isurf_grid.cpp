@@ -288,9 +288,10 @@ void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
       vec[k++] += weight;
       break;
     case MFLUX:
-      vec[k++] += origmass;
-      if (ip) vec[k++] -= imass;
-      if (jp) vec[k++] -= jmass;
+      vec[k] += origmass;
+      if (ip) vec[k] -= imass;
+      if (jp) vec[k] -= jmass;
+      k++;
       break;
     case FX:
       if (!fflag) {

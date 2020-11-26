@@ -168,9 +168,10 @@ void boundary_tally_kk(int iface, int istyle, int reaction,
         a_myarray(iface,k++) += weight;
         break;
       case MFLUX:
-        a_myarray(iface,k++) += origmass;
-        if (ip) a_myarray(iface,k++) -= imass;
-        if (jp) a_myarray(iface,k++) -= jmass;
+        a_myarray(iface,k) += origmass;
+        if (ip) a_myarray(iface,k) -= imass;
+        if (jp) a_myarray(iface,k) -= jmass;
+        k++;
         break;
       case PRESS:
         MathExtraKokkos::scale3(-origmass,vorig,pdelta);
