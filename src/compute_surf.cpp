@@ -298,10 +298,10 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       vec[k++] += weight;
       break;
     case MFLUX:
-      vec[k] += origmass;
+      vec[k] += origmass * fluxscale;
       if (!transparent) {
-        if (ip) vec[k] -= imass;
-        if (jp) vec[k] -= jmass;
+        if (ip) vec[k] -= imass * fluxscale;
+        if (jp) vec[k] -= jmass * fluxscale;
       }
       k++;
       break;
