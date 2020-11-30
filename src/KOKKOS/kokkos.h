@@ -42,8 +42,10 @@ class KokkosSPARTA : protected Pointers {
   int need_dup()
   {
     int value = 0;
+
     if (need_atomics)
-      value = NeedDup<1,DeviceType>::value;
+      value = std::is_same<typename NeedDup<1,DeviceType>::value,Kokkos::Experimental::ScatterDuplicated>::value;
+
     return value;
   }
 };

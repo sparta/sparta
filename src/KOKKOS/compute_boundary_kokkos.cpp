@@ -129,9 +129,9 @@ void ComputeBoundaryKokkos::pre_boundary_tally()
 
   need_dup = sparta->kokkos->need_dup<DeviceType>();
   if (need_dup)
-    dup_myarray = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterDuplicated>(d_myarray);
+    dup_myarray = Kokkos::Experimental::create_scatter_view<typename Kokkos::Experimental::ScatterSum, typename Kokkos::Experimental::ScatterDuplicated>(d_myarray);
   else
-    ndup_myarray = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterNonDuplicated>(d_myarray);
+    ndup_myarray = Kokkos::Experimental::create_scatter_view<typename Kokkos::Experimental::ScatterSum, typename Kokkos::Experimental::ScatterNonDuplicated>(d_myarray);
 }
 
 void ComputeBoundaryKokkos::post_boundary_tally()

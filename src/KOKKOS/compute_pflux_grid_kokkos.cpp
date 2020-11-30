@@ -113,9 +113,9 @@ void ComputePFluxGridKokkos::compute_per_grid_kokkos()
     need_dup = 0;
 
   if (need_dup)
-    dup_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterDuplicated>(d_tally);
+    dup_tally = Kokkos::Experimental::create_scatter_view<typename Kokkos::Experimental::ScatterSum, typename Kokkos::Experimental::ScatterDuplicated>(d_tally);
   else
-    ndup_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterNonDuplicated>(d_tally);
+    ndup_tally = Kokkos::Experimental::create_scatter_view<typename Kokkos::Experimental::ScatterSum, typename Kokkos::Experimental::ScatterNonDuplicated>(d_tally);
 
   copymode = 1;
   if (particle_kk->sorted_kk && sparta->kokkos->need_atomics && !sparta->kokkos->atomic_reduction)
@@ -146,8 +146,8 @@ void ComputePFluxGridKokkos::operator()(TagComputePFluxGrid_compute_per_grid_ato
 
   // The tally array is duplicated for OpenMP, atomic for CUDA, and neither for Serial
 
-  auto v_tally = ScatterViewHelper<NeedDup<NEED_ATOMICS,DeviceType>::value,decltype(dup_tally),decltype(ndup_tally)>::get(dup_tally,ndup_tally);
-  auto a_tally = v_tally.template access<AtomicDup<NEED_ATOMICS,DeviceType>::value>();
+  auto v_tally = ScatterViewHelper<typename NeedDup<NEED_ATOMICS,DeviceType>::value,decltype(dup_tally),decltype(ndup_tally)>::get(dup_tally,ndup_tally);
+  auto a_tally = v_tally.template access<typename AtomicDup<NEED_ATOMICS,DeviceType>::value>();
 
   const int ispecies = d_particles[i].ispecies;
   const int igroup = d_s2g(imix,ispecies);
