@@ -124,7 +124,7 @@ The {diffuse} style computes a simple diffusive reflection model.
 The model has 2 parameters set by the {Tsurf} and {acc} arguments.
 {Tsurf} is the temperature of the surface.  {Acc} is an accommodation
 coefficient from 0.0 to 1.0, which determines what fraction of surface
-collisions are specular.  The rest are diffusive.  Thus a setting of
+collisions are diffusive.  The rest are specular.  Thus a setting of
 {acc} = 0.0 means all collisions are specular.
 
 Note that setting {acc} = 0.0, is a way to perform surface reactions
