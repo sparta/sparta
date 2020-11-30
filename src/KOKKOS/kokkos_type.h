@@ -145,18 +145,18 @@ struct AtomicView<-1> {
 // Do atomic trait when running with CUDA
 template<int NEED_ATOMICS, class DeviceType>
 struct AtomicDup {
-  enum {value = Kokkos::Experimental::ScatterNonAtomic};
+  using value = Kokkos::Experimental::ScatterNonAtomic;
 };
 
 #ifdef KOKKOS_ENABLE_CUDA
 template<>
 struct AtomicDup<1,Kokkos::Cuda> {
-  enum {value = Kokkos::Experimental::ScatterAtomic};
+  using value = Kokkos::Experimental::ScatterAtomic;
 };
 
 template<>
 struct AtomicDup<-1,Kokkos::Cuda> {
-  enum {value = Kokkos::Experimental::ScatterAtomic};
+  using value = Kokkos::Experimental::ScatterAtomic;
 };
 #endif
 
@@ -165,24 +165,24 @@ struct AtomicDup<-1,Kokkos::Cuda> {
 #ifdef KOKKOS_ENABLE_OPENMP
 template<>
 struct AtomicDup<1,Kokkos::OpenMP> {
-  enum {value = Kokkos::Experimental::ScatterAtomic};
+  using value = Kokkos::Experimental::ScatterAtomic;
 };
 
 template<>
 struct AtomicDup<-1,Kokkos::OpenMP> {
-  enum {value = Kokkos::Experimental::ScatterAtomic};
+  using value = Kokkos::Experimental::ScatterAtomic;
 };
 #endif
 
 #ifdef KOKKOS_ENABLE_THREADS
 template<>
 struct AtomicDup<1,Kokkos::Threads> {
-  enum {value = Kokkos::Experimental::ScatterAtomic};
+  using value = Kokkos::Experimental::ScatterAtomic;
 };
 
 template<>
 struct AtomicDup<-1,Kokkos::Threads> {
-  enum {value = Kokkos::Experimental::ScatterAtomic};
+  using value = Kokkos::Experimental::ScatterAtomic;
 };
 #endif
 
@@ -193,7 +193,7 @@ struct AtomicDup<-1,Kokkos::Threads> {
 // Use duplication when running threaded and not using atomics
 template<int NEED_ATOMICS, class DeviceType>
 struct NeedDup {
-  enum {value = Kokkos::Experimental::ScatterNonDuplicated};
+  using value = Kokkos::Experimental::ScatterNonDuplicated;
 };
 
 #ifndef SPARTA_KOKKOS_USE_ATOMICS
@@ -201,37 +201,37 @@ struct NeedDup {
 #ifdef KOKKOS_ENABLE_OPENMP
 template<>
 struct NeedDup<1,Kokkos::OpenMP> {
-  enum {value = Kokkos::Experimental::ScatterDuplicated};
+  using value = Kokkos::Experimental::ScatterDuplicated;
 };
 
 template<>
 struct NeedDup<-1,Kokkos::OpenMP> {
-  enum {value = Kokkos::Experimental::ScatterDuplicated};
+  using value = Kokkos::Experimental::ScatterDuplicated;
 };
 #endif
 
 #ifdef KOKKOS_ENABLE_THREADS
 template<>
 struct NeedDup<1,Kokkos::Threads> {
-  enum {value = Kokkos::Experimental::ScatterDuplicated};
+  using value = Kokkos::Experimental::ScatterDuplicated;
 };
 
 template<>
 struct NeedDup<-1,Kokkos::Threads> {
-  enum {value = Kokkos::Experimental::ScatterDuplicated};
+  using value = Kokkos::Experimental::ScatterDuplicated;
 };
 #endif
 
 #endif
 
-template<int value, typename T1, typename T2>
+template<typename value, typename T1, typename T2>
 class ScatterViewHelper {};
 
 template<typename T1, typename T2>
 class ScatterViewHelper<Kokkos::Experimental::ScatterDuplicated,T1,T2> {
 public:
   KOKKOS_INLINE_FUNCTION
-  static T1 get(const T1 &dup, const T2 &nondup) {
+  static T1 get(const T1 &dup, const T2 & /*nondup*/) {
     return dup;
   }
 };
@@ -240,7 +240,7 @@ template<typename T1, typename T2>
 class ScatterViewHelper<Kokkos::Experimental::ScatterNonDuplicated,T1,T2> {
 public:
   KOKKOS_INLINE_FUNCTION
-  static T2 get(const T1 &dup, const T2 &nondup) {
+  static T2 get(const T1 & /*dup*/, const T2 &nondup) {
     return nondup;
   }
 };

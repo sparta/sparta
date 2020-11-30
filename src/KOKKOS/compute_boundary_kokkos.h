@@ -71,8 +71,8 @@ void boundary_tally_kk(int iface, int istyle, int reaction,
   // particle weight used for all keywords except NUM
   // styles PERIODIC and OUTFLOW do not have post-bounce velocity
 
-  auto v_myarray = ScatterViewHelper<NeedDup<ATOMIC_REDUCTION,DeviceType>::value,decltype(dup_myarray),decltype(ndup_myarray)>::get(dup_myarray,ndup_myarray);
-  auto a_myarray = v_myarray.template access<AtomicDup<ATOMIC_REDUCTION,DeviceType>::value>();
+  auto v_myarray = ScatterViewHelper<typename NeedDup<ATOMIC_REDUCTION,DeviceType>::value,decltype(dup_myarray),decltype(ndup_myarray)>::get(dup_myarray,ndup_myarray);
+  auto a_myarray = v_myarray.template access<typename AtomicDup<ATOMIC_REDUCTION,DeviceType>::value>();
 
   double vsqpre,ivsqpost,jvsqpost;
   double ierot,jerot,ievib,jevib,iother,jother,otherpre;
@@ -261,8 +261,8 @@ void boundary_tally_kk(int iface, int istyle, int reaction,
   DAT::t_float_2d_lr d_myarray;
 
   int need_dup;
-  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterDuplicated> dup_myarray;
-  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterNonDuplicated> ndup_myarray;
+  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,typename Kokkos::Experimental::ScatterSum,typename Kokkos::Experimental::ScatterDuplicated> dup_myarray;
+  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,typename Kokkos::Experimental::ScatterSum,typename Kokkos::Experimental::ScatterNonDuplicated> ndup_myarray;
 
   t_species_1d d_species;
   DAT::t_int_2d d_s2g;

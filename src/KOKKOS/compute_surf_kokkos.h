@@ -136,8 +136,8 @@ void surf_tally_kk(int isurf, int icell, int reaction,
   int nflag = 0;
   int tflag = 0;
 
-  auto v_array_surf_tally = ScatterViewHelper<NeedDup<ATOMIC_REDUCTION,DeviceType>::value,decltype(dup_array_surf_tally),decltype(ndup_array_surf_tally)>::get(dup_array_surf_tally,ndup_array_surf_tally);
-  auto a_array_surf_tally = v_array_surf_tally.template access<AtomicDup<ATOMIC_REDUCTION,DeviceType>::value>();
+  auto v_array_surf_tally = ScatterViewHelper<typename NeedDup<ATOMIC_REDUCTION,DeviceType>::value,decltype(dup_array_surf_tally),decltype(ndup_array_surf_tally)>::get(dup_array_surf_tally,ndup_array_surf_tally);
+  auto a_array_surf_tally = v_array_surf_tally.template access<typename AtomicDup<ATOMIC_REDUCTION,DeviceType>::value>();
 
   for (int m = 0; m < nvalue; m++) {
     switch (d_which(m)) {
@@ -313,8 +313,8 @@ void surf_tally_kk(int isurf, int icell, int reaction,
   DAT::t_float_2d_lr d_array_surf_tally;  // tally values for local surfs
 
   int need_dup;
-  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterDuplicated> dup_array_surf_tally;
-  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterNonDuplicated> ndup_array_surf_tally;
+  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,typename Kokkos::Experimental::ScatterSum,typename Kokkos::Experimental::ScatterDuplicated> dup_array_surf_tally;
+  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,typename Kokkos::Experimental::ScatterSum,typename Kokkos::Experimental::ScatterNonDuplicated> ndup_array_surf_tally;
 
   DAT::t_surfint_1d d_tally2surf;           // tally2surf[I] = surf ID of Ith tally
   DAT::tdual_surfint_1d k_tally2surf;

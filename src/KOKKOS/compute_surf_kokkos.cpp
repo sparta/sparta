@@ -138,9 +138,9 @@ void ComputeSurfKokkos::pre_surf_tally()
 
   need_dup = sparta->kokkos->need_dup<DeviceType>();
   if (need_dup)
-    dup_array_surf_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterDuplicated>(d_array_surf_tally);
+    dup_array_surf_tally = Kokkos::Experimental::create_scatter_view<typename Kokkos::Experimental::ScatterSum, typename Kokkos::Experimental::ScatterDuplicated>(d_array_surf_tally);
   else
-    ndup_array_surf_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterNonDuplicated>(d_array_surf_tally);
+    ndup_array_surf_tally = Kokkos::Experimental::create_scatter_view<typename Kokkos::Experimental::ScatterSum, typename Kokkos::Experimental::ScatterNonDuplicated>(d_array_surf_tally);
 }
 
 /* ---------------------------------------------------------------------- */

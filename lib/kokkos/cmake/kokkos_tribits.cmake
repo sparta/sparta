@@ -21,10 +21,6 @@ IF (KOKKOS_HAS_TRILINOS)
     SET(${PROJECT_NAME}_ENABLE_DEBUG OFF)
   ENDIF()
 
-  IF(NOT DEFINED ${PROJECT_NAME}_ENABLE_CXX11)
-    SET(${PROJECT_NAME}_ENABLE_CXX11 ON)
-  ENDIF()
-
   IF(NOT DEFINED ${PROJECT_NAME}_ENABLE_TESTS)
     SET(${PROJECT_NAME}_ENABLE_TESTS OFF)
   ENDIF()
@@ -134,7 +130,7 @@ FUNCTION(KOKKOS_ADD_EXECUTABLE ROOT_NAME)
     VERIFY_EMPTY(KOKKOS_ADD_EXECUTABLE ${PARSE_UNPARSED_ARGUMENTS})
     #All executables must link to all the kokkos targets
     #This is just private linkage because exe is final
-    TARGET_LINK_LIBRARIES(${EXE_NAME} PRIVATE kokkos)
+    TARGET_LINK_LIBRARIES(${EXE_NAME} PRIVATE Kokkos::kokkos)
   endif()
 ENDFUNCTION()
 
@@ -174,16 +170,42 @@ FUNCTION(KOKKOS_SET_EXE_PROPERTY ROOT_NAME)
 ENDFUNCTION()
 
 MACRO(KOKKOS_SETUP_BUILD_ENVIRONMENT)
- INCLUDE(${KOKKOS_SRC_PATH}/cmake/kokkos_compiler_id.cmake)
- INCLUDE(${KOKKOS_SRC_PATH}/cmake/kokkos_enable_devices.cmake)
- INCLUDE(${KOKKOS_SRC_PATH}/cmake/kokkos_enable_options.cmake)
- INCLUDE(${KOKKOS_SRC_PATH}/cmake/kokkos_test_cxx_std.cmake)
- INCLUDE(${KOKKOS_SRC_PATH}/cmake/kokkos_arch.cmake)
- IF (NOT KOKKOS_HAS_TRILINOS)
-  SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${Kokkos_SOURCE_DIR}/cmake/Modules/")
-  INCLUDE(${KOKKOS_SRC_PATH}/cmake/kokkos_tpls.cmake)
- ENDIF()
- INCLUDE(${KOKKOS_SRC_PATH}/cmake/kokkos_corner_cases.cmake)
+  # This is needed for both regular build and install tests
+  INCLUDE(${KOKKOS_SRC_PATH}/cmake/kokkos_compiler_id.cmake)
+  #set an internal option, if not already set
+  SET(Kokkos_INSTALL_TESTING OFF CACHE INTERNAL "Whether to build tests and examples against installation")
+  IF (Kokkos_INSTALL_TESTING)
+    SET(KOKKOS_ENABLE_TESTS ON)
+    SET(KOKKOS_ENABLE_EXAMPLES ON)
+    # This looks a little weird, but what we are doing
+    # is to NOT build Kokkos but instead look for an
+    # installed Kokkos - then build examples and tests
+    # against that installed Kokkos
+    FIND_PACKAGE(Kokkos REQUIRED)
+    # Just grab the configuration from the installation
+    FOREACH(DEV ${Kokkos_DEVICES})
+      SET(KOKKOS_ENABLE_${DEV} ON)
+    ENDFOREACH()
+    FOREACH(OPT ${Kokkos_OPTIONS})
+      SET(KOKKOS_ENABLE_${OPT} ON)
+    ENDFOREACH()
+    FOREACH(TPL ${Kokkos_TPLS})
+      SET(KOKKOS_ENABLE_${TPL} ON)
+    ENDFOREACH()
+    FOREACH(ARCH ${Kokkos_ARCH})
+      SET(KOKKOS_ARCH_${ARCH} ON)
+    ENDFOREACH()
+  ELSE()
+    INCLUDE(${KOKKOS_SRC_PATH}/cmake/kokkos_enable_devices.cmake)
+    INCLUDE(${KOKKOS_SRC_PATH}/cmake/kokkos_enable_options.cmake)
+    INCLUDE(${KOKKOS_SRC_PATH}/cmake/kokkos_test_cxx_std.cmake)
+    INCLUDE(${KOKKOS_SRC_PATH}/cmake/kokkos_arch.cmake)
+    IF (NOT KOKKOS_HAS_TRILINOS)
+      SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${Kokkos_SOURCE_DIR}/cmake/Modules/")
+    ENDIF()
+    INCLUDE(${KOKKOS_SRC_PATH}/cmake/kokkos_tpls.cmake)
+    INCLUDE(${KOKKOS_SRC_PATH}/cmake/kokkos_corner_cases.cmake)
+  ENDIF()
 ENDMACRO()
 
 MACRO(KOKKOS_ADD_TEST_EXECUTABLE ROOT_NAME)
@@ -212,12 +234,21 @@ FUNCTION(KOKKOS_SET_LIBRARY_PROPERTIES LIBRARY_NAME)
     ""
     ${ARGN})
 
-  IF(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.13")
-    #great, this works the "right" way
+  IF(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.18")
+    #I can use link options
+    #check for CXX linkage using the simple 3.18 way
+    TARGET_LINK_OPTIONS(
+      ${LIBRARY_NAME} PUBLIC
+      $<$<LINK_LANGUAGE:CXX>:${KOKKOS_LINK_OPTIONS}>
+    )
+  ELSEIF(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.13")
+    #I can use link options
+    #just assume CXX linkage
     TARGET_LINK_OPTIONS(
       ${LIBRARY_NAME} PUBLIC ${KOKKOS_LINK_OPTIONS}
     )
   ELSE()
+    #assume CXX linkage, we have no good way to check otherwise
     IF (PARSE_PLAIN_STYLE)
       TARGET_LINK_LIBRARIES(
         ${LIBRARY_NAME} ${KOKKOS_LINK_OPTIONS}
@@ -310,19 +341,25 @@ FUNCTION(KOKKOS_INTERNAL_ADD_LIBRARY LIBRARY_NAME)
     LIST(REMOVE_DUPLICATES PARSE_SOURCES)
   ENDIF()
 
+  IF(PARSE_STATIC)
+    SET(LINK_TYPE STATIC)
+  ENDIF()
+
+  IF(PARSE_SHARED)
+    SET(LINK_TYPE SHARED)
+  ENDIF()
+
+  # MSVC and other platforms want to have
+  # the headers included as source files
+  # for better dependency detection
   ADD_LIBRARY(
     ${LIBRARY_NAME}
+    ${LINK_TYPE}
     ${PARSE_HEADERS}
     ${PARSE_SOURCES}
   )
 
   KOKKOS_INTERNAL_ADD_LIBRARY_INSTALL(${LIBRARY_NAME})
-
-  INSTALL(
-    FILES  ${PARSE_HEADERS}
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    COMPONENT ${PACKAGE_NAME}
-  )
 
   #In case we are building in-tree, add an alias name
   #that matches the install Kokkos:: name
@@ -330,8 +367,19 @@ FUNCTION(KOKKOS_INTERNAL_ADD_LIBRARY LIBRARY_NAME)
 ENDFUNCTION()
 
 FUNCTION(KOKKOS_ADD_LIBRARY LIBRARY_NAME)
+  CMAKE_PARSE_ARGUMENTS(PARSE
+    "ADD_BUILD_OPTIONS"
+    ""
+    "HEADERS"
+    ${ARGN}
+  )
   IF (KOKKOS_HAS_TRILINOS)
-    TRIBITS_ADD_LIBRARY(${LIBRARY_NAME} ${ARGN})
+    # We do not pass headers to trilinos. They would get installed
+    # to the default include folder, but we want headers installed
+    # preserving the directory structure, e.g. impl
+    # If headers got installed in both locations, it breaks some
+    # downstream packages
+    TRIBITS_ADD_LIBRARY(${LIBRARY_NAME} ${PARSE_UNPARSED_ARGUMENTS})
     #Stolen from Tribits - it can add prefixes
     SET(TRIBITS_LIBRARY_NAME_PREFIX "${${PROJECT_NAME}_LIBRARY_NAME_PREFIX}")
     SET(TRIBITS_LIBRARY_NAME ${TRIBITS_LIBRARY_NAME_PREFIX}${LIBRARY_NAME})
@@ -345,9 +393,13 @@ FUNCTION(KOKKOS_ADD_LIBRARY LIBRARY_NAME)
     #Do not set any transitive properties and keep everything working as before
     #KOKKOS_SET_LIBRARY_PROPERTIES(${TRIBITS_LIBRARY_NAME} PLAIN_STYLE)
   ELSE()
+    # Forward the headers, we want to know about all headers
+    # to make sure they appear correctly in IDEs
     KOKKOS_INTERNAL_ADD_LIBRARY(
-      ${LIBRARY_NAME} ${ARGN})
-    KOKKOS_SET_LIBRARY_PROPERTIES(${LIBRARY_NAME})
+      ${LIBRARY_NAME} ${PARSE_UNPARSED_ARGUMENTS} HEADERS ${PARSE_HEADERS})
+    IF (PARSE_ADD_BUILD_OPTIONS)
+      KOKKOS_SET_LIBRARY_PROPERTIES(${LIBRARY_NAME})
+    ENDIF()
   ENDIF()
 ENDFUNCTION()
 
@@ -364,17 +416,6 @@ ELSE()
 
   ADD_LIBRARY(${NAME} INTERFACE)
   KOKKOS_INTERNAL_ADD_LIBRARY_INSTALL(${NAME})
-
-  INSTALL(
-    FILES  ${PARSE_HEADERS}
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  )
-
-  INSTALL(
-    FILES  ${PARSE_HEADERS}
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    COMPONENT ${PACKAGE_NAME}
-  )
 ENDIF()
 ENDFUNCTION()
 
