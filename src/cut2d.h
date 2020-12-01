@@ -43,7 +43,7 @@ class Cut2d : protected Pointers {
                         //   though may not be walked
     int line;           // original line (as stored by Cline) the pt starts,
                         //   only set for ENTRY and TWO pts
-    int corner;         // 1,2,3,4 if x is a corner point, else 0
+    int corner;         // 0,1,2,3 if x is a corner point, else -1
                         // could be ENTRY,EXIT,CORNER pt, but not a TWO pt
     int cprev,cnext;    // indices of pts in linked list around cell perimeter
     int side;           // which side of cell (0,1,2,3) pt is on
@@ -116,6 +116,7 @@ class Cut2d : protected Pointers {
   int push_increment();
   void push(double *);
   int sameedge(double *, double *);
+  int grazing(int, double *);
   int whichside(double *);
 
   void failed_cell();

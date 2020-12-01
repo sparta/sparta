@@ -448,12 +448,6 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
 
     int grazeflag = clip_tris();
 
-    // DEBUG
-    //totcell++;
-    //totsurf += nsurf;
-    //totvert += verts.n;
-    //totedge += edges.n;
-
 #ifdef VERBOSE
     if (id == VERBOSE_ID) print_bpg("BPG after clipped tris");
 #endif
@@ -471,28 +465,6 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
       else if (inout == OUTSIDE) mark = OUTSIDE;
       corners[0] = corners[1] = corners[2] = corners[3] =
         corners[4] = corners[5] = corners[6] = corners[7] = mark;
-
-
-      /*
-      double ctr[3];
-      ctr[0] = 0.5*(lo[0]+hi[0]);
-      ctr[1] = 0.5*(lo[1]+hi[1]);
-      ctr[2] = 0.5*(lo[2]+hi[2]);
-      int check = 0;
-      if (mark == INSIDE &&
-          (fabs(ctr[0]) > 1.0 || fabs(ctr[1]) > 1.0 || fabs(ctr[2]) > 1.0))
-        check = 1;
-      if (mark == OUTSIDE &&
-          (fabs(ctr[0]) < 1.0 && fabs(ctr[1]) < 1.0 && fabs(ctr[2]) < 1.0))
-        check = 1;
-      if (mark == UNKNOWN) check = 1;
-      if (check) {
-        printf("BAD MARKING %d %g %g %g: mark %d: "
-               "nsurf %d pushflag %d grazeflag %d inout %d\n",
-               id,ctr[0],ctr[1],ctr[2],mark,nsurf,pushflag,grazeflag,inout);
-      }
-      */
-
 
       double vol = 0.0;
       if (mark == OUTSIDE) vol = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
@@ -936,10 +908,7 @@ int Cut3d::clip_tris()
   for (iedge = 0; iedge < nedge; iedge++) {
     if (!edges[iedge].active) continue;
     edge = &edges[iedge];
-    if (samepoint(edge->p1,edge->p2)) {
-      if (id == 345) printf("Remove 0-len edge\n");
-      edge_remove(edge);
-    }
+    if (samepoint(edge->p1,edge->p2)) edge_remove(edge);
   }
 
   // remove vertices (triangles) which now have less than 3 edges
@@ -979,7 +948,8 @@ int Cut3d::clip_tris()
     }
 
   // remove vertices which only graze the cell
-  // grazing = all vertex pts in same face of cell and outward normal
+  // grazing = all vertex pts in plane of one face of cell and outward normal
+  // grazeflag = 1 if any vertex grazes the cell
 
   int grazeflag = 0;
   for (ivert = 0; ivert < nvert; ivert++) {
