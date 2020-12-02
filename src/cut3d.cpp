@@ -33,6 +33,8 @@ enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut2d
 
 #define EPSCELL 1.0e-10    // tolerance for pushing surf pts to cell surface
 
+#define EPSCLOSE 1.0e-9    // tolerance for pushing surf clip pts to cell surface
+
 // cell ID for 2d or 3d cell
 
 //#define VERBOSE
@@ -736,12 +738,16 @@ int Cut3d::add_tris()
 
 int Cut3d::clip_tris()
 {
-  int i,n,dim,lohi,ivert,iedge,jedge,idir,jdir,nedge;
+  int i,j,n,dim,lohi,ivert,iedge,jedge,idir,jdir,nedge;
   int p1flag,p2flag;
   double value;
-  double *p1,*p2,*p3;
+  double *p1,*p2,*p3,*p;
   Edge *edge,*newedge;
 
+  double xdelta = EPSCLOSE * (hi[0]-lo[0]);
+  double ydelta = EPSCLOSE * (hi[1]-lo[1]);
+  double zdelta = EPSCLOSE * (hi[2]-lo[2]);
+  
   // loop over all 6 faces of cell
 
   int nvert = verts.n;
@@ -758,6 +764,22 @@ int Cut3d::clip_tris()
     nedge = edges.n;
     for (iedge = 0; iedge < nedge; iedge++)
       if (edges[iedge].active) edges[iedge].clipped = 0;
+
+    // push all edge points within EPSCLOSE of cell face to cell face
+    // done every iteration of clip since it can create new points
+    
+    for (iedge = 0; iedge < nedge; iedge++) {
+      for (j = 0; j < 2; j++) {
+	if (j == 0) p = edges[iedge].p1;
+	else p = edges[iedge].p2;
+	if (fabs(p[0]-lo[0]) < xdelta) p[0] = lo[0];
+	if (fabs(p[0]-hi[0]) < xdelta) p[0] = hi[0];
+	if (fabs(p[1]-lo[1]) < ydelta) p[1] = lo[1];
+	if (fabs(p[1]-hi[1]) < ydelta) p[1] = hi[1];
+	if (fabs(p[2]-lo[2]) < zdelta) p[2] = lo[2];
+	if (fabs(p[2]-hi[2]) < zdelta) p[2] = hi[2];
+      }
+    }
 
     // loop over vertices, clip each of its edges to face
     // if edge already clipped, unset clip flag and keep edge as-is
@@ -1076,6 +1098,12 @@ int Cut3d::edge2face()
     edge = &edges[iedge];
 
     nface = which_faces(edge->p1,edge->p2,faces);
+    if (nface == 0) {
+      double *p1 = edge->p1;
+      double *p2 = edge->p2;
+      printf("BAD id %d edge %d %d p1 %g %g %g p2 %g %g %g\n",id,iedge,nedge,
+	     p1[0],p1[1],p2[2],p2[0],p2[1],p2[2]);
+    }
     if (nface == 0) return 2;
     else if (nface == 1) iface = faces[0];
     else if (nface == 2) {
@@ -2155,14 +2183,17 @@ void Cut3d::push(double *pt)
 void Cut3d::failed_cell()
 {
   printf("Cut3d failed on proc %d in cell ID: " CELLINT_FORMAT "\n",comm->me,id);
-  Surf::Tri *tris = surf->tris;
   printf("  lo corner %g %g %g\n",lo[0],lo[1],lo[2]);
   printf("  hi corner %g %g %g\n",hi[0],hi[1],hi[2]);
   printf("  # of surfs = %d out of " BIGINT_FORMAT "\n",nsurf,surf->nsurf);
+  Surf::Tri *tris = surf->tris;
   printf("  surfs:");
+  //for (int i = 0; i < nsurf; i++) printf(" %d",tris[surfs[i]].id);
   for (int i = 0; i < nsurf; i++)
-    printf(" " SURFINT_FORMAT " %g",tris[surfs[i]].id,tris[surfs[i]].p1[0]);
-  //for (int i = 0; i < nsurf; i++) printf(" %d",surfs[i]+1);
+    printf(" %d p1 %g %g %g p2 %g %g %g p3 %g %g %g\n",tris[surfs[i]].id,
+	   tris[surfs[i]].p1[0],tris[surfs[i]].p1[1],tris[surfs[i]].p1[2],
+	   tris[surfs[i]].p2[0],tris[surfs[i]].p2[1],tris[surfs[i]].p2[2],
+	   tris[surfs[i]].p3[0],tris[surfs[i]].p3[1],tris[surfs[i]].p3[2]);
   printf("\n");
 }
 

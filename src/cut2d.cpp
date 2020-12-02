@@ -32,6 +32,8 @@ enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut3d
 
 #define EPSCELL 1.0e-10    // tolerance for pushing surf pts to cell surface
 
+#define EPSCLOSE 1.0e-9    // tolerance for pushing surf clip pts to cell surface
+
 // cell ID for 2d or 3d cell
 
 //#define VERBOSE
@@ -503,11 +505,14 @@ int Cut2d::split_face(int id_caller, int, double *onelo, double *onehi)
 
 int Cut2d::build_clines()
 {
-  int m;
+  int j,m;
   double p1[2],p2[2],cbox[3],cmid[3],l2b[3];
-  double *x,*y,*norm,*pp1,*pp2;
+  double *x,*y,*norm,*pp1,*pp2,*p;
   Surf::Line *line;
   Cline *cline;
+
+  double xdelta = EPSCLOSE * (hi[0]-lo[0]);
+  double ydelta = EPSCLOSE * (hi[1]-lo[1]);
 
   Surf::Line *lines = surf->lines;
 
@@ -528,11 +533,24 @@ int Cut2d::build_clines()
 
     // if pushflag is set, push line pts near cell surface
 
+    /*
     if (pushflag) {
       push(p1);
       push(p2);
     }
-	     
+    */
+
+    // push all line points within EPSCLOSE of cell face to cell face
+
+    for (j = 0; j < 2; j++) {
+      if (j == 0) p = p1;
+      else p = p2;
+      if (fabs(p[0]-lo[0]) < xdelta) p[0] = lo[0];
+      if (fabs(p[0]-hi[0]) < xdelta) p[0] = hi[0];
+      if (fabs(p[1]-lo[1]) < ydelta) p[1] = lo[1];
+      if (fabs(p[1]-hi[1]) < ydelta) p[1] = hi[1];
+    }
+    
     cline = &clines[n];
     cline->line = i;
 
@@ -1265,8 +1283,9 @@ void Cut2d::failed_cell()
   printf("  lo corner %g %g\n",lo[0],lo[1]);
   printf("  hi corner %g %g\n",hi[0],hi[1]);
   printf("  # of surfs = %d out of " BIGINT_FORMAT "\n",nsurf,surf->nsurf);
+  Surf::Line *lines = surf->lines;
   printf("  surfs:");
-  for (int i = 0; i < nsurf; i++) printf(" %d",surfs[i]);
+  for (int i = 0; i < nsurf; i++) printf(" %d",lines[surfs[i]].id);
   printf("\n");
 }
 

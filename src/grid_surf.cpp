@@ -1111,13 +1111,13 @@ void Grid::surf2grid_split(int subflag, int outflag)
     if (comm->me == 0) {
       if (screen) {
         fprintf(screen,"  ");
-        for (int i = 1; i <= npushmax; i++)
+        for (int i = 0; i <= npushmax; i++)
           fprintf(screen,"%d ",npushall[i]);
         fprintf(screen,"= number of pushed cells\n");
       }
       if (logfile) {
         fprintf(logfile,"  ");
-        for (int i = 1; i <= npushmax; i++)
+        for (int i = 0; i <= npushmax; i++)
           fprintf(logfile,"%d ",npushall[i]);
         fprintf(logfile,"= number of pushed cells\n");
       }
@@ -1748,7 +1748,7 @@ void Grid::flow_stats()
       fprintf(screen," ");
       for (i = 0; i < maxsplitall; i++) fprintf(screen," %d",tallyall[i]);
       fprintf(screen," = surf cells with 1,2,etc splits\n");
-      fprintf(screen,"  %.15g %.15g = cell-wise and global flow volume\n",
+      fprintf(screen,"  %.10g %.10g = cell-wise and global flow volume\n",
               cellvolumeall,flowvolume);
     }
     if (logfile) {
@@ -1757,7 +1757,7 @@ void Grid::flow_stats()
       fprintf(logfile," ");
       for (i = 0; i < maxsplitall; i++) fprintf(logfile," %d",tallyall[i]);
       fprintf(logfile," = surf cells with 1,2,etc splits\n");
-      fprintf(logfile,"  %g %g = cell-wise and global flow volume\n",
+      fprintf(logfile,"  %.10g %.10g = cell-wise and global flow volume\n",
               cellvolumeall,flowvolume);
     }
   }
