@@ -1587,6 +1587,8 @@ void Cut3d::walk()
 }
 
 /* ----------------------------------------------------------------------
+   ok to have a loop with area = 0.0
+   can happen if a tri crosses cell extremely close to corner point
 ------------------------------------------------------------------------- */
 
 int Cut3d::loop2ph()
@@ -1596,7 +1598,7 @@ int Cut3d::loop2ph()
 
   int nloop = loops.n;
   for (int i = 0; i < nloop; i++)
-    if (loops[i].volume > 0.0) positive++;
+    if (loops[i].volume >= 0.0) positive++;
     else negative++;
   if (positive == 0) return 4;
   if (positive > 1 && negative) return 5;
