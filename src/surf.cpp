@@ -75,7 +75,7 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   nlocal = nghost = nmax = 0;
   lines = NULL;
   tris = NULL;
-  pushflag = 0;
+  pushflag = 1;
 
   nown = maxown = 0;
   mylines = NULL;
@@ -3725,11 +3725,11 @@ void Surf::grow(int old)
   if (domain->dimension == 2) {
     lines = (Surf::Line *)
       memory->srealloc(lines,nmax*sizeof(Line),"surf:lines");
-    memset(&lines[old],0,(nmax-old)*sizeof(Line));
+    if (nmax > old) memset(&lines[old],0,(nmax-old)*sizeof(Line));
   } else {
     tris = (Surf::Tri *)
       memory->srealloc(tris,nmax*sizeof(Tri),"surf:tris");
-    memset(&tris[old],0,(nmax-old)*sizeof(Tri));
+    if (nmax > old) memset(&tris[old],0,(nmax-old)*sizeof(Tri));
   }
 }
 
@@ -3740,11 +3740,11 @@ void Surf::grow_own(int old)
   if (domain->dimension == 2) {
     mylines = (Surf::Line *)
       memory->srealloc(mylines,maxown*sizeof(Line),"surf:mylines");
-    memset(&mylines[old],0,(maxown-old)*sizeof(Line));
+    if (maxown > old) memset(&mylines[old],0,(maxown-old)*sizeof(Line));
   } else {
     mytris = (Surf::Tri *)
       memory->srealloc(mytris,maxown*sizeof(Tri),"surf:mytris");
-    memset(&mytris[old],0,(maxown-old)*sizeof(Tri));
+    if (maxown > old) memset(&mytris[old],0,(maxown-old)*sizeof(Tri));
   }
 }
 
@@ -3755,11 +3755,11 @@ void Surf::grow_temporary(int old)
   if (domain->dimension == 2) {
     tmplines = (Surf::Line *)
       memory->srealloc(tmplines,nmaxtmp*sizeof(Line),"surf:lines");
-    memset(&tmplines[old],0,(nmaxtmp-old)*sizeof(Line));
+    if (nmaxtmp > old) memset(&tmplines[old],0,(nmaxtmp-old)*sizeof(Line));
   } else {
     tmptris = (Surf::Tri *)
       memory->srealloc(tmptris,nmaxtmp*sizeof(Tri),"surf:tris");
-    memset(&tmptris[old],0,(nmaxtmp-old)*sizeof(Tri));
+    if (nmaxtmp > old) memset(&tmptris[old],0,(nmaxtmp-old)*sizeof(Tri));
   }
 }
 
