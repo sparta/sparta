@@ -23,42 +23,163 @@ import time
 import glob
 from datetime import timedelta
 
-def open_grid_file(filename):
-  gf = None
-  try:
-    if filename.lower().endswith('.gz'):
-      import gzip
-      gf = gzip.open(filename, "r")
+class SpartaGridFile:
+
+  def __init__(self, grid_file_path):
+    self.__number_of_cells = 0
+    self.__number_of_levels = 0
+    self.__level_dimensions = {}
+    self.__grid_file_handle = None
+    self.__grid_file_path = grid_file_path
+    self._open_grid_file()
+    self._read_grid_file_header()
+    self._close_grid_file()
+
+  @property
+  def number_of_cells(self):
+    return self.__number_of_cells
+
+  @property
+  def number_of_levels(self):
+    return self.__number_of_levels
+
+  def get_level_dimensions(self, level_number):
+    if level_number in self.__level_dimensions:
+       return self.__level_dimensions[level_number]
     else:
-      gf = open(filename, "r")
-  except IOError:
-    print("Unable to open SPARTA grid file: ", filename)
-    sys.exit(1)
-  return gf
+       return None
+
+  def __iter__(self):
+    self._open_grid_file()
+    self._go_to_grid_file_cells_section()
+    return self
+
+  def __next__(self):
+    line = self.__grid_file_handle.readline()
+    if not line:
+      self._close_grid_file()
+      raise StopIteration
+    else:
+      return self._create_dashed_id(self._clean_line(line))
+
+  def _get_grid_file_cells_section_string(self):
+    return 'Cells'
+
+  def _get_grid_file_level_definition_string(self):
+    return 'level-'
+
+  def _get_grid_file_number_of_levels_string(self):
+    return 'levels'
+
+  def _get_grid_file_number_of_cells_string(self):
+    return 'cells'
+
+  def _get_grid_file_cells_section_string(self):
+    return 'Cells'
+
+  def _open_grid_file(self):
+    filename = self.__grid_file_path
+    self.__grid_file_handle = None
+    try:
+      if filename.lower().endswith('.gz'):
+        import gzip
+        self.__grid_file_handle = gzip.open(filename, "r")
+      else:
+        self.__grid_file_handle = open(filename, "r")
+    except IOError:
+      print("Unable to open SPARTA grid file: ", filename)
+      sys.exit(1)
+
+  def _close_grid_file(self):
+    if self.__grid_file_handle is not None:
+      self.__grid_file_handle.close()
+
+  def _clean_line(self, line):
+    line = line.partition('#')[0]
+    return line.strip()
+
+  def _read_grid_file_header(self):
+    grid_file_handle = self.__grid_file_handle
+    for line in grid_file_handle:
+      s = self._clean_line(line).split()
+
+      if self._get_grid_file_cells_section_string() in s:
+        break
+      if self._get_grid_file_number_of_cells_string() in s:
+        index = s.index(self._get_grid_file_number_of_cells_string())
+        self.__number_of_cells = int(s[index-1])
+      if self._get_grid_file_number_of_levels_string() in s:
+        index = s.index(self._get_grid_file_number_of_levels_string())
+        self.__number_of_levels = int(s[index-1])
+      if self.number_of_levels > 0:
+        for level in range(1,self.number_of_levels+1):
+          level_string = self._get_grid_file_level_definition_string() +\
+            str(level)
+          if level_string in s:
+            index = s.index(level_string)
+            self.__level_dimensions[level] = {'x' : int(s[index-3]),
+              'y' : int(s[index-2]), 'z' : int(s[index-1])}
+    self._create_level_bit_masks()  
+
+  def _go_to_grid_file_cells_section(self):
+    grid_file_handle = self.__grid_file_handle
+    for line in grid_file_handle:
+      s = self._clean_line(line).split()
+      if self._get_grid_file_cells_section_string() in s:
+        break
+
+  def _create_level_bit_masks(self):
+    bits_shifted_left = 0
+    for level in range(1,self.number_of_levels+1):
+      ldims = self.__level_dimensions[level]
+      x = ldims['x']
+      y = ldims['y']
+      z = ldims['z']
+      bits = int(math.floor(math.log(int(x*y*z),2)) + 1)
+      mask = 2**bits - 1
+      mask = mask << bits_shifted_left
+      ldims['bit_mask'] = mask
+      ldims['bits_to_shift_right'] = bits_shifted_left
+      bits_shifted_left += bits
+  
+  def _create_dashed_id(self, local_cell_id):
+    if not local_cell_id:
+      return local_cell_id
+    local_cell_id = int(local_cell_id)
+    dashed_id = ""
+    for level in range(1,self.number_of_levels+1):
+      ldims = self.__level_dimensions[level]
+      bit_mask = ldims['bit_mask']
+      bits_to_shift_right = ldims['bits_to_shift_right']
+      level_id = local_cell_id & bit_mask
+      level_id = level_id >> bits_to_shift_right
+      if level_id == 0:
+        break
+      else:
+        if not dashed_id:
+          dashed_id = str(level_id)
+        else:
+          dashed_id = str(level_id) + "-" + dashed_id
+    return dashed_id
 
 def create_grid_from_grid_file(grid_desc):
-  gf = open_grid_file(grid_desc["read_grid"])
+  sgf = SpartaGridFile(grid_desc["read_grid"])
+  if sgf.number_of_levels == 0:
+    print("Error reading SPARTA grid file")
+    print("top level grid specification is invalid")
+    sys.exit(1)
 
-  for line in gf:
-    s = clean_line(line)
-    if len(s.split()) == 5:
-      if int(s.split()[0]) == 1 and \
-         int(s.split()[1]) == 0:
-        grid_desc["create_grid"] = {}
-        grid_desc["create_grid"][1] = {}
-        grid_desc["create_grid"][1]["Cx"] = int(s.split()[2])
-        grid_desc["create_grid"][1]["Cy"] = int(s.split()[3])
-        grid_desc["create_grid"][1]["Cz"] = int(s.split()[4])
-        if grid_desc["create_grid"][1]["Cz"] == 1:
-          grid_desc["dimension"] = 2
-        else:
-          grid_desc["dimension"] = 3
-      else:
-        print("Error reading SPARTA grid file")
-        print("top level grid specification is invalid: ", s)
-        sys.exit(1)
-      gf.close()
-      return
+  top_level_dims = sgf.get_level_dimensions(1)
+  grid_desc["create_grid"] = {}
+  grid_desc["create_grid"][1] = {}
+  grid_desc["create_grid"][1]["Cx"] = top_level_dims['x']
+  grid_desc["create_grid"][1]["Cy"] = top_level_dims['y']
+  grid_desc["create_grid"][1]["Cz"] = top_level_dims['z']
+  if grid_desc["create_grid"][1]["Cz"] == 1:
+    grid_desc["dimension"] = 2
+  else:
+    grid_desc["dimension"] = 3
+  return
 
 def get_chunk(dim, chunk_size):
   dmod = divmod(dim, chunk_size)
@@ -245,35 +366,56 @@ def create_3d_amr_grids(grid_desc, level, parent_bit_mask, parent_id, \
     return build_3d_grid(parent_bit_mask, parent_id, origin, spacing, ndims, chunk_info, grid_desc)
 
 def read_grid_file(grid_desc, chunk_info):
-  gf = open_grid_file(grid_desc["read_grid"])
-  Dx = grid_desc["create_grid"][1]["Cx"]
-  Dy = grid_desc["create_grid"][1]["Cy"]
+  sgf = SpartaGridFile(grid_desc["read_grid"])
   grid_desc["parent_grid"] = {}
 
-  for line in gf:
-    s = clean_line(line)
-    if len(s.split()) == 5:
-      id = s.split()[1].split('-')
-      if len(id) and int(id[0]) != 0: 
-        index = int(id[0]) - 1
-        zloc = 0
-        if grid_desc["dimension"] == 3:
-          zloc = index//(Dx*Dy)
-        yloc = (index - zloc*Dx*Dy)//Dx
-        xloc = index - yloc*Dx - zloc*Dx*Dy
-        xloc += 1
-        yloc += 1
-        zloc += 1
-        if xloc >= chunk_info["x"][0] and xloc <= chunk_info["x"][1] and \
-           yloc >= chunk_info["y"][0] and yloc <= chunk_info["y"][1] and \
-           zloc >= chunk_info["z"][0] and zloc <= chunk_info["z"][1]:
-          cld = grid_desc["parent_grid"]
-          for pid in id:
-            if int(pid) in cld:
-              cld = cld[int(pid)]['np']
-            else:
-              cld[int(pid)] = {'px':int(s.split()[2]), 'py':int(s.split()[3]), 'pz':int(s.split()[4]), 'np':{}}
-  gf.close()
+  for dashed_id in sgf:
+    if dashed_id:
+      first_level_loc = get_cell_first_level_location(dashed_id, grid_desc)
+      if cell_is_inside_chunk(first_level_loc, chunk_info):
+        parents = get_parent_cells_in_dashed_id(dashed_id)
+        cld = grid_desc["parent_grid"]
+        for idx, pid in enumerate(parents):
+          level = idx + 1
+          if pid in cld:
+            cld = cld[pid]['np']
+          else:
+            level_dims = sgf.get_level_dimensions(level+1)
+            x = level_dims['x']
+            y = level_dims['y']
+            z = level_dims['z']
+            cld[pid] = {'px': x, 'py': y, 'pz': z, 'np':{}}
+
+def cell_is_inside_chunk(cell_first_level_loc, chunk_info):
+  xloc = cell_first_level_loc['x']
+  yloc = cell_first_level_loc['y']
+  zloc = cell_first_level_loc['z']
+  return xloc >= chunk_info["x"][0] and xloc <= chunk_info["x"][1] and \
+         yloc >= chunk_info["y"][0] and yloc <= chunk_info["y"][1] and \
+         zloc >= chunk_info["z"][0] and zloc <= chunk_info["z"][1]
+
+def get_cell_first_level_location(dashed_id, grid_desc):
+  first_level_cell_id = int(dashed_id.split('-')[-1]) - 1
+  Dx = grid_desc["create_grid"][1]["Cx"]
+  Dy = grid_desc["create_grid"][1]["Cy"]
+  zloc = 0
+  if grid_desc["dimension"] == 3:
+    zloc = first_level_cell_id//(Dx*Dy)
+  yloc = (first_level_cell_id - zloc*Dx*Dy)//Dx
+  xloc = first_level_cell_id - yloc*Dx - zloc*Dx*Dy
+  xloc += 1
+  yloc += 1
+  zloc += 1
+  return {'x' : xloc, 'y' : yloc, 'z' : zloc}
+
+def get_parent_cells_in_dashed_id(dashed_id):
+  parents = dashed_id.split('-')
+  if len(parents) == 1:
+    return []
+  parents.pop(0)
+  parents = [int(i) for i in parents]
+  parents.reverse()
+  return parents
 
 def level_contains_refined_cells(level, grid_desc, dashed_id):
   if "parent_grid" in grid_desc:
