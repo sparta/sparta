@@ -3632,6 +3632,7 @@ void Surf::write_restart(FILE *fp)
       fwrite(&tris[i].id,sizeof(surfint),1,fp);
       fwrite(&tris[i].type,sizeof(int),1,fp);
       fwrite(&tris[i].mask,sizeof(int),1,fp);
+      fwrite(&tris[i].transparent,sizeof(int),1,fp);
       fwrite(tris[i].p1,sizeof(double),3,fp);
       fwrite(tris[i].p2,sizeof(double),3,fp);
       fwrite(tris[i].p3,sizeof(double),3,fp);
@@ -3682,8 +3683,8 @@ void Surf::read_restart(FILE *fp)
         fread(&lines[i].id,sizeof(surfint),1,fp);
         fread(&lines[i].type,sizeof(int),1,fp);
         fread(&lines[i].mask,sizeof(int),1,fp);
-        lines[i].isc = lines[i].isr = -1;
         fread(&lines[i].transparent,sizeof(int),1,fp);
+        lines[i].isc = lines[i].isr = -1;
         fread(lines[i].p1,sizeof(double),3,fp);
         fread(lines[i].p2,sizeof(double),3,fp);
         lines[i].norm[0] = lines[i].norm[1] = lines[i].norm[2] = 0.0;
@@ -3707,6 +3708,7 @@ void Surf::read_restart(FILE *fp)
         fread(&tris[i].id,sizeof(surfint),1,fp);
         fread(&tris[i].type,sizeof(int),1,fp);
         fread(&tris[i].mask,sizeof(int),1,fp);
+        fread(&tris[i].transparent,sizeof(int),1,fp);
         tris[i].isc = tris[i].isr = -1;
         fread(tris[i].p1,sizeof(double),3,fp);
         fread(tris[i].p2,sizeof(double),3,fp);
