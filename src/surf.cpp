@@ -3620,6 +3620,7 @@ void Surf::write_restart(FILE *fp)
       fwrite(&lines[i].id,sizeof(surfint),1,fp);
       fwrite(&lines[i].type,sizeof(int),1,fp);
       fwrite(&lines[i].mask,sizeof(int),1,fp);
+      fwrite(&lines[i].transparent,sizeof(int),1,fp);
       fwrite(lines[i].p1,sizeof(double),3,fp);
       fwrite(lines[i].p2,sizeof(double),3,fp);
     }
@@ -3682,6 +3683,7 @@ void Surf::read_restart(FILE *fp)
         fread(&lines[i].type,sizeof(int),1,fp);
         fread(&lines[i].mask,sizeof(int),1,fp);
         lines[i].isc = lines[i].isr = -1;
+        fread(&lines[i].transparent,sizeof(int),1,fp);
         fread(lines[i].p1,sizeof(double),3,fp);
         fread(lines[i].p2,sizeof(double),3,fp);
         lines[i].norm[0] = lines[i].norm[1] = lines[i].norm[2] = 0.0;
