@@ -85,7 +85,7 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,
                "Cannot yet use surf_react adsorb with distributed surf elements");
 
-  if (narg < 9) error->all(FLERR,"Illegal surf_react adsorb command");
+  if (narg < 10) error->all(FLERR,"Illegal surf_react adsorb command");
 
   me = comm->me;
   nprocs = comm->nprocs;
@@ -94,25 +94,27 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
   //else if (strcmp(arg[2],"ps") == 0) model = PS;
   else error->all(FLERR,"Illegal surf_react adsorb command");
 
-  nsync = input->numeric(FLERR,arg[4]);
+  if (strcmp(arg[4],"nsync") != 0) 
+    error->all(FLERR,"Illegal surf_react adsorb command");
+  nsync = input->numeric(FLERR,arg[5]);
   if (nsync < 1) error->all(FLERR,"Illegal surf_react adsorb command");
 
-  if (strcmp(arg[5],"face") == 0) mode = FACE;
-  else if (strcmp(arg[5],"surf") == 0) mode = SURF;
+  if (strcmp(arg[6],"face") == 0) mode = FACE;
+  else if (strcmp(arg[6],"surf") == 0) mode = SURF;
   else error->all(FLERR,"Illegal surf_react adsorb command");
 
   if (mode == SURF && surf->nsurf == 0)
     error->all(FLERR,"Cannot use urf_react adsorb when no surfs exist");
 
-  twall = input->numeric(FLERR,arg[6]);
-  max_cover = input->numeric(FLERR,arg[7]);
+  twall = input->numeric(FLERR,arg[7]);
+  max_cover = input->numeric(FLERR,arg[8]);
 
   // species_surf = list of surface species IDs
 
-  species_surf = new char*[narg-8];
+  species_surf = new char*[narg-9];
   nspecies_surf = 0;
 
-  int iarg = 8;
+  int iarg = 9;
   while (iarg < narg) {
     int isp = particle->find_species(arg[iarg]);
     if (isp < 0) error->all(FLERR,"Surf_react adsorb species is not defined");
@@ -646,7 +648,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
   else {
     // NOTE: at this point it is guaranteed a reaction will take place?
 
-    mark[isurf] = 1;
+    if (mode == SURF) mark[isurf] = 1;
 
     // NOTE: why summing to previous react_prob?
 
@@ -945,7 +947,7 @@ void SurfReactAdsorb::update_state_surf()
 
   } else {
     for (int i = 0; i < nlocal; i++) {
-      isr = lines[i].isr;
+      isr = tris[i].isr;
       if (surf->sr[isr] != this) continue;
       if (!mark[i]) continue;
 
