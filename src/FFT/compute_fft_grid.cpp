@@ -39,6 +39,7 @@
 using namespace SPARTA_NS;
 
 enum{COMPUTE,FIX,VARIABLE};
+enum{FORWARD=1,BACWARD=-1};
 
 #define INVOKED_PER_GRID 16
 
@@ -437,10 +438,10 @@ void ComputeFFTGrid::compute_per_grid()
       fft[n+1] = ZEROF;
     }
 
-    // perform FFT
+    // perform forward FFT
 
-    if (dimension == 3) fft3d->compute(fft,fft,1);
-    else fft2d->compute(fft,fft,1);
+    if (dimension == 3) fft3d->compute(fft,fft,FORWARD);
+    else fft2d->compute(fft,fft,FORWARD);
 
     // reverse irregular comm to move results from FFT grid -> SPARTA grid
     // if conjugate set:
