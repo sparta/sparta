@@ -246,6 +246,8 @@ void UpdateKokkos::setup()
 
 void UpdateKokkos::run(int nsteps)
 {
+  sparta->kokkos->auto_sync = 0;
+
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
 
   int n_start_of_step = modify->n_start_of_step;
@@ -321,6 +323,8 @@ void UpdateKokkos::run(int nsteps)
       timer->stamp(TIME_OUTPUT);
     }
   }
+  sparta->kokkos->auto_sync = 1;
+
   particle_kk->sync(Host,ALL_MASK);
 
 }
