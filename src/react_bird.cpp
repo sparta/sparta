@@ -107,6 +107,7 @@ ReactBird::~ReactBird()
 
 void ReactBird::init()
 {
+  tally_flag = 0;
   for (int i = 0; i < nlist; i++) tally_reactions[i] = 0;
 
   // convert species IDs to species indices
