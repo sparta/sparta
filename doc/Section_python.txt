@@ -84,7 +84,7 @@ this is a library file that ends in ".so", not ".a".
 
 For make, from the src directory, type
 
-make makeshlib
+make mode=shlib foo
 make -f Makefile.shlib foo :pre
 
 For CMake, from the build directory, tyoe
