@@ -424,7 +424,7 @@ void ComputeEFluxGridKokkos::operator()(TagComputeEFluxGrid_post_process_grid, c
       d_etally(icell,mv)*d_etally(icell,mv2v2)/summass +
       2.0*d_etally(icell,mv)*d_etally(icell,mv2)*d_etally(icell,mv2)/summass/summass;
     wt = 0.5 * fnum * d_cinfo[icell].weight / d_cinfo[icell].volume;
-    d_vec[icell] = wt * (h + h1 + h2);
+    d_vec[icell] = wt/nsample * (h + h1 + h2);
   }
 }
 
