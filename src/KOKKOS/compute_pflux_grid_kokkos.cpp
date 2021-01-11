@@ -294,6 +294,7 @@ void ComputePFluxGridKokkos::post_process_grid_kokkos(int index, int nsample,
   int hi = nglocal;
 
   if (!d_etally.data()) {
+    nsample = 1;
     d_etally = d_tally;
     emap = map[index];
     d_vec = d_vector;
@@ -303,6 +304,7 @@ void ComputePFluxGridKokkos::post_process_grid_kokkos(int index, int nsample,
   this->d_etally = d_etally;
   this->d_vec = d_vec;
   this->nstride = nstride;
+  this->nsample = nsample;
 
   // compute normalized final value for each grid cell
   // Vcm = Sum mv / Sum m = (Wx,Wy,Wz)
@@ -360,7 +362,7 @@ void ComputePFluxGridKokkos::operator()(TagComputePFluxGrid_post_process_grid_di
   else{
     wt = fnum * d_cinfo[icell].weight / d_cinfo[icell].volume;
     summv = d_etally(icell,mv);
-    d_vec[icell] = wt * (d_etally(icell,mvv) - summv*summv/summass);
+    d_vec[icell] = wt/nsample * (d_etally(icell,mvv) - summv*summv/summass);
   }
 }
 
@@ -373,8 +375,8 @@ void ComputePFluxGridKokkos::operator()(TagComputePFluxGrid_post_process_grid_of
   if (summass == 0.0) d_vec[icell] = 0.0;
   else{
     wt = fnum * d_cinfo[icell].weight / d_cinfo[icell].volume;
-    d_vec[icell] = wt * (d_etally(icell,mvv) -
-                         d_etally(icell,mv1)*d_etally(icell,mv2)/summass);
+    d_vec[icell] = wt/nsample * (d_etally(icell,mvv) -
+                                 d_etally(icell,mv1)*d_etally(icell,mv2)/summass);
   }
 }
 
