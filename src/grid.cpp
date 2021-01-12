@@ -482,14 +482,8 @@ void Grid::acquire_ghosts_all(int surfflag)
 
 void Grid::acquire_ghosts_near(int surfflag)
 {
-  if (update->mem_limit_grid_flag)
-    update->set_mem_limit_grid();
-
-  if (update->global_mem_limit > 0 ||
-      (update->mem_limit_grid_flag && !grid->nlocal)) {
-    acquire_ghosts_near_less_memory(surfflag);
-    return;
-  }
+  if (update->have_mem_limit())
+    return acquire_ghosts_near_less_memory(surfflag);
 
   exist_ghost = 1;
 

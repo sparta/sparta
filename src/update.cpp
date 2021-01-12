@@ -1612,3 +1612,19 @@ void Update::set_mem_limit_grid(int gnlocal)
   global_mem_limit = global_mem_limit_big;
 }
 
+/* ----------------------------------------------------------------------
+   get mem/limit based on grid memory
+------------------------------------------------------------------------- */
+
+int Update::have_mem_limit()
+{
+  if (mem_limit_grid_flag)
+    set_mem_limit_grid();
+
+  int mem_limit_flag = 0;
+
+  if (global_mem_limit > 0 || (mem_limit_grid_flag && !grid->nlocal))
+    mem_limit_flag = 1;
+
+  return mem_limit_flag;
+}

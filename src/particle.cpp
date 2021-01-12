@@ -1529,7 +1529,6 @@ int Particle::unpack_restart(char *buf)
   nlocal_restart = *ibuf;
   ptr += sizeof(int);
   ptr = ROUNDUP(ptr);
-  printf("nlrs %i\n",nlocal_restart);
 
   particle_restart = (char *)
     memory->smalloc(nlocal_restart*nbytes,"particle:particle_restart");
