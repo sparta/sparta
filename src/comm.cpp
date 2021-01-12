@@ -430,7 +430,6 @@ void Comm::migrate_cells_less_memory(int nmigrate)
       memset(rbuf,0,maxrecvbuf);
     }
 
-
     // perform irregular communication
 
     igrid->exchange_variable(sbuf,gsize,rbuf);

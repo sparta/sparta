@@ -378,7 +378,7 @@ void ReadRestart::command(int narg, char **arg)
         if (update->mem_limit_grid_flag)
           update->set_mem_limit_grid(grid_nlocal);
 
-        int nbytes_grid = sizeof(cellint) + 2*sizeof(int);
+        int nbytes_grid = sizeof(Grid::GridRestart);
         int nbytes_onepart = sizeof(Particle::OnePartRestart);
         int nbytes_custom = particle->sizeof_custom();
         int nbytes_particle = nbytes_onepart + nbytes_custom;
@@ -529,7 +529,7 @@ void ReadRestart::command(int narg, char **arg)
         if (update->mem_limit_grid_flag)
           update->set_mem_limit_grid(grid_nlocal);
 
-        int nbytes_grid = sizeof(cellint) + 2*sizeof(int);
+        int nbytes_grid = sizeof(Grid::GridRestart);
         int nbytes_onepart = sizeof(Particle::OnePartRestart);
         int nbytes_custom = particle->sizeof_custom();
         int nbytes_particle = nbytes_onepart + nbytes_custom;

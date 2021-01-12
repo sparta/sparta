@@ -362,7 +362,7 @@ void WriteRestart::write_less_memory(char *file)
   bigint particle_send_size = particle->size_restart_big();
   bigint send_size = grid_send_size + particle_send_size;
 
-  int nbytes_grid = sizeof(cellint) + 2*sizeof(int);
+  int nbytes_grid = sizeof(Grid::GridRestart);
   int nbytes_onepart = sizeof(Particle::OnePartRestart);
   int nbytes_custom = particle->sizeof_custom();
   int nbytes_particle = nbytes_onepart + nbytes_custom;
