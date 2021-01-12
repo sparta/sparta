@@ -1395,7 +1395,6 @@ void AdaptGrid::particle_surf_comm()
   delete alhash;
 }
 
-
 /* ----------------------------------------------------------------------
    unpack adapt comm buffer
    called from Comm::send_cells_adapt
