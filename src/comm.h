@@ -37,7 +37,7 @@ class Comm : protected Pointers {
   void reset_neighbors();
   int migrate_particles(int, int *);
   virtual void migrate_cells(int);
-  int send_cells_adapt(int, int *, char *, char **);
+  void send_cells_adapt(int, int *, char *, class AdaptGrid *);
   int irregular_uniform_neighs(int, int *, char *, int, char **);
   int irregular_uniform(int, int *, char *, int, char **);
   void ring(int, int, void *, int, void (*)(int, char *, void *),
@@ -62,6 +62,7 @@ class Comm : protected Pointers {
                                 // base class when child copy is destroyed)
 
   void migrate_cells_less_memory(int);  // small memory version of migrate_cells
+  void send_cells_adapt_less_memory(int, int *, char *, class AdaptGrid *);  // small memory version of send_cells_adapt
   int rendezvous_irregular(int, char *, int, int, int *,
                            int (*)(int, char *, int &, int *&, char *&, void *),
                            int, char *&, int, void *, int);

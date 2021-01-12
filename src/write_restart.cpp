@@ -358,16 +358,17 @@ void WriteRestart::write_less_memory(char *file)
   // communication buffer for my per-proc info = child grid cells and particles
   // max_size = largest buffer needed by any proc
 
-  int grid_send_size = grid->size_restart();
+  bigint grid_send_size = grid->size_restart_big(grid->nlocal);
   bigint particle_send_size = particle->size_restart_big();
   bigint send_size = grid_send_size + particle_send_size;
 
-  int nbytes_particle = sizeof(Particle::OnePartRestart);
+  int nbytes_grid = sizeof(cellint) + 2*sizeof(int);
+  int nbytes_onepart = sizeof(Particle::OnePartRestart);
   int nbytes_custom = particle->sizeof_custom();
-  int nbytes = nbytes_particle + nbytes_custom;
+  int nbytes_particle = nbytes_onepart + nbytes_custom;
 
-  int max_size = MAX(grid_send_size,update->global_mem_limit);
-  max_size = MAX(max_size,nbytes);
+  int max_size = MAX(update->global_mem_limit,nbytes_grid);
+  max_size = MAX(max_size,nbytes_particle);
   max_size += 128; // extra for size and ROUNDUP(ptr)
 
   int max_size_global;
@@ -412,14 +413,18 @@ void WriteRestart::write_less_memory(char *file)
 
   // pack my child grid and particle data into buf
 
-  // number of particles per pass
+  // number of cells or particles per pass
 
-  int step_size = update->global_mem_limit/nbytes;
+  int step_size_grid = update->global_mem_limit/nbytes_grid;
+  int step_size_particle = update->global_mem_limit/nbytes_particle;
 
-  // extra pass for grid
+  // number of passes
 
-  int my_npasses = ceil((double)particle->nlocal/step_size)+1;
-  if (particle->nlocal == 0) my_npasses++;
+  int my_npasses_grid = ceil((double)grid->nlocal/step_size_grid);
+  if (grid->nlocal == 0) my_npasses_grid++;
+  int my_npasses_particle = ceil((double)particle->nlocal/step_size_particle);
+  if (particle->nlocal == 0) my_npasses_particle++;
+  int my_npasses = my_npasses_grid + my_npasses_particle;
 
   // output of one or more native files
   // filewriter = 1 = this proc writes to file
@@ -432,16 +437,21 @@ void WriteRestart::write_less_memory(char *file)
 
   if (filewriter) {
     bigint total_recv_size = 0;
-    int npasses = 0;
+    int npasses_grid = 0;
+    int npasses_particle = 0;
     for (int iproc = 0; iproc < nclusterprocs; iproc++) {
       if (iproc) {
         MPI_Recv(&total_recv_size,1,MPI_SPARTA_BIGINT,me+iproc,0,world,&status);
-        MPI_Recv(&npasses,1,MPI_INT,me+iproc,0,world,&status);
+        MPI_Recv(&npasses_grid,1,MPI_INT,me+iproc,0,world,&status);
+        MPI_Recv(&npasses_particle,1,MPI_INT,me+iproc,0,world,&status);
       } else {
         total_recv_size = send_size;
-        npasses = my_npasses;
+        npasses_grid = my_npasses_grid;
+        npasses_particle = my_npasses_particle;
       }
+      int npasses = npasses_grid + npasses_particle;
 
+      bigint total_write_grid = 0;
       bigint total_write_part = 0;
       for (int i = 0; i < npasses; i++) {
         if (iproc) {
@@ -451,14 +461,18 @@ void WriteRestart::write_less_memory(char *file)
             MPI_Get_count(&status,MPI_CHAR,&recv_size);
         } else {
           int n = 0;
-          if (i == 0)
-            n = grid->pack_restart(buf);
-          else {
-            n = step_size*nbytes;
+          if (i < npasses_grid) {
+            n = step_size_grid*nbytes_grid;
             if (i == 1) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
+            if (i == npasses_grid-1) n = grid_send_size - total_write_grid;
+            total_write_grid += n;
+            grid->pack_restart(buf,step_size_grid,i);
+          } else {
+            n = step_size_particle*nbytes_particle;
+            if (i == npasses_grid) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
             if (i == npasses-1) n = particle_send_size - total_write_part;
             total_write_part += n;
-            particle->pack_restart(buf,step_size,i-1);
+            particle->pack_restart(buf,step_size_particle,i-npasses_grid);
           }
           recv_size = n;
         }
@@ -471,19 +485,25 @@ void WriteRestart::write_less_memory(char *file)
     fclose(fp);
 
   } else {
+    bigint total_write_grid = 0;
     bigint total_write_part = 0;
     MPI_Isend(&send_size,1,MPI_SPARTA_BIGINT,fileproc,0,world,&request);
-    MPI_Isend(&my_npasses,1,MPI_INT,fileproc,0,world,&request);
+    MPI_Isend(&my_npasses_grid,1,MPI_INT,fileproc,0,world,&request);
+    MPI_Isend(&my_npasses_particle,1,MPI_INT,fileproc,0,world,&request);
     for (int i = 0; i < my_npasses; i++) {
       int n = 0;
-      if (i == 0)
-        n = grid->pack_restart(buf);
-      else {
-        n = step_size*nbytes;
+      if (i < my_npasses_grid) {
+        n = step_size_grid*nbytes_grid;
         if (i == 1) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
+        if (i == my_npasses_grid-1) n = grid_send_size - total_write_grid;
+        total_write_grid += n;
+        grid->pack_restart(buf,step_size_grid,i);
+      } else {
+        n = step_size_particle*nbytes_particle;
+        if (i == my_npasses_grid) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
         if (i == my_npasses-1) n = particle_send_size - total_write_part;
         total_write_part += n;
-        particle->pack_restart(buf,step_size,i-1);
+        particle->pack_restart(buf,step_size_particle,i-my_npasses_grid);
       }
       MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
       MPI_Rsend(buf,n,MPI_CHAR,fileproc,0,world);

@@ -1384,23 +1384,38 @@ void AdaptGrid::particle_surf_comm()
   // it invokes Grid::pack_one_adapt()
   //   if this proc is parent owner, no surfs/particles are sent to self
 
-  int nrecv = comm->send_cells_adapt(nsend,proclist,(char *) sadapt,&spbuf);
+  alhash = new MyHash();
+  alist = NULL;
+  anum = anummax = 0;
+
+  comm->send_cells_adapt(nsend,proclist,(char *) sadapt,this);
 
   memory->destroy(proclist);
   memory->sfree(sadapt);
+  delete alhash;
+}
+
+
+/* ----------------------------------------------------------------------
+   unpack adapt comm buffer
+   called from Comm::send_cells_adapt
+------------------------------------------------------------------------- */
+
+void AdaptGrid::unpack_adapt(int nrecv,char *spbuf)
+{
+  int m,plevel,ichild,nchild,owner;
+  cellint parentID;
+
+  Grid::ParentLevel *plevels = grid->plevels;
 
   // create alist = list of parent cells I will coarsen in perform_coarsen()
 
-  MyHash *alhash = new MyHash();
   SendAdapt *s;
 
   int nbytes_total = sizeof(Particle::OnePart) + particle->sizeof_custom();
 
   int dim = domain->dimension;
   int distributed = surf->distributed;
-
-  alist = NULL;
-  anum = anummax = 0;
 
   char *ptr = spbuf;
 
@@ -1458,10 +1473,7 @@ void AdaptGrid::particle_surf_comm()
     ptr = ROUNDUP(ptr);
   }
 
-  // clean up
   // spbuf is onwed by Comm, so no need to delete in AdaptGrid
-
-  delete alhash;
 }
 
 /* ----------------------------------------------------------------------

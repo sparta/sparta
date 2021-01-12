@@ -54,6 +54,7 @@ class AdaptGrid : protected Pointers {
   bigint coarsen();
   void cleanup();
   void write_file();
+  void unpack_adapt(int, char*);
 
  private:
   int me,nprocs;
@@ -123,7 +124,7 @@ class AdaptGrid : protected Pointers {
   typedef std::tr1::unordered_map<cellint,int> MyHash;
 #endif
 
-  MyHash *chash,*rhash;
+  MyHash *chash,*rhash,*alhash;
 
   // Rvous1 send info
 

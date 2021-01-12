@@ -355,7 +355,8 @@ void ReadRestart::command(int narg, char **arg)
       int procsperfile;
       fread(&procsperfile,sizeof(int),1,fp);
 
-      int step_size,npasses;
+      int step_size_grid,step_size_particle;
+      int npasses_grid,npasses_particle,npasses;
 
       for (int i = 0; i < procsperfile; i++) {
         fread(&flag,sizeof(int),1,fp);
@@ -367,7 +368,7 @@ void ReadRestart::command(int narg, char **arg)
         int grid_nlocal;
         fread(&grid_nlocal,sizeof(int),1,fp);
         fseek(fp,-sizeof(int),SEEK_CUR);
-        int grid_read_size = grid->size_restart(grid_nlocal);
+        bigint grid_read_size = grid->size_restart_big(grid_nlocal);
         bigint particle_read_size = n_big - grid_read_size;
         int particle_nlocal;
         fseek(fp,grid_read_size,SEEK_CUR);
@@ -377,12 +378,13 @@ void ReadRestart::command(int narg, char **arg)
         if (update->mem_limit_grid_flag)
           update->set_mem_limit_grid(grid_nlocal);
 
-        int nbytes_particle = sizeof(Particle::OnePartRestart);
+        int nbytes_grid = sizeof(cellint) + 2*sizeof(int);
+        int nbytes_onepart = sizeof(Particle::OnePartRestart);
         int nbytes_custom = particle->sizeof_custom();
-        int nbytes = nbytes_particle + nbytes_custom;
+        int nbytes_particle = nbytes_onepart + nbytes_custom;
 
-        int maxbuf_new = MAX(grid_read_size,update->global_mem_limit);
-        maxbuf_new = MAX(maxbuf_new,sizeof(nbytes));
+        int maxbuf_new = MAX(update->global_mem_limit,nbytes_grid);
+        maxbuf_new = MAX(maxbuf_new,nbytes_particle);
         maxbuf_new += 128; // extra for size and ROUNDUP(ptr)
         if (maxbuf_new > maxbuf) {
           maxbuf = maxbuf_new;
@@ -390,33 +392,42 @@ void ReadRestart::command(int narg, char **arg)
           memory->create(buf,maxbuf,"read_restart:buf");
         }
 
-        // number of particles per pass
+        // number of cells or particles per pass
 
-        step_size = update->global_mem_limit/nbytes;
+        int step_size_grid = update->global_mem_limit/nbytes_grid;
+        int step_size_particle = update->global_mem_limit/nbytes_particle;
 
-        // extra pass for grid
+        // number of passes
 
-        npasses = ceil((double)particle_nlocal/step_size)+1;
-        if (particle_nlocal == 0) npasses++;
+        npasses_grid = ceil((double)grid_nlocal/step_size_grid);
+        if (grid_nlocal == 0) npasses_grid++;
+        npasses_particle = ceil((double)particle_nlocal/step_size_particle);
+        if (particle_nlocal == 0) npasses_particle++;
+        npasses = npasses_grid + npasses_particle;
 
-        int nlocal_restart = 0;
+        int nlocal_restart_grid = 0;
+        int nlocal_restart_particle = 0;
+        bigint total_read_grid = 0;
         bigint total_read_part = 0;
         for (int ii = 0; ii < npasses; ii++) {
-          if (ii == 0)
-            n = grid_read_size;
-          else {
-            n = step_size*nbytes;
+          if (ii < npasses_grid) {
+            n = step_size_grid*nbytes_grid;
             if (ii == 1) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
+            if (ii == npasses_grid-1) n = grid_read_size - total_read_grid;
+            total_read_grid += n;
+          } else {
+            n = step_size_particle*nbytes_particle;
+            if (ii == npasses_grid) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
             if (ii == npasses-1) n = particle_read_size - total_read_part;
             total_read_part += n;
           }
           fread(buf,sizeof(char),n,fp);
 
-          if (ii == 0) {
-            grid->unpack_restart(buf);
+          if (ii < npasses_grid) {
+            grid->unpack_restart(buf,nlocal_restart_grid,step_size_grid,ii);
             create_child_cells(0);
           } else {
-            particle->unpack_restart(buf,nlocal_restart,step_size,ii-1);
+            particle->unpack_restart(buf,nlocal_restart_particle,step_size_particle,ii-npasses_grid);
             assign_particles(0);
           }
         }
@@ -494,7 +505,8 @@ void ReadRestart::command(int narg, char **arg)
     MPI_Status status;
     MPI_Request request;
 
-    int step_size,npasses;
+    int step_size_grid,step_size_particle;
+    int npasses_grid,npasses_particle,npasses;
 
     for (int i = 0; i < procsperfile; i++) {
       if (filereader) {
@@ -507,7 +519,7 @@ void ReadRestart::command(int narg, char **arg)
         int grid_nlocal;
         fread(&grid_nlocal,sizeof(int),1,fp);
         fseek(fp,-sizeof(int),SEEK_CUR);
-        int grid_read_size = grid->size_restart(grid_nlocal);
+        bigint grid_read_size = grid->size_restart_big(grid_nlocal);
         bigint particle_read_size = n_big - grid_read_size;
         int particle_nlocal;
         fseek(fp,grid_read_size,SEEK_CUR);
@@ -517,12 +529,13 @@ void ReadRestart::command(int narg, char **arg)
         if (update->mem_limit_grid_flag)
           update->set_mem_limit_grid(grid_nlocal);
 
-        int nbytes_particle = sizeof(Particle::OnePartRestart);
+        int nbytes_grid = sizeof(cellint) + 2*sizeof(int);
+        int nbytes_onepart = sizeof(Particle::OnePartRestart);
         int nbytes_custom = particle->sizeof_custom();
-        int nbytes = nbytes_particle + nbytes_custom;
+        int nbytes_particle = nbytes_onepart + nbytes_custom;
 
-        int maxbuf_new = MAX(grid_read_size,update->global_mem_limit);
-        maxbuf_new = MAX(maxbuf_new,nbytes);
+        int maxbuf_new = MAX(update->global_mem_limit,nbytes_grid);
+        maxbuf_new = MAX(maxbuf_new,nbytes_particle);
         maxbuf_new += 128; // extra for size and ROUNDUP(ptr)
         if (maxbuf_new > maxbuf) {
           maxbuf = maxbuf_new;
@@ -530,29 +543,40 @@ void ReadRestart::command(int narg, char **arg)
           memory->create(buf,maxbuf,"read_restart:buf");
         }
 
-        // number of particles per pass
+        // number of cells or particles per pass
 
-        step_size = update->global_mem_limit/nbytes;
+        step_size_grid = update->global_mem_limit/nbytes_grid;
+        step_size_particle = update->global_mem_limit/nbytes_particle;
 
-        // extra pass for grid
+        // number of passes
 
-        npasses = ceil((double)particle_nlocal/step_size)+1;
-        if (particle_nlocal == 0) npasses++;
+        npasses_grid = ceil((double)grid_nlocal/step_size_grid);
+        if (grid_nlocal == 0) npasses_grid++;
+        npasses_particle = ceil((double)particle_nlocal/step_size_particle);
+        if (particle_nlocal == 0) npasses_particle++;
+        npasses = npasses_grid + npasses_particle;
 
         if (i % nclusterprocs) {
           iproc = me + (i % nclusterprocs);
-          MPI_Send(&npasses,1,MPI_INT,iproc,0,world);
-          MPI_Send(&step_size,1,MPI_INT,iproc,0,world);
+          MPI_Send(&npasses_grid,1,MPI_INT,iproc,0,world);
+          MPI_Send(&npasses_particle,1,MPI_INT,iproc,0,world);
+          MPI_Send(&step_size_grid,1,MPI_INT,iproc,0,world);
+          MPI_Send(&step_size_particle,1,MPI_INT,iproc,0,world);
         }
 
-        int nlocal_restart = 0;
+        int nlocal_restart_grid = 0;
+        int nlocal_restart_particle = 0;
+        bigint total_read_grid = 0;
         bigint total_read_part = 0;
         for (int ii = 0; ii < npasses; ii++) {
-          if (ii == 0)
-            n = grid_read_size;
-          else {
-            n = step_size*nbytes;
+          if (ii < npasses_grid) {
+            n = step_size_grid*nbytes_grid;
             if (ii == 1) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
+            if (ii == npasses_grid-1) n = grid_read_size - total_read_grid;
+            total_read_grid += n;
+          } else {
+            n = step_size_particle*nbytes_particle;
+            if (ii == npasses_grid) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
             if (ii == npasses-1) n = particle_read_size - total_read_part;
             total_read_part += n;
           }
@@ -564,20 +588,24 @@ void ReadRestart::command(int narg, char **arg)
             MPI_Recv(&tmp,0,MPI_INT,iproc,0,world,&status);
             MPI_Rsend(buf,n,MPI_CHAR,iproc,0,world);
           } else if (i % nclusterprocs == me - fileproc) {
-            if (ii == 0) {
-              grid->unpack_restart(buf);
+            if (ii < npasses_grid) {
+              grid->unpack_restart(buf,nlocal_restart_particle,step_size_grid,ii);
               create_child_cells(0);
             } else {
-              particle->unpack_restart(buf,nlocal_restart,step_size,ii-1);
+              particle->unpack_restart(buf,nlocal_restart_grid,step_size_particle,ii-npasses_grid);
               assign_particles(0);
             }
           }
         }
 
       } else if (i % nclusterprocs == me - fileproc) {
-        MPI_Recv(&npasses,1,MPI_INT,fileproc,0,world,&status);
-        MPI_Recv(&step_size,1,MPI_INT,fileproc,0,world,&status);
-        int nlocal_restart = 0;
+        MPI_Recv(&npasses_grid,1,MPI_INT,fileproc,0,world,&status);
+        MPI_Recv(&npasses_particle,1,MPI_INT,fileproc,0,world,&status);
+        MPI_Recv(&step_size_grid,1,MPI_INT,fileproc,0,world,&status);
+        MPI_Recv(&step_size_particle,1,MPI_INT,fileproc,0,world,&status);
+        npasses = npasses_grid + npasses_particle;
+        int nlocal_restart_grid = 0;
+        int nlocal_restart_particle = 0;
         for (int ii = 0; ii < npasses; ii++) {
           MPI_Recv(&n,1,MPI_INT,fileproc,0,world,&status);
           if (n > maxbuf) {
@@ -589,11 +617,11 @@ void ReadRestart::command(int narg, char **arg)
           MPI_Send(&tmp,0,MPI_INT,fileproc,0,world);
           MPI_Wait(&request,&status);
 
-          if (ii == 0) {
-            grid->unpack_restart(buf);
+          if (ii < npasses_grid) {
+            grid->unpack_restart(buf,nlocal_restart_grid,step_size_grid,ii);
             create_child_cells(0);
           } else {
-            particle->unpack_restart(buf,nlocal_restart,step_size,ii-1);
+            particle->unpack_restart(buf,nlocal_restart_particle,step_size_particle,ii-npasses_grid);
             assign_particles(0);
           }
         }
@@ -1173,14 +1201,12 @@ void ReadRestart::create_child_cells(int skipflag)
 
   Grid::MyHash *hash = grid->hash;
   int nlocal = grid->nlocal_restart;
-  cellint *ids = grid->id_restart;
-  int *levels = grid->level_restart;
-  int *nsplits = grid->nsplit_restart;
+  Grid::GridRestart *gbuf = (Grid::GridRestart *) grid->grid_restart;
 
   for (int i = 0; i < nlocal; i++) {
-    id = ids[i];
-    level = levels[i];
-    nsplit = nsplits[i];
+    id = gbuf[i].id;
+    level = gbuf[i].level;
+    nsplit = gbuf[i].nsplit;
 
     // unsplit or split cell
     // for skipflag == 1, add only if I own this cell
@@ -1222,9 +1248,7 @@ void ReadRestart::create_child_cells(int skipflag)
 
   // deallocate memory in Grid
 
-  memory->destroy(grid->id_restart);
-  memory->destroy(grid->level_restart);
-  memory->destroy(grid->nsplit_restart);
+  memory->destroy(grid->grid_restart);
 }
 
 /* ----------------------------------------------------------------------

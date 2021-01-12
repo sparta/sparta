@@ -170,6 +170,14 @@ class Grid : protected Pointers {
     double lo[3],hi[3];       // opposite corner pts of cell
   };
 
+  struct GridRestart {
+    cellint id;               // ID of parent cell
+    int level;                // level of cell in hierarchical grid, 0 = root
+    int nsplit;               // 1, unsplit cell
+                              // N > 1, split cell with N sub cells
+                              // N <= 0, neg of sub cell index (0 to Nsplit-1)
+  };
+
   int nlocal;                 // # of child cells I own (all 3 kinds)
   int nghost;                 // # of ghost child cells I store (all 3 kinds)
   int nempty;                 // # of empty ghost cells I store
@@ -194,8 +202,7 @@ class Grid : protected Pointers {
   // restart buffers, filled by read_restart
 
   int nlocal_restart;
-  cellint *id_restart;
-  int *level_restart,*nsplit_restart;
+  char *grid_restart;
 
   // methods
 
@@ -235,9 +242,11 @@ class Grid : protected Pointers {
   void write_restart(FILE *);
   void read_restart(FILE *);
   int size_restart();
-  int size_restart(int);
+  bigint size_restart_big(int);
   int pack_restart(char *);
+  void pack_restart(char *, int, int);
   int unpack_restart(char *);
+  void unpack_restart(char *, int &, int, int);
 
   bigint memory_usage();
 
@@ -381,6 +390,7 @@ class Grid : protected Pointers {
 
   void acquire_ghosts_all(int);
   void acquire_ghosts_near(int);
+  void acquire_ghosts_near_less_memory(int);
 
   void box_intersect(double *, double *, double *, double *,
                      double *, double *);

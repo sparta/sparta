@@ -430,6 +430,7 @@ void Comm::migrate_cells_less_memory(int nmigrate)
       memset(rbuf,0,maxrecvbuf);
     }
 
+
     // perform irregular communication
 
     igrid->exchange_variable(sbuf,gsize,rbuf);
@@ -476,8 +477,17 @@ void Comm::migrate_cells_less_memory(int nmigrate)
    called from AdaptGrid
 ------------------------------------------------------------------------- */
 
-int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
+void Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, AdaptGrid *adapt)
 {
+  if (update->mem_limit_grid_flag)
+    update->set_mem_limit_grid();
+
+  if (update->global_mem_limit > 0 ||
+      (update->mem_limit_grid_flag && !grid->nlocal)) {
+    send_cells_adapt_less_memory(nsend,procsend,inbuf,adapt);
+    return;
+  }
+
   int i,n;
 
   AdaptGrid::SendAdapt *sadapt = (AdaptGrid::SendAdapt *) inbuf;
@@ -546,10 +556,133 @@ int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
 
   igrid->exchange_variable(sbuf,gsize,rbuf);
 
-  // return rbuf and grid cell count
+  // unpack rbuf
 
-  *outbuf = rbuf;
-  return nrecv;
+  adapt->unpack_adapt(nrecv,rbuf);
+}
+
+/* ----------------------------------------------------------------------
+   send grid cell info with their particles needed for possible grid adaptation
+   return # of received cells and buf = ptr to received cell info
+   called from AdaptGrid
+   uses multiple comm passes to reduce buffer size
+------------------------------------------------------------------------- */
+
+void Comm::send_cells_adapt_less_memory(int nsend_total, int *procsend, char *inbuf, AdaptGrid *adapt)
+{
+  int i,n;
+  
+  AdaptGrid::SendAdapt *sadapt = (AdaptGrid::SendAdapt *) inbuf;
+  
+  // grow size list if needed
+  // don't use gproc, but needs to stay same size as gsize
+  
+  if (nsend_total > maxgproc) {
+    maxgproc = nsend_total;
+    memory->destroy(gproc);
+    memory->destroy(gsize);
+    memory->create(gproc,maxgproc,"comm:gproc");
+    memory->create(gsize,maxgproc,"comm:gsize");
+  }
+
+  if (sbuf) memory->destroy(sbuf);
+  sbuf = NULL;
+  maxsendbuf = 0;
+
+  if (rbuf) memory->destroy(rbuf);
+  rbuf = NULL;
+  maxrecvbuf = 0;
+  
+  // compute byte count needed to pack cells
+
+  int i_start = 0;
+  int i_end = nsend_total;
+  int not_done = 1;
+
+  while (not_done) {
+    bigint boffset = 0;
+    int nsend = 0;
+    for (int i = i_start; i < nsend_total; i++) {
+      i_end = i+1;
+      n = grid->pack_one_adapt((char *) &sadapt[i],NULL,0);
+      if (n > 0 && boffset > 0 && boffset+n > update->global_mem_limit) {
+        i_end -= 1;
+        break;
+      }
+      gsize[nsend++] = n;
+      boffset += n;
+    }
+
+    if (boffset > MAXSMALLINT) 
+      error->one(FLERR,"Adapt grid send buffer exceeds 2 GB");
+    int offset = boffset;
+ 
+    // reallocate sbuf as needed
+  
+    if (offset > maxsendbuf) {
+      memory->destroy(sbuf);
+      maxsendbuf = offset;
+      memory->create(sbuf,maxsendbuf,"comm:sbuf");
+      memset(sbuf,0,maxsendbuf);
+    }
+  
+    // pack cell info into sbuf
+    // only called for unsplit and split cells I no longer own
+
+    offset = 0;
+    for (int i = i_start; i < i_end; i++)
+      offset += grid->pack_one_adapt((char *) &sadapt[i],&sbuf[offset],1);
+  
+    // create irregular communication plan with variable size datums
+    // nrecv = # of incoming grid cells
+    // recvsize = total byte size of incoming grid + particle info
+    // DEBUG: append a sort=1 arg so that messages from other procs
+    //        are received in repeatable order, thus grid cells stay in order
+  
+    if (!igrid) igrid = new Irregular(sparta);
+    int recvsize;
+    int nrecv = 
+      igrid->create_data_variable(nsend,procsend,gsize,
+                                  recvsize,commsortflag);
+  
+    // reallocate rbuf as needed
+  
+    if (recvsize > maxrecvbuf) {
+      memory->destroy(rbuf);
+      maxrecvbuf = recvsize;
+      memory->create(rbuf,maxrecvbuf,"comm:rbuf");
+      memset(rbuf,0,maxrecvbuf);
+    }
+  
+    // perform irregular communication
+  
+    igrid->exchange_variable(sbuf,gsize,rbuf);
+
+    // unpack rbuf
+
+    adapt->unpack_adapt(nrecv,rbuf); 
+
+    // deallocate large buffers to reduce memory footprint
+    // also deallocate igrid for same reason
+
+    if (sbuf) memory->destroy(sbuf);
+    sbuf = NULL;
+    maxsendbuf = 0;
+
+    if (rbuf) memory->destroy(rbuf);
+    rbuf = NULL;
+    maxrecvbuf = 0;
+
+    if (igrid) {
+      delete igrid;
+      igrid = NULL;
+    }
+
+    i_start = i_end;
+    int not_done_local = i_start < nsend_total;
+    MPI_Allreduce(&not_done_local,&not_done,1,MPI_INT,MPI_SUM,world);
+
+  } // end while loop
 }
 
 /* ----------------------------------------------------------------------
