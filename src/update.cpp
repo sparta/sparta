@@ -201,7 +201,7 @@ void Update::setup()
   nboundary_running = nexit_running = 0;
   nscheck_running = nscollide_running = 0;
   surf->nreact_running = 0;
-  nstuck = 0;
+  nstuck = naxibad = 0;
 
   collide_react = collide_react_setup();
   bounce_tally = bounce_setup();
@@ -794,7 +794,7 @@ template < int DIM, int SURF > void Update::move()
                   slist_active[m]->surf_tally(minsurf,icell,reaction,
                                               &iorig,ipart,jpart);
 
-              // nstuck = consective iterations particle is immobile
+              // stuck_iterate = consective iterations particle is immobile
 
               if (minparam == 0.0) stuck_iterate++;
               else stuck_iterate = 0;
@@ -871,6 +871,12 @@ template < int DIM, int SURF > void Update::move()
         // no cell crossing and no surface collision
         // set final particle position to xnew, then break from advection loop
         // for axisymmetry, must first remap linear xnew and v
+	// for axisymmetry, check if final particle position is within cell
+	//   can be rare epsilon round-off cases where particle ends up outside
+	//     of final cell curved surf when move logic thinks it is inside
+	//   example is when Geom::axi_horizontal_line() says no crossing of cell edge
+	//     but axi_remap() puts particle outside the cell
+	//   in this case, just DISCARD particle and tally it to naxibad
         // if migrating to another proc,
         //   flag as PDONE so new proc won't move it more on this step
 
@@ -879,6 +885,13 @@ template < int DIM, int SURF > void Update::move()
           x[0] = xnew[0];
           x[1] = xnew[1];
           if (DIM == 3) x[2] = xnew[2];
+	  if (DIM == 1) {
+	    if (x[1] < lo[1] || x[1] > hi[1]) {
+	      particles[i].flag = PDISCARD;
+	      naxibad++;
+	      break;
+	    }
+	  }
           if (cells[icell].proc != me) particles[i].flag = PDONE;
           break;
         }
