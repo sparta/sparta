@@ -794,7 +794,7 @@ template < int DIM, int SURF > void Update::move()
                   slist_active[m]->surf_tally(minsurf,icell,reaction,
                                               &iorig,ipart,jpart);
 
-              // stuck_iterate = consective iterations particle is immobile
+              // stuck_iterate = consecutive iterations particle is immobile
 
               if (minparam == 0.0) stuck_iterate++;
               else stuck_iterate = 0;
