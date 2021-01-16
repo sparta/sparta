@@ -40,7 +40,8 @@ namespace SPARTA_NS {
 struct s_UPDATE_REDUCE {
   int ntouch_one,nexit_one,nboundary_one,
       entryexit,ncomm_one,
-      nscheck_one,nscollide_one,nreact_one,nstuck,error_flag;
+      nscheck_one,nscollide_one,nreact_one,nstuck,
+      naxibad,error_flag;
   KOKKOS_INLINE_FUNCTION
   s_UPDATE_REDUCE() {
     ntouch_one    = 0;
@@ -51,6 +52,7 @@ struct s_UPDATE_REDUCE {
     nscollide_one = 0;
     nreact_one    = 0;
     nstuck        = 0;
+    naxibad       = 0;
   }
 
   KOKKOS_INLINE_FUNCTION
@@ -63,6 +65,7 @@ struct s_UPDATE_REDUCE {
     nscollide_one += rhs.nscollide_one;
     nreact_one    += rhs.nreact_one   ;
     nstuck        += rhs.nstuck       ;
+    naxibad       += rhs.naxibad      ;
   }
 
   KOKKOS_INLINE_FUNCTION
@@ -75,6 +78,7 @@ struct s_UPDATE_REDUCE {
     nscollide_one += rhs.nscollide_one;
     nreact_one    += rhs.nreact_one   ;
     nstuck        += rhs.nstuck       ;
+    naxibad       += rhs.naxibad      ;
   }
 };
 typedef struct s_UPDATE_REDUCE UPDATE_REDUCE;
@@ -137,11 +141,11 @@ class UpdateKokkos : public Update {
   KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];
 
 
-  typedef Kokkos::DualView<int[11], DeviceType::array_layout, DeviceType> tdual_int_11;
-  typedef tdual_int_11::t_dev t_int_11;
-  typedef tdual_int_11::t_host t_host_int_11;
-  t_int_11 d_scalars;
-  t_host_int_11 h_scalars;
+  typedef Kokkos::DualView<int[12], DeviceType::array_layout, DeviceType> tdual_int_12;
+  typedef tdual_int_12::t_dev t_int_12;
+  typedef tdual_int_12::t_host t_host_int_12;
+  t_int_12 d_scalars;
+  t_host_int_12 h_scalars;
 
   DAT::t_int_scalar d_ntouch_one;
   HAT::t_int_scalar h_ntouch_one;
@@ -172,6 +176,9 @@ class UpdateKokkos : public Update {
 
   DAT::t_int_scalar d_nstuck;
   HAT::t_int_scalar h_nstuck;
+
+  DAT::t_int_scalar d_naxibad;
+  HAT::t_int_scalar h_naxibad;
 
   DAT::t_int_scalar d_error_flag;
   HAT::t_int_scalar h_error_flag;
