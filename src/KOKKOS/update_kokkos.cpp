@@ -109,7 +109,7 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   h_nscollide_one = Kokkos::subview(h_scalars,7);
   h_nreact_one    = Kokkos::subview(h_scalars,8);
   h_nstuck        = Kokkos::subview(h_scalars,9);
-  h_naxibad       = Kokkos::subview(d_scalars,10);
+  h_naxibad       = Kokkos::subview(h_scalars,10);
   h_error_flag    = Kokkos::subview(h_scalars,11);
 
   nboundary_tally = 0;
