@@ -795,20 +795,20 @@ void Grid::acquire_ghosts_near_less_memory(int surfflag)
   int j,oflag,lastproc,nsurf_hold;
 
   int icell_start = 0;
-  int icell_end = grid->nlocal;
+  int icell_end = nlocal;
   int not_done = 1;
-  int nglocal = grid->nlocal;
-
-  nsend = 0;
-  bigint bsendsize = 0;
 
   while (not_done) {
+    nsend = 0;
+    bigint bsendsize = 0;
+
     for (int icell = icell_start; icell < nlocal; icell++) {
       icell_end = icell+1;
       if (cells[icell].nsplit <= 0) continue;
       lo = cells[icell].lo;
       hi = cells[icell].hi;
       lastproc = -1;
+      int break_flag = 0;
       for (i = 0; i < nlist; i++) {
         j = list[i];
         oflag = box_overlap(lo,hi,boxall[j].lo,boxall[j].hi);
@@ -816,19 +816,16 @@ void Grid::acquire_ghosts_near_less_memory(int surfflag)
         if (boxall[j].proc == lastproc) continue;
         lastproc = boxall[j].proc;
 
-        if (oflag == 2) {
-          nsurf_hold = cells[icell].nsurf;
-          cells[icell].nsurf = -1;
-        }
         int n = pack_one(icell,NULL,0,0,surfflag,0);
         if (n > 0 && bsendsize > 0 && bsendsize+n > update->global_mem_limit) {
           icell_end -= 1;
+          break_flag = 1;
           break;
         }
         bsendsize += n;
-        if (oflag == 2) cells[icell].nsurf = nsurf_hold;
         nsend++;
       }
+      if (break_flag) break;
     }
 
     if (bsendsize > MAXSMALLINT)
@@ -905,7 +902,7 @@ void Grid::acquire_ghosts_near_less_memory(int surfflag)
     memory->destroy(rbuf);
 
     icell_start = icell_end;
-    int not_done_local = icell_start < nglocal;
+    int not_done_local = icell_start < nlocal;
     MPI_Allreduce(&not_done_local,&not_done,1,MPI_INT,MPI_SUM,world);
 
   } // end while loop
