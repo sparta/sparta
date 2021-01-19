@@ -1531,7 +1531,7 @@ int Particle::unpack_restart(char *buf)
   ptr = ROUNDUP(ptr);
 
   particle_restart = (char *)
-    memory->smalloc(nlocal_restart*nbytes,"grid:particle_restart");
+    memory->smalloc(nlocal_restart*nbytes,"particle:particle_restart");
 
   memcpy(particle_restart,ptr,nlocal_restart*nbytes);
   ptr += nlocal_restart * sizeof(OnePartRestart);
@@ -1567,10 +1567,9 @@ void Particle::unpack_restart(char *buf, int &nlocal_restart, int step, int pass
   step = end - start;
 
   particle_restart = (char *)
-    memory->smalloc(step*nbytes,"grid:particle_restart");
+    memory->smalloc(step*nbytes,"particle:particle_restart");
 
   memcpy(particle_restart,ptr,step*nbytes);
-  ptr += step * sizeof(OnePartRestart);
 
   this->nlocal_restart = step;
 }
