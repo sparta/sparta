@@ -442,11 +442,15 @@ void Grid::acquire_ghosts_all(int surfflag)
 
   // create buf for holding all of my cells, not including sub cells
 
-  int sendsize = 0;
+  bigint bsendsize = 0;
   for (int icell = 0; icell < nlocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
-    sendsize += pack_one(icell,NULL,0,0,surfflag,0);
+    bsendsize += pack_one(icell,NULL,0,0,surfflag,0);
   }
+
+  if (bsendsize > MAXSMALLINT)
+    error->one(FLERR,"Acquire ghosts all send buffer exceeds 2 GB");
+  int sendsize = bsendsize;
 
   char *sbuf;
   memory->create(sbuf,sendsize,"grid:sbuf");
@@ -478,6 +482,9 @@ void Grid::acquire_ghosts_all(int surfflag)
 
 void Grid::acquire_ghosts_near(int surfflag)
 {
+  if (update->have_mem_limit())
+    return acquire_ghosts_near_less_memory(surfflag);
+
   exist_ghost = 1;
 
   // bb lo/hi = bounding box for my owned cells
@@ -575,7 +582,7 @@ void Grid::acquire_ghosts_near(int surfflag)
   int j,oflag,lastproc,nsurf_hold;
 
   nsend = 0;
-  int sendsize = 0;
+  bigint bsendsize = 0;
 
   for (int icell = 0; icell < nlocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
@@ -593,11 +600,15 @@ void Grid::acquire_ghosts_near(int surfflag)
         nsurf_hold = cells[icell].nsurf;
         cells[icell].nsurf = -1;
       }
-      sendsize += pack_one(icell,NULL,0,0,surfflag,0);
+      bsendsize += pack_one(icell,NULL,0,0,surfflag,0);
       if (oflag == 2) cells[icell].nsurf = nsurf_hold;
       nsend++;
     }
   }
+
+  if (bsendsize > MAXSMALLINT)
+    error->one(FLERR,"Acquire ghosts near send buffer exceeds 2 GB");
+  int sendsize = bsendsize;
 
   // create send buf and auxiliary irregular comm vectors
 
@@ -671,6 +682,235 @@ void Grid::acquire_ghosts_near(int surfflag)
   memory->destroy(sizelist);
   memory->destroy(sbuf);
   memory->destroy(rbuf);
+
+  // set nempty = # of EMPTY ghost cells I store
+
+  nempty = 0;
+  for (int icell = nlocal; icell < nlocal+nghost; icell++)
+    if (cells[icell].nsurf < 0) nempty++;
+}
+
+/* ----------------------------------------------------------------------
+   acquire ghost cells from local cells of other procs
+   use irregular comm to only get copy of nearby cells
+   within extended bounding box = bounding box of owned cells + cutoff
+------------------------------------------------------------------------- */
+
+void Grid::acquire_ghosts_near_less_memory(int surfflag)
+{
+  exist_ghost = 1;
+
+  // bb lo/hi = bounding box for my owned cells
+
+  int i;
+  double bblo[3],bbhi[3];
+  double *lo,*hi;
+
+  for (i = 0; i < 3; i++) {
+    bblo[i] = BIG;
+    bbhi[i] = -BIG;
+  }
+
+  for (int icell = 0; icell < nlocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+    for (i = 0; i < 3; i++) {
+      bblo[i] = MIN(bblo[i],lo[i]);
+      bbhi[i] = MAX(bbhi[i],hi[i]);
+    }
+  }
+
+  // ebb lo/hi = bbox + grid cutoff
+  // trim to simulation box in non-periodic dims
+  // if bblo/hi is at periodic boundary and cutoff is 0.0,
+  //   add cell_epsilon to insure ghosts across periodic boundary acquired,
+  //   else may be UNKNOWN to owned cell
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+  int *bflag = domain->bflag;
+
+  double ebblo[3],ebbhi[3];
+  for (i = 0; i < 3; i++) {
+    ebblo[i] = bblo[i] - cutoff;
+    ebbhi[i] = bbhi[i] + cutoff;
+    if (bflag[2*i] != PERIODIC) ebblo[i] = MAX(ebblo[i],boxlo[i]);
+    if (bflag[2*i] != PERIODIC) ebbhi[i] = MIN(ebbhi[i],boxhi[i]);
+    if (bflag[2*i] == PERIODIC && bblo[i] == boxlo[i] && cutoff == 0.0)
+      ebblo[i] -= cell_epsilon;
+    if (bflag[2*i] == PERIODIC && bbhi[i] == boxhi[i] && cutoff == 0.0)
+      ebbhi[i] += cell_epsilon;
+  }
+
+  // box = ebbox split across periodic BC
+  // 27 is max number of periodic images in 3d
+
+  Box box[27];
+  int nbox = box_periodic(ebblo,ebbhi,box);
+
+  // boxall = collection of boxes from all procs
+
+  int me = comm->me;
+  int nprocs = comm->nprocs;
+
+  int nboxall;
+  MPI_Allreduce(&nbox,&nboxall,1,MPI_INT,MPI_SUM,world);
+
+  int *recvcounts,*displs;
+  memory->create(recvcounts,nprocs,"grid:recvcounts");
+  memory->create(displs,nprocs,"grid:displs");
+
+  int nsend = nbox*sizeof(Box);
+  MPI_Allgather(&nsend,1,MPI_INT,recvcounts,1,MPI_INT,world);
+  displs[0] = 0;
+  for (i = 1; i < nprocs; i++) displs[i] = displs[i-1] + recvcounts[i-1];
+
+  Box *boxall = new Box[nboxall];
+  MPI_Allgatherv(box,nsend,MPI_CHAR,boxall,recvcounts,displs,MPI_CHAR,world);
+
+  memory->destroy(recvcounts);
+  memory->destroy(displs);
+
+  // nlist = # of boxes that overlap with my bbox, skipping self boxes
+  // list = indices into boxall of overlaps
+  // overlap = true overlap or just touching
+
+  int nlist = 0;
+  int *list;
+  memory->create(list,nboxall,"grid:list");
+
+  for (i = 0; i < nboxall; i++) {
+    if (boxall[i].proc == me) continue;
+    if (box_overlap(bblo,bbhi,boxall[i].lo,boxall[i].hi)) list[nlist++] = i;
+  }
+
+  // loop over my owned cells, not including sub cells
+  // each may overlap with multiple boxes in list
+  // on 1st pass, just tally memory to send copies of my cells
+  // use lastproc to insure a cell only overlaps once per other proc
+  // if oflag = 2 = my cell just touches box,
+  // so flag grid cell as EMPTY ghost by setting nsurf = -1
+
+  int j,oflag,lastproc,nsurf_hold;
+
+  int icell_start = 0;
+  int icell_end = nlocal;
+  int not_done = 1;
+
+  while (not_done) {
+    nsend = 0;
+    bigint bsendsize = 0;
+
+    for (int icell = icell_start; icell < nlocal; icell++) {
+      icell_end = icell+1;
+      if (cells[icell].nsplit <= 0) continue;
+      lo = cells[icell].lo;
+      hi = cells[icell].hi;
+      lastproc = -1;
+      int break_flag = 0;
+      for (i = 0; i < nlist; i++) {
+        j = list[i];
+        oflag = box_overlap(lo,hi,boxall[j].lo,boxall[j].hi);
+        if (!oflag) continue;
+        if (boxall[j].proc == lastproc) continue;
+        lastproc = boxall[j].proc;
+
+        int n = pack_one(icell,NULL,0,0,surfflag,0);
+        if (n > 0 && bsendsize > 0 && bsendsize+n > update->global_mem_limit) {
+          icell_end -= 1;
+          break_flag = 1;
+          break;
+        }
+        bsendsize += n;
+        nsend++;
+      }
+      if (break_flag) break;
+    }
+
+    if (bsendsize > MAXSMALLINT)
+      error->one(FLERR,"Acquire ghosts near send buffer exceeds 2 GB");
+    int sendsize = bsendsize;
+
+    // create send buf and auxiliary irregular comm vectors
+
+    char *sbuf;
+    memory->create(sbuf,sendsize,"grid:sbuf");
+    memset(sbuf,0,sendsize);
+
+    int *proclist,*sizelist;
+    memory->create(proclist,nsend,"grid:proclist");
+    memory->create(sizelist,nsend,"grid:sizelist");
+
+    // on 2nd pass over local cells, fill the send buf
+    // use lastproc to insure a cell only overlaps once per other proc
+    // if oflag = 2 = my cell just touches box,
+    // so flag grid cell as EMPTY ghost by setting nsurf = -1
+
+    nsend = 0;
+    sendsize = 0;
+    for (int icell = icell_start; icell < icell_end; icell++) {
+      if (cells[icell].nsplit <= 0) continue;
+      lo = cells[icell].lo;
+      hi = cells[icell].hi;
+      lastproc = -1;
+      for (i = 0; i < nlist; i++) {
+        j = list[i];
+        oflag = box_overlap(lo,hi,boxall[j].lo,boxall[j].hi);
+        if (!oflag) continue;
+        if (boxall[j].proc == lastproc) continue;
+        lastproc = boxall[j].proc;
+
+        if (oflag == 2) {
+          nsurf_hold = cells[icell].nsurf;
+          cells[icell].nsurf = -1;
+        }
+        sizelist[nsend] = pack_one(icell,&sbuf[sendsize],0,0,surfflag,1);
+        if (oflag == 2) cells[icell].nsurf = nsurf_hold;
+        proclist[nsend] = lastproc;
+        sendsize += sizelist[nsend];
+        nsend++;
+      }
+    }
+
+    // perform irregular communication of list of ghost cells
+
+    Irregular *irregular = new Irregular(sparta);
+    int recvsize;
+    int nrecv = irregular->create_data_variable(nsend,proclist,sizelist,
+                                                recvsize,comm->commsortflag);
+
+    char *rbuf;
+    memory->create(rbuf,recvsize,"grid:rbuf");
+    memset(rbuf,0,recvsize);
+
+    irregular->exchange_variable(sbuf,sizelist,rbuf);
+    delete irregular;
+    irregular = NULL;
+
+    // unpack received grid cells as ghost cells
+
+    int offset = 0;
+    for (i = 0; i < nrecv; i++)
+      offset += grid->unpack_one(&rbuf[offset],0,0,surfflag);
+
+    // more clean up
+
+    memory->destroy(proclist);
+    memory->destroy(sizelist);
+    memory->destroy(sbuf);
+    memory->destroy(rbuf);
+
+    icell_start = icell_end;
+    int not_done_local = icell_start < nlocal;
+    MPI_Allreduce(&not_done_local,&not_done,1,MPI_INT,MPI_SUM,world);
+
+  } // end while loop
+
+  // clean up
+
+  memory->destroy(list);
+  delete [] boxall;
 
   // set nempty = # of EMPTY ghost cells I store
 
