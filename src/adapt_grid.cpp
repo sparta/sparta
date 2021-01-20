@@ -504,7 +504,7 @@ void AdaptGrid::setup(int iter)
   Grid::ParentLevel *plevels = grid->plevels;
 
   int nmax = 0;
-  for (i = minlevel; i < maxlevel; i++)
+  for (int i = minlevel; i < maxlevel; i++)
     nmax = MAX(nmax,plevels[i].nx * plevels[i].ny * plevels[i].nz);
   childlist = new int[nmax];
 
