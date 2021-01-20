@@ -499,8 +499,14 @@ void AdaptGrid::setup(int iter)
   } else random = NULL;
 
   // list of new cell indices for one refined cell
+  // refinement may occur between minlevel and maxlevel-1 inclusive
+  
+  Grid::ParentLevel *plevels = grid->plevels;
 
-  childlist = new int[nx*ny*nz];
+  int nmax = 0;
+  for (i = minlevel; i < maxlevel; i++)
+    nmax = MAX(nmax,plevels[i].nx * plevels[i].ny * plevels[i].nz);
+  childlist = new int[nmax];
 
   // rlist and clist for refine/coarsen
 
@@ -689,12 +695,13 @@ void AdaptGrid::refine_particle()
 
 void AdaptGrid::refine_surf()
 {
-  int j,m,icell,flag,nsurf;
+  int j,m,icell,flag,nsurf,plevel;
   surfint *csurfs;
   double *norm,*lo,*hi;
 
   int dim = domain->dimension;
   Grid::ChildCell *cells = grid->cells;
+  Grid::ParentLevel *plevels = grid->plevels;
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
 
@@ -719,10 +726,11 @@ void AdaptGrid::refine_surf()
 
     lo = cells[icell].lo;
     hi = cells[icell].hi;
+    plevel = cells[icell].level;
     flag = 1;
-    if (fabs(hi[0]-lo[0])/nx < surfsize) flag = 0;
-    if (fabs(hi[1]-lo[1])/ny < surfsize) flag = 0;
-    if (dim == 3 && fabs(hi[2]-lo[2])/nz < surfsize) flag = 0;
+    if (fabs(hi[0]-lo[0])/plevels[plevel].nx < surfsize) flag = 0;
+    if (fabs(hi[1]-lo[1])/plevels[plevel].ny < surfsize) flag = 0;
+    if (dim == 3 && fabs(hi[2]-lo[2])/plevels[plevel].nz < surfsize) flag = 0;
     if (flag) rlist[n++] = icell;
   }
   rnum = n;
