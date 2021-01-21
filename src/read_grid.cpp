@@ -94,8 +94,6 @@ void ReadGrid::read(char *filename, int external)
 	       "Read_grid did not find Cells section of grid file");
   read_cells();
 
-  grid->ncell = ncell;
-
   // close file
 
   if (me == 0) {
@@ -154,6 +152,7 @@ void ReadGrid::read_cells()
   whichproc = 0;
   bigint nread = 0;
 
+  int count = 0;
   while (nread < ncell) {
     if (ncell-nread > CHUNK) nchunk = CHUNK;
     else nchunk = ncell-nread;
@@ -171,9 +170,18 @@ void ReadGrid::read_cells()
     MPI_Bcast(&m,1,MPI_INT,0,world);
     MPI_Bcast(buffer,m,MPI_CHAR,0,world);
 
+    // add occasional barrier to prevent issues from having too many
+    //  outstanding MPI recv requests (from the broadcast above)
+
+    if (count % 1024 == 0)
+      MPI_Barrier(world);
+
     create_cells(nchunk,buffer);
     nread += nchunk;
+    count++;
   }
+
+  grid->ncell = ncell;
 
   if (me == 0) {
     if (screen) fprintf(screen,"  " BIGINT_FORMAT " grid cells\n",grid->ncell);
