@@ -152,7 +152,7 @@ void ReadGrid::read_cells()
   whichproc = 0;
   bigint nread = 0;
 
-  int count = 0;
+  bigint count = 0;
   while (nread < ncell) {
     if (ncell-nread > CHUNK) nchunk = CHUNK;
     else nchunk = ncell-nread;
