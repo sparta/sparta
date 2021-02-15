@@ -796,6 +796,9 @@ void Grid::acquire_ghosts_near_less_memory(int surfflag)
 
   int icell_start = 0;
   int icell_end = nlocal;
+  int i_start = 0;
+  int i_end = nlist;
+
   int not_done = 1;
 
   while (not_done) {
@@ -809,7 +812,10 @@ void Grid::acquire_ghosts_near_less_memory(int surfflag)
       hi = cells[icell].hi;
       lastproc = -1;
       int break_flag = 0;
-      for (i = 0; i < nlist; i++) {
+      int i_first = 0;
+      if (icell == icell_start) i_first = i_start;
+      for (i = i_first; i < nlist; i++) {
+        i_end = i+1;
         j = list[i];
         oflag = box_overlap(lo,hi,boxall[j].lo,boxall[j].hi);
         if (!oflag) continue;
@@ -818,7 +824,7 @@ void Grid::acquire_ghosts_near_less_memory(int surfflag)
 
         int n = pack_one(icell,NULL,0,0,surfflag,0);
         if (n > 0 && bsendsize > 0 && bsendsize+n > update->global_mem_limit) {
-          icell_end -= 1;
+          i_end = i;
           break_flag = 1;
           break;
         }
@@ -854,7 +860,11 @@ void Grid::acquire_ghosts_near_less_memory(int surfflag)
       lo = cells[icell].lo;
       hi = cells[icell].hi;
       lastproc = -1;
-      for (i = 0; i < nlist; i++) {
+      int i_first = 0;
+      if (icell == icell_start) i_first = i_start;
+      int i_last = nlist;
+      if (icell == icell_end-1) i_last = i_end;
+      for (i = i_first; i < i_last; i++) {
         j = list[i];
         oflag = box_overlap(lo,hi,boxall[j].lo,boxall[j].hi);
         if (!oflag) continue;
@@ -901,8 +911,10 @@ void Grid::acquire_ghosts_near_less_memory(int surfflag)
     memory->destroy(sbuf);
     memory->destroy(rbuf);
 
-    icell_start = icell_end;
-    int not_done_local = icell_start < nlocal;
+    icell_start = icell_end-1;
+    i_start = i_end;
+    int not_done_local = (icell_end < nlocal || i_end < nlist);
+    if (not_done_local && i_end == nlist) i_start = 0;
     MPI_Allreduce(&not_done_local,&not_done,1,MPI_INT,MPI_SUM,world);
 
   } // end while loop
