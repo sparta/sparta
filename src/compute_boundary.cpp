@@ -276,9 +276,10 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
         vec[k++] += weight;
         break;
       case MFLUX:
-        vec[k++] += origmass;
-        if (ip) vec[k++] -= imass;
-        if (jp) vec[k++] -= jmass;
+        vec[k] += origmass;
+        if (ip) vec[k] -= imass;
+        if (jp) vec[k] -= jmass;
+        k++;
         break;
       case PRESS:
         MathExtra::scale3(-origmass,vorig,pdelta);
