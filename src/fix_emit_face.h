@@ -33,6 +33,8 @@ class FixEmitFace : public FixEmit {
   virtual ~FixEmitFace();
   virtual void init();
 
+  void grid_changed();
+
   // one insertion task for a cell and a face
 
   struct Task {

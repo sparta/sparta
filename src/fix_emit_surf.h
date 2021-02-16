@@ -34,6 +34,8 @@ class FixEmitSurf : public FixEmit {
   void init();
   void setup();
 
+  void grid_changed();
+
  private:
   int imix,groupbit,np,normalflag,subsonic,subsonic_style,subsonic_warning;
   int npertask,nthresh;

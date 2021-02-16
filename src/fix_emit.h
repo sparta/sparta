@@ -28,7 +28,7 @@ class FixEmit : public Fix {
   void start_of_step();
   double compute_vector(int);
 
-  void grid_changed();
+  virtual void grid_changed();
 
  protected:
   int perspecies;
