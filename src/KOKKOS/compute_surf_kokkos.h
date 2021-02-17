@@ -148,11 +148,12 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       a_array_surf_tally(itally,k++) += weight;
       break;
     case MFLUX:
-      a_array_surf_tally(itally,k++) += origmass;
+      a_array_surf_tally(itally,k) += origmass * fluxscale;
       if (!transparent) {
-        if (ip) a_array_surf_tally(itally,k++) -= imass;
-        if (jp) a_array_surf_tally(itally,k++) -= jmass;
+        if (ip) a_array_surf_tally(itally,k) -= imass * fluxscale;
+        if (jp) a_array_surf_tally(itally,k) -= jmass * fluxscale;
       }
+      k++;
       break;
     case FX:
       if (!fflag) {

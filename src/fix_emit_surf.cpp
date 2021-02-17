@@ -173,6 +173,23 @@ void FixEmitSurf::init()
 
   // create tasks for all grid cells
 
+  grid_changed();
+
+  // deallocate Cut2d,Cut3d
+
+  if (dimension == 3) delete cut3d;
+  else delete cut2d;
+}
+
+
+/* ----------------------------------------------------------------------
+   grid changed operation
+   invoke create_tasks() to rebuild entire task list
+   invoked after per-processor list of grid cells has changed
+------------------------------------------------------------------------- */
+
+void FixEmitSurf::grid_changed()
+{
   create_tasks();
 
   // if Np > 0, nper = # of insertions per task
@@ -194,11 +211,6 @@ void FixEmitSurf::init()
     else if (tasks_with_no_extra >= nupto) nthresh = ntask;
     else nthresh = tasks_with_no_extra - (nupto-ntask);
   }
-
-  // deallocate Cut2d,Cut3d
-
-  if (dimension == 3) delete cut3d;
-  else delete cut2d;
 }
 
 /* ---------------------------------------------------------------------- */
