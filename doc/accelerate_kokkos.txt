@@ -40,9 +40,9 @@ OpenMP (threading for many-core CPUs and Intel Phi), and CUDA (for
 NVIDIA GPUs). You choose the mode at build time to produce an
 executable compatible with specific hardware.
 
-NOTE: Kokkos support within SPARTA must be built with a C++11
-compatible compiler. This means GCC version 4.7.2 or later, Intel
-14.0.4 or later, or Clang 3.5.2 or later is required.
+NOTE: Kokkos support within SPARTA must be built with a C++14
+compatible compiler. For a list of compilers that have been tested with
+the Kokkos library, see the Kokkos "README"_https://github.com/kokkos/kokkos/blob/master/README.md.
 
 [Building SPARTA with the KOKKOS package with Makefiles:]
 
@@ -71,7 +71,7 @@ Kokkos architecture options.
 
 [Compile for CPU-only (MPI only, no threading):]
 
-Use a C++11 compatible compiler and set Kokkos architicture variable in as described above.  Then do the
+Use a C++14 compatible compiler and set Kokkos architicture variable in as described above.  Then do the
 following:
 
 using Makefiles:
@@ -93,7 +93,7 @@ must support the OpenMP interface. You should have one or more
 multi-core CPUs so that multiple threads can be launched by each MPI
 task running on a CPU.
 
-Use a C++11 compatible compiler and set Kokkos architecture variable in
+Use a C++14 compatible compiler and set Kokkos architecture variable in
 as described above.  Then do the
 following:
 
@@ -111,7 +111,7 @@ make :pre
 
 [Compile for Intel KNL Xeon Phi (Intel Compiler, OpenMPI):]
 
-Use a C++11 compatible compiler and do the following:
+Use a C++14 compatible compiler and do the following:
 
 using Makefiles:
 
@@ -130,7 +130,7 @@ make :pre
 NOTE: To build with Kokkos support for NVIDIA GPUs, NVIDIA CUDA
 software version 7.5 or later must be installed on your system.
 
-Use a C++11 compatible compiler and set Kokkos architecture variable in
+Use a C++14 compatible compiler and set Kokkos architecture variable in
 for both GPU and CPU as described
 above.  Then do the following:
 
