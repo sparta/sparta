@@ -269,7 +269,7 @@ class Grid : protected Pointers {
   // grid_id.cpp
 
   int id_find_child(cellint, int, double *, double *, double *);
-  cellint id_uniform_level(int, int, int, int);
+  void id_uniform_indices(cellint, int, int *);
   void id_find_child_uniform_level(int, int, double *, double *, double *,
 				   int &, int &, int &);
   cellint id_neigh_same_parent(cellint, int, int);
@@ -370,8 +370,7 @@ class Grid : protected Pointers {
   // private methods
 
   void surf2grid_cell_algorithm(int);
-  void surf2grid_new_algorithm(int);
-  void surf2grid_surf_algorithm(int, int);
+  void surf2grid_surf_algorithm(int);
   void surf2grid_split(int, int);
 
   void partition_grid(int, int, int, int, int, int, int, int, GridTree *);

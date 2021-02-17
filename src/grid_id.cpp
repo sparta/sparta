@@ -77,38 +77,43 @@ int Grid::id_find_child(cellint parentID, int plevel,
 }
 
 /* ----------------------------------------------------------------------
-   compute cell ID of the child cell in a full-box uniform grid at level
-   xyz grid = indices (0 to N-1) of the child cell within full-box grid
-   return the cell ID
+   for child cell at level, compute its indices in uniform grid
+   return ixyz[3] = indices (0 to N-1) in full-box uniform grid at level
 ------------------------------------------------------------------------- */
 
-cellint Grid::id_uniform_level(int level, int xgrid, int ygrid, int zgrid)
+void Grid::id_uniform_indices(cellint childID, int level, int *ixyz)
 {
   int ix,iy,iz,nx,ny,nz;
-  int parentbits;
-  cellint ichild;
+  int childbits;
+  cellint ichild,mask;
 
-  cellint childID = 0;
+  ix = iy = iz = 0;
+  
+  for (int ilevel = 0; ilevel < level; ilevel++) {
 
-  for (int ilevel = level-1; ilevel >= 0; ilevel--) {
+    // mask = all 1s for child bits at ilevel
+
+    childbits = plevels[ilevel].newbits;
+    mask = (1L << childbits) - 1;
+    ichild = (childID >> plevels[ilevel].nbits) & mask;
+    ichild--;
+    
     nx = plevels[ilevel].nx;
     ny = plevels[ilevel].ny;
     nz = plevels[ilevel].nz;
 
-    ix = xgrid % nx;
-    iy = ygrid % ny;
-    iz = zgrid % nz;
+    ix *= nx;
+    iy *= ny;
+    iz *= nz;
 
-    ichild = (cellint) iz*ny*nx + (cellint) iy*nx + ix + 1;
-    parentbits = plevels[ilevel].nbits;
-    childID |= ichild << parentbits;
-
-    xgrid /= nx;
-    ygrid /= ny;
-    zgrid /= nz;
+    ix += ichild % nx;
+    iy += (ichild/nx) % ny;
+    iz += ichild / (nx*ny);
   }
 
-  return childID;
+  ixyz[0] = ix;
+  ixyz[1] = iy;
+  ixyz[2] = iz;
 }
 
 /* ----------------------------------------------------------------------

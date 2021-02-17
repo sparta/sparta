@@ -66,14 +66,14 @@ enum{SOUTSIDE,SINSIDE,ONSURF2OUT,ONSURF2IN};  // several files (changed 2 words)
 void Grid::surf2grid(int subflag, int outflag)
 {
   if (surf->distributed) {
-    surf2grid_new_algorithm(outflag);
+    surf2grid_surf_algorithm(outflag);
   } else if (surfgrid_algorithm == PERAUTO) {
     if (comm->nprocs > surf->nsurf) surf2grid_cell_algorithm(outflag);
-    else surf2grid_new_algorithm(outflag);
+    else surf2grid_surf_algorithm(outflag);
   } else if (surfgrid_algorithm == PERCELL) {
     surf2grid_cell_algorithm(outflag);
   } else if (surfgrid_algorithm == PERSURF) {
-    surf2grid_new_algorithm(outflag);
+    surf2grid_surf_algorithm(outflag);
   }
 
   // now have nsurf,csurfs list of local surfs that overlap each cell
@@ -193,7 +193,7 @@ void Grid::surf2grid_cell_algorithm(int outflag)
    in cinfo: set type=OVERLAP for cells with surfs
 ------------------------------------------------------------------------- */
 
-void Grid::surf2grid_new_algorithm(int outflag)
+void Grid::surf2grid_surf_algorithm(int outflag)
 {
   int i,j,n,ix,iy,iz,icell,isurf;
   int xlo,xhi,ylo,yhi,zlo,zhi;
@@ -201,6 +201,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
   cellint childID;
   double t1,t2,t3,t4,t5;
   double bblo[3],bbhi[3],ctr[3];
+  int **rcbindices;
   Irregular *irregular;
 
   struct Send2 {
@@ -424,27 +425,28 @@ void Grid::surf2grid_new_algorithm(int outflag)
       tcomm2 += t3-t2;
     }
 
-    // hash the cell IDs I own in RCB decomp
-    // also compute their lo/hi extent
+    // for cell IDs I own in RCB decomp
+    // compute their lo/hi extent and their indices in uniform grid at this level
 
-    MyHash *rcbhash = new MyHash();
     RCBlohi *rcblohi =
       (RCBlohi *) memory->smalloc(nrecv2*sizeof(RCBlohi),"surf2grid:rcblohi");
+    memory->create(rcbindices,nrecv2,3,"surf2grid:rcbindices");
 
     for (i = 0; i < nrecv2; i++) {
       childID = rbuf2[i].childID;
-      (*rcbhash)[childID] = i;
       id_lohi(childID,level,boxlo,boxhi,rcblohi[i].lo,rcblohi[i].hi);
+      id_uniform_indices(childID,level,rcbindices[i]);
     }
 
     // in RCB decomp, compute intersections between:
-    //   my RCB grid cells that exist and my set of surfs
+    //   my RCB grid cells and my set of surfs
     // append results to my list of surf/grid intersections
     // loop over surfs:
     //   compute surf's bbox in uniform grid
     //   find intersection with box of grid cells I own
-    //   for each grid cell that exists in intersection,
-    //     check for actual overlap via cut2d/cut3d
+    //   for each grid cell owned in RCB decomp,
+    //     check if overlaps surf bbox
+    //     then check for actual overlap via cut2d/cut3d
     //   build pairs list = one surf, one cell
     //     as indices into received RCB data
 
@@ -462,31 +464,32 @@ void Grid::surf2grid_new_algorithm(int outflag)
       id_find_child_uniform_level(level,0,boxlo,boxhi,bblo,sxlo,sylo,szlo);
       id_find_child_uniform_level(level,1,boxlo,boxhi,bbhi,sxhi,syhi,szhi);
 
-      for (iz = szlo; iz <= szhi; iz++) {
-	for (iy = sylo; iy <= syhi; iy++) {
-	  for (ix = sxlo; ix <= sxhi; ix++) {
-	    childID = id_uniform_level(level,ix,iy,iz);
-	    if (rcbhash->find(childID) == rcbhash->end()) continue;
-	    j = (*rcbhash)[childID];
-	
-	    if (dim == 2)
-	      overlap = cut2d->surf2grid_one(rcblines[i].p1,rcblines[i].p2,
-					     rcblohi[j].lo,rcblohi[j].hi);
-	    else
-	      overlap = cut3d->surf2grid_one(rcbtris[i].p1,rcbtris[i].p2,
-					     rcbtris[i].p3,
-					     rcblohi[j].lo,rcblohi[j].hi);
-	    if (!overlap) continue;
-	
-	    if (npair == maxpair) {
-	      maxpair += DELTA_SEND;
-	      memory->grow(pairs,maxpair,2,"surf2grid:pairs");
-	    }
-	    pairs[npair][0] = i;
-	    pairs[npair][1] = j;
-	    npair++;
-	  }
+      for (j = 0; j < nrecv2; j++) {
+	ix = rcbindices[j][0];
+	if (ix < sxlo || ix > sxhi) continue;
+	iy = rcbindices[j][1];
+	if (iy < sylo || iy > syhi) continue;
+	if (dim == 3) {
+	  iz = rcbindices[j][2];
+	  if (iz < szlo || iz > szhi) continue;
 	}
+	
+	if (dim == 2)
+	  overlap = cut2d->surf2grid_one(rcblines[i].p1,rcblines[i].p2,
+					 rcblohi[j].lo,rcblohi[j].hi);
+	else
+	  overlap = cut3d->surf2grid_one(rcbtris[i].p1,rcbtris[i].p2,
+					 rcbtris[i].p3,
+					 rcblohi[j].lo,rcblohi[j].hi);
+	if (!overlap) continue;
+
+	if (npair == maxpair) {
+	  maxpair += DELTA_SEND;
+	  memory->grow(pairs,maxpair,2,"surf2grid:pairs");
+	}
+	pairs[npair][0] = i;
+	pairs[npair][1] = j;
+	npair++;
       }
     }
 
@@ -570,7 +573,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
     memory->sfree(rbuf2);
     memory->sfree(rbuf3);
     memory->sfree(rcblohi);
-    delete rcbhash;
+    memory->destroy(rcbindices);
   }
 
   if (outflag) {
@@ -775,6 +778,8 @@ void Grid::surf2grid_new_algorithm(int outflag)
     t2 = MPI_Wtime();
     tcomm4 = t2-t1;
   }
+
+  if (outflag) surf2grid_stats();
 }
 
 /* ----------------------------------------------------------------------
