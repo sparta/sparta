@@ -1932,7 +1932,7 @@ void Grid::weight_one(int icell)
   } else if (cellweightflag == RADWEIGHT) {
     lo = cells[icell].lo;
     hi = cells[icell].hi;
-    cinfo[icell].weight = 0.5*(hi[1]+lo[1]) * (hi[0]-lo[0]);
+    cinfo[icell].weight = 0.5*(hi[1]+lo[1]);
   }
 }
 
