@@ -54,8 +54,8 @@ ReactBird::ReactBird(SPARTA *sparta, int narg, char **arg) :
   readfile(arg[1]);
   check_duplicate();
 
-  tally_reactions = new int[nlist];
-  tally_reactions_all = new int[nlist];
+  tally_reactions = new bigint[nlist];
+  tally_reactions_all = new bigint[nlist];
   tally_flag = 0;
 
   reactions = NULL;
@@ -886,7 +886,7 @@ double ReactBird::extract_tally(int m)
   if (!tally_flag) {
     tally_flag = 1;
     MPI_Allreduce(tally_reactions,tally_reactions_all,nlist,
-                  MPI_INT,MPI_SUM,world);
+                  MPI_SPARTA_BIGINT,MPI_SUM,world);
   }
 
   return 1.0*tally_reactions_all[m];
