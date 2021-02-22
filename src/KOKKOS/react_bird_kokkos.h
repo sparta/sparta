@@ -43,9 +43,9 @@ class ReactBirdKokkos : public ReactBird {
 
   // tallies for reactions
 
-  DAT::tdual_int_1d k_tally_reactions;
-  DAT::t_int_1d d_tally_reactions;
-  DAT::tdual_int_1d k_tally_reactions_all;
+  DAT::tdual_bigint_1d k_tally_reactions;
+  DAT::t_bigint_1d d_tally_reactions;
+  DAT::tdual_bigint_1d k_tally_reactions_all;
 
   struct OneReactionKokkos {
     int active;                    // 1 if reaction is active
