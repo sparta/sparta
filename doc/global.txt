@@ -314,12 +314,12 @@ axi-symmetric model, the weight is the 3d volume of the 2d
 axi-symmetric cell, i.e. the volume the area sweeps out when rotated
 around the y=0 axis of symmetry.  The {radius} and {radius/unweight}
 settings are only allowed for axisymmetric systems.  For the {radius}
-option, the weight is the distance the cell's midpoint from the y=0
-axis of symmetry multiplied by the length of the cell in the x
+option, the weight is the distance the cell's midpoint is from the y=0
+axis of symmetry, multiplied by the length of the cell in the x
 direction.  This scheme will attempt to preserve a uniform number of
 particles per cell, regardless of the cell area, for a uniform
 targeted density.  For the {radius/unweight} option, the weight is the
-distance the cell's midpoint from the y=0 axis of symmetry. This
+distance the cell's midpoint is from the y=0 axis of symmetry. This
 scheme will attempt to preserve a uniform distribution of particles
 per unit area, for a uniform targeted density.  See "Section
 6.2"_Section_howto.html#howto_2 for more details on axi-symmetric
