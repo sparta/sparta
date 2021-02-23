@@ -57,7 +57,7 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {su
     all = allow particle comm with potentially any processor
   {weight} value = {wstyle} {mode}
     wstyle = {cell}
-    mode = {none} or {volume} or {radius}
+    mode = {none} or {volume} or {radius} {radius/unweight}
   {particle/reorder} value = {nsteps}
     nsteps = reorder the particles every this many timesteps
   {mem/limit} value = {grid} or bytes
@@ -303,19 +303,27 @@ cell are created by the "create_particles"_create_particles.html and
 "fix emit"_fix_emit_face.html command variants.
 
 If the mode is set to {none}, per-cell weighting is turned off if it
-was previously enabled.  For mode = {volume} or {radius}, per-cell
-weighting is enabled, which triggers two computations.  First, at the
-time this command is issued, each grid cell is assigned a "weight"
-which is calculated based either on the cell {volume} or {radius}, as
-specified by the {mode} setting.  For the {volume} setting, the weight
-of a cell is its 3d volume for a 3d model, and the weight is its 2d
-area for a 2d model.  For an axi-symmetric model, the weight is the 3d
-volume of the 2d axi-symmetric cell, i.e. the volume the area sweeps
-out when rotated around the y=0 axis of symmetry.  The {radius}
-setting is only allowed for axisymmetric systems.  The weight in this
-case is the distance the cell's midpoint is from the y=0 axis of
-symmetry.  See "Section 6.2"_Section_howto.html#howto_2 for more
-details on axi-symmetric models.
+was previously enabled.  For mode = {volume} or {radius} or
+{radius/unweight}, per-cell weighting is enabled, which triggers two
+computations.  First, at the time this command is issued, each grid
+cell is assigned a "weight" which is calculated based either on the
+cell {volume} or {radius}, as specified by the {mode} setting.  For
+the {volume} setting, the weight of a cell is its 3d volume for a 3d
+model, and the weight is its 2d area for a 2d model.  For an
+axi-symmetric model, the weight is the 3d volume of the 2d
+axi-symmetric cell, i.e. the volume the area sweeps out when rotated
+around the y=0 axis of symmetry.  The {radius} and {radius/unweight}
+settings are only allowed for axisymmetric systems.  For the {radius}
+option, the weight is the distance the cell's midpoint from the y=0
+axis of symmetry multiplied by the length of the cell in the x
+direction.  This scheme will attempt to preserve a uniform number of
+particles per cell, regardless of the cell area, for a uniform
+targeted density.  For the {radius/unweight} option, the weight is the
+distance the cell's midpoint from the y=0 axis of symmetry. This
+scheme will attempt to preserve a uniform distribution of particles
+per unit area, for a uniform targeted density.  See "Section
+6.2"_Section_howto.html#howto_2 for more details on axi-symmetric
+models.
 
 Second, when a particle moves from an initial cell to a final cell,
 the initial/final ratio of the two cell weights is calculated.  If the
