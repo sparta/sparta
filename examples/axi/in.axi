@@ -18,7 +18,7 @@ create_box          -0.25 0.25 0.0 0.25 -0.5 0.5
 create_grid 	    20 10 1 
 balance_grid        rcb cell
 
-global		    nrho 1.e20 fnum 2.5e15 weight cell radius
+global		    nrho 1.e20 fnum 1.e17 weight cell radius
 
 species		    air.species N2
 mixture		    air N2 vstream 3472.0 0.0 0.0 temp 300.0
