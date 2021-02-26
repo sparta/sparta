@@ -57,7 +57,7 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {su
     all = allow particle comm with potentially any processor
   {weight} value = {wstyle} {mode}
     wstyle = {cell}
-    mode = {none} or {volume} or {radius} {radius/unweight}
+    mode = {none} or {volume} or {radius} {radius/only}
   {particle/reorder} value = {nsteps}
     nsteps = reorder the particles every this many timesteps
   {mem/limit} value = {grid} or bytes
@@ -304,7 +304,7 @@ cell are created by the "create_particles"_create_particles.html and
 
 If the mode is set to {none}, per-cell weighting is turned off if it
 was previously enabled.  For mode = {volume} or {radius} or
-{radius/unweight}, per-cell weighting is enabled, which triggers two
+{radius/only}, per-cell weighting is enabled, which triggers two
 computations.  First, at the time this command is issued, each grid
 cell is assigned a "weight" which is calculated based either on the
 cell {volume} or {radius}, as specified by the {mode} setting.  For
@@ -312,15 +312,14 @@ the {volume} setting, the weight of a cell is its 3d volume for a 3d
 model, and the weight is its 2d area for a 2d model.  For an
 axi-symmetric model, the weight is the 3d volume of the 2d
 axi-symmetric cell, i.e. the volume the area sweeps out when rotated
-around the y=0 axis of symmetry.  The {radius} and {radius/unweight}
+around the y=0 axis of symmetry.  The {radius} and {radius/only}
 settings are only allowed for axisymmetric systems.  For the {radius}
-option, the weight is the distance the cell's midpoint is from the y=0
+option, the weight is the distance the cell midpoint is from the y=0
 axis of symmetry, multiplied by the length of the cell in the x
-direction.  This scheme will attempt to preserve a uniform number of
-particles per cell, regardless of the cell area, for a uniform
-targeted density.  For the {radius/unweight} option, the weight is the
-distance the cell's midpoint is from the y=0 axis of symmetry. This
-scheme will attempt to preserve a uniform distribution of particles
+direction.  This mode attempts to preserve a uniform number of
+particles in each cell, regardless of the cell area, for a uniform
+targeted density.  For the {radius/only} option, the weight is just the
+distance the cell midpoint is from the y=0 axis of symmetry. This mode attempts to preserve a uniform distribution of particles
 per unit area, for a uniform targeted density.  See "Section
 6.2"_Section_howto.html#howto_2 for more details on axi-symmetric
 models.
