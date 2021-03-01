@@ -46,7 +46,7 @@ enum{REGION_ALL,REGION_ONE,REGION_CENTER};      // same as Surf
 
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Update
-enum{NOWEIGHT,VOLWEIGHT,RADWEIGHT};
+enum{NOWEIGHT,VOLWEIGHT,RADWEIGHT,RADUNWEIGHT};
 
 // allocate space for static class variable
 

@@ -159,14 +159,14 @@ double ReactBirdKokkos::extract_tally(int m)
 
     if (sparta->kokkos->gpu_direct_flag) {
       MPI_Allreduce(d_tally_reactions.data(),k_tally_reactions_all.d_view.data(),nlist,
-                    MPI_INT,MPI_SUM,world);
+                    MPI_SPARTA_BIGINT,MPI_SUM,world);
       k_tally_reactions_all.modify_device();
       k_tally_reactions_all.sync_host();
     } else {
       k_tally_reactions.modify_device();
       k_tally_reactions.sync_host();
       MPI_Allreduce(k_tally_reactions.h_view.data(),k_tally_reactions_all.h_view.data(),nlist,
-                    MPI_INT,MPI_SUM,world);
+                    MPI_SPARTA_BIGINT,MPI_SUM,world);
     }
 
   }

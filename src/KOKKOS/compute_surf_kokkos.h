@@ -89,20 +89,11 @@ void surf_tally_kk(int isurf, int icell, int reaction,
     transparent = d_tris[isurf].transparent;
   }
 
-  int index = d_surf2tally(isurf);
-  if (index != -1)
-    itally = index;
-  else { // OK if two threads hit this at the same time
-    if (ATOMIC_REDUCTION != 0)
-      itally = Kokkos::atomic_fetch_add(&d_ntally(),1);
-    else {
-      itally = d_ntally();
-      d_ntally()++;
-    }
+  // thread-safe, tally array will be compressed later
 
-    d_tally2surf(itally) = surfID;
-    d_surf2tally(isurf) = itally;
-  }
+  itally = isurf;
+  d_tally2surf(itally) = surfID;
+  d_surf2tally(isurf) = isurf;
 
   double fluxscale = d_normflux(isurf);
 
@@ -307,7 +298,6 @@ void surf_tally_kk(int isurf, int icell, int reaction,
  private:
   int mvv2e;
 
-  DAT::t_int_scalar d_ntally;
   DAT::t_int_1d d_which;
 
   DAT::tdual_float_2d_lr k_array_surf_tally;

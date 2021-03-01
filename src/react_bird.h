@@ -39,7 +39,7 @@ class ReactBird : public React {
 
   // tallies for reactions
 
-  int *tally_reactions,*tally_reactions_all;
+  bigint *tally_reactions,*tally_reactions_all;
   int tally_flag;
 
   struct OneReaction {

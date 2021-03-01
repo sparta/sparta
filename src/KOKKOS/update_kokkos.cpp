@@ -390,7 +390,6 @@ template < int DIM, int SURF > void UpdateKokkos::move()
   // move/migrate iterations
 
   dt = update->dt;
-  int notfirst = 0;
 
   ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
 
@@ -479,8 +478,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     nmigrate = 0;
     entryexit = 0;
 
-    if (notfirst == 0) {
-      notfirst = 1;
+    if (niterate == 1) {
       pstart = 0;
       pstop = nlocal;
     }

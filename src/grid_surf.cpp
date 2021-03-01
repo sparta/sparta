@@ -699,7 +699,8 @@ void Grid::surf2grid_surf_algorithm(int outflag)
     surf->nlocal = surf->nghost = 0;
     int nmax_old = surf->nmax;
     surf->nmax = surf->nlocal = nreturn;
-    surf->grow(nmax_old);
+    if (surf->nmax > nmax_old)
+      surf->grow(nmax_old);
 
     if (dim == 2) memcpy(surf->lines,outbuf,nreturn*sizeof(Surf::Line));
     else memcpy(surf->tris,outbuf,nreturn*sizeof(Surf::Tri));

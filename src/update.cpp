@@ -339,7 +339,6 @@ template < int DIM, int SURF > void Update::move()
   Surf::Tri *tris = surf->tris;
   Surf::Line *lines = surf->lines;
   double dt = update->dt;
-  int notfirst = 0;
 
   // DEBUG
 
@@ -354,8 +353,7 @@ template < int DIM, int SURF > void Update::move()
     nmigrate = 0;
     entryexit = 0;
 
-    if (notfirst == 0) {
-      notfirst = 1;
+    if (niterate == 1) {
       pstart = 0;
       pstop = nlocal;
     }
