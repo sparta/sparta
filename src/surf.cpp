@@ -3726,6 +3726,8 @@ void Surf::read_restart(FILE *fp)
 
 void Surf::grow(int old)
 {
+  if (nmax <= old) return;
+
   if (domain->dimension == 2) {
     lines = (Surf::Line *)
       memory->srealloc(lines,nmax*sizeof(Line),"surf:lines");
