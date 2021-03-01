@@ -381,6 +381,7 @@ class Grid : protected Pointers {
 
   void acquire_ghosts_all(int);
   void acquire_ghosts_near(int);
+  void acquire_ghosts_near_less_memory(int);
 
   void box_intersect(double *, double *, double *, double *,
                      double *, double *);

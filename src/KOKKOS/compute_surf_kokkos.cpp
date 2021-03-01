@@ -35,8 +35,6 @@ ComputeSurfKokkos::ComputeSurfKokkos(SPARTA *sparta, int narg, char **arg) :
 {
   kokkos_flag = 1;
   d_which = DAT::t_int_1d("surf:which",nvalue);
-
-  d_ntally = DAT::t_int_scalar("surf:ntally");
 }
 
 ComputeSurfKokkos::ComputeSurfKokkos(SPARTA *sparta) :
@@ -112,9 +110,7 @@ void ComputeSurfKokkos::clear()
   // reset all set surf2tally values to -1
   // called by Update at beginning of timesteps surf tallying is done
 
-  ntally = 0;
   combined = 0;
-  Kokkos::deep_copy(d_ntally,0);
   Kokkos::deep_copy(d_array_surf_tally,0);
 
   Kokkos::deep_copy(d_surf2tally,-1);
@@ -166,10 +162,31 @@ int ComputeSurfKokkos::tallyinfo(surfint *&ptr)
   ptr = tally2surf;
 
   k_array_surf_tally.sync_host();
+  auto h_surf2tally = Kokkos::create_mirror_view(d_surf2tally);
+  Kokkos::deep_copy(h_surf2tally,d_surf2tally);
 
-  auto h_ntally = Kokkos::create_mirror_view(d_ntally);
-  Kokkos::deep_copy(h_ntally,d_ntally);
-  return h_ntally();
+  // compress array_surf_tally
+
+  int nsurf = surf->nlocal + surf->nghost;
+  int istart = 0;
+  int iend = nsurf-1;
+
+  while (1) {
+    while (h_surf2tally[istart] != -1 && istart < nsurf-2) istart++;
+    while (h_surf2tally[iend] == -1 && iend > 0) iend--;
+    if (istart >= iend) {
+      ntally = istart;
+      break;
+    }
+    for (int k = 0; k < nsurf; k++) {
+      array_surf_tally[istart] = array_surf_tally[iend];
+    }
+    h_surf2tally[istart] = h_surf2tally[iend];
+    h_surf2tally[iend] = -1;
+    tally2surf[istart] = tally2surf[iend];
+  }
+
+  return ntally;
 }
 
 /* ---------------------------------------------------------------------- */

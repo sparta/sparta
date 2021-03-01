@@ -168,8 +168,8 @@ double FixEmit::mol_inflow(double indot, double vscale, double fraction)
   double scosine = indot / vscale;
   if (scosine < -3.0) return 0.0;
   double inward_number_flux = vscale*fraction *
-    (exp(-scosine*scosine) + sqrt(MY_PI)*scosine*(1.0 + erf(scosine))) /
-    (2*sqrt(MY_PI));
+    (exp(-scosine*scosine) + MY_PIS*scosine*(1.0 + erf(scosine))) /
+    (2*MY_PIS);
   return inward_number_flux;
 }
 

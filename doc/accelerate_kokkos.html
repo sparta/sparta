@@ -43,9 +43,9 @@ OpenMP (threading for many-core CPUs and Intel Phi), and CUDA (for
 NVIDIA GPUs). You choose the mode at build time to produce an
 executable compatible with specific hardware.
 </P>
-<P>NOTE: Kokkos support within SPARTA must be built with a C++11
-compatible compiler. This means GCC version 4.7.2 or later, Intel
-14.0.4 or later, or Clang 3.5.2 or later is required.
+<P>NOTE: Kokkos support within SPARTA must be built with a C++14
+compatible compiler. For a list of compilers that have been tested with
+the Kokkos library, see the Kokkos <A HREF = "https://github.com/kokkos/kokkos/blob/master/README.md">README</A>.
 </P>
 <P><B>Building SPARTA with the KOKKOS package with Makefiles:</B>
 </P>
@@ -74,7 +74,7 @@ Kokkos architecture options.
 </P>
 <P><B>Compile for CPU-only (MPI only, no threading):</B>
 </P>
-<P>Use a C++11 compatible compiler and set Kokkos architicture variable in as described above.  Then do the
+<P>Use a C++14 compatible compiler and set Kokkos architicture variable in as described above.  Then do the
 following:
 </P>
 <P>using Makefiles:
@@ -96,7 +96,7 @@ must support the OpenMP interface. You should have one or more
 multi-core CPUs so that multiple threads can be launched by each MPI
 task running on a CPU.
 </P>
-<P>Use a C++11 compatible compiler and set Kokkos architecture variable in
+<P>Use a C++14 compatible compiler and set Kokkos architecture variable in
 as described above.  Then do the
 following:
 </P>
@@ -114,7 +114,7 @@ make
 </PRE>
 <P><B>Compile for Intel KNL Xeon Phi (Intel Compiler, OpenMPI):</B>
 </P>
-<P>Use a C++11 compatible compiler and do the following:
+<P>Use a C++14 compatible compiler and do the following:
 </P>
 <P>using Makefiles:
 </P>
@@ -133,7 +133,7 @@ make
 <P>NOTE: To build with Kokkos support for NVIDIA GPUs, NVIDIA CUDA
 software version 7.5 or later must be installed on your system.
 </P>
-<P>Use a C++11 compatible compiler and set Kokkos architecture variable in
+<P>Use a C++14 compatible compiler and set Kokkos architecture variable in
 for both GPU and CPU as described
 above.  Then do the following:
 </P>

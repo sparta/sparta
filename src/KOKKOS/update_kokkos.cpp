@@ -83,8 +83,8 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
 
   // use 1D view for scalars to reduce GPU memory operations
 
-  d_scalars = t_int_11("collide:scalars");
-  h_scalars = t_host_int_11("collide:scalars_mirror");
+  d_scalars = t_int_12("collide:scalars");
+  h_scalars = t_host_int_12("collide:scalars_mirror");
 
   d_ncomm_one     = Kokkos::subview(d_scalars,0);
   d_nexit_one     = Kokkos::subview(d_scalars,1);
@@ -96,7 +96,8 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   d_nscollide_one = Kokkos::subview(d_scalars,7);
   d_nreact_one    = Kokkos::subview(d_scalars,8);
   d_nstuck        = Kokkos::subview(d_scalars,9);
-  d_error_flag    = Kokkos::subview(d_scalars,10);
+  d_naxibad       = Kokkos::subview(d_scalars,10);
+  d_error_flag    = Kokkos::subview(d_scalars,11);
 
   h_ncomm_one     = Kokkos::subview(h_scalars,0);
   h_nexit_one     = Kokkos::subview(h_scalars,1);
@@ -108,7 +109,8 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   h_nscollide_one = Kokkos::subview(h_scalars,7);
   h_nreact_one    = Kokkos::subview(h_scalars,8);
   h_nstuck        = Kokkos::subview(h_scalars,9);
-  h_error_flag    = Kokkos::subview(h_scalars,10);
+  h_naxibad       = Kokkos::subview(h_scalars,10);
+  h_error_flag    = Kokkos::subview(h_scalars,11);
 
   nboundary_tally = 0;
 }
@@ -246,6 +248,8 @@ void UpdateKokkos::setup()
 
 void UpdateKokkos::run(int nsteps)
 {
+  sparta->kokkos->auto_sync = 0;
+
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
 
   int n_start_of_step = modify->n_start_of_step;
@@ -321,6 +325,8 @@ void UpdateKokkos::run(int nsteps)
       timer->stamp(TIME_OUTPUT);
     }
   }
+  sparta->kokkos->auto_sync = 1;
+
   particle_kk->sync(Host,ALL_MASK);
 
 }
@@ -384,7 +390,6 @@ template < int DIM, int SURF > void UpdateKokkos::move()
   // move/migrate iterations
 
   dt = update->dt;
-  int notfirst = 0;
 
   ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
 
@@ -473,8 +478,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     nmigrate = 0;
     entryexit = 0;
 
-    if (notfirst == 0) {
-      notfirst = 1;
+    if (niterate == 1) {
       pstart = 0;
       pstop = nlocal;
     }
@@ -520,6 +524,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
       nscollide_one = h_nscollide_one();
       surf->nreact_one = h_nreact_one();
       nstuck = h_nstuck();
+      naxibad = h_naxibad();
     } else {
       ntouch_one       += reduce.ntouch_one   ;
       nexit_one        += reduce.nexit_one    ;
@@ -529,6 +534,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
       nscollide_one    += reduce.nscollide_one;
       surf->nreact_one += reduce.nreact_one   ;
       nstuck           += reduce.nstuck       ;
+      naxibad          += reduce.nstuck       ;
     }
 
     entryexit = h_entryexit();
@@ -1026,7 +1032,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
               slist_active_copy[m].obj.
                     surf_tally_kk<ATOMIC_REDUCTION>(minsurf,icell,reaction,&iorig,ipart,jpart);
 
-          // nstuck = consective iterations particle is immobile
+          // stuck_iterate = consecutive iterations particle is immobile
 
           if (minparam == 0.0) stuck_iterate++;
           else stuck_iterate = 0;
@@ -1082,6 +1088,12 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     // no cell crossing
     // set final particle position to xnew, then break from advection loop
     // for axisymmetry, must first remap linear xnew and v
+    // for axisymmetry, check if final particle position is within cell
+    //   can be rare epsilon round-off cases where particle ends up outside
+    //     of final cell curved surf when move logic thinks it is inside
+    //   example is when Geom::axi_horizontal_line() says no crossing of cell edge
+    //     but axi_remap() puts particle outside the cell
+    //   in this case, just DISCARD particle and tally it to naxibad
     // if migrating to another proc,
     //   flag as PDONE so new proc won't move it more on this step
 
@@ -1090,6 +1102,18 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       x[0] = xnew[0];
       x[1] = xnew[1];
       if (DIM == 3) x[2] = xnew[2];
+      if (DIM == 1) {
+        if (x[1] < lo[1] || x[1] > hi[1]) {
+          particle_i.flag = PDISCARD;
+          if (ATOMIC_REDUCTION == 1)
+            Kokkos::atomic_fetch_add(&d_naxibad(),1);
+          else if (ATOMIC_REDUCTION == 0)
+            d_naxibad()++;
+          else
+            reduce.naxibad++;
+          break;
+        }
+      }
       if (d_cells[icell].proc != me) particle_i.flag = PDONE;
       break;
     }

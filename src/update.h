@@ -63,11 +63,16 @@ class Update : protected Pointers {
   bigint nscollide_running;
 
   int nstuck;                // # of particles stuck on surfs and deleted
-
+  int naxibad;               // # of particles where axisymm move was bad
+                             // in this case, bad means particle ended up
+                             // outside of final cell curved surf by epsilon
+                             // when move logic thinks it is inside cell
+  
   int reorder_period;        // # of timesteps between particle reordering
   int global_mem_limit;      // max # of bytes in arrays for rebalance and reordering
   int mem_limit_grid_flag;   // 1 if using size of grid as memory limit
   void set_mem_limit_grid(int gnlocal = 0);
+  int have_mem_limit();      // 1 if have memory limit
 
   int copymode;          // 1 if copy of class (prevents deallocation of
                          //  base class when child copy is destroyed)
