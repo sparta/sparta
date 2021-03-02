@@ -56,41 +56,42 @@ class SurfReactAdsorb : public SurfReact {
   
   int nface;       // # of box faces, 4 (2d) or 6 (3d)
 
-  int **face_species_state;
+  int **face_species_state;     // 4 state quantities for up to 6 box faces
   int *face_total_state;
   double *face_area;
   double *face_weight;
 
-  int **face_species_delta;
-  int **face_sum_delta;
-  double **face_norm;
+  int **face_species_delta;     // changes to state between syncs
+  int **face_sum_delta;         // delta summed across all procs
+  double **face_norm;           // norm of each face
   
   // mode = SURF for surface elements (lines or tris)
 
-  int nstick_species_custom,nstick_total_custom,area_custom,weight_custom;
+  int nstick_species_custom,nstick_total_custom;   // indices to custom state in Surf
+  int area_custom,weight_custom;
   int first_owner;       // 1 if this instance of SRA allocates custom Surf data
 
-  int **surf_species_state;      // ptrs to custom vecs/arrays in Surf class
+  int **surf_species_state;      // ptrs to custom state vecs/arrays in Surf class
   int *surf_total_state;
   double *surf_area;
   double *surf_weight;
 
-  int **surf_species_delta;      // allocated here
+  int **surf_species_delta;      // changes to state between syncs
 
-  int *mark;                // per-surf mark = 1 if a reaction has occured, else 0
-  int *tally2surf;
-  int **intally,**outtally;
-  double **incollate,**outcollate;
-  int maxtally;
+  int *mark;                     // per-surf mark = 1 if reaction has occured, else 0
+  int *tally2surf;               // global surf index for each entry in incollate
+  int **intally,**outtally;      // used for Allreduce of state changes
+  double **incollate,**outcollate;   // used to collate state changes across procs
+  int maxtally;                  // allocated size of intally
   
   // ptrs to data for each box face or surface element
   // used in react() and react_PS() and sync operations
   
-  int **species_delta;    // change in perspecies count since last sync
-  int **species_state;    // perspecies count at last sync
-  int *total_state;       // total count at last sync
-  double *area;                  // area of surf
-  double *weight;                // weight of surf
+  int **species_delta;       // change in perspecies count since last sync
+  int **species_state;       // perspecies count at last sync
+  int *total_state;          // total count at last sync
+  double *area;              // area of surf
+  double *weight;            // weight of surf
 
   // GS (gas/surface) reaction model
   
