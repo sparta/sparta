@@ -32,7 +32,7 @@ enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
    return parentID
 ------------------------------------------------------------------------- */
 
-cellint Grid::parent_of_child(cellint childid, int level)
+cellint Grid::parent_of_child(cellint childID, int level)
 {
   // mask = all 1s for parent bits of ID
 
