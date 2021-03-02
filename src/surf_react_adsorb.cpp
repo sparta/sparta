@@ -1,4 +1,4 @@
-* ----------------------------------------------------------------------
+/* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
@@ -347,9 +347,8 @@ void SurfReactAdsorb::create_per_face_state()
 }
 
 /* ----------------------------------------------------------------------
-   create and initialize custom per-surf state data structs
-   for per-surf, this must be done exactly once,
-   even if multiple surf react/adsorb models are used
+   create and initialize custom per-surf-element data structs
+   this must be done exactly once even if multiple SRA models are used
 ------------------------------------------------------------------------- */
 
 void SurfReactAdsorb::create_per_surf_state()
@@ -904,12 +903,20 @@ void SurfReactAdsorb::tally_update()
 
   if (model == PS) {
     if (mode == FACE) {
-      PS_react(int element, int ielem, int face, double *norm);
+      for (int iface = 0; iface < nface; iface++) {
+	double *norm;
+	// NOTE: need to setnorm for each face
+	PS_react(iface,norm);
+      }
 
     } else if (mode == SURF) {
       int nsurf = surf->nsurf;
-      for (int m = me; m < nsurf; m += nprocs) {
-	PS_react(int element, int ielem, int face, double *norm);
+      if (dimension == 2) {
+	for (int m = me; m < nsurf; m += nprocs)
+	  PS_react(m,surf->tris[m].norm);
+      } else {
+	for (int m = me; m < nsurf; m += nprocs)
+	  PS_react(m,surf->lines[m].norm);
       }
     }
   }
@@ -929,7 +936,6 @@ void SurfReactAdsorb::update_state_face()
 
   // sum perspecies deltas across all procs
 
-  int nface = 2 * domain->dimension;
   MPI_Allreduce(&species_delta[0][0],&face_sum_delta[0][0],
 		nface*nspecies_surf,MPI_INT,MPI_SUM,world);
 
@@ -1893,9 +1899,14 @@ void SurfReactAdsorb::readfile_ps(char *fname)
   /*
 }
 
-/* ---------------------------------------------------------------------- */
-
-void SurfReactAdsorb::PS_react(int element, int ielem, int face, double *norm)
+/* ----------------------------------------------------------------------
+   perform on-surf reactions for one face or one surf element
+   isurf < 0 for faces indexed from -1 to -6
+   isurf >= 0 for surf element indexed from 0 to Nsurf-1
+   invoked once per Nsync steps
+------------------------------------------------------------------------- */
+							
+void SurfReactAdsorb::PS_react(int isurf, double *norm)
 {
   /*
   if (nactive_ps == 0) return;

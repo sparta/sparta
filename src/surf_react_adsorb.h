@@ -173,6 +173,7 @@ class SurfReactAdsorb : public SurfReact {
  
   void init_reactions_ps();
   void readfile_ps(char *);
+  void PS_react(int, double *);
   //void random_point(int, int, int, double*);
   //int find_cell(int, int, double*); 
   
