@@ -38,7 +38,8 @@ cellint Grid::parent_of_child(cellint childid, int level)
 
   int parentbits = plevels[level-1].nbits;
   cellint mask = (1L << parentbits) - 1;
-  cellint parentID = id & mask;
+  cellint parentID = childID & mask;
+  
   return parentID;
 }
 
