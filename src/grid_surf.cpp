@@ -57,6 +57,7 @@ enum{SOUTSIDE,SINSIDE,ONSURF2OUT,ONSURF2IN};  // several files (changed 2 words)
    surf_alg = Jan19, loop over N/P surfs, find small set of cells each overlaps,
               perform rendezvous comm to convert cells per surf to surfs per cell
    new_alg = Nov20, no more parent cells, rendezvous alg at each level of grid
+   new2_alg = Mar21, modified new alg, use recursive tree to speed overlap finding
    for distributed surfs, have to use surf alg
    PERAUTO option chooses based on total nsurfs vs nprocs
    see info on subflag, outflag options with surf2grid_split()
@@ -66,14 +67,19 @@ enum{SOUTSIDE,SINSIDE,ONSURF2OUT,ONSURF2IN};  // several files (changed 2 words)
 void Grid::surf2grid(int subflag, int outflag)
 {
   if (surf->distributed) {
-    surf2grid_new_algorithm(outflag);
+    //surf2grid_new_algorithm(outflag);
+    surf2grid_new2_algorithm(outflag);
   } else if (surfgrid_algorithm == PERAUTO) {
     if (comm->nprocs > surf->nsurf) surf2grid_cell_algorithm(outflag);
-    else surf2grid_new_algorithm(outflag);
+    else {
+      //surf2grid_new_algorithm(outflag);
+      surf2grid_new2_algorithm(outflag);
+    }
   } else if (surfgrid_algorithm == PERCELL) {
     surf2grid_cell_algorithm(outflag);
   } else if (surfgrid_algorithm == PERSURF) {
-    surf2grid_new_algorithm(outflag);
+    //surf2grid_new_algorithm(outflag);
+    surf2grid_new2_algorithm(outflag);
   }
 
   // now have nsurf,csurfs list of local surfs that overlap each cell
@@ -462,6 +468,618 @@ void Grid::surf2grid_new_algorithm(int outflag)
       id_find_child_uniform_level(level,0,boxlo,boxhi,bblo,sxlo,sylo,szlo);
       id_find_child_uniform_level(level,1,boxlo,boxhi,bbhi,sxhi,syhi,szhi);
 
+      for (iz = szlo; iz <= szhi; iz++) {
+	for (iy = sylo; iy <= syhi; iy++) {
+	  for (ix = sxlo; ix <= sxhi; ix++) {
+	    childID = id_uniform_level(level,ix,iy,iz);
+	    if (rcbhash->find(childID) == rcbhash->end()) continue;
+	    j = (*rcbhash)[childID];
+	
+	    if (dim == 2)
+	      overlap = cut2d->surf2grid_one(rcblines[i].p1,rcblines[i].p2,
+					     rcblohi[j].lo,rcblohi[j].hi);
+	    else
+	      overlap = cut3d->surf2grid_one(rcbtris[i].p1,rcbtris[i].p2,
+					     rcbtris[i].p3,
+					     rcblohi[j].lo,rcblohi[j].hi);
+	    if (!overlap) continue;
+	
+	    if (npair == maxpair) {
+	      maxpair += DELTA_SEND;
+	      memory->grow(pairs,maxpair,2,"surf2grid:pairs");
+	    }
+	    pairs[npair][0] = i;
+	    pairs[npair][1] = j;
+	    npair++;
+	  }
+	}
+      }
+    }
+
+    if (outflag) {
+      MPI_Barrier(world);
+      t4 = MPI_Wtime();
+      tmap += t4-t3;
+    }
+
+    // third irregular comm
+    // send each surf/grid intersection back to proc that owns grid cell
+
+    int surfindex,cellindex;
+
+    nsend = 0;
+
+    for (i = 0; i < npair; i++) {
+      if (nsend == maxsend3) {
+	maxsend3 += DELTA_SEND;
+	memory->grow(proclist3,maxsend3,"surf2grid:proclist3");
+	sbuf3 = (Send3 *) memory->srealloc(sbuf3,maxsend3*sizeof(Send3),
+					  "surf2grid:sbuf3");
+      }
+
+      surfindex = pairs[i][0];
+      cellindex = pairs[i][1];
+      proclist3[i] = rbuf2[cellindex].proc;
+      if (dim == 2) sbuf3[i].surfID = rcblines[surfindex].id;
+      else sbuf3[i].surfID = rcbtris[surfindex].id;
+      sbuf3[i].icell = rbuf2[cellindex].icell;
+      nsend++;
+    }
+
+    irregular = new Irregular(sparta);
+    int nrecv3 = irregular->create_data_uniform(nsend,proclist3,1);
+    Send3 *rbuf3 = (Send3 *) memory->smalloc(nrecv3*sizeof(Send3),
+					     "surf2grid:rbuf3");
+    irregular->exchange_uniform((char *) sbuf3,sizeof(Send3),(char *) rbuf3);
+    delete irregular;
+
+    // process received cell/surf pairs
+    // set nsurf and csurfs for each cell (only ones at this level)
+    // 1st pass: count surfs in each cell, then allocate csurfs in each cell
+    // 2nd pass: fill each cell's csurf list
+
+    for (i = 0; i < nrecv3; i++) {
+      icell = rbuf3[i].icell;
+      cells[icell].nsurf++;
+    }
+
+    // skip sub cells since may exist in a restart
+
+    for (icell = 0; icell < nlocal; icell++) {
+      if (cells[icell].level != level) continue;
+      if (cells[icell].nsplit <= 0) continue;
+      nsurf = cells[icell].nsurf;
+      if (nsurf) {
+	if (nsurf > maxsurfpercell)
+	  error->one(FLERR,"Too many surfs in one cell - set global surfmax");
+	cells[icell].csurfs = csurfs->get(nsurf);
+	cells[icell].nsurf = 0;
+      }
+    }
+
+    for (i = 0; i < nrecv3; i++) {
+      icell = rbuf3[i].icell;
+      nsurf = cells[icell].nsurf;
+      cells[icell].csurfs[nsurf] = rbuf3[i].surfID;
+      cells[icell].nsurf++;
+    }
+
+    if (outflag) {
+      MPI_Barrier(world);
+      t5 = MPI_Wtime();
+      tcomm3 += t5-t4;
+    }
+
+    // clean up for this level iteration
+
+    memory->sfree(rbuf1);
+    memory->sfree(rbuf2);
+    memory->sfree(rbuf3);
+    memory->sfree(rcblohi);
+    delete rcbhash;
+  }
+
+  if (outflag) {
+    MPI_Barrier(world);
+    t1 = MPI_Wtime();
+  }
+
+  // clean up after all iterations
+
+  memory->destroy(proclist1);
+  memory->destroy(proclist2);
+  memory->destroy(proclist3);
+  memory->sfree(sbuf1);
+  memory->sfree(sbuf2);
+  memory->sfree(sbuf3);
+  memory->destroy(pairs);
+  memory->destroy(plist);
+  memory->sfree(gtree);
+
+  // non-distributed surfs:
+  // each cell's csurf list currently stores surf IDs
+  // convert to indices into global list stored by each proc
+  // shash used to store IDs of entire global list
+
+  if (!distributed) {
+    lines = surf->lines;
+    tris = surf->tris;
+    int nslocal = surf->nlocal;
+
+    MySurfHash shash;
+    surfint *list;
+
+    if (dim == 2) {
+      for (i = 0; i < nslocal; i++)
+	shash[lines[i].id] = i;
+    } else {
+      for (i = 0; i < nslocal; i++)
+	shash[tris[i].id] = i;
+    }
+
+    for (icell = 0; icell < nlocal; icell++) {
+      if (!cells[icell].nsurf) continue;
+      if (cells[icell].nsplit <= 0) continue;
+
+      list = cells[icell].csurfs;
+      n = cells[icell].nsurf;
+
+      for (i = 0; i < n; i++)
+	list[i] = shash[list[i]];
+    }
+  }
+
+  // distributed surfs:
+  // rendezvous operation to obtain nlocal surfs for each proc
+  // each grid cell requests a surf from proc that owns surf in mylines/mytris
+  //   use shash to only do this once per surf
+  // receive the surf and store in nlocal lines/tris
+
+  if (distributed) {
+
+    // ncount = # of unique surfs I need for my owned grid cells
+    // store IDs of those surfs in shash
+
+    MySurfHash shash;
+    MyIterator it;
+    surfint *list;
+    int ncount = 0;
+
+    for (icell = 0; icell < nlocal; icell++) {
+      if (!cells[icell].nsurf) continue;
+      if (cells[icell].nsplit <= 0) continue;
+
+      list = cells[icell].csurfs;
+      n = cells[icell].nsurf;
+
+      for (i = 0; i < n; i++)
+	if (shash.find(list[i]) == shash.end()) {
+	  shash[list[i]] = 0;
+	  ncount++;
+	}
+    }
+
+    // allocate memory for rvous input
+
+    int *proclist;
+    memory->create(proclist,ncount,"surf2grid:proclist2");
+    InRvous *inbuf =
+      (InRvous *) memory->smalloc((bigint) ncount*sizeof(InRvous),
+				  "surf2grid:inbuf");
+
+    // create rvous inputs
+    // proclist = owner of each surf
+
+    surfint surfID;
+
+    ncount = 0;
+    for (it = shash.begin(); it != shash.end(); ++it) {
+      surfID = it->first;
+      proclist[ncount] = (surfID-1) % nprocs;
+      inbuf[ncount].proc = me;
+      inbuf[ncount].surfID = surfID;
+      ncount++;
+    }
+
+    // perform rendezvous operation
+    // each proc owns subset of surfs
+    // receives all surf requests to return surf to each proc who needs it
+
+    char *outbuf;
+    int outbytes;
+    if (dim == 2) outbytes = sizeof(OutRvousLine);
+    else outbytes = sizeof(OutRvousTri);
+
+    int nreturn = comm->rendezvous(1,ncount,(char *) inbuf,sizeof(InRvous),
+				   0,proclist,rendezvous_surfrequest,
+				   0,outbuf,outbytes,(void *) this);
+
+    memory->destroy(proclist);
+    memory->sfree(inbuf);
+
+    // copy entire rendezvous output buf into realloced Surf lines/tris
+
+    surf->nlocal = surf->nghost = 0;
+    int nmax_old = surf->nmax;
+    surf->nmax = surf->nlocal = nreturn;
+    if (surf->nmax > nmax_old)
+      surf->grow(nmax_old);
+
+    if (dim == 2) memcpy(surf->lines,outbuf,nreturn*sizeof(Surf::Line));
+    else memcpy(surf->tris,outbuf,nreturn*sizeof(Surf::Tri));
+
+    memory->sfree(outbuf);
+
+    // reset Surf hash to point to surf list in lines/tris
+
+    Surf::Line *lines = surf->lines;
+    Surf::Tri *tris = surf->tris;
+
+    if (dim == 2) {
+      for (i = 0; i < nreturn; i++) {
+        surfID = lines[i].id;
+        shash[surfID] = i;
+      }
+    } else {
+      for (i = 0; i < nreturn; i++) {
+        surfID = tris[i].id;
+        shash[surfID] = i;
+      }
+    }
+
+    // reset csurfs list for each of my owned cells
+    // from storing surfID to storing local index of that surfID
+
+    for (icell = 0; icell < nlocal; icell++) {
+      if (!cells[icell].nsurf) continue;
+      if (cells[icell].nsplit <= 0) continue;
+
+      list = cells[icell].csurfs;
+      n = cells[icell].nsurf;
+
+      for (i = 0; i < n; i++)
+	list[i] = shash[list[i]];
+    }
+  }
+
+  // for performance, sort each cell's csurfs list, same order as cell alg
+  // mark cells with surfs as OVERLAP, only if has a non-transparent surf
+
+  lines = surf->lines;
+  tris = surf->tris;
+
+  surfint *list;
+  int nontrans;
+
+  for (icell = 0; icell < nlocal; icell++) {
+    if (!cells[icell].nsurf) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    qsort(cells[icell].csurfs,cells[icell].nsurf,
+	  sizeof(surfint),compare_surfIDs);
+
+    list = cells[icell].csurfs;
+    n = cells[icell].nsurf;
+    nontrans = 0;
+
+    if (dim == 2) {
+      for (i = 0; i < n; i++) {
+	if (!lines[list[i]].transparent) nontrans = 1;
+	break;
+      }
+    } else {
+      for (i = 0; i < n; i++) {
+	if (!tris[list[i]].transparent) nontrans = 1;
+	break;
+      }
+    }
+
+    if (nontrans) cinfo[icell].type = OVERLAP;
+  }
+
+  if (outflag) {
+    MPI_Barrier(world);
+    t2 = MPI_Wtime();
+    tcomm4 = t2-t1;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   find surfs that overlap owned grid cells
+   NOTE: doc this
+   algorithm:
+   in cells: set nsurf, csurfs
+   in cinfo: set type=OVERLAP for cells with surfs
+------------------------------------------------------------------------- */
+
+void Grid::surf2grid_new2_algorithm(int outflag)
+{
+  int i,j,n,ix,iy,iz,icell,isurf;
+  int xlo,xhi,ylo,yhi,zlo,zhi;
+  int ilo[3],ihi[3];
+  cellint childID;
+  double t1,t2,t3,t4,t5;
+  double bblo[3],bbhi[3],ctr[3];
+  Irregular *irregular;
+
+  struct Send2 {
+    cellint childID;
+    int proc,icell;
+  };
+
+  struct Send3 {
+    surfint surfID;
+    int icell;
+  };
+
+  struct RCBlohi {
+    double lo[3],hi[3];
+  };
+
+  int me = comm->me;
+  int nprocs = comm->nprocs;
+  int dim = domain->dimension;
+  int distributed = surf->distributed;
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  surf->bbox_all();
+  double *slo = surf->bblo;
+  double *shi = surf->bbhi;
+
+  if (dim == 3) cut3d = new Cut3d(sparta);
+  else cut2d = new Cut2d(sparta,domain->axisymmetric);
+
+  int *plist;
+  memory->create(plist,nprocs,"surf2grid:plist");
+
+  GridTree *gtree =
+    (GridTree *) memory->smalloc(nprocs*sizeof(GridTree),"surf2grid:gtree");
+
+  // data structs for 3 irregular comms
+
+  int *proclist1 = NULL;
+  int *proclist2 = NULL;
+  int *proclist3 = NULL;
+  char *sbuf1 = NULL;
+  Send2 *sbuf2 = NULL;
+  Send3 *sbuf3 = NULL;
+  int maxsend1 = 0;
+  int maxsend2 = 0;
+  int maxsend3 = 0;
+  int **pairs = NULL;
+  int maxpair = 0;
+
+  // which set of Lines or Tris to process
+
+  Surf::Line *lines;
+  Surf::Tri *tris;
+  int nsurf,istart,istop,idelta,nbytes_surf;
+
+  if (distributed) {
+    lines = surf->mylines;
+    tris = surf->mytris;
+    nsurf = surf->nown;
+    istart = 0;
+    istop = nsurf;
+    idelta = 1;
+  } else {
+    lines = surf->lines;
+    tris = surf->tris;
+    int ntotal = surf->nsurf;
+    nsurf = ntotal / nprocs;
+    if (me < ntotal % nprocs) nsurf++;
+    istart = comm->me;
+    istop = ntotal;
+    idelta = nprocs;
+  }
+
+  if (dim == 2) nbytes_surf = sizeof(Surf::Line);
+  else nbytes_surf = sizeof(Surf::Tri);
+
+  // loop over levels of grid
+  // at each iteration, operate only on child cells at that level
+
+  tmap = tcomm1 = tcomm2 = tcomm3 = 0.0;
+
+  int minlevel = set_minlevel();
+
+  for (int level = minlevel; level <= maxlevel; level++) {
+
+    if (outflag) {
+      MPI_Barrier(world);
+      t1 = MPI_Wtime();
+    }
+
+    // compute extent of uniform grid at level which overlaps surf bbox
+    // xyz lo/hi = inclusive range of overlapping grid box
+
+    id_find_child_uniform_level(level,0,boxlo,boxhi,slo,xlo,ylo,zlo);
+    id_find_child_uniform_level(level,1,boxlo,boxhi,shi,xhi,yhi,zhi);
+
+    // compute a recursive (RCB) decomp of the uniform grid box
+    // gtree = tree of RCB cuts, cuts are along grid planes
+    // my xyz lo/hi = inclusive range of my portion of grid box
+
+    partition_grid(0,nprocs-1,xlo,xhi,ylo,yhi,zlo,zhi,gtree);
+    int myxlo = xlo; int myxhi = xhi;
+    int myylo = ylo; int myyhi = yhi;
+    int myzlo = zlo; int myzhi = zhi;
+    mybox(me,0,nprocs-1,myxlo,myxhi,myylo,myyhi,myzlo,myzhi,gtree);
+
+    // first portion of irregular comm
+    // loop over my surfs:
+    //   compute surf bbox as a brick of uniform grid cells at this level
+    //   drop bbox down RCB tree to identify set of RCB procs the surf overlaps
+    // send the surf info via irregular comm
+    // nrecv1 = # of surfs I have copy of in RCB decomp
+    // NOTE: this comm might be faster in Rvous mode?
+
+    int sxlo,sxhi,sylo,syhi,szlo,szhi;
+
+    int nsend = 0;
+
+    for (isurf = istart; isurf < istop; isurf += idelta) {
+      if (dim == 2) surf->bbox_one(&lines[isurf],bblo,bbhi);
+      else surf->bbox_one(&tris[isurf],bblo,bbhi);
+      id_find_child_uniform_level(level,0,boxlo,boxhi,bblo,sxlo,sylo,szlo);
+      id_find_child_uniform_level(level,1,boxlo,boxhi,bbhi,sxhi,syhi,szhi);
+
+      // trim surf bbox to grid box
+
+      ilo[0] = MAX(sxlo,xlo);
+      ilo[1] = MAX(sylo,ylo);
+      ilo[2] = MAX(szlo,zlo);
+      ihi[0] = MIN(sxhi,xhi);
+      ihi[1] = MIN(syhi,yhi);
+      ihi[2] = MIN(szhi,zhi);
+
+      // drop trimmed surf bbox on RCB tree
+      // return list of procs whose subbox it overlaps
+
+      int np = 0;
+      box_drop(ilo,ihi,0,nprocs-1,gtree,np,plist);
+      if (!np) continue;
+
+      for (i = 0; i < np; i++) {
+	if (nsend == maxsend1) {
+	  maxsend1 += DELTA_SEND;
+	  memory->grow(proclist1,maxsend1,"surf2grid:proclist1");
+	  if (dim == 2)
+	    sbuf1 = (char *) memory->srealloc(sbuf1,maxsend1*sizeof(Surf::Line),
+					      "surf2grid:sbuf1");
+	  else
+	    sbuf1 = (char *) memory->srealloc(sbuf1,maxsend1*sizeof(Surf::Tri),
+					      "surf2grid:sbuf1");
+	}
+	proclist1[nsend] = plist[i];
+	if (dim == 2) memcpy(&sbuf1[nsend*nbytes_surf],&lines[isurf],nbytes_surf);
+	else memcpy(&sbuf1[nsend*nbytes_surf],&tris[isurf],nbytes_surf);
+	nsend++;
+      }
+    }
+
+    irregular = new Irregular(sparta);
+    int nrecv1 = irregular->create_data_uniform(nsend,proclist1,1);
+    char *rbuf1 = (char *) memory->smalloc(nrecv1*nbytes_surf,"surf2grid:rbuf");
+    irregular->exchange_uniform(sbuf1,nbytes_surf,rbuf1);
+    delete irregular;
+
+    if (outflag) {
+      MPI_Barrier(world);
+      t2 = MPI_Wtime();
+      tcomm1 += t2-t1;
+    }
+
+    // second portion of irregular comm
+    // identify which RCB proc owns each of my child cell at this level
+    // send the cell info via irregular comm
+    // nrecv2 = # of child cells I have copy of in RCB decomp
+
+    int cx,cy,cz;
+    double ctr[3];
+
+    nsend = 0;
+
+    for (icell = 0; icell < nlocal; icell++) {
+      if (cells[icell].level != level) continue;
+      if (cells[icell].nsplit <= 0) continue;
+
+      ctr[0] = 0.5 * (cells[icell].lo[0] + cells[icell].hi[0]);
+      ctr[1] = 0.5 * (cells[icell].lo[1] + cells[icell].hi[1]);
+      ctr[2] = 0.5 * (cells[icell].lo[2] + cells[icell].hi[2]);
+      id_find_child_uniform_level(level,0,boxlo,boxhi,ctr,cx,cy,cz);
+
+      ilo[0] = cx; ihi[0] = cx;
+      ilo[1] = cy; ihi[1] = cy;
+      ilo[2] = cz; ihi[2] = cz;
+
+      int np = 0;
+      box_drop(ilo,ihi,0,nprocs-1,gtree,np,plist);
+      if (np != 1) error->one(FLERR,"Box drop of grid cell failed");
+
+      if (nsend == maxsend2) {
+	maxsend2 += DELTA_SEND;
+	memory->grow(proclist2,maxsend2,"surf2grid:proclist2");
+	sbuf2 = (Send2 *) memory->srealloc(sbuf2,maxsend2*sizeof(Send2),
+					  "surf2grid:sbuf2");
+      }
+
+      proclist2[nsend] = plist[0];
+      sbuf2[nsend].childID = cells[icell].id;
+      sbuf2[nsend].proc = me;
+      sbuf2[nsend].icell = icell;
+      nsend++;
+    }
+
+    irregular = new Irregular(sparta);
+    int nrecv2 = irregular->create_data_uniform(nsend,proclist2,1);
+    Send2 *rbuf2 = (Send2 *) memory->smalloc(nrecv2*sizeof(Send2),"surf2grid:rbuf2");
+    irregular->exchange_uniform((char *) sbuf2,sizeof(Send2),(char *) rbuf2);
+    delete irregular;
+
+    if (outflag) {
+      MPI_Barrier(world);
+      t3 = MPI_Wtime();
+      tcomm2 += t3-t2;
+    }
+
+    // hash the cell IDs I own in RCB decomp
+    // hash all the parent IDs of those cells
+    // also compute the lo/hi extents of the child cells
+
+    MyHash *rcbhash = new MyHash();
+    //MyHash *phash = new MyHash();
+    RCBlohi *rcblohi =
+      (RCBlohi *) memory->smalloc(nrecv2*sizeof(RCBlohi),"surf2grid:rcblohi");
+
+    for (i = 0; i < nrecv2; i++) {
+      childID = rbuf2[i].childID;
+      (*rcbhash)[childID] = i;
+      id_lohi(childID,level,boxlo,boxhi,rcblohi[i].lo,rcblohi[i].hi);
+      /*
+      for (ilevel = level; ilevel > 0; ilevel--) {
+	parentID = parent_of_child(childID,ilevel);
+	if (phash->find(parentID) == phash->end()) break;
+	(phash)[parentID] = 0;
+	childID = parentID;
+      }
+      */
+    }
+
+    // in RCB decomp, compute intersections between:
+    //   my RCB grid cells that exist and my set of surfs
+    // append results to my list of surf/grid intersections
+    // loop over surfs:
+    //   compute surf's bbox in uniform grid
+    //   find intersection with box of grid cells I own
+    //   for each grid cell that exists in intersection,
+    //     check for actual overlap via cut2d/cut3d
+    //   build pairs list = one surf, one cell
+    //     as indices into received RCB data
+
+    Surf::Line *rcblines;
+    Surf::Tri *rcbtris;
+    if (dim == 2) rcblines = (Surf::Line *) rbuf1;
+    else rcbtris = (Surf::Tri *) rbuf1;
+
+    int npair = 0;
+    int overlap;
+
+    for (i = 0; i < nrecv1; i++) {
+      if (dim == 2) surf->bbox_one(&rcblines[i],bblo,bbhi);
+      else surf->bbox_one(&rcbtris[i],bblo,bbhi);
+      id_find_child_uniform_level(level,0,boxlo,boxhi,bblo,sxlo,sylo,szlo);
+      id_find_child_uniform_level(level,1,boxlo,boxhi,bbhi,sxhi,syhi,szhi);
+
+      sxlo = MAX(sxlo,myxlo);
+      sylo = MAX(sylo,myylo);
+      szlo = MAX(szlo,myzlo);
+      sxhi = MIN(sxhi,myxhi);
+      syhi = MIN(syhi,myyhi);
+      szhi = MIN(szhi,myzhi);
+      
       for (iz = szlo; iz <= szhi; iz++) {
 	for (iy = sylo; iy <= syhi; iy++) {
 	  for (ix = sxlo; ix <= sxhi; ix++) {

@@ -268,6 +268,7 @@ class Grid : protected Pointers {
 
   // grid_id.cpp
 
+  cellint parent_of_child(cellint, int);
   int id_find_child(cellint, int, double *, double *, double *);
   cellint id_uniform_level(int, int, int, int);
   void id_find_child_uniform_level(int, int, double *, double *, double *,
@@ -371,6 +372,7 @@ class Grid : protected Pointers {
 
   void surf2grid_cell_algorithm(int);
   void surf2grid_new_algorithm(int);
+  void surf2grid_new2_algorithm(int);
   void surf2grid_surf_algorithm(int, int);
   void surf2grid_split(int, int);
 
