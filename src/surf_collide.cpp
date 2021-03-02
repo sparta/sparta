@@ -88,7 +88,7 @@ void SurfCollide::tally_update()
 double SurfCollide::compute_vector(int i)
 {
   one[0] = nsingle;
-  one[1] = ntotal + nsingle;
+  one[1] = ntotal;
   MPI_Allreduce(one,all,2,MPI_DOUBLE,MPI_SUM,world);
 
   return all[i];

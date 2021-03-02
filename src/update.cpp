@@ -1242,7 +1242,7 @@ int Update::split2d(int icell, double *x)
 }
 
 /* ----------------------------------------------------------------------
-   setup lists of all computes that tally surface collision/reaction info
+   check if any surface collision or reaction models are defined
    return 1 if there are any, 0 if not
 ------------------------------------------------------------------------- */
 
@@ -1253,13 +1253,14 @@ int Update::collide_react_setup()
   nsr = surf->nsr;
   sr = surf->sr;
 
-  if (sc || sr) return 1;
+  if (nsc || nsr) return 1;
   return 0;
 }
 
 /* ----------------------------------------------------------------------
    zero counters for tallying surface collisions/reactions
-   this is done within individual SurfCollide and SurfReact instances
+   done at start of each timestep
+   done within individual SurfCollide and SurfReact instances
 ------------------------------------------------------------------------- */
 
 void Update::collide_react_reset()
@@ -1269,7 +1270,8 @@ void Update::collide_react_reset()
 }
 
 /* ----------------------------------------------------------------------
-   sum cummulative counters for tallying surface collisions/reactions
+   update cummulative counters for tallying surface collisions/reactions
+   done at end of each timestep
    this is done within individual SurfCollide and SurfReact instances
 ------------------------------------------------------------------------- */
 

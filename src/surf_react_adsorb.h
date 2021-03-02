@@ -40,47 +40,58 @@ class SurfReactAdsorb : public SurfReact {
 
  private:
   int me,nprocs;
-  int model,mode,nsync,nsp,nface;
-  double twall,max_cover;
-  int nspecies_surf;
-  char **species_surf;       // list of surface species
-
-  FILE *fp;                  // NOTE: dup of what is in parent class?
+  int model;                        // GS or PS
+  int mode;                         // FACE or SURF
+  int nsync;                        // synchronize surf state every this many steps
+  double twall;                     // temperature of face or surf
+  double max_cover;                 
+  
   class RanPark *random;     // RNG for reaction probabilities
 
-  // surface state
-  // either for box faces or per surface element, depending on mode
+  int nspecies_surf;         // number of surface species
+  char **species_surf;       // list of surface species
 
-  int first_owner;           // 1 if this instance allocates per-surf state
-  int nstick_index,nstick_direct;
-  int nstick_total_index,nstick_total_direct;
-  int area_index,area_direct;
-  int weight_index,weight_direct;
+  // mode = FACE for box faces
+  // all this data is allocated here
+  
+  int nface;       // # of box faces, 4 (2d) or 6 (3d)
 
-  int **nstick_face;        // state for faces
-  int **nstick_face_archive;
-  int nstick_total_face[6];
-  int nstick_total_face_archive[6];
-  double area_face[6];
-  double weight_face[6];
+  int **face_species_state;
+  int *face_total_state;
+  double *face_area;
+  double *face_weight;
 
-  int **nstick;             // state for surfs
-  int **nstick_archive;
-  int *nstick_total;
-  int *nstick_total_archive;
-  double *area;
-  double *weight;
+  int **face_species_delta;
+  int **face_sum_delta;
 
-  // data structs for syncing surface state periodically
+  // mode = SURF for surface elements (lines or tris)
 
-  int maxtally;
-  int *mark;
+  int nstick_species_custom,nstick_total_custom,area_custom,weight_custom;
+  int first_owner;       // 1 if this instance of SRA allocates custom Surf data
+
+  int **surf_species_state;      // ptrs to custom vecs/arrays in Surf class
+  int *surf_total_state;
+  double *surf_area;
+  double *surf_weight;
+
+  int **surf_species_delta;      // allocated here
+
+  int *mark;                // per-surf mark = 1 if a reaction has occured, else 0
   int *tally2surf;
   int **intally,**outtally;
   double **incollate,**outcollate;
-  int **inface,**outface;
+  int maxtally;
+  
+  // ptrs to data for each box face or surface element
+  // used in react() and react_PS() and sync operations
+  
+  int **species_delta;    // change in perspecies count since last sync
+  int **species_state;    // perspecies count at last sync
+  int *total_state;       // total count at last sync
+  double *area;                  // area of surf
+  double *weight;                // weight of surf
 
-  // GS react model
+  // GS (gas/surface) reaction model
   
   struct OneReaction_GS {
     char *id;                      // reaction ID (formula)
@@ -119,10 +130,10 @@ class SurfReactAdsorb : public SurfReact {
   ReactionI_GS *reactions_gs;    // reactions for all species
   int *indices_gs;               // master list of indices
 
- // PS react model
+ // PS (on-surf) reaction model
   
  struct OneReaction_PS {
-    int index;                          // index of the reaction
+    int index;                         // index of the reaction
     int active;                        // 1 if reaction is active
     int type;                          // reaction type = DISSOCIATION, etc
     int style;                         // reaction style = ARRHENIUS, etc
@@ -160,8 +171,8 @@ class SurfReactAdsorb : public SurfReact {
 
   // PS methods
  
-  //void init_reactions_ps();
-  //void readfile_ps(char *);
+  void init_reactions_ps();
+  void readfile_ps(char *);
   //void random_point(int, int, int, double*);
   //int find_cell(int, int, double*); 
   

@@ -25,9 +25,9 @@ class SurfReact : protected Pointers {
   char *id;
   char *style;
 
+  int nlist;                // # of reactions defined or read from file
   int vector_flag;          // 0/1 if compute_vector() function exists
   int size_vector;          // length of global vector
-  int nlist;                // # of reactions defined or read from file
 
   SurfReact(class SPARTA *, int, char **);
   virtual ~SurfReact();
@@ -46,7 +46,12 @@ class SurfReact : protected Pointers {
   FILE *fp;
 
   // tallies for reactions
-
+  // nsingle = all reactions in one step
+  // ntotal = cumulative nsingle across all steps
+  // tally_single = per-reaction counts in one step
+  // tally_all = cumulative tally_single across all steps
+  // 3 flags used in compute_vector() to minimize AllReduce calls
+  
   int nsingle,ntotal;
   double one[2],all[2];
   int *tally_single,*tally_total;
