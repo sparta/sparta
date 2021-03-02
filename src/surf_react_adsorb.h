@@ -63,7 +63,8 @@ class SurfReactAdsorb : public SurfReact {
 
   int **face_species_delta;
   int **face_sum_delta;
-
+  double **face_norm;
+  
   // mode = SURF for surface elements (lines or tris)
 
   int nstick_species_custom,nstick_total_custom,area_custom,weight_custom;
