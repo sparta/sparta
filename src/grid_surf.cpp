@@ -1107,7 +1107,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
 
       // skip surf if it does not intersect my RCB box
       
-      overlap = cut2d->surf2grid_one(rcblines[i].p1,rcblines[i].p2,rcblo,rcblo);
+      overlap = cut2d->surf2grid_one(rcblines[i].p1,rcblines[i].p2,rcblo,rcbhi);
       if (!overlap) continue;
 
       // slo/hi = bbox around one surf
@@ -1130,6 +1130,9 @@ void Grid::surf2grid_new2_algorithm(int outflag)
 		npair,maxpair,pairs,chash,phash);
     }
 
+    MPI_Barrier(world);
+    if (me == 0) printf("RECURSE %d\n",npair);
+    
     if (outflag) {
       MPI_Barrier(world);
       t4 = MPI_Wtime();
@@ -1166,6 +1169,9 @@ void Grid::surf2grid_new2_algorithm(int outflag)
 					     "surf2grid:rbuf3");
     irregular->exchange_uniform((char *) sbuf3,sizeof(Send3),(char *) rbuf3);
     delete irregular;
+
+    MPI_Barrier(world);
+    if (me == 0) printf("IRR3 %d %d\n",nsend,nrecv3);
 
     // process received cell/surf pairs
     // set nsurf and csurfs for each cell (only ones at this level)
