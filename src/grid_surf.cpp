@@ -967,7 +967,8 @@ void Grid::surf2grid_new2_algorithm(int outflag)
 
       int np = 0;
       box_drop(glo,ghi,0,nprocs-1,gtree,np,plist);
-      printf("NP: %d: %d %d\n",me,isurf,np);
+      printf("NP: %d: %d %d: %d %d: %d %d: %d %d\n",
+	     me,isurf,np,glo[0],ghi[0],glo[1],ghi[1],glo[2],ghi[2]);
       if (!np) continue;
 
       for (i = 0; i < np; i++) {
