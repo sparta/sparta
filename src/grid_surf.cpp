@@ -833,7 +833,10 @@ void Grid::surf2grid_new2_algorithm(int outflag)
   int nprocs = comm->nprocs;
   int dim = domain->dimension;
   int distributed = surf->distributed;
-
+ 
+  MPI_Barrier(world);
+  if (me == 0) printf("AAA 1\n");
+ 
   boxlo = domain->boxlo;
   boxhi = domain->boxhi;
 
@@ -898,6 +901,9 @@ void Grid::surf2grid_new2_algorithm(int outflag)
 
   for (int level = minlevel; level <= maxlevel; level++) {
 
+    MPI_Barrier(world);
+    if (me == 0) printf("LEV %d\n",level);
+
     if (outflag) {
       MPI_Barrier(world);
       t1 = MPI_Wtime();
@@ -921,14 +927,14 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     myunilo[0] = unilo[0]; myunihi[0] = unihi[0];
     myunilo[1] = unilo[1]; myunihi[1] = unihi[1];
     myunilo[2] = unilo[2]; myunihi[2] = unihi[2];
-    mybox(me,0,nprocs-1,myunilo[0],myunihi[1],myunilo[1],
+    mybox(me,0,nprocs-1,myunilo[0],myunihi[0],myunilo[1],
 	  myunihi[1],myunilo[2],myunihi[2],gtree);
 
     childID = id_uniform_level(level,myunilo[0],myunilo[2],myunilo[2]);
     id_lohi(childID,level,boxlo,boxhi,rcblo,bbhi);
     childID = id_uniform_level(level,myunihi[0],myunihi[2],myunihi[2]);
     id_lohi(childID,level,boxlo,boxhi,bblo,rcbhi);
-    
+
     // first portion of irregular comm
     // loop over my surfs:
     //   compute surf bbox as a brick of uniform grid cells at this level
@@ -988,6 +994,9 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     char *rbuf1 = (char *) memory->smalloc(nrecv1*nbytes_surf,"surf2grid:rbuf");
     irregular->exchange_uniform(sbuf1,nbytes_surf,rbuf1);
     delete irregular;
+
+    MPI_Barrier(world);
+    if (me == 0) printf("IRR1 %d %d\n",nsend,nrecv);
 
     if (outflag) {
       MPI_Barrier(world);
