@@ -978,9 +978,6 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     irregular->exchange_uniform(sbuf1,nbytes_surf,rbuf1);
     delete irregular;
 
-    MPI_Barrier(world);
-    printf("IRR1 me %d: %d %d\n",me,nsend,nrecv1);
-
     if (outflag) {
       MPI_Barrier(world);
       t2 = MPI_Wtime();
@@ -1036,9 +1033,6 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     irregular->exchange_uniform((char *) sbuf2,sizeof(Send2),(char *) rbuf2);
     delete irregular;
 
-    MPI_Barrier(world);
-    printf("IRR2 me %d: %d %d\n",me,nsend,nrecv2);
-
     if (outflag) {
       MPI_Barrier(world);
       t3 = MPI_Wtime();
@@ -1086,9 +1080,6 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     int npair = 0;
     int overlap;
 
-    // DEBUG
-    int count = 0;
-    
     for (i = 0; i < nrecv1; i++) {
 
       // skip surf if it does not intersect my RCB box
@@ -1112,14 +1103,10 @@ void Grid::surf2grid_new2_algorithm(int outflag)
 
       // find all my RCB child cells this surf intersects
 
-      count++;
       recurse2d(bblo,bbhi,0,0,i,&rcblines[i],boxlo,boxhi,
 		npair,maxpair,pairs,chash,phash);
     }
 
-    MPI_Barrier(world);
-    printf("RECURSE me %d: %d %d %d count %d\n",me,npair,nrecv1,nrecv2,count);
-    
     if (outflag) {
       MPI_Barrier(world);
       t4 = MPI_Wtime();
@@ -1156,9 +1143,6 @@ void Grid::surf2grid_new2_algorithm(int outflag)
 					     "surf2grid:rbuf3");
     irregular->exchange_uniform((char *) sbuf3,sizeof(Send3),(char *) rbuf3);
     delete irregular;
-
-    MPI_Barrier(world);
-    if (me == 0) printf("IRR3 %d %d\n",nsend,nrecv3);
 
     // process received cell/surf pairs
     // set nsurf and csurfs for each cell (only ones at this level)
@@ -1482,9 +1466,6 @@ void Grid::recurse2d(double *bblo, double *bbhi, cellint parentID, int level,
 
   newlo[2] = newhi[2] = 0.0;
 
-  if (me == 0 && surfindex == 0)
-    printf("IJLOHI parentID %d lo %d %d hi %d %d\n",parentID,ilo,jlo,ihi,jhi);
-  
   for (iy = jlo; iy <= jhi; iy++) {
     for (ix = ilo; ix <= ihi; ix++) {
       ichild = (cellint) iy*nx + ix + 1;
