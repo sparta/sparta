@@ -1080,6 +1080,10 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     int npair = 0;
     int overlap;
 
+    printf("PRERECURSE me %d: level %d nrecv12 %d %d\n",me,level,nrecv1,nrecv2);
+    printf("UNI me %d: lo %d %d hi %d %d\n",me,unilo[0],unilo[1],unihi[0],unihi[1]);
+    printf("MYUNI me %d: lo %d %d hi %d %d\n",me,myunilo[0],myunilo[1],myunihi[0],myunihi[1]);
+    
     for (i = 0; i < nrecv1; i++) {
 
       // skip surf if it does not intersect my RCB box
@@ -1482,6 +1486,11 @@ void Grid::recurse2d(double *bblo, double *bbhi, cellint parentID, int level,
       
       grid->id_child_lohi(level,plo,phi,ichild,clo,chi);
       overlap = cut2d->surf2grid_one(p1,p2,clo,chi);
+
+      if (me == 0 && surfindex == 0)
+	printf("  loop: ixy %d %d cpflag %d %d childID %ld overlap %d\n",
+	       ix,iy,cflag,pflag,childID,overlap);
+      
       if (!overlap) continue;
 
       if (cflag) {
