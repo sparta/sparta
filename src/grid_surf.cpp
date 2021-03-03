@@ -943,8 +943,6 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     // nrecv1 = # of surfs I have copy of in RCB decomp
     // NOTE: this comm might be faster in Rvous mode?
 
-    int sxlo,sxhi,sylo,syhi,szlo,szhi;
-
     int nsend = 0;
 
     for (isurf = istart; isurf < istop; isurf += idelta) {
@@ -996,7 +994,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     delete irregular;
 
     MPI_Barrier(world);
-    if (me == 0) printf("IRR1 %d %d\n",nsend,nrecv1);
+    printf("IRR1 %d %d\n",nsend,nrecv1);
 
     if (outflag) {
       MPI_Barrier(world);
@@ -1054,7 +1052,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     delete irregular;
 
     MPI_Barrier(world);
-    if (me == 0) printf("IRR2 %d %d\n",nsend,nrecv2);
+    printf("IRR2 %d %d\n",nsend,nrecv2);
 
     if (outflag) {
       MPI_Barrier(world);
