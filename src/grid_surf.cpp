@@ -967,6 +967,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
 
       int np = 0;
       box_drop(glo,ghi,0,nprocs-1,gtree,np,plist);
+      printf("NP: %d: %d %d\n",me,isurf,np);
       if (!np) continue;
 
       for (i = 0; i < np; i++) {
@@ -994,7 +995,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     delete irregular;
 
     MPI_Barrier(world);
-    printf("IRR1 %d %d\n",nsend,nrecv1);
+    printf("IRR1 me %d: %d %d\n",me,nsend,nrecv1);
 
     if (outflag) {
       MPI_Barrier(world);
@@ -1052,7 +1053,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     delete irregular;
 
     MPI_Barrier(world);
-    printf("IRR2 %d %d\n",nsend,nrecv2);
+    printf("IRR2 me %d: %d %d\n",me,nsend,nrecv2);
 
     if (outflag) {
       MPI_Barrier(world);
