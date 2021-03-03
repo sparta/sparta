@@ -1464,6 +1464,9 @@ void Grid::recurse2d(double *bblo, double *bbhi, cellint parentID, int level,
   // else it is a parent cell, so recurse
   // set newslo/newshi to intersection of slo/shi with new parent cell
 
+  if (me == 0 && surfindex == 0)
+    printf("IJLOHI parentID %ld lo %d %d hi %d %d\n",parentID,ilo,jlo,ihi,jhi);
+      
   newlo[2] = newhi[2] = 0.0;
 
   for (iy = jlo; iy <= jhi; iy++) {
