@@ -1053,12 +1053,11 @@ void Grid::surf2grid_new2_algorithm(int outflag)
       (*chash)[childID] = i;
       id_lohi(childID,level,boxlo,boxhi,rcblohi[i].lo,rcblohi[i].hi);
 
+      int flag;
+      
       for (int ilevel = level; ilevel > 0; ilevel--) {
 	parentID = parent_of_child(childID,ilevel);
-	printf("CHPAR childID %ld parentID %ld\n",childID,parentID);
-	if (phash->find(parentID) == phash->end()) {
-	  break;
-	}
+	if (phash->find(parentID) != phash->end()) break;
 	(*phash)[parentID] = 0;
 	childID = parentID;
       }
