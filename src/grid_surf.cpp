@@ -1482,14 +1482,18 @@ void Grid::recurse2d(double *bblo, double *bbhi, cellint parentID, int level,
       else cflag = 1;
       if (phash->find(childID) == phash->end()) pflag = 0;
       else pflag = 1;
+
+      if (me == 0 && surfindex == 0)
+	printf("  loop: ixy %d %d cpflag %d %d childID %ld\n",
+	       ix,iy,cflag,pflag,childID);
+
       if (!cflag && !pflag) continue;
       
       grid->id_child_lohi(level,plo,phi,ichild,clo,chi);
       overlap = cut2d->surf2grid_one(p1,p2,clo,chi);
 
       if (me == 0 && surfindex == 0)
-	printf("  loop: ixy %d %d cpflag %d %d childID %ld overlap %d\n",
-	       ix,iy,cflag,pflag,childID,overlap);
+	printf("  overlap: %d\n",overlap);
       
       if (!overlap) continue;
 
