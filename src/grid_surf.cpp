@@ -996,7 +996,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     delete irregular;
 
     MPI_Barrier(world);
-    if (me == 0) printf("IRR1 %d %d\n",nsend,nrecv);
+    if (me == 0) printf("IRR1 %d %d\n",nsend,nrecv1);
 
     if (outflag) {
       MPI_Barrier(world);
@@ -1052,6 +1052,9 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     Send2 *rbuf2 = (Send2 *) memory->smalloc(nrecv2*sizeof(Send2),"surf2grid:rbuf2");
     irregular->exchange_uniform((char *) sbuf2,sizeof(Send2),(char *) rbuf2);
     delete irregular;
+
+    MPI_Barrier(world);
+    if (me == 0) printf("IRR2 %d %d\n",nsend,nrecv2);
 
     if (outflag) {
       MPI_Barrier(world);
