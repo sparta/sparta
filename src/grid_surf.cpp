@@ -966,20 +966,20 @@ void Grid::surf2grid_new2_algorithm(int outflag)
        
       // glo/hi = overlap of surf grid bbox with my RCB grid box
 
+      /*
       glo[0] = MAX(sunilo[0],myunilo[0]);
       glo[1] = MAX(sunilo[1],myunilo[1]);
       glo[2] = MAX(sunilo[2],myunilo[2]);
       ghi[0] = MIN(sunihi[0],myunihi[0]);
       ghi[1] = MIN(sunihi[1],myunihi[1]);
       ghi[2] = MIN(sunihi[2],myunihi[2]);
-
+      */
+      
       // drop trimmed surf box on RCB tree
       // return list of procs whose RCB subbox it overlaps
 
       int np = 0;
-      box_drop(glo,ghi,0,nprocs-1,gtree,np,plist);
-      printf("NP: %d: %d %d: %d %d: %d %d: %d %d\n",
-	     me,isurf,np,glo[0],ghi[0],glo[1],ghi[1],glo[2],ghi[2]);
+      box_drop(sunilo,sunihi,0,nprocs-1,gtree,np,plist);
       if (!np) continue;
 
       for (i = 0; i < np; i++) {
