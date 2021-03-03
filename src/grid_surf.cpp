@@ -959,7 +959,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
 	printf("BOX lo %g %g %g hi %g %g %g\n",
 	       boxlo[0],boxlo[1],boxlo[2],boxhi[0],boxhi[1],boxhi[2]);
 	printf("UNI lo %d %d %d hi %d %d %d\n",
-	       suinlo[0],sunilo[1],sunilo[2],sunihi[0],sunihi[1],sunihi[2]);
+	       sunilo[0],sunilo[1],sunilo[2],sunihi[0],sunihi[1],sunihi[2]);
       }
        
       // glo/hi = overlap of surf grid bbox with my RCB grid box
