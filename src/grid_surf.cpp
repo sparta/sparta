@@ -953,6 +953,15 @@ void Grid::surf2grid_new2_algorithm(int outflag)
       id_find_child_uniform_level(level,1,boxlo,boxhi,shi,
 				  sunihi[0],sunihi[1],sunihi[2]);
 
+      if (isurf == 0) {
+	printf("ISURF slo %g %g %g shi %g %g %g\n",
+	       slo[0],slo[1],slo[2],shi[0],shi[1],shi[2]);
+	printf("BOX lo %g %g %g hi %g %g %g\n",
+	       boxlo[0],boxlo[1],boxlo[2],boxhi[0],boxhi[1],boxhi[2]);
+	printf("UNI lo %d %d %d hi %d %d %d\n",
+	       suinlo[0],sunilo[1],sunilo[2],sunihi[0],sunihi[1],sunihi[2]);
+      }
+       
       // glo/hi = overlap of surf grid bbox with my RCB grid box
 
       glo[0] = MAX(sunilo[0],myunilo[0]);
