@@ -1435,8 +1435,6 @@ void Grid::recurse2d(double *bblo, double *bbhi, cellint parentID, int level,
   double clo[3],chi[3];
   double newlo[3],newhi[3];
   
-  double *boxlo = domain->boxlo;
-  double *boxhi = domain->boxhi;
   double *p1 = line->p1;
   double *p2 = line->p2;
 
@@ -1483,6 +1481,9 @@ void Grid::recurse2d(double *bblo, double *bbhi, cellint parentID, int level,
   // set newslo/newshi to intersection of slo/shi with new parent cell
 
   newlo[2] = newhi[2] = 0.0;
+
+  if (me == 0 && surfindex == 0)
+    printf("IJLOHI parentID %d lo %d %d hi %d %d\n",parentID,ilo,jlo,ihi,jhi);
   
   for (iy = jlo; iy <= jhi; iy++) {
     for (ix = ilo; ix <= ihi; ix++) {
