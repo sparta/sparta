@@ -795,7 +795,7 @@ void Grid::surf2grid_new_algorithm(int outflag)
 void Grid::surf2grid_new2_algorithm(int outflag)
 {
   int i,j,n,ix,iy,iz,icell,isurf;
-  cellint childID;
+  cellint childID,parentID;
   double t1,t2,t3,t4,t5;
   double ctr[3];
   Irregular *irregular;
@@ -810,6 +810,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
                                     //   at level which encompasses a single surf
   int glo[3],ghi[3];                // corner indices of a grid box
   double bblo[3],bbhi[3];           // corners of a bounding box
+  double rcblo[3],rcbhi[3];         // corners of my RCB box
   GridTree *gtree;                  // tree of RCB cuts for partitioning uniform grid
   
   // data structs for communication
@@ -913,7 +914,8 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     // compute a recursive (RCB) decomp of the uniform grid box
     // gtree = tree of RCB cuts, cuts are along grid planes
     // myunilo/hi = inclusive range of my portion of grid box
-
+    // rcblo/hi = corner points of my RCB box
+    
     partition_grid(0,nprocs-1,unilo[0],unihi[0],unilo[1],unihi[1],
 		   unilo[2],unihi[2],gtree);
     myunilo[0] = unilo[0]; myunihi[0] = unihi[0];
@@ -922,6 +924,11 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     mybox(me,0,nprocs-1,myunilo[0],myunihi[1],myunilo[1],
 	  myunihi[1],myunilo[2],myunihi[2],gtree);
 
+    childID = id_uniform_level(level,myunilo[0],myunilo[2],myunilo[2]);
+    id_lohi(childID,level,boxlo,boxhi,rcblo,bbhi);
+    childID = id_uniform_level(level,myunihi[0],myunihi[2],myunihi[2]);
+    id_lohi(childID,level,boxlo,boxhi,bblo,rcbhi);
+    
     // first portion of irregular comm
     // loop over my surfs:
     //   compute surf bbox as a brick of uniform grid cells at this level
