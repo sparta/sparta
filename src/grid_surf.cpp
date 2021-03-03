@@ -1421,7 +1421,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
 void Grid::recurse2d(double *bblo, double *bbhi, cellint parentID, int level,
 		     int surfindex, Surf::Line *line, 
 		     double *plo, double *phi,
-                     int &npair, int &maxpair, int **&pair,
+                     int &npair, int &maxpair, int **&pairs,
 		     MyHash *chash, MyHash *phash)
 {
   int ix,iy,cflag,pflag,overlap;
