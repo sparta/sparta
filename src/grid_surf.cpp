@@ -1054,14 +1054,14 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     // hash all the parent IDs of those cells
     // also compute the lo/hi extents of the child cells
 
-    MyHash *rcbhash = new MyHash();
+    MyHash *chash = new MyHash();
     MyHash *phash = new MyHash();
     RCBlohi *rcblohi =
       (RCBlohi *) memory->smalloc(nrecv2*sizeof(RCBlohi),"surf2grid:rcblohi");
 
     for (i = 0; i < nrecv2; i++) {
       childID = rbuf2[i].childID;
-      (*rcbhash)[childID] = i;
+      (*chash)[childID] = i;
       id_lohi(childID,level,boxlo,boxhi,rcblohi[i].lo,rcblohi[i].hi);
 
       for (int ilevel = level; ilevel > 0; ilevel--) {
@@ -1114,38 +1114,9 @@ void Grid::surf2grid_new2_algorithm(int outflag)
 
       // find all my RCB child cells this surf intersects
       
-      recurse2d(bblo,bbhi,0,0,&rcblines[i],boxlo,boxhi,npair,maxpair,pairs);
+      recurse2d(bblo,bbhi,0,0,&rcblines[i],boxlo,boxhi,
+		npair,maxpair,pairs,chash,phash);
     }
-
-    /*
-      for (iz = szlo; iz <= szhi; iz++) {
-	for (iy = sylo; iy <= syhi; iy++) {
-	  for (ix = sxlo; ix <= sxhi; ix++) {
-	    childID = id_uniform_level(level,ix,iy,iz);
-	    if (rcbhash->find(childID) == rcbhash->end()) continue;
-	    j = (*rcbhash)[childID];
-	
-	    if (dim == 2)
-	      overlap = cut2d->surf2grid_one(rcblines[i].p1,rcblines[i].p2,
-					     rcblohi[j].lo,rcblohi[j].hi);
-	    else
-	      overlap = cut3d->surf2grid_one(rcbtris[i].p1,rcbtris[i].p2,
-					     rcbtris[i].p3,
-					     rcblohi[j].lo,rcblohi[j].hi);
-	    if (!overlap) continue;
-	
-	    if (npair == maxpair) {
-	      maxpair += DELTA_SEND;
-	      memory->grow(pairs,maxpair,2,"surf2grid:pairs");
-	    }
-	    pairs[npair][0] = i;
-	    pairs[npair][1] = j;
-	    npair++;
-	  }
-	}
-      }
-    }
-    */
 
     if (outflag) {
       MPI_Barrier(world);
@@ -1227,7 +1198,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     memory->sfree(rbuf2);
     memory->sfree(rbuf3);
     memory->sfree(rcblohi);
-    delete rcbhash;
+    delete chash;
     delete phash;
   }
 
@@ -1438,69 +1409,49 @@ void Grid::surf2grid_new2_algorithm(int outflag)
 
 /* ----------------------------------------------------------------------
    enumerate intersections of isurf with any child grid cell in iparent cell
-   called by surf2grid_surf_algorithm() via find_overlaps()
-   iline = which surf element
-   slo/shi = bounding box around line segment
-   iparent = current parent cell
-   n, list = growing list of cell IDs this line overlaps with
+   called by surf2grid_new2_algorithm()
+   bblo/hi = bounding box for surf within parent cell and this proc's RCB box
+   parentID at level which wholly contains bbox
+   line = surface element
+   plo/phi = corner points of parent cell
+   npair, maxpair, pair = growing list of I,J grid/surf overlap pairs
    cut2d->surf2grid_one() is used to determine actual overlap
 ------------------------------------------------------------------------- */
 
 void Grid::recurse2d(double *bblo, double *bbhi, cellint parentID, int level,
 		     Surf::Line *line, 
 		     double *plo, double *phi,
-                     int &npair, int &maxpair, int **&pair)
+                     int &npair, int &maxpair, int **&pair,
+		     MyHash *chash, MyHash *phash)
 {
-  int ix,iy,newparent,index,parentflag,overlap;
-  cellint ichild,idchild;
+  int ix,iy,overlap;
+  cellint ichild,childID;
   double celledge;
-  double newslo[2],newshi[2];
+  double plo[3],phi[3];
   double clo[3],chi[3];
+  double newlo[3],newhi[3];
+  
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+  double *p1 = line->p1;
+  double *p2 = line->p2;
 
-  /*
-// line intersects bbox
-// parentID is at level
-// bbox is wholly contained with parentID cell
-// gbox = gridbox of indices
+  id_lohi(parentID,boxlo,boxhi,plo,phi);
 
-  nxyz = grid of child cells within parentID
-  gbox = subgrid of nxyz that overlaps with bbox including touches
-  triple loop over gbox ranges:
-   childID = ID of child cell
-   cflag = childID in chash
-   pflag = childID in phash
-   if not cflag or pflag: continue
-   cbox = lo/hi of childID
-   flag = cut2d->surf2grid_one(line,cbox)
-   if not flag: continue
-   if cflag:
-     add I,J to pair
-     continue
-   if pflag:
-     newbox = overlap(bbox,cbox)
-     recurse(newbox,childID,level+1,line,npair,maxpair,pairs)
-  */
-
-  /*
-  p1 = line->p1;
-  p2 = line->p2;
-
-  ParentCell *p = &pcells[iparent];
-  double *plo = p->lo;
-  double *phi = p->hi;
-  int nx = p->nx;
-  int ny = p->ny;
-
-  // ilo,ihi jlo,jhi = indices for range of grid cells overlapped by surf bbox
+  int nx = plevels[level].nx;
+  int ny = plevels[level].ny;
+  int nbits = plevels[level].nbits;
+  
+  // ilo,ihi jlo,jhi = indices for range of child cells overlapped by surf bbox
   // overlap means point is inside grid cell or touches boundary
   // same equation as in Grid::id_find_child()
 
-  int ilo = static_cast<int> ((slo[0]-plo[0]) * nx/(phi[0]-plo[0]));
-  int ihi = static_cast<int> ((shi[0]-plo[0]) * nx/(phi[0]-plo[0]));
-  int jlo = static_cast<int> ((slo[1]-plo[1]) * ny/(phi[1]-plo[1]));
-  int jhi = static_cast<int> ((shi[1]-plo[1]) * ny/(phi[1]-plo[1]));
+  int ilo = static_cast<int> ((bblo[0]-plo[0]) * nx/(phi[0]-plo[0]));
+  int ihi = static_cast<int> ((bbhi[0]-plo[0]) * nx/(phi[0]-plo[0]));
+  int jlo = static_cast<int> ((bblo[1]-plo[1]) * ny/(phi[1]-plo[1]));
+  int jhi = static_cast<int> ((bbhi[1]-plo[1]) * ny/(phi[1]-plo[1]));
 
-  // augment indices if sbox touches or slightly overlaps cell edges
+  // augment indices if surf bbox touches or slightly overlaps cell edges
   // same equation as in Grid::id_child_lohi()
 
   celledge = plo[0] + ilo*(phi[0]-plo[0])/nx;
@@ -1513,7 +1464,7 @@ void Grid::recurse2d(double *bblo, double *bbhi, cellint parentID, int level,
   celledge = plo[1] + (jhi+1)*(phi[1]-plo[1])/ny;
   if (shi[1] >= celledge) jhi++;
 
-  // insure each index is between 0 and N-1 inclusive
+  // insure each index is between 0 and Nxy-1 inclusive
 
   ilo = MAX(ilo,0);
   ilo = MIN(ilo,nx-1);
@@ -1529,33 +1480,44 @@ void Grid::recurse2d(double *bblo, double *bbhi, cellint parentID, int level,
   // else it is a parent cell, so recurse
   // set newslo/newshi to intersection of slo/shi with new parent cell
 
+  newlo[2] = newhi[2] = 0.0;
+  
   for (iy = jlo; iy <= jhi; iy++) {
     for (ix = ilo; ix <= ihi; ix++) {
       ichild = (cellint) iy*nx + ix + 1;
-      idchild = p->id | (ichild << p->nbits);
-      grid->id_child_lohi(iparent,ichild,clo,chi);
-
-      if (hash->find(idchild) == hash->end()) parentflag = 0;
-      else if ((*hash)[idchild] >= 0) parentflag = 0;
-      else parentflag = 1;
+      childID = parentID | (ichild << nbits);
       
-      if (parentflag) {
-        index = (*hash)[idchild];
-        newparent = -index-1;
-        newslo[0] = MAX(slo[0],clo[0]);
-        newslo[1] = MAX(slo[1],clo[1]);
-        newshi[0] = MIN(shi[0],chi[0]);
-        newshi[1] = MIN(shi[1],chi[1]);
-        recurse2d(iline,newslo,newshi,newparent,n,list);
-      } else { 
-        overlap = cut2d->surf2grid_one(p1,p2,clo,chi);
-        if (!overlap) continue;
-        if (n < maxcellpersurf) list[n] = idchild;
-        n++;
+      if (chash->find(childID) == chash->end()) cflag = 0;
+      else cflag = 1;
+      if (phash->find(childID) == phash->end()) pflag = 0;
+      else pflag = 1;
+      if (!cflag && !pflag) continue;
+      
+      grid->id_child_lohi(level,plo,phi,ichild,clo,chi);
+      overlap = cut2d->surf2grid_one(p1,p2,clo,chi);
+      if (!overlap) continue;
+
+      if (cflag) {
+	if (npair == maxpair) {
+	  maxpair += DELTA_SEND;
+	  memory->grow(pairs,maxpair,2,"surf2grid:pairs");
+	}
+	pairs[npair][0] = i;
+	pairs[npair][1] = j;
+	npair++;
+	continue;
+      }
+
+      if (pflag) {
+	newlo[0] = MAX(bblo[0],clo[0]);
+	newlo[1] = MAX(bblo[1],clo[1]);
+	newhi[0] = MIN(bbhi[0],chi[0]);
+	newhi[1] = MIN(bbhi[1],chi[1]);
+	recurse2d(newlo,newhi,childID,level+1,line,clo,chi,
+		  npair,maxpair,pairs,chash,phash)
       }
     }
   }
-  */
 }
 
 /* ----------------------------------------------------------------------

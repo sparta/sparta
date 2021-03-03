@@ -374,7 +374,7 @@ class Grid : protected Pointers {
   void surf2grid_new_algorithm(int);
   void surf2grid_new2_algorithm(int);
   void recurse2d(double *, double *, cellint, int, Surf::Line *, double *, double *,
-		 int &, int &, int **&);
+		 int &, int &, int **&, MyHash *, MyHash *);
   void surf2grid_split(int, int);
   
   void partition_grid(int, int, int, int, int, int, int, int, GridTree *);
