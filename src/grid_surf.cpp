@@ -1030,7 +1030,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     // also compute the lo/hi extents of the child cells
 
     MyHash *rcbhash = new MyHash();
-    //MyHash *phash = new MyHash();
+    MyHash *phash = new MyHash();
     RCBlohi *rcblohi =
       (RCBlohi *) memory->smalloc(nrecv2*sizeof(RCBlohi),"surf2grid:rcblohi");
 
@@ -1038,14 +1038,13 @@ void Grid::surf2grid_new2_algorithm(int outflag)
       childID = rbuf2[i].childID;
       (*rcbhash)[childID] = i;
       id_lohi(childID,level,boxlo,boxhi,rcblohi[i].lo,rcblohi[i].hi);
-      /*
+
       for (ilevel = level; ilevel > 0; ilevel--) {
 	parentID = parent_of_child(childID,ilevel);
 	if (phash->find(parentID) == phash->end()) break;
 	(phash)[parentID] = 0;
 	childID = parentID;
       }
-      */
     }
 
     // in RCB decomp, compute intersections between:
@@ -1079,6 +1078,10 @@ void Grid::surf2grid_new2_algorithm(int outflag)
       sxhi = MIN(sxhi,myxhi);
       syhi = MIN(syhi,myyhi);
       szhi = MIN(szhi,myzhi);
+
+
+
+
       
       for (iz = szlo; iz <= szhi; iz++) {
 	for (iy = sylo; iy <= syhi; iy++) {
@@ -1189,6 +1192,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     memory->sfree(rbuf3);
     memory->sfree(rcblohi);
     delete rcbhash;
+    delete phash;
   }
 
   if (outflag) {
