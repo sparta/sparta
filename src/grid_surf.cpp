@@ -908,7 +908,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     id_find_child_uniform_level(level,0,boxlo,boxhi,allsurflo,
 				unilo[0],unilo[1],unilo[2]);
     id_find_child_uniform_level(level,1,boxlo,boxhi,allsurfhi,
-				unilhi[0],unihi[1],unihi[2]);
+				unihi[0],unihi[1],unihi[2]);
 
     // compute a recursive (RCB) decomp of the uniform grid box
     // gtree = tree of RCB cuts, cuts are along grid planes
@@ -919,8 +919,8 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     myunilo[0] = unilo[0]; myunihi[0] = unihi[0];
     myunilo[1] = unilo[1]; myunihi[1] = unihi[1];
     myunilo[2] = unilo[2]; myunihi[2] = unihi[2];
-    mybox(me,0,nprocs-1,myunilo[0],myunihi[1],myunilo[1],myunihi[1],
-	  myunilo[2],myunihi[2],,gtree);
+    mybox(me,0,nprocs-1,myunilo[0],myunihi[1],myunilo[1],
+	  myunihi[1],myunilo[2],myunihi[2],gtree);
 
     // first portion of irregular comm
     // loop over my surfs:
@@ -1057,7 +1057,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
       (*rcbhash)[childID] = i;
       id_lohi(childID,level,boxlo,boxhi,rcblohi[i].lo,rcblohi[i].hi);
 
-      for (ilevel = level; ilevel > 0; ilevel--) {
+      for (int ilevel = level; ilevel > 0; ilevel--) {
 	parentID = parent_of_child(childID,ilevel);
 	if (phash->find(parentID) == phash->end()) break;
 	(phash)[parentID] = 0;
