@@ -1424,10 +1424,9 @@ void Grid::recurse2d(double *bblo, double *bbhi, cellint parentID, int level,
                      int &npair, int &maxpair, int **&pair,
 		     MyHash *chash, MyHash *phash)
 {
-  int ix,iy,overlap;
+  int ix,iy,cflag,pflag,overlap;
   cellint ichild,childID;
   double celledge;
-  double plo[3],phi[3];
   double clo[3],chi[3];
   double newlo[3],newhi[3];
   
@@ -1435,8 +1434,6 @@ void Grid::recurse2d(double *bblo, double *bbhi, cellint parentID, int level,
   double *boxhi = domain->boxhi;
   double *p1 = line->p1;
   double *p2 = line->p2;
-
-  id_lohi(parentID,boxlo,boxhi,plo,phi);
 
   int nx = plevels[level].nx;
   int ny = plevels[level].ny;
