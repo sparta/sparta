@@ -1114,7 +1114,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
 
       // find all my RCB child cells this surf intersects
       
-      recurse2d(bblo,bbhi,0,0,&rcblines[i],boxlo,boxhi,
+      recurse2d(bblo,bbhi,0,0,i,&rcblines[i],boxlo,boxhi,
 		npair,maxpair,pairs,chash,phash);
     }
 
@@ -1419,7 +1419,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
 ------------------------------------------------------------------------- */
 
 void Grid::recurse2d(double *bblo, double *bbhi, cellint parentID, int level,
-		     Surf::Line *line, 
+		     int surfindex, Surf::Line *line, 
 		     double *plo, double *phi,
                      int &npair, int &maxpair, int **&pair,
 		     MyHash *chash, MyHash *phash)
@@ -1452,14 +1452,14 @@ void Grid::recurse2d(double *bblo, double *bbhi, cellint parentID, int level,
   // same equation as in Grid::id_child_lohi()
 
   celledge = plo[0] + ilo*(phi[0]-plo[0])/nx;
-  if (slo[0] <= celledge) ilo--;
+  if (bblo[0] <= celledge) ilo--;
   celledge = plo[0] + (ihi+1)*(phi[0]-plo[0])/nx;
-  if (shi[0] >= celledge) ihi++;
+  if (bbhi[0] >= celledge) ihi++;
 
   celledge = plo[1] + jlo*(phi[1]-plo[1])/ny;
-  if (slo[1] <= celledge) jlo--;
+  if (bblo[1] <= celledge) jlo--;
   celledge = plo[1] + (jhi+1)*(phi[1]-plo[1])/ny;
-  if (shi[1] >= celledge) jhi++;
+  if (bbhi[1] >= celledge) jhi++;
 
   // insure each index is between 0 and Nxy-1 inclusive
 
@@ -1499,8 +1499,8 @@ void Grid::recurse2d(double *bblo, double *bbhi, cellint parentID, int level,
 	  maxpair += DELTA_SEND;
 	  memory->grow(pairs,maxpair,2,"surf2grid:pairs");
 	}
-	pairs[npair][0] = i;
-	pairs[npair][1] = j;
+	pairs[npair][0] = surfindex;
+	pairs[npair][1] = (*chash)[childID];
 	npair++;
 	continue;
       }
@@ -1510,7 +1510,7 @@ void Grid::recurse2d(double *bblo, double *bbhi, cellint parentID, int level,
 	newlo[1] = MAX(bblo[1],clo[1]);
 	newhi[0] = MIN(bbhi[0],chi[0]);
 	newhi[1] = MIN(bbhi[1],chi[1]);
-	recurse2d(newlo,newhi,childID,level+1,line,clo,chi,
+	recurse2d(newlo,newhi,childID,level+1,surfindex,line,clo,chi,
 		  npair,maxpair,pairs,chash,phash)
       }
     }
