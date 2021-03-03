@@ -1511,7 +1511,7 @@ void Grid::recurse2d(double *bblo, double *bbhi, cellint parentID, int level,
 	newhi[0] = MIN(bbhi[0],chi[0]);
 	newhi[1] = MIN(bbhi[1],chi[1]);
 	recurse2d(newlo,newhi,childID,level+1,surfindex,line,clo,chi,
-		  npair,maxpair,pairs,chash,phash)
+		  npair,maxpair,pairs,chash,phash);
       }
     }
   }
