@@ -834,9 +834,6 @@ void Grid::surf2grid_new2_algorithm(int outflag)
   int dim = domain->dimension;
   int distributed = surf->distributed;
  
-  MPI_Barrier(world);
-  if (me == 0) printf("AAA 1\n");
- 
   boxlo = domain->boxlo;
   boxhi = domain->boxhi;
 
@@ -901,9 +898,6 @@ void Grid::surf2grid_new2_algorithm(int outflag)
 
   for (int level = minlevel; level <= maxlevel; level++) {
 
-    MPI_Barrier(world);
-    if (me == 0) printf("LEV %d\n",level);
-
     if (outflag) {
       MPI_Barrier(world);
       t1 = MPI_Wtime();
@@ -935,16 +929,6 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     childID = id_uniform_level(level,myunihi[0],myunihi[1],myunihi[2]);
     id_lohi(childID,level,boxlo,boxhi,bblo,rcbhi);
 
-    printf("BOX lo %g %g %g hi %g %g %g\n",
-	   boxlo[0],boxlo[1],boxlo[2],boxhi[0],boxhi[1],boxhi[2]);
-    printf("UNI lo %d %d %d hi %d %d %d\n",
-	   unilo[0],unilo[1],unilo[2],unihi[0],unihi[1],unihi[2]);
-    printf("MYUNI lo %d %d %d hi %d %d %d\n",
-	   myunilo[0],myunilo[1],myunilo[2],myunihi[0],myunihi[1],myunihi[2]);
-    printf("RCB lo %g %g %g hi %g %g %g\n",
-	   rcblo[0],rcblo[1],rcblo[2],rcbhi[0],rcbhi[1],rcbhi[2]);
-    
-
     // first portion of irregular comm
     // loop over my surfs:
     //   compute surf bbox as a brick of uniform grid cells at this level
@@ -963,28 +947,6 @@ void Grid::surf2grid_new2_algorithm(int outflag)
       id_find_child_uniform_level(level,1,boxlo,boxhi,shi,
 				  sunihi[0],sunihi[1],sunihi[2]);
 
-      if (isurf == 0) {
-	printf("ISURF slo %g %g %g shi %g %g %g\n",
-	       slo[0],slo[1],slo[2],shi[0],shi[1],shi[2]);
-	printf("BOX lo %g %g %g hi %g %g %g\n",
-	       boxlo[0],boxlo[1],boxlo[2],boxhi[0],boxhi[1],boxhi[2]);
-	printf("SUNI lo %d %d %d hi %d %d %d\n",
-	       sunilo[0],sunilo[1],sunilo[2],sunihi[0],sunihi[1],sunihi[2]);
-	printf("MYUNI lo %d %d %d hi %d %d %d\n",
-	       myunilo[0],myunilo[1],myunilo[2],myunihi[0],myunihi[1],myunihi[2]);
-      }
-       
-      // glo/hi = overlap of surf grid bbox with my RCB grid box
-
-      /*
-      glo[0] = MAX(sunilo[0],myunilo[0]);
-      glo[1] = MAX(sunilo[1],myunilo[1]);
-      glo[2] = MAX(sunilo[2],myunilo[2]);
-      ghi[0] = MIN(sunihi[0],myunihi[0]);
-      ghi[1] = MIN(sunihi[1],myunihi[1]);
-      ghi[2] = MIN(sunihi[2],myunihi[2]);
-      */
-      
       // drop trimmed surf box on RCB tree
       // return list of procs whose RCB subbox it overlaps
 
