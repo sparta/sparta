@@ -930,9 +930,9 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     mybox(me,0,nprocs-1,myunilo[0],myunihi[0],myunilo[1],
 	  myunihi[1],myunilo[2],myunihi[2],gtree);
 
-    childID = id_uniform_level(level,myunilo[0],myunilo[2],myunilo[2]);
+    childID = id_uniform_level(level,myunilo[0],myunilo[1],myunilo[2]);
     id_lohi(childID,level,boxlo,boxhi,rcblo,bbhi);
-    childID = id_uniform_level(level,myunihi[0],myunihi[2],myunihi[2]);
+    childID = id_uniform_level(level,myunihi[0],myunihi[1],myunihi[2]);
     id_lohi(childID,level,boxlo,boxhi,bblo,rcbhi);
 
     printf("BOX lo %g %g %g hi %g %g %g\n",
