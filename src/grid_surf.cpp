@@ -1081,8 +1081,9 @@ void Grid::surf2grid_new2_algorithm(int outflag)
 
     int npair = 0;
     int overlap;
-    
-    for (i = 0; i < nrecv1; i++) {
+
+    if (dim == 2) {
+      for (i = 0; i < nrecv1; i++) {
 
       // skip surf if it does not intersect my RCB box
       
@@ -1091,8 +1092,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
 
       // slo/hi = bbox around one surf
       
-      if (dim == 2) surf->bbox_one(&rcblines[i],slo,shi);
-      else surf->bbox_one(&rcbtris[i],slo,shi);
+      surf->bbox_one(&rcblines[i],slo,shi);
 
       // bblo/hi = overlap of surf bbox with my RCB box
 
