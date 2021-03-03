@@ -1114,7 +1114,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
 
       // find all my RCB child cells this surf intersects
       
-      recurse2d(bblo,bbhi,0,0,rcblines[i],boxlo,boxhi,npair,maxpair,pairs);
+      recurse2d(bblo,bbhi,0,0,&rcblines[i],boxlo,boxhi,npair,maxpair,pairs);
     }
 
     /*
