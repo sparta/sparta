@@ -1103,6 +1103,9 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     int npair = 0;
     int overlap;
 
+    // DEBUG
+    int count = 0;
+    
     for (i = 0; i < nrecv1; i++) {
 
       // skip surf if it does not intersect my RCB box
@@ -1125,13 +1128,14 @@ void Grid::surf2grid_new2_algorithm(int outflag)
       bbhi[2] = MIN(shi[2],rcbhi[2]);
 
       // find all my RCB child cells this surf intersects
-      
+
+      count++;
       recurse2d(bblo,bbhi,0,0,i,&rcblines[i],boxlo,boxhi,
 		npair,maxpair,pairs,chash,phash);
     }
 
     MPI_Barrier(world);
-    if (me == 0) printf("RECURSE %d\n",npair);
+    printf("RECURSE me %d: %d %d %d count %d\n",me,npair,nrecv1,nrecv2,count);
     
     if (outflag) {
       MPI_Barrier(world);
@@ -1149,7 +1153,7 @@ void Grid::surf2grid_new2_algorithm(int outflag)
     for (i = 0; i < npair; i++) {
       if (nsend == maxsend3) {
 	maxsend3 += DELTA_SEND;
-	memory->grow(proclist3,maxsend3,"surf2grid:proclist3");
+	memory->grow(proclist3,maxsend3,"surf2grigd:proclist3");
 	sbuf3 = (Send3 *) memory->srealloc(sbuf3,maxsend3*sizeof(Send3),
 					  "surf2grid:sbuf3");
       }
