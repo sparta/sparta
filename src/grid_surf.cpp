@@ -1548,7 +1548,7 @@ void Grid::recurse3d(double *bblo, double *bbhi, cellint parentID, int level,
                      int &npair, int &maxpair, int **&pairs,
 		     MyHash *chash, MyHash *phash)
 {
-  int ix,iy,cflag,pflag,overlap;
+  int ix,iy,iz,cflag,pflag,overlap;
   cellint ichild,childID;
   double celledge;
   double clo[3],chi[3];
