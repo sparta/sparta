@@ -1625,7 +1625,7 @@ void Grid::recurse3d(double *bblo, double *bbhi, cellint parentID, int level,
 	if (!cflag && !pflag) continue;
       
 	grid->id_child_lohi(level,plo,phi,ichild,clo,chi);
-	overlap = cut2d->surf2grid_one(p1,p2,clo,chi);
+	overlap = cut3d->surf2grid_one(p1,p2,p3,clo,chi);
 	if (!overlap) continue;
 
 	if (cflag) {
