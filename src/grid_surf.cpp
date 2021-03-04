@@ -841,10 +841,6 @@ void Grid::surf2grid_new2_algorithm(int outflag)
   allsurflo = surf->bblo;
   allsurfhi = surf->bbhi;
 
-  if (me == 0) printf("ALLSURF BBOX lo %g %g %g hi %g %g %g\n",
-		      allsurflo[0],allsurflo[2],allsurflo[2],
-		      allsurfhi[0],allsurfhi[2],allsurfhi[2]);
-
   if (dim == 3) cut3d = new Cut3d(sparta);
   else cut2d = new Cut2d(sparta,domain->axisymmetric);
 
