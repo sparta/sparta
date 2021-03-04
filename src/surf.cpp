@@ -687,21 +687,21 @@ void Surf::bbox_all()
   int dim = domain->dimension;
 
   int istart,istop,idelta;
-  Line *looplines;
-  Tri *looptris;
+  Line *linelist;
+  Tri *trilist;
   
   if (!distributed) {
     istart = me;
     istop = nlocal;
     idelta = nprocs;
-    looplines = lines;
-    looptris = tris;
+    linelist = lines;
+    trilist = tris;
   } else {
     istart = 0;
     istop = nown;
     idelta = 1;
-    looplines = mylines;
-    looptris = mytris;
+    linelist = mylines;
+    trilist = mytris;
   }
 
   for (j = 0; j < 3; j++) {
@@ -711,12 +711,12 @@ void Surf::bbox_all()
 
   if (dim == 2) {
     for (i = istart; i < istop; i += idelta) {
-      x = looplines[i].p1;
+      x = linelist[i].p1;
       for (j = 0; j < 2; j++) {
 	bblo_one[j] = MIN(bblo_one[j],x[j]);
 	bbhi_one[j] = MAX(bbhi_one[j],x[j]);
       }
-      x = looplines[i].p2;
+      x = linelist[i].p2;
       for (j = 0; j < 2; j++) {
 	bblo_one[j] = MIN(bblo_one[j],x[j]);
 	bbhi_one[j] = MAX(bbhi_one[j],x[j]);
@@ -727,17 +727,17 @@ void Surf::bbox_all()
     
   } else if (dim == 3) {
     for (i = istart; i < istop; i += idelta) {
-      x = looptris[i].p1;
+      x = trilist[i].p1;
       for (j = 0; j < 3; j++) {
 	bblo_one[j] = MIN(bblo_one[j],x[j]);
 	bbhi_one[j] = MAX(bbhi_one[j],x[j]);
       }
-      x = looptris[i].p2;
+      x = trilist[i].p2;
       for (j = 0; j < 3; j++) {
 	bblo_one[j] = MIN(bblo_one[j],x[j]);
 	bbhi_one[j] = MAX(bbhi_one[j],x[j]);
       }
-      x = looptris[i].p3;
+      x = trilist[i].p3;
       for (j = 0; j < 3; j++) {
 	bblo_one[j] = MIN(bblo_one[j],x[j]);
 	bbhi_one[j] = MAX(bbhi_one[j],x[j]);
