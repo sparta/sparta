@@ -1140,8 +1140,6 @@ void Grid::surf2grid_new2_algorithm(int outflag)
       }
     }
 
-    printf("RECURSE me %d nrecv %d %d npair %d\n",me,nrecv1,nrecv2,npair);
-    
     if (outflag) {
       MPI_Barrier(world);
       t4 = MPI_Wtime();
