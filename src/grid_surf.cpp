@@ -206,7 +206,7 @@ void Grid::surf2grid_one(int flag, int icell, int iparent, int nsurf_caller,
 }
 
 /* ----------------------------------------------------------------------
-   find surfs that overlap owned grid cells
+   find surfs that overlap owned grid cells, only for non-distributed surfs
    algorithm: for each of my cells, check all surfs
    in cells: set nsurf, csurfs
    in cinfo: set type=OVERLAP for cells with surfs
@@ -234,7 +234,7 @@ void Grid::surf2grid_cell_algorithm(int outflag)
   if (dim == 3) cut3d = new Cut3d(sparta);
   else cut2d = new Cut2d(sparta,domain->axisymmetric);
 
-  // compute overlap of surfs with each cell I own
+  // compute overlap of all surfs with each cell I own
   // info stored in nsurf,csurfs
   // skip if nsplit <= 0 b/c split cells could exist if restarting
 
@@ -246,10 +246,14 @@ void Grid::surf2grid_cell_algorithm(int outflag)
   for (int icell = 0; icell < nlocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
 
+    // skip grid cell if outside bounding box of all surfs
+    
     lo = cells[icell].lo;
     hi = cells[icell].hi;
     if (!box_overlap(lo,hi,slo,shi)) continue;
 
+    // cut2d/3d surf2grid finds intersection of all surfs with a single grid cell
+    
     ptr = csurfs->vget();
 
     if (dim == 3)
@@ -310,9 +314,19 @@ void Grid::surf2grid_cell_algorithm(int outflag)
 }
 
 /* ----------------------------------------------------------------------
-   find surfs that overlap owned grid cells
-   NOTE: doc this
-   algorithm:
+   find surfs that overlap owned grid cells, for non-distributed or distributed
+   algorithm: 
+     each proc responsible for subset of surfs
+     loop over levels of hierarchical grid
+     conceptual uniform grid at that level overlayed on bounding box for all surfs
+     partition uniform grid via RCB into sub-grids per proc
+     irregular comm of 2 sets of data to the RCB procs
+       (a) surfs I own with a bbox that overlaps any procs RCB sub-grid
+       (b) child cells I own at level to owning proc in RCB decomp
+     each proc can then identify surf/grid intersections for its RCB grid cells
+       done recursively by dropping each surf down conceptual tree of parent cells
+       until reach child cells that exist at level
+     irregular comm the surf/grid intersection pairs back to procs that own grid cells
    in cells: set nsurf, csurfs
    in cinfo: set type=OVERLAP for cells with surfs
 ------------------------------------------------------------------------- */
@@ -362,7 +376,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
   boxlo = domain->boxlo;
   boxhi = domain->boxhi;
 
-  surf->bbox_all();
+  surf->bbox_all();                 // bounding box for all surfs
   allsurflo = surf->bblo;
   allsurfhi = surf->bbhi;
 
@@ -373,7 +387,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
   memory->create(plist,nprocs,"surf2grid:plist");
   gtree = (GridTree *) memory->smalloc(nprocs*sizeof(GridTree),"surf2grid:gtree");
 
-  // data structs for 3 irregular comms
+  // data structs for 3 rendezvous comms
 
   int *proclist1 = NULL;
   int *proclist2 = NULL;
@@ -387,7 +401,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
   int **pairs = NULL;
   int maxpair = 0;
 
-  // which set of Lines or Tris to process
+  // which set of Lines or Tris to process, distributed or not
 
   Surf::Line *lines;
   Surf::Tri *tris;
@@ -415,7 +429,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
   else nbytes_surf = sizeof(Surf::Tri);
 
   // loop over levels of grid
-  // at each iteration, operate only on child cells at that level
+  // at each iteration, operate only on child cells that exist at that level
 
   tmap = tcomm1 = tcomm2 = tcomm3 = 0.0;
 
@@ -436,7 +450,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
     id_find_child_uniform_level(level,1,boxlo,boxhi,allsurfhi,
 				unihi[0],unihi[1],unihi[2]);
 
-    // compute a recursive (RCB) decomp of the uniform grid box
+    // compute a recursive decomp (RCB) of the uniform grid box
     // gtree = tree of RCB cuts, cuts are along grid planes
     // myunilo/hi = inclusive range of my portion of grid box
     // rcblo/hi = corner points of my RCB box
@@ -454,11 +468,11 @@ void Grid::surf2grid_surf_algorithm(int outflag)
     childID = id_uniform_level(level,myunihi[0],myunihi[1],myunihi[2]);
     id_lohi(childID,level,boxlo,boxhi,bblo,rcbhi);
 
-    // first portion of irregular comm
+    // first irregular comm
     // loop over my surfs:
-    //   compute surf bbox as a brick of uniform grid cells at this level
+    //   compute single surf bbox as a brick of uniform grid cells at this level
     //   drop bbox down RCB tree to identify set of RCB procs the surf overlaps
-    // send the surf info via irregular comm
+    // send copy of surf geometry to RCB procs
     // nrecv1 = # of surfs I have copy of in RCB decomp
     // NOTE: this comm might be faster in Rvous mode?
 
@@ -509,9 +523,9 @@ void Grid::surf2grid_surf_algorithm(int outflag)
       tcomm1 += t2-t1;
     }
 
-    // second portion of irregular comm
+    // second irregular comm
     // identify which RCB proc owns each of my child cells at this level
-    // send the cell info via irregular comm
+    // send childID and my proc ID to RCB procs
     // nrecv2 = # of child cells I have copy of in RCB decomp
 
     int cx,cy,cz;
@@ -564,9 +578,12 @@ void Grid::surf2grid_surf_algorithm(int outflag)
       tcomm2 += t3-t2;
     }
 
-    // hash the cell IDs I own in RCB decomp
-    // hash all the parent IDs of those cells
-    // also compute the lo/hi extents of the child cells
+    // chash = hash with cell IDs I own in RCB decomp
+    //   key = childID, value = index in my RCB list of child cells
+    // phash = hash with all parent cell IDs of child cells 
+    //   key = parentID, value not used
+    //   b/c RCB grid box is compact, size of phash should be small
+    // rcblohi = lo/hi extents of each child cells
 
     MyHash *chash = new MyHash();
     MyHash *phash = new MyHash();
@@ -589,15 +606,18 @@ void Grid::surf2grid_surf_algorithm(int outflag)
     }
 
     // in RCB decomp, compute intersections between:
-    //   my RCB grid cells that exist and my set of surfs
-    // append results to my list of surf/grid intersections
+    //   my RCB child cells (only those that exist) and
+    //   set of RCB surfs that overlap my RCB grid box
+    // append results one by one to pairs = surf/grid intersections
     // loop over surfs:
-    //   compute surf's bbox in uniform grid
-    //   find intersection with box of grid cells I own
-    //   for each grid cell that exists in intersection,
-    //     check for actual overlap via cut2d/cut3d
-    //   build pairs list = one surf, one cell
-    //     as indices into received RCB data
+    //   check if surf actually intersects with RCB box, else skip it
+    //     could just be the bbox of surf overlaps with RCB box
+    //   bblo/hi = intersection of surf bbox with RCB box
+    //   recurse2d/3d starts with bblo/hi within parentID = 0 (sim box)
+    //     will find every child cell in chash that surf intersects with
+    //     checks for actual intersectino are via cut2d/cut3d
+    //   build list of pairs, one pair = surf index, cell index
+    //     both are indices into received RCB surf/cells data
 
     Surf::Line *rcblines;
     Surf::Tri *rcbtris;
@@ -668,7 +688,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
     }
 
     // third irregular comm
-    // send each surf/grid intersection back to proc that owns grid cell
+    // send each surf/grid intersection pair back to proc that owns grid cell
 
     int surfindex,cellindex;
 
@@ -698,8 +718,8 @@ void Grid::surf2grid_surf_algorithm(int outflag)
     irregular->exchange_uniform((char *) sbuf3,sizeof(Send3),(char *) rbuf3);
     delete irregular;
 
-    // process received cell/surf pairs
-    // set nsurf and csurfs for each cell (only ones at this level)
+    // process received cell/surf pairs back in simulation decomposition
+    // set nsurf and csurfs for each cell (only child cells at this level)
     // 1st pass: count surfs in each cell, then allocate csurfs in each cell
     // 2nd pass: fill each cell's csurf list
 
@@ -764,7 +784,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
   // non-distributed surfs:
   // each cell's csurf list currently stores surf IDs
-  // convert to indices into global list stored by each proc
+  // convert them indices into global list stored by each proc
   // shash used to store IDs of entire global list
 
   if (!distributed) {
@@ -797,6 +817,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
   // distributed surfs:
   // rendezvous operation to obtain nlocal surfs for each proc
+  //   these are the surfs that intersect child cells this proc owns
   // each grid cell requests a surf from proc that owns surf in mylines/mytris
   //   use shash to only do this once per surf
   // receive the surf and store in nlocal lines/tris
