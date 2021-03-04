@@ -1588,9 +1588,9 @@ void Grid::recurse3d(double *bblo, double *bbhi, cellint parentID, int level,
   if (bbhi[1] >= celledge) jhi++;
 
   celledge = plo[2] + klo*(phi[2]-plo[2])/nz;
-  if (slo[2] <= celledge) klo--;
+  if (bblo[2] <= celledge) klo--;
   celledge = plo[2] + (khi+1)*(phi[2]-plo[2])/nz;
-  if (shi[2] >= celledge) khi++;
+  if (bbhi[2] >= celledge) khi++;
 
   // insure each index is between 0 and Nxy-1 inclusive
 
