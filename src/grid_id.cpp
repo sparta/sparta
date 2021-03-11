@@ -28,6 +28,22 @@ enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 //   to multiply 2 or 3 nx,ny,nz indices
 
 /* ----------------------------------------------------------------------
+   calculate parentID of a childID at level
+   return parentID
+------------------------------------------------------------------------- */
+
+cellint Grid::parent_of_child(cellint childID, int level)
+{
+  // mask = all 1s for parent bits of ID
+
+  int parentbits = plevels[level-1].nbits;
+  cellint mask = (1L << parentbits) - 1;
+  cellint parentID = childID & mask;
+  
+  return parentID;
+}
+
+/* ----------------------------------------------------------------------
    find child cell within parentID which contains point X
    level = level of parent cell
    oplo/ophi = original parent cell corner pts
