@@ -268,6 +268,7 @@ class Grid : protected Pointers {
 
   // grid_id.cpp
 
+  cellint parent_of_child(cellint, int);
   int id_find_child(cellint, int, double *, double *, double *);
   cellint id_uniform_level(int, int, int, int);
   void id_find_child_uniform_level(int, int, double *, double *, double *,
@@ -370,10 +371,14 @@ class Grid : protected Pointers {
   // private methods
 
   void surf2grid_cell_algorithm(int);
-  void surf2grid_new_algorithm(int);
-  void surf2grid_surf_algorithm(int, int);
+  void surf2grid_surf_algorithm(int);
   void surf2grid_split(int, int);
-
+  void recurse2d(cellint, int, double *, double *,
+		 int, Surf::Line *, double *, double *,
+		 int &, int &, int **&, MyHash *, MyHash *);
+  void recurse3d(cellint, int, double *, double *,
+		 int, Surf::Tri *, double *, double *,
+		 int &, int &, int **&, MyHash *, MyHash *);
   void partition_grid(int, int, int, int, int, int, int, int, GridTree *);
   void mybox(int, int, int, int &, int &, int &, int &, int &, int &,
 	     GridTree *);

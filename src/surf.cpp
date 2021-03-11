@@ -682,47 +682,65 @@ void Surf::bbox_all()
 {
   int i,j;
   double bblo_one[3],bbhi_one[3];
+  double *x;
+
+  int dim = domain->dimension;
+
+  int istart,istop,idelta;
+  Line *linelist;
+  Tri *trilist;
+  
+  if (!distributed) {
+    istart = me;
+    istop = nlocal;
+    idelta = nprocs;
+    linelist = lines;
+    trilist = tris;
+  } else {
+    istart = 0;
+    istop = nown;
+    idelta = 1;
+    linelist = mylines;
+    trilist = mytris;
+  }
 
   for (j = 0; j < 3; j++) {
     bblo_one[j] = BIG;
     bbhi_one[j] = -BIG;
   }
 
-  int dim = domain->dimension;
-  double *x;
-
   if (dim == 2) {
-    for (i = 0; i < nlocal; i++) {
-      x = lines[i].p1;
+    for (i = istart; i < istop; i += idelta) {
+      x = linelist[i].p1;
       for (j = 0; j < 2; j++) {
-        bblo_one[j] = MIN(bblo_one[j],x[j]);
-        bbhi_one[j] = MAX(bbhi_one[j],x[j]);
+	bblo_one[j] = MIN(bblo_one[j],x[j]);
+	bbhi_one[j] = MAX(bbhi_one[j],x[j]);
       }
-      x = lines[i].p2;
+      x = linelist[i].p2;
       for (j = 0; j < 2; j++) {
-        bblo_one[j] = MIN(bblo_one[j],x[j]);
-        bbhi_one[j] = MAX(bbhi_one[j],x[j]);
+	bblo_one[j] = MIN(bblo_one[j],x[j]);
+	bbhi_one[j] = MAX(bbhi_one[j],x[j]);
       }
     }
     bblo_one[2] = domain->boxlo[2];
     bbhi_one[2] = domain->boxhi[2];
-
+    
   } else if (dim == 3) {
-    for (i = 0; i < nlocal; i++) {
-      x = tris[i].p1;
+    for (i = istart; i < istop; i += idelta) {
+      x = trilist[i].p1;
       for (j = 0; j < 3; j++) {
-        bblo_one[j] = MIN(bblo_one[j],x[j]);
-        bbhi_one[j] = MAX(bbhi_one[j],x[j]);
+	bblo_one[j] = MIN(bblo_one[j],x[j]);
+	bbhi_one[j] = MAX(bbhi_one[j],x[j]);
       }
-      x = tris[i].p2;
+      x = trilist[i].p2;
       for (j = 0; j < 3; j++) {
-        bblo_one[j] = MIN(bblo_one[j],x[j]);
-        bbhi_one[j] = MAX(bbhi_one[j],x[j]);
+	bblo_one[j] = MIN(bblo_one[j],x[j]);
+	bbhi_one[j] = MAX(bbhi_one[j],x[j]);
       }
-      x = tris[i].p3;
+      x = trilist[i].p3;
       for (j = 0; j < 3; j++) {
-        bblo_one[j] = MIN(bblo_one[j],x[j]);
-        bbhi_one[j] = MAX(bbhi_one[j],x[j]);
+	bblo_one[j] = MIN(bblo_one[j],x[j]);
+	bbhi_one[j] = MAX(bbhi_one[j],x[j]);
       }
     }
   }
