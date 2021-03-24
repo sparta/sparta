@@ -75,7 +75,7 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   nlocal = nghost = nmax = 0;
   lines = NULL;
   tris = NULL;
-  pushflag = 1;
+  pushflag = 0;  // turn off by default for testing
 
   nown = maxown = 0;
   mylines = NULL;
