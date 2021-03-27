@@ -417,16 +417,18 @@ def read_grid_file(grid_desc, chunk_info):
       if cell_is_inside_chunk(first_level_loc, chunk_info):
         parents = sgf.get_parent_cells_in_dashed_id(dashed_id)
         cld = grid_desc["parent_grid"]
+
         for idx, pid in enumerate(parents):
           level = idx + 1
-          if pid in cld:
-            cld = cld[pid]['np']
-          else:
+
+          if pid not in cld:
             level_dims = sgf.get_level_dimensions(level+1)
             x = level_dims['x']
             y = level_dims['y']
             z = level_dims['z']
             cld[pid] = {'px': x, 'py': y, 'pz': z, 'np':{}}
+
+          cld = cld[pid]['np']
 
 def cell_is_inside_chunk(cell_first_level_loc, chunk_info):
   xloc = cell_first_level_loc['x']
