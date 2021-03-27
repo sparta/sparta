@@ -31,6 +31,7 @@ class SpartaGridFile:
     self.__level_dimensions = {}
     self.__grid_file_handle = None
     self.__grid_file_path = grid_file_path
+    self.__iterate_local_cell_ids = False
     self._open_grid_file()
     self._read_grid_file_header()
     self._close_grid_file()
@@ -42,6 +43,17 @@ class SpartaGridFile:
   @property
   def number_of_levels(self):
     return self.__number_of_levels
+
+  @property
+  def iterate_local_cell_ids(self):
+    return self.__iterate_local_cell_ids
+
+  @iterate_local_cell_ids.setter
+  def iterate_local_cell_ids(self, value):
+        if type(value) is not bool:
+            raise TypeError("Must be type bool")
+        else:
+            self.__iterate_local_cell_ids = value
 
   def get_level_dimensions(self, level_number):
     if level_number in self.__level_dimensions:
@@ -60,7 +72,11 @@ class SpartaGridFile:
       self._close_grid_file()
       raise StopIteration
     else:
-      return self._create_dashed_id(self._clean_line(line))
+      local_cell_id = self._clean_line(line)
+      if self.iterate_local_cell_ids:
+        return local_cell_id
+      else:
+        return self.create_dashed_id(local_cell_id)
 
   def _get_grid_file_cells_section_string(self):
     return 'Cells'
@@ -136,13 +152,13 @@ class SpartaGridFile:
       y = ldims['y']
       z = ldims['z']
       bits = int(math.floor(math.log(int(x*y*z),2)) + 1)
-      mask = 2**bits - 1
-      mask = mask << bits_shifted_left
-      ldims['bit_mask'] = mask
+      max_decimal_value = 2**bits-1
+      bit_mask = max_decimal_value << bits_shifted_left
+      ldims['bit_mask'] = bit_mask
       ldims['bits_to_shift_right'] = bits_shifted_left
       bits_shifted_left += bits
   
-  def _create_dashed_id(self, local_cell_id):
+  def create_dashed_id(self, local_cell_id):
     if not local_cell_id:
       return local_cell_id
     local_cell_id = int(local_cell_id)
@@ -161,6 +177,32 @@ class SpartaGridFile:
         else:
           dashed_id = str(level_id) + "-" + dashed_id
     return dashed_id
+
+  def get_local_cell_id_from_dashed_cell_id(self, dashed_id):
+    id = 0
+    if dashed_id:
+      cells = self.get_cells_in_dashed_id(dashed_id)
+      for level in range(len(cells), 0, -1):
+        cid = cells[len(cells)-level]
+        ldims = self.get_level_dimensions(level)
+        bits_to_shift_right = ldims["bits_to_shift_right"]
+        max_decimal_value = 1 << bits_to_shift_right
+        id += cid*max_decimal_value
+    return id
+
+  def get_parent_cells_in_dashed_id(self, dashed_id):
+    parents = dashed_id.split('-')
+    if len(parents) == 1:
+      return []
+    parents.pop(0)
+    parents = [int(i) for i in parents]
+    parents.reverse()
+    return parents
+
+  def get_cells_in_dashed_id(self, dashed_id):
+    children = dashed_id.split('-')
+    children = [int(i) for i in children]
+    return children
 
 def create_grid_from_grid_file(grid_desc):
   sgf = SpartaGridFile(grid_desc["read_grid"])
@@ -373,7 +415,7 @@ def read_grid_file(grid_desc, chunk_info):
     if dashed_id:
       first_level_loc = get_cell_first_level_location(dashed_id, grid_desc)
       if cell_is_inside_chunk(first_level_loc, chunk_info):
-        parents = get_parent_cells_in_dashed_id(dashed_id)
+        parents = sgf.get_parent_cells_in_dashed_id(dashed_id)
         cld = grid_desc["parent_grid"]
         for idx, pid in enumerate(parents):
           level = idx + 1
@@ -407,15 +449,6 @@ def get_cell_first_level_location(dashed_id, grid_desc):
   yloc += 1
   zloc += 1
   return {'x' : xloc, 'y' : yloc, 'z' : zloc}
-
-def get_parent_cells_in_dashed_id(dashed_id):
-  parents = dashed_id.split('-')
-  if len(parents) == 1:
-    return []
-  parents.pop(0)
-  parents = [int(i) for i in parents]
-  parents.reverse()
-  return parents
 
 def level_contains_refined_cells(level, grid_desc, dashed_id):
   if "parent_grid" in grid_desc:
