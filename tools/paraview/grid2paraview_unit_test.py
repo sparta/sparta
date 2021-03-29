@@ -4,17 +4,11 @@ from grid2paraview import SpartaGridFile
 
 GRID_FILE_200 = os.path.join(os.path.dirname(__file__),
     "tests/input_files/grid.200")
-GRID_FILE_5000 = os.path.join(os.path.dirname(__file__),
-    "tests/input_files/grid.5000")
 
 class TestSpartaGridFile(unittest.TestCase):
 
     def testSpartaGridFile200(self):
        sgf = SpartaGridFile(GRID_FILE_200)
-       self.checkDashedIdConversion(sgf)
-
-    def testSpartaGridFile5000(self):
-       sgf = SpartaGridFile(GRID_FILE_5000)
        self.checkDashedIdConversion(sgf)
 
     def checkDashedIdConversion(self, sparta_grid_file):
