@@ -336,6 +336,14 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
   while (1) {
     int grazeflag = build_clines();
 
+#ifdef VERBOSE
+    if (id == VERBOSE_ID) {
+      failed_cell();
+      printf("Clines for cell %d\n",id);
+      print_clines();
+    }
+#endif
+
     // all lines just touched cell surface
     // mark corner points based on grazeflag and in/out line orientation
     // return area = 0.0 for UNKNOWN/INSIDE, full cell area for OUTSIDE
