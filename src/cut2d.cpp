@@ -69,6 +69,7 @@ Cut2d::Cut2d(SPARTA *sparta, int caller_axisymmetric) : Pointers(sparta)
    csurfs = indices into global surf list
    return nsurf = # of surfs
    return -1 if nsurf > max
+   called by Grid::surf2grid_cell_algorithm
 ------------------------------------------------------------------------- */
 
 int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
@@ -89,7 +90,7 @@ int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
     x1 = lines[m].p1;
     x2 = lines[m].p2;
 
-    if (id_caller == 3637 && m == 361) printf("AAA\n");
+    if (id_caller == 3637) printf("AAA m %d\n",m);
     
     if (MAX(x1[0],x2[0]) < lo[0]) continue;
     if (MIN(x1[0],x2[0]) > hi[0]) continue;
@@ -159,14 +160,15 @@ int Cut2d::surf2grid_list(cellint id_caller,
    p,q = endpoints of surf
    lo,hi = grid cell corner points
    return 1 if intersects, 0 if not
-   called by Grid::surf2grid2
+   called by Grid::surf2grid_surf_algorithm
 ------------------------------------------------------------------------- */
 
 int Cut2d::surf2grid_one(double *p, double *q,
-                         double *lo_caller, double *hi_caller)
+                         double *lo_caller, double *hi_caller, cellint childID)
 {
   lo = lo_caller;
   hi = hi_caller;
+  if (childID == 3637) printf("AAA %d: p %g %g q %g %g\n",p[0],p[1],q[0],q[1]);
   return cliptest(p,q);
 }
 
