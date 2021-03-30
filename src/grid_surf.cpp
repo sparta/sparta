@@ -484,7 +484,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
       id_find_child_uniform_level(level,0,boxlo,boxhi,slo,
 				  sunilo[0],sunilo[1],sunilo[2],lines[isurf].id);
       id_find_child_uniform_level(level,1,boxlo,boxhi,shi,
-				  sunihi[0],sunihi[1],sunihi[2]),lines[isurf].id;
+				  sunihi[0],sunihi[1],sunihi[2],lines[isurf].id);
 
       // drop trimmed surf box on RCB tree
       // return list of procs whose RCB subbox it overlaps
