@@ -190,8 +190,9 @@ void Grid::id_find_child_uniform_level(int level, int lohi,
   //  decrement or increment of index
   // but 0 <= index <= N-1 is still required
 
-  if (surfID == 362) printf("Uniform for surf 362: xyz grid %d %d %d lohi %d x %g %g\n",
-			    xgrid,ygrid,zgrid,lohi,x[0],x[1]);
+  if (surfID == 362) printf("Uniform for surf 362: xyz grid %d %d %d "
+			    "lohi %d x %g %g celllo %g %g\n",
+			    xgrid,ygrid,zgrid,lohi,x[0],x[1],lo[0],lo[1]);
   
   if (lohi == 0) {
     if (x[0] == lo[0] && x[0] != boxlo[0]) xgrid--;
