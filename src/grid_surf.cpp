@@ -446,9 +446,9 @@ void Grid::surf2grid_surf_algorithm(int outflag)
     // unilo/hi = inclusive range of grid box of overlapping grid box
 
     id_find_child_uniform_level(level,0,boxlo,boxhi,allsurflo,
-				unilo[0],unilo[1],unilo[2]);
+				unilo[0],unilo[1],unilo[2],-1);
     id_find_child_uniform_level(level,1,boxlo,boxhi,allsurfhi,
-				unihi[0],unihi[1],unihi[2]);
+				unihi[0],unihi[1],unihi[2],-1);
 
     // compute a recursive decomp (RCB) of the uniform grid box
     // gtree = tree of RCB cuts, cuts are along grid planes
