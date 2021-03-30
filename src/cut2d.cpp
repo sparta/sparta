@@ -168,7 +168,8 @@ int Cut2d::surf2grid_one(double *p, double *q,
 {
   lo = lo_caller;
   hi = hi_caller;
-  if (childID == 3637) printf("AAA %d: p %g %g q %g %g\n",p[0],p[1],q[0],q[1]);
+  if (childID == 3637) printf("AAA %d: p %g %g q %g %g clip %d\n",
+			      p[0],p[1],q[0],q[1],cliptest(p,q));
   return cliptest(p,q);
 }
 
