@@ -34,9 +34,8 @@ enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut3d
 
 // cell ID for 2d or 3d cell
 
-//#define VERBOSE
-#define VERBOSE_ID 37
-//#define VERBOSE_ID 27810406321L
+#define VERBOSE
+#define VERBOSE_ID 3637
 
 /* ---------------------------------------------------------------------- */
 
@@ -337,7 +336,7 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
   while (1) {
     int grazeflag = build_clines();
 
-    // all triangles just touched cell surface
+    // all lines just touched cell surface
     // mark corner points based on grazeflag and in/out line orientation
     // return area = 0.0 for UNKNOWN/INSIDE, full cell area for OUTSIDE
     // vol is changed in Grid::set_inout() if OVERLAP cell corners are marked

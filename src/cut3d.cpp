@@ -2008,9 +2008,9 @@ void Cut3d::expand2d(int iface, double value, double *p2, double *p3)
      this is used by add_face() when adding edges of an entire face
      this avoids matching an on-face CTRI with norm into cell
    error if find edge and it is already part of a vertex in that dir
-   return = index if find it, else -1
+   return = index (0 to nedge-1) if find it, -1 if do not find it
    return dir = 0 if matches as (x,y), 1 if matches as (y,x), -1 if no match
-   return err = 1
+   return -2 as error if edge already exists in same dir as this one
 ------------------------------------------------------------------------- */
 
 int Cut3d::findedge(double *x, double *y, int flag, int &dir)
