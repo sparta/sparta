@@ -598,7 +598,11 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
     for (i = 0; i < nrecv2; i++) {
       childID = rbuf2[i].childID;
-      if (childID == 3637) printf("RCB owner of cell 3637 = proc %d index %d\n",me,i);
+      if (childID == 3637) printf("RCB owner of cell 3637 = proc %d index %d lo %g %g hi %g %g\n",me,i,
+				  rcblohi[i].lo[0],
+				  rcblohi[i].lo[1],
+				  rcblohi[i].hi[0],
+				  rcblohi[i].hi[1]);
       (*chash)[childID] = i;
       id_lohi(childID,level,boxlo,boxhi,rcblohi[i].lo,rcblohi[i].hi);
 
