@@ -456,7 +456,7 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
      incremented by 20 so Cut3d can distinguish from its own error messages
 ------------------------------------------------------------------------- */
 
-int Cut2d::split_face(int id_caller, int, double *onelo, double *onehi)
+int Cut2d::split_face(int id_caller, int iface, double *onelo, double *onehi)
 {
   id = id_caller;
   lo = onelo;
