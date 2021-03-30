@@ -592,6 +592,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
     for (i = 0; i < nrecv2; i++) {
       childID = rbuf2[i].childID;
+      if (childID == 3637) printf("RCB owner of cell 3637 = proc %d index %d\n",me,i);
       (*chash)[childID] = i;
       id_lohi(childID,level,boxlo,boxhi,rcblohi[i].lo,rcblohi[i].hi);
 
@@ -630,6 +631,9 @@ void Grid::surf2grid_surf_algorithm(int outflag)
     if (dim == 2) {
       for (i = 0; i < nrecv1; i++) {
 
+	if (rcblines[i].id == 362) printf("RCB owner of surf 362 = proc %d index %d\n",
+					  me,i);
+	
 	// skip surf if it does not intersect my RCB box
       
 	overlap = cut2d->surf2grid_one(rcblines[i].p1,rcblines[i].p2,rcblo,rcbhi,-1,-1);
