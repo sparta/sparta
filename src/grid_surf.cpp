@@ -490,8 +490,8 @@ void Grid::surf2grid_surf_algorithm(int outflag)
       // return list of procs whose RCB subbox it overlaps
 
       if (lines[isurf].id == 362) {
-	printf("Surf 362 bbox: slo %g %g shi %g %g\m",slo[0],slo[1],shi[0],shi[1]);
-	printf("Surf 362 uni: unilo %d %d unihi %d %d\m",
+	printf("Surf 362 bbox: slo %g %g shi %g %g\n",slo[0],slo[1],shi[0],shi[1]);
+	printf("Surf 362 uni: unilo %d %d unihi %d %d\n",
 	       sunilo[0],sunilo[1],sunihi[0],sunihi[1]);
       }
       
