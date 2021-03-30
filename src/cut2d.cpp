@@ -89,15 +89,22 @@ int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
     x1 = lines[m].p1;
     x2 = lines[m].p2;
 
+    if (id_caller == 3637 && m == 361) printf("AAA\n");
+    
     if (MAX(x1[0],x2[0]) < lo[0]) continue;
     if (MIN(x1[0],x2[0]) > hi[0]) continue;
     if (MAX(x1[1],x2[1]) < lo[1]) continue;
     if (MIN(x1[1],x2[1]) > hi[1]) continue;
 
+    if (id_caller == 3637 && m == 361) printf("BBB %d\n",nsurf);
+
     if (cliptest(x1,x2)) {
+      if (id_caller == 3637 && m == 361) printf("CCC\n");
       if (nsurf < max) surfs[nsurf] = m;
       nsurf++;
     }
+    
+    if (id_caller == 3637 && m == 361) printf("DDD %d\n",nsurf);
   }
 
   return nsurf;
