@@ -164,12 +164,13 @@ int Cut2d::surf2grid_list(cellint id_caller,
 ------------------------------------------------------------------------- */
 
 int Cut2d::surf2grid_one(double *p, double *q,
-                         double *lo_caller, double *hi_caller, cellint childID)
+                         double *lo_caller, double *hi_caller,
+			 cellint childID, surfint surfID)
 {
   lo = lo_caller;
   hi = hi_caller;
-  if (childID == 3637) printf("AAA %d: p %g %g q %g %g clip %d\n",
-			      childID,p[0],p[1],q[0],q[1],cliptest(p,q));
+  if (childID == 3637) printf("AAA %d %d: p %g %g q %g %g clip %d\n",
+			      childID,surfID,p[0],p[1],q[0],q[1],cliptest(p,q));
   return cliptest(p,q);
 }
 

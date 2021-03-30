@@ -632,7 +632,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
 	// skip surf if it does not intersect my RCB box
       
-	overlap = cut2d->surf2grid_one(rcblines[i].p1,rcblines[i].p2,rcblo,rcbhi,-1);
+	overlap = cut2d->surf2grid_one(rcblines[i].p1,rcblines[i].p2,rcblo,rcbhi,-1,-1);
 	if (!overlap) continue;
 
 	// slo/hi = bbox around one surf
@@ -1256,7 +1256,7 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
       if (!cflag && !pflag) continue;
       
       grid->id_child_lohi(level,plo,phi,ichild,clo,chi);
-      overlap = cut2d->surf2grid_one(p1,p2,clo,chi,childID);
+      overlap = cut2d->surf2grid_one(p1,p2,clo,chi,childID,line->id);
       if (!overlap) continue;
 
       if (cflag) {
