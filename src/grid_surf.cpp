@@ -546,7 +546,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
       ctr[0] = 0.5 * (cells[icell].lo[0] + cells[icell].hi[0]);
       ctr[1] = 0.5 * (cells[icell].lo[1] + cells[icell].hi[1]);
       ctr[2] = 0.5 * (cells[icell].lo[2] + cells[icell].hi[2]);
-      id_find_child_uniform_level(level,0,boxlo,boxhi,ctr,cx,cy,cz);
+      id_find_child_uniform_level(level,0,boxlo,boxhi,ctr,cx,cy,cz,-1);
 
       // glo/hi = single cell grid box
       
