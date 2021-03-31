@@ -1247,7 +1247,9 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
 	}
 	pairs[npair][0] = surfindex;
 	pairs[npair][1] = (*chash)[childID];
-	if (childID == 1624) printf("ADDING childID 1624 surfID %d\n",surfindex+1);
+	if (surfindex == 33)
+	  printf("ADDING childID %d surfID %d ix %d %d %d iy %d %d %d\n",
+		 childID,surfindex+1,ix,ilo,ihi,iy,jlo,jhi);
 	npair++;
 	continue;
       }
@@ -1257,7 +1259,9 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
 	newlo[1] = MAX(bblo[1],clo[1]);
 	newhi[0] = MIN(bbhi[0],chi[0]);
 	newhi[1] = MIN(bbhi[1],chi[1]);
-	if (childID == 1624 || childID == 88) printf("RECURSE childID %d\n",childID);
+	if (surfindex == 33)
+	  printf("RECURSE childID %d level %d ix %d %d %d iy %d %d %d\n",
+		 childID,level+1,ix,ilo,ihi,iy,jlo,jhi);
 	recurse2d(childID,level+1,clo,chi,surfindex,line,newlo,newhi,
 		  npair,maxpair,pairs,chash,phash);
       }
