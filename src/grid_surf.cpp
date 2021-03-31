@@ -708,14 +708,6 @@ void Grid::surf2grid_surf_algorithm(int outflag)
       if (dim == 2) sbuf3[i].surfID = rcblines[surfindex].id;
       else sbuf3[i].surfID = rcbtris[surfindex].id;
       sbuf3[i].icell = rbuf2[cellindex].icell;
-
-      if (sbuf3[i].surfID == 34)
-	printf("PAIR1 surfID %d cellID %d I %d\n",
-	       sbuf3[i].surfID,rbuf2[cellindex].childID,i);
-      if (rbuf2[cellindex].childID == 1624)
-	printf("PAIR2 surfID %d cellID %d I %d\n",
-	       sbuf3[i].surfID,rbuf2[cellindex].childID,i);
-
       nsend++;
     }
 
@@ -755,9 +747,6 @@ void Grid::surf2grid_surf_algorithm(int outflag)
       nsurf = cells[icell].nsurf;
       cells[icell].csurfs[nsurf] = rbuf3[i].surfID;
       cells[icell].nsurf++;
-      if (cells[icell].id == 1624)
-	printf("CSURFS nsurf %d value %d\n",cells[icell].nsurf,
-	       cells[icell].csurfs[nsurf-1]);
     }
 
     if (outflag) {
@@ -1224,13 +1213,6 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
   id_point_child(bblo,plo,phi,nx,ny,1,ilo,jlo,klo);
   id_point_child(bbhi,plo,phi,nx,ny,1,ihi,jhi,khi);
 
-  if (surfindex+1 == 35) {
-    printf("POINT CHILD pID %d level %d ilohi %d %d jlohi %d %d\n",
-	   parentID,level,ilo,ihi,jlo,jhi);
-    printf("BBLO %g %g BBHI %g %g plo %g %g phi %g %g\n",
-	   bblo[0],bblo[1],bbhi[0],bbhi[1],plo[0],plo[1],phi[0],phi[1]);
-  }
-  
   celledge = plo[0] + ilo*(phi[0]-plo[0])/nx;
   if (bblo[0] <= celledge && ilo > 0) ilo--;
   celledge = plo[1] + jlo*(phi[1]-plo[1])/ny;
@@ -1265,9 +1247,6 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
 	}
 	pairs[npair][0] = surfindex;
 	pairs[npair][1] = (*chash)[childID];
-	if (surfindex+1 == 35)
-	  printf("ADDING childID %d surfID %d ix %d %d %d iy %d %d %d\n",
-		 childID,surfindex+1,ix,ilo,ihi,iy,jlo,jhi);
 	npair++;
 	continue;
       }
@@ -1277,9 +1256,6 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
 	newlo[1] = MAX(bblo[1],clo[1]);
 	newhi[0] = MIN(bbhi[0],chi[0]);
 	newhi[1] = MIN(bbhi[1],chi[1]);
-	if (surfindex+1 == 35)
-	  printf("RECURSE childID %d level %d ix %d %d %d iy %d %d %d\n",
-		 childID,level+1,ix,ilo,ihi,iy,jlo,jhi);
 	recurse2d(childID,level+1,clo,chi,surfindex,line,newlo,newhi,
 		  npair,maxpair,pairs,chash,phash);
       }

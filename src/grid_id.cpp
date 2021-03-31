@@ -33,7 +33,7 @@ enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
    nx,ny,nz = number of child cells within parent
    return ix,iy,iz for which child cell the point is in
    definition of inside is >= lo boundary and < hi boundary
-   ix,iy,iz range from 0 to Nxyz - 1
+   ix,iy,iz range from 0 to Nxyz-1 inclusive
 ------------------------------------------------------------------------- */
 
 void Grid::id_point_child(double *x, double *lo, double *hi,
@@ -67,7 +67,7 @@ void Grid::id_point_child(double *x, double *lo, double *hi,
   edge = lo[2] + (iz+1)*(hi[2]-lo[2])/nz;
   if (x[2] >= edge) iz++;
 
-  // insure indices are from 0 to Nxyz - 1
+  // insure indices range from 0 to Nxyz-1 inclusive
 
   ix = MAX(ix,0);
   ix = MIN(ix,nx-1);
