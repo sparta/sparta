@@ -1221,33 +1221,34 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
   int nbits = plevels[level].nbits;
   
   // ij lohi = indices for range of child cells overlapped by surf bbox
-  // overlap means point is inside grid cell or touches boundary
-  // same equation as in Grid::id_find_child()
+  // overlap = surf bbox include any interior of grid cell or touches its boundary
+  // id_point_child() returns cell indices for >= lo and < hi
+  // so check if lower range should be decremented
+  
+  int tmp;
+  int ilo,ihi,jlo,jhi;
+  id_point_child(bblo,plo,phi,nx,ny,1,ilo,jlo,tmp);
+  id_point_child(bbhi,plo,phi,nx,ny,1,ihi,jhi,tmp);
 
+  /*
   int ilo = static_cast<int> ((bblo[0]-plo[0]) * nx/(phi[0]-plo[0]));
   int ihi = static_cast<int> ((bbhi[0]-plo[0]) * nx/(phi[0]-plo[0]));
   int jlo = static_cast<int> ((bblo[1]-plo[1]) * ny/(phi[1]-plo[1]));
   int jhi = static_cast<int> ((bbhi[1]-plo[1]) * ny/(phi[1]-plo[1]));
-
+  */
+  
   if (line->id == 362) printf("RECURSE 362 lo %d %d hi %d %d\n",ilo,jlo,ihi,jhi);
 
-  // augment indices if surf bbox touches or slightly overlaps cell edges
-  // same equation as in Grid::id_child_lohi()
-
   celledge = plo[0] + ilo*(phi[0]-plo[0])/nx;
-  if (bblo[0] <= celledge) ilo--;
-  celledge = plo[0] + (ihi+1)*(phi[0]-plo[0])/nx;
-  if (bbhi[0] >= celledge) ihi++;
-
+  if (bblo[0] <= celledge && ilo > 0) ilo--;
   celledge = plo[1] + jlo*(phi[1]-plo[1])/ny;
-  if (bblo[1] <= celledge) jlo--;
-  celledge = plo[1] + (jhi+1)*(phi[1]-plo[1])/ny;
-  if (bbhi[1] >= celledge) jhi++;
-
+  if (bblo[1] <= celledge && jlo > 0) jlo--;
+  
   if (line->id == 362) printf("RECURSE 362 lo %d %d hi %d %d\n",ilo,jlo,ihi,jhi);
     
   // insure each index is between 0 and Nxy-1 inclusive
 
+  /*
   ilo = MAX(ilo,0);
   ilo = MIN(ilo,nx-1);
   ihi = MAX(ihi,0);
@@ -1256,7 +1257,8 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
   jlo = MIN(jlo,ny-1);
   jhi = MAX(jhi,0);
   jhi = MIN(jhi,ny-1);
-
+  */
+  
   // loop over range of grid cells between ij lohi inclusive
   // if cell is neither a child or parent cell in chash/phash, skip it
   // if line does not intersect cell, skip it
@@ -1335,21 +1337,37 @@ void Grid::recurse3d(cellint parentID, int level, double *plo, double *phi,
   int ny = plevels[level].ny;
   int nz = plevels[level].nz;
   int nbits = plevels[level].nbits;
+
+  // ijk lohi = indices for range of child cells overlapped by surf bbox
+  // overlap = surf bbox include any interior of grid cell or touches its boundary
+  // id_point_child() returns cell indices for >= lo and < hi
+  // so check if lower range should be decremented
   
+  int ilo,ihi,jlo,jhi,klo,khi;
+  id_point_child(bblo,plo,phi,nx,ny,1,ilo,jlo,klo);
+  id_point_child(bbhi,plo,phi,nx,ny,1,ihi,jhi,khi);
+
   // ijk lohi = indices for range of child cells overlapped by surf bbox
   // overlap means point is inside grid cell or touches boundary
   // same equation as in Grid::id_find_child()
 
+  /*
   int ilo = static_cast<int> ((bblo[0]-plo[0]) * nx/(phi[0]-plo[0]));
   int ihi = static_cast<int> ((bbhi[0]-plo[0]) * nx/(phi[0]-plo[0]));
   int jlo = static_cast<int> ((bblo[1]-plo[1]) * ny/(phi[1]-plo[1]));
   int jhi = static_cast<int> ((bbhi[1]-plo[1]) * ny/(phi[1]-plo[1]));
   int klo = static_cast<int> ((bblo[2]-plo[2]) * nz/(phi[2]-plo[2]));
   int khi = static_cast<int> ((bbhi[2]-plo[2]) * nz/(phi[2]-plo[2]));
+  */
+  
+  celledge = plo[0] + ilo*(phi[0]-plo[0])/nx;
+  if (bblo[0] <= celledge && ilo > 0) ilo--;
+  celledge = plo[1] + jlo*(phi[1]-plo[1])/ny;
+  if (bblo[1] <= celledge && jlo > 0) jlo--;
+  celledge = plo[2] + klo*(phi[2]-plo[2])/nz;
+  if (bblo[2] <= celledge && klo > 0) klo--;
 
-  // augment indices if surf bbox touches or slightly overlaps cell edges
-  // same equation as in Grid::id_child_lohi()
-
+  /*
   celledge = plo[0] + ilo*(phi[0]-plo[0])/nx;
   if (bblo[0] <= celledge) ilo--;
   celledge = plo[0] + (ihi+1)*(phi[0]-plo[0])/nx;
@@ -1364,9 +1382,11 @@ void Grid::recurse3d(cellint parentID, int level, double *plo, double *phi,
   if (bblo[2] <= celledge) klo--;
   celledge = plo[2] + (khi+1)*(phi[2]-plo[2])/nz;
   if (bbhi[2] >= celledge) khi++;
-
+  */
+  
   // insure each index is between 0 and Nxyz-1 inclusive
 
+  /*
   ilo = MAX(ilo,0);
   ilo = MIN(ilo,nx-1);
   ihi = MAX(ihi,0);
@@ -1379,7 +1399,8 @@ void Grid::recurse3d(cellint parentID, int level, double *plo, double *phi,
   klo = MIN(klo,nz-1);
   khi = MAX(khi,0);
   khi = MIN(khi,nz-1);
-
+  */
+  
   // loop over range of grid cells between ij lohi inclusive
   // if cell is neither a child or parent cell in chash/phash, skip it
   // if tri does not intersect cell, skip it
