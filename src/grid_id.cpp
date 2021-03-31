@@ -36,8 +36,8 @@ enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
    ix,iy,iz range from 0 to Nxyz - 1
 ------------------------------------------------------------------------- */
 
-void id_point_child(double *x, double *lo, double *hi,
-		    int nx, int ny, int nz, int &ix, int &iy, int &iz)
+void Grid::id_point_child(double *x, double *lo, double *hi,
+			  int nx, int ny, int nz, int &ix, int &iy, int &iz)
 {
   // ix,iy,iz = child cell indices within parent lo/hi cell
   // inverse of master equation in id_child_lohi() for cell boundaries
