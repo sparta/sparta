@@ -648,7 +648,6 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
 	// find all my RCB child cells this surf intersects
 
-	printf("CALL RECURSE2d I %d\n",i);
 	recurse2d(0,0,boxlo,boxhi,i,&rcblines[i],bblo,bbhi,
 		  npair,maxpair,pairs,chash,phash);
       }
@@ -1228,8 +1227,8 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
   if (surfindex+1 == 35) {
     printf("POINT CHILD pID %d level %d ilohi %d %d jlohi %d %d\n",
 	   parentID,level,ilo,ihi,jlo,jhi);
-    printf("BBLO %g %g plo %g %g phi %g %g\n",
-	   bblo[0],bblo[1],plo[0],plo[1],phi[0],phi[1]);
+    printf("BBLO %g %g BBHI %g %g plo %g %g phi %g %g\n",
+	   bblo[0],bblo[1],bbhi[0],bbhi[1],plo[0],plo[1],phi[0],phi[1]);
   }
   
   celledge = plo[0] + ilo*(phi[0]-plo[0])/nx;
