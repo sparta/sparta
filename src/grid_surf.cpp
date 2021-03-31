@@ -661,6 +661,8 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 	bblo[1] = MAX(slo[1],rcblo[1]);
 	bbhi[0] = MIN(shi[0],rcbhi[0]);
 	bbhi[1] = MIN(shi[1],rcbhi[1]);
+	bblo[2] = 0.0;
+	bbhi[2] = 0.0;
 
 	// find all my RCB child cells this surf intersects
 	
@@ -1225,10 +1227,9 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
   // id_point_child() returns cell indices for >= lo and < hi
   // so check if lower range should be decremented
   
-  int tmp;
-  int ilo,ihi,jlo,jhi;
-  id_point_child(bblo,plo,phi,nx,ny,1,ilo,jlo,tmp);
-  id_point_child(bbhi,plo,phi,nx,ny,1,ihi,jhi,tmp);
+  int ilo,ihi,jlo,jhi,klo,khi;
+  id_point_child(bblo,plo,phi,nx,ny,1,ilo,jlo,klo);
+  id_point_child(bbhi,plo,phi,nx,ny,1,ihi,jhi,khi);
 
   /*
   int ilo = static_cast<int> ((bblo[0]-plo[0]) * nx/(phi[0]-plo[0]));
