@@ -611,7 +611,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
       int flag;
       
       for (int ilevel = level; ilevel > 0; ilevel--) {
-	parentID = parent_of_child(childID,ilevel);
+	parentID = id_parent_of_child(childID,ilevel);
 	if (phash->find(parentID) != phash->end()) break;
 	(*phash)[parentID] = 0;
 	childID = parentID;
