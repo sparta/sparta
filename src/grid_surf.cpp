@@ -1224,9 +1224,12 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
   id_point_child(bblo,plo,phi,nx,ny,1,ilo,jlo,klo);
   id_point_child(bbhi,plo,phi,nx,ny,1,ihi,jhi,khi);
 
-  if (surfindex+1 == 35)
+  if (surfindex+1 == 35) {
     printf("POINT CHILD ilohi %d %d jlohi %d %d\n",ilo,ihi,jlo,jhi);
-
+    printf("BBLO %g %g plo %g %g phi %g %g\n",
+	   bblo[0],bblo[1],plo[0],plo[1],phi[0],phi[1]);
+  }
+  
   celledge = plo[0] + ilo*(phi[0]-plo[0])/nx;
   if (bblo[0] <= celledge && ilo > 0) ilo--;
   celledge = plo[1] + jlo*(phi[1]-plo[1])/ny;
