@@ -1257,7 +1257,7 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
 	newlo[1] = MAX(bblo[1],clo[1]);
 	newhi[0] = MIN(bbhi[0],chi[0]);
 	newhi[1] = MIN(bbhi[1],chi[1]);
-	if (childID == 1624 || childID = 88) printf("RECURSE childID %d\n",childID);
+	if (childID == 1624 || childID == 88) printf("RECURSE childID %d\n",childID);
 	recurse2d(childID,level+1,clo,chi,surfindex,line,newlo,newhi,
 		  npair,maxpair,pairs,chash,phash);
       }
