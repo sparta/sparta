@@ -1229,6 +1229,8 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
   int jlo = static_cast<int> ((bblo[1]-plo[1]) * ny/(phi[1]-plo[1]));
   int jhi = static_cast<int> ((bbhi[1]-plo[1]) * ny/(phi[1]-plo[1]));
 
+  if (line->id == 362) printf("RECURSE 362 lo %d %d hi %d %d\n",ilo,jlo,ihi,jhi);
+
   // augment indices if surf bbox touches or slightly overlaps cell edges
   // same equation as in Grid::id_child_lohi()
 
@@ -1242,6 +1244,8 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
   celledge = plo[1] + (jhi+1)*(phi[1]-plo[1])/ny;
   if (bbhi[1] >= celledge) jhi++;
 
+  if (line->id == 362) printf("RECURSE 362 lo %d %d hi %d %d\n",ilo,jlo,ihi,jhi);
+    
   // insure each index is between 0 and Nxy-1 inclusive
 
   ilo = MAX(ilo,0);
