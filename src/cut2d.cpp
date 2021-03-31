@@ -157,7 +157,7 @@ int Cut2d::surf2grid_list(cellint id_caller,
 ------------------------------------------------------------------------- */
 
 int Cut2d::surf2grid_one(double *p, double *q,
-                         double *lo_caller, double *hi_caller);
+                         double *lo_caller, double *hi_caller)
 {
   lo = lo_caller;
   hi = hi_caller;
