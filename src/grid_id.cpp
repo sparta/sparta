@@ -224,7 +224,6 @@ void Grid::id_find_child_uniform_level(int level, int lohi,
   // if pt is on either edge, account for lohi flag by
   //  decrement or increment of index
   // still require 0 <= index <= N-1
-  // NOTE: hi test should not be needed ?
   
   if (surfID == 362) {
     printf("Uniform for surf 362: xyz grid %d %d %d "
@@ -238,11 +237,16 @@ void Grid::id_find_child_uniform_level(int level, int lohi,
     if (x[0] == lo[0] && ix != 0) xgrid--;
     if (x[1] == lo[1] && iy != 0) ygrid--;
     if (x[2] == lo[2] && iz != 0) zgrid--;
-  } else {
+  }
+
+  // NOTE: hi test should not be needed ?
+  /*
+  else {
     if (x[0] == hi[0] && ix != nx-1) xgrid++;
     if (x[1] == hi[1] && iy != ny-1) ygrid++;
     if (x[2] == hi[2] && iz != nz-1) zgrid++;
   }
+  */
 }
 
 /* ----------------------------------------------------------------------
