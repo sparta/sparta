@@ -446,9 +446,9 @@ void Grid::surf2grid_surf_algorithm(int outflag)
     // unilo/hi = inclusive range of grid box of overlapping grid box
 
     id_find_child_uniform_level(level,0,boxlo,boxhi,allsurflo,
-				unilo[0],unilo[1],unilo[2],-1);
+				unilo[0],unilo[1],unilo[2]);
     id_find_child_uniform_level(level,1,boxlo,boxhi,allsurfhi,
-				unihi[0],unihi[1],unihi[2],-1);
+				unihi[0],unihi[1],unihi[2]);
 
     // compute a recursive decomp (RCB) of the uniform grid box
     // gtree = tree of RCB cuts, cuts are along grid planes
@@ -482,19 +482,13 @@ void Grid::surf2grid_surf_algorithm(int outflag)
       if (dim == 2) surf->bbox_one(&lines[isurf],slo,shi);
       else surf->bbox_one(&tris[isurf],slo,shi);
       id_find_child_uniform_level(level,0,boxlo,boxhi,slo,
-				  sunilo[0],sunilo[1],sunilo[2],lines[isurf].id);
+				  sunilo[0],sunilo[1],sunilo[2]);
       id_find_child_uniform_level(level,1,boxlo,boxhi,shi,
-				  sunihi[0],sunihi[1],sunihi[2],lines[isurf].id);
+				  sunihi[0],sunihi[1],sunihi[2]);
 
       // drop trimmed surf box on RCB tree
       // return list of procs whose RCB subbox it overlaps
 
-      if (lines[isurf].id == 362) {
-	printf("Surf 362 bbox: slo %g %g shi %g %g\n",slo[0],slo[1],shi[0],shi[1]);
-	printf("Surf 362 uni: unilo %d %d unihi %d %d\n",
-	       sunilo[0],sunilo[1],sunihi[0],sunihi[1]);
-      }
-      
       int np = 0;
       box_drop(sunilo,sunihi,0,nprocs-1,gtree,np,plist);
       if (!np) continue;
@@ -546,7 +540,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
       ctr[0] = 0.5 * (cells[icell].lo[0] + cells[icell].hi[0]);
       ctr[1] = 0.5 * (cells[icell].lo[1] + cells[icell].hi[1]);
       ctr[2] = 0.5 * (cells[icell].lo[2] + cells[icell].hi[2]);
-      id_find_child_uniform_level(level,0,boxlo,boxhi,ctr,cx,cy,cz,-1);
+      id_find_child_uniform_level(level,0,boxlo,boxhi,ctr,cx,cy,cz);
 
       // glo/hi = single cell grid box
       
@@ -601,15 +595,6 @@ void Grid::surf2grid_surf_algorithm(int outflag)
       (*chash)[childID] = i;
       id_lohi(childID,level,boxlo,boxhi,rcblohi[i].lo,rcblohi[i].hi);
 
-      if (childID == 3637)
-	printf("RCB owner of cell 3637 = proc %d index %d lo %g %g hi %g %g\n",me,i,
-	       rcblohi[i].lo[0],
-	       rcblohi[i].lo[1],
-	       rcblohi[i].hi[0],
-	       rcblohi[i].hi[1]);
-
-      int flag;
-      
       for (int ilevel = level; ilevel > 0; ilevel--) {
 	parentID = id_parent_of_child(childID,ilevel);
 	if (phash->find(parentID) != phash->end()) break;
@@ -643,12 +628,9 @@ void Grid::surf2grid_surf_algorithm(int outflag)
     if (dim == 2) {
       for (i = 0; i < nrecv1; i++) {
 
-	if (rcblines[i].id == 362) printf("RCB owner of surf 362 = proc %d index %d\n",
-					  me,i);
-	
 	// skip surf if it does not intersect my RCB box
       
-	overlap = cut2d->surf2grid_one(rcblines[i].p1,rcblines[i].p2,rcblo,rcbhi,-1,-1);
+	overlap = cut2d->surf2grid_one(rcblines[i].p1,rcblines[i].p2,rcblo,rcbhi);
 	if (!overlap) continue;
 
 	// slo/hi = bbox around one surf
@@ -1231,34 +1213,10 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
   id_point_child(bblo,plo,phi,nx,ny,1,ilo,jlo,klo);
   id_point_child(bbhi,plo,phi,nx,ny,1,ihi,jhi,khi);
 
-  /*
-  int ilo = static_cast<int> ((bblo[0]-plo[0]) * nx/(phi[0]-plo[0]));
-  int ihi = static_cast<int> ((bbhi[0]-plo[0]) * nx/(phi[0]-plo[0]));
-  int jlo = static_cast<int> ((bblo[1]-plo[1]) * ny/(phi[1]-plo[1]));
-  int jhi = static_cast<int> ((bbhi[1]-plo[1]) * ny/(phi[1]-plo[1]));
-  */
-  
-  if (line->id == 362) printf("RECURSE 362 lo %d %d hi %d %d\n",ilo,jlo,ihi,jhi);
-
   celledge = plo[0] + ilo*(phi[0]-plo[0])/nx;
   if (bblo[0] <= celledge && ilo > 0) ilo--;
   celledge = plo[1] + jlo*(phi[1]-plo[1])/ny;
   if (bblo[1] <= celledge && jlo > 0) jlo--;
-  
-  if (line->id == 362) printf("RECURSE 362 lo %d %d hi %d %d\n",ilo,jlo,ihi,jhi);
-    
-  // insure each index is between 0 and Nxy-1 inclusive
-
-  /*
-  ilo = MAX(ilo,0);
-  ilo = MIN(ilo,nx-1);
-  ihi = MAX(ihi,0);
-  ihi = MIN(ihi,nx-1);
-  jlo = MAX(jlo,0);
-  jlo = MIN(jlo,ny-1);
-  jhi = MAX(jhi,0);
-  jhi = MIN(jhi,ny-1);
-  */
   
   // loop over range of grid cells between ij lohi inclusive
   // if cell is neither a child or parent cell in chash/phash, skip it
@@ -1279,7 +1237,7 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
       if (!cflag && !pflag) continue;
       
       grid->id_child_lohi(level,plo,phi,ichild,clo,chi);
-      overlap = cut2d->surf2grid_one(p1,p2,clo,chi,childID,line->id);
+      overlap = cut2d->surf2grid_one(p1,p2,clo,chi);
       if (!overlap) continue;
 
       if (cflag) {
@@ -1348,19 +1306,6 @@ void Grid::recurse3d(cellint parentID, int level, double *plo, double *phi,
   id_point_child(bblo,plo,phi,nx,ny,1,ilo,jlo,klo);
   id_point_child(bbhi,plo,phi,nx,ny,1,ihi,jhi,khi);
 
-  // ijk lohi = indices for range of child cells overlapped by surf bbox
-  // overlap means point is inside grid cell or touches boundary
-  // same equation as in Grid::id_find_child()
-
-  /*
-  int ilo = static_cast<int> ((bblo[0]-plo[0]) * nx/(phi[0]-plo[0]));
-  int ihi = static_cast<int> ((bbhi[0]-plo[0]) * nx/(phi[0]-plo[0]));
-  int jlo = static_cast<int> ((bblo[1]-plo[1]) * ny/(phi[1]-plo[1]));
-  int jhi = static_cast<int> ((bbhi[1]-plo[1]) * ny/(phi[1]-plo[1]));
-  int klo = static_cast<int> ((bblo[2]-plo[2]) * nz/(phi[2]-plo[2]));
-  int khi = static_cast<int> ((bbhi[2]-plo[2]) * nz/(phi[2]-plo[2]));
-  */
-  
   celledge = plo[0] + ilo*(phi[0]-plo[0])/nx;
   if (bblo[0] <= celledge && ilo > 0) ilo--;
   celledge = plo[1] + jlo*(phi[1]-plo[1])/ny;
@@ -1368,40 +1313,6 @@ void Grid::recurse3d(cellint parentID, int level, double *plo, double *phi,
   celledge = plo[2] + klo*(phi[2]-plo[2])/nz;
   if (bblo[2] <= celledge && klo > 0) klo--;
 
-  /*
-  celledge = plo[0] + ilo*(phi[0]-plo[0])/nx;
-  if (bblo[0] <= celledge) ilo--;
-  celledge = plo[0] + (ihi+1)*(phi[0]-plo[0])/nx;
-  if (bbhi[0] >= celledge) ihi++;
-
-  celledge = plo[1] + jlo*(phi[1]-plo[1])/ny;
-  if (bblo[1] <= celledge) jlo--;
-  celledge = plo[1] + (jhi+1)*(phi[1]-plo[1])/ny;
-  if (bbhi[1] >= celledge) jhi++;
-
-  celledge = plo[2] + klo*(phi[2]-plo[2])/nz;
-  if (bblo[2] <= celledge) klo--;
-  celledge = plo[2] + (khi+1)*(phi[2]-plo[2])/nz;
-  if (bbhi[2] >= celledge) khi++;
-  */
-  
-  // insure each index is between 0 and Nxyz-1 inclusive
-
-  /*
-  ilo = MAX(ilo,0);
-  ilo = MIN(ilo,nx-1);
-  ihi = MAX(ihi,0);
-  ihi = MIN(ihi,nx-1);
-  jlo = MAX(jlo,0);
-  jlo = MIN(jlo,ny-1);
-  jhi = MAX(jhi,0);
-  jhi = MIN(jhi,ny-1);
-  klo = MAX(klo,0);
-  klo = MIN(klo,nz-1);
-  khi = MAX(khi,0);
-  khi = MIN(khi,nz-1);
-  */
-  
   // loop over range of grid cells between ij lohi inclusive
   // if cell is neither a child or parent cell in chash/phash, skip it
   // if tri does not intersect cell, skip it

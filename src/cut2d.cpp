@@ -90,22 +90,15 @@ int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
     x1 = lines[m].p1;
     x2 = lines[m].p2;
 
-    if (id_caller == 3637) printf("AAA m %d\n",m);
-    
     if (MAX(x1[0],x2[0]) < lo[0]) continue;
     if (MIN(x1[0],x2[0]) > hi[0]) continue;
     if (MAX(x1[1],x2[1]) < lo[1]) continue;
     if (MIN(x1[1],x2[1]) > hi[1]) continue;
 
-    if (id_caller == 3637 && m == 361) printf("BBB %d\n",nsurf);
-
     if (cliptest(x1,x2)) {
-      if (id_caller == 3637 && m == 361) printf("CCC\n");
       if (nsurf < max) surfs[nsurf] = m;
       nsurf++;
     }
-    
-    if (id_caller == 3637 && m == 361) printf("DDD %d\n",nsurf);
   }
 
   return nsurf;
@@ -164,13 +157,10 @@ int Cut2d::surf2grid_list(cellint id_caller,
 ------------------------------------------------------------------------- */
 
 int Cut2d::surf2grid_one(double *p, double *q,
-                         double *lo_caller, double *hi_caller,
-			 cellint childID, surfint surfID)
+                         double *lo_caller, double *hi_caller);
 {
   lo = lo_caller;
   hi = hi_caller;
-  if (childID == 3637) printf("AAA %d %d: p %g %g q %g %g clip %d\n",
-			      childID,surfID,p[0],p[1],q[0],q[1],cliptest(p,q));
   return cliptest(p,q);
 }
 

@@ -185,8 +185,7 @@ cellint Grid::id_uniform_level(int level, int xgrid, int ygrid, int zgrid)
 
 void Grid::id_find_child_uniform_level(int level, int lohi,
 				       double *boxlo, double *boxhi, double *x,
-				       int &xgrid, int &ygrid, int &zgrid,
-				       surfint surfID)
+				       int &xgrid, int &ygrid, int &zgrid)
 {
   int ix,iy,iz,nx,ny,nz;
   double plo[3],phi[3],clo[3],chi[3];
@@ -221,32 +220,14 @@ void Grid::id_find_child_uniform_level(int level, int lohi,
   }
 
   // x >= lower edge and < upper edge of lo/hi cell with indices ix,iy,iz
-  // if pt is on either edge, account for lohi flag by
-  //  decrement or increment of index
+  // if lohi = 0 and pt is on lower edge, decrement index
   // still require 0 <= index <= N-1
-  
-  if (surfID == 362) {
-    printf("Uniform for surf 362: xyz grid %d %d %d "
-	   "lohi %d x %g %g clo %g %g chi %g %g\n",
-	   xgrid,ygrid,zgrid,lohi,x[0],x[1],lo[0],lo[1],hi[0],hi[1]);
-    printf("Compare x=lo %d x<lo %d x>lo %d\n",x[0]==lo[0],x[0]<lo[0],x[0]>lo[0]);
-    printf("HiPrec x %20.16g lo %20.16g\n",x[0],lo[0]);
-  }
   
   if (lohi == 0) {
     if (x[0] == lo[0] && ix != 0) xgrid--;
     if (x[1] == lo[1] && iy != 0) ygrid--;
     if (x[2] == lo[2] && iz != 0) zgrid--;
   }
-
-  // NOTE: hi test should not be needed ?
-  /*
-  else {
-    if (x[0] == hi[0] && ix != nx-1) xgrid++;
-    if (x[1] == hi[1] && iy != ny-1) ygrid++;
-    if (x[2] == hi[2] && iz != nz-1) zgrid++;
-  }
-  */
 }
 
 /* ----------------------------------------------------------------------
