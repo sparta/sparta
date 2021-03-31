@@ -1175,7 +1175,7 @@ void Grid::surf2grid_split(int subflag, int outflag)
 /* ----------------------------------------------------------------------
    enumerate all child cells in chash which a single line intersects with
    done recursively, 1st call from surf2grid_surf_algorithm() uses parentID = root
-     phash stores IDs of all parent cells for child cells in chash
+   phash stores IDs of all parent cells for child cells in chash
    bblo/hi = portion of bounding box for surf that is wholly within parentID
    parentID = parent cell
    level = level of parent cell
@@ -1247,6 +1247,7 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
 	}
 	pairs[npair][0] = surfindex;
 	pairs[npair][1] = (*chash)[childID];
+	if (childID == 1624) printf("ADDING childID 1624 surfID %d\n",surfindex+1);
 	npair++;
 	continue;
       }
