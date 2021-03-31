@@ -705,7 +705,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
       surfindex = pairs[i][0];
       cellindex = pairs[i][1];
       if (surfindex == 33)
-	printf("PAIR surfID %d cellID %d\n",surfindex+1,cells[cellindex].id);
+	printf("PAIR surfID %d cellID %d\n",surfindex+1,rbuf2[cellindex].childID);
       proclist3[i] = rbuf2[cellindex].proc;
       if (dim == 2) sbuf3[i].surfID = rcblines[surfindex].id;
       else sbuf3[i].surfID = rcbtris[surfindex].id;
