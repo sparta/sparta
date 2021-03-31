@@ -34,8 +34,8 @@ enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut3d
 
 // cell ID for 2d or 3d cell
 
-#define VERBOSE
-#define VERBOSE_ID 3637
+//#define VERBOSE
+//#define VERBOSE_ID 3637
 
 /* ---------------------------------------------------------------------- */
 
@@ -339,8 +339,9 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
 
 #ifdef VERBOSE
     if (id == VERBOSE_ID) {
+      printf("Verbose cell " CELLINT_FORMAT "\n",id);
       failed_cell();
-      printf("Clines for cell %d\n",id);
+      printf("Clines for cell " CELLINT_FORMAT "\n",id);
       print_clines();
     }
 #endif
@@ -1271,7 +1272,7 @@ void Cut2d::failed_cell()
 
 void Cut2d::print_clines()
 {
-  printf("ICELL %d\n",id);
+  printf("ICELL id " CELLINT_FORMAT "\n",id);
   printf("  clines %d\n",clines.n);
 
   for (int i = 0; i < clines.n; i++) {
@@ -1288,7 +1289,7 @@ void Cut2d::print_clines()
 
 void Cut2d::print_points()
 {
-  printf("ICELL %d\n",id);
+  printf("ICELL id " CELLINT_FORMAT "\n",id);
   printf("  npoints %d\n",points.n);
 
   for (int i = 0; i < points.n; i++) {
@@ -1312,7 +1313,7 @@ void Cut2d::print_points()
 
 void Cut2d::print_loops()
 {
-  printf("ICELL %d\n",id);
+  printf("ICELL id " CELLINT_FORMAT "\n",id);
   printf("  loops %d\n",loops.n);
 
   for (int i = 0; i < loops.n; i++) {
