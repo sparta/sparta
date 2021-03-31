@@ -704,7 +704,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
       surfindex = pairs[i][0];
       cellindex = pairs[i][1];
-      if (surfindex == 33)
+      if (surfindex == 34)
 	printf("PAIR1 surfID %d cellID %d I %d\n",
 	       surfindex+1,rbuf2[cellindex].childID,i);
       if (rbuf2[cellindex].childID == 1624)
