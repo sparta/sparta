@@ -339,7 +339,7 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
 
 #ifdef VERBOSE
     if (id == VERBOSE_ID) {
-      printf("Verbose cell " CELLINT_FORMAT "\n",id);
+      printf("Verbose cell " CELLINT_FORMAT " grazeflag %d\n",id,grazeflag);
       failed_cell();
       printf("Clines for cell " CELLINT_FORMAT "\n",id);
       print_clines();
@@ -1257,8 +1257,8 @@ int Cut2d::whichside(double *pt)
 void Cut2d::failed_cell()
 {
   printf("Cut2d failed on proc %d in cell ID: " CELLINT_FORMAT "\n",comm->me,id);
-  printf("  lo corner %g %g\n",lo[0],lo[1]);
-  printf("  hi corner %g %g\n",hi[0],hi[1]);
+  printf("  lo corner %20.16g %20.16g\n",lo[0],lo[1]);
+  printf("  hi corner %20.16g %20.16g\n",hi[0],hi[1]);
   printf("  # of surfs = %d out of " BIGINT_FORMAT "\n",nsurf,surf->nsurf);
   printf("  # of surfs = %d\n",nsurf);
   printf("  surfs:");
@@ -1277,8 +1277,8 @@ void Cut2d::print_clines()
 
   for (int i = 0; i < clines.n; i++) {
     printf("  line %d\n",i);
-    printf("    xpoint: %g %g\n",clines[i].x[0],clines[i].x[1]);
-    printf("    ypoint: %g %g\n",clines[i].y[0],clines[i].y[1]);
+    printf("    xpoint: %20.16g %20.16g\n",clines[i].x[0],clines[i].x[1]);
+    printf("    ypoint: %20.16g %20.16g\n",clines[i].y[0],clines[i].y[1]);
     printf("    line %d\n",clines[i].line);
   }
 }
