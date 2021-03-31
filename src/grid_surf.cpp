@@ -749,6 +749,9 @@ void Grid::surf2grid_surf_algorithm(int outflag)
       nsurf = cells[icell].nsurf;
       cells[icell].csurfs[nsurf] = rbuf3[i].surfID;
       cells[icell].nsurf++;
+      if (cells[icell].id == 1624)
+	printf("CSURFS nsurf %d value %d\n",cells[icell].nsurf,
+	       cells[icell].csurfs[nsurf-1]);
     }
 
     if (outflag) {
