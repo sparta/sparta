@@ -46,9 +46,6 @@ void Grid::id_point_child(double *x, double *lo, double *hi,
   ix = static_cast<int> ((x[0]-lo[0]) * nx/(hi[0]-lo[0]));
   iy = static_cast<int> ((x[1]-lo[1]) * ny/(hi[1]-lo[1]));
   iz = static_cast<int> ((x[2]-lo[2]) * nz/(hi[2]-lo[2]));
-  if (ix == nx) ix--;
-  if (iy == ny) iy--;
-  if (iz == nz) iz--;
 
   // insure indices match grid cell boundaries in case of round-off error
   // via master equation id_child_lohi() that defines cell boundaries
@@ -69,6 +66,15 @@ void Grid::id_point_child(double *x, double *lo, double *hi,
   if (x[2] < edge) iz--;
   edge = lo[2] + (iz+1)*(hi[2]-lo[2])/nz;
   if (x[2] >= edge) iz++;
+
+  // insure indices are from 0 to Nxyz - 1
+
+  ix = MAX(ix,0);
+  ix = MIN(ix,nx-1);
+  iy = MAX(iy,0);
+  iy = MIN(iy,ny-1);
+  iz = MAX(iz,0);
+  iz = MIN(iz,nz-1);
 }
 
 /* ----------------------------------------------------------------------
