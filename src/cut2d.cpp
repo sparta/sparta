@@ -34,8 +34,8 @@ enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut3d
 
 // cell ID for 2d or 3d cell
 
-//#define VERBOSE
-//#define VERBOSE_ID 1624
+#define VERBOSE
+#define VERBOSE_ID 1463
 
 /* ---------------------------------------------------------------------- */
 
