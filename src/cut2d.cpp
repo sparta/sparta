@@ -34,8 +34,8 @@ enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut3d
 
 // cell ID for 2d or 3d cell
 
-#define VERBOSE
-#define VERBOSE_ID 1463
+//#define VERBOSE
+//#define VERBOSE_ID 1463
 
 /* ---------------------------------------------------------------------- */
 
@@ -307,12 +307,12 @@ int Cut2d::clip_external(double *p, double *q, double *clo, double *chi,
    return areas = ptr to vector of areas = one area per split
      if nsplit = 1, cut area
      if nsplit > 1, one area per split cell
-   return corners = INSIDE/OUTSIDE for each of 4 corner pts, see below
+   return corners = UNKNOWN/INSIDE/OUTSIDE for each of 4 corner pts
    if nsplit > 1, also return:
      surfmap = which sub-cell (0 to Nsurfs-1) each surf is in
              = -1 if not in any sub-cell (i.e. discarded from clines)
+     xsplit = coords of a point in one of the split cells
      xsub = which sub-cell (0 to Nsplit-1) xsplit is in
-     xsplit = coords of a point in the split cell
 ------------------------------------------------------------------------- */
 
 int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
@@ -332,14 +332,14 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
   // if all push options fail, then print error message
 
   int nsplit,errflag;
-  pushflag = 0;
+  //pushflag = 0;
 
   while (1) {
-    int grazeflag = build_clines();
+    build_clines();
 
 #ifdef VERBOSE
     if (id == VERBOSE_ID) {
-      printf("Verbose cell " CELLINT_FORMAT " grazeflag %d\n",id,grazeflag);
+      printf("Verbose cell " CELLINT_FORMAT " grazecount %d\n",id,grazecount);
       failed_cell();
       printf("Clines for cell " CELLINT_FORMAT "\n",id);
       print_clines();
@@ -347,16 +347,16 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
 #endif
 
     // all lines just touched cell surface
-    // mark corner points based on grazeflag and in/out line orientation
+    // mark corner points based non-zero grazecount or touchmark value
     // return area = 0.0 for UNKNOWN/INSIDE, full cell area for OUTSIDE
     // vol is changed in Grid::set_inout() if OVERLAP cell corners are marked
 
     if (clines.n == 0) {
-      if (pushflag) npushcell[pushflag]++;
+      //if (pushflag) npushcell[pushflag]++;
 
       int mark = UNKNOWN;
-      if (grazeflag || inout == INSIDE) mark = INSIDE;
-      else if (inout == OUTSIDE) mark = OUTSIDE;
+      if (grazecount || touchmark == INSIDE) mark = INSIDE;
+      else if (touchmark == OUTSIDE) mark = OUTSIDE;
       corners[0] = corners[1] = corners[2] = corners[3] = mark;
 
       double area = 0.0;
@@ -377,14 +377,28 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
 
     errflag = weiler_build();
     if (errflag) {
-      if (push_increment()) continue;
+      //if (push_increment()) continue;
       break;
     }
 
     weiler_loops();
     errflag = loop2pg();
+
+    // loop2pg detected no positive-area loops, cell is inside the surf
+
+    if (errflag == 4) {
+      corners[0] = corners[1] = corners[2] = corners[3] = INSIDE;
+      double area = 0.0;
+      areas.grow(1);
+      areas[0] = area;
+      areas_caller = &areas[0];
+      return 1;
+    }
+
+    // other error returns from loop2pg
+
     if (errflag) {
-      if (push_increment()) continue;
+      //if (push_increment()) continue;
       break;
     }
 
@@ -395,7 +409,7 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
       else errflag = split_point_explicit(surfmap,xsplit,xsub);
     }
     if (errflag) {
-      if (push_increment()) continue;
+      //if (push_increment()) continue;
       break;
     }
 
@@ -446,7 +460,7 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
       error->one(FLERR,"WB: Point appears last in more than one CLINE");
     if (errflag == 3)
       error->one(FLERR,"WB: Singlet CLINES point not on cell border");
-    if (errflag == 4)
+    if (errflag == 4) // NOTE: this error can be discarded after testing
       error->one(FLERR,"LP: No positive areas in cell");
     if (errflag == 5)
       error->one(FLERR,"LP: More than one positive area with a negative area");
@@ -456,14 +470,14 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
       error->one(FLERR,"SP: Could not find split point in split cell");
   }
 
-  if (pushflag) npushcell[pushflag]++;
+  //if (pushflag) npushcell[pushflag]++;
 
   return nsplit;
 }
 
 /* ----------------------------------------------------------------------
    return errflag to Cut3d caller
-     incremented by 20 so Cut3d can distinguish from its own error messages
+   incremented by 20 so Cut3d can distinguish from its own error messages
 ------------------------------------------------------------------------- */
 
 int Cut2d::split_face(int id_caller, int iface, double *onelo, double *onehi)
@@ -508,9 +522,14 @@ int Cut2d::split_face(int id_caller, int iface, double *onelo, double *onehi)
 /* ----------------------------------------------------------------------
    create clines = list of lines clipped to cell
    skip transparent surfs
+   also return touchcount and grazecount and touchmark
+     only used if all clipped lines are discarded
+   discard if clipped line is a single point, increment touchcount
+     touchmark = corner point marking inferred from touching line orientations
+   discard if grazes cell with ourward normal, increment grazecount
 ------------------------------------------------------------------------- */
 
-int Cut2d::build_clines()
+void Cut2d::build_clines()
 {
   int m;
   double p1[2],p2[2],cbox[3],cmid[3],l2b[3];
@@ -523,7 +542,9 @@ int Cut2d::build_clines()
   clines.grow(nsurf);
   clines.n = 0;
 
-  int grazeflag = 0;
+  touchcount = 0;
+  grazecount = 0;
+
   int noutside = 0;
   int ninside = 0;
   int n = 0;
@@ -537,10 +558,10 @@ int Cut2d::build_clines()
 
     // if pushflag is set, push line pts near cell surface
 
-    if (pushflag) {
-      push(p1);
-      push(p2);
-    }
+    //if (pushflag) {
+    //  push(p1);
+    //  push(p2);
+    //}
 
     cline = &clines[n];
     cline->line = i;
@@ -551,16 +572,19 @@ int Cut2d::build_clines()
     y = cline->y;
     clip(p1,p2,x,y);
 
-    // discard clipped line if only one point
-    // if all lines are removed, clines will be empty,
-    //   which will result in cell corner pts being left UNKNOWN in split()
-    // to try and avoid this, tally the in/out orientation of all removed lines
-    // "out" orientation means line norm from line ctr points towards cell ctr
-    // "in" orientation means line norm from line ctr points away from cell ctr
-    // some lines may not follow this rule, but majority should
+    // discard clipped line if only one point, increment touchcount
+    // if all lines are removed, clines will be empty
+    //   can result in cell corner pts being left UNKNOWN in split()
+    // to try and avoid this, tally inside/outside for all removed lines
+    //   line is "outside" if it implies cell is outside the surf (in the flow)
+    //   line is "inside" if it implies cell is inside the surf (not in the flow)
+    //   some lines may not follow this rule, but most should
+    // outside = line norm from line ctr points towards cell ctr
+    // inside = line norm from line ctr points away from cell ctr
     // cbox = cell center pt, cmid = line center pt, l2b = cbox-cmid
 
     if (x[0] == y[0] && x[1] == y[1]) {
+      touchcount++;
       cbox[0] = 0.5*(lo[0]+hi[0]);
       cbox[1] = 0.5*(lo[1]+hi[1]);
       cbox[2] = 0.0;
@@ -573,61 +597,53 @@ int Cut2d::build_clines()
       double dot = MathExtra::dot3(line->norm,l2b);
       if (dot > 0.0) noutside++;
       if (dot < 0.0) ninside++;
-
       continue;
     }
 
-    // discard clipped line if lies along one cell edge
-    //   and normal is not into cell
-    // leave grazeflag incremented in this case
+    // discard clipped line if lies on a cell edge w/ normal out of cell
+    // increment grazecount in this case
 
-    grazeflag++;
     if (ptflag(x) == BORDER && ptflag(y) == BORDER) {
       int edge = sameedge(x,y);
       if (edge) {
+        grazecount++;
         norm = line->norm;
         if (edge == 1 and norm[0] < 0.0) continue;
         if (edge == 2 and norm[0] > 0.0) continue;
         if (edge == 3 and norm[1] < 0.0) continue;
         if (edge == 4 and norm[1] > 0.0) continue;
-        grazeflag--;
+        grazecount--;
       }
     }
 
     n++;
   }
 
-  // if empty, also return in/out status based on deleted line orientations
-  // only mark corner pts for INSIDE/OUTSIDE if all deleted lines
-  //   had same orientation, else leave them UNKNOWN
-  // NOTE: marking if majority are INSIDE/OUTSIDE (commented out)
-  //   triggered later marking error for cone_test/in.cone problem
+  // if no lines, set touchmark which will be used to mark corner points
+  // only set touchmark if all single-point deleted lines had same orientation
+  // NOTE: setting touchmark based on orientation of just majority
+  //   triggered later corner marking error for cone_test/in.cone problem
 
-  inout = UNKNOWN;
+  touchmark = UNKNOWN;
   if (n == 0) {
-    if (ninside && noutside == 0) inout = INSIDE;
-    else if (noutside && ninside == 0) inout = OUTSIDE;
-    //if (ninside > noutside) inout = INSIDE;
-    //else if (noutside > ninside) inout = OUTSIDE;
+    if (ninside && noutside == 0) touchmark = INSIDE;
+    else if (noutside && ninside == 0) touchmark = OUTSIDE;
   }
 
   clines.n = n;
-  return grazeflag;
 }
 
 /* ----------------------------------------------------------------------
-   create Weiler/Atherton data structure within points
-   add each CLINE, with next walking from ENTRY pt to EXIT pt
-   check that CLINES has valid set of points
-     no pt should appear no more than once as first or more than once as last
-     every singlet pt should be on cell border
-   add 4 corner pts to points
+   create Weiler/Atherton data structure within points data struct
+   sets all values for each Point in the data struct
+   check that set of points in clines is valid: 3 possible error returns
+     no pt should appear more than twice
+     if appears twice, must be once as first, once as last
+     if appears once, must be on cell border
+   then add 4 cell corner pts to points
      new CORNER pt if doesn't exist
      else already an ENTRY/EXIT pt (not a TWO pt)
-   create counter-clockwise linked list of cell perimeter pts
-     use cprev,cnext,side,value fields of points
-   set next field for points in linked list to complete loops
-     do not change next for ENTRY pts
+   create linked lists for loops and cell perimeter pts
 ------------------------------------------------------------------------- */
 
 int Cut2d::weiler_build()
@@ -645,7 +661,6 @@ int Cut2d::weiler_build()
   // add each cline end pt to points
   // set x,type,next,line for each pt
   // NOTE: could use hash to find existing pts in O(1) time
-  //   see Brian Adams code (howto/c++) for doing this on a vec of doubles
 
   int npt = 0;
 
@@ -711,11 +726,11 @@ int Cut2d::weiler_build()
   // only if corner pt is not already an ENTRY or EXIT pt
   // if a TWO pt, still add corner pt as CORNER
   // each corner pt is at beginning of side it is on
-  // NOTE: could use hash to find existing pts in O(1) time
   // corner flag = 0,1,2,3 for LL,LR,UL,UR, same as in Grid::ChildInfo,
   //   but ordering of corner pts in linked list is LL,LR,UR,UL
   // side = 0,1,2,3 for lower,right,upper,left = traversal order in linked list
   // value = x-coord for lower/upper sides, y-coord for left,right sides
+  // NOTE: could use hash to find existing pts in O(1) time
 
   double cpt[2];
   int ipt1,ipt2,ipt3,ipt4;
@@ -778,7 +793,8 @@ int Cut2d::weiler_build()
 
   points.n = npt;
 
-  // create counter-clockwise linked list of 4 pts around cell perimeter
+  // create initial counter-clockwise linked list around cell perimeter
+  // just the 4 corner pts
 
   firstpt = ipt1;
   lastpt = ipt4;
@@ -854,6 +870,9 @@ int Cut2d::weiler_build()
 }
 
 /* ----------------------------------------------------------------------
+   create loops data struct with one Loop for each closed path in WA data struct
+   sets all values for each Loop in the data struct
+   discard loop if did not close on itself, b/c just corner pts
 ------------------------------------------------------------------------- */
 
 void Cut2d::weiler_loops()
@@ -872,8 +891,8 @@ void Cut2d::weiler_loops()
   //   compute area along the way
   // stop when reach initial pt:
   //   closed loop, add to loops data structure
-  //   loop of just 4 corner pts is a valid loop
-  // stop when reach used pt:
+  //   BORDER loop of just 4 corner pts is a valid loop
+  // stop when reach other used pt:
   //   discard loop, just traversed non-loop corner pts
 
   int ipt,iflag,cflag,ncount,firstpt,nextpt;
@@ -922,23 +941,39 @@ void Cut2d::weiler_loops()
 }
 
 /* ----------------------------------------------------------------------
+   create pgs data struct with one PG (polygon) for each disjoint flow volume
+   a PG can have positive, negative, or zero area
+   some combinations of these are error conditions
+   for no positive areas, return -1 so caller can handle it
 ------------------------------------------------------------------------- */
 
 int Cut2d::loop2pg()
 {
   int positive = 0;
   int negative = 0;
+  int zero = 0;
 
   int nloop = loops.n;
-  for (int i = 0; i < nloop; i++)
+
+  for (int i = 0; i < nloop; i++) {
     if (loops[i].area > 0.0) positive++;
-    else negative++;
+    else if (loops[i].area < 0.0) negative++;
+    else zero++;
+  }
+
+  // if no positive areas, cell is entirely inside the surf, caller handles it
+  // this can happen due to epsilon size polygon(s)
+  // e.g. when a line barely cuts off a cell corner
+
   if (positive == 0) return 4;
+
+  // do not allow mulitple positive with one or more negative
+  // too difficult to figure out which positive each negative is inside of
+
   if (positive > 1 && negative) return 5;
 
-  pgs.grow(positive);
-
-  // if multiple positive loops, mark BORDER loop as inactive if exists
+  // if multiple positive, mark positive BORDER loop as inactive if exists
+  // think this only happens if there is a flow island(s) inside cell
   // don't want entire cell border to be a loop in this case
 
   if (positive > 1) {
@@ -951,6 +986,8 @@ int Cut2d::loop2pg()
 
   // positive = 1 means 1 PG with area = sum of all pos/neg loops
   // positive > 1 means each loop is a PG
+
+  pgs.grow(positive);
 
   if (positive == 1) {
     double area = 0.0;
@@ -967,6 +1004,8 @@ int Cut2d::loop2pg()
       prev = i;
     }
     loops[prev].next = -1;
+
+    // do not allow an inverse donut geometry, positive inside a negative
 
     if (area < 0.0) return 6;
 
