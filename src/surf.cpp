@@ -309,7 +309,6 @@ void Surf::init()
 
   // checks on transparent surfaces
   // must be assigned to transparent surf collision model
-  // must not be assigned to any surf reaction model
 
   if (surf_collision_check) {
     flag = 0;
@@ -317,14 +316,12 @@ void Surf::init()
       for (int i = 0; i < nlocal+nghost; i++) {
         if (!lines[i].transparent) continue;
         if (!sc[lines[i].isc]->transparent) flag++;
-        if (lines[i].isr >= 0) flag++;
       }
     } 
     if (dim == 3) {
       for (int i = 0; i < nlocal+nghost; i++) {
         if (!tris[i].transparent) continue;
         if (!sc[tris[i].isc]->transparent) flag++;
-        if (tris[i].isr >= 0) flag++;
       }
     } 
 
@@ -2802,7 +2799,6 @@ int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
    nrow,ncol = # of entries and columns in input array
    tally2surf = global surf index of each entry in input array
    in = input array of tallies
-   instride = stride between entries in input array
    return out = summed tallies for explicit surfs I own
 ------------------------------------------------------------------------- */
 
@@ -2843,8 +2839,8 @@ void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
   memory->create(one,nglobal,ncol,"surf:one");
   memory->create(all,nglobal,ncol,"surf:all");
 
-  // zero all values and add in values I accumulated
-  
+  // zero all values and set values I accumulated
+
   for (i = 0; i < nglobal; i++)
     for (j = 0; j < ncol; j++)
       one[i][j] = 0.0;
@@ -2952,6 +2948,7 @@ int Surf::rendezvous_array(int n, char *inbuf,
   int me = sptr->comm->me;
   
   // zero my owned surf values
+  // NOTE: is this needed if caller zeroes ?
 
   int ntotal = nown*ncol;
   for (m = 0; m < ntotal; m++) out[m] = 0.0;

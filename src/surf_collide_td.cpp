@@ -143,10 +143,12 @@ collide(Particle::OnePart *&ip, double &,
   nsingle++;
 
   // if surface chemistry defined, attempt reaction
-  // reaction = 1 if reaction took place
+  // reaction = 1 if reaction took place, but post-collision v not yet reset
+  // reaction = 2 if reaction took place, and post-collision v already reset
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
+  reaction = 0;
 
   if (isr >= 0) {
     if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
@@ -155,15 +157,17 @@ collide(Particle::OnePart *&ip, double &,
   }
 
   // td reflection for each particle
+
+  if (reaction < 2) {
+    if (ip) td(ip,norm);
+    if (jp) td(jp,norm);
+  }
+
   // if new particle J created, also need to trigger any fixes
 
-  if (ip) td(ip,norm);
-  if (jp) {
-    td(jp,norm);
-    if (modify->n_add_particle) {
-      int j = jp - particle->particles;
-      modify->add_particle(j,twall,twall,twall,vstream);
-    }
+  if (jp && modify->n_add_particle) {
+    int j = jp - particle->particles;
+    modify->add_particle(j,twall,twall,twall,vstream);
   }
 
   // call any fixes with a surf_react() method
@@ -258,6 +262,70 @@ void SurfCollideTD::td(Particle::OnePart *p, double *norm)
   
   p->erot = particle->erot(ispecies,twall_rot,random); 
   p->evib = particle->evib(ispecies,twall_vib,random);
+}
+
+
+/* ----------------------------------------------------------------------
+   wrapper on td() method to perform collision for a single particle
+   pass in flags/coefficients to match command-line args for style td
+   called by SurfReactAdsorb
+------------------------------------------------------------------------- */
+
+void SurfCollideTD::wrapper(Particle::OnePart *p, double *norm, 
+                            int *flags, double *coeffs)
+{ 
+  twall = coeffs[0];
+
+  barrier_flag = flags[0];
+  initen_flag = flags[1];
+  bond_flag = flags[2];
+
+  int m = 1;
+
+  if (barrier_flag) {
+    barrier_val = coeffs[m++];
+  }
+  if (initen_flag) {
+    initen_trans = coeffs[m++];
+    initen_rot = coeffs[m++];
+    initen_vib = coeffs[m++];
+  }
+  if (bond_flag) {
+    bond_trans = coeffs[m++];
+    bond_rot = coeffs[m++];
+    bond_vib = coeffs[m++];
+  }
+
+  td(p,norm);
+}
+
+/* ----------------------------------------------------------------------
+   return flags and coeffs for this SurfCollide instance to caller
+------------------------------------------------------------------------- */
+
+void SurfCollideTD::flags_and_coeffs(int *flags, double *coeffs)
+{
+  coeffs[0] = twall;
+
+  flags[0] = barrier_flag;
+  flags[1] = initen_flag;
+  flags[2] = bond_flag;
+
+  int m = 1;
+
+  if (barrier_flag) {
+    coeffs[m++] = barrier_val;
+  }
+  if (initen_flag) {
+    coeffs[m++] = initen_trans;
+    coeffs[m++] = initen_rot;
+    coeffs[m++] = initen_vib;
+  }
+  if (bond_flag) {
+    coeffs[m++] = bond_trans;
+    coeffs[m++] = bond_rot;
+    coeffs[m++] = bond_vib;
+  }
 }
 
 /* ----------------------------------------------------------------------

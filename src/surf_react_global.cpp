@@ -37,6 +37,10 @@ SurfReactGlobal::SurfReactGlobal(SPARTA *sparta, int narg, char **arg) :
   if (prob_destroy + prob_create > 1.0)
     error->all(FLERR,"Illegal surf_react global command");
 
+  // setup the reaction tallies
+
+  nsingle = ntotal = 0;
+
   nlist = 2;
   tally_single = new int[nlist];
   tally_total = new int[nlist];

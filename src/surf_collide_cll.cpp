@@ -172,10 +172,12 @@ collide(Particle::OnePart *&ip, double &,
   nsingle++;
 
   // if surface chemistry defined, attempt reaction
-  // reaction = 1 if reaction took place
+  // reaction = 1 if reaction took place, but post-collision v not yet reset
+  // reaction = 2 if reaction took place, and post-collision v already reset
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
+  reaction = 0;
 
   if (isr >= 0) {
     if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
@@ -184,15 +186,17 @@ collide(Particle::OnePart *&ip, double &,
   }
   
   // CLL reflection for each particle
+
+  if (reaction < 2) {
+    if (ip) cll(ip,norm);
+    if (jp) cll(jp,norm);
+  }
+
   // if new particle J created, also need to trigger any fixes
 
-  if (ip) cll(ip,norm);
-  if (jp) {
-    cll(jp,norm);
-    if (modify->n_add_particle) {
-      int j = jp - particle->particles;
-      modify->add_particle(j,twall,twall,twall,vstream);
-    }
+  if (jp && modify->n_add_particle) {
+    int j = jp - particle->particles;
+    modify->add_particle(j,twall,twall,twall,vstream);
   }
 
   // call any fixes with a surf_react() method
@@ -222,7 +226,7 @@ collide(Particle::OnePart *&ip, double &,
   tangent1 = component of particle v tangential to surface,
   check if tangent1 = 0 (normal collision), set randomly
   tangent2 = norm x tangent1 = orthogonal tangential direction
-  tangent12 are both unit vectors  
+  tangent12 are both unit vectors
 ------------------------------------------------------------------------- */
 
 void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
@@ -412,6 +416,46 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
     
     p->evib = update->boltz * twall * 
       (r_vib*r_vib + evib_mag*evib_mag + 2*r_vib*evib_mag*cos_theta_vib);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   wrapper on cll() method to perform collision for a single particle
+   pass in flags/coefficients to match command-line args for style cll 
+   called by SurfReactAdsorb
+------------------------------------------------------------------------- */
+
+void SurfCollideCLL::wrapper(Particle::OnePart *p, double *norm, 
+                             int *flags, double *coeffs)
+{ 
+  twall = coeffs[0];
+  acc_n = coeffs[1];
+  acc_t = coeffs[2];
+  acc_rot = coeffs[3];
+  acc_vib = coeffs[4];
+
+  if (flags[0]) eccen = coeffs[5];
+  else eccen = 0.0;
+
+  cll(p,norm);
+}
+
+/* ----------------------------------------------------------------------
+   return flags and coeffs for this SurfCollide instance to caller
+------------------------------------------------------------------------- */
+
+void SurfCollideCLL::flags_and_coeffs(int *flags, double *coeffs)
+{
+  coeffs[0] = twall;
+  coeffs[1] = acc_n;
+  coeffs[2] = acc_t;
+  coeffs[3] = acc_rot;
+  coeffs[4] = acc_vib;
+
+  flags[0] = 0;
+  if (eccen != 0.0) {
+    flags[0] = 1;
+    coeffs[5] = eccen;
   }
 }
 

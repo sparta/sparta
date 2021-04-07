@@ -32,8 +32,6 @@ SurfCollidePiston::SurfCollidePiston(SPARTA *sparta, int narg, char **arg) :
 {
   if (narg != 3) error->all(FLERR,"Illegal surf_collide piston command");
 
-  allowreact = 1;
-
   vwall = input->numeric(FLERR,arg[2]); 
   if (vwall <= 0.0) error->all(FLERR,"Surf_collide piston velocity <= 0.0");
 }
@@ -95,7 +93,7 @@ void SurfCollidePiston::init()
 
 Particle::OnePart *SurfCollidePiston::
 collide(Particle::OnePart *&ip, double &dtremain, 
-        int isurf, double *norm, int isr, int & reaction)
+        int isurf, double *norm, int isr, int &reaction)
 {
   nsingle++;
 
