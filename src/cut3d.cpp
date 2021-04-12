@@ -2194,11 +2194,15 @@ void Cut3d::failed_cell()
   printf("  lo corner %g %g %g\n",lo[0],lo[1],lo[2]);
   printf("  hi corner %g %g %g\n",hi[0],hi[1],hi[2]);
   printf("  # of surfs = %d out of " BIGINT_FORMAT "\n",nsurf,surf->nsurf);
-  printf("  surfs:");
-  for (int i = 0; i < nsurf; i++)
-    printf(" " SURFINT_FORMAT " %g",tris[surfs[i]].id,tris[surfs[i]].p1[0]);
-  //for (int i = 0; i < nsurf; i++) printf(" %d",surfs[i]+1);
-  printf("\n");
+  for (int i = 0; i < nsurf; i++) {
+    printf("  surfs: " SURFINT_FORMAT ":\n",tris[surfs[i]].id);
+    printf("     p1: %g %g %g\n",
+	   tris[surfs[i]].p1[0],tris[surfs[i]].p1[1],tris[surfs[i]].p1[2]);
+    printf("     p2: %g %g %g\n",
+	   tris[surfs[i]].p2[0],tris[surfs[i]].p2[1],tris[surfs[i]].p2[2]);
+    printf("     p3: %g %g %g\n",
+	   tris[surfs[i]].p3[0],tris[surfs[i]].p3[1],tris[surfs[i]].p3[2]);
+  }
 }
 
 /* ----------------------------------------------------------------------
