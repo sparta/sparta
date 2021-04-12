@@ -310,7 +310,7 @@ int Cut2d::clip_external(double *p, double *q, double *clo, double *chi,
    return corners = UNKNOWN/INSIDE/OUTSIDE for each of 4 corner pts
    if nsplit > 1, also return:
      surfmap = which sub-cell (0 to Nsurfs-1) each surf is in
-             = -1 if not in any sub-cell (i.e. discarded from clines)
+             = -1 if not in any sub-cell, discarded by build_clines()
      xsplit = coords of a point in one of the split cells
      xsub = which sub-cell (0 to Nsplit-1) xsplit is in
 ------------------------------------------------------------------------- */

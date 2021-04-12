@@ -51,6 +51,10 @@ class Cut3d : protected Pointers {
   double pushlo_vec[3],pushhi_vec[3],pushvalue_vec[3];  // push values to try
   int inout;             // orientation of triangles that just touch cell
 
+  int grazecount;        // count of tris that graze cell surf w/ outward norm
+  int touchcount;        // count of tris that only touch cell surf
+  int touchmark;         // corner marking inferred by touching tris
+
   double **path1,**path2;
 
   // DEBUG
@@ -121,7 +125,7 @@ class Cut3d : protected Pointers {
 
   int clip(double *, double *, double *);
   int add_tris();
-  int clip_tris();
+  void clip_tris();
   void ctri_volume();
   int edge2face();
   void edge2clines(int);

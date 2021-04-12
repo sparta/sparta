@@ -409,11 +409,12 @@ int Cut3d::clip_external(double *p0, double *p1, double *p2,
    return vols = ptr to vector of vols = one vol per split
      if nsplit = 1, cut vol
      if nsplit > 1, one vol per split cell
+   return corners = UNKNOWN/INSIDE/OUTSIDE for each of 8 corner pts
    if nsplit > 1, also return:
      surfmap = which sub-cell (0 to Nsurfs-1) each surf is in
-             = -1 if not in any sub-cell (i.e. discarded from clines)
+             = -1 if not in any sub-cell, discarded by add_tris
+     xsplit = coords of a point in one of the split cells
      xsub = which sub-cell (0 to Nsplit-1) xsplit is in
-     xsplit = coords of a point in the split cell
 ------------------------------------------------------------------------- */
 
 int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
@@ -446,20 +447,14 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
     if (id == VERBOSE_ID) print_bpg("BPG after added tris");
 #endif
 
-    int grazeflag = clip_tris();
-
-    // DEBUG
-    //totcell++;
-    //totsurf += nsurf;
-    //totvert += verts.n;
-    //totedge += edges.n;
+    clip_tris();
 
 #ifdef VERBOSE
     if (id == VERBOSE_ID) print_bpg("BPG after clipped tris");
 #endif
 
     // all triangles just touched cell surface
-    // mark corner points based on grazeflag and in/out tri orientation
+    // mark corner points based on grazecount or touchmark value
     // return vol = 0.0 for UNKNOWN/INSIDE, full cell vol for OUTSIDE
     // vol is changed in Grid::set_inout() if OVERLAP cell corners are marked
 
@@ -467,32 +462,10 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
       if (pushflag) npushcell[pushflag]++;
 
       int mark = UNKNOWN;
-      if (grazeflag || inout == INSIDE) mark = INSIDE;
-      else if (inout == OUTSIDE) mark = OUTSIDE;
+      if (grazecount || touchmark == INSIDE) mark = INSIDE;
+      else if (touchmark == OUTSIDE) mark = OUTSIDE;
       corners[0] = corners[1] = corners[2] = corners[3] =
         corners[4] = corners[5] = corners[6] = corners[7] = mark;
-
-
-      /*
-      double ctr[3];
-      ctr[0] = 0.5*(lo[0]+hi[0]);
-      ctr[1] = 0.5*(lo[1]+hi[1]);
-      ctr[2] = 0.5*(lo[2]+hi[2]);
-      int check = 0;
-      if (mark == INSIDE &&
-          (fabs(ctr[0]) > 1.0 || fabs(ctr[1]) > 1.0 || fabs(ctr[2]) > 1.0))
-        check = 1;
-      if (mark == OUTSIDE &&
-          (fabs(ctr[0]) < 1.0 && fabs(ctr[1]) < 1.0 && fabs(ctr[2]) < 1.0))
-        check = 1;
-      if (mark == UNKNOWN) check = 1;
-      if (check) {
-        printf("BAD MARKING %d %g %g %g: mark %d: "
-               "nsurf %d pushflag %d grazeflag %d inout %d\n",
-               id,ctr[0],ctr[1],ctr[2],mark,nsurf,pushflag,grazeflag,inout);
-      }
-      */
-
 
       double vol = 0.0;
       if (mark == OUTSIDE) vol = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
@@ -663,6 +636,11 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
    add each triangle as vertex and edges to BPG
    add full edge even if outside cell, clipping comes later
    skip transparent surfs
+   also return touchcount and grazecount and touchmark
+     only used if all clipped tris are discarded
+   discard if clipped tri is a single point, increment touchcount
+     touchmark = corner point marking inferred from touching tri orientations
+   discard if grazes cell with outward normal, increment grazecount
 ------------------------------------------------------------------------- */
 
 int Cut3d::add_tris()
@@ -681,6 +659,8 @@ int Cut3d::add_tris()
   verts.n = 0;
   edges.n = 0;
 
+
+  
   int nvert = 0;
   for (i = 0; i < nsurf; i++) {
     m = surfs[i];
@@ -762,13 +742,19 @@ int Cut3d::add_tris()
 /* ----------------------------------------------------------------------
 ------------------------------------------------------------------------- */
 
-int Cut3d::clip_tris()
+void Cut3d::clip_tris()
 {
   int i,n,dim,lohi,ivert,iedge,jedge,idir,jdir,nedge;
   int p1flag,p2flag;
   double value;
   double *p1,*p2,*p3;
   Edge *edge,*newedge;
+
+  touchcount = 0;
+  grazecount = 0;
+
+  int noutside = 0;
+  int ninside = 0;
 
   // loop over all 6 faces of cell
 
@@ -947,19 +933,19 @@ int Cut3d::clip_tris()
   // removals should have 2 or 0 edges, no verts should have 1 edge
   // if all triangles are removed, BPG will be empty,
   //   which will result in cell corner pts being left UNKNOWN in split()
-  // to try and avoid this, tally the in/out orientation of all removed tris
-  // "out" orientation means tri norm from tri ctr points towards cell ctr
-  // "in" orientation means tri norm from tri ctr points away from cell ctr
-  // some triangles may not follow this rule, but majority should
+  // to try and avoid this, tally inside/outside for all removed tris
+  //   tri is "outside" if it implies cell is outside the surf (in the flow)
+  //   tri is "inside" if it implies cell is inside the surf (not in the flow)
+  //   some tris may not follow this rule, but most should
+  // outside = tri norm from tri ctr points towards cell ctr
+  // inside = tri norm from tri ctr points away from cell ctr
   // cbox = cell center pt, ctri = triangle center pt, t2b = cbox-ctri
-  // NOTE: should noutside/ninside only be set when nedge > 0 ??
 
-  int noutside = 0;
-  int ninside = 0;
   double cbox[3],ctri[3],t2b[3];
 
   for (ivert = 0; ivert < nvert; ivert++)
     if (verts[ivert].nedge <= 2) {
+      touchcount++;
       cbox[0] = 0.5*(lo[0]+hi[0]);
       cbox[1] = 0.5*(lo[1]+hi[1]);
       cbox[2] = 0.5*(lo[2]+hi[2]);
@@ -974,19 +960,17 @@ int Cut3d::clip_tris()
       double dot = MathExtra::dot3(verts[ivert].norm,t2b);
       if (dot > 0.0) noutside++;
       if (dot < 0.0) ninside++;
-
       vertex_remove(&verts[ivert]);
     }
 
-  // remove vertices which only graze the cell
-  // grazing = all vertex pts in same face of cell and outward normal
+  // discard clipped tri if lies on a cell face w/ normal out of cell
+  // increment grazecount in this case
 
-  int grazeflag = 0;
   for (ivert = 0; ivert < nvert; ivert++) {
     if (!verts[ivert].active) continue;
     if (grazing(&verts[ivert])) {
-      grazeflag = 1;
       vertex_remove(&verts[ivert]);
+      grazecount++;
     }
   }
 
@@ -1006,21 +990,16 @@ int Cut3d::clip_tris()
       break;
     }
 
-  // if empty, also return in/out status based on deleted tri orientations
-  // only mark corner pts for INSIDE/OUTSIDE if all deleted tris
-  //   had same orientation, else leave them UNKNOWN
-  // NOTE: marking if majority are INSIDE/OUTSIDE (commented out)
-  //   triggered later marking error for cone_test/in.cone problem
+  // if no lines, set touchmark which will be used to mark corner points
+  // only set touchmark if all deleted tris had same orientation
+  // NOTE: setting touchmark based on orientation of just majority
+  //   triggered later corner marking error for cone_test/in.cone problem
 
-  inout = UNKNOWN;
+  touchmark = UNKNOWN;
   if (empty) {
-    if (ninside && noutside == 0) inout = INSIDE;
-    else if (noutside && ninside == 0) inout = OUTSIDE;
-    //if (ninside > noutside) inout = INSIDE;
-    //else if (noutside > ninside) inout = OUTSIDE;
+    if (ninside && noutside == 0) touchmark = INSIDE;
+    else if (noutside && ninside == 0) touchmark = OUTSIDE;
   }
-
-  return grazeflag;
 }
 
 /* ----------------------------------------------------------------------
