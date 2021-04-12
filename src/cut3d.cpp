@@ -850,7 +850,7 @@ void Cut3d::clip_tris()
             if (idir == 0) between(p1,p2,dim,value,edge->p1);
             else between(p1,p2,dim,value,edge->p2);
 	    // DEBUG
-	    if (id == VERBOSE_ID && iedge == 0)
+	    if (id == VERBOSE_ID && i == 0)
 	      printf("CLIPOUT iedge %d iface %d pt %20.16g %20.16g %20.16g "
 		     "hi %20.16g %20.16g\n",
 		     i,iface,
@@ -862,7 +862,7 @@ void Cut3d::clip_tris()
             if (idir == 0) between(p1,p2,dim,value,edge->p2);
             else between(p1,p2,dim,value,edge->p1);
 	    // DEBUG
-	    if (id == VERBOSE_ID && iedge == 0)
+	    if (id == VERBOSE_ID && i == 0)
 	      printf("CLIPIN iedge %d iface %d pt %20.16g %20.16g %20.16g ",
 		     "hi %20.16g %20.16g\n",
 		     i,iface,
