@@ -1010,9 +1010,6 @@ void Grid::surf2grid_split(int subflag, int outflag)
 
   for (int icell = 0; icell < ncurrent; icell++) {
     if (cells[icell].nsplit <= 0) continue;
-    printf("OVERLAP cell %d %d %d\n",
-	   cells[icell].id,cells[icell].nsurf,cinfo[icell].type);
-      
     if (cinfo[icell].type != OVERLAP) continue;
 
     surfmap = csplits->vget();
@@ -1337,6 +1334,7 @@ void Grid::recurse3d(cellint parentID, int level, double *plo, double *phi,
       
 	grid->id_child_lohi(level,plo,phi,ichild,clo,chi);
 	overlap = cut3d->surf2grid_one(p1,p2,p3,clo,chi);
+	printf("RECURSE childID %d surfindex %d overlap %d\n");
 	if (!overlap) continue;
 
 	if (cflag) {
