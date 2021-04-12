@@ -1,4 +1,4 @@
-/* ----------------------------------------------------------------------
+ /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
@@ -1022,6 +1022,8 @@ void Grid::surf2grid_split(int subflag, int outflag)
       nsplitone = cut2d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
                                vols,surfmap,cinfo[icell].corner,xsub,xsplit);
 
+    printf("OVERLAP cell %d %d\n",cells[icell].id,nsplitone);
+      
     if (nsplitone == 1) {
       cinfo[icell].volume = vols[0];
 
