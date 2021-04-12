@@ -1011,7 +1011,7 @@ void Grid::surf2grid_split(int subflag, int outflag)
   for (int icell = 0; icell < ncurrent; icell++) {
     if (cells[icell].nsplit <= 0) continue;
     printf("OVERLAP cell %d %d %d\n",
-	   cells[icell].id,cells[icell].nsurf,cells[icell].type);
+	   cells[icell].id,cells[icell].nsurf,cinfo[icell].type);
       
     if (cinfo[icell].type != OVERLAP) continue;
 
