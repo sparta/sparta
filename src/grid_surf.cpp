@@ -1320,6 +1320,13 @@ void Grid::recurse3d(cellint parentID, int level, double *plo, double *phi,
   // if pairs is a parent:
   //   recurse using new lohi for intersection of surf bbox with new parent cell
 
+  if (surfindex == 0) {
+    printf("SURF BB lo %g %g %g hi %g %g %g\n",
+	   bblo[0],bblo[1],bblo[2],
+	   bbhi[0],bbhi[1],bbhi[2]);
+    printf("Cell indices i %d %d j %d %d k %d %d\n",ilo,ihi,jlo,jhi,klo,khi);
+  }
+  
   for (iz = klo; iz <= khi; iz++) {
     for (iy = jlo; iy <= jhi; iy++) {
       for (ix = ilo; ix <= ihi; ix++) {
@@ -1334,7 +1341,9 @@ void Grid::recurse3d(cellint parentID, int level, double *plo, double *phi,
       
 	grid->id_child_lohi(level,plo,phi,ichild,clo,chi);
 	overlap = cut3d->surf2grid_one(p1,p2,p3,clo,chi);
-	printf("RECURSE childID %d surfindex %d overlap %d\n",childID,surfindex,overlap);
+	if (surfindex == 0)
+	  printf("RECURSE childID %d surfindex %d overlap %d\n",
+		 childID,surfindex,overlap);
 	if (!overlap) continue;
 
 	if (cflag) {
