@@ -1303,8 +1303,8 @@ void Grid::recurse3d(cellint parentID, int level, double *plo, double *phi,
   // so check if lower range should be decremented
   
   int ilo,ihi,jlo,jhi,klo,khi;
-  id_point_child(bblo,plo,phi,nx,ny,1,ilo,jlo,klo);
-  id_point_child(bbhi,plo,phi,nx,ny,1,ihi,jhi,khi);
+  id_point_child(bblo,plo,phi,nx,ny,nz,ilo,jlo,klo);
+  id_point_child(bbhi,plo,phi,nx,ny,nz,ihi,jhi,khi);
 
   celledge = plo[0] + ilo*(phi[0]-plo[0])/nx;
   if (bblo[0] <= celledge && ilo > 0) ilo--;
