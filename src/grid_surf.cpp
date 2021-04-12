@@ -1010,6 +1010,9 @@ void Grid::surf2grid_split(int subflag, int outflag)
 
   for (int icell = 0; icell < ncurrent; icell++) {
     if (cells[icell].nsplit <= 0) continue;
+    printf("OVERLAP cell %d %d %d\n",
+	   cells[icell].id,cells[icell].nsurf,cells[icell].type);
+      
     if (cinfo[icell].type != OVERLAP) continue;
 
     surfmap = csplits->vget();
@@ -1022,8 +1025,6 @@ void Grid::surf2grid_split(int subflag, int outflag)
       nsplitone = cut2d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
                                vols,surfmap,cinfo[icell].corner,xsub,xsplit);
 
-    printf("OVERLAP cell %d %d\n",cells[icell].id,nsplitone);
-      
     if (nsplitone == 1) {
       cinfo[icell].volume = vols[0];
 
