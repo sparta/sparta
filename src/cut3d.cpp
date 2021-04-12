@@ -2275,14 +2275,14 @@ void Cut3d::print_bpg(const char *str)
       printf(" n2: [%d %d]",edges[i].next[1],edges[i].dirnext[1]);
     }
     if (edges[i].nvert > 3) printf(" [BIG %d]",edges[i].nvert);
-    printf("FACE p1: %d %d: %d %d: %d %d\n",
-	   edges[i].p1[0]==lo[0],edges[i].p1[0]==hi[0],
-	   edges[i].p1[1]==lo[1],edges[i].p1[1]==hi[1],
-	   edges[i].p1[2]==lo[2],edges[i].p1[2]==hi[2]);
-    printf("FACE p2: %d %d: %d %d: %d %d\n",
-	   edges[i].p2[0]==lo[0],edges[i].p2[0]==hi[0],
-	   edges[i].p2[1]==lo[1],edges[i].p2[1]==hi[1],
-	   edges[i].p2[2]==lo[2],edges[i].p2[2]==hi[2]);
+    printf("FACE p1: %g %g: %g %g: %g %g\n",
+	   fabs(edges[i].p1[0]-lo[0]),fabs(edges[i].p1[0]-hi[0]),
+	   fabs(edges[i].p1[1]-lo[1]),fabs(edges[i].p1[1]-hi[1]),
+	   fabs(edges[i].p1[2]-lo[2]),fabs(edges[i].p1[2]-hi[2]));
+    printf("FACE p2: %g %g: %g %g: %g %g\n",
+	   fabs(edges[i].p2[0]-lo[0]),fabs(edges[i].p2[0]-hi[0]),
+	   fabs(edges[i].p2[1]-lo[1]),fabs(edges[i].p2[1]-hi[1]),
+	   fabs(edges[i].p2[2]-lo[2]),fabs(edges[i].p2[2]-hi[2]));
     printf("\n");
   }
 }
