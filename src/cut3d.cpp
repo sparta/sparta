@@ -852,7 +852,7 @@ void Cut3d::clip_tris()
 	    // DEBUG
 	    if (id == VERBOSE_ID && i == 0)
 	      printf("CLIPOUT iedge %d iface %d pt %20.16g %20.16g %20.16g "
-		     "hi %20.16g %20.16g\n",
+		     "hi %20.16g %20.16g\n", 
 		     i,iface,
 		     edge->p1[0],edge->p1[1],edge->p1[2],hi[1],hi[2]);
             edge->clipped = 1;

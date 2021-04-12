@@ -951,14 +951,12 @@ int Cut2d::loop2pg()
 {
   int positive = 0;
   int negative = 0;
-  int zero = 0;
 
   int nloop = loops.n;
 
   for (int i = 0; i < nloop; i++) {
     if (loops[i].area > 0.0) positive++;
     else if (loops[i].area < 0.0) negative++;
-    else zero++;
   }
 
   // if no positive areas, cell is entirely inside the surf, caller handles it
