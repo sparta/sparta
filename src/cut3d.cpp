@@ -853,12 +853,10 @@ void Cut3d::clip_tris()
           }
         } else if (p1flag == INSIDE) {
           if (p2flag == OUTSIDE) {
-            if (idir == 0) {
-	      between(p1,p2,dim,value,edge->p2);
-	      else between(p1,p2,dim,value,edge->p1);
-	    }
-            edge->clipped = 1;
-          }
+            if (idir == 0) between(p1,p2,dim,value,edge->p2);
+	    else between(p1,p2,dim,value,edge->p1);
+	    edge->clipped = 1;
+	  }
         } else {
           if (p2flag == OUTSIDE) edge_remove(edge,idir);
         }
