@@ -1334,7 +1334,7 @@ void Grid::recurse3d(cellint parentID, int level, double *plo, double *phi,
       
 	grid->id_child_lohi(level,plo,phi,ichild,clo,chi);
 	overlap = cut3d->surf2grid_one(p1,p2,p3,clo,chi);
-	printf("RECURSE childID %d surfindex %d overlap %d\n");
+	printf("RECURSE childID %d surfindex %d overlap %d\n",childID,surfindex,overlap);
 	if (!overlap) continue;
 
 	if (cflag) {
