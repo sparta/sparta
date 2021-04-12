@@ -524,6 +524,19 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
 #endif
 
     errflag = loop2ph();
+
+    // loop2ph detected no positive-volume loops, cell is inside the surf
+
+    if (errflag == 4) {
+      corners[0] = corners[1] = corners[2] = corners[3] =
+	corners[4] = corners[5] = corners[6] = corners[7] = INSIDE;
+      double volume = 0.0;
+      vols.grow(1);
+      vols[0] = volume;
+      vols_caller = &vols[0];
+      return 1;
+    }
+    
     if (errflag) {
       if (push_increment()) continue;
       break;
@@ -1576,11 +1589,25 @@ int Cut3d::loop2ph()
   int negative = 0;
 
   int nloop = loops.n;
-  for (int i = 0; i < nloop; i++)
+  
+  for (int i = 0; i < nloop; i++) {
     if (loops[i].volume > 0.0) positive++;
     else negative++;
+  }
+
+  // if no positive vols, cell is entirely inside the surf, caller handles it
+  // this can happen due to epsilon size polyhedron(s)
+  // e.g. when a tri barely cuts off a cell corner
+
   if (positive == 0) return 4;
+
+  // do not allow mulitple positive with one or more negative
+  // too difficult to figure out which positive each negative is inside of
+
   if (positive > 1 && negative) return 5;
+
+  // positive = 1 means 1 PH with vol = sum of all pos/neg loops
+  // positive > 1 means each loop is a PH
 
   phs.grow(positive);
 
