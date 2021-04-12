@@ -847,26 +847,40 @@ void Cut3d::clip_tris()
         if (p1flag == OUTSIDE) {
           if (p2flag == OUTSIDE || p2flag == OVERLAP) edge_remove(edge,idir);
           else {
-            if (idir == 0) between(p1,p2,dim,value,edge->p1);
-            else between(p1,p2,dim,value,edge->p2);
-	    // DEBUG
-	    if (id == VERBOSE_ID && i == 0)
-	      printf("CLIPOUT iedge %d iface %d pt %20.16g %20.16g %20.16g "
-		     "hi %20.16g %20.16g\n", 
-		     i,iface,
-		     edge->p1[0],edge->p1[1],edge->p1[2],hi[1],hi[2]);
-            edge->clipped = 1;
+            if (idir == 0) {
+	      between(p1,p2,dim,value,edge->p1);
+	      if (id == VERBOSE_ID && i == 0)
+		printf("CLIPOUT iedge %d iface %d ptflag %d %20.16g %20.16g %20.16g "
+		       "hi %20.16g %20.16g\n", 
+		       i,iface,
+		       edge->p1[0],edge->p1[1],edge->p1[2],hi[1],hi[2]);
+            } else {
+	      between(p1,p2,dim,value,edge->p2);
+	      if (id == VERBOSE_ID && i == 0)
+		printf("CLIPOUT iedge %d iface %d ptflag %d %20.16g %20.16g %20.16g "
+		       "hi %20.16g %20.16g\n", 
+		       i,iface,
+		       edge->p2[0],edge->p2[1],edge->p2[2],hi[1],hi[2]);
+            }
+	    edge->clipped = 1;
           }
         } else if (p1flag == INSIDE) {
           if (p2flag == OUTSIDE) {
-            if (idir == 0) between(p1,p2,dim,value,edge->p2);
-            else between(p1,p2,dim,value,edge->p1);
-	    // DEBUG
-	    if (id == VERBOSE_ID && i == 0)
-	      printf("CLIPIN iedge %d iface %d pt %20.16g %20.16g %20.16g "
-		     "hi %20.16g %20.16g\n",
-		     i,iface,
-		     edge->p2[0],edge->p2[1],edge->p2[2],hi[1],hi[2]);
+            if (idir == 0) {
+	      between(p1,p2,dim,value,edge->p2);
+	      if (id == VERBOSE_ID && i == 0)
+		printf("CLIPIN iedge %d iface %d p2flag %d %20.16g %20.16g %20.16g "
+		       "hi %20.16g %20.16g\n",
+		       i,iface,
+		       edge->p2[0],edge->p2[1],edge->p2[2],hi[1],hi[2]);
+	    } else {
+	      between(p1,p2,dim,value,edge->p1);
+	      if (id == VERBOSE_ID && i == 0)
+		printf("CLIPIN iedge %d iface %d p2flag %d %20.16g %20.16g %20.16g "
+		       "hi %20.16g %20.16g\n",
+		       i,iface,
+		       edge->p1[0],edge->p1[1],edge->p1[2],hi[1],hi[2]);
+	    }
             edge->clipped = 1;
           }
         } else {
