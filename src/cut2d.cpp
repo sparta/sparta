@@ -526,7 +526,7 @@ int Cut2d::split_face(int id_caller, int iface, double *onelo, double *onehi)
      only used if all clipped lines are discarded
    discard if clipped line is a single point, increment touchcount
      touchmark = corner point marking inferred from touching line orientations
-   discard if grazes cell with ourward normal, increment grazecount
+   discard if grazes cell with outward normal, increment grazecount
 ------------------------------------------------------------------------- */
 
 void Cut2d::build_clines()
