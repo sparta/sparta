@@ -2278,11 +2278,11 @@ void Cut3d::print_bpg(const char *str)
     printf("FACE p1: %d %d: %d %d: %d %d\n",
 	   edges[i].p1[0]==lo[0],edges[i].p1[0]==hi[0],
 	   edges[i].p1[1]==lo[1],edges[i].p1[1]==hi[1],
-	   edges[i].p1[2]==lo[2],edges[i].p1[2]==hi[2],
+	   edges[i].p1[2]==lo[2],edges[i].p1[2]==hi[2]);
     printf("FACE p2: %d %d: %d %d: %d %d\n",
 	   edges[i].p2[0]==lo[0],edges[i].p2[0]==hi[0],
 	   edges[i].p2[1]==lo[1],edges[i].p2[1]==hi[1],
-	   edges[i].p2[2]==lo[2],edges[i].p2[2]==hi[2],
+	   edges[i].p2[2]==lo[2],edges[i].p2[2]==hi[2]);
     printf("\n");
   }
 }
