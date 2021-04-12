@@ -850,10 +850,11 @@ void Cut3d::clip_tris()
             if (idir == 0) between(p1,p2,dim,value,edge->p1);
             else between(p1,p2,dim,value,edge->p2);
 	    // DEBUG
-	    if (id == VERBOSE_ID)
-	      printf("CLIPOUT iedge %d iface %d pt %20.16g %20.16g %20.16g\n",
-		     iedge,iface,
-		     edge->p1[0],edge->p1[1]-hi[1],edge->p1[2]-hi[2]);
+	    if (id == VERBOSE_ID && iedge == 0)
+	      printf("CLIPOUT iedge %d iface %d pt %20.16g %20.16g %20.16g "
+		     "hi %20.16g %20.16g\n",
+		     i,iface,
+		     edge->p1[0],edge->p1[1],edge->p1[2],hi[1],hi[2]);
             edge->clipped = 1;
           }
         } else if (p1flag == INSIDE) {
@@ -861,10 +862,11 @@ void Cut3d::clip_tris()
             if (idir == 0) between(p1,p2,dim,value,edge->p2);
             else between(p1,p2,dim,value,edge->p1);
 	    // DEBUG
-	    if (id == VERBOSE_ID)
-	      printf("CLIPIN iedge %d iface %d pt %20.16g %20.16g %20.16g\n",
-		     iedge,iface,
-		     edge->p2[0],edge->p2[1]-hi[1],edge->p2[2]-hi[2]);
+	    if (id == VERBOSE_ID && iedge == 0)
+	      printf("CLIPIN iedge %d iface %d pt %20.16g %20.16g %20.16g ",
+		     "hi %20.16g %20.16g\n",
+		     i,iface,
+		     edge->p2[0],edge->p2[1],edge->p2[2],hi[1],hi[2]);
             edge->clipped = 1;
           }
         } else {
