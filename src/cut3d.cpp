@@ -38,13 +38,17 @@ enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut2d
 // cell ID for 2d or 3d cell
 
 #define VERBOSE
-#define VERBOSE_ID 49
+#define VERBOSE_ID 61275
 
 /* ---------------------------------------------------------------------- */
 
 Cut3d::Cut3d(SPARTA *sparta) : Pointers(sparta)
 {
   implicit = surf->implicit;
+
+  // DEBUG
+
+  tiny = 0;
 
   cut2d = new Cut2d(sparta,0);
   for (int i = 0; i <= cut2d->npushmax; i++) cut2d->npushcell[i] = 0;
@@ -970,8 +974,9 @@ void Cut3d::clip_adjust()
     double edgelen = sqrt(dx*dx+dy*dy+dz*dz);
 
     if (edgelen < epsilon) {
-      printf("TINY EDGE %ld %d %d %g %g\n",
-           id,iedge,nedge,edgelen,epsilon);
+      //printf("TINY EDGE %ld %d %d %g %g\n",
+      //     id,iedge,nedge,edgelen,epsilon);
+      tiny++;
 
       nface1 = on_faces(p1,faces1);
       nface2 = on_faces(p2,faces2);
@@ -985,8 +990,8 @@ void Cut3d::clip_adjust()
 
       if (!nface1 && !nface2) { 
         memcpy(pboth,p1,3*sizeof(double));
-        printf("INTERIOR EDGE %ld %d %d %g %g\n",
-               id,iedge,nedge,edgelen,epsilon);
+        //printf("INTERIOR EDGE %ld %d %d %g %g\n",
+        //       id,iedge,nedge,edgelen,epsilon);
       } else if (nface1 && !nface2) {
         memcpy(pboth,p1,3*sizeof(double));
       } else if (nface2 && !nface1) {
@@ -1055,6 +1060,8 @@ void Cut3d::clip_adjust()
     }
     */
   }
+
+  printf("TINY %ld %d\n",id,tiny);
 
 #ifdef VERBOSE
   if (id == VERBOSE_ID) print_bpg("BPG after tiny edge collapse");

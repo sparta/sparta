@@ -26,6 +26,10 @@ class Cut3d : protected Pointers {
   int npushmax;           // # of push options to try
   int npushcell[4];       // tally of cells that required surf point push
 
+  // DEBUG
+
+  int tiny;
+
   Cut3d(class SPARTA *);
   ~Cut3d();
   int surf2grid(cellint, double *, double *, surfint *, int);

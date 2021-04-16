@@ -701,7 +701,10 @@ int Cut2d::weiler_build()
     // pt already exists
 
     if (j < npt) {
-      if (points[j].type == EXIT || points[j].type == TWO) return 2;
+      if (points[j].type == EXIT || points[j].type == TWO) {
+        printf("WEILER BUILD type TWO dup: %20.16g %20.16g\n",pt[0],pt[1]);
+        return 2;
+      }
       points[j].type = TWO;
       points[firstpt].next = j;
     }

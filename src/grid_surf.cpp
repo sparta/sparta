@@ -613,7 +613,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
     //   bblo/hi = intersection of surf bbox with RCB box
     //   recurse2d/3d starts with bblo/hi within parentID = 0 (sim box)
     //     will find every child cell in chash that surf intersects with
-    //     checks for actual intersectino are via cut2d/cut3d
+    //     checks for actual intersection are via cut2d/cut3d
     //   build list of pairs, one pair = surf index, cell index
     //     both are indices into received RCB surf/cells data
 
@@ -1161,6 +1161,11 @@ void Grid::surf2grid_split(int subflag, int outflag)
   }
 
   // clean up
+
+  int tiny = cut3d->tiny;
+  int alltiny;
+  MPI_Allreduce(&tiny,&alltiny,1,MPI_INT,MPI_SUM,world);
+  if (me == 0) printf("TINY EDGES REMOVED: %d\n",alltiny);
 
   if (dim == 3) delete cut3d;
   else delete cut2d;
