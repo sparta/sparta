@@ -30,8 +30,6 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};     // several files
 enum{EXTERIOR,INTERIOR,BORDER,INTBORD};
 enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut3d
 
-#define EPSCELL 1.0e-10    // tolerance for pushing surf pts to cell surface
-
 // cell ID for 2d or 3d cell
 
 //#define VERBOSE
@@ -43,25 +41,6 @@ Cut2d::Cut2d(SPARTA *sparta, int caller_axisymmetric) : Pointers(sparta)
 {
   axisymmetric = caller_axisymmetric;
   implicit = surf->implicit;
-
-  npushmax = 2;    // if increase this, increase push vec size in cut2d.h
-
-  pushlo_vec[0] = -1.0;
-  pushhi_vec[0] = 1.0;
-  pushvalue_vec[0] = 0.0;
-  pushlo_vec[1] = -1.0;
-  pushhi_vec[1] = 1.0;
-  pushvalue_vec[1] = 1.0;
-
-  if (surf->pushflag == 0) npushmax = 0;
-  if (surf->pushflag == 2) npushmax = 3;
-  if (surf->pushflag == 2) {
-    pushlo_vec[2] = surf->pushlo;
-    pushhi_vec[2] = surf->pushhi;
-    pushvalue_vec[2] = surf->pushvalue;
-  }
-
-  for (int i = 0; i <= npushmax; i++) npushcell[i] = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -326,17 +305,13 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
   nsurf = nsurf_caller;
   surfs = surfs_caller;
 
-  // perform cut/split
-  // first attempt is with no pushing of surface points
-  // if fails, then try again with push options
-  // if all push options fail, then print error message
-
   int nsplit,errflag;
-  //pushflag = 0;
+
+  // perform cut/split inside while loop so can break out with error
 
   while (1) {
     build_clines();
-
+    
 #ifdef VERBOSE
     if (id == VERBOSE_ID) {
       printf("Verbose cell " CELLINT_FORMAT " grazecount %d\n",id,grazecount);
@@ -350,10 +325,8 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
     // mark corner points based non-zero grazecount or touchmark value
     // return area = 0.0 for UNKNOWN/INSIDE, full cell area for OUTSIDE
     // vol is changed in Grid::set_inout() if OVERLAP cell corners are marked
-
+  
     if (clines.n == 0) {
-      //if (pushflag) npushcell[pushflag]++;
-
       int mark = UNKNOWN;
       if (grazecount || touchmark == INSIDE) mark = INSIDE;
       else if (touchmark == OUTSIDE) mark = OUTSIDE;
@@ -376,10 +349,7 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
     // value of errflag corresponds to unique error message (listed below)
 
     errflag = weiler_build();
-    if (errflag) {
-      //if (push_increment()) continue;
-      break;
-    }
+    if (errflag) break;
 
     weiler_loops();
     errflag = loop2pg();
@@ -397,10 +367,7 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
 
     // other error returns from loop2pg
 
-    if (errflag) {
-      //if (push_increment()) continue;
-      break;
-    }
+    if (errflag) break;
 
     nsplit = pgs.n;
     if (nsplit > 1) {
@@ -408,10 +375,7 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
       if (implicit) errflag = split_point_implicit(surfmap,xsplit,xsub);
       else errflag = split_point_explicit(surfmap,xsplit,xsub);
     }
-    if (errflag) {
-      //if (push_increment()) continue;
-      break;
-    }
+    if (errflag) break;
 
     // successful cut/split
     // set corners = OUTSIDE if corner pt is in list of points in PGs
@@ -438,18 +402,19 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
     }
 
     // store areas in vector so can return ptr to it
-
+  
     areas.grow(nsplit);
     for (int i = 0; i < nsplit; i++) areas[i] = pgs[i].area;
     areas_caller = &areas[0];
 
-    break;
+    // successful exit
+
+    break;  
   }
 
   // could not perform cut/split -> fatal error
   // print info about cell and final error message
   // 2-letter prefix is which method encountered error
-  // NOTE: store errflag_original for no-push error to print this message?
 
   if (errflag) {
     failed_cell();
@@ -469,8 +434,6 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
     if (errflag == 7)
       error->one(FLERR,"SP: Could not find split point in split cell");
   }
-
-  //if (pushflag) npushcell[pushflag]++;
 
   return nsplit;
 }
@@ -555,13 +518,6 @@ void Cut2d::build_clines()
     if (line->transparent) continue;
     memcpy(p1,line->p1,2*sizeof(double));
     memcpy(p2,line->p2,2*sizeof(double));
-
-    // if pushflag is set, push line pts near cell surface
-
-    //if (pushflag) {
-    //  push(p1);
-    //  push(p2);
-    //}
 
     cline = &clines[n];
     cline->line = i;
@@ -1207,57 +1163,6 @@ int Cut2d::ptflag(double *pt)
   if (x < lo[0] || x > hi[0] || y < lo[1] || y > hi[1]) return EXTERIOR;
   if (x > lo[0] && x < hi[0] && y > lo[1] && y < hi[1]) return INTERIOR;
   return BORDER;
-}
-
-/* ----------------------------------------------------------------------
-   try another push option for pushing surf pts near cell surface
-   if run out of options, return 0
-------------------------------------------------------------------------- */
-
-int Cut2d::push_increment()
-{
-  if (pushflag == npushmax) return 0;
-  pushlo = pushlo_vec[pushflag];
-  pushhi = pushhi_vec[pushflag];;
-  pushvalue = pushvalue_vec[pushflag];
-  pushflag++;
-  return 1;
-}
-
-/* ----------------------------------------------------------------------
-   push point if near cell surface
-   point can be far outside box and still be pushed if
-     close to box face in one dimension (due to commented out lines)
-     NOTE: this was 6Jun16 change
-   do not push point outside simulation box
-------------------------------------------------------------------------- */
-
-void Cut2d::push(double *pt)
-{
-  double x = pt[0];
-  double y = pt[1];
-  double epsx = EPSCELL * (hi[0]-lo[0]);
-  double epsy = EPSCELL * (hi[1]-lo[1]);
-
-  //if (x < lo[0]-pushhi*epsx || x > hi[0]+pushhi*epsx ||
-  //    y < lo[1]-pushhi*epsy || y > hi[1]+pushhi*epsy) return;
-
-  if (x > lo[0]-pushhi*epsx && x < lo[0]-pushlo*epsx) x = lo[0]-pushvalue*epsx;
-  if (x > hi[0]+pushlo*epsx && x < hi[0]+pushhi*epsx) x = hi[0]+pushvalue*epsx;
-  if (y > lo[1]-pushhi*epsy && y < lo[1]-pushlo*epsy) y = lo[1]-pushvalue*epsy;
-  if (y > hi[1]+pushlo*epsy && y < hi[1]+pushhi*epsy) y = hi[1]+pushvalue*epsy;
-
-  double *boxlo = domain->boxlo;
-  double *boxhi = domain->boxhi;
-  x = MAX(x,boxlo[0]);
-  x = MIN(x,boxhi[0]);
-  y = MAX(y,boxlo[1]);
-  y = MIN(y,boxhi[1]);
-
-  if (x != pt[0] || y != pt[1]) {
-    pt[0] = x;
-    pt[1] = y;
-  }
 }
 
 /* ----------------------------------------------------------------------

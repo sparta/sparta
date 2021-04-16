@@ -1102,36 +1102,9 @@ void Grid::surf2grid_split(int subflag, int outflag)
                "set global splitmax");
   }
 
-  // stats on pushed cells and unmarked corner points in OVERLAP cells
+  // stats on unmarked corner points in OVERLAP cells
 
   if (outflag) {
-    int npushmax;
-    int *npushcell;
-    if (dim == 3) {
-      npushmax = cut3d->npushmax;
-      npushcell = cut3d->npushcell;
-    } else {
-      npushmax = cut2d->npushmax;
-      npushcell = cut2d->npushcell;
-    }
-    int *npushall = new int[npushmax+1];
-    MPI_Allreduce(npushcell,npushall,npushmax+1,MPI_INT,MPI_SUM,world);
-    if (comm->me == 0) {
-      if (screen) {
-        fprintf(screen,"  ");
-        for (int i = 1; i <= npushmax; i++)
-          fprintf(screen,"%d ",npushall[i]);
-        fprintf(screen,"= number of pushed cells\n");
-      }
-      if (logfile) {
-        fprintf(logfile,"  ");
-        for (int i = 1; i <= npushmax; i++)
-          fprintf(logfile,"%d ",npushall[i]);
-        fprintf(logfile,"= number of pushed cells\n");
-      }
-    }
-    delete [] npushall;
-
     int noverlap = 0;
     int ncorner = 0;
     for (int icell = 0; icell < nlocal; icell++) {
@@ -1162,10 +1135,10 @@ void Grid::surf2grid_split(int subflag, int outflag)
 
   // clean up
 
-  int tiny = cut3d->tiny;
-  int alltiny;
-  MPI_Allreduce(&tiny,&alltiny,1,MPI_INT,MPI_SUM,world);
-  if (me == 0) printf("TINY EDGES REMOVED: %d\n",alltiny);
+  //int tiny = cut3d->tiny;
+  //int alltiny;
+  //MPI_Allreduce(&tiny,&alltiny,1,MPI_INT,MPI_SUM,world);
+  //if (me == 0) printf("TINY EDGES REMOVED: %d\n",alltiny);
 
   if (dim == 3) delete cut3d;
   else delete cut2d;

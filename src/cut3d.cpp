@@ -31,8 +31,6 @@ enum{CTRI,CTRIFACE,FACEPGON,FACE};
 enum{EXTERIOR,INTERIOR,BORDER};
 enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut2d
 
-#define EPSCELL 1.0e-10   // tolerance for pushing surf pts to cell surface
-
 #define EPSEDGE 1.0e-9    // minimum edge length (fraction of cell size)
 
 // cell ID for 2d or 3d cell
@@ -51,37 +49,8 @@ Cut3d::Cut3d(SPARTA *sparta) : Pointers(sparta)
   tiny = 0;
 
   cut2d = new Cut2d(sparta,0);
-  for (int i = 0; i <= cut2d->npushmax; i++) cut2d->npushcell[i] = 0;
   memory->create(path1,12,3,"cut3d:path1");
   memory->create(path2,12,3,"cut3d:path2");
-
-  npushmax = 2;    // if increase this, increase push vec size in cut3d.h
-
-  pushlo_vec[0] = -1.0;
-  pushhi_vec[0] = 1.0;
-  pushvalue_vec[0] = 0.0;
-  pushlo_vec[1] = -1.0;
-  pushhi_vec[1] = 1.0;
-  pushvalue_vec[1] = 1.0;
-
-  /*
-  pushlo_vec[0] = -1.0;
-  pushhi_vec[0] = 1.0;
-  pushvalue_vec[0] = 1.0;
-  pushlo_vec[1] = -1.0;
-  pushhi_vec[1] = 1.0;
-  pushvalue_vec[1] = 0.0;
-  */
-
-  if (surf->pushflag == 0) npushmax = 0;
-  if (surf->pushflag == 2) npushmax = 3;
-  if (surf->pushflag == 2) {
-    pushlo_vec[2] = surf->pushlo;
-    pushhi_vec[2] = surf->pushhi;
-    pushvalue_vec[2] = surf->pushvalue;
-  }
-
-  for (int i = 0; i <= npushmax; i++) npushcell[i] = 0;
 
   // DEBUG
   //totcell = totsurf = totvert = totedge = 0;
@@ -433,20 +402,13 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
   nsurf = nsurf_caller;
   surfs = surfs_caller;
 
-  // perform cut/split
-  // first attempt is with no pushing of surface points
-  // if fails, then try again with push options
-  // if all push options fail, then print error message
+  // perform cut/split inside while loop so can break out with error
 
   int nsplit,errflag;
-  pushflag = 0;
 
   while (1) {
     errflag = add_tris();
-    if (errflag) {
-      if (push_increment()) continue;
-      break;
-    }
+    if (errflag) break;
 
 #ifdef VERBOSE
     if (id == VERBOSE_ID) print_bpg("BPG after added tris");
@@ -465,8 +427,6 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
     // vol is changed in Grid::set_inout() if OVERLAP cell corners are marked
 
     if (empty) {
-      if (pushflag) npushcell[pushflag]++;
-
       int mark = UNKNOWN;
       if (grazecount || touchmark == INSIDE) mark = INSIDE;
       else if (touchmark == OUTSIDE) mark = OUTSIDE;
@@ -484,10 +444,7 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
 
     ctri_volume();
     errflag = edge2face();
-    if (errflag) {
-      if (push_increment()) continue;
-      break;
-    }
+    if (errflag) break;
 
     double lo2d[2],hi2d[2];
 
@@ -506,11 +463,6 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
       }
     }
 
-    if (errflag) {
-      if (push_increment()) continue;
-      break;
-    }
-
     remove_faces();
 
 #ifdef VERBOSE
@@ -518,10 +470,7 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
 #endif
 
     errflag = check();
-    if (errflag) {
-      if (push_increment()) continue;
-      break;
-    }
+    if (errflag) break;
 
     walk();
 
@@ -543,10 +492,9 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
       return 1;
     }
     
-    if (errflag) {
-      if (push_increment()) continue;
-      break;
-    }
+    // other error returns from loop2ph
+
+    if (errflag) break;
 
     nsplit = phs.n;
     if (nsplit > 1) {
@@ -554,10 +502,7 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
       if (implicit) errflag = split_point_implicit(surfmap,xsplit,xsub);
       else errflag = split_point_explicit(surfmap,xsplit,xsub);
     }
-    if (errflag) {
-      if (push_increment()) continue;
-      break;
-    }
+    if (errflag) break;
 
     // successful cut/split
     // set corners = OUTSIDE if corner pt is in list of edge points
@@ -585,6 +530,8 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
     vols.grow(nsplit);
     for (int i = 0; i < nsplit; i++) vols[i] = phs[i].volume;
     vols_caller = &vols[0];
+
+    // successful exit
 
     break;
   }
@@ -646,8 +593,6 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
       error->one(FLERR,"LP: Single area is negative, inverse donut");
   }
 
-  if (pushflag) npushcell[pushflag]++;
-
   return nsplit;
 }
 
@@ -682,14 +627,6 @@ int Cut3d::add_tris()
     memcpy(p1,tri->p1,3*sizeof(double));
     memcpy(p2,tri->p2,3*sizeof(double));
     memcpy(p3,tri->p3,3*sizeof(double));
-
-    // if pushflag is set, push tri pts near cell surface
-
-    if (pushflag) {
-      push(p1);
-      push(p2);
-      push(p3);
-    }
 
     vert = &verts[nvert];
     vert->active = 1;
@@ -974,8 +911,8 @@ void Cut3d::clip_adjust()
     double edgelen = sqrt(dx*dx+dy*dy+dz*dz);
 
     if (edgelen < epsilon) {
-      //printf("TINY EDGE %ld %d %d %g %g\n",
-      //     id,iedge,nedge,edgelen,epsilon);
+      //printf("TINY EDGE id %ld nsurf %d i/nedge %d %d len %g eps %g\n",
+      //       id,nsurf,iedge,nedge,edgelen,epsilon);
       tiny++;
 
       nface1 = on_faces(p1,faces1);
@@ -1028,40 +965,7 @@ void Cut3d::clip_adjust()
       memcpy(edges[iedge].p1,pboth,3*sizeof(double));
       memcpy(edges[iedge].p2,pboth,3*sizeof(double));
     }
-
-    /*
-    if (which_faces(edge->p1,edge->p2,faces) == 0) {
-      memcpy(move1,edge->p1,3*sizeof(double));
-      move_to_edge(move1);
-      memcpy(move2,edge->p2,3*sizeof(double));
-      move_to_edge(move2);
-
-      if (move1[0] != move2[0]) move1[0] = move2[0] = 0.5*(move1[0]+move2[0]);
-      if (move1[1] != move2[1]) move1[1] = move2[1] = 0.5*(move1[1]+move2[1]);
-      if (move1[2] != move2[2]) move1[2] = move2[2] = 0.5*(move1[2]+move2[2]);
-
-      for (int jedge = 0; jedge < nedge; jedge++) {
-        if (!edges[jedge].active) continue;
-        if (jedge == iedge) continue;
-
-        if (samepoint(edges[jedge].p1,edge->p1))
-          memcpy(edges[jedge].p1,move1,3*sizeof(double));
-        if (samepoint(edges[jedge].p2,edge->p1))
-          memcpy(edges[jedge].p2,move1,3*sizeof(double));
-
-        if (samepoint(edges[jedge].p1,edge->p2))
-          memcpy(edges[jedge].p1,move2,3*sizeof(double));
-        if (samepoint(edges[jedge].p2,edge->p2))
-          memcpy(edges[jedge].p2,move2,3*sizeof(double));
-      }
-
-      memcpy(edges[iedge].p1,move1,3*sizeof(double));
-      memcpy(edges[iedge].p2,move2,3*sizeof(double));
-    }
-    */
   }
-
-  printf("TINY %ld %d\n",id,tiny);
 
 #ifdef VERBOSE
   if (id == VERBOSE_ID) print_bpg("BPG after tiny edge collapse");
@@ -2311,65 +2215,6 @@ int Cut3d::ptflag(double *pt)
   if (x > lo[0] && x < hi[0] && y > lo[1] && y < hi[1] &&
       z > lo[2] && z < hi[2]) return INTERIOR;
   return BORDER;
-}
-
-/* ----------------------------------------------------------------------
-   try another push option for pushing surf pts near cell surface
-   if run out of options, return 0
-------------------------------------------------------------------------- */
-
-int Cut3d::push_increment()
-{
-  if (pushflag == npushmax) return 0;
-  pushlo = pushlo_vec[pushflag];
-  pushhi = pushhi_vec[pushflag];;
-  pushvalue = pushvalue_vec[pushflag];
-  pushflag++;
-  return 1;
-}
-
-/* ----------------------------------------------------------------------
-   push point if near cell surface in any dimension
-   point can be far outside box and still be pushed if
-     close to box face in one dimension (due to commented out lines)
-     NOTE: this was 6Jun16 change
-   do not push point outside simulation box
-------------------------------------------------------------------------- */
-
-void Cut3d::push(double *pt)
-{
-  double x = pt[0];
-  double y = pt[1];
-  double z = pt[2];
-  double epsx = EPSCELL * (hi[0]-lo[0]);
-  double epsy = EPSCELL * (hi[1]-lo[1]);
-  double epsz = EPSCELL * (hi[2]-lo[2]);
-
-  //if (x < lo[0]-pushhi*epsx || x > hi[0]+pushhi*epsx ||
-  //    y < lo[1]-pushhi*epsy || y > hi[1]+pushhi*epsy ||
-  //    z < lo[2]-pushhi*epsz || z > hi[2]+pushhi*epsz) return;
-
-  if (x > lo[0]-pushhi*epsx && x < lo[0]-pushlo*epsx) x = lo[0]-pushvalue*epsx;
-  if (x > hi[0]+pushlo*epsx && x < hi[0]+pushhi*epsx) x = hi[0]+pushvalue*epsx;
-  if (y > lo[1]-pushhi*epsy && y < lo[1]-pushlo*epsy) y = lo[1]-pushvalue*epsy;
-  if (y > hi[1]+pushlo*epsy && y < hi[1]+pushhi*epsy) y = hi[1]+pushvalue*epsy;
-  if (z > lo[2]-pushhi*epsz && z < lo[2]-pushlo*epsz) z = lo[2]-pushvalue*epsz;
-  if (z > hi[2]+pushlo*epsz && z < hi[2]+pushhi*epsz) z = hi[2]+pushvalue*epsz;
-
-  double *boxlo = domain->boxlo;
-  double *boxhi = domain->boxhi;
-  x = MAX(x,boxlo[0]);
-  x = MIN(x,boxhi[0]);
-  y = MAX(y,boxlo[1]);
-  y = MIN(y,boxhi[1]);
-  z = MAX(z,boxlo[2]);
-  z = MIN(z,boxhi[2]);
-
-  if (x != pt[0] || y != pt[1] || z != pt[2]) {
-    pt[0] = x;
-    pt[1] = y;
-    pt[2] = z;
-  }
 }
 
 /* ----------------------------------------------------------------------

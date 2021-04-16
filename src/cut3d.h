@@ -23,9 +23,6 @@ namespace SPARTA_NS {
 
 class Cut3d : protected Pointers {
  public:
-  int npushmax;           // # of push options to try
-  int npushcell[4];       // tally of cells that required surf point push
-
   // DEBUG
 
   int tiny;
@@ -48,12 +45,6 @@ class Cut3d : protected Pointers {
   double *lo,*hi;        // opposite corner pts of cell
   int nsurf;             // # of surf elements in cell
   surfint *surfs;        // indices of surf elements in cell
-
-  int pushflag;          // 0 for no push, else push surf points near cell surf
-  double pushlo,pushhi;  // lo/hi ranges to push on
-  double pushvalue;      // new position to push to
-  double pushlo_vec[3],pushhi_vec[3],pushvalue_vec[3];  // push values to try
-  int inout;             // orientation of triangles that just touch cell
 
   int grazecount;        // count of tris that graze cell surf w/ outward norm
   int touchcount;        // count of tris that only touch cell surf
@@ -162,8 +153,6 @@ class Cut3d : protected Pointers {
   int on_faces(double *, int *);
   void move_to_faces(double *);
   int ptflag(double *);
-  int push_increment();
-  void push(double *);
 
   void failed_cell();
   void print_bpg(const char *);

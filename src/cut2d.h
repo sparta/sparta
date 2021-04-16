@@ -22,9 +22,6 @@ namespace SPARTA_NS {
 
 class Cut2d : protected Pointers {
  public:
-  int npushmax;          // # of push options to try
-  int npushcell[4];      // tally of cells that required surf point push
-
   struct Cline {
     double x[2],y[2];   // coords of end points of line clipped to cell
     int line;           // index in list of lines that intersect this cell
@@ -94,11 +91,6 @@ class Cut2d : protected Pointers {
   int nsurf;             // # of surf elements in cell
   surfint *surfs;        // indices of surf elements in cell
 
-  int pushflag;          // 0 for no push, else push surf points near cell surf
-  double pushlo,pushhi;  // lo/hi ranges to push on
-  double pushvalue;      // new position to push to
-  double pushlo_vec[3],pushhi_vec[3],pushvalue_vec[3];  // push values to try
-
   int grazecount;        // count of lines that graze cell surf w/ outward norm
   int touchcount;        // count of line that only touch cell surf
   int touchmark;         // corner marking inferred by touching lines
@@ -118,8 +110,6 @@ class Cut2d : protected Pointers {
   void clip(double *, double *, double *, double *);
 
   int ptflag(double *);
-  int push_increment();
-  void push(double *);
   int sameedge(double *, double *);
   int whichside(double *);
 
