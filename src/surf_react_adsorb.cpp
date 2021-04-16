@@ -56,7 +56,7 @@ enum{NOMODEL,SPECULAR,DIFFUSE,CLL,TD,IMPULSIVE,MAXMODELS};
 // PS react
 
 enum{DS,LH2,LH4,SB};
-enum{GRID,LINE,TRI};
+//enum{GRID,LINE,TRI};
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 
 #define MAXREACTANT_PS 4
@@ -105,7 +105,7 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
   else error->all(FLERR,"Illegal surf_react adsorb command");
 
   if (mode == SURF && surf->nsurf == 0)
-    error->all(FLERR,"Cannot use urf_react adsorb when no surfs exist");
+    error->all(FLERR,"Cannot use surf_react adsorb when no surfs exist");
 
   twall = input->numeric(FLERR,arg[7]);
   max_cover = input->numeric(FLERR,arg[8]);
@@ -2880,9 +2880,104 @@ void SurfReactAdsorb::cll(Particle::OnePart *p, double *norm, double acc_n,
 
 /* ---------------------------------------------------------------------- */
 
-/*
+
 void SurfReactAdsorb::random_point(int isurf, double *x)
 {
+  
+  if (mode == FACE)
+  {
+    double *lo = domain->boxlo;
+    double *hi = domain->boxhi;
+    double rand1 = random->uniform();
+    double rand2 = random->uniform();
+
+    switch (isurf)
+    {
+      case XLO: 
+      {
+        x[0] = lo[0];
+        x[1] = lo[1] + rand1 * (hi[1] - lo[1]); 
+        x[2] = lo[2] + rand2 * (hi[2] - lo[2]); 
+        break;                  
+      }
+      
+      case XHI: 
+      {
+        x[0] = hi[0];
+        x[1] = lo[1] + rand1 * (hi[1] - lo[1]); 
+        x[2] = lo[2] + rand2 * (hi[2] - lo[2]);
+        break;                   
+      }
+      
+      case YLO: 
+      {
+        x[0] = lo[0] + rand2 * (hi[0] - lo[0]);
+        x[1] = lo[1]; 
+        x[2] = lo[2] + rand1 * (hi[2] - lo[2]); 
+        break;                  
+      }
+      
+      case YHI: 
+      {
+        x[0] = lo[0] + rand2 * (hi[0] - lo[0]);
+        x[1] = hi[1]; 
+        x[2] = lo[2] + rand1 * (hi[2] - lo[2]);      
+        break;             
+      }
+      
+      case ZLO: 
+      {
+        x[0] = lo[0] + rand1 * (hi[0] - lo[0]);
+        x[1] = lo[1] + rand2 * (hi[1] - lo[1]);
+        x[2] = lo[2];    
+        break;               
+      }
+      
+      case ZHI: 
+      {
+        x[0] = lo[0] + rand1 * (hi[0] - lo[0]);
+        x[1] = lo[1] + rand2 * (hi[1] - lo[1]);
+        x[2] = hi[2];   
+        break;                
+      }
+    }
+  }
+  else if (mode == SURF)
+  {
+    if (domain->dimension == 2)
+    {
+      Surf::Line *lines = surf->lines;
+      double *p1,*p2;
+      double rand = random->uniform();
+
+      p1 = lines[isurf].p1;
+      p2 = lines[isurf].p2;
+            
+      x[0] = p1[0] + rand * (p2[0] - p1[0]);
+      x[1] = p1[1] + rand * (p2[1] - p1[1]);
+      x[2] = 0.0;
+    }
+    else if (domain->dimension == 3)
+    {
+      Surf::Tri *tris = surf->tris;
+      double *p1,*p2,*p3;
+      double rand1 = sqrt(random->uniform());
+      double rand2 = random->uniform();
+      double factor1 = 1-rand1;
+      double factor2 = rand1*(1-rand2);
+      double factor3 = rand1*rand2;
+            
+      p1 = tris[isurf].p1;
+      p2 = tris[isurf].p2;
+      p3 = tris[isurf].p3;
+            
+      x[0] = factor1 * p1[0] + factor2 * p2[0] + factor3 * p3[0];
+      x[1] = factor1 * p1[1] + factor2 * p2[1] + factor3 * p3[1];
+      x[2] = factor1 * p1[2] + factor2 * p2[2] + factor3 * p3[2];
+    }
+  }
+
+  /*
   switch(element) {
 
   case GRID: {
@@ -2942,8 +3037,9 @@ void SurfReactAdsorb::random_point(int isurf, double *x)
     break;
   }
   }
+  */
 }
-*/
+
 
 /* ---------------------------------------------------------------------- */
 
