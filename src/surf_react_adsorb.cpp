@@ -723,14 +723,16 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
     // NOTE: why doesn't loop include j=0 ?
 
     for (int j = 1; j < r->nreactant; j++) {
-      if (r->part_reactants[j] == 0) {
-        prob_value[i] *= stoich_pow(total_state[isurf],r->stoich_reactants[j]) * 
-          pow(ms_inv,r->stoich_reactants[j]);
-      } else {        
-        prob_value[i] *= 
-          stoich_pow(species_state[isurf][r->reactants_ad_index[j]],
+      if (r->state_products[j][0] == 's') {
+        if (r->part_reactants[j] == 0) {
+          prob_value[i] *= stoich_pow(total_state[isurf],r->stoich_reactants[j]) * 
+            pow(ms_inv,r->stoich_reactants[j]);
+        } else {        
+          prob_value[i] *= 
+            stoich_pow(species_state[isurf][r->reactants_ad_index[j]],
                      r->stoich_reactants[j]) * 
           pow(ms_inv,r->stoich_reactants[j]);
+        }
       }
     } 
     
@@ -937,7 +939,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
               wrapper(jp,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
 
 
-          if (r->nprod_g == 2) {
+          if (r->nprod_g_tot == 2) {
           double x[3],v[3];
           memcpy(x,ip->x,3*sizeof(double));
           memcpy(v,ip->v,3*sizeof(double));
@@ -945,18 +947,27 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           int id = MAXSMALLINT*random->uniform();
           Particle::OnePart *particles = particle->particles;
 
-          int jp_species;
-          if (r->stoich_products[0] == 2) jp_species = r->products[0];
-          else jp_species = r->products[1];
-
-          int reallocflag = particle->add_particle(id,jp_species,ip->icell,x,v,0.0,0.0);
-          if (reallocflag) ip = particle->particles + (ip - particles);
-          jp = &particle->particles[particle->nlocal-1];
+         
+          if (r->stoich_products[0] == 2) 
+          {
+            int reallocflag = particle->add_particle(id,r->products[0],ip->icell,x,v,0.0,0.0);
+            if (reallocflag) ip = particle->particles + (ip - particles);
+            jp = &particle->particles[particle->nlocal-1];
 
           
-          if (r->cmodel_jp != NOMODEL) 
-            cmodels[r->cmodel_jp]->
-              wrapper(jp,norm,r->cmodel_jp_flags,r->cmodel_jp_coeffs);
+            if (r->cmodel_ip != NOMODEL) cmodels[r->cmodel_ip]->wrapper(jp,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
+          }
+          else 
+          {
+            int reallocflag = particle->add_particle(id,r->products[1],ip->icell,x,v,0.0,0.0);
+            if (reallocflag) ip = particle->particles + (ip - particles);
+            jp = &particle->particles[particle->nlocal-1];
+
+          
+            if (r->cmodel_jp != NOMODEL) cmodels[r->cmodel_jp]->wrapper(jp,norm,r->cmodel_jp_flags,r->cmodel_jp_coeffs);
+          }
+
+          
 
           }
 
@@ -1275,7 +1286,8 @@ void SurfReactAdsorb::readfile_gs(char *fname)
         
       for (int i = nlist_gs; i < maxlist_gs; i++) {
         r = &rlist_gs[i];
-        r->nreactant = r->nproduct = r->nprod_g = 0;
+        r->nreactant = r->nproduct = 0;
+        r->nprod_g = r->nprod_g_tot = 0;
         r->id = NULL;
         r->id_reactants = new char*[MAXREACTANT_GS];
         r->id_products = new char*[MAXPRODUCT_GS];       
@@ -1414,7 +1426,11 @@ void SurfReactAdsorb::readfile_gs(char *fname)
           r->state_products[r->nproduct] = new char[1]();          
           strncpy(r->state_products[r->nproduct],1+strstr(word,"("),1);
 
-          if(r->state_products[r->nproduct][0] == 'g') r->nprod_g += r->stoich_products[r->nproduct];
+          if(r->state_products[r->nproduct][0] == 'g') 
+            {
+              r->nprod_g++;
+              r->nprod_g_tot += r->stoich_products[r->nproduct];
+            }
 
           r->nproduct++;
         }
@@ -1566,7 +1582,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
         error->all(FLERR,"The first reactant must be gas phase");
     }
 
-    if (r->nprod_g > 2) 
+    if (r->nprod_g_tot > 2) 
     {
       print_reaction(copy1,copy2);
       error->all(FLERR,"Number of gas phase products cannot be greater than 2");
@@ -1988,7 +2004,8 @@ void SurfReactAdsorb::readfile_ps(char *fname)
                          "react/tce:rlist_ps");
       for (int i = nlist_ps; i < maxlist_ps; i++) {
         r = &rlist_ps[i];
-        r->nreactant = r->nproduct = r->nprod_g = 0;
+        r->nreactant = r->nproduct = 0;
+        r->nprod_g = r->nprod_g_tot = 0;
         r->id = NULL;
         r->id_reactants = new char*[MAXREACTANT_PS];
         r->id_products = new char*[MAXPRODUCT_PS];
@@ -2102,7 +2119,11 @@ void SurfReactAdsorb::readfile_ps(char *fname)
           r->state_products[r->nproduct] = new char[1]();
           strncpy(r->state_products[r->nproduct],1+strstr(word,"("),1);
 
-          if(r->state_products[r->nproduct][0] == 'g') r->nprod_g += r->stoich_products[r->nproduct];
+          if(r->state_products[r->nproduct][0] == 'g') 
+            {
+              r->nprod_g++;
+              r->nprod_g_tot += r->stoich_products[r->nproduct];
+            }
 
           r->nproduct++;
         }
@@ -2175,7 +2196,7 @@ void SurfReactAdsorb::readfile_ps(char *fname)
 
     // ERROR CHECKS
     // check that reactant/product counts are consistent with type
-    if (r->nprod_g > 2) 
+    if (r->nprod_g_tot > 2) 
     {
       print_reaction(copy1,copy2);
       error->all(FLERR,"Number of gas phase products cannot be greater than 2");
@@ -2502,7 +2523,7 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
         rxn_occur[i] = 0;
     }
     //if (rxn_occur[i]) tau[isurf][react_num] += update->dt;
-    if (rxn_occur[i]) tau[isurf][i] += update->dt;
+    if (rxn_occur[i]) tau[isurf][i] += update->dt*nsync;
   }
   
   while (1) {
@@ -2581,7 +2602,7 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
           v[0] = v[1] = v[2] = 0.0;
 
           //NOTE_SGK have to add these functions
-          //random_point(isurf,x);
+          random_point(isurf,x);
           //pcell = find_cell(isurf,x); // ??? 
            
           
@@ -2610,7 +2631,7 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
           v[0] = v[1] = v[2] = 0;
 
           //NOTE_SGK have to add these functions
-          //random_point(isurf,x);
+          random_point(isurf,x);
           //pcell = find_cell(isurf,x); // ???
 
           //if (r->state_products[0][0] == 'g') 
@@ -2640,7 +2661,7 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
           v[0] = v[1] = v[2] = 0;
 
           //NOTE_SGK have to add these functions
-          //random_point(isurf,x);
+          random_point(isurf,x);
           //pcell = find_cell(isurf,x); // ??? 
           
           //if (r->state_products[0][0] == 'g') 

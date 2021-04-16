@@ -106,7 +106,7 @@ class SurfReactAdsorb : public SurfReact {
     int style;                     // reaction style = ARRHENIUS, etc
     int ncoeff;                    // # of numerical coeffs
     int nreactant,nproduct;        // # of reactants and products
-    int nprod_g;                   // # of products which are gaseous species
+    int nprod_g,nprod_g_tot;                   // # of products which are gaseous species
     char **id_reactants,**id_products;  // species IDs of reactants/products
     char **state_reactants,**state_products; // state of reactants and products
     int *part_reactants,*part_products; // participation of reactants & products
@@ -149,7 +149,7 @@ class SurfReactAdsorb : public SurfReact {
     int style;                         // reaction style = ARRHENIUS, etc
     int ncoeff;                        // # of numerical coeffs
     int nreactant,nproduct;            // # of reactants and products 
-    int nprod_g;                       // # of products which are gaseous species
+    int nprod_g, nprod_g_tot;                       // # of products which are gaseous species
     char **id_reactants,**id_products; // species IDs of reactants & products
     char **state_reactants,**state_products;  // state of reactants & products
     int *part_reactants,*part_products; // participation of reactants & products
