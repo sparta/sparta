@@ -60,6 +60,7 @@ class SurfReactAdsorb : public SurfReact {
   int *face_total_state;
   double *face_area;
   double *face_weight;
+  double **face_tau;
 
   int **face_species_delta;     // changes to state between syncs
   int **face_sum_delta;         // delta summed across all procs
@@ -69,12 +70,14 @@ class SurfReactAdsorb : public SurfReact {
 
   int nstick_species_custom,nstick_total_custom;   // indices to custom state in Surf
   int area_custom,weight_custom;
+  int tau_custom;
   int first_owner;       // 1 if this instance of SRA allocates custom Surf data
 
   int **surf_species_state;      // ptrs to custom state vecs/arrays in Surf class
   int *surf_total_state;
   double *surf_area;
   double *surf_weight;
+  double **surf_tau;
 
   int **surf_species_delta;      // changes to state between syncs
 
@@ -92,6 +95,7 @@ class SurfReactAdsorb : public SurfReact {
   int *total_state;          // total count at last sync
   double *area;              // area of surf
   double *weight;            // weight of surf
+  double **tau;               // PS time of surf
 
   // GS (gas/surface) reaction model
   
@@ -102,6 +106,7 @@ class SurfReactAdsorb : public SurfReact {
     int style;                     // reaction style = ARRHENIUS, etc
     int ncoeff;                    // # of numerical coeffs
     int nreactant,nproduct;        // # of reactants and products
+    int nprod_g;                   // # of products which are gaseous species
     char **id_reactants,**id_products;  // species IDs of reactants/products
     char **state_reactants,**state_products; // state of reactants and products
     int *part_reactants,*part_products; // participation of reactants & products
@@ -112,6 +117,8 @@ class SurfReactAdsorb : public SurfReact {
     int *reactants_ad_index,*products_ad_index;
     double *coeff;                 // numerical coeffs for reaction
     double k_react;
+    int kisliuk_flag, energy_flag;
+    double kisliuk_coeff[3], energy_coeff[2];
     int cmodel_ip;                  // style for I's post-reaction surf collision
     int *cmodel_ip_flags;           // integer flags to pass to SC class
     double *cmodel_ip_coeffs;       // double coeffs to pass to SC class
@@ -135,12 +142,14 @@ class SurfReactAdsorb : public SurfReact {
  // PS (on-surf) reaction model
   
  struct OneReaction_PS {
+    char *id;                      // reaction ID (formula)
     int index;                         // index of the reaction
     int active;                        // 1 if reaction is active
     int type;                          // reaction type = DISSOCIATION, etc
     int style;                         // reaction style = ARRHENIUS, etc
     int ncoeff;                        // # of numerical coeffs
     int nreactant,nproduct;            // # of reactants and products 
+    int nprod_g;                       // # of products which are gaseous species
     char **id_reactants,**id_products; // species IDs of reactants & products
     char **state_reactants,**state_products;  // state of reactants & products
     int *part_reactants,*part_products; // participation of reactants & products
@@ -152,14 +161,25 @@ class SurfReactAdsorb : public SurfReact {
                                        // reactants and products
     double *coeff;                     // numerical coeffs for reaction
     double k_react;
-    char *id;                          // reaction ID (formula)
+    //char *id;                          // reaction ID (formula)
+    int cmodel_ip;                  // style for I's post-reaction surf collision
+    int *cmodel_ip_flags;           // integer flags to pass to SC class
+    double *cmodel_ip_coeffs;       // double coeffs to pass to SC class
+    int cmodel_jp;                  // difto for J particle
+    int *cmodel_jp_flags;
+    double *cmodel_jp_coeffs;
   };
 
   OneReaction_PS *rlist_ps;           // list of all reactions read from file
   int nlist_ps;                       // # of reactions read from file
   int maxlist_ps;                     // max # of reactions in rlist
+
+
+  
   int nactive_ps;
+  // SGK check
   int n_PS_react;
+
 
   // surface collision models, one per supported style
   // only if appears in reaction file
@@ -188,11 +208,13 @@ class SurfReactAdsorb : public SurfReact {
   void update_state_surf();
 
   // NOTE: can remove these 3 at some point
+  /*
   void energy_barrier_scatter(Particle::OnePart*, double *, 
                               double, double, double);
   void non_thermal_scatter(Particle::OnePart*, double *, 
                            double, double, double, double);
   void cll(Particle::OnePart *, double *, double, double, double);
+  */
 
   double stoich_pow(int, int);
   int find_surf_species(char *);
