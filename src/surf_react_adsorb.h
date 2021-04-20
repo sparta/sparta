@@ -42,7 +42,8 @@ class SurfReactAdsorb : public SurfReact {
   int me,nprocs;
   int model;                        // GS or PS
   int mode;                         // FACE or SURF
-  int nsync;                        // synchronize surf state every this many steps
+  int nsync;                        // synchronize surf state 
+                                    // every this many steps
   double twall;                     // temperature of face or surf
   double max_cover;                 
   
@@ -68,21 +69,22 @@ class SurfReactAdsorb : public SurfReact {
   
   // mode = SURF for surface elements (lines or tris)
 
-  int nstick_species_custom,nstick_total_custom;   // indices to custom state in Surf
+  int nstick_species_custom;    // indices to custom state in Surf
+  int nstick_total_custom;   
   int area_custom,weight_custom;
   int tau_custom;
   int first_owner;       // 1 if this instance of SRA allocates custom Surf data
 
-  int **surf_species_state;      // ptrs to custom state vecs/arrays in Surf class
+  int **surf_species_state;     // ptrs to custom state vecs/arrays in Surf class
   int *surf_total_state;
   double *surf_area;
   double *surf_weight;
   double **surf_tau;
 
-  int **surf_species_delta;      // changes to state between syncs
+  int **surf_species_delta;     // changes to state between syncs
 
-  int *mark;                     // per-surf mark = 1 if reaction has occured, else 0
-  int *tally2surf;               // global surf index for each entry in incollate
+  int *mark;               // per-surf mark = 1 if reaction has occured, else 0
+  surfint *tally2surf;     // global surf index for each entry in incollate
   int **intally,**outtally;      // used for Allreduce of state changes
   double **incollate,**outcollate;   // used to collate state changes across procs
   int maxtally;                  // allocated size of intally
@@ -106,7 +108,7 @@ class SurfReactAdsorb : public SurfReact {
     int style;                     // reaction style = ARRHENIUS, etc
     int ncoeff;                    // # of numerical coeffs
     int nreactant,nproduct;        // # of reactants and products
-    int nprod_g,nprod_g_tot;                   // # of products which are gaseous species
+    int nprod_g,nprod_g_tot;       // # of products which are gaseous species
     char **id_reactants,**id_products;  // species IDs of reactants/products
     char **state_reactants,**state_products; // state of reactants and products
     int *part_reactants,*part_products; // participation of reactants & products
@@ -149,7 +151,7 @@ class SurfReactAdsorb : public SurfReact {
     int style;                         // reaction style = ARRHENIUS, etc
     int ncoeff;                        // # of numerical coeffs
     int nreactant,nproduct;            // # of reactants and products 
-    int nprod_g, nprod_g_tot;                       // # of products which are gaseous species
+    int nprod_g, nprod_g_tot;          // # of products which are gaseous species
     char **id_reactants,**id_products; // species IDs of reactants & products
     char **state_reactants,**state_products;  // state of reactants & products
     int *part_reactants,*part_products; // participation of reactants & products
@@ -174,12 +176,9 @@ class SurfReactAdsorb : public SurfReact {
   int nlist_ps;                       // # of reactions read from file
   int maxlist_ps;                     // max # of reactions in rlist
 
-
-  
   int nactive_ps;
   // SGK check
   int n_PS_react;
-
 
   // surface collision models, one per supported style
   // only if appears in reaction file
