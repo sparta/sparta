@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -297,7 +297,7 @@ void FixAveHistoWeightKokkos::bin_vector(
 
   auto policy = Kokkos::RangePolicy<TagFixAveHistoWeight_BinVector,DeviceType>(0, n);
   Kokkos::parallel_reduce(policy, *this, reducer);
-  DeviceType::fence();
+  DeviceType().fence();
 }
 
 /* ----------------------------------------------------------------------
@@ -336,7 +336,7 @@ void FixAveHistoWeightKokkos::bin_particles(
       auto policy = RangePolicy<TagFixAveHistoWeight_BinParticlesX4,DeviceType>(0, n);
       Kokkos::parallel_reduce(policy, *this, reducer);
     }
-    DeviceType::fence();
+    DeviceType().fence();
 
   } else if (attribute == V) {
 
@@ -353,7 +353,7 @@ void FixAveHistoWeightKokkos::bin_particles(
       auto policy = RangePolicy<TagFixAveHistoWeight_BinParticlesV4,DeviceType>(0, n);
       Kokkos::parallel_reduce(policy, *this, reducer);
     }
-    DeviceType::fence();
+    DeviceType().fence();
   }
 }
 
@@ -393,7 +393,7 @@ void FixAveHistoWeightKokkos::bin_particles(
     auto policy = RangePolicy<TagFixAveHistoWeight_BinParticles4,DeviceType>(0, n);
     Kokkos::parallel_reduce(policy, *this, reducer);
   }
-  DeviceType::fence();
+  DeviceType().fence();
 }
 
 /* ----------------------------------------------------------------------
@@ -419,7 +419,7 @@ void FixAveHistoWeightKokkos::bin_grid_cells(
     auto policy = RangePolicy<TagFixAveHistoWeight_BinGridCells2,DeviceType>(0, n);
     Kokkos::parallel_reduce(policy, *this, reducer);
   }
-  DeviceType::fence();
+  DeviceType().fence();
 }
 
 /* ------------------------------------------------------------------------- */

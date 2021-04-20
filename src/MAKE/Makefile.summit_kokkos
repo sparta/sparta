@@ -1,0 +1,109 @@
+# summit_kokkos = KOKKOS package with CUDA backend, NVIDIA V100 GPU + IBM Power9 CPU, default MPI, nvcc/mpicxx compiler
+
+SHELL = /bin/sh
+
+KOKKOS_ABSOLUTE_PATH = $(shell cd $(KOKKOS_PATH); pwd)
+
+# ---------------------------------------------------------------------
+# compiler/linker settings
+# specify flags and libraries needed for your compiler
+
+CC =		$(KOKKOS_ABSOLUTE_PATH)/bin/nvcc_wrapper
+CCFLAGS =	-g -O3
+SHFLAGS =	-fPIC
+DEPFLAGS =	-M
+
+LINK =		$(KOKKOS_ABSOLUTE_PATH)/bin/nvcc_wrapper
+LINKFLAGS =	-g -O3
+LIB = 
+SIZE =		size
+
+ARCHIVE =	ar
+ARFLAGS =	-rc
+SHLIBFLAGS =	-shared
+KOKKOS_DEVICES = Cuda
+KOKKOS_ARCH = Power9,Volta70
+
+# ---------------------------------------------------------------------
+# SPARTA-specific settings
+# specify settings for SPARTA features you will use
+# if you change any -D setting, do full re-compile after "make clean"
+
+# SPARTA ifdef settings, OPTIONAL
+# see possible settings in doc/Section_start.html#2_2 (step 4)
+
+SPARTA_INC =	-DSPARTA_GZIP
+
+# MPI library, REQUIRED
+# see discussion in doc/Section_start.html#2_2 (step 5)
+# can point to dummy MPI library in src/STUBS as in Makefile.serial
+# INC = path for mpi.h, MPI compiler settings
+# PATH = path for MPI library
+# LIB = name of MPI library
+
+MY_MPI_EXE = $(shell which mpicxx)
+MY_MPI_PATH = $(dir ${MY_MPI_EXE})
+
+MPI_INC =       -DMPICH_SKIP_MPICXX -DOMPI_SKIP_MPICXX=1 -I${MY_MPI_PATH}../include
+MPI_PATH =      
+MPI_LIB =	-L${MY_MPI_PATH}../lib -lmpi_ibm
+
+# JPEG library, OPTIONAL
+# see discussion in doc/Section_start.html#2_2 (step 7)
+# only needed if -DSPARTA_JPEG listed with SPARTA_INC
+# INC = path for jpeglib.h
+# PATH = path for JPEG library
+# LIB = name of JPEG library
+
+JPG_INC =       
+JPG_PATH = 	
+JPG_LIB =	
+
+# ---------------------------------------------------------------------
+# build rules and dependencies
+# no need to edit this section
+
+include	Makefile.package.settings
+include	Makefile.package
+
+EXTRA_INC = $(SPARTA_INC) $(PKG_INC) $(MPI_INC) $(JPG_INC) $(PKG_SYSINC)
+EXTRA_PATH = $(PKG_PATH) $(MPI_PATH) $(JPG_PATH) $(PKG_SYSPATH)
+EXTRA_LIB = $(PKG_LIB) $(MPI_LIB) $(JPG_LIB) $(PKG_SYSLIB)
+EXTRA_CPP_DEPENDS = $(PKG_CPP_DEPENDS)
+EXTRA_LINK_DEPENDS = $(PKG_LINK_DEPENDS)
+
+# Path to src files
+
+vpath %.cpp ..
+vpath %.h ..
+
+# Link target
+
+$(EXE):	$(OBJ) $(EXTRA_LINK_DEPENDS)
+	$(LINK) $(LINKFLAGS) $(EXTRA_PATH) $(OBJ) $(EXTRA_LIB) $(LIB) -o $(EXE)
+	$(SIZE) $(EXE)
+
+# Library targets
+
+lib:	$(OBJ) $(EXTRA_LINK_DEPENDS)
+	$(ARCHIVE) $(ARFLAGS) $(EXE) $(OBJ)
+
+shlib:	$(OBJ) $(EXTRA_LINK_DEPENDS)
+	$(CC) $(CCFLAGS) $(SHFLAGS) $(SHLIBFLAGS) $(EXTRA_PATH) -o $(EXE) \
+        $(OBJ) $(EXTRA_LIB) $(LIB)
+
+# Compilation rules
+
+%.o:%.cpp $(EXTRA_CPP_DEPENDS)
+	$(CC) $(CCFLAGS) $(SHFLAGS) $(EXTRA_INC) -c $<
+
+%.d:%.cpp $(EXTRA_CPP_DEPENDS)
+	$(CC) $(CCFLAGS) $(EXTRA_INC) $(DEPFLAGS) $< > $@
+
+%.o:%.cu $(EXTRA_CPP_DEPENDS)
+	$(CC) $(CCFLAGS) $(SHFLAGS) $(EXTRA_INC) -c $<
+
+# Individual dependencies
+
+DEPENDS = $(OBJ:.o=.d)
+sinclude $(DEPENDS)

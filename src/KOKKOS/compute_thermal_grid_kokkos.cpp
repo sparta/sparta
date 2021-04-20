@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -64,8 +64,8 @@ void ComputeThermalGridKokkos::compute_per_grid()
     ComputeThermalGrid::compute_per_grid();
   } else {
     compute_per_grid_kokkos();
-    k_tally.modify<DeviceType>();
-    k_tally.sync<SPAHostType>();
+    k_tally.modify_device();
+    k_tally.sync_host();
   }
 }
 
@@ -86,7 +86,7 @@ void ComputeThermalGridKokkos::compute_per_grid_kokkos()
   grid_kk->sync(Device,CINFO_MASK);
   d_cinfo = grid_kk->k_cinfo.d_view;
 
-  d_s2g = particle_kk->k_species2group.view<DeviceType>();
+  d_s2g = particle_kk->k_species2group.d_view;
   int nlocal = particle->nlocal;
 
   // zero all accumulators
@@ -100,9 +100,9 @@ void ComputeThermalGridKokkos::compute_per_grid_kokkos()
     need_dup = 0;
 
   if (need_dup)
-    dup_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterDuplicated>(d_tally);
+    dup_tally = Kokkos::Experimental::create_scatter_view<typename Kokkos::Experimental::ScatterSum, typename Kokkos::Experimental::ScatterDuplicated>(d_tally);
   else
-    ndup_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterNonDuplicated>(d_tally);
+    ndup_tally = Kokkos::Experimental::create_scatter_view<typename Kokkos::Experimental::ScatterSum, typename Kokkos::Experimental::ScatterNonDuplicated>(d_tally);
 
   copymode = 1;
   if (particle_kk->sorted_kk && sparta->kokkos->need_atomics && !sparta->kokkos->atomic_reduction)
@@ -113,7 +113,7 @@ void ComputeThermalGridKokkos::compute_per_grid_kokkos()
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeThermalGrid_compute_per_grid_atomic<0> >(0,nlocal),*this);
   }
-  DeviceType::fence();
+  DeviceType().fence();
   copymode = 0;
 
   if (need_dup) {
@@ -133,8 +133,8 @@ void ComputeThermalGridKokkos::operator()(TagComputeThermalGrid_compute_per_grid
 
   // The tally array is duplicated for OpenMP, atomic for CUDA, and neither for Serial
 
-  auto v_tally = ScatterViewHelper<NeedDup<NEED_ATOMICS,DeviceType>::value,decltype(dup_tally),decltype(ndup_tally)>::get(dup_tally,ndup_tally);
-  auto a_tally = v_tally.template access<AtomicDup<NEED_ATOMICS,DeviceType>::value>();
+  auto v_tally = ScatterViewHelper<typename NeedDup<NEED_ATOMICS,DeviceType>::value,decltype(dup_tally),decltype(ndup_tally)>::get(dup_tally,ndup_tally);
+  auto a_tally = v_tally.template access<typename AtomicDup<NEED_ATOMICS,DeviceType>::value>();
 
   const int ispecies = d_particles[i].ispecies;
   const int igroup = d_s2g(imix,ispecies);
@@ -149,7 +149,7 @@ void ComputeThermalGridKokkos::operator()(TagComputeThermalGrid_compute_per_grid
   // 6 tallies per particle: N, Mass, mVx, mVy, mVz, mV^2
 
   int k = igroup*npergroup;
-  
+
   a_tally(icell,k++) += 1.0;
   a_tally(icell,k++) += mass;
   a_tally(icell,k++) += mass*v[0];
@@ -268,7 +268,7 @@ post_process_grid_kokkos(int index, int nsample,
 
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeThermalGrid_post_process_grid>(lo,hi),*this);
-  DeviceType::fence();
+  DeviceType().fence();
   copymode = 0;
 }
 

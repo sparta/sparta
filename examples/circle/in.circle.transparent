@@ -1,4 +1,11 @@
+################################################################################
 # 2d flow around a circle with transparent surfaces in front to tally stats
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
 
 seed	    	    12345
 dimension   	    2
@@ -33,7 +40,7 @@ surf_modify         plane2 collide 2
 
 collide             vss air air.vss
 
-fix		    in emit/face air xlo # subsonic 0.1 NULL
+fix		    in emit/face air xlo twopass # subsonic 0.1 NULL
 
 compute             plane1 surf plane1 all n ke
 compute             plane2 surf plane2 all n ke

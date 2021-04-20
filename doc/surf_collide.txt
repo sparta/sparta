@@ -13,7 +13,7 @@ surf_collide command :h3
 surf_collide ID style args keyword values ... :pre
 
 ID = user-assigned name for the surface collision model :ulb,l
-style = {specular} or {diffuse} or {cll} or {impulsive} or {td} or {piston} or {vanish} or {specular/kk} or {diffuse/kk} or {piston/kk} or {vanish/kk} :l
+style = {specular} or {diffuse} or {cll} or {impulsive} or {td} or {piston} or {transparent} or {vanish} or {specular/kk} or {diffuse/kk} or {piston/kk} or {vanish/kk} :l
 args = arguments for specific style :l
   {specular} or {specular/kk} args = none
   {diffuse} or {diffuse/kk} args = Tsurf acc
@@ -46,6 +46,7 @@ args = arguments for specific style :l
             Tsurf can be a variable (see below) 
   {piston} or {piston/kk} args = Vwall
     Vwall = velocity of boundary wall (velocity units)
+  {transparent} args = none :pre
   {vanish} or {vanish/kk} args = none :pre
 zero or more keyword/arg pairs may be appended :l
 keyword = {translate} or {rotate} or {partial} :l
@@ -123,7 +124,7 @@ The {diffuse} style computes a simple diffusive reflection model.
 The model has 2 parameters set by the {Tsurf} and {acc} arguments.
 {Tsurf} is the temperature of the surface.  {Acc} is an accommodation
 coefficient from 0.0 to 1.0, which determines what fraction of surface
-collisions are specular.  The rest are diffusive.  Thus a setting of
+collisions are diffusive.  The rest are specular.  Thus a setting of
 {acc} = 0.0 means all collisions are specular.
 
 Note that setting {acc} = 0.0, is a way to perform surface reactions
@@ -319,7 +320,7 @@ with a subsonic pressure boundary condition, as explained in
 {Vwall} should be chosen to correspond to a desired pressure condition
 for the density of particles in the system.
 
-NOTE: explain how to do this?
+NOTE: give more details on how to do this?
 
 Note that {Vwall} must always be input as a value >= 0.0, meaning the
 surface is moving away from the incident particle.  For example, in
@@ -356,6 +357,7 @@ Note that the "surf_react global"_surf_react.html command can also be
 used to delete particles hitting a surface, by setting the {pdelete}
 parameter to 1.0.  Using a surf_collide vanish command is simpler.
 
+:line
 :line
 
 The keyword {translate} can only be applied to the {diffuse} and {cll}

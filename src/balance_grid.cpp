@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -98,7 +98,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
     if (strcmp(arg[3],"*") == 0) pz = 0;
     else pz = atoi(arg[3]);
     iarg = 4;
-    
+
   } else if (strcmp(arg[0],"random") == 0) {
     if (narg < 1) error->all(FLERR,"Illegal balance_grid command");
     bstyle = RANDOM;
@@ -139,7 +139,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
       if (strchr(eligible,'z')) zdim = 1;
       if (zdim && domain->dimension == 2)
         error->all(FLERR,"Illegal balance_grid command");
-      if (xdim+ydim+zdim != strlen(eligible)) 
+      if (xdim+ydim+zdim != strlen(eligible))
         error->all(FLERR,"Illegal balance_grid command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"flip") == 0) {
@@ -154,7 +154,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
   // error check on methods only allowed for a uniform grid
 
   if (bstyle == STRIDE || bstyle == CLUMP || bstyle == BLOCK)
-    if (!grid->uniform) 
+    if (!grid->uniform)
       error->all(FLERR,"Invalid balance_grid style for non-uniform grid");
 
   // re-assign each of my local child cells to a proc
@@ -188,7 +188,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
       ix = idm1 % nx;
       iy = (idm1 / nx) % ny;
       iz = idm1 / (nx*ny);
-    
+
       if (order == XYZ) nth = iz*nx*ny + iy*nx + ix;
       else if (order == XZY) nth = iy*nx*nz + iz*nx + ix;
       else if (order == YXZ) nth = iz*ny*nx + ix*ny + iy;
@@ -216,7 +216,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
       ix = idm1 % nx;
       iy = (idm1 / nx) % ny;
       iz = idm1 / (nx*ny);
-    
+
       if (order == XYZ) nth = iz*nx*ny + iy*nx + ix;
       else if (order == XZY) nth = iy*nx*nz + iz*nx + ix;
       else if (order == YXZ) nth = iz*ny*nx + ix*ny + iy;
@@ -341,7 +341,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
     update->rcbhi[1] = rcb->hi[1];
     update->rcbhi[2] = rcb->hi[2];
 
-#endif 
+#endif
 
     rcb->invert();
 
@@ -361,7 +361,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
   // set clumped or not, depending on style
   // NONE style does not change clumping
 
-  if (nprocs == 1 || bstyle == CLUMP || bstyle == BLOCK || bstyle == BISECTION) 
+  if (nprocs == 1 || bstyle == CLUMP || bstyle == BLOCK || bstyle == BISECTION)
     grid->clumped = 1;
   else if (bstyle != NONE) grid->clumped = 0;
 
@@ -372,28 +372,6 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
   // NOTE: not needed again if rcbwt = PARTICLE for bstyle = BISECTION ??
 
   particle->sort();
-
-  // DEBUG
-
-  /*
-  char file[32];
-  sprintf(file,"tmp.bef.%d",comm->me);
-  FILE *fp = fopen(file,"w");
-
-  fprintf(fp,"Cells %d %d\n",grid->nlocal,grid->nghost);
-  for (int i = 0; i < grid->nlocal+grid->nghost; i++) {
-    fprintf(fp,"cell %d " CELLINT_FORMAT ": %d : %d %d %d %d %d %d\n",
-           i,grid->cells[i].id,
-           grid->cells[i].nmask,
-           grid->cells[i].neigh[0],
-           grid->cells[i].neigh[1],
-           grid->cells[i].neigh[2],
-           grid->cells[i].neigh[3],
-           grid->cells[i].neigh[4],
-           grid->cells[i].neigh[5]);
-  }
-  fclose(fp);
-  */
 
   MPI_Barrier(world);
   double time3 = MPI_Wtime();
@@ -482,11 +460,11 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
 }
 
 /* ----------------------------------------------------------------------
-   assign nprocs to 3d grid so as to minimize surface area 
+   assign nprocs to 3d grid so as to minimize surface area
    area = surface area of each of 3 faces of simulation box
 ------------------------------------------------------------------------- */
 
-void BalanceGrid::procs2grid(int nx, int ny, int nz, 
+void BalanceGrid::procs2grid(int nx, int ny, int nz,
                              int &px, int &py, int &pz)
 {
   int upx = px;
@@ -548,7 +526,7 @@ void BalanceGrid::procs2grid(int nx, int ny, int nz,
 	ipy++;
 	continue;
       }
-      
+
       ipz = nprocs/ipx/ipy;
       valid = 1;
       if (upz && ipz != upz) valid = 0;
@@ -557,7 +535,7 @@ void BalanceGrid::procs2grid(int nx, int ny, int nz,
 	ipy++;
 	continue;
       }
-      
+
       surf = area[0]/ipx/ipy + area[1]/ipx/ipz + area[2]/ipy/ipz;
       if (surf < bestsurf) {
 	bestsurf = surf;
@@ -619,7 +597,7 @@ void BalanceGrid::timer_cell_weights(double *weight)
     wttotal += localwt[nbalance-1];
   }
 
-  for (int icell = 0; icell < nglocal; icell++) 
+  for (int icell = 0; icell < nglocal; icell++)
     weight[icell] = cost*localwt[icell]/wttotal;
 
   memory->destroy(localwt);

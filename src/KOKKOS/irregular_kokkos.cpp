@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -92,7 +92,7 @@ int IrregularKokkos::create_data_uniform(int n, int *proclist, int sort)
 #ifdef SPARTA_RS_ALLREDUCE_INPLACE
   MPI_Allreduce(MPI_IN_PLACE,work1,nprocs,MPI_INT,MPI_SUM,world);
   nrecv = work1[me];
-#else 
+#else
 #ifdef SPARTA_RS_ALLREDUCE
   MPI_Allreduce(work1,work2,nprocs,MPI_INT,MPI_SUM,world);
   nrecv = work2[me];
@@ -381,16 +381,16 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
   // pack buf with list of datums
   // m = index of datum in sendbuf
 
-  k_index_send.modify<SPAHostType>();
-  k_index_send.sync<DeviceType>();
+  k_index_send.modify_host();
+  k_index_send.sync_device();
 
-  k_index_self.modify<SPAHostType>();
-  k_index_self.sync<DeviceType>();
+  k_index_self.modify_host();
+  k_index_self.sync_device();
 
   k_n.h_view() = 0;
-  k_n.modify<SPAHostType>();
-  k_n.sync<DeviceType>();
-  d_n = k_n.view<DeviceType>();
+  k_n.modify_host();
+  k_n.sync_device();
+  d_n = k_n.d_view;
 
   for (int isend = 0; isend < nsend; isend++) {
     count = num_send[isend];
@@ -408,7 +408,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagIrregularPackBuffer<1> >(0,count),*this);
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagIrregularPackBuffer<0> >(0,count),*this);
-    DeviceType::fence();
+    DeviceType().fence();
     //pack_buffer_serial(0,count);
     copymode = 0;
 
@@ -424,7 +424,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
 
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagIrregularUnpackBuffer>(0,num_self),*this);
-  DeviceType::fence();
+  DeviceType().fence();
   copymode = 0;
 
   // wait on all incoming messages

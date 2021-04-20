@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -161,12 +161,12 @@ void ReadParticles::command(int narg, char **arg)
 
   if (comm->me == 0) {
     if (screen) {
-      fprintf(screen,"Read " BIGINT_FORMAT " particles out of " 
+      fprintf(screen,"Read " BIGINT_FORMAT " particles out of "
               "%d\n",nactual,np);
       fprintf(screen,"  CPU time = %g secs\n",time2-time1);
     }
     if (logfile) {
-      fprintf(logfile,"Read " BIGINT_FORMAT " particles out of " 
+      fprintf(logfile,"Read " BIGINT_FORMAT " particles out of "
               "%d\n",nactual,np);
       fprintf(logfile,"  CPU time = %g secs\n",time2-time1);
     }
@@ -203,9 +203,9 @@ void ReadParticles::process_particles(int n, int, double **fields)
     // assumes x is inside or on surface of parent cell
     // returned icell can be owned or ghost cell
 
-    icell = grid->id_find_child(0,x);
+    icell = grid->id_find_child(0,0,boxlo,boxhi,x);
     if (icell < 0 || cells[icell].proc != me) continue;
-        
+
     id = static_cast<int> (fields[i][0]);
     ispecies = static_cast<int> (fields[i][1]) - 1;
     v[0] = fields[i][5];
@@ -305,7 +305,7 @@ void ReadParticles::read_particles(int n, int nfield, double **fields)
     for (m = 0; m < nfield; m++) {
       if (m == 0) word = strtok(line," \t\n\r\f");
       else word = strtok(NULL," \t\n\r\f");
-      if (word == NULL) 
+      if (word == NULL)
         error->one(FLERR,"Bad particle line in read_particles file");
       fields[i][m] = atof(word);
     }

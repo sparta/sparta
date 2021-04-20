@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -116,7 +116,7 @@ void ComputeSurf::init()
 {
   if (!surf->exist)
     error->all(FLERR,"Cannot use compute surf when surfs do not exist");
-  if (surf->implicit) 
+  if (surf->implicit)
     error->all(FLERR,"Cannot use compute surf with implicit surfs");
 
   if (ngroup != particle->mixture[imix]->ngroup)
@@ -213,7 +213,7 @@ void ComputeSurf::clear()
 ------------------------------------------------------------------------- */
 
 void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
-                             Particle::OnePart *iorig, 
+                             Particle::OnePart *iorig,
                              Particle::OnePart *ip, Particle::OnePart *jp)
 {
   // skip if isurf not in surface group
@@ -298,11 +298,12 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       vec[k++] += weight;
       break;
     case MFLUX:
-      vec[k++] += origmass;
+      vec[k] += origmass * fluxscale;
       if (!transparent) {
-        if (ip) vec[k++] -= imass;
-        if (jp) vec[k++] -= jmass;
+        if (ip) vec[k] -= imass * fluxscale;
+        if (jp) vec[k] -= jmass * fluxscale;
       }
+      k++;
       break;
     case FX:
       if (!fflag) {
@@ -445,7 +446,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       if (transparent)
         etot = -0.5*mvv2e*vsqpre - weight*otherpre;
       else
-        etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
+        etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
           weight * (iother + jother - otherpre);
       vec[k++] -= etot * fluxscale;
       break;
@@ -498,7 +499,7 @@ void ComputeSurf::post_process_surf()
   if (array_surf_tally)
     surf->collate_vector(ntally,tally2surf,
                          &array_surf_tally[0][index-1],ntotal,vector_surf);
-  else 
+  else
     surf->collate_vector(ntally,tally2surf,NULL,ntotal,vector_surf);
   */
 }

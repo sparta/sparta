@@ -17,7 +17,7 @@
 </PRE>
 <UL><LI>ID = user-assigned name for the surface collision model 
 
-<LI>style = <I>specular</I> or <I>diffuse</I> or <I>cll</I> or <I>impulsive</I> or <I>td</I> or <I>piston</I> or <I>vanish</I> or <I>specular/kk</I> or <I>diffuse/kk</I> or <I>piston/kk</I> or <I>vanish/kk</I> 
+<LI>style = <I>specular</I> or <I>diffuse</I> or <I>cll</I> or <I>impulsive</I> or <I>td</I> or <I>piston</I> or <I>transparent</I> or <I>vanish</I> or <I>specular/kk</I> or <I>diffuse/kk</I> or <I>piston/kk</I> or <I>vanish/kk</I> 
 
 <LI>args = arguments for specific style 
 
@@ -52,7 +52,9 @@
             Tsurf can be a variable (see below) 
   <I>piston</I> or <I>piston/kk</I> args = Vwall
     Vwall = velocity of boundary wall (velocity units)
-  <I>vanish</I> or <I>vanish/kk</I> args = none 
+  <I>transparent</I> args = none 
+</PRE>
+<PRE>  <I>vanish</I> or <I>vanish/kk</I> args = none 
 </PRE>
 <LI>zero or more keyword/arg pairs may be appended 
 
@@ -134,7 +136,7 @@ The particle's speed is unchanged.
 <P>The model has 2 parameters set by the <I>Tsurf</I> and <I>acc</I> arguments.
 <I>Tsurf</I> is the temperature of the surface.  <I>Acc</I> is an accommodation
 coefficient from 0.0 to 1.0, which determines what fraction of surface
-collisions are specular.  The rest are diffusive.  Thus a setting of
+collisions are diffusive.  The rest are specular.  Thus a setting of
 <I>acc</I> = 0.0 means all collisions are specular.
 </P>
 <P>Note that setting <I>acc</I> = 0.0, is a way to perform surface reactions
@@ -330,7 +332,7 @@ with a subsonic pressure boundary condition, as explained in
 <P><I>Vwall</I> should be chosen to correspond to a desired pressure condition
 for the density of particles in the system.
 </P>
-<P>NOTE: explain how to do this?
+<P>NOTE: give more details on how to do this?
 </P>
 <P>Note that <I>Vwall</I> must always be input as a value >= 0.0, meaning the
 surface is moving away from the incident particle.  For example, in
@@ -367,6 +369,8 @@ o</A> command.
 used to delete particles hitting a surface, by setting the <I>pdelete</I>
 parameter to 1.0.  Using a surf_collide vanish command is simpler.
 </P>
+<HR>
+
 <HR>
 
 <P>The keyword <I>translate</I> can only be applied to the <I>diffuse</I> and <I>cll</I>

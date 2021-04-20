@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -121,7 +121,11 @@ void CollideVSSKokkos::init()
   if (nparams != particle->nspecies)
     error->all(FLERR,"VSS parameters do not match current species");
 
-  //if (ambiflag && nearcp) 
+  if (sparta->kokkos && vibstyle == DISCRETE)
+    error->all(FLERR,"Cannot (yet) use KOKKOS package with "
+      "'collide_modify vibrate discrete'");
+
+  //if (ambiflag && nearcp)
   //  error->all(FLERR,"Ambipolar collision model does not yet support "
   //             "near-neighbor collisions");
 
@@ -196,8 +200,8 @@ void CollideVSSKokkos::init()
       }
     }
 
-    k_vremax_initial.modify<SPAHostType>();
-    k_vremax_initial.sync<DeviceType>();
+    k_vremax_initial.modify_host();
+    k_vremax_initial.sync_device();
     d_vremax_initial = k_vremax_initial.d_view;
   }
 
@@ -209,7 +213,7 @@ void CollideVSSKokkos::init()
     recombflag = react->recombflag;
     recomb_boost_inverse = react->recomb_boost_inverse;
   }
-  
+
   if (recombflag) {
     int nspecies = particle->nspecies;
     //memory->destroy(recomb_ijflag);
@@ -229,7 +233,7 @@ void CollideVSSKokkos::init()
   //if (ambiflag) {
   //  index_ionambi = particle->find_custom((char *) "ionambi");
   //  index_velambi = particle->find_custom((char *) "velambi");
-  //  if (index_ionambi < 0 || index_velambi < 0) 
+  //  if (index_ionambi < 0 || index_velambi < 0)
   //    error->all(FLERR,"Collision ambipolar without fix ambipolar");
   //  if (react) react->ambi_check();
   //
@@ -260,21 +264,22 @@ void CollideVSSKokkos::init()
 
   // VSS specific
 
-  k_params = tdual_params_1d("collide_vss:params",nparams);
+  k_params = tdual_params_2d("collide_vss:params",nparams,nparams);
   k_prefactor = DAT::tdual_float_2d("collide_vss:prefactor",nparams,nparams);
 
   for (int i=0; i<nparams; i++) {
-    k_params.h_view[i] = params[i];
-    for (int j=0; j<nparams; j++)
+    for (int j=0; j<nparams; j++){
+      k_params.h_view(i,j) = params[i][j];
       k_prefactor.h_view(i,j) = prefactor[i][j];
+    }
   }
 
-  k_params.modify<SPAHostType>();
-  k_params.sync<DeviceType>();
+  k_params.modify_host();
+  k_params.sync_device();
   d_params = k_params.d_view;
 
-  k_prefactor.modify<SPAHostType>();
-  k_prefactor.sync<DeviceType>();
+  k_prefactor.modify_host();
+  k_prefactor.sync_device();
   d_prefactor = k_prefactor.d_view;
 
   // initialize running stats before each run
@@ -295,7 +300,7 @@ void CollideVSSKokkos::reset_vremax()
 
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideResetVremax>(0,nglocal),*this);
-  DeviceType::fence();
+  DeviceType().fence();
   copymode = 0;
 
   this->modify(Device,ALL_MASK);
@@ -360,8 +365,8 @@ void CollideVSSKokkos::collisions()
 
 
   if (ndelete) {
-    k_dellist.modify<DeviceType>();
-    k_dellist.sync<SPAHostType>();
+    k_dellist.modify_device();
+    k_dellist.sync_host();
     ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
 #ifndef SPARTA_KOKKOS_EXACT
     particle_kk->compress_migrate(ndelete,dellist);
@@ -429,7 +434,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
   if (NEARCP) {
     if (int(d_nn_last_partner.extent(0)) < nglocal || int(d_nn_last_partner.extent(1)) < maxcellcount_kk)
-      d_nn_last_partner = typename AT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount_kk);
+      d_nn_last_partner = DAT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount_kk);
     //Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideZeroNN>(0,nglocal),*this);
   }
 
@@ -461,7 +466,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
       Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
       d_plist = grid_kk->d_plist;
       if (NEARCP)
-        d_nn_last_partner = typename AT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount+3);
+        d_nn_last_partner = DAT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount+3);
       maxcellcount_kk = maxcellcount_extra;
     }
 
@@ -517,7 +522,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
         Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_kk);
         d_plist = grid_kk->d_plist;
         if (NEARCP)
-          d_nn_last_partner = typename AT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount_kk);
+          d_nn_last_partner = DAT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount_kk);
         particle_kk->set_maxcellcount(maxcellcount_kk);
       }
 
@@ -535,7 +540,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
   particle->nlocal = h_nlocal();
 
-  DeviceType::fence();
+  DeviceType().fence();
   copymode = 0;
 
   if (h_error_flag())
@@ -634,10 +639,10 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
     int recomb_species = -1;
     double recomb_density = 0.0;
     if (recombflag && d_recomb_ijflag(ipart->ispecies,jpart->ispecies)) {
-      if (rand_gen.drand() > recomb_boost_inverse) 
+      if (rand_gen.drand() > recomb_boost_inverse)
         //react->recomb_species = -1;
         recomb_species = -1;
-      else if (np <= 2) 
+      else if (np <= 2)
         //react->recomb_species = -1;
         recomb_species = -1;
       else {
@@ -700,11 +705,11 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
       if (NEARCP) d_nn_last_partner(icell,j) = d_nn_last_partner(icell,np);
       if (np < 2) break;
     }
-    
+
     // if kpart created, add to plist
     // kpart was just added to particle list, so index = nlocal-1
     // particle data structs may have been realloced by kpart
-    
+
     if (kpart) {
       if (np < maxcellcount_kk) {
         if (NEARCP) d_nn_last_partner(icell,np) = 0;
@@ -763,10 +768,7 @@ int CollideVSSKokkos::test_collision_kokkos(int icell, int igroup, int jgroup,
   double dv  = vi[1] - vj[1];
   double dw  = vi[2] - vj[2];
   double vr2 = du*du + dv*dv + dw*dw;
-  double omega1 = d_params[ispecies].omega;
-  double omega2 = d_params[jspecies].omega;
-  double omega = 0.5 * (omega1+omega2);
-  double vro  = pow(vr2,1.0-omega);
+  double vro  = pow(vr2,1.0-d_params(ispecies,jspecies).omega);
 
   // although the vremax is calcualted for the group,
   // the individual collisions calculated species dependent vre
@@ -793,11 +795,10 @@ void CollideVSSKokkos::setup_collision_kokkos(Particle::OnePart *ip, Particle::O
   precoln.ave_vibdof = 0.5 * (d_species[isp].vibdof + d_species[jsp].vibdof);
   precoln.ave_dof = (precoln.ave_rotdof  + precoln.ave_vibdof)/2.;
 
-  double imass = precoln.imass = d_species[isp].mass;
-  double jmass = precoln.jmass = d_species[jsp].mass;
-  precoln.mr = imass * jmass / (imass+jmass);
+  precoln.imass = d_species[isp].mass;
+  precoln.jmass = d_species[jsp].mass;
 
-  precoln.etrans = 0.5 * precoln.mr * precoln.vr2;
+  precoln.etrans = 0.5 * d_params(isp,jsp).mr * precoln.vr2;
   precoln.erot = ip->erot + jp->erot;
   precoln.evib = ip->evib + jp->evib;
 
@@ -823,8 +824,8 @@ void CollideVSSKokkos::setup_collision_kokkos(Particle::OnePart *ip, Particle::O
 /* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip, 
-                                  Particle::OnePart *&jp, 
+int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
+                                  Particle::OnePart *&jp,
                                   Particle::OnePart *&kp,
                                   struct State &precoln, struct State &postcoln, rand_type &rand_gen,
                                   Particle::OnePart *&p3, int &recomb_species, double &recomb_density,
@@ -837,13 +838,13 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
   // if a 3rd particle is created, its kspecies >= 0 is returned
   // if 2nd particle is removed, its jspecies is set to -1
 
-  if (react_defined) 
+  if (react_defined)
     reactflag = react_kk_copy.obj.attempt_kk(ip,jp,
                                              precoln.etrans,precoln.erot,
                                              precoln.evib,postcoln.etotal,kspecies,
                                              recomb_species,recomb_density,d_species);
   else reactflag = 0;
-  
+
   // repartition energy and perform velocity scattering for I,J,K particles
   // reaction may have changed species of I,J particles
   // J,K particles may have been removed or created by reaction
@@ -863,9 +864,9 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
       memcpy(x,ip->x,3*sizeof(double));
       memcpy(v,ip->v,3*sizeof(double));
       nlocal = Kokkos::atomic_fetch_add(&d_nlocal(),1) + 1;
-      int reallocflag = 
+      int reallocflag =
         ParticleKokkos::add_particle_kokkos(d_particles,nlocal-1,id,kspecies,ip->icell,x,v,0.0,0.0);
-      if (reallocflag) {     
+      if (reallocflag) {
         d_retry() = 1;
         d_part_grow() = 1;
         return 0;
@@ -892,7 +893,33 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
       vi[2] = wcmf;
 
       jp = NULL;
+
+      // account for 3rd body energy via another call to setup_collision()
+      // set precoln.vr2 = relative velocity between ip and 3rd body p3
+
+      const double *vp3 = p3->v;
+      const double du  = vi[0] - vp3[0];
+      const double dv  = vi[1] - vp3[1];
+      const double dw  = vi[2] - vp3[2];
+      const double vr2 = du*du + dv*dv + dw*dw;
+      precoln.vr2 = vr2;
+
+      // save postcoln.etotal from previous setup_collision()
+      // add 3rd body internal energy to it
+      // ip internal energy is already included in postcoln.etotal
+
+      double partial_energy =  postcoln.etotal + p3->erot + p3->evib;
+      ip->erot = 0.0;
+      ip->evib = 0.0;
+      p3->erot = 0.0;
+      p3->evib = 0.0;
+
+      // 2nd call to setup_collision() sets new postcoln.etotal
+      // then add saved partial_energy to it
+
       setup_collision_kokkos(ip,p3,precoln,postcoln);
+      postcoln.etotal += partial_energy;
+
       if (precoln.ave_dof > 0.0) EEXCHANGE_ReactingEDisposal(ip,p3,jp,precoln,postcoln,rand_gen);
       SCATTER_TwoBodyScattering(ip,p3,precoln,postcoln,rand_gen);
 
@@ -913,7 +940,7 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
 /* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::SCATTER_TwoBodyScattering(Particle::OnePart *ip, 
+void CollideVSSKokkos::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
                                                  Particle::OnePart *jp,
                                                  struct State &precoln, struct State &postcoln,
                                                  rand_type &rand_gen) const
@@ -928,39 +955,37 @@ void CollideVSSKokkos::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
   double mass_i = d_species[isp].mass;
   double mass_j = d_species[jsp].mass;
 
-  double alpha_r = 2.0 / (d_params[isp].alpha + d_params[jsp].alpha);
-  double mr = d_species[isp].mass * d_species[jsp].mass /
-    (d_species[isp].mass + d_species[jsp].mass);
+  double alpha_r = 1.0 / d_params(isp,jsp).alpha;
 
   double eps = rand_gen.drand() * 2*MY_PI;
-  if (fabs(alpha_r - 1.0) < 0.001) { 
-    double vr = sqrt(2.0 * postcoln.etrans / mr);
+  if (fabs(alpha_r - 1.0) < 0.001) {
+    double vr = sqrt(2.0 * postcoln.etrans / d_params(isp,jsp).mr);
     double cosX = 2.0*rand_gen.drand() - 1.0;
     double sinX = sqrt(1.0 - cosX*cosX);
     ua = vr*cosX;
     vb = vr*sinX*cos(eps);
-    wc = vr*sinX*sin(eps); 
+    wc = vr*sinX*sin(eps);
   } else {
-    double scale = sqrt((2.0 * postcoln.etrans) / (mr * precoln.vr2));
+    double scale = sqrt((2.0 * postcoln.etrans) / (d_params(isp,jsp).mr * precoln.vr2));
     double cosX = 2.0*pow(rand_gen.drand(),alpha_r) - 1.0;
     double sinX = sqrt(1.0 - cosX*cosX);
     vrc[0] = vi[0]-vj[0];
     vrc[1] = vi[1]-vj[1];
     vrc[2] = vi[2]-vj[2];
     double d = sqrt(vrc[1]*vrc[1]+vrc[2]*vrc[2]);
-    if (d > 1.0e-6) { 
+    if (d > 1.0e-6) {
       ua = scale * ( cosX*vrc[0] + sinX*d*sin(eps) );
-      vb = scale * ( cosX*vrc[1] + sinX*(precoln.vr*vrc[2]*cos(eps) - 
+      vb = scale * ( cosX*vrc[1] + sinX*(precoln.vr*vrc[2]*cos(eps) -
                                          vrc[0]*vrc[1]*sin(eps))/d );
-      wc = scale * ( cosX*vrc[2] - sinX*(precoln.vr*vrc[1]*cos(eps) + 
+      wc = scale * ( cosX*vrc[2] - sinX*(precoln.vr*vrc[1]*cos(eps) +
                                          vrc[0]*vrc[2]*sin(eps))/d );
     } else {
-      ua = scale * ( cosX*vrc[0] ); 
-      vb = scale * ( sinX*vrc[0]*cos(eps) ); 
+      ua = scale * ( cosX*vrc[0] );
+      vb = scale * ( sinX*vrc[0]*cos(eps) );
       wc = scale * ( sinX*vrc[0]*sin(eps) );
     }
   }
-  
+
   // new velocities for the products
 
   double divisor = 1.0 / (mass_i + mass_j);
@@ -975,7 +1000,7 @@ void CollideVSSKokkos::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
 /* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip, 
+void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
                                                       Particle::OnePart *jp,
                                                       struct State &precoln, struct State &postcoln,
                                                       rand_type &rand_gen) const
@@ -1000,74 +1025,73 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   } else {
     E_Dispose = precoln.etrans;
 
-    const double aveomega = 0.5*(d_params[ip->ispecies].omega + 
-                                 d_params[jp->ispecies].omega);
-
     for (i = 0; i < 2; i++) {
-      if (i == 0) p = ip; 
+      if (i == 0) p = ip;
       else p = jp;
 
       int sp = p->ispecies;
       rotdof = d_species[sp].rotdof;
-      double rotn_phi = d_species[sp].rotrel; 
+      double rotn_phi = d_species[sp].rotrel;
 
       if (rotdof) {
         if (relaxflag == VARIABLE) rotn_phi = rotrel(sp,E_Dispose);
         if (rotn_phi >= rand_gen.drand()) {
           if (rotstyle == NONE) {
-            p->erot = 0.0 ; 
+            p->erot = 0.0 ;
 
           } else if (rotstyle != NONE && rotdof == 2) {
             E_Dispose += p->erot;
-            Fraction_Rot = 
-              1- pow(rand_gen.drand(),(1/(2.5-aveomega)));
+            Fraction_Rot =
+              1- pow(rand_gen.drand(),
+		     (1/(2.5-d_params(ip->ispecies,jp->ispecies).omega)));
             p->erot = Fraction_Rot * E_Dispose;
             E_Dispose -= p->erot;
           } else {
             E_Dispose += p->erot;
-            p->erot = E_Dispose * 
+            p->erot = E_Dispose *
               sample_bl(rand_gen,0.5*d_species[sp].rotdof-1.0,
-                        1.5-aveomega);
+                        1.5-d_params(ip->ispecies,jp->ispecies).omega);
             E_Dispose -= p->erot;
           }
         }
       }
       postcoln.erot += p->erot;
- 
+
       vibdof = d_species[sp].vibdof;
-      double vibn_phi = d_species[sp].vibrel[0]; 
+      double vibn_phi = d_species[sp].vibrel[0];
 
       if (vibdof) {
         if (relaxflag == VARIABLE) vibn_phi = vibrel(sp,E_Dispose+p->evib);
         if (vibn_phi >= rand_gen.drand()) {
           if (vibstyle == NONE) {
-            p->evib = 0.0; 
+            p->evib = 0.0;
           } else if (vibdof == 2 && vibstyle == DISCRETE) {
 
             E_Dispose += p->evib;
             max_level = static_cast<int>
               (E_Dispose / (boltz * d_species[sp].vibtemp[0]));
             do {
-              ivib = static_cast<int> 
+              ivib = static_cast<int>
                 (rand_gen.drand()*(max_level+AdjustFactor));
               p->evib = ivib * boltz * d_species[sp].vibtemp[0];
               State_prob = pow((1.0 - p->evib / E_Dispose),
-                             (1.5 - aveomega));
+			       (1.5 - d_params(ip->ispecies,jp->ispecies).omega));
             } while (State_prob < rand_gen.drand());
             E_Dispose -= p->evib;
 
           } else if (vibdof == 2 && vibstyle == SMOOTH) {
             E_Dispose += p->evib;
-            Fraction_Vib = 
-              1.0 - pow(rand_gen.drand(),(1.0/(2.5-aveomega)));
+            Fraction_Vib =
+              1.0 - pow(rand_gen.drand(),
+			(1.0/(2.5-d_params(ip->ispecies,jp->ispecies).omega)));
             p->evib= Fraction_Vib * E_Dispose;
             E_Dispose -= p->evib;
 
           } else if (vibdof > 2) {
             E_Dispose += p->evib;
-            p->evib = E_Dispose * 
+            p->evib = E_Dispose *
               sample_bl(rand_gen,0.5*d_species[sp].vibdof-1.0,
-                        1.5-aveomega);
+                        1.5-d_params(ip->ispecies,jp->ispecies).omega);
             E_Dispose -= p->evib;
           }
 
@@ -1086,7 +1110,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
 /* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::SCATTER_ThreeBodyScattering(Particle::OnePart *ip, 
+void CollideVSSKokkos::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
                                                    Particle::OnePart *jp,
                                                    Particle::OnePart *kp,
                                                    struct State &precoln, struct State &postcoln,
@@ -1105,16 +1129,16 @@ void CollideVSSKokkos::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
   double *vj = jp->v;
   double *vk = kp->v;
 
-  double alpha_r = 2.0 / (d_params[isp].alpha + d_params[jsp].alpha);
+  double alpha_r = 1.0 / d_params(isp,jsp).alpha;
   double mr = mass_ij * mass_k / (mass_ij + mass_k);
-  postcoln.eint = ip->erot + jp->erot + ip->evib + jp->evib 
+  postcoln.eint = ip->erot + jp->erot + ip->evib + jp->evib
                 + kp->erot + kp->evib;
 
   double cosX = 2.0*pow(rand_gen.drand(), alpha_r) - 1.0;
   double sinX = sqrt(1.0 - cosX*cosX);
   double eps = rand_gen.drand() * 2*MY_PI;
 
-  if (fabs(alpha_r - 1.0) < 0.001) { 
+  if (fabs(alpha_r - 1.0) < 0.001) {
     double vr = sqrt(2*postcoln.etrans/mr);
     ua = vr*cosX;
     vb = vr*sinX*cos(eps);
@@ -1125,15 +1149,15 @@ void CollideVSSKokkos::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
     vrc[1] = vi[1]-vj[1];
     vrc[2] = vi[2]-vj[2];
     double d = sqrt(vrc[1]*vrc[1]+vrc[2]*vrc[2]);
-    if (d > 1.E-6 ) { 
+    if (d > 1.E-6 ) {
       ua = scale * (cosX*vrc[0] + sinX*d*sin(eps));
-      vb = scale * (cosX*vrc[1] + sinX*(precoln.vr*vrc[2]*cos(eps) - 
+      vb = scale * (cosX*vrc[1] + sinX*(precoln.vr*vrc[2]*cos(eps) -
                                         vrc[0]*vrc[1]*sin(eps))/d);
-      wc = scale * (cosX*vrc[2] - sinX*(precoln.vr*vrc[1]*cos(eps) + 
+      wc = scale * (cosX*vrc[2] - sinX*(precoln.vr*vrc[1]*cos(eps) +
                                         vrc[0]*vrc[2]*sin(eps))/d);
     } else {
-      ua = scale * cosX*vrc[0]; 
-      vb = scale * sinX*vrc[0]*cos(eps); 
+      ua = scale * cosX*vrc[0];
+      vb = scale * sinX*vrc[0]*cos(eps);
       wc = scale * sinX*vrc[0]*sin(eps);
     }
   }
@@ -1141,12 +1165,12 @@ void CollideVSSKokkos::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
   // new velocities for the products
 
   double divisor = 1.0 / (mass_ij + mass_k);
-  vi[0] = precoln.ucmf + (mass_ij*divisor)*ua;
-  vi[1] = precoln.vcmf + (mass_ij*divisor)*vb;
-  vi[2] = precoln.wcmf + (mass_ij*divisor)*wc;
-  vk[0] = precoln.ucmf - (mass_k*divisor)*ua;
-  vk[1] = precoln.vcmf - (mass_k*divisor)*vb;
-  vk[2] = precoln.wcmf - (mass_k*divisor)*wc;
+  vi[0] = precoln.ucmf + (mass_k*divisor)*ua;
+  vi[1] = precoln.vcmf + (mass_k*divisor)*vb;
+  vi[2] = precoln.wcmf + (mass_k*divisor)*wc;
+  vk[0] = precoln.ucmf - (mass_ij*divisor)*ua;
+  vk[1] = precoln.vcmf - (mass_ij*divisor)*vb;
+  vk[2] = precoln.wcmf - (mass_ij*divisor)*wc;
   vj[0] = vi[0];
   vj[1] = vi[1];
   vj[2] = vi[2];
@@ -1155,7 +1179,7 @@ void CollideVSSKokkos::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
 /* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip, 
+void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
                                                    Particle::OnePart *jp,
                                                    Particle::OnePart *kp,
                                                    struct State &precoln, struct State &postcoln,
@@ -1173,7 +1197,7 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     ip->evib = 0.0;
     jp->evib = 0.0;
     numspecies = 2;
-    aveomega = 0.5*(d_params[ip->ispecies].omega + d_params[jp->ispecies].omega);
+    aveomega = d_params(ip->ispecies,jp->ispecies).omega;
   } else {
     ip->erot = 0.0;
     jp->erot = 0.0;
@@ -1182,18 +1206,18 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     jp->evib = 0.0;
     kp->evib = 0.0;
     numspecies = 3;
-    aveomega = (d_params[ip->ispecies].omega + d_params[jp->ispecies].omega +
-                d_params[kp->ispecies].omega)/3.0;
+    aveomega = (d_params(ip->ispecies,ip->ispecies).omega + d_params(jp->ispecies,jp->ispecies).omega +
+                d_params(kp->ispecies,kp->ispecies).omega)/3.0;
   }
 
   // handle each kind of energy disposal for non-reacting reactants
   // clean up memory for the products
-  
+
   double E_Dispose = postcoln.etotal;
 
   for (i = 0; i < numspecies; i++) {
-    if (i == 0) p = ip; 
-    else if (i == 1) p = jp; 
+    if (i == 0) p = ip;
+    else if (i == 1) p = jp;
     else p = kp;
 
     int sp = p->ispecies;
@@ -1203,29 +1227,29 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
       if (rotstyle == NONE) {
         p->erot = 0.0 ;
       } else if (rotdof == 2) {
-        Fraction_Rot = 
+        Fraction_Rot =
           1- pow(rand_gen.drand(),(1/(2.5-aveomega)));
         p->erot = Fraction_Rot * E_Dispose;
         E_Dispose -= p->erot;
-        
+
       } else if (rotdof > 2) {
-        p->erot = E_Dispose * 
+        p->erot = E_Dispose *
           sample_bl(rand_gen,0.5*d_species[sp].rotdof-1.0,
                     1.5-aveomega);
         E_Dispose -= p->erot;
       }
     }
-    
+
     vibdof = d_species[sp].vibdof;
 
     if (vibdof) {
       if (vibstyle == NONE) {
         p->evib = 0.0;
       } else if (vibdof == 2 && vibstyle == DISCRETE) {
-        max_level = static_cast<int> 
+        max_level = static_cast<int>
           (E_Dispose / (boltz * d_species[sp].vibtemp[0]));
         do {
-          ivib = static_cast<int> 
+          ivib = static_cast<int>
             (rand_gen.drand()*(max_level+AdjustFactor));
           p->evib = (double)
             (ivib * boltz * d_species[sp].vibtemp[0]);
@@ -1233,34 +1257,34 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
                            (1.5 - aveomega));
         } while (State_prob < rand_gen.drand());
         E_Dispose -= p->evib;
-        
+
       } else if (vibdof == 2 && vibstyle == SMOOTH) {
         Fraction_Vib =
           1.0 - pow(rand_gen.drand(),(1.0 / (2.5-aveomega)));
         p->evib = Fraction_Vib * E_Dispose;
         E_Dispose -= p->evib;
-        
+
       } else if (vibdof > 2) {
-        p->evib = E_Dispose * 
+        p->evib = E_Dispose *
           sample_bl(rand_gen,0.5*d_species[sp].vibdof-1.0,
                     1.5-aveomega);
         E_Dispose -= p->evib;
       }
     }
   }
-  
+
   // compute post-collision internal energies
-  
+
   postcoln.erot = ip->erot + jp->erot;
   postcoln.evib = ip->evib + jp->evib;
-  
+
   if (kp) {
     postcoln.erot += kp->erot;
     postcoln.evib += kp->evib;
   }
-  
+
   // compute portion of energy left over for scattering
-  
+
   postcoln.eint = postcoln.erot + postcoln.evib;
   postcoln.etrans = E_Dispose;
 }
@@ -1286,9 +1310,9 @@ double CollideVSSKokkos::sample_bl(rand_type &rand_gen, double Exp_1, double Exp
 KOKKOS_INLINE_FUNCTION
 double CollideVSSKokkos::rotrel(int isp, double Ec) const
 {
-  double Tr = Ec /(boltz * (2.5-d_params[isp].omega));
-  double rotphi = (1.0+d_params[isp].rotc2/sqrt(Tr) + d_params[isp].rotc3/Tr)
-                / d_params[isp].rotc1; 
+  double Tr = Ec /(boltz * (2.5-d_params(isp,isp).omega));
+  double rotphi = (1.0+d_params(isp,isp).rotc2/sqrt(Tr) + d_params(isp,isp).rotc3/Tr)
+                / d_params(isp,isp).rotc1;
   return rotphi;
 }
 
@@ -1299,17 +1323,17 @@ double CollideVSSKokkos::rotrel(int isp, double Ec) const
 KOKKOS_INLINE_FUNCTION
 double CollideVSSKokkos::vibrel(int isp, double Ec) const
 {
-  double Tr = Ec /(boltz * (3.5-d_params[isp].omega));
-  double omega = d_params[isp].omega;
-  double vibphi = 1.0 / (d_params[isp].vibc1/pow(Tr,omega) * 
-                         exp(d_params[isp].vibc2/pow(Tr,1.0/3.0)));
+  double Tr = Ec /(boltz * (3.5-d_params(isp,isp).omega));
+  double omega = d_params(isp,isp).omega;
+  double vibphi = 1.0 / (d_params(isp,isp).vibc1/pow(Tr,omega) *
+                         exp(d_params(isp,isp).vibc2/pow(Tr,1.0/3.0)));
   return vibphi;
 }
 
 /* ----------------------------------------------------------------------
    for particle I, find collision partner J via near neighbor algorithm
    always returns a J neighbor, even if not that near
-   near neighbor algorithm: 
+   near neighbor algorithm:
      check up to nearlimit particles, starting with random particle
      as soon as find one within distance moved by particle I, return it
      else return the closest one found
@@ -1330,7 +1354,7 @@ int CollideVSSKokkos::find_nn(rand_type &rand_gen, int i, int np, int icell) con
   if (np == 2) return (i+1) % 2;
 
   Particle::OnePart *ipart,*jpart;
-  
+
   // thresh = distance particle I moves in this timestep
 
   ipart = &d_particles[d_plist(icell,i)];
@@ -1395,7 +1419,7 @@ int CollideVSSKokkos::find_nn(rand_type &rand_gen, int i, int np, int icell) con
 
 /* ----------------------------------------------------------------------
    pack icell values for per-cell arrays into buf
-   if icell is a split cell, also pack all sub cell values 
+   if icell is a split cell, also pack all sub cell values
    return byte count of amount packed
    if memflag, only return count, do not fill buf
    NOTE: why packing/unpacking parent cell if a split cell?
@@ -1448,7 +1472,7 @@ int CollideVSSKokkos::pack_grid_one(int icell, char *buf_char, int memflag)
 
 /* ----------------------------------------------------------------------
    unpack icell values for per-cell arrays from buf
-   if icell is a split cell, also unpack all sub cell values 
+   if icell is a split cell, also unpack all sub cell values
    return byte count of amount unpacked
 ------------------------------------------------------------------------- */
 
@@ -1581,8 +1605,8 @@ void CollideVSSKokkos::adapt_grid()
 
 void CollideVSSKokkos::grow_percell(int n)
 {
-  if (nglocal+n < nglocalmax) return;
-  nglocalmax += DELTAGRID;
+  if (nglocal+n < nglocalmax || !ngroups) return;
+  while (nglocal+n >= nglocalmax) nglocalmax += DELTAGRID;
 
   this->sync(Device,ALL_MASK); // force resize on device
 
@@ -1603,13 +1627,13 @@ void CollideVSSKokkos::sync(ExecutionSpace space, unsigned int mask)
   if (space == Device) {
     if (sparta->kokkos->auto_sync)
       modify(Host,mask);
-    if (mask & VREMAX_MASK) k_vremax.sync<SPADeviceType>();
+    if (mask & VREMAX_MASK) k_vremax.sync_device();
     if (remainflag)
-      if (mask & REMAIN_MASK) k_remain.sync<SPADeviceType>();
+      if (mask & REMAIN_MASK) k_remain.sync_device();
   } else {
-    if (mask & VREMAX_MASK) k_vremax.sync<SPAHostType>();
+    if (mask & VREMAX_MASK) k_vremax.sync_host();
     if (remainflag)
-      if (mask & REMAIN_MASK) k_remain.sync<SPAHostType>();
+      if (mask & REMAIN_MASK) k_remain.sync_host();
   }
 }
 
@@ -1618,15 +1642,15 @@ void CollideVSSKokkos::sync(ExecutionSpace space, unsigned int mask)
 void CollideVSSKokkos::modify(ExecutionSpace space, unsigned int mask)
 {
   if (space == Device) {
-    if (mask & VREMAX_MASK) k_vremax.modify<SPADeviceType>();
+    if (mask & VREMAX_MASK) k_vremax.modify_device();
     if (remainflag)
-      if (mask & REMAIN_MASK) k_remain.modify<SPADeviceType>();
+      if (mask & REMAIN_MASK) k_remain.modify_device();
     if (sparta->kokkos->auto_sync)
       sync(Host,mask);
   } else {
-    if (mask & VREMAX_MASK) k_vremax.modify<SPAHostType>();
+    if (mask & VREMAX_MASK) k_vremax.modify_host();
     if (remainflag)
-      if (mask & REMAIN_MASK) k_remain.modify<SPAHostType>();
+      if (mask & REMAIN_MASK) k_remain.modify_host();
   }
 }
 

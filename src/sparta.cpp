@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -76,54 +76,54 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
 
   int iarg = 1;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"-partition") == 0 || 
+    if (strcmp(arg[iarg],"-partition") == 0 ||
 	strcmp(arg[iarg],"-p") == 0) {
       universe->existflag = 1;
-      if (iarg+2 > narg) 
+      if (iarg+2 > narg)
 	error->universe_all(FLERR,"Invalid command-line argument");
       iarg++;
       while (iarg < narg && arg[iarg][0] != '-') {
 	universe->add_world(arg[iarg]);
 	iarg++;
       }
-    } else if (strcmp(arg[iarg],"-in") == 0 || 
+    } else if (strcmp(arg[iarg],"-in") == 0 ||
 	       strcmp(arg[iarg],"-i") == 0) {
-      if (iarg+2 > narg) 
+      if (iarg+2 > narg)
 	error->universe_all(FLERR,"Invalid command-line argument");
       inflag = iarg + 1;
       iarg += 2;
-    } else if (strcmp(arg[iarg],"-screen") == 0 || 
+    } else if (strcmp(arg[iarg],"-screen") == 0 ||
 	       strcmp(arg[iarg],"-sc") == 0) {
-      if (iarg+2 > narg) 
+      if (iarg+2 > narg)
 	error->universe_all(FLERR,"Invalid command-line argument");
       screenflag = iarg + 1;
       iarg += 2;
-    } else if (strcmp(arg[iarg],"-log") == 0 || 
+    } else if (strcmp(arg[iarg],"-log") == 0 ||
 	       strcmp(arg[iarg],"-l") == 0) {
-      if (iarg+2 > narg) 
+      if (iarg+2 > narg)
 	error->universe_all(FLERR,"Invalid command-line argument");
       logflag = iarg + 1;
       iarg += 2;
-    } else if (strcmp(arg[iarg],"-var") == 0 || 
+    } else if (strcmp(arg[iarg],"-var") == 0 ||
 	       strcmp(arg[iarg],"-v") == 0) {
       if (iarg+3 > narg)
 	error->universe_all(FLERR,"Invalid command-line argument");
       iarg += 3;
       while (iarg < narg && arg[iarg][0] != '-') iarg++;
-    } else if (strcmp(arg[iarg],"-echo") == 0 || 
+    } else if (strcmp(arg[iarg],"-echo") == 0 ||
 	       strcmp(arg[iarg],"-e") == 0) {
       if (iarg+2 > narg)
 	error->universe_all(FLERR,"Invalid command-line argument");
       iarg += 2;
-    } else if (strcmp(arg[iarg],"-pscreen") == 0 || 
+    } else if (strcmp(arg[iarg],"-pscreen") == 0 ||
 	       strcmp(arg[iarg],"-ps") == 0) {
-      if (iarg+2 > narg) 
+      if (iarg+2 > narg)
        error->universe_all(FLERR,"Invalid command-line argument");
       partscreenflag = iarg + 1;
       iarg += 2;
-    } else if (strcmp(arg[iarg],"-plog") == 0 || 
+    } else if (strcmp(arg[iarg],"-plog") == 0 ||
 	       strcmp(arg[iarg],"-pl") == 0) {
-      if (iarg+2 > narg) 
+      if (iarg+2 > narg)
        error->universe_all(FLERR,"Invalid command-line argument");
       partlogflag = iarg + 1;
       iarg += 2;
@@ -166,7 +166,7 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
       suffix_enable = 1;
       iarg += 2;
 
-    } else if (strcmp(arg[iarg],"-help") == 0 || 
+    } else if (strcmp(arg[iarg],"-help") == 0 ||
 	       strcmp(arg[iarg],"-h") == 0) {
       if (iarg+1 > narg)
 	error->universe_all(FLERR,"Invalid command-line argument");
@@ -208,18 +208,18 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
       universe->uscreen = NULL;
     else {
       universe->uscreen = fopen(arg[screenflag],"w");
-      if (universe->uscreen == NULL) 
+      if (universe->uscreen == NULL)
 	error->universe_one(FLERR,"Cannot open universe screen file");
     }
     if (logflag == 0) {
       universe->ulogfile = fopen("log.sparta","w");
-      if (universe->ulogfile == NULL) 
+      if (universe->ulogfile == NULL)
 	error->universe_one(FLERR,"Cannot open log.sparta");
     } else if (strcmp(arg[logflag],"none") == 0)
       universe->ulogfile = NULL;
     else {
       universe->ulogfile = fopen(arg[logflag],"w");
-      if (universe->ulogfile == NULL) 
+      if (universe->ulogfile == NULL)
 	error->universe_one(FLERR,"Cannot open universe log file");
     }
   }
@@ -289,7 +289,7 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
 	screen = fopen(str,"w");
 	if (screen == NULL) error->one(FLERR,"Cannot open screen file");
       } else screen = NULL;
-    
+
     if (me == 0)
       if (partlogflag == 0)
        if (logflag == 0) {
@@ -313,7 +313,7 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
 	logfile = fopen(str,"w");
 	if (logfile == NULL) error->one(FLERR,"Cannot open logfile");
       } else logfile = NULL;
-    
+
     if (me == 0) {
       infile = fopen(arg[inflag],"r");
       if (infile == NULL) {
@@ -322,9 +322,9 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
 	error->one(FLERR,str);
       }
     } else infile = NULL;
-    
+
     // screen and logfile messages for universe and world
-    
+
     if (universe->me == 0) {
       if (universe->uscreen) {
 	fprintf(universe->uscreen,"SPARTA (%s)\n",universe->version);
@@ -337,7 +337,7 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
 		universe->nworlds);
       }
     }
-    
+
     if (me == 0) {
       if (screen) {
 	fprintf(screen,"SPARTA (%s)\n",universe->version);
@@ -512,7 +512,7 @@ void SPARTA::post_create()
 
   if (!suffix_enable) return;
 
-  if (strcmp(suffix,"kk") == 0 && 
+  if (strcmp(suffix,"kk") == 0 &&
       (kokkos == NULL || kokkos->kokkos_exists == 0))
     error->all(FLERR,"Using suffix kk without KOKKOS package enabled");
 

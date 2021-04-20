@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -66,7 +66,6 @@ struct TagCollideCollisionsOne{};
 
 class CollideVSSKokkos : public CollideVSS {
  public:
-  typedef ArrayTypes<DeviceType> AT;
   typedef COLLIDE_REDUCE value_type;
 
   CollideVSSKokkos(class SPARTA *, int, char **);
@@ -95,7 +94,7 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   void setup_collision_kokkos(Particle::OnePart *, Particle::OnePart *, struct State &, struct State &) const;
   KOKKOS_INLINE_FUNCTION
-  int perform_collision_kokkos(Particle::OnePart *&, Particle::OnePart *&, 
+  int perform_collision_kokkos(Particle::OnePart *&, Particle::OnePart *&,
                         Particle::OnePart *&, struct State &, struct State &, rand_type &,
                         Particle::OnePart *&, int &, double &,
                         int &) const;
@@ -128,49 +127,49 @@ class CollideVSSKokkos : public CollideVSS {
 
   t_particle_1d d_particles;
   t_species_1d_const d_species;
-  typename AT::t_int_2d d_plist;
+  DAT::t_int_2d d_plist;
 
   DAT::tdual_float_2d k_vremax_initial;
-  typename AT::t_float_2d d_vremax_initial;
+  DAT::t_float_2d d_vremax_initial;
   DAT::tdual_float_3d k_vremax;
-  typename AT::t_float_3d d_vremax;
+  DAT::t_float_3d d_vremax;
   DAT::tdual_float_3d k_remain;
-  typename AT::t_float_3d d_remain;
+  DAT::t_float_3d d_remain;
 
-  typedef Kokkos::DualView<int[10], SPADeviceType::array_layout, SPADeviceType> tdual_int_10;
+  typedef Kokkos::DualView<int[10], DeviceType::array_layout, DeviceType> tdual_int_10;
   typedef tdual_int_10::t_dev t_int_10;
   typedef tdual_int_10::t_host t_host_int_10;
   t_int_10 d_scalars;
   t_host_int_10 h_scalars;
 
-  typename AT::t_int_scalar d_nattempt_one;
+  DAT::t_int_scalar d_nattempt_one;
   HAT::t_int_scalar h_nattempt_one;
 
-  typename AT::t_int_scalar d_ncollide_one;
+  DAT::t_int_scalar d_ncollide_one;
   HAT::t_int_scalar h_ncollide_one;
 
-  typename AT::t_int_scalar d_nreact_one;
+  DAT::t_int_scalar d_nreact_one;
   HAT::t_int_scalar h_nreact_one;
 
-  typename AT::t_int_scalar d_error_flag;
+  DAT::t_int_scalar d_error_flag;
   HAT::t_int_scalar h_error_flag;
 
-  typename AT::t_int_scalar d_retry;
+  DAT::t_int_scalar d_retry;
   HAT::t_int_scalar h_retry;
 
-  typename AT::t_int_scalar d_maxdelete;
+  DAT::t_int_scalar d_maxdelete;
   HAT::t_int_scalar h_maxdelete;
 
-  typename AT::t_int_scalar d_maxcellcount;
+  DAT::t_int_scalar d_maxcellcount;
   HAT::t_int_scalar h_maxcellcount;
 
-  typename AT::t_int_scalar d_part_grow;
+  DAT::t_int_scalar d_part_grow;
   HAT::t_int_scalar h_part_grow;
 
-  typename AT::t_int_scalar d_ndelete;
+  DAT::t_int_scalar d_ndelete;
   HAT::t_int_scalar h_ndelete;
 
-  typename AT::t_int_scalar d_nlocal;
+  DAT::t_int_scalar d_nlocal;
   HAT::t_int_scalar h_nlocal;
 
   DAT::tdual_int_1d k_dellist;
@@ -178,41 +177,40 @@ class CollideVSSKokkos : public CollideVSS {
 
   DAT::t_float_2d d_recomb_ijflag;
 
-  typename AT::t_int_2d d_nn_last_partner;
+  DAT::t_int_2d d_nn_last_partner;
 
   template < int NEARCP > void collisions_one(COLLIDE_REDUCE&);
 
   // VSS specific
 
   DAT::tdual_float_2d k_prefactor;
-  typename AT::t_float_2d d_prefactor;
+  DAT::t_float_2d d_prefactor;
 
   typedef Kokkos::
-    DualView<Params*, Kokkos::LayoutRight, DeviceType> tdual_params_1d;
-  typedef tdual_params_1d::t_dev t_params_1d;
-  tdual_params_1d k_params;
-  t_params_1d d_params;
-
+    DualView<Params**, Kokkos::LayoutRight, DeviceType> tdual_params_2d;
+  typedef tdual_params_2d::t_dev t_params_2d;
+  tdual_params_2d k_params;
+  t_params_2d d_params;
 
   double dt,fnum,boltz;
   int maxcellcount,maxcellcount_kk,react_defined;
 
   KOKKOS_INLINE_FUNCTION
-  void SCATTER_TwoBodyScattering(Particle::OnePart *, 
+  void SCATTER_TwoBodyScattering(Particle::OnePart *,
                                  Particle::OnePart *,
                                  struct State &, struct State &, rand_type &) const;
   KOKKOS_INLINE_FUNCTION
-  void EEXCHANGE_NonReactingEDisposal(Particle::OnePart *, 
+  void EEXCHANGE_NonReactingEDisposal(Particle::OnePart *,
                                       Particle::OnePart *,
                                       struct State &, struct State &, rand_type &) const;
 
   KOKKOS_INLINE_FUNCTION
-  void SCATTER_ThreeBodyScattering(Particle::OnePart *, 
+  void SCATTER_ThreeBodyScattering(Particle::OnePart *,
                                    Particle::OnePart *,
                                    Particle::OnePart *,
                                    struct State &, struct State &, rand_type &) const;
   KOKKOS_INLINE_FUNCTION
-  void EEXCHANGE_ReactingEDisposal(Particle::OnePart *, 
+  void EEXCHANGE_ReactingEDisposal(Particle::OnePart *,
                                    Particle::OnePart *,
                                    Particle::OnePart *,
                                    struct State &, struct State &, rand_type &) const;
@@ -233,10 +231,10 @@ class CollideVSSKokkos : public CollideVSS {
   void restore();
 
   t_particle_1d d_particles_backup;
-  typename AT::t_int_2d d_plist_backup;
-  typename AT::t_float_3d d_vremax_backup;
-  typename AT::t_float_3d d_remain_backup;
-  typename AT::t_int_2d d_nn_last_partner_backup;
+  DAT::t_int_2d d_plist_backup;
+  DAT::t_float_3d d_vremax_backup;
+  DAT::t_float_3d d_remain_backup;
+  DAT::t_int_2d d_nn_last_partner_backup;
   RanPark* random_backup;
   RanPark* react_random_backup;
 };

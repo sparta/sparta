@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -163,8 +163,8 @@ void ComputeBoundary::clear()
 ------------------------------------------------------------------------- */
 
 void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
-                                     Particle::OnePart *iorig, 
-                                     Particle::OnePart *ip, 
+                                     Particle::OnePart *iorig,
+                                     Particle::OnePart *ip,
                                      Particle::OnePart *jp)
 {
   // skip if species not in mixture group
@@ -260,7 +260,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
         break;
       case ETOT:
         vsqpre = MathExtra::lensq3(vorig);
-        vec[k++] += 0.5*mvv2e*origmass*vsqpre + 
+        vec[k++] += 0.5*mvv2e*origmass*vsqpre +
           weight*(iorig->erot+iorig->evib);
         break;
       }
@@ -276,9 +276,10 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
         vec[k++] += weight;
         break;
       case MFLUX:
-        vec[k++] += origmass;
-        if (ip) vec[k++] -= imass;
-        if (jp) vec[k++] -= jmass;
+        vec[k] += origmass;
+        if (ip) vec[k] -= imass;
+        if (jp) vec[k] -= jmass;
+        k++;
         break;
       case PRESS:
         MathExtra::scale3(-origmass,vorig,pdelta);
@@ -352,7 +353,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
           jvsqpost = jmass * MathExtra::lensq3(jp->v);
           jother = jp->erot + jp->evib;
         } else jvsqpost = jother = 0.0;
-        vec[k++] -= 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
+        vec[k++] -= 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
           weight * (iother + jother - otherpre);
         break;
       }

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -179,7 +179,7 @@ void Particle::init()
 
   // if vibstyle = DISCRETE,
   // all species with vibdof = 4,6,8 must have info read from a species.vib file
-  
+
   if (collide && collide->vibstyle == DISCRETE) {
     for (int isp = 0; isp < nspecies; isp++) {
       if (species[isp].vibdof <= 2) continue;
@@ -233,7 +233,7 @@ void Particle::compress_migrate(int nmigrate, int *mlist)
       if (j == k) continue;
       memcpy(&particles[j],&particles[k],nbytes);
     }
-    
+
   } else {
     for (i = 0; i < nmigrate; i++) {
       j = mlist[i];
@@ -258,7 +258,7 @@ void Particle::compress_migrate(int nmigrate, int *mlist)
    all particles MUST be in owned cells
    overwrite deleted particle with particle from end of nlocal list
    called from Comm::migrate_cells() when cells+particles migrate on rebalance
-   called from AdaptGrid when particles are sent to other procs
+   called from AdaptGrid when coarsening occurs
    called from ReadSurf to remove particles from cells with surfs
    this does NOT preserve particle sorting
 ------------------------------------------------------------------------- */
@@ -344,7 +344,7 @@ void Particle::compress_rebalance_sorted()
             }
           }
           next[i] = next[nlocal-1];
-        } 
+        }
         memcpy(&particles[i],&particles[nlocal-1],nbytes);
         copy_custom(i,nlocal-1);
         nlocal--;
@@ -445,8 +445,6 @@ void Particle::sort()
   for (int icell = 0; icell < nglocal; icell++) {
     cinfo[icell].first = -1;
     cinfo[icell].count = 0;
-    //cellcount[i] = 0;
-    //first[i] = -1;
   }
 
   // reverse loop over partlcles to store linked lists in forward order
@@ -458,13 +456,6 @@ void Particle::sort()
     next[i] = cinfo[icell].first;
     cinfo[icell].first = i;
     cinfo[icell].count++;
-
-    // NOTE: this method seems much slower for some reason
-    // uses separate, smaller vectors for first & cellcount
-    //icell = cells[particles[i].icell].local;
-    //next[i] = first[icell];
-    //first[icell] = i;
-    //cellcount[icell]++;
   }
 }
 
@@ -564,7 +555,7 @@ void Particle::post_weight()
     }
 
     // ratio > 1.0 is candidate for cloning
-    // create Nclone new particles each with unique ID 
+    // create Nclone new particles each with unique ID
 
     nclone = static_cast<int> (ratio);
     fraction = ratio - nclone;
@@ -588,12 +579,12 @@ void Particle::grow(int nextra)
 {
   bigint target = (bigint) nlocal + nextra;
   if (target <= maxlocal) return;
-  
+
   int oldmax = maxlocal;
   bigint newmax = maxlocal;
   while (newmax < target) newmax += DELTA;
-  
-  if (newmax > MAXSMALLINT) 
+
+  if (newmax > MAXSMALLINT)
     error->one(FLERR,"Per-processor particle count is too big");
 
   maxlocal = newmax;
@@ -617,7 +608,7 @@ void Particle::grow(int nextra)
 
 void Particle::grow_species()
 {
-  species = (Species *) 
+  species = (Species *)
     memory->srealloc(species,maxspecies*sizeof(Species),"particle:species");
 }
 
@@ -655,7 +646,7 @@ int Particle::add_particle(int id, int ispecies, int icell,
   }
 
   OnePart *p = &particles[nlocal];
-  
+
   p->id = id;
   p->ispecies = ispecies;
   p->icell = icell;
@@ -671,6 +662,23 @@ int Particle::add_particle(int id, int ispecies, int icell,
 
   //p->dtremain = 0.0;    not needed due to memset in grow() ??
   //p->weight = 1.0;      not needed due to memset in grow() ??
+
+  nlocal++;
+  return reallocflag;
+}
+
+/* ----------------------------------------------------------------------
+   add an empty particle to particle list, caller will fill it
+   return 1 if particle array was reallocated, else 0
+------------------------------------------------------------------------- */
+
+int Particle::add_particle()
+{
+  int reallocflag = 0;
+  if (nlocal == maxlocal) {
+    grow(1);
+    reallocflag = 1;
+  }
 
   nlocal++;
   return reallocflag;
@@ -724,7 +732,7 @@ void Particle::add_species(int narg, char **arg)
   if (me == 0) read_species_file();
   MPI_Bcast(&nfile,1,MPI_INT,0,world);
   if (comm->me) {
-    filespecies = (Species *) 
+    filespecies = (Species *)
       memory->smalloc(nfile*sizeof(Species),"particle:filespecies");
   }
   MPI_Bcast(filespecies,nfile*sizeof(Species),MPI_BYTE,0,world);
@@ -775,7 +783,7 @@ void Particle::add_species(int narg, char **arg)
   for (i = 0; i < newspecies; i++) {
     n = strlen(names[i]);
     for (j = 0; j < n-1; j++)
-      if (!isalnum(names[i][j]) && names[i][j] != '_' && 
+      if (!isalnum(names[i][j]) && names[i][j] != '_' &&
           names[i][j] != '+' && names[i][j] != '-')
         error->all(FLERR,"Invalid character in species ID");
   }
@@ -823,13 +831,13 @@ void Particle::add_species(int narg, char **arg)
       // not yet supported
       error->all(FLERR,"Illegal species command");
       if (iarg+2 > narg) error->all(FLERR,"Illegal species command");
-      if (rotindex) 
+      if (rotindex)
         error->all(FLERR,"Species command can only use a single rotfile");
       rotindex = iarg+1;
       iarg += 2;
     } else if (strcmp(arg[iarg],"vibfile") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal species command");
-      if (vibindex) 
+      if (vibindex)
         error->all(FLERR,"Species command can only use a single vibfile");
       vibindex = iarg+1;
       iarg += 2;
@@ -854,7 +862,7 @@ void Particle::add_species(int narg, char **arg)
     if (me == 0) read_rotation_file();
     MPI_Bcast(&nfile,1,MPI_INT,0,world);
     if (comm->me) {
-      filerot = (RotFile *) 
+      filerot = (RotFile *)
         memory->smalloc(nfile*sizeof(RotFile),"particle:filerot");
     }
     MPI_Bcast(filerot,nfile*sizeof(RotFile),MPI_BYTE,0,world);
@@ -870,10 +878,10 @@ void Particle::add_species(int narg, char **arg)
       }
 
       int ntemp = filerot[j].ntemp;
-      if ((species[ii].rotdof == 0) || 
-          (species[ii].rotdof == 2 && ntemp != 1) || 
+      if ((species[ii].rotdof == 0) ||
+          (species[ii].rotdof == 2 && ntemp != 1) ||
           (species[ii].rotdof == 3 && ntemp != 3))
-          error->all(FLERR,"Mismatch between species rotdof " 
+          error->all(FLERR,"Mismatch between species rotdof "
                      "and rotation file entry");
 
       species[ii].nrottemp = ntemp;
@@ -903,7 +911,7 @@ void Particle::add_species(int narg, char **arg)
     if (me == 0) read_vibration_file();
     MPI_Bcast(&nfile,1,MPI_INT,0,world);
     if (comm->me) {
-      filevib = (VibFile *) 
+      filevib = (VibFile *)
         memory->smalloc(nfile*sizeof(VibFile),"particle:filevib");
     }
     MPI_Bcast(filevib,nfile*sizeof(VibFile),MPI_BYTE,0,world);
@@ -920,7 +928,7 @@ void Particle::add_species(int narg, char **arg)
 
       int nmode = filevib[j].nmode;
       if (species[ii].nvibmode != nmode)
-        error->all(FLERR,"Mismatch between species vibdof " 
+        error->all(FLERR,"Mismatch between species vibdof "
                    "and vibration file entry");
 
       species[ii].nvibmode = nmode;
@@ -1008,7 +1016,7 @@ double Particle::erot(int isp, double temp_thermal, RanPark *erandom)
  if (species[isp].rotdof < 2) return 0.0;
 
  if (rotstyle == DISCRETE && species[isp].rotdof == 2) {
-    int irot = -log(erandom->uniform()) * temp_thermal / 
+    int irot = -log(erandom->uniform()) * temp_thermal /
       particle->species[isp].rottemp[0];
     eng = irot * update->boltz * particle->species[isp].rottemp[0];
  } else if (rotstyle == SMOOTH && species[isp].rotdof == 2) {
@@ -1048,7 +1056,7 @@ double Particle::evib(int isp, double temp_thermal, RanPark *erandom)
   eng = 0.0;
 
   if (vibstyle == DISCRETE && species[isp].vibdof == 2) {
-    int ivib = -log(erandom->uniform()) * temp_thermal / 
+    int ivib = -log(erandom->uniform()) * temp_thermal /
       particle->species[isp].vibtemp[0];
     eng = ivib * update->boltz * particle->species[isp].vibtemp[0];
   } else if (vibstyle == SMOOTH || species[isp].vibdof >= 2) {
@@ -1079,7 +1087,7 @@ void Particle::read_species_file()
 {
   // read file line by line
   // skip blank lines or comment lines starting with '#'
-  // all other lines must have NWORDS 
+  // all other lines must have NWORDS
 
   int NWORDS = 10;
   char **words = new char*[NWORDS];
@@ -1088,7 +1096,7 @@ void Particle::read_species_file()
   while (fgets(line,MAXLINE,fp)) {
     int pre = strspn(line," \t\n\r");
     if (pre == strlen(line) || line[pre] == '#') continue;
-                                                
+
     strcpy(copy,line);
     int nwords = wordcount(copy,NULL);
     if (nwords != NWORDS)
@@ -1096,7 +1104,7 @@ void Particle::read_species_file()
 
     if (nfile == maxfile) {
       maxfile += DELTASPECIES;
-      filespecies = (Species *) 
+      filespecies = (Species *)
 	memory->srealloc(filespecies,maxfile*sizeof(Species),
 			 "particle:filespecies");
       memset(&filespecies[nfile],0,(maxfile-nfile)*sizeof(Species));
@@ -1142,7 +1150,7 @@ void Particle::read_species_file()
     fsp->rottemp[0] = fsp->rottemp[1] = fsp->rottemp[2] = 0.0;
     fsp->vibtemp[1] = fsp->vibtemp[2] = fsp->vibtemp[3] = 0.0;
     fsp->vibrel[1] = fsp->vibrel[2] = fsp->vibrel[3] = 0.0;
-    fsp->vibdegen[0] = fsp->vibdegen[1] = 
+    fsp->vibdegen[0] = fsp->vibdegen[1] =
       fsp->vibdegen[2] = fsp->vibdegen[3] = 0;
 
     fsp->vibdiscrete_read = 0;
@@ -1165,7 +1173,7 @@ void Particle::read_rotation_file()
 {
   // read file line by line
   // skip blank lines or comment lines starting with '#'
-  // all other lines can have up to NWORDS 
+  // all other lines can have up to NWORDS
 
   int NWORDS = 5;
   char **words = new char*[NWORDS];
@@ -1174,7 +1182,7 @@ void Particle::read_rotation_file()
   while (fgets(line,MAXLINE,fp)) {
     int pre = strspn(line," \t\n\r");
     if (pre == strlen(line) || line[pre] == '#') continue;
-                                                
+
     strcpy(copy,line);
     int nwords = wordcount(copy,NULL);
     if (nwords > NWORDS)
@@ -1182,7 +1190,7 @@ void Particle::read_rotation_file()
 
     if (nfile == maxfile) {
       maxfile += DELTASPECIES;
-      filerot = (RotFile *) 
+      filerot = (RotFile *)
 	memory->srealloc(filerot,maxfile*sizeof(RotFile),
 			 "particle:filerot");
       memset(&filerot[nfile],0,(maxfile-nfile)*sizeof(RotFile));
@@ -1200,7 +1208,7 @@ void Particle::read_rotation_file()
       error->one(FLERR,"Invalid N count in rotation file");
     if (nwords != 2 + rsp->ntemp)
       error->one(FLERR,"Incorrect line format in rotation file");
-   
+
     int j = 2;
     for (int i = 0; i < rsp->ntemp; i++)
       rsp->rottemp[i] = atof(words[j++]);
@@ -1223,7 +1231,7 @@ void Particle::read_vibration_file()
 {
   // read file line by line
   // skip blank lines or comment lines starting with '#'
-  // all other lines can have up to NWORDS 
+  // all other lines can have up to NWORDS
 
   int NWORDS = 14;
   char **words = new char*[NWORDS];
@@ -1232,7 +1240,7 @@ void Particle::read_vibration_file()
   while (fgets(line,MAXLINE,fp)) {
     int pre = strspn(line," \t\n\r");
     if (pre == strlen(line) || line[pre] == '#') continue;
-                                                
+
     strcpy(copy,line);
     int nwords = wordcount(copy,NULL);
     if (nwords > NWORDS)
@@ -1240,7 +1248,7 @@ void Particle::read_vibration_file()
 
     if (nfile == maxfile) {
       maxfile += DELTASPECIES;
-      filevib = (VibFile *) 
+      filevib = (VibFile *)
 	memory->srealloc(filevib,maxfile*sizeof(VibFile),
 			 "particle:filevib");
       memset(&filevib[nfile],0,(maxfile-nfile)*sizeof(VibFile));
@@ -1258,7 +1266,7 @@ void Particle::read_vibration_file()
       error->one(FLERR,"Invalid N count in vibration file");
     if (nwords != 2 + 3*vsp->nmode)
       error->one(FLERR,"Incorrect line format in vibration file");
-   
+
     int j = 2;
     for (int i = 0; i < vsp->nmode; i++) {
       vsp->vibtemp[i] = atof(words[j++]);
@@ -1360,7 +1368,7 @@ void Particle::read_restart_mixture(FILE *fp)
 
   if (nmixture > maxmixture) {
     while (nmixture > maxmixture) maxmixture += DELTAMIXTURE;
-    mixture = (Mixture **) 
+    mixture = (Mixture **)
       memory->srealloc(mixture,maxmixture*sizeof(Mixture *),"particle:mixture");
   }
 
@@ -1391,6 +1399,20 @@ int Particle::size_restart()
   n += nlocal * sizeof(OnePartRestart);
   n += nlocal * sizeof_custom();
   n = IROUNDUP(n);
+  return n;
+}
+
+/* ----------------------------------------------------------------------
+   return size of particle restart info for this proc
+------------------------------------------------------------------------- */
+
+bigint Particle::size_restart_big()
+{
+  bigint n = sizeof(int);
+  n = BIROUNDUP(n);
+  n += nlocal * sizeof(OnePartRestart);
+  n += nlocal * sizeof_custom();
+  n = BIROUNDUP(n);
   return n;
 }
 
@@ -1445,9 +1467,10 @@ int Particle::pack_restart(char *buf)
    use multiple passes to reduce memory use
    use OnePartRestart data struct for permanent info and to encode cell ID
    include per-particle custom attributes if defined
+   NOTE: does not ROUNDUP(ptr) at the end, this is done by caller
 ------------------------------------------------------------------------- */
 
-int Particle::pack_restart(char *buf, int step, int pass)
+void Particle::pack_restart(char *buf, int step, int pass)
 {
   Grid::ChildCell *cells = grid->cells;
   OnePart *p;
@@ -1487,11 +1510,6 @@ int Particle::pack_restart(char *buf, int step, int pass)
     pack_custom(i,ptr);
     ptr += nbytes_custom;
   }
-
-  if (end == nlocal)
-    ptr = ROUNDUP(ptr);
-
-  return ptr - buf;
 }
 
 /* ----------------------------------------------------------------------
@@ -1512,8 +1530,8 @@ int Particle::unpack_restart(char *buf)
   ptr += sizeof(int);
   ptr = ROUNDUP(ptr);
 
-  particle_restart = (char *) 
-    memory->smalloc(nlocal_restart*nbytes,"grid:particle_restart");
+  particle_restart = (char *)
+    memory->smalloc(nlocal_restart*nbytes,"particle:particle_restart");
 
   memcpy(particle_restart,ptr,nlocal_restart*nbytes);
   ptr += nlocal_restart * sizeof(OnePartRestart);
@@ -1527,9 +1545,10 @@ int Particle::unpack_restart(char *buf)
    use multiple passes to reduce memory use
    allocate data structure here, will be deallocated by ReadRestart
    include per-particle custom attributes if defined
+   NOTE: does not ROUNDUP(ptr) at the end, this is done by caller
 ------------------------------------------------------------------------- */
 
-int Particle::unpack_restart(char *buf, int &nlocal_restart, int step, int pass)
+void Particle::unpack_restart(char *buf, int &nlocal_restart, int step, int pass)
 {
   int nbytes_particle = sizeof(OnePartRestart);
   int nbytes_custom = sizeof_custom();
@@ -1547,17 +1566,12 @@ int Particle::unpack_restart(char *buf, int &nlocal_restart, int step, int pass)
   end = MIN(nlocal_restart,end);
   step = end - start;
 
-  particle_restart = (char *) 
-    memory->smalloc(step*nbytes,"grid:particle_restart");
+  particle_restart = (char *)
+    memory->smalloc(step*nbytes,"particle:particle_restart");
 
   memcpy(particle_restart,ptr,step*nbytes);
-  ptr += step * sizeof(OnePartRestart);
-
-  if (end == nlocal_restart)
-    ptr = ROUNDUP(ptr);
 
   this->nlocal_restart = step;
-  return ptr - buf;
 }
 
 // ----------------------------------------------------------------------
@@ -1585,9 +1599,9 @@ void Particle::error_custom()
 {
   if (collide && collide->vibstyle == DISCRETE && maxvibmode > 1) {
     int index = find_custom((char *) "vibmode");
-    if (index < 0) 
+    if (index < 0)
       error->all(FLERR,"No custom particle vibmode array defined");
-    if (esize[index] != maxvibmode) 
+    if (esize[index] != maxvibmode)
       error->all(FLERR,"Custom particle vibmode array is wrong size");
   }
 }
@@ -1640,14 +1654,14 @@ int Particle::add_custom(char *name, int type, int size)
   if (type == INT) {
     if (size == 0) {
       ewhich[index] = ncustom_ivec++;
-      eivec = (int **) 
+      eivec = (int **)
         memory->srealloc(eivec,ncustom_ivec*sizeof(int *),"particle:eivec");
       eivec[ncustom_ivec-1] = NULL;
       memory->grow(icustom_ivec,ncustom_ivec,"particle:icustom_ivec");
       icustom_ivec[ncustom_ivec-1] = index;
     } else {
       ewhich[index] = ncustom_iarray++;
-      eiarray = (int ***) 
+      eiarray = (int ***)
         memory->srealloc(eiarray,ncustom_iarray*sizeof(int **),
                          "particle:eiarray");
       eiarray[ncustom_iarray-1] = NULL;
@@ -1659,14 +1673,14 @@ int Particle::add_custom(char *name, int type, int size)
   } else if (type == DOUBLE) {
     if (size == 0) {
       ewhich[index] = ncustom_dvec++;
-      edvec = (double **) 
+      edvec = (double **)
         memory->srealloc(edvec,ncustom_dvec*sizeof(double *),"particle:edvec");
       edvec[ncustom_dvec-1] = NULL;
       memory->grow(icustom_dvec,ncustom_dvec,"particle:icustom_dvec");
       icustom_dvec[ncustom_dvec-1] = index;
     } else {
       ewhich[index] = ncustom_darray++;
-      edarray = (double ***) 
+      edarray = (double ***)
         memory->srealloc(edarray,ncustom_darray*sizeof(double **),
                          "particle:edarray");
       edarray[ncustom_darray-1] = NULL;
@@ -1699,7 +1713,7 @@ void Particle::grow_custom(int index, int nold, int nnew)
     } else {
       int **iarray = eiarray[ewhich[index]];
       memory->grow(iarray,nnew,esize[index],"particle:eiarray");
-      if (iarray) 
+      if (iarray)
         memset(&iarray[nold][0],0,(nnew-nold)*esize[index]*sizeof(int));
       eiarray[ewhich[index]] = iarray;
     }
@@ -1775,7 +1789,7 @@ void Particle::remove_custom(int index)
   // set ncustom = 0 if custom list is now entirely empty
 
   int empty = 1;
-  for (int i = 0; i < ncustom; i++) 
+  for (int i = 0; i < ncustom; i++)
     if (ename[i]) empty = 0;
   if (empty) ncustom = 0;
 }
@@ -1855,7 +1869,7 @@ void Particle::write_restart_custom(FILE *fp)
 
   fwrite(&nactive,sizeof(int),1,fp);
 
-  // must write custom info in same order 
+  // must write custom info in same order
   //   the per-particle custom values will be written into file
   // not necessarily the same as ncustom list, due to deletions & additions
 

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -233,7 +233,7 @@ void Modify::grid_changed()
    invoke add_particle() method, only for relevant fixes
 ------------------------------------------------------------------------- */
 
-void Modify::add_particle(int index, double temp_thermal, 
+void Modify::add_particle(int index, double temp_thermal,
                           double temp_rot, double temp_vib, double *vstream)
 {
   for (int i = 0; i < n_add_particle; i++)
@@ -268,7 +268,7 @@ void Modify::surf_react(Particle::OnePart *iorig, int &i, int &j)
 
 void Modify::add_fix(int narg, char **arg)
 {
-  if (domain->box_exist == 0) 
+  if (domain->box_exist == 0)
     error->all(FLERR,"Fix command before simulation box is defined");
   if (narg < 2) error->all(FLERR,"Illegal fix command");
 

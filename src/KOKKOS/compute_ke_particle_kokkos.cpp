@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -79,7 +79,7 @@ void ComputeKEParticleKokkos::compute_per_particle_kokkos()
   // compute kinetic energy for each atom in group
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType>(0,nlocal),*this);
-  DeviceType::fence();
+  DeviceType().fence();
   copymode = 0;
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use

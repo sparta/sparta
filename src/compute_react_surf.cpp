@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -121,7 +121,7 @@ void ComputeReactSurf::init()
 {
   if (!surf->exist)
     error->all(FLERR,"Cannot use compute react/surf when surfs do not exist");
-  if (surf->implicit) 
+  if (surf->implicit)
     error->all(FLERR,"Cannot use compute react/surf with implicit surfs");
 
   // warn if any surfs in group are assigned to different surf react model
@@ -151,8 +151,8 @@ void ComputeReactSurf::init()
   if (flagall && comm->me == 0) {
     char str[128];
     sprintf(str,
-            "Compute react/surf %ld surfs are not assigned to surf react model",
-            flagall);
+            "Compute react/surf " BIGINT_FORMAT
+	    " surfs are not assigned to surf react model",flagall);
     error->warning(FLERR,str);
   }
 
@@ -200,7 +200,7 @@ void ComputeReactSurf::clear()
 ------------------------------------------------------------------------- */
 
 void ComputeReactSurf::surf_tally(int isurf, int icell, int reaction,
-                                  Particle::OnePart *iorig, 
+                                  Particle::OnePart *iorig,
                                   Particle::OnePart *ip, Particle::OnePart *jp)
 {
   // skip if no reaction

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -24,7 +24,7 @@ SurfCollideVanishKokkos::SurfCollideVanishKokkos(SPARTA *sparta, int narg, char 
   SurfCollideVanish(sparta, narg, arg)
 {
   k_nsingle = DAT::tdual_int_scalar("SurfCollide:nsingle");
-  d_nsingle = k_nsingle.view<DeviceType>();
+  d_nsingle = k_nsingle.d_view;
   h_nsingle = k_nsingle.h_view;
 }
 
@@ -52,7 +52,7 @@ SurfCollideVanishKokkos::SurfCollideVanishKokkos(SPARTA *sparta) :
 
   vector_flag = 1;
   size_vector = 2;
-    
+
   nsingle = ntotal = 0;
 
   copy = 0;
@@ -60,6 +60,6 @@ SurfCollideVanishKokkos::SurfCollideVanishKokkos(SPARTA *sparta) :
   if (narg != 2) error->all(FLERR,"Illegal surf_collide vanish command");
 
   k_nsingle = DAT::tdual_int_scalar("SurfCollide:nsingle");
-  d_nsingle = k_nsingle.view<DeviceType>();
+  d_nsingle = k_nsingle.d_view;
   h_nsingle = k_nsingle.h_view;
 }

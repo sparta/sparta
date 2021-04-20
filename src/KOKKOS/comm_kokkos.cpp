@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -39,7 +39,7 @@ CommKokkos::CommKokkos(SPARTA *sparta) : Comm(sparta)
   iparticle = new IrregularKokkos(sparta);
 
   k_nsend = DAT::tdual_int_scalar("comm:nsend");
-  d_nsend = k_nsend.view<DeviceType>();
+  d_nsend = k_nsend.d_view;
   h_nsend = k_nsend.h_view;
   d_nlocal = DAT::t_int_scalar("comm:nlocal");
 }
@@ -57,7 +57,7 @@ CommKokkos::~CommKokkos()
 
 /* ----------------------------------------------------------------------
    migrate particles to new procs after particle move
-   return particle nlocal after compression, 
+   return particle nlocal after compression,
      so Update can iterate on particle move
 ------------------------------------------------------------------------- */
 
@@ -109,7 +109,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
     h_pproc = HAT::t_int_1d(Kokkos::view_alloc("comm:pproc_mirror",Kokkos::WithoutInitializing),maxpproc);
     pproc = h_pproc.data();
   }
-  //if (maxsendbuf == 0 || nmigrate*nbytes > maxsendbuf) { // this doesn't work, not sure why 
+  //if (maxsendbuf == 0 || nmigrate*nbytes > maxsendbuf) { // this doesn't work, not sure why
     int maxsendbuf = nmigrate*nbytes;
     if (maxsendbuf > int(d_sbuf.extent(0)))
       d_sbuf = DAT::t_char_1d(Kokkos::view_alloc("comm:sbuf",Kokkos::WithoutInitializing),maxsendbuf);
@@ -127,8 +127,8 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
   //int offset = 0;
 
   h_nsend() = 0;
-  k_nsend.modify<SPAHostType>();
-  k_nsend.sync<DeviceType>();
+  k_nsend.modify_host();
+  k_nsend.sync_device();
 
   particle_kk->sync(Device,PARTICLE_MASK);
   grid_kk->sync(Device,CELL_MASK);
@@ -145,7 +145,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateParticles<1> >(0,nmigrate),*this);
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateParticles<0> >(0,nmigrate),*this);
-    DeviceType::fence();
+    DeviceType().fence();
     //pack_serial(0,nmigrate);
     copymode = 0;
 
@@ -167,8 +167,8 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
 
   Kokkos::deep_copy(h_pproc,d_pproc);
 
-  k_nsend.modify<DeviceType>();
-  k_nsend.sync<SPAHostType>();
+  k_nsend.modify_device();
+  k_nsend.sync_host();
   nsend = h_nsend();
 
   // compress my list of particles
@@ -184,7 +184,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
   int nrecv;
   if (neighflag)
     nrecv = iparticle_kk->augment_data_uniform(nsend,pproc);
-  else 
+  else
     nrecv = iparticle_kk->create_data_uniform(nsend,pproc,commsortflag);
 
   // extend particle list if necessary
@@ -218,7 +218,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
         Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateUnpackParticles<1> >(0,nrecv),*this);
       else
         Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateUnpackParticles<0> >(0,nrecv),*this);
-      DeviceType::fence();
+      DeviceType().fence();
       copymode = 0;
     }
 

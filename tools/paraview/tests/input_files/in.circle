@@ -30,7 +30,7 @@ dump                2 surf all 100 tmp_surf.* id f_2[*]
 
 fix		    in emit/face air xlo # subsonic 0.1 NULL
 
-write_grid          parent data.grid
+write_grid          data.grid
 
 timestep 	    0.0001
 

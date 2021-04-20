@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -215,7 +215,7 @@ void Dump::init()
     boundstr[m++] = ' ';
   }
   boundstr[8] = '\0';
-  
+
   // style-specific initialization
 
   init_style();
@@ -287,7 +287,7 @@ void Dump::write()
     int nsmin,nsmax;
     MPI_Allreduce(&nsme,&nsmin,1,MPI_INT,MPI_MIN,world);
     if (nsmin < 0) error->all(FLERR,"Too much buffered per-proc info for dump");
-    if (multiproc != nprocs) 
+    if (multiproc != nprocs)
       MPI_Allreduce(&nsme,&nsmax,1,MPI_INT,MPI_MAX,world);
     else nsmax = nsme;
     if (nsmax > maxsbuf) {
@@ -316,11 +316,11 @@ void Dump::write()
           MPI_Get_count(&status,MPI_DOUBLE,&nlines);
           nlines /= size_one;
         } else nlines = nme;
-      
+
         write_data(nlines,buf);
       }
       if (flush_flag) fflush(fp);
-    
+
     } else {
       MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
       MPI_Rsend(buf,nme*size_one,MPI_DOUBLE,fileproc,0,world);
@@ -337,17 +337,17 @@ void Dump::write()
           MPI_Wait(&request,&status);
           MPI_Get_count(&status,MPI_CHAR,&nchars);
         } else nchars = nsme;
-        
+
         write_data(nchars,(double *) sbuf);
       }
       if (flush_flag) fflush(fp);
-      
+
     } else {
       MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
       MPI_Rsend(sbuf,nsme,MPI_CHAR,fileproc,0,world);
     }
   }
-  
+
   // if file per timestep, close file if I am filewriter
 
   if (multifile) {
@@ -445,11 +445,11 @@ int Dump::convert_string(int n, double *mybuf)
     }
 
     for (j = 0; j < size_one; j++) {
-      if (vtype[j] == INT) 
+      if (vtype[j] == INT)
         offset += sprintf(&sbuf[offset],vformat[j],static_cast<int> (mybuf[m]));
       else if (vtype[j] == DOUBLE)
         offset += sprintf(&sbuf[offset],vformat[j],mybuf[m]);
-      else if (vtype[j] == BIGINT) 
+      else if (vtype[j] == BIGINT)
         offset += sprintf(&sbuf[offset],vformat[j],
                           static_cast<bigint> (mybuf[m]));
       else if (vtype[j] == STRING) {
@@ -522,7 +522,7 @@ void Dump::modify_params(int narg, char **arg)
                    "without % in dump file name");
       int nper = atoi(arg[iarg+1]);
       if (nper <= 0) error->all(FLERR,"Illegal dump_modify command");
-      
+
       multiproc = nprocs/nper;
       if (nprocs % nper) multiproc++;
       fileproc = me/nper * nper;
@@ -600,13 +600,13 @@ void Dump::modify_params(int narg, char **arg)
         *ptr = '\0';
         sprintf(format_bigint_user,"%s%s%s",format_int_user,&str[1],ptr+1);
         *ptr = 'd';
-        
+
       } else if (strcmp(arg[iarg+1],"float") == 0) {
         delete [] format_float_user;
         int n = strlen(arg[iarg+2]) + 1;
         format_float_user = new char[n];
         strcpy(format_float_user,arg[iarg+2]);
-        
+
       } else {
         int i = input->inumeric(FLERR,arg[iarg+1]) - 1;
         if (i < 0 || i >= size_one)
@@ -632,7 +632,7 @@ void Dump::modify_params(int narg, char **arg)
       fileproc = static_cast<int> ((bigint) icluster * nprocs/nfile);
       int fcluster = static_cast<int> ((bigint) fileproc * nfile/nprocs);
       if (fcluster < icluster) fileproc++;
-      int fileprocnext = 
+      int fileprocnext =
         static_cast<int> ((bigint) (icluster+1) * nprocs/nfile);
       fcluster = static_cast<int> ((bigint) fileprocnext * nfile/nprocs);
       if (fcluster < icluster+1) fileprocnext++;

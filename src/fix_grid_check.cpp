@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -36,7 +36,7 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
 
 /* ---------------------------------------------------------------------- */
 
-FixGridCheck::FixGridCheck(SPARTA *sparta, int narg, char **arg) : 
+FixGridCheck::FixGridCheck(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
   if (narg < 4) error->all(FLERR,"Illegal fix grid/check command");
@@ -64,7 +64,7 @@ FixGridCheck::FixGridCheck(SPARTA *sparta, int narg, char **arg) :
     }
   }
 
-  if (outside_check && !surf->implicit) 
+  if (outside_check && !surf->implicit)
     error->all(FLERR,"Fix grid/check outside yes requires implicit surfs");
 
   // setup
@@ -104,6 +104,13 @@ int FixGridCheck::setmask()
 void FixGridCheck::init()
 {
   ntotal = 0;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixGridCheck::setup()
+{
+  end_of_step();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -159,7 +166,7 @@ void FixGridCheck::end_of_step()
         //    lo[0],lo[1],lo[2],hi[0],hi[1],hi[2]);
         char str[128];
         sprintf(str,
-                "Particle %d,%d on proc %d is outside cell " CELLINT_FORMAT 
+                "Particle %d,%d on proc %d is outside cell " CELLINT_FORMAT
                 " on timestep " BIGINT_FORMAT,
                 i,particles[i].id,comm->me,cells[icell].id,
                 update->ntimestep);
@@ -174,7 +181,7 @@ void FixGridCheck::end_of_step()
       if (outflag == ERROR) {
         char str[128];
         sprintf(str,
-                "Particle %d,%d on proc %d is in split cell " CELLINT_FORMAT 
+                "Particle %d,%d on proc %d is in split cell " CELLINT_FORMAT
                 " on timestep " BIGINT_FORMAT,
                 i,particles[i].id,comm->me,cells[icell].id,
                 update->ntimestep);
@@ -224,7 +231,7 @@ void FixGridCheck::end_of_step()
       splitcell = sinfo[cells[icell].isplit].icell;
       flag = grid->outside_surfs(splitcell,x,cut3d,cut2d);
     } else flag = grid->outside_surfs(icell,x,cut3d,cut2d);
-      
+
     if (!flag) {
       if (outflag == ERROR) {
         char str[128];
@@ -263,7 +270,7 @@ void FixGridCheck::end_of_step()
           for (i = 0; i < nglocal; i++) {
             if (cells[i].id != m) continue;
             if (cells[i].nsplit <= 0) continue;
-            
+
             printf("CELL id %d lo %g %g %g hi %g %g %g\n",
                    cells[i].id,
                    cells[i].lo[0],
@@ -306,7 +313,7 @@ void FixGridCheck::end_of_step()
             int ifix = modify->find_fix("FOO");
             FixAblate *ablate = (FixAblate *) modify->fix[ifix];
             int groupbit = grid->bitmask[ablate->igroup];
-            
+
             printf("MC CORNERS %d: %g %g %g %g %g %g %g %g\n",m,
                     ablate->array_grid[i][0],
                     ablate->array_grid[i][1],
@@ -332,7 +339,7 @@ void FixGridCheck::end_of_step()
         if (outflag == ERROR) {
           char str[128];
           sprintf(str,
-                  "Particle %d,%d on proc %d is in wrong sub cell %d not %d" 
+                  "Particle %d,%d on proc %d is in wrong sub cell %d not %d"
                   " on timestep " BIGINT_FORMAT,
                   i,particles[i].id,comm->me,icell,subcell,
                   update->ntimestep);
@@ -352,7 +359,7 @@ void FixGridCheck::end_of_step()
     MPI_Allreduce(&nflag,&all,1,MPI_INT,MPI_SUM,world);
     if (all && comm->me == 0) {
       char str[128];
-      sprintf(str,"%d particles were in wrong cells on timestep " 
+      sprintf(str,"%d particles were in wrong cells on timestep "
               BIGINT_FORMAT,all,update->ntimestep);
       error->warning(FLERR,str);
     }

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -72,7 +72,7 @@ Cut2d::Cut2d(SPARTA *sparta, int caller_axisymmetric) : Pointers(sparta)
    return -1 if nsurf > max
 ------------------------------------------------------------------------- */
 
-int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller, 
+int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
                      surfint *surfs_caller, int max)
 {
   id = id_caller;
@@ -113,7 +113,7 @@ int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
    called by AdaptGrid via Grid::surf2grid_one
 ------------------------------------------------------------------------- */
 
-int Cut2d::surf2grid_list(cellint id_caller, 
+int Cut2d::surf2grid_list(cellint id_caller,
                           double *lo_caller, double *hi_caller,
                           int nlist, surfint *list,
                           surfint *surfs_caller, int max)
@@ -156,7 +156,7 @@ int Cut2d::surf2grid_list(cellint id_caller,
    called by Grid::surf2grid2
 ------------------------------------------------------------------------- */
 
-int Cut2d::surf2grid_one(double *p, double *q, 
+int Cut2d::surf2grid_one(double *p, double *q,
                          double *lo_caller, double *hi_caller)
 {
   lo = lo_caller;
@@ -219,7 +219,7 @@ int Cut2d::cliptest(double *p, double *q)
       b[0] = x; b[1] = hi[1];
     }
   }
-     
+
   return 1;
 }
 
@@ -232,7 +232,7 @@ int Cut2d::cliptest(double *p, double *q)
    duplicate points in cpath are deleted
 ------------------------------------------------------------------------- */
 
-int Cut2d::clip_external(double *p, double *q, double *clo, double *chi, 
+int Cut2d::clip_external(double *p, double *q, double *clo, double *chi,
                          double *cpath)
 {
   double x,y;
@@ -315,9 +315,9 @@ int Cut2d::clip_external(double *p, double *q, double *clo, double *chi,
      xsplit = coords of a point in the split cell
 ------------------------------------------------------------------------- */
 
-int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller, 
+int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
                  int nsurf_caller, surfint *surfs_caller,
-                 double *&areas_caller, int *surfmap, 
+                 double *&areas_caller, int *surfmap,
                  int *corners, int &xsub, double *xsplit)
 {
   id = id_caller;
@@ -378,7 +378,7 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
       if (push_increment()) continue;
       break;
     }
-  
+
     nsplit = pgs.n;
     if (nsplit > 1) {
       create_surfmap(surfmap);
@@ -397,7 +397,7 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
     corners[0] = corners[1] = corners[2] = corners[3] = INSIDE;
 
     int iloop,nloop,mloop,ipt,npt,mpt;
-    
+
     int npg = pgs.n;
     for (int ipg = 0; ipg < npg; ipg++) {
       nloop = pgs[ipg].n;
@@ -443,7 +443,7 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
       error->one(FLERR,"LP: More than one positive area with a negative area");
     if (errflag == 6)
       error->one(FLERR,"LP: Single area is negative, inverse donut");
-    if (errflag == 7) 
+    if (errflag == 7)
       error->one(FLERR,"SP: Could not find split point in split cell");
   }
 
@@ -546,7 +546,7 @@ int Cut2d::build_clines()
     // if all lines are removed, clines will be empty,
     //   which will result in cell corner pts being left UNKNOWN in split()
     // to try and avoid this, tally the in/out orientation of all removed lines
-    // "out" orientation means line norm from line ctr points towards cell ctr 
+    // "out" orientation means line norm from line ctr points towards cell ctr
     // "in" orientation means line norm from line ctr points away from cell ctr
     // some lines may not follow this rule, but majority should
     // cbox = cell center pt, cmid = line center pt, l2b = cbox-cmid
@@ -567,7 +567,7 @@ int Cut2d::build_clines()
 
       continue;
     }
-    
+
     // discard clipped line if lies along one cell edge
     //   and normal is not into cell
     // leave grazeflag incremented in this case
@@ -897,7 +897,7 @@ void Cut2d::weiler_loops()
       if (ipt == firstpt) break;
     }
     if (ipt != firstpt) continue;
-    
+
     loops.grow(nloop+1);
     loops[nloop].area = area;
     loops[nloop].active = 1;
@@ -1166,7 +1166,7 @@ int Cut2d::ptflag(double *pt)
 ------------------------------------------------------------------------- */
 
 int Cut2d::push_increment()
-{  
+{
   if (pushflag == npushmax) return 0;
   pushlo = pushlo_vec[pushflag];
   pushhi = pushhi_vec[pushflag];;
@@ -1190,7 +1190,7 @@ void Cut2d::push(double *pt)
   double epsx = EPSCELL * (hi[0]-lo[0]);
   double epsy = EPSCELL * (hi[1]-lo[1]);
 
-  //if (x < lo[0]-pushhi*epsx || x > hi[0]+pushhi*epsx || 
+  //if (x < lo[0]-pushhi*epsx || x > hi[0]+pushhi*epsx ||
   //    y < lo[1]-pushhi*epsy || y > hi[1]+pushhi*epsy) return;
 
   if (x > lo[0]-pushhi*epsx && x < lo[0]-pushlo*epsx) x = lo[0]-pushvalue*epsx;
@@ -1248,27 +1248,6 @@ int Cut2d::whichside(double *pt)
 void Cut2d::failed_cell()
 {
   printf("Cut2d failed on proc %d in cell ID: " CELLINT_FORMAT "\n",comm->me,id);
-
-  cellint ichild;
-  int iparent = grid->id_find_parent(id,ichild);
-  while (iparent >= 0) {
-    int nx = grid->pcells[iparent].nx;
-    int ny = grid->pcells[iparent].ny;
-    int ix = (ichild-1) % nx;
-    int iy = ((ichild-1)/nx) % ny;
-    int iz = (ichild-1) / (nx*ny);
-    printf("  parent " CELLINT_FORMAT " level %d: NxNyNz %d %d %d: "
-           "child " CELLINT_FORMAT " %d %d %d\n",
-           grid->pcells[iparent].id,
-           grid->pcells[iparent].level,
-           grid->pcells[iparent].nx,
-           grid->pcells[iparent].ny,
-           grid->pcells[iparent].nz,
-           ichild,ix,iy,iz);
-    if (iparent == 0) break;
-    iparent = grid->id_find_parent(grid->pcells[iparent].id,ichild);
-  }
-
   printf("  lo corner %g %g\n",lo[0],lo[1]);
   printf("  hi corner %g %g\n",hi[0],hi[1]);
   printf("  # of surfs = %d out of " BIGINT_FORMAT "\n",nsurf,surf->nsurf);

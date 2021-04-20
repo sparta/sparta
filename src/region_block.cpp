@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -24,7 +24,7 @@ using namespace SPARTA_NS;
 
 /* ---------------------------------------------------------------------- */
 
-RegBlock::RegBlock(SPARTA *sparta, int narg, char **arg) : 
+RegBlock::RegBlock(SPARTA *sparta, int narg, char **arg) :
   Region(sparta, narg, arg)
 {
   options(narg-8,&arg[8]);
@@ -69,7 +69,7 @@ RegBlock::RegBlock(SPARTA *sparta, int narg, char **arg) :
 
 int RegBlock::inside(double *x)
 {
-  if (x[0] >= xlo && x[0] <= xhi && x[1] >= ylo && x[1] <= yhi && 
+  if (x[0] >= xlo && x[0] <= xhi && x[1] >= ylo && x[1] <= yhi &&
       x[2] >= zlo && x[2] <= zhi)
     return 1;
   return 0;

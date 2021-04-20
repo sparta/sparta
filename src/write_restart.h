@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -62,8 +62,8 @@ class WriteRestart : protected Pointers {
   void write_string(int, char *);
   void write_int_vec(int, int, int *);
   void write_double_vec(int, int, double *);
-  void write_char_vec(int, int, char *);
-  void write_char_vec(int, int, int, char *);
+  void write_char_vec(int, bigint, char *);
+  void write_char_vec(int, bigint, int, char *);
   void write_char_vec(int, char *);
 };
 

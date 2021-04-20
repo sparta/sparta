@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -24,7 +24,8 @@ class SurfCollide : protected Pointers {
  public:
   char *id;
   char *style;
- 
+
+  int dynamicflag;          // 1 if any param is dynamically updated
   int allowreact;           // 1 if allows for surface reactions
   int dynamicflag;          // 1 if any param is dynamically updated
   int transparent;          // 1 if transparent collision model
@@ -39,6 +40,7 @@ class SurfCollide : protected Pointers {
                                      int, double *, int, int &) = 0;
   virtual void wrapper(Particle::OnePart *, double *, int *, double *) {}
   virtual void flags_and_coeffs(int *, double *) {}
+
   virtual void dynamic() {}
   void tally_reset();
   void tally_update();

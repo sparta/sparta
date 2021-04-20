@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -38,15 +38,15 @@ class SurfCollideTD : public SurfCollide {
 
  private:
   double twall;              // surface temperature
-  
+
   double barrier_val;
   double initen_trans, initen_rot, initen_vib;
-  double bond_trans, bond_rot, bond_vib;                   
-  
+  double bond_trans, bond_rot, bond_vib;
+
   double vx,vy,vz;           // translational velocity of surface
   double wx,wy,wz;           // angular velocity of surface
   double px,py,pz;           // point to rotate surface around
-  
+
   int barrier_flag, initen_flag,bond_flag; // optional flags
 
   char *tstr;                // temperature variable name (NULL if constant)

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -91,7 +91,7 @@ ReactBirdKokkos::~ReactBirdKokkos()
 
 /* ---------------------------------------------------------------------- */
 
-void ReactBirdKokkos::init() 
+void ReactBirdKokkos::init()
 {
   ReactBird::init();
 
@@ -139,8 +139,8 @@ void ReactBirdKokkos::init()
       Kokkos::deep_copy(k_reactions.h_view(i,j).d_sp2recomb,h_sp2recomb);
     }
   }
-  k_reactions.modify<SPAHostType>();
-  k_reactions.sync<DeviceType>();
+  k_reactions.modify_host();
+  k_reactions.sync_device();
   d_reactions = k_reactions.d_view;
 
 #ifdef SPARTA_KOKKOS_EXACT
@@ -152,21 +152,21 @@ void ReactBirdKokkos::init()
    return tally associated with a reaction
 ------------------------------------------------------------------------- */
 
-double ReactBirdKokkos::extract_tally(int m) 
+double ReactBirdKokkos::extract_tally(int m)
 {
   if (!tally_flag) {
     tally_flag = 1;
 
     if (sparta->kokkos->gpu_direct_flag) {
       MPI_Allreduce(d_tally_reactions.data(),k_tally_reactions_all.d_view.data(),nlist,
-                    MPI_INT,MPI_SUM,world);
-      k_tally_reactions_all.modify<DeviceType>();
-      k_tally_reactions_all.sync<SPAHostType>();
+                    MPI_SPARTA_BIGINT,MPI_SUM,world);
+      k_tally_reactions_all.modify_device();
+      k_tally_reactions_all.sync_host();
     } else {
-      k_tally_reactions.modify<DeviceType>();
-      k_tally_reactions.sync<SPAHostType>();
+      k_tally_reactions.modify_device();
+      k_tally_reactions.sync_host();
       MPI_Allreduce(k_tally_reactions.h_view.data(),k_tally_reactions_all.h_view.data(),nlist,
-                    MPI_INT,MPI_SUM,world);
+                    MPI_SPARTA_BIGINT,MPI_SUM,world);
     }
 
   }

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -24,7 +24,7 @@ using namespace SPARTA_NS;
 
 /* ---------------------------------------------------------------------- */
 
-RegUnion::RegUnion(SPARTA *sparta, int narg, char **arg) : 
+RegUnion::RegUnion(SPARTA *sparta, int narg, char **arg) :
   Region(sparta, narg, arg)
 {
   if (narg < 5) error->all(FLERR,"Illegal region command");
@@ -40,7 +40,7 @@ RegUnion::RegUnion(SPARTA *sparta, int narg, char **arg) :
   int iregion;
   for (int iarg = 0; iarg < n; iarg++) {
     iregion = domain->find_region(arg[iarg+3]);
-    if (iregion == -1) 
+    if (iregion == -1)
       error->all(FLERR,"Region union region ID does not exist");
     list[nregion++] = iregion;
   }

@@ -1,4 +1,11 @@
+################################################################################
 # particles emitted from box face towards circle
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
 
 seed	    	    12345
 dimension   	    2
@@ -23,7 +30,7 @@ collide             vss air air.vss
 
 region              slit block INF INF 4.5 5.5 INF INF
 
-fix		    in emit/face air xlo region slit
+fix		    in emit/face air xlo twopass region slit
 
 timestep 	    0.0001
 

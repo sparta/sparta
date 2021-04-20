@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -57,7 +57,7 @@ class MyPage {
                    // 2 = memory allocation error
                    // 3 = chunk size exceeded maxchunk
 
-  MyPage(int user_maxchunk = 1, int user_pagesize = 1024, 
+  MyPage(int user_maxchunk = 1, int user_pagesize = 1024,
          int user_pagedelta = 1) {
     maxchunk = user_maxchunk;
     pagesize = user_pagesize;
@@ -132,7 +132,7 @@ class MyPage {
   // get ptr to location that can store maxchunk datums
   // will return same ptr as previous call if vgot() not called
   // return NULL if run out of memory
-  
+
   T *vget() {
     if (index+maxchunk <= pagesize) return &page[index];
     ipage++;
@@ -181,7 +181,7 @@ class MyPage {
   int npage;      // # of allocated pages
   int ipage;      // index of current page
   int index;      // current index on current page
-  
+
   void allocate() {
     npage += pagedelta;
     pages = (T **) realloc(pages,npage*sizeof(T *));

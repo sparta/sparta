@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -51,7 +51,7 @@ FixVibmode::FixVibmode(SPARTA *sparta, int narg, char **arg) :
                "collide_modify vibrate discrete");
 
   maxmode = particle->maxvibmode;
-  if (maxmode <= 1) 
+  if (maxmode <= 1)
     error->all(FLERR,"No multiple vibrational modes in fix vibmode "
                "for any species");
 
@@ -91,8 +91,8 @@ void FixVibmode::init()
    populate all vibrational modes and set evib = sum of mode energies
 ------------------------------------------------------------------------- */
 
-void FixVibmode::add_particle(int index, double temp_thermal, 
-                              double temp_rot, double temp_vib, 
+void FixVibmode::add_particle(int index, double temp_thermal,
+                              double temp_rot, double temp_vib,
                               double *vstream)
 {
   int **vibmode = particle->eiarray[particle->ewhich[vibmodeindex]];
@@ -108,8 +108,8 @@ void FixVibmode::add_particle(int index, double temp_thermal,
   // just convert evib back to mode level
 
   if (nmode == 1) {
-    vibmode[index][0] = static_cast<int> 
-      (particle->particles[index].evib / update->boltz / 
+    vibmode[index][0] = static_cast<int>
+      (particle->particles[index].evib / update->boltz /
        particle->species[isp].vibtemp[0]);
     return;
   }

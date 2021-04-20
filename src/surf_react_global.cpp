@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -98,9 +98,9 @@ int SurfReactGlobal::react(Particle::OnePart *&ip, int, double *,
     double x[3],v[3];
     int id = MAXSMALLINT*random->uniform();
     memcpy(x,ip->x,3*sizeof(double));
-    memcpy(v,ip->v,3*sizeof(double));  
+    memcpy(v,ip->v,3*sizeof(double));
     Particle::OnePart *particles = particle->particles;
-    int reallocflag = 
+    int reallocflag =
       particle->add_particle(id,ip->ispecies,ip->icell,x,v,0.0,0.0);
     if (reallocflag) ip = particle->particles + (ip - particles);
     jp = &particle->particles[particle->nlocal-1];

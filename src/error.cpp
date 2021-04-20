@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -18,6 +18,7 @@
 #include "universe.h"
 #include "output.h"
 #include "memory.h"
+#include "accelerator_kokkos.h"
 
 using namespace SPARTA_NS;
 
@@ -48,6 +49,7 @@ void Error::universe_all(const char *file, int line, const char *str)
   }
   if (universe->ulogfile) fclose(universe->ulogfile);
 
+  if (sparta->kokkos) Kokkos::finalize();
   MPI_Finalize();
   exit(1);
 }
@@ -87,6 +89,7 @@ void Error::all(const char *file, int line, const char *str)
   if (screen && screen != stdout) fclose(screen);
   if (logfile) fclose(logfile);
 
+  if (sparta->kokkos) Kokkos::finalize();
   MPI_Finalize();
   exit(1);
 }
@@ -94,7 +97,7 @@ void Error::all(const char *file, int line, const char *str)
 /* ----------------------------------------------------------------------
    called by one proc in world
    write to world screen only if non-NULL on this proc
-   always write to universe screen 
+   always write to universe screen
 ------------------------------------------------------------------------- */
 
 void Error::one(const char *file, int line, const char *str)
@@ -116,7 +119,7 @@ void Error::one(const char *file, int line, const char *str)
 
 /* ----------------------------------------------------------------------
    called by one proc in world
-   only write to screen if non-NULL on this proc since could be file 
+   only write to screen if non-NULL on this proc since could be file
 ------------------------------------------------------------------------- */
 
 void Error::warning(const char *file, int line, const char *str, int logflag)
@@ -150,6 +153,7 @@ void Error::done()
   if (screen && screen != stdout) fclose(screen);
   if (logfile) fclose(logfile);
 
+  if (sparta->kokkos) Kokkos::finalize();
   MPI_Finalize();
   exit(1);
 }

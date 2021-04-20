@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -91,15 +91,15 @@ FixEmitFaceKokkos::~FixEmitFaceKokkos()
 
 void FixEmitFaceKokkos::init()
 {
-  k_tasks.sync<SPAHostType>();
-  if (perspecies) k_ntargetsp.sync<SPAHostType>();
-  if (subsonic_style == PONLY) k_vscale.sync<SPAHostType>();
+  k_tasks.sync_host();
+  if (perspecies) k_ntargetsp.sync_host();
+  if (subsonic_style == PONLY) k_vscale.sync_host();
 
   FixEmitFace::init();
 
-  k_tasks.modify<SPAHostType>();
-  if (perspecies) k_ntargetsp.modify<SPAHostType>();
-  if (subsonic_style == PONLY) k_vscale.modify<SPAHostType>();
+  k_tasks.modify_host();
+  if (perspecies) k_ntargetsp.modify_host();
+  if (subsonic_style == PONLY) k_vscale.modify_host();
 
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.init(random);
@@ -123,9 +123,9 @@ void FixEmitFaceKokkos::init()
     h_species(isp) = particle->mixture[imix]->species[isp];
   }
 
-  k_mix_vscale .modify<SPAHostType>();
-  k_cummulative.modify<SPAHostType>();
-  k_species    .modify<SPAHostType>();
+  k_mix_vscale .modify_host();
+  k_cummulative.modify_host();
+  k_species    .modify_host();
 }
 
 /* ----------------------------------------------------------------------
@@ -136,9 +136,9 @@ void FixEmitFaceKokkos::init()
 void FixEmitFaceKokkos::create_task(int icell)
 {
   FixEmitFace::create_task(icell);
-  k_tasks.modify<SPAHostType>();
-  k_ntargetsp.modify<SPAHostType>();
-  k_vscale.modify<SPAHostType>();
+  k_tasks.modify_host();
+  k_ntargetsp.modify_host();
+  k_vscale.modify_host();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -161,8 +161,8 @@ void FixEmitFaceKokkos::perform_task()
 
   // copy needed task data to device
 
-  if (perspecies) k_ntargetsp.sync<SPADeviceType>();
-  else k_tasks.sync<SPADeviceType>();
+  if (perspecies) k_ntargetsp.sync_device();
+  else k_tasks.sync_device();
 
   auto ninsert_dim1 = perspecies ? nspecies : 1;
   if (d_ninsert.extent(0) < ntask * ninsert_dim1)
@@ -222,17 +222,17 @@ void FixEmitFaceKokkos::perform_task()
 
   // copy needed task data to device
 
-  k_tasks.sync<DeviceType>();
-  if (perspecies) k_ntargetsp.sync<DeviceType>();
-  if (subsonic_style == PONLY) k_vscale.sync<DeviceType>();
+  k_tasks.sync_device();
+  if (perspecies) k_ntargetsp.sync_device();
+  if (subsonic_style == PONLY) k_vscale.sync_device();
   auto ld_tasks = d_tasks;
   auto ld_vscale = d_vscale;
 
   // copy needed mixture data to device
 
-  k_mix_vscale .sync<SPADeviceType>();
-  k_species    .sync<SPADeviceType>();
-  k_cummulative.sync<SPADeviceType>();
+  k_mix_vscale .sync_device();
+  k_species    .sync_device();
+  k_cummulative.sync_device();
 
   auto ld_mix_vscale = d_mix_vscale;
   auto ld_species    = d_species   ;
@@ -257,7 +257,7 @@ void FixEmitFaceKokkos::perform_task()
   auto nlocal_before = particleKK->nlocal;
   particleKK->grow(nnew);
   particleKK->sync(SPARTA_NS::Device, PARTICLE_MASK);
-  auto ld_particles = particleKK->k_particles.view<SPADeviceType>();
+  auto ld_particles = particleKK->k_particles.d_view;
 
   Kokkos::parallel_for(ncands, SPARTA_LAMBDA(int cand) {
     if (!ld_keep(cand)) return;
@@ -319,7 +319,7 @@ void FixEmitFaceKokkos::perform_task()
 
     // copy needed task data to host
 
-    k_tasks.sync<SPAHostType>();
+    k_tasks.sync_host();
 
     auto h_cands2new = Kokkos::create_mirror_view(ld_cands2new);
     Kokkos::deep_copy(h_cands2new, ld_cands2new);
@@ -418,9 +418,9 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
         do {
           do beta_un = (6.0*rand_gen.drand() - 3.0);
           while (beta_un + scosine < 0.0);
-          normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
+          normalized_distbn_fn = 2.0 * (beta_un + scosine) /
             (scosine + sqrt(scosine*scosine + 2.0)) *
-            exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
+            exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) -
                 beta_un*beta_un);
         } while (normalized_distbn_fn < rand_gen.drand());
 
@@ -468,9 +468,9 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
         do {
           beta_un = (6.0*rand_gen.drand() - 3.0);
         } while (beta_un + scosine < 0.0);
-        normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
+        normalized_distbn_fn = 2.0 * (beta_un + scosine) /
           (scosine + sqrt(scosine*scosine + 2.0)) *
-          exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
+          exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) -
               beta_un*beta_un);
       } while (normalized_distbn_fn < rand_gen.drand());
 
@@ -499,8 +499,8 @@ void FixEmitFaceKokkos::grow_task()
   if (tasks == NULL)
     k_tasks = tdual_task_1d("emit/face:tasks",ntaskmax);
   else {
-    k_tasks.sync<SPAHostType>();
-    k_tasks.modify<SPAHostType>(); // force resize on host
+    k_tasks.sync_host();
+    k_tasks.modify_host(); // force resize on host
     k_tasks.resize(ntaskmax);
   }
   d_tasks = k_tasks.d_view;
@@ -514,17 +514,17 @@ void FixEmitFaceKokkos::grow_task()
   // allocate vectors in each new task or set to NULL
 
   if (perspecies) {
-    k_ntargetsp.sync<SPAHostType>();
-    k_ntargetsp.modify<SPAHostType>(); // force resize on host
+    k_ntargetsp.sync_host();
+    k_ntargetsp.modify_host(); // force resize on host
     k_ntargetsp.resize(ntaskmax,nspecies);
     d_ntargetsp = k_ntargetsp.d_view;
     for (int i = 0; i < ntaskmax; i++)
       tasks[i].ntargetsp = k_ntargetsp.h_view.data() + i*k_ntargetsp.h_view.extent(1);
   }
-  
+
   if (subsonic_style == PONLY) {
-    k_vscale.modify<SPAHostType>(); // force resize on host
-    k_vscale.sync<SPAHostType>();
+    k_vscale.modify_host(); // force resize on host
+    k_vscale.sync_host();
     k_vscale.resize(ntaskmax,nspecies);
     d_vscale = k_vscale.d_view;
     for (int i = 0; i < ntaskmax; i++)
