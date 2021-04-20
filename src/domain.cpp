@@ -107,16 +107,6 @@ void Domain::init()
       error->all(FLERR,"Box face with reaction model, "
                  "but collision model does not allow reactions");
 
-  // test for grid cutoff too long
-
-  int cutflag = 0;
-  if (bflag[0] == PERIODIC && grid->cutoff > xprd) cutflag = 1;
-  if (bflag[2] == PERIODIC && grid->cutoff > yprd) cutflag = 1;
-  if (dimension == 3 && bflag[4] == PERIODIC && grid->cutoff > zprd)
-    cutflag = 1;
-  if (cutflag) error->all(FLERR,"Grid cutoff is longer than "
-                          "box length in a periodic dimension");
-
   // surfreactany = 1 if any face has surface reactions assigned to it
 
   surfreactany = 0;

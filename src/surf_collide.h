@@ -25,7 +25,6 @@ class SurfCollide : protected Pointers {
   char *id;
   char *style;
 
-  int dynamicflag;          // 1 if any param is dynamically updated
   int allowreact;           // 1 if allows for surface reactions
   int dynamicflag;          // 1 if any param is dynamically updated
   int transparent;          // 1 if transparent collision model

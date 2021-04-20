@@ -78,8 +78,10 @@ void SurfReact::init()
     tally_single[i] = tally_total[i] = 0;
 }
 
+
 /* ---------------------------------------------------------------------- */
 
+/*
 void SurfReact::tally_reset()
 {
   // convert species IDs to species indices
@@ -157,179 +159,11 @@ void SurfReact::tally_reset()
       error->all(FLERR,"Surface reaction probability for a species > 1.0");
   }
 }
+*/
 
 /* ---------------------------------------------------------------------- */
 
-void SurfReact::readfile(char *fname)
-{
-  int n,n1,n2,eof;
-  char line1[MAXLINE],line2[MAXLINE];
-  char *word;
-  OneReaction *r;
-
-  // proc 0 opens file
-
-  if (comm->me == 0) {
-    fp = fopen(fname,"r");
-    if (fp == NULL) {
-      char str[128];
-      sprintf(str,"Cannot open reaction file %s",fname);
-      error->one(FLERR,str);
-    }
-  }
-
-  // read reactions one at a time and store their info in rlist
-
-  while (1) {
-    if (comm->me == 0) eof = readone(line1,line2,n1,n2);
-    MPI_Bcast(&eof,1,MPI_INT,0,world);
-    if (eof) break;
-
-    MPI_Bcast(&n1,1,MPI_INT,0,world);
-    MPI_Bcast(&n2,1,MPI_INT,0,world);
-    MPI_Bcast(line1,n1,MPI_CHAR,0,world);
-    MPI_Bcast(line2,n2,MPI_CHAR,0,world);
-
-    if (nlist == maxlist) {
-      maxlist += DELTALIST;
-      rlist = (OneReaction *)
-        memory->srealloc(rlist,maxlist*sizeof(OneReaction),"surf_react:rlist");
-      for (int i = nlist; i < maxlist; i++) {
-        r = &rlist[i];
-        r->nreactant = r->nproduct = 0;
-        r->id_reactants = new char*[MAXREACTANT];
-        r->id_products = new char*[MAXPRODUCT];
-        r->reactants = new int[MAXREACTANT];
-        r->products = new int[MAXPRODUCT];
-        r->coeff = new double[MAXCOEFF];
-        r->id = NULL;
-      }
-    }
-
-    r = &rlist[nlist];
-
-    int side = 0;
-    int species = 1;
-
-    n = strlen(line1) - 1;
-    r->id = new char[n+1];
-    strncpy(r->id,line1,n);
-    r->id[n] = '\0';
-
-    word = strtok(line1," \t\n");
-
-    while (1) {
-      if (!word) {
-        if (side == 0) error->all(FLERR,"Invalid reaction formula in file");
-        if (species) error->all(FLERR,"Invalid reaction formula in file");
-        break;
-      }
-      if (species) {
-        species = 0;
-        if (side == 0) {
-          if (r->nreactant == MAXREACTANT)
-            error->all(FLERR,"Too many reactants in a reaction formula");
-          n = strlen(word) + 1;
-          r->id_reactants[r->nreactant] = new char[n];
-          strcpy(r->id_reactants[r->nreactant],word);
-          r->nreactant++;
-        } else {
-          if (r->nreactant == MAXPRODUCT)
-            error->all(FLERR,"Too many products in a reaction formula");
-          n = strlen(word) + 1;
-          r->id_products[r->nproduct] = new char[n];
-          strcpy(r->id_products[r->nproduct],word);
-          r->nproduct++;
-        }
-      } else {
-        species = 1;
-        if (strcmp(word,"+") == 0) {
-          word = strtok(NULL," \t\n");
-          continue;
-        }
-        if (strcmp(word,"-->") != 0)
-          error->all(FLERR,"Invalid reaction formula in file");
-        side = 1;
-      }
-      word = strtok(NULL," \t\n");
-    }
-
-    // replace single NULL product with no products
-
-    if (r->nproduct == 1 && strcmp(r->id_products[0],"NULL") == 0) {
-      delete [] r->id_products[0];
-      r->id_products[0] = NULL;
-      r->nproduct = 0;
-    }
-
-    word = strtok(line2," \t\n");
-    if (!word) error->all(FLERR,"Invalid reaction type in file");
-    if (word[0] == 'D' || word[0] == 'd') r->type = DISSOCIATION;
-    else if (word[0] == 'E' || word[0] == 'e') r->type = EXCHANGE;
-    else if (word[0] == 'R' || word[0] == 'r') r->type = RECOMBINATION;
-    else error->all(FLERR,"Invalid reaction type in file");
-
-    // check that reactant/product counts are consistent with type
-
-    if (r->type == DISSOCIATION) {
-      if (r->nreactant != 1 || r->nproduct != 2)
-        error->all(FLERR,"Invalid dissociation reaction");
-    } else if (r->type == EXCHANGE) {
-      if (r->nreactant != 1 || r->nproduct != 1)
-        error->all(FLERR,"Invalid exchange reaction");
-    } else if (r->type == RECOMBINATION) {
-      if (r->nreactant != 1 || r->nproduct != 0)
-        error->all(FLERR,"Invalid recombination reaction");
-    }
-
-    word = strtok(NULL," \t\n");
-    if (!word) error->all(FLERR,"Invalid reaction style in file");
-    if (word[0] == 'S' || word[0] == 's') r->style = SIMPLE;
-    else error->all(FLERR,"Invalid reaction style in file");
-
-    if (r->style == SIMPLE) r->ncoeff = 1;
-
-    for (int i = 0; i < r->ncoeff; i++) {
-      word = strtok(NULL," \t\n");
-      if (!word) error->all(FLERR,"Invalid reaction coefficients in file");
-      r->coeff[i] = input->numeric(FLERR,word);
-    }
-
-    word = strtok(NULL," \t\n");
-    if (word) error->all(FLERR,"Too many coefficients in a reaction formula");
-
-    nlist++;
-  }
-
-  if (comm->me == 0) fclose(fp);
-}
-
-/* ----------------------------------------------------------------------
-   read one reaction from file
-   reaction = 2 lines
-   return 1 if end-of-file, else return 0
-------------------------------------------------------------------------- */
-
-int SurfReact::readone(char *line1, char *line2, int &n1, int &n2)
-{
-  char *eof;
-  while ((eof = fgets(line1,MAXLINE,fp))) {
-    size_t pre = strspn(line1," \t\n");
-    if (pre == strlen(line1) || line1[pre] == '#') continue;
-    eof = fgets(line2,MAXLINE,fp);
-    if (!eof) break;
-    n1 = strlen(line1) + 1;
-    n2 = strlen(line2) + 1;
-    return 0;
-  }
-
-  return 1;
-}
-
-/* ---------------------------------------------------------------------- */
-
-void SurfReact::tally_update()
->>>>>>> master
+void SurfReact::tally_reset()
 {
   nsingle = 0;
   for (int i = 0; i < nlist; i++) tally_single[i] = 0;
