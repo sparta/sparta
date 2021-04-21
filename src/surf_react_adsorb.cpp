@@ -1096,8 +1096,8 @@ void SurfReactAdsorb::PS_chemistry()
   // dtremain must be added separately
   // grid->hash is filled must be filled to use grid->id_find_child()
 
-  double boxlo = domain->boxlo;
-  double boxhi = domain->boxhi;
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
 
   int icell;
   double *x;
@@ -2763,7 +2763,7 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
    add new particle P to mypart list
 ------------------------------------------------------------------------- */
 
-void SurfReactAdsorb::add_particle_mine(Particle::OneParticle *p)
+void SurfReactAdsorb::add_particle_mine(Particle::OnePart *p)
 {
   if (npart == maxmypart) {
     maxmypart += DELTA_PART;

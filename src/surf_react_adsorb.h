@@ -214,7 +214,7 @@ class SurfReactAdsorb : public SurfReact {
   void init_reactions_ps();
   void readfile_ps(char *);
   void PS_react(int, double *);
-  void add_particle_mine(Particle::OneParticle *);
+  void add_particle_mine(Particle::OnePart *);
   void PS_chemistry();
   void random_point(int, double*);
   
