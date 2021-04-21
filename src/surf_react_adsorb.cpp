@@ -2669,10 +2669,7 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
             random_point(isurf,x);
             v[0] = v[1] = v[2] = 0.0;
 	    
-            int reallocflag =
-	      particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
-            if (reallocflag) p = particle->particles + (p - particles); 
-            
+	    particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
             p = &particle->particles[particle->nlocal-1];
             p->dtremain = update->dt*random->uniform(); 
             
@@ -2698,10 +2695,6 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
 	    v[0] = v[1] = v[2] = 0.0;
 	  
 	    particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
-	    int reallocflag =
-	      particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
-	    if (reallocflag) p = particle->particles + (p - particles); 
-	    
 	    p = &particle->particles[particle->nlocal-1];
 	    p->dtremain = update->dt*random->uniform(); 
 	    
@@ -2732,11 +2725,6 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
             v[0] = v[1] = v[2] = 0.0;
             
             particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
-
-            int reallocflag =
-	      particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
-            if (reallocflag) p = particle->particles + (p - particles); 
-            
             p = &particle->particles[particle->nlocal-1];
             p->dtremain = update->dt*random->uniform(); 
             
@@ -2771,7 +2759,7 @@ void SurfReactAdsorb::add_particle_mine(Particle::OnePart *p)
       memory->srealloc(mypart,maxmypart*sizeof(AddParticle),"sr_adsorb:mypart");
   }
   
-  mypart[npart].id = p->idid;
+  mypart[npart].id = p->id;
   mypart[npart].ispecies = p->ispecies;
   memcpy(mypart[npart].x,p->x,3*sizeof(double));
   memcpy(mypart[npart].v,p->v,3*sizeof(double));
