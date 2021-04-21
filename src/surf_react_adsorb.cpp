@@ -264,8 +264,8 @@ SurfReactAdsorb::~SurfReactAdsorb()
   
   // added PS particles
 
-  memory_sfree(mypart);
-  memory_sfree(allpart);
+  memory->sfree(mypart);
+  memory->sfree(allpart);
   memory->destroy(recvcounts);
   memory->destroy(displs);
   
