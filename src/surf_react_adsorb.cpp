@@ -1085,7 +1085,7 @@ void SurfReactAdsorb::PS_chemistry()
   int nsend = npart*sizeof(AddParticle);
   MPI_Allgather(&nsend,1,MPI_INT,recvcounts,1,MPI_INT,world);
   displs[0] = 0;
-  for (i = 1; i < nprocs; i++) displs[i] = displs[i-1] + recvcounts[i-1];
+  for (int i = 1; i < nprocs; i++) displs[i] = displs[i-1] + recvcounts[i-1];
 
   MPI_Allgatherv(mypart,nsend,MPI_CHAR,allpart,recvcounts,displs,MPI_CHAR,world);
 
@@ -1109,10 +1109,10 @@ void SurfReactAdsorb::PS_chemistry()
     
     icell = grid->id_find_child(0,0,boxlo,boxhi,x);
     if (icell < 0) continue;
-    if (icell >= nglocal) continue;
+    if (icell >= grid->nlocal) continue;
     
-    particle->add_particle(p->id,p->species,icell,p->x,p->v,p->erot,p->evib);
-    particle->particles[particles->nlocal].dtremain = p->dtremain;
+    particle->add_particle(p->id,p->ispecies,icell,p->x,p->v,p->erot,p->evib);
+    particle->particles[particle->nlocal-1].dtremain = p->dtremain;
   }
 }
 
@@ -2767,8 +2767,8 @@ void SurfReactAdsorb::add_particle_mine(Particle::OnePart *p)
 {
   if (npart == maxmypart) {
     maxmypart += DELTA_PART;
-    mympart = (AddParticle *)
-      memory->srealloc(maxmypart*sizeof(AddParticle),"sr_adsorb:mypart");
+    mypart = (AddParticle *)
+      memory->srealloc(mypart,maxmypart*sizeof(AddParticle),"sr_adsorb:mypart");
   }
   
   mypart[npart].id = p->idid;
