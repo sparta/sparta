@@ -25,6 +25,7 @@
 #include "surf.h"
 #include "grid.h"
 #include "domain.h"
+#include "particle.h"
 #include "collide.h"
 #include "collide_vss.h"
 #include "surf_collide.h"
@@ -43,6 +44,7 @@ enum{INT,DOUBLE};                      // several files
 enum{FACE,SURF};
 
 #define DELTA_TALLY 1024
+#define DELTA_PART 8                   // make this bigger once debugged
 
 // GS react
 
@@ -142,6 +144,15 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
     n_PS_react = 0;
   }
 
+  // initialize PS added particle data structs
+
+  mypart = NULL;
+  allpart = NULL;
+  maxmypart = maxallpart = 0;
+
+  memory->create(recvcounts,comm->nprocs,"sr_adsorb:recvcounts");
+  memory->create(displs,comm->nprocs,"sr_adsorb:displs");
+
   // list of surface collision models
 
   cmodels = new SurfCollide*[MAXMODELS];
@@ -224,7 +235,6 @@ SurfReactAdsorb::~SurfReactAdsorb()
   memory->destroy(indices_gs);
   
   // PS model
-
   
   for (int i = 0; i < maxlist_ps; i++) {
     for (int j = 0; j < rlist_ps[i].nreactant; j++) {
@@ -252,7 +262,13 @@ SurfReactAdsorb::~SurfReactAdsorb()
   }
   memory->destroy(rlist_ps);
   
+  // added PS particles
 
+  memory_sfree(mypart);
+  memory_sfree(allpart);
+  memory->destroy(recvcounts);
+  memory->destroy(displs);
+  
   // surface collision models
 
   for (int i = 0; i < MAXMODELS; i++)  delete cmodels[i];
@@ -1007,33 +1023,97 @@ void SurfReactAdsorb::tally_update()
   if (update->ntimestep % nsync) return;
 
   // perform on-surface chemistry for PS model
-  // for box faces: only a single proc does this
-  // for surf elements: each proc updates only every Pth element it owns
-
+  // will insert new particles desorbing from faces/surfs as needed
+  // first sync gas/surf chem changes to surf states since last sync
+  
   if (model == PS) {
-    if (mode == FACE) {
-      if (me == 0) {
-	for (int iface = 0; iface < nface; iface++)
-	  PS_react(-(iface+1),face_norm[iface]);
-      }
-
-    } else if (mode == SURF) {
-      int nsurf = surf->nsurf;
-      if (domain->dimension == 2) {
-	for (int m = me; m < nsurf; m += nprocs)
-	  PS_react(m,surf->lines[m].norm);
-      } else {
-	for (int m = me; m < nsurf; m += nprocs)
-	  PS_react(m,surf->tris[m].norm);
-      }
-    }
+    if (mode == FACE) update_state_face();
+    else if (mode == SURF) update_state_surf();
+    
+    PS_chemistry();
   }
 
-  // update the state of each face or element
-  // this syncs gas/surf chem from all procs and on-surface chemistry
+  // update the state of all faces or surf elements
+  // if no PS chemistry, syncs gas/surf chem changes to surf states since last sync
+  // if yes PS chemistry, syncs PS chem changes to surf states
   
   if (mode == FACE) update_state_face();
   else if (mode == SURF) update_state_surf();
+}
+
+/* ---------------------------------------------------------------------- */
+
+void SurfReactAdsorb::PS_chemistry()
+{
+  // zero the mypart vector of particles this proc is adding
+
+  npart = 0;
+  
+  // for box faces: a single proc updates all faces
+  // for surf elements: each proc updates every Pth surf it owns
+
+  if (mode == FACE) {
+    if (me == 0) {
+      for (int iface = 0; iface < nface; iface++)
+	PS_react(-(iface+1),face_norm[iface]);
+    }
+
+  } else if (mode == SURF) {
+    int nsurf = surf->nsurf;
+    if (domain->dimension == 2) {
+      for (int m = me; m < nsurf; m += nprocs)
+	PS_react(m,surf->lines[m].norm);
+    } else {
+      for (int m = me; m < nsurf; m += nprocs)
+	PS_react(m,surf->tris[m].norm);
+    }
+  }
+
+  // allpart = nall-length vector of particles all procs are adding
+  // accumulate via Allgatherv
+
+  int nall;
+  MPI_Allreduce(&npart,&nall,1,MPI_INT,MPI_SUM,world);
+
+  if (nall > maxallpart) {
+    while (maxallpart < nall) maxallpart += DELTA_PART;
+    memory->sfree(allpart);
+    allpart = (AddParticle *)
+      memory->smalloc(maxallpart*sizeof(AddParticle),"sr_adsorb:allpart");
+  }
+
+  int nsend = npart*sizeof(AddParticle);
+  MPI_Allgather(&nsend,1,MPI_INT,recvcounts,1,MPI_INT,world);
+  displs[0] = 0;
+  for (i = 1; i < nprocs; i++) displs[i] = displs[i-1] + recvcounts[i-1];
+
+  MPI_Allgatherv(mypart,nsend,MPI_CHAR,allpart,recvcounts,displs,MPI_CHAR,world);
+
+  // loop over all particles
+  // check if inside a child cell I own via id_find_child()
+  // if not, skip the particle, another proc will add it
+  // if yes, add it to particle list using values in allpart
+  // dtremain must be added separately
+  // grid->hash is filled must be filled to use grid->id_find_child()
+
+  double boxlo = domain->boxlo;
+  double boxhi = domain->boxhi;
+
+  int icell;
+  double *x;
+  AddParticle *p;
+  
+  for (int i = 0; i < nall; i++) {
+    p = &allpart[i];
+    x = p->x;
+    
+    icell = grid->id_find_child(0,0,boxlo,boxhi,x);
+    if (icell < 0) continue;
+    if (icell >= nglocal) continue;
+    
+    particle->add_particle(p->id,p->species,icell,p->x,p->v,p->erot,p->evib);
+    particle->particles[particles->nlocal].dtremain = p->dtremain;
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -2463,7 +2543,6 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
   // int *total_state;          // total count at last sync
   // double *area;              // area of surf
   // double *weight;            // weight of surf
-
   
   if (nactive_ps == 0) return;
 
@@ -2585,20 +2664,14 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
         case DS: 
           {
             double x[3],v[3];
-            v[0] = v[1] = v[2] = 0.0;
-            
-            //NOTE_SGK have to add these functions
-            random_point(isurf,x);
-            //pcell = find_cell(isurf,x); // ??? 
-            
-            //if (r->state_products[0][0] == 'g') 
-            //{
+
             int id = MAXSMALLINT*random->uniform();
-
-            particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
-
-            //int reallocflag = particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
-            //if (reallocflag) p = particle->particles + (p - particles); 
+            random_point(isurf,x);
+            v[0] = v[1] = v[2] = 0.0;
+	    
+            int reallocflag =
+	      particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
+            if (reallocflag) p = particle->particles + (p - particles); 
             
             p = &particle->particles[particle->nlocal-1];
             p->dtremain = update->dt*random->uniform(); 
@@ -2606,40 +2679,43 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
             if (r->cmodel_ip != NOMODEL) 
               cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
                                              r->cmodel_ip_coeffs);
-            //}
-           
-            // energy_barrier_scatter(p,norm,r->coeff[3],0.0,0.0);
+	    
+	    // add new particle to mypart list and remove from Particle class
+	    // this allows correct proc that owns the grid cell to later add it
+
+	    add_particle_mine(p);
+	    particle->nlocal--;
 
             break;                      
           }
                     
         case LH2:
           {
-          double x[3],v[3];
-          v[0] = v[1] = v[2] = 0;
-          
-          //NOTE_SGK have to add these functions
-          random_point(isurf,x);
-          //pcell = find_cell(isurf,x); // ???
-          
-          //if (r->state_products[0][0] == 'g') 
-          //{
-          int id = MAXSMALLINT*random->uniform();
-          
-          particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
-          //int reallocflag = particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
-          //if (reallocflag) p = particle->particles + (p - particles); 
-          
-          p = &particle->particles[particle->nlocal-1];
-          p->dtremain = update->dt*random->uniform(); 
-          
-          if (r->cmodel_ip != NOMODEL) 
-            cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
-                                           r->cmodel_ip_coeffs);
-          // }
-          
-          //energy_barrier_scatter(p,norm,r->coeff[3],0,0);
-          break; 
+	    double x[3],v[3];
+
+	    int id = MAXSMALLINT*random->uniform();
+	    random_point(isurf,x);
+	    v[0] = v[1] = v[2] = 0.0;
+	  
+	    particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
+	    int reallocflag =
+	      particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
+	    if (reallocflag) p = particle->particles + (p - particles); 
+	    
+	    p = &particle->particles[particle->nlocal-1];
+	    p->dtremain = update->dt*random->uniform(); 
+	    
+	    if (r->cmodel_ip != NOMODEL) 
+	      cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
+					     r->cmodel_ip_coeffs);
+	  
+	    // add new particle to mypart list and remove from Particle class
+	    // this allows correct proc that owns the grid cell to later add it
+	    
+	    add_particle_mine(p);
+	    particle->nlocal--;
+	    
+	    break; 
           }
           
         case LH4: 
@@ -2650,19 +2726,16 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
         case SB: 
           {
             double x[3],v[3];
-            v[0] = v[1] = v[2] = 0;
-            
-            //NOTE_SGK have to add these functions
-            random_point(isurf,x);
-            //pcell = find_cell(isurf,x); // ??? 
-            
-            //if (r->state_products[0][0] == 'g') 
-            //{
+	    
             int id = MAXSMALLINT*random->uniform();
+            random_point(isurf,x);
+            v[0] = v[1] = v[2] = 0.0;
             
             particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
-            //int reallocflag = particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
-            //if (reallocflag) p = particle->particles + (p - particles); 
+
+            int reallocflag =
+	      particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
+            if (reallocflag) p = particle->particles + (p - particles); 
             
             p = &particle->particles[particle->nlocal-1];
             p->dtremain = update->dt*random->uniform(); 
@@ -2670,7 +2743,13 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
             if (r->cmodel_ip != NOMODEL) 
               cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
                                              r->cmodel_ip_coeffs);
-            //}
+
+	    // add new particle to mypart list and remove from Particle class
+	    // this allows correct proc that owns the grid cell to later add it
+	    
+	    add_particle_mine(p);
+	    particle->nlocal--;
+	    
             break;
           }
         }
@@ -2678,6 +2757,28 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
       }
     }
   }
+}
+
+/* ----------------------------------------------------------------------
+   add new particle P to mypart list
+------------------------------------------------------------------------- */
+
+void SurfReactAdsorb::add_particle_mine(Particle::OneParticle *p)
+{
+  if (npart == maxmypart) {
+    maxmypart += DELTA_PART;
+    mympart = (AddParticle *)
+      memory->srealloc(maxmypart*sizeof(AddParticle),"sr_adsorb:mypart");
+  }
+  
+  mypart[npart].id = p->idid;
+  mypart[npart].ispecies = p->ispecies;
+  memcpy(mypart[npart].x,p->x,3*sizeof(double));
+  memcpy(mypart[npart].v,p->v,3*sizeof(double));
+  mypart[npart].erot = p->erot;
+  mypart[npart].evib = p->evib;
+  mypart[npart].dtremain = p->dtremain;
+  npart++;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -2889,21 +2990,23 @@ void SurfReactAdsorb::cll(Particle::OnePart *p, double *norm, double acc_n,
 } 
 */
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   pick a random point X on a face or surf
+   for face: isurf = 0 to 5 inclusive for which face
+   for surf: isurf = index to line or triangle
+   return X
+------------------------------------------------------------------------- */
 
 void SurfReactAdsorb::random_point(int isurf, double *x)
 {
-  
-  if (mode == FACE)
-  {
+  if (mode == FACE) {
     double *lo = domain->boxlo;
     double *hi = domain->boxhi;
     double rand1 = random->uniform();
     double rand2 = random->uniform();
 
-    switch (isurf)
-    {
-      case XLO: 
+    switch (isurf) {
+    case XLO: 
       {
         x[0] = lo[0];
         x[1] = lo[1] + rand1 * (hi[1] - lo[1]); 
@@ -2911,7 +3014,7 @@ void SurfReactAdsorb::random_point(int isurf, double *x)
         break;                  
       }
       
-      case XHI: 
+    case XHI: 
       {
         x[0] = hi[0];
         x[1] = lo[1] + rand1 * (hi[1] - lo[1]); 
@@ -2919,7 +3022,7 @@ void SurfReactAdsorb::random_point(int isurf, double *x)
         break;                   
       }
       
-      case YLO: 
+    case YLO: 
       {
         x[0] = lo[0] + rand2 * (hi[0] - lo[0]);
         x[1] = lo[1]; 
@@ -2927,7 +3030,7 @@ void SurfReactAdsorb::random_point(int isurf, double *x)
         break;                  
       }
       
-      case YHI: 
+    case YHI: 
       {
         x[0] = lo[0] + rand2 * (hi[0] - lo[0]);
         x[1] = hi[1]; 
@@ -2935,7 +3038,7 @@ void SurfReactAdsorb::random_point(int isurf, double *x)
         break;             
       }
       
-      case ZLO: 
+    case ZLO: 
       {
         x[0] = lo[0] + rand1 * (hi[0] - lo[0]);
         x[1] = lo[1] + rand2 * (hi[1] - lo[1]);
@@ -2943,7 +3046,7 @@ void SurfReactAdsorb::random_point(int isurf, double *x)
         break;               
       }
       
-      case ZHI: 
+    case ZHI: 
       {
         x[0] = lo[0] + rand1 * (hi[0] - lo[0]);
         x[1] = lo[1] + rand2 * (hi[1] - lo[1]);
@@ -2951,11 +3054,9 @@ void SurfReactAdsorb::random_point(int isurf, double *x)
         break;                
       }
     }
-  }
-  else if (mode == SURF)
-  {
-    if (domain->dimension == 2)
-    {
+
+  } else if (mode == SURF) {
+    if (domain->dimension == 2) {
       Surf::Line *lines = surf->lines;
       double *p1,*p2;
       double rand = random->uniform();
@@ -2966,9 +3067,12 @@ void SurfReactAdsorb::random_point(int isurf, double *x)
       x[0] = p1[0] + rand * (p2[0] - p1[0]);
       x[1] = p1[1] + rand * (p2[1] - p1[1]);
       x[2] = 0.0;
-    }
-    else if (domain->dimension == 3)
-    {
+      
+    } else if (domain->dimension == 3) {
+      // NOTE: to avoid sqrt() could use 2 uniform RNs: r1,r2
+      // if r1+r2 > 1 then r1 = 1-r1, r2 = 1-r2
+      // x[i] = p1[i] + r1*(p2[i]-p1[i]) + r2*(p3[i]-p1[i])
+
       Surf::Tri *tris = surf->tris;
       double *p1,*p2,*p3;
       double rand1 = sqrt(random->uniform());

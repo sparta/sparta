@@ -180,6 +180,25 @@ class SurfReactAdsorb : public SurfReact {
   // SGK check
   int n_PS_react;
 
+  // particles added to gas flow by PS surface reactions
+
+  struct AddParticle {
+    int id;                 // particle ID
+    int ispecies;           // particle species index
+    double x[3];            // particle position
+    double v[3];            // particle velocity
+    double erot;            // rotational energy
+    double evib;            // vibrational energy
+    double dtremain;        // fraction of timestep
+  };
+
+  AddParticle *mypart;      // particles this proc adds
+  AddParticle *allpart;     // gathered list of all particles from all procs
+  int *recvcounts,*displs;  // Nproc-length vectors for Allgatherv
+  int npart;                // # of particles this proc adds
+  int maxmypart;            // allocated size of mypart
+  int maxallpart;           // allocated size of allpart
+  
   // surface collision models, one per supported style
   // only if appears in reaction file
 
