@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -43,7 +43,7 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
-enum{NONE,DISCRETE,SMOOTH};           
+enum{NONE,DISCRETE,SMOOTH};
 
 /* ---------------------------------------------------------------------- */
 
@@ -68,29 +68,29 @@ SurfCollideCLL::SurfCollideCLL(SPARTA *sparta, int narg, char **arg) :
   acc_rot = atof(arg[5]);
   acc_vib = atof(arg[6]);
 
-  if (acc_n < 0.0 || acc_n > 1.0 || acc_t < 0.0 || acc_t > 1.0 || 
-      acc_rot < 0.0 || acc_rot > 1.0 || acc_vib < 0.0 || acc_vib > 1.0) 
+  if (acc_n < 0.0 || acc_n > 1.0 || acc_t < 0.0 || acc_t > 1.0 ||
+      acc_rot < 0.0 || acc_rot > 1.0 || acc_vib < 0.0 || acc_vib > 1.0)
     error->all(FLERR,"Surf_collide cll accommodation coeffs "
                "must be >= 0 and <= 1");
-    
-  // optional args  
-  
+
+  // optional args
+
   eccen = 0.0;
   pflag = 0;
   tflag = rflag = 0;
 
   int iarg = 7;
   while (iarg < narg) {
-  
+
     if (strcmp(arg[iarg],"partial") == 0) {
         if (iarg+2 > narg) error->all(FLERR,"Illegal surf_collide cll command");
-        if (acc_n != acc_t) 
+        if (acc_n != acc_t)
           error->all(FLERR,"Surf_collide cll partial requires acc_n = acc_t");
         pflag = 1;
         eccen = atof(arg[iarg+1]);
-        if (eccen < 0.0 || eccen >= 1.0 ) 
+        if (eccen < 0.0 || eccen >= 1.0 )
           error->all(FLERR,"Surf_collide cll eccentricity must be >= 0 and <= 1");
-        iarg += 2;    
+        iarg += 2;
     } else if (strcmp(arg[iarg],"translate") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Illegal surf_collide cll command");
       tflag = 1;
@@ -107,7 +107,7 @@ SurfCollideCLL::SurfCollideCLL(SPARTA *sparta, int narg, char **arg) :
       wx = atof(arg[iarg+4]);
       wy = atof(arg[iarg+5]);
       wz = atof(arg[iarg+6]);
-      if (domain->dimension == 2 && pz != 0.0) 
+      if (domain->dimension == 2 && pz != 0.0)
         error->all(FLERR,"Surf_collide cll rotation invalid for 2d");
       if (domain->dimension == 2 && (wx != 0.0 || wy != 0.0))
         error->all(FLERR,"Surf_collide cll rotation invalid for 2d");
@@ -146,7 +146,7 @@ void SurfCollideCLL::init()
 
   if (tstr) {
     tvar = input->variable->find(tstr);
-    if (tvar < 0) 
+    if (tvar < 0)
       error->all(FLERR,"Surf_collide cll variable name does not exist");
     if (!input->variable->equal_style(tvar))
       error->all(FLERR,"Surf_collide cll variable is invalid style");
@@ -184,7 +184,7 @@ collide(Particle::OnePart *&ip, double &,
     reaction = surf->sr[isr]->react(ip,isurf,norm,jp);
     if (reaction) surf->nreact_one++;    
   }
-  
+
   // CLL reflection for each particle
 
   if (reaction < 2) {
@@ -202,7 +202,7 @@ collide(Particle::OnePart *&ip, double &,
   // call any fixes with a surf_react() method
   // they may reset j to -1, e.g. fix ambipolar
   //   in which case newly created j is deleted
-  
+
   if (reaction && modify->n_surf_react) {
     int i = -1;
     if (ip) i = ip - particle->particles;
@@ -230,16 +230,16 @@ collide(Particle::OnePart *&ip, double &,
 ------------------------------------------------------------------------- */
 
 void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
-{ 
+{
   double tangent1[3],tangent2[3];
   Particle::Species *species = particle->species;
   int ispecies = p->ispecies;
   double beta_un,normalized_distbn_fn;
-    
+
   double *v = p->v;
   double dot = MathExtra::dot3(v,norm);
   double vrm, vperp, vtan1, vtan2;
-    
+
   tangent1[0] = v[0] - dot*norm[0];
   tangent1[1] = v[1] - dot*norm[1];
   tangent1[2] = v[2] - dot*norm[2];
@@ -249,22 +249,22 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
     tangent2[1] = random->uniform();
     tangent2[2] = random->uniform();
     MathExtra::cross3(norm,tangent2,tangent1);
-  } 
+  }
 
   MathExtra::norm3(tangent1);
   MathExtra::cross3(norm,tangent1,tangent2);
-    
+
   double tan1 = MathExtra::dot3(v,tangent1);
-    
+
   vrm = sqrt(2.0*update->boltz * twall / species[ispecies].mass);
-    
+
   // CLL model normal velocity
 
   double r_1 = sqrt(-acc_n*log(random->uniform()));
   double theta_1 = MY_2PI * random->uniform();
   double dot_norm = dot/vrm * sqrt(1-acc_n);
   vperp = vrm * sqrt(r_1*r_1 + dot_norm*dot_norm + 2*r_1*dot_norm*cos(theta_1));
-  
+
   // CLL model tangential velocities
 
   double r_2 = sqrt(-acc_t*log(random->uniform()));
@@ -272,38 +272,38 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
   double vtangent = tan1/vrm * sqrt(1-acc_t);
   vtan1 = vrm * (vtangent + r_2*cos(theta_2));
   vtan2 = vrm * r_2 * sin(theta_2);
-  
+
   // partial keyword
   // incomplete energy accommodation with partial/fully diffuse scattering
   // adjust the final angle of the particle while keeping
   //   the velocity magnitude or speed according to CLL scattering
-    
+
   if (pflag) {
-    double tan2 = MathExtra::dot3(v,tangent2);        
+    double tan2 = MathExtra::dot3(v,tangent2);
     double theta_i, phi_i, psi_i, theta_f, phi_f, psi_f, cos_beta;
-        
+
     theta_i = acos(dot/sqrt(MathExtra::lensq3(v)));
     psi_i = acos(dot*dot/MathExtra::lensq3(v));
     phi_i = atan2(tan2,tan1);
-        
+
     double v_mag = sqrt(vperp*vperp + vtan1*vtan1 + vtan2*vtan2);
-        
-    double P = 0; 
+
+    double P = 0;
     while (random->uniform() > P) {
       phi_f = MY_2PI*random->uniform();
       psi_f = acos(1-random->uniform());
-      cos_beta =  cos(psi_i)*cos(psi_f) + 
+      cos_beta =  cos(psi_i)*cos(psi_f) +
         sin(psi_i)*sin(psi_f)*cos(phi_i - phi_f);
       P = (1-eccen)/(1-eccen*cos_beta);
     }
-    
+
     theta_f = acos(sqrt(cos(psi_f)));
-        
+
     vperp = v_mag * cos(theta_f);
     vtan1 = v_mag * sin(theta_f) * cos(phi_f);
-    vtan2 = v_mag * sin(theta_f) * sin(phi_f); 
+    vtan2 = v_mag * sin(theta_f) * sin(phi_f);
   }
-    
+
   // add in translation or rotation vector if specified
   // only keep portion of vector tangential to surface element
 
@@ -312,7 +312,7 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
     if (tflag) {
       vxdelta = vx; vydelta = vy; vzdelta = vz;
       double dot = vxdelta*norm[0] + vydelta*norm[1] + vzdelta*norm[2];
-      
+
       if (fabs(dot) > 0.001) {
         dot /= vrm;
         do {
@@ -325,7 +325,7 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
         } while (normalized_distbn_fn < random->uniform());
         vperp = beta_un*vrm;
       }
-      
+
     } else {
       double *x = p->x;
       vxdelta = wy*(x[2]-pz) - wz*(x[1]-py);
@@ -336,13 +336,13 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
       vydelta -= dot*norm[1];
       vzdelta -= dot*norm[2];
     }
-    
+
     v[0] = vperp*norm[0] + vtan1*tangent1[0] + vtan2*tangent2[0] + vxdelta;
     v[1] = vperp*norm[1] + vtan1*tangent1[1] + vtan2*tangent2[1] + vydelta;
     v[2] = vperp*norm[2] + vtan1*tangent1[2] + vtan2*tangent2[2] + vzdelta;
-    
+
   // no translation or rotation
-    
+
   } else {
     v[0] = vperp*norm[0] + vtan1*tangent1[0] + vtan2*tangent2[0];
     v[1] = vperp*norm[1] + vtan1*tangent1[1] + vtan2*tangent2[1];
@@ -351,17 +351,17 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
 
   // rotational component
 
-  if (!sparta->collide || sparta->collide->rotstyle == NONE || 
-      species[ispecies].rotdof < 2) p->erot = 0.0;    
-     
+  if (!sparta->collide || sparta->collide->rotstyle == NONE ||
+      species[ispecies].rotdof < 2) p->erot = 0.0;
+
   else {
     double erot_mag = sqrt(p->erot*(1-acc_rot)/(update->boltz*twall));
 
     double r_rot,cos_theta_rot,A_rot,X_rot;
-    if (species[ispecies].rotdof == 2) {    
+    if (species[ispecies].rotdof == 2) {
       r_rot = sqrt(-acc_rot*log(random->uniform()));
       cos_theta_rot = cos(MY_2PI*random->uniform());
-    } 
+    }
     else if (species[ispecies].rotdof > 2) {
       A_rot = 0;
       while (A_rot < random->uniform()) {
@@ -370,12 +370,12 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
       }
       r_rot = sqrt(acc_rot)*X_rot;
       cos_theta_rot = 2*random->uniform() - 1;
-    }    
-    
-    p->erot = update->boltz * twall * 
+    }
+
+    p->erot = update->boltz * twall *
       (r_rot*r_rot + erot_mag*erot_mag + 2*r_rot*erot_mag*cos_theta_rot);
     }
-    
+
   // vibrational component
   // NOTE: check all references to species[]->vibtmp
 
@@ -384,24 +384,24 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
 
   if (!sparta->collide || sparta->collide->vibstyle == NONE || vibdof < 2)
     p->evib = 0.0;
-  
+
   else if (sparta->collide->vibstyle == DISCRETE && vibdof == 2) {
-    double evib_star = 
-      -log(1 - random->uniform() * 
-           (1 - exp(-update->boltz*species[ispecies].vibtemp[0])));    
-    evib_val = p->evib + evib_star;      
+    double evib_star =
+      -log(1 - random->uniform() *
+           (1 - exp(-update->boltz*species[ispecies].vibtemp[0])));
+    evib_val = p->evib + evib_star;
     evib_mag = sqrt(evib_val*(1-acc_vib)/(update->boltz*twall));
     r_vib = sqrt(-acc_vib*log(random->uniform()));
     cos_theta_vib = cos(MY_2PI*random->uniform());
-    evib_val = update->boltz * twall * 
+    evib_val = update->boltz * twall *
       (r_vib*r_vib + evib_mag*evib_mag + 2*r_vib*evib_mag*cos_theta_vib);
     int ivib =  evib_val / (update->boltz*species[ispecies].vibtemp[0]);
     p->evib = ivib * update->boltz * species[ispecies].vibtemp[0];
-  } 
+  }
 
   else if (sparta->collide->vibstyle == SMOOTH || vibdof >= 2) {
     evib_mag = sqrt(p->evib*(1-acc_vib)/(update->boltz*twall));
-    if (vibdof == 2) {    
+    if (vibdof == 2) {
       r_vib = sqrt(-acc_vib*log(random->uniform()));
       cos_theta_vib = cos(MY_2PI*random->uniform());
     } else if (vibdof > 2) {
@@ -412,9 +412,9 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
       }
       r_vib = sqrt(acc_vib)*X_vib;
       cos_theta_vib = 2*random->uniform() - 1;
-    }    
-    
-    p->evib = update->boltz * twall * 
+    }
+
+    p->evib = update->boltz * twall *
       (r_vib*r_vib + evib_mag*evib_mag + 2*r_vib*evib_mag*cos_theta_vib);
   }
 }

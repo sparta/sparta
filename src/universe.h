@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -37,7 +37,7 @@ class Universe : protected Pointers {
   int *root_proc;         // root proc in each world
 
   MPI_Comm uorig;         // original communicator passed to SPARTA instance
-  int *uni2orig;          // proc I in universe uworld is 
+  int *uni2orig;          // proc I in universe uworld is
                           // proc uni2orig[I] in original communicator
 
   Universe(class SPARTA *, MPI_Comm);

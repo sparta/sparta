@@ -29,7 +29,7 @@ class ReactBird : public React {
   virtual void init();
   int recomb_exist(int, int);
   void ambi_check();
-  virtual int attempt(Particle::OnePart *, Particle::OnePart *, 
+  virtual int attempt(Particle::OnePart *, Particle::OnePart *,
                       double, double, double, double &, int &) = 0;
   char *reactionID(int);
   virtual double extract_tally(int);
@@ -39,7 +39,7 @@ class ReactBird : public React {
 
   // tallies for reactions
 
-  int *tally_reactions,*tally_reactions_all;
+  bigint *tally_reactions,*tally_reactions_all;
   int tally_flag;
 
   struct OneReaction {
@@ -61,7 +61,7 @@ class ReactBird : public React {
   // all reactions a pair of reactant species is part of
 
   struct ReactionIJ {
-    int *list;       // N-length list of rlist indices 
+    int *list;       // N-length list of rlist indices
                      //   for reactions defined for this IJ pair,
                      //   just a ptr into sub-section of long list_ij vector
                      //   for all pairs

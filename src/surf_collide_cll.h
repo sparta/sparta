@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -35,6 +35,7 @@ class SurfCollideCLL : public SurfCollide {
                              int, double *, int, int &);
   void wrapper(Particle::OnePart *, double *, int *, double*);
   void flags_and_coeffs(int *, double *);
+
   void dynamic();
 
  private:
@@ -48,9 +49,9 @@ class SurfCollideCLL : public SurfCollide {
 
   int tflag,rflag;           // flags for translation and rotation
   int trflag;                // 1 if either tflag or rflag is set
-  int pflag;                 // 1 if partially energy accommodation 
+  int pflag;                 // 1 if partially energy accommodation
                              // with partial/fully diffuse scattering
-  
+
   char *tstr;                // temperature variable name (NULL if constant)
   int tvar;                  // index of equal-style variable
 

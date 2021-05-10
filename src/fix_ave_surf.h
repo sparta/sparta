@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -90,43 +90,43 @@ command-line option when running SPARTA to see the offending line.
 
 E: Compute ID for fix ave/surf does not exist
 
-Self-explanatory.  
+Self-explanatory.
 
 E: Fix ave/surf compute does not calculate per-surf values
 
-Self-explanatory.  
+Self-explanatory.
 
 E: Fix ave/surf compute does not calculate a per-surf vector
 
-Self-explanatory.  
+Self-explanatory.
 
 E: Fix ave/surf compute does not calculate a per-surf array
 
-Self-explanatory.  
+Self-explanatory.
 
 E: Fix ave/surf compute array is accessed out-of-range
 
-Self-explanatory.  
+Self-explanatory.
 
 E: Fix ID for fix ave/surf does not exist
 
-Self-explanatory.  
+Self-explanatory.
 
 E: Fix ave/surf fix does not calculate per-surf values
 
-Self-explanatory.  
+Self-explanatory.
 
 E: Fix ave/surf fix does not calculate a per-surf vector
 
-Self-explanatory.  
+Self-explanatory.
 
 E: Fix ave/surf fix does not calculate a per-surf array
 
-Self-explanatory.  
+Self-explanatory.
 
 E: Fix ave/surf fix array is accessed out-of-range
 
-Self-explanatory.  
+Self-explanatory.
 
 E: Fix for fix ave/surf not computed at compatible time
 
@@ -135,7 +135,7 @@ requesting a value on a non-allowed timestep.
 
 E: Variable name for fix ave/surf does not exist
 
-Self-explanatory.  
+Self-explanatory.
 
 E: Fix ave/surf variable is not surf-style variable
 

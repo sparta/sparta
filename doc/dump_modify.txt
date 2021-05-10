@@ -162,7 +162,7 @@ For example, the following commands will
 write snapshots at timesteps 0,10,20,30,100,200,300,1000,2000,etc:
 
 variable	        s equal logfreq(10,3,10)
-dump		1 all particle 100 tmp.dump id type x y z
+dump		1 particle all 100 tmp.dump id type x y z
 dump_modify	1 every v_s first yes :pre
 
 :line

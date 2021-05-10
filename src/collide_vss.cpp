@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -63,22 +63,12 @@ CollideVSS::CollideVSS(SPARTA *sparta, int narg, char **arg) :
   // broadcasts params to all procs
 
   nparams = particle->nspecies;
-  if (nparams == 0) 
+  if (nparams == 0)
     error->all(FLERR,"Cannot use collide command with no species defined");
 
-  params = new Params[nparams];
+  memory->create(params,nparams,nparams,"collide:params");
   if (comm->me == 0) read_param_file(arg[2]);
-  MPI_Bcast(params,nparams*sizeof(Params),MPI_BYTE,0,world);
-
-  // check that params were read for all species
-
-  for (int i = 0; i < nparams; i++)
-    if (params[i].diam < 0.0) {
-      char str[128];
-      sprintf(str,"Species %s did not appear in VSS parameter file",
-	      particle->species[i].id);
-      error->one(FLERR,str);
-    }
+  MPI_Bcast(params[0],nparams*nparams*sizeof(Params),MPI_BYTE,0,world);
 
   // allocate per-species prefactor array
 
@@ -91,7 +81,7 @@ CollideVSS::~CollideVSS()
 {
   if (copymode) return;
 
-  delete [] params;
+  memory->destroy(params);
   memory->destroy(prefactor);
 }
 
@@ -128,14 +118,10 @@ double CollideVSS::vremax_init(int igroup, int jgroup)
     for (int jsp = 0; jsp < nspecies; jsp++) {
       if (mix2group[jsp] != jgroup) continue;
 
-      double diam = 0.5 * (params[isp].diam + params[jsp].diam);
-      double omega = 0.5 * (params[isp].omega + params[jsp].omega);
-      double tref = 0.5 * (params[isp].tref + params[jsp].tref);
-      double mr = species[isp].mass * species[jsp].mass /
-	(species[isp].mass + species[jsp].mass);
-      double cxs = diam*diam*MY_PI;
-      prefactor[isp][jsp] = cxs *
-	pow(2.0*update->boltz*tref/mr,omega-0.5)/tgamma(2.5-omega);
+      double cxs = params[isp][jsp].diam*params[isp][jsp].diam*MY_PI;
+      prefactor[isp][jsp] = cxs * pow(2.0*update->boltz*params[isp][jsp].tref/
+	params[isp][jsp].mr,params[isp][jsp].omega-0.5) /
+	tgamma(2.5-params[isp][jsp].omega);
       double beta = MAX(vscale[isp],vscale[jsp]);
       double vrm = 2.0 * cxs * beta;
       vrmgroup = MAX(vrmgroup,vrm);
@@ -149,28 +135,26 @@ double CollideVSS::vremax_init(int igroup, int jgroup)
 
 double CollideVSS::attempt_collision(int icell, int np, double volume)
 {
- double fnum = update->fnum;
- double dt = update->dt;
+  double fnum = update->fnum;
+  double dt = update->dt;
 
- double nattempt;
+  double nattempt;
 
- if (remainflag) {
-   nattempt = 0.5 * np * (np-1) *
-     vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
-   remain[icell][0][0] = nattempt - static_cast<int> (nattempt);
- } else 
-   nattempt = 0.5 * np * (np-1) *
-     vremax[icell][0][0] * dt * fnum / volume + random->uniform();
-
- // DEBUG
- //nattempt = 10;
+  if (remainflag) {
+    nattempt = 0.5 * np * (np-1) *
+      vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
+    remain[icell][0][0] = nattempt - static_cast<int> (nattempt);
+  } else {
+    nattempt = 0.5 * np * (np-1) *
+      vremax[icell][0][0] * dt * fnum / volume + random->uniform();
+  }
 
   return nattempt;
 }
 
 /* ---------------------------------------------------------------------- */
 
-double CollideVSS::attempt_collision(int icell, int igroup, int jgroup, 
+double CollideVSS::attempt_collision(int icell, int igroup, int jgroup,
 				     double volume)
 {
  double fnum = update->fnum;
@@ -212,12 +196,9 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
   double dv  = vi[1] - vj[1];
   double dw  = vi[2] - vj[2];
   double vr2 = du*du + dv*dv + dw*dw;
-  double omega1 = params[ispecies].omega;
-  double omega2 = params[jspecies].omega;
-  double omega = 0.5 * (omega1+omega2);
-  double vro  = pow(vr2,1.0-omega);
+  double vro  = pow(vr2,1.0-params[ispecies][jspecies].omega);
 
-  // although the vremax is calcualted for the group,
+  // although the vremax is calculated for the group,
   // the individual collisions calculated species dependent vre
 
   double vre = vro*prefactor[ispecies][jspecies];
@@ -244,9 +225,8 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 
   double imass = precoln.imass = species[isp].mass;
   double jmass = precoln.jmass = species[jsp].mass;
-  precoln.mr = imass * jmass / (imass+jmass);
 
-  precoln.etrans = 0.5 * precoln.mr * precoln.vr2;
+  precoln.etrans = 0.5 * params[isp][jsp].mr * precoln.vr2;
   precoln.erot = ip->erot + jp->erot;
   precoln.evib = ip->evib + jp->evib;
 
@@ -271,8 +251,8 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 
 /* ---------------------------------------------------------------------- */
 
-int CollideVSS::perform_collision(Particle::OnePart *&ip, 
-                                  Particle::OnePart *&jp, 
+int CollideVSS::perform_collision(Particle::OnePart *&ip,
+                                  Particle::OnePart *&jp,
                                   Particle::OnePart *&kp)
 {
   int reactflag,kspecies;
@@ -283,12 +263,12 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
   // if a 3rd particle is created, its kspecies >= 0 is returned
   // if 2nd particle is removed, its jspecies is set to -1
 
-  if (react) 
+  if (react)
     reactflag = react->attempt(ip,jp,
                                precoln.etrans,precoln.erot,
                                precoln.evib,postcoln.etotal,kspecies);
   else reactflag = 0;
-  
+
   // repartition energy and perform velocity scattering for I,J,K particles
   // reaction may have changed species of I,J particles
   // J,K particles may have been removed or created by reaction
@@ -308,7 +288,7 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
       Particle::OnePart *particles = particle->particles;
       memcpy(x,ip->x,3*sizeof(double));
       memcpy(v,ip->v,3*sizeof(double));
-      int reallocflag = 
+      int reallocflag =
         particle->add_particle(id,kspecies,ip->icell,x,v,0.0,0.0);
       if (reallocflag) {
         ip = particle->particles + (ip - particles);
@@ -337,7 +317,35 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
 
       jp = NULL;
       p3 = react->recomb_part3;
+
+      // properly account for 3rd body energy with another call to setup_collision()
+      // it needs relative velocity of recombined species and 3rd body
+
+      double *vp3 = p3->v;
+      double du  = vi[0] - vp3[0];
+      double dv  = vi[1] - vp3[1];
+      double dw  = vi[2] - vp3[2];
+      double vr2 = du*du + dv*dv + dw*dw;
+      precoln.vr2 = vr2;
+
+      // internal energy of ip particle is already included
+      //   in postcoln.etotal returned from react->attempt()
+      // but still need to add 3rd body internal energy
+
+      double partial_energy =  postcoln.etotal + p3->erot + p3->evib;
+
+      ip->erot = 0;
+      ip->evib = 0;
+      p3->erot = 0;
+      p3->evib = 0;
+	
+      // returned postcoln.etotal will increment only the
+      //   relative translational energy between recombined species and 3rd body
+      // add back partial_energy to get full total energy
+
       setup_collision(ip,p3);
+      postcoln.etotal += partial_energy;
+
       if (precoln.ave_dof > 0.0) EEXCHANGE_ReactingEDisposal(ip,p3,jp);
       SCATTER_TwoBodyScattering(ip,p3);
 
@@ -346,7 +354,7 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
       SCATTER_TwoBodyScattering(ip,jp);
     }
 
-  } else { 
+  } else {
     if (precoln.ave_dof > 0.0) EEXCHANGE_NonReactingEDisposal(ip,jp);
     SCATTER_TwoBodyScattering(ip,jp);
   }
@@ -356,7 +364,7 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
 
 /* ---------------------------------------------------------------------- */
 
-void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip, 
+void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
 					   Particle::OnePart *jp)
 {
   double ua,vb,wc;
@@ -370,39 +378,37 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
   double mass_i = species[isp].mass;
   double mass_j = species[jsp].mass;
 
-  double alpha_r = 2.0 / (params[isp].alpha + params[jsp].alpha);
-  double mr = species[isp].mass * species[jsp].mass /
-    (species[isp].mass + species[jsp].mass);
+  double alpha_r = 1.0 / params[isp][jsp].alpha;
 
   double eps = random->uniform() * 2*MY_PI;
-  if (fabs(alpha_r - 1.0) < 0.001) { 
-    double vr = sqrt(2.0 * postcoln.etrans / mr);
+  if (fabs(alpha_r - 1.0) < 0.001) {
+    double vr = sqrt(2.0 * postcoln.etrans / params[isp][jsp].mr);
     double cosX = 2.0*random->uniform() - 1.0;
     double sinX = sqrt(1.0 - cosX*cosX);
     ua = vr*cosX;
     vb = vr*sinX*cos(eps);
-    wc = vr*sinX*sin(eps); 
+    wc = vr*sinX*sin(eps);
   } else {
-    double scale = sqrt((2.0 * postcoln.etrans) / (mr * precoln.vr2));
+    double scale = sqrt((2.0 * postcoln.etrans) / (params[isp][jsp].mr * precoln.vr2));
     double cosX = 2.0*pow(random->uniform(),alpha_r) - 1.0;
     double sinX = sqrt(1.0 - cosX*cosX);
     vrc[0] = vi[0]-vj[0];
     vrc[1] = vi[1]-vj[1];
     vrc[2] = vi[2]-vj[2];
     double d = sqrt(vrc[1]*vrc[1]+vrc[2]*vrc[2]);
-    if (d > 1.0e-6) { 
+    if (d > 1.0e-6) {
       ua = scale * ( cosX*vrc[0] + sinX*d*sin(eps) );
-      vb = scale * ( cosX*vrc[1] + sinX*(precoln.vr*vrc[2]*cos(eps) - 
+      vb = scale * ( cosX*vrc[1] + sinX*(precoln.vr*vrc[2]*cos(eps) -
                                          vrc[0]*vrc[1]*sin(eps))/d );
-      wc = scale * ( cosX*vrc[2] - sinX*(precoln.vr*vrc[1]*cos(eps) + 
+      wc = scale * ( cosX*vrc[2] - sinX*(precoln.vr*vrc[1]*cos(eps) +
                                          vrc[0]*vrc[2]*sin(eps))/d );
     } else {
-      ua = scale * ( cosX*vrc[0] ); 
-      vb = scale * ( sinX*vrc[0]*cos(eps) ); 
+      ua = scale * ( cosX*vrc[0] );
+      vb = scale * ( sinX*vrc[0]*cos(eps) );
       wc = scale * ( sinX*vrc[0]*sin(eps) );
     }
   }
-  
+
   // new velocities for the products
 
   double divisor = 1.0 / (mass_i + mass_j);
@@ -416,7 +422,7 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
 
 /* ---------------------------------------------------------------------- */
 
-void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip, 
+void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
 						Particle::OnePart *jp)
 {
 
@@ -429,7 +435,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   double AdjustFactor = 0.99999999;
   postcoln.erot = 0.0;
   postcoln.evib = 0.0;
-  double pevib = 0.0;   
+  double pevib = 0.0;
 
   // handle each kind of energy disposal for non-reacting reactants
 
@@ -442,53 +448,52 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   } else {
     E_Dispose = precoln.etrans;
 
-    double aveomega = 0.5*(params[ip->ispecies].omega + 
-                           params[jp->ispecies].omega); 
-
     for (i = 0; i < 2; i++) {
-      if (i == 0) p = ip; 
+      if (i == 0) p = ip;
       else p = jp;
 
       int sp = p->ispecies;
       rotdof = species[sp].rotdof;
-      double rotn_phi = species[sp].rotrel; 
+      double rotn_phi = species[sp].rotrel;
 
       if (rotdof) {
         if (relaxflag == VARIABLE) rotn_phi = rotrel(sp,E_Dispose);
         if (rotn_phi >= random->uniform()) {
           if (rotstyle == NONE) {
-            p->erot = 0.0; 
+            p->erot = 0.0;
           } else if (rotstyle != NONE && rotdof == 2) {
             E_Dispose += p->erot;
-            Fraction_Rot = 
-              1- pow(random->uniform(),(1/(2.5-aveomega)));
+            Fraction_Rot =
+              1- pow(random->uniform(),
+		     (1/(2.5-params[ip->ispecies][jp->ispecies].omega)));
             p->erot = Fraction_Rot * E_Dispose;
             E_Dispose -= p->erot;
           } else {
             E_Dispose += p->erot;
-            p->erot = E_Dispose * 
+            p->erot = E_Dispose *
               sample_bl(random,0.5*species[sp].rotdof-1.0,
-                        1.5-params[sp].omega);
+                        1.5-params[ip->ispecies][jp->ispecies].omega);
             E_Dispose -= p->erot;
           }
         }
       }
       postcoln.erot += p->erot;
- 
+
       vibdof = species[sp].vibdof;
-      double vibn_phi = species[sp].vibrel[0]; 
+      double vibn_phi = species[sp].vibrel[0];
 
       if (vibdof) {
         if (relaxflag == VARIABLE) vibn_phi = vibrel(sp,E_Dispose+p->evib);
         if (vibn_phi >= random->uniform()) {
           if (vibstyle == NONE) {
-            p->evib = 0.0; 
+            p->evib = 0.0;
 
           } else if (vibdof == 2) {
             if (vibstyle == SMOOTH) {
               E_Dispose += p->evib;
-              Fraction_Vib = 
-                1.0 - pow(random->uniform(),(1.0/(2.5-aveomega)));
+              Fraction_Vib =
+                1.0 - pow(random->uniform(),
+			  (1.0/(2.5-params[ip->ispecies][jp->ispecies].omega)));
               p->evib= Fraction_Vib * E_Dispose;
               E_Dispose -= p->evib;
 
@@ -497,53 +502,53 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
               max_level = static_cast<int>
                 (E_Dispose / (update->boltz * species[sp].vibtemp[0]));
               do {
-                ivib = static_cast<int> 
+                ivib = static_cast<int>
                   (random->uniform()*(max_level+AdjustFactor));
                 p->evib = ivib * update->boltz * species[sp].vibtemp[0];
                 State_prob = pow((1.0 - p->evib / E_Dispose),
-                                 (1.5 - params[sp].omega));
+                                 (1.5 - params[ip->ispecies][jp->ispecies].omega));
               } while (State_prob < random->uniform());
               E_Dispose -= p->evib;
             }
-            
+
           } else if (vibdof > 2) {
             if (vibstyle == SMOOTH) {
               E_Dispose += p->evib;
-              p->evib = E_Dispose * 
+              p->evib = E_Dispose *
                 sample_bl(random,0.5*species[sp].vibdof-1.0,
-                          1.5-aveomega);
+                          1.5-params[ip->ispecies][jp->ispecies].omega);
               E_Dispose -= p->evib;
-              
+
             } else if (vibstyle == DISCRETE) {
               p->evib = 0.0;
-              
+
               int nmode = particle->species[sp].nvibmode;
-              int **vibmode = 
+              int **vibmode =
                 particle->eiarray[particle->ewhich[index_vibmode]];
-              int pindex = p - particle->particles; 
+              int pindex = p - particle->particles;
 
               for (int imode = 0; imode < nmode; imode++) {
                 ivib = vibmode[pindex][imode];
-                E_Dispose += ivib * update->boltz * 
+                E_Dispose += ivib * update->boltz *
                   particle->species[sp].vibtemp[imode];
                 max_level = static_cast<int>
                   (E_Dispose / (update->boltz * species[sp].vibtemp[imode]));
 
                 do {
-                  ivib = static_cast<int> 
+                  ivib = static_cast<int>
                     (random->uniform()*(max_level+AdjustFactor));
                   pevib = ivib * update->boltz * species[sp].vibtemp[imode];
                   State_prob = pow((1.0 - pevib / E_Dispose),
-                                   (1.5 - aveomega));
+                                   (1.5 - params[ip->ispecies][jp->ispecies].omega));
                 } while (State_prob < random->uniform());
-                
+
                 vibmode[pindex][imode] = ivib;
                 p->evib += pevib;
                 E_Dispose -= pevib;
               }
             }
           } // end of vibstyle/vibdof if
-        } 
+        }
         postcoln.evib += p->evib;
       } // end of vibdof if
     }
@@ -557,7 +562,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
 
 /* ---------------------------------------------------------------------- */
 
-void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip, 
+void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
 			  		     Particle::OnePart *jp,
 			  		     Particle::OnePart *kp)
 {
@@ -575,16 +580,16 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
   double *vj = jp->v;
   double *vk = kp->v;
 
-  double alpha_r = 2.0 / (params[isp].alpha + params[jsp].alpha);
+  double alpha_r = 1.0 / params[isp][jsp].alpha;
   double mr = mass_ij * mass_k / (mass_ij + mass_k);
-  postcoln.eint = ip->erot + jp->erot + ip->evib + jp->evib 
+  postcoln.eint = ip->erot + jp->erot + ip->evib + jp->evib
                 + kp->erot + kp->evib;
 
   double cosX = 2.0*pow(random->uniform(), alpha_r) - 1.0;
   double sinX = sqrt(1.0 - cosX*cosX);
   double eps = random->uniform() * 2*MY_PI;
 
-  if (fabs(alpha_r - 1.0) < 0.001) { 
+  if (fabs(alpha_r - 1.0) < 0.001) {
     double vr = sqrt(2*postcoln.etrans/mr);
     ua = vr*cosX;
     vb = vr*sinX*cos(eps);
@@ -595,15 +600,15 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
     vrc[1] = vi[1]-vj[1];
     vrc[2] = vi[2]-vj[2];
     double d = sqrt(vrc[1]*vrc[1]+vrc[2]*vrc[2]);
-    if (d > 1.E-6 ) { 
+    if (d > 1.E-6 ) {
       ua = scale * (cosX*vrc[0] + sinX*d*sin(eps));
-      vb = scale * (cosX*vrc[1] + sinX*(precoln.vr*vrc[2]*cos(eps) - 
+      vb = scale * (cosX*vrc[1] + sinX*(precoln.vr*vrc[2]*cos(eps) -
                                         vrc[0]*vrc[1]*sin(eps))/d);
-      wc = scale * (cosX*vrc[2] - sinX*(precoln.vr*vrc[1]*cos(eps) + 
+      wc = scale * (cosX*vrc[2] - sinX*(precoln.vr*vrc[1]*cos(eps) +
                                         vrc[0]*vrc[2]*sin(eps))/d);
     } else {
-      ua = scale * cosX*vrc[0]; 
-      vb = scale * sinX*vrc[0]*cos(eps); 
+      ua = scale * cosX*vrc[0];
+      vb = scale * sinX*vrc[0]*cos(eps);
       wc = scale * sinX*vrc[0]*sin(eps);
     }
   }
@@ -611,12 +616,12 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
   // new velocities for the products
 
   double divisor = 1.0 / (mass_ij + mass_k);
-  vi[0] = precoln.ucmf + (mass_ij*divisor)*ua;
-  vi[1] = precoln.vcmf + (mass_ij*divisor)*vb;
-  vi[2] = precoln.wcmf + (mass_ij*divisor)*wc;
-  vk[0] = precoln.ucmf - (mass_k*divisor)*ua;
-  vk[1] = precoln.vcmf - (mass_k*divisor)*vb;
-  vk[2] = precoln.wcmf - (mass_k*divisor)*wc;
+  vi[0] = precoln.ucmf + (mass_k*divisor)*ua;
+  vi[1] = precoln.vcmf + (mass_k*divisor)*vb;
+  vi[2] = precoln.wcmf + (mass_k*divisor)*wc;
+  vk[0] = precoln.ucmf - (mass_ij*divisor)*ua;
+  vk[1] = precoln.vcmf - (mass_ij*divisor)*vb;
+  vk[2] = precoln.wcmf - (mass_ij*divisor)*wc;
   vj[0] = vi[0];
   vj[1] = vi[1];
   vj[2] = vi[2];
@@ -624,7 +629,7 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
 
 /* ---------------------------------------------------------------------- */
 
-void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip, 
+void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
                                              Particle::OnePart *jp,
                                              Particle::OnePart *kp)
 {
@@ -642,7 +647,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     ip->evib = 0.0;
     jp->evib = 0.0;
     numspecies = 2;
-    aveomega = 0.5*(params[ip->ispecies].omega + params[jp->ispecies].omega); 
+    aveomega = params[ip->ispecies][jp->ispecies].omega;
   } else {
     ip->erot = 0.0;
     jp->erot = 0.0;
@@ -651,18 +656,18 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     jp->evib = 0.0;
     kp->evib = 0.0;
     numspecies = 3;
-    aveomega = (params[ip->ispecies].omega + params[jp->ispecies].omega + 
-                params[kp->ispecies].omega)/3;
+    aveomega = (params[ip->ispecies][ip->ispecies].omega + params[jp->ispecies][jp->ispecies].omega +
+                params[kp->ispecies][kp->ispecies].omega)/3;
   }
 
   // handle each kind of energy disposal for non-reacting reactants
   // clean up memory for the products
-  
+
   double E_Dispose = postcoln.etotal;
 
   for (i = 0; i < numspecies; i++) {
-    if (i == 0) p = ip; 
-    else if (i == 1) p = jp; 
+    if (i == 0) p = ip;
+    else if (i == 1) p = jp;
     else p = kp;
 
     int sp = p->ispecies;
@@ -676,25 +681,25 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
           1- pow(random->uniform(),(1/(2.5-aveomega)));
         p->erot = Fraction_Rot * E_Dispose;
         E_Dispose -= p->erot;
-        
+
       } else if (rotdof > 2) {
-        p->erot = E_Dispose * 
+        p->erot = E_Dispose *
           sample_bl(random,0.5*species[sp].rotdof-1.0,
                     1.5-aveomega);
         E_Dispose -= p->erot;
       }
     }
-    
+
     vibdof = species[sp].vibdof;
 
     if (vibdof) {
       if (vibstyle == NONE) {
         p->evib = 0.0;
       } else if (vibdof == 2 && vibstyle == DISCRETE) {
-        max_level = static_cast<int> 
+        max_level = static_cast<int>
           (E_Dispose / (update->boltz * species[sp].vibtemp[0]));
         do {
-          ivib = static_cast<int> 
+          ivib = static_cast<int>
             (random->uniform()*(max_level+AdjustFactor));
           p->evib = (double)
             (ivib * update->boltz * species[sp].vibtemp[0]);
@@ -702,7 +707,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
                            (1.5 - aveomega));
         } while (State_prob < random->uniform());
         E_Dispose -= p->evib;
-        
+
       } else if (vibdof == 2 && vibstyle == SMOOTH) {
         Fraction_Vib =
           1.0 - pow(random->uniform(),(1.0 / (2.5-aveomega)));
@@ -710,7 +715,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
         E_Dispose -= p->evib;
 
       } else if (vibdof > 2 && vibstyle == SMOOTH) {
-          p->evib = E_Dispose * 
+          p->evib = E_Dispose *
           sample_bl(random,0.5*species[sp].vibdof-1.0,
                    1.5-aveomega);
           E_Dispose -= p->evib;
@@ -723,12 +728,12 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
 
           for (int imode = 0; imode < nmode; imode++) {
             ivib = vibmode[pindex][imode];
-            E_Dispose += ivib * update->boltz * 
+            E_Dispose += ivib * update->boltz *
             particle->species[sp].vibtemp[imode];
             max_level = static_cast<int>
             (E_Dispose / (update->boltz * species[sp].vibtemp[imode]));
             do {
-              ivib = static_cast<int> 
+              ivib = static_cast<int>
               (random->uniform()*(max_level+AdjustFactor));
               pevib = ivib * update->boltz * species[sp].vibtemp[imode];
               State_prob = pow((1.0 - pevib / E_Dispose),
@@ -742,19 +747,19 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
         }
       }
     }
-  
+
   // compute post-collision internal energies
-  
+
   postcoln.erot = ip->erot + jp->erot;
   postcoln.evib = ip->evib + jp->evib;
-  
+
   if (kp) {
     postcoln.erot += kp->erot;
     postcoln.evib += kp->evib;
   }
-  
+
   // compute portion of energy left over for scattering
-  
+
   postcoln.eint = postcoln.erot + postcoln.evib;
   postcoln.etrans = E_Dispose;
 }
@@ -778,9 +783,9 @@ double CollideVSS::sample_bl(RanPark *random, double Exp_1, double Exp_2)
 
 double CollideVSS::rotrel(int isp, double Ec)
 {
-  double Tr = Ec /(update->boltz * (2.5-params[isp].omega));
-  double rotphi = (1.0+params[isp].rotc2/sqrt(Tr) + params[isp].rotc3/Tr)
-                / params[isp].rotc1; 
+  double Tr = Ec /(update->boltz * (2.5-params[isp][isp].omega));
+  double rotphi = (1.0+params[isp][isp].rotc2/sqrt(Tr) + params[isp][isp].rotc3/Tr)
+                / params[isp][isp].rotc1;
   return rotphi;
 }
 
@@ -790,10 +795,9 @@ double CollideVSS::rotrel(int isp, double Ec)
 
 double CollideVSS::vibrel(int isp, double Ec)
 {
-  double Tr = Ec /(update->boltz * (3.5-params[isp].omega));
-  double omega = params[isp].omega;
-  double vibphi = 1.0 / (params[isp].vibc1/pow(Tr,omega) * 
-                         exp(params[isp].vibc2/pow(Tr,1.0/3.0)));
+  double Tr = Ec /(update->boltz * (3.5-params[isp][isp].omega));
+  double vibphi = 1.0 / (params[isp][isp].vibc1/pow(Tr,params[isp][isp].omega) *
+                         exp(params[isp][isp].vibc2/pow(Tr,1.0/3.0)));
   return vibphi;
 }
 
@@ -812,88 +816,151 @@ void CollideVSS::read_param_file(char *fname)
     error->one(FLERR,str);
   }
 
-  // set all diameters to -1, so can detect if not read
+  // set all species diameters to -1, so can detect if not read
+  // set all cross-species parameters to -1 to catch no-reads, as
+  // well as user-selected average
 
-  for (int i = 0; i < nparams; i++) params[i].diam = -1.0;
+  for (int i = 0; i < nparams; i++) {
+    params[i][i].diam = -1.0;
+    for ( int j = i+1; j<nparams; j++) {
+      params[i][j].diam = params[i][j].omega = params[i][j].tref = -1.0;
+      params[i][j].alpha = params[i][j].rotc1 = params[i][j].rotc2 = -1.0;
+      params[i][j].rotc3 = params[i][j].vibc1 = params[i][j].vibc2 = -1.0;
+    }
+  }
 
   // read file line by line
   // skip blank lines or comment lines starting with '#'
-  // all other lines must have at least NWORDS 
+  // all other lines must have at least REQWORDS, which depends on VARIABLE flag
 
-  int NWORDS = 5;
-  if (relaxflag == VARIABLE) NWORDS = 9;
-  char **words = new char*[NWORDS];
-  char line[MAXLINE],copy[MAXLINE];
-  int isp;
+  int REQWORDS = 5;
+  if (relaxflag == VARIABLE) REQWORDS = 9;
+  char **words = new char*[REQWORDS+1]; // one extra word in cross-species lines
+  char line[MAXLINE];
+  int isp,jsp;
 
   while (fgets(line,MAXLINE,fp)) {
     int pre = strspn(line," \t\n\r");
     if (pre == strlen(line) || line[pre] == '#') continue;
 
-    strcpy(copy,line);
-    int nwords = wordcount(copy);
-    if (nwords < NWORDS)
+    int nwords = wordparse(REQWORDS+1,line,words);
+    if (nwords < REQWORDS)
       error->one(FLERR,"Incorrect line format in VSS parameter file");
-    wordparse(NWORDS,line,words);
 
     isp = particle->find_species(words[0]);
     if (isp < 0) continue;
 
-    params[isp].diam = atof(words[1]);
-    params[isp].omega = atof(words[2]);
-    params[isp].tref = atof(words[3]);
-    params[isp].alpha = atof(words[4]);
-    if (relaxflag == VARIABLE) {
-      params[isp].rotc1 = atof(words[5]);
-      params[isp].rotc2 = atof(words[6]);
-      params[isp].rotc3 =  (MY_PI+MY_PI2*MY_PI2)*params[isp].rotc2;
-      params[isp].rotc2 =  (MY_PI*MY_PIS/2.)*sqrt(params[isp].rotc2);
-      params[isp].vibc1 = atof(words[7]);
-      params[isp].vibc2 = atof(words[8]);
+    jsp = particle->find_species(words[1]);
+
+    // if we don't match a species with second word, but it's not a number,
+    // skip the line (it involves a species we aren't using)
+    if ( jsp < 0 &&  !(atof(words[1]) > 0) ) continue;
+
+    if (jsp < 0 ) {
+      params[isp][isp].diam = atof(words[1]);
+      params[isp][isp].omega = atof(words[2]);
+      params[isp][isp].tref = atof(words[3]);
+      params[isp][isp].alpha = atof(words[4]);
+      if (relaxflag == VARIABLE) {
+        params[isp][isp].rotc1 = atof(words[5]);
+        params[isp][isp].rotc2 = atof(words[6]);
+        params[isp][isp].rotc3 = (MY_PI+MY_PI2*MY_PI2)*params[isp][isp].rotc2;
+        params[isp][isp].rotc2 = (MY_PI*MY_PIS/2.)*sqrt(params[isp][isp].rotc2);
+        params[isp][isp].vibc1 = atof(words[7]);
+        params[isp][isp].vibc2 = atof(words[8]);
+      }
+    }else {
+      if (nwords < REQWORDS+1)  // one extra word in cross-species lines
+        error->one(FLERR,"Incorrect line format in VSS parameter file");
+      params[isp][jsp].diam = params[jsp][isp].diam = atof(words[2]);
+      params[isp][jsp].omega = params[jsp][isp].omega = atof(words[3]);
+      params[isp][jsp].tref = params[jsp][isp].tref = atof(words[4]);
+      params[isp][jsp].alpha = params[jsp][isp].alpha = atof(words[5]);
+      if (relaxflag == VARIABLE) {
+        params[isp][jsp].rotc1 = params[jsp][isp].rotc1 = atof(words[6]);
+        params[isp][jsp].rotc2 = atof(words[7]);
+        params[isp][jsp].rotc3 = params[jsp][isp].rotc3 =
+        		(MY_PI+MY_PI2*MY_PI2)*params[isp][jsp].rotc2;
+        if(params[isp][jsp].rotc2 > 0)
+        	params[isp][jsp].rotc2 = params[jsp][isp].rotc2 =
+        			(MY_PI*MY_PIS/2.)*sqrt(params[isp][jsp].rotc2);
+        params[isp][jsp].vibc1 = params[jsp][isp].vibc1= atof(words[8]);
+        params[isp][jsp].vibc2 = params[jsp][isp].vibc2= atof(words[9]);
+      }
     }
   }
 
   delete [] words;
   fclose(fp);
+
+  // check that params were read for all species
+  for (int i = 0; i < nparams; i++) {
+
+    if (params[i][i].diam < 0.0) {
+      char str[128];
+      sprintf(str,"Species %s did not appear in VSS parameter file",
+	      particle->species[i].id);
+      error->one(FLERR,str);
+    }
+  }
+
+  for ( int i = 0; i<nparams; i++) {
+    params[i][i].mr = particle->species[i].mass / 2;
+    for ( int j = i+1; j<nparams; j++) {
+      params[i][j].mr = params[j][i].mr = particle->species[i].mass *
+	particle->species[j].mass / (particle->species[i].mass + particle->species[j].mass);
+
+      if(params[i][j].diam < 0) params[i][j].diam = params[j][i].diam =
+				  0.5*(params[i][i].diam + params[j][j].diam);
+      if(params[i][j].omega < 0) params[i][j].omega = params[j][i].omega =
+				   0.5*(params[i][i].omega + params[j][j].omega);
+      if(params[i][j].tref < 0) params[i][j].tref = params[j][i].tref =
+				  0.5*(params[i][i].tref + params[j][j].tref);
+      if(params[i][j].alpha < 0) params[i][j].alpha = params[j][i].alpha =
+				   0.5*(params[i][i].alpha + params[j][j].alpha);
+
+      if (relaxflag == VARIABLE) {
+	if(params[i][j].rotc1 < 0) params[i][j].rotc1 = params[j][i].rotc1 =
+				     0.5*(params[i][i].rotc1 + params[j][j].rotc1);
+	if(params[i][j].rotc2 < 0) params[i][j].rotc2 = params[j][i].rotc2 =
+				     0.5*(params[i][i].rotc2 + params[j][j].rotc2);
+	if(params[i][j].rotc3 < 0) params[i][j].rotc3 = params[j][i].rotc3 =
+				     0.5*(params[i][i].rotc3 + params[j][j].rotc3);
+	if(params[i][j].vibc1 < 0) params[i][j].vibc1 = params[j][i].vibc1 =
+				     0.5*(params[i][i].vibc1 + params[j][j].vibc1);
+	if(params[i][j].vibc2 < 0) params[i][j].vibc2 = params[j][i].vibc2 =
+				     0.5*(params[i][i].vibc2 + params[j][j].vibc2);
+      }
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
-   count whitespace-delimited words in line
+   parse up to n=maxwords whitespace-delimited words in line
+   store ptr to each word in words and count number of words
 ------------------------------------------------------------------------- */
 
-int CollideVSS::wordcount(char *line)
+int CollideVSS::wordparse(int maxwords, char *line, char **words)
 {
-  int nwords = 0;
-  char *word = strtok(line," \t");
-  while (word) {
-    nwords++;
-    word = strtok(NULL," \t");
+  int nwords = 1;
+  char * word;
+
+  words[0] = strtok(line," \t\n");
+  while ((word = strtok(NULL," \t\n")) != NULL && nwords < maxwords) {
+    words[nwords++] = word;
   }
   return nwords;
-}
-
-/* ----------------------------------------------------------------------
-   parse first N whitespace-delimited words in line
-   store ptr to each word in words
-------------------------------------------------------------------------- */
-
-void CollideVSS::wordparse(int n, char *line, char **words)
-{
-  for (int i = 0; i < n; i++) {
-    if (i == 0) words[i] = strtok(line," \t");
-    else words[i] = strtok(NULL," \t");
-  }
 }
 
 /* ----------------------------------------------------------------------
    return a per-species parameter to caller
 ------------------------------------------------------------------------- */
 
-double CollideVSS::extract(int isp, const char *name)
+double CollideVSS::extract(int isp, int jsp, const char *name)
 {
-  if (strcmp(name,"diam") == 0) return params[isp].diam;
-  else if (strcmp(name,"omega") == 0) return params[isp].omega;
-  else if (strcmp(name,"tref") == 0) return params[isp].tref;
+  if (strcmp(name,"diam") == 0) return params[isp][jsp].diam;
+  else if (strcmp(name,"omega") == 0) return params[isp][jsp].omega;
+  else if (strcmp(name,"tref") == 0) return params[isp][jsp].tref;
   else error->all(FLERR,"Request for unknown parameter from collide");
   return 0.0;
 }

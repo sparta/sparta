@@ -37,15 +37,15 @@ class ReactBirdKokkos : public ReactBird {
                                           ) {};
   virtual ~ReactBirdKokkos();
   virtual void init();
-  virtual int attempt(Particle::OnePart *, Particle::OnePart *, 
+  virtual int attempt(Particle::OnePart *, Particle::OnePart *,
                       double, double, double, double &, int &) = 0;
   double extract_tally(int);
 
   // tallies for reactions
 
-  DAT::tdual_int_1d k_tally_reactions;
-  DAT::t_int_1d d_tally_reactions;
-  DAT::tdual_int_1d k_tally_reactions_all;
+  DAT::tdual_bigint_1d k_tally_reactions;
+  DAT::t_bigint_1d d_tally_reactions;
+  DAT::tdual_bigint_1d k_tally_reactions_all;
 
   struct OneReactionKokkos {
     int active;                    // 1 if reaction is active
@@ -61,7 +61,7 @@ class ReactBirdKokkos : public ReactBird {
   // all reactions a pair of reactant species is part of
 
   struct ReactionIJKokkos {
-    DAT::t_int_1d d_list;       // N-length list of rlist indices 
+    DAT::t_int_1d d_list;       // N-length list of rlist indices
                      //   for reactions defined for this IJ pair,
                      //   just a ptr into sub-section of long list_ij vector
                      //   for all pairs
@@ -76,14 +76,14 @@ class ReactBirdKokkos : public ReactBird {
  protected:
 
   typedef Kokkos::
-    DualView<OneReactionKokkos*, SPADeviceType::array_layout, DeviceType> tdual_reaction_1d;
+    DualView<OneReactionKokkos*, DeviceType::array_layout, DeviceType> tdual_reaction_1d;
   typedef tdual_reaction_1d::t_dev t_reaction_1d;
   typedef tdual_reaction_1d::t_host t_host_reaction_1d;
 
   t_reaction_1d d_rlist;              // list of all reactions read from file
 
   typedef Kokkos::
-    DualView<ReactionIJKokkos**, SPADeviceType::array_layout, DeviceType> tdual_reactionIJ_2d;
+    DualView<ReactionIJKokkos**, DeviceType::array_layout, DeviceType> tdual_reactionIJ_2d;
   typedef tdual_reactionIJ_2d::t_dev t_reactionIJ_2d;
   typedef tdual_reactionIJ_2d::t_host t_host_reactionIJ_2d;
 

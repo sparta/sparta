@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -83,8 +83,8 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
 
   // use 1D view for scalars to reduce GPU memory operations
 
-  d_scalars = t_int_11("collide:scalars");
-  h_scalars = t_host_int_11("collide:scalars_mirror");
+  d_scalars = t_int_12("collide:scalars");
+  h_scalars = t_host_int_12("collide:scalars_mirror");
 
   d_ncomm_one     = Kokkos::subview(d_scalars,0);
   d_nexit_one     = Kokkos::subview(d_scalars,1);
@@ -96,7 +96,8 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   d_nscollide_one = Kokkos::subview(d_scalars,7);
   d_nreact_one    = Kokkos::subview(d_scalars,8);
   d_nstuck        = Kokkos::subview(d_scalars,9);
-  d_error_flag    = Kokkos::subview(d_scalars,10);
+  d_naxibad       = Kokkos::subview(d_scalars,10);
+  d_error_flag    = Kokkos::subview(d_scalars,11);
 
   h_ncomm_one     = Kokkos::subview(h_scalars,0);
   h_nexit_one     = Kokkos::subview(h_scalars,1);
@@ -108,7 +109,8 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   h_nscollide_one = Kokkos::subview(h_scalars,7);
   h_nreact_one    = Kokkos::subview(h_scalars,8);
   h_nstuck        = Kokkos::subview(h_scalars,9);
-  h_error_flag    = Kokkos::subview(h_scalars,10);
+  h_naxibad       = Kokkos::subview(h_scalars,10);
+  h_error_flag    = Kokkos::subview(h_scalars,11);
 
   nboundary_tally = 0;
 }
@@ -170,7 +172,7 @@ void UpdateKokkos::init()
 
   if (domain->dimension == 2 && gravity[2] != 0.0)
     error->all(FLERR,"Gravity in z not allowed for 2d");
-  if (domain->axisymmetric && gravity[1] != 0.0) 
+  if (domain->axisymmetric && gravity[1] != 0.0)
     error->all(FLERR,"Gravity in y not allowed for axi-symmetric model");
 
   // moveperturb method is set if particle motion is perturbed
@@ -246,6 +248,8 @@ void UpdateKokkos::setup()
 
 void UpdateKokkos::run(int nsteps)
 {
+  sparta->kokkos->auto_sync = 0;
+
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
 
   int n_start_of_step = modify->n_start_of_step;
@@ -287,7 +291,7 @@ void UpdateKokkos::run(int nsteps)
 
     if (nmigrate) {
       k_mlist_small = Kokkos::subview(k_mlist,std::make_pair(0,nmigrate));
-      k_mlist_small.sync<SPAHostType>();
+      k_mlist_small.sync_host();
     }
     auto mlist_small = k_mlist_small.h_view.data();
 
@@ -321,6 +325,8 @@ void UpdateKokkos::run(int nsteps)
       timer->stamp(TIME_OUTPUT);
     }
   }
+  sparta->kokkos->auto_sync = 1;
+
   particle_kk->sync(Host,ALL_MASK);
 
 }
@@ -384,7 +390,6 @@ template < int DIM, int SURF > void UpdateKokkos::move()
   // move/migrate iterations
 
   dt = update->dt;
-  int notfirst = 0;
 
   ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
 
@@ -397,10 +402,11 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     niterate++;
 
     d_particles = particle_kk->k_particles.d_view;
-    
+
     GridKokkos* grid_kk = ((GridKokkos*)grid);
     d_cells = grid_kk->k_cells.d_view;
     d_sinfo = grid_kk->k_sinfo.d_view;
+    d_pcells = grid_kk->k_pcells.d_view;
 
     d_csurfs = grid_kk->d_csurfs;
     d_csplits = grid_kk->d_csplits;
@@ -414,7 +420,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     }
 
     particle_kk->sync(Device,PARTICLE_MASK);
-    grid_kk->sync(Device,CELL_MASK|SINFO_MASK);
+    grid_kk->sync(Device,CELL_MASK|PCELL_MASK|SINFO_MASK|PLEVEL_MASK);
 
     // may be able to move this outside of the while loop
     grid_kk_copy.copy(grid_kk);
@@ -472,8 +478,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     nmigrate = 0;
     entryexit = 0;
 
-    if (notfirst == 0) {
-      notfirst = 1;
+    if (niterate == 1) {
       pstart = 0;
       pstop = nlocal;
     }
@@ -487,7 +492,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
 
     Kokkos::deep_copy(d_scalars,h_scalars);
 
-    //k_mlist.sync<SPADeviceType>();
+    //k_mlist.sync_device();
     copymode = 1;
     if (!sparta->kokkos->need_atomics)
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,0> >(pstart,pstop),*this);
@@ -502,7 +507,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     particle_kk->modify(Device,PARTICLE_MASK);
     d_particles = t_particle_1d(); // destroy reference to reduce memory use
 
-    k_mlist.modify<DeviceType>();
+    k_mlist.modify_device();
 
     // END of pstart/pstop loop advecting all particles
 
@@ -519,6 +524,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
       nscollide_one = h_nscollide_one();
       surf->nreact_one = h_nreact_one();
       nstuck = h_nstuck();
+      naxibad = h_naxibad();
     } else {
       ntouch_one       += reduce.ntouch_one   ;
       nexit_one        += reduce.nexit_one    ;
@@ -528,6 +534,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
       nscollide_one    += reduce.nscollide_one;
       surf->nreact_one += reduce.nreact_one   ;
       nstuck           += reduce.nstuck       ;
+      naxibad          += reduce.nstuck       ;
     }
 
     entryexit = h_entryexit();
@@ -542,7 +549,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
               update->ntimestep);
       error->one(FLERR,str);
     }
-    
+
     // if gridcut >= 0.0, check if another iteration of move is required
     // only the case if some particle flag = PENTRY/PEXIT
     //   in which case perform particle migration
@@ -557,7 +564,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     if (any_entryexit) {
       if (nmigrate) {
         k_mlist_small = Kokkos::subview(k_mlist,std::make_pair(0,nmigrate));
-        k_mlist_small.sync<SPAHostType>();
+        k_mlist_small.sync_host();
       }
       auto mlist_small = k_mlist_small.h_view.data();
       timer->stamp(TIME_MOVE);
@@ -764,7 +771,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     }
 
     if (DIM == 1) {
-      if (pflag == PEXIT && x[1] == lo[1]) {
+      if (x[1] == lo[1] && (pflag == PEXIT || v[1] < 0.0)) {
         frac = 0.0;
         outface = YLO;
       } else if (GeometryKokkos::
@@ -776,7 +783,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
         }
       }
 
-      if (pflag == PEXIT && x[1] == hi[1]) {
+      if (x[1] == hi[1] && (pflag == PEXIT || v[1] > 0.0)) {
         frac = 0.0;
         outface = YHI;
       } else {
@@ -795,7 +802,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
       pflag = 0;
     }
-      
+
     if (DIM == 3) {
       if (xnew[2] < lo[2]) {
         newfrac = (lo[2]-x[2]) / (xnew[2]-x[2]);
@@ -814,7 +821,22 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
     if (SURF) {
 
+      // skip surf checks if particle flagged as EXITing this cell
+      // then unset pflag so not checked again for this particle
+
       nsurf = d_cells[icell].nsurf;
+      if (pflag == PEXIT) {
+        nsurf = 0;
+        pflag = 0;
+      }
+
+      if (ATOMIC_REDUCTION == 1)
+        Kokkos::atomic_fetch_add(&d_nscheck_one(),nsurf);
+      else if (ATOMIC_REDUCTION == 0)
+        d_nscheck_one() += nsurf;
+      else
+        reduce.nscheck_one += nsurf;
+
       if (nsurf) {
 
         // particle crosses cell face, reset xnew exactly on face of cell
@@ -825,13 +847,13 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           xhold[0] = xnew[0];
           xhold[1] = xnew[1];
           if (DIM != 2) xhold[2] = xnew[2];
-          
+
           xnew[0] = x[0] + frac*(xnew[0]-x[0]);
           xnew[1] = x[1] + frac*(xnew[1]-x[1]);
           if (DIM != 2) xnew[2] = x[2] + frac*(xnew[2]-x[2]);
 
           if (outface == XLO) xnew[0] = lo[0];
-          else if (outface == XHI) xnew[0] = hi[0]; 
+          else if (outface == XHI) xnew[0] = hi[0];
           else if (outface == YLO) xnew[1] = lo[1];
           else if (outface == YHI) xnew[1] = hi[1];
           else if (outface == ZLO) xnew[2] = lo[2];
@@ -856,8 +878,10 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
         cflag = 0;
         minparam = 2.0;
         auto csurfs_begin = d_csurfs.row_map(icell);
+
         for (int m = 0; m < nsurf; m++) {
           isurf = d_csurfs.entries(csurfs_begin + m);
+
           if (DIM > 1) {
             if (isurf == exclude) continue;
           }
@@ -899,7 +923,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
             // param will be epsilon and exclude must be set
             // skip the hits of other touching surfs
 
-            //if (side == INSIDE && param < EPSPARAM && exclude >= 0) 
+            //if (side == INSIDE && param < EPSPARAM && exclude >= 0)
             // continue;
 
             // this if test is to avoid case where particle
@@ -925,25 +949,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
         } // END of for loop over surfs
 
-
-        if (ATOMIC_REDUCTION == 1)
-          Kokkos::atomic_fetch_add(&d_nscheck_one(),nsurf);
-        else if (ATOMIC_REDUCTION == 0)
-          d_nscheck_one() += nsurf;
-        else
-          reduce.nscheck_one += nsurf;
+        // tri/line = surf that particle hit first
 
         if (cflag) {
-          // NOTE: this check is no longer needed?
-          /**if (minside == INSIDE) {
-            char str[128];
-            sprintf(str,
-                    "Particle %d on proc %d hit inside of "
-                    "surf %d on step " BIGINT_FORMAT,
-                    i,me,minsurf,update->ntimestep);
-            error->one(FLERR,str);
-          }**/
-
           if (DIM == 3) tri = &d_tris[minsurf];
           if (DIM != 3) line = &d_lines[minsurf];
 
@@ -969,7 +977,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           ipart->icell = icell;
           dtremain *= 1.0 - minparam*frac;
 
-          if (nsurf_tally) 
+          if (nsurf_tally)
             iorig = particle_i;
           int n = DIM == 3 ? tri->isc : line->isc;
           int sc_type = sc_type_list[n];
@@ -1024,7 +1032,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
               slist_active_copy[m].obj.
                     surf_tally_kk<ATOMIC_REDUCTION>(minsurf,icell,reaction,&iorig,ipart,jpart);
 
-          // nstuck = consective iterations particle is immobile
+          // stuck_iterate = consecutive iterations particle is immobile
 
           if (minparam == 0.0) stuck_iterate++;
           else stuck_iterate = 0;
@@ -1062,7 +1070,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
         } // END of cflag if section that performed collision
 
         // no collision, so restore saved xnew if changed it above
-        
+
         if (outface != INTERIOR) {
           xnew[0] = xhold[0];
           xnew[1] = xhold[1];
@@ -1080,18 +1088,36 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     // no cell crossing
     // set final particle position to xnew, then break from advection loop
     // for axisymmetry, must first remap linear xnew and v
+    // for axisymmetry, check if final particle position is within cell
+    //   can be rare epsilon round-off cases where particle ends up outside
+    //     of final cell curved surf when move logic thinks it is inside
+    //   example is when Geom::axi_horizontal_line() says no crossing of cell edge
+    //     but axi_remap() puts particle outside the cell
+    //   in this case, just DISCARD particle and tally it to naxibad
     // if migrating to another proc,
     //   flag as PDONE so new proc won't move it more on this step
-    
+
     if (outface == INTERIOR) {
       if (DIM == 1) axi_remap(xnew,v);
       x[0] = xnew[0];
       x[1] = xnew[1];
       if (DIM == 3) x[2] = xnew[2];
+      if (DIM == 1) {
+        if (x[1] < lo[1] || x[1] > hi[1]) {
+          particle_i.flag = PDISCARD;
+          if (ATOMIC_REDUCTION == 1)
+            Kokkos::atomic_fetch_add(&d_naxibad(),1);
+          else if (ATOMIC_REDUCTION == 0)
+            d_naxibad()++;
+          else
+            reduce.naxibad++;
+          break;
+        }
+      }
       if (d_cells[icell].proc != me) particle_i.flag = PDONE;
       break;
     }
-      
+
     // particle crosses cell face
     // decrement dtremain in case particle is passed to another proc
     // for axisymmetry, must then remap linear x and v
@@ -1107,11 +1133,11 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     if (DIM == 1) axi_remap(x,v);
 
     if (outface == XLO) x[0] = lo[0];
-    else if (outface == XHI) x[0] = hi[0]; 
+    else if (outface == XHI) x[0] = hi[0];
     else if (outface == YLO) x[1] = lo[1];
     else if (outface == YHI) x[1] = hi[1];
     else if (outface == ZLO) x[2] = lo[2];
-    else if (outface == ZHI) x[2] = hi[2]; 
+    else if (outface == ZHI) x[2] = hi[2];
 
     if (DIM == 1) {
       xnew[0] = x[0] + dtremain*v[0];
@@ -1121,10 +1147,11 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
     // nflag = type of neighbor cell: child, parent, unknown, boundary
     // if parent, use id_find_child to identify child cell
-    //   result of id_find_child could be unknown:
-    //     particle is hitting face of a ghost child cell which extends
-    //     beyond my ghost halo, cell on other side of face is a parent,
-    //     it's child which the particle is in is entirely beyond my halo
+        //   result can be -1 for unknown cell, occurs when:
+        //   (a) particle hits face of ghost child cell
+        //   (b) the ghost cell extends beyond ghost halo
+ 	//   (c) cell on other side of face is a parent
+        //   (d) its child, which the particle is in, is entirely beyond my halo
     // if new cell is child and surfs exist, check if a split cell
 
     nflag = grid_kk_copy.obj.neigh_decode(nmask,outface);
@@ -1141,7 +1168,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           icell = split2d(icell,x);
       }
     } else if (nflag == NPARENT) {
-      icell = grid_kk_copy.obj.id_find_child(neigh[outface],x);
+      auto pcell = &d_pcells[neigh[outface]];
+      icell = grid_kk_copy.obj.id_find_child(pcell->id,d_cells[icell].level,
+                                             pcell->lo,pcell->hi,x);
       if (icell >= 0) {
         if (DIM == 3 && SURF) {
           if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
@@ -1163,13 +1192,13 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     // if jpart, add new particle to this iteration via pstop++
     // OUTFLOW: exit with particle flag = PDISCARD
     // PERIODIC: new cell via same logic as above for child/parent/unknown
-    // other = reflected particle stays in same grid cell
+    // OTHER = reflected particle stays in same grid cell
 
     else {
       ipart = &particle_i;
 
       Particle::OnePart iorig;
-      if (nboundary_tally) 
+      if (nboundary_tally)
         memcpy(&iorig,&particle_i,sizeof(Particle::OnePart));
 
       Particle::OnePart* ipart = &particle_i;
@@ -1252,7 +1281,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
               icell = split2d(icell,x);
           }
         } else if (nflag == NPBPARENT) {
-          icell = grid_kk_copy.obj.id_find_child(neigh[outface],x);
+          auto pcell = &d_pcells[neigh[outface]];
+          icell = grid_kk_copy.obj.id_find_child(pcell->id,d_cells[icell].level,
+                                                 pcell->lo,pcell->hi,x);
           if (icell >= 0) {
             if (DIM == 3 && SURF) {
               if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
@@ -1308,7 +1339,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
     // if nsurf < 0, new cell is EMPTY ghost
     // exit with particle flag = PENTRY, so receiver can continue move
-    
+
     if (d_cells[icell].nsurf < 0) {
       particle_i.flag = PENTRY;
       particle_i.dtremain = dtremain;
@@ -1338,7 +1369,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
   // if discarding, migration will delete particle
 
   particle_i.icell = icell;
-  
+
   if (particle_i.flag != PKEEP) {
     int index;
     if (ATOMIC_REDUCTION == 0) {
@@ -1403,7 +1434,7 @@ int UpdateKokkos::split3d(int icell, double *x) const
       line_tri_intersect(x,xnew,
                          tri->p1,tri->p2,tri->p3,
                          tri->norm,xc,param,side);
-    
+
     if (hitflag && side != INSIDE && param < minparam) {
       cflag = 1;
       minparam = param;

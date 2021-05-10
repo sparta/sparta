@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -62,7 +62,7 @@ FixAdapt::FixAdapt(SPARTA *sparta, int narg, char **arg) :
   action2 = adapt->action2;
   file = adapt->file;
 
-  if (file && strchr(file,'*') == NULL) 
+  if (file && strchr(file,'*') == NULL)
     error->all(FLERR,"Fix adapt filename must contain '*' character");
 
   // compute initial outputs
@@ -94,14 +94,14 @@ void FixAdapt::init()
   // re-check args in case computes or fixes changed
 
   adapt->check_args(nevery);
-  
+
   // if any fix ave/grid exists, insure it comes before this fix
   // so that its output values are up-to-date on timesteps adaptation occurs
 
   int fixme = modify->find_fix(id);
   for (int i = 0; i < modify->nfix; i++) {
     if (strcmp(modify->fix[i]->style,"ave/grid") == 0) {
-      if (i > fixme) 
+      if (i > fixme)
         error->all(FLERR,"Fix adapt must come after fix ave/grid");
     }
   }
@@ -127,24 +127,24 @@ void FixAdapt::end_of_step()
 
   // perform adaptation
 
-  int pstop = grid->nparent;
+  if (action1 == REFINE || action2 == REFINE) grid->maxlevel++;
 
   if (action1 == REFINE) nrefine = adapt->refine();
-  else if (action1 == COARSEN) ncoarsen = adapt->coarsen(pstop);
+  else if (action1 == COARSEN) ncoarsen = adapt->coarsen();
 
   if (action2 == REFINE) nrefine = adapt->refine();
-  else if (action2 == COARSEN) ncoarsen = adapt->coarsen(pstop);
+  else if (action2 == COARSEN) ncoarsen = adapt->coarsen();
+
+  grid->set_maxlevel();
+  grid->rehash();
 
   // if no refinement or coarsening, just reghost/reneighbor and return
 
-  //if (comm->me == 0) printf("NREF COARSE %d %d nlocal %d\n",nrefine,ncoarsen,
-  //                          grid->nlocal);
-
   if (nrefine == 0 && ncoarsen == 0) {
     last_adapt = 0;
+    adapt->cleanup();
     grid->acquire_ghosts();
     grid->find_neighbors();
-    adapt->cleanup();
     return;
   }
 
@@ -158,27 +158,6 @@ void FixAdapt::end_of_step()
   grid->setup_owned();
   grid->acquire_ghosts();
   grid->find_neighbors();
-
-  /*
-  int flag = 0;
-  if (update->ntimestep == 50) flag = 1;
-
-  if (flag) printf("AG NCELLS %d: %d %d\n",comm->me,grid->nlocal,grid->nghost);
-  MPI_Barrier(world);
-  if (flag) {
-    //if (comm->me == 5) {
-  for (int i = 0; i < grid->nlocal+grid->nghost; i++) {
-    printf("  neighs %d %d %d %d: %d %d: %d %d: %d %d: %d %d\n",
-           comm->me,i,grid->cells[i].id,grid->pcells[grid->cells[i].iparent].id,
-           grid->neigh_decode(grid->cells[i].nmask,0),grid->cells[i].neigh[0],
-           grid->neigh_decode(grid->cells[i].nmask,1),grid->cells[i].neigh[1],
-           grid->neigh_decode(grid->cells[i].nmask,2),grid->cells[i].neigh[2],
-           grid->neigh_decode(grid->cells[i].nmask,3),grid->cells[i].neigh[3]);
-  }
-  //}
-  }
-  */
-
   grid->check_uniform();
   comm->reset_neighbors();
 
@@ -188,10 +167,10 @@ void FixAdapt::end_of_step()
   }
 
   // notify all classes that store per-grid data that grid may have changed
-  
+
   grid->notify_changed();
 
-  // write out new parent grid file
+  // write out new grid file
 
   if (file) adapt->write_file();
 

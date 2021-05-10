@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -61,8 +61,8 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
 
   int iarg = 6;
   while (iarg < narg) {
-    if ((strncmp(arg[iarg],"c_",2) == 0) || 
-	(strncmp(arg[iarg],"f_",2) == 0) || 
+    if ((strncmp(arg[iarg],"c_",2) == 0) ||
+	(strncmp(arg[iarg],"f_",2) == 0) ||
 	(strncmp(arg[iarg],"v_",2) == 0)) {
       nvalues++;
       iarg++;
@@ -95,7 +95,7 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
     if (arg[i][0] == 'c') which[i] = COMPUTE;
     else if (arg[i][0] == 'f') which[i] = FIX;
     else if (arg[i][0] == 'v') which[i] = VARIABLE;
-    
+
     int n = strlen(arg[i]);
     char *suffix = new char[n];
     strcpy(suffix,&arg[i][2]);
@@ -112,13 +112,13 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
     ids[i] = new char[n];
     strcpy(ids[i],suffix);
     delete [] suffix;
-      
+
     post_process[i] = 0;
     if (which[i] == COMPUTE) {
       int icompute = modify->find_compute(ids[i]);
       if (icompute < 0)
         error->all(FLERR,"Compute ID for fix ave/grid does not exist");
-      post_process[i] = 
+      post_process[i] =
         modify->compute[icompute]->post_process_grid_flag;
     }
   }
@@ -150,14 +150,14 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
       if (modify->compute[icompute]->per_grid_flag == 0)
 	error->all(FLERR,
 		   "Fix ave/grid compute does not calculate per-grid values");
-      if (argindex[i] == 0 && 
+      if (argindex[i] == 0 &&
 	  modify->compute[icompute]->size_per_grid_cols != 0)
 	error->all(FLERR,"Fix ave/grid compute does not "
 		   "calculate per-grid vector");
       if (argindex[i] && modify->compute[icompute]->size_per_grid_cols == 0)
 	error->all(FLERR,"Fix ave/grid compute does not "
 		   "calculate per-grid array");
-      if (argindex[i] && 
+      if (argindex[i] &&
 	  argindex[i] > modify->compute[icompute]->size_per_grid_cols)
 	error->all(FLERR,"Fix ave/grid compute array is accessed out-of-range");
       if (modify->compute[icompute]->post_process_isurf_grid_flag)
@@ -201,7 +201,7 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   if (flavor_pergrid) flavor = PERGRID;
   if (flavor_pergridsurf) flavor = PERGRIDSURF;
 
-  // this could be allowed but is dangerous if load-balancing 
+  // this could be allowed but is dangerous if load-balancing
   // per-cellID tallies stored by this proc might grow enormous
 
   if (flavor == PERGRIDSURF && ave == RUNNING)
@@ -401,16 +401,16 @@ void FixAveGrid::init()
       if (icompute < 0)
 	error->all(FLERR,"Compute ID for fix ave/grid does not exist");
       value2index[m] = icompute;
-      
+
     } else if (which[m] == FIX) {
       int ifix = modify->find_fix(ids[m]);
-      if (ifix < 0) 
+      if (ifix < 0)
 	error->all(FLERR,"Fix ID for fix ave/grid does not exist");
       value2index[m] = ifix;
 
     } else if (which[m] == VARIABLE) {
       int ivariable = input->variable->find(ids[m]);
-      if (ivariable < 0) 
+      if (ivariable < 0)
 	error->all(FLERR,"Variable name for fix ave/grid does not exist");
       value2index[m] = ivariable;
 
@@ -479,7 +479,7 @@ void FixAveGrid::end_of_step()
       j = argindex[m];
 
       // invoke compute if not previously invoked
-  
+
       if (which[m] == COMPUTE) {
         Compute *compute = modify->compute[n];
         if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
@@ -513,9 +513,9 @@ void FixAveGrid::end_of_step()
               tally[i][k] += compute_array[i][jm1];
           }
         }
-        
+
       // access fix fields, guaranteed to be ready
-      
+
       } else if (which[m] == FIX) {
         k = umap[m][0];
         if (j == 0) {
@@ -528,9 +528,9 @@ void FixAveGrid::end_of_step()
 	for (i = 0; i < nglocal; i++)
 	  tally[i][k] += fix_array[i][jm1];
         }
-      
+
       // evaluate grid-style variable, sum values to Kth column of tally array
-      
+
       } else if (which[m] == VARIABLE) {
         k = umap[m][0];
         input->variable->compute_grid(n,&tally[0][k],ntotal,1);
@@ -547,7 +547,7 @@ void FixAveGrid::end_of_step()
       j = argindex[m];
 
       // invoke compute if not previously invoked
-  
+
       Compute *compute = modify->compute[n];
       if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
         compute->compute_per_grid();
@@ -699,7 +699,7 @@ void FixAveGrid::end_of_step()
         for (m = 0; m < nvalues; m++)
           array_grid[icell][m] /= nsample;
     }
-    
+
     Grid::SplitInfo *sinfo = grid->sinfo;
 
     int jcell,nsplit;
@@ -744,7 +744,7 @@ void FixAveGrid::end_of_step()
 
 /* ----------------------------------------------------------------------
    pack icell values for per-cell arrays into buf
-   if icell is a split cell, also pack all sub cell values 
+   if icell is a split cell, also pack all sub cell values
    return byte count of amount packed
    if memflag, only return count, do not fill buf
 ------------------------------------------------------------------------- */
@@ -767,7 +767,7 @@ int FixAveGrid::pack_grid_one(int icell, char *buf, int memflag)
 
   return ptr-buf;
 }
- 
+
 /* ----------------------------------------------------------------------
    pack one set of values into buf from icell
 ------------------------------------------------------------------------- */
@@ -792,7 +792,7 @@ int FixAveGrid::pack_one(int icell, char *buf, int memflag)
 
 /* ----------------------------------------------------------------------
    unpack icell values for per-cell arrays from buf
-   if icell is a split cell, also unpack all sub cell values 
+   if icell is a split cell, also unpack all sub cell values
    return byte count of amount unpacked
    NOTE: why packing/unpacking parent cell if a split cell?
 ------------------------------------------------------------------------- */
@@ -865,7 +865,7 @@ void FixAveGrid::add_grid_one()
   grow_percell(1);
 
   if (nvalues == 1) vector_grid[nglocal] = 0.0;
-  else 
+  else
     for (int i = 0; i < nvalues; i++) array_grid[nglocal][i] = 0.0;
 
   if (flavor == PERGRID)
@@ -914,7 +914,7 @@ void FixAveGrid::options(int iarg, int narg, char **arg)
 
 bigint FixAveGrid::nextvalid()
 {
-  bigint nvalid = (update->ntimestep/per_grid_freq)*per_grid_freq + 
+  bigint nvalid = (update->ntimestep/per_grid_freq)*per_grid_freq +
     per_grid_freq;
   if (nvalid-per_grid_freq == update->ntimestep && nrepeat == 1)
     nvalid = update->ntimestep;
@@ -944,7 +944,7 @@ void FixAveGrid::grow_percell(int nnew)
       vector_grid[i] = 0.0;
   else
     for (int i = maxgridold; i < maxgrid; i++)
-      for (int j = 0; i < nvalues; j++)
+      for (int j = 0; j < nvalues; j++)
         array_grid[i][j] = 0.0;
 }
 

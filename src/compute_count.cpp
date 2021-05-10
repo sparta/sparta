@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -30,7 +30,7 @@ enum{SPECIES,MIXTURE};
 
 /* ---------------------------------------------------------------------- */
 
-ComputeCount::ComputeCount(SPARTA *sparta, int narg, char **arg) : 
+ComputeCount::ComputeCount(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
 {
   if (narg < 3) error->all(FLERR,"Illegal compute count command");
@@ -44,10 +44,10 @@ ComputeCount::ComputeCount(SPARTA *sparta, int narg, char **arg) :
       char *ptr = strchr(arg[iarg],'/');
       *ptr = '\0';
       int imix = particle->find_mixture(arg[iarg]);
-      if (imix < 0) 
+      if (imix < 0)
         error->all(FLERR,"Unknown species/mixture in compute count command");
       int igroup = particle->mixture[imix]->find_group(ptr+1);
-      if (imix < 0) 
+      if (imix < 0)
         error->all(FLERR,"Unknown mixture group in compute count command");
       *ptr = '/';
       if (nvalues == maxvalues) allocate(maxvalues+DELTAVALUES);
@@ -60,9 +60,9 @@ ComputeCount::ComputeCount(SPARTA *sparta, int narg, char **arg) :
     } else {
       int isp = particle->find_species(arg[iarg]);
       int imix = particle->find_mixture(arg[iarg]);
-      if (isp < 0 && imix < 0) 
+      if (isp < 0 && imix < 0)
         error->all(FLERR,"Unknown species/mixture in compute count command");
-      if (isp >= 0 && imix >= 0) 
+      if (isp >= 0 && imix >= 0)
         error->all(FLERR,"Ambiguous species/mixture in compute count command");
       if (isp >= 0) {
         if (nvalues == maxvalues) allocate(maxvalues+DELTAVALUES);
@@ -145,7 +145,7 @@ void ComputeCount::init()
     if (igroup >= particle->mixture[imix]->ngroup) err = 1;
   }
 
-  if (err) 
+  if (err)
     error->all(FLERR,
                "Group in mixture used by compute count no longer valid");
   if (warn && comm->me == 0)

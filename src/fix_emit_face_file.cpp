@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -59,7 +59,7 @@ FixEmitFaceFile::FixEmitFaceFile(SPARTA *sparta, int narg, char **arg) :
   global_freq = 1;
 
   imix = particle->find_mixture(arg[2]);
-  if (imix < 0) 
+  if (imix < 0)
     error->all(FLERR,"Fix emit/face/file mixture ID does not exist");
 
   if (strcmp(arg[3],"xlo") == 0) iface = XLO;
@@ -85,10 +85,10 @@ FixEmitFaceFile::FixEmitFaceFile(SPARTA *sparta, int narg, char **arg) :
   // NOTE: could allow insertion on iface = YHI for axisymmetric
   //       if vstream[1] = 0.0, that is allowed in FixEmitFace
 
-  if (domain->dimension == 2 && (iface == ZLO || iface == ZHI)) 
+  if (domain->dimension == 2 && (iface == ZLO || iface == ZHI))
     error->all(FLERR,"Cannot use fix emit/face/file in z dimension "
                "for 2d simulation");
-  if (domain->axisymmetric && (iface == YLO || iface == YHI)) 
+  if (domain->axisymmetric && (iface == YLO || iface == YHI))
     error->all(FLERR,"Cannot use fix emit/face/file in y dimension "
                "for axisymmetric model");
 
@@ -154,7 +154,7 @@ FixEmitFaceFile::~FixEmitFaceFile()
 void FixEmitFaceFile::init()
 {
   // invoke FixEmit::init() to set flags
-  
+
   FixEmit::init();
 
   // copies of class data before invoking parent init() and count_task()
@@ -191,11 +191,11 @@ void FixEmitFaceFile::init()
   for (int m = 0; m < nspecies; m++) {
     int ispecies = particle->mixture[imix]->species[m];
     avemass += fraction_mix[m] * particle->species[ispecies].mass;
-    avegamma += fraction_mix[m] * (1.0 + 2.0 / 
+    avegamma += fraction_mix[m] * (1.0 + 2.0 /
                                (3.0 + particle->species[ispecies].rotdof));
   }
 
-  soundspeed_mixture = sqrt(avegamma * update->boltz * 
+  soundspeed_mixture = sqrt(avegamma * update->boltz *
                             particle->mixture[imix]->temp_thermal / avemass);
 
   // cannot inflow thru periodic boundary
@@ -247,7 +247,7 @@ void FixEmitFaceFile::init()
   }
 
   // create tasks for all grid cells
-  
+
   create_tasks();
 }
 
@@ -263,8 +263,8 @@ void FixEmitFaceFile::create_task(int icell)
 
   // corners[i][j] = J corner points of face I of a grid cell
   // works for 2d quads and 3d hexes
-  
-  int corners[6][4] = {{0,2,4,6}, {1,3,5,7}, {0,1,4,5}, {2,3,6,7}, 
+
+  int corners[6][4] = {{0,2,4,6}, {1,3,5,7}, {0,1,4,5}, {2,3,6,7},
 		       {0,1,2,3}, {4,5,6,7}};
   int nface_pts = 4;
   if (domain->dimension == 2) nface_pts = 2;
@@ -274,7 +274,7 @@ void FixEmitFaceFile::create_task(int icell)
   // if cell is OVERLAP:
   //   allow if any face corner point is OUTSIDE and none is INSIDE
   //   disallow if any pt of any line/tri in cell touches face
-  
+
   int nmask = cells[icell].nmask;
 
   int flag = 0;
@@ -283,14 +283,14 @@ void FixEmitFaceFile::create_task(int icell)
     else if (cinfo[icell].type == OVERLAP) {
       flag = 1;
       cflags = cinfo[icell].corner;
-      
+
       extflag = 0;
       for (j = 0; j < nface_pts; j++) {
         if (cflags[corners[iface][j]] == OUTSIDE) extflag = 1;
         else if (cflags[corners[iface][j]] == INSIDE) flag = 0;
       }
       if (!extflag) flag = 0;
-      
+
       if (flag && dimension == 2) {
         for (j = 0; j < cells[icell].nsurf; j++) {
           n = cells[icell].csurfs[j];
@@ -314,14 +314,14 @@ void FixEmitFaceFile::create_task(int icell)
       }
     }
   }
-    
+
   // no insertions on this face
-  
+
   if (!flag) return;
 
   // set cell parameters of task
   // pcell = sub cell for particles if a split cell
-  
+
   if (ntask == ntaskmax) grow_task();
 
   tasks[ntask].icell = icell;
@@ -411,12 +411,12 @@ void FixEmitFaceFile::perform_task()
 	  do {
 	    do beta_un = (6.0*random->uniform() - 3.0);
 	    while (beta_un + scosine < 0.0);
-	    normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
+	    normalized_distbn_fn = 2.0 * (beta_un + scosine) /
 	      (scosine + sqrt(scosine*scosine + 2.0)) *
-	      exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
+	      exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) -
 		  beta_un*beta_un);
 	  } while (normalized_distbn_fn < random->uniform());
-	  
+	
           v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
 
           theta = MY_2PI * random->uniform();
@@ -434,7 +434,7 @@ void FixEmitFaceFile::perform_task()
           p->flag = PINSERT;
           p->dtremain = dt * random->uniform();
 
-          if (nfix_add_particle) 
+          if (nfix_add_particle)
             modify->add_particle(particle->nlocal-1,temp_thermal,
                                  temp_rot,temp_vib,vstream);
 	}
@@ -465,9 +465,9 @@ void FixEmitFaceFile::perform_task()
 	do {
 	  do beta_un = (6.0*random->uniform() - 3.0);
 	  while (beta_un + scosine < 0.0);
-	  normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
+	  normalized_distbn_fn = 2.0 * (beta_un + scosine) /
 	    (scosine + sqrt(scosine*scosine + 2.0)) *
-	    exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
+	    exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) -
 		beta_un*beta_un);
 	} while (normalized_distbn_fn < random->uniform());
 	
@@ -488,7 +488,7 @@ void FixEmitFaceFile::perform_task()
         p->flag = PINSERT;
         p->dtremain = dt * random->uniform();
 
-        if (nfix_add_particle) 
+        if (nfix_add_particle)
           modify->add_particle(particle->nlocal-1,temp_thermal,
                                temp_rot,temp_vib,vstream);
       }
@@ -559,14 +559,14 @@ void FixEmitFaceFile::read_file(char *file, char *section)
   fgets(line,MAXLINE,fp);                             // read NIJ or NI
   word = strtok(line," \t\n\r");
   if (strcmp(word,"NIJ") == 0) {
-    if (dimension != 3) 
+    if (dimension != 3)
       error->all(FLERR,"Misformatted section in inflow file");
     word = strtok(NULL," \t\n\r");
     mesh.ni = atoi(word);
     word = strtok(NULL," \t\n\r");
     mesh.nj = atoi(word);
   } else if (strcmp(word,"NI") == 0) {
-    if (dimension != 2) 
+    if (dimension != 2)
       error->all(FLERR,"Misformatted section in inflow file");
     word = strtok(NULL," \t\n\r");
     mesh.ni = atoi(word);
@@ -616,7 +616,7 @@ void FixEmitFaceFile::read_file(char *file, char *section)
 
   fgets(line,MAXLINE,fp);
   word = strtok(line," \t\n\r");
-  if (strcmp(word,"IMESH") != 0) 
+  if (strcmp(word,"IMESH") != 0)
     error->one(FLERR,"Misformatted section in inflow file");
   for (i = 0; i < mesh.ni; i++) {
     word = strtok(NULL," \t\n\r");
@@ -630,7 +630,7 @@ void FixEmitFaceFile::read_file(char *file, char *section)
   if (dimension == 3) {
     fgets(line,MAXLINE,fp);
     word = strtok(line," \t\n\r");
-    if (strcmp(word,"JMESH") != 0) 
+    if (strcmp(word,"JMESH") != 0)
       error->one(FLERR,"Misformatted section in inflow file");
     for (i = 0; i < mesh.nj; i++) {
       word = strtok(NULL," \t\n\r");
@@ -660,7 +660,7 @@ void FixEmitFaceFile::read_file(char *file, char *section)
     } else jj = 1;
     if (ii < 1 || ii > mesh.ni || jj < 1 || jj > mesh.nj)
       error->one(FLERR,"Misformatted section in inflow file");
-    offset = (jj-1)*mesh.ni + (ii-1);   
+    offset = (jj-1)*mesh.ni + (ii-1);
     for (m = 0; m < mesh.nvalues; m++) {
       word = strtok(NULL," \t\n\r");
       mesh.values[offset][m] = atof(word);
@@ -715,8 +715,8 @@ void FixEmitFaceFile::bcast_mesh()
     for (int i = 0; i < mesh.nvalues; i++) {
       if (mesh.which[i] == TEMP_THERMAL) subsonic_style = PTBOTH;
       if (mesh.which[i] == NRHO ||
-          mesh.which[i] == TEMP_ROT || mesh.which[i] == TEMP_VIB || 
-          mesh.which[i] == VX || mesh.which[i] == VY || mesh.which[i] == VZ) 
+          mesh.which[i] == TEMP_ROT || mesh.which[i] == TEMP_VIB ||
+          mesh.which[i] == VX || mesh.which[i] == VY || mesh.which[i] == VZ)
         error->all(FLERR,"Fix emit/face/file cannot set "
                    "nrho/trot/tvib/vx/vy/vz when subsonic");
     }
@@ -772,22 +772,22 @@ int FixEmitFaceFile::interpolate(int icell)
 
   lo = cells[icell].lo;
   hi = cells[icell].hi;
-    
-  if (iface % 2 == 0) 
+
+  if (iface % 2 == 0)
     tasks[ntask].lo[ndim] = tasks[ntask].hi[ndim] = lo[ndim];
-  else 
+  else
     tasks[ntask].lo[ndim] = tasks[ntask].hi[ndim] = hi[ndim];
-  
+
   tasks[ntask].lo[pdim] = MAX(lo[pdim],mesh.lo[0]);
   tasks[ntask].hi[pdim] = MIN(hi[pdim],mesh.hi[0]);
   if (tasks[ntask].lo[pdim] >= tasks[ntask].hi[pdim]) return 0;
-  
+
   if (dimension == 3) {
     tasks[ntask].lo[qdim] = MAX(lo[qdim],mesh.lo[1]);
     tasks[ntask].hi[qdim] = MIN(hi[qdim],mesh.hi[1]);
     if (tasks[ntask].lo[qdim] >= tasks[ntask].hi[qdim]) return 0;
   }
-    
+
   // default task params from mixture
   // except pressure which is not used unless defined in file
 
@@ -806,11 +806,11 @@ int FixEmitFaceFile::interpolate(int icell)
   }
 
   // xc = centroid of cell face overlap with mesh
-  
+
   xc[0] = 0.5 * (tasks[ntask].lo[pdim]+tasks[ntask].hi[pdim]);
   if (dimension == 3)
     xc[1] = 0.5 * (tasks[ntask].lo[qdim]+tasks[ntask].hi[qdim]);
-  
+
   // find 2/4 points in mesh that surround xc in 2d/3d
   // allow for mesh.lo <= xc <= mesh.hi
 
@@ -837,12 +837,12 @@ int FixEmitFaceFile::interpolate(int icell)
       if (mesh.which[m] == NRHO)
         tasks[ntask].nrho = linear_interpolation(xc[0],m,plo,phi);
       else if (mesh.which[m] == TEMP_THERMAL) {
-        newtemp = tasks[ntask].temp_thermal = 
+        newtemp = tasks[ntask].temp_thermal =
           linear_interpolation(xc[0],m,plo,phi);
         if (newtemp <= 0.0 && subsonic_style == PTBOTH)
           error->all(FLERR,"Subsonic temperature cannot be <= 0.0");
         for (isp = 0; isp < nspecies; isp++)
-          tasks[ntask].vscale[isp] = 
+          tasks[ntask].vscale[isp] =
             vscale_mix[isp] * sqrt(newtemp/temp_thermal_mix);
       }
       else if (mesh.which[m] == TEMP_ROT)
@@ -868,20 +868,20 @@ int FixEmitFaceFile::interpolate(int icell)
   } else {
     for (m = 0; m < mesh.nvalues; m++) {
       if (mesh.which[m] == NRHO)
-        tasks[ntask].nrho = 
+        tasks[ntask].nrho =
           bilinear_interpolation(xc[0],xc[1],m,plo,phi,qlo,qhi);
       else if (mesh.which[m] == TEMP_THERMAL) {
-        newtemp = tasks[ntask].temp_thermal = 
+        newtemp = tasks[ntask].temp_thermal =
           bilinear_interpolation(xc[0],xc[1],m,plo,phi,qlo,qhi);
         for (isp = 0; isp < nspecies; isp++)
-          tasks[ntask].vscale[isp] = 
+          tasks[ntask].vscale[isp] =
             vscale_mix[isp] * sqrt(newtemp/temp_thermal_mix);
       }
       else if (mesh.which[m] == TEMP_ROT)
-        tasks[ntask].temp_rot = 
+        tasks[ntask].temp_rot =
           bilinear_interpolation(xc[0],xc[1],m,plo,phi,qlo,qhi);
       else if (mesh.which[m] == TEMP_VIB)
-        tasks[ntask].temp_vib = 
+        tasks[ntask].temp_vib =
           bilinear_interpolation(xc[0],xc[1],m,plo,phi,qlo,qhi);
       else if (mesh.which[m] == VX)
         tasks[ntask].vstream[0] =
@@ -922,12 +922,12 @@ int FixEmitFaceFile::interpolate(int icell)
     if (err)
       error->one(FLERR,"Fix inflow/file mixture fractions exceed 1.0");
   }
-  
+
   // area = area for insertion
   // depends on dimension and axisymmetry
 
-  if (dimension == 3) 
-    area = (tasks[ntask].hi[pdim]-tasks[ntask].lo[pdim]) * 
+  if (dimension == 3)
+    area = (tasks[ntask].hi[pdim]-tasks[ntask].lo[pdim]) *
       (tasks[ntask].hi[qdim]-tasks[ntask].lo[qdim]);
   else if (domain->axisymmetric)
     area = (tasks[ntask].hi[pdim]*tasks[ntask].hi[pdim] -
@@ -952,7 +952,7 @@ int FixEmitFaceFile::interpolate(int icell)
 
   if (!subsonic) {
     if (tasks[ntask].ntarget == 0.0) return 0;
-    if (tasks[ntask].ntarget >= MAXSMALLINT) 
+    if (tasks[ntask].ntarget >= MAXSMALLINT)
       error->one(FLERR,
                  "Fix emit/face/file insertion count exceeds 32-bit int");
   }
@@ -968,7 +968,7 @@ double FixEmitFaceFile::linear_interpolation(double x, int m, int plo, int phi)
 {
   double *imesh = mesh.imesh;
   double **values = mesh.values;
-  double value = (values[plo][m]*(imesh[phi]-x) + 
+  double value = (values[plo][m]*(imesh[phi]-x) +
                   values[phi][m]*(x-imesh[plo])) / (imesh[phi]-imesh[plo]);
   return value;
 }
@@ -978,7 +978,7 @@ double FixEmitFaceFile::linear_interpolation(double x, int m, int plo, int phi)
    for column M
 ------------------------------------------------------------------------- */
 
-double FixEmitFaceFile::bilinear_interpolation(double x, double y, int m, 
+double FixEmitFaceFile::bilinear_interpolation(double x, double y, int m,
                                                int plo, int phi,
                                                int qlo, int qhi)
 {
@@ -1049,7 +1049,7 @@ void FixEmitFaceFile::subsonic_inflow()
   int isp,icell;
   double mass,indot,area,nrho,temp_thermal,vscale,ntargetsp;
   double *vstream;
-  
+
   Particle::Species *species = particle->species;
   Grid::ChildInfo *cinfo = grid->cinfo;
   int *mspecies = particle->mixture[imix]->species;
@@ -1064,7 +1064,7 @@ void FixEmitFaceFile::subsonic_inflow()
     nrho = tasks[i].nrho;
     temp_thermal = tasks[i].temp_thermal;
     icell = tasks[i].icell;
-      
+
     tasks[i].ntarget = 0.0;
     for (isp = 0; isp < nspecies; isp++) {
       mass = species[mspecies[isp]].mass;
@@ -1075,7 +1075,7 @@ void FixEmitFaceFile::subsonic_inflow()
       tasks[i].ntarget += ntargetsp;
       if (perspecies) tasks[i].ntargetsp[isp] = ntargetsp;
     }
-    if (tasks[i].ntarget >= MAXSMALLINT) 
+    if (tasks[i].ntarget >= MAXSMALLINT)
       error->one(FLERR,
                  "Fix emit/face/file subsonic insertion count "
                  "exceeds 32-bit int");
@@ -1189,7 +1189,7 @@ void FixEmitFaceFile::subsonic_grid()
 
     // compute/store nrho, 3 temps, vstream for task
     // also vscale for PONLY
-    // if sound speed = 0.0 due to <= 1 particle in cell or 
+    // if sound speed = 0.0 due to <= 1 particle in cell or
     //   all particles having COM velocity, set via mixture properties
 
     vstream = tasks[i].vstream;
@@ -1216,8 +1216,8 @@ void FixEmitFaceFile::subsonic_grid()
         gamma_cell = gamma / np;
         soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
       } else soundspeed_cell = soundspeed_mixture;
-      
-      tasks[i].nrho = nrho_cell + 
+
+      tasks[i].nrho = nrho_cell +
         (tasks[i].press - press_cell) / (soundspeed_cell*soundspeed_cell);
       temp_thermal_cell = tasks[i].press / (boltz * tasks[i].nrho);
       if (temp_thermal_cell > TEMPLIMIT) {
@@ -1227,7 +1227,7 @@ void FixEmitFaceFile::subsonic_grid()
 
       if (np) {
         sign = normal[ndim];
-        vstream[ndim] += sign * 
+        vstream[ndim] += sign *
           (tasks[i].press - press_cell) / (massrho_cell*soundspeed_cell);
       }
 
@@ -1290,7 +1290,7 @@ int FixEmitFaceFile::option(int narg, char **arg)
   if (strcmp(arg[0],"frac") == 0) {
     if (2 > narg) error->all(FLERR,"Illegal fix emit/face/file command");
     frac_user = atof(arg[1]);
-    if (frac_user < 0.0 || frac_user > 1.0) 
+    if (frac_user < 0.0 || frac_user > 1.0)
       error->all(FLERR,"Illegal fix emit/face/file command");
     return 2;
   }

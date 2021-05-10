@@ -7,7 +7,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -84,12 +84,12 @@ class Surf : protected Pointers {
   Tri *tris;                // list of tris for surface collisions
   int nlocal;               // # of lines or tris
                             // explicit, all: nlocal = nsurf
-                            // explicit, distributed: 
+                            // explicit, distributed:
                             //   surfs which overlap my owned grid cells
                             // implicit: surfs within my owned grid cells
   int nghost;               // # of ghost surfs I store for collisions
                             // explicit, all: nghost = 0
-                            // explicit, distributed: 
+                            // explicit, distributed:
                             //   surfs which overlap my ghost grid cells
                             // implicit: surfs within my ghost grid cells
   int nmax;                 // max length of lines/tris vecs
@@ -179,7 +179,8 @@ class Surf : protected Pointers {
   int all_transparent();
 
   void setup_owned();
-  void setup_bbox();
+  void bbox_all();
+  void bbox_one(void *, double *, double *);
 
   void compute_line_normal(int);
   void compute_tri_normal(int);
@@ -213,9 +214,9 @@ class Surf : protected Pointers {
   void group(int, char **);
   int add_group(const char *);
   int find_group(const char *);
-  
-  void compress_implicit_rebalance();
-  void compress_explicit_rebalance();
+
+  void compress_explicit();
+  void compress_implicit();
 
   void collate_vector(int, surfint *, double *, int, double *);
   void collate_vector_reduce(int, surfint *, double *, int, double *);
@@ -249,7 +250,7 @@ class Surf : protected Pointers {
   int me,nprocs;
   int maxsc;                // max # of models in sc
   int maxsr;                // max # of models in sr
-  
+
   // collate vector rendezvous data
 
   struct InRvousVec {
@@ -313,7 +314,7 @@ class Surf : protected Pointers {
                             // used to delete them if not redefined in 
                             // restart script
   // private methods
-  
+
   void point_line_compare(double *, double *, double *, double, int &, int &);
   void point_tri_compare(double *, double *, double *, double *, double *,
                          double, int &, int &, int, int, int);
@@ -329,17 +330,17 @@ class Surf : protected Pointers {
   void check_watertight_3d_distributed();
 
   // callback functions for rendezvous communication
- 
+
   static int rendezvous_vector(int, char *, int &, int *&, char *&, void *);
   static int rendezvous_array(int, char *, int &, int *&, char *&, void *);
   static int rendezvous_implicit(int, char *, int &, int *&, char *&, void *);
-  static int rendezvous_watertight_2d(int, char *, 
+  static int rendezvous_watertight_2d(int, char *,
                                       int &, int *&, char *&, void *);
-  static int rendezvous_watertight_3d(int, char *, 
+  static int rendezvous_watertight_3d(int, char *,
                                       int &, int *&, char *&, void *);
-  static int rendezvous_lines(int, char *, 
+  static int rendezvous_lines(int, char *,
                               int &, int *&, char *&, void *);
-  static int rendezvous_tris(int, char *, 
+  static int rendezvous_tris(int, char *,
                              int &, int *&, char *&, void *);
 };
 

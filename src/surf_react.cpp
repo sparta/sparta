@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -28,7 +28,7 @@ using namespace SPARTA_NS;
 
 /* ---------------------------------------------------------------------- */
 
-SurfReact::SurfReact(SPARTA *sparta, int, char **arg) : 
+SurfReact::SurfReact(SPARTA *sparta, int, char **arg) :
   Pointers(sparta)
 {
   // ID and style
@@ -49,7 +49,7 @@ SurfReact::SurfReact(SPARTA *sparta, int, char **arg) :
 
   vector_flag = 1;
   size_vector = 2;
-    
+
   // tallies
 
   nsingle = ntotal = 0;
@@ -108,7 +108,7 @@ double SurfReact::compute_vector(int i)
     }
     return all[i];
   }
-    
+
   if (i < 2+nlist) {
     if (!tally_single_flag) {
       tally_single_flag = 1;

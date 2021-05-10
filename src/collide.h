@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -33,7 +33,7 @@ class Collide : protected Pointers {
 
   int ncollide_one,nattempt_one,nreact_one;
   bigint ncollide_running,nattempt_running,nreact_running;
- 
+
   Collide(class SPARTA *, int, char **);
   virtual ~Collide();
   virtual void init();
@@ -44,13 +44,13 @@ class Collide : protected Pointers {
   virtual double vremax_init(int, int) = 0;
   virtual double attempt_collision(int, int, double) = 0;
   virtual double attempt_collision(int, int, int, double) = 0;
-  virtual int test_collision(int, int, int, 
+  virtual int test_collision(int, int, int,
 			     Particle::OnePart *, Particle::OnePart *) = 0;
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *) = 0;
-  virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&, 
+  virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
                                 Particle::OnePart *&) = 0;
 
-  virtual double extract(int, const char *) {return 0.0;}
+  virtual double extract(int, int, const char *) {return 0.0;}
 
   virtual int pack_grid_one(int, char *, int);
   virtual int unpack_grid_one(int, char *);
@@ -61,24 +61,25 @@ class Collide : protected Pointers {
 
  protected:
   int npmax;          // max # of particles in plist
-  int *plist;         // list of particles in a single group
+  int *plist;         // list of particle indices for the entire cell
 
   int nglocal;        // current size of per-cell arrays
-  int nglocalmax;     // max allocated size of per-cell arrays
+  int nglocalmax;     // max allocated size of per-cell arrays (vremax, remain)
 
   int ngroups;        // # of groups
-  int *ngroup;        // # of particles in one cell of each group
-  int *maxgroup;      // max # of glist indices allocated per group
-  int **glist;        // indices of particles in one cell of each group
+  int *ngroup;        // # of particles in each group
+  int *maxgroup;      // max # of particles allocated per group
+  int **glist;        // indices into plist of particles in each group
+  int **p2g;          // for each plist entry: 0 = igroup, 1 = index within glist
 
   int npair;          // # of group pairs to do collisions for
-  int **gpair;        // Nx3 list of species pairs to do collisions for
+  int **gpair;        // Npairx3 list of group pairs to do collisions for
                       // 0 = igroup, 1 = jgroup, 2 = # of attempt collisions
 
   int max_nn;             // allocated size of nn_last_partner
-  int *nn_last_partner;   // index+1 of last collision partner for each particle
+  int *nn_last_partner;   // plist index+1 of last collision partner for each particle
                           // 0 = no collision yet (on this step)
-  int *nn_last_partner_igroup;   // ditto for igroup and jgroup particles
+  int *nn_last_partner_igroup;   // ditto for two groups of particles
   int *nn_last_partner_jgroup;
 
   int ndelete,maxdelete;      // # of particles removed by chemsitry
@@ -127,28 +128,46 @@ class Collide : protected Pointers {
                          //   base class when child copy is destroyed)
   int kokkos_flag;        // 1 if collide method supports Kokkos
 
-  // inline function
+  // inline functions
+  // add particle N to Igroup and set its g2p entry in plist to K
+  // delete Ith entry in Igroup and reset g2p entries as well
 
-  inline void addgroup(int igroup, int n)
+  inline void addgroup(int igroup, int pindex)
   {
     if (ngroup[igroup] == maxgroup[igroup]) {
       maxgroup[igroup] += DELTAPART;
       memory->grow(glist[igroup],maxgroup[igroup],"collide:grouplist");
     }
-    glist[igroup][ngroup[igroup]++] = n;
+    int ng = ngroup[igroup];
+    glist[igroup][ng] = pindex;
+    p2g[pindex][0] = igroup;
+    p2g[pindex][1] = ng;
+    ngroup[igroup]++;
+  }
+
+  inline void delgroup(int igroup, int i)
+  {
+    int ng = ngroup[igroup];
+    if (i < ng-1) {
+      glist[igroup][i] = glist[igroup][ng-1];
+      int pindex = glist[igroup][i];
+      p2g[pindex][0] = igroup;
+      p2g[pindex][1] = i;
+    }
+    ngroup[igroup]--;
   }
 
   template < int > void collisions_one();
   template < int > void collisions_group();
   void collisions_one_ambipolar();
   void collisions_group_ambipolar();
-  void ambi_reset(int, int, int, int, Particle::OnePart *, Particle::OnePart *, 
+  void ambi_reset(int, int, int, Particle::OnePart *, Particle::OnePart *,
                   Particle::OnePart *, int *);
   void ambi_check();
   void grow_percell(int);
 
   int find_nn(int, int);
-  int find_nn_group(int, int *, int, int *, int *, int *);
+  int find_nn_group(int, int *, int, int *, int *, int *, int *);
   void realloc_nn(int, int *&);
   void set_nn(int);
   void set_nn_group(int);

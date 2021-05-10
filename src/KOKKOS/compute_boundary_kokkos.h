@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -55,8 +55,8 @@ class ComputeBoundaryKokkos : public ComputeBoundary, public KokkosBase {
 template <int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
 void boundary_tally_kk(int iface, int istyle, int reaction,
-                       Particle::OnePart *iorig, 
-                       Particle::OnePart *ip, 
+                       Particle::OnePart *iorig,
+                       Particle::OnePart *ip,
                        Particle::OnePart *jp,
                        const double* norm) const
 {
@@ -71,8 +71,8 @@ void boundary_tally_kk(int iface, int istyle, int reaction,
   // particle weight used for all keywords except NUM
   // styles PERIODIC and OUTFLOW do not have post-bounce velocity
 
-  auto v_myarray = ScatterViewHelper<NeedDup<ATOMIC_REDUCTION,DeviceType>::value,decltype(dup_myarray),decltype(ndup_myarray)>::get(dup_myarray,ndup_myarray);
-  auto a_myarray = v_myarray.template access<AtomicDup<ATOMIC_REDUCTION,DeviceType>::value>();
+  auto v_myarray = ScatterViewHelper<typename NeedDup<ATOMIC_REDUCTION,DeviceType>::value,decltype(dup_myarray),decltype(ndup_myarray)>::get(dup_myarray,ndup_myarray);
+  auto a_myarray = v_myarray.template access<typename AtomicDup<ATOMIC_REDUCTION,DeviceType>::value>();
 
   double vsqpre,ivsqpost,jvsqpost;
   double ierot,jerot,ievib,jevib,iother,jother,otherpre;
@@ -152,7 +152,7 @@ void boundary_tally_kk(int iface, int istyle, int reaction,
         break;
       case ETOT:
         vsqpre = MathExtraKokkos::lensq3(vorig);
-        a_myarray(iface,k++) += 0.5*mvv2e*origmass*vsqpre + 
+        a_myarray(iface,k++) += 0.5*mvv2e*origmass*vsqpre +
           weight*(iorig->erot+iorig->evib);
         break;
       }
@@ -168,9 +168,10 @@ void boundary_tally_kk(int iface, int istyle, int reaction,
         a_myarray(iface,k++) += weight;
         break;
       case MFLUX:
-        a_myarray(iface,k++) += origmass;
-        if (ip) a_myarray(iface,k++) -= imass;
-        if (jp) a_myarray(iface,k++) -= jmass;
+        a_myarray(iface,k) += origmass;
+        if (ip) a_myarray(iface,k) -= imass;
+        if (jp) a_myarray(iface,k) -= jmass;
+        k++;
         break;
       case PRESS:
         MathExtraKokkos::scale3(-origmass,vorig,pdelta);
@@ -244,7 +245,7 @@ void boundary_tally_kk(int iface, int istyle, int reaction,
           jvsqpost = jmass * MathExtraKokkos::lensq3(jp->v);
           jother = jp->erot + jp->evib;
         } else jvsqpost = jother = 0.0;
-        a_myarray(iface,k++) -= 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
+        a_myarray(iface,k++) -= 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
           weight * (iother + jother - otherpre);
         break;
       }
@@ -261,8 +262,8 @@ void boundary_tally_kk(int iface, int istyle, int reaction,
   DAT::t_float_2d_lr d_myarray;
 
   int need_dup;
-  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterDuplicated> dup_myarray;
-  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterNonDuplicated> ndup_myarray;
+  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,typename Kokkos::Experimental::ScatterSum,typename Kokkos::Experimental::ScatterDuplicated> dup_myarray;
+  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,typename Kokkos::Experimental::ScatterSum,typename Kokkos::Experimental::ScatterNonDuplicated> ndup_myarray;
 
   t_species_1d d_species;
   DAT::t_int_2d d_s2g;

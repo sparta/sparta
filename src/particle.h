@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -146,6 +146,7 @@ class Particle : protected Pointers {
   virtual void post_weight();
 
   virtual int add_particle(int, int, int, double *, double *, double, double);
+  virtual int add_particle();
   int clone_particle(int);
   void add_species(int, char **);
   void add_mixture(int, char **);
@@ -160,10 +161,11 @@ class Particle : protected Pointers {
   void read_restart_mixture(FILE *fp);
 
   int size_restart();
+  bigint size_restart_big();
   int pack_restart(char *);
-  int pack_restart(char *, int, int);
+  void pack_restart(char *, int, int);
   int unpack_restart(char *);
-  int unpack_restart(char *, int &, int, int);
+  void unpack_restart(char *, int &, int, int);
 
   int find_custom(char *);
   void error_custom();
@@ -214,7 +216,7 @@ class Particle : protected Pointers {
   int *edcol;               // # of columns in each double array (esize)
 
   int *custom_restart_flag; // flag on each custom vec/array read from restart
-                            // used to delete them if not redefined in 
+                            // used to delete them if not redefined in
                             // restart script
 
   // private methods

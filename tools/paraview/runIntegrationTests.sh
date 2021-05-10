@@ -59,6 +59,7 @@ test_circle() {
     cp $INPUT_FILE_DIR/circle_slice.txt .
     cp $INPUT_FILE_DIR/circle_read_grid.txt .
     cp $INPUT_FILE_DIR/circle_catalyst_script.py .
+    cp $INPUT_FILE_DIR/in.adapt.static .
 
     CURRENT_TEST="surf2paraview circle"
     echo ""
@@ -176,6 +177,27 @@ test_circle() {
     check_file "RenderView1_8.png"
     check_file "RenderView1_9.png"
     check_file "RenderView1_10.png"
+    echo ""
+    echo "$CURRENT_TEST test passed"
+
+    echo ""
+    echo "Running Sparta circle adapt static example"
+    echo ""
+    $SPARTA_MPI_EXEC -np 4 $SPARTA_EXECUTABLE < in.adapt.static
+    echo ""
+    echo "Finished"
+    echo ""
+
+    CURRENT_TEST="grid2paraview pvpython circle adapt static"
+    echo ""
+    echo "Checking $CURRENT_TEST output"
+    $PARAVIEW_PVPYTHON $GRID2PARAVIEW circle_read_grid.txt \
+        circle_adapt_static_grid_pvpython -xc 10 -yc 10 -r tmp_flow.*
+    echo ""
+    echo "Checking $CURRENT_TEST output"
+    check_file "circle_adapt_static_grid_pvpython.pvd"
+    check_file "circle_adapt_static_grid_pvpython/circle_adapt_static_grid_pvpython_0_1100.vtu"
+    check_file "circle_adapt_static_grid_pvpython/circle_adapt_static_grid_pvpython_4500.pvtu"
     echo ""
     echo "$CURRENT_TEST test passed"
 

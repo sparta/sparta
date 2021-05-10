@@ -42,7 +42,7 @@ void RandPoolWrap::destroy()
   if (random_thr) {
     for (int i=1; i < nthreads; ++i)
       delete random_thr[i];
-  
+
     delete[] random_thr;
     random_thr = NULL;
   }
@@ -54,10 +54,10 @@ void RandPoolWrap::init(RanPark* random)
   if (random_thr) {
     for (int i=1; i < this->nthreads; ++i)
       delete random_thr[i];
-  
+
     delete[] random_thr;
   }
-  
+
   // allocate pool of RNGs
   // generate a random number generator instance for
   // all threads != 0. make sure we use unique seeds.
@@ -68,7 +68,7 @@ void RandPoolWrap::init(RanPark* random)
     double seed = update->ranmaster->uniform();
     random_thr[tid]->reset(seed,comm->me + comm->nprocs*tid,100);
   }
-  
+
   // to ensure full compatibility with the serial style
   // we use the serial random number generator instance for thread 0
   random_thr[0] = random;

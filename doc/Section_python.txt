@@ -19,7 +19,7 @@ interface.
 11.6 "Example Python scripts that use SPARTA"_#py_6 :ul
 
 The SPARTA distribution includes the file python/sparta.py which wraps
-the library interface to SPARTA.  This file makes it is possible to
+the library interface to SPARTA.  This file makes it possible to
 run SPARTA, invoke SPARTA commands or give it an input script, extract
 SPARTA results, and modify internal SPARTA variables, either from a
 Python script or interactively from a Python prompt.  You can do the
@@ -82,10 +82,15 @@ Instructions on how to build SPARTA as a shared library are given in
 that is dynamically loadable, which is what Python requires.  On Linux
 this is a library file that ends in ".so", not ".a".
 
-From the src directory, type
+For make, from the src directory, type
 
-make makeshlib
+make mode=shlib foo
 make -f Makefile.shlib foo :pre
+
+For CMake, from the build directory, tyoe
+
+cmake -C /path/to/sparta/cmake/presets/foo.cmake -DBUILD_SHARED_LIBS=ON /path/to/sparta/cmake
+make :pre
 
 where foo is the machine target name, such as icc or g++ or serial.
 This should create the file libsparta_foo.so in the src directory, as
@@ -94,7 +99,7 @@ will load by default.  Note that if you are building multiple machine
 versions of the shared library, the soft link is always set to the
 most recently built version.
 
-If this fails, see "Section 2.3"_Section_start.html#start_6 for more
+If this fails, see "Section 2.3"_Section_start.html#start_3 for more
 details, especially if your SPARTA build uses auxiliary libraries like
 MPI which may not be built as shared libraries on your system.
 

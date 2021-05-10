@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -29,7 +29,7 @@ CreateBox::CreateBox(SPARTA *sparta) : Pointers(sparta) {}
 
 void CreateBox::command(int narg, char **arg)
 {
-  if (domain->box_exist) 
+  if (domain->box_exist)
     error->all(FLERR,"Cannot create_box after simulation box is defined");
 
   //if (domain->dimension == 2 && domain->zperiodic == 0)
@@ -54,7 +54,7 @@ void CreateBox::command(int narg, char **arg)
   }
   if (domain->axisymmetric && domain->boxlo[1] != 0.0)
     error->all(FLERR,"Box ylo must be 0.0 for axi-symmetric model");
-  
+
   // problem setup using info from header
 
   update->ntimestep = 0;

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -65,7 +65,7 @@ class ReadRestart : protected Pointers {
   char *read_string();
   void read_int_vec(int, int *);
   void read_double_vec(int, double *);
-  void read_char_vec(int, char *);
+  void read_char_vec(bigint, char *);
 };
 
 }

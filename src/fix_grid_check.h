@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -28,10 +28,11 @@ namespace SPARTA_NS {
 class FixGridCheck : public Fix {
  public:
   FixGridCheck(class SPARTA *, int, char **);
-  ~FixGridCheck();
+  virtual ~FixGridCheck();
   int setmask();
   void init();
-  void end_of_step();
+  void setup();
+  virtual void end_of_step();
   double compute_scalar();
 
  protected:

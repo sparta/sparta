@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -140,8 +140,7 @@ class Stats : protected Pointers {
   void compute_nreactave();
   void compute_nsreactave();
 
-  void compute_nparent();
-  void compute_nchild();
+  void compute_ngrid();
   void compute_nsplit();
   void compute_maxlevel();
 

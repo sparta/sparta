@@ -58,6 +58,7 @@ help:
 	@echo 'make mpi-stubs           build dummy MPI library in STUBS'
 	@echo 'make install-python      install SPARTA wrapper in Python'
 	@echo 'make tar                 create spa_src.tar.gz of src dir and packages'
+	@echo 'make purge               purge obsolete copies of source files'
 	@echo ''
 	@echo 'make package             list available packages'
 	@echo 'make yes-package         install a single pgk in src dir'
@@ -66,6 +67,7 @@ help:
 	@echo 'make no-all              remove all pkgs from src dir'
 	@echo ''
 	@echo 'make package-status (ps)  status of all packages'
+	@echo 'make package-installed (pi)  list of installed packages'
 	@echo 'make package-update (pu)  replace src files with package files'
 	@echo 'make package-overwrite    replace package files with src files'
 	@echo 'make package-diff (pd)    diff src files against package file'
@@ -180,6 +182,7 @@ package:
 	@echo 'make no-all                  remove all pkgs from src dir'
 	@echo ''
 	@echo 'make package-status (ps)  status of all packages'
+	@echo 'make package-installed (pi)  list of installed packages'
 	@echo 'make package-update (pu)  replace src files with package files'
 	@echo 'make package-overwrite    replace package files with src files'
 	@echo 'make package-diff (pd)    diff src files against package file'
@@ -227,6 +230,10 @@ package-status ps:
 #	@echo ''
 #	@for p in $(PACKUSERUC); do $(SHELL) Package.sh $$p status; done
 
+package-installed pi:
+	@for p in $(PACKAGEUC); do $(SHELL) Package.sh $$p installed; done
+#        @for p in $(PACKUSERUC); do $(SHELL) Package.sh $$p installed; done
+
 package-update pu:
 	@for p in $(PACKAGEUC); do $(SHELL) Package.sh $$p update; done
 #	@echo ''
@@ -242,8 +249,8 @@ package-diff pd:
 #	@echo ''
 #	@for p in $(PACKUSERUC); do $(SHELL) Package.sh $$p diff; done
 
-package-purge: Purge.list
-	@echo 'Purging obsolete and auto-generated source files'
+purge: Purge.list
+	@echo 'Purging auto-generated source files'
 	@for f in `grep -v '#' Purge.list` ;		\
 	    do test -f $$f && rm $$f && echo $$f || : ;		\
 	done

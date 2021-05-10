@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -37,15 +37,14 @@ class CollideVSS : public Collide {
   double attempt_collision(int, int, int, double);
   virtual int test_collision(int, int, int, Particle::OnePart *, Particle::OnePart *);
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *);
-  virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&, 
+  virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
                         Particle::OnePart *&);
-  double extract(int, const char *);
+  double extract(int, int, const char *);
 
   struct State {      // two-particle state
     double vr2;
     double vr;
     double imass,jmass;
-    double mr;
     double ave_rotdof;
     double ave_vibdof;
     double ave_dof;
@@ -70,37 +69,37 @@ class CollideVSS : public Collide {
     double rotc3;
     double vibc1;
     double vibc2;
+    double mr;
   };
 
  protected:
   int relaxflag,eng_exchange;
   double vr_indice;
   double **prefactor; // static portion of collision attempt frequency
- 
+
   struct State precoln;       // state before collision
   struct State postcoln;      // state after collision
 
-  Params *params;             // VSS params for each species
+  Params **params;             // VSS params for each species
   int nparams;                // # of per-species params read in
 
-  void SCATTER_TwoBodyScattering(Particle::OnePart *, 
+  void SCATTER_TwoBodyScattering(Particle::OnePart *,
 				 Particle::OnePart *);
-  void EEXCHANGE_NonReactingEDisposal(Particle::OnePart *, 
+  void EEXCHANGE_NonReactingEDisposal(Particle::OnePart *,
 				      Particle::OnePart *);
-  void SCATTER_ThreeBodyScattering(Particle::OnePart *, 
+  void SCATTER_ThreeBodyScattering(Particle::OnePart *,
                                    Particle::OnePart *,
                                    Particle::OnePart *);
-  void EEXCHANGE_ReactingEDisposal(Particle::OnePart *, 
+  void EEXCHANGE_ReactingEDisposal(Particle::OnePart *,
                                    Particle::OnePart *,
                                    Particle::OnePart *);
 
   double sample_bl(RanPark *, double, double);
-  double rotrel (int, double);  
-  double vibrel (int, double);  
+  double rotrel (int, double);
+  double vibrel (int, double);
 
   void read_param_file(char *);
-  int wordcount(char *);
-  void wordparse(int, char *, char **);
+  int wordparse(int, char *, char **);
 };
 
 }

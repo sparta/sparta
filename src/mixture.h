@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -24,7 +24,7 @@ class Mixture : protected Pointers {
  public:
   char *id;                   // ID of mixture
   int nspecies;               // # of species in mixture
-  int *species;               // species[i] = particle species index of 
+  int *species;               // species[i] = particle species index of
                               //              mixture species I
 
   int ngroup;                 // # of defined groups
@@ -60,7 +60,7 @@ class Mixture : protected Pointers {
   int **groupspecies;         // list of particle species indices in each group
   int *species2group;         // s2g[i] = group that particle species I is in
                               // -1 if species I not in mixture
-  int *species2species;       // s2s[i] = mixture species that 
+  int *species2species;       // s2s[i] = mixture species that
                               //   particle species I is
                               // -1 if species I not in mixture
   double *vscale;             // pre-computed velocity scale factor

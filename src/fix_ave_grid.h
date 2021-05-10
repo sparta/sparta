@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -50,7 +50,7 @@ class FixAveGrid : public Fix {
   int nrepeat,irepeat,nsample;
   bigint nvalid;
 
-  char **ids;                // ID/name of compute,fix,variable to access   
+  char **ids;                // ID/name of compute,fix,variable to access
   int *which;                // COMPUTE or FIX or VARIABLE
   int *argindex;             // which column from compute or fix to access
   int *value2index;          // index of compute,fix,variable

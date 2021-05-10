@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -42,8 +42,8 @@ class Comm : protected Pointers {
   int irregular_uniform(int, int *, char *, int, char **);
   void ring(int, int, void *, int, void (*)(int, char *, void *),
             void *, int, void *);
-  int rendezvous(int, int, char *, int, int, int *, 
-                 int (*)(int, char *, int &, int *&, char *&, void *), 
+  int rendezvous(int, int, char *, int, int, int *,
+                 int (*)(int, char *, int &, int *&, char *&, void *),
                  int, char *&, int, void *, int statflag=0);
 
  protected:
@@ -53,7 +53,7 @@ class Comm : protected Pointers {
   int *pproc,*gproc,*gsize;
   int maxpproc,maxgproc;
   bigint rvous_bytes;
-  
+
   int neighflag;                    // 1 if nearest-neighbor particle comm
   int nneigh;                       // # of procs I own ghost cells of
   int *neighlist;                   // list of ghost procs
@@ -62,11 +62,11 @@ class Comm : protected Pointers {
                                 // base class when child copy is destroyed)
 
   void migrate_cells_less_memory(int);  // small memory version of migrate_cells
-  int rendezvous_irregular(int, char *, int, int, int *, 
-                           int (*)(int, char *, int &, int *&, char *&, void *), 
+  int rendezvous_irregular(int, char *, int, int, int *,
+                           int (*)(int, char *, int &, int *&, char *&, void *),
                            int, char *&, int, void *, int);
-  int rendezvous_all2all(int, char *, int, int, int *, 
-                         int (*)(int, char *, int &, int *&, char *&, void *), 
+  int rendezvous_all2all(int, char *, int, int, int *,
+                         int (*)(int, char *, int &, int *&, char *&, void *),
                          int, char *&, int, void *, int);
   void rendezvous_stats(int, int, int, int, int, int);
 };

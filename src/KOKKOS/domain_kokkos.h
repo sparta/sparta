@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -45,22 +45,22 @@ class DomainKokkos : public Domain {
   {
     //jp = NULL;
     reaction = 0;
-  
+
     switch (bflag[face]) {
-  
+
       // outflow boundary, particle deleted by caller
-  
+
       case OUTFLOW:
         return OUTFLOW;
-  
+
       // periodic boundary
       // set x to be on periodic box face
       // adjust xnew by periodic box length
-  
+
       case PERIODIC:
       {
         double *x = ip->x;
-      
+
         switch (face) {
         case XLO:
           x[0] = boxhi[0];
@@ -87,20 +87,20 @@ class DomainKokkos : public Domain {
           xnew[2] -= zprd;
           break;
         }
-      
+
         return PERIODIC;
       }
-  
+
       // specular reflection boundary
       // adjust xnew and velocity
-  
+
       case REFLECT:
       {
         double *v = ip->v;
         //double *lo = grid->cells[icell].lo;
         //double *hi = grid->cells[icell].hi;
         int dim = face / 2;
-  
+
         if (face % 2 == 0) {
           xnew[dim] = lo[dim] + (lo[dim]-xnew[dim]);
           v[dim] = -v[dim];
@@ -108,12 +108,12 @@ class DomainKokkos : public Domain {
           xnew[dim] = hi[dim] - (xnew[dim]-hi[dim]);
           v[dim] = -v[dim];
         }
-  
+
         return REFLECT;
       }
 
     }
-  
+
     return 0;
   };
 

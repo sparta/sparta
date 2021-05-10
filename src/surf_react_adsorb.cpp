@@ -25,6 +25,7 @@
 #include "surf.h"
 #include "grid.h"
 #include "domain.h"
+#include "particle.h"
 #include "collide.h"
 #include "collide_vss.h"
 #include "surf_collide.h"
@@ -43,6 +44,7 @@ enum{INT,DOUBLE};                      // several files
 enum{FACE,SURF};
 
 #define DELTA_TALLY 1024
+#define DELTA_PART 8                   // make this bigger once debugged
 
 // GS react
 
@@ -142,6 +144,15 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
     n_PS_react = 0;
   }
 
+  // initialize PS added particle data structs
+
+  mypart = NULL;
+  allpart = NULL;
+  maxmypart = maxallpart = 0;
+
+  memory->create(recvcounts,comm->nprocs,"sr_adsorb:recvcounts");
+  memory->create(displs,comm->nprocs,"sr_adsorb:displs");
+
   // list of surface collision models
 
   cmodels = new SurfCollide*[MAXMODELS];
@@ -224,7 +235,6 @@ SurfReactAdsorb::~SurfReactAdsorb()
   memory->destroy(indices_gs);
   
   // PS model
-
   
   for (int i = 0; i < maxlist_ps; i++) {
     for (int j = 0; j < rlist_ps[i].nreactant; j++) {
@@ -252,7 +262,13 @@ SurfReactAdsorb::~SurfReactAdsorb()
   }
   memory->destroy(rlist_ps);
   
+  // added PS particles
 
+  memory->sfree(mypart);
+  memory->sfree(allpart);
+  memory->destroy(recvcounts);
+  memory->destroy(displs);
+  
   // surface collision models
 
   for (int i = 0; i < MAXMODELS; i++)  delete cmodels[i];
@@ -312,7 +328,6 @@ void SurfReactAdsorb::create_per_face_state()
   memory->create(face_total_state,nface,"face_total_state");
   memory->create(face_area,nface,"face_area");
   memory->create(face_weight,nface,"face_weight");
-  
 
   // local delta and norm storage
 
@@ -348,7 +363,6 @@ void SurfReactAdsorb::create_per_face_state()
     }
     face_weight[iface] = 1.0;
   }
-
 
   // set ptrs used by react() and react_PS() to per-face data structs
 
@@ -450,9 +464,11 @@ void SurfReactAdsorb::init()
     }
     tau = face_tau;
   }
+
   if (mode == SURF) {
     int tau_direct;
-    if (surf->find_custom((char *) "nstick") < 0) tau_custom = surf->add_custom((char *) "tau",DOUBLE,0);
+    if (surf->find_custom((char *) "nstick") < 0) 
+      tau_custom = surf->add_custom((char *) "tau",DOUBLE,0);
     else tau_custom = surf->find_custom((char *) "tau");
   
     tau_direct = surf->ewhich[tau_custom];
@@ -579,7 +595,9 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
         {
           double K_ads = r->kisliuk_coeff[0] * pow(twall,r->kisliuk_coeff[1]) * 
           exp(-r->kisliuk_coeff[2]/twall);
-          if (surf_cover < 1) S_theta = pow((1 - surf_cover)/(1 - surf_cover + K_ads*surf_cover),r->coeff[3]);
+          if (surf_cover < 1) 
+            S_theta = pow((1 - surf_cover)/(1 - surf_cover + 
+                                            K_ads*surf_cover),r->coeff[3]);
         }
         else
         {
@@ -595,16 +613,16 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
         double surf_cover = total_state[isurf] * ms_inv;
         double S_theta = 0.0;
 
-        if (r->kisliuk_flag)
-        {
+        if (r->kisliuk_flag) {
           double K_ads = r->kisliuk_coeff[0] * pow(twall,r->kisliuk_coeff[1]) * 
-          exp(-r->kisliuk_coeff[2]/twall);
-          if (surf_cover < 1) S_theta = pow((1 - surf_cover)/(1 - surf_cover + K_ads*surf_cover),r->coeff[3]);
-        }
-        else
-        {
+            exp(-r->kisliuk_coeff[2]/twall);
+          if (surf_cover < 1) 
+            S_theta = pow((1 - surf_cover)/(1 - surf_cover + 
+                                            K_ads*surf_cover),r->coeff[3]);
+        } else {
           S_theta = pow((1-surf_cover),r->coeff[3]);
         }
+
         prob_value[i] = r->k_react*S_theta;
 
         /*
@@ -614,7 +632,8 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           double S_ratio2 = (1 - surf_cover)/(1 - surf_cover + K_ads*surf_cover); 
           prob_value[i] *= (S_ratio2); 
         }
-        */                  
+        */
+
         break;
       }
         
@@ -623,16 +642,16 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
         double surf_cover = total_state[isurf] * ms_inv;
         double S_theta = 0.0;
 
-        if (r->kisliuk_flag)
-        {
+        if (r->kisliuk_flag) {
           double K_ads = r->kisliuk_coeff[0] * pow(twall,r->kisliuk_coeff[1]) * 
-          exp(-r->kisliuk_coeff[2]/twall);
-          if (surf_cover < 1) S_theta = pow((1 - surf_cover)/(1 - surf_cover + K_ads*surf_cover),r->coeff[3]);
-        }
-        else
-        {
+            exp(-r->kisliuk_coeff[2]/twall);
+          if (surf_cover < 1) 
+            S_theta = pow((1 - surf_cover)/(1 - surf_cover + 
+                                            K_ads*surf_cover),r->coeff[3]);
+        } else {
           S_theta = pow((1-surf_cover),r->coeff[3]);
         }
+
         prob_value[i] = r->k_react*S_theta;
         break;                      
       }
@@ -642,16 +661,16 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
         double surf_cover = total_state[isurf] * ms_inv;
         double S_theta = 0.0;
 
-        if (r->kisliuk_flag)
-        {
+        if (r->kisliuk_flag) {
           double K_ads = r->kisliuk_coeff[0] * pow(twall,r->kisliuk_coeff[1]) * 
-          exp(-r->kisliuk_coeff[2]/twall);
-          if (surf_cover < 1) S_theta = pow((1 - surf_cover)/(1 - surf_cover + K_ads*surf_cover),r->coeff[3]);
-        }
-        else
-        {
+            exp(-r->kisliuk_coeff[2]/twall);
+          if (surf_cover < 1) 
+            S_theta = pow((1 - surf_cover)/(1 - surf_cover + 
+                                            K_ads*surf_cover),r->coeff[3]);
+        } else {
           S_theta = pow((1-surf_cover),r->coeff[3]);
         }
+
         prob_value[i] = r->k_react*S_theta;
         break;
       }
@@ -661,16 +680,16 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
         double surf_cover = total_state[isurf] * ms_inv;
         double S_theta = 0.0;
 
-        if (r->kisliuk_flag)
-        {
+        if (r->kisliuk_flag) {
           double K_ads = r->kisliuk_coeff[0] * pow(twall,r->kisliuk_coeff[1]) * 
-          exp(-r->kisliuk_coeff[2]/twall);
-          if (surf_cover < 1) S_theta = pow((1 - surf_cover)/(1 - surf_cover + K_ads*surf_cover),r->coeff[3]);
-        }
-        else
-        {
+            exp(-r->kisliuk_coeff[2]/twall);
+          if (surf_cover < 1) 
+            S_theta = pow((1 - surf_cover)/(1 - surf_cover + 
+                                            K_ads*surf_cover),r->coeff[3]);
+        } else {
           S_theta = pow((1-surf_cover),r->coeff[3]);
         }
+
         prob_value[i] = r->k_react*S_theta;
         break;          
       } 
@@ -693,8 +712,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
     case CI:
       {
         prob_value[i] = r->k_react;
-        if (r->energy_flag)
-        {
+        if (r->energy_flag) {
           double *v = ip->v;
           double dot = MathExtra::dot3(v,norm);
           double vmag_sq = MathExtra::lensq3(v);
@@ -705,6 +723,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
         }
         break;
       }
+
     /*  
     case CI2:
       {
@@ -720,12 +739,11 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
       */
     }
     
-    // NOTE: why doesn't loop include j=0 ?
-
     for (int j = 1; j < r->nreactant; j++) {
       if (r->state_products[j][0] == 's') {
         if (r->part_reactants[j] == 0) {
-          prob_value[i] *= stoich_pow(total_state[isurf],r->stoich_reactants[j]) * 
+          prob_value[i] *= 
+            stoich_pow(total_state[isurf],r->stoich_reactants[j]) * 
             pow(ms_inv,r->stoich_reactants[j]);
         } else {        
           prob_value[i] *= 
@@ -746,7 +764,6 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
       correction = (1-scatter_prob) / sum_prob;
   } else if (sum_prob > 1.0) correction = 1.0/sum_prob;
   */
-
 
   //if (sum_prob > 1.0) correction = 1.0/sum_prob;
   if (sum_prob > (1.0-scatter_prob)) correction = (1.0-scatter_prob) / sum_prob;
@@ -781,7 +798,8 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           switch(r->state_reactants[j][0]) {
           case 's':
             {
-              species_delta[isurf][r->reactants_ad_index[j]] -= r->stoich_reactants[j];
+              species_delta[isurf][r->reactants_ad_index[j]] -= 
+                r->stoich_reactants[j];
               break; 
             }
             
@@ -796,7 +814,8 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           switch(r->state_products[j][0]) {
           case 's':
             {
-              species_delta[isurf][r->products_ad_index[j]] += r->stoich_products[j];
+              species_delta[isurf][r->products_ad_index[j]] += 
+                r->stoich_products[j];
               break;  
             }
             
@@ -821,7 +840,8 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           if (r->stoich_products[0] == 2) jp_species = r->products[0]; 
           else jp_species = r->products[1];
           
-          int reallocflag = particle->add_particle(id,jp_species,ip->icell,x,v,0.0,0.0);
+          int reallocflag = 
+            particle->add_particle(id,jp_species,ip->icell,x,v,0.0,0.0);
           if (reallocflag) ip = particle->particles + (ip - particles);
           jp = &particle->particles[particle->nlocal-1];
           return 1;
@@ -853,8 +873,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
         {
           if (r->state_products[1][0] != 'g') {
             ip = NULL;                
-          }
-          else {                             
+          } else {                             
             ip->ispecies = r->products[1];
             if (r->cmodel_ip != NOMODEL) 
               cmodels[r->cmodel_ip]->
@@ -878,8 +897,10 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
             //  non_thermal_scatter(ip,norm,r->coeff[10],r->coeff[11],
             //                      r->coeff[12],r->coeff[13]);
             //else
-            //  energy_barrier_scatter(ip,norm,r->coeff[8],r->coeff[6],r->coeff[7]);
+            //  energy_barrier_scatter(ip,norm,r->coeff[8],
+            //                         r->coeff[6],r->coeff[7]);
           //}
+
           if (r->cmodel_ip == NOMODEL) return 1;
           return 2;
           break;
@@ -910,6 +931,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           return 2;
           break;
         }          
+
       /*    
       case CI1:
         {
@@ -923,52 +945,50 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           //  non_thermal_scatter(ip,norm,r->coeff[9],r->coeff[10],
           //                      r->coeff[11],r->coeff[12]);
           //else
-          //  energy_barrier_scatter(ip,norm,r->coeff[7],r->coeff[5],r->coeff[6]); 
+          //  energy_barrier_scatter(ip,norm,r->coeff[7],
+          //                         r->coeff[5],r->coeff[6]); 
           if (r->cmodel_ip == NOMODEL) return 1;
           return 2;
           break;
         }
         */
+
       case CI:
         {
-          
           ip->ispecies = r->products[0];
 
           if (r->cmodel_ip != NOMODEL) 
             cmodels[r->cmodel_ip]->
               wrapper(jp,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
 
-
           if (r->nprod_g_tot == 2) {
-          double x[3],v[3];
-          memcpy(x,ip->x,3*sizeof(double));
-          memcpy(v,ip->v,3*sizeof(double));
+            double x[3],v[3];
+            memcpy(x,ip->x,3*sizeof(double));
+            memcpy(v,ip->v,3*sizeof(double));
           
-          int id = MAXSMALLINT*random->uniform();
-          Particle::OnePart *particles = particle->particles;
-
+            int id = MAXSMALLINT*random->uniform();
+            Particle::OnePart *particles = particle->particles;
          
-          if (r->stoich_products[0] == 2) 
-          {
-            int reallocflag = particle->add_particle(id,r->products[0],ip->icell,x,v,0.0,0.0);
-            if (reallocflag) ip = particle->particles + (ip - particles);
-            jp = &particle->particles[particle->nlocal-1];
-
+            if (r->stoich_products[0] == 2) {
+              int reallocflag = 
+                particle->add_particle(id,r->products[0],ip->icell,x,v,0.0,0.0);
+              if (reallocflag) ip = particle->particles + (ip - particles);
+              jp = &particle->particles[particle->nlocal-1];
+              
           
-            if (r->cmodel_ip != NOMODEL) cmodels[r->cmodel_ip]->wrapper(jp,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
-          }
-          else 
-          {
-            int reallocflag = particle->add_particle(id,r->products[1],ip->icell,x,v,0.0,0.0);
-            if (reallocflag) ip = particle->particles + (ip - particles);
-            jp = &particle->particles[particle->nlocal-1];
-
-          
-            if (r->cmodel_jp != NOMODEL) cmodels[r->cmodel_jp]->wrapper(jp,norm,r->cmodel_jp_flags,r->cmodel_jp_coeffs);
-          }
-
-          
-
+              if (r->cmodel_ip != NOMODEL) 
+                cmodels[r->cmodel_ip]->wrapper(jp,norm,r->cmodel_ip_flags,
+                                               r->cmodel_ip_coeffs);
+            } else {
+              int reallocflag = 
+                particle->add_particle(id,r->products[1],ip->icell,x,v,0.0,0.0);
+              if (reallocflag) ip = particle->particles + (ip - particles);
+              jp = &particle->particles[particle->nlocal-1];
+              
+              if (r->cmodel_jp != NOMODEL) 
+                cmodels[r->cmodel_jp]->wrapper(jp,norm,r->cmodel_jp_flags,
+                                               r->cmodel_jp_coeffs);
+            }
           }
 
           //cll(ip,norm,r->coeff[5],r->coeff[6],r->coeff[7]);
@@ -976,7 +996,8 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           // non_thermal_scatter(jp,norm,r->coeff[12],r->coeff[13],
           //                      r->coeff[14],r->coeff[15]);
           //else
-          //  energy_barrier_scatter(jp,norm,r->coeff[10],r->coeff[8],r->coeff[9]);
+          //  energy_barrier_scatter(jp,norm,r->coeff[10],
+          //                         r->coeff[8],r->coeff[9]);
           
           if (r->cmodel_ip == NOMODEL) return 1;
           return 2;
@@ -1002,33 +1023,97 @@ void SurfReactAdsorb::tally_update()
   if (update->ntimestep % nsync) return;
 
   // perform on-surface chemistry for PS model
-  // for box faces: only a single proc does this
-  // for surf elements: each proc updates only every Pth element it owns
-
+  // will insert new particles desorbing from faces/surfs as needed
+  // first sync gas/surf chem changes to surf states since last sync
+  
   if (model == PS) {
-    if (mode == FACE) {
-      if (me == 0) {
-	for (int iface = 0; iface < nface; iface++)
-	  PS_react(-(iface+1),face_norm[iface]);
-      }
-
-    } else if (mode == SURF) {
-      int nsurf = surf->nsurf;
-      if (domain->dimension == 2) {
-	for (int m = me; m < nsurf; m += nprocs)
-	  PS_react(m,surf->lines[m].norm);
-      } else {
-	for (int m = me; m < nsurf; m += nprocs)
-	  PS_react(m,surf->tris[m].norm);
-      }
-    }
+    if (mode == FACE) update_state_face();
+    else if (mode == SURF) update_state_surf();
+    
+    PS_chemistry();
   }
 
-  // update the state of each face or element
-  // this syncs gas/surf chem from all procs and on-surface chemistry
+  // update the state of all faces or surf elements
+  // if no PS chemistry, syncs gas/surf chem changes to surf states since last sync
+  // if yes PS chemistry, syncs PS chem changes to surf states
   
   if (mode == FACE) update_state_face();
   else if (mode == SURF) update_state_surf();
+}
+
+/* ---------------------------------------------------------------------- */
+
+void SurfReactAdsorb::PS_chemistry()
+{
+  // zero the mypart vector of particles this proc is adding
+
+  npart = 0;
+  
+  // for box faces: a single proc updates all faces
+  // for surf elements: each proc updates every Pth surf it owns
+
+  if (mode == FACE) {
+    if (me == 0) {
+      for (int iface = 0; iface < nface; iface++)
+	PS_react(-(iface+1),face_norm[iface]);
+    }
+
+  } else if (mode == SURF) {
+    int nsurf = surf->nsurf;
+    if (domain->dimension == 2) {
+      for (int m = me; m < nsurf; m += nprocs)
+	PS_react(m,surf->lines[m].norm);
+    } else {
+      for (int m = me; m < nsurf; m += nprocs)
+	PS_react(m,surf->tris[m].norm);
+    }
+  }
+
+  // allpart = nall-length vector of particles all procs are adding
+  // accumulate via Allgatherv
+
+  int nall;
+  MPI_Allreduce(&npart,&nall,1,MPI_INT,MPI_SUM,world);
+
+  if (nall > maxallpart) {
+    while (maxallpart < nall) maxallpart += DELTA_PART;
+    memory->sfree(allpart);
+    allpart = (AddParticle *)
+      memory->smalloc(maxallpart*sizeof(AddParticle),"sr_adsorb:allpart");
+  }
+
+  int nsend = npart*sizeof(AddParticle);
+  MPI_Allgather(&nsend,1,MPI_INT,recvcounts,1,MPI_INT,world);
+  displs[0] = 0;
+  for (int i = 1; i < nprocs; i++) displs[i] = displs[i-1] + recvcounts[i-1];
+
+  MPI_Allgatherv(mypart,nsend,MPI_CHAR,allpart,recvcounts,displs,MPI_CHAR,world);
+
+  // loop over all particles
+  // check if inside a child cell I own via id_find_child()
+  // if not, skip the particle, another proc will add it
+  // if yes, add it to particle list using values in allpart
+  // dtremain must be added separately
+  // grid->hash is filled must be filled to use grid->id_find_child()
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  int icell;
+  double *x;
+  AddParticle *p;
+  
+  for (int i = 0; i < nall; i++) {
+    p = &allpart[i];
+    x = p->x;
+    
+    icell = grid->id_find_child(0,0,boxlo,boxhi,x);
+    if (icell < 0) continue;
+    if (icell >= grid->nlocal) continue;
+    
+    particle->add_particle(p->id,p->ispecies,icell,p->x,p->v,p->erot,p->evib);
+    particle->particles[particle->nlocal-1].dtremain = p->dtremain;
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1503,9 +1588,11 @@ void SurfReactAdsorb::readfile_gs(char *fname)
         error->all(FLERR,"Invalid reaction type in file");
     }
 
-    if (word[0] == 'S' || word[0] == 's') {r->style = SIMPLE; r->ncoeff += 1;}
-    else if (word[0] == 'A' || word[0] == 'a') {r->style = ARRHENIUS; r->ncoeff += 3;}
-    else {
+    if (word[0] == 'S' || word[0] == 's') {
+      r->style = SIMPLE; r->ncoeff += 1;
+    } else if (word[0] == 'A' || word[0] == 'a') {
+      r->style = ARRHENIUS; r->ncoeff += 3;
+    } else {
       print_reaction(copy1,copy2);
       error->all(FLERR,"Invalid reaction type in file");
     }
@@ -1520,38 +1607,28 @@ void SurfReactAdsorb::readfile_gs(char *fname)
     }
 
     word = strtok(NULL," \t\n");
-    while (word != NULL) 
-    { 
-      if (strcmp(word,"kisliuk") == 0) 
-      {
+    while (word != NULL) { 
+      if (strcmp(word,"kisliuk") == 0) {
         r->kisliuk_flag = 1;
-        for (int i = 0; i < 3; i++) 
-        {
+        for (int i = 0; i < 3; i++) {
           word = strtok(NULL," \t\n"); 
-          if (!word) 
-          {
+          if (!word) {
             print_reaction(copy1,copy2);
             error->all(FLERR,"Invalid reaction coefficients in file");
           }
           r->kisliuk_coeff[i] = input->numeric(FLERR,word);
         }
-      } 
-      else if (strcmp(word,"energy") == 0) 
-      {
+      } else if (strcmp(word,"energy") == 0) {
         r->energy_flag = 1;
-        for (int i = 0; i < 2; i++) 
-        {
+        for (int i = 0; i < 2; i++) {
           word = strtok(NULL," \t\n"); 
-          if (!word) 
-          {
+          if (!word) {
             print_reaction(copy1,copy2);
             error->all(FLERR,"Invalid reaction coefficients in file");
           }
           r->energy_coeff[i] = input->numeric(FLERR,word);
         }
-      } 
-      else 
-      { 
+      } else { 
         print_reaction(copy1,copy2);
         error->all(FLERR,"Invalid reaction type in file");
       } 
@@ -1577,16 +1654,16 @@ void SurfReactAdsorb::readfile_gs(char *fname)
     }
     */
 
-    if (r->state_reactants[0][0] != 'g')  {
-        print_reaction(copy1,copy2);
-        error->all(FLERR,"The first reactant must be gas phase");
+    if (r->state_reactants[0][0] != 'g') {
+      print_reaction(copy1,copy2);
+      error->all(FLERR,"The first reactant must be gas phase");
     }
 
-    if (r->nprod_g_tot > 2) 
-    {
+    if (r->nprod_g_tot > 2) {
       print_reaction(copy1,copy2);
       error->all(FLERR,"Number of gas phase products cannot be greater than 2");
     }
+
     /*
     if (r->type == DISSOCIATION) {
       if (r->nreactant != 1 || r->nproduct != 2) {
@@ -1606,138 +1683,133 @@ void SurfReactAdsorb::readfile_gs(char *fname)
       */
     //} else 
 
-    switch (r->type) 
-    {
-      case DISSOCIATION:
+    switch (r->type) {
+
+    case DISSOCIATION:
       {
         /*
-        if (r->nreactant != 1 || r->nproduct != 2) 
-        {
-          print_reaction(copy1,copy2);
-          error->all(FLERR,"Invalid reaction type in file");
-        }
-        */
-        break;
-      }
-      
-      case EXCHANGE:
-      {
-        /*
-        if (r->nreactant != 1 || r->nproduct != 1) 
-        {
-          print_reaction(copy1,copy2);
-          error->all(FLERR,"Invalid reaction type in file");
-        }
-        */
-        break;
-      }
-      
-      case RECOMBINATION:
-      {
-        /*
-        if (r->nreactant != 1 || r->nproduct != 0) 
-        {
-          print_reaction(copy1,copy2);
-          error->all(FLERR,"Invalid reaction type in file");
-        }
-        */
-        break;
-      }
-
-      case AA:
-      {
-        if (r->state_products[0][0] != 's')  
-        {
-          print_reaction(copy1,copy2);
-          error->all(FLERR,"The first product must be surface phase in AA reaction");
-        }
-        break;
-      }
-
-      case DA:
-      {
-        if (r->state_products[0][0] != 's')  
-        {
-          print_reaction(copy1,copy2);
-          error->all(FLERR,"The first product must be surface phase in DA reaction");
-        }
-
-        for (int i=2; i < r->nproduct; i++)
-        {
-          if (r->state_products[i][0] == 'g')
+          if (r->nreactant != 1 || r->nproduct != 2) 
           {
+          print_reaction(copy1,copy2);
+          error->all(FLERR,"Invalid reaction type in file");
+          }
+        */
+        break;
+      }
+      
+    case EXCHANGE:
+      {
+        /*
+          if (r->nreactant != 1 || r->nproduct != 1) 
+          {
+          print_reaction(copy1,copy2);
+          error->all(FLERR,"Invalid reaction type in file");
+          }
+        */
+        break;
+      }
+      
+    case RECOMBINATION:
+      {
+        /*
+          if (r->nreactant != 1 || r->nproduct != 0) 
+          {
+          print_reaction(copy1,copy2);
+          error->all(FLERR,"Invalid reaction type in file");
+          }
+        */
+        break;
+      }
+      
+    case AA:
+      {
+        if (r->state_products[0][0] != 's') {
+          print_reaction(copy1,copy2);
+          error->all(FLERR,
+                     "First product must be surface phase in AA reaction");
+        }
+        break;
+      }
+        
+    case DA:
+      {
+        if (r->state_products[0][0] != 's') {
+          print_reaction(copy1,copy2);
+          error->all(FLERR,
+                     "First product must be surface phase in DA reaction");
+        }
+        
+        for (int i=2; i < r->nproduct; i++) {
+          if (r->state_products[i][0] == 'g') {
             print_reaction(copy1,copy2);
-            error->all(FLERR,"The gas phase species must be second product in DA reaction");
+            error->all(FLERR,
+                       "Gas phase species must be second product "
+                       "in DA reaction");
           }
         }
         break;
       } 
-
-      case LH1:
+      
+    case LH1:
       {
-        if (r->state_products[0][0] != 'g')  
-        {
+        if (r->state_products[0][0] != 'g') {
           print_reaction(copy1,copy2);
-          error->all(FLERR,"The first product must be gas phase in LH1 reaction");
+          error->all(FLERR,
+                     "First product must be gas phase in LH1 reaction");
         }
         break;
       }
-
-      case LH3:
+      
+    case LH3:
       {
-        if (r->state_products[0][0] != 's')  
-        {
+        if (r->state_products[0][0] != 's') {
           print_reaction(copy1,copy2);
-          error->all(FLERR,"The first product must be surface phase in LH3 reaction");
+          error->all(FLERR,
+                     "First product must be surface phase in LH3 reaction");
         }
         break;
       }
-
-      case CD:
+      
+    case CD:
       {
-        if (r->state_products[0][0] != 'b')  
-        {
+        if (r->state_products[0][0] != 'b') {
           print_reaction(copy1,copy2);
-          error->all(FLERR,"The first product must be bulk phase in CD reaction");
+          error->all(FLERR,"First product must be bulk phase in CD reaction");
         }
         break;
       }
-
-      case ER:
+      
+    case ER:
       {
-        if (r->state_products[0][0] != 'g')  
-        {
+        if (r->state_products[0][0] != 'g') {
           print_reaction(copy1,copy2);
-          error->all(FLERR,"The first product must be gas phase in ER reaction");
+          error->all(FLERR,"First product must be gas phase in ER reaction");
         }
         break;
       }
-
-      case CI:
+      
+    case CI:
       {
-        if (r->state_products[0][0] != 'g')  
-        {
+        if (r->state_products[0][0] != 'g') {
           print_reaction(copy1,copy2);
-          error->all(FLERR,"The first product must be gas phase in CI reaction");
+          error->all(FLERR,"First product must be gas phase in CI reaction");
         }
-
-        for (int i=2; i < r->nproduct; i++)
-        {
-          if (r->state_products[i][0] == 'g')
-          {
+        
+        for (int i=2; i < r->nproduct; i++) {
+          if (r->state_products[i][0] == 'g'){
             print_reaction(copy1,copy2);
-            error->all(FLERR,"The gas phase species must be first or second product in CI reaction");
+            error->all(FLERR,"Gas phase species must be first or "
+                       "second product in CI reaction");
           }
         }
         break;
       }
-
     }  
-      
     
     r->k_react = r->coeff[0];
-    if (r->style == ARRHENIUS) r->k_react = r->k_react * pow(twall,r->coeff[1]) * 
-      exp(-r->coeff[2]/(twall));
+    if (r->style == ARRHENIUS) 
+      r->k_react = r->k_react * pow(twall,r->coeff[1]) * 
+        exp(-r->coeff[2]/(twall));
 
     // process 3rd line of reaction
     // NOTE: RIGHT HERE
@@ -1911,7 +1983,6 @@ int SurfReactAdsorb::match_product(char *species, int m)
 
 void SurfReactAdsorb::init_reactions_ps() 
 {
-  
   // convert species IDs to species indices_ps
   // flag reactions as active/inactive_ps depending on whether all species exist
 
@@ -1967,7 +2038,6 @@ void SurfReactAdsorb::init_reactions_ps()
 
 void SurfReactAdsorb::readfile_ps(char *fname) 
 {
-  
   int n,n1,n2,eof;
   char line1[MAXLINE],line2[MAXLINE];
   char copy1[MAXLINE],copy2[MAXLINE];
@@ -2202,115 +2272,107 @@ void SurfReactAdsorb::readfile_ps(char *fname)
       error->all(FLERR,"Number of gas phase products cannot be greater than 2");
     }
 
-    switch (r->type) 
-    {
+    switch (r->type) {
+
       case DS:
-      {
-        if (r->state_reactants[0][0] != 's')  
         {
-          print_reaction(copy1,copy2);
-          error->all(FLERR,"The first reactant must be surface phase in DS reaction");
-        }
-
-        if (r->state_products[0][0] != 'g')  
-        {
-          print_reaction(copy1,copy2);
-          error->all(FLERR,"The first product must be gas phase in DS reaction");
-        }
-
-        for (int i=1; i < r->nproduct; i++)
-        {
-          if (r->state_products[i][0] == 'g')
-          {
+          if (r->state_reactants[0][0] != 's') {
             print_reaction(copy1,copy2);
-            error->all(FLERR,"The gas phase species must be the first product in DS reaction");
+            error->all(FLERR,"First reactant must be surface phase "
+                       "in DS reaction");
+            }
+          
+          if (r->state_products[0][0] != 'g') {
+            print_reaction(copy1,copy2);
+            error->all(FLERR,"First product must be gas phase in DS reaction");
+            }
+          
+          for (int i=1; i < r->nproduct; i++) {
+            if (r->state_products[i][0] == 'g')
+              {
+                print_reaction(copy1,copy2);
+                error->all(FLERR,"Fas phase species must be "
+                           "first product in DS reaction");
+              }
           }
+          break;
+        }
+        
+    case LH2:
+      {
+        if (r->state_reactants[0][0] != 's') {
+          print_reaction(copy1,copy2);
+          error->all(FLERR,"First reactant must be surface phase in "
+                     "LH2 reaction");
+        }
+        
+        if (r->state_products[0][0] != 'g') {
+          print_reaction(copy1,copy2);
+          error->all(FLERR,"First product must be gas phase in "
+                     "LH2 reaction");
+        }
+        
+        for (int i=1; i < r->nproduct; i++) {
+          if (r->state_products[i][0] == 'g')
+            {
+              print_reaction(copy1,copy2);
+              error->all(FLERR,"Gas phase species must be "
+                         "first product in LH2 reaction");
+            }
         }
         break;
       }
       
-      case LH2:
+    case LH4:
       {
-        if (r->state_reactants[0][0] != 's')  
-        {
+        if (r->state_reactants[0][0] != 's') {
           print_reaction(copy1,copy2);
-          error->all(FLERR,"The first reactant must be surface phase in LH2 reaction");
+          error->all(FLERR,"First reactant must be surface phase in "
+                     "LH4 reaction");
         }
-
-        if (r->state_products[0][0] != 'g')  
-        {
+        
+        if (r->state_products[0][0] != 's') {
           print_reaction(copy1,copy2);
-          error->all(FLERR,"The first product must be gas phase in LH2 reaction");
-        }
-
-        for (int i=1; i < r->nproduct; i++)
-        {
-          if (r->state_products[i][0] == 'g')
-          {
-            print_reaction(copy1,copy2);
-            error->all(FLERR,"The gas phase species must be the first product in LH2 reaction");
-          }
+          error->all(FLERR,"First product must be surface phase in "
+                     "LH4 reaction");
         }
         break;
       }
       
-      case LH4:
+    case SB:
       {
-        if (r->state_reactants[0][0] != 's')  
-        {
+        if (r->state_reactants[0][0] != 'b') {
           print_reaction(copy1,copy2);
-          error->all(FLERR,"The first reactant must be surface phase in LH4 reaction");
+          error->all(FLERR,"First reactant must be bulk phase in SB reaction");
         }
-
-        if (r->state_products[0][0] != 's')  
-        {
+        
+        if (r->state_products[0][0] != 'g') {
           print_reaction(copy1,copy2);
-          error->all(FLERR,"The first product must be surface phase in LH4 reaction");
+          error->all(FLERR,"First product must be gas phase in SB reaction");
         }
-        break;
-      }
-
-      case SB:
-      {
-        if (r->state_reactants[0][0] != 'b')  
-        {
-          print_reaction(copy1,copy2);
-          error->all(FLERR,"The first reactant must be bulk phase in SB reaction");
-        }
-
-        if (r->state_products[0][0] != 'g')  
-        {
-          print_reaction(copy1,copy2);
-          error->all(FLERR,"The first product must be gas phase in SB reaction");
-        }
-
-        for (int i=1; i < r->nproduct; i++)
-        {
-          if (r->state_products[i][0] == 'g')
-          {
+        
+        for (int i=1; i < r->nproduct; i++) {
+          if (r->state_products[i][0] == 'g') {
             print_reaction(copy1,copy2);
-            error->all(FLERR,"The gas phase species must be the first product in SB reaction");
+            error->all(FLERR,"Gas phase species must be "
+                       "first product in SB reaction");
           }
         }
-
+        
         break;
       }
     }
-
     
     r->k_react = r->coeff[0];
-
     if (r->style == ARRHENIUS) r->k_react = r->k_react * pow(twall,r->coeff[1]) * 
-      exp(-r->coeff[2]/(twall));
+                                 exp(-r->coeff[2]/(twall));
     //nlist_ps++;
-
+    
     // process 3rd line of reaction
     // NOTE: RIGHT HERE
-
+    
     // nextra = # of extra lines to read in this reaction: 0,1,2
     // please add some code that computes nextra based on gas species count
-
-
 
     int nextra = r->nprod_g;
 
@@ -2442,7 +2504,6 @@ void SurfReactAdsorb::readfile_ps(char *fname)
     // increment reaction count
 
     nlist_ps++;
-
   }
 
   if (me == 0) fclose(fp);
@@ -2458,7 +2519,6 @@ void SurfReactAdsorb::readfile_ps(char *fname)
 							
 void SurfReactAdsorb::PS_react(int isurf, double *norm)
 {
-  
   // error checks 
 
   if (isurf < 0 && mode == SURF)
@@ -2483,7 +2543,6 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
   // int *total_state;          // total count at last sync
   // double *area;              // area of surf
   // double *weight;            // weight of surf
-
   
   if (nactive_ps == 0) return;
 
@@ -2519,7 +2578,8 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
     rxn_occur[i] = 1;
     
     for (int j=0; j<r->nreactant; j++) {
-      if (species_state[isurf][r->reactants_ad_index[j]] < r->stoich_reactants[j]) 
+      if (species_state[isurf][r->reactants_ad_index[j]] < 
+          r->stoich_reactants[j]) 
         rxn_occur[i] = 0;
     }
     //if (rxn_occur[i]) tau[isurf][react_num] += update->dt;
@@ -2540,8 +2600,9 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
             
         nu_react[i] = r->k_react;
         for (int j=0; j<r->nreactant; j++) {
-          nu_react[i] *= stoich_pow(species_state[isurf][r->reactants_ad_index[j]],
-                                    r->stoich_reactants[j]);
+          nu_react[i] *= 
+            stoich_pow(species_state[isurf][r->reactants_ad_index[j]],
+                       r->stoich_reactants[j]);
           factor_pow += r->stoich_reactants[j];              
         }
         nu_react[i] *= pow(ms_inv,factor_pow);
@@ -2575,7 +2636,8 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
             switch(r->state_reactants[j][0]) {
             case 's':
               {
-                species_delta[r->reactants_ad_index[j]] -= r->stoich_reactants[j];
+                species_delta[r->reactants_ad_index[j]] -= 
+                  r->stoich_reactants[j];
               }
             case 'g': {}
             case 'b': {}
@@ -2588,7 +2650,8 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
             switch(r->state_products[j][0]) {
             case 's':
               {
-                species_delta[r->products_ad_index[j]] += r->stoich_products[j];
+                species_delta[r->products_ad_index[j]] += 
+                  r->stoich_products[j];
               }
             case 'g': {}
             case 'b': {}
@@ -2597,97 +2660,113 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
         }
                 
         switch (r->type) {
-        case DS: {
-          double x[3],v[3];
-          v[0] = v[1] = v[2] = 0.0;
 
-          //NOTE_SGK have to add these functions
-          random_point(isurf,x);
-          //pcell = find_cell(isurf,x); // ??? 
-           
+        case DS: 
+          {
+            double x[3],v[3];
+
+            int id = MAXSMALLINT*random->uniform();
+            random_point(isurf,x);
+            v[0] = v[1] = v[2] = 0.0;
+	    
+	    particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
+            p = &particle->particles[particle->nlocal-1];
+            p->dtremain = update->dt*random->uniform(); 
+            
+            if (r->cmodel_ip != NOMODEL) 
+              cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
+                                             r->cmodel_ip_coeffs);
+	    
+	    // add new particle to mypart list and remove from Particle class
+	    // this allows correct proc that owns the grid cell to later add it
+
+	    add_particle_mine(p);
+	    particle->nlocal--;
+
+            break;                      
+          }
+                    
+        case LH2:
+          {
+	    double x[3],v[3];
+
+	    int id = MAXSMALLINT*random->uniform();
+	    random_point(isurf,x);
+	    v[0] = v[1] = v[2] = 0.0;
+	  
+	    particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
+	    p = &particle->particles[particle->nlocal-1];
+	    p->dtremain = update->dt*random->uniform(); 
+	    
+	    if (r->cmodel_ip != NOMODEL) 
+	      cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
+					     r->cmodel_ip_coeffs);
+	  
+	    // add new particle to mypart list and remove from Particle class
+	    // this allows correct proc that owns the grid cell to later add it
+	    
+	    add_particle_mine(p);
+	    particle->nlocal--;
+	    
+	    break; 
+          }
           
-
-          //if (r->state_products[0][0] == 'g') 
-          //{
-            int id = MAXSMALLINT*random->uniform();
-
-            particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
-            //int reallocflag = particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
-            //if (reallocflag) p = particle->particles + (p - particles); 
-           
-            p = &particle->particles[particle->nlocal-1];
-            p->dtremain = update->dt*random->uniform(); 
-
-            if (r->cmodel_ip != NOMODEL) cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
-          //}
-           
-          // energy_barrier_scatter(p,norm,r->coeff[3],0.0,0.0);
-
-          break;                      
-        }
-                    
-        case LH2: {
-          double x[3],v[3];
-          v[0] = v[1] = v[2] = 0;
-
-          //NOTE_SGK have to add these functions
-          random_point(isurf,x);
-          //pcell = find_cell(isurf,x); // ???
-
-          //if (r->state_products[0][0] == 'g') 
-          //{
-            int id = MAXSMALLINT*random->uniform();
-
-            particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
-            //int reallocflag = particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
-            //if (reallocflag) p = particle->particles + (p - particles); 
-
-            p = &particle->particles[particle->nlocal-1];
-            p->dtremain = update->dt*random->uniform(); 
-
-            if (r->cmodel_ip != NOMODEL) cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
-         // }
-                        
-          //energy_barrier_scatter(p,norm,r->coeff[3],0,0);
-          break; 
-        }
-                    
-        case LH4: {
-          break;  
-        }
-                    
-        case SB: {
-          double x[3],v[3];
-          v[0] = v[1] = v[2] = 0;
-
-          //NOTE_SGK have to add these functions
-          random_point(isurf,x);
-          //pcell = find_cell(isurf,x); // ??? 
+        case LH4: 
+          {
+            break;  
+          }
           
-          //if (r->state_products[0][0] == 'g') 
-          //{
+        case SB: 
+          {
+            double x[3],v[3];
+	    
             int id = MAXSMALLINT*random->uniform();
-
+            random_point(isurf,x);
+            v[0] = v[1] = v[2] = 0.0;
+            
             particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
-            //int reallocflag = particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
-            //if (reallocflag) p = particle->particles + (p - particles); 
-     
             p = &particle->particles[particle->nlocal-1];
             p->dtremain = update->dt*random->uniform(); 
+            
+            if (r->cmodel_ip != NOMODEL) 
+              cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
+                                             r->cmodel_ip_coeffs);
 
-            if (r->cmodel_ip != NOMODEL) cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
-         //}
-          break;
-           
-        }
-           
+	    // add new particle to mypart list and remove from Particle class
+	    // this allows correct proc that owns the grid cell to later add it
+	    
+	    add_particle_mine(p);
+	    particle->nlocal--;
+	    
+            break;
+          }
         }
         break;
       }
-       
     }
   }
+}
+
+/* ----------------------------------------------------------------------
+   add new particle P to mypart list
+------------------------------------------------------------------------- */
+
+void SurfReactAdsorb::add_particle_mine(Particle::OnePart *p)
+{
+  if (npart == maxmypart) {
+    maxmypart += DELTA_PART;
+    mypart = (AddParticle *)
+      memory->srealloc(mypart,maxmypart*sizeof(AddParticle),"sr_adsorb:mypart");
+  }
   
+  mypart[npart].id = p->id;
+  mypart[npart].ispecies = p->ispecies;
+  memcpy(mypart[npart].x,p->x,3*sizeof(double));
+  memcpy(mypart[npart].v,p->v,3*sizeof(double));
+  mypart[npart].erot = p->erot;
+  mypart[npart].evib = p->evib;
+  mypart[npart].dtremain = p->dtremain;
+  npart++;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -2899,22 +2978,23 @@ void SurfReactAdsorb::cll(Particle::OnePart *p, double *norm, double acc_n,
 } 
 */
 
-/* ---------------------------------------------------------------------- */
-
+/* ----------------------------------------------------------------------
+   pick a random point X on a face or surf
+   for face: isurf = 0 to 5 inclusive for which face
+   for surf: isurf = index to line or triangle
+   return X
+------------------------------------------------------------------------- */
 
 void SurfReactAdsorb::random_point(int isurf, double *x)
 {
-  
-  if (mode == FACE)
-  {
+  if (mode == FACE) {
     double *lo = domain->boxlo;
     double *hi = domain->boxhi;
     double rand1 = random->uniform();
     double rand2 = random->uniform();
 
-    switch (isurf)
-    {
-      case XLO: 
+    switch (isurf) {
+    case XLO: 
       {
         x[0] = lo[0];
         x[1] = lo[1] + rand1 * (hi[1] - lo[1]); 
@@ -2922,7 +3002,7 @@ void SurfReactAdsorb::random_point(int isurf, double *x)
         break;                  
       }
       
-      case XHI: 
+    case XHI: 
       {
         x[0] = hi[0];
         x[1] = lo[1] + rand1 * (hi[1] - lo[1]); 
@@ -2930,7 +3010,7 @@ void SurfReactAdsorb::random_point(int isurf, double *x)
         break;                   
       }
       
-      case YLO: 
+    case YLO: 
       {
         x[0] = lo[0] + rand2 * (hi[0] - lo[0]);
         x[1] = lo[1]; 
@@ -2938,7 +3018,7 @@ void SurfReactAdsorb::random_point(int isurf, double *x)
         break;                  
       }
       
-      case YHI: 
+    case YHI: 
       {
         x[0] = lo[0] + rand2 * (hi[0] - lo[0]);
         x[1] = hi[1]; 
@@ -2946,7 +3026,7 @@ void SurfReactAdsorb::random_point(int isurf, double *x)
         break;             
       }
       
-      case ZLO: 
+    case ZLO: 
       {
         x[0] = lo[0] + rand1 * (hi[0] - lo[0]);
         x[1] = lo[1] + rand2 * (hi[1] - lo[1]);
@@ -2954,7 +3034,7 @@ void SurfReactAdsorb::random_point(int isurf, double *x)
         break;               
       }
       
-      case ZHI: 
+    case ZHI: 
       {
         x[0] = lo[0] + rand1 * (hi[0] - lo[0]);
         x[1] = lo[1] + rand2 * (hi[1] - lo[1]);
@@ -2962,11 +3042,9 @@ void SurfReactAdsorb::random_point(int isurf, double *x)
         break;                
       }
     }
-  }
-  else if (mode == SURF)
-  {
-    if (domain->dimension == 2)
-    {
+
+  } else if (mode == SURF) {
+    if (domain->dimension == 2) {
       Surf::Line *lines = surf->lines;
       double *p1,*p2;
       double rand = random->uniform();
@@ -2977,9 +3055,12 @@ void SurfReactAdsorb::random_point(int isurf, double *x)
       x[0] = p1[0] + rand * (p2[0] - p1[0]);
       x[1] = p1[1] + rand * (p2[1] - p1[1]);
       x[2] = 0.0;
-    }
-    else if (domain->dimension == 3)
-    {
+      
+    } else if (domain->dimension == 3) {
+      // NOTE: to avoid sqrt() could use 2 uniform RNs: r1,r2
+      // if r1+r2 > 1 then r1 = 1-r1, r2 = 1-r2
+      // x[i] = p1[i] + r1*(p2[i]-p1[i]) + r2*(p3[i]-p1[i])
+
       Surf::Tri *tris = surf->tris;
       double *p1,*p2,*p3;
       double rand1 = sqrt(random->uniform());
@@ -3060,7 +3141,6 @@ void SurfReactAdsorb::random_point(int isurf, double *x)
   }
   */
 }
-
 
 /* ---------------------------------------------------------------------- */
 

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -131,7 +131,7 @@ void Irregular::create_procs(int n, int *proclist, int sort)
 #ifdef SPARTA_RS_ALLREDUCE_INPLACE
   MPI_Allreduce(MPI_IN_PLACE,work1,nprocs,MPI_INT,MPI_SUM,world);
   nrecv = work1[me];
-#else 
+#else
 #ifdef SPARTA_RS_ALLREDUCE
   MPI_Allreduce(work1,work2,nprocs,MPI_INT,MPI_SUM,world);
   nrecv = work2[me];
@@ -240,7 +240,7 @@ int Irregular::create_data_uniform(int n, int *proclist, int sort)
 #ifdef SPARTA_RS_ALLREDUCE_INPLACE
   MPI_Allreduce(MPI_IN_PLACE,work1,nprocs,MPI_INT,MPI_SUM,world);
   nrecv = work1[me];
-#else 
+#else
 #ifdef SPARTA_RS_ALLREDUCE
   MPI_Allreduce(work1,work2,nprocs,MPI_INT,MPI_SUM,world);
   nrecv = work2[me];
@@ -410,7 +410,7 @@ int Irregular::create_data_uniform_grouped(int n, int *procs, int sort)
 #ifdef SPARTA_RS_ALLREDUCE_INPLACE
   MPI_Allreduce(MPI_IN_PLACE,work1,nprocs,MPI_INT,MPI_SUM,world);
   nrecv = work1[me];
-#else 
+#else
 #ifdef SPARTA_RS_ALLREDUCE
   MPI_Allreduce(work1,work2,nprocs,MPI_INT,MPI_SUM,world);
   nrecv = work2[me];
@@ -649,7 +649,7 @@ int Irregular::create_data_variable(int n, int *proclist, int *sizes,
   }
   brecvsize += size_self;
 
-  if (brecvsize > MAXSMALLINT) 
+  if (brecvsize > MAXSMALLINT)
     error->one(FLERR,"Irregular comm recv buffer exceeds 2 GB");
   recvsize = brecvsize;
 
@@ -793,7 +793,7 @@ void Irregular::exchange_uniform(char *sendbuf, int nbytes, char *recvbuf)
       memcpy(&buf[i*nbytes],&sendbuf[m*nbytes],nbytes);
     }
     MPI_Send(buf,count*nbytes,MPI_CHAR,proc_send[isend],0,world);
-  }       
+  }
 
   // copy datums to self, put at beginning of recvbuf
 
@@ -859,7 +859,7 @@ void Irregular::exchange_variable(char *sendbuf, int *nbytes, char *recvbuf)
       offset += nbytes[m];
     }
     MPI_Send(buf,size_send[isend],MPI_CHAR,proc_send[isend],0,world);
-  }       
+  }
 
   // copy datums to self, put at beginning of recvbuf
 
@@ -886,13 +886,13 @@ void Irregular::exchange_variable(char *sendbuf, int *nbytes, char *recvbuf)
    create a proclist that allows reverse communication
    do sanity check that N matches # of received datums
    fill proclist with proc ID of who sent me each of my received datums
-   caller can use proclist to perform irregular comm 
+   caller can use proclist to perform irregular comm
      from recv procs back to send procs
 ------------------------------------------------------------------------- */
 
 void Irregular::reverse(int n, int *proclist)
 {
-  if (n != nrecvdatum) 
+  if (n != nrecvdatum)
     error->one(FLERR,"Irregular reverse comm size does not match");
 
   int m = 0;

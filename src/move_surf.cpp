@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -84,7 +84,7 @@ void MoveSurf::command(int narg, char **arg)
   process_args(narg-1,&arg[1]);
   mode = 0;
 
-  if (action == READFILE) 
+  if (action == READFILE)
     error->all(FLERR,"Move_surf file option is not yet implemented");
 
   // perform surface move
@@ -220,7 +220,7 @@ void MoveSurf::process_args(int narg, char **arg)
     delta[0] = input->numeric(FLERR,arg[1]);
     delta[1] = input->numeric(FLERR,arg[2]);
     delta[2] = input->numeric(FLERR,arg[3]);
-    if (domain->dimension == 2 && delta[2] != 0.0) 
+    if (domain->dimension == 2 && delta[2] != 0.0)
       error->all(FLERR,"Invalid move surf translation for 2d simulation");
     iarg = 4;
   } else if (strcmp(arg[0],"rotate") == 0) {
@@ -233,7 +233,7 @@ void MoveSurf::process_args(int narg, char **arg)
     origin[0] = input->numeric(FLERR,arg[5]);
     origin[1] = input->numeric(FLERR,arg[6]);
     origin[2] = input->numeric(FLERR,arg[7]);
-    if (domain->dimension == 2 && (rvec[0] != 0.0 || rvec[1] != 0.0)) 
+    if (domain->dimension == 2 && (rvec[0] != 0.0 || rvec[1] != 0.0))
       error->all(FLERR,"Invalid move surf rotation for 2d simulation");
     if (rvec[0] == 0.0 && rvec[1] == 0.0 && rvec[2] == 0.0)
       error->all(FLERR,"Invalid move surf rotation");
@@ -269,10 +269,10 @@ void MoveSurf::move_lines(double fraction, Surf::Line *origlines)
   if (action == READFILE) {
     readfile();
     update_points(fraction);
-  } 
+  }
   else if (action == TRANSLATE) translate_2d(fraction,origlines);
   else if (action == ROTATE) rotate_2d(fraction,origlines);
-  
+
   if (connectflag && groupbit != 1) connect_2d_post();
 
   surf->compute_line_normal(0);
@@ -295,7 +295,7 @@ void MoveSurf::move_tris(double fraction, Surf::Tri *origtris)
   if (action == READFILE) {
     readfile();
     update_points(fraction);
-  } 
+  }
   else if (action == TRANSLATE) translate_3d(fraction,origtris);
   else if (action == ROTATE) rotate_3d(fraction,origtris);
 
@@ -382,7 +382,7 @@ void MoveSurf::readfile()
       y = input->numeric(FLERR,strtok(NULL," \t\n\r"));
       if (dim == 3) z = input->numeric(FLERR,strtok(NULL," \t\n\r"));
       else z = 0.0;
-      if (id < 1 || id > npoint) 
+      if (id < 1 || id > npoint)
 	error->one(FLERR,"Invalid point index in move surf file");
       id--;
       readindex[i] = id;
@@ -583,7 +583,7 @@ void MoveSurf::rotate_2d(double fraction, Surf::Line *origlines)
     p1[0] = dnew[0] + origin[0];
     p1[1] = dnew[1] + origin[1];
     pselect[2*i] = 1;
-    
+
     d[0] = op2[0] - origin[0];
     d[1] = op2[1] - origin[1];
     d[2] = op2[2] - origin[2];
@@ -630,7 +630,7 @@ void MoveSurf::rotate_3d(double fraction, Surf::Tri *origtris)
     p1[1] = dnew[1] + origin[1];
     p1[2] = dnew[2] + origin[2];
     pselect[3*i] = 1;
-    
+
     d[0] = op2[0] - origin[0];
     d[1] = op2[1] - origin[1];
     d[2] = op2[2] - origin[2];
@@ -801,7 +801,7 @@ void MoveSurf::connect_3d_post()
         else pselect[3*i+2] = 1;
       }
     }
-  }  
+  }
 
   // free the hash
 

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -23,7 +23,7 @@ using namespace SPARTA_NS;
 #define IQ 127773
 #define IR 2836
 
-/* ---------------------------------------------------------------------- 
+/* ----------------------------------------------------------------------
    Park/Miller RNG
    assume iseed is a positive int
 ------------------------------------------------------------------------ */
@@ -34,7 +34,7 @@ RanPark::RanPark(int iseed)
   save = 0;
 }
 
-/* ---------------------------------------------------------------------- 
+/* ----------------------------------------------------------------------
    set seed to positive int
    assume 0.0 <= rseed < 1.0
 ------------------------------------------------------------------------ */
@@ -46,7 +46,7 @@ RanPark::RanPark(double rseed)
   save = 0;
 }
 
-/* ---------------------------------------------------------------------- 
+/* ----------------------------------------------------------------------
    reset seed to a positive int based on rseed and offset
    assume 0.0 <= rseed < 1.0 and offset is an int >= 0
    fmod() insures no overflow when static cast to int
@@ -63,7 +63,7 @@ void RanPark::reset(double rseed, int offset, int warmup)
 }
 
 /* ----------------------------------------------------------------------
-   uniform RN 
+   uniform RN
 ------------------------------------------------------------------------- */
 
 double RanPark::uniform()

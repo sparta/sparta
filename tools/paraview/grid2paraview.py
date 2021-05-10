@@ -1,4 +1,5 @@
-
+from __future__ import print_function
+from __future__ import division
 #   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
 #   http://sparta.sandia.gov
 #   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov,
@@ -22,42 +23,205 @@ import time
 import glob
 from datetime import timedelta
 
-def open_grid_file(filename):
-  gf = None
-  try:
-    if filename.lower().endswith('.gz'):
-      import gzip
-      gf = gzip.open(filename, "r")
+class SpartaGridFile:
+
+  def __init__(self, grid_file_path):
+    self.__number_of_cells = 0
+    self.__number_of_levels = 0
+    self.__level_dimensions = {}
+    self.__grid_file_handle = None
+    self.__grid_file_path = grid_file_path
+    self.__iterate_local_cell_ids = False
+    self._open_grid_file()
+    self._read_grid_file_header()
+    self._close_grid_file()
+
+  @property
+  def number_of_cells(self):
+    return self.__number_of_cells
+
+  @property
+  def number_of_levels(self):
+    return self.__number_of_levels
+
+  @property
+  def iterate_local_cell_ids(self):
+    return self.__iterate_local_cell_ids
+
+  @iterate_local_cell_ids.setter
+  def iterate_local_cell_ids(self, value):
+        if type(value) is not bool:
+            raise TypeError("Must be type bool")
+        else:
+            self.__iterate_local_cell_ids = value
+
+  def get_level_dimensions(self, level_number):
+    if level_number in self.__level_dimensions:
+       return self.__level_dimensions[level_number]
     else:
-      gf = open(filename, "r")
-  except IOError:
-    print "Unable to open SPARTA grid file: ", filename
-    sys.exit(1)
-  return gf
+       return None
+
+  def __iter__(self):
+    self._open_grid_file()
+    self._go_to_grid_file_cells_section()
+    return self
+
+  def __next__(self):
+    line = self.__grid_file_handle.readline()
+    if not line:
+      self._close_grid_file()
+      raise StopIteration
+    else:
+      local_cell_id = self._clean_line(line)
+      if self.iterate_local_cell_ids:
+        return local_cell_id
+      else:
+        return self.create_dashed_id(local_cell_id)
+
+  def _get_grid_file_cells_section_string(self):
+    return 'Cells'
+
+  def _get_grid_file_level_definition_string(self):
+    return 'level-'
+
+  def _get_grid_file_number_of_levels_string(self):
+    return 'levels'
+
+  def _get_grid_file_number_of_cells_string(self):
+    return 'cells'
+
+  def _get_grid_file_cells_section_string(self):
+    return 'Cells'
+
+  def _open_grid_file(self):
+    filename = self.__grid_file_path
+    self.__grid_file_handle = None
+    try:
+      if filename.lower().endswith('.gz'):
+        import gzip
+        self.__grid_file_handle = gzip.open(filename, "r")
+      else:
+        self.__grid_file_handle = open(filename, "r")
+    except IOError:
+      print("Unable to open SPARTA grid file: ", filename)
+      sys.exit(1)
+
+  def _close_grid_file(self):
+    if self.__grid_file_handle is not None:
+      self.__grid_file_handle.close()
+
+  def _clean_line(self, line):
+    line = line.partition('#')[0]
+    return line.strip()
+
+  def _read_grid_file_header(self):
+    grid_file_handle = self.__grid_file_handle
+    for line in grid_file_handle:
+      s = self._clean_line(line).split()
+
+      if self._get_grid_file_cells_section_string() in s:
+        break
+      if self._get_grid_file_number_of_cells_string() in s:
+        index = s.index(self._get_grid_file_number_of_cells_string())
+        self.__number_of_cells = int(s[index-1])
+      if self._get_grid_file_number_of_levels_string() in s:
+        index = s.index(self._get_grid_file_number_of_levels_string())
+        self.__number_of_levels = int(s[index-1])
+      if self.number_of_levels > 0:
+        for level in range(1,self.number_of_levels+1):
+          level_string = self._get_grid_file_level_definition_string() +\
+            str(level)
+          if level_string in s:
+            index = s.index(level_string)
+            self.__level_dimensions[level] = {'x' : int(s[index-3]),
+              'y' : int(s[index-2]), 'z' : int(s[index-1])}
+    self._create_level_bit_masks()  
+
+  def _go_to_grid_file_cells_section(self):
+    grid_file_handle = self.__grid_file_handle
+    for line in grid_file_handle:
+      s = self._clean_line(line).split()
+      if self._get_grid_file_cells_section_string() in s:
+        break
+
+  def _create_level_bit_masks(self):
+    bits_shifted_left = 0
+    for level in range(1,self.number_of_levels+1):
+      ldims = self.__level_dimensions[level]
+      x = ldims['x']
+      y = ldims['y']
+      z = ldims['z']
+      bits = int(math.floor(math.log(int(x*y*z),2)) + 1)
+      max_decimal_value = 2**bits-1
+      bit_mask = max_decimal_value << bits_shifted_left
+      ldims['bit_mask'] = bit_mask
+      ldims['bits_to_shift_right'] = bits_shifted_left
+      bits_shifted_left += bits
+  
+  def create_dashed_id(self, local_cell_id):
+    if not local_cell_id:
+      return local_cell_id
+    local_cell_id = int(local_cell_id)
+    dashed_id = ""
+    for level in range(1,self.number_of_levels+1):
+      ldims = self.__level_dimensions[level]
+      bit_mask = ldims['bit_mask']
+      bits_to_shift_right = ldims['bits_to_shift_right']
+      level_id = local_cell_id & bit_mask
+      level_id = level_id >> bits_to_shift_right
+      if level_id == 0:
+        break
+      else:
+        if not dashed_id:
+          dashed_id = str(level_id)
+        else:
+          dashed_id = str(level_id) + "-" + dashed_id
+    return dashed_id
+
+  def get_local_cell_id_from_dashed_cell_id(self, dashed_id):
+    id = 0
+    if dashed_id:
+      cells = self.get_cells_in_dashed_id(dashed_id)
+      for level in range(len(cells), 0, -1):
+        cid = cells[len(cells)-level]
+        ldims = self.get_level_dimensions(level)
+        bits_to_shift_right = ldims["bits_to_shift_right"]
+        max_decimal_value = 1 << bits_to_shift_right
+        id += cid*max_decimal_value
+    return id
+
+  def get_parent_cells_in_dashed_id(self, dashed_id):
+    parents = dashed_id.split('-')
+    if len(parents) == 1:
+      return []
+    parents.pop(0)
+    parents = [int(i) for i in parents]
+    parents.reverse()
+    return parents
+
+  def get_cells_in_dashed_id(self, dashed_id):
+    children = dashed_id.split('-')
+    children = [int(i) for i in children]
+    return children
 
 def create_grid_from_grid_file(grid_desc):
-  gf = open_grid_file(grid_desc["read_grid"])
+  sgf = SpartaGridFile(grid_desc["read_grid"])
+  if sgf.number_of_levels == 0:
+    print("Error reading SPARTA grid file")
+    print("top level grid specification is invalid")
+    sys.exit(1)
 
-  for line in gf:
-    s = clean_line(line)
-    if len(s.split()) == 5:
-      if int(s.split()[0]) == 1 and \
-         int(s.split()[1]) == 0:
-        grid_desc["create_grid"] = {}
-        grid_desc["create_grid"][1] = {}
-        grid_desc["create_grid"][1]["Cx"] = int(s.split()[2])
-        grid_desc["create_grid"][1]["Cy"] = int(s.split()[3])
-        grid_desc["create_grid"][1]["Cz"] = int(s.split()[4])
-        if grid_desc["create_grid"][1]["Cz"] == 1:
-          grid_desc["dimension"] = 2
-        else:
-          grid_desc["dimension"] = 3
-      else:
-        print "Error reading SPARTA grid file"
-        print "top level grid specification is invalid: ", s
-        sys.exit(1)
-      gf.close()
-      return
+  top_level_dims = sgf.get_level_dimensions(1)
+  grid_desc["create_grid"] = {}
+  grid_desc["create_grid"][1] = {}
+  grid_desc["create_grid"][1]["Cx"] = top_level_dims['x']
+  grid_desc["create_grid"][1]["Cy"] = top_level_dims['y']
+  grid_desc["create_grid"][1]["Cz"] = top_level_dims['z']
+  if grid_desc["create_grid"][1]["Cz"] == 1:
+    grid_desc["dimension"] = 2
+  else:
+    grid_desc["dimension"] = 3
+  return
 
 def get_chunk(dim, chunk_size):
   dmod = divmod(dim, chunk_size)
@@ -244,35 +408,49 @@ def create_3d_amr_grids(grid_desc, level, parent_bit_mask, parent_id, \
     return build_3d_grid(parent_bit_mask, parent_id, origin, spacing, ndims, chunk_info, grid_desc)
 
 def read_grid_file(grid_desc, chunk_info):
-  gf = open_grid_file(grid_desc["read_grid"])
-  Dx = grid_desc["create_grid"][1]["Cx"]
-  Dy = grid_desc["create_grid"][1]["Cy"]
+  sgf = SpartaGridFile(grid_desc["read_grid"])
   grid_desc["parent_grid"] = {}
 
-  for line in gf:
-    s = clean_line(line)
-    if len(s.split()) == 5:
-      id = s.split()[1].split('-')
-      if len(id) and int(id[0]) != 0: 
-        index = int(id[0]) - 1
-        zloc = 0
-        if grid_desc["dimension"] == 3:
-          zloc = math.floor(index/(Dx*Dy))
-        yloc = math.floor((index - zloc*Dx*Dy)/Dx)
-        xloc = index - yloc*Dx - zloc*Dx*Dy
-        xloc += 1
-        yloc += 1
-        zloc += 1
-        if xloc >= chunk_info["x"][0] and xloc <= chunk_info["x"][1] and \
-           yloc >= chunk_info["y"][0] and yloc <= chunk_info["y"][1] and \
-           zloc >= chunk_info["z"][0] and zloc <= chunk_info["z"][1]:
-          cld = grid_desc["parent_grid"]
-          for pid in id:
-            if int(pid) in cld:
-              cld = cld[int(pid)]['np']
-            else:
-              cld[int(pid)] = {'px':int(s.split()[2]), 'py':int(s.split()[3]), 'pz':int(s.split()[4]), 'np':{}}
-  gf.close()
+  for dashed_id in sgf:
+    if dashed_id:
+      first_level_loc = get_cell_first_level_location(dashed_id, grid_desc)
+      if cell_is_inside_chunk(first_level_loc, chunk_info):
+        parents = sgf.get_parent_cells_in_dashed_id(dashed_id)
+        cld = grid_desc["parent_grid"]
+
+        for idx, pid in enumerate(parents):
+          level = idx + 1
+
+          if pid not in cld:
+            level_dims = sgf.get_level_dimensions(level+1)
+            x = level_dims['x']
+            y = level_dims['y']
+            z = level_dims['z']
+            cld[pid] = {'px': x, 'py': y, 'pz': z, 'np':{}}
+
+          cld = cld[pid]['np']
+
+def cell_is_inside_chunk(cell_first_level_loc, chunk_info):
+  xloc = cell_first_level_loc['x']
+  yloc = cell_first_level_loc['y']
+  zloc = cell_first_level_loc['z']
+  return xloc >= chunk_info["x"][0] and xloc <= chunk_info["x"][1] and \
+         yloc >= chunk_info["y"][0] and yloc <= chunk_info["y"][1] and \
+         zloc >= chunk_info["z"][0] and zloc <= chunk_info["z"][1]
+
+def get_cell_first_level_location(dashed_id, grid_desc):
+  first_level_cell_id = int(dashed_id.split('-')[-1]) - 1
+  Dx = grid_desc["create_grid"][1]["Cx"]
+  Dy = grid_desc["create_grid"][1]["Cy"]
+  zloc = 0
+  if grid_desc["dimension"] == 3:
+    zloc = first_level_cell_id//(Dx*Dy)
+  yloc = (first_level_cell_id - zloc*Dx*Dy)//Dx
+  xloc = first_level_cell_id - yloc*Dx - zloc*Dx*Dy
+  xloc += 1
+  yloc += 1
+  zloc += 1
+  return {'x' : xloc, 'y' : yloc, 'z' : zloc}
 
 def level_contains_refined_cells(level, grid_desc, dashed_id):
   if "parent_grid" in grid_desc:
@@ -744,8 +922,8 @@ def read_grid_levels(gl_array, grid_desc, level):
   if len(gl_array) % 8 or \
      gl_array[0].lower() != "level" or \
      int(gl_array[1]) != level: 
-    print "Error reading SPARTA grid description file"
-    print "create_grid specification is invalid: ", ' '.join(gl_array)
+    print("Error reading SPARTA grid description file")
+    print("create_grid specification is invalid: ", ' '.join(gl_array))
     sys.exit(1)
 
   grid_desc["create_grid"][level] = {}
@@ -770,8 +948,8 @@ def read_grid_description_file(sif, grid_desc):
     if s.lower()[:9] == "dimension" and len(s.split()) == 2:
       dimension = int(s.split()[1])
       if dimension != 2 and dimension != 3:
-        print "Error reading SPARTA grid description file"
-        print "dimension must be either 2 or 3: ", dimension
+        print("Error reading SPARTA grid description file")
+        print("dimension must be either 2 or 3: ", dimension)
         sys.exit(1)
       else:
         grid_desc["dimension"] = dimension
@@ -802,8 +980,8 @@ def read_grid_description_file(sif, grid_desc):
          grid_desc["create_box"]["zlo"] = float(s.split()[5])
          grid_desc["create_box"]["zhi"] = float(s.split()[6])
       else:
-        print "Error reading SPARTA grid description file"
-        print "create_box specification is invalid: ", s
+        print("Error reading SPARTA grid description file")
+        print("create_box specification is invalid: ", s)
         sys.exit(1)
     elif s.lower()[:11] == "create_grid" and len(s.split()) > 3:
       grid_desc["create_grid"] = {}
@@ -817,19 +995,19 @@ def read_grid_description_file(sif, grid_desc):
         if len(s.split()) > 4:
           read_grid_levels(s.split()[4:], grid_desc, 2)
       else:
-        print "Error reading SPARTA grid description file"
-        print "create_grid specification is invalid: ", s
+        print("Error reading SPARTA grid description file")
+        print("create_grid specification is invalid: ", s)
     elif s.lower()[:9] == "read_grid" and len(s.split()) == 2:
       filename = s.split()[1]
       if not os.path.isfile(filename):
-        print "Error reading SPARTA grid description file"
-        print "read_grid filename is not available: ", filename
+        print("Error reading SPARTA grid description file")
+        print("read_grid filename is not available: ", filename)
         sys.exit(1)
       else:
         grid_desc["read_grid"] = filename
     elif len(s):
-      print "Error reading SPARTA grid description file"
-      print "File contains unrecognized keyword: ", s
+      print("Error reading SPARTA grid description file")
+      print("File contains unrecognized keyword: ", s)
       sys.exit(1)
 
 def read_time_steps(result_file_list, time_steps_dict):
@@ -837,17 +1015,19 @@ def read_time_steps(result_file_list, time_steps_dict):
     try:
       fh = open(f, "r")
     except IOError:
-      print "Unable to open SPARTA result file: ", f
+      print("Unable to open SPARTA result file: ", f)
       sys.exit(1)
 
     for line in fh:
       s = clean_line(line)
       if s.lower().replace(" ", "") == "item:timestep":
-        time = int(fh.next())
-        if time in time_steps_dict.keys():
-          time_steps_dict[time].append(f)
-        else:
-          time_steps_dict[time] = [f]
+        for line in fh:
+          time = int(line)
+          if time in time_steps_dict.keys():
+            time_steps_dict[time].append(f)
+          else:
+            time_steps_dict[time] = [f]
+          break
         break
 
     fh.close()
@@ -865,7 +1045,7 @@ def read_time_step_data(time_step_file_list, ug, id_hash):
     try:
       fh = open(f, "r")
     except IOError:
-      print "Unable to open SPARTA result file: ", f
+      print("Unable to open SPARTA result file: ", f)
       return
 
     array_names = []
@@ -875,8 +1055,8 @@ def read_time_step_data(time_step_file_list, ug, id_hash):
     try:
       id_index = array_names.index('id')
     except ValueError:
-      print "Error reading SPARTA result file: ", f
-      print "id column not given in file."
+      print("Error reading SPARTA result file: ", f)
+      print("id column not given in file.")
       return
 
     if not ug.GetCellData().GetNumberOfArrays():
@@ -889,9 +1069,9 @@ def read_time_step_data(time_step_file_list, ug, id_hash):
         ug.GetCellData().AddArray(array)
 
     if ug.GetCellData().GetNumberOfArrays() != len(array_names):
-      print "Error reading SPARTA result file: ", f
-      print "Expected data columns:  ", ug.GetCellData().GetNumberOfArrays()
-      print "Found data columns:  ", len(array_names)
+      print("Error reading SPARTA result file: ", f)
+      print("Expected data columns:  ", ug.GetCellData().GetNumberOfArrays())
+      print("Found data columns:  ", len(array_names))
       return
    
     arrays = []
@@ -908,8 +1088,8 @@ def read_time_step_data(time_step_file_list, ug, id_hash):
         for idx, val in enumerate(array_names):
           arrays[idx].SetValue(id_hash[index], float(sl[idx]))
       else:
-        print "Error reading SPARTA result file: ", f
-        print "Flow data line cannot be processed:  ", line
+        print("Error reading SPARTA result file: ", f)
+        print("Flow data line cannot be processed:  ", line)
         return
 
     fh.close()
@@ -925,18 +1105,16 @@ def write_pvd_file(time_steps_dict, file_name, num_chunks):
       fh.write('    <DataSet timestep="' + str(time) + '" group="" part="0"   \n')
       filepath = os.path.join(file_name, file_name + '_'  + str(time) + '.pvtu')
       fh.write('             file="' + filepath + '"/>\n')
+      array_names = []
       file_list = time_steps_dict[time]
       if file_list:
         try:
           afh = open(file_list[0], "r")
+          read_array_names(afh, array_names)
+          afh.close()
         except IOError:
-          print "Unable to open SPARTA result file: ", f
+          print("Unable to open SPARTA result file: ", f)
           return
-      else:
-          return
-      array_names = []
-      read_array_names(afh, array_names)
-      afh.close()
       write_pvtu_file(array_names, file_name, num_chunks, time)
   fh.write('   </Collection>    \n')
   fh.write('</VTKFile>    \n')
@@ -984,7 +1162,7 @@ def write_slice_pvd_file(time_steps_dict, output_file):
         try:
           afh = open(file_list[0], "r")
         except IOError:
-          print "Unable to open SPARTA result file: ", f
+          print("Unable to open SPARTA result file: ", f)
           return
       else:
           return
@@ -1030,7 +1208,7 @@ class ChunkReport:
 
   def reportChunkComplete(self, chunk_id):
     if self.num_procs == 1:
-      print "Completed grid chunk number: ", chunk_id
+      print("Completed grid chunk number: ", chunk_id)
 
 class ParallelTimer:
   def __init__(self):
@@ -1047,9 +1225,9 @@ class ParallelTimer:
   def report_rank_zero_time(self, message):
     if self.rank == 0:
       time_secs = time.time() - self.start_time
-      print ""
-      print message % timedelta(seconds=round(time_secs))
-      print ""
+      print("")
+      print(message % timedelta(seconds=round(time_secs)))
+      print("")
 
   def report_collective_time(self, message):
     if self.size == 1:
@@ -1060,11 +1238,11 @@ class ParallelTimer:
     max_time = self.comm.reduce(time_secs, op=MPI.MAX)
     min_time = self.comm.reduce(time_secs, op=MPI.MIN)
     if self.rank == 0:
-      print ""
-      print "Average " + message % timedelta(seconds=total_time/float(self.size))
-      print "Maxiumum " + message % timedelta(seconds=max_time)
-      print "Minimum " + message % timedelta(seconds=min_time)
-      print ""
+      print("")
+      print("Average " + message % timedelta(seconds=total_time/float(self.size)))
+      print("Maxiumum " + message % timedelta(seconds=max_time))
+      print("Minimum " + message % timedelta(seconds=min_time))
+      print("")
 
 def report_collective_grid_sizes(ug):
   from mpi4py import MPI
@@ -1081,18 +1259,18 @@ def report_collective_grid_sizes(ug):
     min_mem_used = comm.reduce(mem_size, op=MPI.MIN)
     max_mem_used = comm.reduce(mem_size, op=MPI.MAX)
     if rank == 0:
-      print "Average grid cell count over MPI ranks: {:.1e}"\
-        .format(total_cell_count/float(size))
-      print "Minimum grid cell count over MPI ranks: {:.1e}"\
-        .format(min_cell_count)
-      print "Maximum grid cell count over MPI ranks: {:.1e}"\
-        .format(max_cell_count)
-      print "Average grid memory used over MPI ranks: {} MB"\
-        .format((total_mem_used/float(size))/1000.0)
-      print "Minimum grid memory used over MPI ranks: {} MB"\
-        .format(min_mem_used/1000.0)
-      print "Maximum grid memory used over MPI ranks: {} MB"\
-        .format(max_mem_used/1000.0)
+      print("Average grid cell count over MPI ranks: {:.1e}"\
+        .format(total_cell_count/float(size)))
+      print("Minimum grid cell count over MPI ranks: {:.1e}"\
+        .format(min_cell_count))
+      print("Maximum grid cell count over MPI ranks: {:.1e}"\
+        .format(max_cell_count))
+      print("Average grid memory used over MPI ranks: {} MB"\
+        .format((total_mem_used/float(size))/1000.0))
+      print("Minimum grid memory used over MPI ranks: {} MB"\
+        .format(min_mem_used/1000.0))
+      print("Maximum grid memory used over MPI ranks: {} MB"\
+        .format(max_mem_used/1000.0))
 
 def setup_for_MPI(params_dict):
   from mpi4py import MPI
@@ -1117,9 +1295,9 @@ def run_pvbatch_output(params_dict):
   catalystscript = params_dict["catalystscript"]
 
   if rank == 0:
-    print "Processing grid chunk(s) on " + str(size) + " MPI ranks"
+    print("Processing grid chunk(s) on " + str(size) + " MPI ranks")
 
-  c = len(chunking)/size
+  c = len(chunking)//size
   r = len(chunking) % size
   if rank < r:
     start = rank * (c + 1)
@@ -1147,7 +1325,7 @@ def run_pvbatch_output(params_dict):
 
   if catalystscript is not None:
     if rank == 0:
-      print "Calling Catalyst over " + str(len(time_steps_dict)) + " time step(s) ..."
+      print("Calling Catalyst over " + str(len(time_steps_dict)) + " time step(s) ...")
     import coprocessor
     coprocessor.initialize()
     coprocessor.addscript(catalystscript)
@@ -1161,7 +1339,7 @@ def run_pvbatch_output(params_dict):
     coprocessor.finalize()
   else:
     if rank == 0:
-      print "Writing grid files over " + str(len(time_steps_dict)) + " time step(s) ..."
+      print("Writing grid files over " + str(len(time_steps_dict)) + " time step(s) ...")
     write_grid_chunk(ug, rank, size, grid_desc, time_steps_dict, \
       paraview_output_file)
 
@@ -1194,34 +1372,34 @@ if __name__ == "__main__":
     try:
       gdf = open(args.sparta_grid_description_file, "r")
     except IOError:
-      print "Unable to open SPARTA surf input file: ", args.sparta_grid_description_file
+      print("Unable to open SPARTA surf input file: ", args.sparta_grid_description_file)
       sys.exit(1)
 
     if os.path.isdir(args.paraview_output_file) and not args.catalystscript:
-      print "ParaView output directory exists: ", args.paraview_output_file
+      print("ParaView output directory exists: ", args.paraview_output_file)
       sys.exit(1)
  
     if args.xchunk < 1:
-      print "Invalid xchunk size given: ", args.xchunk
+      print("Invalid xchunk size given: ", args.xchunk)
       sys.exit(1)
 
     if args.ychunk < 1:
-      print "Invalid ychunk size given: ", args.ychunk
+      print("Invalid ychunk size given: ", args.ychunk)
       sys.exit(1)
 
     if args.zchunk < 1:
-      print "Invalid zchunk size given: ", args.zchunk
+      print("Invalid zchunk size given: ", args.zchunk)
       sys.exit(1)
 
     if args.catalystscript:
       if num_procs == 1:
-        print "Error: ParaView Catalyst only available with pvbatch and more than one MPI rank"
+        print("Error: ParaView Catalyst only available with pvbatch and more than one MPI rank")
         sys.exit(1)
       try:
         cf = open(args.catalystscript, "r")
         cf.close()
       except IOError:
-        print "Error: Unable to open Catalyst Python file: ", args.catalystscript
+        print("Error: Unable to open Catalyst Python file: ", args.catalystscript)
         sys.exit(1)
 
     grid_desc = {}
@@ -1229,28 +1407,28 @@ if __name__ == "__main__":
     gdf.close()
 
     if "dimension" not in grid_desc:
-      print "Error: grid description file does not have a dimension statement: ", \
-        args.sparta_grid_description_file
+      print("Error: grid description file does not have a dimension statement: ", \
+        args.sparta_grid_description_file)
       sys.exit(1)
 
     if "create_box" not in grid_desc:
-      print "Error: grid description file does not have a create_box statement: ", \
-        args.sparta_grid_description_file
+      print("Error: grid description file does not have a create_box statement: ", \
+        args.sparta_grid_description_file)
       sys.exit(1)
 
     if "read_grid" not in grid_desc and "create_grid" not in grid_desc:
-      print "Error: grid description file does not have a read_grid or a create_grid statement: ", \
-        args.sparta_grid_description_file
+      print("Error: grid description file does not have a read_grid or a create_grid statement: ", \
+        args.sparta_grid_description_file)
       sys.exit(1)
 
     if "slice" in grid_desc and args.catalystscript:
-      print "Error: Slice plane output not available with ParaView Catalyst"
+      print("Error: Slice plane output not available with ParaView Catalyst")
       sys.exit(1)
 
     if "slice" not in grid_desc:
       if os.path.isfile(args.paraview_output_file + '.pvd') and not \
          args.catalystscript:
-        print "ParaView output file exists: ", args.paraview_output_file + '.pvd'
+        print("ParaView output file exists: ", args.paraview_output_file + '.pvd')
         sys.exit(1)
     else:
       for idx, slice in enumerate(grid_desc["slice"]):
@@ -1259,7 +1437,7 @@ if __name__ == "__main__":
                       str(round(slice["ny"],4)) + "_" + \
                       str(round(slice["nz"],4))
         if os.path.isfile(file_name + '.pvd'):
-          print "ParaView output file exists: ", file_name + '.pvd'
+          print("ParaView output file exists: ", file_name + '.pvd')
           sys.exit(1)
 
     if "read_grid" in grid_desc:
@@ -1277,7 +1455,7 @@ if __name__ == "__main__":
           time_steps_file_list.append(name.rstrip())
         rf.close()
       except IOError:
-        print "Unable to open SPARTA result file input list file: ", args.result_file
+        print("Unable to open SPARTA result file input list file: ", args.result_file)
         sys.exit(1)
 
     if not time_steps_file_list:
@@ -1290,7 +1468,7 @@ if __name__ == "__main__":
 
     sys.stdin = open(os.devnull)
 
-    print "Processing ", len(chunking), " grid chunk(s)."
+    print("Processing ", len(chunking), " grid chunk(s).")
 
     if not args.catalystscript:
       os.mkdir(args.paraview_output_file)
