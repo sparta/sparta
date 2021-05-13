@@ -717,7 +717,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           double dot = MathExtra::dot3(v,norm);
           double vmag_sq = MathExtra::lensq3(v);
           double E_i = 0.5 * species[ip->ispecies].mass * vmag_sq;
-          double cos_theta = dot/sqrt(vmag_sq);
+          double cos_theta = abs(dot)/sqrt(vmag_sq);
           prob_value[i] *= pow(E_i,r->energy_coeff[0]) * 
           pow(cos_theta,r->energy_coeff[1]);
         }
@@ -739,17 +739,12 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
       */
     }
     
-    for (int j = 1; j < r->nreactant; j++) {
-      if (r->state_products[j][0] == 's') {
-        if (r->part_reactants[j] == 0) {
-          prob_value[i] *= 
-            stoich_pow(total_state[isurf],r->stoich_reactants[j]) * 
-            pow(ms_inv,r->stoich_reactants[j]);
-        } else {        
-          prob_value[i] *= 
-            stoich_pow(species_state[isurf][r->reactants_ad_index[j]],
-                     r->stoich_reactants[j]) * 
-          pow(ms_inv,r->stoich_reactants[j]);
+    for (int j = 1; j < r->nreactant; j++) { 
+      if (r->state_reactants[j][0] == 's') { 
+        if (r->part_reactants[j] == 0) { 
+          prob_value[i] *= stoich_pow(total_state[isurf],r->stoich_reactants[j]) * pow(ms_inv,r->stoich_reactants[j]);
+        } else {      
+          prob_value[i] *= stoich_pow(species_state[isurf][r->reactants_ad_index[j]],r->stoich_reactants[j]) * pow(ms_inv,r->stoich_reactants[j]);
         }
       }
     } 
@@ -824,7 +819,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           }                    
         }   
       }
-        
+
       switch (r->type) {
 
       case DISSOCIATION:
@@ -959,13 +954,13 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
 
           if (r->cmodel_ip != NOMODEL) 
             cmodels[r->cmodel_ip]->
-              wrapper(jp,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
+              wrapper(ip,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
 
           if (r->nprod_g_tot == 2) {
             double x[3],v[3];
             memcpy(x,ip->x,3*sizeof(double));
             memcpy(v,ip->v,3*sizeof(double));
-          
+
             int id = MAXSMALLINT*random->uniform();
             Particle::OnePart *particles = particle->particles;
          
@@ -974,7 +969,6 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
                 particle->add_particle(id,r->products[0],ip->icell,x,v,0.0,0.0);
               if (reallocflag) ip = particle->particles + (ip - particles);
               jp = &particle->particles[particle->nlocal-1];
-              
           
               if (r->cmodel_ip != NOMODEL) 
                 cmodels[r->cmodel_ip]->wrapper(jp,norm,r->cmodel_ip_flags,
@@ -1270,7 +1264,9 @@ void SurfReactAdsorb::init_reactions_gs()
       }
       if (r->state_products[i][0] == 's') {
         r->products_ad_index[i] = find_surf_species(r->id_products[i]);
-        if (r->products_ad_index[i] < 0) break;
+        if (r->products_ad_index[i] < 0) {
+          r->active = 0; 
+          break;}
       }
       else r->products_ad_index[i] = -1;
     }
@@ -1552,6 +1548,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
         error->all(FLERR,"Invalid reaction type in file");
     }
     
+    r->ncoeff = 0;
     if (strcmp(word,"D") == 0 || strcmp(word,"d") == 0) {
       r->type = DISSOCIATION;
     } else if (strcmp(word,"E") == 0 || strcmp(word,"e") == 0) {
@@ -1618,7 +1615,14 @@ void SurfReactAdsorb::readfile_gs(char *fname)
           }
           r->kisliuk_coeff[i] = input->numeric(FLERR,word);
         }
-      } else if (strcmp(word,"energy") == 0) {
+      } else if (strcmp(word,"energy") == 0) 
+      {
+        if (r->type != CI) 
+        {
+          print_reaction(copy1,copy2);
+          error->all(FLERR,"Energy option can only be used to define the reaction rate constant in CI reaction");
+        }
+
         r->energy_flag = 1;
         for (int i = 0; i < 2; i++) {
           word = strtok(NULL," \t\n"); 
@@ -1694,6 +1698,11 @@ void SurfReactAdsorb::readfile_gs(char *fname)
           error->all(FLERR,"Invalid reaction type in file");
           }
         */
+        if (r->kisliuk_flag) 
+        {
+          print_reaction(copy1,copy2);
+          error->all(FLERR,"Kisliuk option can only be used to define the reaction rate constant in adsorption mediated reaction such as AA, DA, LH1, LH3, and CD");
+        }
         break;
       }
       
@@ -1706,6 +1715,11 @@ void SurfReactAdsorb::readfile_gs(char *fname)
           error->all(FLERR,"Invalid reaction type in file");
           }
         */
+        if (r->kisliuk_flag) 
+        {
+          print_reaction(copy1,copy2);
+          error->all(FLERR,"Kisliuk option can only be used to define the reaction rate constant in adsorption mediated reaction such as AA, DA, LH1, LH3, and CD");
+        }
         break;
       }
       
@@ -1718,6 +1732,11 @@ void SurfReactAdsorb::readfile_gs(char *fname)
           error->all(FLERR,"Invalid reaction type in file");
           }
         */
+        if (r->kisliuk_flag) 
+        {
+          print_reaction(copy1,copy2);
+          error->all(FLERR,"Kisliuk option can only be used to define the reaction rate constant in adsorption mediated reaction such as AA, DA, LH1, LH3, and CD");
+        }
         break;
       }
       
@@ -1785,6 +1804,11 @@ void SurfReactAdsorb::readfile_gs(char *fname)
           print_reaction(copy1,copy2);
           error->all(FLERR,"First product must be gas phase in ER reaction");
         }
+        if (r->kisliuk_flag) 
+        {
+          print_reaction(copy1,copy2);
+          error->all(FLERR,"Kisliuk option can only be used to define the reaction rate constant in adsorption mediated reaction such as AA, DA, LH1, LH3, and CD");
+        }
         break;
       }
       
@@ -1801,6 +1825,12 @@ void SurfReactAdsorb::readfile_gs(char *fname)
             error->all(FLERR,"Gas phase species must be first or "
                        "second product in CI reaction");
           }
+        }
+
+        if (r->kisliuk_flag) 
+        {
+          print_reaction(copy1,copy2);
+          error->all(FLERR,"Kisliuk option can only be used to define the reaction rate constant in adsorption mediated reaction such as AA, DA, LH1, LH3, and CD");
         }
         break;
       }
@@ -2002,7 +2032,7 @@ void SurfReactAdsorb::init_reactions_ps()
         break;
         }
     }
-    else r->products_ad_index[i] = -1;
+    else r->reactants_ad_index[i] = -1; // SGK_change
     }
     for (int i = 0; i < r->nproduct; i++) {
       r->products[i] = particle->find_species(r->id_products[i]);
@@ -2219,6 +2249,8 @@ void SurfReactAdsorb::readfile_ps(char *fname)
       print_reaction(copy1,copy2);
       error->all(FLERR,"Invalid reaction type in file");
     }
+
+    r->ncoeff = 0;
 
     if (strcmp(word,"DS")==0 || strcmp(word,"Ds")==0 || 
         strcmp(word,"dS")==0|| strcmp(word,"ds")==0) {
@@ -2570,7 +2602,7 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
     
   double nu_react[nactive_ps];
   OneReaction_PS *r;
-  int rxn_occur[nactive_ps];   
+  int rxn_occur[nactive_ps]; 
   
   for (int i=0; i<nactive_ps; i++) {
     r = &rlist_ps[i];
@@ -2600,9 +2632,7 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
             
         nu_react[i] = r->k_react;
         for (int j=0; j<r->nreactant; j++) {
-          nu_react[i] *= 
-            stoich_pow(species_state[isurf][r->reactants_ad_index[j]],
-                       r->stoich_reactants[j]);
+          nu_react[i] *= stoich_pow(species_state[isurf][r->reactants_ad_index[j]],r->stoich_reactants[j]);
           factor_pow += r->stoich_reactants[j];              
         }
         nu_react[i] *= pow(ms_inv,factor_pow);
@@ -2629,7 +2659,7 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
                 
         double t = -log(random->uniform())/nu_react[i];
         //tau[isurf][react_num] -= t;     
-        tau[isurf][i] -= t;            
+        tau[isurf][i] -= t;  
     
         for (int j=0;j<r->nreactant;j++) {
           if (r->part_reactants[j] == 1) {
