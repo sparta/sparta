@@ -67,7 +67,7 @@ class Update : protected Pointers {
                              // in this case, bad means particle ended up
                              // outside of final cell curved surf by epsilon
                              // when move logic thinks it is inside cell
-  
+
   int reorder_period;        // # of timesteps between particle reordering
   int global_mem_limit;      // max # of bytes in arrays for rebalance and reordering
   int mem_limit_grid_flag;   // 1 if using size of grid as memory limit

@@ -500,7 +500,7 @@ void AdaptGrid::setup(int iter)
 
   // list of new cell indices for one refined cell
   // refinement may occur between minlevel and maxlevel-1 inclusive
-  
+
   Grid::ParentLevel *plevels = grid->plevels;
 
   int nmax = 0;
