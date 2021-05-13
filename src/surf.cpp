@@ -689,7 +689,7 @@ void Surf::bbox_all()
   int istart,istop,idelta;
   Line *linelist;
   Tri *trilist;
-  
+
   if (!distributed) {
     istart = me;
     istop = nlocal;
@@ -724,7 +724,7 @@ void Surf::bbox_all()
     }
     bblo_one[2] = domain->boxlo[2];
     bbhi_one[2] = domain->boxhi[2];
-    
+
   } else if (dim == 3) {
     for (i = istart; i < istop; i += idelta) {
       x = trilist[i].p1;
