@@ -89,7 +89,7 @@ cellint Grid::id_parent_of_child(cellint childID, int level)
   int parentbits = plevels[level-1].nbits;
   cellint mask = (1L << parentbits) - 1;
   cellint parentID = childID & mask;
-  
+
   return parentID;
 }
 
