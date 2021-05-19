@@ -241,23 +241,27 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
   KOKKOS_INLINE_FUNCTION
   double erot(int isp, double temp_thermal, rand_type &rand_gen, double boltz) const
   {
-   double eng,a,erm,b;
+    double eng,a,erm,b;
 
-   if (rotstyle == NONE) return 0.0;
-   if (d_species[isp].rotdof < 2) return 0.0;
+    if (rotstyle == NONE) return 0.0;
+    if (d_species[isp].rotdof < 2) return 0.0;
 
-   if (d_species[isp].rotdof == 2)
-     eng = -log(rand_gen.drand()) * boltz * temp_thermal;
-   else {
-     a = 0.5*d_species[isp].rotdof-1.0;
-     while (1) {
-       // energy cut-off at 10 kT
-       erm = 10.0*rand_gen.drand();
-       b = pow(erm/a,a) * exp(a-erm);
-       if (b > rand_gen.drand()) break;
-     }
-     eng = erm * boltz * temp_thermal;
-   }
+    if (rotstyle == DISCRETE && d_species[isp].rotdof == 2) {
+      int irot = -log(rand_gen.drand()) * temp_thermal /
+        d_species[isp].rottemp[0];
+      eng = irot * boltz * d_species[isp].rottemp[0];
+    } else if (rotstyle == SMOOTH && d_species[isp].rotdof == 2) {
+      eng = -log(rand_gen.drand()) * boltz * temp_thermal;
+    } else {
+      a = 0.5*d_species[isp].rotdof-1.0;
+      while (1) {
+        // energy cut-off at 10 kT
+        erm = 10.0*rand_gen.drand();
+        b = pow(erm/a,a) * exp(a-erm);
+        if (b > rand_gen.drand()) break;
+      }
+      eng = erm * boltz * temp_thermal;
+    }
 
    return eng;
   }
@@ -265,6 +269,8 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
   /* ----------------------------------------------------------------------
      generate random vibrational energy for a particle
      only a function of species index and species properties
+     index_vibmode = index of extra per-particle vibrational mode storage
+       -1 if not defined for this model
   ------------------------------------------------------------------------- */
 
   KOKKOS_INLINE_FUNCTION
@@ -274,7 +280,11 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
 
     if (vibstyle == NONE || d_species[isp].vibdof < 2) return 0.0;
 
+    // for DISCRETE, only need set evib for vibdof = 2
+    // mode levels and evib will be set by FixVibmode::add_particle()
+
     eng = 0.0;
+
     if (vibstyle == DISCRETE && d_species[isp].vibdof == 2) {
       int ivib = -log(rand_gen.drand()) * temp_thermal /
         d_species[isp].vibtemp[0];

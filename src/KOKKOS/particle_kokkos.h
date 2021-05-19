@@ -23,6 +23,26 @@
 
 namespace SPARTA_NS {
 
+struct struct_tdual_int_1d
+{
+  DAT::tdual_int_1d k_view;
+};
+
+struct struct_tdual_float_1d
+{
+  DAT::tdual_float_1d k_view;
+};
+
+struct struct_tdual_int_2d
+{
+  DAT::tdual_int_2d k_view;
+};
+
+struct struct_tdual_float_2d
+{
+  DAT::tdual_float_2d k_view;
+};
+
 struct TagParticleZero_cellcount{};
 struct TagParticleCompressReactions{};
 struct TagCopyParticleReorderDestinations{};
@@ -56,6 +76,12 @@ class ParticleKokkos : public Particle {
   void pre_weight() override;
   void post_weight() override;
   void update_class_variables();
+  int add_custom(char *, int, int);
+  void grow_custom(int, int, int);
+  void remove_custom(int);
+  void copy_custom(int, int);
+  void pack_custom(int, char *);
+  void unpack_custom(char *, int);
 
 #ifndef SPARTA_KOKKOS_EXACT
   typedef typename Kokkos::Random_XorShift64_Pool<DeviceType>::generator_type rand_type;
@@ -70,6 +96,12 @@ class ParticleKokkos : public Particle {
 
   KOKKOS_INLINE_FUNCTION
   double evib(int, double, rand_type &) const;
+
+  KOKKOS_INLINE_FUNCTION
+  void pack_custom_kokkos(int, char *) const;
+
+  KOKKOS_INLINE_FUNCTION
+  void unpack_custom_kokkos(char *, int) const;
 
   void wrap_kokkos();
   void sync(ExecutionSpace, unsigned int);
@@ -104,6 +136,19 @@ class ParticleKokkos : public Particle {
   tdual_particle_1d k_particles;
   tdual_species_1d k_species;
   DAT::tdual_int_2d k_species2group;
+
+  typedef Kokkos::DualView<struct_tdual_int_1d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_int_1d_1d;
+  typedef Kokkos::DualView<struct_tdual_float_1d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_float_1d_1d;
+  typedef Kokkos::DualView<struct_tdual_int_2d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_int_2d_1d;
+  typedef Kokkos::DualView<struct_tdual_float_2d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_float_2d_1d;
+
+  DAT::tdual_int_1d k_ewhich,k_eicol,k_edcol;
+
+  tdual_struct_tdual_int_1d_1d k_eivec;
+  tdual_struct_tdual_float_1d_1d k_edvec;
+
+  tdual_struct_tdual_int_2d_1d k_eiarray;
+  tdual_struct_tdual_float_2d_1d k_edarray;
 
   int sorted_kk;
 
@@ -245,6 +290,89 @@ double ParticleKokkos::evib(int isp, double temp_thermal, rand_type &erandom) co
 
   return eng;
 }
+
+KOKKOS_INLINE_FUNCTION
+void ParticleKokkos::pack_custom_kokkos(int n, char *buf) const
+{
+  int i,j;
+  char *ptr = buf;
+
+  if (ncustom_ivec) {
+    for (i = 0; i < ncustom_ivec; i++) {
+      memcpy(ptr,&(k_eivec.d_view(i).k_view.d_view(n)),sizeof(int));
+      ptr += sizeof(int);
+    }
+  }
+  if (ncustom_iarray) {
+    for (i = 0; i < ncustom_iarray; i++) {
+      const int ncols = k_eicol.d_view[i];
+      for (j = 0; j < ncols; j++) {
+        memcpy(ptr,&(k_eiarray.d_view(i).k_view.d_view(n,j)),sizeof(int));
+        ptr += sizeof(int);
+      }
+    }
+  }
+
+  ptr = ROUNDUP(ptr);
+
+  if (ncustom_dvec) {
+    for (i = 0; i < ncustom_dvec; i++) {
+      memcpy(ptr,&(k_edvec.d_view(i).k_view.d_view(n)),sizeof(double));
+      ptr += sizeof(double);
+    }
+  }
+  if (ncustom_darray) {
+    for (i = 0; i < ncustom_darray; i++) {
+      const int ncols = k_edcol.d_view[i];
+      for (j = 0; j < ncols; j++) {
+        memcpy(ptr,&(k_edarray.d_view(i).k_view.d_view(n,j)),sizeof(double));
+        ptr += sizeof(double);
+      }
+    }
+  }
+}
+
+KOKKOS_INLINE_FUNCTION
+void ParticleKokkos::unpack_custom_kokkos(char *buf, int n) const
+{
+  int i,j;
+  char *ptr = buf;
+
+  if (ncustom_ivec) {
+    for (i = 0; i < ncustom_ivec; i++) {
+      memcpy(&(k_eivec.d_view(i).k_view.d_view(n)),ptr,sizeof(int));
+      ptr += sizeof(int);
+    }
+  }
+  if (ncustom_iarray) {
+    for (i = 0; i < ncustom_iarray; i++) {
+      const int ncols = k_eicol.d_view[i];
+      for (j = 0; j < ncols; j++) {
+        memcpy(&(k_eiarray.d_view(i).k_view.d_view(n,j)),ptr,sizeof(int));
+        ptr += sizeof(int);
+      }
+    }
+  }
+
+  ptr = ROUNDUP(ptr);
+
+  if (ncustom_dvec) {
+    for (i = 0; i < ncustom_dvec; i++) {
+      memcpy(&(k_edvec.d_view(i).k_view.d_view(n)),ptr,sizeof(double));
+      ptr += sizeof(double);
+    }
+  }
+  if (ncustom_darray) {
+    for (i = 0; i < ncustom_darray; i++) {
+      const int ncols = k_edcol.d_view[i];
+      for (j = 0; j < ncols; j++) {
+        memcpy(&(k_edarray.d_view(i).k_view.d_view(n,j)),ptr,sizeof(double));
+        ptr += sizeof(double);
+      }
+    }
+  }
+}
+
 
 }
 

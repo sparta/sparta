@@ -29,12 +29,12 @@ namespace SPARTA_NS {
 class FixVibmode : public Fix {
  public:
   FixVibmode(class SPARTA *, int, char **);
-  ~FixVibmode();
+  virtual ~FixVibmode();
   int setmask();
   void init();
-  void add_particle(int, double, double, double, double *);
+  virtual void add_particle(int, double, double, double, double *);
 
- private:
+ protected:
   int maxmode;           // max # of vibrational modes for any species
   int vibmodeindex;      // index into particle custom data structs
   class RanPark *random;
