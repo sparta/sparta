@@ -449,7 +449,7 @@ void ComputeTvibGridKokkos::operator()(TagComputeTvibGrid_post_process_grid, con
         cnt = evb+1;
         continue;
       }
-      tspecies_mode[isp][imode] = theta / (log(1.0 + 1.0/ibar));
+      d_tspecies_mode(isp,imode) = theta / (log(1.0 + 1.0/ibar));
       //denom = boltz * etally[icell][count] * ibar * log(1.0 + 1.0/ibar);
       //tspecies_mode[isp][imode] = etally[icell][evib] / denom;
       evb += 2*maxmode;
