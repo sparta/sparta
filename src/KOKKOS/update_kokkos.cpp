@@ -1425,7 +1425,7 @@ int UpdateKokkos::split3d(int icell, double *x) const
   minparam = 2.0;
 
   auto csplits_begin = d_csplits.row_map(isplit);
-  auto csurfs_begin = d_csurfs.row_map(isplit);
+  auto csurfs_begin = d_csurfs.row_map(icell);
   for (m = 0; m < nsurf; m++) {
     if (d_csplits.entries(csplits_begin + m) < 0) continue;
     isurf = d_csurfs.entries(csurfs_begin + m);
