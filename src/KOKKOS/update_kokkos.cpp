@@ -58,10 +58,10 @@ enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Surf
 // either set ID or PROC/INDEX, set other to -1
 
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID 537898343   // particle ID
-#define MOVE_DEBUG_PROC 0        // owning proc
-#define MOVE_DEBUG_INDEX 16617       // particle index on owning proc
-#define MOVE_DEBUG_STEP 16    // timestep
+#define MOVE_DEBUG_ID 308143534  // particle ID
+#define MOVE_DEBUG_PROC -1        // owning proc
+#define MOVE_DEBUG_INDEX -1   // particle index on owning proc
+#define MOVE_DEBUG_STEP 4107    // timestep
 
 #define VAL_1(X) X
 #define VAL_2(X) VAL_1(X), VAL_1(X)
@@ -729,6 +729,45 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
   while (1) {
 
+#ifdef MOVE_DEBUG
+    if (DIM == 3) {
+      if (ntimestep == MOVE_DEBUG_STEP &&
+	  (MOVE_DEBUG_ID == d_particles[i].id ||
+	   (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
+	printf("PARTICLE %d %ld: %d %d: %d: x %g %g %g: xnew %g %g %g: %d "
+	       CELLINT_FORMAT ": lo %g %g %g: hi %g %g %g: DTR %g\n",
+	       me,ntimestep,i,d_particles[i].id,
+	       d_cells[icell].nsurf,
+	       x[0],x[1],x[2],xnew[0],xnew[1],xnew[2],
+	       icell,d_cells[icell].id,
+	       lo[0],lo[1],lo[2],hi[0],hi[1],hi[2],dtremain);
+    }
+    if (DIM == 2) {
+      if (ntimestep == MOVE_DEBUG_STEP &&
+	  (MOVE_DEBUG_ID == d_particles[i].id ||
+	   (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
+	printf("PARTICLE %d %ld: %d %d: %d: x %g %g: xnew %g %g: %d "
+	       CELLINT_FORMAT ": lo %g %g: hi %g %g: DTR: %g\n",
+	       me,ntimestep,i,d_particles[i].id,
+	       d_cells[icell].nsurf,
+	       x[0],x[1],xnew[0],xnew[1],
+	       icell,d_cells[icell].id,
+	       lo[0],lo[1],hi[0],hi[1],dtremain);
+    }
+    if (DIM == 1) {
+      if (ntimestep == MOVE_DEBUG_STEP &&
+	  (MOVE_DEBUG_ID == d_particles[i].id ||
+	   (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
+	printf("PARTICLE %d %ld: %d %d: %d: x %g %g: xnew %g %g: %d "
+	       CELLINT_FORMAT ": lo %g %g: hi %g %g: DTR: %g\n",
+	       me,ntimestep,i,d_particles[i].id,
+	       d_cells[icell].nsurf,
+	       x[0],x[1],xnew[0],sqrt(xnew[1]*xnew[1]+xnew[2]*xnew[2]),
+	       icell,d_cells[icell].id,
+	       lo[0],lo[1],hi[0],hi[1],dtremain);
+    }
+#endif
+
     // check if particle crosses any cell face
     // frac = fraction of move completed before hitting cell face
     // this section should be as efficient as possible,
@@ -819,6 +858,21 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       }
     }
 
+#ifdef MOVE_DEBUG
+    if (ntimestep == MOVE_DEBUG_STEP &&
+	(MOVE_DEBUG_ID == d_particles[i].id ||
+	 (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX))) {
+      if (outface != INTERIOR)
+	printf("  OUTFACE %d out: %d %d, frac %g\n",
+	       outface,grid_kk_copy.obj.neigh_decode(nmask,outface),
+	       neigh[outface],frac);
+      else
+	printf("  INTERIOR %d %d\n",outface,INTERIOR);
+    }
+#endif
+
+    // START of code specific to surfaces
+
     if (SURF) {
 
       // skip surf checks if particle flagged as EXITing this cell
@@ -907,6 +961,68 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
                                  line->norm,exclude == isurf,
                                  xc,vc,param,side);
           }
+
+#ifdef MOVE_DEBUG
+	  if (DIM == 3) {
+	    if (hitflag && ntimestep == MOVE_DEBUG_STEP &&
+		(MOVE_DEBUG_ID == d_particles[i].id ||
+		 (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
+	      printf("SURF COLLIDE: %d %d %d %d: "
+		     "P1 %g %g %g: P2 %g %g %g: "
+		     "T1 %g %g %g: T2 %g %g %g: T3 %g %g %g: "
+		     "TN %g %g %g: XC %g %g %g: "
+		     "Param %g: Side %d\n",
+		     MOVE_DEBUG_INDEX,icell,nsurf,isurf,
+		     x[0],x[1],x[2],xnew[0],xnew[1],xnew[2],
+		     tri->p1[0],tri->p1[1],tri->p1[2],
+		     tri->p2[0],tri->p2[1],tri->p2[2],
+		     tri->p3[0],tri->p3[1],tri->p3[2],
+		     tri->norm[0],tri->norm[1],tri->norm[2],
+		     xc[0],xc[1],xc[2],param,side);
+	  }
+	  if (DIM == 2) {
+	    if (hitflag && ntimestep == MOVE_DEBUG_STEP &&
+		(MOVE_DEBUG_ID == d_particles[i].id ||
+		 (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
+	      printf("SURF COLLIDE: %d %d %d %d: P1 %g %g: P2 %g %g: "
+		     "L1 %g %g: L2 %g %g: LN %g %g: XC %g %g: "
+		     "Param %g: Side %d\n",
+		     MOVE_DEBUG_INDEX,icell,nsurf,isurf,
+		     x[0],x[1],xnew[0],xnew[1],
+		     line->p1[0],line->p1[1],line->p2[0],line->p2[1],
+		     line->norm[0],line->norm[1],
+		     xc[0],xc[1],param,side);
+	  }
+	  if (DIM == 1) {
+	    if (hitflag && ntimestep == MOVE_DEBUG_STEP &&
+		(MOVE_DEBUG_ID == d_particles[i].id ||
+		 (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
+	      printf("SURF COLLIDE %d %ld: %d %d %d %d: P1 %g %g: P2 %g %g: "
+		     "L1 %g %g: L2 %g %g: LN %g %g: XC %g %g: "
+		     "VC %g %g %g: Param %g: Side %d\n",
+		     hitflag,ntimestep,MOVE_DEBUG_INDEX,icell,nsurf,isurf,
+		     x[0],x[1],
+		     xnew[0],sqrt(xnew[1]*xnew[1]+xnew[2]*xnew[2]),
+		     line->p1[0],line->p1[1],line->p2[0],line->p2[1],
+		     line->norm[0],line->norm[1],
+		     xc[0],xc[1],vc[0],vc[1],vc[2],param,side);
+	    double edge1[3],edge2[3],xfinal[3],cross[3];
+	    MathExtra::sub3(line->p2,line->p1,edge1);
+	    MathExtra::sub3(x,line->p1,edge2);
+	    MathExtra::cross3(edge2,edge1,cross);
+	    if (hitflag && ntimestep == MOVE_DEBUG_STEP &&
+		MOVE_DEBUG_ID == d_particles[i].id)
+	      printf("CROSSSTART %g %g %g\n",cross[0],cross[1],cross[2]);
+	    xfinal[0] = xnew[0];
+	    xfinal[1] = sqrt(xnew[1]*xnew[1]+xnew[2]*xnew[2]);
+	    xfinal[2] = 0.0;
+	    MathExtra::sub3(xfinal,line->p1,edge2);
+	    MathExtra::cross3(edge2,edge1,cross);
+	    if (hitflag && ntimestep == MOVE_DEBUG_STEP &&
+		MOVE_DEBUG_ID == d_particles[i].id)
+	      printf("CROSSFINAL %g %g %g\n",cross[0],cross[1],cross[2]);
+	  }
+#endif
 
           if (hitflag && param < minparam && side == OUTSIDE) {
 
@@ -1050,6 +1166,38 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
             d_nscollide_one()++;
           else
             reduce.nscollide_one++;
+
+#ifdef MOVE_DEBUG
+	  if (DIM == 3) {
+	    if (ntimestep == MOVE_DEBUG_STEP &&
+		(MOVE_DEBUG_ID == d_particles[i].id ||
+		 (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
+	      printf("POST COLLISION %d: %g %g %g: %g %g %g: %g %g %g\n",
+		     MOVE_DEBUG_INDEX,
+		     x[0],x[1],x[2],xnew[0],xnew[1],xnew[2],
+		     minparam,frac,dtremain);
+	  }
+	  if (DIM == 2) {
+	    if (ntimestep == MOVE_DEBUG_STEP &&
+		(MOVE_DEBUG_ID == d_particles[i].id ||
+		 (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
+	      printf("POST COLLISION %d: %g %g: %g %g: %g %g %g\n",
+		     MOVE_DEBUG_INDEX,
+		     x[0],x[1],xnew[0],xnew[1],
+		     minparam,frac,dtremain);
+	  }
+	  if (DIM == 1) {
+	    if (ntimestep == MOVE_DEBUG_STEP &&
+		(MOVE_DEBUG_ID == d_particles[i].id ||
+		 (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
+	      printf("POST COLLISION %d: %g %g: %g %g: vel %g %g %g: %g %g %g\n",
+		     MOVE_DEBUG_INDEX,
+		     x[0],x[1],
+		     xnew[0],sqrt(xnew[1]*xnew[1]+xnew[2]*xnew[2]),
+		     v[0],v[1],v[2],
+		     minparam,frac,dtremain);
+	  }
+#endif
 
           // if ipart = NULL, particle discarded due to surface chem
           // else if particle not stuck, continue advection while loop
@@ -1362,6 +1510,15 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
   }
 
   // END of while loop over advection of single particle
+
+#ifdef MOVE_DEBUG
+  if (ntimestep == MOVE_DEBUG_STEP &&
+      (MOVE_DEBUG_ID == d_particles[i].id ||
+       (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
+    printf("MOVE DONE %d %d %d: %g %g %g: DTR %g\n",
+	   MOVE_DEBUG_INDEX,d_particles[i].flag,icell,
+	   x[0],x[1],x[2],dtremain);
+#endif
 
   // move is complete, or as much as can be done on this proc
   // update particle's grid cell
