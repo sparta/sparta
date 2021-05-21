@@ -142,16 +142,19 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
 
   copymode = 1;
   if (!ncustom) {
+
     if (sparta->kokkos->need_atomics)
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateParticles<1,0> >(0,nmigrate),*this);
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateParticles<0,0> >(0,nmigrate),*this);
 
   } else {
+
     if (sparta->kokkos->need_atomics)
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateParticles<1,1> >(0,nmigrate),*this);
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateParticles<0,1> >(0,nmigrate),*this);
+
   }
   DeviceType().fence();
   copymode = 0;
@@ -189,47 +192,14 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
   // if no custom attributes, append recv particles directly to particle list
   // else receive into rbuf, unpack particles one by one via unpack_custom()
 
-  if (!ncustom) {
-    particle_kk->sync(Device,PARTICLE_MASK);
-    d_particles = particle_kk->k_particles.d_view;
+  particle_kk->sync(Device,PARTICLE_MASK);
+  d_particles = particle_kk->k_particles.d_view;
 
-    if (sparta->kokkos->gpu_direct_flag) {
-      iparticle_kk->
-        exchange_uniform(d_sbuf,nbytes_total,
-                         (char *) (d_particles.data()+particle->nlocal),d_rbuf);
-    } else {
-
-      // allocate exact buffer size to reduce GPU <--> CPU memory transfer
-
-      int maxrecvbuf = nrecv*nbytes_total;
-      d_rbuf = DAT::t_char_1d(Kokkos::view_alloc("comm:rbuf",Kokkos::WithoutInitializing),maxrecvbuf);
-
-      Kokkos::deep_copy(d_nlocal,particle->nlocal);
-      iparticle_kk->exchange_uniform(d_sbuf,nbytes_total,NULL,d_rbuf);
-
-      copymode = 1;
-      if (sparta->kokkos->need_atomics)
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateUnpackParticles<1,0> >(0,nrecv),*this);
-      else
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateUnpackParticles<0,0> >(0,nrecv),*this);
-      DeviceType().fence();
-      copymode = 0;
-    }
-
-    particle_kk->modify(Device,PARTICLE_MASK);
-    d_particles = t_particle_1d(); // destroy reference to reduce memory use
-
+  if (sparta->kokkos->gpu_direct_flag && !ncustom) {
+    iparticle_kk->
+      exchange_uniform(d_sbuf,nbytes_total,
+                       (char *) (d_particles.data()+particle->nlocal),d_rbuf);
   } else {
-    /*offset = 0;
-    int nlocal = particle->nlocal;
-    for (i = 0; i < nrecv; i++) {
-      memcpy(&particle->particles[nlocal],&rbuf[offset],nbytes_particle);
-      offset += nbytes_particle;
-      particle->unpack_custom(&rbuf[offset],nlocal);
-      offset += nbytes_custom;
-      nlocal++;
-    }*/
-
 
     // allocate exact buffer size to reduce GPU <--> CPU memory transfer
 
@@ -237,16 +207,32 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
     d_rbuf = DAT::t_char_1d(Kokkos::view_alloc("comm:rbuf",Kokkos::WithoutInitializing),maxrecvbuf);
 
     Kokkos::deep_copy(d_nlocal,particle->nlocal);
-    iparticle_kk->exchange_uniform(d_sbuf,nbytes_total,NULL,d_rbuf);
+    iparticle_kk->exchange_uniform(d_sbuf,nbytes_total,(char *)d_rbuf.data(),d_rbuf);
 
     copymode = 1;
-    if (sparta->kokkos->need_atomics)
-      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateUnpackParticles<1,0> >(0,nrecv),*this);
-    else
-      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateUnpackParticles<0,0> >(0,nrecv),*this);
-    DeviceType().fence();
-    copymode = 0;
+    if (!ncustom) {
+
+      if (sparta->kokkos->need_atomics)
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateUnpackParticles<1,0> >(0,nrecv),*this);
+      else
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateUnpackParticles<0,0> >(0,nrecv),*this);
+      DeviceType().fence();
+      copymode = 0;
+
+    } else {
+
+      if (sparta->kokkos->need_atomics)
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateUnpackParticles<1,1> >(0,nrecv),*this);
+      else
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateUnpackParticles<0,1> >(0,nrecv),*this);
+      DeviceType().fence();
+      copymode = 0;
+    }
+
   }
+
+  particle_kk->modify(Device,PARTICLE_MASK);
+  d_particles = t_particle_1d(); // destroy reference to reduce memory use
 
   particle->nlocal += nrecv;
   ncomm += nsend;
@@ -283,7 +269,7 @@ void CommKokkos::operator()(TagCommMigrateUnpackParticles<NEED_ATOMICS,HAVE_CUST
     i = d_nlocal();
     d_nlocal()++;
   }
-  const int offset = irecv*nbytes_particle;
+  const int offset = irecv*nbytes_total;
   memcpy(&d_particles[i],&d_rbuf[offset],nbytes_particle);
   if (HAVE_CUSTOM)
     particle_kk_copy.obj.unpack_custom_kokkos((char*)(d_rbuf.data()+offset+nbytes_particle),i);
