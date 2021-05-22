@@ -218,6 +218,8 @@ ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :
 
 ComputeTvibGrid::~ComputeTvibGrid()
 {
+  if (copymode) return;
+
   delete [] nmap;
   memory->destroy(map);
 

@@ -24,6 +24,7 @@
 
 #define PARTICLE_MASK  0x00000001
 #define SPECIES_MASK   0x00000002
+#define CUSTOM_MASK   0x00002048
 
 // grid
 

@@ -169,15 +169,15 @@ class Particle : protected Pointers {
 
   int find_custom(char *);
   void error_custom();
-  int add_custom(char *, int, int);
-  void grow_custom(int, int, int);
-  void remove_custom(int);
-  void copy_custom(int, int);
+  virtual int add_custom(char *, int, int);
+  virtual void grow_custom(int, int, int);
+  virtual void remove_custom(int);
+  virtual void copy_custom(int, int);
   int sizeof_custom();
   void write_restart_custom(FILE *fp);
   void read_restart_custom(FILE *fp);
-  void pack_custom(int, char *);
-  void unpack_custom(char *, int);
+  virtual void pack_custom(int, char *);
+  virtual void unpack_custom(char *, int);
 
   bigint memory_usage();
 
