@@ -40,13 +40,15 @@ class SurfReactAdsorb : public SurfReact {
 
  private:
   int me,nprocs;
-  int model;                        // GS or PS
+  int gsflag,psflag;                // 0/1 if gas and/or surf chem enabled
   int mode;                         // FACE or SURF
   int nsync;                        // synchronize surf state 
                                     // every this many steps
   double twall;                     // temperature of face or surf
   double max_cover;                 
-  
+  int this_index;                   // index of this surf reaction model 
+                                    // in Surf list of all reaction models
+
   class RanPark *random;     // RNG for reaction probabilities
 
   int nspecies_surf;         // number of surface species
