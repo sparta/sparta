@@ -184,9 +184,9 @@ void ComputeTvibGridKokkos::operator()(TagComputeTvibGrid_compute_per_grid_atomi
   auto a_tally = v_tally.template access<typename AtomicDup<NEED_ATOMICS,DeviceType>::value>();
 
   const int ispecies = d_particles[i].ispecies;
+  if (!d_species[ispecies].vibdof) return;
   const int igroup = d_s2g(imix,ispecies);
   if (igroup < 0) return;
-
   const int icell = d_particles[i].icell;
   if (!(d_cinfo[icell].mask & groupbit)) return;
 
@@ -196,9 +196,6 @@ void ComputeTvibGridKokkos::operator()(TagComputeTvibGrid_compute_per_grid_atomi
     a_tally(icell,j+1) += 1.0;
   } else if (modeflag >= 1) {
     auto &d_vibmode = k_eiarray.d_view[d_ewhich[index_vibmode]].k_view.d_view;
-
-    if (!d_species[ispecies].vibdof) return;
-    if (!(d_cinfo[icell].mask & groupbit)) return;
 
     // tally only the modes this species has
 
@@ -376,7 +373,6 @@ void ComputeTvibGridKokkos::operator()(TagComputeTvibGrid_post_process_grid, con
 
     if (denom == 0.0) d_vec[icell] = 0.0;
     else d_vec[icell] = numer/denom;
-
 
   // modeflag = 1, vib modes exist
   // Tgroup = weighted sum over all Tsp and modes for species in group
