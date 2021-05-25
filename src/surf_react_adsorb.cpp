@@ -46,7 +46,7 @@ enum{FACE,SURF};
 #define DELTA_TALLY 1024
 #define DELTA_PART 8                   // make this bigger once debugged
 
-// GS react
+// GS chemistry
 
 enum{DISSOCIATION,EXCHANGE,RECOMBINATION,AA,DA,LH1,LH3,CD,ER,CI}; 
 enum{NOMODEL,SPECULAR,DIFFUSE,CLL,TD,IMPULSIVE,MAXMODELS};
@@ -55,7 +55,7 @@ enum{NOMODEL,SPECULAR,DIFFUSE,CLL,TD,IMPULSIVE,MAXMODELS};
 #define MAXPRODUCT_GS 5
 #define MAXCOEFF_GS 3
 
-// PS react
+// PS chemistry
 
 enum{DS,LH2,LH4,SB};
 //enum{GRID,LINE,TRI};
@@ -65,9 +65,9 @@ enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 #define MAXPRODUCT_PS 4
 #define MAXCOEFF_PS 3
 
-// both
+// both kinds of chemistry
 
-enum{GS,PS};
+enum{GS,PS,GSPS};
 enum{SIMPLE,ARRHENIUS,PARTICULAR};                       // type of reaction
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};           // several files
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
@@ -75,8 +75,8 @@ enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 #define MAXLINE 1024
 #define DELTALIST 10
 
-// Syntax: surf_react ID adsorb gs/ps filename Nsync
-//                    face/surf Tsurf max_cover O CO CO_a CO_b ...
+// Syntax: surf_react ID adsorb (gs or ps or gs/ps) filename1 {filename2}
+//                    Nsync (face or surf) Tsurf max_cover O CO CO_a CO_b ...
 
 /* ---------------------------------------------------------------------- */
 
@@ -88,36 +88,54 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
                "Cannot yet use surf_react adsorb with distributed or "
 	       "implicit surf elements");
 
-  if (narg < 10) error->all(FLERR,"Illegal surf_react adsorb command");
-
   me = comm->me;
   nprocs = comm->nprocs;
 
-  if (strcmp(arg[2],"gs") == 0) model = GS;
-  else if (strcmp(arg[2],"ps") == 0) model = PS;
+  // 1st arg: gas chemistry or surf chemistry or both
+
+  if (narg < 3) error->all(FLERR,"Illegal surf_react adsorb command");
+
+  gsflag = psflag = 0;
+  if (strcmp(arg[2],"gs") == 0) gsflag = 1;
+  else if (strcmp(arg[2],"ps") == 0) psflag = 1;
+  else if (strcmp(arg[2],"gs/ps") == 0) gsflag = psflag = 1;
   else error->all(FLERR,"Illegal surf_react adsorb command");
 
-  if (strcmp(arg[4],"nsync") != 0) 
+  int iarg,gs_filearg,ps_filearg;
+
+  if (gsflag && psflag) {
+    gs_filearg = 3;
+    ps_filearg = 4;
+    iarg = 5;
+    if (narg < 10) error->all(FLERR,"Illegal surf_react adsorb command");
+  } else {
+    if (gsflag) gs_filearg = 3;
+    else if (psflag) ps_filearg = 3;
+    iarg = 4;
+    if (narg < 9) error->all(FLERR,"Illegal surf_react adsorb command");
+  }
+
+  if (strcmp(arg[iarg],"nsync") != 0) 
     error->all(FLERR,"Illegal surf_react adsorb command");
-  nsync = input->numeric(FLERR,arg[5]);
+  nsync = input->numeric(FLERR,arg[iarg+1]);
   if (nsync < 1) error->all(FLERR,"Illegal surf_react adsorb command");
 
-  if (strcmp(arg[6],"face") == 0) mode = FACE;
-  else if (strcmp(arg[6],"surf") == 0) mode = SURF;
+  if (strcmp(arg[iarg+2],"face") == 0) mode = FACE;
+  else if (strcmp(arg[iarg+2],"surf") == 0) mode = SURF;
   else error->all(FLERR,"Illegal surf_react adsorb command");
 
   if (mode == SURF && surf->nsurf == 0)
     error->all(FLERR,"Cannot use surf_react adsorb when no surfs exist");
 
-  twall = input->numeric(FLERR,arg[7]);
-  max_cover = input->numeric(FLERR,arg[8]);
+  twall = input->numeric(FLERR,arg[iarg+3]);
+  max_cover = input->numeric(FLERR,arg[iarg+4]);
 
   // species_surf = list of surface species IDs
 
-  species_surf = new char*[narg-9];
+  iarg += 4;
+  species_surf = new char*[narg-iarg];
   nspecies_surf = 0;
 
-  int iarg = 9;
   while (iarg < narg) {
     int isp = particle->find_species(arg[iarg]);
     if (isp < 0) error->all(FLERR,"Surf_react adsorb species is not defined");
@@ -130,14 +148,14 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
 
   // initialize reaction data structs
 
-  if (model == GS) {
+  if (gsflag) {
     nlist_gs = maxlist_gs = 0;
     rlist_gs = NULL;
     reactions_gs = NULL;
     indices_gs = NULL;
   }
 
-  if (model == PS) {
+  if (psflag) {
     nlist_ps = maxlist_ps = 0;
     rlist_ps = NULL;
     nactive_ps = 0;
@@ -158,17 +176,17 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
   cmodels = new SurfCollide*[MAXMODELS];
   for (int i = 0; i < MAXMODELS; i++) cmodels[i] = NULL;
 
-  // read the file defining GS or PS reactions
+  // read the file defining GS and/or PS reactions
 
-  if (model == GS) readfile_gs(arg[3]);
-  if (model == PS) readfile_ps(arg[3]);
+  //if (gsflag) readfile_gs(arg[gs_filearg]);
+  //if (psflag) readfile_ps(arg[ps_filearg]);
 
   // setup the reaction tallies
 
   nsingle = ntotal = 0;    
 
-  if (model == GS) nlist = nlist_gs;
-  if (model == PS) nlist = nlist_ps;
+  if (gsflag) nlist = nlist_gs;
+  if (psflag) nlist = nlist_ps;
   tally_single = new int[nlist];
   tally_total = new int[nlist];
   tally_single_all = new int[nlist];
@@ -199,7 +217,7 @@ SurfReactAdsorb::~SurfReactAdsorb()
   for (int i = 0; i < nspecies_surf; i++) delete [] species_surf[i];
   delete [] species_surf;
 
-  // GS model
+  // GS chemistry
 
   for (int i = 0; i < maxlist_gs; i++) {
     for (int j = 0; j < rlist_gs[i].nreactant; j++) {
@@ -234,7 +252,7 @@ SurfReactAdsorb::~SurfReactAdsorb()
   memory->destroy(reactions_gs);
   memory->destroy(indices_gs);
   
-  // PS model
+  // PS chemistry
   
   for (int i = 0; i < maxlist_ps; i++) {
     for (int j = 0; j < rlist_ps[i].nreactant; j++) {
@@ -286,7 +304,7 @@ SurfReactAdsorb::~SurfReactAdsorb()
 
   // delete custom per-surf state data owned by Surf class
   // this must be done exactly once by first_owner
-  // in case multiple surf react/adsorb models are used
+  // in case multiple surf react/adsorb instances are used
 
   if (mode == SURF && first_owner) {
     surf->remove_custom(nstick_species_custom);
@@ -375,7 +393,7 @@ void SurfReactAdsorb::create_per_face_state()
 
 /* ----------------------------------------------------------------------
    create and initialize custom per-surf-element data structs
-   this must be done exactly once even if multiple SRA models are used
+   this must be done exactly once even if multiple SRA instances are used
 ------------------------------------------------------------------------- */
 
 void SurfReactAdsorb::create_per_surf_state()
@@ -451,9 +469,16 @@ void SurfReactAdsorb::create_per_surf_state()
 
 void SurfReactAdsorb::init()
 {
+  // this_index = index of this instance of surf react/adsorb
+  //              in Surf list of reaction models
+
+  this_index = surf->find_react(id);
+
+  // initialize GS and PS models
+
   SurfReact::init();
-  if (model == GS) init_reactions_gs();
-  if (model == PS) init_reactions_ps();
+  if (gsflag) init_reactions_gs();
+  if (psflag) init_reactions_ps();
 
   if (mode == FACE) {
     nface = domain->dimension*2;
@@ -483,8 +508,8 @@ void SurfReactAdsorb::init()
 
   // one-time initialize of custom per-surf attributes for area and weight
   // counts were initialized to zero by Surf class when custom vecs/arrays added
-  // only set for surf elements assigned to this model
-  // b/c there may be multiple instances of this model, each for different surfs
+  // only set for surf elements assigned to this command ID
+  // b/c there may be multiple instances of this command, each for different surfs
   // cannot do until now b/c surf->sr[isr] not set until run is performed
 
   Surf::Line *lines = surf->lines;
@@ -1016,11 +1041,11 @@ void SurfReactAdsorb::tally_update()
 
   if (update->ntimestep % nsync) return;
 
-  // perform on-surface chemistry for PS model
+  // perform on-surface chemistry for PS
   // will insert new particles desorbing from faces/surfs as needed
   // first sync gas/surf chem changes to surf states since last sync
   
-  if (model == PS) {
+  if (psflag) {
     if (mode == FACE) update_state_face();
     else if (mode == SURF) update_state_surf();
     
@@ -1028,7 +1053,8 @@ void SurfReactAdsorb::tally_update()
   }
 
   // update the state of all faces or surf elements
-  // if no PS chemistry, syncs gas/surf chem changes to surf states since last sync
+  // if no PS chemistry, syncs gas/surf chem changes to surf states
+  //   since last sync
   // if yes PS chemistry, syncs PS chem changes to surf states
   
   if (mode == FACE) update_state_face();
@@ -1045,21 +1071,26 @@ void SurfReactAdsorb::PS_chemistry()
   
   // for box faces: a single proc updates all faces
   // for surf elements: each proc updates every Pth surf it owns
+  // only call PS_react() if this instance of surf react/adsorb matches
+  //   the reaction model assigned to surf or face
 
   if (mode == FACE) {
     if (me == 0) {
       for (int iface = 0; iface < nface; iface++)
-	PS_react(-(iface+1),face_norm[iface]);
+        if (domain->surf_react[iface] == this_index)
+          PS_react(-(iface+1),face_norm[iface]);
     }
 
   } else if (mode == SURF) {
     int nsurf = surf->nsurf;
     if (domain->dimension == 2) {
       for (int m = me; m < nsurf; m += nprocs)
-	PS_react(m,surf->lines[m].norm);
+        if (surf->lines[m].isr == this_index)
+          PS_react(m,surf->lines[m].norm);
     } else {
       for (int m = me; m < nsurf; m += nprocs)
-	PS_react(m,surf->tris[m].norm);
+        if (surf->tris[m].isr == this_index)
+          PS_react(m,surf->tris[m].norm);
     }
   }
 
