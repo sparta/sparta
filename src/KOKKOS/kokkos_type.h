@@ -28,6 +28,10 @@
 #define MAX_TYPES_STACKPARAMS 12
 #define NeighClusterSize 8
 
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP)
+#define SPARTA_KOKKOS_GPU
+#endif
+
   struct sparta_float3 {
     float x,y,z;
     KOKKOS_INLINE_FUNCTION
@@ -90,20 +94,6 @@
     }
   };
 
-#if !defined(__CUDACC__) && !defined(__VECTOR_TYPES_H__)
-  struct double2 {
-    double x, y;
-  };
-  struct float2 {
-    float x, y;
-  };
-  struct float4 {
-    float x, y, z, w;
-  };
-  struct double4 {
-    double x, y, z, w;
-  };
-#endif
 // set SPAHostype and DeviceType from Kokkos Default Types
 typedef Kokkos::DefaultExecutionSpace SPADeviceType;
 typedef Kokkos::HostSpace::execution_space SPAHostType;
@@ -119,9 +109,17 @@ template<>
 struct ExecutionSpaceFromDevice<SPAHostType> {
   static const SPARTA_NS::ExecutionSpace space = SPARTA_NS::Host;
 };
+
 #ifdef KOKKOS_ENABLE_CUDA
 template<>
 struct ExecutionSpaceFromDevice<Kokkos::Cuda> {
+  static const SPARTA_NS::ExecutionSpace space = SPARTA_NS::Device;
+};
+#endif
+
+#ifdef KOKKOS_ENABLE_HIP
+template<>
+struct ExecutionSpaceFromDevice<Kokkos::Experimental::HIP> {
   static const SPARTA_NS::ExecutionSpace space = SPARTA_NS::Device;
 };
 #endif
@@ -157,6 +155,18 @@ struct AtomicDup<1,Kokkos::Cuda> {
 
 template<>
 struct AtomicDup<-1,Kokkos::Cuda> {
+  using value = Kokkos::Experimental::ScatterAtomic;
+};
+#endif
+
+#ifdef KOKKOS_ENABLE_HIP
+template<>
+struct AtomicDup<1,Kokkos::Experimental::HIP> {
+  using value = Kokkos::Experimental::ScatterAtomic;
+};
+
+template<>
+struct AtomicDup<-1,Kokkos::Experimental::HIP> {
   using value = Kokkos::Experimental::ScatterAtomic;
 };
 #endif
@@ -254,14 +264,8 @@ public:
 #endif
 #if PRECISION==1
 typedef float SPARTA_FLOAT;
-typedef float2 SPARTA_FLOAT2;
-typedef sparta_float3 SPARTA_FLOAT3;
-typedef float4 SPARTA_FLOAT4;
 #else
 typedef double SPARTA_FLOAT;
-typedef double2 SPARTA_FLOAT2;
-typedef sparta_double3 SPARTA_FLOAT3;
-typedef double4 SPARTA_FLOAT4;
 #endif
 
 #ifndef PREC_FORCE
@@ -270,14 +274,8 @@ typedef double4 SPARTA_FLOAT4;
 
 #if PREC_FORCE==1
 typedef float F_FLOAT;
-typedef float2 F_FLOAT2;
-typedef sparta_float3 F_FLOAT3;
-typedef float4 F_FLOAT4;
 #else
 typedef double F_FLOAT;
-typedef double2 F_FLOAT2;
-typedef sparta_double3 F_FLOAT3;
-typedef double4 F_FLOAT4;
 #endif
 
 #ifndef PREC_ENERGY
@@ -286,12 +284,8 @@ typedef double4 F_FLOAT4;
 
 #if PREC_ENERGY==1
 typedef float E_FLOAT;
-typedef float2 E_FLOAT2;
-typedef float4 E_FLOAT4;
 #else
 typedef double E_FLOAT;
-typedef double2 E_FLOAT2;
-typedef double4 E_FLOAT4;
 #endif
 
 struct s_EV_FLOAT {
@@ -338,12 +332,8 @@ typedef struct s_EV_FLOAT EV_FLOAT;
 
 #if PREC_POS==1
 typedef float X_FLOAT;
-typedef float2 X_FLOAT2;
-typedef float4 X_FLOAT4;
 #else
 typedef double X_FLOAT;
-typedef double2 X_FLOAT2;
-typedef double4 X_FLOAT4;
 #endif
 
 #ifndef PREC_VELOCITIES
@@ -352,22 +342,14 @@ typedef double4 X_FLOAT4;
 
 #if PREC_VELOCITIES==1
 typedef float V_FLOAT;
-typedef float2 V_FLOAT2;
-typedef float4 V_FLOAT4;
 #else
 typedef double V_FLOAT;
-typedef double2 V_FLOAT2;
-typedef double4 V_FLOAT4;
 #endif
 
 #if PREC_KSPACE==1
 typedef float K_FLOAT;
-typedef float2 K_FLOAT2;
-typedef float4 K_FLOAT4;
 #else
 typedef double K_FLOAT;
-typedef double2 K_FLOAT2;
-typedef double4 K_FLOAT4;
 #endif
 
 // ------------------------------------------------------------------------
@@ -709,7 +691,7 @@ typedef tdual_float_1d_strided::t_dev t_float_1d_strided;
 typedef tdual_float_1d_strided::t_dev_um t_float_1d_strided_um;
 };
 
-#ifdef KOKKOS_ENABLE_CUDA
+#ifdef SPARTA_KOKKOS_GPU
 template <>
 struct ArrayTypes<SPAHostType> {
 
@@ -1025,11 +1007,7 @@ void memset_kokkos (ViewType &view) {
   ViewType::execution_space::fence();
 }
 
-#ifdef KOKKOS_ENABLE_CUDA
-#define SPARTA_LAMBDA [=] __device__
-#else
-#define SPARTA_LAMBDA [=]
-#endif
+#define SPARTA_LAMBDA KOKKOS_LAMBDA
 
 namespace SPARTA_NS {
 template <typename Device>
