@@ -59,6 +59,8 @@ class Collide : protected Pointers {
   virtual void add_grid_one();
   virtual void adapt_grid();
 
+  int ngroups;        // # of groups
+
  protected:
   int npmax;          // max # of particles in plist
   int *plist;         // list of particle indices for the entire cell
@@ -66,7 +68,6 @@ class Collide : protected Pointers {
   int nglocal;        // current size of per-cell arrays
   int nglocalmax;     // max allocated size of per-cell arrays (vremax, remain)
 
-  int ngroups;        // # of groups
   int *ngroup;        // # of particles in each group
   int *maxgroup;      // max # of particles allocated per group
   int **glist;        // indices into plist of particles in each group
