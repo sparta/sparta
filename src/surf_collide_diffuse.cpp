@@ -206,8 +206,6 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm)
 
   if (random->uniform() > acc) {
     MathExtra::reflect3(p->v,norm);
-    p->erot = particle->erot(p->ispecies,twall,random);
-    p->evib = particle->evib(p->ispecies,twall,random);
 
   // diffuse reflection
   // vrm = most probable speed of species, eqns (4.1) and (4.7)
