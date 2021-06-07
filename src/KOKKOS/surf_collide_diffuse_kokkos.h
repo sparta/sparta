@@ -98,9 +98,26 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
     //}
 
     // diffuse reflection for each particle
+    // resets v, roteng, vibeng
+    // particle I needs to trigger any fixes to update per-particle
+    //  properties which depend on the temperature of the particle
+    //  (e.g. fix vibmode and fix ambipolar)
+    // if new particle J created, also need to trigger any fixes
 
-    if (ip) diffuse(ip,norm);
-    //if (jp) diffuse(jp,norm);
+    if (ip) {
+      diffuse(ip,norm);
+      //if (modify->n_add_particle) {
+      //  int i = ip - particle->particles;
+      //  modify->add_particle(i,twall,twall,twall,vstream);
+      //}
+    }
+    //if (jp) {
+    //  diffuse(jp,norm);
+    //  if (modify->n_add_particle) {
+    //    int j = jp - particle->particles;
+    //    modify->add_particle(j,twall,twall,twall,vstream);
+    //  }
+    //}
 
     // call any fixes with a surf_react() method
     // they may reset j to -1, e.g. fix ambipolar
