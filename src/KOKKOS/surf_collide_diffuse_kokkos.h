@@ -227,6 +227,8 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
         v[2] = vperp*norm[2] + vtan1*tangent1[2] + vtan2*tangent2[2];
       }
 
+      // initialize rot/vib energy
+
       p->erot = erot(ispecies,twall,rand_gen,boltz);
       p->evib = evib(ispecies,twall,rand_gen,boltz);
     }
