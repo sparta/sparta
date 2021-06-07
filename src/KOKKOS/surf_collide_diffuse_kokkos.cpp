@@ -168,6 +168,10 @@ SurfCollideDiffuseKokkos::~SurfCollideDiffuseKokkos()
 
 void SurfCollideDiffuseKokkos::pre_collide()
 {
+  if (modify->n_add_particle)
+    error->all(FLERR,"Cannot yet use surf_collide diffuse/kk"
+               "with fix vibmode or fix ambipolar");
+
   if (random == NULL) {
     // initialize RNG
 
