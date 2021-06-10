@@ -32,6 +32,8 @@ enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut3d
 
 #define EPSCELL 1.0e-10    // tolerance for pushing surf pts to cell surface
 
+#define EPSCLOSE 1.0e-9    // tolerance for pushing surf clip pts to cell surface
+
 // cell ID for 2d or 3d cell
 
 //#define VERBOSE
@@ -454,7 +456,7 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
 
 /* ----------------------------------------------------------------------
    return errflag to Cut3d caller
-     incremented by 20 so Cut3d can distinguish from its own error messages
+   incremented by 20 so Cut3d can distinguish from its own error messages
 ------------------------------------------------------------------------- */
 
 int Cut2d::split_face(int id_caller, int, double *onelo, double *onehi)
@@ -503,11 +505,14 @@ int Cut2d::split_face(int id_caller, int, double *onelo, double *onehi)
 
 int Cut2d::build_clines()
 {
-  int m;
+  int j,m;
   double p1[2],p2[2],cbox[3],cmid[3],l2b[3];
-  double *x,*y,*norm,*pp1,*pp2;
+  double *x,*y,*norm,*pp1,*pp2,*p;
   Surf::Line *line;
   Cline *cline;
+
+  double xdelta = EPSCLOSE * (hi[0]-lo[0]);
+  double ydelta = EPSCLOSE * (hi[1]-lo[1]);
 
   Surf::Line *lines = surf->lines;
 
@@ -528,11 +533,24 @@ int Cut2d::build_clines()
 
     // if pushflag is set, push line pts near cell surface
 
+    /*
     if (pushflag) {
       push(p1);
       push(p2);
     }
+    */
 
+    // push all line points within EPSCLOSE of cell face to cell face
+
+    for (j = 0; j < 2; j++) {
+      if (j == 0) p = p1;
+      else p = p2;
+      if (fabs(p[0]-lo[0]) < xdelta) p[0] = lo[0];
+      if (fabs(p[0]-hi[0]) < xdelta) p[0] = hi[0];
+      if (fabs(p[1]-lo[1]) < ydelta) p[1] = lo[1];
+      if (fabs(p[1]-hi[1]) < ydelta) p[1] = hi[1];
+    }
+    
     cline = &clines[n];
     cline->line = i;
 
@@ -564,27 +582,23 @@ int Cut2d::build_clines()
       double dot = MathExtra::dot3(line->norm,l2b);
       if (dot > 0.0) noutside++;
       if (dot < 0.0) ninside++;
-
       continue;
     }
 
-    // discard clipped line if lies along one cell edge
-    //   and normal is not into cell
-    // leave grazeflag incremented in this case
+    // discard a line which only grazes the cell
+    // grazing = both line pts are on same edge of cell and outward normal
+    // grazeflag = 1 if any line grazes the cell
 
-    grazeflag++;
     if (ptflag(x) == BORDER && ptflag(y) == BORDER) {
       int edge = sameedge(x,y);
-      if (edge) {
-        norm = line->norm;
-        if (edge == 1 and norm[0] < 0.0) continue;
-        if (edge == 2 and norm[0] > 0.0) continue;
-        if (edge == 3 and norm[1] < 0.0) continue;
-        if (edge == 4 and norm[1] > 0.0) continue;
-        grazeflag--;
+      if (edge && grazing(edge,line->norm)) {
+	grazeflag = 1;
+	continue;
       }
     }
 
+    // line is added to clines
+    
     n++;
   }
 
@@ -866,7 +880,7 @@ void Cut2d::weiler_loops()
   //   loop of just 4 corner pts is a valid loop
   // stop when reach used pt:
   //   discard loop, just traversed non-loop corner pts
-
+ 
   int ipt,iflag,cflag,ncount,firstpt,nextpt;
   double area;
   double *x,*y;
@@ -913,6 +927,8 @@ void Cut2d::weiler_loops()
 }
 
 /* ----------------------------------------------------------------------
+   ok to have a loop with area = 0.0
+   can happen if a line crosses cell extremely close to corner point
 ------------------------------------------------------------------------- */
 
 int Cut2d::loop2pg()
@@ -922,7 +938,7 @@ int Cut2d::loop2pg()
 
   int nloop = loops.n;
   for (int i = 0; i < nloop; i++)
-    if (loops[i].area > 0.0) positive++;
+    if (loops[i].area >= 0.0) positive++;
     else negative++;
   if (positive == 0) return 4;
   if (positive > 1 && negative) return 5;
@@ -1227,6 +1243,22 @@ int Cut2d::sameedge(double *a, double *b)
 }
 
 /* ----------------------------------------------------------------------
+   a line is grazing if both its points are on any edge of cell
+   and its normal is outward with respect to cell
+   edge = 1,2,3,4 for both points on left,right,lower,upper cell face
+   return 1 if grazing else 0
+------------------------------------------------------------------------- */
+
+int Cut2d::grazing(int edge, double *norm)
+{
+  if (edge == 1 && norm[0] < 0.0) return 1;
+  if (edge == 2 && norm[0] > 0.0) return 1;
+  if (edge == 3 && norm[1] < 0.0) return 1;
+  if (edge == 4 && norm[1] > 0.0) return 1;
+  return 0;
+}
+
+/* ----------------------------------------------------------------------
    check which side of cell pt is on, assumed to be on border
    not called for corner pt, but return either side
    return 0,1,2,3 = lower,right,upper,left if on border, -1 if not
@@ -1251,9 +1283,9 @@ void Cut2d::failed_cell()
   printf("  lo corner %g %g\n",lo[0],lo[1]);
   printf("  hi corner %g %g\n",hi[0],hi[1]);
   printf("  # of surfs = %d out of " BIGINT_FORMAT "\n",nsurf,surf->nsurf);
-  printf("  # of surfs = %d\n",nsurf);
+  Surf::Line *lines = surf->lines;
   printf("  surfs:");
-  for (int i = 0; i < nsurf; i++) printf(" %d",surfs[i]);
+  for (int i = 0; i < nsurf; i++) printf(" %d",lines[surfs[i]].id);
   printf("\n");
 }
 

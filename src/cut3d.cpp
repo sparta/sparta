@@ -33,6 +33,8 @@ enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut2d
 
 #define EPSCELL 1.0e-10    // tolerance for pushing surf pts to cell surface
 
+#define EPSCLOSE 1.0e-9    // tolerance for pushing surf clip pts to cell surface
+
 // cell ID for 2d or 3d cell
 
 //#define VERBOSE
@@ -448,12 +450,6 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
 
     int grazeflag = clip_tris();
 
-    // DEBUG
-    //totcell++;
-    //totsurf += nsurf;
-    //totvert += verts.n;
-    //totedge += edges.n;
-
 #ifdef VERBOSE
     if (id == VERBOSE_ID) print_bpg("BPG after clipped tris");
 #endif
@@ -471,28 +467,6 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
       else if (inout == OUTSIDE) mark = OUTSIDE;
       corners[0] = corners[1] = corners[2] = corners[3] =
         corners[4] = corners[5] = corners[6] = corners[7] = mark;
-
-
-      /*
-      double ctr[3];
-      ctr[0] = 0.5*(lo[0]+hi[0]);
-      ctr[1] = 0.5*(lo[1]+hi[1]);
-      ctr[2] = 0.5*(lo[2]+hi[2]);
-      int check = 0;
-      if (mark == INSIDE &&
-          (fabs(ctr[0]) > 1.0 || fabs(ctr[1]) > 1.0 || fabs(ctr[2]) > 1.0))
-        check = 1;
-      if (mark == OUTSIDE &&
-          (fabs(ctr[0]) < 1.0 && fabs(ctr[1]) < 1.0 && fabs(ctr[2]) < 1.0))
-        check = 1;
-      if (mark == UNKNOWN) check = 1;
-      if (check) {
-        printf("BAD MARKING %d %g %g %g: mark %d: "
-               "nsurf %d pushflag %d grazeflag %d inout %d\n",
-               id,ctr[0],ctr[1],ctr[2],mark,nsurf,pushflag,grazeflag,inout);
-      }
-      */
-
 
       double vol = 0.0;
       if (mark == OUTSIDE) vol = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
@@ -764,12 +738,16 @@ int Cut3d::add_tris()
 
 int Cut3d::clip_tris()
 {
-  int i,n,dim,lohi,ivert,iedge,jedge,idir,jdir,nedge;
+  int i,j,n,dim,lohi,ivert,iedge,jedge,idir,jdir,nedge;
   int p1flag,p2flag;
   double value;
-  double *p1,*p2,*p3;
+  double *p1,*p2,*p3,*p;
   Edge *edge,*newedge;
 
+  double xdelta = EPSCLOSE * (hi[0]-lo[0]);
+  double ydelta = EPSCLOSE * (hi[1]-lo[1]);
+  double zdelta = EPSCLOSE * (hi[2]-lo[2]);
+  
   // loop over all 6 faces of cell
 
   int nvert = verts.n;
@@ -786,6 +764,22 @@ int Cut3d::clip_tris()
     nedge = edges.n;
     for (iedge = 0; iedge < nedge; iedge++)
       if (edges[iedge].active) edges[iedge].clipped = 0;
+
+    // push all edge points within EPSCLOSE of cell face to cell face
+    // done every iteration of clip since it can create new points
+    
+    for (iedge = 0; iedge < nedge; iedge++) {
+      for (j = 0; j < 2; j++) {
+	if (j == 0) p = edges[iedge].p1;
+	else p = edges[iedge].p2;
+	if (fabs(p[0]-lo[0]) < xdelta) p[0] = lo[0];
+	if (fabs(p[0]-hi[0]) < xdelta) p[0] = hi[0];
+	if (fabs(p[1]-lo[1]) < ydelta) p[1] = lo[1];
+	if (fabs(p[1]-hi[1]) < ydelta) p[1] = hi[1];
+	if (fabs(p[2]-lo[2]) < zdelta) p[2] = lo[2];
+	if (fabs(p[2]-hi[2]) < zdelta) p[2] = hi[2];
+      }
+    }
 
     // loop over vertices, clip each of its edges to face
     // if edge already clipped, unset clip flag and keep edge as-is
@@ -936,10 +930,7 @@ int Cut3d::clip_tris()
   for (iedge = 0; iedge < nedge; iedge++) {
     if (!edges[iedge].active) continue;
     edge = &edges[iedge];
-    if (samepoint(edge->p1,edge->p2)) {
-      if (id == 345) printf("Remove 0-len edge\n");
-      edge_remove(edge);
-    }
+    if (samepoint(edge->p1,edge->p2)) edge_remove(edge);
   }
 
   // remove vertices (triangles) which now have less than 3 edges
@@ -979,7 +970,8 @@ int Cut3d::clip_tris()
     }
 
   // remove vertices which only graze the cell
-  // grazing = all vertex pts in same face of cell and outward normal
+  // grazing = all vertex pts in plane of one face of cell and outward normal
+  // grazeflag = 1 if any vertex grazes the cell
 
   int grazeflag = 0;
   for (ivert = 0; ivert < nvert; ivert++) {
@@ -1106,6 +1098,12 @@ int Cut3d::edge2face()
     edge = &edges[iedge];
 
     nface = which_faces(edge->p1,edge->p2,faces);
+    if (nface == 0) {
+      double *p1 = edge->p1;
+      double *p2 = edge->p2;
+      printf("BAD id %d edge %d %d p1 %g %g %g p2 %g %g %g\n",id,iedge,nedge,
+	     p1[0],p1[1],p2[2],p2[0],p2[1],p2[2]);
+    }
     if (nface == 0) return 2;
     else if (nface == 1) iface = faces[0];
     else if (nface == 2) {
@@ -1589,6 +1587,8 @@ void Cut3d::walk()
 }
 
 /* ----------------------------------------------------------------------
+   ok to have a loop with area = 0.0
+   can happen if a tri crosses cell extremely close to corner point
 ------------------------------------------------------------------------- */
 
 int Cut3d::loop2ph()
@@ -1598,7 +1598,7 @@ int Cut3d::loop2ph()
 
   int nloop = loops.n;
   for (int i = 0; i < nloop; i++)
-    if (loops[i].volume > 0.0) positive++;
+    if (loops[i].volume >= 0.0) positive++;
     else negative++;
   if (positive == 0) return 4;
   if (positive > 1 && negative) return 5;
@@ -2185,14 +2185,17 @@ void Cut3d::push(double *pt)
 void Cut3d::failed_cell()
 {
   printf("Cut3d failed on proc %d in cell ID: " CELLINT_FORMAT "\n",comm->me,id);
-  Surf::Tri *tris = surf->tris;
   printf("  lo corner %g %g %g\n",lo[0],lo[1],lo[2]);
   printf("  hi corner %g %g %g\n",hi[0],hi[1],hi[2]);
   printf("  # of surfs = %d out of " BIGINT_FORMAT "\n",nsurf,surf->nsurf);
+  Surf::Tri *tris = surf->tris;
   printf("  surfs:");
+  //for (int i = 0; i < nsurf; i++) printf(" %d",tris[surfs[i]].id);
   for (int i = 0; i < nsurf; i++)
-    printf(" " SURFINT_FORMAT " %g",tris[surfs[i]].id,tris[surfs[i]].p1[0]);
-  //for (int i = 0; i < nsurf; i++) printf(" %d",surfs[i]+1);
+    printf(" %d p1 %g %g %g p2 %g %g %g p3 %g %g %g\n",tris[surfs[i]].id,
+	   tris[surfs[i]].p1[0],tris[surfs[i]].p1[1],tris[surfs[i]].p1[2],
+	   tris[surfs[i]].p2[0],tris[surfs[i]].p2[1],tris[surfs[i]].p2[2],
+	   tris[surfs[i]].p3[0],tris[surfs[i]].p3[1],tris[surfs[i]].p3[2]);
   printf("\n");
 }
 

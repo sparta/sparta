@@ -2063,6 +2063,7 @@ void ReadSurf::check_consecutive()
 
 /* ----------------------------------------------------------------------
    push all points to box boundary that are just inside
+   1Dec20 added just outside logic
    delta = user-specified frac * (hi-lo)
    this avoids tiny clipped surf elements
 ------------------------------------------------------------------------- */
@@ -2089,6 +2090,13 @@ void ReadSurf::push_points_to_boundary(double frac)
         if (j == 0) x = lines[i].p1;
         else x = lines[i].p2;
 
+	if (fabs(x[0]-boxlo[0]) < xdelta) x[0] = boxlo[0];
+	if (fabs(x[0]-boxhi[0]) < xdelta) x[0] = boxhi[0];
+
+	if (fabs(x[1]-boxlo[1]) < ydelta) x[1] = boxlo[1];
+	if (fabs(x[1]-boxhi[1]) < ydelta) x[1] = boxhi[1];
+	
+	/*
         if (x[0] >= boxlo[0] && x[0] <= boxhi[0]) {
           if (x[0]-boxlo[0] < xdelta) x[0] = boxlo[0];
           else if (boxhi[0]-x[0] < xdelta) x[0] = boxhi[0];
@@ -2097,6 +2105,7 @@ void ReadSurf::push_points_to_boundary(double frac)
           if (x[1]-boxlo[1] < ydelta) x[1] = boxlo[1];
           else if (boxhi[1]-x[1] < ydelta) x[1] = boxhi[1];
         }
+	*/
       }
     }
 
@@ -2110,7 +2119,17 @@ void ReadSurf::push_points_to_boundary(double frac)
         if (j == 0) x = tris[i].p1;
         else if (j == 1) x = tris[i].p2;
         else x = tris[i].p3;
+	
+	if (fabs(x[0]-boxlo[0]) < xdelta) x[0] = boxlo[0];
+	if (fabs(x[0]-boxhi[0]) < xdelta) x[0] = boxhi[0];
 
+	if (fabs(x[1]-boxlo[1]) < ydelta) x[1] = boxlo[1];
+	if (fabs(x[1]-boxhi[1]) < ydelta) x[1] = boxhi[1];
+
+	if (fabs(x[2]-boxlo[2]) < zdelta) x[2] = boxlo[2];
+	if (fabs(x[2]-boxhi[2]) < zdelta) x[2] = boxhi[2];
+
+	/*
         if (x[0] >= boxlo[0] && x[0] <= boxhi[0]) {
           if (x[0]-boxlo[0] < xdelta) x[0] = boxlo[0];
           else if (boxhi[0]-x[0] < xdelta) x[0] = boxhi[0];
@@ -2123,6 +2142,7 @@ void ReadSurf::push_points_to_boundary(double frac)
           if (x[2]-boxlo[2] < zdelta) x[2] = boxlo[2];
           else if (boxhi[2]-x[2] < zdelta) x[2] = boxhi[2];
         }
+	*/
       }
     }
   }

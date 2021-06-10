@@ -12,7 +12,7 @@ create_grid command :h3
 
 create_grid Nx Ny Nz keyword args ... :pre
 
-Nx,Ny,Nz = size of 1st-level grid in each dimension :ulb,l
+Nx,Ny,Nz = size of 1st-level grid in each dimension :ule,l
 zero or more keywords/args pairs may be appended :l
 keyword = {block} or {clump} or {random} or {stride} or {levels} or {subset} or {region} or {inside} :l
   {block} args = Px Py Pz
