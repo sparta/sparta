@@ -94,7 +94,7 @@ class CollideVSS : public Collide {
                                    Particle::OnePart *,
                                    Particle::OnePart *);
 
-  double sample_bl(RanPark *, double, double);
+  double sample_bl(RanKnuth *, double, double);
   double rotrel (int, double);
   double vibrel (int, double);
 

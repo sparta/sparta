@@ -17,13 +17,13 @@
 
 #include "pointers.h"
 #include "kokkos_type.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "error.h"
 
 namespace SPARTA_NS {
 
 struct RandWrap {
-  class RanPark* rng;
+  class RanKnuth* rng;
 
   KOKKOS_INLINE_FUNCTION
   RandWrap() {
@@ -46,13 +46,13 @@ class RandPoolWrap : protected Pointers {
   RandPoolWrap(int, class SPARTA *);
   ~RandPoolWrap();
   void destroy();
-  void init(RanPark*);
+  void init(RanKnuth*);
 
   KOKKOS_INLINE_FUNCTION
   RandWrap get_state() const
   {
 #ifdef SPARTA_KOKKOS_GPU
-    error->all(FLERR,"Cannot use Park RNG with GPUs");
+    error->all(FLERR,"Cannot use Knuth RNG with GPUs");
 #endif
 
     RandWrap rand_wrap;
@@ -75,7 +75,7 @@ class RandPoolWrap : protected Pointers {
   }
 
  private:
-  class RanPark **random_thr;
+  class RanKnuth **random_thr;
   int nthreads;
 };
 

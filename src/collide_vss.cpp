@@ -24,7 +24,7 @@
 #include "react.h"
 #include "comm.h"
 #include "fix_vibmode.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
@@ -766,7 +766,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
 
 /* ---------------------------------------------------------------------- */
 
-double CollideVSS::sample_bl(RanPark *random, double Exp_1, double Exp_2)
+double CollideVSS::sample_bl(RanKnuth *random, double Exp_1, double Exp_2)
 {
   double Exp_s = Exp_1 + Exp_2;
   double x,y;

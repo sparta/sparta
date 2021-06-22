@@ -12,16 +12,16 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#ifndef SPARTA_RAN_PARK_H
-#define SPARTA_RAN_PARK_H
+#ifndef SPARTA_RAN_KNUTH_H
+#define SPARTA_RAN_KNUTH_H
 
 namespace SPARTA_NS {
 
-class RanPark {
+class RanKnuth {
  public:
-  RanPark(int);
-  RanPark(double);
-  ~RanPark() {}
+  RanKnuth(int);
+  RanKnuth(double);
+  ~RanKnuth() {}
   void reset(double, int, int);
   double uniform();
   double gaussian();
@@ -29,6 +29,8 @@ class RanPark {
  private:
   int seed,save;
   double second;
+  int not_init,inext,inextp;
+  int ma[56];
 };
 
 }

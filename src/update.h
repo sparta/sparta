@@ -96,7 +96,7 @@ class Update : protected Pointers {
  protected:
   int me,nprocs;
   int maxmigrate;            // max # of particles in mlist
-  class RanPark *random;     // RNG for particle timestep moves
+  class RanKnuth *random;     // RNG for particle timestep moves
 
   int collide_react;         // 1 if any SurfCollide or React classes defined
   int nsc,nsr;               // copy of Collide/React data in Surf class

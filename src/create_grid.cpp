@@ -21,7 +21,7 @@
 #include "region.h"
 #include "comm.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "memory.h"
 #include "error.h"
 
@@ -505,7 +505,7 @@ void CreateGrid::create_random()
   double lo[3],hi[3];
   Stack *s;
 
-  RanPark *random = new RanPark(update->ranmaster->uniform());
+  RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
 
   // loop over all ntotal cells
   // only add cell if this proc is the random owner

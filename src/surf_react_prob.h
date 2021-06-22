@@ -33,7 +33,7 @@ class SurfReactProb : public SurfReact {
   int react(Particle::OnePart *&, double *, Particle::OnePart *&);
 
  private:
-  class RanPark *random;     // RNG for reaction probabilities
+  class RanKnuth *random;     // RNG for reaction probabilities
 };
 
 }

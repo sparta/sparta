@@ -37,7 +37,7 @@ class SurfReactGlobal : public SurfReact {
 
  private:
   double prob_create,prob_destroy;
-  class RanPark *random;     // RNG for reaction probabilities
+  class RanKnuth *random;     // RNG for reaction probabilities
 };
 
 }

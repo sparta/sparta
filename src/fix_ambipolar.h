@@ -41,7 +41,7 @@ class FixAmbipolar : public Fix {
  private:
   int maxion;                 // length of ions vector
   int ionindex,velindex;      // indices into particle custom data structs
-  class RanPark *random;
+  class RanKnuth *random;
 };
 
 }

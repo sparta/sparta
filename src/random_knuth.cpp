@@ -13,25 +13,25 @@
 ------------------------------------------------------------------------- */
 
 #include "math.h"
-#include "random_park.h"
+#include "random_knuth.h"
 
 using namespace SPARTA_NS;
 
-#define IA 16807
 #define IM 2147483647
-#define AM (1.0/IM)
-#define IQ 127773
-#define IR 2836
+#define MBIG 1000000000
+#define MSEED 161803398
+#define FAC (1.0/MBIG)
 
 /* ----------------------------------------------------------------------
-   Park/Miller RNG
+   Knuth RNG
    assume iseed is a positive int
 ------------------------------------------------------------------------ */
 
-RanPark::RanPark(int iseed)
+RanKnuth::RanKnuth(int iseed)
 {
   seed = iseed;
   save = 0;
+  not_init = 1;
 }
 
 /* ----------------------------------------------------------------------
@@ -39,7 +39,7 @@ RanPark::RanPark(int iseed)
    assume 0.0 <= rseed < 1.0
 ------------------------------------------------------------------------ */
 
-RanPark::RanPark(double rseed)
+RanKnuth::RanKnuth(double rseed)
 {
   seed = static_cast<int> (rseed*IM);
   if (seed == 0) seed = 1;
@@ -54,11 +54,12 @@ RanPark::RanPark(double rseed)
    typically used to setup one RN generator per proc or site or particle
 ------------------------------------------------------------------------ */
 
-void RanPark::reset(double rseed, int offset, int warmup)
+void RanKnuth::reset(double rseed, int offset, int warmup)
 {
   seed = static_cast<int> (fmod(rseed*IM+offset,IM));
   if (seed < 0) seed = -seed;
   if (seed == 0) seed = 1;
+  not_init = 1;
   for (int i = 0; i < warmup; i++) uniform();
 }
 
@@ -66,20 +67,44 @@ void RanPark::reset(double rseed, int offset, int warmup)
    uniform RN
 ------------------------------------------------------------------------- */
 
-double RanPark::uniform()
+double RanKnuth::uniform()
 {
-  int k = seed/IQ;
-  seed = IA*(seed-k*IQ) - IR*k;
-  if (seed < 0) seed += IM;
-  double ans = AM*seed;
-  return ans;
+  int i,ii,k,mj,mk;
+
+  if (not_init == 0) {
+    not_init = 0;
+    mj = labs(MSEED-labs(seed));
+    mj %= MBIG;
+    ma[55] = mj;
+    mk = 1;
+    for (i = 1; i <= 54; i++) {
+      ii = (21*i) % 55;
+      ma[ii] = mk;
+      mk = mj-mk;
+      if (mk < 0) mk += MBIG;
+      mj = ma[ii];
+    }
+    for (k=0; k<4; k++)
+      for (i=1; i<=55; i++) {
+        ma[i] -= ma[1+(i+30) % 55];
+        if (ma[i] < 0) ma[i] += MBIG;
+    }
+    inext = 0;
+    inextp = 31;
+  }
+  if (++inext == 56) inext = 1;
+  if (++inextp == 56) inextp = 1;
+  mj = ma[inext] - ma[inextp];
+  if (mj < 0) mj += MBIG;
+  ma[inext] = mj;
+  return mj*FAC;
 }
 
 /* ----------------------------------------------------------------------
    gaussian RN with zero mean and unit variance
 ------------------------------------------------------------------------- */
 
-double RanPark::gaussian()
+double RanKnuth::gaussian()
 {
   double first,v1,v2,rsq,fac;
 
