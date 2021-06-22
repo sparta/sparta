@@ -24,8 +24,8 @@ args = arguments for that style :l
 
 [Examples:]
 
-surf_react global 0.2 0.15
-surf_react prob air.surf :pre
+surf_react 1 global 0.2 0.15
+surf_react 1 prob air.surf :pre
 
 [Description:]
 
