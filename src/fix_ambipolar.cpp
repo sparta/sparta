@@ -37,7 +37,7 @@ FixAmbipolar::FixAmbipolar(SPARTA *sparta, int narg, char **arg) :
 {
   if (narg < 4) error->all(FLERR,"Illegal fix ambipolar command");
 
-  flag_add_particle = 1;
+  flag_update_custom = 1;
   flag_surf_react = 1;
 
   especies = particle->find_species(arg[2]);
@@ -101,11 +101,12 @@ void FixAmbipolar::init()
 
 /* ----------------------------------------------------------------------
    called when a particle with index is created
+    or when temperature dependent properties need to be updated
    creation used temp_thermal and vstream to set particle velocity
    if an ion, set ionambi and velambi for particle
 ------------------------------------------------------------------------- */
 
-void FixAmbipolar::add_particle(int index, double temp_thermal,
+void FixAmbipolar::update_custom(int index, double temp_thermal,
                                 double, double,
                                 double *vstream)
 {
@@ -175,7 +176,7 @@ void FixAmbipolar::surf_react(Particle::OnePart *iorig, int &i, int &j)
     Particle::OnePart *particles = particle->particles;
     if (ions[particles[i].ispecies] == 0) return;
     if (particles[j].ispecies != especies) return;
-    add_particle(i,update->temp_thermal,update->temp_thermal,
+    update_custom(i,update->temp_thermal,update->temp_thermal,
                  update->temp_thermal,update->vstream);
     j = -1;
   }

@@ -34,10 +34,10 @@ class FixVibmodeKokkos : public FixVibmode {
   FixVibmodeKokkos(class SPARTA *, int, char **);
   ~FixVibmodeKokkos();
   //void init();
-  void add_particle(int, double, double, double, double *);
+  void update_custom(int, double, double, double, double *);
 
   KOKKOS_INLINE_FUNCTION
-  void add_particle_kokkos(int, double, double, double, double *);
+  void update_custom_kokkos(int, double, double, double, double *);
 
  private:
   int boltz;
@@ -63,13 +63,14 @@ class FixVibmodeKokkos : public FixVibmode {
 
 /* ----------------------------------------------------------------------
    called when a particle with index is created
+    or when temperature dependent properties need to be updated
    populate all vibrational modes and set evib = sum of mode energies
 ------------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-void FixVibmodeKokkos::add_particle_kokkos(int index, double temp_thermal,
-                                           double temp_rot, double temp_vib,
-                                           double *)
+void FixVibmodeKokkos::update_custom_kokkos(int index, double temp_thermal,
+                                            double temp_rot, double temp_vib,
+                                            double *)
 {
   auto &d_vibmode = k_eiarray.d_view[d_ewhich[vibmodeindex]].k_view.d_view;
 

@@ -169,16 +169,16 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
 
   if (ip) {
     diffuse(ip,norm);
-    if (modify->n_add_particle) {
+    if (modify->n_update_custom) {
       int i = ip - particle->particles;
-      modify->add_particle(i,twall,twall,twall,vstream);
+      modify->update_custom(i,twall,twall,twall,vstream);
     }
   }
   if (jp) {
     diffuse(jp,norm);
-    if (modify->n_add_particle) {
+    if (modify->n_update_custom) {
       int j = jp - particle->particles;
-      modify->add_particle(j,twall,twall,twall,vstream);
+      modify->update_custom(j,twall,twall,twall,vstream);
     }
   }
 

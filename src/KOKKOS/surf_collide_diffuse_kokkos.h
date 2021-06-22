@@ -106,16 +106,16 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
 
     if (ip) {
       diffuse(ip,norm);
-      //if (modify->n_add_particle) {
+      //if (modify->n_update_custom) {
       //  int i = ip - particle->particles;
-      //  modify->add_particle(i,twall,twall,twall,vstream);
+      //  modify->update_custom(i,twall,twall,twall,vstream);
       //}
     }
     //if (jp) {
     //  diffuse(jp,norm);
-    //  if (modify->n_add_particle) {
+    //  if (modify->n_update_custom) {
     //    int j = jp - particle->particles;
-    //    modify->add_particle(j,twall,twall,twall,vstream);
+    //    modify->update_custom(j,twall,twall,twall,vstream);
     //  }
     //}
 
@@ -300,7 +300,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
     if (vibstyle == NONE || d_species[isp].vibdof < 2) return 0.0;
 
     // for DISCRETE, only need set evib for vibdof = 2
-    // mode levels and evib will be set by FixVibmode::add_particle()
+    // mode levels and evib will be set by FixVibmode::update_custom()
 
     eng = 0.0;
 

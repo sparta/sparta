@@ -56,16 +56,17 @@ FixVibmodeKokkos::~FixVibmodeKokkos()
 
 /* ----------------------------------------------------------------------
    called when a particle with index is created
+    or when temperature dependent properties need to be updated
    populate all vibrational modes and set evib = sum of mode energies
 ------------------------------------------------------------------------- */
 
-void FixVibmodeKokkos::add_particle(int index, double temp_thermal,
-                                    double temp_rot, double temp_vib,
-                                    double *vstream)
+void FixVibmodeKokkos::update_custom(int index, double temp_thermal,
+                                     double temp_rot, double temp_vib,
+                                     double *vstream)
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Host,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
-  FixVibmode::add_particle(index, temp_thermal, temp_rot, temp_vib, vstream);
+  FixVibmode::update_custom(index, temp_thermal, temp_rot, temp_vib, vstream);
   particle_kk->modify(Host,PARTICLE_MASK|CUSTOM_MASK);
 }
 

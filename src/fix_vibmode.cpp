@@ -36,7 +36,7 @@ FixVibmode::FixVibmode(SPARTA *sparta, int narg, char **arg) :
 {
   if (narg != 2) error->all(FLERR,"Illegal fix vibmode command");
 
-  flag_add_particle = 1;
+  flag_update_custom = 1;
 
   // random = RNG for vibrational mode initialization
 
@@ -90,12 +90,13 @@ void FixVibmode::init()
 
 /* ----------------------------------------------------------------------
    called when a particle with index is created
+    or when temperature dependent properties need to be updated
    populate all vibrational modes and set evib = sum of mode energies
 ------------------------------------------------------------------------- */
 
-void FixVibmode::add_particle(int index, double temp_thermal,
-                              double temp_rot, double temp_vib,
-                              double *vstream)
+void FixVibmode::update_custom(int index, double temp_thermal,
+                               double temp_rot, double temp_vib,
+                               double *vstream)
 {
   int **vibmode = particle->eiarray[particle->ewhich[vibmodeindex]];
 
