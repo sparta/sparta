@@ -399,43 +399,46 @@ void SurfCollideImpulsive::impulsive(Particle::OnePart *p, double *norm)
 /* ----------------------------------------------------------------------
    wrapper on impulsive() method to perform collision for a single particle
    pass in flags/coefficients to match command-line args for style impulsive
+   flags, coeffs can be NULL
    called by SurfReactAdsorb
 ------------------------------------------------------------------------- */
 
 void SurfCollideImpulsive::wrapper(Particle::OnePart *p, double *norm, 
                                    int *flags, double *coeffs)
 { 
-  twall = coeffs[0];
+  if (flags) {
+    twall = coeffs[0];
 
-  softsphere_flag = flags[0];
-  if (softsphere_flag) {
-    eng_ratio = coeffs[1];
-    eff_mass = coeffs[2];
-  } else {
-    u0_a = coeffs[1];
-    u0_b = coeffs[2];
-  }
+    softsphere_flag = flags[0];
+    if (softsphere_flag) {
+      eng_ratio = coeffs[1];
+      eff_mass = coeffs[2];
+    } else {
+      u0_a = coeffs[1];
+      u0_b = coeffs[2];
+    }
 
-  var_alpha = coeffs[3];
-  theta_peak = coeffs[4];
-  cos_theta_pow = coeffs[5];
-  cos_phi_pow = coeffs[6];
+    var_alpha = coeffs[3];
+    theta_peak = coeffs[4];
+    cos_theta_pow = coeffs[5];
+    cos_phi_pow = coeffs[6];
+    
+    step_flag = flags[1];
+    double_flag = flags[2];
+    intenergy_flag = flags[3];
 
-  step_flag = flags[1];
-  double_flag = flags[2];
-  intenergy_flag = flags[3];
+    int m = 7;
 
-  int m = 7;
-
-  if (step_flag) {
-    step_size = coeffs[m++];
-  }
-  if (double_flag) {
-    cos_theta_pow_2 = coeffs[m++];
-  }
-  if (intenergy_flag) {
-    rot_frac = coeffs[m++];
-    vib_frac = coeffs[m++];
+    if (step_flag) {
+      step_size = coeffs[m++];
+    }
+    if (double_flag) {
+      cos_theta_pow_2 = coeffs[m++];
+    }
+    if (intenergy_flag) {
+      rot_frac = coeffs[m++];
+      vib_frac = coeffs[m++];
+    }
   }
 
   impulsive(p,norm);

@@ -422,20 +422,23 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
 /* ----------------------------------------------------------------------
    wrapper on cll() method to perform collision for a single particle
    pass in flags/coefficients to match command-line args for style cll 
+   flags, coeffs can be NULL
    called by SurfReactAdsorb
 ------------------------------------------------------------------------- */
 
 void SurfCollideCLL::wrapper(Particle::OnePart *p, double *norm, 
                              int *flags, double *coeffs)
 { 
-  twall = coeffs[0];
-  acc_n = coeffs[1];
-  acc_t = coeffs[2];
-  acc_rot = coeffs[3];
-  acc_vib = coeffs[4];
+  if (flags) {
+    twall = coeffs[0];
+    acc_n = coeffs[1];
+    acc_t = coeffs[2];
+    acc_rot = coeffs[3];
+    acc_vib = coeffs[4];
 
-  if (flags[0]) eccen = coeffs[5];
-  else eccen = 0.0;
+    if (flags[0]) eccen = coeffs[5];
+    else eccen = 0.0;
+  }
 
   cll(p,norm);
 }
