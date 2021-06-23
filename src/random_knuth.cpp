@@ -14,6 +14,7 @@
 
 #include "math.h"
 #include "random_knuth.h"
+#include "stdlib.h"
 
 using namespace SPARTA_NS;
 
@@ -71,7 +72,7 @@ double RanKnuth::uniform()
 {
   int i,ii,k,mj,mk;
 
-  if (not_init == 0) {
+  if (not_init == 1) {
     not_init = 0;
     mj = labs(MSEED-labs(seed));
     mj %= MBIG;
