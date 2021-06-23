@@ -42,6 +42,7 @@ using namespace MathConst;
 
 enum{INT,DOUBLE};                      // several files
 enum{FACE,SURF};
+enum{PSFACE,PSLINE,PSTRI};
 
 #define DELTA_TALLY 1024
 #define DELTA_PART 8                   // make this bigger once debugged
@@ -132,7 +133,7 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
 
   // species_surf = list of surface species IDs
 
-  iarg += 4;
+  iarg += 5;
   species_surf = new char*[narg-iarg];
   nspecies_surf = 0;
 
@@ -178,15 +179,16 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
 
   // read the file defining GS and/or PS reactions
 
-  //if (gsflag) readfile_gs(arg[gs_filearg]);
-  //if (psflag) readfile_ps(arg[ps_filearg]);
+  if (gsflag) readfile_gs(arg[gs_filearg]);
+  if (psflag) readfile_ps(arg[ps_filearg]);
 
   // setup the reaction tallies
 
   nsingle = ntotal = 0;    
 
-  if (gsflag) nlist = nlist_gs;
-  if (psflag) nlist = nlist_ps;
+  nlist = 0;
+  if (gsflag) nlist += nlist_gs;
+  if (psflag) nlist += nactive_ps;
   tally_single = new int[nlist];
   tally_total = new int[nlist];
   tally_single_all = new int[nlist];
@@ -382,7 +384,7 @@ void SurfReactAdsorb::create_per_face_state()
     face_weight[iface] = 1.0;
   }
 
-  // set ptrs used by react() and react_PS() to per-face data structs
+  // set ptrs used by react() and PS_react() to per-face data structs
 
   species_state = face_species_state;
   total_state = face_total_state;
@@ -439,7 +441,7 @@ void SurfReactAdsorb::create_per_surf_state()
   memory->create(surf_species_delta,nlocal,nspecies_surf,
                  "react/adsorb:surf_species_delta");
 
-  // set ptrs used by react() and react_PS() to per-surf data structs
+  // set ptrs used by react() and PS_react() to per-surf data structs
 
   species_state = surf_species_state;
   total_state = surf_total_state;
@@ -539,6 +541,7 @@ void SurfReactAdsorb::init()
 }
 
 /* ----------------------------------------------------------------------
+   GS = gas/surface chemistry reactions
    select surface reaction to perform for particle with ptr IP on surface
    isurf < 0 for faces indexed from -1 to -6
    isurf >= 0 for surf element indexed from 0 to Nsurf-1
@@ -767,9 +770,15 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
     for (int j = 1; j < r->nreactant; j++) { 
       if (r->state_reactants[j][0] == 's') { 
         if (r->part_reactants[j] == 0) { 
-          prob_value[i] *= stoich_pow(total_state[isurf],r->stoich_reactants[j]) * pow(ms_inv,r->stoich_reactants[j]);
+          prob_value[i] *= 
+            stoich_pow(total_state[isurf],
+                       r->stoich_reactants[j]) * 
+            pow(ms_inv,r->stoich_reactants[j]);
         } else {      
-          prob_value[i] *= stoich_pow(species_state[isurf][r->reactants_ad_index[j]],r->stoich_reactants[j]) * pow(ms_inv,r->stoich_reactants[j]);
+          prob_value[i] *= 
+            stoich_pow(species_state[isurf][r->reactants_ad_index[j]],
+                       r->stoich_reactants[j]) * 
+            pow(ms_inv,r->stoich_reactants[j]);
         }
       }
     } 
@@ -845,6 +854,12 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
         }   
       }
 
+      // for each reaction, post-reaction velocities must be set
+      // if NOMODEL then return 1:
+      //   SC instance associated with surf/face sets vels
+      // else return 2:
+      //   SC style created when GS file was read sets velocities
+
       switch (r->type) {
 
       case DISSOCIATION:
@@ -898,8 +913,8 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
             if (r->cmodel_ip != NOMODEL) 
               cmodels[r->cmodel_ip]->
                 wrapper(ip,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
-            //cll(ip,norm,r->coeff[3],r->coeff[4],r->coeff[5]);              
           }
+
           if (r->cmodel_ip == NOMODEL) return 1;
           return 2;
           break; 
@@ -907,20 +922,11 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
 
       case LH1:
         {
-          //if (r->state_products[0][0] == 'g') {
-            ip->ispecies = r->products[0];
-            if (r->cmodel_ip != NOMODEL) 
-              cmodels[r->cmodel_ip]->
-                wrapper(ip,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
-
-            //if (random->uniform() < r->coeff[9])
-            //  non_thermal_scatter(ip,norm,r->coeff[10],r->coeff[11],
-            //                      r->coeff[12],r->coeff[13]);
-            //else
-            //  energy_barrier_scatter(ip,norm,r->coeff[8],
-            //                         r->coeff[6],r->coeff[7]);
-          //}
-
+          ip->ispecies = r->products[0];
+          if (r->cmodel_ip != NOMODEL) 
+            cmodels[r->cmodel_ip]->
+              wrapper(ip,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
+          
           if (r->cmodel_ip == NOMODEL) return 1;
           return 2;
           break;
@@ -946,32 +952,10 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           if (r->cmodel_ip != NOMODEL) 
             cmodels[r->cmodel_ip]->
               wrapper(ip,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
-          //cll(ip,norm,r->coeff[3],r->coeff[4],r->coeff[5]); 
           if (r->cmodel_ip == NOMODEL) return 1;
           return 2;
           break;
         }          
-
-      /*    
-      case CI1:
-        {
-          ip->ispecies = r->products[0];
-          
-          if (r->cmodel_ip != NOMODEL) 
-            cmodels[r->cmodel_ip]->
-              wrapper(ip,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
-
-          //if (random->uniform() < r->coeff[8])
-          //  non_thermal_scatter(ip,norm,r->coeff[9],r->coeff[10],
-          //                      r->coeff[11],r->coeff[12]);
-          //else
-          //  energy_barrier_scatter(ip,norm,r->coeff[7],
-          //                         r->coeff[5],r->coeff[6]); 
-          if (r->cmodel_ip == NOMODEL) return 1;
-          return 2;
-          break;
-        }
-        */
 
       case CI:
         {
@@ -1010,14 +994,6 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
             }
           }
 
-          //cll(ip,norm,r->coeff[5],r->coeff[6],r->coeff[7]);
-          //if (random->uniform() < r->coeff[11])
-          // non_thermal_scatter(jp,norm,r->coeff[12],r->coeff[13],
-          //                      r->coeff[14],r->coeff[15]);
-          //else
-          //  energy_barrier_scatter(jp,norm,r->coeff[10],
-          //                         r->coeff[8],r->coeff[9]);
-          
           if (r->cmodel_ip == NOMODEL) return 1;
           return 2;
           break;
@@ -1078,7 +1054,7 @@ void SurfReactAdsorb::PS_chemistry()
     if (me == 0) {
       for (int iface = 0; iface < nface; iface++)
         if (domain->surf_react[iface] == this_index)
-          PS_react(-(iface+1),face_norm[iface]);
+          PS_react(PSFACE,iface,face_norm[iface]);
     }
 
   } else if (mode == SURF) {
@@ -1086,11 +1062,11 @@ void SurfReactAdsorb::PS_chemistry()
     if (domain->dimension == 2) {
       for (int m = me; m < nsurf; m += nprocs)
         if (surf->lines[m].isr == this_index)
-          PS_react(m,surf->lines[m].norm);
+          PS_react(PSLINE,m,surf->lines[m].norm);
     } else {
       for (int m = me; m < nsurf; m += nprocs)
         if (surf->tris[m].isr == this_index)
-          PS_react(m,surf->tris[m].norm);
+          PS_react(PSTRI,m,surf->tris[m].norm);
     }
   }
 
@@ -2575,25 +2551,15 @@ void SurfReactAdsorb::readfile_ps(char *fname)
 
 /* ----------------------------------------------------------------------
    perform on-surf reactions for one face or one surf element
-   isurf < 0 for faces indexed from -1 to -6
-   isurf >= 0 for surf element indexed from 0 to Nsurf-1
+   modePS = PSFACE, PSLINE, PSTRI
+   isurf = 0 to 5 for box faces
+   isurf >= 0 for line or tri indexed from 0 to Nsurf-1
    invoked once per Nsync steps
 ------------------------------------------------------------------------- */
 							
-void SurfReactAdsorb::PS_react(int isurf, double *norm)
+void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
 {
-  // error checks 
-
-  if (isurf < 0 && mode == SURF)
-    error->one(FLERR,"Surf_react adsorb surf used with box faces");
-  if (isurf >= 0 && mode == FACE)
-    error->one(FLERR,"Surf_react adsorb face used with surface elements");
-
-  // convert face index from negative value to 0 to 5 inclusive
-  
-  if (mode == FACE) isurf = -(isurf+1);
-
-  // mark this surface since performing on-surf chemistry
+  // mark this surface element since performing on-surf chemistry
   
   if (mode == SURF) mark[isurf] = 1;
 
@@ -2614,28 +2580,27 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
   //1 particles = particle->particles;
   // int nlocal = particle->nlocal;
 
-  // set tri or line or cell
+  // line or tri data
 
-  //1 Grid::ChildInfo *cinfo = grid->cinfo;
-  //1 Surf::Line *lines = surf->lines;
-  //1 Surf::Tri *tris = surf->tris;
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
 
-  double fnum = update->fnum; 
   // double *tau;  // NOTE: what is this ?
   // tau = lines[ielem].tau;
   // tau = tris[ielem].tau;
-       
+
+  double fnum = update->fnum; 
   double factor = fnum * weight[isurf] / area[isurf];
   double ms_inv = factor/max_cover;
    
   Particle::OnePart *p;
-  int pcell,id;
+  int pcell,id,isc;
     
   double nu_react[nactive_ps];
   OneReaction_PS *r;
   int rxn_occur[nactive_ps]; 
   
-  for (int i=0; i<nactive_ps; i++) {
+  for (int i = 0; i < nactive_ps; i++) {
     r = &rlist_ps[i];
     //int react_num = r->index;
     rxn_occur[i] = 1;
@@ -2653,7 +2618,7 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
     long int sum_nu_tau = 0;
     long int nu_tau[nactive_ps];
     
-    for (int i=0; i<nactive_ps; i++) {
+    for (int i = 0; i < nactive_ps; i++) {
       nu_react[i] = 0.0;
       nu_tau[i] = 0;
       if (rxn_occur[i]) {
@@ -2663,7 +2628,9 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
             
         nu_react[i] = r->k_react;
         for (int j=0; j<r->nreactant; j++) {
-          nu_react[i] *= stoich_pow(species_state[isurf][r->reactants_ad_index[j]],r->stoich_reactants[j]);
+          nu_react[i] *= 
+            stoich_pow(species_state[isurf][r->reactants_ad_index[j]],
+                       r->stoich_reactants[j]);
           factor_pow += r->stoich_reactants[j];              
         }
         nu_react[i] *= pow(ms_inv,factor_pow);
@@ -2687,6 +2654,9 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
          
         r = &rlist_ps[i];
         //int react_num = r->index;
+
+        nsingle++;
+        tally_single[2+nlist_gs+i]++;
                 
         double t = -log(random->uniform())/nu_react[i];
         //tau[isurf][react_num] -= t;     
@@ -2697,7 +2667,7 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
             switch(r->state_reactants[j][0]) {
             case 's':
               {
-                species_delta[r->reactants_ad_index[j]] -= 
+                species_delta[isurf][r->reactants_ad_index[j]] -= 
                   r->stoich_reactants[j];
               }
             case 'g': {}
@@ -2711,7 +2681,7 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
             switch(r->state_products[j][0]) {
             case 's':
               {
-                species_delta[r->products_ad_index[j]] += 
+                species_delta[isurf][r->products_ad_index[j]] += 
                   r->stoich_products[j];
               }
             case 'g': {}
@@ -2719,7 +2689,15 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
             }                    
           }
         }
-                
+        
+        // for each reaction, post-reaction velocities must be set
+        // if NOMODEL then SC instance associated with surf/face sets vels
+        // else SC style created when PS file was read sets velocities
+        // call to add_particle_mine():
+        //   adds new particle to mypart list
+        //   removes it from Particle class
+        //   allows correct proc that owns the grid cell to later add it
+
         switch (r->type) {
 
         case DS: 
@@ -2737,10 +2715,13 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
             if (r->cmodel_ip != NOMODEL) 
               cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
                                              r->cmodel_ip_coeffs);
+            else {
+              if (modePS == PSFACE) isc = domain->surf_collide[isurf];
+              else if (modePS == PSLINE) isc = lines[isurf].isc;
+              else if (modePS == PSTRI) isc = tris[isurf].isc;
+              surf->sc[isc]->wrapper(p,norm,NULL,NULL);
+            }
 	    
-	    // add new particle to mypart list and remove from Particle class
-	    // this allows correct proc that owns the grid cell to later add it
-
 	    add_particle_mine(p);
 	    particle->nlocal--;
 
@@ -2758,14 +2739,17 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
 	    particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
 	    p = &particle->particles[particle->nlocal-1];
 	    p->dtremain = update->dt*random->uniform(); 
-	    
+
 	    if (r->cmodel_ip != NOMODEL) 
 	      cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
 					     r->cmodel_ip_coeffs);
-	  
-	    // add new particle to mypart list and remove from Particle class
-	    // this allows correct proc that owns the grid cell to later add it
-	    
+            else {
+              if (modePS == PSFACE) isc = domain->surf_collide[isurf];
+              else if (modePS == PSLINE) isc = lines[isurf].isc;
+              else if (modePS == PSTRI) isc = tris[isurf].isc;
+              surf->sc[isc]->wrapper(p,norm,NULL,NULL);
+            }
+
 	    add_particle_mine(p);
 	    particle->nlocal--;
 	    
@@ -2792,10 +2776,13 @@ void SurfReactAdsorb::PS_react(int isurf, double *norm)
             if (r->cmodel_ip != NOMODEL) 
               cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
                                              r->cmodel_ip_coeffs);
+            else {
+              if (modePS == PSFACE) isc = domain->surf_collide[isurf];
+              else if (modePS == PSLINE) isc = lines[isurf].isc;
+              else if (modePS == PSTRI) isc = tris[isurf].isc;
+              surf->sc[isc]->wrapper(p,norm,NULL,NULL);
+            }
 
-	    // add new particle to mypart list and remove from Particle class
-	    // this allows correct proc that owns the grid cell to later add it
-	    
 	    add_particle_mine(p);
 	    particle->nlocal--;
 	    
