@@ -1392,7 +1392,7 @@ double CollideVSSKokkos::rotrel(int isp, double Ec) const
   // Because we are only relaxing one of the particles in each call, we only
   //  include its DoF, consistent with Bird 2013 (3.32)
 
-  double Tr = Ec /(boltz * (2.5-d_params(isp,isp).omega + species[isp].rotdof/2.0));
+  double Tr = Ec /(boltz * (2.5-d_params(isp,isp).omega + d_species[isp].rotdof/2.0));
   double rotphi = (1.0+d_params(isp,isp).rotc2/sqrt(Tr) + d_params(isp,isp).rotc3/Tr)
                 / d_params(isp,isp).rotc1;
   return rotphi;
