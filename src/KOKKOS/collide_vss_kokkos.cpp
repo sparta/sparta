@@ -1059,7 +1059,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
       double rotn_phi = d_species[sp].rotrel;
 
       if (rotdof) {
-        if (relaxflag == VARIABLE) rotn_phi = rotrel(sp,E_Dispose);
+        if (relaxflag == VARIABLE) rotn_phi = rotrel(sp,E_Dispose+p->erot);
         if (rotn_phi >= rand_gen.drand()) {
           if (rotstyle == NONE) {
             p->erot = 0.0 ;
@@ -1389,7 +1389,10 @@ double CollideVSSKokkos::sample_bl(rand_type &rand_gen, double Exp_1, double Exp
 KOKKOS_INLINE_FUNCTION
 double CollideVSSKokkos::rotrel(int isp, double Ec) const
 {
-  double Tr = Ec /(boltz * (2.5-d_params(isp,isp).omega));
+  // Because we are only relaxing one of the particles in each call, we only
+  //  include its DoF, consistent with Bird 2013 (3.32)
+
+  double Tr = Ec /(boltz * (2.5-d_params(isp,isp).omega + species[isp].rotdof/2.0));
   double rotphi = (1.0+d_params(isp,isp).rotc2/sqrt(Tr) + d_params(isp,isp).rotc3/Tr)
                 / d_params(isp,isp).rotc1;
   return rotphi;
