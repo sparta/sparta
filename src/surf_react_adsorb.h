@@ -99,7 +99,7 @@ class SurfReactAdsorb : public SurfReact {
   int *total_state;          // total count at last sync
   double *area;              // area of surf
   double *weight;            // weight of surf
-  double **tau;               // PS time of surf
+  double **tau;              // PS time of surf
 
   // GS (gas/surface) reaction model
   

@@ -54,7 +54,7 @@ enum{NOMODEL,SPECULAR,DIFFUSE,CLL,TD,IMPULSIVE,MAXMODELS};
 
 #define MAXREACTANT_GS 5
 #define MAXPRODUCT_GS 5
-#define MAXCOEFF_GS 3
+#define MAXCOEFF_GS 4
 
 // PS chemistry
 
@@ -301,7 +301,7 @@ SurfReactAdsorb::~SurfReactAdsorb()
     memory->destroy(face_total_state);
     memory->destroy(face_area);
     memory->destroy(face_weight);
-    memory->destroy(face_tau);
+    if (psflag) memory->destroy(face_tau);
   }
 
   // delete custom per-surf state data owned by Surf class
@@ -313,7 +313,7 @@ SurfReactAdsorb::~SurfReactAdsorb()
     surf->remove_custom(nstick_total_custom);
     surf->remove_custom(area_custom);
     surf->remove_custom(weight_custom);
-    surf->remove_custom(tau_custom);
+    if (psflag) surf->remove_custom(tau_custom);
   }
 
   // delete local face and per-surf data
@@ -404,8 +404,8 @@ void SurfReactAdsorb::create_per_surf_state()
   // add_custom() intializes all state data to zero
   // custom indices are for any type of persurf vec or array
   // direct indices are for specific types of vecs or arrays
-
-  int nstick_species_direct,nstick_total_direct,area_direct,weight_direct;
+  // cannot perform add_custom() for tau now, b/c nactive_ps is not yet known
+  //   do this later in init
 
   if (surf->find_custom((char *) "nstick") < 0) {
     first_owner = 1;
@@ -414,7 +414,7 @@ void SurfReactAdsorb::create_per_surf_state()
     nstick_total_custom = surf->add_custom((char *) "nstick_total",INT,0);
     area_custom = surf->add_custom((char *) "area",DOUBLE,0);
     weight_custom = surf->add_custom((char *) "weight",DOUBLE,0);
-    tau_custom = surf->add_custom((char *) "tau",DOUBLE,0);
+    if (psflag) tau_custom = -1;
 
   } else {
     first_owner = 0;
@@ -422,13 +422,13 @@ void SurfReactAdsorb::create_per_surf_state()
     nstick_total_custom = surf->find_custom((char *) "nstick_total");
     area_custom = surf->find_custom((char *) "area");
     weight_custom = surf->find_custom((char *) "weight");
-    tau_custom = surf->find_custom((char *) "tau");
+    if (psflag) tau_custom = surf->find_custom((char *) "tau");
   }
   
-  nstick_species_direct = surf->ewhich[nstick_species_custom];
-  nstick_total_direct = surf->ewhich[nstick_total_custom];
-  area_direct = surf->ewhich[area_custom];
-  weight_direct = surf->ewhich[weight_custom];
+  int nstick_species_direct = surf->ewhich[nstick_species_custom];
+  int nstick_total_direct = surf->ewhich[nstick_total_custom];
+  int area_direct = surf->ewhich[area_custom];
+  int weight_direct = surf->ewhich[weight_custom];
   
   surf_species_state = surf->eiarray[nstick_species_direct];
   surf_total_state = surf->eivec[nstick_total_direct];
@@ -480,30 +480,31 @@ void SurfReactAdsorb::init()
 
   SurfReact::init();
   if (gsflag) init_reactions_gs();
+
   if (psflag) init_reactions_ps();
+  else nactive_ps = 0;
 
-  if (mode == FACE) {
-    nface = domain->dimension*2;
-    memory->create(face_tau,nface,nactive_ps,"face_tau");
-    for (int iface = 0; iface < nface; iface++) {
-      for (int isp = 0; isp < nactive_ps; isp++)
-        face_tau[iface][isp] = 0;
+  // initialze tau only for PS models
+
+  if (psflag) {
+    if (mode == FACE) {
+      nface = domain->dimension*2;
+      memory->create(face_tau,nface,nactive_ps,"face_tau");
+      for (int iface = 0; iface < nface; iface++) {
+        for (int isp = 0; isp < nactive_ps; isp++)
+          face_tau[iface][isp] = 0;
+      }
+      tau = face_tau;
+
+    } else if (mode == SURF) {
+      if (tau_custom == -1)
+        tau_custom = surf->add_custom((char *) "tau",DOUBLE,nactive_ps);
+      int itau = surf->ewhich[tau_custom];
+      tau = surf->edarray[itau];
     }
-    tau = face_tau;
-  }
-
-  if (mode == SURF) {
-    int tau_direct;
-    if (surf->find_custom((char *) "nstick") < 0) 
-      tau_custom = surf->add_custom((char *) "tau",DOUBLE,0);
-    else tau_custom = surf->find_custom((char *) "tau");
-  
-    tau_direct = surf->ewhich[tau_custom];
-    surf_tau = surf->edarray[tau_direct];
-    tau = surf_tau;
   } 
 
-  // NOTE: must check that surf count has not changed since constructor
+  // NOTE: should check that surf count has not changed since constructor
   //       b/c have lots of internal surf arrays
   //       else wait to allocate them until 1st init, then check
   //       count has not changed on subsequent init()
@@ -526,7 +527,8 @@ void SurfReactAdsorb::init()
       if (surf->sr[isr] != this) return;
       area[isurf] = surf->line_size(&lines[isurf]);
       weight[isurf] = 1.0;
-      for (int isp = 0; isp <= nactive_ps; isp++) tau[isurf][isp] = 0.0;
+      if (psflag)
+        for (int isp = 0; isp <= nactive_ps; isp++) tau[isurf][isp] = 0.0;
     }
   } else {
     double tmp;
@@ -535,7 +537,8 @@ void SurfReactAdsorb::init()
       if (surf->sr[isr] != this) return;
       area[isurf] = surf->tri_size(&tris[isurf],tmp);
       weight[isurf] = 1.0;
-      for (int isp = 0; isp <= nactive_ps; isp++) tau[isurf][isp] = 0.0;
+      if (psflag)
+        for (int isp = 0; isp <= nactive_ps; isp++) tau[isurf][isp] = 0.0;
     }
   }
 }
@@ -2068,7 +2071,6 @@ void SurfReactAdsorb::init_reactions_ps()
     nactive_ps++;
     n++;
   }
-  
 }
 
 /* ---------------------------------------------------------------------- */
@@ -2584,10 +2586,6 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
 
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
-
-  // double *tau;  // NOTE: what is this ?
-  // tau = lines[ielem].tau;
-  // tau = tris[ielem].tau;
 
   double fnum = update->fnum; 
   double factor = fnum * weight[isurf] / area[isurf];
