@@ -1663,7 +1663,7 @@ int Particle::add_custom(char *name, int type, int size)
       ewhich[index] = ncustom_iarray++;
       eiarray = (int ***)
         memory->srealloc(eiarray,ncustom_iarray*sizeof(int **),
-                         "particle:eivec");
+                         "particle:eiarray");
       eiarray[ncustom_iarray-1] = NULL;
       memory->grow(icustom_iarray,ncustom_iarray,"particle:icustom_iarray");
       icustom_iarray[ncustom_iarray-1] = index;
@@ -1682,7 +1682,7 @@ int Particle::add_custom(char *name, int type, int size)
       ewhich[index] = ncustom_darray++;
       edarray = (double ***)
         memory->srealloc(edarray,ncustom_darray*sizeof(double **),
-                         "particle:edvec");
+                         "particle:edarray");
       edarray[ncustom_darray-1] = NULL;
       memory->grow(icustom_darray,ncustom_darray,"particle:icustom_darray");
       icustom_darray[ncustom_darray-1] = index;

@@ -25,63 +25,38 @@ class SurfReact : protected Pointers {
   char *id;
   char *style;
 
+  int nlist;                // # of reactions defined or read from file
   int vector_flag;          // 0/1 if compute_vector() function exists
   int size_vector;          // length of global vector
-  int nlist;                // # of reactions defined or read from file
 
   SurfReact(class SPARTA *, int, char **);
   virtual ~SurfReact();
   virtual void init();
-  virtual int react(Particle::OnePart *&, double *, Particle::OnePart *&) = 0;
+  virtual int react(Particle::OnePart *&, int, double *, 
+                    Particle::OnePart *&) = 0;
+  virtual char *reactionID(int) = 0;
+  virtual int match_reactant(char *, int) = 0;
+  virtual int match_product(char *, int) = 0;
 
-  virtual char *reactionID(int);
-  virtual int match_reactant(char *, int);
-  virtual int match_product(char *, int);
-
-  void tally_update();
+  void tally_reset();
+  virtual void tally_update();
   double compute_vector(int i);
 
  protected:
   FILE *fp;
 
   // tallies for reactions
-
+  // nsingle = all reactions in one step
+  // ntotal = cumulative nsingle across all steps
+  // tally_single = per-reaction counts in one step
+  // tally_all = cumulative tally_single across all steps
+  // 3 flags used in compute_vector() to minimize AllReduce calls
+  
   int nsingle,ntotal;
   double one[2],all[2];
   int *tally_single,*tally_total;
   int *tally_single_all,*tally_total_all;
   int tally_two_flag,tally_single_flag,tally_total_flag;
-
-  // reaction info, as read from file
-
-  struct OneReaction {
-    int active;                    // 1 if reaction is active
-    int type;                      // reaction type = DISSOCIATION, etc
-    int style;                     // reaction style = ARRHENIUS, etc
-    int ncoeff;                    // # of numerical coeffs
-    int nreactant,nproduct;        // # of reactants and products
-    char **id_reactants,**id_products;  // species IDs of reactants/products
-    int *reactants,*products;      // species indices of reactants/products
-    double *coeff;                 // numerical coeffs for reaction
-    char *id;                      // reaction ID (formula)
-  };
-
-  OneReaction *rlist;              // list of all reactions read from file
-  int maxlist;                     // max # of reactions in rlist
-
-  // possible reactions a reactant species is part of
-
-  struct ReactionI {
-    int *list;           // list of indices into rlist, ptr into indices
-    int n;               // # of reactions in list
-  };
-
-  ReactionI *reactions;       // reactions for all species
-  int *indices;               // master list of indices
-
-  void init_reactions();
-  void readfile(char *);
-  int readone(char *, char *, int &, int &);
 };
 
 }

@@ -484,6 +484,7 @@ void ComputeSurf::post_process_surf()
   }
 
   // zero array_surf
+  // NOTE: is this needed if collate zeroes ?
 
   int i,j;
   for (i = 0; i < nown; i++)

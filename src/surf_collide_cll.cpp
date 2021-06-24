@@ -156,40 +156,47 @@ void SurfCollideCLL::init()
 /* ----------------------------------------------------------------------
    particle collision with surface with optional chemistry
    ip = particle with current x = collision pt, current v = incident v
+   isurf = index of surface element
    norm = surface normal unit vector
-   ip = set to NULL if destroyed by chemsitry
+   isr = index of reaction model if >= 0, -1 for no chemistry
+   ip = reset to NULL if destroyed by chemsitry
    return jp = new particle if created by chemistry
    return reaction = index of reaction (1 to N) that took place, 0 = no reaction
    resets particle(s) to post-collision outward velocity
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideCLL::
-collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
+collide(Particle::OnePart *&ip, double &,
+        int isurf, double *norm, int isr, int &reaction)
 {
   nsingle++;
 
   // if surface chemistry defined, attempt reaction
-  // reaction = 1 if reaction took place
+  // reaction = 1 if reaction took place, but post-collision v not yet reset
+  // reaction = 2 if reaction took place, and post-collision v already reset
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
+  reaction = 0;
 
   if (isr >= 0) {
     if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
-    reaction = surf->sr[isr]->react(ip,norm,jp);
-    if (reaction) surf->nreact_one++;
+    reaction = surf->sr[isr]->react(ip,isurf,norm,jp);
+    if (reaction) surf->nreact_one++;    
   }
 
   // CLL reflection for each particle
+
+  if (reaction < 2) {
+    if (ip) cll(ip,norm);
+    if (jp) cll(jp,norm);
+  }
+
   // if new particle J created, also need to trigger any fixes
 
-  if (ip) cll(ip,norm);
-  if (jp) {
-    cll(jp,norm);
-    if (modify->n_add_particle) {
-      int j = jp - particle->particles;
-      modify->add_particle(j,twall,twall,twall,vstream);
-    }
+  if (jp && modify->n_add_particle) {
+    int j = jp - particle->particles;
+    modify->add_particle(j,twall,twall,twall,vstream);
   }
 
   // call any fixes with a surf_react() method
@@ -409,6 +416,49 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
 
     p->evib = update->boltz * twall *
       (r_vib*r_vib + evib_mag*evib_mag + 2*r_vib*evib_mag*cos_theta_vib);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   wrapper on cll() method to perform collision for a single particle
+   pass in flags/coefficients to match command-line args for style cll 
+   flags, coeffs can be NULL
+   called by SurfReactAdsorb
+------------------------------------------------------------------------- */
+
+void SurfCollideCLL::wrapper(Particle::OnePart *p, double *norm, 
+                             int *flags, double *coeffs)
+{ 
+  if (flags) {
+    twall = coeffs[0];
+    acc_n = coeffs[1];
+    acc_t = coeffs[2];
+    acc_rot = coeffs[3];
+    acc_vib = coeffs[4];
+
+    if (flags[0]) eccen = coeffs[5];
+    else eccen = 0.0;
+  }
+
+  cll(p,norm);
+}
+
+/* ----------------------------------------------------------------------
+   return flags and coeffs for this SurfCollide instance to caller
+------------------------------------------------------------------------- */
+
+void SurfCollideCLL::flags_and_coeffs(int *flags, double *coeffs)
+{
+  coeffs[0] = twall;
+  coeffs[1] = acc_n;
+  coeffs[2] = acc_t;
+  coeffs[3] = acc_rot;
+  coeffs[4] = acc_vib;
+
+  flags[0] = 0;
+  if (eccen != 0.0) {
+    flags[0] = 1;
+    coeffs[5] = eccen;
   }
 }
 

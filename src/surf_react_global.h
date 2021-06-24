@@ -29,8 +29,7 @@ class SurfReactGlobal : public SurfReact {
  public:
   SurfReactGlobal(class SPARTA *, int, char **);
   ~SurfReactGlobal();
-  int react(Particle::OnePart *&, double *, Particle::OnePart *&);
-
+  int react(Particle::OnePart *&, int, double *, Particle::OnePart *&);
   char *reactionID(int);
   int match_reactant(char *, int) {return 1;}
   int match_product(char *, int) {return 1;}

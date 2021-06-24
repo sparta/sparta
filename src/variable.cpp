@@ -1593,7 +1593,7 @@ double Variable::evaluate(char *str, Tree **tree)
 	  }
 	}
 
-        // s_ID[i] = scalar from global vector
+        // r_ID[i] = scalar from global vector
 
 	if (nbracket == 1 && sr->vector_flag) {
 	  if (index1 > sr->size_vector)

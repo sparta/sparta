@@ -37,12 +37,16 @@ class Domain : protected Pointers {
 
   int surfreactany;                 // 1 if any boundary has surf reactions
 
-  int copy,copymode;                // 1 if copy of class (prevents deallocation of
-                                    //  base class when child copy is destroyed)
+  int copy,copymode;            // 1 if copy of class (prevents deallocation of
+                                //  base class when child copy is destroyed)
 
   int nregion;                      // # of defined Regions
   int maxregion;                    // max # regions can hold
   class Region **regions;           // list of defined Regions
+
+  int surf_collide[6];              // index of SurfCollide model per face
+  int surf_react[6];                // index of SurfReact model per face
+                                    // for each bflag = SURFACE boundary
 
   Domain(class SPARTA *);
   virtual ~Domain();
@@ -59,10 +63,6 @@ class Domain : protected Pointers {
   void delete_region(int, char **);
   int find_region(char *);
   void print_box(const char *);
-
-  int surf_collide[6];              // index of SurfCollide model
-  int surf_react[6];                // index of SurfReact model
-                                    // for each bflag = SURFACE boundary
 };
 
 }
