@@ -528,7 +528,7 @@ void SurfReactAdsorb::init()
       area[isurf] = surf->line_size(&lines[isurf]);
       weight[isurf] = 1.0;
       if (psflag)
-        for (int isp = 0; isp <= nactive_ps; isp++) tau[isurf][isp] = 0.0;
+        for (int isp = 0; isp < nactive_ps; isp++) tau[isurf][isp] = 0.0;
     }
   } else {
     double tmp;
@@ -538,7 +538,7 @@ void SurfReactAdsorb::init()
       area[isurf] = surf->tri_size(&tris[isurf],tmp);
       weight[isurf] = 1.0;
       if (psflag)
-        for (int isp = 0; isp <= nactive_ps; isp++) tau[isurf][isp] = 0.0;
+        for (int isp = 0; isp < nactive_ps; isp++) tau[isurf][isp] = 0.0;
     }
   }
 }
