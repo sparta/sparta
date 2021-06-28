@@ -1051,7 +1051,7 @@ double Particle::evib(int isp, double temp_thermal, RanPark *erandom)
   if (vibstyle == NONE || species[isp].vibdof < 2) return 0.0;
 
   // for DISCRETE, only need set evib for vibdof = 2
-  // mode levels and evib will be set by FixVibmode::add_particle()
+  // mode levels and evib will be set by FixVibmode::update_custom()
 
   eng = 0.0;
 

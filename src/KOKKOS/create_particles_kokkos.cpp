@@ -110,10 +110,10 @@ void CreateParticlesKokkos::create_local(bigint np)
 
   memory->destroy(vols);
 
-  // nfix_add_particle = # of fixes with add_particle() method
+  // nfix_update_custom = # of fixes with update_custom() method
 
   modify->list_init_fixes();
-  int nfix_add_particle = modify->n_add_particle;
+  int nfix_update_custom = modify->n_update_custom;
 
   // loop over cells I own
   // only add particles to OUTSIDE cells
@@ -323,8 +323,8 @@ void CreateParticlesKokkos::create_local(bigint np)
       auto cand = h_cells2cands(i) + m;
       if (!h_keep(cand)) continue;
       auto inew = h_cands2new(cand) + nlocal_before;
-      if (nfix_add_particle)
-        modify->add_particle(inew,temp_thermal,temp_rot,temp_vib,vstream);
+      if (nfix_update_custom)
+        modify->update_custom(inew,temp_thermal,temp_rot,temp_vib,vstream);
     }
   }
 

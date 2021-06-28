@@ -377,7 +377,7 @@ void FixEmitFaceFile::perform_task()
   //   shift Maxwellian distribution by stream velocity component
   //   see Bird 1994, p 259, eq 12.5
 
-  int nfix_add_particle = modify->n_add_particle;
+  int nfix_update_custom = modify->n_update_custom;
 
   for (int i = 0; i < ntask; i++) {
     pcell = tasks[i].pcell;
@@ -434,8 +434,8 @@ void FixEmitFaceFile::perform_task()
           p->flag = PINSERT;
           p->dtremain = dt * random->uniform();
 
-          if (nfix_add_particle)
-            modify->add_particle(particle->nlocal-1,temp_thermal,
+          if (nfix_update_custom)
+            modify->update_custom(particle->nlocal-1,temp_thermal,
                                  temp_rot,temp_vib,vstream);
 	}
 
@@ -488,8 +488,8 @@ void FixEmitFaceFile::perform_task()
         p->flag = PINSERT;
         p->dtremain = dt * random->uniform();
 
-        if (nfix_add_particle)
-          modify->add_particle(particle->nlocal-1,temp_thermal,
+        if (nfix_update_custom)
+          modify->update_custom(particle->nlocal-1,temp_thermal,
                                temp_rot,temp_vib,vstream);
       }
 

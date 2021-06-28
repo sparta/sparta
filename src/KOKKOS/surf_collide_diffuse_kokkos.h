@@ -98,9 +98,26 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
     //}
 
     // diffuse reflection for each particle
+    // resets v, roteng, vibeng
+    // particle I needs to trigger any fixes to update per-particle
+    //  properties which depend on the temperature of the particle
+    //  (e.g. fix vibmode and fix ambipolar)
+    // if new particle J created, also need to trigger any fixes
 
-    if (ip) diffuse(ip,norm);
-    //if (jp) diffuse(jp,norm);
+    if (ip) {
+      diffuse(ip,norm);
+      //if (modify->n_update_custom) {
+      //  int i = ip - particle->particles;
+      //  modify->update_custom(i,twall,twall,twall,vstream);
+      //}
+    }
+    //if (jp) {
+    //  diffuse(jp,norm);
+    //  if (modify->n_update_custom) {
+    //    int j = jp - particle->particles;
+    //    modify->update_custom(j,twall,twall,twall,vstream);
+    //  }
+    //}
 
     // call any fixes with a surf_react() method
     // they may reset j to -1, e.g. fix ambipolar
@@ -227,6 +244,8 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
         v[2] = vperp*norm[2] + vtan1*tangent1[2] + vtan2*tangent2[2];
       }
 
+      // initialize rot/vib energy
+
       p->erot = erot(ispecies,twall,rand_gen,boltz);
       p->evib = evib(ispecies,twall,rand_gen,boltz);
     }
@@ -281,7 +300,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
     if (vibstyle == NONE || d_species[isp].vibdof < 2) return 0.0;
 
     // for DISCRETE, only need set evib for vibdof = 2
-    // mode levels and evib will be set by FixVibmode::add_particle()
+    // mode levels and evib will be set by FixVibmode::update_custom()
 
     eng = 0.0;
 
