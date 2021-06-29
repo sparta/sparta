@@ -38,12 +38,11 @@ for logFileOld in $(ls examples/**/log.$oldDateStr.*); do
     logFileNew=$(echo $logFileOld | sed "s/.${oldDateStr}//g")
     logFileGold=$(echo $logFileNew | sed "s/.mpi/.${dateStr}.mpi/g")
     #echo $logFileOld $logFileNew $logFileGold
-    rm ../$logFileOld
+    git rm ../$logFileOld
     mv $logFileNew ../$logFileGold
+    git add ../$logFileGold
 done
 ################################################################################
-git add ../examples
 #git commit -m "examples: Reblessed log.archive.$dateStr"
 ################################################################################
 echo "STATUS: Log files re-blessed. Please review 'git diff --staged'"
-
