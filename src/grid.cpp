@@ -2396,6 +2396,7 @@ void Grid::read_restart(FILE *fp)
   // if so, need to reallocate surf arrays to correct max length
 
   if (maxsurfpercell != MAXSURFPERCELL) allocate_surf_arrays();
+  if (maxcellpersurf != MAXCELLPERSURF) allocate_cell_arrays();
 
   // read level info
 
