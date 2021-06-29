@@ -26,7 +26,7 @@
 #include "modify.h"
 #include "comm.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "math_extra.h"
 #include "error.h"
@@ -168,10 +168,14 @@ SurfCollideDiffuseKokkos::~SurfCollideDiffuseKokkos()
 
 void SurfCollideDiffuseKokkos::pre_collide()
 {
+  if (modify->n_update_custom)
+    error->all(FLERR,"Cannot yet use surf_collide diffuse/kk"
+               "with fix vibmode or fix ambipolar");
+
   if (random == NULL) {
     // initialize RNG
 
-    random = new RanPark(update->ranmaster->uniform());
+    random = new RanKnuth(update->ranmaster->uniform());
     double seed = update->ranmaster->uniform();
     random->reset(seed,comm->me,100);
 

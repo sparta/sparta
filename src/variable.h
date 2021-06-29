@@ -61,8 +61,8 @@ class Variable : protected Pointers {
 
   int *eval_in_progress;   // flag if evaluation of variable is in progress
 
-  class RanPark *randomequal;     // RNG for equal-style vars
-  class RanPark *randomparticle;  // RNG for particle-style vars
+  class RanKnuth *randomequal;     // RNG for equal-style vars
+  class RanKnuth *randomparticle;  // RNG for particle-style vars
 
   int precedence[17];      // precedence level of math operators
                            // set length to include up to OR in enum

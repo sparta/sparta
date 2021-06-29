@@ -70,7 +70,7 @@ class AdaptGrid : protected Pointers {
   class Fix *fix;
 
   int *childlist;
-  class RanPark *random;
+  class RanKnuth *random;
   class Cut3d *cut3d;
   class Cut2d *cut2d;
 

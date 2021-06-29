@@ -25,7 +25,7 @@
 #include "output.h"
 #include "dump.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "memory.h"
 #include "error.h"
 #include "timer.h"
@@ -260,7 +260,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
 
   } else if (bstyle == RANDOM) {
     int newproc;
-    RanPark *random = new RanPark(update->ranmaster->uniform());
+    RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
     double seed = update->ranmaster->uniform();
     random->reset(seed,comm->me,100);
 
@@ -275,7 +275,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
 
   } else if (bstyle == PROC) {
     int newproc;
-    RanPark *random = new RanPark(update->ranmaster->uniform());
+    RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
     newproc = nprocs * random->uniform();
 
     for (int icell = 0; icell < nglocal; icell++) {

@@ -27,7 +27,7 @@
 #include "input.h"
 #include "variable.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
@@ -416,23 +416,23 @@ void CreateParticles::create_single()
   if (flagall != 1)
     error->all(FLERR,"Could not create a single particle");
 
-  // nfix_add_particle = # of fixes with add_particle() method
+  // nfix_update_custom = # of fixes with update_custom() method
 
   particle->error_custom();
   modify->list_init_fixes();
-  int nfix_add_particle = modify->n_add_particle;
+  int nfix_update_custom = modify->n_update_custom;
 
   // add the particle
 
-  RanPark *random = new RanPark(update->ranmaster->uniform());
+  RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
 
   if (iwhich >= 0) {
     int id = MAXSMALLINT*random->uniform();
     double erot = particle->erot(mspecies,temp_rot,random);
     double evib = particle->evib(mspecies,temp_vib,random);
     particle->add_particle(id,mspecies,iwhich,x,v,erot,evib);
-    if (nfix_add_particle)
-      modify->add_particle(particle->nlocal-1,temp_thermal,
+    if (nfix_update_custom)
+      modify->update_custom(particle->nlocal-1,temp_thermal,
                            temp_rot,temp_vib,vstream);
   }
 
@@ -452,7 +452,7 @@ void CreateParticles::create_local(bigint np)
   int dimension = domain->dimension;
 
   int me = comm->me;
-  RanPark *random = new RanPark(update->ranmaster->uniform());
+  RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,me,100);
 
@@ -509,11 +509,11 @@ void CreateParticles::create_local(bigint np)
 
   memory->destroy(vols);
 
-  // nfix_add_particle = # of fixes with add_particle() method
+  // nfix_update_custom = # of fixes with update_custom() method
 
   particle->error_custom();
   modify->list_init_fixes();
-  int nfix_add_particle = modify->n_add_particle;
+  int nfix_update_custom = modify->n_update_custom;
 
   // loop over cells I own
   // only add particles to OUTSIDE cells
@@ -616,8 +616,8 @@ void CreateParticles::create_local(bigint np)
 
       particle->add_particle(id,ispecies,i,x,v,erot,evib);
 
-      if (nfix_add_particle)
-        modify->add_particle(particle->nlocal-1,temp_thermal,
+      if (nfix_update_custom)
+        modify->update_custom(particle->nlocal-1,temp_thermal,
                              temp_rot,temp_vib,vstream);
     }
 
@@ -643,7 +643,7 @@ void CreateParticles::create_local_twopass(bigint np)
   int dimension = domain->dimension;
 
   int me = comm->me;
-  RanPark *random = new RanPark(update->ranmaster->uniform());
+  RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,me,100);
 
@@ -700,10 +700,10 @@ void CreateParticles::create_local_twopass(bigint np)
 
   memory->destroy(vols);
 
-  // nfix_add_particle = # of fixes with add_particle() method
+  // nfix_update_custom = # of fixes with update_custom() method
 
   modify->list_init_fixes();
-  int nfix_add_particle = modify->n_add_particle;
+  int nfix_update_custom = modify->n_update_custom;
 
   // loop over cells I own
   // only add particles to OUTSIDE cells
@@ -822,8 +822,8 @@ void CreateParticles::create_local_twopass(bigint np)
       id = MAXSMALLINT*random->uniform();
 
       particle->add_particle(id,ispecies,i,x,v,erot,evib);
-      if (nfix_add_particle)
-        modify->add_particle(particle->nlocal-1,temp_thermal,
+      if (nfix_update_custom)
+        modify->update_custom(particle->nlocal-1,temp_thermal,
                              temp_rot,temp_vib,vstream);
     }
   }
@@ -941,7 +941,7 @@ void CreateParticles::create_all(bigint n)
   double zprd = domain->zprd;
 
   int me = comm->me;
-  RanPark *random = new RandomPark(update->ranmaster->uniform());
+  RanKnuth *random = new RandomPark(update->ranmaster->uniform());
 
   int icell,id;
   double x,y,z;

@@ -47,10 +47,10 @@ class React : protected Pointers {
   virtual double extract_tally(int) = 0;
 
   void modify_params(int, char **);
-  RanPark* get_random() { return random; }
+  RanKnuth* get_random() { return random; }
 
  protected:
-  class RanPark *random;
+  class RanKnuth *random;
 };
 
 }

@@ -23,7 +23,7 @@
 #include "collide.h"
 #include "react.h"
 #include "comm.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "random_mars.h"
 #include "math_const.h"
 #include "memory_kokkos.h"
@@ -1752,12 +1752,12 @@ void CollideVSSKokkos::backup()
 
 #ifdef SPARTA_KOKKOS_EXACT
   if (!random_backup)
-    random_backup = new RanPark(12345 + comm->me);
+    random_backup = new RanKnuth(12345 + comm->me);
   memcpy(random_backup,random,sizeof(random));
 
   if (react) {
     if (!react_random_backup)
-      react_random_backup = new RanPark(12345 + comm->me);
+      react_random_backup = new RanKnuth(12345 + comm->me);
     memcpy(react_random_backup,react->get_random(),sizeof(react->get_random()));
   }
 #endif

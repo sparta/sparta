@@ -27,7 +27,7 @@ class Fix : protected Pointers {
   int nevery;                    // how often to call an end_of_step fix
   int time_depend;               // 1 if requires continuous timestepping
   int gridmigrate;               // 0/1 if per grid cell info must migrate
-  int flag_add_particle;         // 0/1 if has add_particle() method
+  int flag_update_custom;         // 0/1 if has update_custom() method
   int flag_gas_react;            // 0/1 if has gas_react() method
   int flag_surf_react;           // 0/1 if has surf_react() method
 
@@ -76,7 +76,7 @@ class Fix : protected Pointers {
 
   virtual void start_of_step() {}
   virtual void end_of_step() {}
-  virtual void add_particle(int, double, double, double, double *) {}
+  virtual void update_custom(int, double, double, double, double *) {}
   virtual void gas_react(int) {}
   virtual void surf_react(Particle::OnePart *, int &, int &) {}
 

@@ -18,7 +18,7 @@
 #include "react_tce_kokkos.h"
 #include "particle.h"
 #include "collide.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "error.h"
 
 // DEBUG

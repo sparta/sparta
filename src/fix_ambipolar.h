@@ -35,13 +35,13 @@ class FixAmbipolar : public Fix {
   ~FixAmbipolar();
   int setmask();
   void init();
-  void add_particle(int, double, double, double, double *);
+  void update_custom(int, double, double, double, double *);
   void surf_react(Particle::OnePart *, int &, int &);
 
  private:
   int maxion;                 // length of ions vector
   int ionindex,velindex;      // indices into particle custom data structs
-  class RanPark *random;
+  class RanKnuth *random;
 };
 
 }

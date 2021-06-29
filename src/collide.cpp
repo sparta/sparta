@@ -25,7 +25,7 @@
 #include "fix.h"
 #include "fix_ambipolar.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "memory.h"
 #include "error.h"
 
@@ -52,7 +52,7 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   mixID = new char[n];
   strcpy(mixID,arg[1]);
 
-  random = new RanPark(update->ranmaster->uniform());
+  random = new RanKnuth(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,comm->me,100);
 

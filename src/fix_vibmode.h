@@ -32,12 +32,12 @@ class FixVibmode : public Fix {
   virtual ~FixVibmode();
   int setmask();
   void init();
-  virtual void add_particle(int, double, double, double, double *);
+  virtual void update_custom(int, double, double, double, double *);
 
  protected:
   int maxmode;           // max # of vibrational modes for any species
   int vibmodeindex;      // index into particle custom data structs
-  class RanPark *random;
+  class RanKnuth *random;
 };
 
 }

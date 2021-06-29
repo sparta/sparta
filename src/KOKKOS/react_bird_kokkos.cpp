@@ -24,7 +24,7 @@
 #include "modify.h"
 #include "fix.h"
 #include "fix_ambipolar.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"

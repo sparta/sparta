@@ -48,7 +48,7 @@ class FixBalance : public Fix {
   double imbfinal;              // imbalance factor after last rebalancing
   double maxperproc;            // max atoms or CPU cost on any processor
 
-  class RanPark *random;
+  class RanKnuth *random;
   class RCB *rcb;
 
   double imbalance_factor(double &);

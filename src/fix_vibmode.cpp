@@ -19,7 +19,7 @@
 #include "collide.h"
 #include "comm.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "error.h"
 
@@ -36,11 +36,11 @@ FixVibmode::FixVibmode(SPARTA *sparta, int narg, char **arg) :
 {
   if (narg != 2) error->all(FLERR,"Illegal fix vibmode command");
 
-  flag_add_particle = 1;
+  flag_update_custom = 1;
 
   // random = RNG for vibrational mode initialization
 
-  random = new RanPark(update->ranmaster->uniform());
+  random = new RanKnuth(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,comm->me,100);
 
@@ -90,12 +90,13 @@ void FixVibmode::init()
 
 /* ----------------------------------------------------------------------
    called when a particle with index is created
+    or when temperature dependent properties need to be updated
    populate all vibrational modes and set evib = sum of mode energies
 ------------------------------------------------------------------------- */
 
-void FixVibmode::add_particle(int index, double temp_thermal,
-                              double temp_rot, double temp_vib,
-                              double *vstream)
+void FixVibmode::update_custom(int index, double temp_thermal,
+                               double temp_rot, double temp_vib,
+                               double *vstream)
 {
   int **vibmode = particle->eiarray[particle->ewhich[vibmodeindex]];
 
