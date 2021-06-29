@@ -16,7 +16,7 @@
 #include "rand_pool_wrap.h"
 #include "sparta.h"
 #include "kokkos.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "random_mars.h"
 #include "update.h"
 
@@ -48,7 +48,7 @@ void RandPoolWrap::destroy()
   }
 }
 
-void RandPoolWrap::init(RanPark* random)
+void RandPoolWrap::init(RanKnuth* random)
 {
   // deallocate pool of RNGs
   if (random_thr) {
@@ -62,9 +62,9 @@ void RandPoolWrap::init(RanPark* random)
   // generate a random number generator instance for
   // all threads != 0. make sure we use unique seeds.
   nthreads = sparta->kokkos->nthreads;
-  random_thr = new RanPark*[nthreads];
+  random_thr = new RanKnuth*[nthreads];
   for (int tid = 1; tid < nthreads; ++tid) {
-    random_thr[tid] = new RanPark(update->ranmaster->uniform());
+    random_thr[tid] = new RanKnuth(update->ranmaster->uniform());
     double seed = update->ranmaster->uniform();
     random_thr[tid]->reset(seed,comm->me + comm->nprocs*tid,100);
   }

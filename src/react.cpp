@@ -19,7 +19,7 @@
 #include "comm.h"
 #include "input.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
@@ -36,7 +36,7 @@ React::React(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   recomb_boost = 1000.0;
   recomb_boost_inverse = 0.001;
 
-  random = new RanPark(update->ranmaster->uniform());
+  random = new RanKnuth(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,comm->me,100);
 

@@ -26,7 +26,7 @@
 #include "modify.h"
 #include "geometry.h"
 #include "input.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "memory_kokkos.h"
 #include "error.h"

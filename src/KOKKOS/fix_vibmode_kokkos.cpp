@@ -19,7 +19,7 @@
 #include "collide.h"
 #include "comm.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "error.h"
 #include "sparta_masks.h"

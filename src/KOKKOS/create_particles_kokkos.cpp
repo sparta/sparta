@@ -27,7 +27,7 @@
 #include "input.h"
 #include "variable.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "memory_kokkos.h"
 #include "error.h"
@@ -52,7 +52,7 @@ void CreateParticlesKokkos::create_local(bigint np)
   int dimension = domain->dimension;
 
   int me = comm->me;
-  RanPark *random = new RanPark(update->ranmaster->uniform());
+  RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,me,100);
   Grid::ChildCell *cells = grid->cells;

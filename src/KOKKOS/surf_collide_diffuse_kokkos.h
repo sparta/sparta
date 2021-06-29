@@ -38,7 +38,7 @@ SurfCollideStyle(diffuse/kk,SurfCollideDiffuseKokkos)
 #include "modify.h"
 #include "comm.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "math_extra_kokkos.h"
 #include "error.h"

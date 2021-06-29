@@ -26,20 +26,24 @@ if [ ! "$1" = "--rerun-failed" ]; then
     ################################################################################
     make -j4
     ################################################################################
-    ctest
+    #ctest
 else
     ctest --rerun-failed
 fi
 
 ################################################################################
+oldDateStr=24Aug20
 dateStr=$(date "+%d%b%y")
-for logFile in $(ls examples/**/log.archive.$dateStr.*); do
-    logFileName=$(echo $logFile | sed 's/\.archive//g')
-    mv -f $logFile ../$logFileName
+for logFileOld in $(ls examples/**/log.$oldDateStr.*); do
+    logFileNew=$(echo $logFileOld | sed "s/.${oldDateStr}//g")
+    logFileGold=$(echo $logFileNew | sed "s/.mpi/.${dateStr}.mpi/g")
+    #echo $logFileOld $logFileNew $logFileGold
+    rm ../$logFileOld
+    mv $logFileNew ../$logFileGold
 done
 ################################################################################
-cd ../
-git add examples/**/log.archive.$dateStr.*
+git add ../examples
 #git commit -m "examples: Reblessed log.archive.$dateStr"
 ################################################################################
 echo "STATUS: Log files re-blessed. Please review 'git diff --staged'"
+

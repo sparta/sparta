@@ -37,7 +37,7 @@ class FixVibmode : public Fix {
  protected:
   int maxmode;           // max # of vibrational modes for any species
   int vibmodeindex;      // index into particle custom data structs
-  class RanPark *random;
+  class RanKnuth *random;
 };
 
 }

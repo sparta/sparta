@@ -24,7 +24,7 @@
 #include "mixture.h"
 #include "collide.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "memory_kokkos.h"
 #include "error.h"
 #include "kokkos.h"

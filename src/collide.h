@@ -88,7 +88,7 @@ class Collide : protected Pointers {
 
   char *mixID;               // ID of mixture to use for groups
   class Mixture *mixture;    // ptr to mixture
-  class RanPark *random;     // RNG for collision generation
+  class RanKnuth *random;     // RNG for collision generation
 
   int vre_first;      // 1 for first run after collision style is defined
   int vre_start;      // 1 if reset vre params at start of each run

@@ -152,8 +152,8 @@ class Particle : protected Pointers {
   void add_mixture(int, char **);
   int find_species(char *);
   int find_mixture(char *);
-  double erot(int, double, class RanPark *);
-  double evib(int, double, class RanPark *);
+  double erot(int, double, class RanKnuth *);
+  double evib(int, double, class RanKnuth *);
 
   void write_restart_species(FILE *fp);
   void read_restart_species(FILE *fp);
@@ -195,7 +195,7 @@ class Particle : protected Pointers {
   RotFile *filerot;         // list of species rotation info read from file
   VibFile *filevib;         // list of species vibration info read from file
 
-  class RanPark *wrandom;   // RNG for particle weighting
+  class RanKnuth *wrandom;   // RNG for particle weighting
 
   // extra custom vectors/arrays for per-particle data
   // ncustom > 0 if there are any extra arrays

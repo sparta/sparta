@@ -24,7 +24,7 @@
 #include "mixture.h"
 #include "collide.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "memory.h"
 #include "error.h"
 #include "fix_vibmode.h"
@@ -160,7 +160,7 @@ void Particle::init()
   // RNG for particle weighting
 
   if (!wrandom) {
-    wrandom = new RanPark(update->ranmaster->uniform());
+    wrandom = new RanKnuth(update->ranmaster->uniform());
     double seed = update->ranmaster->uniform();
     wrandom->reset(seed,me,100);
   }
@@ -1006,7 +1006,7 @@ int Particle::find_mixture(char *id)
    only a function of species index and species properties
 ------------------------------------------------------------------------- */
 
-double Particle::erot(int isp, double temp_thermal, RanPark *erandom)
+double Particle::erot(int isp, double temp_thermal, RanKnuth *erandom)
 {
   double eng,a,erm,b;
   int rotstyle = NONE;
@@ -1042,7 +1042,7 @@ double Particle::erot(int isp, double temp_thermal, RanPark *erandom)
      -1 if not defined for this model
 ------------------------------------------------------------------------- */
 
-double Particle::evib(int isp, double temp_thermal, RanPark *erandom)
+double Particle::evib(int isp, double temp_thermal, RanKnuth *erandom)
 {
   double eng,a,erm,b;
 
