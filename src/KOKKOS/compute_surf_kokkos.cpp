@@ -178,8 +178,8 @@ int ComputeSurfKokkos::tallyinfo(surfint *&ptr)
       ntally = istart;
       break;
     }
-    for (int k = 0; k < nsurf; k++) {
-      array_surf_tally[istart] = array_surf_tally[iend];
+    for (int k = 0; k < ntotal; k++) {
+      array_surf_tally[istart][k] = array_surf_tally[iend][k];
     }
     h_surf2tally[istart] = h_surf2tally[iend];
     h_surf2tally[iend] = -1;
