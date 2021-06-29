@@ -23,8 +23,9 @@ namespace SPARTA_NS {
 
 class Cut3d : protected Pointers {
  public:
-  int npushmax;           // # of push options to try
-  int npushcell[4];       // tally of cells that required surf point push
+  // DEBUG
+
+  int tiny;
 
   Cut3d(class SPARTA *);
   ~Cut3d();
@@ -45,18 +46,17 @@ class Cut3d : protected Pointers {
   int nsurf;             // # of surf elements in cell
   surfint *surfs;        // indices of surf elements in cell
 
-  int pushflag;          // 0 for no push, else push surf points near cell surf
-  double pushlo,pushhi;  // lo/hi ranges to push on
-  double pushvalue;      // new position to push to
-  double pushlo_vec[3],pushhi_vec[3],pushvalue_vec[3];  // push values to try
-  int inout;             // orientation of triangles that just touch cell
+  int grazecount;        // count of tris that graze cell surf w/ outward norm
+  int touchcount;        // count of tris that only touch cell surf
+  int touchmark;         // corner marking inferred by touching tris
+  double epsilon;        // epsilon size for this cell
 
   double **path1,**path2;
 
   // DEBUG
   //int totcell,totsurf,totvert,totedge;
 
-  MyVec<double> vols;    // vols of each flow polyhedra found
+  MyVec<double> vols;    // vols of each flow polyhedron found
 
   int empty;
 
@@ -121,7 +121,8 @@ class Cut3d : protected Pointers {
 
   int clip(double *, double *, double *);
   int add_tris();
-  int clip_tris();
+  void clip_tris();
+  void clip_adjust();
   void ctri_volume();
   int edge2face();
   void edge2clines(int);
@@ -149,9 +150,9 @@ class Cut3d : protected Pointers {
   void between(double *, double *, int, double, double *);
   int samepoint(double *, double *);
   int corner(double *);
+  int on_faces(double *, int *);
+  void move_to_faces(double *);
   int ptflag(double *);
-  int push_increment();
-  void push(double *);
 
   void failed_cell();
   void print_bpg(const char *);

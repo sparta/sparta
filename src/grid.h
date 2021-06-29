@@ -268,7 +268,9 @@ class Grid : protected Pointers {
 
   // grid_id.cpp
 
-  cellint parent_of_child(cellint, int);
+  void id_point_child(double *, double *, double *, int, int, int,
+		      int &, int &, int &);
+  cellint id_parent_of_child(cellint, int);
   int id_find_child(cellint, int, double *, double *, double *);
   cellint id_uniform_level(int, int, int, int);
   void id_find_child_uniform_level(int, int, double *, double *, double *,

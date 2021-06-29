@@ -31,13 +31,12 @@ enum{CTRI,CTRIFACE,FACEPGON,FACE};
 enum{EXTERIOR,INTERIOR,BORDER};
 enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut2d
 
-#define EPSCELL 1.0e-10    // tolerance for pushing surf pts to cell surface
+#define EPSEDGE 1.0e-9    // minimum edge length (fraction of cell size)
 
 // cell ID for 2d or 3d cell
 
-//#define VERBOSE
-#define VERBOSE_ID 4873
-//#define VERBOSE_ID 27810406321L
+#define VERBOSE
+#define VERBOSE_ID 61275
 
 /* ---------------------------------------------------------------------- */
 
@@ -45,38 +44,13 @@ Cut3d::Cut3d(SPARTA *sparta) : Pointers(sparta)
 {
   implicit = surf->implicit;
 
+  // DEBUG
+
+  tiny = 0;
+
   cut2d = new Cut2d(sparta,0);
-  for (int i = 0; i <= cut2d->npushmax; i++) cut2d->npushcell[i] = 0;
   memory->create(path1,12,3,"cut3d:path1");
   memory->create(path2,12,3,"cut3d:path2");
-
-  npushmax = 2;    // if increase this, increase push vec size in cut3d.h
-
-  pushlo_vec[0] = -1.0;
-  pushhi_vec[0] = 1.0;
-  pushvalue_vec[0] = 0.0;
-  pushlo_vec[1] = -1.0;
-  pushhi_vec[1] = 1.0;
-  pushvalue_vec[1] = 1.0;
-
-  /*
-  pushlo_vec[0] = -1.0;
-  pushhi_vec[0] = 1.0;
-  pushvalue_vec[0] = 1.0;
-  pushlo_vec[1] = -1.0;
-  pushhi_vec[1] = 1.0;
-  pushvalue_vec[1] = 0.0;
-  */
-
-  if (surf->pushflag == 0) npushmax = 0;
-  if (surf->pushflag == 2) npushmax = 3;
-  if (surf->pushflag == 2) {
-    pushlo_vec[2] = surf->pushlo;
-    pushhi_vec[2] = surf->pushhi;
-    pushvalue_vec[2] = surf->pushvalue;
-  }
-
-  for (int i = 0; i <= npushmax; i++) npushcell[i] = 0;
 
   // DEBUG
   //totcell = totsurf = totvert = totedge = 0;
@@ -409,11 +383,12 @@ int Cut3d::clip_external(double *p0, double *p1, double *p2,
    return vols = ptr to vector of vols = one vol per split
      if nsplit = 1, cut vol
      if nsplit > 1, one vol per split cell
+   return corners = UNKNOWN/INSIDE/OUTSIDE for each of 8 corner pts
    if nsplit > 1, also return:
      surfmap = which sub-cell (0 to Nsurfs-1) each surf is in
-             = -1 if not in any sub-cell (i.e. discarded from clines)
+             = -1 if not in any sub-cell, discarded by add_tris
+     xsplit = coords of a point in one of the split cells
      xsub = which sub-cell (0 to Nsplit-1) xsplit is in
-     xsplit = coords of a point in the split cell
 ------------------------------------------------------------------------- */
 
 int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
@@ -427,72 +402,36 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
   nsurf = nsurf_caller;
   surfs = surfs_caller;
 
-  // perform cut/split
-  // first attempt is with no pushing of surface points
-  // if fails, then try again with push options
-  // if all push options fail, then print error message
+  // perform cut/split inside while loop so can break out with error
 
   int nsplit,errflag;
-  pushflag = 0;
 
   while (1) {
     errflag = add_tris();
-    if (errflag) {
-      if (push_increment()) continue;
-      break;
-    }
+    if (errflag) break;
 
 #ifdef VERBOSE
     if (id == VERBOSE_ID) print_bpg("BPG after added tris");
 #endif
 
-    int grazeflag = clip_tris();
-
-    // DEBUG
-    //totcell++;
-    //totsurf += nsurf;
-    //totvert += verts.n;
-    //totedge += edges.n;
+    clip_tris();
+    clip_adjust();
 
 #ifdef VERBOSE
     if (id == VERBOSE_ID) print_bpg("BPG after clipped tris");
 #endif
 
     // all triangles just touched cell surface
-    // mark corner points based on grazeflag and in/out tri orientation
+    // mark corner points based on grazecount or touchmark value
     // return vol = 0.0 for UNKNOWN/INSIDE, full cell vol for OUTSIDE
     // vol is changed in Grid::set_inout() if OVERLAP cell corners are marked
 
     if (empty) {
-      if (pushflag) npushcell[pushflag]++;
-
       int mark = UNKNOWN;
-      if (grazeflag || inout == INSIDE) mark = INSIDE;
-      else if (inout == OUTSIDE) mark = OUTSIDE;
+      if (grazecount || touchmark == INSIDE) mark = INSIDE;
+      else if (touchmark == OUTSIDE) mark = OUTSIDE;
       corners[0] = corners[1] = corners[2] = corners[3] =
         corners[4] = corners[5] = corners[6] = corners[7] = mark;
-
-
-      /*
-      double ctr[3];
-      ctr[0] = 0.5*(lo[0]+hi[0]);
-      ctr[1] = 0.5*(lo[1]+hi[1]);
-      ctr[2] = 0.5*(lo[2]+hi[2]);
-      int check = 0;
-      if (mark == INSIDE &&
-          (fabs(ctr[0]) > 1.0 || fabs(ctr[1]) > 1.0 || fabs(ctr[2]) > 1.0))
-        check = 1;
-      if (mark == OUTSIDE &&
-          (fabs(ctr[0]) < 1.0 && fabs(ctr[1]) < 1.0 && fabs(ctr[2]) < 1.0))
-        check = 1;
-      if (mark == UNKNOWN) check = 1;
-      if (check) {
-        printf("BAD MARKING %d %g %g %g: mark %d: "
-               "nsurf %d pushflag %d grazeflag %d inout %d\n",
-               id,ctr[0],ctr[1],ctr[2],mark,nsurf,pushflag,grazeflag,inout);
-      }
-      */
-
 
       double vol = 0.0;
       if (mark == OUTSIDE) vol = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
@@ -505,10 +444,7 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
 
     ctri_volume();
     errflag = edge2face();
-    if (errflag) {
-      if (push_increment()) continue;
-      break;
-    }
+    if (errflag) break;
 
     double lo2d[2],hi2d[2];
 
@@ -527,11 +463,6 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
       }
     }
 
-    if (errflag) {
-      if (push_increment()) continue;
-      break;
-    }
-
     remove_faces();
 
 #ifdef VERBOSE
@@ -539,10 +470,7 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
 #endif
 
     errflag = check();
-    if (errflag) {
-      if (push_increment()) continue;
-      break;
-    }
+    if (errflag) break;
 
     walk();
 
@@ -551,10 +479,22 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
 #endif
 
     errflag = loop2ph();
-    if (errflag) {
-      if (push_increment()) continue;
-      break;
+
+    // loop2ph detected no positive-volume loops, cell is inside the surf
+
+    if (errflag == 4) {
+      corners[0] = corners[1] = corners[2] = corners[3] =
+	corners[4] = corners[5] = corners[6] = corners[7] = INSIDE;
+      double volume = 0.0;
+      vols.grow(1);
+      vols[0] = volume;
+      vols_caller = &vols[0];
+      return 1;
     }
+    
+    // other error returns from loop2ph
+
+    if (errflag) break;
 
     nsplit = phs.n;
     if (nsplit > 1) {
@@ -562,10 +502,7 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
       if (implicit) errflag = split_point_implicit(surfmap,xsplit,xsub);
       else errflag = split_point_explicit(surfmap,xsplit,xsub);
     }
-    if (errflag) {
-      if (push_increment()) continue;
-      break;
-    }
+    if (errflag) break;
 
     // successful cut/split
     // set corners = OUTSIDE if corner pt is in list of edge points
@@ -593,6 +530,8 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
     vols.grow(nsplit);
     for (int i = 0; i < nsplit; i++) vols[i] = phs[i].volume;
     vols_caller = &vols[0];
+
+    // successful exit
 
     break;
   }
@@ -654,8 +593,6 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
       error->one(FLERR,"LP: Single area is negative, inverse donut");
   }
 
-  if (pushflag) npushcell[pushflag]++;
-
   return nsplit;
 }
 
@@ -680,23 +617,16 @@ int Cut3d::add_tris()
   edges.grow(3*nsurf);
   verts.n = 0;
   edges.n = 0;
-
+  
   int nvert = 0;
   for (i = 0; i < nsurf; i++) {
     m = surfs[i];
     tri = &tris[m];
     if (tri->transparent) continue;
+
     memcpy(p1,tri->p1,3*sizeof(double));
     memcpy(p2,tri->p2,3*sizeof(double));
     memcpy(p3,tri->p3,3*sizeof(double));
-
-    // if pushflag is set, push tri pts near cell surface
-
-    if (pushflag) {
-      push(p1);
-      push(p2);
-      push(p3);
-    }
 
     vert = &verts[nvert];
     vert->active = 1;
@@ -708,7 +638,7 @@ int Cut3d::add_tris()
 
     // look for each edge of tri
     // add to edges in forward dir if doesn't yet exist
-    // add to edges in returned dir if already exists
+    // add to edges in reverse dir if already exists
 
     e1 = findedge(p1,p2,0,dir1);
     if (e1 == -2) return 1;
@@ -719,6 +649,7 @@ int Cut3d::add_tris()
       edge = &edges[e1];
       edge->style = CTRI;
       edge->nvert = 0;
+      edge->verts[0] = edge->verts[1] = -1;
       memcpy(edge->p1,p1,3*sizeof(double));
       memcpy(edge->p2,p2,3*sizeof(double));
     }
@@ -733,6 +664,7 @@ int Cut3d::add_tris()
       edge = &edges[e2];
       edge->style = CTRI;
       edge->nvert = 0;
+      edge->verts[0] = edge->verts[1] = -1;
       memcpy(edge->p1,p2,3*sizeof(double));
       memcpy(edge->p2,p3,3*sizeof(double));
     }
@@ -747,6 +679,7 @@ int Cut3d::add_tris()
       edge = &edges[e3];
       edge->style = CTRI;
       edge->nvert = 0;
+      edge->verts[0] = edge->verts[1] = -1;
       memcpy(edge->p1,p3,3*sizeof(double));
       memcpy(edge->p2,p1,3*sizeof(double));
     }
@@ -762,7 +695,7 @@ int Cut3d::add_tris()
 /* ----------------------------------------------------------------------
 ------------------------------------------------------------------------- */
 
-int Cut3d::clip_tris()
+void Cut3d::clip_tris()
 {
   int i,n,dim,lohi,ivert,iedge,jedge,idir,jdir,nedge;
   int p1flag,p2flag;
@@ -850,19 +783,19 @@ int Cut3d::clip_tris()
           if (p2flag == OUTSIDE || p2flag == OVERLAP) edge_remove(edge,idir);
           else {
             if (idir == 0) between(p1,p2,dim,value,edge->p1);
-            else between(p1,p2,dim,value,edge->p2);
-            edge->clipped = 1;
+	    else between(p1,p2,dim,value,edge->p2);
+	    edge->clipped = 1;
           }
         } else if (p1flag == INSIDE) {
           if (p2flag == OUTSIDE) {
             if (idir == 0) between(p1,p2,dim,value,edge->p2);
-            else between(p1,p2,dim,value,edge->p1);
-            edge->clipped = 1;
-          }
+	    else between(p1,p2,dim,value,edge->p1);
+	    edge->clipped = 1;
+	  }
         } else {
           if (p2flag == OUTSIDE) edge_remove(edge,idir);
         }
-
+	
         iedge = edge->next[idir];
         idir = edge->dirnext[idir];
       }
@@ -905,6 +838,7 @@ int Cut3d::clip_tris()
           newedge = &edges[n];
           newedge->style = CTRI;
           newedge->nvert = 0;
+          newedge->verts[0] = newedge->verts[1] = -1;
           memcpy(newedge->p1,p1,3*sizeof(double));
           memcpy(newedge->p2,p2,3*sizeof(double));
           // convert jedge back to -1 for last vertex
@@ -928,38 +862,155 @@ int Cut3d::clip_tris()
     */
 #endif
   }
+}
+
+/* ----------------------------------------------------------------------
+   also return touchcount and grazecount and touchmark
+     only used if all clipped tris are discarded
+   discard if clipped tri is a single point, increment touchcount
+     touchmark = corner point marking inferred from touching tri orientations
+   discard if grazes cell with outward normal, increment grazecount
+------------------------------------------------------------------------- */
+
+void Cut3d::clip_adjust()
+{
+  int nvert,nedge,nface1,nface2;
+  int faces1[6],faces2[6];
+  double pboth[3],move1[3],move2[3];
+  double *p1,*p2,*p3;
+  Edge *edge;
+
+#ifdef VERBOSE
+  if (id == VERBOSE_ID) print_bpg("BPG after initial clipping");
+#endif
+
+  // epsilon = EPSEDGE fraction of largest cell dimension
+
+  epsilon = EPSEDGE*(hi[0]-lo[0]);
+  epsilon = MAX(epsilon,EPSEDGE*(hi[1]-lo[1]));
+  epsilon = MAX(epsilon,EPSEDGE*(hi[2]-lo[2]));
+
+  // collapse edges shorter than epsilon to a single point (so will be removed)
+  // one or both of the points should be on cell faces
+  // tiny edges can occur for several reasons:
+  // (1) pre-clip end point is within epsilon of face
+  // (2) a tri barely grazes cell edge or corner
+  // (3) clipping round-off produces tiny edges near cell faces
+
+  nedge = edges.n;
+
+  for (int iedge = 0; iedge < nedge; iedge++) {
+    if (!edges[iedge].active) continue;
+
+    edge = &edges[iedge];
+    p1 = edge->p1;
+    p2 = edge->p2;
+    double dx = p1[0]-p2[0];
+    double dy = p1[1]-p2[1];
+    double dz = p1[2]-p2[2];
+    double edgelen = sqrt(dx*dx+dy*dy+dz*dz);
+
+    if (edgelen < epsilon) {
+      //printf("TINY EDGE id %ld nsurf %d i/nedge %d %d len %g eps %g\n",
+      //       id,nsurf,iedge,nedge,edgelen,epsilon);
+      tiny++;
+
+      nface1 = on_faces(p1,faces1);
+      nface2 = on_faces(p2,faces2);
+
+      // set both p1 and p2 to same pboth
+      // if both pts are interior (should not happen), pboth = p1
+      // if only one pt X is on a face, pboth = X
+      // if both pts are on one or more faces:
+      //   push both to face(s), recalculate on_faces()
+      //   if pt X is on more faces, pboth = X, else pboth = p1
+
+      if (!nface1 && !nface2) { 
+        memcpy(pboth,p1,3*sizeof(double));
+        //printf("INTERIOR EDGE %ld %d %d %g %g\n",
+        //       id,iedge,nedge,edgelen,epsilon);
+      } else if (nface1 && !nface2) {
+        memcpy(pboth,p1,3*sizeof(double));
+      } else if (nface2 && !nface1) {
+        memcpy(pboth,p2,3*sizeof(double));
+      } else {
+        memcpy(move1,p1,3*sizeof(double));
+        memcpy(move2,p2,3*sizeof(double));
+        move_to_faces(move1);
+        move_to_faces(move2);
+        nface1 = on_faces(move1,faces1);
+        nface2 = on_faces(move2,faces2);
+        if (nface2 > nface1) memcpy(pboth,move2,3*sizeof(double));
+        else memcpy(pboth,move1,3*sizeof(double));
+      }
+
+      // set all points that are same as old p1 or p2 to pboth
+      // reset first for all jedge != iedge, then reset iedge
+      
+      for (int jedge = 0; jedge < nedge; jedge++) {
+        if (!edges[jedge].active) continue;
+        if (jedge == iedge) continue;
+        
+        if (samepoint(edges[jedge].p1,p1))
+          memcpy(edges[jedge].p1,pboth,3*sizeof(double));
+        if (samepoint(edges[jedge].p2,p1))
+          memcpy(edges[jedge].p2,pboth,3*sizeof(double));
+        
+        if (samepoint(edges[jedge].p1,p2))
+          memcpy(edges[jedge].p1,pboth,3*sizeof(double));
+        if (samepoint(edges[jedge].p2,p2))
+          memcpy(edges[jedge].p2,pboth,3*sizeof(double));
+      }
+
+      memcpy(edges[iedge].p1,pboth,3*sizeof(double));
+      memcpy(edges[iedge].p2,pboth,3*sizeof(double));
+    }
+  }
+
+#ifdef VERBOSE
+  if (id == VERBOSE_ID) print_bpg("BPG after tiny edge collapse");
+#endif
 
   // remove zero-length edges
 
   nedge = edges.n;
 
-  for (iedge = 0; iedge < nedge; iedge++) {
+  for (int iedge = 0; iedge < nedge; iedge++) {
     if (!edges[iedge].active) continue;
     edge = &edges[iedge];
-    if (samepoint(edge->p1,edge->p2)) {
-      if (id == 345) printf("Remove 0-len edge\n");
-      edge_remove(edge);
-    }
+    if (samepoint(edge->p1,edge->p2)) edge_remove(edge);
   }
+
+#ifdef VERBOSE
+  if (id == VERBOSE_ID) print_bpg("BPG after remove zero-length edges");
+#endif
 
   // remove vertices (triangles) which now have less than 3 edges
   // do this after deleting zero-length edges so vertices are updated
   // removals should have 2 or 0 edges, no verts should have 1 edge
   // if all triangles are removed, BPG will be empty,
   //   which will result in cell corner pts being left UNKNOWN in split()
-  // to try and avoid this, tally the in/out orientation of all removed tris
-  // "out" orientation means tri norm from tri ctr points towards cell ctr
-  // "in" orientation means tri norm from tri ctr points away from cell ctr
-  // some triangles may not follow this rule, but majority should
+  // to try and avoid this, tally inside/outside for all removed tris
+  //   tri is "outside" if it implies cell is outside the surf (in the flow)
+  //   tri is "inside" if it implies cell is inside the surf (not in the flow)
+  //   some tris may not follow this rule, but most should
+  // outside = tri norm from tri ctr points towards cell ctr
+  // inside = tri norm from tri ctr points away from cell ctr
   // cbox = cell center pt, ctri = triangle center pt, t2b = cbox-ctri
-  // NOTE: should noutside/ninside only be set when nedge > 0 ??
+
+  touchcount = 0;
+  grazecount = 0;
 
   int noutside = 0;
   int ninside = 0;
+
   double cbox[3],ctri[3],t2b[3];
 
-  for (ivert = 0; ivert < nvert; ivert++)
+  nvert = verts.n;
+
+  for (int ivert = 0; ivert < nvert; ivert++)
     if (verts[ivert].nedge <= 2) {
+      touchcount++;
       cbox[0] = 0.5*(lo[0]+hi[0]);
       cbox[1] = 0.5*(lo[1]+hi[1]);
       cbox[2] = 0.5*(lo[2]+hi[2]);
@@ -974,25 +1025,23 @@ int Cut3d::clip_tris()
       double dot = MathExtra::dot3(verts[ivert].norm,t2b);
       if (dot > 0.0) noutside++;
       if (dot < 0.0) ninside++;
-
       vertex_remove(&verts[ivert]);
     }
 
-  // remove vertices which only graze the cell
-  // grazing = all vertex pts in same face of cell and outward normal
+  // discard clipped tri if lies on a cell face w/ normal out of cell
+  // increment grazecount in this case
 
-  int grazeflag = 0;
-  for (ivert = 0; ivert < nvert; ivert++) {
+  for (int ivert = 0; ivert < nvert; ivert++) {
     if (!verts[ivert].active) continue;
     if (grazing(&verts[ivert])) {
-      grazeflag = 1;
       vertex_remove(&verts[ivert]);
+      grazecount++;
     }
   }
 
   // remove edges which now have no vertices
 
-  for (iedge = 0; iedge < nedge; iedge++) {
+  for (int iedge = 0; iedge < nedge; iedge++) {
     if (!edges[iedge].active) continue;
     if (edges[iedge].nvert == 0) edges[iedge].active = 0;
   }
@@ -1000,27 +1049,22 @@ int Cut3d::clip_tris()
   // set BPG empty flag if no active vertices
 
   empty = 1;
-  for (ivert = 0; ivert < nvert; ivert++)
+  for (int ivert = 0; ivert < nvert; ivert++)
     if (verts[ivert].active) {
       empty = 0;
       break;
     }
 
-  // if empty, also return in/out status based on deleted tri orientations
-  // only mark corner pts for INSIDE/OUTSIDE if all deleted tris
-  //   had same orientation, else leave them UNKNOWN
-  // NOTE: marking if majority are INSIDE/OUTSIDE (commented out)
-  //   triggered later marking error for cone_test/in.cone problem
+  // if no lines, set touchmark which will be used to mark corner points
+  // only set touchmark if all deleted tris had same orientation
+  // NOTE: setting touchmark based on orientation of just majority
+  //   triggered later corner marking error for cone_test/in.cone problem
 
-  inout = UNKNOWN;
+  touchmark = UNKNOWN;
   if (empty) {
-    if (ninside && noutside == 0) inout = INSIDE;
-    else if (noutside && ninside == 0) inout = OUTSIDE;
-    //if (ninside > noutside) inout = INSIDE;
-    //else if (noutside > ninside) inout = OUTSIDE;
+    if (ninside && noutside == 0) touchmark = INSIDE;
+    else if (noutside && ninside == 0) touchmark = OUTSIDE;
   }
-
-  return grazeflag;
 }
 
 /* ----------------------------------------------------------------------
@@ -1106,7 +1150,14 @@ int Cut3d::edge2face()
     edge = &edges[iedge];
 
     nface = which_faces(edge->p1,edge->p2,faces);
-    if (nface == 0) return 2;
+    if (nface == 0) {
+      printf("ERROR RETURN id %ld nedge %d iedge %d pt1 "
+             "%20.16g %20.16g %20.16g %20.16g %20.16g %20.16g\n",
+             id,nedge,iedge,
+             edge->p1[0],edge->p1[1],edge->p1[2],
+             edge->p2[0],edge->p2[1],edge->p2[2]);
+      return 2;
+    }
     else if (nface == 1) iface = faces[0];
     else if (nface == 2) {
       iface = faces[0];
@@ -1273,6 +1324,7 @@ int Cut3d::add_face_pgons(int iface)
         edge = &edges[iedge];
         edge->style = FACEPGON;
         edge->nvert = 0;
+        edge->verts[0] = edge->verts[1] = -1;
         if (flip) {
           memcpy(edge->p1,p2,3*sizeof(double));
           memcpy(edge->p2,p1,3*sizeof(double));
@@ -1376,6 +1428,7 @@ int Cut3d::add_face(int iface, double *lo2d, double *hi2d)
     edge = &edges[iedge];
     edge->style = vert->style;
     edge->nvert = 0;
+    edge->verts[0] = edge->verts[1] = -1;
     memcpy(edge->p1,p1,3*sizeof(double));
     memcpy(edge->p2,p2,3*sizeof(double));
     dir = 0;
@@ -1597,11 +1650,25 @@ int Cut3d::loop2ph()
   int negative = 0;
 
   int nloop = loops.n;
-  for (int i = 0; i < nloop; i++)
+  
+  for (int i = 0; i < nloop; i++) {
     if (loops[i].volume > 0.0) positive++;
     else negative++;
+  }
+
+  // if no positive vols, cell is entirely inside the surf, caller handles it
+  // this can happen due to epsilon size polyhedron(s)
+  // e.g. when a tri barely cuts off a cell corner
+
   if (positive == 0) return 4;
+
+  // do not allow mulitple positive with one or more negative
+  // too difficult to figure out which positive each negative is inside of
+
   if (positive > 1 && negative) return 5;
+
+  // positive = 1 means 1 PH with vol = sum of all pos/neg loops
+  // positive > 1 means each loop is a PH
 
   phs.grow(positive);
 
@@ -1930,6 +1997,24 @@ int Cut3d::grazing(Vertex *vert)
 }
 
 /* ----------------------------------------------------------------------
+   identify which cell faces point P is on
+   return list of face IDs (0-5)
+   list length can be 0,1,2
+------------------------------------------------------------------------- */
+
+int Cut3d::on_faces(double *p, int *faces)
+{
+  int n = 0;
+  if (p[0] == lo[0]) faces[n++] = 0;
+  if (p[0] == hi[0]) faces[n++] = 1;
+  if (p[1] == lo[1]) faces[n++] = 2;
+  if (p[1] == hi[1]) faces[n++] = 3;
+  if (p[2] == lo[2]) faces[n++] = 4;
+  if (p[2] == hi[2]) faces[n++] = 5;
+  return n;
+}
+
+/* ----------------------------------------------------------------------
    identify which cell faces edge between p1,p2 is on
    p1,p2 assumed to be on surface or interior of cell
    return list of face IDs (0-5)
@@ -1947,7 +2032,6 @@ int Cut3d::which_faces(double *p1, double *p2, int *faces)
   if (p1[2] == hi[2] && p2[2] == hi[2]) faces[n++] = 5;
   return n;
 }
-
 
 /* ----------------------------------------------------------------------
 # extract 2d cell from iface (0-5) of 3d cell
@@ -2008,9 +2092,9 @@ void Cut3d::expand2d(int iface, double value, double *p2, double *p3)
      this is used by add_face() when adding edges of an entire face
      this avoids matching an on-face CTRI with norm into cell
    error if find edge and it is already part of a vertex in that dir
-   return = index if find it, else -1
+   return = index (0 to nedge-1) if find it, -1 if do not find it
    return dir = 0 if matches as (x,y), 1 if matches as (y,x), -1 if no match
-   return err = 1
+   return -2 as error if edge already exists in same dir as this one
 ------------------------------------------------------------------------- */
 
 int Cut3d::findedge(double *x, double *y, int flag, int &dir)
@@ -2103,6 +2187,20 @@ int Cut3d::corner(double *pt)
 }
 
 /* ----------------------------------------------------------------------
+   move point within epsilon of any cell face to be on cell faces
+------------------------------------------------------------------------- */
+
+void Cut3d::move_to_faces(double *pt)
+{
+  if (fabs(pt[0]-lo[0]) < epsilon) pt[0] = lo[0];
+  if (fabs(pt[0]-hi[0]) < epsilon) pt[0] = hi[0];
+  if (fabs(pt[1]-lo[1]) < epsilon) pt[1] = lo[1];
+  if (fabs(pt[1]-hi[1]) < epsilon) pt[1] = hi[1];
+  if (fabs(pt[2]-lo[2]) < epsilon) pt[2] = lo[2];
+  if (fabs(pt[2]-hi[2]) < epsilon) pt[2] = hi[2];
+}
+
+/* ----------------------------------------------------------------------
    check if pt is inside or outside or on cell border
    return EXTERIOR,BORDER,INTERIOR
 ------------------------------------------------------------------------- */
@@ -2120,65 +2218,6 @@ int Cut3d::ptflag(double *pt)
 }
 
 /* ----------------------------------------------------------------------
-   try another push option for pushing surf pts near cell surface
-   if run out of options, return 0
-------------------------------------------------------------------------- */
-
-int Cut3d::push_increment()
-{
-  if (pushflag == npushmax) return 0;
-  pushlo = pushlo_vec[pushflag];
-  pushhi = pushhi_vec[pushflag];;
-  pushvalue = pushvalue_vec[pushflag];
-  pushflag++;
-  return 1;
-}
-
-/* ----------------------------------------------------------------------
-   push point if near cell surface in any dimension
-   point can be far outside box and still be pushed if
-     close to box face in one dimension (due to commented out lines)
-     NOTE: this was 6Jun16 change
-   do not push point outside simulation box
-------------------------------------------------------------------------- */
-
-void Cut3d::push(double *pt)
-{
-  double x = pt[0];
-  double y = pt[1];
-  double z = pt[2];
-  double epsx = EPSCELL * (hi[0]-lo[0]);
-  double epsy = EPSCELL * (hi[1]-lo[1]);
-  double epsz = EPSCELL * (hi[2]-lo[2]);
-
-  //if (x < lo[0]-pushhi*epsx || x > hi[0]+pushhi*epsx ||
-  //    y < lo[1]-pushhi*epsy || y > hi[1]+pushhi*epsy ||
-  //    z < lo[2]-pushhi*epsz || z > hi[2]+pushhi*epsz) return;
-
-  if (x > lo[0]-pushhi*epsx && x < lo[0]-pushlo*epsx) x = lo[0]-pushvalue*epsx;
-  if (x > hi[0]+pushlo*epsx && x < hi[0]+pushhi*epsx) x = hi[0]+pushvalue*epsx;
-  if (y > lo[1]-pushhi*epsy && y < lo[1]-pushlo*epsy) y = lo[1]-pushvalue*epsy;
-  if (y > hi[1]+pushlo*epsy && y < hi[1]+pushhi*epsy) y = hi[1]+pushvalue*epsy;
-  if (z > lo[2]-pushhi*epsz && z < lo[2]-pushlo*epsz) z = lo[2]-pushvalue*epsz;
-  if (z > hi[2]+pushlo*epsz && z < hi[2]+pushhi*epsz) z = hi[2]+pushvalue*epsz;
-
-  double *boxlo = domain->boxlo;
-  double *boxhi = domain->boxhi;
-  x = MAX(x,boxlo[0]);
-  x = MIN(x,boxhi[0]);
-  y = MAX(y,boxlo[1]);
-  y = MIN(y,boxhi[1]);
-  z = MAX(z,boxlo[2]);
-  z = MIN(z,boxhi[2]);
-
-  if (x != pt[0] || y != pt[1] || z != pt[2]) {
-    pt[0] = x;
-    pt[1] = y;
-    pt[2] = z;
-  }
-}
-
-/* ----------------------------------------------------------------------
    print out cell info for cell which failed at cut/split operation
 ------------------------------------------------------------------------- */
 
@@ -2189,11 +2228,15 @@ void Cut3d::failed_cell()
   printf("  lo corner %g %g %g\n",lo[0],lo[1],lo[2]);
   printf("  hi corner %g %g %g\n",hi[0],hi[1],hi[2]);
   printf("  # of surfs = %d out of " BIGINT_FORMAT "\n",nsurf,surf->nsurf);
-  printf("  surfs:");
-  for (int i = 0; i < nsurf; i++)
-    printf(" " SURFINT_FORMAT " %g",tris[surfs[i]].id,tris[surfs[i]].p1[0]);
-  //for (int i = 0; i < nsurf; i++) printf(" %d",surfs[i]+1);
-  printf("\n");
+  for (int i = 0; i < nsurf; i++) {
+    printf("  surf " SURFINT_FORMAT ":\n",tris[surfs[i]].id);
+    printf("     p1: %g %g %g\n",
+	   tris[surfs[i]].p1[0],tris[surfs[i]].p1[1],tris[surfs[i]].p1[2]);
+    printf("     p2: %g %g %g\n",
+	   tris[surfs[i]].p2[0],tris[surfs[i]].p2[1],tris[surfs[i]].p2[2]);
+    printf("     p3: %g %g %g\n",
+	   tris[surfs[i]].p3[0],tris[surfs[i]].p3[1],tris[surfs[i]].p3[2]);
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -2201,7 +2244,8 @@ void Cut3d::failed_cell()
 
 void Cut3d::print_bpg(const char *str)
 {
-  int iedge,dir,newedge,newdir;
+  int iedge,dir,newedge,newdir,prevedge,prevdir;
+  double *p1,*p2;
 
   printf("%s " CELLINT_FORMAT "\n",str,id);
   printf("  Sizes: %d %d\n",verts.n,edges.n);
@@ -2209,9 +2253,11 @@ void Cut3d::print_bpg(const char *str)
   printf("  Verts:\n");
   for (int i = 0; i < verts.n; i++) {
     if (verts[i].active == 0) continue;
+
     printf("   %d %d %d %d:",i,
            verts[i].active,verts[i].style,verts[i].label);
-    printf(" [");
+
+    printf(" edges [");
     iedge = verts[i].first;
     dir = verts[i].dirfirst;
     for (int j = 0; j < verts[i].nedge; j++) {
@@ -2223,7 +2269,8 @@ void Cut3d::print_bpg(const char *str)
       dir = newdir;
     }
     printf("]");
-    printf(" [");
+
+    printf(" dirs [");
     iedge = verts[i].first;
     dir = verts[i].dirfirst;
     for (int j = 0; j < verts[i].nedge; j++) {
@@ -2235,8 +2282,52 @@ void Cut3d::print_bpg(const char *str)
       dir = newdir;
     }
     printf("]");
+
+    printf(" edgelens [");
+    iedge = verts[i].first;
+    dir = verts[i].dirfirst;
+    for (int j = 0; j < verts[i].nedge; j++) {
+      p1 = edges[iedge].p1;
+      p2 = edges[iedge].p2;
+      double dx = p1[0]-p2[0];
+      double dy = p1[1]-p2[1];
+      double dz = p1[2]-p2[2];
+      double delta = sqrt(dx*dx+dy*dy+dz*dz);
+      printf("%g",delta);
+      if (j < verts[i].nedge-1) printf(" ");
+      newedge = edges[iedge].next[dir];
+      newdir = edges[iedge].dirnext[dir];
+      iedge = newedge;
+      dir = newdir;
+    }
+    printf("]");
+
+    printf(" samept [");
+    iedge = verts[i].first;
+    dir = verts[i].dirfirst;
+    for (int j = 0; j < verts[i].nedge; j++) {
+      if (j > 0) {
+        prevedge = edges[iedge].prev[dir];
+        prevdir = edges[iedge].dirprev[dir];
+      } else {
+        prevedge = verts[i].last;
+        prevdir = verts[i].dirlast;
+      }
+      if (dir == 0) p1 = edges[iedge].p1;
+      else p1 = edges[iedge].p2;
+      if (prevdir == 0) p2 = edges[prevedge].p2;
+      else p2 = edges[prevedge].p1;
+      printf("%d",samepoint(p1,p2));
+      if (j < verts[i].nedge-1) printf(" ");
+      newedge = edges[iedge].next[dir];
+      newdir = edges[iedge].dirnext[dir];
+      iedge = newedge;
+      dir = newdir;
+    }
+    printf("]");
+
     if (verts[i].norm) {
-      printf(" [%g %g %g]\n",
+      printf(" norm [%g %g %g]\n",
              verts[i].norm[0],verts[i].norm[1],verts[i].norm[2]);
     } else printf(" [NULL]\n");
   }
@@ -2244,6 +2335,7 @@ void Cut3d::print_bpg(const char *str)
   printf("  Edges:\n");
   for (int i = 0; i < edges.n; i++) {
     if (edges[i].active == 0) continue;
+
     printf("   %d %d %d",i,edges[i].active,edges[i].style);
     printf(" (%g %g %g)",edges[i].p1[0],edges[i].p1[1],edges[i].p1[2]);
     printf(" (%g %g %g)",edges[i].p2[0],edges[i].p2[1],edges[i].p2[2]);
@@ -2267,6 +2359,16 @@ void Cut3d::print_bpg(const char *str)
     }
     if (edges[i].nvert > 3) printf(" [BIG %d]",edges[i].nvert);
     printf("\n");
+
+    //DEBUG
+    printf("     FACE p1: %g %g: %g %g: %g %g\n",
+	   fabs(edges[i].p1[0]-lo[0]),fabs(edges[i].p1[0]-hi[0]),
+	   fabs(edges[i].p1[1]-lo[1]),fabs(edges[i].p1[1]-hi[1]),
+	   fabs(edges[i].p1[2]-lo[2]),fabs(edges[i].p1[2]-hi[2]));
+    printf("     FACE p2: %g %g: %g %g: %g %g\n",
+	   fabs(edges[i].p2[0]-lo[0]),fabs(edges[i].p2[0]-hi[0]),
+	   fabs(edges[i].p2[1]-lo[1]),fabs(edges[i].p2[1]-hi[1]),
+	   fabs(edges[i].p2[2]-lo[2]),fabs(edges[i].p2[2]-hi[2]));
   }
 }
 
