@@ -36,7 +36,9 @@ if(SPARTA_ENABLE_TESTING)
       "circle"
       "chem"
       "axi"
-      "ambi")
+      "ambi"
+      "relax_const"
+      "relax_variable")
 
   set(SPARTA_DISABLED_TESTS
       "in.ablation.3d.reactions" # Failing
