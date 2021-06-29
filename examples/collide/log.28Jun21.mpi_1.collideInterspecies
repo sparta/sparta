@@ -1,0 +1,118 @@
+SPARTA (26 Feb 2021)
+# thermal gas in a 3d box with collisions
+# particles reflect off global box boundaries
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5 comm/sort yes
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
+create_grid 	    10 10 10
+Created 1000 child grid cells
+  CPU time = 0.00147724 secs
+  create/ghost percent = 59.1672 40.8328
+
+balance_grid        rcb part
+Balance grid migrated 0 cells
+  CPU time = 0.000566006 secs
+  reassign/sort/migrate/ghost percent = 32.9402 0.589722 9.43555 57.0345
+
+species		    6SpeciesAir.species N2 O2 NO N O Ar
+mixture		    air O2 N2 O N vstream 0.0 0.0 0.0 temp 273.1
+mixture		    air O2 frac 0.21
+mixture		    air N2  frac 0.78
+mixture		    air O
+mixture		    air N
+mixture	            air NO
+mixture		    air Ar frac 0.009
+
+
+global              nrho 7.07043E22
+global              fnum 7.07043E6
+
+collide		    vss air 6SpeciesAirII.vss
+
+create_particles    air n 10000
+Created 10000 particles
+  CPU time = 0.00545454 secs
+
+stats		    100
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll c_temp
+
+#compute             1 grid all n
+#region              slab block INF INF INF INF 4.5e-5 5.5e-5
+#dump                2 image all 100 image.*.ppm type type pdiam 3.0e-6 #		    size 512 512 gline yes 0.005 gridx 0.00005 c_1[1]
+#dump_modify	    2 pad 4 region slab
+
+timestep 	    7.00E-9
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.6875 1.6875 1.6875
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.20129 3.20129 3.20129
+Step CPU Np Natt Ncoll c_temp 
+       0            0    10000        0        0    274.39367 
+     100   0.11361766    10000     1435      711    271.74196 
+     200   0.22894788    10000     1459      753    272.78373 
+     300   0.34431267    10000     1434      734    273.35532 
+     400   0.45965672    10000     1467      745    272.68149 
+     500   0.57513618    10000     1460      709    275.31504 
+     600   0.69206214    10000     1450      704    271.90587 
+     700   0.80824852    10000     1454      696    273.96156 
+     800   0.92430043    10000     1476      716    273.66599 
+     900    1.0402892    10000     1483      702    273.56631 
+    1000    1.1564529    10000     1500      685    275.08909 
+Loop time of 1.15647 on 1 procs for 1000 steps with 10000 particles
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.4415     | 0.4415     | 0.4415     |   0.0 | 38.18
+Coll    | 0.64469    | 0.64469    | 0.64469    |   0.0 | 55.75
+Sort    | 0.066432   | 0.066432   | 0.066432   |   0.0 |  5.74
+Comm    | 0.0010109  | 0.0010109  | 0.0010109  |   0.0 |  0.09
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.00073862 | 0.00073862 | 0.00073862 |   0.0 |  0.06
+Other   |            | 0.00209    |            |       |  0.18
+
+Particle moves    = 10000000 (10M)
+Cells touched     = 14233052 (14.2M)
+Particle comms    = 0 (0K)
+Boundary collides = 470235 (0.47M)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 1458692 (1.46M)
+Collide occurs    = 717791 (0.718M)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 8.64704e+06
+Particle-moves/step: 10000
+Cell-touches/particle/step: 1.42331
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0.0470235
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.145869
+Collisions/particle/step: 0.0717791
+Reactions/particle/step: 0
+
+Particles: 10000 ave 10000 max 10000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      1000 ave 1000 max 1000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
