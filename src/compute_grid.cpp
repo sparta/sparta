@@ -21,6 +21,7 @@
 #include "modify.h"
 #include "memory.h"
 #include "error.h"
+#include "comm.h"
 
 using namespace SPARTA_NS;
 
@@ -137,6 +138,11 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
       value[ivalue] = TVIB;
       set_map(ivalue,ENGVIB);
       set_map(ivalue,DOFVIB);
+
+      if (particle->find_custom((char *) "vibmode") >= 0)
+        if (comm->me == 0)
+          error->warning(FLERR,"Using compute grid tvib with "
+           "fix vibmode may give incorrect temperature");
     } else if (strcmp(arg[iarg],"pxrho") == 0) {
       value[ivalue] = PXRHO;
       set_map(ivalue,MVX);
