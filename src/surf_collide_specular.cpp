@@ -102,6 +102,7 @@ collide(Particle::OnePart *&ip, double &,
 /* ----------------------------------------------------------------------
    wrapper on specular() method to perform collision for a single particle
    pass in 0 coefficients to match command-line args for style specular
+   flags, coeffs can be NULL
    called by SurfReactAdsorb
 ------------------------------------------------------------------------- */
 

@@ -309,14 +309,17 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm)
 /* ----------------------------------------------------------------------
    wrapper on diffuse() method to perform collision for a single particle
    pass in 2 coefficients to match command-line args for style diffuse 
+   flags, coeffs can be NULL
    called by SurfReactAdsorb
 ------------------------------------------------------------------------- */
 
 void SurfCollideDiffuse::wrapper(Particle::OnePart *p, double *norm, 
                                  int *flags, double *coeffs)
 { 
-  twall = coeffs[0];
-  acc = coeffs[1];
+  if (flags) {
+    twall = coeffs[0];
+    acc = coeffs[1];
+  }
 
   diffuse(p,norm);
 }

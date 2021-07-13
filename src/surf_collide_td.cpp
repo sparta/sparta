@@ -268,32 +268,35 @@ void SurfCollideTD::td(Particle::OnePart *p, double *norm)
 /* ----------------------------------------------------------------------
    wrapper on td() method to perform collision for a single particle
    pass in flags/coefficients to match command-line args for style td
+   flags, coeffs can be NULL
    called by SurfReactAdsorb
 ------------------------------------------------------------------------- */
 
 void SurfCollideTD::wrapper(Particle::OnePart *p, double *norm, 
                             int *flags, double *coeffs)
 { 
-  twall = coeffs[0];
+  if (flags) {
+    twall = coeffs[0];
 
-  barrier_flag = flags[0];
-  initen_flag = flags[1];
-  bond_flag = flags[2];
+    barrier_flag = flags[0];
+    initen_flag = flags[1];
+    bond_flag = flags[2];
 
-  int m = 1;
+    int m = 1;
 
-  if (barrier_flag) {
-    barrier_val = coeffs[m++];
-  }
-  if (initen_flag) {
-    initen_trans = coeffs[m++];
-    initen_rot = coeffs[m++];
-    initen_vib = coeffs[m++];
-  }
-  if (bond_flag) {
-    bond_trans = coeffs[m++];
-    bond_rot = coeffs[m++];
-    bond_vib = coeffs[m++];
+    if (barrier_flag) {
+      barrier_val = coeffs[m++];
+    }
+    if (initen_flag) {
+      initen_trans = coeffs[m++];
+      initen_rot = coeffs[m++];
+      initen_vib = coeffs[m++];
+    }
+    if (bond_flag) {
+      bond_trans = coeffs[m++];
+      bond_rot = coeffs[m++];
+      bond_vib = coeffs[m++];
+    }
   }
 
   td(p,norm);

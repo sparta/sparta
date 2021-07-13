@@ -99,7 +99,7 @@ class SurfReactAdsorb : public SurfReact {
   int *total_state;          // total count at last sync
   double *area;              // area of surf
   double *weight;            // weight of surf
-  double **tau;               // PS time of surf
+  double **tau;              // PS time of surf
 
   // GS (gas/surface) reaction model
   
@@ -201,8 +201,8 @@ class SurfReactAdsorb : public SurfReact {
   int maxmypart;            // allocated size of mypart
   int maxallpart;           // allocated size of allpart
   
-  // surface collision models, one per supported style
-  // only if appears in reaction file
+  // surface collision models, one per supported SC style
+  // only non-NULL if the SC style appears in GS/PS reaction files
 
   class SurfCollide **cmodels;
 
@@ -215,7 +215,7 @@ class SurfReactAdsorb : public SurfReact {
  
   void init_reactions_ps();
   void readfile_ps(char *);
-  void PS_react(int, double *);
+  void PS_react(int, int, double *);
   void add_particle_mine(Particle::OnePart *);
   void PS_chemistry();
   void random_point(int, double*);
