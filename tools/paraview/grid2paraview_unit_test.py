@@ -25,7 +25,7 @@ class TestSpartaGridFile(unittest.TestCase):
            new_local_cell_id = sparta_grid_file\
                .get_local_cell_id_from_dashed_cell_id(dashed_id)
            if dashed_id:
-             self.assertEqual(local_cell_id, str(new_local_cell_id))
+               self.assertEqual(local_cell_id, str(new_local_cell_id))
 
 if __name__ == '__main__':
     unittest.main()
