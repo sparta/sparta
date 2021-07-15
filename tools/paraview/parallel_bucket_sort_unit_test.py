@@ -1,8 +1,16 @@
 import unittest
+import os
 import random
 from mpi4py import MPI
 from functools import cmp_to_key
 from parallel_bucket_sort import parallel_sort, flatten_list, sort_list
+from grid2paraview import SpartaGridFile
+
+GRID_FILE_200 = os.path.join(os.path.dirname(__file__),
+    "tests/input_files/grid.200")
+
+CIRCLE_GRID_FILE = os.path.join(os.path.dirname(__file__),
+    "tests/input_files/circle_grid.txt")
 
 class TestParallelBucketSort(unittest.TestCase):
 
@@ -67,6 +75,23 @@ class TestParallelBucketSort(unittest.TestCase):
         self.COMM.Barrier()
         data = self.generateData(1000000)
         self.checkResult(data, parallel_sort(data))
+
+    def testSpartaGridFile200(self):
+        self.COMM.Barrier()
+        self.sortGridFile(GRID_FILE_200)
+
+    def testSpartaCircleGridFile(self):
+        self.COMM.Barrier()
+        self.sortGridFile(CIRCLE_GRID_FILE)
+
+    def sortGridFile(self, grid_file):
+        sgf = SpartaGridFile(grid_file)
+        sgf.set_iteration_start(self.RANK)
+        sgf.set_iteration_skip(self.NUM_RANKS)
+        data = [line for line in sgf]
+        self.checkResult(data, parallel_sort(data,
+            SpartaGridFile.compare_dashed_ids),
+                SpartaGridFile.compare_dashed_ids)
 
     def checkResult(self, data, sorted_data, compare=None):
         self.COMM.Barrier()

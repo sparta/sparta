@@ -1,7 +1,7 @@
-
 from mpi4py import MPI
 from random import sample
 import math
+from functools import cmp_to_key
 
 def parallel_sort(data, compare=None):
     _check_inputs(data, compare)
