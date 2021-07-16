@@ -71,6 +71,7 @@ void RanKnuth::reset(double rseed, int offset, int warmup)
 double RanKnuth::uniform()
 {
   int i,ii,k,mj,mk;
+  double rn;
 
   if (not_init == 1) {
     not_init = 0;
@@ -93,12 +94,21 @@ double RanKnuth::uniform()
     inext = 0;
     inextp = 31;
   }
-  if (++inext == 56) inext = 1;
-  if (++inextp == 56) inextp = 1;
-  mj = ma[inext] - ma[inextp];
-  if (mj < 0) mj += MBIG;
-  ma[inext] = mj;
-  return mj*FAC;
+
+  while (1) {
+    if (++inext == 56) inext = 1;
+    if (++inextp == 56) inextp = 1;
+    mj = ma[inext] - ma[inextp];
+    if (mj < 0) mj += MBIG;
+    ma[inext] = mj;
+    rn = mj*FAC;
+
+    // make sure the random number is valid
+
+    if (rn > 0.0 && rn < 1.0) break;
+  }
+
+  return rn;
 }
 
 /* ----------------------------------------------------------------------
