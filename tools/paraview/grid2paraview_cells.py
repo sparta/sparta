@@ -22,12 +22,13 @@ def read_grid_file(pd):
     for cell in sgf:
         cells.append(cell)
         count += 1
-        if rank == 0 and count % 10000000 == 0:
+        if rank == 0 and count % 10000 == 0:
             print("Read " + str(count) + " cell(s) from grid file")
     if rank == 0:
         print("Finished grid file read")
         print("Starting parallel sort")
-    cells = parallel_sort(cells, SpartaGridFile.compare_dashed_ids)
+    cells = parallel_sort(cells, SpartaGridFile.compare_dashed_ids,
+        use_file_buckets=True)
     if rank == 0:
         print("Finished parallel sort")
 

@@ -19,7 +19,7 @@ class TestParallelBucketSort(unittest.TestCase):
     NUM_RANKS = COMM.Get_size()
     ROOT = 0
     MIN_NUM = 1
-    MAX_NUM = 10000000
+    MAX_NUM = 1000
 
     def testSortDataInput(self):
         self.COMM.Barrier()
@@ -79,18 +79,20 @@ class TestParallelBucketSort(unittest.TestCase):
     def testSpartaGridFile200(self):
         self.COMM.Barrier()
         self.sortGridFile(GRID_FILE_200)
+        self.sortGridFile(GRID_FILE_200, use_file_buckets=True)
 
     def testSpartaCircleGridFile(self):
         self.COMM.Barrier()
         self.sortGridFile(CIRCLE_GRID_FILE)
+        self.sortGridFile(CIRCLE_GRID_FILE, use_file_buckets=True)
 
-    def sortGridFile(self, grid_file):
+    def sortGridFile(self, grid_file, use_file_buckets=False):
         sgf = SpartaGridFile(grid_file)
         sgf.set_iteration_start(self.RANK)
         sgf.set_iteration_skip(self.NUM_RANKS)
         data = [line for line in sgf]
         self.checkResult(data, parallel_sort(data,
-            SpartaGridFile.compare_dashed_ids),
+            SpartaGridFile.compare_dashed_ids, use_file_buckets),
                 SpartaGridFile.compare_dashed_ids)
 
     def checkResult(self, data, sorted_data, compare=None):

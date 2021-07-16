@@ -1,14 +1,36 @@
+from __future__ import print_function
 from mpi4py import MPI
 from random import sample
 import math
+import os
 from functools import cmp_to_key
 
-def parallel_sort(data, compare=None):
+def parallel_sort(data, compare=None, use_file_buckets=False):
+    COMM = MPI.COMM_WORLD
     _check_inputs(data, compare)
     pivots = _create_bucket_pivots(data, compare)
+    if COMM.Get_rank() == 0:
+        print("Found " + str(len(pivots)) + " pivot(s) in sort data")
     if not pivots:
-        return _gather_to_proc_zero_and_sort(data, compare)    
+        return _gather_to_proc_zero_and_sort(data, compare)
+    
+    if use_file_buckets:
+        return _sort_with_file_buckets(pivots, data, compare)
+    else:
+        return _sort_with_memory_buckets(pivots, data, compare)
+
+def _sort_with_file_buckets(pivots, data, compare):
+    _write_file_buckets(pivots, data, compare)
+    result = _read_file_bucket()
+    sort_list(result, compare)
+    _remove_file_buckets()
+    return result
+
+def _sort_with_memory_buckets(pivots, data, compare):
+    COMM = MPI.COMM_WORLD
     buckets = _create_buckets(pivots, data, compare)
+    if COMM.Get_rank() == 0:
+        print("Created " + str(len(buckets)) + " bucket(s) from sort data")
     return _distribute_buckets(buckets, compare)
 
 def _gather_to_proc_zero_and_sort(data, compare):
@@ -21,6 +43,63 @@ def _gather_to_proc_zero_and_sort(data, compare):
     else:
         return []
 
+def _write_file_buckets(pivots, data, compare):
+    COMM = MPI.COMM_WORLD
+    _remove_file_buckets()
+    buckets = _create_empty_bucket_list()
+    buckets_size = 0
+    if COMM.Get_rank() == 0:
+        print("Writing "  + str(len(buckets)) + " file bucket(s)")
+    count = 1
+    for element in data:
+        _put_element_in_bucket(element, pivots, buckets, compare)
+        buckets_size += 1
+        if buckets_size > 1000000:
+            _empty_buckets(buckets)
+            buckets_size = 0
+        if COMM.Get_rank() == 0 and count % 100000 == 0:
+            print("Bucketed " + str(count) + " cell(s) of " + str(len(data)))
+        count += 1
+    _empty_buckets(buckets)
+
+def _empty_buckets(buckets):
+    COMM = MPI.COMM_WORLD
+    if COMM.Get_rank() == 0:
+        print("Emptying bucket(s)")
+    for idx, b in enumerate(buckets):
+        filename = _get_bucket_file_name_for_rank(idx)
+        with open(filename, 'a') as f:
+            for element in b:
+                f.write("%s\n" % element)
+        del b[:]
+    if COMM.Get_rank() == 0:
+        print("Finished emptying bucket(s)")
+
+def _read_file_bucket():
+    COMM = MPI.COMM_WORLD
+    COMM.Barrier()
+    filename = _get_bucket_file_name_for_rank(COMM.Get_rank())
+    result = []
+    if COMM.Get_rank() == 0:
+        print("Reading file bucket(s)")
+    with open(filename, 'r') as f:
+        for line in f:
+            result.append(line.strip())
+    return result
+
+def _remove_file_buckets():
+    COMM = MPI.COMM_WORLD
+    COMM.Barrier()
+    if COMM.Get_rank() == 0:
+        for rank in range(COMM.Get_size()):
+            filename = _get_bucket_file_name_for_rank(rank)
+            if os.path.exists(filename):
+                os.remove(filename)
+    COMM.Barrier()
+
+def _get_bucket_file_name_for_rank(rank):
+    return "sort_bucket_rank_" + str(rank) + ".txt"
+
 def _distribute_buckets(buckets, compare):
     COMM = MPI.COMM_WORLD
     result = []
@@ -29,24 +108,32 @@ def _distribute_buckets(buckets, compare):
         if COMM.Get_rank() == idx:
             result = flatten_list(bucket_data)
             sort_list(result, compare)
+        if COMM.Get_rank() == 0:
+            print("Distributed buckets to rank " + str(idx))
     return result
 
 def _create_buckets(pivots, data, compare):
-    COMM = MPI.COMM_WORLD
-    buckets = [[] for x in range(COMM.Get_size())]
-    for d in data:
-        found_bucket = False
-        for idx, p in enumerate(pivots):
-            less_than = d < p
-            if compare is not None:
-                less_than = compare(d, p) == -1
-            if less_than:
-                buckets[idx].append(d)
-                found_bucket = True
-                break
-        if not found_bucket:
-            buckets[-1].append(d)
+    buckets = _create_empty_bucket_list()
+    for element in data:
+        _put_element_in_bucket(element, pivots, buckets, compare)
     return buckets
+
+def _create_empty_bucket_list():
+    COMM = MPI.COMM_WORLD
+    return [[] for x in range(COMM.Get_size())]
+
+def _put_element_in_bucket(element, pivots, buckets, compare):
+    found_bucket = False
+    for idx, p in enumerate(pivots):
+        less_than = element < p
+        if compare is not None:
+            less_than = compare(element, p) == -1
+        if less_than:
+            buckets[idx].append(element)
+            found_bucket = True
+            break
+    if not found_bucket:
+        buckets[-1].append(element)
 
 def _create_bucket_pivots(data, compare):
     COMM = MPI.COMM_WORLD
