@@ -71,6 +71,7 @@ void RanKnuth::reset(double rseed, int offset, int warmup)
 double RanKnuth::uniform()
 {
   int i,ii,k,mj,mk;
+  double rn;
 
   if (not_init == 1) {
     not_init = 0;
@@ -98,8 +99,13 @@ double RanKnuth::uniform()
   mj = ma[inext] - ma[inextp];
   if (mj < 0) mj += MBIG;
   ma[inext] = mj;
-  if (mj*FAC == 0.0) return uniform();
-  return mj*FAC;
+  rn = mj*FAC;
+
+  // check for bad values
+
+  if (rn <= 0.0 || rn >= 1.0) return uniform();
+
+  return rn;
 }
 
 /* ----------------------------------------------------------------------
