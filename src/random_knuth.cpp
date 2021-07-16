@@ -94,16 +94,19 @@ double RanKnuth::uniform()
     inext = 0;
     inextp = 31;
   }
-  if (++inext == 56) inext = 1;
-  if (++inextp == 56) inextp = 1;
-  mj = ma[inext] - ma[inextp];
-  if (mj < 0) mj += MBIG;
-  ma[inext] = mj;
-  rn = mj*FAC;
 
-  // check for bad values
+  while (1) {
+    if (++inext == 56) inext = 1;
+    if (++inextp == 56) inextp = 1;
+    mj = ma[inext] - ma[inextp];
+    if (mj < 0) mj += MBIG;
+    ma[inext] = mj;
+    rn = mj*FAC;
 
-  if (rn <= 0.0 || rn >= 1.0) return uniform();
+    // make sure the random number is valid
+
+    if (rn > 0.0 && rn < 1.0) break;
+  }
 
   return rn;
 }
