@@ -75,7 +75,8 @@ E: Compute grid mixture ID does not exist
 
 Self-explanatory.
 
-W: Using compute grid tvib with fix vibmode may give incorrect temperature
+W: Using compute grid tvib with fix vibmode may give incorrect temperature,
+use compute tvib/grid instead
 
 Self-explanatory.
 

@@ -197,8 +197,8 @@ void ComputeGrid::init()
 
   if (particle->find_custom((char *) "vibmode") >= 0)
     if (comm->me == 0)
-      error->warning(FLERR,"Using compute grid tvib with "
-                            "fix vibmode may give incorrect temperature");
+      error->warning(FLERR,"Using compute grid tvib with fix vibmode may give "
+                            "incorrect temperature, use compute tvib/grid instead");
 
   eprefactor = 0.5*update->mvv2e;
   tprefactor = update->mvv2e / (3.0*update->boltz);
