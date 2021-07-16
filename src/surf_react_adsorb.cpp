@@ -282,9 +282,12 @@ SurfReactAdsorb::~SurfReactAdsorb()
 
     memory->sfree(mypart);
     memory->sfree(allpart);
-    memory->destroy(recvcounts);
-    memory->destroy(displs);
   }
+
+  // parallel comm
+
+  memory->destroy(recvcounts);
+  memory->destroy(displs);
   
   // surface collision models
 
