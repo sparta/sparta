@@ -149,19 +149,15 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
 
   // initialize reaction data structs
 
-  if (gsflag) {
-    nlist_gs = maxlist_gs = 0;
-    rlist_gs = NULL;
-    reactions_gs = NULL;
-    indices_gs = NULL;
-  }
+  nlist_gs = maxlist_gs = 0;
+  rlist_gs = NULL;
+  reactions_gs = NULL;
+  indices_gs = NULL;
 
-  if (psflag) {
-    nlist_ps = maxlist_ps = 0;
-    rlist_ps = NULL;
-    nactive_ps = 0;
-    n_PS_react = 0;
-  }
+  nlist_ps = maxlist_ps = 0;
+  rlist_ps = NULL;
+  nactive_ps = 0;
+  n_PS_react = 0;
 
   // initialize PS added particle data structs
 
@@ -182,19 +178,12 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
   if (gsflag) readfile_gs(arg[gs_filearg]);
   if (psflag) readfile_ps(arg[ps_filearg]);
 
-  // setup the reaction tallies
+  // reaction tallies
+  // more setup is done in init() after nactive_ps is known
+  // this includes size_vector
 
   nsingle = ntotal = 0;    
-
-  nlist = 0;
-  if (gsflag) nlist += nlist_gs;
-  if (psflag) nlist += nactive_ps;
-  tally_single = new int[nlist];
-  tally_total = new int[nlist];
-  tally_single_all = new int[nlist];
-  tally_total_all = new int[nlist];
-
-  size_vector = 2 + 2*nlist;
+  tallyflag = 0;
 
   // initialize RN generator
 
@@ -221,73 +210,81 @@ SurfReactAdsorb::~SurfReactAdsorb()
 
   // GS chemistry
 
-  for (int i = 0; i < maxlist_gs; i++) {
-    for (int j = 0; j < rlist_gs[i].nreactant; j++) {
-      delete [] rlist_gs[i].id_reactants[j];
-      delete [] rlist_gs[i].state_reactants[j];
+  if (gsflag) {
+    for (int i = 0; i < maxlist_gs; i++) {
+      for (int j = 0; j < rlist_gs[i].nreactant; j++) {
+        delete [] rlist_gs[i].id_reactants[j];
+        delete [] rlist_gs[i].state_reactants[j];
+      }
+      for (int j = 0; j < rlist_gs[i].nproduct; j++) {
+        delete [] rlist_gs[i].id_products[j];
+        delete [] rlist_gs[i].state_products[j];
+      }  
+      delete [] rlist_gs[i].id;
+      delete [] rlist_gs[i].id_reactants;
+      delete [] rlist_gs[i].id_products; 
+      delete [] rlist_gs[i].state_reactants;
+      delete [] rlist_gs[i].state_products; 
+      delete [] rlist_gs[i].part_reactants;  
+      delete [] rlist_gs[i].part_products;
+      delete [] rlist_gs[i].stoich_reactants;  
+      delete [] rlist_gs[i].stoich_products; 
+      delete [] rlist_gs[i].reactants;
+      delete [] rlist_gs[i].products;
+      delete [] rlist_gs[i].reactants_ad_index;
+      delete [] rlist_gs[i].products_ad_index;
+      delete [] rlist_gs[i].coeff;
+      delete [] rlist_gs[i].cmodel_ip_flags;
+      delete [] rlist_gs[i].cmodel_ip_coeffs;
+      delete [] rlist_gs[i].cmodel_jp_flags;
+      delete [] rlist_gs[i].cmodel_jp_coeffs;
     }
-    for (int j = 0; j < rlist_gs[i].nproduct; j++) {
-      delete [] rlist_gs[i].id_products[j];
-      delete [] rlist_gs[i].state_products[j];
-    }  
-    delete [] rlist_gs[i].id;
-    delete [] rlist_gs[i].id_reactants;
-    delete [] rlist_gs[i].id_products; 
-    delete [] rlist_gs[i].state_reactants;
-    delete [] rlist_gs[i].state_products; 
-    delete [] rlist_gs[i].part_reactants;  
-    delete [] rlist_gs[i].part_products;
-    delete [] rlist_gs[i].stoich_reactants;  
-    delete [] rlist_gs[i].stoich_products; 
-    delete [] rlist_gs[i].reactants;
-    delete [] rlist_gs[i].products;
-    delete [] rlist_gs[i].reactants_ad_index;
-    delete [] rlist_gs[i].products_ad_index;
-    delete [] rlist_gs[i].coeff;
-    delete [] rlist_gs[i].cmodel_ip_flags;
-    delete [] rlist_gs[i].cmodel_ip_coeffs;
-    delete [] rlist_gs[i].cmodel_jp_flags;
-    delete [] rlist_gs[i].cmodel_jp_coeffs;
-  }
-  memory->destroy(rlist_gs);
 
-  memory->destroy(reactions_gs);
-  memory->destroy(indices_gs);
+    memory->destroy(rlist_gs);
+    memory->destroy(reactions_gs);
+    memory->destroy(indices_gs);
+  }
   
   // PS chemistry
   
-  for (int i = 0; i < maxlist_ps; i++) {
-    for (int j = 0; j < rlist_ps[i].nreactant; j++) {
-      delete [] rlist_ps[i].id_reactants[j];
-      delete [] rlist_ps[i].state_reactants[j];
+  if (psflag) {
+    for (int i = 0; i < maxlist_ps; i++) {
+      for (int j = 0; j < rlist_ps[i].nreactant; j++) {
+        delete [] rlist_ps[i].id_reactants[j];
+        delete [] rlist_ps[i].state_reactants[j];
+      }
+      for (int j = 0; j < rlist_ps[i].nproduct; j++) {
+        delete [] rlist_ps[i].id_products[j];
+        delete [] rlist_ps[i].state_products[j];
+      }
+      delete [] rlist_ps[i].id_reactants;
+      delete [] rlist_ps[i].id_products;
+      delete [] rlist_ps[i].state_reactants;
+      delete [] rlist_ps[i].state_products;
+      delete [] rlist_ps[i].part_reactants;  
+      delete [] rlist_ps[i].part_products;
+      delete [] rlist_ps[i].stoich_reactants;  
+      delete [] rlist_ps[i].stoich_products;     
+      delete [] rlist_ps[i].reactants;
+      delete [] rlist_ps[i].products;
+      delete [] rlist_ps[i].reactants_ad_index;
+      delete [] rlist_ps[i].products_ad_index;
+      delete [] rlist_ps[i].coeff;
+      delete [] rlist_ps[i].id;
+      delete [] rlist_ps[i].cmodel_ip_flags;
+      delete [] rlist_ps[i].cmodel_ip_coeffs;
+      delete [] rlist_ps[i].cmodel_jp_flags;
+      delete [] rlist_ps[i].cmodel_jp_coeffs;
     }
-    for (int j = 0; j < rlist_ps[i].nproduct; j++) {
-      delete [] rlist_ps[i].id_products[j];
-      delete [] rlist_ps[i].state_products[j];
-    }
-    delete [] rlist_ps[i].id_reactants;
-    delete [] rlist_ps[i].id_products;
-    delete [] rlist_ps[i].state_reactants;
-    delete [] rlist_ps[i].state_products;
-    delete [] rlist_ps[i].part_reactants;  
-    delete [] rlist_ps[i].part_products;
-    delete [] rlist_ps[i].stoich_reactants;  
-    delete [] rlist_ps[i].stoich_products;     
-    delete [] rlist_ps[i].reactants;
-    delete [] rlist_ps[i].products;
-    delete [] rlist_ps[i].reactants_ad_index;
-    delete [] rlist_ps[i].products_ad_index;
-    delete [] rlist_ps[i].coeff;
-    delete [] rlist_ps[i].id;
-  }
-  memory->destroy(rlist_ps);
+    memory->destroy(rlist_ps);
   
-  // added PS particles
+    // added PS particles
 
-  memory->sfree(mypart);
-  memory->sfree(allpart);
-  memory->destroy(recvcounts);
-  memory->destroy(displs);
+    memory->sfree(mypart);
+    memory->sfree(allpart);
+    memory->destroy(recvcounts);
+    memory->destroy(displs);
+  }
   
   // surface collision models
 
@@ -356,11 +353,14 @@ void SurfReactAdsorb::create_per_face_state()
   memory->create(face_norm,nface,3,"face_norm");
 
   // initialize 4 state quantities and face normals
-  
+  // initialize face_species_delta for first time
+
   for (int iface = 0; iface < nface; iface++) {
     face_total_state[iface] = 0;
-    for (int isp = 0; isp < nspecies_surf; isp++)
+    for (int isp = 0; isp < nspecies_surf; isp++) {
       face_species_state[iface][isp] = 0;
+      face_species_delta[iface][isp] = 0;
+    }
 
     face_norm[iface][0] = face_norm[iface][1] = face_norm[iface][2] = 0.0;
     if (domain->dimension == 2) {
@@ -436,10 +436,15 @@ void SurfReactAdsorb::create_per_surf_state()
   surf_weight = surf->edvec[weight_direct];
 
   // local delta storage
-  
+  // initialize surf_species_delta for first time
+
   int nlocal = surf->nlocal;
   memory->create(surf_species_delta,nlocal,nspecies_surf,
                  "react/adsorb:surf_species_delta");
+
+  for (int isurf = 0; isurf < nlocal; isurf++)
+    for (int isp = 0; isp < nspecies_surf; isp++)
+      surf_species_delta[isurf][isp] = 0;
 
   // set ptrs used by react() and PS_react() to per-surf data structs
 
@@ -476,9 +481,9 @@ void SurfReactAdsorb::init()
 
   this_index = surf->find_react(id);
 
+
   // initialize GS and PS models
 
-  SurfReact::init();
   if (gsflag) init_reactions_gs();
 
   if (psflag) init_reactions_ps();
@@ -503,6 +508,25 @@ void SurfReactAdsorb::init()
       tau = surf->edarray[itau];
     }
   } 
+
+  // allocate tally vectors for first time now that nactive_ps is now known
+  // can then invoke init() in parent class
+
+  if (tallyflag == 0) {
+    tallyflag = 1;
+
+    nlist = 0;
+    if (gsflag) nlist += nlist_gs;
+    if (psflag) nlist += nactive_ps;
+    tally_single = new int[nlist];
+    tally_total = new int[nlist];
+    tally_single_all = new int[nlist];
+    tally_total_all = new int[nlist];
+
+    size_vector = 2 + 2*nlist;
+  }
+
+  SurfReact::init();
 
   // NOTE: should check that surf count has not changed since constructor
   //       b/c have lots of internal surf arrays
@@ -559,6 +583,10 @@ void SurfReactAdsorb::init()
 int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
                            Particle::OnePart *&jp)
 {
+  // just return if GS model not defined
+
+  if (!gsflag) return 0;
+
   // error checks 
 
   if (isurf < 0 && mode == SURF)
@@ -1012,8 +1040,11 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
 
 void SurfReactAdsorb::tally_update()
 {
+  // tally only the gas phase reactions
+
+  int nsingle_gs = nsingle;
   ntotal += nsingle;
-  for (int i = 0; i < nlist; i++) tally_total[i] += tally_single[i];
+  for (int i = 0; i < nlist_gs; i++) tally_total[i] += tally_single[i];
 
   // sync surface state across all procs
   // only done once every Nsync steps
@@ -1038,6 +1069,11 @@ void SurfReactAdsorb::tally_update()
   
   if (mode == FACE) update_state_face();
   else if (mode == SURF) update_state_surf();
+
+  // tally only the surf phase reactions
+  
+  ntotal += nsingle - nsingle_gs;
+  for (int i = nlist_gs; i < nlist; i++) tally_total[i] += tally_single[i];
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1134,6 +1170,7 @@ void SurfReactAdsorb::update_state_face()
   // new perspecies state = old perspecies state + summed delta
   // insure no counts < 0
   // new total state = sum of new perspecies state over species
+  // re-initialize species_delta, i.e. face_species_delta
 
   for (i = 0; i < nface; i++) {
     total_state[i] = 0;
@@ -1141,6 +1178,7 @@ void SurfReactAdsorb::update_state_face()
       species_state[i][j] += face_sum_delta[i][j];
       species_state[i][j] = MAX(0,species_state[i][j]);
       total_state[i] += species_state[i][j];
+      species_delta[i][j] = 0;
     }
   }
 }
@@ -1154,6 +1192,7 @@ void SurfReactAdsorb::update_state_surf()
   // incollate = array of deltas for surfs I marked
   // ntally = # of surfs I marked = # of rows in incollate
   // tally2surf = global surf index (1 to Nsurf) for each row of array
+  // re-initialize non-zero species_delta values, i.e. surf_species_delta
   
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
@@ -1180,7 +1219,7 @@ void SurfReactAdsorb::update_state_surf()
       ntally++;
     }
 
-  } else {
+  } else { 
     for (int i = 0; i < nlocal; i++) {
       isr = tris[i].isr;
       if (surf->sr[isr] != this) continue;
@@ -1194,8 +1233,10 @@ void SurfReactAdsorb::update_state_surf()
       }
 
       tally2surf[ntally] = i+1;
-      for (j = 0; j < nspecies_surf; j++)
-        incollate[ntally][j+1] = species_delta[i][j];
+      for (j = 0; j < nspecies_surf; j++) {
+        incollate[ntally][j] = species_delta[i][j];
+        species_delta[i][j] = 0;
+      }
       ntally++;
     }
   }
@@ -1210,7 +1251,8 @@ void SurfReactAdsorb::update_state_surf()
   //       since each proc may perform a collision with any surf
 
   for (i = 0; i < nlocal; i++)
-    for (j = 0; j < nspecies_surf; j++) intally[i][j] = 0;
+    for (j = 0; j < nspecies_surf; j++)
+      intally[i][j] = 0;
 
   m = 0;
   for (i = me; i < nlocal; i += nprocs) {
@@ -1613,6 +1655,9 @@ void SurfReactAdsorb::readfile_gs(char *fname)
       r->coeff[i] = input->numeric(FLERR,word);
     }
 
+    r->kisliuk_flag = 0;
+    r->energy_flag = 0;
+
     word = strtok(NULL," \t\n");
     while (word != NULL) { 
       if (strcmp(word,"kisliuk") == 0) {
@@ -1630,7 +1675,8 @@ void SurfReactAdsorb::readfile_gs(char *fname)
         if (r->type != CI) 
         {
           print_reaction(copy1,copy2);
-          error->all(FLERR,"Energy option can only be used to define the reaction rate constant in CI reaction");
+          error->all(FLERR,"Energy option can only be used to define "
+                     "the reaction rate constant in CI reaction");
         }
 
         r->energy_flag = 1;
@@ -1998,7 +2044,8 @@ void SurfReactAdsorb::readfile_gs(char *fname)
 
 char *SurfReactAdsorb::reactionID(int m)
 {
-  return rlist_gs[m].id;
+  if (m < nlist_gs) return rlist_gs[m].id;
+  return rlist_ps[m-nlist_gs].id;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -2186,7 +2233,7 @@ void SurfReactAdsorb::readfile_ps(char *fname)
           if (word[n-3] == 'c') {
             r->part_reactants[r->nreactant] = 0; 
             n--;
-            }
+          }
           if (word[n-3] != 's' && word[n-3] != 'b') {
             print_reaction(copy1,copy2); 
             error->all(FLERR,"Only adsorbed and bulk species can be "
@@ -2307,6 +2354,7 @@ void SurfReactAdsorb::readfile_ps(char *fname)
 
     // ERROR CHECKS
     // check that reactant/product counts are consistent with type
+
     if (r->nprod_g_tot > 2) 
     {
       print_reaction(copy1,copy2);
@@ -2548,7 +2596,6 @@ void SurfReactAdsorb::readfile_ps(char *fname)
   }
 
   if (me == 0) fclose(fp);
-  
 }
 
 /* ----------------------------------------------------------------------
@@ -2654,8 +2701,8 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
         //int react_num = r->index;
 
         nsingle++;
-        tally_single[2+nlist_gs+i]++;
-                
+        tally_single[nlist_gs+i]++;
+
         double t = -log(random->uniform())/nu_react[i];
         //tau[isurf][react_num] -= t;     
         tau[isurf][i] -= t;  

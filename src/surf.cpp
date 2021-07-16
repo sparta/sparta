@@ -3718,7 +3718,6 @@ int Surf::add_custom(char *name, int type, int size)
       ewhich[index] = ncustom_ivec++;
       eivec = (int **) 
         memory->srealloc(eivec,ncustom_ivec*sizeof(int *),"surf:eivec");
-      eivec[ncustom_ivec-1] = NULL;
       memory->grow(icustom_ivec,ncustom_ivec,"surf:icustom_ivec");
       icustom_ivec[ncustom_ivec-1] = index;
     } else {
@@ -3726,7 +3725,6 @@ int Surf::add_custom(char *name, int type, int size)
       eiarray = (int ***) 
         memory->srealloc(eiarray,ncustom_iarray*sizeof(int **),
                          "surf:eiarray");
-      eiarray[ncustom_iarray-1] = NULL;
       memory->grow(icustom_iarray,ncustom_iarray,"surf:icustom_iarray");
       icustom_iarray[ncustom_iarray-1] = index;
       memory->grow(eicol,ncustom_iarray,"surf:eicol");
@@ -3737,7 +3735,6 @@ int Surf::add_custom(char *name, int type, int size)
       ewhich[index] = ncustom_dvec++;
       edvec = (double **) 
         memory->srealloc(edvec,ncustom_dvec*sizeof(double *),"surf:edvec");
-      edvec[ncustom_dvec-1] = NULL;
       memory->grow(icustom_dvec,ncustom_dvec,"surf:icustom_dvec");
       icustom_dvec[ncustom_dvec-1] = index;
     } else {
@@ -3745,7 +3742,6 @@ int Surf::add_custom(char *name, int type, int size)
       edarray = (double ***) 
         memory->srealloc(edarray,ncustom_darray*sizeof(double **),
                          "surf:edarray");
-      edarray[ncustom_darray-1] = NULL;
       memory->grow(icustom_darray,ncustom_darray,"surf:icustom_darray");
       icustom_darray[ncustom_darray-1] = index;
       memory->grow(edcol,ncustom_darray,"surf:edcol");
@@ -3759,8 +3755,7 @@ int Surf::add_custom(char *name, int type, int size)
 }
 
 /* ----------------------------------------------------------------------
-   grow the vector/array associated with custom attribute with index
-   nold = old length, nnew = new length (typically maxlocal)
+   allocate vector/array associated with custom attribute with index
    set new values to 0 via memset()
 ------------------------------------------------------------------------- */
 
@@ -3768,28 +3763,22 @@ void Surf::allocate_custom(int index, int n)
 {
   if (etype[index] == INT) {
     if (esize[index] == 0) {
-      int *ivector = eivec[ewhich[index]];
-      memory->create(ivector,n,"surf:eivec");
+      int *ivector = memory->create(eivec[ewhich[index]],n,"surf:eivec");
       if (ivector) memset(ivector,0,n*sizeof(int));
-      eivec[ewhich[index]] = ivector;
     } else {
-      int **iarray = eiarray[ewhich[index]];
-      memory->create(iarray,n,esize[index],"surf:eiarray");
-      if (iarray) memset(&iarray[0][0],0,n*esize[index]*sizeof(int));
-      eiarray[ewhich[index]] = iarray;
+      int **iarray = memory->create(eiarray[ewhich[index]],
+                                    n,eicol[ewhich[index]],"surf:eiarray");
+      if (iarray) memset(&iarray[0][0],0,n*eicol[ewhich[index]]*sizeof(int));
     }
 
   } else {
     if (esize[index] == 0) {
-      double *dvector = edvec[ewhich[index]];
-      memory->create(dvector,n,"surf:edvec");
+      double *dvector = memory->create(edvec[ewhich[index]],n,"surf:edvec");
       if (dvector) memset(dvector,0,n*sizeof(double));
-      edvec[ewhich[index]] = dvector;
     } else {
-      double **darray = edarray[ewhich[index]];
-      memory->create(darray,n,esize[index],"surf:edarray");
-      if (darray) memset(&darray[0][0],0,n*esize[index]*sizeof(double));
-      edarray[ewhich[index]] = darray;
+      double **darray = memory->create(edarray[ewhich[index]],
+                                       n,edcol[ewhich[index]],"surf:eearray");
+      if (darray) memset(&darray[0][0],0,n*edcol[ewhich[index]]*sizeof(double));
     }
   }
 }

@@ -53,6 +53,7 @@ class SurfReactAdsorb : public SurfReact {
 
   int nspecies_surf;         // number of surface species
   char **species_surf;       // list of surface species
+  int tallyflag;             // 0 until tally vectors are allocated
 
   // mode = FACE for box faces
   // all this data is allocated here
@@ -146,7 +147,7 @@ class SurfReactAdsorb : public SurfReact {
  // PS (on-surf) reaction model
   
  struct OneReaction_PS {
-    char *id;                      // reaction ID (formula)
+    char *id;                          // reaction ID (formula)
     int index;                         // index of the reaction
     int active;                        // 1 if reaction is active
     int type;                          // reaction type = DISSOCIATION, etc
@@ -165,7 +166,6 @@ class SurfReactAdsorb : public SurfReact {
                                        // reactants and products
     double *coeff;                     // numerical coeffs for reaction
     double k_react;
-    //char *id;                          // reaction ID (formula)
     int cmodel_ip;                  // style for I's post-reaction surf collision
     int *cmodel_ip_flags;           // integer flags to pass to SC class
     double *cmodel_ip_coeffs;       // double coeffs to pass to SC class
