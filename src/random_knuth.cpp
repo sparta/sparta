@@ -98,6 +98,7 @@ double RanKnuth::uniform()
   mj = ma[inext] - ma[inextp];
   if (mj < 0) mj += MBIG;
   ma[inext] = mj;
+  if (mj*FAC == 0.0) return uniform();
   return mj*FAC;
 }
 
