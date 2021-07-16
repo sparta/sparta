@@ -138,11 +138,6 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
       value[ivalue] = TVIB;
       set_map(ivalue,ENGVIB);
       set_map(ivalue,DOFVIB);
-
-      if (particle->find_custom((char *) "vibmode") >= 0)
-        if (comm->me == 0)
-          error->warning(FLERR,"Using compute grid tvib with "
-           "fix vibmode may give incorrect temperature");
     } else if (strcmp(arg[iarg],"pxrho") == 0) {
       value[ivalue] = PXRHO;
       set_map(ivalue,MVX);
@@ -199,6 +194,11 @@ void ComputeGrid::init()
 {
   if (ngroup != particle->mixture[imix]->ngroup)
     error->all(FLERR,"Number of groups in compute grid mixture has changed");
+
+  if (particle->find_custom((char *) "vibmode") >= 0)
+    if (comm->me == 0)
+      error->warning(FLERR,"Using compute grid tvib with "
+                            "fix vibmode may give incorrect temperature");
 
   eprefactor = 0.5*update->mvv2e;
   tprefactor = update->mvv2e / (3.0*update->boltz);
