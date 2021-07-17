@@ -292,9 +292,8 @@ class Surf : protected Pointers {
     ubuf(int arg) : i(arg) {}
   };
 
-  // extra custom vectors/arrays for per-particle data
-  // ncustom > 0 if there are any extra arrays
-  // these varaiables are private, others above are public
+  // extra custom vectors/arrays for per-surf data
+  // these variables are private, others above are public
 
   char **ename;             // name of each attribute
 
@@ -313,6 +312,7 @@ class Surf : protected Pointers {
   int *custom_restart_flag; // flag on each custom vec/array read from restart
                             // used to delete them if not redefined in 
                             // restart script
+
   // private methods
 
   void point_line_compare(double *, double *, double *, double, int &, int &);
