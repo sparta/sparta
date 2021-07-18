@@ -3,7 +3,9 @@ import os
 import random
 from mpi4py import MPI
 from functools import cmp_to_key
-from parallel_bucket_sort import parallel_sort, flatten_list, sort_list
+from parallel_bucket_sort import parallel_sort, \
+    flatten_list, sort_list, parallel_sort_to_file_buckets, \
+        remove_file_buckets, get_bucket_file_name_for_rank
 from grid2paraview import SpartaGridFile
 
 GRID_FILE_200 = os.path.join(os.path.dirname(__file__),
@@ -19,7 +21,7 @@ class TestParallelBucketSort(unittest.TestCase):
     NUM_RANKS = COMM.Get_size()
     ROOT = 0
     MIN_NUM = 1
-    MAX_NUM = 1000
+    MAX_NUM = 100000
 
     def testSortDataInput(self):
         self.COMM.Barrier()
@@ -86,14 +88,38 @@ class TestParallelBucketSort(unittest.TestCase):
         self.sortGridFile(CIRCLE_GRID_FILE)
         self.sortGridFile(CIRCLE_GRID_FILE, use_file_buckets=True)
 
+    def testSpartaGridFile200SortToFileBuckets(self):
+        self.COMM.Barrier()
+        self.sortGridFileToFileBuckets(GRID_FILE_200)
+
+    def testSpartaCircleGridFileSortToFileBuckets(self):
+        self.COMM.Barrier()
+        self.sortGridFileToFileBuckets(CIRCLE_GRID_FILE)
+
+    def sortGridFileToFileBuckets(self, grid_file):
+        data = self.loadDataFromGridFile(grid_file)
+        parallel_sort_to_file_buckets(data,
+            SpartaGridFile.compare_dashed_ids, "test")
+        filename = get_bucket_file_name_for_rank(self.COMM.Get_rank(), "test")
+        result = []
+        with open(filename, 'r') as f:
+            for line in f:
+                result.append(line.strip())
+        sort_list(result, SpartaGridFile.compare_dashed_ids)
+        self.checkResult(data, result, SpartaGridFile.compare_dashed_ids)
+        remove_file_buckets("test")
+
     def sortGridFile(self, grid_file, use_file_buckets=False):
-        sgf = SpartaGridFile(grid_file)
-        sgf.set_iteration_start(self.RANK)
-        sgf.set_iteration_skip(self.NUM_RANKS)
-        data = [line for line in sgf]
+        data = self.loadDataFromGridFile(grid_file)
         self.checkResult(data, parallel_sort(data,
             SpartaGridFile.compare_dashed_ids, use_file_buckets),
                 SpartaGridFile.compare_dashed_ids)
+
+    def loadDataFromGridFile(self, grid_file):
+        sgf = SpartaGridFile(grid_file)
+        sgf.set_iteration_start(self.RANK)
+        sgf.set_iteration_skip(self.NUM_RANKS)
+        return [line for line in sgf]
 
     def checkResult(self, data, sorted_data, compare=None):
         self.COMM.Barrier()
@@ -106,7 +132,8 @@ class TestParallelBucketSort(unittest.TestCase):
             areEqual = all_data == all_sorted_data
         else:
             areEqual = None
-        self.assertTrue(self.COMM.bcast(areEqual, root = self.ROOT))
+        areEqual = self.COMM.bcast(areEqual, root = self.ROOT)
+        self.assertTrue(areEqual)
 
     def generateData(self, size):
         return [random.randint(self.MIN_NUM, self.MAX_NUM)
