@@ -156,6 +156,7 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
 
   nlist_ps = maxlist_ps = 0;
   rlist_ps = NULL;
+  reactions_ps_list = NULL;
   nactive_ps = 0;
   n_PS_react = 0;
 
@@ -277,6 +278,7 @@ SurfReactAdsorb::~SurfReactAdsorb()
       delete [] rlist_ps[i].cmodel_jp_coeffs;
     }
     memory->destroy(rlist_ps);
+    memory->destroy(reactions_ps_list);
   
     // added PS particles
 
@@ -520,7 +522,7 @@ void SurfReactAdsorb::init()
 
     nlist = 0;
     if (gsflag) nlist += nlist_gs;
-    if (psflag) nlist += nactive_ps;
+    if (psflag) nlist += nlist_ps;
     tally_single = new int[nlist];
     tally_total = new int[nlist];
     tally_single_all = new int[nlist];
@@ -817,7 +819,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
       }
     } 
     
-    sum_prob += prob_value[i];  
+    sum_prob += prob_value[i]; 
   }
     
   // NOTE: scatter_prob is always zero?
@@ -940,17 +942,69 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
 
       case DA:
         {
-          if (r->state_products[1][0] != 'g') {
-            ip = NULL;                
-          } else {                             
-            ip->ispecies = r->products[1];
-            if (r->cmodel_ip != NOMODEL) 
-              cmodels[r->cmodel_ip]->
-                wrapper(ip,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
+
+          if (r->nprod_g == 0) ip = NULL;
+          else {
+            int n = 1;
+            for (int j = 1; j < r->nproduct; j++) {
+              if (r->state_products[j][0] == 'g') {
+                if (n == 1) {
+                  n++;
+                  ip->ispecies = r->products[j];
+                  if (r->cmodel_ip != NOMODEL) cmodels[r->cmodel_ip]->wrapper(ip,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
+
+                  if (r->stoich_products[j] == 2) {
+                    double x[3],v[3];
+                    memcpy(x,ip->x,3*sizeof(double));
+                    memcpy(v,ip->v,3*sizeof(double));
+
+                    int id = MAXSMALLINT*random->uniform();
+                    Particle::OnePart *particles = particle->particles;
+
+                    int reallocflag = particle->add_particle(id,r->products[j],ip->icell,x,v,0.0,0.0);
+                    if (reallocflag) ip = particle->particles + (ip - particles);
+                    jp = &particle->particles[particle->nlocal-1];
+
+                    if (r->cmodel_ip != NOMODEL) cmodels[r->cmodel_ip]->wrapper(jp,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
+                  }
+
+                } else {
+                    double x[3],v[3];
+                    memcpy(x,ip->x,3*sizeof(double));
+                    memcpy(v,ip->v,3*sizeof(double));
+
+                    int id = MAXSMALLINT*random->uniform();
+                    Particle::OnePart *particles = particle->particles;
+
+                    int reallocflag = particle->add_particle(id,r->products[j],ip->icell,x,v,0.0,0.0);
+                    if (reallocflag) ip = particle->particles + (ip - particles);
+                    jp = &particle->particles[particle->nlocal-1];
+
+                    if (r->cmodel_jp != NOMODEL) cmodels[r->cmodel_jp]->wrapper(jp,norm,r->cmodel_jp_flags,r->cmodel_jp_coeffs);
+                }
+              }
+            }
           }
 
           if (r->cmodel_ip == NOMODEL) return 1;
           return 2;
+
+          /*
+          for (int j = 1; j < r->nproduct; j++) {
+          if (r->state_products[j][0] != 'g') {
+            ip = NULL;                
+          } else {                          
+            ip->ispecies = r->products[1];
+            if (r->cmodel_ip != NOMODEL) {
+              cmodels[r->cmodel_ip]->wrapper(ip,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
+              return 2;
+            }
+          }
+          //if (r->cmodel_ip == NOMODEL) return 1;
+          //return 2;
+          return 1;
+          */
+          
           break; 
         }
 
@@ -1217,8 +1271,10 @@ void SurfReactAdsorb::update_state_surf()
       }
 
       tally2surf[ntally] = i+1;
-      for (j = 0; j < nspecies_surf; j++)
+      for (j = 0; j < nspecies_surf; j++) {
         incollate[ntally][j] = species_delta[i][j];
+        species_delta[i][j] = 0; // SGK added
+      }
       ntally++;
     }
 
@@ -1811,12 +1867,12 @@ void SurfReactAdsorb::readfile_gs(char *fname)
         
     case DA:
       {
-        if (r->state_products[0][0] != 's') {
+        if (r->state_products[0][0] == 'g') {
           print_reaction(copy1,copy2);
           error->all(FLERR,
-                     "First product must be surface phase in DA reaction");
+                     "First product must be surface or bulk phase in DA reaction");
         }
-        
+        /*
         for (int i=2; i < r->nproduct; i++) {
           if (r->state_products[i][0] == 'g') {
             print_reaction(copy1,copy2);
@@ -1825,6 +1881,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
                        "in DA reaction");
           }
         }
+        */
         break;
       } 
       
@@ -2113,12 +2170,22 @@ void SurfReactAdsorb::init_reactions_ps()
 
   // count possible reactions for each species
   
-  int n = 0;
+
 
   for (int m = 0; m < nlist_ps; m++) {
     OneReaction_PS *r = &rlist_ps[m];
     if (!r->active) continue;
     nactive_ps++;
+  }
+
+  memory->destroy(reactions_ps_list);
+  memory->create(reactions_ps_list,nactive_ps,"surf_adsorb:reactions_ps_list");
+  int n = 0;
+
+  for (int m = 0; m < nlist_ps; m++) {
+    OneReaction_PS *r = &rlist_ps[m];
+    if (!r->active) continue;
+    reactions_ps_list[n] = m;
     n++;
   }
 }
@@ -2612,6 +2679,7 @@ void SurfReactAdsorb::readfile_ps(char *fname)
 void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
 {
   // mark this surface element since performing on-surf chemistry
+
   
   if (mode == SURF) mark[isurf] = 1;
 
@@ -2649,14 +2717,14 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
   int rxn_occur[nactive_ps]; 
   
   for (int i = 0; i < nactive_ps; i++) {
-    r = &rlist_ps[i];
+    r = &rlist_ps[reactions_ps_list[i]];
     //int react_num = r->index;
     rxn_occur[i] = 1;
     
     for (int j=0; j<r->nreactant; j++) {
-      if (species_state[isurf][r->reactants_ad_index[j]] < 
-          r->stoich_reactants[j]) 
-        rxn_occur[i] = 0;
+      if (r->state_reactants[j][0] == 's') {
+        if (species_state[isurf][r->reactants_ad_index[j]] < r->stoich_reactants[j]) rxn_occur[i] = 0;
+      }
     }
     //if (rxn_occur[i]) tau[isurf][react_num] += update->dt;
     if (rxn_occur[i]) tau[isurf][i] += update->dt*nsync;
@@ -2670,23 +2738,47 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
       nu_react[i] = 0.0;
       nu_tau[i] = 0;
       if (rxn_occur[i]) {
-        r = &rlist_ps[i];
+        r = &rlist_ps[reactions_ps_list[i]];
         //int react_num = r->index;
-        int factor_pow = -1;
-            
+        
+
         nu_react[i] = r->k_react;
+
+        if (r->type == SB) {
+          double surf_cover = total_state[isurf] * ms_inv;
+          nu_react[i] *= pow((1-surf_cover),r->stoich_reactants[0]);
+        } else {
+          int factor_pow = -1;
+          for (int j=0; j<r->nreactant; j++) {           
+          if (r->state_reactants[j][0] == 's') { 
+            factor_pow += r->stoich_reactants[j];            
+            if (r->part_reactants[j] == 0) { 
+              nu_react[i] *= stoich_pow(total_state[isurf],r->stoich_reactants[j]);   
+            } else {
+              nu_react[i] *= stoich_pow(species_state[isurf][r->reactants_ad_index[j]],r->stoich_reactants[j]);
+            }            
+          }
+        }
+
+
+        nu_react[i] *= pow(ms_inv,factor_pow);
+        }
+
+        /*
         for (int j=0; j<r->nreactant; j++) {
           nu_react[i] *= 
             stoich_pow(species_state[isurf][r->reactants_ad_index[j]],
                        r->stoich_reactants[j]);
           factor_pow += r->stoich_reactants[j];              
         }
-        nu_react[i] *= pow(ms_inv,factor_pow);
+        */
+
         //nu_tau[i] = MAX(floor(nu_react[i] * tau[isurf][react_num]),0);
         nu_tau[i] = MAX(floor(nu_react[i] * tau[isurf][i]),0);
         sum_nu_tau += nu_tau[i]; 
       }
     }
+
 
     if (sum_nu_tau == 0) break;
         
@@ -2700,15 +2792,16 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
       if (react_prob > random_prob) {
         check_break++;
          
-        r = &rlist_ps[i];
+        r = &rlist_ps[reactions_ps_list[i]];
         //int react_num = r->index;
 
         nsingle++;
-        tally_single[nlist_gs+i]++;
+        tally_single[nlist_gs+reactions_ps_list[i]]++;
 
         double t = -log(random->uniform())/nu_react[i];
         //tau[isurf][react_num] -= t;     
         tau[isurf][i] -= t;  
+
     
         for (int j=0;j<r->nreactant;j++) {
           if (r->part_reactants[j] == 1) {
@@ -2756,7 +2849,7 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
             random_point(isurf,x);
             v[0] = v[1] = v[2] = 0.0;
 	    
-	    particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
+	          particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
             p = &particle->particles[particle->nlocal-1];
             p->dtremain = update->dt*random->uniform(); 
             
@@ -2770,8 +2863,8 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
               surf->sc[isc]->wrapper(p,norm,NULL,NULL);
             }
 	    
-	    add_particle_mine(p);
-	    particle->nlocal--;
+	           add_particle_mine(p);
+	           particle->nlocal--;
 
             break;                      
           }
@@ -2831,12 +2924,13 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
               surf->sc[isc]->wrapper(p,norm,NULL,NULL);
             }
 
-	    add_particle_mine(p);
-	    particle->nlocal--;
+	          add_particle_mine(p);
+	          particle->nlocal--;
 	    
             break;
           }
         }
+
         break;
       }
     }
