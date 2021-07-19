@@ -53,7 +53,6 @@ class SurfReactAdsorb : public SurfReact {
 
   int nspecies_surf;         // number of surface species
   char **species_surf;       // list of surface species
-  int tallyflag;             // 0 until tally vectors are allocated
 
   // mode = FACE for box faces
   // all this data is allocated here

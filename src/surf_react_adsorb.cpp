@@ -179,12 +179,19 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
   if (gsflag) readfile_gs(arg[gs_filearg]);
   if (psflag) readfile_ps(arg[ps_filearg]);
 
-  // reaction tallies
-  // more setup is done in init() after nactive_ps is known
-  // this includes size_vector
+  // reaction tally setup
+
+  nlist = 0;
+  if (gsflag) nlist += nlist_gs;
+  if (psflag) nlist += nlist_ps;
+  tally_single = new int[nlist];
+  tally_total = new int[nlist];
+  tally_single_all = new int[nlist];
+  tally_total_all = new int[nlist];
+
+  size_vector = 2 + 2*nlist;
 
   nsingle = ntotal = 0;    
-  tallyflag = 0;
 
   // initialize RN generator
 
@@ -481,18 +488,18 @@ void SurfReactAdsorb::create_per_surf_state()
 
 void SurfReactAdsorb::init()
 {
+  SurfReact::init();
+
   // this_index = index of this instance of surf react/adsorb
   //              in Surf list of reaction models
 
   this_index = surf->find_react(id);
 
-
   // initialize GS and PS models
+  // for PS, this sets nactive_ps
 
   if (gsflag) init_reactions_gs();
-
   if (psflag) init_reactions_ps();
-  else nactive_ps = 0;
 
   // initialze tau only for PS models
 
@@ -513,25 +520,6 @@ void SurfReactAdsorb::init()
       tau = surf->edarray[itau];
     }
   } 
-
-  // allocate tally vectors for first time now that nactive_ps is now known
-  // can then invoke init() in parent class
-
-  if (tallyflag == 0) {
-    tallyflag = 1;
-
-    nlist = 0;
-    if (gsflag) nlist += nlist_gs;
-    if (psflag) nlist += nlist_ps;
-    tally_single = new int[nlist];
-    tally_total = new int[nlist];
-    tally_single_all = new int[nlist];
-    tally_total_all = new int[nlist];
-
-    size_vector = 2 + 2*nlist;
-  }
-
-  SurfReact::init();
 
   // NOTE: should check that surf count has not changed since constructor
   //       b/c have lots of internal surf arrays
@@ -1273,7 +1261,7 @@ void SurfReactAdsorb::update_state_surf()
       tally2surf[ntally] = i+1;
       for (j = 0; j < nspecies_surf; j++) {
         incollate[ntally][j] = species_delta[i][j];
-        species_delta[i][j] = 0; // SGK added
+        species_delta[i][j] = 0;
       }
       ntally++;
     }
@@ -2170,8 +2158,7 @@ void SurfReactAdsorb::init_reactions_ps()
 
   // count possible reactions for each species
   
-
-
+  nactive_ps = 0;
   for (int m = 0; m < nlist_ps; m++) {
     OneReaction_PS *r = &rlist_ps[m];
     if (!r->active) continue;
