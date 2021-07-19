@@ -179,6 +179,7 @@ class SurfReactAdsorb : public SurfReact {
   int maxlist_ps;                     // max # of reactions in rlist
 
   int nactive_ps;
+  int *reactions_ps_list;
   // SGK check
   int n_PS_react;
 
