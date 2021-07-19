@@ -5,12 +5,14 @@ import argparse
 import sys
 import os
 from grid2paraview import SpartaGridFile
-from parallel_bucket_sort import parallel_sort_to_file_buckets
+from parallel_bucket_sort import parallel_sort_to_file_buckets, \
+    is_rank_zero, get_comm_world, get_rank, get_size, error_found_on_rank_zero
 
 def main():
     args = parse_command_line()
     check_grid_file(args)
-    sort_grid_file_to_files(args)
+    grid_file_path = get_grid_file_path(args)
+    sort_grid_file_to_files(grid_file_path)
 
 def parse_command_line():
     if is_rank_zero():
@@ -22,22 +24,17 @@ def parse_command_line():
         return None
 
 def check_grid_file(args):
-    COMM = MPI.COMM_WORLD
-    error_detected = False
+    error_flag = False
     if is_rank_zero():
         try:
             sgf = SpartaGridFile(args.sparta_grid_file_path)
         except:
-            error_detected = True
-        error_detected = COMM.bcast(error_detected, root = 0)
-    else:
-        error_detected = COMM.bcast(error_detected, root = 0)
-         
-    if error_detected:
+            error_flag = True
+
+    if error_found_on_rank_zero(error_flag):
         sys.exit(1)
 
-def sort_grid_file_to_files(args):
-    grid_file_path = get_grid_file_path(args)
+def sort_grid_file_to_files(grid_file_path):
     cells = get_grid_file_cells(grid_file_path)
     prefix = get_grid_file_prefix(grid_file_path)
     if is_rank_zero():
@@ -48,20 +45,18 @@ def sort_grid_file_to_files(args):
         print("Finished parallel sort")
 
 def get_grid_file_path(args):
-    COMM = MPI.COMM_WORLD
     path = None
     if is_rank_zero():
         path = args.sparta_grid_file_path
-        path = COMM.bcast(path, root = 0)
+        path = get_comm_world().bcast(path, root = 0)
     else:
-        path = COMM.bcast(path, root = 0)
+        path = get_comm_world().bcast(path, root = 0)
     return path
 
 def get_grid_file_cells(grid_file_path):
-    COMM = MPI.COMM_WORLD
     sgf = SpartaGridFile(grid_file_path)
-    sgf.set_iteration_start(COMM.Get_rank())
-    sgf.set_iteration_skip(COMM.Get_size())
+    sgf.set_iteration_start(get_rank())
+    sgf.set_iteration_skip(get_size())
     if is_rank_zero():
         print("Reading Sparta grid file " + grid_file_path)
     cells = []
@@ -78,10 +73,6 @@ def get_grid_file_cells(grid_file_path):
 def get_grid_file_prefix(grid_file_path):
     no_suffix = os.path.splitext(grid_file_path)[0]
     return os.path.basename(no_suffix)
-
-def is_rank_zero():
-    COMM = MPI.COMM_WORLD
-    return COMM.Get_rank() == 0
 
 if __name__ == "__main__":
     main()

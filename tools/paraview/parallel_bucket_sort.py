@@ -20,10 +20,9 @@ def parallel_sort_to_file_buckets(data, compare=None, prefix=None):
     _write_file_buckets(pivots, data, compare, prefix)
 
 def _parallel_sort_init(data, compare):
-    COMM = MPI.COMM_WORLD
     _check_inputs(data, compare)
     pivots = _create_bucket_pivots(data, compare)
-    if COMM.Get_rank() == 0:
+    if is_rank_zero():
         print("Found " + str(len(pivots)) + " pivot(s) in sort data")
     return pivots
 
@@ -35,16 +34,14 @@ def _sort_with_file_buckets(pivots, data, compare):
     return result
 
 def _sort_with_memory_buckets(pivots, data, compare):
-    COMM = MPI.COMM_WORLD
     buckets = _create_buckets(pivots, data, compare)
-    if COMM.Get_rank() == 0:
+    if is_rank_zero():
         print("Created " + str(len(buckets)) + " bucket(s) from sort data")
     return _distribute_buckets(buckets, compare)
 
 def _gather_to_proc_zero_and_sort(data, compare):
-    COMM = MPI.COMM_WORLD
-    global_data = COMM.gather(data, root = 0)
-    if COMM.Get_rank() == 0:
+    global_data = get_comm_world().gather(data, root = 0)
+    if is_rank_zero():
         result = flatten_list(global_data)
         sort_list(result, compare)
         return result
@@ -52,11 +49,10 @@ def _gather_to_proc_zero_and_sort(data, compare):
         return []
 
 def _write_file_buckets(pivots, data, compare, prefix=None):
-    COMM = MPI.COMM_WORLD
     remove_file_buckets(prefix)
     buckets = _create_empty_bucket_list()
     buckets_size = 0
-    if COMM.Get_rank() == 0:
+    if is_rank_zero():
         print("Writing "  + str(len(buckets)) + " file bucket(s)")
     count = 1
     for element in data:
@@ -65,15 +61,14 @@ def _write_file_buckets(pivots, data, compare, prefix=None):
         if buckets_size > 1000000:
             _empty_buckets(buckets, prefix)
             buckets_size = 0
-        if COMM.Get_rank() == 0 and count % 100000 == 0:
+        if is_rank_zero() and count % 100000 == 0:
             print("Bucketed " + str(count) + " cell(s) of " + str(len(data)))
         count += 1
     _empty_buckets(buckets, prefix)
-    COMM.Barrier()
+    barrier()
 
 def _empty_buckets(buckets, prefix=None):
-    COMM = MPI.COMM_WORLD
-    if COMM.Get_rank() == 0:
+    if is_rank_zero():
         print("Emptying bucket(s)")
     for idx, b in enumerate(buckets):
         filename = get_bucket_file_name_for_rank(idx, prefix)
@@ -81,14 +76,13 @@ def _empty_buckets(buckets, prefix=None):
             for element in b:
                 f.write("%s\n" % element)
         del b[:]
-    if COMM.Get_rank() == 0:
+    if is_rank_zero():
         print("Finished emptying bucket(s)")
 
 def _read_file_bucket():
-    COMM = MPI.COMM_WORLD
-    filename = get_bucket_file_name_for_rank(COMM.Get_rank())
+    filename = get_bucket_file_name_for_rank(get_rank())
     result = []
-    if COMM.Get_rank() == 0:
+    if is_rank_zero():
         print("Reading file bucket(s)")
     with open(filename, 'r') as f:
         for line in f:
@@ -96,14 +90,13 @@ def _read_file_bucket():
     return result
 
 def remove_file_buckets(prefix=None):
-    COMM = MPI.COMM_WORLD
-    COMM.Barrier()
-    if COMM.Get_rank() == 0:
-        for rank in range(COMM.Get_size()):
+    barrier()
+    if is_rank_zero():
+        for rank in range(get_size()):
             filename = get_bucket_file_name_for_rank(rank, prefix)
             if os.path.exists(filename):
                 os.remove(filename)
-    COMM.Barrier()
+    barrier()
 
 def get_bucket_file_name_for_rank(rank, prefix=None):
     if prefix is not None:
@@ -112,14 +105,13 @@ def get_bucket_file_name_for_rank(rank, prefix=None):
         return "sort_bucket_rank_" + str(rank) + ".txt"
 
 def _distribute_buckets(buckets, compare):
-    COMM = MPI.COMM_WORLD
     result = []
     for idx, b in enumerate(buckets):
-        bucket_data = COMM.gather(b, root = idx)
-        if COMM.Get_rank() == idx:
+        bucket_data = get_comm_world().gather(b, root = idx)
+        if get_rank() == idx:
             result = flatten_list(bucket_data)
             sort_list(result, compare)
-        if COMM.Get_rank() == 0:
+        if is_rank_zero():
             print("Distributed buckets to rank " + str(idx))
     return result
 
@@ -130,8 +122,7 @@ def _create_buckets(pivots, data, compare):
     return buckets
 
 def _create_empty_bucket_list():
-    COMM = MPI.COMM_WORLD
-    return [[] for x in range(COMM.Get_size())]
+    return [[] for x in range(get_size())]
 
 def _put_element_in_bucket(element, pivots, buckets, compare):
     found_bucket = False
@@ -147,19 +138,18 @@ def _put_element_in_bucket(element, pivots, buckets, compare):
         buckets[-1].append(element)
 
 def _create_bucket_pivots(data, compare):
-    COMM = MPI.COMM_WORLD
     oversample_size = _get_oversample_size(data)
     local_samples = []
     if oversample_size <= len(data):
         local_samples = sample(data, oversample_size)
-    global_samples = flatten_list(COMM.allgather(local_samples))
+    global_samples = flatten_list(get_comm_world().allgather(local_samples))
     gs_length = len(global_samples)
-    if COMM.Get_size() == 1 or gs_length == 0 or \
-        gs_length != oversample_size*COMM.Get_size():
+    if get_size() == 1 or gs_length == 0 or \
+        gs_length != oversample_size*get_size():
         return []
     else:
         sort_list(global_samples, compare)
-        increment = int(gs_length/COMM.Get_size())
+        increment = int(gs_length/get_size())
         return list(global_samples[i] for i in range(increment, gs_length, increment))
 
 def _get_oversample_size(data):
@@ -170,8 +160,7 @@ def _get_oversample_size(data):
     return return_value
 
 def _get_total_data_size(data):
-    COMM = MPI.COMM_WORLD
-    return COMM.allreduce(len(data), op=MPI.SUM)
+    return get_comm_world().allreduce(len(data), op=MPI.SUM)
 
 def _check_inputs(data, compare):
     if type(data) is not list:
@@ -187,3 +176,21 @@ def sort_list(input_list, compare):
         input_list.sort(key=cmp_to_key(compare))
     else:
         input_list.sort()
+
+def is_rank_zero():
+    return get_comm_world().Get_rank() == 0
+
+def get_rank():
+    return get_comm_world().Get_rank()
+
+def get_size():
+    return get_comm_world().Get_size() 
+
+def barrier():
+    get_comm_world().Barrier()
+
+def error_found_on_rank_zero(error_flag):
+    return get_comm_world().bcast(error_flag, root = 0)
+
+def get_comm_world():
+    return MPI.COMM_WORLD
