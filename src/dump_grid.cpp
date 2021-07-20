@@ -384,6 +384,9 @@ int DumpGrid::parse_fields(int narg, char **arg)
     } else if (strcmp(arg[iarg],"idstr") == 0) {
       pack_choice[i] = &DumpGrid::pack_id;
       vtype[i] = STRING;
+    } else if (strcmp(arg[iarg],"split") == 0) {
+      pack_choice[i] = &DumpGrid::pack_split;
+      vtype[i] = INT;
     } else if (strcmp(arg[iarg],"proc") == 0) {
       pack_choice[i] = &DumpGrid::pack_proc;
       vtype[i] = INT;
@@ -717,6 +720,21 @@ void DumpGrid::pack_id(int n)
 
   for (int i = 0; i < ncpart; i++) {
     buf[n] = cells[cpart[i]].id;
+    n += size_one;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpGrid::pack_split(int n)
+{
+  Grid::ChildCell *cells = grid->cells;
+
+  for (int i = 0; i < ncpart; i++) {
+    // convert to human readable format:
+    //   split = 0: unsplit cell
+    //   split = 1..N: split cell index + 1
+    buf[n] = -cells[cpart[i]].nsplit + 1;
     n += size_one;
   }
 }
