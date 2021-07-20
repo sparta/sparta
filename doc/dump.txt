@@ -48,7 +48,7 @@ args = list of arguments for a particular style :l
 
       id = integer form of grid cell ID
       idstr = string form of grid cell ID
-      nsplit = integer, either 1 (unsplit cell) or negative sub cell ID
+      split = integer, either 0 (unsplit cell) or 1..N (split cell index + 1)
       proc = processor that owns grid cell
       xlo,ylo,zlo = coords of lower left corner of grid cell
       xhi,yhi,zhi = coords of lower left corner of grid cell

@@ -96,7 +96,7 @@ class DumpGrid : public Dump {
   void pack_variable(int);
 
   void pack_id(int);
-  void pack_nsplit(int);
+  void pack_split(int);
   void pack_proc(int);
 
   void pack_xlo(int);
