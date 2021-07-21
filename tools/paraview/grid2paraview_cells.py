@@ -107,8 +107,6 @@ def get_time_steps(args):
         result_file_list = get_time_steps_file_list(args)
         if result_file_list is not None:
             time_steps_dict = {}
-            if not result_file_list:
-                time_steps_dict[0] = []
             for f in result_file_list:
                 try:
                     fh = open(f, "r")
@@ -159,18 +157,24 @@ def get_time_steps_file_list(args):
     return time_steps_file_list
 
 def write_grid(unstructured_grid, program_data):
-    id_map = create_cell_global_id_to_local_id_map(unstructured_grid)
     writer = vtk.vtkXMLUnstructuredGridWriter()
     writer.SetInputData(unstructured_grid)
     time_steps = program_data["time_steps"]
     output_prefix = program_data["paraview_output_file"]
 
-    for time in sorted(time_steps.keys()):
-        read_time_step_data(time_steps[time], unstructured_grid, id_map)
-        filepath = os.path.join(output_prefix, output_prefix + '_' + \
-            str(get_rank()) + '_' + str(time) + '.vtu')
-        writer.SetFileName(filepath)
-        writer.Write()
+    if time_steps:
+        id_map = create_cell_global_id_to_local_id_map(unstructured_grid)
+        for time in sorted(time_steps.keys()):
+            read_time_step_data(time_steps[time], unstructured_grid, id_map)
+            write_grid_to_file(writer, output_prefix, time)
+    else:
+        write_grid_to_file(writer, output_prefix, 0)
+
+def write_grid_to_file(writer, output_prefix, time):
+    filepath = os.path.join(output_prefix, output_prefix + '_' + \
+        str(get_rank()) + '_' + str(time) + '.vtu')
+    writer.SetFileName(filepath)
+    writer.Write()
 
 def create_cell_global_id_to_local_id_map(unstructured_grid):
     id_map = {}
@@ -243,27 +247,36 @@ def write_pvd_file(program_data):
     fh.write('               byte_order="LittleEndian"\n')
     fh.write('               compressor="vtkZLibDataCompressor">\n')
     fh.write('   <Collection>    \n')
-    for time in sorted(time_steps.keys()):
-        fh.write('    <DataSet timestep="' + str(time) + '" group="" part="0"   \n')
-        filepath = os.path.join(output_prefix, output_prefix + '_'  + str(time) + '.pvtu')
-        fh.write('             file="' + filepath + '"/>\n')
+
+    if time_steps:
+        for time in sorted(time_steps.keys()):
+            array_names = []
+            file_list = time_steps[time]
+            if file_list:
+                try:
+                    afh = open(file_list[0], "r")
+                    array_names = get_array_names(afh)
+                    afh.close()
+                except IOError:
+                    print("Unable to open SPARTA result file: ", f)
+                    return
+            write_pvd_time_step(fh, time, array_names, output_prefix)
+    else:
         array_names = []
-        file_list = time_steps[time]
-        if file_list:
-            try:
-                afh = open(file_list[0], "r")
-                array_names = get_array_names(afh)
-                afh.close()
-            except IOError:
-                print("Unable to open SPARTA result file: ", f)
-                return
-        write_pvtu_file(array_names, time, program_data)
+        time = 0
+        write_pvd_time_step(fh, time, array_names, output_prefix)
+
     fh.write('   </Collection>    \n')
     fh.write('</VTKFile>    \n')
     fh.close()
 
-def write_pvtu_file(array_names, time, program_data):
-    output_prefix = program_data["paraview_output_file"]
+def write_pvd_time_step(file_handle, time, array_names, output_prefix):
+    file_handle.write('    <DataSet timestep="' + str(time) + '" group="" part="0"   \n')
+    filepath = os.path.join(output_prefix, output_prefix + '_'  + str(time) + '.pvtu')
+    file_handle.write('             file="' + filepath + '"/>\n')
+    write_pvtu_file(array_names, time, output_prefix)
+
+def write_pvtu_file(array_names, time, output_prefix):
     filepath = os.path.join(output_prefix, output_prefix + '_'  +\
         str(time) + '.pvtu')
     fh = open(filepath, "w")
