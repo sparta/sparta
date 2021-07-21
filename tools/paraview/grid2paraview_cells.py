@@ -19,8 +19,8 @@ def main():
     grid_desc = create_grid_description(args)
     time_steps = get_time_steps(args)
     program_data = distribute_program_data(args, grid_desc, time_steps)
-    unstructured_grid = create_grid(program_data)
-    write_grid(unstructured_grid, program_data)
+    (unstructured_grid, global_ids) = create_grid(program_data)
+    write_grid(unstructured_grid, global_ids, program_data)
     if is_rank_zero():
         write_pvd_file(program_data)
     barrier()
@@ -159,7 +159,7 @@ def get_time_steps_file_list(args):
             time_steps_file_list = None
     return time_steps_file_list
 
-def write_grid(unstructured_grid, program_data):
+def write_grid(unstructured_grid, global_ids, program_data):
     writer = vtk.vtkXMLUnstructuredGridWriter()
     writer.SetInputData(unstructured_grid)
     time_steps = program_data["time_steps"]
@@ -169,11 +169,12 @@ def write_grid(unstructured_grid, program_data):
         print("Writing grid over " + str(len(time_steps.keys())) + " time step(s)")
 
     if time_steps:
-        id_map = create_cell_global_id_to_local_id_map(unstructured_grid)
         for time in sorted(time_steps.keys()):
-            read_time_step_data(time_steps[time][0], unstructured_grid, id_map)
+            read_time_step_data(time_steps[time][0],
+                unstructured_grid, global_ids)
             write_grid_to_file(writer, output_prefix, time)
     else:
+        unstructured_grid.GetCellData().AddArray(global_ids)
         write_grid_to_file(writer, output_prefix, 0)
 
     if is_rank_zero():
@@ -185,16 +186,7 @@ def write_grid_to_file(writer, output_prefix, time):
     writer.SetFileName(filepath)
     writer.Write()
 
-def create_cell_global_id_to_local_id_map(unstructured_grid):
-    id_map = {}
-    gids = unstructured_grid.GetCellData().GetArray("GlobalIds")
-    if gids:
-        for i in range(gids.GetNumberOfTuples()):
-            id_map[int(gids.GetTuple1(i))] = i
-        unstructured_grid.GetCellData().RemoveArray("GlobalIds")
-    return id_map
-
-def read_time_step_data(file_name, unstructured_grid, id_hash):
+def read_time_step_data(file_name, unstructured_grid, global_ids):
     if is_rank_zero():
         print("Reading Sparta flow file " + file_name)
 
@@ -229,16 +221,17 @@ def read_time_step_data(file_name, unstructured_grid, id_hash):
     for val in array_names:
         arrays.append(unstructured_grid.GetCellData().GetArray(val))
 
-    count = 0
+    count = 1
     for line in fh:
         s = clean_line(line)
         sl = s.split()
         if len(sl) == len(array_names):
-            index = int(sl[id_index])
-            if index not in id_hash:
+            cell_id = int(sl[id_index])
+            cell_index = global_ids.LookupValue(vtk.vtkVariant(cell_id))
+            if cell_index < 0:
                 continue
             for idx, val in enumerate(array_names):
-                arrays[idx].SetValue(id_hash[index], float(sl[idx]))
+                arrays[idx].SetValue(cell_index, float(sl[idx]))
         else:
             print("Error reading SPARTA result file: ", f)
             print("Flow data line cannot be processed:  ", line)
@@ -368,14 +361,15 @@ def create_grid_from_grid_files(program_data):
     unstructured_grid = vtk.vtkUnstructuredGrid()
     unstructured_grid.SetPoints(merge_points.GetPoints())
     global_ids = vtk.vtkIdTypeArray()
-    global_ids.SetName("GlobalIds")
+    global_ids.SetName("id")
     count = 1
     if is_rank_zero():
         print("Started sorted grid file read")
         print("Creating grid")
     with open(get_bucket_file_name(get_rank(), program_data), 'r') as f:
         for cell_id in f:
-            cell = create_grid_cell(cell_id.strip(), sgf,
+            cell_id = cell_id.strip()
+            cell = create_grid_cell(cell_id, sgf,
                 program_data, merge_points)
             unstructured_grid.InsertNextCell(cell.GetCellType(),
                 cell.GetPointIds())
@@ -387,8 +381,7 @@ def create_grid_from_grid_files(program_data):
     if is_rank_zero():
         print("Finished sorted grid file read")
         print("Finished creating grid")
-    unstructured_grid.GetCellData().AddArray(global_ids)
-    return unstructured_grid
+    return (unstructured_grid, global_ids)
 
 def create_merge_points(program_data):
     merge_points = vtk.vtkMergePoints()
