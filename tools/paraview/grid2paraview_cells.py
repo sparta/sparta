@@ -23,6 +23,9 @@ def main():
     write_grid(unstructured_grid, program_data)
     if is_rank_zero():
         write_pvd_file(program_data)
+    barrier()
+    if is_rank_zero():
+        print("grid2paraview_cells finished")
 
 def parse_command_line():
     args = None
@@ -162,13 +165,19 @@ def write_grid(unstructured_grid, program_data):
     time_steps = program_data["time_steps"]
     output_prefix = program_data["paraview_output_file"]
 
+    if is_rank_zero():
+        print("Writing grid over " + str(len(time_steps.keys())) + " time step(s)")
+
     if time_steps:
         id_map = create_cell_global_id_to_local_id_map(unstructured_grid)
         for time in sorted(time_steps.keys()):
-            read_time_step_data(time_steps[time], unstructured_grid, id_map)
+            read_time_step_data(time_steps[time][0], unstructured_grid, id_map)
             write_grid_to_file(writer, output_prefix, time)
     else:
         write_grid_to_file(writer, output_prefix, 0)
+
+    if is_rank_zero():
+        print("Finished writing grid")
 
 def write_grid_to_file(writer, output_prefix, time):
     filepath = os.path.join(output_prefix, output_prefix + '_' + \
@@ -185,14 +194,11 @@ def create_cell_global_id_to_local_id_map(unstructured_grid):
         unstructured_grid.GetCellData().RemoveArray("GlobalIds")
     return id_map
 
-def read_time_step_data(time_step_file_list, unstructured_grid, id_hash):
-    for f in time_step_file_list:
-        try:
-            fh = open(f, "r")
-        except IOError:
-            print("Unable to open SPARTA result file: ", f)
-            return
+def read_time_step_data(file_name, unstructured_grid, id_hash):
+    if is_rank_zero():
+        print("Reading Sparta flow file " + file_name)
 
+    fh = open(file_name, "r")
     array_names = get_array_names(fh)
 
     id_index = 0
@@ -223,6 +229,7 @@ def read_time_step_data(time_step_file_list, unstructured_grid, id_hash):
     for val in array_names:
         arrays.append(unstructured_grid.GetCellData().GetArray(val))
 
+    count = 0
     for line in fh:
         s = clean_line(line)
         sl = s.split()
@@ -236,9 +243,17 @@ def read_time_step_data(time_step_file_list, unstructured_grid, id_hash):
             print("Error reading SPARTA result file: ", f)
             print("Flow data line cannot be processed:  ", line)
             return
+        if is_rank_zero() and count % 100000 == 0:
+            print("Read " + str(count) + " lines from flow file")
+        count += 1
+
     fh.close()
+    if is_rank_zero():
+        print("Finished reading Sparta flow file " + file_name)
 
 def write_pvd_file(program_data):
+    if is_rank_zero():
+        print("Writing pvd file")
     time_steps = program_data["time_steps"]
     output_prefix = program_data["paraview_output_file"]
     fh = open(output_prefix + ".pvd", "w")
@@ -269,6 +284,8 @@ def write_pvd_file(program_data):
     fh.write('   </Collection>    \n')
     fh.write('</VTKFile>    \n')
     fh.close()
+    if is_rank_zero():
+        print("Finished writing pvd file")
 
 def write_pvd_time_step(file_handle, time, array_names, output_prefix):
     file_handle.write('    <DataSet timestep="' + str(time) + '" group="" part="0"   \n')
