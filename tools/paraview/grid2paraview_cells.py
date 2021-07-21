@@ -11,21 +11,18 @@ import argparse
 import sys
 import os
 import vtk
+import glob
 
 def main():
     args = parse_command_line()
     check_command_line(args)
     grid_desc = create_grid_description(args)
-    program_data = distribute_program_data(args, grid_desc)
+    time_steps = get_time_steps(args)
+    program_data = distribute_program_data(args, grid_desc, time_steps)
     unstructured_grid = create_grid(program_data)
-
-    writer = vtk.vtkXMLUnstructuredGridWriter()
-    writer.SetInputData(unstructured_grid)
-    writer.SetFileName("grid_" + str(get_rank()) + ".vtu")
-    writer.Write()
-
-    print("rank " + str(get_rank()) + " has " + \
-        str(unstructured_grid.GetNumberOfCells()) + " cell(s)")
+    write_grid(unstructured_grid, program_data)
+    if is_rank_zero():
+        write_pvd_file(program_data)
 
 def parse_command_line():
     args = None
@@ -103,18 +100,220 @@ def create_grid_description(args):
 
     return grid_desc
 
-def distribute_program_data(args, grid_desc):
+def get_time_steps(args):
+    error_flag = False
+    time_steps_dict = None
+    if is_rank_zero():
+        result_file_list = get_time_steps_file_list(args)
+        if result_file_list is not None:
+            time_steps_dict = {}
+            if not result_file_list:
+                time_steps_dict[0] = []
+            for f in result_file_list:
+                try:
+                    fh = open(f, "r")
+                except IOError:
+                    print("Unable to open SPARTA result file: ", f)
+                    error_flag = True
+                    break
+
+                for line in fh:
+                    s = clean_line(line)
+                    if s.lower().replace(" ", "") == "item:timestep":
+                        for line in fh:
+                            time = int(line)
+                            if time in time_steps_dict.keys():
+                                time_steps_dict[time].append(f)
+                            else:
+                                time_steps_dict[time] = [f]
+                            break
+                    break
+                fh.close()
+        else:
+            error_flag = True
+
+    if error_found_on_rank_zero(error_flag):
+        sys.exit(1)
+
+    return time_steps_dict
+
+def clean_line(line):
+    line = line.partition('#')[0]
+    return line.strip()
+
+def get_time_steps_file_list(args):
+    time_steps_file_list = []
+    if args.result:
+        for f in args.result:
+            time_steps_file_list.extend(glob.glob(f))
+    elif args.resultfile:
+        try:
+            rf = open(args.resultfile, "r")
+            for name in rf:
+                time_steps_file_list.append(name.rstrip())
+            rf.close()
+        except IOError:
+            print("Unable to open SPARTA result file input list file: ",
+                args.resultfile)
+            time_steps_file_list = None
+    return time_steps_file_list
+
+def write_grid(unstructured_grid, program_data):
+    id_map = create_cell_global_id_to_local_id_map(unstructured_grid)
+    writer = vtk.vtkXMLUnstructuredGridWriter()
+    writer.SetInputData(unstructured_grid)
+    time_steps = program_data["time_steps"]
+    output_prefix = program_data["paraview_output_file"]
+
+    for time in sorted(time_steps.keys()):
+        read_time_step_data(time_steps[time], unstructured_grid, id_map)
+        filepath = os.path.join(output_prefix, output_prefix + '_' + \
+            str(get_rank()) + '_' + str(time) + '.vtu')
+        writer.SetFileName(filepath)
+        writer.Write()
+
+def create_cell_global_id_to_local_id_map(unstructured_grid):
+    id_map = {}
+    gids = unstructured_grid.GetCellData().GetArray("GlobalIds")
+    if gids:
+        for i in range(gids.GetNumberOfTuples()):
+            id_map[int(gids.GetTuple1(i))] = i
+        unstructured_grid.GetCellData().RemoveArray("GlobalIds")
+    return id_map
+
+def read_time_step_data(time_step_file_list, unstructured_grid, id_hash):
+    for f in time_step_file_list:
+        try:
+            fh = open(f, "r")
+        except IOError:
+            print("Unable to open SPARTA result file: ", f)
+            return
+
+    array_names = get_array_names(fh)
+
+    id_index = 0
+    try:
+        id_index = array_names.index('id')
+    except ValueError:
+        print("Error reading SPARTA result file: ", f)
+        print("id column not given in file.")
+        return
+
+    if not unstructured_grid.GetCellData().GetNumberOfArrays():
+        for name in array_names:
+            array = vtk.vtkDoubleArray()
+            array.SetName(name)
+            array.SetNumberOfComponents(1)
+            array.SetNumberOfTuples(unstructured_grid.GetNumberOfCells())
+            array.FillComponent(0, 0.0)
+            unstructured_grid.GetCellData().AddArray(array)
+
+    if unstructured_grid.GetCellData().GetNumberOfArrays() != len(array_names):
+        print("Error reading SPARTA result file: ", f)
+        print("Expected data columns:  ",
+            unstructured_grid.GetCellData().GetNumberOfArrays())
+        print("Found data columns:  ", len(array_names))
+        return
+
+    arrays = []
+    for val in array_names:
+        arrays.append(unstructured_grid.GetCellData().GetArray(val))
+
+    for line in fh:
+        s = clean_line(line)
+        sl = s.split()
+        if len(sl) == len(array_names):
+            index = int(sl[id_index])
+            if index not in id_hash:
+                continue
+            for idx, val in enumerate(array_names):
+                arrays[idx].SetValue(id_hash[index], float(sl[idx]))
+        else:
+            print("Error reading SPARTA result file: ", f)
+            print("Flow data line cannot be processed:  ", line)
+            return
+    fh.close()
+
+def write_pvd_file(program_data):
+    time_steps = program_data["time_steps"]
+    output_prefix = program_data["paraview_output_file"]
+    fh = open(output_prefix + ".pvd", "w")
+    fh.write('<?xml version="1.0"?>\n')
+    fh.write('<VTKFile type="Collection" version="0.1"\n')
+    fh.write('               byte_order="LittleEndian"\n')
+    fh.write('               compressor="vtkZLibDataCompressor">\n')
+    fh.write('   <Collection>    \n')
+    for time in sorted(time_steps.keys()):
+        fh.write('    <DataSet timestep="' + str(time) + '" group="" part="0"   \n')
+        filepath = os.path.join(output_prefix, output_prefix + '_'  + str(time) + '.pvtu')
+        fh.write('             file="' + filepath + '"/>\n')
+        array_names = []
+        file_list = time_steps[time]
+        if file_list:
+            try:
+                afh = open(file_list[0], "r")
+                array_names = get_array_names(afh)
+                afh.close()
+            except IOError:
+                print("Unable to open SPARTA result file: ", f)
+                return
+        write_pvtu_file(array_names, time, program_data)
+    fh.write('   </Collection>    \n')
+    fh.write('</VTKFile>    \n')
+    fh.close()
+
+def write_pvtu_file(array_names, time, program_data):
+    output_prefix = program_data["paraview_output_file"]
+    filepath = os.path.join(output_prefix, output_prefix + '_'  +\
+        str(time) + '.pvtu')
+    fh = open(filepath, "w")
+    fh.write('<?xml version="1.0"?>\n')
+    fh.write('<VTKFile type="PUnstructuredGrid" version="0.1"\n')
+    fh.write('               byte_order="LittleEndian"\n')
+    fh.write('               compressor="vtkZLibDataCompressor">\n')
+    fh.write('<PUnstructuredGrid GhostLevel="0">\n')
+    fh.write('<PCellData>\n')
+
+    for name in array_names:
+        fh.write('<PDataArray type="Float64" Name="' + name + '"/>\n')
+
+    fh.write('</PCellData>\n')
+    fh.write('<PPoints>\n')
+    fh.write('<PDataArray type="Float32" Name="Points" NumberOfComponents="3"/>\n')
+    fh.write('</PPoints>\n')
+
+    for rank in range(get_size()):
+        fh.write('<Piece Source="' + output_prefix + '_' + str(rank) + '_' + \
+            str(time) + '.vtu"/>\n')
+
+    fh.write('</PUnstructuredGrid>\n')
+    fh.write('</VTKFile>\n')
+
+def get_array_names(file_handle):
+    array_names = []
+    for line in file_handle:
+        s = clean_line(line)
+        if s.lower().replace(" ", "")[:10] == "item:cells":
+            for name in s.split()[2:]:
+                array_names.append(name)
+            break
+    return array_names
+
+def distribute_program_data(args, grid_desc, time_steps):
     pd = {}
     if is_rank_zero():
         pd["paraview_output_file"] = args.paraview_output_file
         pd["grid_desc"] = grid_desc
+        pd["time_steps"] = time_steps
     else:
         pd["paraview_output_file"] = None
         pd["grid_desc"] = None
+        pd["time_steps"] = None
 
     pd["paraview_output_file"] = get_comm_world().bcast(
         pd["paraview_output_file"], root = 0)
     pd["grid_desc"] = get_comm_world().bcast(pd["grid_desc"], root = 0)
+    pd["time_steps"] = get_comm_world().bcast(pd["time_steps"], root = 0)
     return pd
 
 def create_grid(program_data):
@@ -135,86 +334,91 @@ def exist_grid_file_files(program_data):
 def create_grid_from_grid_files(program_data):
     grid_file = program_data["grid_desc"]["read_grid"]
     sgf = SpartaGridFile(grid_file)
-    append = vtk.vtkAppendFilter()
-    append.MergePointsOn()
+    merge_points = create_merge_points(program_data)
+    unstructured_grid = vtk.vtkUnstructuredGrid()
+    unstructured_grid.SetPoints(merge_points.GetPoints())
+    global_ids = vtk.vtkIdTypeArray()
+    global_ids.SetName("GlobalIds")
     count = 1
     if is_rank_zero():
         print("Started sorted grid file read")
         print("Creating grid")
     with open(get_bucket_file_name(get_rank(), program_data), 'r') as f:
-        for cell in f:
-            ug_cell = create_unstructured_grid_cell(
-                cell.strip(), sgf, program_data)
-            append.AddInputData(ug_cell)
+        for cell_id in f:
+            cell = create_grid_cell(cell_id.strip(), sgf,
+                program_data, merge_points)
+            unstructured_grid.InsertNextCell(cell.GetCellType(),
+                cell.GetPointIds())
+            global_ids.InsertNextTuple1(
+                sgf.get_local_cell_id_from_dashed_cell_id(cell_id))
             if is_rank_zero() and count % 10000 == 0:
                 print("Read " + str(count) + " cells")
             count += 1
     if is_rank_zero():
         print("Finished sorted grid file read")
         print("Finished creating grid")
-    append.Update()
-    return append.GetOutput()
+    unstructured_grid.GetCellData().AddArray(global_ids)
+    return unstructured_grid
 
-def create_unstructured_grid_cell(cell_dashed_id, sgf, program_data):
+def create_merge_points(program_data):
+    merge_points = vtk.vtkMergePoints()
+    points = vtk.vtkPoints()
+    top_level_box = program_data['grid_desc']['create_box']
+    bounds = []
+    bounds.append(top_level_box['xlo'])
+    bounds.append(top_level_box['xhi'])
+    bounds.append(top_level_box['ylo'])
+    bounds.append(top_level_box['yhi'])
+    bounds.append(top_level_box['zlo'])
+    bounds.append(top_level_box['zhi'])
+    merge_points.InitPointInsertion(points, bounds)
+    return merge_points
+
+def create_grid_cell(cell_dashed_id, sgf, program_data, merge_points):
+
     if program_data['grid_desc']['dimension'] == 3:
-        return create_unstructured_grid_hex(cell_dashed_id, sgf, program_data)
+        return create_hex_cell(cell_dashed_id, sgf, program_data, merge_points)
     else:
-        return create_unstructured_grid_quad(cell_dashed_id, sgf, program_data)
+        return create_quad_cell(cell_dashed_id, sgf, program_data, merge_points)
 
-def create_unstructured_grid_hex(cell_dashed_id, sgf, program_data):
+def create_hex_cell(cell_dashed_id, sgf, program_data, merge_points):
     sgc = SpartaGridCell(cell_dashed_id, sgf, program_data)
-    ug = vtk.vtkUnstructuredGrid()
-    points = vtk.vtkPoints()
-    points.InsertNextPoint(sgc.origin_x, sgc.origin_y, sgc.origin_z)
-    points.InsertNextPoint(sgc.origin_x + sgc.length_x,
-        sgc.origin_y, sgc.origin_z)
-    points.InsertNextPoint(sgc.origin_x + sgc.length_x,
-        sgc.origin_y + sgc.length_y, sgc.origin_z)
-    points.InsertNextPoint(sgc.origin_x,
-        sgc.origin_y + sgc.length_y, sgc.origin_z)
-    points.InsertNextPoint(sgc.origin_x,
-        sgc.origin_y, sgc.origin_z + sgc.length_z)
-    points.InsertNextPoint(sgc.origin_x + sgc.length_x,
-        sgc.origin_y, sgc.origin_z + sgc.length_z)
-    points.InsertNextPoint(sgc.origin_x + sgc.length_x,
-        sgc.origin_y + sgc.length_y, sgc.origin_z + sgc.length_z)
-    points.InsertNextPoint(sgc.origin_x,
-        sgc.origin_y + sgc.length_y, sgc.origin_z + sgc.length_z)
-    ug.SetPoints(points)
-
     hex = vtk.vtkHexahedron()
-    for i in range(8):
-        hex.GetPointIds().SetId(i, i)
 
-    ug.InsertNextCell(hex.GetCellType(), hex.GetPointIds())
-    add_global_id(cell_dashed_id, sgf, ug)
-    return ug
+    hex.GetPointIds().SetId(0, merge_points.InsertNextPoint(
+        [sgc.origin_x, sgc.origin_y, sgc.origin_z]))
+    hex.GetPointIds().SetId(1, merge_points.InsertNextPoint(
+        [sgc.origin_x + sgc.length_x, sgc.origin_y, sgc.origin_z]))
+    hex.GetPointIds().SetId(2, merge_points.InsertNextPoint(
+        [sgc.origin_x + sgc.length_x, sgc.origin_y + sgc.length_y, sgc.origin_z]))
+    hex.GetPointIds().SetId(3, merge_points.InsertNextPoint(
+        [sgc.origin_x, sgc.origin_y + sgc.length_y, sgc.origin_z]))
+    hex.GetPointIds().SetId(4, merge_points.InsertNextPoint(
+        [sgc.origin_x, sgc.origin_y, sgc.origin_z + sgc.length_z]))
+    hex.GetPointIds().SetId(5, merge_points.InsertNextPoint(
+        [sgc.origin_x + sgc.length_x, sgc.origin_y, sgc.origin_z + sgc.length_z]))
+    hex.GetPointIds().SetId(6, merge_points.InsertNextPoint(
+        [sgc.origin_x + sgc.length_x, sgc.origin_y + sgc.length_y,
+            sgc.origin_z + sgc.length_z]))
+    hex.GetPointIds().SetId(7, merge_points.InsertNextPoint(
+        [sgc.origin_x, sgc.origin_y + sgc.length_y, sgc.origin_z + sgc.length_z]))
 
-def create_unstructured_grid_quad(cell_dashed_id, sgf, program_data):
+    return hex
+
+def create_quad_cell(cell_dashed_id, sgf, program_data, merge_points):
     sgc = SpartaGridCell(cell_dashed_id, sgf, program_data)
-    ug = vtk.vtkUnstructuredGrid()
-    points = vtk.vtkPoints()
-    points.InsertNextPoint(sgc.origin_x, sgc.origin_y, 0.0)
-    points.InsertNextPoint(sgc.origin_x + sgc.length_x, sgc.origin_y, 0.0)
-    points.InsertNextPoint(sgc.origin_x + sgc.length_x,
-        sgc.origin_y + sgc.length_y, 0.0)
-    points.InsertNextPoint(sgc.origin_x, sgc.origin_y + sgc.length_y, 0.0)
-    ug.SetPoints(points)
-
     quad = vtk.vtkQuad()
-    for i in range(4):
-        quad.GetPointIds().SetId(i, i)
 
-    ug.InsertNextCell(quad.GetCellType(), quad.GetPointIds())
-    add_global_id(cell_dashed_id, sgf, ug)
-    return ug
+    quad.GetPointIds().SetId(0, merge_points.InsertNextPoint(
+        [sgc.origin_x, sgc.origin_y, 0.0]))
+    quad.GetPointIds().SetId(1, merge_points.InsertNextPoint(
+        [sgc.origin_x + sgc.length_x, sgc.origin_y, 0.0]))
+    quad.GetPointIds().SetId(2, merge_points.InsertNextPoint(
+        [sgc.origin_x + sgc.length_x, sgc.origin_y + sgc.length_y, 0.0]))
+    quad.GetPointIds().SetId(3, merge_points.InsertNextPoint(
+        [sgc.origin_x, sgc.origin_y + sgc.length_y, 0.0]))
 
-def add_global_id(cell_dashed_id, sgf, unstructured_grid):
-    gids = vtk.vtkIdTypeArray()
-    gids.SetName("GlobalIds")
-    gids.InsertNextTuple1(sgf.get_local_cell_id_from_dashed_cell_id(
-        cell_dashed_id))
-    unstructured_grid.GetCellData().AddArray(gids)
+    return quad
 
 def get_bucket_file_name(rank, program_data):
     grid_file = program_data["grid_desc"]["read_grid"]
