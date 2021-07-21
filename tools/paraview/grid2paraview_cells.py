@@ -174,7 +174,6 @@ def write_grid(unstructured_grid, global_ids, program_data):
                 unstructured_grid, global_ids)
             write_grid_to_file(writer, output_prefix, time)
     else:
-        unstructured_grid.GetCellData().AddArray(global_ids)
         write_grid_to_file(writer, output_prefix, 0)
 
     if is_rank_zero():
