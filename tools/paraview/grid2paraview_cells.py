@@ -22,7 +22,7 @@ def main():
     (unstructured_grid, global_ids) = create_grid(program_data)
     write_grid(unstructured_grid, global_ids, program_data)
     if is_rank_zero():
-        write_pvd_file(program_data)
+        write_pvd_file(unstructured_grid, program_data)
     barrier()
     if is_rank_zero():
         print("grid2paraview_cells finished")
@@ -35,6 +35,11 @@ def parse_command_line():
             help="SPARTA grid description input file name")
         parser.add_argument("paraview_output_file",
             help="ParaView output file name")
+        parser.add_argument('-f', '--float', action='store_true',
+            help="Use float precision for flow file data (default is double)")
+        parser.add_argument('-v', '--variables', nargs='+', type=str,
+            help="Flow file variable names (f_1[2] f_1[3] f_1[4] etc.) to " +\
+                 "create (default creates all variables found in flow files)")
         group = parser.add_mutually_exclusive_group()
         group.add_argument('-r', '--result',
             help="Optional list of SPARTA dump result files", nargs='+')
@@ -171,7 +176,7 @@ def write_grid(unstructured_grid, global_ids, program_data):
     if time_steps:
         for time in sorted(time_steps.keys()):
             read_time_step_data(time_steps[time][0],
-                unstructured_grid, global_ids)
+                unstructured_grid, global_ids, program_data)
             write_grid_to_file(writer, output_prefix, time)
     else:
         write_grid_to_file(writer, output_prefix, 0)
@@ -185,12 +190,22 @@ def write_grid_to_file(writer, output_prefix, time):
     writer.SetFileName(filepath)
     writer.Write()
 
-def read_time_step_data(file_name, unstructured_grid, global_ids):
+def read_time_step_data(file_name, unstructured_grid, global_ids, program_data):
     if is_rank_zero():
         print("Reading Sparta flow file " + file_name)
 
+    variables = program_data["variables"]
     fh = open(file_name, "r")
     array_names = get_array_names(fh)
+
+    if variables is None:
+        variables = array_names
+    else:
+        for v in variables:
+            if not v in array_names:
+                print("Error: requested flow variable " + \
+                    v + " not in flow file " + file_name)
+                return
 
     id_index = 0
     try:
@@ -199,26 +214,6 @@ def read_time_step_data(file_name, unstructured_grid, global_ids):
         print("Error reading SPARTA result file: ", f)
         print("id column not given in file.")
         return
-
-    if not unstructured_grid.GetCellData().GetNumberOfArrays():
-        for name in array_names:
-            array = vtk.vtkDoubleArray()
-            array.SetName(name)
-            array.SetNumberOfComponents(1)
-            array.SetNumberOfTuples(unstructured_grid.GetNumberOfCells())
-            array.FillComponent(0, 0.0)
-            unstructured_grid.GetCellData().AddArray(array)
-
-    if unstructured_grid.GetCellData().GetNumberOfArrays() != len(array_names):
-        print("Error reading SPARTA result file: ", f)
-        print("Expected data columns:  ",
-            unstructured_grid.GetCellData().GetNumberOfArrays())
-        print("Found data columns:  ", len(array_names))
-        return
-
-    arrays = []
-    for val in array_names:
-        arrays.append(unstructured_grid.GetCellData().GetArray(val))
 
     count = 1
     for line in fh:
@@ -229,8 +224,9 @@ def read_time_step_data(file_name, unstructured_grid, global_ids):
             cell_index = global_ids.LookupValue(vtk.vtkVariant(cell_id))
             if cell_index < 0:
                 continue
-            for idx, val in enumerate(array_names):
-                arrays[idx].SetValue(cell_index, float(sl[idx]))
+            for v in variables:
+                array = unstructured_grid.GetCellData().GetArray(v)
+                array.SetValue(cell_index, float(sl[array_names.index(v)]))
         else:
             print("Error reading SPARTA result file: ", f)
             print("Flow data line cannot be processed:  ", line)
@@ -243,7 +239,7 @@ def read_time_step_data(file_name, unstructured_grid, global_ids):
     if is_rank_zero():
         print("Finished reading Sparta flow file " + file_name)
 
-def write_pvd_file(program_data):
+def write_pvd_file(unstructured_grid, program_data):
     if is_rank_zero():
         print("Writing pvd file")
     time_steps = program_data["time_steps"]
@@ -255,23 +251,14 @@ def write_pvd_file(program_data):
     fh.write('               compressor="vtkZLibDataCompressor">\n')
     fh.write('   <Collection>    \n')
 
+    array_names = get_array_names_on_unstructured_grid(unstructured_grid)
+    
     if time_steps:
         for time in sorted(time_steps.keys()):
-            array_names = []
-            file_list = time_steps[time]
-            if file_list:
-                try:
-                    afh = open(file_list[0], "r")
-                    array_names = get_array_names(afh)
-                    afh.close()
-                except IOError:
-                    print("Unable to open SPARTA result file: ", f)
-                    return
-            write_pvd_time_step(fh, time, array_names, output_prefix)
+            write_pvd_time_step(fh, time, array_names, program_data)
     else:
-        array_names = []
         time = 0
-        write_pvd_time_step(fh, time, array_names, output_prefix)
+        write_pvd_time_step(fh, time, array_names, program_data)
 
     fh.write('   </Collection>    \n')
     fh.write('</VTKFile>    \n')
@@ -279,13 +266,16 @@ def write_pvd_file(program_data):
     if is_rank_zero():
         print("Finished writing pvd file")
 
-def write_pvd_time_step(file_handle, time, array_names, output_prefix):
+def write_pvd_time_step(file_handle, time, array_names, program_data):
+    output_prefix = program_data["paraview_output_file"]
     file_handle.write('    <DataSet timestep="' + str(time) + '" group="" part="0"   \n')
     filepath = os.path.join(output_prefix, output_prefix + '_'  + str(time) + '.pvtu')
     file_handle.write('             file="' + filepath + '"/>\n')
-    write_pvtu_file(array_names, time, output_prefix)
+    write_pvtu_file(time, array_names, program_data)
 
-def write_pvtu_file(array_names, time, output_prefix):
+def write_pvtu_file(time, array_names, program_data):
+    output_prefix = program_data["paraview_output_file"]
+    use_float = program_data["float"]
     filepath = os.path.join(output_prefix, output_prefix + '_'  +\
         str(time) + '.pvtu')
     fh = open(filepath, "w")
@@ -297,7 +287,10 @@ def write_pvtu_file(array_names, time, output_prefix):
     fh.write('<PCellData>\n')
 
     for name in array_names:
-        fh.write('<PDataArray type="Float64" Name="' + name + '"/>\n')
+        if use_float:
+            fh.write('<PDataArray type="Float32" Name="' + name + '"/>\n')
+        else:
+            fh.write('<PDataArray type="Float64" Name="' + name + '"/>\n')
 
     fh.write('</PCellData>\n')
     fh.write('<PPoints>\n')
@@ -325,15 +318,21 @@ def distribute_program_data(args, grid_desc, time_steps):
     pd = {}
     if is_rank_zero():
         pd["paraview_output_file"] = args.paraview_output_file
+        pd["float"] = args.float
+        pd["variables"] = args.variables
         pd["grid_desc"] = grid_desc
         pd["time_steps"] = time_steps
     else:
         pd["paraview_output_file"] = None
+        pd["float"] = None
+        pd["variables"] = None
         pd["grid_desc"] = None
         pd["time_steps"] = None
 
     pd["paraview_output_file"] = get_comm_world().bcast(
         pd["paraview_output_file"], root = 0)
+    pd["float"] = get_comm_world().bcast(pd["float"], root = 0)
+    pd["variables"] = get_comm_world().bcast(pd["variables"], root = 0)
     pd["grid_desc"] = get_comm_world().bcast(pd["grid_desc"], root = 0)
     pd["time_steps"] = get_comm_world().bcast(pd["time_steps"], root = 0)
     return pd
@@ -359,6 +358,7 @@ def create_grid_from_grid_files(program_data):
     merge_points = create_merge_points(program_data)
     unstructured_grid = vtk.vtkUnstructuredGrid()
     unstructured_grid.SetPoints(merge_points.GetPoints())
+    init_flow_file_arrays(unstructured_grid, program_data)
     global_ids = vtk.vtkIdTypeArray()
     global_ids.SetName("id")
     count = 1
@@ -374,6 +374,7 @@ def create_grid_from_grid_files(program_data):
                 cell.GetPointIds())
             global_ids.InsertNextTuple1(
                 sgf.get_local_cell_id_from_dashed_cell_id(cell_id))
+            insert_value_in_flow_file_arrays(0.0, unstructured_grid)
             if is_rank_zero() and count % 10000 == 0:
                 print("Read " + str(count) + " cells")
             count += 1
@@ -381,6 +382,37 @@ def create_grid_from_grid_files(program_data):
         print("Finished sorted grid file read")
         print("Finished creating grid")
     return (unstructured_grid, global_ids)
+
+def init_flow_file_arrays(unstructured_grid, program_data):
+    time_steps = program_data["time_steps"]
+    use_float = program_data["float"]
+    variables = program_data["variables"]
+
+    if variables is None and time_steps:
+        key = sorted(time_steps.keys())[0]
+        fh = open(time_steps[key][0], "r")
+        variables = get_array_names(fh)
+        fh.close()
+
+    if variables is not None:
+        for v in variables:
+            if use_float:
+                array = vtk.vtkFloatArray()
+            else:
+                array = vtk.vtkDoubleArray()
+            array.SetName(v)
+            unstructured_grid.GetCellData().AddArray(array)
+
+def insert_value_in_flow_file_arrays(value, unstructured_grid):
+    for i in range(unstructured_grid.GetCellData().GetNumberOfArrays()):
+        array = unstructured_grid.GetCellData().GetArray(i)
+        array.InsertNextTuple1(value)
+
+def get_array_names_on_unstructured_grid(unstructured_grid):
+    array_names = []
+    for i in range(unstructured_grid.GetCellData().GetNumberOfArrays()):
+        array_names.append(unstructured_grid.GetCellData().GetArrayName(i))
+    return array_names
 
 def create_merge_points(program_data):
     merge_points = vtk.vtkMergePoints()
