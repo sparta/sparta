@@ -221,12 +221,12 @@ def read_time_step_data(file_name, unstructured_grid, global_ids, program_data):
         sl = s.split()
         if len(sl) == len(array_names):
             cell_id = int(sl[id_index])
-            cell_index = global_ids.LookupValue(vtk.vtkVariant(cell_id))
-            if cell_index < 0:
+            if cell_id not in global_ids:
                 continue
             for v in variables:
                 array = unstructured_grid.GetCellData().GetArray(v)
-                array.SetValue(cell_index, float(sl[array_names.index(v)]))
+                array.SetValue(global_ids[cell_id],
+                    float(sl[array_names.index(v)]))
         else:
             print("Error reading SPARTA result file: ", f)
             print("Flow data line cannot be processed:  ", line)
@@ -354,13 +354,13 @@ def exist_grid_file_files(program_data):
 
 def create_grid_from_grid_files(program_data):
     grid_file = program_data["grid_desc"]["read_grid"]
+    time_steps = program_data["time_steps"]
     sgf = SpartaGridFile(grid_file)
     merge_points = create_merge_points(program_data)
     unstructured_grid = vtk.vtkUnstructuredGrid()
     unstructured_grid.SetPoints(merge_points.GetPoints())
     init_flow_file_arrays(unstructured_grid, program_data)
-    global_ids = vtk.vtkIdTypeArray()
-    global_ids.SetName("id")
+    global_ids = {}
     count = 1
     if is_rank_zero():
         print("Started sorted grid file read")
@@ -370,10 +370,11 @@ def create_grid_from_grid_files(program_data):
             cell_id = cell_id.strip()
             cell = create_grid_cell(cell_id, sgf,
                 program_data, merge_points)
-            unstructured_grid.InsertNextCell(cell.GetCellType(),
-                cell.GetPointIds())
-            global_ids.InsertNextTuple1(
-                sgf.get_local_cell_id_from_dashed_cell_id(cell_id))
+            unstructured_grid.InsertNextCell(
+                cell.GetCellType(), cell.GetPointIds())
+            if time_steps:
+                lcid = sgf.get_local_cell_id_from_dashed_cell_id(cell_id)
+                global_ids[lcid] = count-1
             insert_value_in_flow_file_arrays(0.0, unstructured_grid)
             if is_rank_zero() and count % 10000 == 0:
                 print("Read " + str(count) + " cells")
