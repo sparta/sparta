@@ -69,7 +69,7 @@ enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 // both kinds of chemistry
 
 enum{GS,PS,GSPS};
-enum{SIMPLE,ARRHENIUS,PARTICULAR};                       // type of reaction
+enum{SIMPLE,ARRHENIUS};                       // type of reaction
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};           // several files
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 
@@ -621,7 +621,10 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
   OneReaction_GS *r;
   double prob_value[n], sum_prob = 0.0;
   double scatter_prob = 0.0, correction = 1.0;
-  int check_ads = 0, ads_index = -1;
+  //int check_ads = 0, ads_index = -1;
+
+  int coeff_val = 1;
+  if (r->style == ARRHENIUS) coeff_val = 3;
 
   for (int i = 0; i < n; i++) {
     r = &rlist_gs[list[i]];
@@ -650,8 +653,8 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
       
     case AA:
       {         
-        check_ads = 1;
-        ads_index = i;
+        //check_ads = 1;
+        //ads_index = i;
         double surf_cover = total_state[isurf] * ms_inv;
         double S_theta = 0.0;
 
@@ -661,14 +664,15 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           exp(-r->kisliuk_coeff[2]/twall);
           if (surf_cover < 1) 
             S_theta = pow((1 - surf_cover)/(1 - surf_cover + 
-                                            K_ads*surf_cover),r->coeff[3]);
+                                            K_ads*surf_cover),r->coeff[coeff_val]);
         }
         else
         {
-          S_theta = pow((1-surf_cover),r->coeff[3]);
+          S_theta = pow((1-surf_cover),r->coeff[coeff_val]);
         }
-        scatter_prob = 1 - r->k_react*S_theta;
-        prob_value[i] = 1.0;
+        //scatter_prob = 1 - r->k_react*S_theta;
+        //prob_value[i] = 1.0;
+        prob_value[i] = r->k_react*S_theta;
         break;
       }
         
@@ -682,9 +686,9 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
             exp(-r->kisliuk_coeff[2]/twall);
           if (surf_cover < 1) 
             S_theta = pow((1 - surf_cover)/(1 - surf_cover + 
-                                            K_ads*surf_cover),r->coeff[3]);
+                                            K_ads*surf_cover),r->coeff[coeff_val]);
         } else {
-          S_theta = pow((1-surf_cover),r->coeff[3]);
+          S_theta = pow((1-surf_cover),r->coeff[coeff_val]);
         }
 
         prob_value[i] = r->k_react*S_theta;
@@ -711,9 +715,9 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
             exp(-r->kisliuk_coeff[2]/twall);
           if (surf_cover < 1) 
             S_theta = pow((1 - surf_cover)/(1 - surf_cover + 
-                                            K_ads*surf_cover),r->coeff[3]);
+                                            K_ads*surf_cover),r->coeff[coeff_val]);
         } else {
-          S_theta = pow((1-surf_cover),r->coeff[3]);
+          S_theta = pow((1-surf_cover),r->coeff[coeff_val]);
         }
 
         prob_value[i] = r->k_react*S_theta;
@@ -730,9 +734,9 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
             exp(-r->kisliuk_coeff[2]/twall);
           if (surf_cover < 1) 
             S_theta = pow((1 - surf_cover)/(1 - surf_cover + 
-                                            K_ads*surf_cover),r->coeff[3]);
+                                            K_ads*surf_cover),r->coeff[coeff_val]);
         } else {
-          S_theta = pow((1-surf_cover),r->coeff[3]);
+          S_theta = pow((1-surf_cover),r->coeff[coeff_val]);
         }
 
         prob_value[i] = r->k_react*S_theta;
@@ -749,9 +753,9 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
             exp(-r->kisliuk_coeff[2]/twall);
           if (surf_cover < 1) 
             S_theta = pow((1 - surf_cover)/(1 - surf_cover + 
-                                            K_ads*surf_cover),r->coeff[3]);
+                                            K_ads*surf_cover),r->coeff[coeff_val]);
         } else {
-          S_theta = pow((1-surf_cover),r->coeff[3]);
+          S_theta = pow((1-surf_cover),r->coeff[coeff_val]);
         }
 
         prob_value[i] = r->k_react*S_theta;
@@ -830,8 +834,10 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
   } else if (sum_prob > 1.0) correction = 1.0/sum_prob;
   */
 
-  //if (sum_prob > 1.0) correction = 1.0/sum_prob;
-  if (sum_prob > (1.0-scatter_prob)) correction = (1.0-scatter_prob) / sum_prob;
+  if (sum_prob > 1.0) correction = 1.0/sum_prob;
+  else scatter_prob = 1.0 - sum_prob;
+  
+  //if (sum_prob > (1.0-scatter_prob)) correction = (1.0-scatter_prob) / sum_prob;
 
   // probablity to compare to reaction probability
 

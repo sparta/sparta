@@ -17,7 +17,7 @@
 </PRE>
 <UL><LI>ID = user-assigned name for the surface reaction model 
 
-<LI>style = <I>global</I> or <I>prob</I> 
+<LI>style = <I>global</I> or <I>prob</I> or <I>adsorb</I> 
 
 <LI>args = arguments for that style 
 
@@ -26,13 +26,28 @@
     pcreate = probability that surface collision clones the incident particle
   <I>prob</I> args = infile
     infile = file with list of surface chemistry reactions 
+  <I>adsorb</I> args = <I>model</I> infile(s) nsync <I>type</I> temp n_sites ad_species   
+    <I>model</I> can be gs or ps or gs/ps
+      <I>gs</I> = gas-surface reactions
+      <I>ps</I> = pure-surface reactions
+      <I>gs/ps</I> = both gas-surface and pure-surface reactions
+    infile(s) = file with list of surface chemistry reactions. Two files are required as input for the gs/ps option
+    nsync value = Nstep = sync across all the processors and perform PS reactions every this many timesteps
+    <I>type</I> is the type of surface for which the reactions are defined - can be <I>face</I> or <I>surf</I>
+      <I>face</I> = domain boundary modified to be a surface
+      <I>surf</I> = surface element - triangles in 3D, lines in 2D 
+    temp = temperature of the surface
+    n_sites = number of available adsorption sites per unit area (3D) or length (2D)
+    ad_species = list of species that can adsorb on this surface 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
 <PRE>surf_react global 0.2 0.15
-surf_react prob air.surf 
+surf_react prob air.surf  
+surf_react adsorb gs gs_react.surf nsync 10 surf 1000 6.022e18 O CO
+surf_react adsorb gs/ps gs_react.surf ps_react.surf nsync 1 face 300 3e9 O 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -158,6 +173,14 @@ C2, etc, and how they are interpreted by SPARTA.
 </UL>
 <HR>
 
+<P>For the <I>adsorb</I> style, particles are allowed to adsorb on the surface. 
+These adsorbed particles can undergo reactions with other adsorbed particles 
+as well as the gas-phase particles that strike the surface. A detailed 
+description of the <I>adsorb</I> style and the list of reactions within it can be
+found in <A HREF = "surf_react_adsorb.html">surf_react_adsorb</A>
+</P>
+<HR>
+
 <P>If the ambipolar approximation is being used, via the <A HREF = "fix_ambipolar.hmtl">fix
 ambipolar</A> command, then reactions which involve
 either ambipolar ions or the ambipolar electron have more restricitve
@@ -189,10 +212,12 @@ e.g. "the <A HREF = "fix_ave_time.html">fix ave/time</A> command.  See <A HREF =
 4.4</A> for an overview of SPARTA output
 options.
 </P>
-<P>The <I>global</I> and <I>prob</I> styles each compute a vector of length 2 +
+<P>The <I>global</I>, <I>prob</I>, and <I>adsorb</I> styles each compute a vector of length 2 +
 2*nlist.  For the <I>global</I> style, nlist = 2, for "delete" and "create"
 reactions.  For the <I>prob</I> style, nlist is the number of reactions
-listed in the file is read as input.
+listed in the file is read as input. For the <I>adsorb</I> style, nlist 
+is the sum of both the gas-surface and pure-surface reactions listed 
+in the file is read as input.
 </P>
 <P>The first element of the vector is the count of particles that
 performed surface reactions for surface elements assigned to this
@@ -210,7 +235,8 @@ reaction since the beginning of the current run.
 <P><B>Related commands:</B>
 </P>
 <P><A HREF = "react.html">react</A>, <A HREF = "surf_modify.html">surf_modify</A>,
-<A HREF = "bound_modify.html">bound_modify</A>
+<A HREF = "bound_modify.html">bound_modify</A>,
+<A HREF = "surf_react_adsorb.html">surf_react_adsorb</A>
 </P>
 <P><B>Default:</B> none
 </P>
