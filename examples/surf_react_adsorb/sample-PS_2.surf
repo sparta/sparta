@@ -1,0 +1,28 @@
+
+####################### PS method ########################################
+
+#DS reaction 
+O(s) --> O(g)
+DS  A  0.050457  2  3177.17
+td  300.0
+
+#DS reaction 
+CO(s) --> CO(g)
+DS  A  1e3 0 0
+td  300.0
+
+#LH2 reaction 
+2O(s) + C(b) --> CO2(g)
+LH2  A  1e14 0 0
+td  300.0
+
+#LH4 reaction 
+O(s) + C(b) --> CO(s)
+LH4  A  1e2 0 0
+
+##########################################
+
+#SB reaction
+C(b) --> C(g)
+SB  A  1e2 0 0 
+td  300.0
