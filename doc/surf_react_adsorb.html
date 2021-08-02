@@ -274,9 +274,9 @@ by SPARTA.
 </PRE>
 <P>For A = Arrhenius style, there are three coefficients:
 </P>
-<PRE>A = pre-expoential factor 
-b = temperature exponent 
-Ea = activation energy for the reaction 
+<PRE>  A = pre-expoential factor 
+  b = temperature exponent 
+  Ea = activation energy for the reaction 
 </PRE>
 <P>The reaction rate constant is calculated in the following manner: 
 </P>
@@ -287,18 +287,17 @@ LH3, and CD; the user must specify the number of species that adsorb
 on the surface for the reaction as a argument after the reaction rate
 coefficients
 </P>
-Additional optional keywords for GS reactions can be used to define
+<P>Additional optional keywords for GS reactions can be used to define
 the reaction rate constant.  These are <I>kisliuk</I>: proposed by Kisliuk
 <A HREF = "#Kisliuk57">(Kisliuk57)</A>; and <I>energy</I>: proposed by Beckerle <I>et al.</I>
-<A HREF = "#Beckerle89">(Beckerle89)</A>; options 
+<A HREF = "#Beckerle89">(Beckerle89)</A>.
+</P>
+<I>kisliuk</I> args = A_k B_k Ea_k (only for reactions which includes adsorption - AA, DA, LH1, LH3, and CD) 
 <BR>
-<PRE><I>kisliuk</I> args = A_k B_k Ea_k (only for reactions which includes adsorption - AA, DA, LH1, LH3, and CD)
-    <I>A_k</I> = pre-expoential factor
-    <I>B_k</I> = temperature exponent
-    <I>Ea_k</I> = activation energy for the adsorption 
+<PRE>  <I>A_k</I> = pre-expoential factor
+  <I>B_k</I> = temperature exponent
+  <I>Ea_k</I> = activation energy for the adsorption 
 </PRE>
-
-</UL>
 <CENTER><IMG SRC = "Eqs/k_kisliuk.png">
 </CENTER>
 <I>energy</I> args = m n (only for CI) 
@@ -306,8 +305,6 @@ the reaction rate constant.  These are <I>kisliuk</I>: proposed by Kisliuk
 <PRE>  <I>m</I> = energy exponent
   <I>n</I> = polar angle exponent 
 </PRE>
-
-</UL>
 <CENTER><IMG SRC = "Eqs/k_energy.png">
 </CENTER>
 <P>The final rate of the reaction is computed by the product of the
@@ -375,20 +372,20 @@ reaction since the beginning of the current run.
 
 <A NAME = "SG18"></A>
 
-<P><B>(SG18)</B> K. Swaminathan Gopalan, Development of a detailed surface
-chemistry framework in DSMC, AIAA Aerospace Sciences Meeting, Jan
+<P><B>(SG18)</B> K. Swaminathan Gopalan, "Development of a detailed surface
+chemistry framework in DSMC", AIAA Aerospace Sciences Meeting, Jan
 (2018).
 </P>
 <A NAME = "Kisliuk57"></A>
 
 <P><B>(Kisliuk57)</B> P. Kisliuk, "The sticking probabilities of gases
-chemisorbed on the surfaces of solids," Journal of Physics and
+chemisorbed on the surfaces of solids", Journal of Physics and
 Chemistry of Solids, vol. 3, no. 1-2, pp. 95-101, 1957.
 </P>
 <A NAME = "Beckerle89"></A>
 
 <P><B>(Beckerle89)</B> J. Beckerle, A. Johnson, and S. Ceyer, "Observation and
-mechanism of collision-induced desorption: CH4 on Ni (111)," Physical
-review letters, vol. 62, no. 6, p. 685, 1989.
+mechanism of collision-induced desorption: CH4 on Ni (111)", Physical
+Review Letters, vol. 62, no. 6, p. 685, 1989.
 </P>
 </HTML>

@@ -260,9 +260,9 @@ C1 = direct value for the reaction rate constant :pre
 
 For A = Arrhenius style, there are three coefficients:
 
-A = pre-expoential factor 
-b = temperature exponent 
-Ea = activation energy for the reaction :pre
+  A = pre-expoential factor 
+  b = temperature exponent 
+  Ea = activation energy for the reaction :pre
 
 The reaction rate constant is calculated in the following manner: 
 
@@ -276,20 +276,18 @@ coefficients
 Additional optional keywords for GS reactions can be used to define
 the reaction rate constant.  These are {kisliuk}: proposed by Kisliuk
 "(Kisliuk57)"_#Kisliuk57; and {energy}: proposed by Beckerle {et al.}
-"(Beckerle89)"_#Beckerle89; options :b
+"(Beckerle89)"_#Beckerle89.
 
-{kisliuk} args = A_k B_k Ea_k (only for reactions which includes adsorption - AA, DA, LH1, LH3, and CD)
-    {A_k} = pre-expoential factor
-    {B_k} = temperature exponent
-    {Ea_k} = activation energy for the adsorption :pre
-:ule
+{kisliuk} args = A_k B_k Ea_k (only for reactions which includes adsorption - AA, DA, LH1, LH3, and CD) :b
+  {A_k} = pre-expoential factor
+  {B_k} = temperature exponent
+  {Ea_k} = activation energy for the adsorption :pre
 
 :c,image(Eqs/k_kisliuk.png)
 
 {energy} args = m n (only for CI) :b
   {m} = energy exponent
   {n} = polar angle exponent :pre
-:ule
 
 :c,image(Eqs/k_energy.png)
 
@@ -357,16 +355,16 @@ reaction since the beginning of the current run.
 :line
 
 :link(SG18)
-[(SG18)] K. Swaminathan Gopalan, Development of a detailed surface
-chemistry framework in DSMC, AIAA Aerospace Sciences Meeting, Jan
+[(SG18)] K. Swaminathan Gopalan, "Development of a detailed surface
+chemistry framework in DSMC", AIAA Aerospace Sciences Meeting, Jan
 (2018).
 
 :link(Kisliuk57)
 [(Kisliuk57)] P. Kisliuk, "The sticking probabilities of gases
-chemisorbed on the surfaces of solids," Journal of Physics and
+chemisorbed on the surfaces of solids", Journal of Physics and
 Chemistry of Solids, vol. 3, no. 1-2, pp. 95-101, 1957.
 
 :link(Beckerle89)
 [(Beckerle89)] J. Beckerle, A. Johnson, and S. Ceyer, "Observation and
-mechanism of collision-induced desorption: CH4 on Ni (111)," Physical
-review letters, vol. 62, no. 6, p. 685, 1989.
+mechanism of collision-induced desorption: CH4 on Ni (111)", Physical
+Review Letters, vol. 62, no. 6, p. 685, 1989.
