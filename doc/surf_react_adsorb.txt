@@ -1,0 +1,344 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+surf_react adsorb command :h3
+
+[Syntax:]
+
+surf_react ID adsorb args :pre
+
+ID = user-assigned name for the surface reaction model :ulb,l
+style = {adsorb} :l
+args = arguments for that style :l
+  {adsorb} args = {model} infile(s) nsync {type} temp n_sites ad_species   
+    {model} can be gs or ps or gs/ps
+      {gs} = gas-surface reactions
+      {ps} = pure-surface reactions
+      {gs/ps} = both gas-surface and pure-surface reactions
+    infile(s) = file with list of surface chemistry reactions. Two files are required as input for the gs/ps option
+    nsync value = Nstep = sync across all the processors and perform PS reactions every this many timesteps
+    {type} is the type of surface for which the reactions are defined - can be {face} or {surf}
+      {face} = domain boundary modified to be a surface
+      {surf} = surface element - triangles in 3D, lines in 2D 
+    temp = temperature of the surface
+    n_sites = number of available adsorption sites per unit area (3D) or length (2D)
+    ad_species = list of species that can adsorb on this surface :pre
+:ule
+
+[Examples:]
+
+surf_react adsorb gs gs_react.surf nsync 10 surf 1000 6.022e18 O CO
+surf_react adsorb gs/ps gs_react.surf ps_react.surf nsync 1 face 300 3e9 O :pre
+
+[Description:]
+
+Define a model for surface chemistry reactions to perform when
+particles collide with surface elements or the global boundaries of
+the simulation box.  One or more models can be defined and assigned to
+different surfaces or simulation box boundaries via the
+"surf_modify"_surf_modify.html or "bound_modify"_bound_modify.html
+commands.  See "Section 6.9"_Section_howto.html#howto_9 for more
+details of how SPARTA defines surfaces as collections of geometric
+elements, triangles in 3d and line segments in 2d.  Also see the
+"react"_react.html command for specification of a gas-phase chemistry
+reaction model.
+
+The ID for a surface reaction model is used to identify it in other
+commands.  Each surface reaction model ID must be unique.  The ID can
+only contain alphanumeric characters and underscores.
+
+For the {adsorb} style, particles are allowed to adsorb on the surface. 
+These adsorbed particles can undergo reactions with other adsorbed particles 
+as well as the gas-phase particles that strike the surface. When a particle
+adsorbs on the surface, it is deleted and the number of adsorbed particles 
+of that particular species is incremented. When a particle desorbs from the 
+surface, a new particle is created and the count is decremented. The exact 
+location of the adsorbed particles is not stored and they are assumed to 
+uniformly distributed throughout the surface element. 
+
+The surface reaction models for the {adsorb} style are described
+below. There are two types of reactions in the {adsorb} style - 
+gas-surface (GS) and pure-surface (PS). The GS reactions involve 
+both gas-phase and adsorbed/bulk species as reactants. Hence GS 
+reactions occur when gas particles collide with the surface. On 
+the other hand, the PS reactions involve only adsorbed/bulk reactants
+and do not include any gas-phase atoms or molecules. They are carried 
+out at the end of every {nsync} timesteps based on the current value 
+of surface coverage of the various adsorbed species. 
+
+For GS reactions, when a particle collides with a surface element or boundary.
+the list of all reactions possible with that species as the reactant
+is looped over.  A probability for each reaction is calculated, using
+the formulas discussed below, and a random number is used to decide
+which reaction (if any) takes place.  A check is made that the sum of
+probabilities for all possible reactions is <= 1.0, which should
+normally be the case if reasonable reaction coefficients are defined.
+
+For PS reactions, a time counter algorithm is used. Each reaction has a time counter 
+{tau} that is increased by a value of {nsync*timestep} if all the reactants are 
+available. The rate of each reaction {R} is computed based on the specified reaction 
+rate constants as well as the surface coverage of the reactants. The product of the 
+rate {R} and time counter {tau} is normalized to obtain the probability for each of 
+reaction; and a random number is used to decide which reaction occurs. The chosen
+reaction is perforemd and its time counter is modified as follows:
+
+:c,image(Eqs/time_counter.png)
+
+Now the probabilities of each reaction are recomputed and a new reaction is chosen based on
+these probabilties and performed; and this process is repeated till the 
+probability of all the reactions reaches zero. A detailed description can be found in 
+Swaminathan Gopalan {et al.} "(SG18)"_#SG18.
+
+IMPORTANT NOTE: A surface reaction model can not be specified for
+surfaces whose surface collision style does not support reactions.
+Currently this is only the {vanish} collision style.  See the
+"surf_collide"_surf_collide.html doc page for details.
+
+:line
+
+For the {adsorb} style, one or two (for gs/ps option) file(s) is specified 
+which contains a list of surface chemical reactions, with their associated 
+parameters.  The reactions are read into SPARTA and stored in a list.  Each 
+time a simulation is run via the "run"_run.html command, the list is scanned, 
+and only active reactions are stored. In order for a reaction to be active, 
+all the reactants and all the products must be currently defined as 
+species-IDs; and also all the surface reactants and products must be present 
+within the list of species that are allowed to adsorb on the surface.
+This list of species is provided at the end of the surf_react adsorb command. 
+Thus the file can contain more reactions than are used in a particular
+simulation.  See the "species"_species.html command for how species
+IDs are defined.  This style thus defines N reactions, where
+N is the total number of reactions listed in the specified file(s).
+
+As explained below each reaction has a specified probability between
+0.0 and 1.0.  That probability is used to choose which reaction (if
+any) is performed.
+
+The format of the input surface reaction file is as follows.  Comments
+or blank lines are allowed in the file.  Comment lines start with a
+"#" character.  All other entries must come in 2 or more lines with
+values separated by whitespace in the following format
+
+R1(g) + R2(s) + R3(b) --> P1(g) + P2(s) + P3(b)
+reaction-type reaction-style C1 C2 ... 
+scattering-model args :pre
+
+The first line is a text-based description of a single reaction. R1, R2, and 
+R3 are the reactants; while P1, P2, and P3 are the products listed as a 
+"species"_species.html IDs. The phase of the 
+reactants and products are species in the brackets right next to the species ID. 
+It can be one of the following
+
+(g) - gas phase = gas particle striking or scattering from the surface
+(s) - surface phase = adsorbed particle present on the surface
+(b) - bulk phase = material with which the surface is made of :pre
+
+For a GS reaction R1 must be a gas-phase reactant - the particle that collides 
+with the surface/boundary. For a PS reaction R1 must be an adsorbed or bulk-phase species. 
+
+Individual reactants and products must be separated by whitespace
+and a "+" sign. The left-hand and right-hand sides of the equation must be separated
+by whitespace and "-->". 
+The {type} of each reaction is a string of characters (upper or lower
+case). The different types of GS and PS reactions are described below.
+
+:line
+
+The list of GS reactions is as follows:
+
+AA = Associative Adsorption
+DA = Dissociative Adsorption
+LH1 = Langmuir-Hinshelwood mechanism of type 1
+LH3 = Langmuir-Hinshelwood mechanism of type 3 
+CD = Condensation reaction
+ER = Eley-Rideal mechanism 
+CI = Collision-induced reaction :ul
+
+An associative adsorption reaction means that R1(g) adsorbs on the surface to form P1(s)
+when it collides with the surface/boundary. 
+
+A dissociative adsorption reaction means that R1(g) dissociates when it collides with the 
+surface/boundary. One or more of the dissociated products can adsorb on the surface 
+and the rest of them scatter as gas-phase products. 
+
+A Langmuir-Hinshelwood reaction of type 1 means that R1(g) adsorbs on the surface when it 
+collides with the surface/boundary, and reacts quickly with the adsorbed species R2(s) or 
+bulk-phase species R2(b) on the surface to form gas-phase product P1(g).  
+
+A Langmuir-Hinshelwood reaction of type 3 means that R1(g) adsorbs on the surface when it 
+collides with the surface/boundary, and reacts quickly with the adsorbed species R2(s) or 
+bulk-phase species R2(b) on the surface to form adsorbed product P1(s).
+
+A condensation reaction means that R1(g) coalesces with the bulk material with which the
+surface is made of, when it collides with the surface/boundary to form bulk-phase product
+P1(b). 
+
+An Eley-Rideal reaction means that R1(g) reacts quickly with adsorbed species R2(s) or bulk 
+species R2(b) when it collides with the surface/boundary to form gas-phase product P1(g).
+
+A collision-induced reaction means that R1(g) causes the desorption of adsorbed species R2(s)
+when it collides with the surface/boundary to form gas-phase products P1(g) (same species as
+R2). The incident gas-phase particle can either adsorb P2(s) or scatter from the surface P2(g)
+post collision. 
+
+A detailed description of the various types of reactions can be found in 
+Swaminathan Gopalan {et al.} "(SG18)"_#SG18. 
+Here is a table of examples for each type of GS reaction. 
+
+:c,image(Eqs/GS_list.png)
+
+:line
+
+The list of PS reactions is as follows:
+
+DS = Desorption reaction
+LH2 = Langmuir-Hinshelwood mechanism of type 2
+LH4 = Langmuir-Hinshelwood mechanism of type 4 
+SB = Sublimation reaction :ul
+
+A desorption reaction means that R1(s) desorbs from the surface to form P1(g) whose final 
+velocities are determined by the provided scattering model. 
+
+A Langmuir-Hinshelwood reaction of type 2 means that R1(s) adsorbed on the surface reacts
+with another adsorbed species R2(s) or bulk-phase species R2(b) on the surface to form 
+gas-phase product P1(g).  
+
+A Langmuir-Hinshelwood reaction of type 4 means that R1(s) adsorbed on the surface reacts
+with another adsorbed species R2(s) or bulk-phase species R2(b) on the surface to form 
+adsorbed product P1(s).  
+
+A sublimation reaction means that R1(b), the bulk material undergoes a transformation from 
+solid to gas, to form gas-phase product P1(g). 
+
+A detailed description of the various types of reactions can be found in 
+Swaminathan Gopalan {et al.} "(SG18)"_#SG18. 
+Here is a table of examples for each type of PS reaction.
+
+:c,image(Eqs/PS_list.png)
+
+:line 
+
+The {style} of each reaction is a single character (upper or lower
+case) with the following meaning:
+
+S = Simple
+A = Arrhenius :ul
+
+The style determines how many reaction coefficients are listed as C1,
+C2, etc, and how they are interpreted by SPARTA.
+
+For S = Simple style, there is a single coefficient:
+
+C1 = direct value for the reaction rate constant :pre
+
+
+For A = Arrhenius style, there are three coefficients:
+
+A = pre-expoential factor 
+b = temperature exponent 
+Ea = activation energy for the reaction :pre
+
+The reaction rate constant is calculated in the following manner: 
+
+:c,image(Eqs/arrhenius_2.png)
+
+For all the reactions which includes adsorption - AA, DA, LH1, LH3, and CD; the user must 
+specify the number of species that adsorb on the surface for the reaction as a argument 
+after the reaction rate coefficients
+
+Additional optional keywords for GS reactions can be used to define the reaction rate constant. 
+These are {kisliuk}: proposed by Kisliuk "(Kisliuk57)"_#Kisliuk57;
+and {energy}: proposed by Beckerle {et al.} "(Beckerle89)"_#Beckerle89; options :b
+
+{kisliuk} args = a_k b_k Ea_k (only for reactions which includes adsorption - AA, DA, LH1, LH3, and CD)
+    {A_k} = pre-expoential factor
+    {b_k} = temperature exponent
+    {Ea_k} = activation energy for the adsorption :pre
+:ule
+
+:c,image(Eqs/k_kisliuk.png)
+
+{energy} args = m n (only for CI) :b
+  {m} = energy exponent
+  {n} = polar angle exponent :pre
+:ule
+
+:c,image(Eqs/k_energy.png)
+
+The final rate of the reaction is computed by the product of the reaction rate constant and the
+surface coverage of all the adsorbed reactants. The reaction probability is obtained by normalized all the 
+reaction rates. A detailed description can be found in Swaminathan Gopalan {et al.} "(SG18)"_#SG18.
+
+:line
+
+If there are gas-phase products, the user has an option of specifying the 
+model by the particle scatters from the surface, which can be different 
+from the surface collision model assigned to the surface element using the "surf_collide"_surf_collide.html
+command. Any of the following surface collision models can be used: 
+{specular}, {diffuse}, {cll}, {impulsive}, {td}. The scattering model style
+and the corresponding arguments are specified in the next line after the 
+reaction-style. If there are two gas-phase products, the scattering model 
+for the second particle is defined in a new line. The arguments for the different 
+surface scattering models is similar to the "surf_collide"_surf_collide.html 
+command. If the user does not wish to specify a scattering model, {NULL} keyword
+can be specified.
+
+:line
+
+[Output info:]
+
+All the surface reaction models calculate a global vector of values.
+The values can be used by the "stats_style"_stats_style.html command
+and by "variables"_variable.html that define formulas.  The latter
+means they can be used by any command that uses a variable as input,
+e.g. the "fix ave/time"_fix_ave_time.html command.  See "Section
+4.4"_Section_howto.html#howto_4 for an overview of SPARTA output
+options.
+
+The {adsorb} styles each compute a vector of length 2 +
+2*nlist. For the {adsorb} style, nlist is the sum of both the gas-surface 
+and pure-surface reactions listed in the file is read as input.
+
+The first element of the vector is the count of particles that
+performed surface reactions for surface elements assigned to this
+reaction model during the current timestep. The second element is the
+cummulative count of particles that have performed reactions since the
+beginning of the current run.  The next nlist elements are the count
+of each individual reaction that occurred during the current timestep.
+The final nlist elements are the cummulative count of each individual
+reaction since the beginning of the current run.
+
+:line
+
+
+[Restrictions:] none
+
+[Related commands:]
+
+"surf_react"_aurf_react.html, "react"_react.html, 
+"surf_modify"_surf_modify.html,
+"bound_modify"_bound_modify.html, 
+
+
+[Default:] none
+
+:line
+
+:link(SG18)
+[(SG18)] K. Swaminathan Gopalan, Development of a detailed surface chemistry
+framework in DSMC, AIAA Aerospace Sciences Meeting, Jan (2018).
+
+:link(Kisliuk57)
+[(Kisliuk57)] P. Kisliuk, "The sticking probabilities of gases chemisorbed on the surfaces of solids,"
+Journal of Physics and Chemistry of Solids, vol. 3, no. 1-2, pp. 95-101, 1957.
+
+:link(Beckerle89)
+[(Beckerle89)] J. Beckerle, A. Johnson, and S. Ceyer, "Observation and mechanism of collision-induced
+desorption: CH4 on Ni (111)," Physical review letters, vol. 62, no. 6, p. 685, 1989.
+
+
