@@ -612,10 +612,11 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
   //int check_ads = 0, ads_index = -1;
 
   int coeff_val = 1;
-  if (r->style == ARRHENIUS) coeff_val = 3;
 
   for (int i = 0; i < n; i++) {
     r = &rlist_gs[list[i]];
+    
+    if (r->style == ARRHENIUS) coeff_val = 3;
 
     switch (r->type) {
     case DISSOCIATION:
