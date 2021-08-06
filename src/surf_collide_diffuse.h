@@ -22,6 +22,7 @@ SurfCollideStyle(diffuse,SurfCollideDiffuse)
 #define SPARTA_SURF_COLLIDE_DIFFUSE_H
 
 #include "surf_collide.h"
+#include "surf.h"
 
 namespace SPARTA_NS {
 
@@ -32,7 +33,7 @@ class SurfCollideDiffuse : public SurfCollide {
   ~SurfCollideDiffuse();
   void init();
   Particle::OnePart *collide(Particle::OnePart *&, double *, double &,
-                             int, int &);
+                             int, int &, int);
 
   void dynamic();
 
@@ -48,10 +49,13 @@ class SurfCollideDiffuse : public SurfCollide {
   char *tstr;                // temperature variable name (NULL if constant)
   int tvar;                  // index of equal-style variable
 
+  Surf::Line *lines;
+  Surf::Tri *tris;
+
   double vstream[3];
   class RanKnuth *random;     // RNG for particle reflection
 
-  void diffuse(Particle::OnePart *, double *);
+  void diffuse(Particle::OnePart *, double *, int);
 };
 
 }

@@ -164,7 +164,7 @@ void SurfCollideCLL::init()
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideCLL::
-collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
+collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction, int isurf)
 {
   nsingle++;
 

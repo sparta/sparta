@@ -32,7 +32,7 @@ class SurfCollideVanish : public SurfCollide {
   SurfCollideVanish(class SPARTA *sparta) : SurfCollide(sparta) {}
   virtual ~SurfCollideVanish() {}
   Particle::OnePart *collide(Particle::OnePart *&, double *, double &,
-                             int, int &);
+                             int, int &, int);
 };
 
 }

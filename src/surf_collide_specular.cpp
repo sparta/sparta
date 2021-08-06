@@ -44,7 +44,7 @@ SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideSpecular::
-collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
+collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction, int isurf)
 {
   nsingle++;
 

@@ -175,7 +175,7 @@ void SurfCollideImpulsive::init()
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideImpulsive::
-collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
+collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction, int isurf)
 {
   nsingle++;
 

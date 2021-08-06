@@ -31,7 +31,7 @@ class SurfCollideImpulsive : public SurfCollide {
   ~SurfCollideImpulsive();
   void init();
   Particle::OnePart *collide(Particle::OnePart *&, double *,
-                             double &, int, int &);
+                             double &, int, int &, int);
 
   void dynamic();
 

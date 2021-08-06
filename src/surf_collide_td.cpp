@@ -135,7 +135,7 @@ void SurfCollideTD::init()
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideTD::
-collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
+collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction, int isurf)
 {
   nsingle++;
 

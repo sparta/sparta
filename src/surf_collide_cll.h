@@ -32,7 +32,7 @@ class SurfCollideCLL : public SurfCollide {
   ~SurfCollideCLL();
   void init();
   Particle::OnePart *collide(Particle::OnePart *&, double *,
-                             double &, int, int &);
+                             double &, int, int &, int);
 
   void dynamic();
 

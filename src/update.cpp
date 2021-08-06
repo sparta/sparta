@@ -772,10 +772,10 @@ template < int DIM, int SURF > void Update::move()
 
               if (DIM == 3)
                 jpart = surf->sc[tri->isc]->
-                  collide(ipart,tri->norm,dtremain,tri->isr,reaction);
+                  collide(ipart,tri->norm,dtremain,tri->isr,reaction,minsurf);
               if (DIM != 3)
                 jpart = surf->sc[line->isc]->
-                  collide(ipart,line->norm,dtremain,line->isr,reaction);
+                  collide(ipart,line->norm,dtremain,line->isr,reaction,minsurf);
 
               if (jpart) {
                 particles = particle->particles;

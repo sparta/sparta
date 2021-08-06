@@ -33,7 +33,7 @@ class SurfCollidePiston : public SurfCollide {
   ~SurfCollidePiston() {}
   void init();
   Particle::OnePart *collide(Particle::OnePart *&, double *, double &,
-                             int, int &);
+                             int, int &, int);
 
  protected:
   double vwall;

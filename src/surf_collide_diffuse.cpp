@@ -97,6 +97,9 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
 
   vstream[0] = vstream[1] = vstream[2] = 0.0;
 
+  lines = surf->lines;
+  tris = surf->tris;
+
   // initialize RNG
 
   random = new RanKnuth(update->ranmaster->uniform());
@@ -129,6 +132,11 @@ void SurfCollideDiffuse::init()
     if (!input->variable->equal_style(tvar))
       error->all(FLERR,"Surf_collide diffuse variable is invalid style");
   }
+
+  for (int i = 0; i < surf->nlocal; i++) {
+      if (domain->dimension == 2) lines[i].temp = twall;
+      else tris[i].temp = twall;
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -143,7 +151,7 @@ void SurfCollideDiffuse::init()
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideDiffuse::
-collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
+collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction, int isurf)
 {
   nsingle++;
 
@@ -167,15 +175,18 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
   //  (e.g. fix vibmode and fix ambipolar)
   // if new particle J created, also need to trigger any fixes
 
+  if (domain->dimension == 2) twall = lines[isurf].temp;
+  else twall = tris[isurf].temp;
+
   if (ip) {
-    diffuse(ip,norm);
+    diffuse(ip,norm,isurf);
     if (modify->n_update_custom) {
       int i = ip - particle->particles;
       modify->update_custom(i,twall,twall,twall,vstream);
     }
   }
   if (jp) {
-    diffuse(jp,norm);
+    diffuse(jp,norm,isurf);
     if (modify->n_update_custom) {
       int j = jp - particle->particles;
       modify->update_custom(j,twall,twall,twall,vstream);
@@ -208,7 +219,7 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
    resets particle(s) to post-collision outward velocity
 ------------------------------------------------------------------------- */
 
-void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm)
+void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm, int jsurf)
 {
   // specular reflection
   // reflect incident v around norm
@@ -229,6 +240,11 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm)
     double tangent1[3],tangent2[3];
     Particle::Species *species = particle->species;
     int ispecies = p->ispecies;
+
+//    Surf::Line *lines;
+//    Surf::Tri *tris;
+    if (domain->dimension == 2) twall = lines[jsurf].temp;
+    else twall = tris[jsurf].temp;
 
     double vrm = sqrt(2.0*update->boltz * twall / species[ispecies].mass);
     double vperp = vrm * sqrt(-log(random->uniform()));
