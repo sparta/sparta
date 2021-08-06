@@ -12,6 +12,7 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+#include "stdlib.h"
 #include "string.h"
 #include "fix_surf_temp.h"
 #include "surf.h"
