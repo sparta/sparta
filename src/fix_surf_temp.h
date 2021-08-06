@@ -22,6 +22,7 @@ FixStyle(surf/temp,FixSurfTemp)
 #define SPARTA_FIX_SURF_TEMP_H
 
 #include "fix.h"
+#include "surf.h"
 
 namespace SPARTA_NS {
 
@@ -41,13 +42,14 @@ class FixSurfTemp : public Fix {
   class Fix *fqw;
   double *qw,*qw_all;
 
-  int distributed,implicit;  // Surf settings
+  Surf::Line *lines;
+  Surf::Tri *tris;
+
+  int distributed,implicit,dimension;  // Surf settings
   int firstflag;
 
   int groupbit;              // mask for surface group
-  int dimension;
-  int nown;                  // # of surf elements owned by this proc
-  bigint nsurf;              // total # of surf elements, lines or tris
+  int nsurf;                 // nlocal or nown
   int nchoose;               // # of surf elements output by this proc
   int *cglobal;              // indices of global elements for nchoose
 };

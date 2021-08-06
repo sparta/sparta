@@ -39,9 +39,12 @@ FixSurfTemp::FixSurfTemp(SPARTA *sparta, int narg, char **arg) :
 
   if (narg < 5) error->all(FLERR,"Illegal fix surf temp command");
 
+  // Disable implicit or distributed surfs with fix surf temp for now
+
   implicit = surf->implicit;
-  if (implicit)
-    error->all(FLERR,"Cannot use fix surf temp with implicit surfs");
+  distributed = surf->distributed;
+  if (implicit || distributed)
+    error->all(FLERR,"Cannot currently use fix surf temp with implicit or distributed surfs");
 
   int igroup = surf->find_group(arg[2]);
   if (igroup < 0) error->all(FLERR,"Fix surf temp group ID does not exist");
@@ -97,9 +100,18 @@ FixSurfTemp::FixSurfTemp(SPARTA *sparta, int narg, char **arg) :
   // initialize data structures
   // trigger setup of list of owned surf elements belonging to surf group
 
+  if (distributed && !implicit) {
+    lines = surf->mylines;
+    tris = surf->mytris;
+    nsurf = surf->nown;
+  }
+  else {
+    lines = surf->lines;
+    tris = surf->tris;
+    nsurf = surf->nlocal;
+  }
+
   dimension = domain->dimension;
-  nown = surf->nown;
-  nsurf = surf->nsurf;
   firstflag = 1;
   qw = qw_all = NULL;
   cglobal = NULL;
@@ -129,67 +141,57 @@ int FixSurfTemp::setmask()
 
 void FixSurfTemp::init()
 {
-    if (!firstflag) return;
-    firstflag = 0;
+  if (!firstflag) return;
+  firstflag = 0;
 
-    // one-time setup of lists of owned elements contributing to fix surf temp
-    // NOTE: will need to recalculate, if allow addition of surf elements
-    // nown = # of surf elements I own
-    // nchoose = # of nown surf elements in surface group
-    // cglobal[] = global indices for nchoose elements
-    //             used to access lines/tris in Surf
-    // clocal[] = local indices for nchoose elements
-    //            used to access nown data from per-surf computes,fixes,variables
+  // one-time setup of lists of owned elements contributing to fix surf temp
+  // NOTE: will need to recalculate, if allow addition of surf elements
+  // nsurf = # of surf elements I own (nown or nlocal)
+  // nchoose = # of nown surf elements in surface group
+  // cglobal[] = global indices for nchoose elements
+  //             used to access lines/tris in Surf
+  // clocal[] = local indices for nchoose elements
+  //            used to access nown data from per-surf computes,fixes,variables
 
-    Surf::Line *lines;
-    Surf::Tri *tris;
-    distributed = surf->distributed;
+  int m;
+  int me = comm->me;
+  int nprocs = comm->nprocs;
 
-    if (distributed && !implicit) lines = surf->mylines;
-    else lines = surf->lines;
-    if (distributed && !implicit) tris = surf->mytris;
-    else tris = surf->tris;
+  nchoose = 0;
+  for (int i = 0; i < nsurf; i++) {
+    if (dimension == 2) {
+      if (!distributed) m = me + i*nprocs;
+      else m = i;
+      if (lines[m].mask & groupbit) nchoose++;
+    } else {
+      if (!distributed) m = me + i*nprocs;
+      else m = i;
+      if (tris[m].mask & groupbit) nchoose++;
+    }
+  }
 
-    int m;
-    int me = comm->me;
-    int nprocs = comm->nprocs;
+  memory->create(cglobal,nchoose,"fix surf temp:cglobal");
 
-    nchoose = 0;
-    for (int i = 0; i < nown; i++) {
-      if (dimension == 2) {
-        if (!distributed) m = me + i*nprocs;
-        else m = i;
-        if (lines[m].mask & groupbit) nchoose++;
-      } else {
-        if (!distributed) m = me + i*nprocs;
-        else m = i;
-        if (tris[m].mask & groupbit) nchoose++;
+  nchoose = 0;
+  for (int i = 0; i < nsurf; i++) {
+    if (dimension == 2) {
+      if (!distributed) m = me + i*nprocs;
+      else m = i;
+      if (lines[m].mask & groupbit) {
+        cglobal[nchoose++] = m;
+      }
+    } else {
+      if (!distributed) m = me + i*nprocs;
+      else m = i;
+      if (tris[m].mask & groupbit) {
+        cglobal[nchoose++] = m;
       }
     }
+  }
 
-    memory->create(cglobal,nchoose,"fix surf temp:cglobal");
-
-    nchoose = 0;
-    for (int i = 0; i < nown; i++) {
-      if (dimension == 2) {
-        if (!distributed) m = me + i*nprocs;
-        else m = i;
-        if (lines[m].mask & groupbit) {
-          cglobal[nchoose++] = m;
-        }
-      } else {
-        if (!distributed) m = me + i*nprocs;
-        else m = i;
-        if (tris[m].mask & groupbit) {
-          cglobal[nchoose++] = m;
-        }
-      }
-    }
-
-    memory->create(qw,surf->nlocal,"fix surf temp:init");
-    memory->create(qw_all,surf->nlocal,"fix surf temp:init");
-    for (int i = 0; i < surf->nlocal; i++) qw[i] = qw_all[i] = 0.0;
-
+  memory->create(qw,nsurf,"fix surf temp:init");
+  memory->create(qw_all,nsurf,"fix surf temp:init");
+  for (int i = 0; i < nsurf; i++) qw[i] = qw_all[i] = 0.0;
 }
 
 /* ----------------------------------------------------------------------
@@ -198,36 +200,27 @@ void FixSurfTemp::init()
 
 void FixSurfTemp::end_of_step()
 {
-//  if (update->ntimestep >= nvalid) {
-//    nvalid = (update->ntimestep/fqw->per_surf_freq)*fqw->per_surf_freq +
-//      fqw->per_surf_freq;
-//    nvalid -= (fqw->per_surf_freq-1)*fqw->nevery;
-//    if (nvalid <= update->ntimestep) nvalid += fqw->per_surf_freq;
+  if (qwindex == 0) {
+    double *vector = fqw->vector_surf;
+    for (int i = 0; i < nchoose; i++)
+      qw[cglobal[i]] = vector[i];
+  }
+  else {
+    double **array = fqw->array_surf;
+    int index = qwindex-1;
+    for (int i = 0; i < nchoose; i++)
+      qw[cglobal[i]] = array[i][index];
+  }
 
-    if (qwindex == 0) {
-      double *vector = fqw->vector_surf;
-      for (int i = 0; i < nchoose; i++)
-        qw[cglobal[i]] = vector[i];
-    }
-    else {
-      double **array = fqw->array_surf;
-      int index = qwindex-1;
-      for (int i = 0; i < nchoose; i++)
-        qw[cglobal[i]] = array[i][index];
-    }
+  MPI_Allreduce(qw,qw_all,nsurf,MPI_DOUBLE,MPI_SUM,world);
 
-    MPI_Allreduce(qw,qw_all,surf->nlocal,MPI_DOUBLE,MPI_SUM,world);
-
-    for (int i = 0; i < surf->nlocal; i++) {
-        if (dimension == 2) {
-            Surf::Line *lines = surf->lines;
-            if (qw_all[i] > 1.0) lines[i].temp = pow((prefactor * qw_all[i]),0.25);
-            else lines[i].temp = twall;
-        } else {
-            Surf::Tri *tris = surf->tris;
-            if (qw_all[i] > 1.0) tris[i].temp = pow((prefactor * qw_all[i]),0.25);
-            else tris[i].temp = twall;
-        }
+  for (int i = 0; i < nsurf; i++) {
+    if (dimension == 2) {
+        if (qw_all[i] > 1.0) lines[i].temp = pow((prefactor * qw_all[i]),0.25);
+        else lines[i].temp = twall;
+    } else {
+        if (qw_all[i] > 1.0) tris[i].temp = pow((prefactor * qw_all[i]),0.25);
+        else tris[i].temp = twall;
     }
-//  }
+  }
 }

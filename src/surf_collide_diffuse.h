@@ -52,6 +52,9 @@ class SurfCollideDiffuse : public SurfCollide {
   Surf::Line *lines;
   Surf::Tri *tris;
 
+  int distributed,implicit;  // Surf settings
+  int nsurf;                 // nlocal or nown
+
   double vstream[3];
   class RanKnuth *random;     // RNG for particle reflection
 

@@ -110,6 +110,7 @@ class DumpSurf : public Dump {
   void pack_v3x(int);
   void pack_v3y(int);
   void pack_v3z(int);
+  void pack_temp(int);
 };
 
 }

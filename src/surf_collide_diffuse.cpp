@@ -97,8 +97,19 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
 
   vstream[0] = vstream[1] = vstream[2] = 0.0;
 
-  lines = surf->lines;
-  tris = surf->tris;
+  distributed = surf->distributed;
+  implicit = surf->implicit;
+
+  if (distributed && !implicit) {
+    lines = surf->mylines;
+    tris = surf->mytris;
+    nsurf = surf->nown;
+  }
+  else {
+    lines = surf->lines;
+    tris = surf->tris;
+    nsurf = surf->nlocal;
+  }
 
   // initialize RNG
 
@@ -133,9 +144,11 @@ void SurfCollideDiffuse::init()
       error->all(FLERR,"Surf_collide diffuse variable is invalid style");
   }
 
-  for (int i = 0; i < surf->nlocal; i++) {
+  if (!implicit) {
+    for (int i = 0; i < nsurf; i++) {
       if (domain->dimension == 2) lines[i].temp = twall;
       else tris[i].temp = twall;
+    }
   }
 }
 
@@ -175,7 +188,7 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction, 
   //  (e.g. fix vibmode and fix ambipolar)
   // if new particle J created, also need to trigger any fixes
 
-  if (isurf > -1) {
+  if (isurf > -1 && !implicit) {
       if (domain->dimension == 2) twall = lines[isurf].temp;
       else twall = tris[isurf].temp;
   }
@@ -243,9 +256,9 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm, int jsurf)
     Particle::Species *species = particle->species;
     int ispecies = p->ispecies;
 
-    if (jsurf > -1) {
-        if (domain->dimension == 2) twall = lines[jsurf].temp;
-        else twall = tris[jsurf].temp;
+    if ((jsurf > -1) && !implicit) {
+      if (domain->dimension == 2) twall = lines[jsurf].temp;
+      else twall = tris[jsurf].temp;
     }
 
     double vrm = sqrt(2.0*update->boltz * twall / species[ispecies].mass);
