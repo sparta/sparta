@@ -175,8 +175,10 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction, 
   //  (e.g. fix vibmode and fix ambipolar)
   // if new particle J created, also need to trigger any fixes
 
-  if (domain->dimension == 2) twall = lines[isurf].temp;
-  else twall = tris[isurf].temp;
+  if (isurf > -1) {
+      if (domain->dimension == 2) twall = lines[isurf].temp;
+      else twall = tris[isurf].temp;
+  }
 
   if (ip) {
     diffuse(ip,norm,isurf);
@@ -241,10 +243,10 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm, int jsurf)
     Particle::Species *species = particle->species;
     int ispecies = p->ispecies;
 
-//    Surf::Line *lines;
-//    Surf::Tri *tris;
-    if (domain->dimension == 2) twall = lines[jsurf].temp;
-    else twall = tris[jsurf].temp;
+    if (jsurf > -1) {
+        if (domain->dimension == 2) twall = lines[jsurf].temp;
+        else twall = tris[jsurf].temp;
+    }
 
     double vrm = sqrt(2.0*update->boltz * twall / species[ispecies].mass);
     double vperp = vrm * sqrt(-log(random->uniform()));

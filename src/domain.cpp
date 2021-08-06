@@ -351,9 +351,8 @@ int Domain::collide(Particle::OnePart *&ip, int face, int icell, double *xnew,
 
   case SURFACE:
     {
-      int dummy = 0;
       jp = surf->sc[surf_collide[face]]->
-        collide(ip,norm[face],dtremain,surf_react[face],reaction,dummy);
+        collide(ip,norm[face],dtremain,surf_react[face],reaction,-1);
 
       if (ip) {
         double *x = ip->x;
