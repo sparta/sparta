@@ -239,7 +239,7 @@ void ReactBird::init()
         (species[isp].mass + species[jsp].mass);
     double sigma = MY_PI*diam*diam;
 
-    // average DOFs participating in the reaction
+    // read effective internal DOFs participating in the reaction
 
     double z = r->coeff[0];
 
@@ -248,13 +248,13 @@ void ReactBird::init()
 
     double c1 = MY_PIS*epsilon*r->coeff[2]/(2.0*sigma) *
       sqrt(mr/(2.0*update->boltz*tref)) *
-      pow(tref,1.0-omega)/pow(update->boltz,r->coeff[3]-1.0+omega) *
-      tgamma(z+2.5-omega) / MAX(1.0e-6,tgamma(z+r->coeff[3]+1.5));
+      pow(tref,1.0-omega)/pow(update->boltz,r->coeff[3]-1.0+omega); // *
+//      tgamma(z+2.5-omega) / MAX(1.0e-6,tgamma(z+r->coeff[3]+1.5));
     double c2 = r->coeff[3] - 1.0 + omega;
 
     r->coeff[2] = c1;
-    r->coeff[3] = c2;
-    r->coeff[5] = z + 1.5 - omega;
+//    r->coeff[3] = c2;
+    r->coeff[5] = omega;
 
     // add additional coeff for post-collision effective omega
     // mspec = post-collision species of the particle
