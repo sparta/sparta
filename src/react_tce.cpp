@@ -96,7 +96,6 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
        z = pre_ave_rotdof;
        if (collide->vibstyle == SMOOTH) z += (species[isp].vibdof + species[jsp].vibdof)/2.0;
        else if (collide->vibstyle == DISCRETE) {
-//            Tt = pre_etrans / (update->boltz * (2.5-r->coeff[5]));
            if (species[isp].vibdof == 2) z += (species[isp].vibtemp[0]/temp[icell]) / (exp(species[isp].vibtemp[0]/temp[icell])-1);
            else if (species[isp].vibdof > 2) {
                imode = 0;
@@ -108,7 +107,6 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
                while (imode < 4) z += (species[jsp].vibtemp[imode]/temp[icell]) / (exp(species[jsp].vibtemp[imode]/temp[icell])-1);
            }
        }
-       printf("Cell %d temp %f z %f\n",icell,temp[icell],z);
     }
 
     e_excess = ecc - r->coeff[1];

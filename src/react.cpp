@@ -89,12 +89,12 @@ void React::modify_params(int narg, char **arg)
       recomb_boost_inverse = 1.0 / recomb_boost;
       iarg += 2;
     } else if (strcmp(arg[iarg],"partial_energy") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Illegal react_modify command");
       if (strcmp(arg[iarg+1],"yes") == 0) {
+          if (iarg+2 > narg) error->all(FLERR,"Illegal react_modify command");
           partialEnergy = 1;
           iarg += 2;
-      }
-      else if (strcmp(arg[iarg+1],"no") == 0) {
+      } else if (strcmp(arg[iarg+1],"no") == 0) {
+          if (iarg+3 > narg) error->all(FLERR,"Illegal react_modify command");
           partialEnergy = 0;
 
           if (strncmp(arg[iarg+2],"c_",2) == 0 || strncmp(arg[iarg+2],"f_",2) == 0) {
@@ -154,7 +154,6 @@ void React::modify_params(int narg, char **arg)
           iarg += 3;
           nglocal = grid->nlocal;
           memory->create(temp,nglocal,"lambda/grid:temp");
-          printf("nglocal %d\n",nglocal);
       }
 
     } else error->all(FLERR,"Illegal react_modify command");
