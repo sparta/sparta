@@ -18,11 +18,15 @@
 #include "react_tce.h"
 #include "particle.h"
 #include "collide.h"
+#include "update.h"
 #include "random_knuth.h"
 #include "error.h"
+#include "modify.h"
+#include "compute.h"
 
 using namespace SPARTA_NS;
 
+enum{NONE,DISCRETE,SMOOTH};
 enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};   // other files
 
 /* ---------------------------------------------------------------------- */
@@ -46,13 +50,14 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
                       double pre_etrans, double pre_erot, double pre_evib,
                       double &post_etotal, int &kspecies)
 {
-  double pre_etotal,ecc,e_excess,z,Tt;
+  double pre_etotal,ecc,e_excess,z;
   int imode;
   OneReaction *r;
 
   Particle::Species *species = particle->species;
   int isp = ip->ispecies;
-  int jsp = jp->ispecies;  , mm
+  int jsp = jp->ispecies;
+  int icell = ip->icell;
 
   double pre_ave_rotdof = (species[isp].rotdof + species[jsp].rotdof)/2.0;
 
@@ -80,7 +85,7 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
     // average DOFs participating in the reaction
 
-    if (!partialEnergy) {
+    if (partialEnergy) {
        ecc = pre_etrans;
        z = r->coeff[0];
        if (pre_ave_rotdof > 0.1) ecc += pre_erot*z/pre_ave_rotdof;
@@ -92,18 +97,18 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
        if (collide->vibstyle == SMOOTH) z += (species[isp].vibdof + species[jsp].vibdof)/2.0;
        else if (collide->vibstyle == DISCRETE) {
 //            Tt = pre_etrans / (update->boltz * (2.5-r->coeff[5]));
-           Tt = modify->compute[1]->vector_grid[0];
-           if (species[isp].vibdof == 2) z += (species[isp].vibtemp[0]/Tt) / (exp(species[isp].vibtemp[0]/Tt)-1);
+           if (species[isp].vibdof == 2) z += (species[isp].vibtemp[0]/temp[icell]) / (exp(species[isp].vibtemp[0]/temp[icell])-1);
            else if (species[isp].vibdof > 2) {
                imode = 0;
-               while (imode < 4) z += (species[isp].vibtemp[imode]/Tt) / (exp(species[isp].vibtemp[imode]/Tt)-1);
+               while (imode < 4) z += (species[isp].vibtemp[imode]/temp[icell]) / (exp(species[isp].vibtemp[imode]/temp[icell])-1);
            }
-           if (species[jsp].vibdof == 2) z += (species[jsp].vibtemp[0]/Tt) / (exp(species[jsp].vibtemp[0]/Tt)-1);
+           if (species[jsp].vibdof == 2) z += (species[jsp].vibtemp[0]/temp[icell]) / (exp(species[jsp].vibtemp[0]/temp[icell])-1);
            else if (species[jsp].vibdof > 2) {
                imode = 0;
-               while (imode < 4) z += (species[jsp].vibtemp[imode]/Tt) / (exp(species[jsp].vibtemp[imode]/Tt)-1);
+               while (imode < 4) z += (species[jsp].vibtemp[imode]/temp[icell]) / (exp(species[jsp].vibtemp[imode]/temp[icell])-1);
            }
        }
+       printf("Cell %d temp %f z %f\n",icell,temp[icell],z);
     }
 
     e_excess = ecc - r->coeff[1];
