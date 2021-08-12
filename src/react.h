@@ -28,6 +28,8 @@ class React : protected Pointers {
   int recombflag;            // 1 if any recombination reactions defined
   int recombflag_user;       // 0 if user has turned off recomb reactions
   int recomb_species;        // species of 3rd particle in recomb reaction
+  int computeChemRates;      // 1 if only computing a TCE rate without
+                             // actually doing reaction
 
   int partialEnergy;         // 0 if using rDOF model, 1 if using all energy
   int tempwhich,tempindex,invoked_per_grid;

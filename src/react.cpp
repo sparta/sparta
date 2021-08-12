@@ -43,6 +43,7 @@ React::React(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   recombflag_user = 1;
   recomb_boost = 1000.0;
   recomb_boost_inverse = 0.001;
+  computeChemRates = 0;
   partialEnergy = 1;
   id_temp = NULL;
   temp = NULL;
@@ -88,6 +89,12 @@ void React::modify_params(int narg, char **arg)
       if (recomb_boost < 1.0) error->all(FLERR,"Illegal react_modify command");
       recomb_boost_inverse = 1.0 / recomb_boost;
       iarg += 2;
+    } else if (strcmp(arg[iarg],"compute_chem_rates") == 0) {
+        if (iarg+2 > narg) error->all(FLERR,"Illegal react_modify command");
+        if (strcmp(arg[iarg+1],"yes") == 0) computeChemRates = 1;
+        else if (strcmp(arg[iarg+1],"no") == 0) computeChemRates = 0;
+        else error->all(FLERR,"Illegal react_modify command");
+        iarg += 2;
     } else if (strcmp(arg[iarg],"partial_energy") == 0) {
       if (strcmp(arg[iarg+1],"yes") == 0) {
           if (iarg+2 > narg) error->all(FLERR,"Illegal react_modify command");
