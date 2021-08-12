@@ -35,6 +35,7 @@ using namespace SPARTA_NS;
 enum{NONE,DISCRETE,SMOOTH};       // several files  (NOTE: change order)
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{CONSTANT,VARIABLE};      // several files
+enum{COLLISION,CELL};                  // several files
 
 #define DELTAGRID 1000            // must be bigger than split cells per cell
 #define DELTADELETE 1024
@@ -421,9 +422,9 @@ void Collide::collisions()
   ncollide_one = nattempt_one = nreact_one = 0;
   ndelete = 0;
 
-  if (relaxflag == VARIABLE) {
-    int icompute = modify->find_compute( "coll_temp" );
-    if (icompute >= 0 && !(modify->compute[icompute]->invoked_flag & INVOKED_PER_GRID)) {
+  if (relaxTflag == CELL) {
+    int icompute = modify->find_compute( T_compute_name );
+    if (!(modify->compute[icompute]->invoked_flag & INVOKED_PER_GRID)) {
       modify->compute[icompute]->compute_per_grid();
       modify->compute[icompute]->invoked_flag |= INVOKED_PER_GRID;
     }
@@ -483,11 +484,9 @@ template < int NEARCP > void Collide::collisions_one()
     np = cinfo[icell].count;
     if (np <= 1) continue;
     double T = 0.0;
-    if (relaxflag == VARIABLE) {
-      int icompute = modify->find_compute( "coll_temp" );
-      if (icompute >= 0) {
-        T = modify->compute[icompute]->vector_grid[icell];
-      }
+    if (relaxTflag == CELL) {
+      int icompute = modify->find_compute( T_compute_name );
+      T = modify->compute[icompute]->vector_grid[icell];
     }
 
     if (NEARCP) {
@@ -636,11 +635,9 @@ template < int NEARCP > void Collide::collisions_group()
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
     double T = 0.0;
-    if (relaxflag == VARIABLE) {
-      int icompute = modify->find_compute( "coll_temp" );
-      if (icompute >= 0) {
-        T = modify->compute[icompute]->vector_grid[icell];
-      }
+    if (relaxTflag == CELL) {
+      int icompute = modify->find_compute( T_compute_name );
+      T = modify->compute[icompute]->vector_grid[icell];
     }
 
     // reallocate plist and p2g if necessary
@@ -917,11 +914,9 @@ void Collide::collisions_one_ambipolar()
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
     double T = 0.0;
-    if (relaxflag == VARIABLE) {
-      int icompute = modify->find_compute( "coll_temp" );
-      if (icompute >= 0) {
-        T = modify->compute[icompute]->vector_grid[icell];
-      }
+    if (relaxTflag == CELL) {
+      int icompute = modify->find_compute( T_compute_name );
+      T = modify->compute[icompute]->vector_grid[icell];
     }
 
     // setup particle list for this cell
@@ -1218,11 +1213,9 @@ void Collide::collisions_group_ambipolar()
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
     double T = 0.0;
-    if (relaxflag == VARIABLE) {
-      int icompute = modify->find_compute( "coll_temp" );
-      if (icompute >= 0) {
-        T = modify->compute[icompute]->vector_grid[icell];
-      }
+    if (relaxTflag == CELL) {
+      int icompute = modify->find_compute( T_compute_name );
+      T = modify->compute[icompute]->vector_grid[icell];
     }
 
     // reallocate plist and p2g if necessary

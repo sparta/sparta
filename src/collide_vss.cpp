@@ -34,6 +34,7 @@ using namespace MathConst;
 
 enum{NONE,DISCRETE,SMOOTH};            // several files
 enum{CONSTANT,VARIABLE};
+enum{COLLISION,CELL};                  // several files
 
 #define MAXLINE 1024
 
@@ -47,6 +48,7 @@ CollideVSS::CollideVSS(SPARTA *sparta, int narg, char **arg) :
   // optional args
 
   relaxflag = CONSTANT;
+  relaxTflag = COLLISION;
 
   int iarg = 3;
   while (iarg < narg) {
@@ -56,6 +58,11 @@ CollideVSS::CollideVSS(SPARTA *sparta, int narg, char **arg) :
       else if (strcmp(arg[iarg+1],"variable") == 0) relaxflag = VARIABLE;
       else error->all(FLERR,"Illegal collide command");
       iarg += 2;
+    } else if (strcmp(arg[iarg],"T_compute") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide command");
+      relaxTflag = CELL;
+      T_compute_name = new char[strlen(arg[iarg+1]) + 1];
+      strcpy(T_compute_name,arg[iarg+1]);
     } else error->all(FLERR,"Illegal collide command");
   }
 
@@ -459,11 +466,8 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
 
       if (rotdof) {
         if (relaxflag == VARIABLE) {
-          if (T == 0.0) {
-            rotn_phi = rotrel(sp,E_Dispose);
-          } else {
-            rotn_phi = rotrel_T(sp,T);
-          }
+          if (relaxTflag == CELL) rotn_phi = rotrel_T(sp,T);
+          else rotn_phi = rotrel(sp,E_Dispose);
         }
         if (rotn_phi >= random->uniform()) {
           if (rotstyle == NONE) {
@@ -794,9 +798,7 @@ double CollideVSS::rotrel(int isp, double Ec)
   //  include its DoF, consistent with Bird 2013 (3.32)
 
   double Tr = Ec /(update->boltz * (2.5-params[isp][isp].omega + particle->species[isp].rotdof/2.0));
-  double rotphi = (1.0+params[isp][isp].rotc2/sqrt(Tr) + params[isp][isp].rotc3/Tr)
-                / params[isp][isp].rotc1;
-  return rotphi;
+  return rotrel_T( isp, Tr );
 }
 
 double CollideVSS::rotrel_T(int isp, double T)

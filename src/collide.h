@@ -48,7 +48,7 @@ class Collide : protected Pointers {
 			     Particle::OnePart *, Particle::OnePart *) = 0;
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *) = 0;
   virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
-                                Particle::OnePart *&, double T) = 0;
+                                Particle::OnePart *&, double T = 0.0) = 0;
 
   virtual double extract(int, int, const char *) {return 0.0;}
 
@@ -63,6 +63,8 @@ class Collide : protected Pointers {
 
  protected:
   int relaxflag;
+  int relaxTflag;
+  char* T_compute_name;
 
   int npmax;          // max # of particles in plist
   int *plist;         // list of particle indices for the entire cell
