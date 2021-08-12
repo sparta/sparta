@@ -424,8 +424,9 @@ void Collide::collisions()
 
   if (relaxTflag == CELL) {
     int icompute = modify->find_compute( T_compute_name );
+    modify->compute[icompute]->compute_per_grid();
+    modify->compute[icompute]->post_process_grid(0, 1, NULL, NULL, NULL, 1);
     if (!(modify->compute[icompute]->invoked_flag & INVOKED_PER_GRID)) {
-      modify->compute[icompute]->compute_per_grid();
       modify->compute[icompute]->invoked_flag |= INVOKED_PER_GRID;
     }
   }
