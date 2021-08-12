@@ -37,9 +37,9 @@ class CollideVSS : public Collide {
   double attempt_collision(int, int, int, double);
   virtual int test_collision(int, int, int, Particle::OnePart *, Particle::OnePart *);
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *);
-  virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
-                        Particle::OnePart *&);
   double extract(int, int, const char *);
+  virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
+                        Particle::OnePart *&, double T);
 
   struct State {      // two-particle state
     double vr2;
@@ -73,7 +73,7 @@ class CollideVSS : public Collide {
   };
 
  protected:
-  int relaxflag,eng_exchange;
+  int eng_exchange;
   double vr_indice;
   double **prefactor; // static portion of collision attempt frequency
 
@@ -86,7 +86,7 @@ class CollideVSS : public Collide {
   void SCATTER_TwoBodyScattering(Particle::OnePart *,
 				 Particle::OnePart *);
   void EEXCHANGE_NonReactingEDisposal(Particle::OnePart *,
-				      Particle::OnePart *);
+				      Particle::OnePart *, double T);
   void SCATTER_ThreeBodyScattering(Particle::OnePart *,
                                    Particle::OnePart *,
                                    Particle::OnePart *);
@@ -96,6 +96,7 @@ class CollideVSS : public Collide {
 
   double sample_bl(RanKnuth *, double, double);
   double rotrel (int, double);
+  double rotrel_T (int, double);
   double vibrel (int, double);
 
   void read_param_file(char *);

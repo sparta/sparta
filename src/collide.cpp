@@ -15,6 +15,7 @@
 #include "math.h"
 #include "string.h"
 #include "collide.h"
+#include "compute.h"
 #include "particle.h"
 #include "mixture.h"
 #include "update.h"
@@ -33,10 +34,12 @@ using namespace SPARTA_NS;
 
 enum{NONE,DISCRETE,SMOOTH};       // several files  (NOTE: change order)
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
+enum{CONSTANT,VARIABLE};      // several files
 
 #define DELTAGRID 1000            // must be bigger than split cells per cell
 #define DELTADELETE 1024
 #define DELTAELECTRON 128
+#define INVOKED_PER_GRID 16
 
 #define BIG 1.0e20
 
@@ -418,6 +421,14 @@ void Collide::collisions()
   ncollide_one = nattempt_one = nreact_one = 0;
   ndelete = 0;
 
+  if (relaxflag == VARIABLE) {
+    int icompute = modify->find_compute( "coll_temp" );
+    if (icompute >= 0 && !(modify->compute[icompute]->invoked_flag & INVOKED_PER_GRID)) {
+      modify->compute[icompute]->compute_per_grid();
+      modify->compute[icompute]->invoked_flag |= INVOKED_PER_GRID;
+    }
+  }
+
   // perform collisions:
   // variant for single group or multiple groups
   // variant for nearcp flag or not
@@ -471,6 +482,13 @@ template < int NEARCP > void Collide::collisions_one()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
+    double T = 0.0;
+    if (relaxflag == VARIABLE) {
+      int icompute = modify->find_compute( "coll_temp" );
+      if (icompute >= 0) {
+        T = modify->compute[icompute]->vector_grid[icell];
+      }
+    }
 
     if (NEARCP) {
       if (np > max_nn) realloc_nn(np,nn_last_partner);
@@ -551,7 +569,7 @@ template < int NEARCP > void Collide::collisions_one()
       // perform collision and possible reaction
 
       setup_collision(ipart,jpart);
-      reactflag = perform_collision(ipart,jpart,kpart);
+      reactflag = perform_collision(ipart,jpart,kpart,T);
       ncollide_one++;
       if (reactflag) nreact_one++;
       else continue;
@@ -617,6 +635,13 @@ template < int NEARCP > void Collide::collisions_group()
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
+    double T = 0.0;
+    if (relaxflag == VARIABLE) {
+      int icompute = modify->find_compute( "coll_temp" );
+      if (icompute >= 0) {
+        T = modify->compute[icompute]->vector_grid[icell];
+      }
+    }
 
     // reallocate plist and p2g if necessary
 
@@ -763,7 +788,7 @@ template < int NEARCP > void Collide::collisions_group()
         // perform collision and possible reaction
 
 	setup_collision(ipart,jpart);
-	reactflag = perform_collision(ipart,jpart,kpart);
+	reactflag = perform_collision(ipart,jpart,kpart,T);
 	ncollide_one++;
         if (reactflag) nreact_one++;
         else continue;
@@ -891,6 +916,13 @@ void Collide::collisions_one_ambipolar()
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
+    double T = 0.0;
+    if (relaxflag == VARIABLE) {
+      int icompute = modify->find_compute( "coll_temp" );
+      if (icompute >= 0) {
+        T = modify->compute[icompute]->vector_grid[icell];
+      }
+    }
 
     // setup particle list for this cell
 
@@ -1012,7 +1044,7 @@ void Collide::collisions_one_ambipolar()
       ispecies = ipart->ispecies;
       jspecies = jpart->ispecies;
       setup_collision(ipart,jpart);
-      reactflag = perform_collision(ipart,jpart,kpart);
+      reactflag = perform_collision(ipart,jpart,kpart,T);
       ncollide_one++;
       if (reactflag) nreact_one++;
       else continue;
@@ -1185,6 +1217,13 @@ void Collide::collisions_group_ambipolar()
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
+    double T = 0.0;
+    if (relaxflag == VARIABLE) {
+      int icompute = modify->find_compute( "coll_temp" );
+      if (icompute >= 0) {
+        T = modify->compute[icompute]->vector_grid[icell];
+      }
+    }
 
     // reallocate plist and p2g if necessary
 
@@ -1364,7 +1403,7 @@ void Collide::collisions_group_ambipolar()
         ispecies = ipart->ispecies;
         jspecies = jpart->ispecies;
 	setup_collision(ipart,jpart);
-	reactflag = perform_collision(ipart,jpart,kpart);
+	reactflag = perform_collision(ipart,jpart,kpart,T);
 	ncollide_one++;
         if (reactflag) nreact_one++;
         else continue;

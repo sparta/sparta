@@ -253,7 +253,8 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 
 int CollideVSS::perform_collision(Particle::OnePart *&ip,
                                   Particle::OnePart *&jp,
-                                  Particle::OnePart *&kp)
+                                  Particle::OnePart *&kp,
+                                  double T)
 {
   int reactflag,kspecies;
   double x[3],v[3];
@@ -355,7 +356,7 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
     }
 
   } else {
-    if (precoln.ave_dof > 0.0) EEXCHANGE_NonReactingEDisposal(ip,jp);
+    if (precoln.ave_dof > 0.0) EEXCHANGE_NonReactingEDisposal(ip,jp,T);
     SCATTER_TwoBodyScattering(ip,jp);
   }
 
@@ -423,7 +424,7 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
 /* ---------------------------------------------------------------------- */
 
 void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
-						Particle::OnePart *jp)
+						Particle::OnePart *jp, double T)
 {
 
   double State_prob,Fraction_Rot,Fraction_Vib,E_Dispose;
@@ -457,7 +458,13 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
       double rotn_phi = species[sp].rotrel;
 
       if (rotdof) {
-        if (relaxflag == VARIABLE) rotn_phi = rotrel(sp,E_Dispose+p->erot);
+        if (relaxflag == VARIABLE) {
+          if (T == 0.0) {
+            rotn_phi = rotrel(sp,E_Dispose);
+          } else {
+            rotn_phi = rotrel_T(sp,T);
+          }
+        }
         if (rotn_phi >= random->uniform()) {
           if (rotstyle == NONE) {
             p->erot = 0.0;
@@ -788,6 +795,13 @@ double CollideVSS::rotrel(int isp, double Ec)
 
   double Tr = Ec /(update->boltz * (2.5-params[isp][isp].omega + particle->species[isp].rotdof/2.0));
   double rotphi = (1.0+params[isp][isp].rotc2/sqrt(Tr) + params[isp][isp].rotc3/Tr)
+                / params[isp][isp].rotc1;
+  return rotphi;
+}
+
+double CollideVSS::rotrel_T(int isp, double T)
+{
+  double rotphi = (1.0+params[isp][isp].rotc2/sqrt(T) + params[isp][isp].rotc3/T)
                 / params[isp][isp].rotc1;
   return rotphi;
 }
