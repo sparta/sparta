@@ -97,7 +97,8 @@ class CollideVSS : public Collide {
   double sample_bl(RanKnuth *, double, double);
   double rotrel (int, double);
   double rotrel_T (int, double);
-  double vibrel (int, double);
+  double vibrel (int, double);  
+  double vibrel_T (int, double);  
 
   void read_param_file(char *);
   int wordparse(int, char *, char **);

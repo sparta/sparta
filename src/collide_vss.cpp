@@ -494,7 +494,10 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
       double vibn_phi = species[sp].vibrel[0];
 
       if (vibdof) {
-        if (relaxflag == VARIABLE) vibn_phi = vibrel(sp,E_Dispose+p->evib);
+        if (relaxflag == VARIABLE) {
+          if (relaxTflag == CELL) vibn_phi = vibrel_T(sp,T);
+          else vibn_phi = vibrel(sp,E_Dispose+p->evib);
+        }
         if (vibn_phi >= random->uniform()) {
           if (vibstyle == NONE) {
             p->evib = 0.0;
@@ -815,8 +818,14 @@ double CollideVSS::rotrel_T(int isp, double T)
 double CollideVSS::vibrel(int isp, double Ec)
 {
   double Tr = Ec /(update->boltz * (3.5-params[isp][isp].omega));
-  double vibphi = 1.0 / (params[isp][isp].vibc1/pow(Tr,params[isp][isp].omega) *
-                         exp(params[isp][isp].vibc2/pow(Tr,1.0/3.0)));
+  return vibrel_T(isp, Tr);
+}
+
+double CollideVSS::vibrel_T(int isp, double T)
+{
+  double omega = params[isp][isp].omega;
+  double vibphi = 1.0 / (params[isp][isp].vibc1/pow(T,omega) * 
+                         exp(params[isp][isp].vibc2/pow(T,1.0/3.0)));
   return vibphi;
 }
 
