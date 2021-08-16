@@ -29,6 +29,23 @@ class SurfReact : protected Pointers {
   int size_vector;          // length of global vector
   int nlist;                // # of reactions defined or read from file
 
+  // reaction info, as read from file
+
+  struct OneReaction {
+    int active;                    // 1 if reaction is active
+    int type;                      // reaction type = DISSOCIATION, etc
+    int style;                     // reaction style = ARRHENIUS, etc
+    int ncoeff;                    // # of numerical coeffs
+    int nreactant,nproduct;        // # of reactants and products
+    char **id_reactants,**id_products;  // species IDs of reactants/products
+    int *reactants,*products;      // species indices of reactants/products
+    double *coeff;                 // numerical coeffs for reaction
+    char *id;                      // reaction ID (formula)
+  };
+
+  OneReaction *rlist;              // list of all reactions read from file
+  int maxlist;                     // max # of reactions in rlist
+
   SurfReact(class SPARTA *, int, char **);
   virtual ~SurfReact();
   virtual void init();
@@ -51,23 +68,6 @@ class SurfReact : protected Pointers {
   int *tally_single,*tally_total;
   int *tally_single_all,*tally_total_all;
   int tally_two_flag,tally_single_flag,tally_total_flag;
-
-  // reaction info, as read from file
-
-  struct OneReaction {
-    int active;                    // 1 if reaction is active
-    int type;                      // reaction type = DISSOCIATION, etc
-    int style;                     // reaction style = ARRHENIUS, etc
-    int ncoeff;                    // # of numerical coeffs
-    int nreactant,nproduct;        // # of reactants and products
-    char **id_reactants,**id_products;  // species IDs of reactants/products
-    int *reactants,*products;      // species indices of reactants/products
-    double *coeff;                 // numerical coeffs for reaction
-    char *id;                      // reaction ID (formula)
-  };
-
-  OneReaction *rlist;              // list of all reactions read from file
-  int maxlist;                     // max # of reactions in rlist
 
   // possible reactions a reactant species is part of
 
