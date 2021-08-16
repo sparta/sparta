@@ -39,7 +39,8 @@
   ke = flux of particle kinetic energy on surface element
   erot = flux of particle rotational energy on surface element
   evib = flux of particle vibrational energy on surface element
-  etot = flux of particle total energy on surface element 
+  echem = flux of particle chemical catalytic energy on surface element
+  etot = flux of particle total energy on surface element
 </PRE>
 
 </UL>
@@ -248,11 +249,21 @@ internal vibrational energy changes from Evib_pre to Evib_post when
 colliding with the surface element.  The flux equation is the same as
 for the <I>ke</I> value.
 </P>
+<P>The <I>echem</I> value calculates the chemical catalytic energy flux <I>Eflux</I>
+imparted to the surface element by particles in the group, such that
+energy lost by a particles recombining is a positive flux.  This is computed as
+</P>
+<PRE>Eflux = - Sum_i (e_recomb) / (A * dt / fnum)
+</PRE>
+<P>where e_recomb is the catalytic chemical energy of a particle pair
+(positive for an exothermic recombination reaction). The flux equation
+is the same as for the <I>ke</I> value.
+</P>
 <P>The <I>etot</I> value calculates the total energy flux imparted to the
 surface element by particles in the group, such that energy lost by a
 particle is a positive flux.  This is simply the sum of kinetic,
-rotational, and vibrational energies.  Thus the total energy flux is
-the sum of what is computed by the <I>ke</I>, <I>erot</I>, and <I>evib</I> values.
+rotational, vibrational and catalytic energies.  Thus the total energy flux is
+the sum of what is computed by the <I>ke</I>, <I>erot</I>, <I>evib</I> and <I>echem</I> values.
 </P>
 <HR>
 
@@ -267,7 +278,7 @@ transparent surfaces and how to create them.
 surfaces.  I.e. they are the count and weighted count of particles
 passing through the surface.
 </P>
-<P>The <I>mflux</I>, <I>ke</I>, <I>erot</I>. <I>evib</I>, and <I>etot</I> values are fluxes.  For
+<P>The <I>mflux</I>, <I>ke</I>, <I>erot</I>. <I>evib</I>, <I>echem</I> and <I>etot</I> values are fluxes.  For
 transparent surfaces, they are calculated for the incident particle as
 if they had struck the surface.  The outgoing particle is ignored.
 This means the tally quantity is the flux of particles onto the
@@ -301,7 +312,7 @@ for an overview of SPARTA output options.
 <P>The per-surf array values will be in the <A HREF = "units.html">units</A>
 appropriate to the individual values as described above. <I>N</I> is
 unitless.  <I>Press</I>, <I>px</I>, <I>py</I>, <I>pz</I>, <I>shx</I>, <I>shy</I>, <I>shz</I> are in in
-pressure units.  <I>Ke</I>, <I>erot</I>, <I>evib</I>, and <I>etot</I> are in
+pressure units.  <I>Ke</I>, <I>erot</I>, <I>evib</I>, <I>echem</I>, and <I>etot</I> are in
 energy/area-time units for 3d simulations and energy/length-time units
 for 2d simulations.
 </P>
