@@ -13,10 +13,14 @@ react_modify command :h3
 react_modify keyword values ...  :pre
 
 one or more keyword/value pairs may be listed :ulb,l
-keywords = {recomb} or {rboost} :l
+keywords = {recomb} or {rboost} or {compute_chem_rates} or {partial_energy} :l
   {recomb} value = yes or no = enable or disable defined recombination reactions
   {rboost} value = rfactor
-    rfactor = boost probability of recombination reactions by this factor :pre
+    rfactor = boost probability of recombination reactions by this factor
+  {compute_chem_rates} value = yes or no = enable or disable computation of Arrhenius rate for chemical
+  reaction without performing the reaction
+  {partial_energy} = yes or no = use partial energy or total energy for TCE chemistry
+  If {no}, {value} = compute or fix ID that computes a temperature :pre
 :ule
 
 [Examples:]
@@ -57,6 +61,28 @@ of a recombination reaction becomes > 1.0, when it is does occur.
 SPARTA does not check for this, so you should estimate the largest
 boost factor that is safe to use for your model.
 
+The {compute_chem_rates} keyword is a setting that allows the user to
+only compute Arrhenius rates for chemical reactions without performing them.
+
+The {partial_energy} keyword is a setting that allows the user to choose
+the amount of internal energy and internal degrees of freedom used in the
+TCE model. If the {partial_energy} keyword is set to {yes}, the rDOF model
+of Bird is used, and only the sum of the relative translational energy between
+the partcles and a fraction of the rotational energy is used. The participating
+internal degrees of freedom are either set to 1 (dissociation reactions), or 0 (recombination,
+exchange, ionization reactions).
+Conversely, if the {partial_energy} keyword is set to {no}, then the total
+energy model is used, i.e. the sum of the relative translational energy between
+the partcles and the rotational and vibrational energies. The participating
+internal degrees of freedom are computed directly by the code and do not need
+to be inputted by the user. The vibrational energy model used has an impact on
+the internal degrees of freedom used in the TCE model in that case.
+If the {partial_energy} keyword is set to {no}, an additional parameter {value}
+needs to be specified. That value should be the result of a compute or fix grid that computes
+a temperature, usually the translational temperature of the mixture (compute thermal/grid).
+That temperature in each grid cell is used to compute the internal degrees of freedom of the participating
+particles in the case of the vibrational energy model being specified as {DISCRETE}.
+
 :line
 
 [Restrictions:] none
@@ -67,4 +93,4 @@ boost factor that is safe to use for your model.
 
 [Default:]
 
-The option defaults are recomb = yes and rboost = 1000.0.
+The option defaults are recomb = yes, rboost = 1000.0, compute_chem_rates = no, partial_energy = yes.
