@@ -468,7 +468,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
       if (rotdof) {
         if (relaxflag == VARIABLE) {
           if (relaxTflag == CELL) rotn_phi = rotrel_T(sp,T);
-          else rotn_phi = rotrel(sp,E_Dispose);
+          else rotn_phi = rotrel(sp,E_Dispose+p->erot);
         }
         if (rotn_phi >= random->uniform()) {
           if (rotstyle == NONE) {
