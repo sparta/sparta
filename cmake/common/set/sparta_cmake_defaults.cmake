@@ -38,7 +38,8 @@ if(SPARTA_ENABLE_TESTING)
       "axi"
       "ambi"
       "relax_const"
-      "relax_variable")
+      "relax_variable"
+      "relax_cell_temp")
 
   set(SPARTA_DISABLED_TESTS
       "in.ablation.3d.reactions" # Failing
