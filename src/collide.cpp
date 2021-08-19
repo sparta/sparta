@@ -423,7 +423,7 @@ void Collide::collisions()
   ndelete = 0;
 
   if (relaxTflag == CELL) {
-    int icompute = modify->find_compute( T_compute_name );
+    int icompute = modify->find_compute( T_name );
     modify->compute[icompute]->compute_per_grid();
     modify->compute[icompute]->post_process_grid(1, 1, NULL, NULL, NULL, 1);
     if (!(modify->compute[icompute]->invoked_flag & INVOKED_PER_GRID)) {
@@ -486,7 +486,7 @@ template < int NEARCP > void Collide::collisions_one()
     if (np <= 1) continue;
     double T = 0.0;
     if (relaxTflag == CELL) {
-      int icompute = modify->find_compute( T_compute_name );
+      int icompute = modify->find_compute( T_name );
       T = modify->compute[icompute]->vector_grid[icell];
     }
 
@@ -637,7 +637,7 @@ template < int NEARCP > void Collide::collisions_group()
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
     double T = 0.0;
     if (relaxTflag == CELL) {
-      int icompute = modify->find_compute( T_compute_name );
+      int icompute = modify->find_compute( T_name );
       T = modify->compute[icompute]->vector_grid[icell];
     }
 
@@ -916,7 +916,7 @@ void Collide::collisions_one_ambipolar()
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
     double T = 0.0;
     if (relaxTflag == CELL) {
-      int icompute = modify->find_compute( T_compute_name );
+      int icompute = modify->find_compute( T_name );
       T = modify->compute[icompute]->vector_grid[icell];
     }
 
@@ -1215,7 +1215,7 @@ void Collide::collisions_group_ambipolar()
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
     double T = 0.0;
     if (relaxTflag == CELL) {
-      int icompute = modify->find_compute( T_compute_name );
+      int icompute = modify->find_compute( T_name );
       T = modify->compute[icompute]->vector_grid[icell];
     }
 

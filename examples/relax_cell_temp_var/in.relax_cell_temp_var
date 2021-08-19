@@ -25,17 +25,18 @@ mixture		    air N2 vstream 0.0 0.0 0.0 temp 10000.0 trot 100.0
 global              nrho 7.07043E22
 global              fnum 7.07043E5
 
-compute             coll_temp thermal/grid all all temp
-collide		    vss air n2.vss relax variable T c_coll_temp
+compute             coll_temp_tr thermal/grid all all temp
+compute             coll_temp_rot grid all all trot
+variable            coll_temp grid (3*c_coll_temp_tr[1] + 2*c_coll_temp_rot[1])/5
+collide		    vss air n2.vss relax variable T v_coll_temp
 
 create_particles    air n 1000000 twopass
 
 stats		    1
 compute             temp temp
-compute             Ttrans reduce ave c_coll_temp[1]
+compute             Ttrans reduce ave c_coll_temp_tr[1]
 
-compute             rot grid all all trot
-compute             Trot reduce ave c_rot[1]
+compute             Trot reduce ave c_coll_temp_rot[1]
 
 stats_style	    step cpu np nattempt ncoll c_Ttrans c_Trot
 

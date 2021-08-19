@@ -58,11 +58,11 @@ CollideVSS::CollideVSS(SPARTA *sparta, int narg, char **arg) :
       else if (strcmp(arg[iarg+1],"variable") == 0) relaxflag = VARIABLE;
       else error->all(FLERR,"Illegal collide command");
       iarg += 2;
-    } else if (strcmp(arg[iarg],"T_compute") == 0) {
+    } else if (strcmp(arg[iarg],"T") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal collide command");
       relaxTflag = CELL;
-      T_compute_name = new char[strlen(arg[iarg+1]) + 1];
-      strcpy(T_compute_name,arg[iarg+1]);
+      T_name = new char[strlen(arg[iarg+1]) - 1];
+      strcpy(T_name,&arg[iarg+1][2]);
       iarg += 2;
     } else error->all(FLERR,"Illegal collide command");
   }

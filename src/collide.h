@@ -64,7 +64,7 @@ class Collide : protected Pointers {
  protected:
   int relaxflag;
   int relaxTflag;
-  char* T_compute_name;
+  char* T_name;
 
   int npmax;          // max # of particles in plist
   int *plist;         // list of particle indices for the entire cell
