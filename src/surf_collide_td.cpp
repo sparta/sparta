@@ -177,13 +177,6 @@ collide(Particle::OnePart *&ip, double &,
     }
   }
 
-  // if new particle J created, also need to trigger any fixes
-
-  if (jp && modify->n_add_particle) {
-    int j = jp - particle->particles;
-    modify->add_particle(j,twall,twall,twall,vstream);
-  }
-
   // call any fixes with a surf_react() method
   // they may reset j to -1, e.g. fix ambipolar
   //   in which case newly created j is deleted

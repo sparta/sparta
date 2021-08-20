@@ -63,21 +63,26 @@ collide(Particle::OnePart *&ip, double &,
   }
 
   // specular reflection for each particle
-  // reflect incident v around norm
+  // only if SurfReact did not already reset velocities
+  // also both partiticles need to trigger any fixes
+  //   to update per-particle properties which depend on
+  //   temperature of the particle, e.g. fix vibmode and fix ambipolar
+  // NOTE: not doing this for this specular model, 
+  //   since temperature does not change, would need to add a twall arg
 
-  if (reaction < 2) {
-    if (ip) MathExtra::reflect3(ip->v,norm);
-    if (jp) MathExtra::reflect3(jp->v,norm);
+  if (ip) {
+    if (reaction < 2) MathExtra::reflect3(ip->v,norm);
+    //if (modify->n_update_custom) {
+    //  int i = ip - particle->particles;
+    //  modify->update_custom(i,twall,twall,twall,vstream);
+    //}
   }
-
-  // if new particle J created, also need to trigger any fixes
-
-  if (jp && modify->n_add_particle) {
-    int j = jp - particle->particles;
-    // NOTE: need to add a twall arg to this fix ??
-    //       to support 2 fixes that handle created particles
-    //       fix vibmode and fix ambipolar
-    //modify->add_particle(j,twall,twall,twall,vstream);
+  if (jp) {
+    if (reaction < 2) MathExtra::reflect3(jp->v,norm);
+    //if (modify->n_update_custom) {
+    //  int j = jp - particle->particles;
+    //  modify->update_custom(j,twall,twall,twall,vstream);
+    //}
   }
 
   // call any fixes with a surf_react() method

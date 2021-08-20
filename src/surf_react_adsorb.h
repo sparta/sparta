@@ -49,7 +49,7 @@ class SurfReactAdsorb : public SurfReact {
   int this_index;                   // index of this surf reaction model 
                                     // in Surf list of all reaction models
 
-  class RanPark *random;     // RNG for reaction probabilities
+  class RanKnuth *random;     // RNG for reaction probabilities
 
   int nspecies_surf;         // number of surface species
   char **species_surf;       // list of surface species

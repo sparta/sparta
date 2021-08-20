@@ -36,7 +36,7 @@ class SurfReactProb : public SurfReact {
   int match_product(char *, int);
 
  private:
-  class RanPark *random;     // RNG for reaction probabilities
+  class RanKnuth *random;     // RNG for reaction probabilities
 
   // reaction info, as read from file
 
