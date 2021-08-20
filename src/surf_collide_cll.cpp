@@ -186,38 +186,24 @@ collide(Particle::OnePart *&ip, double &,
   }
 
   // CLL reflection for each particle
-<<<<<<< HEAD
-
-  if (reaction < 2) {
-    if (ip) cll(ip,norm);
-    if (jp) cll(jp,norm);
-  }
-
-  // if new particle J created, also need to trigger any fixes
-
-  if (jp && modify->n_add_particle) {
-    int j = jp - particle->particles;
-    modify->add_particle(j,twall,twall,twall,vstream);
-=======
-  // particle I needs to trigger any fixes to update per-particle
-  //  properties which depend on the temperature of the particle
-  //  (e.g. fix vibmode and fix ambipolar)
-  // if new particle J created, also need to trigger any fixes
+  // only if SurfReact did not already reset velocities
+  // also both partiticles need to trigger any fixes
+  //   to update per-particle properties which depend on
+  //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 
   if (ip) {
-    cll(ip,norm);
+    if (reaction < 2) cll(ip,norm);
     if (modify->n_update_custom) {
       int i = ip - particle->particles;
       modify->update_custom(i,twall,twall,twall,vstream);
     }
   }
   if (jp) {
-    cll(jp,norm);
+    if (reaction < 2) cll(jp,norm);
     if (modify->n_update_custom) {
       int j = jp - particle->particles;
       modify->update_custom(j,twall,twall,twall,vstream);
     }
->>>>>>> master
   }
 
   // call any fixes with a surf_react() method

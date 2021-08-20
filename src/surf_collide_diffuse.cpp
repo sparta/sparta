@@ -162,18 +162,24 @@ collide(Particle::OnePart *&ip, double &,
   }
 
   // diffuse reflection for each particle
-  // resets v, roteng, vibeng
+  // only if SurfReact did not already reset velocities
+  // also both partiticles need to trigger any fixes
+  //   to update per-particle properties which depend on
+  //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 
-  if (reaction < 2) {
-    if (ip) diffuse(ip,norm);
-    if (jp) diffuse(jp,norm);
+  if (ip) {
+    if (reaction < 2) diffuse(ip,norm);
+    if (modify->n_update_custom) {
+      int i = ip - particle->particles;
+      modify->update_custom(i,twall,twall,twall,vstream);
+    }
   }
-
-  // if new particle J created, also need to trigger any fixes
-
-  if (jp && modify->n_add_particle) {
-    int j = jp - particle->particles;
-    modify->add_particle(j,twall,twall,twall,vstream);
+  if (jp) {
+    if (reaction < 2) diffuse(jp,norm);
+    if (modify->n_update_custom) {
+      int j = jp - particle->particles;
+      modify->update_custom(j,twall,twall,twall,vstream);
+    }
   }
 
   // call any fixes with a surf_react() method

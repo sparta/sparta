@@ -156,11 +156,25 @@ collide(Particle::OnePart *&ip, double &,
     if (reaction) surf->nreact_one++;
   }
 
-  // td reflection for each particle
+  // TD reflection for each particle
+  // only if SurfReact did not already reset velocities
+  // also both partiticles need to trigger any fixes
+  //   to update per-particle properties which depend on
+  //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 
-  if (reaction < 2) {
-    if (ip) td(ip,norm);
-    if (jp) td(jp,norm);
+  if (ip) {
+    if (reaction < 2) td(ip,norm);
+    if (modify->n_update_custom) {
+      int i = ip - particle->particles;
+      modify->update_custom(i,twall,twall,twall,vstream);
+    }
+  }
+  if (jp) {
+    if (reaction < 2) td(jp,norm);
+    if (modify->n_update_custom) {
+      int j = jp - particle->particles;
+      modify->update_custom(j,twall,twall,twall,vstream);
+    }
   }
 
   // if new particle J created, also need to trigger any fixes

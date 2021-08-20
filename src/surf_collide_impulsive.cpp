@@ -197,21 +197,24 @@ collide(Particle::OnePart *&ip, double &,
   }
 
   // impulsive reflection for each particle
-  // particle I needs to trigger any fixes to update per-particle
-  //  properties which depend on the temperature of the particle
-  //  (e.g. fix vibmode and fix ambipolar)
-  // if new particle J created, also need to trigger any fixes
+  // only if SurfReact did not already reset velocities
+  // also both partiticles need to trigger any fixes
+  //   to update per-particle properties which depend on
+  //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 
-  if (reaction < 2) {
-    if (ip) impulsive(ip,norm);
-    if (jp) impulsive(jp,norm);
+  if (ip) {
+    if (reaction < 2) impulsive(ip,norm);
+    if (modify->n_update_custom) {
+      int i = ip - particle->particles;
+      modify->update_custom(i,twall,twall,twall,vstream);
+    }
   }
-
-  // if new particle J created, also need to trigger any fixes
-
-  if (jp && modify->n_add_particle) {
-    int j = jp - particle->particles;
-    modify->add_particle(j,twall,twall,twall,vstream);
+  if (jp) {
+    if (reaction < 2) impulsive(jp,norm);
+    if (modify->n_update_custom) {
+      int j = jp - particle->particles;
+      modify->update_custom(j,twall,twall,twall,vstream);
+    }
   }
 
   // call any fixes with a surf_react() method
