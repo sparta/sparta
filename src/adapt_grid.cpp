@@ -32,7 +32,7 @@
 #include "dump.h"
 #include "write_grid.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "hashlittle.h"
 #include "my_page.h"
 #include "math_extra.h"
@@ -493,14 +493,14 @@ void AdaptGrid::setup(int iter)
   // create RNG for style = RANDOM
 
   if (style == RANDOM) {
-    random = new RanPark(update->ranmaster->uniform());
+    random = new RanKnuth(update->ranmaster->uniform());
     double seed = update->ranmaster->uniform();
     random->reset(seed,comm->me,100);
   } else random = NULL;
 
   // list of new cell indices for one refined cell
   // refinement may occur between minlevel and maxlevel-1 inclusive
-  
+
   Grid::ParentLevel *plevels = grid->plevels;
 
   int nmax = 0;

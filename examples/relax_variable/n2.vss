@@ -1,0 +1,10 @@
+# VSS collision model parameters for each species
+
+# diameter (m)
+# omega
+# tref
+# alpha
+# Z_inf
+# T*
+
+N2   4.07E-10    0.74  273.15  1.6  15.7   80.0   0.0   0.0

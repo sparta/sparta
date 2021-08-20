@@ -51,7 +51,7 @@ class SurfCollideDiffuse : public SurfCollide {
   int tvar;                  // index of equal-style variable
 
   double vstream[3];
-  class RanPark *random;     // RNG for particle reflection
+  class RanKnuth *random;     // RNG for particle reflection
 
   void diffuse(Particle::OnePart *, double *);
 };

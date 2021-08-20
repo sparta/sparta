@@ -54,8 +54,8 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
 
     } else if (strcmp(arg[iarg],"g") == 0 ||
                strcmp(arg[iarg],"gpus") == 0) {
-#ifndef KOKKOS_ENABLE_CUDA
-      error->all(FLERR,"GPUs are requested but Kokkos has not been compiled for CUDA");
+#ifndef SPARTA_KOKKOS_GPU
+      error->all(FLERR,"GPUs are requested but Kokkos has not been compiled for CUDA or HIP");
 #endif
       if (iarg+2 > narg) error->all(FLERR,"Invalid Kokkos command-line args");
       ngpus = atoi(arg[iarg+1]);
@@ -96,7 +96,7 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
 
       if (ngpus > 1 && !set_flag)
         error->all(FLERR,"Could not determine local MPI rank for multiple "
-                           "GPUs with Kokkos CUDA because MPI library not recognized");
+                           "GPUs with Kokkos CUDA or HIP because MPI library not recognized");
 
     } else if (strcmp(arg[iarg],"t") == 0 ||
                strcmp(arg[iarg],"threads") == 0) {

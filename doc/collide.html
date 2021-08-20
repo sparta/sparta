@@ -169,7 +169,9 @@ affect rotational relaxation; parameters 7 and 8 affect vibrational
 relaxation.  In this case the rotational and vibrational relaxation
 during a collision is treated as a variable and is computed for each
 collision.  This calculation is only performed for polyatomic species,
-using equations A5 and A6 on pages 413 and 414 in <A HREF = "#Bird94">(Bird94)</A>.
+using equations A5 and A6 on pages 413 and 414 in <A HREF = "#Bird94">(Bird94)</A>,
+with the modification that the collision temperature is calculated
+using energy in the internal mode as well as the translational mode.
 Zrotinf and T* are parameters in the numerator and denominator of eq
 A5.  C1 and C2 are in eq A6.  The units of these parameters is as
 follows:

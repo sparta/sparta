@@ -30,7 +30,7 @@
 #include "marching_squares.h"
 #include "marching_cubes.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "memory.h"
 #include "error.h"
 
@@ -202,7 +202,7 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
 
   random = NULL;
   if (which == RANDOM) {
-    random = new RanPark(update->ranmaster->uniform());
+    random = new RanKnuth(update->ranmaster->uniform());
     //double seed = update->ranmaster->uniform();
     //random->reset(seed,comm->me,100);
   }

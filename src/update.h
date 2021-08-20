@@ -67,7 +67,7 @@ class Update : protected Pointers {
                              // in this case, bad means particle ended up
                              // outside of final cell curved surf by epsilon
                              // when move logic thinks it is inside cell
-  
+
   int reorder_period;        // # of timesteps between particle reordering
   int global_mem_limit;      // max # of bytes in arrays for rebalance and reordering
   int mem_limit_grid_flag;   // 1 if using size of grid as memory limit
@@ -96,7 +96,7 @@ class Update : protected Pointers {
  protected:
   int me,nprocs;
   int maxmigrate;            // max # of particles in mlist
-  class RanPark *random;     // RNG for particle timestep moves
+  class RanKnuth *random;     // RNG for particle timestep moves
 
   int collide_react;         // 1 if any SurfCollide or React classes defined
   int nsc,nsr;               // copy of Collide/React data in Surf class

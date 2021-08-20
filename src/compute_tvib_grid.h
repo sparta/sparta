@@ -28,15 +28,15 @@ namespace SPARTA_NS {
 class ComputeTvibGrid : public Compute {
  public:
   ComputeTvibGrid(class SPARTA *, int, char **);
-  ~ComputeTvibGrid();
-  void init();
-  void compute_per_grid();
-  int query_tally_grid(int, double **&, int *&);
-  void post_process_grid(int, int, double **, int *, double *, int);
-  void reallocate();
+  virtual ~ComputeTvibGrid();
+  virtual void init();
+  virtual void compute_per_grid();
+  virtual int query_tally_grid(int, double **&, int *&);
+  virtual void post_process_grid(int, int, double **, int *, double *, int);
+  virtual void reallocate();
   bigint memory_usage();
 
- private:
+ protected:
   int groupbit,imix,ngroup,mixspecies,nspecies;
   int modeflag;              // 1 when tallying stats for each vib mode
   int maxmode;               // max vib mode for any species

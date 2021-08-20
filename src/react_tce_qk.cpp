@@ -18,7 +18,7 @@
 #include "react_tce_qk.h"
 #include "update.h"
 #include "collide.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "memory.h"
 #include "error.h"
 

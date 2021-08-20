@@ -33,7 +33,7 @@ class FixEmit : public Fix {
  protected:
   int perspecies;
   class Region *region;
-  class RanPark *random;
+  class RanKnuth *random;
   int nsingle,ntotal;
 
   int ntask;           // # of insert tasks in underlying child class

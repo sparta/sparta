@@ -34,7 +34,7 @@
 #include "output.h"
 #include "stats.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
@@ -2219,7 +2219,7 @@ double Variable::collapse_tree(Tree *tree)
     collapse_tree(tree->left);
     collapse_tree(tree->right);
     if (randomparticle == NULL) {
-      randomparticle = new RanPark(update->ranmaster->uniform());
+      randomparticle = new RanKnuth(update->ranmaster->uniform());
       double seed = update->ranmaster->uniform();
       randomparticle->reset(seed,me,100);
     }
@@ -2232,7 +2232,7 @@ double Variable::collapse_tree(Tree *tree)
     if (sigma < 0.0)
       error->one(FLERR,"Invalid math function in variable formula");
     if (randomparticle == NULL) {
-      randomparticle = new RanPark(update->ranmaster->uniform());
+      randomparticle = new RanKnuth(update->ranmaster->uniform());
       double seed = update->ranmaster->uniform();
       randomparticle->reset(seed,me,100);
     }
@@ -2507,7 +2507,7 @@ double Variable::eval_tree(Tree *tree, int i)
     double lower = eval_tree(tree->left,i);
     double upper = eval_tree(tree->right,i);
     if (randomparticle == NULL) {
-      randomparticle = new RanPark(update->ranmaster->uniform());
+      randomparticle = new RanKnuth(update->ranmaster->uniform());
       double seed = update->ranmaster->uniform();
       randomparticle->reset(seed,me,100);
     }
@@ -2519,7 +2519,7 @@ double Variable::eval_tree(Tree *tree, int i)
     if (sigma < 0.0)
       error->one(FLERR,"Invalid math function in variable formula");
     if (randomparticle == NULL) {
-      randomparticle = new RanPark(update->ranmaster->uniform());
+      randomparticle = new RanKnuth(update->ranmaster->uniform());
       double seed = update->ranmaster->uniform();
       randomparticle->reset(seed,me,100);
     }
@@ -2919,7 +2919,7 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
     if (tree) newtree->type = RANDOM;
     else {
       if (randomequal == NULL) {
-	randomequal = new RanPark(update->ranmaster->uniform());
+	randomequal = new RanKnuth(update->ranmaster->uniform());
 	double seed = update->ranmaster->uniform();
 	randomequal->reset(seed,me,100);
       }
@@ -2933,7 +2933,7 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
       if (value2 < 0.0)
 	error->all(FLERR,"Invalid math function in variable formula");
       if (randomequal == NULL) {
-	randomequal = new RanPark(update->ranmaster->uniform());
+	randomequal = new RanKnuth(update->ranmaster->uniform());
 	double seed = update->ranmaster->uniform();
 	randomequal->reset(seed,me,100);
       }

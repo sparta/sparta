@@ -66,17 +66,19 @@ class SpartaGridFile:
     self._go_to_grid_file_cells_section()
     return self
 
-  def __next__(self):
-    line = self.__grid_file_handle.readline()
-    if not line:
-      self._close_grid_file()
-      raise StopIteration
-    else:
+  def next(self):
+    try:
+      line = next(self.__grid_file_handle)
       local_cell_id = self._clean_line(line)
       if self.iterate_local_cell_ids:
         return local_cell_id
       else:
         return self.create_dashed_id(local_cell_id)
+    except StopIteration:
+      self._close_grid_file()
+      raise StopIteration
+
+  __next__ = next
 
   def _get_grid_file_cells_section_string(self):
     return 'Cells'

@@ -26,7 +26,7 @@
 #include "cut3d.h"
 #include "input.h"
 #include "comm.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_extra.h"
 #include "math_const.h"
 #include "memory.h"
@@ -460,7 +460,7 @@ void FixEmitSurf::perform_task()
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
 
-  int nfix_add_particle = modify->n_add_particle;
+  int nfix_update_custom = modify->n_update_custom;
   indot = magvstream;
 
   for (i = 0; i < ntask; i++) {
@@ -558,8 +558,8 @@ void FixEmitSurf::perform_task()
           p->flag = PSURF + 1 + isurf;
           p->dtremain = dt * random->uniform();
 
-          if (nfix_add_particle)
-            modify->add_particle(particle->nlocal-1,temp_thermal,
+          if (nfix_update_custom)
+            modify->update_custom(particle->nlocal-1,temp_thermal,
                                  temp_rot,temp_vib,vstream);
         }
 
@@ -651,8 +651,8 @@ void FixEmitSurf::perform_task()
         p->flag = PSURF + 1 + isurf;
         p->dtremain = dt * random->uniform();
 
-        if (nfix_add_particle)
-          modify->add_particle(particle->nlocal-1,temp_thermal,
+        if (nfix_update_custom)
+          modify->update_custom(particle->nlocal-1,temp_thermal,
                                temp_rot,temp_vib,vstream);
       }
 

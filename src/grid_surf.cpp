@@ -247,13 +247,13 @@ void Grid::surf2grid_cell_algorithm(int outflag)
     if (cells[icell].nsplit <= 0) continue;
 
     // skip grid cell if outside bounding box of all surfs
-    
+
     lo = cells[icell].lo;
     hi = cells[icell].hi;
     if (!box_overlap(lo,hi,slo,shi)) continue;
 
     // cut2d/3d surf2grid finds intersection of all surfs with a single grid cell
-    
+
     ptr = csurfs->vget();
 
     if (dim == 3)
@@ -315,7 +315,7 @@ void Grid::surf2grid_cell_algorithm(int outflag)
 
 /* ----------------------------------------------------------------------
    find surfs that overlap owned grid cells, for non-distributed or distributed
-   algorithm: 
+   algorithm:
      each proc responsible for subset of surfs
      loop over levels of hierarchical grid
      conceptual uniform grid at that level overlayed on bounding box for all surfs
@@ -351,9 +351,9 @@ void Grid::surf2grid_surf_algorithm(int outflag)
   double bblo[3],bbhi[3];           // corners of a bounding box
   double rcblo[3],rcbhi[3];         // corners of my RCB box
   GridTree *gtree;                  // tree of RCB cuts for partitioning uniform grid
-  
+
   // data structs for communication
-  
+
   struct Send2 {
     cellint childID;
     int proc,icell;
@@ -372,7 +372,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
   int nprocs = comm->nprocs;
   int dim = domain->dimension;
   int distributed = surf->distributed;
- 
+
   boxlo = domain->boxlo;
   boxhi = domain->boxhi;
 
@@ -454,7 +454,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
     // gtree = tree of RCB cuts, cuts are along grid planes
     // myunilo/hi = inclusive range of my portion of grid box
     // rcblo/hi = corner points of my RCB box
-    
+
     partition_grid(0,nprocs-1,unilo[0],unihi[0],unilo[1],unihi[1],
 		   unilo[2],unihi[2],gtree);
     myunilo[0] = unilo[0]; myunihi[0] = unihi[0];
@@ -543,7 +543,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
       id_find_child_uniform_level(level,0,boxlo,boxhi,ctr,cx,cy,cz);
 
       // glo/hi = single cell grid box
-      
+
       glo[0] = cx; ghi[0] = cx;
       glo[1] = cy; ghi[1] = cy;
       glo[2] = cz; ghi[2] = cz;
@@ -580,7 +580,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
     // chash = hash with cell IDs I own in RCB decomp
     //   key = childID, value = index in my RCB list of child cells
-    // phash = hash with all parent cell IDs of child cells 
+    // phash = hash with all parent cell IDs of child cells
     //   key = parentID, value not used
     //   b/c RCB grid box is compact, size of phash should be small
     // rcblohi = lo/hi extents of each child cells
@@ -596,7 +596,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
       id_lohi(childID,level,boxlo,boxhi,rcblohi[i].lo,rcblohi[i].hi);
 
       int flag;
-      
+
       for (int ilevel = level; ilevel > 0; ilevel--) {
 	parentID = parent_of_child(childID,ilevel);
 	if (phash->find(parentID) != phash->end()) break;
@@ -631,7 +631,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
       for (i = 0; i < nrecv1; i++) {
 
 	// skip surf if it does not intersect my RCB box
-      
+
 	overlap = cut2d->surf2grid_one(rcblines[i].p1,rcblines[i].p2,rcblo,rcbhi);
 	if (!overlap) continue;
 
@@ -651,12 +651,12 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 	recurse2d(0,0,boxlo,boxhi,i,&rcblines[i],bblo,bbhi,
 		  npair,maxpair,pairs,chash,phash);
       }
-      
+
     } else {
       for (i = 0; i < nrecv1; i++) {
 
 	// skip surf if it does not intersect my RCB box
-      
+
 	overlap = cut3d->surf2grid_one(rcbtris[i].p1,rcbtris[i].p2,rcbtris[i].p3,
 				       rcblo,rcbhi);
 	if (!overlap) continue;
@@ -1196,14 +1196,14 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
   double celledge;
   double clo[3],chi[3];
   double newlo[3],newhi[3];
-  
+
   double *p1 = line->p1;
   double *p2 = line->p2;
 
   int nx = plevels[level].nx;
   int ny = plevels[level].ny;
   int nbits = plevels[level].nbits;
-  
+
   // ij lohi = indices for range of child cells overlapped by surf bbox
   // overlap means point is inside grid cell or touches boundary
   // same equation as in Grid::id_find_child()
@@ -1248,13 +1248,13 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
     for (ix = ilo; ix <= ihi; ix++) {
       ichild = (cellint) iy*nx + ix + 1;
       childID = parentID | (ichild << nbits);
-      
+
       if (chash->find(childID) == chash->end()) cflag = 0;
       else cflag = 1;
       if (phash->find(childID) == phash->end()) pflag = 0;
       else pflag = 1;
       if (!cflag && !pflag) continue;
-      
+
       grid->id_child_lohi(level,plo,phi,ichild,clo,chi);
       overlap = cut2d->surf2grid_one(p1,p2,clo,chi);
       if (!overlap) continue;
@@ -1306,7 +1306,7 @@ void Grid::recurse3d(cellint parentID, int level, double *plo, double *phi,
   double celledge;
   double clo[3],chi[3];
   double newlo[3],newhi[3];
-  
+
   double *p1 = tri->p1;
   double *p2 = tri->p2;
   double *p3 = tri->p3;
@@ -1315,7 +1315,7 @@ void Grid::recurse3d(cellint parentID, int level, double *plo, double *phi,
   int ny = plevels[level].ny;
   int nz = plevels[level].nz;
   int nbits = plevels[level].nbits;
-  
+
   // ijk lohi = indices for range of child cells overlapped by surf bbox
   // overlap means point is inside grid cell or touches boundary
   // same equation as in Grid::id_find_child()
@@ -1372,13 +1372,13 @@ void Grid::recurse3d(cellint parentID, int level, double *plo, double *phi,
       for (ix = ilo; ix <= ihi; ix++) {
         ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
 	childID = parentID | (ichild << nbits);
-      
+
 	if (chash->find(childID) == chash->end()) cflag = 0;
 	else cflag = 1;
 	if (phash->find(childID) == phash->end()) pflag = 0;
 	else pflag = 1;
 	if (!cflag && !pflag) continue;
-      
+
 	grid->id_child_lohi(level,plo,phi,ichild,clo,chi);
 	overlap = cut3d->surf2grid_one(p1,p2,p3,clo,chi);
 	if (!overlap) continue;
@@ -1611,7 +1611,7 @@ void Grid::clear_surf()
       if (icell != nlocal-1) {
         memcpy(&cells[icell],&cells[nlocal-1],sizeof(ChildCell));
         memcpy(&cinfo[icell],&cinfo[nlocal-1],sizeof(ChildInfo));
-        if (collide) collide->copy_grid_one(nlocal-1,icell);
+        if (collide && collide->ngroups) collide->copy_grid_one(nlocal-1,icell);
         if (modify->n_pergrid) modify->copy_grid_one(nlocal-1,icell);
       }
       nlocal--;

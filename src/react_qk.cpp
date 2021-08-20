@@ -19,7 +19,7 @@
 #include "update.h"
 #include "particle.h"
 #include "collide.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "error.h"
 

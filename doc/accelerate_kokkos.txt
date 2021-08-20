@@ -304,8 +304,8 @@ number of MPI tasks/node should not exceed N.
 Here are examples of how to use the KOKKOS package for GPUs, assuming
 one or more nodes, each with two GPUs.
 
-mpirun -np 2 spa_kokkos_cuda_mpi -k on g 2 -sf kk -in in.collide          # 1 node,   2 MPI tasks/node, 2 GPUs/node
-mpirun -np 32 -ppn 2 spa_kokkos_cuda_mpi -k on g 2 -sf kk -in in.collide  # 16 nodes, 2 MPI tasks/node, 2 GPUs/node (32 GPUs total) :pre
+mpirun -np 2 spa_kokkos_cuda -k on g 2 -sf kk -in in.collide          # 1 node,   2 MPI tasks/node, 2 GPUs/node
+mpirun -np 32 -ppn 2 spa_kokkos_cuda -k on g 2 -sf kk -in in.collide  # 16 nodes, 2 MPI tasks/node, 2 GPUs/node (32 GPUs total) :pre
 
 NOTE: The default for the "package kokkos"_package.html command is to
 use "parallel" reduction of statistics along with threaded
@@ -316,7 +316,7 @@ kokkos"_package.html options. See its doc page for details and default
 settings. Experimenting with its options can provide a speed-up for
 specific calculations. For example:
 
-mpirun -np 2 spa_kokkos_cuda_mpi -k on g 2 -sf kk -pk kokkos reduction atomic -in in.collide      # set reduction = atomic :pre
+mpirun -np 2 spa_kokkos_cuda -k on g 2 -sf kk -pk kokkos reduction atomic -in in.collide      # set reduction = atomic :pre
 
 NOTE: Using OpenMP threading and CUDA together is currently not
 possible with the SPARTA KOKKOS package.

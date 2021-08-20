@@ -21,7 +21,7 @@
 #include "grid.h"
 #include "comm.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
@@ -47,7 +47,7 @@ FixEmit::FixEmit(SPARTA *sparta, int narg, char **arg) :
   // RNG
 
   int me = comm->me;
-  random = new RanPark(update->ranmaster->uniform());
+  random = new RanKnuth(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,me,100);
 

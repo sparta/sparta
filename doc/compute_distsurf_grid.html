@@ -96,9 +96,9 @@ distance of 0.3 from surface elements facing upwind.  The second
 refines again for grid cells within a distance of 0.1 from the surface
 elements.
 </P>
-<PRE>compute 5 distsurf/grid all dir 1 0 0
-adapt_grid refine value c_5 0.3 0.0 thresh less more
-adapt_grid refine value c_5 0.1 0.0 thresh less more 
+<PRE>compute 5 distsurf/grid all all dir 1 0 0
+adapt_grid all refine value c_5 0.3 0.0 thresh less more
+adapt_grid all refine value c_5 0.1 0.0 thresh less more 
 </PRE>
 <P>For a 2d simulation of flow around a circle (flow from right to left),
 these commands produce this kind of adapted grid (click for a larger

@@ -129,6 +129,9 @@ class CollideVSSKokkos : public CollideVSS {
   t_species_1d_const d_species;
   DAT::t_int_2d d_plist;
 
+  DAT::t_int_1d d_ewhich;
+  ParticleKokkos::tdual_struct_tdual_int_2d_1d k_eiarray;
+
   DAT::tdual_float_2d k_vremax_initial;
   DAT::t_float_2d d_vremax_initial;
   DAT::tdual_float_3d k_vremax;
@@ -235,8 +238,8 @@ class CollideVSSKokkos : public CollideVSS {
   DAT::t_float_3d d_vremax_backup;
   DAT::t_float_3d d_remain_backup;
   DAT::t_int_2d d_nn_last_partner_backup;
-  RanPark* random_backup;
-  RanPark* react_random_backup;
+  RanKnuth* random_backup;
+  RanKnuth* react_random_backup;
 };
 
 }

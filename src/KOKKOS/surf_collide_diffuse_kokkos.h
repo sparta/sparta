@@ -38,7 +38,7 @@ SurfCollideStyle(diffuse/kk,SurfCollideDiffuseKokkos)
 #include "modify.h"
 #include "comm.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "math_extra_kokkos.h"
 #include "error.h"
@@ -98,9 +98,26 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
     //}
 
     // diffuse reflection for each particle
+    // resets v, roteng, vibeng
+    // particle I needs to trigger any fixes to update per-particle
+    //  properties which depend on the temperature of the particle
+    //  (e.g. fix vibmode and fix ambipolar)
+    // if new particle J created, also need to trigger any fixes
 
-    if (ip) diffuse(ip,norm);
-    //if (jp) diffuse(jp,norm);
+    if (ip) {
+      diffuse(ip,norm);
+      //if (modify->n_update_custom) {
+      //  int i = ip - particle->particles;
+      //  modify->update_custom(i,twall,twall,twall,vstream);
+      //}
+    }
+    //if (jp) {
+    //  diffuse(jp,norm);
+    //  if (modify->n_update_custom) {
+    //    int j = jp - particle->particles;
+    //    modify->update_custom(j,twall,twall,twall,vstream);
+    //  }
+    //}
 
     // call any fixes with a surf_react() method
     // they may reset j to -1, e.g. fix ambipolar
@@ -227,6 +244,8 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
         v[2] = vperp*norm[2] + vtan1*tangent1[2] + vtan2*tangent2[2];
       }
 
+      // initialize rot/vib energy
+
       p->erot = erot(ispecies,twall,rand_gen,boltz);
       p->evib = evib(ispecies,twall,rand_gen,boltz);
     }
@@ -241,23 +260,27 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
   KOKKOS_INLINE_FUNCTION
   double erot(int isp, double temp_thermal, rand_type &rand_gen, double boltz) const
   {
-   double eng,a,erm,b;
+    double eng,a,erm,b;
 
-   if (rotstyle == NONE) return 0.0;
-   if (d_species[isp].rotdof < 2) return 0.0;
+    if (rotstyle == NONE) return 0.0;
+    if (d_species[isp].rotdof < 2) return 0.0;
 
-   if (d_species[isp].rotdof == 2)
-     eng = -log(rand_gen.drand()) * boltz * temp_thermal;
-   else {
-     a = 0.5*d_species[isp].rotdof-1.0;
-     while (1) {
-       // energy cut-off at 10 kT
-       erm = 10.0*rand_gen.drand();
-       b = pow(erm/a,a) * exp(a-erm);
-       if (b > rand_gen.drand()) break;
-     }
-     eng = erm * boltz * temp_thermal;
-   }
+    if (rotstyle == DISCRETE && d_species[isp].rotdof == 2) {
+      int irot = -log(rand_gen.drand()) * temp_thermal /
+        d_species[isp].rottemp[0];
+      eng = irot * boltz * d_species[isp].rottemp[0];
+    } else if (rotstyle == SMOOTH && d_species[isp].rotdof == 2) {
+      eng = -log(rand_gen.drand()) * boltz * temp_thermal;
+    } else {
+      a = 0.5*d_species[isp].rotdof-1.0;
+      while (1) {
+        // energy cut-off at 10 kT
+        erm = 10.0*rand_gen.drand();
+        b = pow(erm/a,a) * exp(a-erm);
+        if (b > rand_gen.drand()) break;
+      }
+      eng = erm * boltz * temp_thermal;
+    }
 
    return eng;
   }
@@ -265,6 +288,8 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
   /* ----------------------------------------------------------------------
      generate random vibrational energy for a particle
      only a function of species index and species properties
+     index_vibmode = index of extra per-particle vibrational mode storage
+       -1 if not defined for this model
   ------------------------------------------------------------------------- */
 
   KOKKOS_INLINE_FUNCTION
@@ -274,7 +299,11 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
 
     if (vibstyle == NONE || d_species[isp].vibdof < 2) return 0.0;
 
+    // for DISCRETE, only need set evib for vibdof = 2
+    // mode levels and evib will be set by FixVibmode::update_custom()
+
     eng = 0.0;
+
     if (vibstyle == DISCRETE && d_species[isp].vibdof == 2) {
       int ivib = -log(rand_gen.drand()) * temp_thermal /
         d_species[isp].vibtemp[0];

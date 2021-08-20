@@ -30,7 +30,7 @@
 #include "modify.h"
 #include "comm.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "math_extra.h"
 #include "error.h"
@@ -94,7 +94,7 @@ SurfCollideTD::SurfCollideTD(SPARTA *sparta, int narg, char **arg) :
 
   // initialize RNG
 
-  random = new RanPark(update->ranmaster->uniform());
+  random = new RanKnuth(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,comm->me,100);
 }
