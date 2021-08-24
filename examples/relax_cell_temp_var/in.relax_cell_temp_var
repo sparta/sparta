@@ -27,7 +27,7 @@ global              fnum 7.07043E5
 
 compute             coll_temp_tr thermal/grid all all temp
 compute             coll_temp_rot grid all all trot
-variable            coll_temp grid (3*c_coll_temp_tr[1] + 2*c_coll_temp_rot[1])/5
+variable            coll_temp grid (3*c_coll_temp_tr[1]+2*c_coll_temp_rot[1])/5
 collide		    vss air n2.vss relax variable T v_coll_temp
 
 create_particles    air n 1000000 twopass
