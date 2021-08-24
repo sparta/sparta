@@ -35,6 +35,9 @@ using namespace MathConst;
 enum{NONE,DISCRETE,SMOOTH};            // several files
 enum{CONSTANT,VARIABLE};
 enum{COLLISION,CELL};                  // several files
+enum{T_COMP,T_VAR};                    // several files, we can't use COMPUTE, 
+                                       // FIX,VARIABLE like in other files due
+                                       // to a conflict with the above enum
 
 #define MAXLINE 1024
 
@@ -49,6 +52,7 @@ CollideVSS::CollideVSS(SPARTA *sparta, int narg, char **arg) :
 
   relaxflag = CONSTANT;
   relaxTflag = COLLISION;
+  T_type = T_COMP;
 
   int iarg = 3;
   while (iarg < narg) {
@@ -63,6 +67,11 @@ CollideVSS::CollideVSS(SPARTA *sparta, int narg, char **arg) :
       relaxTflag = CELL;
       T_name = new char[strlen(arg[iarg+1]) - 1];
       strcpy(T_name,&arg[iarg+1][2]);
+      if (strncmp(arg[iarg+1],"c_",2)==0) {
+        T_type = T_COMP;
+      } else if (strncmp(arg[iarg+1],"v_",2)==0) {
+        T_type = T_VAR;
+      } else error->all(FLERR,"Illegal collide command");
       iarg += 2;
     } else error->all(FLERR,"Illegal collide command");
   }

@@ -36,6 +36,7 @@ enum{NONE,DISCRETE,SMOOTH};       // several files  (NOTE: change order)
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{CONSTANT,VARIABLE};      // several files
 enum{COLLISION,CELL};                  // several files
+enum{T_COMP,T_VAR};
 
 #define DELTAGRID 1000            // must be bigger than split cells per cell
 #define DELTADELETE 1024
@@ -423,12 +424,16 @@ void Collide::collisions()
   ndelete = 0;
 
   if (relaxTflag == CELL) {
-    int icompute = modify->find_compute( T_name );
-    modify->compute[icompute]->compute_per_grid();
-    modify->compute[icompute]->post_process_grid(1, 1, NULL, NULL, NULL, 1);
-    if (!(modify->compute[icompute]->invoked_flag & INVOKED_PER_GRID)) {
-      modify->compute[icompute]->invoked_flag |= INVOKED_PER_GRID;
-    }
+    if (T_type == T_COMP) {
+      int icompute = modify->find_compute( T_name );
+      modify->compute[icompute]->compute_per_grid();
+      modify->compute[icompute]->post_process_grid(1, 1, NULL, NULL, NULL, 1);
+      if (!(modify->compute[icompute]->invoked_flag & INVOKED_PER_GRID)) {
+        modify->compute[icompute]->invoked_flag |= INVOKED_PER_GRID;
+      }
+    } else if (T_type == T_VAR) {
+      error->all(FLERR,"Not yet implemented");
+    } else error->all(FLERR,"Illegal collide command");
   }
 
   // perform collisions:
@@ -486,8 +491,12 @@ template < int NEARCP > void Collide::collisions_one()
     if (np <= 1) continue;
     double T = 0.0;
     if (relaxTflag == CELL) {
-      int icompute = modify->find_compute( T_name );
-      T = modify->compute[icompute]->vector_grid[icell];
+      if (T_type == T_COMP) {
+        int icompute = modify->find_compute( T_name );
+        T = modify->compute[icompute]->vector_grid[icell];
+      } else if (T_type == T_VAR) {
+        error->all(FLERR,"Not yet implemented");
+      }
     }
 
     if (NEARCP) {
@@ -637,8 +646,12 @@ template < int NEARCP > void Collide::collisions_group()
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
     double T = 0.0;
     if (relaxTflag == CELL) {
-      int icompute = modify->find_compute( T_name );
-      T = modify->compute[icompute]->vector_grid[icell];
+      if (T_type == T_COMP) {
+        int icompute = modify->find_compute( T_name );
+        T = modify->compute[icompute]->vector_grid[icell];
+      } else if (T_type == T_VAR) {
+        error->all(FLERR,"Not yet implemented");
+      }
     }
 
     // reallocate plist and p2g if necessary
@@ -916,8 +929,12 @@ void Collide::collisions_one_ambipolar()
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
     double T = 0.0;
     if (relaxTflag == CELL) {
-      int icompute = modify->find_compute( T_name );
-      T = modify->compute[icompute]->vector_grid[icell];
+      if (T_type == T_COMP) {
+        int icompute = modify->find_compute( T_name );
+        T = modify->compute[icompute]->vector_grid[icell];
+      } else if (T_type == T_VAR) {
+        error->all(FLERR,"Not yet implemented");
+      }
     }
 
     // setup particle list for this cell
@@ -1215,8 +1232,12 @@ void Collide::collisions_group_ambipolar()
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
     double T = 0.0;
     if (relaxTflag == CELL) {
-      int icompute = modify->find_compute( T_name );
-      T = modify->compute[icompute]->vector_grid[icell];
+      if (T_type == T_COMP) {
+        int icompute = modify->find_compute( T_name );
+        T = modify->compute[icompute]->vector_grid[icell];
+      } else if (T_type == T_VAR) {
+        error->all(FLERR,"Not yet implemented");
+      }
     }
 
     // reallocate plist and p2g if necessary
