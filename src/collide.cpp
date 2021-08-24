@@ -22,6 +22,8 @@
 #include "grid.h"
 #include "comm.h"
 #include "react.h"
+#include "input.h"
+#include "variable.h"
 #include "modify.h"
 #include "fix.h"
 #include "fix_ambipolar.h"
@@ -108,6 +110,9 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   ncollide_running = nattempt_running = nreact_running = 0;
 
   copymode = kokkos_flag = 0;
+
+  maxgrid = 0;
+  vartemp = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -141,6 +146,8 @@ Collide::~Collide()
   memory->destroy(nn_last_partner_jgroup);
 
   memory->destroy(recomb_ijflag);
+
+  memory->destroy(vartemp);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -432,7 +439,15 @@ void Collide::collisions()
         modify->compute[icompute]->invoked_flag |= INVOKED_PER_GRID;
       }
     } else if (T_type == T_VAR) {
-      error->all(FLERR,"Not yet implemented");
+      int n = grid->nlocal;
+      if (n > maxgrid) {
+        maxgrid = grid->maxlocal;
+        memory->destroy(vartemp);
+        memory->create(vartemp,maxgrid,"collide:vartemp");
+      }
+
+      int ivariable = input->variable->find( T_name );
+      input->variable->compute_grid( ivariable, vartemp, 1, 0);
     } else error->all(FLERR,"Illegal collide command");
   }
 
@@ -495,7 +510,7 @@ template < int NEARCP > void Collide::collisions_one()
         int icompute = modify->find_compute( T_name );
         T = modify->compute[icompute]->vector_grid[icell];
       } else if (T_type == T_VAR) {
-        error->all(FLERR,"Not yet implemented");
+        T = vartemp[icell];
       }
     }
 
@@ -650,7 +665,7 @@ template < int NEARCP > void Collide::collisions_group()
         int icompute = modify->find_compute( T_name );
         T = modify->compute[icompute]->vector_grid[icell];
       } else if (T_type == T_VAR) {
-        error->all(FLERR,"Not yet implemented");
+        T = vartemp[icell];
       }
     }
 
@@ -933,7 +948,7 @@ void Collide::collisions_one_ambipolar()
         int icompute = modify->find_compute( T_name );
         T = modify->compute[icompute]->vector_grid[icell];
       } else if (T_type == T_VAR) {
-        error->all(FLERR,"Not yet implemented");
+        T = vartemp[icell];
       }
     }
 
@@ -1236,7 +1251,7 @@ void Collide::collisions_group_ambipolar()
         int icompute = modify->find_compute( T_name );
         T = modify->compute[icompute]->vector_grid[icell];
       } else if (T_type == T_VAR) {
-        error->all(FLERR,"Not yet implemented");
+        T = vartemp[icell];
       }
     }
 
