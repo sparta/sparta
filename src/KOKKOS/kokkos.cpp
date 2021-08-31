@@ -145,7 +145,7 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
   comm_classic = 0;
   atomic_reduction = 0;
   prewrap = 1;
-  auto_sync = 0;
+  auto_sync = 1;
   gpu_direct_flag = 1;
 
   need_atomics = 1;
