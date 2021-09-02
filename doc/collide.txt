@@ -24,6 +24,10 @@ args = arguments for that style :l
 zero or more keyword/value pairs may be appended :l
 keyword = {relax} :l
   {relax} value = {constant} or {variable} :pre
+  {T} value = {c_ID} or {v_ID}
+    only usable with {relax = variable}
+    calculate temperature for relaxation collision number using the
+    per-grid compute or variable
 :ule
 
 [Examples:]
@@ -194,6 +198,13 @@ follows:
 
 species-ID species-ID1 -1 omega -1 -1 -1 -1 -1 -1 :pre
 
+By default when {relax} is specified as {variable}, the temperature
+used to calculate the collision number is calculated on a per-collision
+basis, dependent upon the kinetic and internal energies of the
+colliding particles. By also specifying {T} as a per-grid compute or
+variable, it is possible to use per-cell values that are recalculated
+every timestep based on ensemble properties of all the particles
+in the cell.
 
 :line
 
