@@ -25,7 +25,7 @@
 #include "math_extra.h"
 #include "update.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "error.h"
 #include "memory.h"
@@ -262,7 +262,7 @@ void Image::view_params(double boxxlo, double boxxhi, double boxylo,
 
   if (ssao) {
     if (!random) {
-      random = new RanPark(update->ranmaster->uniform());
+      random = new RanKnuth(update->ranmaster->uniform());
       double seed = update->ranmaster->uniform();
       random->reset(seed,me,100);
     }

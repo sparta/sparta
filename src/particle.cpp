@@ -24,7 +24,7 @@
 #include "mixture.h"
 #include "collide.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "memory.h"
 #include "error.h"
 #include "fix_vibmode.h"
@@ -160,7 +160,7 @@ void Particle::init()
   // RNG for particle weighting
 
   if (!wrandom) {
-    wrandom = new RanPark(update->ranmaster->uniform());
+    wrandom = new RanKnuth(update->ranmaster->uniform());
     double seed = update->ranmaster->uniform();
     wrandom->reset(seed,me,100);
   }
@@ -1006,33 +1006,33 @@ int Particle::find_mixture(char *id)
    only a function of species index and species properties
 ------------------------------------------------------------------------- */
 
-double Particle::erot(int isp, double temp_thermal, RanPark *erandom)
+double Particle::erot(int isp, double temp_thermal, RanKnuth *erandom)
 {
- double eng,a,erm,b;
- int rotstyle = NONE;
- if (collide) rotstyle = collide->rotstyle;
+  double eng,a,erm,b;
+  int rotstyle = NONE;
+  if (collide) rotstyle = collide->rotstyle;
 
- if (!collide || collide->rotstyle == NONE) return 0.0;
- if (species[isp].rotdof < 2) return 0.0;
+  if (!collide || collide->rotstyle == NONE) return 0.0;
+  if (species[isp].rotdof < 2) return 0.0;
 
- if (rotstyle == DISCRETE && species[isp].rotdof == 2) {
+  if (rotstyle == DISCRETE && species[isp].rotdof == 2) {
     int irot = -log(erandom->uniform()) * temp_thermal /
       particle->species[isp].rottemp[0];
     eng = irot * update->boltz * particle->species[isp].rottemp[0];
- } else if (rotstyle == SMOOTH && species[isp].rotdof == 2) {
-   eng = -log(erandom->uniform()) * update->boltz * temp_thermal;
- } else {
-   a = 0.5*particle->species[isp].rotdof-1.0;
-   while (1) {
-     // energy cut-off at 10 kT
-     erm = 10.0*erandom->uniform();
-     b = pow(erm/a,a) * exp(a-erm);
-     if (b > erandom->uniform()) break;
-   }
-   eng = erm * update->boltz * temp_thermal;
- }
+  } else if (rotstyle == SMOOTH && species[isp].rotdof == 2) {
+    eng = -log(erandom->uniform()) * update->boltz * temp_thermal;
+  } else {
+    a = 0.5*particle->species[isp].rotdof-1.0;
+    while (1) {
+      // energy cut-off at 10 kT
+      erm = 10.0*erandom->uniform();
+      b = pow(erm/a,a) * exp(a-erm);
+      if (b > erandom->uniform()) break;
+    }
+    eng = erm * update->boltz * temp_thermal;
+  }
 
- return eng;
+  return eng;
 }
 
 /* ----------------------------------------------------------------------
@@ -1042,7 +1042,7 @@ double Particle::erot(int isp, double temp_thermal, RanPark *erandom)
      -1 if not defined for this model
 ------------------------------------------------------------------------- */
 
-double Particle::evib(int isp, double temp_thermal, RanPark *erandom)
+double Particle::evib(int isp, double temp_thermal, RanKnuth *erandom)
 {
   double eng,a,erm,b;
 
@@ -1051,7 +1051,7 @@ double Particle::evib(int isp, double temp_thermal, RanPark *erandom)
   if (vibstyle == NONE || species[isp].vibdof < 2) return 0.0;
 
   // for DISCRETE, only need set evib for vibdof = 2
-  // mode levels and evib will be set by FixVibmode::add_particle()
+  // mode levels and evib will be set by FixVibmode::update_custom()
 
   eng = 0.0;
 
@@ -1641,8 +1641,8 @@ int Particle::add_custom(char *name, int type, int size)
     ename = (char **) memory->srealloc(ename,ncustom*sizeof(char *),
                                        "particle:ename");
     memory->grow(etype,ncustom,"particle:etype");
-    memory->grow(esize,ncustom,"particle:etype");
-    memory->grow(ewhich,ncustom,"particle:etype");
+    memory->grow(esize,ncustom,"particle:esize");
+    memory->grow(ewhich,ncustom,"particle:ewhich");
   }
 
   int n = strlen(name) + 1;

@@ -27,7 +27,7 @@
 #include "output.h"
 #include "dump.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "memory_kokkos.h"
 #include "error.h"
 #include "sparta_masks.h"

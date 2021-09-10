@@ -27,7 +27,7 @@
 #include "output.h"
 #include "dump.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "memory.h"
 #include "error.h"
 #include "timer.h"
@@ -118,7 +118,7 @@ FixBalance::FixBalance(SPARTA *sparta, int narg, char **arg) :
   rcb = NULL;
 
   if (bstyle == RANDOM || bstyle == PROC)
-    random = new RanPark(update->ranmaster->uniform());
+    random = new RanKnuth(update->ranmaster->uniform());
   if (bstyle == BISECTION) rcb = new RCB(sparta);
 
   // compute initial outputs

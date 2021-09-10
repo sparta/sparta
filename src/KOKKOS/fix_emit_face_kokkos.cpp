@@ -26,7 +26,7 @@
 #include "modify.h"
 #include "geometry.h"
 #include "input.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "memory_kokkos.h"
 #include "error.h"
@@ -311,7 +311,7 @@ void FixEmitFaceKokkos::perform_task()
   particleKK->nlocal = nlocal_before + nnew;
   particleKK->modify(SPARTA_NS::Device, PARTICLE_MASK);
 
-  if (modify->n_add_particle) {
+  if (modify->n_update_custom) {
     auto h_keep = Kokkos::create_mirror_view(d_keep);
     auto h_task = Kokkos::create_mirror_view(d_task);
     Kokkos::deep_copy(h_keep, d_keep);
@@ -336,7 +336,7 @@ void FixEmitFaceKokkos::perform_task()
       auto inew = h_cands2new(cand);
       auto ilocal = nlocal_before + inew;
 
-      modify->add_particle(ilocal,temp_thermal,
+      modify->update_custom(ilocal,temp_thermal,
           temp_rot,temp_vib,vstream);
     }
   }

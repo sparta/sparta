@@ -35,7 +35,7 @@
 #include "modify.h"
 #include "comm.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "math_extra.h"
 #include "error.h"
@@ -123,7 +123,7 @@ SurfCollideCLL::SurfCollideCLL(SPARTA *sparta, int narg, char **arg) :
 
   // initialize RNG
 
-  random = new RanPark(update->ranmaster->uniform());
+  random = new RanKnuth(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,comm->me,100);
 }
@@ -181,14 +181,23 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
   }
 
   // CLL reflection for each particle
+  // particle I needs to trigger any fixes to update per-particle
+  //  properties which depend on the temperature of the particle
+  //  (e.g. fix vibmode and fix ambipolar)
   // if new particle J created, also need to trigger any fixes
 
-  if (ip) cll(ip,norm);
+  if (ip) {
+    cll(ip,norm);
+    if (modify->n_update_custom) {
+      int i = ip - particle->particles;
+      modify->update_custom(i,twall,twall,twall,vstream);
+    }
+  }
   if (jp) {
     cll(jp,norm);
-    if (modify->n_add_particle) {
+    if (modify->n_update_custom) {
       int j = jp - particle->particles;
-      modify->add_particle(j,twall,twall,twall,vstream);
+      modify->update_custom(j,twall,twall,twall,vstream);
     }
   }
 

@@ -23,7 +23,7 @@
 #include "collide.h"
 #include "react.h"
 #include "comm.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "random_mars.h"
 #include "math_const.h"
 #include "memory_kokkos.h"
@@ -121,10 +121,6 @@ void CollideVSSKokkos::init()
   if (nparams != particle->nspecies)
     error->all(FLERR,"VSS parameters do not match current species");
 
-  if (sparta->kokkos && vibstyle == DISCRETE)
-    error->all(FLERR,"Cannot (yet) use KOKKOS package with "
-      "'collide_modify vibrate discrete'");
-
   //if (ambiflag && nearcp)
   //  error->all(FLERR,"Ambipolar collision model does not yet support "
   //             "near-neighbor collisions");
@@ -137,6 +133,32 @@ void CollideVSSKokkos::init()
 
   if (mixture->nspecies != particle->nspecies)
     error->all(FLERR,"Collision mixture does not contain all species");
+
+  // if rotstyle or vibstyle = DISCRETE,
+  // check that extra rotation/vibration info is defined
+  // for species that require it
+
+  if (vibstyle == DISCRETE) {
+    index_vibmode = particle->find_custom((char *) "vibmode");
+
+    Particle::Species *species = particle->species;
+    int nspecies = particle->nspecies;
+
+    int flag = 0;
+    for (int isp = 0; isp < nspecies; isp++) {
+      if (species[isp].vibdof <= 2) continue;
+      if (index_vibmode < 0)
+        error->all(FLERR,
+                   "Fix vibmode must be used with discrete vibrational modes");
+      if (species[isp].nvibmode != species[isp].vibdof / 2) flag++;
+    }
+    if (flag) {
+      char str[128];
+      sprintf(str,"%d species do not define correct vibrational "
+              "modes for discrete model",flag);
+      error->all(FLERR,str);
+    }
+  }
 
   // reallocate one-cell data structs for one or many groups
 
@@ -414,6 +436,8 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
   d_particles = particle_kk->k_particles.d_view;
   d_species = particle_kk->k_species.d_view;
+  d_ewhich = particle_kk->k_ewhich.d_view;
+  k_eiarray = particle_kk->k_eiarray;
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   grid_kk->sync(Device,CINFO_MASK);
@@ -1013,6 +1037,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   double AdjustFactor = 0.99999999;
   postcoln.erot = 0.0;
   postcoln.evib = 0.0;
+  double pevib = 0.0;
 
   // handle each kind of energy disposal for non-reacting reactants
 
@@ -1034,7 +1059,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
       double rotn_phi = d_species[sp].rotrel;
 
       if (rotdof) {
-        if (relaxflag == VARIABLE) rotn_phi = rotrel(sp,E_Dispose);
+        if (relaxflag == VARIABLE) rotn_phi = rotrel(sp,E_Dispose+p->erot);
         if (rotn_phi >= rand_gen.drand()) {
           if (rotstyle == NONE) {
             p->erot = 0.0 ;
@@ -1065,39 +1090,67 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
         if (vibn_phi >= rand_gen.drand()) {
           if (vibstyle == NONE) {
             p->evib = 0.0;
-          } else if (vibdof == 2 && vibstyle == DISCRETE) {
 
-            E_Dispose += p->evib;
-            max_level = static_cast<int>
-              (E_Dispose / (boltz * d_species[sp].vibtemp[0]));
-            do {
-              ivib = static_cast<int>
-                (rand_gen.drand()*(max_level+AdjustFactor));
-              p->evib = ivib * boltz * d_species[sp].vibtemp[0];
-              State_prob = pow((1.0 - p->evib / E_Dispose),
-			       (1.5 - d_params(ip->ispecies,jp->ispecies).omega));
-            } while (State_prob < rand_gen.drand());
-            E_Dispose -= p->evib;
+          } else if (vibdof == 2) {
+            if (vibstyle == SMOOTH) {
+              E_Dispose += p->evib;
+              Fraction_Vib =
+                1.0 - pow(rand_gen.drand(),(1.0/(2.5-d_params(ip->ispecies,jp->ispecies).omega)));
+              p->evib= Fraction_Vib * E_Dispose;
+              E_Dispose -= p->evib;
 
-          } else if (vibdof == 2 && vibstyle == SMOOTH) {
-            E_Dispose += p->evib;
-            Fraction_Vib =
-              1.0 - pow(rand_gen.drand(),
-			(1.0/(2.5-d_params(ip->ispecies,jp->ispecies).omega)));
-            p->evib= Fraction_Vib * E_Dispose;
-            E_Dispose -= p->evib;
-
+            } else if (vibstyle == DISCRETE) {
+              E_Dispose += p->evib;
+              max_level = static_cast<int>
+                (E_Dispose / (boltz * d_species[sp].vibtemp[0]));
+              do {
+                ivib = static_cast<int>
+                  (rand_gen.drand()*(max_level+AdjustFactor));
+                p->evib = ivib * boltz * d_species[sp].vibtemp[0];
+                State_prob = pow((1.0 - p->evib / E_Dispose),
+                                 (1.5 - d_params(ip->ispecies,jp->ispecies).omega));
+              } while (State_prob < rand_gen.drand());
+              E_Dispose -= p->evib;
+            }
           } else if (vibdof > 2) {
-            E_Dispose += p->evib;
-            p->evib = E_Dispose *
-              sample_bl(rand_gen,0.5*d_species[sp].vibdof-1.0,
-                        1.5-d_params(ip->ispecies,jp->ispecies).omega);
-            E_Dispose -= p->evib;
-          }
+            if (vibstyle == SMOOTH) {
+              E_Dispose += p->evib;
+              p->evib = E_Dispose *
+                sample_bl(rand_gen,0.5*d_species[sp].vibdof-1.0,
+                          1.5-d_params(ip->ispecies,jp->ispecies).omega);
+              E_Dispose -= p->evib;
 
+            } else if (vibstyle == DISCRETE) {
+              p->evib = 0.0;
+
+              int nmode = d_species[sp].nvibmode;
+              auto &d_vibmode = k_eiarray.d_view[d_ewhich[index_vibmode]].k_view.d_view;
+              int pindex = p - d_particles.data();
+
+              for (int imode = 0; imode < nmode; imode++) {
+                ivib = d_vibmode(pindex,imode);
+                E_Dispose += ivib * boltz *
+                  d_species[sp].vibtemp[imode];
+                max_level = static_cast<int>
+                  (E_Dispose / (boltz * d_species[sp].vibtemp[imode]));
+
+                do {
+                  ivib = static_cast<int>
+                    (rand_gen.drand()*(max_level+AdjustFactor));
+                  pevib = ivib * boltz * d_species[sp].vibtemp[imode];
+                  State_prob = pow((1.0 - pevib / E_Dispose),
+                                   (1.5 - d_params(ip->ispecies,jp->ispecies).omega));
+                } while (State_prob < rand_gen.drand());
+
+                d_vibmode(pindex,imode) = ivib;
+                p->evib += pevib;
+                E_Dispose -= pevib;
+              }
+            }
+          } // end of vibstyle/vibdof if
         }
-      }
-      postcoln.evib += p->evib;
+        postcoln.evib += p->evib;
+      } // end of vibdof if
     }
   }
 
@@ -1185,8 +1238,9 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
                                                    struct State &precoln, struct State &postcoln,
                                                    rand_type &rand_gen) const
 {
-  double State_prob,Fraction_Rot,Fraction_Vib,aveomega;
+  double State_prob,Fraction_Rot,Fraction_Vib;
   int i,numspecies,rotdof,vibdof,max_level,ivib;
+  double aveomega,pevib;
 
   Particle::OnePart *p;
   double AdjustFactor = 0.99999999;
@@ -1264,11 +1318,36 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
         p->evib = Fraction_Vib * E_Dispose;
         E_Dispose -= p->evib;
 
-      } else if (vibdof > 2) {
+      } else if (vibdof > 2 && vibstyle == SMOOTH) {
         p->evib = E_Dispose *
           sample_bl(rand_gen,0.5*d_species[sp].vibdof-1.0,
                     1.5-aveomega);
         E_Dispose -= p->evib;
+      } else if (vibdof > 2 && vibstyle == DISCRETE) {
+        p->evib = 0.0;
+
+        int nmode = d_species[sp].nvibmode;
+        auto &d_vibmode = k_eiarray.d_view[d_ewhich[index_vibmode]].k_view.d_view;
+        int pindex = p - d_particles.data();
+
+        for (int imode = 0; imode < nmode; imode++) {
+          ivib = d_vibmode(pindex,imode);
+          E_Dispose += ivib * boltz *
+          d_species[sp].vibtemp[imode];
+          max_level = static_cast<int>
+          (E_Dispose / (boltz * d_species[sp].vibtemp[imode]));
+          do {
+            ivib = static_cast<int>
+            (rand_gen.drand()*(max_level+AdjustFactor));
+            pevib = ivib * boltz * d_species[sp].vibtemp[imode];
+            State_prob = pow((1.0 - pevib / E_Dispose),
+                             (1.5 - aveomega));
+          } while (State_prob < rand_gen.drand());
+
+          d_vibmode(pindex,imode) = ivib;
+          p->evib += pevib;
+          E_Dispose -= pevib;
+        }
       }
     }
   }
@@ -1310,7 +1389,10 @@ double CollideVSSKokkos::sample_bl(rand_type &rand_gen, double Exp_1, double Exp
 KOKKOS_INLINE_FUNCTION
 double CollideVSSKokkos::rotrel(int isp, double Ec) const
 {
-  double Tr = Ec /(boltz * (2.5-d_params(isp,isp).omega));
+  // Because we are only relaxing one of the particles in each call, we only
+  //  include its DoF, consistent with Bird 2013 (3.32)
+
+  double Tr = Ec /(boltz * (2.5-d_params(isp,isp).omega + d_species[isp].rotdof/2.0));
   double rotphi = (1.0+d_params(isp,isp).rotc2/sqrt(Tr) + d_params(isp,isp).rotc3/Tr)
                 / d_params(isp,isp).rotc1;
   return rotphi;
@@ -1670,12 +1752,12 @@ void CollideVSSKokkos::backup()
 
 #ifdef SPARTA_KOKKOS_EXACT
   if (!random_backup)
-    random_backup = new RanPark(12345 + comm->me);
+    random_backup = new RanKnuth(12345 + comm->me);
   memcpy(random_backup,random,sizeof(random));
 
   if (react) {
     if (!react_random_backup)
-      react_random_backup = new RanPark(12345 + comm->me);
+      react_random_backup = new RanKnuth(12345 + comm->me);
     memcpy(react_random_backup,react->get_random(),sizeof(react->get_random()));
   }
 #endif

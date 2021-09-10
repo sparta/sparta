@@ -59,6 +59,8 @@ class Collide : protected Pointers {
   virtual void add_grid_one();
   virtual void adapt_grid();
 
+  int ngroups;        // # of groups
+
  protected:
   int npmax;          // max # of particles in plist
   int *plist;         // list of particle indices for the entire cell
@@ -66,7 +68,6 @@ class Collide : protected Pointers {
   int nglocal;        // current size of per-cell arrays
   int nglocalmax;     // max allocated size of per-cell arrays (vremax, remain)
 
-  int ngroups;        // # of groups
   int *ngroup;        // # of particles in each group
   int *maxgroup;      // max # of particles allocated per group
   int **glist;        // indices into plist of particles in each group
@@ -87,7 +88,7 @@ class Collide : protected Pointers {
 
   char *mixID;               // ID of mixture to use for groups
   class Mixture *mixture;    // ptr to mixture
-  class RanPark *random;     // RNG for collision generation
+  class RanKnuth *random;     // RNG for collision generation
 
   int vre_first;      // 1 for first run after collision style is defined
   int vre_start;      // 1 if reset vre params at start of each run

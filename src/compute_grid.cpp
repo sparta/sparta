@@ -21,6 +21,7 @@
 #include "modify.h"
 #include "memory.h"
 #include "error.h"
+#include "comm.h"
 
 using namespace SPARTA_NS;
 
@@ -193,6 +194,11 @@ void ComputeGrid::init()
 {
   if (ngroup != particle->mixture[imix]->ngroup)
     error->all(FLERR,"Number of groups in compute grid mixture has changed");
+
+  if (particle->find_custom((char *) "vibmode") >= 0)
+    if (comm->me == 0)
+      error->warning(FLERR,"Using compute grid tvib with fix vibmode may give "
+                     "incorrect temperature, use compute tvib/grid instead");
 
   eprefactor = 0.5*update->mvv2e;
   tprefactor = update->mvv2e / (3.0*update->boltz);

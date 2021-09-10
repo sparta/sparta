@@ -90,7 +90,7 @@ class FixAblate : public Fix {
 
   class MarchingSquares *ms;
   class MarchingCubes *mc;
-  class RanPark *random;
+  class RanKnuth *random;
 
   void create_surfs(int);
   void set_delta_random();

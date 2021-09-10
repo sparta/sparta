@@ -24,7 +24,7 @@
 #include "react.h"
 #include "comm.h"
 #include "fix_vibmode.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
@@ -457,7 +457,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
       double rotn_phi = species[sp].rotrel;
 
       if (rotdof) {
-        if (relaxflag == VARIABLE) rotn_phi = rotrel(sp,E_Dispose);
+        if (relaxflag == VARIABLE) rotn_phi = rotrel(sp,E_Dispose+p->erot);
         if (rotn_phi >= random->uniform()) {
           if (rotstyle == NONE) {
             p->erot = 0.0;
@@ -766,7 +766,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
 
 /* ---------------------------------------------------------------------- */
 
-double CollideVSS::sample_bl(RanPark *random, double Exp_1, double Exp_2)
+double CollideVSS::sample_bl(RanKnuth *random, double Exp_1, double Exp_2)
 {
   double Exp_s = Exp_1 + Exp_2;
   double x,y;
@@ -783,7 +783,10 @@ double CollideVSS::sample_bl(RanPark *random, double Exp_1, double Exp_2)
 
 double CollideVSS::rotrel(int isp, double Ec)
 {
-  double Tr = Ec /(update->boltz * (2.5-params[isp][isp].omega));
+  // Because we are only relaxing one of the particles in each call, we only
+  //  include its DoF, consistent with Bird 2013 (3.32)
+
+  double Tr = Ec /(update->boltz * (2.5-params[isp][isp].omega + particle->species[isp].rotdof/2.0));
   double rotphi = (1.0+params[isp][isp].rotc2/sqrt(Tr) + params[isp][isp].rotc3/Tr)
                 / params[isp][isp].rotc1;
   return rotphi;
