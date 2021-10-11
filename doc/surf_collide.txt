@@ -546,7 +546,6 @@ twice in the same input script (active at the same time).
 :link(Bird94)
 [(Bird94)] G. A. Bird, Molecular Gas Dynamics and the Direct
 Simulation of Gas Flows, Clarendon Press, Oxford (1994).
-<<<<<<< HEAD
 
 :link(Cercignani71)
 [(Cercignani71)] Cercignani C, Lampis M, Kinetic models for
