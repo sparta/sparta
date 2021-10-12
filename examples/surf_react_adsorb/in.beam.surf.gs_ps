@@ -1,5 +1,11 @@
+################################################################################
 # beam of particles striking the surface at an inclined angle
 # free molecular flow (no collisions)
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+# The "comm/sort" option should not be used for production runs.
+################################################################################
 
 seed	    	    123456
 dimension   	    3
