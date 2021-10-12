@@ -24,6 +24,7 @@ if(SPARTA_ENABLE_TESTING)
       "vibrate"
       "surf_collide"
       "surf"
+      "surf_react_adsorb"
       "step"
       "spiky"
       "sphere"
