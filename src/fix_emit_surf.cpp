@@ -84,6 +84,13 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
 
   maxactive = 0;
   activecell = NULL;
+
+  dimension = domain->dimension;
+
+  // create instance of Cut2d,Cut3d for geometry calculations
+
+  if (dimension == 3) cut3d = new Cut3d(sparta);
+  else cut2d = new Cut2d(sparta,domain->axisymmetric);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -98,6 +105,11 @@ FixEmitSurf::~FixEmitSurf()
   }
   memory->sfree(tasks);
   memory->destroy(activecell);
+
+  // deallocate Cut2d,Cut3d
+
+  if (dimension == 3) delete cut3d;
+  else delete cut2d;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -110,7 +122,6 @@ void FixEmitSurf::init()
 
   // copies of class data before invoking parent init() and count_task()
 
-  dimension = domain->dimension;
   fnum = update->fnum;
   dt = update->dt;
 
@@ -136,11 +147,6 @@ void FixEmitSurf::init()
 
   soundspeed_mixture = sqrt(avegamma * update->boltz *
                             particle->mixture[imix]->temp_thermal / avemass);
-
-  // create instance of Cut2d,Cut3d for geometry calculations
-
-  if (dimension == 3) cut3d = new Cut3d(sparta);
-  else cut2d = new Cut2d(sparta,domain->axisymmetric);
 
   // magvstream = magnitude of mxiture vstream vector
   // norm_vstream = unit vector in stream direction
@@ -174,11 +180,6 @@ void FixEmitSurf::init()
   // create tasks for all grid cells
 
   grid_changed();
-
-  // deallocate Cut2d,Cut3d
-
-  if (dimension == 3) delete cut3d;
-  else delete cut2d;
 }
 
 
