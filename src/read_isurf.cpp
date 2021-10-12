@@ -404,8 +404,8 @@ void ReadISurf::read_types_serial(char *typefile)
   int nxyz[3];
   FILE *fp;
 
-  uint8_t *buf = NULL ;//KAS changed int *buf --> uint8_t *buf
-  memory->create(buf,CHUNK,"readisurf:buf");//KAS
+  uint8_t *buf = NULL ;
+  memory->create(buf,CHUNK,"readisurf:buf");
 
   // proc 0 opens and reads binary file
   // error check the file grid matches input script extent
@@ -439,8 +439,8 @@ void ReadISurf::read_types_serial(char *typefile)
     if (ntypes-nread > CHUNK) nchunk = CHUNK;
     else nchunk = ntypes-nread;
 
-    if (me == 0) fread(buf,sizeof(uint8_t),nchunk,fp);//KAS
-    MPI_Bcast(buf,nchunk,MPI_CHAR,0,world);//KAS
+    if (me == 0) fread(buf,sizeof(uint8_t),nchunk,fp);
+    MPI_Bcast(buf,nchunk,MPI_CHAR,0,world);
 
     assign_types(nchunk,nread,buf);
     nread += nchunk;
@@ -461,7 +461,6 @@ void ReadISurf::read_types_serial(char *typefile)
 /* ----------------------------------------------------------------------
    store all grid surf type values
    use hash to see if I own grid cell corresponding to index (0 to N-1)
-   //KAS changed int *buf --> uint8_t *buf
 ------------------------------------------------------------------------- */
 
 void ReadISurf::assign_types(int n, bigint offset, uint8_t *buf)
