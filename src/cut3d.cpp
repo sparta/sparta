@@ -403,6 +403,17 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
   nsurf = nsurf_caller;
   surfs = surfs_caller;
 
+  // DEBUG
+  /*
+  if (id == 14 || id == 23) {
+    double vol = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+    vols.grow(1);
+    vols[0] = vol;
+    vols_caller = &vols[0];
+    return 1;
+  }
+  */
+
   // perform cut/split inside while loop so can break out with error
 
   int nsplit,errflag;
