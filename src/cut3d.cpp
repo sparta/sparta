@@ -460,6 +460,11 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
 
     double lo2d[2],hi2d[2];
 
+    // DEBUG
+    printf("FACELIST: %d %d: %d %d: %d %d\n",
+           facelist[0].n,facelist[1].n,facelist[2].n,
+           facelist[3].n,facelist[4].n,facelist[5].n);
+
     for (int iface = 0; iface < 6; iface++) {
       if (facelist[iface].n) {
         face_from_cell(iface,lo2d,hi2d);
@@ -705,6 +710,10 @@ int Cut3d::add_tris()
 }
 
 /* ----------------------------------------------------------------------
+   clip collection of tris that overlap cell by 6 faces of cell
+   loop over faces, loop over tris, loop over edges in tri
+   edges fully outside the cell are removed
+   shared edges that intersect the cell are clipped consistently
 ------------------------------------------------------------------------- */
 
 void Cut3d::clip_tris()
@@ -877,11 +886,12 @@ void Cut3d::clip_tris()
 }
 
 /* ----------------------------------------------------------------------
-   also return touchcount and grazecount and touchmark
-     only used if all clipped tris are discarded
+   adjust the collection of clipped triangles (vertices)
    discard if clipped tri is a single point, increment touchcount
      touchmark = corner point marking inferred from touching tri orientations
    discard if grazes cell with outward normal, increment grazecount
+   if all clipped tris are discarded
+     set and return empty, touchcount, grazecount, touchmark
 ------------------------------------------------------------------------- */
 
 void Cut3d::clip_adjust()
@@ -1134,14 +1144,15 @@ void Cut3d::ctri_volume()
    assign all singlet edges to faces (0-5)
    singlet edge must be on one or two faces, two if on cell edge
    if along cell edge, assign to one of two faces based on
-     dot product of inward face norm and norm of tri containing edge
+     which has larger dot product of its inward face norm 
+     and the norm of the tri containing the edge
 ------------------------------------------------------------------------- */
 
 int Cut3d::edge2face()
 {
   int n,iface,nface,ivert;
   int faces[6];
-  double dot;
+  double dot0,dot1;
   double norm_inward[3];
   double *trinorm;
   Edge *edge;
@@ -1172,16 +1183,51 @@ int Cut3d::edge2face()
     }
     else if (nface == 1) iface = faces[0];
     else if (nface == 2) {
+      // DEBUG
+      //printf("EDGE2FACE: iedge %d, faces %d %d\n",iedge,faces[0],faces[1]);
+
+      // NEW
+      if (edge->nvert == 1) ivert = edge->verts[0];
+      else ivert = edge->verts[1];
+      trinorm = verts[ivert].norm;
+
       iface = faces[0];
       norm_inward[0] = norm_inward[1] = norm_inward[2] = 0.0;
       if (iface % 2) norm_inward[iface/2] = -1.0;
       else norm_inward[iface/2] = 1.0;
+      dot0 = norm_inward[0]*trinorm[0] + norm_inward[1]*trinorm[1] +
+        norm_inward[2]*trinorm[2];
+
+      iface = faces[1];
+      norm_inward[0] = norm_inward[1] = norm_inward[2] = 0.0;
+      if (iface % 2) norm_inward[iface/2] = -1.0;
+      else norm_inward[iface/2] = 1.0;
+      dot1 = norm_inward[0]*trinorm[0] + norm_inward[1]*trinorm[1] +
+        norm_inward[2]*trinorm[2];
+
+      if (dot0 < dot1) iface = faces[0];
+      else iface = faces[1];
+
+
+      /*
+      // OLD
       if (edge->nvert == 1) ivert = edge->verts[0];
       else ivert = edge->verts[1];
       trinorm = verts[ivert].norm;
-      dot = norm_inward[0]*trinorm[0] + norm_inward[1]*trinorm[1] +
+
+      iface = faces[0];
+      norm_inward[0] = norm_inward[1] = norm_inward[2] = 0.0;
+      if (iface % 2) norm_inward[iface/2] = -1.0;
+      else norm_inward[iface/2] = 1.0;
+      dot0 = norm_inward[0]*trinorm[0] + norm_inward[1]*trinorm[1] +
         norm_inward[2]*trinorm[2];
-      if (dot > 0.0) iface = faces[1];
+      if (dot0 > 0.0) iface = faces[1];
+      */
+
+      //printf("TRINORM: %g %g %g\n",trinorm[0],trinorm[1],trinorm[2]);
+      //printf("INWARD: %g %g %g\n",norm_inward[0],norm_inward[1],norm_inward[2]);
+      //printf("DOT: %g %d\n",dot, dot > 0.0);
+
     } else return 3;
 
     n = facelist[iface].n;
@@ -1548,7 +1594,15 @@ int Cut3d::check()
   for (int iedge = 0; iedge < nedge; iedge++) {
     if (!edges[iedge].active) continue;
     edge = &edges[iedge];
-    if (edge->nvert != 3) return 16;
+
+    // DEBUG - added print info here for rippled box
+
+    if (edge->nvert != 3) {
+      printf("BAD EDGE %d %d, nvert %d\n",iedge,nedge,edge->nvert);
+      continue;
+      //return 16;
+    }
+
     if (edge->verts[0] == edge->verts[1]) return 17;
     if (edge->verts[0] >= nvert || !verts[edge->verts[0]].active) return 18;
     if (edge->verts[1] >= nvert || !verts[edge->verts[1]].active) return 19;
@@ -2371,16 +2425,6 @@ void Cut3d::print_bpg(const char *str)
     }
     if (edges[i].nvert > 3) printf(" [BIG %d]",edges[i].nvert);
     printf("\n");
-
-    //DEBUG
-    printf("     FACE p1: %g %g: %g %g: %g %g\n",
-	   fabs(edges[i].p1[0]-lo[0]),fabs(edges[i].p1[0]-hi[0]),
-	   fabs(edges[i].p1[1]-lo[1]),fabs(edges[i].p1[1]-hi[1]),
-	   fabs(edges[i].p1[2]-lo[2]),fabs(edges[i].p1[2]-hi[2]));
-    printf("     FACE p2: %g %g: %g %g: %g %g\n",
-	   fabs(edges[i].p2[0]-lo[0]),fabs(edges[i].p2[0]-hi[0]),
-	   fabs(edges[i].p2[1]-lo[1]),fabs(edges[i].p2[1]-hi[1]),
-	   fabs(edges[i].p2[2]-lo[2]),fabs(edges[i].p2[2]-hi[2]));
   }
 }
 
