@@ -201,6 +201,9 @@ void Surf::modify_params(int narg, char **arg)
 
 void Surf::init()
 {
+  int dim = domain->dimension;
+  bigint flag,allflag;
+
   // warn if surfs are distributed (explicit or implicit)
   //   and grid->cutoff < 0.0, since each proc will have copy of all cells
 
@@ -208,11 +211,31 @@ void Surf::init()
     if (comm->me == 0)
       error->warning(FLERR,"Surfs are distributed with infinite grid cutoff");
 
+  // check that surf element types are all values >= 1
+
+  flag = 0;
+  if (dim == 2) {
+    for (int i = 0; i < nlocal; i++)
+      if (lines[i].type <= 0) flag++;
+  }
+  if (dim == 3) {
+    for (int i = 0; i < nlocal; i++)
+      if (tris[i].type <= 0) flag++;
+  }
+
+  if (distributed)
+    MPI_Allreduce(&flag,&allflag,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  else allflag = flag;
+  
+  if (allflag) {
+    char str[64];
+    sprintf(str,BIGINT_FORMAT
+            " surface elements with invalid type <= 0",allflag);
+    error->all(FLERR,str);
+  }
+
   // check that every element is assigned to a surf collision model
   // skip if caller turned off the check, e.g. BalanceGrid, b/c too early
-
-  int dim = domain->dimension;
-  bigint flag,allflag;
 
   if (surf_collision_check) {
     flag = 0;

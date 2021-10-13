@@ -45,14 +45,14 @@ class Surf : protected Pointers {
 
   // surf data structs
   // explicit, all: each proc owns all surfs
-  //   nlocal = Nsurf, nghost = 0, tris = all surfs
-  //   nown = Nsurf/P, mytris = NULL
+  //   nlocal = Nsurf, nghost = 0
+  //   tris = all surfs, nown = Nsurf/P, mytris = NULL
   // explicit, distributed: each proc owns N/P surfs
-  //   nlocal/nghost = surfs in owned/ghost grid cells, tris = nloc+ngh surfs
-  //   nown = Nsurf/P, mytris = surfs I uniquely own
+  //   nlocal/nghost = surfs in owned/ghost grid cells
+  //   tris = nloc+ngh surfs, nown = Nsurf/P, mytris = surfs I uniquely own
   // implicit, distributed: each proc owns surfs in its owned grid cells
   //   nlocal = surfs in owned grid cells, nghost = surfs in ghost grid cells
-  //   nown = nlocal, mytris = NULL
+  //   tris = nloc+ngh surfs, nown = nlocal, mytris = NULL
 
   bigint nsurf;             // total # of surf elements, lines or tris
 
