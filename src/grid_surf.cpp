@@ -1135,22 +1135,24 @@ void Grid::surf2grid_split(int subflag, int outflag)
 
   // print info on unusual surf split cases
 
-  int ntiny = cut3d->ntiny;
-  int alltiny;
-  MPI_Allreduce(&ntiny,&alltiny,1,MPI_INT,MPI_SUM,world);
-  if (alltiny && comm->me == 0) {
-    if (screen) fprintf(screen,"  %d tiny edges removed\n",alltiny);
-    if (logfile) fprintf(logfile,"  %d tiny edges removed\n",alltiny);
-  }
+  if (dim == 3) {
+    int ntiny = cut3d->ntiny;
+    int alltiny;
+    MPI_Allreduce(&ntiny,&alltiny,1,MPI_INT,MPI_SUM,world);
+    if (alltiny && comm->me == 0) {
+      if (screen) fprintf(screen,"  %d tiny edges removed\n",alltiny);
+      if (logfile) fprintf(logfile,"  %d tiny edges removed\n",alltiny);
+    }
 
-  int nshrink = cut3d->nshrink;
-  int allshrink;
-  MPI_Allreduce(&nshrink,&allshrink,1,MPI_INT,MPI_SUM,world);
-  if (allshrink && comm->me == 0) {
-    if (screen) 
-      fprintf(screen,"  %d cells shrunk to enable splitting\n",allshrink);
-    if (logfile)
-      fprintf(logfile,"  %d cells shrunk to enable splitting\n",allshrink);
+    int nshrink = cut3d->nshrink;
+    int allshrink;
+    MPI_Allreduce(&nshrink,&allshrink,1,MPI_INT,MPI_SUM,world);
+    if (allshrink && comm->me == 0) {
+      if (screen) 
+        fprintf(screen,"  %d cells shrunk to enable splitting\n",allshrink);
+      if (logfile)
+        fprintf(logfile,"  %d cells shrunk to enable splitting\n",allshrink);
+    }
   }
 
   // clean up
