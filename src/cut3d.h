@@ -23,9 +23,7 @@ namespace SPARTA_NS {
 
 class Cut3d : protected Pointers {
  public:
-  // DEBUG
-
-  int tiny;
+  int ntiny,nshrink;
 
   Cut3d(class SPARTA *);
   ~Cut3d();
@@ -42,9 +40,10 @@ class Cut3d : protected Pointers {
   int implicit;
 
   cellint id;            // ID of cell being worked on
-  double *lo,*hi;        // opposite corner pts of cell
+  double lo[3],hi[3];    // opposite corner pts of cell being worked on
+
   int nsurf;             // # of surf elements in cell
-  surfint *surfs;        // indices of surf elements in cell
+  surfint *surfs;        // indices of surf elements in cell, caller owns
 
   int grazecount;        // count of tris that graze cell surf w/ outward norm
   int touchcount;        // count of tris that only touch cell surf
@@ -52,9 +51,6 @@ class Cut3d : protected Pointers {
   double epsilon;        // epsilon size for this cell
 
   double **path1,**path2;
-
-  // DEBUG
-  //int totcell,totsurf,totvert,totedge;
 
   MyVec<double> vols;    // vols of each flow polyhedron found
 
@@ -120,6 +116,11 @@ class Cut3d : protected Pointers {
   class Cut2d *cut2d;
 
   int clip(double *, double *, double *);
+
+  int split_try(cellint, int, surfint *,
+                double *&, int *, int *, int &, double *, int &);
+  void split_error(int);
+
   int add_tris();
   void clip_tris();
   void clip_adjust();
