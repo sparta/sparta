@@ -1,4 +1,4 @@
-/* ----------------------------------------------------------------------
+ /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
@@ -595,10 +595,8 @@ void Grid::surf2grid_surf_algorithm(int outflag)
       (*chash)[childID] = i;
       id_lohi(childID,level,boxlo,boxhi,rcblohi[i].lo,rcblohi[i].hi);
 
-      int flag;
-
       for (int ilevel = level; ilevel > 0; ilevel--) {
-	parentID = parent_of_child(childID,ilevel);
+	parentID = id_parent_of_child(childID,ilevel);
 	if (phash->find(parentID) != phash->end()) break;
 	(*phash)[parentID] = 0;
 	childID = parentID;
@@ -615,7 +613,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
     //   bblo/hi = intersection of surf bbox with RCB box
     //   recurse2d/3d starts with bblo/hi within parentID = 0 (sim box)
     //     will find every child cell in chash that surf intersects with
-    //     checks for actual intersectino are via cut2d/cut3d
+    //     checks for actual intersection are via cut2d/cut3d
     //   build list of pairs, one pair = surf index, cell index
     //     both are indices into received RCB surf/cells data
 
@@ -645,9 +643,11 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 	bblo[1] = MAX(slo[1],rcblo[1]);
 	bbhi[0] = MIN(shi[0],rcbhi[0]);
 	bbhi[1] = MIN(shi[1],rcbhi[1]);
+	bblo[2] = 0.0;
+	bbhi[2] = 0.0;
 
 	// find all my RCB child cells this surf intersects
-	
+
 	recurse2d(0,0,boxlo,boxhi,i,&rcblines[i],bblo,bbhi,
 		  npair,maxpair,pairs,chash,phash);
       }
@@ -1102,36 +1102,9 @@ void Grid::surf2grid_split(int subflag, int outflag)
                "set global splitmax");
   }
 
-  // stats on pushed cells and unmarked corner points in OVERLAP cells
+  // stats on unmarked corner points in OVERLAP cells
 
   if (outflag) {
-    int npushmax;
-    int *npushcell;
-    if (dim == 3) {
-      npushmax = cut3d->npushmax;
-      npushcell = cut3d->npushcell;
-    } else {
-      npushmax = cut2d->npushmax;
-      npushcell = cut2d->npushcell;
-    }
-    int *npushall = new int[npushmax+1];
-    MPI_Allreduce(npushcell,npushall,npushmax+1,MPI_INT,MPI_SUM,world);
-    if (comm->me == 0) {
-      if (screen) {
-        fprintf(screen,"  ");
-        for (int i = 1; i <= npushmax; i++)
-          fprintf(screen,"%d ",npushall[i]);
-        fprintf(screen,"= number of pushed cells\n");
-      }
-      if (logfile) {
-        fprintf(logfile,"  ");
-        for (int i = 1; i <= npushmax; i++)
-          fprintf(logfile,"%d ",npushall[i]);
-        fprintf(logfile,"= number of pushed cells\n");
-      }
-    }
-    delete [] npushall;
-
     int noverlap = 0;
     int ncorner = 0;
     for (int icell = 0; icell < nlocal; icell++) {
@@ -1160,6 +1133,28 @@ void Grid::surf2grid_split(int subflag, int outflag)
     }
   }
 
+  // print info on unusual surf split cases
+
+  if (dim == 3) {
+    int ntiny = cut3d->ntiny;
+    int alltiny;
+    MPI_Allreduce(&ntiny,&alltiny,1,MPI_INT,MPI_SUM,world);
+    if (alltiny && comm->me == 0) {
+      if (screen) fprintf(screen,"  %d tiny edges removed\n",alltiny);
+      if (logfile) fprintf(logfile,"  %d tiny edges removed\n",alltiny);
+    }
+
+    int nshrink = cut3d->nshrink;
+    int allshrink;
+    MPI_Allreduce(&nshrink,&allshrink,1,MPI_INT,MPI_SUM,world);
+    if (allshrink && comm->me == 0) {
+      if (screen) 
+        fprintf(screen,"  %d cells shrunk to enable splitting\n",allshrink);
+      if (logfile)
+        fprintf(logfile,"  %d cells shrunk to enable splitting\n",allshrink);
+    }
+  }
+
   // clean up
 
   if (dim == 3) delete cut3d;
@@ -1175,7 +1170,7 @@ void Grid::surf2grid_split(int subflag, int outflag)
 /* ----------------------------------------------------------------------
    enumerate all child cells in chash which a single line intersects with
    done recursively, 1st call from surf2grid_surf_algorithm() uses parentID = root
-     phash stores IDs of all parent cells for child cells in chash
+   phash stores IDs of all parent cells for child cells in chash
    bblo/hi = portion of bounding box for surf that is wholly within parentID
    parentID = parent cell
    level = level of parent cell
@@ -1205,43 +1200,24 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
   int nbits = plevels[level].nbits;
 
   // ij lohi = indices for range of child cells overlapped by surf bbox
-  // overlap means point is inside grid cell or touches boundary
-  // same equation as in Grid::id_find_child()
-
-  int ilo = static_cast<int> ((bblo[0]-plo[0]) * nx/(phi[0]-plo[0]));
-  int ihi = static_cast<int> ((bbhi[0]-plo[0]) * nx/(phi[0]-plo[0]));
-  int jlo = static_cast<int> ((bblo[1]-plo[1]) * ny/(phi[1]-plo[1]));
-  int jhi = static_cast<int> ((bbhi[1]-plo[1]) * ny/(phi[1]-plo[1]));
-
-  // augment indices if surf bbox touches or slightly overlaps cell edges
-  // same equation as in Grid::id_child_lohi()
+  // overlap = surf bbox include any interior of grid cell or touches its boundary
+  // id_point_child() returns cell indices for >= lo and < hi
+  // so check if lower range should be decremented
+  
+  int ilo,ihi,jlo,jhi,klo,khi;
+  id_point_child(bblo,plo,phi,nx,ny,1,ilo,jlo,klo);
+  id_point_child(bbhi,plo,phi,nx,ny,1,ihi,jhi,khi);
 
   celledge = plo[0] + ilo*(phi[0]-plo[0])/nx;
-  if (bblo[0] <= celledge) ilo--;
-  celledge = plo[0] + (ihi+1)*(phi[0]-plo[0])/nx;
-  if (bbhi[0] >= celledge) ihi++;
-
+  if (bblo[0] <= celledge && ilo > 0) ilo--;
   celledge = plo[1] + jlo*(phi[1]-plo[1])/ny;
-  if (bblo[1] <= celledge) jlo--;
-  celledge = plo[1] + (jhi+1)*(phi[1]-plo[1])/ny;
-  if (bbhi[1] >= celledge) jhi++;
-
-  // insure each index is between 0 and Nxy-1 inclusive
-
-  ilo = MAX(ilo,0);
-  ilo = MIN(ilo,nx-1);
-  ihi = MAX(ihi,0);
-  ihi = MIN(ihi,nx-1);
-  jlo = MAX(jlo,0);
-  jlo = MIN(jlo,ny-1);
-  jhi = MAX(jhi,0);
-  jhi = MIN(jhi,ny-1);
-
+  if (bblo[1] <= celledge && jlo > 0) jlo--;
+  
   // loop over range of grid cells between ij lohi inclusive
   // if cell is neither a child or parent cell in chash/phash, skip it
   // if line does not intersect cell, skip it
-  // if cell is a child, add intersectino to pairs list
-  // if pairs is a parent:
+  // if cell is a child, add intersection to pairs list
+  // if cell is a parent:
   //   recurse using new lohi for intersection of surf bbox with new parent cell
 
   for (iy = jlo; iy <= jhi; iy++) {
@@ -1317,48 +1293,20 @@ void Grid::recurse3d(cellint parentID, int level, double *plo, double *phi,
   int nbits = plevels[level].nbits;
 
   // ijk lohi = indices for range of child cells overlapped by surf bbox
-  // overlap means point is inside grid cell or touches boundary
-  // same equation as in Grid::id_find_child()
-
-  int ilo = static_cast<int> ((bblo[0]-plo[0]) * nx/(phi[0]-plo[0]));
-  int ihi = static_cast<int> ((bbhi[0]-plo[0]) * nx/(phi[0]-plo[0]));
-  int jlo = static_cast<int> ((bblo[1]-plo[1]) * ny/(phi[1]-plo[1]));
-  int jhi = static_cast<int> ((bbhi[1]-plo[1]) * ny/(phi[1]-plo[1]));
-  int klo = static_cast<int> ((bblo[2]-plo[2]) * nz/(phi[2]-plo[2]));
-  int khi = static_cast<int> ((bbhi[2]-plo[2]) * nz/(phi[2]-plo[2]));
-
-  // augment indices if surf bbox touches or slightly overlaps cell edges
-  // same equation as in Grid::id_child_lohi()
+  // overlap = surf bbox include any interior of grid cell or touches its boundary
+  // id_point_child() returns cell indices for >= lo and < hi
+  // so check if lower range should be decremented
+  
+  int ilo,ihi,jlo,jhi,klo,khi;
+  id_point_child(bblo,plo,phi,nx,ny,nz,ilo,jlo,klo);
+  id_point_child(bbhi,plo,phi,nx,ny,nz,ihi,jhi,khi);
 
   celledge = plo[0] + ilo*(phi[0]-plo[0])/nx;
-  if (bblo[0] <= celledge) ilo--;
-  celledge = plo[0] + (ihi+1)*(phi[0]-plo[0])/nx;
-  if (bbhi[0] >= celledge) ihi++;
-
+  if (bblo[0] <= celledge && ilo > 0) ilo--;
   celledge = plo[1] + jlo*(phi[1]-plo[1])/ny;
-  if (bblo[1] <= celledge) jlo--;
-  celledge = plo[1] + (jhi+1)*(phi[1]-plo[1])/ny;
-  if (bbhi[1] >= celledge) jhi++;
-
+  if (bblo[1] <= celledge && jlo > 0) jlo--;
   celledge = plo[2] + klo*(phi[2]-plo[2])/nz;
-  if (bblo[2] <= celledge) klo--;
-  celledge = plo[2] + (khi+1)*(phi[2]-plo[2])/nz;
-  if (bbhi[2] >= celledge) khi++;
-
-  // insure each index is between 0 and Nxyz-1 inclusive
-
-  ilo = MAX(ilo,0);
-  ilo = MIN(ilo,nx-1);
-  ihi = MAX(ihi,0);
-  ihi = MIN(ihi,nx-1);
-  jlo = MAX(jlo,0);
-  jlo = MIN(jlo,ny-1);
-  jhi = MAX(jhi,0);
-  jhi = MIN(jhi,ny-1);
-  klo = MAX(klo,0);
-  klo = MIN(klo,nz-1);
-  khi = MAX(khi,0);
-  khi = MIN(khi,nz-1);
+  if (bblo[2] <= celledge && klo > 0) klo--;
 
   // loop over range of grid cells between ij lohi inclusive
   // if cell is neither a child or parent cell in chash/phash, skip it
