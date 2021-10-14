@@ -152,16 +152,19 @@ int SurfReactProb::react(Particle::OnePart *&ip, int, double *,
             particle->add_particle(id,r->products[1],ip->icell,x,v,0.0,0.0);
           if (reallocflag) ip = particle->particles + (ip - particles);
           jp = &particle->particles[particle->nlocal-1];
+          printf("SRP DISS %d\n",ip->id);
           return list[i] + 1;
         }
       case EXCHANGE:
         {
           ip->ispecies = r->products[0];
+          printf("SRP EXCH %d\n",ip->id);
           return list[i] + 1;
         }
       case RECOMBINATION:
         {
           ip = NULL;
+          printf("SRP RECM %d\n",ip->id);
           return list[i] + 1;
         }
       }
@@ -169,7 +172,8 @@ int SurfReactProb::react(Particle::OnePart *&ip, int, double *,
   }
 
   // no reaction
-
+ 
+  printf("SRP NONE %d\n",ip->id);
   return 0;
 }
 
