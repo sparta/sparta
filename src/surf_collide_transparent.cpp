@@ -27,19 +27,19 @@ SurfCollideTransparent(SPARTA *sparta, int narg, char **arg) :
 {
   if (narg != 2) error->all(FLERR,"Illegal surf_collide transparent command");
 
+  allowreact = 0;
   transparent = 1;
 }
 
 /* ----------------------------------------------------------------------
    particle collision with surface with optional chemistry
    ip = particle with current x = collision pt, current v = incident v
-   norm = surface normal unit vector
-   isr = index of reaction model if >= 0, -1 for no chemistry
-   simply return ip = NULL to delete particle
+   ip velocity is unchanged
+   return jp = NULL for no new particle
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideTransparent::
-collide(Particle::OnePart *&ip, double *, double &, int, int &)
+collide(Particle::OnePart *&ip, double &, int, double *, int, int &)
 {
   nsingle++;
 

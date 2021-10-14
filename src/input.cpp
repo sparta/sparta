@@ -1637,5 +1637,3 @@ int Input::count_words(char *line)
   memory->sfree(copy);
   return n;
 }
-
-

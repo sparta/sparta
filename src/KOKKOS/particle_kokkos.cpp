@@ -700,7 +700,7 @@ int ParticleKokkos::add_custom(char *name, int type, int size)
       ewhich[index] = ncustom_iarray++;
       eiarray = (int ***)
         memory->srealloc(eiarray,ncustom_iarray*sizeof(int **),
-                         "particle:eivec");
+                         "particle:eiarray");
       eiarray[ncustom_iarray-1] = NULL;
       k_eiarray.resize(ncustom_iarray);
       memory->grow(icustom_iarray,ncustom_iarray,"particle:icustom_iarray");
@@ -721,7 +721,7 @@ int ParticleKokkos::add_custom(char *name, int type, int size)
       ewhich[index] = ncustom_darray++;
       edarray = (double ***)
         memory->srealloc(edarray,ncustom_darray*sizeof(double **),
-                         "particle:edvec");
+                         "particle:edarray");
       edarray[ncustom_darray-1] = NULL;
       k_edarray.resize(ncustom_darray);
       memory->grow(icustom_darray,ncustom_darray,"particle:icustom_darray");

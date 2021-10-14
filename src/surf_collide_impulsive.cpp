@@ -89,7 +89,7 @@ SurfCollideImpulsive::SurfCollideImpulsive(SPARTA *sparta, int narg, char **arg)
 
   // optional args
 
-  step_flag = double_flag = 0;
+  step_flag = double_flag = intenergy_flag = 0;  
   step_size = 0;
   cos_theta_pow_2 = 0;
 
@@ -167,45 +167,50 @@ void SurfCollideImpulsive::init()
 /* ----------------------------------------------------------------------
    particle collision with surface with optional chemistry
    ip = particle with current x = collision pt, current v = incident v
+   isurf = index of surface element
    norm = surface normal unit vector
-   ip = set to NULL if destroyed by chemsitry
+   isr = index of reaction model if >= 0, -1 for no chemistry
+   ip = reset to NULL if destroyed by chemsitry
    return jp = new particle if created by chemistry
    return reaction = index of reaction (1 to N) that took place, 0 = no reaction
    resets particle(s) to post-collision outward velocity
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideImpulsive::
-collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
+collide(Particle::OnePart *&ip, double &, 
+        int isurf, double *norm, int isr, int &reaction)
 {
   nsingle++;
 
   // if surface chemistry defined, attempt reaction
-  // reaction = 1 if reaction took place
+  // reaction = 1 if reaction took place, but post-collision v not yet reset
+  // reaction = 2 if reaction took place, and post-collision v already reset
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
+  reaction = 0;
 
   if (isr >= 0) {
-    if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
-    reaction = surf->sr[isr]->react(ip,norm,jp);
-    if (reaction) surf->nreact_one++;
+    if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));    
+    reaction = surf->sr[isr]->react(ip,isurf,norm,jp);
+    if (reaction) surf->nreact_one++;    
   }
 
   // impulsive reflection for each particle
-  // particle I needs to trigger any fixes to update per-particle
-  //  properties which depend on the temperature of the particle
-  //  (e.g. fix vibmode and fix ambipolar)
-  // if new particle J created, also need to trigger any fixes
+  // only if SurfReact did not already reset velocities
+  // also both partiticles need to trigger any fixes
+  //   to update per-particle properties which depend on
+  //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 
   if (ip) {
-    impulsive(ip,norm);
+    if (reaction < 2) impulsive(ip,norm);
     if (modify->n_update_custom) {
       int i = ip - particle->particles;
       modify->update_custom(i,twall,twall,twall,vstream);
     }
   }
   if (jp) {
-    impulsive(jp,norm);
+    if (reaction < 2) impulsive(jp,norm);
     if (modify->n_update_custom) {
       int j = jp - particle->particles;
       modify->update_custom(j,twall,twall,twall,vstream);
@@ -394,6 +399,94 @@ void SurfCollideImpulsive::impulsive(Particle::OnePart *p, double *norm)
         p->evib = evib_sum;
       }
     }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   wrapper on impulsive() method to perform collision for a single particle
+   pass in flags/coefficients to match command-line args for style impulsive
+   flags, coeffs can be NULL
+   called by SurfReactAdsorb
+------------------------------------------------------------------------- */
+
+void SurfCollideImpulsive::wrapper(Particle::OnePart *p, double *norm, 
+                                   int *flags, double *coeffs)
+{ 
+  if (flags) {
+    twall = coeffs[0];
+
+    softsphere_flag = flags[0];
+    if (softsphere_flag) {
+      eng_ratio = coeffs[1];
+      eff_mass = coeffs[2];
+    } else {
+      u0_a = coeffs[1];
+      u0_b = coeffs[2];
+    }
+
+    var_alpha = coeffs[3];
+    theta_peak = coeffs[4];
+    cos_theta_pow = coeffs[5];
+    cos_phi_pow = coeffs[6];
+    
+    step_flag = flags[1];
+    double_flag = flags[2];
+    intenergy_flag = flags[3];
+
+    int m = 7;
+
+    if (step_flag) {
+      step_size = coeffs[m++];
+    }
+    if (double_flag) {
+      cos_theta_pow_2 = coeffs[m++];
+    }
+    if (intenergy_flag) {
+      rot_frac = coeffs[m++];
+      vib_frac = coeffs[m++];
+    }
+  }
+
+  impulsive(p,norm);
+}
+
+/* ----------------------------------------------------------------------
+   return flags and coeffs for this SurfCollide instance to caller
+------------------------------------------------------------------------- */
+
+void SurfCollideImpulsive::flags_and_coeffs(int *flags, double *coeffs)
+{
+  coeffs[0] = twall;
+
+  flags[0] = softsphere_flag;
+  if (softsphere_flag) {
+    coeffs[1] = eng_ratio;
+    coeffs[2] = eff_mass;
+  } else {
+    coeffs[1] = u0_a;
+    coeffs[2] = u0_b;
+  }
+
+  coeffs[3] = var_alpha;
+  coeffs[4] = theta_peak;
+  coeffs[5] = cos_theta_pow;
+  coeffs[6] = cos_phi_pow;
+
+  flags[1] = step_flag;
+  flags[2] = double_flag;
+  flags[3] = intenergy_flag;
+
+  int m = 7;
+
+  if (step_flag) {
+    coeffs[m++] = step_size;
+  }
+  if (double_flag) {
+    coeffs[m++] = cos_theta_pow_2;
+  }
+  if (intenergy_flag) {
+    coeffs[m++] = rot_frac;
+    coeffs[m++] = vib_frac;
   }
 }
 

@@ -40,9 +40,9 @@ class SurfCollideTransparentKokkos : public SurfCollideTransparent {
   /* ----------------------------------------------------------------------
      particle collision with surface with optional chemistry
      ip = particle with current x = collision pt, current v = incident v
-     norm = surface normal unit vector
-     simply return ip = NULL to delete particle
-     return reaction = 0 = no reaction took place
+
+     ip velocity is unchanged
+     return jp = NULL for no new particle
   ------------------------------------------------------------------------- */
 
   KOKKOS_INLINE_FUNCTION

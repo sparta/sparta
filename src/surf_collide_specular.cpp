@@ -28,28 +28,29 @@ SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
   SurfCollide(sparta, narg, arg)
 {
   if (narg != 2) error->all(FLERR,"Illegal surf_collide specular command");
-
-  allowreact = 1;
 }
 
 /* ----------------------------------------------------------------------
    particle collision with surface with optional chemistry
    ip = particle with current x = collision pt, current v = incident v
+   isurf = index of surface element
    norm = surface normal unit vector
    isr = index of reaction model if >= 0, -1 for no chemistry
-   ip = set to NULL if destroyed by chemsitry
+   ip = reset to NULL if destroyed by chemsitry
    return jp = new particle if created by chemistry
    return reaction = index of reaction (1 to N) that took place, 0 = no reaction
    resets particle(s) to post-collision outward velocity
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideSpecular::
-collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
+collide(Particle::OnePart *&ip, double &, 
+        int isurf, double *norm, int isr, int &reaction)
 {
   nsingle++;
 
   // if surface chemistry defined, attempt reaction
-  // reaction > 0 if reaction took place
+  // reaction = 1 if reaction took place, but post-collision v not yet reset
+  // reaction = 2 if reaction took place, and post-collision v already reset
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
@@ -57,15 +58,32 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
 
   if (isr >= 0) {
     if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
-    reaction = surf->sr[isr]->react(ip,norm,jp);
+    reaction = surf->sr[isr]->react(ip,isurf,norm,jp);
     if (reaction) surf->nreact_one++;
   }
 
   // specular reflection for each particle
-  // reflect incident v around norm
+  // only if SurfReact did not already reset velocities
+  // also both partiticles need to trigger any fixes
+  //   to update per-particle properties which depend on
+  //   temperature of the particle, e.g. fix vibmode and fix ambipolar
+  // NOTE: not doing this for this specular model, 
+  //   since temperature does not change, would need to add a twall arg
 
-  if (ip) MathExtra::reflect3(ip->v,norm);
-  if (jp) MathExtra::reflect3(jp->v,norm);
+  if (ip) {
+    if (reaction < 2) MathExtra::reflect3(ip->v,norm);
+    //if (modify->n_update_custom) {
+    //  int i = ip - particle->particles;
+    //  modify->update_custom(i,twall,twall,twall,vstream);
+    //}
+  }
+  if (jp) {
+    if (reaction < 2) MathExtra::reflect3(jp->v,norm);
+    //if (modify->n_update_custom) {
+    //  int j = jp - particle->particles;
+    //  modify->update_custom(j,twall,twall,twall,vstream);
+    //}
+  }
 
   // call any fixes with a surf_react() method
   // they may reset j to -1, e.g. fix ambipolar
@@ -84,4 +102,17 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
   }
 
   return jp;
+}
+
+/* ----------------------------------------------------------------------
+   wrapper on specular() method to perform collision for a single particle
+   pass in 0 coefficients to match command-line args for style specular
+   flags, coeffs can be NULL
+   called by SurfReactAdsorb
+------------------------------------------------------------------------- */
+
+void SurfCollideSpecular::wrapper(Particle::OnePart *p, double *norm, 
+                                  int *flags, double *coeffs)
+{ 
+  MathExtra::reflect3(p->v,norm);
 }

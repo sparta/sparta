@@ -231,7 +231,7 @@ void Update::run(int nsteps)
 
     ntimestep++;
 
-    if (collide_react) collide_react_update();
+    if (collide_react) collide_react_reset();
     if (bounce_tally) bounce_set(ntimestep);
 
     timer->stamp();
@@ -266,6 +266,8 @@ void Update::run(int nsteps)
       collide->collisions();
       timer->stamp(TIME_COLLIDE);
     }
+
+    if (collide_react) collide_react_update();
 
     // diagnostic fixes
 
@@ -772,10 +774,10 @@ template < int DIM, int SURF > void Update::move()
 
               if (DIM == 3)
                 jpart = surf->sc[tri->isc]->
-                  collide(ipart,tri->norm,dtremain,tri->isr,reaction);
+                  collide(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
               if (DIM != 3)
                 jpart = surf->sc[line->isc]->
-                  collide(ipart,line->norm,dtremain,line->isr,reaction);
+                  collide(ipart,dtremain,minsurf,line->norm,line->isr,reaction);
 
               if (jpart) {
                 particles = particle->particles;
@@ -1271,7 +1273,7 @@ int Update::split2d(int icell, double *x)
 }
 
 /* ----------------------------------------------------------------------
-   setup lists of all computes that tally surface collision/reaction info
+   check if any surface collision or reaction models are defined
    return 1 if there are any, 0 if not
 ------------------------------------------------------------------------- */
 
@@ -1282,12 +1284,26 @@ int Update::collide_react_setup()
   nsr = surf->nsr;
   sr = surf->sr;
 
-  if (sc || sr) return 1;
+  if (nsc || nsr) return 1;
   return 0;
 }
 
 /* ----------------------------------------------------------------------
-   zero counters in all computes that tally surface collision/reaction info
+   zero counters for tallying surface collisions/reactions
+   done at start of each timestep
+   done within individual SurfCollide and SurfReact instances
+------------------------------------------------------------------------- */
+
+void Update::collide_react_reset()
+{
+  for (int i = 0; i < nsc; i++) sc[i]->tally_reset();
+  for (int i = 0; i < nsr; i++) sr[i]->tally_reset();
+}
+
+/* ----------------------------------------------------------------------
+   update cummulative counters for tallying surface collisions/reactions
+   done at end of each timestep
+   this is done within individual SurfCollide and SurfReact instances
 ------------------------------------------------------------------------- */
 
 void Update::collide_react_update()
