@@ -1184,13 +1184,7 @@ void Collide::collisions_group_ambipolar()
     if (np <= 1) continue;
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
-    if (volume == 0.0) {
-      // DEBUG
-      Grid::ChildCell *cells = grid->cells;
-      printf("ZERO VOL: step %ld, cellID %d, icell %d, vol %g\n",
-             update->ntimestep,cells[icell].id,icell,volume);
-      error->one(FLERR,"Collision cell volume is zero");
-    }
+    if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
 
     // reallocate plist and p2g if necessary
 
