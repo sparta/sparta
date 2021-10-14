@@ -119,12 +119,14 @@ int SurfReactProb::react(Particle::OnePart *&ip, int, double *,
   if (n == 0) return 0;
   int *list = reactions[ip->ispecies].list;
 
-  printf("SRP %d %g %g\n",ip->id,ip->x[0],ip->v[0]);
-
   // probablity to compare to reaction probability
 
   double react_prob = 0.0;
   double random_prob = random->uniform();
+
+  printf("SRP time %ld, pcount %d: %d %g %g, RN %g\n",
+         update->ntimestep,particle->nlocal,
+         ip->id,ip->x[0],ip->v[0],random_prob);
 
   // loop over possible reactions for this species
   // if dissociation performs a realloc:
