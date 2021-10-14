@@ -114,12 +114,12 @@ void SurfReactProb::init()
 int SurfReactProb::react(Particle::OnePart *&ip, int, double *, 
                          Particle::OnePart *&jp)
 {
-  printf("SRP %d %g %g\n",ip->id,ip->x[0],ip->v[0]);
-
   int n = reactions[ip->ispecies].n;
 
   if (n == 0) return 0;
   int *list = reactions[ip->ispecies].list;
+
+  printf("SRP %d %g %g\n",ip->id,ip->x[0],ip->v[0]);
 
   // probablity to compare to reaction probability
 
@@ -160,7 +160,7 @@ int SurfReactProb::react(Particle::OnePart *&ip, int, double *,
       case EXCHANGE:
         {
           ip->ispecies = r->products[0];
-          printf("  SRP EXCH %d\n",ip->id);
+          printf("  SRP EXCH %d %d\n",ip->id,ip->ispecies);
           return list[i] + 1;
         }
       case RECOMBINATION:
