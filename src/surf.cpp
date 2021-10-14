@@ -257,7 +257,7 @@ void Surf::init()
     else allflag = flag;
 
     if (allflag) {
-      char str[64];
+      char str[128];
       sprintf(str,BIGINT_FORMAT " surface elements with reaction model, "
               "but invalid collision model",allflag);
       error->all(FLERR,str);
@@ -290,7 +290,7 @@ void Surf::init()
     else allflag = flag;
 
     if (allflag) {
-      char str[64];
+      char str[128];
       sprintf(str,BIGINT_FORMAT " transparent surface elements "
               "with invalid collision model or reaction model",allflag);
       error->all(FLERR,str);
