@@ -115,18 +115,14 @@ int SurfReactProb::react(Particle::OnePart *&ip, int, double *,
                          Particle::OnePart *&jp)
 {
   int n = reactions[ip->ispecies].n;
-
   if (n == 0) return 0;
+
   int *list = reactions[ip->ispecies].list;
 
   // probablity to compare to reaction probability
 
   double react_prob = 0.0;
   double random_prob = random->uniform();
-
-  printf("SRP time %ld, pcount %d: %d %g %g, RN %g\n",
-         update->ntimestep,particle->nlocal,
-         ip->id,ip->x[0],ip->v[0],random_prob);
 
   // loop over possible reactions for this species
   // if dissociation performs a realloc:
@@ -156,20 +152,17 @@ int SurfReactProb::react(Particle::OnePart *&ip, int, double *,
             particle->add_particle(id,r->products[1],ip->icell,x,v,0.0,0.0);
           if (reallocflag) ip = particle->particles + (ip - particles);
           jp = &particle->particles[particle->nlocal-1];
-          printf("  SRP DISS %d\n",ip->id);
-          return list[i] + 1;
+          return 1;
         }
       case EXCHANGE:
         {
           ip->ispecies = r->products[0];
-          printf("  SRP EXCH %d %d\n",ip->id,ip->ispecies);
-          return list[i] + 1;
+          return 1;
         }
       case RECOMBINATION:
         {
           ip = NULL;
-          printf("  SRP RECM %d\n",ip->id);
-          return list[i] + 1;
+          return 1;
         }
       }
     }
@@ -177,7 +170,6 @@ int SurfReactProb::react(Particle::OnePart *&ip, int, double *,
 
   // no reaction
  
-  printf("  SRP NONE %d\n",ip->id);
   return 0;
 }
 

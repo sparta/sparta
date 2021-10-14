@@ -182,12 +182,6 @@ collide(Particle::OnePart *&ip, double &,
     }
   }
 
-  if (ip->id == 715291938 && update->ntimestep == 212)
-    printf("POST-DIFFUSE ijp %p %p, isp %d, x %g %g %g, v %g %g %g\n",
-           ip,jp,ip->ispecies,
-           ip->x[0],ip->x[2],ip->x[2],
-           ip->v[0],ip->v[2],ip->v[2]);
-
   // call any fixes with a surf_react() method
   // they may reset j to -1, e.g. fix ambipolar
   //   in which case newly created j is deleted

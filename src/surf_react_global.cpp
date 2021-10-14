@@ -104,7 +104,7 @@ int SurfReactGlobal::react(Particle::OnePart *&ip, int, double *,
       particle->add_particle(id,ip->ispecies,ip->icell,x,v,0.0,0.0);
     if (reallocflag) ip = particle->particles + (ip - particles);
     jp = &particle->particles[particle->nlocal-1];
-    return 2;
+    return 1;
   }
 
   // no reaction
@@ -119,4 +119,3 @@ char *SurfReactGlobal::reactionID(int m)
   if (m == 0) return (char *) "delete";
   return (char *) "create";
 }
-
