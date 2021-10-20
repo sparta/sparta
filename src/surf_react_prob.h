@@ -30,7 +30,7 @@ class SurfReactProb : public SurfReact {
   SurfReactProb(class SPARTA *, int, char **);
   ~SurfReactProb();
   void init();
-  int react(Particle::OnePart *&, int, double *, Particle::OnePart *&);
+  int react(Particle::OnePart *&, int, double *, Particle::OnePart *&, int &);
   char *reactionID(int);
   int match_reactant(char *, int);
   int match_product(char *, int);

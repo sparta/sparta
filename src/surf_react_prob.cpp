@@ -106,13 +106,12 @@ void SurfReactProb::init()
 
 /* ----------------------------------------------------------------------
    select surface reaction to perform for particle with ptr IP on surface
-   return 0 = no reaction
-   return 1 = which reaction
+   return which reaction 1 to N, 0 = no reaction
    if dissociation, add particle and return ptr JP
 ------------------------------------------------------------------------- */
 
 int SurfReactProb::react(Particle::OnePart *&ip, int, double *, 
-                         Particle::OnePart *&jp)
+                         Particle::OnePart *&jp, int &)
 {
   int n = reactions[ip->ispecies].n;
   if (n == 0) return 0;
@@ -152,17 +151,17 @@ int SurfReactProb::react(Particle::OnePart *&ip, int, double *,
             particle->add_particle(id,r->products[1],ip->icell,x,v,0.0,0.0);
           if (reallocflag) ip = particle->particles + (ip - particles);
           jp = &particle->particles[particle->nlocal-1];
-          return 1;
+          return (list[i] + 1);
         }
       case EXCHANGE:
         {
           ip->ispecies = r->products[0];
-          return 1;
+          return (list[i] + 1);
         }
       case RECOMBINATION:
         {
           ip = NULL;
-          return 1;
+          return (list[i] + 1);
         }
       }
     }

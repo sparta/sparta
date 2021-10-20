@@ -30,7 +30,7 @@ class SurfReactAdsorb : public SurfReact {
   SurfReactAdsorb(class SPARTA *, int, char **);
   ~SurfReactAdsorb();
   void init();
-  int react(Particle::OnePart *&, int, double *, Particle::OnePart *&);
+  int react(Particle::OnePart *&, int, double *, Particle::OnePart *&, int &);
 
   char *reactionID(int);
   int match_reactant(char *, int);

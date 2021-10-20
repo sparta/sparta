@@ -574,7 +574,7 @@ void SurfReactAdsorb::init()
 ------------------------------------------------------------------------- */
 
 int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
-                           Particle::OnePart *&jp)
+                           Particle::OnePart *&jp, int &velreset)
 {
   // just return if GS model not defined
 
@@ -652,8 +652,9 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           double K_ads = r->kisliuk_coeff[0] * pow(twall,r->kisliuk_coeff[1]) * 
           exp(-r->kisliuk_coeff[2]/twall);
           if (surf_cover < 1) 
-            S_theta = pow((1 - surf_cover)/(1 - surf_cover + 
-                                            K_ads*surf_cover),r->coeff[coeff_val]);
+            S_theta = pow((1 - surf_cover) /
+                          (1 - surf_cover + 
+                           K_ads*surf_cover),r->coeff[coeff_val]);
         }
         else
         {
@@ -674,8 +675,9 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           double K_ads = r->kisliuk_coeff[0] * pow(twall,r->kisliuk_coeff[1]) * 
             exp(-r->kisliuk_coeff[2]/twall);
           if (surf_cover < 1) 
-            S_theta = pow((1 - surf_cover)/(1 - surf_cover + 
-                                            K_ads*surf_cover),r->coeff[coeff_val]);
+            S_theta = pow((1 - surf_cover) /
+                          (1 - surf_cover + 
+                           K_ads*surf_cover),r->coeff[coeff_val]);
         } else {
           S_theta = pow((1-surf_cover),r->coeff[coeff_val]);
         }
@@ -686,7 +688,8 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
         if (r->state_products[1][0] == 's') {
           double K_ads2 = r->coeff[6] * pow(twall,r->coeff[7]) * 
             exp(-r->coeff[8]/twall);
-          double S_ratio2 = (1 - surf_cover)/(1 - surf_cover + K_ads*surf_cover); 
+          double S_ratio2 = (1 - surf_cover) / 
+               (1 - surf_cover + K_ads*surf_cover); 
           prob_value[i] *= (S_ratio2); 
         }
         */
@@ -703,8 +706,9 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           double K_ads = r->kisliuk_coeff[0] * pow(twall,r->kisliuk_coeff[1]) * 
             exp(-r->kisliuk_coeff[2]/twall);
           if (surf_cover < 1) 
-            S_theta = pow((1 - surf_cover)/(1 - surf_cover + 
-                                            K_ads*surf_cover),r->coeff[coeff_val]);
+            S_theta = pow((1 - surf_cover) /
+                          (1 - surf_cover + 
+                           K_ads*surf_cover),r->coeff[coeff_val]);
         } else {
           S_theta = pow((1-surf_cover),r->coeff[coeff_val]);
         }
@@ -722,8 +726,9 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           double K_ads = r->kisliuk_coeff[0] * pow(twall,r->kisliuk_coeff[1]) * 
             exp(-r->kisliuk_coeff[2]/twall);
           if (surf_cover < 1) 
-            S_theta = pow((1 - surf_cover)/(1 - surf_cover + 
-                                            K_ads*surf_cover),r->coeff[coeff_val]);
+            S_theta = pow((1 - surf_cover) /
+                          (1 - surf_cover + 
+                           K_ads*surf_cover),r->coeff[coeff_val]);
         } else {
           S_theta = pow((1-surf_cover),r->coeff[coeff_val]);
         }
@@ -741,8 +746,9 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           double K_ads = r->kisliuk_coeff[0] * pow(twall,r->kisliuk_coeff[1]) * 
             exp(-r->kisliuk_coeff[2]/twall);
           if (surf_cover < 1) 
-            S_theta = pow((1 - surf_cover)/(1 - surf_cover + 
-                                            K_ads*surf_cover),r->coeff[coeff_val]);
+            S_theta = pow((1 - surf_cover) /
+                          (1 - surf_cover + 
+                           K_ads*surf_cover),r->coeff[coeff_val]);
         } else {
           S_theta = pow((1-surf_cover),r->coeff[coeff_val]);
         }
@@ -774,7 +780,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           double dot = MathExtra::dot3(v,norm);
           double vmag_sq = MathExtra::lensq3(v);
           double E_i = 0.5 * species[ip->ispecies].mass * vmag_sq;
-          double cos_theta = abs(dot)/sqrt(vmag_sq);
+          double cos_theta = abs(dot) / sqrt(vmag_sq);
           prob_value[i] *= pow(E_i,r->energy_coeff[0]) * 
           pow(cos_theta,r->energy_coeff[1]);
         }
@@ -826,7 +832,8 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
   if (sum_prob > 1.0) correction = 1.0/sum_prob;
   else scatter_prob = 1.0 - sum_prob;
   
-  //if (sum_prob > (1.0-scatter_prob)) correction = (1.0-scatter_prob) / sum_prob;
+  //if (sum_prob > (1.0-scatter_prob)) 
+  //  correction = (1.0-scatter_prob) / sum_prob;
 
   // probablity to compare to reaction probability
 
@@ -886,10 +893,12 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
       }
 
       // for each reaction, post-reaction velocities must be set
-      // if NOMODEL then return 1:
-      //   SC instance associated with surf/face sets vels
-      // else return 2:
-      //   SC style created when GS file was read sets velocities
+      // if NOMODEL:
+      //   leave velreset = 0 (value passed by caller)
+      //   SC instance associated with the surf/face sets vels after return
+      // else:
+      //   set velreset = 1
+      //   SC style created when GS file was read does velocity reset
 
       switch (r->type) {
 
@@ -909,35 +918,34 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           int reallocflag = 
             particle->add_particle(id,jp_species,ip->icell,x,v,0.0,0.0);
           if (reallocflag) ip = particle->particles + (ip - particles);
-          jp = &particle->particles[particle->nlocal-1];
-          return 1;
-          break;
+          jp = &particle->particles[particle->nlocal-1]; 
+          return (list[i] + 1);
+         break;
         }
 
       case EXCHANGE:
         {
           ip->ispecies = r->products[0];
-          return 1;
+          return (list[i] + 1);
           break;
         }
 
       case RECOMBINATION:
         {
           ip = NULL;
-          return 1;
+          return (list[i] + 1);
           break;
         }
 
       case AA:
         { 
           ip = NULL; 
-          return 1;
+          return (list[i] + 1);
           break;
         }     
 
       case DA:
         {
-
           if (r->nprod_g == 0) ip = NULL;
           else {
             int n = 1;
@@ -946,7 +954,9 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
                 if (n == 1) {
                   n++;
                   ip->ispecies = r->products[j];
-                  if (r->cmodel_ip != NOMODEL) cmodels[r->cmodel_ip]->wrapper(ip,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
+                  if (r->cmodel_ip != NOMODEL)
+                    cmodels[r->cmodel_ip]->
+                      wrapper(ip,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
 
                   if (r->stoich_products[j] == 2) {
                     double x[3],v[3];
@@ -956,11 +966,15 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
                     int id = MAXSMALLINT*random->uniform();
                     Particle::OnePart *particles = particle->particles;
 
-                    int reallocflag = particle->add_particle(id,r->products[j],ip->icell,x,v,0.0,0.0);
+                    int reallocflag = 
+                      particle->add_particle(id,r->products[j],ip->icell,
+                                             x,v,0.0,0.0);
                     if (reallocflag) ip = particle->particles + (ip - particles);
                     jp = &particle->particles[particle->nlocal-1];
 
-                    if (r->cmodel_ip != NOMODEL) cmodels[r->cmodel_ip]->wrapper(jp,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
+                    if (r->cmodel_ip != NOMODEL) 
+                      cmodels[r->cmodel_ip]->
+                        wrapper(jp,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
                   }
 
                 } else {
@@ -971,35 +985,22 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
                     int id = MAXSMALLINT*random->uniform();
                     Particle::OnePart *particles = particle->particles;
 
-                    int reallocflag = particle->add_particle(id,r->products[j],ip->icell,x,v,0.0,0.0);
+                    int reallocflag = 
+                      particle->add_particle(id,r->products[j],ip->icell,
+                                             x,v,0.0,0.0);
                     if (reallocflag) ip = particle->particles + (ip - particles);
                     jp = &particle->particles[particle->nlocal-1];
 
-                    if (r->cmodel_jp != NOMODEL) cmodels[r->cmodel_jp]->wrapper(jp,norm,r->cmodel_jp_flags,r->cmodel_jp_coeffs);
+                    if (r->cmodel_jp != NOMODEL) 
+                      cmodels[r->cmodel_jp]->
+                        wrapper(jp,norm,r->cmodel_jp_flags,r->cmodel_jp_coeffs);
                 }
               }
             }
           }
 
-          if (r->cmodel_ip == NOMODEL) return 1;
-          return 2;
-
-          /*
-          for (int j = 1; j < r->nproduct; j++) {
-          if (r->state_products[j][0] != 'g') {
-            ip = NULL;                
-          } else {                          
-            ip->ispecies = r->products[1];
-            if (r->cmodel_ip != NOMODEL) {
-              cmodels[r->cmodel_ip]->wrapper(ip,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
-              return 2;
-            }
-          }
-          //if (r->cmodel_ip == NOMODEL) return 1;
-          //return 2;
-          return 1;
-          */
-          
+          if (r->cmodel_ip != NOMODEL) velreset = 1;
+          return (list[i] + 1);
           break; 
         }
 
@@ -1009,23 +1010,23 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           if (r->cmodel_ip != NOMODEL) 
             cmodels[r->cmodel_ip]->
               wrapper(ip,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
-          
-          if (r->cmodel_ip == NOMODEL) return 1;
-          return 2;
+
+          if (r->cmodel_ip != NOMODEL) velreset = 1;
+          return (list[i] + 1);
           break;
         }
           
       case LH3:
         {
           ip = NULL;
-          return 1;
+          return (list[i] + 1);
           break;
         }
           
       case CD:
         {
           ip = NULL;
-          return 1;
+          return (list[i] + 1);
           break;
         }
           
@@ -1035,8 +1036,9 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           if (r->cmodel_ip != NOMODEL) 
             cmodels[r->cmodel_ip]->
               wrapper(ip,norm,r->cmodel_ip_flags,r->cmodel_ip_coeffs);
-          if (r->cmodel_ip == NOMODEL) return 1;
-          return 2;
+
+          if (r->cmodel_ip != NOMODEL) velreset = 1;
+          return (list[i] + 1);
           break;
         }          
 
@@ -1077,14 +1079,16 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
             }
           }
 
-          if (r->cmodel_ip == NOMODEL) return 1;
-          return 2;
+          if (r->cmodel_ip != NOMODEL) velreset = 1;
+          return (list[i] + 1);
           break;
         }
       }
     }
   }
   
+  // no reaction
+
   return 0;
 }
 

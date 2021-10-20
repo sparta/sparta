@@ -172,16 +172,17 @@ collide(Particle::OnePart *&ip, double &,
   nsingle++;
 
   // if surface chemistry defined, attempt reaction
-  // reaction = 1 if reaction took place, but post-collision v not yet reset
-  // reaction = 2 if reaction took place, and post-collision v already reset
+  // reaction = 1 to N for which reaction took place, 0 for none
+  // velreset = 1 if reaction reset post-collision velocity, else 0
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
   reaction = 0;
+  int velreset = 0;
 
   if (isr >= 0) {
     if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
-    reaction = surf->sr[isr]->react(ip,isurf,norm,jp);
+    reaction = surf->sr[isr]->react(ip,isurf,norm,jp,velreset);
     if (reaction) surf->nreact_one++;    
   }
 
@@ -192,14 +193,14 @@ collide(Particle::OnePart *&ip, double &,
   //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 
   if (ip) {
-    if (reaction < 2) cll(ip,norm);
+    if (!velreset) cll(ip,norm);
     if (modify->n_update_custom) {
       int i = ip - particle->particles;
       modify->update_custom(i,twall,twall,twall,vstream);
     }
   }
   if (jp) {
-    if (reaction < 2) cll(jp,norm);
+    if (!velreset) cll(jp,norm);
     if (modify->n_update_custom) {
       int j = jp - particle->particles;
       modify->update_custom(j,twall,twall,twall,vstream);
