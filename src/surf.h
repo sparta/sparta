@@ -310,7 +310,7 @@ class Surf : protected Pointers {
   int *edcol;               // # of columns in each double array (esize)
 
   int *custom_restart_flag; // flag on each custom vec/array read from restart
-                            // used to delete them if not redefined in 
+                            // used to delete them if not redefined in
                             // restart script
 
   // private methods

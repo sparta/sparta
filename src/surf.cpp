@@ -269,7 +269,7 @@ void Surf::init()
   if (distributed)
     MPI_Allreduce(&flag,&allflag,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   else allflag = flag;
-  
+
   if (allflag) {
     char str[64];
     sprintf(str,BIGINT_FORMAT
@@ -3738,13 +3738,13 @@ int Surf::add_custom(char *name, int type, int size)
   if (type == INT) {
     if (size == 0) {
       ewhich[index] = ncustom_ivec++;
-      eivec = (int **) 
+      eivec = (int **)
         memory->srealloc(eivec,ncustom_ivec*sizeof(int *),"surf:eivec");
       memory->grow(icustom_ivec,ncustom_ivec,"surf:icustom_ivec");
       icustom_ivec[ncustom_ivec-1] = index;
     } else {
       ewhich[index] = ncustom_iarray++;
-      eiarray = (int ***) 
+      eiarray = (int ***)
         memory->srealloc(eiarray,ncustom_iarray*sizeof(int **),
                          "surf:eiarray");
       memory->grow(icustom_iarray,ncustom_iarray,"surf:icustom_iarray");
@@ -3755,13 +3755,13 @@ int Surf::add_custom(char *name, int type, int size)
   } else if (type == DOUBLE) {
     if (size == 0) {
       ewhich[index] = ncustom_dvec++;
-      edvec = (double **) 
+      edvec = (double **)
         memory->srealloc(edvec,ncustom_dvec*sizeof(double *),"surf:edvec");
       memory->grow(icustom_dvec,ncustom_dvec,"surf:icustom_dvec");
       icustom_dvec[ncustom_dvec-1] = index;
     } else {
       ewhich[index] = ncustom_darray++;
-      edarray = (double ***) 
+      edarray = (double ***)
         memory->srealloc(edarray,ncustom_darray*sizeof(double **),
                          "surf:edarray");
       memory->grow(icustom_darray,ncustom_darray,"surf:icustom_darray");
@@ -3860,7 +3860,7 @@ void Surf::remove_custom(int index)
   // set ncustom = 0 if custom list is now entirely empty
 
   int empty = 1;
-  for (int i = 0; i < ncustom; i++) 
+  for (int i = 0; i < ncustom; i++)
     if (ename[i]) empty = 0;
   if (empty) ncustom = 0;
 }

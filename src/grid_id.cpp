@@ -42,7 +42,7 @@ void Grid::id_point_child(double *x, double *lo, double *hi,
   // ix,iy,iz = child cell indices within parent lo/hi cell
   // inverse of master equation in id_child_lohi() for cell boundaries
   // for point on or eps from cell boundary, can produce round-off error
-  
+
   ix = static_cast<int> ((x[0]-lo[0]) * nx/(hi[0]-lo[0]));
   iy = static_cast<int> ((x[1]-lo[1]) * ny/(hi[1]-lo[1]));
   iz = static_cast<int> ((x[2]-lo[2]) * nz/(hi[2]-lo[2]));
@@ -51,17 +51,17 @@ void Grid::id_point_child(double *x, double *lo, double *hi,
   // via master equation id_child_lohi() that defines cell boundaries
 
   double edge;
-  
+
   edge = lo[0] + ix*(hi[0]-lo[0])/nx;
   if (x[0] < edge) ix--;
   edge = lo[0] + (ix+1)*(hi[0]-lo[0])/nx;
   if (x[0] >= edge) ix++;
-  
+
   edge = lo[1] + iy*(hi[1]-lo[1])/ny;
   if (x[1] < edge) iy--;
   edge = lo[1] + (iy+1)*(hi[1]-lo[1])/ny;
   if (x[1] >= edge) iy++;
-  
+
   edge = lo[2] + iz*(hi[2]-lo[2])/nz;
   if (x[2] < edge) iz--;
   edge = lo[2] + (iz+1)*(hi[2]-lo[2])/nz;
@@ -228,7 +228,7 @@ void Grid::id_find_child_uniform_level(int level, int lohi,
   // x >= lower edge and < upper edge of lo/hi cell with indices ix,iy,iz
   // if lohi = 0 and pt is on lower edge, decrement index
   // still require 0 <= index <= N-1
-  
+
   if (lohi == 0) {
     if (x[0] == lo[0] && ix != 0) xgrid--;
     if (x[1] == lo[1] && iy != 0) ygrid--;

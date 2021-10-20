@@ -395,7 +395,7 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
   // perform split with full-size grid cell
 
   int nsplit;
-  int errflag = 
+  int errflag =
     split_try(id_caller,nsurf_caller,surfs_caller,vols_caller,surfmap,
               corners,xsub,xsplit,nsplit);
 
@@ -421,7 +421,7 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
     lo[2] = newlo;
     hi[2] = newhi;
 
-    errflag = 
+    errflag =
       split_try(id_caller,nsurf_caller,surfs_caller,vols_caller,surfmap,
                 corners,xsub,xsplit,nsplit);
   }
@@ -444,7 +444,7 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
    called multiple times by split() with slightly different grid cell sizes
 ------------------------------------------------------------------------- */
 
-int Cut3d::split_try(cellint id_caller, 
+int Cut3d::split_try(cellint id_caller,
                      int nsurf_caller, surfint *surfs_caller,
                      double *&vols_caller, int *surfmap,
                      int *corners, int &xsub, double *xsplit, int &nsplit)
@@ -471,17 +471,17 @@ int Cut3d::split_try(cellint id_caller,
   // mark corner points based on grazecount or touchmark value
   // return vol = 0.0 for UNKNOWN/INSIDE, full cell vol for OUTSIDE
   // vol is changed in Grid::set_inout() if OVERLAP cell corners are marked
-  
+
   if (empty) {
     int mark = UNKNOWN;
     if (grazecount || touchmark == INSIDE) mark = INSIDE;
     else if (touchmark == OUTSIDE) mark = OUTSIDE;
     corners[0] = corners[1] = corners[2] = corners[3] =
       corners[4] = corners[5] = corners[6] = corners[7] = mark;
-    
+
     double vol = 0.0;
     if (mark == OUTSIDE) vol = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
-    
+
     vols.grow(1);
     vols[0] = vol;
     vols_caller = &vols[0];
@@ -511,7 +511,7 @@ int Cut3d::split_try(cellint id_caller,
   }
 
   remove_faces();
-    
+
 #ifdef VERBOSE
   if (id == VERBOSE_ID) print_bpg("BPG after faces");
 #endif
@@ -524,7 +524,7 @@ int Cut3d::split_try(cellint id_caller,
 #ifdef VERBOSE
   if (id == VERBOSE_ID) print_loops();
 #endif
-  
+
   errflag = loop2ph();
 
   // loop2ph detected no positive-volume loops, cell is inside the surf
@@ -539,7 +539,7 @@ int Cut3d::split_try(cellint id_caller,
     nsplit = 1;
     return 0;
   }
-    
+
   // other error returns from loop2ph
 
   if (errflag) return errflag;
@@ -560,7 +560,7 @@ int Cut3d::split_try(cellint id_caller,
 
   int icorner;
   double *p1,*p2;
-  
+
   corners[0] = corners[1] = corners[2] = corners[3] =
     corners[4] = corners[5] = corners[6] = corners[7] = INSIDE;
 
@@ -574,7 +574,7 @@ int Cut3d::split_try(cellint id_caller,
     icorner = corner(p2);
     if (icorner >= 0) corners[icorner] = OUTSIDE;
   }
-  
+
   // store volumes in vector so can return ptr to it
 
   vols.grow(nsplit);
@@ -586,10 +586,10 @@ int Cut3d::split_try(cellint id_caller,
   return 0;
 }
 
-/* ---------------------------------------------------------------------- 
+/* ----------------------------------------------------------------------
    2-letter prefix is which method encountered error
 ------------------------------------------------------------------------- */
- 
+
 void Cut3d::split_error(int errflag)
 {
   if (errflag == 1)
@@ -607,7 +607,7 @@ void Cut3d::split_error(int errflag)
     error->one(FLERR,"LP: Single volume is negative, inverse donut");
   if (errflag == 7)
     error->one(FLERR,"SP: Could not find split point in split cell");
-  
+
   if (errflag == 11)
     error->one(FLERR,"CH: Vertex has less than 3 edges");
   if (errflag == 12)
@@ -662,7 +662,7 @@ int Cut3d::add_tris()
   edges.grow(3*nsurf);
   verts.n = 0;
   edges.n = 0;
-  
+
   int nvert = 0;
   for (i = 0; i < nsurf; i++) {
     m = surfs[i];
@@ -975,7 +975,7 @@ void Cut3d::clip_adjust()
       //   push both to face(s), recalculate on_faces()
       //   if pt X is on more faces, pboth = X, else pboth = p1
 
-      if (!nface1 && !nface2) { 
+      if (!nface1 && !nface2) {
         memcpy(pboth,p1,3*sizeof(double));
         //printf("INTERIOR EDGE %ld %d %d %g %g\n",
         //       id,iedge,nedge,edgelen,epsilon);
@@ -996,16 +996,16 @@ void Cut3d::clip_adjust()
 
       // set all points that are same as old p1 or p2 to pboth
       // reset first for all jedge != iedge, then reset iedge
-      
+
       for (int jedge = 0; jedge < nedge; jedge++) {
         if (!edges[jedge].active) continue;
         if (jedge == iedge) continue;
-        
+
         if (samepoint(edges[jedge].p1,p1))
           memcpy(edges[jedge].p1,pboth,3*sizeof(double));
         if (samepoint(edges[jedge].p2,p1))
           memcpy(edges[jedge].p2,pboth,3*sizeof(double));
-        
+
         if (samepoint(edges[jedge].p1,p2))
           memcpy(edges[jedge].p1,pboth,3*sizeof(double));
         if (samepoint(edges[jedge].p2,p2))
@@ -1172,7 +1172,7 @@ void Cut3d::ctri_volume()
    assign all singlet edges to faces (0-5)
    singlet edge must be on one or two faces, two if on cell edge
    if along cell edge, assign to one of two faces based on
-     which has larger dot product of its inward face norm 
+     which has larger dot product of its inward face norm
      and the norm of the tri containing the edge
 ------------------------------------------------------------------------- */
 
@@ -1706,7 +1706,7 @@ int Cut3d::loop2ph()
   int negative = 0;
 
   int nloop = loops.n;
-  
+
   for (int i = 0; i < nloop; i++) {
     if (loops[i].volume > 0.0) positive++;
     else negative++;

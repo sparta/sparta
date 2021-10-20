@@ -137,7 +137,7 @@ void SurfCollideTD::init()
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideTD::
-collide(Particle::OnePart *&ip, double &, 
+collide(Particle::OnePart *&ip, double &,
         int isurf, double *norm, int isr, int &reaction)
 {
   nsingle++;
@@ -280,9 +280,9 @@ void SurfCollideTD::td(Particle::OnePart *p, double *norm)
    called by SurfReactAdsorb
 ------------------------------------------------------------------------- */
 
-void SurfCollideTD::wrapper(Particle::OnePart *p, double *norm, 
+void SurfCollideTD::wrapper(Particle::OnePart *p, double *norm,
                             int *flags, double *coeffs)
-{ 
+{
   if (flags) {
     twall = coeffs[0];
 

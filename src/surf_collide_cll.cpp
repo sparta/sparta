@@ -183,7 +183,7 @@ collide(Particle::OnePart *&ip, double &,
   if (isr >= 0) {
     if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
     reaction = surf->sr[isr]->react(ip,isurf,norm,jp,velreset);
-    if (reaction) surf->nreact_one++;    
+    if (reaction) surf->nreact_one++;
   }
 
   // CLL reflection for each particle
@@ -429,14 +429,14 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
 
 /* ----------------------------------------------------------------------
    wrapper on cll() method to perform collision for a single particle
-   pass in flags/coefficients to match command-line args for style cll 
+   pass in flags/coefficients to match command-line args for style cll
    flags, coeffs can be NULL
    called by SurfReactAdsorb
 ------------------------------------------------------------------------- */
 
-void SurfCollideCLL::wrapper(Particle::OnePart *p, double *norm, 
+void SurfCollideCLL::wrapper(Particle::OnePart *p, double *norm,
                              int *flags, double *coeffs)
-{ 
+{
   if (flags) {
     twall = coeffs[0];
     acc_n = coeffs[1];

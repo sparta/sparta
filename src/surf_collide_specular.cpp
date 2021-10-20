@@ -43,7 +43,7 @@ SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideSpecular::
-collide(Particle::OnePart *&ip, double &, 
+collide(Particle::OnePart *&ip, double &,
         int isurf, double *norm, int isr, int &reaction)
 {
   nsingle++;
@@ -68,7 +68,7 @@ collide(Particle::OnePart *&ip, double &,
   // also both partiticles need to trigger any fixes
   //   to update per-particle properties which depend on
   //   temperature of the particle, e.g. fix vibmode and fix ambipolar
-  // NOTE: not doing this for this specular model, 
+  // NOTE: not doing this for this specular model,
   //   since temperature does not change, would need to add a twall arg
 
   if (ip) {
@@ -112,8 +112,8 @@ collide(Particle::OnePart *&ip, double &,
    called by SurfReactAdsorb
 ------------------------------------------------------------------------- */
 
-void SurfCollideSpecular::wrapper(Particle::OnePart *p, double *norm, 
+void SurfCollideSpecular::wrapper(Particle::OnePart *p, double *norm,
                                   int *flags, double *coeffs)
-{ 
+{
   MathExtra::reflect3(p->v,norm);
 }

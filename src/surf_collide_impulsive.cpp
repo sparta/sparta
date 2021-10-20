@@ -89,7 +89,7 @@ SurfCollideImpulsive::SurfCollideImpulsive(SPARTA *sparta, int narg, char **arg)
 
   // optional args
 
-  step_flag = double_flag = intenergy_flag = 0;  
+  step_flag = double_flag = intenergy_flag = 0;
   step_size = 0;
   cos_theta_pow_2 = 0;
 
@@ -177,7 +177,7 @@ void SurfCollideImpulsive::init()
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideImpulsive::
-collide(Particle::OnePart *&ip, double &, 
+collide(Particle::OnePart *&ip, double &,
         int isurf, double *norm, int isr, int &reaction)
 {
   nsingle++;
@@ -192,9 +192,9 @@ collide(Particle::OnePart *&ip, double &,
   int velreset = 0;
 
   if (isr >= 0) {
-    if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));    
+    if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
     reaction = surf->sr[isr]->react(ip,isurf,norm,jp,velreset);
-    if (reaction) surf->nreact_one++;    
+    if (reaction) surf->nreact_one++;
   }
 
   // impulsive reflection for each particle
@@ -410,9 +410,9 @@ void SurfCollideImpulsive::impulsive(Particle::OnePart *p, double *norm)
    called by SurfReactAdsorb
 ------------------------------------------------------------------------- */
 
-void SurfCollideImpulsive::wrapper(Particle::OnePart *p, double *norm, 
+void SurfCollideImpulsive::wrapper(Particle::OnePart *p, double *norm,
                                    int *flags, double *coeffs)
-{ 
+{
   if (flags) {
     twall = coeffs[0];
 
@@ -429,7 +429,7 @@ void SurfCollideImpulsive::wrapper(Particle::OnePart *p, double *norm,
     theta_peak = coeffs[4];
     cos_theta_pow = coeffs[5];
     cos_phi_pow = coeffs[6];
-    
+
     step_flag = flags[1];
     double_flag = flags[2];
     intenergy_flag = flags[3];

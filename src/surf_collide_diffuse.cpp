@@ -142,7 +142,7 @@ void SurfCollideDiffuse::init()
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideDiffuse::
-collide(Particle::OnePart *&ip, double &, 
+collide(Particle::OnePart *&ip, double &,
         int isurf, double *norm, int isr, int &reaction)
 {
   nsingle++;
@@ -313,14 +313,14 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm)
 
 /* ----------------------------------------------------------------------
    wrapper on diffuse() method to perform collision for a single particle
-   pass in 2 coefficients to match command-line args for style diffuse 
+   pass in 2 coefficients to match command-line args for style diffuse
    flags, coeffs can be NULL
    called by SurfReactAdsorb
 ------------------------------------------------------------------------- */
 
-void SurfCollideDiffuse::wrapper(Particle::OnePart *p, double *norm, 
+void SurfCollideDiffuse::wrapper(Particle::OnePart *p, double *norm,
                                  int *flags, double *coeffs)
-{ 
+{
   if (flags) {
     twall = coeffs[0];
     acc = coeffs[1];
@@ -334,7 +334,7 @@ void SurfCollideDiffuse::wrapper(Particle::OnePart *p, double *norm,
 ------------------------------------------------------------------------- */
 
 void SurfCollideDiffuse::flags_and_coeffs(int *flags, double *coeffs)
-{ 
+{
   coeffs[0] = twall;
   coeffs[1] = acc;
 }

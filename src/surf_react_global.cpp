@@ -69,7 +69,7 @@ SurfReactGlobal::~SurfReactGlobal()
    if create, add particle and return ptr JP
 ------------------------------------------------------------------------- */
 
-int SurfReactGlobal::react(Particle::OnePart *&ip, int, double *, 
+int SurfReactGlobal::react(Particle::OnePart *&ip, int, double *,
                            Particle::OnePart *&jp, int &)
 {
   double r = random->uniform();
