@@ -94,21 +94,23 @@ void SurfCollidePiston::init()
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollidePiston::
-collide(Particle::OnePart *&ip, double &dtremain, 
+collide(Particle::OnePart *&ip, double &dtremain,
         int isurf, double *norm, int isr, int &reaction)
 {
   nsingle++;
 
   // if surface chemistry defined, attempt reaction
-  // reaction > 0 if reaction took place
+  // reaction = 1 to N for which reaction took place, 0 for none
+  // velreset = 1 if reaction reset post-collision velocity, else 0
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
   reaction = 0;
+  int velreset = 0;
 
   if (isr >= 0) {
     if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
-    reaction = surf->sr[isr]->react(ip,isurf,norm,jp);
+    reaction = surf->sr[isr]->react(ip,isurf,norm,jp,velreset);
     if (reaction) surf->nreact_one++;
   }
 

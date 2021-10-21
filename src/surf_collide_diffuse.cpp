@@ -142,22 +142,23 @@ void SurfCollideDiffuse::init()
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideDiffuse::
-collide(Particle::OnePart *&ip, double &, 
+collide(Particle::OnePart *&ip, double &,
         int isurf, double *norm, int isr, int &reaction)
 {
   nsingle++;
 
   // if surface chemistry defined, attempt reaction
-  // reaction = 1 if reaction took place, but post-collision v not yet reset
-  // reaction = 2 if reaction took place, and post-collision v already reset
+  // reaction = 1 to N for which reaction took place, 0 for none
+  // velreset = 1 if reaction reset post-collision velocity, else 0
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
   reaction = 0;
+  int velreset = 0;
 
   if (isr >= 0) {
     if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
-    reaction = surf->sr[isr]->react(ip,isurf,norm,jp);
+    reaction = surf->sr[isr]->react(ip,isurf,norm,jp,velreset);
     if (reaction) surf->nreact_one++;
   }
 
@@ -168,14 +169,14 @@ collide(Particle::OnePart *&ip, double &,
   //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 
   if (ip) {
-    if (reaction < 2) diffuse(ip,norm);
+    if (!velreset) diffuse(ip,norm);
     if (modify->n_update_custom) {
       int i = ip - particle->particles;
       modify->update_custom(i,twall,twall,twall,vstream);
     }
   }
   if (jp) {
-    if (reaction < 2) diffuse(jp,norm);
+    if (!velreset) diffuse(jp,norm);
     if (modify->n_update_custom) {
       int j = jp - particle->particles;
       modify->update_custom(j,twall,twall,twall,vstream);
@@ -312,14 +313,14 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm)
 
 /* ----------------------------------------------------------------------
    wrapper on diffuse() method to perform collision for a single particle
-   pass in 2 coefficients to match command-line args for style diffuse 
+   pass in 2 coefficients to match command-line args for style diffuse
    flags, coeffs can be NULL
    called by SurfReactAdsorb
 ------------------------------------------------------------------------- */
 
-void SurfCollideDiffuse::wrapper(Particle::OnePart *p, double *norm, 
+void SurfCollideDiffuse::wrapper(Particle::OnePart *p, double *norm,
                                  int *flags, double *coeffs)
-{ 
+{
   if (flags) {
     twall = coeffs[0];
     acc = coeffs[1];
@@ -333,7 +334,7 @@ void SurfCollideDiffuse::wrapper(Particle::OnePart *p, double *norm,
 ------------------------------------------------------------------------- */
 
 void SurfCollideDiffuse::flags_and_coeffs(int *flags, double *coeffs)
-{ 
+{
   coeffs[0] = twall;
   coeffs[1] = acc;
 }

@@ -32,8 +32,8 @@ class SurfReact : protected Pointers {
   SurfReact(class SPARTA *, int, char **);
   virtual ~SurfReact();
   virtual void init();
-  virtual int react(Particle::OnePart *&, int, double *, 
-                    Particle::OnePart *&) = 0;
+  virtual int react(Particle::OnePart *&, int, double *,
+                    Particle::OnePart *&, int &) = 0;
   virtual char *reactionID(int) = 0;
   virtual int match_reactant(char *, int) = 0;
   virtual int match_product(char *, int) = 0;
@@ -51,7 +51,7 @@ class SurfReact : protected Pointers {
   // tally_single = per-reaction counts in one step
   // tally_all = cumulative tally_single across all steps
   // 3 flags used in compute_vector() to minimize AllReduce calls
-  
+
   int nsingle,ntotal;
   double one[2],all[2];
   int *tally_single,*tally_total;

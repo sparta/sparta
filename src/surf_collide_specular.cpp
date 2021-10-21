@@ -43,22 +43,23 @@ SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideSpecular::
-collide(Particle::OnePart *&ip, double &, 
+collide(Particle::OnePart *&ip, double &,
         int isurf, double *norm, int isr, int &reaction)
 {
   nsingle++;
 
   // if surface chemistry defined, attempt reaction
-  // reaction = 1 if reaction took place, but post-collision v not yet reset
-  // reaction = 2 if reaction took place, and post-collision v already reset
+  // reaction = 1 to N for which reaction took place, 0 for none
+  // velreset = 1 if reaction reset post-collision velocity, else 0
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
   reaction = 0;
+  int velreset = 0;
 
   if (isr >= 0) {
     if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
-    reaction = surf->sr[isr]->react(ip,isurf,norm,jp);
+    reaction = surf->sr[isr]->react(ip,isurf,norm,jp,velreset);
     if (reaction) surf->nreact_one++;
   }
 
@@ -67,18 +68,18 @@ collide(Particle::OnePart *&ip, double &,
   // also both partiticles need to trigger any fixes
   //   to update per-particle properties which depend on
   //   temperature of the particle, e.g. fix vibmode and fix ambipolar
-  // NOTE: not doing this for this specular model, 
+  // NOTE: not doing this for this specular model,
   //   since temperature does not change, would need to add a twall arg
 
   if (ip) {
-    if (reaction < 2) MathExtra::reflect3(ip->v,norm);
+    if (!velreset) MathExtra::reflect3(ip->v,norm);
     //if (modify->n_update_custom) {
     //  int i = ip - particle->particles;
     //  modify->update_custom(i,twall,twall,twall,vstream);
     //}
   }
   if (jp) {
-    if (reaction < 2) MathExtra::reflect3(jp->v,norm);
+    if (!velreset) MathExtra::reflect3(jp->v,norm);
     //if (modify->n_update_custom) {
     //  int j = jp - particle->particles;
     //  modify->update_custom(j,twall,twall,twall,vstream);
@@ -111,8 +112,8 @@ collide(Particle::OnePart *&ip, double &,
    called by SurfReactAdsorb
 ------------------------------------------------------------------------- */
 
-void SurfCollideSpecular::wrapper(Particle::OnePart *p, double *norm, 
+void SurfCollideSpecular::wrapper(Particle::OnePart *p, double *norm,
                                   int *flags, double *coeffs)
-{ 
+{
   MathExtra::reflect3(p->v,norm);
 }

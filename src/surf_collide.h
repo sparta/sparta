@@ -46,14 +46,14 @@ class SurfCollide : protected Pointers {
   double compute_vector(int i);
 
   int copy,copymode;
-  
+
  protected:
 
   // tallies for collisions
   // nsingle = all collisions in one step
   // ntotal = cumulative nsingle across all steps
   // one,all used in compute_vector()
-  
+
   int nsingle,ntotal;
   double one[2],all[2];
 };

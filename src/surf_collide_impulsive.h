@@ -39,22 +39,22 @@ class SurfCollideImpulsive : public SurfCollide {
 
  private:
   double twall;                   // surface temperature
-  double eng_ratio,eff_mass;      // energy ratio and effective mass 
+  double eng_ratio,eff_mass;      // energy ratio and effective mass
                                   // of the surface for soft-sphere model
-  double u0_a, u0_b;              // u0 values for the direct case 
-                                  // within impulsive model      
-  double v_f_avg;                           
+  double u0_a, u0_b;              // u0 values for the direct case
+                                  // within impulsive model
+  double v_f_avg;
   double var_alpha,var_alpha_sq;     // alpha value related to variance
-                                     // from Rettner's expression 
+                                     // from Rettner's expression
   double theta_peak,cos_theta_pow;   // cosine power law varaition for theta
   double cos_phi_pow;                // cosine power law varaition for phi
   double step_size,cos_theta_pow_2;  // step_size and double cosine power
-  double rot_frac,vib_frac;          // rot and vib energy fraction 
+  double rot_frac,vib_frac;          // rot and vib energy fraction
 
   double vx,vy,vz;                 // translational velocity of surface
   double wx,wy,wz;                 // angular velocity of surface
   double px,py,pz;                 // point to rotate surface around
-  
+
   int softsphere_flag;             // flag for direct or soft sphere model
   int step_flag,double_flag;       // optional model flags
   int intenergy_flag;

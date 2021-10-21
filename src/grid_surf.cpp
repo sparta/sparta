@@ -1148,7 +1148,7 @@ void Grid::surf2grid_split(int subflag, int outflag)
     int allshrink;
     MPI_Allreduce(&nshrink,&allshrink,1,MPI_INT,MPI_SUM,world);
     if (allshrink && comm->me == 0) {
-      if (screen) 
+      if (screen)
         fprintf(screen,"  %d cells shrunk to enable splitting\n",allshrink);
       if (logfile)
         fprintf(logfile,"  %d cells shrunk to enable splitting\n",allshrink);
@@ -1203,7 +1203,7 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
   // overlap = surf bbox include any interior of grid cell or touches its boundary
   // id_point_child() returns cell indices for >= lo and < hi
   // so check if lower range should be decremented
-  
+
   int ilo,ihi,jlo,jhi,klo,khi;
   id_point_child(bblo,plo,phi,nx,ny,1,ilo,jlo,klo);
   id_point_child(bbhi,plo,phi,nx,ny,1,ihi,jhi,khi);
@@ -1212,7 +1212,7 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
   if (bblo[0] <= celledge && ilo > 0) ilo--;
   celledge = plo[1] + jlo*(phi[1]-plo[1])/ny;
   if (bblo[1] <= celledge && jlo > 0) jlo--;
-  
+
   // loop over range of grid cells between ij lohi inclusive
   // if cell is neither a child or parent cell in chash/phash, skip it
   // if line does not intersect cell, skip it
@@ -1296,7 +1296,7 @@ void Grid::recurse3d(cellint parentID, int level, double *plo, double *phi,
   // overlap = surf bbox include any interior of grid cell or touches its boundary
   // id_point_child() returns cell indices for >= lo and < hi
   // so check if lower range should be decremented
-  
+
   int ilo,ihi,jlo,jhi,klo,khi;
   id_point_child(bblo,plo,phi,nx,ny,nz,ilo,jlo,klo);
   id_point_child(bbhi,plo,phi,nx,ny,nz,ihi,jhi,khi);

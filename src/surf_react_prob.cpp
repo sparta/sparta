@@ -106,13 +106,12 @@ void SurfReactProb::init()
 
 /* ----------------------------------------------------------------------
    select surface reaction to perform for particle with ptr IP on surface
-   return 0 = no reaction
-   return 1 = which reaction
+   return which reaction 1 to N, 0 = no reaction
    if dissociation, add particle and return ptr JP
 ------------------------------------------------------------------------- */
 
-int SurfReactProb::react(Particle::OnePart *&ip, int, double *, 
-                         Particle::OnePart *&jp)
+int SurfReactProb::react(Particle::OnePart *&ip, int, double *,
+                         Particle::OnePart *&jp, int &)
 {
   int n = reactions[ip->ispecies].n;
   if (n == 0) return 0;
@@ -152,24 +151,24 @@ int SurfReactProb::react(Particle::OnePart *&ip, int, double *,
             particle->add_particle(id,r->products[1],ip->icell,x,v,0.0,0.0);
           if (reallocflag) ip = particle->particles + (ip - particles);
           jp = &particle->particles[particle->nlocal-1];
-          return 1;
+          return (list[i] + 1);
         }
       case EXCHANGE:
         {
           ip->ispecies = r->products[0];
-          return 1;
+          return (list[i] + 1);
         }
       case RECOMBINATION:
         {
           ip = NULL;
-          return 1;
+          return (list[i] + 1);
         }
       }
     }
   }
 
   // no reaction
- 
+
   return 0;
 }
 
@@ -200,7 +199,7 @@ int SurfReactProb::match_product(char *species, int m)
 
 /* ---------------------------------------------------------------------- */
 
-void SurfReactProb::init_reactions() 
+void SurfReactProb::init_reactions()
 {
   // convert species IDs to species indices
   // flag reactions as active/inactive depending on whether all species exist
@@ -232,7 +231,7 @@ void SurfReactProb::init_reactions()
                              "surf_react:reactions");
 
   for (int i = 0; i < nspecies; i++) reactions[i].n = 0;
-  
+
   int n = 0;
   for (int m = 0; m < nlist_prob; m++) {
     OneReaction *r = &rlist[m];
@@ -254,11 +253,11 @@ void SurfReactProb::init_reactions()
     reactions[i].list = &indices[offset];
     offset += reactions[i].n;
   }
-  
+
   // reactions[i].list = indices of possible reactions for each species
 
   for (int i = 0; i < nspecies; i++) reactions[i].n = 0;
- 
+
   for (int m = 0; m < nlist_prob; m++) {
     OneReaction *r = &rlist[m];
     if (!r->active) continue;
@@ -273,14 +272,14 @@ void SurfReactProb::init_reactions()
     sum = 0.0;
     for (int j = 0; j < reactions[i].n; j++)
       sum += rlist[reactions[i].list[j]].coeff[0];
-    if (sum > 1.0) 
+    if (sum > 1.0)
       error->all(FLERR,"Surface reaction probability for a species > 1.0");
   }
 }
 
 /* ---------------------------------------------------------------------- */
 
-void SurfReactProb::readfile(char *fname) 
+void SurfReactProb::readfile(char *fname)
 {
   int n,n1,n2,eof;
   char line1[MAXLINE],line2[MAXLINE];
@@ -304,7 +303,7 @@ void SurfReactProb::readfile(char *fname)
     if (comm->me == 0) eof = readone(line1,line2,n1,n2);
     MPI_Bcast(&eof,1,MPI_INT,0,world);
     if (eof) break;
-    
+
     MPI_Bcast(&n1,1,MPI_INT,0,world);
     MPI_Bcast(&n2,1,MPI_INT,0,world);
     MPI_Bcast(line1,n1,MPI_CHAR,0,world);
@@ -312,7 +311,7 @@ void SurfReactProb::readfile(char *fname)
 
     if (nlist_prob == maxlist_prob) {
       maxlist_prob += DELTALIST;
-      rlist = (OneReaction *) 
+      rlist = (OneReaction *)
         memory->srealloc(rlist,maxlist_prob*sizeof(OneReaction),
                          "surf_react:rlist");
       for (int i = nlist_prob; i < maxlist_prob; i++) {
@@ -348,14 +347,14 @@ void SurfReactProb::readfile(char *fname)
       if (species) {
         species = 0;
         if (side == 0) {
-          if (r->nreactant == MAXREACTANT) 
+          if (r->nreactant == MAXREACTANT)
             error->all(FLERR,"Too many reactants in a reaction formula");
           n = strlen(word) + 1;
           r->id_reactants[r->nreactant] = new char[n];
           strcpy(r->id_reactants[r->nreactant],word);
           r->nreactant++;
         } else {
-          if (r->nreactant == MAXPRODUCT) 
+          if (r->nreactant == MAXPRODUCT)
             error->all(FLERR,"Too many products in a reaction formula");
           n = strlen(word) + 1;
           r->id_products[r->nproduct] = new char[n];
@@ -368,7 +367,7 @@ void SurfReactProb::readfile(char *fname)
           word = strtok(NULL," \t\n");
           continue;
         }
-        if (strcmp(word,"-->") != 0) 
+        if (strcmp(word,"-->") != 0)
           error->all(FLERR,"Invalid reaction formula in file");
         side = 1;
       }
@@ -418,7 +417,7 @@ void SurfReactProb::readfile(char *fname)
 
     word = strtok(NULL," \t\n");
     if (word) error->all(FLERR,"Too many coefficients in a reaction formula");
-    
+
     nlist_prob++;
   }
 
@@ -431,7 +430,7 @@ void SurfReactProb::readfile(char *fname)
    return 1 if end-of-file, else return 0
 ------------------------------------------------------------------------- */
 
-int SurfReactProb::readone(char *line1, char *line2, int &n1, int &n2) 
+int SurfReactProb::readone(char *line1, char *line2, int &n1, int &n2)
 {
   char *eof;
   while ((eof = fgets(line1,MAXLINE,fp))) {

@@ -89,7 +89,7 @@ SurfCollideImpulsive::SurfCollideImpulsive(SPARTA *sparta, int narg, char **arg)
 
   // optional args
 
-  step_flag = double_flag = intenergy_flag = 0;  
+  step_flag = double_flag = intenergy_flag = 0;
   step_size = 0;
   cos_theta_pow_2 = 0;
 
@@ -177,23 +177,24 @@ void SurfCollideImpulsive::init()
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideImpulsive::
-collide(Particle::OnePart *&ip, double &, 
+collide(Particle::OnePart *&ip, double &,
         int isurf, double *norm, int isr, int &reaction)
 {
   nsingle++;
 
   // if surface chemistry defined, attempt reaction
-  // reaction = 1 if reaction took place, but post-collision v not yet reset
-  // reaction = 2 if reaction took place, and post-collision v already reset
+  // reaction = 1 to N for which reaction took place, 0 for none
+  // velreset = 1 if reaction reset post-collision velocity, else 0
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
   reaction = 0;
+  int velreset = 0;
 
   if (isr >= 0) {
-    if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));    
-    reaction = surf->sr[isr]->react(ip,isurf,norm,jp);
-    if (reaction) surf->nreact_one++;    
+    if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
+    reaction = surf->sr[isr]->react(ip,isurf,norm,jp,velreset);
+    if (reaction) surf->nreact_one++;
   }
 
   // impulsive reflection for each particle
@@ -203,14 +204,14 @@ collide(Particle::OnePart *&ip, double &,
   //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 
   if (ip) {
-    if (reaction < 2) impulsive(ip,norm);
+    if (!velreset) impulsive(ip,norm);
     if (modify->n_update_custom) {
       int i = ip - particle->particles;
       modify->update_custom(i,twall,twall,twall,vstream);
     }
   }
   if (jp) {
-    if (reaction < 2) impulsive(jp,norm);
+    if (!velreset) impulsive(jp,norm);
     if (modify->n_update_custom) {
       int j = jp - particle->particles;
       modify->update_custom(j,twall,twall,twall,vstream);
@@ -409,9 +410,9 @@ void SurfCollideImpulsive::impulsive(Particle::OnePart *p, double *norm)
    called by SurfReactAdsorb
 ------------------------------------------------------------------------- */
 
-void SurfCollideImpulsive::wrapper(Particle::OnePart *p, double *norm, 
+void SurfCollideImpulsive::wrapper(Particle::OnePart *p, double *norm,
                                    int *flags, double *coeffs)
-{ 
+{
   if (flags) {
     twall = coeffs[0];
 
@@ -428,7 +429,7 @@ void SurfCollideImpulsive::wrapper(Particle::OnePart *p, double *norm,
     theta_peak = coeffs[4];
     cos_theta_pow = coeffs[5];
     cos_phi_pow = coeffs[6];
-    
+
     step_flag = flags[1];
     double_flag = flags[2];
     intenergy_flag = flags[3];

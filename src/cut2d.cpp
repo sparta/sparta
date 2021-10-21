@@ -311,7 +311,7 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
 
   while (1) {
     build_clines();
-    
+
 #ifdef VERBOSE
     if (id == VERBOSE_ID) {
       printf("Verbose cell " CELLINT_FORMAT " grazecount %d\n",id,grazecount);
@@ -325,7 +325,7 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
     // mark corner points based non-zero grazecount or touchmark value
     // return area = 0.0 for UNKNOWN/INSIDE, full cell area for OUTSIDE
     // vol is changed in Grid::set_inout() if OVERLAP cell corners are marked
-  
+
     if (clines.n == 0) {
       int mark = UNKNOWN;
       if (grazecount || touchmark == INSIDE) mark = INSIDE;
@@ -402,14 +402,14 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
     }
 
     // store areas in vector so can return ptr to it
-  
+
     areas.grow(nsplit);
     for (int i = 0; i < nsplit; i++) areas[i] = pgs[i].area;
     areas_caller = &areas[0];
 
     // successful exit
 
-    break;  
+    break;
   }
 
   // could not perform cut/split -> fatal error
