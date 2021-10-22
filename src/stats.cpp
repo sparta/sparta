@@ -1055,7 +1055,8 @@ void Stats::compute_cpu()
 void Stats::compute_tpcpu()
 {
   double new_cpu;
-  double new_time = update->ntimestep * update->dt;
+  //  double new_time = update->ntimestep * update->dt; // EVENTUALLY DELETE FOR VTS (AKS)
+  double new_time = grid->time_global;
 
   if (firststep == 0) {
     new_cpu = 0.0;

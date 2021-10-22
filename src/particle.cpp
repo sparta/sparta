@@ -1450,6 +1450,7 @@ int Particle::pack_restart(char *buf)
     pr->v[2] = p->v[2];
     pr->erot = p->erot;
     pr->evib = p->evib;
+    pr->dt = p->dt;
 
     ptr += sizeof(OnePartRestart);
     if (!ncustom) continue;
@@ -1503,6 +1504,7 @@ void Particle::pack_restart(char *buf, int step, int pass)
     pr->v[2] = p->v[2];
     pr->erot = p->erot;
     pr->evib = p->evib;
+    pr->dt = p->dt;
 
     ptr += sizeof(OnePartRestart);
     if (!ncustom) continue;

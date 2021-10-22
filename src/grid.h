@@ -48,6 +48,9 @@ class Grid : protected Pointers {
   int maxsurfpercell;   // max surf elements in one child cell
   int maxsplitpercell;  // max split cells in one child cell
 
+  double dtg;           // global timestep size
+  double time_global;   // the global time
+
   int ngroup;           // # of defined groups
   char **gnames;        // name of each group
   int *bitmask;         // one-bit mask for each group
@@ -124,6 +127,8 @@ class Grid : protected Pointers {
                               // N <= 0, neg of sub cell index (0 to Nsplit-1)
     int isplit;               // index into sinfo
                               // set for split and sub cells, -1 if unsplit
+
+    double dt;                // timestep for this cell
   };
 
   // info specific to owned child cell
@@ -196,6 +201,7 @@ class Grid : protected Pointers {
   int nlocal_restart;
   cellint *id_restart;
   int *level_restart,*nsplit_restart;
+  double *dt_restart;
 
   // methods
 

@@ -75,6 +75,7 @@ class Particle : protected Pointers {
     int flag;               // used for migration status
     double dtremain;        // portion of move timestep remaining
     double weight;          // particle or cell weight, if weighting enabled
+    double dt;              // particle time step
   };
 
   struct OnePartRestart {
@@ -87,6 +88,7 @@ class Particle : protected Pointers {
     double v[3];            // particle velocity
     double erot;            // rotational energy
     double evib;            // vibrational energy
+    double dt;              // particle time step
   };
 
   bigint nglobal;           // global # of particles
