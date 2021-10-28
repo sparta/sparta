@@ -35,14 +35,18 @@ class ComputeReduce : public Compute {
   bigint memory_usage();
 
  protected:
-  int me;
+  int me,nprocs;
   int mode,nvalues,iregion;
   int *which,*argindex,*flavor,*value2index;
   char **ids;
   double *onevec;
   int *replace,*indices,*owner;
   int index;
-  char *idregion;
+
+  char *subsetID;
+  int isubset;
+  int *s2g;
+  int gridgroupbit,surfgroupbit;
 
   int maxparticle,maxgrid;
   double *varparticle,*vargrid;
@@ -54,7 +58,7 @@ class ComputeReduce : public Compute {
   Pair pairme,pairall;
 
   double compute_one(int, int);
-  bigint count(int);
+  bigint count_included();
   void combine(double &, double, int);
 };
 

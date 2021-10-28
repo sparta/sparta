@@ -16,7 +16,9 @@
 #include "stdlib.h"
 #include "compute_reduce.h"
 #include "update.h"
+#include "domain.h"
 #include "particle.h"
+#include "mixture.h"
 #include "grid.h"
 #include "surf.h"
 #include "modify.h"
@@ -57,6 +59,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
   else error->all(FLERR,"Illegal compute reduce command");
 
   MPI_Comm_rank(world,&me);
+  MPI_Comm_size(world,&nprocs);
 
   // expand args if any have wildcard character "*"
 
@@ -144,6 +147,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
 
   replace = new int[nvalues];
   for (int i = 0; i < nvalues; i++) replace[i] = -1;
+  subsetID = NULL;
 
   while (iarg < nargnew) {
     if (strcmp(arg[iarg],"replace") == 0) {
@@ -159,6 +163,12 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
         error->all(FLERR,"Invalid replace values in compute reduce");
       replace[col1] = col2;
       iarg += 3;
+    } else if (strcmp(arg[iarg],"subset") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal compute reduce command");
+      int n = strlen(arg[iarg+1]) + 1;
+      subsetID = new char[n];
+      strcpy(subsetID,arg[iarg+1]);
+      iarg += 2;
     } else error->all(FLERR,"Illegal compute reduce command");
   }
 
@@ -271,6 +281,12 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
         error->all(FLERR,"Compute reduce variable is not "
                    "particle-style or grid-style variable");
     }
+
+    // require all values have same flavor
+
+    if (i && flavor[i] != flavor[i-1])
+      error->all(FLERR,"Compute reduce inputs must be all "
+                 "particle, grid, or surf values");
   }
 
   // this compute produces either a scalar or vector
@@ -309,6 +325,8 @@ ComputeReduce::~ComputeReduce()
   delete [] indices;
   delete [] owner;
 
+  if (subsetID) delete [] subsetID;
+
   memory->destroy(varparticle);
   memory->destroy(vargrid);
 }
@@ -317,6 +335,27 @@ ComputeReduce::~ComputeReduce()
 
 void ComputeReduce::init()
 {
+  // if subsetID is defined, identify mixture or grid/surf group
+
+  if (subsetID) {
+    if (flavor[0] == PARTICLE) {
+      int imix = particle->find_mixture(subsetID);
+      if (imix < 0) 
+        error->all(FLERR,"Compute reduce particle mixture ID does not exist");
+      s2g = particle->mixture[imix]->species2group;
+    } else if (flavor[0] == GRID) {
+      int igroup = grid->find_group(subsetID);
+      if (igroup < 0) 
+        error->all(FLERR,"Compute reduce grid group ID does not exist");
+      gridgroupbit = grid->bitmask[igroup];
+    } else if (flavor[0] == SURF) {
+      int igroup = surf->find_group(subsetID);
+      if (isubset < 0) 
+        error->all(FLERR,"Compute reduce surf group ID does not exist");
+      surfgroupbit = surf->bitmask[igroup];
+    }
+  }
+
   // set indices of all computes,fixes,variables
 
   for (int m = 0; m < nvalues; m++) {
@@ -358,7 +397,7 @@ double ComputeReduce::compute_scalar()
     MPI_Allreduce(&one,&scalar,1,MPI_DOUBLE,MPI_MAX,world);
   } else if (mode == AVE || mode == AVESQ) {
     MPI_Allreduce(&one,&scalar,1,MPI_DOUBLE,MPI_SUM,world);
-    bigint n = count(0);
+    bigint n = count_included();
     if (n) scalar /= n;
   }
 
@@ -426,9 +465,9 @@ void ComputeReduce::compute_vector()
     }
 
   } else if (mode == AVE || mode == AVESQ) {
+    bigint n = count_included();
     for (int m = 0; m < nvalues; m++) {
       MPI_Allreduce(&onevec[m],&vector[m],1,MPI_DOUBLE,MPI_SUM,world);
-      bigint n = count(m);
       if (n) vector[m] /= n;
     }
   }
@@ -464,16 +503,20 @@ double ComputeReduce::compute_one(int m, int flag)
     Particle::OnePart *particles = particle->particles;
     int n = particle->nlocal;
     if (flag < 0) {
-      for (i = 0; i < n; i++)
+      for (i = 0; i < n; i++) {
+        if (subsetID && s2g[particles[i].ispecies] < 0) continue;
         combine(one,particles[i].x[aidx],i);
+      }
     } else one = particles[flag].x[aidx];
 
   } else if (which[m] == V) {
     Particle::OnePart *particles = particle->particles;
     int n = particle->nlocal;
     if (flag < 0) {
-      for (i = 0; i < n; i++)
+      for (i = 0; i < n; i++) {
+        if (subsetID && s2g[particles[i].ispecies] < 0) continue;
         combine(one,particles[i].v[aidx],i);
+      }
     } else one = particles[flag].v[aidx];
 
   } else if (which[m] == KE) {
@@ -487,6 +530,7 @@ double ComputeReduce::compute_one(int m, int flag)
 
     if (flag < 0) {
       for (i = 0; i < n; i++) {
+        if (subsetID && s2g[particles[i].ispecies] < 0) continue;
         p = &particles[i];
         v = p->v;
         ke = mvv2e * 0.5 * species[p->ispecies].mass *
@@ -504,16 +548,20 @@ double ComputeReduce::compute_one(int m, int flag)
     Particle::OnePart *particles = particle->particles;
     int n = particle->nlocal;
     if (flag < 0) {
-      for (i = 0; i < n; i++)
+      for (i = 0; i < n; i++) {
+        if (subsetID && s2g[particles[i].ispecies] < 0) continue;
         combine(one,particles[i].erot,i);
+      }
     } else one = particles[flag].erot;
 
   } else if (which[m] == EVIB) {
     Particle::OnePart *particles = particle->particles;
     int n = particle->nlocal;
     if (flag < 0) {
-      for (i = 0; i < n; i++)
+      for (i = 0; i < n; i++) {
+        if (subsetID && s2g[particles[i].ispecies] < 0) continue;
         combine(one,particles[i].evib,i);
+      }
     } else one = particles[flag].evib;
 
   // invoke compute if not previously invoked
@@ -530,18 +578,24 @@ double ComputeReduce::compute_one(int m, int flag)
 
       if (aidx == 0) {
         double *cvec = c->vector_particle;
+        Particle::OnePart *particles = particle->particles;
         int n = particle->nlocal;
         if (flag < 0) {
-          for (i = 0; i < n; i++)
+          for (i = 0; i < n; i++) {
+            if (subsetID && s2g[particles[i].ispecies] < 0) continue;
             combine(one,cvec[i],i);
+          }
         } else one = cvec[flag];
       } else {
         double **carray = c->array_particle;
+        Particle::OnePart *particles = particle->particles;
         int n = particle->nlocal;
         int aidxm1 = aidx - 1;
         if (flag < 0) {
-          for (i = 0; i < n; i++)
+          for (i = 0; i < n; i++) {
+            if (subsetID && s2g[particles[i].ispecies] < 0) continue;
             combine(one,carray[i][aidxm1],i);
+          }
         } else one = carray[flag][aidxm1];
       }
 
@@ -558,18 +612,24 @@ double ComputeReduce::compute_one(int m, int flag)
 
       if (aidx == 0 || c->post_process_grid_flag) {
         double *cvec = c->vector_grid;
+        Grid::ChildInfo *cinfo = grid->cinfo;
         int n = grid->nlocal;
         if (flag < 0) {
-          for (i = 0; i < n; i++)
+          for (i = 0; i < n; i++) {
+            if (subsetID && !(cinfo[i].mask & gridgroupbit)) continue;
             combine(one,cvec[i],i);
+          }
         } else one = cvec[flag];
       } else {
         double **carray = c->array_grid;
+        Grid::ChildInfo *cinfo = grid->cinfo;
         int n = grid->nlocal;
         int aidxm1 = aidx - 1;
         if (flag < 0) {
-          for (i = 0; i < n; i++)
+          for (i = 0; i < n; i++) {
+            if (subsetID && !(cinfo[i].mask & gridgroupbit)) continue;
             combine(one,carray[i][aidxm1],i);
+          }
         } else one = carray[flag][aidxm1];
       }
     }
@@ -585,18 +645,24 @@ double ComputeReduce::compute_one(int m, int flag)
                    "computed at compatible time");
       if (aidx == 0) {
         double *fvec = fix->vector_particle;
+        Particle::OnePart *particles = particle->particles;
         int n = particle->nlocal;
         if (flag < 0) {
-          for (i = 0; i < n; i++)
+          for (i = 0; i < n; i++) {
+            if (subsetID && s2g[particles[i].ispecies] < 0) continue;
             combine(one,fvec[i],i);
+          }
         } else one = fvec[flag];
       } else {
         double **farray = fix->array_particle;
+        Particle::OnePart *particles = particle->particles;
         int n = particle->nlocal;
         int aidxm1 = aidx - 1;
         if (flag < 0) {
-          for (i = 0; i < n; i++)
+          for (i = 0; i < n; i++) {
+            if (subsetID && s2g[particles[i].ispecies] < 0) continue;
             combine(one,farray[i][aidxm1],i);
+          }
         } else one = farray[flag][aidxm1];
       }
 
@@ -606,18 +672,24 @@ double ComputeReduce::compute_one(int m, int flag)
                    "computed at compatible time");
       if (aidx == 0) {
         double *fvec = fix->vector_grid;
+        Grid::ChildInfo *cinfo = grid->cinfo;
         int n = grid->nlocal;
         if (flag < 0) {
-          for (i = 0; i < n; i++)
+          for (i = 0; i < n; i++) {
+            if (subsetID && !(cinfo[i].mask & gridgroupbit)) continue;
             combine(one,fvec[i],i);
+          }
         } else one = fvec[flag];
       } else {
         double **farray = fix->array_grid;
+        Grid::ChildInfo *cinfo = grid->cinfo;
         int n = grid->nlocal;
         int aidxm1 = aidx - 1;
         if (flag < 0) {
-          for (i = 0; i < n; i++)
+          for (i = 0; i < n; i++) {
+            if (subsetID && !(cinfo[i].mask & gridgroupbit)) continue;
             combine(one,farray[i][aidxm1],i);
+          }
         } else one = farray[flag][aidxm1];
       }
 
@@ -627,18 +699,75 @@ double ComputeReduce::compute_one(int m, int flag)
                    "computed at compatible time");
       if (aidx == 0) {
         double *fvec = fix->vector_surf;
+
+        int dimension = domain->dimension;
+        Surf::Line *lines = surf->lines;
+        Surf::Line *mylines = surf->mylines;
+        Surf::Tri *tris = surf->tris;
+        Surf::Tri *mytris = surf->mytris;
+        int distributed = surf->distributed;
         int n = surf->nown;
+
         if (flag < 0) {
-          for (i = 0; i < n; i++)
+
+          // mask/group logic for selecting surfs matches DumpSurf
+
+          for (i = 0; i < n; i++) {
+            if (subsetID) {
+              if (dimension == 2) {
+                if (!distributed) {
+                  if (!(lines[me+i*nprocs].mask & surfgroupbit)) continue;
+                } else {
+                  if (!(mylines[i].mask & surfgroupbit)) continue;
+                }
+              } else {
+                if (!distributed) {
+                  if (!(tris[me+i*nprocs].mask & surfgroupbit)) continue;
+                } else {
+                  if (!(mytris[i].mask & surfgroupbit)) continue;
+                }
+              }
+            }
+
             combine(one,fvec[i],i);
+          }
         } else one = fvec[flag];
+
       } else {
         double **farray = fix->array_surf;
+
+        int dimension = domain->dimension;
+        Surf::Line *lines = surf->lines;
+        Surf::Line *mylines = surf->mylines;
+        Surf::Tri *tris = surf->tris;
+        Surf::Tri *mytris = surf->mytris;
+        int distributed = surf->distributed;
         int n = surf->nown;
+
         int aidxm1 = aidx - 1;
         if (flag < 0) {
-          for (i = 0; i < n; i++)
+
+          // mask/group logic for selecting surfs matches DumpSurf
+
+          for (i = 0; i < n; i++) {
+            if (subsetID) {
+              if (dimension == 2) {
+                if (!distributed) {
+                  if (!(lines[me+i*nprocs].mask & surfgroupbit)) continue;
+                } else {
+                  if (!(mylines[i].mask & surfgroupbit)) continue;
+                }
+              } else {
+                if (!distributed) {
+                  if (!(tris[me+i*nprocs].mask & surfgroupbit)) continue;
+                } else {
+                  if (!(mytris[i].mask & surfgroupbit)) continue;
+                }
+              }
+            }
+
             combine(one,farray[i][aidxm1],i);
+          }
         } else one = farray[flag][aidxm1];
       }
     }
@@ -647,6 +776,7 @@ double ComputeReduce::compute_one(int m, int flag)
 
   } else if (which[m] == VARIABLE) {
     if (flavor[m] == PARTICLE) {
+      Particle::OnePart *particles = particle->particles;
       int n = particle->nlocal;
       if (n > maxparticle) {
         maxparticle = particle->maxlocal;
@@ -656,11 +786,14 @@ double ComputeReduce::compute_one(int m, int flag)
 
       input->variable->compute_particle(vidx,varparticle,1,0);
       if (flag < 0) {
-        for (i = 0; i < n; i++)
+        for (i = 0; i < n; i++) {
+          if (subsetID && s2g[particles[i].ispecies] < 0) continue;
           combine(one,varparticle[i],i);
+        }
       } else one = varparticle[flag];
 
     } else if (flavor[m] == GRID) {
+      Grid::ChildInfo *cinfo = grid->cinfo;
       int n = grid->nlocal;
       if (n > maxgrid) {
         maxgrid = grid->maxlocal;
@@ -670,8 +803,10 @@ double ComputeReduce::compute_one(int m, int flag)
 
       input->variable->compute_grid(vidx,vargrid,1,0);
       if (flag < 0) {
-        for (i = 0; i < n; i++)
+        for (i = 0; i < n; i++) {
+          if (subsetID && !(cinfo[i].mask & gridgroupbit)) continue;
           combine(one,vargrid[i],i);
+        }
       } else one = vargrid[flag];
     }
   }
@@ -681,24 +816,57 @@ double ComputeReduce::compute_one(int m, int flag)
 
 /* ---------------------------------------------------------------------- */
 
-bigint ComputeReduce::count(int m)
+bigint ComputeReduce::count_included()
 {
   bigint ncount,ncountall;
 
-  if (which[m] == X || which[m] == V) {
-    ncount = particle->nlocal;
-  } else if (which[m] == KE || which[m] == EROT || which[m] == EVIB) {
-    ncount = particle->nlocal;
-  } else if (which[m] == COMPUTE) {
-    if (flavor[m] == PARTICLE) ncount = particle->nlocal;
-    else if (flavor[m] == GRID) ncount = grid->nlocal;
-  } else if (which[m] == FIX) {
-    if (flavor[m] == PARTICLE) ncount = particle->nlocal;
-    else if (flavor[m] == GRID) ncount = grid->nlocal;
-    else if (flavor[m] == SURF) ncount = surf->nown;
-  } else if (which[m] == VARIABLE) {
-    if (flavor[m] == PARTICLE) ncount = particle->nlocal;
-    else if (flavor[m] == GRID) ncount = grid->nlocal;
+  if (flavor[0] == PARTICLE) {
+    if (!subsetID) ncount = particle->nlocal;
+    else {
+      Particle::OnePart *particles = particle->particles;
+      int n = particle->nlocal;
+      ncount = 0;
+      for (int i = 0; i < n; i++)
+        if (s2g[particles[i].ispecies] >= 0) ncount++;
+    }
+
+  } else if (flavor[0] == GRID) {
+    if (!subsetID) ncount = grid->nlocal;
+    else {
+      Grid::ChildInfo *cinfo = grid->cinfo;
+      int n = grid->nlocal;
+      ncount = 0;
+      for (int i = 0; i < n; i++)
+        if (cinfo[i].mask & gridgroupbit) ncount++;
+    }
+
+  } else if (flavor[0] == SURF) {
+    if (!subsetID) ncount = surf->nown;
+    else {
+      int dimension = domain->dimension;
+      Surf::Line *lines = surf->lines;
+      Surf::Line *mylines = surf->mylines;
+      Surf::Tri *tris = surf->tris;
+      Surf::Tri *mytris = surf->mytris;
+      int distributed = surf->distributed;
+      int n = surf->nown;
+
+      ncount = 0;
+      for (int i = 0; i < n; i++)
+        if (dimension == 2) {
+          if (!distributed) {
+            if (lines[me+i*nprocs].mask & surfgroupbit) ncount++;
+          } else {
+            if (mylines[i].mask & surfgroupbit) ncount++;
+          }
+        } else {
+          if (!distributed) {
+            if (tris[me+i*nprocs].mask & surfgroupbit) ncount++;
+          } else {
+            if (mytris[i].mask & surfgroupbit) ncount++;
+          }
+        }
+    }
   }
 
   MPI_Allreduce(&ncount,&ncountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
