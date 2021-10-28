@@ -201,7 +201,7 @@ for info on how surface elements can be assigned to surface groups.
 
 IMPORTANT NOTE: If computes or fixes are used as inputs to compute
 reduce, they may define their own subsets of particles, grid cells, or
-suface elements which contribute to their output.  E.g. grid cells not
+surface elements which contribute to their output.  E.g. grid cells not
 in the grid group used by the "compute grid"_compute_grid.html command
 have zero values as output.  You typically should use an argument for
 the {subset} keyword which is consistent with the inputs, but that is

@@ -28,9 +28,6 @@
 #include "memory.h"
 #include "error.h"
 
-// DEBUG
-#include "comm.h"
-
 using namespace SPARTA_NS;
 
 enum{SUM,SUMSQ,MINN,MAXX,AVE,AVESQ};
