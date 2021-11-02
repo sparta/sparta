@@ -1,0 +1,83 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix temp/rescale command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<P>fix ID temp/rescale N Tstart Tstop:pre
+</P>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command
+<LI>temp/rescale = style name of this fix command
+<LI>N = thermostat every N timesteps
+<LI>Tstart,Tstop = desired temperature at start/end of run (temperature units) 
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>fix 1 temp/rescale 100 300.0 300.0
+fix 5 temp/rescale 10 300.0 10.0 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Reset the thermal temperature of all the particles within each grid by
+explicitly rescaling their thermal velocities.  This is a simple
+thermostatting operation to keep the thermal temperature of the gas
+near the desired target temperature. This can be useful if an external
+driving force is adding energy to the system.  Or if you wish the
+thermal temperature of the system to heat or cool over time.
+</P>
+<P>The rescaling is applied to only the translational degrees of freedom
+for the particles.  Their rotational or vibrational degrees of freedom
+are not altered.
+</P>
+<P>Rescaling is performed every N timesteps. The target temperature is a
+ramped value between the Tstart and Tstop temperatures at the
+beginning and end of the run.
+</P>
+<P>This fix performs thermostatting on a per grid cell basis.  For each
+grid cell, the center-of-mass velocity and thermal temperature of the
+particles in the grid cell is computed.  The thermal temperature is
+defined as the kinetic temperature after any center-of-mass motion
+(e.g. a flow velocity) is subtracted from the collection of particles
+in the grid cell.  These are the same calculations as are performed by
+the <A HREF = "compute_thermal_grid.html">compute thermal/grid</A> command.  See its
+doc page for the equations.
+</P>
+<P>From the current thermal temperature and the current target
+temperature, a velocity scale factor is calculated.  That factor is
+applied to each of the components of the thermal velocity for each
+particle in the grid cell.
+</P>
+<P>After this rescaling, if the thermal temperature were re-computed for
+the grid cell, it would be exactly the target temperature.
+</P>
+<HR>
+
+<P><B>Restart, output info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.
+</P>
+<P>This fix produces no output.
+</P>
+<P>This fix can ramp its target temperature over multiple runs, using the
+start and stop keywords of the run command. See the run command for
+details of how to do this.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B> none
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>
