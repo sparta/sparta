@@ -26,16 +26,18 @@ input = x, y, z, vx, vy, vz, ke, erot, evib, c_ID, c_ID\[N\], f_ID, f_ID\[N\], v
   v_name = per-particle or per-grid vector calculated by a particle-style or grid-style variable with name :pre
 
 zero or more keyword/args pairs may be appended :l
-keyword = {replace} :l
+keyword = {replace} or {subset} :l
   {replace} args = vec1 vec2
     vec1 = reduced value from this input vector will be replaced
-    vec2 = replace it with vec1\[N\] where N is index of max/min value from vec2 :pre
+    vec2 = replace it with vec1\[N\] where N is index of max/min value from vec2
+  {subset} arg = subsetID
+    subsetID = mixture-ID or grid group-ID or surface group-ID :pre
 :ule
 
 [Examples:]
 
 compute 1 reduce sum c_grid\[*\]
-compute 2 reduce min f_ave v_myKE
+compute 2 reduce min f_ave v_myKE subset trace_species
 compute 3 reduce max c_mine\[1\] c_mine\[2\] c_temp replace 1 3 replace 2 3 :pre
 
 These commands will include the average grid cell temperature, across
@@ -60,22 +62,27 @@ generate per-particle or per-grid quantities.  See the
 perform the same operations as the compute reduce command on global
 vectors.
 
+IMPORTANT NOTE: All inputs to a compute reduce command must be the
+same type: per-particle, per-grid, or per-surf.  You can use the
+command multiple times if you need to reduce values of different
+types.
+
 The reduction operation is specified by the {mode} setting.  The {sum}
 option adds the values in the vector into a global total.  The {min}
-or {max} options find the minimum or maximum value across all vector
-values.  The {ave} setting adds the vector values into a global total,
-then divides by the number of values in the vector.  The {sumsq}
-option sums the square of the values in the vector into a global
-total.  The {avesq} setting does the same as {sumsq}, then divdes the
-sum of squares by the number of values.  The last two options can be
-useful for calculating the variance of some quantity, e.g. variance =
-sumsq - ave^2.
+or {max} operations find the minimum or maximum value across all
+vector values.  The {ave} operation adds the vector values into a
+global total, then divides by the number of values in the vector.  The
+{sumsq} operation sums the square of the values in the vector into a
+global total.  The {avesq} oepration does the same as {sumsq}, then
+divdes the sum of squares by the number of values.  The last two
+operations can be useful for calculating the variance of some
+quantity, e.g. variance = sumsq - ave^2.
 
-Each listed input is operated on independently.
+Each listed input vector is operated on independently.
 
-Each listed input can be a particle attribute or can be the result of
-a "compute"_compute.html or "fix"_fix.html or the evaluation of a
-"variable"_variable.html.
+Each listed input vector can be a particle attribute or can be the
+result of a "compute"_compute.html or "fix"_fix.html or the evaluation
+of a "variable"_variable.html.
 
 Note that for values from a compute or fix, the bracketed index I can
 be specified using a wildcard asterisk with the index to effectively
@@ -169,6 +176,36 @@ the max of the ID vector, which does not yield useful information in
 this context, the {replace} keyword will extract the ID for the grid
 cell which has the maximum number of particles.  This ID and the
 cell's particle count will be printed with the statistical output.
+
+:line
+
+The {subset} keyword allows selection of a subset of each input
+vectors quantities to be used for the reduce operation.  This may
+affect all of the reduction operations.  E.g. the ave and avesq
+operations will become averages for only a subset of numerical values.
+
+If inputs are per-particle values, then a mixture ID should be
+specified.  Only particle species belonging to the mixture will be
+included in the calculations.  See the "mixture"_mixture.html command
+for how a set of species is included in a mixture.
+
+If inputs are per-grid values, then a grid group ID should be
+specified.  Only grid cells in the grid group will be included in the
+calculations.  See the "group grid"_group.html command for info on how
+grid cells can be assigned to grid groups.
+
+If inputs are per-surface values, then a surface group ID should be
+specified.  Only surface elements in the surface group will be
+included in the calculations.  See the "group surf"_group.html command
+for info on how surface elements can be assigned to surface groups.
+
+IMPORTANT NOTE: If computes or fixes are used as inputs to compute
+reduce, they may define their own subsets of particles, grid cells, or
+surface elements which contribute to their output.  E.g. grid cells not
+in the grid group used by the "compute grid"_compute_grid.html command
+have zero values as output.  You typically should use an argument for
+the {subset} keyword which is consistent with the inputs, but that is
+not required.
 
 :line
 
