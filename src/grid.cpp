@@ -111,6 +111,8 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   csurfs = NULL; csplits = NULL; csubs = NULL;
   allocate_surf_arrays();
 
+  time_global = 0.;
+
   neighshift[XLO] = 0;
   neighshift[XHI] = 3;
   neighshift[YLO] = 6;

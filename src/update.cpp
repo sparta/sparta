@@ -229,6 +229,8 @@ void Update::run(int nsteps)
 
   for (int i = 0; i < nsteps; i++) {
 
+    grid->time_global += grid->dtg;
+
     ntimestep++;
 
     if (collide_react) collide_react_reset();

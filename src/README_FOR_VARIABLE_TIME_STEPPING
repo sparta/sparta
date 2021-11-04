@@ -2,6 +2,7 @@ NOTE on making changes:  when commenting out a line, add "// EVENTUALLY DELETE F
 
 
 CHANGES-------------------------------------------------------------------------------------------
+
 stats.cpp:
   new_time revised in compute_tpcpu()
 
@@ -13,19 +14,25 @@ grid.h:
 grid.cpp:
   added cell dt to restarts (size_restart(), pack_restart(), unpack_restart())
   added grid dtg and time_global to write_restart() and read_restart()
+  initialized time_global to zero in Grid constructor
+  add global time increment at top of timestep loop in Update::run()
 
 particle.h:
-  added dt to OnePart class
-  added dt to OnePartRestart class
+  added particle time to OnePart class
+  added particle time to OnePartRestart class
 
 particle.cpp:
-  added dt copy to pack_restart() functions
+  added particle time copy to pack_restart() functions
 
 read_restart.cpp
   began modifying create_child_cells()
 
 
 QUESTIONS-----------------------------------------------------------------------------------------
+
+check into reset_timestep(), compute_dt()
+
+what is the impact of variable timestepping on computes and fixes?
 
 
 
@@ -36,9 +43,17 @@ QUESTIONS-----------------------------------------------------------------------
 
 
 TODO-----------------------------------------------------------------------------------------------
-*search for all places where dt in class Update is used.  Might be better to eliminate dtg eventually
+
+search for all places where dt in class Update is used.  Might be better to eliminate dtg eventually
   and have dt store the global timestep. (but using dtg during development will help indicate what
   is new/old code for variable time-stepping).
-*remove dt from update.h (and access from grid class)
+remove dt from update.h (and access from grid class)
 
-*finish logic added to ReadRestart::create_child_cells for cell dt (put dt in add_child_cell() argument list?)
+finish logic added to ReadRestart::create_child_cells for cell dt (put dt in add_child_cell() argument list?)
+  Could add optional argument for cell dt when calling create_child_cells for restart case.   obviously would
+  need to compute it otherwise, e.g., during grid construction (read_grid.cpp).  But what about AMR? adopt global
+  time step as cell dt until mean collision time and mean traversal time are available? or use some fraction of
+  the parent cell dt?
+
+
+
