@@ -73,6 +73,10 @@ This fix computes a global scalar which is a flag for whether any grid
 cells were adapted on the last timestep it was invoked.  The value of
 the flag is 1 if any cells were refined or coarsened, else it is 0.
 
+This fix also computes a global vector of length 2.  The first value
+is the number of cells which were refined.  The second is the number
+which were coarsened.  Both on the last timestep the fix was invoked.
+
 :line
 
 Styles with a {kk} suffix are functionally the same as the
