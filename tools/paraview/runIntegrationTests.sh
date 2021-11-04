@@ -88,6 +88,16 @@ test_circle() {
     echo ""
     echo "$CURRENT_TEST test passed"
 
+    CURRENT_TEST="surf2paraview circle exodus"
+    echo ""
+    echo "Running surf2paraview"
+    $PARAVIEW_PVPYTHON $SURF2PARAVIEW data.circle circle_surf -r tmp_surf.* --exodus
+    echo ""
+    echo "Checking $CURRENT_TEST output"
+    check_file "circle_surf.ex2" 
+    echo ""
+    echo "$CURRENT_TEST test passed"
+
     CURRENT_TEST="grid2paraview pvpython circle"
     echo ""
     echo "Checking $CURRENT_TEST output"
@@ -243,6 +253,16 @@ test_sphere() {
     check_file "sphere_surf/sphere_surf_800.vtu" 
     check_file "sphere_surf/sphere_surf_900.vtu" 
     check_file "sphere_surf/sphere_surf_1000.vtu" 
+    echo ""
+    echo "$CURRENT_TEST test passed"
+
+    CURRENT_TEST="surf2paraview sphere exodus"
+    echo ""
+    echo "Running surf2paraview"
+    $PARAVIEW_PVPYTHON $SURF2PARAVIEW data.sphere sphere_surf -r tmp_surf.* --exodus
+    echo ""
+    echo "Checking $CURRENT_TEST output"
+    check_file "sphere_surf.ex2"
     echo ""
     echo "$CURRENT_TEST test passed"
 

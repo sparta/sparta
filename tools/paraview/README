@@ -90,6 +90,15 @@ Delaunay 2D filter from the ParaView menu.
 This will triangulate the interior of the polygon and obscure interior
 grid cells from view.
 
+The -e (or --exodus) option will output the contents of the *.pvd and
+output directory in Exodus 2 output format as a single file:
+
+% pvpython surf2paraview.py data.mir mir_surf -r ../parent/mir/tmp_surf.* --exodus
+
+This will produce an Exodus 2 file mir_surf.ex2, containing the same content
+as mir_surf.pvd and mir_surf/. The .pvd format output is not written when
+Exodus 2 output is requested.
+
 -------------------------------
 
 III. USING grid2paraview.py
