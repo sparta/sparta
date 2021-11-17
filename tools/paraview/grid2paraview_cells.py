@@ -16,8 +16,9 @@ import glob
 def main():
     args = parse_command_line()
     check_command_line(args)
-    grid_desc = create_grid_description(args)
     time_steps = get_time_steps(args)
+    check_time_step_files(args, time_steps)
+    grid_desc = create_grid_description(args)
     program_data = distribute_program_data(args, grid_desc, time_steps)
     (unstructured_grid, global_ids) = create_grid(program_data)
     write_grid(unstructured_grid, global_ids, program_data)
@@ -61,6 +62,26 @@ def check_command_line(args):
                 args.paraview_output_file)
             error_flag = True
 
+    if error_found_on_rank_zero(error_flag):
+        sys.exit(1)
+
+def check_time_step_files(args, time_steps):
+    error_flag = False
+    if is_rank_zero():
+        if time_steps and args.variables:
+            for time in sorted(time_steps.keys()):
+                fh = open(time_steps[time][0], "r")
+                array_names = get_array_names(fh)
+                for v in args.variables:
+                    if not v in array_names:
+                        print("Error: requested flow variable " +\
+                            v + " not in flow file " + time_steps[time][0])
+                        error_flag = True
+                if 'id' not in array_names:
+                    print("Error: id column not in flow file " +\
+                        time_steps[time][0])
+                    error_flag = True
+                fh.close()
     if error_found_on_rank_zero(error_flag):
         sys.exit(1)
 
@@ -200,20 +221,8 @@ def read_time_step_data(file_name, unstructured_grid, global_ids, program_data):
 
     if variables is None:
         variables = array_names
-    else:
-        for v in variables:
-            if not v in array_names:
-                print("Error: requested flow variable " + \
-                    v + " not in flow file " + file_name)
-                return
 
-    id_index = 0
-    try:
-        id_index = array_names.index('id')
-    except ValueError:
-        print("Error reading SPARTA result file: ", f)
-        print("id column not given in file.")
-        return
+    id_index = array_names.index('id')
 
     count = 1
     for line in fh:
