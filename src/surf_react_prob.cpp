@@ -16,6 +16,7 @@
 #include "surf_react_prob.h"
 #include "input.h"
 #include "update.h"
+#include "grid.h"
 #include "comm.h"
 #include "random_mars.h"
 #include "random_knuth.h"
@@ -147,8 +148,9 @@ int SurfReactProb::react(Particle::OnePart *&ip, int, double *,
           memcpy(x,ip->x,3*sizeof(double));
           memcpy(v,ip->v,3*sizeof(double));
           Particle::OnePart *particles = particle->particles;
+          double const particle_time = grid->get_particle_time(ip->icell,random->uniform());
           int reallocflag =
-            particle->add_particle(id,r->products[1],ip->icell,x,v,0.0,0.0);
+            particle->add_particle(id,r->products[1],ip->icell,x,v,0.0,0.0,particle_time);
           if (reallocflag) ip = particle->particles + (ip - particles);
           jp = &particle->particles[particle->nlocal-1];
           return (list[i] + 1);

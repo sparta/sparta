@@ -693,6 +693,7 @@ int Input::execute_command()
   else if (!strcmp(command,"surf_modify")) surf_modify();
   else if (!strcmp(command,"surf_react")) surf_react();
   else if (!strcmp(command,"timestep")) timestep();
+  else if (!strcmp(command,"timestep_va")) timestep_variable_adaptive();
   else if (!strcmp(command,"uncompute")) uncompute();
   else if (!strcmp(command,"undump")) undump();
   else if (!strcmp(command,"unfix")) unfix();
@@ -1462,6 +1463,17 @@ void Input::timestep()
   double dt = atof(arg[0]);
   if (dt <= 0.0) error->all(FLERR,"Illegal timestep command");
   update->dt = dt;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::timestep_variable_adaptive()
+{
+  if (narg != 1) error->all(FLERR,"Illegal timestep command");
+  double dt = atof(arg[0]);
+  if (dt <= 0.0) error->all(FLERR,"Illegal timestep command");
+  grid->dt_global = dt;
+  grid->variable_adaptive_time = true;
 }
 
 /* ---------------------------------------------------------------------- */

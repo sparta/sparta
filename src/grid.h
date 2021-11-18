@@ -48,8 +48,9 @@ class Grid : protected Pointers {
   int maxsurfpercell;   // max surf elements in one child cell
   int maxsplitpercell;  // max split cells in one child cell
 
-  double dtg;           // global timestep size
+  double dt_global;     // global timestep size
   double time_global;   // the global time
+  bool variable_adaptive_time = false;
 
   int ngroup;           // # of defined groups
   char **gnames;        // name of each group
@@ -128,7 +129,8 @@ class Grid : protected Pointers {
     int isplit;               // index into sinfo
                               // set for split and sub cells, -1 if unsplit
 
-    double dt;                // timestep for this cell
+    double dt_desired;        // desired timestep for this cell
+    double time;              // time for this cell
   };
 
   // info specific to owned child cell
@@ -201,7 +203,8 @@ class Grid : protected Pointers {
   int nlocal_restart;
   cellint *id_restart;
   int *level_restart,*nsplit_restart;
-  double *dt_restart;
+  double *dt_desired_restart;
+  double *time_restart;
 
   // methods
 
@@ -230,8 +233,8 @@ class Grid : protected Pointers {
 
   void refine_cell(int, int *, class Cut2d *, class Cut3d *);
   void coarsen_cell(cellint, int, double *, double *,
-		    int, int *, int *, int *, void **, char **,
-		    class Cut2d *, class Cut3d *);
+                    int, int *, int *, int *, void **, char **,
+                    class Cut2d *, class Cut3d *);
 
   void group(int, char **);
   int add_group(const char *);
@@ -275,12 +278,12 @@ class Grid : protected Pointers {
   // grid_id.cpp
 
   void id_point_child(double *, double *, double *, int, int, int,
-		      int &, int &, int &);
+                      int &, int &, int &);
   cellint id_parent_of_child(cellint, int);
   int id_find_child(cellint, int, double *, double *, double *);
   cellint id_uniform_level(int, int, int, int);
   void id_find_child_uniform_level(int, int, double *, double *, double *,
-				   int &, int &, int &);
+                                   int &, int &, int &);
   cellint id_neigh_same_parent(cellint, int, int);
   cellint id_neigh_same_level(cellint, int, int);
   cellint id_refine(cellint, int, int);
@@ -309,6 +312,9 @@ class Grid : protected Pointers {
     nmask |= flag << neighshift[iface];
     return nmask;
   }
+
+  double get_particle_time(cellint, double); // get particle time as a function of cell desired dt, global_time, and RNG
+
 
  protected:
   int me;
@@ -382,14 +388,14 @@ class Grid : protected Pointers {
   void surf2grid_surf_algorithm(int);
   void surf2grid_split(int, int);
   void recurse2d(cellint, int, double *, double *,
-		 int, Surf::Line *, double *, double *,
-		 int &, int &, int **&, MyHash *, MyHash *);
+                 int, Surf::Line *, double *, double *,
+                 int &, int &, int **&, MyHash *, MyHash *);
   void recurse3d(cellint, int, double *, double *,
-		 int, Surf::Tri *, double *, double *,
-		 int &, int &, int **&, MyHash *, MyHash *);
+                 int, Surf::Tri *, double *, double *,
+                 int &, int &, int **&, MyHash *, MyHash *);
   void partition_grid(int, int, int, int, int, int, int, int, GridTree *);
   void mybox(int, int, int, int &, int &, int &, int &, int &, int &,
-	     GridTree *);
+             GridTree *);
   void box_drop(int *, int *, int, int, GridTree *, int &, int *);
 
   void acquire_ghosts_all(int);

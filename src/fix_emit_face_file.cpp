@@ -10,7 +10,7 @@
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 #include "mpi.h"
 #include "stdlib.h"
@@ -192,7 +192,7 @@ void FixEmitFaceFile::init()
     int ispecies = particle->mixture[imix]->species[m];
     avemass += fraction_mix[m] * particle->species[ispecies].mass;
     avegamma += fraction_mix[m] * (1.0 + 2.0 /
-                               (3.0 + particle->species[ispecies].rotdof));
+                                   (3.0 + particle->species[ispecies].rotdof));
   }
 
   soundspeed_mixture = sqrt(avegamma * update->boltz *
@@ -265,7 +265,7 @@ void FixEmitFaceFile::create_task(int icell)
   // works for 2d quads and 3d hexes
 
   int corners[6][4] = {{0,2,4,6}, {1,3,5,7}, {0,1,4,5}, {2,3,6,7},
-		       {0,1,2,3}, {4,5,6,7}};
+                       {0,1,2,3}, {4,5,6,7}};
   int nface_pts = 4;
   if (domain->dimension == 2) nface_pts = 2;
 
@@ -341,7 +341,7 @@ void FixEmitFaceFile::create_task(int icell)
 
 /* ----------------------------------------------------------------------
    insert particles in grid cells with faces touching inflow boundary
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::perform_task()
 {
@@ -395,28 +395,28 @@ void FixEmitFaceFile::perform_task()
     if (perspecies) {
       for (isp = 0; isp < nspecies; isp++) {
         ispecies = species[isp];
-	ntarget = tasks[i].ntargetsp[isp]+random->uniform();
-	ninsert = static_cast<int> (ntarget);
+        ntarget = tasks[i].ntargetsp[isp]+random->uniform();
+        ninsert = static_cast<int> (ntarget);
         scosine = indot / vscale[isp];
 
         nactual = 0;
-	for (int m = 0; m < ninsert; m++) {
-	  x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-	  x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
-	  if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+        for (int m = 0; m < ninsert; m++) {
+          x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
+          x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+          if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
           else x[2] = 0.0;
 
           if (region && !region->match(x)) continue;
 
-	  do {
-	    do beta_un = (6.0*random->uniform() - 3.0);
-	    while (beta_un + scosine < 0.0);
-	    normalized_distbn_fn = 2.0 * (beta_un + scosine) /
-	      (scosine + sqrt(scosine*scosine + 2.0)) *
-	      exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) -
-		  beta_un*beta_un);
-	  } while (normalized_distbn_fn < random->uniform());
-	
+          do {
+            do beta_un = (6.0*random->uniform() - 3.0);
+            while (beta_un + scosine < 0.0);
+            normalized_distbn_fn = 2.0 * (beta_un + scosine) /
+              (scosine + sqrt(scosine*scosine + 2.0)) *
+              exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) -
+                  beta_un*beta_un);
+          } while (normalized_distbn_fn < random->uniform());
+
           v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
 
           theta = MY_2PI * random->uniform();
@@ -427,7 +427,8 @@ void FixEmitFaceFile::perform_task()
           evib = particle->evib(ispecies,temp_vib,random);
           id = MAXSMALLINT*random->uniform();
 
-	  particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+          double const particle_time = grid->get_particle_time(pcell,random->uniform());
+          particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
           nactual++;
 
           p = &particle->particles[particle->nlocal-1];
@@ -436,10 +437,10 @@ void FixEmitFaceFile::perform_task()
 
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
-                                 temp_rot,temp_vib,vstream);
-	}
+                                  temp_rot,temp_vib,vstream);
+        }
 
-	nsingle += nactual;
+        nsingle += nactual;
       }
 
     } else {
@@ -449,28 +450,28 @@ void FixEmitFaceFile::perform_task()
 
       nactual = 0;
       for (int m = 0; m < ninsert; m++) {
-	rn = random->uniform();
-	isp = 0;
-	while (cummulative[isp] < rn) isp++;
+        rn = random->uniform();
+        isp = 0;
+        while (cummulative[isp] < rn) isp++;
         ispecies = species[isp];
         scosine = indot / vscale[isp];
 
-	x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-	x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
-	if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+        x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
+        x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+        if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
         else x[2] = 0.0;
 
         if (region && !region->match(x)) continue;
 
-	do {
-	  do beta_un = (6.0*random->uniform() - 3.0);
-	  while (beta_un + scosine < 0.0);
-	  normalized_distbn_fn = 2.0 * (beta_un + scosine) /
-	    (scosine + sqrt(scosine*scosine + 2.0)) *
-	    exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) -
-		beta_un*beta_un);
-	} while (normalized_distbn_fn < random->uniform());
-	
+        do {
+          do beta_un = (6.0*random->uniform() - 3.0);
+          while (beta_un + scosine < 0.0);
+          normalized_distbn_fn = 2.0 * (beta_un + scosine) /
+            (scosine + sqrt(scosine*scosine + 2.0)) *
+            exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) -
+                beta_un*beta_un);
+        } while (normalized_distbn_fn < random->uniform());
+
         v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
 
         theta = MY_PI * random->uniform();
@@ -481,7 +482,8 @@ void FixEmitFaceFile::perform_task()
         evib = particle->evib(ispecies,temp_vib,random);
         id = MAXSMALLINT*random->uniform();
 
-	particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+        double const particle_time = grid->get_particle_time(pcell,random->uniform());
+        particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
         nactual++;
 
         p = &particle->particles[particle->nlocal-1];
@@ -490,7 +492,7 @@ void FixEmitFaceFile::perform_task()
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,
-                               temp_rot,temp_vib,vstream);
+                                temp_rot,temp_vib,vstream);
       }
 
       nsingle += nactual;
@@ -501,7 +503,7 @@ void FixEmitFaceFile::perform_task()
 /* ----------------------------------------------------------------------
    scan file for section-ID, read regular grid of values into Mesh data struct
    only called by proc 0
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::read_file(char *file, char *section)
 {
@@ -672,7 +674,7 @@ void FixEmitFaceFile::read_file(char *file, char *section)
 
 /* ----------------------------------------------------------------------
    bcast mesh data struct from proc 0 to all other procs
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::bcast_mesh()
 {
@@ -727,7 +729,7 @@ void FixEmitFaceFile::bcast_mesh()
    check that values on mesh points are valid
    all but VX,VY,VZ must be >= 0.0
    species fractions must be <= 1.0
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::check_mesh_values()
 {
@@ -755,7 +757,7 @@ void FixEmitFaceFile::check_mesh_values()
    use centroid of face to find 4 surrounding mesh points (2 in 2d)
    use bilinear interpolation (linear in 2d) to compute each new value
    return 1 if interpolation successful, 0 if not
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 int FixEmitFaceFile::interpolate(int icell)
 {
@@ -962,7 +964,7 @@ int FixEmitFaceFile::interpolate(int icell)
 
 /* ----------------------------------------------------------------------
    linear interpolation at x between lo and hi bounds, for column M
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 double FixEmitFaceFile::linear_interpolation(double x, int m, int plo, int phi)
 {
@@ -976,7 +978,7 @@ double FixEmitFaceFile::linear_interpolation(double x, int m, int plo, int phi)
 /* ----------------------------------------------------------------------
    bilinear interpolation at x,y between (plo,qlo) to (phi,qhi) corners
    for column M
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 double FixEmitFaceFile::bilinear_interpolation(double x, double y, int m,
                                                int plo, int phi,
@@ -1002,7 +1004,7 @@ double FixEmitFaceFile::bilinear_interpolation(double x, double y, int m,
    determine which sub cell the face is part of
    face cannot be touched by surfs, so entire face is part of one sub cell
    compute which via update->split() and return it
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 int FixEmitFaceFile::split(int icell)
 {
@@ -1032,7 +1034,7 @@ int FixEmitFaceFile::split(int icell)
 
 /* ----------------------------------------------------------------------
    recalculate task properties based on subsonic BC
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::subsonic_inflow()
 {
@@ -1085,7 +1087,7 @@ void FixEmitFaceFile::subsonic_inflow()
 /* ----------------------------------------------------------------------
    identify particles in grid cells associated with a task
    store count and linked list, same as for particle sorting
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::subsonic_sort()
 {
@@ -1142,7 +1144,7 @@ void FixEmitFaceFile::subsonic_sort()
    compute number density, thermal temperature, stream velocity
    only for grid cells associated with a task
    first compute for grid cells, then adjust due to boundary conditions
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::subsonic_grid()
 {
@@ -1250,14 +1252,14 @@ void FixEmitFaceFile::subsonic_grid()
 }
 /* ----------------------------------------------------------------------
    grow task list
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::grow_task()
 {
   int oldmax = ntaskmax;
   ntaskmax += DELTATASK;
   tasks = (Task *) memory->srealloc(tasks,ntaskmax*sizeof(Task),
-				    "emit/face/file:tasks");
+                                    "emit/face/file:tasks");
 
   // set all new task bytes to 0 so valgrind won't complain
   // if bytes between fields are uninitialized
@@ -1283,7 +1285,7 @@ void FixEmitFaceFile::grow_task()
 
 /* ----------------------------------------------------------------------
    process keywords specific to this class
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 int FixEmitFaceFile::option(int narg, char **arg)
 {
@@ -1301,7 +1303,7 @@ int FixEmitFaceFile::option(int narg, char **arg)
 
 /* ----------------------------------------------------------------------
    DEBUG method: print status of cellface I
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::print_task(int i)
 {

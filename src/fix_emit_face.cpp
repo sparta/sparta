@@ -10,7 +10,7 @@
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 #include "stdlib.h"
 #include "string.h"
@@ -63,8 +63,8 @@ FixEmitFace::FixEmitFace(SPARTA *sparta, int narg, char **arg) :
   while (iarg < narg) {
     if (strcmp(arg[iarg],"all") == 0) {
       if (domain->dimension == 3)
-	faces[XLO] = faces[XHI] = faces[YLO] = faces[YHI] =
-	  faces[ZLO] = faces[ZHI] = 1;
+        faces[XLO] = faces[XHI] = faces[YLO] = faces[YHI] =
+          faces[ZLO] = faces[ZHI] = 1;
       else faces[XLO] = faces[XHI] = faces[YLO] = faces[YHI] = 1;
     } else if (strcmp(arg[iarg],"xlo") == 0) faces[XLO] = 1;
     else if (strcmp(arg[iarg],"xhi") == 0) faces[XHI] = 1;
@@ -209,7 +209,7 @@ void FixEmitFace::init()
    grid changed operation
    invoke create_tasks() to rebuild entire task list
    invoked after per-processor list of grid cells has changed
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFace::grid_changed()
 {
@@ -239,7 +239,7 @@ void FixEmitFace::grid_changed()
 /* ----------------------------------------------------------------------
    create tasks for one grid cell
    add them to tasks list and increment ntasks
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFace::create_task(int icell)
 {
@@ -261,7 +261,7 @@ void FixEmitFace::create_task(int icell)
   // works for 2d quads and 3d hexes
 
   int corners[6][4] = {{0,2,4,6}, {1,3,5,7}, {0,1,4,5}, {2,3,6,7},
-		       {0,1,2,3}, {4,5,6,7}};
+                       {0,1,2,3}, {4,5,6,7}};
   int nface_pts = 4;
   if (domain->dimension == 2) nface_pts = 2;
 
@@ -402,7 +402,7 @@ void FixEmitFace::create_task(int icell)
       else area = cells[icell].hi[0]-cells[icell].lo[0];
     } else if (iface == ZLO || iface == ZHI) {
       area = (cells[icell].hi[0]-cells[icell].lo[0]) *
-	(cells[icell].hi[1]-cells[icell].lo[1]);
+        (cells[icell].hi[1]-cells[icell].lo[1]);
     }
     tasks[ntask].area = area;
 
@@ -445,7 +445,7 @@ void FixEmitFace::create_task(int icell)
 
 /* ----------------------------------------------------------------------
    insert particles in grid cells with faces touching inflow boundaries
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFace::perform_task()
 {
@@ -457,7 +457,7 @@ void FixEmitFace::perform_task()
    perform insertion in one pass thru tasks
    this is simpler, somewhat faster code
    but uses random #s differently than Kokkos, so insertions are different
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFace::perform_task_onepass()
 {
@@ -517,28 +517,28 @@ void FixEmitFace::perform_task_onepass()
     if (perspecies) {
       for (isp = 0; isp < nspecies; isp++) {
         ispecies = species[isp];
-	ntarget = tasks[i].ntargetsp[isp]+random->uniform();
-	ninsert = static_cast<int> (ntarget);
+        ntarget = tasks[i].ntargetsp[isp]+random->uniform();
+        ninsert = static_cast<int> (ntarget);
         scosine = indot / vscale[isp];
 
         nactual = 0;
-	for (int m = 0; m < ninsert; m++) {
-	  x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-	  x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
-	  if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+        for (int m = 0; m < ninsert; m++) {
+          x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
+          x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+          if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
           else x[2] = 0.0;
 
           if (region && !region->match(x)) continue;
 
-	  do {
-	    do beta_un = (6.0*random->uniform() - 3.0);
-	    while (beta_un + scosine < 0.0);
-	    normalized_distbn_fn = 2.0 * (beta_un + scosine) /
-	      (scosine + sqrt(scosine*scosine + 2.0)) *
-	      exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) -
-		  beta_un*beta_un);
-	  } while (normalized_distbn_fn < random->uniform());
-	
+          do {
+            do beta_un = (6.0*random->uniform() - 3.0);
+            while (beta_un + scosine < 0.0);
+            normalized_distbn_fn = 2.0 * (beta_un + scosine) /
+              (scosine + sqrt(scosine*scosine + 2.0)) *
+              exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) -
+                  beta_un*beta_un);
+          } while (normalized_distbn_fn < random->uniform());
+
           v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
 
           theta = MY_2PI * random->uniform();
@@ -549,7 +549,8 @@ void FixEmitFace::perform_task_onepass()
           evib = particle->evib(ispecies,temp_vib,random);
           id = MAXSMALLINT*random->uniform();
 
-	  particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+          double const particle_time = grid->get_particle_time(pcell,random->uniform());
+          particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
           nactual++;
 
           p = &particle->particles[particle->nlocal-1];
@@ -558,46 +559,46 @@ void FixEmitFace::perform_task_onepass()
 
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
-                                 temp_rot,temp_vib,vstream);
-	}
+                                  temp_rot,temp_vib,vstream);
+        }
 
-	nsingle += nactual;
+        nsingle += nactual;
       }
 
     } else {
       if (np == 0) {
-	ntarget = tasks[i].ntarget+random->uniform();
-	ninsert = static_cast<int> (ntarget);
+        ntarget = tasks[i].ntarget+random->uniform();
+        ninsert = static_cast<int> (ntarget);
       } else {
-	ninsert = npertask;
-	if (i >= nthresh) ninsert++;
+        ninsert = npertask;
+        if (i >= nthresh) ninsert++;
       }
 
       nactual = 0;
       for (int m = 0; m < ninsert; m++) {
-	rn = random->uniform();
-	isp = 0;
-	while (cummulative[isp] < rn) isp++;
+        rn = random->uniform();
+        isp = 0;
+        while (cummulative[isp] < rn) isp++;
         ispecies = species[isp];
         scosine = indot / vscale[isp];
 
-	x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-	x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+        x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
+        x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
         if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
         else x[2] = 0.0;
 
         if (region && !region->match(x)) continue;
 
-	do {
-	  do {
-	    beta_un = (6.0*random->uniform() - 3.0);
-	  } while (beta_un + scosine < 0.0);
-	  normalized_distbn_fn = 2.0 * (beta_un + scosine) /
-	    (scosine + sqrt(scosine*scosine + 2.0)) *
-	    exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) -
-		beta_un*beta_un);
-	} while (normalized_distbn_fn < random->uniform());
-	
+        do {
+          do {
+            beta_un = (6.0*random->uniform() - 3.0);
+          } while (beta_un + scosine < 0.0);
+          normalized_distbn_fn = 2.0 * (beta_un + scosine) /
+            (scosine + sqrt(scosine*scosine + 2.0)) *
+            exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) -
+                beta_un*beta_un);
+        } while (normalized_distbn_fn < random->uniform());
+
         v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
 
         theta = MY_2PI * random->uniform();
@@ -608,7 +609,8 @@ void FixEmitFace::perform_task_onepass()
         evib = particle->evib(ispecies,temp_vib,random);
         id = MAXSMALLINT*random->uniform();
 
-	particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+        double const particle_time = grid->get_particle_time(pcell,random->uniform());
+        particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
         nactual++;
 
         p = &particle->particles[particle->nlocal-1];
@@ -617,7 +619,7 @@ void FixEmitFace::perform_task_onepass()
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,
-                               temp_rot,temp_vib,vstream);
+                                temp_rot,temp_vib,vstream);
       }
 
       nsingle += nactual;
@@ -628,7 +630,7 @@ void FixEmitFace::perform_task_onepass()
 /* ----------------------------------------------------------------------
    perform insertion the way Kokkos does in two passes thru tasks
    this uses random #s the same as Kokkos, for easier debugging
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFace::perform_task_twopass()
 {
@@ -742,7 +744,8 @@ void FixEmitFace::perform_task_twopass()
           evib = particle->evib(ispecies,temp_vib,random);
           id = MAXSMALLINT*random->uniform();
 
-          particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+          double const particle_time = grid->get_particle_time(pcell,random->uniform());
+          particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
           nactual++;
 
           p = &particle->particles[particle->nlocal-1];
@@ -751,7 +754,7 @@ void FixEmitFace::perform_task_twopass()
 
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
-                temp_rot,temp_vib,vstream);
+                                  temp_rot,temp_vib,vstream);
         }
 
         nsingle += nactual;
@@ -795,7 +798,8 @@ void FixEmitFace::perform_task_twopass()
         evib = particle->evib(ispecies,temp_vib,random);
         id = MAXSMALLINT*random->uniform();
 
-        particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+        double const particle_time = grid->get_particle_time(pcell,random->uniform());
+        particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
         nactual++;
 
         p = &particle->particles[particle->nlocal-1];
@@ -804,7 +808,7 @@ void FixEmitFace::perform_task_twopass()
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,
-              temp_rot,temp_vib,vstream);
+                                temp_rot,temp_vib,vstream);
       }
 
       nsingle += nactual;
@@ -819,7 +823,7 @@ void FixEmitFace::perform_task_twopass()
    determine which sub cell the face is part of
    face cannot be touched by surfs, so entire face is part of one sub cell
    compute which via update->split() and return it
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 int FixEmitFace::split(int icell, int iface)
 {
@@ -849,7 +853,7 @@ int FixEmitFace::split(int icell, int iface)
 
 /* ----------------------------------------------------------------------
    recalculate task properties based on subsonic BC
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFace::subsonic_inflow()
 {
@@ -902,7 +906,7 @@ void FixEmitFace::subsonic_inflow()
 /* ----------------------------------------------------------------------
    identify particles in grid cells associated with a task
    store count and linked list, same as for particle sorting
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFace::subsonic_sort()
 {
@@ -959,7 +963,7 @@ void FixEmitFace::subsonic_sort()
    compute number density, thermal temperature, stream velocity
    only for grid cells associated with a task
    first compute for grid cells, then adjust due to boundary conditions
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFace::subsonic_grid()
 {
@@ -1070,14 +1074,14 @@ void FixEmitFace::subsonic_grid()
 
 /* ----------------------------------------------------------------------
    grow task list
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFace::grow_task()
 {
   int oldmax = ntaskmax;
   ntaskmax += DELTATASK;
   tasks = (Task *) memory->srealloc(tasks,ntaskmax*sizeof(Task),
-				    "emit/face:tasks");
+                                    "emit/face:tasks");
 
   // set all new task bytes to 0 so valgrind won't complain
   // if bytes between fields are uninitialized
@@ -1105,7 +1109,7 @@ void FixEmitFace::grow_task()
 
 /* ----------------------------------------------------------------------
    reallocate nspecies arrays
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 void FixEmitFace::realloc_nspecies()
 {
@@ -1125,7 +1129,7 @@ void FixEmitFace::realloc_nspecies()
 
 /* ----------------------------------------------------------------------
    process keywords specific to this class
-------------------------------------------------------------------------- */
+   ------------------------------------------------------------------------- */
 
 int FixEmitFace::option(int narg, char **arg)
 {

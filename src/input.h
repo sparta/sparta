@@ -105,6 +105,7 @@ class Input : protected Pointers {
   void surf_modify();
   void surf_react();
   void timestep();
+  void timestep_variable_adaptive();
   void uncompute();
   void undump();
   void unfix();

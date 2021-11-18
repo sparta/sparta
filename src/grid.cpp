@@ -2376,7 +2376,7 @@ void Grid::write_restart(FILE *fp)
 {
   fwrite(&maxlevel,sizeof(int),1,fp);
   fwrite(plevels,sizeof(ParentLevel),maxlevel,fp);
-  fwrite(&dtg,sizeof(double),1,fp);
+  fwrite(&dt_global,sizeof(double),1,fp);
   fwrite(&time_global,sizeof(double),1,fp);
 
   fwrite(&ngroup,sizeof(int),1,fp);
@@ -2406,12 +2406,12 @@ void Grid::read_restart(FILE *fp)
   if (me == 0) {
     fread(&maxlevel,sizeof(int),1,fp);
     fread(plevels,sizeof(ParentLevel),maxlevel,fp);
-    fread(&dtg,sizeof(double),1,fp);
+    fread(&dt_global,sizeof(double),1,fp);
     fread(&time_global,sizeof(double),1,fp);
   }
   MPI_Bcast(&maxlevel,1,MPI_INT,0,world);
   MPI_Bcast(plevels,maxlevel*sizeof(ParentLevel),MPI_CHAR,0,world);
-  MPI_Bcast(&dtg,1,MPI_DOUBLE,0,world);
+  MPI_Bcast(&dt_global,1,MPI_DOUBLE,0,world);
   MPI_Bcast(&time_global,1,MPI_DOUBLE,0,world);
 
   // if any exist, clear existing group names, before reading new ones
@@ -2449,6 +2449,8 @@ int Grid::size_restart()
   n = IROUNDUP(n);
   n += nlocal * sizeof(double);
   n = IROUNDUP(n);
+  n += nlocal * sizeof(double);
+  n = IROUNDUP(n);
   return n;
 }
 
@@ -2466,6 +2468,8 @@ int Grid::size_restart(int nlocal_restart)
   n += nlocal_restart * sizeof(int);
   n = IROUNDUP(n);
   n += nlocal_restart * sizeof(int);
+  n = IROUNDUP(n);
+  n += nlocal_restart * sizeof(double);
   n = IROUNDUP(n);
   n += nlocal_restart * sizeof(double);
   n = IROUNDUP(n);
@@ -2509,7 +2513,13 @@ int Grid::pack_restart(char *buf)
 
   double *dbuf = (double *) &buf[n];
   for (int i = 0; i < nlocal; i++)
-    dbuf[i] = cells[i].dt;
+    dbuf[i] = cells[i].dt_desired;
+  n += nlocal * sizeof(double);
+  n = IROUNDUP(n);
+
+  dbuf = (double *) &buf[n];
+  for (int i = 0; i < nlocal; i++)
+    dbuf[i] = cells[i].time;
   n += nlocal * sizeof(double);
   n = IROUNDUP(n);
 
@@ -2536,7 +2546,8 @@ int Grid::unpack_restart(char *buf)
   memory->create(id_restart,nlocal_restart,"grid:id_restart");
   memory->create(level_restart,nlocal_restart,"grid:nlevel_restart");
   memory->create(nsplit_restart,nlocal_restart,"grid:nsplit_restart");
-  memory->create(dt_restart,nlocal_restart,"grid:dt_restart");
+  memory->create(dt_desired_restart,nlocal_restart,"grid:dt_restart");
+  memory->create(time_restart,nlocal_restart,"grid:time_restart");
 
   cellint *cbuf = (cellint *) &buf[n];
   for (int i = 0; i < nlocal_restart; i++)
@@ -2558,7 +2569,13 @@ int Grid::unpack_restart(char *buf)
 
   double *dbuf = (double *) &buf[n];
   for (int i = 0; i < nlocal_restart; i++)
-    dt_restart[i] = dbuf[i];
+    dt_desired_restart[i] = dbuf[i];
+  n += nlocal_restart * sizeof(double);
+  n = IROUNDUP(n);
+
+  dbuf = (double *) &buf[n];
+  for (int i = 0; i < nlocal_restart; i++)
+    time_restart[i] = dbuf[i];
   n += nlocal_restart * sizeof(double);
   n = IROUNDUP(n);
 
@@ -2604,4 +2621,11 @@ void Grid::debug()
            cinfo[i].corner[6],cinfo[i].corner[7]);
     printf("  volume %g\n",cinfo[i].volume);
   }
+}
+
+/* ---------------------------------------------------------------------- */
+
+double Grid::get_particle_time(cellint icell, double random_uniform)
+{
+ return time_global + (-1. + 2.*random_uniform)*cells[icell].dt_desired;
 }

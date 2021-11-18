@@ -229,7 +229,7 @@ void Update::run(int nsteps)
 
   for (int i = 0; i < nsteps; i++) {
 
-    grid->time_global += grid->dtg;
+    grid->time_global += grid->dt_global;
 
     ntimestep++;
 

@@ -552,7 +552,8 @@ void FixEmitSurf::perform_task()
           evib = particle->evib(ispecies,temp_vib,random);
           id = MAXSMALLINT*random->uniform();
 
-          particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+          double const particle_time = grid->get_particle_time(pcell,random->uniform());
+          particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
           nactual++;
 
           p = &particle->particles[particle->nlocal-1];
@@ -645,7 +646,8 @@ void FixEmitSurf::perform_task()
         evib = particle->evib(ispecies,temp_vib,random);
         id = MAXSMALLINT*random->uniform();
 
-        particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+        double const particle_time = grid->get_particle_time(pcell,random->uniform());
+        particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
         nactual++;
 
         p = &particle->particles[particle->nlocal-1];

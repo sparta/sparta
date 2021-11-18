@@ -7,25 +7,47 @@ stats.cpp:
   new_time revised in compute_tpcpu()
 
 grid.h:
-  added dt to ChildCell class
-  added dtg to Grid class                        (located here instead of update.h for restart)
+added dt_desired to ChildCell class
+  added time to ChildCell class                  (this is the cell time)
+  added dt_global to Grid class                  (located here instead of update.h for restart)
   added global time (time_global) to Grid class  (located here instead of update.h for restart)
+  added get_particle_time function (constructed from global time and cell desired dt)
+  added variable_adaptive_time boolean
 
 grid.cpp:
-  added cell dt to restarts (size_restart(), pack_restart(), unpack_restart())
-  added grid dtg and time_global to write_restart() and read_restart()
+  added cell dt_desired and time (cell) to restarts (size_restart(), pack_restart(), unpack_restart())
+  added grid dt_global and time_global to write_restart() and read_restart()
   initialized time_global to zero in Grid constructor
   add global time increment at top of timestep loop in Update::run()
+  added get_particle_time function (constructed from global time and cell desired dt)
 
 particle.h:
   added particle time to OnePart class
   added particle time to OnePartRestart class
+  modified add_particle function to include particle_time in argument list
 
 particle.cpp:
   added particle time copy to pack_restart() functions
+  modified add_particle function to include particle_time in argument list
+
+
+* switched to overloaded add_particle() with particle_time
+  create_particles.cpp
+  fix_emit_surf.cpp
+  collide_vss.cpp
+  fix_emit_face_file.cpp
+  fix_emit_face.cpp
+  read_particles.cpp
+  read_restart.cpp
+  surf_react_prob.cpp ???????
+  surf_react_adsorb.cpp ?????
+  surf_react_global.cpp ?????
 
 read_restart.cpp
   began modifying create_child_cells()
+
+input.[h,cpp]
+  added parsing of variable "timestep_va", the variable-adaptive starting timestep
 
 
 QUESTIONS-----------------------------------------------------------------------------------------
@@ -44,10 +66,10 @@ what is the impact of variable timestepping on computes and fixes?
 
 TODO-----------------------------------------------------------------------------------------------
 
-search for all places where dt in class Update is used.  Might be better to eliminate dtg eventually
-  and have dt store the global timestep. (but using dtg during development will help indicate what
+search for all places where dt in class Update is used.  Might be better to eliminate dt_global eventually
+  and have dt store the global timestep. (but using dt_global during development will help indicate what
   is new/old code for variable time-stepping).
-remove dt from update.h (and access from grid class)
+remove dt from update.h (and access either dt or dt_global from grid class)
 
 finish logic added to ReadRestart::create_child_cells for cell dt (put dt in add_child_cell() argument list?)
   Could add optional argument for cell dt when calling create_child_cells for restart case.   obviously would
@@ -55,5 +77,10 @@ finish logic added to ReadRestart::create_child_cells for cell dt (put dt in add
   time step as cell dt until mean collision time and mean traversal time are available? or use some fraction of
   the parent cell dt?
 
+need to make sure that cell dt_desired is set before particles are created initially
 
+look in ds2v.f90 for how particle time is set and advanced.
 
+check on add_particle() without arguments and ramifications with variable, adaptive time-stepping.
+
+how should particle times be set when added from surf_react*.cpp? (check ds2v.f90)

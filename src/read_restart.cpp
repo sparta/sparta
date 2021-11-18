@@ -1176,13 +1176,13 @@ void ReadRestart::create_child_cells(int skipflag)
   cellint *ids = grid->id_restart;
   int *levels = grid->level_restart;
   int *nsplits = grid->nsplit_restart;
-  double *dts = grid->dt_restart;
+  double *dt_desired = grid->dt_desired_restart;
 
   for (int i = 0; i < nlocal; i++) {
     id = ids[i];
     level = levels[i];
     nsplit = nsplits[i];
-    dt = dts[i]; // for variable time-stepping...stopped here (AKS)
+    dt = dt_desired[i]; // for variable time-stepping...stopped here (AKS)
 
     // unsplit or split cell
     // for skipflag == 1, add only if I own this cell
@@ -1227,7 +1227,7 @@ void ReadRestart::create_child_cells(int skipflag)
   memory->destroy(grid->id_restart);
   memory->destroy(grid->level_restart);
   memory->destroy(grid->nsplit_restart);
-  memory->destroy(grid->dt_restart);
+  memory->destroy(grid->dt_desired_restart);
 }
 
 /* ----------------------------------------------------------------------
@@ -1264,7 +1264,7 @@ void ReadRestart::assign_particles(int skipflag)
     icell = (*hash)[p->icell];
     if (p->nsplit <= 0)
       icell = sinfo[cells[icell].isplit].csubs[-p->nsplit];
-    particle->add_particle(p->id,p->ispecies,icell,p->x,p->v,p->erot,p->evib);
+    particle->add_particle(p->id,p->ispecies,icell,p->x,p->v,p->erot,p->evib,p->time);
     ptr += nbytes_particle;
     if (ncustom) {
       particle->unpack_custom(ptr,particle->nlocal-1);

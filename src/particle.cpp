@@ -197,10 +197,10 @@ void Particle::init()
 
   //if (maxgrid < grid->nlocal) {
   //  maxgrid = grid->nlocal;
-    //    memory->destroy(cellcount);
-    //memory->destroy(first);
-    //memory->create(first,maxgrid,"particle:first");
-    //memory->create(cellcount,maxgrid,"particle:cellcount");
+  //    memory->destroy(cellcount);
+  //memory->destroy(first);
+  //memory->create(first,maxgrid,"particle:first");
+  //memory->create(cellcount,maxgrid,"particle:cellcount");
   // }
 }
 
@@ -211,7 +211,7 @@ void Particle::init()
    inner while loop avoids overwrite with deleted particle at end of mlist
    called every step from Comm::migrate_particles() when particles migrate
    this is similar to compress_reactions(), but does not need
-     an auxiliary vector b/c indices are in ascending order
+   an auxiliary vector b/c indices are in ascending order
    this does NOT preserve particle sorting
 ------------------------------------------------------------------------- */
 
@@ -271,8 +271,8 @@ void Particle::compress_rebalance()
     int i = 0;
     while (i < nlocal) {
       if (particles[i].icell < 0) {
-	memcpy(&particles[i],&particles[nlocal-1],nbytes);
-	nlocal--;
+        memcpy(&particles[i],&particles[nlocal-1],nbytes);
+        nlocal--;
       } else i++;
     }
 
@@ -280,9 +280,9 @@ void Particle::compress_rebalance()
     int i = 0;
     while (i < nlocal) {
       if (particles[i].icell < 0) {
-	memcpy(&particles[i],&particles[nlocal-1],nbytes);
-	copy_custom(i,nlocal-1);
-	nlocal--;
+        memcpy(&particles[i],&particles[nlocal-1],nbytes);
+        copy_custom(i,nlocal-1);
+        nlocal--;
       } else i++;
     }
   }
@@ -358,11 +358,11 @@ void Particle::compress_rebalance_sorted()
    dellist indices can be in ANY order
    overwrite deleted particle with particle from end of nlocal list
    use of next vector does bookkeeping for particles
-     that are moved from their original location before they are deleted
+   that are moved from their original location before they are deleted
    called from Collide::migrate_particles() each timestep
-     if any particles were deleted by gas-phase collision reactions
+   if any particles were deleted by gas-phase collision reactions
    this is similar to compress_migrate(), but needs to use
-     an auxiliary vector b/c indices are in random order
+   an auxiliary vector b/c indices are in random order
 ------------------------------------------------------------------------- */
 
 void Particle::compress_reactions(int ndelete, int *dellist)
@@ -546,7 +546,7 @@ void Particle::post_weight()
     if (ratio < 1.0) {
       if (wrandom->uniform() > ratio) {
         memcpy(&particles[i],&particles[nlocal-1],nbytes);
-	if (ncustom) copy_custom(i,nlocal-1);
+        if (ncustom) copy_custom(i,nlocal-1);
         if (nlocal > nlocal_original) i++;
         else nlocal_original--;
         nlocal--;
@@ -590,7 +590,7 @@ void Particle::grow(int nextra)
   maxlocal = newmax;
   particles = (OnePart *)
     memory->srealloc(particles,maxlocal*sizeof(OnePart),
-		     "particle:particles");
+                     "particle:particles");
   memset(&particles[oldmax],0,(maxlocal-oldmax)*sizeof(OnePart));
 
   if (ncustom == 0) return;
@@ -615,9 +615,9 @@ void Particle::grow_species()
 /* ----------------------------------------------------------------------
    grow next list if more particles now exist than there is room for
    called from Grid::unpack_particles_adapt() when grid adaptation
-     takes place and acquire particles from other procs due to coarsening
+   takes place and acquire particles from other procs due to coarsening
    unlike sort(), this requires next list be grown, not destroy/create
-     b/c sorted particle list is maintained during adaptation
+   b/c sorted particle list is maintained during adaptation
 ------------------------------------------------------------------------- */
 
 void Particle::grow_next()
@@ -658,6 +658,43 @@ int Particle::add_particle(int id, int ispecies, int icell,
   p->v[2] = v[2];
   p->erot = erot;
   p->evib = evib;
+  p->flag = PKEEP;
+
+  //p->dtremain = 0.0;    not needed due to memset in grow() ??
+  //p->weight = 1.0;      not needed due to memset in grow() ??
+
+  nlocal++;
+  return reallocflag;
+}
+
+/* ----------------------------------------------------------------------
+   add a particle to particle list
+   return 1 if particle array was reallocated, else 0
+------------------------------------------------------------------------- */
+
+int Particle::add_particle(int id, int ispecies, int icell,
+                           double *x, double *v, double erot, double evib, double time)
+{
+  int reallocflag = 0;
+  if (nlocal == maxlocal) {
+    grow(1);
+    reallocflag = 1;
+  }
+
+  OnePart *p = &particles[nlocal];
+
+  p->id = id;
+  p->ispecies = ispecies;
+  p->icell = icell;
+  p->x[0] = x[0];
+  p->x[1] = x[1];
+  p->x[2] = x[2];
+  p->v[0] = v[0];
+  p->v[1] = v[1];
+  p->v[2] = v[2];
+  p->erot = erot;
+  p->evib = evib;
+  p->time = time;
   p->flag = PKEEP;
 
   //p->dtremain = 0.0;    not needed due to memset in grow() ??
@@ -881,8 +918,8 @@ void Particle::add_species(int narg, char **arg)
       if ((species[ii].rotdof == 0) ||
           (species[ii].rotdof == 2 && ntemp != 1) ||
           (species[ii].rotdof == 3 && ntemp != 3))
-          error->all(FLERR,"Mismatch between species rotdof "
-                     "and rotation file entry");
+        error->all(FLERR,"Mismatch between species rotdof "
+                   "and rotation file entry");
 
       species[ii].nrottemp = ntemp;
       for (k = 0; k < ntemp; k++) {
@@ -1039,7 +1076,7 @@ double Particle::erot(int isp, double temp_thermal, RanKnuth *erandom)
    generate random vibrational energy for a particle
    only a function of species index and species properties
    index_vibmode = index of extra per-particle vibrational mode storage
-     -1 if not defined for this model
+   -1 if not defined for this model
 ------------------------------------------------------------------------- */
 
 double Particle::evib(int isp, double temp_thermal, RanKnuth *erandom)
@@ -1105,8 +1142,8 @@ void Particle::read_species_file()
     if (nfile == maxfile) {
       maxfile += DELTASPECIES;
       filespecies = (Species *)
-	memory->srealloc(filespecies,maxfile*sizeof(Species),
-			 "particle:filespecies");
+        memory->srealloc(filespecies,maxfile*sizeof(Species),
+                         "particle:filespecies");
       memset(&filespecies[nfile],0,(maxfile-nfile)*sizeof(Species));
     }
 
@@ -1191,8 +1228,8 @@ void Particle::read_rotation_file()
     if (nfile == maxfile) {
       maxfile += DELTASPECIES;
       filerot = (RotFile *)
-	memory->srealloc(filerot,maxfile*sizeof(RotFile),
-			 "particle:filerot");
+        memory->srealloc(filerot,maxfile*sizeof(RotFile),
+                         "particle:filerot");
       memset(&filerot[nfile],0,(maxfile-nfile)*sizeof(RotFile));
     }
 
@@ -1249,8 +1286,8 @@ void Particle::read_vibration_file()
     if (nfile == maxfile) {
       maxfile += DELTASPECIES;
       filevib = (VibFile *)
-	memory->srealloc(filevib,maxfile*sizeof(VibFile),
-			 "particle:filevib");
+        memory->srealloc(filevib,maxfile*sizeof(VibFile),
+                         "particle:filevib");
       memset(&filevib[nfile],0,(maxfile-nfile)*sizeof(VibFile));
     }
 
@@ -1740,7 +1777,7 @@ void Particle::grow_custom(int index, int nold, int nnew)
    remove a custom attribute at location index
    free memory for name and vector/array and set ptrs to NULL
    ncustom lists never shrink, but indices stored between
-     the ncustom list and the dense vector/array lists must be reset
+   the ncustom list and the dense vector/array lists must be reset
 ------------------------------------------------------------------------- */
 
 void Particle::remove_custom(int index)

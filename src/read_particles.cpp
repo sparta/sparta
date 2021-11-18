@@ -91,9 +91,9 @@ void ReadParticles::command(int narg, char **arg)
   MPI_Bcast(&np,1,MPI_INT,0,world);
 
   // read, broadcast, and process particles from snapshot in chunks
-  // for now, assume fields are ID,ispecies,x,y,z,vx,vy,vz
+  // for now, assume fields are ID,ispecies,x,y,z,vx,vy,vz,particle_time
 
-  int nfield = 8;
+  int nfield = 9;
   double **fields;
   memory->create(fields,CHUNK,nfield,"read_particles:fields");
 
@@ -176,7 +176,7 @@ void ReadParticles::command(int narg, char **arg)
 /* ----------------------------------------------------------------------
    process N particles and their fields read from dump file
    store the ones in grid cells I own
-   for now, assume fields are id,x,y,z,vx,vy,vz
+   for now, assume fields are id,ispecies,x,y,z,vx,vy,vz,particle_time
 ------------------------------------------------------------------------- */
 
 void ReadParticles::process_particles(int n, int, double **fields)
@@ -211,8 +211,9 @@ void ReadParticles::process_particles(int n, int, double **fields)
     v[0] = fields[i][5];
     v[1] = fields[i][6];
     v[2] = fields[i][7];
+    double const particle_time = fields[i][8];
 
-    particle->add_particle(id,ispecies,icell,x,v,0.0,0.0);
+    particle->add_particle(id,ispecies,icell,x,v,0.0,0.0,particle_time);
   }
 }
 
