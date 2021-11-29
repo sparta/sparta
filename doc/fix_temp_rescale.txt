@@ -10,7 +10,7 @@ fix temp/rescale command :h3
 
 [Syntax:]
 
-fix ID temp/rescale N Tstart Tstop:pre
+fix ID temp/rescale N Tstart Tstop :pre
 
 ID is documented in "fix"_fix.html command
 temp/rescale = style name of this fix command
@@ -24,12 +24,12 @@ fix 5 temp/rescale 10 300.0 10.0 :pre
 
 [Description:]
 
-Reset the thermal temperature of all the particles within each grid by
-explicitly rescaling their thermal velocities.  This is a simple
-thermostatting operation to keep the thermal temperature of the gas
-near the desired target temperature. This can be useful if an external
-driving force is adding energy to the system.  Or if you wish the
-thermal temperature of the system to heat or cool over time.
+Reset the thermal temperature of all the particles within each grid
+cell by explicitly rescaling their thermal velocities.  This is a
+simple thermostatting operation to keep the thermal temperature of the
+gas near the desired target temperature. This can be useful if an
+external driving force is adding energy to the system.  Or if you wish
+the thermal temperature of the system to heat or cool over time.
 
 The rescaling is applied to only the translational degrees of freedom
 for the particles.  Their rotational or vibrational degrees of freedom

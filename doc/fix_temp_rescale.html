@@ -13,8 +13,8 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<P>fix ID temp/rescale N Tstart Tstop:pre
-</P>
+<PRE>fix ID temp/rescale N Tstart Tstop 
+</PRE>
 <UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command
 <LI>temp/rescale = style name of this fix command
 <LI>N = thermostat every N timesteps
@@ -27,12 +27,12 @@ fix 5 temp/rescale 10 300.0 10.0
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Reset the thermal temperature of all the particles within each grid by
-explicitly rescaling their thermal velocities.  This is a simple
-thermostatting operation to keep the thermal temperature of the gas
-near the desired target temperature. This can be useful if an external
-driving force is adding energy to the system.  Or if you wish the
-thermal temperature of the system to heat or cool over time.
+<P>Reset the thermal temperature of all the particles within each grid
+cell by explicitly rescaling their thermal velocities.  This is a
+simple thermostatting operation to keep the thermal temperature of the
+gas near the desired target temperature. This can be useful if an
+external driving force is adding energy to the system.  Or if you wish
+the thermal temperature of the system to heat or cool over time.
 </P>
 <P>The rescaling is applied to only the translational degrees of freedom
 for the particles.  Their rotational or vibrational degrees of freedom
