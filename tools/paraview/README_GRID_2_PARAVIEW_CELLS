@@ -2,12 +2,12 @@
 ** Important **
 
 Refer first to the README file in this directory if you are unfamilair with
-the basic Sparta ParaView tools. This file contains a description of two more
-advanced tools for processing large Sparta grid output in parallel.
+the basic SPARTA ParaView tools. This file contains a description of two more
+advanced tools for processing large SPARTA grid output in parallel.
 
 ----------
 
-When Sparta grids contain a large amount of grid refinement concentrated in
+When SPARTA grids contain a large amount of grid refinement concentrated in
 small areas of the grid, the tool grid2paraview.py tends to run out of memory
 because it depends on a static distribution of cells to processors in terms of
 grid chunks defined at the top level of the grid. To overcome this memory issue,
@@ -15,14 +15,14 @@ two new ParaView tools were developed:
 
 sort_sparta_grid_file.py and grid2paraview_cells.py
 
-The program sort_sparta_grid_file.py takes as input a Sparta grid file and uses
+The program sort_sparta_grid_file.py takes as input a SPARTA grid file and uses
 the parallel bucket sort algorithm to sort the grid cells into the same number
 of files as MPI ranks used to run the program.
 
 % mpiexec -np 4 pvbatch -sym sort_sparta_grid_file.py data.grid
 
 The program must be run using the ParaView pvbatch program with the -sym argument.
-The above command line will produce 4 output files containing Sparta grid dashed ids
+The above command line will produce 4 output files containing SPARTA grid dashed ids
 of cells located in the same area of the grid. The output file names are based on
 the name of the *.grid file used as input (data.grid in this case). The output files
 will be named as shown below.
@@ -42,7 +42,7 @@ and PVD file output.
 The program must be run using the ParaView pvbatch program with the -sym argument.
 The above command line will produce an output.pvd file and a directory name output/
 containing the ParaView VTU file data. The grid.txt file must contain a read_grid
-statement with the path to a Sparta grid cell output file, and is otherwise the same
+statement with the path to a SPARTA grid cell output file, and is otherwise the same
 as the grid2paraview.py version. The option --float outputs float precision numbers
 to the VTU files to save memory (default is double precision). The --variables option
 limits the output arrays to the names given on the command line (default is all variable
