@@ -14,29 +14,37 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(temp/rescale,FixTempRescale)
+FixStyle(temp/rescale/kk,FixTempRescaleKokkos)
 
 #else
 
-#ifndef SPARTA_FIX_TEMP_RESCALE_H
-#define SPARTA_FIX_TEMP_RESCALE_H
+#ifndef SPARTA_FIX_TEMP_RESCALE_KOKKOS_H
+#define SPARTA_FIX_TEMP_RESCALE_KOKKOS_H
 
-#include "stdio.h"
-#include "fix.h"
+#include "fix_temp_rescale.h"
+#include "kokkos_type.h"
 
 namespace SPARTA_NS {
 
-class FixTempRescale : public Fix {
- public:
-  FixTempRescale(class SPARTA *, int, char **);
-  virtual ~FixTempRescale() {}
-  int setmask();
-  void init();
-  virtual void end_of_step();
+struct TagFixTempRescale_end_of_step{};
 
- protected:
-  double tstart,tstop;
-  double tprefactor;
+class FixTempRescaleKokkos : public FixTempRescale {
+ public:
+  FixTempRescaleKokkos(class SPARTA *, int, char **);
+  virtual ~FixTempRescaleKokkos() {}
+  void end_of_step();
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagFixTempRescale_end_of_step, const int&) const;
+
+ private:
+  double t_target;
+
+  t_particle_1d d_particles;
+  t_species_1d d_species;
+
+  DAT::t_int_1d d_cellcount;
+  DAT::t_int_2d d_plist;
 };
 
 }
