@@ -63,7 +63,11 @@ void FixTempRescaleKokkos::end_of_step()
 
   int nglocal = grid->nlocal;
 
+  copymode = 1;
+
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixTempRescale_end_of_step>(0,nglocal),*this);
+
+  copymode = 0;
 }
 
 /* ---------------------------------------------------------------------- */
