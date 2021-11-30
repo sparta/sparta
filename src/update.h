@@ -81,6 +81,15 @@ class Update : protected Pointers {
 
   double rcblo[3],rcbhi[3];    // debug info from RCB for dump image
 
+  // this info accessed by SurfReactAdsorb to do on-surface reaction tallying
+
+  int nsurf_tally;         // # of Cmp tallying surf bounce info this step
+  int nboundary_tally;     // # of Cmp tallying boundary bounce info this step
+  class Compute **slist_active;   // list of active surf Computes this step
+  class Compute **blist_active;   // list of active boundary Computes this step
+
+  // public methods
+
   Update(class SPARTA *);
   ~Update();
   void set_units(const char *);
@@ -108,11 +117,6 @@ class Update : protected Pointers {
   int nblist_compute;             // # of computes that tally boundary bounces
   class Compute **slist_compute;  // list of all surf bounce Computes
   class Compute **blist_compute;  // list of all boundary bounce Computes
-
-  int nsurf_tally;         // # of Cmp tallying surf bounce info this step
-  int nboundary_tally;     // # of Cmp tallying boundary bounce info this step
-  class Compute **slist_active;   // list of active surf Computes this step
-  class Compute **blist_active;   // list of active boundary Computes this step
 
   int surf_pre_tally;       // 1 to log particle stats before surf collide
   int boundary_pre_tally;   // 1 to log particle stats before boundary collide

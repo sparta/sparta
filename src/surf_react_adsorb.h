@@ -206,6 +206,12 @@ class SurfReactAdsorb : public SurfReact {
 
   class SurfCollide **cmodels;
 
+  // pointers to Compute instances which tally reactions on per-surf basis
+  // extracted from Update class
+
+  int ncompute_tally;
+  class Compute **clist_active;
+
   // GS methods
 
   void init_reactions_gs();

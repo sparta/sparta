@@ -30,6 +30,7 @@
 #include "collide_vss.h"
 #include "surf_collide.h"
 #include "style_surf_collide.h"
+#include "compute_react_surf.h"
 #include "random_mars.h"
 #include "random_knuth.h"
 #include "math_const.h"
@@ -1139,6 +1140,17 @@ void SurfReactAdsorb::PS_chemistry()
   // zero the mypart vector of particles this proc is adding
 
   npart = 0;
+
+  // extract list of Computes which tally reactions from Update
+  // used by PS_react() to tally on-surface reactions
+
+  if (mode == FACE) {
+    ncompute_tally = update->nboundary_tally;
+    clist_active = update->blist_active;
+  } else if (mode == SURF) {
+    ncompute_tally = update->nsurf_tally;
+    clist_active = update->slist_active;
+  }
 
   // for box faces: a single proc updates all faces
   // for surf elements: each proc updates every Pth surf it owns
@@ -2678,7 +2690,6 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
 {
   // mark this surface element since performing on-surf chemistry
 
-
   if (mode == SURF) mark[isurf] = 1;
 
   // use these 5 data structs for either faces or surface elements
@@ -2785,6 +2796,8 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
     double react_prob = 0.0;
     int check_break = 0;
 
+    int m,ireaction;
+
     for (int i = 0; i < nactive_ps; i++) {
       react_prob += nu_tau[i]*sum_inv;
       if (react_prob > random_prob) {
@@ -2793,13 +2806,22 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
         r = &rlist_ps[reactions_ps_list[i]];
         //int react_num = r->index;
 
+        // if computes which tally on-surface reactions exist:
+        //    invoke them here so can be tallied on a per-surf basis
+        //    Update::run() does same thing for gas/surf reactions
+
         nsingle++;
-        tally_single[nlist_gs+reactions_ps_list[i]]++;
+        ireaction = nlist_gs + reactions_ps_list[i];
+        tally_single[ireaction]++;
+        if (ncompute_tally)
+          for (m = 0; m < ncompute_tally; m++)
+            clist_active[m]->surf_tally(isurf,-1,ireaction,NULL,NULL,NULL);
+
+        // update tau
 
         double t = -log(random->uniform())/nu_react[i];
         //tau[isurf][react_num] -= t;
         tau[isurf][i] -= t;
-
 
         for (int j=0;j<r->nreactant;j++) {
           if (r->part_reactants[j] == 1) {

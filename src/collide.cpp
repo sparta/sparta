@@ -177,7 +177,7 @@ void Collide::init()
     }
     if (flag) {
       char str[128];
-      sprintf(str,"%d species do not define corrent rotational "
+      sprintf(str,"%d species do not define correct rotational "
               "temps for discrete model",flag);
       error->all(FLERR,str);
     }
