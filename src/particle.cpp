@@ -1131,12 +1131,9 @@ void Particle::read_species_file()
     else fsp->internaldof = 0;
 
     // error checks
-    // NOTE: allow rotdof = 3 when implement rotate = DISCRETE
 
-    if (fsp->rotdof != 0 && fsp->rotdof != 2)
+    if (fsp->rotdof != 0 && fsp->rotdof != 2 && fsp->rotdof != 3)
       error->all(FLERR,"Invalid rotational DOF in species file");
-    //if (fsp->rotdof != 0 && fsp->rotdof != 2 && fsp->rotdof != 3)
-    //  error->all(FLERR,"Invalid rotational DOF in species file");
 
     if (fsp->vibdof < 0 || fsp->vibdof > 8 || fsp->vibdof % 2)
       error->all(FLERR,"Invalid vibrational DOF in species file");
