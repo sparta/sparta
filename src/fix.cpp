@@ -50,6 +50,7 @@ Fix::Fix(SPARTA *sparta, int, char **arg) : Pointers(sparta)
 
   scalar_flag = vector_flag = array_flag = 0;
   per_particle_flag = per_grid_flag = per_surf_flag = 0;
+  per_particle_field = per_grid_field = 0;
 
   // mask settings - same as in modify.cpp
 

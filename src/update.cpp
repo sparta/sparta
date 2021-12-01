@@ -178,10 +178,12 @@ void Update::init()
   } else if (fstyle == PFIELD) {
     ifieldfix = modify->find_fix(fieldID);
     if (ifieldfix < 0) error->all(FLERR,"External field fix ID not found");
-    // NOTE: check if fix is compatible with per-particle external field ?
+    if (!modify->fix[ifieldfix]->per_particle_field)
+      error->all(FLERR,"External field fix does not compute necessary field");
   } else if (fstyle == GFIELD) {
     if (ifieldfix < 0) error->all(FLERR,"External field fix ID not found");
-    // NOTE: check if fix is compatible with per-grid external field ?
+    if (!modify->fix[ifieldfix]->per_grid_field)
+      error->all(FLERR,"External field fix does not compute necessary field");
   }
 
   // moveperturb method is set if external field perturbs particle motion
@@ -193,8 +195,10 @@ void Update::init()
     if (domain->dimension == 3) moveperturb = &Update::field3d;
   } else if (fstyle == PFIELD) {
     moveperturb = &Update::field_per_particle;
+    field_active = modify->fix[ifieldfix]->field_active;
   } else if (fstyle == GFIELD) {
     moveperturb = &Update::field_per_grid;
+    field_active = modify->fix[ifieldfix]->field_active;
   }
 
   if (moveperturb) perturbflag = 1;
@@ -303,19 +307,6 @@ void Update::run(int nsteps)
   }
 }
 
-void Update::field_per_particle(int i, double dt, double *x, double *v)
-{
-  double dtsq = 0.5*dt*dt;
-  double **array = modify->fix[ifieldfix]->array_particle;
-  x[0] += dtsq*array[i][0];
-  x[1] += dtsq*array[i][1];
-  x[2] += dtsq*array[i][2];
-
-  int ispecies = particle->particles[i].ispecies;
-  double mass = particle->species[ispecies].mass;
-  double magmoment = particle->species[ispecies].mass;
-};
-
 /* ----------------------------------------------------------------------
    advect particles thru grid
    DIM = 2/3 for 2d/3d, 1 for 2d axisymmetric
@@ -374,11 +365,11 @@ template < int DIM, int SURF > void Update::move()
   double dt = update->dt;
 
   // external per-particle field
-  // invoke fieldID fix to compute field on all owned particles
+  // fieldID fix calculates field acing on all owned particles
 
   if (fstyle == PFIELD) modify->fix[ifieldfix]->compute_field();
 
-  // loop over particles
+  // one or more loops over particles
   // first iteration = all my particles
   // subsequent iterations = received particles
 
@@ -421,13 +412,15 @@ template < int DIM, int SURF > void Update::move()
         xnew[0] = x[0] + dtremain*v[0];
         xnew[1] = x[1] + dtremain*v[1];
         if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
-        if (perturbflag) (this->*moveperturb)(i,dtremain,xnew,v);
+        if (perturbflag) 
+          (this->*moveperturb)(i,particles[i].icell,dtremain,xnew,v);
       } else if (pflag == PINSERT) {
         dtremain = particles[i].dtremain;
         xnew[0] = x[0] + dtremain*v[0];
         xnew[1] = x[1] + dtremain*v[1];
         if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
-        if (perturbflag) (this->*moveperturb)(i,dtremain,xnew,v);
+        if (perturbflag) 
+          (this->*moveperturb)(i,particles[i].icell,dtremain,xnew,v);
       } else if (pflag == PENTRY) {
         icell = particles[i].icell;
         if (cells[icell].nsplit > 1) {
@@ -1197,6 +1190,44 @@ template < int DIM, int SURF > void Update::move()
   nscollide_running += nscollide_one;
   surf->nreact_running += surf->nreact_one;
 }
+
+/* ----------------------------------------------------------------------
+   calculate motion perturbation for a single particle I
+     due to external per particle field
+   array in fix[ifieldfix] stores per particle perturbations for x and v
+------------------------------------------------------------------------- */
+
+void Update::field_per_particle(int i, int icell, double dt, double *x, double *v)
+{
+  double dtsq = 0.5*dt*dt;
+  double **array = modify->fix[ifieldfix]->array_particle;
+  int icol = 0;
+  if (field_active[0]) x[0] += dtsq*array[i][icol++];
+  if (field_active[1]) x[1] += dtsq*array[i][icol++];
+  if (field_active[2]) x[2] += dtsq*array[i][icol++];
+  if (field_active[3]) v[0] += dtsq*array[i][icol++];
+  if (field_active[4]) v[1] += dtsq*array[i][icol++];
+  if (field_active[5]) v[2] += dtsq*array[i][icol++];
+};
+
+/* ----------------------------------------------------------------------
+   calculate motion perturbation for a single particle I in grid cell Icell
+     due to external per grid cell field
+   array in fix[ifieldfix] stores per grid cell perturbations for x and v
+------------------------------------------------------------------------- */
+
+void Update::field_per_grid(int i, int icell, double dt, double *x, double *v)
+{
+  double dtsq = 0.5*dt*dt;
+  double **array = modify->fix[ifieldfix]->array_grid;
+  int icol = 0;
+  if (field_active[0]) x[0] += dtsq*array[icell][icol++];
+  if (field_active[1]) x[1] += dtsq*array[icell][icol++];
+  if (field_active[2]) x[2] += dtsq*array[icell][icol++];
+  if (field_active[3]) v[0] += dtsq*array[icell][icol++];
+  if (field_active[4]) v[1] += dtsq*array[icell][icol++];
+  if (field_active[5]) v[2] += dtsq*array[icell][icol++];
+};
 
 /* ----------------------------------------------------------------------
    particle is entering split parent icell at x

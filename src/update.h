@@ -43,6 +43,7 @@ class Update : protected Pointers {
   double field[3];       // constant external field
   char *fieldID;         // fix ID for PFIELD or GFIELD
   int ifieldfix;         // index of external field fix
+  int *field_active;     // ptr to field_active flags in fix
 
   int nmigrate;          // # of particles to migrate to new procs
   int *mlist;            // indices of particles to migrate
@@ -167,13 +168,13 @@ class Update : protected Pointers {
   template < int, int > void move();
 
   int perturbflag;
-  typedef void (Update::*FnPtr2)(int, double, double *, double *);
+  typedef void (Update::*FnPtr2)(int, int, double, double *, double *);
   FnPtr2 moveperturb;        // ptr to moveperturb method
 
   // variants of moveperturb method
   // adjust end-of-move x,v due to perturbation on straight-line advection
 
-  inline void field2d(int i, double dt, double *x, double *v) {
+  inline void field2d(int i, int icell, double dt, double *x, double *v) {
     double dtsq = 0.5*dt*dt;
     x[0] += dtsq*field[0];
     x[1] += dtsq*field[1];
@@ -181,7 +182,7 @@ class Update : protected Pointers {
     v[1] += dt*field[1];
   };
 
-  inline void field3d(int i, double dt, double *x, double *v) {
+  inline void field3d(int i, int icell, double dt, double *x, double *v) {
     double dtsq = 0.5*dt*dt;
     x[0] += dtsq*field[0];
     x[1] += dtsq*field[1];
@@ -193,8 +194,8 @@ class Update : protected Pointers {
 
   // NOTE: cannot be inline b/c ref to modify->fix[] is not supported
   //       unless possibly include modify.h and fix.h in this file
-  void field_per_particle(int, double, double *, double *);
-  void field_per_grid(int, double, double *, double *) {}
+  void field_per_particle(int, int, double, double *, double *);
+  void field_per_grid(int, int, double, double *, double *);
 };
 
 }

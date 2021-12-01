@@ -54,21 +54,21 @@ FixFieldParticle::FixFieldParticle(SPARTA *sparta, int narg, char **arg) :
     ncols++;
   }
 
-  if (strcmp(arg[5],"NULL") == 0) xstr = NULL;
+  if (strcmp(arg[5],"NULL") == 0) vxstr = NULL;
   else {
     int n = strlen(arg[5]) + 1;
     vxstr = new char[n];
     strcpy(vxstr,arg[5]);
     ncols++;
   }
-  if (strcmp(arg[6],"NULL") == 0) ystr = NULL;
+  if (strcmp(arg[6],"NULL") == 0) vystr = NULL;
   else {
     int n = strlen(arg[6]) + 1;
     vystr = new char[n];
     strcpy(vystr,arg[6]);
     ncols++;
   }
-  if (strcmp(arg[7],"NULL") == 0) zstr = NULL;
+  if (strcmp(arg[7],"NULL") == 0) vzstr = NULL;
   else {
     int n = strlen(arg[7]) + 1;
     vzstr = new char[n];
@@ -81,6 +81,16 @@ FixFieldParticle::FixFieldParticle(SPARTA *sparta, int narg, char **arg) :
   per_particle_flag = 1;
   size_per_particle_cols = ncols;
   per_particle_freq = 1;
+  per_particle_field = 1;
+
+  field_active[0] = field_active[1] = field_active[2] = 0;
+  field_active[3] = field_active[4] = field_active[5] = 0;
+  if (xstr) field_active[0] = 1;
+  if (ystr) field_active[1] = 1;
+  if (zstr) field_active[2] = 1;
+  if (vxstr) field_active[3] = 1;
+  if (vystr) field_active[4] = 1;
+  if (vzstr) field_active[5] = 1;
 
   // per-particle memory initialization
 
@@ -91,7 +101,14 @@ FixFieldParticle::FixFieldParticle(SPARTA *sparta, int narg, char **arg) :
 /* ---------------------------------------------------------------------- */
 
 FixFieldParticle::~FixFieldParticle()
-{
+{  
+  delete [] xstr;
+  delete [] ystr;
+  delete [] zstr;
+  delete [] vxstr;
+  delete [] vystr;
+  delete [] vzstr;
+  
   memory->destroy(array_particle);
 }
 

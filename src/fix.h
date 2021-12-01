@@ -58,6 +58,10 @@ class Fix : protected Pointers {
   double *vector_surf;           // computed per-surf vector
   double **array_surf;           // computed per-surf array
 
+  int per_particle_field;        // 0/1 if produces per-particle external field
+  int per_grid_field;            // 0/1 if produces per-grid external field
+  int field_active[6];           // 0/1 for active x,v components of ext field
+
   int START_OF_STEP,END_OF_STEP;    // mask settings
 
   int kokkos_flag;              // 0/1 if Kokkos fix
