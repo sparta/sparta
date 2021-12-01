@@ -378,7 +378,7 @@ This is indicated by additional letters in parenthesis: k = KOKKOS.
 
 "ablate"_fix_ablate.html,
 "adapt (k)"_fix_adapt.html,
-"ambipolar"_fix_ambipolar.html,
+"ambipolar (k)"_fix_ambipolar.html,
 "ave/grid (k)"_fix_ave_grid.html,
 "ave/histo (k)"_fix_ave_histo.html,
 "ave/histo/weight (k)"_fix_ave_histo.html,

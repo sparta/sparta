@@ -337,17 +337,17 @@ void ComputeReduce::init()
   if (subsetID) {
     if (flavor[0] == PARTICLE) {
       int imix = particle->find_mixture(subsetID);
-      if (imix < 0) 
+      if (imix < 0)
         error->all(FLERR,"Compute reduce particle mixture ID does not exist");
       s2g = particle->mixture[imix]->species2group;
     } else if (flavor[0] == GRID) {
       int igroup = grid->find_group(subsetID);
-      if (igroup < 0) 
+      if (igroup < 0)
         error->all(FLERR,"Compute reduce grid group ID does not exist");
       gridgroupbit = grid->bitmask[igroup];
     } else if (flavor[0] == SURF) {
       int igroup = surf->find_group(subsetID);
-      if (isubset < 0) 
+      if (isubset < 0)
         error->all(FLERR,"Compute reduce surf group ID does not exist");
       surfgroupbit = surf->bitmask[igroup];
     }

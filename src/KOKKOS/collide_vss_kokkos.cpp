@@ -30,6 +30,9 @@
 #include "error.h"
 #include "kokkos.h"
 #include "sparta_masks.h"
+#include "modify.h"
+#include "fix.h"
+#include "fix_ambipolar.h"
 
 using namespace SPARTA_NS;
 using namespace MathConst;
@@ -60,8 +63,8 @@ CollideVSSKokkos::CollideVSSKokkos(SPARTA *sparta, int narg, char **arg) :
 
   // use 1D view for scalars to reduce GPU memory operations
 
-  d_scalars = t_int_10("collide:scalars");
-  h_scalars = t_host_int_10("collide:scalars_mirror");
+  d_scalars = t_int_11("collide:scalars");
+  h_scalars = t_host_int_11("collide:scalars_mirror");
 
   d_nattempt_one = Kokkos::subview(d_scalars,0);
   d_ncollide_one = Kokkos::subview(d_scalars,1);
@@ -73,6 +76,7 @@ CollideVSSKokkos::CollideVSSKokkos(SPARTA *sparta, int narg, char **arg) :
   d_part_grow    = Kokkos::subview(d_scalars,7);
   d_ndelete      = Kokkos::subview(d_scalars,8);
   d_nlocal       = Kokkos::subview(d_scalars,9);
+  d_maxelectron  = Kokkos::subview(d_scalars,10);
 
   h_nattempt_one = Kokkos::subview(h_scalars,0);
   h_ncollide_one = Kokkos::subview(h_scalars,1);
@@ -84,6 +88,7 @@ CollideVSSKokkos::CollideVSSKokkos(SPARTA *sparta, int narg, char **arg) :
   h_part_grow    = Kokkos::subview(h_scalars,7);
   h_ndelete      = Kokkos::subview(h_scalars,8);
   h_nlocal       = Kokkos::subview(h_scalars,9);
+  h_maxelectron  = Kokkos::subview(h_scalars,10);
 
   random_backup = NULL;
   react_random_backup = NULL;
@@ -100,6 +105,7 @@ CollideVSSKokkos::~CollideVSSKokkos()
   react_kk_copy.uncopy();
 
   memoryKK->destroy_kokkos(k_dellist,dellist);
+  memoryKK->destroy_kokkos(k_elist,elist);
 
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.destroy();
@@ -121,9 +127,9 @@ void CollideVSSKokkos::init()
   if (nparams != particle->nspecies)
     error->all(FLERR,"VSS parameters do not match current species");
 
-  //if (ambiflag && nearcp)
-  //  error->all(FLERR,"Ambipolar collision model does not yet support "
-  //             "near-neighbor collisions");
+  if (ambiflag && nearcp)
+    error->all(FLERR,"Ambipolar collision model does not yet support "
+               "near-neighbor collisions");
 
   // require mixture to contain all species
 
@@ -247,25 +253,35 @@ void CollideVSSKokkos::init()
         h_recomb_ijflag(i,j) = react->recomb_exist(i,j);
     Kokkos::deep_copy(d_recomb_ijflag,h_recomb_ijflag);
   }
-  //
-  //// find ambipolar fix
-  //// set ambipolar vector/array indices
-  //// if reactions defined, check that they are valid ambipolar reactions
-  //
-  //if (ambiflag) {
-  //  index_ionambi = particle->find_custom((char *) "ionambi");
-  //  index_velambi = particle->find_custom((char *) "velambi");
-  //  if (index_ionambi < 0 || index_velambi < 0)
-  //    error->all(FLERR,"Collision ambipolar without fix ambipolar");
-  //  if (react) react->ambi_check();
-  //
-  //  int ifix;
-  //  for (ifix = 0; ifix < modify->nfix; ifix++)
-  //    if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0) break;
-  //  FixAmbipolar *afix = (FixAmbipolar *) modify->fix[ifix];
-  //  ambispecies = afix->especies;
-  //  ions = afix->ions;
-  //}
+
+  // find ambipolar fix
+  // set ambipolar vector/array indices
+  // if reactions defined, check that they are valid ambipolar reactions
+
+  if (ambiflag) {
+    index_ionambi = particle->find_custom((char *) "ionambi");
+    index_velambi = particle->find_custom((char *) "velambi");
+    if (index_ionambi < 0 || index_velambi < 0)
+      error->all(FLERR,"Collision ambipolar without fix ambipolar");
+    if (react) react->ambi_check();
+
+    int ifix;
+    for (ifix = 0; ifix < modify->nfix; ifix++)
+      if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0) break;
+    FixAmbipolar *afix = (FixAmbipolar *) modify->fix[ifix];
+    ambispecies = afix->especies;
+    ions = afix->ions;
+  }
+
+  // if ambipolar and multiple groups in mixture, ambispecies must be its own group
+
+  if (ambiflag && mixture->ngroup > 1) {
+    int *species2group = mixture->species2group;
+    int egroup = species2group[ambispecies];
+    if (mixture->groupsize[egroup] != 1)
+      error->all(FLERR,"Multigroup ambipolar collisions require "
+                 "electrons be their own group");
+  }
 
   // vre_next = next timestep to zero vremax & remain, based on vre_every
 
@@ -289,8 +305,8 @@ void CollideVSSKokkos::init()
   k_params = tdual_params_2d("collide_vss:params",nparams,nparams);
   k_prefactor = DAT::tdual_float_2d("collide_vss:prefactor",nparams,nparams);
 
-  for (int i=0; i<nparams; i++) {
-    for (int j=0; j<nparams; j++){
+  for (int i = 0; i < nparams; i++) {
+    for (int j = 0; j < nparams; j++){
       k_params.h_view(i,j) = params[i][j];
       k_prefactor.h_view(i,j) = prefactor[i][j];
     }
@@ -325,7 +341,7 @@ void CollideVSSKokkos::reset_vremax()
   DeviceType().fence();
   copymode = 0;
 
-  this->modify(Device,ALL_MASK);
+  this->modified(Device,ALL_MASK);
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -365,26 +381,27 @@ void CollideVSSKokkos::collisions()
   fnum = update->fnum;
   boltz = update->boltz;
 
-  // perform collisions without or with ambipolar approximation
-  // one variant is optimized for a single group
+  // perform collisions:
+  // variant for single group or multiple groups (not yet supported)
+  // variant for nearcp flag or not
+  // variant for ambipolar approximation or not
 
-  if (ambiflag)
-    error->all(FLERR,"Ambipolar collisions not yet supported with Kokkos");
   if (ngroups != 1)
     error->all(FLERR,"Group collisions not yet supported with Kokkos");
 
   COLLIDE_REDUCE reduce;
 
-  if (nearcp == 0)
-    collisions_one<0>(reduce);
-  else
-    collisions_one<1>(reduce);
+  if (!ambiflag) {
+    if (nearcp == 0)
+      collisions_one<0>(reduce);
+    else
+      collisions_one<1>(reduce);
+  } else {
+    collisions_one_ambipolar(reduce);
+  }
 
   // remove any particles deleted in chemistry reactions
   // if particles deleted/created by chemistry, particles are no longer sorted
-  // NOTE: not sure if this is the case, need to check
-  //       important if grid adapt will happen at end of timsestepx
-
 
   if (ndelete) {
     k_dellist.modify_device();
@@ -427,13 +444,9 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 {
   // loop over cells I own
 
-  //Grid::ChildInfo *cinfo = grid->cinfo;
-  //
-  //Particle::OnePart *particles = particle->particles;
-  //int *next = particle->next;
-
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
+  if (vibstyle == DISCRETE) particle_kk->sync(Device,CUSTOM_MASK);
   d_particles = particle_kk->k_particles.d_view;
   d_species = particle_kk->k_species.d_view;
   d_ewhich = particle_kk->k_ewhich.d_view;
@@ -497,6 +510,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
     if (d_particles.extent(0) < particle->nlocal*sparta->kokkos->collide_extra) {
       particle->grow(particle->nlocal*sparta->kokkos->collide_extra);
       d_particles = particle_kk->k_particles.d_view;
+      k_eiarray = particle_kk->k_eiarray;
     }
   }
 
@@ -506,8 +520,8 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
       backup();
 
     h_retry() = 0;
-    h_maxdelete() = 0;
-    h_maxcellcount() = particle_kk->get_maxcellcount();
+    h_maxdelete() = d_dellist.extent(0);
+    h_maxcellcount() = d_plist.extent(1);
     h_part_grow() = 0;
     h_ndelete() = 0;
     h_nlocal() = particle->nlocal;
@@ -554,6 +568,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
         //printf("%i %i\n",h_nlocal(),particle->nlocal);
         particle->grow(h_nlocal() - particle->nlocal);
         d_particles = particle_kk->k_particles.d_view;
+        k_eiarray = particle_kk->k_eiarray;
       }
 
       //printf("Reason %i %i %i !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",h_maxdelete(),h_maxcellcount() > particle_kk->get_maxcellcount(),h_part_grow());
@@ -573,7 +588,6 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
   particle_kk->modify(Device,PARTICLE_MASK);
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
-  d_particles_backup = t_particle_1d(); // destroy reference to reduce memory use
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -749,6 +763,513 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
   }
   rand_pool.free_state(rand_gen);
 }
+
+/* ----------------------------------------------------------------------
+   NTC algorithm for a single group with ambipolar approximation
+------------------------------------------------------------------------- */
+
+void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
+{
+  // ambipolar vectors
+
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
+  d_particles = particle_kk->k_particles.d_view;
+  d_species = particle_kk->k_species.d_view;
+  d_ewhich = particle_kk->k_ewhich.d_view;
+  auto h_ewhich = particle_kk->k_ewhich.h_view;
+  k_eivec = particle_kk->k_eivec;
+  k_eiarray = particle_kk->k_eiarray;
+  k_edarray = particle_kk->k_edarray;
+  d_ionambi = k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view;
+  d_velambi = k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view;
+
+  GridKokkos* grid_kk = (GridKokkos*) grid;
+  grid_kk->sync(Device,CINFO_MASK);
+  d_plist = grid_kk->d_plist;
+
+  grid_kk_copy.copy(grid_kk);
+
+  if (react) {
+    ReactTCEKokkos* react_kk = (ReactTCEKokkos*) react;
+    if (!react_kk)
+      error->all(FLERR,"Must use TCE reactions with Kokkos");
+    react_kk_copy.copy(react_kk);
+  }
+
+  maxcellcount_kk = d_plist.extent(1);
+
+  copymode = 1;
+
+  /* ATOMIC_REDUCTION: 1 = use atomics
+                       0 = don't need atomics
+                      -1 = use parallel_reduce
+  */
+
+  // Reactions may create or delete more particles than existing views can hold.
+  //  Cannot grow a Kokkos view in a parallel loop, so
+  //  if the capacity of the view is exceeded, break out of parallel loop,
+  //  reallocate on the host, and then repeat the parallel loop again.
+  //  Unfortunately this leads to really messy code.
+
+  h_retry() = 1;
+
+  if (react && !sparta->kokkos->collide_retry_flag)
+  {
+    maxelectron = MAX(maxelectron,DELTAELECTRON);
+    if (d_maxelectron.extent(0) < maxelectron) {
+      memoryKK->destroy_kokkos(k_elist,elist);
+      memoryKK->grow_kokkos(k_elist,elist,maxelectron*sparta->kokkos->collide_extra,"collide:elist");
+      d_elist = k_elist.d_view;
+    }
+
+    maxdelete = MAX(maxdelete,DELTADELETE);
+    if (d_dellist.extent(0) < maxdelete) {
+      memoryKK->destroy_kokkos(k_dellist,dellist);
+      memoryKK->grow_kokkos(k_dellist,dellist,maxdelete*sparta->kokkos->collide_extra,"collide:dellist");
+      d_dellist = k_dellist.d_view;
+    }
+
+    auto maxcellcount = particle_kk->get_maxcellcount();
+    int maxcellcount_extra = MAX((double)maxcellcount*sparta->kokkos->collide_extra,maxcellcount+1);
+    if (d_plist.extent(1) < maxcellcount_extra) {
+      Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
+      d_plist = grid_kk->d_plist;
+      maxcellcount_kk = maxcellcount_extra;
+    }
+
+    if (d_particles.extent(0) < particle->nlocal*sparta->kokkos->collide_extra) {
+      particle->grow(particle->nlocal*sparta->kokkos->collide_extra);
+      d_particles = particle_kk->k_particles.d_view;
+      auto h_ewhich = particle_kk->k_ewhich.h_view;
+      k_eivec = particle_kk->k_eivec;
+      k_eiarray = particle_kk->k_eiarray;
+      k_edarray = particle_kk->k_edarray;
+      d_ionambi = k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view;
+      d_velambi = k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view;
+    }
+  }
+
+  while (h_retry()) {
+
+    if (react && sparta->kokkos->collide_retry_flag)
+      backup();
+
+    h_retry() = 0;
+    h_maxelectron() = d_elist.extent(0);
+    h_maxdelete() = d_dellist.extent(0);
+    h_maxcellcount() = d_plist.extent(1);
+    h_part_grow() = 0;
+    h_ndelete() = 0;
+    h_nlocal() = particle->nlocal;
+
+    Kokkos::deep_copy(d_scalars,h_scalars);
+
+    if (sparta->kokkos->atomic_reduction) {
+      if (sparta->kokkos->need_atomics)
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneAmbipolar<1> >(0,nglocal),*this);
+      else
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneAmbipolar<0> >(0,nglocal),*this);
+    } else
+      Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneAmbipolar<-1> >(0,nglocal),*this,reduce);
+
+    Kokkos::deep_copy(h_scalars,d_scalars);
+
+    if (h_retry()) {
+      //printf("Retrying !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+      if (!sparta->kokkos->collide_retry_flag) {
+        error->one(FLERR,"Ran out of space in Kokkos collisions, increase collide/extra"
+                         " or use collide/retry");
+      } else
+        restore();
+      reduce = COLLIDE_REDUCE();
+
+      if (h_maxelectron()) {
+        maxelectron = h_maxelectron();
+        memoryKK->destroy_kokkos(k_elist,elist);
+        memoryKK->grow_kokkos(k_elist,elist,maxelectron,"collide:elist");
+        d_elist = k_elist.d_view;
+      }
+
+      if (h_maxdelete()) {
+        maxdelete = h_maxdelete();
+        memoryKK->destroy_kokkos(k_dellist,dellist);
+        memoryKK->grow_kokkos(k_dellist,dellist,maxdelete,"collide:dellist");
+        d_dellist = k_dellist.d_view;
+      }
+
+      if (h_maxcellcount() > particle_kk->get_maxcellcount()) {
+        //printf("%i %i\n",h_maxcellcount(),particle_kk->get_maxcellcount());
+        maxcellcount_kk = h_maxcellcount();
+        Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_kk);
+        d_plist = grid_kk->d_plist;
+        particle_kk->set_maxcellcount(maxcellcount_kk);
+      }
+
+      if (h_part_grow()) {
+        //printf("%i %i\n",h_nlocal(),particle->nlocal);
+        particle->grow(h_nlocal() - particle->nlocal);
+        d_particles = particle_kk->k_particles.d_view;
+        auto h_ewhich = particle_kk->k_ewhich.h_view;
+        k_eivec = particle_kk->k_eivec;
+        k_eiarray = particle_kk->k_eiarray;
+        k_edarray = particle_kk->k_edarray;
+        d_ionambi = k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view;
+        d_velambi = k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view;
+      }
+
+      //printf("Reason %i %i %i %i !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",h_maxelectron(),h_maxdelete(),h_maxcellcount() > particle_kk->get_maxcellcount(),h_part_grow());
+    }
+  }
+
+  ndelete = h_ndelete();
+
+  particle->nlocal = h_nlocal();
+
+  DeviceType().fence();
+  copymode = 0;
+
+  if (h_error_flag() == 1)
+    error->one(FLERR,"Collision cell volume is zero");
+  else if (h_error_flag() == 2)
+    error->one(FLERR,"Collisions in cell did not conserve electron count");
+
+  particle_kk->modify(Device,PARTICLE_MASK|CUSTOM_MASK);
+
+  d_particles = t_particle_1d(); // destroy reference to reduce memory use
+  d_particles_backup = t_particle_1d(); // destroy reference to reduce memory use
+}
+
+template < int ATOMIC_REDUCTION >
+KOKKOS_INLINE_FUNCTION
+void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUCTION >, const int &icell) const {
+  COLLIDE_REDUCE reduce;
+  this->template operator()< ATOMIC_REDUCTION >(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUCTION >(), icell, reduce);
+}
+
+template < int ATOMIC_REDUCTION >
+KOKKOS_INLINE_FUNCTION
+void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUCTION >, const int &icell, COLLIDE_REDUCE &reduce) const {
+  if (d_retry()) return;
+
+  int np = grid_kk_copy.obj.d_cellcount[icell];
+  if (np <= 1) return;
+
+  const double volume = grid_kk_copy.obj.k_cinfo.d_view[icell].volume / grid_kk_copy.obj.k_cinfo.d_view[icell].weight;
+  if (volume == 0.0) d_error_flag() = 1;
+
+  struct State precoln;       // state before collision
+  struct State postcoln;      // state after collision
+
+  int i,j;
+  Particle::OnePart *ipart,*jpart,*kpart,*p,*ep;
+
+  rand_type rand_gen = rand_pool.get_state();
+
+  // setup elist of ionized electrons for this cell
+  // create them in separate array since will never become real particles
+
+  if (np >= maxelectron) {
+    d_retry() = 1;
+    while (d_maxelectron() < np) d_maxelectron() += DELTAELECTRON;
+    rand_pool.free_state(rand_gen);
+    return;
+  }
+
+  // create electrons for ambipolar ions
+
+  int nelectron = 0;
+  for (i = 0; i < np; i++) {
+    if (d_ionambi[d_plist(icell,i)]) {
+      p = &d_particles[d_plist(icell,i)];
+      ep = &d_elist[nelectron];
+      // memcpy(ep,p,nbytes);
+      *ep = *p;
+      //memcpy(ep->v,d_velambi[d_plist(icell,i)],3*sizeof(double));
+      ep->v[0] = d_velambi(d_plist(icell,i),0);
+      ep->v[1] = d_velambi(d_plist(icell,i),1);
+      ep->v[2] = d_velambi(d_plist(icell,i),2);
+      ep->ispecies = ambispecies;
+      nelectron++;
+    }
+  }
+
+  // attempt = exact collision attempt count for all particles in cell
+  // nptotal = includes neutrals, ions, electrons
+  // nattempt = rounded attempt with RN
+
+  int nptotal = np + nelectron;
+  const double attempt = attempt_collision_kokkos(icell,nptotal,volume,rand_gen);
+  const int nattempt = static_cast<int> (attempt);
+  if (!nattempt){
+    rand_pool.free_state(rand_gen);
+    return;
+  }
+  if (ATOMIC_REDUCTION == 1)
+    Kokkos::atomic_fetch_add(&d_nattempt_one(),nattempt);
+  else if (ATOMIC_REDUCTION == 0)
+    d_nattempt_one() += nattempt;
+  else
+    reduce.nattempt_one += nattempt;
+
+  // perform collisions
+  // select random pair of particles, cannot be same
+  // test if collision actually occurs
+  // if chemistry occurs, exit attempt loop if group count goes to 0
+
+  for (int iattempt = 0; iattempt < nattempt; iattempt++) {
+    i = nptotal * rand_gen.drand();
+    j = nptotal * rand_gen.drand();
+    while (i == j) j = nptotal * rand_gen.drand();
+
+    // ipart,jpart = heavy particles or electrons
+
+    if (i < np) ipart = &d_particles[d_plist(icell,i)];
+    else ipart = &d_elist[i-np];
+    if (j < np) jpart = &d_particles[d_plist(icell,j)];
+    else jpart = &d_elist[j-np];
+
+    // check for e/e pair
+    // count as collision, but do not perform it
+
+    if (ipart->ispecies == ambispecies && jpart->ispecies == ambispecies) {
+      if (ATOMIC_REDUCTION == 1)
+	Kokkos::atomic_fetch_add(&d_ncollide_one(),1);
+      else if (ATOMIC_REDUCTION == 0)
+	d_ncollide_one()++;
+      else
+	reduce.ncollide_one++;
+      continue;
+    }
+
+    // if particle I is electron
+    // swap with J, since electron must be 2nd in any ambipolar reaction
+    // just need to swap i/j, ipart/jpart
+    // don't have to worry if an ambipolar ion is I or J
+
+    if (ipart->ispecies == ambispecies) {
+      int tmp = i;
+      i = j;
+      j = tmp;
+      p = ipart;
+      ipart = jpart;
+      jpart = p;
+    }
+
+    // test if collision actually occurs
+
+    if (!test_collision_kokkos(icell,0,0,ipart,jpart,precoln,rand_gen)) continue;
+
+    // if recombination reaction is possible for this IJ pair
+    // pick a 3rd particle to participate and set cell number density
+    // unless boost factor turns it off, or there is no 3rd particle
+    // 3rd particle cannot be an electron, so select from Np
+
+    Particle::OnePart* recomb_part3 = NULL;
+    int recomb_species = -1;
+    double recomb_density = 0.0;
+    if (recombflag && d_recomb_ijflag(ipart->ispecies,jpart->ispecies)) {
+      if (rand_gen.drand() > recomb_boost_inverse)
+        //react->recomb_species = -1;
+        recomb_species = -1;
+      else if (np <= 2)
+        //react->recomb_species = -1;
+        recomb_species = -1;
+      else {
+        int k = np * rand_gen.drand();
+        while (k == i || k == j) k = np * rand_gen.drand();
+        // NOT thread safe
+        //react->recomb_part3 = &particles[plist[k]];
+        //react->recomb_species = react->recomb_part3->ispecies;
+        //react->recomb_density = np * update->fnum / volume;
+        recomb_part3 = &d_particles[d_plist(icell,k)];
+        recomb_species = recomb_part3->ispecies;
+        recomb_density = np * fnum / volume;
+      }
+    }
+
+    // perform collision
+    // ijspecies = species before collision chemistry
+    // continue to next collision if no reaction
+
+    int nlocal = 0;
+
+    const int jspecies = jpart->ispecies;
+    setup_collision_kokkos(ipart,jpart,precoln,postcoln);
+    const int reactflag = perform_collision_kokkos(ipart,jpart,kpart,precoln,postcoln,rand_gen,
+                                                   recomb_part3,recomb_species,recomb_density,nlocal);
+
+    if (ATOMIC_REDUCTION == 1)
+      Kokkos::atomic_fetch_add(&d_ncollide_one(),1);
+    else if (ATOMIC_REDUCTION == 0)
+      d_ncollide_one()++;
+    else
+      reduce.ncollide_one++;
+
+    if (reactflag) {
+      if (ATOMIC_REDUCTION == 1)
+        Kokkos::atomic_fetch_add(&d_nreact_one(),1);
+      else if (ATOMIC_REDUCTION == 0)
+        d_nreact_one()++;
+      else
+        reduce.nreact_one++;
+    } else {
+      rand_pool.free_state(rand_gen);
+      continue;
+    }
+
+    // reset ambipolar ion flags due to collision
+    // must do now before particle count reset below can break out of loop
+    // first reset ionambi if kpart was added since ambi_reset() uses it
+
+    ambi_reset_kokkos(d_plist(icell,i),d_plist(icell,j),jspecies,ipart,jpart,kpart,d_ionambi);
+
+    // if jpart exists, was originally not an electron, now is an electron:
+    //   ionization reaction converted 2 neutrals to one ion
+    //   add to elist, remove from plist, flag J for deletion
+    // if jpart exists, was originally an electron, now is not an electron:
+    //   exchange reaction converted ion + electron to two neutrals
+    //   add neutral J to master particle list, remove from elist, add to plist
+    // if jpart destroyed, was an electron:
+    //   recombination reaction converted ion + electron to one neutral
+    //   remove electron from elist
+    // else if jpart destroyed:
+    //   non-ambipolar recombination reaction
+    //   remove from plist, flag J for deletion
+
+    if (jpart) {
+      if (jspecies != ambispecies && jpart->ispecies == ambispecies) {
+        if (nelectron < maxelectron) {
+          ep = &d_elist[nelectron];
+          //memcpy(ep,jpart,nbytes);
+          *ep = *jpart;
+          ep->ispecies = ambispecies;
+          nelectron++;
+          jpart = NULL;
+        } else {
+          d_retry() = 1;
+          d_maxelectron() += DELTAELECTRON;
+          rand_pool.free_state(rand_gen);
+          return;
+        }
+
+      } else if (jspecies == ambispecies && jpart->ispecies != ambispecies) {
+	int reallocflag = ParticleKokkos::add_particle_kokkos(d_particles,nlocal-1,0,jspecies,icell,jpart->x,jpart->v,0.0,0.0);
+        if (reallocflag) {
+          d_retry() = 1;
+          d_part_grow() = 1;
+          return;
+        }
+
+	int index = nlocal-1;
+	//memcpy(&particles[index],jpart,nbytes);
+        d_particles[index] = *jpart;
+	d_particles[index].id = MAXSMALLINT*rand_gen.drand();
+	d_ionambi[index] = 0;
+
+	//if (nelectron-1 != j-np) memcpy(&d_elist[j-np],&d_elist[nelectron-1],nbytes);
+	if (nelectron-1 != j-np) d_elist[j-np] = d_elist[nelectron-1];
+	nelectron--;
+
+	if (np < maxcellcount_kk) {
+	  d_plist(icell,np++) = index;
+          np++;
+	} else {
+	  d_retry() = 1;
+	  d_maxcellcount() = np + 2;
+	  rand_pool.free_state(rand_gen);
+	  return;
+	}
+
+      }
+    }
+
+    if (!jpart && jspecies == ambispecies) {
+      //if (nelectron-1 != j-np) memcpy(&elist[j-np],&elist[nelectron-1],nbytes);
+      if (nelectron-1 != j-np) d_elist[j-np] = d_elist[nelectron-1];
+      nelectron--;
+
+    } else if (!jpart) {
+      //printf("DELETED PARTICLE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+      int ndelete = Kokkos::atomic_fetch_add(&d_ndelete(),1);
+      if (ndelete < maxdelete) {
+        d_dellist(ndelete) = d_plist(icell,j);
+      } else {
+        d_retry() = 1;
+        d_maxdelete() += DELTADELETE;
+        rand_pool.free_state(rand_gen);
+        return;
+      }
+      d_plist(icell,j) = d_plist(icell,np);
+      np--;
+    }
+
+    // if kpart created:
+    // particles and custom data structs may have been realloced by kpart
+    // add kpart to plist or elist
+    // kpart was just added to particle list, so index = nlocal-1
+
+    if (kpart) {
+      if (kpart->ispecies != ambispecies) {
+        if (np < maxcellcount_kk) {
+          d_plist(icell,np++) = nlocal-1;
+        } else {
+          d_retry() = 1;
+          d_maxcellcount() = np + 2;
+          rand_pool.free_state(rand_gen);
+          return;
+        }
+
+      } else {
+
+	if (nelectron < maxelectron) {
+	  ep = &d_elist[nelectron];
+	  //memcpy(ep,kpart,nbytes);
+	  *ep = *kpart;
+	  ep->ispecies = ambispecies;
+	  nelectron++;
+          Kokkos::atomic_fetch_add(&d_nlocal(),-1);
+	} else {
+	  d_retry() = 1;
+	  d_maxelectron() += DELTAELECTRON;
+	  rand_pool.free_state(rand_gen);
+	  return;
+	}
+      }
+    }
+
+    // update particle counts
+    // quit if no longer enough particles for another collision
+
+    nptotal = np + nelectron;
+    if (nptotal < 2) break;
+  }
+
+  // done with collisions/chemistry for one grid cell
+  // recombine ambipolar ions with their matching electrons
+  //   by copying electron velocity into velambi
+  // which ion is combined with which electron does not matter
+  // error if ion count does not match electron count
+
+  int melectron = 0;
+  for (int n = 0; n < np; n++) {
+    const int i = d_plist(icell,n);
+    p = &d_particles[i];
+    if (d_ionambi[i]) {
+      if (melectron < nelectron) {
+	ep = &d_elist[melectron];
+	//memcpy(d_velambi[i],ep->v,3*sizeof(double));
+        d_velambi(i,0) = ep->v[0];
+        d_velambi(i,1) = ep->v[1];
+        d_velambi(i,2) = ep->v[2];
+      }
+      melectron++;
+    }
+  }
+  if (melectron != nelectron)
+    d_error_flag() = 2;
+}
+
 
 /* ---------------------------------------------------------------------- */
 
@@ -1500,6 +2021,92 @@ int CollideVSSKokkos::find_nn(rand_type &rand_gen, int i, int np, int icell) con
 }
 
 /* ----------------------------------------------------------------------
+   reset ionambi flags if ambipolar reaction occurred
+   this operates independent of cell particle counts and plist/elist data structs
+     caller will adjust those after this method returns
+   i/j = indices of I,J reactants
+   isp/jsp = pre-reaction species of I,J
+     both will not be electrons, if one is electron it will be jsp
+   reactants i,j and isp/jsp will always be in order listed below
+   products ip,jp,kp will always be in order listed below
+   logic must be valid for all ambipolar AND non-ambipolar reactions
+   check for 3 versions of 2 -> 3: dissociation or ionization
+     all have J product = electron
+     D: AB + e -> A + e + B
+        if I reactant = neutral and K product not electron:
+        set K product = neutral
+     D: AB+ + e -> A+ + e + B
+        if I reactant = ion:
+        set K product = neutral
+     I: A + e -> A+ + e + e
+        if I reactant = neutral and K product = electron:
+        set I product = ion
+     all other 2 -> 3 cases, set K product = neutral
+   check for 4 versions of 2 -> 2: ionization or exchange
+     I: A + B -> AB+ + e
+        if J product = electron:
+        set I product to ion
+     E: AB+ + e -> A + B
+        if I reactant = ion and J reactant = elecrton
+        set I/J products to neutral
+     E: AB+ + C -> A + BC+
+        if I reactant = ion:
+        set I/J products to neutral/ion
+     E: C + AB+ -> A + BC+
+        if J reactant = ion:
+        nothing to change for products
+     all other 2 -> 2 cases, no changes
+   check for one version of 2 -> 1: recombination
+     R: A+ + e -> A
+        if ej = elec, set I product to neutral
+     all other 2 -> 1 cases, no changes
+   WARNING:
+     do not index by I,J if could be e, since may be negative I,J index
+     do not access ionambi if could be e, since e may be in elist
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+void CollideVSSKokkos::ambi_reset_kokkos(int i, int j, int jsp,
+                                      Particle::OnePart *ip, Particle::OnePart *jp,
+                                      Particle::OnePart *kp, const DAT::t_int_1d &d_ionambi) const
+{
+  int e = ambispecies;
+
+  // 2 reactants become 3 products
+  // in all ambi reactions with an electron reactant, it is J
+
+  if (kp) {
+    int k = d_nlocal()-1;
+    d_ionambi[k] = 0;
+    if (jsp != e) return;
+
+    if (d_ionambi[i]) {                // nothing to change
+    } else if (kp->ispecies == e) {
+      d_ionambi[i] = 1;                // 1st reactant is now 1st product ion
+    }
+
+  // 2 reactants become 2 products
+  // ambi reaction if J product is electron or either reactant is ion
+
+  } else if (jp) {
+    if (jp->ispecies == e) {
+      d_ionambi[i] = 1;         // 1st reactant is now 1st product ion
+    } else if (d_ionambi[i] && jsp == e) {
+      d_ionambi[i] = 0;         // 1st reactant is now 1st product neutral
+    } else if (d_ionambi[i]) {
+      d_ionambi[i] = 0;         // 1st reactant is now 1st product neutral
+      d_ionambi[j] = 1;         // 2nd reactant is now 2nd product ion
+    }
+
+  // 2 reactants become 1 product
+  // ambi reaction if J reactant is electron
+
+  } else if (!jp) {
+    if (jsp == e) d_ionambi[i] = 0;   // 1st reactant is now 1st product neutral
+  }
+}
+
+/* ----------------------------------------------------------------------
    pack icell values for per-cell arrays into buf
    if icell is a split cell, also pack all sub cell values
    return byte count of amount packed
@@ -1612,7 +2219,7 @@ void CollideVSSKokkos::copy_grid_one(int icell, int jcell)
         k_remain.h_view(jcell,igroup,jgroup) = k_remain.h_view(icell,igroup,jgroup);
     }
   }
-  this->modify(Host,ALL_MASK);
+  this->modified(Host,ALL_MASK);
 }
 
 /* ----------------------------------------------------------------------
@@ -1640,7 +2247,7 @@ void CollideVSSKokkos::add_grid_one()
       k_vremax.h_view(nglocal,igroup,jgroup) = vremax_initial[igroup][jgroup];
       if (remainflag) k_remain.h_view(nglocal,igroup,jgroup) = 0.0;
     }
-  this->modify(Host,ALL_MASK);
+  this->modified(Host,ALL_MASK);
 
   nglocal++;
 }
@@ -1661,7 +2268,7 @@ void CollideVSSKokkos::adapt_grid()
   // this leaves vremax/remain for non-adapted cells the same
 
   this->sync(Host,ALL_MASK);
-  this->modify(Host,ALL_MASK); // force resize on host
+  this->modified(Host,ALL_MASK); // force resize on host
 
   nglocalmax = nglocal;
   k_vremax.resize(nglocalmax,ngroups,ngroups);
@@ -1678,7 +2285,7 @@ void CollideVSSKokkos::adapt_grid()
         if (remainflag) k_remain.h_view(icell,igroup,jgroup) = 0.0;
       }
 
-  this->modify(Host,ALL_MASK);
+  this->modified(Host,ALL_MASK);
 }
 
 /* ----------------------------------------------------------------------
@@ -1699,7 +2306,7 @@ void CollideVSSKokkos::grow_percell(int n)
     d_remain = k_remain.d_view;
   }
 
-  this->modify(Device,ALL_MASK); // needed for auto sync
+  this->modified(Device,ALL_MASK); // needed for auto sync
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1708,7 +2315,7 @@ void CollideVSSKokkos::sync(ExecutionSpace space, unsigned int mask)
 {
   if (space == Device) {
     if (sparta->kokkos->auto_sync)
-      modify(Host,mask);
+      modified(Host,mask);
     if (mask & VREMAX_MASK) k_vremax.sync_device();
     if (remainflag)
       if (mask & REMAIN_MASK) k_remain.sync_device();
@@ -1721,7 +2328,7 @@ void CollideVSSKokkos::sync(ExecutionSpace space, unsigned int mask)
 
 /* ---------------------------------------------------------------------- */
 
-void CollideVSSKokkos::modify(ExecutionSpace space, unsigned int mask)
+void CollideVSSKokkos::modified(ExecutionSpace space, unsigned int mask)
 {
   if (space == Device) {
     if (mask & VREMAX_MASK) k_vremax.modify_device();
@@ -1740,10 +2347,15 @@ void CollideVSSKokkos::modify(ExecutionSpace space, unsigned int mask)
 
 void CollideVSSKokkos::backup()
 {
-  d_particles_backup = decltype(d_particles)(Kokkos::view_alloc("collide:particles_backup",Kokkos::WithoutInitializing),d_particles.extent(0));
-  d_plist_backup     = decltype(d_plist    )(Kokkos::view_alloc("collide:plist_backup",Kokkos::WithoutInitializing),d_plist.extent(0),d_plist.extent(1));
-  d_vremax_backup    = decltype(d_vremax   )(Kokkos::view_alloc("collide:vremax_backup",Kokkos::WithoutInitializing),d_vremax.extent(0),d_vremax.extent(1),d_vremax.extent(2));
-  d_remain_backup    = decltype(d_remain   )(Kokkos::view_alloc("collide:remain_backup",Kokkos::WithoutInitializing),d_remain.extent(0),d_remain.extent(1),d_remain.extent(2));
+  //d_particles_backup = decltype(d_particles)(Kokkos::view_alloc("collide:particles_backup",Kokkos::WithoutInitializing),d_particles.extent(0));
+  //d_plist_backup = decltype(d_plist)(Kokkos::view_alloc("collide:plist_backup",Kokkos::WithoutInitializing),d_plist.extent(0),d_plist.extent(1));
+  //d_vremax_backup = decltype(d_vremax)(Kokkos::view_alloc("collide:vremax_backup",Kokkos::WithoutInitializing),d_vremax.extent(0),d_vremax.extent(1),d_vremax.extent(2));
+  //d_remain_backup = decltype(d_remain)(Kokkos::view_alloc("collide:remain_backup",Kokkos::WithoutInitializing),d_remain.extent(0),d_remain.extent(1),d_remain.extent(2));
+
+//  if (ambiflag) {
+    //d_ionambi_backup = decltype(d_ionambi)(Kokkos::view_alloc("collide:ionambi_backup",Kokkos::WithoutInitializing),d_ionambi.extent(0));
+    //d_velambi_backup = decltype(d_velambi)(Kokkos::view_alloc("collide:velambi_backup",Kokkos::WithoutInitializing),d_velambi.extent(0),d_velambi.extent(1));
+//  }
 
   Kokkos::deep_copy(d_particles_backup,d_particles);
   Kokkos::deep_copy(d_plist_backup,d_plist);
@@ -1770,6 +2382,11 @@ void CollideVSSKokkos::restore()
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   Kokkos::deep_copy(particle_kk->k_particles.d_view,d_particles_backup);
   d_particles = particle_kk->k_particles.d_view;
+  auto h_ewhich = particle_kk->k_ewhich.h_view;
+  k_eivec = particle_kk->k_eivec;
+  k_edarray = particle_kk->k_edarray;
+  d_ionambi = k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view;
+  d_velambi = k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view;
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   Kokkos::deep_copy(grid_kk->d_plist,d_plist_backup);
@@ -1777,6 +2394,11 @@ void CollideVSSKokkos::restore()
 
   Kokkos::deep_copy(d_vremax,d_vremax_backup);
   Kokkos::deep_copy(d_remain,d_remain_backup);
+
+  if (ambiflag) {
+    Kokkos::deep_copy(d_ionambi,d_ionambi_backup);
+    Kokkos::deep_copy(d_velambi,d_velambi_backup);
+  }
 
 #ifdef SPARTA_KOKKOS_EXACT
   memcpy(random,random_backup,sizeof(random_backup));
@@ -1792,4 +2414,17 @@ void CollideVSSKokkos::restore()
     h_ncollide_one() = 0;
     h_nreact_one() = 0;
   }
+
+  // deallocate references to reduce memory use
+
+  d_particles_backup = decltype(d_particles_backup)();
+  d_plist_backup = decltype(d_plist_backup)();
+  d_vremax_backup = decltype(d_vremax_backup)();
+  d_remain_backup = decltype(d_remain_backup)();
+  
+  if (ambiflag) {
+    d_ionambi_backup = decltype(d_ionambi_backup)();
+    d_velambi_backup = decltype(d_velambi_backup)();
+  }
 }
+

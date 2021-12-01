@@ -32,13 +32,13 @@ class FixAmbipolar : public Fix {
   int *ions;                  // 1 if a particle species is an ionx
 
   FixAmbipolar(class SPARTA *, int, char **);
-  ~FixAmbipolar();
+  virtual ~FixAmbipolar();
   int setmask();
   void init();
-  void update_custom(int, double, double, double, double *);
+  virtual void update_custom(int, double, double, double, double *);
   void surf_react(Particle::OnePart *, int &, int &);
 
- private:
+ protected:
   int maxion;                 // length of ions vector
   int ionindex,velindex;      // indices into particle custom data structs
   class RanKnuth *random;

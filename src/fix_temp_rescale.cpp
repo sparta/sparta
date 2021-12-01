@@ -80,7 +80,7 @@ void FixTempRescale::end_of_step()
   int nglocal = grid->nlocal;
 
   // loop over grid cells with more than 1 particle
-  
+
   int ip,ispecies;
   double mass;
   double count,totmass,mvx,mvy,mvz,mvsq;
