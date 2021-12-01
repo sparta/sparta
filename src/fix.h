@@ -60,7 +60,7 @@ class Fix : protected Pointers {
 
   int per_particle_field;        // 0/1 if produces per-particle external field
   int per_grid_field;            // 0/1 if produces per-grid external field
-  int field_active[6];           // 0/1 for active x,v components of ext field
+  int field_active[3];           // 0/1 for active x,y,z components of ext field
 
   int START_OF_STEP,END_OF_STEP;    // mask settings
 

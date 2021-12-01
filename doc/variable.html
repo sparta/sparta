@@ -56,7 +56,7 @@
                      random(x,y), normal(x,y), ceil(x), floor(x), round(x)
                      ramp(x,y), stagger(x,y), logfreq(x,y,z), stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
     special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
-    particle vector = mass, type, x, y, z, vx, vy, vz
+    particle vector = mass, type, mu, x, y, z, vx, vy, vz
     compute references = c_ID, c_ID[i], c_ID[i][j]
     fix references = f_ID, f_ID[i], f_ID[i][j]
     surface collision model references = s_ID[i]
@@ -350,7 +350,7 @@ references, and references to other variables.
 <TR><TD >Math operators</TD><TD > (), -x, x+y, x-y, x*y, x/y, x^y, x%y, x==y, x!=y, x<y, x<=y, x>y, x>=y, x&&y, x||y, !x</TD></TR>
 <TR><TD >Math functions</TD><TD > sqrt(x), exp(x), ln(x), log(x), abs(x), sin(x), cos(x), tan(x),      asin(x), acos(x), atan(x), atan2(y,x), random(x,y,z), normal(x,y,z),      ceil(x), floor(x), round(x), ramp(x,y), stagger(x,y), logfreq(x,y,z),      stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)</TD></TR>
 <TR><TD >Special functions</TD><TD > sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)</TD></TR>
-<TR><TD >Particle vectors</TD><TD > mass, type, x, y, z, vx, vy, vz</TD></TR>
+<TR><TD >Particle vectors</TD><TD > mass, type, mu, x, y, z, vx, vy, vz</TD></TR>
 <TR><TD >Compute references</TD><TD > c_ID, c_ID[i], c_ID[i][j]</TD></TR>
 <TR><TD >Fix references</TD><TD > f_ID, f_ID[i], f_ID[i][j]</TD></TR>
 <TR><TD >Surface collision model references</TD><TD > s_ID[i]</TD></TR>
@@ -612,7 +612,9 @@ is deleted, similar to how the <A HREF = "next.html">next</A> command operates.
 </H4>
 <P>Particle vectors generate one value per particle, so that a reference
 like "vx" means the x-component of each particles's velocity will be
-used when evaluating the variable.
+used when evaluating the variable.  Some values are per-species
+values, like mass and mu.  A reference like "mass" means the mass for
+the particle's species.
 </P>
 <P>The meaning of the different particle vectors is self-explanatory.
 </P>

@@ -35,8 +35,8 @@ class FixFieldParticle : public Fix {
   void compute_field();
 
  private:
-  char *xstr,*ystr,*zstr,*vxstr,*vystr,*vzstr;
-  int xvar,yvar,zvar,vxvar,vyvar,vzvar;
+  char *axstr,*aystr,*azstr;
+  int axvar,ayvar,azvar;
   int maxparticle;
 };
 

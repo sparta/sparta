@@ -1201,13 +1201,23 @@ void Update::field_per_particle(int i, int icell, double dt, double *x, double *
 {
   double dtsq = 0.5*dt*dt;
   double **array = modify->fix[ifieldfix]->array_particle;
+
   int icol = 0;
-  if (field_active[0]) x[0] += dtsq*array[i][icol++];
-  if (field_active[1]) x[1] += dtsq*array[i][icol++];
-  if (field_active[2]) x[2] += dtsq*array[i][icol++];
-  if (field_active[3]) v[0] += dtsq*array[i][icol++];
-  if (field_active[4]) v[1] += dtsq*array[i][icol++];
-  if (field_active[5]) v[2] += dtsq*array[i][icol++];
+  if (field_active[0]) {
+    x[0] += dtsq*array[i][icol];
+    v[0] += dt*array[i][icol];
+    icol++;
+  }
+  if (field_active[1]) {
+    x[1] += dtsq*array[i][icol];
+    v[1] += dt*array[i][icol];
+    icol++;
+  }
+  if (field_active[2]) {
+    x[2] += dtsq*array[i][icol];
+    v[2] += dt*array[i][icol];
+    icol++;
+  }
 };
 
 /* ----------------------------------------------------------------------
@@ -1220,13 +1230,23 @@ void Update::field_per_grid(int i, int icell, double dt, double *x, double *v)
 {
   double dtsq = 0.5*dt*dt;
   double **array = modify->fix[ifieldfix]->array_grid;
+
   int icol = 0;
-  if (field_active[0]) x[0] += dtsq*array[icell][icol++];
-  if (field_active[1]) x[1] += dtsq*array[icell][icol++];
-  if (field_active[2]) x[2] += dtsq*array[icell][icol++];
-  if (field_active[3]) v[0] += dtsq*array[icell][icol++];
-  if (field_active[4]) v[1] += dtsq*array[icell][icol++];
-  if (field_active[5]) v[2] += dtsq*array[icell][icol++];
+  if (field_active[0]) {
+    x[0] += dtsq*array[icell][icol];
+    v[0] += dt*array[icell][icol];
+    icol++;
+  }
+  if (field_active[1]) {
+    x[1] += dtsq*array[icell][icol];
+    v[1] += dt*array[icell][icol];
+    icol++;
+  }
+  if (field_active[2]) {
+    x[2] += dtsq*array[icell][icol];
+    v[2] += dt*array[icell][icol];
+    icol++;
+  }
 };
 
 /* ----------------------------------------------------------------------

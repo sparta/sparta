@@ -17,7 +17,7 @@ ID = species ID :l
 property = {mu} :l
   mu = magnetic moment :pre
 value = value of property for that species :l
-  value for {mu} is in magnetic moment units :pre
+  value for {mu} (magnetic moment units) :pre
 :ule
 
 [Examples:]
