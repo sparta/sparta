@@ -3339,7 +3339,7 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
    check if word matches a particle vector
    return 1 if yes, else 0
    customize by adding a particle vector:
-     mass,type,x,y,z,vx,vy,vz,fx,fy,fz
+     mass,type,x,y,z,vx,vy,vz,fx,fy,fz,mu
 ------------------------------------------------------------------------- */
 
 int Variable::is_particle_vector(char *word)
@@ -3352,9 +3352,7 @@ int Variable::is_particle_vector(char *word)
   if (strcmp(word,"vx") == 0) return 1;
   if (strcmp(word,"vy") == 0) return 1;
   if (strcmp(word,"vz") == 0) return 1;
-  if (strcmp(word,"fx") == 0) return 1;
-  if (strcmp(word,"fy") == 0) return 1;
-  if (strcmp(word,"fz") == 0) return 1;
+  if (strcmp(word,"mu") == 0) return 1;
   return 0;
 }
 
@@ -3401,6 +3399,11 @@ void Variable::particle_vector(char *word, Tree **tree,
     newtree->carray = (char *) &particles[0].v[1];
   else if (strcmp(word,"vz") == 0)
     newtree->carray = (char *) &particles[0].v[2];
+  else if (strcmp(word,"mu") == 0) {
+    newtree->type = SPECARRAY;
+    newtree->nstride = sizeof(Particle::Species);
+    newtree->carray = (char *) &species[0].magmoment;
+  }
 }
 
 /* ----------------------------------------------------------------------

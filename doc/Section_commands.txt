@@ -348,6 +348,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "seed"_seed.html,
 "shell"_shell.html,
 "species"_species.html,
+"species_modify"_species_modify.html,
 "stats"_stats.html,
 "stats_modify"_stats_modify.html,
 "stats_style"_stats_style.html,
