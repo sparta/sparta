@@ -2347,15 +2347,15 @@ void CollideVSSKokkos::modified(ExecutionSpace space, unsigned int mask)
 
 void CollideVSSKokkos::backup()
 {
-  //d_particles_backup = decltype(d_particles)(Kokkos::view_alloc("collide:particles_backup",Kokkos::WithoutInitializing),d_particles.extent(0));
-  //d_plist_backup = decltype(d_plist)(Kokkos::view_alloc("collide:plist_backup",Kokkos::WithoutInitializing),d_plist.extent(0),d_plist.extent(1));
-  //d_vremax_backup = decltype(d_vremax)(Kokkos::view_alloc("collide:vremax_backup",Kokkos::WithoutInitializing),d_vremax.extent(0),d_vremax.extent(1),d_vremax.extent(2));
-  //d_remain_backup = decltype(d_remain)(Kokkos::view_alloc("collide:remain_backup",Kokkos::WithoutInitializing),d_remain.extent(0),d_remain.extent(1),d_remain.extent(2));
+  d_particles_backup = decltype(d_particles)(Kokkos::view_alloc("collide:particles_backup",Kokkos::WithoutInitializing),d_particles.extent(0));
+  d_plist_backup = decltype(d_plist)(Kokkos::view_alloc("collide:plist_backup",Kokkos::WithoutInitializing),d_plist.extent(0),d_plist.extent(1));
+  d_vremax_backup = decltype(d_vremax)(Kokkos::view_alloc("collide:vremax_backup",Kokkos::WithoutInitializing),d_vremax.extent(0),d_vremax.extent(1),d_vremax.extent(2));
+  d_remain_backup = decltype(d_remain)(Kokkos::view_alloc("collide:remain_backup",Kokkos::WithoutInitializing),d_remain.extent(0),d_remain.extent(1),d_remain.extent(2));
 
-//  if (ambiflag) {
-    //d_ionambi_backup = decltype(d_ionambi)(Kokkos::view_alloc("collide:ionambi_backup",Kokkos::WithoutInitializing),d_ionambi.extent(0));
-    //d_velambi_backup = decltype(d_velambi)(Kokkos::view_alloc("collide:velambi_backup",Kokkos::WithoutInitializing),d_velambi.extent(0),d_velambi.extent(1));
-//  }
+  if (ambiflag) {
+    d_ionambi_backup = decltype(d_ionambi)(Kokkos::view_alloc("collide:ionambi_backup",Kokkos::WithoutInitializing),d_ionambi.extent(0));
+    d_velambi_backup = decltype(d_velambi)(Kokkos::view_alloc("collide:velambi_backup",Kokkos::WithoutInitializing),d_velambi.extent(0),d_velambi.extent(1));
+  }
 
   Kokkos::deep_copy(d_particles_backup,d_particles);
   Kokkos::deep_copy(d_plist_backup,d_plist);
