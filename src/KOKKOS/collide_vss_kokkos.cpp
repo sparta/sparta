@@ -91,7 +91,6 @@ CollideVSSKokkos::CollideVSSKokkos(SPARTA *sparta, int narg, char **arg) :
   h_maxelectron  = Kokkos::subview(h_scalars,10);
 
   random_backup = NULL;
-  react_random_backup = NULL;
   react_defined = 0;
 }
 
@@ -111,8 +110,6 @@ CollideVSSKokkos::~CollideVSSKokkos()
   rand_pool.destroy();
   if (random_backup)
     delete random_backup;
-  if (react_random_backup)
-    delete react_random_backup;
 #endif
 }
 
@@ -814,7 +811,7 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 
   h_retry() = 1;
 
-  if (react && !sparta->kokkos->collide_retry_flag)
+  if (!sparta->kokkos->collide_retry_flag)
   {
     maxelectron = MAX(maxelectron,DELTAELECTRON);
     if (d_maxelectron.extent(0) < maxelectron) {
@@ -877,6 +874,8 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 
     if (h_retry()) {
       //printf("Retrying !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+      //printf("Reason %i %i %i %i !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",h_maxelectron() > d_elist.extent(0),h_maxdelete() > d_dellist.extent(0),h_maxcellcount() > d_plist.extent(1),h_part_grow());
+
       if (!sparta->kokkos->collide_retry_flag) {
         error->one(FLERR,"Ran out of space in Kokkos collisions, increase collide/extra"
                          " or use collide/retry");
@@ -918,7 +917,6 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
         d_velambi = k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view;
       }
 
-      //printf("Reason %i %i %i %i !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",h_maxelectron(),h_maxdelete(),h_maxcellcount() > particle_kk->get_maxcellcount(),h_part_grow());
     }
   }
 
@@ -1001,7 +999,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
   int nptotal = np + nelectron;
   const double attempt = attempt_collision_kokkos(icell,nptotal,volume,rand_gen);
   const int nattempt = static_cast<int> (attempt);
-  if (!nattempt){
+  if (!nattempt) {
     rand_pool.free_state(rand_gen);
     return;
   }
@@ -1039,6 +1037,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
 	d_ncollide_one()++;
       else
 	reduce.ncollide_one++;
+
       continue;
     }
 
@@ -1283,9 +1282,8 @@ double CollideVSSKokkos::attempt_collision_kokkos(int icell, int np, double volu
      d_vremax(icell,0,0) * dt * fnum / volume + d_remain(icell,0,0);
    d_remain(icell,0,0) = nattempt - static_cast<int> (nattempt);
  } else {
-   double rand = rand_gen.drand();
    nattempt = 0.5 * np * (np-1) *
-     d_vremax(icell,0,0) * dt * fnum / volume + rand;
+     d_vremax(icell,0,0) * dt * fnum / volume + rand_gen.drand();
  }
 
  // DEBUG
@@ -2347,32 +2345,37 @@ void CollideVSSKokkos::modified(ExecutionSpace space, unsigned int mask)
 
 void CollideVSSKokkos::backup()
 {
-  //d_particles_backup = decltype(d_particles)(Kokkos::view_alloc("collide:particles_backup",Kokkos::WithoutInitializing),d_particles.extent(0));
-  //d_plist_backup = decltype(d_plist)(Kokkos::view_alloc("collide:plist_backup",Kokkos::WithoutInitializing),d_plist.extent(0),d_plist.extent(1));
-  //d_vremax_backup = decltype(d_vremax)(Kokkos::view_alloc("collide:vremax_backup",Kokkos::WithoutInitializing),d_vremax.extent(0),d_vremax.extent(1),d_vremax.extent(2));
-  //d_remain_backup = decltype(d_remain)(Kokkos::view_alloc("collide:remain_backup",Kokkos::WithoutInitializing),d_remain.extent(0),d_remain.extent(1),d_remain.extent(2));
+  d_particles_backup = decltype(d_particles)(Kokkos::view_alloc("collide:particles_backup",Kokkos::WithoutInitializing),d_particles.extent(0));
+  d_plist_backup = decltype(d_plist)(Kokkos::view_alloc("collide:plist_backup",Kokkos::WithoutInitializing),d_plist.extent(0),d_plist.extent(1));
+  d_vremax_backup = decltype(d_vremax)(Kokkos::view_alloc("collide:vremax_backup",Kokkos::WithoutInitializing),d_vremax.extent(0),d_vremax.extent(1),d_vremax.extent(2));
+  d_remain_backup = decltype(d_remain)(Kokkos::view_alloc("collide:remain_backup",Kokkos::WithoutInitializing),d_remain.extent(0),d_remain.extent(1),d_remain.extent(2));
 
-//  if (ambiflag) {
-    //d_ionambi_backup = decltype(d_ionambi)(Kokkos::view_alloc("collide:ionambi_backup",Kokkos::WithoutInitializing),d_ionambi.extent(0));
-    //d_velambi_backup = decltype(d_velambi)(Kokkos::view_alloc("collide:velambi_backup",Kokkos::WithoutInitializing),d_velambi.extent(0),d_velambi.extent(1));
-//  }
+  if (ambiflag) {
+    d_ionambi_backup = decltype(d_ionambi)(Kokkos::view_alloc("collide:ionambi_backup",Kokkos::WithoutInitializing),d_ionambi.extent(0));
+    d_velambi_backup = decltype(d_velambi)(Kokkos::view_alloc("collide:velambi_backup",Kokkos::WithoutInitializing),d_velambi.extent(0),d_velambi.extent(1));
+  }
 
   Kokkos::deep_copy(d_particles_backup,d_particles);
   Kokkos::deep_copy(d_plist_backup,d_plist);
   Kokkos::deep_copy(d_vremax_backup,d_vremax);
   Kokkos::deep_copy(d_remain_backup,d_remain);
 
+  if (ambiflag) {
+    Kokkos::deep_copy(d_ionambi_backup,d_ionambi);
+    Kokkos::deep_copy(d_velambi_backup,d_velambi);
+  }
+
+  if (react) {
+    ReactBirdKokkos* react_kk = (ReactBirdKokkos*) react;
+    react_kk->backup();
+  }
+
 #ifdef SPARTA_KOKKOS_EXACT
   if (!random_backup)
     random_backup = new RanKnuth(12345 + comm->me);
-  memcpy(random_backup,random,sizeof(random));
-
-  if (react) {
-    if (!react_random_backup)
-      react_random_backup = new RanKnuth(12345 + comm->me);
-    memcpy(react_random_backup,react->get_random(),sizeof(react->get_random()));
-  }
+  memcpy(random_backup,random,sizeof(RanKnuth));
 #endif
+
 }
 
 /* ---------------------------------------------------------------------- */
@@ -2382,11 +2385,6 @@ void CollideVSSKokkos::restore()
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   Kokkos::deep_copy(particle_kk->k_particles.d_view,d_particles_backup);
   d_particles = particle_kk->k_particles.d_view;
-  auto h_ewhich = particle_kk->k_ewhich.h_view;
-  k_eivec = particle_kk->k_eivec;
-  k_edarray = particle_kk->k_edarray;
-  d_ionambi = k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view;
-  d_velambi = k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view;
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   Kokkos::deep_copy(grid_kk->d_plist,d_plist_backup);
@@ -2396,17 +2394,24 @@ void CollideVSSKokkos::restore()
   Kokkos::deep_copy(d_remain,d_remain_backup);
 
   if (ambiflag) {
-    Kokkos::deep_copy(d_ionambi,d_ionambi_backup);
-    Kokkos::deep_copy(d_velambi,d_velambi_backup);
+    auto h_ewhich = particle_kk->k_ewhich.h_view;
+
+    Kokkos::deep_copy(particle_kk->k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view,d_ionambi_backup);
+    Kokkos::deep_copy(particle_kk->k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view,d_velambi_backup);
+
+    k_eivec = particle_kk->k_eivec;
+    k_edarray = particle_kk->k_edarray;
+    d_ionambi = k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view;
+    d_velambi = k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view;
+  }
+
+  if (react) {
+    ReactBirdKokkos* react_kk = (ReactBirdKokkos*) react;
+    react_kk->restore();
   }
 
 #ifdef SPARTA_KOKKOS_EXACT
-  memcpy(random,random_backup,sizeof(random_backup));
-
-  if (react) {
-    memcpy(react->get_random(),react_random_backup,sizeof(react_random_backup));
-    ReactBirdKokkos* react_kk = (ReactBirdKokkos*) react;
-  }
+  memcpy(random,random_backup,sizeof(RanKnuth));
 #endif
 
   if (sparta->kokkos->atomic_reduction) {
