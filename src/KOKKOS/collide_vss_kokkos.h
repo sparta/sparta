@@ -150,8 +150,7 @@ class CollideVSSKokkos : public CollideVSS {
   ParticleKokkos::tdual_struct_tdual_float_2d_1d k_edarray;
   DAT::t_int_1d d_ionambi;
   DAT::t_float_2d d_velambi;
-  tdual_particle_1d k_elist;
-  t_particle_1d d_elist;
+  t_particle_2d d_elist;
 
   DAT::tdual_float_2d k_vremax_initial;
   DAT::t_float_2d d_vremax_initial;
@@ -221,7 +220,7 @@ class CollideVSSKokkos : public CollideVSS {
   t_params_2d d_params;
 
   double dt,fnum,boltz;
-  int maxcellcount,maxcellcount_kk,react_defined;
+  int maxcellcount,react_defined;
 
   KOKKOS_INLINE_FUNCTION
   void SCATTER_TwoBodyScattering(Particle::OnePart *,

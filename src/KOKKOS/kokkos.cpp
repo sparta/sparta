@@ -114,11 +114,11 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
   // initialize Kokkos
 
   if (me == 0) {
-    if (screen) fprintf(screen,"  using %d GPU(s) per MPI task\n",ngpus);
-    if (logfile) fprintf(logfile,"  using %d GPU(s) per MPI task\n",ngpus);
+    if (screen) fprintf(screen,"  requested %d GPU(s) per node\n",ngpus);
+    if (logfile) fprintf(logfile,"  requested %d GPU(s) per MPI task\n",ngpus);
 
-    if (screen) fprintf(screen,"  using %d thread(s) per MPI task\n",nthreads);
-    if (logfile) fprintf(logfile,"  using %d thread(s) per MPI task\n",nthreads);
+    if (screen) fprintf(screen,"  using up to %d thread(s) per node\n",nthreads);
+    if (logfile) fprintf(logfile,"  using up to %d thread(s) per MPI task\n",nthreads);
   }
 
 #ifdef KOKKOS_ENABLE_CUDA
