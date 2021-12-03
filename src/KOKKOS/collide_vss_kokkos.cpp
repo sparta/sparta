@@ -967,7 +967,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
   // setup elist of ionized electrons for this cell
   // create them in separate array since will never become real particles
 
-  if (np >= maxelectron) {
+  if (np > maxelectron) {
     d_retry() = 1;
     while (d_maxelectron() < np) d_maxelectron() += DELTAELECTRON;
     rand_pool.free_state(rand_gen);
