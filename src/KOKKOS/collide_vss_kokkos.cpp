@@ -1121,7 +1121,10 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
     // must do now before particle count reset below can break out of loop
     // first reset ionambi if kpart was added since ambi_reset() uses it
 
-    ambi_reset_kokkos(d_plist(icell,i),d_plist(icell,j),jspecies,ipart,jpart,kpart,d_ionambi);
+    if (jspecies == ambispecies)
+      ambi_reset_kokkos(d_plist(icell,i),-1,jspecies,ipart,jpart,kpart,d_ionambi);
+    else
+      ambi_reset_kokkos(d_plist(icell,i),d_plist(icell,j),jspecies,ipart,jpart,kpart,d_ionambi);
 
     // if jpart exists, was originally not an electron, now is an electron:
     //   ionization reaction converted 2 neutrals to one ion
@@ -1199,7 +1202,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
         rand_pool.free_state(rand_gen);
         return;
       }
-      d_plist(icell,j) = d_plist(icell,np);
+      d_plist(icell,j) = d_plist(icell,np-1);
       np--;
     }
 

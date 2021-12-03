@@ -1022,7 +1022,10 @@ void Collide::collisions_one_ambipolar()
       // first reset ionambi if kpart was added since ambi_reset() uses it
 
       if (kpart) ionambi = particle->eivec[particle->ewhich[index_ionambi]];
-      ambi_reset(plist[i],plist[j],jspecies,ipart,jpart,kpart,ionambi);
+      if (jspecies == ambispecies)
+        ambi_reset(plist[i],-1,jspecies,ipart,jpart,kpart,ionambi);
+      else
+        ambi_reset(plist[i],plist[j],jspecies,ipart,jpart,kpart,ionambi);
 
       // if jpart exists, was originally not an electron, now is an electron:
       //   ionization reaction converted 2 neutrals to one ion
