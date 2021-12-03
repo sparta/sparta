@@ -14,8 +14,8 @@
 
 #include "stdlib.h"
 #include "string.h"
-#include "fix_field_particle.h"
-#include "particle.h"
+#include "fix_field_grid.h"
+#include "grid.h"
 #include "input.h"
 #include "variable.h"
 #include "memory.h"
@@ -25,10 +25,10 @@ using namespace SPARTA_NS;
 
 /* ---------------------------------------------------------------------- */
 
-FixFieldParticle::FixFieldParticle(SPARTA *sparta, int narg, char **arg) :
+FixFieldGrid::FixFieldGrid(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
-  if (narg != 5) error->all(FLERR,"Illegal fix field/particle command");
+  if (narg != 5) error->all(FLERR,"Illegal fix field/grid command");
 
   int ncols = 0;
 
@@ -56,36 +56,36 @@ FixFieldParticle::FixFieldParticle(SPARTA *sparta, int narg, char **arg) :
 
   // fix settings
 
-  per_particle_flag = 1;
-  size_per_particle_cols = ncols;
-  per_particle_freq = 1;
-  per_particle_field = 1;
+  per_grid_flag = 1;
+  size_per_grid_cols = ncols;
+  per_grid_freq = 1;
+  per_grid_field = 1;
 
   field_active[0] = field_active[1] = field_active[2] = 0;
   if (axstr) field_active[0] = 1;
   if (aystr) field_active[1] = 1;
   if (azstr) field_active[2] = 1;
 
-  // per-particle memory initialization
+  // per-grid memory initialization
 
-  maxparticle = 0;
-  array_particle = NULL;
+  maxgrid = 0;
+  array_grid = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
 
-FixFieldParticle::~FixFieldParticle()
+FixFieldGrid::~FixFieldGrid()
 {  
   delete [] axstr;
   delete [] aystr;
   delete [] azstr;
   
-  memory->destroy(array_particle);
+  memory->destroy(array_grid);
 }
 
 /* ---------------------------------------------------------------------- */
 
-int FixFieldParticle::setmask()
+int FixFieldGrid::setmask()
 {
   int mask = 0;
   return mask;
@@ -93,76 +93,74 @@ int FixFieldParticle::setmask()
 
 /* ---------------------------------------------------------------------- */
 
-void FixFieldParticle::init()
+void FixFieldGrid::init()
 {
-  // check if all variables exist and are particle-style vars
+  // check if all variables exist and are grid-style vars
 
   if (axstr) {
     axvar = input->variable->find(axstr);
     if (axvar < 0)
-      error->all(FLERR,"Variable name for fix field/particle does not exist");
-    if (!input->variable->particle_style(axvar))
-      error->all(FLERR,"Variable for fix field/particle is invalid style");
+      error->all(FLERR,"Variable name for fix field/grid does not exist");
+    if (!input->variable->grid_style(axvar))
+      error->all(FLERR,"Variable for fix field/grid is invalid style");
   }
   if (aystr) {
     ayvar = input->variable->find(aystr);
     if (ayvar < 0)
-      error->all(FLERR,"Variable name for fix field/particle does not exist");
-    if (!input->variable->particle_style(ayvar))
-      error->all(FLERR,"Variable for fix field/particle is invalid style");
+      error->all(FLERR,"Variable name for fix field/grid does not exist");
+    if (!input->variable->grid_style(ayvar))
+      error->all(FLERR,"Variable for fix field/grid is invalid style");
   }
   if (azstr) {
     azvar = input->variable->find(azstr);
     if (azvar < 0)
-      error->all(FLERR,"Variable name for fix field/particle does not exist");
-    if (!input->variable->particle_style(azvar))
-      error->all(FLERR,"Variable for fix field/particle is invalid style");
+      error->all(FLERR,"Variable name for fix field/grid does not exist");
+    if (!input->variable->grid_style(azvar))
+      error->all(FLERR,"Variable for fix field/grid is invalid style");
   }
 
-  // set initial particle values to zero in case dump is performed at step 0
+  // set initial grid values to zero in case dump is performed at step 0
 
-  if (particle->nlocal > maxparticle) {
-    maxparticle = particle->maxlocal;
-    memory->destroy(array_particle);
-    memory->create(array_particle,maxparticle,size_per_particle_cols,
-                   "array_particle");
+  if (grid->nlocal > maxgrid) {
+    maxgrid = grid->maxlocal;
+    memory->destroy(array_grid);
+    memory->create(array_grid,maxgrid,size_per_grid_cols,"array_grid");
   }
 
-  bigint nbytes = (bigint) particle->nlocal * size_per_particle_cols;
-  memset(&array_particle[0][0],nbytes*sizeof(double),0);
+  bigint nbytes = (bigint) grid->nlocal * size_per_grid_cols;
+  memset(&array_grid[0][0],nbytes*sizeof(double),0);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void FixFieldParticle::compute_field()
+void FixFieldGrid::compute_field()
 {
-  // reallocate array_particle if necessary
+  // reallocate array_grid if necessary
 
-  if (particle->nlocal > maxparticle) {
-    maxparticle = particle->maxlocal;
-    memory->destroy(array_particle);
-    memory->create(array_particle,maxparticle,size_per_particle_cols,
-                   "array_particle");
+  if (grid->nlocal > maxgrid) {
+    maxgrid = grid->maxlocal;
+    memory->destroy(array_grid);
+    memory->create(array_grid,maxgrid,size_per_grid_cols,"array_grid");
   }
   
-  // evaluate each particle-style variable
-  // results are put into strided array_particle
+  // evaluate each grid-style variable
+  // results are put into strided array_grid
   
-  int stride = size_per_particle_cols;
+  int stride = size_per_grid_cols;
   int icol = 0;
 
   if (axstr) {
-    input->variable->compute_particle(axvar,&array_particle[0][icol],stride,0);
+    input->variable->compute_grid(axvar,&array_grid[0][icol],stride,0);
     icol++;
   }
 
   if (aystr) {
-    input->variable->compute_particle(ayvar,&array_particle[0][icol],stride,0);
+    input->variable->compute_grid(ayvar,&array_grid[0][icol],stride,0);
     icol++;
   }
 
   if (azstr) {
-    input->variable->compute_particle(azvar,&array_particle[0][icol],stride,0);
+    input->variable->compute_grid(azvar,&array_grid[0][icol],stride,0);
     icol++;
   }
 }

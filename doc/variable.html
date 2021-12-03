@@ -45,7 +45,7 @@
   <I>getenv</I> arg = one string
   <I>file</I> arg = filename
   <I>internal</I> arg = numeric value
-  <I>equal</I> or <I>particle</I> or <I>grid</I> args = one formula containing numbers, stats keywords, math operations, particle vectors, compute/fix/variable references
+  <I>equal</I> or <I>particle</I> or <I>grid</I> args = one formula containing numbers, stats keywords, math operations, particle vectors, grid vectors, compute/fix/variable references
     numbers = 0.0, 100, -5.4, 2.8e-4, etc
     constants = PI
     stats keywords = step, np, vol, etc from <A HREF = "stats_style.html">stats_style</A>
@@ -56,7 +56,8 @@
                      random(x,y), normal(x,y), ceil(x), floor(x), round(x)
                      ramp(x,y), stagger(x,y), logfreq(x,y,z), stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
     special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
-    particle vector = mass, type, mu, x, y, z, vx, vy, vz
+    particle vectors = mass, type, mu, x, y, z, vx, vy, vz
+    grid vectors = xc, yc, zc
     compute references = c_ID, c_ID[i], c_ID[i][j]
     fix references = f_ID, f_ID[i], f_ID[i][j]
     surface collision model references = s_ID[i]
@@ -340,8 +341,8 @@ example, this is a valid (though strange) variable formula:
 <PRE>variable x equal "np + c_MyTemp / vol^(1/3)" 
 </PRE>
 <P>Specifically, a formula can contain numbers, stats keywords, math
-operators, math functions, particle vectors, compute references, fix
-references, and references to other variables.
+operators, math functions, particle vectors, grid vectors, compute
+references, fix references, and references to other variables.
 </P>
 <DIV ALIGN=center><TABLE  BORDER=1 >
 <TR><TD >Number</TD><TD > 0.2, 100, 1.0e20, -15.4, etc</TD></TR>
@@ -351,6 +352,7 @@ references, and references to other variables.
 <TR><TD >Math functions</TD><TD > sqrt(x), exp(x), ln(x), log(x), abs(x), sin(x), cos(x), tan(x),      asin(x), acos(x), atan(x), atan2(y,x), random(x,y,z), normal(x,y,z),      ceil(x), floor(x), round(x), ramp(x,y), stagger(x,y), logfreq(x,y,z),      stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)</TD></TR>
 <TR><TD >Special functions</TD><TD > sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)</TD></TR>
 <TR><TD >Particle vectors</TD><TD > mass, type, mu, x, y, z, vx, vy, vz</TD></TR>
+<TR><TD >Grid vectors</TD><TD > xc, yc, zc</TD></TR>
 <TR><TD >Compute references</TD><TD > c_ID, c_ID[i], c_ID[i][j]</TD></TR>
 <TR><TD >Fix references</TD><TD > f_ID, f_ID[i], f_ID[i][j]</TD></TR>
 <TR><TD >Surface collision model references</TD><TD > s_ID[i]</TD></TR>
@@ -362,20 +364,20 @@ references, and references to other variables.
 
 <P>Most of the formula elements produce a scalar value.  A few produce a
 per-particle vector or per-grid vector of values.  These are the
-particle vectors, compute references that represent a per-particle or
-per-grid vector, fix references that represent a per-particle or
-per-grid vector, and variables that are particle-style or grid-style
-variables.  Math functions that operate on scalar values produce a
-scalar value; math function that operate on per-particle vectors do so
-element-by-element and produce a per-particle vector.
+particle vectors or grid vectors, compute references that represent a
+per-particle or per-grid vector, fix references that represent a
+per-particle or per-grid vector, and variables that are particle-style
+or grid-style variables.  Math functions that operate on scalar values
+produce a scalar value; math function that operate on per-particle
+vectors do so element-by-element and produce a per-particle vector.
 </P>
 <P>A formula for equal-style variables cannot use any formula element
 that produces a per-particle or per-grid vector.  A formula for a
 particle-style variable can use formula elements that produce either a
 scalar value or a per-particle vector, but not a per-grid vector.
-Likewise a particlgrid-style variable can use formula elements that
-produce either a scalar value or a per-grid vector, but not a
-per-particle vector.
+Likewise a grid-style variable can use formula elements that produce
+either a scalar value or a per-grid vector, but not a per-particle
+vector.
 </P>
 <P>The stats keywords allowed in a formula are those defined by the
 <A HREF = "stats_style.html">stats_style custom</A> command.  If a variable is
@@ -620,6 +622,19 @@ the particle's species.
 </P>
 <P>Particle vectors can only be used in <I>particle</I> style variables,
 not in <I>equal</I> or <I>grid</I> style varaibles.
+</P>
+<HR>
+
+<H4>Grid Vectors 
+</H4>
+<P>Particle vectors generate one value per grid cell, so that a reference
+like "xc" means the x-component of the center point of the grid cell.
+</P>
+<P>The xc, yc, zc values are for the geometric center point of the grid
+cell.
+</P>
+<P>Grid vectors can only be used in <I>grid</I> style variables, not in
+<I>equal</I> or <I>particle</I> style varaibles.
 </P>
 <HR>
 

@@ -23,6 +23,7 @@
 #include "domain.h"
 #include "comm.h"
 #include "particle.h"
+#include "grid.h"
 #include "modify.h"
 #include "compute.h"
 #include "fix.h"
@@ -964,6 +965,7 @@ void Variable::copy(int narg, char **from, char **to)
 		      sin(x),cos(x),tan(x),asin(x),atan2(y,x),...
      special function = sum(x),min(x), ...
      particle vector = x, y, vx, ...
+     grid vector = cxlo, cxhi, cylo, cyhi, czlo, czhi
      compute = c_ID, c_ID[i], c_ID[i][j]
      fix = f_ID, f_ID[i], f_ID[i][j]
      variable = v_name
@@ -1730,6 +1732,16 @@ double Variable::evaluate(char *str, Tree **tree)
 	    error->all(FLERR,
 		       "Variable evaluation before simulation box is defined");
 	  particle_vector(word,tree,treestack,ntreestack);
+
+	// ----------------
+	// grid vector
+	// ----------------
+
+	} else if (is_grid_vector(word)) {
+	  if (domain->box_exist == 0)
+	    error->all(FLERR,
+		       "Variable evaluation before simulation box is defined");
+	  grid_vector(word,tree,treestack,ntreestack);
 
 	// ----------------
 	// constant
@@ -3404,6 +3416,60 @@ void Variable::particle_vector(char *word, Tree **tree,
     newtree->nstride = sizeof(Particle::Species);
     newtree->carray = (char *) &species[0].magmoment;
   }
+}
+
+/* ----------------------------------------------------------------------
+   check if word matches a grid vector
+   return 1 if yes, else 0
+   customize by adding a grid vector:
+     cxlo,cxhi,cylo,cyhi,czlo,czhi
+------------------------------------------------------------------------- */
+
+int Variable::is_grid_vector(char *word)
+{
+  if (strcmp(word,"cxlo") == 0) return 1;
+  if (strcmp(word,"cxhi") == 0) return 1;
+  if (strcmp(word,"cylo") == 0) return 1;
+  if (strcmp(word,"cyhi") == 0) return 1;
+  if (strcmp(word,"czlo") == 0) return 1;
+  if (strcmp(word,"czhi") == 0) return 1;
+  return 0;
+}
+
+/* ----------------------------------------------------------------------
+   process a grid vector in formula
+   push result onto tree
+   word = grid vector
+   customize by adding a grid vector:
+     cxlo,cxhi,cylo,cyhi,czlo,czhi
+------------------------------------------------------------------------- */
+
+void Variable::grid_vector(char *word, Tree **tree,
+                           Tree **treestack, int &ntreestack)
+{
+  if (tree == NULL || treestyle != GRID)
+    error->all(FLERR,"Grid vector in non grid-style variable formula");
+
+  Grid::ChildCell *cells = grid->cells;
+
+  Tree *newtree = new Tree();
+  newtree->type = PARTARRAYDOUBLE;
+  newtree->nstride = sizeof(Grid::ChildCell);
+  newtree->left = newtree->middle = newtree->right = NULL;
+  treestack[ntreestack++] = newtree;
+
+  if (strcmp(word,"cxlo") == 0)
+    newtree->carray = (char *) &cells[0].lo[0];
+  else if (strcmp(word,"cxhi") == 0)
+    newtree->carray = (char *) &cells[0].hi[0];
+  else if (strcmp(word,"cylo") == 0)
+    newtree->carray = (char *) &cells[0].lo[1];
+  else if (strcmp(word,"cyhi") == 0)
+    newtree->carray = (char *) &cells[0].hi[1];
+  else if (strcmp(word,"czlo") == 0)
+    newtree->carray = (char *) &cells[0].lo[2];
+  else if (strcmp(word,"czhi") == 0)
+    newtree->carray = (char *) &cells[0].hi[2];
 }
 
 /* ----------------------------------------------------------------------

@@ -46,18 +46,24 @@ species_modify      Ar mu 1e-18
 variable Rmax equal 0.0001
 variable eps equal 1e-6
 
-variable Bx particle "sqrt(x*x + y*y) * sin(x/v_Rmax)"
-variable BxEps particle "sqrt((x+v_eps)*(x+v_eps) + y*y) * sin((x+v_eps)/v_Rmax)"
-variable gradBx particle "mu/mass * (v_BxEps - v_Bx) / v_eps"
+variable xc grid 0.5*(cxlo+cxhi)
+variable yc grid 0.5*(cylo+cyhi)
+variable zc grid 0.5*(czlo+czhi)
 
-variable By particle "sqrt(x*x + y*y) * sin(y/v_Rmax)"
-variable ByEps particle "sqrt(x*x + (y+v_eps)*(y+v_eps)) * sin((y+v_eps)/v_Rmax)"
-variable gradBy particle "mu/mass * (v_ByEps - v_By) / v_eps"
+variable Bx grid "sqrt(v_xc*v_xc + v_yc*v_yc) * sin(v_xc/v_Rmax)"
+variable BxEps grid "sqrt((v_xc+v_eps)*(v_xc+v_eps) + v_yc*v_yc) * sin((v_xc+v_eps)/v_Rmax)"
+variable gradBx grid "(v_BxEps - v_Bx) / v_eps"
+#variable gradBx grid "mu/mass * (v_BxEps - v_Bx) / v_eps"
 
-fix      1 field/particle gradBx gradBy NULL
-global   field particle 1
+variable By grid "sqrt(v_xc*v_xc + v_yc*v_yc) * sin(v_yc/v_Rmax)"
+variable ByEps grid "sqrt(v_xc*v_xc + (v_yc+v_eps)*(v_yc+v_eps)) * sin((v_yc+v_eps)/v_Rmax)"
+variable gradBy grid "(v_ByEps - v_By) / v_eps"
+#variable gradBy grid "mu/mass * (v_ByEps - v_By) / v_eps"
 
-dump                10 particle all 1000 tmp.dump.* id type f_1[*]
+fix      1 field/grid gradBx gradBy NULL
+global   field grid 1 0
+
+dump                10 grid all 1000 tmp.dump.* id xc yc zc f_1[*]
 
 # ---------------------------------------
 

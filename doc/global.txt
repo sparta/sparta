@@ -30,8 +30,9 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {su
         ex,ey,ez = direction vector which the field acts along
       {particle} arg = fixID
         fixID = ID of fix that computes per particle field components
-      {grid} arg = fixID
+      {grid} args = fixID Nfreq
         fixID = ID of fix that computes per grid cell field components
+        Nfreq = update field values every this many timesteps
   {surfs} value = explicit or explicit/distributed or implicit
     explicit = surfs defined in read_surf file, each proc owns copy of all surfs
     explicit/distributed = surfs defined in read_surf file, each proc owns
@@ -131,9 +132,11 @@ the magnetic moment of each particle, is an example of a variable
 external field.  The fixID argument is the ID of a fix which computes
 the components of the field vector for each particle.  These may alter
 both the position and velocity of each particle when it is advected
-each timestep.  See the doc page for the "fix
-field/particle"_fix_field_particle.html command for the only current
-fix in SPARTA which operates in this manner.
+each timestep.  
+
+See the doc page for the "fix field/particle"_fix_field_particle.html
+command for the only current fix in SPARTA which is compatible with
+the {particle} setting.
 
 The {grid} setting is for a field that is computed on a per grid cell
 basis and applied to all the particles in the grid cell.  A spatially-
@@ -142,12 +145,28 @@ resolution of grid cells is an example of a per grid cell external
 field.  The fixID argument is the ID of a fix which computes the
 components of the field vector for each grid cell.  These may alter
 both the position and velocity or particles in the grid cell when they
-are advected each timestep.  See the doc page for the "fix
-field/grid"_fix_field_grid.html command for the only current fix in
-SPARTA which operates in this manner.
+are advected each timestep.  The Nfreq argument specifies how often to
+re-compute the per grid cell field vectors.  For a field that has no
+time dependence you should set Nfreq to zero; the field will only be
+computed once at the beginning of each simulation run.  For a field
+with time-dependence you can choose how often to recompute the field,
+depending on how fast it varies.
 
-NOTE: The fix field/grid command has not yet been implemented as of
-Dec 2021.
+See the doc page for the "fix field/grid"_fix_field_grid.html command
+for the only current fix in SPARTA which is compatible with the
+{grid} setting.
+
+Note that there is a tradeoff between the {particle} and {grid}
+options.  For the {particle} option the field must be computed every
+timestep for all particles; the field values are accurately computed
+at precisely each particle's position but it is an expensive
+operation.  For the {grid} option the field is only computed once at
+the beginning of a run or once every Nfreq timesteps.  Even if it is
+computed every timestep, the number of grid cells is typically much
+smaller than the number of particles.  However the accuracy of the
+field applied to each particle is more approximate than for the
+{particle} option.  This is because the field applied to each particle
+is the value it has at the center of the particle's grid cell.
 
 :line
 

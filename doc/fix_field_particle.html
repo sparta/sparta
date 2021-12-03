@@ -82,13 +82,14 @@ timestep on all particles.  Thus a simulation will typically run
 several times slower than it would without the external field.
 </P>
 <P>The <A HREF = "fix_field_grid.html">fix field/grid</A> command is an alternative
-which should run faster.  When used with the <A HREF = "global.html">global field
-grid</A> command, the grid-style variables it uses are only
-invoked once as a pre-calculation (for static fields) or once every N
-timesteps (for time-varying fields).  And the field calculation is
-done for each grid cell, not for each particle.  The trade-off is that
-the fields it calculates are based on the grid cell center pint, and
-thus are not as accurate as the calucations performed by this fix.
+which should run faster but be more approximate.  When used with the
+<A HREF = "global.html">global field grid</A> command, the grid-style variables it
+uses are only invoked once as a pre-calculation (for static fields) or
+once every N timesteps (for time-varying fields).  And the field
+calculation is done for each grid cell, not for each particle.  The
+trade-off is that the fields it calculates are based on the grid cell
+center pint, and thus are not as accurate as the calucations performed
+by this fix.
 </P>
 <P><B>Restart, output info:</B>
 </P>

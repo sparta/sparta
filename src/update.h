@@ -44,6 +44,7 @@ class Update : protected Pointers {
   char *fieldID;         // fix ID for PFIELD or GFIELD
   int ifieldfix;         // index of external field fix
   int *field_active;     // ptr to field_active flags in fix
+  int fieldfreq;         // update GFIELD every this many timsteps
 
   int nmigrate;          // # of particles to migrate to new procs
   int *mlist;            // indices of particles to migrate

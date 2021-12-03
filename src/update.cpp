@@ -181,6 +181,7 @@ void Update::init()
     if (!modify->fix[ifieldfix]->per_particle_field)
       error->all(FLERR,"External field fix does not compute necessary field");
   } else if (fstyle == GFIELD) {
+    ifieldfix = modify->find_fix(fieldID);
     if (ifieldfix < 0) error->all(FLERR,"External field fix ID not found");
     if (!modify->fix[ifieldfix]->per_grid_field)
       error->all(FLERR,"External field fix does not compute necessary field");
@@ -241,6 +242,13 @@ void Update::run(int nsteps)
 {
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
+
+  // external per grid cell field
+  // only evaluate once at beginning of run b/c time-independent
+  // fix calculates field acting at center point of all grid cells
+
+  if (fstyle == GFIELD && fieldfreq == 0) 
+    modify->fix[ifieldfix]->compute_field();
 
   // cellweightflag = 1 if grid-based particle weighting is ON
 
@@ -364,10 +372,17 @@ template < int DIM, int SURF > void Update::move()
   Surf::Line *lines = surf->lines;
   double dt = update->dt;
 
-  // external per-particle field
-  // fieldID fix calculates field acing on all owned particles
+  // external per particle field
+  // fix calculates field acting on all owned particles
 
   if (fstyle == PFIELD) modify->fix[ifieldfix]->compute_field();
+
+  // external per grid cell field
+  // evaluate once every fieldfreq steps b/c time-dependent
+  // fix calculates field acting at center point of all grid cells
+  
+  if (fstyle == GFIELD && fieldfreq && ((ntimestep-1) % fieldfreq == 0)) 
+    modify->fix[ifieldfix]->compute_field();
 
   // one or more loops over particles
   // first iteration = all my particles
@@ -1559,13 +1574,15 @@ void Update::global(int narg, char **arg)
         strcpy(fieldID,arg[iarg+2]);
         iarg += 3;
       } else if (strcmp(arg[iarg+1],"grid") == 0) {
-        if (iarg+3 > narg) error->all(FLERR,"Illegal global field command");
+        if (iarg+4 > narg) error->all(FLERR,"Illegal global field command");
         delete [] fieldID;
         fstyle = GFIELD;
         int n = strlen(arg[iarg+2]) + 1;
         fieldID = new char[n];
         strcpy(fieldID,arg[iarg+2]);
-        iarg += 3;
+        fieldfreq = input->inumeric(FLERR,arg[iarg+3]);
+        if (fieldfreq < 0) error->all(FLERR,"Illegal global field command");
+        iarg += 4;
       } else error->all(FLERR,"Illegal global field command");
 
     } else if (strcmp(arg[iarg],"surfs") == 0) {
