@@ -300,9 +300,9 @@ post_process_grid_kokkos(int index, int nsample,
   // ditto for individual vibrational modes if modeflag = 1 or 2
   // loop over species/modes in group to compute normalized Tgroup
 
-  GridKokkos* grid_kk = (GridKokkos*) grid;
-  grid_kk->sync(Device,CINFO_MASK);
-  d_cinfo = grid_kk->k_cinfo.d_view;
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  particle_kk->sync(Device,SPECIES_MASK|CUSTOM_MASK);
+  d_species = particle_kk->k_species.d_view;
 
   if (modeflag == 0) {
     nsp = nmap[index] / 2;
@@ -339,7 +339,7 @@ void ComputeTvibGridKokkos::operator()(TagComputeTvibGrid_post_process_grid, con
   if (modeflag == 0) {
 
     for (int isp = 0; isp < nsp; ++isp) {
-      const int ispecies = d_t2s[evb];
+      const int ispecies = d_t2s[evb-evib];
       const double theta = d_species[ispecies].vibtemp[0];
       if (theta == 0.0 || d_etally(icell,cnt) == 0.0) {
         d_tspecies[isp] = 0.0;
