@@ -45,8 +45,9 @@ ComputeTvibGridKokkos::ComputeTvibGridKokkos(SPARTA *sparta, int narg, char **ar
   kokkos_flag = 1;
 
   if (modeflag == 0) {
-    k_s2t = DAT::tdual_int_1d("compute/tvib/grid:s2t",nspecies);
     k_t2s = DAT::tdual_int_1d("compute/tvib/grid:t2s",ntally);
+    k_s2t = DAT::tdual_int_1d("compute/tvib/grid:s2t",nspecies);
+    d_tspecies = DAT::t_float_1d("d_tspecies",nspecies);
 
     for (int n = 0; n < nspecies; n++)
       k_s2t.h_view(n) = s2t[n];
@@ -65,6 +66,7 @@ ComputeTvibGridKokkos::ComputeTvibGridKokkos(SPARTA *sparta, int narg, char **ar
   } else {
     k_t2s_mode = DAT::tdual_int_1d("compute/tvib/grid:t2s_mode",ntally);
     k_s2t_mode = DAT::tdual_int_2d("compute/tvib/grids2t_mode",nspecies,maxmode);
+    d_tspecies_mode = DAT::t_float_2d_lr("d_tspecies_mode",nspecies,maxmode);
 
     for (int n = 0; n < nspecies; n++)
       for (int m = 0; m < maxmode; m++)
@@ -82,9 +84,6 @@ ComputeTvibGridKokkos::ComputeTvibGridKokkos(SPARTA *sparta, int narg, char **ar
     d_s2t_mode = k_s2t_mode.d_view;
     d_t2s_mode = k_t2s_mode.d_view;
   }
-
-  d_tspecies = DAT::t_float_1d("d_tspecies",nspecies);
-  d_tspecies_mode = DAT::t_float_2d_lr("d_tspecies_mode",nspecies,maxmode);
 
   boltz = update->boltz;
 }
