@@ -25,7 +25,7 @@ class Particle : protected Pointers {
   int exist;                // 1 if particles exist
   int sorted;               // 1 if particles are sorted by grid cell
 
-  enum{MAXVIBMODE=6};       // increase value if species need more vib modes
+  enum{MAXVIBMODE=4};       // increase value if species need more vib modes
 
   struct Species {          // info on each particle species, read from file
     char id[16];            // species ID
