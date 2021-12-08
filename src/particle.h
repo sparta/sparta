@@ -25,6 +25,8 @@ class Particle : protected Pointers {
   int exist;                // 1 if particles exist
   int sorted;               // 1 if particles are sorted by grid cell
 
+  enum{MAXVIBMODE=4};       // increase value if species need more vib modes
+
   struct Species {          // info on each particle species, read from file
     char id[16];            // species ID
     double molwt;           // molecular weight
@@ -33,9 +35,9 @@ class Particle : protected Pointers {
     double charge;          // multiple of electron charge
     double rotrel;          // inverse rotational relaxation number
     double rottemp[3];      // rotational temperature(s)
-    double vibtemp[4];      // vibrational temperature(s)
-    double vibrel[4];       // inverse vibrational relaxation number(s)
-    int vibdegen[4];        // vibrational mode degeneracies
+    double vibtemp[MAXVIBMODE];   // vibrational temperature(s)
+    double vibrel[MAXVIBMODE];    // inverse vibrational relaxation number(s)
+    int vibdegen[MAXVIBMODE];     // vibrational mode degeneracies
     int rotdof,vibdof;      // rotational/vibrational DOF
     int nrottemp,nvibmode;  // # of rotational/vibrational temps/modes defined
     int internaldof;        // 1 if either rotdof or vibdof != 0
@@ -50,9 +52,9 @@ class Particle : protected Pointers {
 
   struct VibFile {          // extra vibration info read from vibfile
     char id[16];
-    double vibrel[4];
-    double vibtemp[4];
-    int vibdegen[4];
+    double vibrel[MAXVIBMODE];
+    double vibtemp[MAXVIBMODE];
+    int vibdegen[MAXVIBMODE];
     int nmode;
   };
 
