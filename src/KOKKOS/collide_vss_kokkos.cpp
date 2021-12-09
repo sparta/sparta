@@ -1260,6 +1260,8 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
   }
   if (melectron != nelectron)
     d_error_flag() = 2;
+
+  rand_pool.free_state(rand_gen);
 }
 
 
