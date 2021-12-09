@@ -20,6 +20,7 @@ grid.cpp:
   initialized time_global to zero in Grid constructor
   add global time increment at top of timestep loop in Update::run()
   added get_particle_time function (constructed from global time and cell desired dt)
+  set cell time to be time_global in add_child_cell
 
 particle.h:
   added particle time to OnePart class
@@ -39,15 +40,27 @@ particle.cpp:
   fix_emit_face.cpp
   read_particles.cpp
   read_restart.cpp
-  surf_react_prob.cpp ???????
-  surf_react_adsorb.cpp ?????
-  surf_react_global.cpp ?????
+
+  surf_react_prob.cpp
+  surf_react_global.cpp
+    where add_particle appears, the new particle time was copied from the existing "i" particle
+
+  surf_react_adsorb.cpp
+    where add_particle appears with "i" particle data, the new particle time was copied from the existing "i" particle.
+    However, there are some add_particle calls that I don't understand (where pcell is passed in through the argument list
+    but is not set previously).
 
 read_restart.cpp
   began modifying create_child_cells()
 
 input.[h,cpp]
   added parsing of variable "timestep_va", the variable-adaptive starting timestep
+
+update.cpp
+  added logic to skip particle move if not sufficiently lagging the global time
+
+collide.cpp
+  added variable_adaptive_time logic to collisions_one()
 
 
 QUESTIONS-----------------------------------------------------------------------------------------
@@ -56,8 +69,12 @@ check into reset_timestep(), compute_dt()
 
 what is the impact of variable timestepping on computes and fixes?
 
+In update.cpp does particle ever move less than full dt?????? ------> ANSWER: at end of loop advecting
+  all particles, particles[i].dtremain = 0.  Therefore, the particle time does not need to be adjusted
+  by the time remaining in the move interval as in ds2v.f90.
 
-
+In ds2v.f90, why does the move stop (with particle time adjusted accordingly) if the time remaining
+in the move is less than 0.1*characteristic_cell_time (or in SPARTA language, 0.1*dt_desired for the cell).
 
 
 
@@ -79,8 +96,20 @@ finish logic added to ReadRestart::create_child_cells for cell dt (put dt in add
 
 need to make sure that cell dt_desired is set before particles are created initially
 
-look in ds2v.f90 for how particle time is set and advanced.
-
 check on add_particle() without arguments and ramifications with variable, adaptive time-stepping.
 
-how should particle times be set when added from surf_react*.cpp? (check ds2v.f90)
+how should particle times be set in the add_particle() calls in surf_react_adsorb.cpp (where
+pcell is also passed in but not set)?  Look at dtremain as well.  Note that the AddParticle class
+does not have time data.
+
+STOPPED HERE: in collide.cpp added variable_adaptive_time logic in collisions_one().  need to figure out how 
+to use dtc in actual collision functions called from collisions_one() and collisions_one_ambipolar(), e.g.,
+ in collide_vss.cpp in CollideVSS::attempt_collision(), where dt is used.  Should we just pass in dtc in the
+ attempt_collision() argument list?
+
+ don't forget to modify collisions_one_ambipolar.
+
+
+
+
+

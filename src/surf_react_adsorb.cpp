@@ -88,7 +88,7 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
   if (surf->distributed || surf->implicit)
     error->all(FLERR,
                "Cannot yet use surf_react adsorb with distributed or "
-	       "implicit surf elements");
+           "implicit surf elements");
 
   me = comm->me;
   nprocs = comm->nprocs;
@@ -423,7 +423,7 @@ void SurfReactAdsorb::create_per_surf_state()
   if (surf->find_custom((char *) "nstick") < 0) {
     first_owner = 1;
     nstick_species_custom = surf->add_custom((char *) "nstick_species",
-					     INT,nspecies_surf);
+                         INT,nspecies_surf);
     nstick_total_custom = surf->add_custom((char *) "nstick_total",INT,0);
     area_custom = surf->add_custom((char *) "area",DOUBLE,0);
     weight_custom = surf->add_custom((char *) "weight",DOUBLE,0);
@@ -917,7 +917,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           else jp_species = r->products[1];
 
           int reallocflag =
-            particle->add_particle(id,jp_species,ip->icell,x,v,0.0,0.0);
+            particle->add_particle(id,jp_species,ip->icell,x,v,0.0,0.0,ip->time);
           if (reallocflag) ip = particle->particles + (ip - particles);
           jp = &particle->particles[particle->nlocal-1];
           return (list[i] + 1);
@@ -969,7 +969,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
 
                     int reallocflag =
                       particle->add_particle(id,r->products[j],ip->icell,
-                                             x,v,0.0,0.0);
+                                             x,v,0.0,0.0,ip->time);
                     if (reallocflag) ip = particle->particles + (ip - particles);
                     jp = &particle->particles[particle->nlocal-1];
 
@@ -988,7 +988,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
 
                     int reallocflag =
                       particle->add_particle(id,r->products[j],ip->icell,
-                                             x,v,0.0,0.0);
+                                             x,v,0.0,0.0,ip->time);
                     if (reallocflag) ip = particle->particles + (ip - particles);
                     jp = &particle->particles[particle->nlocal-1];
 
@@ -1061,7 +1061,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
 
             if (r->stoich_products[0] == 2) {
               int reallocflag =
-                particle->add_particle(id,r->products[0],ip->icell,x,v,0.0,0.0);
+                particle->add_particle(id,r->products[0],ip->icell,x,v,0.0,0.0,ip->time);
               if (reallocflag) ip = particle->particles + (ip - particles);
               jp = &particle->particles[particle->nlocal-1];
 
@@ -1070,7 +1070,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
                                                r->cmodel_ip_coeffs);
             } else {
               int reallocflag =
-                particle->add_particle(id,r->products[1],ip->icell,x,v,0.0,0.0);
+                particle->add_particle(id,r->products[1],ip->icell,x,v,0.0,0.0,ip->time);
               if (reallocflag) ip = particle->particles + (ip - particles);
               jp = &particle->particles[particle->nlocal-1];
 
@@ -1233,7 +1233,7 @@ void SurfReactAdsorb::update_state_face()
   // sum perspecies deltas across all procs
 
   MPI_Allreduce(&species_delta[0][0],&face_sum_delta[0][0],
-		nface*nspecies_surf,MPI_INT,MPI_SUM,world);
+                nface*nspecies_surf,MPI_INT,MPI_SUM,world);
 
   // new perspecies state = old perspecies state + summed delta
   // insure no counts < 0
@@ -2685,7 +2685,7 @@ void SurfReactAdsorb::readfile_ps(char *fname)
    isurf >= 0 for line or tri indexed from 0 to Nsurf-1
    invoked once per Nsync steps
 ------------------------------------------------------------------------- */
-							
+
 void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
 {
   // mark this surface element since performing on-surf chemistry
@@ -2868,8 +2868,8 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
             int id = MAXSMALLINT*random->uniform();
             random_point(isurf,x);
             v[0] = v[1] = v[2] = 0.0;
-	
-	          particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
+
+              particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
             p = &particle->particles[particle->nlocal-1];
             p->dtremain = update->dt*random->uniform();
 
@@ -2882,28 +2882,28 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
               else if (modePS == PSTRI) isc = tris[isurf].isc;
               surf->sc[isc]->wrapper(p,norm,NULL,NULL);
             }
-	
-	           add_particle_mine(p);
-	           particle->nlocal--;
+
+               add_particle_mine(p);
+               particle->nlocal--;
 
             break;
           }
 
         case LH2:
           {
-	    double x[3],v[3];
+        double x[3],v[3];
 
-	    int id = MAXSMALLINT*random->uniform();
-	    random_point(isurf,x);
-	    v[0] = v[1] = v[2] = 0.0;
-	
-	    particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
-	    p = &particle->particles[particle->nlocal-1];
-	    p->dtremain = update->dt*random->uniform();
+        int id = MAXSMALLINT*random->uniform();
+        random_point(isurf,x);
+        v[0] = v[1] = v[2] = 0.0;
 
-	    if (r->cmodel_ip != NOMODEL)
-	      cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
-					     r->cmodel_ip_coeffs);
+        particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
+        p = &particle->particles[particle->nlocal-1];
+        p->dtremain = update->dt*random->uniform();
+
+        if (r->cmodel_ip != NOMODEL)
+          cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
+                         r->cmodel_ip_coeffs);
             else {
               if (modePS == PSFACE) isc = domain->surf_collide[isurf];
               else if (modePS == PSLINE) isc = lines[isurf].isc;
@@ -2911,10 +2911,10 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
               surf->sc[isc]->wrapper(p,norm,NULL,NULL);
             }
 
-	    add_particle_mine(p);
-	    particle->nlocal--;
-	
-	    break;
+        add_particle_mine(p);
+        particle->nlocal--;
+
+        break;
           }
 
         case LH4:
@@ -2925,7 +2925,7 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
         case SB:
           {
             double x[3],v[3];
-	
+
             int id = MAXSMALLINT*random->uniform();
             random_point(isurf,x);
             v[0] = v[1] = v[2] = 0.0;
@@ -2944,9 +2944,9 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
               surf->sc[isc]->wrapper(p,norm,NULL,NULL);
             }
 
-	          add_particle_mine(p);
-	          particle->nlocal--;
-	
+              add_particle_mine(p);
+              particle->nlocal--;
+
             break;
           }
         }
@@ -3301,10 +3301,10 @@ void SurfReactAdsorb::random_point(int isurf, double *x)
 
     double d_beam = 1.5e-3;
     double theta_beam = 45 * MY_PI /180;
-	
+
     double rand_r = sqrt(random->uniform());
     double rand_angle = MY_2PI * random->uniform();
-	
+
     double x_strike = 0.0;
     double y_strike = 0.0;
     double z_strike = 0.0;

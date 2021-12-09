@@ -239,6 +239,7 @@ void Grid::add_child_cell(cellint id, int level, double *lo, double *hi)
   c->csurfs = NULL;
   c->nsplit = 1;
   c->isplit = -1;
+  c->time = time_global;
 
   ChildInfo *ci = &cinfo[nlocal];
   ci->count = 0;
@@ -2627,5 +2628,8 @@ void Grid::debug()
 
 double Grid::get_particle_time(cellint icell, double random_uniform)
 {
- return time_global + (-1. + 2.*random_uniform)*cells[icell].dt_desired;
+  if (variable_adaptive_time)
+    return time_global + (-1. + 2.*random_uniform)*cells[icell].dt_desired;
+  else
+    return time_global;
 }

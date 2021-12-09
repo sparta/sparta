@@ -161,7 +161,7 @@ void FixEmitFaceFile::init()
 
   dimension = domain->dimension;
   fnum = update->fnum;
-  dt = update->dt;
+  dt = grid->dt_global;
 
   nspecies = particle->mixture[imix]->nspecies;
   nrho_mix = particle->mixture[imix]->nrho;
@@ -353,7 +353,7 @@ void FixEmitFaceFile::perform_task()
   double *lo,*hi,*vstream,*cummulative,*vscale;
   Particle::OnePart *p;
 
-  double dt = update->dt;
+  double dt = grid->dt_global;
   int *species = particle->mixture[imix]->species;
 
   // if subsonic, re-compute particle inflow counts for each task
@@ -434,6 +434,7 @@ void FixEmitFaceFile::perform_task()
           p = &particle->particles[particle->nlocal-1];
           p->flag = PINSERT;
           p->dtremain = dt * random->uniform();
+          p->time -= p->dtremain;
 
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
@@ -489,6 +490,7 @@ void FixEmitFaceFile::perform_task()
         p = &particle->particles[particle->nlocal-1];
         p->flag = PINSERT;
         p->dtremain = dt * random->uniform();
+        p->time -= p->dtremain;
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,

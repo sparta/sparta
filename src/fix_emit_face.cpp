@@ -136,7 +136,7 @@ void FixEmitFace::init()
 
   dimension = domain->dimension;
   fnum = update->fnum;
-  dt = update->dt;
+  dt = grid->dt_global;
 
   nspecies = particle->mixture[imix]->nspecies;
   fraction = particle->mixture[imix]->fraction;
@@ -469,7 +469,7 @@ void FixEmitFace::perform_task_onepass()
   double *lo,*hi,*normal,*vstream,*vscale;
   Particle::OnePart *p;
 
-  dt = update->dt;
+  dt = grid->dt_global;
   int *species = particle->mixture[imix]->species;
 
   // if subsonic, re-compute particle inflow counts for each task
@@ -556,6 +556,7 @@ void FixEmitFace::perform_task_onepass()
           p = &particle->particles[particle->nlocal-1];
           p->flag = PINSERT;
           p->dtremain = dt * random->uniform();
+          p->time -= p->dtremain;
 
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
@@ -616,6 +617,7 @@ void FixEmitFace::perform_task_onepass()
         p = &particle->particles[particle->nlocal-1];
         p->flag = PINSERT;
         p->dtremain = dt * random->uniform();
+        p->time -= p->dtremain;
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,
@@ -642,7 +644,7 @@ void FixEmitFace::perform_task_twopass()
   double *lo,*hi,*normal,*vstream,*vscale;
   Particle::OnePart *p;
 
-  dt = update->dt;
+  dt = grid->dt_global;
   int *species = particle->mixture[imix]->species;
 
   // if subsonic, re-compute particle inflow counts for each task
@@ -751,6 +753,7 @@ void FixEmitFace::perform_task_twopass()
           p = &particle->particles[particle->nlocal-1];
           p->flag = PINSERT;
           p->dtremain = dt * random->uniform();
+          p->time -= p->dtremain;
 
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
@@ -805,6 +808,7 @@ void FixEmitFace::perform_task_twopass()
         p = &particle->particles[particle->nlocal-1];
         p->flag = PINSERT;
         p->dtremain = dt * random->uniform();
+        p->time -= p->dtremain;
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,

@@ -464,13 +464,30 @@ template < int NEARCP > void Collide::collisions_one()
   // loop over cells I own
 
   Grid::ChildInfo *cinfo = grid->cinfo;
+  Grid::ChildCell *cells = grid->cells;
 
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
 
   for (int icell = 0; icell < nglocal; icell++) {
+
     np = cinfo[icell].count;
     if (np <= 1) continue;
+
+    // compute collisions in cell if the cell time falls behind the global time by
+    // the desired cell timestep.
+    if (grid->variable_adaptive_time) {
+      bool do_cell_collisions = false;
+      if ((grid->time_global - cells[icell].time) > cells[icell].dt_desired) {
+        do_cell_collisions = true;
+      }
+      if (do_cell_collisions) {
+        double const dtc = 2.*cells[icell].dt_desired;
+        cells[icell].time += dtc;
+      }
+      else
+        continue;
+    }
 
     if (NEARCP) {
       if (np > max_nn) realloc_nn(np,nn_last_partner);

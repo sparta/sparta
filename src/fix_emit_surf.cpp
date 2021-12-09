@@ -123,7 +123,7 @@ void FixEmitSurf::init()
   // copies of class data before invoking parent init() and count_task()
 
   fnum = update->fnum;
-  dt = update->dt;
+  dt = grid->dt_global;
 
   nspecies = particle->mixture[imix]->nspecies;
   fraction = particle->mixture[imix]->fraction;
@@ -433,7 +433,7 @@ void FixEmitSurf::perform_task()
   double x[3],v[3],e1[3],e2[3];
   Particle::OnePart *p;
 
-  double dt = update->dt;
+  double dt = grid->dt_global;
   int *species = particle->mixture[imix]->species;
 
   // if subsonic, re-compute particle inflow counts for each task
@@ -559,6 +559,7 @@ void FixEmitSurf::perform_task()
           p = &particle->particles[particle->nlocal-1];
           p->flag = PSURF + 1 + isurf;
           p->dtremain = dt * random->uniform();
+          p->time -= p->dtremain;
 
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
@@ -653,6 +654,7 @@ void FixEmitSurf::perform_task()
         p = &particle->particles[particle->nlocal-1];
         p->flag = PSURF + 1 + isurf;
         p->dtremain = dt * random->uniform();
+        p->time -= p->dtremain;
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,
