@@ -126,7 +126,7 @@ class CollideVSSKokkos : public CollideVSS {
 
  private:
   KOKKOS_INLINE_FUNCTION
-  void ambi_reset_kokkos(int, int, int,
+  void ambi_reset_kokkos(int, int, int, int,
                          Particle::OnePart *, Particle::OnePart *,
                          Particle::OnePart *, const DAT::t_int_1d &) const;
   int pack_grid_one(int, char *, int);

@@ -695,11 +695,11 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
 
     // perform collision and possible reaction
 
-    int nlocal = 0;
+    int index_kpart;
 
     setup_collision_kokkos(ipart,jpart,precoln,postcoln);
     const int reactflag = perform_collision_kokkos(ipart,jpart,kpart,precoln,postcoln,rand_gen,
-                                                   recomb_part3,recomb_species,recomb_density,nlocal);
+                                                   recomb_part3,recomb_species,recomb_density,index_kpart);
 
     if (ATOMIC_REDUCTION == 1)
       Kokkos::atomic_fetch_add(&d_ncollide_one(),1);
@@ -747,7 +747,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
     if (kpart) {
       if (np < d_plist.extent(1)) {
         if (NEARCP) d_nn_last_partner(icell,np) = 0;
-        d_plist(icell,np++) = nlocal-1;
+        d_plist(icell,np++) = index_kpart;
       } else {
         d_retry() = 1;
         d_maxcellcount() += DELTACELLCOUNT;
@@ -1082,12 +1082,12 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
     // ijspecies = species before collision chemistry
     // continue to next collision if no reaction
 
-    int nlocal = 0;
+    int index_kpart = 0;
 
     const int jspecies = jpart->ispecies;
     setup_collision_kokkos(ipart,jpart,precoln,postcoln);
     const int reactflag = perform_collision_kokkos(ipart,jpart,kpart,precoln,postcoln,rand_gen,
-                                                   recomb_part3,recomb_species,recomb_density,nlocal);
+                                                   recomb_part3,recomb_species,recomb_density,index_kpart);
 
     if (ATOMIC_REDUCTION == 1)
       Kokkos::atomic_fetch_add(&d_ncollide_one(),1);
@@ -1113,9 +1113,9 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
     // first reset ionambi if kpart was added since ambi_reset() uses it
 
     if (jspecies == ambispecies)
-      ambi_reset_kokkos(d_plist(icell,i),-1,jspecies,ipart,jpart,kpart,d_ionambi);
+      ambi_reset_kokkos(d_plist(icell,i),-1,jspecies,index_kpart,ipart,jpart,kpart,d_ionambi);
     else
-      ambi_reset_kokkos(d_plist(icell,i),d_plist(icell,j),jspecies,ipart,jpart,kpart,d_ionambi);
+      ambi_reset_kokkos(d_plist(icell,i),d_plist(icell,j),jspecies,index_kpart,ipart,jpart,kpart,d_ionambi);
 
     // if jpart exists, was originally not an electron, now is an electron:
     //   ionization reaction converted 2 neutrals to one ion
@@ -1147,14 +1147,15 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
         }
 
       } else if (jspecies == ambispecies && jpart->ispecies != ambispecies) {
-	int reallocflag = ParticleKokkos::add_particle_kokkos(d_particles,nlocal-1,0,jspecies,icell,jpart->x,jpart->v,0.0,0.0);
+        int index = Kokkos::atomic_fetch_add(&d_nlocal(),1);
+	int reallocflag = ParticleKokkos::add_particle_kokkos(d_particles,index,0,jspecies,icell,jpart->x,jpart->v,0.0,0.0);
         if (reallocflag) {
           d_retry() = 1;
           d_part_grow() = 1;
+          rand_pool.free_state(rand_gen);
           return;
         }
 
-	int index = nlocal-1;
 	//memcpy(&particles[index],jpart,nbytes);
         d_particles[index] = *jpart;
 	d_particles[index].id = MAXSMALLINT*rand_gen.drand();
@@ -1166,7 +1167,6 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
 
 	if (np < d_plist.extent(1)) {
 	  d_plist(icell,np++) = index;
-          np++;
 	} else {
 	  d_retry() = 1;
 	  d_maxcellcount() += DELTACELLCOUNT;
@@ -1204,7 +1204,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
     if (kpart) {
       if (kpart->ispecies != ambispecies) {
         if (np < d_plist.extent(1)) {
-          d_plist(icell,np++) = nlocal-1;
+          d_plist(icell,np++) = index_kpart;
         } else {
           d_retry() = 1;
           d_maxcellcount() += DELTACELLCOUNT;
@@ -1220,7 +1220,15 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
 	  *ep = *kpart;
 	  ep->ispecies = ambispecies;
 	  nelectron++;
-          Kokkos::atomic_fetch_add(&d_nlocal(),-1);
+          int ndelete = Kokkos::atomic_fetch_add(&d_ndelete(),1);
+          if (ndelete < d_dellist.extent(0)) {
+            d_dellist(ndelete) = index_kpart;
+          } else {
+            d_retry() = 1;
+            d_maxdelete() += DELTADELETE;
+            rand_pool.free_state(rand_gen);
+            return;
+          }
 	} else {
 	  d_retry() = 1;
 	  d_maxelectron() += DELTACELLCOUNT;
@@ -1246,7 +1254,6 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
   int melectron = 0;
   for (int n = 0; n < np; n++) {
     const int i = d_plist(icell,n);
-    p = &d_particles[i];
     if (d_ionambi[i]) {
       if (melectron < nelectron) {
 	ep = &d_elist(icell,melectron);
@@ -1367,7 +1374,7 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
                                   Particle::OnePart *&kp,
                                   struct State &precoln, struct State &postcoln, rand_type &rand_gen,
                                   Particle::OnePart *&p3, int &recomb_species, double &recomb_density,
-                                  int &nlocal) const
+                                  int &index_kpart) const
 {
   int reactflag,kspecies;
   double x[3],v[3];
@@ -1401,16 +1408,16 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
 
       memcpy(x,ip->x,3*sizeof(double));
       memcpy(v,ip->v,3*sizeof(double));
-      nlocal = Kokkos::atomic_fetch_add(&d_nlocal(),1) + 1;
+      index_kpart = Kokkos::atomic_fetch_add(&d_nlocal(),1);
       int reallocflag =
-        ParticleKokkos::add_particle_kokkos(d_particles,nlocal-1,id,kspecies,ip->icell,x,v,0.0,0.0);
+        ParticleKokkos::add_particle_kokkos(d_particles,index_kpart,id,kspecies,ip->icell,x,v,0.0,0.0);
       if (reallocflag) {
         d_retry() = 1;
         d_part_grow() = 1;
         return 0;
       }
 
-      kp = &d_particles[nlocal-1];
+      kp = &d_particles[index_kpart];
       EEXCHANGE_ReactingEDisposal(ip,jp,kp,precoln,postcoln,rand_gen);
       SCATTER_ThreeBodyScattering(ip,jp,kp,precoln,postcoln,rand_gen);
 
@@ -2059,7 +2066,7 @@ int CollideVSSKokkos::find_nn(rand_type &rand_gen, int i, int np, int icell) con
 ------------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::ambi_reset_kokkos(int i, int j, int jsp,
+void CollideVSSKokkos::ambi_reset_kokkos(int i, int j, int jsp, int index_kpart,
                                       Particle::OnePart *ip, Particle::OnePart *jp,
                                       Particle::OnePart *kp, const DAT::t_int_1d &d_ionambi) const
 {
@@ -2069,7 +2076,7 @@ void CollideVSSKokkos::ambi_reset_kokkos(int i, int j, int jsp,
   // in all ambi reactions with an electron reactant, it is J
 
   if (kp) {
-    int k = d_nlocal()-1;
+    int k = index_kpart;
     d_ionambi[k] = 0;
     if (jsp != e) return;
 
