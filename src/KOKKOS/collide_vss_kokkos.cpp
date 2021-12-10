@@ -621,7 +621,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
     return;
   }
   if (ATOMIC_REDUCTION == 1)
-    Kokkos::atomic_fetch_add(&d_nattempt_one(),nattempt);
+    Kokkos::atomic_add(&d_nattempt_one(),nattempt);
   else if (ATOMIC_REDUCTION == 0)
     d_nattempt_one() += nattempt;
   else
@@ -691,7 +691,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
                                                    recomb_part3,recomb_species,recomb_density,nlocal);
 
     if (ATOMIC_REDUCTION == 1)
-      Kokkos::atomic_fetch_add(&d_ncollide_one(),1);
+      Kokkos::atomic_increment(&d_ncollide_one());
     else if (ATOMIC_REDUCTION == 0)
       d_ncollide_one()++;
     else
@@ -699,7 +699,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
 
     if (reactflag) {
       if (ATOMIC_REDUCTION == 1)
-        Kokkos::atomic_fetch_add(&d_nreact_one(),1);
+        Kokkos::atomic_increment(&d_nreact_one());
       else if (ATOMIC_REDUCTION == 0)
         d_nreact_one()++;
       else
