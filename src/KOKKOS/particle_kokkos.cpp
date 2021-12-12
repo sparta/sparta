@@ -162,7 +162,7 @@ void ParticleKokkos::compress_migrate(int ndelete, int *dellist)
 
   Kokkos::deep_copy(d_lists,h_lists);
 
-  this->sync(Device,PARTICLE_MASK);
+  this->sync(Device,PARTICLE_MASK|CUSTOM_MASK);
   d_particles = k_particles.d_view;
 
   copymode = 1;
@@ -170,7 +170,7 @@ void ParticleKokkos::compress_migrate(int ndelete, int *dellist)
   DeviceType().fence();
   copymode = 0;
 
-  this->modify(Device,PARTICLE_MASK);
+  this->modify(Device,PARTICLE_MASK|CUSTOM_MASK);
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
 
   sorted = 0;
@@ -184,6 +184,7 @@ void ParticleKokkos::operator()(TagParticleCompressReactions, const int &i) cons
   const int k = d_slist[i];
   //memcpy(&d_particles[j],&d_particles[k],nbytes);
   d_particles[j] = d_particles[k];
+  copy_custom_kokkos(j,k); 
 }
 
 /* ----------------------------------------------------------------------
@@ -895,7 +896,8 @@ void ParticleKokkos::remove_custom(int index)
 
 void ParticleKokkos::copy_custom(int i, int j)
 {
-  // need sync/modify host of inner view
+  this->sync(Device,CUSTOM_MASK);
+
   int m;
 
   // caller does not always check this
@@ -919,6 +921,46 @@ void ParticleKokkos::copy_custom(int i, int j)
   if (ncustom_darray) {
     for (m = 0; m < ncustom_darray; m++)
       memcpy(edarray[m][i],edarray[m][j],edcol[m]*sizeof(double));
+  }
+
+  this->modify(Device,CUSTOM_MASK);
+}
+
+/* ----------------------------------------------------------------------
+   copy info for one particle in custom attribute vectors/arrays
+   into location I from location J
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+void ParticleKokkos::copy_custom_kokkos(int i, int j) const
+{
+  int m,ncol;
+
+  // caller does not always check this
+  // shouldn't be a problem, but valgrind can complain if memcpy to self
+  // oddly memcpy(&particles[i],&particles[j],sizeof(OnePart)) seems OK
+
+  if (i == j) return;
+
+  // 4 flavors of vectors/arrays
+
+  if (ncustom_ivec) {
+    for (m = 0; m < ncustom_ivec; m++)
+      k_eivec.d_view[m].k_view.d_view[i] = k_eivec.d_view[m].k_view.d_view[j];
+  }
+  if (ncustom_iarray) {
+    for (m = 0; m < ncustom_iarray; m++)
+      for (ncol = 0; ncol < k_eicol.d_view[m]; ncol++)
+        k_eiarray.d_view[m].k_view.d_view(i,ncol) = k_eiarray.d_view[m].k_view.d_view(j,ncol);
+  }
+  if (ncustom_dvec) {
+    for (m = 0; m < ncustom_dvec; m++)
+      k_edvec.d_view[m].k_view.d_view[i] = k_edvec.d_view[m].k_view.d_view[j];
+  }
+  if (ncustom_darray) {
+    for (m = 0; m < ncustom_darray; m++)
+      for (ncol = 0; ncol < k_edcol.d_view[m]; ncol++)
+        k_edarray.d_view[m].k_view.d_view(i,ncol) = k_edarray.d_view[m].k_view.d_view(j,ncol);
   }
 }
 
