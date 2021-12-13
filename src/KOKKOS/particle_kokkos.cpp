@@ -784,7 +784,7 @@ void ParticleKokkos::grow_custom(int index, int nold, int nnew)
       eivec[ewhich[index]] = ivector;
     } else {
       int **iarray = eiarray[ewhich[index]];
-      auto &k_iarray = k_eiarray.h_view[ewhich[index]].k_view;
+      auto k_iarray = k_eiarray.h_view[ewhich[index]].k_view;
       k_iarray.modify_host(); // force resize on host
       memoryKK->grow_kokkos(k_iarray,iarray,nold+nnew,esize[index],"particle:eiarray");
       k_eiarray.h_view[ewhich[index]].k_view = k_iarray;
