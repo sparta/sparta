@@ -297,7 +297,6 @@ void Collide::init()
       if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0) break;
     FixAmbipolar *afix = (FixAmbipolar *) modify->fix[ifix];
     ambispecies = afix->especies;
-    ions = afix->ions;
   }
 
   // if ambipolar and multiple groups in mixture, ambispecies must be its own group
@@ -1022,7 +1021,42 @@ void Collide::collisions_one_ambipolar()
       // first reset ionambi if kpart was added since ambi_reset() uses it
 
       if (kpart) ionambi = particle->eivec[particle->ewhich[index_ionambi]];
-      ambi_reset(plist[i],plist[j],jspecies,ipart,jpart,kpart,ionambi);
+      if (jspecies == ambispecies)
+        ambi_reset(plist[i],-1,jspecies,ipart,jpart,kpart,ionambi);
+      else
+        ambi_reset(plist[i],plist[j],jspecies,ipart,jpart,kpart,ionambi);
+
+      // if kpart created:
+      // particles and custom data structs may have been realloced by kpart
+      // add kpart to plist or elist
+      // kpart was just added to particle list, so index = nlocal-1
+      // must come before jpart code below since it modifies nlocal
+
+      if (kpart) {
+        particles = particle->particles;
+        ionambi = particle->eivec[particle->ewhich[index_ionambi]];
+        velambi = particle->edarray[particle->ewhich[index_velambi]];
+
+        if (kpart->ispecies != ambispecies) {
+          if (np == npmax) {
+            npmax += DELTAPART;
+            memory->grow(plist,npmax,"collide:plist");
+          }
+          plist[np++] = particle->nlocal-1;
+        
+        } else {
+          if (nelectron == maxelectron) {
+            maxelectron += DELTAELECTRON;
+            elist = (Particle::OnePart *)
+              memory->srealloc(elist,maxelectron*nbytes,"collide:elist");
+          }
+          ep = &elist[nelectron];
+          memcpy(ep,kpart,nbytes);
+          ep->ispecies = ambispecies;
+          nelectron++;
+          particle->nlocal--;
+        }
+      }
 
       // if jpart exists, was originally not an electron, now is an electron:
       //   ionization reaction converted 2 neutrals to one ion
@@ -1070,8 +1104,7 @@ void Collide::collisions_one_ambipolar()
 	    npmax += DELTAPART;
 	    memory->grow(plist,npmax,"collide:plist");
 	  }
-	  plist[np] = index;
-	  np++;
+	  plist[np++] = index;
 	}
       }
 
@@ -1087,37 +1120,6 @@ void Collide::collisions_one_ambipolar()
         dellist[ndelete++] = plist[j];
         plist[j] = plist[np-1];
         np--;
-      }
-
-      // if kpart created:
-      // particles and custom data structs may have been realloced by kpart
-      // add kpart to plist or elist
-      // kpart was just added to particle list, so index = nlocal-1
-
-      if (kpart) {
-	particles = particle->particles;
-        ionambi = particle->eivec[particle->ewhich[index_ionambi]];
-        velambi = particle->edarray[particle->ewhich[index_velambi]];
-
-	if (kpart->ispecies != ambispecies) {
-	  if (np == npmax) {
-	    npmax += DELTAPART;
-	    memory->grow(plist,npmax,"collide:plist");
-	  }
-	  plist[np++] = particle->nlocal-1;
-	
-	} else {
-	  if (nelectron == maxelectron) {
-	    maxelectron += DELTAELECTRON;
-	    elist = (Particle::OnePart *)
-	      memory->srealloc(elist,maxelectron*nbytes,"collide:elist");
-	  }
-	  ep = &elist[nelectron];
-	  memcpy(ep,kpart,nbytes);
-	  ep->ispecies = ambispecies;
-	  nelectron++;
-	  particle->nlocal--;
-	}
       }
 
       // update particle counts
@@ -1136,7 +1138,6 @@ void Collide::collisions_one_ambipolar()
     int melectron = 0;
     for (n = 0; n < np; n++) {
       i = plist[n];
-      p = &particles[i];
       if (ionambi[i]) {
 	if (melectron < nelectron) {
 	  ep = &elist[melectron];
@@ -1159,7 +1160,7 @@ void Collide::collisions_group_ambipolar()
 {
   int i,j,k,n,ii,jj,ip,np,isp,ng;
   int pindex,ipair,igroup,jgroup,newgroup,ispecies,jspecies,tmp;
-  int nattempt,reactflag,nelectrons;
+  int nattempt,reactflag,nelectron;
   int *ni,*nj,*ilist,*jlist,*tmpvec;
   double attempt,volume;
   Particle::OnePart *ipart,*jpart,*kpart,*p,*ep;
@@ -1393,6 +1394,52 @@ void Collide::collisions_group_ambipolar()
           if (jlist == ilist && j == *ni) j = i;
 	}
 
+	// if kpart created:
+	// particles and custom data structs may have been realloced by kpart
+	// add kpart to plist or elist and to group
+	// kpart was just added to particle list, so index = nlocal-1
+        // must come before jpart code below since it modifies nlocal
+
+	if (kpart) {
+	  particles = particle->particles;
+	  ionambi = particle->eivec[particle->ewhich[index_ionambi]];
+	  velambi = particle->edarray[particle->ewhich[index_velambi]];
+
+	  newgroup = species2group[kpart->ispecies];
+
+	  if (newgroup != egroup) {
+	    if (np == npmax) {
+	      npmax += DELTAPART;
+	      memory->grow(plist,npmax,"collide:plist");
+	      memory->grow(p2g,npmax,2,"collide:p2g");
+	    }
+	    plist[np++] = particle->nlocal-1;
+	    addgroup(newgroup,np-1);
+	    ilist = glist[igroup];
+	    jlist = glist[jgroup];
+	
+	  } else {
+	    if (nelectron == maxelectron) {
+	      maxelectron += DELTAELECTRON;
+	      elist = (Particle::OnePart *)
+		memory->srealloc(elist,maxelectron*nbytes,"collide:elist");
+	    }
+	    ep = &elist[nelectron];
+	    memcpy(ep,kpart,nbytes);
+	    ep->ispecies = ambispecies;
+	    nelectron++;
+	    particle->nlocal--;
+
+	    if (ngroup[egroup] == maxgroup[egroup]) {
+	      maxgroup[egroup] += DELTAPART;
+	      memory->grow(glist[egroup],maxgroup[egroup],"collide:grouplist");
+	    }
+	    ng = ngroup[egroup];
+	    glist[egroup][ng] = nelectron-1;
+	    ngroup[egroup]++;
+	  }
+        }
+
 	// jpart may now be in a different group or destroyed
 	// if jpart exists, now in a different group, neither group is egroup:
 	//   add/del group, reset ilist,jlist after addgroup() in case glist realloced
@@ -1493,51 +1540,6 @@ void Collide::collisions_group_ambipolar()
 	  np--;
 	}
 
-	// if kpart created:
-	// particles and custom data structs may have been realloced by kpart
-	// add kpart to plist or elist and to group
-	// kpart was just added to particle list, so index = nlocal-1
-
-	if (kpart) {
-	  particles = particle->particles;
-	  ionambi = particle->eivec[particle->ewhich[index_ionambi]];
-	  velambi = particle->edarray[particle->ewhich[index_velambi]];
-
-	  newgroup = species2group[kpart->ispecies];
-
-	  if (newgroup != egroup) {
-	    if (np == npmax) {
-	      npmax += DELTAPART;
-	      memory->grow(plist,npmax,"collide:plist");
-	      memory->grow(p2g,npmax,2,"collide:p2g");
-	    }
-	    plist[np++] = particle->nlocal-1;
-	    addgroup(newgroup,np-1);
-	    ilist = glist[igroup];
-	    jlist = glist[jgroup];
-	
-	  } else {
-	    if (nelectron == maxelectron) {
-	      maxelectron += DELTAELECTRON;
-	      elist = (Particle::OnePart *)
-		memory->srealloc(elist,maxelectron*nbytes,"collide:elist");
-	    }
-	    ep = &elist[nelectron];
-	    memcpy(ep,kpart,nbytes);
-	    ep->ispecies = ambispecies;
-	    nelectron++;
-	    particle->nlocal--;
-
-	    if (ngroup[egroup] == maxgroup[egroup]) {
-	      maxgroup[egroup] += DELTAPART;
-	      memory->grow(glist[egroup],maxgroup[egroup],"collide:grouplist");
-	    }
-	    ng = ngroup[egroup];
-	    glist[egroup][ng] = nelectron-1;
-	    ngroup[egroup]++;
-	  }
-	}
-
         // test to exit attempt loop due to groups becoming too small
 
         if (*ni <= 1) {
@@ -1560,7 +1562,6 @@ void Collide::collisions_group_ambipolar()
     int melectron = 0;
     for (n = 0; n < np; n++) {
       i = plist[n];
-      p = &particles[i];
       if (ionambi[i]) {
 	if (melectron < nelectron) {
 	  ep = &elist[melectron];

@@ -289,5 +289,5 @@ void CommKokkos::migrate_cells(int nmigrate)
   Comm::migrate_cells(nmigrate);
 
   if (collide)
-    collide_kk->modify(Host,ALL_MASK);
+    collide_kk->modified(Host,ALL_MASK);
 }

@@ -54,7 +54,6 @@ class FixVibmodeKokkos : public FixVibmode {
 #endif
 
   t_particle_1d d_particles;
-  t_particle_1d d_sorted;
   t_species_1d d_species;
 
   DAT::t_int_1d d_ewhich;
@@ -106,7 +105,7 @@ void FixVibmodeKokkos::update_custom_kokkos(int index, double temp_thermal,
     evib += ivib * boltz * d_species[isp].vibtemp[imode];
   }
 
-    rand_pool.free_state(rand_gen);
+  rand_pool.free_state(rand_gen);
 
   d_particles[index].evib = evib;
 }

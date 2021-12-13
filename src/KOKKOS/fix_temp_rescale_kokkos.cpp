@@ -77,7 +77,7 @@ void FixTempRescaleKokkos::operator()(TagFixTempRescale_end_of_step, const int &
 
   // loop over grid cells with more than 1 particle
 
-  int ip,ispecies;
+  int ispecies;
   double mass;
   double count,totmass,mvx,mvy,mvz,mvsq;
   double invtotmass,vscale;

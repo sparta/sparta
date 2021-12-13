@@ -81,6 +81,8 @@ action domain_kokkos.cpp
 action domain_kokkos.h
 action fix_adapt_kokkos.cpp
 action fix_adapt_kokkos.h
+action fix_ambipolar_kokkos.cpp
+action fix_ambipolar_kokkos.h
 action fix_ave_grid_kokkos.cpp
 action fix_ave_grid_kokkos.h
 action fix_balance_kokkos.cpp
