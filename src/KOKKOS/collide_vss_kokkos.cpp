@@ -269,7 +269,6 @@ void CollideVSSKokkos::init()
       if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0) break;
     FixAmbipolar *afix = (FixAmbipolar *) modify->fix[ifix];
     ambispecies = afix->especies;
-    ions = afix->ions;
   }
 
   // if ambipolar and multiple groups in mixture, ambispecies must be its own group
@@ -1117,6 +1116,53 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
     else
       ambi_reset_kokkos(d_plist(icell,i),d_plist(icell,j),jspecies,index_kpart,ipart,jpart,kpart,d_ionambi);
 
+    // if kpart created:
+    // particles and custom data structs may have been realloced by kpart
+    // add kpart to plist or elist
+    // kpart was just added to particle list, so index = nlocal-1
+    // must come before jpart code below since it modifies nlocal
+
+    if (kpart) {
+      if (kpart->ispecies != ambispecies) {
+        if (np < d_plist.extent(1)) {
+          d_plist(icell,np++) = index_kpart;
+        } else {
+          d_retry() = 1;
+          d_maxcellcount() += DELTACELLCOUNT;
+          rand_pool.free_state(rand_gen);
+          return;
+        }
+
+      } else {
+
+        if (nelectron < d_elist.extent(1)) {
+          ep = &d_elist(icell,nelectron);
+          //memcpy(ep,kpart,nbytes);
+          *ep = *kpart;
+          ep->ispecies = ambispecies;
+          nelectron++;
+#ifdef SPARTA_KOKKOS_EXACT
+          d_nlocal()--;
+#else
+          int ndelete = Kokkos::atomic_fetch_add(&d_ndelete(),1);
+          if (ndelete < d_dellist.extent(0)) {
+            d_dellist(ndelete) = index_kpart;
+          } else {
+            d_retry() = 1;
+            d_maxdelete() += DELTADELETE;
+            rand_pool.free_state(rand_gen);
+            return;
+          }
+#endif
+        } else {
+          d_retry() = 1;
+          d_maxelectron() += DELTACELLCOUNT;
+          rand_pool.free_state(rand_gen);
+          return;
+        }
+      }
+    }
+
     // if jpart exists, was originally not an electron, now is an electron:
     //   ionization reaction converted 2 neutrals to one ion
     //   add to elist, remove from plist, flag J for deletion
@@ -1194,48 +1240,6 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
       }
       d_plist(icell,j) = d_plist(icell,np-1);
       np--;
-    }
-
-    // if kpart created:
-    // particles and custom data structs may have been realloced by kpart
-    // add kpart to plist or elist
-    // kpart was just added to particle list, so index = nlocal-1
-
-    if (kpart) {
-      if (kpart->ispecies != ambispecies) {
-        if (np < d_plist.extent(1)) {
-          d_plist(icell,np++) = index_kpart;
-        } else {
-          d_retry() = 1;
-          d_maxcellcount() += DELTACELLCOUNT;
-          rand_pool.free_state(rand_gen);
-          return;
-        }
-
-      } else {
-
-	if (nelectron < d_elist.extent(1)) {
-	  ep = &d_elist(icell,nelectron);
-	  //memcpy(ep,kpart,nbytes);
-	  *ep = *kpart;
-	  ep->ispecies = ambispecies;
-	  nelectron++;
-          int ndelete = Kokkos::atomic_fetch_add(&d_ndelete(),1);
-          if (ndelete < d_dellist.extent(0)) {
-            d_dellist(ndelete) = index_kpart;
-          } else {
-            d_retry() = 1;
-            d_maxdelete() += DELTADELETE;
-            rand_pool.free_state(rand_gen);
-            return;
-          }
-	} else {
-	  d_retry() = 1;
-	  d_maxelectron() += DELTACELLCOUNT;
-	  rand_pool.free_state(rand_gen);
-	  return;
-	}
-      }
     }
 
     // update particle counts
