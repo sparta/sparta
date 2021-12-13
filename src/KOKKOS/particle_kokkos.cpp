@@ -896,7 +896,7 @@ void ParticleKokkos::remove_custom(int index)
 
 void ParticleKokkos::copy_custom(int i, int j)
 {
-  this->sync(Device,CUSTOM_MASK);
+  this->sync(Host,CUSTOM_MASK);
 
   int m;
 
@@ -923,7 +923,7 @@ void ParticleKokkos::copy_custom(int i, int j)
       memcpy(edarray[m][i],edarray[m][j],edcol[m]*sizeof(double));
   }
 
-  this->modify(Device,CUSTOM_MASK);
+  this->modify(Host,CUSTOM_MASK);
 }
 
 /* ----------------------------------------------------------------------
