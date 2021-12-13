@@ -32,6 +32,7 @@ class FixAmbipolar : public Fix {
   int *ions;                  // 1 if a particle species is an ionx
 
   FixAmbipolar(class SPARTA *, int, char **);
+  FixAmbipolar(class SPARTA *sparta) : Fix(sparta) {} // needed for Kokkos
   virtual ~FixAmbipolar();
   int setmask();
   void init();

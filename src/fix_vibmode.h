@@ -29,6 +29,7 @@ namespace SPARTA_NS {
 class FixVibmode : public Fix {
  public:
   FixVibmode(class SPARTA *, int, char **);
+  FixVibmode(class SPARTA *sparta) : Fix(sparta) {} // needed for Kokkos
   virtual ~FixVibmode();
   int setmask();
   void init();

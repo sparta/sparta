@@ -32,12 +32,13 @@ namespace SPARTA_NS {
 class FixVibmodeKokkos : public FixVibmode {
  public:
   FixVibmodeKokkos(class SPARTA *, int, char **);
+  FixVibmodeKokkos(class SPARTA *);
   ~FixVibmodeKokkos();
-  //void init();
+  void pre_update_custom_kokkos();
   void update_custom(int, double, double, double, double *);
 
   KOKKOS_INLINE_FUNCTION
-  void update_custom_kokkos(int, double, double, double, double *);
+  void update_custom_kokkos(int, double, double, double, const double *) const;
 
  private:
   int boltz;
@@ -56,8 +57,7 @@ class FixVibmodeKokkos : public FixVibmode {
   t_particle_1d d_particles;
   t_species_1d d_species;
 
-  DAT::t_int_1d d_ewhich;
-  ParticleKokkos::tdual_struct_tdual_int_2d_1d k_eiarray;
+  DAT::t_int_2d d_vibmode;
 };
 
 /* ----------------------------------------------------------------------
@@ -69,10 +69,8 @@ class FixVibmodeKokkos : public FixVibmode {
 KOKKOS_INLINE_FUNCTION
 void FixVibmodeKokkos::update_custom_kokkos(int index, double temp_thermal,
                                             double temp_rot, double temp_vib,
-                                            double *)
+                                            const double *) const
 {
-  auto &d_vibmode = k_eiarray.d_view[d_ewhich[vibmodeindex]].k_view.d_view;
-
   int isp = d_particles[index].ispecies;
   int nmode = d_species[isp].nvibmode;
 
@@ -105,9 +103,9 @@ void FixVibmodeKokkos::update_custom_kokkos(int index, double temp_thermal,
     evib += ivib * boltz * d_species[isp].vibtemp[imode];
   }
 
-  rand_pool.free_state(rand_gen);
-
   d_particles[index].evib = evib;
+
+  rand_pool.free_state(rand_gen);
 }
 
 }
