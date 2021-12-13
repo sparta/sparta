@@ -46,6 +46,10 @@ FixVibmode::FixVibmode(SPARTA *sparta, int narg, char **arg) :
 
   // create per-particle array
 
+  if (!collide)
+    error->all(FLERR,"Cannot use fix vibmode without "
+               "collide style defined");
+
   if (collide->vibstyle != DISCRETE)
     error->all(FLERR,"Cannot use fix vibmode without "
                "collide_modify vibrate discrete");
