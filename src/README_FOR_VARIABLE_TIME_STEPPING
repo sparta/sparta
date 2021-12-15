@@ -60,7 +60,8 @@ update.cpp
   added logic to skip particle move if not sufficiently lagging the global time
 
 collide.cpp
-  added variable_adaptive_time logic to collisions_one()
+  added variable_adaptive_time logic to collisions_one(), collisions_group(), collisions_one_ambipolar(), and collisions_group_ambipolar()
+  added dtc (collision time-step) to argument list of attempt_collision() and find_nn() variants.
 
 
 QUESTIONS-----------------------------------------------------------------------------------------
@@ -101,13 +102,6 @@ check on add_particle() without arguments and ramifications with variable, adapt
 how should particle times be set in the add_particle() calls in surf_react_adsorb.cpp (where
 pcell is also passed in but not set)?  Look at dtremain as well.  Note that the AddParticle class
 does not have time data.
-
-STOPPED HERE: in collide.cpp added variable_adaptive_time logic in collisions_one().  need to figure out how 
-to use dtc in actual collision functions called from collisions_one() and collisions_one_ambipolar(), e.g.,
- in collide_vss.cpp in CollideVSS::attempt_collision(), where dt is used.  Should we just pass in dtc in the
- attempt_collision() argument list?
-
- don't forget to modify collisions_one_ambipolar.
 
 
 

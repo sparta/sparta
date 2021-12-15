@@ -133,11 +133,9 @@ double CollideVSS::vremax_init(int igroup, int jgroup)
 
 /* ---------------------------------------------------------------------- */
 
-double CollideVSS::attempt_collision(int icell, int np, double volume)
+double CollideVSS::attempt_collision(int icell, int np, double volume, double dt)
 {
   double fnum = update->fnum;
-  double dt = update->dt;
-
   double nattempt;
 
   if (remainflag) {
@@ -155,11 +153,9 @@ double CollideVSS::attempt_collision(int icell, int np, double volume)
 /* ---------------------------------------------------------------------- */
 
 double CollideVSS::attempt_collision(int icell, int igroup, int jgroup,
-                                     double volume)
+                                     double volume, double dt)
 {
   double fnum = update->fnum;
-  double dt = update->dt;
-
   double nattempt;
 
   // return 2x the value for igroup != jgroup, since no J,I pairing
