@@ -44,7 +44,7 @@ class FixAmbipolarKokkos : public FixAmbipolar {
 
  private:
 
-  int boltz;
+  double boltz;
 
   t_particle_1d d_particles;
   t_species_1d d_species;

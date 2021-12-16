@@ -80,8 +80,8 @@ SurfCollideDiffuseKokkos::~SurfCollideDiffuseKokkos()
 {
   if (copy) return;
 
-  fix_ambi_kk_copy.uncopy();
-  fix_vibmode_kk_copy.uncopy();
+  fix_ambi_kk_copy.uncopy(1);
+  fix_vibmode_kk_copy.uncopy(1);
 
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.destroy();

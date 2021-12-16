@@ -59,7 +59,7 @@ FixAmbipolarKokkos::FixAmbipolarKokkos(SPARTA *sparta, int narg, char **arg) :
 
 FixAmbipolarKokkos::FixAmbipolarKokkos(SPARTA *sparta) :
   FixAmbipolar(sparta),
-  rand_pool(12345 + comm->me
+  rand_pool(12345 // seed doesn't matter since it will just be copied over
 #ifdef SPARTA_KOKKOS_EXACT
             , sparta
 #endif
@@ -67,13 +67,15 @@ FixAmbipolarKokkos::FixAmbipolarKokkos(SPARTA *sparta) :
 {
   ions = NULL;
   random = NULL;
+  id = NULL;
+  style = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
 
 FixAmbipolarKokkos::~FixAmbipolarKokkos()
 {
-  if (copymode || copy) return;
+  if (copy) return;
 
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.destroy();

@@ -66,7 +66,7 @@ FixVibmode::FixVibmode(SPARTA *sparta, int narg, char **arg) :
 
 FixVibmode::~FixVibmode()
 {
-  if (copymode) return;
+  if (copy) return;
 
   delete random;
   particle->remove_custom(vibmodeindex);

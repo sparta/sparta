@@ -51,19 +51,23 @@ FixVibmodeKokkos::FixVibmodeKokkos(SPARTA *sparta, int narg, char **arg) :
 
 FixVibmodeKokkos::FixVibmodeKokkos(SPARTA *sparta) :
   FixVibmode(sparta),
-  rand_pool(12345 + comm->me
+  rand_pool(12345 // seed doesn't matter since it will just be copied over
 #ifdef SPARTA_KOKKOS_EXACT
             , sparta
 #endif
             )
 {
   random = NULL;
+  id = NULL;
+  style = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
 
 FixVibmodeKokkos::~FixVibmodeKokkos()
 {
+  if (copy) return;
+
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.destroy();
 #endif
