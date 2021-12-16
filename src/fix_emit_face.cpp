@@ -129,7 +129,6 @@ FixEmitFace::~FixEmitFace()
 void FixEmitFace::init()
 {
   // invoke FixEmit::init() to set flags
-
   FixEmit::init();
 
   // copies of class data before invoking parent init() and count_task()
@@ -264,6 +263,8 @@ void FixEmitFace::create_task(int icell)
                        {0,1,2,3}, {4,5,6,7}};
   int nface_pts = 4;
   if (domain->dimension == 2) nface_pts = 2;
+
+  dt = grid->dt_global;
 
   // loop over 6 faces of icell
 
@@ -469,8 +470,9 @@ void FixEmitFace::perform_task_onepass()
   double *lo,*hi,*normal,*vstream,*vscale;
   Particle::OnePart *p;
 
-  dt = grid->dt_global;
   int *species = particle->mixture[imix]->species;
+
+  dt = grid->dt_global;
 
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current per-task temp_thermal and vstream
@@ -644,8 +646,9 @@ void FixEmitFace::perform_task_twopass()
   double *lo,*hi,*normal,*vstream,*vscale;
   Particle::OnePart *p;
 
-  dt = grid->dt_global;
   int *species = particle->mixture[imix]->species;
+
+  dt = grid->dt_global;
 
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current per-task temp_thermal and vstream

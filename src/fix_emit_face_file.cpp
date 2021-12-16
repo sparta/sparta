@@ -353,8 +353,9 @@ void FixEmitFaceFile::perform_task()
   double *lo,*hi,*vstream,*cummulative,*vscale;
   Particle::OnePart *p;
 
-  double dt = grid->dt_global;
   int *species = particle->mixture[imix]->species;
+
+  dt = grid->dt_global;
 
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current temp_thermal and vstream in insertion cells
@@ -944,6 +945,7 @@ int FixEmitFaceFile::interpolate(int icell)
   // skip task if final ntarget = 0.0, due to large outbound vstream
   // do not skip for subsonic since it resets ntarget every step
 
+  dt = grid->dt_global;
   double ntargetsp;
   for (isp = 0; isp < nspecies; isp++) {
     ntargetsp = frac_user *
