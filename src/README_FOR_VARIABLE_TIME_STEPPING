@@ -66,6 +66,8 @@ collide.cpp
   added variable_adaptive_time logic to collisions_one(), collisions_group(), collisions_one_ambipolar(), and collisions_group_ambipolar()
   added dtc (collision time-step) to argument list of attempt_collision() and find_nn() variants.
 
+added new fix framework to compute global dt:  fix_dt_global.[h,cpp]
+
 
 
 
@@ -109,8 +111,7 @@ pcell is also passed in but not set)?  Look at dtremain as well.  Note that the 
 does not have time data.
 
 how is dt_global set and updated?
-in fix_emit* routines, does dt need to be removed from init routines and the current value retrieved in the perform
-routines instead?
+
 
 
 
