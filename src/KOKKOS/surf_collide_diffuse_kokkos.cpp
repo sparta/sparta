@@ -101,7 +101,7 @@ void SurfCollideDiffuseKokkos::init()
         if (!afix->kokkos_flag)
           error->all(FLERR,"Must use fix ambipolar/kk when Kokkos is enabled");
         afix_kk = (FixAmbipolarKokkos*)afix;
-      } else if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0) {
+      } else if (strcmp(modify->fix[ifix]->style,"vibmode") == 0) {
         vibmode_flag = 1;
         FixVibmode *vfix = (FixVibmode *) modify->fix[ifix];
         if (!vfix->kokkos_flag)
