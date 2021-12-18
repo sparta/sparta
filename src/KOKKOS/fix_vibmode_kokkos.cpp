@@ -40,6 +40,8 @@ FixVibmodeKokkos::FixVibmodeKokkos(SPARTA *sparta, int narg, char **arg) :
 #endif
             )
 {
+  kokkos_flag = 1;
+
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.init(random);
 #endif
@@ -47,11 +49,43 @@ FixVibmodeKokkos::FixVibmodeKokkos(SPARTA *sparta, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
+FixVibmodeKokkos::FixVibmodeKokkos(SPARTA *sparta) :
+  FixVibmode(sparta),
+  rand_pool(12345 // seed doesn't matter since it will just be copied over
+#ifdef SPARTA_KOKKOS_EXACT
+            , sparta
+#endif
+            )
+{
+  random = NULL;
+  id = NULL;
+  style = NULL;
+}
+
+/* ---------------------------------------------------------------------- */
+
 FixVibmodeKokkos::~FixVibmodeKokkos()
 {
+  if (copy) return;
+
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.destroy();
 #endif
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixVibmodeKokkos::pre_update_custom_kokkos()
+{
+  boltz = update->boltz;
+
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
+  d_particles = particle_kk->k_particles.d_view;
+  d_species = particle_kk->k_species.d_view;
+  auto h_ewhich = particle_kk->k_ewhich.h_view;
+  auto k_eiarray = particle_kk->k_eiarray;
+  d_vibmode = k_eiarray.h_view[h_ewhich[vibmodeindex]].k_view.d_view;
 }
 
 /* ----------------------------------------------------------------------

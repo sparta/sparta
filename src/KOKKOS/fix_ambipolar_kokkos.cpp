@@ -41,6 +41,8 @@ FixAmbipolarKokkos::FixAmbipolarKokkos(SPARTA *sparta, int narg, char **arg) :
 #endif
             )
 {
+  kokkos_flag = 1;
+
   // random = RNG for electron velocity creation
 
 #ifdef SPARTA_KOKKOS_EXACT
@@ -55,13 +57,46 @@ FixAmbipolarKokkos::FixAmbipolarKokkos(SPARTA *sparta, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
+FixAmbipolarKokkos::FixAmbipolarKokkos(SPARTA *sparta) :
+  FixAmbipolar(sparta),
+  rand_pool(12345 // seed doesn't matter since it will just be copied over
+#ifdef SPARTA_KOKKOS_EXACT
+            , sparta
+#endif
+            )
+{
+  ions = NULL;
+  random = NULL;
+  id = NULL;
+  style = NULL;
+}
+
+/* ---------------------------------------------------------------------- */
+
 FixAmbipolarKokkos::~FixAmbipolarKokkos()
 {
-  if (copymode) return;
+  if (copy) return;
 
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.destroy();
 #endif
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixAmbipolarKokkos::pre_update_custom_kokkos()
+{
+  boltz = update->boltz;
+
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
+  d_particles = particle_kk->k_particles.d_view;
+  d_species = particle_kk->k_species.d_view;
+  auto h_ewhich = particle_kk->k_ewhich.h_view;
+  auto k_eivec = particle_kk->k_eivec;
+  auto k_edarray = particle_kk->k_edarray;
+  d_ionambi = k_eivec.h_view[h_ewhich[ionindex]].k_view.d_view;
+  d_velambi = k_edarray.h_view[h_ewhich[velindex]].k_view.d_view;
 }
 
 /* ----------------------------------------------------------------------

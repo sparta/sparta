@@ -33,23 +33,24 @@ class FixAmbipolarKokkos : public FixAmbipolar {
   DAT::t_int_1d d_ions;                  // 1 if a particle species is an ionx
 
   FixAmbipolarKokkos(class SPARTA *, int, char **);
+  FixAmbipolarKokkos(class SPARTA *);
   ~FixAmbipolarKokkos();
+  void pre_update_custom_kokkos();
   void update_custom(int, double, double, double, double *);
   void surf_react(Particle::OnePart *, int &, int &);
 
   KOKKOS_INLINE_FUNCTION
-  void update_custom_kokkos(int, double, double, double, double *);
+  void update_custom_kokkos(int, double, double, double, const double *) const;
 
  private:
 
-  int boltz;
+  double boltz;
 
   t_particle_1d d_particles;
   t_species_1d d_species;
 
-  DAT::t_int_1d d_ewhich;
-  ParticleKokkos::tdual_struct_tdual_int_1d_1d k_eivec;
-  ParticleKokkos::tdual_struct_tdual_float_2d_1d k_edarray;
+  DAT::t_int_1d d_ionambi;
+  DAT::t_float_2d d_velambi;
 
 #ifndef SPARTA_KOKKOS_EXACT
   Kokkos::Random_XorShift64_Pool<DeviceType> rand_pool;
@@ -72,12 +73,9 @@ class FixAmbipolarKokkos : public FixAmbipolar {
 
 KOKKOS_INLINE_FUNCTION
 void FixAmbipolarKokkos::update_custom_kokkos(int index, double temp_thermal,
-                                             double, double,
-                         double *vstream)
+                                              double, double,
+                                              const double *vstream) const
 {
-  auto &d_ionambi = k_eivec.d_view[d_ewhich[ionindex]].k_view.d_view;
-  auto &d_velambi = k_edarray.d_view[d_ewhich[velindex]].k_view.d_view;
-
   // if species is not ambipolar ion, set ionambi off and return
 
   int ispecies = d_particles[index].ispecies;

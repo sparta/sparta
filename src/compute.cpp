@@ -60,8 +60,7 @@ Compute::Compute(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   invoked_per_particle = invoked_per_grid = invoked_per_surf = -1;
 
   kokkos_flag = 0;
-  copymode = 0;
-  copy = 0;
+  copy = copymode = 0;
 }
 
 /* ---------------------------------------------------------------------- */

@@ -44,6 +44,9 @@ SurfCollideStyle(diffuse/kk,SurfCollideDiffuseKokkos)
 #include "error.h"
 #include "Kokkos_Random.hpp"
 #include "rand_pool_wrap.h"
+#include "kokkos_copy.h"
+#include "fix_ambipolar_kokkos.h"
+#include "fix_vibmode_kokkos.h"
 
 namespace SPARTA_NS {
 
@@ -55,8 +58,9 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
   SurfCollideDiffuseKokkos(class SPARTA *, int, char **);
   SurfCollideDiffuseKokkos(class SPARTA *);
   ~SurfCollideDiffuseKokkos();
-
+  void init();
   void pre_collide();
+  void post_collide();
 
 #ifndef SPARTA_KOKKOS_EXACT
   Kokkos::Random_XorShift64_Pool<DeviceType> rand_pool;
@@ -106,10 +110,11 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
 
     if (ip) {
       diffuse(ip,norm);
-      //if (modify->n_update_custom) {
-      //  int i = ip - particle->particles;
-      //  modify->update_custom(i,twall,twall,twall,vstream);
-      //}
+      int i = ip - d_particles.data();
+      if (ambi_flag)
+        fix_ambi_kk_copy.obj.update_custom_kokkos(i,twall,twall,twall,vstream);
+      if (vibmode_flag)
+        fix_vibmode_kk_copy.obj.update_custom_kokkos(i,twall,twall,twall,vstream);
     }
     //if (jp) {
     //  diffuse(jp,norm);
@@ -144,8 +149,15 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
 
  private:
   double boltz;
+  t_particle_1d d_particles;
   t_species_1d d_species;
   int rotstyle, vibstyle;
+
+  int ambi_flag,vibmode_flag;
+  FixAmbipolarKokkos* afix_kk;
+  FixVibmodeKokkos* vfix_kk;
+  KKCopy<FixAmbipolarKokkos> fix_ambi_kk_copy;
+  KKCopy<FixVibmodeKokkos> fix_vibmode_kk_copy;
 
   KOKKOS_INLINE_FUNCTION
   void diffuse(Particle::OnePart *p, const double *norm) const
