@@ -44,7 +44,7 @@ class KKCopy {
     obj.copy = 1;
   }
 
-  void uncopy(int copy = 1) {
+  void uncopy(int copy = 0) {
     if (ptr_temp != NULL) {
       memcpy(&obj, ptr_temp, sizeof(ClassStyle));
       free(ptr_temp);
