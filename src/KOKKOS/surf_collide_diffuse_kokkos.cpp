@@ -149,3 +149,11 @@ void SurfCollideDiffuseKokkos::pre_collide()
   vibstyle = NONE;
   if (Pointers::collide) vibstyle = Pointers::collide->vibstyle;
 }
+
+/* ---------------------------------------------------------------------- */
+
+void SurfCollideDiffuseKokkos::post_collide()
+{
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  if (ambi_flag || vibmode_flag) particle_kk->modify(Device,CUSTOM_MASK);
+}

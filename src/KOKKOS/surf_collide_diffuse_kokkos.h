@@ -60,6 +60,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
   ~SurfCollideDiffuseKokkos();
   void init();
   void pre_collide();
+  void post_collide();
 
 #ifndef SPARTA_KOKKOS_EXACT
   Kokkos::Random_XorShift64_Pool<DeviceType> rand_pool;

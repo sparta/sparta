@@ -551,6 +551,16 @@ template < int DIM, int SURF > void UpdateKokkos::move()
       error->one(FLERR,str);
     }
 
+    if (surf->nsc > 0) {
+      int ndiff = 0;
+      for (int n = 0; n < surf->nsc; n++) {
+        if (strcmp(surf->sc[n]->style,"diffuse") == 0) {
+          sc_kk_diffuse_copy[ndiff].obj.post_collide();
+          ndiff++;
+        }
+      }
+    }
+
     // if gridcut >= 0.0, check if another iteration of move is required
     // only the case if some particle flag = PENTRY/PEXIT
     //   in which case perform particle migration
