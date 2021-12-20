@@ -161,7 +161,7 @@ double ReactBirdKokkos::extract_tally(int m)
   if (!tally_flag) {
     tally_flag = 1;
 
-    if (sparta->kokkos->gpu_direct_flag) {
+    if (sparta->kokkos->gpu_aware_flag) {
       MPI_Allreduce(d_tally_reactions.data(),k_tally_reactions_all.d_view.data(),nlist,
                     MPI_SPARTA_BIGINT,MPI_SUM,world);
       k_tally_reactions_all.modify_device();
