@@ -1201,8 +1201,9 @@ void SurfReactAdsorb::PS_chemistry()
   // check if inside a child cell I own via id_find_child()
   // if not, skip the particle, another proc will add it
   // if yes, add it to particle list using values in allpart
-  // dtremain must be added separately
-  // grid->hash is filled must be filled to use grid->id_find_child()
+  // dtremain must be set separately
+  // grid->hash must be filled to use grid->id_find_child()
+  // NOTE: does this need logic for handling split cells ?
 
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
@@ -2719,7 +2720,7 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
   double ms_inv = factor/max_cover;
 
   Particle::OnePart *p;
-  int pcell,id,isc;
+  int id,isc;
 
   double nu_react[nactive_ps];
   OneReaction_PS *r;
@@ -2854,10 +2855,12 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
         // for each reaction, post-reaction velocities must be set
         // if NOMODEL then SC instance associated with surf/face sets vels
         // else SC style created when PS file was read sets velocities
-        // call to add_particle_mine():
-        //   adds new particle to mypart list
-        //   removes it from Particle class
-        //   allows correct proc that owns the grid cell to later add it
+        // calls to add_particle(), followed by add_particle_mine()
+        //   for add_particle() use dummy icell = 0, will be reset later
+        //   add_particle_mine() copies new particle to mypart list,
+        //     then removes it from Particle class
+        //   concatenated mypart list is processed in PS_chemistry()
+        //   added particle's grid cells are identified by owning procs
 
         switch (r->type) {
 
@@ -2869,7 +2872,7 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
             random_point(isurf,x);
             v[0] = v[1] = v[2] = 0.0;
 	
-	          particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
+            particle->add_particle(id,r->products[0],0,x,v,0.0,0.0);
             p = &particle->particles[particle->nlocal-1];
             p->dtremain = update->dt*random->uniform();
 
@@ -2883,8 +2886,8 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
               surf->sc[isc]->wrapper(p,norm,NULL,NULL);
             }
 	
-	           add_particle_mine(p);
-	           particle->nlocal--;
+            add_particle_mine(p);
+            particle->nlocal--;
 
             break;
           }
@@ -2897,7 +2900,7 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
 	    random_point(isurf,x);
 	    v[0] = v[1] = v[2] = 0.0;
 	
-	    particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
+	    particle->add_particle(id,r->products[0],0,,x,v,0.0,0.0);
 	    p = &particle->particles[particle->nlocal-1];
 	    p->dtremain = update->dt*random->uniform();
 
@@ -2930,7 +2933,7 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
             random_point(isurf,x);
             v[0] = v[1] = v[2] = 0.0;
 
-            particle->add_particle(id,r->products[0],pcell,x,v,0.0,0.0);
+            particle->add_particle(id,r->products[0],0,x,v,0.0,0.0);
             p = &particle->particles[particle->nlocal-1];
             p->dtremain = update->dt*random->uniform();
 
@@ -2944,8 +2947,8 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
               surf->sc[isc]->wrapper(p,norm,NULL,NULL);
             }
 
-	          add_particle_mine(p);
-	          particle->nlocal--;
+            add_particle_mine(p);
+            particle->nlocal--;
 	
             break;
           }
