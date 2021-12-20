@@ -195,7 +195,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
   particle_kk->sync(Device,PARTICLE_MASK);
   d_particles = particle_kk->k_particles.d_view;
 
-  if (sparta->kokkos->gpu_direct_flag && !ncustom) {
+  if (sparta->kokkos->gpu_aware_flag && !ncustom) {
     iparticle_kk->
       exchange_uniform(d_sbuf,nbytes_total,
                        (char *) (d_particles.data()+particle->nlocal),d_rbuf);
