@@ -1199,15 +1199,18 @@ void SurfReactAdsorb::PS_chemistry()
 
   // loop over all particles
   // check if inside a child cell I own via id_find_child()
+  //   if child cells is a split cell, find subcell via update->split()
   // if not, skip the particle, another proc will add it
   // if yes, add it to particle list using values in allpart
   // dtremain must be set separately
   // grid->hash must be filled to use grid->id_find_child()
   // NOTE: does this need logic for handling split cells ?
 
+  Grid::ChildCell *cells = grid->cells;
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
-
+  int dimension = domain->dimension;
+  
   int icell;
   double *x;
   AddParticle *p;
@@ -1219,6 +1222,10 @@ void SurfReactAdsorb::PS_chemistry()
     icell = grid->id_find_child(0,0,boxlo,boxhi,x);
     if (icell < 0) continue;
     if (icell >= grid->nlocal) continue;
+    if (cells[icell].nsplit > 1) {
+      if (dimension == 3) icell = update->split3d(icell,x);
+      else icell = update->split2d(icell,x);
+    }
 
     particle->add_particle(p->id,p->ispecies,icell,p->x,p->v,p->erot,p->evib);
     particle->particles[particle->nlocal-1].dtremain = p->dtremain;
@@ -2900,7 +2907,7 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
 	    random_point(isurf,x);
 	    v[0] = v[1] = v[2] = 0.0;
 	
-	    particle->add_particle(id,r->products[0],0,,x,v,0.0,0.0);
+	    particle->add_particle(id,r->products[0],0,x,v,0.0,0.0);
 	    p = &particle->particles[particle->nlocal-1];
 	    p->dtremain = update->dt*random->uniform();
 
