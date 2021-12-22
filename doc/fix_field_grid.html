@@ -54,9 +54,10 @@ That is applied by SPARTA during advection.
 </P>
 <P>See the <A HREF = "variable.html">variable</A> doc page for a description of the
 formula syntax allowed for grid-style variables.  They can include
-grid cell center point, thus enabling a spatially-dependent field.
-They can include the current timestep and timestep size (dt) to enable
-a time-dependent field.
+references to the grid vectors xc, yc, and zc for the grid cell center
+point.  Using these values in a formula can enable a
+spatially-dependent field.  The formulas can also include the current
+timestep and timestep size (dt) to enable a time-dependent field.
 </P>
 <P>NOTE still need to figure this out: And they can include properties of
 the particle, such as its mass or magnetic moment.
@@ -77,9 +78,9 @@ variables allows the field to vary spatially as a function of the grid
 cell center point. It also allows the field to vary in time by having
 the variables use the current timestep.  
 </P>
-<P>NOTE still need to figure this out: The field can also depend on
-particle attributes, such as its mass and magnetic moment (for a B
-field).
+<P>NOTE still need to figure out how to do this: The field can also
+depend on particle attributes, such as its mass and magnetic moment
+(for a B field).
 </P>
 <P>Note that use of the <A HREF = "global.html">global field grid</A> command with this
 fix will evaluate the specified grid-style variables as often as
