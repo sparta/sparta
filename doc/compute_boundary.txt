@@ -17,9 +17,10 @@ ID is documented in "compute"_compute.html command :ulb,l
 boundary = style name of this compute command :l
 mix-ID = mixture ID to perform calculation on :l
 one or more values can be appended :l
-value = {n} or {nwt} or {mflux} or {press} or {shx} or {shy} or {shz} or {ke} or {erot} or {evib} or {etot} :l
+value = {n} or {nwt} or {nflux} or {mflux} or {press} or {shx} or {shy} or {shz} or {ke} or {erot} or {evib} or {etot} :l
   n = count of particles hitting boundary
   nwt = weighted count of particles hitting boundary
+  nflux = flux of particles on boundary
   mflux = flux of mass on boundary
   press = magnitude of normal pressure on boundary
   shx,shy,shz = components of shear stress on boundary
@@ -107,15 +108,23 @@ boundary occurs.  The {nwt} quantity will only be different than {n}
 if particle weighting is enabled via the "global weight"_global.html
 command.
 
+The {nflux} value calculates the number flux imparted to the boundary by
+particles in the group.  This is computed as
+
+Nflux = N / (A * dt / fnum) :pre
+
+where N is the number of all contributing particles, normalized by
+A = the area of the surface element, dt = the timestep, and fnum = the
+real/simulated particle ratio set by the "global fnum"_global.html
+command.
+
 The {mflux} value calculates the mass flux imparted to the boundary by
 particles in the group.  This is computed as
 
 Mflux = Sum_i (mass_i) / (A * dt / fnum) :pre
 
 where the sum is over all contributing particle masses, normalized by
-A = the area of the surface element, dt = the timestep, and fnum = the
-real/simulated particle ratio set by the "global fnum"_global.html
-command.
+the area of the surface element, dt and fnum as defined before.
 
 The {press} value calculates the pressure {P} exerted on the boundary
 in the normal direction by particles in the group, such that outward

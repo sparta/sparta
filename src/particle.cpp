@@ -178,7 +178,7 @@ void Particle::init()
   }
 
   // if vibstyle = DISCRETE,
-  // all species with vibdof = 4,6,8 must have info read from a species.vib file
+  // all species with vibdof > 2 must have info read from a species.vib file
 
   if (collide && collide->vibstyle == DISCRETE) {
     for (int isp = 0; isp < nspecies; isp++) {
@@ -1155,14 +1155,11 @@ void Particle::read_species_file()
     else fsp->internaldof = 0;
 
     // error checks
-    // NOTE: allow rotdof = 3 when implement rotate = DISCRETE
 
-    if (fsp->rotdof != 0 && fsp->rotdof != 2)
+    if (fsp->rotdof != 0 && fsp->rotdof != 2 && fsp->rotdof != 3)
       error->all(FLERR,"Invalid rotational DOF in species file");
-    //if (fsp->rotdof != 0 && fsp->rotdof != 2 && fsp->rotdof != 3)
-    //  error->all(FLERR,"Invalid rotational DOF in species file");
 
-    if (fsp->vibdof < 0 || fsp->vibdof > 8 || fsp->vibdof % 2)
+    if (fsp->vibdof < 0 || fsp->vibdof > 2*MAXVIBMODE || fsp->vibdof % 2)
       error->all(FLERR,"Invalid vibrational DOF in species file");
 
     // initialize additional rotation/vibration fields
@@ -1172,10 +1169,13 @@ void Particle::read_species_file()
     fsp->nvibmode = fsp->vibdof / 2;
 
     fsp->rottemp[0] = fsp->rottemp[1] = fsp->rottemp[2] = 0.0;
-    fsp->vibtemp[1] = fsp->vibtemp[2] = fsp->vibtemp[3] = 0.0;
-    fsp->vibrel[1] = fsp->vibrel[2] = fsp->vibrel[3] = 0.0;
-    fsp->vibdegen[0] = fsp->vibdegen[1] =
-      fsp->vibdegen[2] = fsp->vibdegen[3] = 0;
+
+    fsp->vibdegen[0] = 0;
+    for (int m = 1; m < MAXVIBMODE; m++) {
+      fsp->vibtemp[m] = 0.0;
+      fsp->vibrel[m] = 0.0;
+      fsp->vibdegen[m] = 0;
+    }
 
     fsp->vibdiscrete_read = 0;
 
@@ -1257,7 +1257,7 @@ void Particle::read_vibration_file()
   // skip blank lines or comment lines starting with '#'
   // all other lines can have up to NWORDS
 
-  int NWORDS = 14;
+  int NWORDS = 2 + 3*MAXVIBMODE;
   char **words = new char*[NWORDS];
   char line[MAXLINE],copy[MAXLINE];
 
@@ -1286,7 +1286,7 @@ void Particle::read_vibration_file()
     strcpy(vsp->id,words[0]);
 
     vsp->nmode = atoi(words[1]);
-    if (vsp->nmode < 2 || vsp->nmode > 4)
+    if (vsp->nmode < 2 || vsp->nmode > MAXVIBMODE)
       error->one(FLERR,"Invalid N count in vibration file");
     if (nwords != 2 + 3*vsp->nmode)
       error->one(FLERR,"Incorrect line format in vibration file");
@@ -1314,12 +1314,12 @@ void Particle::read_vibration_file()
 int Particle::wordcount(char *line, char **words)
 {
   int nwords = 0;
-  char *word = strtok(line," \t");
+  char *word = strtok(line," \t\n");
 
   while (word) {
     if (words) words[nwords] = word;
     nwords++;
-    word = strtok(NULL," \t");
+    word = strtok(NULL," \t\n");
   }
 
   return nwords;

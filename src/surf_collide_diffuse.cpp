@@ -81,10 +81,17 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
       wx = atof(arg[iarg+4]);
       wy = atof(arg[iarg+5]);
       wz = atof(arg[iarg+6]);
-      if (domain->dimension == 2 && pz != 0.0)
-        error->all(FLERR,"Surf_collide diffuse rotation invalid for 2d");
-      if (domain->dimension == 2 && (wx != 0.0 || wy != 0.0))
-        error->all(FLERR,"Surf_collide diffuse rotation invalid for 2d");
+
+      if (domain->dimension == 2) {
+        if (pz != 0.0)
+          error->all(FLERR,"Surf_collide diffuse rotation invalid for 2d");
+        if (!domain->axisymmetric && (wx != 0.0 || wy != 0.0))
+          error->all(FLERR,"Surf_collide diffuse rotation invalid for 2d");
+        if (domain->axisymmetric && (wy != 0.0 || wz != 0.0))
+          error->all(FLERR,
+                     "Surf_collide diffuse rotation invalid for 2d axisymmetric");
+      }
+
       iarg += 7;
     } else error->all(FLERR,"Illegal surf_collide diffuse command");
   }

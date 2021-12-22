@@ -551,6 +551,16 @@ template < int DIM, int SURF > void UpdateKokkos::move()
       error->one(FLERR,str);
     }
 
+    if (surf->nsc > 0) {
+      int ndiff = 0;
+      for (int n = 0; n < surf->nsc; n++) {
+        if (strcmp(surf->sc[n]->style,"diffuse") == 0) {
+          sc_kk_diffuse_copy[ndiff].obj.post_collide();
+          ndiff++;
+        }
+      }
+    }
+
     // if gridcut >= 0.0, check if another iteration of move is required
     // only the case if some particle flag = PENTRY/PEXIT
     //   in which case perform particle migration
@@ -720,7 +730,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
   int nmask = d_cells[icell].nmask;
   stuck_iterate = 0;
   if (ATOMIC_REDUCTION == 1)
-    Kokkos::atomic_fetch_add(&d_ntouch_one(),1);
+    Kokkos::atomic_increment(&d_ntouch_one());
   else if (ATOMIC_REDUCTION == 0)
     d_ntouch_one()++;
   else
@@ -886,7 +896,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       }
 
       if (ATOMIC_REDUCTION == 1)
-        Kokkos::atomic_fetch_add(&d_nscheck_one(),nsurf);
+        Kokkos::atomic_add(&d_nscheck_one(),nsurf);
       else if (ATOMIC_REDUCTION == 0)
         d_nscheck_one() += nsurf;
       else
@@ -1162,7 +1172,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
           exclude = minsurf;
           if (ATOMIC_REDUCTION == 1)
-            Kokkos::atomic_fetch_add(&d_nscollide_one(),1);
+            Kokkos::atomic_increment(&d_nscollide_one());
           else if (ATOMIC_REDUCTION == 0)
             d_nscollide_one()++;
           else
@@ -1209,7 +1219,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           else {
             particle_i.flag = PDISCARD;
             if (ATOMIC_REDUCTION == 1)
-              Kokkos::atomic_fetch_add(&d_nstuck(),1);
+              Kokkos::atomic_increment(&d_nstuck());
             else if (ATOMIC_REDUCTION == 0)
               d_nstuck()++;
             else
@@ -1255,7 +1265,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
         if (x[1] < lo[1] || x[1] > hi[1]) {
           particle_i.flag = PDISCARD;
           if (ATOMIC_REDUCTION == 1)
-            Kokkos::atomic_fetch_add(&d_naxibad(),1);
+            Kokkos::atomic_increment(&d_naxibad());
           else if (ATOMIC_REDUCTION == 0)
             d_naxibad()++;
           else
@@ -1412,7 +1422,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       if (bflag == OUTFLOW) {
         particle_i.flag = PDISCARD;
         if (ATOMIC_REDUCTION == 1)
-          Kokkos::atomic_fetch_add(&d_nexit_one(),1);
+          Kokkos::atomic_increment(&d_nexit_one());
         else if (ATOMIC_REDUCTION == 0)
           d_nexit_one()++;
         else
@@ -1458,12 +1468,12 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           //jpart->weight = particle_i.weight;
           //pstop++;
         }
-        Kokkos::atomic_fetch_add(&d_nboundary_one(),1);
-        Kokkos::atomic_fetch_add(&d_ntouch_one(),-1);    // decrement here since will increment below
+        Kokkos::atomic_increment(&d_nboundary_one());
+        Kokkos::atomic_decrement(&d_ntouch_one());    // decrement here since will increment below
       } else {
         if (ATOMIC_REDUCTION == 1) {
-          Kokkos::atomic_fetch_add(&d_nboundary_one(),1);
-          Kokkos::atomic_fetch_add(&d_ntouch_one(),-1);    // decrement here since will increment below
+          Kokkos::atomic_increment(&d_nboundary_one());
+          Kokkos::atomic_decrement(&d_ntouch_one());    // decrement here since will increment below
         } else if (ATOMIC_REDUCTION == 0) {
           d_nboundary_one()++;
           d_ntouch_one()--;    // decrement here since will increment below
@@ -1503,7 +1513,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     neigh = d_cells[icell].neigh;
     nmask = d_cells[icell].nmask;
     if (ATOMIC_REDUCTION == 1)
-      Kokkos::atomic_fetch_add(&d_ntouch_one(),1);
+      Kokkos::atomic_increment(&d_ntouch_one());
     else if (ATOMIC_REDUCTION == 0)
       d_ntouch_one()++;
     else
@@ -1543,7 +1553,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
         return;
       }
       if (ATOMIC_REDUCTION == 1)
-        Kokkos::atomic_fetch_add(&d_ncomm_one(),1);
+        Kokkos::atomic_increment(&d_ncomm_one());
       else if (ATOMIC_REDUCTION == 0)
         d_ncomm_one()++;
       else

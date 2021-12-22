@@ -33,9 +33,6 @@ using namespace SPARTA_NS;
 
 enum{TEMP,PRESS};
 
-
-
-
 /* ---------------------------------------------------------------------- */
 
 ComputeThermalGridKokkos::ComputeThermalGridKokkos(SPARTA *sparta, int narg, char **arg) :
@@ -213,7 +210,7 @@ int ComputeThermalGridKokkos::query_tally_grid_kokkos(DAT::t_float_2d_lr &d_arra
      use internal tallied info for single timestep, set nsample = 1
      compute values for all grid cells
        store results in vector_grid with nstride = 1 (single col of array_grid)
-   for etaylly = ptr to caller array:
+   for etally = ptr to caller array:
      use external tallied info for many timesteps
      nsample = additional normalization factor used by some values
      emap = list of etally columns to use, # of columns determined by index
@@ -277,7 +274,7 @@ post_process_grid_kokkos(int index, int nsample,
 KOKKOS_INLINE_FUNCTION
 void ComputeThermalGridKokkos::operator()(TagComputeThermalGrid_post_process_grid, const int &icell) const {
   const double ncount = d_etally(icell,n);
-  if (ncount == 0.0) d_vec[icell] = 0.0;
+  if (ncount <= 1.0) d_vec[icell] = 0.0;
   else {
     const double mass = d_etally(icell,n+1);
     const double mvx = d_etally(icell,n+2);

@@ -27,7 +27,7 @@
 
 using namespace SPARTA_NS;
 
-enum{NUM,NUMWT,MFLUX,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
+enum{NUM,NUMWT,NFLUX,MFLUX,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
      XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ETOT};
 
 #define DELTA 4096
@@ -55,6 +55,7 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
   while (iarg < narg) {
     if (strcmp(arg[iarg],"n") == 0) which[nvalue++] = NUM;
     else if (strcmp(arg[iarg],"nwt") == 0) which[nvalue++] = NUMWT;
+    else if (strcmp(arg[iarg],"nflux") == 0) which[nvalue++] = NFLUX;
     else if (strcmp(arg[iarg],"mflux") == 0) which[nvalue++] = MFLUX;
     else if (strcmp(arg[iarg],"fx") == 0) which[nvalue++] = FX;
     else if (strcmp(arg[iarg],"fy") == 0) which[nvalue++] = FY;
@@ -296,6 +297,14 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       break;
     case NUMWT:
       vec[k++] += weight;
+      break;
+    case NFLUX:
+      vec[k] += weight * fluxscale;
+      if (!transparent) {
+        if (ip) vec[k] -= weight * fluxscale;
+        if (jp) vec[k] -= weight * fluxscale;
+      }
+      k++;
       break;
     case MFLUX:
       vec[k] += origmass * fluxscale;

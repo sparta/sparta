@@ -35,6 +35,7 @@ step = 2d flow around a staircase of steps
 surf = change surfaces between or during runs
 surf_collide = variety of surface collision models
 surf_react_adsorb = surface reaction adsorb models, both GS and PS variants
+thermostat = use of fix temp/rescale as a thermostat
 vibrate = vibrational energy modes in collisions
 
 Here is an example of how one of the sample problems can be run and

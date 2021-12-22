@@ -58,7 +58,7 @@ Fix::Fix(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   END_OF_STEP = 2;
 
   kokkos_flag = 0;
-  copymode = 0;
+  copy = copymode = 0;
 
   execution_space = Host;
   datamask_read = ALL_MASK;
@@ -69,7 +69,7 @@ Fix::Fix(SPARTA *sparta, int, char **arg) : Pointers(sparta)
 
 Fix::~Fix()
 {
-  if (copymode) return;
+  if (copy || copymode) return;
 
   delete [] id;
   delete [] style;

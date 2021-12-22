@@ -65,12 +65,13 @@ class Fix : protected Pointers {
   int START_OF_STEP,END_OF_STEP;    // mask settings
 
   int kokkos_flag;              // 0/1 if Kokkos fix
-  int copymode;                 // 1 if copy of class (prevents deallocation of
+  int copy,copymode;            // 1 if copy of class (prevents deallocation of
                                 //  base class when child copy is destroyed)
   ExecutionSpace execution_space;
   unsigned int datamask_read,datamask_modify;
 
   Fix(class SPARTA *, int, char **);
+  Fix(class SPARTA *sparta) : Pointers(sparta) {} // needed for Kokkos
   virtual ~Fix();
 
   virtual int setmask() = 0;

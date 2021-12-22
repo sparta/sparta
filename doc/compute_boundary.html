@@ -25,10 +25,11 @@
 
 <LI>one or more values can be appended 
 
-<LI>value = <I>n</I> or <I>nwt</I> or <I>mflux</I> or <I>press</I> or <I>shx</I> or <I>shy</I> or <I>shz</I> or <I>ke</I> or <I>erot</I> or <I>evib</I> or <I>etot</I> 
+<LI>value = <I>n</I> or <I>nwt</I> or <I>nflux</I> or <I>mflux</I> or <I>press</I> or <I>shx</I> or <I>shy</I> or <I>shz</I> or <I>ke</I> or <I>erot</I> or <I>evib</I> or <I>etot</I> 
 
 <PRE>  n = count of particles hitting boundary
   nwt = weighted count of particles hitting boundary
+  nflux = flux of particles on boundary
   mflux = flux of mass on boundary
   press = magnitude of normal pressure on boundary
   shx,shy,shz = components of shear stress on boundary
@@ -117,15 +118,23 @@ boundary occurs.  The <I>nwt</I> quantity will only be different than <I>n</I>
 if particle weighting is enabled via the <A HREF = "global.html">global weight</A>
 command.
 </P>
+<P>The <I>nflux</I> value calculates the number flux imparted to the boundary by
+particles in the group.  This is computed as
+</P>
+<PRE>Nflux = N / (A * dt / fnum) 
+</PRE>
+<P>where N is the number of all contributing particles, normalized by
+A = the area of the surface element, dt = the timestep, and fnum = the
+real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
+command.
+</P>
 <P>The <I>mflux</I> value calculates the mass flux imparted to the boundary by
 particles in the group.  This is computed as
 </P>
 <PRE>Mflux = Sum_i (mass_i) / (A * dt / fnum) 
 </PRE>
 <P>where the sum is over all contributing particle masses, normalized by
-A = the area of the surface element, dt = the timestep, and fnum = the
-real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
-command.
+the area of the surface element, dt and fnum as defined before.
 </P>
 <P>The <I>press</I> value calculates the pressure <I>P</I> exerted on the boundary
 in the normal direction by particles in the group, such that outward
