@@ -23,6 +23,7 @@ FixStyle(dt_global,FixDtGlobal)
 
 #include "stdio.h"
 #include "fix.h"
+#include "compute.h"
 
 namespace SPARTA_NS {
 
@@ -33,12 +34,19 @@ class FixDtGlobal : public Fix {
   int setmask();
   void init();
   void end_of_step();
+  virtual void reallocate();
+
+protected:
+  int nglocal;
+  int lambdawhich,usqwhich,vsqwhihc,wsqwhich;
+  char *id_lambda, *id_usq, *id_vsq, *id_wsq;
+  int lambdaindex, usqindex,vsqindex,wsqindex;
+  class Compute *clambda;
+  class Fix *fusq,*fvsq,*fwsq;
+  double *lambda,*usq,*vsq,*wsq;
 
  private:
-  int me,screenflag;
-  FILE *fp;
-  char *string,*copy,*work;
-  int maxcopy,maxwork;
+  int me;
 };
 
 }
