@@ -128,7 +128,7 @@ void FixFieldGrid::init()
   }
 
   bigint nbytes = (bigint) grid->nlocal * size_per_grid_cols;
-  memset(&array_grid[0][0],nbytes*sizeof(double),0);
+  memset(&array_grid[0][0],0,nbytes*sizeof(double));
 }
 
 /* ---------------------------------------------------------------------- */

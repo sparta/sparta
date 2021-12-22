@@ -129,7 +129,7 @@ void FixFieldParticle::init()
   }
 
   bigint nbytes = (bigint) particle->nlocal * size_per_particle_cols;
-  memset(&array_particle[0][0],nbytes*sizeof(double),0);
+  memset(&array_particle[0][0],0,nbytes*sizeof(double));
 }
 
 /* ---------------------------------------------------------------------- */
