@@ -40,7 +40,8 @@ if(SPARTA_ENABLE_TESTING)
       "ambi"
       "relax_const"
       "relax_variable"
-      "thermostat")
+      "thermostat"
+      "bfield")
 
   set(SPARTA_DISABLED_TESTS
       "in.ablation.3d.reactions" # Failing

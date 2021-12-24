@@ -1,0 +1,65 @@
+################################################################################
+# thermal gas in a 3d box with collisions
+# particles reflect off global box boundaries
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5 comm/sort yes
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+create_grid 	    10 10 10
+
+balance_grid        rcb part
+
+species		    ar.species Ar
+mixture		    air Ar vstream 0.0 0.0 0.0 temp 273.15
+
+global              nrho 7.07043E22
+global              fnum 7.07043E6
+
+collide		    vss air ar.vss
+
+create_particles    air n 10000 twopass
+
+stats		    100
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll c_temp
+
+#compute             1 grid all n
+#region              slab block INF INF INF INF 4.5e-5 5.5e-5
+#dump                2 image all 100 image.*.ppm type type pdiam 3.0e-6 &
+#		    size 512 512 gline yes 0.005 gridx 0.00005 c_1[1]
+#dump_modify	    2 pad 4 region slab
+
+# ---------------------------------------
+# added lines for external field
+
+species_modify      Ar mu 1e-18
+variable Rmax equal 0.0001
+variable eps equal 1e-6
+
+variable Bx particle "sqrt(x*x + y*y) * sin(x/v_Rmax)"
+variable BxEps particle "sqrt((x+v_eps)*(x+v_eps) + y*y) * sin((x+v_eps)/v_Rmax)"
+variable gradBx particle "mu/mass * (v_BxEps - v_Bx) / v_eps"
+
+variable By particle "sqrt(x*x + y*y) * sin(y/v_Rmax)"
+variable ByEps particle "sqrt(x*x + (y+v_eps)*(y+v_eps)) * sin((y+v_eps)/v_Rmax)"
+variable gradBy particle "mu/mass * (v_ByEps - v_By) / v_eps"
+
+fix      1 field/particle gradBx gradBy NULL
+global   field particle 1
+
+dump                10 particle all 1000 tmp.dump.* id type f_1[*]
+
+# ---------------------------------------
+
+timestep 	    7.00E-9
+run 		    1000

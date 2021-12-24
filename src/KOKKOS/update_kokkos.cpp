@@ -51,6 +51,8 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Surf
+enum{PERAUTO,PERCELL,PERSURF};                  // several files
+enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // several files
 
 #define MAXSTUCK 20
 #define EPSPARAM 1.0e-7
@@ -168,31 +170,49 @@ void UpdateKokkos::init()
     else moveptr = &UpdateKokkos::move<2,0>;
   }
 
-  // check gravity vector
+  // checks on external field options
 
-  if (domain->dimension == 2 && gravity[2] != 0.0)
-    error->all(FLERR,"Gravity in z not allowed for 2d");
-  if (domain->axisymmetric && gravity[1] != 0.0)
-    error->all(FLERR,"Gravity in y not allowed for axi-symmetric model");
-
-  // moveperturb method is set if particle motion is perturbed
-
-  gravity_3d_flag = gravity_2d_flag = 0;
-  moveperturb = NULL;
-  if (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0) {
-    if (domain->dimension == 3) {
-      moveperturb = &UpdateKokkos::gravity3d;
-      gravity_3d_flag = 1;
-    }
-    if (domain->dimension == 2){
-      moveperturb = &UpdateKokkos::gravity2d;
-      gravity_2d_flag = 1;
-    }
+  if (fstyle == CFIELD) {
+    if (domain->dimension == 2 && field[2] != 0.0)
+      error->all(FLERR,"External field in z not allowed for 2d");
+    if (domain->axisymmetric && field[1] != 0.0)
+      error->all(FLERR,
+                 "External field in y not allowed for axisymmetric model");
+  } else if (fstyle == PFIELD) {
+    ifieldfix = modify->find_fix(fieldID);
+    if (ifieldfix < 0) error->all(FLERR,"External field fix ID not found");
+    if (!modify->fix[ifieldfix]->per_particle_field)
+      error->all(FLERR,"External field fix does not compute necessary field");
+  } else if (fstyle == GFIELD) {
+    ifieldfix = modify->find_fix(fieldID);
+    if (ifieldfix < 0) error->all(FLERR,"External field fix ID not found");
+    if (!modify->fix[ifieldfix]->per_grid_field)
+      error->all(FLERR,"External field fix does not compute necessary field");
   }
+
+  // moveperturb method is set if external field particle motion
+
+  field_3d_flag = field_2d_flag = 0;
+  moveperturb = NULL;
+
+  if (fstyle == CFIELD) {
+    if (field[0] != 0.0 || field[1] != 0.0 || field[2] != 0.0) {
+      if (domain->dimension == 3) {
+        moveperturb = &UpdateKokkos::field3d;
+        field_3d_flag = 1;
+      }
+      if (domain->dimension == 2) {
+        moveperturb = &UpdateKokkos::field2d;
+        field_2d_flag = 1;
+      }
+    }
+  } else if (fstyle == PFIELD)
+    error->all(FLERR,"Cannot (yet) use per-particle external field with KOKKOS package");
+  else if (fstyle == GFIELD)
+    error->all(FLERR,"Cannot (yet) use per-grid cell external field with KOKKOS package");
 
   if (moveperturb) perturbflag = 1;
   else perturbflag = 0;
-
 }
 
 /* ---------------------------------------------------------------------- */
@@ -689,15 +709,15 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     xnew[0] = x[0] + dtremain*v[0];
     xnew[1] = x[1] + dtremain*v[1];
     if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
-    if (gravity_3d_flag) gravity3d(dtremain,xnew,v);
-    else if (gravity_2d_flag) gravity2d(dtremain,xnew,v);
+    if (field_3d_flag) field3d(dtremain,xnew,v);
+    else if (field_2d_flag) field2d(dtremain,xnew,v);
   } else if (pflag == PINSERT) {
     dtremain = particle_i.dtremain;
     xnew[0] = x[0] + dtremain*v[0];
     xnew[1] = x[1] + dtremain*v[1];
     if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
-    if (gravity_3d_flag) gravity3d(dtremain,xnew,v);
-    else if (gravity_2d_flag) gravity2d(dtremain,xnew,v);
+    if (field_3d_flag) field3d(dtremain,xnew,v);
+    else if (field_2d_flag) field2d(dtremain,xnew,v);
   } else if (pflag == PENTRY) {
     icell = particle_i.icell;
     if (d_cells[icell].nsplit > 1) {

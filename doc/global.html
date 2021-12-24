@@ -27,9 +27,17 @@
     Vx,Vy,Vz = streaming velocity of background gas (velocity units)
   <I>temp</I> values = thermal
     thermal = temperature of background gas (temperature units)
-  <I>gravity</I> values = mag ex ey ez
-    mag = magnitude of acceleration due to gravity (acceleration units)
-    ex,ey,ez = direction vector that gravity acts in
+  <I>field</I> values = fstyle args
+    fstyle = <I>none</I> or <I>constant</I> or <I>variable</I> or <I>grid</I>
+      <I>field</I> arg = none
+      <I>constant</I> args = mag ex ey ez
+        mag = magnitude of field acceleration (acceleration units)
+        ex,ey,ez = direction vector which the field acts along
+      <I>particle</I> arg = fixID
+        fixID = ID of fix that computes per particle field components
+      <I>grid</I> args = fixID Nfreq
+        fixID = ID of fix that computes per grid cell field components
+        Nfreq = update field values every this many timesteps
   <I>surfs</I> value = explicit or explicit/distributed or implicit
     explicit = surfs defined in read_surf file, each proc owns copy of all surfs
     explicit/distributed = surfs defined in read_surf file, each proc owns
@@ -78,6 +86,7 @@ global vstream 100.0 0 0 fnum 5.0e18
 global temp 1000
 global weight cell radius 
 global mem/limit 100 
+global field constant 9.8 0 0 1 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -105,11 +114,65 @@ gas.
 This is a Gaussian velocity distribution superposed on top of the
 streaming velocity.
 </P>
-<P>The <I>gravity</I> keyword sets an acceleration term which is included in
-the motion of particles.  The magnitude of gravity is set by the <I>mag</I>
-keyword.  Its direction of action is set as (ex,ex,ez).  The direction
-does not have to be a unit vector.  If the magnitude is set to 0.0, no
-acceleration term is included, which is the default.
+<P>The <I>field</I> keyword adds an additional external field term which can
+included in the motion of particles.  The <I>fstyle</I> argument can be
+<I>none</I> or <I>constant</I>, <I>particle</I>, or <I>grid</I>.  Note that only one of
+these can be set by the global command.  If the <I>field</I> keyword is
+specified multiple times, only the last one has an effect.
+</P>
+<P>The <I>none</I> setting turns off any external field setting previously
+specified.  It is the default.
+</P>
+<P>The <I>constant</I> setting is for a field that has no spatial or time
+dependence; the same field vector acts on all particles.  Gravity is
+an example of a constant external field.  The <I>mag</I> arguement sets the
+magnitude of the field.  The (ex,ey,ez) components specify the
+direction the field acts in.  The components do not need to be a unit
+vector; the code converts them into a unit vector internally.  Note
+that a z-component cannot be used for 2d simulations.
+</P>
+<P>The <I>particle</I> setting is for a field that is computed on a per
+particle basis, depending on the position or other attributes of each
+particle.  A spatially- or time-dependent magnetic field, acting on
+the magnetic moment of each particle, is an example of a variable
+external field.  The fixID argument is the ID of a fix which computes
+the components of the field vector for each particle.  These may alter
+both the position and velocity of each particle when it is advected
+each timestep.  
+</P>
+<P>See the doc page for the <A HREF = "fix_field_particle.html">fix field/particle</A>
+command for the only current fix in SPARTA which is compatible with
+the <I>particle</I> setting.
+</P>
+<P>The <I>grid</I> setting is for a field that is computed on a per grid cell
+basis and applied to all the particles in the grid cell.  A spatially-
+or time-dependent magnetic field which is coarsened to act at the
+resolution of grid cells is an example of a per grid cell external
+field.  The fixID argument is the ID of a fix which computes the
+components of the field vector for each grid cell.  These may alter
+both the position and velocity or particles in the grid cell when they
+are advected each timestep.  The Nfreq argument specifies how often to
+re-compute the per grid cell field vectors.  For a field that has no
+time dependence you should set Nfreq to zero; the field will only be
+computed once at the beginning of each simulation run.  For a field
+with time-dependence you can choose how often to recompute the field,
+depending on how fast it varies.
+</P>
+<P>See the doc page for the <A HREF = "fix_field_grid.html">fix field/grid</A> command
+for the only current fix in SPARTA which is compatible with the
+<I>grid</I> setting.
+</P>
+<P>Note that there is a tradeoff between the <I>particle</I> and <I>grid</I>
+options.  For the <I>particle</I> option the field must be computed every
+timestep for all particles; the field values are accurately computed
+at precisely each particle's position but it is an expensive
+operation.  For the <I>grid</I> option the field is only computed once at
+the beginning of a run or once every Nfreq timesteps.  Even if it is
+computed every timestep, the number of grid cells is typically much
+smaller than the number of particles.  However the accuracy of the
+field applied to each particle is more approximate than for the
+<I>particle</I> option.  This is because the field applied to each particle
+is the value it has at the center of the particle's grid cell.
 </P>
 <HR>
 
@@ -407,9 +470,9 @@ defined, e.g. via the <A HREF = "read_surf.html">read_surf</A> command.
 <P><B>Default:</B>
 </P>
 <P>The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
-0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfs = explicit,
-surfgrid = auto, surfmax = 100, splitmax = 10, surftally = auto,
-surfpush = yes, gridcut = -1.0, comm/sort = no, comm/style = neigh,
-weight = cell none, particle/reorder = 0, mem/limit = 0.
+0.0, temp = 273.15, field = none, surfs = explicit, surfgrid = auto,
+surfmax = 100, splitmax = 10, surftally = auto, surfpush = yes,
+gridcut = -1.0, comm/sort = no, comm/style = neigh, weight = cell
+none, particle/reorder = 0, mem/limit = 0.
 </P>
 </HTML>

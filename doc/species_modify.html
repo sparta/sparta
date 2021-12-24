@@ -1,0 +1,64 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>species_modify command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>species_modify ID property value ... 
+</PRE>
+<UL><LI>ID, property, value can be repeated one or more times 
+
+<LI>ID = species ID 
+
+<LI>property = <I>mu</I> 
+
+<PRE>  mu = magnetic moment 
+</PRE>
+<LI>value = value of property for that species 
+
+<PRE>  value for <I>mu</I> (magnetic moment units) 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>species_modify Fe mu 2.0 Cr mu 3.0 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Set additional properties of one or more species used in a simulation.
+This can be used as many times as desired for different species and
+properties.  Currently it only supports setting of a single optional
+property (the magnetic moment) which is not included in the species
+files read in by the <A HREF = "species.html">species</A> command.
+</P>
+<P>Each <I>ID</I> is a character string used to identify a species, such as N
+or O2 or NO or D or Fe-.  See the <A HREF = "species.html">species</A> command for
+how species are added to a simulation model by reading their
+properties from a species file.
+</P>
+<P>The only property currently recognized is <I>mu</I> or the scalar magnetic
+moment of each particle of the species.  The <I>value</I> for the <I>mu</I>
+property should be specified in the units described on the
+<A HREF = "units.html">units</A> doc page.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B> none
+</P>
+<P><B>Default:</B>
+</P>
+<P>No magnetic moments are defined for any species (all 0.0).
+</P>
+</HTML>

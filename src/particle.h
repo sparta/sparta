@@ -42,6 +42,7 @@ class Particle : protected Pointers {
     int nrottemp,nvibmode;  // # of rotational/vibrational temps/modes defined
     int internaldof;        // 1 if either rotdof or vibdof != 0
     int vibdiscrete_read;   // 1 if species.vib file read for this species
+    double magmoment;       // magnetic moment, set by species_modify command
   };
 
   struct RotFile {          // extra rotation info read from rotfile
@@ -151,8 +152,9 @@ class Particle : protected Pointers {
   virtual int add_particle();
   int clone_particle(int);
   void add_species(int, char **);
-  void add_mixture(int, char **);
   int find_species(char *);
+  void species_modify(int, char **);
+  void add_mixture(int, char **);
   int find_mixture(char *);
   double erot(int, double, class RanKnuth *);
   double evib(int, double, class RanKnuth *);
@@ -201,7 +203,7 @@ class Particle : protected Pointers {
 
   // extra custom vectors/arrays for per-particle data
   // ncustom > 0 if there are any extra arrays
-  // these varaiables are private, others above are public
+  // these variables are private, others above are public
 
   char **ename;             // name of each attribute
 

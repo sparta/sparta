@@ -222,29 +222,29 @@ class UpdateKokkos : public Update {
   KOKKOS_INLINE_FUNCTION
   int split2d(int, double*) const;
 
-  int gravity_3d_flag,gravity_2d_flag;
+  int field_3d_flag,field_2d_flag;
 
   // variants of moveperturb method
   // adjust end-of-move x,v due to perturbation on straight-line advection
 
   KOKKOS_INLINE_FUNCTION
-  void gravity2d(double dt, double *x, double *v) const {
+  void field2d(double dt, double *x, double *v) const {
     double dtsq = 0.5*dt*dt;
-    x[0] += dtsq*gravity[0];
-    x[1] += dtsq*gravity[1];
-    v[0] += dt*gravity[0];
-    v[1] += dt*gravity[1];
+    x[0] += dtsq*field[0];
+    x[1] += dtsq*field[1];
+    v[0] += dt*field[0];
+    v[1] += dt*field[1];
   };
 
   KOKKOS_INLINE_FUNCTION
-  void gravity3d(double dt, double *x, double *v) const {
+  void field3d(double dt, double *x, double *v) const {
     double dtsq = 0.5*dt*dt;
-    x[0] += dtsq*gravity[0];
-    x[1] += dtsq*gravity[1];
-    x[2] += dtsq*gravity[2];
-    v[0] += dt*gravity[0];
-    v[1] += dt*gravity[1];
-    v[2] += dt*gravity[2];
+    x[0] += dtsq*field[0];
+    x[1] += dtsq*field[1];
+    x[2] += dtsq*field[2];
+    v[0] += dt*field[0];
+    v[1] += dt*field[1];
+    v[2] += dt*field[2];
   };
 };
 

@@ -58,6 +58,10 @@ class Fix : protected Pointers {
   double *vector_surf;           // computed per-surf vector
   double **array_surf;           // computed per-surf array
 
+  int per_particle_field;        // 0/1 if produces per-particle external field
+  int per_grid_field;            // 0/1 if produces per-grid external field
+  int field_active[3];           // 0/1 for active x,y,z components of ext field
+
   int START_OF_STEP,END_OF_STEP;    // mask settings
 
   int kokkos_flag;              // 0/1 if Kokkos fix
@@ -80,6 +84,7 @@ class Fix : protected Pointers {
   virtual void update_custom(int, double, double, double, double *) {}
   virtual void gas_react(int) {}
   virtual void surf_react(Particle::OnePart *, int &, int &) {}
+  virtual void compute_field() {}
 
   virtual int pack_grid_one(int, char *, int) {return 0;}
   virtual int unpack_grid_one(int, char *) {return 0;}

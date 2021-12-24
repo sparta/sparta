@@ -951,6 +951,42 @@ void Particle::add_species(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
+   return index of ID in list of species IDs
+   return -1 if not found
+------------------------------------------------------------------------- */
+
+int Particle::find_species(char *id)
+{
+  for (int i = 0; i < nspecies; i++)
+    if (strcmp(id,species[i].id) == 0) return i;
+  return -1;
+}
+
+/* ----------------------------------------------------------------------
+   return index of ID in list of species IDs
+   return -1 if not found
+------------------------------------------------------------------------- */
+
+void Particle::species_modify(int narg, char **arg)
+{
+  if (narg < 3) error->all(FLERR,"Illegal species_modify command");
+
+  int iarg = 0;
+  while (iarg < narg) { 
+    if (iarg+3 > narg) error->all(FLERR,"Illegal species_modify command");
+
+    int ispecies = find_species(arg[iarg]);
+    if (ispecies < 0) error->all(FLERR,"Species_modify species does not exist");
+
+    if (strcmp(arg[iarg+1],"mu") == 0)
+      species[ispecies].magmoment = atof(arg[iarg+2]);
+    else error->all(FLERR,"Unrecognized species_modify property");
+
+    iarg += 3;
+  }
+}
+
+/* ----------------------------------------------------------------------
    create or augment a mixture of species
 ------------------------------------------------------------------------- */
 
@@ -975,18 +1011,6 @@ void Particle::add_mixture(int narg, char **arg)
   }
 
   mixture[imix]->command(narg,arg);
-}
-
-/* ----------------------------------------------------------------------
-   return index of ID in list of species IDs
-   return -1 if not found
-------------------------------------------------------------------------- */
-
-int Particle::find_species(char *id)
-{
-  for (int i = 0; i < nspecies; i++)
-    if (strcmp(id,species[i].id) == 0) return i;
-  return -1;
 }
 
 /* ----------------------------------------------------------------------

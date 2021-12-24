@@ -37,12 +37,15 @@ using namespace SPARTA_NS;
 
 enum{VERSION,SMALLINT,CELLINT,BIGINT,
      UNITS,NTIMESTEP,NPROCS,
-     FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,SURFMAX,GRIDCUT,GRID_WEIGHT,
+     FNUM,NRHO,VSTREAM,TEMP_THERMAL,FSTYLE,FIELD,FIELDID,
+     SURFMAX,GRIDCUT,GRID_WEIGHT,
      COMM_SORT,COMM_STYLE,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      SPECIES,MIXTURE,PARTICLE_CUSTOM,GRID,SURF,
      MULTIPROC,PROCSPERFILE,PERPROC};    // new fields added after PERPROC
+
+enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // update.cpp
 
 /* ---------------------------------------------------------------------- */
 
@@ -513,7 +516,12 @@ void WriteRestart::header()
   write_double(NRHO,update->nrho);
   write_double_vec(VSTREAM,3,update->vstream);
   write_double(TEMP_THERMAL,update->temp_thermal);
-  write_double_vec(GRAVITY,3,update->gravity);
+
+  write_int(FSTYLE,update->fstyle);
+  if (update->fstyle == CFIELD) write_double_vec(FIELD,3,update->field);
+  else if (update->fstyle == PFIELD) write_string(FIELDID,update->fieldID);
+  else if (update->fstyle == GFIELD) write_string(FIELDID,update->fieldID);
+
   write_int(SURFMAX,grid->maxsurfpercell);
   write_double(GRIDCUT,grid->cutoff);
   write_int(COMM_SORT,comm->commsortflag);

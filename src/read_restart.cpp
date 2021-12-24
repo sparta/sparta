@@ -40,7 +40,8 @@ using namespace SPARTA_NS;
 
 enum{VERSION,SMALLINT,CELLINT,BIGINT,
      UNITS,NTIMESTEP,NPROCS,
-     FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,SURFMAX,GRIDCUT,GRID_WEIGHT,
+     FNUM,NRHO,VSTREAM,TEMP_THERMAL,FSTYLE,FIELD,FIELDID,
+     SURFMAX,GRIDCUT,GRID_WEIGHT,
      COMM_SORT,COMM_STYLE,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
@@ -1009,9 +1010,13 @@ void ReadRestart::header(int incompatible)
       read_double_vec(3,update->vstream);
     } else if (flag == TEMP_THERMAL) {
       update->temp_thermal = read_double();
-    } else if (flag == GRAVITY) {
+    } else if (flag == FSTYLE) {
+      update->fstyle = read_int();
+    } else if (flag == FIELD) {
       read_int();
-      read_double_vec(3,update->gravity);
+      read_double_vec(3,update->field);
+    } else if (flag == FIELDID) {
+      update->fieldID = read_string();
     } else if (flag == SURFMAX) {
       grid->maxsurfpercell = read_int();
     } else if (flag == GRIDCUT) {
