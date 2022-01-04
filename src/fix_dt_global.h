@@ -42,7 +42,7 @@ protected:
   char *id_lambda, *id_usq, *id_vsq, *id_wsq;
   int lambdaindex, usqindex,vsqindex,wsqindex;
   class Compute *clambda;
-  class Fix *fusq,*fvsq,*fwsq;
+  class Fix *flambda,*fusq,*fvsq,*fwsq;
   double *lambda,*usq,*vsq,*wsq;
 
  private:

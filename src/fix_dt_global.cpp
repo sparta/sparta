@@ -26,6 +26,8 @@
 
 using namespace SPARTA_NS;
 
+enum{NONE,COMPUTE,FIX};
+
 #define INVOKED_PER_GRID 16
 #define BIG 1.0e20
 
@@ -43,8 +45,7 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
   id_vsq = NULL;
   id_wsq = NULL;
 
-  // lambda compute
-  if (strncmp(arg[3],"c_",2) == 0) {
+  if (strncmp(arg[3],"c_",2) == 0 || strncmp(arg[3],"f_",2) == 0) {
     int n = strlen(arg[3]);
     id_lambda = new char[n];
     strcpy(id_lambda,&arg[3][2]);
@@ -56,23 +57,43 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
       *ptr = '\0';
     } else lambdaindex = 0;
 
-    n = modify->find_compute(id_lambda);
-    if (n < 0)
-      error->all(FLERR,"Could not find fix dt_global compute ID");
-    if (modify->compute[n]->per_grid_flag == 0)
-      error->all(FLERR,"Fix dt_global compute does not "
-                 "compute per-grid info");
-    if (lambdaindex == 0 && modify->compute[n]->size_per_grid_cols > 0)
-      error->all(FLERR,
-                 "Fix dt_global compute does not "
-                 "compute per-grid vector");
-    if (lambdaindex > 0 && modify->compute[n]->size_per_grid_cols == 0)
-      error->all(FLERR,
-                 "Fix dt_global compute does not "
-                 "compute per-grid array");
-    if (lambdaindex > 0 && lambdaindex > modify->compute[n]->size_per_grid_cols)
-      error->all(FLERR,"Fix dt_global compute vector is "
-                 "accessed out-of-range");
+    if (strncmp(arg[3],"c_",2) == 0) lambdawhich = COMPUTE;
+    else lambdawhich = FIX;
+
+    if (lambdawhich == COMPUTE) { // lambda compute
+      int n = modify->find_compute(id_lambda);
+      if (n < 0)
+        error->all(FLERR,"Could not find fix dt_global compute ID");
+      if (modify->compute[n]->per_grid_flag == 0)
+        error->all(FLERR,"Fix dt_global compute does not "
+                   "compute per-grid info");
+      if (lambdaindex == 0 && modify->compute[n]->size_per_grid_cols > 0)
+        error->all(FLERR,
+                   "Fix dt_global compute does not "
+                   "compute per-grid vector");
+      if (lambdaindex > 0 && modify->compute[n]->size_per_grid_cols == 0)
+        error->all(FLERR,
+                   "Fix dt_global compute does not "
+                   "compute per-grid array");
+      if (lambdaindex > 0 && lambdaindex > modify->compute[n]->size_per_grid_cols)
+        error->all(FLERR,"Fix dt_global compute vector is "
+                   "accessed out-of-range");
+    } else { // lambda fix
+      int n = modify->find_fix(id_lambda);
+      if (n < 0) error->all(FLERR,"Could not find fix dt_global fix ID");
+      if (modify->fix[n]->per_grid_flag == 0)
+        error->all(FLERR,"Fix dt_global fix does not "
+                   "compute per-grid info");
+      if (lambdaindex == 0 && modify->fix[n]->size_per_grid_cols > 0)
+        error->all(FLERR,"Fix dt_global fix does not "
+                   "compute per-grid vector");
+      if (lambdaindex > 0 && modify->fix[n]->size_per_grid_cols == 0)
+        error->all(FLERR,"Fix dt_global fix does not "
+                   "compute per-grid array");
+      if (lambdaindex > 0 && lambdaindex > modify->fix[n]->size_per_grid_cols)
+        error->all(FLERR,"Fix dt_global fix array is "
+                   "accessed out-of-range");
+    }
   }
   else {
     error->all(FLERR,"Illegal fix dt global command");
@@ -181,6 +202,8 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
 
 FixDtGlobal::~FixDtGlobal()
 {
+  if (copymode) return;
+
   delete [] id_lambda;
   delete [] id_usq;
   delete [] id_vsq;
@@ -201,11 +224,20 @@ void FixDtGlobal::init()
 
   reallocate();
 
-  // lambda compute
-  int icompute = modify->find_compute(id_lambda);
-  if (icompute < 0)
-    error->all(FLERR,"Could not find fix dt_global compute ID");
-  clambda = modify->compute[icompute];
+  // setup computes and fixes
+
+  // lambda
+  if (lambdawhich == COMPUTE) {
+    int icompute = modify->find_compute(id_lambda);
+    if (icompute < 0)
+      error->all(FLERR,"Could not find fix dt_global compute ID");
+    clambda = modify->compute[icompute];
+  } else if (lambdawhich == FIX) {
+    int ifix = modify->find_fix(id_lambda);
+    if (ifix < 0)
+      error->all(FLERR,"Could not find fix dt_global fix ID");
+    flambda = modify->fix[ifix];
+  }
 
   // usq fix
   int ifix = modify->find_fix(id_usq);
@@ -239,30 +271,42 @@ int FixDtGlobal::setmask()
 
 void FixDtGlobal::end_of_step()
 {
-  // check that required fixes are computed at compatible times
+  // check that fixes are computed at compatible times
+  if (lambdawhich == FIX && update->ntimestep % flambda->per_grid_freq)
+    error->all(FLERR,"Fix dt_global lambda fix not computed at compatible time");
   if (update->ntimestep % fusq->per_grid_freq)
-    error->all(FLERR,"usq fix not computed at compatible time");
+    error->all(FLERR,"Fix dt_global usq fix not computed at compatible time");
   if (update->ntimestep % fvsq->per_grid_freq)
-    error->all(FLERR,"vsq fix not computed at compatible time");
+    error->all(FLERR,"Fix dt_global vsq fix not computed at compatible time");
   if (update->ntimestep % fwsq->per_grid_freq)
-    error->all(FLERR,"wsq fix not computed at compatible time");
+    error->all(FLERR,"Fix dt_global wsq fix not computed at compatible time");
 
-  // get lambda from compute
-  if (!(clambda->invoked_flag & INVOKED_PER_GRID)) {
-    clambda->compute_per_grid();
-    clambda->invoked_flag |= INVOKED_PER_GRID;
-  }
+  // get lambda from fix or by invoking compute
+  if (lambdawhich == COMPUTE) {
+    if (!(clambda->invoked_flag & INVOKED_PER_GRID)) {
+      clambda->compute_per_grid();
+      clambda->invoked_flag |= INVOKED_PER_GRID;
+    }
+    if (clambda->post_process_grid_flag)
+      clambda->post_process_grid(lambdaindex,1,NULL,NULL,NULL,1);
 
-  if (clambda->post_process_grid_flag)
-    clambda->post_process_grid(lambdaindex,1,NULL,NULL,NULL,1);
-
-  if (lambdaindex == 0 || clambda->post_process_grid_flag)
-    memcpy(lambda,clambda->vector_grid,nglocal*sizeof(double));
-  else {
-    int index = lambdaindex-1;
-    double **array = clambda->array_grid;
-    for (int i = 0; i < nglocal; i++)
-      lambda[i] = array[i][index];
+    if (lambdaindex == 0 || clambda->post_process_grid_flag)
+      memcpy(lambda,clambda->vector_grid,nglocal*sizeof(double));
+    else {
+      int index = lambdaindex-1;
+      double **array = clambda->array_grid;
+      for (int i = 0; i < nglocal; i++)
+        lambda[i] = array[i][index];
+    }
+  } else if (lambdawhich == FIX) {
+    if (lambdaindex == 0) {
+      memcpy(lambda,flambda->vector_grid,nglocal*sizeof(double));
+    } else {
+      double **array = flambda->array_grid;
+      int index = lambdaindex-1;
+      for (int i = 0; i < nglocal; i++)
+        lambda[i] = array[i][index];
+    }
   }
 
   // get usq from fix
@@ -310,7 +354,6 @@ void FixDtGlobal::end_of_step()
   grid->dt_global = dtmin;
   if (me == 0) {
     std::cout << "WARNING!!!!! values stored in dt_global and cells[i].dt_desired are placeholders!!!!!\n";
-    std::cout << "...also figure out what it means for index values to be zero, e.g. lambdaindex\n";
   }
 }
 
