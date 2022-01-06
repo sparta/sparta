@@ -6,29 +6,28 @@
 
 :line
 
-fix temp/rescale command :h3
-fix temp/rescale/kk command :h3
+fix temp/rescale/global command :h3
 
 [Syntax:]
 
-fix ID temp/rescale N Tstart Tstop :pre
+fix ID temp/rescale/global N Tstart Tstop :pre
 
 ID is documented in "fix"_fix.html command
-temp/rescale = style name of this fix command
+temp/rescale/gloal = style name of this fix command
 N = thermostat every N timesteps
 Tstart,Tstop = desired temperature at start/end of run (temperature units) :ul
 
 [Examples:]
 
-fix 1 temp/rescale 100 300.0 300.0
-fix 5 temp/rescale 10 300.0 10.0 :pre
+fix 1 temp/rescale/global 100 300.0 300.0
+fix 5 temp/rescale/global 10 300.0 10.0 :pre
 
 [Description:]
 
-Reset the thermal temperature of all the particles within each grid
-cell by explicitly rescaling their thermal velocities.  This is a
-simple thermostatting operation to keep the thermal temperature of the
-gas near the desired target temperature. This can be useful if an
+Reset the thermal temperature of all the particles in the entire
+simulation by explicitly rescaling their thermal velocities.  This is
+a simple thermostatting operation to keep the thermal temperature of
+the gas near the desired target temperature.  This can be useful if an
 external driving force is adding energy to the system.  Or if you wish
 the thermal temperature of the system to heat or cool over time.
 
@@ -40,19 +39,16 @@ Rescaling is performed every N timesteps. The target temperature is a
 ramped value between the Tstart and Tstop temperatures at the
 beginning and end of the run.
 
-This fix performs thermostatting on a per grid cell basis.  For each
-grid cell, the center-of-mass velocity and thermal temperature of the
-particles in the grid cell is computed.  The thermal temperature is
-defined as the kinetic temperature after any center-of-mass motion
-(e.g. a flow velocity) is subtracted from the collection of particles
-in the grid cell.  These are the same calculations as are performed by
-the "compute thermal/grid"_compute_thermal_grid.html command.  See its
-doc page for the equations.
+This fix performs thermostatting on a global basis.  The
+center-of-mass velocity and thermal temperature of all the particles
+in the simulation is computed.  The thermal temperature is defined as
+the kinetic temperature after any center-of-mass motion (e.g. a flow
+velocity) is subtracted from the collection of particles.
 
 From the current thermal temperature and the current target
 temperature, a velocity scale factor is calculated.  That factor is
-applied to each of the components of the thermal velocity for each
-particle in the grid cell.
+applied to each of the components of the thermal velocity for every
+particle in the simulation.
 
 After this rescaling, if the thermal temperature were re-computed for
 the grid cell, it would be exactly the target temperature.
@@ -99,6 +95,6 @@ effectively.
 
 [Related commands:]
 
-"fix temp/rescale/global"_fix_temp_rescale_global.html
+"fix temp/rescale"_fix_temp_rescale.html
 
 [Default:] none
