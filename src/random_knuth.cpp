@@ -32,7 +32,7 @@ RanKnuth::RanKnuth(int iseed)
 {
   seed = iseed;
   save = 0;
-  not_init = 1;
+  initflag = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -45,6 +45,7 @@ RanKnuth::RanKnuth(double rseed)
   seed = static_cast<int> (rseed*IM);
   if (seed == 0) seed = 1;
   save = 0;
+  initflag = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -60,7 +61,7 @@ void RanKnuth::reset(double rseed, int offset, int warmup)
   seed = static_cast<int> (fmod(rseed*IM+offset,IM));
   if (seed < 0) seed = -seed;
   if (seed == 0) seed = 1;
-  not_init = 1;
+  initflag = 0;
   for (int i = 0; i < warmup; i++) uniform();
 }
 
@@ -73,8 +74,8 @@ double RanKnuth::uniform()
   int i,ii,k,mj,mk;
   double rn;
 
-  if (not_init == 1) {
-    not_init = 0;
+  if (!initflag) {
+    initflag = 1;
     mj = labs(MSEED-labs(seed));
     mj %= MBIG;
     ma[55] = mj;

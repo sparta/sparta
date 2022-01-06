@@ -14,22 +14,22 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(field/turb/grid,FixFieldTurbGrid)
+FixStyle(field/forcing/grid,FixFieldForcingGrid)
 
 #else
 
-#ifndef SPARTA_FIX_FIELD_TURB_GRID_H
-#define SPARTA_FIX_FIELD_TURB_GRID_H
+#ifndef SPARTA_FIX_FIELD_FORCING_GRID_H
+#define SPARTA_FIX_FIELD_FORCING_GRID_H
 
 #include "stdio.h"
 #include "fix.h"
 
 namespace SPARTA_NS {
 
-class FixFieldTurbGrid : public Fix {
+class FixFieldForcingGrid : public Fix {
  public:
-  FixFieldTurbGrid(class SPARTA *, int, char **);
-  ~FixFieldTurbGrid();
+  FixFieldForcingGrid(class SPARTA *, int, char **);
+  ~FixFieldForcingGrid();
   int setmask();
   void init();
   void compute_field();

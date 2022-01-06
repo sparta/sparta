@@ -15,7 +15,7 @@
 #include "math.h"
 #include "stdlib.h"
 #include "string.h"
-#include "fix_field_turb_grid.h"
+#include "fix_field_forcing_grid.h"
 #include "update.h"
 #include "grid.h"
 #include "input.h"
@@ -29,24 +29,25 @@ using namespace SPARTA_NS;
 
 /* ---------------------------------------------------------------------- */
 
-FixFieldTurbGrid::FixFieldTurbGrid(SPARTA *sparta, int narg, char **arg) :
+FixFieldForcingGrid::FixFieldForcingGrid(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
-  if (narg < 4) error->all(FLERR,"Illegal fix field/turb/grid command");
+  if (narg < 4) error->all(FLERR,"Illegal fix field/forcing/grid command");
 
   epsilon = atof(arg[2]);
   nkvec = atoi(arg[3]);
 
-  if (nkvec == 0) error->all(FLERR,"Fix field/turb/grid requires Kspace vecs");
-  if (narg-4 != 3*nkvec) error->all(FLERR,"Illegal fix field/turb/grid command");
+  if (nkvec == 0) error->all(FLERR,"Fix field/forcing/grid requires Kspace vecs");
+  if (narg-4 != 3*nkvec) 
+    error->all(FLERR,"Illegal fix field/forcing/grid command");
 
   memory->create(kvecs,nkvec,3,"");
 
   int iarg = 4;
   for (int i = 0; i < nkvec; i++) {
     kvecs[i][0] = atof(arg[iarg]);
-    kvecs[i][2] = atof(arg[iarg+1]);
-    kvecs[i][3] = atof(arg[iarg+2]);
+    kvecs[i][1] = atof(arg[iarg+1]);
+    kvecs[i][2] = atof(arg[iarg+2]);
     iarg += 3;
   }
 
@@ -70,14 +71,16 @@ FixFieldTurbGrid::FixFieldTurbGrid(SPARTA *sparta, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-FixFieldTurbGrid::~FixFieldTurbGrid()
+FixFieldForcingGrid::~FixFieldForcingGrid()
 {  
+  memory->destroy(kvecs);
   memory->destroy(array_grid);
+  delete random;
 }
 
 /* ---------------------------------------------------------------------- */
 
-int FixFieldTurbGrid::setmask()
+int FixFieldForcingGrid::setmask()
 {
   int mask = 0;
   return mask;
@@ -85,14 +88,14 @@ int FixFieldTurbGrid::setmask()
 
 /* ---------------------------------------------------------------------- */
 
-void FixFieldTurbGrid::init()
+void FixFieldForcingGrid::init()
 {
   // set initial grid values to zero in case dump is performed at step 0
 
   if (grid->nlocal > maxgrid) {
     maxgrid = grid->maxlocal;
     memory->destroy(array_grid);
-    memory->create(array_grid,maxgrid,3,"array_grid");
+    memory->create(array_grid,maxgrid,3,"field/forcing:array_grid");
   }
 
   bigint nbytes = (bigint) grid->nlocal * 3;
@@ -101,17 +104,17 @@ void FixFieldTurbGrid::init()
 
 /* ---------------------------------------------------------------------- */
 
-void FixFieldTurbGrid::compute_field()
+void FixFieldForcingGrid::compute_field()
 {
   // reallocate array_grid if necessary
 
   if (grid->nlocal > maxgrid) {
     maxgrid = grid->maxlocal;
     memory->destroy(array_grid);
-    memory->create(array_grid,maxgrid,3,"array_grid");
+    memory->create(array_grid,maxgrid,3,"field/forcing:array_grid");
   }
 
-  // NOTE: this is code you need to write
+  // RYAN: this is code you need to write
   // set current 48 global prefactors for spatial/time varying field
   // can use epsilon and any other arguments to this fix
   // can use random->uniform() to get a uniform RN between 0 and 1
@@ -119,7 +122,7 @@ void FixFieldTurbGrid::compute_field()
   double rn = random->uniform();
   double prefacN = rn;
 
-  // NOTE: this is more code you need to write
+  // RYAN: this is more code you need to write
   // array_grid = current field at each grid cell center point
 
   Grid::ChildCell *cells = grid->cells;
@@ -136,10 +139,10 @@ void FixFieldTurbGrid::compute_field()
     zc = 0.5 * (cells[icell].lo[2] + cells[icell].hi[2]);
 
     // loop over Kspace vectors
-    // NOTE: domain->boxlo and boxhi are global simulation box bounds
+    // RYAN: domain->boxlo and boxhi are global simulation box bounds
     //       domain->prd = simulation box size
     //       something like (xc-boxlo[0])/prd[0] 
-    //         may be what you want for "x" in dot product
+    //         may be what you want for "x" in dot product ?
 
     array_grid[icell][0] = 0.0;
     array_grid[icell][1] = 0.0;
@@ -151,8 +154,8 @@ void FixFieldTurbGrid::compute_field()
       double s = sin(kdotx);
 
       array_grid[icell][0] += prefacN * c + prefacN * s;
-      array_grid[icell][0] += prefacN * c + prefacN * s;
-      array_grid[icell][0] += prefacN * c + prefacN * s;
+      array_grid[icell][1] += prefacN * c + prefacN * s;
+      array_grid[icell][2] += prefacN * c + prefacN * s;
     }
   }
 }
