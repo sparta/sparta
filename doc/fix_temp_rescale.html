@@ -51,7 +51,9 @@ defined as the kinetic temperature after any center-of-mass motion
 (e.g. a flow velocity) is subtracted from the collection of particles
 in the grid cell.  These are the same calculations as are performed by
 the <A HREF = "compute_thermal_grid.html">compute thermal/grid</A> command.  See its
-doc page for the equations.
+doc page for the equations.  See the <A HREF = "fix_temp_globalrescale.html">fix
+temp/global/rescale</A> doc page for a
+command that thermostats the temperature of the global system.
 </P>
 <P>From the current thermal temperature and the current target
 temperature, a velocity scale factor is calculated.  That factor is
@@ -101,7 +103,9 @@ effectively.
 
 <P><B>Restrictions:</B> none
 </P>
-<P><B>Related commands:</B> none
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "fix_temp_global_rescale.html">fix temp/global/rescale</A>
 </P>
 <P><B>Default:</B> none
 </P>

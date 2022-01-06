@@ -47,7 +47,9 @@ defined as the kinetic temperature after any center-of-mass motion
 (e.g. a flow velocity) is subtracted from the collection of particles
 in the grid cell.  These are the same calculations as are performed by
 the "compute thermal/grid"_compute_thermal_grid.html command.  See its
-doc page for the equations.
+doc page for the equations.  See the "fix
+temp/global/rescale"_fix_temp_globalrescale.html doc page for a
+command that thermostats the temperature of the global system.
 
 From the current thermal temperature and the current target
 temperature, a velocity scale factor is calculated.  That factor is
@@ -97,6 +99,8 @@ effectively.
 
 [Restrictions:] none
 
-[Related commands:] none
+[Related commands:]
+
+"fix temp/global/rescale"_fix_temp_global_rescale.html
 
 [Default:] none
