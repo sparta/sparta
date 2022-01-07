@@ -17,7 +17,7 @@
 </PRE>
 <UL><LI>one or more keyword/value pairs 
 
-<LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>gravity</I> or <I>surfs</I> or <I>surfgrid</I> or <I>surfmax</I> or <I>splitmax</I> or <I>surftally</I> or <I>surfpush</I> or <I>gridcut</I> or <I>comm/sort</I> or <I>comm/style</I> or <I>weight</I> or <I>particle/reorder</I> or <I>mem/limit</I> 
+<LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>gravity</I> or <I>surfs</I> or <I>surfgrid</I> or <I>surfmax</I> or <I>splitmax</I> or <I>surftally</I> or <I>gridcut</I> or <I>comm/sort</I> or <I>comm/style</I> or <I>weight</I> or <I>particle/reorder</I> or <I>mem/limit</I> 
 
 <PRE>  <I>fnum</I> value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
@@ -56,11 +56,6 @@
     reduce = tally surf collision info via MPI_Allreduce operations
     rvous = tally via a rendezvous algorithm
     auto = choose reduce or rvous based on surface element and proc count
-  <I>surfpush</I> value(s) = no/yes or slo shi svalue
-    no = do not push surface element points near cell surface
-    yes = push surface element points near cell surface if necessary
-    slo,shi = push points within this range
-    svalue = push points to this value
   <I>gridcut</I> value = cutoff
     cutoff = acquire ghost cells up to this far away (distance units)
   <I>comm/sort</I> value = yes or no
@@ -235,55 +230,6 @@ processor than extracts values for the N/P surfaces it owns.  The
 rendezvous style of communication is performed where every processor
 sends its tally contributions directly to the processor which owns the
 element as one of its N/P elements.
-</P>
-<HR>
-
-<P>The <I>surfpush</I> keyword is only useful to use when SPARTA is having
-problems embedding a surface in the simulation grid, which occurs when
-when surface elements are defined via the <A HREF = "read_surf.html">read_surf</A>
-command.  Or for debugging purposes.
-</P>
-<P>In rare cases, if a surface element point is just slightly inside or
-outside a grid cell, but within an epsilon distance from the surface
-of the grid cell, a numerical round-off error can occur when computing
-the cut volume.  The error can be avoided if such points are shifted
-(pushed) to a slightly different location, which only induces a tiny
-change in the computed cut volume.  By default the <I>surfpush</I> keyword
-is set to <I>yes</I>, which will perform this "push" operation on a grid
-cell if the numerical issue is flagged.  SPARTA prints out how many
-grid cells needed this push operation.
-</P>
-<P>If you set <I>surfpush</I> to <I>no</I>, then the push operation is not
-performed, which will result in an error if the numerical issue
-occurs.
-</P>
-<P>If the default <I>surfpush yes</I> still gives an error, then
-setting the <I>slo</I>, <I>shi</I>, and <I>svalue</I> allows experimentation
-with a different mode of pushing.
-</P>
-<P>These 3 values are all multipliers on an epsilon of 1.0e-6 which is
-set internally in the code.  Epsilon refers to a fraction of the size
-of a grid cell in each of its dimensions.  Negative values for any of
-the 3 values distances inside a grid cell (inward from the cell face).
-Positive values are distances outside a grid cell (outward from the
-cell face).  Zero values are exactly on the cell face.  If any surface
-point (end points of 2d lines, corner points of 3d triangles) is
-between a <I>slo</I> to <I>shi</I> distance from any of the cell faces, then it
-is pushed to be a distance <I>svalue</I> from the face.
-</P>
-<P>When <I>surfpush</I> is set to <I>yes</I>, SPARTA tries 2 kinds of pushing
-first, if the numerical issue is encountered for a grid cell.  The
-first is <I>slo</I> = -1, <I>shi</I> = 1, <I>svalue</I> = 1, which means any point
-within a fractional distance (in each dimension) of 1.0e-6 inside the
-cell to 1.0e-6 outside the cell, is shifted to be a distance 1.0e-6
-outside the cell.  The second try is with <I>slo</I> = -1, <I>shi</I> = 1,
-<I>svalue</I> = 0, which puts the point on the face.  If you set <I>slo</I>,
-<I>shi</I>, <I>svalue</I> explicitly, it will be the third option tried.
-</P>
-<P>If you cannot get a surface to embed properly in a grid, meaning you
-get errors with the default setting of <I>surfpush yes</I>, then please
-contact the SPARTA developers.  We will want to figure out what is
-unusual about your surface file!
 </P>
 <HR>
 
@@ -471,7 +417,7 @@ defined, e.g. via the <A HREF = "read_surf.html">read_surf</A> command.
 </P>
 <P>The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
 0.0, temp = 273.15, field = none, surfs = explicit, surfgrid = auto,
-surfmax = 100, splitmax = 10, surftally = auto, surfpush = yes,
+surfmax = 100, splitmax = 10, surftally = auto,
 gridcut = -1.0, comm/sort = no, comm/style = neigh, weight = cell
 none, particle/reorder = 0, mem/limit = 0.
 </P>
