@@ -1621,7 +1621,6 @@ void Update::global(int narg, char **arg)
       // reallocate paged data structs for variable-length cell info
       grid->allocate_surf_arrays();
       iarg += 2;
-
     } else if (strcmp(arg[iarg],"gridcut") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       grid->cutoff = input->numeric(FLERR,arg[iarg+1]);
@@ -1630,7 +1629,13 @@ void Update::global(int narg, char **arg)
       // force ghost info to be regenerated with new cutoff
       grid->remove_ghosts();
       iarg += 2;
-
+    } else if (strcmp(arg[iarg],"weight") == 0) {
+      // for now assume just one arg after "cell"
+      // may need to generalize later
+      if (iarg+3 > narg) error->all(FLERR,"Illegal global command");
+      if (strcmp(arg[iarg+1],"cell") == 0) grid->weight(1,&arg[iarg+2]);
+      else error->all(FLERR,"Illegal weight command");
+      iarg += 3;
     } else if (strcmp(arg[iarg],"comm/sort") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       if (strcmp(arg[iarg+1],"yes") == 0) comm->commsortflag = 1;
@@ -1650,14 +1655,6 @@ void Update::global(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"rvous") == 0) surf->tally_comm = TALLYRVOUS;
       else error->all(FLERR,"Illegal global command");
       iarg += 2;
-
-    } else if (strcmp(arg[iarg],"weight") == 0) {
-      // for now assume just one arg after "cell"
-      // may need to generalize later
-      if (iarg+3 > narg) error->all(FLERR,"Illegal global command");
-      if (strcmp(arg[iarg+1],"cell") == 0) grid->weight(1,&arg[iarg+2]);
-      else error->all(FLERR,"Illegal weight command");
-      iarg += 3;
     } else if (strcmp(arg[iarg],"particle/reorder") == 0) {
       reorder_period = input->inumeric(FLERR,arg[iarg+1]);
       if (reorder_period < 0) error->all(FLERR,"Illegal global command");

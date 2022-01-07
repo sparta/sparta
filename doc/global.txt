@@ -13,7 +13,7 @@ global command :h3
 global keyword values ... :pre
 
 one or more keyword/value pairs :ulb,l
-keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {surfgrid} or {surfmax} or {splitmax} or {surftally} or {surfpush} or {gridcut} or {comm/sort} or {comm/style} or {weight} or {particle/reorder} or {mem/limit} :l
+keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {surfgrid} or {surfmax} or {splitmax} or {surftally} or {gridcut} or {comm/sort} or {comm/style} or {weight} or {particle/reorder} or {mem/limit} :l
   {fnum} value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
   {nrho} value = density
@@ -51,11 +51,6 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {su
     reduce = tally surf collision info via MPI_Allreduce operations
     rvous = tally via a rendezvous algorithm
     auto = choose reduce or rvous based on surface element and proc count
-  {surfpush} value(s) = no/yes or slo shi svalue
-    no = do not push surface element points near cell surface
-    yes = push surface element points near cell surface if necessary
-    slo,shi = push points within this range
-    svalue = push points to this value
   {gridcut} value = cutoff
     cutoff = acquire ghost cells up to this far away (distance units)
   {comm/sort} value = yes or no
@@ -229,55 +224,6 @@ processor than extracts values for the N/P surfaces it owns.  The
 rendezvous style of communication is performed where every processor
 sends its tally contributions directly to the processor which owns the
 element as one of its N/P elements.
-
-:line
-
-The {surfpush} keyword is only useful to use when SPARTA is having
-problems embedding a surface in the simulation grid, which occurs when
-when surface elements are defined via the "read_surf"_read_surf.html
-command.  Or for debugging purposes.
-
-In rare cases, if a surface element point is just slightly inside or
-outside a grid cell, but within an epsilon distance from the surface
-of the grid cell, a numerical round-off error can occur when computing
-the cut volume.  The error can be avoided if such points are shifted
-(pushed) to a slightly different location, which only induces a tiny
-change in the computed cut volume.  By default the {surfpush} keyword
-is set to {yes}, which will perform this "push" operation on a grid
-cell if the numerical issue is flagged.  SPARTA prints out how many
-grid cells needed this push operation.
-
-If you set {surfpush} to {no}, then the push operation is not
-performed, which will result in an error if the numerical issue
-occurs.
-
-If the default {surfpush yes} still gives an error, then
-setting the {slo}, {shi}, and {svalue} allows experimentation
-with a different mode of pushing.
-
-These 3 values are all multipliers on an epsilon of 1.0e-6 which is
-set internally in the code.  Epsilon refers to a fraction of the size
-of a grid cell in each of its dimensions.  Negative values for any of
-the 3 values distances inside a grid cell (inward from the cell face).
-Positive values are distances outside a grid cell (outward from the
-cell face).  Zero values are exactly on the cell face.  If any surface
-point (end points of 2d lines, corner points of 3d triangles) is
-between a {slo} to {shi} distance from any of the cell faces, then it
-is pushed to be a distance {svalue} from the face.
-
-When {surfpush} is set to {yes}, SPARTA tries 2 kinds of pushing
-first, if the numerical issue is encountered for a grid cell.  The
-first is {slo} = -1, {shi} = 1, {svalue} = 1, which means any point
-within a fractional distance (in each dimension) of 1.0e-6 inside the
-cell to 1.0e-6 outside the cell, is shifted to be a distance 1.0e-6
-outside the cell.  The second try is with {slo} = -1, {shi} = 1,
-{svalue} = 0, which puts the point on the face.  If you set {slo},
-{shi}, {svalue} explicitly, it will be the third option tried.
-
-If you cannot get a surface to embed properly in a grid, meaning you
-get errors with the default setting of {surfpush yes}, then please
-contact the SPARTA developers.  We will want to figure out what is
-unusual about your surface file!
 
 :line
 
@@ -465,6 +411,6 @@ defined, e.g. via the "read_surf"_read_surf.html command.
 
 The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
 0.0, temp = 273.15, field = none, surfs = explicit, surfgrid = auto,
-surfmax = 100, splitmax = 10, surftally = auto, surfpush = yes,
+surfmax = 100, splitmax = 10, surftally = auto,
 gridcut = -1.0, comm/sort = no, comm/style = neigh, weight = cell
 none, particle/reorder = 0, mem/limit = 0.
