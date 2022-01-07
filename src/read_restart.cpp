@@ -43,7 +43,7 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      FNUM,NRHO,VSTREAM,TEMP_THERMAL,FSTYLE,FIELD,FIELDID,
      SURFS_IMPLICIT,SURFS_DISTRIBUTED,SURFGRID,SURFMAX,
      SPLITMAX,GRIDCUT,GRID_WEIGHT,COMM_SORT,COMM_STYLE,
-     SURFTALLY,PARTICLE_REORDER,MEM_LIMIT_GRID,MEM_LIMIT,
+     SURFTALLY,PARTICLE_REORDER,MEMLIMIT_GRID,MEMLIMIT,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      SPECIES,MIXTURE,PARTICLE_CUSTOM,GRID,SURF,
@@ -1038,9 +1038,9 @@ void ReadRestart::header(int incompatible)
       comm->commpartstyle = read_int();
     } else if (flag == PARTICLE_REORDER) {
       update->reorder_period = read_int();
-    } else if (flag == MEM_LIMIT_GRID) {
+    } else if (flag == MEMLIMIT_GRID) {
       update->mem_limit_grid_flag = read_int();
-    } else if (flag == MEM_LIMIT) {
+    } else if (flag == MEMLIMIT) {
       update->global_mem_limit = read_int();
 
     } else if (flag == NPARTICLE) {
