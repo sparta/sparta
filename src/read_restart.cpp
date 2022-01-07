@@ -1011,6 +1011,7 @@ void ReadRestart::header(int incompatible)
       read_double_vec(3,update->vstream);
     } else if (flag == TEMP_THERMAL) {
       update->temp_thermal = read_double();
+
     } else if (flag == FSTYLE) {
       update->fstyle = read_int();
     } else if (flag == FIELD) {
@@ -1018,6 +1019,7 @@ void ReadRestart::header(int incompatible)
       read_double_vec(3,update->field);
     } else if (flag == FIELDID) {
       update->fieldID = read_string();
+
     } else if (flag == SURFS_IMPLICIT) {
       surf->implicit = read_int();
     } else if (flag == SURFS_DISTRIBUTED) {
