@@ -38,8 +38,9 @@ using namespace SPARTA_NS;
 enum{VERSION,SMALLINT,CELLINT,BIGINT,
      UNITS,NTIMESTEP,NPROCS,
      FNUM,NRHO,VSTREAM,TEMP_THERMAL,FSTYLE,FIELD,FIELDID,
-     SURFMAX,GRIDCUT,GRID_WEIGHT,
-     COMM_SORT,COMM_STYLE,
+     SURFS_IMPLICIT,SURFS_DISTRIBUTED,SURFGRID,SURFMAX,
+     SPLITMAX,GRIDCUT,GRID_WEIGHT,COMM_SORT,COMM_STYLE,
+     SURFTALLY,PARTICLE_REORDER,MEM_LIMIT_GRID,MEM_LIMIT,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      SPECIES,MIXTURE,PARTICLE_CUSTOM,GRID,SURF,
@@ -522,11 +523,19 @@ void WriteRestart::header()
   else if (update->fstyle == PFIELD) write_string(FIELDID,update->fieldID);
   else if (update->fstyle == GFIELD) write_string(FIELDID,update->fieldID);
 
+  write_int(SURFS_IMPLICIT,surf->implicit);
+  write_int(SURFS_DISTRIBUTED,surf->distributed);
+  write_int(SURFGRID,grid->surfgrid_algorithm);
   write_int(SURFMAX,grid->maxsurfpercell);
+  write_int(SPLITMAX,grid->maxsplitpercell);
   write_double(GRIDCUT,grid->cutoff);
+  write_int(GRID_WEIGHT,grid->cellweightflag);
   write_int(COMM_SORT,comm->commsortflag);
   write_int(COMM_STYLE,comm->commpartstyle);
-  write_int(GRID_WEIGHT,grid->cellweightflag);
+  write_int(SURFTALLY,surf->tally_comm);
+  write_int(PARTICLE_REORDER,update->reorder_period);
+  write_int(MEMLIMIT_GRID,update->mem_limit_grid_flag);
+  write_int(MEMLIMIT,update->global_mem_limit);
 
   write_bigint(NPARTICLE,particle->nglobal);
   write_bigint(NUNSPLIT,grid->nunsplit);

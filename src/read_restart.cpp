@@ -41,8 +41,9 @@ using namespace SPARTA_NS;
 enum{VERSION,SMALLINT,CELLINT,BIGINT,
      UNITS,NTIMESTEP,NPROCS,
      FNUM,NRHO,VSTREAM,TEMP_THERMAL,FSTYLE,FIELD,FIELDID,
-     SURFMAX,GRIDCUT,GRID_WEIGHT,
-     COMM_SORT,COMM_STYLE,
+     SURFS_IMPLICIT,SURFS_DISTRIBUTED,SURFGRID,SURFMAX,
+     SPLITMAX,GRIDCUT,GRID_WEIGHT,COMM_SORT,COMM_STYLE,
+     SURFTALLY,PARTICLE_REORDER,MEM_LIMIT_GRID,MEM_LIMIT,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      SPECIES,MIXTURE,PARTICLE_CUSTOM,GRID,SURF,
@@ -1017,16 +1018,30 @@ void ReadRestart::header(int incompatible)
       read_double_vec(3,update->field);
     } else if (flag == FIELDID) {
       update->fieldID = read_string();
+    } else if (flag == SURFS_IMPLICIT) {
+      surf->implicit = read_int();
+    } else if (flag == SURFS_DISTRIBUTED) {
+      surf->distributed = read_int();
+    } else if (flag == SURFGRID) {
+      grid->surfgrid_algorithm = read_int();
     } else if (flag == SURFMAX) {
       grid->maxsurfpercell = read_int();
+    } else if (flag == SPLITMAX) {
+      grid->maxsplitpercell = read_int();
     } else if (flag == GRIDCUT) {
       grid->cutoff = read_double();
+    } else if (flag == GRID_WEIGHT) {
+      grid->cellweightflag = read_int();
     } else if (flag == COMM_SORT) {
       comm->commsortflag = read_int();
     } else if (flag == COMM_STYLE) {
       comm->commpartstyle = read_int();
-    } else if (flag == GRID_WEIGHT) {
-      grid->cellweightflag = read_int();
+    } else if (flag == PARTICLE_REORDER) {
+      update->reorder_period = read_int();
+    } else if (flag == MEM_LIMIT_GRID) {
+      update->mem_limit_grid_flag = read_int();
+    } else if (flag == MEM_LIMIT) {
+      update->global_mem_limit = read_int();
 
     } else if (flag == NPARTICLE) {
       nparticle_file = read_bigint();
