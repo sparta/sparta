@@ -1036,6 +1036,8 @@ void ReadRestart::header(int incompatible)
       comm->commsortflag = read_int();
     } else if (flag == COMM_STYLE) {
       comm->commpartstyle = read_int();
+    } else if (flag == SURFTALLY) {
+      surf->tally_comm = read_int();
     } else if (flag == PARTICLE_REORDER) {
       update->reorder_period = read_int();
     } else if (flag == MEMLIMIT_GRID) {
