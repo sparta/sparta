@@ -22,6 +22,8 @@
 #include "variable.h"
 #include "memory.h"
 #include "error.h"
+#include "domain.h"
+#include "particle.h"
 #include <iostream>
 
 using namespace SPARTA_NS;
@@ -36,11 +38,12 @@ enum{NONE,COMPUTE,FIX};
 FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
-  if (narg != 7) error->all(FLERR,"Illegal fix dt global command");
+  if (narg != 8) error->all(FLERR,"Illegal fix dt global command");
   nevery = atoi(arg[2]);
   if (nevery <= 0) error->all(FLERR,"Illegal fix dt global command");
 
   id_lambda = NULL;
+  id_temp = NULL;
   id_usq = NULL;
   id_vsq = NULL;
   id_wsq = NULL;
@@ -99,17 +102,47 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Illegal fix dt global command");
   }
 
-  // squared velocity fixes
+  // squared velocity and temperature fixes
   if ((strncmp(arg[4],"f_",2) == 0) &&
       (strncmp(arg[5],"f_",2) == 0) &&
-      (strncmp(arg[6],"f_",2) == 0)) {
+      (strncmp(arg[6],"f_",2) == 0) &&
+      (strncmp(arg[7],"f_",2) == 0)) {
+
+
+    // temperature--------------------
+    int n = strlen(arg[4]);
+    id_temp = new char[n];
+    strcpy(id_temp,&arg[4][2]);
+
+    char *ptr = strchr(id_temp,'[');
+    if (ptr) {
+      if (id_temp[strlen(id_temp)-1] != ']')
+        error->all(FLERR,"Invalid temperature in fix dt_global command");
+      tempindex = atoi(ptr+1);
+      *ptr = '\0';
+    } else tempindex = 0;
+
+    n = modify->find_fix(id_temp);
+    if (n < 0) error->all(FLERR,"Could not find fix dt_global tempeature fix ID");
+    if (modify->fix[n]->per_grid_flag == 0)
+      error->all(FLERR,"Fix dt_global fix does not "
+                 "compute per-grid info");
+    if (tempindex == 0 && modify->fix[n]->size_per_grid_cols > 0)
+      error->all(FLERR,"Fix dt_global fix does not "
+                 "compute per-grid vector");
+    if (tempindex > 0 && modify->fix[n]->size_per_grid_cols == 0)
+      error->all(FLERR,"Fix dt_global fix does not "
+                 "compute per-grid array");
+    if (tempindex > 0 && tempindex > modify->fix[n]->size_per_grid_cols)
+      error->all(FLERR,"Fix dt_global fix array is "
+                 "accessed out-of-range");
 
     // usq----------------------------
-    int n = strlen(arg[4]);
+    n = strlen(arg[5]);
     id_usq = new char[n];
-    strcpy(id_usq,&arg[4][2]);
+    strcpy(id_usq,&arg[5][2]);
 
-    char *ptr = strchr(id_usq,'[');
+    ptr = strchr(id_usq,'[');
     if (ptr) {
       if (id_usq[strlen(id_usq)-1] != ']')
         error->all(FLERR,"Invalid usq in fix dt_global command");
@@ -118,7 +151,7 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
     } else usqindex = 0;
 
     n = modify->find_fix(id_usq);
-    if (n < 0) error->all(FLERR,"Could not find fix dt_global fix ID");
+    if (n < 0) error->all(FLERR,"Could not find fix dt_global usq fix ID");
     if (modify->fix[n]->per_grid_flag == 0)
       error->all(FLERR,"Fix dt_global fix does not "
                  "compute per-grid info");
@@ -133,9 +166,9 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
                  "accessed out-of-range");
 
     // vsq----------------------------
-    n = strlen(arg[5]);
+    n = strlen(arg[6]);
     id_vsq = new char[n];
-    strcpy(id_vsq,&arg[5][2]);
+    strcpy(id_vsq,&arg[6][2]);
 
     ptr = strchr(id_vsq,'[');
     if (ptr) {
@@ -146,7 +179,7 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
     } else vsqindex = 0;
 
     n = modify->find_fix(id_vsq);
-    if (n < 0) error->all(FLERR,"Could not find fix dt_global fix ID");
+    if (n < 0) error->all(FLERR,"Could not find fix dt_global vsq fix ID");
     if (modify->fix[n]->per_grid_flag == 0)
       error->all(FLERR,"Fix dt_global fix does not "
                  "compute per-grid info");
@@ -161,9 +194,9 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
                  "accessed out-of-range");
 
     // wsq----------------------------
-    n = strlen(arg[6]);
+    n = strlen(arg[7]);
     id_wsq = new char[n];
-    strcpy(id_wsq,&arg[6][2]);
+    strcpy(id_wsq,&arg[7][2]);
 
     ptr = strchr(id_wsq,'[');
     if (ptr) {
@@ -174,7 +207,7 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
     } else wsqindex = 0;
 
     n = modify->find_fix(id_wsq);
-    if (n < 0) error->all(FLERR,"Could not find fix dt_global fix ID");
+    if (n < 0) error->all(FLERR,"Could not find fix dt_global wsq fix ID");
     if (modify->fix[n]->per_grid_flag == 0)
       error->all(FLERR,"Fix dt_global fix does not "
                  "compute per-grid info");
@@ -195,7 +228,7 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
   MPI_Comm_rank(world,&me);
 
   nglocal = 0;
-  lambda = usq = vsq = wsq = NULL;
+  lambda = temp = usq = vsq = wsq = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -205,10 +238,12 @@ FixDtGlobal::~FixDtGlobal()
   if (copymode) return;
 
   delete [] id_lambda;
+  delete [] id_temp;
   delete [] id_usq;
   delete [] id_vsq;
   delete [] id_wsq;
   memory->destroy(lambda);
+  memory->destroy(temp);
   memory->destroy(usq);
   memory->destroy(vsq);
   memory->destroy(wsq);
@@ -239,8 +274,14 @@ void FixDtGlobal::init()
     flambda = modify->fix[ifix];
   }
 
+  // temperature fix
+  int ifix = modify->find_fix(id_temp);
+  if (ifix < 0)
+    error->all(FLERR,"Could not find temperature fix ID");
+  ftemp = modify->fix[ifix];
+
   // usq fix
-  int ifix = modify->find_fix(id_usq);
+  ifix = modify->find_fix(id_usq);
   if (ifix < 0)
     error->all(FLERR,"Could not find usq fix ID");
   fusq = modify->fix[ifix];
@@ -309,6 +350,16 @@ void FixDtGlobal::end_of_step()
     }
   }
 
+  // get temperature from fix
+  if (tempindex == 0) {
+    memcpy(temp,ftemp->vector_grid,nglocal*sizeof(double));
+  } else {
+    double **array = ftemp->array_grid;
+    int index = tempindex-1;
+    for (int i = 0; i < nglocal; i++)
+      temp[i] = array[i][index];
+  }
+
   // get usq from fix
   if (usqindex == 0) {
     memcpy(usq,fusq->vector_grid,nglocal*sizeof(double));
@@ -339,22 +390,93 @@ void FixDtGlobal::end_of_step()
       wsq[i] = array[i][index];
   }
 
-  // compute cell desired timestep
+  // compute cell desired timestep ---------------------------------
   Grid::ChildCell *cells = grid->cells;
-  double dtmin_this_pe = BIG;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  Particle::Species *species = particle->species;
+  Particle::OnePart *particles = particle->particles;
+
+  // allow dt growth and reduce below if necessary
+  grid->dt_global *= 2;
+
+  // find minimum species mass
+  double mass_min = BIG;
+  for (int s = 0; s < particle->nspecies; ++s)
+    mass_min = MIN(species[s].mass,mass_min);
+
+  double transit_fraction = 0.25;
+  double collision_fraction = 0.1;
+  double dt_sum = 0.;
+
   for (int i = 0; i < nglocal; ++i) {
+
+    // cell dt based on mean collision time
     double mean_collision_time = lambda[i]/sqrt(usq[i] + vsq[i] + wsq[i]);
-    cells[i].dt_desired = mean_collision_time;
-    if (cells[i].dt_desired < dtmin_this_pe)
-      dtmin_this_pe = cells[i].dt_desired;
+    if (mean_collision_time > 0.) {
+      cells[i].dt_desired = collision_fraction*mean_collision_time;
+    }
+
+    // cell size
+    double dx = cells[i].hi[0] - cells[i].lo[0];
+    double dy = cells[i].hi[1] - cells[i].lo[1];
+    double dz = 0.;
+
+    // cell dt based on transit time using average velocities
+    double dt_candidate = transit_fraction*dx/sqrt(usq[i]);
+    cells[i].dt_desired = MIN(dt_candidate,cells[i].dt_desired);
+
+    dt_candidate = transit_fraction*dy/sqrt(vsq[i]);
+    cells[i].dt_desired = MIN(dt_candidate,cells[i].dt_desired);
+
+    if (domain->dimension == 3) {
+      dz = cells[i].hi[2] - cells[i].lo[2];
+      dt_candidate = transit_fraction*dz/sqrt(wsq[i]);
+      cells[i].dt_desired = MIN(dt_candidate,cells[i].dt_desired);
+    }
+
+    // cell dt based on transit time using maximum most probable speed
+    double vrm_max = sqrt(2.0*update->boltz * temp[i] / mass_min);
+
+    dt_candidate = transit_fraction*dx/vrm_max;
+    cells[i].dt_desired = MIN(dt_candidate,cells[i].dt_desired);
+
+    dt_candidate = transit_fraction*dy/vrm_max;
+    cells[i].dt_desired = MIN(dt_candidate,cells[i].dt_desired);
+
+    if (domain->dimension == 3) {
+      dt_candidate = transit_fraction*dz/vrm_max;
+      cells[i].dt_desired = MIN(dt_candidate,cells[i].dt_desired);
+    }
+
+    dt_sum += cells[i].dt_desired;
   }
 
-  double dtmin;
-  MPI_Allreduce(&dtmin_this_pe,&dtmin,1,MPI_DOUBLE,MPI_MIN,world);
-  grid->dt_global = dtmin;
-  if (me == 0) {
-    std::cout << "WARNING!!!!! values stored in dt_global and cells[i].dt_desired are placeholders!!!!!\n";
+  double avg_cell_dt = dt_sum/nglocal;
+  double dt_factor = 1000.;
+  double dtmin_this_pe = avg_cell_dt/dt_factor;
+  double dtmax_this_pe = avg_cell_dt*dt_factor;
+  double dtmins_this_pe[2] = {dtmin_this_pe, 1./dtmax_this_pe};
+
+  double dtmins[2];
+  MPI_Allreduce(&dtmins_this_pe,&dtmins,2,MPI_DOUBLE,MPI_MIN,world);
+  double dtmin = dtmins[0];
+  double dtmax = 1.0/dtmins[1];
+  grid->dt_global = 2.*dtmin;
+
+  for (int i = 0; i < nglocal; ++i) {
+    if (cells[i].dt_desired < dtmin)
+      cells[i].dt_desired = dtmin;
+    if (cells[i].dt_desired > dtmax)
+      cells[i].dt_desired = dtmax;
+    if (cells[i].dt_desired < 0.51*grid->dt_global) // AKS look into this logic
+      cells[i].dt_desired = 0.51*grid->dt_global;
   }
+
+  // also what happens if dt everywhere should be the average, then are we forcing
+  // a very small global dt???   Probably should track a minimum and maximum cell dt
+  // and compare to the min and max dt computed with dt_factor.
+
+  // also what happens if a large number of cells have no particles? (ex. inlet flow around a circle)
 }
 
 /* ----------------------------------------------------------------------
@@ -369,12 +491,13 @@ void FixDtGlobal::reallocate()
   nglocal = grid->nlocal;
 
   memory->destroy(lambda);
+  memory->destroy(temp);
   memory->destroy(usq);
   memory->destroy(vsq);
   memory->destroy(wsq);
   memory->create(lambda,nglocal,"dt_global:lambda");
+  memory->create(temp,nglocal,"dt_global:temp");
   memory->create(usq,nglocal,"dt_global:usq");
   memory->create(vsq,nglocal,"dt_global:vsq");
   memory->create(wsq,nglocal,"dt_global:wsq");
-
 }

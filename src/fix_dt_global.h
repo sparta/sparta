@@ -38,12 +38,12 @@ class FixDtGlobal : public Fix {
 
 protected:
   int nglocal;
-  int lambdawhich,usqwhich,vsqwhihc,wsqwhich;
-  char *id_lambda, *id_usq, *id_vsq, *id_wsq;
-  int lambdaindex, usqindex,vsqindex,wsqindex;
+  int lambdawhich,usqwhich,vsqwhihc,wsqwhich,tempwhich;
+  char *id_lambda,*id_usq,*id_vsq,*id_wsq,*id_temp;
+  int lambdaindex, usqindex,vsqindex,wsqindex,tempindex;
   class Compute *clambda;
-  class Fix *flambda,*fusq,*fvsq,*fwsq;
-  double *lambda,*usq,*vsq,*wsq;
+  class Fix *flambda,*fusq,*fvsq,*fwsq,*ftemp;
+  double *lambda,*usq,*vsq,*wsq,*temp;
 
  private:
   int me;
