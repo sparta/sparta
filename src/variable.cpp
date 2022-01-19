@@ -1569,7 +1569,7 @@ double Variable::evaluate(char *str, Tree **tree)
 	char *id = new char[n];
 	strcpy(id,&word[2]);
 
-	int isr = surf->find_collide(id);
+	int isr = surf->find_react(id);
 	if (isr < 0)
           error->all(FLERR,"Invalid surf reaction ID in variable formula");
 	SurfReact *sr = surf->sr[isr];
