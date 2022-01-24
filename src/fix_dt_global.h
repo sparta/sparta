@@ -39,11 +39,20 @@ class FixDtGlobal : public Fix {
 protected:
   int nglocal;
   int lambdawhich,usqwhich,vsqwhihc,wsqwhich,tempwhich;
-  char *id_lambda,*id_usq,*id_vsq,*id_wsq,*id_temp;
   int lambdaindex, usqindex,vsqindex,wsqindex,tempindex;
+  int tvar,txvar,tyvar,tzvar,tempflag;
+  int vxvar,vyvar,vzvar,vvarx,vvary,vvarz,velflag;
+  int imix;
+  char *id_lambda,*id_usq,*id_vsq,*id_wsq,*id_temp;
+  char *tstr,*txstr,*tystr,*tzstr;
+  char *vxstr,*vystr,*vzstr,*vstrx,*vstry,*vstrz;
   class Compute *clambda;
   class Fix *flambda,*fusq,*fvsq,*fwsq,*ftemp;
   double *lambda,*usq,*vsq,*wsq,*temp;
+  double min_species_mass;
+
+  double temperature_variable(double *);
+  void velocity_variable(double *, double *, double *);
 
  private:
   int me;
