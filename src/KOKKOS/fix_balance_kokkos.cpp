@@ -51,8 +51,8 @@ FixBalanceKokkos::FixBalanceKokkos(SPARTA *sparta, int narg, char **arg) :
 }
 
 /* ----------------------------------------------------------------------
- *    perform dynamic load balancing
- *    ------------------------------------------------------------------------- */
+   perform dynamic load balancing
+------------------------------------------------------------------------- */
 
 void FixBalanceKokkos::end_of_step()
 {

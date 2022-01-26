@@ -16,6 +16,7 @@
 #include "string.h"
 #include "stdlib.h"
 #include "ctype.h"
+#include "signal.h"
 #include "kokkos.h"
 #include "sparta.h"
 #include "error.h"
@@ -157,6 +158,10 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
 
   //if (need_atomics == 0) // prevent unnecessary parallel_reduce
   //  atomic_reduction = 1;
+
+  // finalize Kokkos on abort
+
+  signal(SIGABRT, my_signal_handler);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -219,4 +224,9 @@ void KokkosSPARTA::accelerator(int narg, char **arg)
       iarg += 2;
     } else error->all(FLERR,"Illegal package kokkos command");
   }
+}
+
+void KokkosSPARTA::my_signal_handler(int sig)
+{
+  if (sig == SIGABRT) Kokkos::finalize();
 }

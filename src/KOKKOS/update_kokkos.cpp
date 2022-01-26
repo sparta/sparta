@@ -244,6 +244,9 @@ void UpdateKokkos::setup()
 
     sparta->kokkos->prewrap = 0;
   } else {
+    particle_kk->modify(Host,PARTICLE_MASK);
+    particle_kk->sorted_kk = 0;
+
     grid_kk->modify(Host,ALL_MASK);
     grid_kk->update_hash();
     if (surf->exist) {
