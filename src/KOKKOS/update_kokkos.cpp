@@ -224,6 +224,7 @@ void UpdateKokkos::setup()
   SurfKokkos* surf_kk = (SurfKokkos*) surf;
 
   particle_kk->sync(Device,ALL_MASK);
+  particle_kk->sorted_kk = 0;
 
   if (sparta->kokkos->prewrap) {
 
@@ -238,17 +239,14 @@ void UpdateKokkos::setup()
 
     // surf
 
-    if (surf->exist) {
+    if (surf->exist)
       surf_kk->wrap_kokkos();
-    }
 
     sparta->kokkos->prewrap = 0;
   } else {
-    particle_kk->modify(Host,PARTICLE_MASK);
-    particle_kk->sorted_kk = 0;
-
     grid_kk->modify(Host,ALL_MASK);
     grid_kk->update_hash();
+
     if (surf->exist) {
       surf_kk->modify(Host,ALL_MASK);
       grid_kk->wrap_kokkos_graphs();
