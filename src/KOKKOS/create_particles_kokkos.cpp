@@ -43,13 +43,7 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
 #define EPSZERO 1.0e-14
 
 CreateParticlesKokkos::CreateParticlesKokkos(SPARTA* spa):
-  CreateParticles(spa),
-  rand_pool(12345 + comm->me
-#ifdef SPARTA_KOKKOS_EXACT
-            , sparta
-#endif
-            ),
-  particle_kk_copy(sparta)
+  CreateParticles(spa)
 {
 }
 
@@ -301,7 +295,6 @@ void CreateParticlesKokkos::create_local(bigint np)
   auto nlocal_before = particleKK->nlocal;
 
   Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
-    rand_type rand_gen = rand_pool.get_state();
     auto ncreate = d_npercell(i);
     for (int m = 0; m < ncreate; m++) {
       auto cand = d_cells2cands(i) + m;
@@ -314,7 +307,6 @@ void CreateParticlesKokkos::create_local(bigint np)
       for (int d = 0; d < 3; ++d) v[d] = d_v(cand, d);
       auto erot = d_erot(cand);
       auto evib = d_evib(cand);
-      printf("i=%d, m=%d, random=%f\n",i,m,rand_gen.drand());
       ParticleKokkos::add_particle_kokkos(d_particles,inew,id,ispecies,i,x,v,erot,evib);
     }
   });

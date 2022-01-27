@@ -22,7 +22,6 @@ CommandStyle(create_particles/kk,CreateParticlesKokkos)
 #define SPARTA_CREATE_PARTICLES_KOKKOS_H
 
 #include "create_particles.h"
-#include "rand_pool_wrap.h"
 
 namespace SPARTA_NS {
 
@@ -33,17 +32,6 @@ class CreateParticlesKokkos : public CreateParticles {
 
   void create_local(bigint);
   void create_local_twopass(bigint np) { create_local(np); };
-
-#ifndef SPARTA_KOKKOS_EXACT
-  Kokkos::Random_XorShift64_Pool<DeviceType> rand_pool;
-  typedef typename Kokkos::Random_XorShift64_Pool<DeviceType>::generator_type rand_type;
-
-  //Kokkos::Random_XorShift1024_Pool<DeviceType> rand_pool;
-  //typedef typename Kokkos::Random_XorShift1024_Pool<DeviceType>::generator_type rand_type;
-#else
-  RandPoolWrap rand_pool;
-  typedef RandWrap rand_type;
-#endif
 };
 
 }
