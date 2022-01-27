@@ -27,6 +27,9 @@ particle.h:
   added particle time to OnePartRestart class
   modified add_particle function to include particle_time in argument list
 
+particle_kokkos.h
+  overloaded add_particle_kokkos function to include particle_time in argument list
+
 particle.cpp:
   added particle time copy to pack_restart() functions
   modified add_particle function to include particle_time in argument list

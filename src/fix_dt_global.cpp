@@ -378,6 +378,8 @@ void FixDtGlobal::init()
   double temperature;
 
   for (int i = 0; i < nglocal; ++i) {
+
+#if 0
     x[0] = 0.5*(cells[i].lo[0] + cells[i].hi[0]);
     x[1] = 0.5*(cells[i].lo[1] + cells[i].hi[1]);
     x[2] = 0.5*(cells[i].lo[2] + cells[i].hi[2]);
@@ -398,8 +400,10 @@ void FixDtGlobal::init()
       v[1] = vstream[1];
       v[2] = vstream[2];
     }
-
     double vrm_max = sqrt(2.0*update->boltz * temperature / min_species_mass);
+#endif
+    // for now, set cell timestep to be global value, which was read in
+    cells[i].dt_desired = grid->dt_global;
   }
 
   // setup computes and fixes
