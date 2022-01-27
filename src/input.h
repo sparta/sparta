@@ -98,6 +98,7 @@ class Input : protected Pointers {
   void restart();
   void seed();
   void species();
+  void species_modify();
   void stats();
   void stats_modify();
   void stats_style();

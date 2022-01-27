@@ -32,6 +32,9 @@ class SpartaGridFile:
     self.__grid_file_handle = None
     self.__grid_file_path = grid_file_path
     self.__iterate_local_cell_ids = False
+    self.__iteration_start = 0
+    self.__iteration_skip = 1
+    self.__cell_iteration_count = 0
     self._open_grid_file()
     self._read_grid_file_header()
     self._close_grid_file()
@@ -64,21 +67,54 @@ class SpartaGridFile:
   def __iter__(self):
     self._open_grid_file()
     self._go_to_grid_file_cells_section()
+    self.__cell_iteration_count = 0
     return self
 
   def next(self):
     try:
-      line = next(self.__grid_file_handle)
-      local_cell_id = self._clean_line(line)
-      if self.iterate_local_cell_ids:
-        return local_cell_id
-      else:
-        return self.create_dashed_id(local_cell_id)
+      return self._get_next_cell()
     except StopIteration:
       self._close_grid_file()
       raise StopIteration
 
   __next__ = next
+
+  def set_iteration_start(self, start):
+    self.__iteration_start = start
+
+  def set_iteration_skip(self, skip):
+    self.__iteration_skip = skip
+
+  def _get_next_cell(self):
+    local_cell_id = self._get_next_valid_cell()
+    if self.iterate_local_cell_ids:
+      return local_cell_id
+    else:
+      return self.create_dashed_id(local_cell_id)
+
+  def _get_next_valid_cell(self):
+    line = ""
+    while self._line_is_not_valid(line):
+      line = next(self.__grid_file_handle)
+      line = self._clean_line(line)
+      self.__cell_iteration_count += 1
+    return line
+
+  def _line_is_not_valid(self, line):
+    iter_count = self.__cell_iteration_count - self.__iteration_start
+    if not line:
+      return True
+    elif iter_count < 0:
+      return True
+    elif iter_count % self.__iteration_skip != 0:
+      return True
+    else:
+      return False
+
+  def _skip_to_iteration_start(self):
+    line_count = 0
+    for line in self.__grid_file_handle:
+      line_count += 1
 
   def _get_grid_file_cells_section_string(self):
     return 'Cells'
@@ -183,7 +219,7 @@ class SpartaGridFile:
   def get_local_cell_id_from_dashed_cell_id(self, dashed_id):
     id = 0
     if dashed_id:
-      cells = self.get_cells_in_dashed_id(dashed_id)
+      cells = SpartaGridFile.get_cells_in_dashed_id(dashed_id)
       for level in range(len(cells), 0, -1):
         cid = cells[len(cells)-level]
         ldims = self.get_level_dimensions(level)
@@ -201,7 +237,30 @@ class SpartaGridFile:
     parents.reverse()
     return parents
 
-  def get_cells_in_dashed_id(self, dashed_id):
+  @staticmethod
+  def compare_dashed_ids(dashed_id_one, dashed_id_two):
+    cells_one = SpartaGridFile.get_cells_in_dashed_id(dashed_id_one)
+    cells_one.reverse()
+    cells_two = SpartaGridFile.get_cells_in_dashed_id(dashed_id_two)
+    cells_two.reverse()
+    length_one = len(cells_one)
+    length_two = len(cells_two)
+
+    for i in range(min(length_one, length_two)):
+        if cells_one[i] < cells_two[i]:
+            return -1
+        elif cells_one[i] > cells_two[i]:
+            return 1
+
+    if length_one < length_two:
+        return -1
+    elif length_one > length_two:
+        return 1
+    else:
+        return 0
+
+  @staticmethod
+  def get_cells_in_dashed_id(dashed_id):
     children = dashed_id.split('-')
     children = [int(i) for i in children]
     return children

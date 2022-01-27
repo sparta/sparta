@@ -115,6 +115,13 @@ species with a vibdof = 4,6,8.  Note that the <A HREF = "fix_vibmode.html">fix
 vibmode</A> command must also be used to allocate
 per-particle storage for these additional modes.
 </P>
+<P>NOTE: By default the maximum allowed number of vibrational modes is 4
+(dof = 8). If you have a model with species which need more, you can
+change the settings at the top of src/particle.h in the enum command
+for MAXVIBMODE=4 to a larger value and re-compile the code.  The
+format of the <I>vibfile</I>, as described next, is then enhanced
+accordingly.
+</P>
 <HR>
 
 <P>The optional <I>vibfile</I> keyword can be used to specify additional

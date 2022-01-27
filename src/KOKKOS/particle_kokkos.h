@@ -83,6 +83,9 @@ class ParticleKokkos : public Particle {
   void pack_custom(int, char *);
   void unpack_custom(char *, int);
 
+  KOKKOS_INLINE_FUNCTION
+  void copy_custom_kokkos(int, int) const;
+
 #ifndef SPARTA_KOKKOS_EXACT
   typedef typename Kokkos::Random_XorShift64_Pool<DeviceType>::generator_type rand_type;
 

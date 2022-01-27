@@ -1,0 +1,53 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+species_modify command :h3
+
+[Syntax:]
+
+species_modify ID property value ... :pre
+
+ID, property, value can be repeated one or more times :ulb,l
+ID = species ID :l
+property = {mu} :l
+  mu = magnetic moment :pre
+value = value of property for that species :l
+  value for {mu} (magnetic moment units) :pre
+:ule
+
+[Examples:]
+
+species_modify Fe mu 2.0 Cr mu 3.0 :pre
+
+[Description:]
+
+Set additional properties of one or more species used in a simulation.
+This can be used as many times as desired for different species and
+properties.  Currently it only supports setting of a single optional
+property (the magnetic moment) which is not included in the species
+files read in by the "species"_species.html command.
+
+Each {ID} is a character string used to identify a species, such as N
+or O2 or NO or D or Fe-.  See the "species"_species.html command for
+how species are added to a simulation model by reading their
+properties from a species file.
+
+The only property currently recognized is {mu} or the scalar magnetic
+moment of each particle of the species.  The {value} for the {mu}
+property should be specified in the units described on the
+"units"_units.html doc page.
+
+:line
+
+[Restrictions:] none
+
+[Related commands:] none
+
+[Default:]
+
+No magnetic moments are defined for any species (all 0.0).

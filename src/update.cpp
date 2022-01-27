@@ -48,6 +48,7 @@ enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 enum{TALLYAUTO,TALLYREDUCE,TALLYRVOUS};         // same as Surf
 enum{PERAUTO,PERCELL,PERSURF};                  // several files
+enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // several files
 
 #define MAXSTUCK 20
 #define EPSPARAM 1.0e-7
@@ -79,7 +80,8 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   nrho = 1.0;
   vstream[0] = vstream[1] = vstream[2] = 0.0;
   temp_thermal = 273.15;
-  gravity[0] = gravity[1] = gravity[2] = 0.0;
+  fstyle = NOFIELD;
+  fieldID = NULL;
 
   maxmigrate = 0;
   mlist = NULL;
@@ -107,6 +109,7 @@ Update::~Update()
   if (copymode) return;
 
   delete [] unit_style;
+  delete [] fieldID;
   memory->destroy(mlist);
   delete [] slist_compute;
   delete [] blist_compute;
@@ -164,19 +167,39 @@ void Update::init()
     else moveptr = &Update::move<2,0>;
   }
 
-  // check gravity vector
+  // checks on external field options
 
-  if (domain->dimension == 2 && gravity[2] != 0.0)
-    error->all(FLERR,"Gravity in z not allowed for 2d");
-  if (domain->axisymmetric && gravity[1] != 0.0)
-    error->all(FLERR,"Gravity in y not allowed for axi-symmetric model");
+  if (fstyle == CFIELD) {
+    if (domain->dimension == 2 && field[2] != 0.0)
+      error->all(FLERR,"External field in z not allowed for 2d");
+    if (domain->axisymmetric && field[1] != 0.0)
+      error->all(FLERR,
+                 "External field in y not allowed for axisymmetric model");
+  } else if (fstyle == PFIELD) {
+    ifieldfix = modify->find_fix(fieldID);
+    if (ifieldfix < 0) error->all(FLERR,"External field fix ID not found");
+    if (!modify->fix[ifieldfix]->per_particle_field)
+      error->all(FLERR,"External field fix does not compute necessary field");
+  } else if (fstyle == GFIELD) {
+    ifieldfix = modify->find_fix(fieldID);
+    if (ifieldfix < 0) error->all(FLERR,"External field fix ID not found");
+    if (!modify->fix[ifieldfix]->per_grid_field)
+      error->all(FLERR,"External field fix does not compute necessary field");
+  }
 
-  // moveperturb method is set if particle motion is perturbed
+  // moveperturb method is set if external field perturbs particle motion
 
   moveperturb = NULL;
-  if (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0) {
-    if (domain->dimension == 3) moveperturb = &Update::gravity3d;
-    if (domain->dimension == 2) moveperturb = &Update::gravity2d;
+
+  if (fstyle == CFIELD) {
+    if (domain->dimension == 2) moveperturb = &Update::field2d;
+    if (domain->dimension == 3) moveperturb = &Update::field3d;
+  } else if (fstyle == PFIELD) {
+    moveperturb = &Update::field_per_particle;
+    field_active = modify->fix[ifieldfix]->field_active;
+  } else if (fstyle == GFIELD) {
+    moveperturb = &Update::field_per_grid;
+    field_active = modify->fix[ifieldfix]->field_active;
   }
 
   if (moveperturb) perturbflag = 1;
@@ -219,6 +242,13 @@ void Update::run(int nsteps)
 {
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
+
+  // external per grid cell field
+  // only evaluate once at beginning of run b/c time-independent
+  // fix calculates field acting at center point of all grid cells
+
+  if (fstyle == GFIELD && fieldfreq == 0) 
+    modify->fix[ifieldfix]->compute_field();
 
   // cellweightflag = 1 if grid-based particle weighting is ON
 
@@ -344,13 +374,23 @@ template < int DIM, int SURF > void Update::move()
   Surf::Line *lines = surf->lines;
   double dt = grid->dt_global;
 
-  // DEBUG
+  // external per particle field
+  // fix calculates field acting on all owned particles
+
+  if (fstyle == PFIELD) modify->fix[ifieldfix]->compute_field();
+
+  // external per grid cell field
+  // evaluate once every fieldfreq steps b/c time-dependent
+  // fix calculates field acting at center point of all grid cells
+  
+  if (fstyle == GFIELD && fieldfreq && ((ntimestep-1) % fieldfreq == 0)) 
+    modify->fix[ifieldfix]->compute_field();
+
+  // one or more loops over particles
+  // first iteration = all my particles
+  // subsequent iterations = received particles
 
   while (1) {
-
-    // loop over particles
-    // first iteration = all my particles
-    // subsequent iterations = received particles
 
     niterate++;
     particles = particle->particles;
@@ -407,13 +447,15 @@ template < int DIM, int SURF > void Update::move()
         xnew[0] = x[0] + dtremain*v[0];
         xnew[1] = x[1] + dtremain*v[1];
         if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
-        if (perturbflag) (this->*moveperturb)(dtremain,xnew,v);
+        if (perturbflag) 
+          (this->*moveperturb)(i,particles[i].icell,dtremain,xnew,v);
       } else if (pflag == PINSERT) {
         dtremain = particles[i].dtremain;
         xnew[0] = x[0] + dtremain*v[0];
         xnew[1] = x[1] + dtremain*v[1];
         if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
-        if (perturbflag) (this->*moveperturb)(dtremain,xnew,v);
+        if (perturbflag) 
+          (this->*moveperturb)(i,particles[i].icell,dtremain,xnew,v);
       } else if (pflag == PENTRY) {
         icell = particles[i].icell;
         if (cells[icell].nsplit > 1) {
@@ -1185,6 +1227,64 @@ template < int DIM, int SURF > void Update::move()
 }
 
 /* ----------------------------------------------------------------------
+   calculate motion perturbation for a single particle I
+     due to external per particle field
+   array in fix[ifieldfix] stores per particle perturbations for x and v
+------------------------------------------------------------------------- */
+
+void Update::field_per_particle(int i, int icell, double dt, double *x, double *v)
+{
+  double dtsq = 0.5*dt*dt;
+  double **array = modify->fix[ifieldfix]->array_particle;
+
+  int icol = 0;
+  if (field_active[0]) {
+    x[0] += dtsq*array[i][icol];
+    v[0] += dt*array[i][icol];
+    icol++;
+  }
+  if (field_active[1]) {
+    x[1] += dtsq*array[i][icol];
+    v[1] += dt*array[i][icol];
+    icol++;
+  }
+  if (field_active[2]) {
+    x[2] += dtsq*array[i][icol];
+    v[2] += dt*array[i][icol];
+    icol++;
+  }
+};
+
+/* ----------------------------------------------------------------------
+   calculate motion perturbation for a single particle I in grid cell Icell
+     due to external per grid cell field
+   array in fix[ifieldfix] stores per grid cell perturbations for x and v
+------------------------------------------------------------------------- */
+
+void Update::field_per_grid(int i, int icell, double dt, double *x, double *v)
+{
+  double dtsq = 0.5*dt*dt;
+  double **array = modify->fix[ifieldfix]->array_grid;
+
+  int icol = 0;
+  if (field_active[0]) {
+    x[0] += dtsq*array[icell][icol];
+    v[0] += dt*array[icell][icol];
+    icol++;
+  }
+  if (field_active[1]) {
+    x[1] += dtsq*array[icell][icol];
+    v[1] += dt*array[icell][icol];
+    icol++;
+  }
+  if (field_active[2]) {
+    x[2] += dtsq*array[icell][icol];
+    v[2] += dt*array[icell][icol];
+    icol++;
+  }
+};
+
+/* ----------------------------------------------------------------------
    particle is entering split parent icell at x
    determine which split child cell it is in
    return index of sub-cell in ChildCell
@@ -1467,19 +1567,43 @@ void Update::global(int narg, char **arg)
       temp_thermal = input->numeric(FLERR,arg[iarg+1]);
       if (temp_thermal <= 0.0) error->all(FLERR,"Illegal global command");
       iarg += 2;
-    } else if (strcmp(arg[iarg],"gravity") == 0) {
-      if (iarg+5 > narg) error->all(FLERR,"Illegal global command");
-      double gmag = input->numeric(FLERR,arg[iarg+1]);
-      gravity[0] = input->numeric(FLERR,arg[iarg+2]);
-      gravity[1] = input->numeric(FLERR,arg[iarg+3]);
-      gravity[2] = input->numeric(FLERR,arg[iarg+4]);
-      if (gmag < 0.0) error->all(FLERR,"Illegal global command");
-      if (gmag > 0.0 &&
-          gravity[0] == 0.0 && gravity[1] == 0.0 && gravity[2] == 0.0)
-        error->all(FLERR,"Illegal global command");
-      if (gmag > 0.0) MathExtra::snorm3(gmag,gravity);
-      else gravity[0] = gravity[1] = gravity[2] = 0.0;
-      iarg += 5;
+
+    } else if (strcmp(arg[iarg],"field") == 0) {
+      if (iarg+1 > narg) error->all(FLERR,"Illegal global command");
+      if (strcmp(arg[iarg+1],"none") == 0) {
+        fstyle = NOFIELD;
+        iarg += 2;
+      } else if (strcmp(arg[iarg+1],"constant") == 0) {
+        if (iarg+6 > narg) error->all(FLERR,"Illegal global field command");
+        fstyle = CFIELD;
+        double fmag = input->numeric(FLERR,arg[iarg+2]);
+        field[0] = input->numeric(FLERR,arg[iarg+3]);
+        field[1] = input->numeric(FLERR,arg[iarg+4]);
+        field[2] = input->numeric(FLERR,arg[iarg+5]);
+        if (fmag <= 0.0) error->all(FLERR,"Illegal global field command");
+        if (field[0] == 0.0 && field[1] == 0.0 && field[2] == 0.0)
+          error->all(FLERR,"Illegal global field command");
+        MathExtra::snorm3(fmag,field);
+        iarg += 6;
+      } else if (strcmp(arg[iarg+1],"particle") == 0) {
+        if (iarg+3 > narg) error->all(FLERR,"Illegal global field command");
+        delete [] fieldID;
+        fstyle = PFIELD;
+        int n = strlen(arg[iarg+2]) + 1;
+        fieldID = new char[n];
+        strcpy(fieldID,arg[iarg+2]);
+        iarg += 3;
+      } else if (strcmp(arg[iarg+1],"grid") == 0) {
+        if (iarg+4 > narg) error->all(FLERR,"Illegal global field command");
+        delete [] fieldID;
+        fstyle = GFIELD;
+        int n = strlen(arg[iarg+2]) + 1;
+        fieldID = new char[n];
+        strcpy(fieldID,arg[iarg+2]);
+        fieldfreq = input->inumeric(FLERR,arg[iarg+3]);
+        if (fieldfreq < 0) error->all(FLERR,"Illegal global field command");
+        iarg += 4;
+      } else error->all(FLERR,"Illegal global field command");
 
     } else if (strcmp(arg[iarg],"surfs") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
@@ -1517,7 +1641,6 @@ void Update::global(int narg, char **arg)
       // reallocate paged data structs for variable-length cell info
       grid->allocate_surf_arrays();
       iarg += 2;
-
     } else if (strcmp(arg[iarg],"gridcut") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       grid->cutoff = input->numeric(FLERR,arg[iarg+1]);
@@ -1526,7 +1649,13 @@ void Update::global(int narg, char **arg)
       // force ghost info to be regenerated with new cutoff
       grid->remove_ghosts();
       iarg += 2;
-
+    } else if (strcmp(arg[iarg],"weight") == 0) {
+      // for now assume just one arg after "cell"
+      // may need to generalize later
+      if (iarg+3 > narg) error->all(FLERR,"Illegal global command");
+      if (strcmp(arg[iarg+1],"cell") == 0) grid->weight(1,&arg[iarg+2]);
+      else error->all(FLERR,"Illegal weight command");
+      iarg += 3;
     } else if (strcmp(arg[iarg],"comm/sort") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       if (strcmp(arg[iarg+1],"yes") == 0) comm->commsortflag = 1;
@@ -1546,14 +1675,6 @@ void Update::global(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"rvous") == 0) surf->tally_comm = TALLYRVOUS;
       else error->all(FLERR,"Illegal global command");
       iarg += 2;
-
-    } else if (strcmp(arg[iarg],"weight") == 0) {
-      // for now assume just one arg after "cell"
-      // may need to generalize later
-      if (iarg+3 > narg) error->all(FLERR,"Illegal global command");
-      if (strcmp(arg[iarg+1],"cell") == 0) grid->weight(1,&arg[iarg+2]);
-      else error->all(FLERR,"Illegal weight command");
-      iarg += 3;
     } else if (strcmp(arg[iarg],"particle/reorder") == 0) {
       reorder_period = input->inumeric(FLERR,arg[iarg+1]);
       if (reorder_period < 0) error->all(FLERR,"Illegal global command");

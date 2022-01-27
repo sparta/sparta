@@ -163,7 +163,7 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
 
   } else if (which == VARIABLE) {
     ivariable = input->variable->find(idsource);
-    if (ivariable < 0) 
+    if (ivariable < 0)
       error->all(FLERR,"Could not find fix ablate variable name");
     if (input->variable->grid_style(ivariable) == 0)
       error->all(FLERR,"Fix ablate variable is not grid-style variable");

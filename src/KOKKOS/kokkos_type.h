@@ -16,7 +16,6 @@
 
 #include <Kokkos_Core.hpp>
 #include <Kokkos_DualView.hpp>
-#include <impl/Kokkos_Timer.hpp>
 #include <Kokkos_Vectorization.hpp>
 #include <Kokkos_ScatterView.hpp>
 
@@ -362,6 +361,11 @@ namespace SPARTA_NS {
     DualView<Particle::OnePart*, DeviceType::array_layout, DeviceType> tdual_particle_1d;
   typedef tdual_particle_1d::t_dev t_particle_1d;
   typedef tdual_particle_1d::t_host t_host_particle_1d;
+
+  typedef Kokkos::
+    DualView<Particle::OnePart**, DeviceType::array_layout, DeviceType> tdual_particle_2d;
+  typedef tdual_particle_2d::t_dev t_particle_2d;
+  typedef tdual_particle_2d::t_host t_host_particle_2d;
 
   typedef Kokkos::
     DualView<Particle::Species*, DeviceType::array_layout, DeviceType> tdual_species_1d;

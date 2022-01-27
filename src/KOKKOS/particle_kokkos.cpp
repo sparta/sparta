@@ -162,7 +162,7 @@ void ParticleKokkos::compress_migrate(int ndelete, int *dellist)
 
   Kokkos::deep_copy(d_lists,h_lists);
 
-  this->sync(Device,PARTICLE_MASK);
+  this->sync(Device,PARTICLE_MASK|CUSTOM_MASK);
   d_particles = k_particles.d_view;
 
   copymode = 1;
@@ -170,7 +170,7 @@ void ParticleKokkos::compress_migrate(int ndelete, int *dellist)
   DeviceType().fence();
   copymode = 0;
 
-  this->modify(Device,PARTICLE_MASK);
+  this->modify(Device,PARTICLE_MASK|CUSTOM_MASK);
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
 
   sorted = 0;
@@ -184,6 +184,7 @@ void ParticleKokkos::operator()(TagParticleCompressReactions, const int &i) cons
   const int k = d_slist[i];
   //memcpy(&d_particles[j],&d_particles[k],nbytes);
   d_particles[j] = d_particles[k];
+  copy_custom_kokkos(j,k); 
 }
 
 /* ----------------------------------------------------------------------
@@ -653,6 +654,17 @@ int ParticleKokkos::add_custom(char *name, int type, int size)
   ///modifies ewhich on host, sync to device here since it is never modified on the device
   //
 
+  // force resize on host
+
+  k_eivec.modify_host();
+  k_eiarray.modify_host();
+  k_edvec.modify_host();
+  k_edarray.modify_host();
+
+  k_ewhich.modify_host();
+  k_eicol.modify_host();
+  k_edcol.modify_host();
+
   int index;
 
   // if name already exists
@@ -766,12 +778,16 @@ void ParticleKokkos::grow_custom(int index, int nold, int nnew)
     if (esize[index] == 0) {
       int *ivector = eivec[ewhich[index]];
       auto k_ivector = k_eivec.h_view[ewhich[index]].k_view;
+      k_ivector.modify_host(); // force resize on host
       memoryKK->grow_kokkos(k_ivector,ivector,nold+nnew,"particle:eivec");
+      k_eivec.h_view[ewhich[index]].k_view = k_ivector;
       eivec[ewhich[index]] = ivector;
     } else {
       int **iarray = eiarray[ewhich[index]];
-      auto &k_iarray = k_eiarray.h_view[ewhich[index]].k_view;
+      auto k_iarray = k_eiarray.h_view[ewhich[index]].k_view;
+      k_iarray.modify_host(); // force resize on host
       memoryKK->grow_kokkos(k_iarray,iarray,nold+nnew,esize[index],"particle:eiarray");
+      k_eiarray.h_view[ewhich[index]].k_view = k_iarray;
       eiarray[ewhich[index]] = iarray;
     }
 
@@ -779,12 +795,16 @@ void ParticleKokkos::grow_custom(int index, int nold, int nnew)
     if (esize[index] == 0) {
       double *dvector = edvec[ewhich[index]];
       auto k_dvector = k_edvec.h_view[ewhich[index]].k_view;
+      k_dvector.modify_host(); // force resize on host
       memoryKK->grow_kokkos(k_dvector,dvector,nold+nnew,"particle:edvec");
+      k_edvec.h_view[ewhich[index]].k_view = k_dvector;
       edvec[ewhich[index]] = dvector;
     } else {
       double **darray = edarray[ewhich[index]];
       auto k_darray = k_edarray.h_view[ewhich[index]].k_view;
+      k_darray.modify_host(); // force resize on host
       memoryKK->grow_kokkos(k_darray,darray,nold+nnew,esize[index],"particle:edarray");
+      k_edarray.h_view[ewhich[index]].k_view = k_darray;
       edarray[ewhich[index]] = darray;
     }
   }
@@ -816,7 +836,6 @@ void ParticleKokkos::remove_custom(int index)
 
   if (etype[index] == INT) {
     if (esize[index] == 0) {
-      memoryKK->destroy_kokkos(k_eivec.h_view[ewhich[index]].k_view,eivec[ewhich[index]]);
       ncustom_ivec--;
       for (int i = ewhich[index]; i < ncustom_ivec; i++) {
         icustom_ivec[i] = icustom_ivec[i+1];
@@ -825,7 +844,6 @@ void ParticleKokkos::remove_custom(int index)
         k_eivec.h_view[i] = k_eivec.h_view[i+1];
       }
     } else {
-      memoryKK->destroy_kokkos(eiarray[ewhich[index]]);
       ncustom_iarray--;
       for (int i = ewhich[index]; i < ncustom_iarray; i++) {
         icustom_iarray[i] = icustom_iarray[i+1];
@@ -837,7 +855,6 @@ void ParticleKokkos::remove_custom(int index)
     }
   } else if (etype[index] == DOUBLE) {
     if (esize[index] == 0) {
-      memoryKK->destroy(edvec[ewhich[index]]);
       ncustom_dvec--;
       for (int i = ewhich[index]; i < ncustom_dvec; i++) {
         icustom_dvec[i] = icustom_dvec[i+1];
@@ -847,7 +864,6 @@ void ParticleKokkos::remove_custom(int index)
       }
       k_edvec.modify_host();
     } else {
-      memoryKK->destroy(edarray[ewhich[index]]);
       ncustom_darray--;
       for (int i = ewhich[index]; i < ncustom_darray; i++) {
         icustom_darray[i] = icustom_darray[i+1];
@@ -880,7 +896,8 @@ void ParticleKokkos::remove_custom(int index)
 
 void ParticleKokkos::copy_custom(int i, int j)
 {
-  // need sync/modify host of inner view
+  this->sync(Host,CUSTOM_MASK);
+
   int m;
 
   // caller does not always check this
@@ -904,6 +921,46 @@ void ParticleKokkos::copy_custom(int i, int j)
   if (ncustom_darray) {
     for (m = 0; m < ncustom_darray; m++)
       memcpy(edarray[m][i],edarray[m][j],edcol[m]*sizeof(double));
+  }
+
+  this->modify(Host,CUSTOM_MASK);
+}
+
+/* ----------------------------------------------------------------------
+   copy info for one particle in custom attribute vectors/arrays
+   into location I from location J
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+void ParticleKokkos::copy_custom_kokkos(int i, int j) const
+{
+  int m,ncol;
+
+  // caller does not always check this
+  // shouldn't be a problem, but valgrind can complain if memcpy to self
+  // oddly memcpy(&particles[i],&particles[j],sizeof(OnePart)) seems OK
+
+  if (i == j) return;
+
+  // 4 flavors of vectors/arrays
+
+  if (ncustom_ivec) {
+    for (m = 0; m < ncustom_ivec; m++)
+      k_eivec.d_view[m].k_view.d_view[i] = k_eivec.d_view[m].k_view.d_view[j];
+  }
+  if (ncustom_iarray) {
+    for (m = 0; m < ncustom_iarray; m++)
+      for (ncol = 0; ncol < k_eicol.d_view[m]; ncol++)
+        k_eiarray.d_view[m].k_view.d_view(i,ncol) = k_eiarray.d_view[m].k_view.d_view(j,ncol);
+  }
+  if (ncustom_dvec) {
+    for (m = 0; m < ncustom_dvec; m++)
+      k_edvec.d_view[m].k_view.d_view[i] = k_edvec.d_view[m].k_view.d_view[j];
+  }
+  if (ncustom_darray) {
+    for (m = 0; m < ncustom_darray; m++)
+      for (ncol = 0; ncol < k_edcol.d_view[m]; ncol++)
+        k_edarray.d_view[m].k_view.d_view(i,ncol) = k_edarray.d_view[m].k_view.d_view(j,ncol);
   }
 }
 
