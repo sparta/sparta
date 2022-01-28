@@ -47,6 +47,7 @@ CreateParticles::CreateParticles(SPARTA *sparta) : Pointers(sparta) {}
 
 void CreateParticles::command(int narg, char **arg)
 {
+  printf("############################# top of createparticles ###############\n");
   if (!grid->exist)
     error->all(FLERR,"Cannot create particles before grid is defined");
 
@@ -450,6 +451,7 @@ void CreateParticles::create_single()
 
 void CreateParticles::create_local(bigint np)
 {
+  printf("top of non-kokkos create_local\n");
   int dimension = domain->dimension;
 
   int me = comm->me;
@@ -642,6 +644,7 @@ void CreateParticles::create_local(bigint np)
 
 void CreateParticles::create_local_twopass(bigint np)
 {
+  printf("=========top of create_local_twopass==============\n");
   int dimension = domain->dimension;
 
   int me = comm->me;

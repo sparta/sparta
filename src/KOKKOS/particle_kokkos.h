@@ -66,7 +66,12 @@ class ParticleKokkos : public Particle {
   ~ParticleKokkos();
   static KOKKOS_INLINE_FUNCTION
   int add_particle_kokkos(t_particle_1d particles, int, int, int, int,
-                           double *, double *, double, double);
+                          double *, double *, double, double);
+
+  static KOKKOS_INLINE_FUNCTION
+  int add_particle_kokkos(t_particle_1d particles, int, int, int, int,
+                          double *, double *, double, double, double);
+
 #ifndef SPARTA_KOKKOS_EXACT
   void compress_migrate(int, int *);
 #endif
@@ -214,6 +219,37 @@ int ParticleKokkos::add_particle_kokkos(t_particle_1d particles, int index, int 
   tmp.v[2] = v[2];
   tmp.erot = erot;
   tmp.evib = evib;
+  enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};  // same as .cpp file
+  tmp.flag = PKEEP;
+
+  int realloc = 0;
+
+  if (index < particles.extent(0)) {
+    particles[index] = tmp;
+  } else {
+    realloc = 1;
+  }
+
+  return realloc;
+}
+
+KOKKOS_INLINE_FUNCTION
+int ParticleKokkos::add_particle_kokkos(t_particle_1d particles, int index, int id,
+                                        int ispecies, int icell, double *x, double *v, double erot, double evib, double time)
+{
+  OnePart tmp;
+  tmp.id = id;
+  tmp.ispecies = ispecies;
+  tmp.icell = icell;
+  tmp.x[0] = x[0];
+  tmp.x[1] = x[1];
+  tmp.x[2] = x[2];
+  tmp.v[0] = v[0];
+  tmp.v[1] = v[1];
+  tmp.v[2] = v[2];
+  tmp.erot = erot;
+  tmp.evib = evib;
+  tmp.time = time;
   enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};  // same as .cpp file
   tmp.flag = PKEEP;
 

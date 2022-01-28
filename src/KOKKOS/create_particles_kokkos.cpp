@@ -34,6 +34,7 @@
 #include "kokkos_type.h"
 #include "sparta_masks.h"
 #include "kokkos.h"
+#include "Kokkos_Random.hpp"
 
 using namespace SPARTA_NS;
 using namespace MathConst;
@@ -43,13 +44,34 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
 #define EPSZERO 1.0e-14
 
 CreateParticlesKokkos::CreateParticlesKokkos(SPARTA* spa):
-  CreateParticles(spa)
+  CreateParticles(spa),
+  rand_pool(12345 + comm->me
+#ifdef SPARTA_KOKKOS_EXACT
+            , sparta
+#endif
+            )
 {
+#ifdef SPARTA_KOKKOS_EXACT
+  rand_pool.init(random);
+#endif
 }
 
+/* ---------------------------------------------------------------------- */
+CreateParticlesKokkos::~CreateParticlesKokkos()
+{
+#ifdef SPARTA_KOKKOS_EXACT
+  rand_pool.destroy();
+#endif
+}
+
+/* ---------------------------------------------------------------------- */
 void CreateParticlesKokkos::create_local(bigint np)
 {
   int dimension = domain->dimension;
+
+#ifdef SPARTA_KOKKOS_EXACT
+  rand_pool.init(random);
+#endif
 
   int me = comm->me;
   RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
@@ -294,8 +316,12 @@ void CreateParticlesKokkos::create_local(bigint np)
   Kokkos::deep_copy(d_species, h_species);
   auto nlocal_before = particleKK->nlocal;
 
+  d_cells = grid_kk->k_cells.d_view;
+
   Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
+    rand_type rand_gen = rand_pool.get_state();
     auto ncreate = d_npercell(i);
+    printf("cell=%d, id=%d\n",i,d_cells[i].id); // code runs without this line
     for (int m = 0; m < ncreate; m++) {
       auto cand = d_cells2cands(i) + m;
       if (!d_keep(cand)) continue;
@@ -307,8 +333,12 @@ void CreateParticlesKokkos::create_local(bigint np)
       for (int d = 0; d < 3; ++d) v[d] = d_v(cand, d);
       auto erot = d_erot(cand);
       auto evib = d_evib(cand);
-      ParticleKokkos::add_particle_kokkos(d_particles,inew,id,ispecies,i,x,v,erot,evib);
+      double particle_time = 0.03;
+      auto rnd = rand_gen.drand();
+      printf("i=%d, m=%d, rnd=%f\n",i,m,rnd);
+      ParticleKokkos::add_particle_kokkos(d_particles,inew,id,ispecies,i,x,v,erot,evib,particle_time);
     }
+    rand_pool.free_state(rand_gen);
   });
   particleKK->modify(Device,PARTICLE_MASK);
   particleKK->sync(Host,PARTICLE_MASK);

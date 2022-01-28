@@ -117,5 +117,26 @@ how is dt_global set and updated?
 
 
 
+BUILDING AND RUNNING WITH KOKKOS------------------------------------------------------
+
+on mac:
+% cd src
+% make yes-kokkos
+% make kokkos_mpi_only
+% pushd ~/Codes/sparta_examples_AKS/collide
+% ~/Codes/sparta/src/spa_kokkos_mpi_only -k on t 1 -sf kk < in.collide
+
+on vortex:
+% module load gcc/8.3.1
+% module load cuda/11.2.0
+% export CUDA_MANAGED_FORCE_DEVICE_ALLOC=1
+% export CUDA_LAUNCH_BLOCKING=1
+% cd Codes/sparta/src
+% cp ~/Makefile.summit_kokkos MAKE
+% make yes-kokkos
+% make summit_kokkos
+% lalloc 1
+% pushd ../examples/collide
+% jsrun -M "-gpu -disable_gdr" -l gpu-gpu -d packed -n 1 -a 1 -c 1 ~/Codes/sparta/src/spa_summit_kokkos -in in.collide -k on g 1 -sf kk
 
 
