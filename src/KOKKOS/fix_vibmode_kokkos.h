@@ -91,7 +91,6 @@ void FixVibmodeKokkos::update_custom_kokkos(int index, double temp_thermal,
   // loop over modes and populate each
   // accumlate new total evib
 
-  int ivib;
   double evib = 0.0;
 
   rand_type rand_gen = rand_pool.get_state();
