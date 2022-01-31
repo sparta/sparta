@@ -15,8 +15,8 @@ surf_collide ID style args keyword values ... :pre
 ID = user-assigned name for the surface collision model :ulb,l
 style = {specular} or {diffuse} or {cll} or {impulsive} or {td} or {piston} or {transparent} or {vanish} or {specular/kk} or {diffuse/kk} or {piston/kk} or {vanish/kk} :l
 args = arguments for specific style :l
-  {specular} or {specular/kk} args = adiabatic
-    adiabatic = {yes} or {no}
+  {specular} or {specular/kk} args = adiabatic (optional)
+    adiabatic = reflect all velocity components off surface (not just normal component)
   {diffuse} or {diffuse/kk} args = Tsurf acc
     Tsurf = temperature of surface (temperature units)
             Tsurf can be a variable (see below)
@@ -117,9 +117,9 @@ requires no arguments.  Specular reflection means that a particle
 reflects off a surface element with its incident velocity vector
 reversed with respect to the outward normal of the surface element.
 The particle's speed is unchanged. If the optional {adiabatic} keyword
-is set to {yes}, all velocity components are reflected off the surface
+is set, all velocity components are reflected off the surface
 (instead of just the normal component), which creates a no-slip
-condition on the surface (default value is {no}).
+condition on the surface.
 
 :line
 
