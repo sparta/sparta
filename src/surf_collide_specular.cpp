@@ -31,6 +31,8 @@ SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
 
   // optional args
 
+  adiabatic_flag = 0;
+
   int iarg = 2;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"adiabatic") == 0) {
