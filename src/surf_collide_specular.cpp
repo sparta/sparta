@@ -41,7 +41,7 @@ SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
       adiabatic_flag = 0;
       if (strcmp(arg[iarg+1],"yes") == 0) adiabatic_flag = 1;
       else if (strcmp(arg[iarg+1],"no") == 0) adiabatic_flag = 0;
-      else error->all(FLERR,"Illegal surf_collide specular command"); 
+      else error->all(FLERR,"Illegal surf_collide specular command");
       iarg += 2;
     }
   }
@@ -89,11 +89,11 @@ collide(Particle::OnePart *&ip, double &,
   //   since temperature does not change, would need to add a twall arg
 
   if (ip) {
-    if (!velreset) {  
+    if (!velreset) {
       if (adiabatic_flag) {
 
         // adiabatic reflection
-        // reflect incident v, all three components.
+        // reflect incident v, all three components
 
         MathExtra::negate3(ip->v);
       } else {
