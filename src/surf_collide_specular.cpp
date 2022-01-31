@@ -27,7 +27,22 @@ using namespace SPARTA_NS;
 SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
   SurfCollide(sparta, narg, arg)
 {
-  if (narg != 2) error->all(FLERR,"Illegal surf_collide specular command");
+  if (narg < 2) error->all(FLERR,"Illegal surf_collide specular command");
+
+  // optional args
+
+  int iarg = 2;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"adiabatic") == 0) {
+      if (iarg+2 > narg)
+        error->all(FLERR,"Illegal surf_collide specular command");
+      adiabatic_flag = 0;
+      if (strcmp(arg[iarg+1],"yes") == 0) adiabatic_flag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) adiabatic_flag = 0;
+      else error->all(FLERR,"Illegal surf_collide specular command"); 
+      iarg += 2;
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -36,7 +51,7 @@ SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
    isurf = index of surface element
    norm = surface normal unit vector
    isr = index of reaction model if >= 0, -1 for no chemistry
-   ip = reset to NULL if destroyed by chemsitry
+   ip = reset to NULL if destroyed by chemistry
    return jp = new particle if created by chemistry
    return reaction = index of reaction (1 to N) that took place, 0 = no reaction
    resets particle(s) to post-collision outward velocity
@@ -63,7 +78,7 @@ collide(Particle::OnePart *&ip, double &,
     if (reaction) surf->nreact_one++;
   }
 
-  // specular reflection for each particle
+  // specular or adiabatic reflection for each particle
   // only if SurfReact did not already reset velocities
   // also both partiticles need to trigger any fixes
   //   to update per-particle properties which depend on
@@ -72,14 +87,43 @@ collide(Particle::OnePart *&ip, double &,
   //   since temperature does not change, would need to add a twall arg
 
   if (ip) {
-    if (!velreset) MathExtra::reflect3(ip->v,norm);
+    if (!velreset) {  
+      if (adiabatic_flag) {
+
+        // adiabatic reflection
+        // reflect incident v, all three components.
+
+        MathExtra::negate3(ip->v);
+      } else {
+
+        // specular reflection
+
+        MathExtra::reflect3(ip->v,norm);
+      }
+    }
+
     //if (modify->n_update_custom) {
     //  int i = ip - particle->particles;
     //  modify->update_custom(i,twall,twall,twall,vstream);
     //}
   }
+
   if (jp) {
-    if (!velreset) MathExtra::reflect3(jp->v,norm);
+    if (!velreset) {
+      if (adiabatic_flag) {
+
+        // adiabatic reflection
+        // reflect incident v, all three components.
+
+        MathExtra::negate3(jp->v);
+      } else {
+
+        // specular reflection
+
+        MathExtra::reflect3(jp->v,norm);
+      }
+    }
+
     //if (modify->n_update_custom) {
     //  int j = jp - particle->particles;
     //  modify->update_custom(j,twall,twall,twall,vstream);

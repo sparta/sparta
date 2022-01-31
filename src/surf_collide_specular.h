@@ -35,6 +35,8 @@ class SurfCollideSpecular : public SurfCollide {
                              int, double *, int, int &);
   void wrapper(Particle::OnePart *, double *, int *, double*);
   void flags_and_coeffs(int *, double *) {}
+ private:
+  int adiabatic_flag;
 };
 
 }
