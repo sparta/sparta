@@ -27,7 +27,7 @@ using namespace SPARTA_NS;
 SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
   SurfCollide(sparta, narg, arg)
 {
-  if (narg < 2) error->all(FLERR,"Illegal surf_collide specular command");
+  if (narg < 2 || narg > 3) error->all(FLERR,"Illegal surf_collide specular command");
 
   // optional args
 
@@ -36,13 +36,8 @@ SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
   int iarg = 2;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"adiabatic") == 0) {
-      if (iarg+2 > narg)
-        error->all(FLERR,"Illegal surf_collide specular command");
-      adiabatic_flag = 0;
-      if (strcmp(arg[iarg+1],"yes") == 0) adiabatic_flag = 1;
-      else if (strcmp(arg[iarg+1],"no") == 0) adiabatic_flag = 0;
-      else error->all(FLERR,"Illegal surf_collide specular command");
-      iarg += 2;
+      adiabatic_flag = 1;
+      iarg += 1;
     }
   }
 }
