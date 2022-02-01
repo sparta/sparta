@@ -63,6 +63,7 @@ class FixEmitSurf : public FixEmit {
     double temp_rot;            // from mixture or subsonic temp_thermal
     double temp_vib;            // from mixture or subsonic temp_thermal
     double vstream[3];          // from mixture or adjacent subsonic cell
+    double cell_dt_desired;     // cell desired timestep
     double *ntargetsp;          // # of mols to insert for each species,
                                 //   only defined for PERSPECIES
     double *vscale;             // vscale for each species,

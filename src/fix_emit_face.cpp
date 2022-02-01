@@ -135,7 +135,6 @@ void FixEmitFace::init()
 
   dimension = domain->dimension;
   fnum = update->fnum;
-  dt = grid->dt_global;
 
   nspecies = particle->mixture[imix]->nspecies;
   fraction = particle->mixture[imix]->fraction;
@@ -337,6 +336,8 @@ void FixEmitFace::create_task(int icell)
     if (cells[icell].nsplit > 1) tasks[ntask].pcell = split(icell,iface);
     else tasks[ntask].pcell = icell;
 
+    tasks[ntask].cell_dt_desired = cells[icell].dt_desired;
+
     // set face-dependent params of task
 
     tasks[ntask].lo[0] = cells[icell].lo[0];
@@ -473,6 +474,7 @@ void FixEmitFace::perform_task_onepass()
   int *species = particle->mixture[imix]->species;
 
   dt = grid->dt_global;
+  auto time_global = grid->time_global;
 
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current per-task temp_thermal and vstream
@@ -551,7 +553,10 @@ void FixEmitFace::perform_task_onepass()
           evib = particle->evib(ispecies,temp_vib,random);
           id = MAXSMALLINT*random->uniform();
 
-          double const particle_time = grid->get_particle_time(pcell,random->uniform());
+          double const particle_time = get_particle_time(grid->variable_adaptive_time,
+                                                         time_global,
+                                                         random->uniform(),
+                                                         tasks[i].cell_dt_desired);
           particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
           nactual++;
 
@@ -612,7 +617,10 @@ void FixEmitFace::perform_task_onepass()
         evib = particle->evib(ispecies,temp_vib,random);
         id = MAXSMALLINT*random->uniform();
 
-        double const particle_time = grid->get_particle_time(pcell,random->uniform());
+        double const particle_time = get_particle_time(grid->variable_adaptive_time,
+                                                       time_global,
+                                                       random->uniform(),
+                                                       tasks[i].cell_dt_desired);
         particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
         nactual++;
 
@@ -649,6 +657,7 @@ void FixEmitFace::perform_task_twopass()
   int *species = particle->mixture[imix]->species;
 
   dt = grid->dt_global;
+  auto time_global = grid->time_global;
 
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current per-task temp_thermal and vstream
@@ -749,7 +758,10 @@ void FixEmitFace::perform_task_twopass()
           evib = particle->evib(ispecies,temp_vib,random);
           id = MAXSMALLINT*random->uniform();
 
-          double const particle_time = grid->get_particle_time(pcell,random->uniform());
+          double const particle_time = get_particle_time(grid->variable_adaptive_time,
+                                                         time_global,
+                                                         random->uniform(),
+                                                         tasks[i].cell_dt_desired);
           particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
           nactual++;
 
@@ -804,7 +816,10 @@ void FixEmitFace::perform_task_twopass()
         evib = particle->evib(ispecies,temp_vib,random);
         id = MAXSMALLINT*random->uniform();
 
-        double const particle_time = grid->get_particle_time(pcell,random->uniform());
+        double const particle_time = get_particle_time(grid->variable_adaptive_time,
+                                                       time_global,
+                                                       random->uniform(),
+                                                       tasks[i].cell_dt_desired);
         particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
         nactual++;
 

@@ -49,6 +49,14 @@ class FixEmit : public Fix {
   int subsonic_temperature_check(int, double);
   void options(int, char **);
   virtual int option(int, char **);
+
+  virtual double get_particle_time(bool variable_adaptive_time, double time_global, double random_uniform, double dt_desired) {
+    if (variable_adaptive_time)
+      return time_global + (-1. + 2.*random_uniform)*dt_desired;
+    else
+      return time_global;
+  }
+
 };
 
 }

@@ -120,8 +120,8 @@ double CollideVSS::vremax_init(int igroup, int jgroup)
 
       double cxs = params[isp][jsp].diam*params[isp][jsp].diam*MY_PI;
       prefactor[isp][jsp] = cxs * pow(2.0*update->boltz*params[isp][jsp].tref/
-	params[isp][jsp].mr,params[isp][jsp].omega-0.5) /
-	tgamma(2.5-params[isp][jsp].omega);
+                                      params[isp][jsp].mr,params[isp][jsp].omega-0.5) /
+                                      tgamma(2.5-params[isp][jsp].omega);
       double beta = MAX(vscale[isp],vscale[jsp]);
       double vrm = 2.0 * cxs * beta;
       vrmgroup = MAX(vrmgroup,vrm);

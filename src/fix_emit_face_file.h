@@ -78,6 +78,7 @@ class FixEmitFaceFile : public FixEmit {
     double hi[3];               // upper-right corner of overlap of cell/file
     double area;                // area of face
     double ntarget;             // # of mols to insert for all species
+    double cell_dt_desired;     // cell desired timestep
     double *ntargetsp;          // # of mols to insert for each species,
                                 //   only defined for PERSPECIES
 

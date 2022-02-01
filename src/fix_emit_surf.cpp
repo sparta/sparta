@@ -285,6 +285,7 @@ void FixEmitSurf::create_task(int icell)
       subcell = sinfo[isplit].csplits[i];
       tasks[ntask].pcell = sinfo[isplit].csubs[subcell];
     }
+    tasks[ntask].cell_dt_desired = cells[icell].dt_desired;
 
     // set geometry-dependent params of task
     // indot = vstream magnitude for normalflag = 1
@@ -438,6 +439,7 @@ void FixEmitSurf::perform_task()
   int *species = particle->mixture[imix]->species;
 
   dt = grid->dt_global;
+  auto time_global = grid->time_global;
 
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current per-task temp_thermal and vstream
@@ -555,7 +557,10 @@ void FixEmitSurf::perform_task()
           evib = particle->evib(ispecies,temp_vib,random);
           id = MAXSMALLINT*random->uniform();
 
-          double const particle_time = grid->get_particle_time(pcell,random->uniform());
+          double const particle_time = get_particle_time(grid->variable_adaptive_time,
+                                                         time_global,
+                                                         random->uniform(),
+                                                         tasks[i].cell_dt_desired);
           particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
           nactual++;
 
@@ -650,7 +655,10 @@ void FixEmitSurf::perform_task()
         evib = particle->evib(ispecies,temp_vib,random);
         id = MAXSMALLINT*random->uniform();
 
-        double const particle_time = grid->get_particle_time(pcell,random->uniform());
+        double const particle_time = get_particle_time(grid->variable_adaptive_time,
+                                                       time_global,
+                                                       random->uniform(),
+                                                       tasks[i].cell_dt_desired);
         particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
         nactual++;
 

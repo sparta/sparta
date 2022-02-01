@@ -170,6 +170,7 @@ void CreateParticlesKokkos::create_local(bigint np)
     if (cinfo[i].type != OUTSIDE) continue;
     lo = cells[i].lo;
     hi = cells[i].hi;
+
     if (region && region->bboxflag && outside_region(dimension,lo,hi))
       continue;
 
@@ -216,6 +217,7 @@ void CreateParticlesKokkos::create_local(bigint np)
   Kokkos::View<double*, DeviceType> d_evib("cand_evib", ncands);
   Kokkos::View<int*, DeviceType> d_id("cand_id", ncands);
   Kokkos::View<double*[3], DeviceType> d_v("cand_v", ncands);
+  Kokkos::View<double*, DeviceType> d_celldt("celldt", nglocal);
   auto h_keep = Kokkos::create_mirror_view(d_keep);
   auto h_isp = Kokkos::create_mirror_view(d_isp);
   auto h_x = Kokkos::create_mirror_view(d_x);
@@ -226,11 +228,13 @@ void CreateParticlesKokkos::create_local(bigint np)
   auto h_evib = Kokkos::create_mirror_view(d_evib);
   auto h_id = Kokkos::create_mirror_view(d_id);
   auto h_v = Kokkos::create_mirror_view(d_v);
+  auto h_celldt = Kokkos::create_mirror_view(d_celldt);
 
   for (int i = 0; i < nglocal; i++) {
     auto ncreate = h_npercell(i);
     lo = cells[i].lo;
     hi = cells[i].hi;
+    h_celldt(i) = cells[i].dt_desired;
 
     for (int m = 0; m < ncreate; m++) {
       auto cand = h_cells2cands(i) + m;
@@ -302,6 +306,7 @@ void CreateParticlesKokkos::create_local(bigint np)
   Kokkos::deep_copy(d_evib, h_evib);
   Kokkos::deep_copy(d_id, h_id);
   Kokkos::deep_copy(d_v, h_v);
+  Kokkos::deep_copy(d_celldt, h_celldt);
 
   int nnew;
   auto d_cands2new = offset_scan(d_keep, nnew);
@@ -315,13 +320,11 @@ void CreateParticlesKokkos::create_local(bigint np)
   for (int i = 0; i < nspecies; ++i) h_species(i) = species[i];
   Kokkos::deep_copy(d_species, h_species);
   auto nlocal_before = particleKK->nlocal;
-
-  d_cells = grid_kk->k_cells.d_view;
+  auto time_global = grid->time_global;
 
   Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
     rand_type rand_gen = rand_pool.get_state();
     auto ncreate = d_npercell(i);
-    printf("cell=%d, id=%d\n",i,d_cells[i].id); // code runs without this line
     for (int m = 0; m < ncreate; m++) {
       auto cand = d_cells2cands(i) + m;
       if (!d_keep(cand)) continue;
@@ -333,9 +336,8 @@ void CreateParticlesKokkos::create_local(bigint np)
       for (int d = 0; d < 3; ++d) v[d] = d_v(cand, d);
       auto erot = d_erot(cand);
       auto evib = d_evib(cand);
-      double particle_time = 0.03;
       auto rnd = rand_gen.drand();
-      printf("i=%d, m=%d, rnd=%f\n",i,m,rnd);
+      double particle_time = time_global + (-1. + 2.*rnd)*d_celldt(i);
       ParticleKokkos::add_particle_kokkos(d_particles,inew,id,ispecies,i,x,v,erot,evib,particle_time);
     }
     rand_pool.free_state(rand_gen);

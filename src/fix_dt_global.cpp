@@ -342,30 +342,8 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
   MPI_Comm_rank(world,&me);
   nglocal = 0;
   lambda = temp = usq = vsq = wsq = NULL;
-}
 
-/* ---------------------------------------------------------------------- */
 
-FixDtGlobal::~FixDtGlobal()
-{
-  if (copymode) return;
-
-  delete [] id_lambda;
-  delete [] id_temp;
-  delete [] id_usq;
-  delete [] id_vsq;
-  delete [] id_wsq;
-  memory->destroy(lambda);
-  memory->destroy(temp);
-  memory->destroy(usq);
-  memory->destroy(vsq);
-  memory->destroy(wsq);
-}
-
-/* ---------------------------------------------------------------------- */
-
-void FixDtGlobal::init()
-{
   reallocate();
 
   // set up initial timestep
@@ -405,7 +383,30 @@ void FixDtGlobal::init()
     // for now, set cell timestep to be global value, which was read in
     cells[i].dt_desired = grid->dt_global;
   }
+}
 
+/* ---------------------------------------------------------------------- */
+
+FixDtGlobal::~FixDtGlobal()
+{
+  if (copymode) return;
+
+  delete [] id_lambda;
+  delete [] id_temp;
+  delete [] id_usq;
+  delete [] id_vsq;
+  delete [] id_wsq;
+  memory->destroy(lambda);
+  memory->destroy(temp);
+  memory->destroy(usq);
+  memory->destroy(vsq);
+  memory->destroy(wsq);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixDtGlobal::init()
+{
   // setup computes and fixes
 
   // lambda
