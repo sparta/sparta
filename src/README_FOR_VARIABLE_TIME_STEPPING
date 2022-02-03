@@ -53,7 +53,7 @@ particle.cpp:
     However, there are some add_particle calls that I don't understand (where pcell is passed in through the argument list
     but is not set previously).
 
-  Also, in the fix_emit*.cpp files, dg_global was set in the init functions but also reset prior to use in other functions
+  Also, in the fix_emit*.cpp files, dt_global was set in the init functions but also reset prior to use in other functions
   in these files since dt_global will change as the simulation proceeds.
 
 read_restart.cpp
@@ -97,7 +97,7 @@ TODO----------------------------------------------------------------------------
 search for all places where dt in class Update is used.  Might be better to eliminate dt_global eventually
   and have dt store the global timestep. (but using dt_global during development will help indicate what
   is new/old code for variable time-stepping).
-remove dt from update.h (and access either dt or dt_global from grid class)
+*** remove dt from update.h (and access either dt or dt_global from grid class)
 
 finish logic added to ReadRestart::create_child_cells for cell dt (put dt in add_child_cell() argument list?)
   Could add optional argument for cell dt when calling create_child_cells for restart case.   obviously would
@@ -114,6 +114,7 @@ pcell is also passed in but not set)?  Look at dtremain as well.  Note that the 
 does not have time data.
 
 how is dt_global set and updated?
+
 
 
 
