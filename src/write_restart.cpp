@@ -83,6 +83,10 @@ void WriteRestart::command(int narg, char **arg)
   if (strchr(arg[0],'%')) multiproc = nprocs;
   else multiproc = 0;
 
+  if (mem_limit_flag && !multiproc)
+    error->all(FLERR,"Cannot (yet) use global mem/limit without "
+               "% in restart file name");
+
   // setup output style and process optional args
   // also called by Output class for periodic restart files
 
@@ -370,7 +374,8 @@ void WriteRestart::write_less_memory(char *file)
   int nbytes_custom = particle->sizeof_custom();
   int nbytes = nbytes_particle + nbytes_custom;
 
-  int max_size = MAX(grid_send_size,update->global_mem_limit);
+  int max_size = MIN(particle_send_size,update->global_mem_limit);
+  max_size = MAX(max_size,grid_send_size);
   max_size = MAX(max_size,nbytes);
   max_size += 128; // extra for size and ROUNDUP(ptr)
 
