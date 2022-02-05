@@ -1043,7 +1043,7 @@ void Collide::collisions_one_ambipolar()
             memory->grow(plist,npmax,"collide:plist");
           }
           plist[np++] = particle->nlocal-1;
-        
+
         } else {
           if (nelectron == maxelectron) {
             maxelectron += DELTAELECTRON;

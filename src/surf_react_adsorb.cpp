@@ -1210,7 +1210,7 @@ void SurfReactAdsorb::PS_chemistry()
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
   int dimension = domain->dimension;
-  
+
   int icell;
   double *x;
   AddParticle *p;

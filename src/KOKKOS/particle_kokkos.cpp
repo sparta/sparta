@@ -184,7 +184,7 @@ void ParticleKokkos::operator()(TagParticleCompressReactions, const int &i) cons
   const int k = d_slist[i];
   //memcpy(&d_particles[j],&d_particles[k],nbytes);
   d_particles[j] = d_particles[k];
-  copy_custom_kokkos(j,k); 
+  copy_custom_kokkos(j,k);
 }
 
 /* ----------------------------------------------------------------------
