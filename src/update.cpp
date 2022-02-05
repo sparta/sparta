@@ -247,7 +247,7 @@ void Update::run(int nsteps)
   // only evaluate once at beginning of run b/c time-independent
   // fix calculates field acting at center point of all grid cells
 
-  if (fstyle == GFIELD && fieldfreq == 0) 
+  if (fstyle == GFIELD && fieldfreq == 0)
     modify->fix[ifieldfix]->compute_field();
 
   // cellweightflag = 1 if grid-based particle weighting is ON
@@ -380,8 +380,8 @@ template < int DIM, int SURF > void Update::move()
   // external per grid cell field
   // evaluate once every fieldfreq steps b/c time-dependent
   // fix calculates field acting at center point of all grid cells
-  
-  if (fstyle == GFIELD && fieldfreq && ((ntimestep-1) % fieldfreq == 0)) 
+
+  if (fstyle == GFIELD && fieldfreq && ((ntimestep-1) % fieldfreq == 0))
     modify->fix[ifieldfix]->compute_field();
 
   // one or more loops over particles
@@ -427,14 +427,14 @@ template < int DIM, int SURF > void Update::move()
         xnew[0] = x[0] + dtremain*v[0];
         xnew[1] = x[1] + dtremain*v[1];
         if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
-        if (perturbflag) 
+        if (perturbflag)
           (this->*moveperturb)(i,particles[i].icell,dtremain,xnew,v);
       } else if (pflag == PINSERT) {
         dtremain = particles[i].dtremain;
         xnew[0] = x[0] + dtremain*v[0];
         xnew[1] = x[1] + dtremain*v[1];
         if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
-        if (perturbflag) 
+        if (perturbflag)
           (this->*moveperturb)(i,particles[i].icell,dtremain,xnew,v);
       } else if (pflag == PENTRY) {
         icell = particles[i].icell;

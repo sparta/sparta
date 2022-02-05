@@ -483,7 +483,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
   //  Unfortunately this leads to really messy code.
 
   h_retry() = 1;
-  
+
   double extra_factor = sparta->kokkos->collide_extra;
   if (sparta->kokkos->collide_retry_flag) extra_factor = 1.0;
 
@@ -2434,7 +2434,7 @@ void CollideVSSKokkos::restore()
   d_plist_backup = decltype(d_plist_backup)();
   d_vremax_backup = decltype(d_vremax_backup)();
   d_remain_backup = decltype(d_remain_backup)();
-  
+
   if (ambiflag) {
     d_ionambi_backup = decltype(d_ionambi_backup)();
     d_velambi_backup = decltype(d_velambi_backup)();

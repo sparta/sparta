@@ -972,7 +972,7 @@ void Particle::species_modify(int narg, char **arg)
   if (narg < 3) error->all(FLERR,"Illegal species_modify command");
 
   int iarg = 0;
-  while (iarg < narg) { 
+  while (iarg < narg) {
     if (iarg+3 > narg) error->all(FLERR,"Illegal species_modify command");
 
     int ispecies = find_species(arg[iarg]);

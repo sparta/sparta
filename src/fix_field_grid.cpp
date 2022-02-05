@@ -75,11 +75,11 @@ FixFieldGrid::FixFieldGrid(SPARTA *sparta, int narg, char **arg) :
 /* ---------------------------------------------------------------------- */
 
 FixFieldGrid::~FixFieldGrid()
-{  
+{
   delete [] axstr;
   delete [] aystr;
   delete [] azstr;
-  
+
   memory->destroy(array_grid);
 }
 
@@ -142,10 +142,10 @@ void FixFieldGrid::compute_field()
     memory->destroy(array_grid);
     memory->create(array_grid,maxgrid,size_per_grid_cols,"array_grid");
   }
-  
+
   // evaluate each grid-style variable
   // results are put into strided array_grid
-  
+
   int stride = size_per_grid_cols;
   int icol = 0;
 

@@ -75,11 +75,11 @@ FixFieldParticle::FixFieldParticle(SPARTA *sparta, int narg, char **arg) :
 /* ---------------------------------------------------------------------- */
 
 FixFieldParticle::~FixFieldParticle()
-{  
+{
   delete [] axstr;
   delete [] aystr;
   delete [] azstr;
-  
+
   memory->destroy(array_particle);
 }
 
@@ -144,10 +144,10 @@ void FixFieldParticle::compute_field()
     memory->create(array_particle,maxparticle,size_per_particle_cols,
                    "array_particle");
   }
-  
+
   // evaluate each particle-style variable
   // results are put into strided array_particle
-  
+
   int stride = size_per_particle_cols;
   int icol = 0;
 
