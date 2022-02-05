@@ -86,6 +86,9 @@ void ReadRestart::command(int narg, char **arg)
   if (strchr(arg[0],'%')) multiproc = 1;
   else multiproc = 0;
 
+  if (mem_limit_flag && !multiproc)
+    error->all(FLERR,"Cannot (yet) use global mem/limit without parallel restart file ('%' character in filename)");
+
   // open single restart file or base file for multiproc case
 
   if (me == 0) {
