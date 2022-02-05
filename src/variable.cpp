@@ -3416,6 +3416,9 @@ void Variable::particle_vector(char *word, Tree **tree,
     newtree->nstride = sizeof(Particle::Species);
     newtree->carray = (char *) &species[0].magmoment;
   }
+
+  if (particle->nlocal*newtree->nstride > MAXSMALLINT)
+    error->all(FLERR,"Too many particles per processor for particle-style variable");
 }
 
 /* ----------------------------------------------------------------------
@@ -3470,6 +3473,9 @@ void Variable::grid_vector(char *word, Tree **tree,
     newtree->carray = (char *) &cells[0].lo[2];
   else if (strcmp(word,"czhi") == 0)
     newtree->carray = (char *) &cells[0].hi[2];
+
+  if (grid->nlocal*newtree->nstride > MAXSMALLINT)
+    error->all(FLERR,"Too many grid cells per processor for grid-style variable");
 }
 
 /* ----------------------------------------------------------------------
