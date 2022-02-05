@@ -83,6 +83,8 @@ void WriteRestart::command(int narg, char **arg)
   if (strchr(arg[0],'%')) multiproc = nprocs;
   else multiproc = 0;
 
+  int mem_limit_flag = update->global_mem_limit > 0 ||
+           (update->mem_limit_grid_flag && !grid->nlocal);
   if (mem_limit_flag && !multiproc)
     error->all(FLERR,"Cannot (yet) use global mem/limit without "
                "% in restart file name");
