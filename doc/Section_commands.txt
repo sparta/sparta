@@ -348,6 +348,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "seed"_seed.html,
 "shell"_shell.html,
 "species"_species.html,
+"species_modify"_species_modify.html,
 "stats"_stats.html,
 "stats_modify"_stats_modify.html,
 "stats_style"_stats_style.html,
@@ -378,7 +379,7 @@ This is indicated by additional letters in parenthesis: k = KOKKOS.
 
 "ablate"_fix_ablate.html,
 "adapt (k)"_fix_adapt.html,
-"ambipolar"_fix_ambipolar.html,
+"ambipolar (k)"_fix_ambipolar.html,
 "ave/grid (k)"_fix_ave_grid.html,
 "ave/histo (k)"_fix_ave_histo.html,
 "ave/histo/weight (k)"_fix_ave_histo.html,
@@ -388,10 +389,14 @@ This is indicated by additional letters in parenthesis: k = KOKKOS.
 "emit/face (k)"_fix_emit_face.html,
 "emit/face/file"_fix_emit_face_file.html,
 "emit/surf"_fix_emit_surf.html,
+"field/grid"_fix_field_grid.html,
+"field/particle"_fix_field_particle.html,
 "grid/check (k)"_fix_grid_check.html,
 "move/surf (k)"_fix_move_surf.html,
 "print"_fix_print.html,
-"vibmode"_fix_vibmode.html :tb(c=6,ea=c)
+"temp/rescale (k)"_fix_temp_rescale.html,
+"temp/global/rescale"_fix_temp_global_rescale.html,
+"vibmode (k)"_fix_vibmode.html :tb(c=6,ea=c)
 
 :line
 
@@ -462,5 +467,6 @@ Surface reaction styles :h4
 See the "surf_react"_surf_react.html command for details of each
 style.
 
+"adsorb"_surf_adsorb.html,
 "global"_surf_react.html,
 "prob"_surf_react.html :tb(c=2,ea=c)

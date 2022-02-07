@@ -13,7 +13,7 @@ global command :h3
 global keyword values ... :pre
 
 one or more keyword/value pairs :ulb,l
-keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {surfgrid} or {surfmax} or {splitmax} or {surftally} or {surfpush} or {gridcut} or {comm/sort} or {comm/style} or {weight} or {particle/reorder} or {mem/limit} :l
+keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {surfgrid} or {surfmax} or {splitmax} or {surftally} or {gridcut} or {comm/sort} or {comm/style} or {weight} or {particle/reorder} or {mem/limit} :l
   {fnum} value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
   {nrho} value = density
@@ -22,9 +22,17 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {su
     Vx,Vy,Vz = streaming velocity of background gas (velocity units)
   {temp} values = thermal
     thermal = temperature of background gas (temperature units)
-  {gravity} values = mag ex ey ez
-    mag = magnitude of acceleration due to gravity (acceleration units)
-    ex,ey,ez = direction vector that gravity acts in
+  {field} values = fstyle args
+    fstyle = {none} or {constant} or {variable} or {grid}
+      {field} arg = none
+      {constant} args = mag ex ey ez
+        mag = magnitude of field acceleration (acceleration units)
+        ex,ey,ez = direction vector which the field acts along
+      {particle} arg = fixID
+        fixID = ID of fix that computes per particle field components
+      {grid} args = fixID Nfreq
+        fixID = ID of fix that computes per grid cell field components
+        Nfreq = update field values every this many timesteps
   {surfs} value = explicit or explicit/distributed or implicit
     explicit = surfs defined in read_surf file, each proc owns copy of all surfs
     explicit/distributed = surfs defined in read_surf file, each proc owns
@@ -43,11 +51,6 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {su
     reduce = tally surf collision info via MPI_Allreduce operations
     rvous = tally via a rendezvous algorithm
     auto = choose reduce or rvous based on surface element and proc count
-  {surfpush} value(s) = no/yes or slo shi svalue
-    no = do not push surface element points near cell surface
-    yes = push surface element points near cell surface if necessary
-    slo,shi = push points within this range
-    svalue = push points to this value
   {gridcut} value = cutoff
     cutoff = acquire ghost cells up to this far away (distance units)
   {comm/sort} value = yes or no
@@ -71,7 +74,8 @@ global fnum 1.0e20
 global vstream 100.0 0 0 fnum 5.0e18
 global temp 1000
 global weight cell radius 
-global mem/limit 100 :pre
+global mem/limit 100 
+global field constant 9.8 0 0 1 :pre
 
 [Description:]
 
@@ -99,11 +103,65 @@ The {temp} keyword sets the thermal temperature of the background gas.
 This is a Gaussian velocity distribution superposed on top of the
 streaming velocity.
 
-The {gravity} keyword sets an acceleration term which is included in
-the motion of particles.  The magnitude of gravity is set by the {mag}
-keyword.  Its direction of action is set as (ex,ex,ez).  The direction
-does not have to be a unit vector.  If the magnitude is set to 0.0, no
-acceleration term is included, which is the default.
+The {field} keyword adds an additional external field term which can
+included in the motion of particles.  The {fstyle} argument can be
+{none} or {constant}, {particle}, or {grid}.  Note that only one of
+these can be set by the global command.  If the {field} keyword is
+specified multiple times, only the last one has an effect.
+
+The {none} setting turns off any external field setting previously
+specified.  It is the default.
+
+The {constant} setting is for a field that has no spatial or time
+dependence; the same field vector acts on all particles.  Gravity is
+an example of a constant external field.  The {mag} arguement sets the
+magnitude of the field.  The (ex,ey,ez) components specify the
+direction the field acts in.  The components do not need to be a unit
+vector; the code converts them into a unit vector internally.  Note
+that a z-component cannot be used for 2d simulations.
+
+The {particle} setting is for a field that is computed on a per
+particle basis, depending on the position or other attributes of each
+particle.  A spatially- or time-dependent magnetic field, acting on
+the magnetic moment of each particle, is an example of a variable
+external field.  The fixID argument is the ID of a fix which computes
+the components of the field vector for each particle.  These may alter
+both the position and velocity of each particle when it is advected
+each timestep.  
+
+See the doc page for the "fix field/particle"_fix_field_particle.html
+command for the only current fix in SPARTA which is compatible with
+the {particle} setting.
+
+The {grid} setting is for a field that is computed on a per grid cell
+basis and applied to all the particles in the grid cell.  A spatially-
+or time-dependent magnetic field which is coarsened to act at the
+resolution of grid cells is an example of a per grid cell external
+field.  The fixID argument is the ID of a fix which computes the
+components of the field vector for each grid cell.  These may alter
+both the position and velocity or particles in the grid cell when they
+are advected each timestep.  The Nfreq argument specifies how often to
+re-compute the per grid cell field vectors.  For a field that has no
+time dependence you should set Nfreq to zero; the field will only be
+computed once at the beginning of each simulation run.  For a field
+with time-dependence you can choose how often to recompute the field,
+depending on how fast it varies.
+
+See the doc page for the "fix field/grid"_fix_field_grid.html command
+for the only current fix in SPARTA which is compatible with the
+{grid} setting.
+
+Note that there is a tradeoff between the {particle} and {grid}
+options.  For the {particle} option the field must be computed every
+timestep for all particles; the field values are accurately computed
+at precisely each particle's position but it is an expensive
+operation.  For the {grid} option the field is only computed once at
+the beginning of a run or once every Nfreq timesteps.  Even if it is
+computed every timestep, the number of grid cells is typically much
+smaller than the number of particles.  However the accuracy of the
+field applied to each particle is more approximate than for the
+{particle} option.  This is because the field applied to each particle
+is the value it has at the center of the particle's grid cell.
 
 :line
 
@@ -166,55 +224,6 @@ processor than extracts values for the N/P surfaces it owns.  The
 rendezvous style of communication is performed where every processor
 sends its tally contributions directly to the processor which owns the
 element as one of its N/P elements.
-
-:line
-
-The {surfpush} keyword is only useful to use when SPARTA is having
-problems embedding a surface in the simulation grid, which occurs when
-when surface elements are defined via the "read_surf"_read_surf.html
-command.  Or for debugging purposes.
-
-In rare cases, if a surface element point is just slightly inside or
-outside a grid cell, but within an epsilon distance from the surface
-of the grid cell, a numerical round-off error can occur when computing
-the cut volume.  The error can be avoided if such points are shifted
-(pushed) to a slightly different location, which only induces a tiny
-change in the computed cut volume.  By default the {surfpush} keyword
-is set to {yes}, which will perform this "push" operation on a grid
-cell if the numerical issue is flagged.  SPARTA prints out how many
-grid cells needed this push operation.
-
-If you set {surfpush} to {no}, then the push operation is not
-performed, which will result in an error if the numerical issue
-occurs.
-
-If the default {surfpush yes} still gives an error, then
-setting the {slo}, {shi}, and {svalue} allows experimentation
-with a different mode of pushing.
-
-These 3 values are all multipliers on an epsilon of 1.0e-6 which is
-set internally in the code.  Epsilon refers to a fraction of the size
-of a grid cell in each of its dimensions.  Negative values for any of
-the 3 values distances inside a grid cell (inward from the cell face).
-Positive values are distances outside a grid cell (outward from the
-cell face).  Zero values are exactly on the cell face.  If any surface
-point (end points of 2d lines, corner points of 3d triangles) is
-between a {slo} to {shi} distance from any of the cell faces, then it
-is pushed to be a distance {svalue} from the face.
-
-When {surfpush} is set to {yes}, SPARTA tries 2 kinds of pushing
-first, if the numerical issue is encountered for a grid cell.  The
-first is {slo} = -1, {shi} = 1, {svalue} = 1, which means any point
-within a fractional distance (in each dimension) of 1.0e-6 inside the
-cell to 1.0e-6 outside the cell, is shifted to be a distance 1.0e-6
-outside the cell.  The second try is with {slo} = -1, {shi} = 1,
-{svalue} = 0, which puts the point on the face.  If you set {slo},
-{shi}, {svalue} explicitly, it will be the third option tried.
-
-If you cannot get a surface to embed properly in a grid, meaning you
-get errors with the default setting of {surfpush yes}, then please
-contact the SPARTA developers.  We will want to figure out what is
-unusual about your surface file!
 
 :line
 
@@ -401,7 +410,7 @@ defined, e.g. via the "read_surf"_read_surf.html command.
 [Default:]
 
 The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
-0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfs = explicit,
-surfgrid = auto, surfmax = 100, splitmax = 10, surftally = auto,
-surfpush = yes, gridcut = -1.0, comm/sort = no, comm/style = neigh,
-weight = cell none, particle/reorder = 0, mem/limit = 0.
+0.0, temp = 273.15, field = none, surfs = explicit, surfgrid = auto,
+surfmax = 100, splitmax = 10, surftally = auto,
+gridcut = -1.0, comm/sort = no, comm/style = neigh, weight = cell
+none, particle/reorder = 0, mem/limit = 0.

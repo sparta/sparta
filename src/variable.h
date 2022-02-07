@@ -99,6 +99,8 @@ class Variable : protected Pointers {
 		       int &, double *, int &);
   int is_particle_vector(char *);
   void particle_vector(char *, Tree **, Tree **, int &);
+  int is_grid_vector(char *);
+  void grid_vector(char *, Tree **, Tree **, int &);
   int is_constant(char *);
   double constant(char *);
   char *find_next_comma(char *);
@@ -271,6 +273,16 @@ formula.
 E: Invalid math/special function in variable formula
 
 Self-explanatory.
+
+E: Too many particles per processor for particle-style variable
+
+The number of particles per MPI rank is too large, increase the
+number of MPI ranks.
+
+E: Too many grid cells per processor for grid-style variable
+
+The number of grid cells per MPI rank is too large, increase the
+number of MPI ranks.
 
 E: Invalid stats keyword in variable formula
 

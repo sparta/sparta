@@ -16,6 +16,7 @@
 #include "string.h"
 #include "stdlib.h"
 #include "ctype.h"
+#include "signal.h"
 #include "kokkos.h"
 #include "sparta.h"
 #include "error.h"
@@ -114,11 +115,11 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
   // initialize Kokkos
 
   if (me == 0) {
-    if (screen) fprintf(screen,"  using %d GPU(s) per MPI task\n",ngpus);
-    if (logfile) fprintf(logfile,"  using %d GPU(s) per MPI task\n",ngpus);
+    if (screen) fprintf(screen,"  requested %d GPU(s) per node\n",ngpus);
+    if (logfile) fprintf(logfile,"  requested %d GPU(s) per node\n",ngpus);
 
-    if (screen) fprintf(screen,"  using %d thread(s) per MPI task\n",nthreads);
-    if (logfile) fprintf(logfile,"  using %d thread(s) per MPI task\n",nthreads);
+    if (screen) fprintf(screen,"  requested %d thread(s) per MPI task\n",nthreads);
+    if (logfile) fprintf(logfile,"  requested %d thread(s) per MPI task\n",nthreads);
   }
 
 #ifdef KOKKOS_ENABLE_CUDA
@@ -146,7 +147,7 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
   atomic_reduction = 0;
   prewrap = 1;
   auto_sync = 1;
-  gpu_direct_flag = 1;
+  gpu_aware_flag = 1;
 
   need_atomics = 1;
   if (nthreads == 1 && ngpus == 0)
@@ -157,6 +158,10 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
 
   //if (need_atomics == 0) // prevent unnecessary parallel_reduce
   //  atomic_reduction = 1;
+
+  // finalize Kokkos on abort
+
+  signal(SIGABRT, my_signal_handler);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -208,14 +213,20 @@ void KokkosSPARTA::accelerator(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal package kokkos command");
       collide_extra = atof(arg[iarg+1]);
       iarg += 2;
-    } else if (strcmp(arg[iarg],"gpu/direct") == 0) {
+    } else if ((strcmp(arg[iarg],"gpu/aware") == 0)
+               || (strcmp(arg[iarg],"gpu/direct") == 0)) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal package kokkos command");
       if (strcmp(arg[iarg+1],"yes") == 0) {
-        gpu_direct_flag = 1;
+        gpu_aware_flag = 1;
       } else if (strcmp(arg[iarg+1],"no") == 0) {
-        gpu_direct_flag = 0;
+        gpu_aware_flag = 0;
       } else error->all(FLERR,"Illegal package kokkos command");
       iarg += 2;
     } else error->all(FLERR,"Illegal package kokkos command");
   }
+}
+
+void KokkosSPARTA::my_signal_handler(int sig)
+{
+  if (sig == SIGABRT) Kokkos::finalize();
 }

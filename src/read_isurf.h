@@ -88,7 +88,7 @@ class ReadISurf : protected Pointers {
   void read_corners_serial(char *);
   void assign_corners(int, bigint, uint8_t *, double *);
   void read_types_serial(char *);
-  void assign_types(int, bigint, int *);
+  void assign_types(int, bigint, uint8_t *);
 
   void read_corners_parallel(char *);
 

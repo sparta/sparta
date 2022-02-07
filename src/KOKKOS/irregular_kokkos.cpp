@@ -349,7 +349,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
   d_recvbuf_ptr = d_recvbuf_ptr_in;
   d_recvbuf = d_recvbuf_in;
 
-  if (!sparta->kokkos->gpu_direct_flag &&
+  if (!sparta->kokkos->gpu_aware_flag &&
       h_recvbuf.extent(0) != d_recvbuf.extent(0)) {
     h_recvbuf = HAT::t_char_1d(Kokkos::view_alloc("irregular:d_recvbuf:mirror",Kokkos::WithoutInitializing),d_recvbuf.extent(0));
   }
@@ -358,7 +358,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
 
   offset = num_self*nbytes;
   for (int irecv = 0; irecv < nrecv; irecv++) {
-    if (sparta->kokkos->gpu_direct_flag) {
+    if (sparta->kokkos->gpu_aware_flag) {
       MPI_Irecv(&d_recvbuf_ptr[offset],num_recv[irecv]*nbytes,MPI_CHAR,
                 proc_recv[irecv],0,world,&request[irecv]);
     } else {
@@ -395,7 +395,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
   for (int isend = 0; isend < nsend; isend++) {
     count = num_send[isend];
 
-    if (!sparta->kokkos->gpu_direct_flag) {
+    if (!sparta->kokkos->gpu_aware_flag) {
 
       // allocate exact buffer size to reduce GPU <--> CPU memory transfer
 
@@ -412,7 +412,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
     //pack_buffer_serial(0,count);
     copymode = 0;
 
-    if (sparta->kokkos->gpu_direct_flag)
+    if (sparta->kokkos->gpu_aware_flag)
       MPI_Send(d_buf.data(),count*nbytes,MPI_CHAR,proc_send[isend],0,world);
     else {
       Kokkos::deep_copy(h_buf,d_buf);
@@ -432,7 +432,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
   if (nrecv) {
     MPI_Waitall(nrecv,request,status);
 
-    if (!sparta->kokkos->gpu_direct_flag)
+    if (!sparta->kokkos->gpu_aware_flag)
       Kokkos::deep_copy(d_recvbuf,h_recvbuf);
   }
 }

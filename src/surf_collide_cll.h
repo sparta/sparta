@@ -31,8 +31,10 @@ class SurfCollideCLL : public SurfCollide {
   SurfCollideCLL(class SPARTA *, int, char **);
   ~SurfCollideCLL();
   void init();
-  Particle::OnePart *collide(Particle::OnePart *&, double *,
-                             double &, int, int &);
+  Particle::OnePart *collide(Particle::OnePart *&, double &,
+                             int, double *, int, int &);
+  void wrapper(Particle::OnePart *, double *, int *, double*);
+  void flags_and_coeffs(int *, double *);
 
   void dynamic();
 

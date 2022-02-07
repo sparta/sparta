@@ -40,7 +40,7 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
   {getenv} arg = one string
   {file} arg = filename
   {internal} arg = numeric value
-  {equal} or {particle} or {grid} args = one formula containing numbers, stats keywords, math operations, particle vectors, compute/fix/variable references
+  {equal} or {particle} or {grid} args = one formula containing numbers, stats keywords, math operations, particle vectors, grid vectors, compute/fix/variable references
     numbers = 0.0, 100, -5.4, 2.8e-4, etc
     constants = PI
     stats keywords = step, np, vol, etc from "stats_style"_stats_style.html
@@ -51,7 +51,8 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
                      random(x,y), normal(x,y), ceil(x), floor(x), round(x)
                      ramp(x,y), stagger(x,y), logfreq(x,y,z), stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
     special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
-    particle vector = mass, type, x, y, z, vx, vy, vz
+    particle vectors = mass, type, mu, x, y, z, vx, vy, vz
+    grid vectors = xc, yc, zc
     compute references = c_ID, c_ID\[i\], c_ID\[i\]\[j\]
     fix references = f_ID, f_ID\[i\], f_ID\[i\]\[j\]
     surface collision model references = s_ID\[i\]
@@ -334,8 +335,8 @@ example, this is a valid (though strange) variable formula:
 variable x equal "np + c_MyTemp / vol^(1/3)" :pre
 
 Specifically, a formula can contain numbers, stats keywords, math
-operators, math functions, particle vectors, compute references, fix
-references, and references to other variables.
+operators, math functions, particle vectors, grid vectors, compute
+references, fix references, and references to other variables.
 
 Number: 0.2, 100, 1.0e20, -15.4, etc
 Constant: PI
@@ -346,7 +347,8 @@ Math functions: sqrt(x), exp(x), ln(x), log(x), abs(x), sin(x), cos(x), tan(x), 
      ceil(x), floor(x), round(x), ramp(x,y), stagger(x,y), logfreq(x,y,z), \
      stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
 Special functions: sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
-Particle vectors: mass, type, x, y, z, vx, vy, vz
+Particle vectors: mass, type, mu, x, y, z, vx, vy, vz
+Grid vectors: xc, yc, zc
 Compute references: c_ID, c_ID\[i\], c_ID\[i\]\[j\]
 Fix references: f_ID, f_ID\[i\], f_ID\[i\]\[j\]
 Surface collision model references: s_ID\[i\]
@@ -357,20 +359,20 @@ Other variables: v_name :tb(s=:)
 
 Most of the formula elements produce a scalar value.  A few produce a
 per-particle vector or per-grid vector of values.  These are the
-particle vectors, compute references that represent a per-particle or
-per-grid vector, fix references that represent a per-particle or
-per-grid vector, and variables that are particle-style or grid-style
-variables.  Math functions that operate on scalar values produce a
-scalar value; math function that operate on per-particle vectors do so
-element-by-element and produce a per-particle vector.
+particle vectors or grid vectors, compute references that represent a
+per-particle or per-grid vector, fix references that represent a
+per-particle or per-grid vector, and variables that are particle-style
+or grid-style variables.  Math functions that operate on scalar values
+produce a scalar value; math function that operate on per-particle
+vectors do so element-by-element and produce a per-particle vector.
 
 A formula for equal-style variables cannot use any formula element
 that produces a per-particle or per-grid vector.  A formula for a
 particle-style variable can use formula elements that produce either a
 scalar value or a per-particle vector, but not a per-grid vector.
-Likewise a particlgrid-style variable can use formula elements that
-produce either a scalar value or a per-grid vector, but not a
-per-particle vector.
+Likewise a grid-style variable can use formula elements that produce
+either a scalar value or a per-grid vector, but not a per-particle
+vector.
 
 The stats keywords allowed in a formula are those defined by the
 "stats_style custom"_stats_style.html command.  If a variable is
@@ -607,12 +609,27 @@ Particle Vectors :h4
 
 Particle vectors generate one value per particle, so that a reference
 like "vx" means the x-component of each particles's velocity will be
-used when evaluating the variable.
+used when evaluating the variable.  Some values are per-species
+values, like mass and mu.  A reference like "mass" means the mass for
+the particle's species.
 
 The meaning of the different particle vectors is self-explanatory.
 
 Particle vectors can only be used in {particle} style variables,
 not in {equal} or {grid} style varaibles.
+
+:line
+
+Grid Vectors :h4
+
+Particle vectors generate one value per grid cell, so that a reference
+like "xc" means the x-component of the center point of the grid cell.
+
+The xc, yc, zc values are for the geometric center point of the grid
+cell.
+
+Grid vectors can only be used in {grid} style variables, not in
+{equal} or {particle} style varaibles.
 
 :line
 
