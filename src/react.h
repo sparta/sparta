@@ -58,7 +58,6 @@ class React : protected Pointers {
 
   void modify_params(int, char **);
   virtual void compute_per_grid();
-  RanKnuth* get_random() { return random; }
 
  protected:
   int nglocal;

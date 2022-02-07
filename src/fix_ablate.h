@@ -53,7 +53,7 @@ class FixAblate : public Fix {
 
  protected:
   int me;
-  int groupbit,which,argindex,icompute,ifix,maxrandom;
+  int groupbit,which,argindex,icompute,ifix,ivariable,maxrandom;
   double scale;
   char *idsource;
   int storeflag;
@@ -87,6 +87,9 @@ class FixAblate : public Fix {
 
   double *sbuf;
   int maxbuf;
+
+  double *vbuf;
+  int maxvar;
 
   class MarchingSquares *ms;
   class MarchingCubes *mc;

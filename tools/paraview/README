@@ -90,6 +90,15 @@ Delaunay 2D filter from the ParaView menu.
 This will triangulate the interior of the polygon and obscure interior
 grid cells from view.
 
+The -e (or --exodus) option will output the contents of the *.pvd and
+output directory in Exodus 2 output format as a single file:
+
+% pvpython surf2paraview.py data.mir mir_surf -r ../parent/mir/tmp_surf.* --exodus
+
+This will produce an Exodus 2 file mir_surf.ex2, containing the same content
+as mir_surf.pvd and mir_surf/. The .pvd format output is not written when
+Exodus 2 output is requested.
+
 -------------------------------
 
 III. USING grid2paraview.py
@@ -191,7 +200,7 @@ from starting independently.
 
 IV. PVBATCH FOR LARGE SPARTA GRIDS
 
-When Sparta grid output becomes large, the processing time required for
+When SPARTA grid output becomes large, the processing time required for
 grid2paraview.py can be long on a single node even with multi-processing.
 If more than one compute node is available (HPC environment), grid2paraview.py
 can be run with MPI using ParaView's pvbatch program. The pvbatch program
@@ -224,7 +233,7 @@ The Catalyst script will generate images or data extracts for each time-step.
 This will avoid having to run ParaView as a separate step to generate
 visualizations. The ideal work-flow is to run the ParaView GUI on a much smaller
 grid version to setup the visualization and export the Catalyst script.
-Then, run grid2paraview.py on the larger Sparta grid output to generate
+Then, run grid2paraview.py on the larger SPARTA grid output to generate
 images. From the mir.txt example, to run grid2paraview.py using pvbatch and
 catalyst, use the following command line (catalyst.py was exported from
 the ParaView GUI).
@@ -244,10 +253,10 @@ created when "-c" option is used.
 VI. INTEGRATION TEST SCRIPT
 
 There is a bash script, runIntegrationTests.sh, located in this directory.
-This script will run 2D and 3D tests using the circle and sphere Sparta
+This script will run 2D and 3D tests using the circle and sphere SPARTA
 examples, and will create an output directory called 
 "integration_test_scratch_directory". There will be two subdirectories,
 circle and sphere, that contain the output of running surf2paraview.py,
 and grid2paraview.py using pvpython, pvbatch, and catalyst. Edit the top
-portion of runIntegrationTests.sh to point to your installed Sparta and
+portion of runIntegrationTests.sh to point to your installed SPARTA and
 ParaView before running.

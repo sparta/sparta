@@ -40,8 +40,10 @@ using namespace SPARTA_NS;
 
 enum{VERSION,SMALLINT,CELLINT,BIGINT,
      UNITS,NTIMESTEP,NPROCS,
-     FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,SURFMAX,GRIDCUT,GRID_WEIGHT,
-     COMM_SORT,COMM_STYLE,
+     FNUM,NRHO,VSTREAM,TEMP_THERMAL,FSTYLE,FIELD,FIELDID,
+     SURFS_IMPLICIT,SURFS_DISTRIBUTED,SURFGRID,SURFMAX,
+     SPLITMAX,GRIDCUT,GRID_WEIGHT,COMM_SORT,COMM_STYLE,
+     SURFTALLY,PARTICLE_REORDER,MEMLIMIT_GRID,MEMLIMIT,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      SPECIES,MIXTURE,PARTICLE_CUSTOM,GRID,SURF,
@@ -83,6 +85,10 @@ void ReadRestart::command(int narg, char **arg)
 
   if (strchr(arg[0],'%')) multiproc = 1;
   else multiproc = 0;
+
+  if (mem_limit_flag && !multiproc)
+    error->all(FLERR,"Cannot (yet) use global mem/limit without "
+               "% in restart file name");
 
   // open single restart file or base file for multiproc case
 
@@ -1009,19 +1015,41 @@ void ReadRestart::header(int incompatible)
       read_double_vec(3,update->vstream);
     } else if (flag == TEMP_THERMAL) {
       update->temp_thermal = read_double();
-    } else if (flag == GRAVITY) {
+
+    } else if (flag == FSTYLE) {
+      update->fstyle = read_int();
+    } else if (flag == FIELD) {
       read_int();
-      read_double_vec(3,update->gravity);
+      read_double_vec(3,update->field);
+    } else if (flag == FIELDID) {
+      update->fieldID = read_string();
+
+    } else if (flag == SURFS_IMPLICIT) {
+      surf->implicit = read_int();
+    } else if (flag == SURFS_DISTRIBUTED) {
+      surf->distributed = read_int();
+    } else if (flag == SURFGRID) {
+      grid->surfgrid_algorithm = read_int();
     } else if (flag == SURFMAX) {
       grid->maxsurfpercell = read_int();
+    } else if (flag == SPLITMAX) {
+      grid->maxsplitpercell = read_int();
     } else if (flag == GRIDCUT) {
       grid->cutoff = read_double();
+    } else if (flag == GRID_WEIGHT) {
+      grid->cellweightflag = read_int();
     } else if (flag == COMM_SORT) {
       comm->commsortflag = read_int();
     } else if (flag == COMM_STYLE) {
       comm->commpartstyle = read_int();
-    } else if (flag == GRID_WEIGHT) {
-      grid->cellweightflag = read_int();
+    } else if (flag == SURFTALLY) {
+      surf->tally_comm = read_int();
+    } else if (flag == PARTICLE_REORDER) {
+      update->reorder_period = read_int();
+    } else if (flag == MEMLIMIT_GRID) {
+      update->mem_limit_grid_flag = read_int();
+    } else if (flag == MEMLIMIT) {
+      update->global_mem_limit = read_int();
 
     } else if (flag == NPARTICLE) {
       nparticle_file = read_bigint();

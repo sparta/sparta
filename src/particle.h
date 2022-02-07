@@ -25,6 +25,8 @@ class Particle : protected Pointers {
   int exist;                // 1 if particles exist
   int sorted;               // 1 if particles are sorted by grid cell
 
+  enum{MAXVIBMODE=4};       // increase value if species need more vib modes
+
   struct Species {          // info on each particle species, read from file
     char id[16];            // species ID
     double molwt;           // molecular weight
@@ -33,13 +35,14 @@ class Particle : protected Pointers {
     double charge;          // multiple of electron charge
     double rotrel;          // inverse rotational relaxation number
     double rottemp[3];      // rotational temperature(s)
-    double vibtemp[4];      // vibrational temperature(s)
-    double vibrel[4];       // inverse vibrational relaxation number(s)
-    int vibdegen[4];        // vibrational mode degeneracies
+    double vibtemp[MAXVIBMODE];   // vibrational temperature(s)
+    double vibrel[MAXVIBMODE];    // inverse vibrational relaxation number(s)
+    int vibdegen[MAXVIBMODE];     // vibrational mode degeneracies
     int rotdof,vibdof;      // rotational/vibrational DOF
     int nrottemp,nvibmode;  // # of rotational/vibrational temps/modes defined
     int internaldof;        // 1 if either rotdof or vibdof != 0
     int vibdiscrete_read;   // 1 if species.vib file read for this species
+    double magmoment;       // magnetic moment, set by species_modify command
   };
 
   struct RotFile {          // extra rotation info read from rotfile
@@ -50,9 +53,9 @@ class Particle : protected Pointers {
 
   struct VibFile {          // extra vibration info read from vibfile
     char id[16];
-    double vibrel[4];
-    double vibtemp[4];
-    int vibdegen[4];
+    double vibrel[MAXVIBMODE];
+    double vibtemp[MAXVIBMODE];
+    int vibdegen[MAXVIBMODE];
     int nmode;
   };
 
@@ -149,8 +152,9 @@ class Particle : protected Pointers {
   virtual int add_particle();
   int clone_particle(int);
   void add_species(int, char **);
-  void add_mixture(int, char **);
   int find_species(char *);
+  void species_modify(int, char **);
+  void add_mixture(int, char **);
   int find_mixture(char *);
   double erot(int, double, class RanKnuth *);
   double evib(int, double, class RanKnuth *);
@@ -199,7 +203,7 @@ class Particle : protected Pointers {
 
   // extra custom vectors/arrays for per-particle data
   // ncustom > 0 if there are any extra arrays
-  // these varaiables are private, others above are public
+  // these variables are private, others above are public
 
   char **ename;             // name of each attribute
 

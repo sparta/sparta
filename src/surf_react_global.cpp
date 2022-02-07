@@ -37,6 +37,10 @@ SurfReactGlobal::SurfReactGlobal(SPARTA *sparta, int narg, char **arg) :
   if (prob_destroy + prob_create > 1.0)
     error->all(FLERR,"Illegal surf_react global command");
 
+  // setup the reaction tallies
+
+  nsingle = ntotal = 0;
+
   nlist = 2;
   tally_single = new int[nlist];
   tally_total = new int[nlist];
@@ -61,14 +65,12 @@ SurfReactGlobal::~SurfReactGlobal()
 
 /* ----------------------------------------------------------------------
    select surface reaction to perform for particle with ptr IP on surface
-   return 0 if no reaction
-   return 1 = destroy reaction
-   return 2 = create reaction
+   return which reaction 1 (destroy), 2 (create), 0 = no reaction
    if create, add particle and return ptr JP
 ------------------------------------------------------------------------- */
 
-int SurfReactGlobal::react(Particle::OnePart *&ip, double *,
-                           Particle::OnePart *&jp)
+int SurfReactGlobal::react(Particle::OnePart *&ip, int, double *,
+                           Particle::OnePart *&jp, int &)
 {
   double r = random->uniform();
 
@@ -115,4 +117,3 @@ char *SurfReactGlobal::reactionID(int m)
   if (m == 0) return (char *) "delete";
   return (char *) "create";
 }
-
