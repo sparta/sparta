@@ -37,12 +37,16 @@ using namespace SPARTA_NS;
 
 enum{VERSION,SMALLINT,CELLINT,BIGINT,
      UNITS,NTIMESTEP,NPROCS,
-     FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,SURFMAX,GRIDCUT,GRID_WEIGHT,
-     COMM_SORT,COMM_STYLE,
+     FNUM,NRHO,VSTREAM,TEMP_THERMAL,FSTYLE,FIELD,FIELDID,
+     SURFS_IMPLICIT,SURFS_DISTRIBUTED,SURFGRID,SURFMAX,
+     SPLITMAX,GRIDCUT,GRID_WEIGHT,COMM_SORT,COMM_STYLE,
+     SURFTALLY,PARTICLE_REORDER,MEMLIMIT_GRID,MEMLIMIT,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      SPECIES,MIXTURE,PARTICLE_CUSTOM,GRID,SURF,
      MULTIPROC,PROCSPERFILE,PERPROC};    // new fields added after PERPROC
+
+enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // update.cpp
 
 /* ---------------------------------------------------------------------- */
 
@@ -78,6 +82,12 @@ void WriteRestart::command(int narg, char **arg)
 
   if (strchr(arg[0],'%')) multiproc = nprocs;
   else multiproc = 0;
+
+  int mem_limit_flag = update->global_mem_limit > 0 ||
+           (update->mem_limit_grid_flag && !grid->nlocal);
+  if (mem_limit_flag && !multiproc)
+    error->all(FLERR,"Cannot (yet) use global mem/limit without "
+               "% in restart file name");
 
   // setup output style and process optional args
   // also called by Output class for periodic restart files
@@ -366,7 +376,8 @@ void WriteRestart::write_less_memory(char *file)
   int nbytes_custom = particle->sizeof_custom();
   int nbytes = nbytes_particle + nbytes_custom;
 
-  int max_size = MAX(grid_send_size,update->global_mem_limit);
+  int max_size = MIN(particle_send_size,update->global_mem_limit);
+  max_size = MAX(max_size,grid_send_size);
   max_size = MAX(max_size,nbytes);
   max_size += 128; // extra for size and ROUNDUP(ptr)
 
@@ -513,12 +524,25 @@ void WriteRestart::header()
   write_double(NRHO,update->nrho);
   write_double_vec(VSTREAM,3,update->vstream);
   write_double(TEMP_THERMAL,update->temp_thermal);
-  write_double_vec(GRAVITY,3,update->gravity);
+
+  write_int(FSTYLE,update->fstyle);
+  if (update->fstyle == CFIELD) write_double_vec(FIELD,3,update->field);
+  else if (update->fstyle == PFIELD) write_string(FIELDID,update->fieldID);
+  else if (update->fstyle == GFIELD) write_string(FIELDID,update->fieldID);
+
+  write_int(SURFS_IMPLICIT,surf->implicit);
+  write_int(SURFS_DISTRIBUTED,surf->distributed);
+  write_int(SURFGRID,grid->surfgrid_algorithm);
   write_int(SURFMAX,grid->maxsurfpercell);
+  write_int(SPLITMAX,grid->maxsplitpercell);
   write_double(GRIDCUT,grid->cutoff);
+  write_int(GRID_WEIGHT,grid->cellweightflag);
   write_int(COMM_SORT,comm->commsortflag);
   write_int(COMM_STYLE,comm->commpartstyle);
-  write_int(GRID_WEIGHT,grid->cellweightflag);
+  write_int(SURFTALLY,surf->tally_comm);
+  write_int(PARTICLE_REORDER,update->reorder_period);
+  write_int(MEMLIMIT_GRID,update->mem_limit_grid_flag);
+  write_int(MEMLIMIT,update->global_mem_limit);
 
   write_bigint(NPARTICLE,particle->nglobal);
   write_bigint(NUNSPLIT,grid->nunsplit);

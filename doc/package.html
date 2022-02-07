@@ -33,9 +33,9 @@
       <I>collide/retry</I> = <I>yes</I> or <I>no</I>
         yes = retry collision algorithm until successful
         no = do not retry collision algorithm (default)
-      <I>gpu/direct</I> = <I>yes</I> or <I>no</I>
-        yes = use GPU-direct, i.e. CUDA-aware MPI (default)
-        no = do not use GPU-direct 
+      <I>gpu/aware</I> = <I>yes</I> or <I>no</I>
+        yes = use GPU-aware MPI (default)
+        no = do not use GPU-aware MPI 
 </PRE>
 
 </UL>
@@ -43,7 +43,7 @@
 </P>
 <PRE>package kokkos comm classic
 package kokkos comm threaded reduction atomic
-package kokkos gpu/direct no 
+package kokkos gpu/aware no 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -126,10 +126,10 @@ without being moved between the host and GPU.  This requires that your
 MPI is able to access GPU memory directly.  Currently that is true for
 OpenMPI 1.8 (or later versions), Mvapich2 1.9 (or later), and CrayMPI.
 </P>
-<P>The <I>gpu/direct</I> keyword chooses whether GPU-direct will be used. When 
+<P>The <I>gpu/aware</I> keyword chooses whether GPU-aware MPI will be used. When 
 this keyword is set to <I>on</I>, buffers in GPU memory are passed directly 
 through MPI send/receive calls. This can reduce overhead of first 
-copying the data to the host CPU. However GPU-direct is not supported on 
+copying the data to the host CPU. However GPU-aware MPI is not supported on 
 all systems, which can lead to segmentation faults and would require 
 using a value of <I>off</I>. 
 </P>
@@ -153,7 +153,7 @@ setting</A>
 </P>
 <P>For the KOKKOS package, the option defaults are comm = threaded, 
 reduction = parallel/reduce, collide/extra = 1.1, and collide/retry = 
-no, gpu/direct yes. These settings are made automatically by the 
+no, gpu/aware yes. These settings are made automatically by the 
 required "-k on" <A HREF = "Section_start.html#start_6">command-line switch</A>. You 
 can change them by using the package kokkos command in your input script 
 or via the "-pk kokkos" <A HREF = "Section_start.html#start_6">command-line switch</A>. 
