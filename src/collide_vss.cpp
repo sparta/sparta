@@ -355,7 +355,7 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
     }
 
   } else {
-    if (precoln.ave_dof > 0.0) EEXCHANGE_NonReactingEDisposal(ip,jp);
+    if (precoln.ave_dof > 0.0 && !react->computeChemRates) EEXCHANGE_NonReactingEDisposal(ip,jp);
     SCATTER_TwoBodyScattering(ip,jp);
   }
 
