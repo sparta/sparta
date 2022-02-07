@@ -167,6 +167,8 @@ void GridKokkos::grow_sinfo(int n)
 
 void GridKokkos::wrap_kokkos_graphs()
 {
+  if (!surf->exist) return;
+
   // csurfs
 
   Kokkos::Crs<int, SPAHostType, void, int> h_csurfs;

@@ -172,25 +172,25 @@ protected:
     if (value > mm_v.max_val) mm_v.max_val = value;
     if (value < lo) {
       if (beyond == 0 /*IGNORE*/) {
-        Kokkos::atomic_fetch_add(&d_stats(1), weight);
+        Kokkos::atomic_add(&d_stats(1), weight);
         return;
       } else {
-        Kokkos::atomic_fetch_add(&d_bin(0), weight);
+        Kokkos::atomic_add(&d_bin(0), weight);
       }
     } else if (value > hi) {
       if (beyond == 0 /*IGNORE*/) {
-        Kokkos::atomic_fetch_add(&d_stats(1), weight);
+        Kokkos::atomic_add(&d_stats(1), weight);
         return;
       } else {
-        Kokkos::atomic_fetch_add(&d_bin(nbins-1), weight);
+        Kokkos::atomic_add(&d_bin(nbins-1), weight);
       }
     } else {
       int ibin = static_cast<int>((value - lo) * bininv);
       ibin = MIN(ibin, nbins-1);
       if (beyond == 2 /*EXTRA*/) ibin++;
-      Kokkos::atomic_fetch_add(&d_bin(ibin), weight);
+      Kokkos::atomic_add(&d_bin(ibin), weight);
     }
-    Kokkos::atomic_fetch_add(&d_stats(0), weight);
+    Kokkos::atomic_add(&d_stats(0), weight);
   }
 
   KOKKOS_INLINE_FUNCTION

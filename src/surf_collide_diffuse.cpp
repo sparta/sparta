@@ -41,8 +41,6 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
 {
   if (narg < 4) error->all(FLERR,"Illegal surf_collide diffuse command");
 
-  allowreact = 1;
-
   tstr = NULL;
 
   if (strstr(arg[2],"v_") == arg[2]) {
@@ -83,10 +81,17 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
       wx = atof(arg[iarg+4]);
       wy = atof(arg[iarg+5]);
       wz = atof(arg[iarg+6]);
-      if (domain->dimension == 2 && pz != 0.0)
-        error->all(FLERR,"Surf_collide diffuse rotation invalid for 2d");
-      if (domain->dimension == 2 && (wx != 0.0 || wy != 0.0))
-        error->all(FLERR,"Surf_collide diffuse rotation invalid for 2d");
+
+      if (domain->dimension == 2) {
+        if (pz != 0.0)
+          error->all(FLERR,"Surf_collide diffuse rotation invalid for 2d");
+        if (!domain->axisymmetric && (wx != 0.0 || wy != 0.0))
+          error->all(FLERR,"Surf_collide diffuse rotation invalid for 2d");
+        if (domain->axisymmetric && (wy != 0.0 || wz != 0.0))
+          error->all(FLERR,
+                     "Surf_collide diffuse rotation invalid for 2d axisymmetric");
+      }
+
       iarg += 7;
     } else error->all(FLERR,"Illegal surf_collide diffuse command");
   }
@@ -134,48 +139,51 @@ void SurfCollideDiffuse::init()
 /* ----------------------------------------------------------------------
    particle collision with surface with optional chemistry
    ip = particle with current x = collision pt, current v = incident v
+   isurf = index of surface element
    norm = surface normal unit vector
    isr = index of reaction model if >= 0, -1 for no chemistry
-   ip = set to NULL if destroyed by chemsitry
+   ip = reset to NULL if destroyed by chemsitry
    return jp = new particle if created by chemistry
    return reaction = index of reaction (1 to N) that took place, 0 = no reaction
    resets particle(s) to post-collision outward velocity
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideDiffuse::
-collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
+collide(Particle::OnePart *&ip, double &,
+        int isurf, double *norm, int isr, int &reaction)
 {
   nsingle++;
 
   // if surface chemistry defined, attempt reaction
-  // reaction > 0 if reaction took place
+  // reaction = 1 to N for which reaction took place, 0 for none
+  // velreset = 1 if reaction reset post-collision velocity, else 0
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
   reaction = 0;
+  int velreset = 0;
 
   if (isr >= 0) {
     if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
-    reaction = surf->sr[isr]->react(ip,norm,jp);
+    reaction = surf->sr[isr]->react(ip,isurf,norm,jp,velreset);
     if (reaction) surf->nreact_one++;
   }
 
   // diffuse reflection for each particle
-  // resets v, roteng, vibeng
-  // particle I needs to trigger any fixes to update per-particle
-  //  properties which depend on the temperature of the particle
-  //  (e.g. fix vibmode and fix ambipolar)
-  // if new particle J created, also need to trigger any fixes
+  // only if SurfReact did not already reset velocities
+  // also both partiticles need to trigger any fixes
+  //   to update per-particle properties which depend on
+  //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 
   if (ip) {
-    diffuse(ip,norm);
+    if (!velreset) diffuse(ip,norm);
     if (modify->n_update_custom) {
       int i = ip - particle->particles;
       modify->update_custom(i,twall,twall,twall,vstream);
     }
   }
   if (jp) {
-    diffuse(jp,norm);
+    if (!velreset) diffuse(jp,norm);
     if (modify->n_update_custom) {
       int j = jp - particle->particles;
       modify->update_custom(j,twall,twall,twall,vstream);
@@ -308,6 +316,34 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm)
     p->erot = particle->erot(ispecies,twall,random);
     p->evib = particle->evib(ispecies,twall,random);
   }
+}
+
+/* ----------------------------------------------------------------------
+   wrapper on diffuse() method to perform collision for a single particle
+   pass in 2 coefficients to match command-line args for style diffuse
+   flags, coeffs can be NULL
+   called by SurfReactAdsorb
+------------------------------------------------------------------------- */
+
+void SurfCollideDiffuse::wrapper(Particle::OnePart *p, double *norm,
+                                 int *flags, double *coeffs)
+{
+  if (flags) {
+    twall = coeffs[0];
+    acc = coeffs[1];
+  }
+
+  diffuse(p,norm);
+}
+
+/* ----------------------------------------------------------------------
+   return flags and coeffs for this SurfCollide instance to caller
+------------------------------------------------------------------------- */
+
+void SurfCollideDiffuse::flags_and_coeffs(int *flags, double *coeffs)
+{
+  coeffs[0] = twall;
+  coeffs[1] = acc;
 }
 
 /* ----------------------------------------------------------------------

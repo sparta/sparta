@@ -24,6 +24,8 @@
 #include "compute.h"
 #include "fix.h"
 #include "output.h"
+#include "input.h"
+#include "variable.h"
 #include "dump.h"
 #include "cut2d.h"     // remove if fix particles-inside-surfs issue
 #include "cut3d.h"
@@ -36,7 +38,7 @@
 
 using namespace SPARTA_NS;
 
-enum{COMPUTE,FIX,RANDOM};
+enum{COMPUTE,FIX,VARIABLE,RANDOM};
 enum{CVALUE,CDELTA};
 
 #define INVOKED_PER_GRID 16
@@ -105,6 +107,13 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     strcpy(idsource,suffix);
     delete [] suffix;
 
+  } else if (strncmp(arg[5],"v_",2) == 0) {
+    which = VARIABLE;
+
+    int n = strlen(arg[5]);
+    char *idsource = new char[n];
+    strcpy(idsource,&arg[5][2]);
+
   } else if (strcmp(arg[5],"random") == 0) {
     if (narg != 7) error->all(FLERR,"Illegal fix ablate command");
     which = RANDOM;
@@ -151,6 +160,13 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     if (nevery % modify->fix[ifix]->per_grid_freq)
       error->all(FLERR,
                  "Fix for fix ablate not computed at compatible time");
+
+  } else if (which == VARIABLE) {
+    ivariable = input->variable->find(idsource);
+    if (ivariable < 0)
+      error->all(FLERR,"Could not find fix ablate variable name");
+    if (input->variable->grid_style(ivariable) == 0)
+      error->all(FLERR,"Fix ablate variable is not grid-style variable");
   }
 
   // this fix produces a per-grid array and a scalar
@@ -191,6 +207,9 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
 
   sbuf = NULL;
   maxbuf = 0;
+
+  vbuf = NULL;
+  maxvar = 0;
 
   ms = NULL;
   mc = NULL;
@@ -237,6 +256,7 @@ FixAblate::~FixAblate()
   memory->destroy(locallist);
 
   memory->destroy(sbuf);
+  memory->destroy(vbuf);
 
   delete ms;
   delete mc;
@@ -351,6 +371,10 @@ void FixAblate::init()
     ifix = modify->find_fix(idsource);
     if (ifix < 0)
       error->all(FLERR,"Fix ID for fix ablate does not exist");
+  } else if (which == VARIABLE) {
+    ivariable = input->variable->find(idsource);
+    if (ivariable < 0)
+      error->all(FLERR,"Variable ID for fix ablate does not exist");
   }
 
   // reallocate per-grid data if necessary
@@ -693,7 +717,7 @@ void FixAblate::set_delta_random()
 }
 
 /* ----------------------------------------------------------------------
-   set per-cell delta vector from compute/fix source
+   set per-cell delta vector from compute/fix/variable source
    celldelta = nevery * scale * source-value
    // NOTE: how does this work for split cells? should only do parent split?
 ------------------------------------------------------------------------- */
@@ -742,6 +766,17 @@ void FixAblate::set_delta()
       for (i = 0; i < nglocal; i++)
         celldelta[i] = prefactor * farray[i][im1];
     }
+
+  } else if (which == VARIABLE) {
+    if (nglocal > maxvar) {
+      maxvar = grid->maxlocal;
+      memory->destroy(vbuf);
+      memory->create(vbuf,maxvar,"ablate:vbuf");
+    }
+
+    input->variable->compute_grid(ivariable,vbuf,1,0);
+    for (i = 0; i < nglocal; i++)
+      celldelta[i] = prefactor * vbuf[i];
   }
 
   // NOTE: this does not get invoked on step 100,
