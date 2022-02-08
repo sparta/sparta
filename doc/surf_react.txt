@@ -167,7 +167,8 @@ C2, etc, and how they are interpreted by SPARTA.
 
 For S = Surface style, there is a single coefficient:
 
-C1 = probability that the reaction occurs (0.0 to 1.0) :ul
+C1 = probability that the reaction occurs (0.0 to 1.0)
+C2 = catalytic chemical energy of reaction (positive for exothermic) :ul
 
 :line
 

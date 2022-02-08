@@ -30,6 +30,7 @@ value = {n} or {nwt} or {nflux} or {mflux} or {fx} or {fy} or {fz} or {press} or
   ke = flux of particle kinetic energy on surface element
   erot = flux of particle rotational energy on surface element
   evib = flux of particle vibrational energy on surface element
+  echem = flux of particle chemical catalytic energy on surface element
   etot = flux of particle total energy on surface element :pre
 :ule
 
@@ -246,6 +247,16 @@ internal vibrational energy changes from Evib_pre to Evib_post when
 colliding with the surface element.  The flux equation is the same as
 for the {ke} value.
 
+The {echem} value calculates the chemical catalytic energy flux {Eflux}
+imparted to the surface element by particles in the group, such that
+energy lost by a particles recombining is a positive flux.  This is computed as
+
+Eflux = - Sum_i (e_recomb) / (A * dt / fnum)
+
+where e_recomb is the catalytic chemical energy of a particle pair
+(positive for an exothermic recombination reaction). The flux equation
+is the same as for the {ke} value.
+
 The {etot} value calculates the total energy flux imparted to the
 surface element by particles in the group, such that energy lost by a
 particle is a positive flux.  This is simply the sum of kinetic,
@@ -265,7 +276,7 @@ The {n} and {nwt} value are calculated the same for transparent
 surfaces.  I.e. they are the count and weighted count of particles
 passing through the surface.
 
-The {mflux}, {ke}, {erot}. {evib}, and {etot} values are fluxes.  For
+The {mflux}, {ke}, {erot}. {evib}, {echem}, and {etot} values are fluxes.  For
 transparent surfaces, they are calculated for the incident particle as
 if they had struck the surface.  The outgoing particle is ignored.
 This means the tally quantity is the flux of particles onto the
@@ -299,7 +310,7 @@ for an overview of SPARTA output options.
 The per-surf array values will be in the "units"_units.html
 appropriate to the individual values as described above. {N} is
 unitless.  {Press}, {px}, {py}, {pz}, {shx}, {shy}, {shz} are in in
-pressure units.  {Ke}, {erot}, {evib}, and {etot} are in
+pressure units.  {Ke}, {erot}, {evib}, {echem}, and {etot} are in
 energy/area-time units for 3d simulations and energy/length-time units
 for 2d simulations.
 
