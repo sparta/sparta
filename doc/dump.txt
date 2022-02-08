@@ -62,12 +62,13 @@ args = list of arguments for a particular style :l
 
   {surf} args = list of surf attributes
     possible attributes = id, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z, 
-                          c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
+                          temp, c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
 
       id = surface element ID
       v1x,v1y,v1z = coords of 1st vertex in surface element
       v1x,v1y,v1z = coords of 2nd vertex in surface element
       v1x,v1y,v1z = coords of 3rd vertex in surface element
+      temp = surface element temperature
       c_ID = per-surf vector calculated by a compute with ID
       c_ID\[N\] = Nth column of per-surf array calculated by a compute with ID, I can include wildcard (see below)
       f_ID = per-surf vector calculated by a fix with ID
@@ -408,6 +409,10 @@ The {v1x}, {v1y}, {v1z}, {v2x}, {v2y}, {v2z}, {v3x}, {v3y}, {v3z}
 attributes write the coordinates of the vertices of the end or corner
 points of the surface element.  The {v1z}, {v2z}, {v3x}, {v3y}, and
 {v3z} attributes cannot be used for a 2d simulation.
+
+The {temp} attribute write the average surface element temperature,
+computed by the {fix_surf_temp}, or the constant value specified in
+the input file.
 
 The {c_ID} and {c_ID\[I\]} attributes allow per-surf vectors or arrays
 calculated by a "compute"_compute.html to be output.  The ID in the

@@ -1,0 +1,93 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix surf/temp command
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID surf/temp group-ID Nevery source Tsurf emisurf
+</PRE>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command 
+
+<LI>surf/temp = style name of this fix command
+
+<LI>group-ID = ID of group of grid cells that contain explicit surfaces
+
+<LI>Nevery = perform surface temperature adjustment once every Nevery steps
+
+<LI>source = computeID or fixID
+
+<PRE>  computeID = c_ID or c_ID[n] for a compute that calculates per surf values
+  fixID = f_ID or f_ID[n] for a fix that calculates per surf values
+</PRE>
+
+<LI>Tsurf = initial temperature of surface (temperature units)
+
+<LI> emisurf = emissivity of the surface (unitless, 0 < emisurf <= 1)
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>fix 1 surf/temp all 1000 c_1 800 0.9
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Perform surface temperature adjustment once every Nevery steps.
+This command reads in a compute or fix ID that should be
+the flux of total energy on the surface elements (<I>etot</I> from
+<A HREF = "compute_surf.html">compute_surf</A>, i.e. the total surface heat flux).
+</P>
+<P>The specified <I>group-ID</I> must be the name of a surf element group, as
+defined by the <A HREF = "group.html">group grid</A> command, which contains a set
+of surf elements.
+</P>
+<P>The specfied <I>Nevery</I> determines how often a surface temperature adjustment
+operation is performed.
+</P>
+<P>The <I>source</I> can be specified as a per surf element quantity calculated
+by a compute, such as <A HREF = "compute_surf.html">compute_surf</A>,
+e.g. the total surface heat flux <I>etot</I>.
+It can also be specified a per surf quantity
+calculated by a fix, such as <A HREF = "fix_ave_surf.html">fix_ave/surf</A>.  That
+fix could time average per-surf quantities from per surf
+computes.
+</P>
+<P>The model has 2 parameters set by the <I>Tsurf</I> and <I>emisurf</I> arguments.
+<I>Tsurf</I> is the initial temperature of the surface.  <I>emisurf</I> is an emissivity
+coefficient from 0.0 to 1.0, which determines the emissivity of the surface.
+An emissivity coefficient of 1.0 means that the surface is a black-body
+that radiates all the energy it receives.
+</P>
+<HR>
+<P>The surface temperature is calculated from the Stefan-Boltzmann law for
+a gray-body, which states that
+q_wall = sigma * emisurf * Tsurf ^ 4
+where sigma is the Stefan-Boltzmann constant, <I>emisurf</I> is the specified
+surface emissivity, and <I>Tsurf</I> is the surface temperature.
+</P>
+<HR>
+
+<P><B>Restart, output info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.
+</P>
+<P><B>Restrictions:</B>
+</P>
+<P>At the moment, this fix can only be used in simulations that define explicit
+non-distributed surfaces. Distributed and implicit surface support will be
+added at a later time.
+</P>
+<P><B>Related commands:</B> none
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

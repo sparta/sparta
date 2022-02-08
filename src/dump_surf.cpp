@@ -32,7 +32,7 @@ using namespace SPARTA_NS;
 // customize by adding keyword
 
 enum{ID,TYPE,V1X,V1Y,V1Z,V2X,V2Y,V2Z,V3X,V3Y,V3Z,
-     COMPUTE,FIX,VARIABLE};
+     TEMP,COMPUTE,FIX,VARIABLE};
 enum{INT,DOUBLE,BIGINT,STRING};        // same as Dump
 
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
@@ -460,6 +460,9 @@ int DumpSurf::parse_fields(int narg, char **arg)
       if (dimension == 2)
 	error->all(FLERR,"Invalid dump surf field for 2d simulation");
       pack_choice[i] = &DumpSurf::pack_v3z;
+      vtype[i] = DOUBLE;
+    } else if (strcmp(arg[iarg],"temp") == 0) {
+      pack_choice[i] = &DumpSurf::pack_temp;
       vtype[i] = DOUBLE;
 
     // compute value = c_ID
@@ -909,4 +912,27 @@ void DumpSurf::pack_v3z(int n)
     buf[n] = tris[cglobal[i]].p3[2];
     n += size_one;
   }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpSurf::pack_temp(int n)
+{
+    if (dimension == 2) {
+      Surf::Line *lines;
+      if (distributed && !implicit) lines = surf->mylines;
+      else lines = surf->lines;
+      for (int i = 0; i < nchoose; i++) {
+        buf[n] = lines[cglobal[i]].temp;
+        n += size_one;
+      }
+    } else {
+      Surf::Tri *tris;
+      if (distributed && !implicit) tris = surf->mytris;
+      else tris = surf->tris;
+      for (int i = 0; i < nchoose; i++) {
+        buf[n] = tris[cglobal[i]].temp;
+        n += size_one;
+      }
+    }
 }

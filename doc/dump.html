@@ -79,6 +79,7 @@
       v1x,v1y,v1z = coords of 1st vertex in surface element
       v1x,v1y,v1z = coords of 2nd vertex in surface element
       v1x,v1y,v1z = coords of 3rd vertex in surface element
+      temp = surface element temperature
       c_ID = per-surf vector calculated by a compute with ID
       c_ID[N] = Nth column of per-surf array calculated by a compute with ID, I can include wildcard (see below)
       f_ID = per-surf vector calculated by a fix with ID
@@ -420,6 +421,10 @@ outward normal of the triangle.
 attributes write the coordinates of the vertices of the end or corner
 points of the surface element.  The <I>v1z</I>, <I>v2z</I>, <I>v3x</I>, <I>v3y</I>, and
 <I>v3z</I> attributes cannot be used for a 2d simulation.
+</P>
+<P>The <I>temp</I> attribute write the average surface element temperature,
+computed by the <A HREF = "fix_surf_temp.html">fix surf/temp</A>, or the constant value specified in
+the input file.
 </P>
 <P>The <I>c_ID</I> and <I>c_ID[I]</I> attributes allow per-surf vectors or arrays
 calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in the

@@ -66,6 +66,7 @@ class Surf : protected Pointers {
                             // rhand rule: Z x (p2-p1) = outward normal
     double norm[3];         // outward normal to line segment
     int transparent;        // 1 if surf is transparent
+    double temp;            // surf element temperature
   };
 
   struct Tri {
@@ -78,6 +79,7 @@ class Surf : protected Pointers {
                             // rhand rule: (p2-p1) x (p3-p1) = outward normal
     double norm[3];         // outward normal to triangle
     int transparent;        // 1 if surf is transparent
+    double temp;            // surf element temperature
   };
 
   Line *lines;              // list of lines for surface collisions
