@@ -42,5 +42,4 @@ Thumbs.db
 /spa
 
 doc/PDFgen.sh
-*.5000
-tools/sdata.py
+std*
