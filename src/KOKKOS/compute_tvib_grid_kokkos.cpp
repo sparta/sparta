@@ -45,8 +45,9 @@ ComputeTvibGridKokkos::ComputeTvibGridKokkos(SPARTA *sparta, int narg, char **ar
   kokkos_flag = 1;
 
   if (modeflag == 0) {
-    k_s2t = DAT::tdual_int_1d("compute/tvib/grid:s2t",nspecies);
     k_t2s = DAT::tdual_int_1d("compute/tvib/grid:t2s",ntally);
+    k_s2t = DAT::tdual_int_1d("compute/tvib/grid:s2t",nspecies);
+    d_tspecies = DAT::t_float_1d("d_tspecies",nspecies);
 
     for (int n = 0; n < nspecies; n++)
       k_s2t.h_view(n) = s2t[n];
@@ -65,6 +66,7 @@ ComputeTvibGridKokkos::ComputeTvibGridKokkos(SPARTA *sparta, int narg, char **ar
   } else {
     k_t2s_mode = DAT::tdual_int_1d("compute/tvib/grid:t2s_mode",ntally);
     k_s2t_mode = DAT::tdual_int_2d("compute/tvib/grids2t_mode",nspecies,maxmode);
+    d_tspecies_mode = DAT::t_float_2d_lr("d_tspecies_mode",nspecies,maxmode);
 
     for (int n = 0; n < nspecies; n++)
       for (int m = 0; m < maxmode; m++)
@@ -82,9 +84,6 @@ ComputeTvibGridKokkos::ComputeTvibGridKokkos(SPARTA *sparta, int narg, char **ar
     d_s2t_mode = k_s2t_mode.d_view;
     d_t2s_mode = k_t2s_mode.d_view;
   }
-
-  d_tspecies = DAT::t_float_1d("d_tspecies",nspecies);
-  d_tspecies_mode = DAT::t_float_2d_lr("d_tspecies_mode",nspecies,maxmode);
 
   boltz = update->boltz;
 }
@@ -301,9 +300,9 @@ post_process_grid_kokkos(int index, int nsample,
   // ditto for individual vibrational modes if modeflag = 1 or 2
   // loop over species/modes in group to compute normalized Tgroup
 
-  GridKokkos* grid_kk = (GridKokkos*) grid;
-  grid_kk->sync(Device,CINFO_MASK);
-  d_cinfo = grid_kk->k_cinfo.d_view;
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  particle_kk->sync(Device,SPECIES_MASK|CUSTOM_MASK);
+  d_species = particle_kk->k_species.d_view;
 
   if (modeflag == 0) {
     nsp = nmap[index] / 2;
@@ -340,7 +339,7 @@ void ComputeTvibGridKokkos::operator()(TagComputeTvibGrid_post_process_grid, con
   if (modeflag == 0) {
 
     for (int isp = 0; isp < nsp; ++isp) {
-      const int ispecies = d_t2s[evb];
+      const int ispecies = d_t2s[evb-evib];
       const double theta = d_species[ispecies].vibtemp[0];
       if (theta == 0.0 || d_etally(icell,cnt) == 0.0) {
         d_tspecies[isp] = 0.0;

@@ -45,14 +45,14 @@ class Surf : protected Pointers {
 
   // surf data structs
   // explicit, all: each proc owns all surfs
-  //   nlocal = Nsurf, nghost = 0, tris = all surfs
-  //   nown = Nsurf/P, mytris = NULL
+  //   nlocal = Nsurf, nghost = 0
+  //   tris = all surfs, nown = Nsurf/P, mytris = NULL
   // explicit, distributed: each proc owns N/P surfs
-  //   nlocal/nghost = surfs in owned/ghost grid cells, tris = nloc+ngh surfs
-  //   nown = Nsurf/P, mytris = surfs I uniquely own
+  //   nlocal/nghost = surfs in owned/ghost grid cells
+  //   tris = nloc+ngh surfs, nown = Nsurf/P, mytris = surfs I uniquely own
   // implicit, distributed: each proc owns surfs in its owned grid cells
   //   nlocal = surfs in owned grid cells, nghost = surfs in ghost grid cells
-  //   nown = nlocal, mytris = NULL
+  //   tris = nloc+ngh surfs, nown = nlocal, mytris = NULL
 
   bigint nsurf;             // total # of surf elements, lines or tris
 
@@ -115,6 +115,21 @@ class Surf : protected Pointers {
   int pushflag;             // set to 1 to push surf pts near grid cell faces
   double pushlo,pushhi;     // lo/hi ranges to push on
   double pushvalue;         // new position to push to
+
+  // extra custom vectors/arrays for per-surf data
+  // ncustom > 0 if there are any extra arrays
+  // custom attributes are created by various commands
+  // these variables are public, others below are private
+
+  int ncustom;              // # of custom attributes, some may be deleted
+  int *etype;               // type = INT/DOUBLE of each attribute
+  int *esize;               // size = 0 for vector, N for array columns
+  int *ewhich;              // index into eivec,eiarray,edvec,edarray for data
+
+  int **eivec;              // pointer to each integer vector
+  int ***eiarray;           // pointer to each integer array
+  double **edvec;           // pointer to each double vector
+  double ***edarray;        // pointer to each double array
 
 #include "hash_options.h"
 
@@ -220,6 +235,12 @@ class Surf : protected Pointers {
   void redistribute_tris_clip(int, int);
   void redistribute_tris_temporary(int);
 
+  int find_custom(char *);
+  void error_custom();
+  int add_custom(char *, int, int);
+  void allocate_custom(int, int);
+  void remove_custom(int);
+
   void write_restart(FILE *);
   void read_restart(FILE *);
   virtual void grow(int);
@@ -272,6 +293,27 @@ class Surf : protected Pointers {
     ubuf(int64_t arg) : i(arg) {}
     ubuf(int arg) : i(arg) {}
   };
+
+  // extra custom vectors/arrays for per-surf data
+  // these variables are private, others above are public
+
+  char **ename;             // name of each attribute
+
+  int ncustom_ivec;         // # of integer vector attributes
+  int ncustom_iarray;       // # of integer array attributes
+  int *icustom_ivec;        // index into ncustom for each integer vector
+  int *icustom_iarray;      // index into ncustom for each integer array
+  int *eicol;               // # of columns in each integer array (esize)
+
+  int ncustom_dvec;         // # of double vector attributes
+  int ncustom_darray;       // # of double array attributes
+  int *icustom_dvec;        // index into ncustom for each double vector
+  int *icustom_darray;      // index into ncustom for each double array
+  int *edcol;               // # of columns in each double array (esize)
+
+  int *custom_restart_flag; // flag on each custom vec/array read from restart
+                            // used to delete them if not redefined in
+                            // restart script
 
   // private methods
 

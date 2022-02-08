@@ -404,7 +404,7 @@ void ReadISurf::read_types_serial(char *typefile)
   int nxyz[3];
   FILE *fp;
 
-  int *buf;
+  uint8_t *buf = NULL ;
   memory->create(buf,CHUNK,"readisurf:buf");
 
   // proc 0 opens and reads binary file
@@ -439,8 +439,8 @@ void ReadISurf::read_types_serial(char *typefile)
     if (ntypes-nread > CHUNK) nchunk = CHUNK;
     else nchunk = ntypes-nread;
 
-    if (me == 0) fread(buf,sizeof(int),nchunk,fp);
-    MPI_Bcast(buf,nchunk,MPI_INT,0,world);
+    if (me == 0) fread(buf,sizeof(uint8_t),nchunk,fp);
+    MPI_Bcast(buf,nchunk,MPI_CHAR,0,world);
 
     assign_types(nchunk,nread,buf);
     nread += nchunk;
@@ -463,7 +463,7 @@ void ReadISurf::read_types_serial(char *typefile)
    use hash to see if I own grid cell corresponding to index (0 to N-1)
 ------------------------------------------------------------------------- */
 
-void ReadISurf::assign_types(int n, bigint offset, int *buf)
+void ReadISurf::assign_types(int n, bigint offset, uint8_t *buf)
 {
   int icell;
   bigint cellindex;

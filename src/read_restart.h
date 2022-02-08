@@ -86,6 +86,10 @@ E: Cannot read_restart after simulation box is defined
 The read_restart command cannot be used after a read_data,
 read_restart, or create_box command.
 
+E: Cannot (yet) use global mem/limit without % in restart file name
+
+This feature is not yet implemented.
+
 E: Cannot open restart file %s
 
 The specified file cannot be opened.  Check that the path and name are

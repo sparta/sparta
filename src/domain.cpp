@@ -80,6 +80,16 @@ void Domain::init()
   if (dimension == 2 && (bflag[ZLO] != PERIODIC || bflag[ZHI] != PERIODIC))
     error->all(FLERR,"Z dimension must be periodic for 2d simulation");
 
+  // check grid cutoff versus box size
+
+  int cutflag = 0;
+  if (bflag[0] == PERIODIC && grid->cutoff > xprd) cutflag = 1;
+  if (bflag[2] == PERIODIC && grid->cutoff > yprd) cutflag = 1;
+  if (dimension == 3 && bflag[4] == PERIODIC && grid->cutoff > zprd)
+    cutflag = 1;
+  if (cutflag) error->all(FLERR,"Grid cutoff is longer than "
+                          "box length in a periodic dimension");
+
   // check that every SURFACE boundary is assigned to a surf collision model
   // skip if caller turned off the check, e.g. BalanceGrid
 
@@ -89,13 +99,13 @@ void Domain::init()
         error->all(FLERR,"Box boundary not assigned a surf_collide ID");
   }
 
-  int cutflag = 0;
-  if (bflag[0] == PERIODIC && grid->cutoff > xprd) cutflag = 1;
-  if (bflag[2] == PERIODIC && grid->cutoff > yprd) cutflag = 1;
-  if (dimension == 3 && bflag[4] == PERIODIC && grid->cutoff > zprd)
-    cutflag = 1;
-  if (cutflag) error->all(FLERR,"Grid cutoff is longer than "
-                          "box length in a periodic dimension");
+  // if a SURFACE boundary is assigned a reaction model
+  // then its collision model must allow reactions
+
+  for (int i = 0; i < 2*dimension; i++)
+    if (surf_react[i] >= 0 && surf->sc[surf_collide[i]]->allowreact == 0)
+      error->all(FLERR,"Box face with reaction model, "
+                 "but collision model does not allow reactions");
 
   // surfreactany = 1 if any face has surface reactions assigned to it
 
@@ -348,11 +358,12 @@ int Domain::collide(Particle::OnePart *&ip, int face, int icell, double *xnew,
   // dtremain may be changed by collision model
   // reset all components of xnew, in case dtremain changed
   // if axisymmetric, caller will reset again, including xnew[2]
+  // pass -face to collide() to distinguish from surf element collision
 
   case SURFACE:
     {
       jp = surf->sc[surf_collide[face]]->
-        collide(ip,norm[face],dtremain,surf_react[face],reaction,-1);
+        collide(ip,dtremain,-(face+1),norm[face],surf_react[face],reaction);
 
       if (ip) {
         double *x = ip->x;

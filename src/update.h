@@ -38,7 +38,13 @@ class Update : protected Pointers {
   double nrho;           // number density of background gas
   double vstream[3];     // streaming velocity of background gas
   double temp_thermal;   // thermal temperature of background gas
-  double gravity[3];     // acceleration vector of gravity
+
+  int fstyle;            // external field: NOFIELD, CFIELD, PFIELD, GFIELD
+  double field[3];       // constant external field
+  char *fieldID;         // fix ID for PFIELD or GFIELD
+  int ifieldfix;         // index of external field fix
+  int *field_active;     // ptr to field_active flags in fix
+  int fieldfreq;         // update GFIELD every this many timsteps
 
   int nmigrate;          // # of particles to migrate to new procs
   int *mlist;            // indices of particles to migrate
@@ -81,6 +87,15 @@ class Update : protected Pointers {
 
   double rcblo[3],rcbhi[3];    // debug info from RCB for dump image
 
+  // this info accessed by SurfReactAdsorb to do on-surface reaction tallying
+
+  int nsurf_tally;         // # of Cmp tallying surf bounce info this step
+  int nboundary_tally;     // # of Cmp tallying boundary bounce info this step
+  class Compute **slist_active;   // list of active surf Computes this step
+  class Compute **blist_active;   // list of active boundary Computes this step
+
+  // public methods
+
   Update(class SPARTA *);
   ~Update();
   void set_units(const char *);
@@ -109,15 +124,11 @@ class Update : protected Pointers {
   class Compute **slist_compute;  // list of all surf bounce Computes
   class Compute **blist_compute;  // list of all boundary bounce Computes
 
-  int nsurf_tally;         // # of Cmp tallying surf bounce info this step
-  int nboundary_tally;     // # of Cmp tallying boundary bounce info this step
-  class Compute **slist_active;   // list of active surf Computes this step
-  class Compute **blist_active;   // list of active boundary Computes this step
-
   int surf_pre_tally;       // 1 to log particle stats before surf collide
   int boundary_pre_tally;   // 1 to log particle stats before boundary collide
 
   int collide_react_setup();
+  void collide_react_reset();
   void collide_react_update();
 
   int bounce_setup();
@@ -158,29 +169,34 @@ class Update : protected Pointers {
   template < int, int > void move();
 
   int perturbflag;
-  typedef void (Update::*FnPtr2)(double, double *, double *);
+  typedef void (Update::*FnPtr2)(int, int, double, double *, double *);
   FnPtr2 moveperturb;        // ptr to moveperturb method
 
   // variants of moveperturb method
   // adjust end-of-move x,v due to perturbation on straight-line advection
 
-  inline void gravity2d(double dt, double *x, double *v) {
+  inline void field2d(int i, int icell, double dt, double *x, double *v) {
     double dtsq = 0.5*dt*dt;
-    x[0] += dtsq*gravity[0];
-    x[1] += dtsq*gravity[1];
-    v[0] += dt*gravity[0];
-    v[1] += dt*gravity[1];
+    x[0] += dtsq*field[0];
+    x[1] += dtsq*field[1];
+    v[0] += dt*field[0];
+    v[1] += dt*field[1];
   };
 
-  inline void gravity3d(double dt, double *x, double *v) {
+  inline void field3d(int i, int icell, double dt, double *x, double *v) {
     double dtsq = 0.5*dt*dt;
-    x[0] += dtsq*gravity[0];
-    x[1] += dtsq*gravity[1];
-    x[2] += dtsq*gravity[2];
-    v[0] += dt*gravity[0];
-    v[1] += dt*gravity[1];
-    v[2] += dt*gravity[2];
+    x[0] += dtsq*field[0];
+    x[1] += dtsq*field[1];
+    x[2] += dtsq*field[2];
+    v[0] += dt*field[0];
+    v[1] += dt*field[1];
+    v[2] += dt*field[2];
   };
+
+  // NOTE: cannot be inline b/c ref to modify->fix[] is not supported
+  //       unless possibly include modify.h and fix.h in this file
+  void field_per_particle(int, int, double, double *, double *);
+  void field_per_grid(int, int, double, double *, double *);
 };
 
 }

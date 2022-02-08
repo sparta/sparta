@@ -49,7 +49,7 @@ class SurfCollidePistonKokkos : public SurfCollidePiston {
   KOKKOS_INLINE_FUNCTION
   Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, const double *norm, double &dtremain, int, int &) const
   {
-    Kokkos::atomic_fetch_add(&d_nsingle(),1);
+    Kokkos::atomic_increment(&d_nsingle());
 
     // if surface chemistry defined, attempt reaction
     // reaction > 0 if reaction took place

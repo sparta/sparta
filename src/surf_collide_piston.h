@@ -32,8 +32,8 @@ class SurfCollidePiston : public SurfCollide {
   SurfCollidePiston(class SPARTA *sparta) : SurfCollide(sparta) {}
   ~SurfCollidePiston() {}
   void init();
-  Particle::OnePart *collide(Particle::OnePart *&, double *, double &,
-                             int, int &, int);
+  Particle::OnePart *collide(Particle::OnePart *&, double &,
+                             int, double *, int, int &);
 
  protected:
   double vwall;

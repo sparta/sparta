@@ -16,7 +16,6 @@
 
 #include <Kokkos_Core.hpp>
 #include <Kokkos_DualView.hpp>
-#include <impl/Kokkos_Timer.hpp>
 #include <Kokkos_Vectorization.hpp>
 #include <Kokkos_ScatterView.hpp>
 
@@ -28,9 +27,16 @@
 #define MAX_TYPES_STACKPARAMS 12
 #define NeighClusterSize 8
 
-#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP)
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL) || defined(KOKKOS_ENABLE_OPENMPTARGET)
+
 #define SPARTA_KOKKOS_GPU
 #endif
+
+namespace Kokkos {
+  static auto NoInit = [](std::string const& label) {
+    return Kokkos::view_alloc(Kokkos::WithoutInitializing, label);
+  };
+}
 
   struct sparta_float3 {
     float x,y,z;
@@ -115,13 +121,32 @@ template<>
 struct ExecutionSpaceFromDevice<Kokkos::Cuda> {
   static const SPARTA_NS::ExecutionSpace space = SPARTA_NS::Device;
 };
-#endif
-
-#ifdef KOKKOS_ENABLE_HIP
+#elif defined(KOKKOS_ENABLE_HIP)
 template<>
 struct ExecutionSpaceFromDevice<Kokkos::Experimental::HIP> {
   static const SPARTA_NS::ExecutionSpace space = SPARTA_NS::Device;
 };
+#elif defined(KOKKOS_ENABLE_SYCL)
+template<>
+struct ExecutionSpaceFromDevice<Kokkos::Experimental::SYCL> {
+  static const SPARTA_NS::ExecutionSpace space = SPARTA_NS::Device;
+};
+#elif defined(KOKKOS_ENABLE_OPENMPTARGET)
+template<>
+struct ExecutionSpaceFromDevice<Kokkos::Experimental::OpenMPTarget> {
+  static const SPARTA_NS::ExecutionSpace space = SPARTA_NS::Device;
+};
+#endif
+
+// set host pinned space
+#if defined(KOKKOS_ENABLE_CUDA)
+typedef Kokkos::CudaHostPinnedSpace SPAPinnedHostType;
+#elif defined(KOKKOS_ENABLE_HIP)
+typedef Kokkos::Experimental::HIPHostPinnedSpace SPAPinnedHostType;
+#elif defined(KOKKOS_ENABLE_SYCL)
+typedef Kokkos::Experimental::SYCLHostUSMSpace SPAPinnedHostType;
+#elif defined(KOKKOS_ENABLE_OPENMPTARGET)
+typedef Kokkos::Serial SPAPinnedHostType;
 #endif
 
 // Determine memory traits for atomic arrays
@@ -157,9 +182,7 @@ template<>
 struct AtomicDup<-1,Kokkos::Cuda> {
   using value = Kokkos::Experimental::ScatterAtomic;
 };
-#endif
-
-#ifdef KOKKOS_ENABLE_HIP
+#elif defined(KOKKOS_ENABLE_HIP)
 template<>
 struct AtomicDup<1,Kokkos::Experimental::HIP> {
   using value = Kokkos::Experimental::ScatterAtomic;
@@ -167,6 +190,26 @@ struct AtomicDup<1,Kokkos::Experimental::HIP> {
 
 template<>
 struct AtomicDup<-1,Kokkos::Experimental::HIP> {
+  using value = Kokkos::Experimental::ScatterAtomic;
+};
+#elif defined(KOKKOS_ENABLE_SYCL)
+template<>
+struct AtomicDup<1,Kokkos::Experimental::SYCL> {
+  using value = Kokkos::Experimental::ScatterAtomic;
+};
+
+template<>
+struct AtomicDup<-1,Kokkos::Experimental::SYCL> {
+  using value = Kokkos::Experimental::ScatterAtomic;
+};
+#elif defined(KOKKOS_ENABLE_OPENMPTARGET)
+template<>
+struct AtomicDup<1,Kokkos::Experimental::OpenMPTarget> {
+  using value = Kokkos::Experimental::ScatterAtomic;
+};
+
+template<>
+struct AtomicDup<-1,Kokkos::Experimental::OpenMPTarget> {
   using value = Kokkos::Experimental::ScatterAtomic;
 };
 #endif
@@ -362,6 +405,11 @@ namespace SPARTA_NS {
     DualView<Particle::OnePart*, DeviceType::array_layout, DeviceType> tdual_particle_1d;
   typedef tdual_particle_1d::t_dev t_particle_1d;
   typedef tdual_particle_1d::t_host t_host_particle_1d;
+
+  typedef Kokkos::
+    DualView<Particle::OnePart**, DeviceType::array_layout, DeviceType> tdual_particle_2d;
+  typedef tdual_particle_2d::t_dev t_particle_2d;
+  typedef tdual_particle_2d::t_host t_host_particle_2d;
 
   typedef Kokkos::
     DualView<Particle::Species*, DeviceType::array_layout, DeviceType> tdual_species_1d;

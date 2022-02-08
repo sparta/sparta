@@ -29,6 +29,7 @@
 
 <PRE>  computeID = c_ID or c_ID[n] for a compute that calculates per grid cell values
   fixID = f_ID or f_ID[n] for a fix that calculates per grid cell values
+  v_name = per-grid vector calculated by a grid-style variable with name
   random = perform a random decrement 
 </PRE>
 <LI>maxrandom = maximum per grid cell decrement as an integer (only specified if source = random) 
@@ -86,14 +87,25 @@ a value of 0 is void (flow volume for particles).  Values in between
 represent partially ablated material.
 </P>
 <P>The <I>source</I> can be specified as a per grid cell quantity calculated
-by a compute, such as <A HREF = "compute_isurf_grid.html">compute isurf/grid</A>,
-e.g. the number of collisions of particles with the surfaces in each
-grid cell or the amount of energy transferred to the surface by the
-collisions.  It can also be specified a per grid cell quantity
-calculated by a fix, such as <A HREF = "fix_ave_grid.html">fix ave/grid</A>.  That
-fix could time average per-grid cell quantities from per grid cell
-computes.  In that case the <I>scale</I> factor should account for applying
-a time-averaged quantity at an interval of <I>N</I> steps.
+by a compute, fix, or variable.  For example, <A HREF = "compute_isurf_grid.html">compute
+isurf/grid</A> can tally the number of collisions
+of particles with the surfaces in each grid cell or the amount of
+energy transferred to the surface by the collisions.  Or <A HREF = "compute_isurf_grid.html">compute
+react/isurf/grid</A> can tally the number of
+reactions that remove a species from the surface.
+</P>
+<P>An example of a fix which be used as a <I>source</I> is <A HREF = "fix_ave_grid.html">fix
+ave/grid</A> which could use either of those per grid
+cell computes as input.  It could thus accumulate and time average the
+same quantities over many timesteps.  In that case the <I>scale</I> factor
+should account for applying a time-averaged quantity at an interval of
+<I>N</I> steps.  
+</P>
+<P>Finally, a grid-style variable can be be used as a <I>source</I>.  This
+could perform a calculation on other per grid cell quantities.  For
+example, it could add and subtract columns from the compute or fix
+just mentioned to tally adsorption versus desorption reactions and
+thus infer net mass removed from the surface.
 </P>
 <P>For debugging purposes, the <I>source</I> can also be specified as <I>random</I>
 with an additional integer <I>maxrandom</I> value also specified.  In this
