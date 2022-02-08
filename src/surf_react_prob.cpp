@@ -407,7 +407,7 @@ void SurfReactProb::readfile(char *fname)
     if (word[0] == 'S' || word[0] == 's') r->style = SIMPLE;
     else error->all(FLERR,"Invalid reaction style in file");
 
-    if (r->style == SIMPLE) r->ncoeff = 1;
+    if (r->style == SIMPLE) r->ncoeff = 2;
 
     for (int i = 0; i < r->ncoeff; i++) {
       word = strtok(NULL," \t\n");
