@@ -49,7 +49,7 @@ args = arguments for specific style :l
   {transparent} args = none :pre
   {vanish} or {vanish/kk} args = none :pre
 zero or more keyword/arg pairs may be appended :l
-keyword = {translate} or {rotate} or {partial} :l
+keyword = {translate} or {rotate} or {partial} or {barrier} or {bond} or {init_energy} or {step} or {double} or {intenergy} :l
 values = values for specific keyword :l
   {translate} args = Vx Vy Vz
     Vx,Vy,Vz = translational velocity of surface (velocity units)
@@ -546,7 +546,6 @@ twice in the same input script (active at the same time).
 :link(Bird94)
 [(Bird94)] G. A. Bird, Molecular Gas Dynamics and the Direct
 Simulation of Gas Flows, Clarendon Press, Oxford (1994).
-<<<<<<< HEAD
 
 :link(Cercignani71)
 [(Cercignani71)] Cercignani C, Lampis M, Kinetic models for

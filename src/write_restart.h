@@ -84,6 +84,10 @@ Self-explanatory.  Check the input script syntax and compare to the
 documentation for the command.  You can use -echo screen as a
 command-line option when running SPARTA to see the offending line.
 
+E: Cannot (yet) use global mem/limit without % in restart file name
+
+This feature is not yet implemented.
+
 E: Cannot use write_restart fileper without % in restart file name
 
 Self-explanatory.

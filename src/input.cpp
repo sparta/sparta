@@ -686,6 +686,7 @@ int Input::execute_command()
   else if (!strcmp(command,"restart")) restart();
   else if (!strcmp(command,"seed")) seed();
   else if (!strcmp(command,"species")) species();
+  else if (!strcmp(command,"species_modify")) species_modify();
   else if (!strcmp(command,"stats")) stats();
   else if (!strcmp(command,"stats_modify")) stats_modify();
   else if (!strcmp(command,"stats_style")) stats_style();
@@ -1414,6 +1415,13 @@ void Input::species()
 
 /* ---------------------------------------------------------------------- */
 
+void Input::species_modify()
+{
+  particle->species_modify(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
 void Input::stats()
 {
   output->set_stats(narg,arg);
@@ -1637,5 +1645,3 @@ int Input::count_words(char *line)
   memory->sfree(copy);
   return n;
 }
-
-

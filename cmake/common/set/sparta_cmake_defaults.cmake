@@ -24,6 +24,7 @@ if(SPARTA_ENABLE_TESTING)
       "vibrate"
       "surf_collide"
       "surf"
+      "surf_react_adsorb"
       "step"
       "spiky"
       "sphere"
@@ -38,7 +39,9 @@ if(SPARTA_ENABLE_TESTING)
       "axi"
       "ambi"
       "relax_const"
-      "relax_variable")
+      "relax_variable"
+      "thermostat"
+      "bfield")
 
   set(SPARTA_DISABLED_TESTS
       "in.ablation.3d.reactions" # Failing

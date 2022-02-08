@@ -11,13 +11,15 @@
 
 <H3>surf_react command 
 </H3>
+<H3><A HREF = "surf_react_adsorb.html">surf_react adsorb</A> command 
+</H3>
 <P><B>Syntax:</B>
 </P>
 <PRE>surf_react ID style args 
 </PRE>
 <UL><LI>ID = user-assigned name for the surface reaction model 
 
-<LI>style = <I>global</I> or <I>prob</I> 
+<LI>style = <I>global</I> or <I>prob</I> or <I>adsorb</I> 
 
 <LI>args = arguments for that style 
 
@@ -26,41 +28,60 @@
     pcreate = probability that surface collision clones the incident particle
   <I>prob</I> args = infile
     infile = file with list of surface chemistry reactions 
+  <I>adsorb</I> args = model infile(s) n=Nsync type temp n_sites adsp1 adsp2 ...
+    model = <I>gs</I> or <I>ps</I> or <I>gs/ps</I>
+      gs = gas-surface reactions
+      ps = pure-surface reactions
+      gs/ps = both gas-surface and pure-surface reactions
+    infile(s) = file(s) with list of surface chemistry reactions
+                one file for model gs or ps
+                two files for model gs/ps, gs first, ps second
+    Nsync = perform PS reactions and sync across processors every this many timesteps
+    type = <I>face</I> or <I>surf</I>
+      face = domain boundary treated as a surface
+      surf = surface elements = triangles in 3d, lines in 2d 
+    temp = temperature of the surface
+    n_sites = # of available adsorption sites per unit area (3D) or length (2D)
+    adsp1,adsp2,... = list of species that can adsorb on surface 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>surf_react 1 global 0.2 0.15
-surf_react 1 prob air.surf 
+<PRE>surf_react global 0.2 0.15
+surf_react prob air.surf  
+surf_react adsorb gs gs_react.surf nsync 10 surf 1000 6.022e18 O CO
+surf_react adsorb gs/ps gs_react.surf ps_react.surf nsync 1 face 300 3e9 O 
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Define a model for surface chemistry reactions to perform when
+<P>Define a model for surface chemistry reactions occurring when
 particles collide with surface elements or the global boundaries of
-the simulation box.  One or more models can be defined and assigned to
-different surfaces or simulation box boundaries via the
-<A HREF = "surf_modify.html">surf_modify</A> or <A HREF = "bound_modify.html">bound_modify</A>
-commands.  See <A HREF = "Section_howto.html#howto_9">Section 6.9</A> for more
-details of how SPARTA defines surfaces as collections of geometric
-elements, triangles in 3d and line segments in 2d.  Also see the
-<A HREF = "react.html">react</A> command for specification of a gas-phase chemistry
-reaction model.
+the simulation box.  The <I>asorb</I> model also has an option to encode
+chemical reactions that can occur on the surface itself.  
+</P>
+<P>One or more models can be defined and assigned to different surfaces
+or simulation box boundaries via the <A HREF = "surf_modify.html">surf_modify</A> or
+<A HREF = "bound_modify.html">bound_modify</A> commands.  See <A HREF = "Section_howto.html#howto_9">Section
+6.9</A> for more details of how SPARTA defines
+surfaces as collections of geometric elements, triangles in 3d and
+line segments in 2d.  Also see the <A HREF = "react.html">react</A> command for
+specification of a gas-phase chemistry reaction model.
 </P>
 <P>The ID for a surface reaction model is used to identify it in other
 commands.  Each surface reaction model ID must be unique.  The ID can
 only contain alphanumeric characters and underscores.
 </P>
-<P>The surface reaction models for the various styles are described
-below.  When a a particle collides with a surface element or boundary.
-the list of all reactions possible with that species as the reactant
-is looped over.  A probability for each reaction is calculated, using
-the formulas discussed below, and a random number is used to decide
-which reaction (if any) takes place.  A check is made that the sum of
+<P>The surface reaction models for the different styles are described
+below.  When a a particle collides with a surface element or boundary,
+the list of all reactions possible with that species as a reactant is
+looped over.  A probability for each reaction is calculated, using the
+formulas discussed below, and a random number is used to decide which
+reaction (if any) takes place.  A check is made that the sum of
 probabilities for all possible reactions is <= 1.0, which should
 normally be the case if reasonable reaction coefficients are defined.
 </P>
-<P>IMPORTANT NOTE: A surface reaction model can not be specified for
+<P>IMPORTANT NOTE: A surface reaction model cannot be specified for
 surfaces whose surface collision style does not support reactions.
 Currently this is only the <I>vanish</I> collision style.  See the
 <A HREF = "surf_collide.html">surf_collide</A> doc page for details.
@@ -159,6 +180,19 @@ C2, etc, and how they are interpreted by SPARTA.
 </UL>
 <HR>
 
+<P>For the <I>adsorb</I> style, gas particles can adsorb on the surface.
+Adsorbed particles can then undergo reactions with other adsorbed
+particles as well as with new gas-phase particles that strike the
+surface.  Each surface element stores its "state" for the counts of
+different particle species currently adsorbed on the element, which
+alters the probablity for future reactions to take place.
+</P>
+<P>A detailed description of the <I>adsorb</I> style and the list of reactions
+it supports is given on a separate
+<A HREF = "surf_react_adsorb.html">surf_react_adsorb</A> doc page.
+</P>
+<HR>
+
 <P>If the ambipolar approximation is being used, via the <A HREF = "fix_ambipolar.hmtl">fix
 ambipolar</A> command, then reactions which involve
 either ambipolar ions or the ambipolar electron have more restricitve
@@ -190,10 +224,12 @@ e.g. "the <A HREF = "fix_ave_time.html">fix ave/time</A> command.  See <A HREF =
 4.4</A> for an overview of SPARTA output
 options.
 </P>
-<P>The <I>global</I> and <I>prob</I> styles each compute a vector of length 2 +
-2*nlist.  For the <I>global</I> style, nlist = 2, for "delete" and "create"
-reactions.  For the <I>prob</I> style, nlist is the number of reactions
-listed in the file is read as input.
+<P>The <I>global</I>, <I>prob</I>, and <I>adsorb</I> styles each compute a vector of
+length 2 + 2*nlist.  For the <I>global</I> style, nlist = 2, for "delete"
+and "create" reactions.  For the <I>prob</I> style, nlist is the number of
+reactions listed in the file is read as input.  For the <I>adsorb</I>
+style, nlist is the sum of both the gas-surface and pure-surface
+reactions listed in the file(s) read as input.
 </P>
 <P>The first element of the vector is the count of particles that
 performed surface reactions for surface elements assigned to this
@@ -211,7 +247,8 @@ reaction since the beginning of the current run.
 <P><B>Related commands:</B>
 </P>
 <P><A HREF = "react.html">react</A>, <A HREF = "surf_modify.html">surf_modify</A>,
-<A HREF = "bound_modify.html">bound_modify</A>
+<A HREF = "bound_modify.html">bound_modify</A>,
+<A HREF = "surf_react_adsorb.html">surf_react_adsorb</A>
 </P>
 <P><B>Default:</B> none
 </P>

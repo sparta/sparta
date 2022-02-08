@@ -24,6 +24,8 @@ SurfCollideVanish::SurfCollideVanish(SPARTA *sparta, int narg, char **arg) :
   SurfCollide(sparta, narg, arg)
 {
   if (narg != 2) error->all(FLERR,"Illegal surf_collide vanish command");
+
+  allowreact = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -36,7 +38,7 @@ SurfCollideVanish::SurfCollideVanish(SPARTA *sparta, int narg, char **arg) :
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideVanish::
-collide(Particle::OnePart *&ip, double *, double &, int, int &reaction)
+collide(Particle::OnePart *&ip, double &, int, double *, int, int &)
 {
   nsingle++;
 
