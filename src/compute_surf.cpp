@@ -454,7 +454,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
         vec[k++] += 0.0;
       else {
         r_coeff = sr->reaction_coeff(reaction-1);
-        vec[k++] += r_coeff * fluxscale;
+        vec[k++] += weight * r_coeff * fluxscale;
       }
       break;
     case ETOT:
