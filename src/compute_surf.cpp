@@ -15,6 +15,7 @@
 #include "string.h"
 #include "compute_surf.h"
 #include "surf_react.h"
+#include "style_surf_react.h"
 #include "particle.h"
 #include "mixture.h"
 #include "surf.h"
@@ -237,8 +238,6 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
   // if 1st particle hitting isurf, add surf ID to hash
   // grow tally list if needed
 
-  SurfReact::OneReaction *r,*rlist;
-
   int itally,transparent,isr;
   double *vec;
 
@@ -252,6 +251,9 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
     transparent = tris[isurf].transparent;
     isr = tris[isurf].isr;
   }
+
+  double r_coeff;
+  SurfReact *sr = surf->sr[isr];
 
   if (hash->find(surfID) != hash->end()) itally = (*hash)[surfID];
   else {
@@ -451,8 +453,8 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       if (transparent || (reaction < 1))
         vec[k++] += 0.0;
       else {
-        r = &surf->sr[isr]->rlist[reaction-1];
-        vec[k++] += weight * r->coeff[1] * fluxscale;
+        r_coeff = sr->reaction_coeff(reaction-1);
+        vec[k++] += r_coeff * fluxscale;
       }
       break;
     case ETOT:
@@ -472,8 +474,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
         etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
           weight * (iother + jother - otherpre);
         if (reaction) {
-          r = &surf->sr[isr]->rlist[reaction-1];
-          etot -= weight * r->coeff[1];
+          etot -= weight * r_coeff;
         }
       }
       vec[k++] -= etot * fluxscale;

@@ -181,6 +181,13 @@ char *SurfReactProb::reactionID(int m)
 
 /* ---------------------------------------------------------------------- */
 
+double SurfReactProb::reaction_coeff(int m)
+{
+  return rlist[m].coeff[1];
+}
+
+/* ---------------------------------------------------------------------- */
+
 int SurfReactProb::match_reactant(char *species, int m)
 {
   for (int i = 0; i < rlist[m].nreactant; i++)

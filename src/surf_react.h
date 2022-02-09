@@ -29,29 +29,13 @@ class SurfReact : protected Pointers {
   int vector_flag;          // 0/1 if compute_vector() function exists
   int size_vector;          // length of global vector
 
-  // reaction info, as read from file
-
-  struct OneReaction {
-    int active;                    // 1 if reaction is active
-    int type;                      // reaction type = DISSOCIATION, etc
-    int style;                     // reaction style = ARRHENIUS, etc
-    int ncoeff;                    // # of numerical coeffs
-    int nreactant,nproduct;        // # of reactants and products
-    char **id_reactants,**id_products;  // species IDs of reactants/products
-    int *reactants,*products;      // species indices of reactants/products
-    double *coeff;                 // numerical coeffs for reaction
-    char *id;                      // reaction ID (formula)
-  };
-
-  OneReaction *rlist;              // list of all reactions read from file
-  int maxlist;                     // max # of reactions in rlist
-
   SurfReact(class SPARTA *, int, char **);
   virtual ~SurfReact();
   virtual void init();
   virtual int react(Particle::OnePart *&, int, double *,
                     Particle::OnePart *&, int &) = 0;
   virtual char *reactionID(int) = 0;
+  virtual double reaction_coeff(int) = 0;
   virtual int match_reactant(char *, int) = 0;
   virtual int match_product(char *, int) = 0;
 
