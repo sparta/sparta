@@ -1,0 +1,13 @@
+# VSS collision model parameters for each species
+
+# diameter (mass)
+# omega (unitless)
+# tref (temperature)
+# alpha (unitless)
+# Zrotinf (unitless)
+# T* (temperature)
+# C1 (temperature)
+# C2 (temperature^(1/3))
+
+CO2  5.62E-10    0.8   273.0   1.0   18.1 91.5 25.48 177.98
+N2   4.07E-10    0.74  273.15  1.6   18.1 91.5 9.1 220.0
