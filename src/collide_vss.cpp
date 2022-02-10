@@ -810,14 +810,16 @@ double CollideVSS::rotrel(int isp, double Ec)
   // Because we are only relaxing one of the particles in each call, we only
   //  include its DoF, consistent with Bird 2013 (3.32)
 
-  double Tr = Ec /(update->boltz * (2.5-params[isp][isp].omega + particle->species[isp].rotdof/2.0));
+  double Tr = Ec /(update->boltz *
+                   (2.5-params[isp][isp].omega +
+                    particle->species[isp].rotdof/2.0));
   return rotrel_T( isp, Tr );
 }
 
 double CollideVSS::rotrel_T(int isp, double T)
 {
-  double rotphi = (1.0+params[isp][isp].rotc2/sqrt(T) + params[isp][isp].rotc3/T)
-                / params[isp][isp].rotc1;
+  double rotphi = (1.0+params[isp][isp].rotc2/sqrt(T) +
+                   params[isp][isp].rotc3/T) / params[isp][isp].rotc1;
   return rotphi;
 }
 
