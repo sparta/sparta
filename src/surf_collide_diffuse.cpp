@@ -108,13 +108,13 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
   if (distributed && !implicit) {
     lines = surf->mylines;
     tris = surf->mytris;
-    nsurf = surf->nown;
   }
   else {
     lines = surf->lines;
     tris = surf->tris;
-    nsurf = surf->nlocal;
   }
+
+  nlocal = surf->nlocal;
 
   // initialize RNG
 
@@ -150,7 +150,7 @@ void SurfCollideDiffuse::init()
   }
 
   if (!implicit) {
-    for (int i = 0; i < nsurf; i++) {
+    for (int i = 0; i < nlocal; i++) {
       if (domain->dimension == 2) lines[i].temp = twall;
       else tris[i].temp = twall;
     }
@@ -264,7 +264,7 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm, int jsurf)
     Particle::Species *species = particle->species;
     int ispecies = p->ispecies;
 
-    if ((jsurf > -1) && !implicit) {
+    if (jsurf > -1 && !implicit) {
       if (domain->dimension == 2) twall = lines[jsurf].temp;
       else twall = tris[jsurf].temp;
     }
