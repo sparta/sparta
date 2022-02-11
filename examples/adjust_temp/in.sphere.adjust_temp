@@ -1,11 +1,11 @@
 # hypersonic flow around a 3D sphere
 # non-reacting argon flow
 # grid adptation
-# diffuse surface with temperature adjustment
+# diffuse surface with constant temperature
 
 seed	    	    12345
 dimension   	    3
-global		    nrho 4.247e19 fnum 2e13 gridcut 0.01 comm/style all
+global		    nrho 4.247e19 fnum 2e13 gridcut 0.01 comm/sort yes
 timestep            3.5e-7
 
 boundary	    o ro ro

@@ -5,7 +5,7 @@
 
 seed	    	    12345
 dimension   	    3
-global		    nrho 4.247e19 fnum 2e13 gridcut 0.01 comm/style all surfs explicit/distributed
+global		    nrho 4.247e19 fnum 2e13 gridcut 0.01 comm/sort yes surfs explicit/distributed
 timestep            3.5e-7
 
 boundary	    o ro ro
@@ -19,7 +19,7 @@ collide             vss all ar.vss
 collide_modify      vremax 1000 yes
 
 read_surf	    sphere.surf clip group 1
- 
+
 compute             1 surf all all etot
 fix                 1 ave/surf all 1 250 250 c_1[*] ave one
 fix                 2 surf/temp all 250 f_1[*] 100 0.9

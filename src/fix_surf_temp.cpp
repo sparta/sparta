@@ -103,14 +103,15 @@ FixSurfTemp::FixSurfTemp(SPARTA *sparta, int narg, char **arg) :
   if (distributed && !implicit) {
     lines = surf->mylines;
     tris = surf->mytris;
+    nsurf = surf->nown;
   }
   else {
     lines = surf->lines;
     tris = surf->tris;
+    nsurf = surf->nlocal;
   }
 
   nown = surf->nown;
-  nlocal = surf->nlocal;
 
   dimension = domain->dimension;
   firstflag = 1;
@@ -194,9 +195,9 @@ void FixSurfTemp::init()
     }
   }
 
-  memory->create(qw,nlocal,"fix surf temp:init");
-  memory->create(qw_all,nlocal,"fix surf temp:init");
-  for (int i = 0; i < nlocal; i++) qw[i] = qw_all[i] = 0.0;
+  memory->create(qw,nsurf,"fix surf temp:init");
+  memory->create(qw_all,nsurf,"fix surf temp:init");
+  for (int i = 0; i < nsurf; i++) qw[i] = qw_all[i] = 0.0;
 }
 
 /* ----------------------------------------------------------------------
@@ -217,14 +218,14 @@ void FixSurfTemp::end_of_step()
       qw[cglobal[i]] = array[clocal[i]][index];
   }
 
-  MPI_Allreduce(qw,qw_all,nlocal,MPI_DOUBLE,MPI_SUM,world);
+  MPI_Allreduce(qw,qw_all,nsurf,MPI_DOUBLE,MPI_SUM,world);
 
   for (int i = 0; i < nchoose; i++) {
     if (dimension == 2) {
-        if (qw_all[cglobal[i]] > 1.0) lines[cglobal[i]].temp = pow((prefactor * qw_all[cglobal[i]]),0.25);
+        if (qw_all[cglobal[i]] > 1.0e-6) lines[cglobal[i]].temp = pow((prefactor * qw_all[cglobal[i]]),0.25);
         else lines[cglobal[i]].temp = twall;
     } else {
-        if (qw_all[cglobal[i]] > 1.0) tris[cglobal[i]].temp = pow((prefactor * qw_all[cglobal[i]]),0.25);
+        if (qw_all[cglobal[i]] > 1.0e-6) tris[cglobal[i]].temp = pow((prefactor * qw_all[cglobal[i]]),0.25);
         else tris[cglobal[i]].temp = twall;
     }
   }

@@ -108,13 +108,13 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
   if (distributed && !implicit) {
     lines = surf->mylines;
     tris = surf->mytris;
+    nsurf = surf->nown;
   }
   else {
     lines = surf->lines;
     tris = surf->tris;
+    nsurf = surf->nlocal;
   }
-
-  nlocal = surf->nlocal;
 
   // initialize RNG
 
@@ -149,11 +149,9 @@ void SurfCollideDiffuse::init()
       error->all(FLERR,"Surf_collide diffuse variable is invalid style");
   }
 
-  if (!distributed && !implicit) {
-    for (int i = 0; i < nlocal; i++) {
-      if (domain->dimension == 2) lines[i].temp = twall;
-      else tris[i].temp = twall;
-    }
+  for (int i = 0; i < nsurf; i++) {
+    if (domain->dimension == 2) lines[i].temp = twall;
+    else tris[i].temp = twall;
   }
 }
 

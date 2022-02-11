@@ -51,7 +51,7 @@ class FixSurfTemp : public Fix {
   int groupbit;              // mask for surface group
   int nown;                  // # of surf elements owned by this proc
   int nchoose;               // # of surf elements output by this proc
-  int nlocal;                // surf->nlocal
+  int nsurf;                 // nown or nlocal
   int *cglobal;              // indices of global elements for nchoose
   int *clocal;               // indices of local owned elements for nchoose
 };
