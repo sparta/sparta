@@ -149,7 +149,7 @@ void SurfCollideDiffuse::init()
       error->all(FLERR,"Surf_collide diffuse variable is invalid style");
   }
 
-  if (!implicit) {
+  if (!distributed && !implicit) {
     for (int i = 0; i < nlocal; i++) {
       if (domain->dimension == 2) lines[i].temp = twall;
       else tris[i].temp = twall;
@@ -196,7 +196,7 @@ collide(Particle::OnePart *&ip, double &,
   //   to update per-particle properties which depend on
   //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 
-  if (isurf > -1 && !implicit) {
+  if (isurf > -1 && !distributed && !implicit) {
       if (domain->dimension == 2) twall = lines[isurf].temp;
       else twall = tris[isurf].temp;
   }
@@ -264,7 +264,7 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm, int jsurf)
     Particle::Species *species = particle->species;
     int ispecies = p->ispecies;
 
-    if (jsurf > -1 && !implicit) {
+    if (jsurf > -1 && !distributed && !implicit) {
       if (domain->dimension == 2) twall = lines[jsurf].temp;
       else twall = tris[jsurf].temp;
     }
