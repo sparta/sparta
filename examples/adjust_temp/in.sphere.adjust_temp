@@ -19,7 +19,7 @@ collide             vss all ar.vss
 collide_modify      vremax 1000 yes
 
 read_surf	    sphere.surf clip group 1
- 
+
 compute             1 surf all all etot
 fix                 1 ave/surf all 1 250 250 c_1[*] ave one
 fix                 2 surf/temp all 250 f_1[*] 100 0.9

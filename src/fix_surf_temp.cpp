@@ -224,7 +224,7 @@ void FixSurfTemp::end_of_step()
         if (qw_all[cglobal[i]] > 1.0) lines[cglobal[i]].temp = pow((prefactor * qw_all[cglobal[i]]),0.25);
         else lines[cglobal[i]].temp = twall;
     } else {
-        if (qw_all[i] > 1.0) tris[cglobal[cglobal[i]]].temp = pow((prefactor * qw_all[cglobal[i]]),0.25);
+        if (qw_all[cglobal[i]] > 1.0) tris[cglobal[i]].temp = pow((prefactor * qw_all[cglobal[i]]),0.25);
         else tris[cglobal[i]].temp = twall;
     }
   }
