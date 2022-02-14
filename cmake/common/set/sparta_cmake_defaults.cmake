@@ -41,7 +41,7 @@ if(SPARTA_ENABLE_TESTING)
       "relax_const"
       "relax_variable"
       "relax_cell_temp"
-      "relax_cell_temp_var")
+      "relax_cell_temp_var"
       "thermostat"
       "bfield")
 
