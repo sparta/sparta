@@ -36,8 +36,8 @@ using namespace SPARTA_NS;
 
 enum{NONE,DISCRETE,SMOOTH};       // several files  (NOTE: change order)
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
-enum{CONSTANT,VARIABLE};      // several files
-enum{COLLISION,CELL};                  // several files
+enum{CONSTANT,VARIABLE};          // several files
+enum{COLLISION,CELL};             // several files
 enum{T_COMP,T_VAR};
 
 #define DELTAGRID 1000            // must be bigger than split cells per cell
@@ -431,7 +431,7 @@ void Collide::collisions()
 
   if (relaxTflag == CELL) {
     if (T_type == T_COMP) {
-      int icompute = modify->find_compute( T_name );
+      int icompute = modify->find_compute(T_name);
       modify->compute[icompute]->compute_per_grid();
       modify->compute[icompute]->post_process_grid(1, 1, NULL, NULL, NULL, 1);
       if (!(modify->compute[icompute]->invoked_flag & INVOKED_PER_GRID)) {
@@ -445,8 +445,8 @@ void Collide::collisions()
         memory->create(vartemp,maxgrid,"collide:vartemp");
       }
 
-      int ivariable = input->variable->find( T_name );
-      input->variable->compute_grid( ivariable, vartemp, 1, 0);
+      int ivariable = input->variable->find(T_name);
+      input->variable->compute_grid(ivariable, vartemp, 1, 0);
     } else error->all(FLERR,"Illegal collide command");
   }
 
@@ -506,7 +506,7 @@ template < int NEARCP > void Collide::collisions_one()
     double T = 0.0;
     if (relaxTflag == CELL) {
       if (T_type == T_COMP) {
-        int icompute = modify->find_compute( T_name );
+        int icompute = modify->find_compute(T_name);
         T = modify->compute[icompute]->vector_grid[icell];
       } else if (T_type == T_VAR) {
         T = vartemp[icell];
@@ -661,7 +661,7 @@ template < int NEARCP > void Collide::collisions_group()
     double T = 0.0;
     if (relaxTflag == CELL) {
       if (T_type == T_COMP) {
-        int icompute = modify->find_compute( T_name );
+        int icompute = modify->find_compute(T_name);
         T = modify->compute[icompute]->vector_grid[icell];
       } else if (T_type == T_VAR) {
         T = vartemp[icell];
@@ -944,7 +944,7 @@ void Collide::collisions_one_ambipolar()
     double T = 0.0;
     if (relaxTflag == CELL) {
       if (T_type == T_COMP) {
-        int icompute = modify->find_compute( T_name );
+        int icompute = modify->find_compute(T_name);
         T = modify->compute[icompute]->vector_grid[icell];
       } else if (T_type == T_VAR) {
         T = vartemp[icell];
@@ -1249,7 +1249,7 @@ void Collide::collisions_group_ambipolar()
     double T = 0.0;
     if (relaxTflag == CELL) {
       if (T_type == T_COMP) {
-        int icompute = modify->find_compute( T_name );
+        int icompute = modify->find_compute(T_name);
         T = modify->compute[icompute]->vector_grid[icell];
       } else if (T_type == T_VAR) {
         T = vartemp[icell];

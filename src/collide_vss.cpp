@@ -35,7 +35,7 @@ using namespace MathConst;
 enum{NONE,DISCRETE,SMOOTH};            // several files
 enum{CONSTANT,VARIABLE};
 enum{COLLISION,CELL};                  // several files
-enum{T_COMP,T_VAR};                    // several files, we can't use COMPUTE, 
+enum{T_COMP,T_VAR};                    // several files, we can't use COMPUTE,
                                        // FIX,VARIABLE like in other files due
                                        // to a conflict with the above enum
 
@@ -415,15 +415,15 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
     vrc[2] = vi[2]-vj[2];
     double d = sqrt(vrc[1]*vrc[1]+vrc[2]*vrc[2]);
     if (d > 1.0e-6) {
-      ua = scale * ( cosX*vrc[0] + sinX*d*sin(eps) );
-      vb = scale * ( cosX*vrc[1] + sinX*(precoln.vr*vrc[2]*cos(eps) -
-                                         vrc[0]*vrc[1]*sin(eps))/d );
-      wc = scale * ( cosX*vrc[2] - sinX*(precoln.vr*vrc[1]*cos(eps) +
-                                         vrc[0]*vrc[2]*sin(eps))/d );
+      ua = scale * (cosX*vrc[0] + sinX*d*sin(eps));
+      vb = scale * (cosX*vrc[1] + sinX*(precoln.vr*vrc[2]*cos(eps) -
+                                         vrc[0]*vrc[1]*sin(eps))/d);
+      wc = scale * (cosX*vrc[2] - sinX*(precoln.vr*vrc[1]*cos(eps) +
+                                         vrc[0]*vrc[2]*sin(eps))/d);
     } else {
-      ua = scale * ( cosX*vrc[0] );
-      vb = scale * ( sinX*vrc[0]*cos(eps) );
-      wc = scale * ( sinX*vrc[0]*sin(eps) );
+      ua = scale * (cosX*vrc[0]);
+      vb = scale * (sinX*vrc[0]*cos(eps));
+      wc = scale * (sinX*vrc[0]*sin(eps));
     }
   }
 
@@ -624,7 +624,7 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
     vrc[1] = vi[1]-vj[1];
     vrc[2] = vi[2]-vj[2];
     double d = sqrt(vrc[1]*vrc[1]+vrc[2]*vrc[2]);
-    if (d > 1.E-6 ) {
+    if (d > 1.E-6) {
       ua = scale * (cosX*vrc[0] + sinX*d*sin(eps));
       vb = scale * (cosX*vrc[1] + sinX*(precoln.vr*vrc[2]*cos(eps) -
                                         vrc[0]*vrc[1]*sin(eps))/d);
@@ -813,7 +813,7 @@ double CollideVSS::rotrel(int isp, double Ec)
   double Tr = Ec /(update->boltz *
                    (2.5-params[isp][isp].omega +
                     particle->species[isp].rotdof/2.0));
-  return rotrel_T( isp, Tr );
+  return rotrel_T(isp, Tr);
 }
 
 double CollideVSS::rotrel_T(int isp, double T)
@@ -836,7 +836,7 @@ double CollideVSS::vibrel(int isp, double Ec)
 double CollideVSS::vibrel_T(int isp, double T)
 {
   double omega = params[isp][isp].omega;
-  double vibphi = 1.0 / (params[isp][isp].vibc1/pow(T,omega) * 
+  double vibphi = 1.0 / (params[isp][isp].vibc1/pow(T,omega) *
                          exp(params[isp][isp].vibc2/pow(T,1.0/3.0)));
   return vibphi;
 }
@@ -862,7 +862,7 @@ void CollideVSS::read_param_file(char *fname)
 
   for (int i = 0; i < nparams; i++) {
     params[i][i].diam = -1.0;
-    for ( int j = i+1; j<nparams; j++) {
+    for (int j = i+1; j<nparams; j++) {
       params[i][j].diam = params[i][j].omega = params[i][j].tref = -1.0;
       params[i][j].alpha = params[i][j].rotc1 = params[i][j].rotc2 = -1.0;
       params[i][j].rotc3 = params[i][j].vibc1 = params[i][j].vibc2 = -1.0;
@@ -894,9 +894,9 @@ void CollideVSS::read_param_file(char *fname)
 
     // if we don't match a species with second word, but it's not a number,
     // skip the line (it involves a species we aren't using)
-    if ( jsp < 0 &&  !(atof(words[1]) > 0) ) continue;
+    if (jsp < 0 &&  !(atof(words[1]) > 0)) continue;
 
-    if (jsp < 0 ) {
+    if (jsp < 0) {
       params[isp][isp].diam = atof(words[1]);
       params[isp][isp].omega = atof(words[2]);
       params[isp][isp].tref = atof(words[3]);
@@ -944,9 +944,9 @@ void CollideVSS::read_param_file(char *fname)
     }
   }
 
-  for ( int i = 0; i<nparams; i++) {
+  for (int i = 0; i<nparams; i++) {
     params[i][i].mr = particle->species[i].mass / 2;
-    for ( int j = i+1; j<nparams; j++) {
+    for (int j = i+1; j<nparams; j++) {
       params[i][j].mr = params[j][i].mr = particle->species[i].mass *
 	particle->species[j].mass / (particle->species[i].mass + particle->species[j].mass);
 
