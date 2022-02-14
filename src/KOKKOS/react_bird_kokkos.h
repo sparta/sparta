@@ -34,18 +34,21 @@ class ReactBirdKokkos : public ReactBird {
 #ifdef SPARTA_KOKKOS_EXACT
                                           , sparta
 #endif
-                                          ) {};
+                                          ) {random_backup = NULL;};
   virtual ~ReactBirdKokkos();
   virtual void init();
   virtual int attempt(Particle::OnePart *, Particle::OnePart *,
                       double, double, double, double &, int &) = 0;
   double extract_tally(int);
+  void backup();
+  void restore();
 
   // tallies for reactions
 
   DAT::tdual_bigint_1d k_tally_reactions;
   DAT::t_bigint_1d d_tally_reactions;
   DAT::tdual_bigint_1d k_tally_reactions_all;
+  DAT::t_bigint_1d d_tally_reactions_backup;
 
   struct OneReactionKokkos {
     int active;                    // 1 if reaction is active
@@ -89,6 +92,8 @@ class ReactBirdKokkos : public ReactBird {
 
   tdual_reactionIJ_2d k_reactions;     // reaction info for all IJ pairs of species
   t_reactionIJ_2d d_reactions;     // reaction info for all IJ pairs of species
+
+  RanKnuth* random_backup;
 
  public:
 #ifndef SPARTA_KOKKOS_EXACT

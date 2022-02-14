@@ -123,9 +123,7 @@ class Collide : protected Pointers {
   int ambispecies;    // species for ambipolar electrons
   int index_ionambi;  // 2 custom ambipolar vectors
   int index_velambi;
-  int *ions;          // ptr to fix ambipolar list of ions
 
-  int nelectron;                // # of ambipolar electrons in elist
   int maxelectron;              // max # elist can hold
   Particle::OnePart *elist;     // list of ambipolar electrons
                                 // for one grid cell or pair of groups in cell
