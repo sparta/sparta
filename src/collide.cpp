@@ -112,7 +112,7 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   copymode = kokkos_flag = 0;
 
   maxgrid = 0;
-  vartemp = NULL;
+  temparray = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -147,7 +147,8 @@ Collide::~Collide()
 
   memory->destroy(recomb_ijflag);
 
-  memory->destroy(vartemp);
+  if (relaxTflag == CELL && T_type == T_VAR)
+    memory->destroy(temparray);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -437,16 +438,17 @@ void Collide::collisions()
       if (!(modify->compute[icompute]->invoked_flag & INVOKED_PER_GRID)) {
         modify->compute[icompute]->invoked_flag |= INVOKED_PER_GRID;
       }
+      temparray = modify->compute[icompute]->vector_grid;
     } else if (T_type == T_VAR) {
       int n = grid->nlocal;
       if (n > maxgrid) {
         maxgrid = grid->maxlocal;
-        memory->destroy(vartemp);
-        memory->create(vartemp,maxgrid,"collide:vartemp");
+        memory->destroy(temparray);
+        memory->create(temparray,maxgrid,"collide:temparray");
       }
 
       int ivariable = input->variable->find(T_name);
-      input->variable->compute_grid(ivariable, vartemp, 1, 0);
+      input->variable->compute_grid(ivariable, temparray, 1, 0);
     } else error->all(FLERR,"Illegal collide command");
   }
 
@@ -504,14 +506,7 @@ template < int NEARCP > void Collide::collisions_one()
     np = cinfo[icell].count;
     if (np <= 1) continue;
     double T = 0.0;
-    if (relaxTflag == CELL) {
-      if (T_type == T_COMP) {
-        int icompute = modify->find_compute(T_name);
-        T = modify->compute[icompute]->vector_grid[icell];
-      } else if (T_type == T_VAR) {
-        T = vartemp[icell];
-      }
-    }
+    if (relaxTflag == CELL) T = temparray[icell];
 
     if (NEARCP) {
       if (np > max_nn) realloc_nn(np,nn_last_partner);
@@ -659,14 +654,7 @@ template < int NEARCP > void Collide::collisions_group()
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
     double T = 0.0;
-    if (relaxTflag == CELL) {
-      if (T_type == T_COMP) {
-        int icompute = modify->find_compute(T_name);
-        T = modify->compute[icompute]->vector_grid[icell];
-      } else if (T_type == T_VAR) {
-        T = vartemp[icell];
-      }
-    }
+    if (relaxTflag == CELL) T = temparray[icell];
 
     // reallocate plist and p2g if necessary
 
@@ -942,14 +930,7 @@ void Collide::collisions_one_ambipolar()
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
     double T = 0.0;
-    if (relaxTflag == CELL) {
-      if (T_type == T_COMP) {
-        int icompute = modify->find_compute(T_name);
-        T = modify->compute[icompute]->vector_grid[icell];
-      } else if (T_type == T_VAR) {
-        T = vartemp[icell];
-      }
-    }
+    if (relaxTflag == CELL) T = temparray[icell];
 
     // setup particle list for this cell
 
@@ -1247,14 +1228,7 @@ void Collide::collisions_group_ambipolar()
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
     double T = 0.0;
-    if (relaxTflag == CELL) {
-      if (T_type == T_COMP) {
-        int icompute = modify->find_compute(T_name);
-        T = modify->compute[icompute]->vector_grid[icell];
-      } else if (T_type == T_VAR) {
-        T = vartemp[icell];
-      }
-    }
+    if (relaxTflag == CELL) T = temparray[icell];
 
     // reallocate plist and p2g if necessary
 

@@ -67,9 +67,9 @@ CollideVSS::CollideVSS(SPARTA *sparta, int narg, char **arg) :
       relaxTflag = CELL;
       T_name = new char[strlen(arg[iarg+1]) - 1];
       strcpy(T_name,&arg[iarg+1][2]);
-      if (strncmp(arg[iarg+1],"c_",2)==0) {
+      if (strncmp(arg[iarg+1],"c_",2) == 0) {
         T_type = T_COMP;
-      } else if (strncmp(arg[iarg+1],"v_",2)==0) {
+      } else if (strncmp(arg[iarg+1],"v_",2) == 0) {
         T_type = T_VAR;
       } else error->all(FLERR,"Illegal collide command");
       iarg += 2;
