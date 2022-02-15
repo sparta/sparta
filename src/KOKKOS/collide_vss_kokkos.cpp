@@ -21,7 +21,10 @@
 #include "particle_kokkos.h"
 #include "mixture.h"
 #include "collide.h"
+#include "compute.h"
 #include "react.h"
+#include "input.h"
+#include "variable.h"
 #include "comm.h"
 #include "random_knuth.h"
 #include "random_mars.h"
@@ -33,17 +36,22 @@
 #include "modify.h"
 #include "fix.h"
 #include "fix_ambipolar.h"
+#include "kokkos_base.h"
 
 using namespace SPARTA_NS;
 using namespace MathConst;
 
-enum{NONE,DISCRETE,SMOOTH};            // several files
-enum{CONSTANT,VARIABLE};
+enum{NONE,DISCRETE,SMOOTH};       // several files
+enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
+enum{CONSTANT,VARIABLE};          // several files
+enum{COLLISION,CELL};             // several files
+enum{T_COMP,T_VAR};
 
 #define DELTAGRID 1000            // must be bigger than split cells per cell
 #define DELTADELETE 1024
 #define DELTAELECTRON 128
 #define DELTACELLCOUNT 2
+#define INVOKED_PER_GRID 16
 
 #define MAXLINE 1024
 #define BIG 1.0e20
@@ -107,6 +115,9 @@ CollideVSSKokkos::~CollideVSSKokkos()
   react_kk_copy.uncopy();
 
   memoryKK->destroy_kokkos(k_dellist,dellist);
+
+  if (relaxTflag == CELL && T_type == T_VAR)
+    memoryKK->destroy_kokkos(temparray);
 
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.destroy();
@@ -243,8 +254,8 @@ void CollideVSSKokkos::init()
 
   if (recombflag) {
     int nspecies = particle->nspecies;
-    //memory->destroy(recomb_ijflag);
-    //memory->create(recomb_ijflag,nspecies,nspecies,"collide:recomb_ijflag");
+    //destroy(recomb_ijflag);
+    //create(recomb_ijflag,nspecies,nspecies,"collide:recomb_ijflag");
     d_recomb_ijflag = DAT::t_float_2d("collide:recomb_ijflag",nspecies,nspecies);
     auto h_recomb_ijflag = Kokkos::create_mirror_view(d_recomb_ijflag);
     for (int i = 0; i < nspecies; i++)
@@ -378,6 +389,47 @@ void CollideVSSKokkos::collisions()
   dt = update->dt;
   fnum = update->fnum;
   boltz = update->boltz;
+
+  if (relaxTflag == CELL) {
+    if (T_type == T_COMP) {
+      int icompute = modify->find_compute(T_name);
+      modify->compute[icompute]->compute_per_grid();
+      modify->compute[icompute]->post_process_grid(1, 1, NULL, NULL, NULL, 1);
+      if (!(modify->compute[icompute]->invoked_flag & INVOKED_PER_GRID)) {
+        modify->compute[icompute]->invoked_flag |= INVOKED_PER_GRID;
+      }
+      if (modify->compute[icompute]->kokkos_flag) {
+        KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(modify->compute[icompute]);
+        d_temparray = computeKKBase->d_vector;
+      } else {
+        int gnlocal = grid->nlocal;
+        if (gnlocal > maxgrid) {
+          maxgrid = grid->maxlocal;
+          memoryKK->destroy_kokkos(k_temparray,temparray);
+          memoryKK->create_kokkos(k_temparray,temparray,maxgrid,"collide:temparray");
+          d_temparray = k_temparray.d_view;
+        }
+        for (int icell = 0; icell < gnlocal; icell++)
+          k_temparray.h_view[icell] = modify->compute[icompute]->vector_grid[icell];
+
+        k_temparray.modify_host();
+        k_temparray.sync_device();
+      }
+    } else if (T_type == T_VAR) {
+      int gnlocal = grid->nlocal;
+      if (gnlocal > maxgrid) {
+        maxgrid = grid->maxlocal;
+        memoryKK->destroy_kokkos(k_temparray,temparray);
+        memoryKK->create_kokkos(k_temparray,temparray,maxgrid,"collide:temparray");
+        d_temparray = k_temparray.d_view;
+        k_temparray.modify_host();
+        k_temparray.sync_device();
+      }
+
+      int ivariable = input->variable->find(T_name);
+      input->variable->compute_grid(ivariable, temparray, 1, 0);
+    } else error->all(FLERR,"Illegal collide command");
+  }
 
   // perform collisions:
   // variant for single group or multiple groups (not yet supported)
@@ -608,6 +660,9 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
   int np = grid_kk_copy.obj.d_cellcount[icell];
   if (np <= 1) return;
 
+  double T = 0.0;
+  if (relaxTflag == CELL) T = d_temparray[icell];
+
   if (NEARCP) {
     for (int i = 0; i < np; i++)
       d_nn_last_partner(icell,i) = 0;
@@ -698,7 +753,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
 
     setup_collision_kokkos(ipart,jpart,precoln,postcoln);
     const int reactflag = perform_collision_kokkos(ipart,jpart,kpart,precoln,postcoln,rand_gen,
-                                                   recomb_part3,recomb_species,recomb_density,index_kpart);
+                                                   recomb_part3,recomb_species,recomb_density,index_kpart,T);
 
     if (ATOMIC_REDUCTION == 1)
       Kokkos::atomic_increment(&d_ncollide_one());
@@ -954,6 +1009,9 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
   const double volume = grid_kk_copy.obj.k_cinfo.d_view[icell].volume / grid_kk_copy.obj.k_cinfo.d_view[icell].weight;
   if (volume == 0.0) d_error_flag() = 1;
 
+  double T = 0.0;
+  if (relaxTflag == CELL) T = d_temparray[icell];
+
   struct State precoln;       // state before collision
   struct State postcoln;      // state after collision
 
@@ -1086,7 +1144,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
     const int jspecies = jpart->ispecies;
     setup_collision_kokkos(ipart,jpart,precoln,postcoln);
     const int reactflag = perform_collision_kokkos(ipart,jpart,kpart,precoln,postcoln,rand_gen,
-                                                   recomb_part3,recomb_species,recomb_density,index_kpart);
+                                                   recomb_part3,recomb_species,recomb_density,index_kpart,T);
 
     if (ATOMIC_REDUCTION == 1)
       Kokkos::atomic_fetch_add(&d_ncollide_one(),1);
@@ -1378,7 +1436,7 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
                                   Particle::OnePart *&kp,
                                   struct State &precoln, struct State &postcoln, rand_type &rand_gen,
                                   Particle::OnePart *&p3, int &recomb_species, double &recomb_density,
-                                  int &index_kpart) const
+                                  int &index_kpart, double T) const
 {
   int reactflag,kspecies;
   double x[3],v[3];
@@ -1479,7 +1537,7 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
 
   } else {
     kp = NULL;
-    if (precoln.ave_dof > 0.0) EEXCHANGE_NonReactingEDisposal(ip,jp,precoln,postcoln,rand_gen);
+    if (precoln.ave_dof > 0.0) EEXCHANGE_NonReactingEDisposal(ip,jp,precoln,postcoln,rand_gen,T);
     SCATTER_TwoBodyScattering(ip,jp,precoln,postcoln,rand_gen);
   }
 
@@ -1552,7 +1610,8 @@ KOKKOS_INLINE_FUNCTION
 void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
                                                       Particle::OnePart *jp,
                                                       struct State &precoln, struct State &postcoln,
-                                                      rand_type &rand_gen) const
+                                                      rand_type &rand_gen,
+                                                      double T) const
 {
   double State_prob,Fraction_Rot,Fraction_Vib,E_Dispose;
   int i,rotdof,vibdof,max_level,ivib;
@@ -1584,7 +1643,10 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
       double rotn_phi = d_species[sp].rotrel;
 
       if (rotdof) {
-        if (relaxflag == VARIABLE) rotn_phi = rotrel(sp,E_Dispose+p->erot);
+        if (relaxflag == VARIABLE) {
+          if (relaxTflag == CELL) rotn_phi = rotrel_T(sp,T);
+          else rotn_phi = rotrel(sp,E_Dispose+p->erot);
+        }
         if (rotn_phi >= rand_gen.drand()) {
           if (rotstyle == NONE) {
             p->erot = 0.0 ;
@@ -1611,7 +1673,10 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
       double vibn_phi = d_species[sp].vibrel[0];
 
       if (vibdof) {
-        if (relaxflag == VARIABLE) vibn_phi = vibrel(sp,E_Dispose+p->evib);
+        if (relaxflag == VARIABLE) {
+          if (relaxTflag == CELL) vibn_phi = vibrel_T(sp,T);
+          else vibn_phi = vibrel(sp,E_Dispose+p->evib);
+        }
         if (vibn_phi >= rand_gen.drand()) {
           if (vibstyle == NONE) {
             p->evib = 0.0;
@@ -1920,7 +1985,15 @@ double CollideVSSKokkos::rotrel(int isp, double Ec) const
   double Tr = Ec /(boltz * (2.5-d_params(isp,isp).omega + d_species[isp].rotdof/2.0));
   double rotphi = (1.0+d_params(isp,isp).rotc2/sqrt(Tr) + d_params(isp,isp).rotc3/Tr)
                 / d_params(isp,isp).rotc1;
-  return rotphi;
+  return rotrel(isp, Tr);
+}
+
+KOKKOS_INLINE_FUNCTION
+double CollideVSSKokkos::rotrel_T(int isp, double T) const
+{
+  double rotphi = (1.0+d_params(isp,isp).rotc2/sqrt(T) + d_params(isp,isp).rotc3/T)
+                / d_params(isp,isp).rotc1;
+ return rotphi;
 }
 
 /* ----------------------------------------------------------------------
@@ -1931,9 +2004,15 @@ KOKKOS_INLINE_FUNCTION
 double CollideVSSKokkos::vibrel(int isp, double Ec) const
 {
   double Tr = Ec /(boltz * (3.5-d_params(isp,isp).omega));
+  return vibrel_T(isp, Tr);
+}
+
+KOKKOS_INLINE_FUNCTION
+double CollideVSSKokkos::vibrel_T(int isp, double T) const
+{
   double omega = d_params(isp,isp).omega;
-  double vibphi = 1.0 / (d_params(isp,isp).vibc1/pow(Tr,omega) *
-                         exp(d_params(isp,isp).vibc2/pow(Tr,1.0/3.0)));
+  double vibphi = 1.0 / (d_params(isp,isp).vibc1/pow(T,omega) *
+                         exp(d_params(isp,isp).vibc2/pow(T,1.0/3.0)));
   return vibphi;
 }
 

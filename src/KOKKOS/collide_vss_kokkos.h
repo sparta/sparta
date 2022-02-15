@@ -100,7 +100,7 @@ class CollideVSSKokkos : public CollideVSS {
   int perform_collision_kokkos(Particle::OnePart *&, Particle::OnePart *&,
                         Particle::OnePart *&, struct State &, struct State &, rand_type &,
                         Particle::OnePart *&, int &, double &,
-                        int &) const;
+                        int &, double T = 0.0) const;
 
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCollideResetVremax, const int&) const;
@@ -205,6 +205,9 @@ class CollideVSSKokkos : public CollideVSS {
 
   DAT::t_int_2d d_nn_last_partner;
 
+  DAT::tdual_float_1d k_temparray;
+  DAT::t_float_1d d_temparray;
+
   template < int NEARCP > void collisions_one(COLLIDE_REDUCE&);
   void collisions_one_ambipolar(COLLIDE_REDUCE&);
 
@@ -229,7 +232,8 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   void EEXCHANGE_NonReactingEDisposal(Particle::OnePart *,
                                       Particle::OnePart *,
-                                      struct State &, struct State &, rand_type &) const;
+                                      struct State &, struct State &, rand_type &,
+                                      double T) const;
 
   KOKKOS_INLINE_FUNCTION
   void SCATTER_ThreeBodyScattering(Particle::OnePart *,
@@ -247,7 +251,11 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   double rotrel (int, double) const;
   KOKKOS_INLINE_FUNCTION
+  double rotrel_T (int, double) const;
+  KOKKOS_INLINE_FUNCTION
   double vibrel (int, double) const;
+  KOKKOS_INLINE_FUNCTION
+  double vibrel_T (int, double) const;
 
   KOKKOS_INLINE_FUNCTION
   int set_nn(int, int) const;
