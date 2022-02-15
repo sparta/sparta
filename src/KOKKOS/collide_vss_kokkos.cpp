@@ -254,8 +254,6 @@ void CollideVSSKokkos::init()
 
   if (recombflag) {
     int nspecies = particle->nspecies;
-    //destroy(recomb_ijflag);
-    //create(recomb_ijflag,nspecies,nspecies,"collide:recomb_ijflag");
     d_recomb_ijflag = DAT::t_float_2d("collide:recomb_ijflag",nspecies,nspecies);
     auto h_recomb_ijflag = Kokkos::create_mirror_view(d_recomb_ijflag);
     for (int i = 0; i < nspecies; i++)
