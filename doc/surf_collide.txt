@@ -13,7 +13,7 @@ surf_collide command :h3
 surf_collide ID style args keyword values ... :pre
 
 ID = user-assigned name for the surface collision model :ulb,l
-style = {specular} or {diffuse} or {cll} or {impulsive} or {td} or {piston} or {transparent} or {vanish} or {specular/kk} or {diffuse/kk} or {piston/kk} or {vanish/kk} :l
+style = {specular} or {diffuse} or {cll} or {adiabatic} or {impulsive} or {td} or {piston} or {transparent} or {vanish} or {specular/kk} or {diffuse/kk} or {piston/kk} or {vanish/kk} :l
 args = arguments for specific style :l
   {specular} or {specular/kk} args = none
   {diffuse} or {diffuse/kk} args = Tsurf acc
@@ -27,6 +27,7 @@ args = arguments for specific style :l
     acc_t = accommodation coefficient in the surface tangential direction
     acc_rot = accommodation coefficient for the rotational modes
     acc_vib = accommodation coefficient for the vibrational modes
+  {adiabatic} args = none
   {impulsive} args = Tsurf {model} param1 param2 var theta_peak pol_pow azi_pow
     Tsurf = temperature of surface (temperature units)
             Tsurf can be a variable (see below)
@@ -84,6 +85,7 @@ surf_collide 1 transparent
 surf_collide 1 diffuse 273.15 0.9
 surf_collide 1 cll 273.15 0.8 0.8 0.5 0.1
 surf_collide 1 cll 273.15 1.0 1.0 0.1 0.1 partial 0.5
+surf_collide 1 adiabatic
 surf_collide 1 impulsive 1000.0 softsphere 0.2 50 2000 60 5 75
 surf_collide 1 impulsive 1000.0 tempvar 3 500 2000 60 5 75
 surf_collide 1 impulsive 1000.0 softsphere 0.2 50 2000 60 5 75 double 10
@@ -189,6 +191,16 @@ Equal-style variables can specify formulas with various mathematical
 functions and include "stats_style"_status_style.html command keywords
 for the simulation box parameters and timestep and elapsed time.
 Thus, it is easy to specify a time-dependent temperature.
+
+:line
+
+The {adiabatic} style computes the adiabatic surface collision model
+proposed by Mohammadzadeh, Rana, and Struchtrup
+"(Mohammadzadeh16)"_#Mohammadzadeh16. This style requires no arguments.
+The adiabatic surface is modelled by scattering particles isotropically
+whilst conserving their velocity magnitude. Therefore, no energy is
+transferred between the wall and the particles. Note, that this is only
+valid for particle collisions not for potential surface reactions.
 
 :line
 
@@ -604,4 +616,9 @@ Experiments and simulations, The Journal of Chemical Physics, (1990).
 :link(Goodman74)
 [(Goodman74)] F. O. Goodman, Determination of characteristic surface
 vibration temperatures by molecular beam scattering: Application to
-specular scattering in the H-LiF (001) system, Surface Science, (1974)
+specular scattering in the H-LiF (001) system, Surface Science, (1974).
+
+:link(Mohammadzadeh16)
+[(Mohammadzadeh16)] A. Mohammadzadeh, A. Rana, and H. Struchtrup,
+DSMC and R13 modeling of the adiabatic surface, International Journal
+of Thermal Sciences, vol. 101, pp. 9–23, March (2016).
