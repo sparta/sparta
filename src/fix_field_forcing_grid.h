@@ -36,9 +36,15 @@ class FixFieldForcingGrid : public Fix {
 
  private:
   int maxgrid;
-  double epsilon;
+  double epsilon,tau;
   int nkvec;
   double **kvecs;
+
+  // field invocation values
+
+  double **prefacN_r,**prefacN_i;
+  double **fr_prev,**fi_prev;
+  bigint laststep;
 
   class RanKnuth *random;
 };
