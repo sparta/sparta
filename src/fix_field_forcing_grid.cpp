@@ -222,11 +222,11 @@ void FixFieldForcingGrid::compute_field()
     yc = 0.5 * (cells[icell].lo[1] + cells[icell].hi[1]);
     zc = 0.5 * (cells[icell].lo[2] + cells[icell].hi[2]);
 
-    // k xyz c = convert grid center pt to (-PI,PI) within each periodic dim
+    // k xyz c = convert center pt to (-PI,PI) within each periodic dim
 
     kxc = (xc - boxlo[0]) / prd[0] * MY_2PI - MY_PI;
-    kyc = (yc - boxlo[0]) / prd[1] * MY_2PI - MY_PI;
-    kzc = (zc - boxlo[0]) / prd[2] * MY_2PI - MY_PI;
+    kyc = (yc - boxlo[1]) / prd[1] * MY_2PI - MY_PI;
+    kzc = (zc - boxlo[2]) / prd[2] * MY_2PI - MY_PI;
 
     // loop over KSpace vectors
 
