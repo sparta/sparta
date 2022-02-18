@@ -99,12 +99,18 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
            if (species[isp].vibdof == 2) z += (species[isp].vibtemp[0]/temp[icell]) / (exp(species[isp].vibtemp[0]/temp[icell])-1);
            else if (species[isp].vibdof > 2) {
                imode = 0;
-               while (imode < 4) z += (species[isp].vibtemp[imode]/temp[icell]) / (exp(species[isp].vibtemp[imode]/temp[icell])-1);
+               while (imode < 4) {
+                   z += (species[isp].vibtemp[imode]/temp[icell]) / (exp(species[isp].vibtemp[imode]/temp[icell])-1);
+                   imode++;
+               }
            }
            if (species[jsp].vibdof == 2) z += (species[jsp].vibtemp[0]/temp[icell]) / (exp(species[jsp].vibtemp[0]/temp[icell])-1);
            else if (species[jsp].vibdof > 2) {
                imode = 0;
-               while (imode < 4) z += (species[jsp].vibtemp[imode]/temp[icell]) / (exp(species[jsp].vibtemp[imode]/temp[icell])-1);
+               while (imode < 4) {
+                   z += (species[jsp].vibtemp[imode]/temp[icell]) / (exp(species[jsp].vibtemp[imode]/temp[icell])-1);
+                   imode++;
+               }
            }
        }
     }
