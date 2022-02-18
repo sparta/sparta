@@ -83,7 +83,7 @@ class Collide : protected Pointers {
   int *nn_last_partner_igroup;   // ditto for two groups of particles
   int *nn_last_partner_jgroup;
 
-  int ndelete,maxdelete;      // # of particles removed by chemsitry
+  int ndelete,maxdelete;      // # of particles removed by chemistry
   int *dellist;               // list of particle indices to delete
 
   char *mixID;               // ID of mixture to use for groups

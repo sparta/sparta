@@ -37,6 +37,7 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
   /* ----------------------------------------------------------------------
      particle collision with surface with optional chemistry
      ip = particle with current x = collision pt, current v = incident v
+     isurf = index of surface element
      norm = surface normal unit vector
      isr = index of reaction model if >= 0, -1 for no chemistry
      ip = set to NULL if destroyed by chemistry
@@ -56,18 +57,65 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
     //Particle::OnePart iorig;
     Particle::OnePart *jp = NULL;
     //reaction = 0;
+    int velreset = 0;
 
     //if (isr >= 0) {
     //  if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
-    //  reaction = surf->sr[isr]->react(ip,norm,jp);
+    //  reaction = surf->sr[isr]->react(ip,isurf,norm,jp,velreset);
     //  if (reaction) surf->nreact_one++;
     //}
 
-    // specular reflection for each particle
-    // reflect incident v around norm
+    // specular or noslip reflection for each particle
+    // only if SurfReact did not already reset velocities
+    // also both partiticles need to trigger any fixes
+    //   to update per-particle properties which depend on
+    //   temperature of the particle, e.g. fix vibmode and fix ambipolar
+    // NOTE: not doing this for this specular model,
+    //   since temperature does not change, would need to add a twall arg
 
-    if (ip) MathExtraKokkos::reflect3(ip->v,norm);
-    //if (jp) MathExtra::reflect3(jp->v,norm);
+    if (ip) {
+      if (!velreset) {
+        if (noslip_flag) {
+
+          // noslip reflection
+          // reflect incident v, all three components.
+
+          MathExtraKokkos::negate3(ip->v);
+        } else {
+
+          // specular reflection
+
+          MathExtraKokkos::reflect3(ip->v,norm);
+        }
+      }
+
+      //if (modify->n_update_custom) {
+      //  int i = ip - particle->particles;
+      //  modify->update_custom(i,twall,twall,twall,vstream);
+      //}
+    }
+
+    //if (jp) {
+    //  if (!velreset) {
+    //    if (noslip_flag) {
+
+          // noslip reflection
+          // reflect incident v, all three components.
+
+    //      MathExtra::negate3(jp->v);
+    //    } else {
+
+          // specular reflection
+
+    //      MathExtra::reflect3(jp->v,norm);
+    //    }
+    //  }
+
+    //  if (modify->n_update_custom) {
+    //    int j = jp - particle->particles;
+    //    modify->update_custom(j,twall,twall,twall,vstream);
+    //}
+    //}
 
     // call any fixes with a surf_react() method
     // they may reset j to -1, e.g. fix ambipolar
@@ -80,8 +128,8 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
     //  if (jp) j = jp - particle->particles;
     //  modify->surf_react(&iorig,i,j);
     //  if (jp && j < 0) {
-    //    jp = NULL;
-    //    particle->nlocal--;
+    //  jp = NULL;
+    //  particle->nlocal--;
     //  }
     //}
 
