@@ -37,7 +37,7 @@ class SurfCollideSpecular : public SurfCollide {
   void flags_and_coeffs(int *, double *) {}
 
  protected:
-  int adiabatic_flag;
+  int noslip_flag;
 };
 
 }

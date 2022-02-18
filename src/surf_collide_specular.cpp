@@ -31,14 +31,15 @@ SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
 
   // optional args
 
-  adiabatic_flag = 0;
+  noslip_flag = 0;
 
   int iarg = 2;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"adiabatic") == 0) {
-      adiabatic_flag = 1;
+    if (strcmp(arg[iarg],"noslip") == 0) {
+      noslip_flag = 1;
       iarg += 1;
-    }
+    } else
+      error->all(FLERR,"Illegal surf_collide specular command");
   }
 }
 
@@ -75,7 +76,7 @@ collide(Particle::OnePart *&ip, double &,
     if (reaction) surf->nreact_one++;
   }
 
-  // specular or adiabatic reflection for each particle
+  // specular or noslip reflection for each particle
   // only if SurfReact did not already reset velocities
   // also both partiticles need to trigger any fixes
   //   to update per-particle properties which depend on
@@ -85,9 +86,9 @@ collide(Particle::OnePart *&ip, double &,
 
   if (ip) {
     if (!velreset) {
-      if (adiabatic_flag) {
+      if (noslip_flag) {
 
-        // adiabatic reflection
+        // noslip reflection
         // reflect incident v, all three components
 
         MathExtra::negate3(ip->v);
@@ -107,9 +108,9 @@ collide(Particle::OnePart *&ip, double &,
 
   if (jp) {
     if (!velreset) {
-      if (adiabatic_flag) {
+      if (noslip_flag) {
 
-        // adiabatic reflection
+        // noslip reflection
         // reflect incident v, all three components.
 
         MathExtra::negate3(jp->v);
