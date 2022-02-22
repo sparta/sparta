@@ -411,9 +411,11 @@ void ComputeLambdaGrid::compute_per_grid()
   double **ctally;
 
   for (i = 0; i < nglocal; i++) {
-    lambdainv[i] = 0.0;
-    tauinv[i] = 0.0;
-    for (j = 0; j < ntotal; j++) nrho[i][j] = 0.0;
+    for (j = 0; j < ntotal; j++) {
+        nrho[i][j] = 0.0;
+        lambdainv[i][j] = 0.0;
+        tauinv[i][j] = 0.0;
+    }
   }
 
   invoked_per_grid = update->ntimestep;
@@ -532,7 +534,7 @@ void ComputeLambdaGrid::compute_per_grid()
       nrhosum = lambda = tau = 0.0;
       for (int j = 0; j < ntotal; j++) {
         nrhosum += nrho[i][j];
-        for (int k = j; k < ntotal; k++) {
+        for (int k = 0; k < ntotal; k++) {
             dref = collide->extract(j,k,"diam");
             tref = collide->extract(j,k,"tref");
             omega = collide->extract(j,k,"omega");
@@ -540,18 +542,18 @@ void ComputeLambdaGrid::compute_per_grid()
             mk = particle->species[k].mass;
             mr = mj * mk / (mj + mk);
             if (tempwhich == NONE || temp[i] == 0.0) {
-              lambdainv[i] += (MY_PI * sqrt (1+mj/mk) * pow(dref,2.0) * nrho[i][k]);
-              tauinv[i] += (2.0 * pow(dref,2.0) * nrho[i][k] * sqrt (2.0 * MY_PI * update->boltz * tref / mr));
+              lambdainv[i][j] += (MY_PI * sqrt (1+mj/mk) * pow(dref,2.0) * nrho[i][k]);
+              tauinv[i][j] += (2.0 * pow(dref,2.0) * nrho[i][k] * sqrt (2.0 * MY_PI * update->boltz * tref / mr));
             }
             else {
-              lambdainv[i] += (MY_PI * sqrt (1+mj/mk) * pow(dref,2.0) * nrho[i][k] * pow(tref/temp[i],omega-0.5));
-              tauinv[i] += (2.0 * pow(dref,2.0) * nrho[i][k] * sqrt (2.0 * MY_PI * update->boltz * tref / mr) * pow(temp[i]/tref,1.0-omega));
+              lambdainv[i][j] += (MY_PI * sqrt (1+mj/mk) * pow(dref,2.0) * nrho[i][k] * pow(tref/temp[i],omega-0.5));
+              tauinv[i][j] += (2.0 * pow(dref,2.0) * nrho[i][k] * sqrt (2.0 * MY_PI * update->boltz * tref / mr) * pow(temp[i]/tref,1.0-omega));
             }
         }
       }
       for (int j = 0; j<ntotal; j++) {
-        if (lambdainv[i] > 1e-30) lambda += nrho[i][j] / (nrhosum * lambdainv[i]);
-        if (tauinv[i] > 1e-30) tau += nrho[i][j] / (nrhosum * tauinv[i]);
+        if (lambdainv[i][j] > 1e-30) lambda += nrho[i][j] / (nrhosum * lambdainv[i][j]);
+        if (tauinv[i][j] > 1e-30) tau += nrho[i][j] / (nrhosum * tauinv[i][j]);
       }
       if (lambda == 0.0) array_grid[i][0] = BIG;
       else array_grid[i][0] = lambda;
@@ -619,9 +621,9 @@ void ComputeLambdaGrid::reallocate()
     for (int m = 0; m < size_per_grid_cols; m++) array_grid[i][m] = 0.0;
 
   memory->destroy(lambdainv);
-  memory->create(lambdainv,nglocal,"lambda/grid:lambdainv");
+  memory->create(lambdainv,nglocal,ntotal,"lambda/grid:lambdainv");
   memory->destroy(tauinv);
-  memory->create(tauinv,nglocal,"lambda/grid:tauinv");
+  memory->create(tauinv,nglocal,ntotal,"lambda/grid:tauinv");
 
   memory->destroy(nrho);
   memory->create(nrho,nglocal,ntotal,"lambda/grid:nrho");
@@ -640,7 +642,7 @@ bigint ComputeLambdaGrid::memory_usage()
   bigint bytes;
   bytes = nglocal * nvalues * sizeof(double);                  // vector_grid/array_grid1
   bytes += nglocal * size_per_grid_cols * sizeof(double);      // array_grid
-  bytes += 2 * nglocal * sizeof(double);                       // lamndainv + tauinv
+  bytes += 2 * nglocal * ntotal * sizeof(double);              // lambdainv + tauinv
   bytes += nglocal * ntotal * sizeof(double);                  // nrho
   if (tempwhich != KNONE) bytes += nglocal * sizeof(double);   // temp
   return bytes;

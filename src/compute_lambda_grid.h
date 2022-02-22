@@ -62,7 +62,7 @@ class ComputeLambdaGrid : public Compute {
   int tempindex;
   class Compute *cnrho,*ctemp;
   class Fix *fnrho,*ftemp;
-  double **nrho,*temp,*lambdainv,*tauinv;
+  double **nrho,*temp,**lambdainv,**tauinv;
   double **array_grid1;
 
   char *species;
