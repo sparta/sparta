@@ -307,12 +307,12 @@ assigned to the surface element using the
 scattering model is desired, specify a {NULL} value.
 
 Any of the following surface collision models can be used: {specular},
-{diffuse}, {cll}, {impulsive}, {td}.  The scattering model style and
-its corresponding arguments are specified in the line following the
-reaction-style.  If there are two gas-phase products, two lines (for
-the first and second particle) can be specified.  The arguments for
-the different surface scattering models are the same as specified in
-the "surf_collide"_surf_collide.html command.
+{diffuse}, {adiabatic}, {cll}, {impulsive}, {td}.  The scattering
+model style and its corresponding arguments are specified in the line
+following the reaction-style.  If there are two gas-phase products,
+two lines (for the first and second particle) can be specified.  The
+arguments for the different surface scattering models are the same as
+specified in the "surf_collide"_surf_collide.html command.
 
 :line
 
