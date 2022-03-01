@@ -27,7 +27,6 @@
 #include "modify.h"
 #include "compute.h"
 #include "fix.h"
-#include "grid.h"
 #include "surf.h"
 #include "surf_collide.h"
 #include "surf_react.h"
