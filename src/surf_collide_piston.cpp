@@ -86,7 +86,7 @@ void SurfCollidePiston::init()
    isurf = index of surface element
    norm = surface normal unit vector
    isr = index of reaction model if >= 0, -1 for no chemistry
-   ip = reset to NULL if destroyed by chemsitry
+   ip = reset to NULL if destroyed by chemistry
    return jp = new particle if created by chemistry
    return reaction = index of reaction (1 to N) that took place, 0 = no reaction
    resets particle(s) to post-collision outward velocity

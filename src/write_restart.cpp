@@ -425,7 +425,7 @@ void WriteRestart::write_less_memory(char *file)
 
   // number of particles per pass
 
-  int step_size = update->global_mem_limit/nbytes;
+  int step_size = MIN(particle->nlocal,update->global_mem_limit/nbytes);
 
   // extra pass for grid
 
