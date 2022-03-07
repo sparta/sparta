@@ -11,17 +11,21 @@ fix temp/rescale/kk command :h3
 
 [Syntax:]
 
-fix ID temp/rescale N Tstart Tstop :pre
+fix ID temp/rescale N Tstart Tstop keyword value ... :pre
 
-ID is documented in "fix"_fix.html command
-temp/rescale = style name of this fix command
-N = thermostat every N timesteps
-Tstart,Tstop = desired temperature at start/end of run (temperature units) :ul
+ID is documented in "fix"_fix.html command :ulb,l
+temp/rescale = style name of this fix command :l
+N = thermostat every N timesteps :l
+Tstart,Tstop = desired temperature at start/end of run (temperature units) :l
+zero or more keyword/args pairs may be appended :l
+keyword = {ave} :l
+  ave values = {yes} or {no} :pre
+:ule
 
 [Examples:]
 
 fix 1 temp/rescale 100 300.0 300.0
-fix 5 temp/rescale 10 300.0 10.0 :pre
+fix 5 temp/rescale 10 300.0 10.0 ave yes :pre
 
 [Description:]
 
@@ -36,9 +40,9 @@ The rescaling is applied to only the translational degrees of freedom
 for the particles.  Their rotational or vibrational degrees of freedom
 are not altered.
 
-Rescaling is performed every N timesteps. The target temperature is a
-ramped value between the Tstart and Tstop temperatures at the
-beginning and end of the run.
+Rescaling is performed every N timesteps. The target temperature
+(Ttarget) is a ramped value between the Tstart and Tstop temperatures
+at the beginning and end of the run.
 
 This fix performs thermostatting on a per grid cell basis.  For each
 grid cell, the center-of-mass velocity and thermal temperature of the
@@ -51,13 +55,35 @@ doc page for the equations.  See the "fix
 temp/global/rescale"_fix_temp_globalrescale.html doc page for a
 command that thermostats the temperature of the global system.
 
-From the current thermal temperature and the current target
-temperature, a velocity scale factor is calculated.  That factor is
-applied to each of the components of the thermal velocity for each
-particle in the grid cell.
+How the rescaling of particle velocities is done depends on the value
+of the {ave} keyword.
 
-After this rescaling, if the thermal temperature were re-computed for
-the grid cell, it would be exactly the target temperature.
+For {ave} with a value {no} (the default), the thermal temperature
+(Tthermal) of each cell is used to compute a velocity scale factor for
+that cell, which is
+
+vscale = sqrt(Ttarget/Tthermal) :pre
+
+The vscale factor is applied to each of the components of the thermal
+velocity for each particle in the grid cell.
+
+For {ave} with a value {yes}, the thermal temperature of all cells are
+averaged.  The average thermal temperature is simply the sum of cell
+thermal temperature divided by the number of contributing cells.  Only
+cells with 2 or more particles contribute to the numerator or
+denominator.  This average thermal temperature (Tthermal_ave) for all
+cells is used to compute a velocity scale factor for all cells, which
+is
+
+vscale = sqrt(Ttarget/Tthermal_ave) :pre
+
+This single vscale factor is applied to each of the components of the
+thermal velocity for each particle in all the grid cells, including
+the particles in single-particle cells.
+
+After rescaling, for either {ave} = {no} or {yes}, if the thermal
+temperature were re-computed for any grid cell, it would be exactly
+the target temperature.
 
 :line
 
@@ -103,4 +129,6 @@ effectively.
 
 "fix temp/global/rescale"_fix_temp_global_rescale.html
 
-[Default:] none
+[Default:]
+
+The default is ave = no.
