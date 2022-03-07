@@ -76,15 +76,16 @@ that cell, which is
 <PRE>vscale = sqrt(Ttarget/Tthermal) 
 </PRE>
 <P>The vscale factor is applied to each of the components of the thermal
-velocity for each particle in the grid cell.
+velocity for each particle in the grid cell.  Only cells with 2 or
+more particles have their particle velocities rescaled.
 </P>
-<P>For <I>ave</I> with a value <I>yes</I>, the thermal temperature of all cells are
-averaged.  The average thermal temperature is simply the sum of cell
-thermal temperature divided by the number of contributing cells.  Only
-cells with 2 or more particles contribute to the numerator or
-denominator.  This average thermal temperature (Tthermal_ave) for all
-cells is used to compute a velocity scale factor for all cells, which
-is
+<P>For <I>ave</I> with a value <I>yes</I>, the thermal temperatures of all the
+cells are averaged.  The average thermal temperature is simply the sum
+of cell thermal temperatures divided by the number of cells.  Cells
+with less than 2 particles or whose thermal temperature = 0.0
+contribute a thermal temperaure = Ttarget to the average.  The average
+thermal temperature (Tthermal_ave) for all cells is used to compute a
+velocity scale factor for all cells, which is
 </P>
 <PRE>vscale = sqrt(Ttarget/Tthermal_ave) 
 </PRE>
@@ -93,8 +94,8 @@ thermal velocity for each particle in all the grid cells, including
 the particles in single-particle cells.
 </P>
 <P>After rescaling, for either <I>ave</I> = <I>no</I> or <I>yes</I>, if the thermal
-temperature were re-computed for any grid cell, it would be exactly
-the target temperature.
+temperature were re-computed for any grid cell with more than one
+particle, it would be exactly the target temperature.
 </P>
 <HR>
 

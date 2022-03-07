@@ -133,13 +133,13 @@ void FixTempRescale::end_of_step_no_average(double t_target)
   for (int icell = 0; icell < nglocal; icell++) {
     if (cinfo[icell].count <= 1) continue;
 
-    count = 0.0;
+    count = cinfo[icell].count;
     totmass = 0.0;
     mvx = mvy = mvz = 0.0;
     mvsq = 0.0;
 
     // 1st pass: loop over particles in cell
-    // 6 tallies per particle: N, Mass, mVx, mVy, mVz, mV^2
+    // 5 tallies per particle: Mass, mVx, mVy, mVz, mV^2
 
     ip = cinfo[icell].first;
     while (ip >= 0) {
@@ -147,7 +147,6 @@ void FixTempRescale::end_of_step_no_average(double t_target)
       mass = species[ispecies].mass;
       v = particles[ip].v;
 
-      count += 1.0;
       totmass += mass;
       mvx += mass*v[0];
       mvy += mass*v[1];
@@ -200,6 +199,7 @@ void FixTempRescale::end_of_step_average(double t_target)
   Particle::OnePart *particles = particle->particles;
   Particle::Species *species = particle->species;
   int *next = particle->next;
+  Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
 
@@ -212,6 +212,7 @@ void FixTempRescale::end_of_step_average(double t_target)
   }
 
   // loop over grid cells to compute thermal T of each
+  // only unsplit and sub cells, skip split cells
 
   int ip,ispecies;
   double mass;
@@ -223,25 +224,15 @@ void FixTempRescale::end_of_step_average(double t_target)
   double t_current_mine = 0.0;
   
   for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit > 1) continue;
 
-    // skip cells with <= 1 particles
-    // they do not contribute to average cellwise thermal T
-    // but set vxyzcom = 0.0, so a single particle will be rescaled below
-
-    if (cinfo[icell].count <= 1) {
-      vcom[icell][0] = 0.0;
-      vcom[icell][1] = 0.0;
-      vcom[icell][2] = 0.0;
-      continue;
-    }
-
-    count = 0.0;
+    count = cinfo[icell].count;
     totmass = 0.0;
     mvx = mvy = mvz = 0.0;
     mvsq = 0.0;
 
     // loop over particles in cell
-    // 6 tallies per particle: N, Mass, mVx, mVy, mVz, mV^2
+    // 5 tallies per particle: Mass, mVx, mVy, mVz, mV^2
 
     ip = cinfo[icell].first;
     while (ip >= 0) {
@@ -249,7 +240,6 @@ void FixTempRescale::end_of_step_average(double t_target)
       mass = species[ispecies].mass;
       v = particles[ip].v;
 
-      count += 1.0;
       totmass += mass;
       mvx += mass*v[0];
       mvy += mass*v[1];
@@ -259,18 +249,30 @@ void FixTempRescale::end_of_step_average(double t_target)
       ip = next[ip];
     }
 
-    // COM velocity of particles in grid cell
-    // store in vxyzcom array for use in loop below
+    // t_one = thermal T of particles in the cell
+    // vcom = COM velocity of particle in the cell
+    // if cell has <= 1 particle: set t_one = t_target, vcom = zero
+    // likewise if t_one = 0.0: set t_one = t_target, vcom = zero
+    //   corner case when all particles have same velocity
 
-    invtotmass = 1.0/totmass;
-    vcom[icell][0] = mvx * invtotmass;
-    vcom[icell][1] = mvy * invtotmass;
-    vcom[icell][2] = mvz * invtotmass;
+    if (count > 1.0) {
+      invtotmass = 1.0/totmass;
+      t_one = mvsq - (mvx*mvx + mvy*mvy + mvz*mvz)*invtotmass;
+      count = cinfo[icell].count;
+      t_one *= tprefactor/count;
+      vcom[icell][0] = mvx * invtotmass;
+      vcom[icell][1] = mvy * invtotmass;
+      vcom[icell][2] = mvz * invtotmass;
 
-    // t_one = thermal T of particles in one grid cell
+    } else {
+      t_one = t_target;
+      vcom[icell][0] = vcom[icell][1] = vcom[icell][2] = 0.0;
+    }
 
-    t_one = mvsq - (mvx*mvx + mvy*mvy + mvz*mvz)*invtotmass;
-    t_one *= tprefactor/count;
+    if (t_one == 0.0) {
+      t_one = t_target;
+      vcom[icell][0] = vcom[icell][1] = vcom[icell][2] = 0.0;
+    }
 
     // accumulate thermal T over my cells
 
@@ -286,10 +288,6 @@ void FixTempRescale::end_of_step_average(double t_target)
 
   bigint n_current;
   MPI_Allreduce(&n_current_mine,&n_current,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-
-  // just return if n_current = 0, i.e. no cells with > 1 particle
-
-  if (n_current == 0) return;
 
   // t_current = cellwise averaged thermal T
   // scale all particles in all cells by vscale

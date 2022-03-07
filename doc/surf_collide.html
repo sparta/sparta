@@ -21,7 +21,8 @@
 
 <LI>args = arguments for specific style 
 
-<PRE>  <I>specular</I> or <I>specular/kk</I> args = none
+<PRE>  <I>specular</I> or <I>specular/kk</I> args = noslip (optional)
+    noslip = reflect all velocity components off surface (not just normal component)
   <I>diffuse</I> or <I>diffuse/kk</I> args = Tsurf acc
     Tsurf = temperature of surface (temperature units)
             Tsurf can be a variable (see below)
@@ -128,6 +129,13 @@ requires no arguments.  Specular reflection means that a particle
 reflects off a surface element with its incident velocity vector
 reversed with respect to the outward normal of the surface element.
 The particle's speed is unchanged.
+</P>
+<P>Specular reflection means that a particle bounce off a surface element
+reverses only the component of its velocity normal to the surface. If
+the optional <I>noslip</I> keyword is used, the particle bounce flips the sign
+of all 3 xyz components of the particle's incident velocity, so that it
+now moves in the opposite direction, creating a no slip boundary condition.
+In either case, the particle's speed is unchanged.
 </P>
 <HR>
 
