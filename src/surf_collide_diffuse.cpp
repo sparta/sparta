@@ -328,7 +328,7 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm)
 void SurfCollideDiffuse::wrapper(Particle::OnePart *p, double *norm,
                                  int *flags, double *coeffs)
 {
-  if (flags) {
+  if (coeffs) {
     twall = coeffs[0];
     acc = coeffs[1];
   }

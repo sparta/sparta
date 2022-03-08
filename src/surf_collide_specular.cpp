@@ -149,7 +149,7 @@ collide(Particle::OnePart *&ip, double &,
 
 /* ----------------------------------------------------------------------
    wrapper on specular() method to perform collision for a single particle
-   pass in 0 coefficients to match command-line args for style specular
+   pass in 1 flag (optional) to match command-line args for style specular
    flags, coeffs can be NULL
    called by SurfReactAdsorb
 ------------------------------------------------------------------------- */
@@ -157,5 +157,17 @@ collide(Particle::OnePart *&ip, double &,
 void SurfCollideSpecular::wrapper(Particle::OnePart *p, double *norm,
                                   int *flags, double *coeffs)
 {
+  if (flags)
+    noslip_flag = flags[0];
+
   MathExtra::reflect3(p->v,norm);
+}
+
+/* ----------------------------------------------------------------------
+   return flags and coeffs for this SurfCollide instance to caller
+------------------------------------------------------------------------- */
+
+void SurfCollideSpecular::flags_and_coeffs(int *flags, double *coeffs)
+{
+  flags[0] = noslip_flag;
 }
