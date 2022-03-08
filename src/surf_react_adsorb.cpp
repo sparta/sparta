@@ -51,7 +51,7 @@ enum{PSFACE,PSLINE,PSTRI};
 // GS chemistry
 
 enum{DISSOCIATION,EXCHANGE,RECOMBINATION,AA,DA,LH1,LH3,CD,ER,CI};
-enum{NOMODEL,SPECULAR,DIFFUSE,CLL,TD,IMPULSIVE,MAXMODELS};
+enum{NOMODEL,SPECULAR,DIFFUSE,ADIABATIC,CLL,TD,IMPULSIVE,MAXMODELS};
 
 #define MAXREACTANT_GS 5
 #define MAXPRODUCT_GS 5
@@ -2046,13 +2046,18 @@ void SurfReactAdsorb::readfile_gs(char *fname)
         sc = NULL;
       } else if (strcmp(words[1],"specular") == 0) {
         model = SPECULAR;
-        nflags = ncoeffs = 0;
+        nflags = 1;
+        ncoeffs = 0;
         sc = new SurfCollideSpecular(sparta,nwords,words);
       } else if (strcmp(words[1],"diffuse") == 0) {
         model = DIFFUSE;
         nflags = 0;
         ncoeffs = 2;
         sc = new SurfCollideDiffuse(sparta,nwords,words);
+      } else if (strcmp(words[1],"adiabatic") == 0) {
+        model = ADIABATIC;
+        nflags = ncoeffs = 0;
+        sc = new SurfCollideAdiabatic(sparta,nwords,words);
       } else if (strcmp(words[1],"cll") == 0) {
         model = CLL;
         nflags = 1;
@@ -2615,13 +2620,17 @@ void SurfReactAdsorb::readfile_ps(char *fname)
         sc = NULL;
       } else if (strcmp(words[1],"specular") == 0) {
         model = SPECULAR;
-        nflags = ncoeffs = 0;
+        nflags = 1;
+        ncoeffs = 0;
         sc = new SurfCollideSpecular(sparta,nwords,words);
       } else if (strcmp(words[1],"diffuse") == 0) {
         model = DIFFUSE;
         nflags = 0;
         ncoeffs = 2;
-        sc = new SurfCollideDiffuse(sparta,nwords,words);
+      } else if (strcmp(words[1],"adiabatic") == 0) {
+        model = ADIABATIC;
+        nflags = ncoeffs = 0;
+        sc = new SurfCollideAdiabatic(sparta,nwords,words);
       } else if (strcmp(words[1],"cll") == 0) {
         model = CLL;
         nflags = 1;

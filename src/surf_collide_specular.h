@@ -34,7 +34,7 @@ class SurfCollideSpecular : public SurfCollide {
   Particle::OnePart *collide(Particle::OnePart *&, double &,
                              int, double *, int, int &);
   void wrapper(Particle::OnePart *, double *, int *, double*);
-  void flags_and_coeffs(int *, double *) {}
+  void flags_and_coeffs(int *, double *);
 
  protected:
   int noslip_flag;
