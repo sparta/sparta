@@ -327,4 +327,5 @@ double FixTempRescale::memory_usage()
 {
   double bytes = 0.0;
   bytes += maxgrid*3 * sizeof(double);    // vcom
+  return bytes;
 }
