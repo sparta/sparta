@@ -429,7 +429,7 @@ void WriteRestart::write_less_memory(char *file)
 
   // extra pass for grid
 
-  int my_passes;
+  int my_npasses;
   if (particle->nlocal == 0) my_npasses = 2;
   else my_npasses = ceil((double)particle->nlocal/step_size)+1;
 
