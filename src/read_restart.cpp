@@ -403,8 +403,8 @@ void ReadRestart::command(int narg, char **arg)
 
         // extra pass for grid
 
-        npasses = ceil((double)particle_nlocal/step_size)+1;
         if (particle_nlocal == 0) npasses = 2;
+        else npasses = ceil((double)particle_nlocal/step_size)+1;
 
         int nlocal_restart = 0;
         bigint total_read_part = 0;
@@ -544,8 +544,8 @@ void ReadRestart::command(int narg, char **arg)
 
         // extra pass for grid
 
-        npasses = ceil((double)particle_nlocal/step_size)+1;
         if (particle_nlocal == 0) npasses = 2;
+        else npasses = ceil((double)particle_nlocal/step_size)+1;
 
         if (i % nclusterprocs) {
           iproc = me + (i % nclusterprocs);

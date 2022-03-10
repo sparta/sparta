@@ -429,8 +429,9 @@ void WriteRestart::write_less_memory(char *file)
 
   // extra pass for grid
 
-  int my_npasses = ceil((double)particle->nlocal/step_size)+1;
+  int my_passes;
   if (particle->nlocal == 0) my_npasses = 2;
+  else my_npasses = ceil((double)particle->nlocal/step_size)+1;
 
   // output of one or more native files
   // filewriter = 1 = this proc writes to file
