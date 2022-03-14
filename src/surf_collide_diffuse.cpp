@@ -105,17 +105,6 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
   distributed = surf->distributed;
   implicit = surf->implicit;
 
-  if (distributed && !implicit) {
-    lines = surf->mylines;
-    tris = surf->mytris;
-    nsurf = surf->nown;
-  }
-  else {
-    lines = surf->lines;
-    tris = surf->tris;
-    nsurf = surf->nlocal;
-  }
-
   // initialize RNG
 
   random = new RanKnuth(update->ranmaster->uniform());
@@ -147,6 +136,17 @@ void SurfCollideDiffuse::init()
       error->all(FLERR,"Surf_collide diffuse variable name does not exist");
     if (!input->variable->equal_style(tvar))
       error->all(FLERR,"Surf_collide diffuse variable is invalid style");
+  }
+
+  if (distributed && !implicit) {
+    lines = surf->mylines;
+    tris = surf->mytris;
+    nsurf = surf->nown;
+  }
+  else {
+    lines = surf->lines;
+    tris = surf->tris;
+    nsurf = surf->nlocal;
   }
 
   for (int i = 0; i < nsurf; i++) {
