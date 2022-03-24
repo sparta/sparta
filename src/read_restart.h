@@ -32,7 +32,7 @@ class ReadRestart : protected Pointers {
   void command(int, char **);
 
  private:
-  int me,nprocs,nprocs_file,multiproc_file;
+  int me,nprocs,nprocs_file,multiproc_file,mem_limit_flag;
   FILE *fp;
   int nfix_restart_global,nfix_restart_peratom;
 

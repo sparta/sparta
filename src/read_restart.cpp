@@ -62,8 +62,8 @@ void ReadRestart::command(int narg, char **arg)
   if (domain->box_exist)
     error->all(FLERR,"Cannot read_restart after simulation box is defined");
 
-  int mem_limit_flag = update->global_mem_limit > 0 ||
-           (update->mem_limit_grid_flag && !grid->nlocal);
+  mem_limit_flag = update->global_mem_limit > 0 ||
+       (update->mem_limit_grid_flag && !grid->nlocal);
 
   MPI_Comm_rank(world,&me);
   MPI_Comm_size(world,&nprocs);
@@ -1049,10 +1049,15 @@ void ReadRestart::header(int incompatible)
     } else if (flag == PARTICLE_REORDER) {
       update->reorder_period = read_int();
     } else if (flag == MEMLIMIT_GRID) {
-      update->mem_limit_grid_flag = read_int();
-    } else if (flag == MEMLIMIT) {
-      update->global_mem_limit = read_int();
+      // ignore value if already set
 
+      if (mem_limit_flag) read_int();
+      else update->mem_limit_grid_flag = read_int();
+    } else if (flag == MEMLIMIT) {
+      // ignore value if already set
+
+      if (mem_limit_flag) read_int();
+      else update->global_mem_limit = read_int();
     } else if (flag == NPARTICLE) {
       nparticle_file = read_bigint();
     } else if (flag == NUNSPLIT) {
