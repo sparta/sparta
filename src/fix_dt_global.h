@@ -36,7 +36,7 @@ class FixDtGlobal : public Fix {
   void end_of_step();
   virtual void reallocate();
 
-protected:
+ protected:
   int nglocal;
   int lambdawhich,usqwhich,vsqwhihc,wsqwhich,tempwhich;
   int lambdaindex, usqindex,vsqindex,wsqindex,tempindex;

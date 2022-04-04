@@ -51,9 +51,7 @@ CreateParticlesKokkos::CreateParticlesKokkos(SPARTA* spa):
 #endif
             )
 {
-#ifdef SPARTA_KOKKOS_EXACT
-  rand_pool.init(random);
-#endif
+  random = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -69,9 +67,16 @@ void CreateParticlesKokkos::create_local(bigint np)
 {
   int dimension = domain->dimension;
 
+  if (random == NULL) {
+
+    // initialize RNG
+    random = new RanKnuth(update->ranmaster->uniform());
+    double seed = update->ranmaster->uniform();
+    random->reset(seed,comm->me,100);
 #ifdef SPARTA_KOKKOS_EXACT
-  rand_pool.init(random);
+    rand_pool.init(random);
 #endif
+  }
 
   int me = comm->me;
   RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
@@ -320,7 +325,8 @@ void CreateParticlesKokkos::create_local(bigint np)
   for (int i = 0; i < nspecies; ++i) h_species(i) = species[i];
   Kokkos::deep_copy(d_species, h_species);
   auto nlocal_before = particleKK->nlocal;
-  auto time_global = grid->time_global;
+  auto time_global = grid_kk->time_global;
+  auto variable_adaptive_time = grid_kk->variable_adaptive_time;
 
   Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
     rand_type rand_gen = rand_pool.get_state();
@@ -337,11 +343,15 @@ void CreateParticlesKokkos::create_local(bigint np)
       auto erot = d_erot(cand);
       auto evib = d_evib(cand);
       auto rnd = rand_gen.drand();
-      double particle_time = time_global + (-1. + 2.*rnd)*d_celldt(i);
+      double particle_time;
+      if (variable_adaptive_time)
+        particle_time = time_global + (-1. + 2.*rnd)*d_celldt(i);
+      else
+        particle_time = time_global;
       ParticleKokkos::add_particle_kokkos(d_particles,inew,id,ispecies,i,x,v,erot,evib,particle_time);
     }
     rand_pool.free_state(rand_gen);
-  });
+    });
   particleKK->modify(Device,PARTICLE_MASK);
   particleKK->sync(Host,PARTICLE_MASK);
   particleKK->nlocal += nnew;
@@ -359,7 +369,5 @@ void CreateParticlesKokkos::create_local(bigint np)
         modify->update_custom(inew,temp_thermal,temp_rot,temp_vib,vstream);
     }
   }
-
-  delete random;
 }
 

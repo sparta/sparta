@@ -115,6 +115,12 @@ does not have time data.
 
 how is dt_global set and updated?
 
+check on update->ntimestep and where that is set.
+
+*look for setting particle_time in collide_vss_kokkos and see if variable_adaptive_time boolean use is needed.
+
+*try building and running with -DSPARTA_KOKKOS_EXACT (added to SPARTA_INC)
+
 
 
 

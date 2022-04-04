@@ -41,13 +41,23 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
 
 /* ---------------------------------------------------------------------- */
 
-CreateParticles::CreateParticles(SPARTA *sparta) : Pointers(sparta) {}
+CreateParticles::CreateParticles(SPARTA *sparta) : Pointers(sparta)
+{
+  // instantiate RNG
+  random = new RanKnuth(update->ranmaster->uniform());
+}
+
+/* ---------------------------------------------------------------------- */
+
+CreateParticles::~CreateParticles()
+{
+  delete random;
+}
 
 /* ---------------------------------------------------------------------- */
 
 void CreateParticles::command(int narg, char **arg)
 {
-  printf("############################# top of createparticles ###############\n");
   if (!grid->exist)
     error->all(FLERR,"Cannot create particles before grid is defined");
 
@@ -425,8 +435,6 @@ void CreateParticles::create_single()
 
   // add the particle
 
-  RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
-
   if (iwhich >= 0) {
     int id = MAXSMALLINT*random->uniform();
     double erot = particle->erot(mspecies,temp_rot,random);
@@ -437,8 +445,6 @@ void CreateParticles::create_single()
       modify->update_custom(particle->nlocal-1,temp_thermal,
                             temp_rot,temp_vib,vstream);
   }
-
-  delete random;
 }
 
 /* ----------------------------------------------------------------------
@@ -451,11 +457,9 @@ void CreateParticles::create_single()
 
 void CreateParticles::create_local(bigint np)
 {
-  printf("top of non-kokkos create_local\n");
   int dimension = domain->dimension;
 
   int me = comm->me;
-  RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,me,100);
 
@@ -630,8 +634,6 @@ void CreateParticles::create_local(bigint np)
 
     nprev += npercell;
   }
-
-  delete random;
 }
 
 /* ----------------------------------------------------------------------
@@ -644,7 +646,6 @@ void CreateParticles::create_local(bigint np)
 
 void CreateParticles::create_local_twopass(bigint np)
 {
-  printf("=========top of create_local_twopass==============\n");
   int dimension = domain->dimension;
 
   int me = comm->me;
@@ -835,8 +836,6 @@ void CreateParticles::create_local_twopass(bigint np)
   }
 
   memory->destroy(ncreate_values);
-
-  delete random;
 }
 
 /* ----------------------------------------------------------------------

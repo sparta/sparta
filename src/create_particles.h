@@ -29,6 +29,7 @@ class CreateParticles : protected Pointers {
 
  public:
   CreateParticles(class SPARTA *);
+  ~CreateParticles();
   void command(int, char **);
   int evib(int);
   double erot(int);
@@ -37,6 +38,7 @@ class CreateParticles : protected Pointers {
   int imix,single,mspecies,twopass;
   double xp,yp,zp,vx,vy,vz;
   class Region *region;
+  class RanKnuth *random;               // RNG for particle creation
 
   int speciesflag,densflag,velflag,tempflag,normflag;
   char *sstr,*sxstr,*systr,*szstr;

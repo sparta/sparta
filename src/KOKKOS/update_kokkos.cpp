@@ -82,7 +82,6 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   blist_active_copy{VAL_2(KKCopy<ComputeBoundaryKokkos>(sparta))},
   slist_active_copy{VAL_2(KKCopy<ComputeSurfKokkos>(sparta))}
 {
-
   // use 1D view for scalars to reduce GPU memory operations
 
   d_scalars = t_int_12("collide:scalars");
@@ -272,6 +271,7 @@ void UpdateKokkos::run(int nsteps)
   sparta->kokkos->auto_sync = 0;
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  GridKokkos* grid_kk = (GridKokkos*) grid;
 
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
@@ -284,6 +284,10 @@ void UpdateKokkos::run(int nsteps)
   // loop over timesteps
 
   for (int i = 0; i < nsteps; i++) {
+
+    // copy cell desired timesteps from host to device:  AKS, might not need this.
+    //    if (i==0) 
+    //      grid_kk->sync(Device,CELL_MASK);
 
     grid->time_global += grid->dt_global;
 
@@ -298,7 +302,6 @@ void UpdateKokkos::run(int nsteps)
     if (dynamic) dynamic_update();
 
     // start of step fixes
-
     if (n_start_of_step) {
       modify->start_of_step();
       timer->stamp(TIME_MODIFY);
@@ -347,7 +350,9 @@ void UpdateKokkos::run(int nsteps)
       output->write(ntimestep);
       timer->stamp(TIME_OUTPUT);
     }
+
   }
+
   sparta->kokkos->auto_sync = 1;
 
   particle_kk->sync(Host,ALL_MASK);
@@ -680,6 +685,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
   if (grid_kk_copy.obj.variable_adaptive_time && niterate == 1) {
     bool move_particle = false;
     icell = particle_i.icell;
+    //    std::cout << "icell=" << icell << " dt_desired=" << d_cells[icell].dt_desired << std::endl;
     if ((grid_kk_copy.obj.time_global - particle_i.time) > d_cells[icell].dt_desired) {
       move_particle = true;
       dt = 2.*d_cells[icell].dt_desired;

@@ -233,6 +233,8 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
                "accessed out-of-range");
 
   // optional args (prescribed temperature/velocity profiles for initial timestep calculation)
+  tempflag = velflag = 0;
+
   int iarg = 9;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"temperature") == 0) {
@@ -345,6 +347,8 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
 
 
   reallocate();
+
+  grid->variable_adaptive_time = true;
 
   // set up initial timestep
   double x[3];
@@ -592,7 +596,7 @@ void FixDtGlobal::end_of_step()
 
     dt_sum += cells[i].dt_desired;
   }
-
+#if 0
   double avg_cell_dt = dt_sum/nglocal;
   double dt_factor = 1000.;
   double dtmin_this_pe = avg_cell_dt/dt_factor;
@@ -603,7 +607,23 @@ void FixDtGlobal::end_of_step()
   MPI_Allreduce(&dtmins_this_pe,&dtmins,2,MPI_DOUBLE,MPI_MIN,world);
   double dtmin = dtmins[0];
   double dtmax = 1.0/dtmins[1];
+#endif
+
+  double dt_sum_global = 0.;
+  MPI_Allreduce(&dt_sum,&dt_sum_global,1,MPI_DOUBLE,MPI_SUM,world);
+  double avg_cell_dt = dt_sum_global/grid->ncell;
+  std::cout << "*********** avg_cell_dt = " << avg_cell_dt << std::endl;
+  double dt_factor = 1000.;
+  double dtmin = avg_cell_dt/dt_factor;
+  double dtmax = avg_cell_dt*dt_factor;
   grid->dt_global = 2.*dtmin;
+
+  // this is only a test!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  int nglocal_global=0;
+  MPI_Allreduce(&nglocal,&nglocal_global,1,MPI_INT,MPI_SUM,world);
+  if (nglocal_global != grid->ncell)
+    std::cout << "################## nglocal_global=" << nglocal_global << " ncell=" << grid->ncell << std::endl;
+  // end: this is only a test!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   for (int i = 0; i < nglocal; ++i) {
     if (cells[i].dt_desired < dtmin)

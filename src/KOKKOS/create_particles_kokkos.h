@@ -22,8 +22,11 @@ CommandStyle(create_particles/kk,CreateParticlesKokkos)
 #define SPARTA_CREATE_PARTICLES_KOKKOS_H
 
 #include "create_particles.h"
-#include "rand_pool_wrap.h"
 #include "particle_kokkos.h"
+#include "random_mars.h"
+#include "random_knuth.h"
+#include "Kokkos_Random.hpp"
+#include "rand_pool_wrap.h"
 
 namespace SPARTA_NS {
 
@@ -46,12 +49,7 @@ namespace SPARTA_NS {
     RandPoolWrap rand_pool;
     typedef RandWrap rand_type;
 #endif
-
-  private:
-    t_cell_1d d_cells;
-
   };
-
 }
 
 #endif

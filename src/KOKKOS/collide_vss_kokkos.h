@@ -91,7 +91,7 @@ class CollideVSSKokkos : public CollideVSS {
 #endif
 
   KOKKOS_INLINE_FUNCTION
-  double attempt_collision_kokkos(int, int, double, rand_type &) const;
+  double attempt_collision_kokkos(int, int, double, double, rand_type &) const;
   KOKKOS_INLINE_FUNCTION
   int test_collision_kokkos(int, int, int, Particle::OnePart *, Particle::OnePart *, struct State &, rand_type &) const;
   KOKKOS_INLINE_FUNCTION
@@ -220,7 +220,7 @@ class CollideVSSKokkos : public CollideVSS {
   tdual_params_2d k_params;
   t_params_2d d_params;
 
-  double dt,fnum,boltz;
+  double fnum,boltz;
   int maxcellcount,react_defined;
 
   KOKKOS_INLINE_FUNCTION
@@ -253,7 +253,7 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   int set_nn(int, int) const;
   KOKKOS_INLINE_FUNCTION
-  int find_nn(rand_type &, int, int, int) const;
+  int find_nn(rand_type &, int, int, double, int) const;
 
   void backup();
   void restore();
@@ -265,6 +265,7 @@ class CollideVSSKokkos : public CollideVSS {
   DAT::t_int_2d d_nn_last_partner_backup;
   DAT::t_int_1d d_ionambi_backup;
   DAT::t_float_2d d_velambi_backup;
+  t_cell_1d d_cells;
   RanKnuth* random_backup;
 };
 
