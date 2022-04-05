@@ -32,7 +32,7 @@ class FixTempRescale : public Fix {
   virtual ~FixTempRescale();
   int setmask();
   void init();
-  virtual void end_of_step();
+  void end_of_step();
   double memory_usage();
 
  protected:
@@ -43,8 +43,8 @@ class FixTempRescale : public Fix {
   int maxgrid;
   double **vcom;
 
-  void end_of_step_no_average(double);
-  void end_of_step_average(double);
+  virtual void end_of_step_no_average(double);
+  virtual void end_of_step_average(double);
 };
 
 }

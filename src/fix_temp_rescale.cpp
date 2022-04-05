@@ -63,6 +63,8 @@ FixTempRescale::FixTempRescale(SPARTA *sparta, int narg, char **arg) :
 
 FixTempRescale::~FixTempRescale()
 {
+  if (copymode) return;
+
   memory->destroy(vcom);
 }
 
