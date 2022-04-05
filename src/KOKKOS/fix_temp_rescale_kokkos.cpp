@@ -35,8 +35,10 @@ FixTempRescaleKokkos::FixTempRescaleKokkos(SPARTA *sparta, int narg, char **arg)
    current thermal temperature is calculated on a per-cell basis
 ---------------------------------------------------------------------- */
 
-void FixTempRescaleKokkos::end_of_step_no_average(double t_target)
+void FixTempRescaleKokkos::end_of_step_no_average(double t_target_in)
 {
+  t_target = t_target_in;
+
   // loop over grid cells and twice over particles in each cell
   // 1st pass: calc thermal temp via same logic as in ComputeThermalGrid
   // 2nd pass: rescale thermal velocity components
@@ -128,8 +130,10 @@ void FixTempRescaleKokkos::operator()(TagFixTempRescale_end_of_step_no_average, 
    current thermal temperature is averaged over all per-cell temperatures
 ---------------------------------------------------------------------- */
 
-void FixTempRescaleKokkos::end_of_step_average(double t_target)
+void FixTempRescaleKokkos::end_of_step_average(double t_target_in)
 {
+  t_target = t_target_in;
+
   // loop over grid cells and twice over particles in each cell
   // 1st pass: calc thermal temp via same logic as in ComputeThermalGrid
   // 2nd pass: rescale thermal velocity components
