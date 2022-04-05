@@ -122,9 +122,9 @@ void FixTempRescale::end_of_step_no_average(double t_target)
 
   // loop over grid cells with more than 1 particle
 
-  int ip,ispecies;
+  int ip,ispecies,count;
   double mass;
-  double count,totmass,mvx,mvy,mvz,mvsq;
+  double totmass,mvx,mvy,mvz,mvsq;
   double invtotmass,vscale;
   double vxcom,vycom,vzcom;
   double t_current;
@@ -214,9 +214,9 @@ void FixTempRescale::end_of_step_average(double t_target)
   // loop over grid cells to compute thermal T of each
   // only unsplit and sub cells, skip split cells
 
-  int ip,ispecies;
+  int ip,ispecies,count;
   double mass;
-  double count,totmass,mvx,mvy,mvz,mvsq;
+  double totmass,mvx,mvy,mvz,mvsq;
   double invtotmass,t_one;
   double *v;
 
@@ -255,10 +255,9 @@ void FixTempRescale::end_of_step_average(double t_target)
     // likewise if t_one = 0.0: set t_one = t_target, vcom = zero
     //   corner case when all particles have same velocity
 
-    if (count > 1.0) {
+    if (count > 1) {
       invtotmass = 1.0/totmass;
       t_one = mvsq - (mvx*mvx + mvy*mvy + mvz*mvz)*invtotmass;
-      count = cinfo[icell].count;
       t_one *= tprefactor/count;
       vcom[icell][0] = mvx * invtotmass;
       vcom[icell][1] = mvy * invtotmass;
