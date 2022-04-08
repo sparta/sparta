@@ -319,6 +319,7 @@ void UpdateKokkos::run(int nsteps)
       k_mlist_small.sync_host();
     }
     auto mlist_small = k_mlist_small.h_view.data();
+
     ((CommKokkos*)comm)->migrate_particles(nmigrate,mlist_small,k_mlist_small.d_view);
     if (cellweightflag) particle->post_weight();
     timer->stamp(TIME_COMM);
@@ -424,7 +425,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
 
   if (fstyle == PFIELD) {
     modify->fix[ifieldfix]->compute_field();
-    d_fieldfix_array_grid = KKBaseFieldFix->d_array_particle;
+    d_fieldfix_array_particle = KKBaseFieldFix->d_array_particle;
   }
 
   // external per grid cell field
