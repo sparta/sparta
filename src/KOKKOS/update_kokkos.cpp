@@ -42,6 +42,7 @@
 #include "kokkos.h"
 #include "sparta_masks.h"
 #include "surf_collide_specular_kokkos.h"
+#include "kokkos_base.h"
 
 using namespace SPARTA_NS;
 
@@ -190,29 +191,21 @@ void UpdateKokkos::init()
       error->all(FLERR,"External field fix does not compute necessary field");
   }
 
-  // moveperturb method is set if external field particle motion
-
-  field_3d_flag = field_2d_flag = 0;
-  moveperturb = NULL;
-
-  if (fstyle == CFIELD) {
-    if (field[0] != 0.0 || field[1] != 0.0 || field[2] != 0.0) {
-      if (domain->dimension == 3) {
-        moveperturb = &UpdateKokkos::field3d;
-        field_3d_flag = 1;
-      }
-      if (domain->dimension == 2) {
-        moveperturb = &UpdateKokkos::field2d;
-        field_2d_flag = 1;
-      }
-    }
-  } else if (fstyle == PFIELD)
-    error->all(FLERR,"Cannot (yet) use per-particle external field with KOKKOS package");
-  else if (fstyle == GFIELD)
-    error->all(FLERR,"Cannot (yet) use per-grid cell external field with KOKKOS package");
-
-  if (moveperturb) perturbflag = 1;
-  else perturbflag = 0;
+  if (fstyle == PFIELD) {
+    field_active[0] = modify->fix[ifieldfix]->field_active[0];
+    field_active[1] = modify->fix[ifieldfix]->field_active[1];
+    field_active[2] = modify->fix[ifieldfix]->field_active[2];
+    KKBaseFieldFix = dynamic_cast<KokkosBase*>(modify->fix[ifieldfix]);
+    if (!KKBaseFieldFix)
+      error->all(FLERR,"External field fix is not Kokkos-enabled"); 
+  } else if (fstyle == GFIELD) {
+    field_active[0] = modify->fix[ifieldfix]->field_active[0];
+    field_active[1] = modify->fix[ifieldfix]->field_active[1];
+    field_active[2] = modify->fix[ifieldfix]->field_active[2];
+    KKBaseFieldFix = dynamic_cast<KokkosBase*>(modify->fix[ifieldfix]);
+    if (!KKBaseFieldFix)
+      error->all(FLERR,"External field fix is not Kokkos-enabled");    
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -277,6 +270,15 @@ void UpdateKokkos::run(int nsteps)
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
 
+  // external per grid cell field
+  // only evaluate once at beginning of run b/c time-independent
+  // fix calculates field acting at center point of all grid cells
+
+  if (fstyle == GFIELD && fieldfreq == 0) {
+    modify->fix[ifieldfix]->compute_field();
+    d_fieldfix_array_grid = KKBaseFieldFix->d_array_grid;
+  }
+
   // cellweightflag = 1 if grid-based particle weighting is ON
 
   int cellweightflag = 0;
@@ -287,7 +289,8 @@ void UpdateKokkos::run(int nsteps)
   for (int i = 0; i < nsteps; i++) {
 
     ntimestep++;
-    if (collide_react) collide_react_update();
+
+    if (collide_react) collide_react_reset();
     if (bounce_tally) bounce_set(ntimestep);
 
     timer->stamp();
@@ -316,7 +319,6 @@ void UpdateKokkos::run(int nsteps)
       k_mlist_small.sync_host();
     }
     auto mlist_small = k_mlist_small.h_view.data();
-
     ((CommKokkos*)comm)->migrate_particles(nmigrate,mlist_small,k_mlist_small.d_view);
     if (cellweightflag) particle->post_weight();
     timer->stamp(TIME_COMM);
@@ -331,6 +333,8 @@ void UpdateKokkos::run(int nsteps)
       collide->collisions();
       timer->stamp(TIME_COLLIDE);
     }
+
+    if (collide_react) collide_react_update();
 
     // diagnostic fixes
 
@@ -415,11 +419,28 @@ template < int DIM, int SURF > void UpdateKokkos::move()
 
   ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
 
-  while (1) {
+  // external per particle field
+  // fix calculates field acting on all owned particles
 
-    // loop over particles
-    // first iteration = all my particles
-    // subsequent iterations = received particles
+  if (fstyle == PFIELD) {
+    modify->fix[ifieldfix]->compute_field();
+    d_fieldfix_array_grid = KKBaseFieldFix->d_array_particle;
+  }
+
+  // external per grid cell field
+  // evaluate once every fieldfreq steps b/c time-dependent
+  // fix calculates field acting at center point of all grid cells
+
+  if (fstyle == GFIELD && fieldfreq && ((ntimestep-1) % fieldfreq == 0)) {
+    modify->fix[ifieldfix]->compute_field();
+    d_fieldfix_array_grid = KKBaseFieldFix->d_array_grid;
+  }
+
+  // one or more loops over particles
+  // first iteration = all my particles
+  // subsequent iterations = received particles
+
+  while (1) {
 
     niterate++;
 
@@ -710,15 +731,21 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     xnew[0] = x[0] + dtremain*v[0];
     xnew[1] = x[1] + dtremain*v[1];
     if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
-    if (field_3d_flag) field3d(dtremain,xnew,v);
-    else if (field_2d_flag) field2d(dtremain,xnew,v);
+    if (fstyle == CFIELD) {
+      if (DIM == 3) field3d(dtremain,xnew,v);
+      else if (DIM == 2) field2d(dtremain,xnew,v);
+    } else if (fstyle == PFIELD) field_per_particle(i,particle_i.icell,dtremain,xnew,v);
+    else if (fstyle == GFIELD) field_per_grid(i,particle_i.icell,dtremain,xnew,v);
   } else if (pflag == PINSERT) {
     dtremain = particle_i.dtremain;
     xnew[0] = x[0] + dtremain*v[0];
     xnew[1] = x[1] + dtremain*v[1];
     if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
-    if (field_3d_flag) field3d(dtremain,xnew,v);
-    else if (field_2d_flag) field2d(dtremain,xnew,v);
+    if (fstyle == CFIELD) { 
+      if (DIM == 3) field3d(dtremain,xnew,v);
+      else if (DIM == 2) field2d(dtremain,xnew,v);
+    } else if (fstyle == PFIELD) field_per_particle(i,particle_i.icell,dtremain,xnew,v);
+    else if (fstyle == GFIELD) field_per_grid(i,particle_i.icell,dtremain,xnew,v);
   } else if (pflag == PENTRY) {
     icell = particle_i.icell;
     if (d_cells[icell].nsplit > 1) {
