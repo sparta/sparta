@@ -29,7 +29,7 @@ class RanKnuth {
  private:
   int seed,save;
   double second;
-  int not_init,inext,inextp;
+  int initflag,inext,inextp;
   int ma[56];
 };
 
