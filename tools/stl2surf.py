@@ -14,8 +14,8 @@
 # error message
 
 def error(str=None):
-  if str: print "ERROR:",str
-  else: print "Syntax: stl2surf.py stlfile surffile"
+  if str: print("ERROR:",str)
+  else: print("Syntax: stl2surf.py stlfile surffile")
   sys.exit()
 
 # ----------------------------------------------------------------------
@@ -40,7 +40,7 @@ if len(words) >= 2: name = words[1]
 else: name = ""
 
 tritxt = re.split("endfacet\s+facet",stltxt)
-print "# of triangles in STL file:",len(tritxt)
+print("# of triangles in STL file:",len(tritxt))
 
 pattern = ".*vertex\s+(\S+)\s+(\S+)\s+(\S+)"
 triverts = []
@@ -48,8 +48,8 @@ triverts = []
 for one in tritxt:
   vertices = re.findall(pattern,one)
   if len(vertices) != 3:
-    print "Triangle record:"
-    print one
+    print("Triangle record:")
+    print(one)
     error("Invalid triangle vertices")
   triverts.append(vertices)
 
@@ -84,26 +84,26 @@ for vert3 in triverts:
 
 fp = open(sys.argv[2],"w")
 if name:
-  print >>fp,"# SPARTA surface file, from STL file %s with name %s\n" % \
-      (sys.argv[1],name)
+  print("# SPARTA surface file, from STL file %s with name %s\n" % \
+      (sys.argv[1],name), file=fp)
 else:
-  print >>fp,"# SPARTA surface file, from STL file\n",sys.argv[1]
+  print("# SPARTA surface file, from STL file\n",sys.argv[1], file=fp)
 
-print >>fp,len(verts),"points"
-print >>fp,len(tris),"triangles"
+print(len(verts),"points", file=fp)
+print(len(tris),"triangles", file=fp)
 
-print >>fp,"\nPoints\n"
+print("\nPoints\n", file=fp)
 for i,vert in enumerate(verts):
-  print >>fp,i+1,vert[0],vert[1],vert[2]
+  print(i+1,vert[0],vert[1],vert[2], file=fp)
 
-print >>fp,"\nTriangles\n"
+print("\nTriangles\n", file=fp)
 for i,tri in enumerate(tris):
-  print >>fp,i+1,tri[0]+1,tri[1]+1,tri[2]+1
+  print(i+1,tri[0]+1,tri[1]+1,tri[2]+1, file=fp)
 
 # stats to screen
 
-print "# of vertices in SPARTA file:",len(verts)
-print "# of triangles in SPARTA file:",len(tris)
+print("# of vertices in SPARTA file:",len(verts))
+print("# of triangles in SPARTA file:",len(tris))
 
 # warn if not a watertight object
 # watertight = each edge is part of exactly 2 triangles
@@ -137,9 +137,9 @@ for edge in ehash:
     unmatchedge = edge
     
 if dup or unmatch:
-  print "WARNING: surface is not watertight"
-  print "Duplicate edge count:",dup
-  print "Unmatched edge count:",unmatch
-  print "One duplicate edge:",dupedge
-  print "One unmatched edge:",unmatchedge
+  print("WARNING: surface is not watertight")
+  print("Duplicate edge count:",dup)
+  print("Unmatched edge count:",unmatch)
+  print("One duplicate edge:",dupedge)
+  print("One unmatched edge:",unmatchedge)
   

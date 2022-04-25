@@ -22,37 +22,37 @@ from sdata import sdata
 # error message
 
 def error(str):
-  if str: print "ERROR:",str
-  else: print "Syntax: surf_transform.py infile outfile keyword args ..."
+  if str: print("ERROR:",str)
+  else: print("Syntax: surf_transform.py infile outfile keyword args ...")
   sys.exit()
 
 # write SPARTA surf file
   
 def write_surfs(dim,file):
   fp = open(file,"w")
-  print >>fp,"%s file converted via surf_transform.py\n" % infile
+  print("%s file converted via surf_transform.py\n" % infile, file=fp)
   
-  print >>fp,len(pts),"points"
-  if lines: print >>fp,len(lines),"lines"
-  if tris: print >>fp,len(tris),"triangles"
+  print(len(pts),"points", file=fp)
+  if lines: print(len(lines),"lines", file=fp)
+  if tris: print(len(tris),"triangles", file=fp)
 
-  print >>fp,"\nPoints\n"
+  print("\nPoints\n", file=fp)
   if dim == 2:
     for i,pt in enumerate(pts):
-      print >>fp,i+1,pt[0],pt[1]
+      print(i+1,pt[0],pt[1], file=fp)
   else:
     for i,pt in enumerate(pts):
-      print >>fp,i+1,pt[0],pt[1],pt[2]
+      print(i+1,pt[0],pt[1],pt[2], file=fp)
 
   if lines:
-    print >>fp,"\nLines\n"
+    print("\nLines\n", file=fp)
     for i,line in enumerate(lines):
-      print >>fp,i+1,line[0]+1,line[1]+1
+      print(i+1,line[0]+1,line[1]+1, file=fp)
     
   if tris:
-    print >>fp,"\nTriangles\n"
+    print("\nTriangles\n", file=fp)
     for i,tri in enumerate(tris):
-      print >>fp,i+1,tri[0]+1,tri[1]+1,tri[2]+1
+      print(i+1,tri[0]+1,tri[1]+1,tri[2]+1, file=fp)
 
   fp.close()
 

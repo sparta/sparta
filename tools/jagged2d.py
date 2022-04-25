@@ -35,7 +35,7 @@ def genlines(p1,p2):
 
 args = sys.argv[1:]
 if len(args) != 4:
-  print "Syntax: jagged2d.py Nspike Nper delta sfile"
+  print("Syntax: jagged2d.py Nspike Nper delta sfile")
   sys.exit()
   
 nspike = int(args[0])
@@ -76,21 +76,21 @@ lines.append((len(pts)-2,len(pts)-1))
 
 # write out surf file
 
-print "Writing %s with %d points, %d lines" % (datafile,len(pts),len(lines))
+print("Writing %s with %d points, %d lines" % (datafile,len(pts),len(lines)))
 
 fp = open(datafile,'w')
 
-print >>fp,"surf file from jagged2d.py"
-print >>fp
-print >>fp,len(pts),"points"
-print >>fp,len(lines),"lines"
-print >>fp
-print >>fp,"Points\n"
+print("surf file from jagged2d.py", file=fp)
+print(file=fp)
+print(len(pts),"points", file=fp)
+print(len(lines),"lines", file=fp)
+print(file=fp)
+print("Points\n", file=fp)
 for i,pt in enumerate(pts):
-  print >>fp,i+1,pt[0],pt[1]
-print >>fp
-print >>fp,"Lines\n"
+  print(i+1,pt[0],pt[1], file=fp)
+print(file=fp)
+print("Lines\n", file=fp)
 for i,line in enumerate(lines):
-  print >>fp,i+1,1,line[0]+1,line[1]+1
+  print(i+1,1,line[0]+1,line[1]+1, file=fp)
     
 fp.close()
