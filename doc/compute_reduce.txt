@@ -80,13 +80,13 @@ quantity, e.g. variance = sumsq - ave^2.
 
 The {sum-area} or {ave-area} options can only be used for per-surf
 inputs.  Both options multiply each per-surf value by the area of the
-surface element (triangle in 3d, line segment in 2d) and then sum the
+surface element (triangle in 3d, line segment in 2d) and sum the
 resulting values over all surface elements.  That is the output for
 the {sum-area} option.  For the {ave-area} option the summed value is
 divided by the summed area of all elements.  Note that both of these
 options are designed to work with flux values (e.g. mass per area per
-time) produced by the "compute surf"_compute_surf.html command
-produced with its default {norm} = yes option.
+time) produced by the "compute surf"_compute_surf.html command with
+its default {norm} = yes option.
 
 :line
 
@@ -188,6 +188,9 @@ the max of the ID vector, which does not yield useful information in
 this context, the {replace} keyword will extract the ID for the grid
 cell which has the maximum number of particles.  This ID and the
 cell's particle count will be printed with the statistical output.
+
+Note that the {replace} keyword can be used multiple times with
+different pairs of indices.
 
 :line
 
