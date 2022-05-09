@@ -14,7 +14,7 @@ compute ID reduce mode input1 input2 ... keyword args ... :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
 reduce = style name of this compute command :l
-mode = {sum} or {min} or {max} or {ave}  or {sumsq} or {avesq} :l
+mode = {sum} or {min} or {max} or {ave} or {sumsq} or {avesq} or (sum-area) or {ave-area} :l
 one or more inputs can be listed :l
 input = x, y, z, vx, vy, vz, ke, erot, evib, c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :l
   x,y,z,vx,vy,vz = particle position or velocity component
@@ -74,9 +74,21 @@ vector values.  The {ave} operation adds the vector values into a
 global total, then divides by the number of values in the vector.  The
 {sumsq} operation sums the square of the values in the vector into a
 global total.  The {avesq} oepration does the same as {sumsq}, then
-divdes the sum of squares by the number of values.  The last two
+divdes the sum of squares by the number of values.  These two
 operations can be useful for calculating the variance of some
 quantity, e.g. variance = sumsq - ave^2.
+
+The {sum-area} or {ave-area} options can only be used for per-surf
+inputs.  Both options multiply each per-surf value by the area of the
+surface element (triangle in 3d, line segment in 2d) and then sum the
+resulting values over all surface elements.  That is the output for
+the {sum-area} option.  For the {ave-area} option the summed value is
+divided by the summed area of all elements.  Note that both of these
+options are designed to work with flux values (e.g. mass per area per
+time) produced by the "compute surf"_compute_surf.html command
+produced with its default {norm} = yes option.
+
+:line
 
 Each listed input vector is operated on independently.
 

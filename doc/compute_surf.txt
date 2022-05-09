@@ -11,7 +11,7 @@ compute surf/kk command :h3
 
 [Syntax:]
 
-compute ID surf group-ID mix-ID value1 value2 ... :pre
+compute ID surf group-ID mix-ID value1 value2 ... keyword setting ... :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
 surf = style name of this compute command :l
@@ -31,12 +31,16 @@ value = {n} or {nwt} or {nflux} or {mflux} or {fx} or {fy} or {fz} or {press} or
   erot = flux of particle rotational energy on surface element
   evib = flux of particle vibrational energy on surface element
   etot = flux of particle total energy on surface element :pre
+zero or more keyword/setting pairs can be appended :l
+keyword = {norm} :l
+  norm arg = {yes} or {no} for dividing fluxes by area :pre
 :ule
 
 [Examples:]
 
 compute 1 surf all all n press eng
-compute mine surf sphere species press shx shy shz :pre
+compute mine surf sphere species press shx shy shz
+compute 2 surf all all mflux ke erot norm no :pre
 
 These commands will dump time averages for each species and each
 surface element to a dump file every 1000 steps:
@@ -87,10 +91,12 @@ contributions from 0, 1, or 2 outgoing particles.  The exception is
 the {n} and {nwt} values which simply tally counts of particles
 colliding with the surface element.
 
-If the surface element is transparent, the particle will pass through
-the surface unaltered.  The flux of particle count, mass, or energy to
-the surface can still be tallied by this compute.  See details on
-transparent surface elements below.
+If the explicit surface element is transparent, the particle will pass
+through the surface unaltered.  See the transparent keyword for the
+"read_surf"_read_surf.html command.  The count of particles going
+through the surfacce as well as their mass or energy fluxes can still
+be tallied by this compute.  See details on transparent surface
+elements below.
 
 Also note that all values for a collision are tallied based on the
 species group of the incident particle.  Quantities associated with
@@ -142,6 +148,11 @@ A = the area of the surface element, dt = the timestep, and fnum = the
 real/simulated particle ratio set by the "global fnum"_global.html
 command.
 
+If the optional {norm} key is set to {no}, then the area A is not
+included in the Nflux formula.  Then Nflux becomes effectively a
+particle flow rate (count per time).  See discussion of the {norm}
+keyword below.
+
 The {mflux} value calculates the mass flux imparted to the surface
 element by particles in the group.  This is computed as
 
@@ -149,6 +160,11 @@ Mflux = Sum_i (mass_i) / (A * dt / fnum) :pre
 
 where the sum is over all contributing particle masses, normalized by
 the area of the surface element, dt and fnum as defined before.
+
+If the optional {norm} key is set to {no}, then the area A is not
+included in the Nflux formula.  Then Mflux becomes effectively a
+mass flow rate (mass per time).  See discussion of the {norm}
+keyword below.
 
 The {fx}, {fy}, {fz} values calculate the components of force extered
 on the surface element by particles in the group, with respect to the
@@ -222,6 +238,11 @@ over all contributing e_delta, normalized by A = the area of the
 surface element and dt = the timestep and fnum = the real/simulated
 particle ratio set by the "global fnum"_global.html command.
 
+If the optional {norm} key is set to {no}, then the area A is not
+included in the Eflux formula.  Then Eflux becomes effectively an
+energy flow rate (energy per time).  See discussion of the {norm}
+keyword below.
+
 The {erot} value calculates the rotational energy flux {Eflux}
 imparted to the surface element by particles in the group, such that
 energy lost by a particle is a positive flux.  This is computed as
@@ -233,6 +254,11 @@ where e_delta is the rotational energy change in a particle, whose
 internal rotational energy changes from Erot_pre to Erot_post when
 colliding with the surface element.  The flux equation is the same as
 for the {ke} value.
+
+If the optional {norm} key is set to {no}, then the area A is not
+included in the Eflux formula.  Then Eflux becomes effectively an
+energy flow rate (energy per time).  See discussion of the {norm}
+keyword below.
 
 The {evib} value calculates the vibrational energy flux {Eflux}
 imparted to the surface element by particles in the group, such that
@@ -246,11 +272,21 @@ internal vibrational energy changes from Evib_pre to Evib_post when
 colliding with the surface element.  The flux equation is the same as
 for the {ke} value.
 
+If the optional {norm} key is set to {no}, then the area A is not
+included in the Eflux formula.  Then Eflux becomes effectively an
+energy flow rate (energy per time).  See discussion of the {norm}
+keyword below.
+
 The {etot} value calculates the total energy flux imparted to the
 surface element by particles in the group, such that energy lost by a
 particle is a positive flux.  This is simply the sum of kinetic,
 rotational, and vibrational energies.  Thus the total energy flux is
 the sum of what is computed by the {ke}, {erot}, and {evib} values.
+
+If the optional {norm} key is set to {no}, then the area A is not
+included in the {etot} formula.  Then {etot} becomes effectively an
+energy flow rate (energy per time).  See discussion of the {norm}
+keyword below.
 
 :line
 
@@ -262,21 +298,58 @@ transparent surface elements.  The "Section
 transparent surfaces and how to create them.
 
 The {n} and {nwt} value are calculated the same for transparent
-surfaces.  I.e. they are the count and weighted count of particles
-passing through the surface.
+surfaces as for non-transparent.  I.e. they are the count and weighted
+count of particles passing through the surface.
 
-The {mflux}, {ke}, {erot}. {evib}, and {etot} values are fluxes.  For
-transparent surfaces, they are calculated for the incident particle as
-if they had struck the surface.  The outgoing particle is ignored.
-This means the tally quantity is the flux of particles onto the
-outward face of the surface.  No tallying is done for particles
-hitting the inward face of the surface.  See "Section
-6.15"_Section_howto.html#howto_15 for how to do tallying in both
-directions.
+The {nflux}, {mflux}, {ke}, {erot}. {evib}, and {etot} values are
+fluxes.  For transparent surfaces, they are calculated only for the
+incident particle as if it had struck the surface.  The outgoing
+particle is ignored.  This means the tally quantity is the flux of
+particles onto the outward face of the surface.  No tallying is done
+for particles hitting the inward face of the transparent surface.  See
+"Section 6.15"_Section_howto.html#howto_15 for how to do tallying in
+both directions.
 
 All the other values are calculated as described above.  This means
-they will be zero, since the incident particle and outgoing particle
-have the same mass and velocity.
+they will be zero, since the incident and outgoing particle have the
+same mass and velocity.
+
+IMPORTANT NOTE:
+
+Transparent surface elements can intersect standard non-transparent
+surface elements.  For example, to model flow around a spherical
+object, the sphere would be defined by the usual non-transparent
+triangles which interact with flow particles.  A plane of transparent
+surface elements normal to the flow direction could be defined which
+cut through the sphere.  In this case some or all of the transparent
+triangles will be partially or wholly inside the sphere.  SPARTA does
+not attempt to calculate the portion of a tranparent triangle (or line
+segment in 2d) which is inside the flow volume.  The "area" specified
+in all the formulas above will be the area of the entire transparent
+triangle (or line segment in 2d), which may or may not be what you
+want.
+
+See the optional norm keyword (below) to calculate flux values
+un-normalized by the surface element area.  Also see the "sum-area"
+and "ave-area" modes of the "compute reduce"_compute_reduce.html
+command for additional ways to sum or average either normalized or
+un-normalized flux values produced by this compute.
+
+:line
+
+[Optional norm keyword:]
+
+If the {norm} keyword is used with a setting of {no}, then the
+formulas above for all flux values will not use the surface element
+area A in the denominator.  Specifically these values are nflux,
+mflux, ke, erot, evib, etot.
+
+The formulas thus compute the aggregate mass or energy flow to the
+surface (e.g. mass per time), not the flux (e.g. mass per area per
+time).
+
+If the setting is {yes}, then the flux formulas will be calculated as
+shown with the area A in the denominator.
 
 :line
 
@@ -335,4 +408,6 @@ effectively.
 "fix ave/surf"_fix_ave_surf.html, "dump surf"_dump.html, "compute
 isurf/grid"_compute_isurf_grid.html
 
-[Default:] none
+[Default:]
+
+The default for keyword flux is yes.

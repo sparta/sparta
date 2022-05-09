@@ -50,6 +50,8 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
   nvalue = narg - 4;
   which = new int[nvalue];
 
+  // process input values
+
   nvalue = 0;
   int iarg = 4;
   while (iarg < narg) {
@@ -71,9 +73,26 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
     else if (strcmp(arg[iarg],"erot") == 0) which[nvalue++] = EROT;
     else if (strcmp(arg[iarg],"evib") == 0) which[nvalue++] = EVIB;
     else if (strcmp(arg[iarg],"etot") == 0) which[nvalue++] = ETOT;
-    else error->all(FLERR,"Illegal compute surf command");
+    else break;
     iarg++;
   }
+
+  // process optional keywords
+
+  normarea = 1;
+
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"norm") == 0) {
+      if (iarg+2 > narg) 
+        error->all(FLERR,"Invalid compute surf optional keyword");
+      if (strcmp(arg[iarg+1],"no") == 0) normarea = 0;
+      else if (strcmp(arg[iarg+1],"yes") == 0) normarea = 1;
+      else error->all(FLERR,"Invalid compute surf optional keyword");
+      iarg += 2;
+    } else error->all(FLERR,"Invalid compute surf value or optional keyword");
+  }
+
+  // setup
 
   ntotal = ngroup*nvalue;
 
@@ -157,6 +176,8 @@ void ComputeSurf::init_normflux()
   nfactor_inverse = 1.0/nfactor;
 
   // normflux for all surface elements, based on area and timestep size
+  // if normarea = 0, area is not included in flux
+  //   mass/eng fluxes (mass/area/time) becomes mass/eng flows (mass/time)
   // nsurf = all explicit surfs in this procs grid cells
   // store inverse, so can multipy by scale factor when tally
   // store for all surf elements, b/c don't know which ones I need to normalize
@@ -169,7 +190,8 @@ void ComputeSurf::init_normflux()
   double tmp;
 
   for (int i = 0; i < nsurf; i++) {
-    if (dim == 3) normflux[i] = surf->tri_size(i,tmp);
+    if (!normarea) normflux[i] = 1.0;
+    else if (dim == 3) normflux[i] = surf->tri_size(i,tmp);
     else if (axisymmetric) normflux[i] = surf->axi_line_size(i);
     else normflux[i] = surf->line_size(i);
     normflux[i] *= nfactor;
