@@ -316,6 +316,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
     switch (which[m]) {
     case NUM:
       vec[k++] += 1.0;
+      printf("COUNT %g\n",vec[k-1]);
       break;
     case NUMWT:
       vec[k++] += weight;
@@ -330,6 +331,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       break;
     case MFLUX:
       vec[k] += origmass * fluxscale;
+      printf("MFLUX %g\n",vec[k-1]);
       if (!transparent) {
         if (ip) vec[k] -= imass * fluxscale;
         if (jp) vec[k] -= jmass * fluxscale;

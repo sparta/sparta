@@ -367,6 +367,8 @@ void ComputeReduce::init()
 
   if (flavor[0] == SURF) area_total = area_per_surf();
 
+  printf("AREATOTAL %g\n",area_total);
+
   // set indices of all computes,fixes,variables
 
   for (int m = 0; m < nvalues; m++) {
@@ -400,8 +402,9 @@ double ComputeReduce::compute_scalar()
 
   double one = compute_one(0,-1);
 
-  if (mode == SUM || mode == SUMSQ || SUMAREA) {
+  if (mode == SUM || mode == SUMSQ || mode == SUMAREA) {
     MPI_Allreduce(&one,&scalar,1,MPI_DOUBLE,MPI_SUM,world);
+    printf("COMP SCALAR %g %g\n",one,scalar);
   } else if (mode == MINN) {
     MPI_Allreduce(&one,&scalar,1,MPI_DOUBLE,MPI_MIN,world);
   } else if (mode == MAXX) {
@@ -927,6 +930,8 @@ double ComputeReduce::area_per_surf()
       }
     } else {
       if (!distributed) {
+        printf("AREAPERSURF i %d flag %d mode %d\n",
+               i,tris[me+i*nprocs].mask & surfgroupbit,mode);
         if (!(tris[me+i*nprocs].mask & surfgroupbit)) continue;
         if (mode == SUMAREA || mode == AVEAREA)
           areasurf[i] = surf->tri_size(&tris[me+i*nprocs],tmp);
@@ -939,7 +944,9 @@ double ComputeReduce::area_per_surf()
       }
     }
 
+
     area_mine += areasurf[i];
+    printf("AREAMINE %g\n",area_mine);
   }
 
   MPI_Allreduce(&area_mine,&area_all,1,MPI_DOUBLE,MPI_SUM,world);
