@@ -33,14 +33,14 @@ value = {n} or {nwt} or {nflux} or {mflux} or {fx} or {fy} or {fz} or {press} or
   etot = flux of particle total energy on surface element :pre
 zero or more keyword/setting pairs can be appended :l
 keyword = {norm} :l
-  norm arg = {yes} or {no} for dividing fluxes by area :pre
+  norm arg = {flux} or {flow} for dividing flux quantities by area or not :pre
 :ule
 
 [Examples:]
 
 compute 1 surf all all n press eng
 compute mine surf sphere species press shx shy shz
-compute 2 surf all all mflux ke erot norm no :pre
+compute 2 surf all all mflux ke erot norm flow :pre
 
 These commands will dump time averages for each species and each
 surface element to a dump file every 1000 steps:
@@ -148,9 +148,9 @@ A = the area of the surface element, dt = the timestep, and fnum = the
 real/simulated particle ratio set by the "global fnum"_global.html
 command.
 
-If the optional {norm} key is set to {no}, then the area A is not
-included in the Nflux formula.  Then Nflux becomes effectively a
-particle flow rate (count per time).  See discussion of the {norm}
+If the optional {norm} key is set to {flow}, then the area A is not
+included in the Nflux formula.  The Nflux quantity becomes effectively
+a particle flow rate (count per time).  See discussion of the {norm}
 keyword below.
 
 The {mflux} value calculates the mass flux imparted to the surface
@@ -161,10 +161,10 @@ Mflux = Sum_i (mass_i) / (A * dt / fnum) :pre
 where the sum is over all contributing particle masses, normalized by
 the area of the surface element, dt and fnum as defined before.
 
-If the optional {norm} key is set to {no}, then the area A is not
-included in the Nflux formula.  Then Mflux becomes effectively a
-mass flow rate (mass per time).  See discussion of the {norm}
-keyword below.
+If the optional {norm} key is set to {flow}, then the area A is not
+included in the Nflux formula.  Then Mflux quantity becomes
+effectively a mass flow rate (mass per time).  See discussion of the
+{norm} keyword below.
 
 The {fx}, {fy}, {fz} values calculate the components of force extered
 on the surface element by particles in the group, with respect to the
@@ -238,10 +238,10 @@ over all contributing e_delta, normalized by A = the area of the
 surface element and dt = the timestep and fnum = the real/simulated
 particle ratio set by the "global fnum"_global.html command.
 
-If the optional {norm} key is set to {no}, then the area A is not
-included in the Eflux formula.  Then Eflux becomes effectively an
-energy flow rate (energy per time).  See discussion of the {norm}
-keyword below.
+If the optional {norm} key is set to {flow}, then the area A is not
+included in the Eflux formula.  Then Eflux quantity becomes
+effectively an energy flow rate (energy per time).  See discussion of
+the {norm} keyword below.
 
 The {erot} value calculates the rotational energy flux {Eflux}
 imparted to the surface element by particles in the group, such that
@@ -255,10 +255,10 @@ internal rotational energy changes from Erot_pre to Erot_post when
 colliding with the surface element.  The flux equation is the same as
 for the {ke} value.
 
-If the optional {norm} key is set to {no}, then the area A is not
-included in the Eflux formula.  Then Eflux becomes effectively an
-energy flow rate (energy per time).  See discussion of the {norm}
-keyword below.
+If the optional {norm} key is set to {flow}, then the area A is not
+included in the Eflux formula.  Then Eflux quantity becomes
+effectively an energy flow rate (energy per time).  See discussion of
+the {norm} keyword below.
 
 The {evib} value calculates the vibrational energy flux {Eflux}
 imparted to the surface element by particles in the group, such that
@@ -272,10 +272,10 @@ internal vibrational energy changes from Evib_pre to Evib_post when
 colliding with the surface element.  The flux equation is the same as
 for the {ke} value.
 
-If the optional {norm} key is set to {no}, then the area A is not
-included in the Eflux formula.  Then Eflux becomes effectively an
-energy flow rate (energy per time).  See discussion of the {norm}
-keyword below.
+If the optional {norm} key is set to {flow}, then the area A is not
+included in the Eflux formula.  Then Eflux quantity becomes
+effectively an energy flow rate (energy per time).  See discussion of
+the {norm} keyword below.
 
 The {etot} value calculates the total energy flux imparted to the
 surface element by particles in the group, such that energy lost by a
@@ -283,10 +283,10 @@ particle is a positive flux.  This is simply the sum of kinetic,
 rotational, and vibrational energies.  Thus the total energy flux is
 the sum of what is computed by the {ke}, {erot}, and {evib} values.
 
-If the optional {norm} key is set to {no}, then the area A is not
-included in the {etot} formula.  Then {etot} becomes effectively an
-energy flow rate (energy per time).  See discussion of the {norm}
-keyword below.
+If the optional {norm} key is set to {flow}, then the area A is not
+included in the {etot} formula.  Then {etot} quantity becomes
+effectively an energy flow rate (energy per time).  See discussion of
+the {norm} keyword below.
 
 :line
 
@@ -339,7 +339,7 @@ un-normalized flux values produced by this compute.
 
 [Optional norm keyword:]
 
-If the {norm} keyword is used with a setting of {no}, then the
+If the {norm} keyword is used with a setting of {flow}, then the
 formulas above for all flux values will not use the surface element
 area A in the denominator.  Specifically these values are nflux,
 mflux, ke, erot, evib, etot.
@@ -348,8 +348,8 @@ The formulas thus compute the aggregate mass or energy flow to the
 surface (e.g. mass per time), not the flux (e.g. mass per area per
 time).
 
-If the setting is {yes}, then the flux formulas will be calculated as
-shown with the area A in the denominator.
+If the setting is {flux} (the default), then the flux formulas will be
+calculated as shown with the area A in the denominator.
 
 :line
 
@@ -410,4 +410,4 @@ isurf/grid"_compute_isurf_grid.html
 
 [Default:]
 
-The default for keyword flux is yes.
+The default for the norm keyword is flux.

@@ -85,8 +85,8 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
     if (strcmp(arg[iarg],"norm") == 0) {
       if (iarg+2 > narg) 
         error->all(FLERR,"Invalid compute surf optional keyword");
-      if (strcmp(arg[iarg+1],"no") == 0) normarea = 0;
-      else if (strcmp(arg[iarg+1],"yes") == 0) normarea = 1;
+      if (strcmp(arg[iarg+1],"flow") == 0) normarea = 0;
+      else if (strcmp(arg[iarg+1],"flux") == 0) normarea = 1;
       else error->all(FLERR,"Invalid compute surf optional keyword");
       iarg += 2;
     } else error->all(FLERR,"Invalid compute surf value or optional keyword");
