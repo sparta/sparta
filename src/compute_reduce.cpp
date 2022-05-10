@@ -367,8 +367,6 @@ void ComputeReduce::init()
 
   if (flavor[0] == SURF) area_total = area_per_surf();
 
-  printf("AREATOTAL %g\n",area_total);
-
   // set indices of all computes,fixes,variables
 
   for (int m = 0; m < nvalues; m++) {
@@ -404,7 +402,6 @@ double ComputeReduce::compute_scalar()
 
   if (mode == SUM || mode == SUMSQ || mode == SUMAREA) {
     MPI_Allreduce(&one,&scalar,1,MPI_DOUBLE,MPI_SUM,world);
-    printf("COMP SCALAR %g %g\n",one,scalar);
   } else if (mode == MINN) {
     MPI_Allreduce(&one,&scalar,1,MPI_DOUBLE,MPI_MIN,world);
   } else if (mode == MAXX) {
@@ -516,11 +513,9 @@ double ComputeReduce::compute_one(int m, int flag)
   int vidx = value2index[m];
   int aidx = argindex[m];
 
-  double one;
-  if (mode == SUM) one = 0.0;
-  else if (mode == MINN) one = BIG;
+  double one = 0.0;
+  if (mode == MINN) one = BIG;
   else if (mode == MAXX) one = -BIG;
-  else if (mode == AVE) one = 0.0;
 
   if (which[m] == X) {
     Particle::OnePart *particles = particle->particles;
@@ -918,26 +913,24 @@ double ComputeReduce::area_per_surf()
   for (int i = 0; i < n; i++) {
     if (dimension == 2) {
       if (!distributed) {
-        if (!(lines[me+i*nprocs].mask & surfgroupbit)) continue;
+        if (subsetID && !(lines[me+i*nprocs].mask & surfgroupbit)) continue;
         if (mode == SUMAREA || mode == AVEAREA)
           areasurf[i] = surf->line_size(&lines[me+i*nprocs]);
         else areasurf[i] = 1.0;
       } else {
-        if (!(mylines[i].mask & surfgroupbit)) continue;
+        if (subsetID && !(mylines[i].mask & surfgroupbit)) continue;
         if (mode == SUMAREA || mode == AVEAREA)
           areasurf[i] = surf->line_size(&mylines[i]);
         else areasurf[i] = 1.0;
       }
     } else {
       if (!distributed) {
-        printf("AREAPERSURF i %d flag %d mode %d\n",
-               i,tris[me+i*nprocs].mask & surfgroupbit,mode);
-        if (!(tris[me+i*nprocs].mask & surfgroupbit)) continue;
+        if (subsetID && !(tris[me+i*nprocs].mask & surfgroupbit)) continue;
         if (mode == SUMAREA || mode == AVEAREA)
           areasurf[i] = surf->tri_size(&tris[me+i*nprocs],tmp);
         else areasurf[i] = 1.0;
       } else {
-        if (!(mytris[i].mask & surfgroupbit)) continue;
+        if (subsetID && !(mytris[i].mask & surfgroupbit)) continue;
         if (mode == SUMAREA || mode == AVEAREA)
           areasurf[i] = surf->tri_size(&mytris[i],tmp);
         else areasurf[i] = 1.0;
@@ -946,7 +939,6 @@ double ComputeReduce::area_per_surf()
 
 
     area_mine += areasurf[i];
-    printf("AREAMINE %g\n",area_mine);
   }
 
   MPI_Allreduce(&area_mine,&area_all,1,MPI_DOUBLE,MPI_SUM,world);
