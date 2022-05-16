@@ -19,7 +19,7 @@
 
 <LI>reduce = style name of this compute command 
 
-<LI>mode = <I>sum</I> or <I>min</I> or <I>max</I> or <I>ave</I>  or <I>sumsq</I> or <I>avesq</I> 
+<LI>mode = <I>sum</I> or <I>min</I> or <I>max</I> or <I>ave</I> or <I>sumsq</I> or <I>avesq</I> or (sum-area) or <I>ave-area</I> 
 
 <LI>one or more inputs can be listed 
 
@@ -85,10 +85,22 @@ vector values.  The <I>ave</I> operation adds the vector values into a
 global total, then divides by the number of values in the vector.  The
 <I>sumsq</I> operation sums the square of the values in the vector into a
 global total.  The <I>avesq</I> oepration does the same as <I>sumsq</I>, then
-divdes the sum of squares by the number of values.  The last two
+divdes the sum of squares by the number of values.  These two
 operations can be useful for calculating the variance of some
 quantity, e.g. variance = sumsq - ave^2.
 </P>
+<P>The <I>sum-area</I> or <I>ave-area</I> options can only be used for per-surf
+inputs.  Both options multiply each per-surf value by the area of the
+surface element (triangle in 3d, line segment in 2d) and sum the
+resulting values over all surface elements.  That is the output for
+the <I>sum-area</I> option.  For the <I>ave-area</I> option the summed value is
+divided by the summed area of all elements.  Note that both of these
+options are designed to work with flux values (e.g. mass per area per
+time) produced by the <A HREF = "compute_surf.html">compute surf</A> command with
+its default <I>norm</I> = yes option.
+</P>
+<HR>
+
 <P>Each listed input vector is operated on independently.
 </P>
 <P>Each listed input vector can be a particle attribute or can be the
@@ -187,6 +199,9 @@ the max of the ID vector, which does not yield useful information in
 this context, the <I>replace</I> keyword will extract the ID for the grid
 cell which has the maximum number of particles.  This ID and the
 cell's particle count will be printed with the statistical output.
+</P>
+<P>Note that the <I>replace</I> keyword can be used multiple times with
+different pairs of indices.
 </P>
 <HR>
 
