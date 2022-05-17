@@ -14,30 +14,31 @@
 
 #ifdef SURF_COLLIDE_CLASS
 
-SurfCollideStyle(specular,SurfCollideSpecular)
+SurfCollideStyle(adiabatic,SurfCollideAdiabatic)
 
 #else
 
-#ifndef SPARTA_SURF_COLLIDE_SPECULAR_H
-#define SPARTA_SURF_COLLIDE_SPECULAR_H
+#ifndef SPARTA_SURF_COLLIDE_ADIABATIC_H
+#define SPARTA_SURF_COLLIDE_ADIABATIC_H
 
 #include "surf_collide.h"
-#include "particle.h"
 
 namespace SPARTA_NS {
 
-class SurfCollideSpecular : public SurfCollide {
+class SurfCollideAdiabatic : public SurfCollide {
  public:
-  SurfCollideSpecular(class SPARTA *, int, char **);
-  SurfCollideSpecular(class SPARTA *sparta) : SurfCollide(sparta) {}
-  virtual ~SurfCollideSpecular() {}
+  SurfCollideAdiabatic(class SPARTA *, int, char **);
+  SurfCollideAdiabatic(class SPARTA *sparta) : SurfCollide(sparta) {}
+  ~SurfCollideAdiabatic();
   Particle::OnePart *collide(Particle::OnePart *&, double &,
                              int, double *, int, int &);
   void wrapper(Particle::OnePart *, double *, int *, double*);
-  void flags_and_coeffs(int *, double *);
+  void flags_and_coeffs(int *, double *) {}
 
  protected:
-  int noslip_flag;
+  class RanKnuth *random; // RNG for particle reflection
+
+  void scatter_isotropic(Particle::OnePart *, double *);
 };
 
 }

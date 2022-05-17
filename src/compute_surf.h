@@ -45,6 +45,7 @@ class ComputeSurf : public Compute {
  protected:
   int groupbit,imix,nvalue,ngroup,ntotal;
   int maxsurf,combined;
+  int normarea;            // 1 for value/area/time, 0 for value/time
   double nfactor_inverse;
   int *which;
 

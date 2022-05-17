@@ -30,7 +30,7 @@
 
 using namespace SPARTA_NS;
 
-enum{SUM,SUMSQ,MINN,MAXX,AVE,AVESQ};
+enum{SUM,SUMSQ,MINN,MAXX,AVE,AVESQ,SUMAREA,AVEAREA};
 enum{X,V,KE,EROT,EVIB,COMPUTE,FIX,VARIABLE};
 enum{PARTICLE,GRID,SURF};
 
@@ -53,6 +53,8 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
   else if (strcmp(arg[2],"max") == 0) mode = MAXX;
   else if (strcmp(arg[2],"ave") == 0) mode = AVE;
   else if (strcmp(arg[2],"avesq") == 0) mode = AVESQ;
+  else if (strcmp(arg[2],"sum-area") == 0) mode = SUMAREA;
+  else if (strcmp(arg[2],"ave-area") == 0) mode = AVEAREA;
   else error->all(FLERR,"Illegal compute reduce command");
 
   MPI_Comm_rank(world,&me);
@@ -286,6 +288,11 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
                  "particle, grid, or surf values");
   }
 
+  // require per-surf values for SUMAREA or AVEAREA
+
+  if ((mode == SUMAREA || mode == AVEAREA) && (flavor[0] != SURF))
+    error->all(FLERR,"Compure reduce sum-area/ave-area require surf values");
+
   // this compute produces either a scalar or vector
 
   if (nvalues == 1) {
@@ -303,6 +310,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
 
   maxparticle = maxgrid = 0;
   varparticle = vargrid = NULL;
+  areasurf = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -326,6 +334,7 @@ ComputeReduce::~ComputeReduce()
 
   memory->destroy(varparticle);
   memory->destroy(vargrid);
+  memory->destroy(areasurf);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -352,6 +361,11 @@ void ComputeReduce::init()
       surfgroupbit = surf->bitmask[igroup];
     }
   }
+
+  // flavor = SURF, pre-compute area of all surfs
+  // if mode != SUMAREA or AVEAREA, area not computed, just set to 1.0
+
+  if (flavor[0] == SURF) area_total = area_per_surf();
 
   // set indices of all computes,fixes,variables
 
@@ -386,7 +400,7 @@ double ComputeReduce::compute_scalar()
 
   double one = compute_one(0,-1);
 
-  if (mode == SUM || mode == SUMSQ) {
+  if (mode == SUM || mode == SUMSQ || mode == SUMAREA) {
     MPI_Allreduce(&one,&scalar,1,MPI_DOUBLE,MPI_SUM,world);
   } else if (mode == MINN) {
     MPI_Allreduce(&one,&scalar,1,MPI_DOUBLE,MPI_MIN,world);
@@ -396,6 +410,9 @@ double ComputeReduce::compute_scalar()
     MPI_Allreduce(&one,&scalar,1,MPI_DOUBLE,MPI_SUM,world);
     bigint n = count_included();
     if (n) scalar /= n;
+  } else if (mode == AVEAREA) {
+    MPI_Allreduce(&one,&scalar,1,MPI_DOUBLE,MPI_SUM,world);
+    if (area_total > 0.0) scalar /= area_total;
   }
 
   return scalar;
@@ -413,7 +430,7 @@ void ComputeReduce::compute_vector()
       indices[m] = index;
     }
 
-  if (mode == SUM || mode == SUMSQ) {
+  if (mode == SUM || mode == SUMSQ || mode == SUMAREA) {
     for (int m = 0; m < nvalues; m++)
       MPI_Allreduce(&onevec[m],&vector[m],1,MPI_DOUBLE,MPI_SUM,world);
 
@@ -467,6 +484,12 @@ void ComputeReduce::compute_vector()
       MPI_Allreduce(&onevec[m],&vector[m],1,MPI_DOUBLE,MPI_SUM,world);
       if (n) vector[m] /= n;
     }
+
+  } else if (mode == AVEAREA) {
+    for (int m = 0; m < nvalues; m++) {
+      MPI_Allreduce(&onevec[m],&vector[m],1,MPI_DOUBLE,MPI_SUM,world);
+      if (area_total > 0.0) vector[m] /= area_total;
+    }
   }
 }
 
@@ -490,11 +513,9 @@ double ComputeReduce::compute_one(int m, int flag)
   int vidx = value2index[m];
   int aidx = argindex[m];
 
-  double one;
-  if (mode == SUM) one = 0.0;
-  else if (mode == MINN) one = BIG;
+  double one = 0.0;
+  if (mode == MINN) one = BIG;
   else if (mode == MAXX) one = -BIG;
-  else if (mode == AVE) one = 0.0;
 
   if (which[m] == X) {
     Particle::OnePart *particles = particle->particles;
@@ -726,7 +747,7 @@ double ComputeReduce::compute_one(int m, int flag)
               }
             }
 
-            combine(one,fvec[i],i);
+            combine(one,areasurf[i]*fvec[i],i);
           }
         } else one = fvec[flag];
 
@@ -763,7 +784,7 @@ double ComputeReduce::compute_one(int m, int flag)
               }
             }
 
-            combine(one,farray[i][aidxm1],i);
+            combine(one,areasurf[i]*farray[i][aidxm1],i);
           }
         } else one = farray[flag][aidxm1];
       }
@@ -871,6 +892,59 @@ bigint ComputeReduce::count_included()
   return ncountall;
 }
 
+/* ---------------------------------------------------------------------- */
+
+double ComputeReduce::area_per_surf()
+{
+  double area_mine,area_all,tmp;
+
+  int dimension = domain->dimension;
+  Surf::Line *lines = surf->lines;
+  Surf::Line *mylines = surf->mylines;
+  Surf::Tri *tris = surf->tris;
+  Surf::Tri *mytris = surf->mytris;
+  int distributed = surf->distributed;
+  int n = surf->nown;
+    
+  memory->destroy(areasurf);
+  memory->create(areasurf,n,"reduce:areasurf");
+
+  area_mine = 0.0;
+  for (int i = 0; i < n; i++) {
+    if (dimension == 2) {
+      if (!distributed) {
+        if (subsetID && !(lines[me+i*nprocs].mask & surfgroupbit)) continue;
+        if (mode == SUMAREA || mode == AVEAREA)
+          areasurf[i] = surf->line_size(&lines[me+i*nprocs]);
+        else areasurf[i] = 1.0;
+      } else {
+        if (subsetID && !(mylines[i].mask & surfgroupbit)) continue;
+        if (mode == SUMAREA || mode == AVEAREA)
+          areasurf[i] = surf->line_size(&mylines[i]);
+        else areasurf[i] = 1.0;
+      }
+    } else {
+      if (!distributed) {
+        if (subsetID && !(tris[me+i*nprocs].mask & surfgroupbit)) continue;
+        if (mode == SUMAREA || mode == AVEAREA)
+          areasurf[i] = surf->tri_size(&tris[me+i*nprocs],tmp);
+        else areasurf[i] = 1.0;
+      } else {
+        if (subsetID && !(mytris[i].mask & surfgroupbit)) continue;
+        if (mode == SUMAREA || mode == AVEAREA)
+          areasurf[i] = surf->tri_size(&mytris[i],tmp);
+        else areasurf[i] = 1.0;
+      }
+    }
+
+
+    area_mine += areasurf[i];
+  }
+
+  MPI_Allreduce(&area_mine,&area_all,1,MPI_DOUBLE,MPI_SUM,world);
+  return area_all;
+}
+
 /* ----------------------------------------------------------------------
    combine two values according to reduction mode
    for MIN/MAX, also update index with winner
@@ -890,7 +964,7 @@ void ComputeReduce::combine(double &one, double two, int i)
       one = two;
       index = i;
     }
-  }
+  } else if (mode == SUMAREA || mode == AVEAREA) one += two;
 }
 
 /* ----------------------------------------------------------------------
