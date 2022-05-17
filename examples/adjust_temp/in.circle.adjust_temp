@@ -1,11 +1,18 @@
+################################################################################
 # hypersonic flow around a 2D circle
 # non-reacting argon flow
 # grid adptation
 # diffuse surface with temperature adjustment
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
 
 seed	    	    12345
 dimension   	    2
-global		    nrho 4.247e19 fnum 7e14 gridcut 0.01 comm/style all
+global		    nrho 4.247e19 fnum 7e14 gridcut 0.01 comm/style all comm/sort yes
 timestep            3.5e-7
 
 boundary	    o ro p
@@ -28,8 +35,8 @@ dump                2 surf all 500 std_surf.* id temp f_1[*]
 surf_collide        1 diffuse 100 1.0
 surf_modify         1 collide 1
 
-fix                 in emit/face all xlo
-create_particles    all n 0
+fix                 in emit/face all xlo twopass
+create_particles    all n 0 twopass
 
 compute             3 grid all all nrho
 compute             4 thermal/grid all all temp
@@ -44,4 +51,4 @@ stats_style         step cpu np nattempt ncoll nscoll ngrid maxlevel
 stats_modify        flush yes
 stats               250
 
-run                 5000
+run                 3000
