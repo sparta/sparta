@@ -60,7 +60,7 @@ class SurfCollideDiffuse : public SurfCollide {
   double vstream[3];
   class RanKnuth *random;     // RNG for particle reflection
 
-  void diffuse(Particle::OnePart *, double *, int);
+  void diffuse(Particle::OnePart *, double *, int = -1);
 };
 
 }

@@ -362,8 +362,7 @@ void SurfCollideDiffuse::wrapper(Particle::OnePart *p, double *norm,
     acc = coeffs[1];
   }
 
-  int dummy = -1;
-  diffuse(p,norm,dummy);
+  diffuse(p,norm);
 }
 
 /* ----------------------------------------------------------------------
