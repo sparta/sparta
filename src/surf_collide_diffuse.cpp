@@ -142,8 +142,7 @@ void SurfCollideDiffuse::init()
     lines = surf->mylines;
     tris = surf->mytris;
     nsurf = surf->nown;
-  }
-  else {
+  } else {
     lines = surf->lines;
     tris = surf->tris;
     nsurf = surf->nlocal;
@@ -195,8 +194,8 @@ collide(Particle::OnePart *&ip, double &,
   //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 
   if (isurf > -1 && !distributed && !implicit) {
-      if (domain->dimension == 2) twall = lines[isurf].temp;
-      else twall = tris[isurf].temp;
+    if (domain->dimension == 2) twall = lines[isurf].temp;
+    else twall = tris[isurf].temp;
   }
 
   if (ip) {

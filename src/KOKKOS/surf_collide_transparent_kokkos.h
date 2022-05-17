@@ -46,8 +46,8 @@ class SurfCollideTransparentKokkos : public SurfCollideTransparent {
   ------------------------------------------------------------------------- */
 
   KOKKOS_INLINE_FUNCTION
-  Particle::OnePart*
-  collide_kokkos(Particle::OnePart *&ip, const double *, double &, int, int&) const
+  Particle::OnePart* collide_kokkos(Particle::OnePart *, double &,
+                                    int, double *, int, int &) const
   {
     Kokkos::atomic_increment(&d_nsingle());
 

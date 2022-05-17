@@ -16,7 +16,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include "surf_collide_diffuse_kokkos.h"
-#include "surf.h"
+#include "surf_kokkos.h"
 #include "surf_react.h"
 #include "input.h"
 #include "variable.h"
@@ -92,6 +92,39 @@ SurfCollideDiffuseKokkos::~SurfCollideDiffuseKokkos()
 
 void SurfCollideDiffuseKokkos::init()
 {
+  SurfCollideDiffuse::init();
+
+  dimension = domain->dimension;
+
+  auto surfKK = (SurfKokkos*)surf;
+  surfKK->sync(Host,LINE_MASK|TRI_MASK);
+
+  if (distributed && !implicit) {
+    k_lines = surfKK->k_mylines;
+    k_tris = surfKK->k_mytris;
+    nsurf = surf->nown;
+  } else {
+    k_lines = surfKK->k_lines;
+    k_tris = surfKK->k_tris;
+    nsurf = surf->nlocal;
+  }
+
+  for (int i = 0; i < nsurf; i++) {
+    if (domain->dimension == 2) k_lines.h_view[i].temp = twall;
+    else k_tris.h_view[i].temp = twall;
+  }
+
+  if (domain->dimension == 2) {
+    k_lines.modify_host();
+    k_lines.sync_device();
+  } else {
+    k_tris.modify_host();
+    k_tris.sync_device();
+  }
+
+  d_lines = k_lines.d_view;
+  d_tris = k_tris.d_view;
+
   ambi_flag = vibmode_flag = 0;
   if (modify->n_update_custom) {
     for (int ifix = 0; ifix < modify->nfix; ifix++) {
