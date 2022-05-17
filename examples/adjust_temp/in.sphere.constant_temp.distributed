@@ -12,7 +12,7 @@
 
 seed	    	    12345
 dimension   	    3
-global		    nrho 4.247e19 fnum 2e13 gridcut 0.01 comm/sort yes surfs explicit/distributed
+global		    nrho 4.247e19 fnum 2e14 gridcut 0.01 comm/sort yes surfs explicit/distributed
 timestep            3.5e-7
 
 boundary	    o ro ro
@@ -51,4 +51,4 @@ stats_style         step cpu np nattempt ncoll nscoll ngrid maxlevel
 stats_modify        flush yes
 stats               250
 
-run                 3000
+run                 2000
