@@ -1,0 +1,83 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+fix temp/surf command :h3
+
+[Syntax:]
+
+fix ID temp/surf surf-ID Nevery source Tsurf emisurf:pre
+
+ID is documented in "fix"_fix.html command :ulb,l
+temp/surf = style name of this fix command :l
+surf-ID = group ID for which surface elements to consider :l
+Nevery = adjust surface temperature once every Nevery steps :l
+source = computeID or fixID :l
+  computeID = c_ID or c_ID\[n\] for a compute that calculates per surf values
+  fixID = f_ID or f_ID\[n\] for a fix that calculates per surf values :pre
+Tsurf = initial temperature of surface (temperature units) :l
+emisurf = emissivity of the surface (unitless, 0 < emisurf <= 1) :l,ule
+
+[Examples:]
+
+fix 1 temp/surf all 1000 c_1 800 0.9 :pre
+
+[Description:]
+
+Compute a surface element temperature once every Nevery steps.  This
+command takes a compute or fix ID which should compute the flux of
+total energy onto each surface elements, e.g. {etot} from the "compute
+surf"_compute_surf.html command.
+
+The specified {group-ID} must be the name of a surface element group,
+as defined by the "group surf"_group.html command, which contains a
+set of surf elements.
+
+The specfied {Nevery} determines how often the surface temperatures
+are re-computed.
+
+The {source} can be specified as a per surface element quantity
+calculated by a compute, such as the "compute surf"_compute_surf.html
+command.  It can also be specified a per surface element quantity
+calculated by a fix that perform time-averaging, such as "fix
+ave/surf"_fix_ave_surf.html.  That fix can time average per-surf
+quantities from per-surf computes.
+
+The temperature of the surface element is calculated from the
+Stefan-Boltzmann law for a gray-body, which states that 
+
+q_wall = sigma * emisurf * Tsurf^4 :pre
+
+where q_wall is the heat flux to the surface, sigma is the
+Stefan-Boltzmann constant, {emisurf} is the surface emissivity, and
+{Tsurf} is the resulting surface temperature.
+
+The specified emissivity {emisurf} is a unitless coefficient from 0.0
+to 1.0, which determines the emissivity of the surface.  An emissivity
+coefficient of 1.0 means the surface is a black-body that radiates all
+the energy it receives.
+
+The specified {Tsurf} is the initial temperature of each surface
+element.  The value for each surface is reset every {Nevery} timesteps
+by the formula above.
+
+:line
+
+[Restart, output info:]
+
+No information about this fix is written to "binary restart
+files"_restart.html.
+
+[Restrictions:]
+
+Currently this fix can only be used in simulations that define
+explicit non-distributed surfaces.  Distributed and implicit surface
+support will be added at a later time.
+
+[Related commands:] none
+
+[Default:] none

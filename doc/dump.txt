@@ -62,13 +62,14 @@ args = list of arguments for a particular style :l
 
   {surf} args = list of surf attributes
     possible attributes = id, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z, 
-                          temp, c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
+                          p_ID, p_ID\[N\], c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
 
       id = surface element ID
       v1x,v1y,v1z = coords of 1st vertex in surface element
       v1x,v1y,v1z = coords of 2nd vertex in surface element
       v1x,v1y,v1z = coords of 3rd vertex in surface element
-      temp = surface element temperature
+      p_ID = custom per-surf vector with ID
+      p_ID\[N\] = Nth column of custom per-surf array with ID
       c_ID = per-surf vector calculated by a compute with ID
       c_ID\[N\] = Nth column of per-surf array calculated by a compute with ID, I can include wildcard (see below)
       f_ID = per-surf vector calculated by a fix with ID
@@ -410,9 +411,15 @@ attributes write the coordinates of the vertices of the end or corner
 points of the surface element.  The {v1z}, {v2z}, {v3x}, {v3y}, and
 {v3z} attributes cannot be used for a 2d simulation.
 
-The {temp} attribute write the average surface element temperature,
-computed by the {fix_surf_temp}, or the constant value specified in
-the input file.
+The {p_ID} and {p_ID\[N\]} attributes allow custom per-surf vectors or
+arrays defined by a "fix"_fix.html or "surf_react"_surf_react.html
+command to be output.  The ID in the attribute should be replaced by
+the actual ID of the custom per-surf attribute that the fix or
+surf_react command defines.  See individal commands for details.
+E.g. the "fix temp/surf"_fix_temp_surf.html command defines the
+custome vector for temperature.  And the "surf_react
+adsorb"_surf_react_adsorb.html command defines one array and 3
+vectors.
 
 The {c_ID} and {c_ID\[I\]} attributes allow per-surf vectors or arrays
 calculated by a "compute"_compute.html to be output.  The ID in the

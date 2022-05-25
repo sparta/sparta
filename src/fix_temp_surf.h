@@ -14,22 +14,22 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(surf/temp,FixSurfTemp)
+FixStyle(temp/surf,FixTempSurf)
 
 #else
 
-#ifndef SPARTA_FIX_SURF_TEMP_H
-#define SPARTA_FIX_SURF_TEMP_H
+#ifndef SPARTA_FIX_TEMP_SURF_H
+#define SPARTA_FIX_TEMP_SURF_H
 
 #include "fix.h"
 #include "surf.h"
 
 namespace SPARTA_NS {
 
-class FixSurfTemp : public Fix {
+class FixTempSurf : public Fix {
  public:
-  FixSurfTemp(class SPARTA *, int, char **);
-  ~FixSurfTemp();
+  FixTempSurf(class SPARTA *, int, char **);
+  ~FixTempSurf();
   int setmask();
   void init();
   virtual void end_of_step();
@@ -37,8 +37,9 @@ class FixSurfTemp : public Fix {
  private:
   int ifix,m;
   double twall,prefactor,emi;
+  int qwindex,tindex;
   char *id_qw;
-  int qwindex;
+
   class Fix *fqw;
   double *qw,*qw_all;
 

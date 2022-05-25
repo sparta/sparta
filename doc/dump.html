@@ -73,13 +73,14 @@
 </PRE>
 <PRE>  <I>surf</I> args = list of surf attributes
     possible attributes = id, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z, 
-                          c_ID, c_ID[N], f_ID, f_ID[N], v_name 
+                          p_ID, p_ID[N], c_ID, c_ID[N], f_ID, f_ID[N], v_name 
 </PRE>
 <PRE>      id = surface element ID
       v1x,v1y,v1z = coords of 1st vertex in surface element
       v1x,v1y,v1z = coords of 2nd vertex in surface element
       v1x,v1y,v1z = coords of 3rd vertex in surface element
-      temp = surface element temperature
+      p_ID = custom per-surf vector with ID
+      p_ID[N] = Nth column of custom per-surf array with ID
       c_ID = per-surf vector calculated by a compute with ID
       c_ID[N] = Nth column of per-surf array calculated by a compute with ID, I can include wildcard (see below)
       f_ID = per-surf vector calculated by a fix with ID
@@ -422,9 +423,15 @@ attributes write the coordinates of the vertices of the end or corner
 points of the surface element.  The <I>v1z</I>, <I>v2z</I>, <I>v3x</I>, <I>v3y</I>, and
 <I>v3z</I> attributes cannot be used for a 2d simulation.
 </P>
-<P>The <I>temp</I> attribute write the average surface element temperature,
-computed by the <A HREF = "fix_surf_temp.html">fix surf/temp</A>, or the constant value specified in
-the input file.
+<P>The <I>p_ID</I> and <I>p_ID[N]</I> attributes allow custom per-surf vectors or
+arrays defined by a <A HREF = "fix.html">fix</A> or <A HREF = "surf_react.html">surf_react</A>
+command to be output.  The ID in the attribute should be replaced by
+the actual ID of the custom per-surf attribute that the fix or
+surf_react command defines.  See individal commands for details.
+E.g. the <A HREF = "fix_temp_surf.html">fix temp/surf</A> command defines the
+custome vector for temperature.  And the <A HREF = "surf_react_adsorb.html">surf_react
+adsorb</A> command defines one array and 3
+vectors.
 </P>
 <P>The <I>c_ID</I> and <I>c_ID[I]</I> attributes allow per-surf vectors or arrays
 calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in the
