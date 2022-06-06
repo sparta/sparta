@@ -40,8 +40,10 @@ using namespace SPARTA_NS;
 
 enum{VERSION,SMALLINT,CELLINT,BIGINT,
      UNITS,NTIMESTEP,NPROCS,
-     FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,SURFMAX,GRIDCUT,GRID_WEIGHT,
-     COMM_SORT,COMM_STYLE,
+     FNUM,NRHO,VSTREAM,TEMP_THERMAL,FSTYLE,FIELD,FIELDID,
+     SURFS_IMPLICIT,SURFS_DISTRIBUTED,SURFGRID,SURFMAX,
+     SPLITMAX,GRIDCUT,GRID_WEIGHT,COMM_SORT,COMM_STYLE,
+     SURFTALLY,PARTICLE_REORDER,MEMLIMIT_GRID,MEMLIMIT,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      SPECIES,MIXTURE,PARTICLE_CUSTOM,GRID,SURF,
@@ -60,8 +62,8 @@ void ReadRestart::command(int narg, char **arg)
   if (domain->box_exist)
     error->all(FLERR,"Cannot read_restart after simulation box is defined");
 
-  int mem_limit_flag = update->global_mem_limit > 0 ||
-           (update->mem_limit_grid_flag && !grid->nlocal);
+  mem_limit_flag = update->global_mem_limit > 0 ||
+       (update->mem_limit_grid_flag && !grid->nlocal);
 
   MPI_Comm_rank(world,&me);
   MPI_Comm_size(world,&nprocs);
@@ -83,6 +85,10 @@ void ReadRestart::command(int narg, char **arg)
 
   if (strchr(arg[0],'%')) multiproc = 1;
   else multiproc = 0;
+
+  if (mem_limit_flag && !multiproc)
+    error->all(FLERR,"Cannot (yet) use global mem/limit without "
+               "% in restart file name");
 
   // open single restart file or base file for multiproc case
 
@@ -381,8 +387,9 @@ void ReadRestart::command(int narg, char **arg)
         int nbytes_custom = particle->sizeof_custom();
         int nbytes = nbytes_particle + nbytes_custom;
 
-        int maxbuf_new = MAX(grid_read_size,update->global_mem_limit);
-        maxbuf_new = MAX(maxbuf_new,sizeof(nbytes));
+        int maxbuf_new = MIN(particle_read_size,update->global_mem_limit);
+        maxbuf_new = MAX(maxbuf_new,grid_read_size);
+        maxbuf_new = MAX(maxbuf_new,nbytes);
         maxbuf_new += 128; // extra for size and ROUNDUP(ptr)
         if (maxbuf_new > maxbuf) {
           maxbuf = maxbuf_new;
@@ -392,12 +399,12 @@ void ReadRestart::command(int narg, char **arg)
 
         // number of particles per pass
 
-        step_size = update->global_mem_limit/nbytes;
+        step_size = MIN(particle_nlocal,update->global_mem_limit/nbytes);
 
         // extra pass for grid
 
-        npasses = ceil((double)particle_nlocal/step_size)+1;
-        if (particle_nlocal == 0) npasses++;
+        if (particle_nlocal == 0) npasses = 2;
+        else npasses = ceil((double)particle_nlocal/step_size)+1;
 
         int nlocal_restart = 0;
         bigint total_read_part = 0;
@@ -521,7 +528,8 @@ void ReadRestart::command(int narg, char **arg)
         int nbytes_custom = particle->sizeof_custom();
         int nbytes = nbytes_particle + nbytes_custom;
 
-        int maxbuf_new = MAX(grid_read_size,update->global_mem_limit);
+        int maxbuf_new = MIN(particle_read_size,update->global_mem_limit);
+        maxbuf_new = MAX(maxbuf_new,grid_read_size);
         maxbuf_new = MAX(maxbuf_new,nbytes);
         maxbuf_new += 128; // extra for size and ROUNDUP(ptr)
         if (maxbuf_new > maxbuf) {
@@ -532,12 +540,12 @@ void ReadRestart::command(int narg, char **arg)
 
         // number of particles per pass
 
-        step_size = update->global_mem_limit/nbytes;
+        step_size = MIN(particle_nlocal,update->global_mem_limit/nbytes);
 
         // extra pass for grid
 
-        npasses = ceil((double)particle_nlocal/step_size)+1;
-        if (particle_nlocal == 0) npasses++;
+        if (particle_nlocal == 0) npasses = 2;
+        else npasses = ceil((double)particle_nlocal/step_size)+1;
 
         if (i % nclusterprocs) {
           iproc = me + (i % nclusterprocs);
@@ -1009,20 +1017,47 @@ void ReadRestart::header(int incompatible)
       read_double_vec(3,update->vstream);
     } else if (flag == TEMP_THERMAL) {
       update->temp_thermal = read_double();
-    } else if (flag == GRAVITY) {
+
+    } else if (flag == FSTYLE) {
+      update->fstyle = read_int();
+    } else if (flag == FIELD) {
       read_int();
-      read_double_vec(3,update->gravity);
+      read_double_vec(3,update->field);
+    } else if (flag == FIELDID) {
+      update->fieldID = read_string();
+
+    } else if (flag == SURFS_IMPLICIT) {
+      surf->implicit = read_int();
+    } else if (flag == SURFS_DISTRIBUTED) {
+      surf->distributed = read_int();
+    } else if (flag == SURFGRID) {
+      grid->surfgrid_algorithm = read_int();
     } else if (flag == SURFMAX) {
       grid->maxsurfpercell = read_int();
+    } else if (flag == SPLITMAX) {
+      grid->maxsplitpercell = read_int();
     } else if (flag == GRIDCUT) {
       grid->cutoff = read_double();
+    } else if (flag == GRID_WEIGHT) {
+      grid->cellweightflag = read_int();
     } else if (flag == COMM_SORT) {
       comm->commsortflag = read_int();
     } else if (flag == COMM_STYLE) {
       comm->commpartstyle = read_int();
-    } else if (flag == GRID_WEIGHT) {
-      grid->cellweightflag = read_int();
+    } else if (flag == SURFTALLY) {
+      surf->tally_comm = read_int();
+    } else if (flag == PARTICLE_REORDER) {
+      update->reorder_period = read_int();
+    } else if (flag == MEMLIMIT_GRID) {
+      // ignore value if already set
 
+      if (mem_limit_flag) read_int();
+      else update->mem_limit_grid_flag = read_int();
+    } else if (flag == MEMLIMIT) {
+      // ignore value if already set
+
+      if (mem_limit_flag) read_int();
+      else update->global_mem_limit = read_int();
     } else if (flag == NPARTICLE) {
       nparticle_file = read_bigint();
     } else if (flag == NUNSPLIT) {

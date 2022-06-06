@@ -27,7 +27,20 @@ using namespace SPARTA_NS;
 SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
   SurfCollide(sparta, narg, arg)
 {
-  if (narg != 2) error->all(FLERR,"Illegal surf_collide specular command");
+  if (narg < 2 || narg > 3) error->all(FLERR,"Illegal surf_collide specular command");
+
+  // optional args
+
+  noslip_flag = 0;
+
+  int iarg = 2;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"noslip") == 0) {
+      noslip_flag = 1;
+      iarg += 1;
+    } else
+      error->all(FLERR,"Illegal surf_collide specular command");
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -36,7 +49,7 @@ SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
    isurf = index of surface element
    norm = surface normal unit vector
    isr = index of reaction model if >= 0, -1 for no chemistry
-   ip = reset to NULL if destroyed by chemsitry
+   ip = reset to NULL if destroyed by chemistry
    return jp = new particle if created by chemistry
    return reaction = index of reaction (1 to N) that took place, 0 = no reaction
    resets particle(s) to post-collision outward velocity
@@ -63,7 +76,7 @@ collide(Particle::OnePart *&ip, double &,
     if (reaction) surf->nreact_one++;
   }
 
-  // specular reflection for each particle
+  // specular or noslip reflection for each particle
   // only if SurfReact did not already reset velocities
   // also both partiticles need to trigger any fixes
   //   to update per-particle properties which depend on
@@ -72,14 +85,43 @@ collide(Particle::OnePart *&ip, double &,
   //   since temperature does not change, would need to add a twall arg
 
   if (ip) {
-    if (!velreset) MathExtra::reflect3(ip->v,norm);
+    if (!velreset) {
+      if (noslip_flag) {
+
+        // noslip reflection
+        // reflect incident v, all three components
+
+        MathExtra::negate3(ip->v);
+      } else {
+
+        // specular reflection
+
+        MathExtra::reflect3(ip->v,norm);
+      }
+    }
+
     //if (modify->n_update_custom) {
     //  int i = ip - particle->particles;
     //  modify->update_custom(i,twall,twall,twall,vstream);
     //}
   }
+
   if (jp) {
-    if (!velreset) MathExtra::reflect3(jp->v,norm);
+    if (!velreset) {
+      if (noslip_flag) {
+
+        // noslip reflection
+        // reflect incident v, all three components.
+
+        MathExtra::negate3(jp->v);
+      } else {
+
+        // specular reflection
+
+        MathExtra::reflect3(jp->v,norm);
+      }
+    }
+
     //if (modify->n_update_custom) {
     //  int j = jp - particle->particles;
     //  modify->update_custom(j,twall,twall,twall,vstream);
@@ -107,7 +149,7 @@ collide(Particle::OnePart *&ip, double &,
 
 /* ----------------------------------------------------------------------
    wrapper on specular() method to perform collision for a single particle
-   pass in 0 coefficients to match command-line args for style specular
+   pass in 1 flag (optional) to match command-line args for style specular
    flags, coeffs can be NULL
    called by SurfReactAdsorb
 ------------------------------------------------------------------------- */
@@ -115,5 +157,17 @@ collide(Particle::OnePart *&ip, double &,
 void SurfCollideSpecular::wrapper(Particle::OnePart *p, double *norm,
                                   int *flags, double *coeffs)
 {
+  if (flags)
+    noslip_flag = flags[0];
+
   MathExtra::reflect3(p->v,norm);
+}
+
+/* ----------------------------------------------------------------------
+   return flags and coeffs for this SurfCollide instance to caller
+------------------------------------------------------------------------- */
+
+void SurfCollideSpecular::flags_and_coeffs(int *flags, double *coeffs)
+{
+  flags[0] = noslip_flag;
 }

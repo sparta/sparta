@@ -41,7 +41,7 @@ class SurfCollidePistonKokkos : public SurfCollidePiston {
      ip = particle with current x = collision pt, current v = incident v
      norm = surface normal unit vector
      isr = index of reaction model if >= 0, -1 for no chemistry
-     ip = set to NULL if destroyed by chemsitry
+     ip = set to NULL if destroyed by chemistry
      return jp = new particle if created by chemistry
      return reaction = index of reaction (1 to N) that took place, 0 = no reaction
      resets particle(s) to post-collision outward velocity
@@ -49,7 +49,7 @@ class SurfCollidePistonKokkos : public SurfCollidePiston {
   KOKKOS_INLINE_FUNCTION
   Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, const double *norm, double &dtremain, int, int &) const
   {
-    Kokkos::atomic_fetch_add(&d_nsingle(),1);
+    Kokkos::atomic_increment(&d_nsingle());
 
     // if surface chemistry defined, attempt reaction
     // reaction > 0 if reaction took place

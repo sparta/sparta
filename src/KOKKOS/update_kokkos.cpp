@@ -42,6 +42,7 @@
 #include "kokkos.h"
 #include "sparta_masks.h"
 #include "surf_collide_specular_kokkos.h"
+#include "kokkos_base.h"
 
 using namespace SPARTA_NS;
 
@@ -51,6 +52,8 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Surf
+enum{PERAUTO,PERCELL,PERSURF};                  // several files
+enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // several files
 
 #define MAXSTUCK 20
 #define EPSPARAM 1.0e-7
@@ -168,31 +171,41 @@ void UpdateKokkos::init()
     else moveptr = &UpdateKokkos::move<2,0>;
   }
 
-  // check gravity vector
+  // checks on external field options
 
-  if (domain->dimension == 2 && gravity[2] != 0.0)
-    error->all(FLERR,"Gravity in z not allowed for 2d");
-  if (domain->axisymmetric && gravity[1] != 0.0)
-    error->all(FLERR,"Gravity in y not allowed for axi-symmetric model");
-
-  // moveperturb method is set if particle motion is perturbed
-
-  gravity_3d_flag = gravity_2d_flag = 0;
-  moveperturb = NULL;
-  if (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0) {
-    if (domain->dimension == 3) {
-      moveperturb = &UpdateKokkos::gravity3d;
-      gravity_3d_flag = 1;
-    }
-    if (domain->dimension == 2){
-      moveperturb = &UpdateKokkos::gravity2d;
-      gravity_2d_flag = 1;
-    }
+  if (fstyle == CFIELD) {
+    if (domain->dimension == 2 && field[2] != 0.0)
+      error->all(FLERR,"External field in z not allowed for 2d");
+    if (domain->axisymmetric && field[1] != 0.0)
+      error->all(FLERR,
+                 "External field in y not allowed for axisymmetric model");
+  } else if (fstyle == PFIELD) {
+    ifieldfix = modify->find_fix(fieldID);
+    if (ifieldfix < 0) error->all(FLERR,"External field fix ID not found");
+    if (!modify->fix[ifieldfix]->per_particle_field)
+      error->all(FLERR,"External field fix does not compute necessary field");
+  } else if (fstyle == GFIELD) {
+    ifieldfix = modify->find_fix(fieldID);
+    if (ifieldfix < 0) error->all(FLERR,"External field fix ID not found");
+    if (!modify->fix[ifieldfix]->per_grid_field)
+      error->all(FLERR,"External field fix does not compute necessary field");
   }
 
-  if (moveperturb) perturbflag = 1;
-  else perturbflag = 0;
-
+  if (fstyle == PFIELD) {
+    field_active[0] = modify->fix[ifieldfix]->field_active[0];
+    field_active[1] = modify->fix[ifieldfix]->field_active[1];
+    field_active[2] = modify->fix[ifieldfix]->field_active[2];
+    KKBaseFieldFix = dynamic_cast<KokkosBase*>(modify->fix[ifieldfix]);
+    if (!KKBaseFieldFix)
+      error->all(FLERR,"External field fix is not Kokkos-enabled"); 
+  } else if (fstyle == GFIELD) {
+    field_active[0] = modify->fix[ifieldfix]->field_active[0];
+    field_active[1] = modify->fix[ifieldfix]->field_active[1];
+    field_active[2] = modify->fix[ifieldfix]->field_active[2];
+    KKBaseFieldFix = dynamic_cast<KokkosBase*>(modify->fix[ifieldfix]);
+    if (!KKBaseFieldFix)
+      error->all(FLERR,"External field fix is not Kokkos-enabled");    
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -204,6 +217,7 @@ void UpdateKokkos::setup()
   SurfKokkos* surf_kk = (SurfKokkos*) surf;
 
   particle_kk->sync(Device,ALL_MASK);
+  particle_kk->sorted_kk = 0;
 
   if (sparta->kokkos->prewrap) {
 
@@ -218,14 +232,14 @@ void UpdateKokkos::setup()
 
     // surf
 
-    if (surf->exist) {
+    if (surf->exist)
       surf_kk->wrap_kokkos();
-    }
 
     sparta->kokkos->prewrap = 0;
   } else {
     grid_kk->modify(Host,ALL_MASK);
     grid_kk->update_hash();
+
     if (surf->exist) {
       surf_kk->modify(Host,ALL_MASK);
       grid_kk->wrap_kokkos_graphs();
@@ -256,6 +270,15 @@ void UpdateKokkos::run(int nsteps)
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
 
+  // external per grid cell field
+  // only evaluate once at beginning of run b/c time-independent
+  // fix calculates field acting at center point of all grid cells
+
+  if (fstyle == GFIELD && fieldfreq == 0) {
+    modify->fix[ifieldfix]->compute_field();
+    d_fieldfix_array_grid = KKBaseFieldFix->d_array_grid;
+  }
+
   // cellweightflag = 1 if grid-based particle weighting is ON
 
   int cellweightflag = 0;
@@ -266,7 +289,8 @@ void UpdateKokkos::run(int nsteps)
   for (int i = 0; i < nsteps; i++) {
 
     ntimestep++;
-    if (collide_react) collide_react_update();
+
+    if (collide_react) collide_react_reset();
     if (bounce_tally) bounce_set(ntimestep);
 
     timer->stamp();
@@ -310,6 +334,8 @@ void UpdateKokkos::run(int nsteps)
       collide->collisions();
       timer->stamp(TIME_COLLIDE);
     }
+
+    if (collide_react) collide_react_update();
 
     // diagnostic fixes
 
@@ -394,11 +420,28 @@ template < int DIM, int SURF > void UpdateKokkos::move()
 
   ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
 
-  while (1) {
+  // external per particle field
+  // fix calculates field acting on all owned particles
 
-    // loop over particles
-    // first iteration = all my particles
-    // subsequent iterations = received particles
+  if (fstyle == PFIELD) {
+    modify->fix[ifieldfix]->compute_field();
+    d_fieldfix_array_particle = KKBaseFieldFix->d_array_particle;
+  }
+
+  // external per grid cell field
+  // evaluate once every fieldfreq steps b/c time-dependent
+  // fix calculates field acting at center point of all grid cells
+
+  if (fstyle == GFIELD && fieldfreq && ((ntimestep-1) % fieldfreq == 0)) {
+    modify->fix[ifieldfix]->compute_field();
+    d_fieldfix_array_grid = KKBaseFieldFix->d_array_grid;
+  }
+
+  // one or more loops over particles
+  // first iteration = all my particles
+  // subsequent iterations = received particles
+
+  while (1) {
 
     niterate++;
 
@@ -551,6 +594,16 @@ template < int DIM, int SURF > void UpdateKokkos::move()
       error->one(FLERR,str);
     }
 
+    if (surf->nsc > 0) {
+      int ndiff = 0;
+      for (int n = 0; n < surf->nsc; n++) {
+        if (strcmp(surf->sc[n]->style,"diffuse") == 0) {
+          sc_kk_diffuse_copy[ndiff].obj.post_collide();
+          ndiff++;
+        }
+      }
+    }
+
     // if gridcut >= 0.0, check if another iteration of move is required
     // only the case if some particle flag = PENTRY/PEXIT
     //   in which case perform particle migration
@@ -679,15 +732,21 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     xnew[0] = x[0] + dtremain*v[0];
     xnew[1] = x[1] + dtremain*v[1];
     if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
-    if (gravity_3d_flag) gravity3d(dtremain,xnew,v);
-    else if (gravity_2d_flag) gravity2d(dtremain,xnew,v);
+    if (fstyle == CFIELD) {
+      if (DIM == 3) field3d(dtremain,xnew,v);
+      else if (DIM == 2) field2d(dtremain,xnew,v);
+    } else if (fstyle == PFIELD) field_per_particle(i,particle_i.icell,dtremain,xnew,v);
+    else if (fstyle == GFIELD) field_per_grid(i,particle_i.icell,dtremain,xnew,v);
   } else if (pflag == PINSERT) {
     dtremain = particle_i.dtremain;
     xnew[0] = x[0] + dtremain*v[0];
     xnew[1] = x[1] + dtremain*v[1];
     if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
-    if (gravity_3d_flag) gravity3d(dtremain,xnew,v);
-    else if (gravity_2d_flag) gravity2d(dtremain,xnew,v);
+    if (fstyle == CFIELD) { 
+      if (DIM == 3) field3d(dtremain,xnew,v);
+      else if (DIM == 2) field2d(dtremain,xnew,v);
+    } else if (fstyle == PFIELD) field_per_particle(i,particle_i.icell,dtremain,xnew,v);
+    else if (fstyle == GFIELD) field_per_grid(i,particle_i.icell,dtremain,xnew,v);
   } else if (pflag == PENTRY) {
     icell = particle_i.icell;
     if (d_cells[icell].nsplit > 1) {
@@ -720,7 +779,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
   int nmask = d_cells[icell].nmask;
   stuck_iterate = 0;
   if (ATOMIC_REDUCTION == 1)
-    Kokkos::atomic_fetch_add(&d_ntouch_one(),1);
+    Kokkos::atomic_increment(&d_ntouch_one());
   else if (ATOMIC_REDUCTION == 0)
     d_ntouch_one()++;
   else
@@ -886,7 +945,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       }
 
       if (ATOMIC_REDUCTION == 1)
-        Kokkos::atomic_fetch_add(&d_nscheck_one(),nsurf);
+        Kokkos::atomic_add(&d_nscheck_one(),nsurf);
       else if (ATOMIC_REDUCTION == 0)
         d_nscheck_one() += nsurf;
       else
@@ -1162,7 +1221,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
           exclude = minsurf;
           if (ATOMIC_REDUCTION == 1)
-            Kokkos::atomic_fetch_add(&d_nscollide_one(),1);
+            Kokkos::atomic_increment(&d_nscollide_one());
           else if (ATOMIC_REDUCTION == 0)
             d_nscollide_one()++;
           else
@@ -1209,7 +1268,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           else {
             particle_i.flag = PDISCARD;
             if (ATOMIC_REDUCTION == 1)
-              Kokkos::atomic_fetch_add(&d_nstuck(),1);
+              Kokkos::atomic_increment(&d_nstuck());
             else if (ATOMIC_REDUCTION == 0)
               d_nstuck()++;
             else
@@ -1255,7 +1314,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
         if (x[1] < lo[1] || x[1] > hi[1]) {
           particle_i.flag = PDISCARD;
           if (ATOMIC_REDUCTION == 1)
-            Kokkos::atomic_fetch_add(&d_naxibad(),1);
+            Kokkos::atomic_increment(&d_naxibad());
           else if (ATOMIC_REDUCTION == 0)
             d_naxibad()++;
           else
@@ -1412,7 +1471,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       if (bflag == OUTFLOW) {
         particle_i.flag = PDISCARD;
         if (ATOMIC_REDUCTION == 1)
-          Kokkos::atomic_fetch_add(&d_nexit_one(),1);
+          Kokkos::atomic_increment(&d_nexit_one());
         else if (ATOMIC_REDUCTION == 0)
           d_nexit_one()++;
         else
@@ -1458,12 +1517,12 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           //jpart->weight = particle_i.weight;
           //pstop++;
         }
-        Kokkos::atomic_fetch_add(&d_nboundary_one(),1);
-        Kokkos::atomic_fetch_add(&d_ntouch_one(),-1);    // decrement here since will increment below
+        Kokkos::atomic_increment(&d_nboundary_one());
+        Kokkos::atomic_decrement(&d_ntouch_one());    // decrement here since will increment below
       } else {
         if (ATOMIC_REDUCTION == 1) {
-          Kokkos::atomic_fetch_add(&d_nboundary_one(),1);
-          Kokkos::atomic_fetch_add(&d_ntouch_one(),-1);    // decrement here since will increment below
+          Kokkos::atomic_increment(&d_nboundary_one());
+          Kokkos::atomic_decrement(&d_ntouch_one());    // decrement here since will increment below
         } else if (ATOMIC_REDUCTION == 0) {
           d_nboundary_one()++;
           d_ntouch_one()--;    // decrement here since will increment below
@@ -1503,7 +1562,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     neigh = d_cells[icell].neigh;
     nmask = d_cells[icell].nmask;
     if (ATOMIC_REDUCTION == 1)
-      Kokkos::atomic_fetch_add(&d_ntouch_one(),1);
+      Kokkos::atomic_increment(&d_ntouch_one());
     else if (ATOMIC_REDUCTION == 0)
       d_ntouch_one()++;
     else
@@ -1543,7 +1602,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
         return;
       }
       if (ATOMIC_REDUCTION == 1)
-        Kokkos::atomic_fetch_add(&d_ncomm_one(),1);
+        Kokkos::atomic_increment(&d_ncomm_one());
       else if (ATOMIC_REDUCTION == 0)
         d_ncomm_one()++;
       else

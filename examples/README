@@ -21,6 +21,7 @@ ablation = 2d and 3d ablation of implicit surfaces
 adapt = static and on-the-fly grid adaptation
 ambi = amibpolar approxiation for ionized flow around a cylinder
 axi = axisymmetric flow around a sphere
+bfield = external magnetic field affecting particle motion
 chem = chemistry in a 3d box
 circle = 2d flow around a circle
 collide = collisional motion in a 3d box

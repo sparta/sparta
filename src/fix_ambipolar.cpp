@@ -76,6 +76,8 @@ FixAmbipolar::FixAmbipolar(SPARTA *sparta, int narg, char **arg) :
 
 FixAmbipolar::~FixAmbipolar()
 {
+  if (copy || copymode) return;
+
   memory->destroy(ions);
   delete random;
   particle->remove_custom(ionindex);

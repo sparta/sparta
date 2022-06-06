@@ -32,7 +32,7 @@ class ReadRestart : protected Pointers {
   void command(int, char **);
 
  private:
-  int me,nprocs,nprocs_file,multiproc_file;
+  int me,nprocs,nprocs_file,multiproc_file,mem_limit_flag;
   FILE *fp;
   int nfix_restart_global,nfix_restart_peratom;
 
@@ -85,6 +85,10 @@ E: Cannot read_restart after simulation box is defined
 
 The read_restart command cannot be used after a read_data,
 read_restart, or create_box command.
+
+E: Cannot (yet) use global mem/limit without % in restart file name
+
+This feature is not yet implemented.
 
 E: Cannot open restart file %s
 

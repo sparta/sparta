@@ -3951,6 +3951,7 @@ void Surf::read_restart(FILE *fp)
     lines = (Line *) memory->smalloc(nsurf*sizeof(Line),"surf:lines");
     // NOTE: need different logic for different surf styles
     nlocal = nsurf;
+    nmax = nlocal;
 
     if (me == 0) {
       for (int i = 0; i < nsurf; i++) {
@@ -3975,6 +3976,7 @@ void Surf::read_restart(FILE *fp)
     tris = (Tri *) memory->smalloc(nsurf*sizeof(Tri),"surf:tris");
     // NOTE: need different logic for different surf styles
     nlocal = nsurf;
+    nmax = nlocal;
 
     if (me == 0) {
       for (int i = 0; i < nsurf; i++) {
