@@ -4,10 +4,10 @@ from grid2paraview import SpartaGridFile
 from functools import cmp_to_key
 
 GRID_FILE_200 = os.path.join(os.path.dirname(__file__),
-    "tests/input_files/grid.200")
+    "grid.200")
 
 CIRCLE_GRID_FILE = os.path.join(os.path.dirname(__file__),
-    "tests/input_files/circle_grid.txt")
+    "circle_grid.txt")
 
 class TestSpartaGridFile(unittest.TestCase):
 

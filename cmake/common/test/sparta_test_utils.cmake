@@ -4,8 +4,12 @@ if(SPARTA_DSMC_TESTING_PATH)
   # message("dsmc_testing=${SPARTA_DSMC_TESTING_ABSOLUTE_PATH}")
   set(SPARTA_TEST_DRIVER python
                          ${SPARTA_DSMC_TESTING_ABSOLUTE_PATH}/regression.py)
+  set(PARAVIEW_TEST_DRIVER ${PVPYTHON_EXECUTABLE}
+    ${SPARTA_DSMC_TESTING_ABSOLUTE_PATH}/paraview_regression.py)
 else()
   set(SPARTA_TEST_DRIVER python ${SPARTA_TOOLS_DIR}/testing/regression.py)
+  set(PARAVIEW_TEST_DRIVER ${PVPYTHON_EXECUTABLE}
+    ${SPARTA_TOOLS_DIR}/testing/paraview_regression.py)
 endif()
 
 # cmake-format: off
@@ -76,13 +80,25 @@ function(sparta_add_test sparta_in_file mpi_ranks config_name)
       -customtest
       ${sparta_in_file}
       ${__driver_args})
-  add_test(
-    NAME ${__test_name}
-    CONFIGURATIONS ${config_name}
-    COMMAND ${SPARTA_TEST_DRIVER} mpi_${mpi_ranks} "${__sparta_driver_command}"
-            ${__sparta_test_driver_postfix_args}
-    WORKING_DIRECTORY ${__run_dir})
-  # unable to compile regex: ^\*{3} test .* passed
+  is_paraview_test(paraview_test sparta_in_file)
+  if(paraview_test)
+    add_test(
+      NAME ${__test_name}
+      CONFIGURATIONS ${config_name}
+      COMMAND ${PARAVIEW_TEST_DRIVER} ${mpi_ranks} "${__sparta_driver_command}"
+          ${sparta_in_file} ${SPARTA_PARAVIEW_MPIEXEC} ${PVPYTHON_EXECUTABLE}
+          ${PVBATCH_EXECUTABLE} ${GRID2PARAVIEW_MODULE} ${SURF2PARAVIEW_MODULE}
+      WORKING_DIRECTORY ${__run_dir})
+  else()
+    add_test(
+      NAME ${__test_name}
+      CONFIGURATIONS ${config_name}
+      COMMAND ${SPARTA_TEST_DRIVER} mpi_${mpi_ranks} "${__sparta_driver_command}"
+              ${__sparta_test_driver_postfix_args}
+      WORKING_DIRECTORY ${__run_dir})
+    # unable to compile regex: ^\*{3} test .* passed
+  endif()
+
   set_tests_properties(
     ${__test_name} PROPERTIES PASS_REGULAR_EXPRESSION "passed;no failures"
                               FAIL_REGULAR_EXPRESSION "FAILED")
@@ -178,6 +194,10 @@ function(sparta_add_all_tests_to_config mpi_ranks config_name)
     else()
       list(REMOVE_ITEM __in_file_list ${SPARTA_DISABLED_TESTS})
     endif()
+  endif()
+
+  if(NOT SPARTA_ENABLE_PARAVIEW_TESTING)
+    list(FILTER __in_file_list EXCLUDE REGEX ${PARAVIEW_TEST_NAME_REGEX})
   endif()
 
   # message("__in_file_list=${__in_file_list}")

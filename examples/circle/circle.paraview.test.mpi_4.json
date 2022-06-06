@@ -1,0 +1,81 @@
+{
+  "tests" : [
+    {
+      "name" : "grid2paraview pvbatch slice circle",
+      "clean" : "rm -fr circle_slice_grid_pvbatch.pvd circle_slice_grid_pvbatch/",
+      "run" : [
+        "PARAVIEW_MPI_EXEC",
+        "PARAVIEW_PVPBATCH",
+        "GRID2PARAVIEW",
+        "circle_slice.txt circle_slice_grid_pvbatch -x 10 -y 10 -r tmp_flow.*"
+      ],
+      "assert_files" : ["circle_slice_grid_pvbatch.pvd"],
+      "assert_read" : {
+        "file" : "circle_slice_grid_pvbatch.pvd",
+        "attributes" : {
+            "TimestepValues" : [0.0, 100.0, 200.0, 300.0, 400.0,
+                                500.0, 600.0, 700.0, 800.0, 900.0, 1000.0],
+            "CellArrays": ["id", "f_1[1]", "f_1[2]", "f_1[3]", "f_1[4]", "f_1[5]",
+                           "f_1[6]", "f_1[7]", "f_1[8]", "f_1[9]", "f_1[10]", "f_1[11]",
+                           "f_1[12]", "f_1[13]", "f_1[14]"]
+        }
+      },
+      "assert_fetch" : {
+        "file" : "circle_slice_grid_pvbatch.pvd",
+        "attributes" : {
+            "GetNumberOfCells" : 114
+        }
+      }
+    },
+    {
+      "name" : "grid2paraview pvbatch circle",
+      "clean" : "rm -fr circle_grid_pvbatch.pvd circle_grid_pvbatch/",
+      "preprocess" : "printf \"dimension 2\ncreate_box 0 10 0 10 -0.5 0.5\ncreate_grid 20 20 1\n\" > circle.txt",
+      "run" : [
+        "PARAVIEW_MPI_EXEC",
+        "PARAVIEW_PVPBATCH",
+        "GRID2PARAVIEW",
+        "circle.txt circle_grid_pvbatch -x 10 -y 10 -r tmp_flow.*"
+      ],
+      "assert_files" : ["circle_grid_pvpython.pvd"],
+      "assert_read" : {
+        "file" : "circle_grid_pvpython.pvd",
+        "attributes" : {
+            "TimestepValues" : [0.0, 100.0, 200.0, 300.0, 400.0,
+                                500.0, 600.0, 700.0, 800.0, 900.0, 1000.0],
+            "CellArrays": ["id", "f_1[1]", "f_1[2]", "f_1[3]", "f_1[4]", "f_1[5]",
+                           "f_1[6]", "f_1[7]", "f_1[8]", "f_1[9]", "f_1[10]", "f_1[11]",
+                           "f_1[12]", "f_1[13]", "f_1[14]"]
+        }
+      },
+      "assert_fetch" : {
+        "file" : "circle_grid_pvpython.pvd",
+        "attributes" : {
+            "GetNumberOfCells" : 400
+        }
+      }
+    },
+    {
+      "name" : "grid2paraview catalyst circle",
+      "clean" : "rm -fr circle_read_grid.txt datasets/",
+      "preprocess" : "printf \"dimension 2\ncreate_box 0 10 0 10 -0.5 0.5\nread_grid data.grid\n\" > circle_read_grid.txt",
+      "run" : [
+        "PARAVIEW_MPI_EXEC",
+        "PARAVIEW_PVPBATCH",
+        "GRID2PARAVIEW",
+        "circle_read_grid.txt circle_grid_pvbatch -x 10 -y 10 -c circle_test_paraview_catalyst.py -r tmp_flow.*"
+      ],
+      "assert_files" : ["datasets/RenderView1_000000.png",
+                        "datasets/RenderView1_000001.png",
+                        "datasets/RenderView1_000002.png",
+                        "datasets/RenderView1_000003.png",
+                        "datasets/RenderView1_000004.png",
+                        "datasets/RenderView1_000005.png",
+                        "datasets/RenderView1_000006.png",
+                        "datasets/RenderView1_000007.png",
+                        "datasets/RenderView1_000008.png",
+                        "datasets/RenderView1_000009.png",
+                        "datasets/RenderView1_000010.png"]
+    }
+  ]
+}
