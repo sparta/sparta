@@ -72,9 +72,6 @@ def is_valid_test_suite(test_suite):
     if "tests" not in test_suite:
         print('No "tests" key found with list of tests')
         ret_val = False
-    elif not test_suite["tests"]:
-        print('"tests" is an empty list')
-        ret_val = False
     else:
         for test in test_suite["tests"]:
             if not is_valid_test(test):

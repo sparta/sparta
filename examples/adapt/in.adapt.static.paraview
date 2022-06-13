@@ -1,0 +1,81 @@
+################################################################################
+# 2d flow around set of circles
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+global              gridcut 0.0 comm/sort yes
+
+boundary	    o r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    10 10 1 
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0 
+
+# 7 circles, 4 above, 3 below
+
+read_surf           data.circle origin 5 5 0 trans 1.0 0.5 0.0 &
+                    scale 0.33 0.33 1 group 1
+read_surf           data.circle origin 5 5 0 trans -1.0 1.5 0.0 &
+                    scale 0.33 0.33 1 group 1
+read_surf           data.circle origin 5 5 0 trans 1.0 2.5 0.0 &
+                    scale 0.33 0.33 1 group 1
+read_surf           data.circle origin 5 5 0 trans -1.0 3.5 0.0 &
+                    scale 0.33 0.33 1 group 1
+
+read_surf           data.circle origin 5 5 0 trans -1.5 -1.8 0.0 &
+                    scale 0.33 0.33 1 group 2
+read_surf           data.circle origin 5 5 0 trans 0.5 -2.8 0.0 &
+                    scale 0.33 0.33 1 group 2
+read_surf           data.circle origin 5 5 0 trans -1.5 -3.8 0.0 &
+                    scale 0.33 0.33 1 group 1
+
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+compute             1 grid all species n u v w usq vsq wsq
+fix                 1 ave/grid all 1 100 100 c_1[*]
+
+fix		    in emit/face air xlo twopass 
+fix		    foo grid/check 1 error
+dump                1 grid all 100 tmp_flow.* id f_1[*]
+
+timestep 	    0.0001
+
+#dump                2 image all 100 image.*.ppm type type pdiam 0.04 &
+#                    surf one 0.01 size 512 512 zoom 1.75 &
+#                    gline yes 0.005
+#dump_modify	    2 pad 4 scolor * white glinecolor white
+
+#dump                3 image all 100 image2.*.ppm type type pdiam 0.02 &
+#                    surf one 0.01 size 512 512 zoom 1.75 &
+#                    gline yes 0.005 grid proc
+#dump_modify	    3 pad 4 scolor * white glinecolor white
+ 
+stats		    100
+stats_style	    step cpu np nattempt ncoll nscoll nscheck
+run 		    500
+
+fix                 2 adapt 100 all refine coarsen particle 100 80
+fix                 5 balance 200 1.1 rcb cell
+
+run 		    2000
+
+unfix               2
+unfix               5
+
+run                 3000
+
+write_grid          data.grid
