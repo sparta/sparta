@@ -30,6 +30,7 @@ def get_command_line():
     parser.add_argument("pvbatch_exe", help="pvbatch executable path")
     parser.add_argument("grid2paraview_module", help="grid2paraview.py module path")
     parser.add_argument("surf2paraview_module", help="surf2paraview.py module path")
+    parser.add_argument("grid2paraviewcells_module", help="grid2paraview_cells.py module path")
     return parser.parse_args()
 
 def run_sparta(args):
@@ -190,6 +191,8 @@ def get_run_command_line(args, run_command_list):
             command_line += " " + args.surf2paraview_module
         elif token == "GRID2PARAVIEW":
             command_line += " " + args.grid2paraview_module
+        elif token == "GRID2PARAVIEWCELLS":
+            command_line += " " + args.grid2paraviewcells_module
         elif token == "PARAVIEW_MPI_EXEC":
             command_line += " " + args.paraview_mpi_exec + " -np " +\
                 str(args.num_procs)

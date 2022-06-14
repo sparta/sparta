@@ -77,6 +77,34 @@
                         "datasets/RenderView1_000008.png",
                         "datasets/RenderView1_000009.png",
                         "datasets/RenderView1_000010.png"]
+    },
+    {
+      "name" : "grid2paraview_cells pvpython sphere",
+      "clean" : "rm -fr sphere.txt sphere_grid_pvpython_cells sphere_grid_pvpython_cells.pvd",
+      "preprocess" : "printf \"dimension 3\ncreate_box -2 2 -2 2 -2 2\nread_grid data.grid\n\" > sphere.txt",
+      "run" : [
+        "PARAVIEW_MPI_EXEC",
+        "PARAVIEW_PVPBATCH",
+        "GRID2PARAVIEWCELLS",
+        "sphere.txt sphere_grid_pvpython_cells -r tmp_flow.*"
+      ],
+      "assert_files" : ["sphere_grid_pvpython_cells.pvd"],
+      "assert_read" : {
+        "file" : "sphere_grid_pvpython_cells.pvd",
+        "attributes" : {
+            "TimestepValues" : [0.0, 100.0, 200.0, 300.0, 400.0,
+                                500.0, 600.0, 700.0, 800.0, 900.0, 1000.0],
+            "CellArrays": ["id", "f_1[1]", "f_1[2]", "f_1[3]", "f_1[4]", "f_1[5]",
+                           "f_1[6]", "f_1[7]", "f_1[8]", "f_1[9]", "f_1[10]", "f_1[11]",
+                           "f_1[12]", "f_1[13]", "f_1[14]"]
+        }
+      },
+      "assert_fetch" : {
+        "file" : "sphere_grid_pvpython_cells.pvd",
+        "attributes" : {
+            "GetNumberOfCells" : 8000
+        }
+      }
     }
   ]
 }

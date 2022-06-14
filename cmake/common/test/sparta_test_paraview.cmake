@@ -15,6 +15,7 @@ function(is_paraview_test RETURN_VALUE TEST_NAME)
 endfunction()
 
 set(GRID2PARAVIEW_MODULE ${PROJECT_BINARY_DIR}/paraview/grid2paraview.py)
+set(GRID2PARAVIEWCELLS_MODULE ${PROJECT_BINARY_DIR}/paraview/grid2paraview_cells.py)
 set(SURF2PARAVIEW_MODULE ${PROJECT_BINARY_DIR}/paraview/surf2paraview.py)
 
 if(SPARTA_ENABLE_TESTING AND SPARTA_ENABLE_PARAVIEW_TESTING)

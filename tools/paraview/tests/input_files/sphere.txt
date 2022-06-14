@@ -1,3 +1,0 @@
-dimension           3
-create_box          -2 2 -2 2 -2 2
-create_grid         20 20 20

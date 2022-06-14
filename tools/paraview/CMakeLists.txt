@@ -14,8 +14,8 @@ set(PARAVIEW_TOOLS_PARALLEL_PYTHON_TESTS
     parallel_bucket_sort_unit_test.py)
 
 set(PARAVIEW_TOOLS_TEST_FILES
-    "tests/input_files/grid.200"
-    "tests/input_files/circle_grid.txt")
+    "test_data/grid.200"
+    "test_data/circle_grid.txt")
 
 function(ADD_SERIAL_PARAVIEW_TESTS TEST_NAMES) 
     foreach(TEST_FILE IN LISTS TEST_NAMES)

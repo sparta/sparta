@@ -88,6 +88,7 @@ function(sparta_add_test sparta_in_file mpi_ranks config_name)
       COMMAND ${PARAVIEW_TEST_DRIVER} ${mpi_ranks} "${__sparta_driver_command}"
           ${sparta_in_file} ${SPARTA_PARAVIEW_MPIEXEC} ${PVPYTHON_EXECUTABLE}
           ${PVBATCH_EXECUTABLE} ${GRID2PARAVIEW_MODULE} ${SURF2PARAVIEW_MODULE}
+          ${GRID2PARAVIEWCELLS_MODULE}
       WORKING_DIRECTORY ${__run_dir})
   else()
     add_test(
