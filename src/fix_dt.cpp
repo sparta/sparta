@@ -14,7 +14,7 @@
 
 #include "stdlib.h"
 #include "string.h"
-#include "fix_dt_global.h"
+#include "fix_dt.h"
 #include "update.h"
 #include "input.h"
 #include "grid.h"
@@ -36,25 +36,25 @@ enum{NONE,COMPUTE,FIX};
 
 /* ---------------------------------------------------------------------- */
 
-FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
+FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
-  if (narg < 9) error->all(FLERR,"Illegal fix dt global command");
+  if (narg < 9) error->all(FLERR,"Illegal fix dt command");
 
   nevery = atoi(arg[2]);
-  if (nevery <= 0) error->all(FLERR,"Illegal fix dt global command");
+  if (nevery <= 0) error->all(FLERR,"Illegal fix dt command");
 
   imix = particle->find_mixture(arg[3]);
-  if (imix < 0) error->all(FLERR,"fix dg_global mixture ID does not exist");
+  if (imix < 0) error->all(FLERR,"fix dt mixture ID does not exist");
 
   if (strncmp(arg[4],"c_",2) != 0 && strncmp(arg[4],"f_",2) != 0)
-    error->all(FLERR,"Illegal fix dt global command");
+    error->all(FLERR,"Illegal fix dt command");
 
   if ( !((strncmp(arg[5],"f_",2) == 0) &&
          (strncmp(arg[6],"f_",2) == 0) &&
          (strncmp(arg[7],"f_",2) == 0) &&
          (strncmp(arg[8],"f_",2) == 0)) )
-    error->all(FLERR,"Illegal fix dt global command");
+    error->all(FLERR,"Illegal fix dt command");
 
   id_lambda = NULL;
   id_temp = NULL;
@@ -75,7 +75,7 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
   char *ptr = strchr(id_lambda,'[');
   if (ptr) {
     if (id_lambda[strlen(id_lambda)-1] != ']')
-      error->all(FLERR,"Invalid lambda in fix dt_global command");
+      error->all(FLERR,"Invalid lambda in fix dt command");
     lambdaindex = atoi(ptr+1);
     *ptr = '\0';
   } else lambdaindex = 0;
@@ -86,35 +86,35 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
   if (lambdawhich == COMPUTE) { // lambda compute
     n = modify->find_compute(id_lambda);
     if (n < 0)
-      error->all(FLERR,"Could not find fix dt_global compute ID");
+      error->all(FLERR,"Could not find fix dt compute ID");
     if (modify->compute[n]->per_grid_flag == 0)
-      error->all(FLERR,"Fix dt_global compute does not "
+      error->all(FLERR,"Fix dt compute does not "
                  "compute per-grid info");
     if (lambdaindex == 0 && modify->compute[n]->size_per_grid_cols > 0)
       error->all(FLERR,
-                 "Fix dt_global compute does not "
+                 "Fix dt compute does not "
                  "compute per-grid vector");
     if (lambdaindex > 0 && modify->compute[n]->size_per_grid_cols == 0)
       error->all(FLERR,
-                 "Fix dt_global compute does not "
+                 "Fix dt compute does not "
                  "compute per-grid array");
     if (lambdaindex > 0 && lambdaindex > modify->compute[n]->size_per_grid_cols)
-      error->all(FLERR,"Fix dt_global compute vector is "
+      error->all(FLERR,"Fix dt compute vector is "
                  "accessed out-of-range");
   } else { // lambda fix
     n = modify->find_fix(id_lambda);
-    if (n < 0) error->all(FLERR,"Could not find fix dt_global fix ID");
+    if (n < 0) error->all(FLERR,"Could not find fix dt fix ID");
     if (modify->fix[n]->per_grid_flag == 0)
-      error->all(FLERR,"Fix dt_global fix does not "
+      error->all(FLERR,"Fix dt fix does not "
                  "compute per-grid info");
     if (lambdaindex == 0 && modify->fix[n]->size_per_grid_cols > 0)
-      error->all(FLERR,"Fix dt_global fix does not "
+      error->all(FLERR,"Fix dt fix does not "
                  "compute per-grid vector");
     if (lambdaindex > 0 && modify->fix[n]->size_per_grid_cols == 0)
-      error->all(FLERR,"Fix dt_global fix does not "
+      error->all(FLERR,"Fix dt fix does not "
                  "compute per-grid array");
     if (lambdaindex > 0 && lambdaindex > modify->fix[n]->size_per_grid_cols)
-      error->all(FLERR,"Fix dt_global fix array is "
+      error->all(FLERR,"Fix dt fix array is "
                  "accessed out-of-range");
   }
 
@@ -126,24 +126,24 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
   ptr = strchr(id_temp,'[');
   if (ptr) {
     if (id_temp[strlen(id_temp)-1] != ']')
-      error->all(FLERR,"Invalid temperature in fix dt_global command");
+      error->all(FLERR,"Invalid temperature in fix dt command");
     tempindex = atoi(ptr+1);
     *ptr = '\0';
   } else tempindex = 0;
 
   n = modify->find_fix(id_temp);
-  if (n < 0) error->all(FLERR,"Could not find fix dt_global tempeature fix ID");
+  if (n < 0) error->all(FLERR,"Could not find fix dt tempeature fix ID");
   if (modify->fix[n]->per_grid_flag == 0)
-    error->all(FLERR,"Fix dt_global fix does not "
+    error->all(FLERR,"Fix dt fix does not "
                "compute per-grid info");
   if (tempindex == 0 && modify->fix[n]->size_per_grid_cols > 0)
-    error->all(FLERR,"Fix dt_global fix does not "
+    error->all(FLERR,"Fix dt fix does not "
                "compute per-grid vector");
   if (tempindex > 0 && modify->fix[n]->size_per_grid_cols == 0)
-    error->all(FLERR,"Fix dt_global fix does not "
+    error->all(FLERR,"Fix dt fix does not "
                "compute per-grid array");
   if (tempindex > 0 && tempindex > modify->fix[n]->size_per_grid_cols)
-    error->all(FLERR,"Fix dt_global fix array is "
+    error->all(FLERR,"Fix dt fix array is "
                "accessed out-of-range");
 
   // squared-velocity fixes
@@ -156,24 +156,24 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
   ptr = strchr(id_usq,'[');
   if (ptr) {
     if (id_usq[strlen(id_usq)-1] != ']')
-      error->all(FLERR,"Invalid usq in fix dt_global command");
+      error->all(FLERR,"Invalid usq in fix dt command");
     usqindex = atoi(ptr+1);
     *ptr = '\0';
   } else usqindex = 0;
 
   n = modify->find_fix(id_usq);
-  if (n < 0) error->all(FLERR,"Could not find fix dt_global usq fix ID");
+  if (n < 0) error->all(FLERR,"Could not find fix dt usq fix ID");
   if (modify->fix[n]->per_grid_flag == 0)
-    error->all(FLERR,"Fix dt_global fix does not "
+    error->all(FLERR,"Fix dt fix does not "
                "compute per-grid info");
   if (usqindex == 0 && modify->fix[n]->size_per_grid_cols > 0)
-    error->all(FLERR,"Fix dt_global fix does not "
+    error->all(FLERR,"Fix dt fix does not "
                "compute per-grid vector");
   if (usqindex > 0 && modify->fix[n]->size_per_grid_cols == 0)
-    error->all(FLERR,"Fix dt_global fix does not "
+    error->all(FLERR,"Fix dt fix does not "
                "compute per-grid array");
   if (usqindex > 0 && usqindex > modify->fix[n]->size_per_grid_cols)
-    error->all(FLERR,"Fix dt_global fix array is "
+    error->all(FLERR,"Fix dt fix array is "
                "accessed out-of-range");
 
   // vsq----------------------------
@@ -184,24 +184,24 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
   ptr = strchr(id_vsq,'[');
   if (ptr) {
     if (id_vsq[strlen(id_vsq)-1] != ']')
-      error->all(FLERR,"Invalid vsq in fix dt_global command");
+      error->all(FLERR,"Invalid vsq in fix dt command");
     vsqindex = atoi(ptr+1);
     *ptr = '\0';
   } else vsqindex = 0;
 
   n = modify->find_fix(id_vsq);
-  if (n < 0) error->all(FLERR,"Could not find fix dt_global vsq fix ID");
+  if (n < 0) error->all(FLERR,"Could not find fix dt vsq fix ID");
   if (modify->fix[n]->per_grid_flag == 0)
-    error->all(FLERR,"Fix dt_global fix does not "
+    error->all(FLERR,"Fix dt fix does not "
                "compute per-grid info");
   if (vsqindex == 0 && modify->fix[n]->size_per_grid_cols > 0)
-    error->all(FLERR,"Fix dt_global fix does not "
+    error->all(FLERR,"Fix dt fix does not "
                "compute per-grid vector");
   if (vsqindex > 0 && modify->fix[n]->size_per_grid_cols == 0)
-    error->all(FLERR,"Fix dt_global fix does not "
+    error->all(FLERR,"Fix dt fix does not "
                "compute per-grid array");
   if (vsqindex > 0 && vsqindex > modify->fix[n]->size_per_grid_cols)
-    error->all(FLERR,"Fix dt_global fix array is "
+    error->all(FLERR,"Fix dt fix array is "
                "accessed out-of-range");
 
   // wsq----------------------------
@@ -212,24 +212,24 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
   ptr = strchr(id_wsq,'[');
   if (ptr) {
     if (id_wsq[strlen(id_wsq)-1] != ']')
-      error->all(FLERR,"Invalid wsq in fix dt_global command");
+      error->all(FLERR,"Invalid wsq in fix dt command");
     wsqindex = atoi(ptr+1);
     *ptr = '\0';
   } else wsqindex = 0;
 
   n = modify->find_fix(id_wsq);
-  if (n < 0) error->all(FLERR,"Could not find fix dt_global wsq fix ID");
+  if (n < 0) error->all(FLERR,"Could not find fix dt wsq fix ID");
   if (modify->fix[n]->per_grid_flag == 0)
-    error->all(FLERR,"Fix dt_global fix does not "
+    error->all(FLERR,"Fix dt fix does not "
                "compute per-grid info");
   if (wsqindex == 0 && modify->fix[n]->size_per_grid_cols > 0)
-    error->all(FLERR,"Fix dt_global fix does not "
+    error->all(FLERR,"Fix dt fix does not "
                "compute per-grid vector");
   if (wsqindex > 0 && modify->fix[n]->size_per_grid_cols == 0)
-    error->all(FLERR,"Fix dt_global fix does not "
+    error->all(FLERR,"Fix dt fix does not "
                "compute per-grid array");
   if (wsqindex > 0 && wsqindex > modify->fix[n]->size_per_grid_cols)
-    error->all(FLERR,"Fix dt_global fix array is "
+    error->all(FLERR,"Fix dt fix array is "
                "accessed out-of-range");
 
   // optional args (prescribed temperature/velocity profiles for initial timestep calculation)
@@ -238,7 +238,7 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
   int iarg = 9;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"temperature") == 0) {
-      if (iarg+5 > narg) error->all(FLERR,"Illegal fix dt_global command");
+      if (iarg+5 > narg) error->all(FLERR,"Illegal fix dt command");
       tempflag = 1;
       tstr = arg[iarg+1];
       if (strcmp(arg[iarg+2],"NULL") == 0) txstr = NULL;
@@ -249,7 +249,7 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
       else tzstr = arg[iarg+4];
       iarg += 5;
     } else if (strcmp(arg[iarg],"velocity") == 0) {
-      if (iarg+7 > narg) error->all(FLERR,"Illegal fix dt_global command");
+      if (iarg+7 > narg) error->all(FLERR,"Illegal fix dt command");
       velflag = 1;
       if (strcmp(arg[iarg+1],"NULL") == 0) vxstr = NULL;
       else vxstr = arg[iarg+1];
@@ -270,29 +270,29 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
   if (tempflag) {
     tvar = input->variable->find(tstr);
     if (tvar < 0)
-      error->all(FLERR,"Variable name for fix dt_global does not exist");
+      error->all(FLERR,"Variable name for fix dt does not exist");
     if (!input->variable->equal_style(tvar))
-      error->all(FLERR,"Variable for fix dt_global is invalid style");
+      error->all(FLERR,"Variable for fix dt is invalid style");
     if (txstr) {
       txvar = input->variable->find(txstr);
       if (txvar < 0)
-        error->all(FLERR,"Variable name for fix dt_global does not exist");
+        error->all(FLERR,"Variable name for fix dt does not exist");
       if (!input->variable->internal_style(txvar))
-        error->all(FLERR,"Variable for fix dt_global is invalid style");
+        error->all(FLERR,"Variable for fix dt is invalid style");
     }
     if (tystr) {
       tyvar = input->variable->find(tystr);
       if (tyvar < 0)
-        error->all(FLERR,"Variable name for fix dt_global does not exist");
+        error->all(FLERR,"Variable name for fix dt does not exist");
       if (!input->variable->internal_style(tyvar))
-        error->all(FLERR,"Variable for fix dt_global is invalid style");
+        error->all(FLERR,"Variable for fix dt is invalid style");
     }
     if (tzstr) {
       tzvar = input->variable->find(tzstr);
       if (tzvar < 0)
-        error->all(FLERR,"Variable name for fix dt_global does not exist");
+        error->all(FLERR,"Variable name for fix dt does not exist");
       if (!input->variable->internal_style(tzvar))
-        error->all(FLERR,"Variable for fix dt_global is invalid style");
+        error->all(FLERR,"Variable for fix dt is invalid style");
     }
   }
 
@@ -391,7 +391,7 @@ FixDtGlobal::FixDtGlobal(SPARTA *sparta, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-FixDtGlobal::~FixDtGlobal()
+FixDt::~FixDt()
 {
   if (copymode) return;
 
@@ -409,7 +409,7 @@ FixDtGlobal::~FixDtGlobal()
 
 /* ---------------------------------------------------------------------- */
 
-void FixDtGlobal::init()
+void FixDt::init()
 {
   // setup computes and fixes
 
@@ -417,12 +417,12 @@ void FixDtGlobal::init()
   if (lambdawhich == COMPUTE) {
     int icompute = modify->find_compute(id_lambda);
     if (icompute < 0)
-      error->all(FLERR,"Could not find fix dt_global compute ID");
+      error->all(FLERR,"Could not find fix dt compute ID");
     clambda = modify->compute[icompute];
   } else if (lambdawhich == FIX) {
     int ifix = modify->find_fix(id_lambda);
     if (ifix < 0)
-      error->all(FLERR,"Could not find fix dt_global fix ID");
+      error->all(FLERR,"Could not find fix dt fix ID");
     flambda = modify->fix[ifix];
   }
 
@@ -453,7 +453,7 @@ void FixDtGlobal::init()
 
 /* ---------------------------------------------------------------------- */
 
-int FixDtGlobal::setmask()
+int FixDt::setmask()
 {
   int mask = 0;
   mask |= END_OF_STEP;
@@ -462,17 +462,17 @@ int FixDtGlobal::setmask()
 
 /* ---------------------------------------------------------------------- */
 
-void FixDtGlobal::end_of_step()
+void FixDt::end_of_step()
 {
   // check that fixes are computed at compatible times
   if (lambdawhich == FIX && update->ntimestep % flambda->per_grid_freq)
-    error->all(FLERR,"Fix dt_global lambda fix not computed at compatible time");
+    error->all(FLERR,"Fix dt lambda fix not computed at compatible time");
   if (update->ntimestep % fusq->per_grid_freq)
-    error->all(FLERR,"Fix dt_global usq fix not computed at compatible time");
+    error->all(FLERR,"Fix dt usq fix not computed at compatible time");
   if (update->ntimestep % fvsq->per_grid_freq)
-    error->all(FLERR,"Fix dt_global vsq fix not computed at compatible time");
+    error->all(FLERR,"Fix dt vsq fix not computed at compatible time");
   if (update->ntimestep % fwsq->per_grid_freq)
-    error->all(FLERR,"Fix dt_global wsq fix not computed at compatible time");
+    error->all(FLERR,"Fix dt wsq fix not computed at compatible time");
 
   // get lambda from fix or by invoking compute
   if (lambdawhich == COMPUTE) {
@@ -646,7 +646,7 @@ void FixDtGlobal::end_of_step()
    called by init() and load balancer
 ------------------------------------------------------------------------- */
 
-void FixDtGlobal::reallocate()
+void FixDt::reallocate()
 {
   if (grid->nlocal == nglocal) return;
 
@@ -657,11 +657,11 @@ void FixDtGlobal::reallocate()
   memory->destroy(usq);
   memory->destroy(vsq);
   memory->destroy(wsq);
-  memory->create(lambda,nglocal,"dt_global:lambda");
-  memory->create(temp,nglocal,"dt_global:temp");
-  memory->create(usq,nglocal,"dt_global:usq");
-  memory->create(vsq,nglocal,"dt_global:vsq");
-  memory->create(wsq,nglocal,"dt_global:wsq");
+  memory->create(lambda,nglocal,"dt:lambda");
+  memory->create(temp,nglocal,"dt:temp");
+  memory->create(usq,nglocal,"dt:usq");
+  memory->create(vsq,nglocal,"dt:vsq");
+  memory->create(wsq,nglocal,"dt:wsq");
 }
 
 /* ----------------------------------------------------------------------
@@ -669,7 +669,7 @@ void FixDtGlobal::reallocate()
    first plug in cell x,y,z centroid values into txvar,tyvar,tzvar
 ------------------------------------------------------------------------- */
 
-double FixDtGlobal::temperature_variable(double *x)
+double FixDt::temperature_variable(double *x)
 {
 
   if (txstr) input->variable->internal_set(txvar,x[0]);
@@ -685,7 +685,7 @@ double FixDtGlobal::temperature_variable(double *x)
    first plug in cell x,y,z centroid values into vvarx,vvary,vvarz
 ------------------------------------------------------------------------- */
 
-void FixDtGlobal::velocity_variable(double *x, double *vstream,
+void FixDt::velocity_variable(double *x, double *vstream,
                                     double *vstream_variable)
 {
   if (vstrx) input->variable->internal_set(vvarx,x[0]);

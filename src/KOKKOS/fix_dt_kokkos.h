@@ -14,60 +14,60 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(dt_global/kk,FixDtGlobalKokkos)
+FixStyle(dt/kk,FixDtKokkos)
 
 #else
 
-#ifndef SPARTA_FIX_DT_GLOBAL_KOKKOS_H
-#define SPARTA_FIX_DT_GLOBAL_KOKKOS_H
+#ifndef SPARTA_FIX_DT_KOKKOS_H
+#define SPARTA_FIX_DT_KOKKOS_H
 
-#include "fix_dt_global.h"
+#include "fix_dt.h"
 #include "grid_kokkos.h"
 #include "kokkos_base.h"
 #include "kokkos_type.h"
 
 namespace SPARTA_NS {
 
-  struct TagFixDtGlobal_LoadLambdaVecFromArray{};
-  struct TagFixDtGlobal_LoadTempVecFromArray{};
-  struct TagFixDtGlobal_LoadUsqVecFromArray{};
-  struct TagFixDtGlobal_LoadVsqVecFromArray{};
-  struct TagFixDtGlobal_LoadWsqVecFromArray{};
-  struct TagFixDtGlobal_LimitCellDtDesired{};
+  struct TagFixDt_LoadLambdaVecFromArray{};
+  struct TagFixDt_LoadTempVecFromArray{};
+  struct TagFixDt_LoadUsqVecFromArray{};
+  struct TagFixDt_LoadVsqVecFromArray{};
+  struct TagFixDt_LoadWsqVecFromArray{};
+  struct TagFixDt_LimitCellDtDesired{};
 
   template<int ATOMIC_REDUCTION>
-  struct TagFixDtGlobal_SetCellDtDesired{};
+  struct TagFixDt_SetCellDtDesired{};
 
-  class FixDtGlobalKokkos : public FixDtGlobal, public KokkosBase {
+  class FixDtKokkos : public FixDt, public KokkosBase {
   public:
 
-    FixDtGlobalKokkos(class SPARTA *, int, char **);
-    ~FixDtGlobalKokkos();
+    FixDtKokkos(class SPARTA *, int, char **);
+    ~FixDtKokkos();
     //  void init();
     void end_of_step() override;
     void reallocate();
 
     KOKKOS_INLINE_FUNCTION void
-    operator()(TagFixDtGlobal_LoadLambdaVecFromArray, const int&) const;
+    operator()(TagFixDt_LoadLambdaVecFromArray, const int&) const;
 
     KOKKOS_INLINE_FUNCTION void
-    operator()(TagFixDtGlobal_LoadTempVecFromArray, const int&) const;
+    operator()(TagFixDt_LoadTempVecFromArray, const int&) const;
 
     KOKKOS_INLINE_FUNCTION void
-    operator()(TagFixDtGlobal_LoadUsqVecFromArray, const int&) const;
+    operator()(TagFixDt_LoadUsqVecFromArray, const int&) const;
 
     KOKKOS_INLINE_FUNCTION void
-    operator()(TagFixDtGlobal_LoadVsqVecFromArray, const int&) const;
+    operator()(TagFixDt_LoadVsqVecFromArray, const int&) const;
 
     KOKKOS_INLINE_FUNCTION void
-    operator()(TagFixDtGlobal_LoadWsqVecFromArray, const int&) const;
+    operator()(TagFixDt_LoadWsqVecFromArray, const int&) const;
 
     KOKKOS_INLINE_FUNCTION void
-    operator()(TagFixDtGlobal_LimitCellDtDesired, const int&) const;
+    operator()(TagFixDt_LimitCellDtDesired, const int&) const;
 
     template<int ATOMIC_REDUCTION>
     KOKKOS_INLINE_FUNCTION void
-    operator()(TagFixDtGlobal_SetCellDtDesired<ATOMIC_REDUCTION>, const int&) const;
+    operator()(TagFixDt_SetCellDtDesired<ATOMIC_REDUCTION>, const int&) const;
 
   protected:
 

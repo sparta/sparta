@@ -14,7 +14,7 @@
 
 #include "stdlib.h"
 #include "string.h"
-#include "fix_dt_global_kokkos.h"
+#include "fix_dt_kokkos.h"
 
 #include "update.h"
 #include "grid_kokkos.h"
@@ -43,8 +43,8 @@ using namespace SPARTA_NS;
    set global timestep (as a function of cell desired timesteps)
 ------------------------------------------------------------------------- */
 
-FixDtGlobalKokkos::FixDtGlobalKokkos(SPARTA *sparta, int narg, char **arg) :
-  FixDtGlobal(sparta, narg, arg)
+FixDtKokkos::FixDtKokkos(SPARTA *sparta, int narg, char **arg) :
+  FixDt(sparta, narg, arg)
 {
   kokkos_flag = 1;
   execution_space = Device;
@@ -57,28 +57,28 @@ FixDtGlobalKokkos::FixDtGlobalKokkos(SPARTA *sparta, int narg, char **arg) :
   boltz = update->boltz;
   dt_global = grid_kk->dt_global;
 
-  k_dtsum = DAT::tdual_float_scalar("FixDtGlobalKokkos:dtsum");
+  k_dtsum = DAT::tdual_float_scalar("FixDtKokkos:dtsum");
   d_dtsum = k_dtsum.d_view;
   h_dtsum = k_dtsum.h_view;
 
-  k_dtmin = DAT::tdual_float_scalar("FixDtGlobalKokkos:dtmin");
+  k_dtmin = DAT::tdual_float_scalar("FixDtKokkos:dtmin");
   d_dtmin = k_dtmin.d_view;
   h_dtmin = k_dtmin.h_view;
 
-  k_dtmax = DAT::tdual_float_scalar("FixDtGlobalKokkos:dtmax");
+  k_dtmax = DAT::tdual_float_scalar("FixDtKokkos:dtmax");
   d_dtmax = k_dtmax.d_view;
   h_dtmax = k_dtmax.h_view;
 }
 
 /* ---------------------------------------------------------------------- */
 
-FixDtGlobalKokkos::~FixDtGlobalKokkos()
+FixDtKokkos::~FixDtKokkos()
 {
   if (copymode) return;
 }
 
 /* ---------------------------------------------------------------------- */
-void FixDtGlobalKokkos::end_of_step()
+void FixDtKokkos::end_of_step()
 {
   reallocate();
 
@@ -91,7 +91,7 @@ void FixDtGlobalKokkos::end_of_step()
   // invoke lambda compute as needed
   if (lambdawhich == COMPUTE) {
     if (!clambda->kokkos_flag)
-      error->all(FLERR,"Cannot (yet) use non-Kokkos computes with fix dt_global/kk");
+      error->all(FLERR,"Cannot (yet) use non-Kokkos computes with fix dt/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(clambda);
     if (!(clambda->invoked_flag & INVOKED_PER_GRID)) {
       computeKKBase->compute_per_grid_kokkos();
@@ -106,20 +106,20 @@ void FixDtGlobalKokkos::end_of_step()
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
-      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDtGlobal_LoadLambdaVecFromArray>(0,nglocal),*this);
+      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDt_LoadLambdaVecFromArray>(0,nglocal),*this);
       DeviceType().fence();
       copymode = 0;
     }
   } else if (lambdawhich == FIX) {
     if (!flambda->kokkos_flag)
-      error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with fix dt_global/kk");
+      error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with fix dt/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(flambda);
     if (lambdaindex == 0)
       d_lambda_vector = computeKKBase->d_vector;
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
-      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDtGlobal_LoadLambdaVecFromArray>(0,nglocal),*this);
+      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDt_LoadLambdaVecFromArray>(0,nglocal),*this);
       DeviceType().fence();
       copymode = 0;
     }
@@ -127,56 +127,56 @@ void FixDtGlobalKokkos::end_of_step()
 
   // grab temperature values from fix
   if (!ftemp->kokkos_flag)
-    error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with fix dt_global/kk");
+    error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with fix dt/kk");
   KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(ftemp);
   if (tempindex == 0)
     d_temp_vector = computeKKBase->d_vector;
   else {
     d_array = computeKKBase->d_array_grid;
     copymode = 1;
-    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDtGlobal_LoadTempVecFromArray>(0,nglocal),*this);
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDt_LoadTempVecFromArray>(0,nglocal),*this);
     DeviceType().fence();
     copymode = 0;
   }
 
   // grab usq values from fix
   if (!fusq->kokkos_flag)
-    error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with fix dt_global/kk");
+    error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with fix dt/kk");
   computeKKBase = dynamic_cast<KokkosBase*>(fusq);
   if (usqindex == 0)
     d_usq_vector = computeKKBase->d_vector;
   else {
     d_array = computeKKBase->d_array_grid;
     copymode = 1;
-    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDtGlobal_LoadUsqVecFromArray>(0,nglocal),*this);
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDt_LoadUsqVecFromArray>(0,nglocal),*this);
     DeviceType().fence();
     copymode = 0;
   }
 
   // grab vsq values from fix
   if (!fvsq->kokkos_flag)
-    error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with fix dt_global/kk");
+    error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with fix dt/kk");
   computeKKBase = dynamic_cast<KokkosBase*>(fvsq);
   if (vsqindex == 0)
     d_vsq_vector = computeKKBase->d_vector;
   else {
     d_array = computeKKBase->d_array_grid;
     copymode = 1;
-    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDtGlobal_LoadVsqVecFromArray>(0,nglocal),*this);
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDt_LoadVsqVecFromArray>(0,nglocal),*this);
     DeviceType().fence();
     copymode = 0;
   }
 
   // grab wsq values from fix
   if (!fwsq->kokkos_flag)
-    error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with fix dt_global/kk");
+    error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with fix dt/kk");
   computeKKBase = dynamic_cast<KokkosBase*>(fwsq);
   if (wsqindex == 0)
     d_wsq_vector = computeKKBase->d_vector;
   else {
     d_array = computeKKBase->d_array_grid;
     copymode = 1;
-    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDtGlobal_LoadWsqVecFromArray>(0,nglocal),*this);
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDt_LoadWsqVecFromArray>(0,nglocal),*this);
     DeviceType().fence();
     copymode = 0;
   }
@@ -190,11 +190,11 @@ void FixDtGlobalKokkos::end_of_step()
   Kokkos::deep_copy(d_dtsum, 0.0);
   copymode = 1;
   if (!sparta->kokkos->need_atomics)
-    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDtGlobal_SetCellDtDesired<0> >(0,nglocal),*this);
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDt_SetCellDtDesired<0> >(0,nglocal),*this);
   else if (sparta->kokkos->atomic_reduction)
-    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDtGlobal_SetCellDtDesired<1> >(0,nglocal),*this);
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDt_SetCellDtDesired<1> >(0,nglocal),*this);
   else {
-    error->all(FLERR,"Parallel_reduce not implemented for fix dt_global/kk");
+    error->all(FLERR,"Parallel_reduce not implemented for fix dt/kk");
     exit(3);
   }
   DeviceType().fence();
@@ -215,7 +215,7 @@ void FixDtGlobalKokkos::end_of_step()
   grid_kk->dt_global = 2.*h_dtmin();  // reset global timestep
   dt_global = grid_kk->dt_global;
   copymode = 1;
-  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDtGlobal_LimitCellDtDesired>(0,nglocal),*this);
+  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDt_LimitCellDtDesired>(0,nglocal),*this);
   DeviceType().fence();
   copymode = 0;
 }
@@ -223,35 +223,35 @@ void FixDtGlobalKokkos::end_of_step()
 /* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-void FixDtGlobalKokkos::operator()(TagFixDtGlobal_LoadLambdaVecFromArray, const int &i) const {
+void FixDtKokkos::operator()(TagFixDt_LoadLambdaVecFromArray, const int &i) const {
   d_lambda_vector(i) = d_array(i,lambdaindex-1);
 }
 
 /* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-void FixDtGlobalKokkos::operator()(TagFixDtGlobal_LoadTempVecFromArray, const int &i) const {
+void FixDtKokkos::operator()(TagFixDt_LoadTempVecFromArray, const int &i) const {
   d_temp_vector(i) = d_array(i,tempindex-1);
 }
 
 /* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-void FixDtGlobalKokkos::operator()(TagFixDtGlobal_LoadUsqVecFromArray, const int &i) const {
+void FixDtKokkos::operator()(TagFixDt_LoadUsqVecFromArray, const int &i) const {
   d_usq_vector(i) = d_array(i,tempindex-1);
 }
 
 /* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-void FixDtGlobalKokkos::operator()(TagFixDtGlobal_LoadVsqVecFromArray, const int &i) const {
+void FixDtKokkos::operator()(TagFixDt_LoadVsqVecFromArray, const int &i) const {
   d_vsq_vector(i) = d_array(i,tempindex-1);
 }
 
 /* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-void FixDtGlobalKokkos::operator()(TagFixDtGlobal_LoadWsqVecFromArray, const int &i) const {
+void FixDtKokkos::operator()(TagFixDt_LoadWsqVecFromArray, const int &i) const {
   d_wsq_vector(i) = d_array(i,tempindex-1);
 }
 
@@ -259,7 +259,7 @@ void FixDtGlobalKokkos::operator()(TagFixDtGlobal_LoadWsqVecFromArray, const int
 
 template<int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
-void FixDtGlobalKokkos::operator()(TagFixDtGlobal_SetCellDtDesired<ATOMIC_REDUCTION>, const int &i) const {
+void FixDtKokkos::operator()(TagFixDt_SetCellDtDesired<ATOMIC_REDUCTION>, const int &i) const {
 
   // cell dt based on mean collision time
   double transit_fraction = 0.25;
@@ -311,7 +311,7 @@ void FixDtGlobalKokkos::operator()(TagFixDtGlobal_SetCellDtDesired<ATOMIC_REDUCT
 /* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-void FixDtGlobalKokkos::operator()(TagFixDtGlobal_LimitCellDtDesired, const int &i) const {
+void FixDtKokkos::operator()(TagFixDt_LimitCellDtDesired, const int &i) const {
 
   if (d_cells[i].dt_desired < d_dtmin())
     d_cells[i].dt_desired = d_dtmin();
@@ -324,7 +324,7 @@ void FixDtGlobalKokkos::operator()(TagFixDtGlobal_LimitCellDtDesired, const int 
 /* ----------------------------------------------------------------------
    reallocate arrays
 ------------------------------------------------------------------------- */
-void FixDtGlobalKokkos::reallocate()
+void FixDtKokkos::reallocate()
 {
   if (grid->nlocal == nglocal) return;
 

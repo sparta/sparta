@@ -14,12 +14,12 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(dt_global,FixDtGlobal)
+FixStyle(dt,FixDt)
 
 #else
 
-#ifndef SPARTA_FIX_DT_GLOBAL_H
-#define SPARTA_FIX_DT_GLOBAL_H
+#ifndef SPARTA_FIX_DT_H
+#define SPARTA_FIX_DT_H
 
 #include "stdio.h"
 #include "fix.h"
@@ -27,10 +27,10 @@ FixStyle(dt_global,FixDtGlobal)
 
 namespace SPARTA_NS {
 
-class FixDtGlobal : public Fix {
+class FixDt : public Fix {
  public:
-  FixDtGlobal(class SPARTA *, int, char **);
-  ~FixDtGlobal();
+  FixDt(class SPARTA *, int, char **);
+  ~FixDt();
   int setmask();
   void init();
   void end_of_step();
