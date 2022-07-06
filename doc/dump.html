@@ -428,10 +428,15 @@ arrays defined by a <A HREF = "fix.html">fix</A> or <A HREF = "surf_react.html">
 command to be output.  The ID in the attribute should be replaced by
 the actual ID of the custom per-surf attribute that the fix or
 surf_react command defines.  See individal commands for details.
-E.g. the <A HREF = "fix_temp_surf.html">fix temp/surf</A> command defines the
-custome vector for temperature.  And the <A HREF = "surf_react_adsorb.html">surf_react
+E.g. the <A HREF = "fix_temp_surf.html">fix temp/surf</A> command defines the custom
+vector "temperature".  And the <A HREF = "surf_react_adsorb.html">surf_react
 adsorb</A> command defines one array and 3
 vectors.
+</P>
+<P>If <I>p_ID</I> is used as a attribute, the custom attribute must be a
+vector, and it is output.  If <I>p_ID[N]</I> is used, the custom
+attribute must be an array, and N must be in the range from 1-M, which
+will output the Nth column of the M-column array.
 </P>
 <P>The <I>c_ID</I> and <I>c_ID[I]</I> attributes allow per-surf vectors or arrays
 calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in the

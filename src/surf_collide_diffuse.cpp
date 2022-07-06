@@ -34,6 +34,13 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
+// NOTE: how has this changed vs master ?
+// this needs to access correct current temp for surfs in group
+// how does this class know groupID for fix temp/surf ?
+// MAYBE: there needs to be some data struct in surfs.h that
+//        stores common info between this class and fix temp/surf
+//        since there can be multiple FixTempSurf and multiple Collide models
+
 /* ---------------------------------------------------------------------- */
 
 SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
@@ -148,10 +155,12 @@ void SurfCollideDiffuse::init()
     nsurf = surf->nlocal;
   }
 
+  /*
   for (int i = 0; i < nsurf; i++) {
     if (domain->dimension == 2) lines[i].temp = twall;
     else tris[i].temp = twall;
   }
+  */
 }
 
 /* ----------------------------------------------------------------------
@@ -193,10 +202,12 @@ collide(Particle::OnePart *&ip, double &,
   //   to update per-particle properties which depend on
   //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 
+  /*
   if (isurf > -1 && !distributed && !implicit) {
     if (domain->dimension == 2) twall = lines[isurf].temp;
     else twall = tris[isurf].temp;
   }
+  */
 
   if (ip) {
     if (!velreset) diffuse(ip,norm,isurf);
@@ -261,10 +272,12 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm, int jsurf)
     Particle::Species *species = particle->species;
     int ispecies = p->ispecies;
 
+    /*
     if (jsurf > -1 && !distributed && !implicit) {
       if (domain->dimension == 2) twall = lines[jsurf].temp;
       else twall = tris[jsurf].temp;
     }
+    */
 
     double vrm = sqrt(2.0*update->boltz * twall / species[ispecies].mass);
     double vperp = vrm * sqrt(-log(random->uniform()));

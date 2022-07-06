@@ -40,8 +40,6 @@ set of surf elements.
 The specfied {Nevery} determines how often the surface temperatures
 are re-computed.
 
-NOTE: have to specify which column of c/f output is used
-
 The {source} can be specified as a per surface element quantity
 calculated by a compute, such as the "compute surf"_compute_surf.html
 command.  It can also be specified a per surface element quantity

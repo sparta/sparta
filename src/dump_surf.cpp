@@ -31,8 +31,6 @@ using namespace SPARTA_NS;
 
 // customize by adding keyword
 
-enum{ID,TYPE,V1X,V1Y,V1Z,V2X,V2Y,V2Z,V3X,V3Y,V3Z,
-     TEMP,COMPUTE,FIX,VARIABLE};
 enum{INT,DOUBLE,BIGINT,STRING};        // same as Dump
 
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
@@ -77,7 +75,11 @@ DumpSurf::DumpSurf(SPARTA *sparta, int narg, char **arg) :
   field2index = new int[nfield];
   argindex = new int[nfield];
 
-  // computes, fixes, variables which the dump accesses
+  // custom props, computes, fixes, variables which the dump accesses
+
+  ncustom = 0;
+  id_custom = NULL;
+  custom = NULL;
 
   ncompute = 0;
   id_compute = NULL;
@@ -165,6 +167,10 @@ DumpSurf::~DumpSurf()
   delete [] field2index;
   delete [] argindex;
 
+  for (int i = 0; i < ncustom; i++) delete [] id_custom[i];
+  memory->sfree(id_custom);
+  delete [] custom;
+
   for (int i = 0; i < ncompute; i++) delete [] id_compute[i];
   memory->sfree(id_compute);
   delete [] compute;
@@ -200,6 +206,16 @@ void DumpSurf::init_style()
   if (binary) write_choice = &DumpSurf::write_binary;
   else if (buffer_flag == 1) write_choice = &DumpSurf::write_string;
   else write_choice = &DumpSurf::write_text;
+
+  // check that each surf custom attribute still exists
+
+  int icustom;
+  for (int i = 0; i < ncustom; i++) {
+    icustom = surf->find_custom(id_custom[i]);
+    if (icustom < 0)
+      error->all(FLERR,"Could not find dump surf custom attribute");
+    custom[i] = icustom;
+  }
 
   // find current ptr for each compute,fix,variable
   // check that fix frequency is acceptable
@@ -766,7 +782,7 @@ void DumpSurf::pack_variable(int n)
 }
 
 /* ----------------------------------------------------------------------
-   extraction of particle custom attribute
+   extraction of custom surf attribute
 ------------------------------------------------------------------------- */
 
 void DumpSurf::pack_custom(int n)
@@ -775,14 +791,14 @@ void DumpSurf::pack_custom(int n)
 
   if (surf->etype[index] == INT) {
     if (surf->esize[index] == 0) {
-      int *vector = surf->eivec[particle->ewhich[index]];
+      int *vector = surf->eivec[surf->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
         buf[n] = vector[clocal[i]];
         n += size_one;
       }
     } else {
       int icol = argindex[n]-1;
-      int **array = surf->eiarray[particle->ewhich[index]];
+      int **array = surf->eiarray[surf->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
         buf[n] = array[clocal[i]][icol];
         n += size_one;
@@ -790,14 +806,14 @@ void DumpSurf::pack_custom(int n)
     }
   } else {
     if (surf->esize[index] == 0) {
-      double *vector = surf->edvec[particle->ewhich[index]];
+      double *vector = surf->edvec[surf->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
         buf[n] = vector[clocal[i]];
         n += size_one;
       }
     } else {
       int icol = argindex[n]-1;
-      double **array = surf->edarray[particle->ewhich[index]];
+      double **array = surf->edarray[surf->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
         buf[n] = array[clocal[i]][icol];
         n += size_one;

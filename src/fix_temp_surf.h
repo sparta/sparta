@@ -35,18 +35,21 @@ class FixTempSurf : public Fix {
   virtual void end_of_step();
 
  private:
-  int ifix,m;
+  int source,icompute,ifix;
   double twall,prefactor,emi;
-  int qwindex,tindex;
+  int tindex,qwindex;
   char *id_qw;
 
+  class Compute *cqw;
   class Fix *fqw;
+
   double *qw,*qw_all;
 
   Surf::Line *lines;
   Surf::Tri *tris;
 
-  int distributed,implicit,dimension;  // Surf settings
+  int dimension;
+  int distributed;
   int firstflag;
 
   int groupbit;              // mask for surface group
