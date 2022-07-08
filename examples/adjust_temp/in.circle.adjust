@@ -32,7 +32,7 @@ compute             1 surf all all etot
 fix                 1 ave/surf all 1 250 250 c_1[*] ave one
 fix                 2 surf/temp all 250 f_1[*] 50 0.9 temperature
 
-surf_collide        1 diffuse 100 1.0
+surf_collide        1 diffuse s_temperature 1.0
 surf_modify         1 collide 1
 
 fix                 in emit/face all xlo twopass
