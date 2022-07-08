@@ -246,6 +246,7 @@ void FixSurfTemp::end_of_step()
         qw = vector[m];
         if (qw > threshold) tvector_me[i] = pow(prefactor*qw,0.25);
         else tvector_me[i] = twall;
+        printf("NEWTEMP i %d qw %g temp %g\n",i,qw,tvector_me[i]);
       }
       m++;
     }
