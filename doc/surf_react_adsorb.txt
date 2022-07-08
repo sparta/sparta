@@ -51,6 +51,12 @@ surfaces as collections of geometric elements, triangles in 3d and
 line segments in 2d.  Also see the "react"_react.html command for
 specification of a gas-phase chemistry reaction model.
 
+The per-surface element species state computed and updated by this
+command can be output via the "dump surf"_dump.html command, using the
+{s_name} syntax to output the custom temparture variable created by
+this surface reaction model.  See the examples/surf_react_adsorb dir
+for scripts that use this surface reaction model.
+
 The ID for a surface reaction model is used to identify it in other
 commands.  Each surface reaction model ID must be unique.  The ID can
 only contain alphanumeric characters and underscores.

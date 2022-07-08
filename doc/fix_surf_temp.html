@@ -55,6 +55,11 @@ an energy flux.
 current temperature of surface elements.  An example is the
 <A HREF = "surf_collide.html">surf_collide diffuse</A> command.
 </P>
+<P>The per-surface element temperatures computed by this fix can be
+output via the <A HREF = "dump.html">dump surf</A> command, using the <I>s_name</I>
+syntax to output the custom temparture variable created by this fix.
+See the examples/adjust_temp dir for scripts that use this fix.
+</P>
 <P>The specified <I>group-ID</I> must be the name of a surface element group,
 as defined by the <A HREF = "group.html">group surf</A> command, which contains a
 set of surface elements.

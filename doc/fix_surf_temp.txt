@@ -43,6 +43,11 @@ This fix creates a custom per-surf vector with the specified name of
 current temperature of surface elements.  An example is the
 "surf_collide diffuse"_surf_collide.html command.
 
+The per-surface element temperatures computed by this fix can be
+output via the "dump surf"_dump.html command, using the {s_name}
+syntax to output the custom temparture variable created by this fix.
+See the examples/adjust_temp dir for scripts that use this fix.
+
 The specified {group-ID} must be the name of a surface element group,
 as defined by the "group surf"_group.html command, which contains a
 set of surface elements.
