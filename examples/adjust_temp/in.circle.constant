@@ -46,10 +46,10 @@ compute             1b lambda/grid f_3[1] f_3[2] Ar kall
 fix                 10 adapt 250 all refine coarsen value c_1b[2] 2.0 4.5 &
                     combine min thresh less more cells 2 2 1
 
-dump                2 surf all 500 dump.circle.constant id f_1[*]
+dump                2 surf all 250 dump.circle.constant id f_1[*]
 
 stats_style         step cpu np nattempt ncoll nscoll ngrid maxlevel
 stats_modify        flush yes
 stats               250
 
-run                 2000
+run                 250

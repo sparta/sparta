@@ -12,6 +12,10 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Contributing author: Arnaud Borner (NASA Ames)
+------------------------------------------------------------------------- */
+
 #include "math.h"
 #include "stdlib.h"
 #include "string.h"
@@ -31,7 +35,7 @@ using namespace SPARTA_NS;
 
 // Stefan-Boltzmann constants for different units and dimensions
 
-#define SB_MKS 5.670374419e-8
+#define SB_SI 5.670374419e-8
 #define SB_CGS 5.670374419e-5
 
 enum{INT,DOUBLE};                      // several files
@@ -138,16 +142,16 @@ FixSurfTemp::FixSurfTemp(SPARTA *sparta, int narg, char **arg) :
   int dimension = domain->dimension;
 
   if (dimension == 3 || domain->axisymmetric) {
-    if (strcmp(update->unit_style,"mks") == 0) {
-      prefactor = 1.0 / (emi * SB_MKS);
+    if (strcmp(update->unit_style,"si") == 0) {
+      prefactor = 1.0 / (emi * SB_SI);
       threshold = 1.0e-6;
     } else if (strcmp(update->unit_style,"cgs") == 0) {
       prefactor = 1.0 / (emi * SB_CGS);
       threshold = 1.0e-6;
     }
   } else if (dimension == 2) {
-    if (strcmp(update->unit_style,"mks") == 0) {
-      prefactor = 1.0 / (emi * SB_MKS);
+    if (strcmp(update->unit_style,"si") == 0) {
+      prefactor = 1.0 / (emi * SB_SI);
       threshold = 1.0e-6;
     } else if (strcmp(update->unit_style,"cgs") == 0) {
       prefactor = 1.0 / (emi * SB_CGS);
@@ -225,7 +229,6 @@ void FixSurfTemp::end_of_step()
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
 
-  int nown = surf->nown;
   int nlocal = surf->nlocal;
 
   memset(tvector_me,0,nlocal*sizeof(double));
@@ -246,7 +249,6 @@ void FixSurfTemp::end_of_step()
         qw = vector[m];
         if (qw > threshold) tvector_me[i] = pow(prefactor*qw,0.25);
         else tvector_me[i] = twall;
-        printf("NEWTEMP i %d qw %g temp %g\n",i,qw,tvector_me[i]);
       }
       m++;
     }
