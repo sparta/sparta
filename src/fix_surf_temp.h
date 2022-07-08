@@ -14,50 +14,38 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(temp/surf,FixTempSurf)
+FixStyle(surf/temp,FixSurfTemp)
 
 #else
 
-#ifndef SPARTA_FIX_TEMP_SURF_H
-#define SPARTA_FIX_TEMP_SURF_H
+#ifndef SPARTA_FIX_SURF_TEMP_H
+#define SPARTA_FIX_SURF_TEMP_H
 
 #include "fix.h"
 #include "surf.h"
 
 namespace SPARTA_NS {
 
-class FixTempSurf : public Fix {
+class FixSurfTemp : public Fix {
  public:
-  FixTempSurf(class SPARTA *, int, char **);
-  ~FixTempSurf();
+  FixSurfTemp(class SPARTA *, int, char **);
+  ~FixSurfTemp();
   int setmask();
   void init();
   virtual void end_of_step();
 
  private:
-  int source,icompute,ifix;
-  double twall,prefactor,emi;
+  int source,icompute,ifix,firstflag;
+  int groupbit;
+  double twall,emi;
   int tindex,qwindex;
-  char *id_qw;
 
+  char *id_qw;
   class Compute *cqw;
   class Fix *fqw;
 
-  double *qw,*qw_all;
-
-  Surf::Line *lines;
-  Surf::Tri *tris;
-
-  int dimension;
-  int distributed;
-  int firstflag;
-
-  int groupbit;              // mask for surface group
-  int nown;                  // # of surf elements owned by this proc
-  int nchoose;               // # of surf elements output by this proc
-  int nsurf;                 // nown or nlocal
-  int *cglobal;              // indices of global elements for nchoose
-  int *clocal;               // indices of local owned elements for nchoose
+  double prefactor,threshold;
+  double *tvector_me;
 };
 
 }

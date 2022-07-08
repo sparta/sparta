@@ -481,7 +481,7 @@ int DumpSurf::parse_fields(int narg, char **arg)
    // custom surf vector or array
    // if no trailing [], then arg is set to 0, else arg is int between []
 
-    } else if (strncmp(arg[iarg],"p_",2) == 0) {
+    } else if (strncmp(arg[iarg],"s_",2) == 0) {
       pack_choice[i] = &DumpSurf::pack_custom;
 
       int n = strlen(arg[iarg]);

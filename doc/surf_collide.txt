@@ -19,7 +19,7 @@ args = arguments for specific style :l
     noslip = reflect all velocity components off surface (not just normal component)
   {diffuse} or {diffuse/kk} args = Tsurf acc
     Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable (see below)
+            Tsurf can be a variable or custom per-surf vector (see below)
     acc = accommodation coefficient
   {cll} args = Tsurf acc_n acc_t acc_rot acc_vib
     Tsurf = temperature of surface (temperature units)
@@ -162,6 +162,13 @@ Equal-style variables can specify formulas with various mathematical
 functions, and include "stats_style"_status_style.html command
 keywords for the simulation box parameters and timestep and elapsed
 time.  Thus it is easy to specify a time-dependent temperature.
+
+The {Tsurf} value can also be specified as a custom per-surf vector,
+which is updated with temperature values by the "fix
+surf/temp"_fix_surf_temp.html command.  In this case, it should be
+specified as s_name, where name is the name of the custom per-surf
+vector, which is also specified by the "fix
+surf/temp"_fix_surf_temp.html command.
 
 :line
 

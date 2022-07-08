@@ -99,6 +99,9 @@ class Surf : protected Pointers {
   Tri *mytris;              // list of tris assigned uniquely to me
                             //   only for explicit, distributed
   int nown;                 // # of lines or tris I own uniquely
+                            // explicit, all: nown = nsurf/P
+                            // explicit, distributed: nown for mylines/mytris
+                            // implicit: not defined
   int maxown;               // max length of owned lines/tris vecs
 
   Line *tmplines;           // list of temporary lines, filled by ReadSurf

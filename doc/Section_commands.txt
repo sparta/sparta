@@ -394,9 +394,9 @@ This is indicated by additional letters in parenthesis: k = KOKKOS.
 "grid/check (k)"_fix_grid_check.html,
 "move/surf (k)"_fix_move_surf.html,
 "print"_fix_print.html,"
+"surf/temp"_fix_surf_temp.html,
 "temp/global/rescale"_fix_temp_global_rescale.html,
 "temp/rescale (k)"_fix_temp_rescale.html,
-"temp/surf"_fix_temp_surf.html,
 "vibmode (k)"_fix_vibmode.html :tb(c=6,ea=c)
 
 :line

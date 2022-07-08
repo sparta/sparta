@@ -34,12 +34,8 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
-// NOTE: how has this changed vs master ?
-// this needs to access correct current temp for surfs in group
-// how does this class know groupID for fix temp/surf ?
-// MAYBE: there needs to be some data struct in surfs.h that
-//        stores common info between this class and fix temp/surf
-//        since there can be multiple FixTempSurf and multiple Collide models
+enum{INT,DOUBLE};                      // several files
+enum{NUMERIC,VARIABLE,CUSTOM};
 
 /* ---------------------------------------------------------------------- */
 
@@ -52,10 +48,17 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
 
   if (strstr(arg[2],"v_") == arg[2]) {
     dynamicflag = 1;
+    tmode = VARIABLE;
+    int n = strlen(&arg[2][2]) + 1;
+    tstr = new char[n];
+    strcpy(tstr,&arg[2][2]);
+  } else if (strstr(arg[2],"s_") == arg[2]) {
+    tmode = CUSTOM;
     int n = strlen(&arg[2][2]) + 1;
     tstr = new char[n];
     strcpy(tstr,&arg[2][2]);
   } else {
+    tmode = NUMERIC;
     twall = input->numeric(FLERR,arg[2]);
     if (twall <= 0.0) error->all(FLERR,"Surf_collide diffuse temp <= 0.0");
   }
@@ -135,15 +138,25 @@ void SurfCollideDiffuse::init()
 {
   SurfCollide::init();
 
-  // check variable
+  // check variable and custom surf vector
 
-  if (tstr) {
+  if (tmode == VARIABLE) {
     tvar = input->variable->find(tstr);
     if (tvar < 0)
       error->all(FLERR,"Surf_collide diffuse variable name does not exist");
     if (!input->variable->equal_style(tvar))
       error->all(FLERR,"Surf_collide diffuse variable is invalid style");
+  } else if (tmode == CUSTOM) {
+    int tindex = surf->find_custom(tstr);
+    if (tindex < 0) 
+      error->all(FLERR,"Surf_collide diffuse could not find "
+                 "custom per-surf vector");
+    if (surf->etype[tindex] != DOUBLE || surf->esize[tindex] != 0)
+      error->all(FLERR,"Surf_collide diffuse custom per-surf vector in invalid");
+    tvector = surf->edvec[surf->ewhich[tindex]];
   }
+
+  // set ptrs to lines or tris
 
   if (distributed && !implicit) {
     lines = surf->mylines;
@@ -154,13 +167,6 @@ void SurfCollideDiffuse::init()
     tris = surf->tris;
     nsurf = surf->nlocal;
   }
-
-  /*
-  for (int i = 0; i < nsurf; i++) {
-    if (domain->dimension == 2) lines[i].temp = twall;
-    else tris[i].temp = twall;
-  }
-  */
 }
 
 /* ----------------------------------------------------------------------
@@ -202,12 +208,7 @@ collide(Particle::OnePart *&ip, double &,
   //   to update per-particle properties which depend on
   //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 
-  /*
-  if (isurf > -1 && !distributed && !implicit) {
-    if (domain->dimension == 2) twall = lines[isurf].temp;
-    else twall = tris[isurf].temp;
-  }
-  */
+  if (tmode == CUSTOM) twall = tvector[isurf];
 
   if (ip) {
     if (!velreset) diffuse(ip,norm,isurf);
@@ -271,13 +272,6 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm, int jsurf)
     double tangent1[3],tangent2[3];
     Particle::Species *species = particle->species;
     int ispecies = p->ispecies;
-
-    /*
-    if (jsurf > -1 && !distributed && !implicit) {
-      if (domain->dimension == 2) twall = lines[jsurf].temp;
-      else twall = tris[jsurf].temp;
-    }
-    */
 
     double vrm = sqrt(2.0*update->boltz * twall / species[ispecies].mass);
     double vperp = vrm * sqrt(-log(random->uniform()));
@@ -383,12 +377,16 @@ void SurfCollideDiffuse::wrapper(Particle::OnePart *p, double *norm,
 
 void SurfCollideDiffuse::flags_and_coeffs(int *flags, double *coeffs)
 {
+  if (tmode == CUSTOM) 
+    error->all(FLERR,"Surf_collide diffuse with custom per-surf Twall "
+               "does not support external caller");
+
   coeffs[0] = twall;
   coeffs[1] = acc;
 }
 
 /* ----------------------------------------------------------------------
-   set current surface temperature
+   set current surface temperature from equal-style variable
 ------------------------------------------------------------------------- */
 
 void SurfCollideDiffuse::dynamic()
