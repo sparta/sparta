@@ -44,6 +44,7 @@ using namespace SPARTA_NS;
 using namespace MathConst;
 
 enum{NONE,DISCRETE,SMOOTH};
+enum{NUMERIC,VARIABLE,CUSTOM};
 
 /* ---------------------------------------------------------------------- */
 
@@ -55,12 +56,20 @@ SurfCollideCLL::SurfCollideCLL(SPARTA *sparta, int narg, char **arg) :
   tstr = NULL;
 
   if (strstr(arg[2],"v_") == arg[2]) {
+    dynamicflag = 1;
+    tmode = VARIABLE;
+    int n = strlen(&arg[2][2]) + 1;
+    tstr = new char[n];
+    strcpy(tstr,&arg[2][2]);
+  } else if (strstr(arg[2],"s_") == arg[2]) {
+    tmode = CUSTOM;
     int n = strlen(&arg[2][2]) + 1;
     tstr = new char[n];
     strcpy(tstr,&arg[2][2]);
   } else {
-    twall = atof(arg[2]);
-    if (twall < 0.0) error->all(FLERR,"Illegal surf_collide cll command");
+    tmode = NUMERIC;
+    twall = input->numeric(FLERR,arg[2]);
+    if (twall <= 0.0) error->all(FLERR,"Surf_collide cll temp <= 0.0");
   }
 
   acc_n = atof(arg[3]);
@@ -198,6 +207,8 @@ collide(Particle::OnePart *&ip, double &,
   // also both partiticles need to trigger any fixes
   //   to update per-particle properties which depend on
   //   temperature of the particle, e.g. fix vibmode and fix ambipolar
+
+  if (tmode == CUSTOM) twall = tvector[isurf];
 
   if (ip) {
     if (!velreset) cll(ip,norm);
@@ -464,6 +475,10 @@ void SurfCollideCLL::wrapper(Particle::OnePart *p, double *norm,
 
 void SurfCollideCLL::flags_and_coeffs(int *flags, double *coeffs)
 {
+  if (tmode == CUSTOM) 
+    error->all(FLERR,"Surf_collide cll with custom per-surf Twall "
+               "does not support external caller");
+
   coeffs[0] = twall;
   coeffs[1] = acc_n;
   coeffs[2] = acc_t;
@@ -484,4 +499,5 @@ void SurfCollideCLL::flags_and_coeffs(int *flags, double *coeffs)
 void SurfCollideCLL::dynamic()
 {
   twall = input->variable->compute_equal(tvar);
+  if (twall <= 0.0) error->all(FLERR,"Surf_collide cll temp <= 0.0");
 }

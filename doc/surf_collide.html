@@ -29,7 +29,7 @@
     acc = accommodation coefficient
   <I>cll</I> args = Tsurf acc_n acc_t acc_rot acc_vib
     Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable (see below)
+            Tsurf can be a variable or custom per-surf vector (see below)
     acc_n = accommodation coefficient in the surface normal direction
     acc_t = accommodation coefficient in the surface tangential direction
     acc_rot = accommodation coefficient for the rotational modes
@@ -37,7 +37,7 @@
   <I>adiabatic</I> args = none
   <I>impulsive</I> args = Tsurf <I>model</I> param1 param2 var theta_peak pol_pow azi_pow
     Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable (see below)
+            Tsurf can be a variable or custom per-surf vector (see below)
     <I>model</I> can be softsphere or tempvar
       <I>softsphere</I> args = en_ratio eff_mass
         param1 = en_ratio = fraction of energy lost in the collision
@@ -51,7 +51,7 @@
     azi_pow = cosine power represeting the azimuthal angular distribution
   <I>td</I> arg = Tsurf 
     Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable (see below) 
+            Tsurf can be a variable or custom per-surf vector (see below)
   <I>piston</I> or <I>piston/kk</I> args = Vwall
     Vwall = velocity of boundary wall (velocity units)
   <I>transparent</I> args = none 
@@ -164,7 +164,7 @@ the surface given by:
 </P>
 <CENTER><IMG SRC = "Eqs/diffuse_normal.jpg">
 </CENTER>
-<P>The <I>Tsurf</I> value can be specified as an equal-style
+<P>The <I>Tsurf</I> value can be also be specified as an equal-style
 <A HREF = "variable.html">variable</A>.  If the value is a variable, it should be
 specified as v_name, where name is the variable name.  In this case,
 the variable will be evaluated each timestep, and its value used to
@@ -208,16 +208,9 @@ given by Lord <A HREF = "#Lord90">(Lord90)</A>, along with extension to rotation
 and vibrational modes with both continuous and discrete levels
 <A HREF = "#Lord91">(Lord91)</A>.
 </P>
-<P>The <I>Tsurf</I> value can be specified as an equal-style
-<A HREF = "variable.html">variable</A>.  If the value is a variable, it should be
-specified as v_name, where name is the variable name.  In this case,
-the variable will be evaluated each timestep, and its value used to
-determine the current surface temperature.
-</P>
-<P>Equal-style variables can specify formulas with various mathematical
-functions and include <A HREF = "status_style.html">stats_style</A> command keywords
-for the simulation box parameters and timestep and elapsed time.
-Thus, it is easy to specify a time-dependent temperature.
+<P>The <I>Tsurf</I> value can be also be specified as an equal-style
+<A HREF = "variable.html">variable</A> or a custom per-surf vector.  See the
+description of these 2 options for the <I>diffuse</I> style above.
 </P>
 <HR>
 
@@ -244,16 +237,9 @@ normal and the plane tangent to the surface given by:
 </P>
 <CENTER><IMG SRC = "Eqs/diffuse_normal.jpg">
 </CENTER>
-<P>The <I>Tsurf</I> value can be specified as an equal-style
-<A HREF = "variable.html">variable</A>.  If the value is a variable, it should be
-specified as v_name, where name is the variable name.  In this case,
-the variable will be evaluated each timestep, and its value used to
-determine the current surface temperature.
-</P>
-<P>Equal-style variables can specify formulas with various mathematical
-functions, and include <A HREF = "status_style.html">stats_style</A> command
-keywords for the simulation box parameters and timestep and elapsed
-time.  Thus it is easy to specify a time-dependent temperature.
+<P>The <I>Tsurf</I> value can be also be specified as an equal-style
+<A HREF = "variable.html">variable</A> or a custom per-surf vector.  See the
+description of these 2 options for the <I>diffuse</I> style above.
 </P>
 <HR>
 
@@ -322,16 +308,9 @@ angle: (-180, 180)
 molecule remains unchanged within the <I>impulsive</I> model unless the
 optional keyword <I>intenergy</I> is specified (see below).
 </P>
-<P>The <I>Tsurf</I> value can be specified as an equal-style
-<A HREF = "variable.html">variable</A>.  If the value is a variable, it should be
-specified as v_name, where name is the variable name.  In this case,
-the variable will be evaluated each timestep, and its value used to
-determine the current surface temperature.
-</P>
-<P>Equal-style variables can specify formulas with various mathematical
-functions and include <A HREF = "status_style.html">stats_style</A> command keywords
-for the simulation box parameters and timestep and elapsed time.
-Thus, it is easy to specify a time-dependent temperature.
+<P>The <I>Tsurf</I> value can be also be specified as an equal-style
+<A HREF = "variable.html">variable</A> or a custom per-surf vector.  See the
+description of these 2 options for the <I>diffuse</I> style above.
 </P>
 <HR>
 

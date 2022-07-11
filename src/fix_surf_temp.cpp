@@ -136,27 +136,18 @@ FixSurfTemp::FixSurfTemp(SPARTA *sparta, int narg, char **arg) :
   delete [] id_custom;
 
   // prefactor and threshold in Stefan/Boltzmann equation
-  // NOTE: need new constants for 2d and units
-  // NOTE: ditto for threshold
+  // units of prefactor (SI) is K^4 / (watt - m^2)
+  // same in 3d vs 2d, since SPARTA treats 2d cell volume as 1 m in z
+  // NOTE: need new constants for threshold ?
 
   int dimension = domain->dimension;
 
-  if (dimension == 3 || domain->axisymmetric) {
-    if (strcmp(update->unit_style,"si") == 0) {
-      prefactor = 1.0 / (emi * SB_SI);
-      threshold = 1.0e-6;
-    } else if (strcmp(update->unit_style,"cgs") == 0) {
-      prefactor = 1.0 / (emi * SB_CGS);
-      threshold = 1.0e-6;
-    }
-  } else if (dimension == 2) {
-    if (strcmp(update->unit_style,"si") == 0) {
-      prefactor = 1.0 / (emi * SB_SI);
-      threshold = 1.0e-6;
-    } else if (strcmp(update->unit_style,"cgs") == 0) {
-      prefactor = 1.0 / (emi * SB_CGS);
-      threshold = 1.0e-6;
-    }
+  if (strcmp(update->unit_style,"si") == 0) {
+    prefactor = 1.0 / (emi * SB_SI);
+    threshold = 1.0e-6;
+  } else if (strcmp(update->unit_style,"cgs") == 0) {
+    prefactor = 1.0 / (emi * SB_CGS);
+    threshold = 1.0e-6;
   }
 
   // trigger setup of list of owned surf elements belonging to surf group
