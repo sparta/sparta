@@ -21,8 +21,8 @@ create_box          -0.2 0.65 0.0 0.4 -0.5 0.5
 Created orthogonal box = (-0.2 0 -0.5) to (0.65 0.4 0.5)
 create_grid 	    30 15 1 block * * *
 Created 450 child grid cells
-  CPU time = 0.00210005 secs
-  create/ghost percent = 81.0852 18.9148
+  CPU time = 0.00203467 secs
+  create/ghost percent = 79.4761 20.5239
 
 species             ar.species Ar
 mixture             all vstream 2634.1 0 0 temp 200.0
@@ -41,10 +41,10 @@ read_surf	    circle.surf group 1
   390 39 21 = cells outside/inside/overlapping surfs
   21 = surf cells with 1,2,etc splits
   0.303541 0.303541 = cell-wise and global flow volume
-  CPU time = 0.00131374 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 24.6608 13.0784 1.49565 50.2598 10.5054 12.5676 0.151628
-  surf2grid time = 0.000660285 secs
-  map/comm1/comm2/comm3/comm4/split percent = 33.6749 12.322 10.5239 6.77798 13.0892 12.0565
+  CPU time = 0.00133175 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 24.8534 13.1203 2.64847 48.0513 11.3265 13.7096 0.180664
+  surf2grid time = 0.000639924 secs
+  map/comm1/comm2/comm3/comm4/split percent = 37.0272 13.1327 9.96618 4.31489 12.8512 13.8304
 
 compute             1 surf all all etot
 fix                 1 ave/surf all 1 250 250 c_1[1] ave one
@@ -56,7 +56,7 @@ surf_modify         1 collide 1
 fix                 in emit/face all xlo twopass
 create_particles    all n 0 twopass
 Created 18416 particles
-  CPU time = 0.00428987 secs
+  CPU time = 0.00542106 secs
 
 compute             3 grid all all nrho
 compute             4 thermal/grid all all temp
@@ -72,7 +72,7 @@ stats_style         step cpu np nattempt ncoll nscoll ngrid maxlevel
 stats_modify        flush yes
 stats               250
 
-run                 250
+run                 2000
 Memory usage per proc in Mbytes:
   particles (ave,min,max) = 1.6875 1.6875 1.6875
   grid      (ave,min,max) = 1.51379 1.51379 1.51379
@@ -80,53 +80,60 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 3.22371 3.22256 3.22485
 Step CPU Np Natt Ncoll Nscoll Ngrid Maxlevel 
        0            0    18416        0        0        0      450        1 
-     250  0.089418799    17912      147      102       17     1581        2 
-Loop time of 0.0894489 on 4 procs for 250 steps with 17912 particles
+     250  0.088944508    17912      147      102       17     1581        2 
+     500   0.19223019    18592      185      120       10     2397        3 
+     750   0.31509201    20491      213      162        8     2544        4 
+    1000   0.45973327    21893        0        0       19     2649        5 
+    1250   0.61848675    22910      284      203       19     3033        6 
+    1500   0.76118211    23837      299      207       19     3264        7 
+    1750   0.90487196    24656      327      242       16     3507        8 
+    2000    1.0578672    25145        2        1       16     3693        8 
+Loop time of 1.05789 on 4 procs for 2000 steps with 25145 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.018309   | 0.02804    | 0.037919   |   4.3 | 31.35
-Coll    | 0.0041978  | 0.0069119  | 0.0094201  |   2.2 |  7.73
-Sort    | 0.0040198  | 0.0061352  | 0.0076375  |   1.8 |  6.86
-Comm    | 0.0022104  | 0.0024612  | 0.0026688  |   0.3 |  2.75
-Modify  | 0.019597   | 0.026408   | 0.031248   |   2.7 | 29.52
-Output  | 6.1847e-05 | 6.8715e-05 | 8.2615e-05 |   0.0 |  0.08
-Other   |            | 0.01942    |            |       | 21.71
+Move    | 0.046392   | 0.21616    | 0.38015    |  25.8 | 20.43
+Coll    | 0.012491   | 0.094297   | 0.19802    |  22.0 |  8.91
+Sort    | 0.0089021  | 0.049664   | 0.074986   |  11.4 |  4.69
+Comm    | 0.014141   | 0.016125   | 0.017619   |   1.1 |  1.52
+Modify  | 0.073328   | 0.23845    | 0.37342    |  22.6 | 22.54
+Output  | 0.00055901 | 0.0005876  | 0.00064223 |   0.0 |  0.06
+Other   |            | 0.4426     |            |       | 41.84
 
-Particle moves    = 4546058 (4.55M)
-Cells touched     = 4691427 (4.69M)
-Particle comms    = 4208 (4.21K)
-Boundary collides = 273 (0.273K)
-Boundary exits    = 6102 (6.1K)
-SurfColl checks   = 841128 (0.841M)
-SurfColl occurs   = 2929 (2.93K)
+Particle moves    = 43029880 (43M)
+Cells touched     = 46147740 (46.1M)
+Particle comms    = 50724 (50.7K)
+Boundary collides = 6324 (6.32K)
+Boundary exits    = 38150 (38.1K)
+SurfColl checks   = 2673251 (2.67M)
+SurfColl occurs   = 27461 (27.5K)
 Surf reactions    = 0 (0K)
-Collide attempts  = 20643 (20.6K)
-Collide occurs    = 14395 (14.4K)
+Collide attempts  = 434590 (0.435M)
+Collide occurs    = 316831 (0.317M)
 Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 1.27057e+07
-Particle-moves/step: 18184.2
-Cell-touches/particle/step: 1.03198
+Particle-moves/CPUsec/proc: 1.01688e+07
+Particle-moves/step: 21514.9
+Cell-touches/particle/step: 1.07246
 Particle comm iterations/step: 1
-Particle fraction communicated: 0.000925637
-Particle fraction colliding with boundary: 6.0052e-05
-Particle fraction exiting boundary: 0.00134226
-Surface-checks/particle/step: 0.185024
-Surface-collisions/particle/step: 0.000644294
+Particle fraction communicated: 0.00117881
+Particle fraction colliding with boundary: 0.000146968
+Particle fraction exiting boundary: 0.000886593
+Surface-checks/particle/step: 0.0621255
+Surface-collisions/particle/step: 0.000638184
 Surf-reactions/particle/step: 0
-Collision-attempts/particle/step: 0.00454086
-Collisions/particle/step: 0.00316648
+Collision-attempts/particle/step: 0.0100997
+Collisions/particle/step: 0.00736305
 Reactions/particle/step: 0
 
-Particles: 4478 ave 5479 max 1983 min
-Histogram: 1 0 0 0 0 0 0 0 1 2
-Cells:      395.25 ave 480 max 306 min
-Histogram: 2 0 0 0 0 0 0 0 0 2
-GhostCell: 43 ave 47 max 39 min
+Particles: 6286.25 ave 9141 max 1338 min
+Histogram: 1 0 0 0 0 1 0 0 0 2
+Cells:      923.25 ave 2559 max 111 min
+Histogram: 2 0 1 0 0 0 0 0 0 1
+GhostCell: 55.5 ave 83 max 28 min
 Histogram: 2 0 0 0 0 0 0 0 0 2
 EmptyCell: 0 ave 0 max 0 min
 Histogram: 4 0 0 0 0 0 0 0 0 0

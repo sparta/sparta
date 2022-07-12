@@ -52,4 +52,4 @@ stats_style         step cpu np nattempt ncoll nscoll ngrid maxlevel
 stats_modify        flush yes
 stats               250
 
-run                 250
+run                 2000
