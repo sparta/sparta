@@ -570,7 +570,8 @@ void BalanceGrid::timer_cell_weights(double* &weight)
   if (maxcost <= 0.0) {
     memory->destroy(weight);
     weight = NULL;
-    error->warning(FLERR,"No time history accumulated for balance_grid rcb time, using rcb cell option instead");
+      error->warning(FLERR,"No time history accumulated for balance_grid "
+        "rcb time, using rcb cell option instead");
     return;
   }
 
