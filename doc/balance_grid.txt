@@ -145,6 +145,16 @@ before the balance command so that timer data is available. The timers
 used for balancing tally time from the move, sort, collide, and modify
 portions of each timestep.
 
+IMPORTANT NOTE: The adapt_grid"_adapt_grid.html zeros out timing data,
+so the weight {time} option is not available immediatly after this
+command.
+
+IMPORTANT NOTE: The coarsening option in adapt_grid"_adapt_grid.html
+and fix_adapt"_fix_adapt.html may shift cells to different processors,
+which makes the accumulated timing data for the weight {time} option
+less accurate when load balancing is performed immediately after these
+commands.
+
 Here is an example of an RCB partitioning for 24 processors, of a 2d
 hierarchical grid with 5 levels, refined around a tilted ellipsoidal
 surface object (outlined in pink).  This is for a {weight cell}
