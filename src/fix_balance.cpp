@@ -346,7 +346,7 @@ void FixBalance::timer_cost()
 
 /* -------------------------------------------------------------------- */
 
-void FixBalance::timer_cell_weights(double *weight)
+void FixBalance::timer_cell_weights(double* &weight)
 {
   // localwt = weight assigned to each owned grid cell
   // just return if no time yet tallied
@@ -356,6 +356,7 @@ void FixBalance::timer_cell_weights(double *weight)
   if (maxcost <= 0.0) {
     memory->destroy(weight);
     weight = NULL;
+    error->warning(FLERR,"No time history accumulated for fix balance rcb time, using rcb cell option instead");
     return;
   }
 
