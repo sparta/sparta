@@ -17,13 +17,15 @@
 ------------------------------------------------------------------------- */
 
 #include "fix_surf_temp_kokkos.h"
+#include "surf_kokkos.h"
+#include "sparta_masks.h"
 
 using namespace SPARTA_NS;
 
 /* ---------------------------------------------------------------------- */
 
 FixSurfTempKokkos::FixSurfTempKokkos(SPARTA *sparta, int narg, char **arg) :
-  Fix(sparta, narg, arg)
+  FixSurfTemp(sparta, narg, arg)
 {
   kokkos_flag = 1;
   execution_space = Host;

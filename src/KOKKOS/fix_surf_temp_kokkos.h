@@ -21,6 +21,7 @@ FixStyle(surf/temp/kk,FixSurfTempKokkos)
 #ifndef SPARTA_FIX_SURF_TEMP_KOKKOS_H
 #define SPARTA_FIX_SURF_TEMP_KOKKOS_H
 
+#include "fix_surf_temp.h"
 #include "kokkos_type.h"
 
 namespace SPARTA_NS {
@@ -28,12 +29,8 @@ namespace SPARTA_NS {
 class FixSurfTempKokkos : public FixSurfTemp {
  public:
   FixSurfTempKokkos(class SPARTA *, int, char **);
-  ~FixSurfTempKokkos();
-  void init();
+  virtual ~FixSurfTempKokkos();
   virtual void end_of_step();
-
- private:
-  double *tvector_me;
 };
 
 }
