@@ -112,9 +112,6 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
 
   vstream[0] = vstream[1] = vstream[2] = 0.0;
 
-  distributed = surf->distributed;
-  implicit = surf->implicit;
-
   // initialize RNG
 
   random = new RanKnuth(update->ranmaster->uniform());
@@ -154,18 +151,6 @@ void SurfCollideDiffuse::init()
     if (surf->etype[tindex] != DOUBLE || surf->esize[tindex] != 0)
       error->all(FLERR,"Surf_collide diffuse custom per-surf vector in invalid");
     tvector = surf->edvec[surf->ewhich[tindex]];
-  }
-
-  // set ptrs to lines or tris
-
-  if (distributed && !implicit) {
-    lines = surf->mylines;
-    tris = surf->mytris;
-    nsurf = surf->nown;
-  } else {
-    lines = surf->lines;
-    tris = surf->tris;
-    nsurf = surf->nlocal;
   }
 }
 
@@ -211,14 +196,14 @@ collide(Particle::OnePart *&ip, double &,
   if (tmode == CUSTOM) twall = tvector[isurf];
 
   if (ip) {
-    if (!velreset) diffuse(ip,norm,isurf);
+    if (!velreset) diffuse(ip,norm);
     if (modify->n_update_custom) {
       int i = ip - particle->particles;
       modify->update_custom(i,twall,twall,twall,vstream);
     }
   }
   if (jp) {
-    if (!velreset) diffuse(jp,norm,isurf);
+    if (!velreset) diffuse(jp,norm);
     if (modify->n_update_custom) {
       int j = jp - particle->particles;
       modify->update_custom(j,twall,twall,twall,vstream);
@@ -251,7 +236,7 @@ collide(Particle::OnePart *&ip, double &,
    resets particle(s) to post-collision outward velocity
 ------------------------------------------------------------------------- */
 
-void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm, int jsurf)
+void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm)
 {
   // specular reflection
   // reflect incident v around norm
