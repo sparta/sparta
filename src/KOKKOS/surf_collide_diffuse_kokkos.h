@@ -51,6 +51,7 @@ SurfCollideStyle(diffuse/kk,SurfCollideDiffuseKokkos)
 namespace SPARTA_NS {
 
 enum{NONE,DISCRETE,SMOOTH};            // several files
+enum{NUMERIC,VARIABLE,CUSTOM};
 
 class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
  public:
@@ -71,6 +72,8 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
 #endif
 //Kokkos::Random_XorShift1024_Pool<DeviceType> rand_pool;
 //typedef typename Kokkos::Random_XorShift1024_Pool<DeviceType>::generator_type rand_type;
+
+  DAT::t_float_1d d_tvector;
 
   /* ----------------------------------------------------------------------
      particle collision with surface with optional chemistry
@@ -109,25 +112,22 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
     //  (e.g. fix vibmode and fix ambipolar)
     // if new particle J created, also need to trigger any fixes
 
-    double twall;
-    if (isurf > -1 && !distributed && !implicit) {
-      if (dimension == 2) twall = d_lines[isurf].temp;
-      else twall = d_tris[isurf].temp;
-    }
+    double twall_local;
+    if (tmode == CUSTOM) twall_local = d_tvector[isurf];
 
     if (ip) {
-      diffuse(ip,norm,isurf);
+      diffuse(ip,norm,twall_local);
       int i = ip - d_particles.data();
       if (ambi_flag)
-        fix_ambi_kk_copy.obj.update_custom_kokkos(i,twall,twall,twall,vstream);
+        fix_ambi_kk_copy.obj.update_custom_kokkos(i,twall_local,twall_local,twall_local,vstream);
       if (vibmode_flag)
-        fix_vibmode_kk_copy.obj.update_custom_kokkos(i,twall,twall,twall,vstream);
+        fix_vibmode_kk_copy.obj.update_custom_kokkos(i,twall_local,twall_local,twall_local,vstream);
     }
     //if (jp) {
-    //  diffuse(jp,norm,isurf);
+    //  diffuse(jp,norm,twall-local);
     //  if (modify->n_update_custom) {
     //    int j = jp - particle->particles;
-    //    modify->update_custom(j,twall,twall,twall,vstream);
+    //    modify->update_custom(j,twall_local,twall_local,twall_local,vstream);
     //  }
     //}
 
@@ -167,13 +167,8 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
   KKCopy<FixAmbipolarKokkos> fix_ambi_kk_copy;
   KKCopy<FixVibmodeKokkos> fix_vibmode_kk_copy;
 
-  tdual_line_1d k_lines;
-  tdual_tri_1d k_tris;
-  t_line_1d d_lines;
-  t_tri_1d d_tris;
-
   KOKKOS_INLINE_FUNCTION
-  void diffuse(Particle::OnePart *p, const double *norm, const int jsurf = -1) const
+  void diffuse(Particle::OnePart *p, const double *norm, const double twall) const
   {
     // specular reflection
     // reflect incident v around norm
@@ -195,12 +190,6 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
     } else {
       double tangent1[3],tangent2[3];
       int ispecies = p->ispecies;
-
-      double twall;
-      if (jsurf > -1 && !distributed && !implicit) {
-        if (dimension == 2) twall = d_lines[jsurf].temp;
-        else twall = d_tris[jsurf].temp;
-      }
 
       double vrm = sqrt(2.0*boltz * twall / d_species[ispecies].mass);
       double vperp = vrm * sqrt(-log(rand_gen.drand()));

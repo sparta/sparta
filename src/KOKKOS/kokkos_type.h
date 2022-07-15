@@ -1017,9 +1017,32 @@ struct Graph {
   int& get(int i, int j) const { return at(start(i) + j); }
 };
 
-//default SPARTA Types
+// default SPARTA Types
 typedef struct ArrayTypes<DeviceType> DAT;
 typedef struct ArrayTypes<SPAHostType> HAT;
+
+// custom data types
+
+namespace SPARTA_NS {
+
+  struct struct_tdual_int_1d
+  { DAT::tdual_int_1d k_view; };
+
+  struct struct_tdual_float_1d
+  { DAT::tdual_float_1d k_view; };
+
+  struct struct_tdual_int_2d
+  { DAT::tdual_int_2d k_view; };
+
+  struct struct_tdual_float_2d
+  { DAT::tdual_float_2d k_view; };
+
+  typedef Kokkos::DualView<struct_tdual_int_1d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_int_1d_1d;
+  typedef Kokkos::DualView<struct_tdual_float_1d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_float_1d_1d;
+  typedef Kokkos::DualView<struct_tdual_int_2d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_int_2d_1d;
+  typedef Kokkos::DualView<struct_tdual_float_2d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_float_2d_1d;
+}
+
 
 template<class DeviceType, class BufferView, class DualView>
 void buffer_view(BufferView &buf, DualView &view,

@@ -37,6 +37,8 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
+enum{INT,DOUBLE};                      // several files
+
 /* ---------------------------------------------------------------------- */
 
 SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta, int narg, char **arg) :
@@ -94,37 +96,6 @@ void SurfCollideDiffuseKokkos::init()
 {
   SurfCollideDiffuse::init();
 
-  dimension = domain->dimension;
-
-  auto surfKK = (SurfKokkos*)surf;
-  surfKK->sync(Host,LINE_MASK|TRI_MASK);
-
-  if (distributed && !implicit) {
-    k_lines = surfKK->k_mylines;
-    k_tris = surfKK->k_mytris;
-    nsurf = surf->nown;
-  } else {
-    k_lines = surfKK->k_lines;
-    k_tris = surfKK->k_tris;
-    nsurf = surf->nlocal;
-  }
-
-  for (int i = 0; i < nsurf; i++) {
-    if (domain->dimension == 2) k_lines.h_view[i].temp = twall;
-    else k_tris.h_view[i].temp = twall;
-  }
-
-  if (domain->dimension == 2) {
-    k_lines.modify_host();
-    k_lines.sync_device();
-  } else {
-    k_tris.modify_host();
-    k_tris.sync_device();
-  }
-
-  d_lines = k_lines.d_view;
-  d_tris = k_tris.d_view;
-
   ambi_flag = vibmode_flag = 0;
   if (modify->n_update_custom) {
     for (int ifix = 0; ifix < modify->nfix; ifix++) {
@@ -176,6 +147,16 @@ void SurfCollideDiffuseKokkos::pre_collide()
   d_particles = particle_kk->k_particles.d_view;
   d_species = particle_kk->k_species.d_view;
   boltz = update->boltz;
+
+  if (tmode == CUSTOM) {
+    SurfKokkos* surf_kk = (SurfKokkos*) surf;
+    surf_kk->sync(Device,SURF_CUSTOM_MASK);
+
+    int tindex = surf->find_custom(tstr);
+    auto h_ewhich = surf_kk->k_ewhich.h_view;
+    auto h_edvec = surf_kk->k_edvec.h_view;
+    d_tvector = h_edvec[h_ewhich[tindex]].k_view.d_view;
+  } 
 
   rotstyle = NONE;
   if (Pointers::collide) rotstyle = Pointers::collide->rotstyle;
