@@ -163,7 +163,7 @@ class Surf : protected Pointers {
   int hashfilled;             // 1 if hash is filled with surf IDs
 
   Surf(class SPARTA *);
-  ~Surf();
+  virtual ~Surf();
   void global(char *);
   void modify_params(int, char **);
   void init();
@@ -238,9 +238,9 @@ class Surf : protected Pointers {
 
   int find_custom(char *);
   void error_custom();
-  int add_custom(char *, int, int);
-  void allocate_custom(int, int);
-  void remove_custom(int);
+  virtual int add_custom(char *, int, int);
+  virtual void allocate_custom(int, int);
+  virtual void remove_custom(int);
 
   void write_restart(FILE *);
   void read_restart(FILE *);
