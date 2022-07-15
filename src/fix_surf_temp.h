@@ -29,7 +29,7 @@ namespace SPARTA_NS {
 class FixSurfTemp : public Fix {
  public:
   FixSurfTemp(class SPARTA *, int, char **);
-  ~FixSurfTemp();
+  virtual ~FixSurfTemp();
   int setmask();
   void init();
   virtual void end_of_step();
