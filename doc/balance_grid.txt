@@ -145,11 +145,11 @@ before the balance command so that timer data is available. The timers
 used for balancing tally time from the move, sort, collide, and modify
 portions of each timestep.
 
-IMPORTANT NOTE: The adapt_grid"_adapt_grid.html command zeros out
+IMPORTANT NOTE: The "adapt_grid"_adapt_grid.html command zeros out
 timing data, so the weight {time} option is not available immediatly
 after this command.
 
-IMPORTANT NOTE: The coarsening option in fix_adapt"_fix_adapt.html may
+IMPORTANT NOTE: The coarsening option in "fix_adapt"_fix_adapt.html may
 shift cells to different processors, which makes the accumulated
 timing data for the weight {time} option less accurate when load
 balancing is performed immediately after this command.
