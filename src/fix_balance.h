@@ -53,7 +53,7 @@ class FixBalance : public Fix {
 
   double imbalance_factor(double &);
   void timer_cost();
-  void timer_cell_weights(double *);
+  void timer_cell_weights(double *&);
 };
 
 }

@@ -31,6 +31,7 @@
 #include "memory.h"
 #include "error.h"
 #include "timer.h"
+#include "fix_adapt.h"
 
 using namespace SPARTA_NS;
 
@@ -152,6 +153,29 @@ void FixBalance::init()
 
   if (bstyle != BISECTION && grid->cutoff >= 0.0)
     error->all(FLERR,"Cannot use non-rcb fix balance with a grid cutoff");
+
+  // check if fix balance rcb time is after fix adapt with coarsening
+
+  if (rcbwt == TIME) {
+    int coarsen_flag = 0;
+    int after_flag = 0; 
+    for (int ifix = 0; ifix < modify->nfix; ifix++) {
+      if (strstr(modify->fix[ifix]->style,"adapt") != NULL)
+        if (((FixAdapt*)modify->fix[ifix])->coarsen_flag)
+          coarsen_flag = 1;
+
+      if (strstr(modify->fix[ifix]->style,"balance") != NULL)
+        if (coarsen_flag) {
+          after_flag = 1;
+          break;
+        }
+    }
+
+    if (after_flag && comm->me == 0) {
+      error->warning(FLERR,"Using fix_adapt coarsen before fix balance "
+        "rcb time may make the accumulated timing data less accurate");
+    }
+  }
 
   last = 0.0;
   timer->init();
@@ -346,7 +370,7 @@ void FixBalance::timer_cost()
 
 /* -------------------------------------------------------------------- */
 
-void FixBalance::timer_cell_weights(double *weight)
+void FixBalance::timer_cell_weights(double* &weight)
 {
   // localwt = weight assigned to each owned grid cell
   // just return if no time yet tallied
@@ -356,7 +380,11 @@ void FixBalance::timer_cell_weights(double *weight)
   if (maxcost <= 0.0) {
     memory->destroy(weight);
     weight = NULL;
-    return;
+    if (comm->me == 0) {
+      error->warning(FLERR,"No time history accumulated for fix balance "
+        "rcb time, using rcb cell option instead");
+    }
+return;
   }
 
   Grid::ChildCell *cells = grid->cells;
