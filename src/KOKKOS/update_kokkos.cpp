@@ -1408,7 +1408,49 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       if (nboundary_tally)
         memcpy(&iorig,&particle_i,sizeof(Particle::OnePart));
 
-      bflag = domain_kk_copy.obj.collide_kokkos(ipart,outface,lo,hi,xnew/*,dtremain*/,reaction);
+      // from Domain:
+
+      Particle::OnePart* ipart = &particle_i;
+      lo = d_cells[icell].lo;
+      hi = d_cells[icell].hi;
+      if (domain_kk_copy.obj.bflag[outface] == SURFACE) {
+        // treat global boundary as a surface
+        // particle velocity is changed by surface collision model
+        // dtremain may be changed by collision model
+        // reset all components of xnew, in case dtremain changed
+        // if axisymmetric, caller will reset again, including xnew[2]
+
+        int n = domain_kk_copy.obj.surf_collide[outface];
+        int sc_type = sc_type_list[n];
+        int m = sc_map[n];
+
+        if (sc_type == 0)
+          jpart = sc_kk_specular_copy[m].obj.
+            collide_kokkos(ipart,dtremain,-(outface+1),domain_kk_copy.obj.norm[outface],domain_kk_copy.obj.surf_react[outface],reaction);
+        else if (sc_type == 1)
+          jpart = sc_kk_diffuse_copy[m].obj.
+            collide_kokkos(ipart,dtremain,-(outface+1),domain_kk_copy.obj.norm[outface],domain_kk_copy.obj.surf_react[outface],reaction);
+        else if (sc_type == 2)
+          jpart = sc_kk_vanish_copy[m].obj.
+            collide_kokkos(ipart,dtremain,-(outface+1),domain_kk_copy.obj.norm[outface],domain_kk_copy.obj.surf_react[outface],reaction);
+        else if (sc_type == 3)
+          jpart = sc_kk_piston_copy[m].obj.
+            collide_kokkos(ipart,dtremain,-(outface+1),domain_kk_copy.obj.norm[outface],domain_kk_copy.obj.surf_react[outface],reaction);
+        else if (sc_type == 4)
+          jpart = sc_kk_transparent_copy[m].obj.
+            collide_kokkos(ipart,dtremain,-(outface+1),domain_kk_copy.obj.norm[outface],domain_kk_copy.obj.surf_react[outface],reaction);
+
+        if (ipart) {
+          double *x = ipart->x;
+          double *v = ipart->v;
+          xnew[0] = x[0] + dtremain*v[0];
+          xnew[1] = x[1] + dtremain*v[1];
+          if (domain_kk_copy.obj.dimension == 3) xnew[2] = x[2] + dtremain*v[2];
+        }
+        bflag = SURFACE;
+      } else {
+        bflag = domain_kk_copy.obj.collide_kokkos(ipart,outface,lo,hi,xnew/*,dtremain*/,reaction);
+      }
 
       //if (jpart) {
       //  particles = particle->particles;

@@ -88,7 +88,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
 
   KOKKOS_INLINE_FUNCTION
   Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, double &,
-                                    int isurf, double *norm, int, int &) const
+                                    int isurf, const double *norm, int, int &) const
   {
     Kokkos::atomic_increment(&d_nsingle());
 
@@ -112,7 +112,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
     //  (e.g. fix vibmode and fix ambipolar)
     // if new particle J created, also need to trigger any fixes
 
-    double twall_local;
+    double twall_local = twall;
     if (tmode == CUSTOM) twall_local = d_tvector[isurf];
 
     if (ip) {

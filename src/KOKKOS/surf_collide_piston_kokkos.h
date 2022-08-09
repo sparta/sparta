@@ -48,7 +48,7 @@ class SurfCollidePistonKokkos : public SurfCollidePiston {
      ------------------------------------------------------------------------- */
   KOKKOS_INLINE_FUNCTION
   Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, double &dtremain,
-                                    int, double *norm, int, int &) const
+                                    int, const double *norm, int, int &) const
   {
     Kokkos::atomic_increment(&d_nsingle());
 

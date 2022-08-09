@@ -47,7 +47,7 @@ class SurfCollideVanishKokkos : public SurfCollideVanish {
 
   KOKKOS_INLINE_FUNCTION
   Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, double &,
-                                    int, double *, int, int &) const
+                                    int, const double *, int, int &) const
   {
     Kokkos::atomic_increment(&d_nsingle());
 
