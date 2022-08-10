@@ -24,7 +24,7 @@
 
 #define PARTICLE_MASK  0x00000001
 #define SPECIES_MASK   0x00000002
-#define CUSTOM_MASK   0x00002048
+#define CUSTOM_MASK    0x00004096
 
 // grid
 
@@ -36,14 +36,15 @@
 
 // collide
 
-#define VREMAX_MASK   0x00000128
-#define REMAIN_MASK   0x00000256
+#define VREMAX_MASK    0x00000128
+#define REMAIN_MASK    0x00000256
 
 // surf
 
-#define PT_MASK      0x00000512
-#define LINE_MASK    0x00001024
-#define TRI_MASK     0x00002048
+#define PT_MASK          0x00000512
+#define LINE_MASK        0x00001024
+#define TRI_MASK         0x00002048
+#define SURF_CUSTOM_MASK 0x00008192
 
 
 #endif

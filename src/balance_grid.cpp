@@ -552,7 +552,7 @@ void BalanceGrid::procs2grid(int nx, int ny, int nz,
 
 /* -------------------------------------------------------------------- */
 
-void BalanceGrid::timer_cell_weights(double *weight)
+void BalanceGrid::timer_cell_weights(double* &weight)
 {
   // cost = CPU time for relevant timers since last invocation
 
@@ -570,6 +570,8 @@ void BalanceGrid::timer_cell_weights(double *weight)
   if (maxcost <= 0.0) {
     memory->destroy(weight);
     weight = NULL;
+      error->warning(FLERR,"No time history accumulated for balance_grid "
+        "rcb time, using rcb cell option instead");
     return;
   }
 

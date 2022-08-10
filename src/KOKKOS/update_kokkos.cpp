@@ -74,7 +74,7 @@ enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // several files
 UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   grid_kk_copy(sparta),
   domain_kk_copy(sparta),
-  //// Virtual functions are not yet supported on the GPU, which leads to pain:
+  // Virtual functions are not yet supported on the GPU, which leads to pain:
   sc_kk_specular_copy{VAL_2(KKCopy<SurfCollideSpecularKokkos>(sparta))},
   sc_kk_diffuse_copy{VAL_2(KKCopy<SurfCollideDiffuseKokkos>(sparta))},
   sc_kk_vanish_copy{VAL_2(KKCopy<SurfCollideVanishKokkos>(sparta))},
@@ -248,7 +248,7 @@ void UpdateKokkos::setup()
 
   Update::setup(); // must come after prewrap since computes are called by setup()
 
-  //// For MPI debugging
+  // For MPI debugging
   //
   //  volatile int i = 0;
   //  char hostname[256];
@@ -1162,37 +1162,37 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           if (DIM == 3)
             if (sc_type == 0)
               jpart = sc_kk_specular_copy[m].obj.
-                collide_kokkos(ipart,tri->norm,dtremain,tri->isr,reaction);/////
+                collide_kokkos(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
             else if (sc_type == 1)
               jpart = sc_kk_diffuse_copy[m].obj.
-                collide_kokkos(ipart,tri->norm,dtremain,tri->isr,reaction);/////
+                collide_kokkos(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
             else if (sc_type == 2)
               jpart = sc_kk_vanish_copy[m].obj.
-                collide_kokkos(ipart,tri->norm,dtremain,tri->isr,reaction);/////
+                collide_kokkos(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
             else if (sc_type == 3)
               jpart = sc_kk_piston_copy[m].obj.
-                collide_kokkos(ipart,tri->norm,dtremain,tri->isr,reaction);/////
+                collide_kokkos(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
             else if (sc_type == 4)
               jpart = sc_kk_transparent_copy[m].obj.
-                collide_kokkos(ipart,tri->norm,dtremain,tri->isr,reaction);/////
+                collide_kokkos(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
           if (DIM != 3)
             if (sc_type == 0)
               jpart = sc_kk_specular_copy[m].obj.
-                collide_kokkos(ipart,line->norm,dtremain,line->isr,reaction);////
+                collide_kokkos(ipart,dtremain,minsurf,line->norm,line->isr,reaction);
             else if (sc_type == 1)
               jpart = sc_kk_diffuse_copy[m].obj.
-                collide_kokkos(ipart,line->norm,dtremain,line->isr,reaction);////
+                collide_kokkos(ipart,dtremain,minsurf,line->norm,line->isr,reaction);
             else if (sc_type == 2)
               jpart = sc_kk_vanish_copy[m].obj.
-                collide_kokkos(ipart,line->norm,dtremain,line->isr,reaction);////
+                collide_kokkos(ipart,dtremain,minsurf,line->norm,line->isr,reaction);
             else if (sc_type == 3)
               jpart = sc_kk_piston_copy[m].obj.
-                collide_kokkos(ipart,line->norm,dtremain,line->isr,reaction);////
+                collide_kokkos(ipart,dtremain,minsurf,line->norm,line->isr,reaction);
             else if (sc_type == 4)
               jpart = sc_kk_transparent_copy[m].obj.
-                collide_kokkos(ipart,line->norm,dtremain,line->isr,reaction);////
+                collide_kokkos(ipart,dtremain,minsurf,line->norm,line->isr,reaction);
 
-          ////Need to error out for now if surface reactions create (or destroy?) particles////
+          //Need to error out for now if surface reactions create (or destroy?) particles
           //if (jpart) {
           //  particles = particle->particles;
           //  x = particle_i.x;
@@ -1292,7 +1292,6 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
     if (particle_i.flag == PDISCARD) break;
 
-
     // no cell crossing
     // set final particle position to xnew, then break from advection loop
     // for axisymmetry, must first remap linear xnew and v
@@ -1355,11 +1354,11 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
     // nflag = type of neighbor cell: child, parent, unknown, boundary
     // if parent, use id_find_child to identify child cell
-        //   result can be -1 for unknown cell, occurs when:
-        //   (a) particle hits face of ghost child cell
-        //   (b) the ghost cell extends beyond ghost halo
- 	//   (c) cell on other side of face is a parent
-        //   (d) its child, which the particle is in, is entirely beyond my halo
+    //   result can be -1 for unknown cell, occurs when:
+    //   (a) particle hits face of ghost child cell
+    //   (b) the ghost cell extends beyond ghost halo
+    //   (c) cell on other side of face is a parent
+    //   (d) its child, which the particle is in, is entirely beyond my halo
     // if new cell is child and surfs exist, check if a split cell
 
     nflag = grid_kk_copy.obj.neigh_decode(nmask,outface);
@@ -1409,6 +1408,8 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       if (nboundary_tally)
         memcpy(&iorig,&particle_i,sizeof(Particle::OnePart));
 
+      // from Domain:
+
       Particle::OnePart* ipart = &particle_i;
       lo = d_cells[icell].lo;
       hi = d_cells[icell].hi;
@@ -1425,19 +1426,19 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
         if (sc_type == 0)
           jpart = sc_kk_specular_copy[m].obj.
-            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface],reaction);/////
+            collide_kokkos(ipart,dtremain,-(outface+1),domain_kk_copy.obj.norm[outface],domain_kk_copy.obj.surf_react[outface],reaction);
         else if (sc_type == 1)
           jpart = sc_kk_diffuse_copy[m].obj.
-            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface],reaction);/////
+            collide_kokkos(ipart,dtremain,-(outface+1),domain_kk_copy.obj.norm[outface],domain_kk_copy.obj.surf_react[outface],reaction);
         else if (sc_type == 2)
           jpart = sc_kk_vanish_copy[m].obj.
-            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface],reaction);/////
+            collide_kokkos(ipart,dtremain,-(outface+1),domain_kk_copy.obj.norm[outface],domain_kk_copy.obj.surf_react[outface],reaction);
         else if (sc_type == 3)
           jpart = sc_kk_piston_copy[m].obj.
-            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface],reaction);/////
+            collide_kokkos(ipart,dtremain,-(outface+1),domain_kk_copy.obj.norm[outface],domain_kk_copy.obj.surf_react[outface],reaction);
         else if (sc_type == 4)
           jpart = sc_kk_transparent_copy[m].obj.
-            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface],reaction);/////
+            collide_kokkos(ipart,dtremain,-(outface+1),domain_kk_copy.obj.norm[outface],domain_kk_copy.obj.surf_react[outface],reaction);
 
         if (ipart) {
           double *x = ipart->x;

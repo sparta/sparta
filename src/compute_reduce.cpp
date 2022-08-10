@@ -356,7 +356,7 @@ void ComputeReduce::init()
       gridgroupbit = grid->bitmask[igroup];
     } else if (flavor[0] == SURF) {
       int igroup = surf->find_group(subsetID);
-      if (isubset < 0)
+      if (igroup < 0)
         error->all(FLERR,"Compute reduce surf group ID does not exist");
       surfgroupbit = surf->bitmask[igroup];
     }

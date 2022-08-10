@@ -91,6 +91,8 @@ action fix_ave_histo_kokkos.cpp
 action fix_ave_histo_kokkos.h
 action fix_ave_histo_weight_kokkos.cpp
 action fix_ave_histo_weight_kokkos.h
+action fix_surf_temp_kokkos.cpp
+action fix_surf_temp_kokkos.h
 action fix_move_surf_kokkos.cpp
 action fix_move_surf_kokkos.h
 action fix_temp_rescale_kokkos.cpp

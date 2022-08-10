@@ -47,7 +47,8 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
   ------------------------------------------------------------------------- */
 
   KOKKOS_INLINE_FUNCTION
-  Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, const double *norm, double &, int, int &) const
+  Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, double &,
+                                    int, const double *norm, int, int &) const
   {
     Kokkos::atomic_increment(&d_nsingle());
 

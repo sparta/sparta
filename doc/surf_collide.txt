@@ -19,11 +19,11 @@ args = arguments for specific style :l
     noslip = reflect all velocity components off surface (not just normal component)
   {diffuse} or {diffuse/kk} args = Tsurf acc
     Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable (see below)
+            Tsurf can be a variable or custom per-surf vector (see below)
     acc = accommodation coefficient
   {cll} args = Tsurf acc_n acc_t acc_rot acc_vib
     Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable (see below)
+            Tsurf can be a variable or custom per-surf vector (see below)
     acc_n = accommodation coefficient in the surface normal direction
     acc_t = accommodation coefficient in the surface tangential direction
     acc_rot = accommodation coefficient for the rotational modes
@@ -31,7 +31,7 @@ args = arguments for specific style :l
   {adiabatic} args = none
   {impulsive} args = Tsurf {model} param1 param2 var theta_peak pol_pow azi_pow
     Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable (see below)
+            Tsurf can be a variable or custom per-surf vector (see below)
     {model} can be softsphere or tempvar
       {softsphere} args = en_ratio eff_mass
         param1 = en_ratio = fraction of energy lost in the collision
@@ -45,7 +45,7 @@ args = arguments for specific style :l
     azi_pow = cosine power represeting the azimuthal angular distribution
   {td} arg = Tsurf 
     Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable (see below) 
+            Tsurf can be a variable or custom per-surf vector (see below)
   {piston} or {piston/kk} args = Vwall
     Vwall = velocity of boundary wall (velocity units)
   {transparent} args = none :pre
@@ -152,7 +152,7 @@ the surface given by:
 
 :c,image(Eqs/diffuse_normal.jpg)
 
-The {Tsurf} value can be specified as an equal-style
+The {Tsurf} value can be also be specified as an equal-style
 "variable"_variable.html.  If the value is a variable, it should be
 specified as v_name, where name is the variable name.  In this case,
 the variable will be evaluated each timestep, and its value used to
@@ -162,6 +162,13 @@ Equal-style variables can specify formulas with various mathematical
 functions, and include "stats_style"_status_style.html command
 keywords for the simulation box parameters and timestep and elapsed
 time.  Thus it is easy to specify a time-dependent temperature.
+
+The {Tsurf} value can also be specified as a custom per-surf vector,
+which is updated with temperature values by the "fix
+surf/temp"_fix_surf_temp.html command.  In this case, it should be
+specified as s_name, where name is the name of the custom per-surf
+vector, which is also specified by the "fix
+surf/temp"_fix_surf_temp.html command.
 
 :line
 
@@ -189,16 +196,9 @@ given by Lord "(Lord90)"_#Lord90, along with extension to rotational
 and vibrational modes with both continuous and discrete levels
 "(Lord91)"_#Lord91.
 
-The {Tsurf} value can be specified as an equal-style
-"variable"_variable.html.  If the value is a variable, it should be
-specified as v_name, where name is the variable name.  In this case,
-the variable will be evaluated each timestep, and its value used to
-determine the current surface temperature.
-
-Equal-style variables can specify formulas with various mathematical
-functions and include "stats_style"_status_style.html command keywords
-for the simulation box parameters and timestep and elapsed time.
-Thus, it is easy to specify a time-dependent temperature.
+The {Tsurf} value can be also be specified as an equal-style
+"variable"_variable.html or a custom per-surf vector.  See the
+description of these 2 options for the {diffuse} style above.
 
 :line
 
@@ -225,16 +225,9 @@ normal and the plane tangent to the surface given by:
 
 :c,image(Eqs/diffuse_normal.jpg) 
 
-The {Tsurf} value can be specified as an equal-style
-"variable"_variable.html.  If the value is a variable, it should be
-specified as v_name, where name is the variable name.  In this case,
-the variable will be evaluated each timestep, and its value used to
-determine the current surface temperature.
-
-Equal-style variables can specify formulas with various mathematical
-functions, and include "stats_style"_status_style.html command
-keywords for the simulation box parameters and timestep and elapsed
-time.  Thus it is easy to specify a time-dependent temperature.
+The {Tsurf} value can be also be specified as an equal-style
+"variable"_variable.html or a custom per-surf vector.  See the
+description of these 2 options for the {diffuse} style above.
 
 :line
 
@@ -303,16 +296,9 @@ The internal (rotational and vibrational) energy of an incident
 molecule remains unchanged within the {impulsive} model unless the
 optional keyword {intenergy} is specified (see below).
 
-The {Tsurf} value can be specified as an equal-style
-"variable"_variable.html.  If the value is a variable, it should be
-specified as v_name, where name is the variable name.  In this case,
-the variable will be evaluated each timestep, and its value used to
-determine the current surface temperature.
-
-Equal-style variables can specify formulas with various mathematical
-functions and include "stats_style"_status_style.html command keywords
-for the simulation box parameters and timestep and elapsed time.
-Thus, it is easy to specify a time-dependent temperature.
+The {Tsurf} value can be also be specified as an equal-style
+"variable"_variable.html or a custom per-surf vector.  See the
+description of these 2 options for the {diffuse} style above.
 
 :line
 

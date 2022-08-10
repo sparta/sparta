@@ -62,6 +62,10 @@ FixAdapt::FixAdapt(SPARTA *sparta, int narg, char **arg) :
   action2 = adapt->action2;
   file = adapt->file;
 
+  coarsen_flag = 0;
+  if (action1 == COARSEN || action2 == COARSEN)
+    coarsen_flag = 1;
+
   if (file && strchr(file,'*') == NULL)
     error->all(FLERR,"Fix adapt filename must contain '*' character");
 

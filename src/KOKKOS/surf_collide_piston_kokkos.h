@@ -47,7 +47,8 @@ class SurfCollidePistonKokkos : public SurfCollidePiston {
      resets particle(s) to post-collision outward velocity
      ------------------------------------------------------------------------- */
   KOKKOS_INLINE_FUNCTION
-  Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, const double *norm, double &dtremain, int, int &) const
+  Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, double &dtremain,
+                                    int, const double *norm, int, int &) const
   {
     Kokkos::atomic_increment(&d_nsingle());
 
