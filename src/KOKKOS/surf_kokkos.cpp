@@ -445,12 +445,9 @@ void SurfKokkos::grow_own(int old)
 
 void SurfKokkos::sync(ExecutionSpace space, unsigned int mask)
 {
-  if (sparta->kokkos->prewrap) {
+  if (sparta->kokkos->prewrap)
     if (space == Device)
       error->one(FLERR,"Sync Device before wrap");
-    else
-      return;
-  }
 
   if (space == Device) {
     if (sparta->kokkos->auto_sync)
@@ -503,12 +500,9 @@ void SurfKokkos::sync(ExecutionSpace space, unsigned int mask)
 
 void SurfKokkos::modify(ExecutionSpace space, unsigned int mask)
 {
-  if (sparta->kokkos->prewrap) {
+  if (sparta->kokkos->prewrap)
     if (space == Device)
       error->one(FLERR,"Modify Device before wrap");
-    else
-      return;
-  }
 
   if (space == Device) {
     if (mask & LINE_MASK) k_lines.modify_device();

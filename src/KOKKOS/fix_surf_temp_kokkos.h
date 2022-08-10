@@ -30,7 +30,8 @@ class FixSurfTempKokkos : public FixSurfTemp {
  public:
   FixSurfTempKokkos(class SPARTA *, int, char **);
   virtual ~FixSurfTempKokkos();
-  virtual void end_of_step();
+  void init();
+  void end_of_step();
 };
 
 }

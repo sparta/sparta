@@ -31,7 +31,7 @@ class FixSurfTemp : public Fix {
   FixSurfTemp(class SPARTA *, int, char **);
   virtual ~FixSurfTemp();
   int setmask();
-  void init();
+  virtual void init();
   virtual void end_of_step();
 
  private:

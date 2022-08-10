@@ -39,6 +39,18 @@ FixSurfTempKokkos::~FixSurfTempKokkos()
 {
 }
 
+/* ---------------------------------------------------------------------- */
+
+void FixSurfTempKokkos::init()
+{
+  SurfKokkos* surf_kk = (SurfKokkos*) surf;
+  surf_kk->sync(Host,SURF_CUSTOM_MASK);
+
+  FixSurfTemp::init();
+
+  surf_kk->modify(Host,SURF_CUSTOM_MASK);
+}
+
 /* ----------------------------------------------------------------------
    compute new surface element temperatures based on heat flux
    only invoked once every Nevery steps
