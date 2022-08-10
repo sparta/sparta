@@ -1,0 +1,56 @@
+################################################################################
+# hypersonic flow around a 2D circle
+# non-reacting argon flow
+# grid adptation
+# diffuse surface with temperature adjustment
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+global		    nrho 4.247e19 fnum 7e14 gridcut 0.01 &
+                    comm/style all comm/sort yes
+timestep            3.5e-7
+
+boundary	    o ro p
+create_box          -0.2 0.65 0.0 0.4 -0.5 0.5
+create_grid 	    30 15 1 block * * * 
+
+species             ar.species Ar
+mixture             all vstream 2634.1 0 0 temp 200.0
+
+collide             vss all ar.vss
+collide_modify      vremax 1000 yes
+
+read_surf	    circle.surf group 1
+
+compute             1 surf all all etot
+fix                 1 ave/surf all 1 250 250 c_1[1] ave one
+fix                 2 surf/temp all 250 f_1 100 0.9 temperature
+
+surf_collide        1 diffuse s_temperature 1.0
+surf_modify         1 collide 1
+
+fix                 in emit/face all xlo twopass
+create_particles    all n 0 twopass
+
+compute             3 grid all all nrho
+compute             4 thermal/grid all all temp
+fix                 3 ave/grid all 1 250 250 c_3[*] c_4[*] ave one
+
+compute             1b lambda/grid f_3[1] f_3[2] Ar kall
+
+fix                 10 adapt 250 all refine coarsen value c_1b[2] 2.0 4.5 &
+                    combine min thresh less more cells 2 2 1
+
+dump                2 surf all 250 dump.circle.adjust id s_temperature f_1[*]
+
+stats_style         step cpu np nattempt ncoll nscoll ngrid maxlevel
+stats_modify        flush yes
+stats               250
+
+run                 2000

@@ -49,8 +49,10 @@ class SurfCollideTD : public SurfCollide {
 
   int barrier_flag, initen_flag,bond_flag; // optional flags
 
+  int tmode;                 // Twall is NUMERIC,VARIABLE,CUSTOM
   char *tstr;                // temperature variable name (NULL if constant)
   int tvar;                  // index of equal-style variable
+  double *tvector;           // custom per-surf temperature vector
 
   double vstream[3];
   class RanKnuth *random;     // RNG for particle reflection

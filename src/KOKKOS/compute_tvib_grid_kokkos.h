@@ -92,7 +92,7 @@ class ComputeTvibGridKokkos : public ComputeTvibGrid, public KokkosBase {
   DAT::t_int_2d d_s2t_mode;
 
   DAT::t_int_1d d_ewhich;
-  ParticleKokkos::tdual_struct_tdual_int_2d_1d k_eiarray;
+  tdual_struct_tdual_int_2d_1d k_eiarray;
 };
 
 }
