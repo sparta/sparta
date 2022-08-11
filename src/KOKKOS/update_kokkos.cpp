@@ -42,6 +42,7 @@
 #include "kokkos.h"
 #include "sparta_masks.h"
 #include "surf_collide_specular_kokkos.h"
+#include "kokkos_base.h"
 
 using namespace SPARTA_NS;
 
@@ -73,7 +74,7 @@ enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // several files
 UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   grid_kk_copy(sparta),
   domain_kk_copy(sparta),
-  //// Virtual functions are not yet supported on the GPU, which leads to pain:
+  // Virtual functions are not yet supported on the GPU, which leads to pain:
   sc_kk_specular_copy{VAL_2(KKCopy<SurfCollideSpecularKokkos>(sparta))},
   sc_kk_diffuse_copy{VAL_2(KKCopy<SurfCollideDiffuseKokkos>(sparta))},
   sc_kk_vanish_copy{VAL_2(KKCopy<SurfCollideVanishKokkos>(sparta))},
@@ -189,29 +190,21 @@ void UpdateKokkos::init()
       error->all(FLERR,"External field fix does not compute necessary field");
   }
 
-  // moveperturb method is set if external field particle motion
-
-  field_3d_flag = field_2d_flag = 0;
-  moveperturb = NULL;
-
-  if (fstyle == CFIELD) {
-    if (field[0] != 0.0 || field[1] != 0.0 || field[2] != 0.0) {
-      if (domain->dimension == 3) {
-        moveperturb = &UpdateKokkos::field3d;
-        field_3d_flag = 1;
-      }
-      if (domain->dimension == 2) {
-        moveperturb = &UpdateKokkos::field2d;
-        field_2d_flag = 1;
-      }
-    }
-  } else if (fstyle == PFIELD)
-    error->all(FLERR,"Cannot (yet) use per-particle external field with KOKKOS package");
-  else if (fstyle == GFIELD)
-    error->all(FLERR,"Cannot (yet) use per-grid cell external field with KOKKOS package");
-
-  if (moveperturb) perturbflag = 1;
-  else perturbflag = 0;
+  if (fstyle == PFIELD) {
+    field_active[0] = modify->fix[ifieldfix]->field_active[0];
+    field_active[1] = modify->fix[ifieldfix]->field_active[1];
+    field_active[2] = modify->fix[ifieldfix]->field_active[2];
+    KKBaseFieldFix = dynamic_cast<KokkosBase*>(modify->fix[ifieldfix]);
+    if (!KKBaseFieldFix)
+      error->all(FLERR,"External field fix is not Kokkos-enabled"); 
+  } else if (fstyle == GFIELD) {
+    field_active[0] = modify->fix[ifieldfix]->field_active[0];
+    field_active[1] = modify->fix[ifieldfix]->field_active[1];
+    field_active[2] = modify->fix[ifieldfix]->field_active[2];
+    KKBaseFieldFix = dynamic_cast<KokkosBase*>(modify->fix[ifieldfix]);
+    if (!KKBaseFieldFix)
+      error->all(FLERR,"External field fix is not Kokkos-enabled");    
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -223,6 +216,7 @@ void UpdateKokkos::setup()
   SurfKokkos* surf_kk = (SurfKokkos*) surf;
 
   particle_kk->sync(Device,ALL_MASK);
+  particle_kk->sorted_kk = 0;
 
   if (sparta->kokkos->prewrap) {
 
@@ -237,14 +231,14 @@ void UpdateKokkos::setup()
 
     // surf
 
-    if (surf->exist) {
+    if (surf->exist)
       surf_kk->wrap_kokkos();
-    }
 
     sparta->kokkos->prewrap = 0;
   } else {
     grid_kk->modify(Host,ALL_MASK);
     grid_kk->update_hash();
+
     if (surf->exist) {
       surf_kk->modify(Host,ALL_MASK);
       grid_kk->wrap_kokkos_graphs();
@@ -253,7 +247,7 @@ void UpdateKokkos::setup()
 
   Update::setup(); // must come after prewrap since computes are called by setup()
 
-  //// For MPI debugging
+  // For MPI debugging
   //
   //  volatile int i = 0;
   //  char hostname[256];
@@ -276,6 +270,15 @@ void UpdateKokkos::run(int nsteps)
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
 
+  // external per grid cell field
+  // only evaluate once at beginning of run b/c time-independent
+  // fix calculates field acting at center point of all grid cells
+
+  if (fstyle == GFIELD && fieldfreq == 0) {
+    modify->fix[ifieldfix]->compute_field();
+    d_fieldfix_array_grid = KKBaseFieldFix->d_array_grid;
+  }
+
   // cellweightflag = 1 if grid-based particle weighting is ON
 
   int cellweightflag = 0;
@@ -292,7 +295,8 @@ void UpdateKokkos::run(int nsteps)
     grid->time_global += grid->dt_global;
 
     ntimestep++;
-    if (collide_react) collide_react_update();
+
+    if (collide_react) collide_react_reset();
     if (bounce_tally) bounce_set(ntimestep);
 
     timer->stamp();
@@ -335,6 +339,8 @@ void UpdateKokkos::run(int nsteps)
       collide->collisions();
       timer->stamp(TIME_COLLIDE);
     }
+
+    if (collide_react) collide_react_update();
 
     // diagnostic fixes
 
@@ -421,11 +427,28 @@ template < int DIM, int SURF > void UpdateKokkos::move()
 
   ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
 
-  while (1) {
+  // external per particle field
+  // fix calculates field acting on all owned particles
 
-    // loop over particles
-    // first iteration = all my particles
-    // subsequent iterations = received particles
+  if (fstyle == PFIELD) {
+    modify->fix[ifieldfix]->compute_field();
+    d_fieldfix_array_particle = KKBaseFieldFix->d_array_particle;
+  }
+
+  // external per grid cell field
+  // evaluate once every fieldfreq steps b/c time-dependent
+  // fix calculates field acting at center point of all grid cells
+
+  if (fstyle == GFIELD && fieldfreq && ((ntimestep-1) % fieldfreq == 0)) {
+    modify->fix[ifieldfix]->compute_field();
+    d_fieldfix_array_grid = KKBaseFieldFix->d_array_grid;
+  }
+
+  // one or more loops over particles
+  // first iteration = all my particles
+  // subsequent iterations = received particles
+
+  while (1) {
 
     niterate++;
 
@@ -734,15 +757,21 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     xnew[0] = x[0] + dtremain*v[0];
     xnew[1] = x[1] + dtremain*v[1];
     if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
-    if (field_3d_flag) field3d(dtremain,xnew,v);
-    else if (field_2d_flag) field2d(dtremain,xnew,v);
+    if (fstyle == CFIELD) {
+      if (DIM == 3) field3d(dtremain,xnew,v);
+      else if (DIM == 2) field2d(dtremain,xnew,v);
+    } else if (fstyle == PFIELD) field_per_particle(i,particle_i.icell,dtremain,xnew,v);
+    else if (fstyle == GFIELD) field_per_grid(i,particle_i.icell,dtremain,xnew,v);
   } else if (pflag == PINSERT) {
     dtremain = particle_i.dtremain;
     xnew[0] = x[0] + dtremain*v[0];
     xnew[1] = x[1] + dtremain*v[1];
     if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
-    if (field_3d_flag) field3d(dtremain,xnew,v);
-    else if (field_2d_flag) field2d(dtremain,xnew,v);
+    if (fstyle == CFIELD) { 
+      if (DIM == 3) field3d(dtremain,xnew,v);
+      else if (DIM == 2) field2d(dtremain,xnew,v);
+    } else if (fstyle == PFIELD) field_per_particle(i,particle_i.icell,dtremain,xnew,v);
+    else if (fstyle == GFIELD) field_per_grid(i,particle_i.icell,dtremain,xnew,v);
   } else if (pflag == PENTRY) {
     icell = particle_i.icell;
     if (d_cells[icell].nsplit > 1) {
@@ -1158,37 +1187,37 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           if (DIM == 3)
             if (sc_type == 0)
               jpart = sc_kk_specular_copy[m].obj.
-                collide_kokkos(ipart,tri->norm,dtremain,tri->isr,reaction);/////
+                collide_kokkos(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
             else if (sc_type == 1)
               jpart = sc_kk_diffuse_copy[m].obj.
-                collide_kokkos(ipart,tri->norm,dtremain,tri->isr,reaction);/////
+                collide_kokkos(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
             else if (sc_type == 2)
               jpart = sc_kk_vanish_copy[m].obj.
-                collide_kokkos(ipart,tri->norm,dtremain,tri->isr,reaction);/////
+                collide_kokkos(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
             else if (sc_type == 3)
               jpart = sc_kk_piston_copy[m].obj.
-                collide_kokkos(ipart,tri->norm,dtremain,tri->isr,reaction);/////
+                collide_kokkos(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
             else if (sc_type == 4)
               jpart = sc_kk_transparent_copy[m].obj.
-                collide_kokkos(ipart,tri->norm,dtremain,tri->isr,reaction);/////
+                collide_kokkos(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
           if (DIM != 3)
             if (sc_type == 0)
               jpart = sc_kk_specular_copy[m].obj.
-                collide_kokkos(ipart,line->norm,dtremain,line->isr,reaction);////
+                collide_kokkos(ipart,dtremain,minsurf,line->norm,line->isr,reaction);
             else if (sc_type == 1)
               jpart = sc_kk_diffuse_copy[m].obj.
-                collide_kokkos(ipart,line->norm,dtremain,line->isr,reaction);////
+                collide_kokkos(ipart,dtremain,minsurf,line->norm,line->isr,reaction);
             else if (sc_type == 2)
               jpart = sc_kk_vanish_copy[m].obj.
-                collide_kokkos(ipart,line->norm,dtremain,line->isr,reaction);////
+                collide_kokkos(ipart,dtremain,minsurf,line->norm,line->isr,reaction);
             else if (sc_type == 3)
               jpart = sc_kk_piston_copy[m].obj.
-                collide_kokkos(ipart,line->norm,dtremain,line->isr,reaction);////
+                collide_kokkos(ipart,dtremain,minsurf,line->norm,line->isr,reaction);
             else if (sc_type == 4)
               jpart = sc_kk_transparent_copy[m].obj.
-                collide_kokkos(ipart,line->norm,dtremain,line->isr,reaction);////
+                collide_kokkos(ipart,dtremain,minsurf,line->norm,line->isr,reaction);
 
-          ////Need to error out for now if surface reactions create (or destroy?) particles////
+          //Need to error out for now if surface reactions create (or destroy?) particles
           //if (jpart) {
           //  particles = particle->particles;
           //  x = particle_i.x;
@@ -1287,7 +1316,6 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     // break from advection loop if discarding particle
 
     if (particle_i.flag == PDISCARD) break;
-
 
     // no cell crossing
     // set final particle position to xnew, then break from advection loop
@@ -1405,6 +1433,8 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       if (nboundary_tally)
         memcpy(&iorig,&particle_i,sizeof(Particle::OnePart));
 
+      // from Domain:
+
       Particle::OnePart* ipart = &particle_i;
       lo = d_cells[icell].lo;
       hi = d_cells[icell].hi;
@@ -1421,19 +1451,19 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
         if (sc_type == 0)
           jpart = sc_kk_specular_copy[m].obj.
-            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface],reaction);/////
+            collide_kokkos(ipart,dtremain,-(outface+1),domain_kk_copy.obj.norm[outface],domain_kk_copy.obj.surf_react[outface],reaction);
         else if (sc_type == 1)
           jpart = sc_kk_diffuse_copy[m].obj.
-            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface],reaction);/////
+            collide_kokkos(ipart,dtremain,-(outface+1),domain_kk_copy.obj.norm[outface],domain_kk_copy.obj.surf_react[outface],reaction);
         else if (sc_type == 2)
           jpart = sc_kk_vanish_copy[m].obj.
-            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface],reaction);/////
+            collide_kokkos(ipart,dtremain,-(outface+1),domain_kk_copy.obj.norm[outface],domain_kk_copy.obj.surf_react[outface],reaction);
         else if (sc_type == 3)
           jpart = sc_kk_piston_copy[m].obj.
-            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface],reaction);/////
+            collide_kokkos(ipart,dtremain,-(outface+1),domain_kk_copy.obj.norm[outface],domain_kk_copy.obj.surf_react[outface],reaction);
         else if (sc_type == 4)
           jpart = sc_kk_transparent_copy[m].obj.
-            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface],reaction);/////
+            collide_kokkos(ipart,dtremain,-(outface+1),domain_kk_copy.obj.norm[outface],domain_kk_copy.obj.surf_react[outface],reaction);
 
         if (ipart) {
           double *x = ipart->x;

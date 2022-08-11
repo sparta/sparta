@@ -146,9 +146,9 @@ class CollideVSSKokkos : public CollideVSS {
   DAT::t_int_2d d_plist;
 
   DAT::t_int_1d d_ewhich;
-  ParticleKokkos::tdual_struct_tdual_int_1d_1d k_eivec;
-  ParticleKokkos::tdual_struct_tdual_int_2d_1d k_eiarray;
-  ParticleKokkos::tdual_struct_tdual_float_2d_1d k_edarray;
+  tdual_struct_tdual_int_1d_1d k_eivec;
+  tdual_struct_tdual_int_2d_1d k_eiarray;
+  tdual_struct_tdual_float_2d_1d k_edarray;
   DAT::t_int_1d d_ionambi;
   DAT::t_float_2d d_velambi;
   t_particle_2d d_elist;

@@ -51,6 +51,7 @@ SurfCollideStyle(diffuse/kk,SurfCollideDiffuseKokkos)
 namespace SPARTA_NS {
 
 enum{NONE,DISCRETE,SMOOTH};            // several files
+enum{NUMERIC,VARIABLE,CUSTOM};
 
 class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
  public:
@@ -72,19 +73,22 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
 //Kokkos::Random_XorShift1024_Pool<DeviceType> rand_pool;
 //typedef typename Kokkos::Random_XorShift1024_Pool<DeviceType>::generator_type rand_type;
 
+  DAT::t_float_1d d_tvector;
+
   /* ----------------------------------------------------------------------
      particle collision with surface with optional chemistry
      ip = particle with current x = collision pt, current v = incident v
      norm = surface normal unit vector
      isr = index of reaction model if >= 0, -1 for no chemistry
-     ip = set to NULL if destroyed by chemsitry
+     ip = set to NULL if destroyed by chemistry
      return jp = new particle if created by chemistry
      return reaction = index of reaction (1 to N) that took place, 0 = no reaction
      resets particle(s) to post-collision outward velocity
   ------------------------------------------------------------------------- */
 
   KOKKOS_INLINE_FUNCTION
-  Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, const double *norm, double &, int, int &) const
+  Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, double &,
+                                    int isurf, const double *norm, int, int &) const
   {
     Kokkos::atomic_increment(&d_nsingle());
 
@@ -108,19 +112,22 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
     //  (e.g. fix vibmode and fix ambipolar)
     // if new particle J created, also need to trigger any fixes
 
+    double twall_local = twall;
+    if (tmode == CUSTOM) twall_local = d_tvector[isurf];
+
     if (ip) {
-      diffuse(ip,norm);
+      diffuse(ip,norm,twall_local);
       int i = ip - d_particles.data();
       if (ambi_flag)
-        fix_ambi_kk_copy.obj.update_custom_kokkos(i,twall,twall,twall,vstream);
+        fix_ambi_kk_copy.obj.update_custom_kokkos(i,twall_local,twall_local,twall_local,vstream);
       if (vibmode_flag)
-        fix_vibmode_kk_copy.obj.update_custom_kokkos(i,twall,twall,twall,vstream);
+        fix_vibmode_kk_copy.obj.update_custom_kokkos(i,twall_local,twall_local,twall_local,vstream);
     }
     //if (jp) {
-    //  diffuse(jp,norm);
+    //  diffuse(jp,norm,twall-local);
     //  if (modify->n_update_custom) {
     //    int j = jp - particle->particles;
-    //    modify->update_custom(j,twall,twall,twall,vstream);
+    //    modify->update_custom(j,twall_local,twall_local,twall_local,vstream);
     //  }
     //}
 
@@ -152,6 +159,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
   t_particle_1d d_particles;
   t_species_1d d_species;
   int rotstyle, vibstyle;
+  int dimension;
 
   int ambi_flag,vibmode_flag;
   FixAmbipolarKokkos* afix_kk;
@@ -160,7 +168,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
   KKCopy<FixVibmodeKokkos> fix_vibmode_kk_copy;
 
   KOKKOS_INLINE_FUNCTION
-  void diffuse(Particle::OnePart *p, const double *norm) const
+  void diffuse(Particle::OnePart *p, const double *norm, const double twall) const
   {
     // specular reflection
     // reflect incident v around norm

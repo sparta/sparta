@@ -2758,7 +2758,7 @@ void Surf::collate_vector_reduce(int nrow, surfint *tally2surf,
 
   // zero all values and add in values I accumulated
 
-  for (i = 0; i < nglobal; i++) one[i] = 0.0;
+  memset(one,0,nglobal*sizeof(double));
 
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
@@ -2924,9 +2924,7 @@ void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
 
   // zero all values and set values I accumulated
 
-  for (i = 0; i < nglobal; i++)
-    for (j = 0; j < ncol; j++)
-      one[i][j] = 0.0;
+  memset(&one[0][0],0,nglobal*ncol*sizeof(double));
 
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
@@ -3696,7 +3694,7 @@ int Surf::find_custom(char *name)
    assumes name does not already exist, except in case of restart
    type = 0/1 for int/double
    size = 0 for vector, size > 0 for array with size columns
-   return index of its location;
+   return index of its location
 ------------------------------------------------------------------------- */
 
 int Surf::add_custom(char *name, int type, int size)
@@ -3951,6 +3949,7 @@ void Surf::read_restart(FILE *fp)
     lines = (Line *) memory->smalloc(nsurf*sizeof(Line),"surf:lines");
     // NOTE: need different logic for different surf styles
     nlocal = nsurf;
+    nmax = nlocal;
 
     if (me == 0) {
       for (int i = 0; i < nsurf; i++) {
@@ -3975,6 +3974,7 @@ void Surf::read_restart(FILE *fp)
     tris = (Tri *) memory->smalloc(nsurf*sizeof(Tri),"surf:tris");
     // NOTE: need different logic for different surf styles
     nlocal = nsurf;
+    nmax = nlocal;
 
     if (me == 0) {
       for (int i = 0; i < nsurf; i++) {

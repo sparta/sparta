@@ -41,6 +41,9 @@ FixVibmodeKokkos::FixVibmodeKokkos(SPARTA *sparta, int narg, char **arg) :
             )
 {
   kokkos_flag = 1;
+  execution_space = Device;
+  datamask_read = EMPTY_MASK;
+  datamask_modify = EMPTY_MASK;
 
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.init(random);

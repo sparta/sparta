@@ -77,7 +77,7 @@ DumpParticle::DumpParticle(SPARTA *sparta, int narg, char **arg) :
   field2index = new int[nfield];
   argindex = new int[nfield];
 
-  // computes, fixes, variables which the dump accesses
+  // custom props, computes, fixes, variables which the dump accesses
 
   ncustom = 0;
   id_custom = NULL;

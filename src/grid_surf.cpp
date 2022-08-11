@@ -2028,6 +2028,7 @@ void Grid::flow_stats()
 /* ----------------------------------------------------------------------
    compute flow volume for entire box, using list of surfs
    volume for one surf is projection to lower z face (3d) or y face (2d)
+   skip transparent surfs
    NOTE: this does not work if any surfs are clipped to zlo or zhi faces in 3d
          this does not work if any surfs are clipped to ylo or yhi faces in 3d
          need to add contribution due to closing surfs on those faces
@@ -2068,6 +2069,7 @@ double Grid::flow_volume()
 
   if (domain->dimension == 3) {
     for (int i = 0; i < n; i++) {
+      if (tris[i].transparent) continue;
       p1 = tris[i].p1;
       p2 = tris[i].p2;
       p3 = tris[i].p3;
@@ -2088,6 +2090,7 @@ double Grid::flow_volume()
 
   } else if (domain->axisymmetric) {
     for (int i = 0; i < n; i++) {
+      if (lines[i].transparent) continue;
       p1 = lines[i].p1;
       p2 = lines[i].p2;
       volume -=
@@ -2103,6 +2106,7 @@ double Grid::flow_volume()
 
   } else {
     for (int i = 0; i < n; i++) {
+      if (lines[i].transparent) continue;
       p1 = lines[i].p1;
       p2 = lines[i].p2;
       volume -= (0.5*(p1[1]+p2[1]) - boxlo[1]) * (p2[0]-p1[0]);

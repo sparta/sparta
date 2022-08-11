@@ -65,6 +65,20 @@ surfaces as collections of geometric elements, triangles in 3d and
 line segments in 2d.  Also see the <A HREF = "react.html">react</A> command for
 specification of a gas-phase chemistry reaction model.
 </P>
+<P>The per-surface element species state computed and updated by this
+command can be output via the <A HREF = "dump.html">dump surf</A> command, using the
+<I>s_name</I> syntax to output any of the 5 custom surface state variables
+created by this surface reaction model.  They are as follows:
+</P>
+<UL><LI>nstick_species = per-surf array with per-species counts
+<LI>nstick_total = per-surf vector with total count of all species
+<LI>area = per-surf area vector
+<LI>weight = per-surf weight vector
+<LI>tau = per-surf time-counter vector (see below) 
+</UL>
+<P>See the examples/surf_react_adsorb dir for scripts that use this
+surface reaction model.
+</P>
 <P>The ID for a surface reaction model is used to identify it in other
 commands.  Each surface reaction model ID must be unique.  The ID can
 only contain alphanumeric characters and underscores.
@@ -323,12 +337,12 @@ assigned to the surface element using the
 scattering model is desired, specify a <I>NULL</I> value.
 </P>
 <P>Any of the following surface collision models can be used: <I>specular</I>,
-<I>diffuse</I>, <I>cll</I>, <I>impulsive</I>, <I>td</I>.  The scattering model style and
-its corresponding arguments are specified in the line following the
-reaction-style.  If there are two gas-phase products, two lines (for
-the first and second particle) can be specified.  The arguments for
-the different surface scattering models are the same as specified in
-the <A HREF = "surf_collide.html">surf_collide</A> command.
+<I>diffuse</I>, <I>adiabatic</I>, <I>cll</I>, <I>impulsive</I>, <I>td</I>.  The scattering
+model style and its corresponding arguments are specified in the line
+following the reaction-style.  If there are two gas-phase products,
+two lines (for the first and second particle) can be specified.  The
+arguments for the different surface scattering models are the same as
+specified in the <A HREF = "surf_collide.html">surf_collide</A> command.
 </P>
 <HR>
 

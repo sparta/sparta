@@ -23,26 +23,6 @@
 
 namespace SPARTA_NS {
 
-struct struct_tdual_int_1d
-{
-  DAT::tdual_int_1d k_view;
-};
-
-struct struct_tdual_float_1d
-{
-  DAT::tdual_float_1d k_view;
-};
-
-struct struct_tdual_int_2d
-{
-  DAT::tdual_int_2d k_view;
-};
-
-struct struct_tdual_float_2d
-{
-  DAT::tdual_float_2d k_view;
-};
-
 struct TagParticleZero_cellcount{};
 struct TagParticleCompressReactions{};
 struct TagCopyParticleReorderDestinations{};
@@ -141,11 +121,6 @@ class ParticleKokkos : public Particle {
   tdual_particle_1d k_particles;
   tdual_species_1d k_species;
   DAT::tdual_int_2d k_species2group;
-
-  typedef Kokkos::DualView<struct_tdual_int_1d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_int_1d_1d;
-  typedef Kokkos::DualView<struct_tdual_float_1d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_float_1d_1d;
-  typedef Kokkos::DualView<struct_tdual_int_2d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_int_2d_1d;
-  typedef Kokkos::DualView<struct_tdual_float_2d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_float_2d_1d;
 
   DAT::tdual_int_1d k_ewhich,k_eicol,k_edcol;
 

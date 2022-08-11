@@ -39,7 +39,7 @@ SurfCollidePistonKokkos::SurfCollidePistonKokkos(SPARTA *sparta) :
   SurfCollidePiston(sparta)
 {
   id = NULL;
-  style = NULL;  
+  style = NULL;
 }
 
 /* ---------------------------------------------------------------------- */

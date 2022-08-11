@@ -27,7 +27,6 @@
 #include "modify.h"
 #include "compute.h"
 #include "fix.h"
-#include "grid.h"
 #include "surf.h"
 #include "surf_collide.h"
 #include "surf_react.h"
@@ -3416,6 +3415,9 @@ void Variable::particle_vector(char *word, Tree **tree,
     newtree->nstride = sizeof(Particle::Species);
     newtree->carray = (char *) &species[0].magmoment;
   }
+
+  if ((bigint)particle->nlocal*newtree->nstride > MAXSMALLINT)
+    error->all(FLERR,"Too many particles per processor for particle-style variable");
 }
 
 /* ----------------------------------------------------------------------
@@ -3470,6 +3472,9 @@ void Variable::grid_vector(char *word, Tree **tree,
     newtree->carray = (char *) &cells[0].lo[2];
   else if (strcmp(word,"czhi") == 0)
     newtree->carray = (char *) &cells[0].hi[2];
+
+  if ((bigint)grid->nlocal*newtree->nstride > MAXSMALLINT)
+    error->all(FLERR,"Too many grid cells per processor for grid-style variable");
 }
 
 /* ----------------------------------------------------------------------

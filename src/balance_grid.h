@@ -34,7 +34,7 @@ class BalanceGrid : protected Pointers {
   double last;
 
   void procs2grid(int, int, int, int &, int &, int &);
-  void timer_cell_weights(double *);
+  void timer_cell_weights(double *&);
 };
 
 }

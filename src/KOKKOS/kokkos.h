@@ -48,6 +48,9 @@ class KokkosSPARTA : protected Pointers {
 
     return value;
   }
+
+ private:
+  static void my_signal_handler(int);
 };
 
 }

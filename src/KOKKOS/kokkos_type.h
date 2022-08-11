@@ -27,9 +27,16 @@
 #define MAX_TYPES_STACKPARAMS 12
 #define NeighClusterSize 8
 
-#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP)
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL) || defined(KOKKOS_ENABLE_OPENMPTARGET)
+
 #define SPARTA_KOKKOS_GPU
 #endif
+
+namespace Kokkos {
+  static auto NoInit = [](std::string const& label) {
+    return Kokkos::view_alloc(Kokkos::WithoutInitializing, label);
+  };
+}
 
   struct sparta_float3 {
     float x,y,z;
@@ -114,13 +121,32 @@ template<>
 struct ExecutionSpaceFromDevice<Kokkos::Cuda> {
   static const SPARTA_NS::ExecutionSpace space = SPARTA_NS::Device;
 };
-#endif
-
-#ifdef KOKKOS_ENABLE_HIP
+#elif defined(KOKKOS_ENABLE_HIP)
 template<>
 struct ExecutionSpaceFromDevice<Kokkos::Experimental::HIP> {
   static const SPARTA_NS::ExecutionSpace space = SPARTA_NS::Device;
 };
+#elif defined(KOKKOS_ENABLE_SYCL)
+template<>
+struct ExecutionSpaceFromDevice<Kokkos::Experimental::SYCL> {
+  static const SPARTA_NS::ExecutionSpace space = SPARTA_NS::Device;
+};
+#elif defined(KOKKOS_ENABLE_OPENMPTARGET)
+template<>
+struct ExecutionSpaceFromDevice<Kokkos::Experimental::OpenMPTarget> {
+  static const SPARTA_NS::ExecutionSpace space = SPARTA_NS::Device;
+};
+#endif
+
+// set host pinned space
+#if defined(KOKKOS_ENABLE_CUDA)
+typedef Kokkos::CudaHostPinnedSpace SPAPinnedHostType;
+#elif defined(KOKKOS_ENABLE_HIP)
+typedef Kokkos::Experimental::HIPHostPinnedSpace SPAPinnedHostType;
+#elif defined(KOKKOS_ENABLE_SYCL)
+typedef Kokkos::Experimental::SYCLHostUSMSpace SPAPinnedHostType;
+#elif defined(KOKKOS_ENABLE_OPENMPTARGET)
+typedef Kokkos::Serial SPAPinnedHostType;
 #endif
 
 // Determine memory traits for atomic arrays
@@ -156,9 +182,7 @@ template<>
 struct AtomicDup<-1,Kokkos::Cuda> {
   using value = Kokkos::Experimental::ScatterAtomic;
 };
-#endif
-
-#ifdef KOKKOS_ENABLE_HIP
+#elif defined(KOKKOS_ENABLE_HIP)
 template<>
 struct AtomicDup<1,Kokkos::Experimental::HIP> {
   using value = Kokkos::Experimental::ScatterAtomic;
@@ -166,6 +190,26 @@ struct AtomicDup<1,Kokkos::Experimental::HIP> {
 
 template<>
 struct AtomicDup<-1,Kokkos::Experimental::HIP> {
+  using value = Kokkos::Experimental::ScatterAtomic;
+};
+#elif defined(KOKKOS_ENABLE_SYCL)
+template<>
+struct AtomicDup<1,Kokkos::Experimental::SYCL> {
+  using value = Kokkos::Experimental::ScatterAtomic;
+};
+
+template<>
+struct AtomicDup<-1,Kokkos::Experimental::SYCL> {
+  using value = Kokkos::Experimental::ScatterAtomic;
+};
+#elif defined(KOKKOS_ENABLE_OPENMPTARGET)
+template<>
+struct AtomicDup<1,Kokkos::Experimental::OpenMPTarget> {
+  using value = Kokkos::Experimental::ScatterAtomic;
+};
+
+template<>
+struct AtomicDup<-1,Kokkos::Experimental::OpenMPTarget> {
   using value = Kokkos::Experimental::ScatterAtomic;
 };
 #endif
@@ -736,7 +780,7 @@ typedef tdual_bigint_1d::t_host_um t_bigint_1d_um;
 typedef tdual_bigint_1d::t_host_const_um t_bigint_1d_const_um;
 typedef tdual_bigint_1d::t_host_const_randomread t_bigint_1d_randomread;
 
-typedef Kokkos::DualView<int*[3], Kokkos::LayoutRight, DeviceType> tdual_int_1d_3;
+typedef Kokkos::DualView<int*[3], DeviceType::array_layout, DeviceType> tdual_int_1d_3;
 typedef tdual_int_1d_3::t_host t_int_1d_3;
 typedef tdual_int_1d_3::t_host_const t_int_1d_3_const;
 typedef tdual_int_1d_3::t_host_um t_int_1d_3_um;
@@ -973,9 +1017,32 @@ struct Graph {
   int& get(int i, int j) const { return at(start(i) + j); }
 };
 
-//default SPARTA Types
+// default SPARTA Types
 typedef struct ArrayTypes<DeviceType> DAT;
 typedef struct ArrayTypes<SPAHostType> HAT;
+
+// custom data types
+
+namespace SPARTA_NS {
+
+  struct struct_tdual_int_1d
+  { DAT::tdual_int_1d k_view; };
+
+  struct struct_tdual_float_1d
+  { DAT::tdual_float_1d k_view; };
+
+  struct struct_tdual_int_2d
+  { DAT::tdual_int_2d k_view; };
+
+  struct struct_tdual_float_2d
+  { DAT::tdual_float_2d k_view; };
+
+  typedef Kokkos::DualView<struct_tdual_int_1d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_int_1d_1d;
+  typedef Kokkos::DualView<struct_tdual_float_1d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_float_1d_1d;
+  typedef Kokkos::DualView<struct_tdual_int_2d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_int_2d_1d;
+  typedef Kokkos::DualView<struct_tdual_float_2d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_float_2d_1d;
+}
+
 
 template<class DeviceType, class BufferView, class DualView>
 void buffer_view(BufferView &buf, DualView &view,

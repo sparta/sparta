@@ -34,6 +34,7 @@ class FixAdapt : public Fix {
   virtual void end_of_step();
   double compute_scalar();
   double compute_vector(int);
+  int coarsen_flag;
 
  private:
   int me,nprocs;

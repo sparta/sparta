@@ -52,8 +52,10 @@ class SurfCollideCLL : public SurfCollide {
   int pflag;                 // 1 if partially energy accommodation
                              // with partial/fully diffuse scattering
 
+  int tmode;                 // Twall is NUMERIC,VARIABLE,CUSTOM
   char *tstr;                // temperature variable name (NULL if constant)
   int tvar;                  // index of equal-style variable
+  double *tvector;           // custom per-surf temperature vector
 
   double vstream[3];
   class RanKnuth *random;     // RNG for particle reflection

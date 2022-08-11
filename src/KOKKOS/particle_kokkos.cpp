@@ -184,7 +184,7 @@ void ParticleKokkos::operator()(TagParticleCompressReactions, const int &i) cons
   const int k = d_slist[i];
   //memcpy(&d_particles[j],&d_particles[k],nbytes);
   d_particles[j] = d_particles[k];
-  copy_custom_kokkos(j,k); 
+  copy_custom_kokkos(j,k);
 }
 
 /* ----------------------------------------------------------------------
@@ -265,7 +265,7 @@ void ParticleKokkos::sort_kokkos()
       d_sorted = t_particle_1d("particle:sorted",d_particles.extent(0));
     }
     else if (reorder_scheme == FIXEDMEMORY && d_pswap1.size() == 0){
-      nParticlesWksp = (double)update->global_mem_limit/sizeof(Particle::OnePart);
+      nParticlesWksp = MIN(nlocal,(double)update->global_mem_limit/sizeof(Particle::OnePart));
       d_pswap1 = t_particle_1d(Kokkos::view_alloc("particle:swap1",Kokkos::WithoutInitializing),nParticlesWksp);
       d_pswap2 = t_particle_1d(Kokkos::view_alloc("particle:swap2",Kokkos::WithoutInitializing),nParticlesWksp);
     }
@@ -474,7 +474,10 @@ void ParticleKokkos::post_weight()
   constexpr int METHOD = 1;
   if (METHOD == 1) { // just call the host one
     this->sync(Host,PARTICLE_MASK);
+    int prev_auto_sync = sparta->kokkos->auto_sync;
+    sparta->kokkos->auto_sync = 1;
     Particle::post_weight();
+    sparta->kokkos->auto_sync = prev_auto_sync;
     this->modify(Host,PARTICLE_MASK);
   } else if (METHOD == 2) { // Kokkos-parallel, gives same (correct) answer
     Kokkos::View<double*> d_ratios("post_weight:ratios", nlocal);

@@ -533,6 +533,7 @@ void FixAveSurf::end_of_step()
 
   // invoke surf->collate() on tallies this fix stores for multiple steps
   // this merges tallies to owned surfs
+  // NOTE: this should only be done if source is a COMPUTE ?
 
   if (nvalues == 1) {
     surf->collate_vector(ntally,tally2surf,vec_tally,1,bufvec);

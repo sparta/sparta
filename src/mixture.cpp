@@ -391,7 +391,7 @@ void Mixture::params(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
       temp_thermal_flag = 1;
       temp_thermal_user = atof(arg[iarg+1]);
-      if (temp_thermal_user <= 0.0)
+      if (temp_thermal_user < 0.0)
         error->all(FLERR,"Illegal mixture command");
       iarg += 2;
 
@@ -399,7 +399,7 @@ void Mixture::params(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
       temp_rot_flag = 1;
       temp_rot_user = atof(arg[iarg+1]);
-      if (temp_rot_user <= 0.0)
+      if (temp_rot_user < 0.0)
         error->all(FLERR,"Illegal mixture command");
       iarg += 2;
 
@@ -407,7 +407,7 @@ void Mixture::params(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
       temp_vib_flag = 1;
       temp_vib_user = atof(arg[iarg+1]);
-      if (temp_vib_user <= 0.0)
+      if (temp_vib_user < 0.0)
         error->all(FLERR,"Illegal mixture command");
       iarg += 2;
 

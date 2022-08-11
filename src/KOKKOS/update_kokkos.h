@@ -113,6 +113,7 @@ class UpdateKokkos : public Update {
  private:
 
   double dt;
+  int field_active[3];
 
   t_cell_1d d_cells;
   t_sinfo_1d d_sinfo;
@@ -126,6 +127,11 @@ class UpdateKokkos : public Update {
   t_tri_1d d_tris;
 
   t_particle_1d d_particles;
+
+  DAT::t_float_2d_lr d_fieldfix_array_particle;
+  DAT::t_float_2d_lr d_fieldfix_array_grid;
+
+  class KokkosBase* KKBaseFieldFix;
 
   KKCopy<GridKokkos> grid_kk_copy;
   KKCopy<DomainKokkos> domain_kk_copy;
@@ -208,10 +214,8 @@ class UpdateKokkos : public Update {
   FnPtr moveptr;             // ptr to move method
   template < int, int > void move();
 
-  //
-  //int perturbflag;
-  typedef void (UpdateKokkos::*FnPtr2)(double, double *, double *) const;
-  FnPtr2 moveperturb;        // ptr to moveperturb method
+  //typedef void (UpdateKokkos::*FnPtr2)(int, int, double, double *, double *) const;
+  //FnPtr2 moveperturb;        // ptr to moveperturb method
   //
   //// variants of moveperturb method
   //// adjust end-of-move x,v due to perturbation on straight-line advection
@@ -222,14 +226,12 @@ class UpdateKokkos : public Update {
   KOKKOS_INLINE_FUNCTION
   int split2d(int, double*) const;
 
-  int field_3d_flag,field_2d_flag;
-
   // variants of moveperturb method
   // adjust end-of-move x,v due to perturbation on straight-line advection
 
   KOKKOS_INLINE_FUNCTION
   void field2d(double dt, double *x, double *v) const {
-    double dtsq = 0.5*dt*dt;
+    const double dtsq = 0.5*dt*dt;
     x[0] += dtsq*field[0];
     x[1] += dtsq*field[1];
     v[0] += dt*field[0];
@@ -238,13 +240,73 @@ class UpdateKokkos : public Update {
 
   KOKKOS_INLINE_FUNCTION
   void field3d(double dt, double *x, double *v) const {
-    double dtsq = 0.5*dt*dt;
+    const double dtsq = 0.5*dt*dt;
     x[0] += dtsq*field[0];
     x[1] += dtsq*field[1];
     x[2] += dtsq*field[2];
     v[0] += dt*field[0];
     v[1] += dt*field[1];
     v[2] += dt*field[2];
+  };
+
+  /* ----------------------------------------------------------------------
+     calculate motion perturbation for a single particle I
+       due to external per particle field
+     array in fix[ifieldfix] stores per particle perturbations for x and v
+  ------------------------------------------------------------------------- */
+
+  KOKKOS_INLINE_FUNCTION
+  void field_per_particle(int i, int icell, double dt, double *x, double *v) const
+  { 
+    const double dtsq = 0.5*dt*dt;
+    auto &d_array = d_fieldfix_array_particle;
+    
+    int icol = 0;
+    if (field_active[0]) {
+      x[0] += dtsq*d_array(i,icol);
+      v[0] += dt*d_array(i,icol);
+      icol++;
+    }
+    if (field_active[1]) {
+      x[1] += dtsq*d_array(i,icol);
+      v[1] += dt*d_array(i,icol);
+      icol++;
+    }
+    if (field_active[2]) {
+      x[2] += dtsq*d_array(i,icol);
+      v[2] += dt*d_array(i,icol);
+      icol++;
+    }
+  };
+
+  /* ----------------------------------------------------------------------
+     calculate motion perturbation for a single particle I in grid cell Icell
+       due to external per grid cell field
+     array in fix[ifieldfix] stores per grid cell perturbations for x and v
+  ------------------------------------------------------------------------- */
+
+  KOKKOS_INLINE_FUNCTION
+  void field_per_grid(int i, int icell, double dt, double *x, double *v) const
+  {
+    const double dtsq = 0.5*dt*dt;
+    auto &d_array = d_fieldfix_array_grid;
+
+    int icol = 0;
+    if (field_active[0]) {
+      x[0] += dtsq*d_array(icell,icol);
+      v[0] += dt*d_array(icell,icol);
+      icol++;
+    }
+    if (field_active[1]) {
+      x[1] += dtsq*d_array(icell,icol);
+      v[1] += dt*d_array(icell,icol);
+      icol++;
+    }
+    if (field_active[2]) {
+      x[2] += dtsq*d_array(icell,icol);
+      v[2] += dt*d_array(icell,icol);
+      icol++;
+    }
   };
 };
 
