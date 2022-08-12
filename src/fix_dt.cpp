@@ -62,12 +62,6 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   id_vsq = NULL;
   id_wsq = NULL;
 
-  // find minimum species mass
-  Particle::Species *species = particle->species;
-  min_species_mass = BIG;
-  for (int s = 0; s < particle->nspecies; ++s)
-    min_species_mass = MIN(species[s].mass,min_species_mass);
-
   // lambda compute or fix
   int n = strlen(arg[4]);
   id_lambda = new char[n];
@@ -300,44 +294,44 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
     if (vxstr) {
       vxvar = input->variable->find(vxstr);
       if (vxvar < 0)
-        error->all(FLERR,"Variable name for create_particles does not exist");
+        error->all(FLERR,"Variable name for fix dt does not exist");
       if (!input->variable->equal_style(vxvar))
-        error->all(FLERR,"Variable for create_particles is invalid style");
+        error->all(FLERR,"Variable for fix dt is invalid style");
     }
     if (vystr) {
       vyvar = input->variable->find(vystr);
       if (vyvar < 0)
-        error->all(FLERR,"Variable name for create_particles does not exist");
+        error->all(FLERR,"Variable name for fix dt does not exist");
       if (!input->variable->equal_style(vyvar))
-        error->all(FLERR,"Variable for create_particles is invalid style");
+        error->all(FLERR,"Variable for fix dt is invalid style");
     }
     if (vzstr) {
       vzvar = input->variable->find(vzstr);
       if (vzvar < 0)
-        error->all(FLERR,"Variable name for create_particles does not exist");
+        error->all(FLERR,"Variable name for fix dt does not exist");
       if (!input->variable->equal_style(vzvar))
-        error->all(FLERR,"Variable for create_particles is invalid style");
+        error->all(FLERR,"Variable for fix dt is invalid style");
     }
     if (vstrx) {
       vvarx = input->variable->find(vstrx);
       if (vvarx < 0)
-        error->all(FLERR,"Variable name for create_particles does not exist");
+        error->all(FLERR,"Variable name for fix dt does not exist");
       if (!input->variable->internal_style(vvarx))
-        error->all(FLERR,"Variable for create_particles is invalid style");
+        error->all(FLERR,"Variable for fix dt is invalid style");
     }
     if (vstry) {
       vvary = input->variable->find(vstry);
       if (vvary < 0)
-        error->all(FLERR,"Variable name for create_particles does not exist");
+        error->all(FLERR,"Variable name for fix dt does not exist");
       if (!input->variable->internal_style(vvary))
-        error->all(FLERR,"Variable for create_particles is invalid style");
+        error->all(FLERR,"Variable for fix dt is invalid style");
     }
     if (vstrz) {
       vvarz = input->variable->find(vstrz);
       if (vvarz < 0)
-        error->all(FLERR,"Variable name for create_particles does not exist");
+        error->all(FLERR,"Variable name for fix dt does not exist");
       if (!input->variable->internal_style(vvarz))
-        error->all(FLERR,"Variable for create_particles is invalid style");
+        error->all(FLERR,"Variable for fix dt is invalid style");
     }
   }
 
@@ -358,6 +352,12 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   double vstream_variable[3];
   double v[3];
   double temperature;
+
+  // find minimum species mass
+  Particle::Species *species = particle->species;
+  min_species_mass = BIG;
+  for (int s = 0; s < particle->nspecies; ++s)
+    min_species_mass = MIN(species[s].mass,min_species_mass);
 
   for (int i = 0; i < nglocal; ++i) {
 
@@ -613,17 +613,10 @@ void FixDt::end_of_step()
   MPI_Allreduce(&dt_sum,&dt_sum_global,1,MPI_DOUBLE,MPI_SUM,world);
   double avg_cell_dt = dt_sum_global/grid->ncell;
   std::cout << "*********** avg_cell_dt = " << avg_cell_dt << std::endl;
-  double dt_factor = 1000.;
+  double dt_factor = 1000.; // NOTE:  in DS2V.f90, this factor is 10
   double dtmin = avg_cell_dt/dt_factor;
   double dtmax = avg_cell_dt*dt_factor;
   grid->dt_global = 2.*dtmin;
-
-  // this is only a test!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  int nglocal_global=0;
-  MPI_Allreduce(&nglocal,&nglocal_global,1,MPI_INT,MPI_SUM,world);
-  if (nglocal_global != grid->ncell)
-    std::cout << "################## nglocal_global=" << nglocal_global << " ncell=" << grid->ncell << std::endl;
-  // end: this is only a test!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   for (int i = 0; i < nglocal; ++i) {
     if (cells[i].dt_desired < dtmin)
