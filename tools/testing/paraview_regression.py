@@ -34,6 +34,7 @@ def get_command_line():
     return parser.parse_args()
 
 def run_sparta(args):
+    os.system("rm -fr tmp_surf.* tmp_flow.* log.sparta data.grid")
     os.system(args.sparta_command + " -in " + args.test_input_file)
 
 def run_surf2_paraview(args):

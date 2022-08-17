@@ -197,10 +197,6 @@ function(sparta_add_all_tests_to_config mpi_ranks config_name)
     endif()
   endif()
 
-  if(NOT SPARTA_ENABLE_PARAVIEW_TESTING)
-    list(FILTER __in_file_list EXCLUDE REGEX ${PARAVIEW_TEST_NAME_REGEX})
-  endif()
-
   # message("__in_file_list=${__in_file_list}")
   if(BUILD_MPI)
     sparta_add_tests_to_config("${__in_file_list}" "${mpi_ranks}"
