@@ -46,6 +46,12 @@ namespace SPARTA_NS {
 
 enum ExecutionSpace{Host,Device};
 
+#if defined(SPARTA_KOKKOS)
+#define SPARTA_ALIGN(n) alignas(n)
+#else
+#define SPARTA_ALIGN(n)
+#endif
+
 // default settings: 32-bit smallint, 64-bit bigint, 32-bit cellint
 
 #if !defined(SPARTA_SMALL) && !defined(SPARTA_BIG) && !defined(SPARTA_BIGBIG)

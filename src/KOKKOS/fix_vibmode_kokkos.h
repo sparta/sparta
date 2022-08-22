@@ -57,7 +57,7 @@ class FixVibmodeKokkos : public FixVibmode {
   t_particle_1d d_particles;
   t_species_1d d_species;
 
-  DAT::t_int_2d d_vibmode;
+  DAT::t_int_2d_lr d_vibmode;
 };
 
 /* ----------------------------------------------------------------------

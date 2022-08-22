@@ -23,16 +23,16 @@
 
 namespace SPARTA_NS {
 
-struct TagParticleZero_cellcount{};
 struct TagParticleCompressReactions{};
 struct TagCopyParticleReorderDestinations{};
 struct TagFixedMemoryReorder{};
 struct TagFixedMemoryReorderInit{};
 struct TagSetIcellFromPlist{};
-struct TagParticleReorder_COPYPARTICLELIST{};
+struct TagParticleReorder_COPYPARTICLELIST1{};
+struct TagParticleReorder_COPYPARTICLELIST2{};
 struct TagSetDPlistNewStyle{};
 
-template<int NEED_ATOMICS>
+template<int NEED_ATOMICS, int REORDER_FLAG>
 struct TagParticleSort{};
 
 
@@ -91,17 +91,17 @@ class ParticleKokkos : public Particle {
   void modify(ExecutionSpace, unsigned int);
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagParticleZero_cellcount, const int&) const;
-
-  KOKKOS_INLINE_FUNCTION
   void operator()(TagParticleCompressReactions, const int&) const;
 
-  template<int NEED_ATOMICS>
+  template<int NEED_ATOMICS, int REORDER_FLAG>
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagParticleSort<NEED_ATOMICS>, const int&) const;
+  void operator()(TagParticleSort<NEED_ATOMICS,REORDER_FLAG>, const int&) const;
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagParticleReorder_COPYPARTICLELIST, const int, int&, const bool&) const;
+  void operator()(TagParticleReorder_COPYPARTICLELIST1, const int, int&, const bool&) const;
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagParticleReorder_COPYPARTICLELIST2, const int) const;
 
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCopyParticleReorderDestinations, const int, int&, const bool&) const;
@@ -142,8 +142,11 @@ class ParticleKokkos : public Particle {
 
  private:
   t_particle_1d d_particles;
-  t_particle_1d d_sorted;
   t_species_1d d_species;
+
+  t_particle_1d d_sorted;
+  DAT::t_int_1d d_sorted_id;
+  DAT::t_int_1d d_offsets_part;
   int nParticlesWksp;
   DAT::tdual_int_scalar k_reorder_pass;
   DAT::t_int_scalar d_reorder_pass;
