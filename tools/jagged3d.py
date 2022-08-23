@@ -16,6 +16,8 @@
 # Notes:
 # add additional tris to create a closed surf between all the spikes
 
+from __future__ import print_function
+
 import sys,random
 import numpy as np
 

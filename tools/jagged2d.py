@@ -14,6 +14,8 @@
 # Notes:
 # add 3 additional lines to create a closed surf between first/last spike
 
+from __future__ import print_function
+
 import sys,random
 import numpy as np
 

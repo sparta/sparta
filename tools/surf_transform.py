@@ -14,6 +14,8 @@
 #          rotate theta Rx Ry Rz
 #          invert (no args)
 
+from __future__ import print_function
+
 import os,sys,math
 path = os.environ["SPARTA_PYTHON_TOOLS"]
 sys.path.append(path)
@@ -83,7 +85,7 @@ def atranslate(ax,ay,az):
 
 # scale pts by sx,sy,sz around origin
 # for 2d, do not reset x[2] to avoid epsilon change
-    
+
 def scale(dim,sx,sy,sz):
   for pt in pts:
     pt[0] = sx*(pt[0]-origin[0]) + origin[0];

@@ -8,6 +8,8 @@
 
 # olog tool
 
+from __future__ import print_function
+
 oneline = "Read other log files (ChemCell, SPPARKS, SPARTA) and extract time-series data"
 
 docstr = """

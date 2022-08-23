@@ -33,6 +33,8 @@
 #         than 1 level different than neighbors
 #       this would propagate refinement away from surf
 
+from __future__ import print_function
+
 import os,sys
 from math import sqrt
 path = os.environ["SPARTA_PYTHON_TOOLS"]
@@ -252,7 +254,7 @@ if dim == 3:
     for i,norm in enumerate(norms):
       if dot3d((fx,fy,fz),norms[i]) <= 0.0: slist.append(i)
   else: slist = list(range(len(tris)))
-      
+
 # generate grid, one level at a time
 # queue = list of parent cells to process, remove from front, add to end
 #   each entry: id (as list), bbox, surf-list of intersections, nny, nny, nnz

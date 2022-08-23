@@ -11,6 +11,8 @@
 
 # NOTE: process vertices in text format so no precision or round-off issues
 
+from __future__ import print_function
+
 # error message
 
 def error(str=None):
