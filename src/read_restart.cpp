@@ -46,7 +46,9 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      SURFTALLY,PARTICLE_REORDER,MEMLIMIT_GRID,MEMLIMIT,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
-     SPECIES,MIXTURE,PARTICLE_CUSTOM,GRID,SURF,
+     SPECIES,MIXTURE,
+     GRID,SURF,
+     PARTICLE_CUSTOM,GRID_CUSTOM,SURF_CUSTOM,
      MULTIPROC,PROCSPERFILE,PERPROC};    // new fields added after PERPROC
 
 /* ---------------------------------------------------------------------- */
@@ -1122,6 +1124,7 @@ void ReadRestart::particle_params()
     error->all(FLERR,"Invalid flag in particle section of restart file");
   read_int();
   particle->read_restart_mixture(fp);
+
   flag = read_int();
   if (flag != PARTICLE_CUSTOM)
     error->all(FLERR,"Invalid flag in particle section of restart file");
@@ -1138,6 +1141,12 @@ void ReadRestart::grid_params()
     error->all(FLERR,"Invalid flag in grid section of restart file");
   read_int();
   grid->read_restart(fp);
+
+  flag = read_int();
+  if (flag != GRID_CUSTOM)
+    error->all(FLERR,"Invalid flag in grid section of restart file");
+  read_int();
+  grid->read_restart_custom(fp);
 
   // error check on too many bits for cell IDs
   // could occur if restart file was written with 64-bit IDs and
@@ -1161,8 +1170,17 @@ int ReadRestart::surf_params()
   if (flag != SURF)
     error->all(FLERR,"Invalid flag in surf section of restart file");
   int surfexist = read_int();
+  if (!surfexist) return 0;
+
   if (surfexist) surf->read_restart(fp);
-  return surfexist;
+
+  flag = read_int();
+  if (flag != SURF_CUSTOM)
+    error->all(FLERR,"Invalid flag in surf section of restart file");
+  read_int();
+  surf->read_restart_custom(fp);
+
+  return 1;
 }
 
 /* ---------------------------------------------------------------------- */

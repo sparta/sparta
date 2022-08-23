@@ -51,6 +51,14 @@ int Grid::pack_one(int icell, char *buf,
   ptr += sizeof(ChildCell);
   ptr = ROUNDUP(ptr);
 
+  // pack any custom grid data
+
+  if (ncustom) {
+    pack_custom(icell,buf);
+    ptr += nbytes_custom;
+    ptr = ROUNDUP(ptr);
+  }
+
   // no surfs or any other info
   // ditto for sending empty ghost
 
@@ -204,6 +212,14 @@ int Grid::unpack_one(char *buf,
   if (ownflag) {
     cells[icell].proc = me;
     cells[icell].ilocal = icell;
+  }
+
+  // pack any custom grid data
+
+  if (ncustom) {
+    unpack_custom(buf,icell);
+    ptr += nbytes_custom;
+    ptr = ROUNDUP(ptr);
   }
 
   // no surfs or any other info
@@ -476,7 +492,7 @@ int Grid::pack_one_adapt(char *inbuf, char *buf, int memflag)
         ptr += nbytes_particle;
         if (ncustom) {
           particle->pack_custom(ip,ptr);
-          ptr += nbytes_custom;
+          ptr += nbytes_particle_custom;
         }
 	particles[ip].icell = -1;
         ip = next[ip];
@@ -497,7 +513,7 @@ int Grid::pack_one_adapt(char *inbuf, char *buf, int memflag)
           ptr += nbytes_particle;
           if (ncustom) {
             particle->pack_custom(ip,ptr);
-            ptr += nbytes_custom;
+            ptr += nbytes_particle_custom;
           }
 	  particles[ip].icell = -1;
           ip = next[ip];
@@ -505,7 +521,7 @@ int Grid::pack_one_adapt(char *inbuf, char *buf, int memflag)
       }
     }
 
-  } else ptr += np * nbytes_total;
+  } else ptr += np * nbytes_particle_total;
 
   ptr = ROUNDUP(ptr);
   return ptr-buf;
@@ -538,12 +554,12 @@ int Grid::pack_particles(int icell, char *buf, int memflag)
       ptr += nbytes_particle;
       if (ncustom) {
         particle->pack_custom(ip,ptr);
-        ptr += nbytes_custom;
+        ptr += nbytes_particle_custom;
       }
       particles[ip].icell = -1;
       ip = next[ip];
     }
-  } else ptr += np * nbytes_total;
+  } else ptr += np * nbytes_particle_total;
 
   ptr = ROUNDUP(ptr);
   return ptr-buf;
@@ -577,12 +593,12 @@ int Grid::unpack_particles(char *buf, int icell, int sortflag)
       memcpy(&particles[n],ptr,nbytes_particle);
       ptr += nbytes_particle;
       particle->unpack_custom(ptr,n);
-      ptr += nbytes_custom;
+      ptr += nbytes_particle_custom;
       n++;
     }
   } else {
     memcpy(&particles[nplocal],ptr,np*nbytes_particle);
-    ptr += np*nbytes_particle;
+    ptr += np * nbytes_particle_total;
   }
 
   ptr = ROUNDUP(ptr);
@@ -623,7 +639,7 @@ void Grid::unpack_particles_adapt(int np, char *buf)
       memcpy(&particles[nplocal],ptr,nbytes_particle);
       ptr += nbytes_particle;
       particle->unpack_custom(ptr,nplocal);
-      ptr += nbytes_custom;
+      ptr += nbytes_particle_custom;
       nplocal++;
     }
   } else {
