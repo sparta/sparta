@@ -116,7 +116,7 @@ The optimal choice for this keyword depends on the hardware used.
 When running on CPUs or Xeon Phi, the {serial} option is typically
 fastest. When using GPUs, the {threaded} value will typically be
 optimal. In this case data can stay on the GPU for many timesteps
-without being moved between the host and GPU.
+without being fully moved between the host and GPU.
 
 The {gpu/aware} keyword chooses whether GPU-aware MPI will be used. When 
 this keyword is set to {on}, buffers in GPU memory are passed directly 
@@ -145,7 +145,7 @@ setting"_Section_start.html#start_6
 
 For the KOKKOS package, the option defaults are collide/extra = 1.1,
 collide/retry = no, and gpu/aware yes. For CPUs: comm = serial,
-reduction = parallel/reduce. For GPUs: comm = threaded, reduction =
+reduction = parallel/reduce, and for GPUs: comm = threaded, reduction =
 atomic. These settings are made automatically by the required "-k on"
 "command-line switch"_Section_start.html#start_6. You can change them
 by using the package kokkos command in your input script or via the
