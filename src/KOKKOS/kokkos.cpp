@@ -143,15 +143,17 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
 
   // default settings for package kokkos command
 
-  comm_serial = 0;
   prewrap = 1;
   auto_sync = 1;
   gpu_aware_flag = 1;
 
-  if (ngpus > 0)
+  if (ngpus > 0) {
+    comm_serial = 0;
     atomic_reduction = 1;
-  else
+  } else {
+    comm_serial = 1;
     atomic_reduction = 0;
+  }
 
   need_atomics = 1;
   if (nthreads == 1 && ngpus == 0)
@@ -180,10 +182,6 @@ KokkosSPARTA::~KokkosSPARTA()
 
 void KokkosSPARTA::accelerator(int narg, char **arg)
 {
-  // defaults
-
-  comm_serial = 0;
-
   int iarg = 0;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"comm") == 0) {
