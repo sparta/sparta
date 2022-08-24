@@ -120,11 +120,11 @@ void ParticleKokkos::compress_migrate(int ndelete, int *dellist)
   nbytes = sizeof(OnePart);
 
   if (ndelete > d_lists.extent(1)) {
-    d_lists = DAT::t_int_2d(Kokkos::view_alloc("particle:lists",Kokkos::WithoutInitializing),2,ndelete);
+    d_lists = DAT::t_int_2d_lr(Kokkos::view_alloc("particle:lists",Kokkos::WithoutInitializing),2,ndelete);
     d_mlist = Kokkos::subview(d_lists,0,Kokkos::ALL);
     d_slist = Kokkos::subview(d_lists,1,Kokkos::ALL);
 
-    h_lists = HAT::t_int_2d(Kokkos::view_alloc("particle:lists_mirror",Kokkos::WithoutInitializing),2,ndelete);
+    h_lists = HAT::t_int_2d_lr(Kokkos::view_alloc("particle:lists_mirror",Kokkos::WithoutInitializing),2,ndelete);
     h_mlist = Kokkos::subview(h_lists,0,Kokkos::ALL);
     h_slist = Kokkos::subview(h_lists,1,Kokkos::ALL);
   }
