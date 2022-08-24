@@ -10,15 +10,20 @@ from parallel_bucket_sort import parallel_sort, \
 from grid2paraview import SpartaGridFile
 
 GRID_FILE_200 = os.path.join(os.path.dirname(__file__),
-    "tests/input_files/grid.200")
+    "grid.200")
 
 CIRCLE_GRID_FILE = os.path.join(os.path.dirname(__file__),
-    "tests/input_files/circle_grid.txt")
+    "circle_grid.txt")
 
 class TestParallelBucketSort(unittest.TestCase):
 
     MIN_NUM = 1
     MAX_NUM = 100000
+
+    @classmethod
+    def tearDownClass(cls):
+        barrier()
+        MPI.Finalize()
 
     def testSortDataInput(self):
         barrier()
