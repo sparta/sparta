@@ -768,14 +768,6 @@ struct MemsetZeroFunctor {
   }
 };
 
-template<class ViewType>
-void memset_kokkos (ViewType &view) {
-  static MemsetZeroFunctor<typename ViewType::execution_space> f;
-  f.ptr = view.data();
-  Kokkos::parallel_for(view.scan()*sizeof(typename ViewType::value_type)/4, f);
-  ViewType::execution_space::fence();
-}
-
 #define SPARTA_LAMBDA KOKKOS_LAMBDA
 
 namespace SPARTA_NS {

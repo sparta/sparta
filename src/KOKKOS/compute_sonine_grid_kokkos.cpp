@@ -133,10 +133,8 @@ void ComputeSonineGridKokkos::compute_per_grid_kokkos()
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeSonineGrid_compute_vcom_init_atomic<1> >(0,nlocal),*this);
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeSonineGrid_compute_vcom_init_atomic<0> >(0,nlocal),*this);
-    DeviceType().fence();
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeSonineGrid_normalize_vcom>(0,nglocal),*this);
   }
-  DeviceType().fence();
 
   if (need_dup) {
     Kokkos::Experimental::contribute(d_vcom, dup_vcom_tally);
@@ -152,7 +150,6 @@ void ComputeSonineGridKokkos::compute_per_grid_kokkos()
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeSonineGrid_compute_per_grid_atomic<0> >(0,nlocal),*this);
   }
-  DeviceType().fence();
   copymode = 0;
 
   if (need_dup) {
@@ -390,7 +387,6 @@ void ComputeSonineGridKokkos::post_process_grid_kokkos(int index,
 
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeSonineGrid_post_process_grid>(lo,hi),*this);
-  DeviceType().fence();
   copymode = 0;
 }
 

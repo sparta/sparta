@@ -60,10 +60,12 @@ class RandPoolWrap : protected Pointers {
     typedef Kokkos::Experimental::UniqueToken<
       DeviceType, Kokkos::Experimental::UniqueTokenScope::Global> unique_token_type;
 
+#ifndef SPARTA_KK_DEVICE_COMPILE
     unique_token_type unique_token;
     int tid = unique_token.acquire();
     rand_wrap.rng = random_thr[tid];
     unique_token.release(tid);
+#endif
 
     return rand_wrap;
   }
