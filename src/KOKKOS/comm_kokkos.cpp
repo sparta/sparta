@@ -51,7 +51,7 @@ CommKokkos::~CommKokkos()
 {
   if (copymode) return;
 
-  if (!sparta->kokkos->comm_classic) {
+  if (!sparta->kokkos->comm_serial) {
     pproc = NULL;
   }
 
@@ -71,7 +71,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
   particle_kk->update_class_variables();
   particle_kk_copy.copy(particle_kk);
 
-  if (sparta->kokkos->comm_classic) {
+  if (sparta->kokkos->comm_serial) {
     particle_kk->sync(Host,ALL_MASK);
     //grid_kk->sync(Host,ALL_MASK);
     int prev_auto_sync = sparta->kokkos->auto_sync;
