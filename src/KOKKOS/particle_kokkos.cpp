@@ -198,8 +198,11 @@ void ParticleKokkos::sort_kokkos()
 {
   sorted_kk = 1;
   int reorder_scheme = COPYPARTICLELIST;
-  if (update->have_mem_limit())
-    reorder_scheme = FIXEDMEMORY;
+
+  // FIXEDMEMORY reorder temporarily disabled due to bug on GPUs
+
+  //if (update->have_mem_limit())
+  //  reorder_scheme = FIXEDMEMORY;
 
   const int reorder_flag = (update->reorder_period &&
       (update->ntimestep % update->reorder_period == 0));
