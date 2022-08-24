@@ -126,7 +126,6 @@ void ComputePFluxGridKokkos::compute_per_grid_kokkos()
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputePFluxGrid_compute_per_grid_atomic<0> >(0,nlocal),*this);
   }
-  DeviceType().fence();
   copymode = 0;
 
   if (need_dup) {
@@ -332,7 +331,6 @@ void ComputePFluxGridKokkos::post_process_grid_kokkos(int index, int nsample,
       mvv = emap[2];
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputePFluxGrid_post_process_grid_diag>(lo,hi),*this);
-      DeviceType().fence();
       copymode = 0;
       break;
     }
@@ -345,7 +343,6 @@ void ComputePFluxGridKokkos::post_process_grid_kokkos(int index, int nsample,
       mvv = emap[3];
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputePFluxGrid_post_process_grid_offdiag>(lo,hi),*this);
-      DeviceType().fence();
       copymode = 0;
       break;
     }

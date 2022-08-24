@@ -169,7 +169,6 @@ void ComputeCountKokkos::per_species_tally_kokkos()
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeCount_per_species_tally_atomic<1> >(0,nlocal),*this);
   else
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeCount_per_species_tally_atomic<0> >(0,nlocal),*this);
-  DeviceType().fence();
   copymode = 0;
 
   if (need_dup) {

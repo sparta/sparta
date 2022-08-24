@@ -70,7 +70,6 @@ double ComputeTempKokkos::compute_scalar_kokkos()
   double t = 0.0;
   auto range_policy = Kokkos::RangePolicy<DeviceType>(0, nlocal);
   Kokkos::parallel_reduce(range_policy, *this, t);
-  DeviceType().fence();
   copymode = 0;
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
