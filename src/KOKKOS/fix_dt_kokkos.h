@@ -33,7 +33,6 @@ namespace SPARTA_NS {
   struct TagFixDt_LoadUsqVecFromArray{};
   struct TagFixDt_LoadVsqVecFromArray{};
   struct TagFixDt_LoadWsqVecFromArray{};
-  struct TagFixDt_LimitCellDtDesired{};
 
   template<int ATOMIC_REDUCTION>
   struct TagFixDt_SetCellDtDesired{};
@@ -62,9 +61,6 @@ namespace SPARTA_NS {
     KOKKOS_INLINE_FUNCTION void
     operator()(TagFixDt_LoadWsqVecFromArray, const int&) const;
 
-    KOKKOS_INLINE_FUNCTION void
-    operator()(TagFixDt_LimitCellDtDesired, const int&) const;
-
     template<int ATOMIC_REDUCTION>
     KOKKOS_INLINE_FUNCTION void
     operator()(TagFixDt_SetCellDtDesired<ATOMIC_REDUCTION>, const int&) const;
@@ -76,6 +72,10 @@ namespace SPARTA_NS {
   private:
     t_cell_1d d_cells;
 
+    DAT::tdual_int_scalar k_ncells_with_a_particle;
+    DAT::t_int_scalar d_ncells_with_a_particle;
+    HAT::t_int_scalar h_ncells_with_a_particle;
+
     DAT::tdual_float_scalar k_dtsum;
     DAT::t_float_scalar d_dtsum;
     HAT::t_float_scalar h_dtsum;
@@ -84,9 +84,7 @@ namespace SPARTA_NS {
     DAT::t_float_scalar d_dtmin;
     HAT::t_float_scalar h_dtmin;
 
-    DAT::tdual_float_scalar k_dtmax;
-    DAT::t_float_scalar d_dtmax;
-    HAT::t_float_scalar h_dtmax;
+    DAT::t_int_1d d_cellcount;
 
     DAT::t_float_1d d_lambda_vector;
     DAT::t_float_1d d_temp_vector;

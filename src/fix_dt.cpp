@@ -39,21 +39,23 @@ enum{NONE,COMPUTE,FIX};
 FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
-  if (narg < 9) error->all(FLERR,"Illegal fix dt command");
+  if (narg < 10) error->all(FLERR,"Illegal fix dt command");
 
   nevery = atoi(arg[2]);
   if (nevery <= 0) error->all(FLERR,"Illegal fix dt command");
 
-  imix = particle->find_mixture(arg[3]);
+  dt_global_weight = atof(arg[3]);
+
+  imix = particle->find_mixture(arg[4]);
   if (imix < 0) error->all(FLERR,"fix dt mixture ID does not exist");
 
-  if (strncmp(arg[4],"c_",2) != 0 && strncmp(arg[4],"f_",2) != 0)
+  if (strncmp(arg[5],"c_",2) != 0 && strncmp(arg[6],"f_",2) != 0)
     error->all(FLERR,"Illegal fix dt command");
 
-  if ( !((strncmp(arg[5],"f_",2) == 0) &&
-         (strncmp(arg[6],"f_",2) == 0) &&
+  if ( !((strncmp(arg[6],"f_",2) == 0) &&
          (strncmp(arg[7],"f_",2) == 0) &&
-         (strncmp(arg[8],"f_",2) == 0)) )
+         (strncmp(arg[8],"f_",2) == 0) &&
+         (strncmp(arg[9],"f_",2) == 0)) )
     error->all(FLERR,"Illegal fix dt command");
 
   id_lambda = NULL;
@@ -63,9 +65,9 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   id_wsq = NULL;
 
   // lambda compute or fix
-  int n = strlen(arg[4]);
+  int n = strlen(arg[5]);
   id_lambda = new char[n];
-  strcpy(id_lambda,&arg[4][2]);
+  strcpy(id_lambda,&arg[5][2]);
   char *ptr = strchr(id_lambda,'[');
   if (ptr) {
     if (id_lambda[strlen(id_lambda)-1] != ']')
@@ -74,7 +76,7 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
     *ptr = '\0';
   } else lambdaindex = 0;
 
-  if (strncmp(arg[4],"c_",2) == 0) lambdawhich = COMPUTE;
+  if (strncmp(arg[5],"c_",2) == 0) lambdawhich = COMPUTE;
   else lambdawhich = FIX;
 
   if (lambdawhich == COMPUTE) { // lambda compute
@@ -113,9 +115,9 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   }
 
   // temperature fix
-  n = strlen(arg[5]);
+  n = strlen(arg[6]);
   id_temp = new char[n];
-  strcpy(id_temp,&arg[5][2]);
+  strcpy(id_temp,&arg[6][2]);
 
   ptr = strchr(id_temp,'[');
   if (ptr) {
@@ -143,9 +145,9 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   // squared-velocity fixes
 
   // usq----------------------------
-  n = strlen(arg[6]);
+  n = strlen(arg[7]);
   id_usq = new char[n];
-  strcpy(id_usq,&arg[6][2]);
+  strcpy(id_usq,&arg[7][2]);
 
   ptr = strchr(id_usq,'[');
   if (ptr) {
@@ -171,9 +173,9 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
                "accessed out-of-range");
 
   // vsq----------------------------
-  n = strlen(arg[7]);
+  n = strlen(arg[8]);
   id_vsq = new char[n];
-  strcpy(id_vsq,&arg[7][2]);
+  strcpy(id_vsq,&arg[8][2]);
 
   ptr = strchr(id_vsq,'[');
   if (ptr) {
@@ -199,9 +201,9 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
                "accessed out-of-range");
 
   // wsq----------------------------
-  n = strlen(arg[8]);
+  n = strlen(arg[9]);
   id_wsq = new char[n];
-  strcpy(id_wsq,&arg[8][2]);
+  strcpy(id_wsq,&arg[9][2]);
 
   ptr = strchr(id_wsq,'[');
   if (ptr) {
@@ -229,7 +231,7 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   // optional args (prescribed temperature/velocity profiles for initial timestep calculation)
   tempflag = velflag = 0;
 
-  int iarg = 9;
+  int iarg = 10;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"temperature") == 0) {
       if (iarg+5 > narg) error->all(FLERR,"Illegal fix dt command");
@@ -553,8 +555,15 @@ void FixDt::end_of_step()
   double transit_fraction = 0.25;
   double collision_fraction = 0.1;
   double dt_sum = 0.;
+  double dtmin = BIG;
 
+  bigint ncells_with_a_particle = 0.;
   for (int i = 0; i < nglocal; ++i) {
+
+    int np = cinfo[i].count;
+    if (np < 1) continue;
+
+    ncells_with_a_particle++;
 
     // cell dt based on mean collision time
     double mean_collision_time = lambda[i]/sqrt(usq[i] + vsq[i] + wsq[i]);
@@ -594,44 +603,38 @@ void FixDt::end_of_step()
       cells[i].dt_desired = MIN(dt_candidate,cells[i].dt_desired);
     }
 
+    dtmin = MIN(dtmin, cells[i].dt_desired);
     dt_sum += cells[i].dt_desired;
   }
-#if 0
-  double avg_cell_dt = dt_sum/nglocal;
-  double dt_factor = 1000.;
-  double dtmin_this_pe = avg_cell_dt/dt_factor;
-  double dtmax_this_pe = avg_cell_dt*dt_factor;
-  double dtmins_this_pe[2] = {dtmin_this_pe, 1./dtmax_this_pe};
 
-  double dtmins[2];
-  MPI_Allreduce(&dtmins_this_pe,&dtmins,2,MPI_DOUBLE,MPI_MIN,world);
-  double dtmin = dtmins[0];
-  double dtmax = 1.0/dtmins[1];
-#endif
+  // set global dtmin
+  double dtmin_global;
+  MPI_Allreduce(&dtmin,&dtmin_global,1,MPI_DOUBLE,MPI_MIN,world);
+  dtmin = dtmin_global;
 
-  double dt_sum_global = 0.;
-  MPI_Allreduce(&dt_sum,&dt_sum_global,1,MPI_DOUBLE,MPI_SUM,world);
-  double avg_cell_dt = dt_sum_global/grid->ncell;
-  std::cout << "*********** avg_cell_dt = " << avg_cell_dt << std::endl;
-  double dt_factor = 1000.; // NOTE:  in DS2V.f90, this factor is 10
-  double dtmin = avg_cell_dt/dt_factor;
-  double dtmax = avg_cell_dt*dt_factor;
-  grid->dt_global = 2.*dtmin;
+  // set global dtavg
+  double cell_sums[2];
+  double cell_sums_global[2];
+  cell_sums[0] = dt_sum;
+  cell_sums[1] = ncells_with_a_particle; // implicit conversion of bigint to double to avoid 2 MPI_Allreduce calls
+  MPI_Allreduce(cell_sums,cell_sums_global,2,MPI_DOUBLE,MPI_SUM,world);
+  double dtavg = cell_sums_global[0]/cell_sums_global[1];
 
-  for (int i = 0; i < nglocal; ++i) {
-    if (cells[i].dt_desired < dtmin)
-      cells[i].dt_desired = dtmin;
-    if (cells[i].dt_desired > dtmax)
-      cells[i].dt_desired = dtmax;
-    if (cells[i].dt_desired < 0.51*grid->dt_global) // AKS look into this logic
-      cells[i].dt_desired = 0.51*grid->dt_global;
+  // set optimal timestep based on user-specified weighting
+  dt_global_optimal = (1.-dt_global_weight)*dtmin + dt_global_weight*dtavg;
+
+  // process optimal dt
+  if (mode > FIXMODE::WARN)
+    grid->dt_global = dt_global_optimal;
+  else if (mode == FIXMODE::WARN && grid->dt_global > dt_global_optimal) {
+    if (me == 0) {
+      std::cout << std::endl;
+      std::cout << "       WARNING: global timestep=" << grid->dt_global
+                << " is greater than the FixDt-calculated global timestep=" << dt_global_optimal
+                << std::endl;
+      std::cout << std::endl;
+    }
   }
-
-  // also what happens if dt everywhere should be the average, then are we forcing
-  // a very small global dt???   Probably should track a minimum and maximum cell dt
-  // and compare to the min and max dt computed with dt_factor.
-
-  // also what happens if a large number of cells have no particles? (ex. inlet flow around a circle)
 }
 
 /* ----------------------------------------------------------------------

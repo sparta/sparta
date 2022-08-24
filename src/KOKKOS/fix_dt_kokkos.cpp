@@ -36,6 +36,7 @@
 enum{NONE,COMPUTE,FIX};
 
 #define INVOKED_PER_GRID 16
+#define BIG 1.0e20
 
 using namespace SPARTA_NS;
 
@@ -57,6 +58,10 @@ FixDtKokkos::FixDtKokkos(SPARTA *sparta, int narg, char **arg) :
   boltz = update->boltz;
   dt_global = grid_kk->dt_global;
 
+  k_ncells_with_a_particle = DAT::tdual_int_scalar("FixDtKokkos:ncells_with_a_particle");
+  d_ncells_with_a_particle = k_ncells_with_a_particle.d_view;
+  h_ncells_with_a_particle = k_ncells_with_a_particle.h_view;
+
   k_dtsum = DAT::tdual_float_scalar("FixDtKokkos:dtsum");
   d_dtsum = k_dtsum.d_view;
   h_dtsum = k_dtsum.h_view;
@@ -64,10 +69,6 @@ FixDtKokkos::FixDtKokkos(SPARTA *sparta, int narg, char **arg) :
   k_dtmin = DAT::tdual_float_scalar("FixDtKokkos:dtmin");
   d_dtmin = k_dtmin.d_view;
   h_dtmin = k_dtmin.h_view;
-
-  k_dtmax = DAT::tdual_float_scalar("FixDtKokkos:dtmax");
-  d_dtmax = k_dtmax.d_view;
-  h_dtmax = k_dtmax.h_view;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -187,7 +188,10 @@ void FixDtKokkos::end_of_step()
 
   // compute cell desired timestep
   d_cells = grid_kk->k_cells.d_view;
-  Kokkos::deep_copy(d_dtsum, 0.0);
+  d_cellcount = grid_kk->d_cellcount;
+  Kokkos::deep_copy(d_ncells_with_a_particle, 0);
+  Kokkos::deep_copy(d_dtsum, 0.);
+  Kokkos::deep_copy(d_dtmin, BIG);
   copymode = 1;
   if (!sparta->kokkos->need_atomics)
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDt_SetCellDtDesired<0> >(0,nglocal),*this);
@@ -200,24 +204,43 @@ void FixDtKokkos::end_of_step()
   DeviceType().fence();
   copymode = 0;
 
-  // limit cell desired timestep
+  k_ncells_with_a_particle.sync_host();
   k_dtsum.sync_host();
-  double dt_sum_global = 0.;
-  double dt_sum = h_dtsum();
-  MPI_Allreduce(&dt_sum,&dt_sum_global,1,MPI_DOUBLE,MPI_SUM,world);
-  double avg_cell_dt = dt_sum_global/grid_kk->ncell;
-  std::cout << "*********** avg_cell_dt = " << avg_cell_dt << std::endl;
-  double dt_factor = 1000.0;
-  h_dtmin() = avg_cell_dt/dt_factor;
-  h_dtmax() = avg_cell_dt*dt_factor;
-  k_dtmin.sync_device();
-  k_dtmax.sync_device();
-  grid_kk->dt_global = 2.*h_dtmin();  // reset global timestep
+  k_dtmin.sync_host();
+
+  // set global dtmin
+  double dtmin = h_dtmin();
+  double dtmin_global;
+  MPI_Allreduce(&dtmin,&dtmin_global,1,MPI_DOUBLE,MPI_MIN,world);
+  dtmin = dtmin_global;
+
+  // set global dtavg
+  double cell_sums[2];
+  double cell_sums_global[2];
+  cell_sums[0] = h_dtsum();
+  cell_sums[1] = h_ncells_with_a_particle(); // implicit conversion to double to avoid 2 MPI_Allreduce calls
+  MPI_Allreduce(cell_sums,cell_sums_global,2,MPI_DOUBLE,MPI_SUM,world);
+  double dtavg = cell_sums_global[0]/cell_sums_global[1];
+
+  // set optimal timestep based on user-specified weighting
+  dt_global_optimal = (1.-dt_global_weight)*dtmin + dt_global_weight*dtavg;
+
+  // process optimal dt
+  if (mode > FIXMODE::WARN)
+    grid_kk->dt_global = dt_global_optimal;
+  else if (mode == FIXMODE::WARN && grid_kk->dt_global > dt_global_optimal) {
+    if (me == 0) {
+      std::cout << std::endl;
+      std::cout << "       WARNING: global timestep=" << grid_kk->dt_global
+                << " is greater than the FixDt-calculated global timestep=" << dt_global_optimal
+                << std::endl;
+      std::cout << std::endl;
+    }
+  }
+
+
+
   dt_global = grid_kk->dt_global;
-  copymode = 1;
-  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDt_LimitCellDtDesired>(0,nglocal),*this);
-  DeviceType().fence();
-  copymode = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -261,6 +284,9 @@ template<int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
 void FixDtKokkos::operator()(TagFixDt_SetCellDtDesired<ATOMIC_REDUCTION>, const int &i) const {
 
+  if (d_cellcount[i] < 1)
+    return;
+
   // cell dt based on mean collision time
   double transit_fraction = 0.25;
   double collision_fraction = 0.1;
@@ -302,23 +328,17 @@ void FixDtKokkos::operator()(TagFixDt_SetCellDtDesired<ATOMIC_REDUCTION>, const 
     d_cells[i].dt_desired = MIN(dt_candidate,d_cells[i].dt_desired);
   }
 
-  if (ATOMIC_REDUCTION == 1)
+  if (ATOMIC_REDUCTION == 1) {
+    Kokkos::atomic_increment(&d_ncells_with_a_particle());
     Kokkos::atomic_add(&d_dtsum(), d_cells[i].dt_desired);
-  else if (ATOMIC_REDUCTION == 0)
+    Kokkos::atomic_min(&d_dtmin(), d_cells[i].dt_desired);
+  }
+  else if (ATOMIC_REDUCTION == 0) {
+    d_ncells_with_a_particle() += 1;
     d_dtsum() += d_cells[i].dt_desired;
-}
-
-/* ---------------------------------------------------------------------- */
-
-KOKKOS_INLINE_FUNCTION
-void FixDtKokkos::operator()(TagFixDt_LimitCellDtDesired, const int &i) const {
-
-  if (d_cells[i].dt_desired < d_dtmin())
-    d_cells[i].dt_desired = d_dtmin();
-  if (d_cells[i].dt_desired > d_dtmax())
-    d_cells[i].dt_desired = d_dtmax();
-  if (d_cells[i].dt_desired < 0.51*dt_global)
-    d_cells[i].dt_desired = 0.51*dt_global;
+    if (d_cells[i].dt_desired < d_dtmin())
+      d_dtmin() = d_cells[i].dt_desired;
+  }
 }
 
 /* ----------------------------------------------------------------------

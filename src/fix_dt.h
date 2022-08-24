@@ -27,6 +27,8 @@ FixStyle(dt,FixDt)
 
 namespace SPARTA_NS {
 
+enum class FIXMODE : int {NONE, WARN, GLOBAL_TIME_ADAPTIVITY, SPATIAL_ADAPTIVITY};
+
 class FixDt : public Fix {
  public:
   FixDt(class SPARTA *, int, char **);
@@ -37,6 +39,7 @@ class FixDt : public Fix {
   virtual void reallocate();
 
  protected:
+  int me;
   int nglocal;
   int lambdawhich,usqwhich,vsqwhihc,wsqwhich,tempwhich;
   int lambdaindex, usqindex,vsqindex,wsqindex,tempindex;
@@ -50,12 +53,12 @@ class FixDt : public Fix {
   class Fix *flambda,*fusq,*fvsq,*fwsq,*ftemp;
   double *lambda,*usq,*vsq,*wsq,*temp;
   double min_species_mass;
+  double dt_global_weight;
+  double dt_global_optimal;
+  FIXMODE mode = FIXMODE::NONE;
 
   double temperature_variable(double *);
   void velocity_variable(double *, double *, double *);
-
- private:
-  int me;
 };
 
 }
