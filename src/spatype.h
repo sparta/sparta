@@ -46,7 +46,9 @@ namespace SPARTA_NS {
 
 enum ExecutionSpace{Host,Device};
 
-#if defined(SPARTA_KOKKOS)
+// struct alignment for GPUs
+
+#if defined(SPARTA_KOKKOS_GPU)
 #define SPARTA_ALIGN(n) alignas(n)
 #else
 #define SPARTA_ALIGN(n)
