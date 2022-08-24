@@ -36,6 +36,7 @@ class FixDt : public Fix {
   int setmask();
   void init();
   void end_of_step();
+  double compute_scalar();
   virtual void reallocate();
 
  protected:

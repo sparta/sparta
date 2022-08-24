@@ -40,6 +40,8 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
   if (narg < 10) error->all(FLERR,"Illegal fix dt command");
+  scalar_flag = 1;
+  global_freq = 1;
 
   nevery = atoi(arg[2]);
   if (nevery <= 0) error->all(FLERR,"Illegal fix dt command");
@@ -658,6 +660,14 @@ void FixDt::reallocate()
   memory->create(usq,nglocal,"dt:usq");
   memory->create(vsq,nglocal,"dt:vsq");
   memory->create(wsq,nglocal,"dt:wsq");
+}
+
+/* ----------------------------------------------------------------------
+   return optimal calculated timestep
+------------------------------------------------------------------------- */
+double FixDt::compute_scalar()
+{
+  return dt_global_optimal;
 }
 
 /* ----------------------------------------------------------------------
