@@ -23,7 +23,7 @@ namespace SPARTA_NS {
 class KokkosSPARTA : protected Pointers {
  public:
   int kokkos_exists;
-  int comm_classic;
+  int comm_serial;
   int atomic_reduction;
   int prewrap;
   int auto_sync;

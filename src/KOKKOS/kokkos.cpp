@@ -143,11 +143,15 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
 
   // default settings for package kokkos command
 
-  comm_classic = 0;
-  atomic_reduction = 0;
+  comm_serial = 0;
   prewrap = 1;
   auto_sync = 1;
   gpu_aware_flag = 1;
+
+  if (ngpus > 0)
+    atomic_reduction = 1;
+  else
+    atomic_reduction = 0;
 
   need_atomics = 1;
   if (nthreads == 1 && ngpus == 0)
@@ -155,9 +159,6 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
 
   collide_retry_flag = 0;
   collide_extra = 1.1;
-
-  //if (need_atomics == 0) // prevent unnecessary parallel_reduce
-  //  atomic_reduction = 1;
 
   // finalize Kokkos on abort
 
@@ -181,16 +182,18 @@ void KokkosSPARTA::accelerator(int narg, char **arg)
 {
   // defaults
 
-  comm_classic = 0;
+  comm_serial = 0;
 
   int iarg = 0;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"comm") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal package kokkos command");
-      if (strcmp(arg[iarg+1],"classic") == 0) {
-        comm_classic = 1;
+      if (strcmp(arg[iarg+1],"serial") == 0) {
+        comm_serial = 1;
+      } else if (strcmp(arg[iarg+1],"classic") == 0) { // deprecated
+        comm_serial = 1;
       } else if (strcmp(arg[iarg+1],"threaded") == 0) {
-        comm_classic = 0;
+        comm_serial = 0;
       } else error->all(FLERR,"Illegal package kokkos command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"reduction") == 0) {
@@ -214,7 +217,7 @@ void KokkosSPARTA::accelerator(int narg, char **arg)
       collide_extra = atof(arg[iarg+1]);
       iarg += 2;
     } else if ((strcmp(arg[iarg],"gpu/aware") == 0)
-               || (strcmp(arg[iarg],"gpu/direct") == 0)) {
+               || (strcmp(arg[iarg],"gpu/direct") == 0)) { // gpu/direct is deprecated
       if (iarg+2 > narg) error->all(FLERR,"Illegal package kokkos command");
       if (strcmp(arg[iarg+1],"yes") == 0) {
         gpu_aware_flag = 1;
