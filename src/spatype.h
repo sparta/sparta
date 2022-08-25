@@ -33,6 +33,7 @@
 #include "limits.h"
 #include "stdint.h"
 #include "inttypes.h"
+#include "accelerator_kokkos_defs.h"
 
 // grrr - IBM Power6 does not provide this def in their system header files
 
