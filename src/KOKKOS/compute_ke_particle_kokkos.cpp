@@ -79,7 +79,6 @@ void ComputeKEParticleKokkos::compute_per_particle_kokkos()
   // compute kinetic energy for each atom in group
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType>(0,nlocal),*this);
-  DeviceType().fence();
   copymode = 0;
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use

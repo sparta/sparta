@@ -275,7 +275,7 @@ if __name__ == "__main__":
   parser.add_argument("paraview_output_file", help="ParaView output file name")
   group = parser.add_mutually_exclusive_group()
   group.add_argument('-r', '--result', help="Optional list of SPARTA dump result files", nargs='+')
-  group.add_argument('-rf', '--resultfile', help="Optional filename containing path names of SPARTA dump result files")
+  group.add_argument('-f', '--resultfile', help="Optional filename containing path names of SPARTA dump result files")
   parser.add_argument('-e', '--exodus', default=False, action='store_true',
     help="Write output to Exodus II format file")
   args = parser.parse_args()

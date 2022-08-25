@@ -37,6 +37,11 @@ Comm::Comm(SPARTA *sparta) : Pointers(sparta)
   MPI_Comm_rank(world,&me);
   MPI_Comm_size(world,&nprocs);
 
+  if (me == 0) {
+    if (screen) fprintf(screen,"Running on %d MPI task(s)\n",nprocs);
+    if (logfile) fprintf(logfile,"Running on %d MPI task(s)\n",nprocs);
+  }
+
   ncomm = 0;
   commsortflag = 0;
   commpartstyle = 1;

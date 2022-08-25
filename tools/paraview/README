@@ -184,9 +184,9 @@ sub directory the .pvd file refers to.
 
 These additional options are:
 
--xc (or --xchunk, default 100)
--yc (or --ychunk, default 100)
--zc (or --zchunk, default 100)
+-x (or --xchunk, default 100)
+-y (or --ychunk, default 100)
+-z (or --zchunk, default 100)
 
 The program will launch a separate thread of computation for each grid
 chunk.  On workstations with many cores and sufficient memory, using
@@ -249,14 +249,3 @@ will assume that the grid input name is "mir_grid.pvd" in catalyst.py, since
 either edit your catalyst script or change the output directory name on the
 command line to match what your script expects. The output directory is not 
 created when "-c" option is used.
-
-VI. INTEGRATION TEST SCRIPT
-
-There is a bash script, runIntegrationTests.sh, located in this directory.
-This script will run 2D and 3D tests using the circle and sphere SPARTA
-examples, and will create an output directory called 
-"integration_test_scratch_directory". There will be two subdirectories,
-circle and sphere, that contain the output of running surf2paraview.py,
-and grid2paraview.py using pvpython, pvbatch, and catalyst. Edit the top
-portion of runIntegrationTests.sh to point to your installed SPARTA and
-ParaView before running.

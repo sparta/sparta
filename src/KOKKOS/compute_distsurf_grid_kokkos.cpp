@@ -116,7 +116,6 @@ void ComputeDistSurfGridKokkos::compute_per_grid_kokkos()
   // pre-compute center point of each eligible surf
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeDistSurfGrid_surf_centroid>(0,nsurf),*this);
-  DeviceType().fence();
   copymode = 0;
 
   // loop over my unsplit/split grid cells
@@ -134,7 +133,6 @@ void ComputeDistSurfGridKokkos::compute_per_grid_kokkos()
 
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeDistSurfGrid_surf_distance>(0,nglocal),*this);
-  DeviceType().fence();
   copymode = 0;
 
   memoryKK->destroy_kokkos(k_eflag);
