@@ -19,7 +19,7 @@ if(PKG_FFT)
 
   # Get Kokkos header files
   target_link_libraries(${TARGET_SPARTA_PKG_FFT} LINK_PRIVATE
-                        ${Kokkos_INCLUDE_DIRS_RET})
+                        ${TARGET_SPARTA_BUILD_KOKKOS})
 
   # Get FFT header files
   if(FFT)
