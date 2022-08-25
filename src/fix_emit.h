@@ -50,8 +50,8 @@ class FixEmit : public Fix {
   void options(int, char **);
   virtual int option(int, char **);
 
-  virtual double get_particle_time(bool variable_adaptive_time, double time_global, double random_uniform, double dt_desired) {
-    if (variable_adaptive_time)
+  virtual double get_particle_time(bool use_cell_dt, double time_global, double random_uniform, double dt_desired) {
+    if (use_cell_dt)
       return time_global + (-1. + 2.*random_uniform)*dt_desired;
     else
       return time_global;

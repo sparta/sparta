@@ -326,7 +326,7 @@ void CreateParticlesKokkos::create_local(bigint np)
   Kokkos::deep_copy(d_species, h_species);
   auto nlocal_before = particleKK->nlocal;
   auto time_global = grid_kk->time_global;
-  auto variable_adaptive_time = grid_kk->variable_adaptive_time;
+  auto use_cell_dt = grid_kk->use_cell_dt;
 
   Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
     rand_type rand_gen = rand_pool.get_state();
@@ -344,7 +344,7 @@ void CreateParticlesKokkos::create_local(bigint np)
       auto evib = d_evib(cand);
       auto rnd = rand_gen.drand();
       double particle_time;
-      if (variable_adaptive_time)
+      if (use_cell_dt)
         particle_time = time_global + (-1. + 2.*rnd)*d_celldt(i);
       else
         particle_time = time_global;

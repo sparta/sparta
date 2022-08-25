@@ -705,7 +705,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
   Particle::OnePart &particle_i = d_particles[i];
 
   auto dt = grid_kk_copy.obj.dt_global;
-  if (grid_kk_copy.obj.variable_adaptive_time && niterate == 1) {
+  if (grid_kk_copy.obj.use_cell_dt && niterate == 1) {
     bool move_particle = false;
     icell = particle_i.icell;
     //    std::cout << "icell=" << icell << " dt_desired=" << d_cells[icell].dt_desired << std::endl;

@@ -408,7 +408,7 @@ template < int DIM, int SURF > void Update::move()
       // move particle if the particle time falls behind the global time by the desired cell timestep
       // if the particle time is within the desired cell timestep of the global time, do not move the
       // particle but instead skip to the next one.
-      if (grid->variable_adaptive_time && niterate == 1) {
+      if (grid->use_cell_dt && niterate == 1) {
         bool move_particle = false;
         icell = particles[i].icell;
         if ((grid->time_global - particles[i].time) > cells[icell].dt_desired) {

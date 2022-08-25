@@ -56,7 +56,6 @@ FixDtKokkos::FixDtKokkos(SPARTA *sparta, int narg, char **arg) :
   grid_kk = (GridKokkos*) grid;
   dimension = domain->dimension;
   boltz = update->boltz;
-  dt_global = grid_kk->dt_global;
 
   k_ncells_with_a_particle = DAT::tdual_int_scalar("FixDtKokkos:ncells_with_a_particle");
   d_ncells_with_a_particle = k_ncells_with_a_particle.d_view;
@@ -182,10 +181,6 @@ void FixDtKokkos::end_of_step()
     copymode = 0;
   }
 
-  // allow dt growth and reduce later if necessary
-  grid_kk->dt_global *= 2;
-  dt_global = grid_kk->dt_global;
-
   // compute cell desired timestep
   d_cells = grid_kk->k_cells.d_view;
   d_cellcount = grid_kk->d_cellcount;
@@ -222,25 +217,19 @@ void FixDtKokkos::end_of_step()
   MPI_Allreduce(cell_sums,cell_sums_global,2,MPI_DOUBLE,MPI_SUM,world);
   double dtavg = cell_sums_global[0]/cell_sums_global[1];
 
-  // set optimal timestep based on user-specified weighting
-  dt_global_optimal = (1.-dt_global_weight)*dtmin + dt_global_weight*dtavg;
+  // set calculated timestep based on user-specified weighting
+  dt_global_calculated = (1.-dt_global_weight)*dtmin + dt_global_weight*dtavg;
 
-  // process optimal dt
   if (mode > FIXMODE::WARN)
-    grid_kk->dt_global = dt_global_optimal;
-  else if (mode == FIXMODE::WARN && grid_kk->dt_global > dt_global_optimal) {
+    grid_kk->dt_global = dt_global_calculated;
+  else if (mode == FIXMODE::WARN && grid_kk->dt_global > dt_global_calculated) {
     if (me == 0) {
       std::cout << std::endl;
-      std::cout << "       WARNING: global timestep=" << grid_kk->dt_global
-                << " is greater than the FixDt-calculated global timestep=" << dt_global_optimal
-                << std::endl;
-      std::cout << std::endl;
+      std::cout << "    WARNING: user-set global timestep(=" << grid_kk->dt_global
+                << ") is greater than the calculated global timestep(=" << dt_global_calculated
+                << ")\n\n";
     }
   }
-
-
-
-  dt_global = grid_kk->dt_global;
 }
 
 /* ---------------------------------------------------------------------- */

@@ -2629,7 +2629,7 @@ void Grid::debug()
 
 double Grid::get_particle_time(cellint icell, double random_uniform)
 {
-  if (variable_adaptive_time)
+  if (use_cell_dt)
     return time_global + (-1. + 2.*random_uniform)*cells[icell].dt_desired;
   else
     return time_global;

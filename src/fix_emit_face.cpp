@@ -553,7 +553,7 @@ void FixEmitFace::perform_task_onepass()
           evib = particle->evib(ispecies,temp_vib,random);
           id = MAXSMALLINT*random->uniform();
 
-          double const particle_time = get_particle_time(grid->variable_adaptive_time,
+          double const particle_time = get_particle_time(grid->use_cell_dt,
                                                          time_global,
                                                          random->uniform(),
                                                          tasks[i].cell_dt_desired);
@@ -617,7 +617,7 @@ void FixEmitFace::perform_task_onepass()
         evib = particle->evib(ispecies,temp_vib,random);
         id = MAXSMALLINT*random->uniform();
 
-        double const particle_time = get_particle_time(grid->variable_adaptive_time,
+        double const particle_time = get_particle_time(grid->use_cell_dt,
                                                        time_global,
                                                        random->uniform(),
                                                        tasks[i].cell_dt_desired);
@@ -758,7 +758,7 @@ void FixEmitFace::perform_task_twopass()
           evib = particle->evib(ispecies,temp_vib,random);
           id = MAXSMALLINT*random->uniform();
 
-          double const particle_time = get_particle_time(grid->variable_adaptive_time,
+          double const particle_time = get_particle_time(grid->use_cell_dt,
                                                          time_global,
                                                          random->uniform(),
                                                          tasks[i].cell_dt_desired);
@@ -816,7 +816,7 @@ void FixEmitFace::perform_task_twopass()
         evib = particle->evib(ispecies,temp_vib,random);
         id = MAXSMALLINT*random->uniform();
 
-        double const particle_time = get_particle_time(grid->variable_adaptive_time,
+        double const particle_time = get_particle_time(grid->use_cell_dt,
                                                        time_global,
                                                        random->uniform(),
                                                        tasks[i].cell_dt_desired);

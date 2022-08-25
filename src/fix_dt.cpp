@@ -262,6 +262,20 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
       if (strcmp(arg[iarg+6],"NULL") == 0) vstrz = NULL;
       else vstrz = arg[iarg+6];
       iarg += 7;
+    } else if (strcmp(arg[iarg],"none") == 0) {
+      mode = FIXMODE::NONE;
+      iarg += 1;
+    } else if (strcmp(arg[iarg],"warn") == 0) {
+      mode = FIXMODE::WARN;
+      iarg += 1;
+    } else if (strcmp(arg[iarg],"use_calculated_global_dt") == 0) {
+      mode = FIXMODE::USE_CALCULATED_GLOBAL_DT;
+      iarg += 1;
+    }
+    else if (strcmp(arg[iarg],"use_calculated_cell_dt") == 0) {
+      mode = FIXMODE::USE_CALCULATED_CELL_DT;
+      grid->use_cell_dt = true;
+      iarg += 1;
     }
   }
 
@@ -343,10 +357,7 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   nglocal = 0;
   lambda = temp = usq = vsq = wsq = NULL;
 
-
   reallocate();
-
-  grid->variable_adaptive_time = true;
 
   // set up initial timestep
   double x[3];
@@ -551,9 +562,6 @@ void FixDt::end_of_step()
   Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::OnePart *particles = particle->particles;
 
-  // allow dt growth and reduce below if necessary
-  grid->dt_global *= 2;
-
   double transit_fraction = 0.25;
   double collision_fraction = 0.1;
   double dt_sum = 0.;
@@ -622,19 +630,17 @@ void FixDt::end_of_step()
   MPI_Allreduce(cell_sums,cell_sums_global,2,MPI_DOUBLE,MPI_SUM,world);
   double dtavg = cell_sums_global[0]/cell_sums_global[1];
 
-  // set optimal timestep based on user-specified weighting
-  dt_global_optimal = (1.-dt_global_weight)*dtmin + dt_global_weight*dtavg;
+  // set calculated timestep based on user-specified weighting
+  dt_global_calculated = (1.-dt_global_weight)*dtmin + dt_global_weight*dtavg;
 
-  // process optimal dt
   if (mode > FIXMODE::WARN)
-    grid->dt_global = dt_global_optimal;
-  else if (mode == FIXMODE::WARN && grid->dt_global > dt_global_optimal) {
+    grid->dt_global = dt_global_calculated;
+  else if (mode == FIXMODE::WARN && grid->dt_global > dt_global_calculated) {
     if (me == 0) {
       std::cout << std::endl;
-      std::cout << "       WARNING: global timestep=" << grid->dt_global
-                << " is greater than the FixDt-calculated global timestep=" << dt_global_optimal
-                << std::endl;
-      std::cout << std::endl;
+      std::cout << "    WARNING: user-set global timestep(=" << grid->dt_global
+                << ") is greater than the calculated global timestep(=" << dt_global_calculated
+                << ")\n\n";
     }
   }
 }
@@ -667,7 +673,7 @@ void FixDt::reallocate()
 ------------------------------------------------------------------------- */
 double FixDt::compute_scalar()
 {
-  return dt_global_optimal;
+  return dt_global_calculated;
 }
 
 /* ----------------------------------------------------------------------

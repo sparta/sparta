@@ -475,7 +475,7 @@ template < int NEARCP > void Collide::collisions_one()
 
     // compute collisions in cell if the cell time falls behind the global time by
     // the desired cell timestep.
-    if (grid->variable_adaptive_time) {
+    if (grid->use_cell_dt) {
       bool do_cell_collisions = false;
       if ((grid->time_global - cells[icell].time) > cells[icell].dt_desired) {
         do_cell_collisions = true;
@@ -635,7 +635,7 @@ template < int NEARCP > void Collide::collisions_group()
 
     // compute collisions in cell if the cell time falls behind the global time by
     // the desired cell timestep.
-    if (grid->variable_adaptive_time) {
+    if (grid->use_cell_dt) {
       bool do_cell_collisions = false;
       if ((grid->time_global - cells[icell].time) > cells[icell].dt_desired) {
         do_cell_collisions = true;
@@ -926,7 +926,7 @@ void Collide::collisions_one_ambipolar()
 
     // compute collisions in cell if the cell time falls behind the global time by
     // the desired cell timestep.
-    if (grid->variable_adaptive_time) {
+    if (grid->use_cell_dt) {
       bool do_cell_collisions = false;
       if ((grid->time_global - cells[icell].time) > cells[icell].dt_desired) {
         do_cell_collisions = true;
@@ -1237,7 +1237,7 @@ void Collide::collisions_group_ambipolar()
 
     // compute collisions in cell if the cell time falls behind the global time by
     // the desired cell timestep.
-    if (grid->variable_adaptive_time) {
+    if (grid->use_cell_dt) {
       bool do_cell_collisions = false;
       if ((grid->time_global - cells[icell].time) > cells[icell].dt_desired) {
         do_cell_collisions = true;

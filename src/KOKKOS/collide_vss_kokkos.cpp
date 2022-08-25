@@ -612,8 +612,8 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
   // the desired cell timestep.
   double dtc = grid_kk_copy.obj.dt_global;
   const double time_global = grid_kk_copy.obj.time_global;
-  const bool variable_adaptive_time = grid_kk_copy.obj.variable_adaptive_time;
-  if (variable_adaptive_time) {
+  const bool use_cell_dt = grid_kk_copy.obj.use_cell_dt;
+  if (use_cell_dt) {
     const double time_cell = d_cells[icell].time;
     dtc = d_cells[icell].dt_desired;
     bool do_cell_collisions = false;
@@ -977,8 +977,8 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
   // the desired cell timestep.
   double dtc = grid_kk_copy.obj.dt_global;
   const double time_global = grid_kk_copy.obj.time_global;
-  const bool variable_adaptive_time = grid_kk_copy.obj.variable_adaptive_time;
-  if (variable_adaptive_time) {
+  const bool use_cell_dt = grid_kk_copy.obj.use_cell_dt;
+  if (use_cell_dt) {
     const double time_cell = d_cells[icell].time;
     dtc = d_cells[icell].dt_desired;
     bool do_cell_collisions = false;
@@ -1219,7 +1219,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
     //   remove from plist, flag J for deletion
 
     auto time_global = grid_kk_copy.obj.time_global;
-    auto variable_adaptive_time = grid_kk_copy.obj.variable_adaptive_time;
+    auto use_cell_dt = grid_kk_copy.obj.use_cell_dt;
     if (jpart) {
       if (jspecies != ambispecies && jpart->ispecies == ambispecies) {
         if (nelectron < d_elist.extent(1)) {
@@ -1239,7 +1239,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
       } else if (jspecies == ambispecies && jpart->ispecies != ambispecies) {
         int index = Kokkos::atomic_fetch_add(&d_nlocal(),1);
         double particle_time;
-        if (variable_adaptive_time)
+        if (use_cell_dt)
           particle_time = time_global + (-1. + 2.*rand_gen.drand())*dtc;
         else
           particle_time = time_global;
@@ -1458,7 +1458,7 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
     //   make copy of x,v, then repoint ip,jp to new particles data struct
 
     auto time_global = grid_kk_copy.obj.time_global;
-    auto variable_adaptive_time = grid_kk_copy.obj.variable_adaptive_time;
+    auto use_cell_dt = grid_kk_copy.obj.use_cell_dt;
     if (kspecies >= 0) {
       int id = MAXSMALLINT*rand_gen.drand();
 
@@ -1466,7 +1466,7 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
       memcpy(v,ip->v,3*sizeof(double));
       index_kpart = Kokkos::atomic_fetch_add(&d_nlocal(),1);
       double particle_time;
-      if (variable_adaptive_time)
+      if (use_cell_dt)
         particle_time = time_global + (-1. + 2.*rand_gen.drand())*dt;
       else
         particle_time = time_global;

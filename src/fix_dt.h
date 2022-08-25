@@ -27,7 +27,7 @@ FixStyle(dt,FixDt)
 
 namespace SPARTA_NS {
 
-enum class FIXMODE : int {NONE, WARN, GLOBAL_TIME_ADAPTIVITY, SPATIAL_ADAPTIVITY};
+enum class FIXMODE : int {NONE, WARN, USE_CALCULATED_GLOBAL_DT, USE_CALCULATED_CELL_DT};
 
 class FixDt : public Fix {
  public:
@@ -55,7 +55,7 @@ class FixDt : public Fix {
   double *lambda,*usq,*vsq,*wsq,*temp;
   double min_species_mass;
   double dt_global_weight;
-  double dt_global_optimal;
+  double dt_global_calculated=0.;
   FIXMODE mode = FIXMODE::NONE;
 
   double temperature_variable(double *);
