@@ -23,14 +23,10 @@
 #include "grid.h"
 #include "surf.h"
 #include "spatype.h"
+#include "accelerator_kokkos_defs.h"
 
 #define MAX_TYPES_STACKPARAMS 12
 #define NeighClusterSize 8
-
-#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL) || defined(KOKKOS_ENABLE_OPENMPTARGET)
-
-#define SPARTA_KOKKOS_GPU
-#endif
 
 namespace Kokkos {
   static auto NoInit = [](std::string const& label) {
