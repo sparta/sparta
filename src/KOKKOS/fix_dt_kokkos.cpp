@@ -75,6 +75,9 @@ FixDtKokkos::FixDtKokkos(SPARTA *sparta, int narg, char **arg) :
 FixDtKokkos::~FixDtKokkos()
 {
   if (copymode) return;
+
+  memoryKK->destroy_kokkos(k_vector_grid,vector_grid);
+  vector_grid = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -107,7 +110,6 @@ void FixDtKokkos::end_of_step()
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDt_LoadLambdaVecFromArray>(0,nglocal),*this);
-      DeviceType().fence();
       copymode = 0;
     }
   } else if (lambdawhich == FIX) {
@@ -120,7 +122,6 @@ void FixDtKokkos::end_of_step()
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDt_LoadLambdaVecFromArray>(0,nglocal),*this);
-      DeviceType().fence();
       copymode = 0;
     }
   }
@@ -135,7 +136,6 @@ void FixDtKokkos::end_of_step()
     d_array = computeKKBase->d_array_grid;
     copymode = 1;
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDt_LoadTempVecFromArray>(0,nglocal),*this);
-    DeviceType().fence();
     copymode = 0;
   }
 
@@ -149,7 +149,6 @@ void FixDtKokkos::end_of_step()
     d_array = computeKKBase->d_array_grid;
     copymode = 1;
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDt_LoadUsqVecFromArray>(0,nglocal),*this);
-    DeviceType().fence();
     copymode = 0;
   }
 
@@ -163,7 +162,6 @@ void FixDtKokkos::end_of_step()
     d_array = computeKKBase->d_array_grid;
     copymode = 1;
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDt_LoadVsqVecFromArray>(0,nglocal),*this);
-    DeviceType().fence();
     copymode = 0;
   }
 
@@ -177,7 +175,6 @@ void FixDtKokkos::end_of_step()
     d_array = computeKKBase->d_array_grid;
     copymode = 1;
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixDt_LoadWsqVecFromArray>(0,nglocal),*this);
-    DeviceType().fence();
     copymode = 0;
   }
 
@@ -196,9 +193,13 @@ void FixDtKokkos::end_of_step()
     error->all(FLERR,"Parallel_reduce not implemented for fix dt/kk");
     exit(3);
   }
-  DeviceType().fence();
   copymode = 0;
 
+  k_vector_grid.modify_device();
+  k_ncells_with_a_particle.modify_device();
+  k_dtsum.modify_device();
+  k_dtmin.modify_device();
+  k_vector_grid.sync_host();
   k_ncells_with_a_particle.sync_host();
   k_dtsum.sync_host();
   k_dtmin.sync_host();
@@ -316,6 +317,7 @@ void FixDtKokkos::operator()(TagFixDt_SetCellDtDesired<ATOMIC_REDUCTION>, const 
     dt_candidate = transit_fraction*dz/vrm_max;
     d_cells[i].dt_desired = MIN(dt_candidate,d_cells[i].dt_desired);
   }
+  d_vector(i) = d_cells[i].dt_desired;
 
   if (ATOMIC_REDUCTION == 1) {
     Kokkos::atomic_increment(&d_ncells_with_a_particle());
@@ -338,6 +340,10 @@ void FixDtKokkos::reallocate()
   if (grid->nlocal == nglocal) return;
 
   nglocal = grid->nlocal;
+
+  memoryKK->destroy_kokkos(k_vector_grid,vector_grid);
+  memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"FixDtKokkos:vector_grid");
+  d_vector = k_vector_grid.d_view;
 
   d_lambda_vector = DAT::t_float_1d ("d_lambda_vector", nglocal);
   d_temp_vector = DAT::t_float_1d ("d_temp_vector", nglocal);

@@ -230,7 +230,9 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Fix dt fix array is "
                "accessed out-of-range");
 
-  // optional args (prescribed temperature/velocity profiles for initial timestep calculation)
+  // optional args
+  //  - prescribed temperature/velocity profiles for initial timestep calculation
+  //  - mode specification for timestep utilization options
   tempflag = velflag = 0;
 
   int iarg = 10;
@@ -353,9 +355,14 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
     }
   }
 
+  // initialize data structures
   MPI_Comm_rank(world,&me);
   nglocal = 0;
   lambda = temp = usq = vsq = wsq = NULL;
+  vector_grid = NULL;
+  per_grid_flag = 1;
+  per_grid_freq = 1;
+  size_per_grid_cols = 0;
 
   reallocate();
 
@@ -401,6 +408,7 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
 #endif
     // for now, set cell timestep to be global value, which was read in
     cells[i].dt_desired = grid->dt_global;
+    vector_grid[i] = cells[i].dt_desired;
   }
 }
 
@@ -420,6 +428,7 @@ FixDt::~FixDt()
   memory->destroy(usq);
   memory->destroy(vsq);
   memory->destroy(wsq);
+  memory->destroy(vector_grid);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -615,6 +624,7 @@ void FixDt::end_of_step()
 
     dtmin = MIN(dtmin, cells[i].dt_desired);
     dt_sum += cells[i].dt_desired;
+    vector_grid[i] = cells[i].dt_desired;
   }
 
   // set global dtmin
@@ -647,7 +657,7 @@ void FixDt::end_of_step()
 
 /* ----------------------------------------------------------------------
    reallocate arrays if nglocal has changed
-   called by init() and load balancer
+   called by constructor and load balancer
 ------------------------------------------------------------------------- */
 
 void FixDt::reallocate()
@@ -661,11 +671,13 @@ void FixDt::reallocate()
   memory->destroy(usq);
   memory->destroy(vsq);
   memory->destroy(wsq);
+  memory->destroy(vector_grid);
   memory->create(lambda,nglocal,"dt:lambda");
   memory->create(temp,nglocal,"dt:temp");
   memory->create(usq,nglocal,"dt:usq");
   memory->create(vsq,nglocal,"dt:vsq");
   memory->create(wsq,nglocal,"dt:wsq");
+  memory->create(vector_grid,nglocal,"dt:vector_grid");
 }
 
 /* ----------------------------------------------------------------------

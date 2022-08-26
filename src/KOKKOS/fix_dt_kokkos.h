@@ -65,6 +65,8 @@ namespace SPARTA_NS {
     KOKKOS_INLINE_FUNCTION void
     operator()(TagFixDt_SetCellDtDesired<ATOMIC_REDUCTION>, const int&) const;
 
+    DAT::tdual_float_1d k_vector_grid;
+
   protected:
 
     GridKokkos* grid_kk;
