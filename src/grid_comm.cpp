@@ -490,7 +490,7 @@ int Grid::pack_one_adapt(char *inbuf, char *buf, int memflag)
       while (ip >= 0) {
         memcpy(ptr,&particles[ip],nbytes_particle);
         ptr += nbytes_particle;
-        if (ncustom) {
+        if (ncustom_particle) {
           particle->pack_custom(ip,ptr);
           ptr += nbytes_particle_custom;
         }
@@ -511,7 +511,7 @@ int Grid::pack_one_adapt(char *inbuf, char *buf, int memflag)
         while (ip >= 0) {
           memcpy(ptr,&particles[ip],nbytes_particle);
           ptr += nbytes_particle;
-          if (ncustom) {
+          if (ncustom_particle) {
             particle->pack_custom(ip,ptr);
             ptr += nbytes_particle_custom;
           }
@@ -552,7 +552,7 @@ int Grid::pack_particles(int icell, char *buf, int memflag)
     while (ip >= 0) {
       memcpy(ptr,&particles[ip],nbytes_particle);
       ptr += nbytes_particle;
-      if (ncustom) {
+      if (ncustom_particle) {
         particle->pack_custom(ip,ptr);
         ptr += nbytes_particle_custom;
       }
@@ -587,7 +587,7 @@ int Grid::unpack_particles(char *buf, int icell, int sortflag)
   Particle::OnePart *particles = particle->particles;
   int nplocal = particle->nlocal;
 
-  if (ncustom) {
+  if (ncustom_particle) {
     int n = nplocal;
     for (int i = 0; i < np; i++) {
       memcpy(&particles[n],ptr,nbytes_particle);
@@ -633,7 +633,7 @@ void Grid::unpack_particles_adapt(int np, char *buf)
   Particle::OnePart *particles = particle->particles;
   int nplocal = particle->nlocal;
 
-  if (ncustom) {
+  if (ncustom_particle) {
     char *ptr = buf;
     for (int i = 0; i < np; i++) {
       memcpy(&particles[nplocal],ptr,nbytes_particle);
