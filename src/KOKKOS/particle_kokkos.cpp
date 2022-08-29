@@ -293,10 +293,11 @@ void ParticleKokkos::sort_kokkos()
       Kokkos::parallel_scan(Kokkos::RangePolicy<DeviceType, TagParticleReorder_COPYPARTICLELIST1>(0,ngrid),*this);
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagParticleReorder_COPYPARTICLELIST2>(0,nlocal),*this);
       copymode = 0;
-      auto tmp = k_particles.d_view;
-      k_particles.d_view = d_sorted;
-      d_particles = k_particles.d_view;
-      d_sorted = tmp;
+      //auto tmp = k_particles.d_view;
+      //k_particles.d_view = d_sorted;
+      //d_particles = k_particles.d_view;
+      //d_sorted = tmp;
+      Kokkos::deep_copy(d_particles,d_sorted);
       
       this->modify(Device,PARTICLE_MASK);
     }
@@ -483,6 +484,7 @@ void ParticleKokkos::pre_weight()
     d_particles[i].weight = d_cinfo[icell].weight;
   });
   this->modify(Device,PARTICLE_MASK);
+  d_particles = t_particle_1d();
 }
 
 /* ----------------------------------------------------------------------
@@ -566,6 +568,7 @@ void ParticleKokkos::post_weight()
     });
     Kokkos::deep_copy(k_particles.d_view,d_newparticles);
     this->modify(Device,PARTICLE_MASK);
+    d_particles = t_particle_1d();
   }
 }
 
