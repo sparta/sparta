@@ -128,6 +128,25 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   cutoff = -1.0;
   cellweightflag = NOWEIGHT;
 
+  ncustom = 0;
+  ename = NULL;
+  etype = esize = ewhich = NULL;
+
+  ncustom_ivec = ncustom_iarray = 0;
+  icustom_ivec = icustom_iarray = NULL;
+  eivec = NULL;
+  eiarray = NULL;
+  eicol = NULL;
+
+  ncustom_dvec = ncustom_darray = 0;
+  icustom_dvec = icustom_darray = NULL;
+  edvec = NULL;
+  edarray = NULL;
+  edcol = NULL;
+
+  custom_ghost_flag = NULL;
+  custom_restart_flag = NULL;
+
   // allocate hash for cell IDs
 
   hash = new MyHash();
@@ -158,6 +177,22 @@ Grid::~Grid()
   delete csplits;
   delete csubs;
   delete hash;
+
+  memory->sfree(ename);
+  memory->destroy(etype);
+  memory->destroy(esize);
+  memory->destroy(ewhich);
+
+  memory->destroy(icustom_ivec);
+  memory->destroy(icustom_iarray);
+  memory->sfree(eivec);
+  memory->sfree(eiarray);
+  memory->destroy(eicol);
+  memory->destroy(icustom_dvec);
+  memory->destroy(icustom_darray);
+  memory->sfree(edvec);
+  memory->sfree(edarray);
+  memory->destroy(edcol);
 }
 
 /* ----------------------------------------------------------------------
@@ -196,16 +231,28 @@ void Grid::remove()
   // NOTE: what about cutoff and cellweightflag
 }
 
-/* ----------------------------------------------------------------------
-   store copy of Particle class settings
-------------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------- */
 
 void Grid::init()
 {
-  ncustom = particle->ncustom;
+  nbytes_custom = sizeof_custom();
+
+  ncustom_particle = particle->ncustom;
   nbytes_particle = sizeof(Particle::OnePart);
-  nbytes_custom = particle->sizeof_custom();
-  nbytes_total = nbytes_particle + nbytes_custom;
+  nbytes_particle_custom = particle->sizeof_custom();
+  nbytes_particle_total = nbytes_particle + nbytes_particle_custom;
+
+  // if first run after reading a restart file,
+  // delete any custom grid attributes that have not been re-defined
+  // use nactive since remove_custom() may alter ncustom
+
+  if (custom_restart_flag) {
+    int nactive = ncustom;
+    for (int i = 0; i < nactive; i++)
+      if (custom_restart_flag[i] == 0) remove_custom(i);
+    delete [] custom_restart_flag;
+    custom_restart_flag = NULL;
+  }
 }
 
 /* ----------------------------------------------------------------------
