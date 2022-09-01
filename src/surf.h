@@ -244,6 +244,9 @@ class Surf : protected Pointers {
 
   void write_restart(FILE *);
   void read_restart(FILE *);
+  void write_restart_custom(FILE *);
+  void read_restart_custom(FILE *);
+
   virtual void grow(int);
   virtual void grow_own(int);
   virtual void grow_temporary(int);

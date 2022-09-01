@@ -43,7 +43,9 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      SURFTALLY,PARTICLE_REORDER,MEMLIMIT_GRID,MEMLIMIT,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
-     SPECIES,MIXTURE,PARTICLE_CUSTOM,GRID,SURF,
+     SPECIES,MIXTURE,
+     GRID,SURF,
+     PARTICLE_CUSTOM,GRID_CUSTOM,SURF_CUSTOM,
      MULTIPROC,PROCSPERFILE,PERPROC};    // new fields added after PERPROC
 
 enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // update.cpp
@@ -597,6 +599,8 @@ void WriteRestart::grid_params()
 {
   write_int(GRID,0);
   grid->write_restart(fp);
+  write_int(GRID_CUSTOM,0);
+  grid->write_restart_custom(fp);
 }
 
 /* ----------------------------------------------------------------------
@@ -612,6 +616,8 @@ void WriteRestart::surf_params()
 
   write_int(SURF,1);
   surf->write_restart(fp);
+  write_int(SURF_CUSTOM,0);
+  surf->write_restart_custom(fp);
 }
 
 /* ----------------------------------------------------------------------
