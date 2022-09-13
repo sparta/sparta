@@ -12,30 +12,23 @@
 
 #   See the README file in the top-level SPARTA directory.
 
-coProcessor = None
+from paraview.catalyst import bridge
 
 def initialize():
-    global coProcessor
-    import paraview
-    paraview.options.batch = True
-    paraview.options.symmetric = True
-    from paraview.modules import vtkPVCatalyst as catalyst
-    coProcessor = catalyst.vtkCPProcessor()
+    bridge.initialize()
 
 def finalize():
-    global coProcessor
-    coProcessor.Finalize()
+    bridge.finalize()
 
-def addscript(name):
-    global coProcessor
-    from paraview.modules import vtkPVPythonCatalyst as pythoncatalyst
-    pipeline = pythoncatalyst.vtkCPPythonScriptPipeline()
-    pipeline.Initialize(name)
-    coProcessor.AddPipeline(pipeline)
+def addscript(filename):
+    bridge.add_pipeline(filename)
 
 def coprocess(time, timeStep, grid, inputName):
-    global coProcessor
+    from paraview import vtk
     from paraview.modules import vtkPVCatalyst as catalyst
+    from paraview.vtk.util import numpy_support
+
+    coProcessor = bridge.coprocessor
     dataDescription = catalyst.vtkCPDataDescription()
     dataDescription.SetTimeData(time, timeStep)
     dataDescription.AddInput(inputName)

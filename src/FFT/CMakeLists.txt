@@ -17,6 +17,10 @@ if(PKG_FFT)
   target_link_libraries(${TARGET_SPARTA_PKG_FFT} LINK_PRIVATE
                         ${TARGET_SPARTA_BUILD_MPI})
 
+  # Get Kokkos header files
+  target_link_libraries(${TARGET_SPARTA_PKG_FFT} LINK_PRIVATE
+                        ${TARGET_SPARTA_BUILD_KOKKOS})
+
   # Get FFT header files
   if(FFT)
     target_link_libraries(${TARGET_SPARTA_PKG_FFT} LINK_PRIVATE

@@ -17,8 +17,8 @@ set(SPARTA_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 # ######### END   SETUP COMMANDS ##########
 
 # ######### BEGIN PROCESSING PACKAGES - RECURSE COMMANDS ##########
-add_subdirectory(${SPARTA_SRC_DIR}/FFT)
 add_subdirectory(${SPARTA_SRC_DIR}/KOKKOS)
+add_subdirectory(${SPARTA_SRC_DIR}/FFT)
 add_subdirectory(${SPARTA_SRC_DIR}/STUBS)
 # message(VERBOSE "${CMAKE_CURRENT_SOURCE_DIR}:
 # CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")

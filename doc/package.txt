@@ -17,12 +17,12 @@ args = arguments specific to the style :l
   {kokkos} args = keyword value ...
     zero or more keyword/value pairs may be appended
     keywords = {comm} or {reduction}
-      {comm} value = {threaded} or {classic}
-        threaded = perform pack/unpack using KOKKOS (e.g. on GPU or using OpenMP) (default)
-        classic = perform communication pack/unpack in non-KOKKOS mode
+      {comm} value = {threaded} or {serial}
+        threaded = perform pack/unpack using KOKKOS (e.g. on GPU or using OpenMP) (default for GPUs)
+        serial = perform communication pack/unpack in non-KOKKOS mode (default for CPUs)
       {reduction} = {parallel/reduce} or {atomic}
-        parallel/reduce = use parallel reduction for statistics (default)
-        atomic = use atomic reduction for statistics
+        parallel/reduce = use parallel reduction for statistics (default for CPUs)
+        atomic = use atomic reduction for statistics (default for GPUs)
       {collide/extra} = {factor}
         factor = increase memory used for collisions by this factor (default)
       {collide/retry} = {yes} or {no}
@@ -35,7 +35,7 @@ args = arguments specific to the style :l
 
 [Examples:]
 
-package kokkos comm classic
+package kokkos comm serial
 package kokkos comm threaded reduction atomic
 package kokkos gpu/aware no :pre
 
@@ -110,15 +110,13 @@ be ignored. If reactions are not defined, both these options will be ignored.
 
 The {comm} keyword determines whether the host or device performs the
 packing and unpacking of data when communicating per-atom data between
-processors. The value options are {threaded} or {classic}.
+processors. The value options are {threaded} or {serial}.
 
 The optimal choice for this keyword depends on the hardware used.
-When running on CPUs or Xeon Phi, the {classic} option is typically
+When running on CPUs or Xeon Phi, the {serial} option is typically
 fastest. When using GPUs, the {threaded} value will typically be
 optimal. In this case data can stay on the GPU for many timesteps
-without being moved between the host and GPU.  This requires that your
-MPI is able to access GPU memory directly.  Currently that is true for
-OpenMPI 1.8 (or later versions), Mvapich2 1.9 (or later), and CrayMPI.
+without being fully moved between the host and GPU.
 
 The {gpu/aware} keyword chooses whether GPU-aware MPI will be used. When 
 this keyword is set to {on}, buffers in GPU memory are passed directly 
@@ -145,9 +143,10 @@ setting"_Section_start.html#start_6
 
 [Default:]
 
-For the KOKKOS package, the option defaults are comm = threaded, 
-reduction = parallel/reduce, collide/extra = 1.1, and collide/retry = 
-no, gpu/aware yes. These settings are made automatically by the 
-required "-k on" "command-line switch"_Section_start.html#start_6. You 
-can change them by using the package kokkos command in your input script 
-or via the "-pk kokkos" "command-line switch"_Section_start.html#start_6. 
+For the KOKKOS package, the option defaults are collide/extra = 1.1,
+collide/retry = no, and gpu/aware yes. For CPUs: comm = serial,
+reduction = parallel/reduce, and for GPUs: comm = threaded, reduction =
+atomic. These settings are made automatically by the required "-k on"
+"command-line switch"_Section_start.html#start_6. You can change them
+by using the package kokkos command in your input script or via the
+"-pk kokkos" "command-line switch"_Section_start.html#start_6. 

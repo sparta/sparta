@@ -43,8 +43,6 @@
 #include "surf.h"
 #include "modify.h"
 
-#define ALL_MASK       0xffffffff
-
 namespace SPARTA_NS {
 
 class KokkosSPARTA {
@@ -56,8 +54,6 @@ class KokkosSPARTA {
   KokkosSPARTA(class SPARTA *, int, char **) {kokkos_exists = 0;}
   ~KokkosSPARTA() {}
   void accelerator(int, char **) {}
-  //int neigh_list_kokkos(int) {return 0;}
-  //int neigh_count(int) {return 0;}
 };
 
 class Kokkos {
@@ -105,13 +101,6 @@ class ModifyKokkos : public Modify {
  public:
   ModifyKokkos(class SPARTA *sparta) : Modify(sparta) {}
   ~ModifyKokkos() {}
-};
-
-class DAT {
- public:
-  typedef double* t_float_1d;
-  typedef double** t_float_2d_lr;
-  typedef double* t_float_1d_strided;
 };
 
 }

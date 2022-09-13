@@ -363,6 +363,18 @@ void Surf::init()
 
   for (int i = 0; i < nsc; i++) sc[i]->init();
   for (int i = 0; i < nsr; i++) sr[i]->init();
+
+  // if first run after reading a restart file,
+  // delete any custom surf attributes that have not been re-defined
+  // use nactive since remove_custom() may alter ncustom
+
+  if (custom_restart_flag) {
+    int nactive = ncustom;
+    for (int i = 0; i < nactive; i++)
+      if (custom_restart_flag[i] == 0) remove_custom(i);
+    delete [] custom_restart_flag;
+    custom_restart_flag = NULL;
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -3869,7 +3881,7 @@ void Surf::remove_custom(int index)
 
 /* ----------------------------------------------------------------------
    proc 0 writes surf geometry to restart file
-   NOTE: needs to be generalized for different surf styles
+   NOTE: needs to be generalized for distributed or implicit surfs
 ------------------------------------------------------------------------- */
 
 void Surf::write_restart(FILE *fp)
@@ -3916,7 +3928,7 @@ void Surf::write_restart(FILE *fp)
 /* ----------------------------------------------------------------------
    proc 0 reads surf geometry from restart file
    bcast to other procs
-   NOTE: needs to be generalized for different surf styles
+   NOTE: needs to be generalized for distributed or implicit surfs
 ------------------------------------------------------------------------- */
 
 void Surf::read_restart(FILE *fp)
@@ -3994,6 +4006,109 @@ void Surf::read_restart(FILE *fp)
     MPI_Bcast(tris,nsurf*sizeof(Tri),MPI_CHAR,0,world);
   }
 }
+
+/* ----------------------------------------------------------------------
+   proc 0 writes custom attribute definition info to restart file
+------------------------------------------------------------------------- */
+
+void Surf::write_restart_custom(FILE *fp)
+{
+  int m,index;
+
+  // nactive = # of ncustom that have active vectors/arrays
+
+  int nactive = 0;
+  for (int i = 0; i < ncustom; i++)
+    if (ename[i]) nactive++;
+
+  fwrite(&nactive,sizeof(int),1,fp);
+
+  // must write custom info in same order
+  //   the per-surf custom values will be written into file
+  // not necessarily the same as ncustom list, due to deletions & additions
+
+  for (m = 0; m < ncustom_ivec; m++) {
+    index = icustom_ivec[m];
+    int n = strlen(ename[index]) + 1;
+    fwrite(&n,sizeof(int),1,fp);
+    fwrite(ename[index],sizeof(char),n,fp);
+    fwrite(&etype[index],sizeof(int),1,fp);
+    fwrite(&esize[index],sizeof(int),1,fp);
+  }
+  for (m = 0; m < ncustom_iarray; m++) {
+    index = icustom_iarray[m];
+    int n = strlen(ename[index]) + 1;
+    fwrite(&n,sizeof(int),1,fp);
+    fwrite(ename[index],sizeof(char),n,fp);
+    fwrite(&etype[index],sizeof(int),1,fp);
+    fwrite(&esize[index],sizeof(int),1,fp);
+  }
+  for (m = 0; m < ncustom_dvec; m++) {
+    index = icustom_dvec[m];
+    int n = strlen(ename[index]) + 1;
+    fwrite(&n,sizeof(int),1,fp);
+    fwrite(ename[index],sizeof(char),n,fp);
+    fwrite(&etype[index],sizeof(int),1,fp);
+    fwrite(&esize[index],sizeof(int),1,fp);
+  }
+  for (m = 0; m < ncustom_darray; m++) {
+    index = icustom_darray[m];
+    int n = strlen(ename[index]) + 1;
+    fwrite(&n,sizeof(int),1,fp);
+    fwrite(ename[index],sizeof(char),n,fp);
+    fwrite(&etype[index],sizeof(int),1,fp);
+    fwrite(&esize[index],sizeof(int),1,fp);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 reads custom attribute definition info from restart file
+   bcast to other procs and all procs instantiate series of custom properties
+------------------------------------------------------------------------- */
+
+void Surf::read_restart_custom(FILE *fp)
+{
+  // ncustom is 0 at time restart file is read
+  // will be incremented as add_custom() for each nactive
+
+  int nactive;
+  if (me == 0) fread(&nactive,sizeof(int),1,fp);
+  MPI_Bcast(&nactive,1,MPI_INT,0,world);
+  if (nactive == 0) return;
+
+  // order that custom vectors/arrays are in restart file
+  //   matches order the per-particle custom values will be read from file
+
+  int n,type,size,ghostflag;
+  char *name;
+
+  for (int i = 0; i < nactive; i++) {
+    if (me == 0) fread(&n,sizeof(int),1,fp);
+    MPI_Bcast(&n,1,MPI_INT,0,world);
+    name = new char[n];
+    if (me == 0) fread(name,sizeof(char),n,fp);
+    MPI_Bcast(name,n,MPI_CHAR,0,world);
+    if (me == 0) fread(&type,sizeof(int),1,fp);
+    MPI_Bcast(&type,n,MPI_CHAR,0,world);
+    if (me == 0) fread(&size,sizeof(int),1,fp);
+    MPI_Bcast(&size,n,MPI_CHAR,0,world);
+
+    // create the custom attribute
+
+    add_custom(name,type,size);
+    delete [] name;
+  }
+
+  // set flag for each newly created custom attribute to 0
+  // will be reset to 1 if restart script redefines attribute with same name
+
+  custom_restart_flag = new int[ncustom];
+  for (int i = 0; i < ncustom; i++) custom_restart_flag[i] = 0;
+}
+
+// ----------------------------------------------------------------------
+// methods for growing line/tri data structs
+// ----------------------------------------------------------------------
 
 /* ---------------------------------------------------------------------- */
 

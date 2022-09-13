@@ -1933,7 +1933,7 @@ void Particle::write_restart_custom(FILE *fp)
 
 /* ----------------------------------------------------------------------
    proc 0 reads custom attribute definition info from restart file
-   bcast to other procs and all procs instantiate series of Mixtures
+   bcast to other procs and all procs instantiate series of custom properties
 ------------------------------------------------------------------------- */
 
 void Particle::read_restart_custom(FILE *fp)

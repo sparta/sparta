@@ -33,6 +33,7 @@
 #include "limits.h"
 #include "stdint.h"
 #include "inttypes.h"
+#include "accelerator_kokkos_defs.h"
 
 // grrr - IBM Power6 does not provide this def in their system header files
 
@@ -45,6 +46,14 @@ namespace SPARTA_NS {
 // enum used for KOKKOS host/device flags
 
 enum ExecutionSpace{Host,Device};
+
+// struct alignment for GPUs
+
+#if defined(SPARTA_KOKKOS_GPU)
+#define SPARTA_ALIGN(n) alignas(n)
+#else
+#define SPARTA_ALIGN(n)
+#endif
 
 // default settings: 32-bit smallint, 64-bit bigint, 32-bit cellint
 

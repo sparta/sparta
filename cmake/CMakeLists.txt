@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10.0)
+cmake_minimum_required(VERSION 3.12.0)
 
 project(SPARTA)
 
@@ -17,6 +17,7 @@ set(SPARTA_TPL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../lib)
 set(SPARTA_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 set(SPARTA_EXAMPLES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../examples)
 set(SPARTA_TOOLS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../tools)
+set(PARAVIEW_TOOLS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../tools/paraview)
 set(SPARTA_DSMC_TESTING_EXAMPLES_DIR ${SPARTA_DSMC_TESTING_PATH}/examples)
 set(SPARTA_CMAKE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Modules)
@@ -123,7 +124,12 @@ include(${SPARTA_CMAKE_COMMON_DIR}/process/sparta_build_options.cmake)
 include(${SPARTA_CMAKE_COMMON_DIR}/print/sparta_options.cmake)
 # ######### END   PRINT SPARTA OPTIONS ##########
 
+# ######### BEGIN TEST PARAVIEW SPARTA OPTIONS ##########
+include(${SPARTA_CMAKE_COMMON_DIR}/test/sparta_test_paraview.cmake)
+# ######### END   TEST PARAVIEW SPARTA OPTIONS ##########
+
 add_subdirectory(${SPARTA_SRC_DIR} ${CMAKE_CURRENT_BINARY_DIR}/src)
+add_subdirectory(${PARAVIEW_TOOLS_DIR} ${CMAKE_CURRENT_BINARY_DIR}/paraview)
 add_subdirectory(${SPARTA_EXAMPLES_DIR} ${CMAKE_CURRENT_BINARY_DIR}/examples)
 if(SPARTA_DSMC_TESTING_PATH)
   add_subdirectory(${SPARTA_DSMC_TESTING_EXAMPLES_DIR}

@@ -120,9 +120,10 @@ different custom per-surf vector name.
 
 <P><B>Restart, output info:</B>
 </P>
-<P>No information about this fix is written to <A HREF = "restart.html">binary restart
-files</A>.  We may add support for writing the custom
-per-surf vector to the restart file at a later time.
+<P>This fix writes its per-surf temperatures values to the restart file.
+If the restart input script defines this fix after a restart file has
+been read, the temperature values should be set to the restart file
+values.
 </P>
 <P><B>Restrictions:</B>
 </P>
