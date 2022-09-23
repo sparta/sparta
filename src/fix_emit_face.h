@@ -52,7 +52,6 @@ class FixEmitFace : public FixEmit {
                                 //   only defined for PERSPECIES
     double *vscale;             // vscale for each species,
                                 //   only defined for subsonic_style PONLY
-    double cell_dt_desired;     // cell desired timestep
 
     int icell;                  // associated cell index, unsplit or split cell
     int iface;                  // which face of unsplit or split cell

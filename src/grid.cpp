@@ -286,7 +286,6 @@ void Grid::add_child_cell(cellint id, int level, double *lo, double *hi)
   c->csurfs = NULL;
   c->nsplit = 1;
   c->isplit = -1;
-  c->time = time_global;
 
   ChildInfo *ci = &cinfo[nlocal];
   ci->count = 0;
@@ -2496,10 +2495,6 @@ int Grid::size_restart()
   n = IROUNDUP(n);
   n += nlocal * sizeof(int);
   n = IROUNDUP(n);
-  n += nlocal * sizeof(double);
-  n = IROUNDUP(n);
-  n += nlocal * sizeof(double);
-  n = IROUNDUP(n);
   return n;
 }
 
@@ -2517,10 +2512,6 @@ int Grid::size_restart(int nlocal_restart)
   n += nlocal_restart * sizeof(int);
   n = IROUNDUP(n);
   n += nlocal_restart * sizeof(int);
-  n = IROUNDUP(n);
-  n += nlocal_restart * sizeof(double);
-  n = IROUNDUP(n);
-  n += nlocal_restart * sizeof(double);
   n = IROUNDUP(n);
   return n;
 }
@@ -2560,18 +2551,6 @@ int Grid::pack_restart(char *buf)
   n += nlocal * sizeof(int);
   n = IROUNDUP(n);
 
-  double *dbuf = (double *) &buf[n];
-  for (int i = 0; i < nlocal; i++)
-    dbuf[i] = cells[i].dt_desired;
-  n += nlocal * sizeof(double);
-  n = IROUNDUP(n);
-
-  dbuf = (double *) &buf[n];
-  for (int i = 0; i < nlocal; i++)
-    dbuf[i] = cells[i].time;
-  n += nlocal * sizeof(double);
-  n = IROUNDUP(n);
-
   return n;
 }
 
@@ -2595,8 +2574,6 @@ int Grid::unpack_restart(char *buf)
   memory->create(id_restart,nlocal_restart,"grid:id_restart");
   memory->create(level_restart,nlocal_restart,"grid:nlevel_restart");
   memory->create(nsplit_restart,nlocal_restart,"grid:nsplit_restart");
-  memory->create(dt_desired_restart,nlocal_restart,"grid:dt_restart");
-  memory->create(time_restart,nlocal_restart,"grid:time_restart");
 
   cellint *cbuf = (cellint *) &buf[n];
   for (int i = 0; i < nlocal_restart; i++)
@@ -2614,18 +2591,6 @@ int Grid::unpack_restart(char *buf)
   for (int i = 0; i < nlocal_restart; i++)
     nsplit_restart[i] = ibuf[i];
   n += nlocal_restart * sizeof(int);
-  n = IROUNDUP(n);
-
-  double *dbuf = (double *) &buf[n];
-  for (int i = 0; i < nlocal_restart; i++)
-    dt_desired_restart[i] = dbuf[i];
-  n += nlocal_restart * sizeof(double);
-  n = IROUNDUP(n);
-
-  dbuf = (double *) &buf[n];
-  for (int i = 0; i < nlocal_restart; i++)
-    time_restart[i] = dbuf[i];
-  n += nlocal_restart * sizeof(double);
   n = IROUNDUP(n);
 
   return n;
@@ -2670,14 +2635,4 @@ void Grid::debug()
            cinfo[i].corner[6],cinfo[i].corner[7]);
     printf("  volume %g\n",cinfo[i].volume);
   }
-}
-
-/* ---------------------------------------------------------------------- */
-
-double Grid::get_particle_time(cellint icell, double random_uniform)
-{
-  if (use_cell_dt)
-    return time_global + (-1. + 2.*random_uniform)*cells[icell].dt_desired;
-  else
-    return time_global;
 }

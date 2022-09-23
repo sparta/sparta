@@ -110,6 +110,8 @@ class Collide : protected Pointers {
 
   int index_vibmode;   // index to custom vibmode vector
 
+  int index_cell_time; // index to custom cell time array
+
   // ambipolar approximation data structs
 
   int ambiflag;       // 1 if ambipolar option is enabled

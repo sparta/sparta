@@ -287,10 +287,8 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
       memcpy(x,ip->x,3*sizeof(double));
       memcpy(v,ip->v,3*sizeof(double));
 
-      double const particle_time = grid->get_particle_time(ip->icell,random->uniform());
-
       int reallocflag =
-        particle->add_particle(id,kspecies,ip->icell,x,v,0.0,0.0,particle_time);
+        particle->add_particle(id,kspecies,ip->icell,x,v,0.0,0.0);
       if (reallocflag) {
         ip = particle->particles + (ip - particles);
         jp = particle->particles + (jp - particles);

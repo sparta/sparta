@@ -336,8 +336,6 @@ void FixEmitFace::create_task(int icell)
     if (cells[icell].nsplit > 1) tasks[ntask].pcell = split(icell,iface);
     else tasks[ntask].pcell = icell;
 
-    tasks[ntask].cell_dt_desired = cells[icell].dt_desired;
-
     // set face-dependent params of task
 
     tasks[ntask].lo[0] = cells[icell].lo[0];
@@ -553,17 +551,12 @@ void FixEmitFace::perform_task_onepass()
           evib = particle->evib(ispecies,temp_vib,random);
           id = MAXSMALLINT*random->uniform();
 
-          double const particle_time = get_particle_time(grid->use_cell_dt,
-                                                         time_global,
-                                                         random->uniform(),
-                                                         tasks[i].cell_dt_desired);
-          particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
+          particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
           nactual++;
 
           p = &particle->particles[particle->nlocal-1];
           p->flag = PINSERT;
           p->dtremain = dt * random->uniform();
-          p->time -= p->dtremain;
 
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
@@ -617,17 +610,12 @@ void FixEmitFace::perform_task_onepass()
         evib = particle->evib(ispecies,temp_vib,random);
         id = MAXSMALLINT*random->uniform();
 
-        double const particle_time = get_particle_time(grid->use_cell_dt,
-                                                       time_global,
-                                                       random->uniform(),
-                                                       tasks[i].cell_dt_desired);
-        particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
+        particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
         nactual++;
 
         p = &particle->particles[particle->nlocal-1];
         p->flag = PINSERT;
         p->dtremain = dt * random->uniform();
-        p->time -= p->dtremain;
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,
@@ -758,17 +746,12 @@ void FixEmitFace::perform_task_twopass()
           evib = particle->evib(ispecies,temp_vib,random);
           id = MAXSMALLINT*random->uniform();
 
-          double const particle_time = get_particle_time(grid->use_cell_dt,
-                                                         time_global,
-                                                         random->uniform(),
-                                                         tasks[i].cell_dt_desired);
-          particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
+          particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
           nactual++;
 
           p = &particle->particles[particle->nlocal-1];
           p->flag = PINSERT;
           p->dtremain = dt * random->uniform();
-          p->time -= p->dtremain;
 
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
@@ -816,17 +799,12 @@ void FixEmitFace::perform_task_twopass()
         evib = particle->evib(ispecies,temp_vib,random);
         id = MAXSMALLINT*random->uniform();
 
-        double const particle_time = get_particle_time(grid->use_cell_dt,
-                                                       time_global,
-                                                       random->uniform(),
-                                                       tasks[i].cell_dt_desired);
-        particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
+        particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
         nactual++;
 
         p = &particle->particles[particle->nlocal-1];
         p->flag = PINSERT;
         p->dtremain = dt * random->uniform();
-        p->time -= p->dtremain;
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,

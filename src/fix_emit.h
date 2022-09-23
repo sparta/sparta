@@ -41,6 +41,8 @@ class FixEmit : public Fix {
   int active_current;  // set to 0 if grid cell data struct changes
                        // triggers rebuild of active cell list in child classes
 
+  int index_particle_time; // index to custom particle_time vector
+
   virtual void create_task(int) = 0;
   virtual void perform_task() = 0;
 
@@ -49,14 +51,6 @@ class FixEmit : public Fix {
   int subsonic_temperature_check(int, double);
   void options(int, char **);
   virtual int option(int, char **);
-
-  virtual double get_particle_time(bool use_cell_dt, double time_global, double random_uniform, double dt_desired) {
-    if (use_cell_dt)
-      return time_global + (-1. + 2.*random_uniform)*dt_desired;
-    else
-      return time_global;
-  }
-
 };
 
 }

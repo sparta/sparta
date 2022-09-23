@@ -285,7 +285,6 @@ void FixEmitSurf::create_task(int icell)
       subcell = sinfo[isplit].csplits[i];
       tasks[ntask].pcell = sinfo[isplit].csubs[subcell];
     }
-    tasks[ntask].cell_dt_desired = cells[icell].dt_desired;
 
     // set geometry-dependent params of task
     // indot = vstream magnitude for normalflag = 1
@@ -557,17 +556,12 @@ void FixEmitSurf::perform_task()
           evib = particle->evib(ispecies,temp_vib,random);
           id = MAXSMALLINT*random->uniform();
 
-          double const particle_time = get_particle_time(grid->use_cell_dt,
-                                                         time_global,
-                                                         random->uniform(),
-                                                         tasks[i].cell_dt_desired);
-          particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
+          particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
           nactual++;
 
           p = &particle->particles[particle->nlocal-1];
           p->flag = PSURF + 1 + isurf;
           p->dtremain = dt * random->uniform();
-          p->time -= p->dtremain;
 
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
@@ -655,17 +649,12 @@ void FixEmitSurf::perform_task()
         evib = particle->evib(ispecies,temp_vib,random);
         id = MAXSMALLINT*random->uniform();
 
-        double const particle_time = get_particle_time(grid->use_cell_dt,
-                                                       time_global,
-                                                       random->uniform(),
-                                                       tasks[i].cell_dt_desired);
-        particle->add_particle(id,ispecies,pcell,x,v,erot,evib,particle_time);
+        particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
         nactual++;
 
         p = &particle->particles[particle->nlocal-1];
         p->flag = PSURF + 1 + isurf;
         p->dtremain = dt * random->uniform();
-        p->time -= p->dtremain;
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,

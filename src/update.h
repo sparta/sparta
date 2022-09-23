@@ -118,6 +118,9 @@ class Update : protected Pointers {
   class SurfCollide **sc;
   class SurfReact **sr;
 
+  int index_particle_time;   // index to custom particle_time vector
+  int index_cell_time;       // index to custom cell_time array
+
   int bounce_tally;               // 1 if any bounces are ever tallied
   int nslist_compute;             // # of computes that tally surf bounces
   int nblist_compute;             // # of computes that tally boundary bounces

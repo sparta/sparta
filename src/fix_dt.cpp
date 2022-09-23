@@ -25,11 +25,15 @@
 #include "domain.h"
 #include "particle.h"
 #include "mixture.h"
+#include "comm.h"
+#include "random_mars.h"
+#include "random_knuth.h"
 #include <iostream>
 
 using namespace SPARTA_NS;
 
 enum{NONE,COMPUTE,FIX};
+enum{INT,DOUBLE};
 
 #define INVOKED_PER_GRID 16
 #define BIG 1.0e20
@@ -39,6 +43,14 @@ enum{NONE,COMPUTE,FIX};
 FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
+
+  // RNG
+  int me = comm->me;
+  random = new RanKnuth(update->ranmaster->uniform());
+  double seed = update->ranmaster->uniform();
+  random->reset(seed,me,100);
+
+  // arguments
   if (narg < 10) error->all(FLERR,"Illegal fix dt command");
   scalar_flag = 1;
   global_freq = 1;
@@ -366,6 +378,13 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
 
   reallocate();
 
+  // create per-particle vector for particle time
+  particle_time_index = particle->add_custom((char *) "particle_time", DOUBLE, 1);
+
+  // create per-cell array for cell time/desired timestep
+  int ghostflag = 1;
+  cell_time_index = grid->add_custom((char *) "cell_time", DOUBLE, 2, ghostflag);
+
   // set up initial timestep
   double x[3];
   Grid::ChildCell *cells = grid->cells;
@@ -380,6 +399,9 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   min_species_mass = BIG;
   for (int s = 0; s < particle->nspecies; ++s)
     min_species_mass = MIN(species[s].mass,min_species_mass);
+
+  // custom cell time array
+  double **cell_time = grid->edarray[grid->ewhich[cell_time_index]];
 
   for (int i = 0; i < nglocal; ++i) {
 
@@ -406,9 +428,13 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
     }
     double vrm_max = sqrt(2.0*update->boltz * temperature / min_species_mass);
 #endif
+
     // for now, set cell timestep to be global value, which was read in
-    cells[i].dt_desired = grid->dt_global;
-    vector_grid[i] = cells[i].dt_desired;
+
+    cell_time[i][0] = grid->time_global;
+    double cell_dt_desired = grid->dt_global;
+    cell_time[i][1] = cell_dt_desired;
+    vector_grid[i] = cell_dt_desired;
   }
 }
 
@@ -418,6 +444,7 @@ FixDt::~FixDt()
 {
   if (copymode) return;
 
+  delete random;
   delete [] id_lambda;
   delete [] id_temp;
   delete [] id_usq;
@@ -429,6 +456,8 @@ FixDt::~FixDt()
   memory->destroy(vsq);
   memory->destroy(wsq);
   memory->destroy(vector_grid);
+  particle->remove_custom(particle_time_index);
+  grid->remove_custom(cell_time_index);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -576,7 +605,11 @@ void FixDt::end_of_step()
   double dt_sum = 0.;
   double dtmin = BIG;
 
+  // custom cell time array
+  double **cell_time = grid->edarray[grid->ewhich[cell_time_index]];
+
   bigint ncells_with_a_particle = 0.;
+  double cell_dt_desired;
   for (int i = 0; i < nglocal; ++i) {
 
     int np = cinfo[i].count;
@@ -587,7 +620,7 @@ void FixDt::end_of_step()
     // cell dt based on mean collision time
     double mean_collision_time = lambda[i]/sqrt(usq[i] + vsq[i] + wsq[i]);
     if (mean_collision_time > 0.) {
-      cells[i].dt_desired = collision_fraction*mean_collision_time;
+      cell_dt_desired = collision_fraction*mean_collision_time;
     }
 
     // cell size
@@ -597,34 +630,35 @@ void FixDt::end_of_step()
 
     // cell dt based on transit time using average velocities
     double dt_candidate = transit_fraction*dx/sqrt(usq[i]);
-    cells[i].dt_desired = MIN(dt_candidate,cells[i].dt_desired);
+    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
 
     dt_candidate = transit_fraction*dy/sqrt(vsq[i]);
-    cells[i].dt_desired = MIN(dt_candidate,cells[i].dt_desired);
+    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
 
     if (domain->dimension == 3) {
       dz = cells[i].hi[2] - cells[i].lo[2];
       dt_candidate = transit_fraction*dz/sqrt(wsq[i]);
-      cells[i].dt_desired = MIN(dt_candidate,cells[i].dt_desired);
+      cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
     }
 
     // cell dt based on transit time using maximum most probable speed
     double vrm_max = sqrt(2.0*update->boltz * temp[i] / min_species_mass);
 
     dt_candidate = transit_fraction*dx/vrm_max;
-    cells[i].dt_desired = MIN(dt_candidate,cells[i].dt_desired);
+    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
 
     dt_candidate = transit_fraction*dy/vrm_max;
-    cells[i].dt_desired = MIN(dt_candidate,cells[i].dt_desired);
+    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
 
     if (domain->dimension == 3) {
       dt_candidate = transit_fraction*dz/vrm_max;
-      cells[i].dt_desired = MIN(dt_candidate,cells[i].dt_desired);
+      cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
     }
 
-    dtmin = MIN(dtmin, cells[i].dt_desired);
-    dt_sum += cells[i].dt_desired;
-    vector_grid[i] = cells[i].dt_desired;
+    dtmin = MIN(dtmin, cell_dt_desired);
+    dt_sum += cell_dt_desired;
+    cell_time[i][1] = cell_dt_desired;
+    vector_grid[i] = cell_dt_desired;
   }
 
   // set global dtmin
@@ -654,6 +688,37 @@ void FixDt::end_of_step()
     }
   }
 }
+
+/* ----------------------------------------------------------------------
+   called when a particle with index is created
+   creation used cell desired timestep to set particle time
+------------------------------------------------------------------------- */
+
+void FixDt::update_custom(int index, double, double, double, double *)
+{
+  if (grid->use_cell_dt) {
+    int *ptime = particle->eivec[particle->ewhich[particle_time_index]];
+    double **cell_time = grid->edarray[grid->ewhich[cell_time_index]];
+
+    Particle::OnePart *particles = particle->particles;
+    int icell = particles[index].icell;
+    double cell_dt_desired = cell_time[icell][1];
+
+    //        Alternative to using same random number generator for all particle creation
+    //           is to pass in a generator as part of the update_custom argument list.
+    double particle_time = get_particle_time(grid->time_global,
+                                             random->uniform(),
+                                             cell_dt_desired);
+    bool emitting = false;
+    if (emitting)
+      particle_time -= particles[index].dtremain;
+
+    ptime[index] = particle_time;
+  }
+  else
+    return;
+}
+
 
 /* ----------------------------------------------------------------------
    reallocate arrays if nglocal has changed

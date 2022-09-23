@@ -37,6 +37,7 @@ class FixDt : public Fix {
   void init();
   void end_of_step();
   double compute_scalar();
+  virtual void update_custom(int, double, double, double, double *);
   virtual void reallocate();
 
  protected:
@@ -47,11 +48,14 @@ class FixDt : public Fix {
   int tvar,txvar,tyvar,tzvar,tempflag;
   int vxvar,vyvar,vzvar,vvarx,vvary,vvarz,velflag;
   int imix;
+  int particle_time_index;                          // index into custom particle_time vector
+  int cell_time_index;                              // index into custom cell_time array
   char *id_lambda,*id_usq,*id_vsq,*id_wsq,*id_temp;
   char *tstr,*txstr,*tystr,*tzstr;
   char *vxstr,*vystr,*vzstr,*vstrx,*vstry,*vstrz;
   class Compute *clambda;
   class Fix *flambda,*fusq,*fvsq,*fwsq,*ftemp;
+  class RanKnuth *random;
   double *lambda,*usq,*vsq,*wsq,*temp;
   double min_species_mass;
   double dt_global_weight;
@@ -60,6 +64,11 @@ class FixDt : public Fix {
 
   double temperature_variable(double *);
   void velocity_variable(double *, double *, double *);
+
+ private:
+  virtual double get_particle_time(double time_global, double random_uniform, double dt_desired) {
+    return time_global + (-1. + 2.*random_uniform)*dt_desired;
+  }
 };
 
 }

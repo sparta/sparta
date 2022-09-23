@@ -325,6 +325,9 @@ void Collide::init()
   // initialize running stats before each run
 
   ncollide_running = nattempt_running = nreact_running = 0;
+
+  if (grid->use_cell_dt)
+    index_cell_time = grid->find_custom((char*) "cell_time");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -469,20 +472,26 @@ template < int NEARCP > void Collide::collisions_one()
   int *next = particle->next;
   double dtc = grid->dt_global;
 
+  // custom cell time array
+  double **cell_time;
+  if (grid->use_cell_dt)
+    cell_time = grid->edarray[grid->ewhich[index_cell_time]];
+
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
 
     // compute collisions in cell if the cell time falls behind the global time by
-    // the desired cell timestep.
+    // the desired cell timestep. Note: for cell_time array, "0" is cell time, and
+    // "1" is cell desired timestep
     if (grid->use_cell_dt) {
       bool do_cell_collisions = false;
-      if ((grid->time_global - cells[icell].time) > cells[icell].dt_desired) {
+      if ((grid->time_global - cell_time[icell][0]) > cell_time[icell][1]) {
         do_cell_collisions = true;
       }
       if (do_cell_collisions) {
-        dtc = 2.*cells[icell].dt_desired;
-        cells[icell].time += dtc;
+        dtc = 2.*cell_time[icell][1];
+        cell_time[icell][0] += dtc;
       }
       else
         continue;
@@ -629,20 +638,26 @@ template < int NEARCP > void Collide::collisions_group()
   int *species2group = mixture->species2group;
   double dtc = grid->dt_global;
 
+  // custom cell time array
+  double **cell_time;
+  if (grid->use_cell_dt)
+    cell_time = grid->edarray[grid->ewhich[index_cell_time]];
+
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
 
     // compute collisions in cell if the cell time falls behind the global time by
-    // the desired cell timestep.
+    // the desired cell timestep. Note: for cell_time array, "0" is cell time, and
+    // "1" is cell desired timestep
     if (grid->use_cell_dt) {
       bool do_cell_collisions = false;
-      if ((grid->time_global - cells[icell].time) > cells[icell].dt_desired) {
+      if ((grid->time_global - cell_time[icell][0]) > cell_time[icell][1]) {
         do_cell_collisions = true;
       }
       if (do_cell_collisions) {
-        dtc = 2.*cells[icell].dt_desired;
-        cells[icell].time += dtc;
+        dtc = 2.*cell_time[icell][1];
+        cell_time[icell][0] += dtc;
       }
       else
         continue;
@@ -920,20 +935,26 @@ void Collide::collisions_one_ambipolar()
   int nbytes = sizeof(Particle::OnePart);
   double dtc = grid->dt_global;
 
+  // custom cell time array
+  double **cell_time;
+  if (grid->use_cell_dt)
+    cell_time = grid->edarray[grid->ewhich[index_cell_time]];
+
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
 
     // compute collisions in cell if the cell time falls behind the global time by
-    // the desired cell timestep.
+    // the desired cell timestep. Note: for cell_time array, "0" is cell time, and
+    // "1" is cell desired timestep
     if (grid->use_cell_dt) {
       bool do_cell_collisions = false;
-      if ((grid->time_global - cells[icell].time) > cells[icell].dt_desired) {
+      if ((grid->time_global - cell_time[icell][0]) > cell_time[icell][1]) {
         do_cell_collisions = true;
       }
       if (do_cell_collisions) {
-        dtc = 2.*cells[icell].dt_desired;
-        cells[icell].time += dtc;
+        dtc = 2.*cell_time[icell][1];
+        cell_time[icell][0] += dtc;
       }
       else
         continue;
@@ -1231,20 +1252,26 @@ void Collide::collisions_group_ambipolar()
   int egroup = species2group[ambispecies];
   double dtc = grid->dt_global;
 
+  // custom cell time array
+  double **cell_time;
+  if (grid->use_cell_dt)
+    cell_time = grid->edarray[grid->ewhich[index_cell_time]];
+
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
 
     // compute collisions in cell if the cell time falls behind the global time by
-    // the desired cell timestep.
+    // the desired cell timestep. Note: for cell_time array, "0" is cell time, and
+    // "1" is cell desired timestep
     if (grid->use_cell_dt) {
       bool do_cell_collisions = false;
-      if ((grid->time_global - cells[icell].time) > cells[icell].dt_desired) {
+      if ((grid->time_global - cell_time[icell][0]) > cell_time[icell][1]) {
         do_cell_collisions = true;
       }
       if (do_cell_collisions) {
-        dtc = 2.*cells[icell].dt_desired;
-        cells[icell].time += dtc;
+        dtc = 2.*cell_time[icell][1];
+        cell_time[icell][0] += dtc;
       }
       else
         continue;

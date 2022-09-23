@@ -80,6 +80,10 @@ void FixEmit::init()
 {
   particle->exist = 1;
   ntotal = 0;
+
+  if (grid->use_cell_dt) {
+    index_particle_time = particle->find_custom((char*) "particle_time");
+  }
 }
 
 /* ----------------------------------------------------------------------

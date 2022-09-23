@@ -439,8 +439,7 @@ void CreateParticles::create_single()
     int id = MAXSMALLINT*random->uniform();
     double erot = particle->erot(mspecies,temp_rot,random);
     double evib = particle->evib(mspecies,temp_vib,random);
-    double const particle_time = grid->get_particle_time(iwhich,random->uniform());
-    particle->add_particle(id,mspecies,iwhich,x,v,erot,evib,particle_time);
+    particle->add_particle(id,mspecies,iwhich,x,v,erot,evib);
     if (nfix_update_custom)
       modify->update_custom(particle->nlocal-1,temp_thermal,
                             temp_rot,temp_vib,vstream);
@@ -621,8 +620,7 @@ void CreateParticles::create_local(bigint np)
 
       id = MAXSMALLINT*random->uniform();
 
-      double const particle_time = grid->get_particle_time(i,random->uniform());
-      particle->add_particle(id,ispecies,i,x,v,erot,evib,particle_time);
+      particle->add_particle(id,ispecies,i,x,v,erot,evib);
 
       if (nfix_update_custom)
         modify->update_custom(particle->nlocal-1,temp_thermal,
@@ -827,8 +825,7 @@ void CreateParticles::create_local_twopass(bigint np)
 
       id = MAXSMALLINT*random->uniform();
 
-      double const particle_time = grid->get_particle_time(i,random->uniform());
-      particle->add_particle(id,ispecies,i,x,v,erot,evib,particle_time);
+      particle->add_particle(id,ispecies,i,x,v,erot,evib);
       if (nfix_update_custom)
         modify->update_custom(particle->nlocal-1,temp_thermal,
                               temp_rot,temp_vib,vstream);

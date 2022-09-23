@@ -76,7 +76,7 @@ class Grid : protected Pointers {
   int **eivec;              // pointer to each integer vector
   int ***eiarray;           // pointer to each integer array
   double **edvec;           // pointer to each double vector
-  double ***edarray;        // pointer to each double array  
+  double ***edarray;        // pointer to each double array 
 
   // cell ID hash (owned + ghost, no sub-cells)
 
@@ -143,9 +143,6 @@ class Grid : protected Pointers {
                               // N <= 0, neg of sub cell index (0 to Nsplit-1)
     int isplit;               // index into sinfo
                               // set for split and sub cells, -1 if unsplit
-
-    double dt_desired;        // desired timestep for this cell
-    double time;              // time for this cell
   };
 
   // info specific to owned child cell
@@ -218,8 +215,6 @@ class Grid : protected Pointers {
   int nlocal_restart;
   cellint *id_restart;
   int *level_restart,*nsplit_restart;
-  double *dt_desired_restart;
-  double *time_restart;
 
   // methods
 
@@ -341,9 +336,6 @@ class Grid : protected Pointers {
     nmask |= flag << neighshift[iface];
     return nmask;
   }
-
-  double get_particle_time(cellint, double); // get particle time as a function of cell desired dt, global_time, and RNG
-
 
  protected:
   int me;

@@ -917,7 +917,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           else jp_species = r->products[1];
 
           int reallocflag =
-            particle->add_particle(id,jp_species,ip->icell,x,v,0.0,0.0,ip->time);
+            particle->add_particle(id,jp_species,ip->icell,x,v,0.0,0.0);
           if (reallocflag) ip = particle->particles + (ip - particles);
           jp = &particle->particles[particle->nlocal-1];
           return (list[i] + 1);
@@ -968,8 +968,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
                     Particle::OnePart *particles = particle->particles;
 
                     int reallocflag =
-                      particle->add_particle(id,r->products[j],ip->icell,
-                                             x,v,0.0,0.0,ip->time);
+                      particle->add_particle(id,r->products[j],ip->icell,x,v,0.0,0.0);
                     if (reallocflag) ip = particle->particles + (ip - particles);
                     jp = &particle->particles[particle->nlocal-1];
 
@@ -987,8 +986,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
                     Particle::OnePart *particles = particle->particles;
 
                     int reallocflag =
-                      particle->add_particle(id,r->products[j],ip->icell,
-                                             x,v,0.0,0.0,ip->time);
+                      particle->add_particle(id,r->products[j],ip->icell,x,v,0.0,0.0);
                     if (reallocflag) ip = particle->particles + (ip - particles);
                     jp = &particle->particles[particle->nlocal-1];
 
@@ -1061,7 +1059,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
 
             if (r->stoich_products[0] == 2) {
               int reallocflag =
-                particle->add_particle(id,r->products[0],ip->icell,x,v,0.0,0.0,ip->time);
+                particle->add_particle(id,r->products[0],ip->icell,x,v,0.0,0.0);
               if (reallocflag) ip = particle->particles + (ip - particles);
               jp = &particle->particles[particle->nlocal-1];
 
@@ -1070,7 +1068,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
                                                r->cmodel_ip_coeffs);
             } else {
               int reallocflag =
-                particle->add_particle(id,r->products[1],ip->icell,x,v,0.0,0.0,ip->time);
+                particle->add_particle(id,r->products[1],ip->icell,x,v,0.0,0.0);
               if (reallocflag) ip = particle->particles + (ip - particles);
               jp = &particle->particles[particle->nlocal-1];
 

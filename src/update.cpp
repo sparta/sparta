@@ -204,6 +204,11 @@ void Update::init()
 
   if (moveperturb) perturbflag = 1;
   else perturbflag = 0;
+
+  if (grid->use_cell_dt) {
+    index_particle_time = particle->find_custom((char*) "particle_time");
+    index_cell_time = grid->find_custom((char*) "cell_time");
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -390,6 +395,13 @@ template < int DIM, int SURF > void Update::move()
   // first iteration = all my particles
   // subsequent iterations = received particles
 
+  int *particle_time;
+  double **cell_time;
+  if (grid->use_cell_dt) {
+    particle_time = particle->eivec[particle->ewhich[index_particle_time]];
+    cell_time = grid->edarray[grid->ewhich[index_cell_time]];
+  }
+
   while (1) {
 
     niterate++;
@@ -407,16 +419,17 @@ template < int DIM, int SURF > void Update::move()
 
       // move particle if the particle time falls behind the global time by the desired cell timestep
       // if the particle time is within the desired cell timestep of the global time, do not move the
-      // particle but instead skip to the next one.
+      // particle but instead skip to the next one.  For cell_time array, "0" is the cell time and
+      // "1" is the cell desired timestep
       if (grid->use_cell_dt && niterate == 1) {
         bool move_particle = false;
         icell = particles[i].icell;
-        if ((grid->time_global - particles[i].time) > cells[icell].dt_desired) {
+        if ((grid->time_global - particle_time[i]) > cell_time[icell][1]) {
           move_particle = true;
-          dt = 2.*cells[icell].dt_desired;
+          dt = 2.*cell_time[icell][1];
         }
         if (move_particle) {
-          particles[i].time += dt;
+          particle_time[i] += dt;
           particles[i].dtremain = dt;
         }
         else

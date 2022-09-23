@@ -668,43 +668,6 @@ int Particle::add_particle(int id, int ispecies, int icell,
 }
 
 /* ----------------------------------------------------------------------
-   add a particle to particle list
-   return 1 if particle array was reallocated, else 0
-------------------------------------------------------------------------- */
-
-int Particle::add_particle(int id, int ispecies, int icell,
-                           double *x, double *v, double erot, double evib, double time)
-{
-  int reallocflag = 0;
-  if (nlocal == maxlocal) {
-    grow(1);
-    reallocflag = 1;
-  }
-
-  OnePart *p = &particles[nlocal];
-
-  p->id = id;
-  p->ispecies = ispecies;
-  p->icell = icell;
-  p->x[0] = x[0];
-  p->x[1] = x[1];
-  p->x[2] = x[2];
-  p->v[0] = v[0];
-  p->v[1] = v[1];
-  p->v[2] = v[2];
-  p->erot = erot;
-  p->evib = evib;
-  p->time = time;
-  p->flag = PKEEP;
-
-  //p->dtremain = 0.0;    not needed due to memset in grow() ??
-  //p->weight = 1.0;      not needed due to memset in grow() ??
-
-  nlocal++;
-  return reallocflag;
-}
-
-/* ----------------------------------------------------------------------
    add an empty particle to particle list, caller will fill it
    return 1 if particle array was reallocated, else 0
 ------------------------------------------------------------------------- */
@@ -1511,7 +1474,6 @@ int Particle::pack_restart(char *buf)
     pr->v[2] = p->v[2];
     pr->erot = p->erot;
     pr->evib = p->evib;
-    pr->time = p->time;
 
     ptr += sizeof(OnePartRestart);
     if (!ncustom) continue;
@@ -1565,7 +1527,6 @@ void Particle::pack_restart(char *buf, int step, int pass)
     pr->v[2] = p->v[2];
     pr->erot = p->erot;
     pr->evib = p->evib;
-    pr->time = p->time;
 
     ptr += sizeof(OnePartRestart);
     if (!ncustom) continue;

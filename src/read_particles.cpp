@@ -93,7 +93,7 @@ void ReadParticles::command(int narg, char **arg)
   // read, broadcast, and process particles from snapshot in chunks
   // for now, assume fields are ID,ispecies,x,y,z,vx,vy,vz,particle_time
 
-  int nfield = 9;
+  int nfield = 8;
   double **fields;
   memory->create(fields,CHUNK,nfield,"read_particles:fields");
 
@@ -211,9 +211,8 @@ void ReadParticles::process_particles(int n, int, double **fields)
     v[0] = fields[i][5];
     v[1] = fields[i][6];
     v[2] = fields[i][7];
-    double const particle_time = fields[i][8];
 
-    particle->add_particle(id,ispecies,icell,x,v,0.0,0.0,particle_time);
+    particle->add_particle(id,ispecies,icell,x,v,0.0,0.0);
   }
 }
 
