@@ -43,7 +43,7 @@ args = list of arguments for a particular style :l
       v_name = per-particle vector calculated by a particle-style variable with name :pre
 
   {grid} args = list of grid attributes
-    possible attributes = id, idstr, proc, xlo, ylo, zlo, xhi, yhi, zhi,
+    possible attributes = id, idstr, split, proc, xlo, ylo, zlo, xhi, yhi, zhi,
                           c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
 
       id = integer form of grid cell ID
