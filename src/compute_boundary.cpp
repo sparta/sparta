@@ -97,7 +97,7 @@ void ComputeBoundary::init()
 
   // set normflux based on box face area and timestep size
 
-  double nfactor = update->dt/update->fnum;
+  double nfactor = grid->dt_global/update->fnum;
   if (domain->dimension == 2) {
     normflux[XLO] = normflux[XHI] = domain->yprd * nfactor;
     normflux[YLO] = normflux[YHI] = domain->xprd * nfactor;

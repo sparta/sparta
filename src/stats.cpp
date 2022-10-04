@@ -1039,7 +1039,7 @@ void Stats::compute_elaplong()
 
 void Stats::compute_dt()
 {
-  dvalue = update->dt;
+  dvalue = grid->dt_global;
 }
 
 /* ---------------------------------------------------------------------- */

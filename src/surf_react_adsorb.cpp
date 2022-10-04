@@ -2751,7 +2751,7 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
       }
     }
     //if (rxn_occur[i]) tau[isurf][react_num] += update->dt;
-    if (rxn_occur[i]) tau[isurf][i] += update->dt*nsync;
+    if (rxn_occur[i]) tau[isurf][i] += grid->dt_global*nsync;
   }
 
   while (1) {
@@ -2888,7 +2888,7 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
 	
             particle->add_particle(id,r->products[0],0,x,v,0.0,0.0);
             p = &particle->particles[particle->nlocal-1];
-            p->dtremain = update->dt*random->uniform();
+            p->dtremain = grid->dt_global*random->uniform();
 
             if (r->cmodel_ip != NOMODEL)
               cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
@@ -2916,7 +2916,7 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
 	
 	    particle->add_particle(id,r->products[0],0,x,v,0.0,0.0);
 	    p = &particle->particles[particle->nlocal-1];
-	    p->dtremain = update->dt*random->uniform();
+	    p->dtremain = grid->dt_global*random->uniform();
 
 	    if (r->cmodel_ip != NOMODEL)
 	      cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
@@ -2949,7 +2949,7 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
 
             particle->add_particle(id,r->products[0],0,x,v,0.0,0.0);
             p = &particle->particles[particle->nlocal-1];
-            p->dtremain = update->dt*random->uniform();
+            p->dtremain = grid->dt_global*random->uniform();
 
             if (r->cmodel_ip != NOMODEL)
               cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,

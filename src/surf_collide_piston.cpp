@@ -17,6 +17,7 @@
 #include "surf.h"
 #include "surf_react.h"
 #include "update.h"
+#include "grid.h"
 #include "domain.h"
 #include "modify.h"
 #include "input.h"
@@ -42,7 +43,7 @@ void SurfCollidePiston::init()
 {
   SurfCollide::init();
 
-  dt = update->dt;
+  dt = grid->dt_global;
 
   // check that this model only assigned to surfs with axis-aligned normals
   // index = position in surf->sc list that this SurfCollide instance is
