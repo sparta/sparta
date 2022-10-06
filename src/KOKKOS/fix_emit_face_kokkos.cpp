@@ -145,7 +145,7 @@ void FixEmitFaceKokkos::create_task(int icell)
 
 void FixEmitFaceKokkos::perform_task()
 {
-  dt = update->dt;
+  dt = grid->dt_global;
   auto l_dimension = this->dimension;
   auto l_subsonic_style = this->subsonic_style;
 

@@ -129,12 +129,10 @@ void Update::set_units(const char *style)
   if (strcmp(style,"cgs") == 0) {
     boltz = 1.3806488e-16;
     mvv2e = 1.0;
-    grid->dt_global = 1.0;
 
   } else if (strcmp(style,"si") == 0) {
     boltz = 1.3806488e-23;
     mvv2e = 1.0;
-    grid->dt_global = 1.0;
 
   } else error->all(FLERR,"Illegal units command");
 
