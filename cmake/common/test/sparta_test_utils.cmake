@@ -1,13 +1,14 @@
+find_package(Python REQUIRED)
 if(SPARTA_DSMC_TESTING_PATH)
   get_filename_component(SPARTA_DSMC_TESTING_ABSOLUTE_PATH
                          ${SPARTA_DSMC_TESTING_PATH} ABSOLUTE)
   # message("dsmc_testing=${SPARTA_DSMC_TESTING_ABSOLUTE_PATH}")
-  set(SPARTA_TEST_DRIVER python
+  set(SPARTA_TEST_DRIVER Python::Interpreter
                          ${SPARTA_DSMC_TESTING_ABSOLUTE_PATH}/regression.py)
   set(PARAVIEW_TEST_DRIVER ${PVPYTHON_EXECUTABLE}
     ${SPARTA_DSMC_TESTING_ABSOLUTE_PATH}/paraview_regression.py)
 else()
-  set(SPARTA_TEST_DRIVER python ${SPARTA_TOOLS_DIR}/testing/regression.py)
+  set(SPARTA_TEST_DRIVER Python::Interpreter ${SPARTA_TOOLS_DIR}/testing/regression.py)
   set(PARAVIEW_TEST_DRIVER ${PVPYTHON_EXECUTABLE}
     ${SPARTA_TOOLS_DIR}/testing/paraview_regression.py)
 endif()
@@ -16,9 +17,9 @@ endif()
 #
 # sparta_add_test: Add a test called
 # "${SPARTA_MACHINE}.${sparta_in_file}.mpi_${mpi_ranks}"
-# @param sparta_in_file: The input file for the test being 
+# @param sparta_in_file: The input file for the test being
 #                        added argument to sparta's "-in" option.
-# @param mpi_ranks:      A positive integer which is ignored if 
+# @param mpi_ranks:      A positive integer which is ignored if
 #                        BUILD_MPI is false.
 # @param config_name:    A string describing the configuration to add
 #                        this test to. Setting config_name to "" will

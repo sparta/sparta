@@ -150,7 +150,7 @@ class sdata:
     self.llist = []
     self.tlist = []
 
-    if len(list) == 1: raise StandardError,"surf ID and surf file required"
+    if len(list) == 1: raise Exception("surf ID and surf file required")
     if len(list) > 1: self.read(list[0],*list[1:])
 
   # --------------------------------------------------------------------
@@ -163,7 +163,7 @@ class sdata:
     flist = []
     for word in words: flist += glob.glob(word)
     if len(flist) == 0 and len(list) == 1:
-      raise StandardError,"no surf file specified"
+      raise Exception("no surf file specified")
 
     # read all surf file as one surf with ID
     
@@ -239,13 +239,13 @@ class sdata:
 
         elif "Triangles" in line:
           if npoints == 0 or ntriangles == 0:
-            raise StandardError, "invalid surf file"
+            raise Exception("invalid surf file")
 
           # store flags preceding 2 point indices in lineflags
           # may be different number for SPARTA vs LAMMPS format
 
           line = f.readline()
-          for i in xrange(ntriangles):
+          for i in range(ntriangles):
             words = f.readline().split()
             nflags = len(words) - 4
             triflags.append([value for value in words[1:1+nflags]])
@@ -254,10 +254,10 @@ class sdata:
 
       f.close()
 
-    if self.dim == 2: print "read surf %s with %d points, %d lines" % \
-        (id,len(points),len(lines))
-    if self.dim == 3: print "read surf %s with %d points, %d triangles" % \
-        (id,len(points),len(triangles))
+    if self.dim == 2: print("read surf %s with %d points, %d lines" % \
+        (id,len(points),len(lines)))
+    if self.dim == 3: print("read surf %s with %d points, %d triangles" % \
+        (id,len(points),len(triangles)))
 
     # create surf
             
@@ -277,8 +277,8 @@ class sdata:
   # create a circle
 
   def circle(self,id,x,y,r,n):
-    if self.ids.has_key(id): raise StandardError,"ID %s is already in use" % id
-    if self.dim == 3: raise StandardError, "cannot have both 2d/3d surfs"
+    if id in self.ids: raise Exception("ID %s is already in use" % id)
+    if self.dim == 3: raise Exception("cannot have both 2d/3d surfs")
     self.dim = 2
     
     points = []
@@ -303,8 +303,8 @@ class sdata:
   # create a rectangle
 
   def rect(self,id,x0,y0,x1,y1,nx,ny):
-    if self.ids.has_key(id): raise StandardError,"ID %s is already in use" % id
-    if self.dim == 3: raise StandardError, "cannot have both 2d/3d surfs"
+    if id in self.ids: raise Exception("ID %s is already in use" % id)
+    if self.dim == 3: raise Exception("cannot have both 2d/3d surfs")
     self.dim = 2
       
     points = []
@@ -337,8 +337,8 @@ class sdata:
   # create a triangle
 
   def tri(self,id,x0,y0,x1,y1,x2,y2,n1,n2,n3):
-    if self.ids.has_key(id): raise StandardError,"ID %s is already in use" % id
-    if self.dim == 3: raise StandardError, "cannot have both 2d/3d surfs"
+    if id in self.ids: raise Exception("ID %s is already in use" % id)
+    if self.dim == 3: raise Exception("cannot have both 2d/3d surfs")
     self.dim = 2
       
     points = []
@@ -366,9 +366,9 @@ class sdata:
   # create a sphere
 
   def sphere(self,id,x,y,z,r,n):
-    if self.ids.has_key(id):
-      raise StandardError,"ID %s is already in use" % id
-    if self.dim == 2: raise StandardError, "cannot have both 2d/3d surfs"
+    if id in self.ids:
+      raise Exception("ID %s is already in use" % id)
+    if self.dim == 2: raise Exception("cannot have both 2d/3d surfs")
     self.dim = 3
 
     pts,triangles = box_triangulate(n,n,n)
@@ -385,7 +385,7 @@ class sdata:
     surf.select = 1
     surf.points = points
     surf.triangles = triangles
-    surf.triflags = [[] for i in xrange(len(triangles))]
+    surf.triflags = [[] for i in range(len(triangles))]
     surf.center = [x,y,z]
     self.ids[id] = len(self.surfs)
     self.surfs.append(surf)
@@ -394,10 +394,10 @@ class sdata:
   # create a 3d box
 
   def box(self,id,x0,y0,z0,x1,y1,z1,nx,ny,nz):
-    if self.ids.has_key(id): raise StandardError,"ID %s is already in use" % id
-    if self.dim == 2: raise StandardError, "cannot have both 2d/3d surfs"
+    if id in self.ids: raise Exception("ID %s is already in use" % id)
+    if self.dim == 2: raise Exception("cannot have both 2d/3d surfs")
     if nx <= 0 or ny <= 0 or nz <= 0:
-      raise StandardError, "invalid box nx,ny,nz values"
+      raise Exception("invalid box nx,ny,nz values")
     self.dim = 3
 
     pts,triangles = box_triangulate(nx,ny,nz)
@@ -412,7 +412,7 @@ class sdata:
     surf.select = 1
     surf.points = points
     surf.triangles = triangles
-    surf.triflags = [[] for i in xrange(len(triangles))]
+    surf.triflags = [[] for i in range(len(triangles))]
     surf.center = [0.5*(x0+x1),0.5*(y0+y1),0.5*(z0+z1)]
     self.ids[id] = len(self.surfs)
     self.surfs.append(surf)
@@ -421,8 +421,8 @@ class sdata:
   # create a spiky circle
 
   def spikycircle(self,id,x,y,rmin,rmax,n):
-    if self.ids.has_key(id): raise StandardError,"ID %s is already in use" % id
-    if self.dim == 3: raise StandardError, "cannot have both 2d/3d surfs"
+    if id in self.ids: raise Exception("ID %s is already in use" % id)
+    if self.dim == 3: raise Exception("cannot have both 2d/3d surfs")
     self.dim = 2
     
     points = []
@@ -448,9 +448,9 @@ class sdata:
   # create a spiky sphere
 
   def spikysphere(self,id,x,y,z,rmin,rmax,n):
-    if self.ids.has_key(id):
-      raise StandardError,"ID %s is already in use" % id
-    if self.dim == 2: raise StandardError, "cannot have both 2d/3d surfs"
+    if id in self.ids:
+      raise Exception("ID %s is already in use" % id)
+    if self.dim == 2: raise Exception("cannot have both 2d/3d surfs")
     self.dim = 3
 
     pts,triangles = box_triangulate(n,n,n)
@@ -468,7 +468,7 @@ class sdata:
     surf.select = 1
     surf.points = points
     surf.triangles = triangles
-    surf.triflags = [[] for i in xrange(len(triangles))]
+    surf.triflags = [[] for i in range(len(triangles))]
     surf.center = [x,y,z]
     self.ids[id] = len(self.surfs)
     self.surfs.append(surf)
@@ -477,8 +477,8 @@ class sdata:
   # create a custom 2d surf from list of points and lines
 
   def surf2d(self,id,plist,llist):
-    if self.ids.has_key(id): raise StandardError,"ID %s is already in use" % id
-    if self.dim == 3: raise StandardError, "cannot have both 2d/3d surfs"
+    if id in self.ids: raise Exception("ID %s is already in use" % id)
+    if self.dim == 3: raise Exception("cannot have both 2d/3d surfs")
     self.dim = 2
     
     surf = Surface()
@@ -510,10 +510,10 @@ class sdata:
   # set center pt of a surf
 
   def center(self,id,x,y,z):
-    if not self.ids.has_key(id):
-      raise StandardError,"ID %s is not defined" % id
+    if id not in self.ids:
+      raise Exception("ID %s is not defined" % id)
     if self.dim == 2 and z != 0.0:
-      raise StandardError,"z center of 2d surf must be 0.0"
+      raise Exception("z center of 2d surf must be 0.0")
     surf = self.surfs[self.ids[id]]
     surf.center = [x,y,z]
 
@@ -522,10 +522,10 @@ class sdata:
   # add displacement to its vertices and center pt
 
   def trans(self,id,dx,dy,dz):
-    if not self.ids.has_key(id):
-      raise StandardError,"ID %s is not defined" % id
+    if id not in self.ids:
+      raise Exception("ID %s is not defined" % id)
     if self.dim == 2 and dz != 0.0:
-      raise StandardError,"dz translation of 2d surf must be 0.0"
+      raise Exception("dz translation of 2d surf must be 0.0")
 
     surf = self.surfs[self.ids[id]]
     surf.xc += dx
@@ -548,10 +548,10 @@ class sdata:
   # for each point x: xnew = P (x - center) + center
 
   def rotate(self,id,theta,rx,ry,rz):
-    if not self.ids.has_key(id):
-      raise StandardError,"ID %s is not defined" % id
+    if id not in self.ids:
+      raise Exception("ID %s is not defined" % id)
     if self.dim == 2 and (rx != 0.0 or ry != 0.0):
-      raise StandardError,"rx,ry rotation of 2d surf must be 0.0"
+      raise Exception("rx,ry rotation of 2d surf must be 0.0")
 
     r = [rx,ry,rz]
     normalize(r)
@@ -583,10 +583,10 @@ class sdata:
   # scale its vertices relative to center pt
 
   def scale(self,id,sx,sy,sz):
-    if not self.ids.has_key(id):
-      raise StandardError,"ID %s is not defined" % id
+    if id not in self.ids:
+      raise Exception("ID %s is not defined" % id)
     if self.dim == 2 and sz != 1.0:
-      raise StandardError,"sz scale of 2d surf must be 1.0"
+      raise Exception("sz scale of 2d surf must be 1.0")
 
     surf = self.surfs[self.ids[id]]
     center = surf.center
@@ -599,8 +599,8 @@ class sdata:
   # invert direction of surf normals by swapping line or triangle indices
   
   def invert(self,id):
-    if not self.ids.has_key(id):
-      raise StandardError,"ID %s is not defined" % id
+    if id not in self.ids:
+      raise Exception("ID %s is not defined" % id)
 
     surf = self.surfs[self.ids[id]]
     if self.dim == 2:
@@ -616,10 +616,10 @@ class sdata:
   # join surfs in list to form a new surf
   
   def join(self,id,*list):
-    if self.ids.has_key(id):
-      raise StandardError,"ID %s is already in use" % id
+    if id in self.ids:
+      raise Exception("ID %s is already in use" % id)
     if len(list) == 0:
-      raise StandardError,"list of surfs to join is empty"
+      raise Exception("list of surfs to join is empty")
 
     points = []
     lines = []
@@ -832,7 +832,7 @@ class sdata:
       i = self.ids[id]
       del self.ids[id]
       del self.surfs[i]
-      for key in self.ids.keys():
+      for key in list(self.ids.keys()):
         j = self.ids[key]
         if j > i: self.ids[key] = j-1
         
@@ -841,8 +841,8 @@ class sdata:
   # check that new ID doesn't already exist
 
   def rename(self,idold,idnew):
-    if self.ids.has_key(idnew):
-      raise StandardError,"ID %s is already in use" % idnew
+    if idnew in self.ids:
+      raise Exception("ID %s is already in use" % idnew)
     i = self.ids[idold]
     self.ids[idnew] = i
     del self.ids[idold]
@@ -852,8 +852,8 @@ class sdata:
   # check that new name doesn't already exist
 
   def copy(self,idold,idnew):
-    if self.ids.has_key(idnew):
-      raise StandardError,"ID %s is already in use" % idnew
+    if idnew in self.ids:
+      raise Exception("ID %s is already in use" % idnew)
     surf = deepcopy(self.surfs[self.ids[idold]])
     surf.select = 1
     self.ids[idnew] = len(self.surfs)
@@ -864,7 +864,7 @@ class sdata:
   # if list is empty, select all
   
   def select(self,*list):
-    if len(list) == 0: list = self.ids.keys()
+    if len(list) == 0: list = list(self.ids.keys())
     for id in list:
       surf = self.surfs[self.ids[id]]
       surf.select = 1
@@ -874,7 +874,7 @@ class sdata:
   # if list is empty, unselect all
   
   def unselect(self,*list):
-    if len(list) == 0: list = self.ids.keys()
+    if len(list) == 0: list = list(self.ids.keys())
     for id in list:
       surf = self.surfs[self.ids[id]]
       surf.select = 0
@@ -931,13 +931,13 @@ class sdata:
                               points,lines,lineflags,triangles,triflags)
 
     if pflag:
-      if self.dim == 2: print "wrote surf file with %d points, %d lines" % \
-         (len(points),len(lines))
-      if self.dim == 3: print "wrote surf file with %d points, %d triangles" % \
-         (len(points),len(triangles))
+      if self.dim == 2: print("wrote surf file with %d points, %d lines" % \
+         (len(points),len(lines)))
+      if self.dim == 3: print("wrote surf file with %d points, %d triangles" % \
+         (len(points),len(triangles)))
     else:
-      if self.dim == 2: print "wrote surf file with %d lines" % len(lines)
-      if self.dim == 3: print "wrote surf file with %d triangles" % len(triangles)
+      if self.dim == 2: print("wrote surf file with %d lines" % len(lines))
+      if self.dim == 3: print("wrote surf file with %d triangles" % len(triangles))
 
   # --------------------------------------------------------------------
   # write surfs to a single file
@@ -1018,11 +1018,11 @@ class sdata:
   def write_parallel(self,file,nfile,points,lines,lineflags,triangles,triflags):
     basefile = file + ".base"
     fp = open(basefile,'w')
-    print >>fp,"multiproc surf file from Pizza.py"
-    print >>fp
-    print >>fp,nfile,"files"
-    if self.dim == 2: print >>fp,len(lines),"lines"
-    if self.dim == 3: print >>fp,len(triangles),"triangles"
+    print("multiproc surf file from Pizza.py", file=fp)
+    print(file=fp)
+    print(nfile,"files", file=fp)
+    if self.dim == 2: print(len(lines),"lines", file=fp)
+    if self.dim == 3: print(len(triangles),"triangles", file=fp)
     fp.close()
 
     for ifile in range(nfile):
@@ -1075,11 +1075,11 @@ class sdata:
   # overlay a top-level grid over surf for viz only
 
   def grid(self,*args):
-    if self.dim == 0: raise StandardError, "dimension must be defined for grid"
+    if self.dim == 0: raise Exception("dimension must be defined for grid")
     if self.dim == 2 and len(args) != 6:
-      raise StandardError, "bad arguments for sdata.grid()"
+      raise Exception("bad arguments for sdata.grid()")
     if self.dim == 3 and len(args) != 9:
-      raise StandardError, "bad arguments for sdata.grid()"
+      raise Exception("bad arguments for sdata.grid()")
 
     self.gridflag = 1
     self.idparents = ["0"]
@@ -1096,14 +1096,12 @@ class sdata:
   # grid comes from SPARTA parent grid file
 
   def gridfile(self,*args):
-    if self.mode != "SPARTA": raise StandardError, \
-          "gridfile() can only be used with SPARTA mode"
-    if self.dim == 0: raise StandardError, \
-          "dimension must be defined for gridfile"
+    if self.mode != "SPARTA": raise Exception("gridfile() can only be used with SPARTA mode")
+    if self.dim == 0: raise Exception("dimension must be defined for gridfile")
     if self.dim == 2 and len(args) != 5:
-      raise StandardError, "bad arguments for sdata.gridfile()"
+      raise Exception("bad arguments for sdata.gridfile()")
     if self.dim == 3 and len(args) != 7:
-      raise StandardError, "bad arguments for sdata.gridfile()"
+      raise Exception("bad arguments for sdata.gridfile()")
 
     # read parent file, parent entries should start on line 7
 
@@ -1147,7 +1145,7 @@ class sdata:
 
   def viz(self,isnap):
     if isnap:
-      raise StandardError, "cannot call sdata.viz() with isnap != 0"
+      raise Exception("cannot call sdata.viz() with isnap != 0")
 
     # no atoms or bonds
     
@@ -1291,7 +1289,7 @@ class sdata:
 
   def findtime(self,n):
     if n == 0: return 0
-    raise StandardError, "no step %d exists" % (n)
+    raise Exception("no step %d exists" % (n))
 
   # --------------------------------------------------------------------
   # return box size
@@ -1403,7 +1401,7 @@ def bbox(points):
 # return index of where v is in vertices list
 
 def vertex(v,vertices,vdict):
-  if vdict.has_key(v): return vdict[v]
+  if v in vdict: return vdict[v]
   n = len(vertices)
   vertices.append(v)
   vdict[v] = n
@@ -1447,8 +1445,8 @@ def box_triangulate(q1,q2,q3):
   vdict = {}
   vertices = []
   triangles = []
-  for j in xrange(q2):
-    for k in xrange(q3):
+  for j in range(q2):
+    for k in range(q3):
       v1 = (0, j*dy,     k*dz)
       v2 = (0, (j+1)*dy, k*dz)
       v3 = (0, (j+1)*dy, (k+1)*dz)
@@ -1469,8 +1467,8 @@ def box_triangulate(q1,q2,q3):
       iv4 = vertex(v4,vertices,vdict)
       triangles.append([iv1,iv2,iv3])
       triangles.append([iv1,iv3,iv4])
-  for i in xrange(q1):
-    for k in xrange(q3):
+  for i in range(q1):
+    for k in range(q3):
       v1 = (i*dx,     0, k*dz)
       v2 = ((i+1)*dx, 0, k*dz)
       v3 = ((i+1)*dx, 0, (k+1)*dz)
@@ -1491,8 +1489,8 @@ def box_triangulate(q1,q2,q3):
       iv4 = vertex(v4,vertices,vdict)
       triangles.append([iv1,iv3,iv2])
       triangles.append([iv1,iv4,iv3])
-  for i in xrange(q1):
-    for j in xrange(q2):
+  for i in range(q1):
+    for j in range(q2):
       v1 = (i*dx,     j*dy,     0)
       v2 = ((i+1)*dx, j*dy,     0)
       v3 = ((i+1)*dx, (j+1)*dy, 0)
@@ -1537,15 +1535,15 @@ def connect_triangles(tris):
   for i,tri in enumerate(tris):
     edge = (tri[0],tri[1])
     if edge in hash:
-      raise StandardError,"surf connect has duplicate edge"
+      raise Exception("surf connect has duplicate edge")
     hash[edge] = (i,1)
     edge = (tri[1],tri[2])
     if edge in hash:
-      raise StandardError,"surf connect has duplicate edge"
+      raise Exception("surf connect has duplicate edge")
     hash[edge] = (i,2)
     edge = (tri[2],tri[0])
     if edge in hash:
-      raise StandardError,"surf connect has duplicate edge"
+      raise Exception("surf connect has duplicate edge")
     hash[edge] = (i,3)
 
   # create connection list by searching for opposite edges
