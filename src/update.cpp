@@ -393,10 +393,10 @@ template < int DIM, int SURF > void Update::move()
   // first iteration = all my particles
   // subsequent iterations = received particles
 
-  int *particle_time;
+  double *particle_time;
   double **cell_time;
   if (grid->use_cell_dt) {
-    particle_time = particle->eivec[particle->ewhich[index_particle_time]];
+    particle_time = particle->edvec[particle->ewhich[index_particle_time]];
     cell_time = grid->edarray[grid->ewhich[index_cell_time]];
   }
 

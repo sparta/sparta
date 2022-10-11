@@ -379,7 +379,7 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   reallocate();
 
   // create per-particle vector for particle time
-  particle_time_index = particle->add_custom((char *) "particle_time", DOUBLE, 1);
+  particle_time_index = particle->add_custom((char *) "particle_time", DOUBLE, 0);
 
   // create per-cell array for cell time/desired timestep
   int ghostflag = 1;
@@ -697,7 +697,7 @@ void FixDt::end_of_step()
 void FixDt::update_custom(int index, double, double, double, double *)
 {
   if (grid->use_cell_dt) {
-    int *ptime = particle->eivec[particle->ewhich[particle_time_index]];
+    double *ptime = particle->edvec[particle->ewhich[particle_time_index]];
     double **cell_time = grid->edarray[grid->ewhich[cell_time_index]];
 
     Particle::OnePart *particles = particle->particles;
