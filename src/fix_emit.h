@@ -41,8 +41,6 @@ class FixEmit : public Fix {
   int active_current;  // set to 0 if grid cell data struct changes
                        // triggers rebuild of active cell list in child classes
 
-  int index_particle_time; // index to custom particle_time vector
-
   virtual void create_task(int) = 0;
   virtual void perform_task() = 0;
 

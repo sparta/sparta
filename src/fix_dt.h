@@ -65,8 +65,7 @@ class FixDt : public Fix {
   double temperature_variable(double *);
   void velocity_variable(double *, double *, double *);
 
- private:
-  virtual double get_particle_time(double time_global, double random_uniform, double dt_desired) {
+  double get_particle_time(double time_global, double random_uniform, double dt_desired) {
     return time_global + (-1. + 2.*random_uniform)*dt_desired;
   }
 };

@@ -108,9 +108,12 @@ class Collide : protected Pointers {
 
   // discrete vibrational energy data structs
 
-  int index_vibmode;   // index to custom vibmode vector
+  int index_vibmode;            // index to custom vibmode vector
 
-  int index_cell_time; // index to custom cell time array
+  int index_particle_time;      // index to custom particle_time vector
+  int index_cell_time;          // index to custom cell_time array
+  double *particle_time;        // custom particle time vector
+  double **cell_time;           // custom cell time array
 
   // ambipolar approximation data structs
 

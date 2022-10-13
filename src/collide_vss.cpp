@@ -281,6 +281,7 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
     //   make copy of x,v, then repoint ip,jp to new particles data struct
 
     if (kspecies >= 0) {
+
       int id = MAXSMALLINT*random->uniform();
 
       Particle::OnePart *particles = particle->particles;
@@ -289,6 +290,11 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
 
       int reallocflag =
         particle->add_particle(id,kspecies,ip->icell,x,v,0.0,0.0);
+      if (grid->use_cell_dt) {
+        // use the ip particle time to set the new particle time
+        particle_time[particle->nlocal-1] = particle_time[ip-particle->particles];
+      }
+
       if (reallocflag) {
         ip = particle->particles + (ip - particles);
         jp = particle->particles + (jp - particles);

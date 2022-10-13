@@ -94,20 +94,13 @@ in the move is less than 0.1*characteristic_cell_time (or in SPARTA language, 0.
 
 TODO-----------------------------------------------------------------------------------------------
 
-search for all places where dt in class Update is used.  Might be better to eliminate dt_global eventually
-  and have dt store the global timestep. (but using dt_global during development will help indicate what
-  is new/old code for variable time-stepping).
-*** remove dt from update.h (and access either dt or dt_global from grid class)
-
 finish logic added to ReadRestart::create_child_cells for cell dt (put dt in add_child_cell() argument list?)
   Could add optional argument for cell dt when calling create_child_cells for restart case.   obviously would
   need to compute it otherwise, e.g., during grid construction (read_grid.cpp).  But what about AMR? adopt global
   time step as cell dt until mean collision time and mean traversal time are available? or use some fraction of
-  the parent cell dt?
+  the parent cell dt?  (THESE ISSUES MIGHT BE IMPACTED WTIH NEW USE OF CUSTOM TIME DATA STORAGE)
 
 need to make sure that cell dt_desired is set before particles are created initially
-
-check on add_particle() without arguments and ramifications with variable, adaptive time-stepping.
 
 how should particle times be set in the add_particle() calls in surf_react_adsorb.cpp (where
 pcell is also passed in but not set)?  Look at dtremain as well.  Note that the AddParticle class
@@ -117,11 +110,28 @@ how is dt_global set and updated?
 
 check on update->ntimestep and where that is set.
 
-*look for setting particle_time in collide_vss_kokkos and see if variable_adaptive_time boolean use is needed.
+look for setting particle_time in collide_vss_kokkos and see if variable_adaptive_time boolean use is needed.
 
-*try building and running with -DSPARTA_KOKKOS_EXACT (added to SPARTA_INC)
+try building and running with -DSPARTA_KOKKOS_EXACT (added to SPARTA_INC)
 
+check locations where grid->dt_global is used and see if modifications are needed for use_cell_dt = true.
 
+check FixDt::update_custom for emitting boolean.  Figure out how to generalize this. (check this logic in beforeCustomAttributes
+directory)
+
+check for update_custom call consistency
+  -search for add_particle:  surf_react* functions call add_particle but not update_custom.  I noticed that add_particle
+   is called in perform_collision in collide_vss.cpp, but in this case, you don't want the standard update_custom stuff
+   called as defined in fix_dt.cpp.  In this case, you probably want to copy the time from one particle to the new one.
+   We probably just need to add update_custom calls to surf_react* code.
+
+in collide.cpp, make sure custom particle time logic is ok.  Details:  in collide.cpp, perform_task is called
+and particle_time for a new particle is adjusted there, but then in ambipolar code in collide.cpp, particle_time
+is adjusted again after the add_particle() calls with no arguments.
+
+compare use_global_dt option with custom particle/cell times and with particle/cell times in the grid/particle classes to
+make sure we get the same answer. (don't want to break that functionality in the custom time code).  Do this after the KOKKOS
+custom time stuff is implemented.
 
 
 BUILDING AND RUNNING WITH KOKKOS------------------------------------------------------
@@ -145,5 +155,8 @@ on vortex:
 % lalloc 1
 % pushd ../examples/collide
 % jsrun -M "-gpu -disable_gdr" -l gpu-gpu -d packed -n 1 -a 1 -c 1 ~/Codes/sparta/src/spa_summit_kokkos -in in.collide -k on g 1 -sf kk
+
+
+
 
 

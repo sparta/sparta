@@ -472,7 +472,6 @@ void FixEmitFace::perform_task_onepass()
   int *species = particle->mixture[imix]->species;
 
   dt = grid->dt_global;
-  auto time_global = grid->time_global;
 
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current per-task temp_thermal and vstream
@@ -645,7 +644,6 @@ void FixEmitFace::perform_task_twopass()
   int *species = particle->mixture[imix]->species;
 
   dt = grid->dt_global;
-  auto time_global = grid->time_global;
 
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current per-task temp_thermal and vstream

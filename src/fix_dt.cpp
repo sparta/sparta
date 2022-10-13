@@ -697,7 +697,7 @@ void FixDt::end_of_step()
 void FixDt::update_custom(int index, double, double, double, double *)
 {
   if (grid->use_cell_dt) {
-    double *ptime = particle->edvec[particle->ewhich[particle_time_index]];
+    double *particle_time = particle->edvec[particle->ewhich[particle_time_index]];
     double **cell_time = grid->edarray[grid->ewhich[cell_time_index]];
 
     Particle::OnePart *particles = particle->particles;
@@ -706,14 +706,12 @@ void FixDt::update_custom(int index, double, double, double, double *)
 
     //        Alternative to using same random number generator for all particle creation
     //           is to pass in a generator as part of the update_custom argument list.
-    double particle_time = get_particle_time(grid->time_global,
-                                             random->uniform(),
-                                             cell_dt_desired);
+    double ptime = get_particle_time(grid->time_global, random->uniform(), cell_dt_desired);
     bool emitting = false;
     if (emitting)
-      particle_time -= particles[index].dtremain;
+      ptime -= particles[index].dtremain;
 
-    ptime[index] = particle_time;
+    particle_time[index] = ptime;
   }
   else
     return;

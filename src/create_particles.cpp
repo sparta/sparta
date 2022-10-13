@@ -826,6 +826,7 @@ void CreateParticles::create_local_twopass(bigint np)
       id = MAXSMALLINT*random->uniform();
 
       particle->add_particle(id,ispecies,i,x,v,erot,evib);
+
       if (nfix_update_custom)
         modify->update_custom(particle->nlocal-1,temp_thermal,
                               temp_rot,temp_vib,vstream);

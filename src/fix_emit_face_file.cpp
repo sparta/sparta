@@ -355,7 +355,6 @@ void FixEmitFaceFile::perform_task()
   int *species = particle->mixture[imix]->species;
 
   dt = grid->dt_global;
-  auto time_global = grid->time_global;
 
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current temp_thermal and vstream in insertion cells
