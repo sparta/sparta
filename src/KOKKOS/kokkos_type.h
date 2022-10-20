@@ -16,7 +16,6 @@
 
 #include <Kokkos_Core.hpp>
 #include <Kokkos_DualView.hpp>
-#include <Kokkos_Vectorization.hpp>
 #include <Kokkos_ScatterView.hpp>
 
 #include "particle.h"
