@@ -116,22 +116,17 @@ try building and running with -DSPARTA_KOKKOS_EXACT (added to SPARTA_INC)
 
 check locations where grid->dt_global is used and see if modifications are needed for use_cell_dt = true.
 
-check FixDt::update_custom for emitting boolean.  Figure out how to generalize this. (check this logic in beforeCustomAttributes
-directory)
-
 check for update_custom call consistency
-  -search for add_particle:  surf_react* functions call add_particle but not update_custom.  I noticed that add_particle
-   is called in perform_collision in collide_vss.cpp, but in this case, you don't want the standard update_custom stuff
-   called as defined in fix_dt.cpp.  In this case, you probably want to copy the time from one particle to the new one.
-   We probably just need to add update_custom calls to surf_react* code.
+  - NOTE:  in surf_react* functions, add_particle is called but not update_custom.  Initially, it looked like
+    this was an omission, but the update_custom stuff is called in surf_collide* functions.  For example, see
+    the update_custom call in SurfCollideDiffuse::collide() just after react() is called (which has the
+    add_particle call).
 
-in collide.cpp, make sure custom particle time logic is ok.  Details:  in collide.cpp, perform_task is called
-and particle_time for a new particle is adjusted there, but then in ambipolar code in collide.cpp, particle_time
-is adjusted again after the add_particle() calls with no arguments.
 
 compare use_global_dt option with custom particle/cell times and with particle/cell times in the grid/particle classes to
 make sure we get the same answer. (don't want to break that functionality in the custom time code).  Do this after the KOKKOS
-custom time stuff is implemented.
+custom time stuff is implemented (this will be more difficult to do after I switched the creation of new particle
+times to be grid->time_global in the custom attribute version).
 
 
 BUILDING AND RUNNING WITH KOKKOS------------------------------------------------------

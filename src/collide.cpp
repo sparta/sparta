@@ -1172,7 +1172,7 @@ void Collide::collisions_one_ambipolar()
           particles[index].id = MAXSMALLINT*random->uniform();
           ionambi[index] = 0;
           if (grid->use_cell_dt)
-            particle_time[index] = particle_time[jpart-particles];
+            particle_time[index] = grid->time_global;
           if (nelectron-1 != j-np) memcpy(&elist[j-np],&elist[nelectron-1],nbytes);
           nelectron--;
 
@@ -1600,7 +1600,7 @@ void Collide::collisions_group_ambipolar()
             particles[index].id = MAXSMALLINT*random->uniform();
             ionambi[index] = 0;
             if (grid->use_cell_dt)
-              particle_time[index] = particle_time[jpart-particles];
+              particle_time[index] = grid->time_global;
             if (nelectron-1 != j) memcpy(&elist[j],&elist[nelectron-1],nbytes);
             nelectron--;
             ngroup[egroup]--;

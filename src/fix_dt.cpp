@@ -51,7 +51,7 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   random->reset(seed,me,100);
 
   // arguments
-  if (narg < 10) error->all(FLERR,"Illegal fix dt command");
+  if (narg < 12) error->all(FLERR,"Illegal fix dt command");
   scalar_flag = 1;
   global_freq = 1;
 
@@ -59,17 +59,19 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   if (nevery <= 0) error->all(FLERR,"Illegal fix dt command");
 
   dt_global_weight = atof(arg[3]);
+  transit_fraction = atof(arg[4]);
+  collision_fraction = atof(arg[5]);
 
-  imix = particle->find_mixture(arg[4]);
+  imix = particle->find_mixture(arg[6]);
   if (imix < 0) error->all(FLERR,"fix dt mixture ID does not exist");
 
-  if (strncmp(arg[5],"c_",2) != 0 && strncmp(arg[6],"f_",2) != 0)
+  if (strncmp(arg[7],"c_",2) != 0 && strncmp(arg[8],"f_",2) != 0)
     error->all(FLERR,"Illegal fix dt command");
 
-  if ( !((strncmp(arg[6],"f_",2) == 0) &&
-         (strncmp(arg[7],"f_",2) == 0) &&
-         (strncmp(arg[8],"f_",2) == 0) &&
-         (strncmp(arg[9],"f_",2) == 0)) )
+  if ( !((strncmp(arg[8],"f_",2) == 0) &&
+         (strncmp(arg[9],"f_",2) == 0) &&
+         (strncmp(arg[10],"f_",2) == 0) &&
+         (strncmp(arg[11],"f_",2) == 0)) )
     error->all(FLERR,"Illegal fix dt command");
 
   id_lambda = NULL;
@@ -79,9 +81,9 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   id_wsq = NULL;
 
   // lambda compute or fix
-  int n = strlen(arg[5]);
+  int n = strlen(arg[7]);
   id_lambda = new char[n];
-  strcpy(id_lambda,&arg[5][2]);
+  strcpy(id_lambda,&arg[7][2]);
   char *ptr = strchr(id_lambda,'[');
   if (ptr) {
     if (id_lambda[strlen(id_lambda)-1] != ']')
@@ -90,7 +92,7 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
     *ptr = '\0';
   } else lambdaindex = 0;
 
-  if (strncmp(arg[5],"c_",2) == 0) lambdawhich = COMPUTE;
+  if (strncmp(arg[7],"c_",2) == 0) lambdawhich = COMPUTE;
   else lambdawhich = FIX;
 
   if (lambdawhich == COMPUTE) { // lambda compute
@@ -129,9 +131,9 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   }
 
   // temperature fix
-  n = strlen(arg[6]);
+  n = strlen(arg[8]);
   id_temp = new char[n];
-  strcpy(id_temp,&arg[6][2]);
+  strcpy(id_temp,&arg[8][2]);
 
   ptr = strchr(id_temp,'[');
   if (ptr) {
@@ -159,9 +161,9 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   // squared-velocity fixes
 
   // usq----------------------------
-  n = strlen(arg[7]);
+  n = strlen(arg[9]);
   id_usq = new char[n];
-  strcpy(id_usq,&arg[7][2]);
+  strcpy(id_usq,&arg[9][2]);
 
   ptr = strchr(id_usq,'[');
   if (ptr) {
@@ -187,9 +189,9 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
                "accessed out-of-range");
 
   // vsq----------------------------
-  n = strlen(arg[8]);
+  n = strlen(arg[10]);
   id_vsq = new char[n];
-  strcpy(id_vsq,&arg[8][2]);
+  strcpy(id_vsq,&arg[10][2]);
 
   ptr = strchr(id_vsq,'[');
   if (ptr) {
@@ -215,9 +217,9 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
                "accessed out-of-range");
 
   // wsq----------------------------
-  n = strlen(arg[9]);
+  n = strlen(arg[11]);
   id_wsq = new char[n];
-  strcpy(id_wsq,&arg[9][2]);
+  strcpy(id_wsq,&arg[11][2]);
 
   ptr = strchr(id_wsq,'[');
   if (ptr) {
@@ -247,7 +249,7 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   //  - mode specification for timestep utilization options
   tempflag = velflag = 0;
 
-  int iarg = 10;
+  int iarg = 12;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"temperature") == 0) {
       if (iarg+5 > narg) error->all(FLERR,"Illegal fix dt command");
@@ -291,6 +293,8 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
       grid->use_cell_dt = true;
       iarg += 1;
     }
+    else
+      error->all(FLERR,"Illegal fix dt command: optional argument not recognized");
   }
 
   if (tempflag) {
@@ -600,8 +604,6 @@ void FixDt::end_of_step()
   Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::OnePart *particles = particle->particles;
 
-  double transit_fraction = 0.25;
-  double collision_fraction = 0.1;
   double dt_sum = 0.;
   double dtmin = BIG;
 
@@ -698,20 +700,7 @@ void FixDt::update_custom(int index, double, double, double, double *)
 {
   if (grid->use_cell_dt) {
     double *particle_time = particle->edvec[particle->ewhich[particle_time_index]];
-    double **cell_time = grid->edarray[grid->ewhich[cell_time_index]];
-
-    Particle::OnePart *particles = particle->particles;
-    int icell = particles[index].icell;
-    double cell_dt_desired = cell_time[icell][1];
-
-    //        Alternative to using same random number generator for all particle creation
-    //           is to pass in a generator as part of the update_custom argument list.
-    double ptime = get_particle_time(grid->time_global, random->uniform(), cell_dt_desired);
-    bool emitting = false;
-    if (emitting)
-      ptime -= particles[index].dtremain;
-
-    particle_time[index] = ptime;
+    particle_time[index] = grid->time_global;
   }
   else
     return;
