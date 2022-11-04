@@ -1159,38 +1159,43 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           int sc_type = sc_type_list[n];
           int m = sc_map[n];
 
-          if (DIM == 3)
-            if (sc_type == 0)
+          if (DIM == 3) {
+            if (sc_type == 0) {
               jpart = sc_kk_specular_copy[m].obj.
                 collide_kokkos(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
-            else if (sc_type == 1)
+            } else if (sc_type == 1) {
               jpart = sc_kk_diffuse_copy[m].obj.
                 collide_kokkos(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
-            else if (sc_type == 2)
+            } else if (sc_type == 2) {
               jpart = sc_kk_vanish_copy[m].obj.
                 collide_kokkos(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
-            else if (sc_type == 3)
+            } else if (sc_type == 3) {
               jpart = sc_kk_piston_copy[m].obj.
                 collide_kokkos(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
-            else if (sc_type == 4)
+            } else if (sc_type == 4) {
               jpart = sc_kk_transparent_copy[m].obj.
                 collide_kokkos(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
-          if (DIM != 3)
-            if (sc_type == 0)
+            }
+          }
+
+          if (DIM != 3) {
+            if (sc_type == 0) {
               jpart = sc_kk_specular_copy[m].obj.
                 collide_kokkos(ipart,dtremain,minsurf,line->norm,line->isr,reaction);
-            else if (sc_type == 1)
+            } else if (sc_type == 1) {
               jpart = sc_kk_diffuse_copy[m].obj.
                 collide_kokkos(ipart,dtremain,minsurf,line->norm,line->isr,reaction);
-            else if (sc_type == 2)
+            } else if (sc_type == 2) {
               jpart = sc_kk_vanish_copy[m].obj.
                 collide_kokkos(ipart,dtremain,minsurf,line->norm,line->isr,reaction);
-            else if (sc_type == 3)
+            } else if (sc_type == 3) {
               jpart = sc_kk_piston_copy[m].obj.
                 collide_kokkos(ipart,dtremain,minsurf,line->norm,line->isr,reaction);
-            else if (sc_type == 4)
+            } else if (sc_type == 4) {
               jpart = sc_kk_transparent_copy[m].obj.
                 collide_kokkos(ipart,dtremain,minsurf,line->norm,line->isr,reaction);
+            }
+          }
 
           //Need to error out for now if surface reactions create (or destroy?) particles
           //if (jpart) {

@@ -293,7 +293,6 @@ post_process_grid_kokkos(int index, int nsample,
 
   this->d_etally = d_etally;
   this->d_vec = d_vec;
-  this->nstride = nstride;
 
   // compute normalized single Tgroup value for each grid cell
   // compute Ibar and Tspecies for each species in the requested group
