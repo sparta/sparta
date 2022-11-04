@@ -100,7 +100,7 @@ class Grid : protected Pointers {
   // includes unsplit cells, split cells, sub cells in any order
   // ghost cells are appended to owned
 
-  struct SPARTA_ALIGN(128) ChildCell {
+  struct SPARTA_ALIGN(64) ChildCell {
     cellint id;               // ID of child cell
     int level;                // level of cell in hierarchical grid, 0 = root
     int proc;                 // proc that owns this cell
