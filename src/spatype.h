@@ -54,7 +54,7 @@ enum ExecutionSpace{Host,Device};
 #define SPARTA_GET_ALIGN(type) alignof(type)
 #else
 #define SPARTA_ALIGN(n)
-#define SPARTA_GET_ALIGN(type)
+#define SPARTA_GET_ALIGN(type) 0
 #endif
 
 // default settings: 32-bit smallint, 64-bit bigint, 32-bit cellint
