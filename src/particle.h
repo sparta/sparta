@@ -67,7 +67,7 @@ class Particle : protected Pointers {
   int nmixture;
   int maxmixture;
 
-  struct SPARTA_ALIGN(128) OnePart {
+  struct SPARTA_ALIGN(64) OnePart {
     int id;                 // particle ID
     int ispecies;           // particle species index
     int icell;              // which local Grid::cells the particle is in

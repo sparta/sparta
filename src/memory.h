@@ -23,8 +23,8 @@ class Memory : protected Pointers {
  public:
   Memory(class SPARTA *);
 
-  void *smalloc(bigint n, const char *);
-  void *srealloc(void *, bigint n, const char *);
+  void *smalloc(bigint n, const char *, int = 0);
+  void *srealloc(void *, bigint n, const char *, int = 0);
   void sfree(void *);
   void fail(const char *);
 

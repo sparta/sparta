@@ -335,7 +335,6 @@ void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
   this->nsample = nsample;
   this->d_etally = d_etally;
   this->d_vec = d_vec;
-  this->nstride = nstride;
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   grid_kk->sync(Device,CINFO_MASK);
