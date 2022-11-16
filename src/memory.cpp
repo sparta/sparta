@@ -43,7 +43,7 @@ void *Memory::smalloc(bigint nbytes, const char *name, int align)
 
   if (align) {
     int retval = posix_memalign(&ptr, align, nbytes);
-    if (retval) ptr = nullptr;
+    if (retval) ptr = NULL;
   } else {
     ptr = malloc(nbytes);
   }
