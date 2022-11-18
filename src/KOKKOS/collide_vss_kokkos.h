@@ -100,7 +100,6 @@ class CollideVSSKokkos : public CollideVSS {
   int perform_collision_kokkos(Particle::OnePart *&, Particle::OnePart *&,
                                Particle::OnePart *&, struct State &, struct State &, rand_type &,
                                Particle::OnePart *&, int &, double &,
-                               double, double,
                                int &) const;
 
   KOKKOS_INLINE_FUNCTION

@@ -95,7 +95,6 @@ namespace SPARTA_NS {
     DAT::t_float_1d d_wsq_vector;
 
     double boltz;
-    //    double min_species_mass;
     int dimension;
 
 };

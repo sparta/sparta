@@ -15,7 +15,6 @@
 #include "stdlib.h"
 #include "string.h"
 #include "fix_dt_kokkos.h"
-
 #include "update.h"
 #include "grid_kokkos.h"
 #include "domain.h"
@@ -33,7 +32,8 @@
 #include "mixture.h"
 #include "Kokkos_Atomic.hpp"
 
-enum{NONE,COMPUTE,FIX};
+enum{COMPUTE,FIX};
+enum{NONE, WARN, USE_CALCULATED_GLOBAL_DT};
 
 #define INVOKED_PER_GRID 16
 #define BIG 1.0e20
@@ -221,9 +221,9 @@ void FixDtKokkos::end_of_step()
   // set calculated timestep based on user-specified weighting
   dt_global_calculated = (1.-dt_global_weight)*dtmin + dt_global_weight*dtavg;
 
-  if (mode > FIXMODE::WARN)
+  if (mode > WARN)
     grid_kk->dt_global = dt_global_calculated;
-  else if (mode == FIXMODE::WARN && grid_kk->dt_global > dt_global_calculated) {
+  else if (mode == WARN && grid_kk->dt_global > dt_global_calculated) {
     if (me == 0) {
       std::cout << std::endl;
       std::cout << "    WARNING: user-set global timestep(=" << grid_kk->dt_global
@@ -274,17 +274,18 @@ template<int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
 void FixDtKokkos::operator()(TagFixDt_SetCellDtDesired<ATOMIC_REDUCTION>, const int &i) const {
 
+  d_vector(i) = 0.;
+
   if (d_cellcount[i] < 1)
     return;
 
   // cell dt based on mean collision time
-  double transit_fraction = 0.25;
-  double collision_fraction = 0.1;
   double mean_collision_time = d_lambda_vector(i)/sqrt(d_usq_vector(i) +
                                                        d_vsq_vector(i) +
                                                        d_wsq_vector(i));
+  double cell_dt_desired;
   if (mean_collision_time > 0.)
-    d_cells[i].dt_desired = collision_fraction*mean_collision_time;
+    cell_dt_desired = collision_fraction*mean_collision_time;
 
   // cell size
   double dx = d_cells[i].hi[0] - d_cells[i].lo[0];
@@ -293,42 +294,42 @@ void FixDtKokkos::operator()(TagFixDt_SetCellDtDesired<ATOMIC_REDUCTION>, const 
 
   // cell dt based on transit time using average velocities
   double dt_candidate = transit_fraction*dx/sqrt(d_usq_vector(i));
-  d_cells[i].dt_desired = MIN(dt_candidate,d_cells[i].dt_desired);
+  cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
 
   dt_candidate = transit_fraction*dy/sqrt(d_vsq_vector(i));
-  d_cells[i].dt_desired = MIN(dt_candidate,d_cells[i].dt_desired);
+  cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
 
   if (dimension == 3) {
     dz = d_cells[i].hi[2] - d_cells[i].lo[2];
     dt_candidate = transit_fraction*dz/sqrt(d_wsq_vector(i));
-    d_cells[i].dt_desired = MIN(dt_candidate,d_cells[i].dt_desired);
+    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
   }
 
   // cell dt based on transit time using maximum most probable speed
   double vrm_max = sqrt(2.0*boltz * d_temp_vector(i) / min_species_mass);
 
   dt_candidate = transit_fraction*dx/vrm_max;
-  d_cells[i].dt_desired = MIN(dt_candidate,d_cells[i].dt_desired);
+  cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
 
   dt_candidate = transit_fraction*dy/vrm_max;
-  d_cells[i].dt_desired = MIN(dt_candidate,d_cells[i].dt_desired);
+  cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
 
   if (dimension == 3) {
     dt_candidate = transit_fraction*dz/vrm_max;
-    d_cells[i].dt_desired = MIN(dt_candidate,d_cells[i].dt_desired);
+    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
   }
-  d_vector(i) = d_cells[i].dt_desired;
+  d_vector(i) = cell_dt_desired;
 
   if (ATOMIC_REDUCTION == 1) {
     Kokkos::atomic_increment(&d_ncells_with_a_particle());
-    Kokkos::atomic_add(&d_dtsum(), d_cells[i].dt_desired);
-    Kokkos::atomic_min(&d_dtmin(), d_cells[i].dt_desired);
+    Kokkos::atomic_add(&d_dtsum(), cell_dt_desired);
+    Kokkos::atomic_min(&d_dtmin(), cell_dt_desired);
   }
   else if (ATOMIC_REDUCTION == 0) {
     d_ncells_with_a_particle() += 1;
-    d_dtsum() += d_cells[i].dt_desired;
-    if (d_cells[i].dt_desired < d_dtmin())
-      d_dtmin() = d_cells[i].dt_desired;
+    d_dtsum() += cell_dt_desired;
+    if (cell_dt_desired < d_dtmin())
+      d_dtmin() = cell_dt_desired;
   }
 }
 

@@ -50,7 +50,6 @@ class Grid : protected Pointers {
 
   double dt_global;     // global timestep size
   double time_global;   // the global time
-  bool use_cell_dt = false;
 
   int ngroup;           // # of defined groups
   char **gnames;        // name of each group

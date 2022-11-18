@@ -47,7 +47,7 @@ class ParticleKokkos : public Particle {
 
   static KOKKOS_INLINE_FUNCTION
   int add_particle_kokkos(t_particle_1d particles, int, int, int, int,
-                          double *, double *, double, double, double);
+                          double *, double *, double, double);
 
 #ifndef SPARTA_KOKKOS_EXACT
   void compress_migrate(int, int *);
@@ -180,7 +180,7 @@ class ParticleKokkos : public Particle {
 
 KOKKOS_INLINE_FUNCTION
 int ParticleKokkos::add_particle_kokkos(t_particle_1d particles, int index, int id,
-                                        int ispecies, int icell, double *x, double *v, double erot, double evib, double time)
+                                        int ispecies, int icell, double *x, double *v, double erot, double evib)
 {
   OnePart tmp;
   tmp.id = id;
@@ -194,7 +194,6 @@ int ParticleKokkos::add_particle_kokkos(t_particle_1d particles, int index, int 
   tmp.v[2] = v[2];
   tmp.erot = erot;
   tmp.evib = evib;
-  tmp.time = time;
   enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};  // same as .cpp file
   tmp.flag = PKEEP;
 

@@ -325,11 +325,6 @@ void Collide::init()
   // initialize running stats before each run
 
   ncollide_running = nattempt_running = nreact_running = 0;
-
-  if (grid->use_cell_dt) {
-    index_particle_time = particle->find_custom((char*) "particle_time");
-    index_cell_time = grid->find_custom((char*) "cell_time");
-  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -474,29 +469,9 @@ template < int NEARCP > void Collide::collisions_one()
   int *next = particle->next;
   double dtc = grid->dt_global;
 
-  // custom cell time
-  if (grid->use_cell_dt)
-    cell_time = grid->edarray[grid->ewhich[index_cell_time]];
-
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
-
-    // compute collisions in cell if the cell time falls behind the global time by
-    // the desired cell timestep. Note: for cell_time array, "0" is cell time, and
-    // "1" is cell desired timestep
-    if (grid->use_cell_dt) {
-      bool do_cell_collisions = false;
-      if ((grid->time_global - cell_time[icell][0]) > cell_time[icell][1]) {
-        do_cell_collisions = true;
-      }
-      if (do_cell_collisions) {
-        dtc = 2.*cell_time[icell][1];
-        cell_time[icell][0] += dtc;
-      }
-      else
-        continue;
-    }
 
     if (NEARCP) {
       if (np > max_nn) realloc_nn(np,nn_last_partner);
@@ -639,29 +614,9 @@ template < int NEARCP > void Collide::collisions_group()
   int *species2group = mixture->species2group;
   double dtc = grid->dt_global;
 
-  // custom cell time
-  if (grid->use_cell_dt)
-    cell_time = grid->edarray[grid->ewhich[index_cell_time]];
-
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
-
-    // compute collisions in cell if the cell time falls behind the global time by
-    // the desired cell timestep. Note: for cell_time array, "0" is cell time, and
-    // "1" is cell desired timestep
-    if (grid->use_cell_dt) {
-      bool do_cell_collisions = false;
-      if ((grid->time_global - cell_time[icell][0]) > cell_time[icell][1]) {
-        do_cell_collisions = true;
-      }
-      if (do_cell_collisions) {
-        dtc = 2.*cell_time[icell][1];
-        cell_time[icell][0] += dtc;
-      }
-      else
-        continue;
-    }
 
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
@@ -925,12 +880,6 @@ void Collide::collisions_one_ambipolar()
   int *ionambi = particle->eivec[particle->ewhich[index_ionambi]];
   double **velambi = particle->edarray[particle->ewhich[index_velambi]];
 
-  // custom particle/cell time
-  if (grid->use_cell_dt) {
-    particle_time = particle->edvec[particle->ewhich[index_particle_time]];
-    cell_time = grid->edarray[grid->ewhich[index_cell_time]];
-  }
-
   // loop over cells I own
 
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -944,22 +893,6 @@ void Collide::collisions_one_ambipolar()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
-
-    // compute collisions in cell if the cell time falls behind the global time by
-    // the desired cell timestep. Note: for cell_time array, "0" is cell time, and
-    // "1" is cell desired timestep
-    if (grid->use_cell_dt) {
-      bool do_cell_collisions = false;
-      if ((grid->time_global - cell_time[icell][0]) > cell_time[icell][1]) {
-        do_cell_collisions = true;
-      }
-      if (do_cell_collisions) {
-        dtc = 2.*cell_time[icell][1];
-        cell_time[icell][0] += dtc;
-      }
-      else
-        continue;
-    }
 
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
@@ -1163,16 +1096,12 @@ void Collide::collisions_one_ambipolar()
             particles = particle->particles;
             ionambi = particle->eivec[particle->ewhich[index_ionambi]];
             velambi = particle->edarray[particle->ewhich[index_velambi]];
-            if (grid->use_cell_dt)
-              particle_time = particle->edvec[particle->ewhich[index_particle_time]];
           }
 
           int index = particle->nlocal-1;
           memcpy(&particles[index],jpart,nbytes);
           particles[index].id = MAXSMALLINT*random->uniform();
           ionambi[index] = 0;
-          if (grid->use_cell_dt)
-            particle_time[index] = grid->time_global;
           if (nelectron-1 != j-np) memcpy(&elist[j-np],&elist[nelectron-1],nbytes);
           nelectron--;
 
@@ -1245,12 +1174,6 @@ void Collide::collisions_group_ambipolar()
   int *ionambi = particle->eivec[particle->ewhich[index_ionambi]];
   double **velambi = particle->edarray[particle->ewhich[index_velambi]];
 
-  // custom particle/cell time
-  if (grid->use_cell_dt) {
-    particle_time = particle->edvec[particle->ewhich[index_particle_time]];
-    cell_time = grid->edarray[grid->ewhich[index_cell_time]];
-  }
-
   // loop over cells I own
 
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -1266,22 +1189,6 @@ void Collide::collisions_group_ambipolar()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
-
-    // compute collisions in cell if the cell time falls behind the global time by
-    // the desired cell timestep. Note: for cell_time array, "0" is cell time, and
-    // "1" is cell desired timestep
-    if (grid->use_cell_dt) {
-      bool do_cell_collisions = false;
-      if ((grid->time_global - cell_time[icell][0]) > cell_time[icell][1]) {
-        do_cell_collisions = true;
-      }
-      if (do_cell_collisions) {
-        dtc = 2.*cell_time[icell][1];
-        cell_time[icell][0] += dtc;
-      }
-      else
-        continue;
-    }
 
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
@@ -1591,16 +1498,12 @@ void Collide::collisions_group_ambipolar()
               particles = particle->particles;
               ionambi = particle->eivec[particle->ewhich[index_ionambi]];
               velambi = particle->edarray[particle->ewhich[index_velambi]];
-              if (grid->use_cell_dt)
-                particle_time = particle->edvec[particle->ewhich[index_particle_time]];
             }
 
             int index = particle->nlocal-1;
             memcpy(&particles[index],jpart,nbytes);
             particles[index].id = MAXSMALLINT*random->uniform();
             ionambi[index] = 0;
-            if (grid->use_cell_dt)
-              particle_time[index] = grid->time_global;
             if (nelectron-1 != j) memcpy(&elist[j],&elist[nelectron-1],nbytes);
             nelectron--;
             ngroup[egroup]--;

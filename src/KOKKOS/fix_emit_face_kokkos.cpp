@@ -258,8 +258,6 @@ void FixEmitFaceKokkos::perform_task()
   particleKK->grow(nnew);
   particleKK->sync(SPARTA_NS::Device, PARTICLE_MASK);
   auto ld_particles = particleKK->k_particles.d_view;
-  auto time_global = grid->time_global;
-  auto use_cell_dt = grid->use_cell_dt;
 
   Kokkos::parallel_for(ncands, SPARTA_LAMBDA(int cand) {
     if (!ld_keep(cand)) return;
@@ -306,14 +304,8 @@ void FixEmitFaceKokkos::perform_task()
     auto inew = ld_cands2new(cand);
     auto ilocal = nlocal_before + inew;
 
-    auto rnd = rand_gen.drand();
-    double particle_time;
-    if (use_cell_dt)
-      particle_time = time_global + (-1. + 2.*rnd)*task_i.cell_dt_desired;
-    else
-      particle_time = time_global;
     ParticleKokkos::add_particle_kokkos(ld_particles,ilocal,
-                                        id,ispecies,pcell,x,v,erot,evib,particle_time);
+                                        id,ispecies,pcell,x,v,erot,evib);
 
     ld_particles(ilocal).flag = PINSERT;
     ld_particles(ilocal).dtremain = dtremain;

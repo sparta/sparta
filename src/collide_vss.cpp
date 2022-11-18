@@ -296,12 +296,6 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
         jp = particle->particles + (jp - particles);
       }
 
-      if (grid->use_cell_dt) {
-        particle_time = particle->edvec[particle->ewhich[index_particle_time]];
-        particle_time[particle->nlocal-1] = grid->time_global;
-      }
-
-
       kp = &particle->particles[particle->nlocal-1];
       EEXCHANGE_ReactingEDisposal(ip,jp,kp);
       SCATTER_ThreeBodyScattering(ip,jp,kp);

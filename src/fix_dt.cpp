@@ -19,20 +19,18 @@
 #include "input.h"
 #include "grid.h"
 #include "modify.h"
-#include "variable.h"
 #include "memory.h"
 #include "error.h"
 #include "domain.h"
 #include "particle.h"
 #include "mixture.h"
 #include "comm.h"
-#include "random_mars.h"
-#include "random_knuth.h"
 #include <iostream>
 
 using namespace SPARTA_NS;
 
-enum{NONE,COMPUTE,FIX};
+enum{COMPUTE,FIX};
+enum{WARN, USE_CALCULATED_GLOBAL_DT};
 enum{INT,DOUBLE};
 
 #define INVOKED_PER_GRID 16
@@ -43,15 +41,8 @@ enum{INT,DOUBLE};
 FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
-
-  // RNG
-  int me = comm->me;
-  random = new RanKnuth(update->ranmaster->uniform());
-  double seed = update->ranmaster->uniform();
-  random->reset(seed,me,100);
-
   // arguments
-  if (narg < 12) error->all(FLERR,"Illegal fix dt command");
+  if (narg < 13) error->all(FLERR,"Illegal fix dt command");
   scalar_flag = 1;
   global_freq = 1;
 
@@ -244,134 +235,16 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Fix dt fix array is "
                "accessed out-of-range");
 
-  // optional args
-  //  - prescribed temperature/velocity profiles for initial timestep calculation
-  //  - mode specification for timestep utilization options
-  tempflag = velflag = 0;
-
-  int iarg = 12;
-  while (iarg < narg) {
-    if (strcmp(arg[iarg],"temperature") == 0) {
-      if (iarg+5 > narg) error->all(FLERR,"Illegal fix dt command");
-      tempflag = 1;
-      tstr = arg[iarg+1];
-      if (strcmp(arg[iarg+2],"NULL") == 0) txstr = NULL;
-      else txstr = arg[iarg+2];
-      if (strcmp(arg[iarg+3],"NULL") == 0) tystr = NULL;
-      else tystr = arg[iarg+3];
-      if (strcmp(arg[iarg+4],"NULL") == 0) tzstr = NULL;
-      else tzstr = arg[iarg+4];
-      iarg += 5;
-    } else if (strcmp(arg[iarg],"velocity") == 0) {
-      if (iarg+7 > narg) error->all(FLERR,"Illegal fix dt command");
-      velflag = 1;
-      if (strcmp(arg[iarg+1],"NULL") == 0) vxstr = NULL;
-      else vxstr = arg[iarg+1];
-      if (strcmp(arg[iarg+2],"NULL") == 0) vystr = NULL;
-      else vystr = arg[iarg+2];
-      if (strcmp(arg[iarg+3],"NULL") == 0) vzstr = NULL;
-      else vzstr = arg[iarg+3];
-      if (strcmp(arg[iarg+4],"NULL") == 0) vstrx = NULL;
-      else vstrx = arg[iarg+4];
-      if (strcmp(arg[iarg+5],"NULL") == 0) vstry = NULL;
-      else vstry = arg[iarg+5];
-      if (strcmp(arg[iarg+6],"NULL") == 0) vstrz = NULL;
-      else vstrz = arg[iarg+6];
-      iarg += 7;
-    } else if (strcmp(arg[iarg],"none") == 0) {
-      mode = FIXMODE::NONE;
-      iarg += 1;
-    } else if (strcmp(arg[iarg],"warn") == 0) {
-      mode = FIXMODE::WARN;
-      iarg += 1;
-    } else if (strcmp(arg[iarg],"use_calculated_global_dt") == 0) {
-      mode = FIXMODE::USE_CALCULATED_GLOBAL_DT;
-      iarg += 1;
-    }
-    else if (strcmp(arg[iarg],"use_calculated_cell_dt") == 0) {
-      mode = FIXMODE::USE_CALCULATED_CELL_DT;
-      grid->use_cell_dt = true;
-      iarg += 1;
-    }
-    else
-      error->all(FLERR,"Illegal fix dt command: optional argument not recognized");
-  }
-
-  if (tempflag) {
-    tvar = input->variable->find(tstr);
-    if (tvar < 0)
-      error->all(FLERR,"Variable name for fix dt does not exist");
-    if (!input->variable->equal_style(tvar))
-      error->all(FLERR,"Variable for fix dt is invalid style");
-    if (txstr) {
-      txvar = input->variable->find(txstr);
-      if (txvar < 0)
-        error->all(FLERR,"Variable name for fix dt does not exist");
-      if (!input->variable->internal_style(txvar))
-        error->all(FLERR,"Variable for fix dt is invalid style");
-    }
-    if (tystr) {
-      tyvar = input->variable->find(tystr);
-      if (tyvar < 0)
-        error->all(FLERR,"Variable name for fix dt does not exist");
-      if (!input->variable->internal_style(tyvar))
-        error->all(FLERR,"Variable for fix dt is invalid style");
-    }
-    if (tzstr) {
-      tzvar = input->variable->find(tzstr);
-      if (tzvar < 0)
-        error->all(FLERR,"Variable name for fix dt does not exist");
-      if (!input->variable->internal_style(tzvar))
-        error->all(FLERR,"Variable for fix dt is invalid style");
-    }
-  }
-
-  if (velflag) {
-    if (vxstr) {
-      vxvar = input->variable->find(vxstr);
-      if (vxvar < 0)
-        error->all(FLERR,"Variable name for fix dt does not exist");
-      if (!input->variable->equal_style(vxvar))
-        error->all(FLERR,"Variable for fix dt is invalid style");
-    }
-    if (vystr) {
-      vyvar = input->variable->find(vystr);
-      if (vyvar < 0)
-        error->all(FLERR,"Variable name for fix dt does not exist");
-      if (!input->variable->equal_style(vyvar))
-        error->all(FLERR,"Variable for fix dt is invalid style");
-    }
-    if (vzstr) {
-      vzvar = input->variable->find(vzstr);
-      if (vzvar < 0)
-        error->all(FLERR,"Variable name for fix dt does not exist");
-      if (!input->variable->equal_style(vzvar))
-        error->all(FLERR,"Variable for fix dt is invalid style");
-    }
-    if (vstrx) {
-      vvarx = input->variable->find(vstrx);
-      if (vvarx < 0)
-        error->all(FLERR,"Variable name for fix dt does not exist");
-      if (!input->variable->internal_style(vvarx))
-        error->all(FLERR,"Variable for fix dt is invalid style");
-    }
-    if (vstry) {
-      vvary = input->variable->find(vstry);
-      if (vvary < 0)
-        error->all(FLERR,"Variable name for fix dt does not exist");
-      if (!input->variable->internal_style(vvary))
-        error->all(FLERR,"Variable for fix dt is invalid style");
-    }
-    if (vstrz) {
-      vvarz = input->variable->find(vstrz);
-      if (vvarz < 0)
-        error->all(FLERR,"Variable name for fix dt does not exist");
-      if (!input->variable->internal_style(vvarz))
-        error->all(FLERR,"Variable for fix dt is invalid style");
-    }
-  }
+  // mode specification
+  if (strcmp(arg[12],"warn") == 0)
+    mode = WARN;
+  else if (strcmp(arg[12],"use_calculated_global_dt") == 0)
+    mode = USE_CALCULATED_GLOBAL_DT;
+  else
+    error->all(FLERR,"Illegal fix dt command: mode argument not recognized");
 
   // initialize data structures
+  int me = comm->me;
   MPI_Comm_rank(world,&me);
   nglocal = 0;
   lambda = temp = usq = vsq = wsq = NULL;
@@ -379,24 +252,7 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   per_grid_flag = 1;
   per_grid_freq = 1;
   size_per_grid_cols = 0;
-
-  reallocate();
-
-  // create per-particle vector for particle time
-  particle_time_index = particle->add_custom((char *) "particle_time", DOUBLE, 0);
-
-  // create per-cell array for cell time/desired timestep
-  int ghostflag = 1;
-  cell_time_index = grid->add_custom((char *) "cell_time", DOUBLE, 2, ghostflag);
-
-  // set up initial timestep
-  double x[3];
-  Grid::ChildCell *cells = grid->cells;
-  double mixture_temperature_thermal = particle->mixture[imix]->temp_thermal;
-  double *vstream = particle->mixture[imix]->vstream;
-  double vstream_variable[3];
-  double v[3];
-  double temperature;
+  dt_global_calculated = 0.;
 
   // find minimum species mass
   Particle::Species *species = particle->species;
@@ -404,42 +260,11 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   for (int s = 0; s < particle->nspecies; ++s)
     min_species_mass = MIN(species[s].mass,min_species_mass);
 
-  // custom cell time array
-  double **cell_time = grid->edarray[grid->ewhich[cell_time_index]];
+  reallocate();
 
-  for (int i = 0; i < nglocal; ++i) {
-
-#if 0
-    x[0] = 0.5*(cells[i].lo[0] + cells[i].hi[0]);
-    x[1] = 0.5*(cells[i].lo[1] + cells[i].hi[1]);
-    x[2] = 0.5*(cells[i].lo[2] + cells[i].hi[2]);
-
-    if (tempflag)
-      temperature = temperature_variable(x);
-    else
-      temperature = mixture_temperature_thermal;
-
-    if (velflag) {
-      velocity_variable(x,vstream,vstream_variable);
-      v[0] = vstream_variable[0];
-      v[1] = vstream_variable[1];
-      v[2] = vstream_variable[2];
-    }
-    else {
-      v[0] = vstream[0];
-      v[1] = vstream[1];
-      v[2] = vstream[2];
-    }
-    double vrm_max = sqrt(2.0*update->boltz * temperature / min_species_mass);
-#endif
-
-    // for now, set cell timestep to be global value, which was read in
-
-    cell_time[i][0] = grid->time_global;
-    double cell_dt_desired = grid->dt_global;
-    cell_time[i][1] = cell_dt_desired;
-    vector_grid[i] = cell_dt_desired;
-  }
+  // initialize cell timestep vector
+  for (int i = 0; i < nglocal; ++i)
+    vector_grid[i] = 0.;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -448,7 +273,6 @@ FixDt::~FixDt()
 {
   if (copymode) return;
 
-  delete random;
   delete [] id_lambda;
   delete [] id_temp;
   delete [] id_usq;
@@ -460,8 +284,6 @@ FixDt::~FixDt()
   memory->destroy(vsq);
   memory->destroy(wsq);
   memory->destroy(vector_grid);
-  particle->remove_custom(particle_time_index);
-  grid->remove_custom(cell_time_index);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -607,12 +429,11 @@ void FixDt::end_of_step()
   double dt_sum = 0.;
   double dtmin = BIG;
 
-  // custom cell time array
-  double **cell_time = grid->edarray[grid->ewhich[cell_time_index]];
-
   bigint ncells_with_a_particle = 0.;
   double cell_dt_desired;
   for (int i = 0; i < nglocal; ++i) {
+
+    vector_grid[i] = 0.;
 
     int np = cinfo[i].count;
     if (np < 1) continue;
@@ -659,7 +480,6 @@ void FixDt::end_of_step()
 
     dtmin = MIN(dtmin, cell_dt_desired);
     dt_sum += cell_dt_desired;
-    cell_time[i][1] = cell_dt_desired;
     vector_grid[i] = cell_dt_desired;
   }
 
@@ -679,9 +499,9 @@ void FixDt::end_of_step()
   // set calculated timestep based on user-specified weighting
   dt_global_calculated = (1.-dt_global_weight)*dtmin + dt_global_weight*dtavg;
 
-  if (mode > FIXMODE::WARN)
+  if (mode > WARN)
     grid->dt_global = dt_global_calculated;
-  else if (mode == FIXMODE::WARN && grid->dt_global > dt_global_calculated) {
+  else if (mode == WARN && grid->dt_global > dt_global_calculated) {
     if (me == 0) {
       std::cout << std::endl;
       std::cout << "    WARNING: user-set global timestep(=" << grid->dt_global
@@ -690,22 +510,6 @@ void FixDt::end_of_step()
     }
   }
 }
-
-/* ----------------------------------------------------------------------
-   called when a particle with index is created
-   creation used cell desired timestep to set particle time
-------------------------------------------------------------------------- */
-
-void FixDt::update_custom(int index, double, double, double, double *)
-{
-  if (grid->use_cell_dt) {
-    double *particle_time = particle->edvec[particle->ewhich[particle_time_index]];
-    particle_time[index] = grid->time_global;
-  }
-  else
-    return;
-}
-
 
 /* ----------------------------------------------------------------------
    reallocate arrays if nglocal has changed
@@ -738,41 +542,5 @@ void FixDt::reallocate()
 double FixDt::compute_scalar()
 {
   return dt_global_calculated;
-}
-
-/* ----------------------------------------------------------------------
-   use grid cell center in tvar variable to generate temperature scale factor
-   first plug in cell x,y,z centroid values into txvar,tyvar,tzvar
-------------------------------------------------------------------------- */
-
-double FixDt::temperature_variable(double *x)
-{
-
-  if (txstr) input->variable->internal_set(txvar,x[0]);
-  if (tystr) input->variable->internal_set(tyvar,x[1]);
-  if (tzstr) input->variable->internal_set(tzvar,x[2]);
-
-  double temperature = input->variable->compute_equal(tvar);
-  return temperature;
-}
-
-/* ----------------------------------------------------------------------
-   use cell position in vxvar,vyvar,vzvar variables to generate vel stream
-   first plug in cell x,y,z centroid values into vvarx,vvary,vvarz
-------------------------------------------------------------------------- */
-
-void FixDt::velocity_variable(double *x, double *vstream,
-                                    double *vstream_variable)
-{
-  if (vstrx) input->variable->internal_set(vvarx,x[0]);
-  if (vstry) input->variable->internal_set(vvary,x[1]);
-  if (vstrz) input->variable->internal_set(vvarz,x[2]);
-
-  if (vxstr) vstream_variable[0] = input->variable->compute_equal(vxvar);
-  else vstream_variable[0] = vstream[0];
-  if (vystr) vstream_variable[1] = input->variable->compute_equal(vyvar);
-  else vstream_variable[1] = vstream[1];
-  if (vzstr) vstream_variable[2] = input->variable->compute_equal(vzvar);
-  else vstream_variable[2] = vstream[2];
 }
 

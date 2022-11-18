@@ -27,8 +27,6 @@ FixStyle(dt,FixDt)
 
 namespace SPARTA_NS {
 
-enum class FIXMODE : int {NONE, WARN, USE_CALCULATED_GLOBAL_DT, USE_CALCULATED_CELL_DT};
-
 class FixDt : public Fix {
  public:
   FixDt(class SPARTA *, int, char **);
@@ -37,7 +35,6 @@ class FixDt : public Fix {
   void init();
   void end_of_step();
   double compute_scalar();
-  virtual void update_custom(int, double, double, double, double *);
   virtual void reallocate();
 
  protected:
@@ -45,27 +42,17 @@ class FixDt : public Fix {
   int nglocal;
   int lambdawhich,usqwhich,vsqwhihc,wsqwhich,tempwhich;
   int lambdaindex, usqindex,vsqindex,wsqindex,tempindex;
-  int tvar,txvar,tyvar,tzvar,tempflag;
-  int vxvar,vyvar,vzvar,vvarx,vvary,vvarz,velflag;
   int imix;
-  int particle_time_index;                          // index into custom particle_time vector
-  int cell_time_index;                              // index into custom cell_time array
+  int mode;
   char *id_lambda,*id_usq,*id_vsq,*id_wsq,*id_temp;
-  char *tstr,*txstr,*tystr,*tzstr;
-  char *vxstr,*vystr,*vzstr,*vstrx,*vstry,*vstrz;
   class Compute *clambda;
   class Fix *flambda,*fusq,*fvsq,*fwsq,*ftemp;
-  class RanKnuth *random;
   double *lambda,*usq,*vsq,*wsq,*temp;
   double min_species_mass;
   double dt_global_weight;
   double transit_fraction;
   double collision_fraction;
-  double dt_global_calculated=0.;
-  FIXMODE mode = FIXMODE::NONE;
-
-  double temperature_variable(double *);
-  void velocity_variable(double *, double *, double *);
+  double dt_global_calculated;
 };
 
 }

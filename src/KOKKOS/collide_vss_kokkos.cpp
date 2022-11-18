@@ -606,26 +606,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
   int np = grid_kk_copy.obj.d_cellcount[icell];
   if (np <= 1) return;
 
-  // compute collisions in cell if the cell time falls behind the global time by
-  // the desired cell timestep.
   double dtc = grid_kk_copy.obj.dt_global;
-  const double time_global = grid_kk_copy.obj.time_global;
-  const bool use_cell_dt = grid_kk_copy.obj.use_cell_dt;
-  if (use_cell_dt) {
-    const double time_cell = d_cells[icell].time;
-    dtc = d_cells[icell].dt_desired;
-    bool do_cell_collisions = false;
-    if ((time_global - time_cell) > dtc) {
-      do_cell_collisions = true;
-    }
-    if (do_cell_collisions) {
-      dtc = 2.*d_cells[icell].dt_desired;
-      d_cells[icell].time += dtc;
-    }
-    else
-      return;
-  }
-
 
   if (NEARCP) {
     for (int i = 0; i < np; i++)
@@ -717,7 +698,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
 
     setup_collision_kokkos(ipart,jpart,precoln,postcoln);
     const int reactflag = perform_collision_kokkos(ipart,jpart,kpart,precoln,postcoln,rand_gen,
-                                                   recomb_part3,recomb_species,recomb_density,time_global,dtc,index_kpart);
+                                                   recomb_part3,recomb_species,recomb_density,index_kpart);
 
     if (ATOMIC_REDUCTION == 1)
       Kokkos::atomic_increment(&d_ncollide_one());
@@ -970,26 +951,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
   int np = grid_kk_copy.obj.d_cellcount[icell];
   if (np <= 1) return;
 
-  // compute collisions in cell if the cell time falls behind the global time by
-  // the desired cell timestep.
   double dtc = grid_kk_copy.obj.dt_global;
-  const double time_global = grid_kk_copy.obj.time_global;
-  const bool use_cell_dt = grid_kk_copy.obj.use_cell_dt;
-  if (use_cell_dt) {
-    const double time_cell = d_cells[icell].time;
-    dtc = d_cells[icell].dt_desired;
-    bool do_cell_collisions = false;
-    if ((time_global - time_cell) > dtc) {
-      do_cell_collisions = true;
-    }
-    if (do_cell_collisions) {
-      dtc = 2.*d_cells[icell].dt_desired;
-      d_cells[icell].time += dtc;
-    }
-    else
-      return;
-  }
-
   const double volume = grid_kk_copy.obj.k_cinfo.d_view[icell].volume / grid_kk_copy.obj.k_cinfo.d_view[icell].weight;
   if (volume == 0.0) d_error_flag() = 1;
 
@@ -1125,7 +1087,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
     const int jspecies = jpart->ispecies;
     setup_collision_kokkos(ipart,jpart,precoln,postcoln);
     const int reactflag = perform_collision_kokkos(ipart,jpart,kpart,precoln,postcoln,rand_gen,
-                                                   recomb_part3,recomb_species,recomb_density,time_global,dtc,index_kpart);
+                                                   recomb_part3,recomb_species,recomb_density,index_kpart);
 
     if (ATOMIC_REDUCTION == 1)
       Kokkos::atomic_fetch_add(&d_ncollide_one(),1);
@@ -1215,8 +1177,6 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
     //   non-ambipolar recombination reaction
     //   remove from plist, flag J for deletion
 
-    auto time_global = grid_kk_copy.obj.time_global;
-    auto use_cell_dt = grid_kk_copy.obj.use_cell_dt;
     if (jpart) {
       if (jspecies != ambispecies && jpart->ispecies == ambispecies) {
         if (nelectron < d_elist.extent(1)) {
@@ -1235,12 +1195,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
 
       } else if (jspecies == ambispecies && jpart->ispecies != ambispecies) {
         int index = Kokkos::atomic_fetch_add(&d_nlocal(),1);
-        double particle_time;
-        if (use_cell_dt)
-          particle_time = time_global + (-1. + 2.*rand_gen.drand())*dtc;
-        else
-          particle_time = time_global;
-        int reallocflag = ParticleKokkos::add_particle_kokkos(d_particles,index,0,jspecies,icell,jpart->x,jpart->v,0.0,0.0,particle_time);
+        int reallocflag = ParticleKokkos::add_particle_kokkos(d_particles,index,0,jspecies,icell,jpart->x,jpart->v,0.0,0.0);
         if (reallocflag) {
           d_retry() = 1;
           d_part_grow() = 1;
@@ -1424,7 +1379,6 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
                                                Particle::OnePart *&kp,
                                                struct State &precoln, struct State &postcoln, rand_type &rand_gen,
                                                Particle::OnePart *&p3, int &recomb_species, double &recomb_density,
-                                               double time_global, double dt,
                                                int &index_kpart) const
 {
   int reactflag,kspecies;
@@ -1454,21 +1408,15 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
     // if add_particle() performs a realloc:
     //   make copy of x,v, then repoint ip,jp to new particles data struct
 
-    auto time_global = grid_kk_copy.obj.time_global;
-    auto use_cell_dt = grid_kk_copy.obj.use_cell_dt;
     if (kspecies >= 0) {
       int id = MAXSMALLINT*rand_gen.drand();
 
       memcpy(x,ip->x,3*sizeof(double));
       memcpy(v,ip->v,3*sizeof(double));
       index_kpart = Kokkos::atomic_fetch_add(&d_nlocal(),1);
-      double particle_time;
-      if (use_cell_dt)
-        particle_time = time_global + (-1. + 2.*rand_gen.drand())*dt;
-      else
-        particle_time = time_global;
+
       int reallocflag =
-        ParticleKokkos::add_particle_kokkos(d_particles,index_kpart,id,kspecies,ip->icell,x,v,0.0,0.0,particle_time);
+        ParticleKokkos::add_particle_kokkos(d_particles,index_kpart,id,kspecies,ip->icell,x,v,0.0,0.0);
       if (reallocflag) {
         d_retry() = 1;
         d_part_grow() = 1;
