@@ -278,13 +278,17 @@ void Grid::surf2grid_cell_algorithm(int outflag)
       if (dim == 2) {
 
         for (i = 0; i < nsurf; i++) {
-          if (!lines[ptr[i]].transparent) nontrans = 1;
-          break;
+          if (!lines[ptr[i]].transparent) {
+            nontrans = 1;
+            break;
+          }
         }
       } else {
         for (i = 0; i < nsurf; i++) {
-          if (!tris[ptr[i]].transparent) nontrans = 1;
-          break;
+          if (!tris[ptr[i]].transparent) {
+            nontrans = 1;
+            break;
+          }
         }
       }
 
@@ -950,13 +954,17 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
     if (dim == 2) {
       for (i = 0; i < n; i++) {
-	if (!lines[list[i]].transparent) nontrans = 1;
-	break;
+        if (!lines[list[i]].transparent) {
+          nontrans = 1;
+          break;
+        }
       }
     } else {
       for (i = 0; i < n; i++) {
-	if (!tris[list[i]].transparent) nontrans = 1;
-	break;
+        if (!tris[list[i]].transparent) {
+          nontrans = 1;
+          break;
+        }
       }
     }
 

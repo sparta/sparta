@@ -33,6 +33,8 @@
 #         than 1 level different than neighbors
 #       this would propagate refinement away from surf
 
+from __future__ import print_function
+
 import os,sys
 from math import sqrt
 path = os.environ["SPARTA_PYTHON_TOOLS"]
@@ -44,10 +46,10 @@ from cut3d import clip as clip3d
 # error message
 
 def error(str):
-  if str: print "ERROR:",str
-  else: print "Syntax: grid_refine.py -s surffile " + \
+  if str: print("ERROR:",str)
+  else: print("Syntax: grid_refine.py -s surffile " + \
         "-b xlo xhi ylo yhi zlo zhi -n Nx Ny Nz -m Mx My Mz " + \
-        "-x maxlevel -d delta -f Fx Fy Fz -o outfile"
+        "-x maxlevel -d delta -f Fx Fy Fz -o outfile")
   sys.exit()
 
 # check a list of surfs for intersection with box
@@ -245,14 +247,14 @@ if dim == 2:
     slist = []
     for i,norm in enumerate(norms):
       if dot2d((fx,fy),norms[i]) <= 0.0: slist.append(i)
-  else: slist = range(len(lines))
+  else: slist = list(range(len(lines)))
 if dim == 3:
   if flowflag:
     slist = []
     for i,norm in enumerate(norms):
       if dot3d((fx,fy,fz),norms[i]) <= 0.0: slist.append(i)
-  else: slist = range(len(tris))
-      
+  else: slist = list(range(len(tris)))
+
 # generate grid, one level at a time
 # queue = list of parent cells to process, remove from front, add to end
 #   each entry: id (as list), bbox, surf-list of intersections, nny, nny, nnz
@@ -315,24 +317,24 @@ while len(queue):
 
 # write out SPARTA grid file
         
-print "writing grid file %s ..." % outfile
+print("writing grid file %s ..." % outfile)
 fp = open(outfile,"w")
 
-print >>fp,"# SPARTA grid file produced by refine.py tool"
-print >>fp
-print >>fp,"%d parents" % len(plist)
-print >> fp
-print >>fp,"Parents"
-print >>fp
+print("# SPARTA grid file produced by refine.py tool", file=fp)
+print(file=fp)
+print("%d parents" % len(plist), file=fp)
+print(file=fp)
+print("Parents", file=fp)
+print(file=fp)
 
 count = 0
 for parent in plist:
   count += 1
-  print >>fp,count,parent[0],parent[1],parent[2],parent[3]
+  print(count,parent[0],parent[1],parent[2],parent[3], file=fp)
   
 fp.close()
 
 # final stats
 
-print len(plist),"parent cells"
-print nchild,"child cells"
+print(len(plist),"parent cells")
+print(nchild,"child cells")

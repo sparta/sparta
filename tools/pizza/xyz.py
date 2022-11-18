@@ -113,9 +113,9 @@ class xyz:
     which = self.data.findtime(time)
     time,box,atoms,bonds,tris,lines = self.data.viz(which)
     f = open(file,"w")
-    print >>f,len(atoms)
-    print >>f,"Atoms"
+    print(len(atoms), file=f)
+    print("Atoms", file=f)
     for atom in atoms:
       itype = int(atom[1])
-      print >>f,itype,atom[2],atom[3],atom[4]
+      print(itype,atom[2],atom[3],atom[4], file=f)
     f.close()

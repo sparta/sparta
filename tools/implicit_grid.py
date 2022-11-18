@@ -20,7 +20,7 @@ import sys,random,struct
 import numpy as np
 
 def error():
-  print "Syntax: implicit_grid.py dim Nx Ny Nz seed file"
+  print("Syntax: implicit_grid.py dim Nx Ny Nz seed file")
   sys.exit()
 
 # command-line args

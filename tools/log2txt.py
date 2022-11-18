@@ -16,7 +16,7 @@ sys.path.append(path)
 from olog import olog
 
 if len(sys.argv) < 3:
-  raise StandardError, "Syntax: log2txt.py logfile data.txt X Y ..."
+  raise Exception("Syntax: log2txt.py logfile data.txt X Y ...")
 
 logfile = sys.argv[1]
 datafile = sys.argv[2]

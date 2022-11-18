@@ -590,7 +590,8 @@ void Particle::grow(int nextra)
   maxlocal = newmax;
   particles = (OnePart *)
     memory->srealloc(particles,maxlocal*sizeof(OnePart),
-                     "particle:particles");
+                     "particle:particles",SPARTA_GET_ALIGN(OnePart));
+
   memset(&particles[oldmax],0,(maxlocal-oldmax)*sizeof(OnePart));
 
   if (ncustom == 0) return;

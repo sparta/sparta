@@ -2007,7 +2007,8 @@ void Grid::grow_cells(int n, int m)
     int oldmax = maxcell;
     while (maxcell < nlocal+nghost+n) maxcell += DELTA;
     cells = (ChildCell *)
-      memory->srealloc(cells,maxcell*sizeof(ChildCell),"grid:cells");
+      memory->srealloc(cells,maxcell*sizeof(ChildCell),"grid:cells",
+                       SPARTA_GET_ALIGN(ChildCell));
     memset(&cells[oldmax],0,(maxcell-oldmax)*sizeof(ChildCell));
   }
 

@@ -45,7 +45,7 @@ enum{NOSUBSONIC,PTBOTH,PONLY};
 
 #define DELTATASK 256
 #define TEMPLIMIT 1.0e5
-#define MAXLINE 1024
+#define MAXLINE 16384
 
 /* ---------------------------------------------------------------------- */
 

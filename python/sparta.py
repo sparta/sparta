@@ -6,7 +6,7 @@
 #
 #   Copyright (2012) Sandia Corporation.  Under the terms of Contract
 #   DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-#   certain rights in this software.  This software is distributed under 
+#   certain rights in this software.  This software is distributed under
 #   the GNU General Public License.
 #
 #   See the README file in the top-level SPARTA directory.
@@ -22,14 +22,14 @@ class sparta:
 
     # load libsparta.so by default
     # if name = "g++", load libsparta_g++.so
-    
+
     try:
       if not name: self.lib = CDLL("libsparta.so",RTLD_GLOBAL)
       else: self.lib = CDLL("libsparta_%s.so" % name,RTLD_GLOBAL)
     except:
       type,value,tb = sys.exc_info()
       traceback.print_exception(type,value,tb)
-      raise OSError,"Could not load SPARTA dynamic library"
+      raise OSError("Could not load SPARTA dynamic library")
 
     # create an instance of SPARTA
     # don't know how to pass an MPI communicator from PyPar
@@ -89,7 +89,7 @@ class sparta:
   # free memory for 1 double or 1 vector of doubles via sparta_free()
   # for vector, must copy nlocal returned values to local c_double vector
   # memory was allocated by library interface function
-  
+
   def extract_variable(self,name,type):
     if type == 0:
       self.lib.sparta_extract_variable.restype = POINTER(c_double)
@@ -99,12 +99,12 @@ class sparta:
       return result
     if type == 1:
       self.lib.sparta_extract_global.restype = POINTER(c_int)
-      nlocalptr = self.lib.sparta_extract_global(self.spa,"nplocal")
+      nlocalptr = self.lib.sparta_extract_global(self.spa,b"nplocal")
       nlocal = nlocalptr[0]
       result = (c_double*nlocal)()
       self.lib.sparta_extract_variable.restype = POINTER(c_double)
       ptr = self.lib.sparta_extract_variable(self.spa,name)
-      for i in xrange(nlocal): result[i] = ptr[i]
+      for i in range(nlocal): result[i] = ptr[i]
       self.lib.sparta_free(ptr)
       return result
     return None
