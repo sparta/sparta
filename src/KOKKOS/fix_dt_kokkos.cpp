@@ -57,9 +57,9 @@ FixDtKokkos::FixDtKokkos(SPARTA *sparta, int narg, char **arg) :
   dimension = domain->dimension;
   boltz = update->boltz;
 
-  k_ncells_with_a_particle = DAT::tdual_int_scalar("FixDtKokkos:ncells_with_a_particle");
-  d_ncells_with_a_particle = k_ncells_with_a_particle.d_view;
-  h_ncells_with_a_particle = k_ncells_with_a_particle.h_view;
+  k_ncells_computing_dt = DAT::tdual_int_scalar("FixDtKokkos:ncells_computing_dt");
+  d_ncells_computing_dt = k_ncells_computing_dt.d_view;
+  h_ncells_computing_dt = k_ncells_computing_dt.h_view;
 
   k_dtsum = DAT::tdual_float_scalar("FixDtKokkos:dtsum");
   d_dtsum = k_dtsum.d_view;
@@ -180,8 +180,7 @@ void FixDtKokkos::end_of_step()
 
   // compute cell desired timestep
   d_cells = grid_kk->k_cells.d_view;
-  d_cellcount = grid_kk->d_cellcount;
-  Kokkos::deep_copy(d_ncells_with_a_particle, 0);
+  Kokkos::deep_copy(d_ncells_computing_dt, 0);
   Kokkos::deep_copy(d_dtsum, 0.);
   Kokkos::deep_copy(d_dtmin, BIG);
   copymode = 1;
@@ -196,11 +195,11 @@ void FixDtKokkos::end_of_step()
   copymode = 0;
 
   k_vector_grid.modify_device();
-  k_ncells_with_a_particle.modify_device();
+  k_ncells_computing_dt.modify_device();
   k_dtsum.modify_device();
   k_dtmin.modify_device();
   k_vector_grid.sync_host();
-  k_ncells_with_a_particle.sync_host();
+  k_ncells_computing_dt.sync_host();
   k_dtsum.sync_host();
   k_dtmin.sync_host();
 
@@ -210,25 +209,27 @@ void FixDtKokkos::end_of_step()
   MPI_Allreduce(&dtmin,&dtmin_global,1,MPI_DOUBLE,MPI_MIN,world);
   dtmin = dtmin_global;
 
-  // set global dtavg
-  double cell_sums[2];
-  double cell_sums_global[2];
-  cell_sums[0] = h_dtsum();
-  cell_sums[1] = h_ncells_with_a_particle(); // implicit conversion to double to avoid 2 MPI_Allreduce calls
-  MPI_Allreduce(cell_sums,cell_sums_global,2,MPI_DOUBLE,MPI_SUM,world);
-  double dtavg = cell_sums_global[0]/cell_sums_global[1];
+  if (dtmin < BIG) { // at least one cell computed a timestep
+    // set global dtavg
+    double cell_sums[2];
+    double cell_sums_global[2];
+    cell_sums[0] = h_dtsum();
+    cell_sums[1] = h_ncells_computing_dt(); // implicit conversion to double to avoid 2 MPI_Allreduce calls
+    MPI_Allreduce(cell_sums,cell_sums_global,2,MPI_DOUBLE,MPI_SUM,world);
+    double dtavg = cell_sums_global[0]/cell_sums_global[1];
 
-  // set calculated timestep based on user-specified weighting
-  dt_global_calculated = (1.-dt_global_weight)*dtmin + dt_global_weight*dtavg;
+    // set calculated timestep based on user-specified weighting
+    dt_global_calculated = (1.-dt_global_weight)*dtmin + dt_global_weight*dtavg;
 
-  if (mode > WARN)
-    grid_kk->dt_global = dt_global_calculated;
-  else if (mode == WARN && grid_kk->dt_global > dt_global_calculated) {
-    if (me == 0) {
-      std::cout << std::endl;
-      std::cout << "    WARNING: user-set global timestep(=" << grid_kk->dt_global
-                << ") is greater than the calculated global timestep(=" << dt_global_calculated
-                << ")\n\n";
+    if (mode > WARN)
+      grid_kk->dt_global = dt_global_calculated;
+    else if (mode == WARN && grid_kk->dt_global > dt_global_calculated) {
+      if (me == 0) {
+        std::cout << std::endl;
+        std::cout << "    WARNING: user-set global timestep(=" << grid_kk->dt_global
+                  << ") is greater than the calculated global timestep(=" << dt_global_calculated
+                  << ")\n\n";
+      }
     }
   }
 }
@@ -275,17 +276,15 @@ KOKKOS_INLINE_FUNCTION
 void FixDtKokkos::operator()(TagFixDt_SetCellDtDesired<ATOMIC_REDUCTION>, const int &i) const {
 
   d_vector(i) = 0.;
-
-  if (d_cellcount[i] < 1)
-    return;
+  double cell_dt_desired = 0.;
 
   // cell dt based on mean collision time
-  double mean_collision_time = d_lambda_vector(i)/sqrt(d_usq_vector(i) +
-                                                       d_vsq_vector(i) +
-                                                       d_wsq_vector(i));
-  double cell_dt_desired;
-  if (mean_collision_time > 0.)
-    cell_dt_desired = collision_fraction*mean_collision_time;
+  double velocitymag = sqrt(d_usq_vector(i) + d_vsq_vector(i) + d_wsq_vector(i));
+  if (velocitymag > 0.) {
+    double mean_collision_time = d_lambda_vector(i)/velocitymag;
+    if (mean_collision_time > 0.)
+      cell_dt_desired = collision_fraction*mean_collision_time;
+  }
 
   // cell size
   double dx = d_cells[i].hi[0] - d_cells[i].lo[0];
@@ -293,43 +292,56 @@ void FixDtKokkos::operator()(TagFixDt_SetCellDtDesired<ATOMIC_REDUCTION>, const 
   double dz = 0.;
 
   // cell dt based on transit time using average velocities
-  double dt_candidate = transit_fraction*dx/sqrt(d_usq_vector(i));
-  cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+  double dt_candidate;
+  double umag = sqrt(d_usq_vector(i));
+  if (umag > 0.) {
+    dt_candidate = transit_fraction*dx/umag;
+    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+  }
 
-  dt_candidate = transit_fraction*dy/sqrt(d_vsq_vector(i));
-  cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+  double vmag = sqrt(d_vsq_vector(i));
+  if (vmag > 0.) {
+    dt_candidate = transit_fraction*dy/vmag;
+    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+  }
 
   if (dimension == 3) {
     dz = d_cells[i].hi[2] - d_cells[i].lo[2];
-    dt_candidate = transit_fraction*dz/sqrt(d_wsq_vector(i));
-    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+    double wmag = sqrt(d_wsq_vector(i));
+    if (wmag > 0.) {
+      dt_candidate = transit_fraction*dz/wmag;
+      cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+    }
   }
 
   // cell dt based on transit time using maximum most probable speed
   double vrm_max = sqrt(2.0*boltz * d_temp_vector(i) / min_species_mass);
-
-  dt_candidate = transit_fraction*dx/vrm_max;
-  cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
-
-  dt_candidate = transit_fraction*dy/vrm_max;
-  cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
-
-  if (dimension == 3) {
-    dt_candidate = transit_fraction*dz/vrm_max;
+  if (vrm_max > 0.) {
+    dt_candidate = transit_fraction*dx/vrm_max;
     cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
-  }
-  d_vector(i) = cell_dt_desired;
 
-  if (ATOMIC_REDUCTION == 1) {
-    Kokkos::atomic_increment(&d_ncells_with_a_particle());
-    Kokkos::atomic_add(&d_dtsum(), cell_dt_desired);
-    Kokkos::atomic_min(&d_dtmin(), cell_dt_desired);
+    dt_candidate = transit_fraction*dy/vrm_max;
+    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+
+    if (dimension == 3) {
+      dt_candidate = transit_fraction*dz/vrm_max;
+      cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+    }
   }
-  else if (ATOMIC_REDUCTION == 0) {
-    d_ncells_with_a_particle() += 1;
-    d_dtsum() += cell_dt_desired;
-    if (cell_dt_desired < d_dtmin())
-      d_dtmin() = cell_dt_desired;
+
+  if (cell_dt_desired > 0.) {
+    d_vector(i) = cell_dt_desired;
+    if (ATOMIC_REDUCTION == 1) {
+      Kokkos::atomic_increment(&d_ncells_computing_dt());
+      Kokkos::atomic_add(&d_dtsum(), cell_dt_desired);
+      Kokkos::atomic_min(&d_dtmin(), cell_dt_desired);
+    }
+    else if (ATOMIC_REDUCTION == 0) {
+      d_ncells_computing_dt() += 1;
+      d_dtsum() += cell_dt_desired;
+      if (cell_dt_desired < d_dtmin())
+        d_dtmin() = cell_dt_desired;
+    }
   }
 }
 

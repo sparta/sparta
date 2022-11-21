@@ -423,27 +423,23 @@ void FixDt::end_of_step()
 
   // compute cell desired timestep ---------------------------------
   Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::OnePart *particles = particle->particles;
 
   double dt_sum = 0.;
   double dtmin = BIG;
 
-  bigint ncells_with_a_particle = 0.;
-  double cell_dt_desired;
+  bigint ncells_computing_dt = 0;
   for (int i = 0; i < nglocal; ++i) {
 
     vector_grid[i] = 0.;
-
-    int np = cinfo[i].count;
-    if (np < 1) continue;
-
-    ncells_with_a_particle++;
+    double cell_dt_desired = 0.;
 
     // cell dt based on mean collision time
-    double mean_collision_time = lambda[i]/sqrt(usq[i] + vsq[i] + wsq[i]);
-    if (mean_collision_time > 0.) {
-      cell_dt_desired = collision_fraction*mean_collision_time;
+    double velocitymag = sqrt(usq[i] + vsq[i] + wsq[i]);
+    if (velocitymag > 0.) {
+      double mean_collision_time = lambda[i]/velocitymag;
+      if (mean_collision_time > 0.)
+        cell_dt_desired = collision_fraction*mean_collision_time;
     }
 
     // cell size
@@ -452,35 +448,49 @@ void FixDt::end_of_step()
     double dz = 0.;
 
     // cell dt based on transit time using average velocities
-    double dt_candidate = transit_fraction*dx/sqrt(usq[i]);
-    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+    double dt_candidate;
+    double umag = sqrt(usq[i]);
+    if (umag > 0.) {
+      dt_candidate = transit_fraction*dx/umag;
+      cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+    }
 
-    dt_candidate = transit_fraction*dy/sqrt(vsq[i]);
-    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+    double vmag = sqrt(vsq[i]);
+    if (vmag > 0.) {
+      dt_candidate = transit_fraction*dy/vmag;
+      cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+    }
 
     if (domain->dimension == 3) {
       dz = cells[i].hi[2] - cells[i].lo[2];
-      dt_candidate = transit_fraction*dz/sqrt(wsq[i]);
-      cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+      double wmag = sqrt(wsq[i]);
+      if (wmag > 0.) {
+        dt_candidate = transit_fraction*dz/wmag;
+        cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+      }
     }
 
     // cell dt based on transit time using maximum most probable speed
     double vrm_max = sqrt(2.0*update->boltz * temp[i] / min_species_mass);
-
-    dt_candidate = transit_fraction*dx/vrm_max;
-    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
-
-    dt_candidate = transit_fraction*dy/vrm_max;
-    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
-
-    if (domain->dimension == 3) {
-      dt_candidate = transit_fraction*dz/vrm_max;
+    if (vrm_max > 0.) {
+      dt_candidate = transit_fraction*dx/vrm_max;
       cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+
+      dt_candidate = transit_fraction*dy/vrm_max;
+      cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+
+      if (domain->dimension == 3) {
+        dt_candidate = transit_fraction*dz/vrm_max;
+        cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+      }
     }
 
-    dtmin = MIN(dtmin, cell_dt_desired);
-    dt_sum += cell_dt_desired;
-    vector_grid[i] = cell_dt_desired;
+    if (cell_dt_desired > 0.) {
+      dtmin = MIN(dtmin, cell_dt_desired);
+      dt_sum += cell_dt_desired;
+      vector_grid[i] = cell_dt_desired;
+      ncells_computing_dt++;
+    }
   }
 
   // set global dtmin
@@ -488,25 +498,28 @@ void FixDt::end_of_step()
   MPI_Allreduce(&dtmin,&dtmin_global,1,MPI_DOUBLE,MPI_MIN,world);
   dtmin = dtmin_global;
 
-  // set global dtavg
-  double cell_sums[2];
-  double cell_sums_global[2];
-  cell_sums[0] = dt_sum;
-  cell_sums[1] = ncells_with_a_particle; // implicit conversion of bigint to double to avoid 2 MPI_Allreduce calls
-  MPI_Allreduce(cell_sums,cell_sums_global,2,MPI_DOUBLE,MPI_SUM,world);
-  double dtavg = cell_sums_global[0]/cell_sums_global[1];
+  if (dtmin < BIG) { // at least one cell computed a timestep
 
-  // set calculated timestep based on user-specified weighting
-  dt_global_calculated = (1.-dt_global_weight)*dtmin + dt_global_weight*dtavg;
+    // set global dtavg
+    double cell_sums[2];
+    double cell_sums_global[2];
+    cell_sums[0] = dt_sum;
+    cell_sums[1] = ncells_computing_dt; // implicit conversion of bigint to double to avoid 2 MPI_Allreduce calls
+    MPI_Allreduce(cell_sums,cell_sums_global,2,MPI_DOUBLE,MPI_SUM,world);
+    double dtavg = cell_sums_global[0]/cell_sums_global[1];
 
-  if (mode > WARN)
-    grid->dt_global = dt_global_calculated;
-  else if (mode == WARN && grid->dt_global > dt_global_calculated) {
-    if (me == 0) {
-      std::cout << std::endl;
-      std::cout << "    WARNING: user-set global timestep(=" << grid->dt_global
-                << ") is greater than the calculated global timestep(=" << dt_global_calculated
-                << ")\n\n";
+    // set calculated timestep based on user-specified weighting
+    dt_global_calculated = (1.-dt_global_weight)*dtmin + dt_global_weight*dtavg;
+
+    if (mode > WARN)
+      grid->dt_global = dt_global_calculated;
+    else if (mode == WARN && grid->dt_global > dt_global_calculated) {
+      if (me == 0) {
+        std::cout << std::endl;
+        std::cout << "    WARNING: user-set global timestep(=" << grid->dt_global
+                  << ") is greater than the calculated global timestep(=" << dt_global_calculated
+                  << ")\n\n";
+      }
     }
   }
 }

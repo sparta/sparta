@@ -74,9 +74,9 @@ namespace SPARTA_NS {
   private:
     t_cell_1d d_cells;
 
-    DAT::tdual_int_scalar k_ncells_with_a_particle;
-    DAT::t_int_scalar d_ncells_with_a_particle;
-    HAT::t_int_scalar h_ncells_with_a_particle;
+    DAT::tdual_int_scalar k_ncells_computing_dt;
+    DAT::t_int_scalar d_ncells_computing_dt;
+    HAT::t_int_scalar h_ncells_computing_dt;
 
     DAT::tdual_float_scalar k_dtsum;
     DAT::t_float_scalar d_dtsum;
@@ -85,8 +85,6 @@ namespace SPARTA_NS {
     DAT::tdual_float_scalar k_dtmin;
     DAT::t_float_scalar d_dtmin;
     HAT::t_float_scalar h_dtmin;
-
-    DAT::t_int_1d d_cellcount;
 
     DAT::t_float_1d d_lambda_vector;
     DAT::t_float_1d d_temp_vector;
