@@ -191,7 +191,7 @@ SPARTA grid and surface data (input and output) to ParaView format.
 
 "ParaView"_paraview is a popular, powerful, freely-available
 visualization package.  You must have ParaView installed to use the
-Python scripts.  See tools/paraview/README for more details.
+Python scripts.  See "Section 6.16"_Section_howto.html#howto_16 for more details.
 
 The scripts were developed by Tom Otahal (Sandia).
 
