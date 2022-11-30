@@ -21,8 +21,8 @@ mixture		    gasN2LP Ar_2 nrho 1.25e24 temp 1080
 
 global		    fnum 1.0e17 temp 1000 
 
-create_particles    gasN2HP n 0 region HP
-create_particles    gasN2LP n 0 region LP
+create_particles    gasN2HP n 0 region HP  # HP - high pressure region
+create_particles    gasN2LP n 0 region LP  # LP - low pressure region
 
 collide             vss all ar.vss 
 
