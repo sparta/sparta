@@ -12,8 +12,8 @@ create_grid 	    8000 1 1
  
 balance_grid        rcb cell 
 
-region		    HP block 0 0.01 -0.1 0.1 -0.1 0.1
-region		    LP block 0.01 0.02 -0.1 0.1 -0.1 0.1
+region		    HP block 0 0.01 -0.005 0.005 -0.1 0.1
+region		    LP block 0.01 0.02 -0.005 0.005 -0.1 0.1
 
 species		    ar.species Ar Ar_2 
 mixture		    gasN2HP Ar nrho 1e25 temp 1350 
@@ -38,7 +38,7 @@ stats_style	    step cpu np nattempt ncoll nscoll nscheck # what diagnostic data
 
 #dump                2 image all 50 image.*.ppm type type pdiam 3e-4 & 
 #                    surf proc 0.01 size 512 512 zoom 15 &
-# 		    axes yes 0.9 0.02 particle yes
+# 		                 axes yes 0.9 0.02 particle yes
 #dump_modify         2 pad 4
 
 timestep 	    1e-9 
