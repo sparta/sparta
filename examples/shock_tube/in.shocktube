@@ -1,4 +1,14 @@
-# shock in 1D tube (1 cell high in Y)
+################################################################################
+# shock in 1D tube with collisions
+# particles reflect off global box boundaries
+#
+# Note:
+#  - The domain is only 1 cell high in Y
+#  - The “twopass” option is used to match Kokkos runs.
+# The "twopass" options should not be used for production runs.
+################################################################################
+
+#  (1 cell high in Y)
 # particles reflect off global box boundaries
 
 seed	    	    12345 
@@ -21,8 +31,8 @@ mixture		    gasN2LP Ar_2 nrho 1.25e24 temp 1080
 
 global		    fnum 1.0e17 temp 1000 
 
-create_particles    gasN2HP n 0 region HP  # HP - high pressure region
-create_particles    gasN2LP n 0 region LP  # LP - low pressure region
+create_particles    gasN2HP n 0 region HP twopass # HP - high pressure region
+create_particles    gasN2LP n 0 region LP twopass # LP - low pressure region
 
 collide             vss all ar.vss 
 
