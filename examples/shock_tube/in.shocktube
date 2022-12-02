@@ -46,9 +46,9 @@ fix 		gpfix ave/grid all 1 50 50 c_gpcomp[*]
 stats		    100 # print simulation statistics/parameters every this many time steps
 stats_style	    step cpu np nattempt ncoll nscoll nscheck # what diagnostic data to print
 
-#dump                2 image all 50 image.*.ppm type type pdiam 3e-4 & 
-#                    surf proc 0.01 size 512 512 zoom 15 &
-# 		                 axes yes 0.9 0.02 particle yes
+#dump                2 image all 50 image.*.ppm type type pdiam 3e-4 &
+                     surf proc 0.01 size 512 512 axes yes 0.9 0.02 particle yes &
+                     zoom 15 box yes 0.02
 #dump_modify         2 pad 4
 
 timestep 	    1e-9 
