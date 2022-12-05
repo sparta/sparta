@@ -388,6 +388,7 @@ This is indicated by additional letters in parenthesis: k = KOKKOS.
 "balance (k)"_fix_balance.html,
 "emit/face (k)"_fix_emit_face.html,
 "emit/face/file"_fix_emit_face_file.html,
+"emit/region"_fix_emit_region.html,
 "emit/surf"_fix_emit_surf.html,
 "field/grid"_fix_field_grid.html,
 "field/particle"_fix_field_particle.html,

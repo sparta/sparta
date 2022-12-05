@@ -61,6 +61,7 @@ FixEmitRegion::FixEmitRegion(SPARTA *sparta, int narg, char **arg) :
   // optional args
 
   np = 0;
+  nevery = 1;
   
   int iarg = 5;
   while (iarg < narg) {
@@ -68,6 +69,11 @@ FixEmitRegion::FixEmitRegion(SPARTA *sparta, int narg, char **arg) :
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix emit/region command");
       np = ATOBIGINT(arg[iarg+1]);
       if (np < 0) error->all(FLERR,"Illegal emit/region command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"nevery") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix emit/region command");
+      nevery = atoi(arg[iarg+1]);
+      if (nevery <= 0) error->all(FLERR,"Illegal fix emit/region command");
       iarg += 2;
     } else error->all(FLERR,"Illegal fix emit/region command");
   }
@@ -144,15 +150,16 @@ void FixEmitRegion::init()
 
 /* ----------------------------------------------------------------------
    perform particle deletion/creation for cells I own
-   active cells are those in group and flow volume, with no surfs
+   participating cells are those in group and flow volume, with no surfs
 ------------------------------------------------------------------------- */
 
 void FixEmitRegion::start_of_step()
 {
-  //if (update->ntimestep % nevery) return;
+  if (update->ntimestep % nevery) return;
 
-  // delete all current particles from active cells
-
+  // delete all current particles from cell group
+  // flag their cell as -1, then invoke Particle::compress_rebalance()
+  
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::OnePart *particles = particle->particles;
@@ -175,7 +182,7 @@ void FixEmitRegion::start_of_step()
   modify->list_init_fixes();
   int nfix_update_custom = modify->n_update_custom;
 
-  // add new particles to active cells
+  // add new particles to cell group
   // particle properties based on mode = MAXWELL or CHAPMAN
   // ntarget = floating point # of particles to create in one cell
   // npercell = integer # of particles to create in one cell
