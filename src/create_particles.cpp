@@ -450,6 +450,7 @@ void CreateParticles::create_local()
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
+  Grid::SplitInfo *sinfo = grid->sinfo;
   int nglocal = grid->nlocal;
 
   // flowvol = total weighted flow volume of all cells
@@ -600,7 +601,11 @@ void CreateParticles::create_local()
           // subcell of split cell
           
           else {
-            // if OK break;
+            int splitcell = sinfo[cells[icell].isplit].icell;
+            int subcell;
+            if (dimension == 2) subcell = update->split2d(splitcell,x);
+            else subcell = update->split3d(splitcell,x);
+            if (subcell == icell) break;
           }
 
           nattempt++;

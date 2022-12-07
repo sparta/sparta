@@ -1779,6 +1779,10 @@ int Grid::outside_surfs(int icell, double *x,
     MathExtra::sub3(lines[isurf].p1,lines[isurf].p2,edge);
     minedge = MathExtra::len3(edge);
 
+    displace = EPSSURF * minedge;
+    xnew[0] += displace*lines[isurf].norm[0];
+    xnew[1] += displace*lines[isurf].norm[1];
+
   } else {
     double onethird = 1.0/3.0;
     xnew[0] = onethird *
@@ -1796,12 +1800,12 @@ int Grid::outside_surfs(int icell, double *x,
     minedge = MIN(minedge,edgelen);
     MathExtra::sub3(tris[isurf].p3,tris[isurf].p1,edge);
     minedge = MIN(minedge,edgelen);
-  }
 
-  displace = EPSSURF * minedge;
-  xnew[0] += displace*tris[isurf].norm[0];
-  xnew[1] += displace*tris[isurf].norm[1];
-  xnew[2] += displace*tris[isurf].norm[2];
+    displace = EPSSURF * minedge;
+    xnew[0] += displace*tris[isurf].norm[0];
+    xnew[1] += displace*tris[isurf].norm[1];
+    xnew[2] += displace*tris[isurf].norm[2];
+  }
 
   // loop over surfs, ray-trace from x to xnew, see which surf is hit first
   // if no surf is hit (roundoff), assume particle is outside
