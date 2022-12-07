@@ -37,6 +37,7 @@ using namespace MathConst;
 
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
 
+#define MAXATTEMPT 16         // max attempts to insert particle into cut/split cell
 #define EPSZERO 1.0e-14
 
 /* ---------------------------------------------------------------------- */
@@ -60,7 +61,7 @@ void CreateParticles::command(int narg, char **arg)
 
   // style arg
 
-  bigint np = 0;
+  np = 0;
   single = 0;
 
   int iarg = 1;
@@ -86,6 +87,7 @@ void CreateParticles::command(int narg, char **arg)
 
   // optional args
 
+  cutflag = 1;
   int globalflag = 0;
   twopass = 0;
   region = NULL;
@@ -96,7 +98,13 @@ void CreateParticles::command(int narg, char **arg)
   vxstr = vystr = vzstr = vstrx = vstry = vstrz = NULL;
 
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"global") == 0) {
+    if (strcmp(arg[iarg],"cut") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
+      if (strcmp(arg[iarg+1],"no") == 0) cutflag = 0;
+      else if (strcmp(arg[iarg+1],"yes") == 0) cutflag = 1;
+      else error->all(FLERR,"Illegal create_particles command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"global") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
       if (strcmp(arg[iarg+1],"no") == 0) globalflag = 0;
       else if (strcmp(arg[iarg+1],"yes") == 0) globalflag = 1;
@@ -302,27 +310,7 @@ void CreateParticles::command(int narg, char **arg)
     }
   }
 
-  // calculate Np if not set explicitly
-
-  if (single) np = 1;
-  else if (np == 0) {
-    Grid::ChildCell *cells = grid->cells;
-    Grid::ChildInfo *cinfo = grid->cinfo;
-    int nglocal = grid->nlocal;
-
-    double flowvolme = 0.0;
-    for (int icell = 0; icell < nglocal; icell++) {
-      if (cells[icell].nsplit > 1) continue;
-      if (cinfo[icell].type != INSIDE)
-        flowvolme += cinfo[icell].volume / cinfo[icell].weight;
-    }
-    double flowvol;
-    MPI_Allreduce(&flowvolme,&flowvol,1,MPI_DOUBLE,MPI_SUM,world);
-    np = particle->mixture[imix]->nrho * flowvol / update->fnum;
-  }
-
   // generate particles
-  // NOTE: invoke local or global option here
 
   if (comm->me == 0)
     if (screen) fprintf(screen,"Creating particles ...\n");
@@ -331,29 +319,31 @@ void CreateParticles::command(int narg, char **arg)
   double time1 = MPI_Wtime();
 
   bigint nprevious = particle->nglobal;
+  
   if (single) create_single();
   else if (!globalflag) {
-    if (twopass) create_local_twopass(np);
-    else create_local(np);
+    if (twopass) create_local_twopass();
+    else create_local();
+  } else {
+    error->all(FLERR,"Create_particles global option not yet implemented");
+    // create_global();
   }
-  //else create_global(np);
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
 
-  // error check
-  // only if no region and no variable species/density specified
+  // issue warning if created particle count is unexpected
+  // only if no region and no variable density specified
 
   bigint nglobal;
   bigint nme = particle->nlocal;
   MPI_Allreduce(&nme,&nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  if (!region && !speciesflag && !densflag && !tempflag &&
-      nglobal-nprevious != np) {
+  if (!region && !densflag && nglobal-nprevious != np) {
     char str[128];
-    sprintf(str,"Created incorrect # of particles: "
+    sprintf(str,"Created unexpected # of particles: "
 	    BIGINT_FORMAT " versus " BIGINT_FORMAT,
 	    nglobal-nprevious,np);
-    error->all(FLERR,str);
+    if (comm->me == 0) error->warning(FLERR,str);
   }
   bigint ncreated = nglobal-nprevious;
   particle->nglobal = nglobal;
@@ -379,6 +369,8 @@ void CreateParticles::command(int narg, char **arg)
 
 void CreateParticles::create_single()
 {
+  np = 1;
+
   double x[3],v[3],vstream[3];
   double *lo,*hi;
 
@@ -440,14 +432,14 @@ void CreateParticles::create_single()
 }
 
 /* ----------------------------------------------------------------------
-   create Np particles in parallel
-   every proc creates fraction of Np for cells it owns
-   only insert in cells uncut by surfs
+   create particles in parallel
+   every proc creates fraction of particles for cells it owns
+   cutflag determines whether insert in all cells or only ones uncut by surfs
    account for cell weighting
    attributes of created particle depend on number of procs
 ------------------------------------------------------------------------- */
 
-void CreateParticles::create_local(bigint np)
+void CreateParticles::create_local()
 {
   int dimension = domain->dimension;
 
@@ -460,46 +452,59 @@ void CreateParticles::create_local(bigint np)
   Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
 
-  // volme = volume of grid cells I own that are OUTSIDE surfs
-  // skip cells entirely outside region
-  // Nme = # of particles I will create
-  // MPI_Scan() logic insures sum of nme = Np
-
-  double *lo,*hi;
-  double volone;
-
-  double volme = 0.0;
-  for (int i = 0; i < nglocal; i++) {
-    if (cinfo[i].type != OUTSIDE) continue;
-    lo = cells[i].lo;
-    hi = cells[i].hi;
-    if (region && region->bboxflag && outside_region(dimension,lo,hi))
+  // flowvol = total weighted flow volume of all cells
+  //   skip cells inside surfs and split cells
+  //   skip cells outside defined region
+  // insertvol = subset of flowvol for cells eligible for insertion
+  //   insertvol = flowvol if cutflag = 1
+  //   insertvol < flowvol possible if cutflag = 0 (no cut cells)
+  
+  double flowvolme = 0.0;
+  double insertvolme = 0.0;
+  
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cinfo[icell].type == INSIDE) continue;
+    if (cells[icell].nsplit > 1) continue;
+    if (region && region->bboxflag &&
+        outside_region(dimension,cells[icell].lo,cells[icell].hi))
       continue;
-
-    if (dimension == 3) volone = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
-    else if (domain->axisymmetric)
-      volone = (hi[0]-lo[0]) * (hi[1]*hi[1]-lo[1]*lo[1])*MY_PI;
-    else volone = (hi[0]-lo[0]) * (hi[1]-lo[1]);
-    volme += volone / cinfo[i].weight;
+    
+    flowvolme += cinfo[icell].volume / cinfo[icell].weight;
+    if (!cutflag && cells[icell].nsurf) continue;
+    insertvolme += cinfo[icell].volume / cinfo[icell].weight;
   }
+  
+  // calculate total Np if not set explicitly
+  // based on total flowvol and mixture density
 
+  if (np == 0) {
+    double flowvol;
+    MPI_Allreduce(&flowvolme,&flowvol,1,MPI_DOUBLE,MPI_SUM,world);
+    np = particle->mixture[imix]->nrho * flowvol / update->fnum;
+  }
+  
+  // gather cummulative insertion volumes across all procs
+  
   double volupto;
-  MPI_Scan(&volme,&volupto,1,MPI_DOUBLE,MPI_SUM,world);
+  MPI_Scan(&insertvolme,&volupto,1,MPI_DOUBLE,MPI_SUM,world);
 
   double *vols;
   int nprocs = comm->nprocs;
   memory->create(vols,nprocs,"create_particles:vols");
   MPI_Allgather(&volupto,1,MPI_DOUBLE,vols,1,MPI_DOUBLE,world);
 
-  // nme = # of particles for me to create
   // gathered Scan results not guaranteed to be monotonically increasing
-  // can cause epsilon mis-counts for huge particle counts
-  // enforce that by brute force
+  //   can cause epsilon mis-counts for huge particle counts
+  //   so enforce monotonic increase by brute force
 
   for (int i = 1; i < nprocs; i++)
     if (vols[i] != vols[i-1] &&
         fabs(vols[i]-vols[i-1])/vols[nprocs-1] < EPSZERO)
       vols[i] = vols[i-1];
+
+  // nme = # of particles for me to create
+  // based on fraction of insertvol I own
+  // loop over procs insures sum of nme = Np
 
   bigint nstart,nstop;
   if (me > 0) nstart = static_cast<bigint> (np * (vols[me-1]/vols[nprocs-1]));
@@ -516,8 +521,7 @@ void CreateParticles::create_local(bigint np)
   int nfix_update_custom = modify->n_update_custom;
 
   // loop over cells I own
-  // only add particles to OUTSIDE cells
-  // skip cells entirely outside region
+  // only add particles to cells eligible for insertion
   // ntarget = floating point # of particles to create in one cell
   // npercell = integer # of particles to create in one cell
   // basing ntarget on accumulated volume and nprev insures Nme total creations
@@ -536,32 +540,33 @@ void CreateParticles::create_local(bigint np)
   int npercell,ncreate,isp,ispecies,id;
   double x[3],v[3],vstream_variable[3];
   double ntarget,scale,rn,vn,vr,theta1,theta2,erot,evib;
-
+  double *lo,*hi;
+  
   double tempscale = 1.0;
   double sqrttempscale = 1.0;
 
   double volsum = 0.0;
   bigint nprev = 0;
 
-  for (int i = 0; i < nglocal; i++) {
-    if (cinfo[i].type != OUTSIDE) continue;
-    lo = cells[i].lo;
-    hi = cells[i].hi;
-    if (region && region->bboxflag && outside_region(dimension,lo,hi))
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cinfo[icell].type == INSIDE) continue;
+    if (cells[icell].nsplit > 1) continue;
+    if (region && region->bboxflag &&
+        outside_region(dimension,cells[icell].lo,cells[icell].hi))
       continue;
-
-    if (dimension == 3) volone = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
-    else if (domain->axisymmetric)
-      volone = (hi[0]-lo[0]) * (hi[1]*hi[1]-lo[1]*lo[1])*MY_PI;
-    else volone = (hi[0]-lo[0]) * (hi[1]-lo[1]);
-    volsum += volone / cinfo[i].weight;
-
-    ntarget = nme * volsum/volme - nprev;
+    if (!cutflag && cells[icell].nsurf) continue;
+    
+    volsum += cinfo[icell].volume / cinfo[icell].weight;
+    
+    ntarget = nme * volsum/insertvolme - nprev;
     npercell = static_cast<int> (ntarget);
 
     if (random->uniform() < ntarget-npercell) npercell++;
     ncreate = npercell;
 
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+    
     if (densflag) {
       scale = density_variable(lo,hi);
       ntarget *= scale;
@@ -570,18 +575,58 @@ void CreateParticles::create_local(bigint np)
     }
 
     for (int m = 0; m < ncreate; m++) {
-      rn = random->uniform();
 
-      isp = 0;
-      while (cummulative[isp] < rn) isp++;
-      ispecies = species[isp];
+      // generate random position X for new particle
 
       x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
       x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
       x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
       if (dimension == 2) x[2] = 0.0;
 
+      // if unsplit cut cell, check if in flow region
+      // if split cell, check if in correct subcell
+      // attempt cut/split cell insertion up to MAXATTEMPT times
+      
+      if (cutflag && cells[icell].nsurf) {
+        int nattempt = 0;
+        while (nattempt < MAXATTEMPT) {
+          
+          // unsplit cut cell
+        
+          if (cells[icell].nsplit == 1) {
+            if (grid->outside_surfs(icell,x,NULL,NULL)) break;
+          }
+        
+          // subcell of split cell
+          
+          else {
+            // if OK break;
+          }
+
+          nattempt++;
+          
+          x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
+          x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+          x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+          if (dimension == 2) x[2] = 0.0;
+        }
+
+        if (nattempt > MAXATTEMPT) continue;
+      }
+
+      // if region defined, skip if particle outside region
+
       if (region && !region->match(x)) continue;
+
+      // insertion of particle at position X is accepted
+      // calculate all other particle properties
+
+      rn = random->uniform();
+
+      isp = 0;
+      while (cummulative[isp] < rn) isp++;
+      ispecies = species[isp];
+
       if (speciesflag) {
         isp = species_variable(x) - 1;
         if (isp < 0 || isp >= nspecies) continue;
@@ -614,7 +659,7 @@ void CreateParticles::create_local(bigint np)
 
       id = MAXSMALLINT*random->uniform();
 
-      particle->add_particle(id,ispecies,i,x,v,erot,evib);
+      particle->add_particle(id,ispecies,icell,x,v,erot,evib);
 
       if (nfix_update_custom)
         modify->update_custom(particle->nlocal-1,temp_thermal,
@@ -638,7 +683,7 @@ void CreateParticles::create_local(bigint np)
    attributes of created particle depend on number of procs
 ------------------------------------------------------------------------- */
 
-void CreateParticles::create_local_twopass(bigint np)
+void CreateParticles::create_local_twopass()
 {
   int dimension = domain->dimension;
 

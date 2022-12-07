@@ -1752,12 +1752,14 @@ int Grid::outside_surfs(int icell, double *x,
   // set xnew to midpt of first line or center pt of first triangle
   // for implicit surfs this is guaranteed to be a pt in or on icell
   // then displace it by EPSSURF in the line/tri norm direction
-  // reason for this:
+  // logic:
   //   want to insure an inside particle is flagged
-  //   requires a ray from inside particle x to xnew intersects a surf
-  //   if no intersection, logic below assumes particle is outside
-  //   if xnew is midpt of tri, then an inside particle may have no intersection
-  //     due to round-off
+  //   check ray from x to xnew against all surfs
+  //   find first surf it intersects
+  //   if intersects wrong side of surf, then particle is inside
+  //   if intersects no surf, particle is outside
+  // without EPSSURF displacement,
+  //   an inside particle may have no intersection due to round-off
 
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
