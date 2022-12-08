@@ -21,8 +21,6 @@
 #include "particle.h"
 #include "grid.h"
 #include "comm.h"
-#include "cut2d.h"
-#include "cut3d.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
@@ -60,30 +58,12 @@ FixGridCheck::FixGridCheck(SPARTA *sparta, int narg, char **arg) :
     }
   }
 
-  //if (outside_check && !surf->implicit)
-  //  error->all(FLERR,"Fix grid/check outside yes requires implicit surfs");
-
   // setup
 
   dim = domain->dimension;
-  cut2d = NULL;
-  cut3d = NULL;
-
-  if (outside_check) {
-    if (dim == 3) cut3d = new Cut3d(sparta);
-    else cut2d = new Cut2d(sparta,domain->axisymmetric);
-  }
 
   scalar_flag = 1;
   global_freq = 1;
-}
-
-/* ---------------------------------------------------------------------- */
-
-FixGridCheck::~FixGridCheck()
-{
-  delete cut2d;
-  delete cut3d;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -220,14 +200,16 @@ void FixGridCheck::end_of_step()
     if (cells[icell].nsurf == 0) continue;
 
     int splitcell,subcell,flag;
+    double xoutside[3];
 
     if (cells[icell].nsplit <= 0) {
       splitcell = sinfo[cells[icell].isplit].icell;
-      flag = grid->outside_surfs(splitcell,x,cut3d,cut2d);
-    } else flag = grid->outside_surfs(icell,x,cut3d,cut2d);
-
-    if (!flag) printf("BAD PART i %d id %d xy %g %g\n",i,particles[i].id,
-                      particles[i].x[0],particles[i].x[1]);
+      grid->point_outside_surfs(splitcell,xoutside);
+      flag = grid->outside_surfs(splitcell,x,xoutside);
+    } else {
+      grid->point_outside_surfs(icell,xoutside);
+      flag = grid->outside_surfs(icell,x,xoutside);
+    }
     
     if (!flag) {
       if (outflag == ERROR) {

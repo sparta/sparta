@@ -291,7 +291,8 @@ class Grid : protected Pointers {
   void clear_surf_restart();
   void combine_split_cell_particles(int, int);
   void assign_split_cell_particles(int);
-  int outside_surfs(int, double *, class Cut3d *, class Cut2d *);
+  void point_outside_surfs(int, double *);
+  int outside_surfs(int, double *, double *);
   void allocate_surf_arrays();
   int *csubs_request(int);
 

@@ -27,8 +27,6 @@
 #include "input.h"
 #include "variable.h"
 #include "dump.h"
-#include "cut2d.h"     // remove if fix particles-inside-surfs issue
-#include "cut3d.h"
 #include "marching_squares.h"
 #include "marching_cubes.h"
 #include "random_mars.h"
@@ -594,9 +592,6 @@ void FixAblate::create_surfs(int outflag)
   //         after ablation
   // similar code as in fix grid/check
 
-  Cut3d *cut3d = new Cut3d(sparta);
-  Cut2d *cut2d = NULL;
-
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   Grid::SplitInfo *sinfo = grid->sinfo;
@@ -606,6 +601,7 @@ void FixAblate::create_surfs(int outflag)
   int ncount;
   int icell,splitcell,subcell,flag;
   double *x;
+  double xoutside[3];
 
   ncount = 0;
   for (int i = 0; i < pnlocal; i++) {
@@ -613,13 +609,19 @@ void FixAblate::create_surfs(int outflag)
     icell = particles[i].icell;
     if (cells[icell].nsurf == 0) continue;
 
+    grid->point_outside_surfs(icell,xoutside);
+    
     int mcell = icell;
     x = particles[i].x;
     flag = 1;
     if (cells[icell].nsplit <= 0) {
       mcell = splitcell = sinfo[cells[icell].isplit].icell;
-      flag = grid->outside_surfs(splitcell,x,cut3d,cut2d);
-    } else flag = grid->outside_surfs(icell,x,cut3d,cut2d);
+      grid->point_outside_surfs(splitcell,xoutside);
+      flag = grid->outside_surfs(splitcell,x,xoutside);
+    } else {
+      grid->point_outside_surfs(icell,xoutside);
+      flag = grid->outside_surfs(icell,x,xoutside);
+    }
 
     if (!flag) {
       particles[i].flag = PDISCARD;
@@ -651,7 +653,6 @@ void FixAblate::create_surfs(int outflag)
     }
   }
 
-  delete cut3d;
   memory->destroy(mcflags_old);
 
   // compress out the deleted particles

@@ -28,7 +28,7 @@ namespace SPARTA_NS {
 class FixGridCheck : public Fix {
  public:
   FixGridCheck(class SPARTA *, int, char **);
-  virtual ~FixGridCheck();
+  virtual ~FixGridCheck() {}
   int setmask();
   void init();
   void setup();

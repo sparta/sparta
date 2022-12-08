@@ -1735,21 +1735,20 @@ void Grid::assign_split_cell_particles(int icell)
 }
 
 /* ----------------------------------------------------------------------
-   check if particle at x is outside any surfs in icell
+   return a point X in icell that is in the flow (outside of all surfs)
    icell can be split or unsplit cell, not a sub cell
-   if outside, return 1, else return 0
-   // NOTE: make this only for implicit surfs
+   do NOT call for a cell with no surfs
 ------------------------------------------------------------------------- */
 
-int Grid::outside_surfs(int icell, double *x,
-                        Cut3d *cut3d_caller, Cut2d *cut2d_caller)
+void Grid::point_outside_surfs(int icell, double *x)
 {
-  if (cells[icell].nsurf == 0) {
-    if (cinfo[icell].type == INSIDE) return 0;
-    else return 1;
-  }
+  if (surf->implicit) point_outside_surfs_implicit(icell,x);
+  else point_outside_surfs_explicit(icell,x);
+}
 
-  // set xnew to midpt of first line or center pt of first triangle
+void Grid::point_outside_surfs_implicit(int icell, double *x)
+{
+  // set X to midpt of first line or center pt of first triangle
   // for implicit surfs this is guaranteed to be a pt in or on icell
   // then displace it by EPSSURF in the line/tri norm direction
   // logic:
@@ -1758,38 +1757,37 @@ int Grid::outside_surfs(int icell, double *x,
   //   find first surf it intersects
   //   if intersects wrong side of surf, then particle is inside
   //   if intersects no surf, particle is outside
-  // without EPSSURF displacement,
+  // without EPSSURF displacement, test via outside_surfs() for
   //   an inside particle may have no intersection due to round-off
 
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
   surfint *csurfs = cells[icell].csurfs;
 
-  int dim = domain->dimension;
-  double xnew[3],edge[3];
+  double edge[3];
   double edgelen,minedge,displace;
 
   int isurf = csurfs[0];
 
   if (dim == 2) {
-    xnew[0] = 0.5 * (lines[isurf].p1[0] + lines[isurf].p2[0]);
-    xnew[1] = 0.5 * (lines[isurf].p1[1] + lines[isurf].p2[1]);
-    xnew[2] = 0.0;
+    x[0] = 0.5 * (lines[isurf].p1[0] + lines[isurf].p2[0]);
+    x[1] = 0.5 * (lines[isurf].p1[1] + lines[isurf].p2[1]);
+    x[2] = 0.0;
 
     MathExtra::sub3(lines[isurf].p1,lines[isurf].p2,edge);
     minedge = MathExtra::len3(edge);
 
     displace = EPSSURF * minedge;
-    xnew[0] += displace*lines[isurf].norm[0];
-    xnew[1] += displace*lines[isurf].norm[1];
+    x[0] += displace*lines[isurf].norm[0];
+    x[1] += displace*lines[isurf].norm[1];
 
   } else {
     double onethird = 1.0/3.0;
-    xnew[0] = onethird *
+    x[0] = onethird *
       (tris[isurf].p1[0] + tris[isurf].p2[0] + tris[isurf].p3[0]);
-    xnew[1] = onethird *
+    x[1] = onethird *
       (tris[isurf].p1[1] + tris[isurf].p2[1] + tris[isurf].p3[1]);
-    xnew[2] = onethird *
+    x[2] = onethird *
       (tris[isurf].p1[2] + tris[isurf].p2[2] + tris[isurf].p3[2]);
 
     MathExtra::sub3(tris[isurf].p1,tris[isurf].p2,edge);
@@ -1802,15 +1800,111 @@ int Grid::outside_surfs(int icell, double *x,
     minedge = MIN(minedge,edgelen);
 
     displace = EPSSURF * minedge;
-    xnew[0] += displace*tris[isurf].norm[0];
-    xnew[1] += displace*tris[isurf].norm[1];
-    xnew[2] += displace*tris[isurf].norm[2];
+    x[0] += displace*tris[isurf].norm[0];
+    x[1] += displace*tris[isurf].norm[1];
+    x[2] += displace*tris[isurf].norm[2];
+  }
+}
+
+void Grid::point_outside_surfs_explicit(int icell, double *x)
+{
+  int dim = domain->dimension;
+
+  // if any corner point is OUTSIDE, return it
+
+  double *lo = cells[icell].lo;
+  double *hi = cells[icell].hi;
+  int *corners = cinfo[icell].corner;
+
+  double zvalue;
+  if (dim == 2) zvalue = 0.0;
+  else zvalue = lo[2];
+  
+  if (corners[0] == OUTSIDE) {
+    x[0] = lo[0];
+    x[1] = lo[1];
+    x[2] = zvalue;
+    return;
+  }
+  if (corners[1] == OUTSIDE) {
+    x[0] = hi[0];
+    x[1] = lo[1];
+    x[2] = zvalue;
+    return;
+  }
+  if (corners[2] == OUTSIDE) {
+    x[0] = lo[0];
+    x[1] = hi[1];
+    x[2] = zvalue;
+    return;
+  }
+  if (corners[3] == OUTSIDE) {
+    x[0] = hi[0];
+    x[1] = hi[1];
+    x[2] = zvalue;
+    return;
+  }
+    
+  if (dim == 3) {
+    if (corners[4] == OUTSIDE) {
+      x[0] = lo[0];
+      x[1] = lo[1];
+      x[2] = hi[2];
+      return;
+    }
+    if (corners[5] == OUTSIDE) {
+      x[0] = hi[0];
+      x[1] = lo[1];
+      x[2] = hi[2];
+      return;
+    }
+    if (corners[6] == OUTSIDE) {
+      x[0] = lo[0];
+      x[1] = hi[1];
+      x[2] = hi[2];
+      return;
+    }
+    if (corners[7] == OUTSIDE) {
+      x[0] = hi[0];
+      x[1] = hi[1];
+      x[2] = hi[2];
+      return;
+    }
   }
 
-  // loop over surfs, ray-trace from x to xnew, see which surf is hit first
-  // if no surf is hit (roundoff), assume particle is outside
+  // use Cut2d/Cut3d to clip lines or tris to cell
+  // they return a point on a line/tri that is inside the cell
+  // also return the index of the surf the point is on
+  // displace point by EPSSURF in the line/tri norm directoion
+  // without EPSSURF displacement, test via outside_surfs() for
+  //   an inside particle may have no intersection due to round-off
 
-  int m,cflag,hitflag,side,minside;
+  int isurf;
+  
+  if (dim == 2)
+    cut2d->surf_point_in_cell(cells[icell].id,lo,hi,cells[icell].nsurf,cells[icell].csurfs,x,isurf);
+  else
+    cut3d->surf_point_in_cell(cells[icell].id,lo,hi,cells[icell].nsurf,cells[icell].csurfs,x,isurf);
+}
+
+/* ----------------------------------------------------------------------
+   check if particle at x is outside any surfs in icell (in the flow)
+   icell can be split or unsplit cell, not a sub cell
+   do NOT call for a cell with no surfs
+   if outside, return 1, else return 0
+------------------------------------------------------------------------- */
+
+int Grid::outside_surfs(int icell, double *x, double *xoutside)
+{
+  // loop over surfs, ray-trace from x to xoutside, see which surf is hit first
+  // if no surf is hit, assume particle is outside
+
+  int dim = domain->dimension;
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  surfint *csurfs = cells[icell].csurfs;
+
+  int m,isurf,cflag,hitflag,side,minside;
   double param,minparam;
   double xc[3];
   Surf::Line *line;
@@ -1825,12 +1919,12 @@ int Grid::outside_surfs(int icell, double *x,
     if (dim == 3) {
       tri = &tris[isurf];
       hitflag = Geometry::
-        line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
+        line_tri_intersect(x,xoutside,tri->p1,tri->p2,tri->p3,
                            tri->norm,xc,param,side);
     } else {
       line = &lines[isurf];
       hitflag = Geometry::
-        line_line_intersect(x,xnew,line->p1,line->p2,line->norm,xc,param,side);
+        line_line_intersect(x,xoutside,line->p1,line->p2,line->norm,xc,param,side);
     }
     if (hitflag && param < minparam) {
       cflag = 1;

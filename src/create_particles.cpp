@@ -37,7 +37,7 @@ using namespace MathConst;
 
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
 
-#define MAXATTEMPT 16         // max attempts to insert particle into cut/split cell
+#define MAXATTEMPT 1024         // max attempts to insert particle into cut/split cell
 #define EPSZERO 1.0e-14
 
 /* ---------------------------------------------------------------------- */
@@ -539,7 +539,7 @@ void CreateParticles::create_local()
   double temp_vib = particle->mixture[imix]->temp_vib;
 
   int npercell,ncreate,isp,ispecies,id;
-  double x[3],v[3],vstream_variable[3];
+  double x[3],v[3],xoutside[3],vstream_variable[3];
   double ntarget,scale,rn,vn,vr,theta1,theta2,erot,evib;
   double *lo,*hi;
   
@@ -575,9 +575,12 @@ void CreateParticles::create_local()
       if (random->uniform() < ntarget-ncreate) ncreate++;
     }
 
-    for (int m = 0; m < ncreate; m++) {
+    // use xoutside for all created particle attempts in this cell
+    
+    if (cutflag && cells[icell].nsurf)
+      grid->point_outside_surfs(icell,xoutside);
 
-      id = MAXSMALLINT*random->uniform();
+    for (int m = 0; m < ncreate; m++) {
 
       // generate random position X for new particle
 
@@ -586,18 +589,18 @@ void CreateParticles::create_local()
       x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
       if (dimension == 2) x[2] = 0.0;
 
-      // if unsplit cut cell, check if in flow region
+      // if unsplit cut cell, check if particle in flow region
       // if split cell, check if in correct subcell
-      // attempt cut/split cell insertion up to MAXATTEMPT times
+      // if not, attempt new insertion up to MAXATTEMPT times
       
       if (cutflag && cells[icell].nsurf) {
         int nattempt = 0;
         while (nattempt < MAXATTEMPT) {
           
           // unsplit cut cell
-        
+
           if (cells[icell].nsplit == 1) {
-            if (grid->outside_surfs(icell,x,NULL,NULL)) break;
+            if (grid->outside_surfs(icell,x,xoutside)) break;
           }
         
           // subcell of split cell
@@ -618,7 +621,7 @@ void CreateParticles::create_local()
           if (dimension == 2) x[2] = 0.0;
         }
 
-        if (nattempt > MAXATTEMPT) continue;
+        if (nattempt >= MAXATTEMPT) continue;
       }
 
       // if region defined, skip if particle outside region
@@ -664,7 +667,7 @@ void CreateParticles::create_local()
       erot = particle->erot(ispecies,temp_rot*tempscale,random);
       evib = particle->evib(ispecies,temp_vib*tempscale,random);
 
-      //id = MAXSMALLINT*random->uniform();
+      id = MAXSMALLINT*random->uniform();
 
       particle->add_particle(id,ispecies,icell,x,v,erot,evib);
 
