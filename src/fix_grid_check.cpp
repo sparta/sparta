@@ -60,8 +60,8 @@ FixGridCheck::FixGridCheck(SPARTA *sparta, int narg, char **arg) :
     }
   }
 
-  if (outside_check && !surf->implicit)
-    error->all(FLERR,"Fix grid/check outside yes requires implicit surfs");
+  //if (outside_check && !surf->implicit)
+  //  error->all(FLERR,"Fix grid/check outside yes requires implicit surfs");
 
   // setup
 
@@ -226,6 +226,9 @@ void FixGridCheck::end_of_step()
       flag = grid->outside_surfs(splitcell,x,cut3d,cut2d);
     } else flag = grid->outside_surfs(icell,x,cut3d,cut2d);
 
+    if (!flag) printf("BAD PART i %d id %d xy %g %g\n",i,particles[i].id,
+                      particles[i].x[0],particles[i].x[1]);
+    
     if (!flag) {
       if (outflag == ERROR) {
         char str[128];

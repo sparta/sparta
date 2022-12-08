@@ -577,6 +577,8 @@ void CreateParticles::create_local()
 
     for (int m = 0; m < ncreate; m++) {
 
+      id = MAXSMALLINT*random->uniform();
+
       // generate random position X for new particle
 
       x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
@@ -662,7 +664,7 @@ void CreateParticles::create_local()
       erot = particle->erot(ispecies,temp_rot*tempscale,random);
       evib = particle->evib(ispecies,temp_vib*tempscale,random);
 
-      id = MAXSMALLINT*random->uniform();
+      //id = MAXSMALLINT*random->uniform();
 
       particle->add_particle(id,ispecies,icell,x,v,erot,evib);
 
