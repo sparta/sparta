@@ -599,7 +599,7 @@ int Variable::next(int narg, char **arg)
       delete random;
 
       FILE *fp = fopen("tmp.sparta.variable.lock","r");
-      fscanf(fp,"%d",&nextindex);
+      int tmp = fscanf(fp,"%d",&nextindex);
       //printf("READ %d %d\n",universe->me,nextindex);
       fclose(fp);
       fp = fopen("tmp.sparta.variable.lock","w");

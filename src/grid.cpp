@@ -2439,6 +2439,8 @@ void Grid::write_restart(FILE *fp)
 
 void Grid::read_restart(FILE *fp)
 {
+  int tmp;
+  
   // read_restart may have reset maxsurfpercell in its header() method
   // if so, need to reallocate surf arrays to correct max length
 
@@ -2448,8 +2450,8 @@ void Grid::read_restart(FILE *fp)
   // read level info
 
   if (me == 0) {
-    fread(&maxlevel,sizeof(int),1,fp);
-    fread(plevels,sizeof(ParentLevel),maxlevel,fp);
+    tmp = fread(&maxlevel,sizeof(int),1,fp);
+    tmp = fread(plevels,sizeof(ParentLevel),maxlevel,fp);
   }
   MPI_Bcast(&maxlevel,1,MPI_INT,0,world);
   MPI_Bcast(plevels,maxlevel*sizeof(ParentLevel),MPI_CHAR,0,world);
@@ -2458,15 +2460,15 @@ void Grid::read_restart(FILE *fp)
 
   for (int i = 0; i < ngroup; i++) delete [] gnames[i];
 
-  if (me == 0) fread(&ngroup,sizeof(int),1,fp);
+  if (me == 0) tmp = fread(&ngroup,sizeof(int),1,fp);
   MPI_Bcast(&ngroup,1,MPI_INT,0,world);
 
   int n;
   for (int i = 0; i < ngroup; i++) {
-    if (me == 0) fread(&n,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
     MPI_Bcast(&n,1,MPI_INT,0,world);
     gnames[i] = new char[n];
-    if (me == 0) fread(gnames[i],sizeof(char),n,fp);
+    if (me == 0) tmp = fread(gnames[i],sizeof(char),n,fp);
     MPI_Bcast(gnames[i],n,MPI_CHAR,0,world);
   }
 }

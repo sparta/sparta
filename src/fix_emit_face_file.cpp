@@ -507,7 +507,7 @@ void FixEmitFaceFile::read_file(char *file, char *section)
 {
   int i,m,n,ii,jj,offset;
   char line[MAXLINE];
-  char *word;
+  char *word,*tmp;
 
   int dimension = domain->dimension;
 
@@ -530,33 +530,33 @@ void FixEmitFaceFile::read_file(char *file, char *section)
     word = strtok(line," \t\n\r");
     if (strcmp(word,section) == 0) break;           // matching keyword
 
-    fgets(line,MAXLINE,fp);                         // no match, read NIJ or NI
-    word = strtok(line," \t\n\r");                  // skip 2d or 3d section
+    tmp = fgets(line,MAXLINE,fp);               // no match, read NIJ or NI
+    word = strtok(line," \t\n\r");              // skip 2d or 3d section
     int nskip;
     if (strcmp(word,"NIJ") == 0) {
       word = strtok(NULL," \t\n\r");
       nskip = atoi(word);
       word = strtok(NULL," \t\n\r");
       nskip *= atoi(word);
-      fgets(line,MAXLINE,fp);                         // NV line
-      fgets(line,MAXLINE,fp);                         // values line
-      fgets(line,MAXLINE,fp);                         // imesh line
-      fgets(line,MAXLINE,fp);                         // jmesh line
+      tmp = fgets(line,MAXLINE,fp);                   // NV line
+      tmp = fgets(line,MAXLINE,fp);                   // values line
+      tmp = fgets(line,MAXLINE,fp);                   // imesh line
+      tmp = fgets(line,MAXLINE,fp);                   // jmesh line
     } else if (strcmp(word,"NI") == 0) {
       word = strtok(NULL," \t\n\r");
       nskip = atoi(word);
-      fgets(line,MAXLINE,fp);                         // NV line
-      fgets(line,MAXLINE,fp);                         // values line
-      fgets(line,MAXLINE,fp);                         // imesh line
+      tmp = fgets(line,MAXLINE,fp);                   // NV line
+      tmp = fgets(line,MAXLINE,fp);                   // values line
+      tmp = fgets(line,MAXLINE,fp);                   // imesh line
     } else error->one(FLERR,"Misformatted section in inflow file");
 
-    fgets(line,MAXLINE,fp);                               // blank line
-    for (i = 0; i < nskip; i++) fgets(line,MAXLINE,fp);   // value lines
+    tmp = fgets(line,MAXLINE,fp);                     // blank line
+    for (i = 0; i < nskip; i++) tmp = fgets(line,MAXLINE,fp);   // value lines
   }
 
   // read and store the matching section
 
-  fgets(line,MAXLINE,fp);                             // read NIJ or NI
+  tmp = fgets(line,MAXLINE,fp);                       // read NIJ or NI
   word = strtok(line," \t\n\r");
   if (strcmp(word,"NIJ") == 0) {
     if (dimension != 3)
@@ -578,7 +578,7 @@ void FixEmitFaceFile::read_file(char *file, char *section)
 
   // read NV line
 
-  fgets(line,MAXLINE,fp);
+  tmp = fgets(line,MAXLINE,fp);
   word = strtok(line," \t\n\r");
   if (strcmp(word,"NV") != 0)
     error->one(FLERR,"Misformatted section in inflow file");
@@ -590,7 +590,7 @@ void FixEmitFaceFile::read_file(char *file, char *section)
   // read VALUES line and convert names to which vector
 
   mesh.which = new int[mesh.nvalues];
-  fgets(line,MAXLINE,fp);
+  tmp = fgets(line,MAXLINE,fp);
   word = strtok(line," \t\n\r");
   for (i = 0; i < mesh.nvalues; i++) {
     word = strtok(NULL," \t\n\r");
@@ -614,7 +614,7 @@ void FixEmitFaceFile::read_file(char *file, char *section)
   mesh.imesh = new double[mesh.ni];
   mesh.jmesh = new double[mesh.nj];
 
-  fgets(line,MAXLINE,fp);
+  tmp = fgets(line,MAXLINE,fp);
   word = strtok(line," \t\n\r");
   if (strcmp(word,"IMESH") != 0)
     error->one(FLERR,"Misformatted section in inflow file");
@@ -628,7 +628,7 @@ void FixEmitFaceFile::read_file(char *file, char *section)
   mesh.hi[0] = mesh.imesh[mesh.ni-1];
 
   if (dimension == 3) {
-    fgets(line,MAXLINE,fp);
+    tmp = fgets(line,MAXLINE,fp);
     word = strtok(line," \t\n\r");
     if (strcmp(word,"JMESH") != 0)
       error->one(FLERR,"Misformatted section in inflow file");
@@ -645,13 +645,13 @@ void FixEmitFaceFile::read_file(char *file, char *section)
   // N = Ni by Nj values lines, store values in mesh
   // II,JJ stored with II varying fastest in 2d
 
-  fgets(line,MAXLINE,fp);    // blank line
+  tmp = fgets(line,MAXLINE,fp);    // blank line
 
   n = mesh.ni * mesh.nj;
   memory->create(mesh.values,n,mesh.nvalues,"inflow/file:values");
 
   for (i = 0; i < n; i++) {
-    fgets(line,MAXLINE,fp);
+    tmp = fgets(line,MAXLINE,fp);
     word = strtok(line," \t\n\r");
     ii = atoi(word);
     if (dimension == 3) {

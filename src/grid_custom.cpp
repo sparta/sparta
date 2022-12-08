@@ -311,11 +311,13 @@ void Grid::write_restart_custom(FILE *fp)
 
 void Grid::read_restart_custom(FILE *fp)
 {
+  int tmp;
+  
   // ncustom is 0 at time restart file is read
   // will be incremented as add_custom() for each nactive
 
   int nactive;
-  if (me == 0) fread(&nactive,sizeof(int),1,fp);
+  if (me == 0) tmp = fread(&nactive,sizeof(int),1,fp);
   MPI_Bcast(&nactive,1,MPI_INT,0,world);
   if (nactive == 0) return;
 
@@ -326,16 +328,16 @@ void Grid::read_restart_custom(FILE *fp)
   char *name;
 
   for (int i = 0; i < nactive; i++) {
-    if (me == 0) fread(&n,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
     MPI_Bcast(&n,1,MPI_INT,0,world);
     name = new char[n];
-    if (me == 0) fread(name,sizeof(char),n,fp);
+    if (me == 0) tmp = fread(name,sizeof(char),n,fp);
     MPI_Bcast(name,n,MPI_CHAR,0,world);
-    if (me == 0) fread(&type,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&type,sizeof(int),1,fp);
     MPI_Bcast(&type,n,MPI_CHAR,0,world);
-    if (me == 0) fread(&size,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&size,sizeof(int),1,fp);
     MPI_Bcast(&size,n,MPI_CHAR,0,world);
-    if (me == 0) fread(&ghostflag,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&ghostflag,sizeof(int),1,fp);
     MPI_Bcast(&ghostflag,n,MPI_CHAR,0,world);
 
     // create the custom attribute

@@ -1,3 +1,4 @@
+
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
@@ -683,69 +684,71 @@ void Mixture::write_restart(FILE *fp)
 
 void Mixture::read_restart(FILE *fp)
 {
+  int tmp;
+  
   int me = comm->me;
 
-  if (me == 0) fread(&nspecies,sizeof(int),1,fp);
+  if (me == 0) tmp = fread(&nspecies,sizeof(int),1,fp);
   MPI_Bcast(&nspecies,1,MPI_INT,0,world);
 
   while (nspecies > maxspecies) allocate();
 
-  if (me == 0) fread(species,sizeof(int),nspecies,fp);
+  if (me == 0) tmp = fread(species,sizeof(int),nspecies,fp);
   MPI_Bcast(species,nspecies,MPI_INT,0,world);
 
-  if (me == 0) fread(&nrho_flag,sizeof(int),1,fp);
+  if (me == 0) tmp = fread(&nrho_flag,sizeof(int),1,fp);
   MPI_Bcast(&nrho_flag,1,MPI_INT,0,world);
   if (nrho_flag) {
-    if (me == 0) fread(&nrho_user,sizeof(double),1,fp);
+    if (me == 0) tmp = fread(&nrho_user,sizeof(double),1,fp);
     MPI_Bcast(&nrho_user,1,MPI_DOUBLE,0,world);
   }
-  if (me == 0) fread(&vstream_flag,sizeof(int),1,fp);
+  if (me == 0) tmp = fread(&vstream_flag,sizeof(int),1,fp);
   MPI_Bcast(&vstream_flag,1,MPI_INT,0,world);
   if (vstream_flag) {
-    if (me == 0) fread(vstream_user,sizeof(double),3,fp);
+    if (me == 0) tmp = fread(vstream_user,sizeof(double),3,fp);
     MPI_Bcast(vstream_user,3,MPI_DOUBLE,0,world);
   }
-  if (me == 0) fread(&temp_thermal_flag,sizeof(int),1,fp);
+  if (me == 0) tmp = fread(&temp_thermal_flag,sizeof(int),1,fp);
   MPI_Bcast(&temp_thermal_flag,1,MPI_INT,0,world);
   if (temp_thermal_flag) {
-    if (me == 0) fread(&temp_thermal_user,sizeof(double),1,fp);
+    if (me == 0) tmp = fread(&temp_thermal_user,sizeof(double),1,fp);
     MPI_Bcast(&temp_thermal_user,1,MPI_DOUBLE,0,world);
   }
-  if (me == 0) fread(&temp_rot_flag,sizeof(int),1,fp);
+  if (me == 0) tmp = fread(&temp_rot_flag,sizeof(int),1,fp);
   MPI_Bcast(&temp_rot_flag,1,MPI_INT,0,world);
   if (temp_rot_flag) {
-    if (me == 0) fread(&temp_rot_user,sizeof(double),1,fp);
+    if (me == 0) tmp = fread(&temp_rot_user,sizeof(double),1,fp);
     MPI_Bcast(&temp_rot_user,1,MPI_DOUBLE,0,world);
   }
-  if (me == 0) fread(&temp_vib_flag,sizeof(int),1,fp);
+  if (me == 0) tmp = fread(&temp_vib_flag,sizeof(int),1,fp);
   MPI_Bcast(&temp_vib_flag,1,MPI_INT,0,world);
   if (temp_vib_flag) {
-    if (me == 0) fread(&temp_vib_user,sizeof(double),1,fp);
+    if (me == 0) tmp = fread(&temp_vib_user,sizeof(double),1,fp);
     MPI_Bcast(&temp_vib_user,1,MPI_DOUBLE,0,world);
   }
 
-  if (me == 0) fread(fraction_flag,sizeof(int),nspecies,fp);
+  if (me == 0) tmp = fread(fraction_flag,sizeof(int),nspecies,fp);
   MPI_Bcast(fraction_flag,nspecies,MPI_INT,0,world);
-  if (me == 0) fread(fraction_user,sizeof(double),nspecies,fp);
+  if (me == 0) tmp = fread(fraction_user,sizeof(double),nspecies,fp);
   MPI_Bcast(fraction_user,nspecies,MPI_DOUBLE,0,world);
 
   int ngroup_file;
-  if (me == 0) fread(&ngroup_file,sizeof(int),1,fp);
+  if (me == 0) tmp = fread(&ngroup_file,sizeof(int),1,fp);
   MPI_Bcast(&ngroup_file,1,MPI_INT,0,world);
 
   int n;
   char *id;
 
   for (int i = 0; i < ngroup_file; i++) {
-    if (me == 0) fread(&n,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
     MPI_Bcast(&n,1,MPI_INT,0,world);
     id = new char[n];
-    if (me == 0) fread(id,sizeof(char),n,fp);
+    if (me == 0) tmp = fread(id,sizeof(char),n,fp);
     MPI_Bcast(id,n,MPI_CHAR,0,world);
     add_group(id);
     delete [] id;
   }
 
-  if (me == 0) fread(mix2group,sizeof(int),nspecies,fp);
+  if (me == 0) tmp = fread(mix2group,sizeof(int),nspecies,fp);
   MPI_Bcast(mix2group,nspecies,MPI_INT,0,world);
 }
