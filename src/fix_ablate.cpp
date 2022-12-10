@@ -599,9 +599,9 @@ void FixAblate::create_surfs(int outflag)
   int pnlocal = particle->nlocal;
 
   int ncount;
-  int icell,splitcell,subcell,flag;
+  int icell,splitcell,subcell,flag,flagcell;
   double *x;
-  double xoutside[3];
+  double xcell[3];
 
   ncount = 0;
   for (int i = 0; i < pnlocal; i++) {
@@ -609,18 +609,19 @@ void FixAblate::create_surfs(int outflag)
     icell = particles[i].icell;
     if (cells[icell].nsurf == 0) continue;
 
-    grid->point_outside_surfs(icell,xoutside);
+    flagcell = grid->point_outside_surfs(icell,xcell);
+
+    // NOTE: this logic seems messed up, too many call to grid->()
     
     int mcell = icell;
     x = particles[i].x;
     flag = 1;
     if (cells[icell].nsplit <= 0) {
       mcell = splitcell = sinfo[cells[icell].isplit].icell;
-      grid->point_outside_surfs(splitcell,xoutside);
-      flag = grid->outside_surfs(splitcell,x,xoutside);
+      flagcell = grid->point_outside_surfs(splitcell,xcell);
+      flag = grid->outside_surfs(splitcell,x,xcell,flagcell);
     } else {
-      grid->point_outside_surfs(icell,xoutside);
-      flag = grid->outside_surfs(icell,x,xoutside);
+      flag = grid->outside_surfs(icell,x,xcell,flagcell);
     }
 
     if (!flag) {

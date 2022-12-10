@@ -538,8 +538,8 @@ void CreateParticles::create_local()
   double temp_rot = particle->mixture[imix]->temp_rot;
   double temp_vib = particle->mixture[imix]->temp_vib;
 
-  int npercell,ncreate,isp,ispecies,id;
-  double x[3],v[3],xoutside[3],vstream_variable[3];
+  int npercell,ncreate,isp,ispecies,id,flagcell;
+  double x[3],v[3],xcell[3],vstream_variable[3];
   double ntarget,scale,rn,vn,vr,theta1,theta2,erot,evib;
   double *lo,*hi;
   
@@ -575,10 +575,10 @@ void CreateParticles::create_local()
       if (random->uniform() < ntarget-ncreate) ncreate++;
     }
 
-    // use xoutside for all created particle attempts in this cell
-    
+    // use xcell for all created particle attempts in this cell
+
     if (cutflag && cells[icell].nsurf)
-      grid->point_outside_surfs(icell,xoutside);
+      flagcell = grid->point_outside_surfs(icell,xcell);
 
     for (int m = 0; m < ncreate; m++) {
 
@@ -600,7 +600,7 @@ void CreateParticles::create_local()
           // unsplit cut cell
 
           if (cells[icell].nsplit == 1) {
-            if (grid->outside_surfs(icell,x,xoutside)) break;
+            if (grid->outside_surfs(icell,x,xcell,flagcell)) break;
           }
         
           // subcell of split cell

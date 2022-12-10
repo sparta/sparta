@@ -199,27 +199,30 @@ void FixGridCheck::end_of_step()
     if (!outside_check) continue;
     if (cells[icell].nsurf == 0) continue;
 
-    int splitcell,subcell,flag;
-    double xoutside[3];
+    int splitcell,subcell,flag,flagcell;
+    double xcell[3];
 
+    // NOTE: this logic needs simplifying
+    // NOTE last error message is confusing
+    
     if (cells[icell].nsplit <= 0) {
       splitcell = sinfo[cells[icell].isplit].icell;
-      grid->point_outside_surfs(splitcell,xoutside);
-      flag = grid->outside_surfs(splitcell,x,xoutside);
+      flagcell = grid->point_outside_surfs(splitcell,xcell);
+      flag = grid->outside_surfs(splitcell,x,xcell,flagcell);
     } else {
-      grid->point_outside_surfs(icell,xoutside);
-      flag = grid->outside_surfs(icell,x,xoutside);
+      flagcell = grid->point_outside_surfs(icell,xcell);
+      flag = grid->outside_surfs(icell,x,xcell,flagcell);
     }
     
     if (!flag) {
-      if (outflag == ERROR) {
+      if (outflag == WARNING) {
         char str[128];
         sprintf(str,
-                "Particle %d,%d on proc %d is inside surfs in cell "
+                "Particle %d,%d on proc %d with flagcell %d is inside surfs in cell "
                 CELLINT_FORMAT " on timestep " BIGINT_FORMAT,
-                i,particles[i].id,comm->me,cells[icell].id,
+                i,particles[i].id,comm->me,flagcell,cells[icell].id,
                 update->ntimestep);
-        error->one(FLERR,str);
+        error->warning(FLERR,str);   // CHANGE this back
       }
       nflag++;
     }
@@ -230,14 +233,14 @@ void FixGridCheck::end_of_step()
       else subcell = update->split3d(splitcell,x);
 
       if (subcell != icell) {
-        if (outflag == ERROR) {
+        if (outflag == WARNING) {   // NOTE: changed this back
           char str[128];
           sprintf(str,
                   "Particle %d,%d on proc %d is in wrong sub cell %d not %d"
                   " on timestep " BIGINT_FORMAT,
                   i,particles[i].id,comm->me,icell,subcell,
                   update->ntimestep);
-          error->one(FLERR,str);
+          error->warning(FLERR,str);
         }
         nflag++;
       }
