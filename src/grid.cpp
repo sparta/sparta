@@ -22,6 +22,8 @@
 #include "modify.h"
 #include "fix.h"
 #include "compute.h"
+#include "cut2d.h"
+#include "cut3d.h"
 #include "output.h"
 #include "dump.h"
 #include "irregular.h"
@@ -147,6 +149,9 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   custom_ghost_flag = NULL;
   custom_restart_flag = NULL;
 
+  cut2d = NULL;
+  cut3d = NULL;
+  
   // allocate hash for cell IDs
 
   hash = new MyHash();
@@ -193,6 +198,9 @@ Grid::~Grid()
   memory->sfree(edvec);
   memory->sfree(edarray);
   memory->destroy(edcol);
+
+  delete cut2d;
+  delete cut3d;
 }
 
 /* ----------------------------------------------------------------------

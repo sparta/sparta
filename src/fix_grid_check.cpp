@@ -198,8 +198,9 @@ void FixGridCheck::end_of_step()
 
     if (!outside_check) continue;
     if (cells[icell].nsurf == 0) continue;
+    if (cinfo[icell].volume == 0.0) continue;
 
-    int splitcell,subcell,flag,flagcell;
+    int sflag,splitcell,subcell;
     double xcell[3];
 
     // NOTE: this logic needs simplifying
@@ -207,14 +208,16 @@ void FixGridCheck::end_of_step()
     
     if (cells[icell].nsplit <= 0) {
       splitcell = sinfo[cells[icell].isplit].icell;
-      flagcell = grid->point_outside_surfs(splitcell,xcell);
-      flag = grid->outside_surfs(splitcell,x,xcell,flagcell);
+      sflag = grid->point_outside_surfs(splitcell,xcell);
+      if (sflag < 0) continue;
+      sflag = grid->outside_surfs(splitcell,x,xcell);
     } else {
-      flagcell = grid->point_outside_surfs(icell,xcell);
-      flag = grid->outside_surfs(icell,x,xcell,flagcell);
+      sflag = grid->point_outside_surfs(icell,xcell);
+      if (sflag < 0) continue;
+      sflag = grid->outside_surfs(icell,x,xcell);
     }
     
-    if (!flag) {
+    if (!sflag) {
       if (outflag == ERROR) {
         char str[128];
         sprintf(str,

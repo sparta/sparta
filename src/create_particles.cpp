@@ -538,7 +538,7 @@ void CreateParticles::create_local()
   double temp_rot = particle->mixture[imix]->temp_rot;
   double temp_vib = particle->mixture[imix]->temp_vib;
 
-  int npercell,ncreate,isp,ispecies,id,flagcell;
+  int npercell,ncreate,isp,ispecies,id,sflag;
   double x[3],v[3],xcell[3],vstream_variable[3];
   double ntarget,scale,rn,vn,vr,theta1,theta2,erot,evib;
   double *lo,*hi;
@@ -552,6 +552,7 @@ void CreateParticles::create_local()
   for (int icell = 0; icell < nglocal; icell++) {
     if (cinfo[icell].type == INSIDE) continue;
     if (cells[icell].nsplit > 1) continue;
+    if (cinfo[icell].volume == 0.0) continue;
     if (region && region->bboxflag &&
         outside_region(dimension,cells[icell].lo,cells[icell].hi))
       continue;
@@ -577,9 +578,9 @@ void CreateParticles::create_local()
 
     // use xcell for all created particle attempts in this cell
 
-    if (cutflag && cells[icell].nsurf)
-      flagcell = grid->point_outside_surfs(icell,xcell);
-
+    if (cells[icell].nsurf) 
+      sflag = grid->point_outside_surfs(icell,xcell);
+    
     for (int m = 0; m < ncreate; m++) {
 
       // generate random position X for new particle
@@ -593,14 +594,14 @@ void CreateParticles::create_local()
       // if split cell, check if in correct subcell
       // if not, attempt new insertion up to MAXATTEMPT times
       
-      if (cutflag && cells[icell].nsurf) {
+      if (cells[icell].nsurf && sflag >= 0) {
         int nattempt = 0;
         while (nattempt < MAXATTEMPT) {
           
           // unsplit cut cell
 
           if (cells[icell].nsplit == 1) {
-            if (grid->outside_surfs(icell,x,xcell,flagcell)) break;
+            if (grid->outside_surfs(icell,x,xcell)) break;
           }
         
           // subcell of split cell

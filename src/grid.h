@@ -291,9 +291,7 @@ class Grid : protected Pointers {
   void combine_split_cell_particles(int, int);
   void assign_split_cell_particles(int);
   int point_outside_surfs(int, double *);
-  int point_outside_surfs_implicit(int, double *);
-  int point_outside_surfs_explicit(int, double *);
-  int outside_surfs(int, double *, double *, int);
+  int outside_surfs(int, double *, double *);
   void allocate_surf_arrays();
   int *csubs_request(int);
 
@@ -451,6 +449,9 @@ class Grid : protected Pointers {
   virtual void grow_cells(int, int);
   virtual void grow_pcells();
   virtual void grow_sinfo(int);
+
+  int point_outside_surfs_implicit(int, double *);
+  int point_outside_surfs_explicit(int, double *);
 
   void surf2grid_stats();
   void flow_stats();

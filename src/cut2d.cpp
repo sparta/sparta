@@ -144,65 +144,6 @@ int Cut2d::surf2grid_one(double *p, double *q,
 }
 
 /* ----------------------------------------------------------------------
-   clip test of line segment PQ against cell with corners LO,HI
-   return 1 if intersects, 0 if not
-------------------------------------------------------------------------- */
-
-int Cut2d::cliptest(double *p, double *q)
-{
-  double x,y;
-
-  if (p[0] >= lo[0] && p[0] <= hi[0] &&
-      p[1] >= lo[1] && p[1] <= hi[1]) return 1;
-  if (q[0] >= lo[0] && q[0] <= hi[0] &&
-      q[1] >= lo[1] && q[1] <= hi[1]) return 1;
-
-  double a[2],b[2];
-  a[0] = p[0]; a[1] = p[1];
-  b[0] = q[0]; b[1] = q[1];
-
-  if (a[0] < lo[0] && b[0] < lo[0]) return 0;
-  if (a[0] < lo[0] || b[0] < lo[0]) {
-    y = a[1] + (lo[0]-a[0])/(b[0]-a[0])*(b[1]-a[1]);
-    if (a[0] < lo[0]) {
-      a[0] = lo[0]; a[1] = y;
-    } else {
-      b[0] = lo[0]; b[1] = y;
-    }
-  }
-  if (a[0] > hi[0] && b[0] > hi[0]) return 0;
-  if (a[0] > hi[0] || b[0] > hi[0]) {
-    y = a[1] + (hi[0]-a[0])/(b[0]-a[0])*(b[1]-a[1]);
-    if (a[0] > hi[0]) {
-      a[0] = hi[0]; a[1] = y;
-    } else {
-      b[0] = hi[0]; b[1] = y;
-    }
-  }
-
-  if (a[1] < lo[1] && b[1] < lo[1]) return 0;
-  if (a[1] < lo[1] || b[1] < lo[1]) {
-    x = a[0] + (lo[1]-a[1])/(b[1]-a[1])*(b[0]-a[0]);
-    if (a[1] < lo[1]) {
-      a[0] = x; a[1] = lo[1];
-    } else {
-      b[0] = x; b[1] = lo[1];
-    }
-  }
-  if (a[1] > hi[1] && b[1] > hi[1]) return 0;
-  if (a[1] > hi[1] || b[1] > hi[1]) {
-    x = a[0] + (hi[1]-a[1])/(b[1]-a[1])*(b[0]-a[0]);
-    if (a[1] > hi[1]) {
-      a[0] = x; a[1] = hi[1];
-    } else {
-      b[0] = x; b[1] = hi[1];
-    }
-  }
-
-  return 1;
-}
-
-/* ----------------------------------------------------------------------
    clip line segment PQ against cell with corners CLO,CHI
    line may or may not intersect cell (due to rounding)
    return # of clipped points, can be 0,1,2
@@ -439,7 +380,8 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
 }
 
 /* ----------------------------------------------------------------------
-   return errflag to Cut3d caller
+   called by Cut3d for each of its faces
+   return errflag to caller
    incremented by 20 so Cut3d can distinguish from its own error messages
 ------------------------------------------------------------------------- */
 
@@ -481,6 +423,70 @@ int Cut2d::split_face(int id_caller, int iface, double *onelo, double *onehi)
 
   return 0;
 }
+
+/* ----------------------------------------------------------------------
+   find a surf point that is inside or on the boundary of the current cell
+   for explicit surfs and cells already been flagged as a split cell
+   surfmap = sub-cell index each surf is part of (-1 if not eligible)
+   return xsplit = coords of point
+   return xsub = sub-cell index the chosen surf is in
+------------------------------------------------------------------------- */
+
+int Cut2d::point_outside_surfs(cellint id_caller,
+                               double *lo_caller, double *hi_caller,
+                               int nsurf_caller, surfint *surfs_caller,
+                               double *x)
+{
+  id = id_caller;
+  lo = lo_caller;
+  hi = hi_caller;
+  nsurf = nsurf_caller;
+  surfs = surfs_caller;
+
+  Surf::Line *lines = surf->lines;
+
+
+  // clip each line to grid cell
+  // if
+
+  int m;
+  double a[2],b[2];
+  double *x1,*x2,*norm;
+  Surf::Line *line;
+
+  for (int i = 0; i < nsurf; i++) {
+    m = surfs[i];
+    line = &lines[m];
+    if (line->transparent) continue;
+
+    x1 = line->p1;
+    x2 = line->p2;
+    clip(x1,x2,a,b);
+    
+    if (a[0] == b[0] && a[1] == b[1]) continue;
+
+    if (ptflag(a) == BORDER && ptflag(b) == BORDER) {
+      int edge = sameedge(a,b);
+      if (edge) {
+        norm = line->norm;
+        if (edge == 1 and norm[0] < 0.0) continue;
+        if (edge == 2 and norm[0] > 0.0) continue;
+        if (edge == 3 and norm[1] < 0.0) continue;
+        if (edge == 4 and norm[1] > 0.0) continue;
+      }
+    }
+
+    x[0] = 0.5 * (a[0] + b[0]);
+    x[1] = 0.5 * (a[1] + b[1]);
+    return i;
+  }
+
+  return -1;
+}
+
+// ----------------------------------------------------------------------
+// internal methods
+// ----------------------------------------------------------------------
 
 /* ----------------------------------------------------------------------
    create clines = list of lines clipped to cell
@@ -1098,6 +1104,66 @@ int Cut2d::split_point_implicit(int *surfmap, double *xsplit, int &xsub)
 
   return 0;
 }
+
+/* ----------------------------------------------------------------------
+   clip test of line segment PQ against cell with corners LO,HI
+   return 1 if intersects, 0 if not
+------------------------------------------------------------------------- */
+
+int Cut2d::cliptest(double *p, double *q)
+{
+  double x,y;
+
+  if (p[0] >= lo[0] && p[0] <= hi[0] &&
+      p[1] >= lo[1] && p[1] <= hi[1]) return 1;
+  if (q[0] >= lo[0] && q[0] <= hi[0] &&
+      q[1] >= lo[1] && q[1] <= hi[1]) return 1;
+
+  double a[2],b[2];
+  a[0] = p[0]; a[1] = p[1];
+  b[0] = q[0]; b[1] = q[1];
+
+  if (a[0] < lo[0] && b[0] < lo[0]) return 0;
+  if (a[0] < lo[0] || b[0] < lo[0]) {
+    y = a[1] + (lo[0]-a[0])/(b[0]-a[0])*(b[1]-a[1]);
+    if (a[0] < lo[0]) {
+      a[0] = lo[0]; a[1] = y;
+    } else {
+      b[0] = lo[0]; b[1] = y;
+    }
+  }
+  if (a[0] > hi[0] && b[0] > hi[0]) return 0;
+  if (a[0] > hi[0] || b[0] > hi[0]) {
+    y = a[1] + (hi[0]-a[0])/(b[0]-a[0])*(b[1]-a[1]);
+    if (a[0] > hi[0]) {
+      a[0] = hi[0]; a[1] = y;
+    } else {
+      b[0] = hi[0]; b[1] = y;
+    }
+  }
+
+  if (a[1] < lo[1] && b[1] < lo[1]) return 0;
+  if (a[1] < lo[1] || b[1] < lo[1]) {
+    x = a[0] + (lo[1]-a[1])/(b[1]-a[1])*(b[0]-a[0]);
+    if (a[1] < lo[1]) {
+      a[0] = x; a[1] = lo[1];
+    } else {
+      b[0] = x; b[1] = lo[1];
+    }
+  }
+  if (a[1] > hi[1] && b[1] > hi[1]) return 0;
+  if (a[1] > hi[1] || b[1] > hi[1]) {
+    x = a[0] + (hi[1]-a[1])/(b[1]-a[1])*(b[0]-a[0]);
+    if (a[1] > hi[1]) {
+      a[0] = x; a[1] = hi[1];
+    } else {
+      b[0] = x; b[1] = hi[1];
+    }
+  }
+
+  return 1;
+}
+
 
 /* ----------------------------------------------------------------------
    clip test line segment PQ against cell with corners LO,HI

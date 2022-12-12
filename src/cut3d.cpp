@@ -208,78 +208,6 @@ int Cut3d::surf2grid_one(double *p0, double *p1, double *p2,
 }
 
 /* ----------------------------------------------------------------------
-   Sutherland-Hodgman clipping algorithm
-   don't need to delete duplicate points since touching counts as intersection
-------------------------------------------------------------------------- */
-
-int Cut3d::clip(double *p0, double *p1, double *p2)
-{
-  int i,npath,nnew;
-  double value;
-  double *s,*e;
-  double **path,**newpath;
-
-  // initial path = tri vertices
-
-  nnew = 3;
-  memcpy(path1[0],p0,3*sizeof(double));
-  memcpy(path1[1],p1,3*sizeof(double));
-  memcpy(path1[2],p2,3*sizeof(double));
-
-  // intersect if any of tri vertices is within grid cell
-
-  if (p0[0] >= lo[0] && p0[0] <= hi[0] &&
-      p0[1] >= lo[1] && p0[1] <= hi[1] &&
-      p0[2] >= lo[2] && p0[2] <= hi[2] &&
-      p1[0] >= lo[0] && p1[0] <= hi[0] &&
-      p1[1] >= lo[1] && p1[1] <= hi[1] &&
-      p1[2] >= lo[2] && p1[2] <= hi[2] &&
-      p2[0] >= lo[0] && p2[0] <= hi[0] &&
-      p2[1] >= lo[1] && p2[1] <= hi[1] &&
-      p2[2] >= lo[2] && p2[2] <= hi[2]) return 1;
-
-  // clip tri against each of 6 grid face planes
-
-  for (int dim = 0; dim < 3; dim++) {
-    path = path1;
-    newpath = path2;
-    npath = nnew;
-    nnew = 0;
-
-    value = lo[dim];
-    s = path[npath-1];
-    for (i = 0; i < npath; i++) {
-      e = path[i];
-      if (e[dim] >= value) {
-        if (s[dim] < value) between(s,e,dim,value,newpath[nnew++]);
-        memcpy(newpath[nnew++],e,3*sizeof(double));
-      } else if (s[dim] >= value) between(e,s,dim,value,newpath[nnew++]);
-      s = e;
-    }
-    if (!nnew) return 0;
-
-    path = path2;
-    newpath = path1;
-    npath = nnew;
-    nnew = 0;
-
-    value = hi[dim];
-    s = path[npath-1];
-    for (i = 0; i < npath; i++) {
-      e = path[i];
-      if (e[dim] <= value) {
-        if (s[dim] > value) between(s,e,dim,value,newpath[nnew++]);
-        memcpy(newpath[nnew++],e,3*sizeof(double));
-      } else if (s[dim] <= value) between(e,s,dim,value,newpath[nnew++]);
-      s = e;
-    }
-    if (!nnew) return 0;
-  }
-
-  return nnew;
-}
-
-/* ----------------------------------------------------------------------
    clip triangle P0 P1 P2 against cell with corners CLO,CHI
    tri may or may not intersect cell (due to rounding)
    return # of clipped points, can be 0,1,2,3 up to 8 (I think)
@@ -436,6 +364,145 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
   }
 
   return nsplit;
+}
+
+/* ----------------------------------------------------------------------
+   find a surf point that is inside or on the boundary of the current cell
+   for explicit surfs and cells already been flagged as a split cell
+   surfmap = sub-cell index each surf is part of (-1 if not eligible)
+   return xsplit = coords of point
+   return xsub = sub-cell index the chosen surf is in
+------------------------------------------------------------------------- */
+
+int Cut3d::point_outside_surfs(cellint id_caller,
+                               double *lo_caller, double *hi_caller,
+                               int nsurf_caller, surfint *surfs_caller,
+                               double *x)
+{
+  /*
+  id = id_caller;
+  lo = lo_caller;
+  hi = hi_caller;
+  nsurf = nsurf_caller;
+  surfs = surfs_caller;
+  */
+  
+  Surf::Tri *tris = surf->tris;
+
+  // clip each triangle to grid cell
+
+  int m;
+  double a[2],b[2];
+  double *x1,*x2,*norm;
+  Surf::Tri *tri;
+
+  for (int i = 0; i < nsurf; i++) {
+    m = surfs[i];
+    tri = &tris[m];
+    if (tri->transparent) continue;
+
+    //x1 = line->p1;
+    //x2 = line->p2;
+    //clip(x1,x2,a,b);
+    
+    if (a[0] == b[0] && a[1] == b[1]) continue;
+
+    /*
+    if (ptflag(a) == BORDER && ptflag(b) == BORDER) {
+      int edge = sameedge(a,b);
+      if (edge) {
+        norm = line->norm;
+        if (edge == 1 and norm[0] < 0.0) continue;
+        if (edge == 2 and norm[0] > 0.0) continue;
+        if (edge == 3 and norm[1] < 0.0) continue;
+        if (edge == 4 and norm[1] > 0.0) continue;
+      }
+    }
+    */
+
+    x[0] = 0.5 * (a[0] + b[0]);
+    x[1] = 0.5 * (a[1] + b[1]);
+    return i;
+  }
+
+  return -1;
+}
+
+
+// ----------------------------------------------------------------------
+// internal methods
+// ----------------------------------------------------------------------
+
+/* ----------------------------------------------------------------------
+   Sutherland-Hodgman clipping algorithm
+   don't need to delete duplicate points since touching counts as intersection
+------------------------------------------------------------------------- */
+
+int Cut3d::clip(double *p0, double *p1, double *p2)
+{
+  int i,npath,nnew;
+  double value;
+  double *s,*e;
+  double **path,**newpath;
+
+  // initial path = tri vertices
+
+  nnew = 3;
+  memcpy(path1[0],p0,3*sizeof(double));
+  memcpy(path1[1],p1,3*sizeof(double));
+  memcpy(path1[2],p2,3*sizeof(double));
+
+  // intersect if any of tri vertices is within grid cell
+
+  if (p0[0] >= lo[0] && p0[0] <= hi[0] &&
+      p0[1] >= lo[1] && p0[1] <= hi[1] &&
+      p0[2] >= lo[2] && p0[2] <= hi[2] &&
+      p1[0] >= lo[0] && p1[0] <= hi[0] &&
+      p1[1] >= lo[1] && p1[1] <= hi[1] &&
+      p1[2] >= lo[2] && p1[2] <= hi[2] &&
+      p2[0] >= lo[0] && p2[0] <= hi[0] &&
+      p2[1] >= lo[1] && p2[1] <= hi[1] &&
+      p2[2] >= lo[2] && p2[2] <= hi[2]) return 1;
+
+  // clip tri against each of 6 grid face planes
+
+  for (int dim = 0; dim < 3; dim++) {
+    path = path1;
+    newpath = path2;
+    npath = nnew;
+    nnew = 0;
+
+    value = lo[dim];
+    s = path[npath-1];
+    for (i = 0; i < npath; i++) {
+      e = path[i];
+      if (e[dim] >= value) {
+        if (s[dim] < value) between(s,e,dim,value,newpath[nnew++]);
+        memcpy(newpath[nnew++],e,3*sizeof(double));
+      } else if (s[dim] >= value) between(e,s,dim,value,newpath[nnew++]);
+      s = e;
+    }
+    if (!nnew) return 0;
+
+    path = path2;
+    newpath = path1;
+    npath = nnew;
+    nnew = 0;
+
+    value = hi[dim];
+    s = path[npath-1];
+    for (i = 0; i < npath; i++) {
+      e = path[i];
+      if (e[dim] <= value) {
+        if (s[dim] > value) between(s,e,dim,value,newpath[nnew++]);
+        memcpy(newpath[nnew++],e,3*sizeof(double));
+      } else if (s[dim] <= value) between(e,s,dim,value,newpath[nnew++]);
+      s = e;
+    }
+    if (!nnew) return 0;
+  }
+
+  return nnew;
 }
 
 /* ----------------------------------------------------------------------
