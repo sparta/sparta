@@ -215,14 +215,14 @@ void FixGridCheck::end_of_step()
     }
     
     if (!flag) {
-      if (outflag == WARNING) {
+      if (outflag == ERROR) {
         char str[128];
         sprintf(str,
-                "Particle %d,%d on proc %d with flagcell %d is inside surfs in cell "
+                "Particle %d,%d on proc %d is inside surfs in cell "
                 CELLINT_FORMAT " on timestep " BIGINT_FORMAT,
-                i,particles[i].id,comm->me,flagcell,cells[icell].id,
+                i,particles[i].id,comm->me,cells[icell].id,
                 update->ntimestep);
-        error->warning(FLERR,str);   // CHANGE this back
+        error->all(FLERR,str);
       }
       nflag++;
     }
@@ -233,14 +233,14 @@ void FixGridCheck::end_of_step()
       else subcell = update->split3d(splitcell,x);
 
       if (subcell != icell) {
-        if (outflag == WARNING) {   // NOTE: changed this back
+        if (outflag == ERROR) {
           char str[128];
           sprintf(str,
                   "Particle %d,%d on proc %d is in wrong sub cell %d not %d"
                   " on timestep " BIGINT_FORMAT,
                   i,particles[i].id,comm->me,icell,subcell,
                   update->ntimestep);
-          error->warning(FLERR,str);
+          error->all(FLERR,str);
         }
         nflag++;
       }
