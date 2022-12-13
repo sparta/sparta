@@ -37,7 +37,7 @@ using namespace MathConst;
 
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
 
-#define MAXATTEMPT 1024         // max attempts to insert particle into cut/split cell
+#define MAXATTEMPT 1024      // max attempts to insert a particle into cut/split cell
 #define EPSZERO 1.0e-14
 
 /* ---------------------------------------------------------------------- */

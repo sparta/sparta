@@ -220,14 +220,14 @@ void FixGridCheck::end_of_step()
     }
     
     if (!pflag) {
-      if (outflag == ERROR) {
+      if (outflag == WARNING) {   // DEBUG
         char str[128];
         sprintf(str,
                 "Particle %d,%d on proc %d is inside surfs in cell "
                 CELLINT_FORMAT " on timestep " BIGINT_FORMAT,
                 i,particles[i].id,comm->me,cells[icell].id,
                 update->ntimestep);
-        error->all(FLERR,str);
+        error->warning(FLERR,str);     // DEBUG
       }
       nflag_surf++;
     }
@@ -240,14 +240,14 @@ void FixGridCheck::end_of_step()
       else subcell = update->split3d(splitcell,x);
 
       if (subcell != icell) {
-        if (outflag == ERROR) {
+        if (outflag == WARNING) {   // DEBUG
           char str[128];
           sprintf(str,
                   "Particle %d,%d on proc %d is in wrong sub cell %d not %d"
                   " on timestep " BIGINT_FORMAT,
                   i,particles[i].id,comm->me,icell,subcell,
                   update->ntimestep);
-          error->all(FLERR,str);
+          error->warning(FLERR,str);   // DEBUG
         }
         nflag_split++;
       }
@@ -263,21 +263,21 @@ void FixGridCheck::end_of_step()
     MPI_Allreduce(&nflag,&all,1,MPI_INT,MPI_SUM,world);
     if (all && comm->me == 0) {
       char str[128];
-      sprintf(str,"%d particles were in wrong cells on timestep "
+      sprintf(str,"%d particles in wrong cells on timestep "
               BIGINT_FORMAT,all,update->ntimestep);
       error->warning(FLERR,str);
     }
     MPI_Allreduce(&nflag_surf,&all,1,MPI_INT,MPI_SUM,world);
     if (all && comm->me == 0) {
       char str[128];
-      sprintf(str,"%d particles were inside surfs on timestep "
+      sprintf(str,"%d particles inside surfs on timestep "
               BIGINT_FORMAT,all,update->ntimestep);
       error->warning(FLERR,str);
     }
     MPI_Allreduce(&nflag_split,&all,1,MPI_INT,MPI_SUM,world);
     if (all && comm->me == 0) {
       char str[128];
-      sprintf(str,"%d particles were in wrong sub cells on timestep "
+      sprintf(str,"%d particles in wrong sub cells on timestep "
               BIGINT_FORMAT,all,update->ntimestep);
       error->warning(FLERR,str);
     }

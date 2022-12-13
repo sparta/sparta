@@ -1896,10 +1896,10 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
     }
   }
 
-  // unable to find a point in flow volume, all surfs were "continued"
-  // mean entire cell is actually outside or inside, just touched by surfs
+  // unable to find a point in flow volume, all surfs invoked "continue"
+  // means entire cell is actually outside or inside, just touched by surfs
   // if outside, caller does not need to call outside_surfs()
-  // if inside, caller can detect that flow volume = zero
+  // if inside, caller can detect that its flow volume = zero
   
   return 0;
 }
