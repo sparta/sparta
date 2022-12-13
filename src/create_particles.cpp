@@ -538,7 +538,7 @@ void CreateParticles::create_local()
   double temp_rot = particle->mixture[imix]->temp_rot;
   double temp_vib = particle->mixture[imix]->temp_vib;
 
-  int npercell,ncreate,isp,ispecies,id,sflag;
+  int npercell,ncreate,isp,ispecies,id,pflag;
   double x[3],v[3],xcell[3],vstream_variable[3];
   double ntarget,scale,rn,vn,vr,theta1,theta2,erot,evib;
   double *lo,*hi;
@@ -579,7 +579,7 @@ void CreateParticles::create_local()
     // use xcell for all created particle attempts in this cell
 
     if (cells[icell].nsurf) 
-      sflag = grid->point_outside_surfs(icell,xcell);
+      pflag = grid->point_outside_surfs(icell,xcell);
     
     for (int m = 0; m < ncreate; m++) {
 
@@ -594,7 +594,7 @@ void CreateParticles::create_local()
       // if split cell, check if in correct subcell
       // if not, attempt new insertion up to MAXATTEMPT times
       
-      if (cells[icell].nsurf && sflag >= 0) {
+      if (cells[icell].nsurf && pflag) {
         int nattempt = 0;
         while (nattempt < MAXATTEMPT) {
           

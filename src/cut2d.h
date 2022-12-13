@@ -77,13 +77,13 @@ class Cut2d : protected Pointers {
   int surf2grid_list(cellint, double *, double *, int, surfint *,
                      surfint *, int);
   int surf2grid_one(double *, double *, double *, double *);
-  int clip_external(double *, double *, double *, double *, double *);
 
   int split(cellint, double *, double *, int, surfint *,
             double *&, int *, int *, int &, double *);
   int split_face(int, int, double *, double *);
   
-  int point_outside_surfs(cellint, double *, double *, int, surfint *, double *);
+  int clip_external(double *, double *, double *, double *, double *);
+  int sameedge(double *, double *);
   
  private:
   int axisymmetric;
@@ -115,7 +115,6 @@ class Cut2d : protected Pointers {
   void clip(double *, double *, double *, double *);
 
   int ptflag(double *);
-  int sameedge(double *, double *);
   int whichside(double *);
 
   void failed_cell();

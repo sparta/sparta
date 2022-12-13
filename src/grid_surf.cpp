@@ -1821,9 +1821,6 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
   if (dim == 3 && !cut3d) cut3d = new Cut3d(sparta);
   else if (dim == 2 && !cut2d) cut2d = new Cut2d(sparta,domain->axisymmetric);
 
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
-
   cellint id = cells[icell].id;
   double *lo = cells[icell].lo;
   double *hi = cells[icell].hi;
@@ -1834,23 +1831,77 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
   double displace = EPSSURF * minsize;
   
   if (dim == 2) {
-    int index = cut2d->point_outside_surfs(id,lo,hi,nsurf,csurfs,x);
-    if (index < 0) return index;
-    int isurf = csurfs[index];
-    x[0] += displace*lines[isurf].norm[0];
-    x[1] += displace*lines[isurf].norm[1];
-    x[2] = 0.0;
-    return index;
+    int npoint;
+    double cpath[4],a[2],b[2];
+    double *norm;
+    Surf::Line *line;
+    
+    Surf::Line *lines = surf->lines;
+
+    for (int i = 0; i < nsurf; i++) {
+      line = &lines[csurfs[i]];
+      if (line->transparent) continue;
+      norm = line->norm;
+      
+      npoint = cut2d->clip_external(line->p1,line->p2,lo,hi,cpath);
+      if (npoint < 2) continue;
+
+      int edge = cut2d->sameedge(&cpath[0],&cpath[2]);
+      if (edge) {
+        if (edge == 1 and norm[0] < 0.0) continue;
+        if (edge == 2 and norm[0] > 0.0) continue;
+        if (edge == 3 and norm[1] < 0.0) continue;
+        if (edge == 4 and norm[1] > 0.0) continue;
+      }
+
+      x[0] = 0.5*(cpath[0]+cpath[2]) + displace*norm[0];
+      x[1] = 0.5*(cpath[1]+cpath[3]) + displace*norm[1];
+      x[2] = 0.0;
+      return 1;
+    }
     
   } else {
+    int npoint;
+    double cpath[24],a[2],b[2];
+    double *norm;
+    Surf::Tri *tri;
+
+    Surf::Tri *tris = surf->tris;
+
+    for (int i = 0; i < nsurf; i++) {
+      tri = &tris[csurfs[i]];
+      if (tri->transparent) continue;
+      norm = tri->norm;
+      
+      npoint = cut3d->clip_external(tri->p1,tri->p2,tri->p3,lo,hi,cpath);
+      if (npoint < 3) continue;
+                    
+      int face = cut3d->sameface(&cpath[0],&cpath[3],&cpath[6]);
+      if (face) {
+        if (face == 1 and norm[0] < 0.0) continue;
+        if (face == 2 and norm[0] > 0.0) continue;
+        if (face == 3 and norm[1] < 0.0) continue;
+        if (face == 4 and norm[1] > 0.0) continue;
+        if (face == 5 and norm[2] < 0.0) continue;
+        if (face == 6 and norm[2] > 0.0) continue;
+      }
+
+      double onethird = 1.0/3.0;
+      x[0] = onethird*(cpath[0]+cpath[3]+cpath[6]) + displace*norm[0];
+      x[1] = onethird*(cpath[1]+cpath[4]+cpath[7]) + displace*norm[1];
+      x[2] = onethird*(cpath[2]+cpath[5]+cpath[8]) + displace*norm[2];
+      return 1;
+    }
   }
+
+  return 0;
 }
 
 /* ----------------------------------------------------------------------
    check if particle at X is outside any surfs in icell (in the flow)
    icell can be split or unsplit cell, not a sub cell
    do NOT call for a cell with no surfs
-   if outside, return 1, else return 0
+   if outside return 1, else return 0
 ------------------------------------------------------------------------- */
 
 int Grid::outside_surfs(int icell, double *x, double *xcell)

@@ -208,6 +208,77 @@ int Cut3d::surf2grid_one(double *p0, double *p1, double *p2,
 }
 
 /* ----------------------------------------------------------------------
+   calculate cut volume of a grid cell that contains nsurf tris
+   also calculate if cell is split into distinct sub-volumes by tris
+   return nsplit = # of splits, 1 for no split
+   return vols = ptr to vector of vols = one vol per split
+     if nsplit = 1, cut vol
+     if nsplit > 1, one vol per split cell
+   return corners = UNKNOWN/INSIDE/OUTSIDE for each of 8 corner pts
+   if nsplit > 1, also return:
+     surfmap = which sub-cell (0 to Nsurfs-1) each surf is in
+             = -1 if not in any sub-cell, discarded by add_tris
+     xsplit = coords of a point in one of the split cells
+     xsub = which sub-cell (0 to Nsplit-1) xsplit is in
+   work is done by split_try()
+   call it once more with shrunk grid cell if first attempt fails
+------------------------------------------------------------------------- */
+
+int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
+                 int nsurf_caller, surfint *surfs_caller,
+                 double *&vols_caller, int *surfmap,
+                 int *corners, int &xsub, double *xsplit)
+{
+  lo[0] = lo_caller[0]; lo[1] = lo_caller[1]; lo[2] = lo_caller[2];
+  hi[0] = hi_caller[0]; hi[1] = hi_caller[1]; hi[2] = hi_caller[2];
+
+  // perform split with full-size grid cell
+
+  int nsplit;
+  int errflag =
+    split_try(id_caller,nsurf_caller,surfs_caller,vols_caller,surfmap,
+              corners,xsub,xsplit,nsplit);
+
+  // error return
+  // try again after shrinking grid cell by SHRINK factor
+  // this gets rid of pesky errors due to tri pts/edges on cell faces
+
+  if (errflag) {
+    nshrink++;
+
+    double newlo = lo[0] + SHRINK*(hi[0]-lo[0]);
+    double newhi = hi[0] - SHRINK*(hi[0]-lo[0]);
+    lo[0] = newlo;
+    hi[0] = newhi;
+
+    newlo = lo[1] + SHRINK*(hi[1]-lo[1]);
+    newhi = hi[1] - SHRINK*(hi[1]-lo[1]);
+    lo[1] = newlo;
+    hi[1] = newhi;
+
+    newlo = lo[2] + SHRINK*(hi[2]-lo[2]);
+    newhi = hi[2] - SHRINK*(hi[2]-lo[2]);
+    lo[2] = newlo;
+    hi[2] = newhi;
+
+    errflag =
+      split_try(id_caller,nsurf_caller,surfs_caller,vols_caller,surfmap,
+                corners,xsub,xsplit,nsplit);
+  }
+
+  // could not perform cut/split -> fatal error
+  // print info about cell and final error message
+  // NOTE: could unshrink cell first
+
+  if (errflag) {
+    failed_cell();
+    split_error(errflag);
+  }
+
+  return nsplit;
+}
+
+/* ----------------------------------------------------------------------
    clip triangle P0 P1 P2 against cell with corners CLO,CHI
    tri may or may not intersect cell (due to rounding)
    return # of clipped points, can be 0,1,2,3 up to 8 (I think)
@@ -296,138 +367,21 @@ int Cut3d::clip_external(double *p0, double *p1, double *p2,
 }
 
 /* ----------------------------------------------------------------------
-   calculate cut volume of a grid cell that contains nsurf tris
-   also calculate if cell is split into distinct sub-volumes by tris
-   return nsplit = # of splits, 1 for no split
-   return vols = ptr to vector of vols = one vol per split
-     if nsplit = 1, cut vol
-     if nsplit > 1, one vol per split cell
-   return corners = UNKNOWN/INSIDE/OUTSIDE for each of 8 corner pts
-   if nsplit > 1, also return:
-     surfmap = which sub-cell (0 to Nsurfs-1) each surf is in
-             = -1 if not in any sub-cell, discarded by add_tris
-     xsplit = coords of a point in one of the split cells
-     xsub = which sub-cell (0 to Nsplit-1) xsplit is in
-   work is done by split_try()
-   call it once more with shrunk grid cell if first attempt fails
+   check if pts A,B,C are on same face of cell
+   return 1,2,3,4,5,6 = both on left,right,lower,upper,bottom,top face
+   return 0 if not, including inside
 ------------------------------------------------------------------------- */
 
-int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
-                 int nsurf_caller, surfint *surfs_caller,
-                 double *&vols_caller, int *surfmap,
-                 int *corners, int &xsub, double *xsplit)
+int Cut3d::sameface(double *a, double *b, double *c)
 {
-  lo[0] = lo_caller[0]; lo[1] = lo_caller[1]; lo[2] = lo_caller[2];
-  hi[0] = hi_caller[0]; hi[1] = hi_caller[1]; hi[2] = hi_caller[2];
-
-  // perform split with full-size grid cell
-
-  int nsplit;
-  int errflag =
-    split_try(id_caller,nsurf_caller,surfs_caller,vols_caller,surfmap,
-              corners,xsub,xsplit,nsplit);
-
-  // error return
-  // try again after shrinking grid cell by SHRINK factor
-  // this gets rid of pesky errors due to tri pts/edges on cell faces
-
-  if (errflag) {
-    nshrink++;
-
-    double newlo = lo[0] + SHRINK*(hi[0]-lo[0]);
-    double newhi = hi[0] - SHRINK*(hi[0]-lo[0]);
-    lo[0] = newlo;
-    hi[0] = newhi;
-
-    newlo = lo[1] + SHRINK*(hi[1]-lo[1]);
-    newhi = hi[1] - SHRINK*(hi[1]-lo[1]);
-    lo[1] = newlo;
-    hi[1] = newhi;
-
-    newlo = lo[2] + SHRINK*(hi[2]-lo[2]);
-    newhi = hi[2] - SHRINK*(hi[2]-lo[2]);
-    lo[2] = newlo;
-    hi[2] = newhi;
-
-    errflag =
-      split_try(id_caller,nsurf_caller,surfs_caller,vols_caller,surfmap,
-                corners,xsub,xsplit,nsplit);
-  }
-
-  // could not perform cut/split -> fatal error
-  // print info about cell and final error message
-  // NOTE: could unshrink cell first
-
-  if (errflag) {
-    failed_cell();
-    split_error(errflag);
-  }
-
-  return nsplit;
+  if (a[0] == lo[0] and b[0] == lo[0] and c[0] == lo[0]) return 1;
+  if (a[0] == hi[0] and b[0] == hi[0] and c[0] == hi[0]) return 2;
+  if (a[1] == lo[1] and b[1] == lo[1] and c[1] == lo[1]) return 3;
+  if (a[1] == hi[1] and b[1] == hi[1] and c[1] == hi[1]) return 4;
+  if (a[2] == lo[2] and b[2] == lo[2] and c[2] == lo[2]) return 5;
+  if (a[2] == hi[2] and b[2] == hi[2] and c[2] == hi[2]) return 6;
+  return 0;
 }
-
-/* ----------------------------------------------------------------------
-   find a surf point that is inside or on the boundary of the current cell
-   for explicit surfs and cells already been flagged as a split cell
-   surfmap = sub-cell index each surf is part of (-1 if not eligible)
-   return xsplit = coords of point
-   return xsub = sub-cell index the chosen surf is in
-------------------------------------------------------------------------- */
-
-int Cut3d::point_outside_surfs(cellint id_caller,
-                               double *lo_caller, double *hi_caller,
-                               int nsurf_caller, surfint *surfs_caller,
-                               double *x)
-{
-  /*
-  id = id_caller;
-  lo = lo_caller;
-  hi = hi_caller;
-  nsurf = nsurf_caller;
-  surfs = surfs_caller;
-  */
-  
-  Surf::Tri *tris = surf->tris;
-
-  // clip each triangle to grid cell
-
-  int m;
-  double a[2],b[2];
-  double *x1,*x2,*norm;
-  Surf::Tri *tri;
-
-  for (int i = 0; i < nsurf; i++) {
-    m = surfs[i];
-    tri = &tris[m];
-    if (tri->transparent) continue;
-
-    //x1 = line->p1;
-    //x2 = line->p2;
-    //clip(x1,x2,a,b);
-    
-    if (a[0] == b[0] && a[1] == b[1]) continue;
-
-    /*
-    if (ptflag(a) == BORDER && ptflag(b) == BORDER) {
-      int edge = sameedge(a,b);
-      if (edge) {
-        norm = line->norm;
-        if (edge == 1 and norm[0] < 0.0) continue;
-        if (edge == 2 and norm[0] > 0.0) continue;
-        if (edge == 3 and norm[1] < 0.0) continue;
-        if (edge == 4 and norm[1] > 0.0) continue;
-      }
-    }
-    */
-
-    x[0] = 0.5 * (a[0] + b[0]);
-    x[1] = 0.5 * (a[1] + b[1]);
-    return i;
-  }
-
-  return -1;
-}
-
 
 // ----------------------------------------------------------------------
 // internal methods

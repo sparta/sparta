@@ -144,83 +144,6 @@ int Cut2d::surf2grid_one(double *p, double *q,
 }
 
 /* ----------------------------------------------------------------------
-   clip line segment PQ against cell with corners CLO,CHI
-   line may or may not intersect cell (due to rounding)
-   return # of clipped points, can be 0,1,2
-   return clipped points in cpath as series of x,y pairs
-   called externally, depends on no class variables
-   duplicate points in cpath are deleted
-------------------------------------------------------------------------- */
-
-int Cut2d::clip_external(double *p, double *q, double *clo, double *chi,
-                         double *cpath)
-{
-  double x,y;
-
-  // PQ is interior to cell
-
-  if (p[0] >= clo[0] && p[0] <= chi[0] &&
-      p[1] >= clo[1] && p[1] <= chi[1] &&
-      q[0] >= clo[0] && q[0] <= chi[0] &&
-      q[1] >= clo[1] && q[1] <= chi[1]) {
-    cpath[0] = p[0];
-    cpath[1] = p[1];
-    cpath[2] = q[0];
-    cpath[3] = q[1];
-    return 2;
-  }
-
-  double a[2],b[2];
-  a[0] = p[0]; a[1] = p[1];
-  b[0] = q[0]; b[1] = q[1];
-
-  if (a[0] < clo[0] && b[0] < clo[0]) return 0;
-  if (a[0] < clo[0] || b[0] < clo[0]) {
-    y = a[1] + (clo[0]-a[0])/(b[0]-a[0])*(b[1]-a[1]);
-    if (a[0] < clo[0]) {
-      a[0] = clo[0]; a[1] = y;
-    } else {
-      b[0] = clo[0]; b[1] = y;
-    }
-  }
-  if (a[0] > chi[0] && b[0] > chi[0]) return 0;
-  if (a[0] > chi[0] || b[0] > chi[0]) {
-    y = a[1] + (chi[0]-a[0])/(b[0]-a[0])*(b[1]-a[1]);
-    if (a[0] > chi[0]) {
-      a[0] = chi[0]; a[1] = y;
-    } else {
-      b[0] = chi[0]; b[1] = y;
-    }
-  }
-  if (a[1] < clo[1] && b[1] < clo[1]) return 0;
-  if (a[1] < clo[1] || b[1] < clo[1]) {
-    x = a[0] + (clo[1]-a[1])/(b[1]-a[1])*(b[0]-a[0]);
-    if (a[1] < clo[1]) {
-      a[0] = x; a[1] = clo[1];
-    } else {
-      b[0] = x; b[1] = clo[1];
-    }
-  }
-  if (a[1] > chi[1] && b[1] > chi[1]) return 0;
-  if (a[1] > chi[1] || b[1] > chi[1]) {
-    x = a[0] + (chi[1]-a[1])/(b[1]-a[1])*(b[0]-a[0]);
-    if (a[1] > chi[1]) {
-      a[0] = x; a[1] = chi[1];
-    } else {
-      b[0] = x; b[1] = chi[1];
-    }
-  }
-
-  cpath[0] = a[0];
-  cpath[1] = a[1];
-  cpath[2] = b[0];
-  cpath[3] = b[1];
-
-  if (a[0] == b[0] && a[1] == b[1]) return 1;
-  return 2;
-}
-
-/* ----------------------------------------------------------------------
    calculate cut area of a grid cell that contains nsurf lines
    also calculate if cell is split into distinct sub-areas by lines
    return nsplit = # of splits, 1 for no split
@@ -425,63 +348,95 @@ int Cut2d::split_face(int id_caller, int iface, double *onelo, double *onehi)
 }
 
 /* ----------------------------------------------------------------------
-   find a surf point that is inside or on the boundary of the current cell
-   for explicit surfs and cells already been flagged as a split cell
-   surfmap = sub-cell index each surf is part of (-1 if not eligible)
-   return xsplit = coords of point
-   return xsub = sub-cell index the chosen surf is in
+   clip line segment PQ against cell with corners CLO,CHI
+   line may or may not intersect cell (due to rounding)
+   return # of clipped points, can be 0,1,2
+   return clipped points in cpath as series of x,y pairs
+   called externally, depends on no class variables
+   duplicate points in cpath are deleted
 ------------------------------------------------------------------------- */
 
-int Cut2d::point_outside_surfs(cellint id_caller,
-                               double *lo_caller, double *hi_caller,
-                               int nsurf_caller, surfint *surfs_caller,
-                               double *x)
+int Cut2d::clip_external(double *p, double *q, double *clo, double *chi,
+                         double *cpath)
 {
-  id = id_caller;
-  lo = lo_caller;
-  hi = hi_caller;
-  nsurf = nsurf_caller;
-  surfs = surfs_caller;
+  double x,y;
 
-  Surf::Line *lines = surf->lines;
+  // PQ is interior to cell
 
-
-  // clip each line to grid cell
-  // if
-
-  int m;
-  double a[2],b[2];
-  double *x1,*x2,*norm;
-  Surf::Line *line;
-
-  for (int i = 0; i < nsurf; i++) {
-    m = surfs[i];
-    line = &lines[m];
-    if (line->transparent) continue;
-
-    x1 = line->p1;
-    x2 = line->p2;
-    clip(x1,x2,a,b);
-    
-    if (a[0] == b[0] && a[1] == b[1]) continue;
-
-    if (ptflag(a) == BORDER && ptflag(b) == BORDER) {
-      int edge = sameedge(a,b);
-      if (edge) {
-        norm = line->norm;
-        if (edge == 1 and norm[0] < 0.0) continue;
-        if (edge == 2 and norm[0] > 0.0) continue;
-        if (edge == 3 and norm[1] < 0.0) continue;
-        if (edge == 4 and norm[1] > 0.0) continue;
-      }
-    }
-
-    x[0] = 0.5 * (a[0] + b[0]);
-    x[1] = 0.5 * (a[1] + b[1]);
-    return i;
+  if (p[0] >= clo[0] && p[0] <= chi[0] &&
+      p[1] >= clo[1] && p[1] <= chi[1] &&
+      q[0] >= clo[0] && q[0] <= chi[0] &&
+      q[1] >= clo[1] && q[1] <= chi[1]) {
+    cpath[0] = p[0];
+    cpath[1] = p[1];
+    cpath[2] = q[0];
+    cpath[3] = q[1];
+    return 2;
   }
 
-  return -1;
+  double a[2],b[2];
+  a[0] = p[0]; a[1] = p[1];
+  b[0] = q[0]; b[1] = q[1];
+
+  if (a[0] < clo[0] && b[0] < clo[0]) return 0;
+  if (a[0] < clo[0] || b[0] < clo[0]) {
+    y = a[1] + (clo[0]-a[0])/(b[0]-a[0])*(b[1]-a[1]);
+    if (a[0] < clo[0]) {
+      a[0] = clo[0]; a[1] = y;
+    } else {
+      b[0] = clo[0]; b[1] = y;
+    }
+  }
+  if (a[0] > chi[0] && b[0] > chi[0]) return 0;
+  if (a[0] > chi[0] || b[0] > chi[0]) {
+    y = a[1] + (chi[0]-a[0])/(b[0]-a[0])*(b[1]-a[1]);
+    if (a[0] > chi[0]) {
+      a[0] = chi[0]; a[1] = y;
+    } else {
+      b[0] = chi[0]; b[1] = y;
+    }
+  }
+  if (a[1] < clo[1] && b[1] < clo[1]) return 0;
+  if (a[1] < clo[1] || b[1] < clo[1]) {
+    x = a[0] + (clo[1]-a[1])/(b[1]-a[1])*(b[0]-a[0]);
+    if (a[1] < clo[1]) {
+      a[0] = x; a[1] = clo[1];
+    } else {
+      b[0] = x; b[1] = clo[1];
+    }
+  }
+  if (a[1] > chi[1] && b[1] > chi[1]) return 0;
+  if (a[1] > chi[1] || b[1] > chi[1]) {
+    x = a[0] + (chi[1]-a[1])/(b[1]-a[1])*(b[0]-a[0]);
+    if (a[1] > chi[1]) {
+      a[0] = x; a[1] = chi[1];
+    } else {
+      b[0] = x; b[1] = chi[1];
+    }
+  }
+
+  cpath[0] = a[0];
+  cpath[1] = a[1];
+  cpath[2] = b[0];
+  cpath[3] = b[1];
+
+  if (a[0] == b[0] && a[1] == b[1]) return 1;
+  return 2;
+}
+
+/* ----------------------------------------------------------------------
+   check if pts A,B are on same edge of cell
+   return 1,2,3,4 = both on left,right,lower,upper edge
+   return 0 if not, including inside
+------------------------------------------------------------------------- */
+
+int Cut2d::sameedge(double *a, double *b)
+{
+  if (a[0] == lo[0] and b[0] == lo[0]) return 1;
+  if (a[0] == hi[0] and b[0] == hi[0]) return 2;
+  if (a[1] == lo[1] and b[1] == lo[1]) return 3;
+  if (a[1] == hi[1] and b[1] == hi[1]) return 4;
+  return 0;
 }
 
 // ----------------------------------------------------------------------
@@ -1232,24 +1187,10 @@ int Cut2d::ptflag(double *pt)
 }
 
 /* ----------------------------------------------------------------------
-   check if pts A,B are on same edge of cell
-   both assumed to be on cell border
-   return 1,2,3,4 = left,right,lower,upper if they are, 0 if not
-------------------------------------------------------------------------- */
-
-int Cut2d::sameedge(double *a, double *b)
-{
-  if (a[0] == lo[0] and b[0] == lo[0]) return 1;
-  if (a[0] == hi[0] and b[0] == hi[0]) return 2;
-  if (a[1] == lo[1] and b[1] == lo[1]) return 3;
-  if (a[1] == hi[1] and b[1] == hi[1]) return 4;
-  return 0;
-}
-
-/* ----------------------------------------------------------------------
    check which side of cell pt is on, assumed to be on border
    not called for corner pt, but return either side
-   return 0,1,2,3 = lower,right,upper,left if on border, -1 if not
+   return 0,1,2,3 = lower,right,upper,left if on border
+   return -1 if not on border
 ------------------------------------------------------------------------- */
 
 int Cut2d::whichside(double *pt)

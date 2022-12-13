@@ -31,14 +31,14 @@ class Cut3d : protected Pointers {
   int surf2grid_list(cellint, double *, double *, int, surfint *,
                      surfint *, int);
   int surf2grid_one(double *, double *, double *, double *, double *);
-  int clip_external(double *, double *, double *,
-                    double *, double *, double *);
   
   int split(cellint, double *, double *, int, surfint *,
             double *&, int *, int *, int &, double *);
 
-  int point_outside_surfs(cellint, double *, double *, int, surfint *, double *);
-
+  int clip_external(double *, double *, double *,
+                    double *, double *, double *);
+  int sameface(double *, double *, double *);
+  
  private:
   int implicit;
 
