@@ -599,7 +599,7 @@ void FixAblate::create_surfs(int outflag)
   int pnlocal = particle->nlocal;
 
   int ncount;
-  int icell,splitcell,subcell,sflag;
+  int icell,splitcell,subcell,pflag;
   double *x;
   double xcell[3];
 
@@ -608,23 +608,23 @@ void FixAblate::create_surfs(int outflag)
     particles[i].flag = PKEEP;
     icell = particles[i].icell;
     if (cells[icell].nsurf == 0) continue;
-
-    grid->point_outside_surfs(icell,xcell);
-
-    // NOTE: this logic seems messed up, too many call to grid->()
-    
-    int mcell = icell;
     x = particles[i].x;
-    sflag = 1;
-    if (cells[icell].nsplit <= 0) {
-      mcell = splitcell = sinfo[cells[icell].isplit].icell;
-      grid->point_outside_surfs(splitcell,xcell);
-      sflag = grid->outside_surfs(splitcell,x,xcell);
+
+    // check that particle is outside surfs
+    // two cases: unsplit cut cell and split subcell
+
+    if (cells[icell].nsplit == 1) {
+      pflag = grid->point_outside_surfs(icell,xcell);
+      if (!pflag) continue;
+      pflag = grid->outside_surfs(icell,x,xcell);
     } else {
-      sflag = grid->outside_surfs(icell,x,xcell);
+      splitcell = sinfo[cells[icell].isplit].icell;
+      pflag = grid->point_outside_surfs(splitcell,xcell);
+      if (!pflag) continue;
+      pflag = grid->outside_surfs(splitcell,x,xcell);
     }
 
-    if (!sflag) {
+    if (!pflag) {
       particles[i].flag = PDISCARD;
       // DEBUG - print message about MC flags for cell of deleted particle
       /*

@@ -107,6 +107,8 @@ void FixGridCheck::end_of_step()
   // check for split cell is whether particle is inside parent cell
 
   int nflag = 0;
+  int nflag_surf = 0;
+  int nflag_split = 0;
 
   for (int i = 0; i < nlocal; i++) {
     icell = particles[i].icell;
@@ -203,18 +205,18 @@ void FixGridCheck::end_of_step()
     int pflag,splitcell,subcell;
     double xcell[3];
 
-    // NOTE: this logic needs simplifying
-    // NOTE last error message is confusing
-    
-    if (cells[icell].nsplit <= 0) {
+    // check that particle is outside surfs
+    // two cases: unsplit cut cell and split subcell
+
+    if (cells[icell].nsplit == 1) {
+      pflag = grid->point_outside_surfs(icell,xcell);
+      if (!pflag) continue;
+      pflag = grid->outside_surfs(icell,x,xcell);
+    } else {
       splitcell = sinfo[cells[icell].isplit].icell;
       pflag = grid->point_outside_surfs(splitcell,xcell);
       if (!pflag) continue;
       pflag = grid->outside_surfs(splitcell,x,xcell);
-    } else {
-      pflag = grid->point_outside_surfs(icell,xcell);
-      if (!pflag) continue;
-      pflag = grid->outside_surfs(icell,x,xcell);
     }
     
     if (!pflag) {
@@ -227,9 +229,11 @@ void FixGridCheck::end_of_step()
                 update->ntimestep);
         error->all(FLERR,str);
       }
-      nflag++;
+      nflag_surf++;
     }
 
+    // chcek that particle is in correct split subcell
+    
     if (cells[icell].nsplit <= 0) {
       int subcell;
       if (dim == 2) subcell = update->split2d(splitcell,x);
@@ -245,14 +249,14 @@ void FixGridCheck::end_of_step()
                   update->ntimestep);
           error->all(FLERR,str);
         }
-        nflag++;
+        nflag_split++;
       }
     }
   }
 
   // -------------------------------------
   // done with all tests
-  // warning message instead of error
+  // warning messages instead of error
 
   if (outflag == WARNING) {
     int all;
@@ -263,9 +267,23 @@ void FixGridCheck::end_of_step()
               BIGINT_FORMAT,all,update->ntimestep);
       error->warning(FLERR,str);
     }
+    MPI_Allreduce(&nflag_surf,&all,1,MPI_INT,MPI_SUM,world);
+    if (all && comm->me == 0) {
+      char str[128];
+      sprintf(str,"%d particles were inside surfs on timestep "
+              BIGINT_FORMAT,all,update->ntimestep);
+      error->warning(FLERR,str);
+    }
+    MPI_Allreduce(&nflag_split,&all,1,MPI_INT,MPI_SUM,world);
+    if (all && comm->me == 0) {
+      char str[128];
+      sprintf(str,"%d particles were in wrong sub cells on timestep "
+              BIGINT_FORMAT,all,update->ntimestep);
+      error->warning(FLERR,str);
+    }
   }
 
-  ntotal += nflag;
+  ntotal += nflag + nflag_surf + nflag_split;
 }
 
 /* ----------------------------------------------------------------------

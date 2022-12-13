@@ -434,7 +434,7 @@ void CreateParticles::create_single()
 /* ----------------------------------------------------------------------
    create particles in parallel
    every proc creates fraction of particles for cells it owns
-   cutflag determines whether insert in all cells or only ones uncut by surfs
+   cutflag determines whether to insert in all cells or only ones uncut by surfs
    account for cell weighting
    attributes of created particle depend on number of procs
 ------------------------------------------------------------------------- */
@@ -576,9 +576,9 @@ void CreateParticles::create_local()
       if (random->uniform() < ntarget-ncreate) ncreate++;
     }
 
-    // use xcell for all created particle attempts in this cell
+    // if surfs in cell, use xcell for all created particle attempts
 
-    if (cells[icell].nsurf) 
+    if (cells[icell].nsurf)
       pflag = grid->point_outside_surfs(icell,xcell);
     
     for (int m = 0; m < ncreate; m++) {
@@ -603,7 +603,7 @@ void CreateParticles::create_local()
           if (cells[icell].nsplit == 1) {
             if (grid->outside_surfs(icell,x,xcell)) break;
           }
-        
+          
           // subcell of split cell
           
           else {
@@ -692,6 +692,7 @@ void CreateParticles::create_local()
    only insert in cells uncut by surfs
    account for cell weighting
    attributes of created particle depend on number of procs
+   used to be compatible with how Kokkos creates particles
 ------------------------------------------------------------------------- */
 
 void CreateParticles::create_local_twopass()

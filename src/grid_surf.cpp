@@ -1730,7 +1730,6 @@ void Grid::assign_split_cell_particles(int icell)
 
 /* ----------------------------------------------------------------------
    return a point X in icell that is in the flow (outside of all surfs)
-   icell can be split or unsplit cell, not a sub cell
    do NOT call for a cell with no surfs
 ------------------------------------------------------------------------- */
 
@@ -1743,11 +1742,11 @@ int Grid::point_outside_surfs(int icell, double *x)
 }
 
 /* ----------------------------------------------------------------------
-   return a point X in icell that is in the flow (outside of all surfs)
    variant for implicit surfs
+   return a point X in icell that is in the flow (outside of all surfs)
    set X to midpt of first line (2d) or center pt of first triangle (3d)
-   for implicit surfs this is guaranteed to be a pt in or on icell
-   then displace it by EPSSURF in the line/tri norm direction
+   for implicit surfs this should be a pt in or on ICELL
+   displace X by EPSSURF in the line/tri norm direction
    without EPSSURF displacement, test via outside_surfs() for
      a particle which is inside surfs  may not intersect due to round-off
 ------------------------------------------------------------------------- */
@@ -1804,13 +1803,16 @@ int Grid::point_outside_surfs_implicit(int icell, double *x)
 }
 
 /* ----------------------------------------------------------------------
-   return a point X in icell that is in the flow (outside of all surfs)
    variant for explicit surfs
-
-   NOTE: need to doc this
-   set X to midpt of first line (2d) or center pt of first triangle (3d)
-   for implicit surfs this is guaranteed to be a pt in or on icell
-   then displace it by EPSSURF in the line/tri norm direction
+   return a point X in icell that is in the flow (outside of all surfs)
+   loop over surfs:
+     clip surf to grid cell via Cut::clip_external()
+     check that number of clipped points is not a single point or tri edge
+     check that line/tri does not just graze cell edge or face
+     graze = all clipped points on same edge/face and outward normal
+     set X to midpt of clipped line (2d_ or center pt of first 3 clip pts (3d)
+     for implicit surfs this should be a pt in or on ICELL
+   displace X by EPSSURF in the line/tri norm direction
    without EPSSURF displacement, test via outside_surfs() for
      a particle which is inside surfs  may not intersect due to round-off
 ------------------------------------------------------------------------- */
@@ -1894,21 +1896,23 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
     }
   }
 
+  // unable to find a point in flow volume, all surfs were "continued"
+  // mean entire cell is actually outside or inside, just touched by surfs
+  // if outside, caller does not need to call outside_surfs()
+  // if inside, caller can detect that flow volume = zero
+  
   return 0;
 }
 
 /* ----------------------------------------------------------------------
    check if particle at X is outside any surfs in icell (in the flow)
-   icell can be split or unsplit cell, not a sub cell
+   use Xcell as reference point in flow, calculated by point_outside_surfs()
    do NOT call for a cell with no surfs
    if outside return 1, else return 0
 ------------------------------------------------------------------------- */
 
 int Grid::outside_surfs(int icell, double *x, double *xcell)
 {
-  // loop over surfs, ray-trace from x to xcell, see which surf is hit first
-  // if no surf is hit, assume particle is outside surfs
-
   int dim = domain->dimension;
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
@@ -1919,6 +1923,8 @@ int Grid::outside_surfs(int icell, double *x, double *xcell)
   double xc[3];
   Surf::Line *line;
   Surf::Tri *tri;
+
+  // loop over surfs, ray-trace from x to xcell, see which surf is hit first
 
   int nsurf = cells[icell].nsurf;
 
@@ -1942,6 +1948,9 @@ int Grid::outside_surfs(int icell, double *x, double *xcell)
       minside = side;
     }
   }
+
+  // if no surf was hit, particle is outside surfs
+  // else check which side of surf was hit
 
   if (!minflag) return 1;
   if (minside == SOUTSIDE || minside == ONSURF2OUT) return 1;
