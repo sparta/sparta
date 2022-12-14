@@ -194,10 +194,12 @@ void FixGridCheck::end_of_step()
       nflag++;
     }
 
-    // check if particle in a cell with surfs is outside the surfs
+
+    // check if particle in cut/split is outside the surfs
     // for split cell, also verify particle is in correct sub cell
     // expensive, so only do this check if requested
-
+    // if cell volume = zero, error has already been flagged
+    
     if (!outside_check) continue;
     if (cells[icell].nsurf == 0) continue;
     if (cinfo[icell].volume == 0.0) continue;
@@ -206,48 +208,42 @@ void FixGridCheck::end_of_step()
     double xcell[3];
 
     // check that particle is outside surfs
-    // two cases: unsplit cut cell and split subcell
-
-    if (cells[icell].nsplit == 1) {
-      pflag = grid->point_outside_surfs(icell,xcell);
-      if (!pflag) continue;
-      pflag = grid->outside_surfs(icell,x,xcell);
-    } else {
-      splitcell = sinfo[cells[icell].isplit].icell;
-      pflag = grid->point_outside_surfs(splitcell,xcell);
-      if (!pflag) continue;
-      pflag = grid->outside_surfs(splitcell,x,xcell);
-    }
+    // if no xcell found, cannot check
+    
+    pflag = grid->point_outside_surfs(icell,xcell);
+    if (!pflag) continue;
+    pflag = grid->outside_surfs(icell,x,xcell);
     
     if (!pflag) {
-      if (outflag == WARNING) {   // DEBUG
+      if (outflag == ERROR) {
         char str[128];
         sprintf(str,
-                "Particle %d,%d on proc %d is inside surfs in cell "
+                "Particle %d,%d on proc %d at %g %g %d is inside surfs in cell "
                 CELLINT_FORMAT " on timestep " BIGINT_FORMAT,
-                i,particles[i].id,comm->me,cells[icell].id,
+                i,particles[i].id,comm->me,x[0],x[1],icell,cells[icell].id,
                 update->ntimestep);
-        error->warning(FLERR,str);     // DEBUG
+        error->one(FLERR,str);
       }
       nflag_surf++;
     }
 
-    // chcek that particle is in correct split subcell
+    // check that particle is in correct split subcell
     
     if (cells[icell].nsplit <= 0) {
       int subcell;
+      splitcell = sinfo[cells[icell].isplit].icell;
       if (dim == 2) subcell = update->split2d(splitcell,x);
       else subcell = update->split3d(splitcell,x);
 
       if (subcell != icell) {
-        if (outflag == WARNING) {   // DEBUG
+        if (outflag == ERROR) {
           char str[128];
           sprintf(str,
                   "Particle %d,%d on proc %d is in wrong sub cell %d not %d"
                   " on timestep " BIGINT_FORMAT,
                   i,particles[i].id,comm->me,icell,subcell,
                   update->ntimestep);
-          error->warning(FLERR,str);   // DEBUG
+          error->one(FLERR,str);
         }
         nflag_split++;
       }
@@ -256,7 +252,7 @@ void FixGridCheck::end_of_step()
 
   // -------------------------------------
   // done with all tests
-  // warning messages instead of error
+  // warning messages instead of errors
 
   if (outflag == WARNING) {
     int all;

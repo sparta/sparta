@@ -538,7 +538,7 @@ void CreateParticles::create_local()
   double temp_rot = particle->mixture[imix]->temp_rot;
   double temp_vib = particle->mixture[imix]->temp_vib;
 
-  int npercell,ncreate,isp,ispecies,id,pflag;
+  int npercell,ncreate,isp,ispecies,id,pflag,subcell;
   double x[3],v[3],xcell[3],vstream_variable[3];
   double ntarget,scale,rn,vn,vr,theta1,theta2,erot,evib;
   double *lo,*hi;
@@ -590,25 +590,16 @@ void CreateParticles::create_local()
       x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
       if (dimension == 2) x[2] = 0.0;
 
-      // if unsplit cut cell, check if particle in flow region
-      // if split cell, check if in correct subcell
+      // if surfs, check if random position is in flow region
+      // if subcell, also check if in correct subcell
       // if not, attempt new insertion up to MAXATTEMPT times
       
       if (cells[icell].nsurf && pflag) {
         int nattempt = 0;
         while (nattempt < MAXATTEMPT) {
-          
-          // unsplit cut cell
-
-          if (cells[icell].nsplit == 1) {
-            if (grid->outside_surfs(icell,x,xcell)) break;
-          }
-          
-          // subcell of split cell
-          
-          else {
+          if (grid->outside_surfs(icell,x,xcell)) {
+            if (cells[icell].nsplit == 1) break;
             int splitcell = sinfo[cells[icell].isplit].icell;
-            int subcell;
             if (dimension == 2) subcell = update->split2d(splitcell,x);
             else subcell = update->split3d(splitcell,x);
             if (subcell == icell) break;
@@ -622,6 +613,8 @@ void CreateParticles::create_local()
           if (dimension == 2) x[2] = 0.0;
         }
 
+        // particle insertion was unsuccessful
+        
         if (nattempt >= MAXATTEMPT) continue;
       }
 
@@ -669,7 +662,11 @@ void CreateParticles::create_local()
       evib = particle->evib(ispecies,temp_vib*tempscale,random);
 
       id = MAXSMALLINT*random->uniform();
-
+      
+      if (id == 267871906)
+        printf("PART ADD: id %d, icell %d, nplocal %d xy %g %g\n",
+               id,icell,particle->nlocal,x[0],x[1]);
+        
       particle->add_particle(id,ispecies,icell,x,v,erot,evib);
 
       if (nfix_update_custom)
