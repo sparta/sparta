@@ -33,7 +33,7 @@
 #include "Kokkos_Atomic.hpp"
 
 enum{COMPUTE,FIX};
-enum{NONE, WARN, USE_CALCULATED_GLOBAL_DT};
+enum{WARN, USE_CALCULATED_GLOBAL_DT};
 
 #define INVOKED_PER_GRID 16
 #define BIG 1.0e20
@@ -279,7 +279,7 @@ template<int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
 void FixDtKokkos::operator()(TagFixDt_SetCellDtDesired<ATOMIC_REDUCTION>, const int &i) const {
 
-  if (per_grid_flag) checkifpergridflagisavailableondevice
+  if (per_grid_flag)
     d_vector(i) = 0.;
 
   double cell_dt_desired = 0.;
