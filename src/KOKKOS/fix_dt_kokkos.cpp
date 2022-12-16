@@ -76,7 +76,8 @@ FixDtKokkos::~FixDtKokkos()
 {
   if (copymode) return;
 
-  memoryKK->destroy_kokkos(k_vector_grid,vector_grid);
+  if (per_grid_flag)
+    memoryKK->destroy_kokkos(k_vector_grid,vector_grid);
   vector_grid = NULL;
 }
 
@@ -194,14 +195,17 @@ void FixDtKokkos::end_of_step()
   }
   copymode = 0;
 
-  k_vector_grid.modify_device();
   k_ncells_computing_dt.modify_device();
   k_dtsum.modify_device();
   k_dtmin.modify_device();
-  k_vector_grid.sync_host();
   k_ncells_computing_dt.sync_host();
   k_dtsum.sync_host();
   k_dtmin.sync_host();
+
+  if (per_grid_flag) {
+    k_vector_grid.modify_device();
+    k_vector_grid.sync_host();
+  }
 
   // set global dtmin
   double dtmin = h_dtmin();
@@ -275,7 +279,9 @@ template<int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
 void FixDtKokkos::operator()(TagFixDt_SetCellDtDesired<ATOMIC_REDUCTION>, const int &i) const {
 
-  d_vector(i) = 0.;
+  if (per_grid_flag) checkifpergridflagisavailableondevice
+    d_vector(i) = 0.;
+
   double cell_dt_desired = 0.;
 
   // cell dt based on mean collision time
@@ -330,7 +336,8 @@ void FixDtKokkos::operator()(TagFixDt_SetCellDtDesired<ATOMIC_REDUCTION>, const 
   }
 
   if (cell_dt_desired > 0.) {
-    d_vector(i) = cell_dt_desired;
+    if (per_grid_flag)
+      d_vector(i) = cell_dt_desired;
     if (ATOMIC_REDUCTION == 1) {
       Kokkos::atomic_increment(&d_ncells_computing_dt());
       Kokkos::atomic_add(&d_dtsum(), cell_dt_desired);
@@ -354,9 +361,11 @@ void FixDtKokkos::reallocate()
 
   nglocal = grid->nlocal;
 
-  memoryKK->destroy_kokkos(k_vector_grid,vector_grid);
-  memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"FixDtKokkos:vector_grid");
-  d_vector = k_vector_grid.d_view;
+  if (per_grid_flag) {
+    memoryKK->destroy_kokkos(k_vector_grid,vector_grid);
+    memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"FixDtKokkos:vector_grid");
+    d_vector = k_vector_grid.d_view;
+  }
 
   d_lambda_vector = DAT::t_float_1d ("d_lambda_vector", nglocal);
   d_temp_vector = DAT::t_float_1d ("d_temp_vector", nglocal);

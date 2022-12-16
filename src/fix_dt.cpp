@@ -42,7 +42,8 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
   // arguments
-  if (narg < 13) error->all(FLERR,"Illegal fix dt command");
+  int narg_required = 13;
+  if (narg < narg_required) error->all(FLERR,"Illegal fix dt command");
   scalar_flag = 1;
   global_freq = 1;
 
@@ -243,16 +244,26 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   else
     error->all(FLERR,"Illegal fix dt command: mode argument not recognized");
 
+  // optional argument to store cell dt values
+  per_grid_flag = 0;
+  int iarg =  narg_required;
+  if (narg == iarg+1) {
+    if (strcmp(arg[iarg],"store_cell_dt") == 0)
+      per_grid_flag = 1;
+    else
+      error->all(FLERR,"Illegal fix dt command: optional argument not recognized");
+  }
+
   // initialize data structures
+  dt_global_calculated = 0.;
   int me = comm->me;
   MPI_Comm_rank(world,&me);
   nglocal = 0;
   lambda = temp = usq = vsq = wsq = NULL;
   vector_grid = NULL;
-  per_grid_flag = 1;
-  per_grid_freq = 1;
+  per_grid_freq = nevery;
   size_per_grid_cols = 0;
-  dt_global_calculated = 0.;
+
 
   // find minimum species mass
   Particle::Species *species = particle->species;
@@ -263,8 +274,12 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   reallocate();
 
   // initialize cell timestep vector
-  for (int i = 0; i < nglocal; ++i)
-    vector_grid[i] = 0.;
+  // note:  a value of zero indicates that this fix has not calculated a
+  //        timestep for the particular cell.  Such cells are not used in
+  //        the global timestep calculation.
+  if (per_grid_flag)
+    for (int i = 0; i < nglocal; ++i)
+      vector_grid[i] = 0.;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -283,7 +298,8 @@ FixDt::~FixDt()
   memory->destroy(usq);
   memory->destroy(vsq);
   memory->destroy(wsq);
-  memory->destroy(vector_grid);
+  if (per_grid_flag)
+    memory->destroy(vector_grid);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -431,7 +447,9 @@ void FixDt::end_of_step()
   bigint ncells_computing_dt = 0;
   for (int i = 0; i < nglocal; ++i) {
 
-    vector_grid[i] = 0.;
+    if (per_grid_flag)
+      vector_grid[i] = 0.;
+
     double cell_dt_desired = 0.;
 
     // cell dt based on mean collision time
@@ -488,7 +506,8 @@ void FixDt::end_of_step()
     if (cell_dt_desired > 0.) {
       dtmin = MIN(dtmin, cell_dt_desired);
       dt_sum += cell_dt_desired;
-      vector_grid[i] = cell_dt_desired;
+      if (per_grid_flag)
+        vector_grid[i] = cell_dt_desired;
       ncells_computing_dt++;
     }
   }
@@ -540,13 +559,15 @@ void FixDt::reallocate()
   memory->destroy(usq);
   memory->destroy(vsq);
   memory->destroy(wsq);
-  memory->destroy(vector_grid);
+  if (per_grid_flag)
+    memory->destroy(vector_grid);
   memory->create(lambda,nglocal,"dt:lambda");
   memory->create(temp,nglocal,"dt:temp");
   memory->create(usq,nglocal,"dt:usq");
   memory->create(vsq,nglocal,"dt:vsq");
   memory->create(wsq,nglocal,"dt:wsq");
-  memory->create(vector_grid,nglocal,"dt:vector_grid");
+  if (per_grid_flag)
+    memory->create(vector_grid,nglocal,"dt:vector_grid");
 }
 
 /* ----------------------------------------------------------------------
