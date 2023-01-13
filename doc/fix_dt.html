@@ -67,14 +67,15 @@ divided by the velocity magnitude in that direction and then multiplied by the u
 compute a timestep candidate.  The cell timestep is set to be the minumum of these candidate timesteps.  The collision and transit fractions
 simply reduce the calculated timestep, providing a user-defined safety margin.
 </P>
-<P>If specified in the <A HREF = <A HREF = "stats_style.html">stats_style</A> command, the calculated global timestep is printed.  A zero value
-indicates that the fix has not yet calculated a global timestep and that the user-suppled timestep is being used.  If the fix has been
-invoked, the last calculated value of the timestep will be displayed.  If the mode is set
-to <I>warn</I>, the calculated timestep will be displayed but will not be used to advance the simulation.
+<P>If this fix ID is used as a keyword in the <A HREF = "stats_style.html">stats_style</A> command, the calculated global timestep is printed.  A zero value
+indicates that the fix has not yet calculated a global timestep and that the user-suppled timestep is being used.  If the fix
+has been invoked, the last calculated value of the timestep will be displayed.  If the mode is set to <I>warn</I>, the calculated timestep will be
+displayed but will not be used to advance the simulation.  Note that the <I>dt</I> keyword in the stats_style command will display the actual
+timestep being used in the simulation.
 </P>
 <P><B>Example:</B>
 </P>
-<PRE>stats_style     step cpu np f_DT 
+<PRE>stats_style     step cpu np dt f_DT 
 </PRE>
 <HR>
 
