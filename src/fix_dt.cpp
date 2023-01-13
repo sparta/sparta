@@ -42,7 +42,7 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
   // arguments
-  int narg_required = 13;
+  int narg_required = 12;
   if (narg < narg_required) error->all(FLERR,"Illegal fix dt command");
   scalar_flag = 1;
   global_freq = 1;
@@ -54,16 +54,13 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   transit_fraction = atof(arg[4]);
   collision_fraction = atof(arg[5]);
 
-  imix = particle->find_mixture(arg[6]);
-  if (imix < 0) error->all(FLERR,"fix dt mixture ID does not exist");
-
-  if (strncmp(arg[7],"c_",2) != 0 && strncmp(arg[8],"f_",2) != 0)
+  if (strncmp(arg[6],"c_",2) != 0 && strncmp(arg[6],"f_",2) != 0)
     error->all(FLERR,"Illegal fix dt command");
 
-  if ( !((strncmp(arg[8],"f_",2) == 0) &&
+  if ( !((strncmp(arg[7],"f_",2) == 0) &&
+         (strncmp(arg[8],"f_",2) == 0) &&
          (strncmp(arg[9],"f_",2) == 0) &&
-         (strncmp(arg[10],"f_",2) == 0) &&
-         (strncmp(arg[11],"f_",2) == 0)) )
+         (strncmp(arg[10],"f_",2) == 0)) )
     error->all(FLERR,"Illegal fix dt command");
 
   id_lambda = NULL;
@@ -73,9 +70,9 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   id_wsq = NULL;
 
   // lambda compute or fix
-  int n = strlen(arg[7]);
+  int n = strlen(arg[6]);
   id_lambda = new char[n];
-  strcpy(id_lambda,&arg[7][2]);
+  strcpy(id_lambda,&arg[6][2]);
   char *ptr = strchr(id_lambda,'[');
   if (ptr) {
     if (id_lambda[strlen(id_lambda)-1] != ']')
@@ -84,7 +81,7 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
     *ptr = '\0';
   } else lambdaindex = 0;
 
-  if (strncmp(arg[7],"c_",2) == 0) lambdawhich = COMPUTE;
+  if (strncmp(arg[6],"c_",2) == 0) lambdawhich = COMPUTE;
   else lambdawhich = FIX;
 
   if (lambdawhich == COMPUTE) { // lambda compute
@@ -123,9 +120,9 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   }
 
   // temperature fix
-  n = strlen(arg[8]);
+  n = strlen(arg[7]);
   id_temp = new char[n];
-  strcpy(id_temp,&arg[8][2]);
+  strcpy(id_temp,&arg[7][2]);
 
   ptr = strchr(id_temp,'[');
   if (ptr) {
@@ -153,9 +150,9 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   // squared-velocity fixes
 
   // usq----------------------------
-  n = strlen(arg[9]);
+  n = strlen(arg[8]);
   id_usq = new char[n];
-  strcpy(id_usq,&arg[9][2]);
+  strcpy(id_usq,&arg[8][2]);
 
   ptr = strchr(id_usq,'[');
   if (ptr) {
@@ -181,9 +178,9 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
                "accessed out-of-range");
 
   // vsq----------------------------
-  n = strlen(arg[10]);
+  n = strlen(arg[9]);
   id_vsq = new char[n];
-  strcpy(id_vsq,&arg[10][2]);
+  strcpy(id_vsq,&arg[9][2]);
 
   ptr = strchr(id_vsq,'[');
   if (ptr) {
@@ -209,9 +206,9 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
                "accessed out-of-range");
 
   // wsq----------------------------
-  n = strlen(arg[11]);
+  n = strlen(arg[10]);
   id_wsq = new char[n];
-  strcpy(id_wsq,&arg[11][2]);
+  strcpy(id_wsq,&arg[10][2]);
 
   ptr = strchr(id_wsq,'[');
   if (ptr) {
@@ -237,9 +234,9 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
                "accessed out-of-range");
 
   // mode specification
-  if (strcmp(arg[12],"warn") == 0)
+  if (strcmp(arg[11],"warn") == 0)
     mode = WARN;
-  else if (strcmp(arg[12],"use_calculated_global_dt") == 0)
+  else if (strcmp(arg[11],"use_calculated_global_dt") == 0)
     mode = USE_CALCULATED_GLOBAL_DT;
   else
     error->all(FLERR,"Illegal fix dt command: mode argument not recognized");

@@ -42,7 +42,6 @@ class FixDt : public Fix {
   int nglocal;
   int lambdawhich,usqwhich,vsqwhihc,wsqwhich,tempwhich;
   int lambdaindex, usqindex,vsqindex,wsqindex,tempindex;
-  int imix;
   int mode;
   char *id_lambda,*id_usq,*id_vsq,*id_wsq,*id_temp;
   class Compute *clambda;
