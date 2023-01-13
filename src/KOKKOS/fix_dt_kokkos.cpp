@@ -12,24 +12,13 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#include "stdlib.h"
-#include "string.h"
 #include "fix_dt_kokkos.h"
 #include "update.h"
-#include "grid_kokkos.h"
 #include "domain.h"
-#include "collide.h"
-#include "modify.h"
-#include "fix.h"
-#include "compute.h"
-#include "math_const.h"
-#include "memory.h"
 #include "memory_kokkos.h"
 #include "error.h"
 #include "kokkos.h"
 #include "sparta_masks.h"
-#include "particle.h"
-#include "mixture.h"
 #include "Kokkos_Atomic.hpp"
 
 enum{COMPUTE,FIX};

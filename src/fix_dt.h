@@ -21,7 +21,6 @@ FixStyle(dt,FixDt)
 #ifndef SPARTA_FIX_DT_H
 #define SPARTA_FIX_DT_H
 
-#include "stdio.h"
 #include "fix.h"
 #include "compute.h"
 

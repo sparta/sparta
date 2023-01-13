@@ -12,25 +12,21 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#include "stdlib.h"
-#include "string.h"
 #include "fix_dt.h"
+#include "string.h"
 #include "update.h"
-#include "input.h"
 #include "grid.h"
 #include "modify.h"
 #include "memory.h"
 #include "error.h"
 #include "domain.h"
-#include "particle.h"
-#include "mixture.h"
 #include "comm.h"
 #include <iostream>
 
 using namespace SPARTA_NS;
 
 enum{COMPUTE,FIX};
-enum{WARN, USE_CALCULATED_GLOBAL_DT};
+enum{WARN, USE_CALCULATED_DT};
 enum{INT,DOUBLE};
 
 #define INVOKED_PER_GRID 16
@@ -236,8 +232,8 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   // mode specification
   if (strcmp(arg[11],"warn") == 0)
     mode = WARN;
-  else if (strcmp(arg[11],"use_calculated_global_dt") == 0)
-    mode = USE_CALCULATED_GLOBAL_DT;
+  else if (strcmp(arg[11],"use_calculated_dt") == 0)
+    mode = USE_CALCULATED_DT;
   else
     error->all(FLERR,"Illegal fix dt command: mode argument not recognized");
 
