@@ -29,7 +29,7 @@ class sparta:
     except:
       type,value,tb = sys.exc_info()
       traceback.print_exception(type,value,tb)
-      raise OSError("Could not load SPARTA dynamic library")
+      raise Exception("Could not load SPARTA dynamic library")
 
     # create an instance of SPARTA
     # don't know how to pass an MPI communicator from PyPar
@@ -56,33 +56,36 @@ class sparta:
     self.spa = None
 
   def file(self,file):
-    self.lib.sparta_file(self.spa,file)
+    b_file = file.encode('utf-8')
+    self.lib.sparta_file(self.spa,c_char_p(b_file))
 
   def command(self,cmd):
-    self.lib.sparta_command(self.spa,cmd)
+    b_cmd = cmd.encode('utf-8')
+    self.lib.sparta_command(self.spa,c_char_p(b_cmd))
 
   def extract_global(self,name,type):
+    b_name = name.encode('utf-8')
     if type == 0:
       self.lib.sparta_extract_global.restype = POINTER(c_int)
     elif type == 1:
       self.lib.sparta_extract_global.restype = POINTER(c_double)
     else: return None
-    ptr = self.lib.sparta_extract_global(self.spa,name)
+    ptr = self.lib.sparta_extract_global(self.spa,c_char_p(b_name))
     return ptr[0]
 
   def extract_compute(self,id,style,type):
+    b_style = style.encode('utf-8')
     if type == 0:
-      if style > 0: return None
       self.lib.sparta_extract_compute.restype = POINTER(c_double)
-      ptr = self.lib.sparta_extract_compute(self.spa,id,style,type)
+      ptr = self.lib.sparta_extract_compute(self.spa,id,c_char_p(b_style),type)
       return ptr[0]
     if type == 1:
       self.lib.sparta_extract_compute.restype = POINTER(c_double)
-      ptr = self.lib.sparta_extract_compute(self.spa,id,style,type)
+      ptr = self.lib.sparta_extract_compute(self.spa,id,c_char_p(b_style),type)
       return ptr
     if type == 2:
       self.lib.sparta_extract_compute.restype = POINTER(POINTER(c_double))
-      ptr = self.lib.sparta_extract_compute(self.spa,id,style,type)
+      ptr = self.lib.sparta_extract_compute(self.spa,id,c_char_p(b_style),type)
       return ptr
     return None
 
@@ -91,9 +94,10 @@ class sparta:
   # memory was allocated by library interface function
 
   def extract_variable(self,name,type):
+    b_name = name.encode('utf-8')
     if type == 0:
       self.lib.sparta_extract_variable.restype = POINTER(c_double)
-      ptr = self.lib.sparta_extract_variable(self.spa,name)
+      ptr = self.lib.sparta_extract_variable(self.spa,c_char_p(b_name))
       result = ptr[0]
       self.lib.sparta_free(ptr)
       return result
@@ -103,7 +107,7 @@ class sparta:
       nlocal = nlocalptr[0]
       result = (c_double*nlocal)()
       self.lib.sparta_extract_variable.restype = POINTER(c_double)
-      ptr = self.lib.sparta_extract_variable(self.spa,name)
+      ptr = self.lib.sparta_extract_variable(self.spa,c_char_p(b_name))
       for i in range(nlocal): result[i] = ptr[i]
       self.lib.sparta_free(ptr)
       return result
