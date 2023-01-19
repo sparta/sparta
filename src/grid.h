@@ -214,6 +214,8 @@ class Grid : protected Pointers {
   int nlocal_restart;
   cellint *id_restart;
   int *level_restart,*nsplit_restart;
+  bool restart_write_time_data;
+  bool restart_read_time_data;
 
   // methods
 
