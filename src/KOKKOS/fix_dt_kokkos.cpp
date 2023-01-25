@@ -12,6 +12,10 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Contributing author: Alan Stagg (Sandia)
+------------------------------------------------------------------------- */
+
 #include "fix_dt_kokkos.h"
 #include "update.h"
 #include "domain.h"
@@ -22,7 +26,7 @@
 #include "Kokkos_Atomic.hpp"
 
 enum{COMPUTE,FIX};
-enum{WARN, USE_CALCULATED_GLOBAL_DT};
+enum{WARN,USE_CALCULATED_GLOBAL_DT};
 
 #define INVOKED_PER_GRID 16
 #define BIG 1.0e20

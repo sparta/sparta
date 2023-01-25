@@ -12,6 +12,10 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Contributing author: Alan Stagg (Sandia)
+------------------------------------------------------------------------- */
+
 #include "fix_dt.h"
 #include "string.h"
 #include "update.h"
@@ -26,7 +30,7 @@
 using namespace SPARTA_NS;
 
 enum{COMPUTE,FIX};
-enum{WARN, USE_CALCULATED_DT};
+enum{WARN,USE_CALCULATED_DT};
 enum{INT,DOUBLE};
 
 #define INVOKED_PER_GRID 16
