@@ -288,12 +288,7 @@ void UpdateKokkos::run(int nsteps)
 
   for (int i = 0; i < nsteps; i++) {
 
-    // copy cell desired timesteps from host to device:  AKS, might not need this.
-    //    if (i==0) 
-    //      grid_kk->sync(Device,CELL_MASK);
-
     grid->time_global += grid->dt_global;
-
     ntimestep++;
 
     if (collide_react) collide_react_reset();
