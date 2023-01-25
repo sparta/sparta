@@ -237,24 +237,12 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   else
     error->all(FLERR,"Illegal fix dt command: mode argument not recognized");
 
-  // set reading and writing of restart files with time data
-  grid->restart_read_time_data = true;
-  grid->restart_write_time_data = true;
-
-  // optional arguments
-  int iarg = 12;
-  while (iarg < narg) {
-
-    // store cell dt values
-    if (strcmp(arg[iarg],"store_cell_dt") == 0) {
+  // optional argument to store cell dt values
+  per_grid_flag = 0;
+  int iarg =  narg_required;
+  if (narg == iarg+1) {
+    if (strcmp(arg[iarg],"store_cell_dt") == 0)
       per_grid_flag = 1;
-      iarg += 1;
-    }
-    // read restart files without time data
-    else if (strcmp(arg[iarg],"read_timeless_restarts") == 0) {
-      grid->restart_read_time_data = false;
-      iarg += 1;
-    }
     else
       error->all(FLERR,"Illegal fix dt command: optional argument not recognized");
   }

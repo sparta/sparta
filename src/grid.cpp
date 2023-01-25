@@ -148,8 +148,6 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
 
   custom_ghost_flag = NULL;
   custom_restart_flag = NULL;
-  restart_write_time_data = false;
-  restart_read_time_data = false;
 
   // allocate hash for cell IDs
 
@@ -2426,10 +2424,8 @@ void Grid::write_restart(FILE *fp)
 {
   fwrite(&maxlevel,sizeof(int),1,fp);
   fwrite(plevels,sizeof(ParentLevel),maxlevel,fp);
-  if (restart_write_time_data) {
-    fwrite(&dt_global,sizeof(double),1,fp);
-    fwrite(&time_global,sizeof(double),1,fp);
-  }
+  fwrite(&dt_global,sizeof(double),1,fp);
+  fwrite(&time_global,sizeof(double),1,fp);
 
   fwrite(&ngroup,sizeof(int),1,fp);
 
@@ -2459,10 +2455,8 @@ void Grid::read_restart(FILE *fp)
   if (me == 0) {
     fread(&maxlevel,sizeof(int),1,fp);
     fread(plevels,sizeof(ParentLevel),maxlevel,fp);
-    if (restart_read_time_data) {
-      fread(&dt_global,sizeof(double),1,fp);
-      fread(&time_global,sizeof(double),1,fp);
-    }
+    fread(&dt_global,sizeof(double),1,fp);
+    fread(&time_global,sizeof(double),1,fp);
   }
   MPI_Bcast(&maxlevel,1,MPI_INT,0,world);
   MPI_Bcast(plevels,maxlevel*sizeof(ParentLevel),MPI_CHAR,0,world);
