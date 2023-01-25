@@ -64,24 +64,25 @@ is then determined using the formula:
 <P>In the candidate timestep calculation for each cell, the mean collision time is multiplied by the user-supplied collision_fraction
 described above to compute a timestep candidate.  Then for each coordinate direction, the cell size in that direction is
 divided by the velocity magnitude in that direction and then multiplied by the user-supplied transit_fraction described above to
-compute a timestep candidate.  The cell timestep is set to be the minumum of these candidate timesteps.  The collision and transit fractions
+compute a timestep candidate.  The cell timestep is set to be the minimum of these candidate timesteps.  The collision and transit fractions
 simply reduce the calculated timestep, providing a user-defined safety margin.
 </P>
 <P>If this fix ID is used as a keyword in the <A HREF = "stats_style.html">stats_style</A> command, the calculated global timestep is printed.  A zero value
 indicates that the fix has not yet calculated a global timestep and that the user-suppled timestep is being used.  If the fix
 has been invoked, the last calculated value of the timestep will be displayed.  If the mode is set to <I>warn</I>, the calculated timestep will be
 displayed but will not be used to advance the simulation.  Note that the <I>dt</I> keyword in the stats_style command will display the actual
-timestep being used in the simulation.
+timestep being used in the simulation.  The "time" option in the stats_style command prints the current simulation time.
 </P>
 <P><B>Example:</B>
 </P>
-<PRE>stats_style     step cpu np dt f_DT 
+<PRE>stats_style     step time dt f_DT cpu np 
 </PRE>
 <HR>
 
 <P><B>Restart, output info:</B>
 </P>
-<P>No information about this fix is written to <A HREF = "restart.html">binary restart files</A>.
+<P>The global time and the current global timestep are written to <A HREF = "restart.html">binary restart files</A>.  This breaks backwards compatibility
+with older restart files, even if this fix is not invoked.
 </P>
 <P>The optional argument <I>store_cell_dt</I> directs the fix to store the cell timestep values in a per-grid vector.  The vector can be
 accessed by any command that uses per-grid values from a fix as input.  For example, the values can be output by the
