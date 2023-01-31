@@ -54,6 +54,17 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   transit_fraction = atof(arg[4]);
   collision_fraction = atof(arg[5]);
 
+  // weight and fraction checks
+  if (dt_global_weight < 0. || dt_global_weight > 1.)
+    error->all(FLERR,"Illegal fix dt command:  dt_global_weight is outside [0,1]");
+
+  if ( !(transit_fraction > 0.) )
+    error->all(FLERR,"Illegal fix dt command:  transit_fraction must be positive");
+
+  if ( !(collision_fraction > 0.) )
+    error->all(FLERR,"Illegal fix dt command:  collision_fraction must be positive");
+
+  // compute and fix checks
   if (strncmp(arg[6],"c_",2) != 0 && strncmp(arg[6],"f_",2) != 0)
     error->all(FLERR,"Illegal fix dt command");
 
@@ -236,7 +247,7 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   // mode specification
   if (strcmp(arg[11],"warn") == 0)
     mode = WARN;
-  else if (strcmp(arg[11],"use_calculated_dt") == 0)
+  else if (strcmp(arg[11],"use/calculated/dt") == 0)
     mode = USE_CALCULATED_DT;
   else
     error->all(FLERR,"Illegal fix dt command: mode argument not recognized");
@@ -245,7 +256,7 @@ FixDt::FixDt(SPARTA *sparta, int narg, char **arg) :
   per_grid_flag = 0;
   int iarg =  narg_required;
   if (narg == iarg+1) {
-    if (strcmp(arg[iarg],"store_cell_dt") == 0)
+    if (strcmp(arg[iarg],"store/cell/dt") == 0)
       per_grid_flag = 1;
     else
       error->all(FLERR,"Illegal fix dt command: optional argument not recognized");
@@ -531,10 +542,12 @@ void FixDt::end_of_step()
       grid->dt_global = dt_global_calculated;
     else if (mode == WARN && grid->dt_global > dt_global_calculated) {
       if (me == 0) {
-        std::cout << std::endl;
-        std::cout << "    WARNING: user-set global timestep(=" << grid->dt_global
-                  << ") is greater than the calculated global timestep(=" << dt_global_calculated
-                  << ")\n\n";
+        if (screen)
+          fprintf(screen,"WARNING: user-set global timestep(=%8.4e) is greater than the calculated global timestep(=%8.4e)\n\n",
+                  grid->dt_global,dt_global_calculated);
+        if (logfile)
+          fprintf(logfile,"WARNING: user-set global timestep(=%8.4e) is greater than the calculated global timestep(=%8.4e)\n\n",
+                  grid->dt_global,dt_global_calculated);
       }
     }
   }

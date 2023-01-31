@@ -21,7 +21,7 @@
 
 <LI>Nfreq = perform timestep calculation every this many steps 
 
-<LI>avg_dt_weight = weight applied to average cell timestep when calculating the global timestep 
+<LI>avg_dt_weight = weight in interval [0,1] applied to average cell timestep when calculating the global timestep 
 
 <LI>transit_fraction = fraction of the cell transit time used to calculate a cell candidate timestep 
 
@@ -37,16 +37,16 @@
 
 <LI>wsq = fix column for z component of velocity squared, prefaced by "f_" 
 
-<LI>mode = <I>warn</I> or <I>use_calculated_dt</I> 
+<LI>mode = <I>warn</I> or <I>use/calculated/dt</I> 
 
-<LI>extra = <I>store_cell_dt</I> (optional) 
+<LI>extra = <I>store/cell/dt</I> (optional) 
 
 
 </UL>
 <P><B>Examples:</B>
 </P>
 <PRE>fix DT dt 500 0.1 0.25 0.1 c_lambda f_1[2] f_1[3] f_1[4] f_1[5] warn
-fix DT dt 500 0.1 0.25 0.1 f_lambda f_1[2] f_1[3] f_1[4] f_1[5] use_calculated_dt store_cell_dt 
+fix DT dt 500 0.1 0.25 0.1 f_lambda f_1[2] f_1[3] f_1[4] f_1[5] use/calculated/dt store/cell/dt 
 </PRE>
 <P>These commands will calculate a global timestep every 500 steps, either 1) using the user-provided timestep
 and warning if it is greater than the calculated timestep or 2) using the calculated timestep and
@@ -64,14 +64,15 @@ is then determined using the formula:
 <P>In the candidate timestep calculation for each cell, the mean collision time is multiplied by the user-supplied collision_fraction
 described above to compute a timestep candidate.  Then for each coordinate direction, the cell size in that direction is
 divided by the velocity magnitude in that direction and then multiplied by the user-supplied transit_fraction described above to
-compute a timestep candidate.  The cell timestep is set to be the minimum of these candidate timesteps.  The collision and transit fractions
-simply reduce the calculated timestep, providing a user-defined safety margin.
+compute a timestep candidate.  The cell timestep is set to be the minimum of these candidate timesteps.  Collision and
+transit fractions in the interval (0,1) simply provide a user-defined safety margin for the collision time and transit time
+estimates.  Values greater than one enable the user to increase the timestep above the recommended timestep by any desired factor.
 </P>
 <P>If this fix ID is used as a keyword in the <A HREF = "stats_style.html">stats_style</A> command, the calculated global timestep is printed.  A zero value
 indicates that the fix has not yet calculated a global timestep and that the user-suppled timestep is being used.  If the fix
 has been invoked, the last calculated value of the timestep will be displayed.  If the mode is set to <I>warn</I>, the calculated timestep will be
 displayed but will not be used to advance the simulation.  Note that the <I>dt</I> keyword in the stats_style command will display the actual
-timestep being used in the simulation.  The "time" option in the stats_style command prints the current simulation time.
+timestep being used in the simulation.  The <I>time</I> option in the stats_style command prints the current simulation time.
 </P>
 <P><B>Example:</B>
 </P>
