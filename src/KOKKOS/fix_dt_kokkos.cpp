@@ -222,10 +222,12 @@ void FixDtKokkos::end_of_step()
       grid_kk->dt_global = dt_global_calculated;
     else if (mode == WARN && grid_kk->dt_global > dt_global_calculated) {
       if (me == 0) {
-        std::cout << std::endl;
-        std::cout << "    WARNING: user-set global timestep(=" << grid_kk->dt_global
-                  << ") is greater than the calculated global timestep(=" << dt_global_calculated
-                  << ")\n\n";
+        if (screen)
+          fprintf(screen,"WARNING: user-set global timestep(=%8.4e) is greater than the calculated global timestep(=%8.4e)\n\n",
+                  grid_kk->dt_global,dt_global_calculated);
+        if (logfile)
+          fprintf(logfile,"WARNING: user-set global timestep(=%8.4e) is greater than the calculated global timestep(=%8.4e)\n\n",
+                  grid_kk->dt_global,dt_global_calculated);
       }
     }
   }
@@ -249,21 +251,21 @@ void FixDtKokkos::operator()(TagFixDt_LoadTempVecFromArray, const int &i) const 
 
 KOKKOS_INLINE_FUNCTION
 void FixDtKokkos::operator()(TagFixDt_LoadUsqVecFromArray, const int &i) const {
-  d_usq_vector(i) = d_array(i,tempindex-1);
+  d_usq_vector(i) = d_array(i,usqindex-1);
 }
 
 /* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
 void FixDtKokkos::operator()(TagFixDt_LoadVsqVecFromArray, const int &i) const {
-  d_vsq_vector(i) = d_array(i,tempindex-1);
+  d_vsq_vector(i) = d_array(i,vsqindex-1);
 }
 
 /* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
 void FixDtKokkos::operator()(TagFixDt_LoadWsqVecFromArray, const int &i) const {
-  d_wsq_vector(i) = d_array(i,tempindex-1);
+  d_wsq_vector(i) = d_array(i,wsqindex-1);
 }
 
 /* ---------------------------------------------------------------------- */
