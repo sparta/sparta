@@ -39,6 +39,6 @@ fix lambda ave/grid all 1 100 100 c_lambda
 fix DT dt 100 0.1 0.25 0.1 c_lambda f_1[2] f_1[3] f_1[4] f_1[5] use/calculated/dt store/cell/dt
 
 stats             50
-compute           temp temp
-stats_style       step cpu np nattempt ncoll c_temp time dt
+compute           mytemp temp
+stats_style       step cpu np nattempt ncoll c_mytemp time dt
 run               2000
