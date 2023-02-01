@@ -627,15 +627,15 @@ template < int DIM, int SURF > void Update::move()
 
         if (SURF) {
 
-      // skip surf checks if particle flagged as EXITing this cell
-      // then unset pflag so not checked again for this particle
+          // skip surf checks if particle flagged as EXITing this cell
+          // then unset pflag so not checked again for this particle
 
           nsurf = cells[icell].nsurf;
-      if (pflag == PEXIT) {
-        nsurf = 0;
-        pflag = 0;
-      }
-      nscheck_one += nsurf;
+          if (pflag == PEXIT) {
+            nsurf = 0;
+            pflag = 0;
+          }
+          nscheck_one += nsurf;
 
           if (nsurf) {
 
@@ -783,7 +783,7 @@ template < int DIM, int SURF > void Update::move()
 
             } // END of for loop over surfs
 
-        // tri/line = surf that particle hit first
+            // tri/line = surf that particle hit first
 
             if (cflag) {
               if (DIM == 3) tri = &tris[minsurf];
@@ -913,12 +913,12 @@ template < int DIM, int SURF > void Update::move()
         // no cell crossing and no surface collision
         // set final particle position to xnew, then break from advection loop
         // for axisymmetry, must first remap linear xnew and v
-    // for axisymmetry, check if final particle position is within cell
-    //   can be rare epsilon round-off cases where particle ends up outside
-    //     of final cell curved surf when move logic thinks it is inside
-    //   example is when Geom::axi_horizontal_line() says no crossing of cell edge
-    //     but axi_remap() puts particle outside the cell
-    //   in this case, just DISCARD particle and tally it to naxibad
+        // for axisymmetry, check if final particle position is within cell
+        //   can be rare epsilon round-off cases where particle ends up outside
+        //     of final cell curved surf when move logic thinks it is inside
+        //   example is when Geom::axi_horizontal_line() says no crossing of cell edge
+        //     but axi_remap() puts particle outside the cell
+        //   in this case, just DISCARD particle and tally it to naxibad
         // if migrating to another proc,
         //   flag as PDONE so new proc won't move it more on this step
 
@@ -927,13 +927,13 @@ template < int DIM, int SURF > void Update::move()
           x[0] = xnew[0];
           x[1] = xnew[1];
           if (DIM == 3) x[2] = xnew[2];
-      if (DIM == 1) {
-        if (x[1] < lo[1] || x[1] > hi[1]) {
-          particles[i].flag = PDISCARD;
-          naxibad++;
-          break;
-        }
-      }
+          if (DIM == 1) {
+            if (x[1] < lo[1] || x[1] > hi[1]) {
+              particles[i].flag = PDISCARD;
+              naxibad++;
+              break;
+            }
+          }
           if (cells[icell].proc != me) particles[i].flag = PDONE;
           break;
         }
@@ -969,8 +969,8 @@ template < int DIM, int SURF > void Update::move()
         // if parent, use id_find_child to identify child cell
         //   result can be -1 for unknown cell, occurs when:
         //   (a) particle hits face of ghost child cell
-    //   (b) the ghost cell extends beyond ghost halo
-    //   (c) cell on other side of face is a parent
+        //   (b) the ghost cell extends beyond ghost halo
+        //   (c) cell on other side of face is a parent
         //   (d) its child, which the particle is in, is entirely beyond my halo
         // if new cell is child and surfs exist, check if a split cell
 
@@ -988,9 +988,9 @@ template < int DIM, int SURF > void Update::move()
               icell = split2d(icell,x);
           }
         } else if (nflag == NPARENT) {
-      pcell = &pcells[neigh[outface]];
+          pcell = &pcells[neigh[outface]];
           icell = grid->id_find_child(pcell->id,cells[icell].level,
-                      pcell->lo,pcell->hi,x);
+                                      pcell->lo,pcell->hi,x);
           if (icell >= 0) {
             if (DIM == 3 && SURF) {
               if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
@@ -1057,9 +1057,9 @@ template < int DIM, int SURF > void Update::move()
                   icell = split2d(icell,x);
               }
             } else if (nflag == NPBPARENT) {
-          pcell = &pcells[neigh[outface]];
-          icell = grid->id_find_child(pcell->id,cells[icell].level,
-                      pcell->lo,pcell->hi,x);
+              pcell = &pcells[neigh[outface]];
+              icell = grid->id_find_child(pcell->id,cells[icell].level,
+                                          pcell->lo,pcell->hi,x);
               if (icell >= 0) {
                 if (DIM == 3 && SURF) {
                   if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)

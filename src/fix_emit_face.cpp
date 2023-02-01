@@ -10,7 +10,7 @@
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 #include "stdlib.h"
 #include "string.h"
@@ -129,6 +129,7 @@ FixEmitFace::~FixEmitFace()
 void FixEmitFace::init()
 {
   // invoke FixEmit::init() to set flags
+
   FixEmit::init();
 
   // copies of class data before invoking parent init() and count_task()
@@ -207,7 +208,7 @@ void FixEmitFace::init()
    grid changed operation
    invoke create_tasks() to rebuild entire task list
    invoked after per-processor list of grid cells has changed
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFace::grid_changed()
 {
@@ -237,7 +238,7 @@ void FixEmitFace::grid_changed()
 /* ----------------------------------------------------------------------
    create tasks for one grid cell
    add them to tasks list and increment ntasks
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFace::create_task(int icell)
 {
@@ -445,7 +446,7 @@ void FixEmitFace::create_task(int icell)
 
 /* ----------------------------------------------------------------------
    insert particles in grid cells with faces touching inflow boundaries
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFace::perform_task()
 {
@@ -457,7 +458,7 @@ void FixEmitFace::perform_task()
    perform insertion in one pass thru tasks
    this is simpler, somewhat faster code
    but uses random #s differently than Kokkos, so insertions are different
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFace::perform_task_onepass()
 {
@@ -629,7 +630,7 @@ void FixEmitFace::perform_task_onepass()
 /* ----------------------------------------------------------------------
    perform insertion the way Kokkos does in two passes thru tasks
    this uses random #s the same as Kokkos, for easier debugging
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFace::perform_task_twopass()
 {
@@ -821,7 +822,7 @@ void FixEmitFace::perform_task_twopass()
    determine which sub cell the face is part of
    face cannot be touched by surfs, so entire face is part of one sub cell
    compute which via update->split() and return it
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 int FixEmitFace::split(int icell, int iface)
 {
@@ -851,7 +852,7 @@ int FixEmitFace::split(int icell, int iface)
 
 /* ----------------------------------------------------------------------
    recalculate task properties based on subsonic BC
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFace::subsonic_inflow()
 {
@@ -904,7 +905,7 @@ void FixEmitFace::subsonic_inflow()
 /* ----------------------------------------------------------------------
    identify particles in grid cells associated with a task
    store count and linked list, same as for particle sorting
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFace::subsonic_sort()
 {
@@ -961,7 +962,7 @@ void FixEmitFace::subsonic_sort()
    compute number density, thermal temperature, stream velocity
    only for grid cells associated with a task
    first compute for grid cells, then adjust due to boundary conditions
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFace::subsonic_grid()
 {
@@ -1072,7 +1073,7 @@ void FixEmitFace::subsonic_grid()
 
 /* ----------------------------------------------------------------------
    grow task list
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFace::grow_task()
 {
@@ -1107,7 +1108,7 @@ void FixEmitFace::grow_task()
 
 /* ----------------------------------------------------------------------
    reallocate nspecies arrays
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFace::realloc_nspecies()
 {
@@ -1127,7 +1128,7 @@ void FixEmitFace::realloc_nspecies()
 
 /* ----------------------------------------------------------------------
    process keywords specific to this class
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 int FixEmitFace::option(int narg, char **arg)
 {

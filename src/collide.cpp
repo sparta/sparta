@@ -463,7 +463,6 @@ template < int NEARCP > void Collide::collisions_one()
   // loop over cells I own
 
   Grid::ChildInfo *cinfo = grid->cinfo;
-  Grid::ChildCell *cells = grid->cells;
 
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
@@ -607,7 +606,6 @@ template < int NEARCP > void Collide::collisions_group()
   // loop over cells I own
 
   Grid::ChildInfo *cinfo = grid->cinfo;
-  Grid::ChildCell *cells = grid->cells;
 
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
@@ -883,7 +881,6 @@ void Collide::collisions_one_ambipolar()
   // loop over cells I own
 
   Grid::ChildInfo *cinfo = grid->cinfo;
-  Grid::ChildCell *cells = grid->cells;
 
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
@@ -1177,7 +1174,6 @@ void Collide::collisions_group_ambipolar()
   // loop over cells I own
 
   Grid::ChildInfo *cinfo = grid->cinfo;
-  Grid::ChildCell *cells = grid->cells;
 
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;

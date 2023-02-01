@@ -16,7 +16,6 @@
 #include "surf_react_prob.h"
 #include "input.h"
 #include "update.h"
-#include "grid.h"
 #include "comm.h"
 #include "random_mars.h"
 #include "random_knuth.h"

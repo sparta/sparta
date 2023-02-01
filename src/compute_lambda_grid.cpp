@@ -24,7 +24,7 @@
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
-#include <iostream>
+
 using namespace SPARTA_NS;
 using namespace MathConst;
 

@@ -34,7 +34,6 @@
 #include "kokkos_type.h"
 #include "sparta_masks.h"
 #include "kokkos.h"
-#include "Kokkos_Random.hpp"
 
 using namespace SPARTA_NS;
 using namespace MathConst;
@@ -44,39 +43,13 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
 #define EPSZERO 1.0e-14
 
 CreateParticlesKokkos::CreateParticlesKokkos(SPARTA* spa):
-  CreateParticles(spa),
-  rand_pool(12345 + comm->me
-#ifdef SPARTA_KOKKOS_EXACT
-            , sparta
-#endif
-            )
+  CreateParticles(spa)
 {
-  random = NULL;
 }
 
-/* ---------------------------------------------------------------------- */
-CreateParticlesKokkos::~CreateParticlesKokkos()
-{
-#ifdef SPARTA_KOKKOS_EXACT
-  rand_pool.destroy();
-#endif
-}
-
-/* ---------------------------------------------------------------------- */
 void CreateParticlesKokkos::create_local(bigint np)
 {
   int dimension = domain->dimension;
-
-  if (random == NULL) {
-
-    // initialize RNG
-    random = new RanKnuth(update->ranmaster->uniform());
-    double seed = update->ranmaster->uniform();
-    random->reset(seed,comm->me,100);
-#ifdef SPARTA_KOKKOS_EXACT
-    rand_pool.init(random);
-#endif
-  }
 
   int me = comm->me;
   RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
@@ -175,7 +148,6 @@ void CreateParticlesKokkos::create_local(bigint np)
     if (cinfo[i].type != OUTSIDE) continue;
     lo = cells[i].lo;
     hi = cells[i].hi;
-
     if (region && region->bboxflag && outside_region(dimension,lo,hi))
       continue;
 
@@ -222,7 +194,6 @@ void CreateParticlesKokkos::create_local(bigint np)
   Kokkos::View<double*, DeviceType> d_evib("cand_evib", ncands);
   Kokkos::View<int*, DeviceType> d_id("cand_id", ncands);
   Kokkos::View<double*[3], DeviceType> d_v("cand_v", ncands);
-
   auto h_keep = Kokkos::create_mirror_view(d_keep);
   auto h_isp = Kokkos::create_mirror_view(d_isp);
   auto h_x = Kokkos::create_mirror_view(d_x);
@@ -324,7 +295,6 @@ void CreateParticlesKokkos::create_local(bigint np)
   auto nlocal_before = particleKK->nlocal;
 
   Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
-    rand_type rand_gen = rand_pool.get_state();
     auto ncreate = d_npercell(i);
     for (int m = 0; m < ncreate; m++) {
       auto cand = d_cells2cands(i) + m;
@@ -339,8 +309,7 @@ void CreateParticlesKokkos::create_local(bigint np)
       auto evib = d_evib(cand);
       ParticleKokkos::add_particle_kokkos(d_particles,inew,id,ispecies,i,x,v,erot,evib);
     }
-    rand_pool.free_state(rand_gen);
-    });
+  });
   particleKK->modify(Device,PARTICLE_MASK);
   particleKK->sync(Host,PARTICLE_MASK);
   particleKK->nlocal += nnew;
@@ -358,5 +327,7 @@ void CreateParticlesKokkos::create_local(bigint np)
         modify->update_custom(inew,temp_thermal,temp_rot,temp_vib,vstream);
     }
   }
+
+  delete random;
 }
 

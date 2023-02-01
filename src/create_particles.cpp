@@ -10,7 +10,7 @@
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 #include "math.h"
 #include "stdlib.h"
@@ -41,18 +41,7 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
 
 /* ---------------------------------------------------------------------- */
 
-CreateParticles::CreateParticles(SPARTA *sparta) : Pointers(sparta)
-{
-  // instantiate RNG
-  random = new RanKnuth(update->ranmaster->uniform());
-}
-
-/* ---------------------------------------------------------------------- */
-
-CreateParticles::~CreateParticles()
-{
-  delete random;
-}
+CreateParticles::CreateParticles(SPARTA *sparta) : Pointers(sparta) {}
 
 /* ---------------------------------------------------------------------- */
 
@@ -78,8 +67,8 @@ void CreateParticles::command(int narg, char **arg)
   if (strcmp(arg[iarg],"n") == 0) {
     if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
     np = ATOBIGINT(arg[iarg+1]);
-    if (np < 0) error->all(FLERR,"Illegal create_particles command");
-    iarg += 2;
+      if (np < 0) error->all(FLERR,"Illegal create_particles command");
+      iarg += 2;
   } else if (strcmp(arg[iarg],"single") == 0) {
     if (iarg+8 > narg) error->all(FLERR,"Illegal create_particles command");
     single = 1;
@@ -362,8 +351,8 @@ void CreateParticles::command(int narg, char **arg)
       nglobal-nprevious != np) {
     char str[128];
     sprintf(str,"Created incorrect # of particles: "
-            BIGINT_FORMAT " versus " BIGINT_FORMAT,
-            nglobal-nprevious,np);
+	    BIGINT_FORMAT " versus " BIGINT_FORMAT,
+	    nglobal-nprevious,np);
     error->all(FLERR,str);
   }
   bigint ncreated = nglobal-nprevious;
@@ -386,7 +375,7 @@ void CreateParticles::command(int narg, char **arg)
 /* ----------------------------------------------------------------------
    create a single particle
    find cell it is in, and store on appropriate processor
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void CreateParticles::create_single()
 {
@@ -402,7 +391,7 @@ void CreateParticles::create_single()
 
   if (domain->dimension == 2 && x[2] != 0.0)
     error->all(FLERR,"Create_particles single requires z = 0 "
-               "for 2d simulation");
+	       "for 2d simulation");
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -414,8 +403,8 @@ void CreateParticles::create_single()
     lo = cells[icell].lo;
     hi = cells[icell].hi;
     if (x[0] >= lo[0] && x[0] < hi[0] &&
-        x[1] >= lo[1] && x[1] < hi[1] &&
-        x[2] >= lo[2] && x[2] < hi[2]) iwhich = icell;
+	x[1] >= lo[1] && x[1] < hi[1] &&
+	x[2] >= lo[2] && x[2] < hi[2]) iwhich = icell;
   }
 
   // insure that exactly one proc found cell to insert particle into
@@ -435,6 +424,8 @@ void CreateParticles::create_single()
 
   // add the particle
 
+  RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
+
   if (iwhich >= 0) {
     int id = MAXSMALLINT*random->uniform();
     double erot = particle->erot(mspecies,temp_rot,random);
@@ -442,8 +433,10 @@ void CreateParticles::create_single()
     particle->add_particle(id,mspecies,iwhich,x,v,erot,evib);
     if (nfix_update_custom)
       modify->update_custom(particle->nlocal-1,temp_thermal,
-                            temp_rot,temp_vib,vstream);
+                           temp_rot,temp_vib,vstream);
   }
+
+  delete random;
 }
 
 /* ----------------------------------------------------------------------
@@ -459,6 +452,7 @@ void CreateParticles::create_local(bigint np)
   int dimension = domain->dimension;
 
   int me = comm->me;
+  RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,me,100);
 
@@ -624,7 +618,7 @@ void CreateParticles::create_local(bigint np)
 
       if (nfix_update_custom)
         modify->update_custom(particle->nlocal-1,temp_thermal,
-                              temp_rot,temp_vib,vstream);
+                             temp_rot,temp_vib,vstream);
     }
 
     // increment count without effect of density variation
@@ -632,6 +626,8 @@ void CreateParticles::create_local(bigint np)
 
     nprev += npercell;
   }
+
+  delete random;
 }
 
 /* ----------------------------------------------------------------------
@@ -826,14 +822,15 @@ void CreateParticles::create_local_twopass(bigint np)
       id = MAXSMALLINT*random->uniform();
 
       particle->add_particle(id,ispecies,i,x,v,erot,evib);
-
       if (nfix_update_custom)
         modify->update_custom(particle->nlocal-1,temp_thermal,
-                              temp_rot,temp_vib,vstream);
+                             temp_rot,temp_vib,vstream);
     }
   }
 
   memory->destroy(ncreate_values);
+
+  delete random;
 }
 
 /* ----------------------------------------------------------------------
@@ -933,11 +930,11 @@ void CreateParticles::velocity_variable(double *x, double *vstream,
 ------------------------------------------------------------------------- */
 
 /*
-  void CreateParticles::create_all(bigint n)
-  {
+void CreateParticles::create_all(bigint n)
+{
   int dimension = domain->dimension;
   double xlo = domain->boxlo[0];
-  double ylo = doma[in->boxlo[1];
+  double ylo = domain->boxlo[1];
   double zlo = domain->boxlo[2];
   double xprd = domain->xprd;
   double yprd = domain->yprd;
@@ -952,22 +949,22 @@ void CreateParticles::velocity_variable(double *x, double *vstream,
   // loop over all N particles
 
   for (bigint m = 0; m < n; m++) {
-  x = xlo + random->uniform()*xprd;
-  y = ylo + random->uniform()*yprd;
-  z = zlo + random->uniform()*zprd;
-  if (dimension == 2) z = 0.0;
+    x = xlo + random->uniform()*xprd;
+    y = ylo + random->uniform()*yprd;
+    z = zlo + random->uniform()*zprd;
+    if (dimension == 2) z = 0.0;
 
-  // which_cell() returns global grid cell index the particle is in
-  // if I own that grid cell, add particle
+    // which_cell() returns global grid cell index the particle is in
+    // if I own that grid cell, add particle
 
-  icell = grid->which_cell(x,y,z);
-  id = MAXSMALLINT*random->uniform();
+    icell = grid->which_cell(x,y,z);
+    id = MAXSMALLINT*random->uniform();
 
-  if (grid->cells[icell].proc == me) {
-  particle->add_particle(id,1,icell,x,y,z);
-  }
+    if (grid->cells[icell].proc == me) {
+      particle->add_particle(id,1,icell,x,y,z);
+    }
   }
 
   delete random;
-  }
+}
 */

@@ -10,7 +10,7 @@
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 #include "mpi.h"
 #include "stdlib.h"
@@ -340,7 +340,7 @@ void FixEmitFaceFile::create_task(int icell)
 
 /* ----------------------------------------------------------------------
    insert particles in grid cells with faces touching inflow boundary
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::perform_task()
 {
@@ -501,7 +501,7 @@ void FixEmitFaceFile::perform_task()
 /* ----------------------------------------------------------------------
    scan file for section-ID, read regular grid of values into Mesh data struct
    only called by proc 0
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::read_file(char *file, char *section)
 {
@@ -672,7 +672,7 @@ void FixEmitFaceFile::read_file(char *file, char *section)
 
 /* ----------------------------------------------------------------------
    bcast mesh data struct from proc 0 to all other procs
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::bcast_mesh()
 {
@@ -727,7 +727,7 @@ void FixEmitFaceFile::bcast_mesh()
    check that values on mesh points are valid
    all but VX,VY,VZ must be >= 0.0
    species fractions must be <= 1.0
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::check_mesh_values()
 {
@@ -755,7 +755,7 @@ void FixEmitFaceFile::check_mesh_values()
    use centroid of face to find 4 surrounding mesh points (2 in 2d)
    use bilinear interpolation (linear in 2d) to compute each new value
    return 1 if interpolation successful, 0 if not
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 int FixEmitFaceFile::interpolate(int icell)
 {
@@ -963,7 +963,7 @@ int FixEmitFaceFile::interpolate(int icell)
 
 /* ----------------------------------------------------------------------
    linear interpolation at x between lo and hi bounds, for column M
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 double FixEmitFaceFile::linear_interpolation(double x, int m, int plo, int phi)
 {
@@ -977,7 +977,7 @@ double FixEmitFaceFile::linear_interpolation(double x, int m, int plo, int phi)
 /* ----------------------------------------------------------------------
    bilinear interpolation at x,y between (plo,qlo) to (phi,qhi) corners
    for column M
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 double FixEmitFaceFile::bilinear_interpolation(double x, double y, int m,
                                                int plo, int phi,
@@ -1003,7 +1003,7 @@ double FixEmitFaceFile::bilinear_interpolation(double x, double y, int m,
    determine which sub cell the face is part of
    face cannot be touched by surfs, so entire face is part of one sub cell
    compute which via update->split() and return it
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 int FixEmitFaceFile::split(int icell)
 {
@@ -1033,7 +1033,7 @@ int FixEmitFaceFile::split(int icell)
 
 /* ----------------------------------------------------------------------
    recalculate task properties based on subsonic BC
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::subsonic_inflow()
 {
@@ -1086,7 +1086,7 @@ void FixEmitFaceFile::subsonic_inflow()
 /* ----------------------------------------------------------------------
    identify particles in grid cells associated with a task
    store count and linked list, same as for particle sorting
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::subsonic_sort()
 {
@@ -1143,7 +1143,7 @@ void FixEmitFaceFile::subsonic_sort()
    compute number density, thermal temperature, stream velocity
    only for grid cells associated with a task
    first compute for grid cells, then adjust due to boundary conditions
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::subsonic_grid()
 {
@@ -1251,7 +1251,7 @@ void FixEmitFaceFile::subsonic_grid()
 }
 /* ----------------------------------------------------------------------
    grow task list
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::grow_task()
 {
@@ -1284,7 +1284,7 @@ void FixEmitFaceFile::grow_task()
 
 /* ----------------------------------------------------------------------
    process keywords specific to this class
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 int FixEmitFaceFile::option(int narg, char **arg)
 {
@@ -1302,7 +1302,7 @@ int FixEmitFaceFile::option(int narg, char **arg)
 
 /* ----------------------------------------------------------------------
    DEBUG method: print status of cellface I
-   ------------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::print_task(int i)
 {

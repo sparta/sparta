@@ -262,8 +262,6 @@ void FixEmitFaceKokkos::perform_task()
   Kokkos::parallel_for(ncands, SPARTA_LAMBDA(int cand) {
     if (!ld_keep(cand)) return;
 
-    rand_type rand_gen = rand_pool.get_state();
-
     double *normal,*vstream;
 
     auto i = ld_task(cand);
@@ -309,7 +307,6 @@ void FixEmitFaceKokkos::perform_task()
 
     ld_particles(ilocal).flag = PINSERT;
     ld_particles(ilocal).dtremain = dtremain;
-    rand_pool.free_state(rand_gen);
   });
   particleKK->nlocal = nlocal_before + nnew;
   particleKK->modify(SPARTA_NS::Device, PARTICLE_MASK);

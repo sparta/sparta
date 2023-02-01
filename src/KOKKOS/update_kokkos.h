@@ -112,7 +112,6 @@ class UpdateKokkos : public Update {
 
  private:
 
-  double dt;
   int field_active[3];
 
   t_cell_1d d_cells;

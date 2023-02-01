@@ -44,11 +44,9 @@ class ParticleKokkos : public Particle {
 
   ParticleKokkos(class SPARTA *);
   ~ParticleKokkos() override;
-
   static KOKKOS_INLINE_FUNCTION
   int add_particle_kokkos(t_particle_1d particles, int, int, int, int,
-                          double *, double *, double, double);
-
+                           double *, double *, double, double);
 #ifndef SPARTA_KOKKOS_EXACT
   void compress_migrate(int, int *) override;
 #endif
@@ -180,7 +178,7 @@ class ParticleKokkos : public Particle {
 
 KOKKOS_INLINE_FUNCTION
 int ParticleKokkos::add_particle_kokkos(t_particle_1d particles, int index, int id,
-                                        int ispecies, int icell, double *x, double *v, double erot, double evib)
+      int ispecies, int icell, double *x, double *v, double erot, double evib)
 {
   OnePart tmp;
   tmp.id = id;
@@ -207,6 +205,7 @@ int ParticleKokkos::add_particle_kokkos(t_particle_1d particles, int index, int 
 
   return realloc;
 }
+
 
 /* ----------------------------------------------------------------------
    generate random rotational energy for a particle

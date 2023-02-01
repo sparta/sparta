@@ -98,9 +98,9 @@ class CollideVSSKokkos : public CollideVSS {
   void setup_collision_kokkos(Particle::OnePart *, Particle::OnePart *, struct State &, struct State &) const;
   KOKKOS_INLINE_FUNCTION
   int perform_collision_kokkos(Particle::OnePart *&, Particle::OnePart *&,
-                               Particle::OnePart *&, struct State &, struct State &, rand_type &,
-                               Particle::OnePart *&, int &, double &,
-                               int &) const;
+                        Particle::OnePart *&, struct State &, struct State &, rand_type &,
+                        Particle::OnePart *&, int &, double &,
+                        int &) const;
 
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCollideResetVremax, const int&) const;
@@ -258,7 +258,6 @@ class CollideVSSKokkos : public CollideVSS {
   void restore();
 
   t_particle_1d d_particles_backup;
-  t_cell_1d d_cells;
   DAT::t_int_2d d_plist_backup;
   DAT::t_float_3d d_vremax_backup;
   DAT::t_float_3d d_remain_backup;
