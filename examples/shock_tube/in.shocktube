@@ -2,10 +2,11 @@
 # shock in quasi-1D tube with collisions
 # particles reflect off global box boundaries
 #
-# Note:
+# Notes:
 #  - The domain is only 1 cell high in Y
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
 #  - The “twopass” option is used to match Kokkos runs.
-# The "twopass" options should not be used for production runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
 ################################################################################
 
 #  (1 cell high in Y)
@@ -47,8 +48,8 @@ stats		    100
 stats_style	    step cpu np nattempt ncoll nscoll nscheck
 
 #dump                2 image all 50 image.*.ppm type type pdiam 3e-4 &
-                     surf proc 0.01 size 512 512 axes yes 0.9 0.02 particle yes &
-                     zoom 15 box yes 0.02
+#                     surf proc 0.01 size 512 512 axes yes 0.9 0.02 particle yes &
+#                     zoom 15 box yes 0.02
 #dump_modify         2 pad 4
 
 timestep 	    1e-9 
