@@ -374,9 +374,9 @@ void CollideVSSKokkos::collisions()
     h_nreact_one() = 0;
   }
 
+  dt = update->dt;
   fnum = update->fnum;
   boltz = update->boltz;
-  dt = update->dt;
 
   // perform collisions:
   // variant for single group or multiple groups (not yet supported)

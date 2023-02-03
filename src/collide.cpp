@@ -466,7 +466,7 @@ template < int NEARCP > void Collide::collisions_one()
 
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
-  double dtc = update->dt;
+  double dt = update->dt;
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
@@ -499,7 +499,7 @@ template < int NEARCP > void Collide::collisions_one()
     // nattempt = rounded attempt with RN
     // if no attempts, continue to next grid cell
 
-    attempt = attempt_collision(icell,np,volume,dtc);
+    attempt = attempt_collision(icell,np,volume,dt);
     nattempt = static_cast<int> (attempt);
 
     if (!nattempt) continue;
@@ -511,7 +511,7 @@ template < int NEARCP > void Collide::collisions_one()
 
     for (int iattempt = 0; iattempt < nattempt; iattempt++) {
       i = np * random->uniform();
-      if (NEARCP) j = find_nn(i,np,dtc);
+      if (NEARCP) j = find_nn(i,np,dt);
       else {
         j = np * random->uniform();
         while (i == j) j = np * random->uniform();
@@ -610,7 +610,7 @@ template < int NEARCP > void Collide::collisions_group()
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
   int *species2group = mixture->species2group;
-  double dtc = update->dt;
+  double dt = update->dt;
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
@@ -674,7 +674,7 @@ template < int NEARCP > void Collide::collisions_group()
     npair = 0;
     for (igroup = 0; igroup < ngroups; igroup++)
       for (jgroup = igroup; jgroup < ngroups; jgroup++) {
-        attempt = attempt_collision(icell,igroup,jgroup,volume,dtc);
+        attempt = attempt_collision(icell,igroup,jgroup,volume,dt);
         nattempt = static_cast<int> (attempt);
 
         if (nattempt) {
@@ -722,7 +722,7 @@ template < int NEARCP > void Collide::collisions_group()
 
       for (int iattempt = 0; iattempt < nattempt; iattempt++) {
         i = *ni * random->uniform();
-        if (NEARCP) j = find_nn_group(i,ilist,*nj,jlist,plist,nn_igroup,nn_jgroup,dtc);
+        if (NEARCP) j = find_nn_group(i,ilist,*nj,jlist,plist,nn_igroup,nn_jgroup,dt);
         else {
           j = *nj * random->uniform();
           if (igroup == jgroup)
@@ -885,7 +885,7 @@ void Collide::collisions_one_ambipolar()
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
   int nbytes = sizeof(Particle::OnePart);
-  double dtc = update->dt;
+  double dt = update->dt;
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
@@ -938,7 +938,7 @@ void Collide::collisions_one_ambipolar()
     // nattempt = rounded attempt with RN
 
     nptotal = np + nelectron;
-    attempt = attempt_collision(icell,nptotal,volume,dtc);
+    attempt = attempt_collision(icell,nptotal,volume,dt);
     nattempt = static_cast<int> (attempt);
 
     if (!nattempt) continue;
@@ -1180,7 +1180,7 @@ void Collide::collisions_group_ambipolar()
   int nbytes = sizeof(Particle::OnePart);
   int *species2group = mixture->species2group;
   int egroup = species2group[ambispecies];
-  double dtc = update->dt;
+  double dt = update->dt;
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
@@ -1270,7 +1270,7 @@ void Collide::collisions_group_ambipolar()
     for (igroup = 0; igroup < ngroups; igroup++)
       for (jgroup = igroup; jgroup < ngroups; jgroup++) {
         if (igroup == egroup && jgroup == egroup) continue;
-        attempt = attempt_collision(icell,igroup,jgroup,volume,dtc);
+        attempt = attempt_collision(icell,igroup,jgroup,volume,dt);
         nattempt = static_cast<int> (attempt);
 
         if (nattempt) {
@@ -1335,6 +1335,7 @@ void Collide::collisions_group_ambipolar()
         //}
 
         // test if collision actually occurs
+
         if (!test_collision(icell,igroup,jgroup,ipart,jpart)) continue;
 
         // if recombination reaction is possible for this IJ pair
@@ -1342,6 +1343,7 @@ void Collide::collisions_group_ambipolar()
         // unless boost factor turns it off, or there is no 3rd particle
         // 3rd particle will never be an electron since plist has no electrons
         // if jgroup == egroup, no need to check k for match to jj
+
         if (recombflag && recomb_ijflag[ipart->ispecies][jpart->ispecies]) {
           if (random->uniform() > react->recomb_boost_inverse)
             react->recomb_species = -1;

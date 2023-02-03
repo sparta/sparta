@@ -23,7 +23,6 @@
 #include "sparta.h"
 #include "input.h"
 #include "update.h"
-#include "grid.h"
 #include "particle.h"
 #include "modify.h"
 #include "compute.h"

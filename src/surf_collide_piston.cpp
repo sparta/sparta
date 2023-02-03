@@ -17,7 +17,6 @@
 #include "surf.h"
 #include "surf_react.h"
 #include "update.h"
-#include "grid.h"
 #include "domain.h"
 #include "modify.h"
 #include "input.h"

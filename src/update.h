@@ -28,9 +28,8 @@ class Update : protected Pointers {
   bigint firststep,laststep;      // 1st & last step of this run
   bigint beginstep,endstep;       // 1st and last step of multiple runs
   int first_update;               // 0 before initial update, 1 after
-
-  double dt;             // global timestep size
-  double time;           // the global simulation time
+  double dt;                      // timestep size
+  double time;                    // simulation time
 
   char *unit_style;      // style of units used throughout simulation
   double boltz;          // Boltzmann constant (eng/degree K)
