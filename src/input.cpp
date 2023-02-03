@@ -1105,7 +1105,7 @@ void Input::shell()
 
   if (strcmp(arg[0],"cd") == 0) {
     if (narg != 2) error->all(FLERR,"Illegal shell cd command");
-    chdir(arg[1]);
+    int tmp = chdir(arg[1]);
 
   } else if (strcmp(arg[0],"mkdir") == 0) {
     if (narg < 2) error->all(FLERR,"Illegal shell mkdir command");
@@ -1157,7 +1157,7 @@ void Input::shell()
       strcat(work,arg[i]);
     }
 
-    if (me == 0) system(work);
+    if (me == 0) int tmp = system(work);
   }
 }
 

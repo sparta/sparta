@@ -72,7 +72,7 @@ class Grid : protected Pointers {
   int **eivec;              // pointer to each integer vector
   int ***eiarray;           // pointer to each integer array
   double **edvec;           // pointer to each double vector
-  double ***edarray;        // pointer to each double array  
+  double ***edarray;        // pointer to each double array
 
   // cell ID hash (owned + ghost, no sub-cells)
 
@@ -357,7 +357,7 @@ class Grid : protected Pointers {
   int *edcol;               // # of columns in each double array (esize)
 
   int *custom_ghost_flag;   // flag on each custom vec/arr for owned+ghost or not
-  int *custom_restart_flag; // flag on each custom vec/array read from restart 
+  int *custom_restart_flag; // flag on each custom vec/array read from restart
 
   int nbytes_custom;        // size of packed custom values for one grid cell
 

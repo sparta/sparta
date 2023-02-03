@@ -24,8 +24,8 @@ enum{INT,DOUBLE};                               // several files
 // per grid cell custom attributes
 
 /* ----------------------------------------------------------------------
-   find custom per-atom vector/array with name                            
-   return index if found           
+   find custom per-atom vector/array with name
+   return index if found
    return -1 if not found
 ------------------------------------------------------------------------- */
 
@@ -36,11 +36,11 @@ int Grid::find_custom(char *name)
   return -1;
 }
 
-/* ----------------------------------------------------------------------       
-   add a custom attribute with name            
-   assumes name does not already exist, except in case of restart             
-   type = 0/1 for int/double         
-   size = 0 for vector, size > 0 for array with size columns            
+/* ----------------------------------------------------------------------
+   add a custom attribute with name
+   assumes name does not already exist, except in case of restart
+   type = 0/1 for int/double
+   size = 0 for vector, size > 0 for array with size columns
    ghostflag = 1 if ghost cells are included, else 0
    return index of its location;
 ------------------------------------------------------------------------- */
@@ -52,7 +52,7 @@ int Grid::add_custom(char *name, int type, int size, int ghostflag)
   // if name already exists
   // just return index if a restart script and re-defining the name
   // else error
-  
+
   index = find_custom(name);
   if (index >= 0) {
     if (custom_restart_flag == NULL || custom_restart_flag[index] == 1)
@@ -128,8 +128,8 @@ int Grid::add_custom(char *name, int type, int size, int ghostflag)
   return index;
 }
 
-/* ----------------------------------------------------------------------      
-   allocate vector/array associated with custom attribute with index 
+/* ----------------------------------------------------------------------
+   allocate vector/array associated with custom attribute with index
    set new values to 0 via memset()
 ------------------------------------------------------------------------- */
 
@@ -157,8 +157,8 @@ void Grid::allocate_custom(int index, int n)
   }
 }
 
-/* ----------------------------------------------------------------------      
-   reallocate vector/array associated with custom attribute with index 
+/* ----------------------------------------------------------------------
+   reallocate vector/array associated with custom attribute with index
    set new values to 0 via memset()
 ------------------------------------------------------------------------- */
 
@@ -311,11 +311,13 @@ void Grid::write_restart_custom(FILE *fp)
 
 void Grid::read_restart_custom(FILE *fp)
 {
+  int tmp;
+
   // ncustom is 0 at time restart file is read
   // will be incremented as add_custom() for each nactive
 
   int nactive;
-  if (me == 0) fread(&nactive,sizeof(int),1,fp);
+  if (me == 0) tmp = fread(&nactive,sizeof(int),1,fp);
   MPI_Bcast(&nactive,1,MPI_INT,0,world);
   if (nactive == 0) return;
 
@@ -326,16 +328,16 @@ void Grid::read_restart_custom(FILE *fp)
   char *name;
 
   for (int i = 0; i < nactive; i++) {
-    if (me == 0) fread(&n,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
     MPI_Bcast(&n,1,MPI_INT,0,world);
     name = new char[n];
-    if (me == 0) fread(name,sizeof(char),n,fp);
+    if (me == 0) tmp = fread(name,sizeof(char),n,fp);
     MPI_Bcast(name,n,MPI_CHAR,0,world);
-    if (me == 0) fread(&type,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&type,sizeof(int),1,fp);
     MPI_Bcast(&type,n,MPI_CHAR,0,world);
-    if (me == 0) fread(&size,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&size,sizeof(int),1,fp);
     MPI_Bcast(&size,n,MPI_CHAR,0,world);
-    if (me == 0) fread(&ghostflag,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&ghostflag,sizeof(int),1,fp);
     MPI_Bcast(&ghostflag,n,MPI_CHAR,0,world);
 
     // create the custom attribute

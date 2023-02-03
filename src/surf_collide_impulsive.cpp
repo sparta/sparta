@@ -468,7 +468,7 @@ void SurfCollideImpulsive::wrapper(Particle::OnePart *p, double *norm,
 
 void SurfCollideImpulsive::flags_and_coeffs(int *flags, double *coeffs)
 {
-  if (tmode == CUSTOM) 
+  if (tmode == CUSTOM)
     error->all(FLERR,"Surf_collide impulsive with custom per-surf Twall "
                "does not support external caller");
 

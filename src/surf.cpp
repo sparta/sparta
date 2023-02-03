@@ -3933,6 +3933,8 @@ void Surf::write_restart(FILE *fp)
 
 void Surf::read_restart(FILE *fp)
 {
+  int tmp;
+
   if (distributed || implicit)
     error->all(FLERR,
                "Restart files with distributed surfaces are not yet supported");
@@ -3943,20 +3945,20 @@ void Surf::read_restart(FILE *fp)
 
   for (int i = 0; i < ngroup; i++) delete [] gnames[i];
 
-  if (me == 0) fread(&ngroup,sizeof(int),1,fp);
+  if (me == 0) tmp = fread(&ngroup,sizeof(int),1,fp);
   MPI_Bcast(&ngroup,1,MPI_INT,0,world);
 
   int n;
   for (int i = 0; i < ngroup; i++) {
-    if (me == 0) fread(&n,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
     MPI_Bcast(&n,1,MPI_INT,0,world);
     gnames[i] = new char[n];
-    if (me == 0) fread(gnames[i],sizeof(char),n,fp);
+    if (me == 0) tmp = fread(gnames[i],sizeof(char),n,fp);
     MPI_Bcast(gnames[i],n,MPI_CHAR,0,world);
   }
 
   if (domain->dimension == 2) {
-    if (me == 0) fread(&nsurf,sizeof(bigint),1,fp);
+    if (me == 0) tmp = fread(&nsurf,sizeof(bigint),1,fp);
     MPI_Bcast(&nsurf,1,MPI_SPARTA_BIGINT,0,world);
     lines = (Line *) memory->smalloc(nsurf*sizeof(Line),"surf:lines");
     // NOTE: need different logic for different surf styles
@@ -3965,13 +3967,13 @@ void Surf::read_restart(FILE *fp)
 
     if (me == 0) {
       for (int i = 0; i < nsurf; i++) {
-        fread(&lines[i].id,sizeof(surfint),1,fp);
-        fread(&lines[i].type,sizeof(int),1,fp);
-        fread(&lines[i].mask,sizeof(int),1,fp);
-        fread(&lines[i].transparent,sizeof(int),1,fp);
+        tmp = fread(&lines[i].id,sizeof(surfint),1,fp);
+        tmp = fread(&lines[i].type,sizeof(int),1,fp);
+        tmp = fread(&lines[i].mask,sizeof(int),1,fp);
+        tmp = fread(&lines[i].transparent,sizeof(int),1,fp);
         lines[i].isc = lines[i].isr = -1;
-        fread(lines[i].p1,sizeof(double),3,fp);
-        fread(lines[i].p2,sizeof(double),3,fp);
+        tmp = fread(lines[i].p1,sizeof(double),3,fp);
+        tmp = fread(lines[i].p2,sizeof(double),3,fp);
         lines[i].norm[0] = lines[i].norm[1] = lines[i].norm[2] = 0.0;
       }
     }
@@ -3981,7 +3983,7 @@ void Surf::read_restart(FILE *fp)
   }
 
   if (domain->dimension == 3) {
-    if (me == 0) fread(&nsurf,sizeof(bigint),1,fp);
+    if (me == 0) tmp = fread(&nsurf,sizeof(bigint),1,fp);
     MPI_Bcast(&nsurf,1,MPI_SPARTA_BIGINT,0,world);
     tris = (Tri *) memory->smalloc(nsurf*sizeof(Tri),"surf:tris");
     // NOTE: need different logic for different surf styles
@@ -3990,14 +3992,14 @@ void Surf::read_restart(FILE *fp)
 
     if (me == 0) {
       for (int i = 0; i < nsurf; i++) {
-        fread(&tris[i].id,sizeof(surfint),1,fp);
-        fread(&tris[i].type,sizeof(int),1,fp);
-        fread(&tris[i].mask,sizeof(int),1,fp);
-        fread(&tris[i].transparent,sizeof(int),1,fp);
+        tmp = fread(&tris[i].id,sizeof(surfint),1,fp);
+        tmp = fread(&tris[i].type,sizeof(int),1,fp);
+        tmp = fread(&tris[i].mask,sizeof(int),1,fp);
+        tmp = fread(&tris[i].transparent,sizeof(int),1,fp);
         tris[i].isc = tris[i].isr = -1;
-        fread(tris[i].p1,sizeof(double),3,fp);
-        fread(tris[i].p2,sizeof(double),3,fp);
-        fread(tris[i].p3,sizeof(double),3,fp);
+        tmp = fread(tris[i].p1,sizeof(double),3,fp);
+        tmp = fread(tris[i].p2,sizeof(double),3,fp);
+        tmp = fread(tris[i].p3,sizeof(double),3,fp);
         tris[i].norm[0] = tris[i].norm[1] = tris[i].norm[2] = 0.0;
       }
     }
@@ -4068,11 +4070,13 @@ void Surf::write_restart_custom(FILE *fp)
 
 void Surf::read_restart_custom(FILE *fp)
 {
+  int tmp;
+
   // ncustom is 0 at time restart file is read
   // will be incremented as add_custom() for each nactive
 
   int nactive;
-  if (me == 0) fread(&nactive,sizeof(int),1,fp);
+  if (me == 0) tmp = fread(&nactive,sizeof(int),1,fp);
   MPI_Bcast(&nactive,1,MPI_INT,0,world);
   if (nactive == 0) return;
 
@@ -4083,14 +4087,14 @@ void Surf::read_restart_custom(FILE *fp)
   char *name;
 
   for (int i = 0; i < nactive; i++) {
-    if (me == 0) fread(&n,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
     MPI_Bcast(&n,1,MPI_INT,0,world);
     name = new char[n];
-    if (me == 0) fread(name,sizeof(char),n,fp);
+    if (me == 0) tmp = fread(name,sizeof(char),n,fp);
     MPI_Bcast(name,n,MPI_CHAR,0,world);
-    if (me == 0) fread(&type,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&type,sizeof(int),1,fp);
     MPI_Bcast(&type,n,MPI_CHAR,0,world);
-    if (me == 0) fread(&size,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&size,sizeof(int),1,fp);
     MPI_Bcast(&size,n,MPI_CHAR,0,world);
 
     // create the custom attribute
