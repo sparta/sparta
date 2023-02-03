@@ -27,17 +27,20 @@ import sys,re
 
 if len(sys.argv) != 3: error()
 
+stlfile = sys.argv[1]
+surffile = sys.argv[2]
+
 # parse STL file into triangles and triangle vertices
 # tritxt = list of text between facet and endfacet
 # triverts = list of 3 vertices per triangle, in text format
 
-stltxt = open(sys.argv[1],"r").read()
+stltxt = open(stlfile,"r").read()
 
 match = re.search("^.*\n",stltxt)
-if not match: error("STL file has incorrect format" % stlfile)
+if not match: error("STL file %s has incorrect format" % stlfile)
 words = match.group().split()
 if words[0] != "solid":
-  error("STL file has incorrect format" % stlfile)
+  error("STL file %s has incorrect format" % stlfile)
 if len(words) >= 2: name = words[1]
 else: name = ""
 
@@ -84,24 +87,27 @@ for vert3 in triverts:
 
 # print SPARTA surface file
 
-fp = open(sys.argv[2],"w")
+fp = open(surffile,"w")
+
 if name:
   print("# SPARTA surface file, from STL file %s with name %s\n" % \
-      (sys.argv[1],name), file=fp)
+      (stlfile,name),file=fp)
 else:
-  print("# SPARTA surface file, from STL file\n",sys.argv[1], file=fp)
+  print("# SPARTA surface file, from STL file\n",stlfile,file=fp)
 
-print(len(verts),"points", file=fp)
-print(len(tris),"triangles", file=fp)
+print(len(verts),"points",file=fp)
+print(len(tris),"triangles",file=fp)
 
-print("\nPoints\n", file=fp)
+print("\nPoints\n",file=fp)
 for i,vert in enumerate(verts):
-  print(i+1,vert[0],vert[1],vert[2], file=fp)
+  print(i+1,vert[0],vert[1],vert[2],file=fp)
 
-print("\nTriangles\n", file=fp)
+print("\nTriangles\n",file=fp)
 for i,tri in enumerate(tris):
-  print(i+1,tri[0]+1,tri[1]+1,tri[2]+1, file=fp)
+  print(i+1,tri[0]+1,tri[1]+1,tri[2]+1,file=fp)
 
+fp.close()
+  
 # stats to screen
 
 print("# of vertices in SPARTA file:",len(verts))
@@ -144,4 +150,3 @@ if dup or unmatch:
   print("Unmatched edge count:",unmatch)
   print("One duplicate edge:",dupedge)
   print("One unmatched edge:",unmatchedge)
-  
