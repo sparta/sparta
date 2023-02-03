@@ -1041,14 +1041,14 @@ void Stats::compute_elaplong()
 
 void Stats::compute_dt()
 {
-  dvalue = grid->dt_global;
+  dvalue = update->dt;
 }
 
 /* ---------------------------------------------------------------------- */
 
 void Stats::compute_time()
 {
-  dvalue = grid->time_global;
+  dvalue = update->time;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1064,7 +1064,7 @@ void Stats::compute_cpu()
 void Stats::compute_tpcpu()
 {
   double new_cpu;
-  double new_time = grid->time_global;
+  double new_time = update->time;
 
   if (firststep == 0) {
     new_cpu = 0.0;

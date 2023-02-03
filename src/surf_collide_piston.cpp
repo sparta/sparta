@@ -43,7 +43,7 @@ void SurfCollidePiston::init()
 {
   SurfCollide::init();
 
-  dt = grid->dt_global;
+  dt = update->dt;
 
   // check that this model only assigned to surfs with axis-aligned normals
   // index = position in surf->sc list that this SurfCollide instance is

@@ -376,6 +376,7 @@ void CollideVSSKokkos::collisions()
 
   fnum = update->fnum;
   boltz = update->boltz;
+  dt = update->dt;
 
   // perform collisions:
   // variant for single group or multiple groups (not yet supported)
@@ -605,8 +606,6 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
   int np = grid_kk_copy.obj.d_cellcount[icell];
   if (np <= 1) return;
 
-  double dtc = grid_kk_copy.obj.dt_global;
-
   if (NEARCP) {
     for (int i = 0; i < np; i++)
       d_nn_last_partner(icell,i) = 0;
@@ -623,7 +622,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
   // attempt = exact collision attempt count for a pair of groups
   // nattempt = rounded attempt with RN
 
-  const double attempt = attempt_collision_kokkos(icell,np,volume,dtc,rand_gen);
+  const double attempt = attempt_collision_kokkos(icell,np,volume,dt,rand_gen);
   const int nattempt = static_cast<int> (attempt);
   if (!nattempt){
     rand_pool.free_state(rand_gen);
@@ -643,7 +642,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
   for (int m = 0; m < nattempt; m++) {
     const int i = np * rand_gen.drand();
     int j;
-    if (NEARCP) j = find_nn(rand_gen,i,np,dtc,icell);
+    if (NEARCP) j = find_nn(rand_gen,i,np,dt,icell);
     else {
       j = np * rand_gen.drand();
       while (i == j) j = np * rand_gen.drand();
@@ -949,7 +948,6 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
   int np = grid_kk_copy.obj.d_cellcount[icell];
   if (np <= 1) return;
 
-  double dtc = grid_kk_copy.obj.dt_global;
   const double volume = grid_kk_copy.obj.k_cinfo.d_view[icell].volume / grid_kk_copy.obj.k_cinfo.d_view[icell].weight;
   if (volume == 0.0) d_error_flag() = 1;
 
@@ -986,7 +984,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
   // nattempt = rounded attempt with RN
 
   int nptotal = np + nelectron;
-  const double attempt = attempt_collision_kokkos(icell,nptotal,volume,dtc,rand_gen);
+  const double attempt = attempt_collision_kokkos(icell,nptotal,volume,dt,rand_gen);
   const int nattempt = static_cast<int> (attempt);
   if (!nattempt) {
     rand_pool.free_state(rand_gen);

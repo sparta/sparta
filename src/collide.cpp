@@ -466,7 +466,7 @@ template < int NEARCP > void Collide::collisions_one()
 
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
-  double dtc = grid->dt_global;
+  double dtc = update->dt;
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
@@ -610,7 +610,7 @@ template < int NEARCP > void Collide::collisions_group()
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
   int *species2group = mixture->species2group;
-  double dtc = grid->dt_global;
+  double dtc = update->dt;
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
@@ -885,7 +885,7 @@ void Collide::collisions_one_ambipolar()
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
   int nbytes = sizeof(Particle::OnePart);
-  double dtc = grid->dt_global;
+  double dtc = update->dt;
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
@@ -1180,7 +1180,7 @@ void Collide::collisions_group_ambipolar()
   int nbytes = sizeof(Particle::OnePart);
   int *species2group = mixture->species2group;
   int egroup = species2group[ambispecies];
-  double dtc = grid->dt_global;
+  double dtc = update->dt;
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;

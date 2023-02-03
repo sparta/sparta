@@ -219,15 +219,15 @@ void FixDtKokkos::end_of_step()
     dt_global_calculated = (1.-dt_global_weight)*dtmin + dt_global_weight*dtavg;
 
     if (mode > WARN)
-      grid_kk->dt_global = dt_global_calculated;
-    else if (mode == WARN && grid_kk->dt_global > dt_global_calculated) {
+      update->dt = dt_global_calculated;
+    else if (mode == WARN && update->dt > dt_global_calculated) {
       if (me == 0) {
         if (screen)
           fprintf(screen,"WARNING: user-set global timestep(=%8.4e) is greater than the calculated global timestep(=%8.4e)\n\n",
-                  grid_kk->dt_global,dt_global_calculated);
+                  update->dt,dt_global_calculated);
         if (logfile)
           fprintf(logfile,"WARNING: user-set global timestep(=%8.4e) is greater than the calculated global timestep(=%8.4e)\n\n",
-                  grid_kk->dt_global,dt_global_calculated);
+                  update->dt,dt_global_calculated);
       }
     }
   }
