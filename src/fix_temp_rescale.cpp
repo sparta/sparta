@@ -224,7 +224,7 @@ void FixTempRescale::end_of_step_average(double t_target)
 
   bigint n_current_mine = 0.0;
   double t_current_mine = 0.0;
-  
+
   for (int icell = 0; icell < nglocal; icell++) {
     if (cells[icell].nsplit > 1) continue;
 

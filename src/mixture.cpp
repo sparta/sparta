@@ -1,4 +1,3 @@
-
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
@@ -685,7 +684,7 @@ void Mixture::write_restart(FILE *fp)
 void Mixture::read_restart(FILE *fp)
 {
   int tmp;
-  
+
   int me = comm->me;
 
   if (me == 0) tmp = fread(&nspecies,sizeof(int),1,fp);

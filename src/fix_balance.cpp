@@ -158,7 +158,7 @@ void FixBalance::init()
 
   if (rcbwt == TIME) {
     int coarsen_flag = 0;
-    int after_flag = 0; 
+    int after_flag = 0;
     for (int ifix = 0; ifix < modify->nfix; ifix++) {
       if (strstr(modify->fix[ifix]->style,"adapt") != NULL)
         if (((FixAdapt*)modify->fix[ifix])->coarsen_flag)

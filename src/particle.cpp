@@ -1343,7 +1343,7 @@ void Particle::write_restart_species(FILE *fp)
 void Particle::read_restart_species(FILE *fp)
 {
   int tmp;
-  
+
   if (me == 0) tmp = fread(&nspecies,sizeof(int),1,fp);
   MPI_Bcast(&nspecies,1,MPI_INT,0,world);
 
@@ -1383,7 +1383,7 @@ void Particle::write_restart_mixture(FILE *fp)
 void Particle::read_restart_mixture(FILE *fp)
 {
   int tmp;
-  
+
   // must first clear existing default mixtures
 
   for (int i = 0; i < nmixture; i++) delete mixture[i];
@@ -1943,7 +1943,7 @@ void Particle::write_restart_custom(FILE *fp)
 void Particle::read_restart_custom(FILE *fp)
 {
   int tmp;
-  
+
   // ncustom is 0 at time restart file is read
   // will be incremented as add_custom() for each nactive
 

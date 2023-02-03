@@ -86,7 +86,7 @@ FixSurfTemp::FixSurfTemp(SPARTA *sparta, int narg, char **arg) :
       error->all(FLERR,"Fix surf/temp compute does not compute per-surf array");
     if (qwindex > 0 && qwindex > cqw->size_per_surf_cols)
       error->all(FLERR,"Fix surf/temp compute array is accessed out-of-range");
-    
+
   } else if (strncmp(arg[4],"f_",2) == 0) {
     source = FIX;
     int n = strlen(arg[4]);
@@ -125,7 +125,7 @@ FixSurfTemp::FixSurfTemp(SPARTA *sparta, int narg, char **arg) :
   emi = input->numeric(FLERR,arg[6]);
   if (emi <= 0.0 || emi > 1.0)
     error->all(FLERR,"Fix surf/temp emissivity must be > 0.0 and <= 1");
-  
+
   int n = strlen(arg[7]) + 1;
   char *id_custom = new char[n];
   strcpy(id_custom,arg[7]);
@@ -181,7 +181,7 @@ int FixSurfTemp::setmask()
 void FixSurfTemp::init()
 {
   // one-time initialization of temperature for all surfs in custom vector
-  
+
   if (!firstflag) return;
   firstflag = 0;
 
@@ -251,7 +251,7 @@ void FixSurfTemp::end_of_step()
     } else array = fqw->array_surf;
 
     int icol = qwindex-1;
-    
+
     m = 0;
     for (i = me; i < nlocal; i += nprocs) {
       if (dimension == 3) mask = tris[i].mask;

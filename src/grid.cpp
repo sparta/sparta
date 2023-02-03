@@ -2440,7 +2440,7 @@ void Grid::write_restart(FILE *fp)
 void Grid::read_restart(FILE *fp)
 {
   int tmp;
-  
+
   // read_restart may have reset maxsurfpercell in its header() method
   // if so, need to reallocate surf arrays to correct max length
 
