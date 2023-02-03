@@ -2422,8 +2422,6 @@ void Grid::write_restart(FILE *fp)
 {
   fwrite(&maxlevel,sizeof(int),1,fp);
   fwrite(plevels,sizeof(ParentLevel),maxlevel,fp);
-  fwrite(&update->dt,sizeof(double),1,fp);
-  fwrite(&update->time,sizeof(double),1,fp);
 
   fwrite(&ngroup,sizeof(int),1,fp);
 
@@ -2448,18 +2446,14 @@ void Grid::read_restart(FILE *fp)
   if (maxsurfpercell != MAXSURFPERCELL || maxsplitpercell != MAXSPLITPERCELL)
     allocate_surf_arrays();
 
-  // read level and time info
+  // read level info
 
   if (me == 0) {
     fread(&maxlevel,sizeof(int),1,fp);
     fread(plevels,sizeof(ParentLevel),maxlevel,fp);
-    fread(&update->dt,sizeof(double),1,fp);
-    fread(&update->time,sizeof(double),1,fp);
   }
   MPI_Bcast(&maxlevel,1,MPI_INT,0,world);
   MPI_Bcast(plevels,maxlevel*sizeof(ParentLevel),MPI_CHAR,0,world);
-  MPI_Bcast(&update->dt,1,MPI_DOUBLE,0,world);
-  MPI_Bcast(&update->time,1,MPI_DOUBLE,0,world);
 
   // if any exist, clear existing group names, before reading new ones
 

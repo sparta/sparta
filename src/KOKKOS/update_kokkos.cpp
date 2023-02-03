@@ -266,7 +266,6 @@ void UpdateKokkos::run(int nsteps)
   sparta->kokkos->auto_sync = 0;
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
-  GridKokkos* grid_kk = (GridKokkos*) grid;
 
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
