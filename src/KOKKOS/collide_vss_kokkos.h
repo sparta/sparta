@@ -219,7 +219,7 @@ class CollideVSSKokkos : public CollideVSS {
   tdual_params_2d k_params;
   t_params_2d d_params;
 
-  double fnum,boltz;
+  double dt,fnum,boltz;
   int maxcellcount,react_defined;
 
   KOKKOS_INLINE_FUNCTION

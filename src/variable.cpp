@@ -2343,7 +2343,7 @@ double Variable::collapse_tree(Tree *tree)
     if (tree->left->type != VALUE || tree->right->type != VALUE) return 0.0;
     tree->type = VALUE;
     double delta = update->ntimestep - update->beginstep;
-    tree->value = arg1 + arg2*delta*grid->dt_global;
+    tree->value = arg1 + arg2*delta*update->dt;
     return tree->value;
   }
 
@@ -2358,7 +2358,7 @@ double Variable::collapse_tree(Tree *tree)
       error->one(FLERR,"Invalid math function in variable formula");
     double delta = update->ntimestep - update->beginstep;
     double omega = 2.0*MY_PI/arg3;
-    tree->value = arg1 + arg2*sin(omega*delta*grid->dt_global);
+    tree->value = arg1 + arg2*sin(omega*delta*update->dt);
     return tree->value;
   }
 
@@ -2373,7 +2373,7 @@ double Variable::collapse_tree(Tree *tree)
       error->one(FLERR,"Invalid math function in variable formula");
     double delta = update->ntimestep - update->beginstep;
     double omega = 2.0*MY_PI/arg3;
-    tree->value = arg1 + arg2*(1.0-cos(omega*delta*grid->dt_global));
+    tree->value = arg1 + arg2*(1.0-cos(omega*delta*update->dt));
     return tree->value;
   }
 
@@ -2601,7 +2601,7 @@ double Variable::eval_tree(Tree *tree, int i)
     arg1 = eval_tree(tree->left,i);
     arg2 = eval_tree(tree->right,i);
     double delta = update->ntimestep - update->beginstep;
-    arg = arg1 + arg2*delta*grid->dt_global;
+    arg = arg1 + arg2*delta*update->dt;
     return arg;
   }
 
@@ -2613,7 +2613,7 @@ double Variable::eval_tree(Tree *tree, int i)
       error->one(FLERR,"Invalid math function in variable formula");
     double delta = update->ntimestep - update->beginstep;
     double omega = 2.0*MY_PI/arg3;
-    arg = arg1 + arg2*sin(omega*delta*grid->dt_global);
+    arg = arg1 + arg2*sin(omega*delta*update->dt);
     return arg;
   }
 
@@ -2625,7 +2625,7 @@ double Variable::eval_tree(Tree *tree, int i)
       error->one(FLERR,"Invalid math function in variable formula");
     double delta = update->ntimestep - update->beginstep;
     double omega = 2.0*MY_PI/arg3;
-    arg = arg1 + arg2*(1.0-cos(omega*delta*grid->dt_global));
+    arg = arg1 + arg2*(1.0-cos(omega*delta*update->dt));
     return arg;
   }
 
@@ -3049,7 +3049,7 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
     if (tree) newtree->type = VDISPLACE;
     else {
       double delta = update->ntimestep - update->beginstep;
-      double value = value1 + value2*delta*grid->dt_global;
+      double value = value1 + value2*delta*update->dt;
       argstack[nargstack++] = value;
     }
 
@@ -3064,7 +3064,7 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
         error->all(FLERR,"Invalid math function in variable formula");
       double delta = update->ntimestep - update->beginstep;
       double omega = 2.0*MY_PI/value3;
-      double value = value1 + value2*sin(omega*delta*grid->dt_global);
+      double value = value1 + value2*sin(omega*delta*update->dt);
       argstack[nargstack++] = value;
     }
 
@@ -3079,7 +3079,7 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
         error->all(FLERR,"Invalid math function in variable formula");
       double delta = update->ntimestep - update->beginstep;
       double omega = 2.0*MY_PI/value3;
-      double value = value1 + value2*(1.0-cos(omega*delta*grid->dt_global));
+      double value = value1 + value2*(1.0-cos(omega*delta*update->dt));
       argstack[nargstack++] = value;
     }
   }

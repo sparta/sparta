@@ -123,7 +123,7 @@ void FixEmitSurf::init()
   // copies of class data before invoking parent init() and count_task()
 
   fnum = update->fnum;
-  dt = grid->dt_global;
+  dt = update->dt;
 
   nspecies = particle->mixture[imix]->nspecies;
   fraction = particle->mixture[imix]->fraction;
@@ -251,7 +251,7 @@ void FixEmitSurf::create_task(int icell)
 
   if (cells[icell].nsurf == 0) return;
 
-  dt = grid->dt_global;
+  dt = update->dt;
 
   // loop over surfs in cell
   // use Cut2d/Cut3d to find overlap area and geoemtry of overlap
@@ -437,7 +437,7 @@ void FixEmitSurf::perform_task()
 
   int *species = particle->mixture[imix]->species;
 
-  dt = grid->dt_global;
+  dt = update->dt;
 
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current per-task temp_thermal and vstream

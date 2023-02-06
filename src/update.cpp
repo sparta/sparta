@@ -129,12 +129,12 @@ void Update::set_units(const char *style)
   if (strcmp(style,"cgs") == 0) {
     boltz = 1.3806488e-16;
     mvv2e = 1.0;
-    grid->dt_global = 1.0;
+    dt = 1.0;
 
   } else if (strcmp(style,"si") == 0) {
     boltz = 1.3806488e-23;
     mvv2e = 1.0;
-    grid->dt_global = 1.0;
+    dt = 1.0;
 
   } else error->all(FLERR,"Illegal units command");
 
@@ -259,7 +259,7 @@ void Update::run(int nsteps)
 
   for (int i = 0; i < nsteps; i++) {
 
-    grid->time_global += grid->dt_global;
+    time += dt;
 
     ntimestep++;
 
@@ -372,7 +372,6 @@ template < int DIM, int SURF > void Update::move()
   Grid::ParentCell *pcells = grid->pcells;
   Surf::Tri *tris = surf->tris;
   Surf::Line *lines = surf->lines;
-  double dt = grid->dt_global;
 
   // external per particle field
   // fix calculates field acting on all owned particles

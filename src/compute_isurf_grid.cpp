@@ -152,7 +152,7 @@ void ComputeISurfGrid::init_normflux()
 {
   // normalization nfactor = dt/fnum
 
-  double nfactor = grid->dt_global/update->fnum;
+  double nfactor = update->dt/update->fnum;
   nfactor_inverse = 1.0/nfactor;
 
   // normflux for all surface elements, based on area and timestep size

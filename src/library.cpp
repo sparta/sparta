@@ -23,7 +23,6 @@
 #include "sparta.h"
 #include "input.h"
 #include "update.h"
-#include "grid.h"
 #include "particle.h"
 #include "modify.h"
 #include "compute.h"
@@ -123,7 +122,7 @@ void *sparta_extract_global(void *ptr, char *name)
 {
   SPARTA *sparta = (SPARTA *) ptr;
 
-  if (strcmp(name,"dt") == 0) return (void *) &sparta->grid->dt_global;
+  if (strcmp(name,"dt") == 0) return (void *) &sparta->update->dt;
   if (strcmp(name,"fnum") == 0) return (void *) &sparta->update->fnum;
   if (strcmp(name,"nrho") == 0) return (void *) &sparta->update->nrho;
   if (strcmp(name,"nplocal") == 0) return (void *) &sparta->particle->nlocal;

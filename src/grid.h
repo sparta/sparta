@@ -48,9 +48,6 @@ class Grid : protected Pointers {
   int maxsurfpercell;   // max surf elements in one child cell
   int maxsplitpercell;  // max split cells in one child cell
 
-  double dt_global;     // global timestep size
-  double time_global;   // the global time
-
   int ngroup;           // # of defined groups
   char **gnames;        // name of each group
   int *bitmask;         // one-bit mask for each group

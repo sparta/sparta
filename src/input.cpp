@@ -1469,7 +1469,7 @@ void Input::timestep()
   if (narg != 1) error->all(FLERR,"Illegal timestep command");
   double dt = atof(arg[0]);
   if (dt <= 0.0) error->all(FLERR,"Illegal timestep command");
-  grid->dt_global = dt;
+  update->dt = dt;
 }
 
 /* ---------------------------------------------------------------------- */

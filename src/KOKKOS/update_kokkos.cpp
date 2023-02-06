@@ -266,7 +266,6 @@ void UpdateKokkos::run(int nsteps)
   sparta->kokkos->auto_sync = 0;
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
-  GridKokkos* grid_kk = (GridKokkos*) grid;
 
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
@@ -289,7 +288,7 @@ void UpdateKokkos::run(int nsteps)
 
   for (int i = 0; i < nsteps; i++) {
 
-    grid->time_global += grid->dt_global;
+    time += dt;
     ntimestep++;
 
     if (collide_react) collide_react_reset();
@@ -697,7 +696,6 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
   Particle::OnePart &particle_i = d_particles[i];
 
-  auto dt = grid_kk_copy.obj.dt_global;
   pflag = particle_i.flag;
 
   Particle::OnePart iorig;
