@@ -849,7 +849,15 @@ void CreateParticles::create_local_twopass()
       continue;
     if (!cutflag && cells[icell].nsurf) continue;
 
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+
     ncreate = ncreate_values[icell];
+
+    // if surfs in cell, use xcell for all created particle attempts
+
+    if (cells[icell].nsurf)
+      pflag = grid->point_outside_surfs(icell,xcell);
     
     for (int m = 0; m < ncreate; m++) {
 
