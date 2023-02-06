@@ -831,6 +831,11 @@ void CreateParticles::create_local_twopass()
     }
 
     ncreate_values[icell] = ncreate;
+
+    // increment count without effect of density variation
+    // so that target insertion count is undisturbed
+
+    nprev += npercell;
   }
 
   // second pass, create particles using ncreate_values
@@ -934,11 +939,6 @@ void CreateParticles::create_local_twopass()
         modify->update_custom(particle->nlocal-1,temp_thermal,
                              temp_rot,temp_vib,vstream);
     }
-
-    // increment count without effect of density variation
-    // so that target insertion count is undisturbed
-    
-    nprev += npercell;
   }
 
   // clean up
