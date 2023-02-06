@@ -796,7 +796,7 @@ void FixAveHisto::end_of_step()
     fflush(fp);
     if (overwrite) {
       long fileend = ftell(fp);
-      if (fileend > 0) ftruncate(fileno(fp),fileend);
+      if (fileend > 0) int tmp = ftruncate(fileno(fp),fileend);
     }
   }
 }

@@ -193,13 +193,13 @@ void ReadRestart::command(int narg, char **arg)
 
     if (me == 0) {
       for (int iproc = 0; iproc < nprocs_file; iproc++) {
-        fread(&value,sizeof(int),1,fp);
+        tmp = fread(&value,sizeof(int),1,fp);
         if (value != PERPROC)
           error->one(FLERR,"Invalid flag in peratom section of restart file");
 
         if (iproc == 0) filepos = ftell(fp);
 
-        fread(&n_big,sizeof(bigint),1,fp);
+        tmp = fread(&n_big,sizeof(bigint),1,fp);
         if (n_big > MAXSMALLINT)
           error->one(FLERR,"Restart file read buffer too large, use global mem/limit");
         n = n_big;
@@ -210,7 +210,7 @@ void ReadRestart::command(int narg, char **arg)
         }
 
         if (iproc > 0) {
-          fread(buf,sizeof(char),n,fp);
+          tmp = fread(buf,sizeof(char),n,fp);
           MPI_Send(&n,1,MPI_INT,iproc,0,world);
           MPI_Recv(&tmp,0,MPI_INT,iproc,0,world,&status);
           MPI_Send(buf,n,MPI_CHAR,iproc,0,world);
@@ -220,11 +220,11 @@ void ReadRestart::command(int narg, char **arg)
       // rewind and read my chunk
 
       fseek(fp,filepos,SEEK_SET);
-      fread(&n_big,sizeof(bigint),1,fp);
+      tmp = fread(&n_big,sizeof(bigint),1,fp);
       if (n_big > MAXSMALLINT)
         error->one(FLERR,"Restart file read buffer too large, use global mem/limit");
       n = n_big;
-      fread(buf,sizeof(char),n,fp);
+      tmp = fread(buf,sizeof(char),n,fp);
 
       fclose(fp);
 
@@ -235,6 +235,7 @@ void ReadRestart::command(int narg, char **arg)
         memory->destroy(buf);
         memory->create(buf,maxbuf,"read_restart:buf");
       }
+      tmp = 0;
       MPI_Irecv(buf,n,MPI_CHAR,0,0,world,&request);
       MPI_Send(&tmp,0,MPI_INT,0,0,world);
       MPI_Wait(&request,&status);
@@ -305,18 +306,18 @@ void ReadRestart::command(int narg, char **arg)
         error->one(FLERR,str);
       }
 
-      fread(&flag,sizeof(int),1,fp);
+      tmp = fread(&flag,sizeof(int),1,fp);
       if (flag != PROCSPERFILE)
         error->one(FLERR,"Invalid flag in peratom section of restart file");
       int procsperfile;
-      fread(&procsperfile,sizeof(int),1,fp);
+      tmp = fread(&procsperfile,sizeof(int),1,fp);
 
       for (int i = 0; i < procsperfile; i++) {
-        fread(&flag,sizeof(int),1,fp);
+        tmp = fread(&flag,sizeof(int),1,fp);
         if (flag != PERPROC)
           error->one(FLERR,"Invalid flag in peratom section of restart file");
 
-        fread(&n_big,sizeof(bigint),1,fp);
+        tmp = fread(&n_big,sizeof(bigint),1,fp);
         if (n_big > MAXSMALLINT)
           error->one(FLERR,"Restart file read buffer too large, use global mem/limit");
         n = n_big;
@@ -325,7 +326,7 @@ void ReadRestart::command(int narg, char **arg)
           memory->destroy(buf);
           memory->create(buf,maxbuf,"read_restart:buf");
         }
-        fread(buf,sizeof(char),n,fp);
+        tmp = fread(buf,sizeof(char),n,fp);
 
         n = grid->unpack_restart(buf);
         create_child_cells(0);
@@ -357,29 +358,29 @@ void ReadRestart::command(int narg, char **arg)
         error->one(FLERR,str);
       }
 
-      fread(&flag,sizeof(int),1,fp);
+      tmp = fread(&flag,sizeof(int),1,fp);
       if (flag != PROCSPERFILE)
         error->one(FLERR,"Invalid flag in peratom section of restart file");
       int procsperfile;
-      fread(&procsperfile,sizeof(int),1,fp);
+      tmp = fread(&procsperfile,sizeof(int),1,fp);
 
       int step_size,npasses;
 
       for (int i = 0; i < procsperfile; i++) {
-        fread(&flag,sizeof(int),1,fp);
+        tmp = fread(&flag,sizeof(int),1,fp);
         if (flag != PERPROC)
           error->one(FLERR,"Invalid flag in peratom section of restart file");
 
-        fread(&n_big,sizeof(bigint),1,fp);
+        tmp = fread(&n_big,sizeof(bigint),1,fp);
 
         int grid_nlocal;
-        fread(&grid_nlocal,sizeof(int),1,fp);
+        tmp = fread(&grid_nlocal,sizeof(int),1,fp);
         fseek(fp,-sizeof(int),SEEK_CUR);
         int grid_read_size = grid->size_restart(grid_nlocal);
         bigint particle_read_size = n_big - grid_read_size;
         int particle_nlocal;
         fseek(fp,grid_read_size,SEEK_CUR);
-        fread(&particle_nlocal,sizeof(int),1,fp);
+        tmp = fread(&particle_nlocal,sizeof(int),1,fp);
         fseek(fp,-(sizeof(int)+grid_read_size),SEEK_CUR);
 
         if (update->mem_limit_grid_flag)
@@ -419,7 +420,7 @@ void ReadRestart::command(int narg, char **arg)
             if (ii == npasses-1) n = particle_read_size - total_read_part;
             total_read_part += n;
           }
-          fread(buf,sizeof(char),n,fp);
+          tmp = fread(buf,sizeof(char),n,fp);
 
           if (ii == 0) {
             grid->unpack_restart(buf);
@@ -488,10 +489,10 @@ void ReadRestart::command(int narg, char **arg)
     int flag,procsperfile;
 
     if (filereader) {
-      fread(&flag,sizeof(int),1,fp);
+      tmp = fread(&flag,sizeof(int),1,fp);
       if (flag != PROCSPERFILE)
         error->one(FLERR,"Invalid flag in peratom section of restart file");
-      fread(&procsperfile,sizeof(int),1,fp);
+      tmp = fread(&procsperfile,sizeof(int),1,fp);
     }
     MPI_Bcast(&procsperfile,1,MPI_INT,0,clustercomm);
 
@@ -499,7 +500,7 @@ void ReadRestart::command(int narg, char **arg)
     if (procsperfile == nclusterprocs) procmatch = 1;
     else procmatch = 0;
 
-    int tmp,iproc;
+    int iproc;
     MPI_Status status;
     MPI_Request request;
 
@@ -507,20 +508,20 @@ void ReadRestart::command(int narg, char **arg)
 
     for (int i = 0; i < procsperfile; i++) {
       if (filereader) {
-        fread(&flag,sizeof(int),1,fp);
+        tmp = fread(&flag,sizeof(int),1,fp);
         if (flag != PERPROC)
           error->one(FLERR,"Invalid flag in peratom section of restart file");
 
-        fread(&n_big,sizeof(bigint),1,fp);
+        tmp = fread(&n_big,sizeof(bigint),1,fp);
 
         int grid_nlocal;
-        fread(&grid_nlocal,sizeof(int),1,fp);
+        tmp = fread(&grid_nlocal,sizeof(int),1,fp);
         fseek(fp,-sizeof(int),SEEK_CUR);
         int grid_read_size = grid->size_restart(grid_nlocal);
         bigint particle_read_size = n_big - grid_read_size;
         int particle_nlocal;
         fseek(fp,grid_read_size,SEEK_CUR);
-        fread(&particle_nlocal,sizeof(int),1,fp);
+        tmp = fread(&particle_nlocal,sizeof(int),1,fp);
         fseek(fp,-(sizeof(int)+grid_read_size),SEEK_CUR);
 
         if (update->mem_limit_grid_flag)
@@ -566,7 +567,7 @@ void ReadRestart::command(int narg, char **arg)
             if (ii == npasses-1) n = particle_read_size - total_read_part;
             total_read_part += n;
           }
-          fread(buf,sizeof(char),n,fp);
+          tmp = fread(buf,sizeof(char),n,fp);
 
           if (i % nclusterprocs) {
             iproc = me + (i % nclusterprocs);
@@ -595,6 +596,7 @@ void ReadRestart::command(int narg, char **arg)
             memory->destroy(buf);
             memory->create(buf,maxbuf,"read_restart:buf");
           }
+          tmp = 0;
           MPI_Irecv(buf,n,MPI_CHAR,fileproc,0,world,&request);
           MPI_Send(&tmp,0,MPI_INT,fileproc,0,world);
           MPI_Wait(&request,&status);
@@ -655,10 +657,10 @@ void ReadRestart::command(int narg, char **arg)
     int flag,procsperfile;
 
     if (filereader) {
-      fread(&flag,sizeof(int),1,fp);
+      tmp = fread(&flag,sizeof(int),1,fp);
       if (flag != PROCSPERFILE)
         error->one(FLERR,"Invalid flag in peratom section of restart file");
-      fread(&procsperfile,sizeof(int),1,fp);
+      tmp = fread(&procsperfile,sizeof(int),1,fp);
     }
     MPI_Bcast(&procsperfile,1,MPI_INT,0,clustercomm);
 
@@ -672,11 +674,11 @@ void ReadRestart::command(int narg, char **arg)
 
     for (int i = 0; i < procsperfile; i++) {
       if (filereader) {
-        fread(&flag,sizeof(int),1,fp);
+        tmp = fread(&flag,sizeof(int),1,fp);
         if (flag != PERPROC)
           error->one(FLERR,"Invalid flag in peratom section of restart file");
 
-        fread(&n_big,sizeof(bigint),1,fp);
+        tmp = fread(&n_big,sizeof(bigint),1,fp);
         if (n_big > MAXSMALLINT)
           error->one(FLERR,"Restart file read buffer too large, use global mem/limit");
         n = n_big;
@@ -685,7 +687,7 @@ void ReadRestart::command(int narg, char **arg)
           memory->destroy(buf);
           memory->create(buf,maxbuf,"read_restart:buf");
         }
-        fread(buf,sizeof(char),n,fp);
+        tmp = fread(buf,sizeof(char),n,fp);
 
         if (i % nclusterprocs) {
           iproc = me + (i % nclusterprocs);
@@ -701,6 +703,7 @@ void ReadRestart::command(int narg, char **arg)
           memory->destroy(buf);
           memory->create(buf,maxbuf,"read_restart:buf");
         }
+        tmp = 0;
         MPI_Irecv(buf,n,MPI_CHAR,fileproc,0,world,&request);
         MPI_Send(&tmp,0,MPI_INT,fileproc,0,world);
         MPI_Wait(&request,&status);
@@ -1362,7 +1365,7 @@ void ReadRestart::magic_string()
 void ReadRestart::endian()
 {
   int endian;
-  if (me == 0) fread(&endian,sizeof(int),1,fp);
+  if (me == 0) int tmp = fread(&endian,sizeof(int),1,fp);
   MPI_Bcast(&endian,1,MPI_INT,0,world);
   if (endian == ENDIAN) return;
   if (endian == ENDIANSWAP)
@@ -1375,7 +1378,7 @@ void ReadRestart::endian()
 int ReadRestart::version_numeric()
 {
   int vn;
-  if (me == 0) fread(&vn,sizeof(int),1,fp);
+  if (me == 0) int tmp = fread(&vn,sizeof(int),1,fp);
   MPI_Bcast(&vn,1,MPI_INT,0,world);
   if (vn != VERSION_NUMERIC) return 1;
   return 0;
@@ -1388,7 +1391,7 @@ int ReadRestart::version_numeric()
 int ReadRestart::read_int()
 {
   int value;
-  if (me == 0) fread(&value,sizeof(int),1,fp);
+  if (me == 0) int tmp = fread(&value,sizeof(int),1,fp);
   MPI_Bcast(&value,1,MPI_INT,0,world);
   return value;
 }
@@ -1400,7 +1403,7 @@ int ReadRestart::read_int()
 bigint ReadRestart::read_bigint()
 {
   bigint value;
-  if (me == 0) fread(&value,sizeof(bigint),1,fp);
+  if (me == 0) int tmp = fread(&value,sizeof(bigint),1,fp);
   MPI_Bcast(&value,1,MPI_SPARTA_BIGINT,0,world);
   return value;
 }
@@ -1412,7 +1415,7 @@ bigint ReadRestart::read_bigint()
 double ReadRestart::read_double()
 {
   double value;
-  if (me == 0) fread(&value,sizeof(double),1,fp);
+  if (me == 0) int tmp = fread(&value,sizeof(double),1,fp);
   MPI_Bcast(&value,1,MPI_DOUBLE,0,world);
   return value;
 }
@@ -1424,11 +1427,11 @@ double ReadRestart::read_double()
 
 char *ReadRestart::read_string()
 {
-  int n;
-  if (me == 0) fread(&n,sizeof(int),1,fp);
+  int n,tmp;
+  if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
   MPI_Bcast(&n,1,MPI_INT,0,world);
   char *value = new char[n];
-  if (me == 0) fread(value,sizeof(char),n,fp);
+  if (me == 0) tmp = fread(value,sizeof(char),n,fp);
   MPI_Bcast(value,n,MPI_CHAR,0,world);
   return value;
 }
@@ -1439,7 +1442,7 @@ char *ReadRestart::read_string()
 
 void ReadRestart::read_int_vec(int n, int *vec)
 {
-  if (me == 0) fread(vec,sizeof(int),n,fp);
+  if (me == 0) int tmp = fread(vec,sizeof(int),n,fp);
   MPI_Bcast(vec,n,MPI_INT,0,world);
 }
 
@@ -1449,7 +1452,7 @@ void ReadRestart::read_int_vec(int n, int *vec)
 
 void ReadRestart::read_double_vec(int n, double *vec)
 {
-  if (me == 0) fread(vec,sizeof(double),n,fp);
+  if (me == 0) int tmp = fread(vec,sizeof(double),n,fp);
   MPI_Bcast(vec,n,MPI_DOUBLE,0,world);
 }
 
@@ -1459,6 +1462,6 @@ void ReadRestart::read_double_vec(int n, double *vec)
 
 void ReadRestart::read_char_vec(bigint n, char *vec)
 {
-  if (me == 0) fread(vec,sizeof(char),n,fp);
+  if (me == 0) int tmp = fread(vec,sizeof(char),n,fp);
   MPI_Bcast(vec,(int)n,MPI_CHAR,0,world);
 }

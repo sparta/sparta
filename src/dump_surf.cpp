@@ -790,7 +790,7 @@ void DumpSurf::pack_custom(int n)
   int m;
 
   int index = custom[field2index[n]];
-  
+
   // for now, custom data only allowed for explicit all
   // so custom data is nlocal in length, not nown
   // when enable distributed, commented out lines replace 2 previous ones
