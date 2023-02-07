@@ -93,12 +93,6 @@ struct TagUpdateOptSingleStepMove{};
 template<int DIM, int SURF>
 struct TagSetParticleOptMoveFlags{};
 
-template<int DIM, int SURF>
-struct TagSetCellMinDistToSurf{};
-
-template<int DIM, int SURF>
-struct TagCheckCellMinDistToSplitCell{};
-
 
 class UpdateKokkos : public Update {
  public:
@@ -136,13 +130,6 @@ class UpdateKokkos : public Update {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagSetParticleOptMoveFlags<DIM,SURF>, const int&) const;
 
-  template<int DIM, int SURF>
-  KOKKOS_INLINE_FUNCTION
-  void operator()(TagSetCellMinDistToSurf<DIM,SURF>, const int&) const;
-
-  template<int DIM, int SURF>
-  KOKKOS_INLINE_FUNCTION
-  void operator()(TagCheckCellMinDistToSplitCell<DIM,SURF>, const int&) const;
 
   // specializations for DIM=3 -----------------------------------------
   template<int ATOMIC_REDUCTION>
@@ -152,14 +139,6 @@ class UpdateKokkos : public Update {
   template<int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
   void operator()(TagUpdateOptSingleStepMove<3,ATOMIC_REDUCTION>, const int&, UPDATE_REDUCE&) const;
-
-  template<int SURF>
-  KOKKOS_INLINE_FUNCTION
-  void operator()(TagSetCellMinDistToSurf<3,SURF>, const int&) const;
-
-  template<int SURF>
-  KOKKOS_INLINE_FUNCTION
-  void operator()(TagCheckCellMinDistToSplitCell<3,SURF>, const int&) const;
 
   template<int SURF>
   KOKKOS_INLINE_FUNCTION
@@ -374,14 +353,6 @@ class UpdateKokkos : public Update {
     }
   };
 
-  // define 2D cell surface faces for use in distance calculations (for opt particle moves)
-  KOKKOS_INLINE_FUNCTION
-  void setCellSurfaceFaces2D(double S[4][2][3], const int &i) const;
-
-  // define 3D cell surface faces for use in distance calculations (for opt particle moves)
-  KOKKOS_INLINE_FUNCTION
-  void setCellSurfaceFaces3D(double S[12][3][3], const int &i) const;
-
   // original move logic by particle (non-optimized move)
   template<int DIM, int SURF>
   void standardMove();
@@ -389,10 +360,6 @@ class UpdateKokkos : public Update {
   // optimized single step move by particle (requires structured grid)
   template<int DIM>
   void optSingleStepMove();
-
-  // driver to compute minimum distance from each cell to a surface (or to a split cell's faces)
-  template<int DIM, int SURF>
-  void setCellMinDistToSurfDriver();
 };
 
 }

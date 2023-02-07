@@ -17,7 +17,6 @@
 
 #include "math.h"
 #include "pointers.h"
-#include "grid.h"
 
 namespace SPARTA_NS {
 
@@ -172,7 +171,6 @@ class Update : protected Pointers {
   template<int SURF> void setParticleOptMoveFlags2D();      // set particle flags for 2D optimized moves
   template<int SURF> void setParticleOptMoveFlags3D();      // set particle flags for 3D optimized moves
   template<int DIM> void optSingleStepMove();               // optimized single step move
-  template<int DIM> void checkCellMinDistToSplitCell();     // check min distance from cell faces to split-cell faces
   template < int DIM, int SURF> void move();                // general move driver combining standard and opt moves
   template<int DIM, int SURF> void standardMove();          // original move logic by particle (non-optimized move)
 

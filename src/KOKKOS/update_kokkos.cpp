@@ -44,8 +44,6 @@
 #include "surf_collide_specular_kokkos.h"
 #include "kokkos_base.h"
 
-static bool setCellMinDistToSurfThisCycle = true;
-
 using namespace SPARTA_NS;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
@@ -59,7 +57,6 @@ enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // several files
 
 #define MAXSTUCK 20
 #define EPSPARAM 1.0e-7
-#define BIG 1.0e20
 
 // either set ID or PROC/INDEX, set other to -1
 
@@ -97,28 +94,28 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   d_nboundary_one = Kokkos::subview(d_scalars,2);
   d_nmigrate      = Kokkos::subview(d_scalars,3);
   d_nmigrate_opt  = Kokkos::subview(d_scalars,4);
-  d_entryexit     = Kokkos::subview(d_scalars,4);
-  d_ntouch_one    = Kokkos::subview(d_scalars,5);
-  d_nscheck_one   = Kokkos::subview(d_scalars,6);
-  d_nscollide_one = Kokkos::subview(d_scalars,7);
-  d_nreact_one    = Kokkos::subview(d_scalars,8);
-  d_nstuck        = Kokkos::subview(d_scalars,9);
-  d_naxibad       = Kokkos::subview(d_scalars,10);
-  d_error_flag    = Kokkos::subview(d_scalars,11);
+  d_entryexit     = Kokkos::subview(d_scalars,5);
+  d_ntouch_one    = Kokkos::subview(d_scalars,6);
+  d_nscheck_one   = Kokkos::subview(d_scalars,7);
+  d_nscollide_one = Kokkos::subview(d_scalars,8);
+  d_nreact_one    = Kokkos::subview(d_scalars,9);
+  d_nstuck        = Kokkos::subview(d_scalars,10);
+  d_naxibad       = Kokkos::subview(d_scalars,11);
+  d_error_flag    = Kokkos::subview(d_scalars,12);
 
   h_ncomm_one     = Kokkos::subview(h_scalars,0);
   h_nexit_one     = Kokkos::subview(h_scalars,1);
   h_nboundary_one = Kokkos::subview(h_scalars,2);
   h_nmigrate      = Kokkos::subview(h_scalars,3);
   h_nmigrate_opt  = Kokkos::subview(h_scalars,4);
-  h_entryexit     = Kokkos::subview(h_scalars,4);
-  h_ntouch_one    = Kokkos::subview(h_scalars,5);
-  h_nscheck_one   = Kokkos::subview(h_scalars,6);
-  h_nscollide_one = Kokkos::subview(h_scalars,7);
-  h_nreact_one    = Kokkos::subview(h_scalars,8);
-  h_nstuck        = Kokkos::subview(h_scalars,9);
-  h_naxibad       = Kokkos::subview(h_scalars,10);
-  h_error_flag    = Kokkos::subview(h_scalars,11);
+  h_entryexit     = Kokkos::subview(h_scalars,5);
+  h_ntouch_one    = Kokkos::subview(h_scalars,6);
+  h_nscheck_one   = Kokkos::subview(h_scalars,7);
+  h_nscollide_one = Kokkos::subview(h_scalars,8);
+  h_nreact_one    = Kokkos::subview(h_scalars,9);
+  h_nstuck        = Kokkos::subview(h_scalars,10);
+  h_naxibad       = Kokkos::subview(h_scalars,11);
+  h_error_flag    = Kokkos::subview(h_scalars,12);
 
   nboundary_tally = 0;
 }
@@ -309,7 +306,7 @@ void UpdateKokkos::run(int nsteps)
   if (grid->cellweightflag) cellweightflag = 1;
 
   // loop over timesteps
-  int oldmaxlevel = grid->maxlevel;
+
   for (int i = 0; i < nsteps; i++) {
 
     ntimestep++;
@@ -332,24 +329,13 @@ void UpdateKokkos::run(int nsteps)
 
     // move particles
 
-    if (grid->uniform && enableOptParticleMoves) {
+    if (grid->uniform && enableOptParticleMoves)
       optParticleMovesThisCycle = true;
-      if (i==0)
-        setCellMinDistToSurfThisCycle = true;
-      else {
-        if (grid->maxlevel != oldmaxlevel)
-          setCellMinDistToSurfThisCycle = true;
-        else
-          setCellMinDistToSurfThisCycle = false;
-      }
-    }
-    else {
+    else
       optParticleMovesThisCycle = false;
-      setCellMinDistToSurfThisCycle = false;
-    }
+
     if (cellweightflag) particle->pre_weight();
     (this->*moveptr)();
-    oldmaxlevel = grid->maxlevel;
     timer->stamp(TIME_MOVE);
 
     // communicate particles
@@ -656,14 +642,14 @@ template < int DIM, int SURF > void UpdateKokkos::standardMove() {
           sc_kk_transparent_copy[ntrans].copy((SurfCollideTransparentKokkos*)(surf->sc[n]));
           sc_type_list[n] = 4;
           sc_map[n] = ntrans;
-          ntrans++;        
+          ntrans++;
         } else {
           error->all(FLERR,"Unknown Kokkos surface collide method");
         }
       }
       if (nspec > KOKKOS_MAX_SURF_COLL_PER_TYPE || ndiff > KOKKOS_MAX_SURF_COLL_PER_TYPE ||
           nvan > KOKKOS_MAX_SURF_COLL_PER_TYPE || npist > KOKKOS_MAX_SURF_COLL_PER_TYPE ||
-          ntrans > KOKKOS_MAX_SURF_COLL_PER_TYPE)        
+          ntrans > KOKKOS_MAX_SURF_COLL_PER_TYPE)
         error->all(FLERR,"Kokkos currently supports two instances of each surface collide method");
     }
 
@@ -743,9 +729,9 @@ template < int DIM, int SURF > void UpdateKokkos::standardMove() {
     if (error_flag) {
       char str[128];
       sprintf(str,
-          "Particle being sent to self proc "
-          "on step " BIGINT_FORMAT,
-          update->ntimestep);
+              "Particle being sent to self proc "
+              "on step " BIGINT_FORMAT,
+              update->ntimestep);
       error->one(FLERR,str);
     }
 

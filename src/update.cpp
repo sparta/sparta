@@ -52,7 +52,6 @@ enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // several files
 
 #define MAXSTUCK 20
 #define EPSPARAM 1.0e-7
-#define BIG 1.0e20
 
 // either set ID or PROC/INDEX, set other to -1
 
@@ -61,8 +60,6 @@ enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // several files
 #define MOVE_DEBUG_PROC -1        // owning proc
 #define MOVE_DEBUG_INDEX -1   // particle index on owning proc
 #define MOVE_DEBUG_STEP 4107    // timestep
-
-static bool setCellMinDistToSurfThisCycle = true;
 
 /* ---------------------------------------------------------------------- */
 
@@ -261,7 +258,6 @@ void Update::run(int nsteps)
 
   // loop over timesteps
 
-  int oldmaxlevel = grid->maxlevel;
   for (int i = 0; i < nsteps; i++) {
 
     ntimestep++;
@@ -290,7 +286,6 @@ void Update::run(int nsteps)
       optParticleMovesThisCycle = false;
     if (cellweightflag) particle->pre_weight();
     (this->*moveptr)();
-    oldmaxlevel = grid->maxlevel;
     timer->stamp(TIME_MOVE);
 
     // communicate particles
@@ -334,7 +329,7 @@ template <int SURF> void Update::setParticleOptMoveFlags2D() {
   particles = particle->particles;
   int nlocal = particle->nlocal;
 
-  for (int i=0; i<nlocal; ++i) {
+  for (int i = 0; i < nlocal; ++i) {
 
     if (!optParticleMovesThisCycle) {
       particles[i].optMoveFlag = false;
@@ -358,6 +353,7 @@ template <int SURF> void Update::setParticleOptMoveFlags2D() {
       particles[i].optMoveFlag = false;
       continue;
     }
+
     particles[i].optMoveFlag = true;
   }
 }
