@@ -43,11 +43,12 @@ args = list of arguments for a particular style :l
       v_name = per-particle vector calculated by a particle-style variable with name :pre
 
   {grid} args = list of grid attributes
-    possible attributes = id, idstr, proc, xlo, ylo, zlo, xhi, yhi, zhi,
+    possible attributes = id, idstr, split, proc, xlo, ylo, zlo, xhi, yhi, zhi,
                           c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
 
       id = integer form of grid cell ID
       idstr = string form of grid cell ID
+      split = integer, either 0 (unsplit cell) or 1..N (split cell index + 1)
       proc = processor that owns grid cell
       xlo,ylo,zlo = coords of lower left corner of grid cell
       xhi,yhi,zhi = coords of lower left corner of grid cell
@@ -61,12 +62,14 @@ args = list of arguments for a particular style :l
 
   {surf} args = list of surf attributes
     possible attributes = id, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z, 
-                          c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
+                          p_ID, p_ID\[N\], c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
 
       id = surface element ID
       v1x,v1y,v1z = coords of 1st vertex in surface element
       v1x,v1y,v1z = coords of 2nd vertex in surface element
       v1x,v1y,v1z = coords of 3rd vertex in surface element
+      s_ID = custom per-surf vector with ID
+      s_ID\[N\] = Nth column of custom per-surf array with ID
       c_ID = per-surf vector calculated by a compute with ID
       c_ID\[N\] = Nth column of per-surf array calculated by a compute with ID, I can include wildcard (see below)
       f_ID = per-surf vector calculated by a fix with ID
@@ -407,6 +410,21 @@ The {v1x}, {v1y}, {v1z}, {v2x}, {v2y}, {v2z}, {v3x}, {v3y}, {v3z}
 attributes write the coordinates of the vertices of the end or corner
 points of the surface element.  The {v1z}, {v2z}, {v3x}, {v3y}, and
 {v3z} attributes cannot be used for a 2d simulation.
+
+The {s_ID} and {s_ID\[N\]} attributes allow custom per-surf vectors or
+arrays defined by a "fix"_fix.html or "surf_react"_surf_react.html
+command to be output.  The ID in the attribute should be replaced by
+the actual ID of the custom per-surf attribute that the fix or
+surf_react command defines.  See individal commands for details.
+E.g. the "fix surf/temp"_fix_surf_temp.html command defines a custom
+vector named by the user for the temperature of each surface element.
+And the "surf_react adsorb"_surf_react_adsorb.html command defines one
+per-surf array and 3 vectors.
+
+If {s_ID} is used as a attribute, the custom attribute must be a
+vector, and it is output.  If {s_ID\[N\]} is used, the custom
+attribute must be an array, and N must be in the range from 1-M, which
+will output the Nth column of the M-column array.
 
 The {c_ID} and {c_ID\[I\]} attributes allow per-surf vectors or arrays
 calculated by a "compute"_compute.html to be output.  The ID in the

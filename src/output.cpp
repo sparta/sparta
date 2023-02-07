@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -37,7 +37,7 @@ using namespace SPARTA_NS;
 #define DELTA 1
 
 /* ----------------------------------------------------------------------
-   initialize all output 
+   initialize all output
 ------------------------------------------------------------------------- */
 
 Output::Output(SPARTA *sparta) : Pointers(sparta)
@@ -45,10 +45,10 @@ Output::Output(SPARTA *sparta) : Pointers(sparta)
   // create default Stats class
 
   stats = new Stats(sparta);
-    
+
   stats_every = 0;
   var_stats = NULL;
-  
+
   ndump = 0;
   max_dump = 0;
   every_dump = NULL;
@@ -67,7 +67,7 @@ Output::Output(SPARTA *sparta) : Pointers(sparta)
 }
 
 /* ----------------------------------------------------------------------
-   free all memory 
+   free all memory
 ------------------------------------------------------------------------- */
 
 Output::~Output()
@@ -113,7 +113,7 @@ void Output::init()
 	error->all(FLERR,"Variable name for dump every does not exist");
       if (!input->variable->equal_style(ivar_dump[i]))
 	error->all(FLERR,"Variable for dump every is invalid style");
-    }  
+    }
 
   if (restart_flag_single && restart_every_single == 0) {
     ivar_restart_single = input->variable->find(var_restart_single);
@@ -261,7 +261,7 @@ void Output::setup(int memflag)
 ------------------------------------------------------------------------- */
 
 void Output::write(bigint ntimestep)
-{ 
+{
   // next_dump does not force output on last step of run
   // wrap dumps that invoke computes or eval of variable with clear/add
   // download data from GPU if necessary
@@ -381,7 +381,7 @@ void Output::write_dump(bigint ntimestep)
 ------------------------------------------------------------------------- */
 
 void Output::write_restart(bigint ntimestep)
-{  
+{
   if (restart_flag_single) {
     char *file = new char[strlen(restart1) + 16];
     char *ptr = strchr(restart1,'*');
@@ -497,7 +497,7 @@ void Output::reset_timestep(bigint ntimestep)
 }
 
 /* ----------------------------------------------------------------------
-   add a Dump to list of Dumps 
+   add a Dump to list of Dumps
 ------------------------------------------------------------------------- */
 
 void Output::add_dump(int narg, char **arg)
@@ -507,7 +507,7 @@ void Output::add_dump(int narg, char **arg)
   // error checks
 
   for (int idump = 0; idump < ndump; idump++)
-    if (strcmp(arg[0],dump[idump]->id) == 0) 
+    if (strcmp(arg[0],dump[idump]->id) == 0)
       error->all(FLERR,"Reuse of dump ID");
   if (atoi(arg[3]) <= 0) error->all(FLERR,"Invalid dump frequency");
 
@@ -545,7 +545,7 @@ void Output::add_dump(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-   modify parameters of a Dump 
+   modify parameters of a Dump
 ------------------------------------------------------------------------- */
 
 void Output::modify_dump(int narg, char **arg)
@@ -563,7 +563,7 @@ void Output::modify_dump(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-   delete a Dump from list of Dumps 
+   delete a Dump from list of Dumps
 ------------------------------------------------------------------------- */
 
 void Output::delete_dump(char *id)
@@ -611,7 +611,7 @@ void Output::set_stats(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-   new Stats style 
+   new Stats style
 ------------------------------------------------------------------------- */
 
 void Output::create_stats(int narg, char **arg)
@@ -704,7 +704,7 @@ void Output::create_restart(int narg, char **arg)
   if (strchr(arg[1],'%')) multiproc = comm->nprocs;
   else multiproc = 0;
   if (nfile == 2) {
-    if (multiproc && !strchr(arg[2],'%')) 
+    if (multiproc && !strchr(arg[2],'%'))
       error->all(FLERR,"Both restart files must use % or neither");
     if (!multiproc && strchr(arg[2],'%'))
       error->all(FLERR,"Both restart files must use % or neither");

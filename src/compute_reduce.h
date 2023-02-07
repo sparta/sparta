@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -35,17 +35,23 @@ class ComputeReduce : public Compute {
   bigint memory_usage();
 
  protected:
-  int me;
+  int me,nprocs;
   int mode,nvalues,iregion;
+  double area_total;
   int *which,*argindex,*flavor,*value2index;
   char **ids;
   double *onevec;
   int *replace,*indices,*owner;
   int index;
-  char *idregion;
+
+  char *subsetID;
+  int isubset;
+  int *s2g;
+  int gridgroupbit,surfgroupbit;
 
   int maxparticle,maxgrid;
   double *varparticle,*vargrid;
+  double *areasurf;
 
   struct Pair {
     double value;
@@ -54,7 +60,8 @@ class ComputeReduce : public Compute {
   Pair pairme,pairall;
 
   double compute_one(int, int);
-  bigint count(int);
+  bigint count_included();
+  double area_per_surf();
   void combine(double &, double, int);
 };
 

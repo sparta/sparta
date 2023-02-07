@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -17,13 +17,13 @@
 
 #include "pointers.h"
 #include "kokkos_type.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "error.h"
 
 namespace SPARTA_NS {
 
 struct RandWrap {
-  class RanPark* rng;
+  class RanKnuth* rng;
 
   KOKKOS_INLINE_FUNCTION
   RandWrap() {
@@ -46,13 +46,13 @@ class RandPoolWrap : protected Pointers {
   RandPoolWrap(int, class SPARTA *);
   ~RandPoolWrap();
   void destroy();
-  void init(RanPark*);
+  void init(RanKnuth*);
 
   KOKKOS_INLINE_FUNCTION
   RandWrap get_state() const
   {
-#ifdef KOKKOS_ENABLE_CUDA
-    error->all(FLERR,"Cannot use Park RNG with GPUs");
+#ifdef SPARTA_KOKKOS_GPU
+    error->all(FLERR,"Cannot use Knuth RNG with GPUs");
 #endif
 
     RandWrap rand_wrap;
@@ -60,22 +60,24 @@ class RandPoolWrap : protected Pointers {
     typedef Kokkos::Experimental::UniqueToken<
       DeviceType, Kokkos::Experimental::UniqueTokenScope::Global> unique_token_type;
 
+#ifndef SPARTA_KOKKOS_GPU
     unique_token_type unique_token;
     int tid = unique_token.acquire();
     rand_wrap.rng = random_thr[tid];
     unique_token.release(tid);
+#endif
 
     return rand_wrap;
   }
-  
+
   KOKKOS_INLINE_FUNCTION
   void free_state(RandWrap) const
   {
-  
+
   }
 
  private:
-  class RanPark **random_thr;
+  class RanKnuth **random_thr;
   int nthreads;
 };
 

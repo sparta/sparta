@@ -44,7 +44,7 @@
 */
 
 #include <Kokkos_Core.hpp>
-#include <hip/TestHIP_Category.hpp>
+#include <TestHIP_Category.hpp>
 
 struct DummyFunctor {
   using value_type = int;
@@ -52,15 +52,19 @@ struct DummyFunctor {
 };
 
 template <int N>
-__global__ void start_intra_block_scan() {
+__global__ void start_intra_block_scan()
+    __attribute__((amdgpu_flat_work_group_size(1, 1024))) {
   __shared__ DummyFunctor::value_type values[N];
-  const int i = hipThreadIdx_y;
+  const int i = threadIdx.y;
   values[i]   = i + 1;
   __syncthreads();
 
   DummyFunctor f;
-  Kokkos::Impl::hip_intra_block_reduce_scan<true, DummyFunctor, void>(f,
-                                                                      values);
+  typename Kokkos::Impl::FunctorAnalysis<
+      Kokkos::Impl::FunctorPatternInterface::SCAN,
+      Kokkos::RangePolicy<Kokkos::Experimental::HIP>, DummyFunctor>::Reducer
+      reducer(&f);
+  Kokkos::Impl::hip_intra_block_reduce_scan<true>(reducer, values);
 
   __syncthreads();
   if (values[i] != ((i + 2) * (i + 1)) / 2) {
@@ -74,7 +78,7 @@ template <int N>
 void test_intra_block_scan() {
   dim3 grid(1, 1, 1);
   dim3 block(1, N, 1);
-  hipLaunchKernelGGL(start_intra_block_scan<N>, grid, block, 0, 0);
+  start_intra_block_scan<N><<<grid, block, 0, nullptr>>>();
 }
 
 TEST(TEST_CATEGORY, scan_unit) {
@@ -90,8 +94,7 @@ TEST(TEST_CATEGORY, scan_unit) {
     test_intra_block_scan<64>();
     test_intra_block_scan<128>();
     test_intra_block_scan<256>();
-    // FIXME_HIP block sizes larger than 256 give wrong results.
-    // test_intra_block_scan<512>();
-    // test_intra_block_scan<1024>();
+    test_intra_block_scan<512>();
+    test_intra_block_scan<1024>();
   }
 }

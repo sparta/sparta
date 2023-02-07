@@ -48,8 +48,8 @@ class ComputeCountKokkos : public ComputeCount, public KokkosBase {
   DAT::tdual_int_1d k_count;
   DAT::t_int_1d d_count;
   int need_dup;
-  Kokkos::Experimental::ScatterView<int*, typename DAT::t_int_1d::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterDuplicated> dup_count;
-  Kokkos::Experimental::ScatterView<int*, typename DAT::t_int_1d::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterNonDuplicated> ndup_count;
+  Kokkos::Experimental::ScatterView<int*, typename DAT::t_int_1d::array_layout,DeviceType,typename Kokkos::Experimental::ScatterSum,typename Kokkos::Experimental::ScatterDuplicated> dup_count;
+  Kokkos::Experimental::ScatterView<int*, typename DAT::t_int_1d::array_layout,DeviceType,typename Kokkos::Experimental::ScatterSum,typename Kokkos::Experimental::ScatterNonDuplicated> ndup_count;
 
   t_particle_1d d_particles;
 

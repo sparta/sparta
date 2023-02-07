@@ -7,7 +7,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -45,14 +45,14 @@ class Surf : protected Pointers {
 
   // surf data structs
   // explicit, all: each proc owns all surfs
-  //   nlocal = Nsurf, nghost = 0, tris = all surfs
-  //   nown = Nsurf/P, mytris = NULL
+  //   nlocal = Nsurf, nghost = 0
+  //   tris = all surfs, nown = Nsurf/P, mytris = NULL
   // explicit, distributed: each proc owns N/P surfs
-  //   nlocal/nghost = surfs in owned/ghost grid cells, tris = nloc+ngh surfs
-  //   nown = Nsurf/P, mytris = surfs I uniquely own
+  //   nlocal/nghost = surfs in owned/ghost grid cells
+  //   tris = nloc+ngh surfs, nown = Nsurf/P, mytris = surfs I uniquely own
   // implicit, distributed: each proc owns surfs in its owned grid cells
   //   nlocal = surfs in owned grid cells, nghost = surfs in ghost grid cells
-  //   nown = nlocal, mytris = NULL
+  //   tris = nloc+ngh surfs, nown = nlocal, mytris = NULL
 
   bigint nsurf;             // total # of surf elements, lines or tris
 
@@ -84,12 +84,12 @@ class Surf : protected Pointers {
   Tri *tris;                // list of tris for surface collisions
   int nlocal;               // # of lines or tris
                             // explicit, all: nlocal = nsurf
-                            // explicit, distributed: 
+                            // explicit, distributed:
                             //   surfs which overlap my owned grid cells
                             // implicit: surfs within my owned grid cells
   int nghost;               // # of ghost surfs I store for collisions
                             // explicit, all: nghost = 0
-                            // explicit, distributed: 
+                            // explicit, distributed:
                             //   surfs which overlap my ghost grid cells
                             // implicit: surfs within my ghost grid cells
   int nmax;                 // max length of lines/tris vecs
@@ -99,6 +99,9 @@ class Surf : protected Pointers {
   Tri *mytris;              // list of tris assigned uniquely to me
                             //   only for explicit, distributed
   int nown;                 // # of lines or tris I own uniquely
+                            // explicit, all: nown = nsurf/P
+                            // explicit, distributed: nown for mylines/mytris
+                            // implicit: not defined
   int maxown;               // max length of owned lines/tris vecs
 
   Line *tmplines;           // list of temporary lines, filled by ReadSurf
@@ -114,6 +117,21 @@ class Surf : protected Pointers {
   double pushlo,pushhi;     // lo/hi ranges to push on
   double pushvalue;         // new position to push to
 
+  // extra custom vectors/arrays for per-surf data
+  // ncustom > 0 if there are any extra arrays
+  // custom attributes are created by various commands
+  // these variables are public, others below are private
+
+  int ncustom;              // # of custom attributes, some may be deleted
+  int *etype;               // type = INT/DOUBLE of each attribute
+  int *esize;               // size = 0 for vector, N for array columns
+  int *ewhich;              // index into eivec,eiarray,edvec,edarray for data
+
+  int **eivec;              // pointer to each integer vector
+  int ***eiarray;           // pointer to each integer array
+  double **edvec;           // pointer to each double vector
+  double ***edarray;        // pointer to each double array
+
 #include "hash_options.h"
 
 #ifdef SPARTA_MAP
@@ -121,7 +139,7 @@ class Surf : protected Pointers {
   typedef std::map<OnePoint2d,int> MyHashPoint;
   typedef std::map<OnePoint2d,int>::iterator MyPointIt;
   typedef std::map<TwoPoint3d,int> MyHash2Point;
-  typedef std::map<TwoPoint3d,int>::iterator My2PointIt;#
+  typedef std::map<TwoPoint3d,int>::iterator My2PointIt;
   typedef std::map<cellint,int> MyCellHash;
 #elif defined SPARTA_UNORDERED_MAP
   typedef std::unordered_map<surfint,int> MySurfHash;
@@ -145,7 +163,7 @@ class Surf : protected Pointers {
   int hashfilled;             // 1 if hash is filled with surf IDs
 
   Surf(class SPARTA *);
-  ~Surf();
+  virtual ~Surf();
   void global(char *);
   void modify_params(int, char **);
   void init();
@@ -164,7 +182,8 @@ class Surf : protected Pointers {
   int all_transparent();
 
   void setup_owned();
-  void setup_bbox();
+  void bbox_all();
+  void bbox_one(void *, double *, double *);
 
   void compute_line_normal(int);
   void compute_tri_normal(int);
@@ -198,9 +217,9 @@ class Surf : protected Pointers {
   void group(int, char **);
   int add_group(const char *);
   int find_group(const char *);
-  
-  void compress_implicit_rebalance();
-  void compress_explicit_rebalance();
+
+  void compress_explicit();
+  void compress_implicit();
 
   void collate_vector(int, surfint *, double *, int, double *);
   void collate_vector_reduce(int, surfint *, double *, int, double *);
@@ -217,8 +236,17 @@ class Surf : protected Pointers {
   void redistribute_tris_clip(int, int);
   void redistribute_tris_temporary(int);
 
+  int find_custom(char *);
+  void error_custom();
+  virtual int add_custom(char *, int, int);
+  virtual void allocate_custom(int, int);
+  virtual void remove_custom(int);
+
   void write_restart(FILE *);
   void read_restart(FILE *);
+  void write_restart_custom(FILE *);
+  void read_restart_custom(FILE *);
+
   virtual void grow(int);
   virtual void grow_own(int);
   virtual void grow_temporary(int);
@@ -228,7 +256,7 @@ class Surf : protected Pointers {
   int me,nprocs;
   int maxsc;                // max # of models in sc
   int maxsr;                // max # of models in sr
-  
+
   // collate vector rendezvous data
 
   struct InRvousVec {
@@ -270,8 +298,29 @@ class Surf : protected Pointers {
     ubuf(int arg) : i(arg) {}
   };
 
+  // extra custom vectors/arrays for per-surf data
+  // these variables are private, others above are public
+
+  char **ename;             // name of each attribute
+
+  int ncustom_ivec;         // # of integer vector attributes
+  int ncustom_iarray;       // # of integer array attributes
+  int *icustom_ivec;        // index into ncustom for each integer vector
+  int *icustom_iarray;      // index into ncustom for each integer array
+  int *eicol;               // # of columns in each integer array (esize)
+
+  int ncustom_dvec;         // # of double vector attributes
+  int ncustom_darray;       // # of double array attributes
+  int *icustom_dvec;        // index into ncustom for each double vector
+  int *icustom_darray;      // index into ncustom for each double array
+  int *edcol;               // # of columns in each double array (esize)
+
+  int *custom_restart_flag; // flag on each custom vec/array read from restart
+                            // used to delete them if not redefined in
+                            // restart script
+
   // private methods
-  
+
   void point_line_compare(double *, double *, double *, double, int &, int &);
   void point_tri_compare(double *, double *, double *, double *, double *,
                          double, int &, int &, int, int, int);
@@ -287,17 +336,17 @@ class Surf : protected Pointers {
   void check_watertight_3d_distributed();
 
   // callback functions for rendezvous communication
- 
+
   static int rendezvous_vector(int, char *, int &, int *&, char *&, void *);
   static int rendezvous_array(int, char *, int &, int *&, char *&, void *);
   static int rendezvous_implicit(int, char *, int &, int *&, char *&, void *);
-  static int rendezvous_watertight_2d(int, char *, 
+  static int rendezvous_watertight_2d(int, char *,
                                       int &, int *&, char *&, void *);
-  static int rendezvous_watertight_3d(int, char *, 
+  static int rendezvous_watertight_3d(int, char *,
                                       int &, int *&, char *&, void *);
-  static int rendezvous_lines(int, char *, 
+  static int rendezvous_lines(int, char *,
                               int &, int *&, char *&, void *);
-  static int rendezvous_tris(int, char *, 
+  static int rendezvous_tris(int, char *,
                              int &, int *&, char *&, void *);
 };
 

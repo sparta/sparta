@@ -52,8 +52,8 @@ ComputePFluxGridKokkos::ComputePFluxGridKokkos(SPARTA *sparta, int narg, char **
   k_unique = DAT::tdual_int_1d("compute/pflux/grid:unique",npergroup);
   for (int m = 0; m < npergroup; m++)
     k_unique.h_view(m) = unique[m];
-  k_unique.modify<SPAHostType>();
-  k_unique.sync<DeviceType>();
+  k_unique.modify_host();
+  k_unique.sync_device();
   d_unique = k_unique.d_view;
 }
 
@@ -77,8 +77,8 @@ void ComputePFluxGridKokkos::compute_per_grid()
     ComputePFluxGrid::compute_per_grid();
   } else {
     compute_per_grid_kokkos();
-    k_tally.modify<DeviceType>();
-    k_tally.sync<SPAHostType>();
+    k_tally.modify_device();
+    k_tally.sync_host();
   }
 }
 
@@ -99,7 +99,7 @@ void ComputePFluxGridKokkos::compute_per_grid_kokkos()
   grid_kk->sync(Device,CINFO_MASK);
   d_cinfo = grid_kk->k_cinfo.d_view;
 
-  d_s2g = particle_kk->k_species2group.view<DeviceType>();
+  d_s2g = particle_kk->k_species2group.d_view;
   int nlocal = particle->nlocal;
 
   // zero all accumulators
@@ -113,9 +113,9 @@ void ComputePFluxGridKokkos::compute_per_grid_kokkos()
     need_dup = 0;
 
   if (need_dup)
-    dup_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterDuplicated>(d_tally);
+    dup_tally = Kokkos::Experimental::create_scatter_view<typename Kokkos::Experimental::ScatterSum, typename Kokkos::Experimental::ScatterDuplicated>(d_tally);
   else
-    ndup_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterNonDuplicated>(d_tally);
+    ndup_tally = Kokkos::Experimental::create_scatter_view<typename Kokkos::Experimental::ScatterSum, typename Kokkos::Experimental::ScatterNonDuplicated>(d_tally);
 
   copymode = 1;
   if (particle_kk->sorted_kk && sparta->kokkos->need_atomics && !sparta->kokkos->atomic_reduction)
@@ -126,7 +126,6 @@ void ComputePFluxGridKokkos::compute_per_grid_kokkos()
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputePFluxGrid_compute_per_grid_atomic<0> >(0,nlocal),*this);
   }
-  DeviceType().fence();
   copymode = 0;
 
   if (need_dup) {
@@ -146,8 +145,8 @@ void ComputePFluxGridKokkos::operator()(TagComputePFluxGrid_compute_per_grid_ato
 
   // The tally array is duplicated for OpenMP, atomic for CUDA, and neither for Serial
 
-  auto v_tally = ScatterViewHelper<NeedDup<NEED_ATOMICS,DeviceType>::value,decltype(dup_tally),decltype(ndup_tally)>::get(dup_tally,ndup_tally);
-  auto a_tally = v_tally.template access<AtomicDup<NEED_ATOMICS,DeviceType>::value>();
+  auto v_tally = ScatterViewHelper<typename NeedDup<NEED_ATOMICS,DeviceType>::value,decltype(dup_tally),decltype(ndup_tally)>::get(dup_tally,ndup_tally);
+  auto a_tally = v_tally.template access<typename AtomicDup<NEED_ATOMICS,DeviceType>::value>();
 
   const int ispecies = d_particles[i].ispecies;
   const int igroup = d_s2g(imix,ispecies);
@@ -294,6 +293,7 @@ void ComputePFluxGridKokkos::post_process_grid_kokkos(int index, int nsample,
   int hi = nglocal;
 
   if (!d_etally.data()) {
+    nsample = 1;
     d_etally = d_tally;
     emap = map[index];
     d_vec = d_vector;
@@ -302,7 +302,7 @@ void ComputePFluxGridKokkos::post_process_grid_kokkos(int index, int nsample,
 
   this->d_etally = d_etally;
   this->d_vec = d_vec;
-  this->nstride = nstride;
+  this->nsample = nsample;
 
   // compute normalized final value for each grid cell
   // Vcm = Sum mv / Sum m = (Wx,Wy,Wz)
@@ -330,7 +330,6 @@ void ComputePFluxGridKokkos::post_process_grid_kokkos(int index, int nsample,
       mvv = emap[2];
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputePFluxGrid_post_process_grid_diag>(lo,hi),*this);
-      DeviceType().fence();
       copymode = 0;
       break;
     }
@@ -343,7 +342,6 @@ void ComputePFluxGridKokkos::post_process_grid_kokkos(int index, int nsample,
       mvv = emap[3];
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputePFluxGrid_post_process_grid_offdiag>(lo,hi),*this);
-      DeviceType().fence();
       copymode = 0;
       break;
     }
@@ -360,7 +358,7 @@ void ComputePFluxGridKokkos::operator()(TagComputePFluxGrid_post_process_grid_di
   else{
     wt = fnum * d_cinfo[icell].weight / d_cinfo[icell].volume;
     summv = d_etally(icell,mv);
-    d_vec[icell] = wt * (d_etally(icell,mvv) - summv*summv/summass);
+    d_vec[icell] = wt/nsample * (d_etally(icell,mvv) - summv*summv/summass);
   }
 }
 
@@ -373,8 +371,8 @@ void ComputePFluxGridKokkos::operator()(TagComputePFluxGrid_post_process_grid_of
   if (summass == 0.0) d_vec[icell] = 0.0;
   else{
     wt = fnum * d_cinfo[icell].weight / d_cinfo[icell].volume;
-    d_vec[icell] = wt * (d_etally(icell,mvv) -
-                         d_etally(icell,mv1)*d_etally(icell,mv2)/summass);
+    d_vec[icell] = wt/nsample * (d_etally(icell,mvv) -
+                                 d_etally(icell,mv1)*d_etally(icell,mv2)/summass);
   }
 }
 

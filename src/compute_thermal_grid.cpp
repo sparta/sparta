@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -43,7 +43,7 @@ ComputeThermalGrid::ComputeThermalGrid(SPARTA *sparta, int narg, char **arg) :
   groupbit = grid->bitmask[igroup];
 
   imix = particle->find_mixture(arg[3]);
-  if (imix < 0) 
+  if (imix < 0)
     error->all(FLERR,"Compute thermal/grid mixture ID does not exist");
   ngroup = particle->mixture[imix]->ngroup;
 
@@ -151,7 +151,7 @@ void ComputeThermalGrid::compute_per_grid()
 
     vec = tally[icell];
     k = igroup*npergroup;
-    
+
     vec[k++] += 1.0;
     vec[k++] += mass;
     vec[k++] += mass*v[0];
@@ -237,7 +237,7 @@ post_process_grid(int index, int nsample,
   for (int icell = lo; icell < hi; icell++) {
     values = etally[icell];
     ncount = values[n];
-    if (ncount == 0.0) vec[k] = 0.0;
+    if (ncount <= 1.0) vec[k] = 0.0;
     else {
       mass = values[n+1];
       mvx = values[n+2];

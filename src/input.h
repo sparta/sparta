@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -31,7 +31,7 @@ class Input : protected Pointers {
   void file();                   // process all input
   void file(const char *);       // process an input script
   char *one(const char *);       // process a single command
-  void substitute(char *&, char *&, int &, int &, int);  
+  void substitute(char *&, char *&, int &, int &, int);
                                  // substitute for variables in a string
   int expand_args(int, char **, int, char **&);  // expand args due to wildcard
 
@@ -98,6 +98,7 @@ class Input : protected Pointers {
   void restart();
   void seed();
   void species();
+  void species_modify();
   void stats();
   void stats_modify();
   void stats_style();

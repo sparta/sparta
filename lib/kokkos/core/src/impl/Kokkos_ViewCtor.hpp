@@ -49,32 +49,19 @@
 //----------------------------------------------------------------------------
 
 namespace Kokkos {
-
-/* For backward compatibility */
-
-struct ViewAllocateWithoutInitializing {
-  const std::string label;
-
-  ViewAllocateWithoutInitializing() : label() {}
-
-  explicit ViewAllocateWithoutInitializing(const std::string &arg_label)
-      : label(arg_label) {}
-
-  explicit ViewAllocateWithoutInitializing(const char *const arg_label)
-      : label(arg_label) {}
-};
-
-} /* namespace Kokkos */
-
-//----------------------------------------------------------------------------
-//----------------------------------------------------------------------------
-
-namespace Kokkos {
 namespace Impl {
 
 struct WithoutInitializing_t {};
 struct AllowPadding_t {};
-struct NullSpace_t {};
+
+template <typename>
+struct is_view_ctor_property : public std::false_type {};
+
+template <>
+struct is_view_ctor_property<WithoutInitializing_t> : public std::true_type {};
+
+template <>
+struct is_view_ctor_property<AllowPadding_t> : public std::true_type {};
 
 //----------------------------------------------------------------------------
 /**\brief Whether a type can be used for a view label */
@@ -100,10 +87,15 @@ struct ViewCtorProp;
 template <typename Specialize, typename T>
 struct CommonViewAllocProp;
 
+/* Dummy to allow for empty ViewCtorProp object
+ */
+template <>
+struct ViewCtorProp<void> {};
+
 /* Common value_type stored as ViewCtorProp
  */
 template <typename Specialize, typename T>
-struct ViewCtorProp<void, CommonViewAllocProp<Specialize, T> > {
+struct ViewCtorProp<void, CommonViewAllocProp<Specialize, T>> {
   ViewCtorProp()                     = default;
   ViewCtorProp(const ViewCtorProp &) = default;
   ViewCtorProp &operator=(const ViewCtorProp &) = default;
@@ -122,7 +114,7 @@ struct ViewCtorProp<void, CommonViewAllocProp<Specialize, T> > {
  *  that avoid duplicate base class errors
  */
 template <unsigned I>
-struct ViewCtorProp<void, std::integral_constant<unsigned, I> > {
+struct ViewCtorProp<void, std::integral_constant<unsigned, I>> {
   ViewCtorProp()                     = default;
   ViewCtorProp(const ViewCtorProp &) = default;
   ViewCtorProp &operator=(const ViewCtorProp &) = default;
@@ -133,30 +125,29 @@ struct ViewCtorProp<void, std::integral_constant<unsigned, I> > {
 
 /* Property flags have constexpr value */
 template <typename P>
-struct ViewCtorProp<typename std::enable_if<
-                        std::is_same<P, AllowPadding_t>::value ||
-                        std::is_same<P, WithoutInitializing_t>::value>::type,
-                    P> {
+struct ViewCtorProp<
+    std::enable_if_t<std::is_same<P, AllowPadding_t>::value ||
+                     std::is_same<P, WithoutInitializing_t>::value>,
+    P> {
   ViewCtorProp()                     = default;
   ViewCtorProp(const ViewCtorProp &) = default;
   ViewCtorProp &operator=(const ViewCtorProp &) = default;
 
-  typedef P type;
+  using type = P;
 
   ViewCtorProp(const type &) {}
 
-  static constexpr type value = type();
+  type value = type();
 };
 
 /* Map input label type to std::string */
 template <typename Label>
-struct ViewCtorProp<typename std::enable_if<is_view_label<Label>::value>::type,
-                    Label> {
+struct ViewCtorProp<std::enable_if_t<is_view_label<Label>::value>, Label> {
   ViewCtorProp()                     = default;
   ViewCtorProp(const ViewCtorProp &) = default;
   ViewCtorProp &operator=(const ViewCtorProp &) = default;
 
-  typedef std::string type;
+  using type = std::string;
 
   ViewCtorProp(const type &arg) : value(arg) {}
   ViewCtorProp(type &&arg) : value(arg) {}
@@ -165,15 +156,14 @@ struct ViewCtorProp<typename std::enable_if<is_view_label<Label>::value>::type,
 };
 
 template <typename Space>
-struct ViewCtorProp<typename std::enable_if<
-                        Kokkos::Impl::is_memory_space<Space>::value ||
-                        Kokkos::Impl::is_execution_space<Space>::value>::type,
+struct ViewCtorProp<std::enable_if_t<Kokkos::is_memory_space<Space>::value ||
+                                     Kokkos::is_execution_space<Space>::value>,
                     Space> {
   ViewCtorProp()                     = default;
   ViewCtorProp(const ViewCtorProp &) = default;
   ViewCtorProp &operator=(const ViewCtorProp &) = default;
 
-  typedef Space type;
+  using type = Space;
 
   ViewCtorProp(const type &arg) : value(arg) {}
 
@@ -186,7 +176,7 @@ struct ViewCtorProp<void, T *> {
   ViewCtorProp(const ViewCtorProp &) = default;
   ViewCtorProp &operator=(const ViewCtorProp &) = default;
 
-  typedef T *type;
+  using type = T *;
 
   KOKKOS_INLINE_FUNCTION
   ViewCtorProp(const type arg) : value(arg) {}
@@ -194,20 +184,49 @@ struct ViewCtorProp<void, T *> {
   type value;
 };
 
+// For some reason I don't understand I needed this specialization explicitly
+// for NVCC/MSVC
+template <typename T>
+struct ViewCtorProp<T *> {
+  ViewCtorProp()                     = default;
+  ViewCtorProp(const ViewCtorProp &) = default;
+  ViewCtorProp &operator=(const ViewCtorProp &) = default;
+
+  using type = T *;
+
+  KOKKOS_INLINE_FUNCTION
+  ViewCtorProp(const type arg) : value(arg) {}
+
+  enum : bool { has_pointer = true };
+  using pointer_type = type;
+  type value;
+};
+
+// If we use `ViewCtorProp<Args...>` and `ViewCtorProp<void, Args>...` directly
+// in the parameter lists and base class initializers, respectively, as far as
+// we can tell MSVC 16.5.5+CUDA 10.2 thinks that `ViewCtorProp` refers to the
+// current instantiation, not the template itself, and gets all kinds of
+// confused. To work around this, we just use a couple of alias templates that
+// amount to the same thing.
+template <typename... Args>
+using view_ctor_prop_args = ViewCtorProp<Args...>;
+
+template <typename Arg>
+using view_ctor_prop_base = ViewCtorProp<void, Arg>;
+
 template <typename... P>
 struct ViewCtorProp : public ViewCtorProp<void, P>... {
  private:
-  typedef Kokkos::Impl::has_condition<void, Kokkos::Impl::is_memory_space, P...>
-      var_memory_space;
+  using var_memory_space =
+      Kokkos::Impl::has_condition<void, Kokkos::is_memory_space, P...>;
 
-  typedef Kokkos::Impl::has_condition<void, Kokkos::Impl::is_execution_space,
-                                      P...>
-      var_execution_space;
+  using var_execution_space =
+      Kokkos::Impl::has_condition<void, Kokkos::is_execution_space, P...>;
 
   struct VOIDDUMMY {};
 
-  typedef Kokkos::Impl::has_condition<VOIDDUMMY, std::is_pointer, P...>
-      var_pointer;
+  using var_pointer =
+      Kokkos::Impl::has_condition<VOIDDUMMY, std::is_pointer, P...>;
 
  public:
   /* Flags for the common properties */
@@ -220,9 +239,9 @@ struct ViewCtorProp : public ViewCtorProp<void, P>... {
     initialize = !Kokkos::Impl::has_type<WithoutInitializing_t, P...>::value
   };
 
-  typedef typename var_memory_space::type memory_space;
-  typedef typename var_execution_space::type execution_space;
-  typedef typename var_pointer::type pointer_type;
+  using memory_space    = typename var_memory_space::type;
+  using execution_space = typename var_execution_space::type;
+  using pointer_type    = typename var_pointer::type;
 
   /*  Copy from a matching argument list.
    *  Requires  std::is_same< P , ViewCtorProp< void , Args >::value ...
@@ -236,15 +255,56 @@ struct ViewCtorProp : public ViewCtorProp<void, P>... {
         ViewCtorProp<void, typename ViewCtorProp<void, Args>::type>(args)... {}
 
   /* Copy from a matching property subset */
+  KOKKOS_INLINE_FUNCTION ViewCtorProp(pointer_type arg0)
+      : ViewCtorProp<void, pointer_type>(arg0) {}
+
+  // If we use `ViewCtorProp<Args...>` and `ViewCtorProp<void, Args>...` here
+  // directly, MSVC 16.5.5+CUDA 10.2 appears to think that `ViewCtorProp` refers
+  // to the current instantiation, not the template itself, and gets all kinds
+  // of confused. To work around this, we just use a couple of alias templates
+  // that amount to the same thing.
   template <typename... Args>
-  ViewCtorProp(ViewCtorProp<Args...> const &arg)
-      : ViewCtorProp<void, Args>(
-            static_cast<ViewCtorProp<void, Args> const &>(arg))... {
+  ViewCtorProp(view_ctor_prop_args<Args...> const &arg)
+      : view_ctor_prop_base<Args>(
+            static_cast<view_ctor_prop_base<Args> const &>(arg))... {
+    // Suppress an unused argument warning that (at least at one point) would
+    // show up if sizeof...(Args) == 0
     (void)arg;
   }
 };
 
 } /* namespace Impl */
+} /* namespace Kokkos */
+
+//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+
+namespace Kokkos {
+
+namespace Impl {
+struct ViewAllocateWithoutInitializingBackwardCompat {};
+
+template <>
+struct ViewCtorProp<void, ViewAllocateWithoutInitializingBackwardCompat> {};
+
+// NOTE This specialization is meant to be used as the
+// ViewAllocateWithoutInitializing alias below. All it does is add a
+// constructor that takes the label as single argument.
+template <>
+struct ViewCtorProp<WithoutInitializing_t, std::string,
+                    ViewAllocateWithoutInitializingBackwardCompat>
+    : ViewCtorProp<WithoutInitializing_t, std::string>,
+      ViewCtorProp<void, ViewAllocateWithoutInitializingBackwardCompat> {
+  ViewCtorProp(std::string label)
+      : ViewCtorProp<WithoutInitializing_t, std::string>(
+            WithoutInitializing_t(), std::move(label)) {}
+};
+} /* namespace Impl */
+
+using ViewAllocateWithoutInitializing =
+    Impl::ViewCtorProp<Impl::WithoutInitializing_t, std::string,
+                       Impl::ViewAllocateWithoutInitializingBackwardCompat>;
+
 } /* namespace Kokkos */
 
 //----------------------------------------------------------------------------

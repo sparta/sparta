@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -22,9 +22,6 @@ namespace SPARTA_NS {
 
 class Cut2d : protected Pointers {
  public:
-  int npushmax;          // # of push options to try
-  int npushcell[4];      // tally of cells that required surf point push
-
   struct Cline {
     double x[2],y[2];   // coords of end points of line clipped to cell
     int line;           // index in list of lines that intersect this cell
@@ -33,19 +30,19 @@ class Cut2d : protected Pointers {
   struct Point {
     double x[2];        // coords of point
     int type;           // type of pt = ENTRY,EXIT,TWO,CORNER
-                        // ENTRY/EXIT = only part of one Cline,
-                        //   could also be a geometric corner pt
-                        // TWO = part of two Clines
-                        // CORNER = part of no Cline, is a geometric corner pt
-    int next;           // index of next point when walking a loop
+                        // TWO if part of two Clines
+                        // ENTRY/EXIT if only part of one Cline
+                        // CORNER = part of no Cline, geometric corner pt
+    int next;           // index of next point when walking a flow area loop
                         // set for ENTRY/TWO pts between ENTRY and EXIT
                         // set for EXIT/CORNER points around cell perimeter,
                         //   though may not be walked
-    int line;           // original line (as stored by Cline) the pt starts,
+    int line;           // index of line this pt starts in intersecting line list
                         //   only set for ENTRY and TWO pts
-    int corner;         // 1,2,3,4 if x is a corner point, else 0
+    int corner;         // 1,2,3,4 if pt is geometrically a corner point, else 0
                         // could be ENTRY,EXIT,CORNER pt, but not a TWO pt
     int cprev,cnext;    // indices of pts in linked list around cell perimeter
+                        //   walking in counter-clockwise direction
     int side;           // which side of cell (0,1,2,3) pt is on
                         // only for ENTRY/EXIT/CORNER pts to make linked list
     double value;       // coord along the side
@@ -55,7 +52,9 @@ class Cut2d : protected Pointers {
   struct Loop {
     double area;        // area of loop
     int active;         // 1/0 if active or not
-    int flag;           // INTERIOR (if all TWO points) or BORDER
+    int flag;           // INTERIOR, if all TWO pts (TWO pt can be on border)
+                        // BORDER, if all CORNER pts
+                        // INTBORD, if otherwise
     int n;              // # of points in loop
     int first;          // index of first point in loop
     int next;           // index of next loop in same PG, -1 if last loop
@@ -75,7 +74,7 @@ class Cut2d : protected Pointers {
   Cut2d(class SPARTA *, int);
   ~Cut2d() {}
   int surf2grid(cellint, double *, double *, surfint *, int);
-  int surf2grid_list(cellint, double *, double *, int, surfint *, 
+  int surf2grid_list(cellint, double *, double *, int, surfint *,
                      surfint *, int);
   int surf2grid_one(double *, double *, double *, double *);
   int split(cellint, double *, double *, int, surfint *,
@@ -92,16 +91,14 @@ class Cut2d : protected Pointers {
   int nsurf;             // # of surf elements in cell
   surfint *surfs;        // indices of surf elements in cell
 
-  int pushflag;          // 0 for no push, else push surf points near cell surf
-  double pushlo,pushhi;  // lo/hi ranges to push on
-  double pushvalue;      // new position to push to
-  double pushlo_vec[3],pushhi_vec[3],pushvalue_vec[3];  // push values to try
-  int inout;             // orientation of lines that just touch cell
+  int grazecount;        // count of lines that graze cell surf w/ outward norm
+  int touchcount;        // count of line that only touch cell surf
+  int touchmark;         // corner marking inferred by touching lines
 
   MyVec<double> areas;   // areas of each flow polygon found
   MyVec<int> used;       // 0/1 flag for each point when walking loops
 
-  int build_clines();
+  void build_clines();
   int weiler_build();
   void weiler_loops();
   int loop2pg();
@@ -113,8 +110,6 @@ class Cut2d : protected Pointers {
   void clip(double *, double *, double *, double *);
 
   int ptflag(double *);
-  int push_increment();
-  void push(double *);
   int sameedge(double *, double *);
   int whichside(double *);
 

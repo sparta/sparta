@@ -51,13 +51,13 @@ ComputeSonineGridKokkos::ComputeSonineGridKokkos(SPARTA *sparta, int narg, char 
     k_moment.h_view(n) = moment[n];
     k_order.h_view(n) = order[n];
   }
-  k_which.modify<SPAHostType>();
-  k_moment.modify<SPAHostType>();
-  k_order.modify<SPAHostType>();
+  k_which.modify_host();
+  k_moment.modify_host();
+  k_order.modify_host();
 
-  k_which.sync<DeviceType>();
-  k_moment.sync<DeviceType>();
-  k_order.sync<DeviceType>();
+  k_which.sync_device();
+  k_moment.sync_device();
+  k_order.sync_device();
 
   d_which = k_which.d_view;
   d_moment = k_moment.d_view;
@@ -84,8 +84,8 @@ void ComputeSonineGridKokkos::compute_per_grid()
     ComputeSonineGrid::compute_per_grid();
   } else {
     compute_per_grid_kokkos();
-    k_tally.modify<DeviceType>();
-    k_tally.sync<SPAHostType>();
+    k_tally.modify_device();
+    k_tally.sync_host();
   }
 }
 
@@ -104,7 +104,7 @@ void ComputeSonineGridKokkos::compute_per_grid_kokkos()
   d_plist = grid_kk->d_plist;
   grid_kk->sync(Device,CINFO_MASK);
   d_cinfo = grid_kk->k_cinfo.d_view;
-  d_s2g = particle_kk->k_species2group.view<DeviceType>();
+  d_s2g = particle_kk->k_species2group.d_view;
   int nlocal = particle->nlocal;
 
   // zero all accumulators
@@ -116,12 +116,12 @@ void ComputeSonineGridKokkos::compute_per_grid_kokkos()
     need_dup = 0;
 
   if (need_dup) {
-    dup_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterDuplicated>(d_tally);
-    dup_vcom_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterDuplicated>(d_vcom);
+    dup_tally = Kokkos::Experimental::create_scatter_view<typename Kokkos::Experimental::ScatterSum, typename Kokkos::Experimental::ScatterDuplicated>(d_tally);
+    dup_vcom_tally = Kokkos::Experimental::create_scatter_view<typename Kokkos::Experimental::ScatterSum, typename Kokkos::Experimental::ScatterDuplicated>(d_vcom);
   }
   else {
-    ndup_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterNonDuplicated>(d_tally);
-    ndup_vcom_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterNonDuplicated>(d_vcom);
+    ndup_tally = Kokkos::Experimental::create_scatter_view<typename Kokkos::Experimental::ScatterSum, typename Kokkos::Experimental::ScatterNonDuplicated>(d_tally);
+    ndup_vcom_tally = Kokkos::Experimental::create_scatter_view<typename Kokkos::Experimental::ScatterSum, typename Kokkos::Experimental::ScatterNonDuplicated>(d_vcom);
   }
 
   // calculate center of mass velocity for each cell and group
@@ -133,10 +133,8 @@ void ComputeSonineGridKokkos::compute_per_grid_kokkos()
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeSonineGrid_compute_vcom_init_atomic<1> >(0,nlocal),*this);
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeSonineGrid_compute_vcom_init_atomic<0> >(0,nlocal),*this);
-    DeviceType().fence();
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeSonineGrid_normalize_vcom>(0,nglocal),*this);
   }
-  DeviceType().fence();
 
   if (need_dup) {
     Kokkos::Experimental::contribute(d_vcom, dup_vcom_tally);
@@ -152,7 +150,6 @@ void ComputeSonineGridKokkos::compute_per_grid_kokkos()
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeSonineGrid_compute_per_grid_atomic<0> >(0,nlocal),*this);
   }
-  DeviceType().fence();
   copymode = 0;
 
   if (need_dup) {
@@ -169,8 +166,8 @@ void ComputeSonineGridKokkos::operator()(TagComputeSonineGrid_compute_vcom_init_
   // compute COM velocity on this timestep for each cell and group
 
   // The tally array is duplicated for OpenMP, atomic for CUDA, and neither for Serial
-  auto v_com_tally = ScatterViewHelper<NeedDup<NEED_ATOMICS,DeviceType>::value,decltype(dup_vcom_tally),decltype(ndup_vcom_tally)>::get(dup_vcom_tally,ndup_vcom_tally);
-  auto a_vcom_tally = v_com_tally.template access<AtomicDup<NEED_ATOMICS,DeviceType>::value>();
+  auto v_com_tally = ScatterViewHelper<typename NeedDup<NEED_ATOMICS,DeviceType>::value,decltype(dup_vcom_tally),decltype(ndup_vcom_tally)>::get(dup_vcom_tally,ndup_vcom_tally);
+  auto a_vcom_tally = v_com_tally.template access<typename AtomicDup<NEED_ATOMICS,DeviceType>::value>();
 
   const int ispecies = d_particles[i].ispecies;
   const int igroup = d_s2g(imix,ispecies);
@@ -247,8 +244,8 @@ void ComputeSonineGridKokkos::operator()(TagComputeSonineGrid_compute_per_grid_a
 
   // The tally array is duplicated for OpenMP, atomic for CUDA, and neither for Serial
 
-  auto v_tally = ScatterViewHelper<NeedDup<NEED_ATOMICS,DeviceType>::value,decltype(dup_tally),decltype(ndup_tally)>::get(dup_tally,ndup_tally);
-  auto a_tally = v_tally.template access<AtomicDup<NEED_ATOMICS,DeviceType>::value>();
+  auto v_tally = ScatterViewHelper<typename NeedDup<NEED_ATOMICS,DeviceType>::value,decltype(dup_tally),decltype(ndup_tally)>::get(dup_tally,ndup_tally);
+  auto a_tally = v_tally.template access<typename AtomicDup<NEED_ATOMICS,DeviceType>::value>();
 
   const int ispecies = d_particles[i].ispecies;
   const int igroup = d_s2g(imix,ispecies);
@@ -390,7 +387,6 @@ void ComputeSonineGridKokkos::post_process_grid_kokkos(int index,
 
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeSonineGrid_post_process_grid>(lo,hi),*this);
-  DeviceType().fence();
   copymode = 0;
 }
 

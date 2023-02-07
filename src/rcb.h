@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -46,7 +46,7 @@ class RCB : protected Pointers {
   void stats(int);
 
   // RCB cut info
-  
+
   struct Median {
     double totallo,totalhi;   // weight in each half of active partition
     double valuelo,valuehi;   // position of dot(s) nearest to cut
@@ -54,7 +54,7 @@ class RCB : protected Pointers {
     int countlo,counthi;      // # of dots at that position
     int proclo,prochi;	      // unique proc who owns a nearest dot
   };
-  
+
   // bounding box
 
   struct BBox {
@@ -80,7 +80,7 @@ class RCB : protected Pointers {
     double cut;        	// position of cut
     int dim;	        // dimension = 0/1/2 of cut
   };
-  
+
   // inversion message
 
   struct Invert {

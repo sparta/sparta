@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -23,40 +23,36 @@ namespace SPARTA_NS {
 
 class Cut3d : protected Pointers {
  public:
-  int npushmax;           // # of push options to try
-  int npushcell[4];       // tally of cells that required surf point push
+  int ntiny,nshrink;
 
   Cut3d(class SPARTA *);
   ~Cut3d();
   int surf2grid(cellint, double *, double *, surfint *, int);
-  int surf2grid_list(cellint, double *, double *, int, surfint *, 
+  int surf2grid_list(cellint, double *, double *, int, surfint *,
                      surfint *, int);
   int surf2grid_one(double *, double *, double *, double *, double *);
   int split(cellint, double *, double *, int, surfint *,
             double *&, int *, int *, int &, double *);
-  int clip_external(double *, double *, double *, 
+  int clip_external(double *, double *, double *,
                     double *, double *, double *);
 
  private:
   int implicit;
 
   cellint id;            // ID of cell being worked on
-  double *lo,*hi;        // opposite corner pts of cell
-  int nsurf;             // # of surf elements in cell
-  surfint *surfs;        // indices of surf elements in cell
+  double lo[3],hi[3];    // opposite corner pts of cell being worked on
 
-  int pushflag;          // 0 for no push, else push surf points near cell surf
-  double pushlo,pushhi;  // lo/hi ranges to push on
-  double pushvalue;      // new position to push to
-  double pushlo_vec[3],pushhi_vec[3],pushvalue_vec[3];  // push values to try
-  int inout;             // orientation of triangles that just touch cell
+  int nsurf;             // # of surf elements in cell
+  surfint *surfs;        // indices of surf elements in cell, caller owns
+
+  int grazecount;        // count of tris that graze cell surf w/ outward norm
+  int touchcount;        // count of tris that only touch cell surf
+  int touchmark;         // corner marking inferred by touching tris
+  double epsilon;        // epsilon size for this cell
 
   double **path1,**path2;
 
-  // DEBUG
-  //int totcell,totsurf,totvert,totedge;
-
-  MyVec<double> vols;    // vols of each flow polyhedra found
+  MyVec<double> vols;    // vols of each flow polyhedron found
 
   int empty;
 
@@ -120,8 +116,14 @@ class Cut3d : protected Pointers {
   class Cut2d *cut2d;
 
   int clip(double *, double *, double *);
+
+  int split_try(cellint, int, surfint *,
+                double *&, int *, int *, int &, double *, int &);
+  void split_error(int);
+
   int add_tris();
-  int clip_tris();
+  void clip_tris();
+  void clip_adjust();
   void ctri_volume();
   int edge2face();
   void edge2clines(int);
@@ -149,9 +151,9 @@ class Cut3d : protected Pointers {
   void between(double *, double *, int, double, double *);
   int samepoint(double *, double *);
   int corner(double *);
+  int on_faces(double *, int *);
+  void move_to_faces(double *);
   int ptflag(double *);
-  int push_increment();
-  void push(double *);
 
   void failed_cell();
   void print_bpg(const char *);

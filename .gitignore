@@ -40,3 +40,6 @@ Thumbs.db
 /Makefile
 /cmake_install.cmake
 /spa
+
+doc/PDFgen.sh
+std*

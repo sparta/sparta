@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -27,10 +27,11 @@
 #include "output.h"
 #include "dump.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "memory.h"
 #include "error.h"
 #include "timer.h"
+#include "fix_adapt.h"
 
 using namespace SPARTA_NS;
 
@@ -92,7 +93,7 @@ FixBalance::FixBalance(SPARTA *sparta, int narg, char **arg) :
       if (strchr(eligible,'z')) zdim = 1;
       if (zdim && domain->dimension == 2)
         error->all(FLERR,"Illegal balance_grid command");
-      if (xdim+ydim+zdim != strlen(eligible)) 
+      if (xdim+ydim+zdim != strlen(eligible))
         error->all(FLERR,"Illegal fix balance command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"flip") == 0) {
@@ -117,8 +118,8 @@ FixBalance::FixBalance(SPARTA *sparta, int narg, char **arg) :
   random = NULL;
   rcb = NULL;
 
-  if (bstyle == RANDOM || bstyle == PROC) 
-    random = new RanPark(update->ranmaster->uniform()); 
+  if (bstyle == RANDOM || bstyle == PROC)
+    random = new RanKnuth(update->ranmaster->uniform());
   if (bstyle == BISECTION) rcb = new RCB(sparta);
 
   // compute initial outputs
@@ -152,6 +153,29 @@ void FixBalance::init()
 
   if (bstyle != BISECTION && grid->cutoff >= 0.0)
     error->all(FLERR,"Cannot use non-rcb fix balance with a grid cutoff");
+
+  // check if fix balance rcb time is after fix adapt with coarsening
+
+  if (rcbwt == TIME) {
+    int coarsen_flag = 0;
+    int after_flag = 0;
+    for (int ifix = 0; ifix < modify->nfix; ifix++) {
+      if (strstr(modify->fix[ifix]->style,"adapt") != NULL)
+        if (((FixAdapt*)modify->fix[ifix])->coarsen_flag)
+          coarsen_flag = 1;
+
+      if (strstr(modify->fix[ifix]->style,"balance") != NULL)
+        if (coarsen_flag) {
+          after_flag = 1;
+          break;
+        }
+    }
+
+    if (after_flag && comm->me == 0) {
+      error->warning(FLERR,"Using fix_adapt coarsen before fix balance "
+        "rcb time may make the accumulated timing data less accurate");
+    }
+  }
 
   last = 0.0;
   timer->init();
@@ -273,7 +297,7 @@ void FixBalance::end_of_step()
   comm->reset_neighbors();
 
   // notify all classes that store per-grid data that grid may have changed
-  
+
   grid->notify_changed();
 
   // final imbalance factor
@@ -346,7 +370,7 @@ void FixBalance::timer_cost()
 
 /* -------------------------------------------------------------------- */
 
-void FixBalance::timer_cell_weights(double *weight)
+void FixBalance::timer_cell_weights(double* &weight)
 {
   // localwt = weight assigned to each owned grid cell
   // just return if no time yet tallied
@@ -356,7 +380,11 @@ void FixBalance::timer_cell_weights(double *weight)
   if (maxcost <= 0.0) {
     memory->destroy(weight);
     weight = NULL;
-    return;
+    if (comm->me == 0) {
+      error->warning(FLERR,"No time history accumulated for fix balance "
+        "rcb time, using rcb cell option instead");
+    }
+return;
   }
 
   Grid::ChildCell *cells = grid->cells;
@@ -381,7 +409,7 @@ void FixBalance::timer_cell_weights(double *weight)
     wttotal += localwt[nbalance-1];
   }
 
-  for (int icell = 0; icell < nglocal; icell++) 
+  for (int icell = 0; icell < nglocal; icell++)
     weight[icell] = my_timer_cost*localwt[icell]/wttotal;
 
   memory->destroy(localwt);

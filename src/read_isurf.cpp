@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -96,10 +96,10 @@ void ReadISurf::command(int narg, char **arg)
   char *gridfile = arg[4];
 
   thresh = input->numeric(FLERR,arg[5]);
-  if (thresh <= 0 || thresh >= 255) 
+  if (thresh <= 0 || thresh >= 255)
     error->all(FLERR,"Invalid read_isurf command");
   int ithresh = static_cast<int> (thresh);
-  if (ithresh == thresh) 
+  if (ithresh == thresh)
     error->all(FLERR,"An integer value for read_isurf thresh is not allowed");
 
   char *ablateID = arg[6];
@@ -147,12 +147,12 @@ void ReadISurf::command(int narg, char **arg)
 
   // serial or parallel read of grid corner point file
   // NOTE: need to have a parallel read_types as well
-  // serial read uses a hash 
+  // serial read uses a hash
 
   if (readflag == SERIAL) {
     create_hash(count);
     read_corners_serial(gridfile);
-  } else if (readflag == PARALLEL) 
+  } else if (readflag == PARALLEL)
     read_corners_parallel(gridfile);
 
   if (typefile) {
@@ -247,7 +247,7 @@ void ReadISurf::create_hash(int count)
 
 void ReadISurf::read_corners_serial(char *gridfile)
 {
-  int nchunk;
+  int nchunk,tmp;
   int nxyz[3];
   FILE *fp;
 
@@ -268,7 +268,7 @@ void ReadISurf::read_corners_serial(char *gridfile)
                gridfile);
       error->one(FLERR,str);
     }
-    fread(nxyz,sizeof(int),dim,fp);
+    tmp = fread(nxyz,sizeof(int),dim,fp);
   }
 
   MPI_Bcast(nxyz,dim,MPI_INT,0,world);
@@ -277,7 +277,7 @@ void ReadISurf::read_corners_serial(char *gridfile)
   if (nxyz[0] != nx+1) flag = 1;
   if (nxyz[1] != ny+1) flag = 1;
   if (dim == 3 && nxyz[2] != nz+1) flag = 1;
-  if (flag) 
+  if (flag)
     error->all(FLERR,"Grid size in read_isurf grid corner point file "
                "does not match request");
 
@@ -295,10 +295,10 @@ void ReadISurf::read_corners_serial(char *gridfile)
     else nchunk = ncorners-nread;
 
     if (precision == INT) {
-      if (me == 0) fread(ibuf,sizeof(uint8_t),nchunk,fp);
+      if (me == 0) tmp = fread(ibuf,sizeof(uint8_t),nchunk,fp);
       MPI_Bcast(ibuf,nchunk,MPI_CHAR,0,world);
     } else if (precision == DOUBLE) {
-      if (me == 0) fread(dbuf,sizeof(double),nchunk,fp);
+      if (me == 0) tmp = fread(dbuf,sizeof(double),nchunk,fp);
       MPI_Bcast(dbuf,nchunk,MPI_DOUBLE,0,world);
     }
 
@@ -341,7 +341,7 @@ void ReadISurf::assign_corners(int n, bigint offset, uint8_t *ibuf, double *dbuf
     // check that a boundary value is 0
 
     zeroflag = 0;
-    if ((precision == INT && ibuf[i]) || 
+    if ((precision == INT && ibuf[i]) ||
         (precision == DOUBLE && dbuf[i] != 0.0)) {
       if (pix == 0 || piy == 0) zeroflag = 1;
       if (pix == nx || piy == ny) zeroflag = 1;
@@ -349,8 +349,8 @@ void ReadISurf::assign_corners(int n, bigint offset, uint8_t *ibuf, double *dbuf
       if (zeroflag) error->all(FLERR,"Grid boundary value != 0");
     }
 
-    // ncorner = 0,1,2,3,4,5,6,7 when corner point is 
-    //   bottom-lower-left, bottom-lower-right, 
+    // ncorner = 0,1,2,3,4,5,6,7 when corner point is
+    //   bottom-lower-left, bottom-lower-right,
     //   bottom-upper-left, bottom-upper-right,
     //   top-lower-left, top-lower-right, top-upper-left, top-upper-right
     //   of cell
@@ -362,7 +362,7 @@ void ReadISurf::assign_corners(int n, bigint offset, uint8_t *ibuf, double *dbuf
         for (int ciy = piy-1; ciy <= piy; ciy++) {
           for (int cix = pix-1; cix <= pix; cix++) {
             ncorner--;
-            if (cix < 0 || cix >= nx || ciy < 0 || ciy >=ny || 
+            if (cix < 0 || cix >= nx || ciy < 0 || ciy >=ny ||
                 ciz < 0 || ciz >= nz) continue;
             cellindex = (bigint) nx * ny*ciz + nx*ciy + cix;
             if (hash->find(cellindex) == hash->end()) continue;
@@ -373,7 +373,7 @@ void ReadISurf::assign_corners(int n, bigint offset, uint8_t *ibuf, double *dbuf
         }
       }
 
-    // ncorner = 0,1,2,3 when corner point is 
+    // ncorner = 0,1,2,3 when corner point is
     //   lower-left, lower-right, upper-left, upper-right of cell
     // if test on cix,ciy excludes cells that are outside of grid block
 
@@ -400,11 +400,11 @@ void ReadISurf::assign_corners(int n, bigint offset, uint8_t *ibuf, double *dbuf
 
 void ReadISurf::read_types_serial(char *typefile)
 {
-  int nchunk;
+  int nchunk,tmp;
   int nxyz[3];
   FILE *fp;
 
-  int *buf;
+  uint8_t *buf = NULL ;
   memory->create(buf,CHUNK,"readisurf:buf");
 
   // proc 0 opens and reads binary file
@@ -417,7 +417,7 @@ void ReadISurf::read_types_serial(char *typefile)
       snprintf(str,128,"Cannot open read_isurf type file %s",typefile);
       error->one(FLERR,str);
     }
-    fread(nxyz,sizeof(int),dim,fp);
+    tmp = fread(nxyz,sizeof(int),dim,fp);
   }
 
   MPI_Bcast(nxyz,dim,MPI_INT,0,world);
@@ -426,7 +426,7 @@ void ReadISurf::read_types_serial(char *typefile)
   if (nxyz[0] != nx) flag = 1;
   if (nxyz[1] != ny) flag = 1;
   if (dim == 3 && nxyz[2] != nz) flag = 1;
-  if (flag) 
+  if (flag)
     error->all(FLERR,"Grid size in read_isurf type file does not match request");
 
   // read and broadcast one CHUNK of values at a time
@@ -439,8 +439,8 @@ void ReadISurf::read_types_serial(char *typefile)
     if (ntypes-nread > CHUNK) nchunk = CHUNK;
     else nchunk = ntypes-nread;
 
-    if (me == 0) fread(buf,sizeof(int),nchunk,fp);
-    MPI_Bcast(buf,nchunk,MPI_INT,0,world);
+    if (me == 0) tmp = fread(buf,sizeof(uint8_t),nchunk,fp);
+    MPI_Bcast(buf,nchunk,MPI_CHAR,0,world);
 
     assign_types(nchunk,nread,buf);
     nread += nchunk;
@@ -463,7 +463,7 @@ void ReadISurf::read_types_serial(char *typefile)
    use hash to see if I own grid cell corresponding to index (0 to N-1)
 ------------------------------------------------------------------------- */
 
-void ReadISurf::assign_types(int n, bigint offset, int *buf)
+void ReadISurf::assign_types(int n, bigint offset, uint8_t *buf)
 {
   int icell;
   bigint cellindex;
@@ -495,7 +495,7 @@ void ReadISurf::assign_types(int n, bigint offset, int *buf)
 
 void ReadISurf::read_corners_parallel(char *gridfile)
 {
-  int nchunk;
+  int nchunk,tmp;
   int nxyz[3];
   FILE *fp;
 
@@ -510,7 +510,7 @@ void ReadISurf::read_corners_parallel(char *gridfile)
                gridfile);
       error->one(FLERR,str);
     }
-    fread(nxyz,sizeof(int),dim,fp);
+    tmp = fread(nxyz,sizeof(int),dim,fp);
   }
 
   MPI_Bcast(nxyz,dim,MPI_INT,0,world);
@@ -519,7 +519,7 @@ void ReadISurf::read_corners_parallel(char *gridfile)
   if (nxyz[0] != nx+1) flag = 1;
   if (nxyz[1] != ny+1) flag = 1;
   if (dim == 3 && nxyz[2] != nz+1) flag = 1;
-  if (flag) 
+  if (flag)
     error->all(FLERR,"Grid size in read_isurf grid corner point file "
                "does not match request");
 
@@ -555,10 +555,10 @@ void ReadISurf::read_corners_parallel(char *gridfile)
   fp = fopen(gridfile,"rb");
   if (precision == INT) {
     fseek(fp,offset*sizeof(uint8_t)+dim*sizeof(int),SEEK_SET);
-    fread(ibuf,sizeof(uint8_t),nvalues,fp);
+    tmp = fread(ibuf,sizeof(uint8_t),nvalues,fp);
   } else if (precision == DOUBLE) {
     fseek(fp,offset*sizeof(double)+dim*sizeof(int),SEEK_SET);
-    fread(dbuf,sizeof(double),nvalues,fp);
+    tmp = fread(dbuf,sizeof(double),nvalues,fp);
   }
   fclose(fp);
 
@@ -593,7 +593,7 @@ void ReadISurf::read_corners_parallel(char *gridfile)
 
   int *proclist;
   memory->create(proclist,nrvous,"read_isurf:proclist");
-  SendDatum *sdatum = (SendDatum *) 
+  SendDatum *sdatum = (SendDatum *)
     memory->smalloc(nrvous*sizeof(SendDatum),"read_isurf:datum");
 
   nrvous = 0;
@@ -714,7 +714,7 @@ void ReadISurf::read_corners_parallel(char *gridfile)
   for (int i = 0; i < nout; i++) {
     int icell = rdatum[i].icell;
     int icorner = rdatum[i].icorner;
-    if (precision == INT) 
+    if (precision == INT)
       cvalues[icell][icorner] = static_cast<int> (rdatum[i].cvalue);
     else cvalues[icell][icorner] = rdatum[i].cvalue;
   }
@@ -749,7 +749,7 @@ int ReadISurf::rendezvous_corners(int n, char *inbuf, int &flag,
   // rdatum = list of corner point values to pass back to comm->rendezvous
 
   memory->create(proclist,n,"gridsurf:proclist");
-  RecvDatum *rdatum = (RecvDatum *) 
+  RecvDatum *rdatum = (RecvDatum *)
     memory->smalloc(n*sizeof(RecvDatum),"read_isutr:rdatum");
 
   bigint cindex;

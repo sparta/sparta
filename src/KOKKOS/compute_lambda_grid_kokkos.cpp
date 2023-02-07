@@ -30,6 +30,7 @@
 #include "memory_kokkos.h"
 #include "error.h"
 #include "kokkos.h"
+#include "sparta_masks.h"
 
 using namespace SPARTA_NS;
 using namespace MathConst;
@@ -85,6 +86,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
 
   // grab nrho and temp values from compute or fix
   // invoke nrho and temp computes as needed
+
   if (nrhowhich == COMPUTE) {
     if (!cnrho->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos computes with compute lambda/grid/kk");
@@ -103,10 +105,9 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeLambdaGrid_LoadNrhoVecFromArray>(0,nglocal),*this);
-      DeviceType().fence();
       copymode = 0;
     }
-  } else if (nrhowhich == FIX){
+  } else if (nrhowhich == FIX) {
     if (!fnrho->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute lambda/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(fnrho);
@@ -116,7 +117,6 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeLambdaGrid_LoadNrhoVecFromArray>(0,nglocal),*this);
-      DeviceType().fence();
       copymode = 0;
     }
   }
@@ -139,10 +139,9 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeLambdaGrid_LoadTempVecFromArray>(0,nglocal),*this);
-      DeviceType().fence();
       copymode = 0;
     }
-  } else if (tempwhich == FIX){
+  } else if (tempwhich == FIX) {
     if (!ftemp->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute lambda/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(ftemp);
@@ -152,25 +151,24 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeLambdaGrid_LoadTempVecFromArray>(0,nglocal),*this);
-      DeviceType().fence();
       copymode = 0;
     }
   }
 
   GridKokkos* grid_kk = ((GridKokkos*)grid);
+  grid_kk->sync(Device,CELL_MASK);
   d_cells = grid_kk->k_cells.d_view;
   dimension = domain->dimension;
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeLambdaGrid_ComputePerGrid>(0,nglocal),*this);
-  DeviceType().fence();
   copymode = 0;
 
   if (kflag == KNONE) {
-    k_vector_grid.modify<DeviceType>();
-    k_vector_grid.sync<SPAHostType>();
+    k_vector_grid.modify_device();
+    k_vector_grid.sync_host();
   } else {
-    k_array_grid.modify<DeviceType>();
-    k_array_grid.sync<SPAHostType>();
+    k_array_grid.modify_device();
+    k_array_grid.sync_host();
   }
 }
 
@@ -204,6 +202,7 @@ void ComputeLambdaGridKokkos::operator()(TagComputeLambdaGrid_ComputePerGrid, co
   else d_array_grid(i,0) = lambda;
 
   // calculate per-cell Knudsen number
+
   if (kflag == KNONE) return;
 
   if (kflag == KALL) {
@@ -225,11 +224,15 @@ void ComputeLambdaGridKokkos::operator()(TagComputeLambdaGrid_ComputePerGrid, co
   }
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   reallocate arrays if nglocal has changed
+   called by init() and load balancer
+------------------------------------------------------------------------- */
 
 void ComputeLambdaGridKokkos::reallocate()
 {
   if (grid->nlocal == nglocal) return;
+
   nglocal = grid->nlocal;
   if (kflag == KNONE) {
     memoryKK->destroy_kokkos(k_vector_grid,vector_grid);
@@ -241,5 +244,6 @@ void ComputeLambdaGridKokkos::reallocate()
     d_array_grid = k_array_grid.d_view;
   }
   d_nrho_vector = DAT::t_float_1d ("d_nrho_vector", nglocal);
-  d_temp_vector = DAT::t_float_1d ("d_temp_vector", nglocal);
+  if (tempwhich != NONE)
+    d_temp_vector = DAT::t_float_1d ("d_temp_vector", nglocal);
 }

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -37,12 +37,18 @@ using namespace SPARTA_NS;
 
 enum{VERSION,SMALLINT,CELLINT,BIGINT,
      UNITS,NTIMESTEP,NPROCS,
-     FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,SURFMAX,GRIDCUT,GRID_WEIGHT,
-     COMM_SORT,COMM_STYLE,
+     FNUM,NRHO,VSTREAM,TEMP_THERMAL,FSTYLE,FIELD,FIELDID,
+     SURFS_IMPLICIT,SURFS_DISTRIBUTED,SURFGRID,SURFMAX,
+     SPLITMAX,GRIDCUT,GRID_WEIGHT,COMM_SORT,COMM_STYLE,
+     SURFTALLY,PARTICLE_REORDER,MEMLIMIT_GRID,MEMLIMIT,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
-     SPECIES,MIXTURE,PARTICLE_CUSTOM,GRID,SURF,
+     SPECIES,MIXTURE,
+     GRID,SURF,
+     PARTICLE_CUSTOM,GRID_CUSTOM,SURF_CUSTOM,
      MULTIPROC,PROCSPERFILE,PERPROC};    // new fields added after PERPROC
+
+enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // update.cpp
 
 /* ---------------------------------------------------------------------- */
 
@@ -78,6 +84,12 @@ void WriteRestart::command(int narg, char **arg)
 
   if (strchr(arg[0],'%')) multiproc = nprocs;
   else multiproc = 0;
+
+  int mem_limit_flag = update->global_mem_limit > 0 ||
+           (update->mem_limit_grid_flag && !grid->nlocal);
+  if (mem_limit_flag && !multiproc)
+    error->all(FLERR,"Cannot (yet) use global mem/limit without "
+               "% in restart file name");
 
   // setup output style and process optional args
   // also called by Output class for periodic restart files
@@ -129,7 +141,7 @@ void WriteRestart::multiproc_options(int multiproc_caller,
                    "without % in restart file name");
       int nper = atoi(arg[iarg+1]);
       if (nper <= 0) error->all(FLERR,"Illegal write_restart command");
-      
+
       multiproc = nprocs/nper;
       if (nprocs % nper) multiproc++;
       fileproc = me/nper * nper;
@@ -154,7 +166,7 @@ void WriteRestart::multiproc_options(int multiproc_caller,
       fileproc = static_cast<int> ((bigint) icluster * nprocs/nfile);
       int fcluster = static_cast<int> ((bigint) fileproc * nfile/nprocs);
       if (fcluster < icluster) fileproc++;
-      int fileprocnext = 
+      int fileprocnext =
         static_cast<int> ((bigint) (icluster+1) * nprocs/nfile);
       fcluster = static_cast<int> ((bigint) fileprocnext * nfile/nprocs);
       if (fcluster < icluster+1) fileprocnext++;
@@ -176,7 +188,7 @@ void WriteRestart::write(char *file)
 {
   if (update->mem_limit_grid_flag)
     update->set_mem_limit_grid();
-  if (update->global_mem_limit > 0 || 
+  if (update->global_mem_limit > 0 ||
       (update->mem_limit_grid_flag && !grid->nlocal))
     return write_less_memory(file);
 
@@ -209,7 +221,7 @@ void WriteRestart::write(char *file)
   }
 
   // proc 0 writes header info
-  // also simulation box, particle species, parent grid cells, surf info
+  // also simulation box, particle species, grid params, surf info
 
   bigint btmp = particle->nlocal;
   MPI_Allreduce(&btmp,&particle->nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
@@ -225,8 +237,11 @@ void WriteRestart::write(char *file)
   // communication buffer for my per-proc info = child grid cells and particles
   // max_size = largest buffer needed by any proc
 
-  int send_size = grid->size_restart();
-  send_size += particle->size_restart();
+  bigint send_size_big = grid->size_restart();
+  send_size_big += particle->size_restart_big();
+  if (send_size_big > MAXSMALLINT)
+    error->one(FLERR,"Restart file write buffer too large, use global mem/limit");
+  int send_size = send_size_big;
 
   int max_size;
   MPI_Allreduce(&send_size,&max_size,1,MPI_INT,MPI_MAX,world);
@@ -288,7 +303,7 @@ void WriteRestart::write(char *file)
         MPI_Wait(&request,&status);
         MPI_Get_count(&status,MPI_CHAR,&recv_size);
       } else recv_size = send_size;
-      
+
       write_char_vec(PERPROC,recv_size,buf);
     }
     fclose(fp);
@@ -359,8 +374,13 @@ void WriteRestart::write_less_memory(char *file)
   bigint particle_send_size = particle->size_restart_big();
   bigint send_size = grid_send_size + particle_send_size;
 
-  int max_size = MAX(grid_send_size,update->global_mem_limit);
-  max_size = MAX(max_size,sizeof(Particle::OnePartRestart));
+  int nbytes_particle = sizeof(Particle::OnePartRestart);
+  int nbytes_custom = particle->sizeof_custom();
+  int nbytes = nbytes_particle + nbytes_custom;
+
+  int max_size = MIN(particle_send_size,update->global_mem_limit);
+  max_size = MAX(max_size,grid_send_size);
+  max_size = MAX(max_size,nbytes);
   max_size += 128; // extra for size and ROUNDUP(ptr)
 
   int max_size_global;
@@ -406,19 +426,24 @@ void WriteRestart::write_less_memory(char *file)
   // pack my child grid and particle data into buf
 
   // number of particles per pass
-  int step_size = update->global_mem_limit/sizeof(Particle::OnePartRestart);
 
-  int my_npasses = ceil((double)particle->nlocal/step_size)+1; // extra pass for grid
+  int step_size = MIN(particle->nlocal,update->global_mem_limit/nbytes);
+
+  // extra pass for grid
+
+  int my_npasses;
+  if (particle->nlocal == 0) my_npasses = 2;
+  else my_npasses = ceil((double)particle->nlocal/step_size)+1;
 
   // output of one or more native files
   // filewriter = 1 = this proc writes to file
   // ping each proc in my cluster, receive its data, write data to file
   // else wait for ping from fileproc, send my data to fileproc
-  
+
   int tmp,recv_size;
   MPI_Status status;
   MPI_Request request;
-  
+
   if (filewriter) {
     bigint total_recv_size = 0;
     int npasses = 0;
@@ -431,6 +456,7 @@ void WriteRestart::write_less_memory(char *file)
         npasses = my_npasses;
       }
 
+      bigint total_write_part = 0;
       for (int i = 0; i < npasses; i++) {
         if (iproc) {
             MPI_Irecv(buf,max_size,MPI_CHAR,me+iproc,0,world,&request);
@@ -441,8 +467,13 @@ void WriteRestart::write_less_memory(char *file)
           int n = 0;
           if (i == 0)
             n = grid->pack_restart(buf);
-          else
-            n = particle->pack_restart(&buf[n],step_size,i-1);
+          else {
+            n = step_size*nbytes;
+            if (i == 1) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
+            if (i == npasses-1) n = particle_send_size - total_write_part;
+            total_write_part += n;
+            particle->pack_restart(buf,step_size,i-1);
+          }
           recv_size = n;
         }
         if (i == 0)
@@ -454,14 +485,20 @@ void WriteRestart::write_less_memory(char *file)
     fclose(fp);
 
   } else {
+    bigint total_write_part = 0;
     MPI_Isend(&send_size,1,MPI_SPARTA_BIGINT,fileproc,0,world,&request);
     MPI_Isend(&my_npasses,1,MPI_INT,fileproc,0,world,&request);
     for (int i = 0; i < my_npasses; i++) {
       int n = 0;
       if (i == 0)
         n = grid->pack_restart(buf);
-      else
-        n = particle->pack_restart(&buf[n],step_size,i-1);
+      else {
+        n = step_size*nbytes;
+        if (i == 1) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
+        if (i == my_npasses-1) n = particle_send_size - total_write_part;
+        total_write_part += n;
+        particle->pack_restart(buf,step_size,i-1);
+      }
       MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
       MPI_Rsend(buf,n,MPI_CHAR,fileproc,0,world);
     }
@@ -490,12 +527,25 @@ void WriteRestart::header()
   write_double(NRHO,update->nrho);
   write_double_vec(VSTREAM,3,update->vstream);
   write_double(TEMP_THERMAL,update->temp_thermal);
-  write_double_vec(GRAVITY,3,update->gravity);
+
+  write_int(FSTYLE,update->fstyle);
+  if (update->fstyle == CFIELD) write_double_vec(FIELD,3,update->field);
+  else if (update->fstyle == PFIELD) write_string(FIELDID,update->fieldID);
+  else if (update->fstyle == GFIELD) write_string(FIELDID,update->fieldID);
+
+  write_int(SURFS_IMPLICIT,surf->implicit);
+  write_int(SURFS_DISTRIBUTED,surf->distributed);
+  write_int(SURFGRID,grid->surfgrid_algorithm);
   write_int(SURFMAX,grid->maxsurfpercell);
+  write_int(SPLITMAX,grid->maxsplitpercell);
   write_double(GRIDCUT,grid->cutoff);
+  write_int(GRID_WEIGHT,grid->cellweightflag);
   write_int(COMM_SORT,comm->commsortflag);
   write_int(COMM_STYLE,comm->commpartstyle);
-  write_int(GRID_WEIGHT,grid->cellweightflag);
+  write_int(SURFTALLY,surf->tally_comm);
+  write_int(PARTICLE_REORDER,update->reorder_period);
+  write_int(MEMLIMIT_GRID,update->mem_limit_grid_flag);
+  write_int(MEMLIMIT,update->global_mem_limit);
 
   write_bigint(NPARTICLE,particle->nglobal);
   write_bigint(NUNSPLIT,grid->nunsplit);
@@ -549,6 +599,8 @@ void WriteRestart::grid_params()
 {
   write_int(GRID,0);
   grid->write_restart(fp);
+  write_int(GRID_CUSTOM,0);
+  grid->write_restart_custom(fp);
 }
 
 /* ----------------------------------------------------------------------
@@ -564,6 +616,8 @@ void WriteRestart::surf_params()
 
   write_int(SURF,1);
   surf->write_restart(fp);
+  write_int(SURF_CUSTOM,0);
+  surf->write_restart_custom(fp);
 }
 
 /* ----------------------------------------------------------------------
@@ -617,7 +671,7 @@ void WriteRestart::version_numeric()
 }
 
 /* ----------------------------------------------------------------------
-   write a flag and an int into restart file 
+   write a flag and an int into restart file
 ------------------------------------------------------------------------- */
 
 void WriteRestart::write_int(int flag, int value)
@@ -627,7 +681,7 @@ void WriteRestart::write_int(int flag, int value)
 }
 
 /* ----------------------------------------------------------------------
-   write a flag and a bigint into restart file 
+   write a flag and a bigint into restart file
 ------------------------------------------------------------------------- */
 
 void WriteRestart::write_bigint(int flag, bigint value)
@@ -637,7 +691,7 @@ void WriteRestart::write_bigint(int flag, bigint value)
 }
 
 /* ----------------------------------------------------------------------
-   write a flag and a double into restart file 
+   write a flag and a double into restart file
 ------------------------------------------------------------------------- */
 
 void WriteRestart::write_double(int flag, double value)

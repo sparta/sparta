@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -25,6 +25,8 @@ class Particle : protected Pointers {
   int exist;                // 1 if particles exist
   int sorted;               // 1 if particles are sorted by grid cell
 
+  enum{MAXVIBMODE=4};       // increase value if species need more vib modes
+
   struct Species {          // info on each particle species, read from file
     char id[16];            // species ID
     double molwt;           // molecular weight
@@ -33,13 +35,14 @@ class Particle : protected Pointers {
     double charge;          // multiple of electron charge
     double rotrel;          // inverse rotational relaxation number
     double rottemp[3];      // rotational temperature(s)
-    double vibtemp[4];      // vibrational temperature(s)
-    double vibrel[4];       // inverse vibrational relaxation number(s)
-    int vibdegen[4];        // vibrational mode degeneracies
+    double vibtemp[MAXVIBMODE];   // vibrational temperature(s)
+    double vibrel[MAXVIBMODE];    // inverse vibrational relaxation number(s)
+    int vibdegen[MAXVIBMODE];     // vibrational mode degeneracies
     int rotdof,vibdof;      // rotational/vibrational DOF
     int nrottemp,nvibmode;  // # of rotational/vibrational temps/modes defined
     int internaldof;        // 1 if either rotdof or vibdof != 0
     int vibdiscrete_read;   // 1 if species.vib file read for this species
+    double magmoment;       // magnetic moment, set by species_modify command
   };
 
   struct RotFile {          // extra rotation info read from rotfile
@@ -50,9 +53,9 @@ class Particle : protected Pointers {
 
   struct VibFile {          // extra vibration info read from vibfile
     char id[16];
-    double vibrel[4];
-    double vibtemp[4];
-    int vibdegen[4];
+    double vibrel[MAXVIBMODE];
+    double vibtemp[MAXVIBMODE];
+    int vibdegen[MAXVIBMODE];
     int nmode;
   };
 
@@ -64,7 +67,7 @@ class Particle : protected Pointers {
   int nmixture;
   int maxmixture;
 
-  struct OnePart {
+  struct SPARTA_ALIGN(64) OnePart {
     int id;                 // particle ID
     int ispecies;           // particle species index
     int icell;              // which local Grid::cells the particle is in
@@ -147,13 +150,15 @@ class Particle : protected Pointers {
   virtual void post_weight();
 
   virtual int add_particle(int, int, int, double *, double *, double, double);
+  virtual int add_particle();
   int clone_particle(int);
   void add_species(int, char **);
-  void add_mixture(int, char **);
   int find_species(char *);
+  void species_modify(int, char **);
+  void add_mixture(int, char **);
   int find_mixture(char *);
-  double erot(int, double, class RanPark *);
-  double evib(int, double, class RanPark *);
+  double erot(int, double, class RanKnuth *);
+  double evib(int, double, class RanKnuth *);
 
   void write_restart_species(FILE *fp);
   void read_restart_species(FILE *fp);
@@ -163,21 +168,21 @@ class Particle : protected Pointers {
   int size_restart();
   bigint size_restart_big();
   int pack_restart(char *);
-  int pack_restart(char *, int, int);
+  void pack_restart(char *, int, int);
   int unpack_restart(char *);
-  int unpack_restart(char *, int &, int, int);
+  void unpack_restart(char *, int &, int, int);
 
   int find_custom(char *);
   void error_custom();
-  int add_custom(char *, int, int);
-  void grow_custom(int, int, int);
-  void remove_custom(int);
-  void copy_custom(int, int);
+  virtual int add_custom(char *, int, int);
+  virtual void grow_custom(int, int, int);
+  virtual void remove_custom(int);
+  virtual void copy_custom(int, int);
   int sizeof_custom();
   void write_restart_custom(FILE *fp);
   void read_restart_custom(FILE *fp);
-  void pack_custom(int, char *);
-  void unpack_custom(char *, int);
+  virtual void pack_custom(int, char *);
+  virtual void unpack_custom(char *, int);
 
   bigint memory_usage();
 
@@ -195,11 +200,11 @@ class Particle : protected Pointers {
   RotFile *filerot;         // list of species rotation info read from file
   VibFile *filevib;         // list of species vibration info read from file
 
-  class RanPark *wrandom;   // RNG for particle weighting
+  class RanKnuth *wrandom;   // RNG for particle weighting
 
   // extra custom vectors/arrays for per-particle data
   // ncustom > 0 if there are any extra arrays
-  // these varaiables are private, others above are public
+  // these variables are private, others above are public
 
   char **ename;             // name of each attribute
 
@@ -216,7 +221,7 @@ class Particle : protected Pointers {
   int *edcol;               // # of columns in each double array (esize)
 
   int *custom_restart_flag; // flag on each custom vec/array read from restart
-                            // used to delete them if not redefined in 
+                            // used to delete them if not redefined in
                             // restart script
 
   // private methods

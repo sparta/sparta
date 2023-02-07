@@ -17,7 +17,7 @@
 </PRE>
 <UL><LI>one or more keyword/value pairs 
 
-<LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>gravity</I> or <I>surfs</I> or <I>surfgrid</I> or <I>surfmax</I> or <I>cellmax</I> or <I>splitmax</I> or <I>surftally</I> or <I>surfpush</I> or <I>gridcut</I> or <I>comm/sort</I> or <I>comm/style</I> or <I>weight</I> or <I>particle/reorder</I> or <I>mem/limit</I> 
+<LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>gravity</I> or <I>surfs</I> or <I>surfgrid</I> or <I>surfmax</I> or <I>splitmax</I> or <I>surftally</I> or <I>gridcut</I> or <I>comm/sort</I> or <I>comm/style</I> or <I>weight</I> or <I>particle/reorder</I> or <I>mem/limit</I> 
 
 <PRE>  <I>fnum</I> value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
@@ -27,9 +27,17 @@
     Vx,Vy,Vz = streaming velocity of background gas (velocity units)
   <I>temp</I> values = thermal
     thermal = temperature of background gas (temperature units)
-  <I>gravity</I> values = mag ex ey ez
-    mag = magnitude of acceleration due to gravity (acceleration units)
-    ex,ey,ez = direction vector that gravity acts in
+  <I>field</I> values = fstyle args
+    fstyle = <I>none</I> or <I>constant</I> or <I>variable</I> or <I>grid</I>
+      <I>field</I> arg = none
+      <I>constant</I> args = mag ex ey ez
+        mag = magnitude of field acceleration (acceleration units)
+        ex,ey,ez = direction vector which the field acts along
+      <I>particle</I> arg = fixID
+        fixID = ID of fix that computes per particle field components
+      <I>grid</I> args = fixID Nfreq
+        fixID = ID of fix that computes per grid cell field components
+        Nfreq = update field values every this many timesteps
   <I>surfs</I> value = explicit or explicit/distributed or implicit
     explicit = surfs defined in read_surf file, each proc owns copy of all surfs
     explicit/distributed = surfs defined in read_surf file, each proc owns
@@ -42,19 +50,12 @@
     auto = choose percell or persurf based on surface element and proc count
   <I>surfmax</I> value = Nsurf
     Nsurf = max # of surface elements allowed in single grid cell
-  <I>cellmax</I> value = Ncell
-    Ncell = max # of grid cells a single surf can overlap
   <I>splitmax</I> value = Nsplit
     Nsplit = max # of sub-cells one grid cell can be split into by surface elements
   <I>surftally</I> value = <I>reduce</I> or <I>rvous</I> or <I>auto</I>
     reduce = tally surf collision info via MPI_Allreduce operations
     rvous = tally via a rendezvous algorithm
     auto = choose reduce or rvous based on surface element and proc count
-  <I>surfpush</I> value(s) = no/yes or slo shi svalue
-    no = do not push surface element points near cell surface
-    yes = push surface element points near cell surface if necessary
-    slo,shi = push points within this range
-    svalue = push points to this value
   <I>gridcut</I> value = cutoff
     cutoff = acquire ghost cells up to this far away (distance units)
   <I>comm/sort</I> value = yes or no
@@ -64,7 +65,7 @@
     all = allow particle comm with potentially any processor
   <I>weight</I> value = <I>wstyle</I> <I>mode</I>
     wstyle = <I>cell</I>
-    mode = <I>none</I> or <I>volume</I> or <I>radius</I>
+    mode = <I>none</I> or <I>volume</I> or <I>radius</I> or <I>radius/only</I>
   <I>particle/reorder</I> value = <I>nsteps</I>
     nsteps = reorder the particles every this many timesteps
   <I>mem/limit</I> value = <I>grid</I> or bytes
@@ -80,6 +81,7 @@ global vstream 100.0 0 0 fnum 5.0e18
 global temp 1000
 global weight cell radius 
 global mem/limit 100 
+global field constant 9.8 0 0 1 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -107,11 +109,65 @@ gas.
 This is a Gaussian velocity distribution superposed on top of the
 streaming velocity.
 </P>
-<P>The <I>gravity</I> keyword sets an acceleration term which is included in
-the motion of particles.  The magnitude of gravity is set by the <I>mag</I>
-keyword.  Its direction of action is set as (ex,ex,ez).  The direction
-does not have to be a unit vector.  If the magnitude is set to 0.0, no
-acceleration term is included, which is the default.
+<P>The <I>field</I> keyword adds an additional external field term which can
+included in the motion of particles.  The <I>fstyle</I> argument can be
+<I>none</I> or <I>constant</I>, <I>particle</I>, or <I>grid</I>.  Note that only one of
+these can be set by the global command.  If the <I>field</I> keyword is
+specified multiple times, only the last one has an effect.
+</P>
+<P>The <I>none</I> setting turns off any external field setting previously
+specified.  It is the default.
+</P>
+<P>The <I>constant</I> setting is for a field that has no spatial or time
+dependence; the same field vector acts on all particles.  Gravity is
+an example of a constant external field.  The <I>mag</I> arguement sets the
+magnitude of the field.  The (ex,ey,ez) components specify the
+direction the field acts in.  The components do not need to be a unit
+vector; the code converts them into a unit vector internally.  Note
+that a z-component cannot be used for 2d simulations.
+</P>
+<P>The <I>particle</I> setting is for a field that is computed on a per
+particle basis, depending on the position or other attributes of each
+particle.  A spatially- or time-dependent magnetic field, acting on
+the magnetic moment of each particle, is an example of a variable
+external field.  The fixID argument is the ID of a fix which computes
+the components of the field vector for each particle.  These may alter
+both the position and velocity of each particle when it is advected
+each timestep.  
+</P>
+<P>See the doc page for the <A HREF = "fix_field_particle.html">fix field/particle</A>
+command for the only current fix in SPARTA which is compatible with
+the <I>particle</I> setting.
+</P>
+<P>The <I>grid</I> setting is for a field that is computed on a per grid cell
+basis and applied to all the particles in the grid cell.  A spatially-
+or time-dependent magnetic field which is coarsened to act at the
+resolution of grid cells is an example of a per grid cell external
+field.  The fixID argument is the ID of a fix which computes the
+components of the field vector for each grid cell.  These may alter
+both the position and velocity or particles in the grid cell when they
+are advected each timestep.  The Nfreq argument specifies how often to
+re-compute the per grid cell field vectors.  For a field that has no
+time dependence you should set Nfreq to zero; the field will only be
+computed once at the beginning of each simulation run.  For a field
+with time-dependence you can choose how often to recompute the field,
+depending on how fast it varies.
+</P>
+<P>See the doc page for the <A HREF = "fix_field_grid.html">fix field/grid</A> command
+for the only current fix in SPARTA which is compatible with the
+<I>grid</I> setting.
+</P>
+<P>Note that there is a tradeoff between the <I>particle</I> and <I>grid</I>
+options.  For the <I>particle</I> option the field must be computed every
+timestep for all particles; the field values are accurately computed
+at precisely each particle's position but it is an expensive
+operation.  For the <I>grid</I> option the field is only computed once at
+the beginning of a run or once every Nfreq timesteps.  Even if it is
+computed every timestep, the number of grid cells is typically much
+smaller than the number of particles.  However the accuracy of the
+field applied to each particle is more approximate than for the
+<I>particle</I> option.  This is because the field applied to each particle
+is the value it has at the center of the particle's grid cell.
 </P>
 <HR>
 
@@ -150,14 +206,6 @@ cell.  The default is 100, which should be large enough for any
 simulation, unless you define very coarse grid cells relative to the
 size of surface elements they contain.
 </P>
-<P>The <I>cellmax</I> keyword determines the maximum number of grid cells that
-a single surface element (lines in 2d, tringles in 3d) can overlap.
-This keyword is only used if the <I>persurf</I> algorithm defined by the
-<I>surfgrid</I> keyword is invoked.  The default is 100, which should be
-large enough for most simulations, unless you define one or more very
-large surface elements relative to the size of grid cells they
-intersect.
-</P>
 <P>The <I>splitmax</I> keyword determines the maximum number of sub-cells a
 single grid cell can be split into as a result of its intersection
 with multiple surface elements (lines in 2d, triangles in 3d).  The
@@ -182,55 +230,6 @@ processor than extracts values for the N/P surfaces it owns.  The
 rendezvous style of communication is performed where every processor
 sends its tally contributions directly to the processor which owns the
 element as one of its N/P elements.
-</P>
-<HR>
-
-<P>The <I>surfpush</I> keyword is only useful to use when SPARTA is having
-problems embedding a surface in the simulation grid, which occurs when
-when surface elements are defined via the <A HREF = "read_surf.html">read_surf</A>
-command.  Or for debugging purposes.
-</P>
-<P>In rare cases, if a surface element point is just slightly inside or
-outside a grid cell, but within an epsilon distance from the surface
-of the grid cell, a numerical round-off error can occur when computing
-the cut volume.  The error can be avoided if such points are shifted
-(pushed) to a slightly different location, which only induces a tiny
-change in the computed cut volume.  By default the <I>surfpush</I> keyword
-is set to <I>yes</I>, which will perform this "push" operation on a grid
-cell if the numerical issue is flagged.  SPARTA prints out how many
-grid cells needed this push operation.
-</P>
-<P>If you set <I>surfpush</I> to <I>no</I>, then the push operation is not
-performed, which will result in an error if the numerical issue
-occurs.
-</P>
-<P>If the default <I>surfpush yes</I> still gives an error, then
-setting the <I>slo</I>, <I>shi</I>, and <I>svalue</I> allows experimentation
-with a different mode of pushing.
-</P>
-<P>These 3 values are all multipliers on an epsilon of 1.0e-6 which is
-set internally in the code.  Epsilon refers to a fraction of the size
-of a grid cell in each of its dimensions.  Negative values for any of
-the 3 values distances inside a grid cell (inward from the cell face).
-Positive values are distances outside a grid cell (outward from the
-cell face).  Zero values are exactly on the cell face.  If any surface
-point (end points of 2d lines, corner points of 3d triangles) is
-between a <I>slo</I> to <I>shi</I> distance from any of the cell faces, then it
-is pushed to be a distance <I>svalue</I> from the face.
-</P>
-<P>When <I>surfpush</I> is set to <I>yes</I>, SPARTA tries 2 kinds of pushing
-first, if the numerical issue is encountered for a grid cell.  The
-first is <I>slo</I> = -1, <I>shi</I> = 1, <I>svalue</I> = 1, which means any point
-within a fractional distance (in each dimension) of 1.0e-6 inside the
-cell to 1.0e-6 outside the cell, is shifted to be a distance 1.0e-6
-outside the cell.  The second try is with <I>slo</I> = -1, <I>shi</I> = 1,
-<I>svalue</I> = 0, which puts the point on the face.  If you set <I>slo</I>,
-<I>shi</I>, <I>svalue</I> explicitly, it will be the third option tried.
-</P>
-<P>If you cannot get a surface to embed properly in a grid, meaning you
-get errors with the default setting of <I>surfpush yes</I>, then please
-contact the SPARTA developers.  We will want to figure out what is
-unusual about your surface file!
 </P>
 <HR>
 
@@ -319,19 +318,26 @@ cell are created by the <A HREF = "create_particles.html">create_particles</A> a
 <A HREF = "fix_emit_face.html">fix emit</A> command variants.
 </P>
 <P>If the mode is set to <I>none</I>, per-cell weighting is turned off if it
-was previously enabled.  For mode = <I>volume</I> or <I>radius</I>, per-cell
-weighting is enabled, which triggers two computations.  First, at the
-time this command is issued, each grid cell is assigned a "weight"
-which is calculated based either on the cell <I>volume</I> or <I>radius</I>, as
-specified by the <I>mode</I> setting.  For the <I>volume</I> setting, the weight
-of a cell is its 3d volume for a 3d model, and the weight is its 2d
-area for a 2d model.  For an axi-symmetric model, the weight is the 3d
-volume of the 2d axi-symmetric cell, i.e. the volume the area sweeps
-out when rotated around the y=0 axis of symmetry.  The <I>radius</I>
-setting is only allowed for axisymmetric systems.  The weight in this
-case is the distance the cell's midpoint is from the y=0 axis of
-symmetry.  See <A HREF = "Section_howto.html#howto_2">Section 6.2</A> for more
-details on axi-symmetric models.
+was previously enabled.  For mode = <I>volume</I> or <I>radius</I> or
+<I>radius/only</I>, per-cell weighting is enabled, which triggers two
+computations.  First, at the time this command is issued, each grid
+cell is assigned a "weight" which is calculated based either on the
+cell <I>volume</I> or <I>radius</I>, as specified by the <I>mode</I> setting.  For
+the <I>volume</I> setting, the weight of a cell is its 3d volume for a 3d
+model, and the weight is its 2d area for a 2d model.  For an
+axi-symmetric model, the weight is the 3d volume of the 2d
+axi-symmetric cell, i.e. the volume the area sweeps out when rotated
+around the y=0 axis of symmetry.  The <I>radius</I> and <I>radius/only</I>
+settings are only allowed for axisymmetric systems.  For the <I>radius</I>
+option, the weight is the distance the cell midpoint is from the y=0
+axis of symmetry, multiplied by the length of the cell in the x
+direction.  This mode attempts to preserve a uniform number of
+particles in each cell, regardless of the cell area, for a uniform
+targeted density.  For the <I>radius/only</I> option, the weight is just the
+distance the cell midpoint is from the y=0 axis of symmetry. This mode attempts to preserve a uniform distribution of particles
+per unit area, for a uniform targeted density.  See <A HREF = "Section_howto.html#howto_2">Section
+6.2</A> for more details on axi-symmetric
+models.
 </P>
 <P>Second, when a particle moves from an initial cell to a final cell,
 the initial/final ratio of the two cell weights is calculated.  If the
@@ -410,10 +416,9 @@ defined, e.g. via the <A HREF = "read_surf.html">read_surf</A> command.
 <P><B>Default:</B>
 </P>
 <P>The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
-0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfs = explicit,
-surfgrid = auto, surfmax = 100, cellmax = 100, splitmax = 10,
-surftally = auto, surfpush = yes, gridcut = -1.0, comm/sort = no,
-comm/style = neigh, weight = cell none, particle/reorder = 0,
-mem/limit = 0.
+0.0, temp = 273.15, field = none, surfs = explicit, surfgrid = auto,
+surfmax = 100, splitmax = 10, surftally = auto,
+gridcut = -1.0, comm/sort = no, comm/style = neigh, weight = cell
+none, particle/reorder = 0, mem/limit = 0.
 </P>
 </HTML>

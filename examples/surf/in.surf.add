@@ -1,4 +1,11 @@
+################################################################################
 # 2d flow around a circle
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
 
 seed	    	    12345
 dimension   	    2
@@ -22,7 +29,7 @@ surf_modify         all collide 1
 
 collide             vss air air.vss
 
-fix		    in emit/face air xlo 
+fix		    in emit/face air xlo twopass 
 
 timestep 	    0.0001
 

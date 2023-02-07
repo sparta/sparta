@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -30,29 +30,32 @@ class SurfCollideTD : public SurfCollide {
   SurfCollideTD(class SPARTA *, int, char **);
   ~SurfCollideTD();
   void init();
-  Particle::OnePart *collide(Particle::OnePart *&, double *, 
-                             double &, int, int &);
-  
+  Particle::OnePart *collide(Particle::OnePart *&, double &,
+                             int, double *, int, int &);
+  void wrapper(Particle::OnePart *, double *, int *, double*);
+  void flags_and_coeffs(int *, double *);
   void dynamic();
 
  private:
   double twall;              // surface temperature
-  
+
   double barrier_val;
   double initen_trans, initen_rot, initen_vib;
-  double bond_trans, bond_rot, bond_vib;                   
-  
+  double bond_trans, bond_rot, bond_vib;
+
   double vx,vy,vz;           // translational velocity of surface
   double wx,wy,wz;           // angular velocity of surface
   double px,py,pz;           // point to rotate surface around
-  
+
   int barrier_flag, initen_flag,bond_flag; // optional flags
 
+  int tmode;                 // Twall is NUMERIC,VARIABLE,CUSTOM
   char *tstr;                // temperature variable name (NULL if constant)
   int tvar;                  // index of equal-style variable
+  double *tvector;           // custom per-surf temperature vector
 
   double vstream[3];
-  class RanPark *random;     // RNG for particle reflection
+  class RanKnuth *random;     // RNG for particle reflection
 
   void td(Particle::OnePart *, double *);
 };

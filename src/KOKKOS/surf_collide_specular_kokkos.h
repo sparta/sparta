@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -29,7 +29,6 @@ namespace SPARTA_NS {
 
 class SurfCollideSpecularKokkos : public SurfCollideSpecular {
  public:
-  typedef ArrayTypes<DeviceType> AT;
 
   SurfCollideSpecularKokkos(class SPARTA *, int, char **);
   SurfCollideSpecularKokkos(class SPARTA *);
@@ -38,6 +37,7 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
   /* ----------------------------------------------------------------------
      particle collision with surface with optional chemistry
      ip = particle with current x = collision pt, current v = incident v
+     isurf = index of surface element
      norm = surface normal unit vector
      isr = index of reaction model if >= 0, -1 for no chemistry
      ip = set to NULL if destroyed by chemistry
@@ -45,35 +45,83 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
      return reaction = index of reaction (1 to N) that took place, 0 = no reaction
      resets particle(s) to post-collision outward velocity
   ------------------------------------------------------------------------- */
-  
+
   KOKKOS_INLINE_FUNCTION
-  Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, const double *norm, double &, int, int &) const
+  Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, double &,
+                                    int, const double *norm, int, int &) const
   {
-    Kokkos::atomic_fetch_add(&d_nsingle(),1);
-  
+    Kokkos::atomic_increment(&d_nsingle());
+
     // if surface chemistry defined, attempt reaction
     // reaction > 0 if reaction took place
-  
+
     //Particle::OnePart iorig;
     Particle::OnePart *jp = NULL;
     //reaction = 0;
-  
+    int velreset = 0;
+
     //if (isr >= 0) {
     //  if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
-    //  reaction = surf->sr[isr]->react(ip,norm,jp);
+    //  reaction = surf->sr[isr]->react(ip,isurf,norm,jp,velreset);
     //  if (reaction) surf->nreact_one++;
     //}
-  
-    // specular reflection for each particle
-    // reflect incident v around norm
-  
-    if (ip) MathExtraKokkos::reflect3(ip->v,norm);
-    //if (jp) MathExtra::reflect3(jp->v,norm);
-  
+
+    // specular or noslip reflection for each particle
+    // only if SurfReact did not already reset velocities
+    // also both partiticles need to trigger any fixes
+    //   to update per-particle properties which depend on
+    //   temperature of the particle, e.g. fix vibmode and fix ambipolar
+    // NOTE: not doing this for this specular model,
+    //   since temperature does not change, would need to add a twall arg
+
+    if (ip) {
+      if (!velreset) {
+        if (noslip_flag) {
+
+          // noslip reflection
+          // reflect incident v, all three components.
+
+          MathExtraKokkos::negate3(ip->v);
+        } else {
+
+          // specular reflection
+
+          MathExtraKokkos::reflect3(ip->v,norm);
+        }
+      }
+
+      //if (modify->n_update_custom) {
+      //  int i = ip - particle->particles;
+      //  modify->update_custom(i,twall,twall,twall,vstream);
+      //}
+    }
+
+    //if (jp) {
+    //  if (!velreset) {
+    //    if (noslip_flag) {
+
+          // noslip reflection
+          // reflect incident v, all three components.
+
+    //      MathExtra::negate3(jp->v);
+    //    } else {
+
+          // specular reflection
+
+    //      MathExtra::reflect3(jp->v,norm);
+    //    }
+    //  }
+
+    //  if (modify->n_update_custom) {
+    //    int j = jp - particle->particles;
+    //    modify->update_custom(j,twall,twall,twall,vstream);
+    //}
+    //}
+
     // call any fixes with a surf_react() method
     // they may reset j to -1, e.g. fix ambipolar
     //   in which case newly created j is deleted
-  
+
     //if (reaction && modify->n_surf_react) {
     //  int i = -1;
     //  if (ip) i = ip - particle->particles;
@@ -81,16 +129,16 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
     //  if (jp) j = jp - particle->particles;
     //  modify->surf_react(&iorig,i,j);
     //  if (jp && j < 0) {
-    //    jp = NULL;
-    //    particle->nlocal--;
+    //  jp = NULL;
+    //  particle->nlocal--;
     //  }
     //}
-      
+
     return jp;
   };
 
   DAT::tdual_int_scalar k_nsingle;
-  typename AT::t_int_scalar d_nsingle;
+  DAT::t_int_scalar d_nsingle;
   HAT::t_int_scalar h_nsingle;
 };
 

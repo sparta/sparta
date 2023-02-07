@@ -42,6 +42,15 @@
 //@HEADER
 */
 
+#ifndef KOKKOS_IMPL_PUBLIC_INCLUDE
+#include <Kokkos_Macros.hpp>
+#ifndef KOKKOS_ENABLE_DEPRECATED_CODE_3
+static_assert(false,
+              "Including non-public Kokkos header files is not allowed.");
+#else
+KOKKOS_IMPL_WARNING("Including non-public Kokkos header files is not allowed.")
+#endif
+#endif
 #ifndef KOKKOS_OPENMPTARGET_HPP
 #define KOKKOS_OPENMPTARGET_HPP
 
@@ -56,10 +65,10 @@
 #include <Kokkos_OpenMPTargetSpace.hpp>
 #include <Kokkos_ScratchSpace.hpp>
 #include <Kokkos_Parallel.hpp>
-#include <Kokkos_TaskPolicy.hpp>
+#include <Kokkos_TaskScheduler.hpp>
 #include <Kokkos_Layout.hpp>
-#include <impl/Kokkos_Tags.hpp>
 #include <impl/Kokkos_Profiling_Interface.hpp>
+#include <impl/Kokkos_InitializationSettings.hpp>
 #include <KokkosExp_MDRangePolicy.hpp>
 /*--------------------------------------------------------------------------*/
 
@@ -78,76 +87,76 @@ class OpenMPTarget {
   //@{
 
   //! Tag this class as a kokkos execution space
-  typedef OpenMPTarget execution_space;
-  typedef OpenMPTargetSpace memory_space;
+  using execution_space = OpenMPTarget;
+  using memory_space    = OpenMPTargetSpace;
   //! This execution space preferred device_type
-  typedef Kokkos::Device<execution_space, memory_space> device_type;
+  using device_type = Kokkos::Device<execution_space, memory_space>;
 
-  typedef LayoutLeft array_layout;
-  typedef memory_space::size_type size_type;
+  using array_layout = LayoutLeft;
+  using size_type    = memory_space::size_type;
 
-  typedef ScratchMemorySpace<OpenMPTarget> scratch_memory_space;
+  using scratch_memory_space = ScratchMemorySpace<OpenMPTarget>;
 
   inline static bool in_parallel() { return omp_in_parallel(); }
 
-  static void fence();
+  static void fence(const std::string& name =
+                        "Kokkos::OpenMPTarget::fence: Unnamed Instance Fence");
+
+  static void impl_static_fence(const std::string& name);
 
   /** \brief  Return the maximum amount of concurrency.  */
   static int concurrency();
 
   //! Print configuration information to the given output stream.
-  void print_configuration(std::ostream&, const bool detail = false);
+  void print_configuration(std::ostream& os, bool verbose = false) const;
 
   static const char* name();
 
   //! Free any resources being consumed by the device.
-  void impl_finalize();
+  static void impl_finalize();
 
   //! Has been initialized
   static int impl_is_initialized();
 
   //! Initialize, telling the CUDA run-time library which device to use.
-  void impl_initialize();
+  static void impl_initialize(InitializationSettings const&);
 
   inline Impl::OpenMPTargetInternal* impl_internal_space_instance() const {
     return m_space_instance;
   }
 
   OpenMPTarget();
-  uint32_t impl_instance_id() const noexcept { return 0; }
+  uint32_t impl_instance_id() const noexcept;
 
  private:
   Impl::OpenMPTargetInternal* m_space_instance;
 };
 }  // namespace Experimental
 
-namespace Profiling {
+namespace Impl {
+template <>
+struct MemorySpaceAccess<
+    Kokkos::Experimental::OpenMPTargetSpace,
+    Kokkos::Experimental::OpenMPTarget::scratch_memory_space> {
+  enum : bool { assignable = false };
+  enum : bool { accessible = true };
+  enum : bool { deepcopy = false };
+};
+}  // namespace Impl
+
+namespace Tools {
 namespace Experimental {
 template <>
 struct DeviceTypeTraits<::Kokkos::Experimental::OpenMPTarget> {
   static constexpr DeviceType id =
       ::Kokkos::Profiling::Experimental::DeviceType::OpenMPTarget;
+  static int device_id(const Kokkos::Experimental::OpenMPTarget&) {
+    return omp_get_default_device();
+  }
 };
 }  // namespace Experimental
-}  // namespace Profiling
-}  // namespace Kokkos
+}  // namespace Tools
 
-/*--------------------------------------------------------------------------*/
-/*--------------------------------------------------------------------------*/
-
-namespace Kokkos {
-namespace Impl {
-
-template <>
-struct VerifyExecutionCanAccessMemorySpace<
-    Kokkos::Experimental::OpenMPTarget::memory_space,
-    Kokkos::Experimental::OpenMPTarget::scratch_memory_space> {
-  enum { value = true };
-  inline static void verify(void) {}
-  inline static void verify(const void*) {}
-};
-
-}  // namespace Impl
 }  // namespace Kokkos
 
 /*--------------------------------------------------------------------------*/

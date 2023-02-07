@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -21,7 +21,7 @@
 #include "mixture.h"
 #include "comm.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
@@ -48,7 +48,7 @@ void ScaleParticles::command(int narg, char **arg)
 
   // RNG for cloning/deletion
 
-  RanPark *random = new RanPark(update->ranmaster->uniform());
+  RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,comm->me,100);
 
@@ -101,7 +101,7 @@ void ScaleParticles::command(int narg, char **arg)
     }
 
     // factor > 1.0 is candidate for cloning
-    // create Nclone new particles each with unique ID 
+    // create Nclone new particles each with unique ID
 
     nclone = static_cast<int> (factor);
     fraction = factor - nclone;
@@ -135,14 +135,14 @@ void ScaleParticles::command(int narg, char **arg)
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"Scaled particles\n");
-      fprintf(screen,"  before = " BIGINT_FORMAT 
+      fprintf(screen,"  before = " BIGINT_FORMAT
               ", after = " BIGINT_FORMAT "\n",
               nbefore,nafter);
       fprintf(screen,"  CPU time = %g secs\n",time2-time1);
     }
     if (logfile) {
       fprintf(logfile,"Scaled particles\n");
-      fprintf(logfile,"  before = " BIGINT_FORMAT 
+      fprintf(logfile,"  before = " BIGINT_FORMAT
               ", after = " BIGINT_FORMAT "\n",
               nbefore,nafter);
       fprintf(logfile,"  CPU time = %g secs\n",time2-time1);

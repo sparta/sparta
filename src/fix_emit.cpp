@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -21,7 +21,7 @@
 #include "grid.h"
 #include "comm.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
@@ -47,7 +47,7 @@ FixEmit::FixEmit(SPARTA *sparta, int narg, char **arg) :
   // RNG
 
   int me = comm->me;
-  random = new RanPark(update->ranmaster->uniform());
+  random = new RanKnuth(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,me,100);
 
@@ -159,7 +159,7 @@ void FixEmit::create_tasks()
      streaming velocity up to a reasonable limit
    if did not bound, would rarely emit a particle, but when do,
      could take too many iterations of double do while loop,
-     e.g. in FixEmitFace::perform_task(), 
+     e.g. in FixEmitFace::perform_task(),
      to generate an inward velocity for the particle
 ------------------------------------------------------------------------- */
 
@@ -168,8 +168,8 @@ double FixEmit::mol_inflow(double indot, double vscale, double fraction)
   double scosine = indot / vscale;
   if (scosine < -3.0) return 0.0;
   double inward_number_flux = vscale*fraction *
-    (exp(-scosine*scosine) + sqrt(MY_PI)*scosine*(1.0 + erf(scosine))) / 
-    (2*sqrt(MY_PI));
+    (exp(-scosine*scosine) + MY_PIS*scosine*(1.0 + erf(scosine))) /
+    (2*MY_PIS);
   return inward_number_flux;
 }
 
@@ -224,7 +224,7 @@ void FixEmit::options(int narg, char **arg)
     } else if (strcmp(arg[iarg],"region") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix emit command");
       int iregion = domain->find_region(arg[iarg+1]);
-      if (iregion < 0) 
+      if (iregion < 0)
         error->all(FLERR,"Fix emit region does not exist");
       region = domain->regions[iregion];
       iarg += 2;
@@ -250,7 +250,7 @@ int FixEmit::option(int, char **)
 double FixEmit::compute_vector(int i)
 {
   double one,all;
-  
+
   if (i == 0) one = nsingle;
   else one = ntotal;
   MPI_Allreduce(&one,&all,1,MPI_DOUBLE,MPI_SUM,world);

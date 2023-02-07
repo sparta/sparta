@@ -58,8 +58,8 @@ void ComputeDistSurfGridKokkos::compute_per_grid()
     ComputeDistSurfGrid::compute_per_grid();
   } else {
     compute_per_grid_kokkos();
-    k_vector_grid.modify<DeviceType>();
-    k_vector_grid.sync<SPAHostType>();
+    k_vector_grid.modify_device();
+    k_vector_grid.sync_host();
   }
 }
 
@@ -105,18 +105,17 @@ void ComputeDistSurfGridKokkos::compute_per_grid_kokkos()
       }
     }
   }
-  k_eflag.modify<SPAHostType>();
-  k_slist.modify<SPAHostType>();
+  k_eflag.modify_host();
+  k_slist.modify_host();
 
-  k_eflag.sync<DeviceType>();
-  k_slist.sync<DeviceType>();
+  k_eflag.sync_device();
+  k_slist.sync_device();
 
   d_sctr = DAT::t_float_1d_3("compute/distsurf/grid:sctr",nsurf);
 
   // pre-compute center point of each eligible surf
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeDistSurfGrid_surf_centroid>(0,nsurf),*this);
-  DeviceType().fence();
   copymode = 0;
 
   // loop over my unsplit/split grid cells
@@ -134,7 +133,6 @@ void ComputeDistSurfGridKokkos::compute_per_grid_kokkos()
 
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeDistSurfGrid_surf_distance>(0,nglocal),*this);
-  DeviceType().fence();
   copymode = 0;
 
   memoryKK->destroy_kokkos(k_eflag);

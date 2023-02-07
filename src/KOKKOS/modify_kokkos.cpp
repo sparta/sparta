@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -216,19 +216,19 @@ void ModifyKokkos::grid_changed()
 }
 
 /* ----------------------------------------------------------------------
-   invoke add_particle() method, only for relevant fixes
+   invoke update_custom() method, only for relevant fixes
 ------------------------------------------------------------------------- */
 
-void ModifyKokkos::add_particle(int index, double temp_thermal, 
-                          double temp_rot, double temp_vib, double *vstream)
+void ModifyKokkos::update_custom(int index, double temp_thermal,
+                                 double temp_rot, double temp_vib, double *vstream)
 {
-  for (int i = 0; i < n_add_particle; i++) {
-    int j = list_add_particle[i];
+  for (int i = 0; i < n_update_custom; i++) {
+    int j = list_update_custom[i];
     particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);
     int prev_auto_sync = sparta->kokkos->auto_sync;
     if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
 
-    fix[list_add_particle[i]]->add_particle(index,temp_thermal,temp_rot,
+    fix[list_update_custom[i]]->update_custom(index,temp_thermal,temp_rot,
                                             temp_vib,vstream);
 
     sparta->kokkos->auto_sync = prev_auto_sync;

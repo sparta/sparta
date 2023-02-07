@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -19,7 +19,7 @@
 #include "comm.h"
 #include "input.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
@@ -36,7 +36,7 @@ React::React(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   recomb_boost = 1000.0;
   recomb_boost_inverse = 0.001;
 
-  random = new RanPark(update->ranmaster->uniform());
+  random = new RanKnuth(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,comm->me,100);
 

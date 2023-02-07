@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -191,14 +191,14 @@ void WriteISurf::collect_values()
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
-    
+
     // ix,iy,iz = cell index (1 to Nxyz) within array of grid cells
 
-    ix = 
+    ix =
       static_cast<int> ((cells[icell].lo[0]-cornerlo[0]) / xyzsize[0] + 0.5) + 1;
-    iy = 
+    iy =
       static_cast<int> ((cells[icell].lo[1]-cornerlo[1]) / xyzsize[1] + 0.5) + 1;
-    iz = 
+    iz =
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
 
     // index = corner point index, 0 to (Nx+1)*(Ny+1)*(Nz+1) - 1
@@ -214,7 +214,7 @@ void WriteISurf::collect_values()
     if (ix == nx) dbuf[index+1] = array_grid[icell][1];
     if (iy == ny) dbuf[index+nx+1] = array_grid[icell][2];
     if (ix == nx && iy == ny) dbuf[index+nx+2] = array_grid[icell][3];
-    
+
     if (iz == nz && dim == 3) {
       index += (ny+1)*(nx+1);
       dbuf[index] = array_grid[icell][4];
@@ -246,7 +246,7 @@ void WriteISurf::write_file(FILE *fp)
   if (precision == INT) {
     uint8_t *ibuf8;
     memory->create(ibuf8,ncorner,"write_isurf:ibuf8");
-    for (int i = 0; i < ncorner; i++) 
+    for (int i = 0; i < ncorner; i++)
       ibuf8[i] = static_cast<int> (dbufall[i]);
     fwrite(ibuf8,sizeof(uint8_t),ncorner,fp);
     memory->destroy(ibuf8);

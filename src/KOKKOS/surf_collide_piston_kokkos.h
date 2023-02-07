@@ -29,7 +29,6 @@ namespace SPARTA_NS {
 
 class SurfCollidePistonKokkos : public SurfCollidePiston {
  public:
-  typedef ArrayTypes<DeviceType> AT;
 
   SurfCollidePistonKokkos(class SPARTA *, int, char **);
   SurfCollidePistonKokkos(class SPARTA *);
@@ -42,15 +41,16 @@ class SurfCollidePistonKokkos : public SurfCollidePiston {
      ip = particle with current x = collision pt, current v = incident v
      norm = surface normal unit vector
      isr = index of reaction model if >= 0, -1 for no chemistry
-     ip = set to NULL if destroyed by chemsitry
+     ip = set to NULL if destroyed by chemistry
      return jp = new particle if created by chemistry
      return reaction = index of reaction (1 to N) that took place, 0 = no reaction
      resets particle(s) to post-collision outward velocity
      ------------------------------------------------------------------------- */
   KOKKOS_INLINE_FUNCTION
-  Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, const double *norm, double &dtremain, int, int &) const
+  Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, double &dtremain,
+                                    int, const double *norm, int, int &) const
   {
-    Kokkos::atomic_fetch_add(&d_nsingle(),1);
+    Kokkos::atomic_increment(&d_nsingle());
 
     // if surface chemistry defined, attempt reaction
     // reaction > 0 if reaction took place
@@ -139,7 +139,7 @@ class SurfCollidePistonKokkos : public SurfCollidePiston {
   };
 
   DAT::tdual_int_scalar k_nsingle;
-  typename AT::t_int_scalar d_nsingle;
+  DAT::t_int_scalar d_nsingle;
   HAT::t_int_scalar h_nsingle;
 
 };

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -92,7 +92,7 @@ int IrregularKokkos::create_data_uniform(int n, int *proclist, int sort)
 #ifdef SPARTA_RS_ALLREDUCE_INPLACE
   MPI_Allreduce(MPI_IN_PLACE,work1,nprocs,MPI_INT,MPI_SUM,world);
   nrecv = work1[me];
-#else 
+#else
 #ifdef SPARTA_RS_ALLREDUCE
   MPI_Allreduce(work1,work2,nprocs,MPI_INT,MPI_SUM,world);
   nrecv = work2[me];
@@ -349,7 +349,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
   d_recvbuf_ptr = d_recvbuf_ptr_in;
   d_recvbuf = d_recvbuf_in;
 
-  if (!sparta->kokkos->gpu_direct_flag &&
+  if (!sparta->kokkos->gpu_aware_flag &&
       h_recvbuf.extent(0) != d_recvbuf.extent(0)) {
     h_recvbuf = HAT::t_char_1d(Kokkos::view_alloc("irregular:d_recvbuf:mirror",Kokkos::WithoutInitializing),d_recvbuf.extent(0));
   }
@@ -358,7 +358,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
 
   offset = num_self*nbytes;
   for (int irecv = 0; irecv < nrecv; irecv++) {
-    if (sparta->kokkos->gpu_direct_flag) {
+    if (sparta->kokkos->gpu_aware_flag) {
       MPI_Irecv(&d_recvbuf_ptr[offset],num_recv[irecv]*nbytes,MPI_CHAR,
                 proc_recv[irecv],0,world,&request[irecv]);
     } else {
@@ -381,21 +381,21 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
   // pack buf with list of datums
   // m = index of datum in sendbuf
 
-  k_index_send.modify<SPAHostType>();
-  k_index_send.sync<DeviceType>();
+  k_index_send.modify_host();
+  k_index_send.sync_device();
 
-  k_index_self.modify<SPAHostType>();
-  k_index_self.sync<DeviceType>();
+  k_index_self.modify_host();
+  k_index_self.sync_device();
 
   k_n.h_view() = 0;
-  k_n.modify<SPAHostType>();
-  k_n.sync<DeviceType>();
-  d_n = k_n.view<DeviceType>();
+  k_n.modify_host();
+  k_n.sync_device();
+  d_n = k_n.d_view;
 
   for (int isend = 0; isend < nsend; isend++) {
     count = num_send[isend];
 
-    if (!sparta->kokkos->gpu_direct_flag) {
+    if (!sparta->kokkos->gpu_aware_flag) {
 
       // allocate exact buffer size to reduce GPU <--> CPU memory transfer
 
@@ -412,7 +412,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
     //pack_buffer_serial(0,count);
     copymode = 0;
 
-    if (sparta->kokkos->gpu_direct_flag)
+    if (sparta->kokkos->gpu_aware_flag)
       MPI_Send(d_buf.data(),count*nbytes,MPI_CHAR,proc_send[isend],0,world);
     else {
       Kokkos::deep_copy(h_buf,d_buf);
@@ -432,7 +432,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
   if (nrecv) {
     MPI_Waitall(nrecv,request,status);
 
-    if (!sparta->kokkos->gpu_direct_flag)
+    if (!sparta->kokkos->gpu_aware_flag)
       Kokkos::deep_copy(d_recvbuf,h_recvbuf);
   }
 }

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -24,9 +24,9 @@ class SurfCollide : protected Pointers {
  public:
   char *id;
   char *style;
- 
-  int dynamicflag;          // 1 if any param is dynamically updated
+
   int allowreact;           // 1 if allows for surface reactions
+  int dynamicflag;          // 1 if any param is dynamically updated
   int transparent;          // 1 if transparent collision model
   int vector_flag;          // 0/1 if compute_vector() function exists
   int size_vector;          // length of global vector
@@ -35,16 +35,25 @@ class SurfCollide : protected Pointers {
   SurfCollide(class SPARTA *sparta) : Pointers(sparta) {}
   virtual ~SurfCollide();
   virtual void init();
-  virtual Particle::OnePart *collide(Particle::OnePart *&, double *, 
-                                     double &, int, int &) = 0;
+  virtual Particle::OnePart *collide(Particle::OnePart *&, double &,
+                                     int, double *, int, int &) = 0;
+  virtual void wrapper(Particle::OnePart *, double *, int *, double *) {}
+  virtual void flags_and_coeffs(int *, double *) {}
 
   virtual void dynamic() {}
+  void tally_reset();
   void tally_update();
   double compute_vector(int i);
 
   int copy,copymode;
 
  protected:
+
+  // tallies for collisions
+  // nsingle = all collisions in one step
+  // ntotal = cumulative nsingle across all steps
+  // one,all used in compute_vector()
+
   int nsingle,ntotal;
   double one[2],all[2];
 };

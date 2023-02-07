@@ -43,12 +43,14 @@
 */
 
 #include <Kokkos_Core.hpp>
-#include <hip/TestHIP_Category.hpp>
+#include <TestHIP_Category.hpp>
+
+#include <array>
 
 namespace Test {
 
 __global__ void offset(int* p) {
-  int idx = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < 100) {
     p[idx] += idx;
   }
@@ -58,21 +60,21 @@ __global__ void offset(int* p) {
 // HIP.
 TEST(hip, raw_hip_interop) {
   int* p;
-  hipMalloc(&p, sizeof(int) * 100);
-  Kokkos::InitArguments arguments{-1, -1, -1, false};
-  Kokkos::initialize(arguments);
+  KOKKOS_IMPL_HIP_SAFE_CALL(hipMalloc(&p, sizeof(int) * 100));
+  Kokkos::initialize();
 
   Kokkos::View<int*, Kokkos::MemoryTraits<Kokkos::Unmanaged>> v(p, 100);
   Kokkos::deep_copy(v, 5);
 
   Kokkos::finalize();
 
-  hipLaunchKernelGGL(offset, dim3(100), dim3(100), 0, 0, p);
-  HIP_SAFE_CALL(hipDeviceSynchronize());
+  offset<<<dim3(100), dim3(100), 0, nullptr>>>(p);
+  KOKKOS_IMPL_HIP_SAFE_CALL(hipDeviceSynchronize());
 
-  int* h_p = new int[100];
-  hipMemcpy(h_p, p, sizeof(int) * 100, hipMemcpyDefault);
-  HIP_SAFE_CALL(hipDeviceSynchronize());
+  std::array<int, 100> h_p;
+  KOKKOS_IMPL_HIP_SAFE_CALL(
+      hipMemcpy(h_p.data(), p, sizeof(int) * 100, hipMemcpyDefault));
+  KOKKOS_IMPL_HIP_SAFE_CALL(hipDeviceSynchronize());
   int64_t sum        = 0;
   int64_t sum_expect = 0;
   for (int i = 0; i < 100; i++) {
@@ -81,5 +83,6 @@ TEST(hip, raw_hip_interop) {
   }
 
   ASSERT_EQ(sum, sum_expect);
+  KOKKOS_IMPL_HIP_SAFE_CALL(hipFree(p));
 }
 }  // namespace Test

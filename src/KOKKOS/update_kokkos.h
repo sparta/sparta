@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -41,7 +41,8 @@ namespace SPARTA_NS {
 struct s_UPDATE_REDUCE {
   int ntouch_one,nexit_one,nboundary_one,
       entryexit,ncomm_one,
-      nscheck_one,nscollide_one,nreact_one,nstuck,error_flag;
+      nscheck_one,nscollide_one,nreact_one,nstuck,
+      naxibad,error_flag;
   KOKKOS_INLINE_FUNCTION
   s_UPDATE_REDUCE() {
     ntouch_one    = 0;
@@ -52,6 +53,7 @@ struct s_UPDATE_REDUCE {
     nscollide_one = 0;
     nreact_one    = 0;
     nstuck        = 0;
+    naxibad       = 0;
   }
 
   KOKKOS_INLINE_FUNCTION
@@ -64,6 +66,7 @@ struct s_UPDATE_REDUCE {
     nscollide_one += rhs.nscollide_one;
     nreact_one    += rhs.nreact_one   ;
     nstuck        += rhs.nstuck       ;
+    naxibad       += rhs.naxibad      ;
   }
 
   KOKKOS_INLINE_FUNCTION
@@ -76,6 +79,7 @@ struct s_UPDATE_REDUCE {
     nscollide_one += rhs.nscollide_one;
     nreact_one    += rhs.nreact_one   ;
     nstuck        += rhs.nstuck       ;
+    naxibad       += rhs.naxibad      ;
   }
 };
 typedef struct s_UPDATE_REDUCE UPDATE_REDUCE;
@@ -98,7 +102,6 @@ struct TagCheckCellMinDistToSplitCell{};
 
 class UpdateKokkos : public Update {
  public:
-  typedef ArrayTypes<DeviceType> AT;
   typedef UPDATE_REDUCE value_type;
 
   DAT::tdual_int_1d k_mlist;
@@ -166,6 +169,7 @@ class UpdateKokkos : public Update {
  private:
 
   double dt;
+  int field_active[3];
 
   // data for optimized particle moves
   double dx,dy,dz,Lx,Ly,Lz;
@@ -175,15 +179,21 @@ class UpdateKokkos : public Update {
 
   t_cell_1d d_cells;
   t_sinfo_1d d_sinfo;
+  t_pcell_1d d_pcells;
 
-  Kokkos::Crs<int, SPADeviceType, void, int> d_csurfs;
-  Kokkos::Crs<int, SPADeviceType, void, int> d_csplits;
-  Kokkos::Crs<int, SPADeviceType, void, int> d_csubs;
+  Kokkos::Crs<int, DeviceType, void, int> d_csurfs;
+  Kokkos::Crs<int, DeviceType, void, int> d_csplits;
+  Kokkos::Crs<int, DeviceType, void, int> d_csubs;
 
   t_line_1d d_lines;
   t_tri_1d d_tris;
 
   t_particle_1d d_particles;
+
+  DAT::t_float_2d_lr d_fieldfix_array_particle;
+  DAT::t_float_2d_lr d_fieldfix_array_grid;
+
+  class KokkosBase* KKBaseFieldFix;
 
   KKCopy<GridKokkos> grid_kk_copy;
   KKCopy<DomainKokkos> domain_kk_copy;
@@ -199,46 +209,49 @@ class UpdateKokkos : public Update {
   KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];
 
 
-  typedef Kokkos::DualView<int[12], SPADeviceType::array_layout, SPADeviceType> tdual_int_12;
-  typedef tdual_int_12::t_dev t_int_12;
-  typedef tdual_int_12::t_host t_host_int_12;
-  t_int_12 d_scalars;
-  t_host_int_12 h_scalars;
+  typedef Kokkos::DualView<int[13], DeviceType::array_layout, DeviceType> tdual_int_13;
+  typedef tdual_int_13::t_dev t_int_13;
+  typedef tdual_int_13::t_host t_host_int_13;
+  t_int_13 d_scalars;
+  t_host_int_13 h_scalars;
 
-  typename AT::t_int_scalar d_ntouch_one;
+  DAT::t_int_scalar d_ntouch_one;
   HAT::t_int_scalar h_ntouch_one;
 
-  typename AT::t_int_scalar d_nexit_one;
+  DAT::t_int_scalar d_nexit_one;
   HAT::t_int_scalar h_nexit_one;
 
-  typename AT::t_int_scalar d_nboundary_one;
+  DAT::t_int_scalar d_nboundary_one;
   HAT::t_int_scalar h_nboundary_one;
 
-  typename AT::t_int_scalar d_nmigrate;
+  DAT::t_int_scalar d_nmigrate;
   HAT::t_int_scalar h_nmigrate;
 
-  typename AT::t_int_scalar d_nmigrate_opt;
+  DAT::t_int_scalar d_nmigrate_opt;
   HAT::t_int_scalar h_nmigrate_opt;
 
-  typename AT::t_int_scalar d_entryexit;
+  DAT::t_int_scalar d_entryexit;
   HAT::t_int_scalar h_entryexit;
 
-  typename AT::t_int_scalar d_ncomm_one;
+  DAT::t_int_scalar d_ncomm_one;
   HAT::t_int_scalar h_ncomm_one;
 
-  typename AT::t_int_scalar d_nscheck_one;
+  DAT::t_int_scalar d_nscheck_one;
   HAT::t_int_scalar h_nscheck_one;
 
-  typename AT::t_int_scalar d_nscollide_one;
+  DAT::t_int_scalar d_nscollide_one;
   HAT::t_int_scalar h_nscollide_one;
 
-  typename AT::t_int_scalar d_nreact_one;
+  DAT::t_int_scalar d_nreact_one;
   HAT::t_int_scalar h_nreact_one;
 
-  typename AT::t_int_scalar d_nstuck;
+  DAT::t_int_scalar d_nstuck;
   HAT::t_int_scalar h_nstuck;
 
-  typename AT::t_int_scalar d_error_flag;
+  DAT::t_int_scalar d_naxibad;
+  HAT::t_int_scalar h_naxibad;
+
+  DAT::t_int_scalar d_error_flag;
   HAT::t_int_scalar h_error_flag;
 
   void bounce_set(bigint);
@@ -266,10 +279,8 @@ class UpdateKokkos : public Update {
   FnPtr moveptr;             // ptr to move method
   template < int, int > void move();
 
-  //
-  //int perturbflag;
-  typedef void (UpdateKokkos::*FnPtr2)(double, double *, double *) const;
-  FnPtr2 moveperturb;        // ptr to moveperturb method
+  //typedef void (UpdateKokkos::*FnPtr2)(int, int, double, double *, double *) const;
+  //FnPtr2 moveperturb;        // ptr to moveperturb method
   //
   //// variants of moveperturb method
   //// adjust end-of-move x,v due to perturbation on straight-line advection
@@ -280,44 +291,102 @@ class UpdateKokkos : public Update {
   KOKKOS_INLINE_FUNCTION
   int split2d(int, double*) const;
 
-  int gravity_3d_flag,gravity_2d_flag;
-
   // variants of moveperturb method
   // adjust end-of-move x,v due to perturbation on straight-line advection
 
   KOKKOS_INLINE_FUNCTION
-  void gravity2d(double dt, double *x, double *v) const {
-    double dtsq = 0.5*dt*dt;
-    x[0] += dtsq*gravity[0];
-    x[1] += dtsq*gravity[1];
-    v[0] += dt*gravity[0];
-    v[1] += dt*gravity[1];
+  void field2d(double dt, double *x, double *v) const {
+    const double dtsq = 0.5*dt*dt;
+    x[0] += dtsq*field[0];
+    x[1] += dtsq*field[1];
+    v[0] += dt*field[0];
+    v[1] += dt*field[1];
   };
 
   KOKKOS_INLINE_FUNCTION
-  void gravity3d(double dt, double *x, double *v) const {
-    double dtsq = 0.5*dt*dt;
-    x[0] += dtsq*gravity[0];
-    x[1] += dtsq*gravity[1];
-    x[2] += dtsq*gravity[2];
-    v[0] += dt*gravity[0];
-    v[1] += dt*gravity[1];
-    v[2] += dt*gravity[2];
+  void field3d(double dt, double *x, double *v) const {
+    const double dtsq = 0.5*dt*dt;
+    x[0] += dtsq*field[0];
+    x[1] += dtsq*field[1];
+    x[2] += dtsq*field[2];
+    v[0] += dt*field[0];
+    v[1] += dt*field[1];
+    v[2] += dt*field[2];
+  };
+
+  /* ----------------------------------------------------------------------
+     calculate motion perturbation for a single particle I
+       due to external per particle field
+     array in fix[ifieldfix] stores per particle perturbations for x and v
+  ------------------------------------------------------------------------- */
+
+  KOKKOS_INLINE_FUNCTION
+  void field_per_particle(int i, int icell, double dt, double *x, double *v) const
+  {
+    const double dtsq = 0.5*dt*dt;
+    auto &d_array = d_fieldfix_array_particle;
+
+    int icol = 0;
+    if (field_active[0]) {
+      x[0] += dtsq*d_array(i,icol);
+      v[0] += dt*d_array(i,icol);
+      icol++;
+    }
+    if (field_active[1]) {
+      x[1] += dtsq*d_array(i,icol);
+      v[1] += dt*d_array(i,icol);
+      icol++;
+    }
+    if (field_active[2]) {
+      x[2] += dtsq*d_array(i,icol);
+      v[2] += dt*d_array(i,icol);
+      icol++;
+    }
+  };
+
+  /* ----------------------------------------------------------------------
+     calculate motion perturbation for a single particle I in grid cell Icell
+       due to external per grid cell field
+     array in fix[ifieldfix] stores per grid cell perturbations for x and v
+  ------------------------------------------------------------------------- */
+
+  KOKKOS_INLINE_FUNCTION
+  void field_per_grid(int i, int icell, double dt, double *x, double *v) const
+  {
+    const double dtsq = 0.5*dt*dt;
+    auto &d_array = d_fieldfix_array_grid;
+
+    int icol = 0;
+    if (field_active[0]) {
+      x[0] += dtsq*d_array(icell,icol);
+      v[0] += dt*d_array(icell,icol);
+      icol++;
+    }
+    if (field_active[1]) {
+      x[1] += dtsq*d_array(icell,icol);
+      v[1] += dt*d_array(icell,icol);
+      icol++;
+    }
+    if (field_active[2]) {
+      x[2] += dtsq*d_array(icell,icol);
+      v[2] += dt*d_array(icell,icol);
+      icol++;
+    }
   };
 
   // define 2D cell surface faces for use in distance calculations (for opt particle moves)
   KOKKOS_INLINE_FUNCTION
   void setCellSurfaceFaces2D(double S[4][2][3], const int &i) const;
 
-  // define 3D cell surface faces for use in distance calculations (for opt particle moves)  
+  // define 3D cell surface faces for use in distance calculations (for opt particle moves)
   KOKKOS_INLINE_FUNCTION
   void setCellSurfaceFaces3D(double S[12][3][3], const int &i) const;
 
-  // original move logic by particle (non-optimized move)  
+  // original move logic by particle (non-optimized move)
   template<int DIM, int SURF>
   void standardMove();
 
-  // optimized single step move by particle (requires structured grid)  
+  // optimized single step move by particle (requires structured grid)
   template<int DIM>
   void optSingleStepMove();
 

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -203,9 +203,9 @@ void *sparta_extract_compute(void *ptr, char *id, int style, int type)
     if (type == 1) {
       if (compute->invoked_per_grid != sparta->update->ntimestep)
         compute->compute_per_grid();
-      if (compute->post_process_grid_flag) 
+      if (compute->post_process_grid_flag)
         compute->post_process_grid(0,1,NULL,NULL,NULL,1);
-      else if (compute->post_process_isurf_grid_flag) 
+      else if (compute->post_process_isurf_grid_flag)
         compute->post_process_isurf_grid();
       return (void *) compute->vector_grid;
     }

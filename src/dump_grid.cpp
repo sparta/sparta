@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -202,7 +202,7 @@ void DumpGrid::init_style()
   int icompute;
   for (int i = 0; i < ncompute; i++) {
     icompute = modify->find_compute(id_compute[i]);
-    if (icompute < 0) 
+    if (icompute < 0)
       error->all(FLERR,"Could not find dump grid compute ID");
     compute[i] = modify->compute[icompute];
   }
@@ -219,7 +219,7 @@ void DumpGrid::init_style()
   int ivariable;
   for (int i = 0; i < nvariable; i++) {
     ivariable = input->variable->find(id_variable[i]);
-    if (ivariable < 0) 
+    if (ivariable < 0)
       error->all(FLERR,"Could not find dump grid variable name");
     variable[i] = ivariable;
   }
@@ -350,13 +350,13 @@ void DumpGrid::write_text(int n, double *mybuf)
   int m = 0;
   for (i = 0; i < n; i++) {
     for (j = 0; j < size_one; j++) {
-      if (vtype[j] == INT) 
+      if (vtype[j] == INT)
         fprintf(fp,vformat[j],static_cast<int> (mybuf[m]));
-      else if (vtype[j] == DOUBLE) 
+      else if (vtype[j] == DOUBLE)
         fprintf(fp,vformat[j],mybuf[m]);
-      else if (vtype[j] == BIGINT) 
+      else if (vtype[j] == BIGINT)
         fprintf(fp,vformat[j],static_cast<bigint> (mybuf[m]));
-      else if (vtype[j] == STRING) { 
+      else if (vtype[j] == STRING) {
         grid->id_num2str(static_cast<int> (mybuf[m]),str);
         fprintf(fp,vformat[j],str);
       }
@@ -384,6 +384,9 @@ int DumpGrid::parse_fields(int narg, char **arg)
     } else if (strcmp(arg[iarg],"idstr") == 0) {
       pack_choice[i] = &DumpGrid::pack_id;
       vtype[i] = STRING;
+    } else if (strcmp(arg[iarg],"split") == 0) {
+      pack_choice[i] = &DumpGrid::pack_split;
+      vtype[i] = INT;
     } else if (strcmp(arg[iarg],"proc") == 0) {
       pack_choice[i] = &DumpGrid::pack_proc;
       vtype[i] = INT;
@@ -395,7 +398,7 @@ int DumpGrid::parse_fields(int narg, char **arg)
       pack_choice[i] = &DumpGrid::pack_ylo;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"zlo") == 0) {
-      if (dimension == 2) 
+      if (dimension == 2)
 	error->all(FLERR,"Invalid dump grid field for 2d simulation");
       pack_choice[i] = &DumpGrid::pack_zlo;
       vtype[i] = DOUBLE;
@@ -406,7 +409,7 @@ int DumpGrid::parse_fields(int narg, char **arg)
       pack_choice[i] = &DumpGrid::pack_yhi;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"zhi") == 0) {
-      if (dimension == 2) 
+      if (dimension == 2)
 	error->all(FLERR,"Invalid dump grid field for 2d simulation");
       pack_choice[i] = &DumpGrid::pack_zhi;
       vtype[i] = DOUBLE;
@@ -417,7 +420,7 @@ int DumpGrid::parse_fields(int narg, char **arg)
       pack_choice[i] = &DumpGrid::pack_yc;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"zc") == 0) {
-      if (dimension == 2) 
+      if (dimension == 2)
 	error->all(FLERR,"Invalid dump grid field for 2d simulation");
       pack_choice[i] = &DumpGrid::pack_zc;
       vtype[i] = DOUBLE;
@@ -453,7 +456,7 @@ int DumpGrid::parse_fields(int narg, char **arg)
                    "per-grid vector");
       if (argindex[i] > 0 && modify->compute[n]->size_per_grid_cols == 0)
 	error->all(FLERR,"Dump grid compute does not calculate per-grid array");
-      if (argindex[i] > 0 && 
+      if (argindex[i] > 0 &&
           argindex[i] > modify->compute[n]->size_per_grid_cols)
 	error->all(FLERR,"Dump grid compute array is accessed out-of-range");
 
@@ -532,7 +535,7 @@ int DumpGrid::add_compute(char *id)
   for (icompute = 0; icompute < ncompute; icompute++)
     if (strcmp(id,id_compute[icompute]) == 0) break;
   if (icompute < ncompute) return icompute;
-  
+
   id_compute = (char **)
     memory->srealloc(id_compute,(ncompute+1)*sizeof(char *),"dump:id_compute");
   delete [] compute;
@@ -557,7 +560,7 @@ int DumpGrid::add_fix(char *id)
   for (ifix = 0; ifix < nfix; ifix++)
     if (strcmp(id,id_fix[ifix]) == 0) break;
   if (ifix < nfix) return ifix;
-  
+
   id_fix = (char **)
     memory->srealloc(id_fix,(nfix+1)*sizeof(char *),"dump:id_fix");
   delete [] fix;
@@ -582,7 +585,7 @@ int DumpGrid::add_variable(char *id)
   for (ivariable = 0; ivariable < nvariable; ivariable++)
     if (strcmp(id,id_variable[ivariable]) == 0) break;
   if (ivariable < nvariable) return ivariable;
-  
+
   id_variable = (char **)
     memory->srealloc(id_variable,(nvariable+1)*sizeof(char *),
 		     "dump:id_variable");
@@ -642,15 +645,15 @@ void DumpGrid::pack_compute(int n)
   int index = argindex[n];
   Compute *c = compute[field2index[n]];
 
-  // if one of post_process flags is set, 
+  // if one of post_process flags is set,
   //   invoke post_process_grid() or invoke post_process_tally()
   // else extract from compute's vector_grid and array_grid directly
   // dump buf only stores values for grid cells with particles
   //   use cpart indices to extract needed subset
 
-  if (c->post_process_grid_flag) 
+  if (c->post_process_grid_flag)
     c->post_process_grid(index,1,NULL,NULL,NULL,1);
-  else if (c->post_process_isurf_grid_flag) 
+  else if (c->post_process_isurf_grid_flag)
     c->post_process_isurf_grid();
 
   if (index == 0 || c->post_process_grid_flag) {
@@ -717,6 +720,21 @@ void DumpGrid::pack_id(int n)
 
   for (int i = 0; i < ncpart; i++) {
     buf[n] = cells[cpart[i]].id;
+    n += size_one;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpGrid::pack_split(int n)
+{
+  Grid::ChildCell *cells = grid->cells;
+
+  for (int i = 0; i < ncpart; i++) {
+    // convert to human readable format:
+    //   split = 0: unsplit cell
+    //   split = 1..N: split cell index + 1
+    buf[n] = -cells[cpart[i]].nsplit + 1;
     n += size_one;
   }
 }

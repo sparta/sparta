@@ -56,8 +56,6 @@
 
 #include <Kokkos_Core.hpp>
 
-#include <TestTile.hpp>
-//#include <TestSharedAlloc.hpp>
 //#include <TestViewAPI.hpp>
 //#include <TestViewOfClass.hpp>
 //#include <TestViewSubview.hpp>
@@ -78,7 +76,6 @@
 //#include <TestCXX11.hpp>
 //#include <TestCXX11Deduction.hpp>
 #include <TestTeamVector.hpp>
-//#include <TestTemplateMetaFunctions.hpp>
 //#include <TestPolicyConstruction.hpp>
 //#include <TestMDRange.hpp>
 

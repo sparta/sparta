@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -73,7 +73,7 @@ ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :
 
   if (modeflag != 0) {
     maxmode = particle->maxvibmode;
-    if (maxmode == 0) 
+    if (maxmode == 0)
       error->all(FLERR,"No species in compute tvib/grid has vibrational modes");
   }
 
@@ -145,8 +145,8 @@ ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :
     memory->create(s2t_mode,nspecies,maxmode,"tvib/grid:s2t_mode");
     t2s_mode = new int[ntally];
 
-    for (int isp = 0; isp < nspecies; isp++) 
-      for (int imode = 0; imode < maxmode; imode++) 
+    for (int isp = 0; isp < nspecies; isp++)
+      for (int imode = 0; imode < maxmode; imode++)
         s2t_mode[isp][imode] = -1;
 
     int itally = 0;
@@ -166,7 +166,7 @@ ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :
 
   // modeflag = 2
   // Ngroup*Nmode outputs, 2*Nspecies*Nmode tallies per output
-  // tally count and list of tally columns are duplicated 
+  // tally count and list of tally columns are duplicated
   //   Nmode times for each group
 
   } else if (modeflag == 2) {
@@ -177,8 +177,8 @@ ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :
     memory->create(s2t_mode,nspecies,maxmode,"tvib/grid:s2t_mode");
     t2s_mode = new int[ntally];
 
-    for (int isp = 0; isp < nspecies; isp++) 
-      for (int imode = 0; imode < maxmode; imode++) 
+    for (int isp = 0; isp < nspecies; isp++)
+      for (int imode = 0; imode < maxmode; imode++)
         s2t_mode[isp][imode] = -1;
 
     int itally = 0;
@@ -201,7 +201,7 @@ ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :
     for (int igroup = 0; igroup < ngroup; igroup++) {
       for (int imode = 1; imode < maxmode; imode++)
         nmap[igroup*maxmode + imode] = nmap[igroup*maxmode];
-      
+
       int ncol = 2*groupsize[igroup]*maxmode;
       for (int imode = 1; imode < maxmode; imode++)
         for (int icol = 0; icol < ncol; icol++)
@@ -218,6 +218,8 @@ ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :
 
 ComputeTvibGrid::~ComputeTvibGrid()
 {
+  if (copymode) return;
+
   delete [] nmap;
   memory->destroy(map);
 
@@ -259,7 +261,7 @@ void ComputeTvibGrid::init()
         (modeflag > 0  && 2*groupsize[i]*maxmode != nmap[i]))
       error->all(FLERR,"Number of species in compute tvib/grid "
                  "group has changed");
-  
+
   if (modeflag > 0) index_vibmode = particle->find_custom((char *) "vibmode");
 
   reallocate();
@@ -273,7 +275,9 @@ void ComputeTvibGrid::compute_per_grid()
 
   Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::OnePart *particles = particle->particles;
+  Particle::Species *species = particle->species;
   int *s2g = particle->mixture[imix]->species2group;
+  double boltz = update->boltz;
   int nlocal = particle->nlocal;
 
   int i,j,ispecies,igroup,icell,imode,nmode;
@@ -290,36 +294,38 @@ void ComputeTvibGrid::compute_per_grid()
 
   if (modeflag == 0) {
     for (i = 0; i < nlocal; i++) {
-      if (particles[i].evib == 0) continue;
       ispecies = particles[i].ispecies;
+      if (!species[ispecies].vibdof) continue;
       igroup = s2g[ispecies];
       if (igroup < 0) continue;
       icell = particles[i].icell;
       if (!(cinfo[icell].mask & groupbit)) continue;
-      
+
       j = s2t[ispecies];
       tally[icell][j] += particles[i].evib;
       tally[icell][j+1] += 1.0;
     }
 
   } else if (modeflag >= 1) {
-    int **vibmode = 
+    int **vibmode =
       particle->eiarray[particle->ewhich[index_vibmode]];
 
     for (i = 0; i < nlocal; i++) {
       ispecies = particles[i].ispecies;
+      if (!species[ispecies].vibdof) continue;
       igroup = s2g[ispecies];
       if (igroup < 0) continue;
       icell = particles[i].icell;
       if (!(cinfo[icell].mask & groupbit)) continue;
-      
+
       // tally only the modes this species has
 
       nmode = particle->species[ispecies].nvibmode;
       for (imode = 0; imode < nmode; imode++) {
-        if (vibmode[i][imode] == 0) continue;
         j = s2t_mode[ispecies][imode];
-        tally[icell][j] += vibmode[i][imode];
+        if (nmode > 1) tally[icell][j] += vibmode[i][imode];
+        else tally[icell][j] +=
+	       particles[i].evib / (boltz*species[ispecies].vibtemp[0]);
         tally[icell][j+1] += 1.0;
       }
     }
@@ -362,7 +368,7 @@ void ComputeTvibGrid::post_process_grid(int index, int nsample,
                                         double *vec, int nstride)
 {
   index--;
-  
+
   int lo = 0;
   int hi = nglocal;
   int k = 0;
@@ -398,7 +404,7 @@ void ComputeTvibGrid::post_process_grid(int index, int nsample,
       evib = emap[0];
       count = evib+1;
       for (isp = 0; isp < nsp; isp++) {
-        ispecies = t2s[evib];
+        ispecies = t2s[evib-emap[0]];
         theta = species[ispecies].vibtemp[0];
         if (theta == 0.0 || etally[icell][count] == 0.0) {
           tspecies[isp] = 0.0;
@@ -419,7 +425,7 @@ void ComputeTvibGrid::post_process_grid(int index, int nsample,
         evib += 2;
         count = evib+1;
       }
-      
+
       // loop over species in group to accumulate numerator & denominator
 
       numer = denom = 0.0;
@@ -429,7 +435,7 @@ void ComputeTvibGrid::post_process_grid(int index, int nsample,
         denom += etally[icell][count];
         count += 2;
       }
-      
+
       if (denom == 0.0) vec[k] = 0.0;
       else vec[k] = numer/denom;
       k += nstride;
@@ -443,14 +449,14 @@ void ComputeTvibGrid::post_process_grid(int index, int nsample,
 
   } else if (modeflag == 1) {
     int nsp = nmap[index] / maxmode / 2;
-    int **vibmode = 
+    int **vibmode =
       particle->eiarray[particle->ewhich[index_vibmode]];
 
     for (int icell = lo; icell < hi; icell++) {
       evib = emap[0];
       count = evib+1;
       for (isp = 0; isp < nsp; isp++) {
-        ispecies = t2s_mode[evib];
+        ispecies = t2s_mode[evib-emap[0]];
         for (imode = 0; imode < maxmode; imode++) {
           theta = species[ispecies].vibtemp[imode];
           if (theta == 0.0 || etally[icell][count] == 0.0) {
@@ -486,7 +492,7 @@ void ComputeTvibGrid::post_process_grid(int index, int nsample,
           count += 2;
         }
       }
-      
+
       if (denom == 0.0) vec[k] = 0.0;
       else vec[k] = numer/denom;
       k += nstride;
@@ -501,14 +507,14 @@ void ComputeTvibGrid::post_process_grid(int index, int nsample,
   } else if (modeflag == 2) {
     int nsp = nmap[index] / maxmode / 2;
     imode = index % maxmode;
-    int **vibmode = 
+    int **vibmode =
       particle->eiarray[particle->ewhich[index_vibmode]];
 
     for (int icell = lo; icell < hi; icell++) {
       evib = emap[2*imode];
       count = evib+1;
       for (isp = 0; isp < nsp; isp++) {
-        ispecies = t2s_mode[evib];
+        ispecies = t2s_mode[evib-emap[0]];
         theta = species[ispecies].vibtemp[imode];
         if (theta == 0.0 || etally[icell][count] == 0.0) {
           tspecies_mode[isp][imode] = 0.0;
@@ -536,12 +542,11 @@ void ComputeTvibGrid::post_process_grid(int index, int nsample,
       numer = denom = 0.0;
       count = emap[2*imode+1];
       for (isp = 0; isp < nsp; isp++) {
-        ispecies = t2s[evib];
         numer += tspecies_mode[isp][imode]*etally[icell][count];
         denom += etally[icell][count];
         count += 2*maxmode;
       }
-      
+
       if (denom == 0.0) vec[k] = 0.0;
       else vec[k] = numer/denom;
       k += nstride;

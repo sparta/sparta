@@ -7,7 +7,7 @@ vpath %.cpp ${KOKKOS_PATH}/containers/unit_tests/openmp
 vpath %.cpp ${KOKKOS_PATH}/containers/unit_tests/hpx
 vpath %.cpp ${KOKKOS_PATH}/containers/unit_tests/serial
 vpath %.cpp ${KOKKOS_PATH}/containers/unit_tests/threads
-vpath %.cpp ${KOKKOS_PATH}/containers/unit_tests/rocm
+vpath %.cpp ${KOKKOS_PATH}/containers/unit_tests/hip
 vpath %.cpp ${KOKKOS_PATH}/containers/unit_tests/cuda
 vpath %.cpp ${CURDIR}
 default: build_all
@@ -26,7 +26,7 @@ override LDFLAGS += -lpthread
 
 include $(KOKKOS_PATH)/Makefile.kokkos
 
-KOKKOS_CXXFLAGS += -I$(GTEST_PATH) -I${KOKKOS_PATH}/containers/unit_tests
+KOKKOS_CXXFLAGS += -I$(GTEST_PATH) -I${KOKKOS_PATH}/containers/unit_tests -I${KOKKOS_PATH}/core/unit_test/category_files
 
 TEST_TARGETS =
 TARGETS =
@@ -60,7 +60,7 @@ ifeq ($(KOKKOS_INTERNAL_USE_CUDA), 1)
 	TEST_TARGETS += test-cuda
 endif
 
-ifeq ($(KOKKOS_INTERNAL_USE_PTHREADS), 1)
+ifeq ($(KOKKOS_INTERNAL_USE_THREADS), 1)
 	OBJ_THREADS = UnitTestMain.o gtest-all.o
 	OBJ_THREADS += TestThreads_Bitset.o
 	OBJ_THREADS += TestThreads_DualView.o

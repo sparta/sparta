@@ -103,11 +103,11 @@ processors, which then needs to be re-generated before a simulation is
 run.  Using the balance_grid none command will re-generate the ghost
 cell information.
 </P>
-<P>The <I>stride</I>, <I>clump</I>, and <I>block</I> styles can only be used if the
-grid is "uniform".  The grid in SPARTA is hierarchical with one or
-more levels, as defined by the <A HREF = "create_grid.html">create_grid</A> or
+<P>The <I>stride</I>, <I>clump</I>, and <I>block</I> styles can only be used if the grid
+is "uniform".  The grid in SPARTA is hierarchical with one or more
+levels, as defined by the <A HREF = "create_grid.html">create_grid</A> or
 <A HREF = "read_grid.html">read_grid</A> commlands.  If the parent cell of every
-grid cell is at the same level of the hierarchy, then for puposed os
+grid cell is at the same level of the hierarchy, then for purposes of
 this command the grid is uniform, meaning the collection of grid cells
 effectively form a uniform fine grid overlaying the entire simulation
 domain.
@@ -152,6 +152,15 @@ command is issued, a <I>cell</I> style weight will be used instead of
 before the balance command so that timer data is available. The timers
 used for balancing tally time from the move, sort, collide, and modify
 portions of each timestep.
+</P>
+<P>IMPORTANT NOTE: The <A HREF = "adapt_grid.html">adapt_grid</A> command zeros out
+timing data, so the weight <I>time</I> option is not available immediatly
+after this command.
+</P>
+<P>IMPORTANT NOTE: The coarsening option in <A HREF = "fix_adapt.html">fix_adapt</A> may
+shift cells to different processors, which makes the accumulated
+timing data for the weight <I>time</I> option less accurate when load
+balancing is performed immediately after this command.
 </P>
 <P>Here is an example of an RCB partitioning for 24 processors, of a 2d
 hierarchical grid with 5 levels, refined around a tilted ellipsoidal

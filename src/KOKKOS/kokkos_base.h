@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -31,6 +31,7 @@ class KokkosBase {
 
   DAT::t_float_1d d_vector;          // Kokkos version of computed vector
   DAT::t_float_2d_lr d_array_grid;   // Kokkos version of computed per-grid array
+  DAT::t_float_2d_lr d_array_particle;   // Kokkos version of computed per-particle array
 
   DAT::tdual_float_2d_lr k_array;    // Kokkos version of computed array
   DAT::t_float_2d_lr d_array;        // Kokkos version of computed array

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -29,7 +29,7 @@ using namespace SPARTA_NS;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
-enum{NUM,NUMWT,MFLUX,PRESS,XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ETOT};
+enum{NUM,NUMWT,NFLUX,MFLUX,PRESS,XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ETOT};
 
 /* ---------------------------------------------------------------------- */
 
@@ -49,6 +49,7 @@ ComputeBoundary::ComputeBoundary(SPARTA *sparta, int narg, char **arg) :
   while (iarg < narg) {
     if (strcmp(arg[iarg],"n") == 0) which[nvalue++] = NUM;
     else if (strcmp(arg[iarg],"nwt") == 0) which[nvalue++] = NUMWT;
+    else if (strcmp(arg[iarg],"nflux") == 0) which[nvalue++] = NFLUX;
     else if (strcmp(arg[iarg],"mflux") == 0) which[nvalue++] = MFLUX;
     else if (strcmp(arg[iarg],"press") == 0) which[nvalue++] = PRESS;
     else if (strcmp(arg[iarg],"shx") == 0) which[nvalue++] = XSHEAR;
@@ -163,8 +164,8 @@ void ComputeBoundary::clear()
 ------------------------------------------------------------------------- */
 
 void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
-                                     Particle::OnePart *iorig, 
-                                     Particle::OnePart *ip, 
+                                     Particle::OnePart *iorig,
+                                     Particle::OnePart *ip,
                                      Particle::OnePart *jp)
 {
   // skip if species not in mixture group
@@ -214,6 +215,9 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
       case NUMWT:
         vec[k++] += weight;
         break;
+      case NFLUX:
+        vec[k++] += weight;
+        break;
       case MFLUX:
         vec[k++] += origmass;
         break;
@@ -260,7 +264,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
         break;
       case ETOT:
         vsqpre = MathExtra::lensq3(vorig);
-        vec[k++] += 0.5*mvv2e*origmass*vsqpre + 
+        vec[k++] += 0.5*mvv2e*origmass*vsqpre +
           weight*(iorig->erot+iorig->evib);
         break;
       }
@@ -275,10 +279,17 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
       case NUMWT:
         vec[k++] += weight;
         break;
+      case NFLUX:
+        vec[k] += weight;
+        if (ip) vec[k] -= weight;
+        if (jp) vec[k] -= weight;
+        k++;
+        break;
       case MFLUX:
-        vec[k++] += origmass;
-        if (ip) vec[k++] -= imass;
-        if (jp) vec[k++] -= jmass;
+        vec[k] += origmass;
+        if (ip) vec[k] -= imass;
+        if (jp) vec[k] -= jmass;
+        k++;
         break;
       case PRESS:
         MathExtra::scale3(-origmass,vorig,pdelta);
@@ -352,7 +363,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
           jvsqpost = jmass * MathExtra::lensq3(jp->v);
           jother = jp->erot + jp->evib;
         } else jvsqpost = jother = 0.0;
-        vec[k++] -= 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
+        vec[k++] -= 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
           weight * (iother + jother - otherpre);
         break;
       }

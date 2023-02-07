@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -27,7 +27,6 @@ struct TagIrregularUnpackBuffer{};
 
 class IrregularKokkos : public Irregular {
  public:
-  typedef ArrayTypes<DeviceType> AT;
 
   IrregularKokkos(class SPARTA *);
   ~IrregularKokkos();
@@ -52,7 +51,7 @@ class IrregularKokkos : public Irregular {
   DAT::t_int_1d d_index_self;
 
   DAT::tdual_int_scalar k_n;
-  typename AT::t_int_scalar d_n;
+  DAT::t_int_scalar d_n;
   HAT::t_int_scalar h_n;
 
   DAT::t_char_1d d_sendbuf;

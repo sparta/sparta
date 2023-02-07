@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -42,7 +42,7 @@ class ComputeSurfKokkos : public ComputeSurf {
   void pre_surf_tally();
   void post_surf_tally();
 
-enum{NUM,NUMWT,MFLUX,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
+enum{NUM,NUMWT,NFLUX,MFLUX,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
      XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ETOT};
 
 /* ----------------------------------------------------------------------
@@ -58,7 +58,7 @@ enum{NUM,NUMWT,MFLUX,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
 template <int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
 void surf_tally_kk(int isurf, int icell, int reaction,
-                   Particle::OnePart *iorig, 
+                   Particle::OnePart *iorig,
                    Particle::OnePart *ip, Particle::OnePart *jp) const
 {
   // skip if isurf not in surface group
@@ -89,20 +89,11 @@ void surf_tally_kk(int isurf, int icell, int reaction,
     transparent = d_tris[isurf].transparent;
   }
 
-  int index = d_surf2tally(isurf);
-  if (index != -1)
-    itally = index;
-  else { // OK if two threads hit this at the same time
-    if (ATOMIC_REDUCTION != 0)
-      itally = Kokkos::atomic_fetch_add(&d_ntally(),1);
-    else {
-      itally = d_ntally();
-      d_ntally()++;
-    }
+  // thread-safe, tally array will be compressed later
 
-    d_tally2surf(itally) = surfID;
-    d_surf2tally(isurf) = itally;
-  }
+  itally = isurf;
+  d_tally2surf(itally) = surfID;
+  d_surf2tally(isurf) = isurf;
 
   double fluxscale = d_normflux(isurf);
 
@@ -136,8 +127,8 @@ void surf_tally_kk(int isurf, int icell, int reaction,
   int nflag = 0;
   int tflag = 0;
 
-  auto v_array_surf_tally = ScatterViewHelper<NeedDup<ATOMIC_REDUCTION,DeviceType>::value,decltype(dup_array_surf_tally),decltype(ndup_array_surf_tally)>::get(dup_array_surf_tally,ndup_array_surf_tally);
-  auto a_array_surf_tally = v_array_surf_tally.template access<AtomicDup<ATOMIC_REDUCTION,DeviceType>::value>();
+  auto v_array_surf_tally = ScatterViewHelper<typename NeedDup<ATOMIC_REDUCTION,DeviceType>::value,decltype(dup_array_surf_tally),decltype(ndup_array_surf_tally)>::get(dup_array_surf_tally,ndup_array_surf_tally);
+  auto a_array_surf_tally = v_array_surf_tally.template access<typename AtomicDup<ATOMIC_REDUCTION,DeviceType>::value>();
 
   for (int m = 0; m < nvalue; m++) {
     switch (d_which(m)) {
@@ -147,12 +138,21 @@ void surf_tally_kk(int isurf, int icell, int reaction,
     case NUMWT:
       a_array_surf_tally(itally,k++) += weight;
       break;
-    case MFLUX:
-      a_array_surf_tally(itally,k++) += origmass;
+    case NFLUX:
+      a_array_surf_tally(itally,k) += weight * fluxscale;
       if (!transparent) {
-        if (ip) a_array_surf_tally(itally,k++) -= imass;
-        if (jp) a_array_surf_tally(itally,k++) -= jmass;
+        if (ip) a_array_surf_tally(itally,k) -= weight * fluxscale;
+        if (jp) a_array_surf_tally(itally,k) -= weight * fluxscale;
       }
+      k++;
+      break;
+    case MFLUX:
+      a_array_surf_tally(itally,k) += origmass * fluxscale;
+      if (!transparent) {
+        if (ip) a_array_surf_tally(itally,k) -= imass * fluxscale;
+        if (jp) a_array_surf_tally(itally,k) -= jmass * fluxscale;
+      }
+      k++;
       break;
     case FX:
       if (!fflag) {
@@ -295,7 +295,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       if (transparent)
         etot = -0.5*mvv2e*vsqpre - weight*otherpre;
       else
-        etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
+        etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
           weight * (iother + jother - otherpre);
       a_array_surf_tally(itally,k++) -= etot * fluxscale;
       break;
@@ -306,16 +306,15 @@ void surf_tally_kk(int isurf, int icell, int reaction,
  private:
   int mvv2e;
 
-  DAT::t_int_scalar d_ntally;
   DAT::t_int_1d d_which;
 
   DAT::tdual_float_2d_lr k_array_surf_tally;
   DAT::t_float_2d_lr d_array_surf_tally;  // tally values for local surfs
 
   int need_dup;
-  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterDuplicated> dup_array_surf_tally;
-  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterNonDuplicated> ndup_array_surf_tally;
- 
+  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,typename Kokkos::Experimental::ScatterSum,typename Kokkos::Experimental::ScatterDuplicated> dup_array_surf_tally;
+  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,typename Kokkos::Experimental::ScatterSum,typename Kokkos::Experimental::ScatterNonDuplicated> ndup_array_surf_tally;
+
   DAT::t_surfint_1d d_tally2surf;           // tally2surf[I] = surf ID of Ith tally
   DAT::tdual_surfint_1d k_tally2surf;
   DAT::t_int_1d d_surf2tally;         // using Kokkos::UnorderedMap::insert uses too many registers on GPUs

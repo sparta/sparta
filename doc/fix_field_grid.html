@@ -1,0 +1,123 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix field/grid command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID field/grid axvar ayvar azvar 
+</PRE>
+<P>ID is documented in <A HREF = "fix.html">fix</A> command
+field/grid = style name of this fix command
+axvar,ayvar,azvar = names of grid-style variables for acceleration components:ul
+</P>
+<P><B>Examples:</B>
+</P>
+<PRE>fix 1 field/grid gradBx gradBy NULL 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Specify the formulas used to calculate the acceleration effect of an
+external field on particle motion.  The ID of this fix can be used by
+the <A HREF = "global.html">global field grid</A> command which applies the field
+when particles are advected during a simulation run.  This is done by
+invoking a method in this fix, which evaluates the specified
+grid-style variables.
+</P>
+<P>Each of the <I>axvar</I>, <I>ayvar</I>, and <I>azvar</I> arguments is the name of a
+grid-style variable.  The variables should compute the x,y,z
+components of acceleration applied at the center point of each grid
+cell in the simulation.  Any of the three variables can be specified
+as NULL, which means there is no acceleration in that dimension.
+</P>
+<P>Each timestep when a particle is advected the acceleration vector (a)
+for the grid cell it is in acts as a perturbation on straight-line
+motion which affects both the end-of-timestep position (x) and
+velocity (v) vectors of the particle:
+</P>
+<PRE>xnew = x + dt*v + 0.5*a*dt^2
+vnew = v + dt*a 
+</PRE>
+<P>Note that the formulas encoded by the <I>axvar</I>, <I>ayvar</I>, and <I>azvar</I>
+variables should produce values that are in units of acceleration
+(distance/time^2, see the <A HREF = "units.html">units</A> command), not force.  And
+they should not include the timestep (dt) value in the formulas above.
+That is applied by SPARTA during advection.
+</P>
+<P>See the <A HREF = "variable.html">variable</A> doc page for a description of the
+formula syntax allowed for grid-style variables.  They can include
+references to the grid vectors xc, yc, and zc for the grid cell center
+point.  Using these values in a formula can enable a
+spatially-dependent field.  The formulas can also include the current
+timestep and timestep size (dt) to enable a time-dependent field.
+</P>
+<P>NOTE still need to figure this out: And they can include properties of
+the particle, such as its mass or magnetic moment.
+</P>
+<HR>
+
+<P>Note that the <A HREF = "global.html">global field</A> command provides three
+alternatives for specifying an external field:
+</P>
+<PRE>global field constant ...     # field is constant in space and time
+global field particle ...     # field is applied on a per particle basis
+global field grid ...         # field is applied on a per grid cell basis 
+</PRE>
+<P>This fix is only used for per-grid fields.  It should only be used for
+fields which vary spatially or in time; otherwise use the constant
+option which will be much more efficient.  The use of per-grid
+variables allows the field to vary spatially as a function of the grid
+cell center point. It also allows the field to vary in time by having
+the variables use the current timestep.  
+</P>
+<P>NOTE still need to figure out how to do this: The field can also
+depend on particle attributes, such as its mass and magnetic moment
+(for a B field).
+</P>
+<P>Note that use of the <A HREF = "global.html">global field grid</A> command with this
+fix will evaluate the specified grid-style variables as often as
+requested.  For a field that has no time-ependence, you can specificy
+it only be evaluated once at the beginning of a run.  For a field that
+is time-dependent you can choose how often to recompute the field,
+depending on how fast it varies.
+</P>
+<P>The <A HREF = "fix_field_particle.html">fix field/particle</A> command is an
+alternative which will typically run much slower, but be more
+accurate.  When used with the <A HREF = "global.html">global field particle</A>
+command, the particle-style variables it uses are invoked every
+timestep using current particle positions.  And the field calculation
+is done for each grid particle, not for each grid cell.  The trade-off
+is that the fields it calculates for each particle is more accurate,
+but the simulation will typically run several times slower than it
+would with this fix.
+</P>
+<P><B>Restart, output info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.
+</P>
+<P>This fix stores a per-grid cell array of values which can be accessed
+by various output commands on any timestep, e.g. by the <A HREF = "dump.html">dump
+grid</A> command.  The values are those produced by evaluating
+the grid-style variables.  The number of rows in the array is the
+number of grid cells this processor owns.  The number of columns in
+the array is the number of non-NULL variables specified.
+</P>
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "fix_field_particle.html">fix field/particle</A>, <A HREF = "global.html">global
+field</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

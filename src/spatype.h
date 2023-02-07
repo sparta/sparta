@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -20,7 +20,7 @@
 
 // smallint must be an int, as defined by C compiler
 // bigint can be 32-bit or 64-bit int, must be >= smallint
-// cellint can be 32-bit or 64-bit int
+// cellint can be unsigned 32-bit or 64-bit int
 
 // MPI_SPARTA_BIGINT = MPI data type corresponding to a bigint
 
@@ -33,6 +33,7 @@
 #include "limits.h"
 #include "stdint.h"
 #include "inttypes.h"
+#include "accelerator_kokkos_defs.h"
 
 // grrr - IBM Power6 does not provide this def in their system header files
 
@@ -45,6 +46,16 @@ namespace SPARTA_NS {
 // enum used for KOKKOS host/device flags
 
 enum ExecutionSpace{Host,Device};
+
+// struct alignment for GPUs
+
+#if defined(SPARTA_KOKKOS_GPU)
+#define SPARTA_ALIGN(n) alignas(n)
+#define SPARTA_GET_ALIGN(type) alignof(type)
+#else
+#define SPARTA_ALIGN(n)
+#define SPARTA_GET_ALIGN(type) 0
+#endif
 
 // default settings: 32-bit smallint, 64-bit bigint, 32-bit cellint
 
@@ -68,14 +79,14 @@ enum ExecutionSpace{Host,Device};
 #ifdef SPARTA_BIG
 
 typedef int smallint;
-typedef int cellint;
+typedef uint32_t cellint;
 typedef int surfint;
 typedef int64_t bigint;
 
 #define MAXSMALLINT INT_MAX
 #define MAXBIGINT INT64_MAX
 #define MPI_SPARTA_BIGINT MPI_LL
-#define CELLINT_FORMAT "%d"
+#define CELLINT_FORMAT "%u"
 #define SURFINT_FORMAT "%d"
 #define BIGINT_FORMAT "%" PRId64
 #define ATOCELLINT atoi
@@ -90,14 +101,14 @@ typedef int64_t bigint;
 #ifdef SPARTA_BIGBIG
 
 typedef int smallint;
-typedef int64_t cellint;
+typedef uint64_t cellint;
 typedef int64_t surfint;
 typedef int64_t bigint;
 
 #define MAXSMALLINT INT_MAX
 #define MAXBIGINT INT64_MAX
 #define MPI_SPARTA_BIGINT MPI_LL
-#define CELLINT_FORMAT "%" PRId64
+#define CELLINT_FORMAT "%" PRIu64
 #define SURFINT_FORMAT "%" PRId64
 #define BIGINT_FORMAT "%" PRId64
 #define ATOCELLINT ATOLL
@@ -112,14 +123,14 @@ typedef int64_t bigint;
 #ifdef SPARTA_SMALL
 
 typedef int smallint;
-typedef int cellint;
+typedef uint32_t cellint;
 typedef int surfint;
 typedef int bigint;
 
 #define MAXSMALLINT INT_MAX
 #define MAXBIGINT INT_MAX
 #define MPI_SPARTA_BIGINT MPI_INT
-#define CELLINT_FORMAT "%d"
+#define CELLINT_FORMAT "%u"
 #define SURFINT_FORMAT "%d"
 #define BIGINT_FORMAT "%d"
 #define ATOCELLINT atoi

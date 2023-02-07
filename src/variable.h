@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -61,8 +61,8 @@ class Variable : protected Pointers {
 
   int *eval_in_progress;   // flag if evaluation of variable is in progress
 
-  class RanPark *randomequal;     // RNG for equal-style vars
-  class RanPark *randomparticle;  // RNG for particle-style vars
+  class RanKnuth *randomequal;     // RNG for equal-style vars
+  class RanKnuth *randomparticle;  // RNG for particle-style vars
 
   int precedence[17];      // precedence level of math operators
                            // set length to include up to OR in enum
@@ -76,7 +76,7 @@ class Variable : protected Pointers {
   int *maxlen_storage;     // allocated length of each vector
 
   struct Tree {            // parse tree for particle-style variables
-    double value;          // single scalar  
+    double value;          // single scalar
     double *array;         // per-atom or per-type list of doubles
     char *carray;          // ptr into data struct with nstride = sizeof(struct)
     int type;              // operation, see enum{} in variable.cpp
@@ -95,10 +95,12 @@ class Variable : protected Pointers {
   void free_tree(Tree *);
   int find_matching_paren(char *, int, char *&);
   int math_function(char *, char *, Tree **, Tree **, int &, double *, int &);
-  int special_function(char *, char *, Tree **, Tree **, 
+  int special_function(char *, char *, Tree **, Tree **,
 		       int &, double *, int &);
   int is_particle_vector(char *);
   void particle_vector(char *, Tree **, Tree **, int &);
+  int is_grid_vector(char *);
+  void grid_vector(char *, Tree **, Tree **, int &);
   int is_constant(char *);
   double constant(char *);
   char *find_next_comma(char *);
@@ -271,6 +273,16 @@ formula.
 E: Invalid math/special function in variable formula
 
 Self-explanatory.
+
+E: Too many particles per processor for particle-style variable
+
+The number of particles per MPI rank is too large, increase the
+number of MPI ranks.
+
+E: Too many grid cells per processor for grid-style variable
+
+The number of grid cells per MPI rank is too large, increase the
+number of MPI ranks.
 
 E: Invalid stats keyword in variable formula
 

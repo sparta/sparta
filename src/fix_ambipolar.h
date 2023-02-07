@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -32,16 +32,17 @@ class FixAmbipolar : public Fix {
   int *ions;                  // 1 if a particle species is an ionx
 
   FixAmbipolar(class SPARTA *, int, char **);
-  ~FixAmbipolar();
+  FixAmbipolar(class SPARTA *sparta) : Fix(sparta) {} // needed for Kokkos
+  virtual ~FixAmbipolar();
   int setmask();
   void init();
-  void add_particle(int, double, double, double, double *);
+  virtual void update_custom(int, double, double, double, double *);
   void surf_react(Particle::OnePart *, int &, int &);
 
- private:
+ protected:
   int maxion;                 // length of ions vector
   int ionindex,velindex;      // indices into particle custom data structs
-  class RanPark *random;
+  class RanKnuth *random;
 };
 
 }

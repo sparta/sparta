@@ -53,9 +53,9 @@ namespace Impl {
 
 template <typename MapType, bool Near = false>
 struct TestInsert {
-  typedef MapType map_type;
-  typedef typename map_type::execution_space execution_space;
-  typedef uint32_t value_type;
+  using map_type        = MapType;
+  using execution_space = typename map_type::execution_space;
+  using value_type      = uint32_t;
 
   map_type map;
   uint32_t inserts;
@@ -87,8 +87,7 @@ struct TestInsert {
   void init(value_type &failed_count) const { failed_count = 0; }
 
   KOKKOS_INLINE_FUNCTION
-  void join(volatile value_type &failed_count,
-            const volatile value_type &count) const {
+  void join(value_type &failed_count, const value_type &count) const {
     failed_count += count;
   }
 
@@ -101,10 +100,10 @@ struct TestInsert {
 
 template <typename MapType, bool Near>
 struct TestErase {
-  typedef TestErase<MapType, Near> self_type;
+  using self_type = TestErase<MapType, Near>;
 
-  typedef MapType map_type;
-  typedef typename MapType::execution_space execution_space;
+  using map_type        = MapType;
+  using execution_space = typename MapType::execution_space;
 
   map_type m_map;
   uint32_t m_num_erase;
@@ -131,9 +130,9 @@ struct TestErase {
 
 template <typename MapType>
 struct TestFind {
-  typedef MapType map_type;
-  typedef typename MapType::execution_space::execution_space execution_space;
-  typedef uint32_t value_type;
+  using map_type        = MapType;
+  using execution_space = typename MapType::execution_space::execution_space;
+  using value_type      = uint32_t;
 
   map_type m_map;
   uint32_t m_num_insert;
@@ -156,14 +155,13 @@ struct TestFind {
   static void init(value_type &dst) { dst = 0; }
 
   KOKKOS_INLINE_FUNCTION
-  static void join(volatile value_type &dst, const volatile value_type &src) {
-    dst += src;
-  }
+  static void join(value_type &dst, const value_type &src) { dst += src; }
 
   KOKKOS_INLINE_FUNCTION
   void operator()(typename execution_space::size_type i,
                   value_type &errors) const {
-    const bool expect_to_find_i = (i < m_max_key);
+    const bool expect_to_find_i =
+        (i < typename execution_space::size_type(m_max_key));
 
     const bool exists = m_map.exists(i);
 
@@ -180,9 +178,9 @@ struct TestFind {
 template <typename Device>
 void test_insert(uint32_t num_nodes, uint32_t num_inserts,
                  uint32_t num_duplicates, bool near) {
-  typedef Kokkos::UnorderedMap<uint32_t, uint32_t, Device> map_type;
-  typedef Kokkos::UnorderedMap<const uint32_t, const uint32_t, Device>
-      const_map_type;
+  using map_type = Kokkos::UnorderedMap<uint32_t, uint32_t, Device>;
+  using const_map_type =
+      Kokkos::UnorderedMap<const uint32_t, const uint32_t, Device>;
 
   const uint32_t expected_inserts =
       (num_inserts + num_duplicates - 1u) / num_duplicates;
@@ -232,7 +230,7 @@ void test_insert(uint32_t num_nodes, uint32_t num_inserts,
 
 template <typename Device>
 void test_failed_insert(uint32_t num_nodes) {
-  typedef Kokkos::UnorderedMap<uint32_t, uint32_t, Device> map_type;
+  using map_type = Kokkos::UnorderedMap<uint32_t, uint32_t, Device>;
 
   map_type map(num_nodes);
   Impl::TestInsert<map_type> test_insert(map, 2u * num_nodes, 1u);
@@ -244,13 +242,11 @@ void test_failed_insert(uint32_t num_nodes) {
 
 template <typename Device>
 void test_deep_copy(uint32_t num_nodes) {
-  typedef Kokkos::UnorderedMap<uint32_t, uint32_t, Device> map_type;
-  typedef Kokkos::UnorderedMap<const uint32_t, const uint32_t, Device>
-      const_map_type;
+  using map_type = Kokkos::UnorderedMap<uint32_t, uint32_t, Device>;
+  using const_map_type =
+      Kokkos::UnorderedMap<const uint32_t, const uint32_t, Device>;
 
-  typedef typename map_type::HostMirror host_map_type;
-  // typedef Kokkos::UnorderedMap<uint32_t, uint32_t, typename
-  // Device::host_mirror_execution_space > host_map_type;
+  using host_map_type = typename map_type::HostMirror;
 
   map_type map;
   map.rehash(num_nodes, false);
@@ -295,10 +291,7 @@ void test_deep_copy(uint32_t num_nodes) {
   }
 }
 
-// FIXME_HIP deadlock
-#ifndef KOKKOS_ENABLE_HIP
-// WORKAROUND MSVC
-#ifndef _WIN32
+#if !defined(_WIN32)
 TEST(TEST_CATEGORY, UnorderedMap_insert) {
   for (int i = 0; i < 500; ++i) {
     test_insert<TEST_EXECSPACE>(100000, 90000, 100, true);
@@ -314,7 +307,6 @@ TEST(TEST_CATEGORY, UnorderedMap_failed_insert) {
 TEST(TEST_CATEGORY, UnorderedMap_deep_copy) {
   for (int i = 0; i < 2; ++i) test_deep_copy<TEST_EXECSPACE>(10000);
 }
-#endif
 
 TEST(TEST_CATEGORY, UnorderedMap_valid_empty) {
   using Key   = int;
@@ -326,6 +318,28 @@ TEST(TEST_CATEGORY, UnorderedMap_valid_empty) {
   n = Map{m.capacity()};
   n.rehash(m.capacity());
   Kokkos::deep_copy(n, m);
+  ASSERT_TRUE(m.is_allocated());
+  ASSERT_TRUE(n.is_allocated());
+}
+
+TEST(TEST_CATEGORY, UnorderedMap_clear_zero_size) {
+  using Map =
+      Kokkos::UnorderedMap<int, void, Kokkos::DefaultHostExecutionSpace>;
+
+  Map m(11);
+  ASSERT_EQ(0u, m.size());
+
+  m.insert(2);
+  m.insert(3);
+  m.insert(5);
+  m.insert(7);
+  ASSERT_EQ(4u, m.size());
+  m.rehash(0);
+  ASSERT_EQ(128u, m.capacity());
+  ASSERT_EQ(4u, m.size());
+
+  m.clear();
+  ASSERT_EQ(0u, m.size());
 }
 
 }  // namespace Test

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -40,8 +40,8 @@ ComputePropertyGridKokkos::ComputePropertyGridKokkos(SPARTA *sparta, int narg, c
   for (int n = 0; n < nvalues; n++){
     k_index.h_view(n) = index[n];
   }
-  k_index.modify<SPAHostType>();
-  k_index.sync<DeviceType>();
+  k_index.modify_host();
+  k_index.sync_device();
   d_index = k_index.d_view;
 }
 
@@ -67,11 +67,11 @@ void ComputePropertyGridKokkos::compute_per_grid()
   } else {
     compute_per_grid_kokkos();
     if (nvalues == 1) {
-      k_vector_grid.modify<DeviceType>();
-      k_vector_grid.sync<SPAHostType>();
+      k_vector_grid.modify_device();
+      k_vector_grid.sync_host();
     } else {
-      k_array_grid.modify<DeviceType>();
-      k_array_grid.sync<SPAHostType>();
+      k_array_grid.modify_device();
+      k_array_grid.sync_host();
     }
   }
 }
@@ -79,7 +79,7 @@ void ComputePropertyGridKokkos::compute_per_grid()
 /* ---------------------------------------------------------------------- */
 void ComputePropertyGridKokkos::compute_per_grid_kokkos()
 {
-  GridKokkos* grid_kk = ((GridKokkos*)grid);  
+  GridKokkos* grid_kk = ((GridKokkos*)grid);
   d_cells = grid_kk->k_cells.d_view;
   d_cinfo = grid_kk->k_cinfo.d_view;
   grid_kk->sync(Device,CELL_MASK|CINFO_MASK);
@@ -88,8 +88,7 @@ void ComputePropertyGridKokkos::compute_per_grid_kokkos()
   if (nvalues == 1)
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputePropertyGrid_ComputePerGrid_vector>(0,nglocal),*this);
   else
-    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputePropertyGrid_ComputePerGrid_array>(0,nglocal),*this);    
-  DeviceType().fence();
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputePropertyGrid_ComputePerGrid_array>(0,nglocal),*this);
   copymode = 0;
 }
 
@@ -136,18 +135,18 @@ void ComputePropertyGridKokkos::operator()(TagComputePropertyGrid_ComputePerGrid
     else d_vector[i] = 0.0;
     break;
   case YC:
-    if (d_cinfo[i].mask & groupbit) 
+    if (d_cinfo[i].mask & groupbit)
       d_vector[i] = 0.5 * (d_cells[i].lo[1] + d_cells[i].hi[1]);
     else d_vector[i] = 0.0;
     break;
   case ZC:
-    if (d_cinfo[i].mask & groupbit) 
+    if (d_cinfo[i].mask & groupbit)
       d_vector[i] = 0.5 * (d_cells[i].lo[2] + d_cells[i].hi[2]);
     else d_vector[i] = 0.0;
     break;
   case VOL:
     if (d_cinfo[i].mask & groupbit) d_vector[i] = d_cinfo[i].volume;
-    else d_vector[i] = 0.0;      
+    else d_vector[i] = 0.0;
     break;
   }
 }
@@ -196,18 +195,18 @@ void ComputePropertyGridKokkos::operator()(TagComputePropertyGrid_ComputePerGrid
       else d_array_grid(i,n) = 0.0;
       break;
     case YC:
-      if (d_cinfo[i].mask & groupbit) 
+      if (d_cinfo[i].mask & groupbit)
 	d_array_grid(i,n) = 0.5 * (d_cells[i].lo[1] + d_cells[i].hi[1]);
       else d_array_grid(i,n) = 0.0;
       break;
     case ZC:
-      if (d_cinfo[i].mask & groupbit) 
+      if (d_cinfo[i].mask & groupbit)
 	d_array_grid(i,n) = 0.5 * (d_cells[i].lo[2] + d_cells[i].hi[2]);
       else d_array_grid(i,n) = 0.0;
       break;
     case VOL:
       if (d_cinfo[i].mask & groupbit) d_array_grid(i,n) = d_cinfo[i].volume;
-      else d_array_grid(i,n) = 0.0;      
+      else d_array_grid(i,n) = 0.0;
       break;
     }
   }

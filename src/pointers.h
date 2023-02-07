@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -39,13 +39,13 @@ namespace SPARTA_NS {
 // roundup a char ptr to 8-byte boundary
 // roundup an int to multiple of 8
 
-#define ROUNDUP(A) (char *) (((uint64_t) (A) + 7) & ~7);
-#define IROUNDUP(A) ((((int) (A) + 7) / 8) * 8);
-#define BIROUNDUP(A) ((((bigint) (A) + 7) / 8) * 8);
+#define ROUNDUP(A) (char *) (((uint64_t) (A) + 7) & ~7)
+#define IROUNDUP(A) ((((int) (A) + 7) / 8) * 8)
+#define BIROUNDUP(A) ((((bigint) (A) + 7) / 8) * 8)
 
 class Pointers {
  public:
-  Pointers(SPARTA *ptr) : 
+  Pointers(SPARTA *ptr) :
     sparta(ptr),
     memory(ptr->memory),
     error(ptr->error),

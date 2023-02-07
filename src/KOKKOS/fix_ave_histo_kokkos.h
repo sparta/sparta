@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -172,25 +172,25 @@ protected:
     if (value > mm_v.max_val) mm_v.max_val = value;
     if (value < lo) {
       if (beyond == 0 /*IGNORE*/) {
-        Kokkos::atomic_fetch_add(&d_stats(1), weight);
+        Kokkos::atomic_add(&d_stats(1), weight);
         return;
       } else {
-        Kokkos::atomic_fetch_add(&d_bin(0), weight);
+        Kokkos::atomic_add(&d_bin(0), weight);
       }
     } else if (value > hi) {
       if (beyond == 0 /*IGNORE*/) {
-        Kokkos::atomic_fetch_add(&d_stats(1), weight);
+        Kokkos::atomic_add(&d_stats(1), weight);
         return;
       } else {
-        Kokkos::atomic_fetch_add(&d_bin(nbins-1), weight);
+        Kokkos::atomic_add(&d_bin(nbins-1), weight);
       }
     } else {
       int ibin = static_cast<int>((value - lo) * bininv);
       ibin = MIN(ibin, nbins-1);
       if (beyond == 2 /*EXTRA*/) ibin++;
-      Kokkos::atomic_fetch_add(&d_bin(ibin), weight);
+      Kokkos::atomic_add(&d_bin(ibin), weight);
     }
-    Kokkos::atomic_fetch_add(&d_stats(0), weight);
+    Kokkos::atomic_add(&d_stats(0), weight);
   }
 
   KOKKOS_INLINE_FUNCTION

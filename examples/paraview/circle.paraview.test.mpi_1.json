@@ -1,0 +1,100 @@
+{
+  "tests" : [
+    {
+      "name" : "surf2paraview circle",
+      "clean" : "rm -fr circle_surf.pvd circle_surf/",
+      "run" : [
+        "PARAVIEW_PVPYTHON",
+        "SURF2PARAVIEW",
+        "data.circle circle_surf -r tmp_surf.*"
+      ],
+      "assert_files" : ["circle_surf.pvd"],
+      "assert_read" : {
+        "file" : "circle_surf.pvd",
+        "attributes" : {
+            "TimestepValues" : [0.0, 100.0, 200.0, 300.0, 400.0,
+                                500.0, 600.0, 700.0, 800.0, 900.0, 1000.0],
+            "CellArrays": ["id", "f_2[1]", "f_2[2]", "f_2[3]", "f_2[4]", "f_2[5]",
+                           "f_2[6]", "f_2[7]", "f_2[8]", "f_2[9]", "f_2[10]", "f_2[11]",
+                           "f_2[12]", "f_2[13]", "f_2[14]", "f_2[15]", "f_2[16]"]
+        }
+      },
+      "assert_fetch" : {
+        "file" : "circle_surf.pvd",
+        "attributes" : {
+            "GetNumberOfCells" : 50
+        }
+      }
+    },
+    {
+      "name" : "surf2paraview exodus",
+      "clean" : "rm -f circle_surf.ex2",
+      "run" : [
+        "PARAVIEW_PVPYTHON",
+        "SURF2PARAVIEW",
+        "data.circle circle_surf -r tmp_surf.* --exodus"
+      ],
+      "assert_files" : ["circle_surf.ex2"],
+      "assert_fetch" : {
+        "file" : "circle_surf.ex2",
+        "attributes" : {
+            "GetNumberOfCells" : 50
+        }
+      }
+    },
+    {
+      "name" : "grid2paraview pvpython circle",
+      "clean" : "rm -fr circle.txt circle_grid_pvpython circle_grid_pvpython.pvd",
+      "preprocess" : "printf \"dimension 2\ncreate_box 0 10 0 10 -0.5 0.5\ncreate_grid 20 20 1\n\" > circle.txt",
+      "run" : [
+        "PARAVIEW_PVPYTHON",
+        "GRID2PARAVIEW",
+        "circle.txt circle_grid_pvpython -x 10 -y 10 -r tmp_flow.*"
+      ],
+      "assert_files" : ["circle_grid_pvpython.pvd"],
+      "assert_read" : {
+        "file" : "circle_grid_pvpython.pvd",
+        "attributes" : {
+            "TimestepValues" : [0.0, 100.0, 200.0, 300.0, 400.0,
+                                500.0, 600.0, 700.0, 800.0, 900.0, 1000.0],
+            "CellArrays": ["id", "f_1[1]", "f_1[2]", "f_1[3]", "f_1[4]", "f_1[5]",
+                           "f_1[6]", "f_1[7]", "f_1[8]", "f_1[9]", "f_1[10]", "f_1[11]",
+                           "f_1[12]", "f_1[13]", "f_1[14]"]
+        }
+      },
+      "assert_fetch" : {
+        "file" : "circle_grid_pvpython.pvd",
+        "attributes" : {
+            "GetNumberOfCells" : 400
+        }
+      }
+    },
+    {
+      "name" : "grid2paraview pvpython slice circle",
+      "clean" : "rm -fr circle_slice.txt circle_slice_grid_pvpython circle_slice_grid_pvpython.pvd",
+      "preprocess" : "printf \"dimension 2\ncreate_box 0 10 0 10 -0.5 0.5\ncreate_grid 20 20 1\nslice 1 0 0 5 5 0.0\nslice 0 1 0 5 5 0.0\nslice 1 1 0 5 5 0.0\n\" > circle_slice.txt",
+      "run" : [
+        "PARAVIEW_PVPYTHON",
+        "GRID2PARAVIEW",
+        "circle_slice.txt circle_slice_grid_pvpython -x 10 -y 10 -r tmp_flow.*"
+      ],
+      "assert_files" : ["circle_slice_grid_pvpython.pvd"],
+      "assert_read" : {
+        "file" : "circle_slice_grid_pvpython.pvd",
+        "attributes" : {
+            "TimestepValues" : [0.0, 100.0, 200.0, 300.0, 400.0,
+                                500.0, 600.0, 700.0, 800.0, 900.0, 1000.0],
+            "CellArrays": ["id", "f_1[1]", "f_1[2]", "f_1[3]", "f_1[4]", "f_1[5]",
+                           "f_1[6]", "f_1[7]", "f_1[8]", "f_1[9]", "f_1[10]", "f_1[11]",
+                           "f_1[12]", "f_1[13]", "f_1[14]"]
+        }
+      },
+      "assert_fetch" : {
+        "file" : "circle_slice_grid_pvpython.pvd",
+        "attributes" : {
+            "GetNumberOfCells" : 114
+        }
+      }
+    }
+  ]
+}

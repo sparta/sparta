@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -20,7 +20,7 @@
 #include "particle.h"
 #include "comm.h"
 #include "random_mars.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
@@ -37,7 +37,7 @@ FixAmbipolar::FixAmbipolar(SPARTA *sparta, int narg, char **arg) :
 {
   if (narg < 4) error->all(FLERR,"Illegal fix ambipolar command");
 
-  flag_add_particle = 1;
+  flag_update_custom = 1;
   flag_surf_react = 1;
 
   especies = particle->find_species(arg[2]);
@@ -62,7 +62,7 @@ FixAmbipolar::FixAmbipolar(SPARTA *sparta, int narg, char **arg) :
 
   // random = RNG for electron velocity creation
 
-  random = new RanPark(update->ranmaster->uniform());
+  random = new RanKnuth(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,comm->me,100);
 
@@ -76,6 +76,8 @@ FixAmbipolar::FixAmbipolar(SPARTA *sparta, int narg, char **arg) :
 
 FixAmbipolar::~FixAmbipolar()
 {
+  if (copy || copymode) return;
+
   memory->destroy(ions);
   delete random;
   particle->remove_custom(ionindex);
@@ -101,12 +103,13 @@ void FixAmbipolar::init()
 
 /* ----------------------------------------------------------------------
    called when a particle with index is created
+    or when temperature dependent properties need to be updated
    creation used temp_thermal and vstream to set particle velocity
    if an ion, set ionambi and velambi for particle
 ------------------------------------------------------------------------- */
 
-void FixAmbipolar::add_particle(int index, double temp_thermal, 
-                                double, double, 
+void FixAmbipolar::update_custom(int index, double temp_thermal,
+                                double, double,
                                 double *vstream)
 {
   int *ionambi = particle->eivec[particle->ewhich[ionindex]];
@@ -133,7 +136,7 @@ void FixAmbipolar::add_particle(int index, double temp_thermal,
   double vr = vscale * sqrt(-log(random->uniform()));
   double theta1 = MY_2PI * random->uniform();
   double theta2 = MY_2PI * random->uniform();
-    
+
   velambi[index][0] = vstream[0] + vn*cos(theta1);
   velambi[index][1] = vstream[1] + vr*cos(theta2);
   velambi[index][2] = vstream[2] + vr*sin(theta2);
@@ -175,7 +178,7 @@ void FixAmbipolar::surf_react(Particle::OnePart *iorig, int &i, int &j)
     Particle::OnePart *particles = particle->particles;
     if (ions[particles[i].ispecies] == 0) return;
     if (particles[j].ispecies != especies) return;
-    add_particle(i,update->temp_thermal,update->temp_thermal,
+    update_custom(i,update->temp_thermal,update->temp_thermal,
                  update->temp_thermal,update->vstream);
     j = -1;
   }

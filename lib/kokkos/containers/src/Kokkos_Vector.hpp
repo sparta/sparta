@@ -44,6 +44,10 @@
 
 #ifndef KOKKOS_VECTOR_HPP
 #define KOKKOS_VECTOR_HPP
+#ifndef KOKKOS_IMPL_PUBLIC_INCLUDE
+#define KOKKOS_IMPL_PUBLIC_INCLUDE
+#define KOKKOS_IMPL_PUBLIC_INCLUDE_NOTDEFINED_VECTOR
+#endif
 
 #include <Kokkos_Core_fwd.hpp>
 #include <Kokkos_DualView.hpp>
@@ -58,19 +62,19 @@ namespace Kokkos {
 template <class Scalar, class Arg1Type = void>
 class vector : public DualView<Scalar*, LayoutLeft, Arg1Type> {
  public:
-  typedef Scalar value_type;
-  typedef Scalar* pointer;
-  typedef const Scalar* const_pointer;
-  typedef Scalar& reference;
-  typedef const Scalar& const_reference;
-  typedef Scalar* iterator;
-  typedef const Scalar* const_iterator;
-  typedef size_t size_type;
+  using value_type      = Scalar;
+  using pointer         = Scalar*;
+  using const_pointer   = const Scalar*;
+  using reference       = Scalar&;
+  using const_reference = const Scalar&;
+  using iterator        = Scalar*;
+  using const_iterator  = const Scalar*;
+  using size_type       = size_t;
 
  private:
   size_t _size;
   float _extra_storage;
-  typedef DualView<Scalar*, LayoutLeft, Arg1Type> DV;
+  using DV = DualView<Scalar*, LayoutLeft, Arg1Type>;
 
  public:
 #ifdef KOKKOS_ENABLE_CUDA_UVM
@@ -119,12 +123,14 @@ class vector : public DualView<Scalar*, LayoutLeft, Arg1Type> {
     if (DV::template need_sync<typename DV::t_dev::device_type>()) {
       set_functor_host f(DV::h_view, val);
       parallel_for("Kokkos::vector::assign", n, f);
-      typename DV::t_host::execution_space().fence();
+      typename DV::t_host::execution_space().fence(
+          "Kokkos::vector::assign: fence after assigning values");
       DV::template modify<typename DV::t_host::device_type>();
     } else {
       set_functor f(DV::d_view, val);
       parallel_for("Kokkos::vector::assign", n, f);
-      typename DV::t_dev::execution_space().fence();
+      typename DV::t_dev::execution_space().fence(
+          "Kokkos::vector::assign: fence after assigning values");
       DV::template modify<typename DV::t_dev::device_type>();
     }
   }
@@ -160,7 +166,7 @@ class vector : public DualView<Scalar*, LayoutLeft, Arg1Type> {
     }
     DV::sync_host();
     DV::modify_host();
-    if (it < begin() || it > end())
+    if (std::less<>()(it, begin()) || std::less<>()(end(), it))
       Kokkos::abort("Kokkos::vector::insert : invalid insert iterator");
     if (count == 0) return it;
     ptrdiff_t start = std::distance(begin(), it);
@@ -183,42 +189,38 @@ class vector : public DualView<Scalar*, LayoutLeft, Arg1Type> {
  public:
   // TODO: can use detection idiom to generate better error message here later
   template <typename InputIterator>
-  typename std::enable_if<impl_is_input_iterator<InputIterator>::value,
-                          iterator>::type
+  std::enable_if_t<impl_is_input_iterator<InputIterator>::value, iterator>
   insert(iterator it, InputIterator b, InputIterator e) {
     ptrdiff_t count = std::distance(b, e);
-    if (count == 0) return it;
 
     DV::sync_host();
     DV::modify_host();
-    if (it < begin() || it > end())
+    if (std::less<>()(it, begin()) || std::less<>()(end(), it))
       Kokkos::abort("Kokkos::vector::insert : invalid insert iterator");
 
-    bool resized = false;
-    if ((size() == 0) && (it == begin())) {
-      resize(count);
-      it      = begin();
-      resized = true;
-    }
     ptrdiff_t start = std::distance(begin(), it);
     auto org_size   = size();
-    if (!resized) resize(size() + count);
-    it = begin() + start;
+
+    // Note: resize(...) invalidates it; use begin() + start instead
+    resize(size() + count);
 
     std::copy_backward(begin() + start, begin() + org_size,
                        begin() + org_size + count);
-    std::copy(b, e, it);
+    std::copy(b, e, begin() + start);
 
     return begin() + start;
   }
 
+  KOKKOS_INLINE_FUNCTION constexpr bool is_allocated() const {
+    return DV::is_allocated();
+  }
+
   size_type size() const { return _size; }
   size_type max_size() const { return 2000000000; }
-#ifdef KOKKOS_ENABLE_DEPRECATED_CODE
-  size_type capacity() const { return DV::capacity(); }
-#endif
   size_type span() const { return DV::span(); }
   bool empty() const { return _size == 0; }
+
+  pointer data() const { return DV::h_view.data(); }
 
   iterator begin() const { return DV::h_view.data(); }
 
@@ -310,7 +312,7 @@ class vector : public DualView<Scalar*, LayoutLeft, Arg1Type> {
 
  public:
   struct set_functor {
-    typedef typename DV::t_dev::execution_space execution_space;
+    using execution_space = typename DV::t_dev::execution_space;
     typename DV::t_dev _data;
     Scalar _val;
 
@@ -321,7 +323,7 @@ class vector : public DualView<Scalar*, LayoutLeft, Arg1Type> {
   };
 
   struct set_functor_host {
-    typedef typename DV::t_host::execution_space execution_space;
+    using execution_space = typename DV::t_host::execution_space;
     typename DV::t_host _data;
     Scalar _val;
 
@@ -334,4 +336,8 @@ class vector : public DualView<Scalar*, LayoutLeft, Arg1Type> {
 };
 
 }  // namespace Kokkos
+#ifdef KOKKOS_IMPL_PUBLIC_INCLUDE_NOTDEFINED_VECTOR
+#undef KOKKOS_IMPL_PUBLIC_INCLUDE
+#undef KOKKOS_IMPL_PUBLIC_INCLUDE_NOTDEFINED_VECTOR
+#endif
 #endif

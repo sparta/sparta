@@ -30,7 +30,7 @@ class ReactQK : public ReactBird {
  public:
   ReactQK(class SPARTA *, int, char **);
   void init();
-  int attempt(Particle::OnePart *, Particle::OnePart *, 
+  int attempt(Particle::OnePart *, Particle::OnePart *,
               double, double, double, double &, int &);
 };
 

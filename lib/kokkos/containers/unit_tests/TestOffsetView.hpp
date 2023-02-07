@@ -50,9 +50,8 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstdio>
-#include <impl/Kokkos_Timer.hpp>
+#include <Kokkos_Timer.hpp>
 #include <Kokkos_OffsetView.hpp>
-#include <KokkosExp_MDRangePolicy.hpp>
 
 using std::cout;
 using std::endl;
@@ -61,11 +60,29 @@ namespace Test {
 
 template <typename Scalar, typename Device>
 void test_offsetview_construction() {
-  typedef Kokkos::Experimental::OffsetView<Scalar**, Device> offset_view_type;
-  typedef Kokkos::View<Scalar**, Device> view_type;
+  using offset_view_type = Kokkos::Experimental::OffsetView<Scalar**, Device>;
+  using view_type        = Kokkos::View<Scalar**, Device>;
 
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_3
   Kokkos::Experimental::index_list_type range0 = {-1, 3};
   Kokkos::Experimental::index_list_type range1 = {-2, 2};
+#else
+  std::pair<int64_t, int64_t> range0 = {-1, 3};
+  std::pair<int64_t, int64_t> range1 = {-2, 2};
+#endif
+
+  {
+    offset_view_type o1;
+    ASSERT_FALSE(o1.is_allocated());
+
+    o1 = offset_view_type("o1", {-1, 3}, {-2, 2});
+    offset_view_type o2(o1);
+    offset_view_type o3("o3", range0, range1);
+
+    ASSERT_TRUE(o1.is_allocated());
+    ASSERT_TRUE(o2.is_allocated());
+    ASSERT_TRUE(o3.is_allocated());
+  }
 
   offset_view_type ov("firstOV", range0, range1);
 
@@ -78,14 +95,10 @@ void test_offsetview_construction() {
   ASSERT_EQ(ov.begin(1), -2);
   ASSERT_EQ(ov.end(1), 3);
 
-  ASSERT_EQ(ov.extent(0), 5);
-  ASSERT_EQ(ov.extent(1), 5);
+  ASSERT_EQ(ov.extent(0), 5u);
+  ASSERT_EQ(ov.extent(1), 5u);
 
 #if defined(KOKKOS_ENABLE_CUDA_LAMBDA) || !defined(KOKKOS_ENABLE_CUDA)
-  const int ovmin0 = ov.begin(0);
-  const int ovend0 = ov.end(0);
-  const int ovmin1 = ov.begin(1);
-  const int ovend1 = ov.end(1);
   {
     Kokkos::Experimental::OffsetView<Scalar*, Device> offsetV1("OneDOffsetView",
                                                                range0);
@@ -109,9 +122,9 @@ void test_offsetview_construction() {
   {  // test deep copy of scalar const value into mirro
     const int constVal = 6;
     typename offset_view_type::HostMirror hostOffsetView =
-        Kokkos::Experimental::create_mirror_view(ov);
+        Kokkos::create_mirror_view(ov);
 
-    Kokkos::Experimental::deep_copy(hostOffsetView, constVal);
+    Kokkos::deep_copy(hostOffsetView, constVal);
 
     for (int i = hostOffsetView.begin(0); i < hostOffsetView.end(0); ++i) {
       for (int j = hostOffsetView.begin(1); j < hostOffsetView.end(1); ++j) {
@@ -121,10 +134,14 @@ void test_offsetview_construction() {
     }
   }
 
-  typedef Kokkos::MDRangePolicy<Device, Kokkos::Rank<2>,
-                                Kokkos::IndexType<int> >
-      range_type;
-  typedef typename range_type::point_type point_type;
+  const int ovmin0 = ov.begin(0);
+  const int ovend0 = ov.end(0);
+  const int ovmin1 = ov.begin(1);
+  const int ovend1 = ov.end(1);
+
+  using range_type =
+      Kokkos::MDRangePolicy<Device, Kokkos::Rank<2>, Kokkos::IndexType<int> >;
+  using point_type = typename range_type::point_type;
 
   range_type rangePolicy2D(point_type{{ovmin0, ovmin1}},
                            point_type{{ovend0, ovend1}});
@@ -136,9 +153,9 @@ void test_offsetview_construction() {
 
   // test offsetview to offsetviewmirror deep copy
   typename offset_view_type::HostMirror hostOffsetView =
-      Kokkos::Experimental::create_mirror_view(ov);
+      Kokkos::create_mirror_view(ov);
 
-  Kokkos::Experimental::deep_copy(hostOffsetView, ov);
+  Kokkos::deep_copy(hostOffsetView, ov);
 
   for (int i = hostOffsetView.begin(0); i < hostOffsetView.end(0); ++i) {
     for (int j = hostOffsetView.begin(1); j < hostOffsetView.end(1); ++j) {
@@ -185,10 +202,9 @@ void test_offsetview_construction() {
 
     Kokkos::deep_copy(view3D, 1);
 
-    typedef Kokkos::MDRangePolicy<Device, Kokkos::Rank<3>,
-                                  Kokkos::IndexType<int64_t> >
-        range3_type;
-    typedef typename range3_type::point_type point3_type;
+    using range3_type = Kokkos::MDRangePolicy<Device, Kokkos::Rank<3>,
+                                              Kokkos::IndexType<int64_t> >;
+    using point3_type = typename range3_type::point_type;
 
     typename point3_type::value_type begins0 = -10, begins1 = -20,
                                      begins2 = -30;
@@ -245,7 +261,7 @@ void test_offsetview_construction() {
 
   {  // test offsetview to view deep copy
     view_type aView("aView", ov.extent(0), ov.extent(1));
-    Kokkos::Experimental::deep_copy(aView, ov);
+    Kokkos::deep_copy(aView, ov);
 
 #if defined(KOKKOS_ENABLE_CUDA_LAMBDA) || !defined(KOKKOS_ENABLE_CUDA)
     int sum = 0;
@@ -264,7 +280,7 @@ void test_offsetview_construction() {
     view_type aView("aView", ov.extent(0), ov.extent(1));
 
     Kokkos::deep_copy(aView, 99);
-    Kokkos::Experimental::deep_copy(ov, aView);
+    Kokkos::deep_copy(ov, aView);
 
 #if defined(KOKKOS_ENABLE_CUDA_LAMBDA) || !defined(KOKKOS_ENABLE_CUDA)
     int sum = 0;
@@ -345,7 +361,6 @@ void test_offsetview_unmanaged_construction() {
     ASSERT_EQ(bb, ii);
   }
 
-#ifdef KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_HOST
   {
     using offset_view_type = Kokkos::Experimental::OffsetView<Scalar*, Device>;
 
@@ -385,7 +400,6 @@ void test_offsetview_unmanaged_construction() {
     ASSERT_THROW(offset_view_type(&s, {0, 0, 0}, {1, 1, 1}),
                  std::runtime_error);
   }
-#endif  // KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_HOST
 }
 
 template <typename Scalar, typename Device>
@@ -447,10 +461,9 @@ void test_offsetview_subview() {
       ASSERT_EQ(offsetSubview.end(1), 9);
 
 #if defined(KOKKOS_ENABLE_CUDA_LAMBDA) || !defined(KOKKOS_ENABLE_CUDA)
-      typedef Kokkos::MDRangePolicy<Device, Kokkos::Rank<2>,
-                                    Kokkos::IndexType<int> >
-          range_type;
-      typedef typename range_type::point_type point_type;
+      using range_type = Kokkos::MDRangePolicy<Device, Kokkos::Rank<2>,
+                                               Kokkos::IndexType<int> >;
+      using point_type = typename range_type::point_type;
 
       const int b0 = offsetSubview.begin(0);
       const int b1 = offsetSubview.begin(1);

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -22,6 +22,7 @@ SurfCollideStyle(diffuse,SurfCollideDiffuse)
 #define SPARTA_SURF_COLLIDE_DIFFUSE_H
 
 #include "surf_collide.h"
+#include "surf.h"
 
 namespace SPARTA_NS {
 
@@ -30,9 +31,11 @@ class SurfCollideDiffuse : public SurfCollide {
   SurfCollideDiffuse(class SPARTA *, int, char **);
   SurfCollideDiffuse(class SPARTA *sparta) : SurfCollide(sparta) {}
   ~SurfCollideDiffuse();
-  void init();
-  Particle::OnePart *collide(Particle::OnePart *&, double *, double &, 
-                             int, int &);
+  virtual void init();
+  Particle::OnePart *collide(Particle::OnePart *&, double &,
+                             int, double *, int, int &);
+  void wrapper(Particle::OnePart *, double *, int *, double*);
+  void flags_and_coeffs(int *, double *);
 
   void dynamic();
 
@@ -45,11 +48,16 @@ class SurfCollideDiffuse : public SurfCollide {
   int tflag,rflag;           // flags for translation and rotation
   int trflag;                // 1 if either tflag or rflag is set
 
+  int tmode;                 // Twall is NUMERIC,VARIABLE,CUSTOM
   char *tstr;                // temperature variable name (NULL if constant)
   int tvar;                  // index of equal-style variable
+  double *tvector;           // custom per-surf temperature vector
+
+  Surf::Line *lines;
+  Surf::Tri *tris;
 
   double vstream[3];
-  class RanPark *random;     // RNG for particle reflection
+  class RanKnuth *random;     // RNG for particle reflection
 
   void diffuse(Particle::OnePart *, double *);
 };

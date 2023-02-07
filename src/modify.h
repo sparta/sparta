@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -24,7 +24,7 @@ class Modify : protected Pointers {
  public:
   int nfix,maxfix;
   int n_start_of_step,n_end_of_step;
-  int n_pergrid,n_add_particle,n_gas_react,n_surf_react;
+  int n_pergrid,n_update_custom,n_gas_react,n_surf_react;
 
   class Fix **fix;           // list of fixes
   int *fmask;                // bit mask for when each fix is applied
@@ -61,7 +61,7 @@ class Modify : protected Pointers {
   void list_init_fixes();
   void list_init_computes();
 
-  virtual void add_particle(int, double, double, double, double *);
+  virtual void update_custom(int, double, double, double, double *);
   virtual void gas_react(int);
   virtual void surf_react(Particle::OnePart *, int &, int &);
 
@@ -76,7 +76,7 @@ class Modify : protected Pointers {
   int *end_of_step_every;
 
   int *list_pergrid;         // list of fixes that store per grid cell info
-  int *list_add_particle;    // list of fixes with add_particle() method
+  int *list_update_custom;    // list of fixes with update_custom() method
   int *list_gas_react;       // list of fixes with gas_react() method
   int *list_surf_react;      // list of fixes with surf_react() method
 

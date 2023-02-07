@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -55,7 +55,7 @@ enum{PARTICLE,GRID,SURF,XPLANE,YPLANE,ZPLANE};
 
 /* ---------------------------------------------------------------------- */
 
-DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) : 
+DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
   DumpParticle(sparta, narg, arg)
 {
   if (binary || multiproc) error->all(FLERR,"Invalid dump image filename");
@@ -158,7 +158,7 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       if (strcmp(arg[iarg+1],"proc") == 0) gcolor = PROC;
       else {
         gcolor = ATTRIBUTE;
-        if (strncmp(arg[iarg+1],"c_",2) && strncmp(arg[iarg+1],"f_",2) && 
+        if (strncmp(arg[iarg+1],"c_",2) && strncmp(arg[iarg+1],"f_",2) &&
             strncmp(arg[iarg+1],"v_",2))
           error->all(FLERR,"Illegal dump image command");
         if (arg[iarg+1][0] == 'c') gridwhich = COMPUTE;
@@ -190,7 +190,7 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       if (strcmp(arg[iarg+2],"proc") == 0) gxcolor = PROC;
       else {
         gxcolor = ATTRIBUTE;
-        if (strncmp(arg[iarg+2],"c_",2) && strncmp(arg[iarg+2],"f_",2) && 
+        if (strncmp(arg[iarg+2],"c_",2) && strncmp(arg[iarg+2],"f_",2) &&
             strncmp(arg[iarg+2],"v_",2))
           error->all(FLERR,"Illegal dump image command");
         if (arg[iarg+2][0] == 'c') gridxwhich = COMPUTE;
@@ -222,7 +222,7 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       if (strcmp(arg[iarg+2],"proc") == 0) gycolor = PROC;
       else {
         gycolor = ATTRIBUTE;
-        if (strncmp(arg[iarg+2],"c_",2) && strncmp(arg[iarg+2],"f_",2) && 
+        if (strncmp(arg[iarg+2],"c_",2) && strncmp(arg[iarg+2],"f_",2) &&
             strncmp(arg[iarg+2],"v_",2))
           error->all(FLERR,"Illegal dump image command");
         if (arg[iarg+2][0] == 'c') gridywhich = COMPUTE;
@@ -254,7 +254,7 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       if (strcmp(arg[iarg+2],"proc") == 0) gzcolor = PROC;
       else {
         gzcolor = ATTRIBUTE;
-        if (strncmp(arg[iarg+2],"c_",2) && strncmp(arg[iarg+2],"f_",2) && 
+        if (strncmp(arg[iarg+2],"c_",2) && strncmp(arg[iarg+2],"f_",2) &&
             strncmp(arg[iarg+2],"v_",2))
           error->all(FLERR,"Illegal dump image command");
         if (arg[iarg+2][0] == 'c') gridzwhich = COMPUTE;
@@ -285,11 +285,11 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       if (strcmp(arg[iarg+1],"one") == 0) scolor = ONE;
       else if (strcmp(arg[iarg+1],"proc") == 0) scolor = PROC;
       else {
-        if (surf->implicit) 
+        if (surf->implicit)
           error->all(FLERR,"Cannot use dump image surf with "
                      "compute/fix/variable for implicit surfs");
         scolor = ATTRIBUTE;
-        if (strncmp(arg[iarg+1],"c_",2) && strncmp(arg[iarg+1],"f_",2) && 
+        if (strncmp(arg[iarg+1],"c_",2) && strncmp(arg[iarg+1],"f_",2) &&
             strncmp(arg[iarg+1],"v_",2))
           error->all(FLERR,"Illegal dump image command");
         if (arg[iarg+1][0] == 'c') surfwhich = COMPUTE;
@@ -319,7 +319,7 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       if (iarg+3 > narg) error->all(FLERR,"Illegal dump image command");
       int width = atoi(arg[iarg+1]);
       int height = atoi(arg[iarg+2]);
-      if (width <= 0 || height <= 0) 
+      if (width <= 0 || height <= 0)
 	error->all(FLERR,"Illegal dump image command");
       image->width = width;
       image->height = height;
@@ -531,7 +531,7 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
   // viewflag = DYNAMIC if any view parameter is dynamic
 
   viewflag = STATIC;
-  if (thetastr || phistr || cflag == DYNAMIC || 
+  if (thetastr || phistr || cflag == DYNAMIC ||
       upxstr || upystr || upzstr || zoomstr || perspstr) viewflag = DYNAMIC;
 
   if (cflag == STATIC) box_center();
@@ -558,7 +558,7 @@ DumpImage::~DumpImage()
 
 void DumpImage::init_style()
 {
-  if (multifile == 0) 
+  if (multifile == 0)
     error->all(FLERR,"Dump image requires one snapshot per file");
 
   DumpParticle::init_style();
@@ -567,70 +567,70 @@ void DumpImage::init_style()
 
   if (thetastr) {
     thetavar = input->variable->find(thetastr);
-    if (thetavar < 0) 
+    if (thetavar < 0)
       error->all(FLERR,"Variable name for dump image theta does not exist");
     if (!input->variable->equal_style(thetavar))
       error->all(FLERR,"Variable for dump image theta is invalid style");
   }
   if (phistr) {
     phivar = input->variable->find(phistr);
-    if (phivar < 0) 
+    if (phivar < 0)
       error->all(FLERR,"Variable name for dump image phi does not exist");
     if (!input->variable->equal_style(phivar))
       error->all(FLERR,"Variable for dump image phi is invalid style");
   }
   if (cxstr) {
     cxvar = input->variable->find(cxstr);
-    if (cxvar < 0) 
+    if (cxvar < 0)
       error->all(FLERR,"Variable name for dump image center does not exist");
     if (!input->variable->equal_style(cxvar))
       error->all(FLERR,"Variable for dump image center is invalid style");
   }
   if (cystr) {
     cyvar = input->variable->find(cystr);
-    if (cyvar < 0) 
+    if (cyvar < 0)
       error->all(FLERR,"Variable name for dump image center does not exist");
     if (!input->variable->equal_style(cyvar))
       error->all(FLERR,"Variable for dump image center is invalid style");
   }
   if (czstr) {
     czvar = input->variable->find(czstr);
-    if (czvar < 0) 
+    if (czvar < 0)
       error->all(FLERR,"Variable name for dump image center does not exist");
     if (!input->variable->equal_style(czvar))
       error->all(FLERR,"Variable for dump image center is invalid style");
   }
   if (upxstr) {
     upxvar = input->variable->find(upxstr);
-    if (upxvar < 0) 
+    if (upxvar < 0)
       error->all(FLERR,"Variable name for dump image center does not exist");
     if (!input->variable->equal_style(upxvar))
       error->all(FLERR,"Variable for dump image center is invalid style");
   }
   if (upystr) {
     upyvar = input->variable->find(upystr);
-    if (upyvar < 0) 
+    if (upyvar < 0)
       error->all(FLERR,"Variable name for dump image center does not exist");
     if (!input->variable->equal_style(upyvar))
       error->all(FLERR,"Variable for dump image center is invalid style");
   }
   if (upzstr) {
     upzvar = input->variable->find(upzstr);
-    if (upzvar < 0) 
+    if (upzvar < 0)
       error->all(FLERR,"Variable name for dump image center does not exist");
     if (!input->variable->equal_style(upzvar))
       error->all(FLERR,"Variable for dump image center is invalid style");
   }
   if (zoomstr) {
     zoomvar = input->variable->find(zoomstr);
-    if (zoomvar < 0) 
+    if (zoomvar < 0)
       error->all(FLERR,"Variable name for dump image zoom does not exist");
     if (!input->variable->equal_style(zoomvar))
       error->all(FLERR,"Variable for dump image zoom is invalid style");
   }
   if (perspstr) {
     perspvar = input->variable->find(perspstr);
-    if (perspvar < 0) 
+    if (perspvar < 0)
       error->all(FLERR,"Variable name for dump image persp does not exist");
     if (!input->variable->equal_style(perspvar))
       error->all(FLERR,"Variable for dump image persp is invalid style");
@@ -642,10 +642,10 @@ void DumpImage::init_style()
   if (gridflag && gcolor == ATTRIBUTE) {
     if (gridwhich == COMPUTE) {
       gridindex = modify->find_compute(idgrid);
-      if (gridindex < 0) 
+      if (gridindex < 0)
         error->all(FLERR,"Could not find dump image compute ID");
       Compute *compute = modify->compute[gridindex];
-      if (!compute->per_grid_flag) 
+      if (!compute->per_grid_flag)
         error->all(FLERR,"Dump image compute is not a per-grid compute");
       if (gridcol == 0 && compute->size_per_grid_cols != 0)
         error->all(FLERR,"Dump image compute does not produce a vector");
@@ -653,10 +653,10 @@ void DumpImage::init_style()
         error->all(FLERR,"Dump image compute does not have requested column");
     } else if (gridwhich == FIX) {
       gridindex = modify->find_fix(idgrid);
-      if (gridindex < 0) 
+      if (gridindex < 0)
         error->all(FLERR,"Could not find dump image fix ID");
       Fix *fix = modify->fix[gridindex];
-      if (!fix->per_grid_flag) 
+      if (!fix->per_grid_flag)
         error->all(FLERR,"Dump image fix does not produce per-grid values");
       if (gridcol == 0 && fix->size_per_grid_cols != 0)
         error->all(FLERR,"Dump image fix does not produce a vector");
@@ -670,10 +670,10 @@ void DumpImage::init_style()
   if (gridxflag && gxcolor == ATTRIBUTE) {
     if (gridxwhich == COMPUTE) {
       gridxindex = modify->find_compute(idgridx);
-      if (gridxindex < 0) 
+      if (gridxindex < 0)
         error->all(FLERR,"Could not find dump image compute ID");
       Compute *compute = modify->compute[gridxindex];
-      if (!compute->per_grid_flag) 
+      if (!compute->per_grid_flag)
         error->all(FLERR,"Dump image compute is not a per-grid compute");
       if (gridxcol == 0 && compute->size_per_grid_cols != 0)
         error->all(FLERR,"Dump image compute does not produce a vector");
@@ -681,10 +681,10 @@ void DumpImage::init_style()
         error->all(FLERR,"Dump image compute does not have requested column");
     } else if (gridxwhich == FIX) {
       gridxindex = modify->find_fix(idgridx);
-      if (gridxindex < 0) 
+      if (gridxindex < 0)
         error->all(FLERR,"Could not find dump image fix ID");
       Fix *fix = modify->fix[gridxindex];
-      if (!fix->per_grid_flag) 
+      if (!fix->per_grid_flag)
         error->all(FLERR,"Dump image fix does not produce per-grid values");
       if (gridxcol == 0 && fix->size_per_grid_cols != 0)
         error->all(FLERR,"Dump image fix does not produce a vector");
@@ -698,10 +698,10 @@ void DumpImage::init_style()
   if (gridyflag && gycolor == ATTRIBUTE) {
     if (gridywhich == COMPUTE) {
       gridyindex = modify->find_compute(idgridy);
-      if (gridyindex < 0) 
+      if (gridyindex < 0)
         error->all(FLERR,"Could not find dump image compute ID");
       Compute *compute = modify->compute[gridyindex];
-      if (!compute->per_grid_flag) 
+      if (!compute->per_grid_flag)
         error->all(FLERR,"Dump image compute is not a per-grid compute");
       if (gridycol == 0 && compute->size_per_grid_cols != 0)
         error->all(FLERR,"Dump image compute does not produce a vector");
@@ -709,10 +709,10 @@ void DumpImage::init_style()
         error->all(FLERR,"Dump image compute does not have requested column");
     } else if (gridywhich == FIX) {
       gridyindex = modify->find_fix(idgridy);
-      if (gridyindex < 0) 
+      if (gridyindex < 0)
         error->all(FLERR,"Could not find dump image fix ID");
       Fix *fix = modify->fix[gridyindex];
-      if (!fix->per_grid_flag) 
+      if (!fix->per_grid_flag)
         error->all(FLERR,"Dump image fix does not produce per-grid values");
       if (gridycol == 0 && fix->size_per_grid_cols != 0)
         error->all(FLERR,"Dump image fix does not produce a vector");
@@ -726,10 +726,10 @@ void DumpImage::init_style()
   if (gridzflag && gzcolor == ATTRIBUTE) {
     if (gridzwhich == COMPUTE) {
       gridzindex = modify->find_compute(idgridz);
-      if (gridzindex < 0) 
+      if (gridzindex < 0)
         error->all(FLERR,"Could not find dump image compute ID");
       Compute *compute = modify->compute[gridzindex];
-      if (!compute->per_grid_flag) 
+      if (!compute->per_grid_flag)
         error->all(FLERR,"Dump image compute is not a per-grid compute");
       if (gridzcol == 0 && compute->size_per_grid_cols != 0)
         error->all(FLERR,"Dump image compute does not produce a vector");
@@ -737,10 +737,10 @@ void DumpImage::init_style()
         error->all(FLERR,"Dump image compute does not have requested column");
     } else if (gridzwhich == FIX) {
       gridzindex = modify->find_fix(idgridz);
-      if (gridzindex < 0) 
+      if (gridzindex < 0)
         error->all(FLERR,"Could not find dump image fix ID");
       Fix *fix = modify->fix[gridzindex];
-      if (!fix->per_grid_flag) 
+      if (!fix->per_grid_flag)
         error->all(FLERR,"Dump image fix does not produce per-grid values");
       if (gridzcol == 0 && fix->size_per_grid_cols != 0)
         error->all(FLERR,"Dump image fix does not produce a vector");
@@ -754,10 +754,10 @@ void DumpImage::init_style()
   if (surfflag && scolor == ATTRIBUTE) {
     if (surfwhich == COMPUTE) {
       surfindex = modify->find_compute(idsurf);
-      if (surfindex < 0) 
+      if (surfindex < 0)
         error->all(FLERR,"Could not find dump image compute ID");
       Compute *compute = modify->compute[surfindex];
-      if (!compute->per_surf_flag) 
+      if (!compute->per_surf_flag)
         error->all(FLERR,"Dump image compute is not a per-surf compute");
       if (surfcol == 0 && compute->size_per_surf_cols != 0)
         error->all(FLERR,"Dump image compute does not produce a vector");
@@ -765,10 +765,10 @@ void DumpImage::init_style()
         error->all(FLERR,"Dump image compute does not have requested column");
     } else if (surfwhich == FIX) {
       surfindex = modify->find_fix(idsurf);
-      if (surfindex < 0) 
+      if (surfindex < 0)
         error->all(FLERR,"Could not find dump image fix ID");
       Fix *fix = modify->fix[surfindex];
-      if (!fix->per_surf_flag) 
+      if (!fix->per_surf_flag)
         error->all(FLERR,"Dump image fix does not produce per-surf values");
       if (surfcol == 0 && fix->size_per_surf_cols != 0)
         error->all(FLERR,"Dump image fix does not produce a vector");
@@ -794,7 +794,7 @@ void DumpImage::write()
   if (viewflag == DYNAMIC) view_params();
 
   // nme = # of particles this proc will contribute to dump
-  
+
   nme = count();
 
   if (nme > maxbuf) {
@@ -1137,7 +1137,7 @@ void DumpImage::view_params()
 
 /* ----------------------------------------------------------------------
    create image for particles on this proc
-   every pixel has depth 
+   every pixel has depth
 ------------------------------------------------------------------------- */
 
 void DumpImage::create_image()
@@ -1155,7 +1155,7 @@ void DumpImage::create_image()
     m = 0;
     for (i = 0; i < nchoose; i++) {
       j = clist[i];
-      
+
       if (pcolor == TYPE) {
 	itype = static_cast<int> (buf[m]);
 	color = pcolortype[itype];
@@ -1272,7 +1272,7 @@ void DumpImage::create_image()
         if (cx->post_process_grid_flag) {
           cx->post_process_grid(gridxcol,1,NULL,NULL,NULL,1);
           ppgflagx = 1;
-        } else if (cx->post_process_isurf_grid_flag) 
+        } else if (cx->post_process_isurf_grid_flag)
           cx->post_process_isurf_grid();
       } else if (gridxwhich == FIX) {
         fx = modify->fix[gridxindex];
@@ -1290,7 +1290,7 @@ void DumpImage::create_image()
         if (cy->post_process_grid_flag) {
           cy->post_process_grid(gridycol,1,NULL,NULL,NULL,1);
           ppgflagy = 1;
-        } else if (cy->post_process_isurf_grid_flag) 
+        } else if (cy->post_process_isurf_grid_flag)
           cy->post_process_isurf_grid();
       } else if (gridywhich == FIX) {
         fy = modify->fix[gridyindex];
@@ -1308,7 +1308,7 @@ void DumpImage::create_image()
         if (cz->post_process_grid_flag) {
           cz->post_process_grid(gridzcol,1,NULL,NULL,NULL,1);
           ppgflagz = 1;
-        } else if (cz->post_process_isurf_grid_flag) 
+        } else if (cz->post_process_isurf_grid_flag)
           cz->post_process_isurf_grid();
       } else if (gridzwhich == FIX) {
         fz = modify->fix[gridzindex];
@@ -1627,7 +1627,7 @@ void DumpImage::create_image()
         image->draw_line(lines[m].p1,lines[m].p2,slinecolor,diameter);
       }
     } else {
-      for (int isurf = 0; isurf < nsurf; isurf++) { 
+      for (int isurf = 0; isurf < nsurf; isurf++) {
         if (strided) m = me + isurf*nprocs;
         else m = isurf;
         image->draw_line(tris[m].p1,tris[m].p2,slinecolor,diameter);
@@ -1712,7 +1712,7 @@ void DumpImage::create_image()
   image->draw_box2d(box,boxcolor,diameter);
 
 #endif
-  
+
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1795,7 +1795,7 @@ int DumpImage::modify_param(int narg, char **arg)
   if (strcmp(arg[0],"boxcolor") == 0) {
     if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
     boxcolor = image->color2rgb(arg[1]);
-    if (boxcolor == NULL) 
+    if (boxcolor == NULL)
       error->all(FLERR,"Invalid color in dump_modify command");
     return 2;
   }
@@ -1871,7 +1871,7 @@ int DumpImage::modify_param(int narg, char **arg)
   if (strcmp(arg[0],"glinecolor") == 0) {
     if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
     glinecolor = image->color2rgb(arg[1]);
-    if (glinecolor == NULL) 
+    if (glinecolor == NULL)
       error->all(FLERR,"Invalid color in dump_modify command");
     return 2;
   }
@@ -1924,7 +1924,7 @@ int DumpImage::modify_param(int narg, char **arg)
   if (strcmp(arg[0],"slinecolor") == 0) {
     if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
     slinecolor = image->color2rgb(arg[1]);
-    if (slinecolor == NULL) 
+    if (slinecolor == NULL)
       error->all(FLERR,"Invalid color in dump_modify command");
     return 2;
   }

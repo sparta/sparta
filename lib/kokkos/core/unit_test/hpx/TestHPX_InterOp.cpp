@@ -43,15 +43,15 @@
 */
 
 #include <Kokkos_Core.hpp>
-#include <hpx/TestHPX_Category.hpp>
+#include <TestHPX_Category.hpp>
 
 namespace Test {
 
 // Test whether allocations survive Kokkos initialize/finalize if done via Raw
-// Cuda.
+// HPX.
 TEST(hpx, raw_hpx_interop) {
-  Kokkos::InitArguments arguments{-1, -1, -1, false};
-  Kokkos::initialize(arguments);
+  // FIXME_HPX
+  Kokkos::initialize();
   Kokkos::finalize();
 }
 }  // namespace Test

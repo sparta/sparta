@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -42,7 +42,7 @@ enum{LOCAL,MINE,TEMPALL,TEMPSTRIDE};
 #define CHUNK 16384
 #define EPSILON_NORM 1.0e-12
 #define BIG 1.0e20
-#define DELTA 128           // must be 2 or greater 
+#define DELTA 128           // must be 2 or greater
 #define DELTA_DISCARD 128
 
 /* ---------------------------------------------------------------------- */
@@ -70,7 +70,7 @@ ReadSurf::~ReadSurf()
 
 void ReadSurf::command(int narg, char **arg)
 {
-  if (!grid->exist) 
+  if (!grid->exist)
     error->all(FLERR,"Cannot read_surf before grid is defined");
   if (surf->implicit)
     error->all(FLERR,"Cannot read_surf unless global surfs explicit is set");
@@ -183,7 +183,7 @@ void ReadSurf::command(int narg, char **arg)
 
   // make list of surf elements I own
   // clear grid of surf info including split cells
-  
+
   surf->setup_owned();
   grid->unset_neighbors();
   grid->remove_ghosts();
@@ -248,7 +248,7 @@ void ReadSurf::command(int narg, char **arg)
 
     for (int icell = 0; icell < nglocal; icell++) {
       if (cinfo[icell].type == INSIDE) {
-	if (partflag == KEEP) 
+	if (partflag == KEEP)
           error->one(FLERR,"Particles are inside new surfaces");
 	if (cinfo[icell].count) delflag = 1;
 	particle->remove_all_from_cell(cinfo[icell].first);
@@ -291,7 +291,7 @@ void ReadSurf::command(int narg, char **arg)
   double time8 = MPI_Wtime();
 
   // stats
-  
+
   double time_total = time6-time1;
   double time_s2g = time5-time4;
 
@@ -308,9 +308,11 @@ void ReadSurf::command(int narg, char **arg)
               100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total,
               100.0*(time8-time7)/time_total);
       fprintf(screen,"  surf2grid time = %g secs\n",time_s2g);
-      fprintf(screen,"  map/rvous1/rvous2/split percent = %g %g %g %g\n",
-              100.0*grid->tmap/time_s2g,100.0*grid->trvous1/time_s2g,
-              100.0*grid->trvous2/time_s2g,100.0*grid->tsplit/time_s2g);
+      fprintf(screen,"  map/comm1/comm2/comm3/comm4/split percent = "
+	      "%g %g %g %g %g %g\n",
+	      100.0*grid->tmap/time_s2g,100.0*grid->tcomm1/time_s2g,
+	      100.0*grid->tcomm2/time_s2g,100.0*grid->tcomm3/time_s2g,
+	      100.0*grid->tcomm4/time_s2g,100.0*grid->tsplit/time_s2g);
     }
 
     if (logfile) {
@@ -325,9 +327,11 @@ void ReadSurf::command(int narg, char **arg)
               100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total,
               100.0*(time8-time7)/time_total);
       fprintf(logfile,"  surf2grid time = %g secs\n",time_s2g);
-      fprintf(logfile,"  map/rvous1/rvous2/split percent = %g %g %g %g\n",
-              100.0*grid->tmap/time_s2g,100.0*grid->trvous1/time_s2g,
-              100.0*grid->trvous2/time_s2g,100.0*grid->tsplit/time_s2g);
+      fprintf(logfile,"  map/comm1/comm2/comm3/comm4/split percent = "
+	      "%g %g %g %g %g %g\n",
+	      100.0*grid->tmap/time_s2g,100.0*grid->tcomm1/time_s2g,
+	      100.0*grid->tcomm2/time_s2g,100.0*grid->tcomm3/time_s2g,
+	      100.0*grid->tcomm4/time_s2g,100.0*grid->tsplit/time_s2g);
     }
   }
 }
@@ -397,7 +401,7 @@ void ReadSurf::read_multiple(char *file)
     // icluster = which cluster of procs this proc is in
     // fileproc = ID of proc in my cluster who reads from file
     // filereader = 1 if this proc reads file, else 0
-    
+
     int icluster = static_cast<int> ((bigint) me * nfiles/nprocs);
     int fileproc = static_cast<int> ((bigint) icluster * nprocs/nfiles);
     int fcluster = static_cast<int> ((bigint) fileproc * nfiles/nprocs);
@@ -409,7 +413,7 @@ void ReadSurf::read_multiple(char *file)
     MPI_Comm_size(filecomm,&nprocs_file);
 
     // each cluster reads a file, stores surfs in tmplines/tmptris
-    
+
     *ptr = '\0';
     sprintf(procfile,"%s%d%s",file,icluster,ptr+1);
     *ptr = '%';
@@ -451,7 +455,7 @@ void ReadSurf::read_multiple(char *file)
     bigint nbytes;
     if (dim == 2) nbytes = (bigint) nsurf_basefile * sizeof(Surf::Line);
     else nbytes = (bigint) nsurf_basefile * sizeof(Surf::Tri);
-    if (nbytes > MAXSMALLINT) 
+    if (nbytes > MAXSMALLINT)
       error->all(FLERR,"Aggregate surf byte count is too large");
 
     int *recvcounts,*displs;
@@ -481,7 +485,7 @@ void ReadSurf::read_multiple(char *file)
     else
       MPI_Allgatherv(surf->tmptris,surf->ntmp*sizeof(Surf::Tri),MPI_CHAR,
                      &surf->tris[nsurf_old],recvcounts,displs,MPI_CHAR,world);
-    
+
     // set surf->nlocal to aggregate size of Allgatherv()
 
     surf->nlocal = nsurf_total_old + nsurf_basefile;
@@ -498,7 +502,7 @@ void ReadSurf::read_multiple(char *file)
     MPI_Allreduce(&ntmp,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
     bigint nnew = nall / nprocs;
     if (me < nall % nprocs) nnew++;
-    if (nnew > MAXSMALLINT) 
+    if (nnew > MAXSMALLINT)
       error->one(FLERR,"Too many distributed surfs per processor");
     int nown_new = nnew;
 
@@ -622,18 +626,18 @@ void ReadSurf::header()
     if (strstr(line,"points")) {
       bigint bnpoint;
       sscanf(line,BIGINT_FORMAT,&bnpoint);
-      if (bnpoint > MAXSMALLINT) 
+      if (bnpoint > MAXSMALLINT)
         error->one(FLERR,"Read surf npoint is too large");
       npoint_file = bnpoint;
     } else if (strstr(line,"lines")) {
-      if (dim == 3) 
+      if (dim == 3)
 	error->one(FLERR,"Surf file cannot contain lines for 3d simulation");
       bigint bnline;
       sscanf(line,BIGINT_FORMAT,&bnline);
       if (bnline > MAXSMALLINT) error->all(FLERR,"Read surf nline is too large");
       nsurf_file = nline_file = bnline;
     } else if (strstr(line,"triangles")) {
-      if (dim == 2) 
+      if (dim == 2)
 	error->one(FLERR,
 		   "Surf file cannot contain triangles for 2d simulation");
       bigint bntri;
@@ -646,7 +650,7 @@ void ReadSurf::header()
 
   if (dim == 2 && nline_file == 0)
     error->one(FLERR,"Surf file does not contain lines");
-  if (dim == 3 && ntri_file == 0) 
+  if (dim == 3 && ntri_file == 0)
     error->one(FLERR,"Surf file does not contain triangles");
 }
 
@@ -721,12 +725,12 @@ void ReadSurf::base(char *file)
     if (strstr(line,"files")) {
       sscanf(line,"%d",&nfiles);
     } else if (strstr(line,"lines")) {
-      if (dim == 3) 
+      if (dim == 3)
 	error->all(FLERR,"Surf file cannot contain lines for 3d simulation");
       sscanf(line,BIGINT_FORMAT,&nline_basefile);
       nsurf_basefile = nline_basefile;
     } else if (strstr(line,"triangles")) {
-      if (dim == 2) 
+      if (dim == 2)
 	error->all(FLERR,
 		   "Surf file cannot contain triangles for 2d simulation");
       sscanf(line,BIGINT_FORMAT,&ntri_basefile);
@@ -737,9 +741,9 @@ void ReadSurf::base(char *file)
 
   if (nfiles == 0)
     error->all(FLERR,"Surf base file does not contain files");
-  if (dim == 2 && nline_basefile == 0) 
+  if (dim == 2 && nline_basefile == 0)
     error->all(FLERR,"Surf base file does not contain lines");
-  if (dim == 3 && ntri_basefile == 0) 
+  if (dim == 3 && ntri_basefile == 0)
     error->all(FLERR,"Surf base file does not contain triangles");
 
   if (me == 0) fclose(fp);
@@ -749,10 +753,11 @@ void ReadSurf::base(char *file)
    read a single input file, header and post-header sections
    proc with filereader = 1 reads the file
    filecomm = MPI communicator for all procs who share this file
-   storeflag = 0/1/2 is passed to read points/lines/tris
-     0 = store surfs in lines/tris
-     1 = store surfs in mylines/mytris
-     2 = store surfs in tmplines/tmptris
+   storeflag = 0/1/2/3 = LOCAL/MINE/TEMPALL/TEMPSTRIDE
+     is passed to read points/lines/tris
+     LOCAL = store surfs in lines/tris
+     MINE = store surfs in mylines/mytris
+     TEMPALL/TEMPSTRIDE = store surfs in tmplines/tmptris
 ------------------------------------------------------------------------- */
 
 void ReadSurf::read_file(char *file, int storeflag)
@@ -773,7 +778,7 @@ void ReadSurf::read_file(char *file, int storeflag)
   if (storeflag == MINE) {
     bigint nnew = (surf->nsurf+nsurf_file) / nprocs;
     if (me < (surf->nsurf+nsurf_file) % nprocs) nnew++;
-    if (nnew > MAXSMALLINT) 
+    if (nnew > MAXSMALLINT)
       error->one(FLERR,"Too many distributed surfs per processor");
     nsurf_new = nnew;    // NOTE: this line is a kludge but needed for now
     int maxown_old = surf->maxown;
@@ -833,7 +838,7 @@ void ReadSurf::read_points()
   // read and broadcast one CHUNK of points at a time
 
   int nread = 0;
-  
+
   while (nread < npoint_file) {
     if (npoint_file-nread > CHUNK) nchunk = CHUNK;
     else nchunk = npoint_file - nread;
@@ -868,7 +873,7 @@ void ReadSurf::read_points()
       strtok(buf," \t\n\r\f");
       pts[n].x[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
       pts[n].x[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-      if (dim == 3) 
+      if (dim == 3)
         pts[n].x[2] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
       else pts[n].x[2] = 0.0;
       n++;
@@ -881,8 +886,7 @@ void ReadSurf::read_points()
 
 /* ----------------------------------------------------------------------
    read Lines section of file
-   store copy of all lines on each proc
-   store in local Lines data struct
+   storeflag determines how each line is stored
 ------------------------------------------------------------------------- */
 
 void ReadSurf::read_lines(int storeflag)
@@ -1010,8 +1014,7 @@ void ReadSurf::read_lines(int storeflag)
 
 /* ----------------------------------------------------------------------
    read Triangles section of file
-   store copy of all tris on each proc
-   store in local Triangles data struct
+   storeflag determines how each tri is stored
 ------------------------------------------------------------------------- */
 
 void ReadSurf::read_tris(int storeflag)
@@ -1080,7 +1083,7 @@ void ReadSurf::read_tris(int storeflag)
         p1 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
         p2 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
         p3 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-        if (p1 < 1 || p1 > npoint_file || p2 < 1 || p2 > npoint_file || 
+        if (p1 < 1 || p1 > npoint_file || p2 < 1 || p2 > npoint_file ||
             p3 < 1 || p3 > npoint_file || p1 == p2 || p2 == p3)
           error->all(FLERR,"Invalid point index in Triangles section");
 
@@ -1174,7 +1177,7 @@ void ReadSurf::process_args(int start, int narg, char **arg)
       double ox = atof(arg[iarg+1]);
       double oy = atof(arg[iarg+2]);
       double oz = atof(arg[iarg+3]);
-      if (dim == 2 && oz != 0.0) 
+      if (dim == 2 && oz != 0.0)
 	error->all(FLERR,"Invalid read_surf geometry transformation "
 		   "for 2d simulation");
       origin[0] = ox;
@@ -1186,7 +1189,7 @@ void ReadSurf::process_args(int start, int narg, char **arg)
       double dx = input->numeric(FLERR,arg[iarg+1]);
       double dy = input->numeric(FLERR,arg[iarg+2]);
       double dz = input->numeric(FLERR,arg[iarg+3]);
-      if (dim == 2 && dz != 0.0) 
+      if (dim == 2 && dz != 0.0)
 	error->all(FLERR,"Invalid read_surf geometry transformation "
 		   "for 2d simulation");
       origin[0] += dx;
@@ -1199,7 +1202,7 @@ void ReadSurf::process_args(int start, int narg, char **arg)
       double ax = input->numeric(FLERR,arg[iarg+1]);
       double ay = input->numeric(FLERR,arg[iarg+2]);
       double az = input->numeric(FLERR,arg[iarg+3]);
-      if (dim == 2 && az != 0.0) 
+      if (dim == 2 && az != 0.0)
 	error->all(FLERR,"Invalid read_surf geometry transformation "
 		   "for 2d simulation");
       double dx = ax - origin[0];
@@ -1215,7 +1218,7 @@ void ReadSurf::process_args(int start, int narg, char **arg)
       double fx = input->numeric(FLERR,arg[iarg+1]);
       double fy = input->numeric(FLERR,arg[iarg+2]);
       double fz = input->numeric(FLERR,arg[iarg+3]);
-      if (dim == 2 && fz != 0.5) 
+      if (dim == 2 && fz != 0.5)
 	error->all(FLERR,"Invalid read_surf geometry transformation "
 		   "for 2d simulation");
       double ax = domain->boxlo[0] + fx*domain->xprd;
@@ -1236,7 +1239,7 @@ void ReadSurf::process_args(int start, int narg, char **arg)
       double sx = input->numeric(FLERR,arg[iarg+1]);
       double sy = input->numeric(FLERR,arg[iarg+2]);
       double sz = input->numeric(FLERR,arg[iarg+3]);
-      if (dim == 2 && sz != 1.0) 
+      if (dim == 2 && sz != 1.0)
 	error->all(FLERR,"Invalid read_surf geometry transformation "
 		   "for 2d simulation");
       scale(sx,sy,sz);
@@ -1264,7 +1267,7 @@ void ReadSurf::process_args(int start, int narg, char **arg)
         char c = arg[iarg+1][0];
         if (isdigit(c) || c == '-' || c == '+' || c == '.') {
           frac = input->numeric(FLERR,arg[iarg+1]);
-          if (frac < 0.0 || frac >= 0.5) 
+          if (frac < 0.0 || frac >= 0.5)
             error->all(FLERR,"Invalid read_surf command");
           iarg++;
         }
@@ -1643,7 +1646,7 @@ void ReadSurf::clip2d()
   }
 
   // if discarded any surfs:
-  // if non-distributed: 
+  // if non-distributed:
   //   renumber all IDs for new surfs from nsurf_old to nsurf_new
   // if distributed:
   //    MPI_Scan to find unique IDs for me,
@@ -1653,7 +1656,7 @@ void ReadSurf::clip2d()
 
   int discardany;
   MPI_Allreduce(&discardflag,&discardany,1,MPI_INT,MPI_MAX,world);
-  
+
   if (discardany) {
     if (!distributed) {
       for (i = nsurf_old; i < nsurf_new; i++) lines[i].id = i+1;
@@ -1664,7 +1667,7 @@ void ReadSurf::clip2d()
       MPI_Scan(&delta,&offset,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
       offset -= delta;
       for (i = nsurf_old; i < nsurf_new; i++)
-        lines[i].id = static_cast<surfint> 
+        lines[i].id = static_cast<surfint>
           (nsurf_total_old+offset + i-nsurf_old + 1);
 
       delta = nsurf_new;
@@ -1926,7 +1929,7 @@ void ReadSurf::clip3d()
   }
 
   // if discarded any surfs:
-  // if non-distributed: 
+  // if non-distributed:
   //   renumber all IDs for new surfs from nsurf_old to nsurf_new
   // if distributed:
   //    MPI_Scan to find unique IDs for mine,
@@ -1937,7 +1940,7 @@ void ReadSurf::clip3d()
   int changeflag = discardflag + addflag;
   int changeany;
   MPI_Allreduce(&changeflag,&changeany,1,MPI_INT,MPI_MAX,world);
-  
+
   if (changeany) {
     if (!distributed) {
       for (i = nsurf_old; i < nsurf_new; i++) tris[i].id = i+1;
@@ -1948,7 +1951,7 @@ void ReadSurf::clip3d()
       MPI_Scan(&delta,&offset,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
       offset -= delta;
       for (i = nsurf_old; i < nsurf_new; i++)
-        tris[i].id = static_cast<surfint> 
+        tris[i].id = static_cast<surfint>
           (nsurf_total_old+offset + i-nsurf_old + 1);
 
       delta = nsurf_new;
@@ -2015,6 +2018,8 @@ void ReadSurf::check_consecutive()
   Surf::Line *lines;
   Surf::Tri *tris;
 
+  if (surf->nsurf == 0) return;
+
   bigint smin = surf->nsurf;
   bigint smax = 0;
 
@@ -2034,7 +2039,6 @@ void ReadSurf::check_consecutive()
     else tris = surf->tris;
     for (int i = 0; i < n; i++) {
       id = tris[i].id;
-      //if (id == 0) printf("ID %d %d: %d %d\n",id,me,i,n);
       smin = MIN(smin,id);
       smax = MAX(smax,id);
     }
@@ -2045,7 +2049,6 @@ void ReadSurf::check_consecutive()
   MPI_Allreduce(&smax,&smaxall,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
 
   if (sminall != 1) {
-    printf("SMINALL %d\n",sminall);
     char str[128];
     sprintf(str,"Read_surf minimum surface ID is " BIGINT_FORMAT,sminall);
     error->all(FLERR,str);
@@ -2060,6 +2063,7 @@ void ReadSurf::check_consecutive()
 
 /* ----------------------------------------------------------------------
    push all points to box boundary that are just inside
+   1Dec20 added just outside logic
    delta = user-specified frac * (hi-lo)
    this avoids tiny clipped surf elements
 ------------------------------------------------------------------------- */
@@ -2086,6 +2090,13 @@ void ReadSurf::push_points_to_boundary(double frac)
         if (j == 0) x = lines[i].p1;
         else x = lines[i].p2;
 
+	if (fabs(x[0]-boxlo[0]) < xdelta) x[0] = boxlo[0];
+	if (fabs(x[0]-boxhi[0]) < xdelta) x[0] = boxhi[0];
+
+	if (fabs(x[1]-boxlo[1]) < ydelta) x[1] = boxlo[1];
+	if (fabs(x[1]-boxhi[1]) < ydelta) x[1] = boxhi[1];
+	
+	/*
         if (x[0] >= boxlo[0] && x[0] <= boxhi[0]) {
           if (x[0]-boxlo[0] < xdelta) x[0] = boxlo[0];
           else if (boxhi[0]-x[0] < xdelta) x[0] = boxhi[0];
@@ -2094,6 +2105,7 @@ void ReadSurf::push_points_to_boundary(double frac)
           if (x[1]-boxlo[1] < ydelta) x[1] = boxlo[1];
           else if (boxhi[1]-x[1] < ydelta) x[1] = boxhi[1];
         }
+	*/
       }
     }
 
@@ -2107,7 +2119,17 @@ void ReadSurf::push_points_to_boundary(double frac)
         if (j == 0) x = tris[i].p1;
         else if (j == 1) x = tris[i].p2;
         else x = tris[i].p3;
+	
+	if (fabs(x[0]-boxlo[0]) < xdelta) x[0] = boxlo[0];
+	if (fabs(x[0]-boxhi[0]) < xdelta) x[0] = boxhi[0];
 
+	if (fabs(x[1]-boxlo[1]) < ydelta) x[1] = boxlo[1];
+	if (fabs(x[1]-boxhi[1]) < ydelta) x[1] = boxhi[1];
+
+	if (fabs(x[2]-boxlo[2]) < zdelta) x[2] = boxlo[2];
+	if (fabs(x[2]-boxhi[2]) < zdelta) x[2] = boxhi[2];
+
+	/*
         if (x[0] >= boxlo[0] && x[0] <= boxhi[0]) {
           if (x[0]-boxlo[0] < xdelta) x[0] = boxlo[0];
           else if (boxhi[0]-x[0] < xdelta) x[0] = boxhi[0];
@@ -2120,6 +2142,7 @@ void ReadSurf::push_points_to_boundary(double frac)
           if (x[2]-boxlo[2] < zdelta) x[2] = boxlo[2];
           else if (boxhi[2]-x[2] < zdelta) x[2] = boxhi[2];
         }
+	*/
       }
     }
   }
@@ -2430,7 +2453,7 @@ void ReadSurf::parse_keyword(int first)
 
   int start = strspn(line," \t\n\r");
   int stop = strlen(line) - 1;
-  while (line[stop] == ' ' || line[stop] == '\t' 
+  while (line[stop] == ' ' || line[stop] == '\t'
 	 || line[stop] == '\n' || line[stop] == '\r') stop--;
   line[stop+1] = '\0';
   strcpy(keyword,&line[start]);
@@ -2448,7 +2471,7 @@ void ReadSurf::parse_keyword(int first)
   //      could put them very close together
 ------------------------------------------------------------------------- */
 
-/* 
+/*
 
 void ReadSurf::check_point_pairs()
 {
@@ -2477,7 +2500,7 @@ void ReadSurf::check_point_pairs()
   int nbinx,nbiny,nbinz;
   double xbin,ybin,zbin;
   double xbininv,ybininv,zbininv;
-  
+
   if (dim == 2) {
     double vol_per_point = domain->xprd * domain->yprd / npoint_new;
     xbin = ybin = sqrt(vol_per_point);
@@ -2487,7 +2510,7 @@ void ReadSurf::check_point_pairs()
     if (nbiny == 0) nbiny = 1;
     nbinz = 1;
   } else {
-    double vol_per_point = domain->xprd * domain->yprd * domain->zprd / 
+    double vol_per_point = domain->xprd * domain->yprd * domain->zprd /
       npoint_new;
     xbin = ybin = zbin = pow(vol_per_point,1.0/3.0);
     nbinx = static_cast<int> (domain->xprd / xbin);

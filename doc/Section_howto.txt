@@ -26,7 +26,8 @@ SPARTA works.
 6.12 "Using multiple vibrational energy levels"_#howto_12
 6.13 "Surface elements: explicit, implicit, distributed"_#howto_13
 6.14 "Implicit surface ablation"_#howto_14
-6.15 "Transparent surface elements"_#howto_15 :all(b)
+6.15 "Transparent surface elements"_#howto_15
+6.15 "Visualizing SPARTA output with ParaView"_#howto_16 :all(b)
 
 The example input scripts included in the SPARTA distribution and
 highlighted in "Section 5"_Section_example.html of the manual also
@@ -159,7 +160,7 @@ read data.grid
 global nrho $\{rho\}
 ...
 compute myGrid grid all all n temp
-dump 1 all grid 1000 dump.$a id c_myGrid
+dump 1 grid all 1000 dump.$a id c_myGrid
 run 100000
 clear
 next rho
@@ -627,28 +628,38 @@ particle/surface collisions can be efficiently computed.
 SPARTA uses a Cartesian hierarchical grid.  Cartesian means that the
 faces of a grid cell, at any level of the hierarchy, are aligned with
 the Cartesian xyz axes.  I.e. each grid cell is an axis-aligned
-pallelpiped or rectangular box.  The hierarchy of grid cells is
-defined in the following manner.  The entire simulation box is a
-single "root" grid cell at level 0 of the hierarchy.  It is
-sub-divided into a regular Nx by Ny by Nz grid of cells, all at level
-1 of the hierarchy.  "Regular" means all the Nx*Ny*Nz sub-divided
-cells within a parent cell are the same size.  Each Nx,Ny,Nz value >=
-1 (although if Nx = Ny = Nz = 1 then obviously there is no
-sub-division).  Any of the cells at level 1 can be further sub-divided
-in the same manner to create cells at level 2, and recursively for
-levels 3, 4, etc.  The Nx,Ny,Nz values for sub-dividing an individual
-parent cell can be uniquely chosen.  All level 2 cells do not need to
-be sub-divided using the same Nx,Ny,Nz values.  Grids for 2d and 3d
-simulations (see the "dimension"_dimension.html) follow the same
-rules, except that Nz = 1 is required at every level of sub-division
-for 2d grids.
+pallelpiped or rectangular box.
 
-Note that this manner of defining a hierarchy allows for flexible grid
+The hierarchy of grid cells is defined for N levels, from 1 to N.  The
+entire simulation box is a single parent grid cell, conceptually at
+level 0.  It is subdivided into a regular grid of Nx by Ny by Nz cells
+at level 1.  "Regular" means all the Nx*Ny*Nz sub-divided cells within
+any parent cell are the same size.  Each of those cells can be a child
+cell (no further sub-division) or it can be a parent cell which is
+further subdivided into Nx by Ny by Nz cells at level 2.  This can
+recurse to as many levels as desired.  Different cells can stop
+recursing at different levels.  The Nx,Ny,Nz values for each level of
+the grid can be different, but they are the same for every grid cell
+at the same level.  The per-level Nx,Ny,Nz values are defined by the
+"create_grid"_create_grid.html, "read_grid"_read_grid.html,
+"adapt_grid"_adapt_grid.html, or "fix_adapt"_fix_adapt.html commands.
+
+As described below, each child cell is assigned an ID which encodes
+the cell's logical position within in the hierarchical grid, as a
+32-bit or 64-bit unsigned integer ID.  The precision is set by the
+-DSPARTA_BIG or -DSPARTA_SMALL or -DSPARTA_BIGBIG compiler switch, as
+described in "Section 2.2"_Section_start.html#start2_2.  The number of
+grid levels that can be used depends on this precision and the
+resolution of the grid at each level.  For example, in a 3d
+simulation, a level that is refined with a 2x2x2 sub-grid requires 4
+bits of the ID.  Thus a maximum of 8 levels can be used for 32-bit IDs
+and 16 levels for 64-bit IDs.
+
+This manner of defining a hierarchical grid allows for flexible grid
 cell refinement in any region of the simulation domain.  E.g. around a
-surface, or in a high-density region of the gas flow.  
-Also note that a 3d oct-tree (quad-tree in 2d) is a special case of
-the SPARTA hierarchical grid, where Nx = Ny = Nz = 2 is always used to
-sub-divide a grid cell.
+surface, or in a high-density region of the gas flow.  Also note that
+a 3d oct-tree (quad-tree in 2d) is a special case of the SPARTA
+hierarchical grid, where Nx = Ny = Nz = 2 is used at every level.
 
 An example 2d hierarchical grid is shown in the diagram, for a
 circular surface object (in red) with the grid refined on the upwind
@@ -665,20 +676,17 @@ portion of the simulation domain that is "outside" any surface objects
 and is typically filled with particles.
 
 root cell = the simulation box itself
-parent cell = a grid cell at any level that is sub-divided further
+parent cell = a grid cell that is sub-divided (root cell = parent cell)
 child cell = a grid cell that is not sub-divided further
 unsplit cell = a child cell not intersected by any surface elements
 cut cell = a child cell intersected by one or more surface elements, one resulting flow region
 split cell = a child cell intersected by two or more surface elemments, two or more resulting disjoint flow regions
 sub cell = one disjoint flow region portion of a split cell :ul
 
-The list of parent cells in a simulation is stored by every processor
-and is read in by the "read_grid"_read_grid.html command, or defined
-by the "create_grid"_create_grid.html command.  Child cells are
-inferred by the same 2 commands and the union of all child cells is
-the entire simulation domain.  Child cells are distributed across
-processors, so that each child cell is owned by exactly one processor,
-as discussed below.
+In SPARTA, parent cells are only conceptual.  They do not exist or
+require memory.  Child cells store various attributes and are
+distributed across processors, so that each child cell is owned by
+exactly one processor, as discussed below.
 
 When surface objects are defined via the "read_surf"_read_surf.html
 command, they intersect child cells.  In this contex "intersection" by
@@ -712,40 +720,30 @@ simulation domain.  These are the only kinds of child cells that store
 particles.  Split cells and unsplit cells interior to surface objects
 have no particles.
 
-Every parent and child cell is assigned an ID by SPARTA.  These IDs
-can be output in integer or string form by the "dump grid"_dump.html
-command, using its {id} and {idstr} attributes.  The integer form can
-also be output by the "compute
+Child cell IDs can be output in integer or string form by the "dump
+grid"_dump.html command, using its {id} and {idstr} attributes.  The
+integer form can also be output by the "compute
 property/grid"_compute_property_grid.html.
 
-Here is how the grid cell ID is computed and stored by SPARTA.  Say
-the 1st level grid is a 10x10x20 sub-division (2000 cells) of the root
-cell.  The 1st level cells are numbered from 1 to 2000 with the
-x-dimension varying fastest, then y, and finally the z-dimension
-slowest.  Now say the 374th (out of 2000, 14 in x, 19 in y, 1 in z)
-1st-level cell has a 2x2x2 sub-division (8 cells), and consider the
-4th 2nd-level cell (2 in x, 2 in y, 1 in z) within the 374th cell.  It
-could be a parent cell if it is further sub-divided, or a child cell
-if not.  In either case its ID is the same.  The rightmost 11 bits of
-the integer ID are encoded with 374.  This is because it requires 11
-bits to represent 2000 cells (1 to 2000) at level 1.  The next 4 bits
-are used to encode 1 to 8, specifically 4 in the case of this cell.
-Thus the cell ID in integer format is 4*2048 + 374 = 8566.  In string
-format it will be printed as 4-374, with dashes separating the levels.
+Here is how a grid cell ID is computed by SPARTA, either for parent or
+child cells.  Say the level 1 grid is a 10x10x20 sub-division (2000
+cells) of the root cell.  The level 1 cells are numbered from 1 to
+2000 with the x-dimension varying fastest, then y, and finally the
+z-dimension slowest.  Now say the 374th (out of 2000, 14 in x, 19 in
+y, 1 in z) level 1 cell has a 2x2x2 sub-division (8 cells), and
+consider the 4th level 2 cell (2 in x, 2 in y, 1 in z) within the
+374th cell.  It could be a parent cell if it is further sub-divided,
+or a child cell if not.  In either case its ID is the same.  The
+rightmost 11 bits of the integer ID are encoded with 374.  This is
+because it requires 11 bits to represent 2000 cells (1 to 2000) at
+level 1.  The next 4 bits are used to encode 1 to 8, specifically 4 in
+the case of this cell.  Thus the cell ID in integer format is 4*2048 +
+374 = 8566.  In string format it will be printed as 4-374, with dashes
+separating the levels.
 
 Note that a child cell has the same ID whether it is unsplit, cut, or
 split.  Currently, sub cells of a split cell also have the same ID,
 though that may change in the future.
-
-The number of hierarchical levels a SPARTA grid can contain is limited
-to whether all cell IDs can be encoded in an integer.  By default cell
-IDs are stored in 32-bit integers.  64-bit integers can be used if
-SPARTA is compiled with the -DSPARTA_BIGBIG option, as explained in
-"Section 2.2.2"_Section_start.html#start_2_2.
-
-For 32-bit cell IDs if every level uses a 2x2x2 sub-division which
-requires 4 bits (to store values from 1 to 8), then a grid can have 7
-levels.  For 64-bit cell IDs, 15 levels could be defined.
 
 The "create_grid"_create_grid.html and "balance"_balance.html and "fix
 balance"_fix_balance.html commands determine the assignment of child
@@ -753,8 +751,9 @@ cells to processors.  If a child cell is assigned to a processor, that
 processor owns the cell whether it is an unsplit, cut, or split cell.
 It also owns any sub cells that are part of a split cell.
 
-Depending on how they the commands are used, the child cells assigned
-to each processor will either be "clumped" or "dispersed".
+Depending on which assignment options in these commands are used, the
+child cells assigned to each processor will either be "clumped" or
+"dispersed".
 
 Clumped means each processor's cells will be geometrically compact.
 Dispersed means the processor's cells will be geometrically dispersed
@@ -944,13 +943,14 @@ The first is during gas-phase collisions and chemistry.  The ionized
 ambipolar particles in a grid cell are each split into two particles
 (ion and electron) and each can participate in two-body collisions
 with any other particle in the cell.  Electron/electron collisions are
-actually not performed, but are tallied in the overall collision
-count.  If gas-phase chemistry is turned on, reactions involving ions
-and electrons can be specified, which include dissociation,
-ionization, exchange, and recombination reactions.  At the end of the
-collision/chemsitry operations for the grid cell, there is still a
-one-to-one pairing between ambipolar ions and electrons.  Each pair is
-recombined into a single particle.
+actually not performed, but are tallied in the overall collision count
+(if using a collision mixture with a single group, not when using
+multiple groups).  If gas-phase chemistry is turned on, reactions
+involving ions and electrons can be specified, which include
+dissociation, ionization, exchange, and recombination reactions.  At
+the end of the collision/chemsitry operations for the grid cell, there
+is still a one-to-one pairing between ambipolar ions and electrons.
+Each pair is recombined into a single particle.
 
 The second is during collisions with surface (or the boundaries of the
 simulation box) if a surface reaction model is defined for the surface
@@ -982,16 +982,13 @@ destroyed) internally, as described above.
 
 Use the "collide_modify ambipolar yes"_collide_modify.html command if
 you want to perform gas-phase collisions using the ambipolar model.
-This is not required.  If you do this, DO use a mixture which includes
-the ambipolar electron species, so that electrons will participate in
-the collisions and reactions (if defined).  You probably also want to
-specify a mixture for the collide command which has two or more
-groups.  One group is for the ambipolar electron species, the other
-for ambipolar ions.  Additional groups could exist for other species
-(e.g. neutrals), or those species could be part of the ion group.
-Putting the ambipolar electron species in its own group should improve
-the efficiency of the code due to the large disparity in electron
-versus ion/neutral velocities.
+This is not required.  If you do this, you may also want to specify a
+mixture for the collide command which has two or more groups.  If this
+is the case, the ambipolar electron species must be in a group by
+itself.  The other group(s) can contain any combination of ion or
+neutral species.  Note that putting the ambipolar electron species in
+its own group should improve the efficiency of the code due to the
+large disparity in electron versus ion/neutral velocities.
 
 If you want to perform gas-phase chemistry for reactions involving
 ambipolar ions and electrons, use the "react"_react.html command with
@@ -1316,3 +1313,303 @@ files.  The resulting tallies are output with the
 "stats_style"_stats_style.html command.  They could also be output
 with a "dump surf"_dump_surf.html command for more resolution if the 2
 lines were each defined as multiple line segments.
+
+:line
+
+6.16 Visualizing SPARTA output with ParaView :link(howto_16),h4
+
+The {sparta/tools/paraview} directory contains two Python programs that can
+be used to convert SPARTA surface and grid data to ParaView {.pvd} format for
+visualization with ParaView:
+
+surf2paraview.py  
+grid2paraview.py :pre
+
+Note that you must have ParaView installed on your system to use these
+scripts.  Installation and usage instructions follow.
+
+These tools were written by Tom Otahal (Sandia), who can
+be contacted at tjotaha at sandia.gov.
+
+[**Important**]
+
+The ParaView {pvpython} interpreter must be used to run these Python scripts.  
+Using a standard Python interpreter will not work, since the scripts will
+not have access to the required ParaView Python modules and libraries.
+
+[**Important**]
+
+(1) Getting Started
+
+Download and install ParaView at "Kitware ParaView"_https://www.paraview.org
+
+Binary installers are available for Linux, MacOS, and Windows.
+Locate the {pvpython} binary in your ParaView installation.  
+
+  On Linux:
+
+pvpython is in the bin/ directory of the extracted tar.gz file :pre
+
+  On MacOS:
+
+pvpython is in /Applications/paraview.app/Contents/bin/ :pre
+
+  On Windows:
+
+pvpython is in C:\Program Files (x86)\ParaView 5.6.0\bin :pre
+
+-------------------------------
+
+(2) Using surf2paraview.py
+
+The {surf2paraview.py} program converts 3D SPARTA surface triangulation
+files and 2D SPARTA closed polygon files into ParaView {.pvd} format.
+Additionally, the program can optionally read one or more SPARTA
+surface dump files and associate the calculated results with the
+surface geometry over time.
+
+The program has two required arguments:
+
+pvpython surf2paraview.py data.mir mir_surf :pre
+
+The first argument is the file name of a SPARTA surf file containing a
+3d triangulation of an objects surface, or a 2d enclosed polygon of
+line segments.  The second argument is the name of the resulting
+ParaView output {.pvd} file.  The above command line will produce a file
+called {mir_surf.pvd} and a directory called {mir_surf/}.  The {mir_surf/}
+directory contains a ParaView {.vtu} file with geometry information and
+is referred to by the {mir_surf.pvd} file.  Start ParaView and open the
+file {mir_surf.pvd} to visualize the surface.
+
+The program has an optional argument to associate time result data
+with the surface elements:
+
+pvpython surf2paraview.py data.mir mir_surf -r ../parent/mir/tmp_surf.* :pre
+
+The {-r} (or {--result}) option is followed by a list of file names with
+full or relative paths to SPARTA surf dump files.  The files can be
+over different time steps and from different processors at the same
+time step. The script will organize the result files so that ParaView
+can play a smooth animation over all time steps for the stored
+variables in the file.  The example above uses a wild card character in
+the file name to gather all of the {tmp_surf.*} files stored in the
+directory.  Wild card characters can only be used in the file name part
+of the path and can be given for multiple paths.
+
+NOTE: SPARTA 2d enclosed polygons will be 2d outlines in ParaView.
+This means that any grid cells inside of the polygon will be visible
+in ParaView.  To obscure the inside of the enclosed polygon, select a
+Delaunay 2D filter from the ParaView menu.
+
+  Filters->Alphabetical->Delaunay 2D :pre
+
+This will triangulate the interior of the polygon and obscure interior
+grid cells from view.
+
+The {-e} (or {--exodus}) option will output the contents of the {*.pvd} and
+output directory in Exodus 2 output format as a single file:
+
+pvpython surf2paraview.py data.mir mir_surf -r ../parent/mir/tmp_surf.* --exodus :pre
+
+This will produce an Exodus 2 file {mir_surf.ex2}, containing the same content
+as {mir_surf.pvd} and {mir_surf/}. The {.pvd} format output is not written when
+Exodus 2 output is requested.
+
+(3) Using grid2paraview.py
+
+The {grid2paraview.py} program converts a text file description of a 2D
+or 3D SPARTA mesh into a ParaView {.pvd} file.  Additionally, the
+program can optionally read one or more SPARTA grid dump files and
+associate the calculated results with the grid cells over time.
+
+The program has two required arguments:
+
+pvpython grid2paraview.py mir.txt mir_grid :pre
+
+The first argument is a text file containing a description of the
+SPARTA grid.  The description uses commands found in the SPARTA input
+deck.  These commands are {dimension}, {create_box}, and {create_grid} or
+{read_grid}.  The file can also contain "slice" commands which will
+define slice planes through the 3d grid and output 3d data for each
+slice plane (crinkle cut).  The file can also contain comment lines
+with start with a "#" character.
+
+The dimension and create_box command have exactly the same syntax as
+corresponding SPARTA input script commands.  Both of these commands
+must be used.
+
+The grid itself can be defined by either a create_grid or read_grid
+command, one of which must be used.  The create_grid command is
+similar to the SPARTA input script command with the same name, but it
+only allows for use of the "level" keyword.  The other keywords that
+specify processor assignments for cells are not allowed.  The
+read_grid command has the same syntax as the corresponding SPARTA
+input script command, and reads a SPARTA parent grid file, which can
+define a hierarchical grid with multiple levels of refinement.
+
+One or more slice commands are optional.  Each defines a 2d plane
+in the following manner
+
+slice Nx Ny Nz Px Py Pz :pre
+
+where (Nx,Ny,Nz) is the plane normal (need not be normalized) and
+(Px,Py,Pz) is a point on the plane.  Note that the plane can be at any
+orientation.  ParaView will perform a good interpolation from the 3d
+grid cells to the 2d plane.
+
+Each command will output a {*.pvd} file with the plane normal encoded in
+the {*.pvd} file-name.
+
+As an example, the {mir.txt} file specified above could contain the
+following grid description:
+
+  dimension           3
+  create_box          -15.0 30.0 -20.0 15.0 -20.0 20.0
+  create_grid         100 100 100 level 2 * * * 2 2 2
+  slice               1 0 0 0.0 0.0 0.0
+  slice               0 1 0 0.0 0.0 0.0 :pre
+
+The second argument for the {grid2paraview} command gives the name of
+the resulting {.pvd} file.  The above command line will produce a file
+called {mir_grid.pvd} and a directory called {mir_grid/}.  The {mir_grid/}
+directory contains all the ParaView {.vtu} files used to describe the
+grid cell geometry.  The {mir_grid.pvd} references the {mir_grid/}
+directory.  Open {mir_grid.pvd} with ParaView to view the grid.
+
+The program has an optional argument to associate time result data
+with the grid cells:
+
+pvpython grid2paraview.py mir.txt mir_grid -r ../parent/mir/tmp_flow.* :pre
+
+The {-r} (or {--result}) option is followed by a list of file names with
+full or relative paths to SPARTA grid dump files. This option operates
+like the {-r} option in the {surf2paraview.py} program.
+
+The grid description given in the {*.txt} file must match the data given
+in the grid flow files. The grid flow files must also contain a column
+that gives the SPARTA encoded integer id for the cell.
+
+For large grids (greater than 100x100x100), the time to write out the
+{.pvd} file and data directory can be lengthy.  For this reason, the
+{grid2paraview.py} command has three additional options which can break
+the grid into smaller chunks at the top-most level of the grid.  Each
+chunk will be written out as a separate {.vtu} file in the named
+sub directory the {.pvd} file refers to.
+
+These additional options are:
+
+-x (or --xchunk, default 100)
+-y (or --ychunk, default 100)
+-z (or --zchunk, default 100) :pre
+
+The program will launch a separate thread of computation for each grid
+chunk.  On workstations with many cores and sufficient memory, using
+small chunks (of about 1 million cells each) can greatly speed up
+output time. For 2d grids, the {-zc} option is ignored.
+
+NOTE: On Windows platforms, the grid blocking will always be executed
+serially.  This is due to how the multiprocessing module is
+implemented on Windows, which prohibits multiple instances of {pvpython}
+from starting independently.
+
+(4) pvbatch for Large SPARTA Grids
+
+When SPARTA grid output becomes large, the processing time required for
+grid2paraview.py can be long on a single node even with multi-processing.
+If more than one compute node is available (HPC environment), grid2paraview.py
+can be run with MPI using ParaView's {pvbatch} program. The {pvbatch} program
+is normally located in the same directory as {pvpython}, along with the mpiexec
+program that works with ParaView. In some environments, ParaView may have
+been compiled from source with a particular version of MPI, in which case 
+the appropriate mpiexec program will need to be used.
+
+From the {mir.txt} example in section (3), to run {grid2paraview.py} using
+{pvbatch}, use the following command line.
+
+mpiexec -np 256 pvbatch -sym grid2paraview.py mir.txt mir_grid -r ../parent/mir/tmp_flow.* :pre
+
+This command will run grid2paraview.py on 256 MPI ranks and produce the same
+outputs as the {pvpython} version. Using 256 MPI ranks will be faster than
+multi-processing with threads on a single compute node. Notice the "-sym"
+argument to {pvbatch}, which tells {pvbatch} to run in symmetric MPI mode.
+This argument is required.
+
+(5) Catalyst for Large SPARTA Grids
+
+There is an option in {grid2paraview.py} to execute a ParaView Catalyst Python
+script that has been exported from the ParaView GUI. For more details on
+Catalyst, please see the Catalyst user guide, located here.
+
+"Kitware ParaView Catalyst in-situ"_https://www.paraview.org/in-situ/
+
+The Catalyst script will generate images or data extracts for each time-step.
+This will avoid having to run ParaView as a separate step to generate
+visualizations. The ideal work-flow is to run the ParaView GUI on a much smaller
+grid version to setup the visualization and export the Catalyst script.
+Then, run {grid2paraview.py} on the larger SPARTA grid output to generate
+images. From the {mir.txt} example, to run {grid2paraview.py} using {pvbatch} and
+Catalyst, use the following command line ({catalyst.py} was exported from
+the ParaView GUI).
+
+mpiexec -np 32 pvbatch -sym grid2paraview.py mir.txt mir_grid -r -c catalyst.py ../parent/mir/tmp_flow.* :pre
+
+This will generate images or data extracts, depending on how {catalyst.py} was
+setup in the ParaView GUI. The {grid2paraview.py} script will not generate
+ParaView grid geometry when the "-c" option is used. Note that {grid2paraview.py}
+will assume that the grid input name is "mir_grid.pvd" in {catalyst.py}, since
+"mir_grid" is given as the output directory.  If these two names do not match,
+either edit your catalyst script or change the output directory name on the
+command line to match what your script expects. The output directory is not 
+created when {-c} option is used.
+
+(6) Post-processing large refined SPARTA output grids
+
+When SPARTA grids contain a large amount of grid refinement concentrated in
+small areas of the grid, the tool {grid2paraview.py} tends to run out of memory
+because it depends on a static distribution of cells to processors in terms of
+grid chunks defined at the top level of the grid. To overcome this memory issue,
+two new ParaView tools were developed: 
+
+sort_sparta_grid_file.py and grid2paraview_cells.py :pre
+
+The program {sort_sparta_grid_file.py} takes as input a SPARTA grid file and uses
+the parallel bucket sort algorithm to sort the grid cells into the same number
+of files as MPI ranks used to run the program.
+
+mpiexec -np 4 pvbatch -sym sort_sparta_grid_file.py data.grid :pre
+
+The program must be run using the ParaView {pvbatch} program with the {-sym} argument.
+The above command line will produce 4 output files containing SPARTA grid dashed ids
+of cells located in the same area of the grid. The output file names are based on
+the name of the {*.grid} file used as input ({data.grid} in this case). The output files
+will be named as shown below.
+
+data_sort_bucket_rank_0.txt
+data_sort_bucket_rank_1.txt
+data_sort_bucket_rank_2.txt
+data_sort_bucket_rank_3.txt :pre
+
+The program {grid2paraview_cells.py} takes similar inputs as the {grid2paraview.py}
+program described in section (3), and produces the same ParaView VTU file output
+and PVD file output.
+
+mpiexec -np 4 pvbatch -sym grid2paraview_cells.py grid.txt output -rf flow_files.txt --float --variables id f_1\[5\] f_1\[7\] :pre
+
+The program must be run using the ParaView {pvbatch} program with the {-sym} argument.
+The above command line will produce an {output.pvd} file and a directory name output/
+containing the ParaView VTU file data. The {grid.txt} file must contain a {read_grid}
+statement with the path to a SPARTA grid cell output file, and is otherwise the same
+as the {grid2paraview.py} version. The option {--float} outputs float precision numbers
+to the VTU files to save memory (default is double precision). The {--variables} option
+limits the output arrays to the names given on the command line (default is all variable
+names found in the flow files given by the {-rf} or {-r} options).
+
+The {grid2paraview_cells.py} program will look for {*_sort_bucket_rank_?.txt} files
+produced by the sort_sparta_grid_file.py program. The matching will depend on the number
+of MPI ranks that {grid2paraview_cells.py} is run on and the name of the output directory
+given to {grid2paraview_cells.py}. If matching files are found, these will be used as
+input on each MPI rank. If no match is found, {grid2paraview_cells.py} will run
+{sort_sparta_grid_file.py} to produce sorted output files for each rank. The programs
+are decoupled in this way to allow faster {grid2paraview_cells.py} runs once a set
+of sorted files has been generated by {sort_sparta_grid_file.py}.
+

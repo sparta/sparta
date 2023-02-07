@@ -45,6 +45,9 @@
 #ifndef KOKKOS_CUDA_WORKGRAPHPOLICY_HPP
 #define KOKKOS_CUDA_WORKGRAPHPOLICY_HPP
 
+#include <Kokkos_Cuda.hpp>
+#include <Cuda/Kokkos_Cuda_KernelLaunch.hpp>
+
 namespace Kokkos {
 namespace Impl {
 
@@ -52,29 +55,29 @@ template <class FunctorType, class... Traits>
 class ParallelFor<FunctorType, Kokkos::WorkGraphPolicy<Traits...>,
                   Kokkos::Cuda> {
  public:
-  typedef Kokkos::WorkGraphPolicy<Traits...> Policy;
-  typedef ParallelFor<FunctorType, Policy, Kokkos::Cuda> Self;
+  using Policy = Kokkos::WorkGraphPolicy<Traits...>;
+  using Self   = ParallelFor<FunctorType, Policy, Kokkos::Cuda>;
 
  private:
   Policy m_policy;
   FunctorType m_functor;
 
   template <class TagType>
-  __device__ inline
-      typename std::enable_if<std::is_same<TagType, void>::value>::type
-      exec_one(const std::int32_t w) const noexcept {
+  __device__ inline std::enable_if_t<std::is_void<TagType>::value> exec_one(
+      const std::int32_t w) const noexcept {
     m_functor(w);
   }
 
   template <class TagType>
-  __device__ inline
-      typename std::enable_if<!std::is_same<TagType, void>::value>::type
-      exec_one(const std::int32_t w) const noexcept {
+  __device__ inline std::enable_if_t<!std::is_void<TagType>::value> exec_one(
+      const std::int32_t w) const noexcept {
     const TagType t{};
     m_functor(t, w);
   }
 
  public:
+  Policy const& get_policy() const { return m_policy; }
+
   __device__ inline void operator()() const noexcept {
     if (0 == (threadIdx.y % 16)) {
       // Spin until COMPLETED_TOKEN.

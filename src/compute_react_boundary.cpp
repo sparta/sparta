@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -64,7 +64,7 @@ ComputeReactBoundary(SPARTA *sparta, int narg, char **arg) :
       char *copy = new char[n];
       strcpy(copy,&arg[iarg][2]);
       char *ptr = copy;
-      while (ptr = strtok(ptr,"/")) {
+      while ((ptr = strtok(ptr,"/")) != (char *) NULL) {
         for (int ireaction = 0; ireaction < ntotal; ireaction++) {
           reaction2col[ireaction][icol] = 0;
           if (which == REACTANT) {
@@ -154,8 +154,8 @@ void ComputeReactBoundary::clear()
 ------------------------------------------------------------------------- */
 
 void ComputeReactBoundary::boundary_tally(int iface, int istyle, int reaction,
-                                     Particle::OnePart *iorig, 
-                                     Particle::OnePart *ip, 
+                                     Particle::OnePart *iorig,
+                                     Particle::OnePart *ip,
                                      Particle::OnePart *jp)
 {
   // skip if no reaction

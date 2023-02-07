@@ -52,8 +52,6 @@
 #include <winsock2.h>
 #include <windows.h>
 
-#undef VOID
-
 namespace Kokkos {
 namespace Impl {
 #ifdef _MSC_VER
@@ -67,16 +65,17 @@ _declspec(align(16))
     return (lower != a.lower) || upper != a.upper;
   }
 }
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__clang__)
 __attribute__((aligned(16)))
 #endif
 ;
 }  // namespace Impl
 
+#if !defined(__CUDA_ARCH__) || defined(__clang__)
 template <typename T>
-KOKKOS_INLINE_FUNCTION T atomic_compare_exchange(
+inline T atomic_compare_exchange(
     volatile T* const dest, const T& compare,
-    typename std::enable_if<sizeof(T) == sizeof(CHAR), const T&>::type val) {
+    std::enable_if_t<sizeof(T) == sizeof(CHAR), const T&> val) {
   union U {
     CHAR i;
     T t;
@@ -89,9 +88,9 @@ KOKKOS_INLINE_FUNCTION T atomic_compare_exchange(
 }
 
 template <typename T>
-KOKKOS_INLINE_FUNCTION T atomic_compare_exchange(
+inline T atomic_compare_exchange(
     volatile T* const dest, const T& compare,
-    typename std::enable_if<sizeof(T) == sizeof(SHORT), const T&>::type val) {
+    std::enable_if_t<sizeof(T) == sizeof(SHORT), const T&> val) {
   union U {
     SHORT i;
     T t;
@@ -104,9 +103,9 @@ KOKKOS_INLINE_FUNCTION T atomic_compare_exchange(
 }
 
 template <typename T>
-KOKKOS_INLINE_FUNCTION T atomic_compare_exchange(
+inline T atomic_compare_exchange(
     volatile T* const dest, const T& compare,
-    typename std::enable_if<sizeof(T) == sizeof(LONG), const T&>::type val) {
+    std::enable_if_t<sizeof(T) == sizeof(LONG), const T&> val) {
   union U {
     LONG i;
     T t;
@@ -119,10 +118,9 @@ KOKKOS_INLINE_FUNCTION T atomic_compare_exchange(
 }
 
 template <typename T>
-KOKKOS_INLINE_FUNCTION T atomic_compare_exchange(
+inline T atomic_compare_exchange(
     volatile T* const dest, const T& compare,
-    typename std::enable_if<sizeof(T) == sizeof(LONGLONG), const T&>::type
-        val) {
+    std::enable_if_t<sizeof(T) == sizeof(LONGLONG), const T&> val) {
   union U {
     LONGLONG i;
     T t;
@@ -135,10 +133,9 @@ KOKKOS_INLINE_FUNCTION T atomic_compare_exchange(
 }
 
 template <typename T>
-KOKKOS_INLINE_FUNCTION T atomic_compare_exchange(
+inline T atomic_compare_exchange(
     volatile T* const dest, const T& compare,
-    typename std::enable_if<sizeof(T) == sizeof(Impl::cas128_t), const T&>::type
-        val) {
+    std::enable_if_t<sizeof(T) == sizeof(Impl::cas128_t), const T&> val) {
   T compare_and_result(compare);
   union U {
     Impl::cas128_t i;
@@ -151,13 +148,7 @@ KOKKOS_INLINE_FUNCTION T atomic_compare_exchange(
                                  ((LONGLONG*)&compare_and_result));
   return compare_and_result;
 }
-
-template <typename T>
-KOKKOS_INLINE_FUNCTION T atomic_compare_exchange_strong(volatile T* const dest,
-                                                        const T& compare,
-                                                        const T& val) {
-  return atomic_compare_exchange(dest, compare, val);
-}
+#endif
 
 }  // namespace Kokkos
 #endif

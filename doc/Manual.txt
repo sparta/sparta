@@ -1,6 +1,6 @@
 <HEAD>
 <TITLE>SPARTA Users Manual</TITLE>
-<META NAME="docnumber" CONTENT="7 May 2020 version">
+<META NAME="docnumber" CONTENT="18 Jul 2022 version">
 <META NAME="author" CONTENT="http://sparta.sandia.gov - Sandia National Laboratories">
 <META NAME="copyright" CONTENT="Copyright (2014) Sandia Corporation.  This software and manual is distributed under the GNU General Public License.">
 </HEAD>
@@ -18,7 +18,7 @@
 <H1></H1>
 
 SPARTA Documentation :c,h3
-7 May 2020 version :c,h4
+18 Jul 2022 version :c,h4
 
 Version info: :h4
 
@@ -44,8 +44,7 @@ it to be part of very patch. :l
 
 At some point, there also will be a "Developer.pdf"_Developer.pdf file
 in the doc directory, which describes the internal structure and
-algorithms of SPARTA.  NOTE: as of 21 Apr 2015, this file is not yet
-available. :ule,l
+algorithms of SPARTA. :ule,l
 
 SPARTA stands for Stochastic PArallel Rarefied-gas Time-accurate
 Analyzer.

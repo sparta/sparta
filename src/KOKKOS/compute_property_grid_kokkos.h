@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -28,7 +28,7 @@ ComputeStyle(property/grid/kk,ComputePropertyGridKokkos)
 namespace SPARTA_NS {
 
   struct TagComputePropertyGrid_ComputePerGrid_vector{};
-  struct TagComputePropertyGrid_ComputePerGrid_array{};  
+  struct TagComputePropertyGrid_ComputePerGrid_array{};
 
  class ComputePropertyGridKokkos : public ComputePropertyGrid, public KokkosBase {
  public:
@@ -43,7 +43,7 @@ namespace SPARTA_NS {
   void operator()(TagComputePropertyGrid_ComputePerGrid_vector, const int&) const;
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagComputePropertyGrid_ComputePerGrid_array, const int&) const;  
+  void operator()(TagComputePropertyGrid_ComputePerGrid_array, const int&) const;
 
   DAT::tdual_float_1d k_vector_grid;
   DAT::tdual_float_2d_lr k_array_grid;

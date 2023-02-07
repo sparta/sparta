@@ -29,7 +29,7 @@ input = one or more grid attributes :l
 
 [Examples:]
 
-compute 1 all property/grid id xc yc zc :pre
+compute 1 property/grid all id xc yc zc :pre
 
 [Description:]
 
@@ -48,16 +48,16 @@ The values are stored in a per-grid vector or array as discussed
 below. 
 
 {Id} is the grid cell ID.  In SPARTA each grid cell is assigned a
-unique ID which represents its location, in a topological sense,
-within the hierarchical grid.  This ID is stored as an integer such as
-5774983, but can also be decoded into a string such as 33-4-6, which
-makes it easier to understand the grid hierarchy.  In this case it
-means the grid cell is at the 3rd level of the hierarchy.  Its
-grandparent cell was 33 at the 1st level, its parent was cell 4 (at
-level 2) within cell 33, and the cell itself is cell 6 (at level 3)
-within cell 4 within cell 33.  If you specify {id}, the ID is printed
-directly as an integer.  The ID in string format can be accessed by
-the "dump grid"_dump.html command and its {idstr} argument.
+unique ID which represents its logical location within the
+hierarchical grid.  This ID is stored as an integer such as 5774983,
+but can also be decoded into a string such as 33-4-6, which makes it
+easier to understand the grid hierarchy.  In this case it means the
+grid cell is at the 3rd level of the hierarchy.  Its grandparent cell
+was 33 at the 1st level, its parent was cell 4 (at level 2) within
+cell 33, and the cell itself is cell 6 (at level 3) within cell 4
+within cell 33.  If you specify {id}, the ID is printed directly as an
+integer.  The ID in string format can be accessed by the "dump
+grid"_dump.html command and its {idstr} argument.
 
 {Proc} is the ID of the processor which currently owns the grid cell.
 

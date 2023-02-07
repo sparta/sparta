@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -28,12 +28,12 @@ class FixEmit : public Fix {
   void start_of_step();
   double compute_vector(int);
 
-  void grid_changed();
+  virtual void grid_changed();
 
  protected:
   int perspecies;
   class Region *region;
-  class RanPark *random;
+  class RanKnuth *random;
   int nsingle,ntotal;
 
   int ntask;           // # of insert tasks in underlying child class

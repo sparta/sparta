@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -97,7 +97,7 @@ void Error::all(const char *file, int line, const char *str)
 /* ----------------------------------------------------------------------
    called by one proc in world
    write to world screen only if non-NULL on this proc
-   always write to universe screen 
+   always write to universe screen
 ------------------------------------------------------------------------- */
 
 void Error::one(const char *file, int line, const char *str)
@@ -119,7 +119,7 @@ void Error::one(const char *file, int line, const char *str)
 
 /* ----------------------------------------------------------------------
    called by one proc in world
-   only write to screen if non-NULL on this proc since could be file 
+   only write to screen if non-NULL on this proc since could be file
 ------------------------------------------------------------------------- */
 
 void Error::warning(const char *file, int line, const char *str, int logflag)

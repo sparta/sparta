@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -39,27 +39,27 @@ class KKCopy {
 
   ~KKCopy() {}
 
-  void copy(ClassStyle* orig) {
-    memcpy(&obj, orig, sizeof(ClassStyle));
+  void copy(void* orig) {
+    memcpy((void*)&obj, orig, sizeof(ClassStyle));
     obj.copy = 1;
   }
 
-  void uncopy() {
+  void uncopy(int copy = 0) {
     if (ptr_temp != NULL) {
-      memcpy(&obj, ptr_temp, sizeof(ClassStyle));
+      memcpy((void*)&obj, ptr_temp, sizeof(ClassStyle));
       free(ptr_temp);
       ptr_temp = NULL;
     }
-    obj.copy = 0;
+    obj.copy = copy;
     obj.copymode = 0;
   }
 
  private:
-  ClassStyle* ptr_temp;
+  void* ptr_temp;
 
   void save() {
     ptr_temp = (ClassStyle*) malloc(sizeof(ClassStyle));
-    memcpy(ptr_temp, &obj, sizeof(ClassStyle));
+    memcpy(ptr_temp, (void*)&obj, sizeof(ClassStyle));
   }
 
 };

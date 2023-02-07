@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -27,7 +27,7 @@
 
 using namespace SPARTA_NS;
 
-enum{NUM,NUMWT,MFLUX,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
+enum{NUM,NUMWT,NFLUX,MFLUX,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
      XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ETOT};
 
 #define DELTA 4096
@@ -50,11 +50,14 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
   nvalue = narg - 4;
   which = new int[nvalue];
 
+  // process input values
+
   nvalue = 0;
   int iarg = 4;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"n") == 0) which[nvalue++] = NUM;
     else if (strcmp(arg[iarg],"nwt") == 0) which[nvalue++] = NUMWT;
+    else if (strcmp(arg[iarg],"nflux") == 0) which[nvalue++] = NFLUX;
     else if (strcmp(arg[iarg],"mflux") == 0) which[nvalue++] = MFLUX;
     else if (strcmp(arg[iarg],"fx") == 0) which[nvalue++] = FX;
     else if (strcmp(arg[iarg],"fy") == 0) which[nvalue++] = FY;
@@ -70,9 +73,26 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
     else if (strcmp(arg[iarg],"erot") == 0) which[nvalue++] = EROT;
     else if (strcmp(arg[iarg],"evib") == 0) which[nvalue++] = EVIB;
     else if (strcmp(arg[iarg],"etot") == 0) which[nvalue++] = ETOT;
-    else error->all(FLERR,"Illegal compute surf command");
+    else break;
     iarg++;
   }
+
+  // process optional keywords
+
+  normarea = 1;
+
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"norm") == 0) {
+      if (iarg+2 > narg)
+        error->all(FLERR,"Invalid compute surf optional keyword");
+      if (strcmp(arg[iarg+1],"flow") == 0) normarea = 0;
+      else if (strcmp(arg[iarg+1],"flux") == 0) normarea = 1;
+      else error->all(FLERR,"Invalid compute surf optional keyword");
+      iarg += 2;
+    } else error->all(FLERR,"Invalid compute surf value or optional keyword");
+  }
+
+  // setup
 
   ntotal = ngroup*nvalue;
 
@@ -116,7 +136,7 @@ void ComputeSurf::init()
 {
   if (!surf->exist)
     error->all(FLERR,"Cannot use compute surf when surfs do not exist");
-  if (surf->implicit) 
+  if (surf->implicit)
     error->all(FLERR,"Cannot use compute surf with implicit surfs");
 
   if (ngroup != particle->mixture[imix]->ngroup)
@@ -156,6 +176,8 @@ void ComputeSurf::init_normflux()
   nfactor_inverse = 1.0/nfactor;
 
   // normflux for all surface elements, based on area and timestep size
+  // if normarea = 0, area is not included in flux
+  //   mass/eng fluxes (mass/area/time) becomes mass/eng flows (mass/time)
   // nsurf = all explicit surfs in this procs grid cells
   // store inverse, so can multipy by scale factor when tally
   // store for all surf elements, b/c don't know which ones I need to normalize
@@ -168,7 +190,8 @@ void ComputeSurf::init_normflux()
   double tmp;
 
   for (int i = 0; i < nsurf; i++) {
-    if (dim == 3) normflux[i] = surf->tri_size(i,tmp);
+    if (!normarea) normflux[i] = 1.0;
+    else if (dim == 3) normflux[i] = surf->tri_size(i,tmp);
     else if (axisymmetric) normflux[i] = surf->axi_line_size(i);
     else normflux[i] = surf->line_size(i);
     normflux[i] *= nfactor;
@@ -213,7 +236,7 @@ void ComputeSurf::clear()
 ------------------------------------------------------------------------- */
 
 void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
-                             Particle::OnePart *iorig, 
+                             Particle::OnePart *iorig,
                              Particle::OnePart *ip, Particle::OnePart *jp)
 {
   // skip if isurf not in surface group
@@ -297,12 +320,21 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
     case NUMWT:
       vec[k++] += weight;
       break;
-    case MFLUX:
-      vec[k++] += origmass;
+    case NFLUX:
+      vec[k] += weight * fluxscale;
       if (!transparent) {
-        if (ip) vec[k++] -= imass;
-        if (jp) vec[k++] -= jmass;
+        if (ip) vec[k] -= weight * fluxscale;
+        if (jp) vec[k] -= weight * fluxscale;
       }
+      k++;
+      break;
+    case MFLUX:
+      vec[k] += origmass * fluxscale;
+      if (!transparent) {
+        if (ip) vec[k] -= imass * fluxscale;
+        if (jp) vec[k] -= jmass * fluxscale;
+      }
+      k++;
       break;
     case FX:
       if (!fflag) {
@@ -445,7 +477,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       if (transparent)
         etot = -0.5*mvv2e*vsqpre - weight*otherpre;
       else
-        etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
+        etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
           weight * (iother + jother - otherpre);
       vec[k++] -= etot * fluxscale;
       break;
@@ -483,6 +515,7 @@ void ComputeSurf::post_process_surf()
   }
 
   // zero array_surf
+  // NOTE: is this needed if collate zeroes ?
 
   int i,j;
   for (i = 0; i < nown; i++)
@@ -497,7 +530,7 @@ void ComputeSurf::post_process_surf()
   if (array_surf_tally)
     surf->collate_vector(ntally,tally2surf,
                          &array_surf_tally[0][index-1],ntotal,vector_surf);
-  else 
+  else
     surf->collate_vector(ntally,tally2surf,NULL,ntotal,vector_surf);
   */
 }

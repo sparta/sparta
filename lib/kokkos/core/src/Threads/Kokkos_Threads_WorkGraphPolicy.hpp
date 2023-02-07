@@ -45,6 +45,9 @@
 #ifndef KOKKOS_THREADS_WORKGRAPHPOLICY_HPP
 #define KOKKOS_THREADS_WORKGRAPHPOLICY_HPP
 
+#include <Kokkos_Core_fwd.hpp>
+#include <Kokkos_Threads.hpp>
+
 namespace Kokkos {
 namespace Impl {
 
@@ -52,23 +55,22 @@ template <class FunctorType, class... Traits>
 class ParallelFor<FunctorType, Kokkos::WorkGraphPolicy<Traits...>,
                   Kokkos::Threads> {
  private:
-  typedef Kokkos::WorkGraphPolicy<Traits...> Policy;
+  using Policy = Kokkos::WorkGraphPolicy<Traits...>;
 
-  typedef ParallelFor<FunctorType, Kokkos::WorkGraphPolicy<Traits...>,
-                      Kokkos::Threads>
-      Self;
+  using Self = ParallelFor<FunctorType, Kokkos::WorkGraphPolicy<Traits...>,
+                           Kokkos::Threads>;
 
   Policy m_policy;
   FunctorType m_functor;
 
   template <class TagType>
-  typename std::enable_if<std::is_same<TagType, void>::value>::type exec_one(
+  std::enable_if_t<std::is_void<TagType>::value> exec_one(
       const std::int32_t w) const noexcept {
     m_functor(w);
   }
 
   template <class TagType>
-  typename std::enable_if<!std::is_same<TagType, void>::value>::type exec_one(
+  std::enable_if_t<!std::is_void<TagType>::value> exec_one(
       const std::int32_t w) const noexcept {
     const TagType t{};
     m_functor(t, w);

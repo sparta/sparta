@@ -46,18 +46,18 @@
 #define KOKKOS_TEST_SCATTER_VIEW_HPP
 
 #include <Kokkos_ScatterView.hpp>
-#include <impl/Kokkos_Timer.hpp>
+#include <Kokkos_Timer.hpp>
 
 namespace Perf {
 
-template <typename ExecSpace, typename Layout, int duplication,
-          int contribution>
+template <typename ExecSpace, typename Layout, typename Duplication,
+          typename Contribution>
 void test_scatter_view(int m, int n) {
   Kokkos::View<double * [3], Layout, ExecSpace> original_view("original_view",
                                                               n);
   {
     auto scatter_view = Kokkos::Experimental::create_scatter_view<
-        Kokkos::Experimental::ScatterSum, duplication, contribution>(
+        Kokkos::Experimental::ScatterSum, Duplication, Contribution>(
         original_view);
     Kokkos::Experimental::UniqueToken<
         ExecSpace, Kokkos::Experimental::UniqueTokenScope::Global>
@@ -82,8 +82,8 @@ void test_scatter_view(int m, int n) {
         Kokkos::Timer timer;
         timer.reset();
         for (int k = 0; k < m; ++k) {
-          Kokkos::parallel_for(policy, f2,
-                               "hand_coded_duplicate_scatter_view_test");
+          Kokkos::parallel_for("hand_coded_duplicate_scatter_view_test", policy,
+                               f2);
         }
         Kokkos::fence();
         auto t = timer.seconds();
@@ -102,7 +102,7 @@ void test_scatter_view(int m, int n) {
         Kokkos::Timer timer;
         timer.reset();
         for (int k = 0; k < m; ++k) {
-          Kokkos::parallel_for(policy, f, "scatter_view_test");
+          Kokkos::parallel_for("scatter_view_test", policy, f);
         }
         Kokkos::fence();
         auto t = timer.seconds();

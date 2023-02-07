@@ -45,11 +45,9 @@
 #include <Kokkos_Core.hpp>
 #include <cstdio>
 
-extern "C" void print_fortran_();
-
 int main(int argc, char* argv[]) {
   Kokkos::initialize(argc, argv);
-  Kokkos::DefaultExecutionSpace::print_configuration(std::cout);
+  Kokkos::DefaultExecutionSpace{}.print_configuration(std::cout);
 
   if (argc < 2) {
     fprintf(stderr, "Usage: %s [<kokkos_options>] <size>\n", argv[0]);
@@ -83,8 +81,6 @@ int main(int argc, char* argv[]) {
 
   count_time = timer.seconds();
   printf("Sequential: %ld    %10.6f\n", seq_count, count_time);
-
-  print_fortran_();
 
   Kokkos::finalize();
 

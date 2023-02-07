@@ -44,7 +44,6 @@
 
 #include <gtest/gtest.h>
 
-#include <stdexcept>
 #include <sstream>
 #include <iostream>
 #include <time.h>
@@ -54,12 +53,9 @@
 namespace Test {
 
 TEST(TEST_CATEGORY, view_layoutstride_left_to_layoutleft_assignment) {
-  typedef TEST_EXECSPACE exec_space;
+  using exec_space = TEST_EXECSPACE;
 
-  auto t = time(nullptr);
-  srand(t);  // Use current time as seed for random generator
-  printf("view_layoutstride_left_to_layoutleft_assignment: srand(%lu)\n",
-         size_t(t));
+  srand(123456);  // arbitrary seed for random generator
 
   {  // Assignment of rank-1 LayoutLeft = LayoutStride
     int ndims   = 1;
@@ -336,12 +332,9 @@ TEST(TEST_CATEGORY, view_layoutstride_left_to_layoutleft_assignment) {
 }
 
 TEST(TEST_CATEGORY, view_layoutstride_right_to_layoutright_assignment) {
-  typedef TEST_EXECSPACE exec_space;
+  using exec_space = TEST_EXECSPACE;
 
-  auto t = time(nullptr);
-  srand(t);  // Use current time as seed for random generator
-  printf("view_layoutstride_right_to_layoutright_assignment: srand(%lu)\n",
-         size_t(t));
+  srand(123456);  // arbitrary seed for random generator
 
   {  // Assignment of rank-1 LayoutRight = LayoutStride
     int ndims   = 1;
@@ -617,13 +610,11 @@ TEST(TEST_CATEGORY, view_layoutstride_right_to_layoutright_assignment) {
   }
 }
 
+#ifndef KOKKOS_COMPILER_NVHPC  // FIXME_NVHPC
 TEST(TEST_CATEGORY_DEATH, view_layoutstride_right_to_layoutleft_assignment) {
-  typedef TEST_EXECSPACE exec_space;
+  using exec_space = TEST_EXECSPACE;
 
-  auto t = time(nullptr);
-  srand(t);  // Use current time as seed for random generator
-  printf("view_layoutstride_right_to_layoutleft_assignment: srand(%lu)\n",
-         size_t(t));
+  srand(123456);  // arbitrary seed for random generator
 
   {  // Assignment of rank-1 LayoutLeft = LayoutStride (LayoutRight compatible)
     int ndims   = 1;
@@ -661,6 +652,10 @@ TEST(TEST_CATEGORY_DEATH, view_layoutstride_right_to_layoutleft_assignment) {
     ASSERT_EQ(dst.span(), src.span());
     ASSERT_EQ(test, true);
   }
+// WORKAROUND OPENMPTARGET : death tests don't seem to work ...
+#if defined(KOKKOS_ENABLE_OPENMPTARGET)
+  return;
+#endif
   {  // Assignment of rank-2 LayoutLeft = LayoutStride (LayoutRight compatible)
     int ndims   = 2;
     int dims[]  = {10, 9};
@@ -769,12 +764,9 @@ TEST(TEST_CATEGORY_DEATH, view_layoutstride_right_to_layoutleft_assignment) {
 }
 
 TEST(TEST_CATEGORY_DEATH, view_layoutstride_left_to_layoutright_assignment) {
-  typedef TEST_EXECSPACE exec_space;
+  using exec_space = TEST_EXECSPACE;
 
-  auto t = time(nullptr);
-  srand(t);  // Use current time as seed for random generator
-  printf("view_layoutstride_left_to_layoutright_assignment: srand(%lu)\n",
-         size_t(t));
+  srand(123456);  // arbitrary seed for random generator
 
   {  // Assignment of rank-1 LayoutRight = LayoutStride (LayoutLeft compatible)
     int ndims   = 1;
@@ -812,6 +804,10 @@ TEST(TEST_CATEGORY_DEATH, view_layoutstride_left_to_layoutright_assignment) {
     ASSERT_EQ(dst.span(), src.span());
     ASSERT_EQ(test, true);
   }
+// WORKAROUND OPENMPTARGET : death tests don't seem to work ...
+#if defined(KOKKOS_ENABLE_OPENMPTARGET)
+  return;
+#endif
   {  // Assignment of rank-2 LayoutRight = LayoutStride (LayoutLeft compatible)
     int ndims   = 2;
     int dims[]  = {10, 9};
@@ -918,5 +914,8 @@ TEST(TEST_CATEGORY_DEATH, view_layoutstride_left_to_layoutright_assignment) {
                  "View assignment must have compatible layouts");
   }
 }
+#endif
 
 }  // namespace Test
+
+#include <TestIrregularLayout.hpp>

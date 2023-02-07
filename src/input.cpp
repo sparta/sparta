@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -123,13 +123,13 @@ Input::~Input()
 void Input::file()
 {
   int m,n;
-  
+
   while (1) {
-    
+
     // read a line from input script
     // n = length of line including str terminator, 0 if end of file
     // if line ends in continuation char '&', concatenate next line
-    
+
     if (me == 0) {
       m = 0;
       while (1) {
@@ -141,7 +141,7 @@ void Input::file()
         }
         m = strlen(line);
         if (line[m-1] != '\n') continue;
-        
+
         m--;
         while (m >= 0 && isspace(line[m])) m--;
         if (m < 0 || line[m] != '&') {
@@ -151,13 +151,13 @@ void Input::file()
         }
       }
     }
-    
+
     // bcast the line
     // if n = 0, end-of-file
     // error if label_active is set, since label wasn't encountered
     // if original input file, code is done
     // else go back to previous input file
-    
+
     MPI_Bcast(&n,1,MPI_INT,0,world);
     if (n == 0) {
       if (label_active) error->all(FLERR,"Label wasn't found in input script");
@@ -173,29 +173,29 @@ void Input::file()
       if (me == 0) infile = infiles[nfile-1];
       continue;
     }
-    
+
     if (n > maxline) reallocate(line,maxline,n);
     MPI_Bcast(line,n,MPI_CHAR,0,world);
-    
+
     // echo the command unless scanning for label
-    
+
     if (me == 0 && label_active == 0) {
       if (echo_screen && screen) fprintf(screen,"%s\n",line);
       if (echo_log && logfile) fprintf(logfile,"%s\n",line);
     }
-    
+
     // parse the line
     // if no command, skip to next line in input script
-    
+
     parse();
     if (command == NULL) continue;
-    
+
     // if scanning for label, skip command unless it's a label command
-    
+
     if (label_active && strcmp(command,"label") != 0) continue;
-    
+
     // execute the command
-    
+
     if (execute_command()) {
       char *str = new char[maxline+32];
       sprintf(str,"Unknown command: %s",line);
@@ -214,12 +214,12 @@ void Input::file(const char *filename)
   // error if another nested file still open, should not be possible
   // open new filename and set infile, infiles[0], nfile
   // call to file() will close filename and decrement nfile
-  
+
   if (me == 0) {
     if (nfile > 1)
       error->one(FLERR,"Invalid use of library file() function");
 
-    if (infile && infile != stdin) fclose(infile); 
+    if (infile && infile != stdin) fclose(infile);
     infile = fopen(filename,"r");
     if (infile == NULL) {
       char str[128];
@@ -229,7 +229,7 @@ void Input::file(const char *filename)
     infiles[0] = infile;
     nfile = 1;
   }
-  
+
   file();
 }
 
@@ -243,32 +243,32 @@ char *Input::one(const char *single)
   int n = strlen(single) + 1;
   if (n > maxline) reallocate(line,maxline,n);
   strcpy(line,single);
-  
+
   // echo the command unless scanning for label
-  
+
   if (me == 0 && label_active == 0) {
     if (echo_screen && screen) fprintf(screen,"%s\n",line);
     if (echo_log && logfile) fprintf(logfile,"%s\n",line);
   }
-  
+
   // parse the line
   // if no command, just return NULL
-  
+
   parse();
   if (command == NULL) return NULL;
-  
+
   // if scanning for label, skip command unless it's a label command
-  
+
   if (label_active && strcmp(command,"label") != 0) return NULL;
-  
+
   // execute the command and return its name
-  
+
   if (execute_command()) {
     char *str = new char[maxline+32];
     sprintf(str,"Unknown command: %s",line);
     error->all(FLERR,str);
   }
-  
+
   return command;
 }
 
@@ -285,14 +285,14 @@ char *Input::one(const char *single)
 void Input::parse()
 {
   // duplicate line into copy string to break into words
-  
+
   int n = strlen(line) + 1;
   if (n > maxcopy) reallocate(copy,maxcopy,n);
   strcpy(copy,line);
-  
+
   // strip any # comment by replacing it with 0
   // do not strip # inside single/double quotes
-  
+
   char quote = '\0';
   char *ptr = copy;
   while (*ptr) {
@@ -304,22 +304,22 @@ void Input::parse()
     else if (*ptr == '"' || *ptr == '\'') quote = *ptr;
     ptr++;
   }
-  
+
   // perform $ variable substitution (print changes)
   // except if searching for a label since earlier variable may not be defined
-  
+
   if (!label_active) substitute(copy,work,maxcopy,maxwork,1);
-  
+
   // command = 1st arg in copy string
-  
+
   char *next;
   command = nextword(copy,&next);
   if (command == NULL) return;
-  
+
   // point arg[] at each subsequent arg in copy string
   // nextword() inserts string terminators into copy string to delimit args
   // nextword() treats text between single/double quotes as one arg
-  
+
   narg = 0;
   ptr = next;
   while (ptr) {
@@ -349,10 +349,10 @@ void Input::parse()
 char *Input::nextword(char *str, char **next)
 {
   char *start,*stop;
-  
+
   start = &str[strspn(str," \t\n\v\f\r")];
   if (*start == '\0') return NULL;
-  
+
   if (*start == '"' || *start == '\'') {
     stop = strchr(&start[1],*start);
     if (!stop) error->all(FLERR,"Unbalanced quotes in input line");
@@ -360,7 +360,7 @@ char *Input::nextword(char *str, char **next)
       error->all(FLERR,"Input line quote not followed by whitespace");
     start++;
   } else stop = &start[strcspn(start," \t\n\v\f\r")];
-  
+
   if (*stop == '\0') *next = NULL;
   else *next = stop+1;
   *stop = '\0';
@@ -383,44 +383,44 @@ void Input::substitute(char *&str, char *&str2, int &max, int &max2, int flag)
   //   if $ is followed by '{', trailing '}' becomes NULL
   //   else $x becomes x followed by NULL
   // beyond = points to text following variable
-  
+
   int i,n,paren_count;
   char immediate[256];
   char *var,*value,*beyond;
   char quote = '\0';
   char *ptr = str;
-  
+
   n = strlen(str) + 1;
   if (n > max2) reallocate(str2,max2,n);
   *str2 = '\0';
   char *ptr2 = str2;
-  
+
   while (*ptr) {
     // variable substitution
-    
+
     if (*ptr == '$' && !quote) {
-      
+
       // value = ptr to expanded variable
       // variable name between curly braces, e.g. ${a}
-      
+
       if (*(ptr+1) == '{') {
         var = ptr+2;
         i = 0;
-        
+
         while (var[i] != '\0' && var[i] != '}') i++;
-        
+
         if (var[i] == '\0') error->one(FLERR,"Invalid variable name");
         var[i] = '\0';
         beyond = ptr + strlen(var) + 3;
         value = variable->retrieve(var);
-        
+
         // immediate variable between parenthesis, e.g. $(1/2)
-        
+
       } else if (*(ptr+1) == '(') {
         var = ptr+2;
         paren_count = 0;
         i = 0;
-        
+
         while (var[i] != '\0' && !(var[i] == ')' && paren_count == 0)) {
           switch (var[i]) {
           case '(': paren_count++; break;
@@ -429,15 +429,15 @@ void Input::substitute(char *&str, char *&str2, int &max, int &max2, int flag)
           }
           i++;
         }
-        
+
         if (var[i] == '\0') error->one(FLERR,"Invalid immediate variable");
         var[i] = '\0';
         beyond = ptr + strlen(var) + 3;
         sprintf(immediate,"%.20g",variable->compute_equal(var));
         value = immediate;
-        
+
         // single character variable name, e.g. $a
-        
+
       } else {
         var = ptr;
         var[0] = var[1];
@@ -445,40 +445,40 @@ void Input::substitute(char *&str, char *&str2, int &max, int &max2, int flag)
         beyond = ptr + 2;
         value = variable->retrieve(var);
       }
-      
+
       if (value == NULL) error->one(FLERR,"Substitution for illegal variable");
-      
+
       // check if storage in str2 needs to be expanded
       // re-initialize ptr and ptr2 to the point beyond the variable.
-      
+
       n = strlen(str2) + strlen(value) + strlen(beyond) + 1;
       if (n > max2) reallocate(str2,max2,n);
       strcat(str2,value);
       ptr2 = str2 + strlen(str2);
       ptr = beyond;
-      
+
       // output substitution progress if requested
-      
+
       if (flag && me == 0 && label_active == 0) {
         if (echo_screen && screen) fprintf(screen,"%s%s\n",str2,beyond);
         if (echo_log && logfile) fprintf(logfile,"%s%s\n",str2,beyond);
       }
-      
+
       continue;
     }
-    
+
     if (*ptr == quote) quote = '\0';
     else if (*ptr == '"' || *ptr == '\'') quote = *ptr;
-    
+
     // copy current character into str2
-    
+
     *ptr2++ = *ptr++;
     *ptr2 = '\0';
   }
-  
+
   // set length of input str to length of work str2
   // copy work string back to input str
-  
+
   if (max2 > max) reallocate(str,max,max2);
   strcpy(str,str2);
 }
@@ -540,20 +540,20 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
 		} else if (mode == 1 && modify->compute[icompute]->array_flag) {
 		  nmax = modify->compute[icompute]->size_array_cols;
 		  expandflag = 1;
-                } else if (modify->compute[icompute]->per_particle_flag && 
+                } else if (modify->compute[icompute]->per_particle_flag &&
                            modify->compute[icompute]->size_per_particle_cols) {
 		  nmax = modify->compute[icompute]->size_per_particle_cols;
 		  expandflag = 1;
-                } else if (modify->compute[icompute]->per_grid_flag && 
+                } else if (modify->compute[icompute]->per_grid_flag &&
                            modify->compute[icompute]->size_per_grid_cols) {
 		  nmax = modify->compute[icompute]->size_per_grid_cols;
 		  expandflag = 1;
-                } else if (modify->compute[icompute]->per_surf_flag && 
+                } else if (modify->compute[icompute]->per_surf_flag &&
                            modify->compute[icompute]->size_per_surf_cols) {
 		  nmax = modify->compute[icompute]->size_per_surf_cols;
 		  expandflag = 1;
 		}
-	      }	      
+	      }	
 	    } else if (arg[iarg][0] == 'f') {
 	      *ptr1 = '\0';
 	      ifix = modify->find_fix(&arg[iarg][2]);
@@ -569,15 +569,15 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
 		} else if (mode == 1 && modify->fix[ifix]->array_flag) {
 		  nmax = modify->fix[ifix]->size_array_cols;
 		  expandflag = 1;
-                } else if (modify->fix[ifix]->per_particle_flag && 
+                } else if (modify->fix[ifix]->per_particle_flag &&
                            modify->fix[ifix]->size_per_particle_cols) {
 		  nmax = modify->fix[ifix]->size_per_particle_cols;
 		  expandflag = 1;
-                } else if (modify->fix[ifix]->per_grid_flag && 
+                } else if (modify->fix[ifix]->per_grid_flag &&
                            modify->fix[ifix]->size_per_grid_cols) {
 		  nmax = modify->fix[ifix]->size_per_grid_cols;
 		  expandflag = 1;
-                } else if (modify->fix[ifix]->per_surf_flag && 
+                } else if (modify->fix[ifix]->per_surf_flag &&
                            modify->fix[ifix]->size_per_surf_cols) {
 		  nmax = modify->fix[ifix]->size_per_surf_cols;
 		  expandflag = 1;
@@ -596,7 +596,7 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
       *ptr2 = ']';
       if (newarg+nhi-nlo+1 > maxarg) {
 	maxarg += nhi-nlo+1;
-	earg = (char **) 
+	earg = (char **)
           memory->srealloc(earg,maxarg*sizeof(char *),"input:earg");
       }
       for (index = nlo; index <= nhi; index++) {
@@ -611,7 +611,7 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
     } else {
       if (newarg == maxarg) {
 	maxarg++;
-	earg = (char **) 
+	earg = (char **)
           memory->srealloc(earg,maxarg*sizeof(char *),"input:earg");
       }
       n = strlen(arg[iarg]) + 1;
@@ -639,7 +639,7 @@ void Input::reallocate(char *&str, int &max, int n)
   if (n) {
     while (n > max) max += DELTALINE;
   } else max += DELTALINE;
-  
+
   str = (char *) memory->srealloc(str,max*sizeof(char),"input:str");
 }
 
@@ -651,7 +651,7 @@ void Input::reallocate(char *&str, int &max, int n)
 int Input::execute_command()
 {
   int flag = 1;
-  
+
   if (!strcmp(command,"clear")) clear();
   else if (!strcmp(command,"echo")) echo();
   else if (!strcmp(command,"if")) ifthenelse();
@@ -665,7 +665,7 @@ int Input::execute_command()
   else if (!strcmp(command,"quit")) quit();
   else if (!strcmp(command,"shell")) shell();
   else if (!strcmp(command,"variable")) variable_command();
-  
+
   else if (!strcmp(command,"boundary")) boundary();
   else if (!strcmp(command,"bound_modify")) bound_modify();
   else if (!strcmp(command,"collide")) collide_command();
@@ -686,6 +686,7 @@ int Input::execute_command()
   else if (!strcmp(command,"restart")) restart();
   else if (!strcmp(command,"seed")) seed();
   else if (!strcmp(command,"species")) species();
+  else if (!strcmp(command,"species_modify")) species_modify();
   else if (!strcmp(command,"stats")) stats();
   else if (!strcmp(command,"stats_modify")) stats_modify();
   else if (!strcmp(command,"stats_style")) stats_style();
@@ -709,7 +710,7 @@ int Input::execute_command()
   if (sparta->suffix_enable && sparta->suffix) {
     char command2[256];
     sprintf(command2,"%s/%s",command,sparta->suffix);
-    
+
     if (0) return 0;      // dummy line to enable else-if macro expansion
 #define COMMAND_CLASS
 #define CommandStyle(key,Class)            \
@@ -904,7 +905,7 @@ void Input::include()
   // NOTE: this check will fail if a 2nd if command was inside the if command
   //       and came before the include
 
-  if (ifthenelse_flag) 
+  if (ifthenelse_flag)
     error->all(FLERR,"Cannot use include command within an if command");
 
   if (me == 0) {
@@ -1104,7 +1105,7 @@ void Input::shell()
 
   if (strcmp(arg[0],"cd") == 0) {
     if (narg != 2) error->all(FLERR,"Illegal shell cd command");
-    chdir(arg[1]);
+    int tmp = chdir(arg[1]);
 
   } else if (strcmp(arg[0],"mkdir") == 0) {
     if (narg < 2) error->all(FLERR,"Illegal shell mkdir command");
@@ -1135,7 +1136,7 @@ void Input::shell()
     if (narg < 2) error->all(FLERR,"Illegal shell putenv command");
     for (int i = 1; i < narg; i++) {
       char *ptr = strdup(arg[i]);
-#ifdef _WIN32 
+#ifdef _WIN32
       if (ptr != NULL) _putenv(ptr);
 #else
       if (ptr != NULL) putenv(ptr);
@@ -1156,7 +1157,7 @@ void Input::shell()
       strcat(work,arg[i]);
     }
 
-    if (me == 0) system(work);
+    if (me == 0) int tmp = system(work);
   }
 }
 
@@ -1233,7 +1234,7 @@ void Input::collide_command()
 
 void Input::collide_modify()
 {
-  if (collide == NULL) 
+  if (collide == NULL)
     error->all(FLERR,"Cannot use collide_modify with no collisions defined");
   collide->modify_params(narg,arg);
 }
@@ -1250,7 +1251,7 @@ void Input::compute()
 void Input::dimension()
 {
   if (narg != 1) error->all(FLERR,"Illegal dimension command");
-  if (domain->box_exist) 
+  if (domain->box_exist)
     error->all(FLERR,"Dimension command after simulation box is defined");
   domain->dimension = atoi(arg[0]);
   if (domain->dimension != 2 && domain->dimension != 3)
@@ -1367,7 +1368,7 @@ void Input::react_command()
 
 void Input::react_modify()
 {
-  if (react == NULL) 
+  if (react == NULL)
     error->all(FLERR,"Cannot use react_modify with no reactions defined");
   react->modify_params(narg,arg);
 }
@@ -1410,6 +1411,13 @@ void Input::seed()
 void Input::species()
 {
   particle->add_species(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::species_modify()
+{
+  particle->species_modify(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1493,7 +1501,7 @@ void Input::unfix()
 void Input::units()
 {
   if (narg != 1) error->all(FLERR,"Illegal units command");
-  if (domain->box_exist) 
+  if (domain->box_exist)
     error->all(FLERR,"Units command after simulation box is defined");
   update->set_units(arg[0]);
 }
@@ -1537,11 +1545,11 @@ double Input::numeric(const char *file, int line, const char *str)
 
 int Input::inumeric(const char *file, int line, char *str)
 {
-  if (!str) 
+  if (!str)
     error->all(file,line,
                "Expected integer parameter in input script or data file");
   int n = strlen(str);
-  if (n == 0) 
+  if (n == 0)
     error->all(file,line,
                "Expected integer parameter in input script or data file");
 
@@ -1562,11 +1570,11 @@ int Input::inumeric(const char *file, int line, char *str)
 
 bigint Input::bnumeric(const char *file, int line, char *str)
 {
-  if (!str) 
+  if (!str)
     error->all(file,line,
                "Expected integer parameter in input script or data file");
   int n = strlen(str);
-  if (n == 0) 
+  if (n == 0)
     error->all(file,line,
                "Expected integer parameter in input script or data file");
 
@@ -1637,5 +1645,3 @@ int Input::count_words(char *line)
   memory->sfree(copy);
   return n;
 }
-
-

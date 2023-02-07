@@ -43,11 +43,18 @@
 */
 #ifndef KOKKOS_COMPLEX_HPP
 #define KOKKOS_COMPLEX_HPP
+#ifndef KOKKOS_IMPL_PUBLIC_INCLUDE
+#define KOKKOS_IMPL_PUBLIC_INCLUDE
+#define KOKKOS_IMPL_PUBLIC_INCLUDE_NOTDEFINED_COMPLEX
+#endif
 
 #include <Kokkos_Atomic.hpp>
+#include <Kokkos_MathematicalFunctions.hpp>
 #include <Kokkos_NumericTraits.hpp>
+#include <impl/Kokkos_Error.hpp>
 #include <complex>
-#include <iostream>
+#include <type_traits>
+#include <iosfwd>
 
 namespace Kokkos {
 
@@ -74,7 +81,7 @@ class
 
   //! Default constructor (initializes both real and imaginary parts to zero).
   KOKKOS_DEFAULTED_FUNCTION
-  complex() noexcept = default;
+  complex() = default;
 
   //! Copy constructor.
   KOKKOS_DEFAULTED_FUNCTION
@@ -84,9 +91,9 @@ class
   complex& operator=(const complex&) noexcept = default;
 
   /// \brief Conversion constructor from compatible RType
-  template <class RType,
-            typename std::enable_if<std::is_convertible<RType, RealType>::value,
-                                    int>::type = 0>
+  template <
+      class RType,
+      std::enable_if_t<std::is_convertible<RType, RealType>::value, int> = 0>
   KOKKOS_INLINE_FUNCTION complex(const complex<RType>& other) noexcept
       // Intentionally do the conversions implicitly here so that users don't
       // get any warnings about narrowing, etc., that they would expect to get
@@ -147,11 +154,11 @@ class
 
   //! The imaginary part of this complex number.
   KOKKOS_INLINE_FUNCTION
-  KOKKOS_CONSTEXPR_14 RealType& imag() noexcept { return im_; }
+  constexpr RealType& imag() noexcept { return im_; }
 
   //! The real part of this complex number.
   KOKKOS_INLINE_FUNCTION
-  KOKKOS_CONSTEXPR_14 RealType& real() noexcept { return re_; }
+  constexpr RealType& real() noexcept { return re_; }
 
   //! The imaginary part of this complex number.
   KOKKOS_INLINE_FUNCTION
@@ -163,41 +170,39 @@ class
 
   //! Set the imaginary part of this complex number.
   KOKKOS_INLINE_FUNCTION
-  KOKKOS_CONSTEXPR_14
-  void imag(RealType v) noexcept { im_ = v; }
+  constexpr void imag(RealType v) noexcept { im_ = v; }
 
   //! Set the real part of this complex number.
   KOKKOS_INLINE_FUNCTION
-  KOKKOS_CONSTEXPR_14
-  void real(RealType v) noexcept { re_ = v; }
+  constexpr void real(RealType v) noexcept { re_ = v; }
 
-  KOKKOS_CONSTEXPR_14 KOKKOS_INLINE_FUNCTION complex& operator+=(
+  constexpr KOKKOS_INLINE_FUNCTION complex& operator+=(
       const complex<RealType>& src) noexcept {
     re_ += src.re_;
     im_ += src.im_;
     return *this;
   }
 
-  KOKKOS_CONSTEXPR_14 KOKKOS_INLINE_FUNCTION complex& operator+=(
+  constexpr KOKKOS_INLINE_FUNCTION complex& operator+=(
       const RealType& src) noexcept {
     re_ += src;
     return *this;
   }
 
-  KOKKOS_CONSTEXPR_14 KOKKOS_INLINE_FUNCTION complex& operator-=(
+  constexpr KOKKOS_INLINE_FUNCTION complex& operator-=(
       const complex<RealType>& src) noexcept {
     re_ -= src.re_;
     im_ -= src.im_;
     return *this;
   }
 
-  KOKKOS_CONSTEXPR_14 KOKKOS_INLINE_FUNCTION complex& operator-=(
+  constexpr KOKKOS_INLINE_FUNCTION complex& operator-=(
       const RealType& src) noexcept {
     re_ -= src;
     return *this;
   }
 
-  KOKKOS_CONSTEXPR_14 KOKKOS_INLINE_FUNCTION complex& operator*=(
+  constexpr KOKKOS_INLINE_FUNCTION complex& operator*=(
       const complex<RealType>& src) noexcept {
     const RealType realPart = re_ * src.re_ - im_ * src.im_;
     const RealType imagPart = re_ * src.im_ + im_ * src.re_;
@@ -206,7 +211,7 @@ class
     return *this;
   }
 
-  KOKKOS_CONSTEXPR_14 KOKKOS_INLINE_FUNCTION complex& operator*=(
+  constexpr KOKKOS_INLINE_FUNCTION complex& operator*=(
       const RealType& src) noexcept {
     re_ *= src;
     im_ *= src;
@@ -214,14 +219,11 @@ class
   }
 
   // Conditional noexcept, just in case RType throws on divide-by-zero
-  KOKKOS_CONSTEXPR_14 KOKKOS_INLINE_FUNCTION complex& operator/=(
+  constexpr KOKKOS_INLINE_FUNCTION complex& operator/=(
       const complex<RealType>& y) noexcept(noexcept(RealType{} / RealType{})) {
     // Scale (by the "1-norm" of y) to avoid unwarranted overflow.
     // If the real part is +/-Inf and the imaginary part is -/+Inf,
     // this won't change the result.
-#if !defined(__HIP_DEVICE_COMPILE__)  // FIXME_HIP
-    using std::fabs;
-#endif
     const RealType s = fabs(y.real()) + fabs(y.imag());
 
     // If s is 0, then y is zero, so x/y == real(x)/0 + i*imag(x)/0.
@@ -243,16 +245,12 @@ class
     return *this;
   }
 
-  KOKKOS_CONSTEXPR_14
-  KOKKOS_INLINE_FUNCTION complex& operator/=(
+  constexpr KOKKOS_INLINE_FUNCTION complex& operator/=(
       const std::complex<RealType>& y) noexcept(noexcept(RealType{} /
                                                          RealType{})) {
     // Scale (by the "1-norm" of y) to avoid unwarranted overflow.
     // If the real part is +/-Inf and the imaginary part is -/+Inf,
     // this won't change the result.
-#if !defined(__HIP_DEVICE_COMPILE__)  // FIXME_HIP
-    using std::fabs;
-#endif
     const RealType s = fabs(y.real()) + fabs(y.imag());
 
     // If s is 0, then y is zero, so x/y == real(x)/0 + i*imag(x)/0.
@@ -273,7 +271,7 @@ class
     return *this;
   }
 
-  KOKKOS_CONSTEXPR_14 KOKKOS_INLINE_FUNCTION complex& operator/=(
+  constexpr KOKKOS_INLINE_FUNCTION complex& operator/=(
       const RealType& src) noexcept(noexcept(RealType{} / RealType{})) {
     re_ /= src;
     im_ /= src;
@@ -286,9 +284,9 @@ class
   //---------------------------------------------------------------------------
 
   //! Copy constructor from volatile.
-  template <class RType,
-            typename std::enable_if<std::is_convertible<RType, RealType>::value,
-                                    int>::type = 0>
+  template <
+      class RType,
+      std::enable_if_t<std::is_convertible<RType, RealType>::value, int> = 0>
   KOKKOS_INLINE_FUNCTION complex(const volatile complex<RType>& src) noexcept
       // Intentionally do the conversions implicitly here so that users don't
       // get any warnings about narrowing, etc., that they would expect to get
@@ -316,8 +314,7 @@ class
   //    vl = r;
   //    vl = cr;
   template <class Complex,
-            typename std::enable_if<std::is_same<Complex, complex>::value,
-                                    int>::type = 0>
+            std::enable_if_t<std::is_same<Complex, complex>::value, int> = 0>
   KOKKOS_INLINE_FUNCTION void operator=(const Complex& src) volatile noexcept {
     re_ = src.re_;
     im_ = src.im_;
@@ -339,8 +336,7 @@ class
   //    vl = vr;
   //    vl = cvr;
   template <class Complex,
-            typename std::enable_if<std::is_same<Complex, complex>::value,
-                                    int>::type = 0>
+            std::enable_if_t<std::is_same<Complex, complex>::value, int> = 0>
   KOKKOS_INLINE_FUNCTION volatile complex& operator=(
       const volatile Complex& src) volatile noexcept {
     re_ = src.re_;
@@ -362,8 +358,7 @@ class
   //    l = cvr;
   //
   template <class Complex,
-            typename std::enable_if<std::is_same<Complex, complex>::value,
-                                    int>::type = 0>
+            std::enable_if_t<std::is_same<Complex, complex>::value, int> = 0>
   KOKKOS_INLINE_FUNCTION complex& operator=(
       const volatile Complex& src) noexcept {
     re_ = src.re_;
@@ -455,7 +450,7 @@ class
 template <class RealType1, class RealType2>
 KOKKOS_INLINE_FUNCTION bool operator==(complex<RealType1> const& x,
                                        complex<RealType2> const& y) noexcept {
-  using common_type = typename std::common_type<RealType1, RealType2>::type;
+  using common_type = std::common_type_t<RealType1, RealType2>;
   return common_type(x.real()) == common_type(y.real()) &&
          common_type(x.imag()) == common_type(y.imag());
 }
@@ -466,7 +461,7 @@ KOKKOS_INLINE_FUNCTION bool operator==(complex<RealType1> const& x,
 template <class RealType1, class RealType2>
 inline bool operator==(std::complex<RealType1> const& x,
                        complex<RealType2> const& y) noexcept {
-  using common_type = typename std::common_type<RealType1, RealType2>::type;
+  using common_type = std::common_type_t<RealType1, RealType2>;
   return common_type(x.real()) == common_type(y.real()) &&
          common_type(x.imag()) == common_type(y.imag());
 }
@@ -475,7 +470,7 @@ inline bool operator==(std::complex<RealType1> const& x,
 template <class RealType1, class RealType2>
 inline bool operator==(complex<RealType1> const& x,
                        std::complex<RealType2> const& y) noexcept {
-  using common_type = typename std::common_type<RealType1, RealType2>::type;
+  using common_type = std::common_type_t<RealType1, RealType2>;
   return common_type(x.real()) == common_type(y.real()) &&
          common_type(x.imag()) == common_type(y.imag());
 }
@@ -484,11 +479,10 @@ inline bool operator==(complex<RealType1> const& x,
 template <
     class RealType1, class RealType2,
     // Constraints to avoid participation in oparator==() for every possible RHS
-    typename std::enable_if<std::is_convertible<RealType2, RealType1>::value,
-                            int>::type = 0>
+    std::enable_if_t<std::is_convertible<RealType2, RealType1>::value, int> = 0>
 KOKKOS_INLINE_FUNCTION bool operator==(complex<RealType1> const& x,
                                        RealType2 const& y) noexcept {
-  using common_type = typename std::common_type<RealType1, RealType2>::type;
+  using common_type = std::common_type_t<RealType1, RealType2>;
   return common_type(x.real()) == common_type(y) &&
          common_type(x.imag()) == common_type(0);
 }
@@ -497,11 +491,10 @@ KOKKOS_INLINE_FUNCTION bool operator==(complex<RealType1> const& x,
 template <
     class RealType1, class RealType2,
     // Constraints to avoid participation in oparator==() for every possible RHS
-    typename std::enable_if<std::is_convertible<RealType1, RealType2>::value,
-                            int>::type = 0>
+    std::enable_if_t<std::is_convertible<RealType1, RealType2>::value, int> = 0>
 KOKKOS_INLINE_FUNCTION bool operator==(RealType1 const& x,
                                        complex<RealType2> const& y) noexcept {
-  using common_type = typename std::common_type<RealType1, RealType2>::type;
+  using common_type = std::common_type_t<RealType1, RealType2>;
   return common_type(x) == common_type(y.real()) &&
          common_type(0) == common_type(y.imag());
 }
@@ -510,7 +503,7 @@ KOKKOS_INLINE_FUNCTION bool operator==(RealType1 const& x,
 template <class RealType1, class RealType2>
 KOKKOS_INLINE_FUNCTION bool operator!=(complex<RealType1> const& x,
                                        complex<RealType2> const& y) noexcept {
-  using common_type = typename std::common_type<RealType1, RealType2>::type;
+  using common_type = std::common_type_t<RealType1, RealType2>;
   return common_type(x.real()) != common_type(y.real()) ||
          common_type(x.imag()) != common_type(y.imag());
 }
@@ -519,7 +512,7 @@ KOKKOS_INLINE_FUNCTION bool operator!=(complex<RealType1> const& x,
 template <class RealType1, class RealType2>
 inline bool operator!=(std::complex<RealType1> const& x,
                        complex<RealType2> const& y) noexcept {
-  using common_type = typename std::common_type<RealType1, RealType2>::type;
+  using common_type = std::common_type_t<RealType1, RealType2>;
   return common_type(x.real()) != common_type(y.real()) ||
          common_type(x.imag()) != common_type(y.imag());
 }
@@ -528,7 +521,7 @@ inline bool operator!=(std::complex<RealType1> const& x,
 template <class RealType1, class RealType2>
 inline bool operator!=(complex<RealType1> const& x,
                        std::complex<RealType2> const& y) noexcept {
-  using common_type = typename std::common_type<RealType1, RealType2>::type;
+  using common_type = std::common_type_t<RealType1, RealType2>;
   return common_type(x.real()) != common_type(y.real()) ||
          common_type(x.imag()) != common_type(y.imag());
 }
@@ -537,11 +530,10 @@ inline bool operator!=(complex<RealType1> const& x,
 template <
     class RealType1, class RealType2,
     // Constraints to avoid participation in oparator==() for every possible RHS
-    typename std::enable_if<std::is_convertible<RealType2, RealType1>::value,
-                            int>::type = 0>
+    std::enable_if_t<std::is_convertible<RealType2, RealType1>::value, int> = 0>
 KOKKOS_INLINE_FUNCTION bool operator!=(complex<RealType1> const& x,
                                        RealType2 const& y) noexcept {
-  using common_type = typename std::common_type<RealType1, RealType2>::type;
+  using common_type = std::common_type_t<RealType1, RealType2>;
   return common_type(x.real()) != common_type(y) ||
          common_type(x.imag()) != common_type(0);
 }
@@ -550,11 +542,10 @@ KOKKOS_INLINE_FUNCTION bool operator!=(complex<RealType1> const& x,
 template <
     class RealType1, class RealType2,
     // Constraints to avoid participation in oparator==() for every possible RHS
-    typename std::enable_if<std::is_convertible<RealType1, RealType2>::value,
-                            int>::type = 0>
+    std::enable_if_t<std::is_convertible<RealType1, RealType2>::value, int> = 0>
 KOKKOS_INLINE_FUNCTION bool operator!=(RealType1 const& x,
                                        complex<RealType2> const& y) noexcept {
-  using common_type = typename std::common_type<RealType1, RealType2>::type;
+  using common_type = std::common_type_t<RealType1, RealType2>;
   return common_type(x) != common_type(y.real()) ||
          common_type(0) != common_type(y.imag());
 }
@@ -564,30 +555,26 @@ KOKKOS_INLINE_FUNCTION bool operator!=(RealType1 const& x,
 
 //! Binary + operator for complex complex.
 template <class RealType1, class RealType2>
-KOKKOS_INLINE_FUNCTION
-    complex<typename std::common_type<RealType1, RealType2>::type>
-    operator+(const complex<RealType1>& x,
-              const complex<RealType2>& y) noexcept {
-  return complex<typename std::common_type<RealType1, RealType2>::type>(
-      x.real() + y.real(), x.imag() + y.imag());
+KOKKOS_INLINE_FUNCTION complex<std::common_type_t<RealType1, RealType2>>
+operator+(const complex<RealType1>& x, const complex<RealType2>& y) noexcept {
+  return complex<std::common_type_t<RealType1, RealType2>>(x.real() + y.real(),
+                                                           x.imag() + y.imag());
 }
 
 //! Binary + operator for complex scalar.
 template <class RealType1, class RealType2>
-KOKKOS_INLINE_FUNCTION
-    complex<typename std::common_type<RealType1, RealType2>::type>
-    operator+(const complex<RealType1>& x, const RealType2& y) noexcept {
-  return complex<typename std::common_type<RealType1, RealType2>::type>(
-      x.real() + y, x.imag());
+KOKKOS_INLINE_FUNCTION complex<std::common_type_t<RealType1, RealType2>>
+operator+(const complex<RealType1>& x, const RealType2& y) noexcept {
+  return complex<std::common_type_t<RealType1, RealType2>>(x.real() + y,
+                                                           x.imag());
 }
 
 //! Binary + operator for scalar complex.
 template <class RealType1, class RealType2>
-KOKKOS_INLINE_FUNCTION
-    complex<typename std::common_type<RealType1, RealType2>::type>
-    operator+(const RealType1& x, const complex<RealType2>& y) noexcept {
-  return complex<typename std::common_type<RealType1, RealType2>::type>(
-      x + y.real(), y.imag());
+KOKKOS_INLINE_FUNCTION complex<std::common_type_t<RealType1, RealType2>>
+operator+(const RealType1& x, const complex<RealType2>& y) noexcept {
+  return complex<std::common_type_t<RealType1, RealType2>>(x + y.real(),
+                                                           y.imag());
 }
 
 //! Unary + operator for complex.
@@ -599,30 +586,26 @@ KOKKOS_INLINE_FUNCTION complex<RealType> operator+(
 
 //! Binary - operator for complex.
 template <class RealType1, class RealType2>
-KOKKOS_INLINE_FUNCTION
-    complex<typename std::common_type<RealType1, RealType2>::type>
-    operator-(const complex<RealType1>& x,
-              const complex<RealType2>& y) noexcept {
-  return complex<typename std::common_type<RealType1, RealType2>::type>(
-      x.real() - y.real(), x.imag() - y.imag());
+KOKKOS_INLINE_FUNCTION complex<std::common_type_t<RealType1, RealType2>>
+operator-(const complex<RealType1>& x, const complex<RealType2>& y) noexcept {
+  return complex<std::common_type_t<RealType1, RealType2>>(x.real() - y.real(),
+                                                           x.imag() - y.imag());
 }
 
 //! Binary - operator for complex scalar.
 template <class RealType1, class RealType2>
-KOKKOS_INLINE_FUNCTION
-    complex<typename std::common_type<RealType1, RealType2>::type>
-    operator-(const complex<RealType1>& x, const RealType2& y) noexcept {
-  return complex<typename std::common_type<RealType1, RealType2>::type>(
-      x.real() - y, x.imag());
+KOKKOS_INLINE_FUNCTION complex<std::common_type_t<RealType1, RealType2>>
+operator-(const complex<RealType1>& x, const RealType2& y) noexcept {
+  return complex<std::common_type_t<RealType1, RealType2>>(x.real() - y,
+                                                           x.imag());
 }
 
 //! Binary - operator for scalar complex.
 template <class RealType1, class RealType2>
-KOKKOS_INLINE_FUNCTION
-    complex<typename std::common_type<RealType1, RealType2>::type>
-    operator-(const RealType1& x, const complex<RealType2>& y) noexcept {
-  return complex<typename std::common_type<RealType1, RealType2>::type>(
-      x - y.real(), -y.imag());
+KOKKOS_INLINE_FUNCTION complex<std::common_type_t<RealType1, RealType2>>
+operator-(const RealType1& x, const complex<RealType2>& y) noexcept {
+  return complex<std::common_type_t<RealType1, RealType2>>(x - y.real(),
+                                                           -y.imag());
 }
 
 //! Unary - operator for complex.
@@ -634,11 +617,9 @@ KOKKOS_INLINE_FUNCTION complex<RealType> operator-(
 
 //! Binary * operator for complex.
 template <class RealType1, class RealType2>
-KOKKOS_INLINE_FUNCTION
-    complex<typename std::common_type<RealType1, RealType2>::type>
-    operator*(const complex<RealType1>& x,
-              const complex<RealType2>& y) noexcept {
-  return complex<typename std::common_type<RealType1, RealType2>::type>(
+KOKKOS_INLINE_FUNCTION complex<std::common_type_t<RealType1, RealType2>>
+operator*(const complex<RealType1>& x, const complex<RealType2>& y) noexcept {
+  return complex<std::common_type_t<RealType1, RealType2>>(
       x.real() * y.real() - x.imag() * y.imag(),
       x.real() * y.imag() + x.imag() * y.real());
 }
@@ -652,9 +633,9 @@ KOKKOS_INLINE_FUNCTION
 /// std::complex's methods and nonmember functions are not marked as
 /// CUDA device functions.
 template <class RealType1, class RealType2>
-inline complex<typename std::common_type<RealType1, RealType2>::type> operator*(
+inline complex<std::common_type_t<RealType1, RealType2>> operator*(
     const std::complex<RealType1>& x, const complex<RealType2>& y) {
-  return complex<typename std::common_type<RealType1, RealType2>::type>(
+  return complex<std::common_type_t<RealType1, RealType2>>(
       x.real() * y.real() - x.imag() * y.imag(),
       x.real() * y.imag() + x.imag() * y.real());
 }
@@ -664,11 +645,10 @@ inline complex<typename std::common_type<RealType1, RealType2>::type> operator*(
 /// This function exists because the compiler doesn't know that
 /// RealType and complex<RealType> commute with respect to operator*.
 template <class RealType1, class RealType2>
-KOKKOS_INLINE_FUNCTION
-    complex<typename std::common_type<RealType1, RealType2>::type>
-    operator*(const RealType1& x, const complex<RealType2>& y) noexcept {
-  return complex<typename std::common_type<RealType1, RealType2>::type>(
-      x * y.real(), x * y.imag());
+KOKKOS_INLINE_FUNCTION complex<std::common_type_t<RealType1, RealType2>>
+operator*(const RealType1& x, const complex<RealType2>& y) noexcept {
+  return complex<std::common_type_t<RealType1, RealType2>>(x * y.real(),
+                                                           x * y.imag());
 }
 
 /// \brief Binary * operator for RealType times complex.
@@ -676,11 +656,10 @@ KOKKOS_INLINE_FUNCTION
 /// This function exists because the compiler doesn't know that
 /// RealType and complex<RealType> commute with respect to operator*.
 template <class RealType1, class RealType2>
-KOKKOS_INLINE_FUNCTION
-    complex<typename std::common_type<RealType1, RealType2>::type>
-    operator*(const complex<RealType1>& y, const RealType2& x) noexcept {
-  return complex<typename std::common_type<RealType1, RealType2>::type>(
-      x * y.real(), x * y.imag());
+KOKKOS_INLINE_FUNCTION complex<std::common_type_t<RealType1, RealType2>>
+operator*(const complex<RealType1>& y, const RealType2& x) noexcept {
+  return complex<std::common_type_t<RealType1, RealType2>>(x * y.real(),
+                                                           x * y.imag());
 }
 
 //! Imaginary part of a complex number.
@@ -689,52 +668,97 @@ KOKKOS_INLINE_FUNCTION RealType imag(const complex<RealType>& x) noexcept {
   return x.imag();
 }
 
+template <class ArithmeticType>
+KOKKOS_INLINE_FUNCTION constexpr Impl::promote_t<ArithmeticType> imag(
+    ArithmeticType) {
+  return ArithmeticType();
+}
+
 //! Real part of a complex number.
 template <class RealType>
 KOKKOS_INLINE_FUNCTION RealType real(const complex<RealType>& x) noexcept {
   return x.real();
 }
 
+template <class ArithmeticType>
+KOKKOS_INLINE_FUNCTION constexpr Impl::promote_t<ArithmeticType> real(
+    ArithmeticType x) {
+  return x;
+}
+
+//! Constructs a complex number from magnitude and phase angle
+template <class T>
+KOKKOS_INLINE_FUNCTION complex<T> polar(const T& r, const T& theta = T()) {
+  KOKKOS_EXPECTS(r >= 0);
+  return complex<T>(r * cos(theta), r * sin(theta));
+}
+
 //! Absolute value (magnitude) of a complex number.
 template <class RealType>
 KOKKOS_INLINE_FUNCTION RealType abs(const complex<RealType>& x) {
-#if !defined(__CUDA_ARCH__) && \
-    !defined(__HIP_DEVICE_COMPILE__)  // FIXME_CUDA FIXME_HIP
-  using std::hypot;
-#endif
   return hypot(x.real(), x.imag());
 }
 
 //! Power of a complex number
-template <class RealType>
-KOKKOS_INLINE_FUNCTION Kokkos::complex<RealType> pow(const complex<RealType>& x,
-                                                     const RealType& e) {
-  RealType r = abs(x);
-#if !defined(__HIP_DEVICE_COMPILE__)  // FIXME_HIP
-  using std::atan;
-  using std::cos;
-  using std::pow;
-  using std::sin;
-#endif
-  using ::pow;
-  RealType phi = atan(x.imag() / x.real());
-  return pow(r, e) * Kokkos::complex<RealType>(cos(phi * e), sin(phi * e));
+template <class T>
+KOKKOS_INLINE_FUNCTION complex<T> pow(const complex<T>& x, const T& y) {
+  T r     = abs(x);
+  T theta = atan2(x.imag(), x.real());
+  return polar(pow(r, y), y * theta);
 }
 
-//! Square root of a complex number.
+template <class T>
+KOKKOS_INLINE_FUNCTION complex<T> pow(const T& x, const complex<T>& y) {
+  return pow(complex<T>(x), y);
+}
+
+template <class T>
+KOKKOS_INLINE_FUNCTION complex<T> pow(const complex<T>& x,
+                                      const complex<T>& y) {
+  return x == T() ? T() : exp(y * log(x));
+}
+
+template <class T, class U,
+          class = std::enable_if_t<std::is_arithmetic<T>::value>>
+KOKKOS_INLINE_FUNCTION complex<Impl::promote_2_t<T, U>> pow(
+    const T& x, const complex<U>& y) {
+  using type = Impl::promote_2_t<T, U>;
+  return pow(type(x), complex<type>(y));
+}
+
+template <class T, class U,
+          class = std::enable_if_t<std::is_arithmetic<U>::value>>
+KOKKOS_INLINE_FUNCTION complex<Impl::promote_2_t<T, U>> pow(const complex<T>& x,
+                                                            const U& y) {
+  using type = Impl::promote_2_t<T, U>;
+  return pow(complex<type>(x), type(y));
+}
+
+template <class T, class U>
+KOKKOS_INLINE_FUNCTION complex<Impl::promote_2_t<T, U>> pow(
+    const complex<T>& x, const complex<U>& y) {
+  using type = Impl::promote_2_t<T, U>;
+  return pow(complex<type>(x), complex<type>(y));
+}
+
+//! Square root of a complex number. This is intended to match the stdc++
+//! implementation, which returns sqrt(z*z) = z; where z is complex number.
 template <class RealType>
 KOKKOS_INLINE_FUNCTION Kokkos::complex<RealType> sqrt(
     const complex<RealType>& x) {
-  RealType r = abs(x);
-#if !defined(__HIP_DEVICE_COMPILE__)  // FIXME_HIP
-  using std::atan;
-  using std::cos;
-  using std::sin;
-  using std::sqrt;
-#endif
-  using ::sqrt;
-  RealType phi = atan(x.imag() / x.real());
-  return sqrt(r) * Kokkos::complex<RealType>(cos(phi * 0.5), sin(phi * 0.5));
+  RealType r = x.real();
+  RealType i = x.imag();
+
+  if (r == RealType()) {
+    RealType t = sqrt(fabs(i) / 2);
+    return Kokkos::complex<RealType>(t, i < RealType() ? -t : t);
+  } else {
+    RealType t = sqrt(2 * (abs(x) + fabs(r)));
+    RealType u = t / 2;
+    return r > RealType() ? Kokkos::complex<RealType>(u, i / t)
+                          : Kokkos::complex<RealType>(fabs(i) / t,
+                                                      i < RealType() ? -u : u);
+  }
 }
 
 //! Conjugate of a complex number.
@@ -744,17 +768,147 @@ KOKKOS_INLINE_FUNCTION complex<RealType> conj(
   return complex<RealType>(real(x), -imag(x));
 }
 
+template <class ArithmeticType>
+KOKKOS_INLINE_FUNCTION constexpr complex<Impl::promote_t<ArithmeticType>> conj(
+    ArithmeticType x) {
+  using type = Impl::promote_t<ArithmeticType>;
+  return complex<type>(x, -type());
+}
+
 //! Exponential of a complex number.
 template <class RealType>
 KOKKOS_INLINE_FUNCTION complex<RealType> exp(const complex<RealType>& x) {
-#if !defined(__HIP_DEVICE_COMPILE__)  // FIXME_HIP
-  using std::cos;
-  using std::exp;
-  using std::sin;
-#else
-  using ::exp;
-#endif
   return exp(x.real()) * complex<RealType>(cos(x.imag()), sin(x.imag()));
+}
+
+//! natural log of a complex number.
+template <class RealType>
+KOKKOS_INLINE_FUNCTION Kokkos::complex<RealType> log(
+    const complex<RealType>& x) {
+  RealType phi = atan2(x.imag(), x.real());
+  return Kokkos::complex<RealType>(log(abs(x)), phi);
+}
+
+//! base 10 log of a complex number.
+template <class RealType>
+KOKKOS_INLINE_FUNCTION Kokkos::complex<RealType> log10(
+    const complex<RealType>& x) {
+  return log(x) / log(RealType(10));
+}
+
+//! sine of a complex number.
+template <class RealType>
+KOKKOS_INLINE_FUNCTION Kokkos::complex<RealType> sin(
+    const complex<RealType>& x) {
+  return Kokkos::complex<RealType>(sin(x.real()) * cosh(x.imag()),
+                                   cos(x.real()) * sinh(x.imag()));
+}
+
+//! cosine of a complex number.
+template <class RealType>
+KOKKOS_INLINE_FUNCTION Kokkos::complex<RealType> cos(
+    const complex<RealType>& x) {
+  return Kokkos::complex<RealType>(cos(x.real()) * cosh(x.imag()),
+                                   -sin(x.real()) * sinh(x.imag()));
+}
+
+//! tangent of a complex number.
+template <class RealType>
+KOKKOS_INLINE_FUNCTION Kokkos::complex<RealType> tan(
+    const complex<RealType>& x) {
+  return sin(x) / cos(x);
+}
+
+//! hyperbolic sine of a complex number.
+template <class RealType>
+KOKKOS_INLINE_FUNCTION Kokkos::complex<RealType> sinh(
+    const complex<RealType>& x) {
+  return Kokkos::complex<RealType>(sinh(x.real()) * cos(x.imag()),
+                                   cosh(x.real()) * sin(x.imag()));
+}
+
+//! hyperbolic cosine of a complex number.
+template <class RealType>
+KOKKOS_INLINE_FUNCTION Kokkos::complex<RealType> cosh(
+    const complex<RealType>& x) {
+  return Kokkos::complex<RealType>(cosh(x.real()) * cos(x.imag()),
+                                   sinh(x.real()) * sin(x.imag()));
+}
+
+//! hyperbolic tangent of a complex number.
+template <class RealType>
+KOKKOS_INLINE_FUNCTION Kokkos::complex<RealType> tanh(
+    const complex<RealType>& x) {
+  return sinh(x) / cosh(x);
+}
+
+//! inverse hyperbolic sine of a complex number.
+template <class RealType>
+KOKKOS_INLINE_FUNCTION Kokkos::complex<RealType> asinh(
+    const complex<RealType>& x) {
+  return log(x + sqrt(x * x + RealType(1.0)));
+}
+
+//! inverse hyperbolic cosine of a complex number.
+template <class RealType>
+KOKKOS_INLINE_FUNCTION Kokkos::complex<RealType> acosh(
+    const complex<RealType>& x) {
+  return RealType(2.0) * log(sqrt(RealType(0.5) * (x + RealType(1.0))) +
+                             sqrt(RealType(0.5) * (x - RealType(1.0))));
+}
+
+//! inverse hyperbolic tangent of a complex number.
+template <class RealType>
+KOKKOS_INLINE_FUNCTION Kokkos::complex<RealType> atanh(
+    const complex<RealType>& x) {
+  const RealType i2 = x.imag() * x.imag();
+  const RealType r  = RealType(1.0) - i2 - x.real() * x.real();
+
+  RealType p = RealType(1.0) + x.real();
+  RealType m = RealType(1.0) - x.real();
+
+  p = i2 + p * p;
+  m = i2 + m * m;
+
+  RealType phi = atan2(RealType(2.0) * x.imag(), r);
+  return Kokkos::complex<RealType>(RealType(0.25) * (log(p) - log(m)),
+                                   RealType(0.5) * phi);
+}
+
+//! inverse sine of a complex number.
+template <class RealType>
+KOKKOS_INLINE_FUNCTION Kokkos::complex<RealType> asin(
+    const complex<RealType>& x) {
+  Kokkos::complex<RealType> t =
+      asinh(Kokkos::complex<RealType>(-x.imag(), x.real()));
+  return Kokkos::complex<RealType>(t.imag(), -t.real());
+}
+
+//! inverse cosine of a complex number.
+template <class RealType>
+KOKKOS_INLINE_FUNCTION Kokkos::complex<RealType> acos(
+    const complex<RealType>& x) {
+  Kokkos::complex<RealType> t = asin(x);
+  RealType pi_2               = acos(RealType(0.0));
+  return Kokkos::complex<RealType>(pi_2 - t.real(), -t.imag());
+}
+
+//! inverse tangent of a complex number.
+template <class RealType>
+KOKKOS_INLINE_FUNCTION Kokkos::complex<RealType> atan(
+    const complex<RealType>& x) {
+  const RealType r2 = x.real() * x.real();
+  const RealType i  = RealType(1.0) - r2 - x.imag() * x.imag();
+
+  RealType p = x.imag() + RealType(1.0);
+  RealType m = x.imag() - RealType(1.0);
+
+  p = r2 + p * p;
+  m = r2 + m * m;
+
+  return Kokkos::complex<RealType>(
+      RealType(0.5) * atan2(RealType(2.0) * x.real(), i),
+      RealType(0.25) * log(p / m));
 }
 
 /// This function cannot be called in a CUDA device function,
@@ -768,30 +922,23 @@ inline complex<RealType> exp(const std::complex<RealType>& c) {
 
 //! Binary operator / for complex and real numbers
 template <class RealType1, class RealType2>
-KOKKOS_INLINE_FUNCTION
-    complex<typename std::common_type<RealType1, RealType2>::type>
-    operator/(const complex<RealType1>& x,
-              const RealType2& y) noexcept(noexcept(RealType1{} /
-                                                    RealType2{})) {
-  return complex<typename std::common_type<RealType1, RealType2>::type>(
-      real(x) / y, imag(x) / y);
+KOKKOS_INLINE_FUNCTION complex<std::common_type_t<RealType1, RealType2>>
+operator/(const complex<RealType1>& x,
+          const RealType2& y) noexcept(noexcept(RealType1{} / RealType2{})) {
+  return complex<std::common_type_t<RealType1, RealType2>>(real(x) / y,
+                                                           imag(x) / y);
 }
 
 //! Binary operator / for complex.
 template <class RealType1, class RealType2>
-KOKKOS_INLINE_FUNCTION
-    complex<typename std::common_type<RealType1, RealType2>::type>
-    operator/(const complex<RealType1>& x,
-              const complex<RealType2>& y) noexcept(noexcept(RealType1{} /
-                                                             RealType2{})) {
+KOKKOS_INLINE_FUNCTION complex<std::common_type_t<RealType1, RealType2>>
+operator/(const complex<RealType1>& x,
+          const complex<RealType2>& y) noexcept(noexcept(RealType1{} /
+                                                         RealType2{})) {
   // Scale (by the "1-norm" of y) to avoid unwarranted overflow.
   // If the real part is +/-Inf and the imaginary part is -/+Inf,
   // this won't change the result.
-#if !defined(__HIP_DEVICE_COMPILE__)  // FIXME_HIP
-  using std::fabs;
-#endif
-  typedef
-      typename std::common_type<RealType1, RealType2>::type common_real_type;
+  using common_real_type   = std::common_type_t<RealType1, RealType2>;
   const common_real_type s = fabs(real(y)) + fabs(imag(y));
 
   // If s is 0, then y is zero, so x/y == real(x)/0 + i*imag(x)/0.
@@ -813,12 +960,11 @@ KOKKOS_INLINE_FUNCTION
 
 //! Binary operator / for complex and real numbers
 template <class RealType1, class RealType2>
-KOKKOS_INLINE_FUNCTION
-    complex<typename std::common_type<RealType1, RealType2>::type>
-    operator/(const RealType1& x,
-              const complex<RealType2>& y) noexcept(noexcept(RealType1{} /
-                                                             RealType2{})) {
-  return complex<typename std::common_type<RealType1, RealType2>::type>(x) / y;
+KOKKOS_INLINE_FUNCTION complex<std::common_type_t<RealType1, RealType2>>
+operator/(const RealType1& x,
+          const complex<RealType2>& y) noexcept(noexcept(RealType1{} /
+                                                         RealType2{})) {
+  return complex<std::common_type_t<RealType1, RealType2>>(x) / y;
 }
 
 template <class RealType>
@@ -837,8 +983,8 @@ std::istream& operator>>(std::istream& is, complex<RealType>& x) {
 }
 
 template <class T>
-struct reduction_identity<Kokkos::complex<T> > {
-  typedef reduction_identity<T> t_red_ident;
+struct reduction_identity<Kokkos::complex<T>> {
+  using t_red_ident = reduction_identity<T>;
   KOKKOS_FORCEINLINE_FUNCTION constexpr static Kokkos::complex<T>
   sum() noexcept {
     return Kokkos::complex<T>(t_red_ident::sum(), t_red_ident::sum());
@@ -851,4 +997,8 @@ struct reduction_identity<Kokkos::complex<T> > {
 
 }  // namespace Kokkos
 
+#ifdef KOKKOS_IMPL_PUBLIC_INCLUDE_NOTDEFINED_COMPLEX
+#undef KOKKOS_IMPL_PUBLIC_INCLUDE
+#undef KOKKOS_IMPL_PUBLIC_INCLUDE_NOTDEFINED_COMPLEX
+#endif
 #endif  // KOKKOS_COMPLEX_HPP

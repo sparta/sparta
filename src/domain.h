@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -37,12 +37,16 @@ class Domain : protected Pointers {
 
   int surfreactany;                 // 1 if any boundary has surf reactions
 
-  int copy,copymode;                // 1 if copy of class (prevents deallocation of
-                                    //  base class when child copy is destroyed)
+  int copy,copymode;            // 1 if copy of class (prevents deallocation of
+                                //  base class when child copy is destroyed)
 
   int nregion;                      // # of defined Regions
   int maxregion;                    // max # regions can hold
   class Region **regions;           // list of defined Regions
+
+  int surf_collide[6];              // index of SurfCollide model per face
+  int surf_react[6];                // index of SurfReact model per face
+                                    // for each bflag = SURFACE boundary
 
   Domain(class SPARTA *);
   virtual ~Domain();
@@ -52,17 +56,13 @@ class Domain : protected Pointers {
   void set_boundary(int, char **);
   int periodic(int *);
   void boundary_modify(int, char **);
-  virtual int collide(Particle::OnePart *&, int, int, double *, double &, 
+  virtual int collide(Particle::OnePart *&, int, int, double *, double &,
                       Particle::OnePart *&, int &);
   virtual void uncollide(int, double *);
   void add_region(int, char **);
   void delete_region(int, char **);
   int find_region(char *);
   void print_box(const char *);
-
-  int surf_collide[6];              // index of SurfCollide model
-  int surf_react[6];                // index of SurfReact model
-                                    // for each bflag = SURFACE boundary
 };
 
 }

@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -24,7 +24,7 @@
 #include "modify.h"
 #include "fix.h"
 #include "fix_ambipolar.h"
-#include "random_park.h"
+#include "random_knuth.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
@@ -55,6 +55,8 @@ ReactBirdKokkos::ReactBirdKokkos(SPARTA *sparta, int narg, char **arg) :
   memoryKK->create_kokkos(k_tally_reactions,tally_reactions,nlist,"react_bird:tally_reactions");
   memoryKK->create_kokkos(k_tally_reactions_all,tally_reactions_all,nlist,"react_bird:tally_reactions_all");
   d_tally_reactions = k_tally_reactions.d_view;
+
+  random_backup = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -65,6 +67,12 @@ ReactBirdKokkos::~ReactBirdKokkos()
 
   tally_reactions = NULL;
   tally_reactions_all = NULL;
+
+#ifdef SPARTA_KOKKOS_EXACT
+  rand_pool.destroy();
+  if (random_backup)
+    delete random_backup;
+#endif
 
   // deallocate views of views in serial to prevent race conditions in external tools
 
@@ -83,15 +91,11 @@ ReactBirdKokkos::~ReactBirdKokkos()
       }
     }
   }
-
-#ifdef SPARTA_KOKKOS_EXACT
-  rand_pool.destroy();
-#endif
 }
 
 /* ---------------------------------------------------------------------- */
 
-void ReactBirdKokkos::init() 
+void ReactBirdKokkos::init()
 {
   ReactBird::init();
 
@@ -139,8 +143,8 @@ void ReactBirdKokkos::init()
       Kokkos::deep_copy(k_reactions.h_view(i,j).d_sp2recomb,h_sp2recomb);
     }
   }
-  k_reactions.modify<SPAHostType>();
-  k_reactions.sync<DeviceType>();
+  k_reactions.modify_host();
+  k_reactions.sync_device();
   d_reactions = k_reactions.d_view;
 
 #ifdef SPARTA_KOKKOS_EXACT
@@ -152,24 +156,53 @@ void ReactBirdKokkos::init()
    return tally associated with a reaction
 ------------------------------------------------------------------------- */
 
-double ReactBirdKokkos::extract_tally(int m) 
+double ReactBirdKokkos::extract_tally(int m)
 {
   if (!tally_flag) {
     tally_flag = 1;
 
-    if (sparta->kokkos->gpu_direct_flag) {
+    if (sparta->kokkos->gpu_aware_flag) {
       MPI_Allreduce(d_tally_reactions.data(),k_tally_reactions_all.d_view.data(),nlist,
-                    MPI_INT,MPI_SUM,world);
-      k_tally_reactions_all.modify<DeviceType>();
-      k_tally_reactions_all.sync<SPAHostType>();
+                    MPI_SPARTA_BIGINT,MPI_SUM,world);
+      k_tally_reactions_all.modify_device();
+      k_tally_reactions_all.sync_host();
     } else {
-      k_tally_reactions.modify<DeviceType>();
-      k_tally_reactions.sync<SPAHostType>();
+      k_tally_reactions.modify_device();
+      k_tally_reactions.sync_host();
       MPI_Allreduce(k_tally_reactions.h_view.data(),k_tally_reactions_all.h_view.data(),nlist,
-                    MPI_INT,MPI_SUM,world);
+                    MPI_SPARTA_BIGINT,MPI_SUM,world);
     }
 
   }
 
   return 1.0*tally_reactions_all[m];
 };
+
+/* ---------------------------------------------------------------------- */
+
+void ReactBirdKokkos::backup()
+{
+  d_tally_reactions_backup = decltype(d_tally_reactions)(Kokkos::view_alloc("react_bird:tally_reactions_backup",Kokkos::WithoutInitializing),d_tally_reactions.extent(0));
+
+  Kokkos::deep_copy(d_tally_reactions_backup,d_tally_reactions);
+
+#ifdef SPARTA_KOKKOS_EXACT
+  if (!random_backup)
+    random_backup = new RanKnuth(12345 + comm->me);
+  memcpy(random_backup,random,sizeof(RanKnuth));
+#endif
+
+}
+
+/* ---------------------------------------------------------------------- */
+
+void ReactBirdKokkos::restore()
+{
+  Kokkos::deep_copy(d_tally_reactions,d_tally_reactions_backup);
+
+#ifdef SPARTA_KOKKOS_EXACT
+  memcpy(random,random_backup,sizeof(RanKnuth));
+#endif
+
+  d_tally_reactions_backup = decltype(d_tally_reactions_backup)();
+}

@@ -17,25 +17,27 @@
 </PRE>
 <UL><LI>ID = user-assigned name for the surface collision model 
 
-<LI>style = <I>specular</I> or <I>diffuse</I> or <I>cll</I> or <I>impulsive</I> or <I>td</I> or <I>piston</I> or <I>transparent</I> or <I>vanish</I> or <I>specular/kk</I> or <I>diffuse/kk</I> or <I>piston/kk</I> or <I>vanish/kk</I> 
+<LI>style = <I>specular</I> or <I>diffuse</I> or <I>cll</I> or <I>adiabatic</I> or <I>impulsive</I> or <I>td</I> or <I>piston</I> or <I>transparent</I> or <I>vanish</I> or <I>specular/kk</I> or <I>diffuse/kk</I> or <I>piston/kk</I> or <I>vanish/kk</I> 
 
 <LI>args = arguments for specific style 
 
-<PRE>  <I>specular</I> or <I>specular/kk</I> args = none
+<PRE>  <I>specular</I> or <I>specular/kk</I> args = noslip (optional)
+    noslip = reflect all velocity components off surface (not just normal component)
   <I>diffuse</I> or <I>diffuse/kk</I> args = Tsurf acc
     Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable (see below)
+            Tsurf can be a variable or custom per-surf vector (see below)
     acc = accommodation coefficient
   <I>cll</I> args = Tsurf acc_n acc_t acc_rot acc_vib
     Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable (see below)
+            Tsurf can be a variable or custom per-surf vector (see below)
     acc_n = accommodation coefficient in the surface normal direction
     acc_t = accommodation coefficient in the surface tangential direction
     acc_rot = accommodation coefficient for the rotational modes
     acc_vib = accommodation coefficient for the vibrational modes
+  <I>adiabatic</I> args = none
   <I>impulsive</I> args = Tsurf <I>model</I> param1 param2 var theta_peak pol_pow azi_pow
     Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable (see below)
+            Tsurf can be a variable or custom per-surf vector (see below)
     <I>model</I> can be softsphere or tempvar
       <I>softsphere</I> args = en_ratio eff_mass
         param1 = en_ratio = fraction of energy lost in the collision
@@ -49,7 +51,7 @@
     azi_pow = cosine power represeting the azimuthal angular distribution
   <I>td</I> arg = Tsurf 
     Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable (see below) 
+            Tsurf can be a variable or custom per-surf vector (see below)
   <I>piston</I> or <I>piston/kk</I> args = Vwall
     Vwall = velocity of boundary wall (velocity units)
   <I>transparent</I> args = none 
@@ -58,7 +60,7 @@
 </PRE>
 <LI>zero or more keyword/arg pairs may be appended 
 
-<LI>keyword = <I>translate</I> or <I>rotate</I> or <I>partial</I> 
+<LI>keyword = <I>translate</I> or <I>rotate</I> or <I>partial</I> or <I>barrier</I> or <I>bond</I> or <I>init_energy</I> or <I>step</I> or <I>double</I> or <I>intenergy</I> 
 
 <LI>values = values for specific keyword 
 
@@ -96,6 +98,7 @@ surf_collide 1 transparent
 surf_collide 1 diffuse 273.15 0.9
 surf_collide 1 cll 273.15 0.8 0.8 0.5 0.1
 surf_collide 1 cll 273.15 1.0 1.0 0.1 0.1 partial 0.5
+surf_collide 1 adiabatic
 surf_collide 1 impulsive 1000.0 softsphere 0.2 50 2000 60 5 75
 surf_collide 1 impulsive 1000.0 tempvar 3 500 2000 60 5 75
 surf_collide 1 impulsive 1000.0 softsphere 0.2 50 2000 60 5 75 double 10
@@ -129,6 +132,13 @@ reflects off a surface element with its incident velocity vector
 reversed with respect to the outward normal of the surface element.
 The particle's speed is unchanged.
 </P>
+<P>Specular reflection means that a particle bounce off a surface element
+reverses only the component of its velocity normal to the surface. If
+the optional <I>noslip</I> keyword is used, the particle bounce flips the sign
+of all 3 xyz components of the particle's incident velocity, so that it
+now moves in the opposite direction, creating a no slip boundary condition.
+In either case, the particle's speed is unchanged.
+</P>
 <HR>
 
 <P>The <I>diffuse</I> style computes a simple diffusive reflection model.
@@ -136,7 +146,7 @@ The particle's speed is unchanged.
 <P>The model has 2 parameters set by the <I>Tsurf</I> and <I>acc</I> arguments.
 <I>Tsurf</I> is the temperature of the surface.  <I>Acc</I> is an accommodation
 coefficient from 0.0 to 1.0, which determines what fraction of surface
-collisions are specular.  The rest are diffusive.  Thus a setting of
+collisions are diffusive.  The rest are specular.  Thus a setting of
 <I>acc</I> = 0.0 means all collisions are specular.
 </P>
 <P>Note that setting <I>acc</I> = 0.0, is a way to perform surface reactions
@@ -154,7 +164,7 @@ the surface given by:
 </P>
 <CENTER><IMG SRC = "Eqs/diffuse_normal.jpg">
 </CENTER>
-<P>The <I>Tsurf</I> value can be specified as an equal-style
+<P>The <I>Tsurf</I> value can be also be specified as an equal-style
 <A HREF = "variable.html">variable</A>.  If the value is a variable, it should be
 specified as v_name, where name is the variable name.  In this case,
 the variable will be evaluated each timestep, and its value used to
@@ -164,6 +174,13 @@ determine the current surface temperature.
 functions, and include <A HREF = "status_style.html">stats_style</A> command
 keywords for the simulation box parameters and timestep and elapsed
 time.  Thus it is easy to specify a time-dependent temperature.
+</P>
+<P>The <I>Tsurf</I> value can also be specified as a custom per-surf vector,
+which is updated with temperature values by the <A HREF = "fix_surf_temp.html">fix
+surf/temp</A> command.  In this case, it should be
+specified as s_name, where name is the name of the custom per-surf
+vector, which is also specified by the <A HREF = "fix_surf_temp.html">fix
+surf/temp</A> command.
 </P>
 <HR>
 
@@ -191,16 +208,19 @@ given by Lord <A HREF = "#Lord90">(Lord90)</A>, along with extension to rotation
 and vibrational modes with both continuous and discrete levels
 <A HREF = "#Lord91">(Lord91)</A>.
 </P>
-<P>The <I>Tsurf</I> value can be specified as an equal-style
-<A HREF = "variable.html">variable</A>.  If the value is a variable, it should be
-specified as v_name, where name is the variable name.  In this case,
-the variable will be evaluated each timestep, and its value used to
-determine the current surface temperature.
+<P>The <I>Tsurf</I> value can be also be specified as an equal-style
+<A HREF = "variable.html">variable</A> or a custom per-surf vector.  See the
+description of these 2 options for the <I>diffuse</I> style above.
 </P>
-<P>Equal-style variables can specify formulas with various mathematical
-functions and include <A HREF = "status_style.html">stats_style</A> command keywords
-for the simulation box parameters and timestep and elapsed time.
-Thus, it is easy to specify a time-dependent temperature.
+<HR>
+
+<P>The <I>adiabatic</I> style computes the adiabatic surface collision model
+proposed by Mohammadzadeh, Rana, and Struchtrup
+<A HREF = "#Mohammadzadeh16">(Mohammadzadeh16)</A>. This style requires no arguments.
+The adiabatic surface is modelled by scattering particles isotropically
+whilst conserving their velocity magnitude. Therefore, no energy is
+transferred between the wall and the particles. Note, that this is only
+valid for particle collisions not for potential surface reactions.
 </P>
 <HR>
 
@@ -217,16 +237,9 @@ normal and the plane tangent to the surface given by:
 </P>
 <CENTER><IMG SRC = "Eqs/diffuse_normal.jpg">
 </CENTER>
-<P>The <I>Tsurf</I> value can be specified as an equal-style
-<A HREF = "variable.html">variable</A>.  If the value is a variable, it should be
-specified as v_name, where name is the variable name.  In this case,
-the variable will be evaluated each timestep, and its value used to
-determine the current surface temperature.
-</P>
-<P>Equal-style variables can specify formulas with various mathematical
-functions, and include <A HREF = "status_style.html">stats_style</A> command
-keywords for the simulation box parameters and timestep and elapsed
-time.  Thus it is easy to specify a time-dependent temperature.
+<P>The <I>Tsurf</I> value can be also be specified as an equal-style
+<A HREF = "variable.html">variable</A> or a custom per-surf vector.  See the
+description of these 2 options for the <I>diffuse</I> style above.
 </P>
 <HR>
 
@@ -295,16 +308,9 @@ angle: (-180, 180)
 molecule remains unchanged within the <I>impulsive</I> model unless the
 optional keyword <I>intenergy</I> is specified (see below).
 </P>
-<P>The <I>Tsurf</I> value can be specified as an equal-style
-<A HREF = "variable.html">variable</A>.  If the value is a variable, it should be
-specified as v_name, where name is the variable name.  In this case,
-the variable will be evaluated each timestep, and its value used to
-determine the current surface temperature.
-</P>
-<P>Equal-style variables can specify formulas with various mathematical
-functions and include <A HREF = "status_style.html">stats_style</A> command keywords
-for the simulation box parameters and timestep and elapsed time.
-Thus, it is easy to specify a time-dependent temperature.
+<P>The <I>Tsurf</I> value can be also be specified as an equal-style
+<A HREF = "variable.html">variable</A> or a custom per-surf vector.  See the
+description of these 2 options for the <I>diffuse</I> style above.
 </P>
 <HR>
 
@@ -560,7 +566,6 @@ twice in the same input script (active at the same time).
 
 <P><B>(Bird94)</B> G. A. Bird, Molecular Gas Dynamics and the Direct
 Simulation of Gas Flows, Clarendon Press, Oxford (1994).
-<<<<<<< HEAD
 </P>
 <A NAME = "Cercignani71"></A>
 
@@ -631,6 +636,12 @@ Experiments and simulations, The Journal of Chemical Physics, (1990).
 
 <P><B>(Goodman74)</B> F. O. Goodman, Determination of characteristic surface
 vibration temperatures by molecular beam scattering: Application to
-specular scattering in the H-LiF (001) system, Surface Science, (1974)
+specular scattering in the H-LiF (001) system, Surface Science, (1974).
+</P>
+<A NAME = "Mohammadzadeh16"></A>
+
+<P><B>(Mohammadzadeh16)</B> A. Mohammadzadeh, A. Rana, and H. Struchtrup,
+DSMC and R13 modeling of the adiabatic surface, International Journal
+of Thermal Sciences, vol. 101, pp. 9–23, March (2016).
 </P>
 </HTML>

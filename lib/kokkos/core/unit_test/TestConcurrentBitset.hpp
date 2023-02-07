@@ -47,7 +47,6 @@
 
 #include <gtest/gtest.h>
 
-#include <stdexcept>
 #include <sstream>
 #include <iostream>
 
@@ -57,8 +56,8 @@ namespace Test {
 
 template <class DeviceType>
 struct ConcurrentBitset {
-  typedef Kokkos::View<uint32_t*, DeviceType> view_unsigned_type;
-  typedef Kokkos::View<int*, DeviceType> view_int_type;
+  using view_unsigned_type = Kokkos::View<uint32_t*, DeviceType>;
+  using view_int_type      = Kokkos::View<int*, DeviceType>;
 
   view_unsigned_type bitset;
   view_int_type acquired;
@@ -117,9 +116,9 @@ struct ConcurrentBitset {
 
 template <class DeviceType>
 void test_concurrent_bitset(int bit_count) {
-  typedef ConcurrentBitset<DeviceType> Functor;
-  typedef typename Functor::view_unsigned_type view_unsigned_type;
-  typedef typename Functor::view_int_type view_int_type;
+  using Functor            = ConcurrentBitset<DeviceType>;
+  using view_unsigned_type = typename Functor::view_unsigned_type;
+  using view_int_type      = typename Functor::view_int_type;
 
   int bit_count_lg2 = 1;
 

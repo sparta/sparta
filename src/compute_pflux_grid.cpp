@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -44,7 +44,7 @@ ComputePFluxGrid::ComputePFluxGrid(SPARTA *sparta, int narg, char **arg) :
   if (narg < 5) error->all(FLERR,"Illegal compute pflux/grid command");
 
   int igroup = grid->find_group(arg[2]);
-  if (igroup < 0) 
+  if (igroup < 0)
     error->all(FLERR,"Compute pflux/grid group ID does not exist");
   groupbit = grid->bitmask[igroup];
 
@@ -55,7 +55,7 @@ ComputePFluxGrid::ComputePFluxGrid(SPARTA *sparta, int narg, char **arg) :
 
   nvalue = narg - 4;
   value = new int[nvalue];
-  
+
   npergroup = 0;
   unique = new int[LASTSIZE];
   nmap = new int[nvalue];
@@ -265,7 +265,7 @@ void ComputePFluxGrid::post_process_grid(int index, int nsample,
 {
   index--;
   int ivalue = index % nvalue;
-  
+
   int lo = 0;
   int hi = nglocal;
   int k = 0;
@@ -307,7 +307,7 @@ void ComputePFluxGrid::post_process_grid(int index, int nsample,
         else {
           wt = fnum * cinfo[icell].weight / cinfo[icell].volume;
 	  summv = etally[icell][mv];
-	  vec[k] = wt * (etally[icell][mvv] - summv*summv/summass);
+	  vec[k] = wt/nsample * (etally[icell][mvv] - summv*summv/summass);
 	}
         k += nstride;
       }
@@ -331,8 +331,8 @@ void ComputePFluxGrid::post_process_grid(int index, int nsample,
         if (summass == 0.0) vec[k] = 0.0;
         else {
           wt = fnum * cinfo[icell].weight / cinfo[icell].volume;
-	  vec[k] = wt * (etally[icell][mvv] - 
-			 etally[icell][mv1]*etally[icell][mv2]/summass);
+	  vec[k] = wt/nsample * (etally[icell][mvv] -
+				 etally[icell][mv1]*etally[icell][mv2]/summass);
 	}
         k += nstride;
       }

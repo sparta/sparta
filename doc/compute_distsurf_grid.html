@@ -11,6 +11,8 @@
 
 <H3>compute distsurf/grid command 
 </H3>
+<H3>compute distsurf/grid/kk command 
+</H3>
 <P><B>Syntax:</B>
 </P>
 <PRE>compute ID distsurf/grid group-ID surf-ID keyword args ... 
@@ -94,9 +96,9 @@ distance of 0.3 from surface elements facing upwind.  The second
 refines again for grid cells within a distance of 0.1 from the surface
 elements.
 </P>
-<PRE>compute 5 distsurf/grid all dir 1 0 0
-adapt_grid refine value c_5 0.3 0.0 thresh less more
-adapt_grid refine value c_5 0.1 0.0 thresh less more 
+<PRE>compute 5 distsurf/grid all all dir 1 0 0
+adapt_grid all refine value c_5 0.3 0.0 thresh less more
+adapt_grid all refine value c_5 0.1 0.0 thresh less more 
 </PRE>
 <P>For a 2d simulation of flow around a circle (flow from right to left),
 these commands produce this kind of adapted grid (click for a larger
@@ -126,6 +128,31 @@ for an overview of SPARTA output options.
 <P>The per-grid array values for the vector will be in distance
 <A HREF = "units.html">units</A>.
 </P>
+<HR>
+
+<P>Styles with a <I>kk</I> suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+<A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+</P>
+<P>These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the <A HREF = "Section_start.html#start_3">Making
+SPARTA</A> section for more info.
+</P>
+<P>You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the <A HREF = "Section_start.html#start_6">-suffix command-line
+switch</A> when you invoke SPARTA, or you can
+use the <A HREF = "suffix.html">suffix</A> command in your input script.
+</P>
+<P>See the <A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
+</P>
+<HR>
+
 <P><B>Restrictions:</B> None
 </P>
 <P><B>Related commands:</B>

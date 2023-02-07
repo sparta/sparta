@@ -19,8 +19,10 @@ are 2d problems so that they run quickly and can be easily visualized.
 
 ablation = 2d and 3d ablation of implicit surfaces
 adapt = static and on-the-fly grid adaptation
+adjust_temp = change surf element temps dynamically due to collisions
 ambi = amibpolar approxiation for ionized flow around a cylinder
 axi = axisymmetric flow around a sphere
+bfield = external magnetic field affecting particle motion
 chem = chemistry in a 3d box
 circle = 2d flow around a circle
 collide = collisional motion in a 3d box
@@ -33,6 +35,8 @@ spiky = 2d flow around a spiky circle
 step = 2d flow around a staircase of steps
 surf = change surfaces between or during runs
 surf_collide = variety of surface collision models
+surf_react_adsorb = surface reaction adsorb models, both GS and PS variants
+thermostat = use of fix temp/rescale as a thermostat
 vibrate = vibrational energy modes in collisions
 
 Here is an example of how one of the sample problems can be run and

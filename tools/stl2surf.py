@@ -11,11 +11,13 @@
 
 # NOTE: process vertices in text format so no precision or round-off issues
 
+from __future__ import print_function
+
 # error message
 
 def error(str=None):
-  if str: print "ERROR:",str
-  else: print "Syntax: stl2surf.py stlfile surffile"
+  if str: print("ERROR:",str)
+  else: print("Syntax: stl2surf.py stlfile surffile")
   sys.exit()
 
 # ----------------------------------------------------------------------
@@ -25,22 +27,25 @@ import sys,re
 
 if len(sys.argv) != 3: error()
 
+stlfile = sys.argv[1]
+surffile = sys.argv[2]
+
 # parse STL file into triangles and triangle vertices
 # tritxt = list of text between facet and endfacet
 # triverts = list of 3 vertices per triangle, in text format
 
-stltxt = open(sys.argv[1],"r").read()
+stltxt = open(stlfile,"r").read()
 
 match = re.search("^.*\n",stltxt)
-if not match: error("STL file has incorrect format" % stlfile)
+if not match: error("STL file %s has incorrect format" % stlfile)
 words = match.group().split()
 if words[0] != "solid":
-  error("STL file has incorrect format" % stlfile)
+  error("STL file %s has incorrect format" % stlfile)
 if len(words) >= 2: name = words[1]
 else: name = ""
 
 tritxt = re.split("endfacet\s+facet",stltxt)
-print "# of triangles in STL file:",len(tritxt)
+print("# of triangles in STL file:",len(tritxt))
 
 pattern = ".*vertex\s+(\S+)\s+(\S+)\s+(\S+)"
 triverts = []
@@ -48,8 +53,8 @@ triverts = []
 for one in tritxt:
   vertices = re.findall(pattern,one)
   if len(vertices) != 3:
-    print "Triangle record:"
-    print one
+    print("Triangle record:")
+    print(one)
     error("Invalid triangle vertices")
   triverts.append(vertices)
 
@@ -82,28 +87,31 @@ for vert3 in triverts:
 
 # print SPARTA surface file
 
-fp = open(sys.argv[2],"w")
+fp = open(surffile,"w")
+
 if name:
-  print >>fp,"# SPARTA surface file, from STL file %s with name %s\n" % \
-      (sys.argv[1],name)
+  print("# SPARTA surface file, from STL file %s with name %s\n" % \
+      (stlfile,name),file=fp)
 else:
-  print >>fp,"# SPARTA surface file, from STL file\n",sys.argv[1]
+  print("# SPARTA surface file, from STL file\n",stlfile,file=fp)
 
-print >>fp,len(verts),"points"
-print >>fp,len(tris),"triangles"
+print(len(verts),"points",file=fp)
+print(len(tris),"triangles",file=fp)
 
-print >>fp,"\nPoints\n"
+print("\nPoints\n",file=fp)
 for i,vert in enumerate(verts):
-  print >>fp,i+1,vert[0],vert[1],vert[2]
+  print(i+1,vert[0],vert[1],vert[2],file=fp)
 
-print >>fp,"\nTriangles\n"
+print("\nTriangles\n",file=fp)
 for i,tri in enumerate(tris):
-  print >>fp,i+1,tri[0]+1,tri[1]+1,tri[2]+1
+  print(i+1,tri[0]+1,tri[1]+1,tri[2]+1,file=fp)
 
+fp.close()
+  
 # stats to screen
 
-print "# of vertices in SPARTA file:",len(verts)
-print "# of triangles in SPARTA file:",len(tris)
+print("# of vertices in SPARTA file:",len(verts))
+print("# of triangles in SPARTA file:",len(tris))
 
 # warn if not a watertight object
 # watertight = each edge is part of exactly 2 triangles
@@ -137,9 +145,8 @@ for edge in ehash:
     unmatchedge = edge
     
 if dup or unmatch:
-  print "WARNING: surface is not watertight"
-  print "Duplicate edge count:",dup
-  print "Unmatched edge count:",unmatch
-  print "One duplicate edge:",dupedge
-  print "One unmatched edge:",unmatchedge
-  
+  print("WARNING: surface is not watertight")
+  print("Duplicate edge count:",dup)
+  print("Unmatched edge count:",unmatch)
+  print("One duplicate edge:",dupedge)
+  print("One unmatched edge:",unmatchedge)
