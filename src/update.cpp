@@ -1763,7 +1763,7 @@ void Update::global(int narg, char **arg)
       fnum = input->numeric(FLERR,arg[iarg+1]);
       if (fnum <= 0.0) error->all(FLERR,"Illegal global command");
       iarg += 2;
-    } else if (strcmp(arg[iarg],"optParticleMoves") == 0) {
+    } else if (strcmp(arg[iarg],"optmove") == 0) {
       enableOptParticleMoves = true;
       iarg += 1;
     } else if (strcmp(arg[iarg],"nrho") == 0) {
