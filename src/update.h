@@ -175,10 +175,6 @@ class Update : protected Pointers {
   template<int DIM> void checkCellMinDistToSplitCell();     // check min distance from cell faces to split-cell faces
   template < int DIM, int SURF> void move();                // general move driver combining standard and opt moves
   template<int DIM, int SURF> void standardMove();          // original move logic by particle (non-optimized move)
-  template<int DIM, int SURF> void setCellMinDistToSurf();  // set min distance from cell faces to surfaces
-  template<int DIM, int SURF> void setCellMinDistToSurfDriver();
-  void setCellSurfaceFaces3D(double S[12][3][3], Grid::ChildCell *cells, int c);
-  void setCellSurfaceFaces2D(double S[4][2][3], Grid::ChildCell *cells, int c);
 
   int perturbflag;
   typedef void (Update::*FnPtr2)(int, int, double, double *, double *);
