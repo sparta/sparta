@@ -324,13 +324,15 @@ void UpdateKokkos::run(int nsteps)
     if (cellweightflag) particle->post_weight();
     timer->stamp(TIME_COMM);
 
-    if (collide) {
+    const int reorder_flag = (update->reorder_period &&
+        (update->ntimestep % update->reorder_period == 0));
+
+    if (collide || reorder_flag) {
       particle_kk->sort_kokkos();
       timer->stamp(TIME_SORT);
+    }
 
-      //CollideVSSKokkos* collide_kk = (CollideVSSKokkos*) collide;
-      //collide_kk->wrap_kokkos_sort();
-
+    if (collide) {
       collide->collisions();
       timer->stamp(TIME_COLLIDE);
     }
