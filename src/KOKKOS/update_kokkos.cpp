@@ -157,32 +157,6 @@ void UpdateKokkos::init()
   if (runflag == 0) return;
   first_update = 1;
 
-  // choose the appropriate move method
-
-  moveptr = NULL;
-  if (domain->dimension == 3) {
-    if (surf->exist)
-      moveptr = &UpdateKokkos::move<3,1,0>;
-    else {
-      if (optmove_flag) moveptr = &UpdateKokkos::move<3,0,1>;
-      else moveptr = &UpdateKokkos::move<3,0,0>;
-    }
-  } else if (domain->axisymmetric) {
-    if (surf->exist)
-      moveptr = &UpdateKokkos::move<1,1,0>;
-    else {
-      if (optmove_flag) moveptr = &UpdateKokkos::move<1,0,1>;
-      else moveptr = &UpdateKokkos::move<1,0,0>;
-    }
-  } else if (domain->dimension == 2) {
-    if (surf->exist)
-      moveptr = &UpdateKokkos::move<2,1,0>;
-    else {
-      if (optmove_flag) moveptr = &UpdateKokkos::move<2,0,1>;
-      else moveptr = &UpdateKokkos::move<2,0,0>;
-    }
-  }
-
   // checks on external field options
 
   if (fstyle == CFIELD) {
@@ -340,9 +314,34 @@ void UpdateKokkos::run(int nsteps)
     // move particles
 
     if (grid->uniform && enable_optmove)
-      optmove_flag = true;
+      optmove_flag = 1;
     else
-      optmove_flag = false;
+      optmove_flag = 0;
+
+    // choose the appropriate move method
+
+    if (domain->dimension == 3) {
+      if (surf->exist)
+        moveptr = &UpdateKokkos::move<3,1,0>;
+      else {
+        if (optmove_flag) moveptr = &UpdateKokkos::move<3,0,1>;
+        else moveptr = &UpdateKokkos::move<3,0,0>;
+      }
+    } else if (domain->axisymmetric) {
+      if (surf->exist)
+        moveptr = &UpdateKokkos::move<1,1,0>;
+      else {
+        if (optmove_flag) moveptr = &UpdateKokkos::move<1,0,1>;
+        else moveptr = &UpdateKokkos::move<1,0,0>;
+      }
+    } else if (domain->dimension == 2) {
+      if (surf->exist)
+        moveptr = &UpdateKokkos::move<2,1,0>;
+      else {
+        if (optmove_flag) moveptr = &UpdateKokkos::move<2,0,1>;
+        else moveptr = &UpdateKokkos::move<2,0,0>;
+      }
+    }
 
     if (cellweightflag) particle->pre_weight();
     (this->*moveptr)();

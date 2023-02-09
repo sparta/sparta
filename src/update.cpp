@@ -155,31 +155,6 @@ void Update::init()
   if (runflag == 0) return;
   first_update = 1;
 
-  // choose the appropriate move method
-
-  if (domain->dimension == 3) {
-    if (surf->exist)
-      moveptr = &Update::move<3,1,0>;
-    else {
-      if (optmove_flag) moveptr = &Update::move<3,0,1>;
-      else moveptr = &Update::move<3,0,0>;
-    }
-  } else if (domain->axisymmetric) {
-    if (surf->exist)
-      moveptr = &Update::move<1,1,0>;
-    else { 
-      if (optmove_flag) moveptr = &Update::move<1,0,1>;
-      else moveptr = &Update::move<1,0,0>;
-    }
-  } else if (domain->dimension == 2) {
-    if (surf->exist)
-      moveptr = &Update::move<2,1,0>;
-    else { 
-      if (optmove_flag) moveptr = &Update::move<2,0,1>;
-      else moveptr = &Update::move<2,0,0>;
-    }
-  }
-
   // checks on external field options
 
   if (fstyle == CFIELD) {
@@ -296,6 +271,31 @@ void Update::run(int nsteps)
       optmove_flag = true;
     else
       optmove_flag = false;
+
+    // choose the appropriate move method
+
+    if (domain->dimension == 3) {
+      if (surf->exist)
+        moveptr = &Update::move<3,1,0>;
+      else {
+        if (optmove_flag) moveptr = &Update::move<3,0,1>;
+        else moveptr = &Update::move<3,0,0>;
+      }
+    } else if (domain->axisymmetric) {
+      if (surf->exist)
+        moveptr = &Update::move<1,1,0>;
+      else {
+        if (optmove_flag) moveptr = &Update::move<1,0,1>;
+        else moveptr = &Update::move<1,0,0>;
+      }
+    } else if (domain->dimension == 2) {
+      if (surf->exist)
+        moveptr = &Update::move<2,1,0>;
+      else {
+        if (optmove_flag) moveptr = &Update::move<2,0,1>;
+        else moveptr = &Update::move<2,0,0>;
+      }
+    }
 
     if (cellweightflag) particle->pre_weight();
     (this->*moveptr)();
