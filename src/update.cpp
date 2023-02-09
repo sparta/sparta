@@ -80,7 +80,7 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   nrho = 1.0;
   vstream[0] = vstream[1] = vstream[2] = 0.0;
   temp_thermal = 273.15;
-  enableOptParticleMoves = false;
+  enable_optmove = 0;
   fstyle = NOFIELD;
   fieldID = NULL;
 
@@ -158,14 +158,26 @@ void Update::init()
   // choose the appropriate move method
 
   if (domain->dimension == 3) {
-    if (surf->exist) moveptr = &Update::move<3,1>;
-    else moveptr = &Update::move<3,0>;
+    if (surf->exist)
+      moveptr = &Update::move<3,1,0>;
+    else {
+      if (optmove_flag) moveptr = &Update::move<3,0,1>;
+      else moveptr = &Update::move<3,0,0>;
+    }
   } else if (domain->axisymmetric) {
-    if (surf->exist) moveptr = &Update::move<1,1>;
-    else moveptr = &Update::move<1,0>;
+    if (surf->exist)
+      moveptr = &Update::move<1,1,0>;
+    else { 
+      if (optmove_flag) moveptr = &Update::move<1,0,1>;
+      else moveptr = &Update::move<1,0,0>;
+    }
   } else if (domain->dimension == 2) {
-    if (surf->exist) moveptr = &Update::move<2,1>;
-    else moveptr = &Update::move<2,0>;
+    if (surf->exist)
+      moveptr = &Update::move<2,1,0>;
+    else { 
+      if (optmove_flag) moveptr = &Update::move<2,0,1>;
+      else moveptr = &Update::move<2,0,0>;
+    }
   }
 
   // checks on external field options
@@ -280,10 +292,11 @@ void Update::run(int nsteps)
 
     // move particles
 
-    if (grid->uniform && enableOptParticleMoves)
-      optParticleMovesThisCycle = true;
+    if (grid->uniform && enable_optmove)
+      optmove_flag = true;
     else
-      optParticleMovesThisCycle = false;
+      optmove_flag = false;
+
     if (cellweightflag) particle->pre_weight();
     (this->*moveptr)();
     timer->stamp(TIME_MOVE);
@@ -320,249 +333,15 @@ void Update::run(int nsteps)
   }
 }
 
-/* ---------------------------------------------------------------------- */
-template <int SURF> void Update::setParticleOptMoveFlags2D() {
-  double xnew[2];
-  double *x,*v;
-  Grid::ChildCell *cells = grid->cells;
-  Particle::OnePart *particles;
-  particles = particle->particles;
-  int nlocal = particle->nlocal;
+/* ----------------------------------------------------------------------
+   advect particles thru grid
+   DIM = 2/3 for 2d/3d, 1 for 2d axisymmetric
+   SURF = 0/1 for no surfs or surfs
+   use multiple iterations of move/comm if necessary
+------------------------------------------------------------------------- */
 
-  for (int i = 0; i < nlocal; ++i) {
-
-    if (!optParticleMovesThisCycle) {
-      particles[i].optMoveFlag = false;
-      continue;
-    }
-
-    x = particles[i].x;
-    v = particles[i].v;
-
-    double distx = dt*v[0];
-    double disty = dt*v[1];
-
-    xnew[0] = x[0] + distx;
-    xnew[1] = x[1] + disty;
-
-    if (xnew[0] < domain->boxlo[0] || xnew[0] > domain->boxhi[0]) {
-      particles[i].optMoveFlag = false;
-      continue;
-    }
-    if (xnew[1] < domain->boxlo[1] || xnew[1] > domain->boxhi[1]) {
-      particles[i].optMoveFlag = false;
-      continue;
-    }
-
-    particles[i].optMoveFlag = true;
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-template <int SURF> void Update::setParticleOptMoveFlags3D() {
-  double xnew[3];
-  double *x,*v;
-  Grid::ChildCell *cells = grid->cells;
-  Particle::OnePart *particles;
-  particles = particle->particles;
-  int nlocal = particle->nlocal;
-
-  for (int i=0; i<nlocal; ++i) {
-
-    if (!optParticleMovesThisCycle) {
-      particles[i].optMoveFlag = false;
-      continue;
-    }
-
-    x = particles[i].x;
-    v = particles[i].v;
-
-    double distx = dt*v[0];
-    double disty = dt*v[1];
-    double distz = dt*v[2];
-
-    xnew[0] = x[0] + distx;
-    xnew[1] = x[1] + disty;
-    xnew[2] = x[2] + distz;
-
-    if (xnew[0] < domain->boxlo[0] || xnew[0] > domain->boxhi[0]) {
-      particles[i].optMoveFlag = false;
-      continue;
-    }
-    if (xnew[1] < domain->boxlo[1] || xnew[1] > domain->boxhi[1]) {
-      particles[i].optMoveFlag = false;
-      continue;
-    }
-    if (xnew[2] < domain->boxlo[2] || xnew[2] > domain->boxhi[2]) {
-      particles[i].optMoveFlag = false;
-      continue;
-    }
-
-    particles[i].optMoveFlag = true;
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-template < int DIM, int SURF >
-void Update::move()
+template < int DIM, int SURF, int OPT > void Update::move()
 {
-  // set particle opt move flags even if optimized moves are not activated
-  // for this cycle.  This handles the scenario where AMR refinement requires
-  // standard particle moves and the particle opt move flags need to be reset
-  // to false.
-  if (enableOptParticleMoves) {
-    if (DIM == 3)
-      setParticleOptMoveFlags3D<SURF>();
-    else
-      setParticleOptMoveFlags2D<SURF>();
-  }
-
-  // extend migration list if necessary
-  int nlocal = particle->nlocal;
-  int maxlocal = particle->maxlocal;
-  if (nlocal > maxmigrate) {
-    maxmigrate = maxlocal;
-    memory->destroy(mlist);
-    memory->create(mlist,maxmigrate,"particle:mlist");
-  }
-  nmigrate = 0;
-  ncomm_one = 0;
-
-  // optimized particle moves
-  // note:  this must be called before standardMove so that optimized move
-  //        particles can be flagged for a standard move if they are moving
-  //        outside the ghost halo.
-  if (optParticleMovesThisCycle)
-    optSingleStepMove<DIM>();
-
-  // standard particle moves
-  standardMove<DIM,SURF>();
-
-  particle->sorted = 0;
-}
-
-/* ---------------------------------------------------------------------- */
-template<int DIM>
-void Update::optSingleStepMove() {
-  Grid::ChildCell *cells = grid->cells;
-  Particle::OnePart *particles;
-  particles = particle->particles;
-
-  double dx = (domain->boxhi[0] - domain->boxlo[0])/grid->unx;
-  double dy = (domain->boxhi[1] - domain->boxlo[1])/grid->uny;
-
-  double *x,*v;
-  double xnew[3];
-  double dt = update->dt;
-  double dtremain;
-  xnew[2] = 0.0;
-
-  int ip,jp;
-  int nlocal = particle->nlocal;
-  for (int i = 0; i < nlocal; i++) {
-    if (!particles[i].optMoveFlag) continue;
-
-    x = particles[i].x;
-    v = particles[i].v;
-
-    if (particles[i].flag == PINSERT)
-      dtremain = particles[i].dtremain;
-    else
-      dtremain = dt;
-
-    xnew[0] = x[0] + dtremain*v[0];
-    xnew[1] = x[1] + dtremain*v[1];
-
-    ip = static_cast<int>((xnew[0] - domain->boxlo[0])/dx);
-    jp = static_cast<int>((xnew[1] - domain->boxlo[1])/dy);
-
-    int cellIdx = jp*grid->unx + ip + 1;
-    int idx = (*(grid->hash))[cellIdx];
-
-    // particle moving outside ghost cells will be flagged for standard move
-    if (idx == 0) {
-      particles[i].optMoveFlag = false;
-      continue;
-    }
-
-    // reset particle values
-    x[0] = xnew[0];
-    x[1] = xnew[1];
-    x[2] = xnew[2];
-    int icell = idx - 1;
-    particles[i].icell = icell;
-    particles[i].flag = PKEEP;
-    if (cells[particles[i].icell].proc != me) {
-      mlist[nmigrate++] = i;
-      ncomm_one++;
-    }
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-// specialization for DIM=3
-template<>
-void Update::optSingleStepMove<3>() {
-  Grid::ChildCell *cells = grid->cells;
-  Particle::OnePart *particles;
-  particles = particle->particles;
-
-  double dx = (domain->boxhi[0] - domain->boxlo[0])/grid->unx;
-  double dy = (domain->boxhi[1] - domain->boxlo[1])/grid->uny;
-  double dz = (domain->boxhi[2] - domain->boxlo[2])/grid->unz;
-
-  double *x,*v;
-  double xnew[3];
-  double dt = update->dt;
-  double dtremain;
-  int ip,jp,kp;
-
-  int nlocal = particle->nlocal;
-  for (int i = 0; i < nlocal; i++) {
-    if (!particles[i].optMoveFlag) continue;
-
-    x = particles[i].x;
-    v = particles[i].v;
-
-    if (particles[i].flag == PINSERT)
-      dtremain = particles[i].dtremain;
-    else
-      dtremain = dt;
-
-    xnew[0] = x[0] + dtremain*v[0];
-    xnew[1] = x[1] + dtremain*v[1];
-    xnew[2] = x[2] + dtremain*v[2];
-
-    ip = static_cast<int>((xnew[0] - domain->boxlo[0])/dx);
-    jp = static_cast<int>((xnew[1] - domain->boxlo[1])/dy);
-    kp = static_cast<int>((xnew[2] - domain->boxlo[2])/dz);
-
-    int cellIdx = (kp*grid->uny + jp)*grid->unx + ip + 1;
-    int idx = (*(grid->hash))[cellIdx];
-
-    // particle moving outside ghost cells will be flagged for standard move
-    if (idx == 0) {
-      particles[i].optMoveFlag = false;
-      continue;
-    }
-
-    // reset particle values
-    x[0] = xnew[0];
-    x[1] = xnew[1];
-    x[2] = xnew[2];
-    particles[i].icell = idx - 1;
-    particles[i].flag = PKEEP;
-    if (cells[particles[i].icell].proc != me) {
-      mlist[nmigrate++] = i;
-      ncomm_one++;
-    }
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-template < int DIM, int SURF >
-void Update::standardMove() {
-
   bool hitflag;
   int m,icell,icell_original,nmask,outface,bflag,nflag,pflag,itmp;
   int side,minside,minsurf,nsurf,cflag,isurf,exclude,stuck_iterate;
@@ -572,6 +351,8 @@ void Update::standardMove() {
   double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
   double xnew[3],xhold[3],xc[3],vc[3],minxc[3],minvc[3];
   double *x,*v,*lo,*hi;
+  double Lx,Ly,Lz,dx,dy,dz;
+  double *boxlo, *boxhi;
   Grid::ParentCell *pcell;
   Surf::Tri *tri;
   Surf::Line *line;
@@ -579,16 +360,37 @@ void Update::standardMove() {
   Particle::OnePart *particles;
   Particle::OnePart *ipart,*jpart;
 
+  if (enable_optmove) {
+    boxlo = domain->boxlo;
+    boxhi = domain->boxhi;
+    Lx = boxhi[0] - boxlo[0];
+    Ly = boxhi[1] - boxlo[1];
+    Lz = boxhi[2] - boxlo[2];
+    dx = Lx/grid->unx;
+    dy = Ly/grid->uny;
+    dz = Lz/grid->unz;
+  }
+
   // for 2d and axisymmetry only
   // xnew,xc passed to geometry routines which use or set z component
 
   if (DIM < 3) xnew[2] = xc[2] = 0.0;
 
+  // extend migration list if necessary
+
   int nlocal = particle->nlocal;
+  int maxlocal = particle->maxlocal;
+
+  if (nlocal > maxmigrate) {
+    maxmigrate = maxlocal;
+    memory->destroy(mlist);
+    memory->create(mlist,maxmigrate,"particle:mlist");
+  }
 
   // counters
+
   niterate = 0;
-  ntouch_one = 0;
+  ntouch_one = ncomm_one = 0;
   nboundary_one = nexit_one = 0;
   nscheck_one = nscollide_one = 0;
   surf->nreact_one = 0;
@@ -600,8 +402,6 @@ void Update::standardMove() {
   Surf::Tri *tris = surf->tris;
   Surf::Line *lines = surf->lines;
   double dt = update->dt;
-  int notfirst = 0;
-  int nmigrate_opt = nmigrate;
 
   // external per particle field
   // fix calculates field acting on all owned particles
@@ -632,9 +432,6 @@ void Update::standardMove() {
     }
 
     for (int i = pstart; i < pstop; i++) {
-
-      if (particles[i].optMoveFlag) continue;
-
       pflag = particles[i].flag;
 
       // received from another proc and move is done
@@ -692,6 +489,50 @@ void Update::standardMove() {
         xnew[1] = x[1] + dtremain*v[1];
         if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
         if (pflag > PSURF) exclude = pflag - PSURF - 1;
+      }
+
+      if (OPT) {
+        int optmove = 1;
+
+        if (xnew[0] < boxlo[0] || xnew[0] > boxhi[0])
+          optmove = 0;
+
+        if (xnew[1] < boxlo[1] || xnew[1] > boxhi[1])
+          optmove = 0;
+
+        if (DIM == 3) {
+          if (xnew[2] < boxlo[2] || xnew[2] > boxhi[2])
+            optmove = 0;
+        }
+
+        if (optmove) {
+          const int ip = static_cast<int>((xnew[0] - boxlo[0])/dx);
+          const int jp = static_cast<int>((xnew[1] - boxlo[1])/dy);
+          int kp = 0;
+          if (DIM == 3) kp = static_cast<int>((xnew[2] - boxlo[2])/dz);
+
+          int cellIdx = (kp*grid->uny + jp)*grid->unx + ip + 1;
+          int idx = (*(grid->hash))[cellIdx];
+
+          // particle outside ghost grid halo must use standard move
+
+          if (idx != 0) {
+
+            // reset particle cell and coordinates
+
+            int icell = idx - 1;
+            particles[i].icell = icell;
+            particles[i].flag = PKEEP;
+            x[0] = xnew[0];
+            x[1] = xnew[1];
+            x[2] = xnew[2];
+
+            if (cells[icell].proc != me)
+              mlist[nmigrate++] = i;
+
+            continue;
+          }
+        }
       }
 
       particles[i].flag = PKEEP;
@@ -1378,7 +1219,7 @@ void Update::standardMove() {
       particles[i].icell = icell;
 
       if (particles[i].flag != PKEEP) {
-        mlist[nmigrate_opt + nmigrate++] = i;
+        mlist[nmigrate++] = i;
         if (particles[i].flag != PDISCARD) {
           if (cells[icell].proc == me) {
             char str[128];
@@ -1406,11 +1247,11 @@ void Update::standardMove() {
     timer->stamp(TIME_MOVE);
     MPI_Allreduce(&entryexit,&any_entryexit,1,MPI_INT,MPI_MAX,world);
     timer->stamp();
+
     if (any_entryexit) {
       timer->stamp(TIME_MOVE);
-      pstart = comm->migrate_particles(nmigrate_opt + nmigrate,mlist);
+      pstart = comm->migrate_particles(nmigrate,mlist);
       timer->stamp(TIME_COMM);
-      nmigrate_opt = 0;
       pstop = particle->nlocal;
       if (pstop-pstart > maxmigrate) {
         maxmigrate = pstop-pstart;
@@ -1420,13 +1261,15 @@ void Update::standardMove() {
     } else break;
 
     // END of single move/migrate iteration
+
   }
+
   // END of all move/migrate iterations
 
-  if (nmigrate_opt > 0)
-    nmigrate += nmigrate_opt;
+  particle->sorted = 0;
 
   // accumulate running totals
+
   niterate_running += niterate;
   nmove_running += nlocal;
   ntouch_running += ntouch_one;
@@ -1764,7 +1607,7 @@ void Update::global(int narg, char **arg)
       if (fnum <= 0.0) error->all(FLERR,"Illegal global command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"optmove") == 0) {
-      enableOptParticleMoves = true;
+      enable_optmove = 1;
       iarg += 1;
     } else if (strcmp(arg[iarg],"nrho") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");

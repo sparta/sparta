@@ -18,7 +18,6 @@
 #include "update.h"
 #include "kokkos_type.h"
 #include "particle.h"
-#include "particle_kokkos.h"
 #include "grid_kokkos.h"
 #include "domain_kokkos.h"
 #include "kokkos_copy.h"
@@ -84,15 +83,8 @@ struct s_UPDATE_REDUCE {
 };
 typedef struct s_UPDATE_REDUCE UPDATE_REDUCE;
 
-template<int DIM, int SURF, int ATOMIC_REDUCTION>
+template<int DIM, int SURF, int OPT, int ATOMIC_REDUCTION>
 struct TagUpdateMove{};
-
-template<int DIM, int ATOMIC_REDUCTION>
-struct TagUpdateOptSingleStepMove{};
-
-template<int DIM, int SURF>
-struct TagSetParticleOptMoveFlags{};
-
 
 class UpdateKokkos : public Update {
  public:
@@ -110,40 +102,13 @@ class UpdateKokkos : public Update {
   void setup();
   void run(int);
 
-  template<int DIM, int SURF, int ATOMIC_REDUCTION>
+  template<int DIM, int SURF, int OPT, int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const int&) const;
+  void operator()(TagUpdateMove<DIM,SURF,OPT,ATOMIC_REDUCTION>, const int&) const;
 
-  template<int DIM, int SURF, int ATOMIC_REDUCTION>
+  template<int DIM, int SURF, int OPT, int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const int&, UPDATE_REDUCE&) const;
-
-  template<int DIM, int ATOMIC_REDUCTION>
-  KOKKOS_INLINE_FUNCTION
-  void operator()(TagUpdateOptSingleStepMove<DIM,ATOMIC_REDUCTION>, const int&) const;
-
-  template<int DIM, int ATOMIC_REDUCTION>
-  KOKKOS_INLINE_FUNCTION
-  void operator()(TagUpdateOptSingleStepMove<DIM,ATOMIC_REDUCTION>, const int&, UPDATE_REDUCE&) const;
-
-  template<int DIM, int SURF>
-  KOKKOS_INLINE_FUNCTION
-  void operator()(TagSetParticleOptMoveFlags<DIM,SURF>, const int&) const;
-
-
-  // specializations for DIM=3 -----------------------------------------
-  template<int ATOMIC_REDUCTION>
-  KOKKOS_INLINE_FUNCTION
-  void operator()(TagUpdateOptSingleStepMove<3,ATOMIC_REDUCTION>, const int&) const;
-
-  template<int ATOMIC_REDUCTION>
-  KOKKOS_INLINE_FUNCTION
-  void operator()(TagUpdateOptSingleStepMove<3,ATOMIC_REDUCTION>, const int&, UPDATE_REDUCE&) const;
-
-  template<int SURF>
-  KOKKOS_INLINE_FUNCTION
-  void operator()(TagSetParticleOptMoveFlags<3,SURF>, const int&) const;
-
+  void operator()(TagUpdateMove<DIM,SURF,OPT,ATOMIC_REDUCTION>, const int&, UPDATE_REDUCE&) const;
 
  private:
 
@@ -188,11 +153,11 @@ class UpdateKokkos : public Update {
   KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];
 
 
-  typedef Kokkos::DualView<int[13], DeviceType::array_layout, DeviceType> tdual_int_13;
-  typedef tdual_int_13::t_dev t_int_13;
-  typedef tdual_int_13::t_host t_host_int_13;
-  t_int_13 d_scalars;
-  t_host_int_13 h_scalars;
+  typedef Kokkos::DualView<int[12], DeviceType::array_layout, DeviceType> tdual_int_12;
+  typedef tdual_int_12::t_dev t_int_12;
+  typedef tdual_int_12::t_host t_host_int_12;
+  t_int_12 d_scalars;
+  t_host_int_12 h_scalars;
 
   DAT::t_int_scalar d_ntouch_one;
   HAT::t_int_scalar h_ntouch_one;
@@ -205,9 +170,6 @@ class UpdateKokkos : public Update {
 
   DAT::t_int_scalar d_nmigrate;
   HAT::t_int_scalar h_nmigrate;
-
-  DAT::t_int_scalar d_nmigrate_opt;
-  HAT::t_int_scalar h_nmigrate_opt;
 
   DAT::t_int_scalar d_entryexit;
   HAT::t_int_scalar h_entryexit;
@@ -256,7 +218,7 @@ class UpdateKokkos : public Update {
 
   typedef void (UpdateKokkos::*FnPtr)();
   FnPtr moveptr;             // ptr to move method
-  template < int, int > void move();
+  template < int, int, int > void move();
 
   //typedef void (UpdateKokkos::*FnPtr2)(int, int, double, double *, double *) const;
   //FnPtr2 moveperturb;        // ptr to moveperturb method
@@ -352,14 +314,6 @@ class UpdateKokkos : public Update {
       icol++;
     }
   };
-
-  // original move logic by particle (non-optimized move)
-  template<int DIM, int SURF>
-  void standardMove();
-
-  // optimized single step move by particle (requires structured grid)
-  template<int DIM>
-  void optSingleStepMove();
 };
 
 }

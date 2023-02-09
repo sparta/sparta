@@ -76,7 +76,6 @@ class Particle : protected Pointers {
     double erot;            // rotational energy
     double evib;            // vibrational energy
     int flag;               // used for migration status
-    bool optMoveFlag;       // indicator for 1-step optimized move
     double dtremain;        // portion of move timestep remaining
     double weight;          // particle or cell weight, if weighting enabled
   };

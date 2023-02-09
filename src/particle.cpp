@@ -223,7 +223,7 @@ void Particle::compress_migrate(int nmigrate, int *mlist)
   // was taken so that when SPARTA_KOKKOS_EXACT is defined at compile
   // time, the compress_reactions routine will be called for Kokkos and
   // non-Kokkos execution when optimized particle moves are utilized.
-  if (update->optParticleMovesThisCycle) {
+  if (update->optmove_flag) {
     compress_reactions(nmigrate, mlist);
     return;
   }
@@ -670,7 +670,6 @@ int Particle::add_particle(int id, int ispecies, int icell,
   p->erot = erot;
   p->evib = evib;
   p->flag = PKEEP;
-  p->optMoveFlag = false;
 
   //p->dtremain = 0.0;    not needed due to memset in grow() ??
   //p->weight = 1.0;      not needed due to memset in grow() ??

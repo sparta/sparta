@@ -38,8 +38,8 @@ class Update : protected Pointers {
   double nrho;           // number density of background gas
   double vstream[3];     // streaming velocity of background gas
   double temp_thermal;   // thermal temperature of background gas
-  bool enableOptParticleMoves;    // flag to enable optimized particle moves if possible
-  bool optParticleMovesThisCycle; // flag for use of optimized particle moves this cycle
+  int enable_optmove;    // global optmove option set
+  int optmove_flag;      // use optimized particle moves this timestep
 
   int fstyle;            // external field: NOFIELD, CFIELD, PFIELD, GFIELD
   double field[3];       // constant external field
@@ -167,12 +167,8 @@ class Update : protected Pointers {
   };
 
   typedef void (Update::*FnPtr)();
-  FnPtr moveptr;                                            // ptr to move method
-  template<int SURF> void setParticleOptMoveFlags2D();      // set particle flags for 2D optimized moves
-  template<int SURF> void setParticleOptMoveFlags3D();      // set particle flags for 3D optimized moves
-  template<int DIM> void optSingleStepMove();               // optimized single step move
-  template < int DIM, int SURF> void move();                // general move driver combining standard and opt moves
-  template<int DIM, int SURF> void standardMove();          // original move logic by particle (non-optimized move)
+  FnPtr moveptr;             // ptr to move method
+  template < int, int, int > void move();
 
   int perturbflag;
   typedef void (Update::*FnPtr2)(int, int, double, double *, double *);
@@ -204,8 +200,6 @@ class Update : protected Pointers {
   void field_per_particle(int, int, double, double *, double *);
   void field_per_grid(int, int, double, double *, double *);
 };
-
-template<> void Update::optSingleStepMove<3>();
 
 }
 
