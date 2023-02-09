@@ -156,7 +156,7 @@ void SurfCollideDiffuseKokkos::pre_collide()
     auto h_ewhich = surf_kk->k_ewhich.h_view;
     auto h_edvec = surf_kk->k_edvec.h_view;
     d_tvector = h_edvec[h_ewhich[tindex]].k_view.d_view;
-  } 
+  }
 
   rotstyle = NONE;
   if (Pointers::collide) rotstyle = Pointers::collide->rotstyle;

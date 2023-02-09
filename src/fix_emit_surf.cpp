@@ -925,7 +925,7 @@ void FixEmitSurf::grow_task()
   int oldmax = ntaskmax;
   ntaskmax += DELTATASK;
   tasks = (Task *) memory->srealloc(tasks,ntaskmax*sizeof(Task),
-				    "emit/face:tasks");
+                                    "emit/face:tasks");
 
   // set all new task bytes to 0 so valgrind won't complain
   // if bytes between fields are uninitialized

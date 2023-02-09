@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -457,8 +457,8 @@ int MPI_Allreduce(void *sendbuf, void *recvbuf, int count,
 /* copy values from data1 to data2 */
 
 int MPI_Reduce(void *sendbuf, void *recvbuf, int count,
-		   MPI_Datatype datatype, MPI_Op op,
-		   int root, MPI_Comm comm)
+                   MPI_Datatype datatype, MPI_Op op,
+                   int root, MPI_Comm comm)
 {
   int n = count * stubtypesize(datatype);
 
@@ -544,8 +544,8 @@ int MPI_Gather(void *sendbuf, int sendcount, MPI_Datatype sendtype,
 /* copy values from data1 to data2 */
 
 int MPI_Gatherv(void *sendbuf, int sendcount, MPI_Datatype sendtype,
-		void *recvbuf, int *recvcounts, int *displs,
-		MPI_Datatype recvtype, int root, MPI_Comm comm)
+                void *recvbuf, int *recvcounts, int *displs,
+                MPI_Datatype recvtype, int root, MPI_Comm comm)
 {
   int n = sendcount * stubtypesize(sendtype);
 
@@ -575,8 +575,8 @@ int MPI_Scatter(void *sendbuf, int sendcount, MPI_Datatype sendtype,
 /* copy values from data1 to data2 */
 
 int MPI_Scatterv(void *sendbuf, int *sendcounts, int *displs,
-		 MPI_Datatype sendtype, void *recvbuf, int recvcount,
-		 MPI_Datatype recvtype, int root, MPI_Comm comm)
+                 MPI_Datatype sendtype, void *recvbuf, int recvcount,
+                 MPI_Datatype recvtype, int root, MPI_Comm comm)
 {
   int n = recvcount * stubtypesize(recvtype);
 

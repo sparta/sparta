@@ -158,7 +158,7 @@ void FixMoveSurf::end_of_step()
     int nglocal = grid->nlocal;
     for (int icell = 0; icell < nglocal; icell++)
       if (cells[icell].nsplit > 1)
-	grid->combine_split_cell_particles(icell,1);
+        grid->combine_split_cell_particles(icell,1);
   }
 
   grid->clear_surf();

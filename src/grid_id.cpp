@@ -37,7 +37,7 @@ enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 ------------------------------------------------------------------------- */
 
 void Grid::id_point_child(double *x, double *lo, double *hi,
-			  int nx, int ny, int nz, int &ix, int &iy, int &iz)
+                          int nx, int ny, int nz, int &ix, int &iy, int &iz)
 {
   // ix,iy,iz = child cell indices within parent lo/hi cell
   // inverse of master equation in id_child_lohi() for cell boundaries
@@ -104,7 +104,7 @@ cellint Grid::id_parent_of_child(cellint childID, int level)
 ------------------------------------------------------------------------- */
 
 int Grid::id_find_child(cellint parentID, int plevel,
-			double *oplo, double *ophi, double *x)
+                        double *oplo, double *ophi, double *x)
 {
   int ix,iy,iz,nx,ny,nz;
   double plo[3],phi[3],clo[3],chi[3];
@@ -190,8 +190,8 @@ cellint Grid::id_uniform_level(int level, int xgrid, int ygrid, int zgrid)
 ------------------------------------------------------------------------- */
 
 void Grid::id_find_child_uniform_level(int level, int lohi,
-				       double *boxlo, double *boxhi, double *x,
-				       int &xgrid, int &ygrid, int &zgrid)
+                                       double *boxlo, double *boxhi, double *x,
+                                       int &xgrid, int &ygrid, int &zgrid)
 {
   int ix,iy,iz,nx,ny,nz;
   double plo[3],phi[3],clo[3],chi[3];
@@ -447,7 +447,7 @@ int Grid::id_level(cellint id)
 ------------------------------------------------------------------------- */
 
 void Grid::id_child_lohi(int plevel, double *plo, double *phi,
-			 cellint ichild, double *clo, double *chi)
+                         cellint ichild, double *clo, double *chi)
 {
   int nx = plevels[plevel].nx;
   int ny = plevels[plevel].ny;
@@ -478,7 +478,7 @@ void Grid::id_child_lohi(int plevel, double *plo, double *phi,
 ------------------------------------------------------------------------- */
 
 void Grid::id_lohi(cellint id, int level, double *boxlo, double *boxhi,
-		   double *lo, double *hi)
+                   double *lo, double *hi)
 {
   int childbits;
   cellint ichild,mask;

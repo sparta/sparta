@@ -171,7 +171,7 @@ void Image::buffers()
 ------------------------------------------------------------------------- */
 
 void Image::view_params(double boxxlo, double boxxhi, double boxylo,
-			double boxyhi, double boxzlo, double boxzhi)
+                        double boxyhi, double boxzlo, double boxzhi)
 {
   // camDir points at the camera, view direction = -camDir
 
@@ -320,14 +320,14 @@ void Image::merge()
       MPI_Irecv(rgbcopy,npixels*3,MPI_BYTE,me+nhalf,0,world,&requests[0]);
       MPI_Irecv(depthcopy,npixels,MPI_DOUBLE,me+nhalf,0,world,&requests[1]);
       if (ssao)
-	MPI_Irecv(surfacecopy,npixels*2,MPI_DOUBLE,
-		  me+nhalf,0,world,&requests[2]);
+        MPI_Irecv(surfacecopy,npixels*2,MPI_DOUBLE,
+                  me+nhalf,0,world,&requests[2]);
       if (ssao) MPI_Waitall(3,requests,statuses);
       else MPI_Waitall(2,requests,statuses);
 
       for (int i = 0; i < npixels; i++) {
         if (depthBuffer[i] < 0 || (depthcopy[i] >= 0 &&
-				   depthcopy[i] < depthBuffer[i])) {
+                                   depthcopy[i] < depthBuffer[i])) {
           depthBuffer[i] = depthcopy[i];
           imageBuffer[i*3+0] = rgbcopy[i*3+0];
           imageBuffer[i*3+1] = rgbcopy[i*3+1];
@@ -579,31 +579,31 @@ void Image::draw_brick(double *x, double *surfaceColor, double *diameter)
           tdir[2] = camDir[2] * t;
 
           bool xin = ((surface[0]+tdir[0]) >= -radius[0]) &&
-	    ((surface[0]+tdir[0]) <= radius[0]);
+            ((surface[0]+tdir[0]) <= radius[0]);
           bool yin = ((surface[1]+tdir[1]) >= -radius[1]) &&
-	    ((surface[1]+tdir[1]) <= radius[1]);
+            ((surface[1]+tdir[1]) <= radius[1]);
           bool zin = ((surface[2]+tdir[2]) >= -radius[2]) &&
-	    ((surface[2]+tdir[2]) <= radius[2]);
+            ((surface[2]+tdir[2]) <= radius[2]);
 
           switch (dim) {
-	  case 0:
-	    if (yin & zin) {
-	      depth = dist - t;
-	      draw_pixel (ix, iy, depth, normal, surfaceColor);
-	    }
-	    break;
-	  case 1:
-	    if (xin & zin) {
-	      depth = dist - t;
-	      draw_pixel (ix, iy, depth, normal, surfaceColor);
-	    }
-	    break;
-	  case 2:
-	    if (xin & yin) {
-	      depth = dist - t;
-	      draw_pixel (ix, iy, depth, normal, surfaceColor);
-	    }
-	    break;
+          case 0:
+            if (yin & zin) {
+              depth = dist - t;
+              draw_pixel (ix, iy, depth, normal, surfaceColor);
+            }
+            break;
+          case 1:
+            if (xin & zin) {
+              depth = dist - t;
+              draw_pixel (ix, iy, depth, normal, surfaceColor);
+            }
+            break;
+          case 2:
+            if (xin & yin) {
+              depth = dist - t;
+              draw_pixel (ix, iy, depth, normal, surfaceColor);
+            }
+            break;
           }
         }
       }
@@ -621,7 +621,7 @@ void Image::draw_brick(double *x, double *surfaceColor, double *diameter)
 ------------------------------------------------------------------------- */
 
 void Image::draw_cylinder(double *x, double *y,
-			  double *surfaceColor, double diameter, int sflag)
+                          double *surfaceColor, double diameter, int sflag)
 {
   double surface[3], normal[3];
   double mid[3],xaxis[3],yaxis[3],zaxis[3];
@@ -903,11 +903,11 @@ void Image::draw_triangle(double *x, double *y, double *z, double *surfaceColor)
 /* ---------------------------------------------------------------------- */
 
 void Image::draw_pixel(int ix, int iy, double depth,
-			   double *surface, double *surfaceColor)
+                           double *surface, double *surfaceColor)
 {
   double diffuseKey,diffuseFill,diffuseBack,specularKey;
   if (depth < 0 || (depthBuffer[ix + iy*width] >= 0 &&
-		    depth >= depthBuffer[ix + iy*width])) return;
+                    depth >= depthBuffer[ix + iy*width])) return;
   depthBuffer[ix + iy*width] = depth;
 
   // store only the tangent relative to the camera normal (0,0,-1)
@@ -919,7 +919,7 @@ void Image::draw_pixel(int ix, int iy, double depth,
   diffuseFill = saturate(MathExtra::dot3(surface, fillLightDir));
   diffuseBack = saturate(MathExtra::dot3(surface, backLightDir));
   specularKey = pow(saturate(MathExtra::dot3(surface, keyHalfDir)),
-		    specularHardness) * specularIntensity;
+                    specularHardness) * specularIntensity;
 
   double c[3];
   c[0] = surfaceColor[0] * ambientColor[0];
@@ -962,7 +962,7 @@ void Image::compute_SSAO()
   // typical neighborhood value for shading
 
   double pixelWidth = (tanPerPixel > 0) ? tanPerPixel :
-	-tanPerPixel / zoom;
+        -tanPerPixel / zoom;
   int pixelRadius = (int) trunc (SSAORadius / pixelWidth + 0.5);
 
   // each proc is assigned a subset of contiguous pixels from the full image

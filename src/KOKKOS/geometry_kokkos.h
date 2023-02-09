@@ -62,8 +62,8 @@ int whichside(double *v, double *norm, double x, double y, double z)
 
 KOKKOS_INLINE_FUNCTION
 bool line_line_intersect(double *start, double *stop,
-			 double *v0, double *v1, double *norm,
-			 double *point, double &param, int &side, int id=0)
+                         double *v0, double *v1, double *norm,
+                         double *point, double &param, int &side, int id=0)
 {
   (void)id;
   double vec[3],start2stop[3],edge[3],pvec[3];
@@ -398,8 +398,8 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
 
 KOKKOS_INLINE_FUNCTION
 bool line_tri_intersect(double *start, double *stop,
-			double *v0, double *v1, double *v2, double *norm,
-			double *point, double &param, int &side)
+                        double *v0, double *v1, double *v2, double *norm,
+                        double *point, double &param, int &side)
 {
   double vec[3],start2stop[3],edge[3],pvec[3],xproduct[3];
 
@@ -487,7 +487,7 @@ bool line_tri_intersect(double *start, double *stop,
 
 KOKKOS_INLINE_FUNCTION
 int line_quad_intersect(double *v0, double *v1, double *norm,
-			double *lo, double *hi)
+                        double *lo, double *hi)
 {
   int sum,side;
   double xlo,xhi,ylo,yhi,param;
@@ -513,7 +513,7 @@ int line_quad_intersect(double *v0, double *v1, double *norm,
   sum += whichside(v0,norm,xhi,yhi,0.0);
 
   if (sum == 4 || sum == -4) return 0;
-	
+
   // test 4 quad edges for intersection with line
   // b,e = begin/end of quad edge line segment
 
@@ -547,7 +547,7 @@ int line_quad_intersect(double *v0, double *v1, double *norm,
 
 KOKKOS_INLINE_FUNCTION
 int quad_line_intersect_point(double *v0, double *v1, double *norm,
-			      double *lo, double *hi, double *xc)
+                              double *lo, double *hi, double *xc)
 {
   int side;
   double xlo,xhi,ylo,yhi,param;
@@ -592,7 +592,7 @@ int quad_line_intersect_point(double *v0, double *v1, double *norm,
 
 KOKKOS_INLINE_FUNCTION
 int line_quad_face_touch(double *v0, double *v1, int iface,
-			 double *lo, double *hi)
+                         double *lo, double *hi)
 {
   // value = position of face
 
@@ -624,7 +624,7 @@ int line_quad_face_touch(double *v0, double *v1, int iface,
 
 KOKKOS_INLINE_FUNCTION
 int tri_hex_intersect(double *v0, double *v1, double *v2, double *norm,
-		      double *lo, double *hi)
+                      double *lo, double *hi)
 {
   int sum,side;
   double xlo,xhi,ylo,yhi,zlo,zhi,param;
@@ -798,7 +798,7 @@ int tri_hex_intersect(double *v0, double *v1, double *v2, double *norm,
 
 KOKKOS_INLINE_FUNCTION
 int hex_tri_intersect_point(double *v0, double *v1, double *v2, double *norm,
-			    double *lo, double *hi, double *xc)
+                            double *lo, double *hi, double *xc)
 {
   int side;
   double xlo,xhi,ylo,yhi,zlo,zhi,param;
@@ -948,7 +948,7 @@ int hex_tri_intersect_point(double *v0, double *v1, double *v2, double *norm,
 
 KOKKOS_INLINE_FUNCTION
 int tri_hex_face_touch(double *v0, double *v1, double *v2, int iface,
-		       double *lo, double *hi)
+                       double *lo, double *hi)
 {
   // value = position of face
 
@@ -967,15 +967,15 @@ int tri_hex_face_touch(double *v0, double *v1, double *v2, int iface,
 
   if (v0[dim] == value) {
     if (v0[other1] >= lo[other1] && v0[other1] <= hi[other1] &&
-	v0[other2] >= lo[other2] && v0[other2] <= hi[other2]) return 1;
+        v0[other2] >= lo[other2] && v0[other2] <= hi[other2]) return 1;
   }
   if (v1[dim] == value) {
     if (v1[other1] >= lo[other1] && v1[other1] <= hi[other1] &&
-	v1[other2] >= lo[other2] && v1[other2] <= hi[other2]) return 1;
+        v1[other2] >= lo[other2] && v1[other2] <= hi[other2]) return 1;
   }
   if (v2[dim] == value) {
     if (v2[other1] >= lo[other1] && v2[other1] <= hi[other1] &&
-	v2[other2] >= lo[other2] && v2[other2] <= hi[other2]) return 1;
+        v2[other2] >= lo[other2] && v2[other2] <= hi[other2]) return 1;
   }
 
   return 0;

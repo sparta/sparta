@@ -123,7 +123,7 @@ void MoveSurf::command(int narg, char **arg)
     int nglocal = grid->nlocal;
     for (int icell = 0; icell < nglocal; icell++)
       if (cells[icell].nsplit > 1)
-	grid->combine_split_cell_particles(icell,1);
+        grid->combine_split_cell_particles(icell,1);
   }
 
   grid->clear_surf();
@@ -174,23 +174,23 @@ void MoveSurf::command(int narg, char **arg)
   if (comm->me == 0) {
     if (screen) {
       if (particle->exist)
-	fprintf(screen,"  " BIGINT_FORMAT " deleted particles\n",ndeleted);
+        fprintf(screen,"  " BIGINT_FORMAT " deleted particles\n",ndeleted);
       fprintf(screen,"  CPU time = %g secs\n",time_total);
       fprintf(screen,"  sort/surf2grid/ghost/inout/particle percent = "
-	      "%g %g %g %g %g\n",
+              "%g %g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
               100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
-	      100.0*(time6-time5)/time_total);
+              100.0*(time6-time5)/time_total);
     }
     if (logfile) {
       if (particle->exist)
-	fprintf(logfile,"  " BIGINT_FORMAT " deleted particles\n",ndeleted);
+        fprintf(logfile,"  " BIGINT_FORMAT " deleted particles\n",ndeleted);
       fprintf(logfile,"  CPU time = %g secs\n",time_total);
       fprintf(logfile,"  sort/surf2grid/ghost/inout/particle percent = "
-	      "%g %g %g %g %g\n",
+              "%g %g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
               100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
-	      100.0*(time6-time5)/time_total);
+              100.0*(time6-time5)/time_total);
     }
   }
 }
@@ -337,13 +337,13 @@ void MoveSurf::readfile()
   if (me == 0) {
     while (1) {
       if (fgets(line,MAXLINE,fp) == NULL)
-	error->one(FLERR,"Did not find entry in move surf file");
+        error->one(FLERR,"Did not find entry in move surf file");
       if (strspn(line," \t\n\r") == strlen(line)) continue;  // blank line
       if (line[0] == '#') continue;                          // comment
       word = strtok(line," \t\n\r");
       if (strcmp(word,entry) != 0) continue;          // non-matching entry
       if (fgets(line,MAXLINE,fp) == NULL)
-	error->one(FLERR,"Incompete entry in move surf file");
+        error->one(FLERR,"Incompete entry in move surf file");
       word = strtok(line," \t\n\r");        // npoints value after entry
       nread = input->inumeric(FLERR,word);
     }
@@ -383,7 +383,7 @@ void MoveSurf::readfile()
       if (dim == 3) z = input->numeric(FLERR,strtok(NULL," \t\n\r"));
       else z = 0.0;
       if (id < 1 || id > npoint)
-	error->one(FLERR,"Invalid point index in move surf file");
+        error->one(FLERR,"Invalid point index in move surf file");
       id--;
       readindex[i] = id;
       oldcoord[i][0] = pts[id].x[0];
@@ -850,25 +850,25 @@ bigint MoveSurf::remove_particles()
 
       int m;
       if (dim == 2) {
-	for (m = 0; m < nsurf; m++) {
+        for (m = 0; m < nsurf; m++) {
           isurf = csurfs[m];
-	  if (pselect[2*isurf]) break;
-	  if (pselect[2*isurf+1]) break;
-	}
+          if (pselect[2*isurf]) break;
+          if (pselect[2*isurf+1]) break;
+        }
       } else {
-	for (m = 0; m < nsurf; m++) {
+        for (m = 0; m < nsurf; m++) {
           isurf = csurfs[m];
-	  if (pselect[3*isurf]) break;
-	  if (pselect[3*isurf+1]) break;
-	  if (pselect[3*isurf+2]) break;
-	}
+          if (pselect[3*isurf]) break;
+          if (pselect[3*isurf+1]) break;
+          if (pselect[3*isurf+2]) break;
+        }
       }
 
       if (m < nsurf) {
-	if (cinfo[icell].count) delflag = 1;
-	particle->remove_all_from_cell(cinfo[icell].first);
-	cinfo[icell].count = 0;
-	cinfo[icell].first = -1;
+        if (cinfo[icell].count) delflag = 1;
+        particle->remove_all_from_cell(cinfo[icell].first);
+        cinfo[icell].count = 0;
+        cinfo[icell].first = -1;
       }
     }
 

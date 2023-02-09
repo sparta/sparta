@@ -769,7 +769,7 @@ void Irregular::exchange_uniform(char *sendbuf, int nbytes, char *recvbuf)
   offset = num_self*nbytes;
   for (int irecv = 0; irecv < nrecv; irecv++) {
     MPI_Irecv(&recvbuf[offset],num_recv[irecv]*nbytes,MPI_CHAR,
-	      proc_recv[irecv],0,world,&request[irecv]);
+              proc_recv[irecv],0,world,&request[irecv]);
     offset += num_recv[irecv]*nbytes;
   }
 
@@ -832,7 +832,7 @@ void Irregular::exchange_variable(char *sendbuf, int *nbytes, char *recvbuf)
   offset = size_self;
   for (int irecv = 0; irecv < nrecv; irecv++) {
     MPI_Irecv(&recvbuf[offset],size_recv[irecv],MPI_CHAR,
-	      proc_recv[irecv],0,world,&request[irecv]);
+              proc_recv[irecv],0,world,&request[irecv]);
     offset += size_recv[irecv];
   }
 

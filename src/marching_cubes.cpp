@@ -1343,7 +1343,7 @@ bool MarchingCubes::modified_test_interior(int s, int icase)
     inter_amb = interior_ambiguity_verification(edge);
 
     if (inter_amb == 0) return false;
-    else		return true;
+    else                return true;
 
     break;
 

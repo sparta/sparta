@@ -332,10 +332,10 @@ struct s_EV_FLOAT {
   E_FLOAT v[6];
   KOKKOS_INLINE_FUNCTION
   s_EV_FLOAT() {
-	  evdwl = 0;
-	  ecoul = 0;
-	  v[0] = 0; v[1] = 0; v[2] = 0;
-	  v[3] = 0; v[4] = 0; v[5] = 0;
+    evdwl = 0;
+    ecoul = 0;
+    v[0] = 0; v[1] = 0; v[2] = 0;
+    v[3] = 0; v[4] = 0; v[5] = 0;
   }
 
   KOKKOS_INLINE_FUNCTION

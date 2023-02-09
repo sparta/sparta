@@ -49,7 +49,7 @@ void CreateBox::command(int narg, char **arg)
   if (domain->dimension == 2) {
     if (domain->boxlo[2] >= 0.0 || domain->boxhi[2] <= 0.0)
       error->all(FLERR,
-		 "Create_box z box bounds must straddle 0.0 "
+                 "Create_box z box bounds must straddle 0.0 "
                  "for 2d simulations");
   }
   if (domain->axisymmetric && domain->boxlo[1] != 0.0)

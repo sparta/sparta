@@ -325,7 +325,7 @@ void ComputeTvibGrid::compute_per_grid()
         j = s2t_mode[ispecies][imode];
         if (nmode > 1) tally[icell][j] += vibmode[i][imode];
         else tally[icell][j] +=
-	       particles[i].evib / (boltz*species[ispecies].vibtemp[0]);
+               particles[i].evib / (boltz*species[ispecies].vibtemp[0]);
         tally[icell][j+1] += 1.0;
       }
     }
