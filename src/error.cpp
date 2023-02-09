@@ -37,9 +37,9 @@ void Error::universe_all(const char *file, int line, const char *str)
 
   if (universe->me == 0) {
     if (universe->uscreen) fprintf(universe->uscreen,
-				   "ERROR: %s (%s:%d)\n",str,file,line);
+                                   "ERROR: %s (%s:%d)\n",str,file,line);
     if (universe->ulogfile) fprintf(universe->ulogfile,
-				    "ERROR: %s (%s:%d)\n",str,file,line);
+                                    "ERROR: %s (%s:%d)\n",str,file,line);
   }
 
   if (output) delete output;
@@ -62,7 +62,7 @@ void Error::universe_one(const char *file, int line, const char *str)
 {
   if (universe->uscreen) {
     fprintf(universe->uscreen,"ERROR on proc %d: %s (%s:%d)\n",
-	    universe->me,str,file,line);
+            universe->me,str,file,line);
     fflush(universe->uscreen);
   }
   MPI_Abort(universe->uworld,1);
@@ -111,7 +111,7 @@ void Error::one(const char *file, int line, const char *str)
   }
   if (universe->nworlds > 1) {
     fprintf(universe->uscreen,"ERROR on proc %d: %s (%s:%d)\n",
-	    universe->me,str,file,line);
+            universe->me,str,file,line);
     fflush(universe->uscreen);
   }
   MPI_Abort(world,1);
@@ -126,7 +126,7 @@ void Error::warning(const char *file, int line, const char *str, int logflag)
 {
   if (screen) fprintf(screen,"WARNING: %s (%s:%d)\n",str,file,line);
   if (logflag && logfile) fprintf(logfile,"WARNING: %s (%s:%d)\n",
-				  str,file,line);
+                                  str,file,line);
 }
 
 /* ----------------------------------------------------------------------

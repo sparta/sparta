@@ -832,19 +832,19 @@ void Cut3d::clip_tris()
           if (p2flag == OUTSIDE || p2flag == OVERLAP) edge_remove(edge,idir);
           else {
             if (idir == 0) between(p1,p2,dim,value,edge->p1);
-	    else between(p1,p2,dim,value,edge->p2);
-	    edge->clipped = 1;
+            else between(p1,p2,dim,value,edge->p2);
+            edge->clipped = 1;
           }
         } else if (p1flag == INSIDE) {
           if (p2flag == OUTSIDE) {
             if (idir == 0) between(p1,p2,dim,value,edge->p2);
-	    else between(p1,p2,dim,value,edge->p1);
-	    edge->clipped = 1;
-	  }
+            else between(p1,p2,dim,value,edge->p1);
+            edge->clipped = 1;
+          }
         } else {
           if (p2flag == OUTSIDE) edge_remove(edge,idir);
         }
-	
+
         iedge = edge->next[idir];
         idir = edge->dirnext[idir];
       }
@@ -2287,11 +2287,11 @@ void Cut3d::failed_cell()
   for (int i = 0; i < nsurf; i++) {
     printf("  surf " SURFINT_FORMAT ":\n",tris[surfs[i]].id);
     printf("     p1: %g %g %g\n",
-	   tris[surfs[i]].p1[0],tris[surfs[i]].p1[1],tris[surfs[i]].p1[2]);
+           tris[surfs[i]].p1[0],tris[surfs[i]].p1[1],tris[surfs[i]].p1[2]);
     printf("     p2: %g %g %g\n",
-	   tris[surfs[i]].p2[0],tris[surfs[i]].p2[1],tris[surfs[i]].p2[2]);
+           tris[surfs[i]].p2[0],tris[surfs[i]].p2[1],tris[surfs[i]].p2[2]);
     printf("     p3: %g %g %g\n",
-	   tris[surfs[i]].p3[0],tris[surfs[i]].p3[1],tris[surfs[i]].p3[2]);
+           tris[surfs[i]].p3[0],tris[surfs[i]].p3[1],tris[surfs[i]].p3[2]);
   }
 }
 

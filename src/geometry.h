@@ -17,22 +17,22 @@
 
 namespace Geometry {
   int line_quad_intersect(double *, double *, double *,
-			  double *, double *);
+                          double *, double *);
   int quad_line_intersect_point(double *, double *, double *,
-				double *, double *, double *);
+                                double *, double *, double *);
   int line_touch_quad_face(double *, double *, int, double *, double *);
 
   int tri_hex_intersect(double *, double *, double *, double *,
-			double *, double *);
+                        double *, double *);
   int hex_tri_intersect_point(double *, double *, double *, double *,
-			      double *, double *, double *);
+                              double *, double *, double *);
   int tri_touch_hex_face(double *, double *, double *, int, double *, double *);
   int tri_on_hex_face(double *, double *, double *, double *, double *);
   int edge_on_hex_face(double *, double *, double *, double *);
 
   bool line_line_intersect(double *, double *,
-			   double *, double *, double *,
-			   double *, double &param, int &, int=0);
+                           double *, double *, double *,
+                           double *, double &param, int &, int=0);
 
   bool axi_line_intersect(double, double *, double *, int, double *, double *,
                           double *, double *, double *, int,
@@ -41,8 +41,8 @@ namespace Geometry {
                            int &, double &, double &);
 
   bool line_tri_intersect(double *, double *,
-			  double *, double *, double *, double *,
-			  double *, double &param, int &);
+                          double *, double *, double *, double *,
+                          double *, double &param, int &);
   int whichside(double *, double *, double, double, double);
   int point_on_hex(double *, double *, double *);
   int point_in_hex(double *, double *, double *);

@@ -152,7 +152,7 @@ void ComputeReactSurf::init()
     char str[128];
     sprintf(str,
             "Compute react/surf " BIGINT_FORMAT
-	    " surfs are not assigned to surf react model",flagall);
+            " surfs are not assigned to surf react model",flagall);
     error->warning(FLERR,str);
   }
 

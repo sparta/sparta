@@ -73,7 +73,7 @@ class DumpParticle : public Dump {
   int *custom;               // list of indices for the Custom attributes
 
   int ntypes;                // # of particle types
-  char **typenames;	     // array of element names for each type
+  char **typenames;             // array of element names for each type
 
   virtual void init_style();
   void write_header(bigint);

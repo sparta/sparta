@@ -193,7 +193,7 @@ void ReadSurf::command(int narg, char **arg)
     int nglocal = grid->nlocal;
     for (int icell = 0; icell < nglocal; icell++)
       if (cells[icell].nsplit > 1)
-	grid->combine_split_cell_particles(icell,1);
+        grid->combine_split_cell_particles(icell,1);
   }
 
   grid->clear_surf();
@@ -248,38 +248,38 @@ void ReadSurf::command(int narg, char **arg)
 
     for (int icell = 0; icell < nglocal; icell++) {
       if (cinfo[icell].type == INSIDE) {
-	if (partflag == KEEP)
+        if (partflag == KEEP)
           error->one(FLERR,"Particles are inside new surfaces");
-	if (cinfo[icell].count) delflag = 1;
-	particle->remove_all_from_cell(cinfo[icell].first);
-	cinfo[icell].count = 0;
-	cinfo[icell].first = -1;
-	continue;
+        if (cinfo[icell].count) delflag = 1;
+        particle->remove_all_from_cell(cinfo[icell].first);
+        cinfo[icell].count = 0;
+        cinfo[icell].first = -1;
+        continue;
       }
       if (cells[icell].nsurf && cells[icell].nsplit >= 1) {
-	int nsurf = cells[icell].nsurf;
-	surfint *csurfs = cells[icell].csurfs;
-	int m;
-	if (dim == 2) {
+        int nsurf = cells[icell].nsurf;
+        surfint *csurfs = cells[icell].csurfs;
+        int m;
+        if (dim == 2) {
           Surf::Line *lines = surf->lines;
-	  for (m = 0; m < nsurf; m++) {
-	    if (lines[csurfs[m]].id > nsurf_total_old) break;
-	  }
-	} else {
+          for (m = 0; m < nsurf; m++) {
+            if (lines[csurfs[m]].id > nsurf_total_old) break;
+          }
+        } else {
           Surf::Tri *tris = surf->tris;
-	  for (m = 0; m < nsurf; m++) {
-	    if (tris[csurfs[m]].id >= nsurf_total_old) break;
-	  }
-	}
-	if (m < nsurf && partflag == CHECK) {
-	  if (cinfo[icell].count) delflag = 1;
-	  particle->remove_all_from_cell(cinfo[icell].first);
-	  cinfo[icell].count = 0;
-	  cinfo[icell].first = -1;
-	}
+          for (m = 0; m < nsurf; m++) {
+            if (tris[csurfs[m]].id >= nsurf_total_old) break;
+          }
+        }
+        if (m < nsurf && partflag == CHECK) {
+          if (cinfo[icell].count) delflag = 1;
+          particle->remove_all_from_cell(cinfo[icell].first);
+          cinfo[icell].count = 0;
+          cinfo[icell].first = -1;
+        }
       }
       if (cells[icell].nsplit > 1)
-	grid->assign_split_cell_particles(icell);
+        grid->assign_split_cell_particles(icell);
     }
     int nlocal_old = particle->nlocal;
     if (delflag) particle->compress_rebalance();
@@ -298,7 +298,7 @@ void ReadSurf::command(int narg, char **arg)
   if (comm->me == 0) {
     if (screen) {
       if (particle->exist)
-	fprintf(screen,"  " BIGINT_FORMAT " deleted particles\n",ndeleted);
+        fprintf(screen,"  " BIGINT_FORMAT " deleted particles\n",ndeleted);
       fprintf(screen,"  CPU time = %g secs\n",time_total);
       fprintf(screen,"  read/check/sort/surf2grid/ghost/"
               "inout/particle percent = "
@@ -309,15 +309,15 @@ void ReadSurf::command(int narg, char **arg)
               100.0*(time8-time7)/time_total);
       fprintf(screen,"  surf2grid time = %g secs\n",time_s2g);
       fprintf(screen,"  map/comm1/comm2/comm3/comm4/split percent = "
-	      "%g %g %g %g %g %g\n",
-	      100.0*grid->tmap/time_s2g,100.0*grid->tcomm1/time_s2g,
-	      100.0*grid->tcomm2/time_s2g,100.0*grid->tcomm3/time_s2g,
-	      100.0*grid->tcomm4/time_s2g,100.0*grid->tsplit/time_s2g);
+              "%g %g %g %g %g %g\n",
+              100.0*grid->tmap/time_s2g,100.0*grid->tcomm1/time_s2g,
+              100.0*grid->tcomm2/time_s2g,100.0*grid->tcomm3/time_s2g,
+              100.0*grid->tcomm4/time_s2g,100.0*grid->tsplit/time_s2g);
     }
 
     if (logfile) {
       if (particle->exist)
-	fprintf(logfile,"  " BIGINT_FORMAT " deleted particles\n",ndeleted);
+        fprintf(logfile,"  " BIGINT_FORMAT " deleted particles\n",ndeleted);
       fprintf(logfile,"  CPU time = %g secs\n",time_total);
       fprintf(logfile,"  read/check/sort/surf2grid/ghost/"
               "inout/particle percent = "
@@ -328,10 +328,10 @@ void ReadSurf::command(int narg, char **arg)
               100.0*(time8-time7)/time_total);
       fprintf(logfile,"  surf2grid time = %g secs\n",time_s2g);
       fprintf(logfile,"  map/comm1/comm2/comm3/comm4/split percent = "
-	      "%g %g %g %g %g %g\n",
-	      100.0*grid->tmap/time_s2g,100.0*grid->tcomm1/time_s2g,
-	      100.0*grid->tcomm2/time_s2g,100.0*grid->tcomm3/time_s2g,
-	      100.0*grid->tcomm4/time_s2g,100.0*grid->tsplit/time_s2g);
+              "%g %g %g %g %g %g\n",
+              100.0*grid->tmap/time_s2g,100.0*grid->tcomm1/time_s2g,
+              100.0*grid->tcomm2/time_s2g,100.0*grid->tcomm3/time_s2g,
+              100.0*grid->tcomm4/time_s2g,100.0*grid->tsplit/time_s2g);
     }
   }
 }
@@ -631,15 +631,15 @@ void ReadSurf::header()
       npoint_file = bnpoint;
     } else if (strstr(line,"lines")) {
       if (dim == 3)
-	error->one(FLERR,"Surf file cannot contain lines for 3d simulation");
+        error->one(FLERR,"Surf file cannot contain lines for 3d simulation");
       bigint bnline;
       sscanf(line,BIGINT_FORMAT,&bnline);
       if (bnline > MAXSMALLINT) error->all(FLERR,"Read surf nline is too large");
       nsurf_file = nline_file = bnline;
     } else if (strstr(line,"triangles")) {
       if (dim == 2)
-	error->one(FLERR,
-		   "Surf file cannot contain triangles for 2d simulation");
+        error->one(FLERR,
+                   "Surf file cannot contain triangles for 2d simulation");
       bigint bntri;
       sscanf(line,BIGINT_FORMAT,&bntri);
       if (bntri > MAXSMALLINT) error->one(FLERR,"Read surf ntri is too large");
@@ -726,13 +726,13 @@ void ReadSurf::base(char *file)
       sscanf(line,"%d",&nfiles);
     } else if (strstr(line,"lines")) {
       if (dim == 3)
-	error->all(FLERR,"Surf file cannot contain lines for 3d simulation");
+        error->all(FLERR,"Surf file cannot contain lines for 3d simulation");
       sscanf(line,BIGINT_FORMAT,&nline_basefile);
       nsurf_basefile = nline_basefile;
     } else if (strstr(line,"triangles")) {
       if (dim == 2)
-	error->all(FLERR,
-		   "Surf file cannot contain triangles for 2d simulation");
+        error->all(FLERR,
+                   "Surf file cannot contain triangles for 2d simulation");
       sscanf(line,BIGINT_FORMAT,&ntri_basefile);
       nsurf_basefile = ntri_basefile;
 
@@ -846,9 +846,9 @@ void ReadSurf::read_points()
       char *eof;
       m = 0;
       for (i = 0; i < nchunk; i++) {
-	eof = fgets(&buffer[m],MAXLINE,fp);
-	if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
-	m += strlen(&buffer[m]);
+        eof = fgets(&buffer[m],MAXLINE,fp);
+        if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
+        m += strlen(&buffer[m]);
       }
       m++;
     }
@@ -907,9 +907,9 @@ void ReadSurf::read_lines(int storeflag)
       char *eof;
       m = 0;
       for (i = 0; i < nchunk; i++) {
-	eof = fgets(&buffer[m],MAXLINE,fp);
-	if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
-	m += strlen(&buffer[m]);
+        eof = fgets(&buffer[m],MAXLINE,fp);
+        if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
+        m += strlen(&buffer[m]);
       }
       m++;
     }
@@ -1038,9 +1038,9 @@ void ReadSurf::read_tris(int storeflag)
       char *eof;
       m = 0;
       for (i = 0; i < nchunk; i++) {
-	eof = fgets(&buffer[m],MAXLINE,fp);
-	if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
-	m += strlen(&buffer[m]);
+        eof = fgets(&buffer[m],MAXLINE,fp);
+        if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
+        m += strlen(&buffer[m]);
       }
       m++;
     }
@@ -1178,8 +1178,8 @@ void ReadSurf::process_args(int start, int narg, char **arg)
       double oy = atof(arg[iarg+2]);
       double oz = atof(arg[iarg+3]);
       if (dim == 2 && oz != 0.0)
-	error->all(FLERR,"Invalid read_surf geometry transformation "
-		   "for 2d simulation");
+        error->all(FLERR,"Invalid read_surf geometry transformation "
+                   "for 2d simulation");
       origin[0] = ox;
       origin[1] = oy;
       origin[2] = oz;
@@ -1190,8 +1190,8 @@ void ReadSurf::process_args(int start, int narg, char **arg)
       double dy = input->numeric(FLERR,arg[iarg+2]);
       double dz = input->numeric(FLERR,arg[iarg+3]);
       if (dim == 2 && dz != 0.0)
-	error->all(FLERR,"Invalid read_surf geometry transformation "
-		   "for 2d simulation");
+        error->all(FLERR,"Invalid read_surf geometry transformation "
+                   "for 2d simulation");
       origin[0] += dx;
       origin[1] += dy;
       origin[2] += dz;
@@ -1203,8 +1203,8 @@ void ReadSurf::process_args(int start, int narg, char **arg)
       double ay = input->numeric(FLERR,arg[iarg+2]);
       double az = input->numeric(FLERR,arg[iarg+3]);
       if (dim == 2 && az != 0.0)
-	error->all(FLERR,"Invalid read_surf geometry transformation "
-		   "for 2d simulation");
+        error->all(FLERR,"Invalid read_surf geometry transformation "
+                   "for 2d simulation");
       double dx = ax - origin[0];
       double dy = ay - origin[1];
       double dz = az - origin[2];
@@ -1219,8 +1219,8 @@ void ReadSurf::process_args(int start, int narg, char **arg)
       double fy = input->numeric(FLERR,arg[iarg+2]);
       double fz = input->numeric(FLERR,arg[iarg+3]);
       if (dim == 2 && fz != 0.5)
-	error->all(FLERR,"Invalid read_surf geometry transformation "
-		   "for 2d simulation");
+        error->all(FLERR,"Invalid read_surf geometry transformation "
+                   "for 2d simulation");
       double ax = domain->boxlo[0] + fx*domain->xprd;
       double ay = domain->boxlo[1] + fy*domain->yprd;
       double az;
@@ -1240,8 +1240,8 @@ void ReadSurf::process_args(int start, int narg, char **arg)
       double sy = input->numeric(FLERR,arg[iarg+2]);
       double sz = input->numeric(FLERR,arg[iarg+3]);
       if (dim == 2 && sz != 1.0)
-	error->all(FLERR,"Invalid read_surf geometry transformation "
-		   "for 2d simulation");
+        error->all(FLERR,"Invalid read_surf geometry transformation "
+                   "for 2d simulation");
       scale(sx,sy,sz);
       iarg += 4;
     } else if (strcmp(arg[iarg],"rotate") == 0) {
@@ -1251,11 +1251,11 @@ void ReadSurf::process_args(int start, int narg, char **arg)
       double ry = input->numeric(FLERR,arg[iarg+3]);
       double rz = input->numeric(FLERR,arg[iarg+4]);
       if (dim == 2 && (rx != 0.0 || ry != 0.0 || rz != 1.0))
-	error->all(FLERR,"Invalid read_surf geometry transformation "
-		   "for 2d simulation");
+        error->all(FLERR,"Invalid read_surf geometry transformation "
+                   "for 2d simulation");
       if (rx == 0.0 && ry == 0.0 && rz == 0.0)
-	error->all(FLERR,"Invalid read_surf geometry transformation "
-		   "for 2d simulation");
+        error->all(FLERR,"Invalid read_surf geometry transformation "
+                   "for 2d simulation");
       rotate(theta,rx,ry,rz);
       iarg += 5;
     } else if (strcmp(arg[iarg],"invert") == 0) {
@@ -2090,13 +2090,13 @@ void ReadSurf::push_points_to_boundary(double frac)
         if (j == 0) x = lines[i].p1;
         else x = lines[i].p2;
 
-	if (fabs(x[0]-boxlo[0]) < xdelta) x[0] = boxlo[0];
-	if (fabs(x[0]-boxhi[0]) < xdelta) x[0] = boxhi[0];
+        if (fabs(x[0]-boxlo[0]) < xdelta) x[0] = boxlo[0];
+        if (fabs(x[0]-boxhi[0]) < xdelta) x[0] = boxhi[0];
 
-	if (fabs(x[1]-boxlo[1]) < ydelta) x[1] = boxlo[1];
-	if (fabs(x[1]-boxhi[1]) < ydelta) x[1] = boxhi[1];
-	
-	/*
+        if (fabs(x[1]-boxlo[1]) < ydelta) x[1] = boxlo[1];
+        if (fabs(x[1]-boxhi[1]) < ydelta) x[1] = boxhi[1];
+
+        /*
         if (x[0] >= boxlo[0] && x[0] <= boxhi[0]) {
           if (x[0]-boxlo[0] < xdelta) x[0] = boxlo[0];
           else if (boxhi[0]-x[0] < xdelta) x[0] = boxhi[0];
@@ -2105,7 +2105,7 @@ void ReadSurf::push_points_to_boundary(double frac)
           if (x[1]-boxlo[1] < ydelta) x[1] = boxlo[1];
           else if (boxhi[1]-x[1] < ydelta) x[1] = boxhi[1];
         }
-	*/
+        */
       }
     }
 
@@ -2119,17 +2119,17 @@ void ReadSurf::push_points_to_boundary(double frac)
         if (j == 0) x = tris[i].p1;
         else if (j == 1) x = tris[i].p2;
         else x = tris[i].p3;
-	
-	if (fabs(x[0]-boxlo[0]) < xdelta) x[0] = boxlo[0];
-	if (fabs(x[0]-boxhi[0]) < xdelta) x[0] = boxhi[0];
 
-	if (fabs(x[1]-boxlo[1]) < ydelta) x[1] = boxlo[1];
-	if (fabs(x[1]-boxhi[1]) < ydelta) x[1] = boxhi[1];
+        if (fabs(x[0]-boxlo[0]) < xdelta) x[0] = boxlo[0];
+        if (fabs(x[0]-boxhi[0]) < xdelta) x[0] = boxhi[0];
 
-	if (fabs(x[2]-boxlo[2]) < zdelta) x[2] = boxlo[2];
-	if (fabs(x[2]-boxhi[2]) < zdelta) x[2] = boxhi[2];
+        if (fabs(x[1]-boxlo[1]) < ydelta) x[1] = boxlo[1];
+        if (fabs(x[1]-boxhi[1]) < ydelta) x[1] = boxhi[1];
 
-	/*
+        if (fabs(x[2]-boxlo[2]) < zdelta) x[2] = boxlo[2];
+        if (fabs(x[2]-boxhi[2]) < zdelta) x[2] = boxhi[2];
+
+        /*
         if (x[0] >= boxlo[0] && x[0] <= boxhi[0]) {
           if (x[0]-boxlo[0] < xdelta) x[0] = boxlo[0];
           else if (boxhi[0]-x[0] < xdelta) x[0] = boxhi[0];
@@ -2142,7 +2142,7 @@ void ReadSurf::push_points_to_boundary(double frac)
           if (x[2]-boxlo[2] < zdelta) x[2] = boxlo[2];
           else if (boxhi[2]-x[2] < zdelta) x[2] = boxhi[2];
         }
-	*/
+        */
       }
     }
   }
@@ -2454,7 +2454,7 @@ void ReadSurf::parse_keyword(int first)
   int start = strspn(line," \t\n\r");
   int stop = strlen(line) - 1;
   while (line[stop] == ' ' || line[stop] == '\t'
-	 || line[stop] == '\n' || line[stop] == '\r') stop--;
+         || line[stop] == '\n' || line[stop] == '\r') stop--;
   line[stop+1] = '\0';
   strcpy(keyword,&line[start]);
 }
@@ -2545,7 +2545,7 @@ void ReadSurf::check_point_pairs()
   for (i = 0; i < nbinx; i++)
     for (j = 0; j < nbiny; j++)
       for (k = 0; k < nbinz; k++)
-	binhead[i][j][k] = -1;
+        binhead[i][j][k] = -1;
 
   origin[0] = boxlo[0];
   origin[1] = boxlo[1];
@@ -2568,19 +2568,19 @@ void ReadSurf::check_point_pairs()
   for (i = 0; i < nbinx; i++)
     for (j = 0; j < nbiny; j++)
       for (k = 0; k < nbinz; k++) {
-	m = binhead[i][j][k];
-	while (m >= 0) {
-	  n = bin[m];
-	  while (n >= 0) {
-	    dx = pts[m].x[0] - pts[n].x[0];
-	    dy = pts[m].x[1] - pts[n].x[1];
-	    dz = pts[m].x[2] - pts[n].x[2];
-	    rsq = dx*dx + dy*dy + dz*dz;
-	    if (rsq < epssq) nbad++;
-	    n = bin[n];
-	  }
-	  m = bin[m];
-	}
+        m = binhead[i][j][k];
+        while (m >= 0) {
+          n = bin[m];
+          while (n >= 0) {
+            dx = pts[m].x[0] - pts[n].x[0];
+            dy = pts[m].x[1] - pts[n].x[1];
+            dz = pts[m].x[2] - pts[n].x[2];
+            rsq = dx*dx + dy*dy + dz*dz;
+            if (rsq < epssq) nbad++;
+            n = bin[n];
+          }
+          m = bin[m];
+        }
       }
 
   if (nbad) {
@@ -2595,7 +2595,7 @@ void ReadSurf::check_point_pairs()
   for (i = 0; i < nbinx; i++)
     for (j = 0; j < nbiny; j++)
       for (k = 0; k < nbinz; k++)
-	binhead[i][j][k] = -1;
+        binhead[i][j][k] = -1;
 
   origin[0] = boxlo[0] - 0.5*xbin;
   origin[1] = boxlo[1] - 0.5*ybin;
@@ -2621,19 +2621,19 @@ void ReadSurf::check_point_pairs()
   for (i = 0; i < nbinx; i++)
     for (j = 0; j < nbiny; j++)
       for (k = 0; k < nbinz; k++) {
-	m = binhead[i][j][k];
-	while (m >= 0) {
-	  n = bin[m];
-	  while (n >= 0) {
-	    dx = pts[m].x[0] - pts[n].x[0];
-	    dy = pts[m].x[1] - pts[n].x[1];
-	    dz = pts[m].x[2] - pts[n].x[2];
-	    rsq = dx*dx + dy*dy + dz*dz;
-	    if (rsq < epssq) nbad++;
-	    n = bin[n];
-	  }
-	  m = bin[m];
-	}
+        m = binhead[i][j][k];
+        while (m >= 0) {
+          n = bin[m];
+          while (n >= 0) {
+            dx = pts[m].x[0] - pts[n].x[0];
+            dy = pts[m].x[1] - pts[n].x[1];
+            dz = pts[m].x[2] - pts[n].x[2];
+            rsq = dx*dx + dy*dy + dz*dz;
+            if (rsq < epssq) nbad++;
+            n = bin[n];
+          }
+          m = bin[m];
+        }
       }
 
   if (nbad) {

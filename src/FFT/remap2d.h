@@ -64,4 +64,4 @@ struct remap_plan_2d *remap_2d_create_plan(MPI_Comm,
                                            int, int, int, int);
 void remap_2d_destroy_plan(struct remap_plan_2d *);
 int remap_2d_collide(struct extent_2d *,
-		     struct extent_2d *, struct extent_2d *);
+                     struct extent_2d *, struct extent_2d *);

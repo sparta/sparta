@@ -103,7 +103,7 @@ void WriteGrid::header()
   fprintf(fp,"%d levels\n",grid->maxlevel);
   for (int ilevel = 0; ilevel < grid->maxlevel; ilevel++)
     fprintf(fp,"%d %d %d level-%d\n",
-	    plevels[ilevel].nx,plevels[ilevel].ny,plevels[ilevel].nz,ilevel+1);
+            plevels[ilevel].nx,plevels[ilevel].ny,plevels[ilevel].nz,ilevel+1);
 }
 
 /* ----------------------------------------------------------------------
@@ -128,7 +128,7 @@ void WriteGrid::write()
 
   int nmax;
   MPI_Allreduce(&nme,&nmax,1,MPI_INT,MPI_MAX,world);
-		
+
   bigint *buf;
   memory->create(buf,nmax,"write_grid:buf");
 

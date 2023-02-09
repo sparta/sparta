@@ -753,10 +753,10 @@ template < int DIM, int SURF, int OPT > void Update::move()
             cflag = 0;
             minparam = 2.0;
             csurfs = cells[icell].csurfs;
-        
+
             for (m = 0; m < nsurf; m++) {
               isurf = csurfs[m];
-        
+
               if (DIM > 1) {
                 if (isurf == exclude) continue;
               }
@@ -859,7 +859,7 @@ template < int DIM, int SURF, int OPT > void Update::move()
             } // END of for loop over surfs
 
             // tri/line = surf that particle hit first
-        
+
             if (cflag) {
               if (DIM == 3) tri = &tris[minsurf];
               if (DIM != 3) line = &lines[minsurf];

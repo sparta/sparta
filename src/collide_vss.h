@@ -84,9 +84,9 @@ class CollideVSS : public Collide {
   int nparams;                // # of per-species params read in
 
   void SCATTER_TwoBodyScattering(Particle::OnePart *,
-				 Particle::OnePart *);
+                                 Particle::OnePart *);
   void EEXCHANGE_NonReactingEDisposal(Particle::OnePart *,
-				      Particle::OnePart *);
+                                      Particle::OnePart *);
   void SCATTER_ThreeBodyScattering(Particle::OnePart *,
                                    Particle::OnePart *,
                                    Particle::OnePart *);

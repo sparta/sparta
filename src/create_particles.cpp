@@ -351,8 +351,8 @@ void CreateParticles::command(int narg, char **arg)
       nglobal-nprevious != np) {
     char str[128];
     sprintf(str,"Created incorrect # of particles: "
-	    BIGINT_FORMAT " versus " BIGINT_FORMAT,
-	    nglobal-nprevious,np);
+            BIGINT_FORMAT " versus " BIGINT_FORMAT,
+            nglobal-nprevious,np);
     error->all(FLERR,str);
   }
   bigint ncreated = nglobal-nprevious;
@@ -391,7 +391,7 @@ void CreateParticles::create_single()
 
   if (domain->dimension == 2 && x[2] != 0.0)
     error->all(FLERR,"Create_particles single requires z = 0 "
-	       "for 2d simulation");
+               "for 2d simulation");
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -403,8 +403,8 @@ void CreateParticles::create_single()
     lo = cells[icell].lo;
     hi = cells[icell].hi;
     if (x[0] >= lo[0] && x[0] < hi[0] &&
-	x[1] >= lo[1] && x[1] < hi[1] &&
-	x[2] >= lo[2] && x[2] < hi[2]) iwhich = icell;
+        x[1] >= lo[1] && x[1] < hi[1] &&
+        x[2] >= lo[2] && x[2] < hi[2]) iwhich = icell;
   }
 
   // insure that exactly one proc found cell to insert particle into

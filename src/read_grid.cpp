@@ -91,7 +91,7 @@ void ReadGrid::read(char *filename, int external)
   parse_keyword(1);
   if (strcmp(keyword,"Cells") != 0)
     error->all(FLERR,
-	       "Read_grid did not find Cells section of grid file");
+               "Read_grid did not find Cells section of grid file");
   read_cells();
 
   // close file
@@ -160,9 +160,9 @@ void ReadGrid::read_cells()
       char *eof;
       m = 0;
       for (i = 0; i < nchunk; i++) {
-	eof = fgets(&buffer[m],MAXLINE,fp);
-	if (eof == NULL) error->one(FLERR,"Unexpected end of grid file");
-	m += strlen(&buffer[m]);
+        eof = fgets(&buffer[m],MAXLINE,fp);
+        if (eof == NULL) error->one(FLERR,"Unexpected end of grid file");
+        m += strlen(&buffer[m]);
       }
       if (buffer[m-1] != '\n') strcpy(&buffer[m++],"\n");
       m++;
@@ -314,7 +314,7 @@ void ReadGrid::header()
       sscanf(line,"%d",&nlevels);
       if (nlevels <= 0) error->all(FLERR,"Grid file levels must be > 0");
       if (nlevels > grid->plevel_limit)
-	error->all(FLERR,"Grid file levels exceeds MAXLEVEL");
+        error->all(FLERR,"Grid file levels exceeds MAXLEVEL");
       levels = new Level[nlevels];
       for (int i = 0; i < nlevels; i++) levels[i].setflag = 0;
     } else if (strstr(line,"level-")) {
@@ -323,10 +323,10 @@ void ReadGrid::header()
       ptr += strlen("level-");
       ilevel = atoi(ptr);
       if (ilevel < 1 || ilevel > nlevels)
-	error->all(FLERR,"Grid file level-N is invalid");
+        error->all(FLERR,"Grid file level-N is invalid");
       sscanf(line,"%d %d %d",&nx,&ny,&nz);
       if (levels[ilevel-1].setflag == 1)
-	error->all(FLERR,"Grid file level-N is already set");
+        error->all(FLERR,"Grid file level-N is already set");
       levels[ilevel-1].setflag = 1;
       levels[ilevel-1].cx = nx;
       levels[ilevel-1].cy = ny;
@@ -372,7 +372,7 @@ void ReadGrid::header()
   if (nbits > sizeof(cellint)*8) {
     char str[128];
     sprintf(str,"Hierarchical grid induces cell IDs that exceed %d bits",
-	    (int) sizeof(cellint)*8);
+            (int) sizeof(cellint)*8);
     error->all(FLERR,str);
   }
 
@@ -427,7 +427,7 @@ void ReadGrid::parse_keyword(int first)
   int start = strspn(line," \t\n\r");
   int stop = strlen(line) - 1;
   while (line[stop] == ' ' || line[stop] == '\t'
-	 || line[stop] == '\n' || line[stop] == '\r') stop--;
+         || line[stop] == '\n' || line[stop] == '\r') stop--;
   line[stop+1] = '\0';
   strcpy(keyword,&line[start]);
 }
