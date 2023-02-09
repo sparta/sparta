@@ -1157,7 +1157,7 @@ void ReadRestart::grid_params()
   if (nbits > sizeof(cellint)*8) {
     char str[128];
     sprintf(str,"Hierarchical grid induces cell IDs that exceed %d bits",
-	    (int) sizeof(cellint)*8);
+            (int) sizeof(cellint)*8);
     error->all(FLERR,str);
   }
 }

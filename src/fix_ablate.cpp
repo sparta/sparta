@@ -428,7 +428,7 @@ void FixAblate::create_surfs(int outflag)
     Grid::ChildCell *cells = grid->cells;
     for (int icell = 0; icell < nglocal; icell++)
       if (cells[icell].nsplit > 1)
-	grid->combine_split_cell_particles(icell,1);
+        grid->combine_split_cell_particles(icell,1);
   }
 
   // call clear_surf before create new surfs, so cell/corner flags are all set
@@ -558,7 +558,7 @@ void FixAblate::create_surfs(int outflag)
     Grid::ChildCell *cells = grid->cells;
     for (int icell = 0; icell < nglocal; icell++)
       if (cells[icell].nsplit > 1)
-	grid->assign_split_cell_particles(icell);
+        grid->assign_split_cell_particles(icell);
     particle->sorted = 0;
   }
 

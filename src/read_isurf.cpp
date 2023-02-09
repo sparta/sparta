@@ -702,8 +702,8 @@ void ReadISurf::read_corners_parallel(char *gridfile)
 
   char *buf;
   int nout = comm->rendezvous(1,nrvous,(char *) sdatum,sizeof(SendDatum),
-			      0,proclist,rendezvous_corners,
-			      0,buf,sizeof(RecvDatum),(void *) this);
+                              0,proclist,rendezvous_corners,
+                              0,buf,sizeof(RecvDatum),(void *) this);
   RecvDatum *rdatum = (RecvDatum *) buf;
 
   memory->destroy(proclist);

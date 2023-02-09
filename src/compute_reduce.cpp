@@ -905,7 +905,7 @@ double ComputeReduce::area_per_surf()
   Surf::Tri *mytris = surf->mytris;
   int distributed = surf->distributed;
   int n = surf->nown;
-    
+
   memory->destroy(areasurf);
   memory->create(areasurf,n,"reduce:areasurf");
 

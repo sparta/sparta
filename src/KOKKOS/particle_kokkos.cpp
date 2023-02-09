@@ -298,7 +298,7 @@ void ParticleKokkos::sort_kokkos()
       //d_particles = k_particles.d_view;
       //d_sorted = tmp;
       Kokkos::deep_copy(d_particles,d_sorted);
-      
+
       this->modify(Device,PARTICLE_MASK);
     }
     else if (reorder_scheme == FIXEDMEMORY) {

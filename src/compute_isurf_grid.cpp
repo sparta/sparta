@@ -415,12 +415,12 @@ void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
       vsqpre = origmass * MathExtra::lensq3(vorig);
       otherpre = iorig->erot + iorig->evib;
       if (ip) {
-	ivsqpost = imass * MathExtra::lensq3(ip->v);
-	iother = ip->erot + ip->evib;
+        ivsqpost = imass * MathExtra::lensq3(ip->v);
+        iother = ip->erot + ip->evib;
       } else ivsqpost = iother = 0.0;
       if (jp) {
-	jvsqpost = jmass * MathExtra::lensq3(jp->v);
-	jother = jp->erot + jp->evib;
+        jvsqpost = jmass * MathExtra::lensq3(jp->v);
+        jother = jp->erot + jp->evib;
       } else jvsqpost = jother = 0.0;
       etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
         weight * (iother + jother - otherpre);

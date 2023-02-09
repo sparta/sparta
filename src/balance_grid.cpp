@@ -523,8 +523,8 @@ void BalanceGrid::procs2grid(int nx, int ny, int nz,
       if (upy && ipy != upy) valid = 0;
       if ((nprocs/ipx) % ipy) valid = 0;
       if (!valid) {
-	ipy++;
-	continue;
+        ipy++;
+        continue;
       }
 
       ipz = nprocs/ipx/ipy;
@@ -532,16 +532,16 @@ void BalanceGrid::procs2grid(int nx, int ny, int nz,
       if (upz && ipz != upz) valid = 0;
       if (domain->dimension == 2 && ipz != 1) valid = 0;
       if (!valid) {
-	ipy++;
-	continue;
+        ipy++;
+        continue;
       }
 
       surf = area[0]/ipx/ipy + area[1]/ipx/ipz + area[2]/ipy/ipz;
       if (surf < bestsurf) {
-	bestsurf = surf;
-	px = ipx;
-	py = ipy;
-	pz = ipz;
+        bestsurf = surf;
+        px = ipx;
+        py = ipy;
+        pz = ipz;
       }
       ipy++;
     }

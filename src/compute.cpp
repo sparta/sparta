@@ -39,7 +39,7 @@ Compute::Compute(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   for (int i = 0; i < n-1; i++)
     if (!isalnum(id[i]) && id[i] != '_')
       error->all(FLERR,
-		 "Compute ID must be alphanumeric or underscore characters");
+                 "Compute ID must be alphanumeric or underscore characters");
 
   n = strlen(arg[1]) + 1;
   style = new char[n];

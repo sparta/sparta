@@ -86,7 +86,7 @@ void RemoveSurf::command(int narg, char **arg)
     int nglocal = grid->nlocal;
     for (int icell = 0; icell < nglocal; icell++)
       if (cells[icell].nsplit > 1)
-	grid->combine_split_cell_particles(icell,1);
+        grid->combine_split_cell_particles(icell,1);
   }
 
   grid->clear_surf();
@@ -102,7 +102,7 @@ void RemoveSurf::command(int narg, char **arg)
     int nglocal = grid->nlocal;
     for (int icell = 0; icell < nglocal; icell++)
       if (cells[icell].nsplit > 1)
-	grid->assign_split_cell_particles(icell);
+        grid->assign_split_cell_particles(icell);
   }
 
   MPI_Barrier(world);

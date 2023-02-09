@@ -24,8 +24,8 @@ enum{INT,DOUBLE};                               // several files
 // per grid cell custom attributes
 
 /* ----------------------------------------------------------------------
-   find custom per-atom vector/array with name                            
-   return index if found           
+   find custom per-atom vector/array with name
+   return index if found
    return -1 if not found
 ------------------------------------------------------------------------- */
 
@@ -36,11 +36,11 @@ int Grid::find_custom(char *name)
   return -1;
 }
 
-/* ----------------------------------------------------------------------       
-   add a custom attribute with name            
-   assumes name does not already exist, except in case of restart             
-   type = 0/1 for int/double         
-   size = 0 for vector, size > 0 for array with size columns            
+/* ----------------------------------------------------------------------
+   add a custom attribute with name
+   assumes name does not already exist, except in case of restart
+   type = 0/1 for int/double
+   size = 0 for vector, size > 0 for array with size columns
    ghostflag = 1 if ghost cells are included, else 0
    return index of its location;
 ------------------------------------------------------------------------- */
@@ -52,7 +52,7 @@ int Grid::add_custom(char *name, int type, int size, int ghostflag)
   // if name already exists
   // just return index if a restart script and re-defining the name
   // else error
-  
+
   index = find_custom(name);
   if (index >= 0) {
     if (custom_restart_flag == NULL || custom_restart_flag[index] == 1)
@@ -69,7 +69,7 @@ int Grid::add_custom(char *name, int type, int size, int ghostflag)
   if (index == ncustom) {
     ncustom++;
     ename = (char **) memory->srealloc(ename,ncustom*sizeof(char *),
-				       "grid:ename");
+                                       "grid:ename");
     memory->grow(etype,ncustom,"grid:etype");
     memory->grow(esize,ncustom,"grid:etype");
     memory->grow(ewhich,ncustom,"grid:etype");
@@ -87,14 +87,14 @@ int Grid::add_custom(char *name, int type, int size, int ghostflag)
     if (size == 0) {
       ewhich[index] = ncustom_ivec++;
       eivec = (int **)
-	memory->srealloc(eivec,ncustom_ivec*sizeof(int *),"grid:eivec");
+        memory->srealloc(eivec,ncustom_ivec*sizeof(int *),"grid:eivec");
       memory->grow(icustom_ivec,ncustom_ivec,"grid:icustom_ivec");
       icustom_ivec[ncustom_ivec-1] = index;
     } else {
       ewhich[index] = ncustom_iarray++;
       eiarray = (int ***)
-	memory->srealloc(eiarray,ncustom_iarray*sizeof(int **),
-			 "grid:eiarray");
+        memory->srealloc(eiarray,ncustom_iarray*sizeof(int **),
+                         "grid:eiarray");
       memory->grow(icustom_iarray,ncustom_iarray,"grid:icustom_iarray");
       icustom_iarray[ncustom_iarray-1] = index;
       memory->grow(eicol,ncustom_iarray,"grid:eicol");
@@ -104,14 +104,14 @@ int Grid::add_custom(char *name, int type, int size, int ghostflag)
     if (size == 0) {
       ewhich[index] = ncustom_dvec++;
       edvec = (double **)
-	memory->srealloc(edvec,ncustom_dvec*sizeof(double *),"grid:edvec");
+        memory->srealloc(edvec,ncustom_dvec*sizeof(double *),"grid:edvec");
       memory->grow(icustom_dvec,ncustom_dvec,"grid:icustom_dvec");
       icustom_dvec[ncustom_dvec-1] = index;
     } else {
       ewhich[index] = ncustom_darray++;
       edarray = (double ***)
-	memory->srealloc(edarray,ncustom_darray*sizeof(double **),
-			 "grid:edarray");
+        memory->srealloc(edarray,ncustom_darray*sizeof(double **),
+                         "grid:edarray");
       memory->grow(icustom_darray,ncustom_darray,"grid:icustom_darray");
       icustom_darray[ncustom_darray-1] = index;
       memory->grow(edcol,ncustom_darray,"grid:edcol");
@@ -128,8 +128,8 @@ int Grid::add_custom(char *name, int type, int size, int ghostflag)
   return index;
 }
 
-/* ----------------------------------------------------------------------      
-   allocate vector/array associated with custom attribute with index 
+/* ----------------------------------------------------------------------
+   allocate vector/array associated with custom attribute with index
    set new values to 0 via memset()
 ------------------------------------------------------------------------- */
 
@@ -141,7 +141,7 @@ void Grid::allocate_custom(int index, int n)
       if (ivector) memset(ivector,0,n*sizeof(int));
     } else {
       int **iarray = memory->create(eiarray[ewhich[index]],
-				    n,eicol[ewhich[index]],"grid:eiarray");
+                                    n,eicol[ewhich[index]],"grid:eiarray");
       if (iarray) memset(&iarray[0][0],0,n*eicol[ewhich[index]]*sizeof(int));
     }
 
@@ -151,14 +151,14 @@ void Grid::allocate_custom(int index, int n)
       if (dvector) memset(dvector,0,n*sizeof(double));
     } else {
       double **darray = memory->create(edarray[ewhich[index]],
-				       n,edcol[ewhich[index]],"grid:eiarray");
+                                       n,edcol[ewhich[index]],"grid:eiarray");
       if (darray) memset(&darray[0][0],0,n*edcol[ewhich[index]]*sizeof(double));
     }
   }
 }
 
-/* ----------------------------------------------------------------------      
-   reallocate vector/array associated with custom attribute with index 
+/* ----------------------------------------------------------------------
+   reallocate vector/array associated with custom attribute with index
    set new values to 0 via memset()
 ------------------------------------------------------------------------- */
 
