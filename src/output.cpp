@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -11,7 +11,7 @@
 
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
-#include <iostream>
+
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
@@ -110,9 +110,9 @@ void Output::init()
     if (every_dump[i] == 0) {
       ivar_dump[i] = input->variable->find(var_dump[i]);
       if (ivar_dump[i] < 0)
-	error->all(FLERR,"Variable name for dump every does not exist");
+        error->all(FLERR,"Variable name for dump every does not exist");
       if (!input->variable->equal_style(ivar_dump[i]))
-	error->all(FLERR,"Variable for dump every is invalid style");
+        error->all(FLERR,"Variable for dump every is invalid style");
     }
 
   if (restart_flag_single && restart_every_single == 0) {
@@ -236,8 +236,6 @@ void Output::setup(int memflag)
   stats->compute(0);
   last_stats = ntimestep;
 
-  ////AKS//// logic for adding last step in time mode.  problem:  this is currently done as part of setup
-  std::cout << "in output, update->laststep=" << update->laststep << std::endl;
   if (var_stats) {
     next_stats = static_cast<bigint>
       (input->variable->compute_equal(ivar_stats));
@@ -267,7 +265,7 @@ void Output::write(bigint ntimestep)
   // next_dump does not force output on last step of run
   // wrap dumps that invoke computes or eval of variable with clear/add
   // download data from GPU if necessary
-  std::cout << "I am in write output....ntimestep=" << ntimestep << std::endl;
+
   if (next_dump_any == ntimestep) {
     for (int idump = 0; idump < ndump; idump++) {
       if (next_dump[idump] == ntimestep) {
@@ -345,7 +343,7 @@ void Output::write(bigint ntimestep)
   // insure next_thermo forces output on last step of run
   // thermo may invoke computes so wrap with clear/add
 
-  if (next_stats == ntimestep) { // AKS look here for time logic
+  if (next_stats == ntimestep) {
     modify->clearstep_compute();
     if (last_stats != ntimestep) stats->compute(1);
     last_stats = ntimestep;
@@ -769,24 +767,24 @@ void Output::memory_usage()
     if (screen) {
       fprintf(screen,"Memory usage per proc in Mbytes:\n");
       fprintf(screen,"  particles (ave,min,max) = %g %g %g\n",
-	      pave,pmin,pmax);
+              pave,pmin,pmax);
       fprintf(screen,"  grid      (ave,min,max) = %g %g %g\n",
-	      gave,gmin,gmax);
+              gave,gmin,gmax);
       fprintf(screen,"  surf      (ave,min,max) = %g %g %g\n",
-	      save,smin,smax);
+              save,smin,smax);
       fprintf(screen,"  total     (ave,min,max) = %g %g %g\n",
-	      tave,tmin,tmax);
+              tave,tmin,tmax);
     }
     if (logfile) {
       fprintf(logfile,"Memory usage per proc in Mbytes:\n");
       fprintf(logfile,"  particles (ave,min,max) = %g %g %g\n",
-	      pave,pmin,pmax);
+              pave,pmin,pmax);
       fprintf(logfile,"  grid      (ave,min,max) = %g %g %g\n",
-	      gave,gmin,gmax);
+              gave,gmin,gmax);
       fprintf(logfile,"  surf      (ave,min,max) = %g %g %g\n",
-	      save,smin,smax);
+              save,smin,smax);
       fprintf(logfile,"  total     (ave,min,max) = %g %g %g\n",
-	      tave,tmin,tmax);
+              tave,tmin,tmax);
     }
   }
 }

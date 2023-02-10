@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -110,12 +110,11 @@ void Run::command(int narg, char **arg)
     } else error->all(FLERR,"Illegal run command");
   }
 
+  // set nsteps as integer, using upto value if specified
   int nsteps;
   if (timeflag)
     nsteps = INT_MAX;
-
-  // set nsteps as integer, using upto value if specified
-  if (!timeflag) {
+  else {
     if (!uptoflag) {
       if (nsteps_input < 0 || nsteps_input > MAXSMALLINT)
         error->all(FLERR,"Invalid run command N value");
