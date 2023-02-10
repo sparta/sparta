@@ -317,6 +317,7 @@ bool Update::run(int timeflag, int nsteps, double time_final)
     }
 
     // all output
+
     if (completed_time) {
       laststep = ntimestep;
       output->next = ntimestep;

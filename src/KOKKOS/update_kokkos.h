@@ -100,7 +100,7 @@ class UpdateKokkos : public Update {
   ~UpdateKokkos();
   void init();
   void setup();
-  void run(int);
+  bool run(int, int, double);
 
   template<int DIM, int SURF, int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION

@@ -261,7 +261,7 @@ void UpdateKokkos::setup()
 
 /* ---------------------------------------------------------------------- */
 
-void UpdateKokkos::run(int nsteps)
+bool UpdateKokkos::run(int timeflag, int nsteps, double time_final)
 {
   sparta->kokkos->auto_sync = 0;
 
@@ -285,11 +285,21 @@ void UpdateKokkos::run(int nsteps)
   if (grid->cellweightflag) cellweightflag = 1;
 
   // loop over timesteps
+  bool completed_time = false;
+  int i = 0;
+  while ( (timeflag && time < time_final) || (!timeflag && i < nsteps) ) {
 
-  for (int i = 0; i < nsteps; i++) {
-
-    time += dt;
+    i++;
     ntimestep++;
+
+    // reset dt if final time will be exceeded
+    double tleft = time_final - time;
+    if (tleft <= dt) {
+      dt = tleft;
+      completed_time = true;
+    }
+    time += dt;
+
 
     if (collide_react) collide_react_reset();
     if (bounce_tally) bounce_set(ntimestep);
@@ -347,16 +357,23 @@ void UpdateKokkos::run(int nsteps)
 
     // all output
 
+    if (completed_time) {
+      laststep = ntimestep;
+      output->next = ntimestep;
+      output->next_stats = ntimestep;
+    }
     if (ntimestep == output->next) {
       particle_kk->sync(Host,ALL_MASK);
       output->write(ntimestep);
       timer->stamp(TIME_OUTPUT);
     }
+
+    if (completed_time) break;
   }
+
   sparta->kokkos->auto_sync = 1;
-
   particle_kk->sync(Host,ALL_MASK);
-
+  return completed_time;
 }
 
 //make randomread versions of d_particles?
