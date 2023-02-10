@@ -11,7 +11,7 @@
 
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
-
+#include <iostream>
 #include "spatype.h"
 #include "mpi.h"
 #include "math.h"
@@ -238,7 +238,7 @@ void Update::setup()
 
 /* ---------------------------------------------------------------------- */
 
-void Update::run(int nsteps)
+bool Update::run(int timeflag, int nsteps, double time_final)
 {
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
@@ -256,12 +256,20 @@ void Update::run(int nsteps)
   if (grid->cellweightflag) cellweightflag = 1;
 
   // loop over timesteps
+  bool completed_time = false;
+  int i = 0;
+  while ( (timeflag && time < time_final) || (!timeflag && i < nsteps) ) {
 
-  for (int i = 0; i < nsteps; i++) {
-
-    time += dt;
-
+    i++;
     ntimestep++;
+
+    // reset dt if final time will be exceeded
+    double tleft = time_final - time;
+    if (tleft <= dt) {
+      dt = tleft;
+      completed_time = true;
+    }
+    time += dt;
 
     if (collide_react) collide_react_reset();
     if (bounce_tally) bounce_set(ntimestep);
@@ -314,7 +322,13 @@ void Update::run(int nsteps)
       output->write(ntimestep);
       timer->stamp(TIME_OUTPUT);
     }
+    if (completed_time) {
+      laststep = ntimestep;
+      std::cout << "laststep=" << laststep << std::endl;
+      break;
+    }
   }
+  return completed_time;
 }
 
 /* ----------------------------------------------------------------------

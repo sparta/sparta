@@ -102,7 +102,7 @@ class Update : protected Pointers {
   void set_units(const char *);
   virtual void init();
   virtual void setup();
-  virtual void run(int);
+  virtual bool run(int, int, double);
   void global(int, char **);
   void reset_timestep(int, char **);
 

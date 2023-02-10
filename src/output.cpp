@@ -11,7 +11,7 @@
 
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
-
+#include <iostream>
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
@@ -236,6 +236,8 @@ void Output::setup(int memflag)
   stats->compute(0);
   last_stats = ntimestep;
 
+  ////AKS//// logic for adding last step in time mode.  problem:  this is currently done as part of setup
+  std::cout << "in output, update->laststep=" << update->laststep << std::endl;
   if (var_stats) {
     next_stats = static_cast<bigint>
       (input->variable->compute_equal(ivar_stats));
@@ -265,7 +267,7 @@ void Output::write(bigint ntimestep)
   // next_dump does not force output on last step of run
   // wrap dumps that invoke computes or eval of variable with clear/add
   // download data from GPU if necessary
-
+  std::cout << "I am in write output....ntimestep=" << ntimestep << std::endl;
   if (next_dump_any == ntimestep) {
     for (int idump = 0; idump < ndump; idump++) {
       if (next_dump[idump] == ntimestep) {
@@ -343,7 +345,7 @@ void Output::write(bigint ntimestep)
   // insure next_thermo forces output on last step of run
   // thermo may invoke computes so wrap with clear/add
 
-  if (next_stats == ntimestep) {
+  if (next_stats == ntimestep) { // AKS look here for time logic
     modify->clearstep_compute();
     if (last_stats != ntimestep) stats->compute(1);
     last_stats = ntimestep;

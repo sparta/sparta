@@ -11,7 +11,7 @@
 
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
-
+#include <iostream>
 #include "spatype.h"
 #include "stdlib.h"
 #include "string.h"
@@ -25,6 +25,7 @@
 #include "finish.h"
 #include "timer.h"
 #include "error.h"
+#include <cfloat>
 
 using namespace SPARTA_NS;
 
@@ -44,6 +45,7 @@ void Run::command(int narg, char **arg)
     error->all(FLERR,"Run command before grid ghost cells are defined");
 
   bigint nsteps_input = ATOBIGINT(arg[0]);
+  double time_final = DBL_MAX;
 
   // parse optional args
 
@@ -56,10 +58,16 @@ void Run::command(int narg, char **arg)
   int nevery = 0;
   int ncommands = 0;
   int first,last;
+  int timeflag = 0;
 
   int iarg = 1;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"upto") == 0) {
+    if (strcmp(arg[iarg],"time") == 0) {
+      if (iarg+1 > narg) error->all(FLERR,"Illegal run command");
+      time_final = atof(arg[0]);
+      timeflag = 1;
+      iarg += 1;
+    } else if (strcmp(arg[iarg],"upto") == 0) {
       if (iarg+1 > narg) error->all(FLERR,"Illegal run command");
       uptoflag = 1;
       iarg += 1;
@@ -102,18 +110,22 @@ void Run::command(int narg, char **arg)
     } else error->all(FLERR,"Illegal run command");
   }
 
-  // set nsteps as integer, using upto value if specified
-
   int nsteps;
-  if (!uptoflag) {
-    if (nsteps_input < 0 || nsteps_input > MAXSMALLINT)
-      error->all(FLERR,"Invalid run command N value");
-    nsteps = static_cast<int> (nsteps_input);
-  } else {
-    bigint delta = nsteps_input - update->ntimestep;
-    if (delta < 0 || delta > MAXSMALLINT)
-      error->all(FLERR,"Invalid run command upto value");
-    nsteps = static_cast<int> (delta);
+  if (timeflag)
+    nsteps = INT_MAX;
+
+  // set nsteps as integer, using upto value if specified
+  if (!timeflag) {
+    if (!uptoflag) {
+      if (nsteps_input < 0 || nsteps_input > MAXSMALLINT)
+        error->all(FLERR,"Invalid run command N value");
+      nsteps = static_cast<int> (nsteps_input);
+    } else {
+      bigint delta = nsteps_input - update->ntimestep;
+      if (delta < 0 || delta > MAXSMALLINT)
+        error->all(FLERR,"Invalid run command upto value");
+      nsteps = static_cast<int> (delta);
+    }
   }
 
   // error check
@@ -158,7 +170,7 @@ void Run::command(int narg, char **arg)
     update->nsteps = nsteps;
     update->firststep = update->ntimestep;
     update->laststep = update->ntimestep + nsteps;
-    if (update->laststep < 0 || update->laststep > MAXBIGINT)
+    if ( !timeflag && (update->laststep < 0 || update->laststep > MAXBIGINT) )
       error->all(FLERR,"Too many timesteps");
 
     if (startflag) update->beginstep = start;
@@ -173,7 +185,7 @@ void Run::command(int narg, char **arg)
 
     timer->init();
     timer->barrier_start(TIME_LOOP);
-    update->run(nsteps);
+    update->run(timeflag, nsteps, time_final);
     timer->barrier_stop(TIME_LOOP);
 
     Finish finish(sparta);
@@ -188,11 +200,15 @@ void Run::command(int narg, char **arg)
   } else {
     int iter = 0;
     int nleft = nsteps;
+    double tleft = time_final;
     double time_multiple_runs = 0.0;
+    int timeflag_in_loop = 0;
+    bool completed_time = false;
 
-    while (nleft > 0 || iter == 0) {
+    while ( (timeflag && !completed_time) ||
+            (!timeflag && (nleft > 0 || iter == 0)) ) {
+
       nsteps = MIN(nleft,nevery);
-
       update->nsteps = nsteps;
       update->firststep = update->ntimestep;
       update->laststep = update->ntimestep + nsteps;
@@ -211,12 +227,12 @@ void Run::command(int narg, char **arg)
 
       timer->init();
       timer->barrier_start(TIME_LOOP);
-      update->run(nsteps);
+      completed_time = update->run(timeflag_in_loop, nsteps, time_final);
       timer->barrier_stop(TIME_LOOP);
       time_multiple_runs += timer->array[TIME_LOOP];
 
       Finish finish(sparta);
-      if (postflag || nleft <= nsteps) {
+      if (postflag || ( nleft <= nsteps || completed_time)) {
         if (preflag) finish.end(1,0.0);
         else finish.end(1,time_multiple_runs);
       } else finish.end(0,0.0);
