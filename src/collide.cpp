@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -795,6 +795,7 @@ template < int NEARCP > void Collide::collisions_group()
             ilist = glist[igroup];
             jlist = glist[jgroup];
           }
+
         } else {
           if (ndelete == maxdelete) {
             maxdelete += DELTADELETE;
@@ -1087,6 +1088,7 @@ void Collide::collisions_one_ambipolar()
           ep->ispecies = ambispecies;
           nelectron++;
           jpart = NULL;
+
         } else if (jspecies == ambispecies && jpart->ispecies != ambispecies) {
           int reallocflag = particle->add_particle();
           if (reallocflag) {
@@ -1099,6 +1101,7 @@ void Collide::collisions_one_ambipolar()
           memcpy(&particles[index],jpart,nbytes);
           particles[index].id = MAXSMALLINT*random->uniform();
           ionambi[index] = 0;
+
           if (nelectron-1 != j-np) memcpy(&elist[j-np],&elist[nelectron-1],nbytes);
           nelectron--;
 
@@ -1113,6 +1116,7 @@ void Collide::collisions_one_ambipolar()
       if (!jpart && jspecies == ambispecies) {
         if (nelectron-1 != j-np) memcpy(&elist[j-np],&elist[nelectron-1],nbytes);
         nelectron--;
+
       } else if (!jpart) {
         if (ndelete == maxdelete) {
           maxdelete += DELTADELETE;
@@ -1275,12 +1279,12 @@ void Collide::collisions_group_ambipolar()
 
         if (nattempt) {
           if (igroup == egroup) {
-            gpair[npair][0] = jgroup;
-            gpair[npair][1] = igroup;
-          } else {
-            gpair[npair][0] = igroup;
-            gpair[npair][1] = jgroup;
-          }
+              gpair[npair][0] = jgroup;
+              gpair[npair][1] = igroup;
+            } else {
+              gpair[npair][0] = igroup;
+              gpair[npair][1] = jgroup;
+            }
           gpair[npair][2] = nattempt;
           nattempt_one += nattempt;
           npair++;
@@ -1461,6 +1465,7 @@ void Collide::collisions_group_ambipolar()
 
         if (jpart) {
           newgroup = species2group[jpart->ispecies];
+
           if (newgroup == jgroup) {
             // nothing to do
 
@@ -1490,6 +1495,7 @@ void Collide::collisions_group_ambipolar()
             ngroup[egroup]++;
 
             jpart = NULL;
+
           } else if (jgroup == egroup && jpart->ispecies != ambispecies) {
             int reallocflag = particle->add_particle();
             if (reallocflag) {
@@ -1502,6 +1508,7 @@ void Collide::collisions_group_ambipolar()
             memcpy(&particles[index],jpart,nbytes);
             particles[index].id = MAXSMALLINT*random->uniform();
             ionambi[index] = 0;
+
             if (nelectron-1 != j) memcpy(&elist[j],&elist[nelectron-1],nbytes);
             nelectron--;
             ngroup[egroup]--;
@@ -1522,6 +1529,7 @@ void Collide::collisions_group_ambipolar()
           if (nelectron-1 != j) memcpy(&elist[j],&elist[nelectron-1],nbytes);
           nelectron--;
           ngroup[egroup]--;
+
         } else if (!jpart) {
           if (ndelete == maxdelete) {
             maxdelete += DELTADELETE;

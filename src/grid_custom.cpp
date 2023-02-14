@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -69,7 +69,7 @@ int Grid::add_custom(char *name, int type, int size, int ghostflag)
   if (index == ncustom) {
     ncustom++;
     ename = (char **) memory->srealloc(ename,ncustom*sizeof(char *),
-				       "grid:ename");
+                                       "grid:ename");
     memory->grow(etype,ncustom,"grid:etype");
     memory->grow(esize,ncustom,"grid:etype");
     memory->grow(ewhich,ncustom,"grid:etype");
@@ -87,14 +87,14 @@ int Grid::add_custom(char *name, int type, int size, int ghostflag)
     if (size == 0) {
       ewhich[index] = ncustom_ivec++;
       eivec = (int **)
-	memory->srealloc(eivec,ncustom_ivec*sizeof(int *),"grid:eivec");
+        memory->srealloc(eivec,ncustom_ivec*sizeof(int *),"grid:eivec");
       memory->grow(icustom_ivec,ncustom_ivec,"grid:icustom_ivec");
       icustom_ivec[ncustom_ivec-1] = index;
     } else {
       ewhich[index] = ncustom_iarray++;
       eiarray = (int ***)
-	memory->srealloc(eiarray,ncustom_iarray*sizeof(int **),
-			 "grid:eiarray");
+        memory->srealloc(eiarray,ncustom_iarray*sizeof(int **),
+                         "grid:eiarray");
       memory->grow(icustom_iarray,ncustom_iarray,"grid:icustom_iarray");
       icustom_iarray[ncustom_iarray-1] = index;
       memory->grow(eicol,ncustom_iarray,"grid:eicol");
@@ -104,14 +104,14 @@ int Grid::add_custom(char *name, int type, int size, int ghostflag)
     if (size == 0) {
       ewhich[index] = ncustom_dvec++;
       edvec = (double **)
-	memory->srealloc(edvec,ncustom_dvec*sizeof(double *),"grid:edvec");
+        memory->srealloc(edvec,ncustom_dvec*sizeof(double *),"grid:edvec");
       memory->grow(icustom_dvec,ncustom_dvec,"grid:icustom_dvec");
       icustom_dvec[ncustom_dvec-1] = index;
     } else {
       ewhich[index] = ncustom_darray++;
       edarray = (double ***)
-	memory->srealloc(edarray,ncustom_darray*sizeof(double **),
-			 "grid:edarray");
+        memory->srealloc(edarray,ncustom_darray*sizeof(double **),
+                         "grid:edarray");
       memory->grow(icustom_darray,ncustom_darray,"grid:icustom_darray");
       icustom_darray[ncustom_darray-1] = index;
       memory->grow(edcol,ncustom_darray,"grid:edcol");
@@ -141,7 +141,7 @@ void Grid::allocate_custom(int index, int n)
       if (ivector) memset(ivector,0,n*sizeof(int));
     } else {
       int **iarray = memory->create(eiarray[ewhich[index]],
-				    n,eicol[ewhich[index]],"grid:eiarray");
+                                    n,eicol[ewhich[index]],"grid:eiarray");
       if (iarray) memset(&iarray[0][0],0,n*eicol[ewhich[index]]*sizeof(int));
     }
 
@@ -151,7 +151,7 @@ void Grid::allocate_custom(int index, int n)
       if (dvector) memset(dvector,0,n*sizeof(double));
     } else {
       double **darray = memory->create(edarray[ewhich[index]],
-				       n,edcol[ewhich[index]],"grid:eiarray");
+                                       n,edcol[ewhich[index]],"grid:eiarray");
       if (darray) memset(&darray[0][0],0,n*edcol[ewhich[index]]*sizeof(double));
     }
   }

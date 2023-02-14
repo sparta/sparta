@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -51,7 +51,7 @@ void *Memory::smalloc(bigint nbytes, const char *name, int align)
   if (ptr == NULL) {
     char str[128];
     sprintf(str,"Failed to allocate " BIGINT_FORMAT " bytes for array %s",
-	    nbytes,name);
+            nbytes,name);
     error->one(FLERR,str);
   }
   return ptr;
@@ -87,7 +87,7 @@ void *Memory::srealloc(void *ptr, bigint nbytes, const char *name, int align)
   if (ptr == NULL) {
     char str[128];
     sprintf(str,"Failed to reallocate " BIGINT_FORMAT " bytes for array %s",
-	    nbytes,name);
+            nbytes,name);
     error->one(FLERR,str);
   }
   return ptr;

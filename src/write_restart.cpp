@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -137,7 +137,7 @@ void WriteRestart::multiproc_options(int multiproc_caller,
     if (strcmp(arg[iarg],"fileper") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal write_restart command");
       if (!multiproc)
-	error->all(FLERR,"Cannot use write_restart fileper "
+        error->all(FLERR,"Cannot use write_restart fileper "
                    "without % in restart file name");
       int nper = atoi(arg[iarg+1]);
       if (nper <= 0) error->all(FLERR,"Illegal write_restart command");
@@ -155,7 +155,7 @@ void WriteRestart::multiproc_options(int multiproc_caller,
     } else if (strcmp(arg[iarg],"nfile") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal write_restart command");
       if (!multiproc)
-	error->all(FLERR,"Cannot use write_restart nfile "
+        error->all(FLERR,"Cannot use write_restart nfile "
                    "without % in restart file name");
       int nfile = atoi(arg[iarg+1]);
       if (nfile <= 0) error->all(FLERR,"Illegal write_restart command");

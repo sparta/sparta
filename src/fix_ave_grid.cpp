@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -62,8 +62,8 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   int iarg = 6;
   while (iarg < narg) {
     if ((strncmp(arg[iarg],"c_",2) == 0) ||
-	(strncmp(arg[iarg],"f_",2) == 0) ||
-	(strncmp(arg[iarg],"v_",2) == 0)) {
+        (strncmp(arg[iarg],"f_",2) == 0) ||
+        (strncmp(arg[iarg],"v_",2) == 0)) {
       nvalues++;
       iarg++;
     } else break;
@@ -146,20 +146,20 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
     if (which[i] == COMPUTE) {
       int icompute = modify->find_compute(ids[i]);
       if (icompute < 0)
-	error->all(FLERR,"Compute ID for fix ave/grid does not exist");
+        error->all(FLERR,"Compute ID for fix ave/grid does not exist");
       if (modify->compute[icompute]->per_grid_flag == 0)
-	error->all(FLERR,
-		   "Fix ave/grid compute does not calculate per-grid values");
+        error->all(FLERR,
+                   "Fix ave/grid compute does not calculate per-grid values");
       if (argindex[i] == 0 &&
-	  modify->compute[icompute]->size_per_grid_cols != 0)
-	error->all(FLERR,"Fix ave/grid compute does not "
-		   "calculate per-grid vector");
+          modify->compute[icompute]->size_per_grid_cols != 0)
+        error->all(FLERR,"Fix ave/grid compute does not "
+                   "calculate per-grid vector");
       if (argindex[i] && modify->compute[icompute]->size_per_grid_cols == 0)
-	error->all(FLERR,"Fix ave/grid compute does not "
-		   "calculate per-grid array");
+        error->all(FLERR,"Fix ave/grid compute does not "
+                   "calculate per-grid array");
       if (argindex[i] &&
-	  argindex[i] > modify->compute[icompute]->size_per_grid_cols)
-	error->all(FLERR,"Fix ave/grid compute array is accessed out-of-range");
+          argindex[i] > modify->compute[icompute]->size_per_grid_cols)
+        error->all(FLERR,"Fix ave/grid compute array is accessed out-of-range");
       if (modify->compute[icompute]->post_process_isurf_grid_flag)
         flavor_pergridsurf = 1;
       else flavor_pergrid = 1;
@@ -167,28 +167,28 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
     } else if (which[i] == FIX) {
       int ifix = modify->find_fix(ids[i]);
       if (ifix < 0)
-	error->all(FLERR,"Fix ID for fix ave/grid does not exist");
+        error->all(FLERR,"Fix ID for fix ave/grid does not exist");
       if (modify->fix[ifix]->per_grid_flag == 0)
-	error->all(FLERR,"Fix ave/grid fix does not calculate per-grid values");
+        error->all(FLERR,"Fix ave/grid fix does not calculate per-grid values");
       if (argindex[i] == 0 && modify->fix[ifix]->size_per_grid_cols != 0)
-	error->all(FLERR,
-		   "Fix ave/grid fix does not calculate per-grid vector");
+        error->all(FLERR,
+                   "Fix ave/grid fix does not calculate per-grid vector");
       if (argindex[i] && modify->fix[ifix]->size_per_grid_cols == 0)
-	error->all(FLERR,
-		   "Fix ave/grid fix does not calculate per-grid array");
+        error->all(FLERR,
+                   "Fix ave/grid fix does not calculate per-grid array");
       if (argindex[i] && argindex[i] > modify->fix[ifix]->size_per_grid_cols)
-	error->all(FLERR,"Fix ave/grid fix array is accessed out-of-range");
+        error->all(FLERR,"Fix ave/grid fix array is accessed out-of-range");
       if (nevery % modify->fix[ifix]->per_grid_freq)
-	error->all(FLERR,
-		   "Fix for fix ave/grid not computed at compatible time");
+        error->all(FLERR,
+                   "Fix for fix ave/grid not computed at compatible time");
       flavor_pergrid = 1;
 
     } else if (which[i] == VARIABLE) {
       int ivariable = input->variable->find(ids[i]);
       if (ivariable < 0)
-	error->all(FLERR,"Variable name for fix ave/grid does not exist");
+        error->all(FLERR,"Variable name for fix ave/grid does not exist");
       if (input->variable->grid_style(ivariable) == 0)
-	error->all(FLERR,"Fix ave/grid variable is not grid-style variable");
+        error->all(FLERR,"Fix ave/grid variable is not grid-style variable");
       flavor_pergrid = 1;
     }
   }
@@ -399,19 +399,19 @@ void FixAveGrid::init()
     if (which[m] == COMPUTE) {
       int icompute = modify->find_compute(ids[m]);
       if (icompute < 0)
-	error->all(FLERR,"Compute ID for fix ave/grid does not exist");
+        error->all(FLERR,"Compute ID for fix ave/grid does not exist");
       value2index[m] = icompute;
 
     } else if (which[m] == FIX) {
       int ifix = modify->find_fix(ids[m]);
       if (ifix < 0)
-	error->all(FLERR,"Fix ID for fix ave/grid does not exist");
+        error->all(FLERR,"Fix ID for fix ave/grid does not exist");
       value2index[m] = ifix;
 
     } else if (which[m] == VARIABLE) {
       int ivariable = input->variable->find(ids[m]);
       if (ivariable < 0)
-	error->all(FLERR,"Variable name for fix ave/grid does not exist");
+        error->all(FLERR,"Variable name for fix ave/grid does not exist");
       value2index[m] = ivariable;
 
     } else value2index[m] = -1;
@@ -525,8 +525,8 @@ void FixAveGrid::end_of_step()
         } else {
           int jm1 = j - 1;
         double **fix_array = modify->fix[n]->array_grid;
-	for (i = 0; i < nglocal; i++)
-	  tally[i][k] += fix_array[i][jm1];
+        for (i = 0; i < nglocal; i++)
+          tally[i][k] += fix_array[i][jm1];
         }
 
       // evaluate grid-style variable, sum values to Kth column of tally array

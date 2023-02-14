@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -84,9 +84,9 @@ class CollideVSS : public Collide {
   int nparams;                // # of per-species params read in
 
   void SCATTER_TwoBodyScattering(Particle::OnePart *,
-				 Particle::OnePart *);
+                                 Particle::OnePart *);
   void EEXCHANGE_NonReactingEDisposal(Particle::OnePart *,
-				      Particle::OnePart *);
+                                      Particle::OnePart *);
   void SCATTER_ThreeBodyScattering(Particle::OnePart *,
                                    Particle::OnePart *,
                                    Particle::OnePart *);

@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -358,8 +358,8 @@ int DumpSurf::count()
   if (ncompute) {
     for (int i = 0; i < ncompute; i++)
       if (!(compute[i]->invoked_flag & INVOKED_PER_SURF)) {
-	compute[i]->compute_per_grid();
-	compute[i]->invoked_flag |= INVOKED_PER_SURF;
+        compute[i]->compute_per_grid();
+        compute[i]->invoked_flag |= INVOKED_PER_SURF;
       }
   }
 
@@ -448,7 +448,7 @@ int DumpSurf::parse_fields(int narg, char **arg)
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v1z") == 0) {
       if (dimension == 2)
-	error->all(FLERR,"Invalid dump surf field for 2d simulation");
+        error->all(FLERR,"Invalid dump surf field for 2d simulation");
       pack_choice[i] = &DumpSurf::pack_v1z;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v2x") == 0) {
@@ -459,22 +459,22 @@ int DumpSurf::parse_fields(int narg, char **arg)
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v2z") == 0) {
       if (dimension == 2)
-	error->all(FLERR,"Invalid dump surf field for 2d simulation");
+        error->all(FLERR,"Invalid dump surf field for 2d simulation");
       pack_choice[i] = &DumpSurf::pack_v2z;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v3x") == 0) {
       if (dimension == 2)
-	error->all(FLERR,"Invalid dump surf field for 2d simulation");
+        error->all(FLERR,"Invalid dump surf field for 2d simulation");
       pack_choice[i] = &DumpSurf::pack_v3x;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v3y") == 0) {
       if (dimension == 2)
-	error->all(FLERR,"Invalid dump surf field for 2d simulation");
+        error->all(FLERR,"Invalid dump surf field for 2d simulation");
       pack_choice[i] = &DumpSurf::pack_v3y;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v3z") == 0) {
       if (dimension == 2)
-	error->all(FLERR,"Invalid dump surf field for 2d simulation");
+        error->all(FLERR,"Invalid dump surf field for 2d simulation");
       pack_choice[i] = &DumpSurf::pack_v3z;
       vtype[i] = DOUBLE;
 
@@ -490,10 +490,10 @@ int DumpSurf::parse_fields(int narg, char **arg)
 
       char *ptr = strchr(suffix,'[');
       if (ptr) {
-	if (suffix[strlen(suffix)-1] != ']')
-	  error->all(FLERR,"Invalid attribute in dump surf command");
-	argindex[i] = atoi(ptr+1);
-	*ptr = '\0';
+        if (suffix[strlen(suffix)-1] != ']')
+          error->all(FLERR,"Invalid attribute in dump surf command");
+        argindex[i] = atoi(ptr+1);
+        *ptr = '\0';
       } else argindex[i] = 0;
 
       n = surf->find_custom(suffix);
@@ -502,16 +502,16 @@ int DumpSurf::parse_fields(int narg, char **arg)
 
       vtype[i] = surf->etype[n];
       if (argindex[i] == 0 && surf->esize[n] > 0)
-	error->all(FLERR,
-		   "Dump surf custom attribute does not store "
-		   "per-surf vector");
+        error->all(FLERR,
+                   "Dump surf custom attribute does not store "
+                   "per-surf vector");
       if (argindex[i] > 0 && surf->esize[n] == 0)
-	error->all(FLERR,
-		   "Dump surf custom attribute does not store "
-		   "per-surf array");
+        error->all(FLERR,
+                   "Dump surf custom attribute does not store "
+                   "per-surf array");
       if (argindex[i] > 0 && argindex[i] > surf->esize[n])
-	error->all(FLERR,
-		   "Dump surf custom attribute is accessed out-of-range");
+        error->all(FLERR,
+                   "Dump surf custom attribute is accessed out-of-range");
 
       field2index[i] = add_custom(suffix);
       delete [] suffix;
@@ -529,10 +529,10 @@ int DumpSurf::parse_fields(int narg, char **arg)
 
       char *ptr = strchr(suffix,'[');
       if (ptr) {
-	if (suffix[strlen(suffix)-1] != ']')
-	  error->all(FLERR,"Invalid attribute in dump surf command");
-	argindex[i] = atoi(ptr+1);
-	*ptr = '\0';
+        if (suffix[strlen(suffix)-1] != ']')
+          error->all(FLERR,"Invalid attribute in dump surf command");
+        argindex[i] = atoi(ptr+1);
+        *ptr = '\0';
       } else argindex[i] = 0;
 
       n = modify->find_compute(suffix);
@@ -540,15 +540,15 @@ int DumpSurf::parse_fields(int narg, char **arg)
       if (surf->implicit)
         error->all(FLERR,"Cannot use dump surf compute with implicit surfs");
       if (modify->compute[n]->per_surf_flag == 0)
-	error->all(FLERR,"Dump surf compute does not compute per-surf info");
+        error->all(FLERR,"Dump surf compute does not compute per-surf info");
       if (argindex[i]== 0 && modify->compute[n]->size_per_surf_cols != 0)
-	error->all(FLERR,"Dump surf compute does not compute per-surf vector");
+        error->all(FLERR,"Dump surf compute does not compute per-surf vector");
       if (argindex[i] > 0 && modify->compute[n]->size_per_surf_cols == 0)
-	error->all(FLERR,
-		   "Dump surf compute does not calculate per-surf array");
+        error->all(FLERR,
+                   "Dump surf compute does not calculate per-surf array");
       if (argindex[i] > 0 &&
           argindex[i] > modify->compute[n]->size_per_surf_cols)
-	error->all(FLERR,"Dump surf compute array is accessed out-of-range");
+        error->all(FLERR,"Dump surf compute array is accessed out-of-range");
 
       field2index[i] = add_compute(suffix);
       delete [] suffix;
@@ -567,10 +567,10 @@ int DumpSurf::parse_fields(int narg, char **arg)
 
       char *ptr = strchr(suffix,'[');
       if (ptr) {
-	if (suffix[strlen(suffix)-1] != ']')
-	  error->all(FLERR,"Invalid attribute in dump surf command");
-	argindex[i] = atoi(ptr+1);
-	*ptr = '\0';
+        if (suffix[strlen(suffix)-1] != ']')
+          error->all(FLERR,"Invalid attribute in dump surf command");
+        argindex[i] = atoi(ptr+1);
+        *ptr = '\0';
       } else argindex[i] = 0;
 
       n = modify->find_fix(suffix);
@@ -578,13 +578,13 @@ int DumpSurf::parse_fields(int narg, char **arg)
       if (surf->implicit)
         error->all(FLERR,"Cannot use dump surf fix with implicit surfs");
       if (modify->fix[n]->per_surf_flag == 0)
-	error->all(FLERR,"Dump surf fix does not compute per-surf info");
+        error->all(FLERR,"Dump surf fix does not compute per-surf info");
       if (argindex[i]== 0 && modify->fix[n]->size_per_surf_cols != 0)
-	error->all(FLERR,"Dump surf fix does not compute per-surf vector");
+        error->all(FLERR,"Dump surf fix does not compute per-surf vector");
       if (argindex[i] > 0 && modify->fix[n]->size_per_surf_cols == 0)
-	error->all(FLERR,"Dump surf fix does not compute per-surf array");
+        error->all(FLERR,"Dump surf fix does not compute per-surf array");
       if (argindex[i] > 0 && argindex[i] > modify->fix[n]->size_per_surf_cols)
-	error->all(FLERR,"Dump surf fix array is accessed out-of-range");
+        error->all(FLERR,"Dump surf fix array is accessed out-of-range");
 
       field2index[i] = add_fix(suffix);
       delete [] suffix;
@@ -604,7 +604,7 @@ int DumpSurf::parse_fields(int narg, char **arg)
       n = input->variable->find(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump surf variable name");
       if (input->variable->surf_style(n) == 0)
-	error->all(FLERR,"Dump surf variable is not surf-style variable");
+        error->all(FLERR,"Dump surf variable is not surf-style variable");
 
       field2index[i] = add_variable(suffix);
       delete [] suffix;
@@ -705,7 +705,7 @@ int DumpSurf::add_variable(char *id)
 
   id_variable = (char **)
     memory->srealloc(id_variable,(nvariable+1)*sizeof(char *),
-		     "dump:id_variable");
+                     "dump:id_variable");
   delete [] variable;
   variable = new int[nvariable+1];
   delete [] vbuf;

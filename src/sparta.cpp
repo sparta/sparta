@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -77,52 +77,52 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
   int iarg = 1;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"-partition") == 0 ||
-	strcmp(arg[iarg],"-p") == 0) {
+        strcmp(arg[iarg],"-p") == 0) {
       universe->existflag = 1;
       if (iarg+2 > narg)
-	error->universe_all(FLERR,"Invalid command-line argument");
+        error->universe_all(FLERR,"Invalid command-line argument");
       iarg++;
       while (iarg < narg && arg[iarg][0] != '-') {
-	universe->add_world(arg[iarg]);
-	iarg++;
+        universe->add_world(arg[iarg]);
+        iarg++;
       }
     } else if (strcmp(arg[iarg],"-in") == 0 ||
-	       strcmp(arg[iarg],"-i") == 0) {
+               strcmp(arg[iarg],"-i") == 0) {
       if (iarg+2 > narg)
-	error->universe_all(FLERR,"Invalid command-line argument");
+        error->universe_all(FLERR,"Invalid command-line argument");
       inflag = iarg + 1;
       iarg += 2;
     } else if (strcmp(arg[iarg],"-screen") == 0 ||
-	       strcmp(arg[iarg],"-sc") == 0) {
+               strcmp(arg[iarg],"-sc") == 0) {
       if (iarg+2 > narg)
-	error->universe_all(FLERR,"Invalid command-line argument");
+        error->universe_all(FLERR,"Invalid command-line argument");
       screenflag = iarg + 1;
       iarg += 2;
     } else if (strcmp(arg[iarg],"-log") == 0 ||
-	       strcmp(arg[iarg],"-l") == 0) {
+               strcmp(arg[iarg],"-l") == 0) {
       if (iarg+2 > narg)
-	error->universe_all(FLERR,"Invalid command-line argument");
+        error->universe_all(FLERR,"Invalid command-line argument");
       logflag = iarg + 1;
       iarg += 2;
     } else if (strcmp(arg[iarg],"-var") == 0 ||
-	       strcmp(arg[iarg],"-v") == 0) {
+               strcmp(arg[iarg],"-v") == 0) {
       if (iarg+3 > narg)
-	error->universe_all(FLERR,"Invalid command-line argument");
+        error->universe_all(FLERR,"Invalid command-line argument");
       iarg += 3;
       while (iarg < narg && arg[iarg][0] != '-') iarg++;
     } else if (strcmp(arg[iarg],"-echo") == 0 ||
-	       strcmp(arg[iarg],"-e") == 0) {
+               strcmp(arg[iarg],"-e") == 0) {
       if (iarg+2 > narg)
-	error->universe_all(FLERR,"Invalid command-line argument");
+        error->universe_all(FLERR,"Invalid command-line argument");
       iarg += 2;
     } else if (strcmp(arg[iarg],"-pscreen") == 0 ||
-	       strcmp(arg[iarg],"-ps") == 0) {
+               strcmp(arg[iarg],"-ps") == 0) {
       if (iarg+2 > narg)
        error->universe_all(FLERR,"Invalid command-line argument");
       partscreenflag = iarg + 1;
       iarg += 2;
     } else if (strcmp(arg[iarg],"-plog") == 0 ||
-	       strcmp(arg[iarg],"-pl") == 0) {
+               strcmp(arg[iarg],"-pl") == 0) {
       if (iarg+2 > narg)
        error->universe_all(FLERR,"Invalid command-line argument");
       partlogflag = iarg + 1;
@@ -167,9 +167,9 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
       iarg += 2;
 
     } else if (strcmp(arg[iarg],"-help") == 0 ||
-	       strcmp(arg[iarg],"-h") == 0) {
+               strcmp(arg[iarg],"-h") == 0) {
       if (iarg+1 > narg)
-	error->universe_all(FLERR,"Invalid command-line argument");
+        error->universe_all(FLERR,"Invalid command-line argument");
       helpflag = 1;
       iarg += 1;
     } else error->universe_all(FLERR,"Invalid command-line argument");
@@ -209,18 +209,18 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
     else {
       universe->uscreen = fopen(arg[screenflag],"w");
       if (universe->uscreen == NULL)
-	error->universe_one(FLERR,"Cannot open universe screen file");
+        error->universe_one(FLERR,"Cannot open universe screen file");
     }
     if (logflag == 0) {
       universe->ulogfile = fopen("log.sparta","w");
       if (universe->ulogfile == NULL)
-	error->universe_one(FLERR,"Cannot open log.sparta");
+        error->universe_one(FLERR,"Cannot open log.sparta");
     } else if (strcmp(arg[logflag],"none") == 0)
       universe->ulogfile = NULL;
     else {
       universe->ulogfile = fopen(arg[logflag],"w");
       if (universe->ulogfile == NULL)
-	error->universe_one(FLERR,"Cannot open universe log file");
+        error->universe_one(FLERR,"Cannot open universe log file");
     }
   }
 
@@ -245,9 +245,9 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
       if (inflag == 0) infile = stdin;
       else infile = fopen(arg[inflag],"r");
       if (infile == NULL) {
-	char str[128];
-	sprintf(str,"Cannot open input script %s",arg[inflag]);
-	error->one(FLERR,str);
+        char str[128];
+        sprintf(str,"Cannot open input script %s",arg[inflag]);
+        error->one(FLERR,str);
       }
     }
 
@@ -282,12 +282,12 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
          if (screen == NULL) error->one(FLERR,"Cannot open screen file");
        }
       else if (strcmp(arg[partscreenflag],"none") == 0)
-	screen = NULL;
+        screen = NULL;
       else {
-	char str[128];
-	sprintf(str,"%s.%d",arg[partscreenflag],universe->iworld);
-	screen = fopen(str,"w");
-	if (screen == NULL) error->one(FLERR,"Cannot open screen file");
+        char str[128];
+        sprintf(str,"%s.%d",arg[partscreenflag],universe->iworld);
+        screen = fopen(str,"w");
+        if (screen == NULL) error->one(FLERR,"Cannot open screen file");
       } else screen = NULL;
 
     if (me == 0)
@@ -306,20 +306,20 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
          if (logfile == NULL) error->one(FLERR,"Cannot open logfile");
        }
       else if (strcmp(arg[partlogflag],"none") == 0)
-	logfile = NULL;
+        logfile = NULL;
       else {
-	char str[128];
-	sprintf(str,"%s.%d",arg[partlogflag],universe->iworld);
-	logfile = fopen(str,"w");
-	if (logfile == NULL) error->one(FLERR,"Cannot open logfile");
+        char str[128];
+        sprintf(str,"%s.%d",arg[partlogflag],universe->iworld);
+        logfile = fopen(str,"w");
+        if (logfile == NULL) error->one(FLERR,"Cannot open logfile");
       } else logfile = NULL;
 
     if (me == 0) {
       infile = fopen(arg[inflag],"r");
       if (infile == NULL) {
-	char str[128];
-	sprintf(str,"Cannot open input script %s",arg[inflag]);
-	error->one(FLERR,str);
+        char str[128];
+        sprintf(str,"Cannot open input script %s",arg[inflag]);
+        error->one(FLERR,str);
       }
     } else infile = NULL;
 
@@ -327,25 +327,25 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
 
     if (universe->me == 0) {
       if (universe->uscreen) {
-	fprintf(universe->uscreen,"SPARTA (%s)\n",universe->version);
-	fprintf(universe->uscreen,"Running on %d partitions of processors\n",
-		universe->nworlds);
+        fprintf(universe->uscreen,"SPARTA (%s)\n",universe->version);
+        fprintf(universe->uscreen,"Running on %d partitions of processors\n",
+                universe->nworlds);
       }
       if (universe->ulogfile) {
-	fprintf(universe->ulogfile,"SPARTA (%s)\n",universe->version);
-	fprintf(universe->ulogfile,"Running on %d partitions of processors\n",
-		universe->nworlds);
+        fprintf(universe->ulogfile,"SPARTA (%s)\n",universe->version);
+        fprintf(universe->ulogfile,"Running on %d partitions of processors\n",
+                universe->nworlds);
       }
     }
 
     if (me == 0) {
       if (screen) {
-	fprintf(screen,"SPARTA (%s)\n",universe->version);
-	fprintf(screen,"Processor partition = %d\n",universe->iworld);
+        fprintf(screen,"SPARTA (%s)\n",universe->version);
+        fprintf(screen,"Processor partition = %d\n",universe->iworld);
       }
       if (logfile) {
-	fprintf(logfile,"SPARTA (%s)\n",universe->version);
-	fprintf(logfile,"Processor partition = %d\n",universe->iworld);
+        fprintf(logfile,"SPARTA (%s)\n",universe->version);
+        fprintf(logfile,"Processor partition = %d\n",universe->iworld);
       }
     }
   }
@@ -361,7 +361,7 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
   MPI_Type_size(MPI_SPARTA_BIGINT,&mpisize);
   if (mpisize != sizeof(bigint))
       error->all(FLERR,
-		 "MPI_SPARTA_BIGINT and bigint in spatype.h "
+                 "MPI_SPARTA_BIGINT and bigint in spatype.h "
                  "are not compatible");
 
   if (sizeof(smallint) != 4 || sizeof(bigint) != 8)

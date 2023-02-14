@@ -1,0 +1,57 @@
+################################################################################
+# shock in quasi-1D tube with collisions
+# particles reflect off global box boundaries
+#
+# Notes:
+#  - The domain is only 1 cell high in Y
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+#  (1 cell high in Y)
+# particles reflect off global box boundaries
+
+seed	    	    12345 
+dimension   	    2     
+global              gridcut 0.0 comm/sort yes
+
+boundary	    r r p
+
+create_box  	    0 0.02 -0.005 0.005 -0.1 0.1 
+create_grid 	    8000 1 1
+ 
+balance_grid        rcb cell 
+
+region		    HP block 0 0.01 -0.005 0.005 -0.1 0.1
+region		    LP block 0.01 0.02 -0.005 0.005 -0.1 0.1
+
+species		    ar.species Ar Ar_2 
+mixture		    gasN2HP Ar nrho 1e25 temp 1350 
+mixture		    gasN2LP Ar_2 nrho 1.25e24 temp 1080
+
+global		    fnum 1.0e17 temp 1000 
+
+create_particles    gasN2HP n 0 region HP twopass # HP - high pressure region
+create_particles    gasN2LP n 0 region LP twopass # LP - low pressure region
+
+collide             vss all ar.vss 
+
+compute         gcomp grid all all u v w massrho nrho 
+fix             gfix ave/grid all 1 50 50 c_gcomp[*] 
+compute         gtcomp thermal/grid all all temp 
+fix             gtfix ave/grid all 1 50 50 c_gtcomp[*] 
+compute 	gpcomp thermal/grid all all press
+fix 		gpfix ave/grid all 1 50 50 c_gpcomp[*]
+
+stats		    100 
+stats_style	    step cpu np nattempt ncoll nscoll nscheck
+
+#dump                2 image all 50 image.*.ppm type type pdiam 3e-4 &
+#                     surf proc 0.01 size 512 512 axes yes 0.9 0.02 particle yes &
+#                     zoom 15 box yes 0.02
+#dump_modify         2 pad 4
+
+timestep 	    1e-9 
+run 		    10000
+

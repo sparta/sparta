@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -890,29 +890,29 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
       maxdelete = h_maxdelete();
       auto maxdelete_extra = maxdelete*extra_factor;
       if (d_dellist.extent(0) < maxdelete_extra) {
-	memoryKK->destroy_kokkos(k_dellist,dellist);
-	memoryKK->grow_kokkos(k_dellist,dellist,maxdelete_extra,"collide:dellist");
-	d_dellist = k_dellist.d_view;
+        memoryKK->destroy_kokkos(k_dellist,dellist);
+        memoryKK->grow_kokkos(k_dellist,dellist,maxdelete_extra,"collide:dellist");
+        d_dellist = k_dellist.d_view;
       }
 
       maxcellcount = h_maxcellcount();
       particle_kk->set_maxcellcount(maxcellcount);
       auto maxcellcount_extra = maxcellcount*extra_factor;
       if (d_plist.extent(1) < maxcellcount_extra) {
-	Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
-	d_plist = grid_kk->d_plist;
+        Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
+        d_plist = grid_kk->d_plist;
       }
 
       auto nlocal_extra = h_nlocal()*extra_factor;
       if (d_particles.extent(0) < nlocal_extra) {
-	particle->grow(nlocal_extra - particle->nlocal);
-	d_particles = particle_kk->k_particles.d_view;
-	auto h_ewhich = particle_kk->k_ewhich.h_view;
-	k_eivec = particle_kk->k_eivec;
-	k_eiarray = particle_kk->k_eiarray;
-	k_edarray = particle_kk->k_edarray;
-	d_ionambi = k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view;
-	d_velambi = k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view;
+        particle->grow(nlocal_extra - particle->nlocal);
+        d_particles = particle_kk->k_particles.d_view;
+        auto h_ewhich = particle_kk->k_ewhich.h_view;
+        k_eivec = particle_kk->k_eivec;
+        k_eiarray = particle_kk->k_eiarray;
+        k_edarray = particle_kk->k_edarray;
+        d_ionambi = k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view;
+        d_velambi = k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view;
       }
     }
   }
@@ -1019,11 +1019,11 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
 
     if (ipart->ispecies == ambispecies && jpart->ispecies == ambispecies) {
       if (ATOMIC_REDUCTION == 1)
-	Kokkos::atomic_fetch_add(&d_ncollide_one(),1);
+        Kokkos::atomic_fetch_add(&d_ncollide_one(),1);
       else if (ATOMIC_REDUCTION == 0)
-	d_ncollide_one()++;
+        d_ncollide_one()++;
       else
-	reduce.ncollide_one++;
+        reduce.ncollide_one++;
 
       continue;
     }
@@ -1191,7 +1191,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
 
       } else if (jspecies == ambispecies && jpart->ispecies != ambispecies) {
         int index = Kokkos::atomic_fetch_add(&d_nlocal(),1);
-	int reallocflag = ParticleKokkos::add_particle_kokkos(d_particles,index,0,jspecies,icell,jpart->x,jpart->v,0.0,0.0);
+        int reallocflag = ParticleKokkos::add_particle_kokkos(d_particles,index,0,jspecies,icell,jpart->x,jpart->v,0.0,0.0);
         if (reallocflag) {
           d_retry() = 1;
           d_part_grow() = 1;
@@ -1199,23 +1199,23 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
           return;
         }
 
-	//memcpy(&particles[index],jpart,nbytes);
+        //memcpy(&particles[index],jpart,nbytes);
         d_particles[index] = *jpart;
-	d_particles[index].id = MAXSMALLINT*rand_gen.drand();
-	d_ionambi[index] = 0;
+        d_particles[index].id = MAXSMALLINT*rand_gen.drand();
+        d_ionambi[index] = 0;
 
-	//if (nelectron-1 != j-np) memcpy(&d_elist(icell,j-np),&d_elist(icell,nelectron-1),nbytes);
-	if (nelectron-1 != j-np) d_elist(icell,j-np) = d_elist(icell,nelectron-1);
-	nelectron--;
+        //if (nelectron-1 != j-np) memcpy(&d_elist(icell,j-np),&d_elist(icell,nelectron-1),nbytes);
+        if (nelectron-1 != j-np) d_elist(icell,j-np) = d_elist(icell,nelectron-1);
+        nelectron--;
 
-	if (np < d_plist.extent(1)) {
-	  d_plist(icell,np++) = index;
-	} else {
-	  d_retry() = 1;
-	  d_maxcellcount() += DELTACELLCOUNT;
-	  rand_pool.free_state(rand_gen);
-	  return;
-	}
+        if (np < d_plist.extent(1)) {
+          d_plist(icell,np++) = index;
+        } else {
+          d_retry() = 1;
+          d_maxcellcount() += DELTACELLCOUNT;
+          rand_pool.free_state(rand_gen);
+          return;
+        }
 
       }
     }
@@ -1257,8 +1257,8 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
     const int i = d_plist(icell,n);
     if (d_ionambi[i]) {
       if (melectron < nelectron) {
-	ep = &d_elist(icell,melectron);
-	//memcpy(d_velambi[i],ep->v,3*sizeof(double));
+        ep = &d_elist(icell,melectron);
+        //memcpy(d_velambi[i],ep->v,3*sizeof(double));
         d_velambi(i,0) = ep->v[0];
         d_velambi(i,1) = ep->v[1];
         d_velambi(i,2) = ep->v[2];
@@ -1590,7 +1590,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
             E_Dispose += p->erot;
             Fraction_Rot =
               1- pow(rand_gen.drand(),
-		     (1/(2.5-d_params(ip->ispecies,jp->ispecies).omega)));
+                     (1/(2.5-d_params(ip->ispecies,jp->ispecies).omega)));
             p->erot = Fraction_Rot * E_Dispose;
             E_Dispose -= p->erot;
           } else {
