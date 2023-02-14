@@ -66,7 +66,7 @@ stats_style     step time dt f_DT cpu np :pre
 
 [Restart, output info:]
 
-The global time and the current global timestep are written to "binary restart files"_restart.html.  This breaks backwards compatibility
+The global time and the current global timestep are written to "binary restart files"_restart.html.  This breaks backward compatibility
 with older restart files, even if this fix is not invoked.
 
 The optional argument {store_cell_dt} directs the fix to store the cell timestep values in a per-grid vector.  The vector can be
@@ -74,5 +74,12 @@ accessed by any command that uses per-grid values from a fix as input.  For exam
 "dump grid"_dump.html command.  See "Section 4.4"_Section_howto.html#howto_4 for an overview of SPARTA
 output options.  The {store_cell_dt} option could be useful for visualizing the cell timestep data on the grid at
 a fixed point in time or as the solution evolves.
-</P>
+
+[Related commands:]
+
+"run"_run.html
+
+A {time} keyword has been added to the {run} command so that a simulation can be run until a specified end time is reached.
+
 <P><B>Default: </B> none
+

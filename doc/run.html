@@ -13,21 +13,22 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>run N keyword values ... 
+<PRE>run val keyword values ... 
 </PRE>
-<UL><LI>N = # of timesteps 
+<UL><LI>val = # of integer timesteps N or ending time (see <I>time</I> keyword below)  
 
 <LI>zero or more keyword/value pairs may be appended 
 
-<LI>keyword = <I>upto</I> or <I>start</I> or <I>stop</I> or <I>pre</I> or <I>post</I> or <I>every</I> 
+<LI>keyword = <I>time</I> or <I>upto</I> or <I>start</I> or <I>stop</I> or <I>pre</I> or <I>post</I> or <I>every</I> 
 
-<PRE>  <I>upto</I> value = none
+<PRE>  <I>time</I> value = none
+  <I>upto</I> value = none
   <I>start</I> value = N1
     N1 = timestep at which 1st run started
   <I>stop</I> value = N2
     N2 = timestep at which last run will end
   <I>pre</I> value = <I>no</I> or <I>yes</I>
-  <I>post</I> value = <I>no</I> or <I>yes</I> 
+  <I>post</I> value = <I>no</I> or <I>yes</I>
   <I>every</I> values = M c1 c2 ...
     M = break the run into M-timestep segments and invoke one or more commands between each segment
     c1,c2,...,cN = one or more SPARTA commands, each enclosed in quotes
@@ -42,11 +43,14 @@ run 1000000 upto
 run 100 start 0 stop 1000
 run 1000 pre no post yes
 run 100000 start 0 stop 1000000 every 1000 "print 'Temp = $t'"
-run 100000 every 1000 NULL 
+run 100000 every 1000 NULL
+run 5.7 time
+run 5.7 time every 100 NULL 
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Run or continue a simulation for a specified number of timesteps.
+<P>Run or continue a simulation for a specified number of timesteps or until a specified ending time
+is reached (if the <I>time</I> keyword is specified).
 </P>
 <P>A value of N = 0 is acceptable; only the statistics of the system are
 computed and printed without taking a timestep.
@@ -59,7 +63,9 @@ machine that allocates chunks of time and terminate your job when time
 is exceeded.  If you need to restart your script multiple times
 (reading in the last restart file), you can keep restarting your
 script with the same run command until the simulation finally
-completes.
+completes.  If the <I>time</I> keyword is used, the <I>upto</I> keyword is not
+needed since the time option runs the simulation "up to" the specified
+time.
 </P>
 <P>The <I>start</I> or <I>stop</I> keywords can be used if multiple runs are being
 performed and you want a <A HREF = "variable.html">variable</A> or <A HREF = "fix.html">fix</A>
@@ -169,6 +175,10 @@ command:
 <I>every</I> keyword, then the 1st run will do the full setup and the last
 run will print the full timing summary, but these operations will be
 skipped for intermediate runs.
+</P>
+<P>If the <I>time</I> keyword is used in conjunction with the <I>every</I> keyword,
+the shorter runs of M steps each are performed until the specified end
+time is reached, possibly reducing the number of steps in the last run.
 </P>
 <P>IMPORTANT NOTE: You might hope to specify a command that exits the run
 by jumping out of the loop, e.g.

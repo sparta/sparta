@@ -82,7 +82,7 @@ timestep being used in the simulation.  The <I>time</I> option in the stats_styl
 
 <P><B>Restart, output info:</B>
 </P>
-<P>The global time and the current global timestep are written to <A HREF = "restart.html">binary restart files</A>.  This breaks backwards compatibility
+<P>The global time and the current global timestep are written to <A HREF = "restart.html">binary restart files</A>.  This breaks backward compatibility
 with older restart files, even if this fix is not invoked.
 </P>
 <P>The optional argument <I>store_cell_dt</I> directs the fix to store the cell timestep values in a per-grid vector.  The vector can be
@@ -91,6 +91,12 @@ accessed by any command that uses per-grid values from a fix as input.  For exam
 output options.  The <I>store_cell_dt</I> option could be useful for visualizing the cell timestep data on the grid at
 a fixed point in time or as the solution evolves.
 </P>
-<P><B>Default: </B> none
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "run.html">run</A>
+</P>
+<P>A <I>time</I> keyword has been added to the <I>run</I> command so that a simulation can be run until a specified end time is reached.
+</P>
+<P><P><B>Default: </B> none
 </P>
 </HTML>
