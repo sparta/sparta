@@ -1596,9 +1596,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           jpart->flag = PSURF;
           jpart->dtremain = dtremain;
           jpart->weight = particle_i.weight;
-          //d_pcreated()++; //// need atomics
         }
 
+        Kokkos::atomic_increment(&d_nboundary_one());
         Kokkos::atomic_decrement(&d_ntouch_one());    // decrement here since will increment below
       } else {
         if (ATOMIC_REDUCTION == 1) {
