@@ -42,7 +42,7 @@ enum{COPYPARTICLELIST,FIXEDMEMORY};
 #define DELTA 16384
 #define DELTASPECIES 16
 #define DELTAMIXTURE 8
-#define DELTACELLCOUNT 10
+#define DELTACELLCOUNT 16
 #define MAXLINE 1024
 
 // customize by adding an abbreviation string
@@ -62,7 +62,7 @@ ParticleKokkos::ParticleKokkos(SPARTA *sparta) : Particle(sparta)
   h_reorder_pass = k_reorder_pass.h_view;
 
   sorted_kk = 0;
-  maxcellcount = 10;
+  maxcellcount = 16;
 
   k_eivec = tdual_struct_tdual_int_1d_1d("particle:eivec",0);
   k_eiarray = tdual_struct_tdual_int_2d_1d("particle:eiarray",0);

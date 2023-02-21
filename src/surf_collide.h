@@ -30,6 +30,8 @@ class SurfCollide : protected Pointers {
   int transparent;          // 1 if transparent collision model
   int vector_flag;          // 0/1 if compute_vector() function exists
   int size_vector;          // length of global vector
+  int kokkosable;           // 1 if Kokkos version
+  int copy,copymode;        // 1 if copy of class, used by Kokkos
 
   SurfCollide(class SPARTA *, int, char **);
   SurfCollide(class SPARTA *sparta) : Pointers(sparta) {}
@@ -45,16 +47,17 @@ class SurfCollide : protected Pointers {
   void tally_update();
   double compute_vector(int i);
 
-  int copy,copymode;
+  // nsingle = all collisions in one step
+
+  int nsingle;
 
  protected:
 
   // tallies for collisions
-  // nsingle = all collisions in one step
   // ntotal = cumulative nsingle across all steps
   // one,all used in compute_vector()
 
-  int nsingle,ntotal;
+  int ntotal;
   double one[2],all[2];
 };
 

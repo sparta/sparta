@@ -134,6 +134,10 @@ action surf_collide_vanish_kokkos.cpp
 action surf_collide_vanish_kokkos.h
 action surf_kokkos.cpp
 action surf_kokkos.h
+action surf_react_global_kokkos.cpp
+action surf_react_global_kokkos.h
+action surf_react_prob_kokkos.cpp
+action surf_react_prob_kokkos.h
 action update_kokkos.cpp
 action update_kokkos.h
 action kokkos_scan.cpp

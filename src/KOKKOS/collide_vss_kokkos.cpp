@@ -483,8 +483,8 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
   h_retry() = 1;
 
-  double extra_factor = sparta->kokkos->collide_extra;
-  if (sparta->kokkos->collide_retry_flag) extra_factor = 1.0;
+  double extra_factor = sparta->kokkos->react_extra;
+  if (sparta->kokkos->react_retry_flag) extra_factor = 1.0;
 
   if (react) {
     auto maxdelete_extra = maxdelete*extra_factor;
@@ -513,7 +513,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
   while (h_retry()) {
 
-    if (react && sparta->kokkos->collide_retry_flag)
+    if (react && sparta->kokkos->react_retry_flag)
       backup();
 
     h_retry() = 0;
@@ -537,7 +537,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
     if (h_retry()) {
       //printf("Retrying, reason %i %i %i !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",h_maxdelete() > d_dellist.extent(0),h_maxcellcount() > d_plist.extent(1),h_part_grow());
-      if (!sparta->kokkos->collide_retry_flag) {
+      if (!sparta->kokkos->react_retry_flag) {
         error->one(FLERR,"Ran out of space in Kokkos collisions, increase collide/extra"
                          " or use collide/retry");
       } else
@@ -805,8 +805,8 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 
   h_retry() = 1;
 
-  double extra_factor = sparta->kokkos->collide_extra;
-  if (sparta->kokkos->collide_retry_flag) extra_factor = 1.0;
+  double extra_factor = sparta->kokkos->react_extra;
+  if (sparta->kokkos->react_retry_flag) extra_factor = 1.0;
 
   if (react) {
     maxcellcount = particle_kk->get_maxcellcount();
@@ -845,7 +845,7 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 
   while (h_retry()) {
 
-    if (react && sparta->kokkos->collide_retry_flag)
+    if (react && sparta->kokkos->react_retry_flag)
       backup();
 
     h_retry() = 0;
@@ -872,7 +872,7 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
       //printf("Retrying, reason %i %i %i %i !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",h_maxelectron() > d_elist.extent(1),h_maxdelete() > d_dellist.extent(0),h_maxcellcount() > d_plist.extent(1),h_part_grow());
       //printf("%i %i %i %i %i %i %i !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",h_maxelectron(),d_elist.extent(1),h_maxdelete(),d_dellist.extent(0),h_maxcellcount(),d_plist.extent(1),h_part_grow());
 
-      if (!sparta->kokkos->collide_retry_flag) {
+      if (!sparta->kokkos->react_retry_flag) {
         error->one(FLERR,"Ran out of space in Kokkos collisions, increase collide/extra"
                          " or use collide/retry");
       } else

@@ -52,6 +52,8 @@ class SurfKokkos : public Surf {
   tdual_struct_tdual_int_2d_1d k_eiarray;
   tdual_struct_tdual_float_2d_1d k_edarray;
 
+  DAT::t_int_scalar d_nreact_one;
+
  private:
 
 };

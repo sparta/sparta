@@ -56,10 +56,10 @@ enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // several files
 // either set ID or PROC/INDEX, set other to -1
 
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID 308143534  // particle ID
+#define MOVE_DEBUG_ID 1680896170  // particle ID
 #define MOVE_DEBUG_PROC -1        // owning proc
 #define MOVE_DEBUG_INDEX -1   // particle index on owning proc
-#define MOVE_DEBUG_STEP 4107    // timestep
+#define MOVE_DEBUG_STEP 357    // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -1196,7 +1196,7 @@ template < int DIM, int SURF > void Update::move()
   // accumulate running totals
 
   niterate_running += niterate;
-  nmove_running += nlocal;
+  nmove_running += particle->nlocal;
   ntouch_running += ntouch_one;
   ncomm_running += ncomm_one;
   nboundary_running += nboundary_one;
