@@ -60,7 +60,7 @@ enum{ARG,OP};
 
 enum{DONE,ADD,SUBTRACT,MULTIPLY,DIVIDE,CARAT,MODULO,UNARY,
      NOT,EQ,NE,LT,LE,GT,GE,AND,OR,
-     SQRT,EXP,LN,LOG,ABS,SIN,COS,TAN,ASIN,ACOS,ATAN,ATAN2,
+     SQRT,EXP,LN,LOG,ABS,SIN,COS,TAN,ASIN,ACOS,ATAN,ATAN2,ERF,
      RANDOM,NORMAL,CEIL,FLOOR,ROUND,RAMP,STAGGER,LOGFREQ,STRIDE,
      VDISPLACE,SWIGGLE,CWIGGLE,
      VALUE,ARRAY,PARTARRAYDOUBLE,PARTARRAYINT,SPECARRAY};
@@ -2224,6 +2224,14 @@ double Variable::collapse_tree(Tree *tree)
     return tree->value;
   }
 
+  if (tree->type == ERF) {
+    arg1 = collapse_tree(tree->left);
+    if (tree->left->type != VALUE) return 0.0;
+    tree->type = VALUE;
+    tree->value = erf(arg1);
+    return tree->value;
+  }
+
   // random() or normal() do not become a single collapsed value
 
   if (tree->type == RANDOM) {
@@ -2513,6 +2521,8 @@ double Variable::eval_tree(Tree *tree, int i)
     return atan(eval_tree(tree->left,i));
   if (tree->type == ATAN2)
     return atan2(eval_tree(tree->left,i),eval_tree(tree->right,i));
+  if (tree->type == ERF)
+    return erf(eval_tree(tree->left,i));
 
   if (tree->type == RANDOM) {
     double lower = eval_tree(tree->left,i);
@@ -2761,7 +2771,8 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
       strcmp(word,"sin") && strcmp(word,"cos") &&
       strcmp(word,"tan") && strcmp(word,"asin") &&
       strcmp(word,"acos") && strcmp(word,"atan") &&
-      strcmp(word,"atan2") && strcmp(word,"random") &&
+      strcmp(word,"atan2") && strcmp(word,"erf") &&
+      strcmp(word,"random") &&
       strcmp(word,"normal") && strcmp(word,"ceil") &&
       strcmp(word,"floor") && strcmp(word,"round") &&
       strcmp(word,"ramp") && strcmp(word,"stagger") &&
@@ -2923,6 +2934,11 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
       error->all(FLERR,"Invalid math function in variable formula");
     if (tree) newtree->type = ATAN2;
     else argstack[nargstack++] = atan2(value1,value2);
+  } else if (strcmp(word,"erf") == 0) {
+    if (narg != 1)
+      error->all(FLERR,"Invalid math function in variable formula");
+    if (tree) newtree->type = ERF;
+    else argstack[nargstack++] = erf(value1);
 
   } else if (strcmp(word,"random") == 0) {
     if (narg != 2)
