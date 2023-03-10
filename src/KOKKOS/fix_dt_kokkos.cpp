@@ -280,9 +280,9 @@ void FixDtKokkos::operator()(TagFixDt_SetCellDtDesired<ATOMIC_REDUCTION>, const 
   double cell_dt_desired = 0.;
 
   // cell dt based on mean collision time
-  double velocitymag = sqrt(d_usq_vector(i) + d_vsq_vector(i) + d_wsq_vector(i));
-  if (velocitymag > 0.) {
-    double mean_collision_time = d_lambda_vector(i)/velocitymag;
+  double vrm_max = sqrt(2.0*boltz * d_temp_vector(i) / min_species_mass);
+  if (vrm_max > 0.) {
+    double mean_collision_time = d_lambda_vector(i)/vrm_max;
     if (mean_collision_time > 0.)
       cell_dt_desired = collision_fraction*mean_collision_time;
   }
@@ -316,7 +316,6 @@ void FixDtKokkos::operator()(TagFixDt_SetCellDtDesired<ATOMIC_REDUCTION>, const 
   }
 
   // cell dt based on transit time using maximum most probable speed
-  double vrm_max = sqrt(2.0*boltz * d_temp_vector(i) / min_species_mass);
   if (vrm_max > 0.) {
     dt_candidate = transit_fraction*dx/vrm_max;
     cell_dt_desired = MIN(dt_candidate,cell_dt_desired);

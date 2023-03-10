@@ -461,9 +461,9 @@ void FixDt::end_of_step()
     double cell_dt_desired = 0.;
 
     // cell dt based on mean collision time
-    double velocitymag = sqrt(usq[i] + vsq[i] + wsq[i]);
-    if (velocitymag > 0.) {
-      double mean_collision_time = lambda[i]/velocitymag;
+    double vrm_max = sqrt(2.0*update->boltz * temp[i] / min_species_mass);
+    if (vrm_max > 0.) {
+      double mean_collision_time = lambda[i]/vrm_max;
       if (mean_collision_time > 0.)
         cell_dt_desired = collision_fraction*mean_collision_time;
     }
@@ -497,7 +497,6 @@ void FixDt::end_of_step()
     }
 
     // cell dt based on transit time using maximum most probable speed
-    double vrm_max = sqrt(2.0*update->boltz * temp[i] / min_species_mass);
     if (vrm_max > 0.) {
       dt_candidate = transit_fraction*dx/vrm_max;
       cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
