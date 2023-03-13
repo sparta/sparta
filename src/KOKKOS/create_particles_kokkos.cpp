@@ -185,7 +185,7 @@ void CreateParticlesKokkos::create_local(bigint np)
   Kokkos::deep_copy(h_cells2cands, d_cells2cands);
 
   Kokkos::View<int*, DeviceType> d_keep("cand_keep", ncands);
-  Kokkos::View<int*, DeviceType> d_isp("cand_x", ncands);
+  Kokkos::View<int*, DeviceType> d_isp("cand_isp", ncands);
   Kokkos::View<double*[3], DeviceType> d_x("cand_x", ncands);
   Kokkos::View<double*, DeviceType> d_vn("cand_vn", ncands);
   Kokkos::View<double*, DeviceType> d_vr("cand_vr", ncands);
