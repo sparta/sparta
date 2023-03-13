@@ -187,8 +187,6 @@ void CreateParticlesKokkos::create_local(bigint np)
   Kokkos::View<int*, DeviceType> d_keep("cand_keep", ncands);
   Kokkos::View<int*, DeviceType> d_isp("cand_isp", ncands);
   Kokkos::View<double*[3], DeviceType> d_x("cand_x", ncands);
-  Kokkos::View<double*, DeviceType> d_vn("cand_vn", ncands);
-  Kokkos::View<double*, DeviceType> d_vr("cand_vr", ncands);
   Kokkos::View<double*, DeviceType> d_erot("cand_erot", ncands);
   Kokkos::View<double*, DeviceType> d_evib("cand_evib", ncands);
   Kokkos::View<int*, DeviceType> d_id("cand_id", ncands);
@@ -196,8 +194,6 @@ void CreateParticlesKokkos::create_local(bigint np)
   auto h_keep = Kokkos::create_mirror_view(d_keep);
   auto h_isp = Kokkos::create_mirror_view(d_isp);
   auto h_x = Kokkos::create_mirror_view(d_x);
-  auto h_vn = Kokkos::create_mirror_view(d_vn);
-  auto h_vr = Kokkos::create_mirror_view(d_vr);
   auto h_erot = Kokkos::create_mirror_view(d_erot);
   auto h_evib = Kokkos::create_mirror_view(d_evib);
   auto h_id = Kokkos::create_mirror_view(d_id);
@@ -242,8 +238,6 @@ void CreateParticlesKokkos::create_local(bigint np)
 
       auto theta1 = MY_2PI * random->uniform();
       auto theta2 = MY_2PI * random->uniform();
-      h_vn(cand) = vn;
-      h_vr(cand) = vr;
 
       //these two functions also use random variables...
       h_erot(cand) = particle->erot(ispecies,temp_rot*tempscale,random);
@@ -269,8 +263,6 @@ void CreateParticlesKokkos::create_local(bigint np)
   Kokkos::deep_copy(d_keep, h_keep);
   Kokkos::deep_copy(d_isp, h_isp);
   Kokkos::deep_copy(d_x, h_x);
-  Kokkos::deep_copy(d_vn, h_vn);
-  Kokkos::deep_copy(d_vr, h_vr);
   Kokkos::deep_copy(d_erot, h_erot);
   Kokkos::deep_copy(d_evib, h_evib);
   Kokkos::deep_copy(d_id, h_id);
