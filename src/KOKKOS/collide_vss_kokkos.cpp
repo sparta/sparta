@@ -466,7 +466,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
   if (NEARCP) {
     if (int(d_nn_last_partner.extent(0)) < nglocal || int(d_nn_last_partner.extent(1)) < d_plist.extent(1))
-      d_nn_last_partner = DAT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,d_plist.extent(1));
+      MemKK::realloc_kokkos(d_nn_last_partner,"collide:nn_last_partner",nglocal,d_plist.extent(1));
     //Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideZeroNN>(0,nglocal),*this);
   }
 
@@ -500,7 +500,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
       Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
       d_plist = grid_kk->d_plist;
       if (NEARCP)
-        d_nn_last_partner = DAT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount_extra);
+        MemKK::realloc_kokkos(d_nn_last_partner,"collide:nn_last_partner",nglocal,maxcellcount_extra);
     }
 
     auto nlocal_extra = particle->nlocal*extra_factor;

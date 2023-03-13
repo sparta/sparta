@@ -20,6 +20,8 @@
 
 namespace SPARTA_NS {
 
+typedef MemoryKokkos MemKK;
+
 class MemoryKokkos : public Memory {
  public:
   MemoryKokkos(class SPARTA *sparta) : Memory(sparta) {}
@@ -307,6 +309,28 @@ void destroy_kokkos(TYPE data, typename TYPE::value_type** &array)
   data = TYPE();
   sfree(array);
   array = NULL;
+}
+
+/* ----------------------------------------------------------------------
+   reallocate Kokkos views without initialization
+   deallocate first to reduce memory use
+------------------------------------------------------------------------- */
+
+template <typename TYPE, typename... Indices>
+static void realloc_kokkos(TYPE &data, const char *name, Indices... ns)
+{
+  data = TYPE();
+  data = TYPE(Kokkos::NoInit(std::string(name)), ns...);
+}
+
+/* ----------------------------------------------------------------------
+   get memory usage of Kokkos view in bytes
+------------------------------------------------------------------------- */
+
+template <typename TYPE>
+static double memory_usage(TYPE &data)
+{
+  return data.span() * sizeof(typename TYPE::value_type);
 }
 
 };
