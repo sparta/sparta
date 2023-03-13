@@ -211,15 +211,16 @@ void ParticleKokkos::sort_kokkos()
   d_plist = grid_kk->d_plist;
 
   if (ngrid > int(d_cellcount.extent(0))) {
-    grid_kk->d_cellcount = DAT::t_int_1d(Kokkos::NoInit("particle:cellcount"),ngrid);
+    d_cellcount = decltype(d_cellcount)();
+    MemKK::realloc_kokkos(grid_kk->d_cellcount,"particle:cellcount",ngrid);
     d_cellcount = grid_kk->d_cellcount;
   }
 
   Kokkos::deep_copy(d_cellcount,0);
 
   if (ngrid > int(d_plist.extent(0)) || maxcellcount > int(d_plist.extent(1))) {
-    grid_kk->d_plist = DAT::t_int_2d(); // destroy reference to reduce memory use
-    grid_kk->d_plist = DAT::t_int_2d(Kokkos::view_alloc("particle:plist",Kokkos::WithoutInitializing),ngrid,maxcellcount);
+    d_plist = decltype(d_plist)();
+    MemKK::realloc_kokkos(grid_kk->d_plist,"particle:plist",ngrid,maxcellcount);
     d_plist = grid_kk->d_plist;
   }
 
@@ -228,8 +229,7 @@ void ParticleKokkos::sort_kokkos()
 
   if (reorder_flag && reorder_scheme == COPYPARTICLELIST) {
     if (d_particles.extent(0) > d_offsets_part.extent(0)) {
-      d_offsets_part = DAT::t_int_1d();
-      d_offsets_part = DAT::t_int_1d(Kokkos::NoInit("particle:offsets_part"),d_particles.extent(0));
+      MemKK::realloc_kokkos(d_offsets_part,"particle:offsets_part",d_particles.extent(0));
     }
   }
 
@@ -260,8 +260,8 @@ void ParticleKokkos::sort_kokkos()
     if (h_fail_flag()) {
       Kokkos::deep_copy(d_cellcount,0);
       maxcellcount += DELTACELLCOUNT;
-      grid_kk->d_plist = DAT::t_int_2d(); // destroy reference to reduce memory use
-      grid_kk->d_plist = DAT::t_int_2d(Kokkos::view_alloc("particle:plist",Kokkos::WithoutInitializing),ngrid,maxcellcount);
+      d_plist = decltype(d_plist)();
+      MemKK::realloc_kokkos(grid_kk->d_plist,"particle:plist",ngrid,maxcellcount);
       d_plist = grid_kk->d_plist;
 
       Kokkos::deep_copy(d_fail_flag,0);
@@ -271,15 +271,11 @@ void ParticleKokkos::sort_kokkos()
   if (reorder_flag) {
 
     if (reorder_scheme == COPYPARTICLELIST) {
-      if (d_particles.extent(0) > d_sorted.extent(0)) {
-        d_sorted = t_particle_1d();
-        d_sorted = t_particle_1d(Kokkos::NoInit("particle:sorted"),d_particles.extent(0));
-      }
+      if (d_particles.extent(0) > d_sorted.extent(0))
+        MemKK::realloc_kokkos(d_sorted,"particle:sorted",d_particles.extent(0));
 
-      if (d_particles.extent(0) > d_sorted_id.extent(0)) {
-        d_sorted_id = DAT::t_int_1d();
-        d_sorted_id = DAT::t_int_1d(Kokkos::NoInit("particle:sorted_id"),d_particles.extent(0));
-      }
+      if (d_particles.extent(0) > d_sorted_id.extent(0))
+        MemKK::realloc_kokkos(d_sorted_id,"particle:sorted_id",d_particles.extent(0));
     } else if (reorder_scheme == FIXEDMEMORY && d_pswap1.size() == 0) {
       nParticlesWksp = MIN(nlocal,(double)update->global_mem_limit/sizeof(Particle::OnePart));
       d_pswap1 = t_particle_1d(Kokkos::view_alloc("particle:swap1",Kokkos::WithoutInitializing),nParticlesWksp);
