@@ -428,6 +428,22 @@ int Cut2d::clip_external(double *p, double *q, double *clo, double *chi,
    check if pts A,B are on same edge of cell
    return 1,2,3,4 = both on left,right,lower,upper edge
    return 0 if not, including inside
+   called externally, depends on no class variables
+------------------------------------------------------------------------- */
+
+int Cut2d::sameedge_external(double *a, double *b, double *clo, double *chi)
+{
+  if (a[0] == clo[0] and b[0] == clo[0]) return 1;
+  if (a[0] == chi[0] and b[0] == chi[0]) return 2;
+  if (a[1] == clo[1] and b[1] == clo[1]) return 3;
+  if (a[1] == chi[1] and b[1] == chi[1]) return 4;
+  return 0;
+}
+
+/* ----------------------------------------------------------------------
+   check if pts A,B are on same edge of cell
+   return 1,2,3,4 = both on left,right,lower,upper edge
+   return 0 if not, including inside
 ------------------------------------------------------------------------- */
 
 int Cut2d::sameedge(double *a, double *b)

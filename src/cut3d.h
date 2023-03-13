@@ -38,6 +38,7 @@ class Cut3d : protected Pointers {
   int clip_external(double *, double *, double *,
                     double *, double *, double *);
   int sameface(double *, double *, double *);
+  int sameface_external(double *, double *, double *, double *, double *);
   
  private:
   int implicit;

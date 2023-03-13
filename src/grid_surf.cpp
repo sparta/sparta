@@ -1848,7 +1848,7 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
       npoint = cut2d->clip_external(line->p1,line->p2,lo,hi,cpath);
       if (npoint < 2) continue;
 
-      int edge = cut2d->sameedge(&cpath[0],&cpath[2]);
+      int edge = cut2d->sameedge_external(&cpath[0],&cpath[2],lo,hi);
       if (edge) {
         if (edge == 1 and norm[0] < 0.0) continue;
         if (edge == 2 and norm[0] > 0.0) continue;
@@ -1878,7 +1878,7 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
       npoint = cut3d->clip_external(tri->p1,tri->p2,tri->p3,lo,hi,cpath);
       if (npoint < 3) continue;
                     
-      int face = cut3d->sameface(&cpath[0],&cpath[3],&cpath[6]);
+      int face = cut3d->sameface_external(&cpath[0],&cpath[3],&cpath[6],lo,hi);
       if (face) {
         if (face == 1 and norm[0] < 0.0) continue;
         if (face == 2 and norm[0] > 0.0) continue;

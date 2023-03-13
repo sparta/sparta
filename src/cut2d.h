@@ -84,6 +84,7 @@ class Cut2d : protected Pointers {
   
   int clip_external(double *, double *, double *, double *, double *);
   int sameedge(double *, double *);
+  int sameedge_external(double *, double *, double *, double *);
   
  private:
   int axisymmetric;

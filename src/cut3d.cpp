@@ -383,6 +383,24 @@ int Cut3d::sameface(double *a, double *b, double *c)
   return 0;
 }
 
+/* ----------------------------------------------------------------------
+   check if pts A,B,C are on same face of cell
+   return 1,2,3,4,5,6 = both on left,right,lower,upper,bottom,top face
+   return 0 if not, including inside
+   called externally, depends on no class variables
+------------------------------------------------------------------------- */
+
+int Cut3d::sameface_external(double *a, double *b, double *c, double *clo, double *chi)
+{
+  if (a[0] == clo[0] and b[0] == clo[0] and c[0] == clo[0]) return 1;
+  if (a[0] == chi[0] and b[0] == chi[0] and c[0] == chi[0]) return 2;
+  if (a[1] == clo[1] and b[1] == clo[1] and c[1] == clo[1]) return 3;
+  if (a[1] == chi[1] and b[1] == chi[1] and c[1] == chi[1]) return 4;
+  if (a[2] == clo[2] and b[2] == clo[2] and c[2] == clo[2]) return 5;
+  if (a[2] == chi[2] and b[2] == chi[2] and c[2] == chi[2]) return 6;
+  return 0;
+}
+
 // ----------------------------------------------------------------------
 // internal methods
 // ----------------------------------------------------------------------
