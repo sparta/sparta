@@ -267,8 +267,8 @@ void ParticleKokkos::sort_kokkos()
   if (reorder_flag) {
 
     if (reorder_scheme == COPYPARTICLELIST) {
-      // always realloc then dealloc d_sorted to reduce memory footprint
-      MemKK::realloc_kokkos(d_sorted,"particle:sorted",d_particles.extent(0));
+      if (d_particles.extent(0) > d_sorted.extent(0))
+        MemKK::realloc_kokkos(d_sorted,"particle:sorted",d_particles.extent(0));
 
       if (d_particles.extent(0) > d_sorted_id.extent(0))
         MemKK::realloc_kokkos(d_sorted_id,"particle:sorted_id",d_particles.extent(0));
@@ -290,7 +290,6 @@ void ParticleKokkos::sort_kokkos()
       //d_particles = k_particles.d_view;
       //d_sorted = tmp;
       Kokkos::deep_copy(d_particles,d_sorted);
-      d_sorted = t_particle_1d();
 
       this->modify(Device,PARTICLE_MASK);
     }
