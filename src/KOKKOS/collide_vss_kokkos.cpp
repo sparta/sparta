@@ -497,6 +497,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
     maxcellcount = particle_kk->get_maxcellcount();
     auto maxcellcount_extra = maxcellcount*extra_factor;
     if (d_plist.extent(1) < maxcellcount_extra) {
+      d_plist = decltype(d_plist)();
       Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
       d_plist = grid_kk->d_plist;
       if (NEARCP)
@@ -557,6 +558,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
       particle_kk->set_maxcellcount(maxcellcount);
       auto maxcellcount_extra = maxcellcount*extra_factor;
       if (d_plist.extent(1) < maxcellcount_extra) {
+        d_plist = decltype(d_plist)();
         Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
         d_plist = grid_kk->d_plist;
       }
@@ -583,6 +585,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
   d_nn_last_partner = decltype(d_nn_last_partner)();
+  d_plist = decltype(d_nn_last_partner)();
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -827,6 +830,7 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 
     auto maxcellcount_extra = maxcellcount*extra_factor;
     if (d_plist.extent(1) < maxcellcount_extra) {
+      d_plist = decltype(d_plist)();
       Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
       d_plist = grid_kk->d_plist;
     }
@@ -900,6 +904,7 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
       particle_kk->set_maxcellcount(maxcellcount);
       auto maxcellcount_extra = maxcellcount*extra_factor;
       if (d_plist.extent(1) < maxcellcount_extra) {
+        d_plist = decltype(d_plist)();
         Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
         d_plist = grid_kk->d_plist;
       }
@@ -932,6 +937,7 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
   particle_kk->modify(Device,PARTICLE_MASK|CUSTOM_MASK);
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
+  d_plist = decltype(d_nn_last_partner)();
 }
 
 template < int ATOMIC_REDUCTION >
