@@ -34,16 +34,12 @@
 
 using namespace SPARTA_NS;
 
-enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};  // several files
 enum{NONE,DISCRETE,SMOOTH};            // several files
 enum{INT,DOUBLE};                      // several files
 enum{COPYPARTICLELIST,FIXEDMEMORY};
 
 #define DELTA 16384
-#define DELTASPECIES 16
-#define DELTAMIXTURE 8
-#define DELTACELLCOUNT 10
-#define MAXLINE 1024
+#define DELTACELLCOUNT 8
 
 // customize by adding an abbreviation string
 // also add a check for the keyword in 2 places in add_species()
@@ -271,8 +267,8 @@ void ParticleKokkos::sort_kokkos()
   if (reorder_flag) {
 
     if (reorder_scheme == COPYPARTICLELIST) {
-      if (d_particles.extent(0) > d_sorted.extent(0))
-        MemKK::realloc_kokkos(d_sorted,"particle:sorted",d_particles.extent(0));
+      // always realloc then dealloc d_sorted to reduce memory footprint
+      MemKK::realloc_kokkos(d_sorted,"particle:sorted",d_particles.extent(0));
 
       if (d_particles.extent(0) > d_sorted_id.extent(0))
         MemKK::realloc_kokkos(d_sorted_id,"particle:sorted_id",d_particles.extent(0));
@@ -294,6 +290,7 @@ void ParticleKokkos::sort_kokkos()
       //d_particles = k_particles.d_view;
       //d_sorted = tmp;
       Kokkos::deep_copy(d_particles,d_sorted);
+      d_sorted = t_particle_1d();
 
       this->modify(Device,PARTICLE_MASK);
     }
@@ -594,7 +591,7 @@ void ParticleKokkos::grow(int nextra)
   if (target <= maxlocal) return;
 
   bigint newmax = maxlocal;
-  while (newmax < target) newmax += MAX(DELTA, newmax*1.1);
+  while (newmax < target) newmax = MAX(newmax+DELTA, newmax*1.1);
   int oldmax = maxlocal;
 
   if (newmax > MAXSMALLINT)

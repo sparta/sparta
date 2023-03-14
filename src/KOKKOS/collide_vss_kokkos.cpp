@@ -582,6 +582,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
   particle_kk->modify(Device,PARTICLE_MASK);
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
+  d_nn_last_partner = decltype(d_nn_last_partner)();
 }
 
 KOKKOS_INLINE_FUNCTION
