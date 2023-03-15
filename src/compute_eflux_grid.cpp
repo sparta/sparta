@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -248,19 +248,19 @@ void ComputeEFluxGrid::compute_per_grid()
         break;
       case mVxVzVz:
         vec[k++] += mass*v[0]*v[2]*v[2];
-	break;
+        break;
       case mVyVxVx:
         vec[k++] += mass*v[1]*v[0]*v[0];
-	break;
+        break;
       case mVyVzVz:
         vec[k++] += mass*v[1]*v[2]*v[2];
-	break;
+        break;
       case mVzVxVx:
         vec[k++] += mass*v[2]*v[0]*v[0];
-	break;
+        break;
       case mVzVyVy:
         vec[k++] += mass*v[2]*v[1]*v[1];
-	break;
+        break;
       }
     }
   }
@@ -363,9 +363,9 @@ void ComputeEFluxGrid::post_process_grid(int index, int nsample,
       h = t[mvvv] - 3.0*t[mv]*t[mvv]/summass +
         2.0*t[mv]*t[mv]*t[mv]/summass/summass;
       h1 = t[mvv1v1] - 2.0*t[mvv1]*t[mv1]/summass - t[mv]*t[mv1v1]/summass +
-	2.0*t[mv]*t[mv1]*t[mv1]/summass/summass;
+        2.0*t[mv]*t[mv1]*t[mv1]/summass/summass;
       h2 = t[mvv2v2] - 2.0*t[mvv2]*t[mv2]/summass - t[mv]*t[mv2v2]/summass +
-	2.0*t[mv]*t[mv2]*t[mv2]/summass/summass;
+        2.0*t[mv]*t[mv2]*t[mv2]/summass/summass;
       wt = 0.5 * fnum * cinfo[icell].weight / cinfo[icell].volume;
       vec[k] = wt/nsample * (h + h1 + h2);
     }

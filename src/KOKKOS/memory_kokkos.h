@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -19,6 +19,8 @@
 #include "kokkos_type.h"
 
 namespace SPARTA_NS {
+
+typedef MemoryKokkos MemKK;
 
 class MemoryKokkos : public Memory {
  public:
@@ -307,6 +309,28 @@ void destroy_kokkos(TYPE data, typename TYPE::value_type** &array)
   data = TYPE();
   sfree(array);
   array = NULL;
+}
+
+/* ----------------------------------------------------------------------
+   reallocate Kokkos views without initialization
+   deallocate first to reduce memory use
+------------------------------------------------------------------------- */
+
+template <typename TYPE, typename... Indices>
+static void realloc_kokkos(TYPE &data, const char *name, Indices... ns)
+{
+  data = TYPE();
+  data = TYPE(Kokkos::NoInit(std::string(name)), ns...);
+}
+
+/* ----------------------------------------------------------------------
+   get memory usage of Kokkos view in bytes
+------------------------------------------------------------------------- */
+
+template <typename TYPE>
+static double memory_usage(TYPE &data)
+{
+  return data.span() * sizeof(typename TYPE::value_type);
 }
 
 };

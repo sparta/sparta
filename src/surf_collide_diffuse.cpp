@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -145,7 +145,7 @@ void SurfCollideDiffuse::init()
       error->all(FLERR,"Surf_collide diffuse variable is invalid style");
   } else if (tmode == CUSTOM) {
     int tindex = surf->find_custom(tstr);
-    if (tindex < 0) 
+    if (tindex < 0)
       error->all(FLERR,"Surf_collide diffuse could not find "
                  "custom per-surf vector");
     if (surf->etype[tindex] != DOUBLE || surf->esize[tindex] != 0)
@@ -362,7 +362,7 @@ void SurfCollideDiffuse::wrapper(Particle::OnePart *p, double *norm,
 
 void SurfCollideDiffuse::flags_and_coeffs(int *flags, double *coeffs)
 {
-  if (tmode == CUSTOM) 
+  if (tmode == CUSTOM)
     error->all(FLERR,"Surf_collide diffuse with custom per-surf Twall "
                "does not support external caller");
 

@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -383,7 +383,7 @@ void CreateParticles::create_single()
 
   if (domain->dimension == 2 && x[2] != 0.0)
     error->all(FLERR,"Create_particles single requires z = 0 "
-	       "for 2d simulation");
+               "for 2d simulation");
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -395,8 +395,8 @@ void CreateParticles::create_single()
     lo = cells[icell].lo;
     hi = cells[icell].hi;
     if (x[0] >= lo[0] && x[0] < hi[0] &&
-	x[1] >= lo[1] && x[1] < hi[1] &&
-	x[2] >= lo[2] && x[2] < hi[2]) iwhich = icell;
+        x[1] >= lo[1] && x[1] < hi[1] &&
+        x[2] >= lo[2] && x[2] < hi[2]) iwhich = icell;
   }
 
   // insure that exactly one proc found cell to insert particle into

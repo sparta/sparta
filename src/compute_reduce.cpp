@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -905,7 +905,7 @@ double ComputeReduce::area_per_surf()
   Surf::Tri *mytris = surf->mytris;
   int distributed = surf->distributed;
   int n = surf->nown;
-    
+
   memory->destroy(areasurf);
   memory->create(areasurf,n,"reduce:areasurf");
 

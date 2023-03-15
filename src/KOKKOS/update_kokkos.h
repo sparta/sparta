@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -257,10 +257,10 @@ class UpdateKokkos : public Update {
 
   KOKKOS_INLINE_FUNCTION
   void field_per_particle(int i, int icell, double dt, double *x, double *v) const
-  { 
+  {
     const double dtsq = 0.5*dt*dt;
     auto &d_array = d_fieldfix_array_particle;
-    
+
     int icol = 0;
     if (field_active[0]) {
       x[0] += dtsq*d_array(i,icol);

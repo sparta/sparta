@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -91,8 +91,8 @@ void ComputeDistSurfGridKokkos::compute_per_grid_kokkos()
       h_eflag[i] = 0;
       if (!(lines[i].mask & sgroupbit)) continue;
       if (MathExtraKokkos::dot3(lines[i].norm,sdir) <= 0.0) {
-	h_eflag[i] = 1;
-	h_slist[nsurf++] = i;
+        h_eflag[i] = 1;
+        h_slist[nsurf++] = i;
       }
     }
   } else {
@@ -100,8 +100,8 @@ void ComputeDistSurfGridKokkos::compute_per_grid_kokkos()
       h_eflag[i] = 0;
       if (!(tris[i].mask & sgroupbit)) continue;
       if (MathExtraKokkos::dot3(tris[i].norm,sdir) <= 0.0) {
-	h_eflag[i] = 1;
-	h_slist[nsurf++] = i;
+        h_eflag[i] = 1;
+        h_slist[nsurf++] = i;
       }
     }
   }
@@ -192,13 +192,13 @@ void ComputeDistSurfGridKokkos::operator()(TagComputeDistSurfGrid_surf_distance,
     if (i < n) {
       d_vector[icell] = 0.0;
       if (d_cells[icell].nsplit > 1) {
-	n = d_cells[icell].nsplit;
-	int isplit = d_cells[icell].isplit;
-	auto csubs_begin = d_csubs.row_map(isplit);
-	for (i = 0; i < n; i++) {
-	  m = d_csubs.entries(csubs_begin + i);
-	  d_vector[m] = 0.0;
-	}
+        n = d_cells[icell].nsplit;
+        int isplit = d_cells[icell].isplit;
+        auto csubs_begin = d_csubs.row_map(isplit);
+        for (i = 0; i < n; i++) {
+          m = d_csubs.entries(csubs_begin + i);
+          d_vector[m] = 0.0;
+        }
       }
       return;
     }
@@ -225,7 +225,7 @@ void ComputeDistSurfGridKokkos::operator()(TagComputeDistSurfGrid_surf_distance,
     } else {
       if (MathExtraKokkos::dot3(cell2surf,d_tris[m].norm) > 0.0) continue;
       dist = GeometryKokkos::dist_tri_hex(d_tris[m].p1,d_tris[m].p2,d_tris[m].p3,
-					  d_tris[m].norm,lo,hi);
+                                          d_tris[m].norm,lo,hi);
     }
     mindist = MIN(mindist,dist);
   }

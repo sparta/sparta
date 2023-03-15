@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -43,25 +43,25 @@ class ParticleKokkos : public Particle {
   // methods
 
   ParticleKokkos(class SPARTA *);
-  ~ParticleKokkos();
+  ~ParticleKokkos() override;
   static KOKKOS_INLINE_FUNCTION
   int add_particle_kokkos(t_particle_1d particles, int, int, int, int,
                            double *, double *, double, double);
 #ifndef SPARTA_KOKKOS_EXACT
-  void compress_migrate(int, int *);
+  void compress_migrate(int, int *) override;
 #endif
   void sort_kokkos();
-  void grow(int);
-  void grow_species();
+  void grow(int) override;
+  void grow_species() override;
   void pre_weight() override;
   void post_weight() override;
   void update_class_variables();
-  int add_custom(char *, int, int);
-  void grow_custom(int, int, int);
-  void remove_custom(int);
-  void copy_custom(int, int);
-  void pack_custom(int, char *);
-  void unpack_custom(char *, int);
+  int add_custom(char *, int, int) override;
+  void grow_custom(int, int, int) override;
+  void remove_custom(int) override;
+  void copy_custom(int, int) override;
+  void pack_custom(int, char *) override;
+  void unpack_custom(char *, int) override;
 
   KOKKOS_INLINE_FUNCTION
   void copy_custom_kokkos(int, int) const;
@@ -168,8 +168,8 @@ class ParticleKokkos : public Particle {
   HAT::t_int_1d h_mlist;
   HAT::t_int_1d h_slist;
 
-  DAT::t_int_scalar d_fail_flag;
-  HAT::t_int_scalar h_fail_flag;
+  DAT::t_int_scalar d_resize;
+  HAT::t_int_scalar h_resize;
 
   // work memory for reduced memory reordering
   t_particle_1d d_pswap1;

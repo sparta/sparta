@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -72,7 +72,7 @@ class Grid : protected Pointers {
   int **eivec;              // pointer to each integer vector
   int ***eiarray;           // pointer to each integer array
   double **edvec;           // pointer to each double vector
-  double ***edarray;        // pointer to each double array  
+  double ***edarray;        // pointer to each double array
 
   // cell ID hash (owned + ghost, no sub-cells)
 
@@ -100,7 +100,7 @@ class Grid : protected Pointers {
   // includes unsplit cells, split cells, sub cells in any order
   // ghost cells are appended to owned
 
-  struct SPARTA_ALIGN(128) ChildCell {
+  struct SPARTA_ALIGN(64) ChildCell {
     cellint id;               // ID of child cell
     int level;                // level of cell in hierarchical grid, 0 = root
     int proc;                 // proc that owns this cell
@@ -238,8 +238,8 @@ class Grid : protected Pointers {
 
   void refine_cell(int, int *, class Cut2d *, class Cut3d *);
   void coarsen_cell(cellint, int, double *, double *,
-		    int, int *, int *, int *, void **, char **,
-		    class Cut2d *, class Cut3d *);
+                    int, int *, int *, int *, void **, char **,
+                    class Cut2d *, class Cut3d *);
 
   void group(int, char **);
   int add_group(const char *);
@@ -298,12 +298,12 @@ class Grid : protected Pointers {
   // grid_id.cpp
 
   void id_point_child(double *, double *, double *, int, int, int,
-		      int &, int &, int &);
+                      int &, int &, int &);
   cellint id_parent_of_child(cellint, int);
   int id_find_child(cellint, int, double *, double *, double *);
   cellint id_uniform_level(int, int, int, int);
   void id_find_child_uniform_level(int, int, double *, double *, double *,
-				   int &, int &, int &);
+                                   int &, int &, int &);
   cellint id_neigh_same_parent(cellint, int, int);
   cellint id_neigh_same_level(cellint, int, int);
   cellint id_refine(cellint, int, int);
@@ -357,7 +357,7 @@ class Grid : protected Pointers {
   int *edcol;               // # of columns in each double array (esize)
 
   int *custom_ghost_flag;   // flag on each custom vec/arr for owned+ghost or not
-  int *custom_restart_flag; // flag on each custom vec/array read from restart 
+  int *custom_restart_flag; // flag on each custom vec/array read from restart
 
   int nbytes_custom;        // size of packed custom values for one grid cell
 
@@ -427,14 +427,14 @@ class Grid : protected Pointers {
   void surf2grid_surf_algorithm(int);
   void surf2grid_split(int, int);
   void recurse2d(cellint, int, double *, double *,
-		 int, Surf::Line *, double *, double *,
-		 int &, int &, int **&, MyHash *, MyHash *);
+                 int, Surf::Line *, double *, double *,
+                 int &, int &, int **&, MyHash *, MyHash *);
   void recurse3d(cellint, int, double *, double *,
-		 int, Surf::Tri *, double *, double *,
-		 int &, int &, int **&, MyHash *, MyHash *);
+                 int, Surf::Tri *, double *, double *,
+                 int &, int &, int **&, MyHash *, MyHash *);
   void partition_grid(int, int, int, int, int, int, int, int, GridTree *);
   void mybox(int, int, int, int &, int &, int &, int &, int &, int &,
-	     GridTree *);
+             GridTree *);
   void box_drop(int *, int *, int, int, GridTree *, int &, int *);
 
   void acquire_ghosts_all(int);

@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -59,7 +59,7 @@ ComputePropertyGrid::ComputePropertyGrid(SPARTA *sparta, int narg, char **arg) :
       index[i] = 3;
     } else if (strcmp(arg[iarg],"zlo") == 0) {
       if (domain->dimension == 2)
-	error->all(FLERR,
+        error->all(FLERR,
                    "Invalid compute property/grid field for 2d simulation");
       pack_choice[i] = &ComputePropertyGrid::pack_zlo;
       index[i] = 4;
@@ -71,7 +71,7 @@ ComputePropertyGrid::ComputePropertyGrid(SPARTA *sparta, int narg, char **arg) :
       index[i] = 6;
     } else if (strcmp(arg[iarg],"zhi") == 0) {
       if (domain->dimension == 2)
-	error->all(FLERR,
+        error->all(FLERR,
                    "Invalid compute property/grid field for 2d simulation");
       pack_choice[i] = &ComputePropertyGrid::pack_zhi;
       index[i] = 7;
@@ -83,7 +83,7 @@ ComputePropertyGrid::ComputePropertyGrid(SPARTA *sparta, int narg, char **arg) :
       index[i] = 9;
     } else if (strcmp(arg[iarg],"zc") == 0) {
       if (domain->dimension == 2)
-	error->all(FLERR,
+        error->all(FLERR,
                    "Invalid compute property/grid field for 2d simulation");
       pack_choice[i] = &ComputePropertyGrid::pack_zc;
       index[i] = 10;

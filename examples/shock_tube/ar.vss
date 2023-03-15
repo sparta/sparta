@@ -1,0 +1,13 @@
+# VSS collision model parameters for each species
+# six-species neutral air (1000-5000K)
+# from Swaminathan-Gopalan and Stephani (2016) Table II
+# https://doi.org/10.1063/1.4939719
+
+# species (or species pair)
+# diameter (m)
+# omega
+# tref
+# alpha
+
+Ar  	3.899E-10    0.709    273.15    1.416
+Ar_2  	3.899E-10    0.709    273.15    1.416

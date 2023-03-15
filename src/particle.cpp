@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -271,8 +271,8 @@ void Particle::compress_rebalance()
     int i = 0;
     while (i < nlocal) {
       if (particles[i].icell < 0) {
-	memcpy(&particles[i],&particles[nlocal-1],nbytes);
-	nlocal--;
+        memcpy(&particles[i],&particles[nlocal-1],nbytes);
+        nlocal--;
       } else i++;
     }
 
@@ -280,9 +280,9 @@ void Particle::compress_rebalance()
     int i = 0;
     while (i < nlocal) {
       if (particles[i].icell < 0) {
-	memcpy(&particles[i],&particles[nlocal-1],nbytes);
-	copy_custom(i,nlocal-1);
-	nlocal--;
+        memcpy(&particles[i],&particles[nlocal-1],nbytes);
+        copy_custom(i,nlocal-1);
+        nlocal--;
       } else i++;
     }
   }
@@ -546,7 +546,7 @@ void Particle::post_weight()
     if (ratio < 1.0) {
       if (wrandom->uniform() > ratio) {
         memcpy(&particles[i],&particles[nlocal-1],nbytes);
-	if (ncustom) copy_custom(i,nlocal-1);
+        if (ncustom) copy_custom(i,nlocal-1);
         if (nlocal > nlocal_original) i++;
         else nlocal_original--;
         nlocal--;
@@ -590,7 +590,7 @@ void Particle::grow(int nextra)
   maxlocal = newmax;
   particles = (OnePart *)
     memory->srealloc(particles,maxlocal*sizeof(OnePart),
-		     "particle:particles");
+                     "particle:particles",SPARTA_GET_ALIGN(OnePart));
   memset(&particles[oldmax],0,(maxlocal-oldmax)*sizeof(OnePart));
 
   if (ncustom == 0) return;
@@ -1129,8 +1129,8 @@ void Particle::read_species_file()
     if (nfile == maxfile) {
       maxfile += DELTASPECIES;
       filespecies = (Species *)
-	memory->srealloc(filespecies,maxfile*sizeof(Species),
-			 "particle:filespecies");
+        memory->srealloc(filespecies,maxfile*sizeof(Species),
+                         "particle:filespecies");
       memset(&filespecies[nfile],0,(maxfile-nfile)*sizeof(Species));
     }
 
@@ -1215,8 +1215,8 @@ void Particle::read_rotation_file()
     if (nfile == maxfile) {
       maxfile += DELTASPECIES;
       filerot = (RotFile *)
-	memory->srealloc(filerot,maxfile*sizeof(RotFile),
-			 "particle:filerot");
+        memory->srealloc(filerot,maxfile*sizeof(RotFile),
+                         "particle:filerot");
       memset(&filerot[nfile],0,(maxfile-nfile)*sizeof(RotFile));
     }
 
@@ -1273,8 +1273,8 @@ void Particle::read_vibration_file()
     if (nfile == maxfile) {
       maxfile += DELTASPECIES;
       filevib = (VibFile *)
-	memory->srealloc(filevib,maxfile*sizeof(VibFile),
-			 "particle:filevib");
+        memory->srealloc(filevib,maxfile*sizeof(VibFile),
+                         "particle:filevib");
       memset(&filevib[nfile],0,(maxfile-nfile)*sizeof(VibFile));
     }
 
@@ -1342,7 +1342,9 @@ void Particle::write_restart_species(FILE *fp)
 
 void Particle::read_restart_species(FILE *fp)
 {
-  if (me == 0) fread(&nspecies,sizeof(int),1,fp);
+  int tmp;
+
+  if (me == 0) tmp = fread(&nspecies,sizeof(int),1,fp);
   MPI_Bcast(&nspecies,1,MPI_INT,0,world);
 
   if (nspecies > maxspecies) {
@@ -1350,7 +1352,7 @@ void Particle::read_restart_species(FILE *fp)
     grow_species();
   }
 
-  if (me == 0) fread(species,sizeof(Species),nspecies,fp);
+  if (me == 0) tmp = fread(species,sizeof(Species),nspecies,fp);
   MPI_Bcast(species,nspecies*sizeof(Species),MPI_CHAR,0,world);
 
   maxvibmode = 0;
@@ -1380,6 +1382,8 @@ void Particle::write_restart_mixture(FILE *fp)
 
 void Particle::read_restart_mixture(FILE *fp)
 {
+  int tmp;
+
   // must first clear existing default mixtures
 
   for (int i = 0; i < nmixture; i++) delete mixture[i];
@@ -1387,7 +1391,7 @@ void Particle::read_restart_mixture(FILE *fp)
 
   // now process restart file data
 
-  if (me == 0) fread(&nmixture,sizeof(int),1,fp);
+  if (me == 0) tmp = fread(&nmixture,sizeof(int),1,fp);
   MPI_Bcast(&nmixture,1,MPI_INT,0,world);
 
   if (nmixture > maxmixture) {
@@ -1400,10 +1404,10 @@ void Particle::read_restart_mixture(FILE *fp)
   char *id;
 
   for (int i = 0; i < nmixture; i++) {
-    if (me == 0) fread(&n,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
     MPI_Bcast(&n,1,MPI_INT,0,world);
     id = new char[n];
-    if (me == 0) fread(id,sizeof(char),n,fp);
+    if (me == 0) tmp = fread(id,sizeof(char),n,fp);
     MPI_Bcast(id,n,MPI_CHAR,0,world);
     mixture[i] = new Mixture(sparta,id);
     mixture[i]->read_restart(fp);
@@ -1938,11 +1942,13 @@ void Particle::write_restart_custom(FILE *fp)
 
 void Particle::read_restart_custom(FILE *fp)
 {
+  int tmp;
+
   // ncustom is 0 at time restart file is read
   // will be incremented as add_custom() for each nactive
 
   int nactive;
-  if (me == 0) fread(&nactive,sizeof(int),1,fp);
+  if (me == 0) tmp = fread(&nactive,sizeof(int),1,fp);
   MPI_Bcast(&nactive,1,MPI_INT,0,world);
   if (nactive == 0) return;
 
@@ -1953,14 +1959,14 @@ void Particle::read_restart_custom(FILE *fp)
   char *name;
 
   for (int i = 0; i < nactive; i++) {
-    if (me == 0) fread(&n,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
     MPI_Bcast(&n,1,MPI_INT,0,world);
     name = new char[n];
-    if (me == 0) fread(name,sizeof(char),n,fp);
+    if (me == 0) tmp = fread(name,sizeof(char),n,fp);
     MPI_Bcast(name,n,MPI_CHAR,0,world);
-    if (me == 0) fread(&type,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&type,sizeof(int),1,fp);
     MPI_Bcast(&type,n,MPI_CHAR,0,world);
-    if (me == 0) fread(&size,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&size,sizeof(int),1,fp);
     MPI_Bcast(&size,n,MPI_CHAR,0,world);
 
     // create the custom attribute

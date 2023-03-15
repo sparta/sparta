@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -320,7 +320,7 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       int width = atoi(arg[iarg+1]);
       int height = atoi(arg[iarg+2]);
       if (width <= 0 || height <= 0)
-	error->all(FLERR,"Illegal dump image command");
+        error->all(FLERR,"Illegal dump image command");
       image->width = width;
       image->height = height;
       iarg += 3;
@@ -328,24 +328,24 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
     } else if (strcmp(arg[iarg],"view") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal dump image command");
       if (strstr(arg[iarg+1],"v_") == arg[iarg+1]) {
-	int n = strlen(&arg[iarg+1][2]) + 1;
-	thetastr = new char[n];
-	strcpy(thetastr,&arg[iarg+1][2]);
+        int n = strlen(&arg[iarg+1][2]) + 1;
+        thetastr = new char[n];
+        strcpy(thetastr,&arg[iarg+1][2]);
       } else {
-	double theta = atof(arg[iarg+1]);
-	if (theta < 0.0 || theta > 180.0)
-	  error->all(FLERR,"Invalid dump image theta value");
-	theta *= MY_PI/180.0;
-	image->theta = theta;
+        double theta = atof(arg[iarg+1]);
+        if (theta < 0.0 || theta > 180.0)
+          error->all(FLERR,"Invalid dump image theta value");
+        theta *= MY_PI/180.0;
+        image->theta = theta;
       }
       if (strstr(arg[iarg+2],"v_") == arg[iarg+2]) {
-	int n = strlen(&arg[iarg+2][2]) + 1;
-	phistr = new char[n];
-	strcpy(phistr,&arg[iarg+2][2]);
+        int n = strlen(&arg[iarg+2][2]) + 1;
+        phistr = new char[n];
+        strcpy(phistr,&arg[iarg+2][2]);
       } else {
-	double phi = atof(arg[iarg+2]);
-	phi *= MY_PI/180.0;
-	image->phi = phi;
+        double phi = atof(arg[iarg+2]);
+        phi *= MY_PI/180.0;
+        image->phi = phi;
       }
       iarg += 3;
 
@@ -355,54 +355,54 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       else if (strcmp(arg[iarg+1],"d") == 0) cflag = DYNAMIC;
       else error->all(FLERR,"Illegal dump image command");
       if (strstr(arg[iarg+2],"v_") == arg[iarg+2]) {
-	int n = strlen(&arg[iarg+2][2]) + 1;
-	cxstr = new char[n];
-	strcpy(cxstr,&arg[iarg+2][2]);
-	cflag = DYNAMIC;
+        int n = strlen(&arg[iarg+2][2]) + 1;
+        cxstr = new char[n];
+        strcpy(cxstr,&arg[iarg+2][2]);
+        cflag = DYNAMIC;
       } else cx = atof(arg[iarg+2]);
       if (strstr(arg[iarg+3],"v_") == arg[iarg+3]) {
-	int n = strlen(&arg[iarg+3][2]) + 1;
-	cystr = new char[n];
-	strcpy(cystr,&arg[iarg+3][2]);
-	cflag = DYNAMIC;
+        int n = strlen(&arg[iarg+3][2]) + 1;
+        cystr = new char[n];
+        strcpy(cystr,&arg[iarg+3][2]);
+        cflag = DYNAMIC;
       } else cy = atof(arg[iarg+3]);
       if (strstr(arg[iarg+4],"v_") == arg[iarg+4]) {
-	int n = strlen(&arg[iarg+4][2]) + 1;
-	czstr = new char[n];
-	strcpy(czstr,&arg[iarg+4][2]);
-	cflag = DYNAMIC;
+        int n = strlen(&arg[iarg+4][2]) + 1;
+        czstr = new char[n];
+        strcpy(czstr,&arg[iarg+4][2]);
+        cflag = DYNAMIC;
       } else cz = atof(arg[iarg+4]);
       iarg += 5;
 
     } else if (strcmp(arg[iarg],"up") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Illegal dump image command");
       if (strstr(arg[iarg+1],"v_") == arg[iarg+1]) {
-	int n = strlen(&arg[iarg+1][2]) + 1;
-	upxstr = new char[n];
-	strcpy(upxstr,&arg[iarg+1][2]);
+        int n = strlen(&arg[iarg+1][2]) + 1;
+        upxstr = new char[n];
+        strcpy(upxstr,&arg[iarg+1][2]);
       } else image->up[0] = atof(arg[iarg+1]);
       if (strstr(arg[iarg+2],"v_") == arg[iarg+2]) {
-	int n = strlen(&arg[iarg+2][2]) + 1;
-	upystr = new char[n];
-	strcpy(upystr,&arg[iarg+2][2]);
+        int n = strlen(&arg[iarg+2][2]) + 1;
+        upystr = new char[n];
+        strcpy(upystr,&arg[iarg+2][2]);
       } else image->up[1] = atof(arg[iarg+1]);
       if (strstr(arg[iarg+3],"v_") == arg[iarg+3]) {
-	int n = strlen(&arg[iarg+3][2]) + 1;
-	upzstr = new char[n];
-	strcpy(upzstr,&arg[iarg+3][2]);
+        int n = strlen(&arg[iarg+3][2]) + 1;
+        upzstr = new char[n];
+        strcpy(upzstr,&arg[iarg+3][2]);
       } else image->up[2] = atof(arg[iarg+3]);
       iarg += 4;
 
     } else if (strcmp(arg[iarg],"zoom") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal dump image command");
       if (strstr(arg[iarg+1],"v_") == arg[iarg+1]) {
-	int n = strlen(&arg[iarg+1][2]) + 1;
-	zoomstr = new char[n];
-	strcpy(zoomstr,&arg[iarg+1][2]);
+        int n = strlen(&arg[iarg+1][2]) + 1;
+        zoomstr = new char[n];
+        strcpy(zoomstr,&arg[iarg+1][2]);
       } else {
-	double zoom = atof(arg[iarg+1]);
-	if (zoom <= 0.0) error->all(FLERR,"Illegal dump image command");
-	image->zoom = zoom;
+        double zoom = atof(arg[iarg+1]);
+        if (zoom <= 0.0) error->all(FLERR,"Illegal dump image command");
+        image->zoom = zoom;
       }
       iarg += 2;
 
@@ -410,13 +410,13 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       error->all(FLERR,"Dump image persp option is not yet supported");
       if (iarg+2 > narg) error->all(FLERR,"Illegal dump image command");
       if (strstr(arg[iarg+1],"v_") == arg[iarg+1]) {
-	int n = strlen(&arg[iarg+1][2]) + 1;
-	perspstr = new char[n];
-	strcpy(perspstr,&arg[iarg+1][2]);
+        int n = strlen(&arg[iarg+1][2]) + 1;
+        perspstr = new char[n];
+        strcpy(perspstr,&arg[iarg+1][2]);
       } else {
-	double persp = atof(arg[iarg+1]);
-	if (persp < 0.0) error->all(FLERR,"Illegal dump image command");
-	image->persp = persp;
+        double persp = atof(arg[iarg+1]);
+        if (persp < 0.0) error->all(FLERR,"Illegal dump image command");
+        image->persp = persp;
       }
       iarg += 2;
 
@@ -455,14 +455,14 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       axeslen = atof(arg[iarg+2]);
       axesdiam = atof(arg[iarg+3]);
       if (axeslen < 0.0 || axesdiam < 0.0)
-	error->all(FLERR,"Illegal dump image command");
+        error->all(FLERR,"Illegal dump image command");
       iarg += 4;
 
     } else if (strcmp(arg[iarg],"shiny") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal dump image command");
       double shiny = atof(arg[iarg+1]);
       if (shiny < 0.0 || shiny > 1.0)
-	error->all(FLERR,"Illegal dump image command");
+        error->all(FLERR,"Illegal dump image command");
       image->shiny = shiny;
       iarg += 2;
 
@@ -476,7 +476,7 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       image->seed = seed;
       double ssaoint = atof(arg[iarg+3]);
       if (ssaoint < 0.0 || ssaoint > 1.0)
-	error->all(FLERR,"Illegal dump image command");
+        error->all(FLERR,"Illegal dump image command");
       image->ssaoint = ssaoint;
       iarg += 4;
 
@@ -1157,21 +1157,21 @@ void DumpImage::create_image()
       j = clist[i];
 
       if (pcolor == TYPE) {
-	itype = static_cast<int> (buf[m]);
-	color = pcolortype[itype];
+        itype = static_cast<int> (buf[m]);
+        color = pcolortype[itype];
       } else if (pcolor == PROC) {
-	color = pcolorproc;
+        color = pcolorproc;
       } else if (pcolor == ATTRIBUTE) {
-	color = image->map_value2color(PARTICLE,buf[m]);
+        color = image->map_value2color(PARTICLE,buf[m]);
       }
 
       if (pdiam == NUMERIC) {
-	diameter = pdiamvalue;
+        diameter = pdiamvalue;
       } else if (pdiam == TYPE) {
-	itype = static_cast<int> (buf[m+1]);
-	diameter = pdiamtype[itype];
+        itype = static_cast<int> (buf[m+1]);
+        diameter = pdiamtype[itype];
       } else if (pdiam == ATTRIBUTE) {
-	diameter = buf[m+1];
+        diameter = buf[m+1];
       }
 
       image->draw_sphere(particles[j].x,color,diameter);
@@ -1219,7 +1219,7 @@ void DumpImage::create_image()
       if (cells[icell].nsplit <= 0) continue;
 
       if (gcolor == PROC) {
-	color = gcolorproc;
+        color = gcolorproc;
       } else if (gcolor == ATTRIBUTE) {
         if (gridwhich == COMPUTE) {
           if (gridcol == 0 || ppgflag) value = c->vector_grid[icell];
