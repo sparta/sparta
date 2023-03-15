@@ -34,7 +34,7 @@ class CommKokkos : public Comm {
 
   CommKokkos(class SPARTA *);
   ~CommKokkos();
-  int migrate_particles(int, int*, DAT::t_int_1d);
+  int migrate_particles(int, int*, DAT::t_int_1d &);
   void migrate_cells(int);
 
   template<int NEED_ATOMICS, int HAVE_CUSTOM>

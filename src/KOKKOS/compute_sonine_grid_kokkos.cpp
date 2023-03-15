@@ -156,6 +156,8 @@ void ComputeSonineGridKokkos::compute_per_grid_kokkos()
     Kokkos::Experimental::contribute(d_tally, dup_tally);
     dup_tally = decltype(dup_tally)(); // free duplicated memory
   }
+
+  d_plist = decltype(d_plist)();
 }
 
 /* ---------------------------------------------------------------------- */
