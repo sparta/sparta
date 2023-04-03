@@ -36,6 +36,7 @@ if(SPARTA_ENABLE_TESTING)
       "collide"
       "circle"
       "chem"
+      "cylinder"
       "axi"
       "ambi"
       "relax_const"
@@ -50,6 +51,7 @@ if(SPARTA_ENABLE_TESTING)
       "in.axi" # Failing
       "in.collide" # Failing
       "in.ambi" # Failing
+      "in.cylinder" # Long runtime
       "in.jagged.3d" # Long runtime
       "in.jagged.3d.distributed" # Long runtime
   )
