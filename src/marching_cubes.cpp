@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -1343,7 +1343,7 @@ bool MarchingCubes::modified_test_interior(int s, int icase)
     inter_amb = interior_ambiguity_verification(edge);
 
     if (inter_amb == 0) return false;
-    else		return true;
+    else                return true;
 
     break;
 

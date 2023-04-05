@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -23,7 +23,7 @@ namespace SPARTA_NS {
 class KokkosSPARTA : protected Pointers {
  public:
   int kokkos_exists;
-  int comm_classic;
+  int comm_serial;
   int atomic_reduction;
   int prewrap;
   int auto_sync;
@@ -65,7 +65,7 @@ Self-explanatory.  See Section ? of the manual for details.
 
 E: Could not determine local MPI rank for multiple GPUs with Kokkos CUDA because MPI library not recognized
 
-The local MPI rank was not found in one of four supported environment variables.
+The local MPI rank was not found in one of five supported environment variables.
 
 E: GPUs are requested but Kokkos has not been compiled for CUDA
 

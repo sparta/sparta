@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -31,11 +31,15 @@ class Cut3d : protected Pointers {
   int surf2grid_list(cellint, double *, double *, int, surfint *,
                      surfint *, int);
   int surf2grid_one(double *, double *, double *, double *, double *);
+  
   int split(cellint, double *, double *, int, surfint *,
             double *&, int *, int *, int &, double *);
+
   int clip_external(double *, double *, double *,
                     double *, double *, double *);
-
+  int sameface(double *, double *, double *);
+  int sameface_external(double *, double *, double *, double *, double *);
+  
  private:
   int implicit;
 
@@ -115,8 +119,9 @@ class Cut3d : protected Pointers {
 
   class Cut2d *cut2d;
 
+  // methods
+  
   int clip(double *, double *, double *);
-
   int split_try(cellint, int, surfint *,
                 double *&, int *, int *, int &, double *, int &);
   void split_error(int);

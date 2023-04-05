@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -110,7 +110,6 @@ void ComputeThermalGridKokkos::compute_per_grid_kokkos()
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeThermalGrid_compute_per_grid_atomic<0> >(0,nlocal),*this);
   }
-  DeviceType().fence();
   copymode = 0;
 
   if (need_dup) {
@@ -239,7 +238,6 @@ post_process_grid_kokkos(int index, int nsample,
 
   this->d_etally = d_etally;
   this->d_vec = d_vec;
-  this->nstride = nstride;
   this->nsample = nsample;
 
   // compute normalized final value for each grid cell
@@ -265,7 +263,6 @@ post_process_grid_kokkos(int index, int nsample,
 
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeThermalGrid_post_process_grid>(lo,hi),*this);
-  DeviceType().fence();
   copymode = 0;
 }
 

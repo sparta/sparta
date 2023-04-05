@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -415,12 +415,12 @@ void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
       vsqpre = origmass * MathExtra::lensq3(vorig);
       otherpre = iorig->erot + iorig->evib;
       if (ip) {
-	ivsqpost = imass * MathExtra::lensq3(ip->v);
-	iother = ip->erot + ip->evib;
+        ivsqpost = imass * MathExtra::lensq3(ip->v);
+        iother = ip->erot + ip->evib;
       } else ivsqpost = iother = 0.0;
       if (jp) {
-	jvsqpost = jmass * MathExtra::lensq3(jp->v);
-	jother = jp->erot + jp->evib;
+        jvsqpost = jmass * MathExtra::lensq3(jp->v);
+        jother = jp->erot + jp->evib;
       } else jvsqpost = jother = 0.0;
       etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
         weight * (iother + jother - otherpre);

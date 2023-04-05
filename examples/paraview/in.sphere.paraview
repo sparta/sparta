@@ -1,0 +1,58 @@
+################################################################################
+# 3d flow around a sphere
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+
+global              gridcut 0.1 comm/sort yes
+
+boundary	    o r r
+
+create_box  	    -2 2 -2 2 -2 2
+
+create_grid         20 20 20
+
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.0005
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0 
+
+read_surf           data.sphere
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide		    vss air air.vss
+
+fix		    in emit/face air xlo twopass 
+
+compute             1 grid all species n u v w usq vsq wsq
+compute             2 surf all species n nwt mflux fx fx fz press ke
+fix                 1 ave/grid all 1 100 100 c_1[*]
+fix                 2 ave/surf all 1 100 100 c_2[*]
+dump                1 grid all 100 tmp_flow.* id f_1[*]
+dump                2 surf all 100 tmp_surf.* id f_2[*]
+write_grid          data.grid
+
+timestep 	    0.0001
+
+#compute             2 surf all all n press ke
+#fix                 save ave/surf all 1 50 50 c_2[*] ave running
+#region              slab block INF INF INF INF -0.1 0.1
+#dump                2 image all 50 image.*.ppm type type pdiam 0.03 &
+#		    view 70 120 size 512 512 axes yes 0.9 0.02 &
+#                    gridz -0.8 proc gline yes 0.005 &
+#                    surf f_save[2] 0.0
+#dump_modify	    2 pad 4 region slab
+#dump_modify         2 cmap surf min max cf 0.0 2 min orange max green
+
+stats		    100
+stats_style	    step cpu np nattempt ncoll nscoll nscheck
+run 		    1000

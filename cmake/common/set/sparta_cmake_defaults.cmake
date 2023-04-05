@@ -36,18 +36,22 @@ if(SPARTA_ENABLE_TESTING)
       "collide"
       "circle"
       "chem"
+      "cylinder"
       "axi"
       "ambi"
       "relax_const"
       "relax_variable"
       "thermostat"
-      "bfield")
+      "bfield"
+      "adjust_temp"
+      "shock_tube")
 
   set(SPARTA_DISABLED_TESTS
       "in.ablation.3d.reactions" # Failing
       "in.axi" # Failing
       "in.collide" # Failing
       "in.ambi" # Failing
+      "in.cylinder" # Long runtime
       "in.jagged.3d" # Long runtime
       "in.jagged.3d.distributed" # Long runtime
   )

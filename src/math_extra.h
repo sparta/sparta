@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -59,19 +59,19 @@ namespace MathExtra {
                                const double mat2[3][3],
                                double ans[3][3]);
   inline void times3_transpose(const double mat1[3][3],
-			       const double mat2[3][3],
-			       double ans[3][3]);
+                               const double mat2[3][3],
+                               double ans[3][3]);
   inline void invert3(const double mat[3][3], double ans[3][3]);
   inline void matvec(const double mat[3][3], const double*vec, double *ans);
   inline void matvec(const double *ex, const double *ey, const double *ez,
-		     const double *vec, double *ans);
+                     const double *vec, double *ans);
   inline void transpose_matvec(const double mat[3][3], const double*vec,
-			       double *ans);
+                               double *ans);
   inline void transpose_matvec(const double *ex, const double *ey,
-			       const double *ez, const double *v,
-			       double *ans);
+                               const double *ez, const double *v,
+                               double *ans);
   inline void transpose_diag3(const double mat[3][3], const double*vec,
-			      double ans[3][3]);
+                              double ans[3][3]);
   inline void vecmat(const double *v, const double m[3][3], double *ans);
   inline void scalar_times3(const double f, double m[3][3]);
 
@@ -282,7 +282,7 @@ double MathExtra::det3(const double m[3][3])
 ------------------------------------------------------------------------- */
 
 void MathExtra::diag_times3(const double *d, const double m[3][3],
-			    double ans[3][3])
+                            double ans[3][3])
 {
   ans[0][0] = d[0]*m[0][0];
   ans[0][1] = d[0]*m[0][1];
@@ -300,7 +300,7 @@ void MathExtra::diag_times3(const double *d, const double m[3][3],
 ------------------------------------------------------------------------- */
 
 void MathExtra::plus3(const double m[3][3], const double m2[3][3],
-		      double ans[3][3])
+                      double ans[3][3])
 {
   ans[0][0] = m[0][0]+m2[0][0];
   ans[0][1] = m[0][1]+m2[0][1];
@@ -405,7 +405,7 @@ void MathExtra::matvec(const double m[3][3], const double *v, double *ans)
 ------------------------------------------------------------------------- */
 
 void MathExtra::matvec(const double *ex, const double *ey, const double *ez,
-		       const double *v, double *ans)
+                       const double *v, double *ans)
 {
   ans[0] = ex[0]*v[0] + ey[0]*v[1] + ez[0]*v[2];
   ans[1] = ex[1]*v[0] + ey[1]*v[1] + ez[1]*v[2];
@@ -417,7 +417,7 @@ void MathExtra::matvec(const double *ex, const double *ey, const double *ez,
 ------------------------------------------------------------------------- */
 
 void MathExtra::transpose_matvec(const double m[3][3], const double *v,
-				 double *ans)
+                                 double *ans)
 {
   ans[0] = m[0][0]*v[0] + m[1][0]*v[1] + m[2][0]*v[2];
   ans[1] = m[0][1]*v[0] + m[1][1]*v[1] + m[2][1]*v[2];
@@ -429,8 +429,8 @@ void MathExtra::transpose_matvec(const double m[3][3], const double *v,
 ------------------------------------------------------------------------- */
 
 void MathExtra::transpose_matvec(const double *ex, const double *ey,
-				 const double *ez, const double *v,
-				 double *ans)
+                                 const double *ez, const double *v,
+                                 double *ans)
 {
   ans[0] = ex[0]*v[0] + ex[1]*v[1] + ex[2]*v[2];
   ans[1] = ey[0]*v[0] + ey[1]*v[1] + ey[2]*v[2];
@@ -442,7 +442,7 @@ void MathExtra::transpose_matvec(const double *ex, const double *ey,
 ------------------------------------------------------------------------- */
 
 void MathExtra::transpose_diag3(const double m[3][3], const double *d,
-				double ans[3][3])
+                                double ans[3][3])
 {
   ans[0][0] = m[0][0]*d[0];
   ans[0][1] = m[1][0]*d[1];
@@ -483,7 +483,7 @@ void MathExtra::scalar_times3(const double f, double m[3][3])
 ------------------------------------------------------------------------- */
 
 void MathExtra::axisangle_to_quat(const double *v, const double angle,
-				  double *quat)
+                                  double *quat)
 {
   double halfa = 0.5*angle;
   double sina = sin(halfa);
@@ -518,7 +518,7 @@ void MathExtra::quat_to_mat(const double *quat, double mat[3][3])
   mat[1][0] = twoij+twokw;
   mat[1][1] = w2-i2+j2-k2;
   mat[1][2] = twojk-twoiw;
-	
+
   mat[2][0] = twoik-twojw;
   mat[2][1] = twojk+twoiw;
   mat[2][2] = w2-i2-j2+k2;

@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -31,8 +31,6 @@ SurfCollidePiston::SurfCollidePiston(SPARTA *sparta, int narg, char **arg) :
   SurfCollide(sparta, narg, arg)
 {
   if (narg != 3) error->all(FLERR,"Illegal surf_collide piston command");
-
-  allowreact = 1;
 
   vwall = input->numeric(FLERR,arg[2]);
   if (vwall <= 0.0) error->all(FLERR,"Surf_collide piston velocity <= 0.0");

@@ -19,6 +19,7 @@ are 2d problems so that they run quickly and can be easily visualized.
 
 ablation = 2d and 3d ablation of implicit surfaces
 adapt = static and on-the-fly grid adaptation
+adjust_temp = change surf element temps dynamically due to collisions
 ambi = amibpolar approxiation for ionized flow around a cylinder
 axi = axisymmetric flow around a sphere
 bfield = external magnetic field affecting particle motion

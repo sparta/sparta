@@ -139,6 +139,15 @@ of timesteps <I>Nfreq</I> between balancing steps also needs to be large
 enough to give reliable timings. The timers used for balancing tally
 time from the move, sort, collide, and modify portions of each timestep.
 </P>
+<P>IMPORTANT NOTE: The <A HREF = "adapt_grid.html">adapt_grid</A> command zeros out
+timing data, so the weight <I>time</I> option is not available immediatly
+after this command.
+</P>
+<P>IMPORTANT NOTE: The coarsening option in <A HREF = "fix_adapt.html">fix_adapt</A> may
+shift cells to different processors, which makes the accumulated
+timing data for the weight <I>time</I> option less accurate when load
+balancing is performed immediately after this command.
+</P>
 <P>Here is an example of an RCB partitioning for 24 processors, of a 2d
 hierarchical grid with 5 levels, refined around a tilted ellipsoidal
 surface object (outlined in pink).  This is for a <I>weight cell</I>

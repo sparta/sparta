@@ -165,7 +165,10 @@ assuming the continued simulation needs the information.
 <P>Also note that many commands can be used after a restart file is read,
 to override a setting that was stored in the restart file.  For
 example, the <A HREF = "global.html">global</A> command can be used to reset the
-values of its specified keywords.
+values of its specified keywords. If a global command is used in the
+input file before the restart file is read, then it will be overriden
+by values in the restart file. The only exception is the *mem/limit*
+command, since it affects how the restart file is processed.
 </P>
 <P>In particular, take note of the following issues:
 </P>

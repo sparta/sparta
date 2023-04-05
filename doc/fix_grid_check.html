@@ -51,17 +51,19 @@ monitored (see below).  A value of 0 is "correct", meaning that no
 particle was found outside its assigned grid cell.
 </P>
 <P>If the <I>outside</I> keyword is set to <I>yes</I>, then a check for particles
-inside implicit surfaces is also performed.  If a particle is in a
-grid cell with implicit surface elements and the particles is "inside"
-the surfaces (which have possibly ablated), then the error count is
-incremented.
+inside explicit or implicit surfaces is also performed.  If a particle
+is in a grid cell with surface elements and the particle is "inside"
+the surfaces, then the error count is incremented.
 </P>
 <P>If the outflag setting is <I>error</I>, SPARTA will print an error and stop
-if it finds a particle in an incorrect grid cell or inside the
-implicit surface elements.  For <I>warn</I>, it will print a warning
-message and continue.  For <I>silent</I>, it will print no message, but the
-count of such occurrences can be monitored as described below, e.g. by
-outputting the value with the <A HREF = "stats.html">stats</A> command.
+if it finds a particle in an incorrect grid cell or inside the surface
+elements.  For <I>warn</I>, it will print a warning message and continue.
+For <I>silent</I>, it will print no message, but the count of such
+occurrences can be monitored as described below, e.g. by outputting
+the value with the <A HREF = "stats.html">stats</A> command.
+</P>
+<P>IMPORTANT NOTE: Use of <I>outside yes</I> can be expensive if the check is
+performed frequently (e.g. every step).
 </P>
 <HR>
 

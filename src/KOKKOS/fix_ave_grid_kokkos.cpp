@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -169,10 +169,8 @@ void FixAveGridKokkos::end_of_step()
   // could do this with memset()
 
   copymode = 1;
-  if (ave == ONE && irepeat == 0) {
+  if (ave == ONE && irepeat == 0)
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Zero_tally>(0,nglocal),*this);
-    DeviceType().fence();
-  }
 
   // accumulate results of computes,fixes,variables
   // compute/fix/variable may invoke computes so wrap with clear/add
@@ -208,18 +206,15 @@ void FixAveGridKokkos::end_of_step()
         ntally = numap[m];
         computeKKBase->query_tally_grid_kokkos(d_ctally);
         Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Add_ctally>(0,nglocal),*this);
-        DeviceType().fence();
       } else {
         k = umap[m][0];
         if (j == 0) {
           d_compute_vector = computeKKBase->d_vector;
           Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Add_compute_vector>(0,nglocal),*this);
-          DeviceType().fence();
         } else {
           jm1 = j - 1;
           d_compute_array = computeKKBase->d_array_grid;
           Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Add_compute_array>(0,nglocal),*this);
-          DeviceType().fence();
         }
       }
 
@@ -231,12 +226,10 @@ void FixAveGridKokkos::end_of_step()
       //if (j == 0) {
       //  double *d_fix_vector = modify->fix[n]->vector_grid; // need Kokkos version
       //  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Add_fix_vector>(0,nglocal),*this);
-      //  DeviceType().fence();
       //} else {
       //  int jm1 = j - 1;
       //  double **fix_array = modify->fix[n]->array_grid; // need Kokkos version
       //  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Add_fix_array>(0,nglocal),*this);
-      //  DeviceType().fence();
       //}
 
     // evaluate grid-style variable, sum values to Kth column of tally array
@@ -279,7 +272,6 @@ void FixAveGridKokkos::end_of_step()
     } else {
       k = map[0][0];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Norm_vector_grid>(0,nglocal),*this);
-      DeviceType().fence();
     }
 
   } else {
@@ -294,7 +286,6 @@ void FixAveGridKokkos::end_of_step()
       } else {
         k = map[m][0];
         Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Norm_array_grid>(0,nglocal),*this);
-        DeviceType().fence();
       }
     }
   }
@@ -317,7 +308,6 @@ void FixAveGridKokkos::end_of_step()
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Zero_group_vector>(0,nglocal),*this);
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Zero_group_array>(0,nglocal),*this);
-    DeviceType().fence();
   }
 
   // reset nsample if ave = ONE

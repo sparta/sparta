@@ -1,0 +1,110 @@
+{
+  "tests" : [
+    {
+      "name" : "grid2paraview pvbatch slice sphere",
+      "clean" : "rm -fr sphere_slice.txt sphere_slice_grid_pvbatch.pvd sphere_slice_grid_pvbatch/",
+      "preprocess" : "printf \"dimension 3\ncreate_box -2 2 -2 2 -2 2\ncreate_grid 20 20 20\nslice 1 0 0 0.0 0.0 0.0\nslice 0 1 0 0.0 0.0 0.0\nslice 1 1 1 0.0 0.0 0.0\nslice 1 0 1 0.0 0.0 0.0\n\" > sphere_slice.txt",
+      "run" : [
+        "PARAVIEW_MPI_EXEC",
+        "PARAVIEW_PVPBATCH",
+        "GRID2PARAVIEW",
+        "sphere_slice.txt sphere_slice_grid_pvbatch -x 10 -y 10 -z 10 -r tmp_flow.*"
+      ],
+      "assert_files" : ["sphere_slice_grid_pvbatch.pvd"],
+      "assert_read" : {
+        "file" : "sphere_slice_grid_pvbatch.pvd",
+        "attributes" : {
+            "TimestepValues" : [0.0, 100.0, 200.0, 300.0, 400.0,
+                                500.0, 600.0, 700.0, 800.0, 900.0, 1000.0],
+            "CellArrays": ["id", "f_1[1]", "f_1[2]", "f_1[3]", "f_1[4]", "f_1[5]",
+                           "f_1[6]", "f_1[7]", "f_1[8]", "f_1[9]", "f_1[10]", "f_1[11]",
+                           "f_1[12]", "f_1[13]", "f_1[14]"]
+        }
+      },
+      "assert_fetch" : {
+        "file" : "sphere_slice_grid_pvbatch.pvd",
+        "attributes" : {
+            "GetNumberOfCells" : 2788
+        }
+      }
+    },
+    {
+      "name" : "grid2paraview pvpython sphere",
+      "clean" : "rm -fr sphere.txt sphere_grid_pvpython sphere_grid_pvpython.pvd",
+      "preprocess" : "printf \"dimension 3\ncreate_box -2 2 -2 2 -2 2\ncreate_grid 20 20 20\n\" > sphere.txt",
+      "run" : [
+        "PARAVIEW_MPI_EXEC",
+        "PARAVIEW_PVPBATCH",
+        "GRID2PARAVIEW",
+        "sphere.txt sphere_grid_pvpython -x 10 -y 10 -z 10 -r tmp_flow.*"
+      ],
+      "assert_files" : ["sphere_grid_pvpython.pvd"],
+      "assert_read" : {
+        "file" : "sphere_grid_pvpython.pvd",
+        "attributes" : {
+            "TimestepValues" : [0.0, 100.0, 200.0, 300.0, 400.0,
+                                500.0, 600.0, 700.0, 800.0, 900.0, 1000.0],
+            "CellArrays": ["id", "f_1[1]", "f_1[2]", "f_1[3]", "f_1[4]", "f_1[5]",
+                           "f_1[6]", "f_1[7]", "f_1[8]", "f_1[9]", "f_1[10]", "f_1[11]",
+                           "f_1[12]", "f_1[13]", "f_1[14]"]
+        }
+      },
+      "assert_fetch" : {
+        "file" : "sphere_grid_pvpython.pvd",
+        "attributes" : {
+            "GetNumberOfCells" : 8000
+        }
+      }
+    },
+    {
+      "name" : "grid2paraview catalyst sphere",
+      "clean" : "rm -fr sphere_read_grid.txt datasets/",
+      "preprocess" : "printf \"dimension 3\ncreate_box -2 2 -2 2 -2 2\nread_grid data.grid\n\" > sphere_read_grid.txt",
+      "run" : [
+        "PARAVIEW_MPI_EXEC",
+        "PARAVIEW_PVPBATCH",
+        "GRID2PARAVIEW",
+        "sphere_read_grid.txt sphere_grid_pvbatch -x 10 -y 10 -z 10 -c sphere_test_paraview_catalyst.py -r tmp_flow.*"
+      ],
+      "assert_files" : ["datasets/RenderView1_000000.png",
+                        "datasets/RenderView1_000001.png",
+                        "datasets/RenderView1_000002.png",
+                        "datasets/RenderView1_000003.png",
+                        "datasets/RenderView1_000004.png",
+                        "datasets/RenderView1_000005.png",
+                        "datasets/RenderView1_000006.png",
+                        "datasets/RenderView1_000007.png",
+                        "datasets/RenderView1_000008.png",
+                        "datasets/RenderView1_000009.png",
+                        "datasets/RenderView1_000010.png"]
+    },
+    {
+      "name" : "grid2paraview_cells pvpython sphere",
+      "clean" : "rm -fr sphere.txt sphere_grid_pvpython_cells sphere_grid_pvpython_cells.pvd",
+      "preprocess" : "printf \"dimension 3\ncreate_box -2 2 -2 2 -2 2\nread_grid data.grid\n\" > sphere.txt",
+      "run" : [
+        "PARAVIEW_MPI_EXEC",
+        "PARAVIEW_PVPBATCH",
+        "GRID2PARAVIEWCELLS",
+        "sphere.txt sphere_grid_pvpython_cells -r tmp_flow.*"
+      ],
+      "assert_files" : ["sphere_grid_pvpython_cells.pvd"],
+      "assert_read" : {
+        "file" : "sphere_grid_pvpython_cells.pvd",
+        "attributes" : {
+            "TimestepValues" : [0.0, 100.0, 200.0, 300.0, 400.0,
+                                500.0, 600.0, 700.0, 800.0, 900.0, 1000.0],
+            "CellArrays": ["id", "f_1[1]", "f_1[2]", "f_1[3]", "f_1[4]", "f_1[5]",
+                           "f_1[6]", "f_1[7]", "f_1[8]", "f_1[9]", "f_1[10]", "f_1[11]",
+                           "f_1[12]", "f_1[13]", "f_1[14]"]
+        }
+      },
+      "assert_fetch" : {
+        "file" : "sphere_grid_pvpython_cells.pvd",
+        "attributes" : {
+            "GetNumberOfCells" : 8000
+        }
+      }
+    }
+  ]
+}

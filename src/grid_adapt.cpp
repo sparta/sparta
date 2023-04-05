@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -63,15 +63,15 @@ void Grid::refine_cell(int icell, int *childlist, Cut2d *cut2d, Cut3d *cut3d)
         childlist[m] = nlocal;
         m++;
         childID = ((cellint) m << pbits) | parentID;
-	plo = cells[icell].lo;
-	phi = cells[icell].hi;
+        plo = cells[icell].lo;
+        phi = cells[icell].hi;
         id_child_lohi(plevel,plo,phi,m,lo,hi);
         add_child_cell(childID,plevel+1,lo,hi);
         weight_one(nlocal-1);
-	(*hash)[childID] = nlocal-1;
-	
+        (*hash)[childID] = nlocal-1;
+
         // update any per grid fixes for the new child cell
-	
+
         if (modify->n_pergrid) modify->add_grid_one();
 
         // if surfs in parent cell, intersect them with child cell
@@ -191,9 +191,9 @@ void Grid::refine_cell(int icell, int *childlist, Cut2d *cut2d, Cut3d *cut3d)
 ------------------------------------------------------------------------- */
 
 void Grid::coarsen_cell(cellint parentID, int plevel, double *plo, double *phi,
-			int nchild, int *index,
-			int *nsurf_child, int *npart_child,
-			void **surf_child, char **part_child,
+                        int nchild, int *index,
+                        int *nsurf_child, int *npart_child,
+                        void **surf_child, char **part_child,
                         Cut2d *cut2d, Cut3d *cut3d)
 {
   int i,j,k,m,icell,jcell,ns,ip,ipnew;
@@ -233,23 +233,23 @@ void Grid::coarsen_cell(cellint parentID, int plevel, double *plo, double *phi,
 
     for (m = 0; m < nchild; m++) {
       if (index[m] >= 0) {
-	icell = index[m];
-	ns = cells[icell].nsurf;
-	cs = cells[icell].csurfs;
+        icell = index[m];
+        ns = cells[icell].nsurf;
+        cs = cells[icell].csurfs;
       } else {
-	ns = nsurf_child[m];
-	cs = (surfint *) surf_child[m];
+        ns = nsurf_child[m];
+        cs = (surfint *) surf_child[m];
       }
 
       for (i = 0; i < ns; i++) {
-	if (dim == 2) surfID = lines[cs[i]].id;
-	else surfID = tris[cs[i]].id;
-	if (shash.find(surfID) == shash.end()) {
-	  shash[surfID] = 0;
-	  if (nsurf == maxsurfpercell)
-	    error->one(FLERR,"Too many surfs in coarsened cell");
-	  ptr[nsurf++] = cs[i];
-	}
+        if (dim == 2) surfID = lines[cs[i]].id;
+        else surfID = tris[cs[i]].id;
+        if (shash.find(surfID) == shash.end()) {
+          shash[surfID] = 0;
+          if (nsurf == maxsurfpercell)
+            error->one(FLERR,"Too many surfs in coarsened cell");
+          ptr[nsurf++] = cs[i];
+        }
       }
     }
 
@@ -275,48 +275,48 @@ void Grid::coarsen_cell(cellint parentID, int plevel, double *plo, double *phi,
       // locally owned cell, so indices
 
       if (index[m] >= 0) {
-	icell = index[m];
-	ns = cells[icell].nsurf;
-	cs = cells[icell].csurfs;
-	if (dim == 2) lines = surf->lines;
-	else tris = surf->tris;
+        icell = index[m];
+        ns = cells[icell].nsurf;
+        cs = cells[icell].csurfs;
+        if (dim == 2) lines = surf->lines;
+        else tris = surf->tris;
 
-	for (i = 0; i < ns; i++) {
-	  if (dim == 2) surfID = lines[cs[i]].id;
-	  else surfID = tris[cs[i]].id;
-	  if (shash.find(surfID) == shash.end()) {
-	    shash[surfID] = 0;
-	    if (nsurf == maxsurfpercell)
-	      error->one(FLERR,"Too many surfs in coarsened cell");
-	    ptr[nsurf++] = cs[i];
-	  }
-	}
+        for (i = 0; i < ns; i++) {
+          if (dim == 2) surfID = lines[cs[i]].id;
+          else surfID = tris[cs[i]].id;
+          if (shash.find(surfID) == shash.end()) {
+            shash[surfID] = 0;
+            if (nsurf == maxsurfpercell)
+              error->one(FLERR,"Too many surfs in coarsened cell");
+            ptr[nsurf++] = cs[i];
+          }
+        }
 
       // communicated cell, so lines or tris
 
       } else {
-	
-	ns = nsurf_child[m];
-	if (dim == 2) lines = (Surf::Line *) surf_child[m];
-	else tris = (Surf::Tri *) surf_child[m];
-	
-	for (i = 0; i < ns; i++) {
-	  if (dim == 2) surfID = lines[i].id;
-	  else surfID = tris[i].id;
-	  if (shash.find(surfID) == shash.end()) {
-	    shash[surfID] = 0;
-	    if (surfhash->find(surfID) != surfhash->end())
-	      ilocal = (*surfhash)[surfID];
-	    else {
-	      if (dim == 2) surf->add_line_copy(1,&lines[i]);
-	      else surf->add_tri_copy(1,&tris[i]);
-	      ilocal = surf->nlocal-1;
-	    }
-	    if (nsurf == maxsurfpercell)
-	      error->one(FLERR,"Too many surfs in coarsened cell");
-	    ptr[nsurf++] = ilocal;
-	  }
-	}
+
+        ns = nsurf_child[m];
+        if (dim == 2) lines = (Surf::Line *) surf_child[m];
+        else tris = (Surf::Tri *) surf_child[m];
+
+        for (i = 0; i < ns; i++) {
+          if (dim == 2) surfID = lines[i].id;
+          else surfID = tris[i].id;
+          if (shash.find(surfID) == shash.end()) {
+            shash[surfID] = 0;
+            if (surfhash->find(surfID) != surfhash->end())
+              ilocal = (*surfhash)[surfID];
+            else {
+              if (dim == 2) surf->add_line_copy(1,&lines[i]);
+              else surf->add_tri_copy(1,&tris[i]);
+              ilocal = surf->nlocal-1;
+            }
+            if (nsurf == maxsurfpercell)
+              error->one(FLERR,"Too many surfs in coarsened cell");
+            ptr[nsurf++] = ilocal;
+          }
+        }
       }
     }
   }
@@ -377,8 +377,8 @@ void Grid::coarsen_cell(cellint parentID, int plevel, double *plo, double *phi,
 
         particles[ip].icell = icell;
 
-	// create new linked list for all particles in icell (newcell)
-	// necessary b/c grid cells will be compressed after coarsening
+        // create new linked list for all particles in icell (newcell)
+        // necessary b/c grid cells will be compressed after coarsening
 
         cinfo[icell].count++;
         if (cinfo[icell].first < 0) cinfo[icell].first = ip;
@@ -400,26 +400,26 @@ void Grid::coarsen_cell(cellint parentID, int plevel, double *plo, double *phi,
 
       for (ip = nplocal-np; ip < nplocal; ip++) {
 
-	// if new child is not split: assign particle to icell
-	// else:
-	//   use split2d/3d to find which sub cell particle is in
-	//   assign particle to sub cell
-	
-	if (cells[newcell].nsplit == 1) icell = newcell;
-	else {
-	  if (dim == 3) icell = update->split3d(newcell,particles[ip].x);
-	  else icell = update->split2d(newcell,particles[ip].x);
-	}
+        // if new child is not split: assign particle to icell
+        // else:
+        //   use split2d/3d to find which sub cell particle is in
+        //   assign particle to sub cell
 
-	// assign particle to icell
+        if (cells[newcell].nsplit == 1) icell = newcell;
+        else {
+          if (dim == 3) icell = update->split3d(newcell,particles[ip].x);
+          else icell = update->split2d(newcell,particles[ip].x);
+        }
 
-	particles[ip].icell = icell;
+        // assign particle to icell
 
-	// create new linked list for all particles in newcell
-	// necessary b/c grid cells will be compressed after coarsening
+        particles[ip].icell = icell;
 
-	cinfo[icell].count++;
-	if (cinfo[icell].first < 0) cinfo[icell].first = ip;
+        // create new linked list for all particles in newcell
+        // necessary b/c grid cells will be compressed after coarsening
+
+        cinfo[icell].count++;
+        if (cinfo[icell].first < 0) cinfo[icell].first = ip;
         else next[cinfo[icell].mask] = ip;
         cinfo[icell].mask = ip;
         next[ip] = -1;
