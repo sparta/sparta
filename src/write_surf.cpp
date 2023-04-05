@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -95,7 +95,7 @@ void WriteSurf::command(int narg, char **arg)
     } else if (strcmp(arg[iarg],"fileper") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal write_sirf command");
       if (!multiproc)
-	error->all(FLERR,"Cannot use write_surf fileper "
+        error->all(FLERR,"Cannot use write_surf fileper "
                    "without % in surface file name");
       int nper = atoi(arg[iarg+1]);
       if (nper <= 0) error->all(FLERR,"Illegal write_surf command");
@@ -113,7 +113,7 @@ void WriteSurf::command(int narg, char **arg)
     } else if (strcmp(arg[iarg],"nfile") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal write_surf command");
       if (!multiproc)
-	error->all(FLERR,"Cannot use write_surf nfile "
+        error->all(FLERR,"Cannot use write_surf nfile "
                    "without % in surface file name");
       int nfile = atoi(arg[iarg+1]);
       if (nfile <= 0) error->all(FLERR,"Illegal write_surf command");
@@ -462,19 +462,19 @@ void WriteSurf::write_file_distributed_points(char *file)
       m = 0;
 
       if (dim == 2) {
-	for (int i = 0; i < ncount; i++) {
-	  index++;
-	  fprintf(fp,BIGINT_FORMAT " %20.15g %20.15g\n",
+        for (int i = 0; i < ncount; i++) {
+          index++;
+          fprintf(fp,BIGINT_FORMAT " %20.15g %20.15g\n",
                   index,pbuf[m],pbuf[m+1]);
           m += 2;
-	}
+        }
       } else {
-	for (int i = 0; i < ncount; i++) {
-	  index++;
-	  fprintf(fp,BIGINT_FORMAT " %20.15g %20.15g %20.15g\n",
+        for (int i = 0; i < ncount; i++) {
+          index++;
+          fprintf(fp,BIGINT_FORMAT " %20.15g %20.15g %20.15g\n",
                   index,pbuf[m],pbuf[m+1],pbuf[m+2]);
           m += 3;
-	}
+        }
       }
     }
 
@@ -529,18 +529,18 @@ void WriteSurf::write_file_distributed_points(char *file)
 
       ncount = recv_size/nper;
       if (dim == 2) {
-	for (int i = 0; i < ncount; i++) {
-	  fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT "\n",
-		  sbuf[i].id,sbuf[i].type,index+1,index+2);
-	  index += 2;
-	}
+        for (int i = 0; i < ncount; i++) {
+          fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT "\n",
+                  sbuf[i].id,sbuf[i].type,index+1,index+2);
+          index += 2;
+        }
       } else {
-	for (int i = 0; i < ncount; i++) {
-	  fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT " "
-		  BIGINT_FORMAT "\n",
-		  sbuf[i].id,sbuf[i].type,index+1,index+2,index+3);
-	  index += 3;
-	}
+        for (int i = 0; i < ncount; i++) {
+          fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT " "
+                  BIGINT_FORMAT "\n",
+                  sbuf[i].id,sbuf[i].type,index+1,index+2,index+3);
+          index += 3;
+        }
       }
     }
     fclose(fp);
@@ -652,21 +652,21 @@ void WriteSurf::write_file_distributed_nopoints(char *file)
 
       ncount = recv_size/nper;
       if (dim == 2) {
-	lines = (Surf::Line *) buf;
-	for (int i = 0; i < ncount; i++)
-	  fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g %20.15g\n",
-		  lines[i].id,lines[i].type,
-		  lines[i].p1[0],lines[i].p1[1],
-		  lines[i].p2[0],lines[i].p2[1]);
+        lines = (Surf::Line *) buf;
+        for (int i = 0; i < ncount; i++)
+          fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g %20.15g\n",
+                  lines[i].id,lines[i].type,
+                  lines[i].p1[0],lines[i].p1[1],
+                  lines[i].p2[0],lines[i].p2[1]);
       } else {
-	tris = (Surf::Tri *) buf;
-	for (int i = 0; i < ncount; i++)
-	  fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g "
+        tris = (Surf::Tri *) buf;
+        for (int i = 0; i < ncount; i++)
+          fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g "
                   "%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g\n",
-		  tris[i].id,tris[i].type,
-		  tris[i].p1[0],tris[i].p1[1],tris[i].p1[2],
-		  tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
-		  tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
+                  tris[i].id,tris[i].type,
+                  tris[i].p1[0],tris[i].p1[1],tris[i].p1[2],
+                  tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
+                  tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
       }
     }
     fclose(fp);

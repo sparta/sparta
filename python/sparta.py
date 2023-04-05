@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------
 #   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
 #   http://sparta.sandia.gov
-#   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+#   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
 #   Sandia National Laboratories
 #
 #   Copyright (2012) Sandia Corporation.  Under the terms of Contract
@@ -29,7 +29,7 @@ class sparta:
     except:
       type,value,tb = sys.exc_info()
       traceback.print_exception(type,value,tb)
-      raise OSError("Could not load SPARTA dynamic library")
+      raise Exception("Could not load SPARTA dynamic library")
 
     # create an instance of SPARTA
     # don't know how to pass an MPI communicator from PyPar
@@ -56,12 +56,15 @@ class sparta:
     self.spa = None
 
   def file(self,file):
+    file = file.encode('utf-8')
     self.lib.sparta_file(self.spa,file)
 
   def command(self,cmd):
+    cmd = cmd.encode('utf-8')
     self.lib.sparta_command(self.spa,cmd)
 
   def extract_global(self,name,type):
+    name = name.encode('utf-8')
     if type == 0:
       self.lib.sparta_extract_global.restype = POINTER(c_int)
     elif type == 1:
@@ -71,8 +74,8 @@ class sparta:
     return ptr[0]
 
   def extract_compute(self,id,style,type):
+    style = style.encode('utf-8')
     if type == 0:
-      if style > 0: return None
       self.lib.sparta_extract_compute.restype = POINTER(c_double)
       ptr = self.lib.sparta_extract_compute(self.spa,id,style,type)
       return ptr[0]
@@ -91,6 +94,7 @@ class sparta:
   # memory was allocated by library interface function
 
   def extract_variable(self,name,type):
+    name = name.encode('utf-8')
     if type == 0:
       self.lib.sparta_extract_variable.restype = POINTER(c_double)
       ptr = self.lib.sparta_extract_variable(self.spa,name)

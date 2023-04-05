@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -51,8 +51,10 @@ enum ExecutionSpace{Host,Device};
 
 #if defined(SPARTA_KOKKOS_GPU)
 #define SPARTA_ALIGN(n) alignas(n)
+#define SPARTA_GET_ALIGN(type) alignof(type)
 #else
 #define SPARTA_ALIGN(n)
+#define SPARTA_GET_ALIGN(type) 0
 #endif
 
 // default settings: 32-bit smallint, 64-bit bigint, 32-bit cellint

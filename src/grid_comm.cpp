@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -80,20 +80,20 @@ int Grid::pack_one(int icell, char *buf,
       int sizesurf = sizeof(Surf::Line);
       surfint *csurfs = cells[icell].csurfs;
       for (int m = 0; m < nsurf; m++) {
-	int isurf = csurfs[m];
-	if (memflag) memcpy(ptr,&lines[isurf],sizesurf);
-	ptr += sizesurf;
-	ptr = ROUNDUP(ptr);
+        int isurf = csurfs[m];
+        if (memflag) memcpy(ptr,&lines[isurf],sizesurf);
+        ptr += sizesurf;
+        ptr = ROUNDUP(ptr);
       }
     } else {
       Surf::Tri *tris = surf->tris;
       int sizesurf = sizeof(Surf::Tri);
       surfint *csurfs = cells[icell].csurfs;
       for (int m = 0; m < nsurf; m++) {
-	int isurf = csurfs[m];
-	if (memflag) memcpy(ptr,&tris[isurf],sizesurf);
-	ptr += sizesurf;
-	ptr = ROUNDUP(ptr);
+        int isurf = csurfs[m];
+        if (memflag) memcpy(ptr,&tris[isurf],sizesurf);
+        ptr += sizesurf;
+        ptr = ROUNDUP(ptr);
       }
     }
   }
@@ -454,18 +454,18 @@ int Grid::pack_one_adapt(char *inbuf, char *buf, int memflag)
       int sizesurf = sizeof(Surf::Line);
       surfint *csurfs = cells[icell].csurfs;
       for (int m = 0; m < nsurf; m++) {
-	isurf = csurfs[m];
-	if (memflag) memcpy(ptr,&lines[isurf],sizesurf);
-	ptr += sizesurf;
+        isurf = csurfs[m];
+        if (memflag) memcpy(ptr,&lines[isurf],sizesurf);
+        ptr += sizesurf;
       }
     } else {
       Surf::Tri *tris = surf->tris;
       int sizesurf = sizeof(Surf::Tri);
       surfint *csurfs = cells[icell].csurfs;
       for (int m = 0; m < nsurf; m++) {
-	isurf = csurfs[m];
-	if (memflag) memcpy(ptr,&tris[isurf],sizesurf);
-	ptr += sizesurf;
+        isurf = csurfs[m];
+        if (memflag) memcpy(ptr,&tris[isurf],sizesurf);
+        ptr += sizesurf;
       }
     }
     ptr = ROUNDUP(ptr);
@@ -494,7 +494,7 @@ int Grid::pack_one_adapt(char *inbuf, char *buf, int memflag)
           particle->pack_custom(ip,ptr);
           ptr += nbytes_particle_custom;
         }
-	particles[ip].icell = -1;
+        particles[ip].icell = -1;
         ip = next[ip];
       }
 
@@ -515,7 +515,7 @@ int Grid::pack_one_adapt(char *inbuf, char *buf, int memflag)
             particle->pack_custom(ip,ptr);
             ptr += nbytes_particle_custom;
           }
-	  particles[ip].icell = -1;
+          particles[ip].icell = -1;
           ip = next[ip];
         }
       }

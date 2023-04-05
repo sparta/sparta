@@ -1,12 +1,14 @@
 # Pizza.py toolkit, www.cs.sandia.gov/~sjplimp/pizza.html
-# Steve Plimpton, sjplimp@sandia.gov, Sandia National Laboratories
+# Steve Plimpton, sjplimp@gmail.com, Sandia National Laboratories
 #
 # Copyright (2005) Sandia Corporation.  Under the terms of Contract
 # DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-# certain rights in this software.  This software is distributed under 
+# certain rights in this software.  This software is distributed under
 # the GNU General Public License.
 
 # sdata tool
+
+from __future__ import print_function
 
 oneline = "Read, create, manipulate SPARTA/LAMMPS surf files"
 
@@ -25,8 +27,8 @@ s.read(ID,"mem.surf")		   read in one or more data files
 s.mode = "SPARTA" or "LAMMPS"      set format of in/out files (def = "SPARTA")
 s.seed = 48379                     set random # seed (def = 12345)
 s.circle(ID,x,y,r,n)               create a 2d circle with N lines and ID
-s.rect(ID,x1,y1,x2,y2,nx,ny)       create a 2d rect, 2 corner pts, Nx,Ny segs 
-s.tri(ID,x1,y1,x2,y2,x3,y3,n1,n2,n3)  create a 2d tri, 3 pts, N1,N2,N3 segs 
+s.rect(ID,x1,y1,x2,y2,nx,ny)       create a 2d rect, 2 corner pts, Nx,Ny segs
+s.tri(ID,x1,y1,x2,y2,x3,y3,n1,n2,n3)  create a 2d tri, 3 pts, N1,N2,N3 segs
 s.sphere(ID,x,y,z,r,n)		   create a 3d sphere with NxN sqs per face
 s.box(ID,x1,y1,z1,x2,y2,z2,nx,ny,nz)  3d box, 2 corner pts, Nx,Ny,Nz per face
 s.spikycircle(ID,x,y,rmin,rmax,n)  2d circle, N lines, Rmin <= rad <= Rmax
@@ -75,7 +77,7 @@ s.unselect()                       unselect all surfs
 
   selection applies to write() and viz()
   surfs are selected by default when read or created
-  
+
 s.write("file",pflag=1,nfile=0,ids=[])	    write all selected surfs to file
 s.write("file",pflag=1,nfile=0,ids=[id1,id2,...])  write only listed & selected
 
@@ -166,13 +168,13 @@ class sdata:
       raise Exception("no surf file specified")
 
     # read all surf file as one surf with ID
-    
+
     points = []
     lines = []
     lineflags = []
     triangles = []
     triflags = []
-    
+
     for file in flist:
       npoints_prev = len(points)
 
@@ -201,18 +203,18 @@ class sdata:
 
         elif "Points" in line:
           if npoints == 0:
-            raise StandardError, "invalid surf file"
+            raise Exception("invalid surf file")
           if nlines == 0 and ntriangles == 0:
-            raise StandardError, "invalid surf file"
+            raise Exception("invalid surf file")
           if nlines and ntriangles:
-            raise StandardError, "invalid surf file"
+            raise Exception("invalid surf file")
           if nlines:
-            if self.dim == 3: 
-              raise StandardError, "cannot have both 2d/3d surfs"
+            if self.dim == 3:
+              raise Exception("cannot have both 2d/3d surfs")
             self.dim = 2
           if ntriangles:
-            if self.dim == 2: 
-              raise StandardError, "cannot have both 2d/3d surfs"
+            if self.dim == 2:
+              raise Exception("cannot have both 2d/3d surfs")
             self.dim = 3
 
           line = f.readline()
@@ -221,14 +223,14 @@ class sdata:
             pt = [float(value) for value in list[1:]]
             if len(pt) == 2: pt.append(0.0)      # treat pts as 3-vecs
             points.append(pt)
-          
+
         elif "Lines" in line:
           if npoints == 0 or nlines == 0:
-            raise StandardError, "invalid surf file"
+            raise Exception("invalid surf file")
 
           # store flags preceding 2 point indices in lineflags
           # may be different number for SPARTA vs LAMMPS format
-          
+
           line = f.readline()
           for i in xrange(nlines):
             words = f.readline().split()
@@ -260,7 +262,7 @@ class sdata:
         (id,len(points),len(triangles)))
 
     # create surf
-            
+
     surf = Surface()
     surf.select = 1
     surf.points = points
@@ -272,7 +274,7 @@ class sdata:
     surf.center = [0.5*(box[0]+box[3]),0.5*(box[1]+box[4]),0.5*(box[2]+box[5])]
     self.ids[id] = len(self.surfs)
     self.surfs.append(surf)
-    
+
   # --------------------------------------------------------------------
   # create a circle
 
@@ -280,13 +282,13 @@ class sdata:
     if id in self.ids: raise Exception("ID %s is already in use" % id)
     if self.dim == 3: raise Exception("cannot have both 2d/3d surfs")
     self.dim = 2
-    
+
     points = []
     lines = []
     for i in range(n):
-      theta = i*2.0*pi/n 
+      theta = i*2.0*pi/n
       points.append([x+r*cos(theta),y+r*sin(theta),0.0])
-      
+
     for i in range(n-1):
       lines.append([i,i+1])
     lines.append([n-1,0])
@@ -306,7 +308,7 @@ class sdata:
     if id in self.ids: raise Exception("ID %s is already in use" % id)
     if self.dim == 3: raise Exception("cannot have both 2d/3d surfs")
     self.dim = 2
-      
+
     points = []
     lines = []
     for i in range(ny):
@@ -322,9 +324,9 @@ class sdata:
       lines.append([i,i+1])
     lines.append([2*(nx+ny)-1,0])
 
-    print points
-    print lines
-    
+    print(points)
+    print(lines)
+
     surf = Surface()
     surf.select = 1
     surf.points = points
@@ -340,7 +342,7 @@ class sdata:
     if id in self.ids: raise Exception("ID %s is already in use" % id)
     if self.dim == 3: raise Exception("cannot have both 2d/3d surfs")
     self.dim = 2
-      
+
     points = []
     lines = []
     for i in range(n1):
@@ -353,7 +355,7 @@ class sdata:
     for i in range(n1*n2*n3-1):
       lines.append([i,i+1])
     lines.append([n1*n2*n3-1,0])
-    
+
     surf = Surface()
     surf.select = 1
     surf.points = points
@@ -424,14 +426,14 @@ class sdata:
     if id in self.ids: raise Exception("ID %s is already in use" % id)
     if self.dim == 3: raise Exception("cannot have both 2d/3d surfs")
     self.dim = 2
-    
+
     points = []
     lines = []
     for i in range(n):
       theta = i*2.0*pi/n
       r = rmin + self.random()*(rmax-rmin)
       points.append([x+r*cos(theta),y+r*sin(theta),0.0])
-      
+
     for i in range(n-1):
       lines.append([i,i+1])
     lines.append([n-1,0])
@@ -480,7 +482,7 @@ class sdata:
     if id in self.ids: raise Exception("ID %s is already in use" % id)
     if self.dim == 3: raise Exception("cannot have both 2d/3d surfs")
     self.dim = 2
-    
+
     surf = Surface()
     surf.select = 1
     surf.points = plist
@@ -493,10 +495,10 @@ class sdata:
   # create a custom 3d surf from list of points and lines
 
   def surf3d(self,id,plist,tlist):
-    if self.ids.has_key(id): raise StandardError,"ID %s is already in use" % id
-    if self.dim == 2: raise StandardError, "cannot have both 2d/3d surfs"
+    if self.ids.has_key(id): raise Exception("ID %s is already in use" % id)
+    if self.dim == 2: raise Exception("cannot have both 2d/3d surfs")
     self.dim = 3
-    
+
     surf = Surface()
     surf.select = 1
     surf.points = plist
@@ -544,7 +546,7 @@ class sdata:
   # rotation matrix P =
   #   2 * ( (q0^2+q1^2-q2^2-q3^2)/2   q1q2-q0q3    q1q3+q0q2 )
   #       ( q1q2+q0q3  (q0^2-q1^2+q2^2-q3^2)/2     q2q3-q0q1 )
-  #       ( q1q3-q0q2     q2q3+q0q1   q0^2-q1^2-q2^2+q3^2)/2 )	
+  #       ( q1q3-q0q2     q2q3+q0q1   q0^2-q1^2-q2^2+q3^2)/2 )
   # for each point x: xnew = P (x - center) + center
 
   def rotate(self,id,theta,rx,ry,rz):
@@ -577,7 +579,7 @@ class sdata:
       ptnew[1] = p10*xc[0] + p11*xc[1] + p12*xc[2] + center[1]
       ptnew[2] = p20*xc[0] + p21*xc[1] + p22*xc[2] + center[2]
       surf.points[i] = ptnew
-    
+
   # --------------------------------------------------------------------
   # scale an object by sx,sy,sz factors
   # scale its vertices relative to center pt
@@ -594,10 +596,10 @@ class sdata:
       pt[0] = center[0] + sx*(pt[0]-center[0])
       pt[1] = center[1] + sy*(pt[1]-center[1])
       pt[2] = center[2] + sz*(pt[2]-center[2])
-    
+
   # --------------------------------------------------------------------
   # invert direction of surf normals by swapping line or triangle indices
-  
+
   def invert(self,id):
     if id not in self.ids:
       raise Exception("ID %s is not defined" % id)
@@ -611,10 +613,10 @@ class sdata:
       for i,tri in enumerate(surf.triangles):
         tri = [tri[0],tri[2],tri[1]]
         surf.triangles[i] = tri
-  
+
   # --------------------------------------------------------------------
   # join surfs in list to form a new surf
-  
+
   def join(self,id,*list):
     if id in self.ids:
       raise Exception("ID %s is already in use" % id)
@@ -653,15 +655,15 @@ class sdata:
 
   # --------------------------------------------------------------------
   # refine surf to form a new surf with lines/tris <= size
-  
+
   def refine(self,id,size):
     if not self.ids.has_key(id):
-      raise StandardError,"ID %s is not defined" % id
-    
+      raise Exception("ID %s is not defined" % id)
+
     surf = self.surfs[self.ids[id]]
 
     # 2d surface with lines
-    
+
     if self.dim == 2:
       points = surf.points
       lines = surf.lines
@@ -693,7 +695,7 @@ class sdata:
             nline -= 1
           else: i += 1
         if not change: break
-        
+
       surf.points = points
       surf.lines = lines
       surf.lineflags = lineflags
@@ -704,13 +706,13 @@ class sdata:
       points = surf.points
       tris = surf.triangles
       triflags = surf.triflags
-      
+
       while 1:
         change = 0
         npoint = len(points)
         ntri = len(tris)
         connect = connect_triangles(tris)
-        
+
         # loop over current tris
         # if any of its edges > size, find longest edge
         # split tri in two with new midpt of that edge
@@ -719,14 +721,14 @@ class sdata:
         #   otherwise, connecting tri has already been processed on this pass
         #   mark connecting tri as inactive for this pass
         # build up refined newtris,newflags lists while looping
-        
+
         newtris = []
         newflags = []
         active = ntri*[1]
-        
+
         for i in xrange(ntri):
           if not active[i]: continue
-          
+
           tri = tris[i]
           flags = triflags[i]
           p1 = points[tri[0]]
@@ -739,7 +741,7 @@ class sdata:
           lenp23 = length(p23)
           lenp31 = length(p31)
           maxlen = max(lenp12,max(lenp23,lenp31))
-          
+
           if maxlen > size:
             change = 1
             if maxlen == lenp12:
@@ -808,7 +810,7 @@ class sdata:
               newtris.append(tri4)
               newflags.append(flags)
               newflags.append(flags)
-              
+
           else:
             newtris.append(tri)
             newflags.append(flags)
@@ -818,7 +820,7 @@ class sdata:
         if not change: break
 
       # refined surface replaces original
-        
+
       surf.points = points
       surf.triangles = tris
       surf.triflags = triflags
@@ -826,7 +828,7 @@ class sdata:
   # --------------------------------------------------------------------
   # delete each surf in list
   # reset values in ids since some indices are decremented
-  
+
   def delete(self,*list):
     for id in list:
       i = self.ids[id]
@@ -835,7 +837,7 @@ class sdata:
       for key in list(self.ids.keys()):
         j = self.ids[key]
         if j > i: self.ids[key] = j-1
-        
+
   # --------------------------------------------------------------------
   # rename the ID of an object
   # check that new ID doesn't already exist
@@ -846,7 +848,7 @@ class sdata:
     i = self.ids[idold]
     self.ids[idnew] = i
     del self.ids[idold]
-    
+
   # --------------------------------------------------------------------
   # create a deep copy of an object and assign it a new ID
   # check that new name doesn't already exist
@@ -862,7 +864,7 @@ class sdata:
   # --------------------------------------------------------------------
   # set selection flag for each surf in list
   # if list is empty, select all
-  
+
   def select(self,*list):
     if len(list) == 0: list = list(self.ids.keys())
     for id in list:
@@ -872,7 +874,7 @@ class sdata:
   # --------------------------------------------------------------------
   # unset selection flag for each surf in list
   # if list is empty, unselect all
-  
+
   def unselect(self,*list):
     if len(list) == 0: list = list(self.ids.keys())
     for id in list:
@@ -882,17 +884,17 @@ class sdata:
   # --------------------------------------------------------------------
   # write out surfs in list to surf file in SPARTA or LAMMPS format
   # if list is empty, write all surfs
-  
+
   def write(self,file,pflag=1,nfile=0,ids=[]):
     if pflag != 0 and pflag != 1:
-      raise StandardError,"Pflag value is invalid"
+      raise Exception("Pflag value is invalid")
     if nfile < 0:
-      raise StandardError,"Nfile value is invalid"
+      raise Exception("Nfile value is invalid")
     if pflag == 1 and nfile:
-      raise StandardError,"Cannot use pflag=1 with nfile >= 1"
+      raise Exception("Cannot use pflag=1 with nfile >= 1")
     if pflag == 0 and self.mode == "LAMMPS":
-      raise StandardError,"Cannot use pflag=0 for LAMMPS mode"
-      
+      raise Exception("Cannot use pflag=0 for LAMMPS mode")
+
     if not ids: vlist = range(len(self.surfs))
     else:
       vlist = []
@@ -903,7 +905,7 @@ class sdata:
     lineflags = []
     triangles = []
     triflags = []
-    
+
     for index in vlist:
       obj = self.surfs[index]
       if not obj.select: continue
@@ -914,8 +916,8 @@ class sdata:
           line[0] += npoints_prev
           line[1] += npoints_prev
           lines.append(line)
-        for lineflag in obj.lineflags:
-          lineflags.append(lineflag)
+        #for lineflag in obj.lineflags:
+          #lineflags.append(lineflag)
       if self.dim == 3:
         for tri in obj.triangles:
           tri[0] += npoints_prev
@@ -941,80 +943,80 @@ class sdata:
 
   # --------------------------------------------------------------------
   # write surfs to a single file
-    
+
   def write_single(self,file,pflag,points,lines,lineflags,triangles,triflags):
     fp = open(file,'w')
 
-    print >>fp,"surf file from Pizza.py"
-    print >>fp
-    print >>fp,len(points),"points"
-    if self.dim == 2: print >>fp,len(lines),"lines"
-    if self.dim == 3: print >>fp,len(triangles),"triangles"
-    print >>fp
+    print("surf file from Pizza.py", file=fp)
+    print(file=fp)
+    print(len(points),"points", file=fp)
+    if self.dim == 2: print(len(lines),"lines", file=fp)
+    if self.dim == 3: print(len(triangles),"triangles", file=fp)
+    print(file=fp)
 
     if pflag:
-      print >>fp,"Points\n"
+      print("Points\n", file=fp)
       if self.dim == 2:
         if self.mode == "SPARTA":
           for i,point in enumerate(points):
-            print >>fp,i+1,point[0],point[1]
+            print(i+1,point[0],point[1], file=fp)
         if self.mode == "LAMMPS":
           for i,point in enumerate(points):
-            print >>fp,i+1,point[0],point[1],point[2]
+            print(i+1,point[0],point[1],point[2], file=fp)
       if self.dim == 3:
         for i,point in enumerate(points):
-          print >>fp,i+1,point[0],point[1],point[2]
-      print >>fp
-    
+          print(i+1,point[0],point[1],point[2], file=fp)
+      print(file=fp)
+
     if self.dim == 2:
-      print >>fp,"Lines\n"
+      print("Lines\n", file=fp)
       if pflag:
-        if lineflags[0]:
+        if lineflags:
           for i,line in enumerate(lines):
-            print >>fp,i+1,' '.join(lineflags[i]),line[0]+1,line[1]+1
+            print(i+1,' '.join(lineflags[i]),line[0]+1,line[1]+1, file=fp)
         else:
           for i,line in enumerate(lines):
-            print >>fp,i+1,line[0]+1,line[1]+1
+            print(i+1,line[0]+1,line[1]+1, file=fp)
       else:
         if lineflags[0]:
           for i,line in enumerate(lines):
-            print >>fp,i+1,' '.join(lineflags[i]), \
+            print(i+1,' '.join(lineflags[i]), \
               points[line[0]][0],points[line[0]][1], \
-              points[line[1]][0],points[line[1]][1]
+              points[line[1]][0],points[line[1]][1], file=fp)
           else:
             for i,line in enumerate(lines):
-              print >>fp,i+1, \
+              print(i+1, \
                 points[line[0]][0],points[line[0]][1], \
-                points[line[1]][0],points[line[1]][1]
-        
+                points[line[1]][0],points[line[1]][1], file=fp)
+
     if self.dim == 3:
-      print >>fp,"Triangles\n"
+      print("Triangles\n", file=fp)
       if pflag:
         if triflags[0]:
           for i,tri in enumerate(triangles):
-            print >>fp,i+1,' '.join(triflags[i]),tri[0]+1,tri[1]+1,tri[2]+1
+            print(i+1,' '.join(triflags[i]),tri[0]+1,tri[1]+1,tri[2]+1, file=fp)
         else:
           for i,tri in enumerate(triangles):
-            print >>fp,i+1,tri[0]+1,tri[1]+1,tri[2]+1
+            print(i+1,tri[0]+1,tri[1]+1,tri[2]+1, file=fp)
       else:
         if triflags[0]:
           for i,tri in enumerate(triangles):
-            print >>fp,i+1,' '.join(triflags[i]), \
+            print(i+1,' '.join(triflags[i]), \
               points[tri[0]][0],points[tri[0]][1],points[tri[0]][2], \
               points[tri[1]][0],points[tri[1]][1],points[tri[1]][2], \
-              points[tri[2]][0],points[tri[2]][1],points[tri[2]][2]
+              points[tri[2]][0],points[tri[2]][1],points[tri[2]][2], file=fp)
         else:
           for i,tri in enumerate(triangles):
-            print >>fp,i+1, \
+            print(i+1, \
               points[tri[0]][0],points[tri[0]][1],points[tri[0]][2], \
               points[tri[1]][0],points[tri[1]][1],points[tri[1]][2], \
-              points[tri[2]][0],points[tri[2]][1],points[tri[2]][2]
-    
+              points[tri[2]][0],points[tri[2]][1],points[tri[2]][2], file=fp)
+
     fp.close()
 
   # --------------------------------------------------------------------
   # write surfs to Nfile parallel files
-    
+
   def write_parallel(self,file,nfile,points,lines,lineflags,triangles,triflags):
     basefile = file + ".base"
     fp = open(basefile,'w')
@@ -1035,40 +1037,40 @@ class sdata:
 
       onefile = "%s.%d" % (file,ifile)
       fp = open(onefile,'w')
-      print >>fp,"surf file from Pizza.py"
-      print >>fp
-      if self.dim == 2: print >>fp,istop-istart,"lines"
-      if self.dim == 3: print >>fp,istop-istart,"triangles"
-      print >>fp
+      print("surf file from Pizza.py", file=fp)
+      print(file=fp)
+      if self.dim == 2: print(istop-istart,"lines", file=fp)
+      if self.dim == 3: print(istop-istart,"triangles", file=fp)
+      print(file=fp)
 
       if self.dim == 2:
-        print >>fp,"Lines\n"
+        print("Lines\n", file=fp)
         if lineflags[0]:
           for i,line in enumerate(lines[istart:istop]):
-            print >>fp,i+istart+1,' '.join(lineflags[i+istart]), \
+            print(i+istart+1,' '.join(lineflags[i+istart]), \
               points[line[0]][0],points[line[0]][1], \
-              points[line[1]][0],points[line[1]][1]
+              points[line[1]][0],points[line[1]][1], file=fp)
         else:
           for i,line in enumerate(lines[istart:istop]):
-            print >>fp,i+istart+1, \
+            print(i+istart+1, \
               points[line[0]][0],points[line[0]][1], \
-              points[line[1]][0],points[line[1]][1]
-        
+              points[line[1]][0],points[line[1]][1], file=fp)
+
       if self.dim == 3:
-        print >>fp,"Triangles\n"
+        print("Triangles\n", file=fp)
         if triflags[0]:
           for i,tri in enumerate(triangles[istart:istop]):
-            print >>fp,i+istart+1,' '.join(triflags[i+istart]), \
+            print(i+istart+1,' '.join(triflags[i+istart]), \
               points[tri[0]][0],points[tri[0]][1],points[tri[0]][2], \
               points[tri[1]][0],points[tri[1]][1],points[tri[1]][2], \
-              points[tri[2]][0],points[tri[2]][1],points[tri[2]][2]
+              points[tri[2]][0],points[tri[2]][1],points[tri[2]][2], file=fp)
         else:
           for i,tri in enumerate(triangles[istart:istop]):
-            print >>fp,i+istart+1, \
+            print(i+istart+1, \
               points[tri[0]][0],points[tri[0]][1],points[tri[0]][2], \
               points[tri[1]][0],points[tri[1]][1],points[tri[1]][2], \
-              points[tri[2]][0],points[tri[2]][1],points[tri[2]][2]
-    
+              points[tri[2]][0],points[tri[2]][1],points[tri[2]][2], file=fp)
+
       fp.close()
 
   # --------------------------------------------------------------------
@@ -1090,7 +1092,7 @@ class sdata:
     if self.dim == 3:
       self.parents["0"] = [(args[0],args[1],args[2],args[3],args[4],args[5]),
                            (args[6],args[7],args[8])]
-        
+
   # --------------------------------------------------------------------
   # overlay a hierarchical grid over surf for viz only
   # grid comes from SPARTA parent grid file
@@ -1107,7 +1109,7 @@ class sdata:
 
     lines = open(args[4],"r").readlines()
     lines = lines[6:]
-    
+
     self.gridflag = 1
     self.idparents = []
     self.parents = {}
@@ -1148,7 +1150,7 @@ class sdata:
       raise Exception("cannot call sdata.viz() with isnap != 0")
 
     # no atoms or bonds
-    
+
     atoms = []
     bonds = []
 
@@ -1191,14 +1193,14 @@ class sdata:
     # use box stored with parents or compute box from ID
     # grandparent box will always exist due to loop over idparents
     #   which requires a parent cell's grandparent to be earlier in list
-          
+
     if self.gridflag and self.dim == 2:
       for idparent in self.idparents:
         box,subgrid = self.parents[idparent]
         levels = idparent.split('-')
         nlevel = len(levels)
         if idparent == "0": nlevel = 0
-        
+
         if not box:
           if nlevel <= 1:
             idchild = int(idparent)
@@ -1208,17 +1210,17 @@ class sdata:
             idgrandparent = "-".join(levels[:-1])
           gbox,gsubgrid = self.parents[idgrandparent]
           # compute parent box from grandparent box and store in parents hash
-          xlo = gbox[0]; xhi = gbox[1]; 
-          ylo = gbox[2]; yhi = gbox[3]; 
+          xlo = gbox[0]; xhi = gbox[1];
+          ylo = gbox[2]; yhi = gbox[3];
           nx = gsubgrid[0]; ny = gsubgrid[1]
           ix = (idchild-1) % nx
           iy = (idchild-1) / nx
           box = (xlo + float(ix)*(xhi-xlo)/nx, xlo + float(ix+1)*(xhi-xlo)/nx,
                  ylo + float(iy)*(yhi-ylo)/ny, ylo + float(iy+1)*(yhi-ylo)/ny)
           self.parents[idparent] = [box,subgrid]
-          
-        xlo = box[0]; xhi = box[1]; 
-        ylo = box[2]; yhi = box[3]; 
+
+        xlo = box[0]; xhi = box[1];
+        ylo = box[2]; yhi = box[3];
         nx = subgrid[0]; ny = subgrid[1]
 
         for i in range(nx+1):
@@ -1246,9 +1248,9 @@ class sdata:
             idgrandparent = "-".join(levels[:-1])
           gbox,gsubgrid = self.parents[idgrandparent]
           # compute parent box from grandparent box and store in parents hash
-          xlo = gbox[0]; xhi = gbox[1]; 
-          ylo = gbox[2]; yhi = gbox[3]; 
-          zlo = gbox[4]; zhi = gbox[5]; 
+          xlo = gbox[0]; xhi = gbox[1];
+          ylo = gbox[2]; yhi = gbox[3];
+          zlo = gbox[4]; zhi = gbox[5];
           nx = gsubgrid[0]; ny = gsubgrid[1]; nz = gsubgrid[2]
           ix = (idchild-1) % nx
           iy = ((idchild-1)/nx) % ny
@@ -1257,10 +1259,10 @@ class sdata:
                  ylo + float(iy)*(yhi-ylo)/ny, ylo + float(iy+1)*(yhi-ylo)/ny,
                  zlo + float(iz)*(zhi-zlo)/nz, zlo + float(iz+1)*(zhi-zlo)/nz)
           self.parents[idparent] = [box,subgrid]
-          
-        xlo = box[0]; xhi = box[1]; 
-        ylo = box[2]; yhi = box[3]; 
-        zlo = box[4]; zhi = box[5]; 
+
+        xlo = box[0]; xhi = box[1];
+        ylo = box[2]; yhi = box[3];
+        zlo = box[4]; zhi = box[5];
         nx = subgrid[0]; ny = subgrid[1]; nz = subgrid[2]
 
         for i in range(ny+1):
@@ -1300,7 +1302,7 @@ class sdata:
   # --------------------------------------------------------------------
   # return box that bounds all selected objects
   # use grid box if defined
-  
+
   def bbox(self):
     xlo = ylo = zlo = BIG
     xhi = yhi = zhi = -BIG
@@ -1313,7 +1315,7 @@ class sdata:
       xhi = max(xhi,box[3])
       yhi = max(yhi,box[4])
       zhi = max(zhi,box[5])
-      
+
     if self.gridflag:
       root = self.parents["0"]
       box = root[0]
@@ -1527,10 +1529,10 @@ def box_triangulate(q1,q2,q3):
 #   edge sub-entry = (-1,0) if no connection
 
 def connect_triangles(tris):
-  
+
   # hash all edges, 3 per tri
   # key = (p1,p2), value = (tri,edge)
-  
+
   hash = {}
   for i,tri in enumerate(tris):
     edge = (tri[0],tri[1])
@@ -1547,7 +1549,7 @@ def connect_triangles(tris):
     hash[edge] = (i,3)
 
   # create connection list by searching for opposite edges
-    
+
   connect = []
   for i,tri in enumerate(tris):
     entry = []
@@ -1561,7 +1563,7 @@ def connect_triangles(tris):
     if reverse not in hash: entry.append((-1,0))
     else: entry.append(hash[reverse])
     connect.append(entry)
-    
+
   return connect
 
 # Surface class

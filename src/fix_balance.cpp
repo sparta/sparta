@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -158,7 +158,7 @@ void FixBalance::init()
 
   if (rcbwt == TIME) {
     int coarsen_flag = 0;
-    int after_flag = 0; 
+    int after_flag = 0;
     for (int ifix = 0; ifix < modify->nfix; ifix++) {
       if (strstr(modify->fix[ifix]->style,"adapt") != NULL)
         if (((FixAdapt*)modify->fix[ifix])->coarsen_flag)

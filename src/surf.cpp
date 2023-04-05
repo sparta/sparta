@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -787,13 +787,13 @@ void Surf::bbox_all()
     for (i = istart; i < istop; i += idelta) {
       x = linelist[i].p1;
       for (j = 0; j < 2; j++) {
-	bblo_one[j] = MIN(bblo_one[j],x[j]);
-	bbhi_one[j] = MAX(bbhi_one[j],x[j]);
+        bblo_one[j] = MIN(bblo_one[j],x[j]);
+        bbhi_one[j] = MAX(bbhi_one[j],x[j]);
       }
       x = linelist[i].p2;
       for (j = 0; j < 2; j++) {
-	bblo_one[j] = MIN(bblo_one[j],x[j]);
-	bbhi_one[j] = MAX(bbhi_one[j],x[j]);
+        bblo_one[j] = MIN(bblo_one[j],x[j]);
+        bbhi_one[j] = MAX(bbhi_one[j],x[j]);
       }
     }
     bblo_one[2] = domain->boxlo[2];
@@ -803,18 +803,18 @@ void Surf::bbox_all()
     for (i = istart; i < istop; i += idelta) {
       x = trilist[i].p1;
       for (j = 0; j < 3; j++) {
-	bblo_one[j] = MIN(bblo_one[j],x[j]);
-	bbhi_one[j] = MAX(bbhi_one[j],x[j]);
+        bblo_one[j] = MIN(bblo_one[j],x[j]);
+        bbhi_one[j] = MAX(bbhi_one[j],x[j]);
       }
       x = trilist[i].p2;
       for (j = 0; j < 3; j++) {
-	bblo_one[j] = MIN(bblo_one[j],x[j]);
-	bbhi_one[j] = MAX(bbhi_one[j],x[j]);
+        bblo_one[j] = MIN(bblo_one[j],x[j]);
+        bbhi_one[j] = MAX(bbhi_one[j],x[j]);
       }
       x = trilist[i].p3;
       for (j = 0; j < 3; j++) {
-	bblo_one[j] = MIN(bblo_one[j],x[j]);
-	bbhi_one[j] = MAX(bbhi_one[j],x[j]);
+        bblo_one[j] = MIN(bblo_one[j],x[j]);
+        bbhi_one[j] = MAX(bbhi_one[j],x[j]);
       }
     }
   }
@@ -1190,8 +1190,8 @@ void Surf::check_watertight_2d_distributed()
 
   char *buf;
   int nout = comm->rendezvous(1,nrvous,(char *) inpoint,sizeof(InRvousPoint),
-			      0,proclist,rendezvous_watertight_2d,
-			      0,buf,0,(void *) this);
+                              0,proclist,rendezvous_watertight_2d,
+                              0,buf,0,(void *) this);
 
   memory->destroy(proclist);
   memory->destroy(inpoint);
@@ -1329,9 +1329,9 @@ void Surf::check_watertight_3d_all()
       keyinv.pts[3] = p1[0]; keyinv.pts[4] = p1[1]; keyinv.pts[5] = p1[2];
       if (phash.find(keyinv) == phash.end()) phash[key] = 1;
       else {
-	value = phash[keyinv];
-	if (value == 1) phash[keyinv] = 2;
-	else ndup++;
+        value = phash[keyinv];
+        if (value == 1) phash[keyinv] = 2;
+        else ndup++;
       }
     } else ndup++;
 
@@ -1342,9 +1342,9 @@ void Surf::check_watertight_3d_all()
       keyinv.pts[3] = p2[0]; keyinv.pts[4] = p2[1]; keyinv.pts[5] = p2[2];
       if (phash.find(keyinv) == phash.end()) phash[key] = 1;
       else {
-	value = phash[keyinv];
-	if (value == 1) phash[keyinv] = 2;
-	else ndup++;
+        value = phash[keyinv];
+        if (value == 1) phash[keyinv] = 2;
+        else ndup++;
       }
     } else ndup++;
 
@@ -1355,9 +1355,9 @@ void Surf::check_watertight_3d_all()
       keyinv.pts[3] = p3[0]; keyinv.pts[4] = p3[1]; keyinv.pts[5] = p3[2];
       if (phash.find(keyinv) == phash.end()) phash[key] = 1;
       else {
-	value = phash[keyinv];
-	if (value == 1) phash[keyinv] = 2;
-	else ndup++;
+        value = phash[keyinv];
+        if (value == 1) phash[keyinv] = 2;
+        else ndup++;
       }
     } else ndup++;
   }
@@ -1489,8 +1489,8 @@ void Surf::check_watertight_3d_distributed()
 
   char *buf;
   int nout = comm->rendezvous(1,nrvous,(char *) inedge,sizeof(InRvousEdge),
-			      0,proclist,rendezvous_watertight_3d,
-			      0,buf,0,(void *) this);
+                              0,proclist,rendezvous_watertight_3d,
+                              0,buf,0,(void *) this);
 
   memory->destroy(proclist);
   memory->destroy(inedge);
@@ -1612,12 +1612,12 @@ void Surf::check_point_inside(int old)
     for (int i = old; i < n; i++) {
       x = newlines[i].p1;
       if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
-	  x[1] < boxlo[1] || x[1] > boxhi[1] ||
-	  x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
+          x[1] < boxlo[1] || x[1] > boxhi[1] ||
+          x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
       x = newlines[i].p2;
       if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
-	  x[1] < boxlo[1] || x[1] > boxhi[1] ||
-	  x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
+          x[1] < boxlo[1] || x[1] > boxhi[1] ||
+          x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
     }
 
   } else if (dim == 3) {
@@ -1635,16 +1635,16 @@ void Surf::check_point_inside(int old)
     for (int i = old; i < n; i++) {
       x = newtris[i].p1;
       if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
-	  x[1] < boxlo[1] || x[1] > boxhi[1] ||
-	  x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
+          x[1] < boxlo[1] || x[1] > boxhi[1] ||
+          x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
       x = newtris[i].p2;
       if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
-	  x[1] < boxlo[1] || x[1] > boxhi[1] ||
-	  x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
+          x[1] < boxlo[1] || x[1] > boxhi[1] ||
+          x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
       x = newtris[i].p3;
       if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
-	  x[1] < boxlo[1] || x[1] > boxhi[1] ||
-	  x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
+          x[1] < boxlo[1] || x[1] > boxhi[1] ||
+          x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
     }
   }
 
@@ -1655,7 +1655,7 @@ void Surf::check_point_inside(int old)
   if (nbadall) {
     char str[128];
     sprintf(str,"%d surface points are not inside simulation box",
-	    nbadall);
+            nbadall);
     error->all(FLERR,str);
   }
 }
@@ -1868,10 +1868,10 @@ void Surf::output_extent(int old)
       fprintf(screen,"  %g %g ylo yhi\n",extentall[1][0],extentall[1][1]);
       fprintf(screen,"  %g %g zlo zhi\n",extentall[2][0],extentall[2][1]);
       if (dim == 2)
-	fprintf(screen,"  %g min line length\n",minlen);
+        fprintf(screen,"  %g min line length\n",minlen);
       if (dim == 3) {
-	fprintf(screen,"  %g min triangle edge length\n",minlen);
-	fprintf(screen,"  %g min triangle area\n",minarea);
+        fprintf(screen,"  %g min triangle edge length\n",minlen);
+        fprintf(screen,"  %g min triangle area\n",minarea);
       }
     }
     if (logfile) {
@@ -1879,10 +1879,10 @@ void Surf::output_extent(int old)
       fprintf(logfile,"  %g %g ylo yhi\n",extentall[1][0],extentall[1][1]);
       fprintf(logfile,"  %g %g zlo zhi\n",extentall[2][0],extentall[2][1]);
       if (dim == 2)
-	fprintf(logfile,"  %g min line length\n",minlen);
+        fprintf(logfile,"  %g min line length\n",minlen);
       if (dim == 3) {
-	fprintf(logfile,"  %g min triangle edge length\n",minlen);
-	fprintf(logfile,"  %g min triangle area\n",minarea);
+        fprintf(logfile,"  %g min triangle edge length\n",minlen);
+        fprintf(logfile,"  %g min triangle area\n",minarea);
       }
     }
   }
@@ -2843,8 +2843,8 @@ void Surf::collate_vector_rendezvous(int nrow, surfint *tally2surf,
 
   char *buf;
   int nout = comm->rendezvous(1,nrow,(char *) in_rvous,sizeof(InRvousVec),
-			      0,proclist,rendezvous_vector,
-			      0,buf,0,(void *) this);
+                              0,proclist,rendezvous_vector,
+                              0,buf,0,(void *) this);
 
   memory->destroy(proclist);
   memory->destroy(in_rvous);
@@ -3012,8 +3012,8 @@ void Surf::collate_array_rendezvous(int nrow, int ncol, surfint *tally2surf,
 
   char *buf;
   int nout = comm->rendezvous(1,nrow,(char *) in_rvous,size,
-			      0,proclist,rendezvous_array,
-			      0,buf,0,(void *) this);
+                              0,proclist,rendezvous_array,
+                              0,buf,0,(void *) this);
 
   memory->destroy(proclist);
   memory->sfree(in_rvous);
@@ -3172,8 +3172,8 @@ void Surf::collate_vector_implicit(int nrow, surfint *tally2surf,
   ncol_rvous = 1;
   char *buf;
   int nout = comm->rendezvous(1,ncount,(char *) in_rvous,3*sizeof(double),
-			      0,proclist,rendezvous_implicit,
-			      0,buf,2*sizeof(double),(void *) this);
+                              0,proclist,rendezvous_implicit,
+                              0,buf,2*sizeof(double),(void *) this);
   double *out_rvous = (double *) buf;
 
   memory->destroy(proclist);
@@ -3303,8 +3303,8 @@ void Surf::collate_array_implicit(int nrow, int ncol, surfint *tally2surf,
   char *buf;
   int nout = comm->rendezvous(1,ncount,(char *) in_rvous,
                               (ncol+2)*sizeof(double),
-			      0,proclist,rendezvous_implicit,
-			      0,buf,(ncol+1)*sizeof(double),(void *) this);
+                              0,proclist,rendezvous_implicit,
+                              0,buf,(ncol+1)*sizeof(double),(void *) this);
   double *out_rvous = (double *) buf;
 
   memory->destroy(proclist);
@@ -3449,8 +3449,8 @@ void Surf::redistribute_lines_clip(int nold, int nnew)
 
   char *buf;
   int nout = comm->rendezvous(1,nsend,(char *) in_rvous,sizeof(Line),
-			      0,proclist,rendezvous_lines,
-			      0,buf,0,(void *) this);
+                              0,proclist,rendezvous_lines,
+                              0,buf,0,(void *) this);
 
   memory->destroy(proclist);
   memory->sfree(in_rvous);
@@ -3500,8 +3500,8 @@ void Surf::redistribute_lines_temporary(int nnew)
 
   char *buf;
   int nout = comm->rendezvous(1,nsend,(char *) in_rvous,sizeof(Line),
-			      0,proclist,rendezvous_lines,
-			      0,buf,0,(void *) this);
+                              0,proclist,rendezvous_lines,
+                              0,buf,0,(void *) this);
 
   memory->destroy(proclist);
   memory->sfree(in_rvous);
@@ -3591,8 +3591,8 @@ void Surf::redistribute_tris_clip(int nold, int nnew)
 
   char *buf;
   int nout = comm->rendezvous(1,nsend,(char *) in_rvous,sizeof(Tri),
-			      0,proclist,rendezvous_tris,
-			      0,buf,0,(void *) this);
+                              0,proclist,rendezvous_tris,
+                              0,buf,0,(void *) this);
 
   memory->destroy(proclist);
   memory->sfree(in_rvous);
@@ -3642,8 +3642,8 @@ void Surf::redistribute_tris_temporary(int nnew)
 
   char *buf;
   int nout = comm->rendezvous(1,nsend,(char *) in_rvous,sizeof(Tri),
-			      0,proclist,rendezvous_tris,
-			      0,buf,0,(void *) this);
+                              0,proclist,rendezvous_tris,
+                              0,buf,0,(void *) this);
 
   memory->destroy(proclist);
   memory->sfree(in_rvous);
@@ -3933,6 +3933,8 @@ void Surf::write_restart(FILE *fp)
 
 void Surf::read_restart(FILE *fp)
 {
+  int tmp;
+
   if (distributed || implicit)
     error->all(FLERR,
                "Restart files with distributed surfaces are not yet supported");
@@ -3943,20 +3945,20 @@ void Surf::read_restart(FILE *fp)
 
   for (int i = 0; i < ngroup; i++) delete [] gnames[i];
 
-  if (me == 0) fread(&ngroup,sizeof(int),1,fp);
+  if (me == 0) tmp = fread(&ngroup,sizeof(int),1,fp);
   MPI_Bcast(&ngroup,1,MPI_INT,0,world);
 
   int n;
   for (int i = 0; i < ngroup; i++) {
-    if (me == 0) fread(&n,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
     MPI_Bcast(&n,1,MPI_INT,0,world);
     gnames[i] = new char[n];
-    if (me == 0) fread(gnames[i],sizeof(char),n,fp);
+    if (me == 0) tmp = fread(gnames[i],sizeof(char),n,fp);
     MPI_Bcast(gnames[i],n,MPI_CHAR,0,world);
   }
 
   if (domain->dimension == 2) {
-    if (me == 0) fread(&nsurf,sizeof(bigint),1,fp);
+    if (me == 0) tmp = fread(&nsurf,sizeof(bigint),1,fp);
     MPI_Bcast(&nsurf,1,MPI_SPARTA_BIGINT,0,world);
     lines = (Line *) memory->smalloc(nsurf*sizeof(Line),"surf:lines");
     // NOTE: need different logic for different surf styles
@@ -3965,13 +3967,13 @@ void Surf::read_restart(FILE *fp)
 
     if (me == 0) {
       for (int i = 0; i < nsurf; i++) {
-        fread(&lines[i].id,sizeof(surfint),1,fp);
-        fread(&lines[i].type,sizeof(int),1,fp);
-        fread(&lines[i].mask,sizeof(int),1,fp);
-        fread(&lines[i].transparent,sizeof(int),1,fp);
+        tmp = fread(&lines[i].id,sizeof(surfint),1,fp);
+        tmp = fread(&lines[i].type,sizeof(int),1,fp);
+        tmp = fread(&lines[i].mask,sizeof(int),1,fp);
+        tmp = fread(&lines[i].transparent,sizeof(int),1,fp);
         lines[i].isc = lines[i].isr = -1;
-        fread(lines[i].p1,sizeof(double),3,fp);
-        fread(lines[i].p2,sizeof(double),3,fp);
+        tmp = fread(lines[i].p1,sizeof(double),3,fp);
+        tmp = fread(lines[i].p2,sizeof(double),3,fp);
         lines[i].norm[0] = lines[i].norm[1] = lines[i].norm[2] = 0.0;
       }
     }
@@ -3981,7 +3983,7 @@ void Surf::read_restart(FILE *fp)
   }
 
   if (domain->dimension == 3) {
-    if (me == 0) fread(&nsurf,sizeof(bigint),1,fp);
+    if (me == 0) tmp = fread(&nsurf,sizeof(bigint),1,fp);
     MPI_Bcast(&nsurf,1,MPI_SPARTA_BIGINT,0,world);
     tris = (Tri *) memory->smalloc(nsurf*sizeof(Tri),"surf:tris");
     // NOTE: need different logic for different surf styles
@@ -3990,14 +3992,14 @@ void Surf::read_restart(FILE *fp)
 
     if (me == 0) {
       for (int i = 0; i < nsurf; i++) {
-        fread(&tris[i].id,sizeof(surfint),1,fp);
-        fread(&tris[i].type,sizeof(int),1,fp);
-        fread(&tris[i].mask,sizeof(int),1,fp);
-        fread(&tris[i].transparent,sizeof(int),1,fp);
+        tmp = fread(&tris[i].id,sizeof(surfint),1,fp);
+        tmp = fread(&tris[i].type,sizeof(int),1,fp);
+        tmp = fread(&tris[i].mask,sizeof(int),1,fp);
+        tmp = fread(&tris[i].transparent,sizeof(int),1,fp);
         tris[i].isc = tris[i].isr = -1;
-        fread(tris[i].p1,sizeof(double),3,fp);
-        fread(tris[i].p2,sizeof(double),3,fp);
-        fread(tris[i].p3,sizeof(double),3,fp);
+        tmp = fread(tris[i].p1,sizeof(double),3,fp);
+        tmp = fread(tris[i].p2,sizeof(double),3,fp);
+        tmp = fread(tris[i].p3,sizeof(double),3,fp);
         tris[i].norm[0] = tris[i].norm[1] = tris[i].norm[2] = 0.0;
       }
     }
@@ -4068,11 +4070,13 @@ void Surf::write_restart_custom(FILE *fp)
 
 void Surf::read_restart_custom(FILE *fp)
 {
+  int tmp;
+
   // ncustom is 0 at time restart file is read
   // will be incremented as add_custom() for each nactive
 
   int nactive;
-  if (me == 0) fread(&nactive,sizeof(int),1,fp);
+  if (me == 0) tmp = fread(&nactive,sizeof(int),1,fp);
   MPI_Bcast(&nactive,1,MPI_INT,0,world);
   if (nactive == 0) return;
 
@@ -4083,14 +4087,14 @@ void Surf::read_restart_custom(FILE *fp)
   char *name;
 
   for (int i = 0; i < nactive; i++) {
-    if (me == 0) fread(&n,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
     MPI_Bcast(&n,1,MPI_INT,0,world);
     name = new char[n];
-    if (me == 0) fread(name,sizeof(char),n,fp);
+    if (me == 0) tmp = fread(name,sizeof(char),n,fp);
     MPI_Bcast(name,n,MPI_CHAR,0,world);
-    if (me == 0) fread(&type,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&type,sizeof(int),1,fp);
     MPI_Bcast(&type,n,MPI_CHAR,0,world);
-    if (me == 0) fread(&size,sizeof(int),1,fp);
+    if (me == 0) tmp = fread(&size,sizeof(int),1,fp);
     MPI_Bcast(&size,n,MPI_CHAR,0,world);
 
     // create the custom attribute

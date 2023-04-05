@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -302,7 +302,6 @@ void ComputePFluxGridKokkos::post_process_grid_kokkos(int index, int nsample,
 
   this->d_etally = d_etally;
   this->d_vec = d_vec;
-  this->nstride = nstride;
   this->nsample = nsample;
 
   // compute normalized final value for each grid cell

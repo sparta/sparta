@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -475,7 +475,7 @@ void SurfCollideCLL::wrapper(Particle::OnePart *p, double *norm,
 
 void SurfCollideCLL::flags_and_coeffs(int *flags, double *coeffs)
 {
-  if (tmode == CUSTOM) 
+  if (tmode == CUSTOM)
     error->all(FLERR,"Surf_collide cll with custom per-surf Twall "
                "does not support external caller");
 
