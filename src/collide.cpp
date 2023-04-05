@@ -1860,6 +1860,7 @@ int Collide::find_nn(int i, int np)
 
   Particle::OnePart *ipart,*jpart;
   Particle::OnePart *particles = particle->particles;
+  double dt = update->dt;
 
   // thresh = distance particle I moves in this timestep
 
@@ -1948,6 +1949,7 @@ int Collide::find_nn_group(int i, int *ilist, int np, int *jlist, int *plist,
 
   Particle::OnePart *ipart,*jpart;
   Particle::OnePart *particles = particle->particles;
+  double dt = update->dt;
 
   // thresh = distance particle I moves in this timestep
 
