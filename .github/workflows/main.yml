@@ -7,13 +7,13 @@ on:
     branches: [ master ]
 
 # Define jobs: mpi, mpi-stubs-fft, mpi-stubs-kokkos-exact-fft, and bigbig
-# Each jobs runs on ubuntu-18.04 and uses the cmake build system
-# All jobs except for bigbig run ctest
+# Each jobs runs on ubuntu-22.04 and uses the cmake build system
+# All jobs except for bigbig and mpi-stubs-kokkos-exact-fft run ctest
 jobs:
   mpi:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Install Dependencies
       run: sudo apt install openmpi-bin libopenmpi-dev
@@ -29,12 +29,6 @@ jobs:
     - name: Build
       run: cd build; make -j4
 
-    # Cannot download artifacts from previous workflows
-    #- uses: actions/download-artifact@v2
-    #  with:
-    #    name: mpi-Artifacts
-    #    path: build/examples/
-
     - name: Test
       run: |
         cd build
@@ -43,14 +37,15 @@ jobs:
         sudo ln -s /bin/bash /bin/sh
         ctest --output-on-failure -j4
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
+      if: failure()
       with:
         name: 'mpi-Artifacts'
-        path: 'build/examples/**/log.archive*'
+        path: 'build/examples/'
   mpi-stubs-fft:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Configure
       run: |
@@ -64,12 +59,6 @@ jobs:
     - name: Build
       run: cd build; make -j4
 
-    # Cannot download artifacts from previous workflows
-    #- uses: actions/download-artifact@v2
-    #  with:
-    #    name: mpi-stubs-fft-Artifacts
-    #    path: build/examples/
-
     - name: Test
       run: |
         cd build
@@ -78,14 +67,15 @@ jobs:
         sudo ln -s /bin/bash /bin/sh
         ctest --output-on-failure -j4
 
-    - uses: actions/upload-artifact@v2
-      with:
-        name: 'mpi-stubs-fft-Artifacts'
-        path: 'build/examples/**/log.archive*'
+    #- uses: actions/upload-artifact@v3
+    #  if: '!cancelled()'
+    #  with:
+    #    name: 'mpi-stubs-fft-Artifacts'
+    #    path: 'build/examples/'
   mpi-stubs-kokkos-exact-fft:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Configure
       run: |
@@ -101,28 +91,23 @@ jobs:
     - name: Build
       run: cd build; make -j4
 
-    # Cannot download artifacts from previous workflows
-    #- uses: actions/download-artifact@v2
+#    - name: Test
+#      run: |
+#        cd build
+#        find -name 'log.archive*'
+#        sudo rm /bin/sh
+#        sudo ln -s /bin/bash /bin/sh
+#        ctest --output-on-failure -j4
+
+    #- uses: actions/upload-artifact@v3
+    #  if: '!cancelled()'
     #  with:
-    #    name: mpi-stubs-kokkos-exact-fft-Artifacts
-    #    path: build/examples/
-
-    - name: Test
-      run: |
-        cd build
-        find -name 'log.archive*'
-        sudo rm /bin/sh
-        sudo ln -s /bin/bash /bin/sh
-        ctest --output-on-failure -j4
-
-    - uses: actions/upload-artifact@v2
-      with:
-        name: 'mpi-stubs-kokkos-exact-fft-Artifacts'
-        path: 'build/examples/**/log.archive*'
+    #    name: 'mpi-stubs-kokkos-exact-fft-Artifacts'
+    #    path: 'build/examples/'
   bigbig:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Install Dependencies
       run: sudo apt install openmpi-bin libopenmpi-dev
