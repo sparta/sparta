@@ -152,7 +152,6 @@ class Grid : protected Pointers {
     int type;                 // OUTSIDE,INSIDE,OVERLAP,UNKNOWN
     int corner[8];            // corner flags, 4/8 in 2d/3d
                               // OUTSIDE,INSIDE,UNKNOWN
-                              // no OVERLAP is used for this anymore I think
                               // ordered x first, y next, z last
                               // for sub cells, type/corner
                               //   are same as in split cell containing them
@@ -291,7 +290,8 @@ class Grid : protected Pointers {
   void clear_surf_restart();
   void combine_split_cell_particles(int, int);
   void assign_split_cell_particles(int);
-  int outside_surfs(int, double *, class Cut3d *, class Cut2d *);
+  int point_outside_surfs(int, double *);
+  int outside_surfs(int, double *, double *);
   void allocate_surf_arrays();
   int *csubs_request(int);
 
@@ -449,6 +449,9 @@ class Grid : protected Pointers {
   virtual void grow_cells(int, int);
   virtual void grow_pcells();
   virtual void grow_sinfo(int);
+
+  int point_outside_surfs_implicit(int, double *);
+  int point_outside_surfs_explicit(int, double *);
 
   void surf2grid_stats();
   void flow_stats();

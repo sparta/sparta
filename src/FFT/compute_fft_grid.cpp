@@ -540,8 +540,6 @@ void ComputeFFTGrid::reallocate()
 
   irregular_create();
 
-  if (grid->nlocal == nglocal) return;
-
   memory->destroy(ingrid);
   memory->destroy(gridwork);
   memory->destroy(gridworkcomplex);
