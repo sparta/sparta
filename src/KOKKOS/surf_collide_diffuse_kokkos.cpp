@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -16,7 +16,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include "surf_collide_diffuse_kokkos.h"
-#include "surf.h"
+#include "surf_kokkos.h"
 #include "surf_react.h"
 #include "input.h"
 #include "variable.h"
@@ -36,6 +36,8 @@
 
 using namespace SPARTA_NS;
 using namespace MathConst;
+
+enum{INT,DOUBLE};                      // several files
 
 /* ---------------------------------------------------------------------- */
 
@@ -92,6 +94,8 @@ SurfCollideDiffuseKokkos::~SurfCollideDiffuseKokkos()
 
 void SurfCollideDiffuseKokkos::init()
 {
+  SurfCollideDiffuse::init();
+
   ambi_flag = vibmode_flag = 0;
   if (modify->n_update_custom) {
     for (int ifix = 0; ifix < modify->nfix; ifix++) {
@@ -144,6 +148,16 @@ void SurfCollideDiffuseKokkos::pre_collide()
   d_species = particle_kk->k_species.d_view;
   boltz = update->boltz;
 
+  if (tmode == CUSTOM) {
+    SurfKokkos* surf_kk = (SurfKokkos*) surf;
+    surf_kk->sync(Device,SURF_CUSTOM_MASK);
+
+    int tindex = surf->find_custom(tstr);
+    auto h_ewhich = surf_kk->k_ewhich.h_view;
+    auto h_edvec = surf_kk->k_edvec.h_view;
+    d_tvector = h_edvec[h_ewhich[tindex]].k_view.d_view;
+  }
+
   rotstyle = NONE;
   if (Pointers::collide) rotstyle = Pointers::collide->rotstyle;
   vibstyle = NONE;
@@ -156,4 +170,5 @@ void SurfCollideDiffuseKokkos::post_collide()
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   if (ambi_flag || vibmode_flag) particle_kk->modify(Device,CUSTOM_MASK);
+  d_particles = decltype(d_particles)();
 }

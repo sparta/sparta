@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -38,6 +38,8 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
+enum{NUMERIC,VARIABLE,CUSTOM};
+
 /* ---------------------------------------------------------------------- */
 
 SurfCollideTD::SurfCollideTD(SPARTA *sparta, int narg, char **arg) :
@@ -48,12 +50,20 @@ SurfCollideTD::SurfCollideTD(SPARTA *sparta, int narg, char **arg) :
   tstr = NULL;
 
   if (strstr(arg[2],"v_") == arg[2]) {
+    dynamicflag = 1;
+    tmode = VARIABLE;
+    int n = strlen(&arg[2][2]) + 1;
+    tstr = new char[n];
+    strcpy(tstr,&arg[2][2]);
+  } else if (strstr(arg[2],"s_") == arg[2]) {
+    tmode = CUSTOM;
     int n = strlen(&arg[2][2]) + 1;
     tstr = new char[n];
     strcpy(tstr,&arg[2][2]);
   } else {
-    twall = atof(arg[2]);
-    if (twall < 0.0) error->all(FLERR,"Illegal surf_collide td command");
+    tmode = NUMERIC;
+    twall = input->numeric(FLERR,arg[2]);
+    if (twall <= 0.0) error->all(FLERR,"Surf_collide td temp <= 0.0");
   }
 
   // optional args
@@ -130,7 +140,7 @@ void SurfCollideTD::init()
    isurf = index of surface element
    norm = surface normal unit vector
    isr = index of reaction model if >= 0, -1 for no chemistry
-   ip = reset to NULL if destroyed by chemsitry
+   ip = reset to NULL if destroyed by chemistry
    return jp = new particle if created by chemistry
    return reaction = index of reaction (1 to N) that took place, 0 = no reaction
    resets particle(s) to post-collision outward velocity
@@ -162,6 +172,8 @@ collide(Particle::OnePart *&ip, double &,
   // also both partiticles need to trigger any fixes
   //   to update per-particle properties which depend on
   //   temperature of the particle, e.g. fix vibmode and fix ambipolar
+
+  if (tmode == CUSTOM) twall = tvector[isurf];
 
   if (ip) {
     if (!velreset) td(ip,norm);
@@ -316,6 +328,10 @@ void SurfCollideTD::wrapper(Particle::OnePart *p, double *norm,
 
 void SurfCollideTD::flags_and_coeffs(int *flags, double *coeffs)
 {
+  if (tmode == CUSTOM)
+    error->all(FLERR,"Surf_collide td with custom per-surf Twall "
+               "does not support external caller");
+
   coeffs[0] = twall;
 
   flags[0] = barrier_flag;
@@ -346,4 +362,5 @@ void SurfCollideTD::flags_and_coeffs(int *flags, double *coeffs)
 void SurfCollideTD::dynamic()
 {
   twall = input->variable->compute_equal(tvar);
+  if (twall <= 0.0) error->all(FLERR,"Surf_collide td temp <= 0.0");
 }

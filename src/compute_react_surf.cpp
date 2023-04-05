@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -152,7 +152,7 @@ void ComputeReactSurf::init()
     char str[128];
     sprintf(str,
             "Compute react/surf " BIGINT_FORMAT
-	    " surfs are not assigned to surf react model",flagall);
+            " surfs are not assigned to surf react model",flagall);
     error->warning(FLERR,str);
   }
 

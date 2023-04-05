@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -488,7 +488,6 @@ void FixAveHistoKokkos::bin_vector(
 
   auto policy = Kokkos::RangePolicy<TagFixAveHisto_BinVector,DeviceType>(0, n);
   Kokkos::parallel_reduce(policy, *this, reducer);
-  DeviceType().fence();
 }
 
 /* ----------------------------------------------------------------------
@@ -526,7 +525,6 @@ void FixAveHistoKokkos::bin_particles(
       auto policy = RangePolicy<TagFixAveHisto_BinParticlesX4,DeviceType>(0, n);
       Kokkos::parallel_reduce(policy, *this, reducer);
     }
-    DeviceType().fence();
 
   } else if (attribute == V) {
 
@@ -543,7 +541,6 @@ void FixAveHistoKokkos::bin_particles(
       auto policy = RangePolicy<TagFixAveHisto_BinParticlesV4,DeviceType>(0, n);
       Kokkos::parallel_reduce(policy, *this, reducer);
     }
-    DeviceType().fence();
   }
 }
 
@@ -583,7 +580,6 @@ void FixAveHistoKokkos::bin_particles(
     auto policy = RangePolicy<TagFixAveHisto_BinParticles4,DeviceType>(0, n);
     Kokkos::parallel_reduce(policy, *this, reducer);
   }
-  DeviceType().fence();
 }
 
 /* ----------------------------------------------------------------------
@@ -608,7 +604,6 @@ void FixAveHistoKokkos::bin_grid_cells(
     auto policy = RangePolicy<TagFixAveHisto_BinGridCells2,DeviceType>(0, n);
     Kokkos::parallel_reduce(policy, *this, reducer);
   }
-  DeviceType().fence();
 }
 
 

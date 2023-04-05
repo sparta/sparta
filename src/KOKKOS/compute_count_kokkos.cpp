@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -169,7 +169,6 @@ void ComputeCountKokkos::per_species_tally_kokkos()
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeCount_per_species_tally_atomic<1> >(0,nlocal),*this);
   else
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeCount_per_species_tally_atomic<0> >(0,nlocal),*this);
-  DeviceType().fence();
   copymode = 0;
 
   if (need_dup) {

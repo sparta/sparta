@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -41,13 +41,14 @@ class SurfCollidePistonKokkos : public SurfCollidePiston {
      ip = particle with current x = collision pt, current v = incident v
      norm = surface normal unit vector
      isr = index of reaction model if >= 0, -1 for no chemistry
-     ip = set to NULL if destroyed by chemsitry
+     ip = set to NULL if destroyed by chemistry
      return jp = new particle if created by chemistry
      return reaction = index of reaction (1 to N) that took place, 0 = no reaction
      resets particle(s) to post-collision outward velocity
      ------------------------------------------------------------------------- */
   KOKKOS_INLINE_FUNCTION
-  Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, const double *norm, double &dtremain, int, int &) const
+  Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, double &dtremain,
+                                    int, const double *norm, int, int &) const
   {
     Kokkos::atomic_increment(&d_nsingle());
 

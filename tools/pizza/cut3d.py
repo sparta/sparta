@@ -10,7 +10,7 @@
 def clip(cell,p0,p1,p2):
   path = [p0,p1,p2]
   iface = 0
-  for dim in xrange(3):
+  for dim in range(3):
     iface += 1
     value = cell[iface]
 

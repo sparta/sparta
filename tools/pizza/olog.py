@@ -1,12 +1,14 @@
 # Pizza.py toolkit, www.cs.sandia.gov/~sjplimp/pizza.html
-# Steve Plimpton, sjplimp@sandia.gov, Sandia National Laboratories
+# Steve Plimpton, sjplimp@gmail.com, Sandia National Laboratories
 #
 # Copyright (2005) Sandia Corporation.  Under the terms of Contract
 # DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-# certain rights in this software.  This software is distributed under 
+# certain rights in this software.  This software is distributed under
 # the GNU General Public License.
 
 # olog tool
+
+from __future__ import print_function
 
 oneline = "Read other log files (ChemCell, SPPARKS, SPARTA) and extract time-series data"
 
@@ -21,7 +23,7 @@ o = olog("log.cell","",0)            3rd arg = average all runs
   if specify 2nd arg, it delimits a time section
   no 2nd arg or empty string, use default = "Step"
   if specify any 3rd arg, average all runs, assume all start at time 0
-  
+
 nvec = o.nvec                        # of vectors of thermo info
 nlen = o.nlen                        length of each vectors
 names = o.names                      list of vector names
@@ -65,7 +67,7 @@ class olog:
     self.names = []
     self.ptr = {}
     self.data = []
-    self.firststr = "Step"
+    self.firststr = str("Step")
     self.ave = 0
 
     # flist = list of all log file names
@@ -74,61 +76,61 @@ class olog:
     self.flist = []
     for word in words: self.flist += glob.glob(word)
     if len(self.flist) == 0 and len(list) == 1:
-      raise StandardError,"no log file specified"
+      raise Exception("no log file specified")
 
     if len(list) > 1 and len(list[1]): self.firststr = list[1]
     if len(list) == 3: self.ave = 1
-    
+
     self.read_all()
 
   # --------------------------------------------------------------------
   # read all log data from all files
-  
+
   def read_all(self):
     self.read_header(self.flist[0])
-    if self.nvec == 0: raise StandardError,"log file has no values"
+    if self.nvec == 0: raise Exception("log file has no values")
 
     # read all files
 
     for file in self.flist: self.read_one(file)
-    print
+    print()
 
     # if no average, sort entries by timestep, cull duplicates
     # if average, call self.average()
 
     if self.ave == 0:
-      self.data.sort(self.compare)
+      self.data.sort()
       self.cull()
     else: self.average()
 
     self.nlen = len(self.data)
-    print "read %d log entries" % self.nlen
+    print("read %d log entries" % self.nlen)
 
   # --------------------------------------------------------------------
 
   def get(self,*keys):
     if len(keys) == 0:
-      raise StandardError, "no log vectors specified"
+      raise Exception("no log vectors specified")
 
     map = []
     for key in keys:
-      if self.ptr.has_key(key):
+      if key in self.ptr:
         map.append(self.ptr[key])
       else:
         count = 0
         for i in range(self.nvec):
-	  if self.names[i].find(key) == 0:
-	    count += 1
-	    index = i
+          if self.names[i].find(key) == 0:
+            count += 1
+            index = i
         if count == 1:
           map.append(index)
         else:
-          raise StandardError, "unique log vector %s not found" % key
+          raise Exception("unique log vector %s not found" % key)
 
     vecs = []
     for i in range(len(keys)):
       vecs.append(self.nlen * [0])
-      for j in xrange(self.nlen):
+      for j in range(self.nlen):
         vecs[i][j] = self.data[j][map[i]]
 
     if len(keys) == 1: return vecs[0]
@@ -140,26 +142,26 @@ class olog:
     if len(keys):
       map = []
       for key in keys:
-        if self.ptr.has_key(key):
+        if key in self.ptr:
           map.append(self.ptr[key])
         else:
           count = 0
           for i in range(self.nvec):
-	    if self.names[i].find(key) == 0:
-	      count += 1
-	      index = i
+            if self.names[i].find(key) == 0:
+              count += 1
+              index = i
           if count == 1:
             map.append(index)
           else:
-            raise StandardError, "unique log vector %s not found" % key
+            raise Exception("unique log vector %s not found" % key)
     else:
-      map = range(self.nvec)
+      map = list(range(self.nvec))
 
     f = open(filename,"w")
-    for i in xrange(self.nlen):
-      for j in xrange(len(map)):
-        print >>f,self.data[i][map[j]],
-      print >>f
+    for i in range(self.nlen):
+      for j in range(len(map)):
+        print(self.data[i][map[j]], file=f)
+      print(file=f)
     f.close()
 
   # --------------------------------------------------------------------
@@ -195,17 +197,17 @@ class olog:
         data.append(self.nvec*[0])
         nlen += 1
       counts[j] += 1
-      for m in xrange(self.nvec): data[j][m] += self.data[i][m]
+      for m in range(self.nvec): data[j][m] += self.data[i][m]
       j += 1
       i += 1
 
-    for i in xrange(nlen):
-      for j in xrange(self.nvec):
+    for i in range(nlen):
+      for j in range(self.nvec):
         data[i][j] /= counts[j]
 
     self.nlen = nlen
     self.data = data
-  
+
   # --------------------------------------------------------------------
 
   def read_header(self,file):
@@ -233,9 +235,9 @@ class olog:
 
     file = list[0]
     if file[-3:] == ".gz":
-      f = popen("%s -c %s" % (PIZZA_GUNZIP,file),'rb')
+      f = popen("%s -c %s" % (PIZZA_GUNZIP,file),'r')
     else:
-      f = open(file,'rb')
+      f = open(file,'r')
 
     if len(list) == 2: f.seek(list[1])
     txt = f.read()
@@ -261,41 +263,41 @@ class olog:
       elif s1 >= 0 and s2 >= 0 and s2 < s1:  # found s1,s2 with s2 before s1
         s1 = 0
       elif s1 == -1 and s2 >= 0:             # found s2, but no s1
-	last = 1
+        last = 1
         s1 = 0
       elif s1 >= 0 and s2 == -1:             # found s1, but no s2
         last = 1
         s1 = txt.find("\n",s1) + 1
         s2 = txt.rfind("\n",s1) + 1
-	eof -= len(txt) - s2
+        eof -= len(txt) - s2
       elif s1 == -1 and s2 == -1:            # found neither
                                              # could be end-of-file section
-					     # or entire read was one chunk
+        				     # or entire read was one chunk
 
         if txt.find("Loop time of",start) == start:   # end of file, so exit
-	  eof -= len(txt) - start                     # reset eof to "Loop"
-	  break
+          eof -= len(txt) - start                     # reset eof to "Loop"
+          break
 
-	last = 1                                      # entire read is a chunk
+        last = 1                                      # entire read is a chunk
         s1 = 0
         s2 = txt.rfind("\n",s1) + 1
-	eof -= len(txt) - s2
-	if s1 == s2: break
+        eof -= len(txt) - s2
+        if s1 == s2: break
 
       chunk = txt[s1:s2-1]
       start = s2
-      
+
       # split chunk into entries
       # parse each entry for numeric fields, append to data
-  
+
       lines = chunk.split("\n")
       for line in lines:
         words = line.split()
-        self.data.append(map(float,words))
-  
+        self.data.append([float(i) for i in words])
+
       # print last timestep of chunk
 
-      print int(self.data[len(self.data)-1][0]),
+      print(int(self.data[len(self.data)-1][0]), end=' ')
       sys.stdout.flush()
 
     return eof

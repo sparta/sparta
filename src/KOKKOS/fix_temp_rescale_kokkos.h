@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -26,25 +26,61 @@ FixStyle(temp/rescale/kk,FixTempRescaleKokkos)
 
 namespace SPARTA_NS {
 
-struct TagFixTempRescale_end_of_step{};
+struct TagFixTempRescale_end_of_step_no_average{};
+struct TagFixTempRescale_end_of_step_average1{};
+struct TagFixTempRescale_end_of_step_average2{};
 
 class FixTempRescaleKokkos : public FixTempRescale {
  public:
+
+  struct REDUCE {
+    bigint n;
+    double t;
+    KOKKOS_INLINE_FUNCTION
+    REDUCE() {
+      n = 0;
+      t = 0.0;
+    }
+    KOKKOS_INLINE_FUNCTION
+    REDUCE& operator+=(const REDUCE &rhs) {
+      n += rhs.n;
+      t += rhs.t;
+      return *this;
+    }
+
+    KOKKOS_INLINE_FUNCTION
+    void operator+=(const volatile REDUCE &rhs) volatile {
+      n += rhs.n;
+      t += rhs.t;
+    }
+  };
+
   FixTempRescaleKokkos(class SPARTA *, int, char **);
   virtual ~FixTempRescaleKokkos() {}
-  void end_of_step();
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagFixTempRescale_end_of_step, const int&) const;
+  void operator()(TagFixTempRescale_end_of_step_no_average, const int&) const;
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagFixTempRescale_end_of_step_average1, const int&, REDUCE&) const;
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagFixTempRescale_end_of_step_average2, const int&) const;
 
  private:
-  double t_target;
+  double t_target,vscale;
+
+  DAT::t_float_1d_3 d_vcom;
 
   t_particle_1d d_particles;
   t_species_1d d_species;
 
   DAT::t_int_1d d_cellcount;
   DAT::t_int_2d d_plist;
+  t_cell_1d d_cells;
+
+  void end_of_step_no_average(double);
+  void end_of_step_average(double);
 };
 
 }

@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -89,7 +89,6 @@ void ComputePropertyGridKokkos::compute_per_grid_kokkos()
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputePropertyGrid_ComputePerGrid_vector>(0,nglocal),*this);
   else
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputePropertyGrid_ComputePerGrid_array>(0,nglocal),*this);
-  DeviceType().fence();
   copymode = 0;
 }
 
@@ -192,17 +191,17 @@ void ComputePropertyGridKokkos::operator()(TagComputePropertyGrid_ComputePerGrid
       break;
     case XC:
       if (d_cinfo[i].mask & groupbit)
-	d_array_grid(i,n) = 0.5 * (d_cells[i].lo[0] + d_cells[i].hi[0]);
+        d_array_grid(i,n) = 0.5 * (d_cells[i].lo[0] + d_cells[i].hi[0]);
       else d_array_grid(i,n) = 0.0;
       break;
     case YC:
       if (d_cinfo[i].mask & groupbit)
-	d_array_grid(i,n) = 0.5 * (d_cells[i].lo[1] + d_cells[i].hi[1]);
+        d_array_grid(i,n) = 0.5 * (d_cells[i].lo[1] + d_cells[i].hi[1]);
       else d_array_grid(i,n) = 0.0;
       break;
     case ZC:
       if (d_cinfo[i].mask & groupbit)
-	d_array_grid(i,n) = 0.5 * (d_cells[i].lo[2] + d_cells[i].hi[2]);
+        d_array_grid(i,n) = 0.5 * (d_cells[i].lo[2] + d_cells[i].hi[2]);
       else d_array_grid(i,n) = 0.0;
       break;
     case VOL:

@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -208,75 +208,74 @@ int Cut3d::surf2grid_one(double *p0, double *p1, double *p2,
 }
 
 /* ----------------------------------------------------------------------
-   Sutherland-Hodgman clipping algorithm
-   don't need to delete duplicate points since touching counts as intersection
+   calculate cut volume of a grid cell that contains nsurf tris
+   also calculate if cell is split into distinct sub-volumes by tris
+   return nsplit = # of splits, 1 for no split
+   return vols = ptr to vector of vols = one vol per split
+     if nsplit = 1, cut vol
+     if nsplit > 1, one vol per split cell
+   return corners = UNKNOWN/INSIDE/OUTSIDE for each of 8 corner pts
+   if nsplit > 1, also return:
+     surfmap = which sub-cell (0 to Nsurfs-1) each surf is in
+             = -1 if not in any sub-cell, discarded by add_tris
+     xsplit = coords of a point in one of the split cells
+     xsub = which sub-cell (0 to Nsplit-1) xsplit is in
+   work is done by split_try()
+   call it once more with shrunk grid cell if first attempt fails
 ------------------------------------------------------------------------- */
 
-int Cut3d::clip(double *p0, double *p1, double *p2)
+int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
+                 int nsurf_caller, surfint *surfs_caller,
+                 double *&vols_caller, int *surfmap,
+                 int *corners, int &xsub, double *xsplit)
 {
-  int i,npath,nnew;
-  double value;
-  double *s,*e;
-  double **path,**newpath;
+  lo[0] = lo_caller[0]; lo[1] = lo_caller[1]; lo[2] = lo_caller[2];
+  hi[0] = hi_caller[0]; hi[1] = hi_caller[1]; hi[2] = hi_caller[2];
 
-  // initial path = tri vertices
+  // perform split with full-size grid cell
 
-  nnew = 3;
-  memcpy(path1[0],p0,3*sizeof(double));
-  memcpy(path1[1],p1,3*sizeof(double));
-  memcpy(path1[2],p2,3*sizeof(double));
+  int nsplit;
+  int errflag =
+    split_try(id_caller,nsurf_caller,surfs_caller,vols_caller,surfmap,
+              corners,xsub,xsplit,nsplit);
 
-  // intersect if any of tri vertices is within grid cell
+  // error return
+  // try again after shrinking grid cell by SHRINK factor
+  // this gets rid of pesky errors due to tri pts/edges on cell faces
 
-  if (p0[0] >= lo[0] && p0[0] <= hi[0] &&
-      p0[1] >= lo[1] && p0[1] <= hi[1] &&
-      p0[2] >= lo[2] && p0[2] <= hi[2] &&
-      p1[0] >= lo[0] && p1[0] <= hi[0] &&
-      p1[1] >= lo[1] && p1[1] <= hi[1] &&
-      p1[2] >= lo[2] && p1[2] <= hi[2] &&
-      p2[0] >= lo[0] && p2[0] <= hi[0] &&
-      p2[1] >= lo[1] && p2[1] <= hi[1] &&
-      p2[2] >= lo[2] && p2[2] <= hi[2]) return 1;
+  if (errflag) {
+    nshrink++;
 
-  // clip tri against each of 6 grid face planes
+    double newlo = lo[0] + SHRINK*(hi[0]-lo[0]);
+    double newhi = hi[0] - SHRINK*(hi[0]-lo[0]);
+    lo[0] = newlo;
+    hi[0] = newhi;
 
-  for (int dim = 0; dim < 3; dim++) {
-    path = path1;
-    newpath = path2;
-    npath = nnew;
-    nnew = 0;
+    newlo = lo[1] + SHRINK*(hi[1]-lo[1]);
+    newhi = hi[1] - SHRINK*(hi[1]-lo[1]);
+    lo[1] = newlo;
+    hi[1] = newhi;
 
-    value = lo[dim];
-    s = path[npath-1];
-    for (i = 0; i < npath; i++) {
-      e = path[i];
-      if (e[dim] >= value) {
-        if (s[dim] < value) between(s,e,dim,value,newpath[nnew++]);
-        memcpy(newpath[nnew++],e,3*sizeof(double));
-      } else if (s[dim] >= value) between(e,s,dim,value,newpath[nnew++]);
-      s = e;
-    }
-    if (!nnew) return 0;
+    newlo = lo[2] + SHRINK*(hi[2]-lo[2]);
+    newhi = hi[2] - SHRINK*(hi[2]-lo[2]);
+    lo[2] = newlo;
+    hi[2] = newhi;
 
-    path = path2;
-    newpath = path1;
-    npath = nnew;
-    nnew = 0;
-
-    value = hi[dim];
-    s = path[npath-1];
-    for (i = 0; i < npath; i++) {
-      e = path[i];
-      if (e[dim] <= value) {
-        if (s[dim] > value) between(s,e,dim,value,newpath[nnew++]);
-        memcpy(newpath[nnew++],e,3*sizeof(double));
-      } else if (s[dim] <= value) between(e,s,dim,value,newpath[nnew++]);
-      s = e;
-    }
-    if (!nnew) return 0;
+    errflag =
+      split_try(id_caller,nsurf_caller,surfs_caller,vols_caller,surfmap,
+                corners,xsub,xsplit,nsplit);
   }
 
-  return nnew;
+  // could not perform cut/split -> fatal error
+  // print info about cell and final error message
+  // NOTE: could unshrink cell first
+
+  if (errflag) {
+    failed_cell();
+    split_error(errflag);
+  }
+
+  return nsplit;
 }
 
 /* ----------------------------------------------------------------------
@@ -368,74 +367,114 @@ int Cut3d::clip_external(double *p0, double *p1, double *p2,
 }
 
 /* ----------------------------------------------------------------------
-   calculate cut volume of a grid cell that contains nsurf tris
-   also calculate if cell is split into distinct sub-volumes by tris
-   return nsplit = # of splits, 1 for no split
-   return vols = ptr to vector of vols = one vol per split
-     if nsplit = 1, cut vol
-     if nsplit > 1, one vol per split cell
-   return corners = UNKNOWN/INSIDE/OUTSIDE for each of 8 corner pts
-   if nsplit > 1, also return:
-     surfmap = which sub-cell (0 to Nsurfs-1) each surf is in
-             = -1 if not in any sub-cell, discarded by add_tris
-     xsplit = coords of a point in one of the split cells
-     xsub = which sub-cell (0 to Nsplit-1) xsplit is in
-   work is done by split_try()
-   call it once more with shrunk grid cell if first attempt fails
+   check if pts A,B,C are on same face of cell
+   return 1,2,3,4,5,6 = both on left,right,lower,upper,bottom,top face
+   return 0 if not, including inside
 ------------------------------------------------------------------------- */
 
-int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
-                 int nsurf_caller, surfint *surfs_caller,
-                 double *&vols_caller, int *surfmap,
-                 int *corners, int &xsub, double *xsplit)
+int Cut3d::sameface(double *a, double *b, double *c)
 {
-  lo[0] = lo_caller[0]; lo[1] = lo_caller[1]; lo[2] = lo_caller[2];
-  hi[0] = hi_caller[0]; hi[1] = hi_caller[1]; hi[2] = hi_caller[2];
+  if (a[0] == lo[0] and b[0] == lo[0] and c[0] == lo[0]) return 1;
+  if (a[0] == hi[0] and b[0] == hi[0] and c[0] == hi[0]) return 2;
+  if (a[1] == lo[1] and b[1] == lo[1] and c[1] == lo[1]) return 3;
+  if (a[1] == hi[1] and b[1] == hi[1] and c[1] == hi[1]) return 4;
+  if (a[2] == lo[2] and b[2] == lo[2] and c[2] == lo[2]) return 5;
+  if (a[2] == hi[2] and b[2] == hi[2] and c[2] == hi[2]) return 6;
+  return 0;
+}
 
-  // perform split with full-size grid cell
+/* ----------------------------------------------------------------------
+   check if pts A,B,C are on same face of cell
+   return 1,2,3,4,5,6 = both on left,right,lower,upper,bottom,top face
+   return 0 if not, including inside
+   called externally, depends on no class variables
+------------------------------------------------------------------------- */
 
-  int nsplit;
-  int errflag =
-    split_try(id_caller,nsurf_caller,surfs_caller,vols_caller,surfmap,
-              corners,xsub,xsplit,nsplit);
+int Cut3d::sameface_external(double *a, double *b, double *c, double *clo, double *chi)
+{
+  if (a[0] == clo[0] and b[0] == clo[0] and c[0] == clo[0]) return 1;
+  if (a[0] == chi[0] and b[0] == chi[0] and c[0] == chi[0]) return 2;
+  if (a[1] == clo[1] and b[1] == clo[1] and c[1] == clo[1]) return 3;
+  if (a[1] == chi[1] and b[1] == chi[1] and c[1] == chi[1]) return 4;
+  if (a[2] == clo[2] and b[2] == clo[2] and c[2] == clo[2]) return 5;
+  if (a[2] == chi[2] and b[2] == chi[2] and c[2] == chi[2]) return 6;
+  return 0;
+}
 
-  // error return
-  // try again after shrinking grid cell by SHRINK factor
-  // this gets rid of pesky errors due to tri pts/edges on cell faces
+// ----------------------------------------------------------------------
+// internal methods
+// ----------------------------------------------------------------------
 
-  if (errflag) {
-    nshrink++;
+/* ----------------------------------------------------------------------
+   Sutherland-Hodgman clipping algorithm
+   don't need to delete duplicate points since touching counts as intersection
+------------------------------------------------------------------------- */
 
-    double newlo = lo[0] + SHRINK*(hi[0]-lo[0]);
-    double newhi = hi[0] - SHRINK*(hi[0]-lo[0]);
-    lo[0] = newlo;
-    hi[0] = newhi;
+int Cut3d::clip(double *p0, double *p1, double *p2)
+{
+  int i,npath,nnew;
+  double value;
+  double *s,*e;
+  double **path,**newpath;
 
-    newlo = lo[1] + SHRINK*(hi[1]-lo[1]);
-    newhi = hi[1] - SHRINK*(hi[1]-lo[1]);
-    lo[1] = newlo;
-    hi[1] = newhi;
+  // initial path = tri vertices
 
-    newlo = lo[2] + SHRINK*(hi[2]-lo[2]);
-    newhi = hi[2] - SHRINK*(hi[2]-lo[2]);
-    lo[2] = newlo;
-    hi[2] = newhi;
+  nnew = 3;
+  memcpy(path1[0],p0,3*sizeof(double));
+  memcpy(path1[1],p1,3*sizeof(double));
+  memcpy(path1[2],p2,3*sizeof(double));
 
-    errflag =
-      split_try(id_caller,nsurf_caller,surfs_caller,vols_caller,surfmap,
-                corners,xsub,xsplit,nsplit);
+  // intersect if any of tri vertices is within grid cell
+
+  if (p0[0] >= lo[0] && p0[0] <= hi[0] &&
+      p0[1] >= lo[1] && p0[1] <= hi[1] &&
+      p0[2] >= lo[2] && p0[2] <= hi[2] &&
+      p1[0] >= lo[0] && p1[0] <= hi[0] &&
+      p1[1] >= lo[1] && p1[1] <= hi[1] &&
+      p1[2] >= lo[2] && p1[2] <= hi[2] &&
+      p2[0] >= lo[0] && p2[0] <= hi[0] &&
+      p2[1] >= lo[1] && p2[1] <= hi[1] &&
+      p2[2] >= lo[2] && p2[2] <= hi[2]) return 1;
+
+  // clip tri against each of 6 grid face planes
+
+  for (int dim = 0; dim < 3; dim++) {
+    path = path1;
+    newpath = path2;
+    npath = nnew;
+    nnew = 0;
+
+    value = lo[dim];
+    s = path[npath-1];
+    for (i = 0; i < npath; i++) {
+      e = path[i];
+      if (e[dim] >= value) {
+        if (s[dim] < value) between(s,e,dim,value,newpath[nnew++]);
+        memcpy(newpath[nnew++],e,3*sizeof(double));
+      } else if (s[dim] >= value) between(e,s,dim,value,newpath[nnew++]);
+      s = e;
+    }
+    if (!nnew) return 0;
+
+    path = path2;
+    newpath = path1;
+    npath = nnew;
+    nnew = 0;
+
+    value = hi[dim];
+    s = path[npath-1];
+    for (i = 0; i < npath; i++) {
+      e = path[i];
+      if (e[dim] <= value) {
+        if (s[dim] > value) between(s,e,dim,value,newpath[nnew++]);
+        memcpy(newpath[nnew++],e,3*sizeof(double));
+      } else if (s[dim] <= value) between(e,s,dim,value,newpath[nnew++]);
+      s = e;
+    }
+    if (!nnew) return 0;
   }
 
-  // could not perform cut/split -> fatal error
-  // print info about cell and final error message
-  // NOTE: could unshrink cell first
-
-  if (errflag) {
-    failed_cell();
-    split_error(errflag);
-  }
-
-  return nsplit;
+  return nnew;
 }
 
 /* ----------------------------------------------------------------------
@@ -832,19 +871,19 @@ void Cut3d::clip_tris()
           if (p2flag == OUTSIDE || p2flag == OVERLAP) edge_remove(edge,idir);
           else {
             if (idir == 0) between(p1,p2,dim,value,edge->p1);
-	    else between(p1,p2,dim,value,edge->p2);
-	    edge->clipped = 1;
+            else between(p1,p2,dim,value,edge->p2);
+            edge->clipped = 1;
           }
         } else if (p1flag == INSIDE) {
           if (p2flag == OUTSIDE) {
             if (idir == 0) between(p1,p2,dim,value,edge->p2);
-	    else between(p1,p2,dim,value,edge->p1);
-	    edge->clipped = 1;
-	  }
+            else between(p1,p2,dim,value,edge->p1);
+            edge->clipped = 1;
+          }
         } else {
           if (p2flag == OUTSIDE) edge_remove(edge,idir);
         }
-	
+
         iedge = edge->next[idir];
         idir = edge->dirnext[idir];
       }
@@ -2287,11 +2326,11 @@ void Cut3d::failed_cell()
   for (int i = 0; i < nsurf; i++) {
     printf("  surf " SURFINT_FORMAT ":\n",tris[surfs[i]].id);
     printf("     p1: %g %g %g\n",
-	   tris[surfs[i]].p1[0],tris[surfs[i]].p1[1],tris[surfs[i]].p1[2]);
+           tris[surfs[i]].p1[0],tris[surfs[i]].p1[1],tris[surfs[i]].p1[2]);
     printf("     p2: %g %g %g\n",
-	   tris[surfs[i]].p2[0],tris[surfs[i]].p2[1],tris[surfs[i]].p2[2]);
+           tris[surfs[i]].p2[0],tris[surfs[i]].p2[1],tris[surfs[i]].p2[2]);
     printf("     p3: %g %g %g\n",
-	   tris[surfs[i]].p3[0],tris[surfs[i]].p3[1],tris[surfs[i]].p3[2]);
+           tris[surfs[i]].p3[0],tris[surfs[i]].p3[1],tris[surfs[i]].p3[2]);
   }
 }
 

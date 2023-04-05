@@ -16,6 +16,8 @@
 # Notes:
 # add additional tris to create a closed surf between all the spikes
 
+from __future__ import print_function
+
 import sys,random
 import numpy as np
 
@@ -96,7 +98,7 @@ def gentris(p1,p2,p3,nslice):
     
 args = sys.argv[1:]
 if len(args) != 7:
-  print "Syntax: jagged3d.py Nyspike Nzspike Nxlayer Nyslice Nzslice delta sfile"
+  print("Syntax: jagged3d.py Nyspike Nzspike Nxlayer Nyslice Nzslice delta sfile")
   sys.exit()
   
 nyspike = int(args[0])
@@ -236,21 +238,21 @@ for iz in range(nzspike):
     
 # write out surf file
 
-print "Writing %s with %d points, %d tris" % (datafile,len(pts),len(tris))
+print("Writing %s with %d points, %d tris" % (datafile,len(pts),len(tris)))
 
 fp = open(datafile,'w')
 
-print >>fp,"surf file from jagged3d.py"
-print >>fp
-print >>fp,len(pts),"points"
-print >>fp,len(tris),"triangles"
-print >>fp
-print >>fp,"Points\n"
+print("surf file from jagged3d.py", file=fp)
+print(file=fp)
+print(len(pts),"points", file=fp)
+print(len(tris),"triangles", file=fp)
+print(file=fp)
+print("Points\n", file=fp)
 for i,pt in enumerate(pts):
-  print >>fp,i+1,pt[0],pt[1],pt[2]
-print >>fp
-print >>fp,"Triangles\n"
+  print(i+1,pt[0],pt[1],pt[2], file=fp)
+print(file=fp)
+print("Triangles\n", file=fp)
 for i,tri in enumerate(tris):
-  print >>fp,i+1,1,tri[0]+1,tri[1]+1,tri[2]+1
+  print(i+1,1,tri[0]+1,tri[1]+1,tri[2]+1, file=fp)
     
 fp.close()

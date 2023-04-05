@@ -48,7 +48,7 @@ from sdata import sdata
 # error message
 
 def error():
-  print "Syntax: surf_create.py sfile style argsx style args ..."
+  print("Syntax: surf_create.py sfile style argsx style args ...")
   sys.exit()
 
 # ---------------------------------------------------------------------

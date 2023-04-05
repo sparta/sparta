@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -39,7 +39,7 @@ Compute::Compute(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   for (int i = 0; i < n-1; i++)
     if (!isalnum(id[i]) && id[i] != '_')
       error->all(FLERR,
-		 "Compute ID must be alphanumeric or underscore characters");
+                 "Compute ID must be alphanumeric or underscore characters");
 
   n = strlen(arg[1]) + 1;
   style = new char[n];

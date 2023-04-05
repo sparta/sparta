@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -46,8 +46,8 @@ class SurfCollideTransparentKokkos : public SurfCollideTransparent {
   ------------------------------------------------------------------------- */
 
   KOKKOS_INLINE_FUNCTION
-  Particle::OnePart*
-  collide_kokkos(Particle::OnePart *&ip, const double *, double &, int, int&) const
+  Particle::OnePart* collide_kokkos(Particle::OnePart *, double &,
+                                    int, const double *, int, int &) const
   {
     Kokkos::atomic_increment(&d_nsingle());
 

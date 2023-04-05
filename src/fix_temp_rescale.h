@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -29,14 +29,22 @@ namespace SPARTA_NS {
 class FixTempRescale : public Fix {
  public:
   FixTempRescale(class SPARTA *, int, char **);
-  virtual ~FixTempRescale() {}
+  virtual ~FixTempRescale();
   int setmask();
   void init();
-  virtual void end_of_step();
+  void end_of_step();
+  double memory_usage();
 
  protected:
+  int aveflag;
   double tstart,tstop;
   double tprefactor;
+
+  int maxgrid;
+  double **vcom;
+
+  virtual void end_of_step_no_average(double);
+  virtual void end_of_step_average(double);
 };
 
 }
