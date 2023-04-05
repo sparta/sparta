@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -32,7 +32,7 @@ class ReadRestart : protected Pointers {
   void command(int, char **);
 
  private:
-  int me,nprocs,nprocs_file,multiproc_file;
+  int me,nprocs,nprocs_file,multiproc_file,mem_limit_flag;
   FILE *fp;
   int nfix_restart_global,nfix_restart_peratom;
 

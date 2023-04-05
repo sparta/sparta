@@ -15,7 +15,7 @@ from olog import olog
 from gnu import gnu
 
 if len(sys.argv) != 4:
-  raise StandardError, "Syntax: logplot.py logfile X Y"
+  raise Exception("Syntax: logplot.py logfile X Y")
 
 logfile = sys.argv[1]
 xlabel = sys.argv[2]
@@ -25,4 +25,4 @@ lg = olog(logfile)
 x,y = lg.get(xlabel,ylabel)
 g = gnu()
 g.plot(x,y)
-print "Type Ctrl-D to exit Python"
+print("Type Ctrl-D to exit Python")

@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -126,7 +126,6 @@ void ComputePFluxGridKokkos::compute_per_grid_kokkos()
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputePFluxGrid_compute_per_grid_atomic<0> >(0,nlocal),*this);
   }
-  DeviceType().fence();
   copymode = 0;
 
   if (need_dup) {
@@ -303,7 +302,6 @@ void ComputePFluxGridKokkos::post_process_grid_kokkos(int index, int nsample,
 
   this->d_etally = d_etally;
   this->d_vec = d_vec;
-  this->nstride = nstride;
   this->nsample = nsample;
 
   // compute normalized final value for each grid cell
@@ -332,7 +330,6 @@ void ComputePFluxGridKokkos::post_process_grid_kokkos(int index, int nsample,
       mvv = emap[2];
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputePFluxGrid_post_process_grid_diag>(lo,hi),*this);
-      DeviceType().fence();
       copymode = 0;
       break;
     }
@@ -345,7 +342,6 @@ void ComputePFluxGridKokkos::post_process_grid_kokkos(int index, int nsample,
       mvv = emap[3];
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputePFluxGrid_post_process_grid_offdiag>(lo,hi),*this);
-      DeviceType().fence();
       copymode = 0;
       break;
     }

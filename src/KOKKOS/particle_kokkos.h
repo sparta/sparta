@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -23,36 +23,16 @@
 
 namespace SPARTA_NS {
 
-struct struct_tdual_int_1d
-{
-  DAT::tdual_int_1d k_view;
-};
-
-struct struct_tdual_float_1d
-{
-  DAT::tdual_float_1d k_view;
-};
-
-struct struct_tdual_int_2d
-{
-  DAT::tdual_int_2d k_view;
-};
-
-struct struct_tdual_float_2d
-{
-  DAT::tdual_float_2d k_view;
-};
-
-struct TagParticleZero_cellcount{};
 struct TagParticleCompressReactions{};
 struct TagCopyParticleReorderDestinations{};
 struct TagFixedMemoryReorder{};
 struct TagFixedMemoryReorderInit{};
 struct TagSetIcellFromPlist{};
-struct TagParticleReorder_COPYPARTICLELIST{};
+struct TagParticleReorder_COPYPARTICLELIST1{};
+struct TagParticleReorder_COPYPARTICLELIST2{};
 struct TagSetDPlistNewStyle{};
 
-template<int NEED_ATOMICS>
+template<int NEED_ATOMICS, int REORDER_FLAG>
 struct TagParticleSort{};
 
 
@@ -63,25 +43,25 @@ class ParticleKokkos : public Particle {
   // methods
 
   ParticleKokkos(class SPARTA *);
-  ~ParticleKokkos();
+  ~ParticleKokkos() override;
   static KOKKOS_INLINE_FUNCTION
   int add_particle_kokkos(t_particle_1d particles, int, int, int, int,
                            double *, double *, double, double);
 #ifndef SPARTA_KOKKOS_EXACT
-  void compress_migrate(int, int *);
+  void compress_migrate(int, int *) override;
 #endif
   void sort_kokkos();
-  void grow(int);
-  void grow_species();
+  void grow(int) override;
+  void grow_species() override;
   void pre_weight() override;
   void post_weight() override;
   void update_class_variables();
-  int add_custom(char *, int, int);
-  void grow_custom(int, int, int);
-  void remove_custom(int);
-  void copy_custom(int, int);
-  void pack_custom(int, char *);
-  void unpack_custom(char *, int);
+  int add_custom(char *, int, int) override;
+  void grow_custom(int, int, int) override;
+  void remove_custom(int) override;
+  void copy_custom(int, int) override;
+  void pack_custom(int, char *) override;
+  void unpack_custom(char *, int) override;
 
   KOKKOS_INLINE_FUNCTION
   void copy_custom_kokkos(int, int) const;
@@ -111,17 +91,17 @@ class ParticleKokkos : public Particle {
   void modify(ExecutionSpace, unsigned int);
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagParticleZero_cellcount, const int&) const;
-
-  KOKKOS_INLINE_FUNCTION
   void operator()(TagParticleCompressReactions, const int&) const;
 
-  template<int NEED_ATOMICS>
+  template<int NEED_ATOMICS, int REORDER_FLAG>
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagParticleSort<NEED_ATOMICS>, const int&) const;
+  void operator()(TagParticleSort<NEED_ATOMICS,REORDER_FLAG>, const int&) const;
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagParticleReorder_COPYPARTICLELIST, const int, int&, const bool&) const;
+  void operator()(TagParticleReorder_COPYPARTICLELIST1, const int, int&, const bool&) const;
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagParticleReorder_COPYPARTICLELIST2, const int) const;
 
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCopyParticleReorderDestinations, const int, int&, const bool&) const;
@@ -139,11 +119,6 @@ class ParticleKokkos : public Particle {
   tdual_particle_1d k_particles;
   tdual_species_1d k_species;
   DAT::tdual_int_2d k_species2group;
-
-  typedef Kokkos::DualView<struct_tdual_int_1d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_int_1d_1d;
-  typedef Kokkos::DualView<struct_tdual_float_1d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_float_1d_1d;
-  typedef Kokkos::DualView<struct_tdual_int_2d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_int_2d_1d;
-  typedef Kokkos::DualView<struct_tdual_float_2d*, DeviceType::array_layout, DeviceType> tdual_struct_tdual_float_2d_1d;
 
   DAT::tdual_int_1d k_ewhich,k_eicol,k_edcol;
 
@@ -167,8 +142,11 @@ class ParticleKokkos : public Particle {
 
  private:
   t_particle_1d d_particles;
-  t_particle_1d d_sorted;
   t_species_1d d_species;
+
+  t_particle_1d d_sorted;
+  DAT::t_int_1d d_sorted_id;
+  DAT::t_int_1d d_offsets_part;
   int nParticlesWksp;
   DAT::tdual_int_scalar k_reorder_pass;
   DAT::t_int_scalar d_reorder_pass;
@@ -182,16 +160,16 @@ class ParticleKokkos : public Particle {
   DAT::t_int_2d d_plist;
   DAT::t_int_1d d_cellcount;
 
-  DAT::t_int_2d d_lists;
+  DAT::t_int_2d_lr d_lists;
   DAT::t_int_1d d_mlist;
   DAT::t_int_1d d_slist;
 
-  HAT::t_int_2d h_lists;
+  HAT::t_int_2d_lr h_lists;
   HAT::t_int_1d h_mlist;
   HAT::t_int_1d h_slist;
 
-  DAT::t_int_scalar d_fail_flag;
-  HAT::t_int_scalar h_fail_flag;
+  DAT::t_int_scalar d_resize;
+  HAT::t_int_scalar h_resize;
 
   // work memory for reduced memory reordering
   t_particle_1d d_pswap1;

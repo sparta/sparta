@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -61,6 +61,10 @@ FixAdapt::FixAdapt(SPARTA *sparta, int narg, char **arg) :
   action1 = adapt->action1;
   action2 = adapt->action2;
   file = adapt->file;
+
+  coarsen_flag = 0;
+  if (action1 == COARSEN || action2 == COARSEN)
+    coarsen_flag = 1;
 
   if (file && strchr(file,'*') == NULL)
     error->all(FLERR,"Fix adapt filename must contain '*' character");

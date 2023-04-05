@@ -5,7 +5,7 @@
 
 #   LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
 #   http://lammps.sandia.gov, Sandia National Laboratories
-#   Steve Plimpton, sjplimp@sandia.gov
+#   Steve Plimpton, sjplimp@gmail.com
 
 #   Copyright (2003) Sandia Corporation.  Under the terms of Contract
 #   DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
@@ -125,6 +125,7 @@ import sys
 import os
 import math
 import re
+import subprocess
 from operator import itemgetter
 from glob import glob
 import time
@@ -181,15 +182,15 @@ def run_test(test,lmps,descriptor):
   new_flag = False
 
   # print test header
-  print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-  print "dir =",os.getcwd()
-  print "test =",test
+  print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+  print("dir =",os.getcwd())
+  print("test =",test)
   sys.stdout.flush()
   if (custom_flag):
-    print "descriptor =",descriptor
-    print "norm =",error_norm
-    print "tolerance =",tolerance
-    print "relative error =",relative_error
+    print("descriptor =",descriptor)
+    print("norm =",error_norm)
+    print("tolerance =",tolerance)
+    print("relative error =",relative_error)
     sys.stdout.flush()
 
   # check if gold standard exists, if not create it
@@ -197,7 +198,7 @@ def run_test(test,lmps,descriptor):
   gold_standard = glob("log.*"+"."+descriptor+"."+test)
   if (len(gold_standard) > 0):
     ref = (gold_standard)[0];
-    print "gold standard =",ref
+    print("gold standard =",ref)
     sys.stdout.flush()
   else:
     new_flag = True
@@ -213,7 +214,7 @@ def run_test(test,lmps,descriptor):
   if (os.path.isfile(log)): os.remove(log)
   if (os.path.isfile(stdout)): os.remove(stdout)
   # run the test
-  os.system(lmps+" -in "+input+" -log "+log+" >& "+stdout);
+  subprocess.call([lmps+" -in "+input+" -log "+log+" >& "+stdout], shell=True, executable="/bin/bash");
   # check if a log file was generated
   if (not os.path.isfile(log)) :
     msg += "!!! no "+log+"\n";
@@ -232,11 +233,11 @@ def run_test(test,lmps,descriptor):
     return msg
   # compare columns
   not_same_rows.clear()
-  cols = range(len(bdict))
+  cols = list(range(len(bdict)))
   if (len(cdata) != len(bdata)):
     msg += "!!! data size "+str(len(cdata))+" does not match data "+str(len(bdata))+" in "+ref+"\n";
     msg += "!!! test "+test+" FAILED\n"
-    return msg 
+    return msg
   i = 0
   for name in bdict:
     [passing,cmsg] = compare(name,cdata[cols[i]],bdata[cols[i]]);
@@ -259,7 +260,7 @@ def run_test(test,lmps,descriptor):
       msg += "WARNING: Gold standard for test "+test+" has been auto-reblessed\n"
   if (fail) :
     msg += "!!! test "+test+" FAILED\n"
-  else : 
+  else :
     msg += "*** test "+test+" passed\n"
   return msg
 
@@ -273,7 +274,7 @@ def add_test(test,lmps,descriptor):
   msg = "==== generating gold standard for test "+test+" ====\n"
   if (os.path.isfile(log)): os.remove(log)
   if (os.path.isfile(stdout)): os.remove(stdout)
-  os.system(lmps+" -in "+input+" -log "+log+" >& "+stdout);
+  subprocess.call([lmps+" -in "+input+" -log "+log+" >& "+stdout], shell=True, executable="/bin/bash");
   if (not os.path.isfile(log)) :
     msg += "!!! no "+log+"\n";
     msg += "!!! test "+test+" FAILED\n"
@@ -324,7 +325,7 @@ def error_check(file,stdout):
   text_file.close()
   num_lines = int(len(lines))
   # check for errors
-  for i in xrange(num_lines):
+  for i in range(num_lines):
     if "ERROR" in lines[i] or "exited on signal" in lines[i]:
       msg += lines[i]
 
@@ -333,7 +334,7 @@ def error_check(file,stdout):
   text_file.close()
   num_lines = int(len(lines))
   # check for errors
-  for i in xrange(num_lines):
+  for i in range(num_lines):
     if "ERROR" in lines[i] or "exited on signal" in lines[i]:
       msg += lines[i]
 
@@ -393,7 +394,7 @@ def compare(name,colA,colB):
     err /= norm
     norm = 1.0
 
-  if (norm > tolerance) :  
+  if (norm > tolerance) :
     msg = "{0:7s}  error {1:4} wrt norm {2:7}\n".format(name,err,norm)
   else :
     msg = "{0:7s}           error {1:4}\n"               .format(name,err)
@@ -442,7 +443,7 @@ def init() :
 
   # parse input arguments
   if (len(sys.argv) < 4):
-    print usage
+    print(usage)
     sys.exit(1)
   default_descriptor = sys.argv[1]
   default_lmps = sys.argv[2]
@@ -459,7 +460,7 @@ def init() :
   keywords = ["-auto-rebless","-min-same-rows","-exclude","-only",
               "-customonly","-customtest","-custom","-error_norm",
               "-relative_error","-tolerance","-logread"]
-  while (cnt < len(sys.argv)): 
+  while (cnt < len(sys.argv)):
     option = sys.argv[cnt]
     if ("-auto-rebless" == option):
       flag = sys.argv[cnt+1]
@@ -576,17 +577,17 @@ def init() :
     os.chdir(home)
 
   # print header
-  print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-  print "start: ",date()
-  print "ntests:",ntests
-  print "default descriptor:",default_descriptor
-  print "default norm:",default_error_norm
-  print "default tolerance:",default_tolerance
-  print "default relative error:",default_relative_error
-  print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-  print
-  print "subdirs =",dirs
-  print
+  print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+  print("start: ",date())
+  print("ntests:",ntests)
+  print("default descriptor:",default_descriptor)
+  print("default norm:",default_error_norm)
+  print("default tolerance:",default_tolerance)
+  print("default relative error:",default_relative_error)
+  print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+  print()
+  print("subdirs =",dirs)
+  print()
   sys.stdout.flush()
 
   return tests
@@ -599,7 +600,7 @@ if __name__ == '__main__':
 
   if logread[0] != ".": sys.path.append(logread[0])
   strcmd = "from %s import %s as logreader" % (logread[1],logread[1])
-  exec strcmd
+  exec(strcmd)
 
   nfails = 0
   fail_list = []
@@ -610,29 +611,29 @@ if __name__ == '__main__':
 
   for test in tests:
     msg = execute(test)
-    if (fail_pattern.search(msg)) : 
+    if (fail_pattern.search(msg)) :
       nfails += 1
       fail_list.append(test)
-    elif (warn_pattern.search(msg)) : 
+    elif (warn_pattern.search(msg)) :
       nwarnings += 1
       warn_list.append(test)
-    print msg
+    print(msg)
     sys.stdout.flush()
 
   # print out results
 
-  print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-  print "end:",date()
+  print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+  print("end:",date())
   if (nfails == 0):
-    print ntests,"tests passed"
-    print "*** no failures ***"
+    print(ntests,"tests passed")
+    print("*** no failures ***")
   else:
-    print "!!!",nfails,"of",ntests,"tests failed"
+    print("!!!",nfails,"of",ntests,"tests failed")
     for test in fail_list:
-      print test
+      print(test)
   if (nwarnings > 0):
-    print "\n!!! Warnings were generated in the following tests"
+    print("\n!!! Warnings were generated in the following tests")
     for test in warn_list:
-      print test
-  print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+      print(test)
+  print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
   sys.stdout.flush()

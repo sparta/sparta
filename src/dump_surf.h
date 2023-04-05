@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -55,6 +55,10 @@ class DumpSurf : public Dump {
   int *variable;             // list of indices for the Variables
   double **vbuf;             // local storage for variable evaluation
 
+  int ncustom;               // # of surf Custom attributes used by dump
+  char **id_custom;          // their IDs
+  int *custom;               // list of indices for the Custom attributes
+
   int dimension;
   int nown;                  // # of surf elements owned by this proc
   int nchoose;               // # of surf elements output by this proc
@@ -75,6 +79,7 @@ class DumpSurf : public Dump {
   void write_data(int, double *);
 
   int parse_fields(int, char **);
+  int add_custom(char *);
   int add_compute(char *);
   int add_fix(char *);
   int add_variable(char *);
@@ -98,6 +103,7 @@ class DumpSurf : public Dump {
   void pack_compute(int);
   void pack_fix(int);
   void pack_variable(int);
+  void pack_custom(int);
 
   void pack_id(int);
   void pack_type(int);

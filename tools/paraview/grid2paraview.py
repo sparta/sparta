@@ -2,7 +2,7 @@ from __future__ import print_function
 from __future__ import division
 #   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
 #   http://sparta.sandia.gov
-#   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov,
+#   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov,
 #   Thomas Otahal, tjotaha@sandia.gov
 #   Sandia National Laboratories
 
@@ -1417,15 +1417,15 @@ if __name__ == "__main__":
     parser.add_argument('-c', '--catalystscript', help="Run a ParaView Catalyst Python script with pvbatch")
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-r', '--result', help="Optional list of SPARTA dump result files", nargs='+')
-    group.add_argument('-rf', '--resultfile', \
+    group.add_argument('-f', '--resultfile', \
                         help="Optional filename containing path names of SPARTA dump result files")
-    parser.add_argument('-xc', '--xchunk', \
+    parser.add_argument('-x', '--xchunk', \
                         help="Optional x grid chunk size (positive integer; default 100)", \
                         default=100, type=int)
-    parser.add_argument('-yc', '--ychunk', \
+    parser.add_argument('-y', '--ychunk', \
                         help="Optional y grid chunk size (positive integer; default 100)", \
                         default=100, type=int)
-    parser.add_argument('-zc', '--zchunk', \
+    parser.add_argument('-z', '--zchunk', \
                         help="Optional z grid chunk size (positive integer; default 100)", \
                         default=100, type=int)
     args = parser.parse_args()

@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -36,8 +36,8 @@ class FixEmitFaceKokkos : public FixEmitFace {
   typedef int value_type;
 
   FixEmitFaceKokkos(class SPARTA *, int, char **);
-  ~FixEmitFaceKokkos();
-  void init();
+  ~FixEmitFaceKokkos() override;
+  void init() override;
   void perform_task() override;
   void perform_task_twopass() override { perform_task(); }
 
@@ -95,9 +95,9 @@ class FixEmitFaceKokkos : public FixEmitFace {
   DAT::t_float_1d d_cummulative;
   DAT::t_int_1d d_species;
 
-  void create_task(int);
-  void grow_task();
-  void realloc_nspecies();
+  void create_task(int) override;
+  void grow_task() override;
+  void realloc_nspecies() override;
 };
 
 }

@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -34,7 +34,8 @@ class CreateParticles : protected Pointers {
   double erot(int);
 
  protected:
-  int imix,single,mspecies,twopass;
+  int imix,single,cutflag,mspecies,twopass;
+  bigint np;
   double xp,yp,zp,vx,vy,vz;
   class Region *region;
 
@@ -53,8 +54,8 @@ class CreateParticles : protected Pointers {
   char *vstrx_copy,*vstry_copy,*vstrz_copy;
 
   virtual void create_single();
-  virtual void create_local(bigint);
-  virtual void create_local_twopass(bigint);
+  virtual void create_local();
+  virtual void create_local_twopass();
   int species_variable(double *);
   double density_variable(double *, double *);
   double temperature_variable(double *);

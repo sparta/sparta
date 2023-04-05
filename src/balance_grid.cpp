@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -523,8 +523,8 @@ void BalanceGrid::procs2grid(int nx, int ny, int nz,
       if (upy && ipy != upy) valid = 0;
       if ((nprocs/ipx) % ipy) valid = 0;
       if (!valid) {
-	ipy++;
-	continue;
+        ipy++;
+        continue;
       }
 
       ipz = nprocs/ipx/ipy;
@@ -532,16 +532,16 @@ void BalanceGrid::procs2grid(int nx, int ny, int nz,
       if (upz && ipz != upz) valid = 0;
       if (domain->dimension == 2 && ipz != 1) valid = 0;
       if (!valid) {
-	ipy++;
-	continue;
+        ipy++;
+        continue;
       }
 
       surf = area[0]/ipx/ipy + area[1]/ipx/ipz + area[2]/ipy/ipz;
       if (surf < bestsurf) {
-	bestsurf = surf;
-	px = ipx;
-	py = ipy;
-	pz = ipz;
+        bestsurf = surf;
+        px = ipx;
+        py = ipy;
+        pz = ipz;
       }
       ipy++;
     }
@@ -552,7 +552,7 @@ void BalanceGrid::procs2grid(int nx, int ny, int nz,
 
 /* -------------------------------------------------------------------- */
 
-void BalanceGrid::timer_cell_weights(double *weight)
+void BalanceGrid::timer_cell_weights(double* &weight)
 {
   // cost = CPU time for relevant timers since last invocation
 
@@ -570,6 +570,8 @@ void BalanceGrid::timer_cell_weights(double *weight)
   if (maxcost <= 0.0) {
     memory->destroy(weight);
     weight = NULL;
+      error->warning(FLERR,"No time history accumulated for balance_grid "
+        "rcb time, using rcb cell option instead");
     return;
   }
 
