@@ -1720,6 +1720,7 @@ void Update::reset_timestep(bigint newstep)
     modify->compute[i]->invoked_per_particle = -1;
     modify->compute[i]->invoked_per_grid = -1;
     modify->compute[i]->invoked_per_surf = -1;
+    modify->compute[i]->invoked_per_tally = -1;
   }
 
   for (int i = 0; i < modify->ncompute; i++)

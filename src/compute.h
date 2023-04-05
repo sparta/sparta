@@ -33,13 +33,20 @@ class Compute : protected Pointers {
   double **array_grid;      // computed per-grid array
 
   // vec/array surf are length = # of explicit surf elements owned
-  // vec/array tally are length = # of surf elements tallied
+  // vec/array surf tally are length = # of surf elements tallied
 
   double *vector_surf;        // computed per-surf vector
   double **array_surf;        // computed per-surf array
   double *vector_surf_tally;  // computed per-surf tally vector
   double **array_surf_tally;  // computed per-surf tally array
 
+  // vec/array tally are length = # of tallies
+
+  double *vector_tally;      // computed per-tally vector
+  double **array_tally;      // computed per-tally array
+  
+  // data flags and sizes
+  
   int scalar_flag;          // 0/1 if compute_scalar() function exists
   int vector_flag;          // 0/1 if compute_vector() function exists
   int array_flag;           // 0/1 if compute_array() function exists
@@ -61,6 +68,11 @@ class Compute : protected Pointers {
   int surf_tally_flag;        // 1 if compute tallies surface bounce info
   int boundary_tally_flag;    // 1 if compute tallies boundary bounce info
 
+  int per_tally_flag;         // 1 if compute_per_tally() function exists
+  int size_per_tally_cols;    //  0 = vector, N = columns in per-tally array
+  
+  // timestep and invocation info
+  
   int timeflag;       // 1 if Compute stores list of timesteps it's called on
   int ntime;          // # of entries in time list
   int maxtime;        // max # of entries time list can hold
@@ -73,7 +85,10 @@ class Compute : protected Pointers {
   bigint invoked_per_particle; // ditto for compute_per_particle()
   bigint invoked_per_grid;     // ditto for compute_per_grid()
   bigint invoked_per_surf;     // ditto for compute_per_surf()
+  bigint invoked_per_tally;    // ditto for compute_per_tally()
 
+  // public methods
+  
   Compute(class SPARTA *, int, char **);
   Compute(class SPARTA* sparta) : Pointers(sparta) {}
   virtual ~Compute();
@@ -85,6 +100,7 @@ class Compute : protected Pointers {
   virtual void compute_per_particle() {}
   virtual void compute_per_grid() {}
   virtual void compute_per_surf() {}
+  virtual void compute_per_tally() {}
   virtual void clear() {}
   virtual void surf_tally(int, int, int, Particle::OnePart *,
                           Particle::OnePart *, Particle::OnePart *) {}

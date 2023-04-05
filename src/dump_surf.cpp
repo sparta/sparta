@@ -358,7 +358,7 @@ int DumpSurf::count()
   if (ncompute) {
     for (int i = 0; i < ncompute; i++)
       if (!(compute[i]->invoked_flag & INVOKED_PER_SURF)) {
-        compute[i]->compute_per_grid();
+        compute[i]->compute_per_surf();
         compute[i]->invoked_flag |= INVOKED_PER_SURF;
       }
   }
