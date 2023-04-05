@@ -134,6 +134,8 @@ void *sparta_extract_global(void *ptr, char *name)
    id = compute ID
    style = 0 for global data, 1 for per particle data,
      2 for per grid data, 3 for per surf data, 4 for per tally data
+     NOTE: for per tally data, some columns of double **array
+           may be int/bigint ubuf data, up to caller to decode correctly
    type
      for style global: 0 for scalar, 1 for vector, 2 for array
      for style = particle, grid, surf:
@@ -253,7 +255,7 @@ void *sparta_extract_compute(void *ptr, char *id, int style, int type)
       return (void *) compute->array_tally;
     }
   }
-
+  
   return NULL;
 }
 

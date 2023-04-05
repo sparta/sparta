@@ -26,6 +26,8 @@ using namespace SPARTA_NS;
 
 enum{IDPART,IDSURF,XC,YC,ZC,VXOLD,VYOLD,VZOLD,VXNEW,VYNEW,VZNEW};
 
+enum{INT,DOUBLE,BIGINT,STRING};        // same as Dump
+
 #define DELTA 4096
 
 /* ---------------------------------------------------------------------- */
@@ -156,27 +158,27 @@ void ComputeCollideTally::surf_tally(int isurf, int icell, int reaction,
   if (ntally == maxtally) grow_tally();
 
   // tally all values associated with group into array
-  // particle iorig and ip have same position = collision point
+  // particle iorig,ip have same collision point but before/after velocities
   
   double *vec = array_tally[ntally++];
   
   for (int m = 0; m < nvalue; m++) {
     switch (which[m]) {
     case IDPART:
-      vec[m] = ip->id;
+      vec[m] = ubuf(ip->id).d;
       break;
     case IDSURF:
-      if (dim == 2) vec[m] = lines[isurf].id;
-      else vec[m] = tris[isurf].id;
+      if (dim == 2) vec[m] = ubuf(lines[isurf].id).d;
+      else vec[m] = ubuf(tris[isurf].id).d;
       break;
     case XC:
-      vec[m] = ip->x[0];
+      vec[m] = iorig->x[0];
       break;
     case YC: 
-      vec[m] = ip->x[1];
+      vec[m] = iorig->x[1];
       break;
     case ZC: 
-      vec[m] = ip->x[2];
+      vec[m] = iorig->x[2];
       break;
     case VXOLD:
       vec[m] = iorig->v[0];
@@ -207,6 +209,25 @@ void ComputeCollideTally::surf_tally(int isurf, int icell, int reaction,
 int ComputeCollideTally::tallyinfo(surfint *&dummy)
 {
   return ntally;
+}
+
+/* ----------------------------------------------------------------------
+   return datatype of tally quantity
+   icol = 0 for vector
+   icol = 1 to N for array column
+   datatype = INT,DOUBLE,BIGINT
+------------------------------------------------------------------------- */
+
+int ComputeCollideTally::datatype(int icol)
+{
+  if (which[icol-1] == IDPART) return INT;
+
+  if (which[icol-1] == IDSURF) {
+    if (sizeof(surfint) == sizeof(smallint)) return INT;
+    if (sizeof(surfint) == sizeof(bigint)) return BIGINT;
+  }
+
+  return DOUBLE;
 }
 
 /* ---------------------------------------------------------------------- */

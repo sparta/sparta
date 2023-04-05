@@ -42,8 +42,14 @@ DumpTally::DumpTally(SPARTA *sparta, int narg, char **arg) :
   if (narg == 5) error->all(FLERR,"No dump tally attributes specified");
 
   clearstep = 1;
-  buffer_allow = 1;
-  buffer_flag = 1;
+
+  // do not allow buffered output until change
+  //   Dump::convert_string() to use ubuf like DumpTally::write_text() does
+  // will require other dumps and computes/fixes to use datatype()
+  //   like DumpTally and ComputeCollideTally do
+  
+  //buffer_allow = 1;
+  //buffer_flag = 1;
 
   dimension = domain->dimension;
 
@@ -285,12 +291,9 @@ void DumpTally::write_text(int n, double *mybuf)
 
   int m = 0;
   for (i = 0; i < n; i++) {
-    if (i == 0) printf("MYBUF %d %d %g %g %g\n",
-                       static_cast<int> (mybuf[0]),
-                       static_cast<int> (mybuf[1]),
-                       mybuf[2],mybuf[3],mybuf[4]);
     for (j = 0; j < size_one; j++) {
-      if (vtype[j] == INT) fprintf(fp,vformat[j],static_cast<int> (mybuf[m]));
+      if (vtype[j] == INT) fprintf(fp,vformat[j],(int) ubuf(mybuf[m]).i);
+      else if (vtype[j] == BIGINT) fprintf(fp,vformat[j],(bigint) ubuf(mybuf[m]).i);
       else if (vtype[j] == DOUBLE) fprintf(fp,vformat[j],mybuf[m]);
       m++;
     }
@@ -314,9 +317,7 @@ int DumpTally::parse_fields(int narg, char **arg)
 
     if (strncmp(arg[iarg],"c_",2) == 0) {
       pack_choice[i] = &DumpTally::pack_compute;
-      if (i <= 1) vtype[i] = INT;
-      else vtype[i] = DOUBLE;
-
+      
       int n = strlen(arg[iarg]);
       char *suffix = new char[n];
       strcpy(suffix,&arg[iarg][2]);
@@ -342,6 +343,13 @@ int DumpTally::parse_fields(int narg, char **arg)
           argindex[i] > modify->compute[n]->size_per_tally_cols)
         error->all(FLERR,"Dump tally compute array is accessed out-of-range");
 
+      // set vtype by querying compute column
+      // if returns -1, error b/c it doesn't provide datatype() func
+      
+      vtype[i] = modify->compute[n]->datatype(argindex[i]);
+      if (vtype[i] < 0)
+        error->all(FLERR,"Dump tally compute ID does not provide datatypes");
+      
       field2index[i] = add_compute(suffix);
       delete [] suffix;
 

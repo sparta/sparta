@@ -36,6 +36,7 @@ class ComputeCollideTally : public Compute {
   void surf_tally(int, int, int, Particle::OnePart *,
                           Particle::OnePart *, Particle::OnePart *);
   int tallyinfo(surfint *&);
+  int datatype(int);
   bigint memory_usage();
 
  protected:

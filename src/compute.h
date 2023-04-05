@@ -113,9 +113,11 @@ class Compute : protected Pointers {
   virtual void post_process_isurf_grid() {}
 
   virtual int query_tally_grid(int, double **&, int *&) {return 0;}
-  virtual int tallyinfo(surfint *&) {return 0;}
   virtual void post_process_surf() {}
 
+  virtual int tallyinfo(surfint *&) {return 0;}
+  virtual int datatype(int) {return -1;}
+  
   virtual void reallocate() {}
   virtual bigint memory_usage();
 
@@ -130,6 +132,27 @@ class Compute : protected Pointers {
   int kokkos_flag;          // 1 if Kokkos-enabled
   int copy,copymode;        // 1 if copy of class (prevents deallocation of
                             //  base class when child copy is destroyed)
+
+ protected:
+
+  // union data struct for packing 32-bit and 64-bit ints into double bufs
+  // this avoids aliasing issues by having 2 pointers (double,int)
+  //   to same buf memory
+  // constructor for 32-bit int prevents compiler
+  //   from possibly calling the double constructor when passed an int
+  // copy to a double *buf:
+  //   buf[m++] = ubuf(foo).d, where foo is a 32-bit or 64-bit int
+  // copy from a double *buf:
+  //   foo = (int) ubuf(buf[m++]).i;, where (int) or (tagint) match foo
+  //   the cast prevents compiler warnings about possible truncation
+
+  union ubuf {
+    double d;
+    int64_t i;
+    ubuf(double arg) : d(arg) {}
+    ubuf(int64_t arg) : i(arg) {}
+    ubuf(int arg) : i(arg) {}
+  };
 };
 
 }
