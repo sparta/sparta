@@ -1,0 +1,120 @@
+SPARTA (18 Jul 2022)
+Running on 4 MPI task(s)
+# thermal gas in a 3d box with collisions
+# particles reflect off global box boundaries
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5 comm/sort yes
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
+create_grid 	    10 10 10
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/home/me/sparta_master/src/grid.cpp:465)
+Created 1000 child grid cells
+  CPU time = 0.00173007 secs
+  create/ghost percent = 79.4692 20.5308
+
+balance_grid        rcb part
+Balance grid migrated 740 cells
+  CPU time = 0.00134576 secs
+  reassign/sort/migrate/ghost percent = 43.981 0.27962 16.4583 39.281
+
+species		    6SpeciesAir.species N2 O2 NO N O Ar
+mixture		    air O2 N2 O N vstream 0.0 0.0 0.0 temp 273.1
+mixture		    air O2 frac 0.21
+mixture		    air N2  frac 0.78
+mixture		    air O
+mixture		    air N
+mixture	            air NO
+mixture		    air Ar frac 0.009
+
+
+global              nrho 7.07043E22
+global              fnum 7.07043E6
+
+collide		    vss air 6SpeciesAirII.vss
+
+create_particles    air n 10000
+Created 10000 particles
+  CPU time = 0.00255917 secs
+
+stats		    100
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll c_temp
+
+#compute             1 grid all n
+#region              slab block INF INF INF INF 4.5e-5 5.5e-5
+#dump                2 image all 100 image.*.ppm type type pdiam 3.0e-6 #		    size 512 512 gline yes 0.005 gridx 0.00005 c_1[1]
+#dump_modify	    2 pad 4 region slab
+
+timestep 	    7.00E-9
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.6875 1.6875 1.6875
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.20129 3.20129 3.20129
+Step CPU Np Natt Ncoll c_temp 
+       0            0    10000        0        0     274.5312 
+     100  0.036798825    10000     1426      734     272.1263 
+     200   0.07381053    10000     1446      693    271.88128 
+     300   0.11089641    10000     1442      692    273.19963 
+     400   0.14752497    10000     1458      708    272.49226 
+     500   0.18448874    10000     1469      698    273.35373 
+     600    0.2236305    10000     1463      721    274.45839 
+     700   0.26131514    10000     1461      696    273.47145 
+     800   0.29829202    10000     1483      736    270.01786 
+     900   0.33541868    10000     1449      705    273.23247 
+    1000   0.37209095    10000     1495      747    273.55514 
+Loop time of 0.372218 on 4 procs for 1000 steps with 10000 particles
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.12517    | 0.12617    | 0.12714    |   0.2 | 33.90
+Coll    | 0.15906    | 0.16124    | 0.16292    |   0.4 | 43.32
+Sort    | 0.023303   | 0.023597   | 0.023822   |   0.1 |  6.34
+Comm    | 0.03842    | 0.03957    | 0.041327   |   0.5 | 10.63
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.00058337 | 0.0010416  | 0.0019094  |   1.6 |  0.28
+Other   |            | 0.0206     |            |       |  5.53
+
+Particle moves    = 10000000 (10M)
+Cells touched     = 14230596 (14.2M)
+Particle comms    = 311452 (0.311M)
+Boundary collides = 469956 (0.47M)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 1456641 (1.46M)
+Collide occurs    = 715452 (0.715M)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 6.71649e+06
+Particle-moves/step: 10000
+Cell-touches/particle/step: 1.42306
+Particle comm iterations/step: 1
+Particle fraction communicated: 0.0311452
+Particle fraction colliding with boundary: 0.0469956
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.145664
+Collisions/particle/step: 0.0715452
+Reactions/particle/step: 0
+
+Particles: 2500 ave 2514 max 2489 min
+Histogram: 2 0 0 0 0 0 0 1 0 1
+Cells:      250 ave 250 max 250 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 172.5 ave 240 max 110 min
+Histogram: 1 0 0 0 2 0 0 0 0 1
+EmptyCell: 62.5 ave 130 max 0 min
+Histogram: 1 0 0 0 2 0 0 0 0 1
