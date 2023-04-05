@@ -133,9 +133,10 @@ double CollideVSS::vremax_init(int igroup, int jgroup)
 
 /* ---------------------------------------------------------------------- */
 
-double CollideVSS::attempt_collision(int icell, int np, double volume, double dt)
+double CollideVSS::attempt_collision(int icell, int np, double volume)
 {
   double fnum = update->fnum;
+  double dt = update->dt;
 
   double nattempt;
 
@@ -154,27 +155,28 @@ double CollideVSS::attempt_collision(int icell, int np, double volume, double dt
 /* ---------------------------------------------------------------------- */
 
 double CollideVSS::attempt_collision(int icell, int igroup, int jgroup,
-                                     double volume, double dt)
+                                     double volume)
 {
- double fnum = update->fnum;
+  double fnum = update->fnum;
+  double dt = update->dt;
 
- double nattempt;
+  double nattempt;
 
- // return 2x the value for igroup != jgroup, since no J,I pairing
+  // return 2x the value for igroup != jgroup, since no J,I pairing
 
- double npairs;
- if (igroup == jgroup) npairs = 0.5 * ngroup[igroup] * (ngroup[igroup]-1);
- else npairs = ngroup[igroup] * (ngroup[jgroup]);
- //else npairs = 0.5 * ngroup[igroup] * (ngroup[jgroup]);
+  double npairs;
+  if (igroup == jgroup) npairs = 0.5 * ngroup[igroup] * (ngroup[igroup]-1);
+  else npairs = ngroup[igroup] * (ngroup[jgroup]);
+  //else npairs = 0.5 * ngroup[igroup] * (ngroup[jgroup]);
 
- nattempt = npairs * vremax[icell][igroup][jgroup] * dt * fnum / volume;
+  nattempt = npairs * vremax[icell][igroup][jgroup] * dt * fnum / volume;
 
- if (remainflag) {
-   nattempt += remain[icell][igroup][jgroup];
-   remain[icell][igroup][jgroup] = nattempt - static_cast<int> (nattempt);
- } else nattempt += random->uniform();
+  if (remainflag) {
+    nattempt += remain[icell][igroup][jgroup];
+    remain[icell][igroup][jgroup] = nattempt - static_cast<int> (nattempt);
+  } else nattempt += random->uniform();
 
- return nattempt;
+  return nattempt;
 }
 
 /* ----------------------------------------------------------------------

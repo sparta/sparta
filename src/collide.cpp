@@ -466,7 +466,6 @@ template < int NEARCP > void Collide::collisions_one()
 
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
-  double dt = update->dt;
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
@@ -610,7 +609,6 @@ template < int NEARCP > void Collide::collisions_group()
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
   int *species2group = mixture->species2group;
-  double dt = update->dt;
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
@@ -886,7 +884,6 @@ void Collide::collisions_one_ambipolar()
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
   int nbytes = sizeof(Particle::OnePart);
-  double dt = update->dt;
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
@@ -1863,7 +1860,6 @@ int Collide::find_nn(int i, int np)
 
   Particle::OnePart *ipart,*jpart;
   Particle::OnePart *particles = particle->particles;
-  double dt = update->dt;
 
   // thresh = distance particle I moves in this timestep
 
@@ -1952,7 +1948,6 @@ int Collide::find_nn_group(int i, int *ilist, int np, int *jlist, int *plist,
 
   Particle::OnePart *ipart,*jpart;
   Particle::OnePart *particles = particle->particles;
-  double dt = update->dt;
 
   // thresh = distance particle I moves in this timestep
 
