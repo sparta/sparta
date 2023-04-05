@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -260,7 +260,7 @@ void DumpParticle::init_style()
     fix[i] = modify->fix[ifix];
     if (nevery % modify->fix[ifix]->per_particle_freq)
       error->all(FLERR,
-		 "Dump particle and fix not computed at compatible times");
+                 "Dump particle and fix not computed at compatible times");
   }
 
   int ivariable;
@@ -347,8 +347,8 @@ int DumpParticle::count()
   if (ncompute) {
     for (i = 0; i < ncompute; i++)
       if (!(compute[i]->invoked_flag & INVOKED_PER_PARTICLE)) {
-	compute[i]->compute_per_particle();
-	compute[i]->invoked_flag |= INVOKED_PER_PARTICLE;
+        compute[i]->compute_per_particle();
+        compute[i]->invoked_flag |= INVOKED_PER_PARTICLE;
       }
   }
 
@@ -397,90 +397,90 @@ int DumpParticle::count()
       // customize by adding to if statement
 
       if (thresh_array[ithresh] == ID) {
-	for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].id;
-	ptr = dchoose;
-	nstride = 1;
+        for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].id;
+        ptr = dchoose;
+        nstride = 1;
       } else if (thresh_array[ithresh] == TYPE) {
-	for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].ispecies + 1;
-	ptr = dchoose;
-	nstride = 1;
+        for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].ispecies + 1;
+        ptr = dchoose;
+        nstride = 1;
       } else if (thresh_array[ithresh] == PROC) {
-	for (i = 0; i < nlocal; i++) dchoose[i] = me;
-	ptr = dchoose;
-	nstride = 1;
+        for (i = 0; i < nlocal; i++) dchoose[i] = me;
+        ptr = dchoose;
+        nstride = 1;
 
       } else if (thresh_array[ithresh] == X) {
-	for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].x[0];
-	ptr = dchoose;
-	nstride = 1;
+        for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].x[0];
+        ptr = dchoose;
+        nstride = 1;
       } else if (thresh_array[ithresh] == Y) {
-	for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].x[1];
-	ptr = dchoose;
-	nstride = 1;
+        for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].x[1];
+        ptr = dchoose;
+        nstride = 1;
       } else if (thresh_array[ithresh] == Z) {
-	for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].x[2];
-	ptr = dchoose;
-	nstride = 1;
+        for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].x[2];
+        ptr = dchoose;
+        nstride = 1;
 
       } else if (thresh_array[ithresh] == XS) {
-	double boxxlo = domain->boxlo[0];
-	double invxprd = 1.0/domain->xprd;
-	for (i = 0; i < nlocal; i++)
-	  dchoose[i] = (particles[i].x[0] - boxxlo) * invxprd;
-	ptr = dchoose;
-	nstride = 1;
+        double boxxlo = domain->boxlo[0];
+        double invxprd = 1.0/domain->xprd;
+        for (i = 0; i < nlocal; i++)
+          dchoose[i] = (particles[i].x[0] - boxxlo) * invxprd;
+        ptr = dchoose;
+        nstride = 1;
       } else if (thresh_array[ithresh] == YS) {
-	double boxylo = domain->boxlo[1];
-	double invyprd = 1.0/domain->yprd;
-	for (i = 0; i < nlocal; i++)
-	  dchoose[i] = (particles[i].x[1] - boxylo) * invyprd;
-	ptr = dchoose;
-	nstride = 1;
+        double boxylo = domain->boxlo[1];
+        double invyprd = 1.0/domain->yprd;
+        for (i = 0; i < nlocal; i++)
+          dchoose[i] = (particles[i].x[1] - boxylo) * invyprd;
+        ptr = dchoose;
+        nstride = 1;
       } else if (thresh_array[ithresh] == ZS) {
-	double boxzlo = domain->boxlo[2];
-	double invzprd = 1.0/domain->zprd;
-	for (i = 0; i < nlocal; i++)
-	  dchoose[i] = (particles[i].x[2] - boxzlo) * invzprd;
-	ptr = dchoose;
-	nstride = 1;
+        double boxzlo = domain->boxlo[2];
+        double invzprd = 1.0/domain->zprd;
+        for (i = 0; i < nlocal; i++)
+          dchoose[i] = (particles[i].x[2] - boxzlo) * invzprd;
+        ptr = dchoose;
+        nstride = 1;
 
       } else if (thresh_array[ithresh] == VX) {
-	for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].v[0];
-	ptr = dchoose;
-	nstride = 1;
+        for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].v[0];
+        ptr = dchoose;
+        nstride = 1;
       } else if (thresh_array[ithresh] == VY) {
-	for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].v[1];
-	ptr = dchoose;
-	nstride = 1;
+        for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].v[1];
+        ptr = dchoose;
+        nstride = 1;
       } else if (thresh_array[ithresh] == VZ) {
-	for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].v[2];
-	ptr = dchoose;
-	nstride = 1;
+        for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].v[2];
+        ptr = dchoose;
+        nstride = 1;
 
       } else if (thresh_array[ithresh] == KE) {
         Particle::Species *species = particle->species;
         Particle::OnePart *p;
         double *v;
         double mvv2e = update->mvv2e;
-	for (i = 0; i < nlocal; i++) {
+        for (i = 0; i < nlocal; i++) {
           p = &particles[i];
           v = p->v;
           dchoose[i] = mvv2e * 0.5 * species[p->ispecies].mass *
             (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
         }
-	ptr = dchoose;
-	nstride = 1;
+        ptr = dchoose;
+        nstride = 1;
       } else if (thresh_array[ithresh] == EROT) {
-	for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].erot;
-	ptr = dchoose;
-	nstride = 1;
+        for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].erot;
+        ptr = dchoose;
+        nstride = 1;
       } else if (thresh_array[ithresh] == EVIB) {
-	for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].evib;
-	ptr = dchoose;
-	nstride = 1;
+        for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].evib;
+        ptr = dchoose;
+        nstride = 1;
 
       } else if (thresh_array[ithresh] == CUSTOM) {
-	i = nfield + ithresh;
+        i = nfield + ithresh;
         int index = custom[field2index[i]];
         if (particle->etype[index] == INT) {
           ptrstyle = INT;
@@ -506,29 +506,29 @@ int DumpParticle::count()
         }
 
       } else if (thresh_array[ithresh] == COMPUTE) {
-	i = nfield + ithresh;
-	if (argindex[i] == 0) {
-	  ptr = compute[field2index[i]]->vector_particle;
-	  nstride = 1;
-	} else {
-	  ptr = &compute[field2index[i]]->array_particle[0][argindex[i]-1];
-	  nstride = compute[field2index[i]]->size_per_particle_cols;
-	}
+        i = nfield + ithresh;
+        if (argindex[i] == 0) {
+          ptr = compute[field2index[i]]->vector_particle;
+          nstride = 1;
+        } else {
+          ptr = &compute[field2index[i]]->array_particle[0][argindex[i]-1];
+          nstride = compute[field2index[i]]->size_per_particle_cols;
+        }
 
       } else if (thresh_array[ithresh] == FIX) {
-	i = nfield + ithresh;
-	if (argindex[i] == 0) {
-	  ptr = fix[field2index[i]]->vector_particle;
-	  nstride = 1;
-	} else {
-	  ptr = &fix[field2index[i]]->array_particle[0][argindex[i]-1];
-	  nstride = fix[field2index[i]]->size_per_particle_cols;
-	}
+        i = nfield + ithresh;
+        if (argindex[i] == 0) {
+          ptr = fix[field2index[i]]->vector_particle;
+          nstride = 1;
+        } else {
+          ptr = &fix[field2index[i]]->array_particle[0][argindex[i]-1];
+          nstride = fix[field2index[i]]->size_per_particle_cols;
+        }
 
       } else if (thresh_array[ithresh] == VARIABLE) {
-	i = nfield + ithresh;
-	ptr = vbuf[field2index[i]];
-	nstride = 1;
+        i = nfield + ithresh;
+        ptr = vbuf[field2index[i]];
+        nstride = 1;
       }
 
       // unselect particles that don't meet threshhold criterion
@@ -633,7 +633,7 @@ void DumpParticle::write_text(int n, double *mybuf)
       if (vtype[j] == INT) fprintf(fp,vformat[j],static_cast<int> (mybuf[m]));
       else if (vtype[j] == DOUBLE) fprintf(fp,vformat[j],mybuf[m]);
       else if (vtype[j] == STRING)
-	fprintf(fp,vformat[j],typenames[(int) mybuf[m]]);
+        fprintf(fp,vformat[j],typenames[(int) mybuf[m]]);
       m++;
     }
     fprintf(fp,"\n");
@@ -712,10 +712,10 @@ int DumpParticle::parse_fields(int narg, char **arg)
 
       char *ptr = strchr(suffix,'[');
       if (ptr) {
-	if (suffix[strlen(suffix)-1] != ']')
-	  error->all(FLERR,"Invalid attribute in dump particle command");
-	argindex[i] = atoi(ptr+1);
-	*ptr = '\0';
+        if (suffix[strlen(suffix)-1] != ']')
+          error->all(FLERR,"Invalid attribute in dump particle command");
+        argindex[i] = atoi(ptr+1);
+        *ptr = '\0';
       } else argindex[i] = 0;
 
       n = particle->find_custom(suffix);
@@ -724,16 +724,16 @@ int DumpParticle::parse_fields(int narg, char **arg)
 
       vtype[i] = particle->etype[n];
       if (argindex[i] == 0 && particle->esize[n] > 0)
-	error->all(FLERR,
-		   "Dump particle custom attribute does not store "
-		   "per-particle vector");
+        error->all(FLERR,
+                   "Dump particle custom attribute does not store "
+                   "per-particle vector");
       if (argindex[i] > 0 && particle->esize[n] == 0)
-	error->all(FLERR,
-		   "Dump particle custom attribute does not store "
-		   "per-particle array");
+        error->all(FLERR,
+                   "Dump particle custom attribute does not store "
+                   "per-particle array");
       if (argindex[i] > 0 && argindex[i] > particle->esize[n])
-	error->all(FLERR,
-		   "Dump particle custom attribute is accessed out-of-range");
+        error->all(FLERR,
+                   "Dump particle custom attribute is accessed out-of-range");
 
       field2index[i] = add_custom(suffix);
       delete [] suffix;
@@ -751,31 +751,31 @@ int DumpParticle::parse_fields(int narg, char **arg)
 
       char *ptr = strchr(suffix,'[');
       if (ptr) {
-	if (suffix[strlen(suffix)-1] != ']')
-	  error->all(FLERR,"Invalid attribute in dump particle command");
-	argindex[i] = atoi(ptr+1);
-	*ptr = '\0';
+        if (suffix[strlen(suffix)-1] != ']')
+          error->all(FLERR,"Invalid attribute in dump particle command");
+        argindex[i] = atoi(ptr+1);
+        *ptr = '\0';
       } else argindex[i] = 0;
 
       n = modify->find_compute(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump particle compute ID");
       if (modify->compute[n]->per_particle_flag == 0)
-	error->all(FLERR,
-		   "Dump particle compute does not compute per-particle info");
+        error->all(FLERR,
+                   "Dump particle compute does not compute per-particle info");
       if (argindex[i] == 0 &&
           modify->compute[n]->size_per_particle_cols > 0)
-	error->all(FLERR,
-		   "Dump particle compute does not calculate "
-		   "per-particle vector");
+        error->all(FLERR,
+                   "Dump particle compute does not calculate "
+                   "per-particle vector");
       if (argindex[i] > 0 &&
           modify->compute[n]->size_per_particle_cols == 0)
-	error->all(FLERR,
-		   "Dump particle compute does not calculate "
-		   "per-particle array");
+        error->all(FLERR,
+                   "Dump particle compute does not calculate "
+                   "per-particle array");
       if (argindex[i] > 0 &&
-	  argindex[i] > modify->compute[n]->size_per_particle_cols)
-	error->all(FLERR,
-		   "Dump particle compute array is accessed out-of-range");
+          argindex[i] > modify->compute[n]->size_per_particle_cols)
+        error->all(FLERR,
+                   "Dump particle compute array is accessed out-of-range");
 
       field2index[i] = add_compute(suffix);
       delete [] suffix;
@@ -793,26 +793,26 @@ int DumpParticle::parse_fields(int narg, char **arg)
 
       char *ptr = strchr(suffix,'[');
       if (ptr) {
-	if (suffix[strlen(suffix)-1] != ']')
-	  error->all(FLERR,"Invalid attribute in dump particle command");
-	argindex[i] = atoi(ptr+1);
-	*ptr = '\0';
+        if (suffix[strlen(suffix)-1] != ']')
+          error->all(FLERR,"Invalid attribute in dump particle command");
+        argindex[i] = atoi(ptr+1);
+        *ptr = '\0';
       } else argindex[i] = 0;
 
       n = modify->find_fix(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump particle fix ID");
       if (modify->fix[n]->per_particle_flag == 0)
-	error->all(FLERR,"Dump particle fix does not compute "
-		   "per-particle info");
+        error->all(FLERR,"Dump particle fix does not compute "
+                   "per-particle info");
       if (argindex[i] == 0 && modify->fix[n]->size_per_particle_cols > 0)
-	error->all(FLERR,"Dump particle fix does not compute "
-		   "per-particle vector");
+        error->all(FLERR,"Dump particle fix does not compute "
+                   "per-particle vector");
       if (argindex[i] > 0 && modify->fix[n]->size_per_particle_cols == 0)
-	error->all(FLERR,"Dump particle fix does not compute "
-		   "per-particle array");
+        error->all(FLERR,"Dump particle fix does not compute "
+                   "per-particle array");
       if (argindex[i] > 0 &&
-	  argindex[i] > modify->fix[n]->size_per_particle_cols)
-	error->all(FLERR,"Dump particle fix array is accessed out-of-range");
+          argindex[i] > modify->fix[n]->size_per_particle_cols)
+        error->all(FLERR,"Dump particle fix array is accessed out-of-range");
 
       field2index[i] = add_fix(suffix);
       delete [] suffix;
@@ -832,8 +832,8 @@ int DumpParticle::parse_fields(int narg, char **arg)
       n = input->variable->find(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump particle variable name");
       if (input->variable->particle_style(n) == 0)
-	error->all(FLERR,"Dump particle variable is not "
-		   "particle-style variable");
+        error->all(FLERR,"Dump particle variable is not "
+                   "particle-style variable");
 
       field2index[i] = add_variable(suffix);
       delete [] suffix;
@@ -934,7 +934,7 @@ int DumpParticle::add_variable(char *id)
 
   id_variable = (char **)
     memory->srealloc(id_variable,(nvariable+1)*sizeof(char *),
-		     "dump:id_variable");
+                     "dump:id_variable");
   delete [] variable;
   variable = new int[nvariable+1];
   delete [] vbuf;
@@ -967,12 +967,12 @@ int DumpParticle::modify_param(int narg, char **arg)
     if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
     if (strcmp(arg[1],"none") == 0) {
       if (nthresh) {
-	memory->destroy(thresh_array);
-	memory->destroy(thresh_op);
-	memory->destroy(thresh_value);
-	thresh_array = NULL;
-	thresh_op = NULL;
-	thresh_value = NULL;
+        memory->destroy(thresh_array);
+        memory->destroy(thresh_op);
+        memory->destroy(thresh_value);
+        thresh_array = NULL;
+        thresh_op = NULL;
+        thresh_value = NULL;
       }
       nthresh = 0;
       return 2;
@@ -1022,10 +1022,10 @@ int DumpParticle::modify_param(int narg, char **arg)
 
       char *ptr = strchr(suffix,'[');
       if (ptr) {
-	if (suffix[strlen(suffix)-1] != ']')
-	  error->all(FLERR,"Invalid attribute in dump modify command");
-	argindex[nfield+nthresh] = atoi(ptr+1);
-	*ptr = '\0';
+        if (suffix[strlen(suffix)-1] != ']')
+          error->all(FLERR,"Invalid attribute in dump modify command");
+        argindex[nfield+nthresh] = atoi(ptr+1);
+        *ptr = '\0';
       } else argindex[nfield+nthresh] = 0;
 
       n = particle->find_custom(suffix);
@@ -1033,17 +1033,17 @@ int DumpParticle::modify_param(int narg, char **arg)
         error->all(FLERR,"Could not find dump modify custom attribute");
 
       if (argindex[nfield+nthresh] == 0 && particle->esize[n] > 0)
-	error->all(FLERR,
-		   "Dump modify custom attribute does not store "
-		   "per-particle vector");
+        error->all(FLERR,
+                   "Dump modify custom attribute does not store "
+                   "per-particle vector");
       if (argindex[nfield+nthresh] > 0 && particle->esize[n] == 0)
-	error->all(FLERR,
-		   "Dump modify custom attribute does not store "
-		   "per-particle array");
+        error->all(FLERR,
+                   "Dump modify custom attribute does not store "
+                   "per-particle array");
       if (argindex[nfield+nthresh] > 0 &&
           argindex[nfield+nthresh] > particle->esize[n])
-	error->all(FLERR,
-		   "Dump modify custom attribute is accessed out-of-range");
+        error->all(FLERR,
+                   "Dump modify custom attribute is accessed out-of-range");
 
       field2index[nfield+nthresh] = add_custom(suffix);
       delete [] suffix;
@@ -1062,31 +1062,31 @@ int DumpParticle::modify_param(int narg, char **arg)
 
       char *ptr = strchr(suffix,'[');
       if (ptr) {
-	if (suffix[strlen(suffix)-1] != ']')
-	  error->all(FLERR,"Invalid attribute in dump modify command");
-	argindex[nfield+nthresh] = atoi(ptr+1);
-	*ptr = '\0';
+        if (suffix[strlen(suffix)-1] != ']')
+          error->all(FLERR,"Invalid attribute in dump modify command");
+        argindex[nfield+nthresh] = atoi(ptr+1);
+        *ptr = '\0';
       } else argindex[nfield+nthresh] = 0;
 
       n = modify->find_compute(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump modify compute ID");
 
       if (modify->compute[n]->per_particle_flag == 0)
-	error->all(FLERR,
-		   "Dump modify compute ID does not compute per-particle info");
+        error->all(FLERR,
+                   "Dump modify compute ID does not compute per-particle info");
       if (argindex[nfield+nthresh] == 0 &&
-	  modify->compute[n]->size_per_particle_cols > 0)
-	error->all(FLERR,
-		   "Dump modify compute ID does not compute "
-		   "per-particle vector");
+          modify->compute[n]->size_per_particle_cols > 0)
+        error->all(FLERR,
+                   "Dump modify compute ID does not compute "
+                   "per-particle vector");
       if (argindex[nfield+nthresh] > 0 &&
-	  modify->compute[n]->size_per_particle_cols == 0)
-	error->all(FLERR,
-		   "Dump modify compute ID does not compute "
-		   "per-particle array");
+          modify->compute[n]->size_per_particle_cols == 0)
+        error->all(FLERR,
+                   "Dump modify compute ID does not compute "
+                   "per-particle array");
       if (argindex[nfield+nthresh] > 0 &&
-	  argindex[nfield+nthresh] > modify->compute[n]->size_per_particle_cols)
-	error->all(FLERR,"Dump modify compute ID vector is not large enough");
+          argindex[nfield+nthresh] > modify->compute[n]->size_per_particle_cols)
+        error->all(FLERR,"Dump modify compute ID vector is not large enough");
 
       field2index[nfield+nthresh] = add_compute(suffix);
       delete [] suffix;
@@ -1105,29 +1105,29 @@ int DumpParticle::modify_param(int narg, char **arg)
 
       char *ptr = strchr(suffix,'[');
       if (ptr) {
-	if (suffix[strlen(suffix)-1] != ']')
-	  error->all(FLERR,"Invalid attribute in dump modify command");
-	argindex[nfield+nthresh] = atoi(ptr+1);
-	*ptr = '\0';
+        if (suffix[strlen(suffix)-1] != ']')
+          error->all(FLERR,"Invalid attribute in dump modify command");
+        argindex[nfield+nthresh] = atoi(ptr+1);
+        *ptr = '\0';
       } else argindex[nfield+nthresh] = 0;
 
       n = modify->find_fix(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump modify fix ID");
 
       if (modify->fix[n]->per_particle_flag == 0)
-	error->all(FLERR,"Dump modify fix ID does not compute "
-		   "per-particle info");
+        error->all(FLERR,"Dump modify fix ID does not compute "
+                   "per-particle info");
       if (argindex[nfield+nthresh] == 0 &&
-	  modify->fix[n]->size_per_particle_cols > 0)
-	error->all(FLERR,"Dump modify fix ID does not compute "
-		   "per-particle vector");
+          modify->fix[n]->size_per_particle_cols > 0)
+        error->all(FLERR,"Dump modify fix ID does not compute "
+                   "per-particle vector");
       if (argindex[nfield+nthresh] > 0 &&
-	  modify->fix[n]->size_per_particle_cols == 0)
-	error->all(FLERR,"Dump modify fix ID does not compute "
-		   "per-particle array");
+          modify->fix[n]->size_per_particle_cols == 0)
+        error->all(FLERR,"Dump modify fix ID does not compute "
+                   "per-particle array");
       if (argindex[nfield+nthresh] > 0 &&
-	  argindex[nfield+nthresh] > modify->fix[n]->size_per_particle_cols)
-	error->all(FLERR,"Dump modify fix ID vector is not large enough");
+          argindex[nfield+nthresh] > modify->fix[n]->size_per_particle_cols)
+        error->all(FLERR,"Dump modify fix ID vector is not large enough");
 
       field2index[nfield+nthresh] = add_fix(suffix);
       delete [] suffix;
@@ -1148,7 +1148,7 @@ int DumpParticle::modify_param(int narg, char **arg)
       n = input->variable->find(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump modify variable name");
       if (input->variable->particle_style(n) == 0)
-	error->all(FLERR,"Dump modify variable is not particle-style variable");
+        error->all(FLERR,"Dump modify variable is not particle-style variable");
 
       field2index[nfield+nthresh] = add_variable(suffix);
       delete [] suffix;

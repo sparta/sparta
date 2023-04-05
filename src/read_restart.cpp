@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -1160,7 +1160,7 @@ void ReadRestart::grid_params()
   if (nbits > sizeof(cellint)*8) {
     char str[128];
     sprintf(str,"Hierarchical grid induces cell IDs that exceed %d bits",
-	    (int) sizeof(cellint)*8);
+            (int) sizeof(cellint)*8);
     error->all(FLERR,str);
   }
 }

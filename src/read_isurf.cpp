@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -702,8 +702,8 @@ void ReadISurf::read_corners_parallel(char *gridfile)
 
   char *buf;
   int nout = comm->rendezvous(1,nrvous,(char *) sdatum,sizeof(SendDatum),
-			      0,proclist,rendezvous_corners,
-			      0,buf,sizeof(RecvDatum),(void *) this);
+                              0,proclist,rendezvous_corners,
+                              0,buf,sizeof(RecvDatum),(void *) this);
   RecvDatum *rdatum = (RecvDatum *) buf;
 
   memory->destroy(proclist);

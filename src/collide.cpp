@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -306,7 +306,7 @@ void Collide::init()
     int egroup = species2group[ambispecies];
     if (mixture->groupsize[egroup] != 1)
       error->all(FLERR,"Multigroup ambipolar collisions require "
-		 "electrons be their own group");
+                 "electrons be their own group");
   }
 
   // vre_next = next timestep to zero vremax & remain, based on vre_every
@@ -640,8 +640,8 @@ template < int NEARCP > void Collide::collisions_group()
       isp = particles[ip].ispecies;
       igroup = species2group[isp];
       if (ngroup[igroup] == maxgroup[igroup]) {
-	maxgroup[igroup] += DELTAPART;
-	memory->grow(glist[igroup],maxgroup[igroup],"collide:glist");
+        maxgroup[igroup] += DELTAPART;
+        memory->grow(glist[igroup],maxgroup[igroup],"collide:glist");
       }
       ng = ngroup[igroup];
       glist[igroup][ng] = n;
@@ -671,16 +671,16 @@ template < int NEARCP > void Collide::collisions_group()
     npair = 0;
     for (igroup = 0; igroup < ngroups; igroup++)
       for (jgroup = igroup; jgroup < ngroups; jgroup++) {
-	attempt = attempt_collision(icell,igroup,jgroup,volume);
-	nattempt = static_cast<int> (attempt);
+        attempt = attempt_collision(icell,igroup,jgroup,volume);
+        nattempt = static_cast<int> (attempt);
 
-	if (nattempt) {
-	  gpair[npair][0] = igroup;
-	  gpair[npair][1] = jgroup;
-	  gpair[npair][2] = nattempt;
-	  nattempt_one += nattempt;
-	  npair++;
-	}
+        if (nattempt) {
+          gpair[npair][0] = igroup;
+          gpair[npair][1] = jgroup;
+          gpair[npair][2] = nattempt;
+          nattempt_one += nattempt;
+          npair++;
+        }
       }
 
     // perform collisions for each pair of groups in gpair list
@@ -718,7 +718,7 @@ template < int NEARCP > void Collide::collisions_group()
       }
 
       for (int iattempt = 0; iattempt < nattempt; iattempt++) {
-	i = *ni * random->uniform();
+        i = *ni * random->uniform();
         if (NEARCP) j = find_nn_group(i,ilist,*nj,jlist,plist,nn_igroup,nn_jgroup);
         else {
           j = *nj * random->uniform();
@@ -726,13 +726,13 @@ template < int NEARCP > void Collide::collisions_group()
             while (i == j) j = *nj * random->uniform();
         }
 
-	ipart = &particles[plist[ilist[i]]];
-	jpart = &particles[plist[jlist[j]]];
+        ipart = &particles[plist[ilist[i]]];
+        jpart = &particles[plist[jlist[j]]];
 
         // test if collision actually occurs
         // continue to next collision if no reaction
 
-	if (!test_collision(icell,igroup,jgroup,ipart,jpart)) continue;
+        if (!test_collision(icell,igroup,jgroup,ipart,jpart)) continue;
 
         if (NEARCP) {
           nn_igroup[i] = j+1;
@@ -761,64 +761,64 @@ template < int NEARCP > void Collide::collisions_group()
 
         // perform collision and possible reaction
 
-	setup_collision(ipart,jpart);
-	reactflag = perform_collision(ipart,jpart,kpart);
-	ncollide_one++;
+        setup_collision(ipart,jpart);
+        reactflag = perform_collision(ipart,jpart,kpart);
+        ncollide_one++;
         if (reactflag) nreact_one++;
         else continue;
 
-	// ipart may now be in different group
+        // ipart may now be in different group
         // reset ilist,jlist after addgroup() in case it realloced glist
 
-	newgroup = species2group[ipart->ispecies];
-	if (newgroup != igroup) {
-	  addgroup(newgroup,ilist[i]);
-	  delgroup(igroup,i);
+        newgroup = species2group[ipart->ispecies];
+        if (newgroup != igroup) {
+          addgroup(newgroup,ilist[i]);
+          delgroup(igroup,i);
           ilist = glist[igroup];
           jlist = glist[jgroup];
           // this line needed if jgroup=igroup and delgroup() moved J particle
           if (jgroup == igroup && j == *ni) j = i;
-	}
+        }
 
-	// jpart may now be in different group or destroyed
+        // jpart may now be in different group or destroyed
         // if new group: reset ilist,jlist after addgroup() in case it realloced glist
-	// if destroyed: delete from plist and group, add particle to deletion list
+        // if destroyed: delete from plist and group, add particle to deletion list
 
-	if (jpart) {
-	  newgroup = species2group[jpart->ispecies];
-	  if (newgroup != jgroup) {
-	    addgroup(newgroup,jlist[j]);
-	    delgroup(jgroup,j);
-	    ilist = glist[igroup];
-	    jlist = glist[jgroup];
-	  }
-	
-	} else {
+        if (jpart) {
+          newgroup = species2group[jpart->ispecies];
+          if (newgroup != jgroup) {
+            addgroup(newgroup,jlist[j]);
+            delgroup(jgroup,j);
+            ilist = glist[igroup];
+            jlist = glist[jgroup];
+          }
+
+        } else {
           if (ndelete == maxdelete) {
             maxdelete += DELTADELETE;
             memory->grow(dellist,maxdelete,"collide:dellist");
           }
-	  pindex = jlist[j];
+          pindex = jlist[j];
           dellist[ndelete++] = plist[pindex];
 
-	  delgroup(jgroup,j);
+          delgroup(jgroup,j);
 
-	  plist[pindex] = plist[np-1];
-	  p2g[pindex][0] = p2g[np-1][0];
-	  p2g[pindex][1] = p2g[np-1][1];
-	  if (pindex < np-1) glist[p2g[pindex][0]][p2g[pindex][1]] = pindex;
-	  np--;
-	
+          plist[pindex] = plist[np-1];
+          p2g[pindex][0] = p2g[np-1][0];
+          p2g[pindex][1] = p2g[np-1][1];
+          if (pindex < np-1) glist[p2g[pindex][0]][p2g[pindex][1]] = pindex;
+          np--;
+
           if (NEARCP) nn_jgroup[j] = nn_jgroup[*nj];
-	}
+        }
 
         // if kpart created, add to plist and group list
-	// kpart was just added to particle list, so index = nlocal-1
+        // kpart was just added to particle list, so index = nlocal-1
         // reset ilist,jlist after addgroup() in case it realloced
         // particles data struct may also have been realloced
 
-	if (kpart) {
-	  newgroup = species2group[kpart->ispecies];
+        if (kpart) {
+          newgroup = species2group[kpart->ispecies];
 
           if (NEARCP) {
             if (newgroup == igroup || newgroup == jgroup) {
@@ -832,21 +832,21 @@ template < int NEARCP > void Collide::collisions_group()
             }
           }
 
-	  if (np == npmax) {
-	    npmax += DELTAPART;
-	    memory->grow(plist,npmax,"collide:plist");
-	    memory->grow(p2g,npmax,2,"collide:p2g");
-	  }
-	  plist[np++] = particle->nlocal-1;
+          if (np == npmax) {
+            npmax += DELTAPART;
+            memory->grow(plist,npmax,"collide:plist");
+            memory->grow(p2g,npmax,2,"collide:p2g");
+          }
+          plist[np++] = particle->nlocal-1;
 
-	  addgroup(newgroup,np-1);
+          addgroup(newgroup,np-1);
           ilist = glist[igroup];
           jlist = glist[jgroup];
           particles = particle->particles;
-	}
+        }
 
         // test to exit attempt loop due to groups becoming too small
-	
+
         if (*ni <= 1) {
           if (*ni == 0) break;
           if (igroup == jgroup) break;
@@ -1072,46 +1072,46 @@ void Collide::collisions_one_ambipolar()
       //   remove from plist, flag J for deletion
 
       if (jpart) {
-	if (jspecies != ambispecies && jpart->ispecies == ambispecies) {
-	  if (nelectron == maxelectron) {
-	    maxelectron += DELTAELECTRON;
-	    elist = (Particle::OnePart *)
-	      memory->srealloc(elist,maxelectron*nbytes,"collide:elist");
-	  }
-	  ep = &elist[nelectron];
-	  memcpy(ep,jpart,nbytes);
-	  ep->ispecies = ambispecies;
-	  nelectron++;
-	  jpart = NULL;
-	
-	} else if (jspecies == ambispecies && jpart->ispecies != ambispecies) {
-	  int reallocflag = particle->add_particle();
-	  if (reallocflag) {
-	    particles = particle->particles;
-	    ionambi = particle->eivec[particle->ewhich[index_ionambi]];
-	    velambi = particle->edarray[particle->ewhich[index_velambi]];
-	  }
+        if (jspecies != ambispecies && jpart->ispecies == ambispecies) {
+          if (nelectron == maxelectron) {
+            maxelectron += DELTAELECTRON;
+            elist = (Particle::OnePart *)
+              memory->srealloc(elist,maxelectron*nbytes,"collide:elist");
+          }
+          ep = &elist[nelectron];
+          memcpy(ep,jpart,nbytes);
+          ep->ispecies = ambispecies;
+          nelectron++;
+          jpart = NULL;
 
-	  int index = particle->nlocal-1;
-	  memcpy(&particles[index],jpart,nbytes);
-	  particles[index].id = MAXSMALLINT*random->uniform();
-	  ionambi[index] = 0;
-	
-	  if (nelectron-1 != j-np) memcpy(&elist[j-np],&elist[nelectron-1],nbytes);
-	  nelectron--;
+        } else if (jspecies == ambispecies && jpart->ispecies != ambispecies) {
+          int reallocflag = particle->add_particle();
+          if (reallocflag) {
+            particles = particle->particles;
+            ionambi = particle->eivec[particle->ewhich[index_ionambi]];
+            velambi = particle->edarray[particle->ewhich[index_velambi]];
+          }
 
-	  if (np == npmax) {
-	    npmax += DELTAPART;
-	    memory->grow(plist,npmax,"collide:plist");
-	  }
-	  plist[np++] = index;
-	}
+          int index = particle->nlocal-1;
+          memcpy(&particles[index],jpart,nbytes);
+          particles[index].id = MAXSMALLINT*random->uniform();
+          ionambi[index] = 0;
+
+          if (nelectron-1 != j-np) memcpy(&elist[j-np],&elist[nelectron-1],nbytes);
+          nelectron--;
+
+          if (np == npmax) {
+            npmax += DELTAPART;
+            memory->grow(plist,npmax,"collide:plist");
+          }
+          plist[np++] = index;
+        }
       }
 
       if (!jpart && jspecies == ambispecies) {
-	if (nelectron-1 != j-np) memcpy(&elist[j-np],&elist[nelectron-1],nbytes);
-	nelectron--;
-	
+        if (nelectron-1 != j-np) memcpy(&elist[j-np],&elist[nelectron-1],nbytes);
+        nelectron--;
+
       } else if (!jpart) {
         if (ndelete == maxdelete) {
           maxdelete += DELTADELETE;
@@ -1139,11 +1139,11 @@ void Collide::collisions_one_ambipolar()
     for (n = 0; n < np; n++) {
       i = plist[n];
       if (ionambi[i]) {
-	if (melectron < nelectron) {
-	  ep = &elist[melectron];
-	  memcpy(velambi[i],ep->v,3*sizeof(double));
-	}
-	melectron++;
+        if (melectron < nelectron) {
+          ep = &elist[melectron];
+          memcpy(velambi[i],ep->v,3*sizeof(double));
+        }
+        melectron++;
       }
     }
     if (melectron != nelectron)
@@ -1223,8 +1223,8 @@ void Collide::collisions_group_ambipolar()
       isp = particles[ip].ispecies;
       igroup = species2group[isp];
       if (ngroup[igroup] == maxgroup[igroup]) {
-	maxgroup[igroup] += DELTAPART;
-	memory->grow(glist[igroup],maxgroup[igroup],"collide:glist");
+        maxgroup[igroup] += DELTAPART;
+        memory->grow(glist[igroup],maxgroup[igroup],"collide:glist");
       }
       ng = ngroup[igroup];
       glist[igroup][ng] = n;
@@ -1239,15 +1239,15 @@ void Collide::collisions_group_ambipolar()
         memcpy(ep,p,nbytes);
         memcpy(ep->v,velambi[ip],3*sizeof(double));
         ep->ispecies = ambispecies;
-	nelectron++;
+        nelectron++;
 
-	if (ngroup[egroup] == maxgroup[egroup]) {
-	  maxgroup[egroup] += DELTAPART;
-	  memory->grow(glist[egroup],maxgroup[egroup],"collide:grouplist");
-	}
-	ng = ngroup[egroup];
-	glist[egroup][ng] = nelectron-1;
-	ngroup[egroup]++;
+        if (ngroup[egroup] == maxgroup[egroup]) {
+          maxgroup[egroup] += DELTAPART;
+          memory->grow(glist[egroup],maxgroup[egroup],"collide:grouplist");
+        }
+        ng = ngroup[egroup];
+        glist[egroup][ng] = nelectron-1;
+        ngroup[egroup]++;
       }
 
       n++;
@@ -1266,22 +1266,22 @@ void Collide::collisions_group_ambipolar()
     npair = 0;
     for (igroup = 0; igroup < ngroups; igroup++)
       for (jgroup = igroup; jgroup < ngroups; jgroup++) {
-	if (igroup == egroup && jgroup == egroup) continue;
-	attempt = attempt_collision(icell,igroup,jgroup,volume);
-	nattempt = static_cast<int> (attempt);
+        if (igroup == egroup && jgroup == egroup) continue;
+        attempt = attempt_collision(icell,igroup,jgroup,volume);
+        nattempt = static_cast<int> (attempt);
 
-	if (nattempt) {
-	  if (igroup == egroup) {
-	      gpair[npair][0] = jgroup;
-	      gpair[npair][1] = igroup;
-	    } else {
-	      gpair[npair][0] = igroup;
-	      gpair[npair][1] = jgroup;
-	    }
-	  gpair[npair][2] = nattempt;
-	  nattempt_one += nattempt;
-	  npair++;
-	}
+        if (nattempt) {
+          if (igroup == egroup) {
+              gpair[npair][0] = jgroup;
+              gpair[npair][1] = igroup;
+            } else {
+              gpair[npair][0] = igroup;
+              gpair[npair][1] = jgroup;
+            }
+          gpair[npair][2] = nattempt;
+          nattempt_one += nattempt;
+          npair++;
+        }
       }
 
     // perform collisions for each pair of groups in gpair list
@@ -1311,17 +1311,17 @@ void Collide::collisions_group_ambipolar()
       if (igroup == jgroup && *ni == 1) continue;
 
       for (int iattempt = 0; iattempt < nattempt; iattempt++) {
-	i = *ni * random->uniform();
+        i = *ni * random->uniform();
         j = *nj * random->uniform();
         if (igroup == jgroup)
           while (i == j) j = *nj * random->uniform();
 
-	// ipart/jpart can be from particles or elist
+        // ipart/jpart can be from particles or elist
 
-	if (igroup == egroup) ipart = &elist[i];
-	else ipart = &particles[plist[ilist[i]]];
-	if (jgroup == egroup) jpart = &elist[j];
-	else jpart = &particles[plist[jlist[j]]];
+        if (igroup == egroup) ipart = &elist[i];
+        else ipart = &particles[plist[ilist[i]]];
+        if (jgroup == egroup) jpart = &elist[j];
+        else jpart = &particles[plist[jlist[j]]];
 
         // NOTE: unlike single group, no possibility of e/e collision
         //       means collision stats may be different
@@ -1329,44 +1329,44 @@ void Collide::collisions_group_ambipolar()
         //if (ipart->ispecies == ambispecies && jpart->ispecies == ambispecies) {
         //  ncollide_one++;
         //  continue;
-	//}
+        //}
 
         // test if collision actually occurs
-	
-	if (!test_collision(icell,igroup,jgroup,ipart,jpart)) continue;
 
-	// if recombination reaction is possible for this IJ pair
-	// pick a 3rd particle to participate and set cell number density
-	// unless boost factor turns it off, or there is no 3rd particle
-	// 3rd particle will never be an electron since plist has no electrons
-	// if jgroup == egroup, no need to check k for match to jj
-	
-	if (recombflag && recomb_ijflag[ipart->ispecies][jpart->ispecies]) {
-	  if (random->uniform() > react->recomb_boost_inverse)
-	    react->recomb_species = -1;
-	  else if (np <= 2)
+        if (!test_collision(icell,igroup,jgroup,ipart,jpart)) continue;
+
+        // if recombination reaction is possible for this IJ pair
+        // pick a 3rd particle to participate and set cell number density
+        // unless boost factor turns it off, or there is no 3rd particle
+        // 3rd particle will never be an electron since plist has no electrons
+        // if jgroup == egroup, no need to check k for match to jj
+
+        if (recombflag && recomb_ijflag[ipart->ispecies][jpart->ispecies]) {
+          if (random->uniform() > react->recomb_boost_inverse)
             react->recomb_species = -1;
-	  else {
-	    ii = ilist[i];
-	    if (jgroup == egroup) jj = -1;
-	    else jj = jlist[j];
-	    k = np * random->uniform();
-	    while (k == ii || k == jj) k = np * random->uniform();
-	    react->recomb_part3 = &particles[plist[k]];
-	    react->recomb_species = react->recomb_part3->ispecies;
-	    react->recomb_density = np * update->fnum / volume;
-	  }
-	}
+          else if (np <= 2)
+            react->recomb_species = -1;
+          else {
+            ii = ilist[i];
+            if (jgroup == egroup) jj = -1;
+            else jj = jlist[j];
+            k = np * random->uniform();
+            while (k == ii || k == jj) k = np * random->uniform();
+            react->recomb_part3 = &particles[plist[k]];
+            react->recomb_species = react->recomb_part3->ispecies;
+            react->recomb_density = np * update->fnum / volume;
+          }
+        }
 
-	// perform collision
-	// ijspecies = species before collision chemistry
+        // perform collision
+        // ijspecies = species before collision chemistry
         // continue to next collision if no reaction
 
         ispecies = ipart->ispecies;
         jspecies = jpart->ispecies;
-	setup_collision(ipart,jpart);
-	reactflag = perform_collision(ipart,jpart,kpart);
-	ncollide_one++;
+        setup_collision(ipart,jpart);
+        reactflag = perform_collision(ipart,jpart,kpart);
+        ncollide_one++;
         if (reactflag) nreact_one++;
         else continue;
 
@@ -1375,170 +1375,170 @@ void Collide::collisions_group_ambipolar()
         // first reset ionambi if kpart was added since ambi_reset() uses it
 
         if (kpart) ionambi = particle->eivec[particle->ewhich[index_ionambi]];
-	if (jgroup == egroup)
-	  ambi_reset(plist[ilist[i]],-1,jspecies,ipart,jpart,kpart,ionambi);
-	else
-	  ambi_reset(plist[ilist[i]],plist[jlist[j]],jspecies,
-		     ipart,jpart,kpart,ionambi);
+        if (jgroup == egroup)
+          ambi_reset(plist[ilist[i]],-1,jspecies,ipart,jpart,kpart,ionambi);
+        else
+          ambi_reset(plist[ilist[i]],plist[jlist[j]],jspecies,
+                     ipart,jpart,kpart,ionambi);
 
-	// ipart may now be in different group
-	// reset ilist,jlist after addgroup() in case it realloced glist
+        // ipart may now be in different group
+        // reset ilist,jlist after addgroup() in case it realloced glist
 
-	newgroup = species2group[ipart->ispecies];
-	if (newgroup != igroup) {
-	  addgroup(newgroup,ilist[i]);
-	  delgroup(igroup,i);
+        newgroup = species2group[ipart->ispecies];
+        if (newgroup != igroup) {
+          addgroup(newgroup,ilist[i]);
+          delgroup(igroup,i);
           ilist = glist[igroup];
           jlist = glist[jgroup];
           // this line needed if jgroup=igroup and delgroup() moved J particle
           if (jlist == ilist && j == *ni) j = i;
-	}
-
-	// if kpart created:
-	// particles and custom data structs may have been realloced by kpart
-	// add kpart to plist or elist and to group
-	// kpart was just added to particle list, so index = nlocal-1
-        // must come before jpart code below since it modifies nlocal
-
-	if (kpart) {
-	  particles = particle->particles;
-	  ionambi = particle->eivec[particle->ewhich[index_ionambi]];
-	  velambi = particle->edarray[particle->ewhich[index_velambi]];
-
-	  newgroup = species2group[kpart->ispecies];
-
-	  if (newgroup != egroup) {
-	    if (np == npmax) {
-	      npmax += DELTAPART;
-	      memory->grow(plist,npmax,"collide:plist");
-	      memory->grow(p2g,npmax,2,"collide:p2g");
-	    }
-	    plist[np++] = particle->nlocal-1;
-	    addgroup(newgroup,np-1);
-	    ilist = glist[igroup];
-	    jlist = glist[jgroup];
-	
-	  } else {
-	    if (nelectron == maxelectron) {
-	      maxelectron += DELTAELECTRON;
-	      elist = (Particle::OnePart *)
-		memory->srealloc(elist,maxelectron*nbytes,"collide:elist");
-	    }
-	    ep = &elist[nelectron];
-	    memcpy(ep,kpart,nbytes);
-	    ep->ispecies = ambispecies;
-	    nelectron++;
-	    particle->nlocal--;
-
-	    if (ngroup[egroup] == maxgroup[egroup]) {
-	      maxgroup[egroup] += DELTAPART;
-	      memory->grow(glist[egroup],maxgroup[egroup],"collide:grouplist");
-	    }
-	    ng = ngroup[egroup];
-	    glist[egroup][ng] = nelectron-1;
-	    ngroup[egroup]++;
-	  }
         }
 
-	// jpart may now be in a different group or destroyed
-	// if jpart exists, now in a different group, neither group is egroup:
-	//   add/del group, reset ilist,jlist after addgroup() in case glist realloced
-	// if jpart exists, was originally not an electron, now is an electron:
-	//   ionization reaction converted 2 neutrals to one ion
-	//   add to elist, remove from plist, flag J for deletion
-	// if jpart exists, was originally an electron, now is not an electron:
-	//   exchange reaction converted ion + electron to two neutrals
-	//   add neutral J to master particle list, remove from elist, add to plist
-	// if jpart destroyed, was an electron:
-	//   recombination reaction converted ion + electron to one neutral
-	//   remove electron from elist
-	// else if jpart destroyed:
-	//   non-ambipolar recombination reaction
-	//   remove from plist and group, add particle to deletion list
+        // if kpart created:
+        // particles and custom data structs may have been realloced by kpart
+        // add kpart to plist or elist and to group
+        // kpart was just added to particle list, so index = nlocal-1
+        // must come before jpart code below since it modifies nlocal
 
-	if (jpart) {
-	  newgroup = species2group[jpart->ispecies];
-	
-	  if (newgroup == jgroup) {
-	    // nothing to do
+        if (kpart) {
+          particles = particle->particles;
+          ionambi = particle->eivec[particle->ewhich[index_ionambi]];
+          velambi = particle->edarray[particle->ewhich[index_velambi]];
 
-	  } else if (jgroup != egroup && newgroup != egroup) {
-	    addgroup(newgroup,jlist[j]);
-	    delgroup(jgroup,j);
-	    ilist = glist[igroup];
-	    jlist = glist[jgroup];
+          newgroup = species2group[kpart->ispecies];
 
-	  } else if (jgroup != egroup && jpart->ispecies == ambispecies) {
-	    if (nelectron == maxelectron) {
-	      maxelectron += DELTAELECTRON;
-	      elist = (Particle::OnePart *)
-		memory->srealloc(elist,maxelectron*nbytes,"collide:elist");
-	    }
-	    ep = &elist[nelectron];
-	    memcpy(ep,jpart,nbytes);
-	    ep->ispecies = ambispecies;
-	    nelectron++;
+          if (newgroup != egroup) {
+            if (np == npmax) {
+              npmax += DELTAPART;
+              memory->grow(plist,npmax,"collide:plist");
+              memory->grow(p2g,npmax,2,"collide:p2g");
+            }
+            plist[np++] = particle->nlocal-1;
+            addgroup(newgroup,np-1);
+            ilist = glist[igroup];
+            jlist = glist[jgroup];
 
-	    if (ngroup[egroup] == maxgroup[egroup]) {
-	      maxgroup[egroup] += DELTAPART;
-	      memory->grow(glist[egroup],maxgroup[egroup],"collide:grouplist");
-	    }
-	    ng = ngroup[egroup];
-	    glist[egroup][ng] = nelectron-1;
-	    ngroup[egroup]++;
+          } else {
+            if (nelectron == maxelectron) {
+              maxelectron += DELTAELECTRON;
+              elist = (Particle::OnePart *)
+                memory->srealloc(elist,maxelectron*nbytes,"collide:elist");
+            }
+            ep = &elist[nelectron];
+            memcpy(ep,kpart,nbytes);
+            ep->ispecies = ambispecies;
+            nelectron++;
+            particle->nlocal--;
 
-	    jpart = NULL;
-	
-	  } else if (jgroup == egroup && jpart->ispecies != ambispecies) {
-	    int reallocflag = particle->add_particle();
-	    if (reallocflag) {
-	      particles = particle->particles;
-	      ionambi = particle->eivec[particle->ewhich[index_ionambi]];
-	      velambi = particle->edarray[particle->ewhich[index_velambi]];
-	    }
+            if (ngroup[egroup] == maxgroup[egroup]) {
+              maxgroup[egroup] += DELTAPART;
+              memory->grow(glist[egroup],maxgroup[egroup],"collide:grouplist");
+            }
+            ng = ngroup[egroup];
+            glist[egroup][ng] = nelectron-1;
+            ngroup[egroup]++;
+          }
+        }
 
-	    int index = particle->nlocal-1;
-	    memcpy(&particles[index],jpart,nbytes);
-	    particles[index].id = MAXSMALLINT*random->uniform();
-	    ionambi[index] = 0;
-	
-	    if (nelectron-1 != j) memcpy(&elist[j],&elist[nelectron-1],nbytes);
-	    nelectron--;
-	    ngroup[egroup]--;
+        // jpart may now be in a different group or destroyed
+        // if jpart exists, now in a different group, neither group is egroup:
+        //   add/del group, reset ilist,jlist after addgroup() in case glist realloced
+        // if jpart exists, was originally not an electron, now is an electron:
+        //   ionization reaction converted 2 neutrals to one ion
+        //   add to elist, remove from plist, flag J for deletion
+        // if jpart exists, was originally an electron, now is not an electron:
+        //   exchange reaction converted ion + electron to two neutrals
+        //   add neutral J to master particle list, remove from elist, add to plist
+        // if jpart destroyed, was an electron:
+        //   recombination reaction converted ion + electron to one neutral
+        //   remove electron from elist
+        // else if jpart destroyed:
+        //   non-ambipolar recombination reaction
+        //   remove from plist and group, add particle to deletion list
 
-	    if (np == npmax) {
-	      npmax += DELTAPART;
-	      memory->grow(plist,npmax,"collide:plist");
-	      memory->grow(p2g,npmax,2,"collide:p2g");
-	    }
-	    plist[np++] = index;
-	    addgroup(newgroup,np-1);
-	    ilist = glist[igroup];
-	    jlist = glist[jgroup];
-	  }
-	}
+        if (jpart) {
+          newgroup = species2group[jpart->ispecies];
 
-	if (!jpart && jspecies == ambispecies) {
-	  if (nelectron-1 != j) memcpy(&elist[j],&elist[nelectron-1],nbytes);
-	  nelectron--;
-	  ngroup[egroup]--;
-	
-	} else if (!jpart) {
-	  if (ndelete == maxdelete) {
-	    maxdelete += DELTADELETE;
-	    memory->grow(dellist,maxdelete,"collide:dellist");
-	  }
-	  pindex = jlist[j];
-	  dellist[ndelete++] = plist[pindex];
+          if (newgroup == jgroup) {
+            // nothing to do
 
-	  delgroup(jgroup,j);
+          } else if (jgroup != egroup && newgroup != egroup) {
+            addgroup(newgroup,jlist[j]);
+            delgroup(jgroup,j);
+            ilist = glist[igroup];
+            jlist = glist[jgroup];
 
-	  plist[pindex] = plist[np-1];
-	  p2g[pindex][0] = p2g[np-1][0];
-	  p2g[pindex][1] = p2g[np-1][1];
-	  if (pindex < np-1) glist[p2g[pindex][0]][p2g[pindex][1]] = pindex;
-	  np--;
-	}
+          } else if (jgroup != egroup && jpart->ispecies == ambispecies) {
+            if (nelectron == maxelectron) {
+              maxelectron += DELTAELECTRON;
+              elist = (Particle::OnePart *)
+                memory->srealloc(elist,maxelectron*nbytes,"collide:elist");
+            }
+            ep = &elist[nelectron];
+            memcpy(ep,jpart,nbytes);
+            ep->ispecies = ambispecies;
+            nelectron++;
+
+            if (ngroup[egroup] == maxgroup[egroup]) {
+              maxgroup[egroup] += DELTAPART;
+              memory->grow(glist[egroup],maxgroup[egroup],"collide:grouplist");
+            }
+            ng = ngroup[egroup];
+            glist[egroup][ng] = nelectron-1;
+            ngroup[egroup]++;
+
+            jpart = NULL;
+
+          } else if (jgroup == egroup && jpart->ispecies != ambispecies) {
+            int reallocflag = particle->add_particle();
+            if (reallocflag) {
+              particles = particle->particles;
+              ionambi = particle->eivec[particle->ewhich[index_ionambi]];
+              velambi = particle->edarray[particle->ewhich[index_velambi]];
+            }
+
+            int index = particle->nlocal-1;
+            memcpy(&particles[index],jpart,nbytes);
+            particles[index].id = MAXSMALLINT*random->uniform();
+            ionambi[index] = 0;
+
+            if (nelectron-1 != j) memcpy(&elist[j],&elist[nelectron-1],nbytes);
+            nelectron--;
+            ngroup[egroup]--;
+
+            if (np == npmax) {
+              npmax += DELTAPART;
+              memory->grow(plist,npmax,"collide:plist");
+              memory->grow(p2g,npmax,2,"collide:p2g");
+            }
+            plist[np++] = index;
+            addgroup(newgroup,np-1);
+            ilist = glist[igroup];
+            jlist = glist[jgroup];
+          }
+        }
+
+        if (!jpart && jspecies == ambispecies) {
+          if (nelectron-1 != j) memcpy(&elist[j],&elist[nelectron-1],nbytes);
+          nelectron--;
+          ngroup[egroup]--;
+
+        } else if (!jpart) {
+          if (ndelete == maxdelete) {
+            maxdelete += DELTADELETE;
+            memory->grow(dellist,maxdelete,"collide:dellist");
+          }
+          pindex = jlist[j];
+          dellist[ndelete++] = plist[pindex];
+
+          delgroup(jgroup,j);
+
+          plist[pindex] = plist[np-1];
+          p2g[pindex][0] = p2g[np-1][0];
+          p2g[pindex][1] = p2g[np-1][1];
+          if (pindex < np-1) glist[p2g[pindex][0]][p2g[pindex][1]] = pindex;
+          np--;
+        }
 
         // test to exit attempt loop due to groups becoming too small
 
@@ -1563,11 +1563,11 @@ void Collide::collisions_group_ambipolar()
     for (n = 0; n < np; n++) {
       i = plist[n];
       if (ionambi[i]) {
-	if (melectron < nelectron) {
-	  ep = &elist[melectron];
-	  memcpy(velambi[i],ep->v,3*sizeof(double));
-	}
-	melectron++;
+        if (melectron < nelectron) {
+          ep = &elist[melectron];
+          memcpy(velambi[i],ep->v,3*sizeof(double));
+        }
+        melectron++;
       }
     }
     if (melectron != nelectron)

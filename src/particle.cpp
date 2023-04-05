@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -282,8 +282,8 @@ void Particle::compress_rebalance()
     int i = 0;
     while (i < nlocal) {
       if (particles[i].icell < 0) {
-	memcpy(&particles[i],&particles[nlocal-1],nbytes);
-	nlocal--;
+        memcpy(&particles[i],&particles[nlocal-1],nbytes);
+        nlocal--;
       } else i++;
     }
 
@@ -291,9 +291,9 @@ void Particle::compress_rebalance()
     int i = 0;
     while (i < nlocal) {
       if (particles[i].icell < 0) {
-	memcpy(&particles[i],&particles[nlocal-1],nbytes);
-	copy_custom(i,nlocal-1);
-	nlocal--;
+        memcpy(&particles[i],&particles[nlocal-1],nbytes);
+        copy_custom(i,nlocal-1);
+        nlocal--;
       } else i++;
     }
   }
@@ -557,7 +557,7 @@ void Particle::post_weight()
     if (ratio < 1.0) {
       if (wrandom->uniform() > ratio) {
         memcpy(&particles[i],&particles[nlocal-1],nbytes);
-	if (ncustom) copy_custom(i,nlocal-1);
+        if (ncustom) copy_custom(i,nlocal-1);
         if (nlocal > nlocal_original) i++;
         else nlocal_original--;
         nlocal--;
@@ -601,7 +601,7 @@ void Particle::grow(int nextra)
   maxlocal = newmax;
   particles = (OnePart *)
     memory->srealloc(particles,maxlocal*sizeof(OnePart),
-		     "particle:particles",SPARTA_GET_ALIGN(OnePart));
+                     "particle:particles",SPARTA_GET_ALIGN(OnePart));
   memset(&particles[oldmax],0,(maxlocal-oldmax)*sizeof(OnePart));
 
   if (ncustom == 0) return;
@@ -1141,8 +1141,8 @@ void Particle::read_species_file()
     if (nfile == maxfile) {
       maxfile += DELTASPECIES;
       filespecies = (Species *)
-	memory->srealloc(filespecies,maxfile*sizeof(Species),
-			 "particle:filespecies");
+        memory->srealloc(filespecies,maxfile*sizeof(Species),
+                         "particle:filespecies");
       memset(&filespecies[nfile],0,(maxfile-nfile)*sizeof(Species));
     }
 
@@ -1227,8 +1227,8 @@ void Particle::read_rotation_file()
     if (nfile == maxfile) {
       maxfile += DELTASPECIES;
       filerot = (RotFile *)
-	memory->srealloc(filerot,maxfile*sizeof(RotFile),
-			 "particle:filerot");
+        memory->srealloc(filerot,maxfile*sizeof(RotFile),
+                         "particle:filerot");
       memset(&filerot[nfile],0,(maxfile-nfile)*sizeof(RotFile));
     }
 
@@ -1285,8 +1285,8 @@ void Particle::read_vibration_file()
     if (nfile == maxfile) {
       maxfile += DELTASPECIES;
       filevib = (VibFile *)
-	memory->srealloc(filevib,maxfile*sizeof(VibFile),
-			 "particle:filevib");
+        memory->srealloc(filevib,maxfile*sizeof(VibFile),
+                         "particle:filevib");
       memset(&filevib[nfile],0,(maxfile-nfile)*sizeof(VibFile));
     }
 

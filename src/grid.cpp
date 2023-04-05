@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -1153,14 +1153,14 @@ void Grid::find_neighbors()
       if (bflag[iface] == PERIODIC) periodic = 1;
       else periodic = 0;
       if (dimension == 2 && (iface == ZLO || iface == ZHI))
-	periodic = 0;
+        periodic = 0;
 
       // face = non-periodic boundary, neighbor is BOUND
 
       if (boundary && !periodic) {
-	neigh[iface] = 0;
-	nmask = neigh_encode(NBOUND,nmask,iface);
-	continue;
+        neigh[iface] = 0;
+        nmask = neigh_encode(NBOUND,nmask,iface);
+        continue;
       }
 
       // neighID = ID of neighbor cell at same level as icell
@@ -1171,10 +1171,10 @@ void Grid::find_neighbors()
       // if in hash, neighbor is CHILD
 
       if (hash->find(neighID) != hash->end()) {
-	neigh[iface] = (*hash)[neighID];
-	if (!boundary) nmask = neigh_encode(NCHILD,nmask,iface);
-	else nmask = neigh_encode(NPBCHILD,nmask,iface);
-	continue;
+        neigh[iface] = (*hash)[neighID];
+        if (!boundary) nmask = neigh_encode(NCHILD,nmask,iface);
+        else nmask = neigh_encode(NPBCHILD,nmask,iface);
+        continue;
       }
 
       // refine from neighID until reach maxlevel
@@ -1187,20 +1187,20 @@ void Grid::find_neighbors()
       found = 0;
 
       while (ilevel < maxlevel) {
-	refineID = id_refine(refineID,ilevel,face_touching);
-	if (hash->find(refineID) != hash->end()) {
-	  neigh[iface] = nparent;
-	  if (!boundary) nmask = neigh_encode(NPARENT,nmask,iface);
-	  else nmask = neigh_encode(NPBPARENT,nmask,iface);
-	
-	  if (nparent == maxparent) grow_pcells();
-	  pcells[nparent].id = neighID;
-	  id_lohi(neighID,level,boxlo,boxhi,pcells[nparent].lo,pcells[nparent].hi);
-	  nparent++;
-	
-	  found = 1;
-	  break;
-	} else ilevel++;
+        refineID = id_refine(refineID,ilevel,face_touching);
+        if (hash->find(refineID) != hash->end()) {
+          neigh[iface] = nparent;
+          if (!boundary) nmask = neigh_encode(NPARENT,nmask,iface);
+          else nmask = neigh_encode(NPBPARENT,nmask,iface);
+
+          if (nparent == maxparent) grow_pcells();
+          pcells[nparent].id = neighID;
+          id_lohi(neighID,level,boxlo,boxhi,pcells[nparent].lo,pcells[nparent].hi);
+          nparent++;
+
+          found = 1;
+          break;
+        } else ilevel++;
       }
       if (found) continue;
 
@@ -1212,14 +1212,14 @@ void Grid::find_neighbors()
       found = 0;
 
       while (ilevel > 1) {
-	coarsenID = id_coarsen(coarsenID,ilevel);
-	if (hash->find(coarsenID) != hash->end()) {
-	  neigh[iface] = (*hash)[coarsenID];
-	  if (!boundary) nmask = neigh_encode(NCHILD,nmask,iface);
-	  else nmask = neigh_encode(NPBCHILD,nmask,iface);
-	  found = 1;
-	  break;
-	} else ilevel--;
+        coarsenID = id_coarsen(coarsenID,ilevel);
+        if (hash->find(coarsenID) != hash->end()) {
+          neigh[iface] = (*hash)[coarsenID];
+          if (!boundary) nmask = neigh_encode(NCHILD,nmask,iface);
+          else nmask = neigh_encode(NPBCHILD,nmask,iface);
+          found = 1;
+          break;
+        } else ilevel--;
       }
       if (found) continue;
 
@@ -1341,11 +1341,11 @@ void Grid::reset_neighbors()
         } else neigh[i] = (*hash)[neigh[i]];
 
       } else if (nflag == NPARENT || nflag == NPBPARENT) {
-	if (nparent == maxparent) grow_pcells();
-	pcells[nparent].id = neigh[i];
-	id_lohi(neigh[i],level,boxlo,boxhi,pcells[nparent].lo,pcells[nparent].hi);
+        if (nparent == maxparent) grow_pcells();
+        pcells[nparent].id = neigh[i];
+        id_lohi(neigh[i],level,boxlo,boxhi,pcells[nparent].lo,pcells[nparent].hi);
         neigh[i] = nparent;
-	nparent++;
+        nparent++;
 
       } else if (nflag == NUNKNOWN || nflag == NPBUNKNOWN) {
         if (hash->find(neigh[i]) != hash->end()) {
@@ -1569,7 +1569,7 @@ void Grid::set_inout()
             //   find jcell = child cell owner of the face corner pt
             //   if I own the child cell, mark it in same manner as above
 
-	    pcell = &pcells[jcell];
+            pcell = &pcells[jcell];
             for (m = 0; m < nface_pts; m++) {
               ic = corners[iface][m];
               if (ic % 2) xcorner[0] = cells[icell].hi[0];
@@ -1583,7 +1583,7 @@ void Grid::set_inout()
                 domain->uncollide(faceflip[iface],xcorner);
 
               jcell = id_find_child(pcell->id,cells[icell].level,
-				    pcell->lo,pcell->hi,xcorner);
+                                    pcell->lo,pcell->hi,xcorner);
               if (jcell < 0) error->one(FLERR,"Parent cell child missing");
 
               // this proc owns neighbor cell
@@ -1896,7 +1896,7 @@ void Grid::type_check(int outflag)
     char str[128];
     sprintf(str,"Grid cell interior corner points marked as unknown "
             "(volume will be wrong if cell is effectively outside) = %d",
-	    insideall);
+            insideall);
     if (comm->me == 0) error->warning(FLERR,str);
   }
 
@@ -1905,7 +1905,7 @@ void Grid::type_check(int outflag)
   if (outsideall) {
     char str[128];
     sprintf(str,"Grid cell corner points on boundary marked as unknown = %d",
-	    outsideall);
+            outsideall);
     error->all(FLERR,str);
   }
 
@@ -1919,7 +1919,7 @@ void Grid::type_check(int outflag)
   if (outsideall) {
     char str[128];
     sprintf(str,"Grid cells marked outside, but with zero volume = %d",
-	    volzeroall);
+            volzeroall);
     error->all(FLERR,str);
   }
 

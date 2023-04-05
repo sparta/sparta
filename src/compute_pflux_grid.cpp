@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -306,9 +306,9 @@ void ComputePFluxGrid::post_process_grid(int index, int nsample,
         if (summass == 0.0) vec[k] = 0.0;
         else {
           wt = fnum * cinfo[icell].weight / cinfo[icell].volume;
-	  summv = etally[icell][mv];
-	  vec[k] = wt/nsample * (etally[icell][mvv] - summv*summv/summass);
-	}
+          summv = etally[icell][mv];
+          vec[k] = wt/nsample * (etally[icell][mvv] - summv*summv/summass);
+        }
         k += nstride;
       }
       break;
@@ -331,9 +331,9 @@ void ComputePFluxGrid::post_process_grid(int index, int nsample,
         if (summass == 0.0) vec[k] = 0.0;
         else {
           wt = fnum * cinfo[icell].weight / cinfo[icell].volume;
-	  vec[k] = wt/nsample * (etally[icell][mvv] -
-				 etally[icell][mv1]*etally[icell][mv2]/summass);
-	}
+          vec[k] = wt/nsample * (etally[icell][mvv] -
+                                 etally[icell][mv1]*etally[icell][mv2]/summass);
+        }
         k += nstride;
       }
       break;

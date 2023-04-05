@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -120,8 +120,8 @@ class Memory : protected Pointers {
 
       bigint n = 0;
       for (int i = 0; i < n1; i++) {
-	array[i] = &data[n];
-	n += n2;
+        array[i] = &data[n];
+        n += n2;
       }
       return array;
     }
@@ -147,8 +147,8 @@ class Memory : protected Pointers {
 
       bigint n = 0;
       for (int i = 0; i < n1; i++) {
-	array[i] = &data[n];
-	n += n2;
+        array[i] = &data[n];
+        n += n2;
       }
       return array;
     }
@@ -186,8 +186,8 @@ class Memory : protected Pointers {
 
       bigint n = 0;
       for (int i = 0; i < n1; i++) {
-	array[i] = &data[n];
-	n += n2[i];
+        array[i] = &data[n];
+        n += n2[i];
       }
       return array;
     }
@@ -203,7 +203,7 @@ class Memory : protected Pointers {
 
   template <typename TYPE>
     TYPE **create2d_offset(TYPE **&array, int n1, int n2lo, int n2hi,
-			   const char *name)
+                           const char *name)
     {
       int n2 = n2hi - n2lo + 1;
       create(array,n1,n2,name);
@@ -213,7 +213,7 @@ class Memory : protected Pointers {
 
   template <typename TYPE>
     TYPE ***create2d_offset(TYPE ***&array, int n1, int n2lo, int n2hi,
-			    const char *name) {fail(name);}
+                            const char *name) {fail(name);}
 
 /* ----------------------------------------------------------------------
    destroy a 2d array with 2nd index offset
@@ -245,12 +245,12 @@ class Memory : protected Pointers {
       bigint m;
       bigint n = 0;
       for (i = 0; i < n1; i++) {
-	m = ((bigint) i) * n2;
-	array[i] = &plane[m];
-	for (j = 0; j < n2; j++) {
-	  plane[m+j] = &data[n];
-	  n += n3;
-	}
+        m = ((bigint) i) * n2;
+        array[i] = &plane[m];
+        for (j = 0; j < n2; j++) {
+          plane[m+j] = &data[n];
+          n += n3;
+        }
       }
       return array;
     }
@@ -280,12 +280,12 @@ class Memory : protected Pointers {
       bigint m;
       bigint n = 0;
       for (i = 0; i < n1; i++) {
-	m = ((bigint) i) * n2;
-	array[i] = &plane[m];
-	for (j = 0; j < n2; j++) {
-	  plane[m+j] = &data[n];
-	  n += n3;
-	}
+        m = ((bigint) i) * n2;
+        array[i] = &plane[m];
+        for (j = 0; j < n2; j++) {
+          plane[m+j] = &data[n];
+          n += n3;
+        }
       }
       return array;
     }
@@ -314,7 +314,7 @@ class Memory : protected Pointers {
 
   template <typename TYPE>
     TYPE ***create3d_offset(TYPE ***&array, int n1lo, int n1hi,
-			    int n2, int n3, const char *name)
+                            int n2, int n3, const char *name)
     {
       int n1 = n1hi - n1lo + 1;
       create(array,n1,n2,n3,name);
@@ -324,7 +324,7 @@ class Memory : protected Pointers {
 
   template <typename TYPE>
     TYPE ****create3d_offset(TYPE ****&array, int n1lo, int n1hi,
-			     int n2, int n3, const char *name)
+                             int n2, int n3, const char *name)
     {fail(name);}
 
 /* ----------------------------------------------------------------------
@@ -347,8 +347,8 @@ class Memory : protected Pointers {
 
   template <typename TYPE>
     TYPE ***create3d_offset(TYPE ***&array, int n1lo, int n1hi,
-			    int n2lo, int n2hi, int n3lo, int n3hi,
-			    const char *name)
+                            int n2lo, int n2hi, int n3lo, int n3hi,
+                            const char *name)
     {
       int n1 = n1hi - n1lo + 1;
       int n2 = n2hi - n2lo + 1;
@@ -364,8 +364,8 @@ class Memory : protected Pointers {
 
   template <typename TYPE>
     TYPE ****create3d_offset(TYPE ****&array, int n1lo, int n1hi,
-			     int n2lo, int n2hi, int n3lo, int n3hi,
-			     const char *name)
+                             int n2lo, int n2hi, int n3lo, int n3hi,
+                             const char *name)
     {fail(name);}
 
 /* ----------------------------------------------------------------------
@@ -374,7 +374,7 @@ class Memory : protected Pointers {
 
   template <typename TYPE>
     void destroy3d_offset(TYPE ***array,
-			  int n1_offset, int n2_offset, int n3_offset)
+                          int n1_offset, int n2_offset, int n3_offset)
     {
       if (array == NULL) return;
       sfree(&array[n1_offset][n2_offset][n3_offset]);
@@ -388,7 +388,7 @@ class Memory : protected Pointers {
 
   template <typename TYPE>
     TYPE ****create(TYPE ****&array, int n1, int n2, int n3, int n4,
-		    const char *name)
+                    const char *name)
     {
       bigint nbytes = ((bigint) sizeof(TYPE)) * n1*n2*n3*n4;
       TYPE *data = (TYPE *) smalloc(nbytes,name);
@@ -403,25 +403,25 @@ class Memory : protected Pointers {
       bigint m1,m2;
       bigint n = 0;
       for (i = 0; i < n1; i++) {
-	m2 = ((bigint) i) * n2;
-	array[i] = &plane[m2];
-	for (j = 0; j < n2; j++) {
-	  m1 = ((bigint) i) * n2 + j;
-	  m2 = ((bigint) i) * n2*n3 + j*n3;
-	  plane[m1] = &cube[m2];
-	  for (k = 0; k < n3; k++) {
-	    m1 = ((bigint) i) * n2*n3 + j*n3 + k;
-	    cube[m1] = &data[n];
-	    n += n4;
-	  }
-	}
+        m2 = ((bigint) i) * n2;
+        array[i] = &plane[m2];
+        for (j = 0; j < n2; j++) {
+          m1 = ((bigint) i) * n2 + j;
+          m2 = ((bigint) i) * n2*n3 + j*n3;
+          plane[m1] = &cube[m2];
+          for (k = 0; k < n3; k++) {
+            m1 = ((bigint) i) * n2*n3 + j*n3 + k;
+            cube[m1] = &data[n];
+            n += n4;
+          }
+        }
       }
       return array;
     }
 
   template <typename TYPE>
     TYPE *****create(TYPE *****&array, int n1, int n2, int n3, int n4,
-		     const char *name)
+                     const char *name)
     {fail(name);}
 
 /* ----------------------------------------------------------------------

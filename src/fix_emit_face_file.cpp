@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -265,7 +265,7 @@ void FixEmitFaceFile::create_task(int icell)
   // works for 2d quads and 3d hexes
 
   int corners[6][4] = {{0,2,4,6}, {1,3,5,7}, {0,1,4,5}, {2,3,6,7},
-		       {0,1,2,3}, {4,5,6,7}};
+                       {0,1,2,3}, {4,5,6,7}};
   int nface_pts = 4;
   if (domain->dimension == 2) nface_pts = 2;
 
@@ -395,28 +395,28 @@ void FixEmitFaceFile::perform_task()
     if (perspecies) {
       for (isp = 0; isp < nspecies; isp++) {
         ispecies = species[isp];
-	ntarget = tasks[i].ntargetsp[isp]+random->uniform();
-	ninsert = static_cast<int> (ntarget);
+        ntarget = tasks[i].ntargetsp[isp]+random->uniform();
+        ninsert = static_cast<int> (ntarget);
         scosine = indot / vscale[isp];
 
         nactual = 0;
-	for (int m = 0; m < ninsert; m++) {
-	  x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-	  x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
-	  if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+        for (int m = 0; m < ninsert; m++) {
+          x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
+          x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+          if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
           else x[2] = 0.0;
 
           if (region && !region->match(x)) continue;
 
-	  do {
-	    do beta_un = (6.0*random->uniform() - 3.0);
-	    while (beta_un + scosine < 0.0);
-	    normalized_distbn_fn = 2.0 * (beta_un + scosine) /
-	      (scosine + sqrt(scosine*scosine + 2.0)) *
-	      exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) -
-		  beta_un*beta_un);
-	  } while (normalized_distbn_fn < random->uniform());
-	
+          do {
+            do beta_un = (6.0*random->uniform() - 3.0);
+            while (beta_un + scosine < 0.0);
+            normalized_distbn_fn = 2.0 * (beta_un + scosine) /
+              (scosine + sqrt(scosine*scosine + 2.0)) *
+              exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) -
+                  beta_un*beta_un);
+          } while (normalized_distbn_fn < random->uniform());
+
           v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
 
           theta = MY_2PI * random->uniform();
@@ -427,7 +427,7 @@ void FixEmitFaceFile::perform_task()
           evib = particle->evib(ispecies,temp_vib,random);
           id = MAXSMALLINT*random->uniform();
 
-	  particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+          particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
           nactual++;
 
           p = &particle->particles[particle->nlocal-1];
@@ -437,9 +437,9 @@ void FixEmitFaceFile::perform_task()
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
                                  temp_rot,temp_vib,vstream);
-	}
+        }
 
-	nsingle += nactual;
+        nsingle += nactual;
       }
 
     } else {
@@ -449,28 +449,28 @@ void FixEmitFaceFile::perform_task()
 
       nactual = 0;
       for (int m = 0; m < ninsert; m++) {
-	rn = random->uniform();
-	isp = 0;
-	while (cummulative[isp] < rn) isp++;
+        rn = random->uniform();
+        isp = 0;
+        while (cummulative[isp] < rn) isp++;
         ispecies = species[isp];
         scosine = indot / vscale[isp];
 
-	x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-	x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
-	if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+        x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
+        x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+        if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
         else x[2] = 0.0;
 
         if (region && !region->match(x)) continue;
 
-	do {
-	  do beta_un = (6.0*random->uniform() - 3.0);
-	  while (beta_un + scosine < 0.0);
-	  normalized_distbn_fn = 2.0 * (beta_un + scosine) /
-	    (scosine + sqrt(scosine*scosine + 2.0)) *
-	    exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) -
-		beta_un*beta_un);
-	} while (normalized_distbn_fn < random->uniform());
-	
+        do {
+          do beta_un = (6.0*random->uniform() - 3.0);
+          while (beta_un + scosine < 0.0);
+          normalized_distbn_fn = 2.0 * (beta_un + scosine) /
+            (scosine + sqrt(scosine*scosine + 2.0)) *
+            exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) -
+                beta_un*beta_un);
+        } while (normalized_distbn_fn < random->uniform());
+
         v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
 
         theta = MY_PI * random->uniform();
@@ -481,7 +481,7 @@ void FixEmitFaceFile::perform_task()
         evib = particle->evib(ispecies,temp_vib,random);
         id = MAXSMALLINT*random->uniform();
 
-	particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+        particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
         nactual++;
 
         p = &particle->particles[particle->nlocal-1];
@@ -1257,7 +1257,7 @@ void FixEmitFaceFile::grow_task()
   int oldmax = ntaskmax;
   ntaskmax += DELTATASK;
   tasks = (Task *) memory->srealloc(tasks,ntaskmax*sizeof(Task),
-				    "emit/face/file:tasks");
+                                    "emit/face/file:tasks");
 
   // set all new task bytes to 0 so valgrind won't complain
   // if bytes between fields are uninitialized

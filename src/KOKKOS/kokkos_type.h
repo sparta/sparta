@@ -1,7 +1,7 @@
 /* -*- c++ -*- ----------------------------------------------------------
    SPARTA - Large-scale Atomic/Molecular Massively Parallel Simulator
    http://sparta.sandia.gov, Sandia National Laboratories
-   Steve Plimpton, sjplimp@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
@@ -332,10 +332,10 @@ struct s_EV_FLOAT {
   E_FLOAT v[6];
   KOKKOS_INLINE_FUNCTION
   s_EV_FLOAT() {
-	  evdwl = 0;
-	  ecoul = 0;
-	  v[0] = 0; v[1] = 0; v[2] = 0;
-	  v[3] = 0; v[4] = 0; v[5] = 0;
+    evdwl = 0;
+    ecoul = 0;
+    v[0] = 0; v[1] = 0; v[2] = 0;
+    v[3] = 0; v[4] = 0; v[5] = 0;
   }
 
   KOKKOS_INLINE_FUNCTION
