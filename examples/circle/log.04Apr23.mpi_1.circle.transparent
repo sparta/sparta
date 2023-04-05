@@ -19,12 +19,12 @@ create_box  	    0 10 0 10 -0.5 0.5
 Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
 create_grid 	    10 10 1
 Created 100 child grid cells
-  CPU time = 0.00100827 secs
-  create/ghost percent = 77.5361 22.4639
+  CPU time = 0.000957251 secs
+  create/ghost percent = 84.6824 15.3176
 balance_grid        rcb cell
 Balance grid migrated 0 cells
-  CPU time = 0.000271559 secs
-  reassign/sort/migrate/ghost percent = 40.4741 1.22915 20.9833 37.3134
+  CPU time = 0.000159025 secs
+  reassign/sort/migrate/ghost percent = 58.3208 0.29985 22.4888 18.8906
 
 global		    nrho 1.0 fnum 0.001
 
@@ -47,10 +47,10 @@ read_surf           data.circle group circle
   60 16 24 = cells outside/inside/overlapping surfs
   24 = surf cells with 1,2,etc splits
   71.8 71.8 = cell-wise and global flow volume
-  CPU time = 0.00110006 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 17.4902 12.8739 1.75553 55.2883 12.5921 5.37495 0.0216732
-  surf2grid time = 0.000608206 secs
-  map/comm1/comm2/comm3/comm4/split percent = 46.6876 7.72246 6.74245 3.92003 10.9369 20.2274
+  CPU time = 0.000653744 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 30.8899 10.4303 1.09409 50.6929 6.89278 7.76805 0.401167
+  surf2grid time = 0.000331402 secs
+  map/comm1/comm2/comm3/comm4/split percent = 41.223 13.5971 8.92086 4.67626 15.3237 12.5899
 read_surf           data.plane1 group plane1 transparent
   2 points
   51 lines
@@ -62,10 +62,10 @@ read_surf           data.plane1 group plane1 transparent
   60 16 24 = cells outside/inside/overlapping surfs
   24 = surf cells with 1,2,etc splits
   71.8 71.8 = cell-wise and global flow volume
-  CPU time = 0.00080514 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 5.86319 11.6968 2.19129 63.3106 16.9381 6.24815 0
-  surf2grid time = 0.000509739 secs
-  map/comm1/comm2/comm3/comm4/split percent = 47.3807 8.51263 7.81104 6.22077 7.76427 19.2236
+  CPU time = 0.000406742 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 11.6061 10.3751 1.0551 66.1782 10.7855 9.96483 0.0586166
+  surf2grid time = 0.000269175 secs
+  map/comm1/comm2/comm3/comm4/split percent = 48.5385 13.9947 11.6032 8.41453 5.66873 9.83171
 read_surf           data.plane2 group plane2 transparent
   2 points
   52 lines
@@ -77,10 +77,10 @@ read_surf           data.plane2 group plane2 transparent
   60 16 24 = cells outside/inside/overlapping surfs
   24 = surf cells with 1,2,etc splits
   71.8 71.8 = cell-wise and global flow volume
-  CPU time = 0.000715017 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 7.23575 13.0043 2.46749 54.7516 22.5408 6.9023 0.0333444
-  surf2grid time = 0.000391483 secs
-  map/comm1/comm2/comm3/comm4/split percent = 43.7881 7.61267 6.88185 3.10597 8.40438 27.162
+  CPU time = 0.00031352 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 15.7414 13.8403 1.44487 53.9163 15.057 11.5589 0
+  surf2grid time = 0.000169039 secs
+  map/comm1/comm2/comm3/comm4/split percent = 39.6333 14.5275 14.6685 3.94922 8.88575 14.9506
 
 surf_collide	    1 diffuse 300.0 0.0
 surf_collide	    2 transparent
@@ -117,28 +117,28 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 1.52074 1.52074 1.52074
 Step CPU Np Natt Ncoll Nscoll Nscheck c_reduce[1] c_reduce[2] c_reduce[3] c_reduce[4] 
        0            0        0        0        0        0        0            0            0            0            0 
-     100   0.21786571    19683        0        0      308    32858        93.68 1.3832091e-18        19.45 3.614087e-19 
-     200   0.69058704    31429        0        0      346    44092       124.48 1.7101534e-18        58.87 9.2036692e-19 
-     300    1.2826829    36894        0        0      409    49888       125.73 1.711686e-18        73.33 1.0661136e-18 
-     400    1.9316607    39641        0        0      426    52518       126.85  1.73557e-18        81.26 1.1617336e-18 
-     500    2.6077342    41078        0        0      405    53554       126.01 1.7343079e-18        83.73 1.1731557e-18 
-     600    3.2975068    42009        0        0      410    54676       127.12 1.7285525e-18        84.77 1.1857523e-18 
-     700    4.0020969    42471        0        0      421    55576       125.38 1.690651e-18         87.6 1.2014302e-18 
-     800    4.7108467    43002        0        0      414    56478       127.54 1.7414969e-18        85.73 1.1634047e-18 
-     900    5.4261627    43322        0        0      394    56676       127.25 1.7465237e-18        87.71 1.2039211e-18 
-    1000    6.1454487    43496        0        0      408    56716       126.78 1.7449034e-18        87.03 1.176422e-18 
-Loop time of 6.14547 on 1 procs for 1000 steps with 43496 particles
+     100   0.09399724    19683        0        0      308    32858        93.68 1.3832091e-18        19.45 3.614087e-19 
+     200   0.29981256    31429        0        0      346    44092       124.48 1.7101534e-18        58.87 9.2036692e-19 
+     300   0.56462622    36894        0        0      409    49888       125.73 1.711686e-18        73.33 1.0661136e-18 
+     400   0.85506749    39641        0        0      426    52518       126.85  1.73557e-18        81.26 1.1617336e-18 
+     500    1.1574986    41078        0        0      405    53554       126.01 1.7343079e-18        83.73 1.1731557e-18 
+     600    1.4666319    42009        0        0      410    54676       127.12 1.7285525e-18        84.77 1.1857523e-18 
+     700    1.7831857    42471        0        0      421    55576       125.38 1.690651e-18         87.6 1.2014302e-18 
+     800     2.100384    43002        0        0      414    56478       127.54 1.7414969e-18        85.73 1.1634047e-18 
+     900    2.4209881    43322        0        0      394    56676       127.25 1.7465237e-18        87.71 1.2039211e-18 
+    1000    2.7445991    43496        0        0      408    56716       126.78 1.7449034e-18        87.03 1.176422e-18 
+Loop time of 2.74463 on 1 procs for 1000 steps with 43496 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 5.222      | 5.222      | 5.222      |   0.0 | 84.97
-Coll    | 0.29045    | 0.29045    | 0.29045    |   0.0 |  4.73
-Sort    | 0.42168    | 0.42168    | 0.42168    |   0.0 |  6.86
-Comm    | 0.0080833  | 0.0080833  | 0.0080833  |   0.0 |  0.13
-Modify  | 0.19984    | 0.19984    | 0.19984    |   0.0 |  3.25
-Output  | 0.00034761 | 0.00034761 | 0.00034761 |   0.0 |  0.01
-Other   |            | 0.003101   |            |       |  0.05
+Move    | 2.2237     | 2.2237     | 2.2237     |   0.0 | 81.02
+Coll    | 0.16106    | 0.16106    | 0.16106    |   0.0 |  5.87
+Sort    | 0.20122    | 0.20122    | 0.20122    |   0.0 |  7.33
+Comm    | 0.0067892  | 0.0067892  | 0.0067892  |   0.0 |  0.25
+Modify  | 0.14874    | 0.14874    | 0.14874    |   0.0 |  5.42
+Output  | 0.00030828 | 0.00030828 | 0.00030828 |   0.0 |  0.01
+Other   |            | 0.002774   |            |       |  0.10
 
 Particle moves    = 36496203 (36.5M)
 Cells touched     = 38783299 (38.8M)
@@ -154,7 +154,7 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 5.93871e+06
+Particle-moves/CPUsec/proc: 1.32973e+07
 Particle-moves/step: 36496.2
 Cell-touches/particle/step: 1.06267
 Particle comm iterations/step: 1
