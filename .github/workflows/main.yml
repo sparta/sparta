@@ -44,6 +44,7 @@ jobs:
         ctest --output-on-failure -j4
 
     - uses: actions/upload-artifact@v3
+      if: '!cancelled()'
       with:
         name: 'mpi-Artifacts'
         path: 'build/examples/'
@@ -77,8 +78,8 @@ jobs:
         sudo rm /bin/sh
         sudo ln -s /bin/bash /bin/sh
         ctest --output-on-failure -j4
-
     - uses: actions/upload-artifact@v3
+      if: '!cancelled()'
       with:
         name: 'mpi-stubs-fft-Artifacts'
         path: 'build/examples/'
@@ -116,6 +117,7 @@ jobs:
         ctest --output-on-failure -j4
 
     - uses: actions/upload-artifact@v3
+      if: '!cancelled()'
       with:
         name: 'mpi-stubs-kokkos-exact-fft-Artifacts'
         path: 'build/examples/'
