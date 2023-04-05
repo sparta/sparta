@@ -18,14 +18,14 @@ boundary	    o r p
 create_box  	    0 10 0 10 -0.5 0.5
 Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
 create_grid 	    20 20 1
-WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/home/me/sparta_master/src/grid.cpp:465)
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/home/runner/work/sparta/sparta/src/grid.cpp:465)
 Created 400 child grid cells
-  CPU time = 0.00157345 secs
-  create/ghost percent = 85.291 14.709
+  CPU time = 0.00324054 secs
+  create/ghost percent = 87.1903 12.8097
 balance_grid        rcb cell
 Balance grid migrated 280 cells
-  CPU time = 0.000835673 secs
-  reassign/sort/migrate/ghost percent = 54.8259 0.360189 21.3601 23.4538
+  CPU time = 0.00169122 secs
+  reassign/sort/migrate/ghost percent = 55.2625 1.29498 20.1395 23.303
 
 global		    nrho 1.0 fnum 0.001
 
@@ -43,10 +43,10 @@ read_surf           data.circle
   264 88 48 = cells outside/inside/overlapping surfs
   48 = surf cells with 1,2,etc splits
   71.8 71.8 = cell-wise and global flow volume
-  CPU time = 0.00112657 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 25.3467 14.4873 0.704619 47.4108 12.0506 13.4439 2.6192
-  surf2grid time = 0.000534114 secs
-  map/comm1/comm2/comm3/comm4/split percent = 31.2671 10.4305 10.7146 6.02793 14.9985 11.9645
+  CPU time = 0.00217843 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 17.8388 13.2345 3.06189 49.2013 16.6636 16.4432 2.04739
+  surf2grid time = 0.00107181 secs
+  map/comm1/comm2/comm3/comm4/split percent = 31.6756 14.6389 9.42337 7.54804 13.1461 9.83389
 surf_collide	    1 diffuse 300.0 1.0
 surf_modify         all collide 1
 
@@ -69,28 +69,28 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 1.51894 1.51894 1.51894
 Step CPU Np Natt Ncoll Nscoll Nscheck 
        0            0        0        0        0        0        0 
-     100  0.047634195    20044        0        0      106     4496 
-     200   0.14315872    31692        0        0      154     6818 
-     300   0.26492165    37277        0        0      184     7671 
-     400   0.40135413    40276        0        0      183     8156 
-     500   0.55944292    41899        0        0      213     8455 
-     600   0.71902625    42809        0        0      168     8298 
-     700     0.876927    43465        0        0      189     8594 
-     800    1.0359298    43714        0        0      209     8751 
-     900    1.1953053    43781        0        0      168     8528 
-    1000    1.3545896    44117        0        0      174     8674 
-Loop time of 1.35477 on 4 procs for 1000 steps with 44117 particles
+     100  0.065876244    20044        0        0      106     4496 
+     200   0.14890291    31692        0        0      154     6818 
+     300   0.23835855    37277        0        0      184     7671 
+     400   0.33613751    40276        0        0      183     8156 
+     500   0.44195786    41899        0        0      213     8455 
+     600   0.54405197    42809        0        0      168     8298 
+     700    0.6476979    43465        0        0      189     8594 
+     800   0.75253154    43714        0        0      209     8751 
+     900   0.85725928    43781        0        0      168     8528 
+    1000   0.96231063    44117        0        0      174     8674 
+Loop time of 0.962333 on 4 procs for 1000 steps with 44117 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.21692    | 0.49368    | 0.7694     |  38.9 | 36.44
-Coll    | 0.022746   | 0.060117   | 0.098259   |  15.2 |  4.44
-Sort    | 0.11463    | 0.21152    | 0.30991    |  20.8 | 15.61
-Comm    | 0.064591   | 0.068773   | 0.074453   |   1.4 |  5.08
-Modify  | 0.0019612  | 0.037565   | 0.073172   |  18.3 |  2.77
-Output  | 0.0003695  | 0.0020469  | 0.0029247  |   2.3 |  0.15
-Other   |            | 0.4811     |            |       | 35.51
+Move    | 0.060576   | 0.17522    | 0.29008    |  27.2 | 18.21
+Coll    | 0.0081323  | 0.030078   | 0.05217    |  12.6 |  3.13
+Sort    | 0.0092474  | 0.032144   | 0.056523   |  12.8 |  3.34
+Comm    | 0.093202   | 0.2208     | 0.49595    |  34.1 | 22.94
+Modify  | 0.0001869  | 0.014771   | 0.030206   |  12.0 |  1.53
+Output  | 0.00059811 | 0.0032233  | 0.0048189  |   3.0 |  0.33
+Other   |            | 0.4861     |            |       | 50.51
 
 Particle moves    = 37053073 (37.1M)
 Cells touched     = 41836455 (41.8M)
@@ -106,7 +106,7 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 6.83751e+06
+Particle-moves/CPUsec/proc: 9.62585e+06
 Particle-moves/step: 37053.1
 Cell-touches/particle/step: 1.1291
 Particle comm iterations/step: 2.102
