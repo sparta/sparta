@@ -1,0 +1,145 @@
+# advect particles on uniform Cartesian grid
+# single-step moves that cross grid cell boundaries are detected
+# particle effectively moves from cell to cell
+# particles reflect off global box boundaries
+#
+###################################
+# Constants
+###################################
+variable            boltz equal 1.380658E-23
+
+###################################
+# Gas parameters (Ar)
+###################################
+variable            mue equal 1.656E-5
+variable            mass equal 46.5E-27
+variable            visc equal 1.656E-5
+variable            gamma equal 1.400
+variable            To equal 293.
+variable            pi equal 3.14159
+
+variable            cbar equal sqrt(8.*${boltz}*${To}/${mass}/${pi})
+variable            uspeed equal sqrt(${gamma}*${boltz}*${To}/${mass})
+
+###################################
+# Trajectory inputs
+###################################
+variable            mach equal 1.71
+variable            L equal 1.
+variable            Vo equal ${mach}*${uspeed}
+variable            nden equal 1.E20 
+variable            Vo equal ${mach}*${uspeed}
+
+variable            surftemp equal 293.
+variable            temp equal 293.00
+variable            beta equal 0.000
+
+###################################
+# Simulation initialization standards
+###################################
+variable            ppc equal 47
+variable            cpmfp equal 4
+
+###################################
+# Parameter calculations
+###################################
+variable            Vx equal ${Vo}*cos(${beta}*2*PI/360)
+variable            Vy equal ${Vo}*sin(${beta}*2*PI/360)
+
+
+variable            mfp equal 2*${mue}/(${nden}*${mass}*${cbar})
+
+variable            xmin equal -5.0*${L}
+variable            xmax equal  5.1*${L}
+variable            ymin equal -5.1*${L}
+variable            ymax equal  5.1*${L}
+
+variable            xncells equal (${xmax}-${xmin})/${mfp}*${cpmfp}
+variable            yncells equal (${ymax}-${ymin})/${mfp}*${cpmfp}
+
+variable            Fnum equal  ${nden}*(${xmax}-${xmin})*(${ymax}-${ymin})/${ppc}/${xncells}/${yncells}
+
+variable            tstep equal (-${xmin}+${xmax})/${Vx}/${xncells}/10/4
+
+###################################
+# Print variable values to log file
+###################################
+print               " Velocity  = ${Vo}"
+print               " Density  = ${nden}"
+print               " X-Velocity  = ${Vx}"
+print               " Y-Velocity  = ${Vy}"
+print               " Temp  = ${temp}"
+print               " cbar  = ${cbar}"
+print               " mean free path  = ${mfp}"
+print               " cells per free stream mean free path = ${cpmfp}"
+print               " sound speed  = ${uspeed}"
+#print               " number of mean free paths = ${nmfp}"
+print               " x-min = ${xmin}"
+print               " x-max = ${xmax}"
+print               " y-min = ${ymin}"
+print               " y-max = ${ymax}"
+print               " x-cells = ${xncells}"
+print               " y-cells = ${yncells}"
+print               " Simulation Ratio = ${Fnum}"
+print               " Timestep = ${tstep}"
+
+###################################
+# Simulation parameters
+###################################
+seed	    	    847384
+dimension   	    2
+global		    nrho ${nden}
+global              fnum ${Fnum}
+
+timestep            ${tstep}
+global              gridcut 1.E-1 particle/reorder 100
+
+###################################
+# Grid generation
+###################################
+boundary	    o o p
+create_box          ${xmin} ${xmax} ${ymin} ${ymax} -0.5 0.5
+create_grid 	    ${xncells} ${yncells} 1 block * * * 
+
+#####################################
+# Gas/Collision Model Specification #
+#####################################
+species             air.species N2
+mixture             air vstream ${Vx} ${Vy} 0.0 temp ${temp}
+mixture             air N2 frac 1.0
+
+mixture             air vstream ${Vx} ${Vy} 0.0 temp ${temp}
+
+collide             vss all air.vss relax variable 
+collide_modify      vremax 100 yes vibrate no rotate smooth nearcp yes 10
+
+#####################################################
+# Surface generation and collision specification
+#####################################################
+read_surf	    circle_R0.5_P10000.surf group 1 invert
+surf_collide	    1 diffuse ${surftemp} 1.0 
+surf_modify         1 collide 1 
+
+###################################
+# Boundary conditions
+###################################
+fix                 in emit/face air xlo xhi ylo yhi twopass
+
+# adapt the grid around the surface before running the simulation
+adapt_grid          all refine surf all 0.00001 iterate 5
+
+balance_grid        rcb cell
+
+###################################
+# Initialize simulation
+###################################
+create_particles    air n 0 twopass
+
+###################################
+# Output
+###################################
+stats_style         step cpu np nattempt ncoll maxlevel
+
+stats               100
+
+run                 10000000

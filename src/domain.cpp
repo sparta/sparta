@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -183,7 +183,7 @@ void Domain::set_boundary(int narg, char **arg)
   for (m = 0; m < 6; m += 2)
     if (bflag[m] == PERIODIC || bflag[m+1] == PERIODIC) {
       if (bflag[m] != PERIODIC || bflag[m+1] != PERIODIC)
-	error->all(FLERR,"Both sides of boundary must be periodic");
+        error->all(FLERR,"Both sides of boundary must be periodic");
     }
 }
 
@@ -304,29 +304,29 @@ int Domain::collide(Particle::OnePart *&ip, int face, int icell, double *xnew,
 
       switch (face) {
       case XLO:
-	x[0] = boxhi[0];
-	xnew[0] += xprd;
-	break;
+        x[0] = boxhi[0];
+        xnew[0] += xprd;
+        break;
       case XHI:
-	x[0] = boxlo[0];
-	xnew[0] -= xprd;
-	break;
+        x[0] = boxlo[0];
+        xnew[0] -= xprd;
+        break;
       case YLO:
-	x[1] = boxhi[1];
-	xnew[1] += yprd;
-	break;
+        x[1] = boxhi[1];
+        xnew[1] += yprd;
+        break;
       case YHI:
-	x[1] = boxlo[1];
-	xnew[1] -= yprd;
-	break;
+        x[1] = boxlo[1];
+        xnew[1] -= yprd;
+        break;
       case ZLO:
-	x[2] = boxhi[2];
-	xnew[2] += zprd;
-	break;
+        x[2] = boxhi[2];
+        xnew[2] += zprd;
+        break;
       case ZHI:
-	x[2] = boxlo[2];
-	xnew[2] -= zprd;
-	break;
+        x[2] = boxlo[2];
+        xnew[2] -= zprd;
+        break;
       }
 
       return PERIODIC;
@@ -343,11 +343,11 @@ int Domain::collide(Particle::OnePart *&ip, int face, int icell, double *xnew,
       int dim = face / 2;
 
       if (face % 2 == 0) {
-	xnew[dim] = lo[dim] + (lo[dim]-xnew[dim]);
-	v[dim] = -v[dim];
+        xnew[dim] = lo[dim] + (lo[dim]-xnew[dim]);
+        v[dim] = -v[dim];
       } else {
-	xnew[dim] = hi[dim] - (xnew[dim]-hi[dim]);
-	v[dim] = -v[dim];
+        xnew[dim] = hi[dim] - (xnew[dim]-hi[dim]);
+        v[dim] = -v[dim];
       }
 
       return REFLECT;
@@ -488,9 +488,9 @@ void Domain::print_box(const char *str)
   if (comm->me == 0) {
     if (screen)
       fprintf(screen,"%sorthogonal box = (%g %g %g) to (%g %g %g)\n",
-	      str,boxlo[0],boxlo[1],boxlo[2],boxhi[0],boxhi[1],boxhi[2]);
+              str,boxlo[0],boxlo[1],boxlo[2],boxhi[0],boxhi[1],boxhi[2]);
     if (logfile)
       fprintf(logfile,"%sorthogonal box = (%g %g %g) to (%g %g %g)\n",
-	      str,boxlo[0],boxlo[1],boxlo[2],boxhi[0],boxhi[1],boxhi[2]);
+              str,boxlo[0],boxlo[1],boxlo[2],boxhi[0],boxhi[1],boxhi[2]);
   }
 }

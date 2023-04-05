@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -325,7 +325,7 @@ void ComputeTvibGrid::compute_per_grid()
         j = s2t_mode[ispecies][imode];
         if (nmode > 1) tally[icell][j] += vibmode[i][imode];
         else tally[icell][j] +=
-	       particles[i].evib / (boltz*species[ispecies].vibtemp[0]);
+               particles[i].evib / (boltz*species[ispecies].vibtemp[0]);
         tally[icell][j+1] += 1.0;
       }
     }

@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -39,14 +39,14 @@ class KKCopy {
 
   ~KKCopy() {}
 
-  void copy(ClassStyle* orig) {
-    memcpy(&obj, orig, sizeof(ClassStyle));
+  void copy(void* orig) {
+    memcpy((void*)&obj, orig, sizeof(ClassStyle));
     obj.copy = 1;
   }
 
   void uncopy(int copy = 0) {
     if (ptr_temp != NULL) {
-      memcpy(&obj, ptr_temp, sizeof(ClassStyle));
+      memcpy((void*)&obj, ptr_temp, sizeof(ClassStyle));
       free(ptr_temp);
       ptr_temp = NULL;
     }
@@ -55,11 +55,11 @@ class KKCopy {
   }
 
  private:
-  ClassStyle* ptr_temp;
+  void* ptr_temp;
 
   void save() {
     ptr_temp = (ClassStyle*) malloc(sizeof(ClassStyle));
-    memcpy(ptr_temp, &obj, sizeof(ClassStyle));
+    memcpy(ptr_temp, (void*)&obj, sizeof(ClassStyle));
   }
 
 };

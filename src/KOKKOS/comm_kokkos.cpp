@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -51,7 +51,7 @@ CommKokkos::~CommKokkos()
 {
   if (copymode) return;
 
-  if (!sparta->kokkos->comm_classic) {
+  if (!sparta->kokkos->comm_serial) {
     pproc = NULL;
   }
 
@@ -64,14 +64,14 @@ CommKokkos::~CommKokkos()
      so Update can iterate on particle move
 ------------------------------------------------------------------------- */
 
-int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plist_in)
+int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d &d_plist_in)
 {
   GridKokkos* grid_kk = (GridKokkos*) grid;
   ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
   particle_kk->update_class_variables();
   particle_kk_copy.copy(particle_kk);
 
-  if (sparta->kokkos->comm_classic) {
+  if (sparta->kokkos->comm_serial) {
     particle_kk->sync(Host,ALL_MASK);
     //grid_kk->sync(Host,ALL_MASK);
     int prev_auto_sync = sparta->kokkos->auto_sync;
@@ -233,6 +233,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
 
   particle_kk->modify(Device,PARTICLE_MASK);
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
+  d_plist = decltype(d_plist)();
 
   particle->nlocal += nrecv;
   ncomm += nsend;

@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -59,8 +59,10 @@ class SurfCollideImpulsive : public SurfCollide {
   int step_flag,double_flag;       // optional model flags
   int intenergy_flag;
 
+  int tmode;                 // Twall is NUMERIC,VARIABLE,CUSTOM
   char *tstr;                // temperature variable name (NULL if constant)
   int tvar;                  // index of equal-style variable
+  double *tvector;           // custom per-surf temperature vector
 
   double vstream[3];
   class RanKnuth *random;     // RNG for particle reflection

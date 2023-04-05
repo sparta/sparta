@@ -116,22 +116,24 @@ the streaming velocity.  Particles created using the mixture will use
 the specified {Vx,Vy,Vz} values.
 
 The {temp} keyword sets a global attribute of the mixture, namely the
-thermal temperature of its particles.  When particles are created,
-this value is used to sample a Gaussian velocity distribution, which
-is superposed on the streaming velocity, when each particle's velocity
-is initialized.
+thermal temperature of its particles.  It must be a value >= zero.
+When particles are created, this value is used to sample a Gaussian
+velocity distribution, which is superposed on the streaming velocity,
+when each particle's velocity is initialized.
 
 The {trot} keyword sets a global attribute of the mixture, namely the
-rotational temperature of its particles.  When particles are created,
-this value is used to sample a Gaussian energy distribution to define
-each particle's rotational energy.  If this keyword is not specified,
-the thermal temperature is used as the default.
+rotational temperature of its particles.  It must be a value >= zero.
+When particles are created, this value is used to sample a Gaussian
+energy distribution to define each particle's rotational energy.  If
+this keyword is not specified, the thermal temperature is used as the
+default.
 
 The {tvig} keyword sets a global attribute of the mixture, namely the
-vibrational temperature of its particles.  When particles are created,
-this value is used to sample a Gaussian energy distribution to define
-each particle's vibrational energy.  If this keyword is not specified,
-the thermal temperature is used as the default.
+vibrational temperature of its particles.  It must be a value >= zero.
+When particles are created, this value is used to sample a Gaussian
+energy distribution to define each particle's vibrational energy.  If
+this keyword is not specified, the thermal temperature is used as the
+default.
 
 :line
 

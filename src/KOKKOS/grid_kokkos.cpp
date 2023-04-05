@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -282,15 +282,10 @@ void GridKokkos::wrap_kokkos()
     pcells = k_pcells.h_view.data();
   }
 
-  // plevels
+  // plevels doesn't need wrap but was modified on host
 
-  if (plevels != k_plevels.h_view.data()) {
-    memoryKK->wrap_kokkos(k_plevels,plevels,maxparent,"grid:plevels");
-    k_plevels.modify_host();
-    k_plevels.sync_device();
-    memory->sfree(plevels);
-    plevels = k_plevels.h_view.data();
-  }
+  k_plevels.modify_host();
+  k_plevels.sync_device();
 }
 
 /* ---------------------------------------------------------------------- */

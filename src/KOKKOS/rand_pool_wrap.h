@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -60,10 +60,12 @@ class RandPoolWrap : protected Pointers {
     typedef Kokkos::Experimental::UniqueToken<
       DeviceType, Kokkos::Experimental::UniqueTokenScope::Global> unique_token_type;
 
+#ifndef SPARTA_KOKKOS_GPU
     unique_token_type unique_token;
     int tid = unique_token.acquire();
     rand_wrap.rng = random_thr[tid];
     unique_token.release(tid);
+#endif
 
     return rand_wrap;
   }
