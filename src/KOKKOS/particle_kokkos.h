@@ -168,8 +168,8 @@ class ParticleKokkos : public Particle {
   HAT::t_int_1d h_mlist;
   HAT::t_int_1d h_slist;
 
-  DAT::t_int_scalar d_fail_flag;
-  HAT::t_int_scalar h_fail_flag;
+  DAT::t_int_scalar d_resize;
+  HAT::t_int_scalar h_resize;
 
   // work memory for reduced memory reordering
   t_particle_1d d_pswap1;

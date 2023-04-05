@@ -232,6 +232,8 @@ void SurfCollideDiffuseKokkos::post_collide()
   auto sc = surf->sc[m]; // can't modify the copy directly, use the original
   sc->nsingle += h_nsingle();
   surf->nreact_one += h_nreact_one();
+
+  d_particles = decltype(d_particles)();
 }
 
 /* ---------------------------------------------------------------------- */

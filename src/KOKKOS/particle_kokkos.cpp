@@ -34,35 +34,26 @@
 
 using namespace SPARTA_NS;
 
-enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};  // several files
 enum{NONE,DISCRETE,SMOOTH};            // several files
 enum{INT,DOUBLE};                      // several files
 enum{COPYPARTICLELIST,FIXEDMEMORY};
 
 #define DELTA 16384
-#define DELTASPECIES 16
-#define DELTAMIXTURE 8
-#define DELTACELLCOUNT 16
-#define MAXLINE 1024
-
-// customize by adding an abbreviation string
-// also add a check for the keyword in 2 places in add_species()
-
-#define AIR "N O NO"
+#define DELTACELLCOUNT 1
 
 /* ---------------------------------------------------------------------- */
 
 ParticleKokkos::ParticleKokkos(SPARTA *sparta) : Particle(sparta)
 {
-  d_fail_flag = DAT::t_int_scalar("particle:fail_flag");
-  h_fail_flag = HAT::t_int_scalar("particle:fail_flag_mirror");
+  d_resize = DAT::t_int_scalar("particle:resize");
+  h_resize = HAT::t_int_scalar("particle:resize_mirror");
 
   k_reorder_pass = DAT::tdual_int_scalar("particle:reorder_pass");
   d_reorder_pass = k_reorder_pass.d_view;
   h_reorder_pass = k_reorder_pass.h_view;
 
   sorted_kk = 0;
-  maxcellcount = 16;
+  maxcellcount = 1;
 
   k_eivec = tdual_struct_tdual_int_1d_1d("particle:eivec",0);
   k_eiarray = tdual_struct_tdual_int_2d_1d("particle:eiarray",0);
@@ -211,15 +202,16 @@ void ParticleKokkos::sort_kokkos()
   d_plist = grid_kk->d_plist;
 
   if (ngrid > int(d_cellcount.extent(0))) {
-    grid_kk->d_cellcount = DAT::t_int_1d(Kokkos::NoInit("particle:cellcount"),ngrid);
+    d_cellcount = decltype(d_cellcount)();
+    MemKK::realloc_kokkos(grid_kk->d_cellcount,"particle:cellcount",ngrid);
     d_cellcount = grid_kk->d_cellcount;
   }
 
   Kokkos::deep_copy(d_cellcount,0);
 
   if (ngrid > int(d_plist.extent(0)) || maxcellcount > int(d_plist.extent(1))) {
-    grid_kk->d_plist = DAT::t_int_2d(); // destroy reference to reduce memory use
-    grid_kk->d_plist = DAT::t_int_2d(Kokkos::view_alloc("particle:plist",Kokkos::WithoutInitializing),ngrid,maxcellcount);
+    d_plist = decltype(d_plist)();
+    MemKK::realloc_kokkos(grid_kk->d_plist,"particle:plist",ngrid,maxcellcount);
     d_plist = grid_kk->d_plist;
   }
 
@@ -228,8 +220,7 @@ void ParticleKokkos::sort_kokkos()
 
   if (reorder_flag && reorder_scheme == COPYPARTICLELIST) {
     if (d_particles.extent(0) > d_offsets_part.extent(0)) {
-      d_offsets_part = DAT::t_int_1d();
-      d_offsets_part = DAT::t_int_1d(Kokkos::NoInit("particle:offsets_part"),d_particles.extent(0));
+      MemKK::realloc_kokkos(d_offsets_part,"particle:offsets_part",d_particles.extent(0));
     }
   }
 
@@ -240,7 +231,10 @@ void ParticleKokkos::sort_kokkos()
   //  needed, reallocate on the host, and then
   //  repeat the parallel loop again
 
-  do {
+  int resize = 1;
+  while (resize) {
+    resize = 0;
+
     copymode = 1;
     if (sparta->kokkos->need_atomics) {
       if (reorder_flag && reorder_scheme == COPYPARTICLELIST)
@@ -255,31 +249,29 @@ void ParticleKokkos::sort_kokkos()
     }
     copymode = 0;
 
-    Kokkos::deep_copy(h_fail_flag,d_fail_flag);
+    Kokkos::deep_copy(h_resize,d_resize);
+    resize = h_resize();
 
-    if (h_fail_flag()) {
+    if (resize) {
       Kokkos::deep_copy(d_cellcount,0);
-      maxcellcount += DELTACELLCOUNT;
-      grid_kk->d_plist = DAT::t_int_2d(); // destroy reference to reduce memory use
-      grid_kk->d_plist = DAT::t_int_2d(Kokkos::view_alloc("particle:plist",Kokkos::WithoutInitializing),ngrid,maxcellcount);
+      int old = maxcellcount;
+      maxcellcount = MAX(maxcellcount+MAX(DELTACELLCOUNT,maxcellcount*0.1),resize);
+      d_plist = decltype(d_plist)();
+      MemKK::realloc_kokkos(grid_kk->d_plist,"particle:plist",ngrid,maxcellcount);
       d_plist = grid_kk->d_plist;
 
-      Kokkos::deep_copy(d_fail_flag,0);
+      Kokkos::deep_copy(d_resize,0);
     }
-  } while (h_fail_flag());
+  }
 
   if (reorder_flag) {
 
     if (reorder_scheme == COPYPARTICLELIST) {
-      if (d_particles.extent(0) > d_sorted.extent(0)) {
-        d_sorted = t_particle_1d();
-        d_sorted = t_particle_1d(Kokkos::NoInit("particle:sorted"),d_particles.extent(0));
-      }
+      if (d_particles.extent(0) > d_sorted.extent(0))
+        MemKK::realloc_kokkos(d_sorted,"particle:sorted",d_particles.extent(0));
 
-      if (d_particles.extent(0) > d_sorted_id.extent(0)) {
-        d_sorted_id = DAT::t_int_1d();
-        d_sorted_id = DAT::t_int_1d(Kokkos::NoInit("particle:sorted_id"),d_particles.extent(0));
-      }
+      if (d_particles.extent(0) > d_sorted_id.extent(0))
+        MemKK::realloc_kokkos(d_sorted_id,"particle:sorted_id",d_particles.extent(0));
     } else if (reorder_scheme == FIXEDMEMORY && d_pswap1.size() == 0) {
       nParticlesWksp = MIN(nlocal,(double)update->global_mem_limit/sizeof(Particle::OnePart));
       d_pswap1 = t_particle_1d(Kokkos::view_alloc("particle:swap1",Kokkos::WithoutInitializing),nParticlesWksp);
@@ -341,6 +333,7 @@ void ParticleKokkos::sort_kokkos()
   }
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
+  d_plist = decltype(d_plist)();
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -428,16 +421,14 @@ void ParticleKokkos::operator()(TagParticleSort<NEED_ATOMICS,REORDER_FLAG>, cons
     d_cellcount[icell]++;
   }
 
-  if (j+1 > maxcellcount)
-    d_fail_flag() = 1;
+  if (j >= maxcellcount)
+    d_resize() = MAX(d_resize(),j+1);
   else {
     d_plist(icell,j) = i;
 
     if (REORDER_FLAG)
       d_offsets_part[i] = j;
   }
-
-  if (d_fail_flag()) return;
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -598,7 +589,7 @@ void ParticleKokkos::grow(int nextra)
   if (target <= maxlocal) return;
 
   bigint newmax = maxlocal;
-  while (newmax < target) newmax += MAX(DELTA, newmax*1.1);
+  while (newmax < target) newmax += MAX(DELTA, newmax*0.1);
   int oldmax = maxlocal;
 
   if (newmax > MAXSMALLINT)

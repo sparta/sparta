@@ -21,8 +21,6 @@
 #include "particle.h"
 #include "grid.h"
 #include "comm.h"
-#include "cut2d.h"
-#include "cut3d.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
@@ -60,30 +58,12 @@ FixGridCheck::FixGridCheck(SPARTA *sparta, int narg, char **arg) :
     }
   }
 
-  if (outside_check && !surf->implicit)
-    error->all(FLERR,"Fix grid/check outside yes requires implicit surfs");
-
   // setup
 
   dim = domain->dimension;
-  cut2d = NULL;
-  cut3d = NULL;
-
-  if (outside_check) {
-    if (dim == 3) cut3d = new Cut3d(sparta);
-    else cut2d = new Cut2d(sparta,domain->axisymmetric);
-  }
 
   scalar_flag = 1;
   global_freq = 1;
-}
-
-/* ---------------------------------------------------------------------- */
-
-FixGridCheck::~FixGridCheck()
-{
-  delete cut2d;
-  delete cut3d;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -127,6 +107,8 @@ void FixGridCheck::end_of_step()
   // check for split cell is whether particle is inside parent cell
 
   int nflag = 0;
+  int nflag_surf = 0;
+  int nflag_split = 0;
 
   for (int i = 0; i < nlocal; i++) {
     icell = particles[i].icell;
@@ -212,35 +194,44 @@ void FixGridCheck::end_of_step()
       nflag++;
     }
 
-    // check if particle in a cell with surfs is outside the surfs
+
+    // check if particle in cut/split is outside the surfs
     // for split cell, also verify particle is in correct sub cell
     // expensive, so only do this check if requested
-
+    // if cell volume = zero, error has already been flagged
+    
     if (!outside_check) continue;
     if (cells[icell].nsurf == 0) continue;
+    if (cinfo[icell].volume == 0.0) continue;
 
-    int splitcell,subcell,flag;
+    int pflag,splitcell,subcell;
+    double xcell[3];
 
-    if (cells[icell].nsplit <= 0) {
-      splitcell = sinfo[cells[icell].isplit].icell;
-      flag = grid->outside_surfs(splitcell,x,cut3d,cut2d);
-    } else flag = grid->outside_surfs(icell,x,cut3d,cut2d);
-
-    if (!flag) {
+    // check that particle is outside surfs
+    // if no xcell found, cannot check
+    
+    pflag = grid->point_outside_surfs(icell,xcell);
+    if (!pflag) continue;
+    pflag = grid->outside_surfs(icell,x,xcell);
+    
+    if (!pflag) {
       if (outflag == ERROR) {
         char str[128];
         sprintf(str,
-                "Particle %d,%d on proc %d is inside surfs in cell "
+                "Particle %d,%d on proc %d at %g %g %d is inside surfs in cell "
                 CELLINT_FORMAT " on timestep " BIGINT_FORMAT,
-                i,particles[i].id,comm->me,cells[icell].id,
+                i,particles[i].id,comm->me,x[0],x[1],icell,cells[icell].id,
                 update->ntimestep);
         error->one(FLERR,str);
       }
-      nflag++;
+      nflag_surf++;
     }
 
+    // check that particle is in correct split subcell
+    
     if (cells[icell].nsplit <= 0) {
       int subcell;
+      splitcell = sinfo[cells[icell].isplit].icell;
       if (dim == 2) subcell = update->split2d(splitcell,x);
       else subcell = update->split3d(splitcell,x);
 
@@ -254,27 +245,41 @@ void FixGridCheck::end_of_step()
                   update->ntimestep);
           error->one(FLERR,str);
         }
-        nflag++;
+        nflag_split++;
       }
     }
   }
 
   // -------------------------------------
   // done with all tests
-  // warning message instead of error
+  // warning messages instead of errors
 
   if (outflag == WARNING) {
     int all;
     MPI_Allreduce(&nflag,&all,1,MPI_INT,MPI_SUM,world);
     if (all && comm->me == 0) {
       char str[128];
-      sprintf(str,"%d particles were in wrong cells on timestep "
+      sprintf(str,"%d particles in wrong cells on timestep "
+              BIGINT_FORMAT,all,update->ntimestep);
+      error->warning(FLERR,str);
+    }
+    MPI_Allreduce(&nflag_surf,&all,1,MPI_INT,MPI_SUM,world);
+    if (all && comm->me == 0) {
+      char str[128];
+      sprintf(str,"%d particles inside surfs on timestep "
+              BIGINT_FORMAT,all,update->ntimestep);
+      error->warning(FLERR,str);
+    }
+    MPI_Allreduce(&nflag_split,&all,1,MPI_INT,MPI_SUM,world);
+    if (all && comm->me == 0) {
+      char str[128];
+      sprintf(str,"%d particles in wrong sub cells on timestep "
               BIGINT_FORMAT,all,update->ntimestep);
       error->warning(FLERR,str);
     }
   }
 
-  ntotal += nflag;
+  ntotal += nflag + nflag_surf + nflag_split;
 }
 
 /* ----------------------------------------------------------------------
