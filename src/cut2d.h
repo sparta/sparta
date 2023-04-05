@@ -77,11 +77,15 @@ class Cut2d : protected Pointers {
   int surf2grid_list(cellint, double *, double *, int, surfint *,
                      surfint *, int);
   int surf2grid_one(double *, double *, double *, double *);
+
   int split(cellint, double *, double *, int, surfint *,
             double *&, int *, int *, int &, double *);
   int split_face(int, int, double *, double *);
+  
   int clip_external(double *, double *, double *, double *, double *);
-
+  int sameedge(double *, double *);
+  int sameedge_external(double *, double *, double *, double *);
+  
  private:
   int axisymmetric;
   int implicit;
@@ -98,6 +102,8 @@ class Cut2d : protected Pointers {
   MyVec<double> areas;   // areas of each flow polygon found
   MyVec<int> used;       // 0/1 flag for each point when walking loops
 
+  // methods
+  
   void build_clines();
   int weiler_build();
   void weiler_loops();
@@ -110,7 +116,6 @@ class Cut2d : protected Pointers {
   void clip(double *, double *, double *, double *);
 
   int ptflag(double *);
-  int sameedge(double *, double *);
   int whichside(double *);
 
   void failed_cell();
