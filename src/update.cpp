@@ -11,7 +11,7 @@
 
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
-#include <iostream>
+
 #include "spatype.h"
 #include "mpi.h"
 #include "math.h"

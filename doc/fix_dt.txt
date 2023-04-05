@@ -66,8 +66,7 @@ stats_style     step time dt f_DT cpu np :pre
 
 [Restart, output info:]
 
-The global time and the current global timestep are written to "binary restart files"_restart.html.  This breaks backward compatibility
-with older restart files, even if this fix is not invoked.
+The global time and the current global timestep are written to "binary restart files"_restart.html.
 
 The optional argument {store_cell_dt} directs the fix to store the cell timestep values in a per-grid vector.  The vector can be
 accessed by any command that uses per-grid values from a fix as input.  For example, the values can be output by the

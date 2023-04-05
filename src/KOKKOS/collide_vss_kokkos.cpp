@@ -626,7 +626,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
   // attempt = exact collision attempt count for a pair of groups
   // nattempt = rounded attempt with RN
 
-  const double attempt = attempt_collision_kokkos(icell,np,volume,dt,rand_gen);
+  const double attempt = attempt_collision_kokkos(icell,np,volume,rand_gen);
   const int nattempt = static_cast<int> (attempt);
   if (!nattempt){
     rand_pool.free_state(rand_gen);
@@ -991,7 +991,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
   // nattempt = rounded attempt with RN
 
   int nptotal = np + nelectron;
-  const double attempt = attempt_collision_kokkos(icell,nptotal,volume,dt,rand_gen);
+  const double attempt = attempt_collision_kokkos(icell,nptotal,volume,rand_gen);
   const int nattempt = static_cast<int> (attempt);
   if (!nattempt) {
     rand_pool.free_state(rand_gen);
@@ -1283,7 +1283,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
 /* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-double CollideVSSKokkos::attempt_collision_kokkos(int icell, int np, double volume, double dt, rand_type &rand_gen) const
+double CollideVSSKokkos::attempt_collision_kokkos(int icell, int np, double volume, rand_type &rand_gen) const
 {
  double nattempt;
 
