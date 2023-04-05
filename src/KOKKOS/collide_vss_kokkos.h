@@ -252,7 +252,7 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   int set_nn(int, int) const;
   KOKKOS_INLINE_FUNCTION
-  int find_nn(rand_type &, int, int, double, int) const;
+  int find_nn(rand_type &, int, int, int) const;
 
   void backup();
   void restore();

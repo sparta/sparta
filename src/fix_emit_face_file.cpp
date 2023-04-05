@@ -161,6 +161,7 @@ void FixEmitFaceFile::init()
 
   dimension = domain->dimension;
   fnum = update->fnum;
+  dt = update->dt;
 
   nspecies = particle->mixture[imix]->nspecies;
   nrho_mix = particle->mixture[imix]->nrho;
@@ -191,7 +192,7 @@ void FixEmitFaceFile::init()
     int ispecies = particle->mixture[imix]->species[m];
     avemass += fraction_mix[m] * particle->species[ispecies].mass;
     avegamma += fraction_mix[m] * (1.0 + 2.0 /
-                                   (3.0 + particle->species[ispecies].rotdof));
+                               (3.0 + particle->species[ispecies].rotdof));
   }
 
   soundspeed_mixture = sqrt(avegamma * update->boltz *
@@ -352,9 +353,8 @@ void FixEmitFaceFile::perform_task()
   double *lo,*hi,*vstream,*cummulative,*vscale;
   Particle::OnePart *p;
 
+  double dt = update->dt;
   int *species = particle->mixture[imix]->species;
-
-  dt = update->dt;
 
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current temp_thermal and vstream in insertion cells
@@ -490,7 +490,7 @@ void FixEmitFaceFile::perform_task()
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,
-                                temp_rot,temp_vib,vstream);
+                               temp_rot,temp_vib,vstream);
       }
 
       nsingle += nactual;
@@ -940,7 +940,6 @@ int FixEmitFaceFile::interpolate(int icell)
   // skip task if final ntarget = 0.0, due to large outbound vstream
   // do not skip for subsonic since it resets ntarget every step
 
-  dt = update->dt;
   double ntargetsp;
   for (isp = 0; isp < nspecies; isp++) {
     ntargetsp = frac_user *

@@ -646,7 +646,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
   for (int m = 0; m < nattempt; m++) {
     const int i = np * rand_gen.drand();
     int j;
-    if (NEARCP) j = find_nn(rand_gen,i,np,dt,icell);
+    if (NEARCP) j = find_nn(rand_gen,i,np,icell);
     else {
       j = np * rand_gen.drand();
       while (i == j) j = np * rand_gen.drand();
@@ -1953,7 +1953,7 @@ double CollideVSSKokkos::vibrel(int isp, double Ec) const
 ------------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-int CollideVSSKokkos::find_nn(rand_type &rand_gen, int i, int np, double dt, int icell) const
+int CollideVSSKokkos::find_nn(rand_type &rand_gen, int i, int np, int icell) const
 {
   int jneigh;
   double dx,dy,dz,rsq;

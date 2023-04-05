@@ -136,6 +136,7 @@ void FixEmitFace::init()
 
   dimension = domain->dimension;
   fnum = update->fnum;
+  dt = update->dt;
 
   nspecies = particle->mixture[imix]->nspecies;
   fraction = particle->mixture[imix]->fraction;
@@ -263,8 +264,6 @@ void FixEmitFace::create_task(int icell)
                        {0,1,2,3}, {4,5,6,7}};
   int nface_pts = 4;
   if (domain->dimension == 2) nface_pts = 2;
-
-  dt = update->dt;
 
   // loop over 6 faces of icell
 
@@ -470,9 +469,8 @@ void FixEmitFace::perform_task_onepass()
   double *lo,*hi,*normal,*vstream,*vscale;
   Particle::OnePart *p;
 
-  int *species = particle->mixture[imix]->species;
-
   dt = update->dt;
+  int *species = particle->mixture[imix]->species;
 
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current per-task temp_thermal and vstream
@@ -619,7 +617,7 @@ void FixEmitFace::perform_task_onepass()
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,
-                                temp_rot,temp_vib,vstream);
+                               temp_rot,temp_vib,vstream);
       }
 
       nsingle += nactual;
@@ -642,9 +640,8 @@ void FixEmitFace::perform_task_twopass()
   double *lo,*hi,*normal,*vstream,*vscale;
   Particle::OnePart *p;
 
-  int *species = particle->mixture[imix]->species;
-
   dt = update->dt;
+  int *species = particle->mixture[imix]->species;
 
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current per-task temp_thermal and vstream
@@ -754,7 +751,7 @@ void FixEmitFace::perform_task_twopass()
 
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
-                                  temp_rot,temp_vib,vstream);
+                temp_rot,temp_vib,vstream);
         }
 
         nsingle += nactual;
@@ -807,7 +804,7 @@ void FixEmitFace::perform_task_twopass()
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,
-                                temp_rot,temp_vib,vstream);
+              temp_rot,temp_vib,vstream);
       }
 
       nsingle += nactual;

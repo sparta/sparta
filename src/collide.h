@@ -42,8 +42,8 @@ class Collide : protected Pointers {
   virtual void collisions();
 
   virtual double vremax_init(int, int) = 0;
-  virtual double attempt_collision(int, int, double, double) = 0;
-  virtual double attempt_collision(int, int, int, double, double) = 0;
+  virtual double attempt_collision(int, int, double) = 0;
+  virtual double attempt_collision(int, int, int, double) = 0;
   virtual int test_collision(int, int, int,
                              Particle::OnePart *, Particle::OnePart *) = 0;
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *) = 0;
@@ -165,8 +165,8 @@ class Collide : protected Pointers {
   void ambi_check();
   void grow_percell(int);
 
-  int find_nn(int, int, double);
-  int find_nn_group(int, int *, int, int *, int *, int *, int *, double);
+  int find_nn(int, int);
+  int find_nn_group(int, int *, int, int *, int *, int *, int *);
   void realloc_nn(int, int *&);
   void set_nn(int);
   void set_nn_group(int);

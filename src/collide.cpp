@@ -499,7 +499,7 @@ template < int NEARCP > void Collide::collisions_one()
     // nattempt = rounded attempt with RN
     // if no attempts, continue to next grid cell
 
-    attempt = attempt_collision(icell,np,volume,dt);
+    attempt = attempt_collision(icell,np,volume);
     nattempt = static_cast<int> (attempt);
 
     if (!nattempt) continue;
@@ -511,7 +511,7 @@ template < int NEARCP > void Collide::collisions_one()
 
     for (int iattempt = 0; iattempt < nattempt; iattempt++) {
       i = np * random->uniform();
-      if (NEARCP) j = find_nn(i,np,dt);
+      if (NEARCP) j = find_nn(i,np);
       else {
         j = np * random->uniform();
         while (i == j) j = np * random->uniform();
@@ -674,7 +674,7 @@ template < int NEARCP > void Collide::collisions_group()
     npair = 0;
     for (igroup = 0; igroup < ngroups; igroup++)
       for (jgroup = igroup; jgroup < ngroups; jgroup++) {
-        attempt = attempt_collision(icell,igroup,jgroup,volume,dt);
+        attempt = attempt_collision(icell,igroup,jgroup,volume);
         nattempt = static_cast<int> (attempt);
 
         if (nattempt) {
@@ -722,7 +722,7 @@ template < int NEARCP > void Collide::collisions_group()
 
       for (int iattempt = 0; iattempt < nattempt; iattempt++) {
         i = *ni * random->uniform();
-        if (NEARCP) j = find_nn_group(i,ilist,*nj,jlist,plist,nn_igroup,nn_jgroup,dt);
+        if (NEARCP) j = find_nn_group(i,ilist,*nj,jlist,plist,nn_igroup,nn_jgroup);
         else {
           j = *nj * random->uniform();
           if (igroup == jgroup)
@@ -939,7 +939,7 @@ void Collide::collisions_one_ambipolar()
     // nattempt = rounded attempt with RN
 
     nptotal = np + nelectron;
-    attempt = attempt_collision(icell,nptotal,volume,dt);
+    attempt = attempt_collision(icell,nptotal,volume);
     nattempt = static_cast<int> (attempt);
 
     if (!nattempt) continue;
@@ -1184,7 +1184,6 @@ void Collide::collisions_group_ambipolar()
   int nbytes = sizeof(Particle::OnePart);
   int *species2group = mixture->species2group;
   int egroup = species2group[ambispecies];
-  double dt = update->dt;
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
@@ -1274,7 +1273,7 @@ void Collide::collisions_group_ambipolar()
     for (igroup = 0; igroup < ngroups; igroup++)
       for (jgroup = igroup; jgroup < ngroups; jgroup++) {
         if (igroup == egroup && jgroup == egroup) continue;
-        attempt = attempt_collision(icell,igroup,jgroup,volume,dt);
+        attempt = attempt_collision(icell,igroup,jgroup,volume);
         nattempt = static_cast<int> (attempt);
 
         if (nattempt) {
@@ -1851,7 +1850,7 @@ void Collide::grow_percell(int n)
    this version is for single group collisions
 ------------------------------------------------------------------------- */
 
-int Collide::find_nn(int i, int np, double dt)
+int Collide::find_nn(int i, int np)
 {
   int jneigh;
   double dx,dy,dz,rsq;
@@ -1864,6 +1863,7 @@ int Collide::find_nn(int i, int np, double dt)
 
   Particle::OnePart *ipart,*jpart;
   Particle::OnePart *particles = particle->particles;
+  double dt = update->dt;
 
   // thresh = distance particle I moves in this timestep
 
@@ -1938,7 +1938,7 @@ int Collide::find_nn(int i, int np, double dt)
 ------------------------------------------------------------------------- */
 
 int Collide::find_nn_group(int i, int *ilist, int np, int *jlist, int *plist,
-                           int *nn_igroup, int *nn_jgroup, double dt)
+                           int *nn_igroup, int *nn_jgroup)
 {
   int jneigh;
   double dx,dy,dz,rsq;
@@ -1952,6 +1952,7 @@ int Collide::find_nn_group(int i, int *ilist, int np, int *jlist, int *plist,
 
   Particle::OnePart *ipart,*jpart;
   Particle::OnePart *particles = particle->particles;
+  double dt = update->dt;
 
   // thresh = distance particle I moves in this timestep
 

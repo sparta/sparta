@@ -231,7 +231,7 @@ void Run::command(int narg, char **arg)
       time_multiple_runs += timer->array[TIME_LOOP];
 
       Finish finish(sparta);
-      if (postflag || ( nleft <= nsteps || completed_time)) {
+      if (postflag || (nleft <= nsteps || completed_time)) {
         if (preflag) finish.end(1,0.0);
         else finish.end(1,time_multiple_runs);
       } else finish.end(0,0.0);
