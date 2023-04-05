@@ -7,11 +7,11 @@ on:
     branches: [ master ]
 
 # Define jobs: mpi, mpi-stubs-fft, mpi-stubs-kokkos-exact-fft, and bigbig
-# Each jobs runs on ubuntu-18.04 and uses the cmake build system
+# Each jobs runs on ubuntu-latest and uses the cmake build system
 # All jobs except for bigbig run ctest
 jobs:
   mpi:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
 
@@ -48,7 +48,7 @@ jobs:
         name: 'mpi-Artifacts'
         path: 'build/examples/**/log.archive*'
   mpi-stubs-fft:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
 
@@ -83,7 +83,7 @@ jobs:
         name: 'mpi-stubs-fft-Artifacts'
         path: 'build/examples/**/log.archive*'
   mpi-stubs-kokkos-exact-fft:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
 
@@ -120,7 +120,7 @@ jobs:
         name: 'mpi-stubs-kokkos-exact-fft-Artifacts'
         path: 'build/examples/**/log.archive*'
   bigbig:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
 
