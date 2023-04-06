@@ -170,4 +170,5 @@ void SurfCollideDiffuseKokkos::post_collide()
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   if (ambi_flag || vibmode_flag) particle_kk->modify(Device,CUSTOM_MASK);
+  d_particles = decltype(d_particles)();
 }

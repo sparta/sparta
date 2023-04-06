@@ -63,7 +63,7 @@ function(sparta_add_test sparta_in_file mpi_ranks config_name)
     set(__test_name
         ${SPARTA_MACHINE}.${sparta_in_file}.mpi_${mpi_ranks}${__config_name})
     set(__sparta_command
-        ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${mpi_ranks} --bind-to none
+        ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${mpi_ranks} --oversubscribe --bind-to none
         $<TARGET_FILE:${TARGET_SPARTA}> ${__spa_args})
   endif()
 
