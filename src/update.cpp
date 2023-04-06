@@ -268,9 +268,9 @@ void Update::run(int nsteps)
     // move particles
 
     if (grid->uniform && enable_optmove)
-      optmove_flag = true;
+      optmove_flag = 1;
     else
-      optmove_flag = false;
+      optmove_flag = 0;
 
     // choose the appropriate move method
 

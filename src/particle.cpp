@@ -217,17 +217,6 @@ void Particle::init()
 
 void Particle::compress_migrate(int nmigrate, int *mlist)
 {
-  // for optimized particle moves, call compress_reactions (rather than
-  // the compress_migrate logic below), since the mlist data will not be
-  // guaranteed to be in ascending order.  This somewhat klunky approach
-  // was taken so that when SPARTA_KOKKOS_EXACT is defined at compile
-  // time, the compress_reactions routine will be called for Kokkos and
-  // non-Kokkos execution when optimized particle moves are utilized.
-  if (update->optmove_flag) {
-    compress_reactions(nmigrate, mlist);
-    return;
-  }
-  
   int i,j,k;
   int nbytes = sizeof(OnePart);
 

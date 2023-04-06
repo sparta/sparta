@@ -180,7 +180,15 @@ int Comm::migrate_particles(int nmigrate, int *plist)
 
   // compress my list of particles
 
-  particle->compress_migrate(nmigrate,plist);
+  // for optimized particle moves, call compress_reactions rather than
+  //  compress_migrate since mlist is not guaranteed to be in ascending
+  //  order
+
+  if (update->optmove_flag)
+    particle->compress_reactions(nmigrate,plist);
+  else
+    particle->compress_migrate(nmigrate,plist);
+
   int ncompress = particle->nlocal;
 
   // create or augment irregular communication plan
