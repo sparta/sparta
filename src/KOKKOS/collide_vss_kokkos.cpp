@@ -1404,7 +1404,7 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
 
   kp = NULL;
 
-  if (reactflag) {
+  if (reactflag && !react->computeChemRates) {
 
     // add 3rd K particle if reaction created it
     // index of new K particle = nlocal-1

@@ -36,6 +36,7 @@ class ReactTCEKokkos : public ReactBirdKokkos {
 
 /* ---------------------------------------------------------------------- */
 
+enum{NONE,DISCRETE,SMOOTH};
 enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};   // other files
 
 KOKKOS_INLINE_FUNCTION
@@ -71,8 +72,48 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 
     const double pre_etotal = pre_etrans + pre_erot + pre_evib;
 
-    double ecc = pre_etrans;
-    if (pre_ave_rotdof > 0.1) ecc += pre_erot*r->d_coeff[0]/pre_ave_rotdof;
+    // two options for total energy in TCE model
+    // 0: partialEnergy = true: rDOF model
+    // 1: partialEnergy = false: TCE: Rotation + Vibration
+
+    // average DOFs participating in the reaction
+
+    double ecc,z;
+    int icell = ip->icell;
+    int imode = 0;
+
+    if (partialEnergy) {
+      ecc = pre_etrans;
+      z = r->d_coeff[0];
+      if (pre_ave_rotdof > 0.1)
+        ecc += pre_erot*z/pre_ave_rotdof;
+    } else {
+      ecc = pre_etotal;
+      if (pre_etotal+r->d_coeff[4] <= 0.0) continue; // Cover cases where coeff[1].neq.coeff[4]
+      z = pre_ave_rotdof;
+      if (vibstyle == SMOOTH)
+        z += (d_species[isp].vibdof + d_species[jsp].vibdof)/2.0;
+      else if (vibstyle == DISCRETE) {
+        if (d_species[isp].vibdof == 2)
+          z += (d_species[isp].vibtemp[0]/d_temp[icell]) / (exp(d_species[isp].vibtemp[0]/d_temp[icell])-1);
+        else if (d_species[isp].vibdof > 2) {
+          imode = 0;
+          while (imode < 4) {
+            z += (d_species[isp].vibtemp[imode]/d_temp[icell]) / (exp(d_species[isp].vibtemp[imode]/d_temp[icell])-1);
+            imode++;
+          }
+        }
+        if (d_species[jsp].vibdof == 2)
+          z += (d_species[jsp].vibtemp[0]/d_temp[icell]) / (exp(d_species[jsp].vibtemp[0]/d_temp[icell])-1);
+        else if (d_species[jsp].vibdof > 2) {
+          imode = 0;
+          while (imode < 4) {
+            z += (d_species[jsp].vibtemp[imode]/d_temp[icell]) / (exp(d_species[jsp].vibtemp[imode]/d_temp[icell])-1);
+            imode++;
+          }
+        }
+      }
+    }
 
     const double e_excess = ecc - r->d_coeff[1];
     if (e_excess <= 0.0) continue;
@@ -84,9 +125,9 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
     case IONIZATION:
     case EXCHANGE:
       {
-        react_prob += r->d_coeff[2] *
-          pow(ecc-r->d_coeff[1],r->d_coeff[3]) *
-          pow(1.0-r->d_coeff[1]/ecc,r->d_coeff[5]);
+        react_prob += r->d_coeff[2] * tgamma(z+2.5-r->d_coeff[5]) / MAX(1.0e-6,tgamma(z+r->d_coeff[3]+1.5)) *
+          pow(ecc-r->d_coeff[1],r->d_coeff[3]-1+r->d_coeff[5]) *
+          pow(1.0-r->d_coeff[1]/ecc,z+1.5-r->d_coeff[5]);
         break;
       }
 
@@ -105,8 +146,9 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
         if (d_sp2recomb[recomb_species] != d_list[i]) continue;
 
         react_prob += recomb_boost * recomb_density * r->d_coeff[2] *
-          pow(ecc,r->d_coeff[3]) *
-          pow(1.0-r->d_coeff[1]/ecc,r->d_coeff[5]);
+          tgamma(z+2.5-r->d_coeff[5]) / MAX(1.0e-6,tgamma(z+r->d_coeff[3]+1.5)) *
+          pow(ecc-r->d_coeff[1],r->d_coeff[3]-1+r->d_coeff[5]) *  // extended to general recombination case with non-zero activation energy
+          pow(1.0-r->d_coeff[1]/ecc,z+1.5-r->d_coeff[5]);
         break;
       }
 
@@ -136,33 +178,31 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 
     if (react_prob > random_prob) {
       Kokkos::atomic_increment(&d_tally_reactions[d_list[i]]);
-      ip->ispecies = r->d_products[0];
+      if (!computeChemRates) {
+        ip->ispecies = r->d_products[0];
 
-      // Previous statment did not destroy the 2nd species (B) if
-      //   recombination was specified as A+B->AB+M (which has nproductus=2)
-      //   but only for the A+B->AB specication form (which has nproductus=1)
+        switch (r->type) {
+        case DISSOCIATION:
+        case IONIZATION:
+        case EXCHANGE:
+          {
+            jp->ispecies = r->d_products[1];
+            break;
+          }
+        case RECOMBINATION:
+          {
+            // always destroy 2nd reactant species
 
-      switch (r->type) {
-      case DISSOCIATION:
-      case IONIZATION:
-      case EXCHANGE:
-        {
-          jp->ispecies = r->d_products[1];
-          break;
+            jp->ispecies = -1;
+            break;
+          }
         }
-      case RECOMBINATION:
-        {
-          // always destroy 2nd reactant species
 
-          jp->ispecies = -1;
-          break;
-        }
+        if (r->nproduct > 2) kspecies = r->d_products[2];
+        else kspecies = -1;
+
+        post_etotal = pre_etotal + r->d_coeff[4];
       }
-
-      if (r->nproduct > 2) kspecies = r->d_products[2];
-      else kspecies = -1;
-
-      post_etotal = pre_etotal + r->d_coeff[4];
 
       return 1;
     }
@@ -174,6 +214,8 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 /* ---------------------------------------------------------------------- */
 
  protected:
+  int vibstyle;
+
   DAT::tdual_int_scalar k_error_flag;
   DAT::t_int_scalar d_error_flag;
   HAT::t_int_scalar h_error_flag;

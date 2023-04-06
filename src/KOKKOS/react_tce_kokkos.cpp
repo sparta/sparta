@@ -41,4 +41,6 @@ void ReactTCEKokkos::init()
     error->all(FLERR,"React tce can only be used with collide vss");
 
   ReactBirdKokkos::init();
+
+  vibstyle = collide->vibstyle;
 }

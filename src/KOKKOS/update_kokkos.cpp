@@ -27,6 +27,7 @@
 #include "comm_kokkos.h"
 #include "collide.h"
 #include "collide_vss_kokkos.h"
+#include "react.h"
 #include "grid_kokkos.h"
 #include "surf_kokkos.h"
 #include "surf_collide.h"
@@ -343,6 +344,7 @@ void UpdateKokkos::run(int nsteps)
 
     if (n_end_of_step) {
       modify->end_of_step();
+      if (react) react->compute_per_grid();
       timer->stamp(TIME_MODIFY);
     }
 
