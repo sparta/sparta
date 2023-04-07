@@ -80,7 +80,7 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   nrho = 1.0;
   vstream[0] = vstream[1] = vstream[2] = 0.0;
   temp_thermal = 273.15;
-  enable_optmove = 0;
+  optmove_flag = 0;
   fstyle = NOFIELD;
   fieldID = NULL;
 
@@ -155,6 +155,44 @@ void Update::init()
   if (runflag == 0) return;
   first_update = 1;
 
+  if (optmove_flag) {
+    if (!grid->uniform)
+      error->all(FLERR,"Cannot use optimized move with non-uniform grid");
+    else if (surf->exist)
+      error->all(FLERR,"Cannot use optimized move when surfaces are defined");
+    else {
+      for (int ifix = 0; ifix < modify->nfix; ifix++) {
+        if (strstr(modify->fix[ifix]->style,"adapt") != NULL)
+          error->all(FLERR,"Cannot use optimized move with fix adapt");
+      }
+    }
+  }
+
+  // choose the appropriate move method
+
+  if (domain->dimension == 3) {
+    if (surf->exist)
+      moveptr = &Update::move<3,1,0>;
+    else {
+      if (optmove_flag) moveptr = &Update::move<3,0,1>;
+      else moveptr = &Update::move<3,0,0>;
+    }
+  } else if (domain->axisymmetric) {
+    if (surf->exist)
+      moveptr = &Update::move<1,1,0>;
+    else {
+      if (optmove_flag) moveptr = &Update::move<1,0,1>;
+      else moveptr = &Update::move<1,0,0>;
+    }
+  } else if (domain->dimension == 2) {
+    if (surf->exist)
+      moveptr = &Update::move<2,1,0>;
+    else {
+      if (optmove_flag) moveptr = &Update::move<2,0,1>;
+      else moveptr = &Update::move<2,0,0>;
+    }
+  }
+
   // checks on external field options
 
   if (fstyle == CFIELD) {
@@ -175,7 +213,7 @@ void Update::init()
       error->all(FLERR,"External field fix does not compute necessary field");
   }
 
-  // moveperturb method is set if external field perturbs particle motion
+  // moveperturr method is set if external field perturbs particle motion
 
   moveperturb = NULL;
 
@@ -267,36 +305,6 @@ void Update::run(int nsteps)
 
     // move particles
 
-    if (grid->uniform && enable_optmove)
-      optmove_flag = 1;
-    else
-      optmove_flag = 0;
-
-    // choose the appropriate move method
-
-    if (domain->dimension == 3) {
-      if (surf->exist)
-        moveptr = &Update::move<3,1,0>;
-      else {
-        if (optmove_flag) moveptr = &Update::move<3,0,1>;
-        else moveptr = &Update::move<3,0,0>;
-      }
-    } else if (domain->axisymmetric) {
-      if (surf->exist)
-        moveptr = &Update::move<1,1,0>;
-      else {
-        if (optmove_flag) moveptr = &Update::move<1,0,1>;
-        else moveptr = &Update::move<1,0,0>;
-      }
-    } else if (domain->dimension == 2) {
-      if (surf->exist)
-        moveptr = &Update::move<2,1,0>;
-      else {
-        if (optmove_flag) moveptr = &Update::move<2,0,1>;
-        else moveptr = &Update::move<2,0,0>;
-      }
-    }
-
     if (cellweightflag) particle->pre_weight();
     (this->*moveptr)();
     timer->stamp(TIME_MOVE);
@@ -360,7 +368,7 @@ template < int DIM, int SURF, int OPT > void Update::move()
   Particle::OnePart *particles;
   Particle::OnePart *ipart,*jpart;
 
-  if (enable_optmove) {
+  if (OPT) {
     boxlo = domain->boxlo;
     boxhi = domain->boxhi;
     Lx = boxhi[0] - boxlo[0];
@@ -1607,7 +1615,7 @@ void Update::global(int narg, char **arg)
       if (fnum <= 0.0) error->all(FLERR,"Illegal global command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"optmove") == 0) {
-      enable_optmove = 1;
+      optmove_flag = 1;
       iarg += 1;
     } else if (strcmp(arg[iarg],"nrho") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");

@@ -157,6 +157,44 @@ void UpdateKokkos::init()
   if (runflag == 0) return;
   first_update = 1;
 
+  if (optmove_flag) {
+    if (!grid->uniform)
+      error->all(FLERR,"Cannot use optimized move with non-uniform grid");
+    else if (surf->exist)
+      error->all(FLERR,"Cannot use optimized move when surfaces are defined");
+    else {
+      for (int ifix = 0; ifix < modify->nfix; ifix++) {
+        if (strstr(modify->fix[ifix]->style,"adapt") != NULL)
+          error->all(FLERR,"Cannot use optimized move with fix adapt");
+      }
+    }
+  }
+
+  // choose the appropriate move method
+
+  if (domain->dimension == 3) {
+    if (surf->exist)
+      moveptr = &UpdateKokkos::move<3,1,0>;
+    else {
+      if (optmove_flag) moveptr = &UpdateKokkos::move<3,0,1>;
+      else moveptr = &UpdateKokkos::move<3,0,0>;
+    }
+  } else if (domain->axisymmetric) {
+    if (surf->exist)
+      moveptr = &UpdateKokkos::move<1,1,0>;
+    else {
+      if (optmove_flag) moveptr = &UpdateKokkos::move<1,0,1>;
+      else moveptr = &UpdateKokkos::move<1,0,0>;
+    }
+  } else if (domain->dimension == 2) {
+    if (surf->exist)
+      moveptr = &UpdateKokkos::move<2,1,0>;
+    else {
+      if (optmove_flag) moveptr = &UpdateKokkos::move<2,0,1>;
+      else moveptr = &UpdateKokkos::move<2,0,0>;
+    }
+  }
+
   // checks on external field options
 
   if (fstyle == CFIELD) {
@@ -177,7 +215,7 @@ void UpdateKokkos::init()
       error->all(FLERR,"External field fix does not compute necessary field");
   }
 
-  if (enable_optmove) {
+  if (optmove_flag) {
     xlo = domain->boxlo[0];
     ylo = domain->boxlo[1];
     zlo = domain->boxlo[2];
@@ -312,36 +350,6 @@ void UpdateKokkos::run(int nsteps)
     }
 
     // move particles
-
-    if (grid->uniform && enable_optmove)
-      optmove_flag = 1;
-    else
-      optmove_flag = 0;
-
-    // choose the appropriate move method
-
-    if (domain->dimension == 3) {
-      if (surf->exist)
-        moveptr = &UpdateKokkos::move<3,1,0>;
-      else {
-        if (optmove_flag) moveptr = &UpdateKokkos::move<3,0,1>;
-        else moveptr = &UpdateKokkos::move<3,0,0>;
-      }
-    } else if (domain->axisymmetric) {
-      if (surf->exist)
-        moveptr = &UpdateKokkos::move<1,1,0>;
-      else {
-        if (optmove_flag) moveptr = &UpdateKokkos::move<1,0,1>;
-        else moveptr = &UpdateKokkos::move<1,0,0>;
-      }
-    } else if (domain->dimension == 2) {
-      if (surf->exist)
-        moveptr = &UpdateKokkos::move<2,1,0>;
-      else {
-        if (optmove_flag) moveptr = &UpdateKokkos::move<2,0,1>;
-        else moveptr = &UpdateKokkos::move<2,0,0>;
-      }
-    }
 
     if (cellweightflag) particle->pre_weight();
     (this->*moveptr)();

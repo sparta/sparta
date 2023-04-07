@@ -38,8 +38,7 @@ class Update : protected Pointers {
   double nrho;           // number density of background gas
   double vstream[3];     // streaming velocity of background gas
   double temp_thermal;   // thermal temperature of background gas
-  int enable_optmove;    // global optmove option set
-  int optmove_flag;      // use optimized particle moves this timestep
+  int optmove_flag;      // global optmove option set
 
   int fstyle;            // external field: NOFIELD, CFIELD, PFIELD, GFIELD
   double field[3];       // constant external field
