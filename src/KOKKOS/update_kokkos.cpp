@@ -800,6 +800,8 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,OPT,ATOMIC_REDUCTION>, cons
     if (pflag > PSURF) exclude = pflag - PSURF - 1;
   }
 
+  // optimized move
+
   if (OPT) {
     int optmove = 1;
 

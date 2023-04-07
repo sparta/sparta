@@ -213,7 +213,7 @@ void Update::init()
       error->all(FLERR,"External field fix does not compute necessary field");
   }
 
-  // moveperturr method is set if external field perturbs particle motion
+  // moveperturb method is set if external field perturbs particle motion
 
   moveperturb = NULL;
 
@@ -498,6 +498,8 @@ template < int DIM, int SURF, int OPT > void Update::move()
         if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
         if (pflag > PSURF) exclude = pflag - PSURF - 1;
       }
+
+      // optimized move
 
       if (OPT) {
         int optmove = 1;

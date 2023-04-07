@@ -116,6 +116,7 @@ class UpdateKokkos : public Update {
   int field_active[3];
 
   // data for optimized particle moves
+
   double dx,dy,dz,Lx,Ly,Lz;
   double xlo,ylo,zlo,xhi,yhi,zhi;
   int ncx,ncy,ncz;
