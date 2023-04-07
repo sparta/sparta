@@ -412,11 +412,11 @@ single level for all cells without further refinement) and the
 {optmove} keyword is set to {yes} then the particle will be moved to
 its final position in a single step, skipping all intermediate grid
 cell crossings, which can improve performance. If a particle hits a
-box boundary or leaves the owning proc's subdomain, then the normal
-(non-optimized) move algorithm will be used for that specific particle
-on that timestep. The {optmove yes} option cannot be used when
-surfaces are defined, the grid is not uniform, or when fix adapt is
-enabled, otherwise an error will result.
+box boundary or leaves the owning proc's subdomain (including the
+ghost cell region), then the normal (non-optimized) move algorithm
+will be used for that specific particle on that timestep. The {optmove
+yes} option cannot be used when surfaces are defined, the grid is not
+uniform, or when fix adapt is enabled, otherwise an error will result.
 
 [Restrictions:]
 
