@@ -157,18 +157,42 @@ void UpdateKokkos::init()
   if (runflag == 0) return;
   first_update = 1;
 
+  if (optmove_flag) {
+    if (!grid->uniform)
+      error->all(FLERR,"Cannot use optimized move with non-uniform grid");
+    else if (surf->exist)
+      error->all(FLERR,"Cannot use optimized move when surfaces are defined");
+    else {
+      for (int ifix = 0; ifix < modify->nfix; ifix++) {
+        if (strstr(modify->fix[ifix]->style,"adapt") != NULL)
+          error->all(FLERR,"Cannot use optimized move with fix adapt");
+      }
+    }
+  }
+
   // choose the appropriate move method
 
-  moveptr = NULL;
   if (domain->dimension == 3) {
-    if (surf->exist) moveptr = &UpdateKokkos::move<3,1>;
-    else moveptr = &UpdateKokkos::move<3,0>;
+    if (surf->exist)
+      moveptr = &UpdateKokkos::move<3,1,0>;
+    else {
+      if (optmove_flag) moveptr = &UpdateKokkos::move<3,0,1>;
+      else moveptr = &UpdateKokkos::move<3,0,0>;
+    }
   } else if (domain->axisymmetric) {
-    if (surf->exist) moveptr = &UpdateKokkos::move<1,1>;
-    else moveptr = &UpdateKokkos::move<1,0>;
+    if (surf->exist)
+      moveptr = &UpdateKokkos::move<1,1,0>;
+    else {
+      if (optmove_flag) moveptr = &UpdateKokkos::move<1,0,1>;
+      else moveptr = &UpdateKokkos::move<1,0,0>;
+    }
   } else if (domain->dimension == 2) {
-    if (surf->exist) moveptr = &UpdateKokkos::move<2,1>;
-    else moveptr = &UpdateKokkos::move<2,0>;
+    if (surf->exist)
+      moveptr = &UpdateKokkos::move<2,1,0>;
+    else {
+      if (optmove_flag) moveptr = &UpdateKokkos::move<2,0,1>;
+      else moveptr = &UpdateKokkos::move<2,0,0>;
+    }
   }
 
   // checks on external field options
@@ -189,6 +213,24 @@ void UpdateKokkos::init()
     if (ifieldfix < 0) error->all(FLERR,"External field fix ID not found");
     if (!modify->fix[ifieldfix]->per_grid_field)
       error->all(FLERR,"External field fix does not compute necessary field");
+  }
+
+  if (optmove_flag) {
+    xlo = domain->boxlo[0];
+    ylo = domain->boxlo[1];
+    zlo = domain->boxlo[2];
+    xhi = domain->boxhi[0];
+    yhi = domain->boxhi[1];
+    zhi = domain->boxhi[2];
+    Lx = xhi-xlo;
+    Ly = yhi-ylo;
+    Lz = zhi-zlo;
+    ncx = grid->unx;
+    ncy = grid->uny;
+    ncz = grid->unz;
+    dx = Lx/ncx;
+    dy = Ly/ncy;
+    dz = Lz/ncz;
   }
 
   if (fstyle == PFIELD) {
@@ -245,6 +287,7 @@ void UpdateKokkos::setup()
       grid_kk->wrap_kokkos_graphs();
     }
   }
+  hash_kk = grid_kk->hash_kk;
 
   Update::setup(); // must come after prewrap since computes are called by setup()
 
@@ -375,10 +418,9 @@ bool UpdateKokkos::run(int timeflag, int nsteps, double time_final)
 
   sparta->kokkos->auto_sync = 1;
   particle_kk->sync(Host,ALL_MASK);
+
   return completed_time;
 }
-
-//make randomread versions of d_particles?
 
 /* ----------------------------------------------------------------------
    advect particles thru grid
@@ -387,20 +429,8 @@ bool UpdateKokkos::run(int timeflag, int nsteps, double time_final)
    use multiple iterations of move/comm if necessary
 ------------------------------------------------------------------------- */
 
-template < int DIM, int SURF > void UpdateKokkos::move()
+template < int DIM, int SURF, int OPT > void UpdateKokkos::move()
 {
-  //bool hitflag;
-  //int m,icell,icell_original,nmask,outface,bflag,nflag,pflag,itmp;
-  //int side,minside,minsurf,nsurf,cflag,isurf,exclude,stuck_iterate;
-  //int pstart,pstop,entryexit,any_entryexit;
-  //cellint *neigh;
-  //double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
-  //double xnew[3],xhold[3],xc[3],vc[3],minxc[3],minvc[3];
-  //double *x,*v,*lo,*hi;
-  //Particle::OnePart iorig;
-  //Particle::OnePart *particles;
-  //Particle::OnePart *ipart,*jpart;
-
   int pstart,pstop,entryexit,any_entryexit;
 
   // extend migration list if necessary
@@ -557,11 +587,11 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     //k_mlist.sync_device();
     copymode = 1;
     if (!sparta->kokkos->need_atomics)
-      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,0> >(pstart,pstop),*this);
+      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,OPT,0> >(pstart,pstop),*this);
     else if (sparta->kokkos->atomic_reduction)
-      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,1> >(pstart,pstop),*this);
+      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,OPT,1> >(pstart,pstop),*this);
     else
-      Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,-1> >(pstart,pstop),*this,reduce);
+      Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,OPT,-1> >(pstart,pstop),*this,reduce);
     copymode = 0;
 
     Kokkos::deep_copy(h_scalars,d_scalars);
@@ -651,7 +681,6 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     } else break;
 
     // END of single move/migrate iteration
-
   }
 
   // END of all move/migrate iterations
@@ -688,18 +717,18 @@ template < int DIM, int SURF > void UpdateKokkos::move()
 
 /* ---------------------------------------------------------------------- */
 
-template<int DIM, int SURF, int ATOMIC_REDUCTION>
+template<int DIM, int SURF, int OPT, int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
-void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const int &i) const {
+void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,OPT,ATOMIC_REDUCTION>, const int &i) const {
   UPDATE_REDUCE reduce;
-  this->template operator()<DIM,SURF,ATOMIC_REDUCTION>(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>(), i, reduce);
+  this->template operator()<DIM,SURF,OPT,ATOMIC_REDUCTION>(TagUpdateMove<DIM,SURF,OPT,ATOMIC_REDUCTION>(), i, reduce);
 }
 
 /*-----------------------------------------------------------------------------*/
 
-template<int DIM, int SURF, int ATOMIC_REDUCTION>
+template<int DIM, int SURF, int OPT, int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
-void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const int &i, UPDATE_REDUCE &reduce) const {
+void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,OPT,ATOMIC_REDUCTION>, const int &i, UPDATE_REDUCE &reduce) const {
   if (d_error_flag()) return;
 
   // int m;
@@ -788,6 +817,62 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     xnew[1] = x[1] + dtremain*v[1];
     if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
     if (pflag > PSURF) exclude = pflag - PSURF - 1;
+  }
+
+  // optimized move
+
+  if (OPT) {
+    int optmove = 1;
+
+    if (xnew[0] < xlo || xnew[0] > xhi)
+      optmove = 0;
+
+    if (xnew[1] < ylo || xnew[1] > yhi)
+      optmove = 0;
+
+    if (DIM == 3) {
+      if (xnew[2] < zlo || xnew[2] > zhi)
+        optmove = 0;
+    }
+
+    if (optmove) {
+
+      const int ip = static_cast<int>((xnew[0] - xlo)/dx);
+      const int jp = static_cast<int>((xnew[1] - ylo)/dy);
+      int kp = 0;
+      if (DIM == 3) kp = static_cast<int>((xnew[2] - zlo)/dz);
+
+      int cellIdx = (kp*ncy + jp)*ncx + ip + 1;
+      GridKokkos::size_type h_index = hash_kk.find(static_cast<GridKokkos::key_type>(cellIdx));
+      int idx = static_cast<int>(hash_kk.value_at(h_index));
+
+      // particle moving outside ghost halo will be flagged for standard move
+
+      if (idx != 0) {
+
+        // reset particle cell and coordinates
+
+        int icell = idx - 1;
+        particle_i.icell = icell;
+        particle_i.flag = PKEEP;
+        x[0] = xnew[0];
+        x[1] = xnew[1];
+        x[2] = xnew[2];
+
+        if (d_cells[icell].proc != me) {
+          int indx;
+          if (ATOMIC_REDUCTION == 0) {
+            indx = d_nmigrate();
+            d_nmigrate()++;
+          } else {
+            indx = Kokkos::atomic_fetch_add(&d_nmigrate(),1);
+          }
+          k_mlist.d_view[indx] = i;
+        }
+
+        return;
+      }
+    }
   }
 
   particle_i.flag = PKEEP;
