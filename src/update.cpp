@@ -73,6 +73,9 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   beginstep = endstep = 0;
   runflag = 0;
 
+  time = 0.0;
+  time_last_update = 0;
+    
   unit_style = NULL;
   set_units("si");
 
@@ -264,7 +267,7 @@ void Update::setup()
 
 /* ---------------------------------------------------------------------- */
 
-bool Update::run(int timeflag, int nsteps, double time_final)
+void Update::run(int nsteps)
 {
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
@@ -282,20 +285,10 @@ bool Update::run(int timeflag, int nsteps, double time_final)
   if (grid->cellweightflag) cellweightflag = 1;
 
   // loop over timesteps
-  bool completed_time = false;
-  int i = 0;
-  while ( (timeflag && time < time_final) || (!timeflag && i < nsteps) ) {
 
-    i++;
+  for (int i = 0; i < nsteps; i++) {
+
     ntimestep++;
-
-    // reset dt if final time will be exceeded
-    double tleft = time_final - time;
-    if (tleft <= dt) {
-      dt = tleft;
-      completed_time = true;
-    }
-    time += dt;
 
     if (collide_react) collide_react_reset();
     if (bounce_tally) bounce_set(ntimestep);
@@ -344,19 +337,11 @@ bool Update::run(int timeflag, int nsteps, double time_final)
 
     // all output
 
-    if (completed_time) {
-      laststep = ntimestep;
-      output->next = ntimestep;
-      output->next_stats = ntimestep;
-    }
     if (ntimestep == output->next) {
       output->write(ntimestep);
       timer->stamp(TIME_OUTPUT);
     }
-
-    if (completed_time) break;
   }
-  return completed_time;
 }
 
 /* ----------------------------------------------------------------------
@@ -427,6 +412,7 @@ template < int DIM, int SURF, int OPT > void Update::move()
   Grid::ParentCell *pcells = grid->pcells;
   Surf::Tri *tris = surf->tris;
   Surf::Line *lines = surf->lines;
+  double dt = update->dt;
 
   // external per particle field
   // fix calculates field acting on all owned particles
