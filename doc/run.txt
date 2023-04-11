@@ -10,12 +10,11 @@ run command :h3
 
 [Syntax:]
 
-run val keyword values ... :pre
+run N keyword values ... :pre
 
-val = # of integer timesteps N or ending time (see {time} keyword below)  :ulb,l
+value = # of integer timesteps N or ending time (see {time} keyword below)  :ulb,l
 zero or more keyword/value pairs may be appended :l
-keyword = {time} or {upto} or {start} or {stop} or {pre} or {post} or {every} :l
-  {time} value = none
+keyword = {upto} or {start} or {stop} or {pre} or {post} or {every} or {time} :l
   {upto} value = none
   {start} value = N1
     N1 = timestep at which 1st run started
@@ -26,7 +25,8 @@ keyword = {time} or {upto} or {start} or {stop} or {pre} or {post} or {every} :l
   {every} values = M c1 c2 ...
     M = break the run into M-timestep segments and invoke one or more commands between each segment
     c1,c2,...,cN = one or more SPARTA commands, each enclosed in quotes
-    c1 = NULL means no command will be invoked :pre
+    c1 = NULL means no command will be invoked
+  {time} value = none :pre
 :ule
 
 [Examples:]
@@ -42,8 +42,9 @@ run 5.7 time every 100 NULL :pre
 
 [Description:]
 
-Run or continue a simulation for a specified number of timesteps or until a specified ending time
-is reached (if the {time} keyword is specified).
+Run or continue a simulation for a specified number of timesteps.  If
+the {time} keyword is used, run for a specified amount of physical
+time.
 
 A value of N = 0 is acceptable; only the statistics of the system are
 computed and printed without taking a timestep.
