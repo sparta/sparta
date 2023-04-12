@@ -10,10 +10,11 @@ compute dt/grid command :h3
 
 [Syntax:]
 
-compute ID dt/grid tfraction cfraction lambda temperature usq vsq wsq :pre
+compute ID dt/grid group-ID tfraction cfraction lambda temperature usq vsq wsq :pre
 
 ID is documented in "compute"_compute.html command
 dt/grid = style name of this compute command
+group-ID = group ID for which grid cells to perform calculation on :l
 tfraction = fraction of grid cell transit time used to calculate timestep 
 cfraction = fraction of grid cell mean collision time used to calculate timestep
 lambda = compute or fix column for mean free path, prefaced by "c_" or "f_"
@@ -34,14 +35,18 @@ compute 1 dt/grid 0.25 0.1 c_lamdba f_1\[2\] f_1\[3\] f_1\[4\] f_1\[5\] pre
 
 [Description:]
 
-Calculate a current timestep for each grid cell based on the
-properties of particles currently in the cell and the grid cell size.
-The per-grid cell timesteps can be output in a per-grid dump file for
-post analyses.  Or they can be used as input to the "fix
-dt/reset"_fit_dt_reset.html command to adjust the global timestep for
-a variable timestep simulation.  See this
+Calculate a current timestep for each grid cell in a grid cell group,
+based on the properties of particles currently in the cell and the
+grid cell size.  The per-grid cell timesteps can be output in a
+per-grid dump file for post analyses.  Or they can be used as input to
+the "fix dt/reset"_fit_dt_reset.html command to adjust the global
+timestep for a variable timestep simulation.  See this
 "section"_Section_howto.html#howto_17 of the manual for more
 information on variable timestep simulations.
+
+Only grid cells in the grid group specified by {group-ID} are included
+in the calculations.  See the "group grid"_group.html command for info
+on how grid cells can be assigned to grid groups.
 
 The {tfraction} and {cfraction} arguments are both values from 0.0 to
 1.0 which are applied to the transit term and collision term in the

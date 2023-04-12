@@ -12,45 +12,43 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#ifdef FIX_CLASS
+#ifdef COMPUTE_CLASS
 
-FixStyle(dt,FixDt)
+ComputeStyle(dt/grid,ComputeDtGrid)
 
 #else
 
-#ifndef SPARTA_FIX_DT_H
-#define SPARTA_FIX_DT_H
+#ifndef SPARTA_COMPUTE_DT_GRID_H
+#define SPARTA_COMPUTE_DT_GRID_H
 
-#include "fix.h"
 #include "compute.h"
 
 namespace SPARTA_NS {
 
-class FixDt : public Fix {
+class ComputeDtGrid : public Compute {
  public:
-  FixDt(class SPARTA *, int, char **);
-  ~FixDt();
-  int setmask();
+  ComputeDtGrid(class SPARTA *, int, char **);
+  ~ComputeDtGrid();
   void init();
-  void end_of_step();
-  double compute_scalar();
-  virtual void reallocate();
+  void compute_per_grid();
+  void reallocate();
+  bigint memory_usage();
 
  protected:
-  int me;
-  int nglocal;
-  int lambdawhich,usqwhich,vsqwhihc,wsqwhich,tempwhich;
-  int lambdaindex, usqindex,vsqindex,wsqindex,tempindex;
-  int mode;
-  char *id_lambda,*id_usq,*id_vsq,*id_wsq,*id_temp;
-  class Compute *clambda;
-  class Fix *flambda,*fusq,*fvsq,*fwsq,*ftemp;
-  double *lambda,*usq,*vsq,*wsq,*temp;
+  int groupbit;
+  int lambda_which,temp_which,usq_which,vsq_which,wsq_which;
+  int lambda_index,temp_index,usq_index,vsq_index,wsq_index;
+  double transit_fraction,collision_fraction;
   double min_species_mass;
-  double dt_global_weight;
-  double transit_fraction;
-  double collision_fraction;
-  double dt_global_calculated;
+
+  int nglocal;
+  
+  char *id_lambda,*id_temp,*id_usq,*id_vsq,*id_wsq;
+
+  class Compute *clambda,*ctemp,*cusq,*cvsq,*cwsq;
+  class Fix *flambda,*ftemp,*fusq,*fvsq,*fwsq;
+
+  double *lambda,*temp,*usq,*vsq,*wsq;
 };
 
 }
