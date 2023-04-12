@@ -1,0 +1,144 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>compute dt/grid command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>compute ID dt/grid tfraction cfraction lambda temperature usq vsq wsq 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command
+<LI>dt/grid = style name of this compute command
+<LI>tfraction = fraction of grid cell transit time used to calculate timestep 
+<LI>cfraction = fraction of grid cell mean collision time used to calculate timestep
+<LI>lambda = compute or fix column for mean free path, prefaced by "c_" or "f_"
+<LI>temperature = compute or fix column for temperature, prefaced by "c_" or "f_"
+<LI>usq = compute or fix column for x component of velocity squared, prefaced by "c_" or "f_"
+<LI>vsq = compute or fix column for y component of velocity squared, prefaced by "c_" or "f_"
+<LI>wsq = compute or fix column for z component of velocity squared, prefaced by "c_" or "f_" 
+<LI>
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compute 1 grid nrho temp usq vsq wsq
+fix 1 ave/grid all 10 50 500 c_1[*]
+compute 2 lambda/grid f_1[1] f_1[2] Ar
+compute tstep dt/grid 0.25 0.1 c_2 f_1[2] f_1[3] f_1[4] f_1[5] 
+</PRE>
+<P>compute 1 dt/grid 0.25 0.1 c_lamdba f_1[2] f_1[3] f_1[4] f_1[5] pre
+</P>
+<P><B>Description:</B>
+</P>
+<P>Calculate a current timestep for each grid cell based on the
+properties of particles currently in the cell and the grid cell size.
+The per-grid cell timesteps can be output in a per-grid dump file for
+post analyses.  Or they can be used as input to the <A HREF = "fit_dt_reset.html">fix
+dt/reset</A> command to adjust the global timestep for
+a variable timestep simulation.  See this
+<A HREF = "Section_howto.html#howto_17">section</A> of the manual for more
+information on variable timestep simulations.
+</P>
+<P>The <I>tfraction</I> and <I>cfraction</I> arguments are both values from 0.0 to
+1.0 which are applied to the transit term and collision term in the
+formula below.
+</P>
+<P>The remaining 5 arguments specify computes which calculate various per
+grid cell quantities.  Or they specify fixes which time average those
+per grid cell quantities.  The 5 quantities are per grid cell mean
+free path (lambda), temperature, and the xyz components of the
+velocity squared for particles in the grid cell.  The <A HREF = "compute_lambda.html">compute
+lambda</A> calculates a mean free path.  The <A HREF = "compute_grid.html">compute
+grid</A> command can calculate the other 4 quantities.
+The <A HREF = "compute_thermal_grid.html">compute thermal/grid</A> command can also
+compute a per grid cell temperature.
+</P>
+<P>This is done by specifying the lambda, temperature, usq, vsq, wsq
+arguments like this:
+</P>
+<UL><LI>c_ID = compute with ID that calculates a per grid cell quantity as a vector output
+<LI>c_ID[m] = compute with ID that calculates a quantity as its Mth column of array output
+<LI>f_ID[m] = fix with ID that calculates a time-averaged quantity as a vector output
+<LI>f_ID[m] = fix with ID that calculates a time-averaged quantity as its Mth column of array output 
+</UL>
+<P>See the Example section above for an example of how these arguments
+can be specified.
+</P>
+<P>IMPORTANT NOTE: If the IDs of one or more <A HREF = "fix_ave_grid.html">fix
+ave/grid</A> commands is used for these 5 arguments,
+tjhey only produces output on timesteps that are multiples of their
+<I>Nfreq</I> argument.  Thus this compute can only be invoked on those
+timesteps.
+</P>
+<P>Using these per grid cell values, the timestep for each grid cell is calculated
+as follows:
+</P>
+<P>NOTE: put a formula here and explain it, including the tfraction and
+cfraction parameters.  Include some advice for users on choosing
+tfraction and cfraction.  Could be a LaTeX formula and include a JPG
+file here.
+</P>
+<CENTER><IMG SRC = "Eqs/timestep.jpg">
+</CENTER>
+<P>OLD TEXT:
+</P>
+<P>In the candidate timestep calculation for each cell, the mean
+collision time is multiplied by the user-supplied collision_fraction
+described above to compute a timestep candidate.  Then for each
+coordinate direction, the cell size in that direction is divided by
+the velocity magnitude in that direction and then multiplied by the
+user-supplied transit_fraction described above to compute a timestep
+candidate.  The cell timestep is set to be the minimum of these
+candidate timesteps.  Collision and transit fractions in the interval
+(0,1) simply provide a user-defined safety margin for the collision
+time and transit time estimates.  Values greater than one enable the
+user to increase the timestep above the recommended timestep by any
+desired factor.
+</P>
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>This compute calculates a per-grid vector.
+</P>
+<P>This compute performs calculations for all flavors of child grid cells
+in the simulation, which includes unsplit, cut, split, and sub cells.
+See <A HREF = "Section_howto.html#howto_8">Section 6.8</A> of the manual gives
+details of how SPARTA defines child, unsplit, split, and sub cells.
+Note that cells inside closed surfaces contain no particles.  These
+could be unsplit or cut cells (if they have zero flow volume).  Both
+of these kinds of cells will compute a zero result for all the
+individual values.  Likewise, split cells store no particles and will
+produce a zero result.  This is because their sub-cells actually
+contain the particles that are geometrically inside the split cell.
+</P>
+<P>The vector can be accessed by any command that uses per-grid values
+from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 4.4</A>
+for an overview of SPARTA output options.
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>As explained above, to use this compute with <I>nrho</I> or <I>temp</I> defined
+as input from a <A HREF = "fix_ave_grid.html">fix ave/grid</A> command, this compute
+must only be invoked on timesteps that are multiples of the <I>Nfreq</I>
+argument used by the fix, since those are the steps when it produces
+output.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "fix_dt_reset.html">fix dt/reset</A>, <A HREF = "compute_grid.html">compute grid</A>,
+<A HREF = "compute_thermal/grid.html">compute thermal/grid</A>, <A HREF = "fix_ave_grid.html">fix
+ave/grid</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

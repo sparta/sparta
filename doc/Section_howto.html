@@ -30,7 +30,8 @@ SPARTA works.
 6.13 <A HREF = "#howto_13">Surface elements: explicit, implicit, distributed</A><BR>
 6.14 <A HREF = "#howto_14">Implicit surface ablation</A><BR>
 6.15 <A HREF = "#howto_15">Transparent surface elements</A><BR>
-6.15 <A HREF = "#howto_16">Visualizing SPARTA output with ParaView</A> <BR>
+6.16 <A HREF = "#howto_16">Visualizing SPARTA output with ParaView</A><BR>
+6.17 <A HREF = "#howto_17">Variable timestep simulations</A> <BR>
 
 <P>The example input scripts included in the SPARTA distribution and
 highlighted in <A HREF = "Section_example.html">Section 5</A> of the manual also
@@ -1328,9 +1329,9 @@ lines were each defined as multiple line segments.
 
 <A NAME = "howto_16"></A><H4>6.16 Visualizing SPARTA output with ParaView 
 </H4>
-<P>The <I>sparta/tools/paraview</I> directory contains two Python programs that can
-be used to convert SPARTA surface and grid data to ParaView <I>.pvd</I> format for
-visualization with ParaView:
+<P>The <I>sparta/tools/paraview</I> directory contains two Python programs
+that can be used to convert SPARTA surface and grid data to ParaView
+<I>.pvd</I> format for visualization with ParaView:
 </P>
 <PRE>surf2paraview.py  
 grid2paraview.py 
@@ -1588,39 +1589,61 @@ of files as MPI ranks used to run the program.
 </P>
 <PRE>mpiexec -np 4 pvbatch -sym sort_sparta_grid_file.py data.grid 
 </PRE>
-<P>The program must be run using the ParaView <I>pvbatch</I> program with the <I>-sym</I> argument.
-The above command line will produce 4 output files containing SPARTA grid dashed ids
-of cells located in the same area of the grid. The output file names are based on
-the name of the <I>*.grid</I> file used as input (<I>data.grid</I> in this case). The output files
-will be named as shown below.
+<P>The program must be run using the ParaView <I>pvbatch</I> program with the
+<I>-sym</I> argument.  The above command line will produce 4 output files
+containing SPARTA grid dashed ids of cells located in the same area of
+the grid. The output file names are based on the name of the <I>*.grid</I>
+file used as input (<I>data.grid</I> in this case). The output files will
+be named as shown below.
 </P>
 <PRE>data_sort_bucket_rank_0.txt
 data_sort_bucket_rank_1.txt
 data_sort_bucket_rank_2.txt
 data_sort_bucket_rank_3.txt 
 </PRE>
-<P>The program <I>grid2paraview_cells.py</I> takes similar inputs as the <I>grid2paraview.py</I>
-program described in section (3), and produces the same ParaView VTU file output
-and PVD file output.
+<P>The program <I>grid2paraview_cells.py</I> takes similar inputs as the
+<I>grid2paraview.py</I> program described in section (3), and produces the
+same ParaView VTU file output and PVD file output.
 </P>
 <PRE>mpiexec -np 4 pvbatch -sym grid2paraview_cells.py grid.txt output -rf flow_files.txt --float --variables id f_1[5] f_1[7] 
 </PRE>
-<P>The program must be run using the ParaView <I>pvbatch</I> program with the <I>-sym</I> argument.
-The above command line will produce an <I>output.pvd</I> file and a directory name output/
-containing the ParaView VTU file data. The <I>grid.txt</I> file must contain a <I>read_grid</I>
-statement with the path to a SPARTA grid cell output file, and is otherwise the same
-as the <I>grid2paraview.py</I> version. The option <I>--float</I> outputs float precision numbers
-to the VTU files to save memory (default is double precision). The <I>--variables</I> option
-limits the output arrays to the names given on the command line (default is all variable
-names found in the flow files given by the <I>-rf</I> or <I>-r</I> options).
+<P>The program must be run using the ParaView <I>pvbatch</I> program with the
+<I>-sym</I> argument.  The above command line will produce an <I>output.pvd</I>
+file and a directory name output/ containing the ParaView VTU file
+data. The <I>grid.txt</I> file must contain a <I>read_grid</I> statement with
+the path to a SPARTA grid cell output file, and is otherwise the same
+as the <I>grid2paraview.py</I> version. The option <I>--float</I> outputs float
+precision numbers to the VTU files to save memory (default is double
+precision). The <I>--variables</I> option limits the output arrays to the
+names given on the command line (default is all variable names found
+in the flow files given by the <I>-rf</I> or <I>-r</I> options).
 </P>
-<P>The <I>grid2paraview_cells.py</I> program will look for <I>*_sort_bucket_rank_?.txt</I> files
-produced by the sort_sparta_grid_file.py program. The matching will depend on the number
-of MPI ranks that <I>grid2paraview_cells.py</I> is run on and the name of the output directory
-given to <I>grid2paraview_cells.py</I>. If matching files are found, these will be used as
-input on each MPI rank. If no match is found, <I>grid2paraview_cells.py</I> will run
-<I>sort_sparta_grid_file.py</I> to produce sorted output files for each rank. The programs
-are decoupled in this way to allow faster <I>grid2paraview_cells.py</I> runs once a set
-of sorted files has been generated by <I>sort_sparta_grid_file.py</I>.
+<P>The <I>grid2paraview_cells.py</I> program will look for
+<I>*_sort_bucket_rank_?.txt</I> files produced by the
+sort_sparta_grid_file.py program. The matching will depend on the
+number of MPI ranks that <I>grid2paraview_cells.py</I> is run on and the
+name of the output directory given to <I>grid2paraview_cells.py</I>. If
+matching files are found, these will be used as input on each MPI
+rank. If no match is found, <I>grid2paraview_cells.py</I> will run
+<I>sort_sparta_grid_file.py</I> to produce sorted output files for each
+rank. The programs are decoupled in this way to allow faster
+<I>grid2paraview_cells.py</I> runs once a set of sorted files has been
+generated by <I>sort_sparta_grid_file.py</I>.
 </P>
+<HR>
+
+<A NAME = "howto_17"></A><H4>6.17 Variable timestep simulations 
+</H4>
+<P>NOTE: this section should give an overview for users as to why they
+would want to use a variable timestep simulation and what benefits
+would result.  Higher accuracy?  Longer timesteps and thus shorter run
+times?  Etc.  Also a breif description of what command to use.  Can
+just point to the command doc pages for details.
+</P>
+<UL><LI>internal time variable with elapsed physical time
+<LI>keywords time and dt from <A HREF = "stats_style.html">stats_style</A>
+<LI><A HREF = "compute_dt_grid.html">compute dt/grid</A>
+<LI><A HREF = "fix_dt_reset.html">fix dt/reset</A>
+<LI><A HREF = "read_restart.html">read_resstart</A> and <A HREF = "write_restart.html">write restart</A> include time and dt settings 
+</UL>
 </HTML>

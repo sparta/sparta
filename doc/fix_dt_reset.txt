@@ -1,0 +1,109 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+fix dt/reset command :h3
+
+[Syntax:]
+
+fix ID dt/reset Nfreq step weight resetflag :pre
+
+ID is documented in "fix"_fix.html command
+dt/reset = style name of this fix command
+Nfreq = perform timestep calculation every this many steps
+step = compute or fix column for per-grid cell timestep, prefaced by "c_" or "f_"
+weight = weight (0.0 to 1.0) applied to average per-cell timestep when calculating global timestep
+resetflag = 1 to overwrite global timestep with new timestep, 0 to just calculate new timestep
+:ul
+
+[Examples:]
+
+compute 1 grid nrho temp usq vsq wsq
+fix 1 ave/grid all 10 50 500 c_1\[*\]
+compute lambda lambda/grid f_1\[1\] f_1\[2\] Ar
+compute tstep dt/grid 0.25 0.1 c_lambda f_1\[2\] f_1\[3\] f_1\[4\] f_1\[5\] :pre
+
+fix 2 dt 500 0.1 c_tstep 1 :pre
+
+[Description:]
+
+Calculate a new global timestep for the simulation based on per grid
+cell timesteps calculated by a compute or fix.  The new global
+timestep can be output by the "stats_style"_stats_style.html command.
+Or it can be used to overwrite the current global timestep for a
+variable time simulation.  See this
+"section"_Section_howto.html#howto_17 of the manual for more
+information on variable timestep simulations.
+
+The {Nfreq} argument specifies how often the global timestep is calculated.
+
+The {step} argument specifies a compute which calculates a per grid
+cell timestep.  Or it specifies a fix which time averages a per grid
+cell timestep.  Currently the only compute that calculates a per grid
+cell timestep is "compute dt/grid"_compute_dt_grid.html.  The "fix
+ave/grid"_fix_ave_grid.html command could perform a time average of
+the compute.
+
+This is done by specifying the {step} argument like this:
+
+c_ID = compute with ID that calculates a per grid cell timestep as a vector output
+c_ID\[m\] = compute with ID that calculates a timestep as its Mth column of array output
+f_ID\[m\] = fix with ID that calculates a time-averaged timestep as a vector output
+f_ID\[m\] = fix with ID that calculates a time-averaged timestep as its Mth column of array output :ul
+
+IMPORTANT NOTE: If the ID of a "fix ave/grid"_fix_ave_grid.html
+command is used as the {step} argument, it only produces output on
+timesteps that are multiples of its {Nfreq} argument.  Thus this fix
+can only be invoked on those timesteps.
+
+From the per-cell timesteps, 3 values are extracted by this fix.  They
+are the minimum timestep (DTmin) for all cells, the maximum timestep
+(DTmax) for all cells, and the average timestep (DTave) over all
+cells.
+
+NOTE: See the output section of compute dt/grid which explains that
+the compute performs calculations for all flavors of child grid cells
+in the simulation, which includes unsplit, cut, split, and sub cells.
+The timestep for some of those cells will be zero.  E.g. interior to
+surfs.  How does this fix treat those values in the calc of DTmin,
+DTmax, DTave ?  Should be explained here and done correctly in the
+code.
+
+A new global timestep is than calculated by this formula, using
+the specified {weight} argument:
+
+DTnew = (1-weight)*DTmin + weight*DTave :pre
+
+If the {resetflag} argument is specified as 1, then the global
+timestep for the simulation, initially specified by the
+"timestep"_timestep.html command, is overwritten with the new DTnew
+value.  If {resetflag} is 0, then the global timestep is not changed.
+
+:line
+
+[Restart, output info:]
+
+No information about this fix is written to "binary restart
+files"_restart.html.
+
+This fix computes a global scalar which is the new global timestep
+(DTnew above) after the most recent timestep re-calculation.  This
+value is accessible to other commands whether or not the global
+timestep is overwritten with the new value.
+
+It also computes a global vector of length 3 with these values:
+
+1 = DTmin
+2 = DTmax
+3 = DTave :ul
+
+[Related commands:]
+
+"compute dt/grid"_compute_dt_grid.html
+
+[Default:] none
+

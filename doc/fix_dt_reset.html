@@ -1,0 +1,113 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix dt/reset command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID dt/reset Nfreq step weight resetflag 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command
+<LI>dt/reset = style name of this fix command
+<LI>Nfreq = perform timestep calculation every this many steps
+<LI>step = compute or fix column for per-grid cell timestep, prefaced by "c_" or "f_"
+<LI>weight = weight (0.0 to 1.0) applied to average per-cell timestep when calculating global timestep
+<LI>resetflag = 1 to overwrite global timestep with new timestep, 0 to just calculate new timestep
+<LI>
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compute 1 grid nrho temp usq vsq wsq
+fix 1 ave/grid all 10 50 500 c_1[*]
+compute lambda lambda/grid f_1[1] f_1[2] Ar
+compute tstep dt/grid 0.25 0.1 c_lambda f_1[2] f_1[3] f_1[4] f_1[5] 
+</PRE>
+<PRE>fix 2 dt 500 0.1 c_tstep 1 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Calculate a new global timestep for the simulation based on per grid
+cell timesteps calculated by a compute or fix.  The new global
+timestep can be output by the <A HREF = "stats_style.html">stats_style</A> command.
+Or it can be used to overwrite the current global timestep for a
+variable time simulation.  See this
+<A HREF = "Section_howto.html#howto_17">section</A> of the manual for more
+information on variable timestep simulations.
+</P>
+<P>The <I>Nfreq</I> argument specifies how often the global timestep is calculated.
+</P>
+<P>The <I>step</I> argument specifies a compute which calculates a per grid
+cell timestep.  Or it specifies a fix which time averages a per grid
+cell timestep.  Currently the only compute that calculates a per grid
+cell timestep is <A HREF = "compute_dt_grid.html">compute dt/grid</A>.  The <A HREF = "fix_ave_grid.html">fix
+ave/grid</A> command could perform a time average of
+the compute.
+</P>
+<P>This is done by specifying the <I>step</I> argument like this:
+</P>
+<UL><LI>c_ID = compute with ID that calculates a per grid cell timestep as a vector output
+<LI>c_ID[m] = compute with ID that calculates a timestep as its Mth column of array output
+<LI>f_ID[m] = fix with ID that calculates a time-averaged timestep as a vector output
+<LI>f_ID[m] = fix with ID that calculates a time-averaged timestep as its Mth column of array output 
+</UL>
+<P>IMPORTANT NOTE: If the ID of a <A HREF = "fix_ave_grid.html">fix ave/grid</A>
+command is used as the <I>step</I> argument, it only produces output on
+timesteps that are multiples of its <I>Nfreq</I> argument.  Thus this fix
+can only be invoked on those timesteps.
+</P>
+<P>From the per-cell timesteps, 3 values are extracted by this fix.  They
+are the minimum timestep (DTmin) for all cells, the maximum timestep
+(DTmax) for all cells, and the average timestep (DTave) over all
+cells.
+</P>
+<P>NOTE: See the output section of compute dt/grid which explains that
+the compute performs calculations for all flavors of child grid cells
+in the simulation, which includes unsplit, cut, split, and sub cells.
+The timestep for some of those cells will be zero.  E.g. interior to
+surfs.  How does this fix treat those values in the calc of DTmin,
+DTmax, DTave ?  Should be explained here and done correctly in the
+code.
+</P>
+<P>A new global timestep is than calculated by this formula, using
+the specified <I>weight</I> argument:
+</P>
+<PRE>DTnew = (1-weight)*DTmin + weight*DTave 
+</PRE>
+<P>If the <I>resetflag</I> argument is specified as 1, then the global
+timestep for the simulation, initially specified by the
+<A HREF = "timestep.html">timestep</A> command, is overwritten with the new DTnew
+value.  If <I>resetflag</I> is 0, then the global timestep is not changed.
+</P>
+<HR>
+
+<P><B>Restart, output info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.
+</P>
+<P>This fix computes a global scalar which is the new global timestep
+(DTnew above) after the most recent timestep re-calculation.  This
+value is accessible to other commands whether or not the global
+timestep is overwritten with the new value.
+</P>
+<P>It also computes a global vector of length 3 with these values:
+</P>
+<UL><LI>1 = DTmin
+<LI>2 = DTmax
+<LI>3 = DTave 
+</UL>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "compute_dt_grid.html">compute dt/grid</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

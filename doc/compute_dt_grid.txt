@@ -1,0 +1,139 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+compute dt/grid command :h3
+
+[Syntax:]
+
+compute ID dt/grid tfraction cfraction lambda temperature usq vsq wsq :pre
+
+ID is documented in "compute"_compute.html command
+dt/grid = style name of this compute command
+tfraction = fraction of grid cell transit time used to calculate timestep 
+cfraction = fraction of grid cell mean collision time used to calculate timestep
+lambda = compute or fix column for mean free path, prefaced by "c_" or "f_"
+temperature = compute or fix column for temperature, prefaced by "c_" or "f_"
+usq = compute or fix column for x component of velocity squared, prefaced by "c_" or "f_"
+vsq = compute or fix column for y component of velocity squared, prefaced by "c_" or "f_"
+wsq = compute or fix column for z component of velocity squared, prefaced by "c_" or "f_" 
+:ul
+
+[Examples:]
+
+compute 1 grid nrho temp usq vsq wsq
+fix 1 ave/grid all 10 50 500 c_1\[*\]
+compute 2 lambda/grid f_1\[1\] f_1\[2\] Ar
+compute tstep dt/grid 0.25 0.1 c_2 f_1\[2\] f_1\[3\] f_1\[4\] f_1\[5\] :pre
+
+compute 1 dt/grid 0.25 0.1 c_lamdba f_1\[2\] f_1\[3\] f_1\[4\] f_1\[5\] pre
+
+[Description:]
+
+Calculate a current timestep for each grid cell based on the
+properties of particles currently in the cell and the grid cell size.
+The per-grid cell timesteps can be output in a per-grid dump file for
+post analyses.  Or they can be used as input to the "fix
+dt/reset"_fit_dt_reset.html command to adjust the global timestep for
+a variable timestep simulation.  See this
+"section"_Section_howto.html#howto_17 of the manual for more
+information on variable timestep simulations.
+
+The {tfraction} and {cfraction} arguments are both values from 0.0 to
+1.0 which are applied to the transit term and collision term in the
+formula below.
+
+The remaining 5 arguments specify computes which calculate various per
+grid cell quantities.  Or they specify fixes which time average those
+per grid cell quantities.  The 5 quantities are per grid cell mean
+free path (lambda), temperature, and the xyz components of the
+velocity squared for particles in the grid cell.  The "compute
+lambda"_compute_lambda.html calculates a mean free path.  The "compute
+grid"_compute_grid.html command can calculate the other 4 quantities.
+The "compute thermal/grid"_compute_thermal_grid.html command can also
+compute a per grid cell temperature.
+
+This is done by specifying the lambda, temperature, usq, vsq, wsq
+arguments like this:
+
+c_ID = compute with ID that calculates a per grid cell quantity as a vector output
+c_ID\[m\] = compute with ID that calculates a quantity as its Mth column of array output
+f_ID\[m\] = fix with ID that calculates a time-averaged quantity as a vector output
+f_ID\[m\] = fix with ID that calculates a time-averaged quantity as its Mth column of array output :ul
+
+See the Example section above for an example of how these arguments
+can be specified.
+
+IMPORTANT NOTE: If the IDs of one or more "fix
+ave/grid"_fix_ave_grid.html commands is used for these 5 arguments,
+tjhey only produces output on timesteps that are multiples of their
+{Nfreq} argument.  Thus this compute can only be invoked on those
+timesteps.
+
+Using these per grid cell values, the timestep for each grid cell is calculated
+as follows:
+
+NOTE: put a formula here and explain it, including the tfraction and
+cfraction parameters.  Include some advice for users on choosing
+tfraction and cfraction.  Could be a LaTeX formula and include a JPG
+file here.
+
+:c,image(Eqs/timestep.jpg)
+
+OLD TEXT:
+
+In the candidate timestep calculation for each cell, the mean
+collision time is multiplied by the user-supplied collision_fraction
+described above to compute a timestep candidate.  Then for each
+coordinate direction, the cell size in that direction is divided by
+the velocity magnitude in that direction and then multiplied by the
+user-supplied transit_fraction described above to compute a timestep
+candidate.  The cell timestep is set to be the minimum of these
+candidate timesteps.  Collision and transit fractions in the interval
+(0,1) simply provide a user-defined safety margin for the collision
+time and transit time estimates.  Values greater than one enable the
+user to increase the timestep above the recommended timestep by any
+desired factor.
+
+:line
+
+[Output info:]
+
+This compute calculates a per-grid vector.
+
+This compute performs calculations for all flavors of child grid cells
+in the simulation, which includes unsplit, cut, split, and sub cells.
+See "Section 6.8"_Section_howto.html#howto_8 of the manual gives
+details of how SPARTA defines child, unsplit, split, and sub cells.
+Note that cells inside closed surfaces contain no particles.  These
+could be unsplit or cut cells (if they have zero flow volume).  Both
+of these kinds of cells will compute a zero result for all the
+individual values.  Likewise, split cells store no particles and will
+produce a zero result.  This is because their sub-cells actually
+contain the particles that are geometrically inside the split cell.
+
+The vector can be accessed by any command that uses per-grid values
+from a compute as input.  See "Section 4.4"_Section_howto.html#howto_4
+for an overview of SPARTA output options.
+
+:line
+
+[Restrictions:]
+
+As explained above, to use this compute with {nrho} or {temp} defined
+as input from a "fix ave/grid"_fix_ave_grid.html command, this compute
+must only be invoked on timesteps that are multiples of the {Nfreq}
+argument used by the fix, since those are the steps when it produces
+output.
+
+[Related commands:]
+
+"fix dt/reset"_fix_dt_reset.html, "compute grid"_compute_grid.html,
+"compute thermal/grid"_compute_thermal/grid.html, "fix
+ave/grid"_fix_ave_grid.html
+
+[Default:] none

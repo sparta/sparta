@@ -529,7 +529,9 @@ void WriteRestart::header()
   write_double(TEMP_THERMAL,update->temp_thermal);
 
   write_double(DT,update->dt);
-  write_double(TIME,update->time);
+  double time = update->time +
+    (update->ntimestep-update-> time_last_update) * update->dt;
+  write_double(TIME,time);
 
   write_int(FSTYLE,update->fstyle);
   if (update->fstyle == CFIELD) write_double_vec(FIELD,3,update->field);

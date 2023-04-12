@@ -1027,6 +1027,7 @@ void ReadRestart::header(int incompatible)
       update->dt = read_double();
     } else if (flag == TIME) {
       update->time = read_double();
+      update->time_last_update = update->ntimestep;
 
     } else if (flag == FSTYLE) {
       update->fstyle = read_int();

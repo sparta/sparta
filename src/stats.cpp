@@ -1048,7 +1048,8 @@ void Stats::compute_dt()
 
 void Stats::compute_time()
 {
-  dvalue = update->time;
+  dvalue = update->time +
+    (update->ntimestep-update-> time_last_update) * update->dt;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1064,8 +1065,9 @@ void Stats::compute_cpu()
 void Stats::compute_tpcpu()
 {
   double new_cpu;
-  double new_time = update->time;
-
+  double new_time = update->time +
+   (update->ntimestep-update-> time_last_update) * update->dt;
+  
   if (firststep == 0) {
     new_cpu = 0.0;
     dvalue = 0.0;
