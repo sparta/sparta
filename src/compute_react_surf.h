@@ -34,7 +34,7 @@ class ComputeReactSurf : public Compute {
   virtual void init();
   void compute_per_surf();
   virtual void clear();
-  virtual void surf_tally(int, int, int, Particle::OnePart *,
+  virtual void surf_tally(double, int, int, int, Particle::OnePart *,
                           Particle::OnePart *, Particle::OnePart *);
   virtual int tallyinfo(surfint *&);
   virtual void post_process_surf();

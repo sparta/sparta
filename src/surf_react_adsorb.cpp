@@ -2826,13 +2826,14 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
         // if computes which tally on-surface reactions exist:
         //    invoke them here so can be tallied on a per-surf basis
         //    Update::run() does same thing for gas/surf reactions
-
+        // for now just pass dtremain = 0.0 to surf_tally()
+        
         nsingle++;
         ireaction = nlist_gs + reactions_ps_list[i];
         tally_single[ireaction]++;
         if (ncompute_tally)
           for (m = 0; m < ncompute_tally; m++)
-            clist_active[m]->surf_tally(isurf,-1,ireaction,NULL,NULL,NULL);
+            clist_active[m]->surf_tally(0.0,isurf,-1,ireaction,NULL,NULL,NULL);
 
         // update tau
 

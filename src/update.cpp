@@ -833,7 +833,7 @@ template < int DIM, int SURF > void Update::move()
 
               if (nsurf_tally)
                 for (m = 0; m < nsurf_tally; m++)
-                  slist_active[m]->surf_tally(minsurf,icell,reaction,
+                  slist_active[m]->surf_tally(dtremain,minsurf,icell,reaction,
                                               &iorig,ipart,jpart);
 
               // stuck_iterate = consecutive iterations particle is immobile
@@ -1032,7 +1032,7 @@ template < int DIM, int SURF > void Update::move()
           if (nboundary_tally)
             for (m = 0; m < nboundary_tally; m++)
               blist_active[m]->
-                boundary_tally(outface,bflag,reaction,&iorig,ipart,jpart);
+                boundary_tally(dtremain,outface,bflag,reaction,&iorig,ipart,jpart);
 
           if (DIM == 1) {
             xnew[0] = x[0] + dtremain*v[0];

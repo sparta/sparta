@@ -24,7 +24,7 @@
 
 using namespace SPARTA_NS;
 
-enum{IDPART,IDSURF,XC,YC,ZC,VXOLD,VYOLD,VZOLD,VXNEW,VYNEW,VZNEW};
+enum{IDPART,IDSURF,XC,YC,ZC,TIME,VXOLD,VYOLD,VZOLD,VXNEW,VYNEW,VZNEW};
 
 enum{INT,DOUBLE,BIGINT,STRING};        // same as Dump
 
@@ -57,6 +57,7 @@ ComputeCollideTally::ComputeCollideTally(SPARTA *sparta, int narg, char **arg) :
     else if (strcmp(arg[iarg],"xc") == 0) which[nvalue++] = XC;
     else if (strcmp(arg[iarg],"yc") == 0) which[nvalue++] = YC;
     else if (strcmp(arg[iarg],"zc") == 0) which[nvalue++] = ZC;
+    else if (strcmp(arg[iarg],"time") == 0) which[nvalue++] = TIME;
     else if (strcmp(arg[iarg],"vxold") == 0) which[nvalue++] = VXOLD;
     else if (strcmp(arg[iarg],"vyold") == 0) which[nvalue++] = VYOLD;
     else if (strcmp(arg[iarg],"vzold") == 0) which[nvalue++] = VZOLD;
@@ -135,7 +136,7 @@ void ComputeCollideTally::clear()
    jp != NULL means two particles after collision
 ------------------------------------------------------------------------- */
 
-void ComputeCollideTally::surf_tally(int isurf, int icell, int reaction,
+void ComputeCollideTally::surf_tally(double dtremain, int isurf, int icell, int reaction,
                                      Particle::OnePart *iorig,
                                      Particle::OnePart *ip, Particle::OnePart *jp)
 {
@@ -179,6 +180,9 @@ void ComputeCollideTally::surf_tally(int isurf, int icell, int reaction,
       break;
     case ZC: 
       vec[m] = iorig->x[2];
+      break;
+    case TIME: 
+      vec[m] = update->dt - dtremain;
       break;
     case VXOLD:
       vec[m] = iorig->v[0];
