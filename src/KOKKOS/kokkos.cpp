@@ -44,7 +44,6 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
   ngpus = 0;
   int device = 0;
   nthreads = 1;
-  numa = 1;
 
   int iarg = 0;
   while (iarg < narg) {
@@ -110,11 +109,6 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
       nthreads = atoi(arg[iarg+1]);
       iarg += 2;
 
-    } else if (strcmp(arg[iarg],"n") == 0 ||
-               strcmp(arg[iarg],"numa") == 0) {
-      numa = atoi(arg[iarg+1]);
-      iarg += 2;
-
     } else error->all(FLERR,"Invalid Kokkos command-line args");
   }
 
@@ -140,10 +134,9 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
                          "than the OpenMP backend");
 #endif
 
-  Kokkos::InitArguments args;
-  args.num_threads = nthreads;
-  args.num_numa = numa;
-  args.device_id = device;
+  Kokkos::InitializationSettings args;
+  args.set_num_threads(nthreads);
+  args.set_device_id(device);
 
   Kokkos::initialize(args);
 
