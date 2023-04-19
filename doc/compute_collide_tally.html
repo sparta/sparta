@@ -1,0 +1,115 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>compute collide/tally command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>compute ID collide/tally group-ID mix-ID value1 value2 ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
+
+<LI>collide/tally = style name of this compute command 
+
+<LI>group-ID = group ID for which surface elements to perform calculation on 
+
+<LI>mix-ID = mixture ID to perform calculation on 
+
+<LI>one or more values can be appended 
+
+<LI>value = <I>id/part</I> or <I>id/surf</I> or <I>time</I> or <I>xc</I> or <I>yc</I> or <I>zc</I> or <I>vxold</I> or <I>vyold</I> or <I>vzold</I> or <I>vxnew</I> or <I>vynew</I> or <I>vznew</I> 
+
+<PRE>  <I>id/part</I> = particle ID
+  <I>id/part2</I> = particle ID - what about if vanishes ?
+  <I>id/surf</I> = surface element ID
+  <I>time</I> = time of collision (within timestep, see below)
+  <I>xc</I>, <I>yc</I>, <I>zc</I> = coordinates of collision point
+  <I>vxold</I>, <I>vyold</I>, <I>vzold</I> = velocity components of incident particle
+  <I>vxnew</I>, <I>vynew</I>, <I>vznew</I> = velocity components of outgoing particle
+  <I>vxnew2</I>, <I>vynew2</I>, <I>vznew2</I> = velocity components of outgoing particle 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compute 1 collide/tally all species id/part id/surf time xc yc zc 
+</PRE>
+<P>This command will dump the tallies in the previous command to a dump
+file every 10 steps:
+</P>
+<PRE>dump 1 tally all 10 tmp.tally c_1[*] 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Tally one or more values for each collision of a particle with a
+surface element during the current timestep.  Only surface elements in
+the surface group specified by <I>group-ID</I> and particles with species
+in the mixture specified by <I>mix-ID</I> are included.  See the <A HREF = "group.html">group
+grid</A> command for info on how surface elements can be
+assigned to surface groups.
+</P>
+<P>The results of this compute can be used by different commands in
+different ways.  The values for a single timestep can be output by the
+<A HREF = "dump.html">dump tally</A> command.  Currenlty this is the only option for
+accessing the tallied values.
+</P>
+<HR>
+
+<P>The <I>id/part</I> value is the ID of the particle.  Note that particle IDs
+are generated randomly.  Thus multiple particles can potentially
+have the same ID.
+</P>
+<P>The <I>id/surf</I> value is the ID of the surface element.  Surface element
+IDs are unique.
+</P>
+<P>The <I>time</I> value is the point in time within the timestep when the
+collision occurs.  Thus if the timestep size is DT as set by the
+<A HREF = "timestep.html">timestep</A> command, the <I>time</I> values will all be within
+the range of 0.0 to DT, every timestep this compute is invoked.
+</P>
+<P>The <I>xc</I>, <I>yc</I>, and <I>zc</I> are the coordinates of the collision point
+between the particle and the surface element.
+</P>
+<P>The <I>vxold</I>, <I>vyold</I>, <I>vzold</I> values are the velocity components of
+the particle before it collides with the surface element.
+</P>
+<P>The <I>vxnew</I>, <I>vynew</I>, <I>vznew</I> values are the velocity components of
+the particle after it bounces off the surface element.  If the surface
+collision induces a chemical reaction ...
+</P>
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>This compute calculates a per-tally array, with the number of columns
+equal to the number of values.
+</P>
+<P>The array can be accessed by any command that uses per-tally values
+from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 6.4</A>
+for an overview of SPARTA output options.
+</P>
+<P>The per-tally array values will be in the <A HREF = "units.html">units</A>
+appropriate to the individual values as described above.  <I>Time</I> is in
+time units; see above for details.  <I>Xc</I>, <I>yc</I>, and <I>zc</I> are in
+distance units.  <I>Vxold</I>, <I>vyold</I>, <I>vzold</I> are in velocity units, as
+are <I>vxnew</I>, <I>vynew</I>, <I>vznew</I>.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "dump.html">dump tally</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

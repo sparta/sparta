@@ -359,7 +359,10 @@ grid cell contiguously in memory. This operation is performed every
 <I>nsteps</I> as specified. A value of 0 means no reordering is ever done. 
 This option is only available when using the KOKKOS package and can 
 improve performance on certain hardware such as GPUs, but is typically 
-slower on CPUs except when running on thousands of nodes. 
+slower on CPUs except when running on thousands of nodes. Reordering
+requires sorting the particles, which is done automatically when
+collisions are enabled. If collisions are not enabled, then sorting
+will also be performed in addition to reordering. 
 </P>
 <P>The <I>mem/limit</I> keyword limits the amount of memory allocated for 
 several operations: load balancing, reordering of particles, and restart 

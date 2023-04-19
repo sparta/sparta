@@ -1,0 +1,103 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+compute collide/tally command :h3
+
+[Syntax:]
+
+compute ID collide/tally group-ID mix-ID value1 value2 ... :pre
+
+ID is documented in "compute"_compute.html command :ulb,l
+collide/tally = style name of this compute command :l
+group-ID = group ID for which surface elements to perform calculation on :l
+mix-ID = mixture ID to perform calculation on :l
+one or more values can be appended :l
+value = {id/part} or {id/surf} or {time} or {xc} or {yc} or {zc} or {vxold} or {vyold} or {vzold} or {vxnew} or {vynew} or {vznew} :l
+  {id/part} = particle ID
+  {id/part2} = particle ID - what about if vanishes ?
+  {id/surf} = surface element ID
+  {time} = time of collision (within timestep, see below)
+  {xc}, {yc}, {zc} = coordinates of collision point
+  {vxold}, {vyold}, {vzold} = velocity components of incident particle
+  {vxnew}, {vynew}, {vznew} = velocity components of outgoing particle
+  {vxnew2}, {vynew2}, {vznew2} = velocity components of outgoing particle :pre
+:ule
+
+[Examples:]
+
+compute 1 collide/tally all species id/part id/surf time xc yc zc :pre
+
+This command will dump the tallies in the previous command to a dump
+file every 10 steps:
+
+dump 1 tally all 10 tmp.tally c_1\[*\] :pre
+
+[Description:]
+
+Tally one or more values for each collision of a particle with a
+surface element during the current timestep.  Only surface elements in
+the surface group specified by {group-ID} and particles with species
+in the mixture specified by {mix-ID} are included.  See the "group
+grid"_group.html command for info on how surface elements can be
+assigned to surface groups.
+
+The results of this compute can be used by different commands in
+different ways.  The values for a single timestep can be output by the
+"dump tally"_dump.html command.  Currenlty this is the only option for
+accessing the tallied values.
+
+:line
+
+The {id/part} value is the ID of the particle.  Note that particle IDs
+are generated randomly.  Thus multiple particles can potentially
+have the same ID.
+
+The {id/surf} value is the ID of the surface element.  Surface element
+IDs are unique.
+
+The {time} value is the point in time within the timestep when the
+collision occurs.  Thus if the timestep size is DT as set by the
+"timestep"_timestep.html command, the {time} values will all be within
+the range of 0.0 to DT, every timestep this compute is invoked.
+
+The {xc}, {yc}, and {zc} are the coordinates of the collision point
+between the particle and the surface element.
+
+The {vxold}, {vyold}, {vzold} values are the velocity components of
+the particle before it collides with the surface element.
+
+The {vxnew}, {vynew}, {vznew} values are the velocity components of
+the particle after it bounces off the surface element.  If the surface
+collision induces a chemical reaction ...
+
+:line
+
+[Output info:]
+
+This compute calculates a per-tally array, with the number of columns
+equal to the number of values.
+
+The array can be accessed by any command that uses per-tally values
+from a compute as input.  See "Section 6.4"_Section_howto.html#howto_4
+for an overview of SPARTA output options.
+
+The per-tally array values will be in the "units"_units.html
+appropriate to the individual values as described above.  {Time} is in
+time units; see above for details.  {Xc}, {yc}, and {zc} are in
+distance units.  {Vxold}, {vyold}, {vzold} are in velocity units, as
+are {vxnew}, {vynew}, {vznew}.
+
+:line
+
+[Restrictions:] none
+
+[Related commands:]
+
+"dump tally"_dump.html
+
+[Default:] none

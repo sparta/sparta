@@ -54,10 +54,10 @@ ComputeCollideTally::ComputeCollideTally(SPARTA *sparta, int narg, char **arg) :
   while (iarg < narg) {
     if (strcmp(arg[iarg],"id/part") == 0) which[nvalue++] = IDPART;
     else if (strcmp(arg[iarg],"id/surf") == 0) which[nvalue++] = IDSURF;
+    else if (strcmp(arg[iarg],"time") == 0) which[nvalue++] = TIME;
     else if (strcmp(arg[iarg],"xc") == 0) which[nvalue++] = XC;
     else if (strcmp(arg[iarg],"yc") == 0) which[nvalue++] = YC;
     else if (strcmp(arg[iarg],"zc") == 0) which[nvalue++] = ZC;
-    else if (strcmp(arg[iarg],"time") == 0) which[nvalue++] = TIME;
     else if (strcmp(arg[iarg],"vxold") == 0) which[nvalue++] = VXOLD;
     else if (strcmp(arg[iarg],"vyold") == 0) which[nvalue++] = VYOLD;
     else if (strcmp(arg[iarg],"vzold") == 0) which[nvalue++] = VZOLD;

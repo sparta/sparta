@@ -51,6 +51,7 @@ and what it does.  Here is an alphabetic list of compute styles
 available in SPARTA:
 
 "boundary"_compute_boundary.html - various quantities on each global boundary 
+"collide/tally"_compute_collide_tally.html - tallies for particles colliding with surface elements
 "count"_compute_count.html - particle counts for species and mixtures and mixture groups
 "distsurf/grid"_compute_distsurf_grid.html - distance from grid cells to surface
 "eflux/grid"_compute_eflux_grid.html - energy flux density per grid cell
@@ -128,11 +129,14 @@ variable"_variable.html. :l
 
 Per-grid values can be output via the "dump grid"_dump.html command.
 They can be time-averaged via the "fix ave/grid"_fix_ave_grid.html
-command.  :l
+command. :l
 
 Per-surf values can be output via the "dump surf"_dump.html command.
 They can be time-averaged via the "fix ave/surf"_fix_ave_surf.html
-command.  :l,ule
+command. :l
+
+Per-tally values can be output via the "dump tally"_dump.html
+command. :l,ule
 
 :line
 

@@ -53,7 +53,7 @@ DumpTally::DumpTally(SPARTA *sparta, int narg, char **arg) :
 
   dimension = domain->dimension;
 
-  nevery = atoi(arg[2]);
+  nevery = atoi(arg[3]);
 
   // expand args if any have wildcard character "*"
   // ok to include trailing optional args,
