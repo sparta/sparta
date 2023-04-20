@@ -10,7 +10,7 @@ compute collide/tally command :h3
 
 [Syntax:]
 
-compute ID collide/tally group-ID mix-ID value1 value2 ... :pre
+compute ID collide/tally group-ID mix-ID value1 value2 ... keyword arg ... :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
 collide/tally = style name of this compute command :l
@@ -18,19 +18,27 @@ group-ID = group ID for which surface elements to perform calculation on :l
 mix-ID = mixture ID to perform calculation on :l
 one or more values can be appended :l
 value = {id/part} or {id/surf} or {time} or {xc} or {yc} or {zc} or {vxold} or {vyold} or {vzold} or {vxnew} or {vynew} or {vznew} :l
-  {id/part} = particle ID
-  {id/part2} = particle ID - what about if vanishes ?
+  {id/old} = particle ID before collision
+  {id/new} = particle ID after collision
+  {id/new2} = particle ID of new 2nd particle after collision/reaction
+  {type/old} = particle type before collision
+  {type/new1} = particle type after collision
+  {type/new2} = particle type of new 2nd particle after collision/reaction
   {id/surf} = surface element ID
   {time} = time of collision (within timestep, see below)
   {xc}, {yc}, {zc} = coordinates of collision point
   {vxold}, {vyold}, {vzold} = velocity components of incident particle
   {vxnew}, {vynew}, {vznew} = velocity components of outgoing particle
   {vxnew2}, {vynew2}, {vznew2} = velocity components of outgoing particle :pre
+zero or more keyword/value pairs may be appended :l
+  keyword = {reactions} :l
+  {reactions} arg = {no} or {yes} or {only} :pre
 :ule
 
 [Examples:]
 
-compute 1 collide/tally all species id/part id/surf time xc yc zc :pre
+compute 1 collide/tally all species id/old id/surf time xc yc zc
+compute 1 collide/tally all species id/old id/new id/new2 type/old type/new type/new2 id/surf time xc yc zc reactions only
 
 This command will dump the tallies in the previous command to a dump
 file every 10 steps:
@@ -39,10 +47,10 @@ dump 1 tally all 10 tmp.tally c_1\[*\] :pre
 
 [Description:]
 
-Tally one or more values for each collision of a particle with a
-surface element during the current timestep.  Only surface elements in
-the surface group specified by {group-ID} and particles with species
-in the mixture specified by {mix-ID} are included.  See the "group
+Tally various values for each collision of a particle with a surface
+element during the current timestep.  Only surface elements in the
+surface group specified by {group-ID} and particles with species in
+the mixture specified by {mix-ID} are included.  See the "group
 grid"_group.html command for info on how surface elements can be
 assigned to surface groups.
 
@@ -51,29 +59,80 @@ different ways.  The values for a single timestep can be output by the
 "dump tally"_dump.html command.  Currenlty this is the only option for
 accessing the tallied values.
 
+Note that if gas/surface reactions are enabled via the
+"surf_react"_surf_react.html command, then a collision of a single
+particle with a surface can result in 0, 1, or 2 particles being
+produced.  The species of the 1 or 2 product particles may be
+different than the species of the reactant.  All of these attributes
+can be tallied using the values explained next.
+
 :line
 
-The {id/part} value is the ID of the particle.  Note that particle IDs
-are generated randomly.  Thus multiple particles can potentially
-have the same ID.
+The {id/old} value is the ID of the incident particle.  Note that
+particle IDs are generated randomly.  Thus multiple particles in the
+system can potentially have the same ID.  See "Section
+6.17"_Section_howto_17 for more details on particle IDs.
 
-The {id/surf} value is the ID of the surface element.  Surface element
-IDs are unique.
+The {id/new} and {id/new2} values are the post-collision IDs of the 0,
+1, or 2 resulting particles.  If the incident particle vanished in a
+reaction, then {id/new} will be 0.  Otherwise it will be the same as
+{id/old}, whether there was just a collision or also a reaction.  If
+{id/new2} is 0, no 2nd particle was created in a reaction, otherwise
+it is the random ID assigned to the newly created particle.
+
+The {type/old} value is the integer index for the incident particle
+species.  It is a value from 1 to Nspecies. The value corresponds to
+the order in which species were defined via the "species"_species.html
+command.  See "Section 6.17"_Section_howto_17 for more details on
+particle types.
+
+The {type/new} and {type/new2} values are the post-collision integer
+indices for the particle species of the 0, 1, or 2 resulting
+particles.  If the incident particle vanished in a reaction, then
+{type/new} will be 0.  If only a collision took place, then {type/new}
+will be the same as {type/old}.  If {type/new} is different than
+{type/old}, then a reaction took place.  If {type/new2} is 0, no 2nd
+particle was created in a reaction, otherwise it is the type of the
+newly created particle.
+
+The {id/surf} value is the ID of the surface element.  For explicit
+surfaces, surface element IDs are unique.  For implicit surfaces, the
+surface ID of all the surface elements within a grid cell are the grid
+cell ID.  See "Section 6.13"_Section_howto_13 for more discussion of
+explicit and implicit surfaces.
 
 The {time} value is the point in time within the timestep when the
-collision occurs.  Thus if the timestep size is DT as set by the
+collision occured.  Thus if the timestep size is DT, as set by the
 "timestep"_timestep.html command, the {time} values will all be within
-the range of 0.0 to DT, every timestep this compute is invoked.
+the range of 0.0 to DT, for all collisions tallied by this compute on
+each timestep it is invoked.
 
 The {xc}, {yc}, and {zc} are the coordinates of the collision point
 between the particle and the surface element.
 
 The {vxold}, {vyold}, {vzold} values are the velocity components of
-the particle before it collides with the surface element.
+the incident particle before it collides with the surface element.
 
-The {vxnew}, {vynew}, {vznew} values are the velocity components of
-the particle after it bounces off the surface element.  If the surface
-collision induces a chemical reaction ...
+The {vxnew}, {vynew}, {vznew} and {vxnew2}, {vynew2}, {vznew2} values
+are the IDs velocity components of the 0, 1, or 2 resulting particles.
+{Vxnew}, {vynew}, {vznew} are the post-collision velocities of the
+incident particle whether there was only a collision or also a
+reaction.  {Vxnew2}, {vynew2}, {vznew2} will be zero if no 2nd
+particle was created in a reaction, otherwise they are the newly
+created particle's velocity components.
+
+:line
+
+The {reactions} keyword can be used to specify which kinds of
+collisions or reactions are included in the tally outputs.
+
+For the default argument {no}, only collisions resulting in no
+reactions are included.  This means the values {id/new}, {id/new2},
+{type/new}, {type/new2}, {vxnew2}, {vynew2}, {vznew2} are irrelevant.
+
+For {yes}, both collisions with and without reactions are incldued.
+For {only}, only collisions resulting in reactions are included.  In
+these cases, all the values may be relevant.
 
 :line
 
@@ -90,7 +149,7 @@ The per-tally array values will be in the "units"_units.html
 appropriate to the individual values as described above.  {Time} is in
 time units; see above for details.  {Xc}, {yc}, and {zc} are in
 distance units.  {Vxold}, {vyold}, {vzold} are in velocity units, as
-are {vxnew}, {vynew}, {vznew}.
+are {vxnew}, {vynew}, {vznew}, {vxnew2}, {vynew2}, {vznew2}.
 
 :line
 
@@ -100,4 +159,7 @@ are {vxnew}, {vynew}, {vznew}.
 
 "dump tally"_dump.html
 
-[Default:] none
+[Default:]
+
+The default for the reactions keyword is no.
+
