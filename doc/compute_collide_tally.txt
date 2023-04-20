@@ -54,6 +54,10 @@ the mixture specified by {mix-ID} are included.  See the "group
 grid"_group.html command for info on how surface elements can be
 assigned to surface groups.
 
+This compute can be used for simulations with either explicit or
+implicit surface elements.  See "Section 6.13"_Section_howto_13 for
+more discussion of explicit and implicit surfaces.
+
 The results of this compute can be used by different commands in
 different ways.  The values for a single timestep can be output by the
 "dump tally"_dump.html command.  Currenlty this is the only option for

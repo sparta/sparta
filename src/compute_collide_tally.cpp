@@ -99,8 +99,6 @@ void ComputeCollideTally::init()
 {
   if (!surf->exist)
     error->all(FLERR,"Cannot use compute collide/tally when surfs do not exist");
-  if (surf->implicit)
-    error->all(FLERR,"Cannot use compute collide/tally with implicit surfs");
 }
 
 /* ----------------------------------------------------------------------
