@@ -27,7 +27,7 @@ value = {id/pre} or {id/post} or {id/post2} or {type/pre} or {type/post} or {typ
   {id/surf} = surface element ID
   {time} = time of collision (within timestep, see below)
   {xc}, {yc}, {zc} = coordinates of collision point
-  {vx/pre}, {vy/pre}, {vz/pre = velocity components before collision
+  {vx/pre}, {vy/pre}, {vz/pre} = velocity components before collision
   {vxnew}, {vynew}, {vznew} = velocity components after collision/reaction
   {vxnew2}, {vynew2}, {vznew2} = velocity components of outgoing particle :pre
 :ule

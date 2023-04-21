@@ -14,22 +14,22 @@
 
 #ifdef COMPUTE_CLASS
 
-ComputeStyle(collide/tally,ComputeCollideTally)
+ComputeStyle(reaction/tally,ComputeReactionTally)
 
 #else
 
-#ifndef SPARTA_COMPUTE_COLLIDE_TALLY_H
-#define SPARTA_COMPUTE_COLLIDE_TALLY_H
+#ifndef SPARTA_COMPUTE_REACTION_TALLY_H
+#define SPARTA_COMPUTE_REACTION_TALLY_H
 
 #include "compute.h"
 #include "surf.h"
 
 namespace SPARTA_NS {
 
-class ComputeCollideTally : public Compute {
+class ComputeReactionTally : public Compute {
  public:
-  ComputeCollideTally(class SPARTA *, int, char **);
-  ~ComputeCollideTally();
+  ComputeReactionTally(class SPARTA *, int, char **);
+  ~ComputeReactionTally();
   void init();
   void compute_per_tally();
   void clear();
