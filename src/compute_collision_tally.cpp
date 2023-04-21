@@ -139,6 +139,13 @@ void ComputeCollisionTally::surf_tally(double dtremain, int isurf, int icell, in
                                        Particle::OnePart *iorig,
                                        Particle::OnePart *ip, Particle::OnePart *jp)
 {
+  // skip if a reaction
+  // this compute only tallies collisions that do not induce a reaction
+  // reactions can be tallied by compute reaction/tally command
+
+  if (ip == NULL || jp) return;
+  if (iorig->ispecies != ip->ispecies) return;
+  
   // skip if isurf not in surface group
 
   if (dim == 2) {
@@ -153,13 +160,6 @@ void ComputeCollisionTally::surf_tally(double dtremain, int isurf, int icell, in
   int igroup = particle->mixture[imix]->species2group[origspecies];
   if (igroup < 0) return;
 
-  // skip if a reaction
-  // this compute only tallies collisions that do not induce a reaction
-  // reactions can be tallied by compute reaction/tally command
-
-  if (ip == NULL || jp) return;
-  if (iorig->ispecies != ip->ispecies) return;
-  
   // grow tally array if necessary
   
   if (ntally == maxtally) grow_tally();
@@ -175,7 +175,7 @@ void ComputeCollisionTally::surf_tally(double dtremain, int isurf, int icell, in
       vec[m] = ubuf(ip->id).d;
       break;
     case TYPE:
-      vec[m] = ubuf(ip->ispecies).d;
+      vec[m] = ubuf(ip->ispecies+1).d;
       break;
     case IDSURF:
       if (dim == 2) vec[m] = ubuf(lines[isurf].id).d;

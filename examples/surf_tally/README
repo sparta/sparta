@@ -1,0 +1,8 @@
+These input scripts demonstrate use of the compute collision/tally and
+compute reaction/tally commands.  Each produces a dump file which
+tallies information about gas/surface collisions or reactions.
+
+The in.circle.tally script is adapated from examples/circle/in.circle
+
+The in.circle.gs.tally script is adapated from
+examples/surf_react_adsorb/in.circle.gs

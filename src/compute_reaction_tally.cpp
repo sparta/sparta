@@ -190,15 +190,15 @@ void ComputeReactionTally::surf_tally(double dtremain, int isurf, int icell, int
       else vec[m] = ubuf(jp->id).d;
       break;
     case TYPEPRE:
-      vec[m] = ubuf(iorig->ispecies).d;
+      vec[m] = ubuf(iorig->ispecies+1).d;
       break;
     case TYPEPOST:
       if (ip == NULL) vec[m] = ubuf(0).d;
-      else vec[m] = ubuf(ip->ispecies).d;
+      else vec[m] = ubuf(ip->ispecies+1).d;
       break;
     case TYPEPOST2:
       if (jp == NULL) vec[m] = ubuf(0).d;
-      else vec[m] = ubuf(jp->ispecies).d;
+      else vec[m] = ubuf(jp->ispecies+1).d;
       break;
     case IDSURF:
       if (dim == 2) vec[m] = ubuf(lines[isurf].id).d;
