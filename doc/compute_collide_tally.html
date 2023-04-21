@@ -9,15 +9,15 @@
 
 <HR>
 
-<H3>compute collide/tally command 
+<H3>compute collision/tally command 
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>compute ID collide/tally group-ID mix-ID value1 value2 ... keyword arg ... 
+<PRE>compute ID collision/tally group-ID mix-ID value1 value2 ... 
 </PRE>
 <UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
 
-<LI>collide/tally = style name of this compute command 
+<LI>collision/tally = style name of this compute command 
 
 <LI>group-ID = group ID for which surface elements to perform calculation on 
 
@@ -25,34 +25,22 @@
 
 <LI>one or more values can be appended 
 
-<LI>value = <I>id/part</I> or <I>id/surf</I> or <I>time</I> or <I>xc</I> or <I>yc</I> or <I>zc</I> or <I>vxold</I> or <I>vyold</I> or <I>vzold</I> or <I>vxnew</I> or <I>vynew</I> or <I>vznew</I> 
+<LI>value = <I>id</I> or <I>type</I> or <I>id/surf</I> or <I>time</I> or <I>xc</I> or <I>yc</I> or <I>zc</I> or <I>vx/pre</I> or <I>vy/pre</I> or <I>vz/pre</I> or <I>vx/post</I> or <I>vy/post</I> or <I>vz/post</I> 
 
-<PRE>  <I>id/old</I> = particle ID before collision
-  <I>id/new</I> = particle ID after collision
-  <I>id/new2</I> = particle ID of new 2nd particle after collision/reaction
-  <I>type/old</I> = particle type before collision
-  <I>type/new1</I> = particle type after collision
-  <I>type/new2</I> = particle type of new 2nd particle after collision/reaction
+<PRE>  <I>id</I> = particle ID
+  <I>type</I> = particle type
   <I>id/surf</I> = surface element ID
   <I>time</I> = time of collision (within timestep, see below)
   <I>xc</I>, <I>yc</I>, <I>zc</I> = coordinates of collision point
-  <I>vxold</I>, <I>vyold</I>, <I>vzold</I> = velocity components of incident particle
-  <I>vxnew</I>, <I>vynew</I>, <I>vznew</I> = velocity components of outgoing particle
-  <I>vxnew2</I>, <I>vynew2</I>, <I>vznew2</I> = velocity components of outgoing particle 
-</PRE>
-<LI>zero or more keyword/value pairs may be appended 
-
-<LI>  keyword = <I>reactions</I> 
-
-<PRE>  <I>reactions</I> arg = <I>no</I> or <I>yes</I> or <I>only</I> 
+  <I>vx/pre</I>, <I>vy/pre</I>, <I>vz/pre</I> = velocity components before collision
+  <I>vx/post</I>, <I>vy/post</I>, <I>vz/post</I> = velocity components after collision 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
-<P>compute 1 collide/tally all species id/old id/surf time xc yc zc
-compute 1 collide/tally all species id/old id/new id/new2 type/old type/new type/new2 id/surf time xc yc zc reactions only
-</P>
+<PRE>compute 1 collision/tally all all id id/surf time xc yc zc 
+</PRE>
 <P>This command will dump the tallies in the previous command to a dump
 file every 10 steps:
 </P>
@@ -61,11 +49,16 @@ file every 10 steps:
 <P><B>Description:</B>
 </P>
 <P>Tally various values for each collision of a particle with a surface
-element during the current timestep.  Only surface elements in the
-surface group specified by <I>group-ID</I> and particles with species in
-the mixture specified by <I>mix-ID</I> are included.  See the <A HREF = "group.html">group
-grid</A> command for info on how surface elements can be
-assigned to surface groups.
+element during the current timestep.  Only surface collisions which do
+not result in chemical reactions are tallied by this command.  See the
+related <A HREF = "compute_reaction_tally.html">compute reaction/tally</A> command
+to tally reactions.  It provides different tally value options than
+this compute.
+</P>
+<P>Only surface elements in the surface group specified by <I>group-ID</I> and
+particles with species in the mixture specified by <I>mix-ID</I> are
+included.  See the <A HREF = "group.html">group grid</A> command for info on how
+surface elements can be assigned to surface groups.
 </P>
 <P>This compute can be used for simulations with either explicit or
 implicit surface elements.  See <A HREF = "Section_howto_13">Section 6.13</A> for
@@ -76,41 +69,18 @@ different ways.  The values for a single timestep can be output by the
 <A HREF = "dump.html">dump tally</A> command.  Currenlty this is the only option for
 accessing the tallied values.
 </P>
-<P>Note that if gas/surface reactions are enabled via the
-<A HREF = "surf_react.html">surf_react</A> command, then a collision of a single
-particle with a surface can result in 0, 1, or 2 particles being
-produced.  The species of the 1 or 2 product particles may be
-different than the species of the reactant.  All of these attributes
-can be tallied using the values explained next.
-</P>
 <HR>
 
-<P>The <I>id/old</I> value is the ID of the incident particle.  Note that
-particle IDs are generated randomly.  Thus multiple particles in the
-system can potentially have the same ID.  See <A HREF = "Section_howto_17">Section
-6.17</A> for more details on particle IDs.
+<P>The <I>id</I> value is the ID of the particle.  Note that particle
+IDs are generated randomly.  Thus multiple particles in the system can
+potentially have the same ID.  See <A HREF = "Section_howto_17">Section 6.17</A> for
+more details on particle IDs.
 </P>
-<P>The <I>id/new</I> and <I>id/new2</I> values are the post-collision IDs of the 0,
-1, or 2 resulting particles.  If the incident particle vanished in a
-reaction, then <I>id/new</I> will be 0.  Otherwise it will be the same as
-<I>id/old</I>, whether there was just a collision or also a reaction.  If
-<I>id/new2</I> is 0, no 2nd particle was created in a reaction, otherwise
-it is the random ID assigned to the newly created particle.
-</P>
-<P>The <I>type/old</I> value is the integer index for the incident particle
-species.  It is a value from 1 to Nspecies. The value corresponds to
-the order in which species were defined via the <A HREF = "species.html">species</A>
-command.  See <A HREF = "Section_howto_17">Section 6.17</A> for more details on
-particle types.
-</P>
-<P>The <I>type/new</I> and <I>type/new2</I> values are the post-collision integer
-indices for the particle species of the 0, 1, or 2 resulting
-particles.  If the incident particle vanished in a reaction, then
-<I>type/new</I> will be 0.  If only a collision took place, then <I>type/new</I>
-will be the same as <I>type/old</I>.  If <I>type/new</I> is different than
-<I>type/old</I>, then a reaction took place.  If <I>type/new2</I> is 0, no 2nd
-particle was created in a reaction, otherwise it is the type of the
-newly created particle.
+<P>The <I>type</I> value is the integer index for the particle species.  It is
+a value from 1 to Nspecies. The value corresponds to the order in
+which species were defined via the <A HREF = "species.html">species</A> command.
+See <A HREF = "Section_howto_17">Section 6.17</A> for more details on particle
+types.
 </P>
 <P>The <I>id/surf</I> value is the ID of the surface element.  For explicit
 surfaces, surface element IDs are unique.  For implicit surfaces, the
@@ -127,29 +97,11 @@ each timestep it is invoked.
 <P>The <I>xc</I>, <I>yc</I>, and <I>zc</I> are the coordinates of the collision point
 between the particle and the surface element.
 </P>
-<P>The <I>vxold</I>, <I>vyold</I>, <I>vzold</I> values are the velocity components of
+<P>The <I>vx/pre</I>, <I>vy/pre</I>, <I>vz/pre</I> values are the velocity components of
 the incident particle before it collides with the surface element.
 </P>
-<P>The <I>vxnew</I>, <I>vynew</I>, <I>vznew</I> and <I>vxnew2</I>, <I>vynew2</I>, <I>vznew2</I> values
-are the IDs velocity components of the 0, 1, or 2 resulting particles.
-<I>Vxnew</I>, <I>vynew</I>, <I>vznew</I> are the post-collision velocities of the
-incident particle whether there was only a collision or also a
-reaction.  <I>Vxnew2</I>, <I>vynew2</I>, <I>vznew2</I> will be zero if no 2nd
-particle was created in a reaction, otherwise they are the newly
-created particle's velocity components.
-</P>
-<HR>
-
-<P>The <I>reactions</I> keyword can be used to specify which kinds of
-collisions or reactions are included in the tally outputs.
-</P>
-<P>For the default argument <I>no</I>, only collisions resulting in no
-reactions are included.  This means the values <I>id/new</I>, <I>id/new2</I>,
-<I>type/new</I>, <I>type/new2</I>, <I>vxnew2</I>, <I>vynew2</I>, <I>vznew2</I> are irrelevant.
-</P>
-<P>For <I>yes</I>, both collisions with and without reactions are incldued.
-For <I>only</I>, only collisions resulting in reactions are included.  In
-these cases, all the values may be relevant.
+<P>The <I>vx/post</I>, <I>vy/post</I>, <I>vz/post</I> values are the velocity components
+of the particle after it collides with the surface element.
 </P>
 <HR>
 
@@ -165,8 +117,8 @@ for an overview of SPARTA output options.
 <P>The per-tally array values will be in the <A HREF = "units.html">units</A>
 appropriate to the individual values as described above.  <I>Time</I> is in
 time units; see above for details.  <I>Xc</I>, <I>yc</I>, and <I>zc</I> are in
-distance units.  <I>Vxold</I>, <I>vyold</I>, <I>vzold</I> are in velocity units, as
-are <I>vxnew</I>, <I>vynew</I>, <I>vznew</I>, <I>vxnew2</I>, <I>vynew2</I>, <I>vznew2</I>.
+distance units.  <I>Vx/pre</I>, <I>vy/pre</I>, <I>vz/pre</I> are in velocity units, as
+are <I>vx/post</I>, <I>vy/post</I>, <I>vz/post</I>.
 </P>
 <HR>
 
@@ -174,10 +126,8 @@ are <I>vxnew</I>, <I>vynew</I>, <I>vznew</I>, <I>vxnew2</I>, <I>vynew2</I>, <I>v
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "dump.html">dump tally</A>
+<P><A HREF = "compute_reaction_tally.html">compute reaction/tally</A>, <A HREF = "dump.html">dump tally</A>
 </P>
-<P><B>Default:</B>
-</P>
-<P>The default for the reactions keyword is no.
+<P><B>Default:</B> none
 </P>
 </HTML>

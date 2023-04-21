@@ -221,7 +221,7 @@ can then be output with these commands.
 The following sub-sections discuss different SPARTA commands related
 to output and the kind of data they operate on and produce:
 
-"Global/per-particle/per-grid/per-surf data"_#global
+"Global/per-particle/per-grid/per-surf/per-tally data"_#global
 "Scalar/vector/array data"_#scalar
 "Statistical output"_#stat
 "Dump file output"_#dump
@@ -232,7 +232,7 @@ to output and the kind of data they operate on and produce:
 "Variables that generate values to output"_#variable
 "Summary table of output options and data flow between commands"_#table :ul
 
-Global/per-particle/per-grid/per-surf data :h5,link(global)
+Global/per-particle/per-grid/per-surf/pre-tally data :h5,link(global)
 
 Various output-related commands work with four different styles of
 data: global, per particle, per grid, or per surf.  A global datum is
@@ -241,15 +241,19 @@ per particle datum is one or more values per partice, e.g. the kinetic
 energy of each particle.  A per grid datum is one or more values per
 grid cell, e.g. the temperature of the particles in the grid cell.  A
 per surf datum is one or more values per surface element, e.g. the
-count of particles that collided with the surface element.
+count of particles that collided with the surface element.  A
+per-tally datum is one or more values per event, e.g. a particle
+colliding or reacting with a surface element.
 
 Scalar/vector/array data :h5,link(scalar)
 
-Global, per particle, per grid, and per surf datums can each come in
-three kinds: a single scalar value, a vector of values, or a 2d array
-of values.  The doc page for a "compute" or "fix" or "variable" that
-generates data will specify both the style and kind of data it
-produces, e.g. a per grid vector.
+Global, per particle, per grid, per surf, and per tally datums can
+each come in two kinds: a single scalar value, a vector of values.
+Additionally, global quantities can also be a 2d array of values.  The
+doc page for a "compute" or "fix" or "variable" that generates data
+will specify both the style and kind of data it produces, e.g. a
+per-particle vector.  Some computes can produce more than one form of
+a single style, e.g. a global scalar and a global vector.
 
 When a quantity is accessed, as in many of the output commands
 discussed below, it can be referenced via the following bracket
@@ -284,7 +288,8 @@ Dump file output :h5,link(dump)
 
 Dump file output is specified by the "dump"_dump.html and
 "dump_modify"_dump_modify.html commands.  There are several
-pre-defined formats: dump particle, dump grid, dump surf, etc.
+pre-defined formats: dump particle, dump grid, dump surf, dump tally,
+etc.
 
 Each of these allows specification of what values are output with each
 particle, grid cell, or surface element.  Pre-defined attributes can
@@ -406,9 +411,10 @@ Command: Input: Output:
 "dump particle"_dump.html: per particle vectors: dump file:
 "dump grid"_dump.html: per grid vectors: dump file:
 "dump surf"_dump.html: per surf vectors: dump file:
+"dump tally"_dump.html: per tally vectors: dump file:
 "fix print"_fix_print.html: global scalar from variable: screen, file:
 "print"_print.html: global scalar from variable: screen:
-"computes"_compute.html: N/A: global or per particle/grid/surf scalar/vector/array:
+"computes"_compute.html: N/A: global or per particle/grid/surf/tally scalar/vector/array:
 "fixes"_fix.html: N/A: global or per particle/grid/surf scalar/vector/array:
 "variables"_variable.html: global scalars, per particle vectors: global scalar, per particle vector:
 "compute reduce"_compute_reduce.html: per particle/grid/surf vectors: global scalar/vector:

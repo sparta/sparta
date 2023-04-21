@@ -54,7 +54,7 @@ and what it does.  Here is an alphabetic list of compute styles
 available in SPARTA:
 </P>
 <UL><LI><A HREF = "compute_boundary.html">boundary</A> - various quantities on each global boundary 
-<LI><A HREF = "compute_collide_tally.html">collide/tally</A> - tallies for particles colliding with surface elements
+<LI><A HREF = "compute_collision_tally.html">collision/tally</A> - tallies for particles colliding with surface elements
 <LI><A HREF = "compute_count.html">count</A> - particle counts for species and mixtures and mixture groups
 <LI><A HREF = "compute_distsurf_grid.html">distsurf/grid</A> - distance from grid cells to surface
 <LI><A HREF = "compute_eflux_grid.html">eflux/grid</A> - energy flux density per grid cell
@@ -68,6 +68,7 @@ available in SPARTA:
 <LI><A HREF = "compute_react_boundary.html">react/boundary</A> - reaction stats on global boundary
 <LI><A HREF = "compute_react_surf.html">react/surf</A> = reaction stats for explicit surfs
 <LI><A HREF = "compute_react_isurf_grid.html">react/isurf/grid</A> - reactions stats for implicit surfs
+<LI><A HREF = "compute_collision_tally.html">reaction/tally</A> - tallies for particles reacting with surface elements
 <LI><A HREF = "compute_reduce.html">reduce</A> - reduce vectors to scalars
 <LI><A HREF = "compute_sonine_grid.html">sonine/grid</A> - Sonine moments per grid cell
 <LI><A HREF = "compute_surf.html">surf</A> - various explicit surface element quantities
@@ -82,20 +83,22 @@ pair section of <A HREF = "Section_commands.html#cmd_5">this page</A>.
 </P>
 <HR>
 
-<P>Computes calculate one of four styles of quantities: global,
-per-particle, per-grid, or per-surf.  A global quantity is one or more
-system-wide values, e.g. the temperature of the system.  A
+<P>Computes calculate one of five styles of quantities: global,
+per-particle, per-grid, per-surf, or per-tally.  A global quantity is
+one or more system-wide values, e.g. the temperature of the system.  A
 per-particle quantity is one or more values per particle, e.g. the
 kinetic energy of each particle.  A per-grid quantity is one or more
 values per grid cell.  A per-surf quantity is one or more values per
-surface element.
+surface element.  A per-tally quantity is one or more values per
+event, e.g. a particle colliding or reacting with a surface element.
 </P>
-<P>Global, per-particle, per-grid, and per-surf quantities each come in
-two forms: a single scalar value or a vector of values.  Additionaly,
-global quantities can also be a 2d array of values.  The doc page for
-each compute describes the style and kind of values it produces,
-e.g. a per-particle vector.  Some computes can produce more than one
-form of a single style, e.g. a global scalar and a global vector.
+<P>Global, per-particle, per-grid, per-surf, and per-tally quantities
+each come in two forms: a single scalar value or a vector of values.
+Additionaly, global quantities can also be a 2d array of values.  The
+doc page for each compute describes the style and kind of values it
+produces, e.g. a per-particle vector.  Some computes can produce more
+than one form of a single style, e.g. a global scalar and a global
+vector.
 </P>
 <P>When a compute quantity is accessed, as in many of the output commands
 discussed below, it can be referenced via the following bracket

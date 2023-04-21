@@ -225,7 +225,7 @@ can then be output with these commands.
 <P>The following sub-sections discuss different SPARTA commands related
 to output and the kind of data they operate on and produce:
 </P>
-<UL><LI><A HREF = "#global">Global/per-particle/per-grid/per-surf data</A>
+<UL><LI><A HREF = "#global">Global/per-particle/per-grid/per-surf/per-tally data</A>
 <LI><A HREF = "#scalar">Scalar/vector/array data</A>
 <LI><A HREF = "#stat">Statistical output</A>
 <LI><A HREF = "#dump">Dump file output</A>
@@ -236,7 +236,7 @@ to output and the kind of data they operate on and produce:
 <LI><A HREF = "#variable">Variables that generate values to output</A>
 <LI><A HREF = "#table">Summary table of output options and data flow between commands</A> 
 </UL>
-<H5><A NAME = "global"></A>Global/per-particle/per-grid/per-surf data 
+<H5><A NAME = "global"></A>Global/per-particle/per-grid/per-surf/pre-tally data 
 </H5>
 <P>Various output-related commands work with four different styles of
 data: global, per particle, per grid, or per surf.  A global datum is
@@ -245,15 +245,19 @@ per particle datum is one or more values per partice, e.g. the kinetic
 energy of each particle.  A per grid datum is one or more values per
 grid cell, e.g. the temperature of the particles in the grid cell.  A
 per surf datum is one or more values per surface element, e.g. the
-count of particles that collided with the surface element.
+count of particles that collided with the surface element.  A
+per-tally datum is one or more values per event, e.g. a particle
+colliding or reacting with a surface element.
 </P>
 <H5><A NAME = "scalar"></A>Scalar/vector/array data 
 </H5>
-<P>Global, per particle, per grid, and per surf datums can each come in
-three kinds: a single scalar value, a vector of values, or a 2d array
-of values.  The doc page for a "compute" or "fix" or "variable" that
-generates data will specify both the style and kind of data it
-produces, e.g. a per grid vector.
+<P>Global, per particle, per grid, per surf, and per tally datums can
+each come in two kinds: a single scalar value, a vector of values.
+Additionally, global quantities can also be a 2d array of values.  The
+doc page for a "compute" or "fix" or "variable" that generates data
+will specify both the style and kind of data it produces, e.g. a
+per-particle vector.  Some computes can produce more than one form of
+a single style, e.g. a global scalar and a global vector.
 </P>
 <P>When a quantity is accessed, as in many of the output commands
 discussed below, it can be referenced via the following bracket
@@ -290,7 +294,8 @@ global values to be used as an argument of the
 </H5>
 <P>Dump file output is specified by the <A HREF = "dump.html">dump</A> and
 <A HREF = "dump_modify.html">dump_modify</A> commands.  There are several
-pre-defined formats: dump particle, dump grid, dump surf, etc.
+pre-defined formats: dump particle, dump grid, dump surf, dump tally,
+etc.
 </P>
 <P>Each of these allows specification of what values are output with each
 particle, grid cell, or surface element.  Pre-defined attributes can
@@ -413,9 +418,10 @@ vector input could be a column of an array.
 <TR><TD ><A HREF = "dump.html">dump particle</A></TD><TD > per particle vectors</TD><TD > dump file</TD><TD ></TD></TR>
 <TR><TD ><A HREF = "dump.html">dump grid</A></TD><TD > per grid vectors</TD><TD > dump file</TD><TD ></TD></TR>
 <TR><TD ><A HREF = "dump.html">dump surf</A></TD><TD > per surf vectors</TD><TD > dump file</TD><TD ></TD></TR>
+<TR><TD ><A HREF = "dump.html">dump tally</A></TD><TD > per tally vectors</TD><TD > dump file</TD><TD ></TD></TR>
 <TR><TD ><A HREF = "fix_print.html">fix print</A></TD><TD > global scalar from variable</TD><TD > screen, file</TD><TD ></TD></TR>
 <TR><TD ><A HREF = "print.html">print</A></TD><TD > global scalar from variable</TD><TD > screen</TD><TD ></TD></TR>
-<TR><TD ><A HREF = "compute.html">computes</A></TD><TD > N/A</TD><TD > global or per particle/grid/surf scalar/vector/array</TD><TD ></TD></TR>
+<TR><TD ><A HREF = "compute.html">computes</A></TD><TD > N/A</TD><TD > global or per particle/grid/surf/tally scalar/vector/array</TD><TD ></TD></TR>
 <TR><TD ><A HREF = "fix.html">fixes</A></TD><TD > N/A</TD><TD > global or per particle/grid/surf scalar/vector/array</TD><TD ></TD></TR>
 <TR><TD ><A HREF = "variable.html">variables</A></TD><TD > global scalars, per particle vectors</TD><TD > global scalar, per particle vector</TD><TD ></TD></TR>
 <TR><TD ><A HREF = "compute_reduce.html">compute reduce</A></TD><TD > per particle/grid/surf vectors</TD><TD > global scalar/vector</TD><TD ></TD></TR>
