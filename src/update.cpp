@@ -304,7 +304,6 @@ void Update::run(int nsteps)
 
     if (n_end_of_step) {
       modify->end_of_step();
-      if (react) react->compute_per_grid();
       timer->stamp(TIME_MODIFY);
     }
 
