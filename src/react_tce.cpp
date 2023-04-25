@@ -21,10 +21,6 @@
 #include "update.h"
 #include "random_knuth.h"
 #include "error.h"
-#include "modify.h"
-#include "compute.h"
-#include <iostream>
-using namespace std;
 
 using namespace SPARTA_NS;
 

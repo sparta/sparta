@@ -26,7 +26,6 @@
 #include "domain.h"
 #include "comm.h"
 #include "collide.h"
-#include "react.h"
 #include "grid.h"
 #include "surf.h"
 #include "surf_collide.h"

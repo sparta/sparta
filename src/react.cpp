@@ -16,7 +16,6 @@
 #include "string.h"
 #include "react.h"
 #include "update.h"
-#include "grid.h"
 #include "comm.h"
 #include "input.h"
 #include "random_mars.h"
