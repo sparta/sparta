@@ -20,7 +20,6 @@ keywords = {recomb} or {rboost} or {compute_chem_rates} or {partial_energy} :l
   {compute_chem_rates} value = yes or no = enable or disable computation of Arrhenius rate for chemical
   reaction without performing the reaction
   {partial_energy} = yes or no = use partial energy or total energy for TCE chemistry
-  If {no}, {value} = compute or fix ID that computes a temperature :pre
 :ule
 
 [Examples:]
@@ -77,11 +76,6 @@ the partcles and the rotational and vibrational energies. The participating
 internal degrees of freedom are computed directly by the code and do not need
 to be inputted by the user. The vibrational energy model used has an impact on
 the internal degrees of freedom used in the TCE model in that case.
-If the {partial_energy} keyword is set to {no}, an additional parameter {value}
-needs to be specified. That value should be the result of a compute or fix grid that computes
-a temperature, usually the translational temperature of the mixture (compute thermal/grid).
-That temperature in each grid cell is used to compute the internal degrees of freedom of the participating
-particles in the case of the vibrational energy model being specified as {DISCRETE}.
 
 :line
 

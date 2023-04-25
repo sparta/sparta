@@ -1,104 +1,63 @@
-<HTML>
-<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
-</CENTER>
-
-
-
-
-
-
-<HR>
-
-<H3>react_modify command 
-</H3>
-<P><B>Syntax:</B>
-</P>
-<PRE>react_modify keyword values ...  
-</PRE>
-<UL><LI>one or more keyword/value pairs may be listed 
-
-<LI>keywords = <I>recomb</I> or <I>rboost</I> 
-
-<PRE>  <I>recomb</I> value = yes or no = enable or disable defined recombination reactions
-  <I>rboost</I> value = rfactor
-    rfactor = boost probability of recombination reactions by this factor 
-    <I>compute_chem_rates</I> value = yes or no = enable or disable computation of Arrhenius rate for chemical
-    reaction without performing the reaction
-    <I>partial_energy</I> = yes or no = use partial energy or total energy for TCE chemistry
-    If <I>no</I>, <I>value</I> = compute or fix ID that computes a temperature
-</PRE>
-
-</UL>
-<P><B>Examples:</B>
-</P>
-<PRE>react_modify recomb no
-react_modify rboost 100.0 
-</PRE>
-<P><B>Description:</B>
-</P>
-<P>Set parameters that affect how reactions are performed.
-</P>
-<P>The <I>recomb</I> keyword turns on or off recombination reactions.  It is
-only relevant if recombination reactions were defined in the reaction
-file read in by the <A HREF = "react.html">react</A> command.  If the setting is
-<I>no</I> then they will be disabled even if they were listed in the
-reaction file.  This is useful to turn recombination reactions off, to
-see if they affect simulation results.
-</P>
-<P>The <I>rboost</I> keyword is a setting for recombination reactions.  It is
-ignored if no recombination reactions exist, or the <I>recomb</I> keyword
-is set to <I>no</I>.  The <I>rboost</I> setting does not affect the overalll
-statistical results of recombination reactions, but tries to improve
-their computational efficiency.  Recombination reactions typically
-occur with very low probability, which means the code spends time
-testing for reactions that rarely occur.  If the <I>rfactor</I> is set to N
-> 1, then recombination reactions are skipped N-1 out of N times, when
-one or more such reactions is defined for a pair of colliding
-particles.  A random number us used to select on that probability.  To
-compensate, when a recombination reaction is actually tested for
-occurrence, its rate is boosted by a factor of N, making it N times
-more likely to occur.
-</P>
-<P>The smallest value <I>rboost</I> can be set to is 1.0, which effectively
-applies no boost factor.
-</P>
-<P>IMPORTANT NOTE: Setting <I>rboost</I> too large could meant the probability
-of a recombination reaction becomes > 1.0, when it is does occur.
-SPARTA does not check for this, so you should estimate the largest
-boost factor that is safe to use for your model.
-</P>
-<P>The <I>compute_chem_rates</I> keyword is a setting that allows the user to
-only compute Arrhenius rates for chemical reactions without performing them.
-</P>
-<P>The <I>partial_energy</I> keyword is a setting that allows the user to choose
-the amount of internal energy and internal degrees of freedom used in the
-TCE model. If the <I>partial_energy</I> keyword is set to <I>yes</I>, the rDOF model
-of Bird is used, and only the sum of the relative translational energy between
-the partcles and a fraction of the rotational energy is used. The participating
-internal degrees of freedom are either set to 1 (dissociation reactions), or 0 (recombination,
-exchange, ionization reactions).
-Conversely, if the <I>partial_energy</I> keyword is set to <I>no</I>, then the total
-energy model is used, i.e. the sum of the relative translational energy between
-the partcles and the rotational and vibrational energies. The participating
-internal degrees of freedom are computed directly by the code and do not need
-to be inputted by the user. The vibrational energy model used has an impact on
-the internal degrees of freedom used in the TCE model in that case.
-If the <I>partial_energy</I> keyword is set to <I>no</I>, an additional parameter <I>value</I>
-needs to be specified. That value should be the result of a compute or fix grid that computes
-a temperature, usually the translational temperature of the mixture (compute thermal/grid).
-That temperature in each grid cell is used to compute the internal degrees of freedom of the participating
-particles in the case of the vibrational energy model being specified as <I>DISCRETE</I>.
-</P>
-<HR>
-
-<P><B>Restrictions:</B> none
-</P>
-<P><B>Related commands:</B>
-</P>
-<P><A HREF = "react.html">react</A>
-</P>
-<P><B>Default:</B>
-</P>
-<P>The option defaults are recomb = yes, rboost = 1000.0, compute_chem_rates = no, partial_energy = yes.
-</P>
-</HTML>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2299.5">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: center; font: 12.0px Times; color: #0000e9; -webkit-text-stroke: #0000e9}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times; -webkit-text-stroke: #000000; min-height: 14.0px}
+    p.p4 {margin: 0.0px 0.0px 12.0px 0.0px; font: 12.0px Times; -webkit-text-stroke: #000000}
+    p.p5 {margin: 0.0px 0.0px 0.0px 0.0px; font: 13.0px Courier; -webkit-text-stroke: #000000}
+    p.p8 {margin: 0.0px 0.0px 12.0px 0.0px; font: 12.0px Times; color: #0000e9; -webkit-text-stroke: #0000e9}
+    li.li5 {margin: 0.0px 0.0px 0.0px 0.0px; font: 13.0px Courier; -webkit-text-stroke: #000000}
+    li.li6 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times; -webkit-text-stroke: #000000}
+    li.li7 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times}
+    span.s1 {text-decoration: underline ; font-kerning: none}
+    span.s2 {font-kerning: none; color: #000000; -webkit-text-stroke: 0px #000000}
+    span.s3 {text-decoration: underline ; font-kerning: none; -webkit-text-stroke: 0px #0000e9}
+    span.s4 {font-kerning: none}
+    span.s5 {-webkit-text-stroke: 0px #000000}
+    span.s6 {font: 12.0px Times; -webkit-text-stroke: 0px #000000}
+    span.s7 {font: 12.0px Times; font-kerning: none}
+    span.s8 {text-decoration: underline ; font-kerning: none; color: #0000e9; -webkit-text-stroke: 0px #0000e9}
+    ul.ul1 {list-style-type: disc}
+  </style>
+</head>
+<body>
+<p class="p1"><span class="s1"><a href="http://sparta.sandia.gov/">SPARTA WWW Site</a></span><span class="s2"> - <a href="file:///Users/aborner/Documents/GitHub/aborner1-sparta/doc/Manual.html"><span class="s3">SPARTA Documentation</span></a> - <a href="file:///Users/aborner/Documents/GitHub/aborner1-sparta/doc/Section_commands.html#comm"><span class="s3">SPARTA Commands</span></a></span></p>
+<p class="p2"><span class="s4"></span><br></p>
+<h3 style="margin: 0.0px 0.0px 14.0px 0.0px; font: 14.0px Times; -webkit-text-stroke: #000000"><span class="s4"><b>react_modify command</b></span></h3>
+<p class="p4"><span class="s4"><b>Syntax:</b></span></p>
+<p class="p5"><span class="s4">react_modify keyword values ... <span class="Apple-converted-space"> </span></span></p>
+<ul class="ul1">
+  <li class="li6"><span class="s5"></span><span class="s4">one or more keyword/value pairs may be listed</span></li>
+  <li class="li5"><span class="s6"></span><span class="s7">keywords = <i>recomb</i> or <i>rboost</i> </span><span class="s4"><span class="Apple-converted-space">  </span><i>recomb</i> value = yes or no = enable or disable defined recombination reactions</span></li>
+  <li class="li5"><span class="s5"></span><span class="s4"><span class="Apple-converted-space">  </span><i>rboost</i> value = rfactor</span></li>
+  <li class="li5"><span class="s5"></span><span class="s4"><span class="Apple-converted-space">    </span>rfactor = boost probability of recombination reactions by this factor<span class="Apple-converted-space"> </span></span></li>
+  <li class="li5"><span class="s5"></span><span class="s4"><span class="Apple-converted-space">    </span><i>compute_chem_rates</i> value = yes or no = enable or disable computation of Arrhenius rate for chemical</span></li>
+  <li class="li5"><span class="s5"></span><span class="s4"><span class="Apple-converted-space">    </span>reaction without performing the reaction</span></li>
+  <li class="li5"><span class="s5"></span><span class="s4"><span class="Apple-converted-space">    </span><i>partial_energy</i> = yes or no = use partial energy or total energy for TCE chemistry</span></li>
+  <li class="li7"></li>
+</ul>
+<p class="p4"><span class="s4"><b>Examples:</b></span></p>
+<p class="p5"><span class="s4">react_modify recomb no</span></p>
+<p class="p5"><span class="s4">react_modify rboost 100.0<span class="Apple-converted-space"> </span></span></p>
+<p class="p4"><span class="s4"><b>Description:</b></span></p>
+<p class="p4"><span class="s4">Set parameters that affect how reactions are performed.</span></p>
+<p class="p4"><span class="s4">The <i>recomb</i> keyword turns on or off recombination reactions. It is only relevant if recombination reactions were defined in the reaction file read in by the <a href="file:///Users/aborner/Documents/GitHub/aborner1-sparta/doc/react.html"><span class="s8">react</span></a> command. If the setting is <i>no</i> then they will be disabled even if they were listed in the reaction file. This is useful to turn recombination reactions off, to see if they affect simulation results.</span></p>
+<p class="p4"><span class="s4">The <i>rboost</i> keyword is a setting for recombination reactions. It is ignored if no recombination reactions exist, or the <i>recomb</i> keyword is set to <i>no</i>. The <i>rboost</i> setting does not affect the overalll statistical results of recombination reactions, but tries to improve their computational efficiency. Recombination reactions typically occur with very low probability, which means the code spends time testing for reactions that rarely occur. If the <i>rfactor</i> is set to N &gt; 1, then recombination reactions are skipped N-1 out of N times, when one or more such reactions is defined for a pair of colliding particles. A random number us used to select on that probability. To compensate, when a recombination reaction is actually tested for occurrence, its rate is boosted by a factor of N, making it N times more likely to occur.</span></p>
+<p class="p4"><span class="s4">The smallest value <i>rboost</i> can be set to is 1.0, which effectively applies no boost factor.</span></p>
+<p class="p4"><span class="s4">IMPORTANT NOTE: Setting <i>rboost</i> too large could meant the probability of a recombination reaction becomes &gt; 1.0, when it is does occur. SPARTA does not check for this, so you should estimate the largest boost factor that is safe to use for your model.</span></p>
+<p class="p4"><span class="s4">The <i>compute_chem_rates</i> keyword is a setting that allows the user to only compute Arrhenius rates for chemical reactions without performing them.</span></p>
+<p class="p4"><span class="s4">The <i>partial_energy</i> keyword is a setting that allows the user to choose the amount of internal energy and internal degrees of freedom used in the TCE model. If the <i>partial_energy</i> keyword is set to <i>yes</i>, the rDOF model of Bird is used, and only the sum of the relative translational energy between the partcles and a fraction of the rotational energy is used. The participating internal degrees of freedom are either set to 1 (dissociation reactions), or 0 (recombination, exchange, ionization reactions). Conversely, if the <i>partial_energy</i> keyword is set to <i>no</i>, then the total energy model is used, i.e. the sum of the relative translational energy between the partcles and the rotational and vibrational energies. The participating internal degrees of freedom are computed directly by the code and do not need to be inputted by the user. The vibrational energy model used has an impact on the internal degrees of freedom used in the TCE model in that case.</span></p>
+<p class="p2"><span class="s4"></span><br></p>
+<p class="p4"><span class="s4"><b>Restrictions:</b> none</span></p>
+<p class="p4"><span class="s4"><b>Related commands:</b></span></p>
+<p class="p8"><span class="s1"><a href="file:///Users/aborner/Documents/GitHub/aborner1-sparta/doc/react.html">react</a></span></p>
+<p class="p4"><span class="s4"><b>Default:</b></span></p>
+<p class="p4"><span class="s4">The option defaults are recomb = yes, rboost = 1000.0, compute_chem_rates = no, partial_energy = yes.</span></p>
+</body>
+</html>
