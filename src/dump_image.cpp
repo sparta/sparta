@@ -494,7 +494,7 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
 
   // additional defaults for dump_modify options
 
-  int ntypes = 0;
+  int ntypes = particle->nspecies;
   pcolortype = new double*[ntypes+1];
   pdiamtype = new double[ntypes+1];
 

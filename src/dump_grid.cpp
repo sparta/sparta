@@ -356,7 +356,10 @@ void DumpGrid::write_text(int n, double *mybuf)
       else if (vtype[j] == UINT) fprintf(fp,vformat[j],(uint32_t) ubuf(mybuf[m]).i); 
       else if (vtype[j] == BIGUINT) fprintf(fp,vformat[j],(uint64_t) ubuf(mybuf[m]).i);
       else if (vtype[j] == STRING) {
-        grid->id_num2str(static_cast<int> (mybuf[m]),str);
+        if (sizeof(cellint) == sizeof(smallint))
+          grid->id_num2str((uint32_t) ubuf(mybuf[m]).i,str);
+        else
+          grid->id_num2str((uint64_t) ubuf(mybuf[m]).i,str);
         fprintf(fp,vformat[j],str);
       }
       m++;
