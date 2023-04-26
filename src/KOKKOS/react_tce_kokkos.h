@@ -35,8 +35,8 @@ class ReactTCEKokkos : public ReactBirdKokkos {
   void init();
   int attempt(Particle::OnePart *, Particle::OnePart *,
               double, double, double, double &, int &) { return 0; }
-  double newtonTvib(const int nmode, double Evib,
-                      const double VibTemp[],
+  double newtonTvib(int nmode, double Evib,
+                      double VibTemp[],
                       double Tvib0,
                       double tol,
                       int nmax);
@@ -102,7 +102,6 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 
     double ecc,z;
     double e_excess = 0.0;
-    int imode = 0;
 
     if (partialEnergy) {
       ecc = pre_etrans;
