@@ -33,6 +33,9 @@ class ReactTCEKokkos : public ReactBirdKokkos {
   void init();
   int attempt(Particle::OnePart *, Particle::OnePart *,
               double, double, double, double &, int &) { return 0; }
+  double bird_Evib(int, double, double, double);
+  double bird_dEvib(int, double, double);
+  double newtonTvib(int, double, double, double, double, int);
 
 /* ---------------------------------------------------------------------- */
 
@@ -79,7 +82,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
     // average DOFs participating in the reaction
 
     double ecc,z;
-    int icell = ip->icell;
+    const double e_excess;
     int imode = 0;
 
     if (partialEnergy) {
@@ -89,30 +92,51 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
         ecc += pre_erot*z/pre_ave_rotdof;
     } else {
       ecc = pre_etotal;
-      if (pre_etotal+r->d_coeff[4] <= 0.0) continue; // Cover cases where coeff[1].neq.coeff[4]
       z = pre_ave_rotdof;
-      if (vibstyle == SMOOTH)
-        z += (d_species[isp].vibdof + d_species[jsp].vibdof)/2.0;
-      else if (vibstyle == DISCRETE) {
-        if (d_species[isp].vibdof == 2)
-          z += (d_species[isp].vibtemp[0]/d_temp[icell]) / (exp(d_species[isp].vibtemp[0]/d_temp[icell])-1);
-        else if (d_species[isp].vibdof > 2) {
-          imode = 0;
-          while (imode < 4) {
-            z += (d_species[isp].vibtemp[imode]/d_temp[icell]) / (exp(d_species[isp].vibtemp[imode]/d_temp[icell])-1);
-            imode++;
-          }
-        }
-        if (d_species[jsp].vibdof == 2)
-          z += (d_species[jsp].vibtemp[0]/d_temp[icell]) / (exp(d_species[jsp].vibtemp[0]/d_temp[icell])-1);
-        else if (d_species[jsp].vibdof > 2) {
-          imode = 0;
-          while (imode < 4) {
-            z += (d_species[jsp].vibtemp[imode]/d_temp[icell]) / (exp(d_species[jsp].vibtemp[imode]/d_temp[icell])-1);
-            imode++;
-          }
-        }
-      }
+    }
+
+    // Cover cases where coeff[1].neq.coeff[4]
+    if (r->d_coeff[1]>((-1)*r->d_coeff[4])) e_excess = ecc - r->d_coeff[1];
+    else e_excess = ecc + r->d_coeff[4];
+    if (e_excess <= 0.0) continue;
+
+    if (!partialEnergy) {
+
+       if (vibstyle == SMOOTH) z += (d_species[isp].vibdof + d_species[jsp].vibdof)/2.0;
+       else if (vibstyle == DISCRETE) {
+            inmode = d_species[isp].nvibmode;
+            jnmode = d_species[jsp].nvibmode;
+            //Instantaneous z for diatomic molecules
+            if (inmode == 1) {
+                avei = static_cast<int>
+                        (ievib / (update->boltz * d_species[isp].vibtemp[0]));
+                if (avei > 0) zi = 2.0 * avei * log(1.0 / avei + 1.0);
+                else zi = 0.0;
+            } else if (inmode > 1) {
+                if (ievib < 1e-26 ) zi = 0.0; //Low Energy Cut-Off to prevent nan solutions to newtonTvib
+                //Instantaneous T for polyatomic
+                else {
+                  iTvib = newtonTvib(inmode,ievib,d_species[isp].vibtemp,3000,1e-4,1000);
+                  zi = (2 * ievib)/(update->boltz * iTvib);
+                }
+            } else zi = 0.0;
+
+            if (jnmode == 1) {
+                avej = static_cast<int>
+                        (jevib / (update->boltz * d_species[jsp].vibtemp[0]));
+                if (avej > 0) zj = 2.0 * avej * log(1.0 / avej + 1.0);
+                else zj = 0.0;
+            } else if (jnmode > 1) {
+                if (jevib < 1e-26) zj = 0.0;
+                else {
+                  jTvib = newtonTvib(jnmode,jevib,d_species[jsp].vibtemp,3000,1e-4,1000);
+                  zj = (2 * jevib)/(update->boltz * jTvib);
+                }
+            } else zj = 0.0;
+
+            if (isnan(zi) || isnan(zj) || zi<0 || zj<0) error->all(FLERR,"Root-Finding Error");
+            z += 0.5 * (zi+zj);
+       }
     }
 
     const double e_excess = ecc - r->d_coeff[1];
@@ -125,7 +149,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
     case IONIZATION:
     case EXCHANGE:
       {
-        react_prob += r->d_coeff[2] * tgamma(z+2.5-r->d_coeff[5]) / MAX(1.0e-6,tgamma(z+r->d_coeff[3]+1.5)) *
+        react_prob += r->d_coeff[2] * tgamma(z+2.5-r->d_coeff[5]) / tgamma(z+r->d_coeff[3]+1.5) *
           pow(ecc-r->d_coeff[1],r->d_coeff[3]-1+r->d_coeff[5]) *
           pow(1.0-r->d_coeff[1]/ecc,z+1.5-r->d_coeff[5]);
         break;
@@ -146,11 +170,14 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
         if (d_sp2recomb[recomb_species] != d_list[i]) continue;
 
         react_prob += recomb_boost * recomb_density * r->d_coeff[2] *
-          tgamma(z+2.5-r->d_coeff[5]) / MAX(1.0e-6,tgamma(z+r->d_coeff[3]+1.5)) *
+          tgamma(z+2.5-r->d_coeff[5]) / tgamma(z+r->d_coeff[3]+1.5) *
           pow(ecc-r->d_coeff[1],r->d_coeff[3]-1+r->d_coeff[5]) *  // extended to general recombination case with non-zero activation energy
           pow(1.0-r->d_coeff[1]/ecc,z+1.5-r->d_coeff[5]);
         break;
       }
+
+      if (react_prob < 0) error->warning(FLERR,"Negative reaction probability");
+      else if (react_prob > 1) error->warning(FLERR,"Reaction probability greater than 1");
 
     default:
       //error->one(FLERR,"Unknown outcome in reaction");

@@ -40,7 +40,6 @@ class ReactBirdKokkos : public ReactBird {
   virtual int attempt(Particle::OnePart *, Particle::OnePart *,
                       double, double, double, double &, int &) = 0;
   double extract_tally(int);
-  void compute_per_grid();
   void backup();
   void restore();
 
@@ -93,8 +92,6 @@ class ReactBirdKokkos : public ReactBird {
 
   tdual_reactionIJ_2d k_reactions;     // reaction info for all IJ pairs of species
   t_reactionIJ_2d d_reactions;     // reaction info for all IJ pairs of species
-                                      
-  DAT::t_float_1d d_temp;
 
   RanKnuth* random_backup;
 

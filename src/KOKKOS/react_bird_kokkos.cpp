@@ -18,7 +18,6 @@
 #include "react_bird_kokkos.h"
 #include "input.h"
 #include "collide.h"
-#include "compute.h"
 #include "update.h"
 #include "particle.h"
 #include "comm.h"
@@ -30,17 +29,14 @@
 #include "memory.h"
 #include "error.h"
 #include "kokkos.h"
-#include "kokkos_base.h"
 #include "memory_kokkos.h"
 
 using namespace SPARTA_NS;
 using namespace MathConst;
 
-enum{NONE,COMPUTE,FIX};
 enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};  // other react files
 enum{ARRHENIUS,QUANTUM};                               // other react files
 
-#define INVOKED_PER_GRID 16
 #define MAXLINE 1024
 #define DELTALIST 16
 
@@ -181,67 +177,6 @@ double ReactBirdKokkos::extract_tally(int m)
 
   return 1.0*tally_reactions_all[m];
 };
-
-/* ---------------------------------------------------------------------- */
-
-void ReactBirdKokkos::compute_per_grid()
-{
-  if (partialEnergy) return;
-
-  invoked_per_grid = update->ntimestep;
-
-  if (tempwhich == FIX && update->ntimestep % ftemp->per_grid_freq)
-    error->all(FLERR,"React_modify fix not computed at compatible time");
-
-  // grab temp value from compute or fix
-  // invoke temp compute as needed
-
-  if (tempwhich == COMPUTE) {
-    if (!ctemp->kokkos_flag)
-      error->all(FLERR,"Must use Kokkos-enabled compute for Kokkos react_modify compute");
-    auto ctempKK = dynamic_cast<KokkosBase*>(ctemp);
-
-    if (!(ctemp->invoked_flag & INVOKED_PER_GRID)) {
-      ctempKK->compute_per_grid_kokkos();
-      ctemp->invoked_flag |= INVOKED_PER_GRID;
-    }
-
-    DAT::t_float_2d_lr d_etally_tmp;
-    DAT::t_float_1d_strided d_vec_tmp;
-
-    if (ctemp->post_process_grid_flag)
-      ctempKK->post_process_grid_kokkos(tempindex,1,d_etally_tmp,NULL,d_vec_tmp);
-
-    if (tempindex == 0 || ctemp->post_process_grid_flag)
-      Kokkos::deep_copy(d_temp,ctempKK->d_vector);
-    else {
-      int index = tempindex-1;
-     
-      auto l_array = ctempKK->d_array;
-      auto l_temp = d_temp;
-      Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
-        l_temp[i] = l_array(i,index);
-      });
-    }
-
-  } else if (tempwhich == FIX) {
-    if (!ctemp->kokkos_flag)
-      error->all(FLERR,"Must use Kokkos-enabled fix for Kokkos react_modify fix");
-    auto ftempKK = dynamic_cast<KokkosBase*>(ftemp);
-
-    if (tempindex == 0)
-      Kokkos::deep_copy(d_temp,ftempKK->d_vector);
-    else {
-      int index = tempindex-1;
-
-      auto l_array = ftempKK->d_array;
-      auto l_temp = d_temp;
-      Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
-        l_temp[i] = l_array(i,index);
-      });
-    }
-  }
-}
 
 /* ---------------------------------------------------------------------- */
 

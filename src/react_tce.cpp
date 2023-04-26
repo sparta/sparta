@@ -55,7 +55,6 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
   Particle::Species *species = particle->species;
   int isp = ip->ispecies;
   int jsp = jp->ispecies;
-  int icell = ip->icell;
   double ievib = ip->evib;
   double jevib = jp->evib;
 
