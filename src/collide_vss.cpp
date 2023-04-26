@@ -258,16 +258,8 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
 {
   int m,reactflag,kspecies;
   double x[3],v[3];
-  Particle::OnePart iorig,jorig;
   Particle::OnePart *p3;
 
-  // prepare to tally gas collision stats if requested using iorig,jorig
-
-  if (ngas_tally) {
-    memcpy(&iorig,ip,sizeof(Particle::OnePart));
-    memcpy(&jorig,jp,sizeof(Particle::OnePart));
-  }
-  
   // if gas-phase chemistry defined, attempt and perform reaction
   // if a 3rd particle is created, its kspecies >= 0 is returned
   // if 2nd particle is removed, its jspecies is set to -1
@@ -370,13 +362,6 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
     SCATTER_TwoBodyScattering(ip,jp);
   }
 
-  // tally gas collision stats if requested using iorig,jorig
-
-  if (ngas_tally)
-    for (m = 0; m < ngas_tally; m++)
-      glist_active[m]->gas_tally(icell_collision,reactflag,
-                                 &iorig,&jorig,ip,jp,kp);
-  
   return reactflag;
 }
 

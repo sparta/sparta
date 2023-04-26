@@ -24,6 +24,7 @@
 #include "modify.h"
 #include "fix.h"
 #include "fix_ambipolar.h"
+#include "compute.h"
 #include "random_mars.h"
 #include "random_knuth.h"
 #include "memory.h"
@@ -68,10 +69,6 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   maxgroup = NULL;
   glist = NULL;
   gpair = NULL;
-
-  nglist_compute = 0;
-  glist_compute = NULL;
-  glist_active = NULL;
 
   maxdelete = 0;
   dellist = NULL;
@@ -130,9 +127,6 @@ Collide::~Collide()
     memory->destroy(gpair);
   }
   
-  delete [] glist_compute;
-  delete [] glist_active;
-
   memory->destroy(dellist);
   memory->sfree(elist);
   memory->destroy(vremax);
@@ -407,7 +401,7 @@ void Collide::reset_vremax()
 }
 
 /* ----------------------------------------------------------------------
-  NTC algorithm
+   NTC algorithm
 ------------------------------------------------------------------------- */
 
 void Collide::collisions()
@@ -419,6 +413,11 @@ void Collide::collisions()
     vre_next += vre_every;
   }
 
+  // copy Update settings for gas/gas collision computes
+
+  ngas_tally = update->ngas_tally;
+  glist_active = update->glist_active;
+  
   // counters
 
   ncollide_one = nattempt_one = nreact_one = 0;
@@ -465,6 +464,7 @@ template < int NEARCP > void Collide::collisions_one()
   int i,j,k,m,n,ip,np;
   int nattempt,reactflag;
   double attempt,volume;
+  Particle::OnePart iorig,jorig;
   Particle::OnePart *ipart,*jpart,*kpart;
 
   // loop over cells I own
@@ -477,7 +477,6 @@ template < int NEARCP > void Collide::collisions_one()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
-    icell_collision = icell;
     
     if (NEARCP) {
       if (np > max_nn) realloc_nn(np,nn_last_partner);
@@ -556,10 +555,23 @@ template < int NEARCP > void Collide::collisions_one()
       }
 
       // perform collision and possible reaction
+      // prepare to tally gas collision stats if requested using iorig,jorig
+      // tally gas collision stats if requested using iorig,jorig
+
+      if (ngas_tally) {
+        memcpy(&iorig,ipart,sizeof(Particle::OnePart));
+        memcpy(&jorig,jpart,sizeof(Particle::OnePart));
+      }
 
       setup_collision(ipart,jpart);
       reactflag = perform_collision(ipart,jpart,kpart);
       ncollide_one++;
+
+      if (ngas_tally)
+        for (m = 0; m < ngas_tally; m++)
+          glist_active[m]->gas_tally(icell,reactflag,
+                                     &iorig,&jorig,ipart,jpart,kpart);
+
       if (reactflag) nreact_one++;
       else continue;
 
@@ -621,7 +633,6 @@ template < int NEARCP > void Collide::collisions_group()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
-    icell_collision = icell;
 
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
@@ -897,7 +908,6 @@ void Collide::collisions_one_ambipolar()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
-    icell_collision = icell;
 
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
@@ -1195,7 +1205,6 @@ void Collide::collisions_group_ambipolar()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
-    icell_collision = icell;
         
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;

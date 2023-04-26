@@ -88,12 +88,15 @@ class Update : protected Pointers {
   double rcblo[3],rcbhi[3];    // debug info from RCB for dump image
 
   // hooks to computes doing on-surface collision/reaction tallying
-  // public b/c also accessed by SurfReactAdsorb for on-surface reaction tallies
+  // public b/c accessed by Collid and SurfReactAdsorb
 
-  int nsurf_tally;         // # of Comps tallying surf bounce info this step
-  int nboundary_tally;     // # of Comps tallying boundary bounce info this step
-  class Compute **slist_active;   // list of active surf Comps this step
-  class Compute **blist_active;   // list of active boundary Comps this step
+  int ngas_tally;          // # of Comps tallying gas/gas info this step
+  int nsurf_tally;         // # of Comps tallying gas/surf info this step
+  int nboundary_tally;     // # of Comps tallying gas/boundary info this step
+
+  class Compute **glist_active;   // list of active gas/gas Comps this step
+  class Compute **slist_active;   // list of active gas/surf Comps this step
+  class Compute **blist_active;   // list of active gas/boundary Comps this step
 
   // public methods
 
@@ -114,38 +117,40 @@ class Update : protected Pointers {
   int maxmigrate;            // max # of particles in mlist
   class RanKnuth *random;     // RNG for particle timestep moves
 
+  // optional operations that occur while timestepping
+  
   int collide_react;         // 1 if any SurfCollide or React classes defined
+
   int nsc,nsr;               // copy of Collide/React data in Surf class
   class SurfCollide **sc;
   class SurfReact **sr;
 
-  int bounce_tally;               // 1 if any bounces are ever tallied
-  int nslist_compute;             // # of computes that tally surf bounces
-  int nblist_compute;             // # of computes that tally boundary bounces
-  class Compute **slist_compute;  // list of all surf bounce Computes
-  class Compute **blist_compute;  // list of all boundary bounce Computes
+  int tallyflag;             // 1 if any event tallying computes are defined
+  int nglist_compute;        // # of computes that tally gas/gas info
+  int nslist_compute;        // # of computes that tally gas/surf info
+  int nblist_compute;        // # of computes that tally gas/boundary info
 
-  int surf_pre_tally;       // 1 to log particle stats before surf collide
-  int boundary_pre_tally;   // 1 to log particle stats before boundary collide
+  int dynamic;               // 1 if any classes do dynamic updates of params
+  int ndlist_surfcollide;    // # of SurfCollide classes with dynamic updates
+  
+  class Compute **glist_compute;  // list of all gas/gas Computes
+  class Compute **slist_compute;  // list of all gas/surf Computes
+  class Compute **blist_compute;  // list of all gas/boundary Computes
+  class SurfCollide **dlist_surfcollide;  // list of all dynamic SurfCollides
 
+  // methods
+  
   int collide_react_setup();
   void collide_react_reset();
   void collide_react_update();
 
-  int bounce_setup();
-  virtual void bounce_set(bigint);
+  int tally_setup();
+  virtual void tally_set(bigint);
 
-  int nulist_surfcollide;
-  SurfCollide **ulist_surfcollide;
-
-  int dynamic;              // 1 if any classes do dynamic updates of params
-  void dynamic_setup();
+  int dynamic_setup();
   void dynamic_update();
 
   void reset_timestep(bigint);
-
-  //int axi_vertical_line(double, double *, double *, double, double, double,
-  //                     double &);
 
   // remap x and v components into axisymmetric plane
   // input x at end of linear move (x = xold + dt*v)
@@ -196,6 +201,7 @@ class Update : protected Pointers {
 
   // NOTE: cannot be inline b/c ref to modify->fix[] is not supported
   //       unless possibly include modify.h and fix.h in this file
+  
   void field_per_particle(int, int, double, double *, double *);
   void field_per_grid(int, int, double, double *, double *);
 };

@@ -107,7 +107,7 @@ void ComputeGasCollisionTally::compute_per_tally()
 }
 
 /* ----------------------------------------------------------------------
-   called by Collide before timesteps which invoke gas_tally()
+   called by Update before timesteps which invoke gas_tally()
 ---------------------------------------------------------------------- */
 
 void ComputeGasCollisionTally::clear()
@@ -138,7 +138,7 @@ void ComputeGasCollisionTally::gas_tally(int icell, int reaction,
   // this compute only tallies collisions that do not induce a reaction
   // reactions can be tallied by compute gas/reaction/tally command
 
-  if (!reaction) return;
+  if (reaction) return;
   
   // skip if icell not in grid group
 
