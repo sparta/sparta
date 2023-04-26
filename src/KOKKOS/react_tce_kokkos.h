@@ -21,8 +21,10 @@ ReactStyle(tce/kk,ReactTCEKokkos)
 #ifndef SPARTA_REACT_TCE_KOKKOS_H
 #define SPARTA_REACT_TCE_KOKKOS_H
 
+#include "math.h"
 #include "react_bird_kokkos.h"
 #include "kokkos_type.h"
+#include "update.h"
 
 namespace SPARTA_NS {
 
@@ -52,7 +54,8 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 
   const int isp = ip->ispecies;
   const int jsp = jp->ispecies;
-  const int inmode,jnmode;
+  const double ievib = ip->evib;
+  const double jevib = jp->evib;
 
   const double pre_ave_rotdof = (d_species[isp].rotdof + d_species[jsp].rotdof)/2.0;
 
@@ -89,7 +92,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
     // average DOFs participating in the reaction
 
     double ecc,z;
-    const double e_excess;
+    const double e_excess = 0.0;
     int imode = 0;
 
     if (partialEnergy) {
@@ -111,32 +114,30 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 
        if (vibstyle == SMOOTH) z += (d_species[isp].vibdof + d_species[jsp].vibdof)/2.0;
        else if (vibstyle == DISCRETE) {
-            inmode = d_species[isp].nvibmode;
-            jnmode = d_species[jsp].nvibmode;
             //Instantaneous z for diatomic molecules
-            if (inmode == 1) {
+            if (d_species[isp].nvibmode == 1) {
                 avei = static_cast<int>
                         (ievib / (update->boltz * d_species[isp].vibtemp[0]));
                 if (avei > 0) zi = 2.0 * avei * log(1.0 / avei + 1.0);
                 else zi = 0.0;
-            } else if (inmode > 1) {
+            } else if (d_species[isp].nvibmode > 1) {
                 if (ievib < 1e-26 ) zi = 0.0; //Low Energy Cut-Off to prevent nan solutions to newtonTvib
                 //Instantaneous T for polyatomic
                 else {
-                  iTvib = newtonTvib(inmode,ievib,d_species[isp].vibtemp,3000,1e-4,1000);
+                  iTvib = newtonTvib(d_species[isp].nvibmode,ievib,d_species[isp].vibtemp,3000,1e-4,1000);
                   zi = (2 * ievib)/(update->boltz * iTvib);
                 }
             } else zi = 0.0;
 
-            if (jnmode == 1) {
+            if (d_species[jsp].nvibmode == 1) {
                 avej = static_cast<int>
                         (jevib / (update->boltz * d_species[jsp].vibtemp[0]));
                 if (avej > 0) zj = 2.0 * avej * log(1.0 / avej + 1.0);
                 else zj = 0.0;
-            } else if (jnmode > 1) {
+            } else if (d_species[jsp].nvibmode > 1) {
                 if (jevib < 1e-26) zj = 0.0;
                 else {
-                  jTvib = newtonTvib(jnmode,jevib,d_species[jsp].vibtemp,3000,1e-4,1000);
+                  jTvib = newtonTvib(d_species[jsp].nvibmode,jevib,d_species[jsp].vibtemp,3000,1e-4,1000);
                   zj = (2 * jevib)/(update->boltz * jTvib);
                 }
             } else zj = 0.0;
