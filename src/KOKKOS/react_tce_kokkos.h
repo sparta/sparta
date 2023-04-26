@@ -52,6 +52,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 
   const int isp = ip->ispecies;
   const int jsp = jp->ispecies;
+  const int inmode,jnmode;
 
   const double pre_ave_rotdof = (d_species[isp].rotdof + d_species[jsp].rotdof)/2.0;
 
@@ -65,6 +66,12 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
   rand_type rand_gen = rand_pool.get_state();
   const double random_prob = rand_gen.drand();
   rand_pool.free_state(rand_gen);
+  double zi = 0.0;
+  double zj = 0.0;
+  int avei = 0;
+  int avej = 0;
+  double iTvib = 0.0;
+  double jTvib = 0.0;
 
   // loop over possible reactions for these 2 species
 
@@ -138,9 +145,6 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
             z += 0.5 * (zi+zj);
        }
     }
-
-    const double e_excess = ecc - r->d_coeff[1];
-    if (e_excess <= 0.0) continue;
 
     // compute probability of reaction
 
