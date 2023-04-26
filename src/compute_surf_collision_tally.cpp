@@ -24,7 +24,7 @@
 
 using namespace SPARTA_NS;
 
-enum{ID,TYPE,IDSURF,TIME,XC,YC,ZC,VXPRE,VYPRE,VZPRE,VXPOST,VYPOST,VZPOST};
+enum{IDSURF,ID,TYPE,TIME,XC,YC,ZC,VXPRE,VYPRE,VZPRE,VXPOST,VYPOST,VZPOST};
 enum{DOUBLE,INT,BIGINT,UINT,BIGUINT,STRING};    // same as Dump
 
 #define DELTA 4096
@@ -51,9 +51,9 @@ ComputeSurfCollisionTally::ComputeSurfCollisionTally(SPARTA *sparta, int narg, c
   nvalue = 0;
   int iarg = 4;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"id") == 0) which[nvalue++] = ID;
+    if (strcmp(arg[iarg],"id/surf") == 0) which[nvalue++] = IDSURF;
+    else if (strcmp(arg[iarg],"id") == 0) which[nvalue++] = ID;
     else if (strcmp(arg[iarg],"type") == 0) which[nvalue++] = TYPE;
-    else if (strcmp(arg[iarg],"id/surf") == 0) which[nvalue++] = IDSURF;
     else if (strcmp(arg[iarg],"time") == 0) which[nvalue++] = TIME;
     else if (strcmp(arg[iarg],"xc") == 0) which[nvalue++] = XC;
     else if (strcmp(arg[iarg],"yc") == 0) which[nvalue++] = YC;
@@ -141,7 +141,7 @@ void ComputeSurfCollisionTally::surf_tally(double dtremain, int isurf,
 {
   // skip if a reaction
   // this compute only tallies collisions that do not induce a reaction
-  // reactions can be tallied by compute reaction/tally command
+  // reactions can be tallied by compute surf/reaction/tally command
 
   if (ip == NULL || jp) return;
   if (iorig->ispecies != ip->ispecies) return;
@@ -171,15 +171,15 @@ void ComputeSurfCollisionTally::surf_tally(double dtremain, int isurf,
   
   for (int m = 0; m < nvalue; m++) {
     switch (which[m]) {
+    case IDSURF:
+      if (dim == 2) vec[m] = ubuf(lines[isurf].id).d;
+      else vec[m] = ubuf(tris[isurf].id).d;
+      break;
     case ID:
       vec[m] = ubuf(ip->id).d;
       break;
     case TYPE:
       vec[m] = ubuf(ip->ispecies+1).d;
-      break;
-    case IDSURF:
-      if (dim == 2) vec[m] = ubuf(lines[isurf].id).d;
-      else vec[m] = ubuf(tris[isurf].id).d;
       break;
     case XC:
       vec[m] = iorig->x[0];
@@ -233,12 +233,12 @@ int ComputeSurfCollisionTally::tallyinfo(surfint *&dummy)
 
 int ComputeSurfCollisionTally::datatype(int icol)
 {
-  if (which[icol-1] == ID) return INT;
-  if (which[icol-1] == TYPE) return INT;
   if (which[icol-1] == IDSURF) {
     if (sizeof(surfint) == sizeof(smallint)) return INT;
     if (sizeof(surfint) == sizeof(bigint)) return BIGINT;
   }
+  if (which[icol-1] == ID) return INT;
+  if (which[icol-1] == TYPE) return INT;
 
   return DOUBLE;
 }

@@ -16,16 +16,16 @@
 #include "compute_gas_reaction_tally.h"
 #include "particle.h"
 #include "mixture.h"
-#include "surf.h"
+#include "grid.h"
 #include "update.h"
-#include "domain.h"
 #include "memory.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
 
-enum{IDPRE,IDPOST,IDPOST2,TYPEPRE,TYPEPOST,TYPEPOST2,IDSURF,TIME,XC,YC,ZC,
-  VXPRE,VYPRE,VZPRE,VXPOST,VYPOST,VZPOST,VXPOST2,VYPOST2,VZPOST2};
+enum{IDCELL,ID1PRE,ID2PRE,ID1POST,ID2POST,ID3POST,TYPE1PRE,TYPE2PRE,
+  TYPE1POST,TYPE2POST,TYPE3POST,VX1PRE,VY1PRE,VZ1PRE,VX2PRE,VY2PRE,VZ2PRE,
+  VX1POST,VY1POST,VZ1POST,VX2POST,VY2POST,VZ2POST,VX3POST,VY3POST,VZ3POST};
 enum{DOUBLE,INT,BIGINT,UINT,BIGUINT,STRING};    // same as Dump
 
 #define DELTA 4096
@@ -37,9 +37,9 @@ ComputeGasReactionTally::ComputeGasReactionTally(SPARTA *sparta, int narg, char 
 {
   if (narg < 5) error->all(FLERR,"Illegal compute gas/reaction/tally command");
 
-  int igroup = surf->find_group(arg[2]);
+  int igroup = grid->find_group(arg[2]);
   if (igroup < 0) error->all(FLERR,"Compute gas/reaction/tally group ID does not exist");
-  groupbit = surf->bitmask[igroup];
+  groupbit = grid->bitmask[igroup];
 
   imix = particle->find_mixture(arg[3]);
   if (imix < 0) error->all(FLERR,"Compute gas/reaction/tally mixture ID does not exist");
@@ -52,26 +52,32 @@ ComputeGasReactionTally::ComputeGasReactionTally(SPARTA *sparta, int narg, char 
   nvalue = 0;
   int iarg = 4;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"id/pre") == 0) which[nvalue++] = IDPRE;
-    else if (strcmp(arg[iarg],"id/post") == 0) which[nvalue++] = IDPOST;
-    else if (strcmp(arg[iarg],"id/post2") == 0) which[nvalue++] = IDPOST2;
-    else if (strcmp(arg[iarg],"type/pre") == 0) which[nvalue++] = TYPEPRE;
-    else if (strcmp(arg[iarg],"type/post") == 0) which[nvalue++] = TYPEPOST;
-    else if (strcmp(arg[iarg],"type/post2") == 0) which[nvalue++] = TYPEPOST2;
-    else if (strcmp(arg[iarg],"id/surf") == 0) which[nvalue++] = IDSURF;
-    else if (strcmp(arg[iarg],"time") == 0) which[nvalue++] = TIME;
-    else if (strcmp(arg[iarg],"xc") == 0) which[nvalue++] = XC;
-    else if (strcmp(arg[iarg],"yc") == 0) which[nvalue++] = YC;
-    else if (strcmp(arg[iarg],"zc") == 0) which[nvalue++] = ZC;
-    else if (strcmp(arg[iarg],"vx/pre") == 0) which[nvalue++] = VXPRE;
-    else if (strcmp(arg[iarg],"vy/pre") == 0) which[nvalue++] = VYPRE;
-    else if (strcmp(arg[iarg],"vz/pre") == 0) which[nvalue++] = VZPRE;
-    else if (strcmp(arg[iarg],"vx/post") == 0) which[nvalue++] = VXPOST;
-    else if (strcmp(arg[iarg],"vy/post") == 0) which[nvalue++] = VYPOST;
-    else if (strcmp(arg[iarg],"vz/post") == 0) which[nvalue++] = VZPOST;
-    else if (strcmp(arg[iarg],"vx/post2") == 0) which[nvalue++] = VXPOST2;
-    else if (strcmp(arg[iarg],"vy/post2") == 0) which[nvalue++] = VYPOST2;
-    else if (strcmp(arg[iarg],"vz/post2") == 0) which[nvalue++] = VZPOST2;
+    if (strcmp(arg[iarg],"id/cell") == 0) which[nvalue++] = IDCELL;
+    else if (strcmp(arg[iarg],"id1/pre") == 0) which[nvalue++] = ID1PRE;
+    else if (strcmp(arg[iarg],"id2/pre") == 0) which[nvalue++] = ID2PRE;
+    else if (strcmp(arg[iarg],"id1/post") == 0) which[nvalue++] = ID1POST;
+    else if (strcmp(arg[iarg],"id2/post") == 0) which[nvalue++] = ID2POST;
+    else if (strcmp(arg[iarg],"id3/post") == 0) which[nvalue++] = ID3POST;
+    else if (strcmp(arg[iarg],"type1/pre") == 0) which[nvalue++] = TYPE1PRE;
+    else if (strcmp(arg[iarg],"type2/pre") == 0) which[nvalue++] = TYPE2PRE;
+    else if (strcmp(arg[iarg],"type1/post") == 0) which[nvalue++] = TYPE1POST;
+    else if (strcmp(arg[iarg],"type2/post") == 0) which[nvalue++] = TYPE2POST;
+    else if (strcmp(arg[iarg],"type3/post") == 0) which[nvalue++] = TYPE3POST;
+    else if (strcmp(arg[iarg],"vx1/pre") == 0) which[nvalue++] = VX1PRE;
+    else if (strcmp(arg[iarg],"vy1/pre") == 0) which[nvalue++] = VY1PRE;
+    else if (strcmp(arg[iarg],"vz1/pre") == 0) which[nvalue++] = VZ1PRE;
+    else if (strcmp(arg[iarg],"vx2/pre") == 0) which[nvalue++] = VX2PRE;
+    else if (strcmp(arg[iarg],"vy2/pre") == 0) which[nvalue++] = VX2PRE;
+    else if (strcmp(arg[iarg],"vz2/pre") == 0) which[nvalue++] = VY2PRE;
+    else if (strcmp(arg[iarg],"vx1/post") == 0) which[nvalue++] = VX1POST;
+    else if (strcmp(arg[iarg],"vy1/post") == 0) which[nvalue++] = VY1POST;
+    else if (strcmp(arg[iarg],"vz1/post") == 0) which[nvalue++] = VZ1POST;
+    else if (strcmp(arg[iarg],"vx2/post") == 0) which[nvalue++] = VX2POST;
+    else if (strcmp(arg[iarg],"vy2/post") == 0) which[nvalue++] = VY2POST;
+    else if (strcmp(arg[iarg],"vz2/post") == 0) which[nvalue++] = VZ2POST;
+    else if (strcmp(arg[iarg],"vx3/post") == 0) which[nvalue++] = VX3POST;
+    else if (strcmp(arg[iarg],"vy3/post") == 0) which[nvalue++] = VY3POST;
+    else if (strcmp(arg[iarg],"vz3/post") == 0) which[nvalue++] = VZ3POST;
     else error->all(FLERR,"Invalid value for compute gas/reaction/tally");
     iarg++;
   }
@@ -86,8 +92,6 @@ ComputeGasReactionTally::ComputeGasReactionTally(SPARTA *sparta, int narg, char 
 
   ntally = maxtally = 0;
   array_tally = NULL;
-  
-  dim = domain->dimension;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -99,14 +103,6 @@ ComputeGasReactionTally::~ComputeGasReactionTally()
   delete [] which;
 
   memory->destroy(array_tally);
-}
-
-/* ---------------------------------------------------------------------- */
-
-void ComputeGasReactionTally::init()
-{
-  if (!surf->exist)
-    error->all(FLERR,"Cannot use compute gas/reaction/tally when surfs do not exist");
 }
 
 /* ----------------------------------------------------------------------
@@ -126,8 +122,8 @@ void ComputeGasReactionTally::compute_per_tally()
 
 void ComputeGasReactionTally::clear()
 {
-  lines = surf->lines;
-  tris = surf->tris;
+  cells = grid->cells;
+  cinfo = grid->cinfo;
 
   ntally = 0;
 }
@@ -142,29 +138,28 @@ void ComputeGasReactionTally::clear()
    jp != NULL means two particles after collision
 ------------------------------------------------------------------------- */
 
-void ComputeGasReactionTally::surf_tally(double dtremain, int isurf, int icell, int reaction,
-                                      Particle::OnePart *iorig,
-                                      Particle::OnePart *ip, Particle::OnePart *jp)
+void ComputeGasReactionTally::gas_tally(int icell, int reaction,
+                                        Particle::OnePart *iorig,
+                                        Particle::OnePart *jorig,
+                                        Particle::OnePart *ip,
+                                        Particle::OnePart *jp,
+                                        Particle::OnePart *kp)
 {
   // skip if not a reaction
   // this compute only tallies collisions that induce a reaction
-  // simple collisions can be tallied by compute collision/tally command
+  // simple collisions can be tallied by compute gas/collision/tally command
 
-  if (ip && jp == NULL && iorig->ispecies == ip->ispecies) return;
+  if (!reaction) return;
 
-  // skip if isurf not in surface group
+  // skip if icell not in grid group
 
-  if (dim == 2) {
-    if (!(lines[isurf].mask & groupbit)) return;
-  } else {
-    if (!(tris[isurf].mask & groupbit)) return;
-  }
+  if (!(cinfo[icell].mask & groupbit)) return;
 
-  // skip if particle species not in mixture group
+  // skip if either particle species not in mixture group
 
-  int origspecies = iorig->ispecies;
-  int igroup = particle->mixture[imix]->species2group[origspecies];
-  if (igroup < 0) return;
+  int igroup = particle->mixture[imix]->species2group[iorig->ispecies];
+  int jgroup = particle->mixture[imix]->species2group[jorig->ispecies];
+  if (igroup < 0 || jgroup < 0) return;
 
   // grow tally array if necessary
   
@@ -177,76 +172,96 @@ void ComputeGasReactionTally::surf_tally(double dtremain, int isurf, int icell, 
   
   for (int m = 0; m < nvalue; m++) {
     switch (which[m]) {
-    case IDPRE:
+    case IDCELL:
+      vec[m] = ubuf(cells[icell].id).d;
+      break;
+    case ID1PRE:
       vec[m] = ubuf(iorig->id).d;
+      break; 
+    case ID2PRE:
+      vec[m] = ubuf(jorig->id).d;
       break;
-    case IDPOST:
-      if (ip == NULL) vec[m] = ubuf(0).d;
-      else vec[m] = ubuf(ip->id).d;
-      break;
-    case IDPOST2:
+    case ID1POST:
+      vec[m] = ubuf(ip->id).d;
+      break; 
+    case ID2POST:
       if (jp == NULL) vec[m] = ubuf(0).d;
       else vec[m] = ubuf(jp->id).d;
       break;
-    case TYPEPRE:
+    case ID3POST:
+      if (kp == NULL) vec[m] = ubuf(0).d;
+      else vec[m] = ubuf(jp->id).d;
+      break;
+      
+    case TYPE1PRE:
       vec[m] = ubuf(iorig->ispecies+1).d;
       break;
-    case TYPEPOST:
-      if (ip == NULL) vec[m] = ubuf(0).d;
-      else vec[m] = ubuf(ip->ispecies+1).d;
+    case TYPE2PRE:
+      vec[m] = ubuf(jorig->ispecies+1).d;
       break;
-    case TYPEPOST2:
+    case TYPE1POST:
+      vec[m] = ubuf(ip->ispecies+1).d;
+      break;
+    case TYPE2POST:
       if (jp == NULL) vec[m] = ubuf(0).d;
       else vec[m] = ubuf(jp->ispecies+1).d;
       break;
-    case IDSURF:
-      if (dim == 2) vec[m] = ubuf(lines[isurf].id).d;
-      else vec[m] = ubuf(tris[isurf].id).d;
+    case TYPE3POST:
+      if (kp == NULL) vec[m] = ubuf(0).d;
+      else vec[m] = ubuf(jp->ispecies+1).d;
       break;
-    case XC:
-      vec[m] = iorig->x[0];
-      break;
-    case YC: 
-      vec[m] = iorig->x[1];
-      break;
-    case ZC: 
-      vec[m] = iorig->x[2];
-      break;
-    case TIME: 
-      vec[m] = update->dt - dtremain;
-      break;
-    case VXPRE:
+      
+    case VX1PRE:
       vec[m] = iorig->v[0];
       break;
-    case VYPRE: 
+    case VY1PRE: 
       vec[m] = iorig->v[1];
       break;
-    case VZPRE: 
+    case VZ1PRE: 
       vec[m] = iorig->v[2];
       break;
-    case VXPOST:
-      if (ip == NULL) vec[m] = 0.0;
-      else vec[m] = ip->v[0];
+    case VX2PRE:
+      vec[m] = jorig->v[0];
       break;
-    case VYPOST: 
-      if (ip == NULL) vec[m] = 0.0;
-      else vec[m] = ip->v[1];
+    case VY2PRE: 
+      vec[m] = jorig->v[1];
       break;
-    case VZPOST: 
-      if (ip == NULL) vec[m] = 0.0;
-      else vec[m] = ip->v[2];
+    case VZ2PRE: 
+      vec[m] = jorig->v[2];
       break;
-    case VXPOST2:
+      
+    case VX1POST:
+      vec[m] = ip->v[0];
+      break;
+    case VY1POST: 
+      vec[m] = ip->v[1];
+      break;
+    case VZ1POST: 
+      vec[m] = ip->v[2];
+      break;
+    case VX2POST:
       if (jp == NULL) vec[m] = 0.0;
       else vec[m] = jp->v[0];
       break;
-    case VYPOST2: 
+    case VY2POST: 
       if (jp == NULL) vec[m] = 0.0;
       else vec[m] = jp->v[1];
       break;
-    case VZPOST2: 
+    case VZ2POST: 
       if (jp == NULL) vec[m] = 0.0;
       else vec[m] = jp->v[2];
+      break;
+    case VX3POST:
+      if (kp == NULL) vec[m] = 0.0;
+      else vec[m] = kp->v[0];
+      break;
+    case VY3POST: 
+      if (kp == NULL) vec[m] = 0.0;
+      else vec[m] = kp->v[1];
+      break;
+    case VZ3POST: 
+      if (kp == NULL) vec[m] = 0.0;
+      else vec[m] = kp->v[2];
       break;
     }
   }
@@ -270,16 +285,16 @@ int ComputeGasReactionTally::tallyinfo(surfint *&dummy)
 
 int ComputeGasReactionTally::datatype(int icol)
 {
-  if (which[icol-1] == IDPRE) return INT;
-  if (which[icol-1] == IDPOST) return INT;
-  if (which[icol-1] == IDPOST2) return INT;
-  if (which[icol-1] == TYPEPRE) return INT;
-  if (which[icol-1] == TYPEPOST) return INT;
-  if (which[icol-1] == TYPEPOST2) return INT;
-  if (which[icol-1] == IDSURF) {
-    if (sizeof(surfint) == sizeof(smallint)) return INT;
-    if (sizeof(surfint) == sizeof(bigint)) return BIGINT;
+  if (which[icol-1] == IDCELL) {
+    if (sizeof(cellint) == sizeof(smallint)) return UINT;
+    if (sizeof(cellint) == sizeof(bigint)) return BIGUINT;
   }
+  if (which[icol-1] == ID1PRE || which[icol-1] == ID2PRE) return INT;
+  if (which[icol-1] == ID1POST || which[icol-1] == ID2POST ||
+      which[icol-1] == ID3POST) return INT;
+  if (which[icol-1] == TYPE1PRE || which[icol-1] == TYPE2PRE) return INT;
+  if (which[icol-1] == TYPE1POST || which[icol-1] == TYPE2POST ||
+      which[icol-1] == TYPE3POST) return INT;
 
   return DOUBLE;
 }

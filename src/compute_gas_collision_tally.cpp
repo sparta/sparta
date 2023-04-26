@@ -51,9 +51,9 @@ ComputeGasCollisionTally::ComputeGasCollisionTally(SPARTA *sparta, int narg, cha
   nvalue = 0;
   int iarg = 4;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"id1") == 0) which[nvalue++] = ID1;
+    if (strcmp(arg[iarg],"id/cell") == 0) which[nvalue++] = IDCELL;
+    else if (strcmp(arg[iarg],"id1") == 0) which[nvalue++] = ID1;
     else if (strcmp(arg[iarg],"id2") == 0) which[nvalue++] = ID2;
-    else if (strcmp(arg[iarg],"id/cell") == 0) which[nvalue++] = IDCELL;
     else if (strcmp(arg[iarg],"type1") == 0) which[nvalue++] = TYPE1;
     else if (strcmp(arg[iarg],"type2") == 0) which[nvalue++] = TYPE1;
     else if (strcmp(arg[iarg],"vx1/pre") == 0) which[nvalue++] = VX1PRE;
@@ -161,21 +161,23 @@ void ComputeGasCollisionTally::gas_tally(int icell, int reaction,
   
   for (int m = 0; m < nvalue; m++) {
     switch (which[m]) {
+    case IDCELL:
+      vec[m] = ubuf(cells[icell].id).d;
+      break;
     case ID1:
       vec[m] = ubuf(ip->id).d;
       break; 
     case ID2:
       vec[m] = ubuf(jp->id).d;
       break;
-    case IDCELL:
-      vec[m] = ubuf(cells[icell].id).d;
-      break;
+      
     case TYPE1:
       vec[m] = ubuf(ip->ispecies+1).d;
       break;
     case TYPE2:
       vec[m] = ubuf(jp->ispecies+1).d;
       break;
+      
     case VX1PRE: 
       vec[m] = iorig->v[0];
       break;
@@ -194,6 +196,7 @@ void ComputeGasCollisionTally::gas_tally(int icell, int reaction,
     case VZ2PRE: 
       vec[m] = jorig->v[2];
       break;
+      
     case VX1POST:
       vec[m] = ip->v[0];
       break;
@@ -234,11 +237,11 @@ int ComputeGasCollisionTally::tallyinfo(surfint *&dummy)
 
 int ComputeGasCollisionTally::datatype(int icol)
 {
-  if (which[icol-1] == ID1 || which[icol-1] == ID2) return INT;
   if (which[icol-1] == IDCELL) {
     if (sizeof(cellint) == sizeof(smallint)) return UINT;
     if (sizeof(cellint) == sizeof(bigint)) return BIGUINT;
   }
+  if (which[icol-1] == ID1 || which[icol-1] == ID2) return INT;
   if (which[icol-1] == TYPE1 || which[icol-1] == TYPE2) return INT;
 
   return DOUBLE;

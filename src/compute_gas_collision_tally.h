@@ -42,7 +42,7 @@ class ComputeGasCollisionTally : public Compute {
   int groupbit,imix,nvalue;
   int *which;
 
-  int ntally;              // # of surfs I have tallied for
+  int ntally;              // # of gas collisions I have tallied for
   int maxtally;            // # of tallies currently allocated
 
   Grid::ChildCell *cells;    // local copies

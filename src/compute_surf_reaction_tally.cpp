@@ -24,8 +24,8 @@
 
 using namespace SPARTA_NS;
 
-enum{IDPRE,IDPOST,IDPOST2,TYPEPRE,TYPEPOST,TYPEPOST2,IDSURF,TIME,XC,YC,ZC,
-  VXPRE,VYPRE,VZPRE,VXPOST,VYPOST,VZPOST,VXPOST2,VYPOST2,VZPOST2};
+enum{IDSURF,IDPRE,ID1POST,ID2POST,TYPEPRE,TYPE1POST,TYPE2POST,TIME,XC,YC,ZC,
+  VXPRE,VYPRE,VZPRE,VX1POST,VY1POST,VZ1POST,VX2POST,VY2POST,VZ2POST};
 enum{DOUBLE,INT,BIGINT,UINT,BIGUINT,STRING};    // same as Dump
 
 #define DELTA 4096
@@ -52,13 +52,13 @@ ComputeSurfReactionTally::ComputeSurfReactionTally(SPARTA *sparta, int narg, cha
   nvalue = 0;
   int iarg = 4;
   while (iarg < narg) {
+    if (strcmp(arg[iarg],"id/surf") == 0) which[nvalue++] = IDSURF;
     if (strcmp(arg[iarg],"id/pre") == 0) which[nvalue++] = IDPRE;
-    else if (strcmp(arg[iarg],"id/post") == 0) which[nvalue++] = IDPOST;
-    else if (strcmp(arg[iarg],"id/post2") == 0) which[nvalue++] = IDPOST2;
+    else if (strcmp(arg[iarg],"id1/post") == 0) which[nvalue++] = ID1POST;
+    else if (strcmp(arg[iarg],"id2/post") == 0) which[nvalue++] = ID2POST;
     else if (strcmp(arg[iarg],"type/pre") == 0) which[nvalue++] = TYPEPRE;
-    else if (strcmp(arg[iarg],"type/post") == 0) which[nvalue++] = TYPEPOST;
-    else if (strcmp(arg[iarg],"type/post2") == 0) which[nvalue++] = TYPEPOST2;
-    else if (strcmp(arg[iarg],"id/surf") == 0) which[nvalue++] = IDSURF;
+    else if (strcmp(arg[iarg],"type1/post") == 0) which[nvalue++] = TYPE1POST;
+    else if (strcmp(arg[iarg],"type2/post") == 0) which[nvalue++] = TYPE2POST;
     else if (strcmp(arg[iarg],"time") == 0) which[nvalue++] = TIME;
     else if (strcmp(arg[iarg],"xc") == 0) which[nvalue++] = XC;
     else if (strcmp(arg[iarg],"yc") == 0) which[nvalue++] = YC;
@@ -66,12 +66,12 @@ ComputeSurfReactionTally::ComputeSurfReactionTally(SPARTA *sparta, int narg, cha
     else if (strcmp(arg[iarg],"vx/pre") == 0) which[nvalue++] = VXPRE;
     else if (strcmp(arg[iarg],"vy/pre") == 0) which[nvalue++] = VYPRE;
     else if (strcmp(arg[iarg],"vz/pre") == 0) which[nvalue++] = VZPRE;
-    else if (strcmp(arg[iarg],"vx/post") == 0) which[nvalue++] = VXPOST;
-    else if (strcmp(arg[iarg],"vy/post") == 0) which[nvalue++] = VYPOST;
-    else if (strcmp(arg[iarg],"vz/post") == 0) which[nvalue++] = VZPOST;
-    else if (strcmp(arg[iarg],"vx/post2") == 0) which[nvalue++] = VXPOST2;
-    else if (strcmp(arg[iarg],"vy/post2") == 0) which[nvalue++] = VYPOST2;
-    else if (strcmp(arg[iarg],"vz/post2") == 0) which[nvalue++] = VZPOST2;
+    else if (strcmp(arg[iarg],"vx1/post") == 0) which[nvalue++] = VX1POST;
+    else if (strcmp(arg[iarg],"vy1/post") == 0) which[nvalue++] = VY1POST;
+    else if (strcmp(arg[iarg],"vz1/post") == 0) which[nvalue++] = VZ1POST;
+    else if (strcmp(arg[iarg],"vx2/post") == 0) which[nvalue++] = VX2POST;
+    else if (strcmp(arg[iarg],"vy2/post") == 0) which[nvalue++] = VY2POST;
+    else if (strcmp(arg[iarg],"vz2/post") == 0) which[nvalue++] = VZ2POST;
     else error->all(FLERR,"Invalid value for compute surf/reaction/tally");
     iarg++;
   }
@@ -143,12 +143,12 @@ void ComputeSurfReactionTally::clear()
 ------------------------------------------------------------------------- */
 
 void ComputeSurfReactionTally::surf_tally(double dtremain, int isurf, int icell, int reaction,
-                                      Particle::OnePart *iorig,
-                                      Particle::OnePart *ip, Particle::OnePart *jp)
+                                          Particle::OnePart *iorig,
+                                          Particle::OnePart *ip, Particle::OnePart *jp)
 {
   // skip if not a reaction
   // this compute only tallies collisions that induce a reaction
-  // simple collisions can be tallied by compute collision/tally command
+  // simple collisions can be tallied by compute surf/collision/tally command
 
   if (ip && jp == NULL && iorig->ispecies == ip->ispecies) return;
 
@@ -177,31 +177,36 @@ void ComputeSurfReactionTally::surf_tally(double dtremain, int isurf, int icell,
   
   for (int m = 0; m < nvalue; m++) {
     switch (which[m]) {
-    case IDPRE:
-      vec[m] = ubuf(iorig->id).d;
-      break;
-    case IDPOST:
-      if (ip == NULL) vec[m] = ubuf(0).d;
-      else vec[m] = ubuf(ip->id).d;
-      break;
-    case IDPOST2:
-      if (jp == NULL) vec[m] = ubuf(0).d;
-      else vec[m] = ubuf(jp->id).d;
-      break;
-    case TYPEPRE:
-      vec[m] = ubuf(iorig->ispecies+1).d;
-      break;
-    case TYPEPOST:
-      if (ip == NULL) vec[m] = ubuf(0).d;
-      else vec[m] = ubuf(ip->ispecies+1).d;
-      break;
-    case TYPEPOST2:
-      if (jp == NULL) vec[m] = ubuf(0).d;
-      else vec[m] = ubuf(jp->ispecies+1).d;
-      break;
     case IDSURF:
       if (dim == 2) vec[m] = ubuf(lines[isurf].id).d;
       else vec[m] = ubuf(tris[isurf].id).d;
+      break;
+    case IDPRE:
+      vec[m] = ubuf(iorig->id).d;
+      break;
+    case ID1POST:
+      if (ip == NULL) vec[m] = ubuf(0).d;
+      else vec[m] = ubuf(ip->id).d;
+      break;
+    case ID2POST:
+      if (jp == NULL) vec[m] = ubuf(0).d;
+      else vec[m] = ubuf(jp->id).d;
+      break;
+
+    case TYPEPRE:
+      vec[m] = ubuf(iorig->ispecies+1).d;
+      break;
+    case TYPE1POST:
+      if (ip == NULL) vec[m] = ubuf(0).d;
+      else vec[m] = ubuf(ip->ispecies+1).d;
+      break;
+    case TYPE2POST:
+      if (jp == NULL) vec[m] = ubuf(0).d;
+      else vec[m] = ubuf(jp->ispecies+1).d;
+      break;
+      
+    case TIME: 
+      vec[m] = update->dt - dtremain;
       break;
     case XC:
       vec[m] = iorig->x[0];
@@ -212,9 +217,7 @@ void ComputeSurfReactionTally::surf_tally(double dtremain, int isurf, int icell,
     case ZC: 
       vec[m] = iorig->x[2];
       break;
-    case TIME: 
-      vec[m] = update->dt - dtremain;
-      break;
+
     case VXPRE:
       vec[m] = iorig->v[0];
       break;
@@ -224,27 +227,27 @@ void ComputeSurfReactionTally::surf_tally(double dtremain, int isurf, int icell,
     case VZPRE: 
       vec[m] = iorig->v[2];
       break;
-    case VXPOST:
+    case VX1POST:
       if (ip == NULL) vec[m] = 0.0;
       else vec[m] = ip->v[0];
       break;
-    case VYPOST: 
+    case VY1POST: 
       if (ip == NULL) vec[m] = 0.0;
       else vec[m] = ip->v[1];
       break;
-    case VZPOST: 
+    case VZ1POST: 
       if (ip == NULL) vec[m] = 0.0;
       else vec[m] = ip->v[2];
       break;
-    case VXPOST2:
+    case VX2POST:
       if (jp == NULL) vec[m] = 0.0;
       else vec[m] = jp->v[0];
       break;
-    case VYPOST2: 
+    case VY2POST: 
       if (jp == NULL) vec[m] = 0.0;
       else vec[m] = jp->v[1];
       break;
-    case VZPOST2: 
+    case VZ2POST: 
       if (jp == NULL) vec[m] = 0.0;
       else vec[m] = jp->v[2];
       break;
@@ -270,16 +273,14 @@ int ComputeSurfReactionTally::tallyinfo(surfint *&dummy)
 
 int ComputeSurfReactionTally::datatype(int icol)
 {
-  if (which[icol-1] == IDPRE) return INT;
-  if (which[icol-1] == IDPOST) return INT;
-  if (which[icol-1] == IDPOST2) return INT;
-  if (which[icol-1] == TYPEPRE) return INT;
-  if (which[icol-1] == TYPEPOST) return INT;
-  if (which[icol-1] == TYPEPOST2) return INT;
   if (which[icol-1] == IDSURF) {
     if (sizeof(surfint) == sizeof(smallint)) return INT;
     if (sizeof(surfint) == sizeof(bigint)) return BIGINT;
   }
+  if (which[icol-1] == IDPRE) return INT;
+  if (which[icol-1] == ID2POST || which[icol-1] == ID2POST) return INT;
+  if (which[icol-1] == TYPEPRE) return INT;
+  if (which[icol-1] == TYPE1POST || which[icol-1] == TYPE2POST) return INT;
 
   return DOUBLE;
 }

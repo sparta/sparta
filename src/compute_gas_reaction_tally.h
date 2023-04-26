@@ -22,7 +22,7 @@ ComputeStyle(gas/reaction/tally,ComputeGasReactionTally)
 #define SPARTA_COMPUTE_GAS_REACTION_TALLY_H
 
 #include "compute.h"
-#include "surf.h"
+#include "grid.h"
 
 namespace SPARTA_NS {
 
@@ -30,11 +30,10 @@ class ComputeGasReactionTally : public Compute {
  public:
   ComputeGasReactionTally(class SPARTA *, int, char **);
   ~ComputeGasReactionTally();
-  void init();
   void compute_per_tally();
   void clear();
-  void surf_tally(double, int, int, int, Particle::OnePart *,
-                  Particle::OnePart *, Particle::OnePart *);
+  void gas_tally(int, int, Particle::OnePart *, Particle::OnePart *,
+                 Particle::OnePart *, Particle::OnePart *, Particle::OnePart *);
   int tallyinfo(surfint *&);
   int datatype(int);
   bigint memory_usage();
@@ -43,12 +42,11 @@ class ComputeGasReactionTally : public Compute {
   int groupbit,imix,nvalue;
   int *which;
 
-  int ntally;              // # of surfs I have tallied for
+  int ntally;              // # of gas collisions I have tallied for
   int maxtally;            // # of tallies currently allocated
 
-  int dim;                 // local copies
-  Surf::Line *lines;
-  Surf::Tri *tris;
+  Grid::ChildCell *cells;    // local copies
+  Grid::ChildInfo *cinfo;
 
   virtual void grow_tally();
 };
