@@ -14,27 +14,26 @@
 
 #ifdef COMPUTE_CLASS
 
-ComputeStyle(collision/tally,ComputeCollisionTally)
+ComputeStyle(gas/collision/tally,ComputeGasCollisionTally)
 
 #else
 
-#ifndef SPARTA_COMPUTE_COLLISION_TALLY_H
-#define SPARTA_COMPUTE_COLLISION_TALLY_H
+#ifndef SPARTA_COMPUTE_GAS_COLLISION_TALLY_H
+#define SPARTA_COMPUTE_GAS_COLLISION_TALLY_H
 
 #include "compute.h"
-#include "surf.h"
+#include "grid.h"
 
 namespace SPARTA_NS {
 
-class ComputeCollisionTally : public Compute {
+class ComputeGasCollisionTally : public Compute {
  public:
-  ComputeCollisionTally(class SPARTA *, int, char **);
-  ~ComputeCollisionTally();
-  void init();
+  ComputeGasCollisionTally(class SPARTA *, int, char **);
+  ~ComputeGasCollisionTally();
   void compute_per_tally();
   void clear();
-  void surf_tally(double, int, int, int, Particle::OnePart *,
-                  Particle::OnePart *, Particle::OnePart *);
+  void gas_tally(int, int, Particle::OnePart *, Particle::OnePart *,
+                 Particle::OnePart *, Particle::OnePart *, Particle::OnePart *);
   int tallyinfo(surfint *&);
   int datatype(int);
   bigint memory_usage();
@@ -46,10 +45,9 @@ class ComputeCollisionTally : public Compute {
   int ntally;              // # of surfs I have tallied for
   int maxtally;            // # of tallies currently allocated
 
-  int dim;                 // local copies
-  Surf::Line *lines;
-  Surf::Tri *tris;
-
+  Grid::ChildCell *cells;    // local copies
+  Grid::ChildInfo *cinfo;
+  
   virtual void grow_tally();
 };
 

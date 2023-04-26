@@ -31,8 +31,7 @@ using namespace SPARTA_NS;
 
 // customize by adding keyword
 
-enum{INT,DOUBLE,BIGINT,STRING};        // same as Dump
-
+enum{DOUBLE,INT,BIGINT,UINT,BIGUINT,STRING};    // same as Dump
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
 #define INVOKED_PER_SURF 32
@@ -119,9 +118,12 @@ DumpSurf::DumpSurf(SPARTA *sparta, int narg, char **arg) :
   format_default[0] = '\0';
 
   for (int i = 0; i < nfield; i++) {
-    if (vtype[i] == INT) strcat(format_default,"%d ");
-    else if (vtype[i] == DOUBLE) strcat(format_default,"%g ");
+    if (vtype[i] == DOUBLE) strcat(format_default,"%g ");
+    else if (vtype[i] == INT) strcat(format_default,"%d ");
     else if (vtype[i] == BIGINT) strcat(format_default,BIGINT_FORMAT " ");
+    else if (vtype[i] == UINT) strcat(format_default,"%u ");
+    else if (vtype[i] == BIGUINT) strcat(format_default,BIGUINT_FORMAT " ");
+    else if (vtype[i] == STRING) strcat(format_default,"%s ");
     vformat[i] = NULL;
   }
 
@@ -413,8 +415,11 @@ void DumpSurf::write_text(int n, double *mybuf)
   int m = 0;
   for (i = 0; i < n; i++) {
     for (j = 0; j < size_one; j++) {
-      if (vtype[j] == INT) fprintf(fp,vformat[j],static_cast<int> (mybuf[m]));
-      else if (vtype[j] == DOUBLE) fprintf(fp,vformat[j],mybuf[m]);
+      if (vtype[j] == DOUBLE) fprintf(fp,vformat[j],mybuf[m]);
+      else if (vtype[j] == INT) fprintf(fp,vformat[j],(int) ubuf(mybuf[m]).i);
+      else if (vtype[j] == BIGINT) fprintf(fp,vformat[j],(bigint) ubuf(mybuf[m]).i);
+      else if (vtype[j] == UINT) fprintf(fp,vformat[j],(uint32_t) ubuf(mybuf[m]).i); 
+      else if (vtype[j] == BIGUINT) fprintf(fp,vformat[j],(uint64_t) ubuf(mybuf[m]).i);
       m++;
     }
     fprintf(fp,"\n");
@@ -844,14 +849,12 @@ void DumpSurf::pack_custom(int n)
 
 void DumpSurf::pack_id(int n)
 {
-  // NOTE: surfint (bigint) won't fit in double in some cases
-
   if (dimension == 2) {
     Surf::Line *lines;
     if (distributed && !implicit) lines = surf->mylines;
     else lines = surf->lines;
     for (int i = 0; i < nchoose; i++) {
-      buf[n] = lines[cglobal[i]].id;
+      buf[n] = ubuf(lines[cglobal[i]].id).d;
       n += size_one;
     }
   } else {
@@ -859,7 +862,7 @@ void DumpSurf::pack_id(int n)
     if (distributed && !implicit) tris = surf->mytris;
     else tris = surf->tris;
     for (int i = 0; i < nchoose; i++) {
-      buf[n] = tris[cglobal[i]].id;
+      buf[n] = ubuf(tris[cglobal[i]].id).d;
       n += size_one;
     }
   }
@@ -874,7 +877,7 @@ void DumpSurf::pack_type(int n)
     if (distributed && !implicit) lines = surf->mylines;
     else lines = surf->lines;
     for (int i = 0; i < nchoose; i++) {
-      buf[n] = lines[cglobal[i]].type;
+      buf[n] = ubuf(lines[cglobal[i]].type).d;
       n += size_one;
     }
   } else if (dimension == 3) {
@@ -882,7 +885,7 @@ void DumpSurf::pack_type(int n)
     if (distributed && !implicit) tris = surf->mytris;
     else tris = surf->tris;
     for (int i = 0; i < nchoose; i++) {
-      buf[n] = tris[cglobal[i]].type;
+      buf[n] = ubuf(tris[cglobal[i]].type).d;
       n += size_one;
     }
   }

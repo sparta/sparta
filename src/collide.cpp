@@ -69,6 +69,10 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   glist = NULL;
   gpair = NULL;
 
+  nglist_compute = 0;
+  glist_compute = NULL;
+  glist_active = NULL;
+
   maxdelete = 0;
   dellist = NULL;
 
@@ -125,6 +129,9 @@ Collide::~Collide()
     delete [] glist;
     memory->destroy(gpair);
   }
+  
+  delete [] glist_compute;
+  delete [] glist_active;
 
   memory->destroy(dellist);
   memory->sfree(elist);
@@ -470,7 +477,8 @@ template < int NEARCP > void Collide::collisions_one()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
-
+    icell_collision = icell;
+    
     if (NEARCP) {
       if (np > max_nn) realloc_nn(np,nn_last_partner);
       memset(nn_last_partner,0,np*sizeof(int));
@@ -613,6 +621,8 @@ template < int NEARCP > void Collide::collisions_group()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
+    icell_collision = icell;
+
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
@@ -887,6 +897,8 @@ void Collide::collisions_one_ambipolar()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
+    icell_collision = icell;
+
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
@@ -1183,6 +1195,8 @@ void Collide::collisions_group_ambipolar()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
+    icell_collision = icell;
+        
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");

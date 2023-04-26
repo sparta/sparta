@@ -13,7 +13,7 @@
 ------------------------------------------------------------------------- */
 
 #include "string.h"
-#include "compute_collision_tally.h"
+#include "compute_surf_collision_tally.h"
 #include "particle.h"
 #include "mixture.h"
 #include "surf.h"
@@ -25,24 +25,23 @@
 using namespace SPARTA_NS;
 
 enum{ID,TYPE,IDSURF,TIME,XC,YC,ZC,VXPRE,VYPRE,VZPRE,VXPOST,VYPOST,VZPOST};
-
-enum{INT,DOUBLE,BIGINT,STRING};        // same as Dump
+enum{DOUBLE,INT,BIGINT,UINT,BIGUINT,STRING};    // same as Dump
 
 #define DELTA 4096
 
 /* ---------------------------------------------------------------------- */
 
-ComputeCollisionTally::ComputeCollisionTally(SPARTA *sparta, int narg, char **arg) :
+ComputeSurfCollisionTally::ComputeSurfCollisionTally(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
 {
-  if (narg < 5) error->all(FLERR,"Illegal compute collision/tally command");
+  if (narg < 5) error->all(FLERR,"Illegal compute surf/collision/tally command");
 
   int igroup = surf->find_group(arg[2]);
-  if (igroup < 0) error->all(FLERR,"Compute collision/tally group ID does not exist");
+  if (igroup < 0) error->all(FLERR,"Compute surf/collision/tally group ID does not exist");
   groupbit = surf->bitmask[igroup];
 
   imix = particle->find_mixture(arg[3]);
-  if (imix < 0) error->all(FLERR,"Compute collision/tally mixture ID does not exist");
+  if (imix < 0) error->all(FLERR,"Compute surf/collision/tally mixture ID does not exist");
 
   nvalue = narg - 4;
   which = new int[nvalue];
@@ -65,7 +64,7 @@ ComputeCollisionTally::ComputeCollisionTally(SPARTA *sparta, int narg, char **ar
     else if (strcmp(arg[iarg],"vx/post") == 0) which[nvalue++] = VXPOST;
     else if (strcmp(arg[iarg],"vy/post") == 0) which[nvalue++] = VYPOST;
     else if (strcmp(arg[iarg],"vz/post") == 0) which[nvalue++] = VZPOST;
-    else error->all(FLERR,"Invalid value for compute collision/tally");
+    else error->all(FLERR,"Invalid value for compute surf/collision/tally");
     iarg++;
   }
 
@@ -85,7 +84,7 @@ ComputeCollisionTally::ComputeCollisionTally(SPARTA *sparta, int narg, char **ar
 
 /* ---------------------------------------------------------------------- */
 
-ComputeCollisionTally::~ComputeCollisionTally()
+ComputeSurfCollisionTally::~ComputeSurfCollisionTally()
 {
   if (copy || copymode) return;
 
@@ -96,10 +95,10 @@ ComputeCollisionTally::~ComputeCollisionTally()
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeCollisionTally::init()
+void ComputeSurfCollisionTally::init()
 {
   if (!surf->exist)
-    error->all(FLERR,"Cannot use compute collision/tally when surfs do not exist");
+    error->all(FLERR,"Cannot use compute surf/collision/tally when surfs do not exist");
 }
 
 /* ----------------------------------------------------------------------
@@ -108,7 +107,7 @@ void ComputeCollisionTally::init()
    enables prediction of next step when update needs to tally
 ------------------------------------------------------------------------- */
 
-void ComputeCollisionTally::compute_per_tally()
+void ComputeSurfCollisionTally::compute_per_tally()
 {
   invoked_per_tally = update->ntimestep;
 }
@@ -117,7 +116,7 @@ void ComputeCollisionTally::compute_per_tally()
    called by Update before timesteps if will invoke surf_tally()
 ---------------------------------------------------------------------- */
 
-void ComputeCollisionTally::clear()
+void ComputeSurfCollisionTally::clear()
 {
   lines = surf->lines;
   tris = surf->tris;
@@ -135,9 +134,10 @@ void ComputeCollisionTally::clear()
    jp != NULL means two particles after collision
 ------------------------------------------------------------------------- */
 
-void ComputeCollisionTally::surf_tally(double dtremain, int isurf, int icell, int reaction,
-                                       Particle::OnePart *iorig,
-                                       Particle::OnePart *ip, Particle::OnePart *jp)
+void ComputeSurfCollisionTally::surf_tally(double dtremain, int isurf,
+                                           int icell, int reaction,
+                                           Particle::OnePart *iorig,
+                                           Particle::OnePart *ip, Particle::OnePart *jp)
 {
   // skip if a reaction
   // this compute only tallies collisions that do not induce a reaction
@@ -219,7 +219,7 @@ void ComputeCollisionTally::surf_tally(double dtremain, int isurf, int icell, in
    return # of tallies
 ------------------------------------------------------------------------- */
 
-int ComputeCollisionTally::tallyinfo(surfint *&dummy)
+int ComputeSurfCollisionTally::tallyinfo(surfint *&dummy)
 {
   return ntally;
 }
@@ -231,7 +231,7 @@ int ComputeCollisionTally::tallyinfo(surfint *&dummy)
    datatype = INT,DOUBLE,BIGINT
 ------------------------------------------------------------------------- */
 
-int ComputeCollisionTally::datatype(int icol)
+int ComputeSurfCollisionTally::datatype(int icol)
 {
   if (which[icol-1] == ID) return INT;
   if (which[icol-1] == TYPE) return INT;
@@ -245,17 +245,17 @@ int ComputeCollisionTally::datatype(int icol)
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeCollisionTally::grow_tally()
+void ComputeSurfCollisionTally::grow_tally()
 {
   maxtally += DELTA;
-  memory->grow(array_tally,maxtally,nvalue,"collision/tally:array_tally");
+  memory->grow(array_tally,maxtally,nvalue,"surf/collision/tally:array_tally");
 }
 
 /* ----------------------------------------------------------------------
    memory usage
 ------------------------------------------------------------------------- */
 
-bigint ComputeCollisionTally::memory_usage()
+bigint ComputeSurfCollisionTally::memory_usage()
 {
   bigint bytes = 0;
   bytes += nvalue*maxtally * sizeof(double);    // array_tally

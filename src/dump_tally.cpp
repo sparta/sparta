@@ -29,7 +29,7 @@ using namespace SPARTA_NS;
 
 // customize by adding keyword
 
-enum{INT,DOUBLE,BIGINT,STRING};        // same as Dump
+enum{DOUBLE,INT,BIGINT,UINT,BIGUINT,STRING};        // same as Dump
 
 #define INVOKED_PER_TALLY 64
 #define CHUNK 8
@@ -104,9 +104,11 @@ DumpTally::DumpTally(SPARTA *sparta, int narg, char **arg) :
   format_default[0] = '\0';
 
   for (int i = 0; i < nfield; i++) {
-    if (vtype[i] == INT) strcat(format_default,"%d ");
-    else if (vtype[i] == DOUBLE) strcat(format_default,"%g ");
+    if (vtype[i] == DOUBLE) strcat(format_default,"%g ");
+    else if (vtype[i] == INT) strcat(format_default,"%d ");
     else if (vtype[i] == BIGINT) strcat(format_default,BIGINT_FORMAT " ");
+    else if (vtype[i] == UINT) strcat(format_default,"%u ");
+    else if (vtype[i] == BIGUINT) strcat(format_default,BIGUINT_FORMAT " ");
     vformat[i] = NULL;
   }
 
@@ -292,9 +294,11 @@ void DumpTally::write_text(int n, double *mybuf)
   int m = 0;
   for (i = 0; i < n; i++) {
     for (j = 0; j < size_one; j++) {
-      if (vtype[j] == INT) fprintf(fp,vformat[j],(int) ubuf(mybuf[m]).i);
+      if (vtype[j] == DOUBLE) fprintf(fp,vformat[j],mybuf[m]);
+      else if (vtype[j] == INT) fprintf(fp,vformat[j],(int) ubuf(mybuf[m]).i);
       else if (vtype[j] == BIGINT) fprintf(fp,vformat[j],(bigint) ubuf(mybuf[m]).i);
-      else if (vtype[j] == DOUBLE) fprintf(fp,vformat[j],mybuf[m]);
+      else if (vtype[j] == UINT) fprintf(fp,vformat[j],(uint32_t) ubuf(mybuf[m]).i); 
+      else if (vtype[j] == BIGUINT) fprintf(fp,vformat[j],(uint64_t) ubuf(mybuf[m]).i);
       m++;
     }
     fprintf(fp,"\n");

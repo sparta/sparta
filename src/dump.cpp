@@ -35,7 +35,7 @@ using namespace SPARTA_NS;
 #define ONEFIELD 32
 #define DELTA 1048576
 
-enum{INT,DOUBLE,BIGINT,STRING};    // many dump files
+enum{DOUBLE,INT,BIGINT,UINT,BIGUINT,STRING};    // many dump files
 
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 

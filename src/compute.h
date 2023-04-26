@@ -65,8 +65,9 @@ class Compute : protected Pointers {
   int per_surf_flag;          // 0/1 if compute_per_surf() function exists
   int size_per_surf_cols;     // 0 = vector, N = columns in per-surf array
 
-  int surf_tally_flag;        // 1 if compute tallies surface bounce info
-  int boundary_tally_flag;    // 1 if compute tallies boundary bounce info
+  int gas_tally_flag;         // 1 if compute tallies gas collision info
+  int surf_tally_flag;        // 1 if compute tallies surface collision info
+  int boundary_tally_flag;    // 1 if compute tallies boundary collision info
 
   int per_tally_flag;         // 1 if compute_per_tally() function exists
   int size_per_tally_cols;    //  0 = vector, N = columns in per-tally array
@@ -102,11 +103,16 @@ class Compute : protected Pointers {
   virtual void compute_per_surf() {}
   virtual void compute_per_tally() {}
   virtual void clear() {}
+  
   virtual void surf_tally(double, int, int, int, Particle::OnePart *,
                           Particle::OnePart *, Particle::OnePart *) {}
   virtual void boundary_tally(double, int, int, int, Particle::OnePart *,
                               Particle::OnePart *, Particle::OnePart *) {}
-
+  virtual void gas_tally(int, int,
+                         Particle::OnePart *, Particle::OnePart *,
+                         Particle::OnePart *, Particle::OnePart *,
+                         Particle::OnePart *) {}
+  
   virtual void post_process_grid(int, int, double **, int *, double *, int) {}
   // NOTE: get rid of this method at some point
   virtual void post_process_grid_old(void *, void *, int, int, double *, int) {}
@@ -141,17 +147,19 @@ class Compute : protected Pointers {
   // constructor for 32-bit int prevents compiler
   //   from possibly calling the double constructor when passed an int
   // copy to a double *buf:
-  //   buf[m++] = ubuf(foo).d, where foo is a 32-bit or 64-bit int
+  //   buf[m++] = ubuf(foo).d where foo is a 32/64-bit int or unsigned int
   // copy from a double *buf:
-  //   foo = (int) ubuf(buf[m++]).i;, where (int) or (tagint) match foo
+  //   foo = (int) ubuf(buf[m++]).i where (int cast) matches foo
   //   the cast prevents compiler warnings about possible truncation
 
   union ubuf {
     double d;
     int64_t i;
     ubuf(double arg) : d(arg) {}
-    ubuf(int64_t arg) : i(arg) {}
     ubuf(int arg) : i(arg) {}
+    ubuf(int64_t arg) : i(arg) {}
+    ubuf(uint32_t arg) : i(arg) {}
+    ubuf(uint64_t arg) : i(arg) {}
   };
 };
 

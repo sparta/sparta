@@ -31,9 +31,7 @@ using namespace SPARTA_NS;
 
 // customize by adding keyword
 
-enum{ID,PROC,XLO,YLO,ZLO,XHI,YHI,ZHI,XC,YC,ZC,VOL,
-     COMPUTE,FIX,VARIABLE};
-enum{INT,DOUBLE,BIGINT,STRING};        // same as Dump
+enum{DOUBLE,INT,BIGINT,UINT,BIGUINT,STRING};    // same as Dump
 
 #define INVOKED_PER_GRID 16
 #define CHUNK 8
@@ -119,9 +117,11 @@ DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
   format_default[0] = '\0';
 
   for (int i = 0; i < nfield; i++) {
-    if (vtype[i] == INT) strcat(format_default,"%d ");
-    else if (vtype[i] == DOUBLE) strcat(format_default,"%g ");
+    if (vtype[i] == DOUBLE) strcat(format_default,"%g ");
+    else if (vtype[i] == INT) strcat(format_default,"%d ");
     else if (vtype[i] == BIGINT) strcat(format_default,BIGINT_FORMAT " ");
+    else if (vtype[i] == UINT) strcat(format_default,"%u ");
+    else if (vtype[i] == BIGUINT) strcat(format_default,BIGUINT_FORMAT " ");
     else if (vtype[i] == STRING) strcat(format_default,"%s ");
     vformat[i] = NULL;
   }
@@ -350,12 +350,11 @@ void DumpGrid::write_text(int n, double *mybuf)
   int m = 0;
   for (i = 0; i < n; i++) {
     for (j = 0; j < size_one; j++) {
-      if (vtype[j] == INT)
-        fprintf(fp,vformat[j],static_cast<int> (mybuf[m]));
-      else if (vtype[j] == DOUBLE)
-        fprintf(fp,vformat[j],mybuf[m]);
-      else if (vtype[j] == BIGINT)
-        fprintf(fp,vformat[j],static_cast<bigint> (mybuf[m]));
+      if (vtype[j] == DOUBLE) fprintf(fp,vformat[j],mybuf[m]);
+      else if (vtype[j] == INT) fprintf(fp,vformat[j],(int) ubuf(mybuf[m]).i);
+      else if (vtype[j] == BIGINT) fprintf(fp,vformat[j],(bigint) ubuf(mybuf[m]).i);
+      else if (vtype[j] == UINT) fprintf(fp,vformat[j],(uint32_t) ubuf(mybuf[m]).i); 
+      else if (vtype[j] == BIGUINT) fprintf(fp,vformat[j],(uint64_t) ubuf(mybuf[m]).i);
       else if (vtype[j] == STRING) {
         grid->id_num2str(static_cast<int> (mybuf[m]),str);
         fprintf(fp,vformat[j],str);
@@ -379,8 +378,8 @@ int DumpGrid::parse_fields(int narg, char **arg)
 
     if (strcmp(arg[iarg],"id") == 0) {
       pack_choice[i] = &DumpGrid::pack_id;
-      if (sizeof(cellint) == sizeof(smallint)) vtype[i] = INT;
-      else vtype[i] = BIGINT;
+      if (sizeof(cellint) == sizeof(smallint)) vtype[i] = UINT;
+      else vtype[i] = BIGUINT;
     } else if (strcmp(arg[iarg],"idstr") == 0) {
       pack_choice[i] = &DumpGrid::pack_id;
       vtype[i] = STRING;
@@ -716,10 +715,8 @@ void DumpGrid::pack_id(int n)
 {
   Grid::ChildCell *cells = grid->cells;
 
-  // NOTE: cellint (bigint) won't fit in double in some cases
-
   for (int i = 0; i < ncpart; i++) {
-    buf[n] = cells[cpart[i]].id;
+    buf[n] = ubuf(cells[cpart[i]].id).d;
     n += size_one;
   }
 }
@@ -731,10 +728,12 @@ void DumpGrid::pack_split(int n)
   Grid::ChildCell *cells = grid->cells;
 
   for (int i = 0; i < ncpart; i++) {
+    
     // convert to human readable format:
     //   split = 0: unsplit cell
     //   split = 1..N: split cell index + 1
-    buf[n] = -cells[cpart[i]].nsplit + 1;
+    
+    buf[n] = ubuf(-cells[cpart[i]].nsplit + 1).d;
     n += size_one;
   }
 }
@@ -746,7 +745,7 @@ void DumpGrid::pack_proc(int n)
   Grid::ChildCell *cells = grid->cells;
 
   for (int i = 0; i < ncpart; i++) {
-    buf[n] = cells[cpart[i]].proc;
+    buf[n] = ubuf(cells[cpart[i]].proc).d;
     n += size_one;
   }
 }

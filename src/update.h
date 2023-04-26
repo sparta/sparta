@@ -87,12 +87,13 @@ class Update : protected Pointers {
 
   double rcblo[3],rcbhi[3];    // debug info from RCB for dump image
 
-  // this info accessed by SurfReactAdsorb to do on-surface reaction tallying
+  // hooks to computes doing on-surface collision/reaction tallying
+  // public b/c also accessed by SurfReactAdsorb for on-surface reaction tallies
 
-  int nsurf_tally;         // # of Cmp tallying surf bounce info this step
-  int nboundary_tally;     // # of Cmp tallying boundary bounce info this step
-  class Compute **slist_active;   // list of active surf Computes this step
-  class Compute **blist_active;   // list of active boundary Computes this step
+  int nsurf_tally;         // # of Comps tallying surf bounce info this step
+  int nboundary_tally;     // # of Comps tallying boundary bounce info this step
+  class Compute **slist_active;   // list of active surf Comps this step
+  class Compute **blist_active;   // list of active boundary Comps this step
 
   // public methods
 

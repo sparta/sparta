@@ -14,22 +14,22 @@
 
 #ifdef COMPUTE_CLASS
 
-ComputeStyle(reaction/tally,ComputeReactionTally)
+ComputeStyle(gas/reaction/tally,ComputeGasReactionTally)
 
 #else
 
-#ifndef SPARTA_COMPUTE_REACTION_TALLY_H
-#define SPARTA_COMPUTE_REACTION_TALLY_H
+#ifndef SPARTA_COMPUTE_GAS_REACTION_TALLY_H
+#define SPARTA_COMPUTE_GAS_REACTION_TALLY_H
 
 #include "compute.h"
 #include "surf.h"
 
 namespace SPARTA_NS {
 
-class ComputeReactionTally : public Compute {
+class ComputeGasReactionTally : public Compute {
  public:
-  ComputeReactionTally(class SPARTA *, int, char **);
-  ~ComputeReactionTally();
+  ComputeGasReactionTally(class SPARTA *, int, char **);
+  ~ComputeGasReactionTally();
   void init();
   void compute_per_tally();
   void clear();

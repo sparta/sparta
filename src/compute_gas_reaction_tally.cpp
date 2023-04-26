@@ -13,7 +13,7 @@
 ------------------------------------------------------------------------- */
 
 #include "string.h"
-#include "compute_reaction_tally.h"
+#include "compute_gas_reaction_tally.h"
 #include "particle.h"
 #include "mixture.h"
 #include "surf.h"
@@ -26,24 +26,23 @@ using namespace SPARTA_NS;
 
 enum{IDPRE,IDPOST,IDPOST2,TYPEPRE,TYPEPOST,TYPEPOST2,IDSURF,TIME,XC,YC,ZC,
   VXPRE,VYPRE,VZPRE,VXPOST,VYPOST,VZPOST,VXPOST2,VYPOST2,VZPOST2};
-
-enum{INT,DOUBLE,BIGINT,STRING};        // same as Dump
+enum{DOUBLE,INT,BIGINT,UINT,BIGUINT,STRING};    // same as Dump
 
 #define DELTA 4096
 
 /* ---------------------------------------------------------------------- */
 
-ComputeReactionTally::ComputeReactionTally(SPARTA *sparta, int narg, char **arg) :
+ComputeGasReactionTally::ComputeGasReactionTally(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
 {
-  if (narg < 5) error->all(FLERR,"Illegal compute reaction/tally command");
+  if (narg < 5) error->all(FLERR,"Illegal compute gas/reaction/tally command");
 
   int igroup = surf->find_group(arg[2]);
-  if (igroup < 0) error->all(FLERR,"Compute reaction/tally group ID does not exist");
+  if (igroup < 0) error->all(FLERR,"Compute gas/reaction/tally group ID does not exist");
   groupbit = surf->bitmask[igroup];
 
   imix = particle->find_mixture(arg[3]);
-  if (imix < 0) error->all(FLERR,"Compute reaction/tally mixture ID does not exist");
+  if (imix < 0) error->all(FLERR,"Compute gas/reaction/tally mixture ID does not exist");
 
   nvalue = narg - 4;
   which = new int[nvalue];
@@ -73,7 +72,7 @@ ComputeReactionTally::ComputeReactionTally(SPARTA *sparta, int narg, char **arg)
     else if (strcmp(arg[iarg],"vx/post2") == 0) which[nvalue++] = VXPOST2;
     else if (strcmp(arg[iarg],"vy/post2") == 0) which[nvalue++] = VYPOST2;
     else if (strcmp(arg[iarg],"vz/post2") == 0) which[nvalue++] = VZPOST2;
-    else error->all(FLERR,"Invalid value for compute collision/tally");
+    else error->all(FLERR,"Invalid value for compute gas/reaction/tally");
     iarg++;
   }
 
@@ -82,8 +81,8 @@ ComputeReactionTally::ComputeReactionTally(SPARTA *sparta, int narg, char **arg)
   per_tally_flag = 1;
   size_per_tally_cols = nvalue;
 
-  surf_tally_flag = 1;         // triggers Update to invoke surf_tally() for each collision
-  timeflag = 1;                // tells Update which timesteps to invoke surf_tally()
+  gas_tally_flag = 1;         // triggers Collide to invoke gas_tally() for each collision
+  timeflag = 1;               // tells Collide which timesteps to invoke gas_tally()
 
   ntally = maxtally = 0;
   array_tally = NULL;
@@ -93,7 +92,7 @@ ComputeReactionTally::ComputeReactionTally(SPARTA *sparta, int narg, char **arg)
 
 /* ---------------------------------------------------------------------- */
 
-ComputeReactionTally::~ComputeReactionTally()
+ComputeGasReactionTally::~ComputeGasReactionTally()
 {
   if (copy || copymode) return;
 
@@ -104,10 +103,10 @@ ComputeReactionTally::~ComputeReactionTally()
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeReactionTally::init()
+void ComputeGasReactionTally::init()
 {
   if (!surf->exist)
-    error->all(FLERR,"Cannot use compute reaction/tally when surfs do not exist");
+    error->all(FLERR,"Cannot use compute gas/reaction/tally when surfs do not exist");
 }
 
 /* ----------------------------------------------------------------------
@@ -116,7 +115,7 @@ void ComputeReactionTally::init()
    enables prediction of next step when update needs to tally
 ------------------------------------------------------------------------- */
 
-void ComputeReactionTally::compute_per_tally()
+void ComputeGasReactionTally::compute_per_tally()
 {
   invoked_per_tally = update->ntimestep;
 }
@@ -125,7 +124,7 @@ void ComputeReactionTally::compute_per_tally()
    called by Update before timesteps if will invoke surf_tally()
 ---------------------------------------------------------------------- */
 
-void ComputeReactionTally::clear()
+void ComputeGasReactionTally::clear()
 {
   lines = surf->lines;
   tris = surf->tris;
@@ -143,7 +142,7 @@ void ComputeReactionTally::clear()
    jp != NULL means two particles after collision
 ------------------------------------------------------------------------- */
 
-void ComputeReactionTally::surf_tally(double dtremain, int isurf, int icell, int reaction,
+void ComputeGasReactionTally::surf_tally(double dtremain, int isurf, int icell, int reaction,
                                       Particle::OnePart *iorig,
                                       Particle::OnePart *ip, Particle::OnePart *jp)
 {
@@ -257,7 +256,7 @@ void ComputeReactionTally::surf_tally(double dtremain, int isurf, int icell, int
    return # of tallies
 ------------------------------------------------------------------------- */
 
-int ComputeReactionTally::tallyinfo(surfint *&dummy)
+int ComputeGasReactionTally::tallyinfo(surfint *&dummy)
 {
   return ntally;
 }
@@ -269,7 +268,7 @@ int ComputeReactionTally::tallyinfo(surfint *&dummy)
    datatype = INT,DOUBLE,BIGINT
 ------------------------------------------------------------------------- */
 
-int ComputeReactionTally::datatype(int icol)
+int ComputeGasReactionTally::datatype(int icol)
 {
   if (which[icol-1] == IDPRE) return INT;
   if (which[icol-1] == IDPOST) return INT;
@@ -287,17 +286,17 @@ int ComputeReactionTally::datatype(int icol)
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeReactionTally::grow_tally()
+void ComputeGasReactionTally::grow_tally()
 {
   maxtally += DELTA;
-  memory->grow(array_tally,maxtally,nvalue,"reaction/tally:array_tally");
+  memory->grow(array_tally,maxtally,nvalue,"gas/reaction/tally:array_tally");
 }
 
 /* ----------------------------------------------------------------------
    memory usage
 ------------------------------------------------------------------------- */
 
-bigint ComputeReactionTally::memory_usage()
+bigint ComputeGasReactionTally::memory_usage()
 {
   bigint bytes = 0;
   bytes += nvalue*maxtally * sizeof(double);    // array_tally

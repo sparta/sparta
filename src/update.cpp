@@ -805,7 +805,7 @@ template < int DIM, int SURF > void Update::move()
               // must update particle's icell to current icell so that
               //   if jpart is created, it will be added to correct cell
               // if jpart, add new particle to this iteration via pstop++
-              // tally surface statistics if requested using iorig
+              // tally surface collision stats if requested using iorig
 
               ipart = &particles[i];
               ipart->icell = icell;

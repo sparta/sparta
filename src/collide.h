@@ -119,7 +119,16 @@ class Collide : protected Pointers {
 
   int maxelectron;              // max # elist can hold
   Particle::OnePart *elist;     // list of ambipolar electrons
-                                // for one grid cell or pair of groups in cell
+
+  // hooks to computes performing gas collision/reaction tallying
+
+  int nglist_compute;     // # of Computes that tally gas collisions
+  int ngas_tally;         // # of Computes tallying gas collision info this step
+  class Compute **glist_compute;   // list of all gas collision Computes
+  class Compute **glist_active;   // list of active gas Computes this step
+  int icell_collision;    // local grid cell collision is occurring in
+  
+  // for one grid cell or pair of groups in cell
   // Kokkos data
 
   int oldgroups;         // pass from parent to child class
