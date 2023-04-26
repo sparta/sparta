@@ -35,8 +35,8 @@ class ReactTCEKokkos : public ReactBirdKokkos {
   void init();
   int attempt(Particle::OnePart *, Particle::OnePart *,
               double, double, double, double &, int &) { return 0; }
-  double newtonTvib(int nmode, double Evib,
-                      double VibTemp[],
+  double newtonTvib(const int nmode, double Evib,
+                      const double VibTemp[],
                       double Tvib0,
                       double tol,
                       int nmax);
