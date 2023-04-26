@@ -86,7 +86,7 @@ double ReactTCEKokkos::bird_dEvib(int nmode, double Tvib, double vibtemp[])
 
 /* ---------------------------------------------------------------------- */
 
-double ReactTCEKokkos::newtonTvib(int nmode, double Evib, double vibTemp[],
+double ReactTCEKokkos::newtonTvib(const int nmode, double Evib, const double vibTemp[],
                double Tvib0,
                double tol,
                int nmax)

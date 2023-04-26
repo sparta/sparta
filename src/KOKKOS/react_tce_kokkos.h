@@ -35,9 +35,18 @@ class ReactTCEKokkos : public ReactBirdKokkos {
   void init();
   int attempt(Particle::OnePart *, Particle::OnePart *,
               double, double, double, double &, int &) { return 0; }
-  double bird_Evib(int, double, double, double);
-  double bird_dEvib(int, double, double);
-  double newtonTvib(int, double, double, double, double, int);
+  double newtonTvib(const int nmode, double Evib,
+                      const double VibTemp[],
+                      double Tvib0,
+                      double tol,
+                      int nmax);
+
+  double bird_dEvib(int nmode, double Tvib,
+                  double VibTemp[]);
+
+  double bird_Evib(int nmode, double Tvib,
+                 double VibTemp[],
+                 double Evib);
 
 /* ---------------------------------------------------------------------- */
 
@@ -92,7 +101,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
     // average DOFs participating in the reaction
 
     double ecc,z;
-    const double e_excess = 0.0;
+    double e_excess = 0.0;
     int imode = 0;
 
     if (partialEnergy) {
