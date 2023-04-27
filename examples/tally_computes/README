@@ -1,0 +1,20 @@
+These input scripts demonstrate use of these 4 computes which
+tally gas and surface collisions and reactions and
+allow them to be dumped via dump tally:
+
+compute gas/collision/tally
+compute gas/reaction/tally
+compute surf/collision/tally
+compute surf/reaction/tally
+
+Each produces a dump file via the dump tally command which tallies
+information about the collisions and reactions.
+
+The in.gas.collision.tally script is adapated from
+examples/collide/in.collode
+
+The in.surf.collision.tally script is adapated from
+examples/circle/in.circle
+
+The in.surf.reaction.tally script is adapated from
+examples/surf_react_adsorb/in.circle.gs

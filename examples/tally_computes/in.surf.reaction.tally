@@ -50,11 +50,12 @@ timestep 	    	0.0001
 #dump                2 image all 50 image.*.ppm type type pdiam 0.1 surf proc 0.01 size 512 512 zoom 1.75 gline yes 0.005 
 #dump_modify	     2 pad 4
 
-compute             1 reaction/tally all all &
-                    id/pre id/post id/post2 type/pre type/post type/post2 &
-                    id/surf time xc yc zc
+compute             1 surf/reaction/tally all all &
+                    reaction id/surf id/pre id1/post id2/post &
+                    type/pre type1/post type2/post &
+                    time xc yc zc
 
-dump                1 tally all 100 dump.circle.gs.tally c_1[*]
+dump                1 tally all 100 dump.surf.reaction.tally c_1[*]
 
 stats		    	10
 stats_style	    	step cpu np nattempt ncoll nscoll nscheck
