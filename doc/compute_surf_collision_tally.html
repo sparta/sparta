@@ -9,15 +9,15 @@
 
 <HR>
 
-<H3>compute collision/tally command 
+<H3>compute surf/collision/tally command 
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>compute ID collision/tally group-ID mix-ID value1 value2 ... 
+<PRE>compute ID surf/collision/tally group-ID mix-ID value1 value2 ... 
 </PRE>
 <UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
 
-<LI>collision/tally = style name of this compute command 
+<LI>surf/collision/tally = style name of this compute command 
 
 <LI>group-ID = group ID for which surface elements to perform calculation on 
 
@@ -25,11 +25,11 @@
 
 <LI>one or more values can be appended 
 
-<LI>value = <I>id</I> or <I>type</I> or <I>id/surf</I> or <I>time</I> or <I>xc</I> or <I>yc</I> or <I>zc</I> or <I>vx/pre</I> or <I>vy/pre</I> or <I>vz/pre</I> or <I>vx/post</I> or <I>vy/post</I> or <I>vz/post</I> 
+<LI>value = <I>id/surf</I> or <I>id</I> or <I>type</I> or <I>time</I> or <I>xc</I> or <I>yc</I> or <I>zc</I> or <I>vx/pre</I> or <I>vy/pre</I> or <I>vz/pre</I> or <I>vx/post</I> or <I>vy/post</I> or <I>vz/post</I> 
 
-<PRE>  <I>id</I> = particle ID
-  <I>type</I> = particle type
-  <I>id/surf</I> = surface element ID
+<PRE>  <I>id/surf</I> = surface element ID
+  <I>id</I> = particle ID
+  <I>type</I> = particle species
   <I>time</I> = time of collision (within timestep, see below)
   <I>xc</I>, <I>yc</I>, <I>zc</I> = coordinates of collision point
   <I>vx/pre</I>, <I>vy/pre</I>, <I>vz/pre</I> = velocity components before collision
@@ -39,7 +39,7 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>compute 1 collision/tally all all id id/surf time xc yc zc 
+<PRE>compute 1 surf/collision/tally all all id id/surf time xc yc zc 
 </PRE>
 <P>This command will dump the tallies in the previous command to a dump
 file every 10 steps:
@@ -51,8 +51,8 @@ file every 10 steps:
 <P>Tally various values for each collision of a particle with a surface
 element during the current timestep.  Only surface collisions which do
 not result in chemical reactions are tallied by this command.  See the
-related <A HREF = "compute_reaction_tally.html">compute reaction/tally</A> command
-to tally reactions.  It provides different tally value options than
+related <A HREF = "compute_reaction_tally.html">compute surf/reaction/tally</A>
+command to tally reactions.  It provides different tally values than
 this compute.
 </P>
 <P>Only surface elements in the surface group specified by <I>group-ID</I> and
@@ -66,27 +66,27 @@ more discussion of explicit and implicit surfaces.
 </P>
 <P>The results of this compute can be used by different commands in
 different ways.  The values for a single timestep can be output by the
-<A HREF = "dump.html">dump tally</A> command.  Currenlty this is the only option for
+<A HREF = "dump.html">dump tally</A> command.  Currently this is the only option for
 accessing the tallied values.
 </P>
 <HR>
 
-<P>The <I>id</I> value is the ID of the particle.  Note that particle
-IDs are generated randomly.  Thus multiple particles in the system can
-potentially have the same ID.  See <A HREF = "Section_howto_17">Section 6.17</A> for
-more details on particle IDs.
-</P>
-<P>The <I>type</I> value is the integer index for the particle species.  It is
-a value from 1 to Nspecies. The value corresponds to the order in
-which species were defined via the <A HREF = "species.html">species</A> command.
-See <A HREF = "Section_howto_17">Section 6.17</A> for more details on particle
-types.
-</P>
 <P>The <I>id/surf</I> value is the ID of the surface element.  For explicit
 surfaces, surface element IDs are unique.  For implicit surfaces, the
 surface ID of all the surface elements within a grid cell are the grid
 cell ID.  See <A HREF = "Section_howto_13">Section 6.13</A> for more discussion of
 explicit and implicit surfaces.
+</P>
+<P>The <I>id</I> value is the ID of the particle.  Note that particle IDs are
+generated randomly.  Thus multiple particles in the system can
+potentially have the same ID.  See <A HREF = "Section_howto_17">Section 6.17</A> for
+more details on particle IDs.
+</P>
+<P>The <I>type</I> value is an integer index for the particle species.  It is
+a value from 1 to Nspecies. The value corresponds to the order in
+which species were defined via the <A HREF = "species.html">species</A> command.
+See <A HREF = "Section_howto_17">Section 6.17</A> for more details on particle
+types.
 </P>
 <P>The <I>time</I> value is the point in time within the timestep when the
 collision occured.  Thus if the timestep size is DT, as set by the
@@ -126,7 +126,9 @@ are <I>vx/post</I>, <I>vy/post</I>, <I>vz/post</I>.
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "compute_reaction_tally.html">compute reaction/tally</A>, <A HREF = "dump.html">dump tally</A>
+<P><A HREF = "compute_surf_reaction_tally.html">compute surf/reaction/tally</A>,
+<A HREF = "compute_gas_collision_tally.html">compute gas/collision/tally</A>,
+<A HREF = "dump.html">dump tally</A>
 </P>
 <P><B>Default:</B> none
 </P>

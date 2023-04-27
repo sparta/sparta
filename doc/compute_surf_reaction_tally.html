@@ -1,0 +1,175 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>compute surf/reaction/tally command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>compute ID surf/reaction/tally group-ID mix-ID value1 value2 ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
+
+<LI>surf/reaction/tally = style name of this compute command 
+
+<LI>group-ID = group ID for which surface elements to perform calculation on 
+
+<LI>mix-ID = mixture ID to perform calculation on 
+
+<LI>one or more values can be appended 
+
+<LI>value = <I>reaction</I> or <I>id/surf</I> or <I>id/pre</I> or <I>id1/post</I> or <I>id2/post</I> or <I>type/pre</I> or <I>type1/post</I> or <I>type2/post</I> or <I>time</I> or <I>xc</I> or <I>yc</I> or <I>zc</I> or <I>vx/pre</I> or <I>vy/pre</I> or <I>vz/pre</I> or <I>vx1/post</I> or <I>vy1/post</I> or <I>vz1/post</I> or <I>vx2/post</I> or <I>vy2/post</I> or <I>vz2/post</I> 
+
+<PRE>  <I>reaction</I> = which reaction occurred (1 to N)
+  <I>id/surf</I> = surface element ID
+  <I>id/pre</I> = particle ID before collision
+  <I>id1/post</I> = particle ID of first particle after reaction
+  <I>id2/post</I> = particle ID of second particle after reaction
+  <I>type/pre</I> = particle species before collision
+  <I>type1/post</I> = particle species of first particle after reaction
+  <I>type2/post</I> = particle species of second particle after reaction
+  <I>time</I> = time of collision (within timestep, see below)
+  <I>xc</I>, <I>yc</I>, <I>zc</I> = coordinates of collision point
+  <I>vx/pre</I>, <I>vy/pre</I>, <I>vz/pre</I> = velocity components before reaction
+  <I>vx1/post</I>, <I>vy1/post</I>, <I>vz1/post</I> = velocity components of first particle after reaction
+  <I>vx2/post</I>, <I>vy2/post</I>, <I>vz2/post</I> = velocity components of second particle after reaction 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compute 1 surf/reaction/tally all all reaction id/pre id1/post id2/post type/pre type1/post type2/post id/surf time xc yc zc 
+</PRE>
+<P>This command will dump the tallies in the previous command to a dump
+file every 10 steps:
+</P>
+<PRE>dump 1 tally all 10 tmp.tally c_1[*] 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Tally various values for each reaction of a particle with a surface
+element during the current timestep.  Only surface collisions which
+result in a chemical reaction are tallied by this command, as enabled
+by the <A HREF = "surf_react.html">surf_react</A> command.  See the related <A HREF = "compute_reaction_tally.html">compute
+surf/collision/tally</A> command to tally
+simple collisions which do not induce reactions.  It provides
+different tally value options than this compute.
+</P>
+<P>Only surface elements in the surface group specified by <I>group-ID</I> and
+particles with species in the mixture specified by <I>mix-ID</I> are
+included.  See the <A HREF = "group.html">group grid</A> command for info on how
+surface elements can be assigned to surface groups.
+</P>
+<P>This compute can be used for simulations with either explicit or
+implicit surface elements.  See <A HREF = "Section_howto_13">Section 6.13</A> for
+more discussion of explicit and implicit surfaces.
+</P>
+<P>The results of this compute can be used by different commands in
+different ways.  The values for a single timestep can be output by the
+<A HREF = "dump.html">dump tally</A> command.  Currently this is the only option for
+accessing the tallied values.
+</P>
+<P>Note that if a gas/surface reaction takes place
+<A HREF = "surf_react.html">surf_react</A> command, then a collision of a single
+particle with a surface can result in 0, 1, or 2 particles being
+produced.  The species of the product particles may be different than
+the species of the reactant.  All of these attributes can be tallied
+using the values explained next.
+</P>
+<HR>
+
+<P>The <I>reaction</I> value is the index of which reaction occurred.  It is a
+number from 1 to N, where N is the number of reactions defined by the
+<A HREF = "surf_react.html">surf_react</A> command.
+</P>
+<P>The <I>id/surf</I> value is the ID of the surface element.  For explicit
+surfaces, surface element IDs are unique.  For implicit surfaces, the
+surface ID of all the surface elements within a grid cell are the grid
+cell ID.  See <A HREF = "Section_howto_13">Section 6.13</A> for more discussion of
+explicit and implicit surfaces.
+</P>
+<P>The <I>id/pre</I> value is the ID of the incident particle.  Note that
+particle IDs are generated randomly.  Thus multiple particles in the
+system can potentially have the same ID.  See <A HREF = "Section_howto_17">Section
+6.17</A> for more details on particle IDs.
+</P>
+<P>The <I>id1/post</I> and <I>id2/post</I> values are the post-collision IDs of the
+0, 1, or 2 resulting particles.  If the incident particle vanished in
+the reaction, then <I>id1/post</I> will be 0.  Otherwise it will be the
+same as <I>id/pre</I>.  If <I>id2/post</I> is 0, no 2nd particle was created by
+the reaction, otherwise it is the random ID assigned to the newly
+created particle.
+</P>
+<P>The <I>type/pre</I> value is the integer index for the incident particle
+species.  It is a value from 1 to Nspecies. The value corresponds to
+the order in which species were defined via the <A HREF = "species.html">species</A>
+command.  See <A HREF = "Section_howto_17">Section 6.17</A> for more details on
+particle types.
+</P>
+<P>The <I>type1/post</I> and <I>type2/post</I> values are the post-collision
+integer indices for the particle species of the 0, 1, or 2 resulting
+particles.  If the incident particle vanished in the reaction, then
+<I>type1/post</I> will be 0.  Otherwise <I>type1/post</I> is the new species
+index of the incident particle.  If <I>type2/post</I> is 0, no 2nd particle
+was created by the reaction, otherwise it is the species index of the
+newly created particle.
+</P>
+<P>The <I>time</I> value is the point in time within the timestep when the
+collision occured.  Thus if the timestep size is DT, as set by the
+<A HREF = "timestep.html">timestep</A> command, the <I>time</I> values will all be within
+the range of 0.0 to DT, for all collisions tallied by this compute on
+each timestep it is invoked.
+</P>
+<P>The <I>xc</I>, <I>yc</I>, and <I>zc</I> are the coordinates of the collision point
+between the particle and the surface element.
+</P>
+<P>The <I>vx/pre</I>, <I>vy/pre</I>, <I>vz/pre</I> values are the velocity components of
+the incident particle before it collides with the surface element.
+</P>
+<P>The <I>vx1/post</I>, <I>vy1/post</I>, <I>vz1/post</I> values are the velocity
+components of the incident particle after it collides with the surface
+element and has reacted.  These values will be zero if the paticle
+vanished in the reaction.
+</P>
+<P>If a 2nd particle was created by the reaction, the <I>vx2/post</I>,
+<I>vy2/post</I>, <I>vz2/post</I> values are its velocity components.  If no 2nd
+particle was created, these values will be zero.
+</P>
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>This compute calculates a per-tally array, with the number of columns
+equal to the number of values.
+</P>
+<P>The array can be accessed by any command that uses per-tally values
+from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 6.4</A>
+for an overview of SPARTA output options.
+</P>
+<P>The per-tally array values will be in the <A HREF = "units.html">units</A>
+appropriate to the individual values as described above.  <I>Time</I> is in
+time units; see above for details.  <I>Xc</I>, <I>yc</I>, and <I>zc</I> are in
+distance units.  <I>Vx/pre</I>, <I>vy/pre</I>, <I>vz/pre</I> are in velocity units,
+as are <I>vx1/post</I>, <I>vy1/post</I>, <I>vz1/post</I> and <I>vx2/post</I>, <I>vy2/post</I>,
+<I>vz2/post</I>.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "compute_surf/collision_tally.html">compute surf/collision/tally</A>,
+<A HREF = "compute_gas_reaction_tally.html">compute gas/reaction/tally</A>,
+<A HREF = "dump.html">dump tally</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

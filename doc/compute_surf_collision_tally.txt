@@ -6,21 +6,21 @@
 
 :line
 
-compute collision/tally command :h3
+compute surf/collision/tally command :h3
 
 [Syntax:]
 
-compute ID collision/tally group-ID mix-ID value1 value2 ... :pre
+compute ID surf/collision/tally group-ID mix-ID value1 value2 ... :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
-collision/tally = style name of this compute command :l
+surf/collision/tally = style name of this compute command :l
 group-ID = group ID for which surface elements to perform calculation on :l
 mix-ID = mixture ID to perform calculation on :l
 one or more values can be appended :l
-value = {id} or {type} or {id/surf} or {time} or {xc} or {yc} or {zc} or {vx/pre} or {vy/pre} or {vz/pre} or {vx/post} or {vy/post} or {vz/post} :l
-  {id} = particle ID
-  {type} = particle type
+value = {id/surf} or {id} or {type} or {time} or {xc} or {yc} or {zc} or {vx/pre} or {vy/pre} or {vz/pre} or {vx/post} or {vy/post} or {vz/post} :l
   {id/surf} = surface element ID
+  {id} = particle ID
+  {type} = particle species
   {time} = time of collision (within timestep, see below)
   {xc}, {yc}, {zc} = coordinates of collision point
   {vx/pre}, {vy/pre}, {vz/pre} = velocity components before collision
@@ -29,7 +29,7 @@ value = {id} or {type} or {id/surf} or {time} or {xc} or {yc} or {zc} or {vx/pre
 
 [Examples:]
 
-compute 1 collision/tally all all id id/surf time xc yc zc :pre
+compute 1 surf/collision/tally all all id id/surf time xc yc zc :pre
 
 This command will dump the tallies in the previous command to a dump
 file every 10 steps:
@@ -41,8 +41,8 @@ dump 1 tally all 10 tmp.tally c_1\[*\] :pre
 Tally various values for each collision of a particle with a surface
 element during the current timestep.  Only surface collisions which do
 not result in chemical reactions are tallied by this command.  See the
-related "compute reaction/tally"_compute_reaction_tally.html command
-to tally reactions.  It provides different tally value options than
+related "compute surf/reaction/tally"_compute_reaction_tally.html
+command to tally reactions.  It provides different tally values than
 this compute.
 
 Only surface elements in the surface group specified by {group-ID} and
@@ -56,27 +56,27 @@ more discussion of explicit and implicit surfaces.
 
 The results of this compute can be used by different commands in
 different ways.  The values for a single timestep can be output by the
-"dump tally"_dump.html command.  Currenlty this is the only option for
+"dump tally"_dump.html command.  Currently this is the only option for
 accessing the tallied values.
 
 :line
-
-The {id} value is the ID of the particle.  Note that particle
-IDs are generated randomly.  Thus multiple particles in the system can
-potentially have the same ID.  See "Section 6.17"_Section_howto_17 for
-more details on particle IDs.
-
-The {type} value is the integer index for the particle species.  It is
-a value from 1 to Nspecies. The value corresponds to the order in
-which species were defined via the "species"_species.html command.
-See "Section 6.17"_Section_howto_17 for more details on particle
-types.
 
 The {id/surf} value is the ID of the surface element.  For explicit
 surfaces, surface element IDs are unique.  For implicit surfaces, the
 surface ID of all the surface elements within a grid cell are the grid
 cell ID.  See "Section 6.13"_Section_howto_13 for more discussion of
 explicit and implicit surfaces.
+
+The {id} value is the ID of the particle.  Note that particle IDs are
+generated randomly.  Thus multiple particles in the system can
+potentially have the same ID.  See "Section 6.17"_Section_howto_17 for
+more details on particle IDs.
+
+The {type} value is an integer index for the particle species.  It is
+a value from 1 to Nspecies. The value corresponds to the order in
+which species were defined via the "species"_species.html command.
+See "Section 6.17"_Section_howto_17 for more details on particle
+types.
 
 The {time} value is the point in time within the timestep when the
 collision occured.  Thus if the timestep size is DT, as set by the
@@ -116,7 +116,9 @@ are {vx/post}, {vy/post}, {vz/post}.
 
 [Related commands:]
 
-"compute reaction/tally"_compute_reaction_tally.html, "dump tally"_dump.html
+"compute surf/reaction/tally"_compute_surf_reaction_tally.html,
+"compute gas/collision/tally"_compute_gas_collision_tally.html,
+"dump tally"_dump.html
 
 [Default:] none
 
