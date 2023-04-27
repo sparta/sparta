@@ -424,21 +424,37 @@ void Collide::collisions()
   ndelete = 0;
 
   // perform collisions:
-  // variant for single group or multiple groups
-  // variant for nearcp flag or not
   // variant for ambipolar approximation or not
+  // variant for nearcp flag or not
+  // variant for ngas_tally active or not
+  // variant for single group or multiple groups
 
   if (!ambiflag) {
-    if (nearcp == 0) {
-      if (ngroups == 1) collisions_one<0>();
-      else collisions_group<0>();
-    } else {
-      if (ngroups == 1) collisions_one<1>();
-      else collisions_group<1>();
+    if (!nearcp) {
+      if (!ngas_tally) {
+        if (ngroups == 1) collisions_one<0,0>();
+        else collisions_group<0,0>();
+      } else if (ngas_tally) {
+        if (ngroups == 1) collisions_one<0,1>();
+        else collisions_group<0,1>();
+      }
+    } else if (nearcp) { 
+      if (!ngas_tally) {
+        if (ngroups == 1) collisions_one<1,0>();
+        else collisions_group<1,0>();
+      } else if (ngas_tally) {
+        if (ngroups == 1) collisions_one<1,1>();
+        else collisions_group<1,1>();
+      }
     }
-  } else {
-    if (ngroups == 1) collisions_one_ambipolar();
-    else collisions_group_ambipolar();
+  } else if (ambiflag) {
+    if (!ngas_tally) {
+      if (ngroups == 1) collisions_one_ambipolar<0>();
+      else collisions_group_ambipolar<0>();
+    } else if (!ngas_tally) {
+      if (ngroups == 1) collisions_one_ambipolar<1>();
+      else collisions_group_ambipolar<1>();
+    }
   }
 
   // remove any particles deleted in chemistry reactions
@@ -459,7 +475,7 @@ void Collide::collisions()
    NTC algorithm for a single group
 ------------------------------------------------------------------------- */
 
-template < int NEARCP > void Collide::collisions_one()
+template < int NEARCP, int GASTALLY > void Collide::collisions_one()
 {
   int i,j,k,m,n,ip,np;
   int nattempt,reactflag;
@@ -555,10 +571,9 @@ template < int NEARCP > void Collide::collisions_one()
       }
 
       // perform collision and possible reaction
-      // prepare to tally gas collision stats if requested using iorig,jorig
-      // tally gas collision stats if requested using iorig,jorig
+      // if GASTALLY: tally prep with iorig/jorig, then trigger tally
 
-      if (ngas_tally) {
+      if (GASTALLY) {
         memcpy(&iorig,ipart,sizeof(Particle::OnePart));
         memcpy(&jorig,jpart,sizeof(Particle::OnePart));
       }
@@ -567,7 +582,7 @@ template < int NEARCP > void Collide::collisions_one()
       reactflag = perform_collision(ipart,jpart,kpart);
       ncollide_one++;
 
-      if (ngas_tally)
+      if (GASTALLY)
         for (m = 0; m < ngas_tally; m++)
           glist_active[m]->gas_tally(icell,reactflag,
                                      &iorig,&jorig,ipart,jpart,kpart);
@@ -612,7 +627,7 @@ template < int NEARCP > void Collide::collisions_one()
    pre-compute # of attempts per group pair
 ------------------------------------------------------------------------- */
 
-template < int NEARCP > void Collide::collisions_group()
+template < int NEARCP, int GASTALLY > void Collide::collisions_group()
 {
   int i,j,k,m,n,ii,jj,kk,ip,np,isp,ng;
   int pindex,ipair,igroup,jgroup,newgroup,ngmax;
@@ -620,6 +635,7 @@ template < int NEARCP > void Collide::collisions_group()
   int *ni,*nj,*ilist,*jlist;
   int *nn_igroup,*nn_jgroup;
   double attempt,volume;
+  Particle::OnePart iorig,jorig;
   Particle::OnePart *ipart,*jpart,*kpart;
 
   // loop over cells I own
@@ -781,10 +797,22 @@ template < int NEARCP > void Collide::collisions_group()
         }
 
         // perform collision and possible reaction
+        // if GASTALLY: tally prep with iorig/jorig, then trigger tally
+
+        if (GASTALLY) {
+          memcpy(&iorig,ipart,sizeof(Particle::OnePart));
+          memcpy(&jorig,jpart,sizeof(Particle::OnePart));
+        }
 
         setup_collision(ipart,jpart);
         reactflag = perform_collision(ipart,jpart,kpart);
         ncollide_one++;
+
+        if (GASTALLY)
+          for (m = 0; m < ngas_tally; m++)
+            glist_active[m]->gas_tally(icell,reactflag,
+                                       &iorig,&jorig,ipart,jpart,kpart);
+
         if (reactflag) nreact_one++;
         else continue;
 
@@ -885,11 +913,12 @@ template < int NEARCP > void Collide::collisions_group()
    NTC algorithm for a single group with ambipolar approximation
 ------------------------------------------------------------------------- */
 
-void Collide::collisions_one_ambipolar()
+template < int GASTALLY > void Collide::collisions_one_ambipolar()
 {
-  int i,j,k,n,ip,np,nelectron,nptotal,ispecies,jspecies,tmp;
+  int i,j,k,m,n,ip,np,nelectron,nptotal,ispecies,jspecies,tmp;
   int nattempt,reactflag;
   double attempt,volume;
+  Particle::OnePart iorig,jorig;
   Particle::OnePart *ipart,*jpart,*kpart,*p,*ep;
 
   // ambipolar vectors
@@ -1028,13 +1057,24 @@ void Collide::collisions_one_ambipolar()
 
       // perform collision
       // ijspecies = species before collision chemistry
-      // continue to next collision if no reaction
+      // if GASTALLY: tally prep with iorig/jorig, then trigger tally
+
+      if (GASTALLY) {
+        memcpy(&iorig,ipart,sizeof(Particle::OnePart));
+        memcpy(&jorig,jpart,sizeof(Particle::OnePart));
+      }
 
       ispecies = ipart->ispecies;
       jspecies = jpart->ispecies;
       setup_collision(ipart,jpart);
       reactflag = perform_collision(ipart,jpart,kpart);
       ncollide_one++;
+
+      if (GASTALLY)
+        for (m = 0; m < ngas_tally; m++)
+          glist_active[m]->gas_tally(icell,reactflag,
+                                     &iorig,&jorig,ipart,jpart,kpart);
+
       if (reactflag) nreact_one++;
       else continue;
 
@@ -1178,13 +1218,14 @@ void Collide::collisions_one_ambipolar()
    loop over pairs of groups, pre-compute # of attempts per group pair
 ------------------------------------------------------------------------- */
 
-void Collide::collisions_group_ambipolar()
+template < int GASTALLY > void Collide::collisions_group_ambipolar()
 {
-  int i,j,k,n,ii,jj,ip,np,isp,ng;
+  int i,j,k,m,n,ii,jj,ip,np,isp,ng;
   int pindex,ipair,igroup,jgroup,newgroup,ispecies,jspecies,tmp;
   int nattempt,reactflag,nelectron;
   int *ni,*nj,*ilist,*jlist,*tmpvec;
   double attempt,volume;
+  Particle::OnePart iorig,jorig;
   Particle::OnePart *ipart,*jpart,*kpart,*p,*ep;
 
   // ambipolar vectors
@@ -1383,13 +1424,24 @@ void Collide::collisions_group_ambipolar()
 
         // perform collision
         // ijspecies = species before collision chemistry
-        // continue to next collision if no reaction
+        // if GASTALLY: tally prep with iorig/jorig, then trigger tally
 
+        if (GASTALLY) {
+          memcpy(&iorig,ipart,sizeof(Particle::OnePart));
+          memcpy(&jorig,jpart,sizeof(Particle::OnePart));
+        }
+        
         ispecies = ipart->ispecies;
         jspecies = jpart->ispecies;
         setup_collision(ipart,jpart);
         reactflag = perform_collision(ipart,jpart,kpart);
         ncollide_one++;
+
+        if (GASTALLY)
+          for (m = 0; m < ngas_tally; m++)
+            glist_active[m]->gas_tally(icell,reactflag,
+                                       &iorig,&jorig,ipart,jpart,kpart);
+
         if (reactflag) nreact_one++;
         else continue;
 

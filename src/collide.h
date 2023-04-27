@@ -160,13 +160,15 @@ class Collide : protected Pointers {
     ngroup[igroup]--;
   }
 
-  template < int > void collisions_one();
-  template < int > void collisions_group();
-  void collisions_one_ambipolar();
-  void collisions_group_ambipolar();
+  template < int,int > void collisions_one();
+  template < int,int > void collisions_group();
+  template < int > void collisions_one_ambipolar();
+  template < int > void collisions_group_ambipolar();
+  
   void ambi_reset(int, int, int, Particle::OnePart *, Particle::OnePart *,
                   Particle::OnePart *, int *);
   void ambi_check();
+  
   void grow_percell(int);
 
   int find_nn(int, int);
