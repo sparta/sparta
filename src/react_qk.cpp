@@ -71,7 +71,6 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
   double omega = collide->extract(isp,jsp,"omega");
 
   int n = reactions[isp][jsp].n;
-
   if (n == 0) return 0;
   int *list = reactions[isp][jsp].list;
 
@@ -111,7 +110,6 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
       }
     case EXCHANGE:
       {
-
         if (r->coeff[4] < 0.0 && species[isp].rotdof > 0) {
 
           // endothermic reaction
@@ -193,9 +191,13 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
       if (r->nproduct > 2) kspecies = r->products[2];
       else kspecies = -1;
 
-      return 1;
+      // return reaction from 1 to N
+
+      return list[i] + 1;
     }
   }
 
+  // no reaction performed
+  
   return 0;
 }

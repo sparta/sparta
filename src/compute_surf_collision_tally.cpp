@@ -125,8 +125,10 @@ void ComputeSurfCollisionTally::clear()
 }
 
 /* ----------------------------------------------------------------------
-   tally values for a single particle in icell
-     colliding with surface element isurf, performing reaction (1 to N)
+   tally values for a single particle in icell colliding with 
+     surface element isurf
+   reaction = 0 for collision only
+   reaction = 1 to N for which reaction
    iorig = particle before collision
    ip,jp = particles after collision
    ip = NULL means no particles after collision
@@ -137,14 +139,14 @@ void ComputeSurfCollisionTally::clear()
 void ComputeSurfCollisionTally::surf_tally(double dtremain, int isurf,
                                            int icell, int reaction,
                                            Particle::OnePart *iorig,
-                                           Particle::OnePart *ip, Particle::OnePart *jp)
+                                           Particle::OnePart *ip,
+                                           Particle::OnePart *jp)
 {
   // skip if a reaction
   // this compute only tallies collisions that do not induce a reaction
   // reactions can be tallied by compute surf/reaction/tally command
 
-  if (ip == NULL || jp) return;
-  if (iorig->ispecies != ip->ispecies) return;
+  if (reaction) return;
   
   // skip if isurf not in surface group
 

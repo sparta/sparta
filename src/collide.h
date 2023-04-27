@@ -37,8 +37,7 @@ class Collide : protected Pointers {
   Collide(class SPARTA *, int, char **);
   virtual ~Collide();
   virtual void init();
-  void modify_params(int, char **);
-  void reset_vremax();
+  virtual void setup();
   virtual void collisions();
 
   virtual double vremax_init(int, int) = 0;
@@ -49,8 +48,10 @@ class Collide : protected Pointers {
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *) = 0;
   virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
                                 Particle::OnePart *&) = 0;
-
   virtual double extract(int, int, const char *) {return 0.0;}
+
+  void modify_params(int, char **);
+  void reset_vremax();
 
   virtual int pack_grid_one(int, char *, int);
   virtual int unpack_grid_one(int, char *);

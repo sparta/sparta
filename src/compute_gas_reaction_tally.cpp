@@ -23,7 +23,7 @@
 
 using namespace SPARTA_NS;
 
-enum{IDCELL,ID1PRE,ID2PRE,ID1POST,ID2POST,ID3POST,TYPE1PRE,TYPE2PRE,
+enum{REACTION,IDCELL,ID1PRE,ID2PRE,ID1POST,ID2POST,ID3POST,TYPE1PRE,TYPE2PRE,
   TYPE1POST,TYPE2POST,TYPE3POST,VX1PRE,VY1PRE,VZ1PRE,VX2PRE,VY2PRE,VZ2PRE,
   VX1POST,VY1POST,VZ1POST,VX2POST,VY2POST,VZ2POST,VX3POST,VY3POST,VZ3POST};
 enum{DOUBLE,INT,BIGINT,UINT,BIGUINT,STRING};    // same as Dump
@@ -52,7 +52,8 @@ ComputeGasReactionTally::ComputeGasReactionTally(SPARTA *sparta, int narg, char 
   nvalue = 0;
   int iarg = 4;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"id/cell") == 0) which[nvalue++] = IDCELL;
+    if (strcmp(arg[iarg],"reaction") == 0) which[nvalue++] = REACTION;
+    else if (strcmp(arg[iarg],"id/cell") == 0) which[nvalue++] = IDCELL;
     else if (strcmp(arg[iarg],"id1/pre") == 0) which[nvalue++] = ID1PRE;
     else if (strcmp(arg[iarg],"id2/pre") == 0) which[nvalue++] = ID2PRE;
     else if (strcmp(arg[iarg],"id1/post") == 0) which[nvalue++] = ID1POST;
@@ -172,6 +173,10 @@ void ComputeGasReactionTally::gas_tally(int icell, int reaction,
   
   for (int m = 0; m < nvalue; m++) {
     switch (which[m]) {
+    case REACTION:
+      vec[m] = ubuf(reaction).d;
+      break;
+
     case IDCELL:
       vec[m] = ubuf(cells[icell].id).d;
       break;
@@ -285,6 +290,7 @@ int ComputeGasReactionTally::tallyinfo(surfint *&dummy)
 
 int ComputeGasReactionTally::datatype(int icol)
 {
+  if (which[icol-1] == REACTION) return INT;
   if (which[icol-1] == IDCELL) {
     if (sizeof(cellint) == sizeof(smallint)) return UINT;
     if (sizeof(cellint) == sizeof(bigint)) return BIGUINT;

@@ -24,7 +24,7 @@
 
 using namespace SPARTA_NS;
 
-enum{IDSURF,IDPRE,ID1POST,ID2POST,TYPEPRE,TYPE1POST,TYPE2POST,TIME,XC,YC,ZC,
+enum{REACTION,IDSURF,IDPRE,ID1POST,ID2POST,TYPEPRE,TYPE1POST,TYPE2POST,TIME,XC,YC,ZC,
   VXPRE,VYPRE,VZPRE,VX1POST,VY1POST,VZ1POST,VX2POST,VY2POST,VZ2POST};
 enum{DOUBLE,INT,BIGINT,UINT,BIGUINT,STRING};    // same as Dump
 
@@ -52,8 +52,9 @@ ComputeSurfReactionTally::ComputeSurfReactionTally(SPARTA *sparta, int narg, cha
   nvalue = 0;
   int iarg = 4;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"id/surf") == 0) which[nvalue++] = IDSURF;
-    if (strcmp(arg[iarg],"id/pre") == 0) which[nvalue++] = IDPRE;
+    if (strcmp(arg[iarg],"reaction") == 0) which[nvalue++] = REACTION;
+    else if (strcmp(arg[iarg],"id/surf") == 0) which[nvalue++] = IDSURF;
+    else if (strcmp(arg[iarg],"id/pre") == 0) which[nvalue++] = IDPRE;
     else if (strcmp(arg[iarg],"id1/post") == 0) which[nvalue++] = ID1POST;
     else if (strcmp(arg[iarg],"id2/post") == 0) which[nvalue++] = ID2POST;
     else if (strcmp(arg[iarg],"type/pre") == 0) which[nvalue++] = TYPEPRE;
@@ -133,8 +134,10 @@ void ComputeSurfReactionTally::clear()
 }
 
 /* ----------------------------------------------------------------------
-   tally values for a single particle in icell
-     colliding with surface element isurf, performing reaction (1 to N)
+   tally values for a single particle in icell colliding with 
+     surface element isurf
+   reaction = 0 for collision only
+   reaction = 1 to N for which reaction
    iorig = particle before collision
    ip,jp = particles after collision
    ip = NULL means no particles after collision
@@ -142,15 +145,17 @@ void ComputeSurfReactionTally::clear()
    jp != NULL means two particles after collision
 ------------------------------------------------------------------------- */
 
-void ComputeSurfReactionTally::surf_tally(double dtremain, int isurf, int icell, int reaction,
+void ComputeSurfReactionTally::surf_tally(double dtremain, int isurf,
+                                          int icell, int reaction,
                                           Particle::OnePart *iorig,
-                                          Particle::OnePart *ip, Particle::OnePart *jp)
+                                          Particle::OnePart *ip,
+                                          Particle::OnePart *jp)
 {
   // skip if not a reaction
   // this compute only tallies collisions that induce a reaction
   // simple collisions can be tallied by compute surf/collision/tally command
 
-  if (ip && jp == NULL && iorig->ispecies == ip->ispecies) return;
+  if (!reaction) return;
 
   // skip if isurf not in surface group
 
@@ -176,7 +181,11 @@ void ComputeSurfReactionTally::surf_tally(double dtremain, int isurf, int icell,
   double *vec = array_tally[ntally++];
   
   for (int m = 0; m < nvalue; m++) {
-    switch (which[m]) {
+    switch (which[m]) { 
+    case REACTION:
+      vec[m] = ubuf(reaction).d;
+      break;
+      
     case IDSURF:
       if (dim == 2) vec[m] = ubuf(lines[isurf].id).d;
       else vec[m] = ubuf(tris[isurf].id).d;
@@ -273,6 +282,7 @@ int ComputeSurfReactionTally::tallyinfo(surfint *&dummy)
 
 int ComputeSurfReactionTally::datatype(int icol)
 {
+  if (which[icol-1] == REACTION) return INT;
   if (which[icol-1] == IDSURF) {
     if (sizeof(surfint) == sizeof(smallint)) return INT;
     if (sizeof(surfint) == sizeof(bigint)) return BIGINT;

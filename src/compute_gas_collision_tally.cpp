@@ -23,7 +23,7 @@
 
 using namespace SPARTA_NS;
 
-enum{ID1,ID2,IDCELL,TYPE1,TYPE2,VX1PRE,VY1PRE,VZ1PRE,VX2PRE,VY2PRE,VZ2PRE,
+enum{IDCELL,ID1,ID2,TYPE1,TYPE2,VX1PRE,VY1PRE,VZ1PRE,VX2PRE,VY2PRE,VZ2PRE,
   VX1POST,VY1POST,VZ1POST,VX2POST,VY2POST,VZ2POST};
 enum{DOUBLE,INT,BIGINT,UINT,BIGUINT,STRING};    // same as Dump
 
@@ -119,8 +119,9 @@ void ComputeGasCollisionTally::clear()
 }
 
 /* ----------------------------------------------------------------------
-   tally values for a single gas collision in icell,
-     performing reaction (1 to N)
+   tally values for a single gas collision in icell
+   reaction = 0 for collision only
+   reaction = 1 to N for which reaction
    iorig,jorig = particles before collision
    ip,jp = particles after collision
    jp = NULL means one particle after collision

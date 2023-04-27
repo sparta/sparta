@@ -64,7 +64,6 @@ int ReactTCEQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
   int jsp = jp->ispecies;
 
   int n = reactions[isp][jsp].n;
-
   if (n == 0) return 0;
   int *list = reactions[isp][jsp].list;
 
@@ -93,9 +92,16 @@ int ReactTCEQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
                             pre_etrans,pre_erot,
                             pre_evib,post_etotal,kspecies);
 
-    if (reaction) tally_reactions[list[i]]++;
+    // return reaction from 1 to N
+    
+    if (reaction) {
+      tally_reactions[list[i]]++;
+      return list[i] + 1;
+    }
   }
 
+  // no reaction performed
+  
   return 0;
 }
 
