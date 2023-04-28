@@ -195,7 +195,7 @@ void ComputeGasReactionTally::gas_tally(int icell, int reaction,
       break;
     case ID3POST:
       if (kp == NULL) vec[m] = ubuf(0).d;
-      else vec[m] = ubuf(jp->id).d;
+      else vec[m] = ubuf(kp->id).d;
       break;
       
     case TYPE1PRE:
@@ -213,7 +213,7 @@ void ComputeGasReactionTally::gas_tally(int icell, int reaction,
       break;
     case TYPE3POST:
       if (kp == NULL) vec[m] = ubuf(0).d;
-      else vec[m] = ubuf(jp->ispecies+1).d;
+      else vec[m] = ubuf(kp->ispecies+1).d;
       break;
       
     case VX1PRE:

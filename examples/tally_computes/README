@@ -10,8 +10,13 @@ compute surf/reaction/tally
 Each produces a dump file via the dump tally command which tallies
 information about the collisions and reactions.
 
+-----
+
 The in.gas.collision.tally script is adapated from
 examples/collide/in.collode
+
+The in.gas.reaction.tally script is adapated from
+examples/chem/in.chem
 
 The in.surf.collision.tally script is adapated from
 examples/circle/in.circle
