@@ -37,11 +37,15 @@ class FixEmitSurf : public FixEmit {
   void grid_changed();
 
  private:
-  int imix,groupbit,np,normalflag,subsonic,subsonic_style,subsonic_warning;
+  int imix,groupbit,normalflag,subsonic,subsonic_style,subsonic_warning;
   int npertask,nthresh;
   double psubsonic,tsubsonic,nsubsonic;
   double tprefactor,soundspeed_mixture;
 
+  int npmode,np;    // npmode = FLOW,CONSTANT,VARIABLE
+  int npvar;
+  char *npstr;
+  
   // copies of data from other classes
 
   int dimension,nspecies;
