@@ -420,10 +420,9 @@ template < int DIM, int SURF, int OPT > void UpdateKokkos::move()
 
   // extend migration list if necessary
 
-  int nlocal = particle->nlocal;
   int maxlocal = particle->maxlocal;
 
-  if (nlocal > maxmigrate) {
+  if (particle->nlocal > maxmigrate) {
     maxmigrate = maxlocal;
     memoryKK->destroy_kokkos(k_mlist,mlist);
     memoryKK->create_kokkos(k_mlist,mlist,maxmigrate,"particle:mlist");
@@ -564,7 +563,7 @@ template < int DIM, int SURF, int OPT > void UpdateKokkos::move()
 
     if (niterate == 1 && !continue_loop_flag) {
       pstart = 0;
-      pstop = nlocal;
+      pstop = particle->nlocal;
     }
 
     UPDATE_REDUCE reduce;
@@ -633,7 +632,7 @@ template < int DIM, int SURF, int OPT > void UpdateKokkos::move()
         h_retry() = 1;
 
         if (d_particles.extent(0) < nlocal_extra) {
-          particle->grow(nlocal_extra - nlocal);
+          particle->grow(nlocal_extra - particle->nlocal);
           d_particles = particle_kk->k_particles.d_view;
         }
       }
@@ -649,7 +648,6 @@ template < int DIM, int SURF, int OPT > void UpdateKokkos::move()
     nmigrate = h_nmigrate();
     
     particle->nlocal = h_nlocal();
-    nlocal = particle->nlocal;
 
     int error_flag;
 
@@ -715,9 +713,9 @@ template < int DIM, int SURF, int OPT > void UpdateKokkos::move()
 
     continue_loop_flag = 0;
 
-    if (surf->nsr && pstop < nlocal) {
+    if (surf->nsr && pstop < particle->nlocal) {
       pstart = pstop;
-      pstop = nlocal;
+      pstop = particle->nlocal;
       continue_loop_flag = 1;
       continue;
     }
@@ -762,7 +760,7 @@ template < int DIM, int SURF, int OPT > void UpdateKokkos::move()
   // accumulate running totals
 
   niterate_running += niterate;
-  nmove_running += nlocal;
+  nmove_running += particle->nlocal;
   ntouch_running += ntouch_one;
   ncomm_running += ncomm_one;
   nboundary_running += nboundary_one;
