@@ -601,7 +601,7 @@ template < int DIM, int SURF, int OPT > void UpdateKokkos::move()
         backup();
 
       h_retry() = 0;
-      h_nlocal() = nlocal;
+      h_nlocal() = particle->nlocal;
       if (continue_loop_flag) h_nmigrate() = nmigrate;
 
       Kokkos::deep_copy(d_scalars,h_scalars);
