@@ -824,16 +824,16 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,OPT,ATOMIC_REDUCTION>, cons
       if (DIM == 3) kp = static_cast<int>((xnew[2] - zlo)/dz);
 
       int cellIdx = (kp*ncy + jp)*ncx + ip + 1;
-      GridKokkos::size_type h_index = hash_kk.find(static_cast<GridKokkos::key_type>(cellIdx));
-      int idx = static_cast<int>(hash_kk.value_at(h_index));
+      auto index = hash_kk.find(static_cast<GridKokkos::key_type>(cellIdx));
 
       // particle moving outside ghost halo will be flagged for standard move
 
-      if (idx != 0) {
+      if (hash_kk.valid_at(index)) {
+
+        int icell = static_cast<int>(hash_kk.value_at(index));
 
         // reset particle cell and coordinates
 
-        int icell = idx - 1;
         particle_i.icell = icell;
         particle_i.flag = PKEEP;
         x[0] = xnew[0];
