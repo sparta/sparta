@@ -101,6 +101,11 @@ void ComputeBoundary::init()
   if (domain->dimension == 2) {
     normflux[XLO] = normflux[XHI] = domain->yprd * nfactor;
     normflux[YLO] = normflux[YHI] = domain->xprd * nfactor;
+
+    if (domain->axisymmetric) {
+      normflux[YLO] *= 2 * M_PI * domain->yprd;
+      normflux[YHI] *= 2 * M_PI * domain->yprd;
+    }
   } else if (domain->dimension == 3) {
     normflux[XLO] = normflux[XHI] = domain->yprd*domain->zprd * nfactor;
     normflux[YLO] = normflux[YHI] = domain->xprd*domain->zprd * nfactor;
