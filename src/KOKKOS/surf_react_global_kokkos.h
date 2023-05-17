@@ -109,7 +109,6 @@ class SurfReactGlobalKokkos : public SurfReactGlobal {
       int index = Kokkos::atomic_fetch_add(&d_nlocal(),1);
       int reallocflag = ParticleKokkos::add_particle_kokkos(d_particles,index,id,ip->ispecies,ip->icell,x,v,0.0,0.0);
       if (reallocflag) {
-        printf("REALLOC!!!!!!!!\n");
         d_retry() = 1;
         rand_pool.free_state(rand_gen);
         return 0;
