@@ -581,13 +581,12 @@ template < int DIM, int SURF, int OPT > void UpdateKokkos::move()
 
     h_retry() = 1;
 
-    double extra_factor = 1.0;
-
     if (surf->nsr) {
-      extra_factor = sparta->kokkos->react_extra;
-      if (sparta->kokkos->react_retry_flag) extra_factor = 1.0;
+      double extra_factor = 1.0;
+      if (!sparta->kokkos->react_retry_flag)
+        extra_factor = sparta->kokkos->react_extra;
 
-      auto nlocal_extra = particle->nlocal*extra_factor;
+      int nlocal_extra = particle->nlocal*extra_factor;
       if (d_particles.extent(0) < nlocal_extra) {
         particle->grow(nlocal_extra - particle->nlocal);
         d_particles = particle_kk->k_particles.d_view;
@@ -617,7 +616,7 @@ template < int DIM, int SURF, int OPT > void UpdateKokkos::move()
       Kokkos::deep_copy(h_scalars,d_scalars);
 
       if (h_retry()) {
-        auto nlocal_extra = h_nlocal()*extra_factor;
+        int nlocal_new = h_nlocal();
 
         if (!sparta->kokkos->react_retry_flag) {
           error->one(FLERR,"Ran out of space for Kokkos reactions, increase react/extra"
@@ -631,8 +630,8 @@ template < int DIM, int SURF, int OPT > void UpdateKokkos::move()
         reduce = UPDATE_REDUCE();
         h_retry() = 1;
 
-        if (d_particles.extent(0) < nlocal_extra) {
-          particle->grow(nlocal_extra - particle->nlocal);
+        if (d_particles.extent(0) < nlocal_new) {
+          particle->grow(nlocal_new - particle->nlocal);
           d_particles = particle_kk->k_particles.d_view;
         }
       }
