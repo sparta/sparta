@@ -1281,7 +1281,7 @@ template < int DIM, int SURF, int OPT > void Update::move()
   // accumulate running totals
 
   niterate_running += niterate;
-  nmove_running += nlocal;
+  nmove_running += particle->nlocal;
   ntouch_running += ntouch_one;
   ncomm_running += ncomm_one;
   nboundary_running += nboundary_one;

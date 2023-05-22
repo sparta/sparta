@@ -78,7 +78,7 @@ collide(Particle::OnePart *&ip, double &,
 
   // specular or noslip reflection for each particle
   // only if SurfReact did not already reset velocities
-  // also both partiticles need to trigger any fixes
+  // also both particles need to trigger any fixes
   //   to update per-particle properties which depend on
   //   temperature of the particle, e.g. fix vibmode and fix ambipolar
   // NOTE: not doing this for this specular model,
