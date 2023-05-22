@@ -498,6 +498,18 @@ template < int DIM, int SURF, int OPT > void UpdateKokkos::move()
       d_tris = surf_kk->k_tris.d_view;
     }
 
+    if (surf->nsr) {
+      double extra_factor = 1.0;
+      if (!sparta->kokkos->react_retry_flag)
+        extra_factor = sparta->kokkos->react_extra;
+
+      int nlocal_extra = particle->nlocal*extra_factor;
+      if (d_particles.extent(0) < nlocal_extra) {
+        particle->grow(nlocal_extra - particle->nlocal); // this!
+        d_particles = particle_kk->k_particles.d_view;
+      }
+    }
+
     particle_kk->sync(Device,PARTICLE_MASK);
     grid_kk->sync(Device,CELL_MASK|PCELL_MASK|SINFO_MASK|PLEVEL_MASK);
 
@@ -580,18 +592,6 @@ template < int DIM, int SURF, int OPT > void UpdateKokkos::move()
     //  Unfortunately this leads to really messy code.
 
     h_retry() = 1;
-
-    if (surf->nsr) {
-      double extra_factor = 1.0;
-      if (!sparta->kokkos->react_retry_flag)
-        extra_factor = sparta->kokkos->react_extra;
-
-      int nlocal_extra = particle->nlocal*extra_factor;
-      if (d_particles.extent(0) < nlocal_extra) {
-        particle->grow(nlocal_extra - particle->nlocal);
-        d_particles = particle_kk->k_particles.d_view;
-      }
-    }
 
     while (h_retry()) {
 
