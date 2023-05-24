@@ -24,7 +24,7 @@
 #include "compute.h"
 #include "memory.h"
 #include "error.h"
-
+#include <iostream>
 using namespace SPARTA_NS;
 
 enum{COMPUTE,FIX};
@@ -50,12 +50,12 @@ FixDtReset::FixDtReset(SPARTA *sparta, int narg, char **arg) :
   resetflag = atoi(arg[5]);
 
   // error checks
-    
+
   if (nevery <= 0) error->all(FLERR,"Illegal fix dt/reset command");
   if (weight < 0.0 || weight > 1.0)
-    error->all(FLERR,"Fix dt/reset weight is not withing [0,1]");
+    error->all(FLERR,"Fix dt/reset weight is not within [0,1]");
   if (resetflag < 0 || resetflag > 2) error->all(FLERR,"Illegal fix dt/reset command");
-    
+
   // process per grid timestep arg as compute or fix
 
   if (strncmp(arg[3],"c_",2) == 0) step_which = COMPUTE;
@@ -160,20 +160,20 @@ void FixDtReset::end_of_step()
   // reallocate per-grid storage if necessary
 
   int nglocal = grid->nlocal;
-  
+
   if (nglocal > maxgrid) {
     maxgrid = grid->nlocal;
     memory->destroy(gridstep);
     memory->create(gridstep,maxgrid,"dt/reset:gridstep");
   }
-  
+
   // check that fix is computed at compatible time
-  
+
   if (step_which == FIX && update->ntimestep % fstep->per_grid_freq)
     error->all(FLERR,"Fix dt/reset fix not computed at compatible time");
 
   // grab per grid cell timestep from compute or fix, invoke compute if needed
-  
+
   if (step_which == COMPUTE) {
     if (!(cstep->invoked_flag & INVOKED_PER_GRID)) {
       cstep->compute_per_grid();
@@ -206,7 +206,7 @@ void FixDtReset::end_of_step()
   double dtmax_me = 0.0;
   double dtsum_me = 0.0;
   int count = 0;
-  
+
   for (int i = 0; i < nglocal; i++) {
     if (gridstep[i] == 0.0) continue;
     dtmin_me = MIN(dtmin_me,gridstep[i]);
@@ -215,27 +215,29 @@ void FixDtReset::end_of_step()
     count++;
   }
 
-  MPI_Allreduce(&dtmin_me,&dtmin,1,MPI_DOUBLE,MPI_MIN,world);
-  MPI_Allreduce(&dtmax_me,&dtmax,1,MPI_DOUBLE,MPI_MAX,world);
-  MPI_Allreduce(&dtsum_me,&dtave,1,MPI_DOUBLE,MPI_SUM,world);
-
   bigint bcount_me = count;
   bigint bcount;
   MPI_Allreduce(&bcount_me,&bcount,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  if (bcount == 0) return;  // done if no cell computed a timestep
+
+  double min_max_data_me[2];
+  double min_max_data[2];
+  min_max_data_me[0] = dtmin_me;
+  min_max_data_me[1] = 1./dtmax_me;
+  MPI_Allreduce(&min_max_data_me,&min_max_data,2,MPI_DOUBLE,MPI_MIN,world);
+  dtmin = min_max_data[0];
+  dtmax = 1./min_max_data[1];
+  MPI_Allreduce(&dtsum_me,&dtave,1,MPI_DOUBLE,MPI_SUM,world);
   dtave /= bcount;
-
-  // done if no cell computed a timestep
-
-  if (dtmin == BIG) return;
 
   // calculate new global timestep
 
   dtnew = (1.0-weight) * dtmin + weight * dtave;
-  
+
   // reset global timestep if requested
   // also reset the global time
   // NOTE: I'm not clear on when/why you want to issue a WARNING
-  
+
   if (resetflag) {
     update->time += (update->ntimestep - update->time_last_update) * update->dt;
     update->time_last_update = update->ntimestep;
@@ -273,8 +275,8 @@ double FixDtReset::compute_scalar()
 
 double FixDtReset::compute_vector(int index)
 {
-  if (index == 1) return dtmin;
-  else if (index == 2) return dtmax;
-  else if (index == 3) return dtave;
+  if (index == 0) return dtmin;
+  else if (index == 1) return dtmax;
+  else if (index == 2) return dtave;
   return 0.0;
 }

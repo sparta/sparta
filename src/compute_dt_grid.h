@@ -42,7 +42,7 @@ class ComputeDtGrid : public Compute {
   double min_species_mass;
 
   int nglocal;
-  
+
   char *id_lambda,*id_temp,*id_usq,*id_vsq,*id_wsq;
 
   class Compute *clambda,*ctemp,*cusq,*cvsq,*cwsq;

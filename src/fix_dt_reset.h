@@ -45,7 +45,7 @@ class FixDtReset : public Fix {
   char *id_step;
   class Compute *cstep;
   class Fix *fstep;
-  
+
   double *gridstep;
 };
 

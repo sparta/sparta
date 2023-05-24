@@ -59,7 +59,7 @@ ComputeDtGrid::ComputeDtGrid(SPARTA *sparta, int narg, char **arg) :
 
   int n;
   char *ptr;
-  
+
   if (strncmp(arg[5],"c_",2) == 0) lambda_which = COMPUTE;
   else if (strncmp(arg[5],"f_",2) == 0) lambda_which = FIX;
   else error->all(FLERR,"Invalid lambda in compute dt/grid command");
@@ -107,7 +107,7 @@ ComputeDtGrid::ComputeDtGrid(SPARTA *sparta, int narg, char **arg) :
       error->all(FLERR,"Compute dt/grid fix array is "
                  "accessed out-of-range");
   }
-  
+
   // parse temp as compute or fix
 
   if (strncmp(arg[6],"c_",2) == 0) temp_which = COMPUTE;
@@ -257,7 +257,7 @@ ComputeDtGrid::ComputeDtGrid(SPARTA *sparta, int narg, char **arg) :
       error->all(FLERR,"Compute dt/grid fix array is "
                  "accessed out-of-range");
   }
-  
+
   // parse wsq as compute or fix
 
   if (strncmp(arg[9],"c_",2) == 0) wsq_which = COMPUTE;
@@ -319,7 +319,7 @@ ComputeDtGrid::ComputeDtGrid(SPARTA *sparta, int narg, char **arg) :
 
   per_grid_flag = 1;
   size_per_grid_cols = 0;
-  
+
   nglocal = 0;
   vector_grid = NULL;
   lambda = temp = usq = vsq = wsq = NULL;
@@ -349,7 +349,7 @@ ComputeDtGrid::~ComputeDtGrid()
 void ComputeDtGrid::init()
 {
   reallocate();
-  
+
   // clambda/flambda = compute or fix that calculates per grid cell lambda
   // ditto for temp,usq,vsq,wsq
 
@@ -421,7 +421,7 @@ void ComputeDtGrid::compute_per_grid()
   invoked_per_grid = update->ntimestep;
 
   // check that fixes are computed at compatible times
-    
+
   if (lambda_which == FIX && update->ntimestep % flambda->per_grid_freq)
     error->all(FLERR,"Fix dt lambda fix not computed at compatible time");
   if (temp_which == FIX && update->ntimestep % ftemp->per_grid_freq)
@@ -580,50 +580,40 @@ void ComputeDtGrid::compute_per_grid()
   int dimension = domain->dimension;
 
   double dx,dy,dz;
-  double umag,vmag,wmag;
+  double umag,vmag,wmag,velmag2;
   double vrm_max;
   double cell_dt_desired,mean_collision_time;
   double dt_candidate;
-  
+
   for (int i = 0; i < nglocal; ++i) {
     vector_grid[i] = 0.0;
     if (!(cinfo[i].mask & groupbit)) continue;
 
-    // NOTE: is this correct?
-    //       seems if vrm_max = 0.0 or MCT = 0.0,
-    //       that transit time calcultion will have no effect
-    //       since cell_dt_desired will stay zero ?
-    
-    cell_dt_desired = 0.0;
+    // check sufficiency of cell data to calculate cell dt
+    vrm_max = sqrt(2.0*update->boltz * temp[i] / min_species_mass);
+    velmag2 = usq[i] + vsq[i] + wsq[i];
+    if ( !((vrm_max > 0.) && (lambda[i] > 0.) && (velmag2 > 0.)) ) continue;
 
     // cell dt based on mean collision time
-    
-    vrm_max = sqrt(2.0*update->boltz * temp[i] / min_species_mass);
-    if (vrm_max > 0.0) {
-      mean_collision_time = lambda[i]/vrm_max;
-      if (mean_collision_time > 0.0)
-        cell_dt_desired = collision_fraction*mean_collision_time;
-    }
+    mean_collision_time = lambda[i]/vrm_max;
+    cell_dt_desired = collision_fraction*mean_collision_time;
 
-    // cell dt based on transit time using average velocities
     // cell size = dx,dy,dz
-    
     dx = cells[i].hi[0] - cells[i].lo[0];
     dy = cells[i].hi[1] - cells[i].lo[1];
     dz = cells[i].hi[2] - cells[i].lo[2];
-    
+
+    // cell dt based on transit time using average velocities
     umag = sqrt(usq[i]);
     if (umag > 0.0) {
       dt_candidate = transit_fraction*dx/umag;
       cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
     }
-
     vmag = sqrt(vsq[i]);
-    if (vmag > 0.0) { 
+    if (vmag > 0.0) {
       dt_candidate = transit_fraction*dy/vmag;
       cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
     }
-
     if (domain->dimension == 3) {
       wmag = sqrt(wsq[i]);
       if (wmag > 0.0) {
@@ -633,22 +623,16 @@ void ComputeDtGrid::compute_per_grid()
     }
 
     // cell dt based on transit time using maximum most probable speed
-    
-    if (vrm_max > 0.0) {
-      dt_candidate = transit_fraction*dx/vrm_max;
+    dt_candidate = transit_fraction*dx/vrm_max;
+    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+    dt_candidate = transit_fraction*dy/vrm_max;
+    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+    if (domain->dimension == 3) {
+      dt_candidate = transit_fraction*dz/vrm_max;
       cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
-
-      dt_candidate = transit_fraction*dy/vrm_max;
-      cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
-
-      if (domain->dimension == 3) {
-        dt_candidate = transit_fraction*dz/vrm_max;
-        cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
-      }
     }
 
     // per grid cell timestep = final cell_dt_desired for all criteria
-    
     vector_grid[i] = cell_dt_desired;
   }
 }
