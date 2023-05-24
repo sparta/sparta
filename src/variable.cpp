@@ -3366,19 +3366,20 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
    check if word matches a particle vector
    return 1 if yes, else 0
    customize by adding a particle vector:
-     mass,type,x,y,z,vx,vy,vz,fx,fy,fz,mu
+     x,y,z,vx,vy,vz,type,mass,q,mu
 ------------------------------------------------------------------------- */
 
 int Variable::is_particle_vector(char *word)
 {
-  if (strcmp(word,"mass") == 0) return 1;
-  if (strcmp(word,"type") == 0) return 1;
   if (strcmp(word,"x") == 0) return 1;
   if (strcmp(word,"y") == 0) return 1;
   if (strcmp(word,"z") == 0) return 1;
   if (strcmp(word,"vx") == 0) return 1;
   if (strcmp(word,"vy") == 0) return 1;
   if (strcmp(word,"vz") == 0) return 1;
+  if (strcmp(word,"type") == 0) return 1;
+  if (strcmp(word,"mass") == 0) return 1;
+  if (strcmp(word,"q") == 0) return 1;
   if (strcmp(word,"mu") == 0) return 1;
   return 0;
 }
@@ -3388,7 +3389,7 @@ int Variable::is_particle_vector(char *word)
    push result onto tree
    word = particle vector
    customize by adding a particle vector:
-     mass,type,x,y,z,vx,vy,vz,fx,fy,fz
+     x,y,z,vx,vy,vz,type,mass,q,mu
 ------------------------------------------------------------------------- */
 
 void Variable::particle_vector(char *word, Tree **tree,
@@ -3406,15 +3407,7 @@ void Variable::particle_vector(char *word, Tree **tree,
   newtree->left = newtree->middle = newtree->right = NULL;
   treestack[ntreestack++] = newtree;
 
-  if (strcmp(word,"mass") == 0) {
-    newtree->type = SPECARRAY;
-    newtree->nstride = sizeof(Particle::Species);
-    newtree->carray = (char *) &species[0].mass;
-  } else if (strcmp(word,"type") == 0) {
-    newtree->type = PARTARRAYINT;
-    newtree->carray = (char *) &particles[0].ispecies;
-  }
-  else if (strcmp(word,"x") == 0)
+  if (strcmp(word,"x") == 0)
     newtree->carray = (char *) &particles[0].x[0];
   else if (strcmp(word,"y") == 0)
     newtree->carray = (char *) &particles[0].x[1];
@@ -3426,7 +3419,19 @@ void Variable::particle_vector(char *word, Tree **tree,
     newtree->carray = (char *) &particles[0].v[1];
   else if (strcmp(word,"vz") == 0)
     newtree->carray = (char *) &particles[0].v[2];
-  else if (strcmp(word,"mu") == 0) {
+
+  else if (strcmp(word,"type") == 0) {
+    newtree->type = PARTARRAYINT;
+    newtree->carray = (char *) &particles[0].ispecies;
+  } else if (strcmp(word,"mass") == 0) {
+    newtree->type = SPECARRAY;
+    newtree->nstride = sizeof(Particle::Species);
+    newtree->carray = (char *) &species[0].mass;
+  } else if (strcmp(word,"q") == 0) {
+    newtree->type = SPECARRAY;
+    newtree->nstride = sizeof(Particle::Species);
+    newtree->carray = (char *) &species[0].charge;
+  } else if (strcmp(word,"mu") == 0) {
     newtree->type = SPECARRAY;
     newtree->nstride = sizeof(Particle::Species);
     newtree->carray = (char *) &species[0].magmoment;

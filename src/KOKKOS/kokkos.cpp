@@ -165,8 +165,8 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
   if (nthreads == 1 && ngpus == 0)
     need_atomics = 0;
 
-  collide_retry_flag = 0;
-  collide_extra = 1.1;
+  react_retry_flag = 0;
+  react_extra = 1.1;
 
   // finalize Kokkos on abort
 
@@ -208,17 +208,17 @@ void KokkosSPARTA::accelerator(int narg, char **arg)
         atomic_reduction = 0;
       } else error->all(FLERR,"Illegal package kokkos command");
       iarg += 2;
-    } else if (strcmp(arg[iarg],"collide/retry") == 0) {
+    } else if (strcmp(arg[iarg],"react/retry") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal package kokkos command");
       if (strcmp(arg[iarg+1],"yes") == 0) {
-        collide_retry_flag = 1;
+        react_retry_flag = 1;
       } else if (strcmp(arg[iarg+1],"no") == 0) {
-        collide_retry_flag = 0;
+        react_retry_flag = 0;
       } else error->all(FLERR,"Illegal package kokkos command");
       iarg += 2;
-    } else if (strcmp(arg[iarg],"collide/extra") == 0) {
+    } else if (strcmp(arg[iarg],"react/extra") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal package kokkos command");
-      collide_extra = atof(arg[iarg+1]);
+      react_extra = atof(arg[iarg+1]);
       iarg += 2;
     } else if ((strcmp(arg[iarg],"gpu/aware") == 0)
                || (strcmp(arg[iarg],"gpu/direct") == 0)) { // gpu/direct is deprecated

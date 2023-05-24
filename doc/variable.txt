@@ -51,7 +51,7 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
                      random(x,y), normal(x,y), ceil(x), floor(x), round(x)
                      ramp(x,y), stagger(x,y), logfreq(x,y,z), stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
     special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
-    particle vectors = mass, type, mu, x, y, z, vx, vy, vz
+    particle vectors = mass, type, q, mu, x, y, z, vx, vy, vz
     grid vectors = xc, yc, zc
     compute references = c_ID, c_ID\[i\], c_ID\[i\]\[j\]
     fix references = f_ID, f_ID\[i\], f_ID\[i\]\[j\]
@@ -347,7 +347,7 @@ Math functions: sqrt(x), exp(x), ln(x), log(x), abs(x), sin(x), cos(x), tan(x), 
      ceil(x), floor(x), round(x), ramp(x,y), stagger(x,y), logfreq(x,y,z), \
      stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
 Special functions: sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
-Particle vectors: mass, type, mu, x, y, z, vx, vy, vz
+Particle vectors: mass, type, q, mu, x, y, z, vx, vy, vz
 Grid vectors: xc, yc, zc
 Compute references: c_ID, c_ID\[i\], c_ID\[i\]\[j\]
 Fix references: f_ID, f_ID\[i\], f_ID\[i\]\[j\]
@@ -610,10 +610,10 @@ Particle Vectors :h4
 Particle vectors generate one value per particle, so that a reference
 like "vx" means the x-component of each particles's velocity will be
 used when evaluating the variable.  Some values are per-species
-values, like mass and mu.  A reference like "mass" means the mass for
-the particle's species.
+values, like mass and q and mu.  "Mass" is the mass for the particle's
+species, "q" is the particle's charge, "mu" is its magnetic moment.
 
-The meaning of the different particle vectors is self-explanatory.
+The meaning of the other particle vectors should be self-explanatory.
 
 Particle vectors can only be used in {particle} style variables,
 not in {equal} or {grid} style varaibles.

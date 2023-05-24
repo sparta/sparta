@@ -468,8 +468,11 @@ letters in parenthesis: k = KOKKOS.
 Surface reaction styles :h4
 
 See the "surf_react"_surf_react.html command for details of each
-style.
+style. Some of the styles have accelerated versions, which can be
+used if SPARTA is built with the "appropriate accelerated
+package"_Section_accelerate.html.  This is indicated by additional
+letters in parenthesis: k = KOKKOS.
 
 "adsorb"_surf_adsorb.html,
-"global"_surf_react.html,
-"prob"_surf_react.html :tb(c=2,ea=c)
+"global (k)"_surf_react.html,
+"prob (k)"_surf_react.html :tb(c=2,ea=c)

@@ -60,6 +60,8 @@ SurfReactGlobal::SurfReactGlobal(SPARTA *sparta, int narg, char **arg) :
 
 SurfReactGlobal::~SurfReactGlobal()
 {
+  if (copy) return;
+
   delete random;
 }
 
