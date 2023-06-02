@@ -366,7 +366,7 @@ void ComputeLambdaGrid::compute_per_grid()
 
 /* ----------------------------------------------------------------------
    reallocate arrays if nglocal has changed
-   called by init(), load balancer, and grid adapt
+   called by init() and load balancer
 ------------------------------------------------------------------------- */
 
 void ComputeLambdaGrid::reallocate()

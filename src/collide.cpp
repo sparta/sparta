@@ -613,7 +613,6 @@ template < int NEARCP > void Collide::collisions_group()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
-
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
@@ -888,7 +887,6 @@ void Collide::collisions_one_ambipolar()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
-
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
@@ -1185,7 +1183,6 @@ void Collide::collisions_group_ambipolar()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
-
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");

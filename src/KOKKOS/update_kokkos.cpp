@@ -308,7 +308,7 @@ void UpdateKokkos::setup()
 
 /* ---------------------------------------------------------------------- */
 
-bool UpdateKokkos::run(int timeflag, int nsteps, double time_final)
+void UpdateKokkos::run(int nsteps)
 {
   sparta->kokkos->auto_sync = 0;
 
@@ -332,21 +332,10 @@ bool UpdateKokkos::run(int timeflag, int nsteps, double time_final)
   if (grid->cellweightflag) cellweightflag = 1;
 
   // loop over timesteps
-  bool completed_time = false;
-  int i = 0;
-  while ( (timeflag && time < time_final) || (!timeflag && i < nsteps) ) {
 
-    i++;
+  for (int i = 0; i < nsteps; i++) {
+
     ntimestep++;
-
-    // reset dt if final time will be exceeded
-    double tleft = time_final - time;
-    if (tleft <= dt) {
-      dt = tleft;
-      completed_time = true;
-    }
-    time += dt;
-
 
     if (collide_react) collide_react_reset();
     if (bounce_tally) bounce_set(ntimestep);
@@ -406,24 +395,15 @@ bool UpdateKokkos::run(int timeflag, int nsteps, double time_final)
 
     // all output
 
-    if (completed_time) {
-      laststep = ntimestep;
-      output->next = ntimestep;
-      output->next_stats = ntimestep;
-    }
     if (ntimestep == output->next) {
       particle_kk->sync(Host,ALL_MASK);
       output->write(ntimestep);
       timer->stamp(TIME_OUTPUT);
     }
-
-    if (completed_time) break;
   }
-
   sparta->kokkos->auto_sync = 1;
-  particle_kk->sync(Host,ALL_MASK);
 
-  return completed_time;
+  particle_kk->sync(Host,ALL_MASK);
 }
 
 /* ----------------------------------------------------------------------
@@ -469,6 +449,8 @@ template < int DIM, int SURF, int OPT > void UpdateKokkos::move()
   h_error_flag() = 0;
 
   // move/migrate iterations
+
+  dt = update->dt;
 
   ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
 
@@ -829,7 +811,6 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,OPT,ATOMIC_REDUCTION>, cons
   int reaction;
 
   Particle::OnePart &particle_i = d_particles[i];
-
   pflag = particle_i.flag;
 
   Particle::OnePart iorig;
@@ -1280,7 +1261,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,OPT,ATOMIC_REDUCTION>, cons
             //       think it is now sufficient to test for particle
             //       in an INSIDE cell in fix grid/check
 
-            //if (hitflag && side != ONSURF2OUT && param <= minparam)
+          //if (hitflag && side != ONSURF2OUT && param <= minparam)
 
             // this if test is to avoid case where particle
             // previously hit 1 of 2 (or more) touching angled surfs at

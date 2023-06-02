@@ -303,7 +303,7 @@ void FixEmitFaceKokkos::perform_task()
     auto ilocal = nlocal_before + inew;
 
     ParticleKokkos::add_particle_kokkos(ld_particles,ilocal,
-                                        id,ispecies,pcell,x,v,erot,evib);
+        id,ispecies,pcell,x,v,erot,evib);
 
     ld_particles(ilocal).flag = PINSERT;
     ld_particles(ilocal).dtremain = dtremain;

@@ -157,26 +157,26 @@ double CollideVSS::attempt_collision(int icell, int np, double volume)
 double CollideVSS::attempt_collision(int icell, int igroup, int jgroup,
                                      double volume)
 {
-  double fnum = update->fnum;
-  double dt = update->dt;
+ double fnum = update->fnum;
+ double dt = update->dt;
 
-  double nattempt;
+ double nattempt;
 
-  // return 2x the value for igroup != jgroup, since no J,I pairing
+ // return 2x the value for igroup != jgroup, since no J,I pairing
 
-  double npairs;
-  if (igroup == jgroup) npairs = 0.5 * ngroup[igroup] * (ngroup[igroup]-1);
-  else npairs = ngroup[igroup] * (ngroup[jgroup]);
-  //else npairs = 0.5 * ngroup[igroup] * (ngroup[jgroup]);
+ double npairs;
+ if (igroup == jgroup) npairs = 0.5 * ngroup[igroup] * (ngroup[igroup]-1);
+ else npairs = ngroup[igroup] * (ngroup[jgroup]);
+ //else npairs = 0.5 * ngroup[igroup] * (ngroup[jgroup]);
 
-  nattempt = npairs * vremax[icell][igroup][jgroup] * dt * fnum / volume;
+ nattempt = npairs * vremax[icell][igroup][jgroup] * dt * fnum / volume;
 
-  if (remainflag) {
-    nattempt += remain[icell][igroup][jgroup];
-    remain[icell][igroup][jgroup] = nattempt - static_cast<int> (nattempt);
-  } else nattempt += random->uniform();
+ if (remainflag) {
+   nattempt += remain[icell][igroup][jgroup];
+   remain[icell][igroup][jgroup] = nattempt - static_cast<int> (nattempt);
+ } else nattempt += random->uniform();
 
-  return nattempt;
+ return nattempt;
 }
 
 /* ----------------------------------------------------------------------
@@ -283,16 +283,13 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
     //   make copy of x,v, then repoint ip,jp to new particles data struct
 
     if (kspecies >= 0) {
-
       int id = MAXSMALLINT*random->uniform();
 
       Particle::OnePart *particles = particle->particles;
       memcpy(x,ip->x,3*sizeof(double));
       memcpy(v,ip->v,3*sizeof(double));
-
       int reallocflag =
         particle->add_particle(id,kspecies,ip->icell,x,v,0.0,0.0);
-
       if (reallocflag) {
         ip = particle->particles + (ip - particles);
         jp = particle->particles + (jp - particles);

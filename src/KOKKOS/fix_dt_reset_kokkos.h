@@ -22,6 +22,7 @@ FixStyle(dt/reset/kk,FixDtResetKokkos)
 #define SPARTA_FIX_DT_RESET_KOKKOS_H
 
 #include "fix_dt_reset.h"
+#include "grid_kokkos.h"
 #include "kokkos_base.h"
 #include "kokkos_type.h"
 

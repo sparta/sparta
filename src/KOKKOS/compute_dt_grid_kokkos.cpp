@@ -40,8 +40,6 @@ ComputeDtGridKokkos::ComputeDtGridKokkos(SPARTA *sparta, int narg, char **arg) :
   ComputeDtGrid(sparta, narg, arg)
 {
   kokkos_flag = 1;
-
-  nglocal = 0;
   dimension = domain->dimension;
   boltz = update->boltz;
 
@@ -71,6 +69,7 @@ void ComputeDtGridKokkos::compute_per_grid()
 /* ---------------------------------------------------------------------- */
 void ComputeDtGridKokkos::compute_per_grid_kokkos()
 {
+  std::cout << "top of ComputeDtGridKokkos::compute_per_grid_kokkos\n";
   if (lambda_which == FIX && update->ntimestep % flambda->per_grid_freq)
     error->all(FLERR,"Compute lambda/grid lambda fix not computed at compatible time");
   if (temp_which == FIX && update->ntimestep % ftemp->per_grid_freq)
@@ -116,6 +115,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       copymode = 0;
     }
   }
+  std::cout << "...after lambda\n";
 
   if (temp_which == COMPUTE) {
     if (!ctemp->kokkos_flag)
@@ -140,16 +140,19 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
     if (!ftemp->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(ftemp);
+    std::cout << "temp_index=" << temp_index << std::endl;
     if (temp_index == 0)
       d_temp_vector = computeKKBase->d_vector;
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
+      std::cout << "before loading temp vector\n";
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeDtGrid_LoadTempVecFromArray>(0,nglocal),*this);
+      std::cout << "finishd loading temp vector\n";
       copymode = 0;
     }
   }
-
+  std::cout << "...after temp\n";
   if (usq_which == COMPUTE) {
     if (!cusq->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos computes with compute dt/grid/kk");
@@ -266,6 +269,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
 
   k_vector_grid.modify_device();
   k_vector_grid.sync_host();
+  std::cout << "bot of ComputeDtGridKokkos::compute_per_grid_kokkos\n";
 }
 
 /* ---------------------------------------------------------------------- */
@@ -279,7 +283,8 @@ void ComputeDtGridKokkos::operator()(TagComputeDtGrid_LoadLambdaVecFromArray, co
 
 KOKKOS_INLINE_FUNCTION
 void ComputeDtGridKokkos::operator()(TagComputeDtGrid_LoadTempVecFromArray, const int &i) const {
-  d_temp_vector(i) = d_array(i,temp_index-1);
+  std::cout << "i=" << i << " temp_index=" << temp_index << " temp=" << d_array(i,temp_index-1) << " size=" << d_temp_vector.extent(0) << std::endl;
+  //  d_temp_vector(i) = d_array(i,temp_index-1);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -371,8 +376,10 @@ void ComputeDtGridKokkos::reallocate()
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"ComputeDtGridKokkos:vector_grid");
   d_vector = k_vector_grid.d_view;
 
+  std::cout << "nglocal=" << nglocal << " grid->nlocal="  << grid->nlocal << std::endl;
   d_lambda_vector = DAT::t_float_1d ("d_lambda_vector", nglocal);
   d_temp_vector = DAT::t_float_1d ("d_temp_vector", nglocal);
+  std::cout << "just allocated d_temp_vector, size=" << nglocal << std::endl;
   d_usq_vector = DAT::t_float_1d ("d_usq_vector", nglocal);
   d_vsq_vector = DAT::t_float_1d ("d_vsq_vector", nglocal);
   d_wsq_vector = DAT::t_float_1d ("d_wsq_vector", nglocal);

@@ -99,7 +99,7 @@ class UpdateKokkos : public Update {
   ~UpdateKokkos();
   void init();
   void setup();
-  bool run(int, int, double);
+  void run(int);
 
   template<int DIM, int SURF, int OPT, int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
@@ -111,6 +111,7 @@ class UpdateKokkos : public Update {
 
  private:
 
+  double dt;
   int field_active[3];
 
   // data for optimized particle moves
