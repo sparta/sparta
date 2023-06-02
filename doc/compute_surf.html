@@ -27,12 +27,14 @@
 
 <LI>one or more values can be appended 
 
-<LI>value = <I>n</I> or <I>nwt</I> or <I>nflux</I> or <I>mflux</I> or <I>fx</I> or <I>fy</I> or <I>fz</I> or <I>press</I> or <I>px</I> or <I>py</I> or <I>pz</I> or <I>shx</I> or <I>shy</I> or <I>shz</I> or <I>ke</I> 
+<LI>value = <I>n</I> or <I>nwt</I> or <I>nflux</I> or <I>nflux_incident</I> or <I>mflux</I> or <I>mflux_incident</I> or <I>fx</I> or <I>fy</I> or <I>fz</I> or <I>press</I> or <I>px</I> or <I>py</I> or <I>pz</I> or <I>shx</I> or <I>shy</I> or <I>shz</I> or <I>ke</I> 
 
 <PRE>  n = count of particles hitting surface element
   nwt = weighted count of particles hitting surface element
-  nflux = flux of particles on surface element
-  mflux = flux of mass on surface element
+  nflux = net flux of particles through surface element
+  nflux_incident = incident flux of particles on surface element
+  mflux = net flux of mass through surface element
+  mflux_incident = incident flux of mass on surface element
   fx,fy,fz = components of force on surface element
   press = magnitude of normal pressure on surface element
   px,py,pz = components of normal pressure on surface element
@@ -152,8 +154,9 @@ occurs.  The <I>nwt</I> quantity will only be different than <I>n</I> if
 particle weighting is enabled via the <A HREF = "global.html">global weight</A>
 command.
 </P>
-<P>The <I>nflux</I> value calculates the number flux imparted to the surface
-element by particles in the group.  This is computed as
+<P>The <I>nflux</I> and <I>nflux_incident</I> values calculate the net and incident
+number flux imparted to the surface element by particles in the group
+respectively. These are computed as
 </P>
 <PRE>Nflux = N / (A * dt / fnum) 
 </PRE>
@@ -167,8 +170,9 @@ included in the Nflux formula.  The Nflux quantity becomes effectively
 a particle flow rate (count per time).  See discussion of the <I>norm</I>
 keyword below.
 </P>
-<P>The <I>mflux</I> value calculates the mass flux imparted to the surface
-element by particles in the group.  This is computed as
+<P>The <I>mflux</I> and <I>mflux_incident</I> values calculate the net and incident
+mass flux imparted to the surface element by particles in the group
+respectively. These are computed as
 </P>
 <PRE>Mflux = Sum_i (mass_i) / (A * dt / fnum) 
 </PRE>
