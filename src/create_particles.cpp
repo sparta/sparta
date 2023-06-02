@@ -319,7 +319,7 @@ void CreateParticles::command(int narg, char **arg)
   double time1 = MPI_Wtime();
 
   bigint nprevious = particle->nglobal;
-  
+
   if (single) create_single();
   else if (!globalflag) {
     if (twopass) create_local_twopass();
@@ -459,22 +459,22 @@ void CreateParticles::create_local()
   // insertvol = subset of flowvol for cells eligible for insertion
   //   insertvol = flowvol if cutflag = 1
   //   insertvol < flowvol possible if cutflag = 0 (no cut cells)
-  
+
   double flowvolme = 0.0;
   double insertvolme = 0.0;
-  
+
   for (int icell = 0; icell < nglocal; icell++) {
     if (cinfo[icell].type == INSIDE) continue;
     if (cells[icell].nsplit > 1) continue;
     if (region && region->bboxflag &&
         outside_region(dimension,cells[icell].lo,cells[icell].hi))
       continue;
-    
+
     flowvolme += cinfo[icell].volume / cinfo[icell].weight;
     if (!cutflag && cells[icell].nsurf) continue;
     insertvolme += cinfo[icell].volume / cinfo[icell].weight;
   }
-  
+
   // calculate total Np if not set explicitly
   // based on total flowvol and mixture density
 
@@ -483,9 +483,9 @@ void CreateParticles::create_local()
     MPI_Allreduce(&flowvolme,&flowvol,1,MPI_DOUBLE,MPI_SUM,world);
     np = particle->mixture[imix]->nrho * flowvol / update->fnum;
   }
-  
+
   // gather cummulative insertion volumes across all procs
-  
+
   double volupto;
   MPI_Scan(&insertvolme,&volupto,1,MPI_DOUBLE,MPI_SUM,world);
 
@@ -542,7 +542,7 @@ void CreateParticles::create_local()
   double x[3],v[3],xcell[3],vstream_variable[3];
   double ntarget,scale,rn,vn,vr,theta1,theta2,erot,evib;
   double *lo,*hi;
-  
+
   double tempscale = 1.0;
   double sqrttempscale = 1.0;
 
@@ -557,9 +557,9 @@ void CreateParticles::create_local()
         outside_region(dimension,cells[icell].lo,cells[icell].hi))
       continue;
     if (!cutflag && cells[icell].nsurf) continue;
-    
+
     volsum += cinfo[icell].volume / cinfo[icell].weight;
-    
+
     ntarget = nme * volsum/insertvolme - nprev;
     npercell = static_cast<int> (ntarget);
 
@@ -568,7 +568,7 @@ void CreateParticles::create_local()
 
     lo = cells[icell].lo;
     hi = cells[icell].hi;
-    
+
     if (densflag) {
       scale = density_variable(lo,hi);
       ntarget *= scale;
@@ -580,7 +580,7 @@ void CreateParticles::create_local()
 
     if (cells[icell].nsurf)
       pflag = grid->point_outside_surfs(icell,xcell);
-    
+
     for (int m = 0; m < ncreate; m++) {
 
       // generate random position X for new particle
@@ -593,7 +593,7 @@ void CreateParticles::create_local()
       // if surfs, check if random position is in flow region
       // if subcell, also check if in correct subcell
       // if not, attempt new insertion up to MAXATTEMPT times
-      
+
       if (cells[icell].nsurf && pflag) {
         int nattempt = 0;
         while (nattempt < MAXATTEMPT) {
@@ -606,7 +606,7 @@ void CreateParticles::create_local()
           }
 
           nattempt++;
-          
+
           x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
           x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
           x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
@@ -614,7 +614,7 @@ void CreateParticles::create_local()
         }
 
         // particle insertion was unsuccessful
-        
+
         if (nattempt >= MAXATTEMPT) continue;
       }
 
@@ -662,7 +662,7 @@ void CreateParticles::create_local()
       evib = particle->evib(ispecies,temp_vib*tempscale,random);
 
       id = MAXSMALLINT*random->uniform();
-      
+
       particle->add_particle(id,ispecies,icell,x,v,erot,evib);
 
       if (nfix_update_custom)
@@ -708,17 +708,17 @@ void CreateParticles::create_local_twopass()
   // insertvol = subset of flowvol for cells eligible for insertion
   //   insertvol = flowvol if cutflag = 1
   //   insertvol < flowvol possible if cutflag = 0 (no cut cells)
-  
+
   double flowvolme = 0.0;
   double insertvolme = 0.0;
-  
+
   for (int icell = 0; icell < nglocal; icell++) {
     if (cinfo[icell].type == INSIDE) continue;
     if (cells[icell].nsplit > 1) continue;
     if (region && region->bboxflag &&
         outside_region(dimension,cells[icell].lo,cells[icell].hi))
       continue;
-    
+
     flowvolme += cinfo[icell].volume / cinfo[icell].weight;
     if (!cutflag && cells[icell].nsurf) continue;
     insertvolme += cinfo[icell].volume / cinfo[icell].weight;
@@ -732,9 +732,9 @@ void CreateParticles::create_local_twopass()
     MPI_Allreduce(&flowvolme,&flowvol,1,MPI_DOUBLE,MPI_SUM,world);
     np = particle->mixture[imix]->nrho * flowvol / update->fnum;
   }
-  
+
   // gather cummulative insertion volumes across all procs
-  
+
   double volupto;
   MPI_Scan(&insertvolme,&volupto,1,MPI_DOUBLE,MPI_SUM,world);
 
@@ -799,7 +799,7 @@ void CreateParticles::create_local_twopass()
 
   // first pass, just calculate # of particles to create
   // ncreate_values[icell] = # of particles to create in ICELL
-  
+
   int *ncreate_values;
   memory->create(ncreate_values, nglocal, "create_particles:ncreate");
 
@@ -813,7 +813,7 @@ void CreateParticles::create_local_twopass()
     if (!cutflag && cells[icell].nsurf) continue;
 
     volsum += cinfo[icell].volume / cinfo[icell].weight;
-    
+
     ntarget = nme * volsum/insertvolme - nprev;
     npercell = static_cast<int> (ntarget);
 
@@ -839,7 +839,7 @@ void CreateParticles::create_local_twopass()
   }
 
   // second pass, create particles using ncreate_values
-  
+
   for (int icell = 0; icell < nglocal; icell++) {
     if (cinfo[icell].type == INSIDE) continue;
     if (cells[icell].nsplit > 1) continue;
@@ -858,7 +858,7 @@ void CreateParticles::create_local_twopass()
 
     if (cells[icell].nsurf)
       pflag = grid->point_outside_surfs(icell,xcell);
-    
+
     for (int m = 0; m < ncreate; m++) {
 
       // generate random position X for new particle
@@ -871,7 +871,7 @@ void CreateParticles::create_local_twopass()
       // if surfs, check if random position is in flow region
       // if subcell, also check if in correct subcell
       // if not, attempt new insertion up to MAXATTEMPT times
-      
+
       if (cells[icell].nsurf && pflag) {
         int nattempt = 0;
         while (nattempt < MAXATTEMPT) {
@@ -884,7 +884,7 @@ void CreateParticles::create_local_twopass()
           }
 
           nattempt++;
-          
+
           x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
           x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
           x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
@@ -892,7 +892,7 @@ void CreateParticles::create_local_twopass()
         }
 
         // particle insertion was unsuccessful
-        
+
         if (nattempt >= MAXATTEMPT) continue;
       }
 
@@ -940,7 +940,7 @@ void CreateParticles::create_local_twopass()
       evib = particle->evib(ispecies,temp_vib*tempscale,random);
 
       id = MAXSMALLINT*random->uniform();
-      
+
       particle->add_particle(id,ispecies,icell,x,v,erot,evib);
 
       if (nfix_update_custom)
@@ -950,7 +950,7 @@ void CreateParticles::create_local_twopass()
   }
 
   // clean up
-  
+
   memory->destroy(ncreate_values);
 
   delete random;
