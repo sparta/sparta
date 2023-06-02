@@ -142,7 +142,9 @@ command.
 
 The {nflux} and {nflux_incident} values calculate the net and incident
 number flux imparted to the surface element by particles in the group
-respectively.  These are computed as
+respectively. Incident flux sums over all the impacting particles,
+while net flux subtracts out reflected particles and includes effects
+from surface chemistry such as particle deletion. These are computed as
 
 Nflux = N / (A * dt / fnum) :pre
 
