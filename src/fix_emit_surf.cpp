@@ -103,7 +103,7 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
 FixEmitSurf::~FixEmitSurf()
 {
   delete [] npstr;
-  
+
   for (int i = 0; i < ntaskmax; i++) {
     delete [] tasks[i].ntargetsp;
     delete [] tasks[i].vscale;
@@ -193,7 +193,7 @@ void FixEmitSurf::init()
     if (!input->variable->equal_style(npvar))
       error->all(FLERR,"Fix emit/surf  variable is invalid style");
   }
-  
+
   // create tasks for all grid cells
 
   grid_changed();
@@ -224,13 +224,6 @@ void FixEmitSurf::grid_changed()
     for (int i = 0; i < ntask; i++)
       tasks[i].ntarget = tasks[i].area / areasum;
   }
-}
-
-/* ---------------------------------------------------------------------- */
-
-void FixEmitSurf::setup()
-{
-  // needed for Kokkos because pointers are changed in UpdateKokkos::setup()
 }
 
 /* ----------------------------------------------------------------------
@@ -458,7 +451,7 @@ void FixEmitSurf::perform_task()
     npcurrent = input->variable->compute_equal(npvar);
     if (npcurrent <= 0.0) error->all(FLERR,"Fix emit/surf Np <= 0.0");
   }
-  
+
   // insert particles for each task = cell/surf pair
   // ntarget/ninsert is either perspecies or for all species
   // for one particle:
@@ -467,7 +460,7 @@ void FixEmitSurf::perform_task()
   //       if normalflag, mag of vstream is applied to surf normal dir
   //       first stage: normal dimension (normal)
   //       second stage: parallel dimensions (tan1,tan2)
-  
+
   // double while loop until randomized particle velocity meets 2 criteria
   // inner do-while loop:
   //   v = vstream-component + vthermal is into simulation box
@@ -503,7 +496,7 @@ void FixEmitSurf::perform_task()
                        vstream[2]*normal[2];
 
     // perspecies yes
-    
+
     if (perspecies) {
       for (isp = 0; isp < nspecies; isp++) {
         ispecies = species[isp];
@@ -597,7 +590,7 @@ void FixEmitSurf::perform_task()
       // for CONSTANT or VARIABLE: task narget is fraction of its surf's area
       //   scale fraction by np or npcurrent (variable evaluation)
       // ninsert = rounded-down (ntarget + random number)
-      
+
       if (npmode == FLOW) ntarget = tasks[i].ntarget;
       else if (npmode == CONSTANT) ntarget = np * tasks[i].ntarget;
       else if (npmode == VARIABLE) ntarget = npcurrent * tasks[i].ntarget;

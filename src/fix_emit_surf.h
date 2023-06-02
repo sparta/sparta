@@ -32,7 +32,6 @@ class FixEmitSurf : public FixEmit {
   FixEmitSurf(class SPARTA *, int, char **);
   ~FixEmitSurf();
   void init();
-  void setup();
 
   void grid_changed();
 
@@ -45,7 +44,7 @@ class FixEmitSurf : public FixEmit {
   int npmode,np;    // npmode = FLOW,CONSTANT,VARIABLE
   int npvar;
   char *npstr;
-  
+
   // copies of data from other classes
 
   int dimension,nspecies;
