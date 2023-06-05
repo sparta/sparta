@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -18,18 +18,19 @@
 
 #include "compute_dt_grid_kokkos.h"
 #include "update.h"
+#include "grid_kokkos.h"
 #include "domain.h"
+#include "fix.h"
+#include "compute.h"
+#include "memory.h"
 #include "memory_kokkos.h"
 #include "error.h"
 #include "kokkos.h"
-#include "grid_kokkos.h"
-#include "fix.h"
-#include "compute.h"
 #include "sparta_masks.h"
 
 using namespace SPARTA_NS;
 
-enum{COMPUTE,FIX};
+enum{NONE,COMPUTE,FIX};
 
 #define INVOKED_PER_GRID 16
 #define BIG 1.0e20
@@ -42,8 +43,6 @@ ComputeDtGridKokkos::ComputeDtGridKokkos(SPARTA *sparta, int narg, char **arg) :
   kokkos_flag = 1;
   dimension = domain->dimension;
   boltz = update->boltz;
-
-  reallocate();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -67,19 +66,21 @@ void ComputeDtGridKokkos::compute_per_grid()
 }
 
 /* ---------------------------------------------------------------------- */
+
 void ComputeDtGridKokkos::compute_per_grid_kokkos()
 {
-  std::cout << "top of ComputeDtGridKokkos::compute_per_grid_kokkos\n";
+  invoked_per_grid = update->ntimestep;
+
   if (lambda_which == FIX && update->ntimestep % flambda->per_grid_freq)
-    error->all(FLERR,"Compute lambda/grid lambda fix not computed at compatible time");
+    error->all(FLERR,"Compute dt/grid lambda fix not computed at compatible time");
   if (temp_which == FIX && update->ntimestep % ftemp->per_grid_freq)
-    error->all(FLERR,"Compute lambda/grid temp fix not computed at compatible time");
+    error->all(FLERR,"Compute dt/grid temp fix not computed at compatible time");
   if (usq_which == FIX && update->ntimestep % fusq->per_grid_freq)
-    error->all(FLERR,"Compute lambda/grid usq fix not computed at compatible time");
+    error->all(FLERR,"Compute dt/grid usq fix not computed at compatible time");
   if (vsq_which == FIX && update->ntimestep % fvsq->per_grid_freq)
-    error->all(FLERR,"Compute lambda/grid vsq fix not computed at compatible time");
+    error->all(FLERR,"Compute dt/grid vsq fix not computed at compatible time");
   if (wsq_which == FIX && update->ntimestep % fwsq->per_grid_freq)
-    error->all(FLERR,"Compute lambda/grid wsq fix not computed at compatible time");
+    error->all(FLERR,"Compute dt/grid wsq fix not computed at compatible time");
 
   // grab per grid cell lambda from compute or fix, invoke lambda compute if needed
   // ditto for temp,us,vsq,wsq
@@ -115,7 +116,6 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       copymode = 0;
     }
   }
-  std::cout << "...after lambda\n";
 
   if (temp_which == COMPUTE) {
     if (!ctemp->kokkos_flag)
@@ -140,19 +140,16 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
     if (!ftemp->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(ftemp);
-    std::cout << "temp_index=" << temp_index << std::endl;
     if (temp_index == 0)
       d_temp_vector = computeKKBase->d_vector;
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
-      std::cout << "before loading temp vector\n";
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeDtGrid_LoadTempVecFromArray>(0,nglocal),*this);
-      std::cout << "finishd loading temp vector\n";
       copymode = 0;
     }
   }
-  std::cout << "...after temp\n";
+
   if (usq_which == COMPUTE) {
     if (!cusq->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos computes with compute dt/grid/kk");
@@ -253,23 +250,17 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
   }
 
   // calculate per grid cell timestep for cells in group
-  GridKokkos* grid_kk = (GridKokkos*) grid;
+  GridKokkos* grid_kk = ((GridKokkos*)grid);
   grid_kk->sync(Device,CELL_MASK);
   d_cinfo = grid_kk->k_cinfo.d_view;
   d_cells = grid_kk->k_cells.d_view;
 
   copymode = 1;
-  if (!sparta->kokkos->need_atomics)
-    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeDtGrid_SetCellDtDesired<0> >(0,nglocal),*this);
-  else if (sparta->kokkos->atomic_reduction)
-    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeDtGrid_SetCellDtDesired<1> >(0,nglocal),*this);
-  else
-    error->all(FLERR,"Parallel_reduce not implemented for compute dt/grid/kk");
+  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeDtGrid_ComputePerGrid>(0,nglocal),*this);
   copymode = 0;
 
   k_vector_grid.modify_device();
   k_vector_grid.sync_host();
-  std::cout << "bot of ComputeDtGridKokkos::compute_per_grid_kokkos\n";
 }
 
 /* ---------------------------------------------------------------------- */
@@ -283,8 +274,7 @@ void ComputeDtGridKokkos::operator()(TagComputeDtGrid_LoadLambdaVecFromArray, co
 
 KOKKOS_INLINE_FUNCTION
 void ComputeDtGridKokkos::operator()(TagComputeDtGrid_LoadTempVecFromArray, const int &i) const {
-  std::cout << "i=" << i << " temp_index=" << temp_index << " temp=" << d_array(i,temp_index-1) << " size=" << d_temp_vector.extent(0) << std::endl;
-  //  d_temp_vector(i) = d_array(i,temp_index-1);
+  d_temp_vector(i) = d_array(i,temp_index-1);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -310,9 +300,8 @@ void ComputeDtGridKokkos::operator()(TagComputeDtGrid_LoadWsqVecFromArray, const
 
 /* ---------------------------------------------------------------------- */
 
-template<int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
-void ComputeDtGridKokkos::operator()(TagComputeDtGrid_SetCellDtDesired<ATOMIC_REDUCTION>, const int &i) const {
+void ComputeDtGridKokkos::operator()(TagComputeDtGrid_ComputePerGrid, const int &i) const {
 
   d_vector(i) = 0.;
   if (!(d_cinfo[i].mask & groupbit)) return;
@@ -376,12 +365,9 @@ void ComputeDtGridKokkos::reallocate()
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"ComputeDtGridKokkos:vector_grid");
   d_vector = k_vector_grid.d_view;
 
-  std::cout << "nglocal=" << nglocal << " grid->nlocal="  << grid->nlocal << std::endl;
   d_lambda_vector = DAT::t_float_1d ("d_lambda_vector", nglocal);
   d_temp_vector = DAT::t_float_1d ("d_temp_vector", nglocal);
-  std::cout << "just allocated d_temp_vector, size=" << nglocal << std::endl;
   d_usq_vector = DAT::t_float_1d ("d_usq_vector", nglocal);
   d_vsq_vector = DAT::t_float_1d ("d_vsq_vector", nglocal);
   d_wsq_vector = DAT::t_float_1d ("d_wsq_vector", nglocal);
 }
-

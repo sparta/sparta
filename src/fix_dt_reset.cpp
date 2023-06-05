@@ -121,6 +121,8 @@ FixDtReset::FixDtReset(SPARTA *sparta, int narg, char **arg) :
 
 FixDtReset::~FixDtReset()
 {
+  if (copymode) return;
+
   delete [] id_step;
   memory->destroy(gridstep);
 }

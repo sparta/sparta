@@ -56,7 +56,6 @@ FixDtResetKokkos::~FixDtResetKokkos()
 
 void FixDtResetKokkos::end_of_step()
 {
-  std::cout << "top of FixDtResetKokkos::end_of_step()\n";
   int nglocal = grid->nlocal;
   if (nglocal > maxgrid) {
     maxgrid = grid->nlocal;
@@ -73,9 +72,7 @@ void FixDtResetKokkos::end_of_step()
       error->all(FLERR,"Cannot (yet) use non-Kokkos computes with fix dt/reset/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(cstep);
     if (!(cstep->invoked_flag & INVOKED_PER_GRID)) {
-      std::cout << "before compute_per_grid_kokkos call\n";
       computeKKBase->compute_per_grid_kokkos();
-      std::cout << "after compute_per_grid_kokkos call\n"; 
       cstep->invoked_flag |= INVOKED_PER_GRID;
     }
 
@@ -145,7 +142,6 @@ void FixDtResetKokkos::end_of_step()
     update->time_last_update = update->ntimestep;
     update->dt = dtnew;
   }
-  std::cout << "bot of FixDtResetKokkos::end_of_step()\n";
 }
 
 /* ---------------------------------------------------------------------- */

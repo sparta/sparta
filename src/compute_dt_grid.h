@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -30,18 +30,19 @@ class ComputeDtGrid : public Compute {
   ComputeDtGrid(class SPARTA *, int, char **);
   ~ComputeDtGrid();
   void init();
-  void compute_per_grid();
-  void reallocate();
+  virtual void compute_per_grid();
+  virtual void reallocate();
   bigint memory_usage();
 
  protected:
-  int groupbit;
-  int lambda_which,temp_which,usq_which,vsq_which,wsq_which;
-  int lambda_index,temp_index,usq_index,vsq_index,wsq_index;
+
   double transit_fraction,collision_fraction;
   double min_species_mass;
 
+  int groupbit;
   int nglocal;
+  int lambda_which,temp_which,usq_which,vsq_which,wsq_which;
+  int lambda_index,temp_index,usq_index,vsq_index,wsq_index;;
 
   char *id_lambda,*id_temp,*id_usq,*id_vsq,*id_wsq;
 
@@ -50,7 +51,6 @@ class ComputeDtGrid : public Compute {
 
   double *lambda,*temp,*usq,*vsq,*wsq;
 };
-
 }
 
 #endif

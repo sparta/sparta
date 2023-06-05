@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -32,13 +32,10 @@ namespace SPARTA_NS {
   struct TagComputeDtGrid_LoadUsqVecFromArray{};
   struct TagComputeDtGrid_LoadVsqVecFromArray{};
   struct TagComputeDtGrid_LoadWsqVecFromArray{};
-
-  template<int ATOMIC_REDUCTION>
-  struct TagComputeDtGrid_SetCellDtDesired{};
+  struct TagComputeDtGrid_ComputePerGrid{};
 
   class ComputeDtGridKokkos : public ComputeDtGrid, public KokkosBase {
   public:
-
     ComputeDtGridKokkos(class SPARTA *, int, char **);
     ~ComputeDtGridKokkos();
 
@@ -61,12 +58,10 @@ namespace SPARTA_NS {
     KOKKOS_INLINE_FUNCTION void
     operator()(TagComputeDtGrid_LoadWsqVecFromArray, const int&) const;
 
-    template<int ATOMIC_REDUCTION>
-    KOKKOS_INLINE_FUNCTION void
-    operator()(TagComputeDtGrid_SetCellDtDesired<ATOMIC_REDUCTION>, const int&) const;
+    KOKKOS_INLINE_FUNCTION
+    void operator()(TagComputeDtGrid_ComputePerGrid, const int&) const;
 
     DAT::tdual_float_1d k_vector_grid;
-
 
   private:
     t_cell_1d d_cells;
@@ -89,5 +84,11 @@ namespace SPARTA_NS {
 #endif
 
 /* ERROR/WARNING messages:
- */
 
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running SPARTA to see the offending line.
+
+*/

@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -17,19 +17,18 @@
 ------------------------------------------------------------------------- */
 
 #include "compute_dt_grid.h"
-#include "string.h"
 #include "update.h"
 #include "grid.h"
+#include "domain.h"
 #include "modify.h"
 #include "fix.h"
-#include "domain.h"
-#include "comm.h"
+#include "compute.h"
 #include "memory.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
 
-enum{COMPUTE,FIX};
+enum{NONE,COMPUTE,FIX};
 
 #define INVOKED_PER_GRID 16
 #define BIG 1.0e20
@@ -55,10 +54,16 @@ ComputeDtGrid::ComputeDtGrid(SPARTA *sparta, int narg, char **arg) :
   if (collision_fraction < 0.0)
     error->all(FLERR,"Compute dt/grid cfraction must be positive");
 
-  // parse lambda as compute or fix
+  id_lambda = NULL;
+  id_temp = NULL;
+  id_usq = NULL;
+  id_vsq = NULL;
+  id_wsq = NULL;
 
   int n;
   char *ptr;
+
+  // parse lambda as compute or fix
 
   if (strncmp(arg[5],"c_",2) == 0) lambda_which = COMPUTE;
   else if (strncmp(arg[5],"f_",2) == 0) lambda_which = FIX;
@@ -329,6 +334,8 @@ ComputeDtGrid::ComputeDtGrid(SPARTA *sparta, int narg, char **arg) :
 
 ComputeDtGrid::~ComputeDtGrid()
 {
+  if (copymode) return;
+
   delete [] id_lambda;
   delete [] id_temp;
   delete [] id_usq;
@@ -336,7 +343,6 @@ ComputeDtGrid::~ComputeDtGrid()
   delete [] id_wsq;
 
   memory->destroy(vector_grid);
-
   memory->destroy(lambda);
   memory->destroy(temp);
   memory->destroy(usq);
@@ -639,7 +645,7 @@ void ComputeDtGrid::compute_per_grid()
 
 /* ----------------------------------------------------------------------
    reallocate arrays if nglocal has changed
-   called by init(), load balancer, and grid adapt
+   called by init() and load balancer
 ------------------------------------------------------------------------- */
 
 void ComputeDtGrid::reallocate()
@@ -664,13 +670,14 @@ void ComputeDtGrid::reallocate()
 }
 
 /* ----------------------------------------------------------------------
-   memory usage of local grid-based arrays
+   memory usage of local grid-based array
 ------------------------------------------------------------------------- */
 
 bigint ComputeDtGrid::memory_usage()
 {
   bigint bytes;
-  bytes = nglocal * sizeof(double);       // vector_grid
+  bytes = nglocal * sizeof(double);      // vector_grid
   bytes += 5*nglocal * sizeof(double);   // lambda,temp,usq,vsq,wsq
   return bytes;
 }
+
