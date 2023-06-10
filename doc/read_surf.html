@@ -19,9 +19,17 @@
 
 <LI>zero or more keyword/args pairs may be appended 
 
-<LI>keyword = <I>origin</I> or <I>trans</I> or <I>atrans</I> or <I>ftrans</I> or <I>scale</I> or <I>rotate</I> or <I>transparent</I> or <I>invert</I> or <I>clip</I> or <I>group</I> or <I>typeadd</I> or <I>particle</I> or <I>file</I> 
+<LI>keyword = <I>type</I> or <I>custom</I> or <I>origin</I> or <I>trans</I> or <I>atrans</I> or
+<I>ftrans</I> or <I>scale</I> or <I>rotate</I> or <I>transparent</I> or <I>invert</I> or <I>clip</I> or <I>group</I> or <I>typeadd</I> or <I>particle</I> or <I>file</I> 
 
-<PRE>  origin args = Ox Oy Oz
+<PRE>  type args = none
+    NOTE: if the type or custom keywords are used, they must come first
+  custom args = name int/float Nc
+    name = name of custom per-surf vector or array
+    int or float = for integer or floating point values
+    Nc = 0 for a vector (single value), Nc >= 1 for an array (one or more values)
+    NOTE: if the type or custom keywords are used, they must come first
+  origin args = Ox Oy Oz
     Ox,Oy,Oz = set origin of surface to this point (distance units)
   trans args = Dx Dy Dz
     Dx,Dy,Dz = translate origin by this displacement (distance units)
@@ -47,13 +55,14 @@
     check = delete particles inside surfs or in cells intersected by surfs
     keep = keep all particles
   file args = identical to those defined for the <A HREF = "write_surf.html">write_surf</A> command
-    this keyword must be last 
+    NOTE: if used, the file keyword must come last 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
 <PRE>read_surf surf.sphere
+read_surf surf.sphere type custom temperature double 0
 read_surf surf.sphere group sphere2 typeadd 1
 read_surf surf.file trans 10 5 0 scale 3 3 3 invert clip
 read_surf surf.file trans 10 5 0 scale 3 3 3 invert clip 1.0e-6
@@ -119,6 +128,8 @@ program.
 </P>
 <HR>
 
+<HR>
+
 <P>If all the surface elements are contained in a single file, the
 specified file can be a text file or a gzipped text file (detected by
 a .gz suffix).
@@ -148,6 +159,8 @@ of input on parallel machines that support parallel I/O.
 file, whether it is the only file or one of multiple files flagged
 with a processor number.
 </P>
+<HR>
+
 <P>A surface file for explicit surfaces has a header and a body.
 The header appears first.  The first line of the header is always
 skipped; it typically contains a description of the file.  Then lines
@@ -193,6 +206,8 @@ a "base" file for a set of multiple files.  In that case, the <I>lines</I>
 and <I>triangles</I> keywords give the number of lines or triangles in the
 entire set.
 </P>
+<HR>
+
 <P>These are the recognized section keywords for the body of the file.
 </P>
 <UL><LI><I>Points, Lines, Triangles</I> 
@@ -223,21 +238,26 @@ required.  You must either use both or neither.  As explained next, an
 optional format for the <I>Lines</I> or <I>Triangles</I> sections includes point
 coordinates directly with each line or triangle.
 </P>
+<HR>
+
 <P>The <I>Lines</I> section is only allowed for 2d simulations and consists of
 N entries, where N = # of lines.  All entries must be in the same
 format, either A or B.  If a Points section was included, use format
 A.  If it was not, use format B.
 </P>
-<PRE>line-ID (type) p1 p2               # format A
-line-ID (type) p1x p1y p2x p2y     # format B 
+<PRE>line-ID (type) p1 p2 (custom1) (custom2) ...                      # format A
+line-ID (type) p1x p1y p2x p2y (custom1) (custom2) ...     # format B 
 </PRE>
-<P>The line-ID is stored internally with the line.  If the read_surf
-commmand is reading a single file, the line-IDs should be unique
-values from 1 to N where N is the number of lines specified in the
-header of the file.  For a set of multiple files, each line in the
-collection of all files should have a unique ID, and the IDs should
-range from 1 to N, where N is the number of lines specified in the
-base file.  SPARTA does not check line-IDs for uniqueness.  Note that
+<P>The <I>line-ID</I> is stored internally with the line and can be output by
+the <A HREF = "dump.html">dump surf</A> command.  If the read_surf commmand is
+reading a single file, the line-IDs should be unique values from 1 to
+N where N is the number of lines specified in the header of the file.
+For a set of multiple files, each line in the collection of all files
+should have a unique ID, and the IDs should range from 1 to N, where N
+is the number of lines specified in the base file.
+</P>
+<P>Note that SPARTA does not check line-IDs for uniqueness, only that
+the smallest values is 1 and the largest value is N.  Also note that
 lines in an individual file (single or multiple) do not need to be
 listed by ID order; they can be in any order.
 </P>
@@ -245,11 +265,11 @@ listed by ID order; they can be in any order.
 exist, i.e. to add new lines, then each line-ID is incremented by
 Nprevious = the # of lines that already exist.
 </P>
-<P><I>Type</I> is an optional integer value which must be specified for all or
-none of the lines in the file.  If used, it must be a positive integer
-value for each line.  If not specified, the type of each line is set
-to 1.  Line IDs and types can be used to assign lines to surface
-groups via the <A HREF = "group.html">group surf</A> command.
+<P><I>Type</I> is an optional integer value and can only be specified if the
+<I>type</I> keyword is used.  It must be a positive integer for each line.
+If not specified, the type of each line is set to 1.  Line IDs and
+types can be used to assign lines to surface groups via the <A HREF = "group.html">group
+surf</A> command.
 </P>
 <P>For format A, <I>p1</I> and <I>p2</I> are the indices of the 2 end points of the
 line segment, as found in the Points section.  Each is a value from 1
@@ -264,21 +284,40 @@ This is defined by a right-hand rule.  The outward normal N = (0,0,1)
 x (p2-p1).  In other words, a unit z-direction vector is crossed into
 the vector from <I>p1</I> to <I>p2</I> to determine the normal.
 </P>
+<P>The <I>custom</I> values are optional and can only be specified if the
+<I>custom</I> keyword is used one or more times.  Each use of the <I>custom</I>
+keyword determines how many values are appended for each line.  For a
+custom per-surf vector, a single value is appended.  For a custom
+per-surf array, Nc values are appended.  The values are assigned to
+custom vectors or arrays in the order the <I>custom</I> keywords are
+specified.  For example, for this read_surf command, 4 custom values
+should be added to the end of each line in the Lines section:
+</P>
+<PRE>read_surf surf.sphere type custom temperature float 0 custom flags int 3 
+</PRE>
+<P>The first floating-point value will be the temperature, the next 3
+integers will be flags.
+</P>
+<HR>
+
 <P>The <I>Triangles</I> section is only allowed for 3d simulations and
 consists of N entries, where N = # of triangles.  All entries must be
 in the same format, either A or B.  If a Points section was included,
 use format A.  If it was not, use format B.
 </P>
-<PRE>tri-ID (type) p1 p2 p3                                  # format A
-tri-ID (type) p1x p1y p1z p2x p2y p2z p3x p3y p3z       # format B 
+<PRE>tri-ID (type) p1 p2 p3 (custom1) (custom2) ...                                               # format A
+tri-ID (type) p1x p1y p1z p2x p2y p2z p3x p3y p3z (custom1) custom2) ...  # format B 
 </PRE>
-<P>The tri-ID is stored internally with the line.  If the read_surf
-commmand is reading a single file, the tri-IDs should be unique values
-from 1 to N where N is the number of triangles specified in the header
-of the file.  For a set of multiple files, each triangle in the
-collection of all files should have a unique ID, and the IDs should
-range from 1 to N, where N is the number of triangles specified in the
-base file.  SPARTA does not check tri-IDs for uniqueness.  Note that
+<P>The tri-ID is stored internally with the triangle and can be output
+with the <A HREF = "dump_surf.html">dump surf</A> comand.  If the read_surf command
+is reading a single file, the tri-IDs should be unique values from 1
+to N where N is the number of triangles specified in the header of the
+file.  For a set of multiple files, each triangle in the collection of
+all files should have a unique ID, and the IDs should range from 1 to
+N, where N is the number of triangles specified in the base file.
+</P>
+<P>Note that SPARTA does not check tri-IDs for uniqueness, only that the
+smallest values is 1 and the largest value is N.  Also note that
 triangles in an individual file (single or multiple) do not need to be
 listed by ID order; they can be in any order.
 </P>
@@ -286,11 +325,11 @@ listed by ID order; they can be in any order.
 already exist, i.e. to add new triangles, then each tri-ID is
 incremented by Nprevious = the # of triangles that already exist.
 </P>
-<P><I>Type</I> is an optional integer value which must be specified for all or
-none of the triangles in the file.  If used, it must be a positive
-integer value for each triangle.  If not specified, the type of each
-triangle is set to 1.  Triangle IDs and types can be used to assign
-triangles to surface groups via the <A HREF = "group.html">group surf</A> command.
+<P><I>Type</I> is an optional integer value and can only be specified if the
+<I>type</I> keyword is used.  It must be a positive integer for each
+triangle.  If not specified, the type of each triangle is set to 1.
+Triangle IDs and types can be used to assign triangles to surface
+groups via the <A HREF = "group.html">group surf</A> command.
 </P>
 <P>For format A, <I>p1</I>, <I>p2</I>, and <I>p3</I> are the indices of the 3 corner
 points of the triangle, as found in the Points section.  Each is a
@@ -305,12 +344,61 @@ triangle. This is defined by a right-hand rule.  The outward normal N
 = (p2-p1) x (p3-p1).  In other words, the edge from <I>p1</I> to <I>p2</I> is
 crossed into the edge from <I>p1</I> to <I>p3</I> to determine the normal.
 </P>
+<P>The <I>custom</I> values are optional and can only be specified if the
+<I>custom</I> keyword is used one or more times.  Each use of the <I>custom</I>
+keyword determines how many values are appended to each triangle.  For
+a custom per-surf vector, a single value is appended.  For a custom
+per-surf array, Nc values are appended.  The values are assigned to
+custom vectors or arrays in the order the <I>custom</I> keywords are
+specified.  For example, for this read_surf command, 4 custom values
+should be added to the end of each triangle in the Triangles section:
+</P>
+<PRE>read_surf surf.sphere type custom temperature float 0 custom flags int 3 
+</PRE>
+<P>The first floating-point value will be the temperature, the next 3
+integers will be flags.
+</P>
+<HR>
+
+<HR>
+
+<P>The following optional keywords affect the format of the surface
+file(s) that are read.  If used, these two keywords must come before
+any other keywords.
+</P>
+<P>The <I>type</I> keyword means that each surface element in the Lines or
+Triangles section will include a surface element type, which is a
+positive integer.  See the discussion of the format of the Lines
+and Triangles sections above for details.
+</P>
+<P>The <I>custom</I> keyword allows a custom per-surf vector or array to be
+defined and initialized.  Custom vectors or arrays associated a single
+value or multiple values with each surface element.  They can be
+output by the <A HREF = "dump.html">dump surf</A> command and uses as inputs by
+other commands.  For example, many of the models for the
+<A HREF = "surf_collide.html">surf_collide</A> command take temperature as an input;
+use of a per-surf vector allows the temperature of individual surface
+elements to be specified.
+</P>
+<P>The <I>name</I> argument is the name assigned to the new custom vector or
+array.  The next argument is <I>int</I> or <I>float</I> to determine whether the
+vector/array stores integer or floating point values.  The final <I>Nc</I>
+argument is 0 for a per-surf vector and an integer >= 1 for an array
+with <I>Nc</I> columns.  A per-surf vector stores a single value per
+surface element; a per-surf array stores Nc values per element.
+</P>
+<P>Not that the <I>custom</I> keyword can be used multiple times.  See the
+discussion of the format of the Lines and Triangles sections above for
+details.
+</P>
 <HR>
 
 <P>The following optional keywords affect the geometry of the read-in
 surface elements.  The geometric transformations they describe are
 performed in the order they are listed, which gives flexibility in how
-surfaces can be manipulated.  Note that the order may be important;
+surfaces can be manipulated.
+</P>
+<P>Note that the order of these arguments may be important;
 e.g. performing an <I>origin</I> operation followed by a <I>rotate</I> operation
 may not be the same as a <I>rotate</I> operation followed by an <I>origin</I>
 operation.
@@ -429,8 +517,8 @@ reordering.
 <HR>
 
 <P>The following optional keywords affect group and type settings for the
-read-in surface elements and output of the elements.  Also how
-particles are treated when surface elements are added.
+read-in surface elements as well as how particles are treated when
+surface elements are added.
 </P>
 <P>Surface groups are collections of surface elements.  Each surface
 element belongs to one or more surface groups; all elements belong to
@@ -477,24 +565,33 @@ a surface object, and a new object is being read in, and you know
 the new object is smaller than the one it replaced.  E.g. for a model
 of a shrinking or ablating object.
 </P>
+<HR>
+
+<P>IMPORTANT NOTE: The final optional keyword is <I>file</I>, which must be
+must be the last keyword specified.  This is because all the remaining
+arguments in the read_surf command are passed to the
+<A HREF = "write_surf.html">write_surf</A> command.
+</P>
 <P>If the <I>file</I> keyword is used, the surfaces will be written out to the
-specified <I>filename</I> immediately after they are read in.  The
-arguments for this keyword are identical to those used for the
+specified <I>filename</I> immediately after they are read in (and
+transformed by any of the optional keywords).
+</P>
+<P>The arguments for this keyword are identical to those used for the
 <A HREF = "write_surf.html">write_surf</A> command.  This includes a file name with
-optional "*" and "%" wildcard characters, as well as its optional
-keywords.
+optional "*" and "%" wildcard characters as well as the write_surf
+optional keyword/arguments.
 </P>
-<P>IMPORTANT NOTE: The <I>file</I> keyword must be the last keyword specified
-with the read_isurf command.  This is because all the remaining arguments
-are passed to the <A HREF = "write_surf.html">write_surf</A> command.
+<P>The format for the output file is the same as the one read by this
+command.
 </P>
-<P>The format for the output file is the same as the one written by the
-<A HREF = "write_surf.html">write_surf</A> command, or read by this command.  Note
-that it can be useful to write out a new surface file after reading
-one if clipping was performed; the new file will contain the surface
-element altered by clipping and will not contain any surface elements
-removed by clipping.
+<P>Note that it can be useful to write out a new surface file after it is
+read if clipping was performed.  This is beacuse the new file will
+contain surface elements altered by clipping and will not contain any
+surface elements removed by clipping.  This may include a renumbering
+of the surface element IDs.
 </P>
+<HR>
+
 <HR>
 
 <P><B>Restrictions:</B>

@@ -41,6 +41,15 @@ class ReadSurf : protected Pointers {
   FILE *fp;
   int compressed;
   int distributed;
+
+  int typeflag;
+  int ncustom,nvalues_custom;
+  char **name_custom;
+  int *type_custom,*size_custom,*index_custom;
+  int nclocal,ncmax;
+  double **cvalues;
+  
+  int grouparg,typeadd,transparent_flag;
   int partflag,filearg;
 
   int multiproc;            // 1 if multiple files to read from
@@ -88,7 +97,10 @@ class ReadSurf : protected Pointers {
   void read_points();
   void read_lines(int);
   void read_tris(int);
-
+  void add_custom(double *);
+  void create_custom();
+  void copy_custom(int, int, int);
+  
   void process_args(int, int, char **);
 
   void translate(double, double, double);
@@ -99,7 +111,7 @@ class ReadSurf : protected Pointers {
   void clip3d();
   void transparent();
 
-  void check_consecutive();
+  void check_bounds();
   void push_points_to_boundary(double);
   void check_neighbor_norm_2d();
   void check_neighbor_norm_3d();

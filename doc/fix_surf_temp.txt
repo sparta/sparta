@@ -26,8 +26,8 @@ customID = name of a custom per-surf variable to create :l,ule
 [Examples:]
 
 compute 1 surf all all etot
-fix 1 surf/temp all 1000 c_1 250 0.9 temperature :pre
-surf_collide 1 diffuse s_temperature 0.5
+fix 1 surf/temp all 1000 c_1 250 0.9 temperature
+surf_collide 1 diffuse s_temperature 0.5 :pre
 
 [Description:]
 

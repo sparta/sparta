@@ -609,7 +609,7 @@ void Surf::add_tri_own(surfint id, int itype, double *p1, double *p2, double *p3
 
 /* ----------------------------------------------------------------------
    add a triangls's info to mytris list
-   called by ReadSurf for distributed surfs when clip3d adds one
+   called by ReadSurf for distributed surfs when clip3d adds a triangle
    ARE adding one tri at a time, IDs will be renumbered after
      and tris re-distributed to procs
    check if mytris needs to be reallocated

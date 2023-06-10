@@ -37,10 +37,9 @@
 <P><B>Examples:</B>
 </P>
 <PRE>compute 1 surf all all etot
-fix 1 surf/temp all 1000 c_1 250 0.9 temperature 
+fix 1 surf/temp all 1000 c_1 250 0.9 temperature
+surf_collide 1 diffuse s_temperature 0.5 
 </PRE>
-<P>surf_collide 1 diffuse s_temperature 0.5
-</P>
 <P><B>Description:</B>
 </P>
 <P>Compute a new temperature for each surface element in the group once
