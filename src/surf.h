@@ -117,11 +117,12 @@ class Surf : protected Pointers {
   double pushlo,pushhi;     // lo/hi ranges to push on
   double pushvalue;         // new position to push to
 
-  // extra custom vectors/arrays for per-surf data
-  // ncustom > 0 if there are any extra arrays
+  // extra custom per-surf attributes, as vectors or arrays
+  // ncustom > 0 if there are any extra attributes defined
   // custom attributes are created by various commands
   // these variables are public, others below are private
-
+  // NOTE: only currently allowed for explicit non-distributed surfs
+  
   int ncustom;              // # of custom attributes, some may be deleted
   int *etype;               // type = INT/DOUBLE of each attribute
   int *esize;               // size = 0 for vector, N for array columns
@@ -237,9 +238,9 @@ class Surf : protected Pointers {
   void redistribute_tris_temporary(int);
 
   int find_custom(char *);
-  void error_custom();
   virtual int add_custom(char *, int, int);
-  virtual void allocate_custom(int, int);
+  virtual void allocate_custom_one(int);
+  virtual void reallocate_custom_all();
   virtual void remove_custom(int);
 
   void write_restart(FILE *);
@@ -298,11 +299,13 @@ class Surf : protected Pointers {
     ubuf(int arg) : i(arg) {}
   };
 
-  // extra custom vectors/arrays for per-surf data
+  // extra custom per-surf attributes, as vectors or arrays
   // these variables are private, others above are public
 
   char **ename;             // name of each attribute
 
+  int size_custom;          // current size of allocated vecs/arrays
+  
   int ncustom_ivec;         // # of integer vector attributes
   int ncustom_iarray;       // # of integer array attributes
   int *icustom_ivec;        // index into ncustom for each integer vector

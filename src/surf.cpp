@@ -93,7 +93,8 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   ncustom = 0;
   ename = NULL;
   etype = esize = ewhich = NULL;
-
+  size_custom = 0;
+  
   ncustom_ivec = ncustom_iarray = 0;
   icustom_ivec = icustom_iarray = NULL;
   eivec = NULL;
@@ -3725,6 +3726,11 @@ int Surf::add_custom(char *name, int type, int size)
     return index;
   }
 
+  // ensure all existing custom per-surf data is correct current length
+
+  reallocate_custom_all();
+  
+  // assign index to new custom data
   // use first available NULL entry or allocate a new one
 
   for (index = 0; index < ncustom; index++)
@@ -3762,6 +3768,7 @@ int Surf::add_custom(char *name, int type, int size)
       memory->grow(eicol,ncustom_iarray,"surf:eicol");
       eicol[ncustom_iarray-1] = size;
     }
+    
   } else if (type == DOUBLE) {
     if (size == 0) {
       ewhich[index] = ncustom_dvec++;
@@ -3781,18 +3788,21 @@ int Surf::add_custom(char *name, int type, int size)
     }
   }
 
-  allocate_custom(index,nlocal);
+  allocate_custom_one(index);
 
   return index;
 }
 
 /* ----------------------------------------------------------------------
-   allocate vector/array associated with custom attribute with index
-   set new values to 0 via memset()
+   allocate custom per-surf vector/array associated with new index
+   via memory->create() to current size nlocal
+   set all values to 0 via memset()
 ------------------------------------------------------------------------- */
 
-void Surf::allocate_custom(int index, int n)
+void Surf::allocate_custom_one(int index)
 {
+  int n = nlocal;
+  
   if (etype[index] == INT) {
     if (esize[index] == 0) {
       int *ivector = memory->create(eivec[ewhich[index]],n,"surf:eivec");
@@ -3816,10 +3826,53 @@ void Surf::allocate_custom(int index, int n)
 }
 
 /* ----------------------------------------------------------------------
+   reallocate all custom per-surf vectors/arrays
+   via memory->grow() to current nlocal beyond previous size_custom
+   set added values beyond size_custom to 0 via memset()
+------------------------------------------------------------------------- */
+
+void Surf::reallocate_custom_all()
+{
+  int nold = size_custom;
+  int nnew = nlocal;
+  if (nnew == nold) return;
+  
+  for (int index = 0; index < ncustom; index++) {
+    if (ename[index] == NULL) continue;
+    
+    if (etype[index] == INT) {
+      if (esize[index] == 0) {
+	int *ivector = memory->grow(eivec[ewhich[index]],nnew,"surf:eivec");
+	if (ivector) memset(&ivector[nold],0,(nnew-nold)*sizeof(int));
+      } else {
+	int **iarray = memory->grow(eiarray[ewhich[index]],
+				    nnew,eicol[ewhich[index]],"surf:eiarray");
+	if (iarray)
+	  memset(iarray[nold],0,(nnew-nold)*eicol[ewhich[index]]*sizeof(int));
+      }
+
+    } else {
+      if (esize[index] == 0) {
+	double *dvector = memory->grow(edvec[ewhich[index]],nnew,"surf:edvec");
+	if (dvector) memset(&dvector[nold],0,(nnew-nold)*sizeof(double));
+      } else {
+	double **darray = memory->grow(edarray[ewhich[index]],
+				       nnew,edcol[ewhich[index]],"surf:eearray");
+	if (darray)
+	  memset(darray[nold],0,(nnew-nold)*edcol[ewhich[index]]*sizeof(double));
+      }
+    }
+  }
+
+  size_custom = nlocal;
+}
+
+/* ----------------------------------------------------------------------
    remove a custom attribute at location index
-   free memory for name and vector/array and set ptrs to NULL
-   ncustom lists never shrink, but indices stored between
-     the ncustom list and the dense vector/array lists must be reset
+   free memory for name, set name ptr to NULL to indicate removed
+   free vector/array or per-surf data
+   ncustom does not shrink, but ncustom i/d vec/array does shrink
+   cross indices bewteen ewhich and i/d vec/array lists must be reset
 ------------------------------------------------------------------------- */
 
 void Surf::remove_custom(int index)
@@ -3846,6 +3899,7 @@ void Surf::remove_custom(int index)
         eicol[i] = eicol[i+1];
       }
     }
+    
   } else if (etype[index] == DOUBLE) {
     if (esize[index] == 0) {
       memory->destroy(edvec[ewhich[index]]);

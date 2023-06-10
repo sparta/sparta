@@ -150,8 +150,8 @@ void ReadSurf::command(int narg, char **arg)
     for (int ic = 0; ic < ncustom; ic++)
       if (size_custom[ic] == 0) nvalues_custom++;
       else nvalues_custom += size_custom[ic];
-    
-    memory->create(cvalues,0,nvalues_custom,"readsurf:cvalues");
+
+    cvalues = NULL;
     nclocal = ncmax = 0;
   }
 
@@ -178,7 +178,13 @@ void ReadSurf::command(int narg, char **arg)
 
   check_bounds();
 
-  // create and populate custom per-surf vectors and arrays
+  // new surface element count has now been set
+  // reset existing custom per-surf vectors/arrays to new lengths
+
+  surf->reallocate_custom_all();
+    
+  // create and populate any custom per-surf vectors and arrays
+  // specified with this read_surf command
 
   if (ncustom) {
     create_custom();
@@ -1095,6 +1101,8 @@ void ReadSurf::read_lines(int storeflag)
 		  custom[icvalue++] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
 	  }
 	}
+
+	printf("ONELINE %d %g\n",id,custom[0]);
 	
         if (storeflag == LOCAL) {
           surf->add_line(id,type,pts[p1-1].x,pts[p2-1].x);
@@ -1375,12 +1383,13 @@ void ReadSurf::add_custom(double *custom)
 {
   if (nclocal == ncmax) {
     ncmax += DELTA_CUSTOM;
-    memory->grow(cvalues,ncmax,nvalues_custom,"readsurf:values_custom");
+    memory->grow(cvalues,ncmax,nvalues_custom,"readsurf:cvalues");
   }
 
-  for (int ivalue; ivalue < nvalues_custom; ivalue++)
+  for (int ivalue = 0; ivalue < nvalues_custom; ivalue++)
     cvalues[nclocal][ivalue] = custom[ivalue];
-  
+
+  printf("ADDCUST %d %d %g %g\n",nvalues_custom,nclocal,custom[0],cvalues[nclocal][0]);
   nclocal++;
 }
 
@@ -1399,6 +1408,8 @@ void ReadSurf::create_custom()
   
   int nlocal = surf->nlocal;
   int icvalue = 0;
+
+  printf("CVALUES %g %g %g %g\n",cvalues[0][0],cvalues[3][0],cvalues[9][0],cvalues[15][0]);
   
   for (int ic = 0; ic < ncustom; ic++) {
     index = surf->add_custom(name_custom[ic],type_custom[ic],size_custom[ic]);
@@ -1407,27 +1418,28 @@ void ReadSurf::create_custom()
     if (type_custom[ic] == 0) {
       if (size_custom[ic] == 0) {
 	ivector = surf->eivec[surf->ewhich[index]];
-	for (i = 0; i < nlocal; i++)
-	  ivector[i] = static_cast<int> (cvalues[i][icvalue]);
+	for (i = nsurf_old; i < nlocal; i++)
+	  ivector[i] = static_cast<int> (cvalues[i-nsurf_old][icvalue]);
 	icvalue++;
       } else {
 	iarray = surf->eiarray[surf->ewhich[index]];
-	for (i = 0; i < nlocal; i++)
+	for (i = nsurf_old; i < nlocal; i++)
 	  for (j = 0; j < size_custom[ic]; j++)
-	    iarray[i][j] = static_cast<int> (cvalues[i][icvalue+j]);
+	    iarray[i][j] = static_cast<int> (cvalues[i-nsurf_old][icvalue+j]);
 	icvalue += size_custom[ic];
       }
+      
     } else {
       if (size_custom[ic] == 0) {
 	dvector = surf->edvec[surf->ewhich[index]];
-	for (i = 0; i < nlocal; i++)
-	  dvector[i] = cvalues[i][icvalue];
+	for (i = nsurf_old; i < nlocal; i++)
+	  dvector[i] = cvalues[i-nsurf_old][icvalue];
 	icvalue++;
       } else {
 	darray = surf->edarray[surf->ewhich[index]];
-	for (i = 0; i < nlocal; i++)
+	for (i = nsurf_old; i < nlocal; i++)
 	  for (j = 0; j < size_custom[ic]; j++)
-	    darray[i][j] = cvalues[i][icvalue+j];
+	    darray[i][j] = cvalues[i-nsurf_old][icvalue+j];
 	icvalue += size_custom[ic];
       }
     }
@@ -1446,12 +1458,14 @@ void ReadSurf::copy_custom(int i, int j, int realloc)
   int m,index;
   int *ivector,**iarray;
   double *dvector,**darray;
+
+  // must realloc custom per-surf vectors/arrays to +1 length
   
+  if (realloc) surf->reallocate_custom_all();
+		 
   for (int ic = 0; ic < ncustom; ic++) {
     index = index_custom[ic];
 
-    // NOTE: need to do something for realloc flag
-    
     if (type_custom[ic] == 0) {
       if (size_custom[ic] == 0) {
 	ivector = surf->eivec[surf->ewhich[index]];
