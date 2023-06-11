@@ -16,39 +16,39 @@ filename = name of surface file :ulb,l
 zero or more keyword/args pairs may be appended :l
 keyword = {type} or {custom} or {origin} or {trans} or {atrans} or
 {ftrans} or {scale} or {rotate} or {transparent} or {invert} or {clip} or {group} or {typeadd} or {particle} or {file} :l
-  type args = none
+  {type} arg = none
     NOTE: if the type or custom keywords are used, they must come first
-  custom args = name int/float Nc
+  {custom} args = name int/float Nc
     name = name of custom per-surf vector or array
     int or float = for integer or floating point values
     Nc = 0 for a vector (single value), Nc >= 1 for an array (one or more values)
     NOTE: if the type or custom keywords are used, they must come first
-  origin args = Ox Oy Oz
+  {origin} args = Ox Oy Oz
     Ox,Oy,Oz = set origin of surface to this point (distance units)
-  trans args = Dx Dy Dz
+  {trans} args = Dx Dy Dz
     Dx,Dy,Dz = translate origin by this displacement (distance units)
-  atrans args = Ax Ay Az
+  {atrans} args = Ax Ay Az
     Ax,Ax,Az = translate origin to this absolute point (distance units)
-  ftrans args = Fx Fy Fz
+  {ftrans} args = Fx Fy Fz
     Fx,Fy,Fz = translate origin to this fractional point in simulation box
-  scale args = Sx Sy Sz
+  {scale} args = Sx Sy Sz
     Sx,Sy,Sz = scale surface by these factors around origin
-  rotate args = theta Rx Ry Rz
+  {rotate} args = theta Rx Ry Rz
     theta = rotate surface by this angle in counter-clockwise direction (degrees)
     Rx,Ry,Rz = rotate around vector starting at origin pointing in this direction
-  transparent args = none
-  invert args = none
-  clip args = none or fraction
+  {transparent} args = none
+  {invert} args = none
+  {clip} args = none or fraction
     fraction = push points close to the box boundary to the boundary (optional)
-  group arg = group-ID
+  {group} arg = group-ID
     group-ID = new or existing surface group to assign the surface elements to
-  typeadd arg = Noffset
+  {typeadd} arg = Noffset
     Noffset = add Noffset to the type value of each element
-  particle args = {none} or {check} or {keep}
+  {particle} args = {none} or {check} or {keep}
     none = allow no particles in simulation when read surfs (default)
     check = delete particles inside surfs or in cells intersected by surfs
     keep = keep all particles
-  file args = identical to those defined for the "write_surf"_write_surf.html command
+  {file} args = identical to those defined for the "write_surf"_write_surf.html command
     NOTE: if used, the file keyword must come last :pre
 :ule
 
@@ -363,7 +363,7 @@ positive integer.  See the discussion of the format of the Lines
 and Triangles sections above for details.
 
 The {custom} keyword allows a custom per-surf vector or array to be
-defined and initialized.  Custom vectors or arrays associated a single
+created and initialized.  Custom vectors or arrays associate a single
 value or multiple values with each surface element.  They can be
 output by the "dump surf"_dump.html command and uses as inputs by
 other commands.  For example, many of the models for the
@@ -372,15 +372,22 @@ use of a per-surf vector allows the temperature of individual surface
 elements to be specified.
 
 The {name} argument is the name assigned to the new custom vector or
-array.  The next argument is {int} or {float} to determine whether the
-vector/array stores integer or floating point values.  The final {Nc}
-argument is 0 for a per-surf vector and an integer >= 1 for an array
-with {Nc} columns.  A per-surf vector stores a single value per
+array.  The next argument is {int} or {float} which determines whether
+the vector/array stores integer or floating point values.  The final
+{Nc} argument is 0 for a per-surf vector and an integer >= 1 for an
+array with {Nc} columns.  A per-surf vector stores a single value per
 surface element; a per-surf array stores Nc values per element.
 
-Not that the {custom} keyword can be used multiple times.  See the
-discussion of the format of the Lines and Triangles sections above for
-details.
+The {custom} keyword can be used multiple times.  See the discussion
+of the format of the Lines and Triangles sections above for details.
+
+If the read_surf command is used multiple times and the same custom
+options are not used when reading each file, then the same custom
+vectors or arrays attributes will be defined for all surface elements.
+However, their values will only be initialized for the elements in the
+surface files which included custom values.  Otherwise the custom
+attributes of elements that were not specified in surface files are
+are initialized to zero.
 
 :line
  
@@ -572,8 +579,8 @@ The arguments for this keyword are identical to those used for the
 optional "*" and "%" wildcard characters as well as the write_surf
 optional keyword/arguments.
 
-The format for the output file is the same as the one read by this
-command.
+The format for the output file is the same as for the file read by
+this command.
 
 Note that it can be useful to write out a new surface file after it is
 read if clipping was performed.  This is beacuse the new file will
@@ -643,4 +650,4 @@ lead to unphysical particle dynamics.
 [Default:]
 
 The default origin for the vertices in the surface file is (0,0,0).
-The defaults for group = all, type = no, toffset = 0, particle = none.
+The defaults for group = all, typeadd = 0, particle = none.

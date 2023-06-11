@@ -612,8 +612,8 @@ void ReadSurf::read_multiple(char *file)
       memory->create(cvalues,nsurf_basefile,nvalues_custom,"readsurf:cvalues");
       double *start = NULL;
       if (surf->ntmp) start = &tmpcvalues[0][0];
-      MPI_Allgatherv(start,surf->ntmp*nvalues_custom*sizeof(double),MPI_CHAR,
-		     &cvalues[0][0],recvcounts,displs,MPI_CHAR,world);
+      MPI_Allgatherv(start,surf->ntmp*nvalues_custom,MPI_DOUBLE,
+		     &cvalues[0][0],recvcounts,displs,MPI_DOUBLE,world);
       memory->destroy(tmpcvalues);
     }
     
