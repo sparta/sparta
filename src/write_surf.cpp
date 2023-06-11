@@ -70,6 +70,11 @@ void WriteSurf::command(int narg, char **arg)
   // optional args
 
   pointflag = 1;
+  typeflag = 0;
+  ncustom = 0;
+  index_custom = NULL;
+  type_custom = NULL;
+  size_custom = NULL;
 
   if (multiproc) {
     nclusterprocs = 1;
@@ -90,6 +95,26 @@ void WriteSurf::command(int narg, char **arg)
       if (strcmp(arg[iarg+1],"yes") == 0) pointflag = 1;
       else if (strcmp(arg[iarg+1],"no") == 0) pointflag = 0;
       else error->all(FLERR,"Illegal write_surf command");
+      iarg += 2;
+
+    } else if (strcmp(arg[iarg],"type") == 0) {
+      typeflag = 1;
+      iarg++;
+      
+    } else if (strcmp(arg[iarg],"custom") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid write_surf command");
+
+      memory->grow(index_custom,ncustom+1,"writesurf:index_custom");
+      memory->grow(type_custom,ncustom+1,"writesurf:type_custom");
+      memory->grow(size_custom,ncustom+1,"writesurf:size_custom");
+
+      int index = surf->find_custom(arg[iarg+1]);
+      if (index < 0) error->all(FLERR,"Write_surf custom name does not exist");
+      index_custom[ncustom] = index;
+      type_custom[ncustom] = surf->etype[index];
+      size_custom[ncustom] = surf->esize[index];
+      ncustom++;
+      
       iarg += 2;
 
     } else if (strcmp(arg[iarg],"fileper") == 0) {
@@ -247,11 +272,23 @@ void WriteSurf::write_file_all_points(char *file)
     Surf::Line *lines = surf->lines;
     fprintf(fp,"\nLines\n\n");
     bigint m = 0;
-    for (int i = istart; i < istop; i++) {
-      fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT "\n",
-              lines[i].id,lines[i].type,m+1,m+2);
-      m += 2;
-    }
+
+    if (typeflag)
+      for (int i = istart; i < istop; i++) {
+	fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT,
+		lines[i].id,lines[i].type,m+1,m+2);
+	if (ncustom) write_custom(i);
+	fprintf(fp,"\n");
+	m += 2;
+      }
+    else
+      for (int i = istart; i < istop; i++) {
+	fprintf(fp,SURFINT_FORMAT " " BIGINT_FORMAT " " BIGINT_FORMAT,
+		lines[i].id,m+1,m+2);
+	if (ncustom) write_custom(i);
+	fprintf(fp,"\n");
+	m += 2;
+      }
   }
 
   // triangles
@@ -260,12 +297,26 @@ void WriteSurf::write_file_all_points(char *file)
     Surf::Tri *tris = surf->tris;
     fprintf(fp,"\nTriangles\n\n");
     bigint m = 0;
-    for (int i = istart; i < istop; i++) {
-      fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " "
-              BIGINT_FORMAT " " BIGINT_FORMAT "\n",
-              tris[i].id,tris[i].type,m+1,m+2,m+3);
-      m += 3;
-    }
+
+    if (typeflag)
+      for (int i = istart; i < istop; i++) {
+	fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " "
+		BIGINT_FORMAT " " BIGINT_FORMAT,
+		tris[i].id,tris[i].type,m+1,m+2,m+3);
+	if (ncustom) write_custom(i);
+	fprintf(fp,"\n");
+	m += 3;
+      }
+    else
+      for (int i = istart; i < istop; i++) {
+	fprintf(fp,SURFINT_FORMAT " " BIGINT_FORMAT " "
+		BIGINT_FORMAT " " BIGINT_FORMAT,
+		tris[i].id,m+1,m+2,m+3);
+	if (ncustom) write_custom(i);
+	fprintf(fp,"\n");
+	m += 3;
+      }
+    
   }
 
   fclose(fp);
@@ -310,11 +361,26 @@ void WriteSurf::write_file_all_nopoints(char *file)
   if (dim == 2) {
     Surf::Line *lines = surf->lines;
     fprintf(fp,"\nLines\n\n");
-    for (int i = istart; i < istop; i++)
-      fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g %20.15g\n",
-              lines[i].id,lines[i].type,
-              lines[i].p1[0],lines[i].p1[1],
-              lines[i].p2[0],lines[i].p2[1]);
+    
+    if (typeflag)
+      for (int i = istart; i < istop; i++) {
+	fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g %20.15g",
+		lines[i].id,lines[i].type,
+		lines[i].p1[0],lines[i].p1[1],
+		lines[i].p2[0],lines[i].p2[1]);
+	if (ncustom) write_custom(i);
+	fprintf(fp,"\n");
+      }
+
+    else
+      for (int i = istart; i < istop; i++) {
+	fprintf(fp,SURFINT_FORMAT " %20.15g %20.15g %20.15g %20.15g",
+		lines[i].id,
+		lines[i].p1[0],lines[i].p1[1],
+		lines[i].p2[0],lines[i].p2[1]);
+	if (ncustom) write_custom(i);
+	fprintf(fp,"\n");
+      }
   }
 
   // triangles
@@ -322,13 +388,29 @@ void WriteSurf::write_file_all_nopoints(char *file)
   if (dim == 3) {
     Surf::Tri *tris = surf->tris;
     fprintf(fp,"\nTriangles\n\n");
-    for (int i = istart; i < istop; i++)
-      fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g "
-              "%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g\n",
-              tris[i].id,tris[i].type,
-              tris[i].p1[0],tris[i].p1[1],tris[i].p1[2],
-              tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
-              tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
+
+    if (typeflag)
+      for (int i = istart; i < istop; i++) {
+	fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g "
+		"%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g",
+		tris[i].id,tris[i].type,
+		tris[i].p1[0],tris[i].p1[1],tris[i].p1[2],
+		tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
+		tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
+	if (ncustom) write_custom(i);
+	fprintf(fp,"\n");
+      }
+    else 
+      for (int i = istart; i < istop; i++) {
+	fprintf(fp,SURFINT_FORMAT " %20.15g %20.15g %20.15g "
+		"%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g",
+		tris[i].id,
+		tris[i].p1[0],tris[i].p1[1],tris[i].p1[2],
+		tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
+		tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
+	if (ncustom) write_custom(i);
+	fprintf(fp,"\n");
+      }
   }
 
   fclose(fp);
@@ -467,7 +549,7 @@ void WriteSurf::write_file_distributed_points(char *file)
           fprintf(fp,BIGINT_FORMAT " %20.15g %20.15g\n",
                   index,pbuf[m],pbuf[m+1]);
           m += 2;
-        }
+	}
       } else {
         for (int i = 0; i < ncount; i++) {
           index++;
@@ -529,18 +611,35 @@ void WriteSurf::write_file_distributed_points(char *file)
 
       ncount = recv_size/nper;
       if (dim == 2) {
-        for (int i = 0; i < ncount; i++) {
-          fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT "\n",
-                  sbuf[i].id,sbuf[i].type,index+1,index+2);
-          index += 2;
-        }
+	if (typeflag)
+	  for (int i = 0; i < ncount; i++) {
+	    fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT "\n",
+		    sbuf[i].id,sbuf[i].type,index+1,index+2);
+	    index += 2;
+	  }
+	else {
+	  for (int i = 0; i < ncount; i++) {
+	    fprintf(fp,SURFINT_FORMAT " " BIGINT_FORMAT " " BIGINT_FORMAT "\n",
+		    sbuf[i].id,index+1,index+2);
+	    index += 2;
+	  }
+	}
+	
       } else {
-        for (int i = 0; i < ncount; i++) {
-          fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT " "
-                  BIGINT_FORMAT "\n",
-                  sbuf[i].id,sbuf[i].type,index+1,index+2,index+3);
-          index += 3;
-        }
+	if (typeflag)
+	  for (int i = 0; i < ncount; i++) {
+	    fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT " "
+		    BIGINT_FORMAT "\n",
+		    sbuf[i].id,sbuf[i].type,index+1,index+2,index+3);
+	    index += 3;
+	  }
+        else
+	  for (int i = 0; i < ncount; i++) {
+	    fprintf(fp,SURFINT_FORMAT " " BIGINT_FORMAT " " BIGINT_FORMAT " "
+		    BIGINT_FORMAT "\n",
+		    sbuf[i].id,index+1,index+2,index+3);
+	    index += 3;
+	  }
       }
     }
     fclose(fp);
@@ -653,20 +752,43 @@ void WriteSurf::write_file_distributed_nopoints(char *file)
       ncount = recv_size/nper;
       if (dim == 2) {
         lines = (Surf::Line *) buf;
-        for (int i = 0; i < ncount; i++)
-          fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g %20.15g\n",
-                  lines[i].id,lines[i].type,
-                  lines[i].p1[0],lines[i].p1[1],
-                  lines[i].p2[0],lines[i].p2[1]);
+	
+	if (typeflag)
+	  for (int i = 0; i < ncount; i++) {
+	    fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g %20.15g\n",
+		    lines[i].id,lines[i].type,
+		    lines[i].p1[0],lines[i].p1[1],
+		    lines[i].p2[0],lines[i].p2[1]);
+	  }
+	else
+	  for (int i = 0; i < ncount; i++) {
+	    fprintf(fp,SURFINT_FORMAT " %20.15g %20.15g %20.15g %20.15g\n",
+		    lines[i].id,
+		    lines[i].p1[0],lines[i].p1[1],
+		    lines[i].p2[0],lines[i].p2[1]);
+	  }
+
       } else {
         tris = (Surf::Tri *) buf;
-        for (int i = 0; i < ncount; i++)
-          fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g "
-                  "%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g\n",
-                  tris[i].id,tris[i].type,
-                  tris[i].p1[0],tris[i].p1[1],tris[i].p1[2],
-                  tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
-                  tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
+	
+	if (typeflag)
+	  for (int i = 0; i < ncount; i++) {
+	    fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g "
+		    "%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g\n",
+		    tris[i].id,tris[i].type,
+		    tris[i].p1[0],tris[i].p1[1],tris[i].p1[2],
+		    tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
+		    tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
+	  }
+	else
+	  for (int i = 0; i < ncount; i++) {
+	    fprintf(fp,SURFINT_FORMAT " %20.15g %20.15g %20.15g "
+		    "%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g\n",
+		    tris[i].id,
+		    tris[i].p1[0],tris[i].p1[1],tris[i].p1[2],
+		    tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
+		    tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
+	  }
       }
     }
     fclose(fp);
@@ -787,6 +909,35 @@ void WriteSurf::write_header(int nmine)
       if (pointflag)
         fprintf(fp,BIGINT_FORMAT " points\n",(bigint) 3*nfile);
       fprintf(fp,BIGINT_FORMAT " triangles\n",nfile);
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   write user-specified custom values for surf I to output file
+---------------------------------------------------------------------- */
+
+void WriteSurf::write_custom(int i)
+{
+  for (int ic = 0; ic < ncustom; ic++) {
+    if (type_custom[ic] == 0) {
+      if (size_custom[ic] == 0) {
+	int *ivector = surf->eivec[surf->ewhich[index_custom[ic]]];
+	fprintf(fp," %d",ivector[i]);
+      } else {
+	int **iarray = surf->eiarray[surf->ewhich[index_custom[ic]]];
+	for (int j = 0; j < size_custom[ic]; j++)
+	  fprintf(fp," %d",iarray[i][j]);
+      }
+    } else {
+      if (size_custom[ic] == 0) {
+	double *dvector = surf->edvec[surf->ewhich[index_custom[ic]]];
+	fprintf(fp," %g",dvector[i]);
+      } else {
+	double **darray = surf->edarray[surf->ewhich[index_custom[ic]]];
+	for (int j = 0; j < size_custom[ic]; j++)
+	  fprintf(fp," %g",darray[i][j]);
+      }
     }
   }
 }

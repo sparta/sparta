@@ -39,6 +39,11 @@ class WriteSurf : protected Pointers {
   FILE *fp;
 
   int pointflag;             // 1/0 to include/exclude Points section in file
+  int typeflag;              // 1/0 to include/exclude element types
+
+  int ncustom;               // number of custom per-surf attributes to output
+  int *index_custom,*type_custom,*size_custom;  // flags for custom attributes
+  
   int multiproc;             // 0 = proc 0 writes for all
                              // else # of procs writing files
   int filewriter;            // 1 if this proc writes to file, else 0
@@ -60,6 +65,7 @@ class WriteSurf : protected Pointers {
   void write_base(char *);
   void open(char *);
   void write_header(int);
+  void write_custom(int);
 };
 
 }

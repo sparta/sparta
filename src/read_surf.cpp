@@ -1409,8 +1409,6 @@ void ReadSurf::create_custom()
   int nlocal = surf->nlocal;
   int icvalue = 0;
 
-  printf("CVALUES %g %g %g %g\n",cvalues[0][0],cvalues[3][0],cvalues[9][0],cvalues[15][0]);
-  
   for (int ic = 0; ic < ncustom; ic++) {
     index = surf->add_custom(name_custom[ic],type_custom[ic],size_custom[ic]);
     index_custom[ic] = index;
