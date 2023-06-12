@@ -42,11 +42,36 @@ void WriteGrid::command(int narg, char **arg)
   if (!grid->exist)
     error->all(FLERR,"Cannot write grid when grid is not defined");
 
-  if (narg != 1) error->all(FLERR,"Illegal write_grid command");
+  if (narg < 1) error->all(FLERR,"Illegal write_grid command");
 
-  MPI_Barrier(world);
-  double time1 = MPI_Wtime();
+  // optional args
 
+  int iarg = 1;
+
+  ncustom = 0;
+  index_custom = NULL;
+  type_custom = NULL;
+  size_custom = NULL;
+  
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"custom") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid write_grid command");
+
+      memory->grow(index_custom,ncustom+1,"writegrid:index_custom");
+      memory->grow(type_custom,ncustom+1,"writegrid:type_custom");
+      memory->grow(size_custom,ncustom+1,"writegridf:size_custom");
+
+      int index = grid->find_custom(arg[iarg+1]);
+      if (index < 0) error->all(FLERR,"Write_grid custom name does not exist");
+      index_custom[ncustom] = index;
+      type_custom[ncustom] = grid->etype[index];
+      size_custom[ncustom] = grid->esize[index];
+      ncustom++;
+
+      iarg += 2;
+    } else error->all(FLERR,"Invalid write_grid command");
+  }
+  
   // open file on proc 0
 
   int me = comm->me;
@@ -61,6 +86,9 @@ void WriteGrid::command(int narg, char **arg)
   }
 
   // write file
+
+  MPI_Barrier(world);
+  double time1 = MPI_Wtime();
 
   if (me == 0) header();
   write();
@@ -129,10 +157,12 @@ void WriteGrid::write()
   int nmax;
   MPI_Allreduce(&nme,&nmax,1,MPI_INT,MPI_MAX,world);
 
+  // pack ID of each child cell into buf, skipping sub cells
+  // add custom values if requested
+  // NOTE: multiply nmax by nvalues_custom
+  
   bigint *buf;
   memory->create(buf,nmax,"write_grid:buf");
-
-  // pack ID each cell into buf, skipping sub cells
 
   Grid::ChildCell *cells = grid->cells;
   int nglocal = grid->nlocal;
@@ -157,6 +187,7 @@ void WriteGrid::write()
 
       for (i = 0; i < nlines; i++) {
         fprintf(fp,BIGINT_FORMAT "\n",buf[i]);
+	// NOTE: here is where to write_custom()
       }
     }
 

@@ -60,8 +60,51 @@ void ReadGrid::command(int narg, char **arg)
 
   grid->exist = 1;
 
-  if (narg != 1) error->all(FLERR,"Illegal read_grid command");
+  if (narg < 1) error->all(FLERR,"Illegal read_grid command");
 
+  // optional args
+
+  int iarg = 1;
+
+  ncustom = 0;
+  name_custom = NULL;
+  type_custom = NULL;
+  size_custom = NULL;
+  ghost_custom = NULL;
+  index_custom = NULL;
+  
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"custom") == 0) {
+      if (iarg+5 > narg) error->all(FLERR,"Invalid read_grid command");
+
+      name_custom = (char **)
+	memory->srealloc(name_custom,(ncustom+1)*sizeof(char *),
+			 "readgrid:name_custom");
+      memory->grow(type_custom,ncustom+1,"readgrid:type_custom");
+      memory->grow(size_custom,ncustom+1,"readgrid:size_custom");
+      memory->grow(ghost_custom,ncustom+1,"readgrid:ghost_custom");
+      memory->grow(index_custom,ncustom+1,"readgrid:index_custom");
+
+      int n = strlen(arg[iarg+1]) + 1;
+      name_custom[ncustom] = new char[n];
+      strcpy(name_custom[ncustom],arg[iarg+1]);
+      if (strcmp(arg[iarg+2],"int") == 0) type_custom[ncustom] = 0;
+      else if (strcmp(arg[iarg+2],"float") == 0) type_custom[ncustom] = 1;
+      else error->all(FLERR,"Invalid read_grid command");
+      size_custom[ncustom] = input->inumeric(FLERR,arg[iarg+3]);
+      if (size_custom[ncustom] < 0)
+	error->all(FLERR,"Invalid read_surf command");
+      if (strcmp(arg[iarg+2],"no") == 0) ghost_custom[ncustom] = 0;
+      else if (strcmp(arg[iarg+2],"yes") == 0) ghost_custom[ncustom] = 1;
+      else error->all(FLERR,"Invalid read_grid command");
+      ncustom++;
+      
+      iarg += 5;
+    } else error->all(FLERR,"Invalid read_grid command");
+  }
+
+  // read file
+  
   read(arg[0],0);
 }
 
@@ -103,11 +146,6 @@ void ReadGrid::read(char *filename, int external)
   }
 
   // new per-proc grid cell count has now been set
-  // reset existing custom per-grid vectors/arrays to new lengths
-  // NOTE: is this necessary ?
-  
-  //grid->reallocate_custom_all();
-    
   // create and populate any custom per-grid vectors and arrays
 
   if (ncustom) {
@@ -317,7 +355,8 @@ void ReadGrid::create_custom()
   int icvalue = 0;
 
   for (int ic = 0; ic < ncustom; ic++) {
-    index = grid->add_custom(name_custom[ic],type_custom[ic],size_custom[ic],0);
+    index = grid->add_custom(name_custom[ic],
+			     type_custom[ic],size_custom[ic],ghost_custom[ic]);
     index_custom[ic] = index;
     
     if (type_custom[ic] == 0) {

@@ -41,7 +41,8 @@ class ReadGrid : protected Pointers {
 
   int ncustom,nvalues_custom;
   char **name_custom;
-  int *type_custom,*size_custom,*index_custom;
+  int *type_custom,*size_custom,*ghost_custom;
+  int *index_custom;
   int nclocal,ncmax;
   double **cvalues;
 

@@ -36,6 +36,9 @@ class WriteGrid : protected Pointers {
  private:
   FILE *fp;
 
+  int ncustom;               // number of custom per-grid attributes to output
+  int *index_custom,*type_custom,*size_custom;  // flags for custom attributes
+
   void header();
   void write();
 };
