@@ -65,6 +65,8 @@
       xhi,yhi,zhi = coords of lower left corner of grid cell
       xc,yc,zc = coords of center of grid cell
       vol = flow volume of grid cell (area in 2d)
+      g_ID = custom per-grid vector with ID
+      g_ID[N] = Nth column of custom per-grid array with ID
       c_ID = per-grid vector calculated by a compute with ID
       c_ID[N] = Nth column of per-grid array calculated by a compute with ID, I can include wildcard (see below)
       f_ID = per-grid vector calculated by a fix with ID
@@ -269,7 +271,7 @@ affected by the <A HREF = "collid_modify.html">collide_modify</A> command.
 <P>The <I>p_ID</I> and <I>p_ID[N]</I> attributes allow custom per-particle
 vectors or arrays defined by a <A HREF = "fix.html">fix</A> command to be output.
 The ID in the attribute should be replaced by the actual ID of the
-custom particle attribute that the fix defines.  See individal fix
+custom particle attribute that the fix defines.  See individal
 commands for details, e.g. the <A HREF = "fix_ambipolar.html">fix ambipolar</A>
 command which defines the custom vector "ionambi" and the custom array
 "velambi".
@@ -367,6 +369,19 @@ a cut cell which is inside a suface object but which is intersected by
 surface element(s) which only touch a face, edge, or corner point of
 the grid cell, will have a flow volume of 0.0.
 </P>
+<P>The <I>g_ID</I> and <I>g_ID[N]</I> attributes allow custom per-grid vectors or
+arrays defined by the <A HREF = "read_grid.html">read_grid</A> or <A HREF = "surf_react_implicit.html">surf_react
+implicit</A> command to be output.  (The
+surf/react implicit command has not yet been released in public
+SPPARKS).  The ID in the attribute should be replaced by the actual ID
+of the custom per-grid attribute that the command defines.  See
+individal commands for details.
+</P>
+<P>If <I>g_ID</I> is used as a attribute, the custom attribute must be a
+vector, and it is output.  If <I>g_ID[N]</I> is used, the custom
+attribute must be an array, and N must be in the range from 1-M, which
+will output the Nth column of the M-column array.
+</P>
 <P>The <I>c_ID</I> and <I>c_ID[I]</I> attributes allow per-grid vectors or arrays
 calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in the
 attribute should be replaced by the actual ID of the compute that has
@@ -424,14 +439,12 @@ points of the surface element.  The <I>v1z</I>, <I>v2z</I>, <I>v3x</I>, <I>v3y</
 <I>v3z</I> attributes cannot be used for a 2d simulation.
 </P>
 <P>The <I>s_ID</I> and <I>s_ID[N]</I> attributes allow custom per-surf vectors or
-arrays defined by a <A HREF = "fix.html">fix</A> or <A HREF = "surf_react.html">surf_react</A>
-command to be output.  The ID in the attribute should be replaced by
-the actual ID of the custom per-surf attribute that the fix or
-surf_react command defines.  See individal commands for details.
-E.g. the <A HREF = "fix_surf_temp.html">fix surf/temp</A> command defines a custom
-vector named by the user for the temperature of each surface element.
-And the <A HREF = "surf_react_adsorb.html">surf_react adsorb</A> command defines one
-per-surf array and 3 vectors.
+arrays defined by the <A HREF = "read_surf.html">read_surf</A>, <A HREF = "fix_surf_temp.html">fix
+surf/temp</A>, or <A HREF = "surf_react_adsorb.html">surf_react
+adsorb</A> command to be output.  The ID in the
+attribute should be replaced by the actual ID of the custom per-surf
+attribute that the command defines.  See individal commands for
+details.
 </P>
 <P>If <I>s_ID</I> is used as a attribute, the custom attribute must be a
 vector, and it is output.  If <I>s_ID[N]</I> is used, the custom

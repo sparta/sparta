@@ -57,6 +57,10 @@ class DumpGrid : public Dump {
   int *variable;             // list of indices for the Variables
   double **vbuf;             // local storage for variable evaluation
 
+  int ncustom;               // # of grid Custom attributes used by dump
+  char **id_custom;          // their IDs
+  int *custom;               // list of indices for the Custom attributes
+
   int *cpart;                // indices into grid->cells for cells with particles
   int ncpart;                // # of owned grid cells with particles
   int maxgrid;               // max length of per-grid variable vectors
@@ -70,6 +74,7 @@ class DumpGrid : public Dump {
   void write_data(int, double *);
 
   int parse_fields(int, char **);
+  int add_custom(char *);
   int add_compute(char *);
   int add_fix(char *);
   int add_variable(char *);
@@ -94,6 +99,7 @@ class DumpGrid : public Dump {
   void pack_compute(int);
   void pack_fix(int);
   void pack_variable(int);
+  void pack_custom(int);
 
   void pack_id(int);
   void pack_split(int);

@@ -27,6 +27,7 @@ using namespace SPARTA_NS;
 
 #define MAXLINE 256
 #define CHUNK 1024
+#define DELTA_CUSTOM 8192
 
 /* ---------------------------------------------------------------------- */
 
@@ -101,6 +102,23 @@ void ReadGrid::read(char *filename, int external)
     else fclose(fp);
   }
 
+  // new per-proc grid cell count has now been set
+  // reset existing custom per-grid vectors/arrays to new lengths
+  // NOTE: is this necessary ?
+  
+  //grid->reallocate_custom_all();
+    
+  // create and populate any custom per-grid vectors and arrays
+
+  if (ncustom) {
+    create_custom();
+    memory->destroy(cvalues);
+    for (int ic = 0; ic < ncustom; ic++) delete [] name_custom[ic];
+    memory->sfree(name_custom);
+    memory->destroy(type_custom);
+    memory->destroy(size_custom);
+  }
+  
   // invoke grid methods to complete grid setup
 
   MPI_Barrier(world);
@@ -200,30 +218,136 @@ void ReadGrid::create_cells(int n, char *buf)
   char *next,*idptr;
   double lo[3],hi[3];
 
-  double *boxlo = domain->boxlo;
-  double *boxhi = domain->boxhi;
+  // nwords_required = # of words per line
+
+  int nwords_required = 1 + nvalues_custom;
+  double *custom = new double[nvalues_custom];
 
   // create one child cell for each line
   // assign to procs in round-robin fasion
 
-  for (int i = 0; i < n; i++) {
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  int i,ic,iv,icvalue;
+
+  for (i = 0; i < n; i++) {
     next = strchr(buf,'\n');
 
     if (me == whichproc) {
+      *next = '\0';
+      int nwords = input->count_words(buf);
+      *next = '\n';
+
+      if (nwords != nwords_required)
+	error->one(FLERR,"Incorrect line format in grid file");
+
       idptr = strtok(buf," \t\n\r\f");
       id = ATOCELLINT(idptr);
       if (id < 0) error->all(FLERR,"Invalid cell ID in grid file");
+
+      if (ncustom) {
+	icvalue = 0;
+	for (ic = 0; ic < ncustom; ic++) {
+	  if (type_custom[ic] == 0) {
+	    if (size_custom[ic] == 0)
+	      custom[icvalue++] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+	    else
+	      for (iv = 0; iv < size_custom[ic]; iv++)
+		custom[icvalue++] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+	  }
+	  if (size_custom[ic] == 0)
+	    custom[icvalue++] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+	  else
+	    for (iv = 0; iv < size_custom[ic]; iv++)
+	      custom[icvalue++] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+	}
+      }
 
       level = grid->id_level(id);
       if (level < 0) error->one(FLERR,"Cell ID in grid file exceeds maxlevel");
       grid->id_lohi(id,level,boxlo,boxhi,lo,hi);
       grid->add_child_cell(id,level,lo,hi);
+      add_custom(custom);
     }
 
     whichproc++;
     if (whichproc == nprocs) whichproc = 0;
 
     buf = next + 1;
+  }
+
+  // clean up custom value storage
+  
+  delete [] custom;
+}
+
+/* ----------------------------------------------------------------------
+   append custom values for one grid cell to values_custom array
+   grow values_custom as needed
+------------------------------------------------------------------------- */
+
+void ReadGrid::add_custom(double *custom)
+{
+  if (nclocal == ncmax) {
+    ncmax += DELTA_CUSTOM;
+    memory->grow(cvalues,ncmax,nvalues_custom,"readgrid:cvalues");
+  }
+
+  for (int ivalue = 0; ivalue < nvalues_custom; ivalue++)
+    cvalues[nclocal][ivalue] = custom[ivalue];
+  
+  nclocal++;
+}
+
+/* ----------------------------------------------------------------------
+   create custom per-grid vectors and arrays
+   cannot be done until after grid file is read and grid->nlocal is valid
+     b/c grid->add_custom() uses nlocal to allocate per-grid vector/array
+   populate each vector or array with read-in cvalues
+------------------------------------------------------------------------- */
+
+void ReadGrid::create_custom()
+{
+  int i,j,index;
+  int *ivector,**iarray;
+  double *dvector,**darray;
+  
+  int nlocal = grid->nlocal;
+  int icvalue = 0;
+
+  for (int ic = 0; ic < ncustom; ic++) {
+    index = grid->add_custom(name_custom[ic],type_custom[ic],size_custom[ic],0);
+    index_custom[ic] = index;
+    
+    if (type_custom[ic] == 0) {
+      if (size_custom[ic] == 0) {
+	ivector = grid->eivec[grid->ewhich[index]];
+	for (i = 0; i < nlocal; i++)
+	  ivector[i] = static_cast<int> (cvalues[i][icvalue]);
+	icvalue++;
+      } else {
+	iarray = grid->eiarray[grid->ewhich[index]];
+	for (i = 0; i < nlocal; i++)
+	  for (j = 0; j < size_custom[ic]; j++)
+	    iarray[i][j] = static_cast<int> (cvalues[i][icvalue+j]);
+	icvalue += size_custom[ic];
+      }
+      
+    } else {
+      if (size_custom[ic] == 0) {
+	dvector = grid->edvec[grid->ewhich[index]];
+	for (i = 0; i < nlocal; i++)
+	  dvector[i] = cvalues[i][icvalue];
+	icvalue++;
+      } else {
+	darray = grid->edarray[grid->ewhich[index]];
+	for (i = 0; i < nlocal; i++)
+	  for (j = 0; j < size_custom[ic]; j++)
+	    darray[i][j] = cvalues[i][icvalue+j];
+	icvalue += size_custom[ic];
+      }
+    }
   }
 }
 

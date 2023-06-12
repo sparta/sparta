@@ -146,7 +146,7 @@ void ReadSurf::command(int narg, char **arg)
 
   if (ncustom) {
     if (surf->distributed)
-      error->all(FLERR,"Read surf custom values not compatible with distributed surfs");
+      error->all(FLERR,"Read surf custom not allowed for distributed surfs");
     for (int ic = 0; ic < ncustom; ic++)
       if (size_custom[ic] == 0) nvalues_custom++;
       else nvalues_custom += size_custom[ic];
@@ -1102,8 +1102,6 @@ void ReadSurf::read_lines(int storeflag)
 	  }
 	}
 
-	printf("ONELINE %d %g\n",id,custom[0]);
-	
         if (storeflag == LOCAL) {
           surf->add_line(id,type,pts[p1-1].x,pts[p2-1].x);
 	  add_custom(custom);
@@ -1388,8 +1386,7 @@ void ReadSurf::add_custom(double *custom)
 
   for (int ivalue = 0; ivalue < nvalues_custom; ivalue++)
     cvalues[nclocal][ivalue] = custom[ivalue];
-
-  printf("ADDCUST %d %d %g %g\n",nvalues_custom,nclocal,custom[0],cvalues[nclocal][0]);
+  
   nclocal++;
 }
 
