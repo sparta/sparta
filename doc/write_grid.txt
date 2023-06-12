@@ -10,7 +10,7 @@ write_grid command :h3
 
 [Syntax:]
 
-write_grid filename :pre
+write_grid filename keyword arg ... :pre
 
 filename = name of file to write grid info to :ulb,l
 zero or more keyword/args pairs may be appended :l
