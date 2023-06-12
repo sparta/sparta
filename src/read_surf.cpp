@@ -132,6 +132,9 @@ void ReadSurf::command(int narg, char **arg)
       if (strcmp(arg[iarg+2],"int") == 0) type_custom[ncustom] = 0;
       else if (strcmp(arg[iarg+2],"float") == 0) type_custom[ncustom] = 1;
       else error->all(FLERR,"Invalid read_surf command");
+      size_custom[ncustom] = input->inumeric(FLERR,arg[iarg+3]);
+      if (size_custom[ncustom] < 0)
+	error->all(FLERR,"Invalid read_surf command");
       ncustom++;
       
       iarg += 4;
