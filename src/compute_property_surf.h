@@ -14,48 +14,53 @@
 
 #ifdef COMPUTE_CLASS
 
-ComputeStyle(property/grid,ComputePropertyGrid)
+ComputeStyle(property/surf,ComputePropertySurf)
 
 #else
 
-#ifndef SPARTA_COMPUTE_PROPERTY_GRID_H
-#define SPARTA_COMPUTE_PROPERTY_GRID_H
+#ifndef SPARTA_COMPUTE_PROPERTY_SURF_H
+#define SPARTA_COMPUTE_PROPERTY_SURF_H
 
 #include "compute.h"
 
 namespace SPARTA_NS {
 
-class ComputePropertyGrid : public Compute {
+class ComputePropertySurf : public Compute {
  public:
-  ComputePropertyGrid(class SPARTA *, int, char **);
-  ~ComputePropertyGrid();
+  ComputePropertySurf(class SPARTA *, int, char **);
+  ~ComputePropertySurf();
   void init();
-  void compute_per_grid();
-  void reallocate();
+  void compute_per_surf();
   bigint memory_usage();
 
  protected:
   int groupbit,nvalues;
-  int dimension,nglocal;
-  double *buf;
+  int dimension,distributed,nslocal;
 
-  typedef void (ComputePropertyGrid::*FnPtrPack)(int);
+  typedef void (ComputePropertySurf::*FnPtrPack)(int);
   FnPtrPack *pack_choice;              // ptrs to pack functions
 
+  double *buf;
+
   void pack_id(int);
-  void pack_proc(int);
   
-  void pack_xlo(int);
-  void pack_ylo(int);
-  void pack_zlo(int);
-  void pack_xhi(int);
-  void pack_yhi(int);
-  void pack_zhi(int);
+  void pack_v1x(int);
+  void pack_v1y(int);
+  void pack_v1z(int);
+  void pack_v2x(int);
+  void pack_v2y(int);
+  void pack_v2z(int);
+  void pack_v3x(int);
+  void pack_v3y(int);
+  void pack_v3z(int);
   void pack_xc(int);
   void pack_yc(int);
   void pack_zc(int);
 
-  void pack_vol(int);
+  void pack_area(int);
+  void pack_normx(int);
+  void pack_normy(int);
+  void pack_normz(int);
 };
 
 }

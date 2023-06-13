@@ -138,7 +138,7 @@ void ComputeSurf::init()
     error->all(FLERR,"Cannot use compute surf when surfs do not exist");
   if (surf->implicit)
     error->all(FLERR,"Cannot use compute surf with implicit surfs");
-
+  
   if (ngroup != particle->mixture[imix]->ngroup)
     error->all(FLERR,"Number of groups in compute surf mixture has changed");
 

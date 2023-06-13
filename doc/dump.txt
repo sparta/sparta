@@ -68,8 +68,8 @@ args = list of arguments for a particular style :l
 
       id = surface element ID
       v1x,v1y,v1z = coords of 1st vertex in surface element
-      v1x,v1y,v1z = coords of 2nd vertex in surface element
-      v1x,v1y,v1z = coords of 3rd vertex in surface element
+      v2x,v2y,v3z = coords of 2nd vertex in surface element
+      v3x,v3y,v3z = coords of 3rd vertex in surface element
       s_ID = custom per-surf vector with ID
       s_ID\[N\] = Nth column of custom per-surf array with ID
       c_ID = per-surf vector calculated by a compute with ID
