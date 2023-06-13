@@ -79,6 +79,7 @@ styles available in SPARTA:
 "emit/face"_fix_emit_face.html - emit particles at global boundaries
 "emit/face/kk"_fix_emit_face.html - Kokkos version of fix emit/face
 "emit/face/file"_fix_emit_face_file.html - emit particles at global boundaries using a distribution defined in a file
+"emit/region"_fix_emit_region.html - emit particles with region of grid cells
 "emit/surf"_fix_emit_surf.html - emit particles at surfaces
 "field/grid"_fix_field_grid.html - apply an external field on a per grid cell basis
 "field/particle"_fix_field_particle.html - apply an external field on a per particle basis

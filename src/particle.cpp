@@ -260,6 +260,7 @@ void Particle::compress_migrate(int nmigrate, int *mlist)
    called from Comm::migrate_cells() when cells+particles migrate on rebalance
    called from AdaptGrid when coarsening occurs
    called from ReadSurf to remove particles from cells with surfs
+   called from FixEmitRegion to remove particles from insertion region
    this does NOT preserve particle sorting
 ------------------------------------------------------------------------- */
 

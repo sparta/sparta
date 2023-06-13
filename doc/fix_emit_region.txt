@@ -1,0 +1,126 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+fix emit/region command :h3
+
+[Syntax:]
+
+fix ID emit/region mix-ID group-ID mode keyword value(s) ... :pre
+
+ID is documented in "fix"_fix.html command :ulb,l
+emit/region = style name of this fix command :l
+mix-ID = ID of mixture to use when creating particles :l
+group-ID = ID of group of grid cells :l
+mode = {mb} or {ce} for Maxwell-Boltzmann or Chapman-Enskog distribution
+zero or more keyword/value(s) pairs may be appended :l
+keyword = {n} or {nevery} :l
+  {n} value = Np = number of particles to create
+  {nevery} value = Nstep = add particles every this many timesteps :pre
+:ule
+
+[Examples:]
+
+fix in emit/region air leftside mb n 1000
+fix in emit/region air cfd_overlap ce :pre
+
+[Description:]
+
+Emit particles from within a group of grid cells, continuously during
+a simulation.  In invoked every timestep, this fix creates a
+continuous influx of particles within a geometric region of the
+simulation box.  It is designed to be used when coupling SPARTA to a
+computational fluid dynamics (CFD) code using a simulation geometry
+similar to the following diagram:
+
+NOTE: insert a 3-subdomain figure for CFD, CFD+DSMC, DSMC regions.
+
+This fix performs two operations each time it is invoked.  The first
+operation is to delete all particles within grid cells in the
+specified group.  The second operation is to insert new particles in
+the same grid cells.  This fix thus effectively replaces all particles
+with the group of grid cells.  Note that particles are only deleted
+and added to cells which are not intersected by surface elements.
+
+Properties of the added particles are determined by the mixture with
+ID {mix-ID}.  The mixture density determines the number of particles
+added to each grid cell, consistent with its size and the {fnum} ratio
+specified by the "global"_global.html" command.
+
+If the number of particles {M} to add to a cell has a fractional
+value, e.g. 12.5, then 12 particles are added, and a 13th depending on
+the value of a random number.  Each particle is added at a random
+location within the grid cell.  The particle species is chosen
+randomly in accord with the {frac} settings of the collection of
+species in the mixture, as set by the "mixture"_mixture.html command.
+
+Each new particle is assigned a thermal velocity consistent with the
+thermal temperature of the mixture and the specified {mode} setting.
+For {mb} the Maxwell-Boltzmann distribution is used, the same as for
+the "create_particles"_create_particles.html command.  For {ce} the
+Chapman-Enskog distribution is used.
+
+NOTE: add a description of the C-E distribution, words and equations.
+Explain why the user would want to use one versus the other.
+
+The total velocity of each particle is set to the sum of its thermal
+velocity and the streaming velocity of the mixture.  The internal
+energy modes of the particle are determined by the {trot} and {tvib}
+settings of the mixture and the {rotate} and {vibrate} options of the
+"collide_modify"_collide_modify.html command.  Note that if the
+"collide"_collide.html command has not been specified (free molecular
+flow), then no rotational or vibrational energy will be assigned to
+created particles.
+
+NOTE: explain more about how CFD + DSMC coupling is performed using
+this fix.
+
+:line
+
+The {n} keyword can alter how many particles are added, which can be
+useful for debugging purposes.  If {Np} is set to 0, then the number
+of added particles is a function of {fnum}, {nrho}, and other mixture
+settings, as described above.  If {Np} is set to a value > 0, then the
+{fnum} and {nrho} settings are ignored, and exactly {Np} particles are
+added on each insertion timestep.  This is done by dividing {Np} by
+the total number of grid cells that are adjacent to the specified box
+faces and adding an equal number of particles per grid cell.
+
+The {nevery} keyword determines how often particles are added.  If
+{Nstep} > 1, this may give a non-continuous, clumpy distribution in
+the inlet flow field.
+
+:line
+
+[Restart, output info:]
+
+No information about this fix is written to "binary restart
+files"_restart.html.
+
+This fix computes a global vector of length 2 which can be accessed by
+various output commands.  The first element of the vector is the total
+number of particles added on the most recent insertion step.  The
+second element is the cummulative total number added since the
+beginning of the run.  The 2nd value is initialized to zero each time
+a run is performed.
+
+:line
+
+[Restrictions:] none
+
+[Related commands:]
+
+"mixture"_mixture.html, "create_particles"_create_particles.html, "fix
+emit/face"_fix_emit_face.html
+
+[Default:]
+
+The keyword defaults are n = 0 and nevery = 1.
+
+:line
+
+NOTE: Add a citation or two for papers which couple CFD to DSMC.
