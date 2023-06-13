@@ -54,6 +54,7 @@ class DumpSurf : public Dump {
   char **id_variable;        // their names
   int *variable;             // list of indices for the Variables
   double **vbuf;             // local storage for variable evaluation
+  int maxsurf;               // max length of per-surf variable vectors
 
   int ncustom;               // # of surf Custom attributes used by dump
   char **id_custom;          // their IDs

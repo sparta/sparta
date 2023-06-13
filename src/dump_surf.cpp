@@ -111,6 +111,10 @@ DumpSurf::DumpSurf(SPARTA *sparta, int narg, char **arg) :
   size_one = nfield;
   ioptional = narg - noptional;
 
+  // max length of per-surf variable vectors
+
+  maxsurf = 0;
+
   // setup format strings
 
   vformat = new char*[nfield];
@@ -353,6 +357,17 @@ void DumpSurf::header_item(bigint ndump)
 
 int DumpSurf::count()
 {
+  // grow variable vbuf arrays if needed
+
+  int nslocal = surf->nlocal;
+  if (nslocal > maxsurf) {
+    maxsurf = surf->nlocal;
+    for (int i = 0; i < nvariable; i++) {
+      memory->destroy(vbuf[i]);
+      memory->create(vbuf[i],maxsurf,"dump:vbuf");
+    }
+  }
+
   // invoke Computes for per-surf quantities
 
   if (ncompute) {
@@ -772,8 +787,6 @@ void DumpSurf::pack_fix(int n)
 void DumpSurf::pack_variable(int n)
 {
   double *vector = vbuf[field2index[n]];
-
-  // NOTE: when add surf variables, check this logic
 
   for (int i = 0; i < nchoose; i++) {
     buf[n] = vector[clocal[i]];
