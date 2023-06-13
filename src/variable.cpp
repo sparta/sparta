@@ -437,13 +437,30 @@ void Variable::set(int narg, char **arg)
       copy(1,&arg[2],data[nvar]);
     }
 
-  // SURF (not implemented yet)
+  // SURF
   // replace pre-existing var if also style SURF (allows it to be reset)
   // num = 1, which = 1st value
   // data = 1 value, string to eval
 
   } else if (strcmp(arg[1],"surf") == 0) {
-    error->all(FLERR,"Surf-style variables are not yet implemented");
+    
+    if (narg != 3) error->all(FLERR,"Illegal variable command");
+    int ivar = find(arg[0]);
+    if (ivar >= 0) {
+      if (style[find(arg[0])] != SURF)
+        error->all(FLERR,"Cannot redefine variable as a different style");
+      delete [] data[ivar][0];
+      copy(1,&arg[2],data[ivar]);
+      replaceflag = 1;
+    } else {
+      if (nvar == maxvar) grow();
+      style[nvar] = SURF;
+      num[nvar] = 1;
+      which[nvar] = 0;
+      pad[nvar] = 0;
+      data[nvar] = new char*[num[nvar]];
+      copy(1,&arg[2],data[nvar]);
+    }
 
   // INTERNAL
   // replace pre-existing var if also style INTERNAL (allows it to be reset)
@@ -526,13 +543,13 @@ int Variable::next(int narg, char **arg)
       error->all(FLERR,"All variables in next command must be same style");
   }
 
-  // invalid styles: STRING, EQUAL, WORLD, PARTICLE, GRID, GETENV,
-  //                 FORMAT, INTERNAL
+  // invalid styles: STRING, EQUAL, WORLD, PARTICLE, GRID, SURF,
+  //                 GETENV, FORMAT, INTERNAL
 
   int istyle = style[find(arg[0])];
   if (istyle == STRING || istyle == EQUAL || istyle == WORLD ||
       istyle == GETENV || istyle == PARTICLE || istyle == GRID ||
-      istyle == FORMAT || istyle == INTERNAL)
+      istyle == SURF || istyle == FORMAT || istyle == INTERNAL)
     error->all(FLERR,"Invalid variable style with next command");
 
   // if istyle = UNIVERSE or ULOOP, insure all such variables are incremented
@@ -643,7 +660,7 @@ int Variable::next(int narg, char **arg)
    if EQUAL var, evaluate variable and put result in str
    if FORMAT var, evaluate its variable and put formatted result in str
    if GETENV var, query environment and put result in str
-   if PARTICLE or GRID var, return NULL
+   if PARTICLE or GRID or SURF var, return NULL
    if INTERNAL, convert dvalue and put result in str
    return NULL if no variable with name or which value is bad,
      caller must respond
@@ -697,8 +714,9 @@ char *Variable::retrieve(char *name)
   } else if (style[ivar] == INTERNAL) {
     sprintf(data[ivar][0],"%.15g",dvalue[ivar]);
     str = data[ivar][0];
-  } else if (style[ivar] == PARTICLE || style[ivar] == GRID) return NULL;
-
+  } else if (style[ivar] == PARTICLE || style[ivar] == GRID ||
+	     style[ivar] == SURF) return NULL;
+  
   return str;
 }
 
@@ -805,6 +823,48 @@ void Variable::compute_grid(int ivar, double *result,
   } else {
     int m = 0;
     for (int i = 0; i < nglocal; i++) {
+      result[m] += eval_tree(tree,i);
+      m += stride;
+    }
+  }
+
+  free_tree(tree);
+
+  eval_in_progress[ivar] = 0;
+}
+
+/* ----------------------------------------------------------------------
+   compute result of surf-style variable evaluation
+   answers are placed every stride locations into result
+   if sumflag, add variable values to existing result
+------------------------------------------------------------------------- */
+
+void Variable::compute_surf(int ivar, double *result,
+                            int stride, int sumflag)
+{
+  Tree *tree;
+
+  if (eval_in_progress[ivar])
+    error->all(FLERR,"Variable has circular dependency");
+  eval_in_progress[ivar] = 1;
+
+  nvec_storage = 0;
+  treestyle = SURF;
+  evaluate(data[ivar][0],&tree);
+  collapse_tree(tree);
+
+  int nslocal = surf->nlocal;
+
+  if (sumflag == 0) {
+    int m = 0;
+    for (int i = 0; i < nslocal; i++) {
+      result[m] = eval_tree(tree,i);
+      m += stride;
+    }
+
+  } else {
+    int m = 0;
+    for (int i = 0; i < nslocal; i++) {
       result[m] += eval_tree(tree,i);
       m += stride;
     }
@@ -970,7 +1030,7 @@ void Variable::copy(int narg, char **from, char **to)
      variable = v_name
    equal-style variable passes in tree = NULL:
      evaluate the formula, return result as a double
-   particle-style or grid-style variable passes in tree = non-NULL:
+   particle-style or grid-style or surf-style variable passes in tree = non-NULL:
      parse the formula but do not evaluate it
      create a parse tree and return it
 ------------------------------------------------------------------------- */
@@ -1277,7 +1337,7 @@ double Variable::evaluate(char *str, Tree **tree)
         // if compute sets post_process_grid_flag:
         //   then values are in computes's vector_grid,
         //   must store them locally via add_vector()
-        //   since compute's vector_grid be overwritten
+        //   since compute's vector_grid will be overwritten
         //   if this variable accesses multiple columns from compute's array
 
         } else if (nbracket == 1 && compute->per_grid_flag &&
@@ -1316,6 +1376,65 @@ double Variable::evaluate(char *str, Tree **tree)
           newtree->left = newtree->middle = newtree->right = NULL;
           treestack[ntreestack++] = newtree;
 
+	// c_ID = vector from per-surf vector
+
+        } else if (nbracket == 0 && compute->per_surf_flag &&
+                   compute->size_per_surf_cols == 0) {
+
+          if (tree == NULL || treestyle != SURF)
+            error->all(FLERR,"Per-surf compute in "
+                       "non surf-style variable formula");
+          if (update->runflag == 0) {
+            if (compute->invoked_per_grid != update->ntimestep)
+              error->all(FLERR,"Compute used in variable between runs "
+                         "is not current");
+          } else if (!(compute->invoked_flag & INVOKED_PER_SURF)) {
+            compute->compute_per_surf();
+            compute->invoked_flag |= INVOKED_PER_SURF;
+          }
+
+	  compute->post_process_surf();
+
+          Tree *newtree = new Tree();
+          newtree->type = ARRAY;
+          newtree->array = compute->vector_surf;
+          newtree->nstride = 1;
+          newtree->selfalloc = 0;
+          newtree->left = newtree->middle = newtree->right = NULL;
+          treestack[ntreestack++] = newtree;
+	  
+	// c_ID[i] = vector from per-surf array
+
+        } else if (nbracket == 1 && compute->per_surf_flag &&
+                   compute->size_per_surf_cols > 0) {
+
+          if (tree == NULL || treestyle != SURF)
+            error->all(FLERR,"Per-surf compute in "
+                       "non surf-style variable formula");
+          if (index1 > compute->size_per_surf_cols)
+            error->all(FLERR,"Variable formula compute array "
+                       "is accessed out-of-range");
+          if (update->runflag == 0) {
+            if (compute->invoked_per_surf != update->ntimestep)
+              error->all(FLERR,"Compute used in variable between runs "
+                         "is not current");
+          } else if (!(compute->invoked_flag & INVOKED_PER_SURF)) {
+            compute->compute_per_surf();
+            compute->invoked_flag |= INVOKED_PER_SURF;
+          }
+
+	  compute->post_process_surf();
+
+          Tree *newtree = new Tree();
+          newtree->type = ARRAY;
+	  newtree->array = &compute->array_surf[0][index1-1];
+	  newtree->nstride = compute->size_per_surf_cols;
+          newtree->selfalloc = 0;
+          newtree->left = newtree->middle = newtree->right = NULL;
+          treestack[ntreestack++] = newtree;
+
+	// unrecognized compute
+	  
         } else error->all(FLERR,"Mismatched compute in variable formula");
 
       // ----------------
@@ -1497,7 +1616,52 @@ double Variable::evaluate(char *str, Tree **tree)
           newtree->left = newtree->middle = newtree->right = NULL;
           treestack[ntreestack++] = newtree;
 
-        } else error->all(FLERR,"Mismatched fix in variable formula");
+        // f_ID = vector from per-surf vector
+
+        } else if (nbracket == 0 && fix->per_surf_flag &&
+                   fix->size_per_surf_cols == 0) {
+
+          if (tree == NULL || treestyle != SURF)
+            error->all(FLERR,"Per-surf fix in "
+                       "non surf-style variable formula");
+          if (update->runflag > 0 &&
+              update->ntimestep % fix->per_surf_freq)
+            error->all(FLERR,"Fix in variable not computed at compatible time");
+
+          Tree *newtree = new Tree();
+          newtree->type = ARRAY;
+          newtree->array = fix->vector_surf;
+          newtree->nstride = 1;
+          newtree->selfalloc = 0;
+          newtree->left = newtree->middle = newtree->right = NULL;
+          treestack[ntreestack++] = newtree;
+
+        // f_ID[i] = vector from per-surf array
+
+        } else if (nbracket == 1 && fix->per_surf_flag &&
+                   fix->size_per_surf_cols > 0) {
+
+          if (tree == NULL || treestyle != SURF)
+            error->all(FLERR,"Per-surf fix in "
+                       "non surf-style variable formula");
+          if (index1 > fix->size_per_surf_cols)
+            error->all(FLERR,
+                       "Variable formula fix array is accessed out-of-range");
+          if (update->runflag > 0 &&
+              update->ntimestep % fix->per_surf_freq)
+            error->all(FLERR,"Fix in variable not computed at compatible time");
+
+          Tree *newtree = new Tree();
+          newtree->type = ARRAY;
+          newtree->array = &fix->array_surf[0][index1-1];
+          newtree->nstride = fix->size_per_surf_cols;
+          newtree->selfalloc = 0;
+          newtree->left = newtree->middle = newtree->right = NULL;
+          treestack[ntreestack++] = newtree;
+
+	// unrecognized fix
+	  
+	} else error->all(FLERR,"Mismatched fix in variable formula");
 
       // ----------------
       // surface collide model
@@ -1654,11 +1818,11 @@ double Variable::evaluate(char *str, Tree **tree)
             treestack[ntreestack++] = newtree;
           } else argstack[nargstack++] = value1;
 
-        // v_name = scalar from non particle/grid variable
+        // v_name = scalar from non particle/grid/surf variable
         // access value via retrieve()
 
         } else if (nbracket == 0 && style[ivar] != PARTICLE &&
-                   style[ivar] != GRID) {
+                   style[ivar] != GRID && style[ivar] != SURF) {
 
           char *var = retrieve(id);
           if (var == NULL)
@@ -1695,6 +1859,20 @@ double Variable::evaluate(char *str, Tree **tree)
           evaluate(data[ivar][0],&newtree);
           treestack[ntreestack++] = newtree;
 
+        // v_name = per-surf vector from grid-style variable
+        // evaluate the surf-style variable as newtree
+
+        } else if (nbracket == 0 && style[ivar] == SURF) {
+
+          if (tree == NULL || treestyle != SURF)
+            error->all(FLERR,"Per-surf variable in "
+                       "non surf-style variable formula");
+          Tree *newtree;
+          evaluate(data[ivar][0],&newtree);
+          treestack[ntreestack++] = newtree;
+
+	// unrecognized variable
+	  
         } else error->all(FLERR,"Mismatched variable in variable formula");
 
         delete [] id;
@@ -1741,6 +1919,16 @@ double Variable::evaluate(char *str, Tree **tree)
             error->all(FLERR,
                        "Variable evaluation before simulation box is defined");
           grid_vector(word,tree,treestack,ntreestack);
+
+        // ----------------
+        // surf vector
+        // ----------------
+
+        } else if (is_surf_vector(word)) {
+          if (domain->box_exist == 0)
+            error->all(FLERR,
+                       "Variable evaluation before simulation box is defined");
+          surf_vector(word,tree,treestack,ntreestack);
 
         // ----------------
         // constant
@@ -3473,6 +3661,67 @@ void Variable::grid_vector(char *word, Tree **tree,
   if (tree == NULL || treestyle != GRID)
     error->all(FLERR,"Grid vector in non grid-style variable formula");
 
+  Grid::ChildCell *cells = grid->cells;
+
+  Tree *newtree = new Tree();
+  newtree->type = PARTARRAYDOUBLE;
+  newtree->nstride = sizeof(Grid::ChildCell);
+  newtree->left = newtree->middle = newtree->right = NULL;
+  treestack[ntreestack++] = newtree;
+
+  if (strcmp(word,"cxlo") == 0)
+    newtree->carray = (char *) &cells[0].lo[0];
+  else if (strcmp(word,"cxhi") == 0)
+    newtree->carray = (char *) &cells[0].hi[0];
+  else if (strcmp(word,"cylo") == 0)
+    newtree->carray = (char *) &cells[0].lo[1];
+  else if (strcmp(word,"cyhi") == 0)
+    newtree->carray = (char *) &cells[0].hi[1];
+  else if (strcmp(word,"czlo") == 0)
+    newtree->carray = (char *) &cells[0].lo[2];
+  else if (strcmp(word,"czhi") == 0)
+    newtree->carray = (char *) &cells[0].hi[2];
+
+  if ((bigint)grid->nlocal*newtree->nstride > MAXSMALLINT)
+    error->all(FLERR,"Too many grid cells per processor for grid-style variable");
+}
+
+/* ----------------------------------------------------------------------
+   check if word matches a surf vector
+   return 1 if yes, else 0
+   customize by adding a surf vector:
+     cxlo,cxhi,cylo,cyhi,czlo,czhi
+------------------------------------------------------------------------- */
+
+int Variable::is_surf_vector(char *word)
+{
+  // NOTE: this code needs work
+
+  if (strcmp(word,"cxlo") == 0) return 1;
+  if (strcmp(word,"cxhi") == 0) return 1;
+  if (strcmp(word,"cylo") == 0) return 1;
+  if (strcmp(word,"cyhi") == 0) return 1;
+  if (strcmp(word,"czlo") == 0) return 1;
+  if (strcmp(word,"czhi") == 0) return 1;
+  return 0;
+}
+
+/* ----------------------------------------------------------------------
+   process a surf vector in formula
+   push result onto tree
+   word = surf vector
+   customize by adding a surf vector:
+     cxlo,cxhi,cylo,cyhi,czlo,czhi
+------------------------------------------------------------------------- */
+
+void Variable::surf_vector(char *word, Tree **tree,
+                           Tree **treestack, int &ntreestack)
+{
+  if (tree == NULL || treestyle != SURF)
+    error->all(FLERR,"Surf vector in non surf-style variable formula");
+
+  // NOTE: this code needs work
+  
   Grid::ChildCell *cells = grid->cells;
 
   Tree *newtree = new Tree();

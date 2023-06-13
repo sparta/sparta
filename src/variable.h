@@ -40,7 +40,7 @@ class Variable : protected Pointers {
   double compute_equal(char *);
   void compute_particle(int, double *, int, int);
   void compute_grid(int, double *, int, int);
-  void compute_surf(int, double *, int, int) {}  // not yet supported
+  void compute_surf(int, double *, int, int);
   void internal_set(int, double);
 
   int int_between_brackets(char *&, int);
@@ -97,10 +97,13 @@ class Variable : protected Pointers {
   int math_function(char *, char *, Tree **, Tree **, int &, double *, int &);
   int special_function(char *, char *, Tree **, Tree **,
                        int &, double *, int &);
+
   int is_particle_vector(char *);
   void particle_vector(char *, Tree **, Tree **, int &);
   int is_grid_vector(char *);
   void grid_vector(char *, Tree **, Tree **, int &);
+  int is_surf_vector(char *);
+  void surf_vector(char *, Tree **, Tree **, int &);
   int is_constant(char *);
   double constant(char *);
   char *find_next_comma(char *);
