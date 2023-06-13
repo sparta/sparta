@@ -155,6 +155,8 @@ void ReadGrid::read(char *filename, int external)
     memory->sfree(name_custom);
     memory->destroy(type_custom);
     memory->destroy(size_custom);
+    memory->destroy(ghost_custom);
+    memory->destroy(index_custom);
   }
   
   // invoke grid methods to complete grid setup
@@ -321,8 +323,8 @@ void ReadGrid::create_cells(int n, char *buf)
 }
 
 /* ----------------------------------------------------------------------
-   append custom values for one grid cell to values_custom array
-   grow values_custom as needed
+   append custom values for one grid cell to cvalues array
+   grow cvalues as needed
 ------------------------------------------------------------------------- */
 
 void ReadGrid::add_custom(double *custom)
