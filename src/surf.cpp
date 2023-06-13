@@ -3726,9 +3726,9 @@ int Surf::add_custom(char *name, int type, int size)
     return index;
   }
 
-  // ensure all existing custom per-surf data is correct current length
+  // ensure all existing custom data is correct current length
 
-  reallocate_custom_all();
+  reallocate_custom();
   
   // assign index to new custom data
   // use first available NULL entry or allocate a new one
@@ -3788,18 +3788,20 @@ int Surf::add_custom(char *name, int type, int size)
     }
   }
 
-  allocate_custom_one(index);
+  // allocate new custom vector or array
+
+  allocate_custom(index);
 
   return index;
 }
 
 /* ----------------------------------------------------------------------
-   allocate custom per-surf vector/array associated with new index
+   allocate ONE custom per-surf vector/array associated with new index
    via memory->create() to current size nlocal
    set all values to 0 via memset()
 ------------------------------------------------------------------------- */
 
-void Surf::allocate_custom_one(int index)
+void Surf::allocate_custom(int index)
 {
   int n = nlocal;
   
@@ -3826,12 +3828,12 @@ void Surf::allocate_custom_one(int index)
 }
 
 /* ----------------------------------------------------------------------
-   reallocate all custom per-surf vectors/arrays
-   via memory->grow() to current nlocal beyond previous size_custom
-   set added values beyond size_custom to 0 via memset()
+   reallocate ALL custom per-surf vectors/arrays to current nlocal size
+   via memory->grow() to grow or shrink nlocal versus previous size_custom
+   if added values beyond size_custom, set them to 0 via memset()
 ------------------------------------------------------------------------- */
 
-void Surf::reallocate_custom_all()
+void Surf::reallocate_custom()
 {
   int nold = size_custom;
   int nnew = nlocal;
@@ -3843,22 +3845,22 @@ void Surf::reallocate_custom_all()
     if (etype[index] == INT) {
       if (esize[index] == 0) {
 	int *ivector = memory->grow(eivec[ewhich[index]],nnew,"surf:eivec");
-	if (ivector) memset(&ivector[nold],0,(nnew-nold)*sizeof(int));
+	if (nnew > nold) memset(&ivector[nold],0,(nnew-nold)*sizeof(int));
       } else {
 	int **iarray = memory->grow(eiarray[ewhich[index]],
 				    nnew,eicol[ewhich[index]],"surf:eiarray");
-	if (iarray)
+	if (nnew > nold)
 	  memset(iarray[nold],0,(nnew-nold)*eicol[ewhich[index]]*sizeof(int));
       }
 
     } else {
       if (esize[index] == 0) {
 	double *dvector = memory->grow(edvec[ewhich[index]],nnew,"surf:edvec");
-	if (dvector) memset(&dvector[nold],0,(nnew-nold)*sizeof(double));
+	if (nnew > nold) memset(&dvector[nold],0,(nnew-nold)*sizeof(double));
       } else {
 	double **darray = memory->grow(edarray[ewhich[index]],
 				       nnew,edcol[ewhich[index]],"surf:eearray");
-	if (darray)
+	if (nnew > nold)
 	  memset(darray[nold],0,(nnew-nold)*edcol[ewhich[index]]*sizeof(double));
       }
     }
@@ -3868,10 +3870,45 @@ void Surf::reallocate_custom_all()
 }
 
 /* ----------------------------------------------------------------------
+   copy custom per-surf data from location I to location J in vectors/arrays
+   called when adding/removing lines/triangles
+   reallocflag = 1 if new line/triangle just added and being copied to
+------------------------------------------------------------------------- */
+
+void Surf::copy_custom(int i, int j, int reallocflag)
+{
+  if (reallocflag) reallocate_custom();
+  
+  for (int ic = 0; ic < ncustom; ic++) {
+    if (!ename[ic]) continue;
+    
+    if (etype[ic] == 0) {
+      if (esize[ic] == 0) {
+	int *ivector = eivec[ewhich[ic]];
+	ivector[j] = ivector[i];
+      } else {
+	int **iarray = eiarray[ewhich[ic]];
+	for (int m = 0; m < esize[ic]; m++)
+	  iarray[j][m] = iarray[i][m];
+      }
+    } else {
+      if (esize[ic] == 0) {
+	double *dvector = edvec[ewhich[ic]];
+	dvector[j] = dvector[i];
+      } else {
+	double **darray = edarray[ewhich[ic]];
+	for (int m = 0; m < esize[ic]; m++)
+	  darray[j][m] = darray[i][m];
+      }
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
    remove a custom attribute at location index
    free memory for name, set name ptr to NULL to indicate removed
    free vector/array or per-surf data
-   ncustom does not shrink, but ncustom i/d vec/array does shrink
+   ncustom does not shrink, but ncustom i/d vec/array lists do shrink
    cross indices bewteen ewhich and i/d vec/array lists must be reset
 ------------------------------------------------------------------------- */
 

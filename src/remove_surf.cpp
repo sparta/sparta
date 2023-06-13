@@ -144,7 +144,8 @@ void RemoveSurf::command(int narg, char **arg)
 
 /* ----------------------------------------------------------------------
    remove all lines in surf group
-   condense data structures by removing deleted points & lines
+   condense data structures by removing deleted lines
+   including any custom per-surf attributes
 ------------------------------------------------------------------------- */
 
 void RemoveSurf::remove_2d(int groupbit)
@@ -156,15 +157,21 @@ void RemoveSurf::remove_2d(int groupbit)
   Surf::Line *lines = surf->lines;
   int nline = surf->nsurf;
   int nbytes = sizeof(Surf::Line);
+  int ncustom = surf->ncustom;
 
   int n = 0;
   for (i = 0; i < nline; i++) {
     if (!(lines[i].mask & groupbit)) continue;
     if (i != n) memcpy(&lines[n],&lines[i],nbytes);
+    if (ncustom) surf->copy_custom(i,n,0);
     n++;
   }
 
-  surf->nsurf = surf->nlocal = nline - n;
+  surf->nsurf = surf->nlocal = n;
+
+  // reallocate custom data after removal is complete
+  
+  if (ncustom) surf->reallocate_custom();
 
   // print stats after removal
 
@@ -184,7 +191,8 @@ void RemoveSurf::remove_2d(int groupbit)
 
 /* ----------------------------------------------------------------------
    remove all triangles in surf group
-   condense data structures by removing deleted points & triangles
+   condense data structures by removing deleted triangles
+   including any custom per-surf attributes
 ------------------------------------------------------------------------- */
 
 void RemoveSurf::remove_3d(int groupbit)
@@ -196,16 +204,22 @@ void RemoveSurf::remove_3d(int groupbit)
   Surf::Tri *tris = surf->tris;
   int ntri = surf->nsurf;
   int nbytes = sizeof(Surf::Tri);
-
+  int ncustom = surf->ncustom;
+  
   int n = 0;
   for (i = 0; i < ntri; i++) {
     if (!(tris[i].mask & groupbit)) continue;
     if (i != n) memcpy(&tris[n],&tris[i],nbytes);
+    if (ncustom) surf->copy_custom(i,n,0);
     n++;
   }
 
-  surf->nsurf = surf->nlocal = ntri - n;
+  surf->nsurf = surf->nlocal = n;
 
+  // reallocate custom data after removal is complete
+
+  if (ncustom) surf->reallocate_custom();
+  
   // print stats after removal
 
   int ntri_remove = ntri - surf->nsurf;

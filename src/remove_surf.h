@@ -36,6 +36,7 @@ class RemoveSurf : protected Pointers {
  private:
   void remove_2d(int);
   void remove_3d(int);
+  void copy_custom(int, int);
 };
 
 }

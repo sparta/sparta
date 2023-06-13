@@ -184,7 +184,7 @@ void ReadSurf::command(int narg, char **arg)
   // new surface element count has now been set
   // reset existing custom per-surf vectors/arrays to new lengths
 
-  surf->reallocate_custom_all();
+  surf->reallocate_custom();
     
   // create and populate any custom per-surf vectors and arrays
   // specified with this read_surf command
@@ -208,8 +208,10 @@ void ReadSurf::command(int narg, char **arg)
   // parse command-line args after type/custom
   // apply geometric transformations when parsed
   // apply keywords group,typeadd,transparent,particle,file below
+  // clip operation may grow/shrink surf element count so realloc custom data
   
   process_args(iarg,narg,arg);
+  surf->reallocate_custom();
 
   // error test on particles
 
@@ -1444,48 +1446,6 @@ void ReadSurf::create_custom()
   }
 }
 
-/* ----------------------------------------------------------------------
-   copy custom per-surf data from location I to location J in vectors/arrays
-   called when discarding surf elements in clip2d/clip3d to compress list
-   called when adding new surf elements in clip3d, e.g. trapezoid -> 2 tris
-   realloc set when adding to end of current custom vecs/arrays
-------------------------------------------------------------------------- */
-
-void ReadSurf::copy_custom(int i, int j, int realloc)
-{
-  int m,index;
-  int *ivector,**iarray;
-  double *dvector,**darray;
-
-  // must realloc custom per-surf vectors/arrays to +1 length
-  
-  if (realloc) surf->reallocate_custom_all();
-		 
-  for (int ic = 0; ic < ncustom; ic++) {
-    index = index_custom[ic];
-
-    if (type_custom[ic] == 0) {
-      if (size_custom[ic] == 0) {
-	ivector = surf->eivec[surf->ewhich[index]];
-	ivector[j] = ivector[i];
-      } else {
-	iarray = surf->eiarray[surf->ewhich[index]];
-	for (m = 0; m < size_custom[ic]; m++)
-	  iarray[j][m] = iarray[i][m];
-      }
-    } else {
-      if (size_custom[ic] == 0) {
-	dvector = surf->edvec[surf->ewhich[index]];
-	dvector[j] = dvector[i];
-      } else {
-	darray = surf->edarray[surf->ewhich[index]];
-	for (m = 0; m < size_custom[ic]; m++)
-	  darray[j][m] = darray[i][m];
-      }
-    }
-  }
-}
-
 // -----------------------
 // transform surface elements
 // -----------------------
@@ -1926,7 +1886,7 @@ void ReadSurf::clip2d()
   for (i = nsurf_old; i < nsurf_new; i++) {
     if (!discard[i-nsurf_old]) {
       if (n != i) memcpy(&lines[n],&lines[i],sizeof(Surf::Line));
-      if (ncustom) copy_custom(i,n,0);
+      if (surf->ncustom) surf->copy_custom(i,n,0);
       n++;
     }
   }
@@ -2191,7 +2151,7 @@ void ReadSurf::clip3d()
         } else {
           surf->add_tri(tris[i].id,tris[i].type,in1_copy,x2,x1);
           tris = surf->tris;
-	  if (ncustom) copy_custom(i,surf->nlocal-1,1);
+	  if (surf->ncustom) surf->copy_custom(i,surf->nlocal-1,1);
         }
 
         discard[nsurf_new-nsurf_old+ntri_add] = 0;
@@ -2211,7 +2171,7 @@ void ReadSurf::clip3d()
   for (i = nsurf_old; i < nsurf_new; i++) {
     if (!discard[i-nsurf_old]) {
       if (n != i) memcpy(&tris[n],&tris[i],sizeof(Surf::Tri));
-      if (ncustom) copy_custom(i,n,0);
+      if (surf->ncustom) surf->copy_custom(i,n,0);
       n++;
     }
   }

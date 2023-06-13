@@ -2029,7 +2029,7 @@ void Grid::grow_cells(int n, int m)
 
 /* ----------------------------------------------------------------------
    grow pcells
-   NOTE: need this function for Kokkos
+   need this function for Kokkos
 ------------------------------------------------------------------------- */
 
 void Grid::grow_pcells()

@@ -99,7 +99,6 @@ class ReadSurf : protected Pointers {
   void read_tris(int);
   void add_custom(double *);
   void create_custom();
-  void copy_custom(int, int, int);
   
   void process_args(int, int, char **);
 

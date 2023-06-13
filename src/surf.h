@@ -239,8 +239,9 @@ class Surf : protected Pointers {
 
   int find_custom(char *);
   virtual int add_custom(char *, int, int);
-  virtual void allocate_custom_one(int);
-  virtual void reallocate_custom_all();
+  virtual void allocate_custom(int);
+  virtual void reallocate_custom();
+  void copy_custom(int, int, int);
   virtual void remove_custom(int);
 
   void write_restart(FILE *);
