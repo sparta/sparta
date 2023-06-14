@@ -23,7 +23,8 @@ input = x, y, z, vx, vy, vz, ke, erot, evib, c_ID, c_ID\[N\], f_ID, f_ID\[N\], v
   c_ID\[I\] = Ith column of per-particle or per-grid array calculated by a compute with ID, I can include wildcard (see below)
   f_ID = per-particle or per-grid or per-surf vector calculated by a fix with ID
   f_ID\[I\] = Ith column of per-particle or per-grid or per-surf array calculated by a fix with ID, I can include wildcard (see below)
-  v_name = per-particle or per-grid vector calculated by a particle-style or grid-style variable with name :pre
+  v_name = per-particle or per-grid or per-surf vector calculated by a
+  particle-style or grid-style or surf-style variable with name :pre
 
 zero or more keyword/args pairs may be appended :l
 keyword = {replace} or {subset} :l
@@ -54,13 +55,12 @@ Define a calculation that "reduces" one or more vector inputs into
 scalar values, one per listed input.  The inputs can be per-particle
 or per-grid or per-surf quantities; they cannot be global quantities.
 Particle attributes are per-particle quantities,
-"computes"_compute.html may generate per-particle or per-grid
-quantities, "fixes"_fix.html may generate any of the three kinds of
-quantities, and "particle-style or grid-style variables"_variable.html
-generate per-particle or per-grid quantities.  See the
-"variable"_variable command and its special functions which can
-perform the same operations as the compute reduce command on global
-vectors.
+"computes"_compute.html and "fixes"_fix.html may generate any of the
+three kinds of quantities, and "particle-style, grid-style, and
+surf-style variables"_variable.html generate per-particle, per-grid,
+or per-surf quantities.  See the "variable"_variable command and its
+special functions which can perform the same operations as the compute
+reduce command on global vectors.
 
 IMPORTANT NOTE: All inputs to a compute reduce command must be the
 same type: per-particle, per-grid, or per-surf.  You can use the
@@ -157,12 +157,13 @@ asterisk to effectively specify multiple values.
 
 If a value begins with "v_", a variable name must follow which has
 been previously defined in the input script.  It must be a
-"particle-style or grid-style variable"_variable.html.  Both styles
-define formulas which can reference stats keywords or invoke other
-computes, fixes, or variables when they are evaluated.  Particle-style
-variables can also reference various per-particle attributes
-(position, velocity, etc).  So these variables are a very general
-means of creating per-particle or per-grid quantities to reduce.
+"particle-style or grid-style or surf-stylevariable"_variable.html.
+These styles define formulas which can reference stats keywords or
+invoke other computes, fixes, or variables when they are evaluated.
+Particle-style variables can also reference various per-particle
+attributes (position, velocity, etc).  So these variables are a very
+general means of creating per-particle or per-grid or per-surf
+quantities to reduce.
 
 :line
 
