@@ -23,7 +23,8 @@ value = c_ID, c_ID\[i\], f_ID, f_ID\[i\], v_name :l
   c_ID = per-surf vector (or array) calculated by a compute with ID
   c_ID\[I\] = Ith column of per-surf array calculated by a compute with ID, I can include wildcard (see below)
   f_ID = per-surf vector (or array) calculated by a fix with ID
-  f_ID\[I\] = Ith column of per-surf array calculated by a fix with ID, I can include wildcard (see below) :pre
+  f_ID\[I\] = Ith column of per-surf array calculated by a fix with ID, I can include wildcard (see below)
+   v_name = per-surf vector calculated by a surf-style variable with name :pre
 zero or more keyword/arg pairs may be appended :l
 keyword = {ave}
   {ave} args = one or running
@@ -35,7 +36,15 @@ keyword = {ave}
 
 fix 1 ave/surf all 1 100 100 c_surf ave running
 fix 1 ave/surf leftcircle 10 20 1000 c_mine\[2\]
-fix 1 ave/surf leftcircle 10 20 1000 c_mine\[*\] :pre
+fix 1 ave/surf leftcircle 10 20 1000 c_mine\[*\]
+fix 1 ave/surf all 5 20 100 v_myEng :pre
+
+These commands will dump time averages for each species and each
+surface element to a dump file every 1000 steps:
+
+compute 1 surf all species n press shx shy shz
+fix 1 ave/surf all 10 100 1000 c_1\[*\]
+dump 1 surf all 1000 tmp.surf id f_1\[*\] :pre
 
 [Description:]
 
@@ -49,11 +58,12 @@ group specified by {group-ID} are included in the averaging.  See the
 be assigned to surface groups.
 
 Each input value can be the result of a "compute"_compute.html or
-"fix"_fix.html.  The compute or fix must produce a per-surf vector or
-array, not a global or per-particle or per-grid quantity.  If you wish
-to time-average global quantities from a compute or fix then see the
-"fix ave/time"_fix_ave_time.html command.  To time-average per-grid
-quantities, see the "fix ave/grid"_fix_ave_grid.html command.
+"fix"_fix.html of "surf-style variable"_variable.html.  The compute or
+fix must produce a per-surf vector or array, not a global or
+per-particle or per-grid quantity.  If you wish to time-average global
+quantities from a compute or fix then see the "fix
+ave/time"_fix_ave_time.html command.  To time-average per-grid
+quantities, see the "fix ave/grid"_fix_ave_surf.html command.
 
 Each per-surf value of each input vector is averaged independently.
 
@@ -127,19 +137,29 @@ which must be compatible with {Nevery}, else an error will result.
 Users can also write code for their own fix styles and "add them to
 SPARTA"_Section_modify.html.
 
+If a value begins with "v_", a variable name must follow which has
+been previously defined in the input script.  Only surf-style
+variables can be referenced.  See the "variable"_variable.html command
+for details.  Note that surf-style variables define a formula which
+can reference "stats_style"_stats_style.html keywords, or they can
+invoke other computes, fixes, or variables when they are evaluated, so
+this is a very general means of specifying quantities to time average.
+
 :line
 
 For averaging of a value that comes from a compute or fix,
-normalization is performed as follows.  If the compute or fix is
-summing over particles to calculate a per-surf quantity (e.g. pressure
-or energy flux), this takes the form of a numerator divided by a
-denominator.  For example, see the formulas discussed on the "compute
-surf"_compute_surf.html doc page, where the denominator is 1 (for
-keyword n), area times dt (timestep) for the other quantities (press,
-shx, ke, etc).  When this command averages over a series of timesteps,
-the numerator and denominator are summed separately.  This means the
-numerator/denominator division only takes place when this fix produces
-output, every Nfreq timesteps.
+normalization is performed as follows.  Note that no normalization is
+performed on a value produced by a surf-style variable.
+
+If the compute or fix is summing over particles to calculate a
+per-surf quantity (e.g. pressure or energy flux), this takes the form
+of a numerator divided by a denominator.  For example, see the
+formulas discussed on the "compute surf"_compute_surf.html doc page,
+where the denominator is 1 (for keyword n), area times dt (timestep)
+for the other quantities (press, shx, ke, etc).  When this command
+averages over a series of timesteps, the numerator and denominator are
+summed separately.  This means the numerator/denominator division only
+takes place when this fix produces output, every Nfreq timesteps.
 
 :line
 

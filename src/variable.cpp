@@ -443,7 +443,6 @@ void Variable::set(int narg, char **arg)
   // data = 1 value, string to eval
 
   } else if (strcmp(arg[1],"surf") == 0) {
-    
     if (narg != 3) error->all(FLERR,"Illegal variable command");
     int ivar = find(arg[0]);
     if (ivar >= 0) {
@@ -842,6 +841,9 @@ void Variable::compute_grid(int ivar, double *result,
 void Variable::compute_surf(int ivar, double *result,
                             int stride, int sumflag)
 {
+  if (surf->implicit)
+    error->all(FLERR,"Surf-style variables only operate on explicit surfs");
+
   Tree *tree;
 
   if (eval_in_progress[ivar])

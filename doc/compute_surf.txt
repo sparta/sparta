@@ -38,7 +38,7 @@ keyword = {norm} :l
 
 [Examples:]
 
-compute 1 surf all all n press eng
+compute 1 surf all all n press etot
 compute mine surf sphere species press shx shy shz
 compute 2 surf all all mflux ke erot norm flow :pre
 
