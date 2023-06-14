@@ -1667,14 +1667,14 @@ double Variable::evaluate(char *str, Tree **tree)
       // surface collide model
       // ----------------
 
-      } else if (strncmp(word,"s_",2) == 0) {
+      } else if (strncmp(word,"sc_",3) == 0) {
         if (domain->box_exist == 0)
           error->all(FLERR,
                      "Variable evaluation before simulation box is defined");
 
-        n = strlen(word) - 2 + 1;
+        n = strlen(word) - 3 + 1;
         char *id = new char[n];
-        strcpy(id,&word[2]);
+        strcpy(id,&word[3]);
 
         int isc = surf->find_collide(id);
         if (isc < 0)
@@ -1701,7 +1701,7 @@ double Variable::evaluate(char *str, Tree **tree)
           }
         }
 
-        // s_ID[i] = scalar from global vector
+        // sc_ID[i] = scalar from global vector
 
         if (nbracket == 1 && sc->vector_flag) {
           if (index1 > sc->size_vector)
@@ -1723,14 +1723,14 @@ double Variable::evaluate(char *str, Tree **tree)
       // surface reaction model
       // ----------------
 
-      } else if (strncmp(word,"r_",2) == 0) {
+      } else if (strncmp(word,"sr_",3) == 0) {
         if (domain->box_exist == 0)
           error->all(FLERR,
                      "Variable evaluation before simulation box is defined");
 
-        n = strlen(word) - 2 + 1;
+        n = strlen(word) - 3 + 1;
         char *id = new char[n];
-        strcpy(id,&word[2]);
+        strcpy(id,&word[3]);
 
         int isr = surf->find_react(id);
         if (isr < 0)
@@ -1758,7 +1758,7 @@ double Variable::evaluate(char *str, Tree **tree)
           }
         }
 
-        // r_ID[i] = scalar from global vector
+        // sr_ID[i] = scalar from global vector
 
         if (nbracket == 1 && sr->vector_flag) {
           if (index1 > sr->size_vector)
