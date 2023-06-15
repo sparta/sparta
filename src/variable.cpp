@@ -751,6 +751,7 @@ double Variable::compute_equal(char *str)
 
 /* ----------------------------------------------------------------------
    compute result of particle-style variable evaluation
+   each proc computes only on particles it owns
    answers are placed every stride locations into result
    if sumflag, add variable values to existing result
 ------------------------------------------------------------------------- */
@@ -792,6 +793,7 @@ void Variable::compute_particle(int ivar, double *result,
 
 /* ----------------------------------------------------------------------
    compute result of grid-style variable evaluation
+   each proc computes only on grid cells it owns
    answers are placed every stride locations into result
    if sumflag, add variable values to existing result
 ------------------------------------------------------------------------- */
@@ -834,7 +836,7 @@ void Variable::compute_grid(int ivar, double *result,
 
 /* ----------------------------------------------------------------------
    compute result of surf-style variable evaluation
-   answers are placed every stride locations into result
+   each proc computes only on surf elements it owns
    if sumflag, add variable values to existing result
 ------------------------------------------------------------------------- */
 
@@ -855,18 +857,18 @@ void Variable::compute_surf(int ivar, double *result,
   evaluate(data[ivar][0],&tree);
   collapse_tree(tree);
 
-  int nslocal = surf->nlocal;
+  int nsown = surf->nown;
 
   if (sumflag == 0) {
     int m = 0;
-    for (int i = 0; i < nslocal; i++) {
+    for (int i = 0; i < nsown; i++) {
       result[m] = eval_tree(tree,i);
       m += stride;
     }
 
   } else {
     int m = 0;
-    for (int i = 0; i < nslocal; i++) {
+    for (int i = 0; i < nsown; i++) {
       result[m] += eval_tree(tree,i);
       m += stride;
     }
@@ -1861,7 +1863,7 @@ double Variable::evaluate(char *str, Tree **tree)
           evaluate(data[ivar][0],&newtree);
           treestack[ntreestack++] = newtree;
 
-        // v_name = per-surf vector from grid-style variable
+        // v_name = per-surf vector from surf-style variable
         // evaluate the surf-style variable as newtree
 
         } else if (nbracket == 0 && style[ivar] == SURF) {

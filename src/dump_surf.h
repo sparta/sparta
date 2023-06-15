@@ -61,7 +61,7 @@ class DumpSurf : public Dump {
   int *custom;               // list of indices for the Custom attributes
 
   int dimension;
-  int nown;                  // # of surf elements owned by this proc
+  int nsown;                 // # of surf elements owned by this proc
   int nchoose;               // # of surf elements output by this proc
   int *cglobal;              // indices of global elements for nchoose
   int *clocal;               // indices of local owned elements for nchoose
