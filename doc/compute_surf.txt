@@ -18,11 +18,13 @@ surf = style name of this compute command :l
 group-ID = group ID for which surface elements to perform calculation on :l
 mix-ID = mixture ID for particles to perform calculation on :l
 one or more values can be appended :l
-value = {n} or {nwt} or {nflux} or {mflux} or {fx} or {fy} or {fz} or {press} or {px} or {py} or {pz} or {shx} or {shy} or {shz} or {ke} :l
+value = {n} or {nwt} or {nflux} or {nflux_incident} or {mflux} or {mflux_incident} or {fx} or {fy} or {fz} or {press} or {px} or {py} or {pz} or {shx} or {shy} or {shz} or {ke} :l
   n = count of particles hitting surface element
   nwt = weighted count of particles hitting surface element
-  nflux = flux of particles on surface element
-  mflux = flux of mass on surface element
+  nflux = net flux of particles through surface element
+  nflux_incident = incident flux of particles on surface element
+  mflux = net flux of mass through surface element
+  mflux_incident = incident flux of mass on surface element
   fx,fy,fz = components of force on surface element
   press = magnitude of normal pressure on surface element
   px,py,pz = components of normal pressure on surface element
@@ -139,8 +141,11 @@ occurs.  The {nwt} quantity will only be different than {n} if
 particle weighting is enabled via the "global weight"_global.html
 command.
 
-The {nflux} value calculates the number flux imparted to the surface
-element by particles in the group.  This is computed as
+The {nflux} and {nflux_incident} values calculate the net and incident
+number flux imparted to the surface element by particles in the group
+respectively. Incident flux sums over all the impacting particles,
+while net flux subtracts out reflected particles and includes effects
+from surface chemistry such as particle deletion. These are computed as
 
 Nflux = N / (A * dt / fnum) :pre
 
@@ -154,8 +159,9 @@ included in the Nflux formula.  The Nflux quantity becomes effectively
 a particle flow rate (count per time).  See discussion of the {norm}
 keyword below.
 
-The {mflux} value calculates the mass flux imparted to the surface
-element by particles in the group.  This is computed as
+The {mflux} and {mflux_incident} values calculate the net and incident
+mass flux imparted to the surface element by particles in the group
+respectively.  These are computed as
 
 Mflux = Sum_i (mass_i) / (A * dt / fnum) :pre
 

@@ -29,7 +29,7 @@
 
 using namespace SPARTA_NS;
 
-enum{NUM,NUMWT,NFLUX,MFLUX,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
+enum{NUM,NUMWT,NFLUX,NFLUXIN,MFLUX,MFLUXIN,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
      XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ECHEM,ETOT};
 
 #define DELTA 4096
@@ -60,7 +60,9 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
     if (strcmp(arg[iarg],"n") == 0) which[nvalue++] = NUM;
     else if (strcmp(arg[iarg],"nwt") == 0) which[nvalue++] = NUMWT;
     else if (strcmp(arg[iarg],"nflux") == 0) which[nvalue++] = NFLUX;
+    else if (strcmp(arg[iarg],"nflux_incident") == 0) which[nvalue++] = NFLUXIN;
     else if (strcmp(arg[iarg],"mflux") == 0) which[nvalue++] = MFLUX;
+    else if (strcmp(arg[iarg],"mflux_incident") == 0) which[nvalue++] = MFLUXIN;
     else if (strcmp(arg[iarg],"fx") == 0) which[nvalue++] = FX;
     else if (strcmp(arg[iarg],"fy") == 0) which[nvalue++] = FY;
     else if (strcmp(arg[iarg],"fz") == 0) which[nvalue++] = FZ;
@@ -336,12 +338,20 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       }
       k++;
       break;
+    case NFLUXIN:
+      vec[k] += weight * fluxscale;
+      k++;
+      break;
     case MFLUX:
       vec[k] += origmass * fluxscale;
       if (!transparent) {
         if (ip) vec[k] -= imass * fluxscale;
         if (jp) vec[k] -= jmass * fluxscale;
       }
+      k++;
+      break;
+    case MFLUXIN:
+      vec[k] += origmass * fluxscale;
       k++;
       break;
     case FX:

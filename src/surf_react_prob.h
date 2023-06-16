@@ -28,16 +28,14 @@ namespace SPARTA_NS {
 class SurfReactProb : public SurfReact {
  public:
   SurfReactProb(class SPARTA *, int, char **);
-  ~SurfReactProb();
-  void init();
+  SurfReactProb(class SPARTA *sparta) : SurfReact(sparta) {}
+  virtual ~SurfReactProb();
+  virtual void init();
   int react(Particle::OnePart *&, int, double *, Particle::OnePart *&, int &);
   char *reactionID(int);
   double reaction_coeff(int);
   int match_reactant(char *, int);
   int match_product(char *, int);
-
- private:
-  class RanKnuth *random;     // RNG for reaction probabilities
 
   // reaction info, as read from file
 
@@ -53,6 +51,9 @@ class SurfReactProb : public SurfReact {
     char *id;                      // reaction ID (formula)
   };
 
+ protected:
+  class RanKnuth *random;     // RNG for reaction probabilities
+
   OneReaction *rlist;              // list of all reactions read from file
   int nlist_prob;                  // # of reactions read from file
   int maxlist_prob;                // max # of reactions in rlist
@@ -67,7 +68,7 @@ class SurfReactProb : public SurfReact {
   ReactionI *reactions;       // reactions for all species
   int *indices;               // master list of indices
 
-  void init_reactions();
+  virtual void init_reactions();
   void readfile(char *);
   int readone(char *, char *, int &, int &);
 };

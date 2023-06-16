@@ -38,6 +38,7 @@ class Update : protected Pointers {
   double nrho;           // number density of background gas
   double vstream[3];     // streaming velocity of background gas
   double temp_thermal;   // thermal temperature of background gas
+  int optmove_flag;      // global optmove option set
 
   int fstyle;            // external field: NOFIELD, CFIELD, PFIELD, GFIELD
   double field[3];       // constant external field
@@ -166,7 +167,7 @@ class Update : protected Pointers {
 
   typedef void (Update::*FnPtr)();
   FnPtr moveptr;             // ptr to move method
-  template < int, int > void move();
+  template < int, int, int > void move();
 
   int perturbflag;
   typedef void (Update::*FnPtr2)(int, int, double, double *, double *);
