@@ -42,7 +42,7 @@ class ComputeSurfKokkos : public ComputeSurf {
   void pre_surf_tally();
   void post_surf_tally();
 
-enum{NUM,NUMWT,NFLUX,MFLUX,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
+enum{NUM,NUMWT,NFLUX,NFLUXIN,MFLUX,MFLUXIN,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
      XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ETOT};
 
 /* ----------------------------------------------------------------------
@@ -146,12 +146,20 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       }
       k++;
       break;
+    case NFLUXIN:
+      a_array_surf_tally(itally,k) += weight * fluxscale;
+      k++;
+      break;
     case MFLUX:
       a_array_surf_tally(itally,k) += origmass * fluxscale;
       if (!transparent) {
         if (ip) a_array_surf_tally(itally,k) -= imass * fluxscale;
         if (jp) a_array_surf_tally(itally,k) -= jmass * fluxscale;
       }
+      k++;
+      break;
+    case MFLUXIN:
+      a_array_surf_tally(itally,k) += origmass * fluxscale;
       k++;
       break;
     case FX:
