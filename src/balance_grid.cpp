@@ -102,12 +102,12 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
   } else if (strcmp(arg[0],"random") == 0) {
     if (narg < 1) error->all(FLERR,"Illegal balance_grid command");
     bstyle = RANDOM;
-    iarg = 0;
+    iarg = 1;
 
   } else if (strcmp(arg[0],"proc") == 0) {
     if (narg < 1) error->all(FLERR,"Illegal balance_grid command");
     bstyle = PROC;
-    iarg = 0;
+    iarg = 1;
 
   } else if (strcmp(arg[0],"rcb") == 0) {
     if (narg < 2) error->all(FLERR,"Illegal balance_grid command");
