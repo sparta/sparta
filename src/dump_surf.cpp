@@ -806,26 +806,18 @@ void DumpSurf::pack_custom(int n)
 
   int index = custom[field2index[n]];
 
-  // for now, custom data only allowed for explicit all
-  // so custom data is nlocal in length, not nsown
-  // when enable distributed, commented out lines replace 2 previous ones
-
   if (surf->etype[index] == INT) {
     if (surf->esize[index] == 0) {
       int *vector = surf->eivec[surf->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
-        m = me + i*nprocs;
-        buf[n] = vector[m];
-        //buf[n] = vector[clocal[i]];
+        buf[n] = vector[clocal[i]];
         n += size_one;
       }
     } else {
       int icol = argindex[n]-1;
       int **array = surf->eiarray[surf->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
-        m = me + i*nprocs;
-        buf[n] = array[m][icol];
-        //buf[n] = array[clocal[i]][icol];
+        buf[n] = array[clocal[i]][icol];
         n += size_one;
       }
     }
@@ -833,18 +825,14 @@ void DumpSurf::pack_custom(int n)
     if (surf->esize[index] == 0) {
       double *vector = surf->edvec[surf->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
-        m = me + i*nprocs;
-        buf[n] = vector[m];
-        //buf[n] = vector[clocal[i]];
+        buf[n] = vector[clocal[i]];
         n += size_one;
       }
     } else {
       int icol = argindex[n]-1;
       double **array = surf->edarray[surf->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
-        m = me + i*nprocs;
-        buf[n] = array[m][icol];
-        //buf[n] = array[clocal[i]][icol];
+        buf[n] = array[clocal[i]][icol];
         n += size_one;
       }
     }

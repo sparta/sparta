@@ -49,7 +49,7 @@ class Surf : protected Pointers {
   //   tris = all surfs, nown = Nsurf/P, mytris = NULL
   // explicit, distributed: each proc owns N/P surfs
   //   nlocal/nghost = surfs in owned/ghost grid cells
-  //   tris = nloc+ngh surfs, nown = Nsurf/P, mytris = surfs I uniquely own
+  //   tris = nlocal+nghost surfs, nown = Nsurf/P, mytris = surfs I uniquely own
   // implicit, distributed: each proc owns surfs in its owned grid cells
   //   nlocal = surfs in owned grid cells, nghost = surfs in ghost grid cells
   //   tris = nloc+ngh surfs, nown = nlocal, mytris = NULL
@@ -243,7 +243,8 @@ class Surf : protected Pointers {
   virtual void reallocate_custom();
   void copy_custom(int, int, int);
   virtual void remove_custom(int);
-
+  void spread_custom(int);
+  
   void write_restart(FILE *);
   void read_restart(FILE *);
   void write_restart_custom(FILE *);

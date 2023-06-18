@@ -1120,7 +1120,7 @@ double Variable::evaluate(char *str, Tree **tree)
       delete [] number;
 
     // ----------------
-    // letter: c_ID, c_ID[], c_ID[][], f_ID, f_ID[], f_ID[][], s_ID[], r_ID[],
+    // letter: c_ID, c_ID[], c_ID[][], f_ID, f_ID[], f_ID[][], sc_ID[], sr_ID[],
     //         v_name, exp(), x, PI, vol
     // ----------------
 

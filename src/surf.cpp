@@ -3797,7 +3797,7 @@ int Surf::add_custom(char *name, int type, int size)
 
 /* ----------------------------------------------------------------------
    allocate ONE custom per-surf vector/array associated with new index
-   via memory->create() to current size nlocal
+   via memory->create() to current size nown
    set all values to 0 via memset()
 ------------------------------------------------------------------------- */
 
@@ -3828,15 +3828,15 @@ void Surf::allocate_custom(int index)
 }
 
 /* ----------------------------------------------------------------------
-   reallocate ALL custom per-surf vectors/arrays to current nlocal size
-   via memory->grow() to grow or shrink nlocal versus previous size_custom
-   if added values beyond size_custom, set them to 0 via memset()
+   reallocate ALL custom per-surf vectors/arrays to current nown size
+   via memory->grow() to grow or shrink nown versus previous size_custom
+   if adding storage beyond size_custom, initialize to 0 via memset()
 ------------------------------------------------------------------------- */
 
 void Surf::reallocate_custom()
 {
   int nold = size_custom;
-  int nnew = nlocal;
+  int nnew = nown;
   if (nnew == nold) return;
   
   for (int index = 0; index < ncustom; index++) {
@@ -3866,7 +3866,7 @@ void Surf::reallocate_custom()
     }
   }
 
-  size_custom = nlocal;
+  size_custom = nown;
 }
 
 /* ----------------------------------------------------------------------
@@ -3964,6 +3964,15 @@ void Surf::remove_custom(int index)
   for (int i = 0; i < ncustom; i++)
     if (ename[i]) empty = 0;
   if (empty) ncustom = 0;
+}
+
+/* ----------------------------------------------------------------------
+   spread custom attribute at location index
+   from owned custom data to per-line/per-tri data
+------------------------------------------------------------------------- */
+
+void Surf::spread_custom(int index)
+{
 }
 
 // ----------------------------------------------------------------------

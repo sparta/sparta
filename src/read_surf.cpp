@@ -74,7 +74,7 @@ void ReadSurf::command(int narg, char **arg)
   if (!grid->exist)
     error->all(FLERR,"Cannot read_surf before grid is defined");
   if (surf->implicit)
-    error->all(FLERR,"Cannot read_surf unless global surfs explicit is set");
+    error->all(FLERR,"Cannot use read_surf when global surfs implicit is set");
 
   surf->exist = 1;
   dim = domain->dimension;
@@ -143,13 +143,11 @@ void ReadSurf::command(int narg, char **arg)
 
   // setup for temporary storage of per-surf custom values in file
   // nvalues_custom = # of custom values per surf
-  // cvalues = growable array with custom values for all surfs
+  // cvalues = growable array with custom values for each surf
 
   nvalues_custom = 0;
 
   if (ncustom) {
-    if (surf->distributed)
-      error->all(FLERR,"Read surf custom not allowed for distributed surfs");
     for (int ic = 0; ic < ncustom; ic++)
       if (size_custom[ic] == 0) nvalues_custom++;
       else nvalues_custom += size_custom[ic];
@@ -1115,6 +1113,7 @@ void ReadSurf::read_lines(int storeflag)
             if ((id-1) / nprocs >= nsurf_new)
               error->one(FLERR,"Invalid surf ID in read_surf file");
             surf->add_line_own(id,type,pts[p1-1].x,pts[p2-1].x);
+	    add_custom(custom);
           }
         } else if (storeflag == TEMPALL) {
           surf->add_line_temporary(id,type,pts[p1-1].x,pts[p2-1].x);
@@ -1172,6 +1171,7 @@ void ReadSurf::read_lines(int storeflag)
             if ((id-1) / nprocs >= nsurf_new)
               error->one(FLERR,"Invalid surf ID in read_surf file");
             surf->add_line_own(id,type,x1,x2);
+	    add_custom(custom);
           }
         } else if (storeflag == TEMPALL) {
           surf->add_line_temporary(id,type,x1,x2);
@@ -1292,6 +1292,7 @@ void ReadSurf::read_tris(int storeflag)
             if ((id-1) / nprocs >= nsurf_new)
               error->one(FLERR,"Invalid surf ID in read_surf file");
             surf->add_tri_own(id,type,pts[p1-1].x,pts[p2-1].x,pts[p3-1].x);
+	    add_custom(custom);
           }
         } else if (storeflag == TEMPALL) {
           surf->add_tri_temporary(id,type,pts[p1-1].x,pts[p2-1].x,pts[p3-1].x);
@@ -1354,6 +1355,7 @@ void ReadSurf::read_tris(int storeflag)
             if ((id-1) / nprocs >= nsurf_new)
               error->one(FLERR,"Invalid surf ID in read_surf file");
             surf->add_tri_own(id,type,x1,x2,x3);
+	    add_custom(custom);
           }
         } else if (storeflag == TEMPALL) {
           surf->add_tri_temporary(id,type,x1,x2,x3);
@@ -1397,8 +1399,8 @@ void ReadSurf::add_custom(double *custom)
 
 /* ----------------------------------------------------------------------
    create custom per-surf vectors and arrays
-   cannot be done until after surf file is read and surf->nlocal is valid
-     b/c surf->add_custom() uses nlocal to allocate per-surf vector/array
+   cannot be done until after surf file is read and surf data structs exist
+     b/c surf->add_custom() uses them to allocate per-surf vector/array
    populate each vector or array with read-in cvalues
 ------------------------------------------------------------------------- */
 
@@ -1408,7 +1410,7 @@ void ReadSurf::create_custom()
   int *ivector,**iarray;
   double *dvector,**darray;
   
-  int nlocal = surf->nlocal;
+  int nsown = surf->nown;
   int icvalue = 0;
 
   for (int ic = 0; ic < ncustom; ic++) {
@@ -1418,12 +1420,12 @@ void ReadSurf::create_custom()
     if (type_custom[ic] == 0) {
       if (size_custom[ic] == 0) {
 	ivector = surf->eivec[surf->ewhich[index]];
-	for (i = nsurf_old; i < nlocal; i++)
+	for (i = nsurf_old; i < nsown; i++)
 	  ivector[i] = static_cast<int> (cvalues[i-nsurf_old][icvalue]);
 	icvalue++;
       } else {
 	iarray = surf->eiarray[surf->ewhich[index]];
-	for (i = nsurf_old; i < nlocal; i++)
+	for (i = nsurf_old; i < nsown; i++)
 	  for (j = 0; j < size_custom[ic]; j++)
 	    iarray[i][j] = static_cast<int> (cvalues[i-nsurf_old][icvalue+j]);
 	icvalue += size_custom[ic];
@@ -1432,12 +1434,12 @@ void ReadSurf::create_custom()
     } else {
       if (size_custom[ic] == 0) {
 	dvector = surf->edvec[surf->ewhich[index]];
-	for (i = nsurf_old; i < nlocal; i++)
+	for (i = nsurf_old; i < nsown; i++)
 	  dvector[i] = cvalues[i-nsurf_old][icvalue];
 	icvalue++;
       } else {
 	darray = surf->edarray[surf->ewhich[index]];
-	for (i = nsurf_old; i < nlocal; i++)
+	for (i = nsurf_old; i < nsown; i++)
 	  for (j = 0; j < size_custom[ic]; j++)
 	    darray[i][j] = cvalues[i-nsurf_old][icvalue+j];
 	icvalue += size_custom[ic];
