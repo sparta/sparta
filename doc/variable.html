@@ -59,6 +59,7 @@
     particle vectors = mass, type, q, mu, x, y, z, vx, vy, vz
     compute references = c_ID, c_ID[i], c_ID[i][j]
     fix references = f_ID, f_ID[i], f_ID[i][j]
+    custom attribute references = p_ID, p_ID[i], g_ID, g_ID[i], s_ID, s_ID[i]
     surface collision model references = sc_ID[i]
     surface reaction model references = sr_ID[i]
     variable references = v_name 
@@ -349,7 +350,7 @@ example, this is a valid (though strange) variable formula:
 </PRE>
 <P>Specifically, a formula can contain numbers, stats keywords, math
 operators, math functions, particle vectors, compute references, fix
-references, and references to other variables.
+references, custom attribute references, and other variables.
 </P>
 <DIV ALIGN=center><TABLE  BORDER=1 >
 <TR><TD >Number</TD><TD > 0.2, 100, 1.0e20, -15.4, etc</TD></TR>
@@ -361,6 +362,7 @@ references, and references to other variables.
 <TR><TD >Particle vectors</TD><TD > mass, type, q, mu, x, y, z, vx, vy, vz</TD></TR>
 <TR><TD >Compute references</TD><TD > c_ID, c_ID[i], c_ID[i][j]</TD></TR>
 <TR><TD >Fix references</TD><TD > f_ID, f_ID[i], f_ID[i][j]</TD></TR>
+<TR><TD >Custom attribute references = p_ID, p_ID[i], g_ID, g_ID[i], s_ID, s_ID[i]</TD></TR>
 <TR><TD >Surface collision model references</TD><TD > sc_ID[i]</TD></TR>
 <TR><TD >Surface reaction model references</TD><TD > sr_ID[i]</TD></TR>
 <TR><TD >Other variables</TD><TD > v_name 
@@ -731,6 +733,39 @@ If a variable attempts to access the fix on non-allowed timesteps, an
 error is generated.  For example, the <A HREF = "fix_ave_time.html">fix ave/time</A>
 command may only generate averaged quantities every 100 steps.  See
 the doc pages for individual fix commands for details.
+</P>
+<HR>
+
+<H4>Custom Attribute References 
+</H4>
+<P>Particles, grid cells, and surface elements can have custom attributes
+which are either single or multiple values per particle, per grid
+cell, or per surface element.  They can be defined and initialized in
+data files, e.g. via the read_surf command.  Or they can be defined
+and used by specific commands, e.g. <A HREF = "fix_ambipolar.html">fix ambipolar</A>
+or <A HREF = "fix_surf_temp.html">fix surf/temp</A> or <A HREF = "surf_react_adsorb.html">surf_react
+adsorb</A>.  The IDs (names) of each attribute are
+set by the user or defined by the command.  See <A HREF = "Section_howto.html#howto_17">Section
+6.17</A> for more discussion of custom
+attributes.
+</P>
+<P>Single-value attributes are referred to as per-particle, per-grid, or
+per-surf vectors.  Multiple-value attributes are referred to as
+per-particle, per-grid, or per-surf arrays.  In variable formulas they
+can be referenced using the following syntax:
+</P>
+<DIV ALIGN=center><TABLE  BORDER=1 >
+<TR><TD >p_ID</TD><TD > per-particle vector</TD></TR>
+<TR><TD >p_ID[i]</TD><TD > Ith column from per-particle array</TD></TR>
+<TR><TD >g_ID</TD><TD > per-grid vector</TD></TR>
+<TR><TD >g_ID[i]</TD><TD > Ith column from per-grid array</TD></TR>
+<TR><TD >s_ID</TD><TD > per-surf vector</TD></TR>
+<TR><TD >s_ID[i]</TD><TD > Ith column from per-surf array 
+</TD></TR></TABLE></DIV>
+
+<P>Particle attributes can only be used in particle-style variables.
+Grid cell attributes can only be used in grid-style variables.
+Surface element attributes can only be used in surf-style variables.
 </P>
 <HR>
 

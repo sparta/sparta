@@ -77,7 +77,8 @@ class Variable : protected Pointers {
 
   struct Tree {            // parse tree for particle-style variables
     double value;          // single scalar
-    double *array;         // per-atom or per-type list of doubles
+    double *array;         // ptr to vector of doubles with nstride
+    int *iarray;           // ptr to vector of integers with nstride
     char *carray;          // ptr into data struct with nstride = sizeof(struct)
     int type;              // operation, see enum{} in variable.cpp
     int nstride;           // stride between atoms if array is a 2d array

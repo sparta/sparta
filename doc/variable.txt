@@ -54,6 +54,7 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
     particle vectors = mass, type, q, mu, x, y, z, vx, vy, vz
     compute references = c_ID, c_ID\[i\], c_ID\[i\]\[j\]
     fix references = f_ID, f_ID\[i\], f_ID\[i\]\[j\]
+    custom attribute references = p_ID, p_ID\[i\], g_ID, g_ID\[i\], s_ID, s_ID\[i\]
     surface collision model references = sc_ID\[i\]
     surface reaction model references = sr_ID\[i\]
     variable references = v_name :pre
@@ -343,7 +344,7 @@ variable x equal "np + c_MyTemp / vol^(1/3)" :pre
 
 Specifically, a formula can contain numbers, stats keywords, math
 operators, math functions, particle vectors, compute references, fix
-references, and references to other variables.
+references, custom attribute references, and other variables.
 
 Number: 0.2, 100, 1.0e20, -15.4, etc
 Constant: PI
@@ -357,6 +358,7 @@ Special functions: sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
 Particle vectors: mass, type, q, mu, x, y, z, vx, vy, vz
 Compute references: c_ID, c_ID\[i\], c_ID\[i\]\[j\]
 Fix references: f_ID, f_ID\[i\], f_ID\[i\]\[j\]
+Custom attribute references = p_ID, p_ID\[i\], g_ID, g_ID\[i\], s_ID, s_ID\[i\]
 Surface collision model references: sc_ID\[i\]
 Surface reaction model references: sr_ID\[i\]
 Other variables: v_name :tb(s=:)
@@ -722,6 +724,37 @@ If a variable attempts to access the fix on non-allowed timesteps, an
 error is generated.  For example, the "fix ave/time"_fix_ave_time.html
 command may only generate averaged quantities every 100 steps.  See
 the doc pages for individual fix commands for details.
+
+:line
+
+Custom Attribute References :h4
+
+Particles, grid cells, and surface elements can have custom attributes
+which are either single or multiple values per particle, per grid
+cell, or per surface element.  They can be defined and initialized in
+data files, e.g. via the read_surf command.  Or they can be defined
+and used by specific commands, e.g. "fix ambipolar"_fix_ambipolar.html
+or "fix surf/temp"_fix_surf_temp.html or "surf_react
+adsorb"_surf_react_adsorb.html.  The IDs (names) of each attribute are
+set by the user or defined by the command.  See "Section
+6.17"_Section_howto.html#howto_17 for more discussion of custom
+attributes.
+
+Single-value attributes are referred to as per-particle, per-grid, or
+per-surf vectors.  Multiple-value attributes are referred to as
+per-particle, per-grid, or per-surf arrays.  In variable formulas they
+can be referenced using the following syntax:
+
+p_ID: per-particle vector
+p_ID\[i\]: Ith column from per-particle array
+g_ID: per-grid vector
+g_ID\[i\]: Ith column from per-grid array
+s_ID: per-surf vector
+s_ID\[i\]: Ith column from per-surf array :tb(s=:)
+
+Particle attributes can only be used in particle-style variables.
+Grid cell attributes can only be used in grid-style variables.
+Surface element attributes can only be used in surf-style variables.
 
 :line
 
