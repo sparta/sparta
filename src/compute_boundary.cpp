@@ -24,8 +24,10 @@
 #include "math_extra.h"
 #include "memory.h"
 #include "error.h"
+#include "math_const.h"
 
 using namespace SPARTA_NS;
+using namespace MathConst;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
@@ -100,7 +102,15 @@ void ComputeBoundary::init()
   double nfactor = update->dt/update->fnum;
   if (domain->dimension == 2) {
     normflux[XLO] = normflux[XHI] = domain->yprd * nfactor;
-    normflux[YLO] = normflux[YHI] = domain->xprd * nfactor;
+
+    if (!domain->axisymmetric) {
+      normflux[YLO] = normflux[YHI] = domain->xprd * nfactor;
+    }
+    else {
+      // normflux[YLO] is actually 0 in axisymmetric case
+      // but is used in tally normalization even though numerator will be 0
+      normflux[YLO] = normflux[YHI] = 2 * MY_PI * domain->xprd * domain->yprd * nfactor;
+    }
   } else if (domain->dimension == 3) {
     normflux[XLO] = normflux[XHI] = domain->yprd*domain->zprd * nfactor;
     normflux[YLO] = normflux[YHI] = domain->xprd*domain->zprd * nfactor;
