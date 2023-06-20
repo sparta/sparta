@@ -482,7 +482,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
         vec[k++] -= weight * (ievib + jevib - iorig->evib) * fluxscale;
       break;
     case ECHEM:
-      if (reaction && !transparent)
+      if (reaction && !transparent) {
         sr = surf->sr[isr];
         r_coeff = sr->reaction_coeff(reaction-1);
         vec[k++] += weight * r_coeff * fluxscale;
