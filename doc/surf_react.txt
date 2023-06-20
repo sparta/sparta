@@ -178,8 +178,6 @@ surface.  Each surface element stores its "state" for the counts of
 different particle species currently adsorbed on the element, which
 alters the probablity for future reactions to take place.
 
-
-
 A detailed description of the {adsorb} style and the list of reactions
 it supports is given on a separate
 "surf_react_adsorb"_surf_react_adsorb.html doc page.

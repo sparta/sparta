@@ -126,7 +126,7 @@ points in the direction of the outward normal of the surface element,
 and its magnitude is set to the magnitude of the mixture's streaming
 velocity.  A velocity is then assigned to the particle in the same
 manner as before.  It is assigned the outward streaming velocity
-superposed with a thermal velocity sampled fromt he temperature of the
+superposed with a thermal velocity sampled from the temperature of the
 mixture.  The effect is that particles effectively stream outward from
 each emitting surface element.
 
