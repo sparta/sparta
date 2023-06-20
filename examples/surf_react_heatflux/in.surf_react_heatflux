@@ -1,5 +1,5 @@
 ################################################################################
-# 2d flow around a circle
+# 2d flow around a circle, computes heatflux of surface reactions
 #
 # Note:
 #  - The "comm/sort” option to the “global” command is used to match MPI runs.
@@ -67,6 +67,7 @@ print               " Timestep = ${tstep}"
 seed	    	    847384
 dimension   	    2
 global		    nrho ${nden} fnum ${Fnum} gridcut 0.01 comm/style all
+global		    comm/sort yes
 timestep            ${tstep}
 
 ###################################
@@ -103,12 +104,12 @@ surf_modify         1 collide 1 react 1
 ###################################
 # Boundary conditions
 ###################################
-fix                 in emit/face all xlo
+fix                 in emit/face all xlo twopass
 
 ###################################
 # Initialize simulation
 ###################################
-create_particles    all n 0
+create_particles    all n 0 twopass
 balance_grid        rcb part
 
 ###################################
@@ -116,22 +117,24 @@ balance_grid        rcb part
 ###################################
 compute             1 grid all all nrho
 compute             2 thermal/grid all all temp
-fix                 1 ave/grid all 1 5000 5000 c_1[*] c_2[*] ave one
+fix                 1 ave/grid all 1 1000 1000 c_1[*] c_2[*] ave one
 
 compute             1b lambda/grid f_1[1] f_1[2] N2 kall
 
-fix                 10 adapt 5000 all refine coarsen value c_1b[2] 0.8 1.6 &
+fix                 10 adapt 1000 all refine coarsen value c_1b[2] 0.8 1.6 &
                     combine min thresh less more cells 2 2 1
-fix                 load balance 5000 1.1 rcb time
+fix                 load balance 1000 1.1 rcb time
 
 compute             3 surf all all etot ke erot evib echem
-fix                 3 ave/surf all 1 5000 5000 c_3[*] ave one
-dump                3 surf all 5000 std_surf.* id f_3[*]
+fix                 3 ave/surf all 1 1000 1000 c_3[*] ave one
+dump                3 surf all 1000 std_surf.* id f_3[*]
 
-stats_style         step cpu np ncoll nreact nscoll nsreact ngrid maxlevel
+compute             echem reduce ave f_3[5]
+
+stats_style         step cpu np ncoll nreact nscoll nsreact ngrid c_echem maxlevel
 stats_modify        flush yes
-stats               500
+stats               1000
 
-run                 20000
+run                 5000
 
 
