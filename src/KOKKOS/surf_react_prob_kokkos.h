@@ -44,6 +44,8 @@ class SurfReactProbKokkos : public SurfReactProb {
   void backup();
   void restore();
 
+  DAT::t_float_2d d_coeffs;
+
  private:
   DAT::t_int_1d d_reactions_n;       // # of reactions in list
   DAT::t_int_2d d_list;
@@ -51,7 +53,6 @@ class SurfReactProbKokkos : public SurfReactProb {
   DAT::t_int_1d d_type;
   DAT::t_int_2d d_reactants;
   DAT::t_int_2d d_products;
-  DAT::t_float_2d d_coeffs;
 
   void init_reactions();
 

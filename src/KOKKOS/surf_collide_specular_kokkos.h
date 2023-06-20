@@ -34,9 +34,6 @@ SurfCollideStyle(specular/kk,SurfCollideSpecularKokkos)
 
 namespace SPARTA_NS {
 
-#define KOKKOS_MAX_SURF_REACT_PER_TYPE 2
-#define KOKKOS_MAX_TOT_SURF_REACT 4
-
 class SurfCollideSpecularKokkos : public SurfCollideSpecular {
  public:
 
