@@ -730,13 +730,13 @@ the doc pages for individual fix commands for details.
 Custom Attribute References :h4
 
 Particles, grid cells, and surface elements can have custom attributes
-which are either single or multiple values per particle, per grid
+which store either single or multiple values per particle, per grid
 cell, or per surface element.  They can be defined and initialized in
-data files, e.g. via the read_surf command.  Or they can be defined
-and used by specific commands, e.g. "fix ambipolar"_fix_ambipolar.html
-or "fix surf/temp"_fix_surf_temp.html or "surf_react
-adsorb"_surf_react_adsorb.html.  The IDs (names) of each attribute are
-set by the user or defined by the command.  See "Section
+data files, e.g. via the "read_surf"_read_surf.html command.  Or they
+can be defined and used by specific commands, e.g. "fix
+ambipolar"_fix_ambipolar.html or "fix surf/temp"_fix_surf_temp.html or
+"surf_react adsorb"_surf_react_adsorb.html.  The IDs (names) of each
+attribute are set by the user or defined by the command.  See "Section
 6.17"_Section_howto.html#howto_17 for more discussion of custom
 attributes.
 

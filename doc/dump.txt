@@ -269,29 +269,29 @@ vector, and it is output.  If {p_ID\[N\]} is used, the custom
 attribute must be an array, and N must be in the range from 1-M, which
 will output the Nth column of the M-column array.
 
-The {c_ID} and {c_ID\[I\]} attributes allow per-particle vectors or
+The {c_ID} and {c_ID\[N\]} attributes allow per-particle vectors or
 arrays calculated by a "compute"_compute.html to be output.  The ID in
 the attribute should be replaced by the actual ID of the compute that
 has been defined previously in the input script.  See the
 "compute"_compute.html command for details.
 
 If {c_ID} is used as a attribute, the compute must calculate a
-per-particle vector, and it is output.  If {c_ID\[I\]} is used, the
-compute must calculate a per-particle array, and I must be in the
-range from 1-M, which will output the Ith column of the M-column
-array.  See the discussion above for how I can be specified with a
+per-particle vector, and it is output.  If {c_ID\[N\]} is used, the
+compute must calculate a per-particle array, and N must be in the
+range from 1-M, which will output the Nth column of the M-column
+array.  See the discussion above for how N can be specified with a
 wildcard asterisk to effectively specify multiple values.
 
-The {f_ID} and {f_ID\[I\]} attributes allow vector or array
+The {f_ID} and {f_ID\[N\]} attributes allow vector or array
 per-particle quantities calculated by a "fix"_fix.html to be output.
 The ID in the attribute should be replaced by the actual ID of the fix
 that has been defined previously in the input script.
 
 If {f_ID} is used as a attribute, the fix must calculate a
-per-particle vector, and it is output.  If {f_ID\[I\]} is used, the
-fix must calculate a per-particle array, and I must be in the range
-from 1-M, which will output the Ith column of the M-column array.
-See the discussion above for how I can be specified with a
+per-particle vector, and it is output.  If {f_ID\[N\]} is used, the
+fix must calculate a per-particle array, and N must be in the range
+from 1-M, which will output the Nth column of the M-column array.
+See the discussion above for how N can be specified with a
 wildcard asterisk to effectively specify multiple values.
 
 The {v_name} attribute allows per-particle vectors calculated by a
@@ -370,29 +370,29 @@ vector, and it is output.  If {g_ID\[N\]} is used, the custom
 attribute must be an array, and N must be in the range from 1-M, which
 will output the Nth column of the M-column array.
 
-The {c_ID} and {c_ID\[I\]} attributes allow per-grid vectors or arrays
+The {c_ID} and {c_ID\[N\]} attributes allow per-grid vectors or arrays
 calculated by a "compute"_compute.html to be output.  The ID in the
 attribute should be replaced by the actual ID of the compute that has
 been defined previously in the input script.  See the
 "compute"_compute.html command for details.
 
 If {c_ID} is used as a attribute, and the compute calculates a
-per-grid vector, then the per-grid vector is output.  If {c_ID\[I\]}
-is used, then I must be in the range from 1-M, which will output the
-Ith column of the M-column per-grid array calculated by the compute.
-See the discussion above for how I can be specified with a wildcard
+per-grid vector, then the per-grid vector is output.  If {c_ID\[N\]}
+is used, then N must be in the range from 1-M, which will output the
+Nth column of the M-column per-grid array calculated by the compute.
+See the discussion above for how N can be specified with a wildcard
 asterisk to effectively specify multiple values.
 
-The {f_ID} and {f_ID\[I\]} attributes allow per-grid vectors or arrays
+The {f_ID} and {f_ID\[N\]} attributes allow per-grid vectors or arrays
 calculated by a "fix"_fix.html to be output.  The ID in the attribute
 should be replaced by the actual ID of the fix that has been defined
 previously in the input script.
 
 If {f_ID} is used as a attribute, and the fix calculates a per-grid
-vector, then the per-grid vector is output.  If {f_ID\[I\]} is used,
-then I must be in the range from 1-M, which will output the Ith column
+vector, then the per-grid vector is output.  If {f_ID\[N\]} is used,
+then N must be in the range from 1-M, which will output the Nth column
 of the M-columne per-grid array calculated by the fix.  See the
-discussion above for how I can be specified with a wildcard asterisk
+discussion above for how N can be specified with a wildcard asterisk
 to effectively specify multiple values.
 
 The {v_name} attribute allows per-grid vectors calculated by a
@@ -426,42 +426,43 @@ attributes write the coordinates of the vertices of the end or corner
 points of the surface element.  The {v1z}, {v2z}, {v3x}, {v3y}, and
 {v3z} attributes cannot be used for a 2d simulation.
 
-The {s_ID} and {s_ID\[N\]} attributes allow custom per-surf vectors or
-arrays defined by the "read_surf"_read_surf.html, "fix
-surf/temp"_fix_surf_temp.html, or "surf_react
-adsorb"_surf_react_adsorb.html command to be output.  The ID in the
-attribute should be replaced by the actual ID of the custom per-surf
-attribute that the command defines.  See individal commands for
-details.
+The {s_ID} and {s_ID\[N\]} attributes allow output of custom per-surf
+attributes which store either single or multiple values per surface
+element.  They can be defined and initialized in data files, e.g. via
+the read_surf command.  Or they can be defined and used by specific
+commands, e.g. "fix surf/temp"_fix_surf_temp.html or "surf_react
+adsorb"_surf_react_adsorb.html.  The IDs (names) of each attribute are
+set by the user or defined by the command.  See "Section
+6.17"_Section_howto.html#howto_17 for more discussion of custom
+attributes.
 
 If {s_ID} is used as a attribute, the custom attribute must be a
-vector, and it is output.  If {s_ID\[N\]} is used, the custom
-attribute must be an array, and N must be in the range from 1-M, which
-will output the Nth column of the M-column array.
+vector.  If {s_ID\[N\]} is used, the custom attribute must be an
+array, and N must be in the range from 1-M for an M-column array.
 
-The {c_ID} and {c_ID\[I\]} attributes allow per-surf vectors or arrays
+The {c_ID} and {c_ID\[N\]} attributes allow per-surf vectors or arrays
 calculated by a "compute"_compute.html to be output.  The ID in the
 attribute should be replaced by the actual ID of the compute that has
 been defined previously in the input script.  See the
 "compute"_compute.html command for details.
 
 If {c_ID} is used as a attribute, and the compute calculates a per-srf
-vector, then the per-surf vector is output.  If {c_ID\[I\]} is used,
-then I must be in the range from 1-M, which will output the Ith column
+vector, then the per-surf vector is output.  If {c_ID\[N\]} is used,
+then N must be in the range from 1-M, which will output the Nth column
 of the M-column per-surf array calculated by the compute.  See the
-discussion above for how I can be specified with a wildcard asterisk
+discussion above for how N can be specified with a wildcard asterisk
 to effectively specify multiple values.
 
-The {f_ID} and {f_ID\[I\]} attributes allow per-surf vectors or arrays
+The {f_ID} and {f_ID\[N\]} attributes allow per-surf vectors or arrays
 calculated by a "fix"_fix.html to be output.  The ID in the attribute
 should be replaced by the actual ID of the fix that has been defined
 previously in the input script.
 
 If {f_ID} is used as a attribute, and the fix calculates a per-surf
-vector, then the per-surf vector is output.  If {f_ID\[I\]} is used,
-then I must be in the range from 1-M, which will output the Ith column
+vector, then the per-surf vector is output.  If {f_ID\[N\]} is used,
+then N must be in the range from 1-M, which will output the Nth column
 of the M-column per-surf array calculated by the fix.  See the
-discussion above for how I can be specified with a wildcard asterisk
+discussion above for how N can be specified with a wildcard asterisk
 to effectively specify multiple values.
 
 The {v_name} attribute allows per-surf vectors calculated by a

@@ -19,13 +19,15 @@ Nevery = use input values every this many timesteps :l
 Nrepeat = # of times to use input values for calculating averages :l
 Nfreq = calculate averages every this many timesteps
 zero or more input values can be listed :l
-value = c_ID, c_ID\[i\], f_ID, f_ID\[i\], v_name :l
+value = c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name, s_ID, s_ID\[N\] :l
   c_ID = per-surf vector (or array) calculated by a compute with ID
   c_ID\[I\] = Ith column of per-surf array calculated by a compute with ID, I can include wildcard (see below)
   f_ID = per-surf vector (or array) calculated by a fix with ID
   f_ID\[I\] = Ith column of per-surf array calculated by a fix with ID, I can include wildcard (see below)
-   v_name = per-surf vector calculated by a surf-style variable with name :pre
-zero or more keyword/arg pairs may be appended :l
+  v_name = per-surf vector calculated by a surf-style variable with name
+  s_ID = custom per-surf vector with ID
+  s_ID\[N\] = Nth column of per-surf custom array with ID :pre
+ zero or more keyword/arg pairs may be appended :l
 keyword = {ave}
   {ave} args = one or running
     one = output a new average value every Nfreq steps
@@ -58,12 +60,13 @@ group specified by {group-ID} are included in the averaging.  See the
 be assigned to surface groups.
 
 Each input value can be the result of a "compute"_compute.html or
-"fix"_fix.html of "surf-style variable"_variable.html.  The compute or
-fix must produce a per-surf vector or array, not a global or
-per-particle or per-grid quantity.  If you wish to time-average global
-quantities from a compute or fix then see the "fix
-ave/time"_fix_ave_time.html command.  To time-average per-grid
-quantities, see the "fix ave/grid"_fix_ave_surf.html command.
+"fix"_fix.html or "surf-style variable"_variable.html or a custom
+per-surf attribute..  The compute or fix must produce a per-surf
+vector or array, not a global or per-particle or per-grid quantity.
+If you wish to time-average global quantities from a compute or fix
+then see the "fix ave/time"_fix_ave_time.html command.  To
+time-average per-grid quantities, see the "fix
+ave/grid"_fix_ave_surf.html command.
 
 Each per-surf value of each input vector is averaged independently.
 
@@ -114,10 +117,10 @@ timestep 200, etc.
 If a value begins with "c_", a compute ID must follow which has been
 previously defined in the input script.  If no bracketed term is
 appended, and the compute calculates a per-surf vector, then the
-per-surf vector is used.  If {c_ID\[I\]} is used, then I must be in
+per-surf vector is used.  If {c_ID\[N\]} is used, then N must be in
 the range from 1-M, which will use the Ith column of the M-column
 per-surf array calculated by the compute.  See the discussion above
-for how I can be specified with a wildcard asterisk to effectively
+for how N can be specified with a wildcard asterisk to effectively
 specify multiple values.
 
 Users can also write code for their own compute styles and "add them
@@ -126,9 +129,9 @@ to SPARTA"_Section_modify.html.
 If a value begins with "f_", a fix ID must follow which has been
 previously defined in the input script.  If no bracketed term is
 appended, and the fix calculates a per-surf vector, then the per-surf
-vector is used.  If {f_ID\[I\]} is used, then I must be in the range
+vector is used.  If {f_ID\[N\]} is used, then N must be in the range
 from 1-M, which will use the Ith column of the M-column per-surf array
-calculated by the fix.  See the discussion above for how I can be
+calculated by the fix.  See the discussion above for how N can be
 specified with a wildcard asterisk to effectively specify multiple
 values.
 
@@ -144,6 +147,21 @@ for details.  Note that surf-style variables define a formula which
 can reference "stats_style"_stats_style.html keywords, or they can
 invoke other computes, fixes, or variables when they are evaluated, so
 this is a very general means of specifying quantities to time average.
+
+If a value begins with "s_", the name of a custom per-surf vector or
+array must follow. They can store either a single or multiple values
+per surface element.  They can be defined and initialized in data
+files, e.g. via the "read_surf"_read_surf.html command.  Or they can
+be defined and used by specific commands, e.g. "fix
+surf/temp"_fix_surf_temp.html or "surf_react
+adsorb"_surf_react_adsorb.html.  The IDs (names) of each attribute are
+set by the user or defined by the command.  See "Section
+6.17"_Section_howto.html#howto_17 for more discussion of custom
+attributes.
+
+If {s_ID} is used as a value, the custom attribute must be a vector.
+If {s_ID\[N\]} is used, the custom attribute must be an array, and N
+must be in the range from 1-M for an M-column array.
 
 :line
 
@@ -197,11 +215,20 @@ is when averaging is performed.
 Surface elements not in the specified {group-ID} will output zeroes
 for all their values.
 
-[Restrictions:] none
+[Restrictions:]
+
+If one of the specified values is a compute which tallies information
+about particle/surface element collisions, then all the values must be
+for compute(s) which do this.  I.e. you cannot mix tallying computes
+with other kinds of values in the same fix ave/surf command.
+
+Examples of computes which tally particle/surface element collision
+info are "compute surf"_compute_surf.html and "compute
+react/surf"_compute_react_surf.html.
 
 [Related commands:]
 
-"compute"_compute.html, ""fix ave/time"_fix_ave_time.html
+"compute"_compute.html, "fix ave/time"_fix_ave_time.html
 
 [Default:]
 
