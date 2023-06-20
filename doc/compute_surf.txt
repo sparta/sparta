@@ -279,6 +279,11 @@ internal vibrational energy changes from Evib_pre to Evib_post when
 colliding with the surface element.  The flux equation is the same as
 for the {ke} value.
 
+If the optional {norm} key is set to {flow}, then the area A is not
+included in the Eflux formula.  Then Eflux quantity becomes
+effectively an energy flow rate (energy per time).  See discussion of
+the {norm} keyword below.
+
 The {echem} value calculates the chemical catalytic energy flux {Eflux}
 imparted to the surface element by particles in the group, such that
 energy lost by a particles recombining is a positive flux.  This is computed as
@@ -310,7 +315,6 @@ transparent surface elements.  The "Section
 transparent surfaces and how to create them.
 
 The {n} and {nwt} value are calculated the same for transparent
-<<<<<<< HEAD
 surfaces.  I.e. they are the count and weighted count of particles
 passing through the surface.
 
@@ -322,9 +326,6 @@ outward face of the surface.  No tallying is done for particles
 hitting the inward face of the surface.  See "Section
 6.15"_Section_howto.html#howto_15 for how to do tallying in both
 directions.
-=======
-surfaces as for non-transparent.  I.e. they are the count and weighted
-count of particles passing through the surface.
 
 The {nflux}, {mflux}, {ke}, {erot}. {evib}, and {etot} values are
 fluxes.  For transparent surfaces, they are calculated only for the
@@ -334,7 +335,6 @@ particles onto the outward face of the surface.  No tallying is done
 for particles hitting the inward face of the transparent surface.  See
 "Section 6.15"_Section_howto.html#howto_15 for how to do tallying in
 both directions.
->>>>>>> cd053cd95609d2d43185c19dde6119794cb897ae
 
 All the other values are calculated as described above.  This means
 they will be zero, since the incident and outgoing particle have the

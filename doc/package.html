@@ -28,9 +28,9 @@
       <I>reduction</I> = <I>parallel/reduce</I> or <I>atomic</I>
         parallel/reduce = use parallel reduction for statistics (default for CPUs)
         atomic = use atomic reduction for statistics (default for GPUs)
-      <I>collide/extra</I> = <I>factor</I>
+      <I>react/extra</I> = <I>factor</I>
         factor = increase memory used for collisions by this factor (default)
-      <I>collide/retry</I> = <I>yes</I> or <I>no</I>
+      <I>react/retry</I> = <I>yes</I> or <I>no</I>
         yes = retry collision algorithm until successful
         no = do not retry collision algorithm (default)
       <I>gpu/aware</I> = <I>yes</I> or <I>no</I>
@@ -95,24 +95,25 @@ is typically the preferred method when running on CPUs and Xeon Phis.
 The <I>atomic</I> option uses thread atomics and is typically faster when
 running on GPUs.
 </P>
-<P>Chemical reactions can increase the number of particles in the 
-simulation, which requires extra memory storage. It is not possible to 
-resize Kokkos data structures during the collide routine, so two 
-workarounds are provided. The default is to use the <I>collide/extra</I> 
-keyword, which ensures there is extra memory allocated to store new 
-particles. For example, if <I>collide/extra</I> is set to 1.1, then the 
-memory is over-allocated by 10%. If this space is still not sufficient to hold 
-new particles, the code will error out and the simulation must be 
-restarted using a larger value for <I>collide/extra</I>. Alternatively, if 
-the <I>collide/retry</I> option is set to <I>yes</I>, backup copies of the Kokkos 
-data structures are created. If space is exceeded during the collide 
-routine, the Kokkos data structures are restored from backup, their size 
-is increased, and the collide routine is started over from the 
-beginning. This guarantees that the collide routine will eventually 
-succeed without producing an error, but increased memory by a factor of 
-2 and also has overhead from making a backup copy of the data. If the 
-<I>collide/retry</I> option is set to <I>yes</I>, the <I>collide/extra</I> keyword will 
-be ignored. If reactions are not defined, both these options will be ignored.
+<P>Chemical reactions (gas or surface) can increase the number of
+particles in the simulation, which requires extra memory storage. It
+is not possible to resize Kokkos data structures during the reaction
+routines, so two workarounds are provided. The default is to use the
+<I>react/extra</I> keyword, which ensures there is extra memory allocated
+to store new particles. For example, if <I>react/extra</I> is set to 1.1,
+then the memory is over-allocated by 10%. If this space is still not
+sufficient to hold new particles, the code will error out and the
+simulation must be restarted using a larger value for <I>react/extra</I>.
+Alternatively, if the <I>react/retry</I> option is set to <I>yes</I>, backup
+copies of the Kokkos data structures are created. If space is exceeded
+during reactions, the Kokkos data structures are restored from backup,
+their size is increased, and the collide or move routine is started
+over from the beginning. This guarantees that reactions will
+eventually succeed without producing an error, but increases memory by
+a factor of 2 and also has overhead from making a backup copy of the
+data. If the <I>react/retry</I> option is set to <I>yes</I>, the
+<I>react/extra</I> keyword will be ignored. If reactions are not defined,
+both of these options will be ignored.
 </P>
 <P>The <I>comm</I> keyword determines whether the host or device performs the
 packing and unpacking of data when communicating per-atom data between
@@ -149,8 +150,8 @@ setting</A>
 </P>
 <P><B>Default:</B>
 </P>
-<P>For the KOKKOS package, the option defaults are collide/extra = 1.1,
-collide/retry = no, and gpu/aware yes. For CPUs: comm = serial,
+<P>For the KOKKOS package, the option defaults are react/extra = 1.1,
+react/retry = no, and gpu/aware yes. For CPUs: comm = serial,
 reduction = parallel/reduce, and for GPUs: comm = threaded, reduction =
 atomic. These settings are made automatically by the required "-k on"
 <A HREF = "Section_start.html#start_6">command-line switch</A>. You can change them
