@@ -80,6 +80,7 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   nrho = 1.0;
   vstream[0] = vstream[1] = vstream[2] = 0.0;
   temp_thermal = 273.15;
+  optmove_flag = 0;
   fstyle = NOFIELD;
   fieldID = NULL;
 
@@ -154,17 +155,42 @@ void Update::init()
   if (runflag == 0) return;
   first_update = 1;
 
+  if (optmove_flag) {
+    if (!grid->uniform)
+      error->all(FLERR,"Cannot use optimized move with non-uniform grid");
+    else if (surf->exist)
+      error->all(FLERR,"Cannot use optimized move when surfaces are defined");
+    else {
+      for (int ifix = 0; ifix < modify->nfix; ifix++) {
+        if (strstr(modify->fix[ifix]->style,"adapt") != NULL)
+          error->all(FLERR,"Cannot use optimized move with fix adapt");
+      }
+    }
+  }
+
   // choose the appropriate move method
 
   if (domain->dimension == 3) {
-    if (surf->exist) moveptr = &Update::move<3,1>;
-    else moveptr = &Update::move<3,0>;
+    if (surf->exist)
+      moveptr = &Update::move<3,1,0>;
+    else {
+      if (optmove_flag) moveptr = &Update::move<3,0,1>;
+      else moveptr = &Update::move<3,0,0>;
+    }
   } else if (domain->axisymmetric) {
-    if (surf->exist) moveptr = &Update::move<1,1>;
-    else moveptr = &Update::move<1,0>;
+    if (surf->exist)
+      moveptr = &Update::move<1,1,0>;
+    else {
+      if (optmove_flag) moveptr = &Update::move<1,0,1>;
+      else moveptr = &Update::move<1,0,0>;
+    }
   } else if (domain->dimension == 2) {
-    if (surf->exist) moveptr = &Update::move<2,1>;
-    else moveptr = &Update::move<2,0>;
+    if (surf->exist)
+      moveptr = &Update::move<2,1,0>;
+    else {
+      if (optmove_flag) moveptr = &Update::move<2,0,1>;
+      else moveptr = &Update::move<2,0,0>;
+    }
   }
 
   // checks on external field options
@@ -322,7 +348,7 @@ void Update::run(int nsteps)
    use multiple iterations of move/comm if necessary
 ------------------------------------------------------------------------- */
 
-template < int DIM, int SURF > void Update::move()
+template < int DIM, int SURF, int OPT > void Update::move()
 {
   bool hitflag;
   int m,icell,icell_original,nmask,outface,bflag,nflag,pflag,itmp;
@@ -333,12 +359,25 @@ template < int DIM, int SURF > void Update::move()
   double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
   double xnew[3],xhold[3],xc[3],vc[3],minxc[3],minvc[3];
   double *x,*v,*lo,*hi;
+  double Lx,Ly,Lz,dx,dy,dz;
+  double *boxlo, *boxhi;
   Grid::ParentCell *pcell;
   Surf::Tri *tri;
   Surf::Line *line;
   Particle::OnePart iorig;
   Particle::OnePart *particles;
   Particle::OnePart *ipart,*jpart;
+
+  if (OPT) {
+    boxlo = domain->boxlo;
+    boxhi = domain->boxhi;
+    Lx = boxhi[0] - boxlo[0];
+    Ly = boxhi[1] - boxlo[1];
+    Lz = boxhi[2] - boxlo[2];
+    dx = Lx/grid->unx;
+    dy = Ly/grid->uny;
+    dz = Lz/grid->unz;
+  }
 
   // for 2d and axisymmetry only
   // xnew,xc passed to geometry routines which use or set z component
@@ -458,6 +497,52 @@ template < int DIM, int SURF > void Update::move()
         xnew[1] = x[1] + dtremain*v[1];
         if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
         if (pflag > PSURF) exclude = pflag - PSURF - 1;
+      }
+
+      // optimized move
+
+      if (OPT) {
+        int optmove = 1;
+
+        if (xnew[0] < boxlo[0] || xnew[0] > boxhi[0])
+          optmove = 0;
+
+        if (xnew[1] < boxlo[1] || xnew[1] > boxhi[1])
+          optmove = 0;
+
+        if (DIM == 3) {
+          if (xnew[2] < boxlo[2] || xnew[2] > boxhi[2])
+            optmove = 0;
+        }
+
+        if (optmove) {
+          const int ip = static_cast<int>((xnew[0] - boxlo[0])/dx);
+          const int jp = static_cast<int>((xnew[1] - boxlo[1])/dy);
+          int kp = 0;
+          if (DIM == 3) kp = static_cast<int>((xnew[2] - boxlo[2])/dz);
+
+          int cellIdx = (kp*grid->uny + jp)*grid->unx + ip + 1;
+
+          // particle outside ghost grid halo must use standard move
+
+          if (grid->hash->find(cellIdx) != grid->hash->end()) {
+          
+            int icell = (*(grid->hash))[cellIdx];
+
+            // reset particle cell and coordinates
+
+            particles[i].icell = icell;
+            particles[i].flag = PKEEP;
+            x[0] = xnew[0];
+            x[1] = xnew[1];
+            x[2] = xnew[2];
+
+            if (cells[icell].proc != me)
+              mlist[nmigrate++] = i;
+
+            continue;
+          }
+        }
       }
 
       particles[i].flag = PKEEP;
@@ -1196,7 +1281,7 @@ template < int DIM, int SURF > void Update::move()
   // accumulate running totals
 
   niterate_running += niterate;
-  nmove_running += nlocal;
+  nmove_running += particle->nlocal;
   ntouch_running += ntouch_one;
   ncomm_running += ncomm_one;
   nboundary_running += nboundary_one;
@@ -1530,6 +1615,12 @@ void Update::global(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       fnum = input->numeric(FLERR,arg[iarg+1]);
       if (fnum <= 0.0) error->all(FLERR,"Illegal global command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"optmove") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
+      if (strcmp(arg[iarg+1],"yes") == 0) optmove_flag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) optmove_flag = 0;
+      else error->all(FLERR,"Illegal global command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"nrho") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");

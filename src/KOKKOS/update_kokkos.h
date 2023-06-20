@@ -31,9 +31,8 @@
 
 namespace SPARTA_NS {
 
-#define KOKKOS_SURF_COLL_TYPES 4
 #define KOKKOS_MAX_SURF_COLL_PER_TYPE 2
-#define KOKKOS_TOT_SURF_COLL 6
+#define KOKKOS_MAX_TOT_SURF_COLL 10
 #define KOKKOS_MAX_BLIST 2
 #define KOKKOS_MAX_SLIST 2
 
@@ -83,7 +82,7 @@ struct s_UPDATE_REDUCE {
 };
 typedef struct s_UPDATE_REDUCE UPDATE_REDUCE;
 
-template<int DIM, int SURF, int ATOMIC_REDUCTION>
+template<int DIM, int SURF, int OPT, int ATOMIC_REDUCTION>
 struct TagUpdateMove{};
 
 class UpdateKokkos : public Update {
@@ -102,18 +101,25 @@ class UpdateKokkos : public Update {
   void setup();
   void run(int);
 
-  template<int DIM, int SURF, int ATOMIC_REDUCTION>
+  template<int DIM, int SURF, int OPT, int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const int&) const;
+  void operator()(TagUpdateMove<DIM,SURF,OPT,ATOMIC_REDUCTION>, const int&) const;
 
-  template<int DIM, int SURF, int ATOMIC_REDUCTION>
+  template<int DIM, int SURF, int OPT, int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const int&, UPDATE_REDUCE&) const;
+  void operator()(TagUpdateMove<DIM,SURF,OPT,ATOMIC_REDUCTION>, const int&, UPDATE_REDUCE&) const;
 
  private:
 
   double dt;
   int field_active[3];
+
+  // data for optimized particle moves
+
+  double dx,dy,dz,Lx,Ly,Lz;
+  double xlo,ylo,zlo,xhi,yhi,zhi;
+  int ncx,ncy,ncz;
+  GridKokkos::hash_type hash_kk;
 
   t_cell_1d d_cells;
   t_sinfo_1d d_sinfo;
@@ -136,8 +142,8 @@ class UpdateKokkos : public Update {
   KKCopy<GridKokkos> grid_kk_copy;
   KKCopy<DomainKokkos> domain_kk_copy;
 
-  int sc_type_list[KOKKOS_TOT_SURF_COLL];
-  int sc_map[KOKKOS_TOT_SURF_COLL];
+  int sc_type_list[KOKKOS_MAX_TOT_SURF_COLL];
+  int sc_map[KOKKOS_MAX_TOT_SURF_COLL];
   KKCopy<SurfCollideSpecularKokkos> sc_kk_specular_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<SurfCollideDiffuseKokkos> sc_kk_diffuse_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<SurfCollideVanishKokkos> sc_kk_vanish_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
@@ -147,11 +153,11 @@ class UpdateKokkos : public Update {
   KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];
 
 
-  typedef Kokkos::DualView<int[12], DeviceType::array_layout, DeviceType> tdual_int_12;
-  typedef tdual_int_12::t_dev t_int_12;
-  typedef tdual_int_12::t_host t_host_int_12;
-  t_int_12 d_scalars;
-  t_host_int_12 h_scalars;
+  typedef Kokkos::DualView<int[14], DeviceType::array_layout, DeviceType> tdual_int_14;
+  typedef tdual_int_14::t_dev t_int_14;
+  typedef tdual_int_14::t_host t_host_int_14;
+  t_int_14 d_scalars;
+  t_host_int_14 h_scalars;
 
   DAT::t_int_scalar d_ntouch_one;
   HAT::t_int_scalar h_ntouch_one;
@@ -189,6 +195,16 @@ class UpdateKokkos : public Update {
   DAT::t_int_scalar d_error_flag;
   HAT::t_int_scalar h_error_flag;
 
+  DAT::t_int_scalar d_retry;
+  HAT::t_int_scalar h_retry;
+
+  DAT::t_int_scalar d_nlocal;
+  HAT::t_int_scalar h_nlocal;
+
+  void backup();
+  void restore();
+  t_particle_1d d_particles_backup;
+
   void bounce_set(bigint);
 
   // remap x and v components into axisymmetric plane
@@ -212,7 +228,7 @@ class UpdateKokkos : public Update {
 
   typedef void (UpdateKokkos::*FnPtr)();
   FnPtr moveptr;             // ptr to move method
-  template < int, int > void move();
+  template < int, int, int > void move();
 
   //typedef void (UpdateKokkos::*FnPtr2)(int, int, double, double *, double *) const;
   //FnPtr2 moveperturb;        // ptr to moveperturb method

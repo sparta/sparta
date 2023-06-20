@@ -17,7 +17,6 @@
 #include "string.h"
 #include "surf_collide_diffuse_kokkos.h"
 #include "surf_kokkos.h"
-#include "surf_react.h"
 #include "input.h"
 #include "variable.h"
 #include "particle.h"
@@ -37,7 +36,8 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
-enum{INT,DOUBLE};                      // several files
+#define VAL_1(X) X
+#define VAL_2(X) VAL_1(X), VAL_1(X)
 
 /* ---------------------------------------------------------------------- */
 
@@ -45,25 +45,39 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta, int narg, cha
   SurfCollideDiffuse(sparta, narg, arg),
   fix_ambi_kk_copy(sparta),
   fix_vibmode_kk_copy(sparta),
+  sr_kk_global_copy{VAL_2(KKCopy<SurfReactGlobalKokkos>(sparta))},
+  sr_kk_prob_copy{VAL_2(KKCopy<SurfReactProbKokkos>(sparta))},
   rand_pool(12345 + comm->me
 #ifdef SPARTA_KOKKOS_EXACT
             , sparta
 #endif
            )
 {
+  kokkosable = 1;
+
+  random_backup = NULL;
+
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.init(random);
 #endif
 
-  k_nsingle = DAT::tdual_int_scalar("SurfCollide:nsingle");
-  d_nsingle = k_nsingle.d_view;
-  h_nsingle = k_nsingle.h_view;
+  // use 1D view for scalars to reduce GPU memory operations
+
+  d_scalars = t_int_2("surf_collide_diffuse:scalars");
+  d_nsingle = Kokkos::subview(d_scalars,0);
+  d_nreact_one = Kokkos::subview(d_scalars,1);
+
+  h_scalars = t_host_int_2("surf_collide_diffuse:scalars_mirror");
+  h_nsingle = Kokkos::subview(h_scalars,0);
+  h_nreact_one = Kokkos::subview(h_scalars,1);
 }
 
 SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta) :
   SurfCollideDiffuse(sparta),
   fix_ambi_kk_copy(sparta),
   fix_vibmode_kk_copy(sparta),
+  sr_kk_global_copy{VAL_2(KKCopy<SurfReactGlobalKokkos>(sparta))},
+  sr_kk_prob_copy{VAL_2(KKCopy<SurfReactProbKokkos>(sparta))},
   rand_pool(12345 // seed doesn't matter since it will just be copied over
 #ifdef SPARTA_KOKKOS_EXACT
             , sparta
@@ -72,6 +86,7 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta) :
 {
   tstr = NULL;
   random = NULL;
+  random_backup = NULL;
   id = NULL;
   style = NULL;
 }
@@ -85,8 +100,15 @@ SurfCollideDiffuseKokkos::~SurfCollideDiffuseKokkos()
   fix_ambi_kk_copy.uncopy(1);
   fix_vibmode_kk_copy.uncopy(1);
 
+  for (int i = 0; i < KOKKOS_MAX_SURF_REACT_PER_TYPE; i++) {
+    sr_kk_global_copy[i].uncopy();
+    sr_kk_prob_copy[i].uncopy();
+  }
+
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.destroy();
+  if (random_backup)
+    delete random_backup;
 #endif
 }
 
@@ -130,6 +152,36 @@ void SurfCollideDiffuseKokkos::pre_collide()
     fix_vibmode_kk_copy.copy(vfix_kk);
   }
 
+  if (surf->nsr > KOKKOS_MAX_TOT_SURF_REACT)
+    error->all(FLERR,"Kokkos currently supports two instances of each surface reaction method");
+
+  if (surf->nsr > 0) {
+    int nglob,nprob;
+    nglob = nprob = 0;
+    for (int n = 0; n < surf->nsr; n++) {
+      if (!surf->sr[n]->kokkosable)
+        error->all(FLERR,"Must use Kokkos-enabled surface reaction method with Kokkos");
+      if (strcmp(surf->sr[n]->style,"global") == 0) {
+        sr_kk_global_copy[nglob].copy((SurfReactGlobalKokkos*)(surf->sr[n]));
+        sr_kk_global_copy[nglob].obj.pre_react();
+        sr_type_list[n] = 0;
+        sr_map[n] = nprob;
+        nglob++;
+      } else if (strcmp(surf->sr[n]->style,"prob") == 0) {
+        sr_kk_prob_copy[nprob].copy((SurfReactProbKokkos*)(surf->sr[n]));
+        sr_kk_prob_copy[nprob].obj.pre_react();
+        sr_type_list[n] = 1;
+        sr_map[n] = nprob;
+        nprob++;
+      } else {
+        error->all(FLERR,"Unknown Kokkos surface reaction method");
+      }
+    }
+
+    if (nglob > KOKKOS_MAX_SURF_REACT_PER_TYPE || nprob > KOKKOS_MAX_SURF_REACT_PER_TYPE)
+      error->all(FLERR,"Kokkos currently supports two instances of each surface reaction method");
+  }
+
   if (random == NULL) {
     // initialize RNG
 
@@ -148,8 +200,9 @@ void SurfCollideDiffuseKokkos::pre_collide()
   d_species = particle_kk->k_species.d_view;
   boltz = update->boltz;
 
+  SurfKokkos* surf_kk = (SurfKokkos*) surf;
+
   if (tmode == CUSTOM) {
-    SurfKokkos* surf_kk = (SurfKokkos*) surf;
     surf_kk->sync(Device,SURF_CUSTOM_MASK);
 
     int tindex = surf->find_custom(tstr);
@@ -162,6 +215,8 @@ void SurfCollideDiffuseKokkos::pre_collide()
   if (Pointers::collide) rotstyle = Pointers::collide->rotstyle;
   vibstyle = NONE;
   if (Pointers::collide) vibstyle = Pointers::collide->vibstyle;
+
+  Kokkos::deep_copy(d_scalars,0);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -170,5 +225,66 @@ void SurfCollideDiffuseKokkos::post_collide()
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   if (ambi_flag || vibmode_flag) particle_kk->modify(Device,CUSTOM_MASK);
+
+  Kokkos::deep_copy(h_scalars,d_scalars);
+
+  int m = surf->find_collide(id);
+  auto sc = surf->sc[m]; // can't modify the copy directly, use the original
+  sc->nsingle += h_nsingle();
+  surf->nreact_one += h_nreact_one();
+
   d_particles = decltype(d_particles)();
+}
+
+/* ---------------------------------------------------------------------- */
+
+void SurfCollideDiffuseKokkos::backup()
+{
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  d_particles = particle_kk->k_particles.d_view;
+
+  if (surf->nsr > 0) {
+    int nglob,nprob;
+    nglob = nprob = 0;
+    for (int n = 0; n < surf->nsr; n++) {
+      if (strcmp(surf->sr[n]->style,"global") == 0) {
+        sr_kk_global_copy[nglob].obj.backup();
+        nglob++;
+      } else if (strcmp(surf->sr[n]->style,"prob") == 0) {
+        sr_kk_prob_copy[nprob].obj.backup();
+        nprob++;
+      }
+    }
+  }
+
+#ifdef SPARTA_KOKKOS_EXACT
+  if (!random_backup)
+    random_backup = new RanKnuth(12345 + comm->me);
+  memcpy(random_backup,random,sizeof(RanKnuth));
+#endif
+}
+
+/* ---------------------------------------------------------------------- */
+
+void SurfCollideDiffuseKokkos::restore()
+{
+  if (surf->nsr > 0) {
+    int nglob,nprob;
+    nglob = nprob = 0;
+    for (int n = 0; n < surf->nsr; n++) {
+      if (strcmp(surf->sr[n]->style,"global") == 0) {
+        sr_kk_global_copy[nglob].obj.restore();
+        nglob++;
+      } else if (strcmp(surf->sr[n]->style,"prob") == 0) {
+        sr_kk_prob_copy[nprob].obj.restore();
+        nprob++;
+      }
+    }
+  }
+
+  Kokkos::deep_copy(d_scalars,0);
+
+#ifdef SPARTA_KOKKOS_EXACT
+  memcpy(random,random_backup,sizeof(RanKnuth));
+#endif
 }
