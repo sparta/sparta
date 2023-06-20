@@ -31,7 +31,7 @@
 using namespace SPARTA_NS;
 
 enum{SUM,SUMSQ,MINN,MAXX,AVE,AVESQ,SUMAREA,AVEAREA};
-enum{X,V,KE,EROT,EVIB,COMPUTE,FIX,VARIABLE};
+enum{X,V,KE,EROT,EVIB,COMPUTE,FIX,VARIABLE,PCUSTOM,GCUSTOM,SCUSTOM};
 enum{PARTICLE,GRID,SURF};
 
 #define INVOKED_PER_PARTICLE 8
@@ -114,10 +114,16 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
 
     } else if (strncmp(arg[iarg],"c_",2) == 0 ||
                strncmp(arg[iarg],"f_",2) == 0 ||
-               strncmp(arg[iarg],"v_",2) == 0) {
+               strncmp(arg[iarg],"v_",2) == 0 ||
+               strncmp(arg[iarg],"p_",2) == 0 ||
+               strncmp(arg[iarg],"g_",2) == 0 ||
+               strncmp(arg[iarg],"s_",2) == 0) {
       if (arg[iarg][0] == 'c') which[nvalues] = COMPUTE;
       else if (arg[iarg][0] == 'f') which[nvalues] = FIX;
       else if (arg[iarg][0] == 'v') which[nvalues] = VARIABLE;
+      else if (arg[iarg][0] == 'p') which[nvalues] = PCUSTOM;
+      else if (arg[iarg][0] == 'g') which[nvalues] = GCUSTOM;
+      else if (arg[iarg][0] == 's') which[nvalues] = SCUSTOM;
 
       int n = strlen(arg[iarg]);
       char *suffix = new char[n];
@@ -198,6 +204,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
       int icompute = modify->find_compute(ids[i]);
       if (icompute < 0)
         error->all(FLERR,"Compute ID for compute reduce does not exist");
+      
       if (modify->compute[icompute]->per_particle_flag) {
         flavor[i] = PARTICLE;
         if (argindex[i] == 0 &&
@@ -212,6 +219,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
             argindex[i] > modify->compute[icompute]->size_per_particle_cols)
           error->all(FLERR,
                      "Compute reduce compute array is accessed out-of-range");
+
       } else if (modify->compute[icompute]->per_grid_flag) {
         flavor[i] = GRID;
         if (argindex[i] == 0 &&
@@ -225,13 +233,19 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
             argindex[i] > modify->compute[icompute]->size_per_grid_cols)
           error->all(FLERR,
                      "Compute reduce compute array is accessed out-of-range");
-      } else error->all(FLERR,"Compute reduce compute calculates "
-                        "global or surf values");
+
+      } else if (modify->compute[icompute]->per_grid_flag) {
+        flavor[i] = SURF;
+
+	// NOTE: add logic
+	
+      } else error->all(FLERR,"Compute reduce compute calculates global values");
 
     } else if (which[i] == FIX) {
       int ifix = modify->find_fix(ids[i]);
       if (ifix < 0)
         error->all(FLERR,"Fix ID for compute reduce does not exist");
+      
       if (modify->fix[ifix]->per_particle_flag) {
         flavor[i] = PARTICLE;
         if (argindex[i] == 0 &&
@@ -244,6 +258,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
         if (argindex[i] &&
             argindex[i] > modify->fix[ifix]->size_per_particle_cols)
           error->all(FLERR,"Compute reduce fix array is accessed out-of-range");
+	
       } else if (modify->fix[ifix]->per_grid_flag) {
         flavor[i] = GRID;
         if (argindex[i] == 0 &&
@@ -256,6 +271,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
         if (argindex[i] &&
             argindex[i] > modify->fix[ifix]->size_per_grid_cols)
           error->all(FLERR,"Compute reduce fix array is accessed out-of-range");
+	
       } else if (modify->fix[ifix]->per_surf_flag) {
         flavor[i] = SURF;
         if (argindex[i] == 0 &&
@@ -268,6 +284,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
         if (argindex[i] &&
             argindex[i] > modify->fix[ifix]->size_per_surf_cols)
           error->all(FLERR,"Compute reduce fix array is accessed out-of-range");
+	
       } else error->all(FLERR,"Compute reduce fix calculates global values");
 
     } else if (which[i] == VARIABLE) {
@@ -276,9 +293,20 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
         error->all(FLERR,"Variable name for compute reduce does not exist");
       if (input->variable->particle_style(ivariable)) flavor[i] = PARTICLE;
       else if (input->variable->grid_style(ivariable)) flavor[i] = GRID;
+      else if (input->variable->surf_style(ivariable)) flavor[i] = SURF;
       else
         error->all(FLERR,"Compute reduce variable is not "
-                   "particle-style or grid-style variable");
+                   "particle-, grid-, surf-style variable");
+
+    } else if (which[i] == PCUSTOM) {
+      flavor[i] = PARTICLE;
+	// NOTE: add logic
+    } else if (which[i] == GCUSTOM) {
+      flavor[i] = GRID;
+	// NOTE: add logic
+    } else if (which[i] == SCUSTOM) {
+      flavor[i] = SURF;
+	// NOTE: add logic
     }
 
     // require all values have same flavor
@@ -308,8 +336,8 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
     owner = new int[size_vector];
   }
 
-  maxparticle = maxgrid = 0;
-  varparticle = vargrid = NULL;
+  maxparticle = maxgrid = maxsurf = 0;
+  varparticle = vargrid = varsurf = NULL;
   areasurf = NULL;
 }
 
@@ -583,7 +611,8 @@ double ComputeReduce::compute_one(int m, int flag)
     } else one = particles[flag].evib;
 
   // invoke compute if not previously invoked
-  // for per-grid compute, invoke post_process() method if necessary
+  // for per-grid compute, invoke post_process grid() or isurf_grid() method as needed
+  // for per-surf compute, invoke post_process_surf() method as needed
 
   } else if (which[m] == COMPUTE) {
     Compute *c = modify->compute[vidx];
@@ -650,8 +679,11 @@ double ComputeReduce::compute_one(int m, int flag)
           }
         } else one = carray[flag][aidxm1];
       }
+      
+    } else if (flavor[m] == SURF) {
+      // NOTE: add logic
     }
-
+    
   // access fix fields, check if fix frequency is a match
 
   } else if (which[m] == FIX) {
@@ -790,7 +822,7 @@ double ComputeReduce::compute_one(int m, int flag)
       }
     }
 
-  // evaluate particle-style or grid-style variable
+  // evaluate particle-style or grid-style or surf->style variable
 
   } else if (which[m] == VARIABLE) {
     if (flavor[m] == PARTICLE) {
@@ -826,7 +858,34 @@ double ComputeReduce::compute_one(int m, int flag)
           combine(one,vargrid[i],i);
         }
       } else one = vargrid[flag];
+
+    } else if (flavor[m] == SURF) {
+      int n = surf->nown;
+      if (n > maxsurf) {
+        maxsurf = surf->nown;
+        memory->destroy(varsurf);
+        memory->create(varsurf,maxsurf,"reduce:varsurf");
+      }
+
+      input->variable->compute_surf(vidx,varsurf,1,0);
+      if (flag < 0) {
+	// NOTE: need logic for surf group
+        for (i = 0; i < n; i++) {
+          //if (subsetID && !(cinfo[i].mask & gridgroupbit)) continue;
+          combine(one,varsurf[i],i);
+        }
+      } else one = varsurf[flag];
     }
+
+  // access custom attribute
+
+  } else if (which[m] == PCUSTOM) {
+    // NOTE: add logic
+  } else if (which[m] == GCUSTOM) {
+    // NOTE: add logic
+  } else if (which[m] == SCUSTOM) {
+    // NOTE: add logic
+
   }
 
   return one;
