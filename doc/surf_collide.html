@@ -25,20 +25,20 @@
     noslip = reflect all velocity components off surface (not just normal component)
   <I>diffuse</I> or <I>diffuse/kk</I> args = Tsurf acc
     Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable or custom per-surf vector (see below)
+                Tsurf can be a variable or custom per-surf attribute (see below)
     acc = accommodation coefficient
   <I>cll</I> args = Tsurf acc_n acc_t acc_rot acc_vib
     Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable or custom per-surf vector (see below)
+                Tsurf can be a variable or custom per-surf attribute (see below)
     acc_n = accommodation coefficient in the surface normal direction
     acc_t = accommodation coefficient in the surface tangential direction
     acc_rot = accommodation coefficient for the rotational modes
     acc_vib = accommodation coefficient for the vibrational modes
   <I>adiabatic</I> args = none
-  <I>impulsive</I> args = Tsurf <I>model</I> param1 param2 var theta_peak pol_pow azi_pow
+  <I>impulsive</I> args = Tsurf model param1 param2 var theta_peak pol_pow azi_pow
     Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable or custom per-surf vector (see below)
-    <I>model</I> can be softsphere or tempvar
+                Tsurf can be a variable or custom per-surf attribute (see below)
+    model can be <I>softsphere</I> or <I>tempvar</I>
       <I>softsphere</I> args = en_ratio eff_mass
         param1 = en_ratio = fraction of energy lost in the collision
         param2 = eff_mass = effective mass of the surface atom
@@ -51,7 +51,7 @@
     azi_pow = cosine power represeting the azimuthal angular distribution
   <I>td</I> arg = Tsurf 
     Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable or custom per-surf vector (see below)
+                Tsurf can be a variable or custom per-surf attribute (see below)
   <I>piston</I> or <I>piston/kk</I> args = Vwall
     Vwall = velocity of boundary wall (velocity units)
   <I>transparent</I> args = none 
@@ -60,7 +60,7 @@
 </PRE>
 <LI>zero or more keyword/arg pairs may be appended 
 
-<LI>keyword = <I>translate</I> or <I>rotate</I> or <I>partial</I> or <I>barrier</I> or <I>bond</I> or <I>init_energy</I> or <I>step</I> or <I>double</I> or <I>intenergy</I> 
+<LI>keyword = <I>translate</I> or <I>rotate</I> or <I>temp/freq</I> or <I>partial</I> or <I>barrier</I> or <I>bond</I> or <I>init_energy</I> or <I>step</I> or <I>double</I> or <I>intenergy</I> 
 
 <LI>values = values for specific keyword 
 
@@ -69,6 +69,8 @@
   <I>rotate</I> args = Pz Py Pz Wx Wy Wz
     Px,Py,Pz = point to rotate surface around (distance units)
     Wx,Wy,Wz = angular velocity of surface around point (radians/time) 
+  <I>temp/freq</I> arg = Nfreq
+    Nfreq = evaulate a temperature variable every this many timesteps (default = 1)
   <I>partial</I> args = eccen (only for <I>cll</I> style)
     eccen = eccentricity parameter
   <I>barrier</I> args = bar_val (only for <I>td</I> style)
@@ -103,7 +105,7 @@ surf_collide 1 impulsive 1000.0 softsphere 0.2 50 2000 60 5 75
 surf_collide 1 impulsive 1000.0 tempvar 3 500 2000 60 5 75
 surf_collide 1 impulsive 1000.0 softsphere 0.2 50 2000 60 5 75 double 10
 surf_collide 1 impulsive 1000.0 tempvar 3 500 2000 60 5 75 step 0.1
-surf_collide heatwall diffuse v_ramp 0.8
+surf_collide heatwall diffuse v_ramp 0.8 temp/freq 100
 surf_collide heatwall diffuse v_ramp 0.8 translate 5.0 0.0 0.0 
 </PRE>
 <P><B>Description:</B>
@@ -126,6 +128,59 @@ only contain alphanumeric characters and underscores.
 </P>
 <HR>
 
+<P>Several of the surface collision models specify <I>Tsurf</I> as an argument
+for the temperature of the surface.  It can be specified in several
+different ways.
+</P>
+<P><I>Tsurf</I> can be a numeric value.  The temperature of all surface
+elements assigned to the model will be the same and will be constant
+for the duration of the simulation.
+</P>
+<P><I>Tsurf</I> can be a variable specified as v_name where <I>name</I> is the name
+of the variable defined by the <A HREF = "variable.html">variable</A> command.  Two
+different styles of variable can be used.
+</P>
+<P>The first is an equal-style variable which evaulates to a single
+scalar value, which will be the temperature assigned to every surface
+element.  Equal-style variables can specify formulas with various
+mathematical functions, and include <A HREF = "status_style.html">stats_style</A>
+command keywords and timestep and elapsed time.  Thus it is easy to
+specify a time-dependent temperature.
+</P>
+<P>The second is a surf-style variable with a formula which can calculate
+a different temperature for each surface element, e.g. a temperature
+which depends on the geometric location of the center point of the
+surface element.  The calculation can also be time-dependent if
+desired.
+</P>
+<P>Note that the frequency at which the equal-style or surf-style
+variable is evaluated can be set using the optional <I>temp/freq</I>
+keyword, disussed below.  The default value is 1, meaning the variable
+is evaluated every timestep.  Surf-style variables can be expensive to
+evaluate, because they require inter-processor communication in
+parallel, so you may wish to set the <I>temp/freq</I> keyword to a larger
+value.
+</P>
+<P><I>Tsurf</I> can be a custom per-surf attribute specified as s_ID, where ID
+is the name of the attribute.  It must be a custom per-surf vector
+with floating point values for the temperature for each surface
+element.  These could be static values initialized, for example, by
+the <A HREF = "read_surf.html">read_surf</A> command.  Or they could be dynamic
+values recomputed periodically, for example, by the "fix surf/temp"
+command.  See <A HREF = "Section_howto.html#howto_17">Section 6.17</A> for more
+discussion of custom attributes.
+</P>
+<P>Note that if the custom per-surf vector values are dynamic, then each
+time they are modified (e.g. by the <A HREF = "fix_surf_temp.html">fix surf/temp</A>
+command), then their use by a surf_collide model will trigger
+inter-processor communication to ensure each processor knows the
+correct temperature values for the surface elements its particles
+interact with.  This can be an expensive operation, so it may be
+desirable to not update the custom per-surf vector values too
+frequently.
+</P>
+<HR>
+
 <P>The <I>specular</I> style computes a simple specular reflection model.  It
 requires no arguments.  Specular reflection means that a particle
 reflects off a surface element with its incident velocity vector
@@ -144,10 +199,15 @@ In either case, the particle's speed is unchanged.
 <P>The <I>diffuse</I> style computes a simple diffusive reflection model.
 </P>
 <P>The model has 2 parameters set by the <I>Tsurf</I> and <I>acc</I> arguments.
-<I>Tsurf</I> is the temperature of the surface.  <I>Acc</I> is an accommodation
-coefficient from 0.0 to 1.0, which determines what fraction of surface
-collisions are diffusive.  The rest are specular.  Thus a setting of
-<I>acc</I> = 0.0 means all collisions are specular.
+</P>
+<P>The <I>Tsurf</I> argument specifies the temperature of the surface.  It can
+be a numeric value, surf-style variable, or custom per-surf attribute.
+See the explanation for all 3 options above.
+</P>
+<P><I>Acc</I> is an accommodation coefficient from 0.0 to 1.0, which
+determines what fraction of surface collisions are diffusive.  The
+rest are specular.  Thus a setting of <I>acc</I> = 0.0 means all collisions
+are specular.
 </P>
 <P>Note that setting <I>acc</I> = 0.0, is a way to perform surface reactions
 with specular reflection, via the <A HREF = "surf_react.html">surf_react</A>
@@ -164,35 +224,22 @@ the surface given by:
 </P>
 <CENTER><IMG SRC = "Eqs/diffuse_normal.jpg">
 </CENTER>
-<P>The <I>Tsurf</I> value can be also be specified as an equal-style
-<A HREF = "variable.html">variable</A>.  If the value is a variable, it should be
-specified as v_name, where name is the variable name.  In this case,
-the variable will be evaluated each timestep, and its value used to
-determine the current surface temperature.
-</P>
-<P>Equal-style variables can specify formulas with various mathematical
-functions, and include <A HREF = "status_style.html">stats_style</A> command
-keywords for the simulation box parameters and timestep and elapsed
-time.  Thus it is easy to specify a time-dependent temperature.
-</P>
-<P>The <I>Tsurf</I> value can also be specified as a custom per-surf vector,
-which is updated with temperature values by the <A HREF = "fix_surf_temp.html">fix
-surf/temp</A> command.  In this case, it should be
-specified as s_name, where name is the name of the custom per-surf
-vector, which is also specified by the <A HREF = "fix_surf_temp.html">fix
-surf/temp</A> command.
-</P>
 <HR>
 
 <P>The <I>cll</I> style computes the surface collision model proposed by
 Cercignani, Lampis and Lord.  The model has 5 parameters set by the
-<I>Tsurf</I>, <I>acc_n</I>, <I>acc_t</I>, <I>acc_rot</I>, and <I>acc_vib</I> arguments. <I>Tsurf</I>
-is the temperature of the surface.  <I>acc_n</I>, <I>acc_t</I>, <I>acc_rot</I>, and
-<I>acc_vib</I> are the accommodation coefficient for the surface normal
-direction, surface tangential directions, rotational energy mode, and
-vibrational energy mode respectively. The rotational and vibrational
-energy accommodation values must be specified even for an atomic
-species; however these values are simply ignored.
+<I>Tsurf</I>, <I>acc_n</I>, <I>acc_t</I>, <I>acc_rot</I>, and <I>acc_vib</I> arguments.
+</P>
+<P>The <I>Tsurf</I> argument specifies the temperature of the surface.  It can
+be a numeric value, surf-style variable, or custom per-surf attribute.
+See the explanation for all 3 options above.
+</P>
+<P><I>Acc_n</I>, <I>acc_t</I>, <I>acc_rot</I>, and <I>acc_vib</I> are the accommodation
+coefficient for the surface normal direction, surface tangential
+directions, rotational energy mode, and vibrational energy mode
+respectively. The rotational and vibrational energy accommodation
+values must be specified even for an atomic species; however these
+values are simply ignored.
 </P>
 <P>The theoretical scattering kernel was proposed by Cercignani and
 Lampis <A HREF = "#Cercignani71">(Cercignani71)</A>. In this original model, two
@@ -208,10 +255,6 @@ given by Lord <A HREF = "#Lord90">(Lord90)</A>, along with extension to rotation
 and vibrational modes with both continuous and discrete levels
 <A HREF = "#Lord91">(Lord91)</A>.
 </P>
-<P>The <I>Tsurf</I> value can be also be specified as an equal-style
-<A HREF = "variable.html">variable</A> or a custom per-surf vector.  See the
-description of these 2 options for the <I>diffuse</I> style above.
-</P>
 <HR>
 
 <P>The <I>adiabatic</I> style computes the adiabatic surface collision model
@@ -225,10 +268,13 @@ valid for particle collisions not for potential surface reactions.
 <HR>
 
 <P>The <I>td</I> style computes the thermal desorption surface collision model
-proposed by Swaminathan Gopalan <I>et al.</I> <A HREF = "#SG18">(SG18)</A>. The model has
-1 parameter set by <I>Tsurf</I> argument, which is the temperature of the
-surface. This is similar to <I>diffuse</I> style with an accommodation
-coefficient <I>acc</I> = 1.0.
+proposed by Swaminathan Gopalan <I>et al.</I> <A HREF = "#SG18">(SG18)</A>, which is
+similar to <I>diffuse</I> style with an accommodation coefficient <I>acc</I> =
+1.0.
+</P>
+<P>The <I>Tsurf</I> argument specifies the temperature of the surface.  It can
+be a numeric value, surf-style variable, or custom per-surf attribute.
+See the explanation for all 3 options above.
 </P>
 <P>The particles are scattered thermally based on the Maxwell Boltzmann
 distribution conisstent with the surface temperture.  The new velocity
@@ -237,10 +283,6 @@ normal and the plane tangent to the surface given by:
 </P>
 <CENTER><IMG SRC = "Eqs/diffuse_normal.jpg">
 </CENTER>
-<P>The <I>Tsurf</I> value can be also be specified as an equal-style
-<A HREF = "variable.html">variable</A> or a custom per-surf vector.  See the
-description of these 2 options for the <I>diffuse</I> style above.
-</P>
 <HR>
 
 <P>The <I>impuslive</I> style computes the surface collision model proposed by
@@ -254,11 +296,16 @@ which represents the fraction of energy lost during the collision, and
 particle velocity distribution as a linear function of temperature. It
 has two parameters: the linear term <I>a1</I> and constant term <I>a0</I>. The
 other five parameters <I>Tsurf</I>, <I>var</I>, <I>pol_peak</I>, <I>pol_pow</I>, <I>azi_pow</I>
-are set for both the models. <I>Tsurf</I> is the surface temperature. <I>var</I>
-is the variance of the scattered particle velocity
-distribution. <I>pol_peak</I> is the peak of the polar angle
-distribution. <I>pol_pow</I> and <I>azi_pow</I> are the cosine power
-representing the polar and azimuthal angle distribution respectively.
+are set for both the models.
+</P>
+<P>The <I>Tsurf</I> argument specifies the temperature of the surface.  It can
+be a numeric value, surf-style variable, or custom per-surf attribute.
+See the explanation for all 3 options above.
+</P>
+<P><I>Var</I> is the variance of the scattered particle velocity distribution;
+<I>pol_peak</I> is the peak of the polar angle distribution; <I>pol_pow</I> and
+<I>azi_pow</I> are the cosine power representing the polar and azimuthal
+angle distribution respectively.
 </P>
 <P>The <I>impulsive</I> model is used to represent the scattering of particles
 having super or hyperthermal translational energies and very low
@@ -307,10 +354,6 @@ angle: (-180, 180)
 <P>The internal (rotational and vibrational) energy of an incident
 molecule remains unchanged within the <I>impulsive</I> model unless the
 optional keyword <I>intenergy</I> is specified (see below).
-</P>
-<P>The <I>Tsurf</I> value can be also be specified as an equal-style
-<A HREF = "variable.html">variable</A> or a custom per-surf vector.  See the
-description of these 2 options for the <I>diffuse</I> style above.
 </P>
 <HR>
 
@@ -413,6 +456,15 @@ rotation produces a tangential velocity.  However if does enforce the
 condition by subtracting off any component of the added velocity that
 is normal to the simulation box boundary or individual surface
 element.
+</P>
+<P>The <B>temp/freq</I> keyword only applies to the styles which define a
+<I>Tsurf</I> parameter for the temperature of the surface, and also only
+applies if <I>Tsurf</I> is specified as a variable with the syntax
+<I>v_name</I>.  The <I>Nfreq</I> value determines the frequency at which the
+variable is evaluated, once every Nfreq timesteps.  The default value
+is 1 (evaluate every timestep).  This is usually fine for equal-style
+variables, but surf-style variables may be expensive to evaluate.  In
+which case setting Nfreq to 100 or 1000 may be desirable.
 </P>
 <P>The keyword <I>partial</I> can only be applied to the <I>cll</I> style. Within
 the CLL model, the energy and angular distribution are linked. Lord
@@ -558,7 +610,9 @@ twice in the same input script (active at the same time).
 </P>
 <P><A HREF = "read_surf.html">read_surf</A>, <A HREF = "bound_modify.html">bound_modify</A>
 </P>
-<P><B>Default:</B> none
+<P><B>Default:</B>
+</P>
+<P>The default for the <I>temp/freq</I> keyword = 1.
 </P>
 <HR>
 
