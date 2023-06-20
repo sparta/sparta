@@ -190,7 +190,8 @@ class Surf : protected Pointers {
   void compute_tri_normal(int);
   void quad_corner_point(int, double *, double *, double *);
   void hex_corner_point(int, double *, double *, double *);
-
+  void extract_masks(int *);
+  
   double line_size(int);
   double line_size(Line *);
   double line_size(double *, double *);

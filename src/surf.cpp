@@ -953,6 +953,34 @@ void Surf::hex_corner_point(int icorner, double *lo, double *hi, double *pt)
 }
 
 /* ----------------------------------------------------------------------
+   return vector of masks for my owned surfs
+   for distributed or non-distributed explicit surfs
+   called by other classes which need to select owned surfs in surf group
+------------------------------------------------------------------------- */
+
+void Surf::extract_masks(int *masks)
+{
+  if (distributed) {
+    if (domain->dimension == 2) {
+      for (int i = 0; i < nown; i++)
+        masks[i] = mylines[i].mask;
+    } else {
+      for (int i = 0; i < nown; i++)
+	masks[i] = mytris[i].mask;
+    }
+  } else {
+    int m = 0;
+    if (domain->dimension == 2) {
+      for (int i = me; i < nsurf; i += nprocs)
+        masks[m++] = lines[i].mask;
+    } else {
+      for (int i = me; i < nsurf; i += nprocs)
+        masks[m++] = tris[i].mask;
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
    return length of line M from lines list (not myline)
 ------------------------------------------------------------------------- */
 

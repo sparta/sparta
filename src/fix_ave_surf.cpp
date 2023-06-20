@@ -208,12 +208,15 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
   if (nvalues == 1) size_per_surf_cols = 0;
   else size_per_surf_cols = nvalues;
 
-  // allocate accumulators for owned surfaces
-  // if ave = RUNNING, allocate extra set of accvec/accarray
+  // set surf element masks for owned surfs
 
   nown = surf->nown;
   memory->create(masks,nown,"ave/surf:masks");
+  surf->extract_masks(masks);
 
+  // allocate accumulators for owned surfaces
+  // if ave = RUNNING, allocate extra set of accvec/accarray
+  
   if (count_tally) {
     bufvec = NULL;
     bufarray = NULL;
@@ -264,35 +267,6 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
     for (int i = 0; i < nown; i++)
       for (m = 0; m < nvalues; m++)
         array_surf[i][m] = 0.0;
-  }
-
-  // set surf element masks for owned surfs
-
-  if (surf->distributed) {
-    if (domain->dimension == 2) {
-      Surf::Line *lines = surf->mylines;
-      for (int i = 0; i < nown; i++)
-        masks[i] = lines[i].mask;
-    } else {
-      Surf::Tri *tris = surf->mytris;
-      for (int i = 0; i < nown; i++)
-      masks[i] = tris[i].mask;
-    }
-
-  } else {
-    int me = comm->me;
-    int nprocs = comm->nprocs;
-    int nsurf = surf->nsurf;
-    int m = 0;
-    if (domain->dimension == 2) {
-      Surf::Line *lines = surf->lines;
-      for (int i = me; i < nsurf; i += nprocs)
-        masks[m++] = lines[i].mask;
-    } else {
-      Surf::Tri *tris = surf->tris;
-      for (int i = me; i < nsurf; i += nprocs)
-        masks[m++] = tris[i].mask;
-    }
   }
 
   // nvalid = next step on which end_of_step does something

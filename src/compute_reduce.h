@@ -51,8 +51,10 @@ class ComputeReduce : public Compute {
 
   int maxparticle,maxgrid,maxsurf;
   double *varparticle,*vargrid,*varsurf;
+  
+  int *smasks;
   double *areasurf;
-
+  
   struct Pair {
     double value;
     int proc;
