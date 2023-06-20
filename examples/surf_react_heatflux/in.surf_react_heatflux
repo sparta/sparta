@@ -66,7 +66,7 @@ print               " Timestep = ${tstep}"
 ###################################
 seed	    	    847384
 dimension   	    2
-global		    nrho ${nden} fnum ${Fnum} gridcut 0.01 comm/style all
+global		    nrho ${nden} fnum ${Fnum} gridcut 0.01
 global		    comm/sort yes
 timestep            ${tstep}
 
