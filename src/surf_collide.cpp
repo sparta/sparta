@@ -16,9 +16,15 @@
 #include "ctype.h"
 #include "string.h"
 #include "surf_collide.h"
+#include "input.h"
+#include "variable.h"
+#include "surf.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
+
+enum{INT,DOUBLE};                        // several files
+enum{NUMERIC,CUSTOM,VARIABLE,VAREQUAL,VARSURF};   // surf_collide classes
 
 /* ---------------------------------------------------------------------- */
 
@@ -60,6 +66,7 @@ SurfCollide::~SurfCollide()
 
   delete [] id;
   delete [] style;
+  delete [] tstr;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -85,6 +92,77 @@ void SurfCollide::tally_update()
 
 /* ---------------------------------------------------------------------- */
 
+void SurfCollide::parse_tsurf(char *str)
+{
+  tstr = NULL;
+  tfreq = 1;
+
+  if (strstr(str,"v_") == str) {
+    tmode = VARIABLE;
+    dynamicflag = 1;
+    int n = strlen(&str[2]) + 1;
+    tstr = new char[n];
+    strcpy(tstr,&str[2]);
+  } else if (strstr(str,"s_") == str) {
+    tmode = CUSTOM;
+    dynamicflag = 1;
+    int n = strlen(&str[2]) + 1;
+    tstr = new char[n];
+    strcpy(tstr,&str[2]);
+  } else {
+    tmode = NUMERIC;
+    tsurf = input->numeric(FLERR,str);
+    if (tsurf <= 0.0) error->all(FLERR,"Surf_collide temp <= 0.0");
+  }
+
+  // error checks
+  
+  if (tmode == VARIABLE) {
+    tindex_var = input->variable->find(tstr);
+    if (tindex_var < 0)
+      error->all(FLERR,"Surf_collide tsurf variable name does not exist");
+    if (input->variable->equal_style(tindex_var)) tmode = VAREQUAL;
+    else if (input->variable->surf_style(tindex_var)) tmode = VARSURF;
+    else error->all(FLERR,"Surf_collide tsurf variable is invalid style");
+  } else if (tmode == CUSTOM) {
+    tindex_custom = surf->find_custom(tstr);
+    if (tindex_custom < 0)
+      error->all(FLERR,"Surf_collide tsurf could not find custom attribute");
+    if (surf->etype[tindex_custom] != DOUBLE)
+      error->all(FLERR,"Surf_collide tsurf custom attribute is not a float");
+    if (surf->esize[tindex_custom] > 0)
+      error->all(FLERR,"Surf_collide tsurf custom attribute is not a vector");
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void SurfCollide::check_tsurf()
+{
+  if (tmode == VAREQUAL || tmode == VARSURF) {
+    tindex_var = input->variable->find(tstr);
+    if (tindex_var < 0)
+      error->all(FLERR,"Surf_collide tsurf variable name does not exist");
+  } else if (tmode == CUSTOM) {
+    int tindex_custom = surf->find_custom(tstr);
+    if (tindex_custom < 0)
+      error->all(FLERR,"Surf_collide tsurf could not find custom attribute");
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void SurfCollide::dynamic()
+{
+  if (tmode == VAREQUAL) {
+  } else if (tmode == VAREQUAL) {
+  } else if (tmode == CUSTOM) {
+    t_persurf = surf->edvec[surf->ewhich[tindex_custom]];
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
 double SurfCollide::compute_vector(int i)
 {
   one[0] = nsingle;
@@ -93,3 +171,4 @@ double SurfCollide::compute_vector(int i)
 
   return all[i];
 }
+

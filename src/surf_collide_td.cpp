@@ -38,7 +38,7 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
-enum{NUMERIC,VARIABLE,CUSTOM};
+enum{NUMERIC,VAREQUAL,VARSURF,CUSTOM};       // surf_collide classes
 
 /* ---------------------------------------------------------------------- */
 
@@ -47,24 +47,7 @@ SurfCollideTD::SurfCollideTD(SPARTA *sparta, int narg, char **arg) :
 {
   if (narg < 3) error->all(FLERR,"Illegal surf_collide td command");
 
-  tstr = NULL;
-
-  if (strstr(arg[2],"v_") == arg[2]) {
-    dynamicflag = 1;
-    tmode = VARIABLE;
-    int n = strlen(&arg[2][2]) + 1;
-    tstr = new char[n];
-    strcpy(tstr,&arg[2][2]);
-  } else if (strstr(arg[2],"s_") == arg[2]) {
-    tmode = CUSTOM;
-    int n = strlen(&arg[2][2]) + 1;
-    tstr = new char[n];
-    strcpy(tstr,&arg[2][2]);
-  } else {
-    tmode = NUMERIC;
-    twall = input->numeric(FLERR,arg[2]);
-    if (twall <= 0.0) error->all(FLERR,"Surf_collide td temp <= 0.0");
-  }
+  parse_tsurf(arg[2]);
 
   // optional args
 
@@ -72,7 +55,13 @@ SurfCollideTD::SurfCollideTD(SPARTA *sparta, int narg, char **arg) :
 
   int iarg = 3;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"barrier") == 0) {
+    if (strcmp(arg[iarg],"temp/freq") == 0) {
+      if (iarg+2 > narg)
+        error->all(FLERR,"Illegal surf_collide td command");
+      tfreq = atoi(arg[iarg+1]);
+      if (tfreq <= 0) error->all(FLERR,"Illegal surf_collide td command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"barrier") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal surf_collide td command");
       barrier_flag = 1;
       barrier_val = atof(arg[iarg+1]);
@@ -113,7 +102,6 @@ SurfCollideTD::SurfCollideTD(SPARTA *sparta, int narg, char **arg) :
 
 SurfCollideTD::~SurfCollideTD()
 {
-  delete [] tstr;
   delete random;
 }
 
@@ -122,16 +110,7 @@ SurfCollideTD::~SurfCollideTD()
 void SurfCollideTD::init()
 {
   SurfCollide::init();
-
-  // check variable
-
-  if (tstr) {
-    tvar = input->variable->find(tstr);
-    if (tvar < 0)
-      error->all(FLERR,"Surf_collide td variable name does not exist");
-    if (!input->variable->equal_style(tvar))
-      error->all(FLERR,"Surf_collide td variable is invalid style");
-  }
+  check_tsurf();
 }
 
 /* ----------------------------------------------------------------------
@@ -167,26 +146,28 @@ collide(Particle::OnePart *&ip, double &,
     if (reaction) surf->nreact_one++;
   }
 
+  // set temperature of isurf if VARSURF or CUSTOM
+  
+  if (persurf_temperature) tsurf = t_persurf[isurf];
+
   // TD reflection for each particle
   // only if SurfReact did not already reset velocities
   // also both partiticles need to trigger any fixes
   //   to update per-particle properties which depend on
   //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 
-  if (tmode == CUSTOM) twall = tvector[isurf];
-
   if (ip) {
     if (!velreset) td(ip,norm);
     if (modify->n_update_custom) {
       int i = ip - particle->particles;
-      modify->update_custom(i,twall,twall,twall,vstream);
+      modify->update_custom(i,tsurf,tsurf,tsurf,vstream);
     }
   }
   if (jp) {
     if (!velreset) td(jp,norm);
     if (modify->n_update_custom) {
       int j = jp - particle->particles;
-      modify->update_custom(j,twall,twall,twall,vstream);
+      modify->update_custom(j,tsurf,tsurf,tsurf,vstream);
     }
   }
 
@@ -247,7 +228,7 @@ void SurfCollideTD::td(Particle::OnePart *p, double *norm)
   double mass = species[ispecies].mass;
   double E_i = 0.5 * mass * MathExtra::lensq3(v);
 
-  double E_t = boltz*twall;
+  double E_t = boltz * tsurf;
   if (bond_flag) E_t += boltz*bond_trans;
   if (initen_flag) E_t += E_i*initen_trans;
 
@@ -267,8 +248,8 @@ void SurfCollideTD::td(Particle::OnePart *p, double *norm)
   v[1] = vperp*norm[1] + vtan1*tangent1[1] + vtan2*tangent2[1];
   v[2] = vperp*norm[2] + vtan1*tangent1[2] + vtan2*tangent2[2];
 
-  double twall_rot = twall;
-  double twall_vib = twall;
+  double twall_rot = tsurf;
+  double twall_vib = tsurf;
 
   if (bond_flag) {
     twall_rot += bond_rot;
@@ -284,7 +265,6 @@ void SurfCollideTD::td(Particle::OnePart *p, double *norm)
   p->evib = particle->evib(ispecies,twall_vib,random);
 }
 
-
 /* ----------------------------------------------------------------------
    wrapper on td() method to perform collision for a single particle
    pass in flags/coefficients to match command-line args for style td
@@ -296,7 +276,7 @@ void SurfCollideTD::wrapper(Particle::OnePart *p, double *norm,
                             int *flags, double *coeffs)
 {
   if (flags) {
-    twall = coeffs[0];
+    tsurf = coeffs[0];
 
     barrier_flag = flags[0];
     initen_flag = flags[1];
@@ -328,11 +308,11 @@ void SurfCollideTD::wrapper(Particle::OnePart *p, double *norm,
 
 void SurfCollideTD::flags_and_coeffs(int *flags, double *coeffs)
 {
-  if (tmode == CUSTOM)
-    error->all(FLERR,"Surf_collide td with custom per-surf Twall "
+  if (tmode != NUMERIC)
+    error->all(FLERR,"Surf_collide td with non-numeric Tsurf "
                "does not support external caller");
 
-  coeffs[0] = twall;
+  coeffs[0] = tsurf;
 
   flags[0] = barrier_flag;
   flags[1] = initen_flag;
@@ -353,14 +333,4 @@ void SurfCollideTD::flags_and_coeffs(int *flags, double *coeffs)
     coeffs[m++] = bond_rot;
     coeffs[m++] = bond_vib;
   }
-}
-
-/* ----------------------------------------------------------------------
-   set current surface temperature
-------------------------------------------------------------------------- */
-
-void SurfCollideTD::dynamic()
-{
-  twall = input->variable->compute_equal(tvar);
-  if (twall <= 0.0) error->all(FLERR,"Surf_collide td temp <= 0.0");
 }

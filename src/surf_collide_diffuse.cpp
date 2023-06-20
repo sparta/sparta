@@ -34,8 +34,7 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
-enum{INT,DOUBLE};                      // several files
-enum{NUMERIC,VARIABLE,CUSTOM};
+enum{NUMERIC,VAREQUAL,VARSURF,CUSTOM};       // surf_collide classes
 
 /* ---------------------------------------------------------------------- */
 
@@ -44,25 +43,8 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
 {
   if (narg < 4) error->all(FLERR,"Illegal surf_collide diffuse command");
 
-  tstr = NULL;
-
-  if (strstr(arg[2],"v_") == arg[2]) {
-    dynamicflag = 1;
-    tmode = VARIABLE;
-    int n = strlen(&arg[2][2]) + 1;
-    tstr = new char[n];
-    strcpy(tstr,&arg[2][2]);
-  } else if (strstr(arg[2],"s_") == arg[2]) {
-    tmode = CUSTOM;
-    int n = strlen(&arg[2][2]) + 1;
-    tstr = new char[n];
-    strcpy(tstr,&arg[2][2]);
-  } else {
-    tmode = NUMERIC;
-    twall = input->numeric(FLERR,arg[2]);
-    if (twall <= 0.0) error->all(FLERR,"Surf_collide diffuse temp <= 0.0");
-  }
-
+  parse_tsurf(arg[2]);
+  
   acc = input->numeric(FLERR,arg[3]);
   if (acc < 0.0 || acc > 1.0)
     error->all(FLERR,"Illegal surf_collide diffuse command");
@@ -73,7 +55,13 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
 
   int iarg = 4;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"translate") == 0) {
+    if (strcmp(arg[iarg],"temp/freq") == 0) {
+      if (iarg+2 > narg)
+        error->all(FLERR,"Illegal surf_collide diffuse command");
+      tfreq = atoi(arg[iarg+1]);
+      if (tfreq <= 0) error->all(FLERR,"Illegal surf_collide diffuse command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"translate") == 0) {
       if (iarg+4 > narg)
         error->all(FLERR,"Illegal surf_collide diffuse command");
       tflag = 1;
@@ -103,6 +91,7 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
       }
 
       iarg += 7;
+
     } else error->all(FLERR,"Illegal surf_collide diffuse command");
   }
 
@@ -125,7 +114,6 @@ SurfCollideDiffuse::~SurfCollideDiffuse()
 {
   if (copy) return;
 
-  delete [] tstr;
   delete random;
 }
 
@@ -134,24 +122,7 @@ SurfCollideDiffuse::~SurfCollideDiffuse()
 void SurfCollideDiffuse::init()
 {
   SurfCollide::init();
-
-  // check variable and custom surf vector
-
-  if (tmode == VARIABLE) {
-    tvar = input->variable->find(tstr);
-    if (tvar < 0)
-      error->all(FLERR,"Surf_collide diffuse variable name does not exist");
-    if (!input->variable->equal_style(tvar))
-      error->all(FLERR,"Surf_collide diffuse variable is invalid style");
-  } else if (tmode == CUSTOM) {
-    int tindex = surf->find_custom(tstr);
-    if (tindex < 0)
-      error->all(FLERR,"Surf_collide diffuse could not find "
-                 "custom per-surf vector");
-    if (surf->etype[tindex] != DOUBLE || surf->esize[tindex] != 0)
-      error->all(FLERR,"Surf_collide diffuse custom per-surf vector is invalid");
-    tvector = surf->edvec[surf->ewhich[tindex]];
-  }
+  check_tsurf();
 }
 
 /* ----------------------------------------------------------------------
@@ -187,26 +158,28 @@ collide(Particle::OnePart *&ip, double &,
     if (reaction) surf->nreact_one++;
   }
 
+  // set temperature of isurf if VARSURF or CUSTOM
+  
+  if (persurf_temperature) tsurf = t_persurf[isurf];
+
   // diffuse reflection for each particle
   // only if SurfReact did not already reset velocities
   // also both particles need to trigger any fixes
   //   to update per-particle properties which depend on
   //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 
-  if (tmode == CUSTOM) twall = tvector[isurf];
-
   if (ip) {
     if (!velreset) diffuse(ip,norm);
     if (modify->n_update_custom) {
       int i = ip - particle->particles;
-      modify->update_custom(i,twall,twall,twall,vstream);
+      modify->update_custom(i,tsurf,tsurf,tsurf,vstream);
     }
   }
   if (jp) {
     if (!velreset) diffuse(jp,norm);
     if (modify->n_update_custom) {
       int j = jp - particle->particles;
-      modify->update_custom(j,twall,twall,twall,vstream);
+      modify->update_custom(j,tsurf,tsurf,tsurf,vstream);
     }
   }
 
@@ -258,7 +231,7 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm)
     Particle::Species *species = particle->species;
     int ispecies = p->ispecies;
 
-    double vrm = sqrt(2.0*update->boltz * twall / species[ispecies].mass);
+    double vrm = sqrt(2.0*update->boltz * tsurf / species[ispecies].mass);
     double vperp = vrm * sqrt(-log(random->uniform()));
 
     double theta = MY_2PI * random->uniform();
@@ -333,8 +306,8 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm)
 
     // initialize rot/vib energy
 
-    p->erot = particle->erot(ispecies,twall,random);
-    p->evib = particle->evib(ispecies,twall,random);
+    p->erot = particle->erot(ispecies,tsurf,random);
+    p->evib = particle->evib(ispecies,tsurf,random);
   }
 }
 
@@ -349,7 +322,7 @@ void SurfCollideDiffuse::wrapper(Particle::OnePart *p, double *norm,
                                  int *flags, double *coeffs)
 {
   if (coeffs) {
-    twall = coeffs[0];
+    tsurf = coeffs[0];
     acc = coeffs[1];
   }
 
@@ -362,20 +335,10 @@ void SurfCollideDiffuse::wrapper(Particle::OnePart *p, double *norm,
 
 void SurfCollideDiffuse::flags_and_coeffs(int *flags, double *coeffs)
 {
-  if (tmode == CUSTOM)
-    error->all(FLERR,"Surf_collide diffuse with custom per-surf Twall "
+  if (tmode != NUMERIC)
+    error->all(FLERR,"Surf_collide diffuse with non-numeric Tsurf "
                "does not support external caller");
 
-  coeffs[0] = twall;
+  coeffs[0] = tsurf;
   coeffs[1] = acc;
-}
-
-/* ----------------------------------------------------------------------
-   set current surface temperature from equal-style variable
-------------------------------------------------------------------------- */
-
-void SurfCollideDiffuse::dynamic()
-{
-  twall = input->variable->compute_equal(tvar);
-  if (twall <= 0.0) error->all(FLERR,"Surf_collide diffuse temp <= 0.0");
 }
