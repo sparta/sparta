@@ -426,7 +426,7 @@ void FixAveSurf::end_of_step()
     ntally = 0;
   }
 
-  // accumulate results of computes,fixes,variables
+  // accumulate results of computes,fixes,variables,custom attributes
   // compute/fix/variable may invoke computes so wrap with clear/add
 
   modify->clearstep_compute();

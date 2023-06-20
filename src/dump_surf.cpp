@@ -822,7 +822,7 @@ void DumpSurf::pack_custom(int n)
       }
     }
   } else {
-    if (surf->esize[index] == 0) {
+    if (surf->esize[index] == INT) {
       double *vector = surf->edvec[surf->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
         buf[n] = vector[clocal[i]];

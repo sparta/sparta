@@ -30,8 +30,9 @@
 using namespace SPARTA_NS;
 
 enum{PERGRID,PERGRIDSURF};
-enum{COMPUTE,FIX,VARIABLE};
-enum{ONE,RUNNING};                // multiple files
+enum{COMPUTE,FIX,VARIABLE,CUSTOM};
+enum{ONE,RUNNING};                      // multiple files
+enum{INT,DOUBLE};                       // several files
 
 #define INVOKED_PER_GRID 16
 #define DELTAGRID 1024            // must be bigger than split cells per cell
@@ -190,6 +191,18 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
       if (input->variable->grid_style(ivariable) == 0)
         error->all(FLERR,"Fix ave/grid variable is not grid-style variable");
       flavor_pergrid = 1;
+
+    } else if (which[i] == CUSTOM) {
+      int icustom = grid->find_custom(ids[i]);
+      if (icustom < 0)
+        error->all(FLERR,"Custom attribute for fix ave/grid does not exist");
+      if (argindex[i] == 0 && grid->esize[icustom] != 0)
+        error->all(FLERR,"Fix ave/grid custom attribute is not a vector");
+      if (argindex[i] && grid->esize[icustom] == 0)
+        error->all(FLERR,"Fix ave/grid custom attribute is not an array");
+      if (argindex[i] && argindex[i] > grid->esize[icustom])
+        error->all(FLERR,"Fix ave/grid custom attribute array is "
+		   "accessed out-of-range");
     }
   }
 
@@ -414,6 +427,12 @@ void FixAveGrid::init()
         error->all(FLERR,"Variable name for fix ave/grid does not exist");
       value2index[m] = ivariable;
 
+    } else if (which[m] == CUSTOM) {
+      int icustom = grid->find_custom(ids[m]);
+      if (icustom < 0)
+        error->all(FLERR,"Custom attribute for fix ave/grid does not exist");
+      value2index[m] = icustom;
+
     } else value2index[m] = -1;
   }
 
@@ -464,13 +483,13 @@ void FixAveGrid::end_of_step()
     ntallyID = 0;
   }
 
-  // accumulate results of computes,fixes,variables
+  // accumulate results of computes,fixes,variables,custom attributes
   // compute/fix/variable may invoke computes so wrap with clear/add
 
   modify->clearstep_compute();
 
-  // PERGRID = all values are computes,fixes,variable which
-  //           calculate per-grid values in standard manner
+  // PERGRID = all values are computes,fixes,variable,custom attributes
+  //           which calculate per-grid values in standard manner
 
   if (flavor == PERGRID) {
 
@@ -534,9 +553,53 @@ void FixAveGrid::end_of_step()
       } else if (which[m] == VARIABLE) {
         k = umap[m][0];
         input->variable->compute_grid(n,&tally[0][k],ntotal,1);
+
+      // access custom attribute
+
+      } else if (which[m] == CUSTOM) {
+        k = umap[m][0];
+	if (j == 0) {
+	  if (nvalues == 1) {
+	    if (grid->etype[n] == INT) {
+	      int *custom_vector = grid->eivec[grid->ewhich[n]];
+	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_vector[i];
+	    } else if (grid->etype[n] == DOUBLE) {
+	      double *custom_vector = grid->edvec[grid->ewhich[n]];
+	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_vector[i];
+	    } 
+	  } else {
+	    if (grid->etype[n] == INT) {
+	      int *custom_vector = grid->eivec[grid->ewhich[n]];
+	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_vector[i];
+	    } else if (grid->etype[n] == DOUBLE) {
+	      double *custom_vector = grid->edvec[grid->ewhich[n]];
+	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_vector[i];
+	    }
+	  }
+	} else {
+	  int jm1 = j - 1;
+	  double **custom_array = modify->fix[n]->array_surf;
+	  if (nvalues == 1) {
+	    if (grid->etype[n] == INT) {
+	      int **custom_array = grid->eiarray[grid->ewhich[n]];
+	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_array[i][jm1];
+	    } else if (grid->etype[n] == DOUBLE) {
+	      double **custom_array = grid->edarray[grid->ewhich[n]];
+	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_array[i][jm1];
+	    }
+	  } else { 
+	    if (grid->etype[n] == INT) {
+	      int **custom_array = grid->eiarray[grid->ewhich[n]];
+	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_array[i][jm1];
+	    } else if (grid->etype[n] == DOUBLE) {
+	      double **custom_array = grid->edarray[grid->ewhich[n]];
+	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_array[i][jm1];
+	    }
+	  }
+	}
       }
     }
-
+      
   // PERGRIDSURF = all values are computes which tally info on collisions
   //               with implicit surfs and store them as per-grid-cell tallies
 

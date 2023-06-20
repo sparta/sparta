@@ -30,10 +30,10 @@ zero or more input values can be listed
 
 <LI>value = c_ID, c_ID[N], f_ID, f_ID[N], v_name, s_ID, s_ID[N] 
 
-<PRE>  c_ID = per-surf vector (or array) calculated by a compute with ID
-  c_ID[I] = Ith column of per-surf array calculated by a compute with ID, I can include wildcard (see below)
-  f_ID = per-surf vector (or array) calculated by a fix with ID
-  f_ID[I] = Ith column of per-surf array calculated by a fix with ID, I can include wildcard (see below)
+<PRE>  c_ID = per-surf vector calculated by a compute with ID
+  c_ID[N] = Nth column of per-surf array calculated by a compute with ID, N can include wildcard (see below)
+  f_ID = per-surf vector calculated by a fix with ID
+  f_ID[N] = Nth column of per-surf array calculated by a fix with ID, N can include wildcard (see below)
   v_name = per-surf vector calculated by a surf-style variable with name
   s_ID = custom per-surf vector with ID
   s_ID[N] = Nth column of per-surf custom array with ID 
@@ -88,8 +88,8 @@ those which have the word <I>surf</I> in their style name.  See the doc
 pages for individual <A HREF = "fix.html">fixes</A> to determine which ones produce
 per-surf vectors or arrays.
 </P>
-<P>Note that for values from a compute or fix, the bracketed index I can
-be specified using a wildcard asterisk with the index to effectively
+<P>Note that for values from a compute or fix, the bracketed index can be
+specified using a wildcard asterisk with the index to effectively
 specify multiple values.  This takes the form "*" or "*n" or "n*" or
 "m*n".  If N = the size of the vector (for <I>mode</I> = scalar) or the
 number of columns in the array (for <I>mode</I> = vector), then an asterisk
@@ -129,22 +129,22 @@ timestep 200, etc.
 
 <P>If a value begins with "c_", a compute ID must follow which has been
 previously defined in the input script.  If no bracketed term is
-appended, and the compute calculates a per-surf vector, then the
-per-surf vector is used.  If <I>c_ID[N]</I> is used, then N must be in
-the range from 1-M, which will use the Ith column of the M-column
-per-surf array calculated by the compute.  See the discussion above
-for how N can be specified with a wildcard asterisk to effectively
-specify multiple values.
+appended, the compute must calculate a per-surf vector.  If
+<I>c_ID[N]</I> is used, the compute must calculate a per-surf array with
+M columns and N must be in the range from 1-M, which will use the Nth
+column of the M-column per-surf array.  See the discussion above for
+how N can be specified with a wildcard asterisk to effectively specify
+multiple values.
 </P>
 <P>Users can also write code for their own compute styles and <A HREF = "Section_modify.html">add them
 to SPARTA</A>.
 </P>
 <P>If a value begins with "f_", a fix ID must follow which has been
 previously defined in the input script.  If no bracketed term is
-appended, and the fix calculates a per-surf vector, then the per-surf
-vector is used.  If <I>f_ID[N]</I> is used, then N must be in the range
-from 1-M, which will use the Ith column of the M-column per-surf array
-calculated by the fix.  See the discussion above for how N can be
+appended, the fix must calculates a per-surf vector.  If <I>f_ID[N]</I>
+is used, the fix must calculate a per-surf array with M columns and N
+must be in the range from 1-M, which will use the Nth column of the
+M-column per-surf array.  See the discussion above for how N can be
 specified with a wildcard asterisk to effectively specify multiple
 values.
 </P>

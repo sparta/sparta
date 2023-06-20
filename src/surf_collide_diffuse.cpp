@@ -149,7 +149,7 @@ void SurfCollideDiffuse::init()
       error->all(FLERR,"Surf_collide diffuse could not find "
                  "custom per-surf vector");
     if (surf->etype[tindex] != DOUBLE || surf->esize[tindex] != 0)
-      error->all(FLERR,"Surf_collide diffuse custom per-surf vector in invalid");
+      error->all(FLERR,"Surf_collide diffuse custom per-surf vector is invalid");
     tvector = surf->edvec[surf->ewhich[tindex]];
   }
 }
@@ -189,7 +189,7 @@ collide(Particle::OnePart *&ip, double &,
 
   // diffuse reflection for each particle
   // only if SurfReact did not already reset velocities
-  // also both partiticles need to trigger any fixes
+  // also both particles need to trigger any fixes
   //   to update per-particle properties which depend on
   //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 

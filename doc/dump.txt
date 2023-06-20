@@ -429,10 +429,10 @@ points of the surface element.  The {v1z}, {v2z}, {v3x}, {v3y}, and
 The {s_ID} and {s_ID\[N\]} attributes allow output of custom per-surf
 attributes which store either single or multiple values per surface
 element.  They can be defined and initialized in data files, e.g. via
-the read_surf command.  Or they can be defined and used by specific
-commands, e.g. "fix surf/temp"_fix_surf_temp.html or "surf_react
-adsorb"_surf_react_adsorb.html.  The IDs (names) of each attribute are
-set by the user or defined by the command.  See "Section
+the "read_surf"_read_surf.html command.  Or they can be defined and
+used by specific commands, e.g. "fix surf/temp"_fix_surf_temp.html or
+"surf_react adsorb"_surf_react_adsorb.html.  The IDs (names) of each
+attribute are set by the user or defined by the command.  See "Section
 6.17"_Section_howto.html#howto_17 for more discussion of custom
 attributes.
 
