@@ -123,7 +123,7 @@ compute             1b lambda/grid f_1[1] f_1[2] N2 kall
 
 fix                 10 adapt 1000 all refine coarsen value c_1b[2] 0.8 1.6 &
                     combine min thresh less more cells 2 2 1
-fix                 load balance 1000 1.1 rcb time
+fix                 load balance 1000 1.1 rcb part
 
 compute             3 surf all all etot ke erot evib echem
 fix                 3 ave/surf all 1 1000 1000 c_3[*] ave one
@@ -135,6 +135,4 @@ stats_style         step cpu np ncoll nreact nscoll nsreact ngrid c_echem maxlev
 stats_modify        flush yes
 stats               1000
 
-run                 5000
-
-
+run                 3000
