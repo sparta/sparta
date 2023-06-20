@@ -306,7 +306,9 @@ energy lost by a particles recombining is a positive flux.  This is computed as
 </P>
 <P>where e_recomb is the catalytic chemical energy of a particle pair
 (positive for an exothermic recombination reaction). The flux equation
-is the same as for the <I>ke</I> value.
+is the same as for the <I>ke</I> value. This option applies only to the
+<I>prob</I> style of surface reations. A value of 0.0 will be returned
+for other styles of surface reactions, e.g. <I>global</I> and <I>adsorb</I>.
 </P>
 <P>The <I>etot</I> value calculates the total energy flux imparted to the
 surface element by particles in the group, such that energy lost by a

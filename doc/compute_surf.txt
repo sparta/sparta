@@ -292,7 +292,9 @@ Eflux = - Sum_i (e_recomb) / (A * dt / fnum)
 
 where e_recomb is the catalytic chemical energy of a particle pair
 (positive for an exothermic recombination reaction). The flux equation
-is the same as for the {ke} value.
+is the same as for the {ke} value. This option applies only to the
+{prob} style of surface reations. A value of 0.0 will be returned
+for other styles of surface reactions, e.g. {global} and {adsorb}.
 
 The {etot} value calculates the total energy flux imparted to the
 surface element by particles in the group, such that energy lost by a
