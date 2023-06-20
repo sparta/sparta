@@ -329,19 +329,10 @@ transparent surface elements.  The <A HREF = "Section_howto.html#howto_15">Secti
 transparent surfaces and how to create them.
 </P>
 <P>The <I>n</I> and <I>nwt</I> value are calculated the same for transparent
-surfaces.  I.e. they are the count and weighted count of particles
-passing through the surface.
+surfaces as for non-transparent.  I.e. they are the count and weighted
+count of particles passing through the surface.
 </P>
-<P>The <I>mflux</I>, <I>ke</I>, <I>erot</I>. <I>evib</I>, <I>echem</I>, and <I>etot</I> values are fluxes.  For
-transparent surfaces, they are calculated for the incident particle as
-if they had struck the surface.  The outgoing particle is ignored.
-This means the tally quantity is the flux of particles onto the
-outward face of the surface.  No tallying is done for particles
-hitting the inward face of the surface.  See <A HREF = "Section_howto.html#howto_15">Section
-6.15</A> for how to do tallying in both
-directions.
-</P>
-<P>The <I>nflux</I>, <I>mflux</I>, <I>ke</I>, <I>erot</I>. <I>evib</I>, and <I>etot</I> values are
+<P>The <I>nflux</I>, <I>mflux</I>, <I>ke</I>, <I>erot</I>. <I>evib</I>, <I>echem</I>, and <I>etot</I> values are
 fluxes.  For transparent surfaces, they are calculated only for the
 incident particle as if it had struck the surface.  The outgoing
 particle is ignored.  This means the tally quantity is the flux of
