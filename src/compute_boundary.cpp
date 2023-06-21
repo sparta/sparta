@@ -103,12 +103,11 @@ void ComputeBoundary::init()
   if (domain->dimension == 2) {
     normflux[XLO] = normflux[XHI] = domain->yprd * nfactor;
 
-    if (!domain->axisymmetric) {
+    if (!domain->axisymmetric)
       normflux[YLO] = normflux[YHI] = domain->xprd * nfactor;
-    }
     else {
       // normflux[YLO] is actually 0 in axisymmetric case
-      // but is used in tally normalization even though numerator will be 0
+      //  but is used in tally normalization even though numerator will be 0
       normflux[YLO] = normflux[YHI] = 2 * MY_PI * domain->xprd * domain->yprd * nfactor;
     }
   } else if (domain->dimension == 3) {
