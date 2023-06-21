@@ -244,7 +244,6 @@ class Surf : protected Pointers {
   virtual void reallocate_custom();
   void copy_custom(int, int, int);
   virtual void remove_custom(int);
-  void spread_custom(int);
   
   void write_restart(FILE *);
   void read_restart(FILE *);

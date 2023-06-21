@@ -40,7 +40,7 @@ using namespace SPARTA_NS;
 using namespace MathConst;
 
 enum{NONE,DISCRETE,SMOOTH};
-enum{NUMERIC,VAREQUAL,VARSURF,CUSTOM};       // surf_collide classes
+enum{NUMERIC,CUSTOM,VARIABLE,VAREQUAL,VARSURF};   // surf_collide classes
 
 /* ---------------------------------------------------------------------- */
 

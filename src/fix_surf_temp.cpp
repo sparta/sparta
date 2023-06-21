@@ -256,9 +256,4 @@ void FixSurfTemp::end_of_step()
       }
     }
   }
-
-  // spread new owned custom values to custom values for lines/tris
-  // NOTE: should this be done here or by client ?
-  
-  surf->spread_custom(tindex);
 }

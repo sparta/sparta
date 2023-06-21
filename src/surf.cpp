@@ -3994,15 +3994,6 @@ void Surf::remove_custom(int index)
   if (empty) ncustom = 0;
 }
 
-/* ----------------------------------------------------------------------
-   spread custom attribute at location index
-   from owned custom data to per-line/per-tri data
-------------------------------------------------------------------------- */
-
-void Surf::spread_custom(int index)
-{
-}
-
 // ----------------------------------------------------------------------
 // methods for write/read restart info
 // ----------------------------------------------------------------------

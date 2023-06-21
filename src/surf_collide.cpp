@@ -16,9 +16,11 @@
 #include "ctype.h"
 #include "string.h"
 #include "surf_collide.h"
+#include "update.h"
+#include "surf.h"
 #include "input.h"
 #include "variable.h"
-#include "surf.h"
+#include "memory.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
@@ -74,6 +76,8 @@ SurfCollide::~SurfCollide()
 void SurfCollide::init()
 {
   nsingle = ntotal = 0;
+
+  // NOTE: need to always invoke var/custom on this step?
 }
 
 /* ---------------------------------------------------------------------- */
@@ -148,16 +152,48 @@ void SurfCollide::check_tsurf()
     if (tindex_custom < 0)
       error->all(FLERR,"Surf_collide tsurf could not find custom attribute");
   }
+
+  // NOTE: allocate per-surf variable memory ?
 }
 
 /* ---------------------------------------------------------------------- */
 
 void SurfCollide::dynamic()
 {
+  // for VAREQUAL mode
+  // evaulate equal-style variable to set new tsurf
+  // only if timestep is multiple of tfreq
+ 
   if (tmode == VAREQUAL) {
-  } else if (tmode == VAREQUAL) {
+    if (update->ntimestep % tfreq) return;
+    tsurf = input->variable->compute_equal(tindex_var);
+    if (tsurf <= 0.0) error->all(FLERR,"Surf_collide tsurf <= 0.0");
+
+  // for VARSURF mode
+  // evaulate surf-style variable to set new t_persurf_own
+  // only if timestep is multiple of tfreq
+  // communicate t_persurf_own -> t_persurf_nlocal internal to Surf class
+  // set t_persurf_nlocal pointer
+    
+  } else if (tmode == VARSURF) {
+    if (update->ntimestep % tfreq) return;
+    // when to allocate this vector?
+    input->variable->compute_surf(tindex_var,t_persurf_own,1,0);
+    // check if any value <= 0.0 ?
+    // if (tsurf <= 0.0) error->all(FLERR,"Surf_collide tsurf <= 0.0");
+    // trigger own -> nlocal comm ?
+
+  // for CUSTOM mode
+  // if status of custom per-surf vec has not changed, just return
+  // set t_persurf_nlocal pointer
+  // set t_persurf_own to point to custom per-surf vector
+  // communicate t_persurf_own -> t_persurf_nlocal internal to Surf class
+  // set t_persurf_nlocal pointer
+    
   } else if (tmode == CUSTOM) {
-    t_persurf = surf->edvec[surf->ewhich[tindex_custom]];
+    //if (surf->estatus[tindex_custom] == 0) continue;
+    t_persurf_own = surf->edvec[surf->ewhich[tindex_custom]];
+    //surf->estatus[tindex_custom] = 1;
   }
 }
 

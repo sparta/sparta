@@ -68,6 +68,8 @@ class SurfCollide : protected Pointers {
   int tfreq;                 // frequency to update variables
   int persurf_temperature;
   double *t_persurf;
+  double *t_persurf_own;
+  double *t_persurf_nlocal;
   
   // functions used by all SC classes which define Tsurf
   
