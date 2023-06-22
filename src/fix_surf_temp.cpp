@@ -256,4 +256,8 @@ void FixSurfTemp::end_of_step()
       }
     }
   }
+
+  // flag custom attribute as updated
+
+  surf->estatus[tindex] = 0;
 }

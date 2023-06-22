@@ -56,7 +56,8 @@ SurfCollide::SurfCollide(SPARTA *sparta, int, char **arg) :
   size_vector = 2;
 
   nsingle = ntotal = 0;
-
+  tname = NULL;
+  
   copy = copymode = 0;
 }
 
@@ -68,7 +69,7 @@ SurfCollide::~SurfCollide()
 
   delete [] id;
   delete [] style;
-  delete [] tstr;
+  delete [] tname;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -98,38 +99,39 @@ void SurfCollide::tally_update()
 
 void SurfCollide::parse_tsurf(char *str)
 {
-  tstr = NULL;
+  tname = NULL;
   tfreq = 1;
 
   if (strstr(str,"v_") == str) {
     tmode = VARIABLE;
     dynamicflag = 1;
     int n = strlen(&str[2]) + 1;
-    tstr = new char[n];
-    strcpy(tstr,&str[2]);
+    tname = new char[n];
+    strcpy(tname,&str[2]);
   } else if (strstr(str,"s_") == str) {
     tmode = CUSTOM;
     dynamicflag = 1;
     int n = strlen(&str[2]) + 1;
-    tstr = new char[n];
-    strcpy(tstr,&str[2]);
+    tname = new char[n];
+    strcpy(tname,&str[2]);
   } else {
     tmode = NUMERIC;
     tsurf = input->numeric(FLERR,str);
-    if (tsurf <= 0.0) error->all(FLERR,"Surf_collide temp <= 0.0");
+    if (tsurf <= 0.0) error->all(FLERR,"Surf_collide tsurf <= 0.0");
   }
 
   // error checks
   
   if (tmode == VARIABLE) {
-    tindex_var = input->variable->find(tstr);
+    tindex_var = input->variable->find(tname);
     if (tindex_var < 0)
       error->all(FLERR,"Surf_collide tsurf variable name does not exist");
     if (input->variable->equal_style(tindex_var)) tmode = VAREQUAL;
     else if (input->variable->surf_style(tindex_var)) tmode = VARSURF;
     else error->all(FLERR,"Surf_collide tsurf variable is invalid style");
+
   } else if (tmode == CUSTOM) {
-    tindex_custom = surf->find_custom(tstr);
+    tindex_custom = surf->find_custom(tname);
     if (tindex_custom < 0)
       error->all(FLERR,"Surf_collide tsurf could not find custom attribute");
     if (surf->etype[tindex_custom] != DOUBLE)
@@ -144,56 +146,84 @@ void SurfCollide::parse_tsurf(char *str)
 void SurfCollide::check_tsurf()
 {
   if (tmode == VAREQUAL || tmode == VARSURF) {
-    tindex_var = input->variable->find(tstr);
+    tindex_var = input->variable->find(tname);
     if (tindex_var < 0)
       error->all(FLERR,"Surf_collide tsurf variable name does not exist");
   } else if (tmode == CUSTOM) {
-    int tindex_custom = surf->find_custom(tstr);
+    int tindex_custom = surf->find_custom(tname);
     if (tindex_custom < 0)
       error->all(FLERR,"Surf_collide tsurf could not find custom attribute");
   }
 
-  // NOTE: allocate per-surf variable memory ?
+  persurf_temperature = 0;
+  if (tmode == VARSURF || tmode == CUSTOM) persurf_temperature = 1;
+
+  // allocate memory for t_owned and t_local
+  
+  if (tmode == VARSURF) {
+  }
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   recalculate Tsurf values which are dynamics
+   called by Update::setup() and Update::run()
+---------------------------------------------------------------------- */
 
 void SurfCollide::dynamic()
 {
-  // for VAREQUAL mode
-  // evaulate equal-style variable to set new tsurf
-  // only if timestep is multiple of tfreq
+  // VAREQUAL mode
+  // evaulate equal-style variable to set new tsurf for all surfs
+  // only evaluate if timestep is multiple of tfreq
  
   if (tmode == VAREQUAL) {
     if (update->ntimestep % tfreq) return;
     tsurf = input->variable->compute_equal(tindex_var);
     if (tsurf <= 0.0) error->all(FLERR,"Surf_collide tsurf <= 0.0");
 
-  // for VARSURF mode
-  // evaulate surf-style variable to set new t_persurf_own
-  // only if timestep is multiple of tfreq
-  // communicate t_persurf_own -> t_persurf_nlocal internal to Surf class
-  // set t_persurf_nlocal pointer
+  // VARSURF mode
+  // evaulate surf-style variable to set new tsurf values for all surfs
+  // only evaluate if timestep is multiple of tfreq
+  // surf-style variable sets values for owned explicit surfs only
+  // comm owned values to Surf::lines/tris via spread_vector()
+  // particle/surf collisions access t_persurf for local+ghost values 
     
   } else if (tmode == VARSURF) {
     if (update->ntimestep % tfreq) return;
-    // when to allocate this vector?
-    input->variable->compute_surf(tindex_var,t_persurf_own,1,0);
-    // check if any value <= 0.0 ?
-    // if (tsurf <= 0.0) error->all(FLERR,"Surf_collide tsurf <= 0.0");
-    // trigger own -> nlocal comm ?
+    input->variable->compute_surf(tindex_var,t_owned,1,0);
 
-  // for CUSTOM mode
-  // if status of custom per-surf vec has not changed, just return
-  // set t_persurf_nlocal pointer
-  // set t_persurf_own to point to custom per-surf vector
-  // communicate t_persurf_own -> t_persurf_nlocal internal to Surf class
-  // set t_persurf_nlocal pointer
+    int flag = 0;
+    int nsown = surf->nown;
+    for (int i = 0; i < nsown; i++)
+      if (t_owned[i] <= 0.0) flag = 1;
+    int flagall;
+    MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
+    if (flagall) error->all(FLERR,"Surf_collide tsurf <= 0.0 for one or more surfs");
+    
+    surf->spread_vector(t_owned,t_local);
+    t_persurf = t_local;
+
+  // CUSTOM mode
+  // access custom per-surf vec for tsurf values for all surfs
+  // only necessary if status of custom vector has changed
+  // custom vector stores values for owned explicit surfs only
+  // comm owned values to Surf::lines/tris via spread_custom_vector()
+  // particle/surf collisions access t_persurf for local+ghost values 
     
   } else if (tmode == CUSTOM) {
-    //if (surf->estatus[tindex_custom] == 0) continue;
-    t_persurf_own = surf->edvec[surf->ewhich[tindex_custom]];
-    //surf->estatus[tindex_custom] = 1;
+    if (surf->estatus[tindex_custom] == 0) return;
+
+    double *tcustom = surf->edvec[tindex_custom];
+    int nsown = surf->nown;
+    int flag = 0;
+    for (int i = 0; i < nsown; i++)
+      if (tcustom[i] <= 0.0) flag = 1;
+    int flagall;
+    MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
+    if (flagall) error->all(FLERR,"Surf_collide tsurf <= 0.0 for one or more surfs");
+
+    surf->spread_custom(tindex_custom);
+    surf->estatus[tindex_custom] = 1;
+    t_persurf = surf->edvec_local[tindex_custom];
   }
 }
 

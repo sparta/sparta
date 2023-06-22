@@ -60,9 +60,8 @@ class Grid : protected Pointers {
                         //  base class when child copy is destroyed)
 
   // custom vectors/arrays for per-grid data
-  // ncustom > 0 if there are any extra arrays
-  // custom grid attributes are created by various commands
-  // these variables are public
+  // ncustom > 0 if there is any custom per-grid datta
+  // these variables are public, others below are private
 
   int ncustom;              // # of custom grid attributes, some may be deleted
   int *etype;               // type = INT/DOUBLE of each attribute
@@ -339,6 +338,17 @@ class Grid : protected Pointers {
   int maxsplit;            // size of sinfo
   int maxbits;             // max bits allowed in a cell ID
 
+  int neighmask[6];        // bit-masks for each face in nmask
+  int neighshift[6];       // bit-shifts for each face in nmask
+
+  class Cut2d *cut2d;
+  class Cut3d *cut3d;
+
+  // Particle class values used for packing/unpacking particles in grid comm
+
+  int ncustom_particle;
+  int nbytes_particle,nbytes_particle_custom,nbytes_particle_total;
+
   // custom vectors/arrays for per-grid data
   // these variables are private, others above are public
 
@@ -360,12 +370,6 @@ class Grid : protected Pointers {
   int *custom_restart_flag; // flag on each custom vec/array read from restart
 
   int nbytes_custom;        // size of packed custom values for one grid cell
-
-  int neighmask[6];        // bit-masks for each face in nmask
-  int neighshift[6];       // bit-shifts for each face in nmask
-
-  class Cut2d *cut2d;
-  class Cut3d *cut3d;
 
   // connection between one of my cells and a neighbor cell on another proc
 
@@ -415,11 +419,6 @@ class Grid : protected Pointers {
     typedef std::tr1::unordered_map<surfint,int> MySurfHash;
     typedef std::tr1::unordered_map<surfint,int>::iterator MyIterator;
 #endif
-
-  // Particle class values used for packing/unpacking particles in grid comm
-
-  int ncustom_particle;
-  int nbytes_particle,nbytes_particle_custom,nbytes_particle_total;
 
   // private methods
 

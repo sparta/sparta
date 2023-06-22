@@ -59,17 +59,16 @@ class SurfCollide : protected Pointers {
 
   // variables used by all SC classes which define Tsurf
   
-  int tmode;                 // possible modes = NUMERIC,VAREQUAL,VARSURF,CUSTOM
-  double tsurf;
-  char *tstr;                // temperature variable name (NULL if constant)
-  int tindex_var;                  // index of equal-style variable
-  int tindex_custom;                  // index of equal-style variable
-  double *tvector;           // custom per-surf temperature vector
-  int tfreq;                 // frequency to update variables
-  int persurf_temperature;
-  double *t_persurf;
-  double *t_persurf_own;
-  double *t_persurf_nlocal;
+  int tmode;               // possible modes = NUMERIC,VAREQUAL,VARSURF,CUSTOM
+  double tsurf;            // single value for NUMERIC or VAREQUAL
+  char *tname;             // name for variable or custom attribute
+  int tindex_var;          // index of variable
+  int tindex_custom;       // index of custom attribute
+  int tfreq;               // frequency to update variables
+  int persurf_temperature; // 1 if VARSURF or CUSTOM
+  double *t_owned;         // values for VARSURF for owned surfs
+  double *t_local;         // values for VARSURF for local+ghost surfs
+  double *t_persurf;       // ptr to VARSURF or CUSTOM local values
   
   // functions used by all SC classes which define Tsurf
   

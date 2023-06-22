@@ -117,21 +117,28 @@ class Surf : protected Pointers {
   double pushlo,pushhi;     // lo/hi ranges to push on
   double pushvalue;         // new position to push to
 
-  // extra custom per-surf attributes, as vectors or arrays
-  // ncustom > 0 if there are any extra attributes defined
-  // custom attributes are created by various commands
+  // custom vectors/array for per-surf data
+  // only for explicit surfs, non-distributed or distributed
+  // ncustom > 0 if there is any custom per-surf data
   // these variables are public, others below are private
-  // NOTE: only currently allowed for explicit non-distributed surfs
   
   int ncustom;              // # of custom attributes, some may be deleted
   int *etype;               // type = INT/DOUBLE of each attribute
   int *esize;               // size = 0 for vector, N for array columns
+  int *estatus;             // status = 0/1 for each attribute
+                            //   0 = only owned surf values are stored
+                            //   1 = owned + local/ghost surf values are stored
   int *ewhich;              // index into eivec,eiarray,edvec,edarray for data
 
-  int **eivec;              // pointer to each integer vector
-  int ***eiarray;           // pointer to each integer array
-  double **edvec;           // pointer to each double vector
-  double ***edarray;        // pointer to each double array
+  int **eivec;              // pointer to each integer vector, owned surfs
+  int ***eiarray;           // pointer to each integer array, owned surfs
+  double **edvec;           // pointer to each double vector, owned surfs
+  double ***edarray;        // pointer to each double array, owned surfs
+
+  int **eivec_local;        // pointer to each integer vector, local+ghost surfs
+  int ***eiarray_local;     // pointer to each integer array, local+ghost surfs
+  double **edvec_local;     // pointer to each double vector, local+ghost surfs
+  double ***edarray_local;  // pointer to each double array, local+ghost surfs
 
 #include "hash_options.h"
 
@@ -220,6 +227,17 @@ class Surf : protected Pointers {
   int add_group(const char *);
   int find_group(const char *);
 
+  void write_restart(FILE *);
+  void read_restart(FILE *);
+
+  virtual void grow(int);
+  virtual void grow_own(int);
+  virtual void grow_temporary(int);
+
+  bigint memory_usage();
+
+  // surf_comm.cpp
+  
   void compress_explicit();
   void compress_implicit();
 
@@ -238,22 +256,20 @@ class Surf : protected Pointers {
   void redistribute_tris_clip(int, int);
   void redistribute_tris_temporary(int);
 
+  void spread_vector(double *, double *);
+
+  // surf_custom.cpp
+
   int find_custom(char *);
   virtual int add_custom(char *, int, int);
   virtual void allocate_custom(int);
   virtual void reallocate_custom();
   void copy_custom(int, int, int);
   virtual void remove_custom(int);
-  
-  void write_restart(FILE *);
-  void read_restart(FILE *);
+  void spread_custom(int);
+
   void write_restart_custom(FILE *);
   void read_restart_custom(FILE *);
-
-  virtual void grow(int);
-  virtual void grow_own(int);
-  virtual void grow_temporary(int);
-  bigint memory_usage();
 
  protected:
   int me,nprocs;
@@ -301,7 +317,7 @@ class Surf : protected Pointers {
     ubuf(int arg) : i(arg) {}
   };
 
-  // extra custom per-surf attributes, as vectors or arrays
+  // custom vectors/arrays for per-grid data
   // these variables are private, others above are public
 
   char **ename;             // name of each attribute

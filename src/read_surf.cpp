@@ -110,7 +110,6 @@ void ReadSurf::command(int narg, char **arg)
   name_custom = NULL;
   type_custom = NULL;
   size_custom = NULL;
-  index_custom = NULL;
   
   while (iarg < narg) {
     if (strcmp(arg[iarg],"type") == 0) {
@@ -124,7 +123,6 @@ void ReadSurf::command(int narg, char **arg)
 			 "readsurf:name_custom");
       memory->grow(type_custom,ncustom+1,"readsurf:type_custom");
       memory->grow(size_custom,ncustom+1,"readsurf:size_custom");
-      memory->grow(index_custom,ncustom+1,"readsurf:index_custom");
 
       int n = strlen(arg[iarg+1]) + 1;
       name_custom[ncustom] = new char[n];
@@ -1406,25 +1404,23 @@ void ReadSurf::add_custom(double *custom)
 
 void ReadSurf::create_custom()
 {
-  int i,j,index;
-  int *ivector,**iarray;
-  double *dvector,**darray;
+  int i,j;
   
   int nsown = surf->nown;
   int icvalue = 0;
 
   for (int ic = 0; ic < ncustom; ic++) {
-    index = surf->add_custom(name_custom[ic],type_custom[ic],size_custom[ic]);
-    index_custom[ic] = index;
+    int index = surf->add_custom(name_custom[ic],type_custom[ic],size_custom[ic]);
+    surf->estatus[index] = 0;
     
     if (type_custom[ic] == 0) {
       if (size_custom[ic] == 0) {
-	ivector = surf->eivec[surf->ewhich[index]];
+	int *ivector = surf->eivec[surf->ewhich[index]];
 	for (i = nsurf_old; i < nsown; i++)
 	  ivector[i] = static_cast<int> (cvalues[i-nsurf_old][icvalue]);
 	icvalue++;
       } else {
-	iarray = surf->eiarray[surf->ewhich[index]];
+	int **iarray = surf->eiarray[surf->ewhich[index]];
 	for (i = nsurf_old; i < nsown; i++)
 	  for (j = 0; j < size_custom[ic]; j++)
 	    iarray[i][j] = static_cast<int> (cvalues[i-nsurf_old][icvalue+j]);
@@ -1433,12 +1429,12 @@ void ReadSurf::create_custom()
       
     } else {
       if (size_custom[ic] == 0) {
-	dvector = surf->edvec[surf->ewhich[index]];
+	double *dvector = surf->edvec[surf->ewhich[index]];
 	for (i = nsurf_old; i < nsown; i++)
 	  dvector[i] = cvalues[i-nsurf_old][icvalue];
 	icvalue++;
       } else {
-	darray = surf->edarray[surf->ewhich[index]];
+	double **darray = surf->edarray[surf->ewhich[index]];
 	for (i = nsurf_old; i < nsown; i++)
 	  for (j = 0; j < size_custom[ic]; j++)
 	    darray[i][j] = cvalues[i-nsurf_old][icvalue+j];

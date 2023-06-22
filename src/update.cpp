@@ -259,6 +259,7 @@ void Update::setup()
   dynamic_setup();
 
   modify->setup();
+  if (dynamic) dynamic_update();
   output->setup(1);
 }
 
