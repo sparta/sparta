@@ -22,6 +22,11 @@
 using namespace SPARTA_NS;
 
 enum{TALLYAUTO,TALLYREDUCE,TALLYRVOUS};         // same as Update
+enum{INT,DOUBLE};                      // several files
+
+// ----------------------------------------------------------------------
+// compress operations after load-balancing or grid adaptation
+// ----------------------------------------------------------------------
 
 /* ----------------------------------------------------------------------
    compress owned explicit distributed surfs to account for deleted grid cells
@@ -165,19 +170,24 @@ void Surf::compress_implicit()
   nlocal = n;
 }
 
+// ----------------------------------------------------------------------
+// collate operations for summing tallies to owned surfs
+// ----------------------------------------------------------------------
+
 /* ----------------------------------------------------------------------
-   comm of tallies across all procs
+   comm of tallies across all procs for a single value (vector)
    nrow = # of tally entries in input vector
    tally2surf = surf index of each entry in input vector
    in = input vector of tallies
    instride = stride between entries in input vector
    return out = summed tallies for explicit surfs I own
+   only called for explicit surfs
 ------------------------------------------------------------------------- */
 
 void Surf::collate_vector(int nrow, surfint *tally2surf,
                           double *in, int instride, double *out)
 {
-  // collate version depends on tally_comm setting
+  // collate algorithm depends on tally_comm setting
 
   if (tally_comm == TALLYAUTO) {
     if (nprocs > nsurf)
@@ -191,7 +201,7 @@ void Surf::collate_vector(int nrow, surfint *tally2surf,
 }
 
 /* ----------------------------------------------------------------------
-   allreduce version of collate
+   allreduce algorithm for collate_vector
 ------------------------------------------------------------------------- */
 
 void Surf::collate_vector_reduce(int nrow, surfint *tally2surf,
@@ -242,7 +252,7 @@ void Surf::collate_vector_reduce(int nrow, surfint *tally2surf,
 }
 
 /* ----------------------------------------------------------------------
-   rendezvous version of collate
+   rendezvous algorithm for collate_vector
 ------------------------------------------------------------------------- */
 
 void Surf::collate_vector_rendezvous(int nrow, surfint *tally2surf,
@@ -292,7 +302,7 @@ void Surf::collate_vector_rendezvous(int nrow, surfint *tally2surf,
 }
 
 /* ----------------------------------------------------------------------
-   callback from rendezvous operation
+   callback from collate_rendezvous_vector rendezvous operatiion
    process tallies for surfs assigned to me
    inbuf = list of N Inbuf datums
    no outbuf
@@ -331,17 +341,18 @@ int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
 }
 
 /* ----------------------------------------------------------------------
-   comm of tallies across all procs
+   comm of tallies across all procs for multiple values (array)
    nrow,ncol = # of entries and columns in input array
    tally2surf = global surf index of each entry in input array
    in = input array of tallies
    return out = summed tallies for explicit surfs I own
+   only called for explicit surfs
 ------------------------------------------------------------------------- */
 
 void Surf::collate_array(int nrow, int ncol, surfint *tally2surf,
                          double **in, double **out)
 {
-  // collate version depends on tally_comm setting
+  // collate algorithm depends on tally_comm setting
 
   if (tally_comm == TALLYAUTO) {
     if (nprocs > nsurf)
@@ -355,7 +366,7 @@ void Surf::collate_array(int nrow, int ncol, surfint *tally2surf,
 }
 
 /* ----------------------------------------------------------------------
-   allreduce version of collate
+   allreduce algorithm for collate_array()
 ------------------------------------------------------------------------- */
 
 void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
@@ -408,7 +419,7 @@ void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
 }
 
 /* ----------------------------------------------------------------------
-   rendezvous version of collate
+   rendezvous algorithm for collate_array
 ------------------------------------------------------------------------- */
 
 void Surf::collate_array_rendezvous(int nrow, int ncol, surfint *tally2surf,
@@ -461,7 +472,7 @@ void Surf::collate_array_rendezvous(int nrow, int ncol, surfint *tally2surf,
 }
 
 /* ----------------------------------------------------------------------
-   callback from rendezvous operation
+   callback from collate_rendezvous_array rendezvous operation
    process tallies for surfs assigned to me
    inbuf = list of N Inbuf datums
    no outbuf
@@ -509,14 +520,15 @@ int Surf::rendezvous_array(int n, char *inbuf,
 }
 
 /* ----------------------------------------------------------------------
-   comm of tallies across all procs
+   comm of tallies across all procs for a single value (vector)
    called from compute isurf/grid and fix ave/grid
      for implicit surf tallies by grid cell
    nrow = # of tallies
    tally2surf = surf ID for each tally (same as cell ID)
    in = vectir of tally values
    return out = summed tallies for grid cells I own
-   done via rendezvous algorithm
+   always done via rendezvous algorithm (no allreduce algorithm)
+   only called for implicit surfs
 ------------------------------------------------------------------------- */
 
 void Surf::collate_vector_implicit(int nrow, surfint *tally2surf,
@@ -635,7 +647,7 @@ void Surf::collate_vector_implicit(int nrow, surfint *tally2surf,
 }
 
 /* ----------------------------------------------------------------------
-   comm of tallies across all procs
+   comm of tallies across all procs for multiple values (array)
    called from compute isurf/grid and fix ave/grid
      for implicit surf tallies by grid cell
    nrow = # of tallies
@@ -643,7 +655,8 @@ void Surf::collate_vector_implicit(int nrow, surfint *tally2surf,
    tally2surf = surf ID for each tally (same as cell ID)
    in = array of tally values, nrow by ncol
    return out = summed tallies for grid cells I own, nlocal by ncol
-   done via rendezvous algorithm
+   always done via rendezvous algorithm (no allreduce algorithm)
+   only called for implicit surfs
 ------------------------------------------------------------------------- */
 
 void Surf::collate_array_implicit(int nrow, int ncol, surfint *tally2surf,
@@ -767,7 +780,7 @@ void Surf::collate_array_implicit(int nrow, int ncol, surfint *tally2surf,
 }
 
 /* ----------------------------------------------------------------------
-   callback from rendezvous operation
+   callback from collate_vector/array_implicit rendezvous operations
    create summed tallies for each grid cell assigned to me
    inbuf = list of N input datums
    send cellID + Ncol values back to owning proc of each grid cell
@@ -842,13 +855,17 @@ int Surf::rendezvous_implicit(int n, char *inbuf,
   return nout;
 }
 
+// ----------------------------------------------------------------------
+// redistribute operations for explicit distributed surfs after clipping
+// ----------------------------------------------------------------------
+
 /* ----------------------------------------------------------------------
    redistribute newly created distributed lines to owing procs
    nold = original nown value before new surfs were read in
    nown = current nown value that includes my new surfs to redistribute
    nnew = nown value after new surfs from all procs are assigned to me
    called by ReadSurf:clip() after proc creates new surfs via clipping
-   only called for distributed surfs
+   only called for explicit distributed surfs
 ------------------------------------------------------------------------- */
 
 void Surf::redistribute_lines_clip(int nold, int nnew)
@@ -901,7 +918,7 @@ void Surf::redistribute_lines_clip(int nold, int nnew)
    redistribute newly created distributed lines to owing procs
    nnew = nown value after new surfs from all procs are assigned to me
    called by ReadSurf:read_multiple()
-   only called for distributed surfs
+   only called for explicit distributed surfs
 ------------------------------------------------------------------------- */
 
 void Surf::redistribute_lines_temporary(int nnew)
@@ -949,7 +966,7 @@ void Surf::redistribute_lines_temporary(int nnew)
 }
 
 /* ----------------------------------------------------------------------
-   callback from rendezvous operation
+   callback from redistributed_lines_temporary rendezvous operation
    store received surfs assigned to me in correct location in mylines
    inbuf = list of N Inbuf datums
    no outbuf
@@ -990,7 +1007,7 @@ int Surf::rendezvous_lines(int n, char *inbuf,
    nnew = nown value after new surfs from all procs are assigned to me
    old = starting index that skips previously distributed surfs
    called by ReadSurf:clip() after proc create new surfs via clipping
-   only called for distributed surfs
+   only called for explicit distributed surfs
 ------------------------------------------------------------------------- */
 
 void Surf::redistribute_tris_clip(int nold, int nnew)
@@ -1043,7 +1060,7 @@ void Surf::redistribute_tris_clip(int nold, int nnew)
    redistribute newly created distributed tris to owing procs
    nnew = nown value after new surfs from all procs are assigned to me
    called by ReadSurf:read_multiple()
-   only called for distributed surfs
+   only called for explicit distributed surfs
 ------------------------------------------------------------------------- */
 
 void Surf::redistribute_tris_temporary(int nnew)
@@ -1090,8 +1107,8 @@ void Surf::redistribute_tris_temporary(int nnew)
   memory->sfree(in_rvous);
 }
 
-/* ----------------------------------------------------------------------
-   callback from rendezvous operation
+/* ----------------------------------------------------------------------  
+   callback from redistributed_tris_temporary rendezvous operation
    store received surfs assigned to me in correct location in mytris
    inbuf = list of N Inbuf datums
    no outbuf
@@ -1126,9 +1143,188 @@ int Surf::rendezvous_tris(int n, char *inbuf,
 }
 
 /* ----------------------------------------------------------------------
-   spread values for a vector from owned to local+ghost surfs
+   spread values for N datums per surf from in vector to out vector
+   type = 0/1 = INT or DOUBLE datums
+   for explicit non-distributed surfs, use allreduce algorithm
+     in = owned surfs
+     out = nlocal surfs (all procs own copy)
+   for explicit distributed surfs, use rendezvous algorithms
+     in = owned surfs
+     out = nlocal+nghost surfs (for my owned + ghost cells)
+   only called for explicit surfs, non-distributed or distributed
+   called by spread_custom() and surf_collide.cpp
 ------------------------------------------------------------------------- */
 
-void Surf::spread_vector(double *in, double *out)
+void Surf::spread_own2local(int n, int type, void *in, void *out)
 {
+  if (!distributed) spread_own2local_reduce(n,type,in,out);
+  else spread_own2local_rendezvous(n,type,in,out);
+}
+
+/* ----------------------------------------------------------------------
+   allreduce algorithm for spread_own2local
+   owned surf data combined for data for all nlocal surfs on all procs
+   NOTE: check for overflow of n*nall or n*nall*sizeof()
+---------------------------------------------------------------------- */
+
+void Surf::spread_own2local_reduce(int n, int type, void *in, void *out)
+{
+  int i,j,m,ij,mj;
+  
+  if (type == INT) {
+    int *ivec = (int *) in;
+    int *ovec = (int *) out;
+
+    int *myvec;
+    memory->create(myvec,n*nlocal,"surf/spread:myvec");
+    memset(myvec,0,n*nlocal*sizeof(int));
+
+    if (n == 1) {
+      for (i = 0; i < nown; i++) {
+	m = me + i*nprocs;
+	myvec[m] = ivec[i];
+      }
+    } else {
+      for (i = 0; i < nown; i++) {
+	ij = i * n;
+	mj = (me + i*nprocs) * n;
+	for (j = 0; j < n; j++)
+	  myvec[mj++] = ivec[ij++];
+      }
+    }
+    
+    MPI_Allreduce(myvec,ovec,n*nlocal,MPI_INT,MPI_SUM,world);
+
+    memory->destroy(myvec);
+    
+  } else {
+    double *ivec = (double *) in;
+    double *ovec = (double *) out;
+
+    double *myvec;
+    memory->create(myvec,n*nlocal,"surf/spread:myvec");
+    memset(myvec,0,n*nlocal*sizeof(double));
+
+    if (n == 1) {
+      for (i = 0; i < nown; i++) {
+	m = me + i*nprocs;
+	myvec[m] = ivec[i];
+      }
+    } else {
+      for (i = 0; i < nown; i++) {
+	ij = i * n;
+	mj = (me + i*nprocs) * n;
+	for (j = 0; j < n; j++)
+	  myvec[mj++] = ivec[ij++];
+      }
+    }
+    
+    MPI_Allreduce(myvec,ovec,n*nlocal,MPI_DOUBLE,MPI_SUM,world);
+
+    memory->destroy(myvec);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   rendezvous algorithm for spread_own2local
+   owned surf data becomes data for nlocal+nghost surfs on each proc
+---------------------------------------------------------------------- */
+
+void Surf::spread_own2local_rendezvous(int n, int type, void *in, void *out)
+{
+  // allocate memory for rvous input
+
+  int nall = nlocal + nghost;
+
+  int *proclist;
+  memory->create(proclist,nall,"spread/own2local:proclist");
+  int *inbuf;
+  memory->create(inbuf,3*nall,"spread/own2local:inbuf");
+
+  // create rvous inputs
+  // proclist = owner of each surf
+  // inbuf = 3 ints per request = me, my index, index on owning proc
+
+  int dim = domain->dimension;
+  surfint surfID;
+
+  int m = 0;
+  for (int i = 0; i < nall; i++) {
+    if (dim == 2) surfID = lines[i].id;
+    else surfID = tris[i].id;
+    proclist[i] = (surfID-1) % nprocs;
+    inbuf[m] = me;
+    inbuf[m+1] = i;
+    inbuf[m+2] = (surfID-1) / nprocs;
+    m += 3;
+  }
+
+  // perform rendezvous operation
+  // each proc owns subset of surfs
+  // receives all surf requests to return per-surf values to each proc who needs it
+  
+  int outbytes;
+  if (type == INT) outbytes = (n+1) * sizeof(int);
+  else outbytes = (n+1) * sizeof(double);
+
+  char *buf;
+  int nreturn = comm->rendezvous(1,nall,(char *) inbuf,3*sizeof(int),
+				 0,proclist,rendezvous_spread,
+				 0,buf,outbytes,(void *) this);
+  
+  memory->destroy(proclist);
+  memory->destroy(inbuf);
+
+  // loop over received datums
+  // copy per-surf values into out
+
+  for (int i = 0; i < nall; i++) {
+    
+
+  }
+  
+  memory->destroy(buf);
+}
+
+/* ----------------------------------------------------------------------
+   callback from spread_own2local_rendezvous rendezvous operation
+   process requests for data from surf elements I own
+------------------------------------------------------------------------- */
+
+int Surf::rendezvous_spread(int n, char *inbuf,
+			    int &flag, int *&proclist, char *&outbuf,
+			    void *ptr)
+{
+  int i,j,k,m;
+
+  Surf *sptr = (Surf *) ptr;
+  //int type = sptr->spread_type;
+  //int size = sptr->spread_size;
+
+  // NOTE: allocate out
+
+  int *in_rvous = (int *) inbuf;
+
+  int oproc,oindex,index;
+
+  double *out;
+  
+  m = 0;
+  for (int i = 0; i < n; i++) {
+    oproc = in_rvous[m];
+    oindex = in_rvous[m+1];
+    index = in_rvous[m+2];
+    m += 3;
+
+    proclist[i] = oproc;
+    out[k++] = oindex;
+    // pack values depending on size and type
+  }
+
+  // flag = 1: second comm needed in rendezvous
+
+  outbuf = (char *) out;
+  
+  flag = 1;
+  return n;
 }

@@ -301,8 +301,28 @@ void Surf::remove_custom(int index)
    spread values for a custom attribute from owned to local+ghost
 ------------------------------------------------------------------------- */
 
+// NOTE: need to (re)allocate custom data for nlocal+nghost
+// NOTE: worry about NULL array ptrs, hence no [0][0] access
+
 void Surf::spread_custom(int index)
 {
+  if (etype[index] == INT) {
+    if (esize[index] == 0) {
+      spread_own2local(1,INT,eivec[ewhich[index]],
+		       eivec_local[ewhich[index]]);
+    } else if (esize[index]) {
+      spread_own2local(esize[index],INT,&eiarray[ewhich[index]][0][0],
+		       &eiarray_local[ewhich[index]][0][0]);
+    }
+  } else if (etype[index] == DOUBLE) {
+    if (esize[index] == 0) {
+      spread_own2local(1,DOUBLE,edvec[ewhich[index]],
+		       &edvec_local[ewhich[index]]);
+    } else if (esize[index]) {
+      spread_own2local(esize[index],DOUBLE,&edarray[ewhich[index]][0][0],
+		       &edarray_local[ewhich[index]][0][0]);
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------

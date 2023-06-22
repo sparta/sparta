@@ -62,7 +62,7 @@ enum{SOUTSIDE,SINSIDE,ONSURF2OUT,ONSURF2IN};  // several files (changed 2 words)
    for distributed surfs, have to use surf alg
    PERAUTO option chooses based on total nsurfs vs nprocs
    see info on subflag, outflag options with surf2grid_split()
-   called from Readsurf, MoveSurf, RemoveSurf, ReadRestart, and FixMoveSurf
+   called from ReadSurf, MoveSurf, RemoveSurf, ReadRestart, and FixMoveSurf
 ------------------------------------------------------------------------- */
 
 void Grid::surf2grid(int subflag, int outflag)
@@ -317,7 +317,8 @@ void Grid::surf2grid_cell_algorithm(int outflag)
 }
 
 /* ----------------------------------------------------------------------
-   find surfs that overlap owned grid cells, for non-distributed or distributed
+   find surfs that overlap owned grid cells
+     for non-distributed or distributed explicit surfs
    algorithm:
      each proc responsible for subset of surfs
      loop over levels of hierarchical grid
@@ -329,7 +330,7 @@ void Grid::surf2grid_cell_algorithm(int outflag)
      each proc can then identify surf/grid intersections for its RCB grid cells
        done recursively by dropping each surf down conceptual tree of parent cells
        until reach child cells that exist at level
-     irregular comm the surf/grid intersection pairs back to procs that own grid cells
+     irregular comm of surf/grid intersection pairs back to procs that own grid cells
    in cells: set nsurf, csurfs
    in cinfo: set type=OVERLAP for cells with surfs
 ------------------------------------------------------------------------- */
@@ -852,7 +853,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
     // allocate memory for rvous input
 
     int *proclist;
-    memory->create(proclist,ncount,"surf2grid:proclist2");
+    memory->create(proclist,ncount,"surf2grid:proclist");
     InRvous *inbuf =
       (InRvous *) memory->smalloc((bigint) ncount*sizeof(InRvous),
                                   "surf2grid:inbuf");

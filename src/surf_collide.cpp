@@ -184,7 +184,7 @@ void SurfCollide::dynamic()
   // evaulate surf-style variable to set new tsurf values for all surfs
   // only evaluate if timestep is multiple of tfreq
   // surf-style variable sets values for owned explicit surfs only
-  // comm owned values to Surf::lines/tris via spread_vector()
+  // comm owned values to Surf::lines/tris via spread_own2local()
   // particle/surf collisions access t_persurf for local+ghost values 
     
   } else if (tmode == VARSURF) {
@@ -199,7 +199,7 @@ void SurfCollide::dynamic()
     MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
     if (flagall) error->all(FLERR,"Surf_collide tsurf <= 0.0 for one or more surfs");
     
-    surf->spread_vector(t_owned,t_local);
+    surf->spread_own2local(1,DOUBLE,t_owned,t_local);
     t_persurf = t_local;
 
   // CUSTOM mode

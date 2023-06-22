@@ -256,7 +256,9 @@ class Surf : protected Pointers {
   void redistribute_tris_clip(int, int);
   void redistribute_tris_temporary(int);
 
-  void spread_vector(double *, double *);
+  void spread_own2local(int, int, void *, void *);
+  void spread_own2local_reduce(int, int, void *, void *);
+  void spread_own2local_rendezvous(int, int, void *, void *);
 
   // surf_custom.cpp
 
@@ -369,6 +371,8 @@ class Surf : protected Pointers {
                               int &, int *&, char *&, void *);
   static int rendezvous_tris(int, char *,
                              int &, int *&, char *&, void *);
+  static int rendezvous_spread(int, char *,
+			       int &, int *&, char *&, void *);
 };
 
 }
