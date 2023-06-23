@@ -159,12 +159,12 @@ void RemoveSurf::remove_2d(int groupbit)
 
   int n = 0;
   for (i = 0; i < nline; i++) {
-    if (!(lines[i].mask & groupbit)) continue;
+    if (lines[i].mask & groupbit) continue;
     if (i != n) memcpy(&lines[n],&lines[i],nbytes);
     n++;
   }
 
-  surf->nsurf = surf->nlocal = nline - n;
+  surf->nsurf = surf->nlocal = n;
 
   // print stats after removal
 
@@ -199,12 +199,12 @@ void RemoveSurf::remove_3d(int groupbit)
 
   int n = 0;
   for (i = 0; i < ntri; i++) {
-    if (!(tris[i].mask & groupbit)) continue;
+    if (tris[i].mask & groupbit) continue;
     if (i != n) memcpy(&tris[n],&tris[i],nbytes);
     n++;
   }
 
-  surf->nsurf = surf->nlocal = ntri - n;
+  surf->nsurf = surf->nlocal = n;
 
   // print stats after removal
 

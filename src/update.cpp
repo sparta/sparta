@@ -522,15 +522,15 @@ template < int DIM, int SURF, int OPT > void Update::move()
           if (DIM == 3) kp = static_cast<int>((xnew[2] - boxlo[2])/dz);
 
           int cellIdx = (kp*grid->uny + jp)*grid->unx + ip + 1;
-          int idx = (*(grid->hash))[cellIdx];
 
           // particle outside ghost grid halo must use standard move
 
-          if (idx != 0) {
+          if (grid->hash->find(cellIdx) != grid->hash->end()) {
+          
+            int icell = (*(grid->hash))[cellIdx];
 
             // reset particle cell and coordinates
 
-            int icell = idx - 1;
             particles[i].icell = icell;
             particles[i].flag = PKEEP;
             x[0] = xnew[0];
@@ -1281,7 +1281,7 @@ template < int DIM, int SURF, int OPT > void Update::move()
   // accumulate running totals
 
   niterate_running += niterate;
-  nmove_running += nlocal;
+  nmove_running += particle->nlocal;
   ntouch_running += ntouch_one;
   ncomm_running += ncomm_one;
   nboundary_running += nboundary_one;
