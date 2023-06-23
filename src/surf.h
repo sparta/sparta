@@ -342,6 +342,11 @@ class Surf : protected Pointers {
                             // used to delete them if not redefined in
                             // restart script
 
+  // rendezvous callback ptrs to Surf class data
+
+  int spread_type,spread_size;
+  void *spread_data;
+  
   // private methods
 
   void point_line_compare(double *, double *, double *, double, int &, int &);

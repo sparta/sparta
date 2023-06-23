@@ -188,19 +188,28 @@ void SurfCollide::dynamic()
   // particle/surf collisions access t_persurf for local+ghost values 
     
   } else if (tmode == VARSURF) {
-    if (update->ntimestep % tfreq) return;
-    input->variable->compute_surf(tindex_var,t_owned,1,0);
-
-    int flag = 0;
-    int nsown = surf->nown;
-    for (int i = 0; i < nsown; i++)
-      if (t_owned[i] <= 0.0) flag = 1;
-    int flagall;
-    MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
-    if (flagall) error->all(FLERR,"Surf_collide tsurf <= 0.0 for one or more surfs");
+    int spreadflag = 0;
     
-    surf->spread_own2local(1,DOUBLE,t_owned,t_local);
-    t_persurf = t_local;
+    if (update->ntimestep % tfreq == 0) {
+      input->variable->compute_surf(tindex_var,t_owned,1,0);
+
+      int flag = 0;
+      int nsown = surf->nown;
+      for (int i = 0; i < nsown; i++)
+	if (t_owned[i] <= 0.0) flag = 1;
+      int flagall;
+      MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
+      if (flagall) error->all(FLERR,"Surf_collide tsurf <= 0.0 for one or more surfs");
+
+      spreadflag = 1;
+    }
+
+    // NOTE: need to check reallocs of t_owned and t_local
+    
+    if (spreadflag) {   // NOTE: need to check if Surf has been LB
+      surf->spread_own2local(1,DOUBLE,t_owned,t_local);
+      t_persurf = t_local;
+    }
 
   // CUSTOM mode
   // access custom per-surf vec for tsurf values for all surfs
@@ -213,6 +222,7 @@ void SurfCollide::dynamic()
     if (surf->estatus[tindex_custom] == 0) return;
 
     double *tcustom = surf->edvec[tindex_custom];
+    
     int nsown = surf->nown;
     int flag = 0;
     for (int i = 0; i < nsown; i++)
@@ -221,6 +231,9 @@ void SurfCollide::dynamic()
     MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
     if (flagall) error->all(FLERR,"Surf_collide tsurf <= 0.0 for one or more surfs");
 
+    // NOTE: what about custom values which are 0.0 b/c unused
+    // NTOE: need to check realloc of edvec_local ?
+    
     surf->spread_custom(tindex_custom);
     surf->estatus[tindex_custom] = 1;
     t_persurf = surf->edvec_local[tindex_custom];

@@ -1232,6 +1232,8 @@ void Surf::spread_own2local_reduce(int n, int type, void *in, void *out)
 
 void Surf::spread_own2local_rendezvous(int n, int type, void *in, void *out)
 {
+  int i,j,k,m,index;
+
   // allocate memory for rvous input
 
   int nall = nlocal + nghost;
@@ -1248,8 +1250,8 @@ void Surf::spread_own2local_rendezvous(int n, int type, void *in, void *out)
   int dim = domain->dimension;
   surfint surfID;
 
-  int m = 0;
-  for (int i = 0; i < nall; i++) {
+  m = 0;
+  for (i = 0; i < nall; i++) {
     if (dim == 2) surfID = lines[i].id;
     else surfID = tris[i].id;
     proclist[i] = (surfID-1) % nprocs;
@@ -1262,12 +1264,16 @@ void Surf::spread_own2local_rendezvous(int n, int type, void *in, void *out)
   // perform rendezvous operation
   // each proc owns subset of surfs
   // receives all surf requests to return per-surf values to each proc who needs it
+
+  spread_type = type;
+  spread_size = n;
+  spread_data = (void *) in;
   
   int outbytes;
   if (type == INT) outbytes = (n+1) * sizeof(int);
   else outbytes = (n+1) * sizeof(double);
-
   char *buf;
+
   int nreturn = comm->rendezvous(1,nall,(char *) inbuf,3*sizeof(int),
 				 0,proclist,rendezvous_spread,
 				 0,buf,outbytes,(void *) this);
@@ -1275,14 +1281,41 @@ void Surf::spread_own2local_rendezvous(int n, int type, void *in, void *out)
   memory->destroy(proclist);
   memory->destroy(inbuf);
 
-  // loop over received datums
+  // loop over received datums for nlocal+nghost surfs
   // copy per-surf values into out
 
-  for (int i = 0; i < nall; i++) {
-    
+  int *ibuf,*ioutbuf;
+  double *dbuf,*doutbuf;
 
+  if (type == INT) ibuf = (int *) buf;
+  else if (type == DOUBLE) dbuf = (double *) dbuf;
+
+  m = 0;
+  if (type == INT) {
+    for (i = 0; i < nall; i++) {
+      index = ibuf[m++];
+      if (n == 1)
+	ioutbuf[index] = ibuf[m++];
+      else {
+	k = index * n;
+	for (j = 0; j < n; j++)
+	  ioutbuf[k++] = ibuf[m++];
+      }
+    }
+    
+  } else if (type == DOUBLE) {
+    for (i = 0; i < nall; i++) {
+      index = (int) ubuf(dbuf[m++]).i;
+      if (n == 1)
+	doutbuf[index] = dbuf[m++];
+      else {
+	k = index * n;
+	for (j = 0; j < n; j++)
+	  doutbuf[k++] = dbuf[m++];
+      }
+    }
   }
-  
+
   memory->destroy(buf);
 }
 
@@ -1295,36 +1328,71 @@ int Surf::rendezvous_spread(int n, char *inbuf,
 			    int &flag, int *&proclist, char *&outbuf,
 			    void *ptr)
 {
-  int i,j,k,m;
+  int i,j,k,m,id;
+  int *idata,*iout;
+  double *ddata,*dout;
 
   Surf *sptr = (Surf *) ptr;
-  //int type = sptr->spread_type;
-  //int size = sptr->spread_size;
+  Memory *memory = sptr->memory;
+  int type = sptr->spread_type;
+  int size = sptr->spread_size;
+  if (type == INT) idata = (int *) sptr->spread_data;
+  else if (type == DOUBLE) ddata = (double *) sptr->spread_data;
 
-  // NOTE: allocate out
+  // allocate proclist & iout/dout, based on n, type, size
 
-  int *in_rvous = (int *) inbuf;
+  memory->create(proclist,n,"spread:proclist");
+  if (type == INT) memory->create(iout,(size+1)*n,"spread:iout");
+  else if (type == DOUBLE) memory->create(dout,(size+1)*n,"spread:dout");
 
-  int oproc,oindex,index;
-
-  double *out;
+  // loop over received requests, pack data into iout/dout
   
+  int *in_rvous = (int *) inbuf;
+  int oproc,oindex,index;
   m = 0;
-  for (int i = 0; i < n; i++) {
-    oproc = in_rvous[m];
-    oindex = in_rvous[m+1];
-    index = in_rvous[m+2];
-    m += 3;
-
-    proclist[i] = oproc;
-    out[k++] = oindex;
-    // pack values depending on size and type
+  k = 0;
+  
+  if (type == INT) {
+    for (int i = 0; i < n; i++) {
+      oproc = in_rvous[m];
+      oindex = in_rvous[m+1];
+      index = in_rvous[m+2];
+      m += 3;
+      
+      proclist[i] = oproc;
+      iout[k++] = oindex;
+      if (size == 1)
+	iout[k++] = idata[index];
+      else {
+	id = index * size;
+	for (j = 0; j < size; j++)
+	  iout[k++] = idata[id++];
+      }
+    }
+    
+  } else if (type == DOUBLE) {
+    for (int i = 0; i < n; i++) {
+      oproc = in_rvous[m];
+      oindex = in_rvous[m+1];
+      index = in_rvous[m+2];
+      m += 3;
+      
+      proclist[i] = oproc;
+      dout[k++] = oindex;
+      if (size == 1)
+	dout[k++] = ddata[index];
+      else {
+	id = index * size;
+	for (j = 0; j < size; j++)
+	  dout[k++] = ddata[id++];
+      }
+    }
   }
 
-  // flag = 1: second comm needed in rendezvous
+  // flag = 2: new outbuf
 
-  outbuf = (char *) out;
-  
-  flag = 1;
+  flag = 2;
+  if (type == INT) outbuf = (char *) iout;
+  else if (type == DOUBLE) outbuf = (char *) dout;
   return n;
 }
