@@ -10,16 +10,16 @@ fix surf/temp command :h3
 
 [Syntax:]
 
-fix ID surf/temp surf-ID Nevery source Tsurf emisurf customID :pre
+fix ID surf/temp surf-ID Nevery source Tinit emisurf customID :pre
 
 ID is documented in "fix"_fix.html command :ulb,l
 surf/temp = style name of this fix command :l
 surf-ID = group ID for which surface elements to consider :l
 Nevery = adjust surface temperature once every Nevery steps :l
 source = computeID or fixID :l
-  computeID = c_ID or c_ID\[n\] for a compute that calculates per surf values
-  fixID = f_ID or f_ID\[n\] for a fix that calculates per surf values :pre
-Tsurf = initial temperature of surface (temperature units) :l
+  computeID = c_ID or c_ID\[N\] for a compute that calculates per surf values
+  fixID = f_ID or f_ID\[N\] for a fix that calculates per surf values :pre
+Tinit = initial temperature of surface (temperature units) :l
 emisurf = emissivity of the surface (unitless, 0 < emisurf <= 1)  :l
 customID = name of a custom per-surf variable to create :l,ule
 
@@ -33,20 +33,20 @@ surf_collide 1 diffuse s_temperature 0.5 :pre
 
 Compute a new temperature for each surface element in the group once
 every Nevery steps.  This command uses a compute or fix ID which
-should compute the flux of total energy onto each surface elements,
+should compute the flux of total energy onto each surface element,
 e.g. {etot} from the "compute surf"_compute_surf.html command.  Note
-that SPARTA does not check that the compute/fix specified calculates
+that SPARTA does not check that the specified compute/fix calculates
 an energy flux.
 
-This fix creates a custom per-surf vector with the specified name of
-{customID}.  It can be accessed by other commands which use the
-current temperature of surface elements.  An example is the
+This fix creates a custom per-surf floating point vector with the
+specified name of {customID}.  It can be accessed by other commands
+which use the temperature of surface elements.  An example is the
 "surf_collide diffuse"_surf_collide.html command.
 
 The per-surface element temperatures computed by this fix can be
-output via the "dump surf"_dump.html command, using the {s_name}
-syntax to output the custom temparture variable created by this fix.
-See the examples/adjust_temp dir for scripts that use this fix.
+output via the "dump surf"_dump.html command, using its {s_name}
+syntax.  See the examples/adjust_temp directory for input scripts that
+use this fix.
 
 The specified {group-ID} must be the name of a surface element group,
 as defined by the "group surf"_group.html command, which contains a
@@ -62,13 +62,13 @@ which performs time-averaging of per-surf quantities, such as "fix
 ave/surf"_fix_ave_surf.html.
 
 If the specified {source} has no bracketed term appended, the compute
-or fix must calculate a per-surf vector.  If {c_ID\[I\]} or
-{f_ID\[I\]} is used, then I must be in the range from 1-M, which will
-use the Ith column of the M-column per-surf array calculated by the
+or fix must calculate a per-surf vector.  If {c_ID\[N\]} or
+{f_ID\[N\]} is used, then N must be in the range from 1-M, which will
+use the Nth column of the M-column per-surf array calculated by the
 compute or fix.
 
-The temperature of the surface element is calculated from the
-Stefan-Boltzmann law for a gray-body, which states that
+The temperature of each surface element is calculated from the
+Stefan-Boltzmann law for a gray-body as follows:
 
 q_wall = sigma * emisurf * Tsurf^4 :pre
 
@@ -82,42 +82,36 @@ The specified emissivity {emisurf} is a unitless coefficient > 0.0 and
 coefficient of 1.0 means the surface is a black-body that radiates all
 the energy it receives.
 
-The specified {Tsurf} value is used to set the initial temperature of
-every surface element in the system.  The temperature values for only
-surface elements in the {surf-ID} group will be reset every {Nevery}
-timesteps by the formula above.  The the temperature values for
-surfaces not in the {surf-ID} group will always be {Tsurf}.
+The specified {Tinit} value is used to set the initial temperature of
+every surface element in the system.  New temperature values for only
+the surface elements in the {surf-ID} group will be reset every
+{Nevery} timesteps by the formula above.  Thus temperature values for
+surfaces not in the {surf-ID} group will always be {Tinit}.
 
-Note that these temperature values are stored in a custom per-surf
-vector.  The commands that use these values determine whether they
-access only surface element values in the {surf-ID} group or others as
-well.  E.g. the "surf_collide diffuse"_surf_collide.html command can
-also be assigned to a group of surface elements via the
-"surf_modify"_surf_modify.html command.  If the same surface group ID
-and same custom per-surf vector name is used for both surf_collide
-diffuse and this command, then only surface elements with time-varying
-temperatures set by this fix will be accessed for surface collision
-calculations.
-
-It is also possible to defined multiple "surf_collide
-diffuse"_surf_collide.html and fix surf/temp commands could be
-defined, each pair of which use a different surface group and
+Note that commands which use these temperature values can determine
+which surface element values they access by their own {surf-ID} group.
+E.g. the "surf_collide diffuse"_surf_collide.html command is assigned
+to a group of surface elements via the "surf_modify"_surf_modify.html
+command.  It its Tsurf value is set to the custom vector defined by
+this fix, then you likely want the two surface groups to be
+consistent.  Note that it also possible to define multiple
+"surf_collide diffuse"_surf_collide.html and multiple fix surf/temp
+commands, each pair of which use a different surface group and
 different custom per-surf vector name.
 
 :line
 
 [Restart, output info:]
 
-This fix writes its per-surf temperatures values to the restart file.
-If the restart input script defines this fix after a restart file has
-been read, the temperature values should be set to the restart file
+This fix writes its per-surf temperatures values to restart files.  If
+the restart input script defines this fix after a restart file has
+been read, the temperature values will be set to the restart file
 values.
 
 [Restrictions:]
 
-Currently this fix can only be used in simulations that define
-explicit non-distributed surfaces.  Support for distributed or
-implicit surfaces may be added at a later time.
+This fix can only be used in simulations that define explicit
+surfaces, not for implicit surface models.
 
 [Related commands:] none
 
