@@ -66,8 +66,9 @@ class SurfCollide : protected Pointers {
   int tindex_custom;       // index of custom attribute
   int tfreq;               // frequency to update variables
   int persurf_temperature; // 1 if VARSURF or CUSTOM
-  double *t_owned;         // values for VARSURF for owned surfs
-  double *t_local;         // values for VARSURF for local+ghost surfs
+  int n_owned,n_localghost;  // # of owned and local+ghost variable values
+   double *t_owned;        // values for VARSURF for owned surfs
+  double *t_localghost;    // values for VARSURF for local+ghost surfs
   double *t_persurf;       // ptr to VARSURF or CUSTOM local values
   
   // functions used by all SC classes which define Tsurf

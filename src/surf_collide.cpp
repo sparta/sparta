@@ -57,6 +57,9 @@ SurfCollide::SurfCollide(SPARTA *sparta, int, char **arg) :
 
   nsingle = ntotal = 0;
   tname = NULL;
+
+  n_owned = n_localghost = 0;
+  t_owned = t_localghost = NULL;
   
   copy = copymode = 0;
 }
@@ -70,6 +73,9 @@ SurfCollide::~SurfCollide()
   delete [] id;
   delete [] style;
   delete [] tname;
+
+  memory->destroy(t_owned);
+  memory->destroy(t_localghost);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -77,8 +83,6 @@ SurfCollide::~SurfCollide()
 void SurfCollide::init()
 {
   nsingle = ntotal = 0;
-
-  // NOTE: need to always invoke var/custom on this step?
 }
 
 /* ---------------------------------------------------------------------- */
@@ -157,11 +161,6 @@ void SurfCollide::check_tsurf()
 
   persurf_temperature = 0;
   if (tmode == VARSURF || tmode == CUSTOM) persurf_temperature = 1;
-
-  // allocate memory for t_owned and t_local
-  
-  if (tmode == VARSURF) {
-  }
 }
 
 /* ----------------------------------------------------------------------
@@ -172,30 +171,36 @@ void SurfCollide::check_tsurf()
 void SurfCollide::dynamic()
 {
   // VAREQUAL mode
-  // evaulate equal-style variable to set new tsurf for all surfs
-  // only evaluate if timestep is multiple of tfreq
+  // equal-style variable sets single tsurf value for all surfs
  
   if (tmode == VAREQUAL) {
+
+    // only evaluate variable if timestep is multiple of tfreq
+
     if (update->ntimestep % tfreq) return;
     tsurf = input->variable->compute_equal(tindex_var);
     if (tsurf <= 0.0) error->all(FLERR,"Surf_collide tsurf <= 0.0");
 
   // VARSURF mode
-  // evaulate surf-style variable to set new tsurf values for all surfs
-  // only evaluate if timestep is multiple of tfreq
-  // surf-style variable sets values for owned explicit surfs only
-  // comm owned values to Surf::lines/tris via spread_own2local()
+  // surf-style variable sets new tsurf values for all surfs
   // particle/surf collisions access t_persurf for local+ghost values 
     
   } else if (tmode == VARSURF) {
-    int spreadflag = 0;
+
+    // only evaluate variable if timestep is multiple of tfreq
     
+    int spreadflag = 0;
     if (update->ntimestep % tfreq == 0) {
+      if (n_owned != surf->nown) {
+	memory->destroy(t_owned);
+	n_owned = surf->nown;
+	memory->create(t_owned,n_owned,"surfcollide:t_owned");
+      }
+      
       input->variable->compute_surf(tindex_var,t_owned,1,0);
 
       int flag = 0;
-      int nsown = surf->nown;
-      for (int i = 0; i < nsown; i++)
+      for (int i = 0; i < n_owned; i++)
 	if (t_owned[i] <= 0.0) flag = 1;
       int flagall;
       MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
@@ -204,23 +209,34 @@ void SurfCollide::dynamic()
       spreadflag = 1;
     }
 
-    // NOTE: need to check reallocs of t_owned and t_local
+    // spread t_owned values to t_localghost values via spread_own2local()
+    // if just re-computed variable OR surfs are
+    //   distributed and load balance/adaptation took place on previous step
     
-    if (spreadflag) {   // NOTE: need to check if Surf has been LB
-      surf->spread_own2local(1,DOUBLE,t_owned,t_local);
-      t_persurf = t_local;
+    if (spreadflag ||
+	(surf->distributed && surf->redistributed_step == update->ntimestep-1)) {
+      if (n_localghost != surf->nlocal + surf->nghost) {
+	memory->destroy(t_localghost);
+	n_localghost = surf->nlocal + surf->nghost;
+	memory->create(t_localghost,n_localghost,"surfcollide:t_localghost");
+      }
+      
+      surf->spread_own2local(1,DOUBLE,t_owned,t_localghost);
+      t_persurf = t_localghost;
     }
 
   // CUSTOM mode
-  // access custom per-surf vec for tsurf values for all surfs
-  // only necessary if status of custom vector has changed
-  // custom vector stores values for owned explicit surfs only
-  // comm owned values to Surf::lines/tris via spread_custom_vector()
+  // ensure access to custom per-surf vec for tsurf values for all surfs
   // particle/surf collisions access t_persurf for local+ghost values 
     
   } else if (tmode == CUSTOM) {
-    if (surf->estatus[tindex_custom] == 0) return;
 
+    // estatus == 1 means owned values already spread to local+ghost values
+    // if estatus == 0: owned values are new OR
+    //   surfs are distributed and load balance/adaptation took place
+    
+    if (surf->estatus[tindex_custom]) return;
+    
     double *tcustom = surf->edvec[tindex_custom];
     
     int nsown = surf->nown;
@@ -230,12 +246,10 @@ void SurfCollide::dynamic()
     int flagall;
     MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
     if (flagall) error->all(FLERR,"Surf_collide tsurf <= 0.0 for one or more surfs");
-
-    // NOTE: what about custom values which are 0.0 b/c unused
-    // NTOE: need to check realloc of edvec_local ?
+    
+    // spread owned values to local+ghost values via spread_custom()
     
     surf->spread_custom(tindex_custom);
-    surf->estatus[tindex_custom] = 1;
     t_persurf = surf->edvec_local[tindex_custom];
   }
 }
@@ -250,4 +264,3 @@ double SurfCollide::compute_vector(int i)
 
   return all[i];
 }
-

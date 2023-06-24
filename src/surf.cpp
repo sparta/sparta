@@ -56,7 +56,8 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   implicit = 0;
   distributed = 0;
   surf_collision_check = 1;
-
+  redistributed_step = -1;
+  
   gnames = (char **) memory->smalloc(MAXGROUP*sizeof(char *),"surf:gnames");
   bitmask = (int *) memory->smalloc(MAXGROUP*sizeof(int),"surf:bitmask");
   inversemask = (int *) memory->smalloc(MAXGROUP*sizeof(int),
@@ -91,8 +92,9 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
 
   ncustom = 0;
   ename = NULL;
-  etype = esize = ewhich = NULL;
+  etype = esize = estatus = ewhich = NULL;
   size_custom = 0;
+  size_custom_local = NULL;
   
   ncustom_ivec = ncustom_iarray = 0;
   icustom_ivec = icustom_iarray = NULL;
@@ -140,7 +142,9 @@ Surf::~Surf()
   memory->sfree(ename);
   memory->destroy(etype);
   memory->destroy(esize);
+  memory->destroy(estatus);
   memory->destroy(ewhich);
+  memory->destroy(size_custom_local);
 
   for (int i = 0; i < ncustom_ivec; i++) memory->destroy(eivec[i]);
   for (int i = 0; i < ncustom_iarray; i++) memory->destroy(eiarray[i]);

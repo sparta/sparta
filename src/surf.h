@@ -31,7 +31,9 @@ class Surf : protected Pointers {
                             // 0 = each proc owns all
   int surf_collision_check; // flag for whether init() check is required
                             // for assign of collision models to surfs
-
+  bigint redistributed_step;  // last timestep expl distributed surfs
+                              // were redistributed due to LB or adaptation
+  
   double bblo[3],bbhi[3];   // bounding box around surfs
   int tally_comm;           // style of comm for surf tallies
 
@@ -325,6 +327,7 @@ class Surf : protected Pointers {
   char **ename;             // name of each attribute
 
   int size_custom;          // current size of allocated vecs/arrays
+  int *size_custom_local;   // size of each allocated nlocal+nghost vec/array
   
   int ncustom_ivec;         // # of integer vector attributes
   int ncustom_iarray;       // # of integer array attributes
