@@ -40,7 +40,7 @@ OpenMP (threading for many-core CPUs and Intel Phi), and CUDA (for
 NVIDIA GPUs). You choose the mode at build time to produce an
 executable compatible with specific hardware.
 
-NOTE: Kokkos support within SPARTA must be built with a C++14
+NOTE: Kokkos support within SPARTA must be built with a C++17
 compatible compiler. For a list of compilers that have been tested with
 the Kokkos library, see the Kokkos "README"_https://github.com/kokkos/kokkos/blob/master/README.md.
 
@@ -71,7 +71,7 @@ Kokkos architecture options.
 
 [Compile for CPU-only (MPI only, no threading):]
 
-Use a C++14 compatible compiler and set Kokkos architicture variable in as described above.  Then do the
+Use a C++17 compatible compiler and set Kokkos architicture variable in as described above.  Then do the
 following:
 
 using Makefiles:
@@ -93,7 +93,7 @@ must support the OpenMP interface. You should have one or more
 multi-core CPUs so that multiple threads can be launched by each MPI
 task running on a CPU.
 
-Use a C++14 compatible compiler and set Kokkos architecture variable in
+Use a C++17 compatible compiler and set Kokkos architecture variable in
 as described above.  Then do the
 following:
 
@@ -111,7 +111,7 @@ make :pre
 
 [Compile for Intel KNL Xeon Phi (Intel Compiler, OpenMPI):]
 
-Use a C++14 compatible compiler and do the following:
+Use a C++17 compatible compiler and do the following:
 
 using Makefiles:
 
@@ -128,9 +128,9 @@ make :pre
 [Compile for CPUs and GPUs (with OpenMPI or MPICH):]
 
 NOTE: To build with Kokkos support for NVIDIA GPUs, NVIDIA CUDA
-software version 7.5 or later must be installed on your system.
+software version 11.0 or later must be installed on your system.
 
-Use a C++14 compatible compiler and set Kokkos architecture variable in
+Use a C++17 compatible compiler and set Kokkos architecture variable in
 for both GPU and CPU as described
 above.  Then do the following:
 
@@ -391,39 +391,61 @@ KOKKOS_DEVICES=CUDA means an NVIDIA GPU running CUDA will be used.
 As described above, the CMake option Kokkos_ARCH_{TYPE}=ON or the makefile setting KOKKOS_ARCH={TYPE} enables compiler switches needed when compiling for a specific hardware:
 
 [Arch-ID]	| [HOST or GPU] |	[Description] |
-AMDAVX	| HOST |	AMD 64-bit x86 CPU (AVX 1) |
-EPYC	| HOST |	AMD EPYC Zen class CPU (AVX 2) |
-ARMV80	| HOST |	ARMv8.0 Compatible CPU |
-ARMV81	| HOST |	ARMv8.1 Compatible CPU |
-ARMV8_THUNDERX	| HOST |	ARMv8 Cavium ThunderX CPU |
-ARMV8_THUNDERX2	| HOST |	ARMv8 Cavium ThunderX2 CPU |
-WSM	| HOST |	Intel Westmere CPU (SSE 4.2) |
-SNB	| HOST |	Intel Sandy/Ivy Bridge CPU (AVX 1) |
-HSW	| HOST |	Intel Haswell CPU (AVX 2) |
-BDW	| HOST |	Intel Broadwell Xeon E-class CPU (AVX 2 + transactional mem) |
-SKX	| HOST |	Intel Sky Lake Xeon E-class HPC CPU (AVX512 + transactional mem) |
-KNC	| HOST |	Intel Knights Corner Xeon Phi |
-KNL	| HOST |	Intel Knights Landing Xeon Phi |
-BGQ	| HOST |	IBM Blue Gene/Q CPU |
-POWER7	| HOST |	IBM POWER7 CPU |
-POWER8	| HOST |	IBM POWER8 CPU |
-POWER9	| HOST |	IBM POWER9 CPU |
-KEPLER30	| GPU |	NVIDIA Kepler generation CC 3.0 GPU |
-KEPLER32	| GPU |	NVIDIA Kepler generation CC 3.2 GPU |
-KEPLER35	| GPU |	NVIDIA Kepler generation CC 3.5 GPU |
-KEPLER37	| GPU |	NVIDIA Kepler generation CC 3.7 GPU |
-MAXWELL50	| GPU |	NVIDIA Maxwell generation CC 5.0 GPU |
-MAXWELL52	| GPU |	NVIDIA Maxwell generation CC 5.2 GPU |
-MAXWELL53	| GPU |	NVIDIA Maxwell generation CC 5.3 GPU |
-PASCAL60	| GPU |	NVIDIA Pascal generation CC 6.0 GPU |
-PASCAL61	| GPU |	NVIDIA Pascal generation CC 6.1 GPU |
-VOLTA70	| GPU |	NVIDIA Volta generation CC 7.0 GPU |
-VOLTA72	| GPU |	NVIDIA Volta generation CC 7.2 GPU |
-TURING75	| GPU |	NVIDIA Turing generation CC 7.5 GPU |
+NATIVE | HOST | Local machine |
+AMDAVX | HOST | AMD 64-bit x86 CPU (AVX 1) |
+ZEN | HOST | AMD Zen class CPU (AVX 2) |
+ZEN2 | HOST | AMD Zen2 class CPU (AVX 2) |
+ZEN3 | HOST | AMD Zen3 class CPU (AVX 2) |
+ARMV80 | HOST | ARMv8.0 Compatible CPU |
+ARMV81 | HOST | ARMv8.1 Compatible CPU |
+ARMV8_THUNDERX | HOST | ARMv8 Cavium ThunderX CPU |
+ARMV8_THUNDERX2 | HOST | ARMv8 Cavium ThunderX2 CPU |
+A64FX | HOST | ARMv8.2 with SVE Support |
+WSM | HOST | Intel Westmere CPU (SSE 4.2) |
+SNB | HOST | Intel Sandy/Ivy Bridge CPU (AVX 1) |
+HSW | HOST | Intel Haswell CPU (AVX 2) |
+BDW | HOST | Intel Broadwell Xeon E-class CPU (AVX 2 + transactional
+mem) |
+SKL | HOST | Intel Skylake Client CPU |
+SKX | HOST | Intel Skylake Xeon Server CPU (AVX512) |
+ICL | HOST | Intel Ice Lake Client CPU (AVX512) |
+ICX | HOST | Intel Ice Lake Xeon Server CPU (AVX512) |
+SPR | HOST | Intel Sapphire Rapids Xeon Server CPU (AVX512) |
+KNC | HOST | Intel Knights Corner Xeon Phi |
+KNL | HOST | Intel Knights Landing Xeon Phi |
+BGQ | HOST | IBM Blue Gene/Q CPU |
+POWER7 | HOST | IBM POWER7 CPU |
+POWER8 | HOST | IBM POWER8 CPU |
+POWER9 | HOST | IBM POWER9 CPU |
+KEPLER30 | GPU | NVIDIA Kepler generation CC 3.0 GPU |
+KEPLER32 | GPU | NVIDIA Kepler generation CC 3.2 GPU |
+KEPLER35 | GPU | NVIDIA Kepler generation CC 3.5 GPU |
+KEPLER37 | GPU | NVIDIA Kepler generation CC 3.7 GPU |
+MAXWELL50 | GPU | NVIDIA Maxwell generation CC 5.0 GPU |
+MAXWELL52 | GPU | NVIDIA Maxwell generation CC 5.2 GPU |
+MAXWELL53 | GPU | NVIDIA Maxwell generation CC 5.3 GPU |
+PASCAL60 | GPU | NVIDIA Pascal generation CC 6.0 GPU |
+PASCAL61 | GPU | NVIDIA Pascal generation CC 6.1 GPU |
+VOLTA70 | GPU | NVIDIA Volta generation CC 7.0 GPU |
+VOLTA72 | GPU | NVIDIA Volta generation CC 7.2 GPU |
+TURING75 | GPU | NVIDIA Turing generation CC 7.5 GPU |
 AMPERE80 | GPU | NVIDIA Ampere generation CC 8.0 GPU |
-VEGA900	| GPU |	AMD GPU MI25 GFX900 |
-VEGA906	| GPU |	AMD GPU MI50/MI60 GFX906 |
-INTEL_GEN | GPU | Intel GPUs Gen9+
+AMPERE86 | GPU | NVIDIA Ampere generation CC 8.6 GPU |
+ADA89 | GPU | NVIDIA Ada Lovelace generation CC 8.9 GPU |
+HOPPER90 | GPU | NVIDIA Hopper generation CC 9.0 GPU |
+VEGA900 | GPU | AMD GPU MI25 GFX900 |
+VEGA906 | GPU | AMD GPU MI50/MI60 GFX906 |
+VEGA908 | GPU | AMD GPU MI100 GFX908 |
+VEGA90A | GPU | AMD GPU MI200 GFX90A |
+NAVI1030 | GPU | AMD GPU V620/W6800 |
+NAVI1100 | GPU | AMD GPU RX7900XTX |
+INTEL_GEN GPU SPIR64-based devices, e.g. Intel GPUs, using JIT |
+INTEL_DG1 | GPU | Intel Iris XeMAX GPU |
+INTEL_GEN9 | GPU | Intel GPU Gen9 |
+INTEL_GEN11 | GPU | Intel GPU Gen11 |
+INTEL_GEN12LP | GPU | Intel GPU Gen12LP |
+INTEL_XEHP | GPU | Intel GPU Xe-HP |
+INTEL_PVC | GPU | Intel GPU Ponte Vecchio |
 :tb(c=3,s=|)
 
 The CMake option Kokkos_ENABLE_CUDA_{OPTION} or the makefile setting KOKKOS_CUDA_OPTIONS={OPTION} are 
