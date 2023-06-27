@@ -165,6 +165,15 @@ void AdaptGrid::command(int narg, char **arg)
     grid->type_check();
   }
 
+  // if explicit distributed surfs
+  // set redistribute timestep and clear custom status flags
+
+  if (surf->distributed && !surf->implicit) {
+    surf->localghost_changed_step = update->ntimestep;
+    for (int i = 0; i < surf->ncustom; i++)
+      surf->estatus[i] = 0;
+  }
+
   // write out new grid file
 
   if (file) write_file();

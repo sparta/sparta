@@ -53,24 +53,28 @@ class ReadSurf : protected Pointers {
   int partflag,filearg;
 
   int multiproc;            // 1 if multiple files to read from
-  int nfiles;               // # of proc files along with base file
-  bigint nsurf_basefile;    // surface count in base file
+  int nfiles;               // # of proc files in addition to base file
   int me_file,nprocs_file;  // info for cluster of procs that read a file
 
   int dim;
   double origin[3];
+  
+  Surf::Line *lines;        // lines read from all files, distributed over procs
+  Surf::Tri *tris;          // tris read from all files, distributed over procs
+
+  int nsurf;                // read-in surf count on this proc
+  int maxsurf;              // max allocation of lines or tris
+
+  bigint nsurf_old;         // # of system surfs before read
+  bigint nsurf_all;         // # of system surfs read (one or more files)
+  int nsurf_file;           // # of surfs in one file
 
   struct Point {
     double x[3];            // point coords
   };
 
-  Point *pts;               // storage for points read from input file
-
-  bigint nsurf_total_old;   // # of total system surfs before read
-  int nsurf_old;            // # of surfs on this proc before read
-  int nsurf_new;            // # of surfs on this proc after read
   int npoint_file;          // # of points in one file
-  int nsurf_file;           // # of surfs in one file
+  Point *pts;               // storage for points read from one file
 
   int filereader;
   MPI_Comm filecomm;
@@ -88,16 +92,19 @@ class ReadSurf : protected Pointers {
 
   void read_single(char *);
   void read_multiple(char *);
+  void read_file(char *);
 
-  void surf_counts();
+  void base(char *);
   void header();
-  void base(char *file);
 
-  void read_file(char *, int);
   void read_points();
-  void read_lines(int);
-  void read_tris(int);
+  void read_lines();
+  void read_tris();
+
+  void add_line(surfint, int, double *, double *);
+  void add_tri(surfint, int, double *, double *, double *);
   void add_custom(double *);
+  void copy_custom(int, int, int);
   void create_custom();
   
   void process_args(int, int, char **);
@@ -108,7 +115,6 @@ class ReadSurf : protected Pointers {
   void invert();
   void clip2d();
   void clip3d();
-  void transparent();
 
   void check_bounds();
   void push_points_to_boundary(double);

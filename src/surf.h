@@ -28,11 +28,11 @@ class Surf : protected Pointers {
   int exist;                // 1 if any surfaces are defined, else 0
   int implicit;             // 1 = implicit surfs, 0 = explicit surfs
   int distributed;          // 1 = surfs spread across procs (exp or impl)
-                            // 0 = each proc owns all
+                            // 0 = each proc owns all surfs
   int surf_collision_check; // flag for whether init() check is required
                             // for assign of collision models to surfs
-  bigint redistributed_step;  // last timestep expl distributed surfs
-                              // were redistributed due to LB or adaptation
+  bigint localghost_changed_step;  // last timestep expl distributed surfs
+                                   // were remapped due to LB or adaptation
   
   double bblo[3],bbhi[3];   // bounding box around surfs
   int tally_comm;           // style of comm for surf tallies
@@ -120,7 +120,7 @@ class Surf : protected Pointers {
   double pushvalue;         // new position to push to
 
   // custom vectors/array for per-surf data
-  // only for explicit surfs, non-distributed or distributed
+  // only for explicit surfs, all or distributed
   // ncustom > 0 if there is any custom per-surf data
   // these variables are public, others below are private
   

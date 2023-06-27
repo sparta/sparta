@@ -56,7 +56,7 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   implicit = 0;
   distributed = 0;
   surf_collision_check = 1;
-  redistributed_step = -1;
+  localghost_changed_step = -1;
   
   gnames = (char **) memory->smalloc(MAXGROUP*sizeof(char *),"surf:gnames");
   bitmask = (int *) memory->smalloc(MAXGROUP*sizeof(int),"surf:bitmask");

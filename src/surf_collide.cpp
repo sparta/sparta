@@ -214,7 +214,7 @@ void SurfCollide::dynamic()
     //   distributed and load balance/adaptation took place on previous step
     
     if (spreadflag ||
-	(surf->distributed && surf->redistributed_step == update->ntimestep-1)) {
+	(surf->distributed && surf->localghost_changed_step == update->ntimestep-1)) {
       if (n_localghost != surf->nlocal + surf->nghost) {
 	memory->destroy(t_localghost);
 	n_localghost = surf->nlocal + surf->nghost;

@@ -300,6 +300,15 @@ void FixBalance::end_of_step()
 
   grid->notify_changed();
 
+  // if explicit distributed surfs
+  // set redistribute timestep and clear custom status flags
+
+  if (surf->distributed && !surf->implicit) {
+    surf->localghost_changed_step = update->ntimestep;
+    for (int i = 0; i < surf->ncustom; i++)
+      surf->estatus[i] = 0;
+  }
+  
   // final imbalance factor
 
   if (bstyle == BISECTION && rcbwt == TIME)
