@@ -491,34 +491,6 @@ void Surf::add_line_own(surfint id, int itype, double *p1, double *p2)
 }
 
 /* ----------------------------------------------------------------------
-   add a line to tmplines list
-   called by ReadSurf for multiple file input
-------------------------------------------------------------------------- */
-
-void Surf::add_line_temporary(surfint id, int itype, double *p1, double *p2)
-{
-  if (ntmp == nmaxtmp) {
-    if ((bigint) nmaxtmp + DELTA > MAXSMALLINT)
-      error->one(FLERR,"Surf add_line_tmeporary overflowed");
-    nmaxtmp += DELTA;
-    grow_temporary(nmaxtmp-DELTA);
-  }
-
-  tmplines[ntmp].id = id;
-  tmplines[ntmp].type = itype;
-  tmplines[ntmp].mask = 1;
-  tmplines[ntmp].isc = tmplines[ntmp].isr = -1;
-  tmplines[ntmp].p1[0] = p1[0];
-  tmplines[ntmp].p1[1] = p1[1];
-  tmplines[ntmp].p1[2] = 0.0;
-  tmplines[ntmp].p2[0] = p2[0];
-  tmplines[ntmp].p2[1] = p2[1];
-  tmplines[ntmp].p2[2] = 0.0;
-  tmplines[ntmp].transparent = 0;
-  ntmp++;
-}
-
-/* ----------------------------------------------------------------------
    add a triangle to tris list
    called by ReadSurf (for non-distributed surfs) and
      by ReadISurf via FixAblate and Marching Cubes/Squares
@@ -609,74 +581,6 @@ void Surf::add_tri_own(surfint id, int itype, double *p1, double *p2, double *p3
   mytris[m].p3[1] = p3[1];
   mytris[m].p3[2] = p3[2];
   mytris[m].transparent = 0;
-}
-
-/* ----------------------------------------------------------------------
-   add a triangls's info to mytris list
-   called by ReadSurf for distributed surfs when clip3d adds a triangle
-   ARE adding one tri at a time, IDs will be renumbered after
-     and tris re-distributed to procs
-   check if mytris needs to be reallocated
-   increment nown
-------------------------------------------------------------------------- */
-
-void Surf::add_tri_own_clip(surfint id, int itype,
-                            double *p1, double *p2, double *p3)
-{
-  if (nown == maxown) {
-    if ((bigint) maxown + DELTA > MAXSMALLINT)
-      error->one(FLERR,"Surf add_tri overflowed");
-    maxown += DELTA;
-    grow_own(maxown-DELTA);
-  }
-
-  mytris[nown].id = id;
-  mytris[nown].type = itype;
-  mytris[nown].mask = 1;
-  mytris[nown].isc = mytris[nown].isr = -1;
-  mytris[nown].p1[0] = p1[0];
-  mytris[nown].p1[1] = p1[1];
-  mytris[nown].p1[2] = p1[2];
-  mytris[nown].p2[0] = p2[0];
-  mytris[nown].p2[1] = p2[1];
-  mytris[nown].p2[2] = p2[2];
-  mytris[nown].p3[0] = p3[0];
-  mytris[nown].p3[1] = p3[1];
-  mytris[nown].p3[2] = p3[2];
-  mytris[nown].transparent = 0;
-  nown++;
-}
-
-/* ----------------------------------------------------------------------
-   add a triangle to tmptris list
-   called by ReadSurf for mutliple file input
-------------------------------------------------------------------------- */
-
-void Surf::add_tri_temporary(surfint id, int itype,
-                             double *p1, double *p2, double *p3)
-{
-  if (ntmp == nmaxtmp) {
-    if ((bigint) nmaxtmp + DELTA > MAXSMALLINT)
-      error->one(FLERR,"Surf add_tri_temporary overflowed");
-    nmaxtmp += DELTA;
-    grow_temporary(nmaxtmp-DELTA);
-  }
-
-  tmptris[ntmp].id = id;
-  tmptris[ntmp].type = itype;
-  tmptris[ntmp].mask = 1;
-  tmptris[ntmp].isc = tmptris[ntmp].isr = -1;
-  tmptris[ntmp].p1[0] = p1[0];
-  tmptris[ntmp].p1[1] = p1[1];
-  tmptris[ntmp].p1[2] = p1[2];
-  tmptris[ntmp].p2[0] = p2[0];
-  tmptris[ntmp].p2[1] = p2[1];
-  tmptris[ntmp].p2[2] = p2[2];
-  tmptris[ntmp].p3[0] = p3[0];
-  tmptris[ntmp].p3[1] = p3[1];
-  tmptris[ntmp].p3[2] = p3[2];
-  tmptris[ntmp].transparent = 0;
-  ntmp++;
 }
 
 /* ----------------------------------------------------------------------
@@ -2779,21 +2683,6 @@ void Surf::grow_own(int old)
     mytris = (Surf::Tri *)
       memory->srealloc(mytris,maxown*sizeof(Tri),"surf:mytris");
     memset(&mytris[old],0,(maxown-old)*sizeof(Tri));
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-
-void Surf::grow_temporary(int old)
-{
-  if (domain->dimension == 2) {
-    tmplines = (Surf::Line *)
-      memory->srealloc(tmplines,nmaxtmp*sizeof(Line),"surf:lines");
-    memset(&tmplines[old],0,(nmaxtmp-old)*sizeof(Line));
-  } else {
-    tmptris = (Surf::Tri *)
-      memory->srealloc(tmptris,nmaxtmp*sizeof(Tri),"surf:tris");
-    memset(&tmptris[old],0,(nmaxtmp-old)*sizeof(Tri));
   }
 }
 

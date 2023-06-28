@@ -31,32 +31,62 @@ namespace SPARTA_NS {
 
 class ReadSurf : protected Pointers {
  public:
+
+  // info needed by static rendezvous class
+  
+  int me,nprocs;
+  int dim,distributed;
+  bigint nsurf_old;         // # of system surfs before read
+  bigint nsurf_all;         // # of system surfs read (one or more files)
+  Surf::Line *lines_contig; // lines stored contiguous across all procs (for all)
+  Surf::Tri *tris_contig;   // tris stored contiguous across all procs (for all)
+
+  int ncustom;
+  int nvalues_custom;
+
+  // union data struct for packing 32-bit and 64-bit ints into double bufs
+  // this avoids aliasing issues by having 2 pointers (double,int)
+  //   to same buf memory
+  // constructor for 32-bit int prevents compiler
+  //   from possibly calling the double constructor when passed an int
+  // copy to a double *buf:
+  //   buf[m++] = ubuf(foo).d, where foo is a 32-bit or 64-bit int
+  // copy from a double *buf:
+  //   foo = (int) ubuf(buf[m++]).i;, where (int) or (tagint) match foo
+  //   the cast prevents compiler warnings about possible truncation
+
+  union ubuf {
+    double d;
+    int64_t i;
+    ubuf(double arg) : d(arg) {}
+    ubuf(int64_t arg) : i(arg) {}
+    ubuf(int arg) : i(arg) {}
+  };
+
+  // methods
+  
   ReadSurf(class SPARTA *);
   virtual ~ReadSurf();
   virtual void command(int, char **);
 
  protected:
-  int me,nprocs;
   char *line,*keyword,*buffer;
   FILE *fp;
   int compressed;
-  int distributed;
 
-  int typeflag;
-  int ncustom,nvalues_custom;
+  int typeflag,typeadd;
+  int grouparg,transparent_flag;
+  int partflag,filearg;
+
   char **name_custom;
   int *type_custom,*size_custom,*index_custom;
-  int nclocal,ncmax;
-  double **cvalues;
-  
-  int grouparg,typeadd,transparent_flag;
-  int partflag,filearg;
+
+  double **cvalues;         // ID + read-in per-surf custom values
 
   int multiproc;            // 1 if multiple files to read from
   int nfiles;               // # of proc files in addition to base file
   int me_file,nprocs_file;  // info for cluster of procs that read a file
 
-  int dim;
   double origin[3];
   
   Surf::Line *lines;        // lines read from all files, distributed over procs
@@ -65,10 +95,12 @@ class ReadSurf : protected Pointers {
   int nsurf;                // read-in surf count on this proc
   int maxsurf;              // max allocation of lines or tris
 
-  bigint nsurf_old;         // # of system surfs before read
-  bigint nsurf_all;         // # of system surfs read (one or more files)
+  bigint nsurf_new;         // # of system surfs after read (old + new)
+  
   int nsurf_file;           // # of surfs in one file
-
+  int nsurf_old_mine;       // # of surfs (all or distributed)
+                            //   in my Surf data struct before read
+  
   struct Point {
     double x[3];            // point coords
   };
@@ -78,18 +110,9 @@ class ReadSurf : protected Pointers {
 
   int filereader;
   MPI_Comm filecomm;
-
-#ifdef SPARTA_MAP
-  typedef std::map<bigint,int> MyHash;
-  typedef std::map<bigint,int>::iterator MyIterator;
-#elif defined SPARTA_UNORDERED_MAP
-  typedef std::unordered_map<bigint,int> MyHash;
-  typedef std::unordered_map<bigint,int>::iterator MyIterator;
-#else
-  typedef std::tr1::unordered_map<bigint,int> MyHash;
-  typedef std::tr1::unordered_map<bigint,int>::iterator MyIterator;
-#endif
-
+  
+  // methods
+  
   void read_single(char *);
   void read_multiple(char *);
   void read_file(char *);
@@ -103,10 +126,11 @@ class ReadSurf : protected Pointers {
 
   void add_line(surfint, int, double *, double *);
   void add_tri(surfint, int, double *, double *, double *);
-  void add_custom(double *);
-  void copy_custom(int, int, int);
-  void create_custom();
-  
+  void add_custom(surfint, double *);
+
+  void redistribute_surfs();
+  void redistribute_custom();
+
   void process_args(int, int, char **);
 
   void translate(double, double, double);
@@ -125,6 +149,13 @@ class ReadSurf : protected Pointers {
   void file_search(char *, char *);
   void parse_keyword(int);
   int count_words(char *);
+
+  // callback function for rendezvous communication
+
+  static int rendezvous_redistribute_surfs(int, char *, int &,
+					   int *&, char *&, void *);
+  static int rendezvous_redistribute_custom(int, char *, int &,
+					    int *&, char *&, void *);
 };
 
 }

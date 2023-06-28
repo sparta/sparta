@@ -182,12 +182,9 @@ class Surf : protected Pointers {
   void add_line(surfint, int, double *, double *);
   void add_line_copy(int, Line *);
   void add_line_own(surfint, int, double *, double *);
-  void add_line_temporary(surfint, int, double *, double *);
   void add_tri(surfint, int, double *, double *, double *);
   void add_tri_copy(int, Tri *);
   void add_tri_own(surfint, int, double *, double *, double *);
-  void add_tri_own_clip(surfint, int, double *, double *, double *);
-  void add_tri_temporary(surfint, int, double *, double *, double *);
   void rehash();
   int all_transparent();
 
@@ -234,7 +231,6 @@ class Surf : protected Pointers {
 
   virtual void grow(int);
   virtual void grow_own(int);
-  virtual void grow_temporary(int);
 
   bigint memory_usage();
 
@@ -253,11 +249,6 @@ class Surf : protected Pointers {
   void collate_vector_implicit(int, surfint *, double *, double *);
   void collate_array_implicit(int, int, surfint *, double **, double **);
 
-  void redistribute_lines_clip(int, int);
-  void redistribute_lines_temporary(int);
-  void redistribute_tris_clip(int, int);
-  void redistribute_tris_temporary(int);
-
   void spread_own2local(int, int, void *, void *);
   void spread_own2local_reduce(int, int, void *, void *);
   void spread_own2local_rendezvous(int, int, void *, void *);
@@ -268,7 +259,7 @@ class Surf : protected Pointers {
   virtual int add_custom(char *, int, int);
   virtual void allocate_custom(int);
   virtual void reallocate_custom();
-  void copy_custom(int, int, int);
+  void copy_custom(int, int);
   virtual void remove_custom(int);
   void spread_custom(int);
 

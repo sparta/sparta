@@ -163,7 +163,7 @@ void RemoveSurf::remove_2d(int groupbit)
   for (i = 0; i < nline; i++) {
     if (!(lines[i].mask & groupbit)) continue;
     if (i != n) memcpy(&lines[n],&lines[i],nbytes);
-    if (ncustom) surf->copy_custom(i,n,0);
+    if (ncustom) surf->copy_custom(i,n);
     n++;
   }
 
@@ -210,7 +210,7 @@ void RemoveSurf::remove_3d(int groupbit)
   for (i = 0; i < ntri; i++) {
     if (!(tris[i].mask & groupbit)) continue;
     if (i != n) memcpy(&tris[n],&tris[i],nbytes);
-    if (ncustom) surf->copy_custom(i,n,0);
+    if (ncustom) surf->copy_custom(i,n);
     n++;
   }
 

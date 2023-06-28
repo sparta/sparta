@@ -223,14 +223,11 @@ void Surf::reallocate_custom()
 
 /* ----------------------------------------------------------------------
    copy custom per-surf data from location I to location J in vectors/arrays
-   called when adding/removing lines/triangles
-   reallocflag = 1 if new line/triangle just added and being copied to
+   called when removing lines/triangles
 ------------------------------------------------------------------------- */
 
-void Surf::copy_custom(int i, int j, int reallocflag)
+void Surf::copy_custom(int i, int j)
 {
-  if (reallocflag) reallocate_custom();
-  
   for (int ic = 0; ic < ncustom; ic++) {
     if (!ename[ic]) continue;
     
