@@ -34,9 +34,35 @@ class RemoveSurf : protected Pointers {
   void command(int, char **);
 
  private:
-  void remove_2d(int);
-  void remove_3d(int);
-  void copy_custom(int, int);
+  int nsurf;               
+  bigint nremove;          // total # of removed surfs
+  bigint nsurf_old;        // total # of surfs before removal
+  bigint nsurf_new;        // total # of surfs after removal
+ 
+  Surf::Line *lines;       // local copy of Surf lines
+  Surf::Tri *tris;         // local copy of Surf tris
+  double **cvalues;        // local copy of custom per-surf data
+  
+  bigint remove(int);
+
+  // union data struct for packing 32-bit and 64-bit ints into double bufs
+  // this avoids aliasing issues by having 2 pointers (double,int)
+  //   to same buf memory
+  // constructor for 32-bit int prevents compiler
+  //   from possibly calling the double constructor when passed an int
+  // copy to a double *buf:
+  //   buf[m++] = ubuf(foo).d, where foo is a 32-bit or 64-bit int
+  // copy from a double *buf:
+  //   foo = (int) ubuf(buf[m++]).i;, where (int) or (tagint) match foo
+  //   the cast prevents compiler warnings about possible truncation
+
+  union ubuf {
+    double d;
+    int64_t i;
+    ubuf(double arg) : d(arg) {}
+    ubuf(int64_t arg) : i(arg) {}
+    ubuf(int arg) : i(arg) {}
+  };
 };
 
 }

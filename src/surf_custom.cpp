@@ -222,38 +222,6 @@ void Surf::reallocate_custom()
 }
 
 /* ----------------------------------------------------------------------
-   copy custom per-surf data from location I to location J in vectors/arrays
-   called when removing lines/triangles
-------------------------------------------------------------------------- */
-
-void Surf::copy_custom(int i, int j)
-{
-  for (int ic = 0; ic < ncustom; ic++) {
-    if (!ename[ic]) continue;
-    
-    if (etype[ic] == 0) {
-      if (esize[ic] == 0) {
-	int *ivector = eivec[ewhich[ic]];
-	ivector[j] = ivector[i];
-      } else {
-	int **iarray = eiarray[ewhich[ic]];
-	for (int m = 0; m < esize[ic]; m++)
-	  iarray[j][m] = iarray[i][m];
-      }
-    } else {
-      if (esize[ic] == 0) {
-	double *dvector = edvec[ewhich[ic]];
-	dvector[j] = dvector[i];
-      } else {
-	double **darray = edarray[ewhich[ic]];
-	for (int m = 0; m < esize[ic]; m++)
-	  darray[j][m] = darray[i][m];
-      }
-    }
-  }
-}
-
-/* ----------------------------------------------------------------------
    remove a custom attribute at location index
    free memory for name, set name ptr to NULL to indicate removed
    free vector/array or per-surf data
@@ -385,6 +353,19 @@ void Surf::spread_custom(int index)
   }
 
   estatus[index] = 1;
+}
+
+/* ----------------------------------------------------------------------
+   extract all custom per-surf data as an array of doubles
+   prepend the surfID to values for each surf
+   return count of custom values per surf
+   called by RemoveSurf
+------------------------------------------------------------------------- */
+
+int Surf::extract_custom(double **&cvalues)
+{
+  memory->create(cvalues,nown,2,"surf:cvalues");
+  return 2;
 }
 
 /* ----------------------------------------------------------------------

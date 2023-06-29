@@ -31,45 +31,15 @@ namespace SPARTA_NS {
 
 class ReadSurf : protected Pointers {
  public:
-
-  // info needed by static rendezvous class
-  
-  int me,nprocs;
-  int dim,distributed;
-  bigint nsurf_old;         // # of system surfs before read
-  bigint nsurf_all;         // # of system surfs read (one or more files)
-  Surf::Line *lines_contig; // lines stored contiguous across all procs (for all)
-  Surf::Tri *tris_contig;   // tris stored contiguous across all procs (for all)
-
-  int ncustom;
-  int nvalues_custom;
-
-  // union data struct for packing 32-bit and 64-bit ints into double bufs
-  // this avoids aliasing issues by having 2 pointers (double,int)
-  //   to same buf memory
-  // constructor for 32-bit int prevents compiler
-  //   from possibly calling the double constructor when passed an int
-  // copy to a double *buf:
-  //   buf[m++] = ubuf(foo).d, where foo is a 32-bit or 64-bit int
-  // copy from a double *buf:
-  //   foo = (int) ubuf(buf[m++]).i;, where (int) or (tagint) match foo
-  //   the cast prevents compiler warnings about possible truncation
-
-  union ubuf {
-    double d;
-    int64_t i;
-    ubuf(double arg) : d(arg) {}
-    ubuf(int64_t arg) : i(arg) {}
-    ubuf(int arg) : i(arg) {}
-  };
-
-  // methods
-  
   ReadSurf(class SPARTA *);
   virtual ~ReadSurf();
   virtual void command(int, char **);
 
  protected:
+  int me,nprocs;
+  int dim;
+  int distributed;
+
   char *line,*keyword,*buffer;
   FILE *fp;
   int compressed;
@@ -81,7 +51,9 @@ class ReadSurf : protected Pointers {
   char **name_custom;
   int *type_custom,*size_custom,*index_custom;
 
-  double **cvalues;         // ID + read-in per-surf custom values
+  int ncustom;              // # of custom per-surf vecs/arrays
+  int nvalues_custom;       // # of custom values per surf
+  double **cvalues;         // surfID + read-in per-surf custom values
 
   int multiproc;            // 1 if multiple files to read from
   int nfiles;               // # of proc files in addition to base file
@@ -95,6 +67,8 @@ class ReadSurf : protected Pointers {
   int nsurf;                // read-in surf count on this proc
   int maxsurf;              // max allocation of lines or tris
 
+  bigint nsurf_old;         // # of system surfs before read
+  bigint nsurf_all;         // # of system surfs read (one or more files)
   bigint nsurf_new;         // # of system surfs after read (old + new)
   
   int nsurf_file;           // # of surfs in one file
@@ -128,9 +102,6 @@ class ReadSurf : protected Pointers {
   void add_tri(surfint, int, double *, double *, double *);
   void add_custom(surfint, double *);
 
-  void redistribute_surfs();
-  void redistribute_custom();
-
   void process_args(int, int, char **);
 
   void translate(double, double, double);
@@ -150,12 +121,24 @@ class ReadSurf : protected Pointers {
   void parse_keyword(int);
   int count_words(char *);
 
-  // callback function for rendezvous communication
+  // union data struct for packing 32-bit and 64-bit ints into double bufs
+  // this avoids aliasing issues by having 2 pointers (double,int)
+  //   to same buf memory
+  // constructor for 32-bit int prevents compiler
+  //   from possibly calling the double constructor when passed an int
+  // copy to a double *buf:
+  //   buf[m++] = ubuf(foo).d, where foo is a 32-bit or 64-bit int
+  // copy from a double *buf:
+  //   foo = (int) ubuf(buf[m++]).i;, where (int) or (tagint) match foo
+  //   the cast prevents compiler warnings about possible truncation
 
-  static int rendezvous_redistribute_surfs(int, char *, int &,
-					   int *&, char *&, void *);
-  static int rendezvous_redistribute_custom(int, char *, int &,
-					    int *&, char *&, void *);
+  union ubuf {
+    double d;
+    int64_t i;
+    ubuf(double arg) : d(arg) {}
+    ubuf(int64_t arg) : i(arg) {}
+    ubuf(int arg) : i(arg) {}
+  };
 };
 
 }

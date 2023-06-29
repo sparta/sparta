@@ -125,6 +125,7 @@ class Surf : protected Pointers {
   // these variables are public, others below are private
   
   int ncustom;              // # of custom attributes, some may be deleted
+  char **ename;             // name of each attribute
   int *etype;               // type = INT/DOUBLE of each attribute
   int *esize;               // size = 0 for vector, N for array columns
   int *estatus;             // status = 0/1 for each attribute
@@ -235,6 +236,8 @@ class Surf : protected Pointers {
   bigint memory_usage();
 
   // surf_comm.cpp
+
+  void add_surfs(int, int, Line *, Tri *, int, int *, double **);
   
   void compress_explicit();
   void compress_implicit();
@@ -259,9 +262,9 @@ class Surf : protected Pointers {
   virtual int add_custom(char *, int, int);
   virtual void allocate_custom(int);
   virtual void reallocate_custom();
-  void copy_custom(int, int);
   virtual void remove_custom(int);
   void spread_custom(int);
+  int extract_custom(double **&);
 
   void write_restart_custom(FILE *);
   void read_restart_custom(FILE *);
@@ -314,8 +317,6 @@ class Surf : protected Pointers {
 
   // custom vectors/arrays for per-grid data
   // these variables are private, others above are public
-
-  char **ename;             // name of each attribute
 
   int size_custom;          // current size of allocated vecs/arrays
   int *size_custom_local;   // size of each allocated nlocal+nghost vec/array
