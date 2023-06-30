@@ -85,10 +85,8 @@ enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
   SurfReact(sparta, narg, arg)
 {
-  if (surf->distributed || surf->implicit)
-    error->all(FLERR,
-               "Cannot yet use surf_react adsorb with distributed or "
-               "implicit surf elements");
+  if (surf->implicit)
+    error->all(FLERR,"Cannot use surf_react adsorb with implicit surfaces");
 
   me = comm->me;
   nprocs = comm->nprocs;
@@ -319,8 +317,8 @@ SurfReactAdsorb::~SurfReactAdsorb()
   // in case multiple surf react/adsorb instances are used
 
   if (mode == SURF && first_owner) {
-    surf->remove_custom(nstick_species_custom);
     surf->remove_custom(nstick_total_custom);
+    surf->remove_custom(nstick_species_custom);
     surf->remove_custom(area_custom);
     surf->remove_custom(weight_custom);
     if (psflag) surf->remove_custom(tau_custom);
@@ -414,37 +412,37 @@ void SurfReactAdsorb::create_per_face_state()
 void SurfReactAdsorb::create_per_surf_state()
 {
   // SRA instance with first_owner = 1 allocates the custom per-surf data
-  // add_custom() intializes all state data to zero
-  // custom indices are for any type of persurf vec or array
+  // add_custom() initializes all state data to zero
+  // custom indices are for any type of per-surf vec or array
   // direct indices are for specific types of vecs or arrays
   // cannot perform add_custom() for tau now, b/c nactive_ps is not yet known
   //   do this later in init
 
-  if (surf->find_custom((char *) "nstick") < 0) {
+  if (surf->find_custom((char *) "nstick_total") < 0) {
     first_owner = 1;
+    nstick_total_custom = surf->add_custom((char *) "nstick_total",INT,0);
     nstick_species_custom = surf->add_custom((char *) "nstick_species",
                                              INT,nspecies_surf);
-    nstick_total_custom = surf->add_custom((char *) "nstick_total",INT,0);
     area_custom = surf->add_custom((char *) "area",DOUBLE,0);
     weight_custom = surf->add_custom((char *) "weight",DOUBLE,0);
     if (psflag) tau_custom = -1;
 
   } else {
     first_owner = 0;
-    nstick_species_custom = surf->find_custom((char *) "nstick_species");
     nstick_total_custom = surf->find_custom((char *) "nstick_total");
+    nstick_species_custom = surf->find_custom((char *) "nstick_species");
     area_custom = surf->find_custom((char *) "area");
     weight_custom = surf->find_custom((char *) "weight");
     if (psflag) tau_custom = surf->find_custom((char *) "tau");
   }
 
-  int nstick_species_direct = surf->ewhich[nstick_species_custom];
   int nstick_total_direct = surf->ewhich[nstick_total_custom];
+  int nstick_species_direct = surf->ewhich[nstick_species_custom];
   int area_direct = surf->ewhich[area_custom];
   int weight_direct = surf->ewhich[weight_custom];
 
-  surf_species_state = surf->eiarray[nstick_species_direct];
   surf_total_state = surf->eivec[nstick_total_direct];
+  surf_species_state = surf->eiarray[nstick_species_direct];
   surf_area = surf->edvec[area_direct];
   surf_weight = surf->edvec[weight_direct];
 
@@ -461,8 +459,8 @@ void SurfReactAdsorb::create_per_surf_state()
 
   // set ptrs used by react() and PS_react() to per-surf data structs
 
-  species_state = surf_species_state;
   total_state = surf_total_state;
+  species_state = surf_species_state;
   area = surf_area;
   weight = surf_weight;
   species_delta = surf_species_delta;
@@ -539,6 +537,9 @@ void SurfReactAdsorb::init()
 
   int isr;
 
+  // NOTE: these are BAD loops
+  // NOTE: whay does tau need to be reset to 0.0 after add_custom() ?
+  
   if (domain->dimension == 2) {
     for (int isurf = 0; isurf < nlocal; isurf++) {
       isr = lines[isurf].isr;
@@ -1164,6 +1165,8 @@ void SurfReactAdsorb::PS_chemistry()
           PS_react(PSFACE,iface,face_norm[iface]);
     }
 
+    // NOTE: BAD loop for distributed ?
+    
   } else if (mode == SURF) {
     int nsurf = surf->nsurf;
     if (domain->dimension == 2) {
@@ -1276,6 +1279,8 @@ void SurfReactAdsorb::update_state_surf()
 
   int ntally = 0;
 
+  // NOTE: BAD loops
+  
   if (domain->dimension == 2) {
     for (int i = 0; i < nlocal; i++) {
       isr = lines[i].isr;
@@ -2699,7 +2704,7 @@ void SurfReactAdsorb::readfile_ps(char *fname)
    perform on-surf reactions for one face or one surf element
    modePS = PSFACE, PSLINE, PSTRI
    isurf = 0 to 5 for box faces
-   isurf >= 0 for line or tri indexed from 0 to Nsurf-1
+   isurf >= 0 for line or tri indexed from 0 to Nsurf-1  // NOTE: BAD for dist ?
    invoked once per Nsync steps
 ------------------------------------------------------------------------- */
 
@@ -2732,7 +2737,7 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
   Surf::Tri *tris = surf->tris;
 
   double fnum = update->fnum;
-  double factor = fnum * weight[isurf] / area[isurf];
+  double factor = fnum * weight[isurf] / area[isurf];  // NOTE: bad access ??
   double ms_inv = factor/max_cover;
 
   Particle::OnePart *p;
