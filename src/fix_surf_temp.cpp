@@ -147,7 +147,7 @@ FixSurfTemp::FixSurfTemp(SPARTA *sparta, int narg, char **arg) :
     threshold = 1.0e-3;
   }
 
-  // trigger setup of list of owned surf elements belonging to surf group
+  // trigger one-time initialization of custom per-surf temperatures
 
   firstflag = 1;
 }
@@ -173,10 +173,10 @@ int FixSurfTemp::setmask()
 
 void FixSurfTemp::init()
 {
-  // one-time initialization of temperature for all surfs in custom vector
-
   if (!firstflag) return;
   firstflag = 0;
+
+  // one-time initialization of temperature for all surfs in custom vector
 
   double *tvector = surf->edvec[surf->ewhich[tindex]];
   int nsown = surf->nown;
