@@ -198,14 +198,6 @@ void SurfCollide::dynamic()
       }
       
       input->variable->compute_surf(tindex_var,t_owned,1,0);
-
-      int flag = 0;
-      for (int i = 0; i < n_owned; i++)
-	if (t_owned[i] <= 0.0) flag = 1;
-      int flagall;
-      MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
-      if (flagall) error->all(FLERR,"Surf_collide tsurf <= 0.0 for one or more surfs");
-
       spreadflag = 1;
     }
 
@@ -236,16 +228,8 @@ void SurfCollide::dynamic()
     //   surfs are distributed and load balance/adaptation took place
     
     if (surf->estatus[tindex_custom]) return;
-    
+
     double *tcustom = surf->edvec[tindex_custom];
-    
-    int nsown = surf->nown;
-    int flag = 0;
-    for (int i = 0; i < nsown; i++)
-      if (tcustom[i] <= 0.0) flag = 1;
-    int flagall;
-    MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
-    if (flagall) error->all(FLERR,"Surf_collide tsurf <= 0.0 for one or more surfs");
     
     // spread owned values to local+ghost values via spread_custom()
     
