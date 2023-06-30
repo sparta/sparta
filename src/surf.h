@@ -33,6 +33,7 @@ class Surf : protected Pointers {
                             // for assign of collision models to surfs
   bigint localghost_changed_step;  // last timestep expl distributed surfs
                                    // were remapped due to LB or adaptation
+  int dim;                  // dimeension of system --> lines or tris
   
   double bblo[3],bbhi[3];   // bounding box around surfs
   int tally_comm;           // style of comm for surf tallies
@@ -106,11 +107,6 @@ class Surf : protected Pointers {
                             // implicit: not defined
   int maxown;               // max length of owned lines/tris vecs
 
-  Line *tmplines;           // list of temporary lines, filled by ReadSurf
-  Tri *tmptris;             // list of temporary tris, filled by ReadSurf
-  int ntmp;                 // # of temporary surfs
-  int nmaxtmp;              // max size of tmplines/tmptris
-
   int nsc,nsr;              // # of surface collision and reaction models
   class SurfCollide **sc;   // list of surface collision models
   class SurfReact **sr;     // list of surface reaction models
@@ -178,14 +174,16 @@ class Surf : protected Pointers {
   void global(char *);
   void modify_params(int, char **);
   void init();
-  void clear();
+  void clear_explicit();
+  void clear_implicit();
   void remove_ghosts();
+
   void add_line(surfint, int, double *, double *);
   void add_line_copy(int, Line *);
-  void add_line_own(surfint, int, double *, double *);
   void add_tri(surfint, int, double *, double *, double *);
   void add_tri_copy(int, Tri *);
-  void add_tri_own(surfint, int, double *, double *, double *);
+  void add_surfs(int, int, Line *, Tri *, int, int *, double **);
+  
   void rehash();
   int all_transparent();
 
@@ -237,8 +235,9 @@ class Surf : protected Pointers {
 
   // surf_comm.cpp
 
-  void add_surfs(int, int, Line *, Tri *, int, int *, double **);
-  
+  void redistribute_surfs(int, Line *, Tri *,
+			  int, int *, double **, bigint, bigint);
+
   void compress_explicit();
   void compress_implicit();
 
@@ -274,47 +273,6 @@ class Surf : protected Pointers {
   int maxsc;                // max # of models in sc
   int maxsr;                // max # of models in sr
 
-  // collate vector rendezvous data
-
-  struct InRvousVec {
-    surfint id;             // surface ID
-    double value;           // compute value
-  };
-
-  double *out_rvous;
-  int ncol_rvous;
-
-  // watertight rendezvous data
-
-  struct InRvousPoint {
-    double x[2];            // 2d point coords
-    int which;              // 1 for first endpoint, 2 for second endpoint
-  };
-
-  struct InRvousEdge {
-    double x1[3],x2[3];     // 3d edge point coords
-    int which;              // 1 for forward order, 2 for reverse order
-  };
-
-  // union data struct for packing 32-bit and 64-bit ints into double bufs
-  // this avoids aliasing issues by having 2 pointers (double,int)
-  //   to same buf memory
-  // constructor for 32-bit int prevents compiler
-  //   from possibly calling the double constructor when passed an int
-  // copy to a double *buf:
-  //   buf[m++] = ubuf(foo).d, where foo is a 32-bit or 64-bit int
-  // copy from a double *buf:
-  //   foo = (int) ubuf(buf[m++]).i;, where (int) or (tagint) match foo
-  //   the cast prevents compiler warnings about possible truncation
-
-  union ubuf {
-    double d;
-    int64_t i;
-    ubuf(double arg) : d(arg) {}
-    ubuf(int64_t arg) : i(arg) {}
-    ubuf(int arg) : i(arg) {}
-  };
-
   // custom vectors/arrays for per-grid data
   // these variables are private, others above are public
 
@@ -337,7 +295,41 @@ class Surf : protected Pointers {
                             // used to delete them if not redefined in
                             // restart script
 
-  // rendezvous callback ptrs to Surf class data
+  // redezvous operation data and callback info
+  
+  // redistribute_surfs rendezvous
+
+  bigint redistribute_nsurf_old;
+  int redistribute_surfperproc;
+  Line *redistribute_lines_contig;
+  Tri *redistribute_tris_contig;
+
+  int redistribute_nvalues_custom;
+  int *redistribute_index_custom;
+
+  // collate vector rendezvous
+
+  struct InRvousVec {
+    surfint id;             // surface ID
+    double value;           // compute value
+  };
+
+  double *out_rvous;
+  int ncol_rvous;
+
+  // watertight rendezvous
+
+  struct InRvousPoint {
+    double x[2];            // 2d point coords
+    int which;              // 1 for first endpoint, 2 for second endpoint
+  };
+
+  struct InRvousEdge {
+    double x1[3],x2[3];     // 3d edge point coords
+    int which;              // 1 for forward order, 2 for reverse order
+  };
+
+  // spread rendezvous
 
   int spread_type,spread_size;
   void *spread_data;
@@ -359,6 +351,12 @@ class Surf : protected Pointers {
   void check_watertight_3d_distributed();
 
   // callback functions for rendezvous communication
+  
+  static int rendezvous_redistribute_surfs(int, char *, int &, int *&,
+					   char *&, void *);
+  static int rendezvous_redistribute_custom(int, char *, int &, int *&,
+
+					    char *&, void *);
 
   static int rendezvous_vector(int, char *, int &, int *&, char *&, void *);
   static int rendezvous_array(int, char *, int &, int *&, char *&, void *);
@@ -373,6 +371,25 @@ class Surf : protected Pointers {
                              int &, int *&, char *&, void *);
   static int rendezvous_spread(int, char *,
 			       int &, int *&, char *&, void *);
+
+  // union data struct for packing 32-bit and 64-bit ints into double bufs
+  // this avoids aliasing issues by having 2 pointers (double,int)
+  //   to same buf memory
+  // constructor for 32-bit int prevents compiler
+  //   from possibly calling the double constructor when passed an int
+  // copy to a double *buf:
+  //   buf[m++] = ubuf(foo).d, where foo is a 32-bit or 64-bit int
+  // copy from a double *buf:
+  //   foo = (int) ubuf(buf[m++]).i;, where (int) or (tagint) match foo
+  //   the cast prevents compiler warnings about possible truncation
+
+  union ubuf {
+    double d;
+    int64_t i;
+    ubuf(double arg) : d(arg) {}
+    ubuf(int64_t arg) : i(arg) {}
+    ubuf(int arg) : i(arg) {}
+  };
 };
 
 }

@@ -25,128 +25,74 @@ enum{TALLYAUTO,TALLYREDUCE,TALLYRVOUS};         // same as Update
 enum{INT,DOUBLE};                      // several files
 
 // ----------------------------------------------------------------------
-// add set of local explicit surfs to Surf data structs
-//   either all or distribueted
-// local surfs are stored by caller, distributed across procs in strided fashion
-// cvalues = optional custom per-surf data
-// if replace = 0, add these surfs to existing ones
-// if replace = 1, wipe out existing surfs, replace with these
-// called by ReadSurf and RemoveSurf
+// redistribution of new surfs operation from ReadSurf or RemoveSurf
 // ----------------------------------------------------------------------
 
-void Surf::add_surfs(int replace, int ncount,
-		     Line *newlines, Tri *newtris,
-		     int nc, int *indices, double **cvalues)
-{
-}
-
 /* ----------------------------------------------------------------------
-   redistribute surfs
-   read-in surfs are in lines/tris, strided across procs
-     clipping may have deleted some, added others on some procs
-   for all surfs, need to add all of them to Surf::lines/tris
-     do this via an Allreduce()
-   for distributed surfs, need to add strided copy to Surf::mylines/mytris
-     do this via rendezcous comm
+   redistribute caller per-proc surfs to owning procs in Surf data structs
+     for explicit surfs only, all or distributed
+     use rendezvous algorithm to send surfs to owning procs
+     for all distribution, perform Allgatherv so all procs have a copy
+   n = # of new surfs contributed by this proc
+   newlines/newtris = list of new surfs, other ptr is NULL
+   nc = # of custom attributes (vecs/arrays) for each surf
+   index_custom = index for each custom vec or array in Surf custom lists
+   cvalues = custom values for each surf in same order as newlines/newtris
+     1st value is surf ID, remaining values are for nc vecs/arrays
+   called from add_surfs() via ReadSurf or RemoveSurf
 ------------------------------------------------------------------------- */
 
-/*
-void ReadSurf::redistribute_surfs()
+void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
+			      int nc, int *index_custom, double **cvalues,
+			      bigint nsurf_new, bigint nsurf_old)
 {
-  // extend counts & data in Surf class for all or distributed surfs
-  // nsurf_old = total # of surfs before new surfs added
-  // nsurf_new = total # of surfs after new surfs added (old + new)
-  // nsurf_old_mine = # of surfs in Surf::lines/tris or mylines/mytris
-  //                  before new surfs added
-  // nsurf_new_mine = # of surfs in Surf::lines/tris or mylines/mytris
-  //                  after new surfs added (old + new)
-  // set surf->nown for both all and distributed, though no alloc for all
-  
-  nsurf_old = surf->nsurf;
-  nsurf_new = nsurf_old + nsurf_all;
-  surf->nsurf = nsurf_new;
-  
-  int nsurf_new_mine;
-  
-  if (!distributed) {
-    nsurf_old_mine = surf->nlocal;
-    while (surf->nmax < nsurf_new) surf->nmax += DELTA;
-    surf->grow(surf->nlocal);
-    surf->nlocal = nsurf_new;
-    int nown = nsurf_new / nprocs;
-    if (me < nsurf_new % nprocs) nown++;
-    surf->nown = nown;
-    nsurf_new_mine = surf->nlocal;
-  } else {
-    nsurf_old_mine = surf->nown;
-    int nown = nsurf_new / nprocs;
-    if (me < nsurf_new % nprocs) nown++;
-    surf->nown = nown;
-    surf->maxown = nown;
-    surf->grow_own(surf->nown);
-    nsurf_new_mine = surf->nown;
-  }
-
-  // add offset to IDs of read-in surfs = pre-existing nsurf_old
-
-  if (dim == 2)
-    for (int i = 0; i < nsurf; i++) lines[i].id += nsurf_old;
-  else
-    for (int i = 0; i < nsurf; i++) tris[i].id += nsurf_old;
-
-  // rendezvous for lines or tris
-  // for all: target is local lines_contig or tris_contig for contiguous IDs
-  // for distributed: target is Surf::mylines/mytris owning strided IDs
-  // npersurf = size of lines/tris_contig, last proc owns extra
-  
   int nbytes;
-  if (dim == 2) nbytes = sizeof(Surf::Line);
-  else nbytes = sizeof(Surf::Tri);
+  if (dim == 2) nbytes = sizeof(Line);
+  else nbytes = sizeof(Tri);
 
-  int *proclist;
-  memory->create(proclist,nsurf,"readsurf:proclist");
-    
-  Surf::Line *in_rvous_lines;
-  Surf::Tri *in_rvous_tris;
-  
-  if (dim == 2)
-    in_rvous_lines = (Surf::Line *)
-      memory->smalloc(nsurf*nbytes,"readsurf:in_rvous_line");
-  else
-    in_rvous_tris = (Surf::Tri *)
-      memory->smalloc(nsurf*nbytes,"readsurf:in_rvous_tri");
+  // ---------------------------------------------------------
+  // redistribute newlines or newtris via rendezvous operation
+  // ---------------------------------------------------------
 
+  // setup rendezvous memory
   // for all:
-  // ncontig = # of contiguous ID surfs I own
-  // alloc and zero lines_contig or tris_contig
+  //   target is local lines_contig or tris_contig for contiguous IDs
+  //   ncontig = # of contiguous ID surfs this proc owns
+  //   ncontig = nsurf_all / nprocs, last proc owns any extra surfs
+  // for distributed:
+  //   target is mylines/mytris owning strided IDs
+  //   no need to allocate here
   
-  int surfperproc = nsurf_all / nprocs;
-  int ncontig = surfperproc;
-  if (me == nprocs-1) ncontig = nsurf_all - (nprocs-1)*surfperproc;
+  int *proclist;
+  memory->create(proclist,n,"readsurf:proclist");
 
-  lines_contig = NULL;
-  tris_contig = NULL;
+  int surfperproc = nsurf_new / nprocs;
+  int ncontig = surfperproc;
+  if (me == nprocs-1) ncontig = nsurf_new - (nprocs-1)*surfperproc;
+
+  Line *lines_contig = NULL;
+  Tri *tris_contig = NULL;
 
   if (!distributed) {
     if (dim == 2) {
-      lines_contig = (Surf::Line *)
-	memory->smalloc(ncontig*nbytes,"readsurf:lines_contig");
+      lines_contig = (Line *)
+	memory->smalloc(ncontig*nbytes,"surf:lines_contig");
       memset(lines_contig,0,ncontig*nbytes);
     } else {
-      tris_contig = (Surf::Tri *)
-	memory->smalloc(ncontig*nbytes,"readsurf:tris_contig");
+      tris_contig = (Tri *)
+	memory->smalloc(ncontig*nbytes,"surf:tris_contig");
       memset(tris_contig,0,ncontig*nbytes);
     }
   }
   
   // create rvous inputs
-  // proclist = owner of each surf based on surfID (includes old surfs)
-  // receivers will have contiguous IDs for all, strided for distributed
+  // proclist = owner of each surf based on surf ID
+  // receivers own contiguous IDs for all, strided for distributed
   
   surfint id;
   int proc;
   
-  for (int i = 0; i < nsurf; i++) {
+  for (int i = 0; i < n; i++) {
     if (dim == 2) id = lines[i].id;
     else id = tris[i].id;
     if (distributed)
@@ -156,80 +102,50 @@ void ReadSurf::redistribute_surfs()
       if (proc >= nprocs) proc = nprocs-1;
     }
     proclist[i] = proc;
-    if (dim == 2) memcpy(&in_rvous_lines[i],&lines[i],nbytes);
-    else memcpy(&in_rvous_tris[i],&tris[i],nbytes);
   }
 
   // perform rendezvous operation
-  // each proc owns subset of new surfs
-  // receives them from other procs
+  // each proc receives subset of new surfs from other procs
 
+  redistribute_nsurf_old = nsurf_old;
+  redistribute_surfperproc = surfperproc;
+  redistribute_lines_contig = lines_contig;
+  redistribute_tris_contig = tris_contig;
+  
   char *in_rvous;
-  if (dim == 2) in_rvous = (char *) in_rvous_lines;
-  else in_rvous = (char *) in_rvous_tris;
+  if (dim == 2) in_rvous = (char *) newlines;
+  else in_rvous = (char *) newtris;
 
   char *buf;
-  int nout = comm->rendezvous(1,nsurf,in_rvous,nbytes,
+  int nout = comm->rendezvous(1,n,in_rvous,nbytes,
                               0,proclist,rendezvous_redistribute_surfs,
                               0,buf,0,(void *) this);
 
   memory->destroy(proclist);
-  if (dim == 2) memory->sfree(in_rvous_lines);
-  else memory->sfree(in_rvous_tris);
-    
-  // check if new surf IDs are contiguous from 1 to Nsurf
-  // if any ID = 0 in rendezvous output, IDs in file were NOT contiguous
-
-  int flag = 0;
-  if (dim == 2) {
-    if (!distributed) {
-      for (int i = 0; i < ncontig; i++)
-	if (lines_contig[i].id == 0) flag++;
-    } else {
-      for (int i = nsurf_old_mine; i < nsurf_new_mine; i++)
-	if (surf->mylines[i].id == 0) flag++;
-    }
-  } else {
-    if (!distributed) {
-      for (int i = 0; i < ncontig; i++)
-	if (tris_contig[i].id == 0) flag++;
-    } else {
-      for (int i = nsurf_old_mine; i < nsurf_new_mine; i++)
-	if (surf->mytris[i].id == 0) flag++;
-    }
-  }
-
-  int flagall;
-  MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
-  if (flagall) {
-    char str[128];
-    sprintf(str,"Missing read_surf IDs = %d",flagall);
-    error->all(FLERR,str);
-  }
   
-  // if each proc owns all surfs:
+  // if distribution is all:
   // perform Allgatherv with lines/tris_contig
-  // append to previous surfs in Surf::lines/tris
+  // append to previous surfs in lines/tris
   
   if (!distributed) {
     int *recvcounts,*displs;
     memory->create(recvcounts,nprocs,"readsurf:recvcounts");
     memory->create(displs,nprocs,"readsurf:displs");
   
-    int n;
-    if (dim == 2) n = ncontig * sizeof(Surf::Line);
-    else n = ncontig * sizeof(Surf::Tri);
+    int nbsize;
+    if (dim == 2) nbsize = ncontig * sizeof(Line);
+    else nbsize = ncontig * sizeof(Tri);
   
-    MPI_Allgather(&n,1,MPI_INT,recvcounts,1,MPI_INT,world);
+    MPI_Allgather(&nbsize,1,MPI_INT,recvcounts,1,MPI_INT,world);
     displs[0] = 0;
     for (int i = 1; i < nprocs; i++) displs[i] = displs[i-1] + recvcounts[i-1];
 
     if (dim == 2)
-      MPI_Allgatherv(lines_contig,ncontig*sizeof(Surf::Line),MPI_CHAR,
-		     &surf->lines[nsurf_old],recvcounts,displs,MPI_CHAR,world);
+      MPI_Allgatherv(lines_contig,ncontig*sizeof(Line),MPI_CHAR,
+		     &lines[nsurf_old],recvcounts,displs,MPI_CHAR,world);
     else
-      MPI_Allgatherv(tris_contig,ncontig*sizeof(Surf::Tri),MPI_CHAR,
-		     &surf->tris[nsurf_old],recvcounts,displs,MPI_CHAR,world);
+      MPI_Allgatherv(tris_contig,ncontig*sizeof(Tri),MPI_CHAR,
+		     &tris[nsurf_old],recvcounts,displs,MPI_CHAR,world);
 
     // clean up
 
@@ -238,49 +154,97 @@ void ReadSurf::redistribute_surfs()
     memory->destroy(recvcounts);
     memory->destroy(displs);
   }
+
+  // done if no new custom data
+
+  if (nc == 0) return;
+
+  // --------------------------------------------------------------
+  // redistribute new custom per-surf data via rendezvous operation
+  // --------------------------------------------------------------
+
+  // proclist = owner of each surf based on surf ID
+  // surf IDs in cvalues are already augmented by old surfs
+  
+  memory->create(proclist,n,"surf:proclist");
+
+  for (int i = 0; i < n; i++) {
+    id = (surfint) ubuf(cvalues[i][0]).i;
+    proclist[i] = (id-1) % nprocs;
+  }
+
+  // nvalues_custom = # of new custom values per surf
+  
+  int nvalues_custom = 0;
+  for (int ic = 0; ic < nc; ic++) {
+    int index = index_custom[ic];
+    if (esize[ic] == 0) nvalues_custom++;
+    else nvalues_custom += esize[ic];
+  }
+
+  // perform rendezvous operation
+  // each proc receives subset of custom values from other procs
+
+  redistribute_nvalues_custom = nvalues_custom;
+  redistribute_index_custom = index_custom;
+    
+  if (nsurf) in_rvous = (char *) &cvalues[0][0];
+  nbytes = (1+nvalues_custom) * sizeof(double);
+
+  nout = comm->rendezvous(1,nsurf,in_rvous,nbytes,
+			  0,proclist,rendezvous_redistribute_custom,
+			  0,buf,0,(void *) this);
+
+  memory->destroy(proclist);
 }
-*/
 
 /* ----------------------------------------------------------------------
    callback from redistribute_surfs rendezvous operatiion
-   inbuf = list of N Inbuf datums (list of lines or tris)
+   inbuf = list of N datums, each is a line or tri
    no outbuf
 ------------------------------------------------------------------------- */
 
-/*
-int ReadSurf::rendezvous_redistribute_surfs(int n, char *inbuf, int &flag,
-					    int *&proclist, char *&outbuf, void *ptr)
+int Surf::rendezvous_redistribute_surfs(int n, char *inbuf, int &flag,
+					int *&proclist, char *&outbuf, void *ptr)
 {
-  ReadSurf *rptr = (ReadSurf *) ptr;
-  int dim = rptr->dim;
-  int nprocs = rptr->nprocs;
-  int me = rptr->me;
-  int distributed = rptr->distributed;
-  bigint nsurf_old = rptr->nsurf_old;
-  bigint nsurf_all = rptr->nsurf_all;
+  Surf *sptr = (Surf *) ptr;
+
+  // generic Surf class variables
+  
+  int me = sptr->me;
+  int nprocs = sptr->nprocs;
+  int dim = sptr->dim;
+  int distributed = sptr->distributed;
+  Line *mylines = sptr->mylines;
+  Tri *mytris = sptr->mytris;
+
+  // Surf class variables peculiar to this rendevous operation
+  
+  bigint nsurf_old = sptr->redistribute_nsurf_old;
+  int surfperproc = sptr->redistribute_surfperproc;
+  Line *lines_contig = sptr->redistribute_lines_contig;
+  Tri *tris_contig = sptr->redistribute_tris_contig;
   
   int nbytes;
-  if (dim == 2) nbytes = sizeof(Surf::Line);
-  else nbytes = sizeof(Surf::Tri);
-
-  int surfperproc = nsurf_all / nprocs;
+  if (dim == 2) nbytes = sizeof(Line);
+  else nbytes = sizeof(Tri);
 
   // loop over received surfs
-  // copy each into apprpriate locataion in all or distributed data struct
-  // for all, target = ReadSurf::lines/tris_contig
-  // for distributed, target = Surf::mylines/mytris
+  // copy each into apprpriate location in Surf data struct
+  // for all: target = lines/tris_contig
+  // for distributed: target = mylines/mytris
 
-  Surf::Line *in_lines,*out_lines;
-  Surf::Tri *in_tris,*out_tris;
+  Line *in_lines,*out_lines;
+  Tri *in_tris,*out_tris;
 
   if (dim == 2) {
-    in_lines = (Surf::Line *) inbuf;
-    if (!distributed) out_lines = rptr->lines_contig;
-    else out_lines = rptr->surf->mylines;
+    in_lines = (Line *) inbuf;
+    if (!distributed) out_lines = lines_contig;
+    else out_lines = mylines;
   } else {
-    in_tris = (Surf::Tri *) inbuf;
-    if (!distributed) out_tris = rptr->tris_contig;
-    else out_tris = rptr->surf->mytris;
+    in_tris = (Tri *) inbuf;
+    if (!distributed) out_tris = tris_contig;
+    else out_tris = mytris;
   }
 
   surfint id;
@@ -300,105 +264,55 @@ int ReadSurf::rendezvous_redistribute_surfs(int n, char *inbuf, int &flag,
   flag = 0;
   return 0;
 }
-*/
-/* ----------------------------------------------------------------------
-   redistribute custom per-surf data
-   comm local cvalues to custom per-surf vecs/arrays in Surf
-   rendezvous operation is done based on strided surf IDs
-------------------------------------------------------------------------- */
-/*
-void ReadSurf::redistribute_custom()
-{
-  // extend Surf class custom per-surf vecs/arrays
-  // can do now b/c surf->nown reflects added surfs
-  // each specified custom name alraedy exists or is added
-  
-  surf->reallocate_custom();
-
-  for (int ic = 0; ic < ncustom; ic++) {
-    int index = surf->find_custom(name_custom[ic]);
-    if (index < 0)
-      index = surf->add_custom(name_custom[ic],type_custom[ic],size_custom[ic]);
-    index_custom[ic] = index;
-  }
-
-  // create rvous inputs
-  // proclist = owner of each surf based on surfID (includes old surfs)
-  
-  int *proclist;
-  memory->create(proclist,nsurf,"readsurf:proclist");
-
-  surfint id;
-
-  for (int i = 0; i < nsurf; i++) {
-    id = (surfint) ubuf(cvalues[i][0]).i;
-    proclist[i] = (id-1) % nprocs;
-  }
-
-  // perform rendezvous operation
-  // each proc owns subset of new custom values
-  // receives them from other procs
-
-  char *in_rvous = NULL;
-  if (nsurf) in_rvous = (char *) &cvalues[0][0];
-  int nbytes = (1+nvalues_custom) * sizeof(double);
-
-  char *buf;
-  int nout = comm->rendezvous(1,nsurf,in_rvous,nbytes,
-                              0,proclist,rendezvous_redistribute_custom,
-                              0,buf,0,(void *) this);
-
-  memory->destroy(proclist);
-  
-  // clean up all custom data
-
-  if (ncustom) {
-    memory->destroy(cvalues);
-    for (int ic = 0; ic < ncustom; ic++) delete [] name_custom[ic];
-    memory->sfree(name_custom);
-    memory->destroy(type_custom);
-    memory->destroy(size_custom);
-    memory->destroy(index_custom);
-  }
-}
-*/
 
 /* ----------------------------------------------------------------------
-   callback from redistribute_custom rendezvous operatiion
-   inbuf = list of N Inbuf datums (set of custom values for a surfID)
+   callback from redistribute_surfs rendezvous operatiion
+   inbuf = list of N datums, each is a set of custom values for one surf
    no outbuf
 ------------------------------------------------------------------------- */
 
-/*
-int ReadSurf::rendezvous_redistribute_custom(int n, char *inbuf, int &flag,
-					     int *&proclist, char *&outbuf, void *ptr)
+int Surf::rendezvous_redistribute_custom(int n, char *inbuf, int &flag,
+					 int *&proclist, char *&outbuf, void *ptr)
 {
-  ReadSurf *rptr = (ReadSurf *) ptr;
-  int nprocs = rptr->nprocs;
-  int ncustom = rptr->ncustom;
-  int nvalues_custom = rptr->nvalues_custom;
-  int *index_custom = rptr->index_custom;
-  Surf *surf = rptr->surf;
+  Surf *sptr = (Surf *) ptr;
+
+  // generic Surf class variables
+
+  int nprocs = sptr->nprocs;
+  int ncustom = sptr->ncustom;
+  int *etype = sptr->etype;
+  int *esize = sptr->esize;
+  int *ewhich = sptr->ewhich;
+  int **eivec = sptr->eivec;
+  int ***eiarray = sptr->eiarray;
+  double **edvec = sptr->edvec;
+  double ***edarray = sptr->edarray;
   
+  // Surf class variables peculiar to this rendevous operation
+
+  int nvalues_custom = sptr->redistribute_nvalues_custom;
+  int *index_custom = sptr->redistribute_index_custom;
+
   // loop over received sets of custom values
   // copy each value into appropriate locataion in custom vec or array
 
   double *in_custom = (double *) inbuf;
-  surfint id;
+  
   int i,j,k,m;
   int index,type,size;
+  surfint id;
 
   int skip = 1 + nvalues_custom;
   int offset = 1;
   
   for (int ic = 0; ic < ncustom; ic++) {
     index = index_custom[ic];
-    type = surf->etype[index];
-    size = surf->esize[index];
+    type = etype[index];
+    size = esize[index];
     
     if (type == 0) {
       if (size == 0) {
-	int *ivector = surf->eivec[surf->ewhich[index]];
+	int *ivector = eivec[ewhich[index]];
 
 	m = 0;
 	for (i = 0; i < n; i++) {
@@ -409,7 +323,7 @@ int ReadSurf::rendezvous_redistribute_custom(int n, char *inbuf, int &flag,
 	}
 
       } else {
-	int **iarray = surf->eiarray[surf->ewhich[index]];
+	int **iarray = eiarray[ewhich[index]];
 
 	m = 0;
 	for (i = 0; i < n; i++) {
@@ -423,7 +337,7 @@ int ReadSurf::rendezvous_redistribute_custom(int n, char *inbuf, int &flag,
 
     } else {
       if (size == 0) {
-	double *dvector = surf->edvec[surf->ewhich[index]];
+	double *dvector = edvec[ewhich[index]];
 
 	m = 0;
 	for (i = 0; i < n; i++) {
@@ -434,7 +348,7 @@ int ReadSurf::rendezvous_redistribute_custom(int n, char *inbuf, int &flag,
 	}
 	  
       } else {
-	double **darray = surf->edarray[surf->ewhich[index]];
+	double **darray = edarray[ewhich[index]];
 
 	m = 0;
 	for (i = 0; i < n; i++) {
@@ -456,7 +370,6 @@ int ReadSurf::rendezvous_redistribute_custom(int n, char *inbuf, int &flag,
   flag = 0;
   return 0;
 }
-*/
 
 // ----------------------------------------------------------------------
 // compress operations after load-balancing or grid adaptation
@@ -476,8 +389,6 @@ void Surf::compress_explicit()
 {
   int i,m,ns;
   surfint *csurfs;
-
-  int dim = domain->dimension;
 
   // keep = 1 if a local surf is referenced by a compressed local grid cell
 
@@ -657,9 +568,8 @@ void Surf::collate_vector_reduce(int nrow, surfint *tally2surf,
 
   memset(one,0,nglobal*sizeof(double));
 
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
-  int dim = domain->dimension;
+  Line *lines = surf->lines;
+  Tri *tris = surf->tris;
   surfint id;
 
   j = 0;
@@ -704,10 +614,6 @@ void Surf::collate_vector_rendezvous(int nrow, surfint *tally2surf,
   // proclist = owner of each surf
   // logic of (id-1) % nprocs sends
   //   surf IDs 1,11,21,etc on 10 procs to proc 0
-
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
-  int dim = domain->dimension;
 
   surfint id;
 
@@ -760,7 +666,7 @@ int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
   // logic of (id-1-me) / nprocs maps
   //   surf IDs [1,11,21,...] on 10 procs to [0,1,2,...] on proc 0
 
-  Surf::InRvousVec *in_rvous = (Surf::InRvousVec *) inbuf;
+  InRvousVec *in_rvous = (InRvousVec *) inbuf;
 
   int m;
   for (int i = 0; i < n; i++) {
@@ -824,10 +730,6 @@ void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
 
   memset(&one[0][0],0,nglobal*ncol*sizeof(double));
 
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
-  int dim = domain->dimension;
-
   for (i = 0; i < nrow; i++) {
     m = (int) tally2surf[i] - 1;
     for (j = 0; j < ncol; j++)
@@ -873,9 +775,8 @@ void Surf::collate_array_rendezvous(int nrow, int ncol, surfint *tally2surf,
   // logic of (id-1) % nprocs sends
   //   surf IDs 1,11,21,etc on 10 procs to proc 0
 
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
-  int dim = domain->dimension;
+  Line *lines = surf->lines;
+  Tri *tris = surf->tris;
   surfint id;
 
   m = 0;
@@ -1399,7 +1300,6 @@ void Surf::spread_own2local_rendezvous(int n, int type, void *in, void *out)
   // proclist = owner of each surf
   // inbuf = 3 ints per request = me, my index, index on owning proc
 
-  int dim = domain->dimension;
   surfint surfID;
 
   m = 0;

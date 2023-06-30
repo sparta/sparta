@@ -181,8 +181,8 @@ void Surf::allocate_custom(int index)
 
 /* ----------------------------------------------------------------------
    reallocate ALL custom per-surf vectors/arrays to current nown size
-   via memory->grow() to grow or shrink nown versus previous size_custom
-   if adding storage beyond old size, initialize to 0 via memset()
+   via memory->grow() to grow (or shrink) nown versus previous size_custom
+   if adding values beyond old size, initialize to 0 via memset()
 ------------------------------------------------------------------------- */
 
 void Surf::reallocate_custom()

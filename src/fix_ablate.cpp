@@ -434,7 +434,7 @@ void FixAblate::create_surfs(int outflag)
   grid->unset_neighbors();
   grid->remove_ghosts();
   grid->clear_surf();
-  surf->clear();
+  surf->clear_implicit();
 
   // perform Marching Squares/Cubes to create new implicit surfs
   // cvalues = corner point values

@@ -64,16 +64,10 @@ class ReadSurf : protected Pointers {
   Surf::Line *lines;        // lines read from all files, distributed over procs
   Surf::Tri *tris;          // tris read from all files, distributed over procs
 
-  int nsurf;                // read-in surf count on this proc
+  int nsurf;                // # of read-in surfs on this proc
   int maxsurf;              // max allocation of lines or tris
-
-  bigint nsurf_old;         // # of system surfs before read
-  bigint nsurf_all;         // # of system surfs read (one or more files)
-  bigint nsurf_new;         // # of system surfs after read (old + new)
-  
-  int nsurf_file;           // # of surfs in one file
-  int nsurf_old_mine;       // # of surfs (all or distributed)
-                            //   in my Surf data struct before read
+  bigint nsurf_all;         // # of read-in surfs across all procs
+  int nsurf_file;           // # of surfs read-in from one file
   
   struct Point {
     double x[3];            // point coords

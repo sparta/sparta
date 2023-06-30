@@ -57,6 +57,7 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   distributed = 0;
   surf_collision_check = 1;
   localghost_changed_step = -1;
+  dim = domain->dimension;
   
   gnames = (char **) memory->smalloc(MAXGROUP*sizeof(char *),"surf:gnames");
   bitmask = (int *) memory->smalloc(MAXGROUP*sizeof(int),"surf:bitmask");
@@ -191,8 +192,6 @@ void Surf::modify_params(int narg, char **arg)
   if (igroup < 0) error->all(FLERR,"Surf_modify surface group is not defined");
   int groupbit = bitmask[igroup];
 
-  int dim = domain->dimension;
-
   int iarg = 1;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"collide") == 0) {
@@ -248,9 +247,6 @@ void Surf::modify_params(int narg, char **arg)
 
 void Surf::init()
 {
-  int dim = domain->dimension;
-  bigint flag,allflag;
-
   // warn if surfs are distributed (explicit or implicit)
   //   and grid->cutoff < 0.0, since each proc will have copy of all cells
 
@@ -259,6 +255,8 @@ void Surf::init()
       error->warning(FLERR,"Surfs are distributed with infinite grid cutoff");
 
   // check that surf element types are all values >= 1
+
+  bigint flag,allflag;
 
   flag = 0;
   if (dim == 2) {
@@ -382,11 +380,36 @@ void Surf::init()
 }
 
 /* ----------------------------------------------------------------------
-   remove all surfs
+   remove all explicit surfs and deallocate memory
+   called by add_surfs() via ReadSurf and RemoveSurf
+------------------------------------------------------------------------- */
+
+void Surf::clear_explicit()
+{
+  nsurf = 0;
+  nlocal = nghost = nmax = 0;
+  nown = maxown = 0;
+  
+  memory->sfree(lines);
+  memory->sfree(tris);
+  memory->sfree(mylines);
+  memory->sfree(mytris);
+  
+  lines = NULL;
+  tris = NULL;
+  mylines = NULL;
+  mytris = NULL;
+
+  hash->clear();
+  hashfilled = 0;
+}
+
+/* ----------------------------------------------------------------------
+   remove all implicit surfs but do not deallocate memory
    called by FixAblate
 ------------------------------------------------------------------------- */
 
-void Surf::clear()
+void Surf::clear_implicit()
 {
   nsurf = 0;
   nlocal = nghost = 0;
@@ -406,7 +429,7 @@ void Surf::remove_ghosts()
 
 /* ----------------------------------------------------------------------
    add a line to lines list
-   called by ReadSurf (for non-distributed surfs) and ReadISurf
+   called by ReadISurf or FixAblate via Marching Squares
 ------------------------------------------------------------------------- */
 
 void Surf::add_line(surfint id, int itype, double *p1, double *p2)
@@ -433,7 +456,7 @@ void Surf::add_line(surfint id, int itype, double *p1, double *p2)
 }
 
 /* ----------------------------------------------------------------------
-   add a line to owned or ghost lines list, depending on ownflag
+   add a line to owned or ghost list, depending on ownflag
    called by Grid::unpack_one() or Grid::coarsen_cell()
 ------------------------------------------------------------------------- */
 
@@ -466,34 +489,8 @@ void Surf::add_line_copy(int ownflag, Line *line)
 }
 
 /* ----------------------------------------------------------------------
-   add a line to mylines list
-   called by ReadSurf for distributed surfs
-   NOT adding one line at a time, rather inserting at location M based on ID
-   assume mylines has been pre-allocated to correct length
-   caller sets surf->nown
-------------------------------------------------------------------------- */
-
-void Surf::add_line_own(surfint id, int itype, double *p1, double *p2)
-{
-  int m = (id-1) / nprocs;
-
-  mylines[m].id = id;
-  mylines[m].type = itype;
-  mylines[m].mask = 1;
-  mylines[m].isc = mylines[m].isr = -1;
-  mylines[m].p1[0] = p1[0];
-  mylines[m].p1[1] = p1[1];
-  mylines[m].p1[2] = 0.0;
-  mylines[m].p2[0] = p2[0];
-  mylines[m].p2[1] = p2[1];
-  mylines[m].p2[2] = 0.0;
-  mylines[m].transparent = 0;
-}
-
-/* ----------------------------------------------------------------------
    add a triangle to tris list
-   called by ReadSurf (for non-distributed surfs) and
-     by ReadISurf via FixAblate and Marching Cubes/Squares
+   called by ReadISurf or FixAblate via Marching Cubes
 ------------------------------------------------------------------------- */
 
 void Surf::add_tri(surfint id, int itype, double *p1, double *p2, double *p3)
@@ -524,7 +521,7 @@ void Surf::add_tri(surfint id, int itype, double *p1, double *p2, double *p3)
 
 /* ----------------------------------------------------------------------
    add a triangle to owned or ghost list, depending on ownflag
-   called by Grid::unpack_one
+   called by Grid::unpack_one or Grid::coarsen_cell()
 ------------------------------------------------------------------------- */
 
 void Surf::add_tri_copy(int ownflag, Tri *tri)
@@ -556,31 +553,112 @@ void Surf::add_tri_copy(int ownflag, Tri *tri)
 }
 
 /* ----------------------------------------------------------------------
-   add a triangls's info to mytris list
-   called by ReadSurf for distributed surfs
-   NOT adding one tri at a time, rather inserting at location M based on ID
-   assume mytris has been pre-allocated to correct length
-   caller sets surf->nown
+   add list of surfs created by caller to Surf data structs
+     for explicit surfs only, all or distributed
+   replace = 0: add newlines/newtris to existing ones
+   replace = 1: wipe out existing surfs, replace with newlines/newtris
+   ncount = # of new surfs contributed by this proc
+     new surfs are distributed across procs
+     can be in any order, but IDs need to be unique and contiguous
+   newlines/newtris = list of new surfs, other ptr is NULL
+   nc = # of custom attributes (vecs/arrays) for each surf
+   index_custom = index for each custom vec or array in Surf custom lists
+   cvalues = custom values for each surf in same order as newlines/newtris
+     1st value is surf ID, remaining values are for nc vecs/arrays
+   called by ReadSurf and RemoveSurf
 ------------------------------------------------------------------------- */
 
-void Surf::add_tri_own(surfint id, int itype, double *p1, double *p2, double *p3)
+void Surf::add_surfs(int replace, int ncount,
+		     Line *newlines, Tri *newtris,
+		     int nc, int *index_custom, double **cvalues)
 {
-  int m = (id-1) / nprocs;
+  // if replace: remove all existing surfs and their memory
+  // remove ghost surfs for replace or add
+  
+  if (replace) clear_explicit();
+  remove_ghosts();
+  
+  // (re)allocate data structs for adding new surfs
 
-  mytris[m].id = id;
-  mytris[m].type = itype;
-  mytris[m].mask = 1;
-  mytris[m].isc = mytris[m].isr = -1;
-  mytris[m].p1[0] = p1[0];
-  mytris[m].p1[1] = p1[1];
-  mytris[m].p1[2] = p1[2];
-  mytris[m].p2[0] = p2[0];
-  mytris[m].p2[1] = p2[1];
-  mytris[m].p2[2] = p2[2];
-  mytris[m].p3[0] = p3[0];
-  mytris[m].p3[1] = p3[1];
-  mytris[m].p3[2] = p3[2];
-  mytris[m].transparent = 0;
+  bigint bncount = ncount;
+  bigint nsurf_new;
+  MPI_Allreduce(&bncount,&nsurf_new,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+
+  bigint nsurf_old = nsurf;
+  nsurf += nsurf_new;
+
+  int nlocal_old = nlocal;
+  int nown_old = nown;
+  
+  if (!distributed) {
+    nlocal += nsurf_new;
+    while (nmax < nlocal) nmax += DELTA;
+    grow(nlocal_old);
+  } else {
+    nown = nsurf / nprocs;
+    if (me < nsurf % nprocs) nown++;
+    maxown = nown;
+    grow_own(nown_old);
+  }
+
+  // reallocate data structs for adding new custom values
+  // wait unto now b/c nown has now been reset
+  
+  reallocate_custom();
+
+  // offset IDs of new surfs by pre-existing nsurf_old
+  // for both lines/tris and custom data in cvalues
+
+  if (dim == 2)
+    for (int i = 0; i < ncount; i++)
+      lines[i].id += nsurf_old;
+  else
+    for (int i = 0; i < ncount; i++)
+      tris[i].id += nsurf_old;
+
+  if (nc) 
+    for (int i = 0; i < ncount; i++)
+      cvalues[i][0] = ((surfint) ubuf(cvalues[i][0]).i) + nsurf_old;
+
+  // redistribute surfs to correct layout in Surf data structs
+  // also checks that new surfs have IDs contiguous from 1 to N
+  
+  redistribute_surfs(ncount,newlines,newtris,nc,index_custom,cvalues,
+		     nsurf_new,nsurf_old);
+
+  // check if new surf IDs are contiguous from 1 to Nsurf_new
+  // if any ID = 0 in rendezvous output, new surf IDs were NOT contiguous
+
+  int surfperproc = nsurf_new / nprocs;
+  int ncontig = surfperproc;
+  if (me == nprocs-1) ncontig = nsurf_new - (nprocs-1)*surfperproc;
+
+  int flag = 0;
+  if (dim == 2) {
+    if (!distributed) {
+      for (int i = nlocal_old; i < nlocal; i++)
+	if (lines[i].id == 0) flag++;
+    } else {
+      for (int i = nown_old; i < nown; i++)
+	if (surf->mylines[i].id == 0) flag++;
+    }
+  } else {
+    if (!distributed) {
+      for (int i = nlocal_old; i < nlocal; i++)
+	if (tris[i].id == 0) flag++;
+    } else {
+      for (int i = nown_old; i < nown; i++)
+	if (surf->mytris[i].id == 0) flag++;
+    }
+  }
+
+  int flagall;
+  MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
+  if (flagall) {
+    char str[128];
+    sprintf(str,"Missing read_surf IDs = %d",flagall);
+    error->all(FLERR,str);
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -665,8 +743,6 @@ void Surf::bbox_all()
   int i,j;
   double bblo_one[3],bbhi_one[3];
   double *x;
-
-  int dim = domain->dimension;
 
   int istart,istop,idelta;
   Line *linelist;
@@ -1529,7 +1605,6 @@ void Surf::check_point_inside(int old)
   int nbad;
   double *x;
 
-  int dim = domain->dimension;
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
 
@@ -1740,8 +1815,6 @@ void Surf::output_extent(int old)
   double extent[3][2],extentall[3][2];
   extent[0][0] = extent[1][0] = extent[2][0] = BIG;
   extent[0][1] = extent[1][1] = extent[2][1] = -BIG;
-
-  int dim = domain->dimension;
 
   if (dim == 2) {
     Line *newlines;
@@ -2048,8 +2121,6 @@ void Surf::group(int narg, char **arg)
   double x[3];
 
   if (narg < 3) error->all(FLERR,"Illegal group command");
-
-  int dim = domain->dimension;
 
   int igroup = find_group(arg[0]);
   if (igroup < 0) igroup = add_group(arg[0]);
@@ -2653,7 +2724,8 @@ void Surf::read_restart(FILE *fp)
 }
 
 /* ----------------------------------------------------------------------
-   methods for growing line/tri data structs
+   grow lines or tris data struct
+   zero added lines/tris beyond old
 ---------------------------------------------------------------------- */
 
 void Surf::grow(int old)
@@ -2671,18 +2743,21 @@ void Surf::grow(int old)
   }
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   grow (or shrink) mylines or mytris data struct
+   zero added lines/tris beyond old
+---------------------------------------------------------------------- */
 
 void Surf::grow_own(int old)
 {
   if (domain->dimension == 2) {
     mylines = (Surf::Line *)
       memory->srealloc(mylines,maxown*sizeof(Line),"surf:mylines");
-    memset(&mylines[old],0,(maxown-old)*sizeof(Line));
+    if (maxown > old) memset(&mylines[old],0,(maxown-old)*sizeof(Line));
   } else {
     mytris = (Surf::Tri *)
       memory->srealloc(mytris,maxown*sizeof(Tri),"surf:mytris");
-    memset(&mytris[old],0,(maxown-old)*sizeof(Tri));
+    if (maxown > old) memset(&mytris[old],0,(maxown-old)*sizeof(Tri));
   }
 }
 

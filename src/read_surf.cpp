@@ -166,7 +166,6 @@ void ReadSurf::command(int narg, char **arg)
       else nvalues_custom += size_custom[ic];
     }
   }
-
   
   // -----------------------
   // read surface data from file(s)
@@ -248,7 +247,13 @@ void ReadSurf::command(int narg, char **arg)
   }
   
   // list of read-in surfs in lines/tris/cvalues is now final (post-clip)
-  // add_surfs() adds surfs and custom data to Surf data structs
+  // add all read-in data to Surf data structs via add_surfs()
+  // can then deallocate all local data
+
+  bigint nsurf_old = surf->nsurf;
+  int nsurf_old_mine;
+  if (!distributed) nsurf_old_mine = surf->nlocal;
+  else nsurf_old_mine = surf->nown;
   
   surf->add_surfs(0,nsurf,lines,tris,ncustom,index_custom,cvalues);
 
@@ -361,9 +366,6 @@ void ReadSurf::command(int narg, char **arg)
   grid->set_inout();
   grid->type_check();
 
-  // DEBUG
-  //grid->debug();
-
   MPI_Barrier(world);
   double time7 = MPI_Wtime();
 
@@ -466,10 +468,6 @@ void ReadSurf::command(int narg, char **arg)
               100.0*grid->tcomm4/time_s2g,100.0*grid->tsplit/time_s2g);
     }
   }
-
-  // clean up
-
-  
 }
 
 // ----------------------------------------------------------------------
@@ -556,10 +554,6 @@ void ReadSurf::read_multiple(char *file)
     nprocs_file = 1;
 
     // each proc reads every Pth file, stores surfs in tmplines/tmptris
-
-    surf->ntmp = surf->nmaxtmp = 0;
-    surf->tmplines = NULL;
-    surf->tmptris = NULL;
 
     bigint nsurf_oneproc = 0;
 
