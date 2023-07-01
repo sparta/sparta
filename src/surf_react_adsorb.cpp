@@ -339,9 +339,7 @@ SurfReactAdsorb::~SurfReactAdsorb()
   if (mode == SURF) {
     memory->destroy(surf_species_delta);
     memory->destroy(mark);
-    memory->destroy(tally2surf);
-    memory->destroy(intally);
-    memory->destroy(outtally);
+    memory->destroy(idtally);
     memory->destroy(incollate);
     memory->destroy(outcollate);
   }
@@ -417,10 +415,7 @@ void SurfReactAdsorb::create_per_surf_state()
 {
   // SRA instance with first_owner = 1 allocates the custom per-surf data
   // add_custom() initializes all state data to zero
-  // custom indices are for any type of per-surf vec or array
-  // direct indices are for specific types of vecs or arrays
-  // cannot perform add_custom() for tau now, b/c nactive_ps is not yet known
-  //   do this later in init
+  // add_custom() for tau is in init(), b/c nactive_ps is not yet known
 
   if (surf->find_custom((char *) "nstick_total") < 0) {
     first_owner = 1;
@@ -440,39 +435,29 @@ void SurfReactAdsorb::create_per_surf_state()
     if (psflag) tau_index = -1;
   }
 
-  // local delta storage
-  // initialize surf_species_delta for first time
-
-  // NOTE: should all data below here be nlocal or nlocal+nghost ??
-  // NOTE: how to prevent LB or adapt, or allow it ??
-  //       since it changes nlocal,nghost for distributed surfs
+  // allocate and intialize surf_species_delta
+  // stores changes in each nlocal+nghost surf due to reactions
   
-  int nlocal = surf->nlocal;
-  memory->create(surf_species_delta,nlocal,nspecies_surf,
+  int nall = surf->nlocal + surf->nghost;
+  memory->create(surf_species_delta,nall,nspecies_surf,
                  "react/adsorb:surf_species_delta");
-
-  for (int isurf = 0; isurf < nlocal; isurf++)
-    for (int isp = 0; isp < nspecies_surf; isp++)
-      surf_species_delta[isurf][isp] = 0;
-
+  if (nall) memset(&surf_species_delta[0][0],0,
+		   nall*nspecies_surf*sizeof(int));
+  
   species_delta = surf_species_delta;
 
-  // allocate data structs for periodic sync
+  // allocate data structs user for periodic state update
 
-  int nown = surf->nown;
-
-  memory->create(mark,nlocal,"react/adsorb:mark");
-  memory->create(tally2surf,nlocal,"react/adsorb:tally2surf");
-  memory->create(intally,nlocal,nspecies_surf,"react/adsorb:intally");
-  memory->create(outtally,nlocal,nspecies_surf,"react/adsorb:outtally");
-  memory->create(outcollate,nown,nspecies_surf,"react/adsorb:outcollate");
+  memory->create(mark,nall,"react/adsorb:mark");
+  memory->create(outcollate,surf->nown,nspecies_surf,"react/adsorb:outcollate");
 
   maxtally = 0;
+  idtally = NULL;
   incollate = NULL;
 
   // clear mark vector
 
-  for (int isurf = 0; isurf < nlocal; isurf++) mark[isurf] = 0;
+  memset(mark,0,nall*sizeof(int));
 }
 
 /* ---------------------------------------------------------------------- */
@@ -576,9 +561,9 @@ void SurfReactAdsorb::init()
     }
   }
 
-  // spread custom vec/array valuesto nlocal+nghost lines/tris
-  // one-time operation for area, weight, tau
-  // total_state and species_state will be periodically updated
+  // spread custom vec/array values to nlocal+nghost lines/tris
+  // one-time operation for static area, weight, tau
+  // dynamic total_state and species_state are periodically updated
   
   if (mode == SURF) {
     surf->spread_custom(total_state_index);
@@ -586,7 +571,7 @@ void SurfReactAdsorb::init()
     surf->spread_custom(area_index);
     surf->spread_custom(weight_index);
     if (psflag) surf->spread_custom(tau_index);
-      
+
     total_state = surf->eivec_local[total_state_index];
     species_state = surf->eiarray_local[species_state_index];
     area = surf->edvec_local[area_index];
@@ -1149,13 +1134,11 @@ void SurfReactAdsorb::tally_update()
   if (psflag) {
     if (mode == FACE) update_state_face();
     else if (mode == SURF) update_state_surf();
-
     PS_chemistry();
   }
 
   // update the state of all faces or surf elements
   // if no PS chemistry, syncs gas/surf chem changes to surf states
-  //   since last sync
   // if yes PS chemistry, syncs PS chem changes to surf states
 
   if (mode == FACE) update_state_face();
@@ -1187,8 +1170,9 @@ void SurfReactAdsorb::PS_chemistry()
   }
 
   // for box faces: a single proc updates all faces
-  // for surf elements: each proc updates every Pth of its nlocal surfs
-  //   this works for distribution of surfs = all and distributed
+  // for surf elements: each proc updates Nsurf/P fraction of surfs
+  //   for all: every Pth surf in nlocal
+  //   for distributed: my nown surfs
   // only call PS_react() if this instance of surf react/adsorb matches
   //   the reaction model assigned to surf or face
 
@@ -1215,6 +1199,7 @@ void SurfReactAdsorb::PS_chemistry()
   }
 
   // allpart = nall-length vector of particles all procs are adding
+  // added due to desorption reactions from faces or surfs
   // accumulate via Allgatherv
 
   int nall;
@@ -1302,32 +1287,32 @@ void SurfReactAdsorb::update_state_surf()
 {
   int i,j,m,isr;
 
-  // incollate = array of deltas for surfs I marked
-  // ntally = # of surfs I marked = # of rows in incollate
-  // tally2surf = global surf index (1 to Nsurf) for each row of array
-  // re-initialize non-zero species_delta values, i.e. surf_species_delta
+  // use species_delta for my nlocal+nghost surfs to create:
+  // ntally = # of surfs I marked
+  // idsurf = surf ID for each marked surf
+  // incollate = species deltas for each marked surf
+  // re-zero species_delta values for each marked surf
 
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
-  int nlocal = surf->nlocal;
-  int nall = nlocal + surf->nghost;
+  int nall = surf->nlocal + surf->nghost;
   
   int ntally = 0;
 
   if (domain->dimension == 2) {
     for (int i = 0; i < nall; i++) {
+      if (!mark[i]) continue;
       isr = lines[i].isr;
       if (surf->sr[isr] != this) continue;
-      if (!mark[i]) continue;
 
       if (ntally == maxtally) {
         maxtally += DELTA_TALLY;
-        memory->grow(tally2surf,maxtally,"react/adsorb:tally2surf");
+        memory->grow(idtally,maxtally,"react/adsorb:idtally");
         memory->grow(incollate,maxtally,nspecies_surf,
-                     "react/adsorb:incollate");
+		     "react/adsorb:incollate");
       }
 
-      tally2surf[ntally] = i+1;
+      idtally[ntally] = lines[i].id;
       for (j = 0; j < nspecies_surf; j++) {
         incollate[ntally][j] = species_delta[i][j];
         species_delta[i][j] = 0;
@@ -1337,18 +1322,18 @@ void SurfReactAdsorb::update_state_surf()
 
   } else {
     for (int i = 0; i < nall; i++) {
+      if (!mark[i]) continue;
       isr = tris[i].isr;
       if (surf->sr[isr] != this) continue;
-      if (!mark[i]) continue;
 
       if (ntally == maxtally) {
         maxtally += DELTA_TALLY;
-        memory->grow(tally2surf,maxtally,"react/adsorb:tally2surf");
+        memory->grow(idtally,maxtally,"react/adsorb:tally2surf");
         memory->grow(incollate,maxtally,nspecies_surf,
                      "react/adsorb:incollate");
       }
 
-      tally2surf[ntally] = i+1;
+      idtally[ntally] = tris[i].id;
       for (j = 0; j < nspecies_surf; j++) {
         incollate[ntally][j] = species_delta[i][j];
         species_delta[i][j] = 0;
@@ -1357,37 +1342,23 @@ void SurfReactAdsorb::update_state_surf()
     }
   }
 
-  // perform the collate
-  // outcollate = values only for owned surfs
+  // collate the tallies
+  // input: ntally, idtally, incollate
+  // output: outcollate = summed values for surfs I own
 
-  surf->collate_array(ntally,nspecies_surf,tally2surf,incollate,outcollate);
+  surf->collate_array(ntally,nspecies_surf,idtally,incollate,outcollate);
 
-  // MPI_Allreduce of outcollate so all procs know new state of all surfs
-  // NOTE: inefficient, but necessary for non-distributed surfs?
-  //       since each proc may perform a collision with any surf
+  // update custome species_state array with outcollate values
+  //   outcollate = summed deltas to species_state from all contributing procs
+  // insure no species counts < 0
+  // set total_stat = sum of species_state over species
 
-  for (i = 0; i < nlocal; i++)
-    for (j = 0; j < nspecies_surf; j++)
-      intally[i][j] = 0;
-
-  m = 0;
-  for (i = me; i < nlocal; i += nprocs) {
-    for (j = 0; j < nspecies_surf; j++)
-      intally[i][j] = static_cast<int> (outcollate[m][j]);
-    m++;
-  }
-
-  MPI_Allreduce(&intally[0][0],&outtally[0][0],nlocal*nspecies_surf,
-                MPI_INT,MPI_SUM,world);
-
-  // new perspecies state = old perspecies state + summed delta (outtally)
-  // insure no counts < 0
-  // new total state = sum of new perspecies state over species
-
-  for (i = 0; i < nlocal; i++) {
+  int nsown = surf->nown;
+  
+  for (i = 0; i < nsown; i++) {
     total_state[i] = 0;
     for (j = 0; j < nspecies_surf; j++) {
-      species_state[i][j] += outtally[i][j];
+      species_state[i][j] += outcollate[i][j];
       species_state[i][j] = MAX(0,species_state[i][j]);
       total_state[i] += species_state[i][j];
     }
@@ -1395,7 +1366,12 @@ void SurfReactAdsorb::update_state_surf()
 
   // clear mark vector
 
-  for (int isurf = 0; isurf < nlocal; isurf++) mark[isurf] = 0;
+  memset(mark,0,nall*sizeof(int));
+
+  // spread new total and species state to all nlocal+nghost surfs
+
+  surf->spread_custom(total_state_index);
+  surf->spread_custom(species_state_index);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -2743,26 +2719,11 @@ void SurfReactAdsorb::readfile_ps(char *fname)
 
 void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
 {
+  if (nactive_ps == 0) return;
+
   // mark this surface element since performing on-surf chemistry
 
   if (mode == SURF) mark[isurf] = 1;
-
-  // use these 5 data structs for either faces or surface elements
-  // in either case, can be indexed by isurf
-  // NOTE: not seeing where species_state or total_state is used in code below?
-
-  // int **species_delta;       // change in perspecies count since last sync
-  // int **species_state;       // perspecies count at last sync
-  // int *total_state;          // total count at last sync
-  // double *area;              // area of surf
-  // double *weight;            // weight of surf
-
-  if (nactive_ps == 0) return;
-
-  //1 Particle::Species *species = particle->species;
-  //1 Particle::OnePart *particles;
-  //1 particles = particle->particles;
-  // int nlocal = particle->nlocal;
 
   // line or tri data
 
@@ -2804,7 +2765,6 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
       if (rxn_occur[i]) {
         r = &rlist_ps[reactions_ps_list[i]];
         //int react_num = r->index;
-
 
         nu_react[i] = r->k_react;
 

@@ -84,10 +84,10 @@ class SurfReactAdsorb : public SurfReact {
   int **surf_species_delta;     // changes to state between syncs
 
   int *mark;               // per-surf mark = 1 if reaction has occured, else 0
-  surfint *tally2surf;     // global surf index for each entry in incollate
-  int **intally,**outtally;      // used for Allreduce of state changes
-  double **incollate,**outcollate;   // used to collate state changes across procs
-  int maxtally;                  // allocated size of intally
+  surfint *idtally;        // surf ID for each tally entry in incollate
+  double **incollate;      // species changes for each tally
+  double **outcollate;     // collate output for summed changes for owned surfs
+  int maxtally;            // allocated size of idtally, incollate
 
   // ptrs to data for each box face or surface element
   // used in react() and react_PS() and sync operations
