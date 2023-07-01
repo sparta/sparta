@@ -107,10 +107,17 @@ class Surf : protected Pointers {
                             // implicit: not defined
   int maxown;               // max length of owned lines/tris vecs
 
+  int nunique;
+  int *unique;
+
+  // surface collision and reaction models
+  
   int nsc,nsr;              // # of surface collision and reaction models
   class SurfCollide **sc;   // list of surface collision models
   class SurfReact **sr;     // list of surface reaction models
 
+  // settings for mapping surfs to grid cells
+  
   int pushflag;             // set to 1 to push surf pts near grid cell faces
   double pushlo,pushhi;     // lo/hi ranges to push on
   double pushvalue;         // new position to push to

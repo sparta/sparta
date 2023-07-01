@@ -43,7 +43,6 @@ using namespace MathConst;
 
 enum{INT,DOUBLE};                      // several files
 enum{FACE,SURF};
-enum{PSFACE,PSLINE,PSTRI};
 
 #define DELTA_TALLY 1024
 #define DELTA_PART 8                   // make this bigger once debugged
@@ -1172,29 +1171,64 @@ void SurfReactAdsorb::PS_chemistry()
   // for box faces: a single proc updates all faces
   // for surf elements: each proc updates Nsurf/P fraction of surfs
   //   for all: every Pth surf in nlocal
-  //   for distributed: my nown surfs
+  //   for distributed: subset of nlocal surfs in surf->unique
   // only call PS_react() if this instance of surf react/adsorb matches
   //   the reaction model assigned to surf or face
 
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  int isc;
+  
   if (mode == FACE) {
     if (me == 0) {
-      for (int iface = 0; iface < nface; iface++)
-        if (domain->surf_react[iface] == this_index)
-          PS_react(PSFACE,iface,face_norm[iface]);
+      for (int iface = 0; iface < nface; iface++) {
+        if (domain->surf_react[iface] != this_index) continue;
+	isc = domain->surf_collide[iface];
+	PS_react(iface,isc,face_norm[iface]);
+      }
     }
 
   } else if (mode == SURF) {
-    int nslocal = surf->nlocal;
-    if (domain->dimension == 2) {
-      Surf::Line *lines = surf->lines;
-      for (int isurf = me; isurf < nslocal; isurf += nprocs)
-        if (lines[isurf].isr == this_index)
-          PS_react(PSLINE,isurf,lines[isurf].norm);
+    if (!surf->distributed) {
+      int nslocal = surf->nlocal;
+      if (domain->dimension == 2) {
+	for (int isurf = me; isurf < nslocal; isurf += nprocs) {
+	  if (lines[isurf].isr != this_index) continue;
+	  isc = lines[isurf].isc;
+	  PS_react(isurf,isc,lines[isurf].norm);
+	  mark[isurf] = 1;
+	}
+      } else {
+	for (int isurf = me; isurf < nslocal; isurf += nprocs) {
+	  if (tris[isurf].isr != this_index) continue;
+	  isc = tris[isurf].isc;
+	  PS_react(isurf,isc,tris[isurf].norm);
+	  mark[isurf] = 1;
+	}
+      }
+      
     } else {
-      Surf::Tri *tris = surf->tris;
-      for (int isurf = me; isurf < nslocal; isurf += nprocs)
-        if (tris[isurf].isr == this_index)
-          PS_react(PSTRI,isurf,tris[isurf].norm);
+      int *unique = surf->unique;
+      int nunique = surf->nunique;
+      int isurf;
+      
+      if (domain->dimension == 2) {
+	for (int m = 0; m < nunique; m++) {
+	  isurf = unique[m];
+	  if (lines[isurf].isr != this_index) continue;
+	  isc = lines[isurf].isc;
+	  PS_react(isurf,isc,lines[isurf].norm);
+	  mark[isurf] = 1;
+	}
+      } else {
+	for (int m = 0; m < nunique; m++) {
+	  isurf = unique[m];
+	  if (tris[isurf].isr != this_index) continue;
+	  isc = tris[isurf].isc;
+	  PS_react(isurf,isc,tris[isurf].norm);
+	  mark[isurf] = 1;
+	}
+      }
     }
   }
 
@@ -1288,11 +1322,12 @@ void SurfReactAdsorb::update_state_surf()
   int i,j,m,isr;
 
   // use species_delta for my nlocal+nghost surfs to create:
-  // ntally = # of surfs I marked
-  // idsurf = surf ID for each marked surf
-  // incollate = species deltas for each marked surf
+  //   ntally = # of surfs I marked
+  //   idsurf = surf ID for each marked surf
+  //   incollate = species deltas for each marked surf
   // re-zero species_delta values for each marked surf
-
+  // also clear mark
+  
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
   int nall = surf->nlocal + surf->nghost;
@@ -1302,6 +1337,7 @@ void SurfReactAdsorb::update_state_surf()
   if (domain->dimension == 2) {
     for (int i = 0; i < nall; i++) {
       if (!mark[i]) continue;
+      mark[i] = 0;
       isr = lines[i].isr;
       if (surf->sr[isr] != this) continue;
 
@@ -1323,6 +1359,7 @@ void SurfReactAdsorb::update_state_surf()
   } else {
     for (int i = 0; i < nall; i++) {
       if (!mark[i]) continue;
+      mark[i] = 0;
       isr = tris[i].isr;
       if (surf->sr[isr] != this) continue;
 
@@ -1363,10 +1400,6 @@ void SurfReactAdsorb::update_state_surf()
       total_state[i] += species_state[i][j];
     }
   }
-
-  // clear mark vector
-
-  memset(mark,0,nall*sizeof(int));
 
   // spread new total and species state to all nlocal+nghost surfs
 
@@ -2711,31 +2744,23 @@ void SurfReactAdsorb::readfile_ps(char *fname)
 
 /* ----------------------------------------------------------------------
    perform on-surf reactions for one face or one surf element
-   modePS = PSFACE, PSLINE, PSTRI
    isurf = 0 to 5 for box faces
-   isurf >= 0 for line or tri indexed from 0 to Nsurf-1  // NOTE: BAD for dist ?
+   isurf >= 0 for line or tri index in Surf::lines/tris
+     isurf is valid for surf distribution = all or distributed
+   isc = index of SurfCollide model for isurf
    invoked once per Nsync steps
 ------------------------------------------------------------------------- */
 
-void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
+void SurfReactAdsorb::PS_react(int isurf, int isc, double *norm)
 {
   if (nactive_ps == 0) return;
 
-  // mark this surface element since performing on-surf chemistry
-
-  if (mode == SURF) mark[isurf] = 1;
-
-  // line or tri data
-
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
-
   double fnum = update->fnum;
-  double factor = fnum * weight[isurf] / area[isurf];  // NOTE: bad access ??
+  double factor = fnum * weight[isurf] / area[isurf];
   double ms_inv = factor/max_cover;
 
+  int pid;
   Particle::OnePart *p;
-  int id,isc;
 
   double nu_react[nactive_ps];
   OneReaction_PS *r;
@@ -2882,11 +2907,11 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
           {
             double x[3],v[3];
 
-            int id = MAXSMALLINT*random->uniform();
+            pid = MAXSMALLINT*random->uniform();
             random_point(isurf,x);
             v[0] = v[1] = v[2] = 0.0;
 
-            particle->add_particle(id,r->products[0],0,x,v,0.0,0.0);
+            particle->add_particle(pid,r->products[0],0,x,v,0.0,0.0);
             p = &particle->particles[particle->nlocal-1];
             p->dtremain = update->dt*random->uniform();
 
@@ -2894,9 +2919,6 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
               cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
                                              r->cmodel_ip_coeffs);
             else {
-              if (modePS == PSFACE) isc = domain->surf_collide[isurf];
-              else if (modePS == PSLINE) isc = lines[isurf].isc;
-              else if (modePS == PSTRI) isc = tris[isurf].isc;
               surf->sc[isc]->wrapper(p,norm,NULL,NULL);
             }
 
@@ -2910,11 +2932,11 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
           {
             double x[3],v[3];
 
-            int id = MAXSMALLINT*random->uniform();
+            pid = MAXSMALLINT*random->uniform();
             random_point(isurf,x);
             v[0] = v[1] = v[2] = 0.0;
 
-            particle->add_particle(id,r->products[0],0,x,v,0.0,0.0);
+            particle->add_particle(pid,r->products[0],0,x,v,0.0,0.0);
             p = &particle->particles[particle->nlocal-1];
             p->dtremain = update->dt*random->uniform();
 
@@ -2922,9 +2944,6 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
               cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
                                              r->cmodel_ip_coeffs);
             else {
-              if (modePS == PSFACE) isc = domain->surf_collide[isurf];
-              else if (modePS == PSLINE) isc = lines[isurf].isc;
-              else if (modePS == PSTRI) isc = tris[isurf].isc;
               surf->sc[isc]->wrapper(p,norm,NULL,NULL);
             }
 
@@ -2943,11 +2962,11 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
           {
             double x[3],v[3];
 
-            int id = MAXSMALLINT*random->uniform();
+            pid = MAXSMALLINT*random->uniform();
             random_point(isurf,x);
             v[0] = v[1] = v[2] = 0.0;
 
-            particle->add_particle(id,r->products[0],0,x,v,0.0,0.0);
+            particle->add_particle(pid,r->products[0],0,x,v,0.0,0.0);
             p = &particle->particles[particle->nlocal-1];
             p->dtremain = update->dt*random->uniform();
 
@@ -2955,9 +2974,6 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
               cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
                                              r->cmodel_ip_coeffs);
             else {
-              if (modePS == PSFACE) isc = domain->surf_collide[isurf];
-              else if (modePS == PSLINE) isc = lines[isurf].isc;
-              else if (modePS == PSTRI) isc = tris[isurf].isc;
               surf->sc[isc]->wrapper(p,norm,NULL,NULL);
             }
 
