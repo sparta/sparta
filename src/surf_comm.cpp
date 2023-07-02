@@ -660,7 +660,7 @@ int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
 
   // zero my owned surf values
 
-  for (int i = 0; i < nown; i++) out[i] = 0.0;
+  memset(out,0,nown*sizeof(double));
 
   // accumulate per-surf values from different procs to my owned surfs
   // logic of (id-1-me) / nprocs maps
@@ -828,10 +828,8 @@ int Surf::rendezvous_array(int n, char *inbuf,
   int me = sptr->comm->me;
 
   // zero my owned surf values
-  // NOTE: is this needed if caller zeroes ?
 
-  int ntotal = nown*ncol;
-  for (m = 0; m < ntotal; m++) out[m] = 0.0;
+  memset(out,0,nown*ncol*sizeof(double));
 
   // accumulate per-surf values from different procs to my owned surfs
   // logic of (id-1-me) / nprocs maps
@@ -862,6 +860,7 @@ int Surf::rendezvous_array(int n, char *inbuf,
    tally2surf = surf ID for each tally (same as cell ID)
    in = vectir of tally values
    return out = summed tallies for grid cells I own
+     caller MUST zero out before call, b/c this method does not know size
    always done via rendezvous algorithm (no allreduce algorithm)
    only called for implicit surfs
 ------------------------------------------------------------------------- */
@@ -990,6 +989,7 @@ void Surf::collate_vector_implicit(int nrow, surfint *tally2surf,
    tally2surf = surf ID for each tally (same as cell ID)
    in = array of tally values, nrow by ncol
    return out = summed tallies for grid cells I own, nlocal by ncol
+     caller MUST zero out before call, b/c this method does not know size
    always done via rendezvous algorithm (no allreduce algorithm)
    only called for implicit surfs
 ------------------------------------------------------------------------- */

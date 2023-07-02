@@ -742,16 +742,20 @@ void FixAveGrid::end_of_step()
   // final PERGRIDSURF values for output
   // invoke surf->collate() on cellID tallies this fix stores for multiple steps
   //   this merges tallies to owned grid cells
+  // must zero vector_grid and array_grid b/c collate_implicit requires it
   // divide results by nsample
   // copy split cell values to their sub cells, used by dump grid
 
   } else if (flavor == PERGRIDSURF) {
-    if (nvalues == 1)
+    if (nvalues == 1) {
+      memset(vector_grid,0,nglocal*sizeof(double));
       surf->collate_vector_implicit(ntallyID,tally2cell,vec_tally,vector_grid);
-    else
+    } else {
+      if (nglocal) memset(&array_grid[0][0],0,nglocal*nvalues*sizeof(double));
       surf->collate_array_implicit(ntallyID,nvalues,tally2cell,
                                    array_tally,array_grid);
-
+    }
+    
     Grid::ChildCell *cells = grid->cells;
 
     if (nvalues == 1) {

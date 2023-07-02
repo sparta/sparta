@@ -460,12 +460,9 @@ void ComputeISurfGrid::post_process_isurf_grid()
     memory->create(array_grid,maxgrid,ntotal,"isurf/grid:array_grid");
   }
 
-  // zero array_grid
+  // zero array_grid b/c collate_array_implicit() requires it
 
-  int i,j;
-  for (i = 0; i < nglocal; i++)
-    for (j = 0; j < ntotal; j++)
-      array_grid[i][j] = 0.0;
+  if (nglocal) memset(&array_grid[0][0],0,nglocal*ntotal*sizeof(double));
 
   // perform rendezvous comm on tallies to sum them to my grid cells
   // array_surf_tally can be NULL if this proc has performed no tallies
@@ -478,7 +475,8 @@ void ComputeISurfGrid::post_process_isurf_grid()
   // cinfo does not have mask values for ghost cells
 
   Grid::ChildInfo *cinfo = grid->cinfo;
-
+  int j;
+  
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) {
       for (j = 0; j < ntotal; j++)

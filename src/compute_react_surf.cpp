@@ -283,13 +283,6 @@ void ComputeReactSurf::post_process_surf()
     memory->create(array_surf,maxsurf,ntotal,"react/surf:array_surf");
   }
 
-  // zero array_surf
-
-  int i,j;
-  for (i = 0; i < nown; i++)
-    for (j = 0; j < ntotal; j++)
-      array_surf[i][j] = 0.0;
-
   // collate entire array of results
 
   surf->collate_array(ntally,ntotal,tally2surf,array_surf_tally,array_surf);

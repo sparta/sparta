@@ -84,7 +84,7 @@ class SurfReactAdsorb : public SurfReact {
   int **surf_species_delta;     // changes to state between syncs
 
   int *mark;               // per-surf mark = 1 if reaction has occured, else 0
-  surfint *idtally;        // surf ID for each tally entry in incollate
+  surfint *tally2surf;     // surf ID for each tally entry in incollate
   double **incollate;      // species changes for each tally
   double **outcollate;     // collate output for summed changes for owned surfs
   int maxtally;            // allocated size of idtally, incollate

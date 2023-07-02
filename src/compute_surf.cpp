@@ -518,25 +518,9 @@ void ComputeSurf::post_process_surf()
     memory->create(array_surf,maxsurf,ntotal,"surf:array_surf");
   }
 
-  // zero array_surf
-  // NOTE: is this needed if collate zeroes ?
-
-  int i,j;
-  for (i = 0; i < nown; i++)
-    for (j = 0; j < ntotal; j++)
-      array_surf[i][j] = 0.0;
-
   // collate entire array of results
 
   surf->collate_array(ntally,ntotal,tally2surf,array_surf_tally,array_surf);
-
-  /*
-  if (array_surf_tally)
-    surf->collate_vector(ntally,tally2surf,
-                         &array_surf_tally[0][index-1],ntotal,vector_surf);
-  else
-    surf->collate_vector(ntally,tally2surf,NULL,ntotal,vector_surf);
-  */
 }
 
 

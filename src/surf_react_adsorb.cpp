@@ -338,7 +338,7 @@ SurfReactAdsorb::~SurfReactAdsorb()
   if (mode == SURF) {
     memory->destroy(surf_species_delta);
     memory->destroy(mark);
-    memory->destroy(idtally);
+    memory->destroy(tally2surf);
     memory->destroy(incollate);
     memory->destroy(outcollate);
   }
@@ -451,7 +451,7 @@ void SurfReactAdsorb::create_per_surf_state()
   memory->create(outcollate,surf->nown,nspecies_surf,"react/adsorb:outcollate");
 
   maxtally = 0;
-  idtally = NULL;
+  tally2surf = NULL;
   incollate = NULL;
 
   // clear mark vector
@@ -1233,7 +1233,7 @@ void SurfReactAdsorb::PS_chemistry()
   }
 
   // allpart = nall-length vector of particles all procs are adding
-  // added due to desorption reactions from faces or surfs
+  //   due to desorption reactions from faces or surfs
   // accumulate via Allgatherv
 
   int nall;
@@ -1343,12 +1343,12 @@ void SurfReactAdsorb::update_state_surf()
 
       if (ntally == maxtally) {
         maxtally += DELTA_TALLY;
-        memory->grow(idtally,maxtally,"react/adsorb:idtally");
+        memory->grow(tally2surf,maxtally,"react/adsorb:tally2surf");
         memory->grow(incollate,maxtally,nspecies_surf,
 		     "react/adsorb:incollate");
       }
 
-      idtally[ntally] = lines[i].id;
+      tally2surf[ntally] = lines[i].id;
       for (j = 0; j < nspecies_surf; j++) {
         incollate[ntally][j] = species_delta[i][j];
         species_delta[i][j] = 0;
@@ -1365,12 +1365,12 @@ void SurfReactAdsorb::update_state_surf()
 
       if (ntally == maxtally) {
         maxtally += DELTA_TALLY;
-        memory->grow(idtally,maxtally,"react/adsorb:tally2surf");
+        memory->grow(tally2surf,maxtally,"react/adsorb:tally2surf");
         memory->grow(incollate,maxtally,nspecies_surf,
                      "react/adsorb:incollate");
       }
 
-      idtally[ntally] = tris[i].id;
+      tally2surf[ntally] = tris[i].id;
       for (j = 0; j < nspecies_surf; j++) {
         incollate[ntally][j] = species_delta[i][j];
         species_delta[i][j] = 0;
@@ -1380,10 +1380,10 @@ void SurfReactAdsorb::update_state_surf()
   }
 
   // collate the tallies
-  // input: ntally, idtally, incollate
+  // input: ntally, tally2surf, incollate
   // output: outcollate = summed values for surfs I own
 
-  surf->collate_array(ntally,nspecies_surf,idtally,incollate,outcollate);
+  surf->collate_array(ntally,nspecies_surf,tally2surf,incollate,outcollate);
 
   // update custome species_state array with outcollate values
   //   outcollate = summed deltas to species_state from all contributing procs
