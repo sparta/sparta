@@ -75,16 +75,17 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
 
   Line *lines_contig = NULL;
   Tri *tris_contig = NULL;
-
+  bigint bbytes = (bigint) ncontig * nbytes;
+  
   if (!distributed) {
     if (dim == 2) {
       lines_contig = (Line *)
-	memory->smalloc(ncontig*nbytes,"surf:lines_contig");
-      memset(lines_contig,0,ncontig*nbytes);
+	memory->smalloc(bbytes,"surf:lines_contig");
+      memset(lines_contig,0,bbytes);
     } else {
       tris_contig = (Tri *)
-	memory->smalloc(ncontig*nbytes,"surf:tris_contig");
-      memset(tris_contig,0,ncontig*nbytes);
+	memory->smalloc(bbytes,"surf:tris_contig");
+      memset(tris_contig,0,bbytes);
     }
   }
   
@@ -569,7 +570,8 @@ void Surf::collate_vector_reduce(int nrow, surfint *tally2surf,
 
   // zero all values and add in values I accumulated
 
-  memset(one,0,nglobal*sizeof(double));
+  bigint bbytes = (bigint) nglobal * sizeof(double);
+  memset(one,0,bbytes);
 
   Line *lines = surf->lines;
   Tri *tris = surf->tris;
@@ -667,7 +669,8 @@ int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
 
   // zero my owned surf values
 
-  memset(out,0,nown*sizeof(double));
+  bigint bbytes = (bigint) nown * sizeof(double);
+  memset(out,0,bbytes);
 
   // accumulate per-surf values from different procs to my owned surfs
 
@@ -735,7 +738,8 @@ void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
 
   // zero all values and set values I accumulated
 
-  memset(&one[0][0],0,nglobal*ncol*sizeof(double));
+  bigint bbytes = (bigint) nglobal * ncol * sizeof(double);
+  memset(&one[0][0],0,bbytes);
 
   for (i = 0; i < nrow; i++) {
     m = (int) tally2surf[i] - 1;
@@ -834,7 +838,8 @@ int Surf::rendezvous_array(int n, char *inbuf,
 
   // zero my owned surf values
 
-  memset(out,0,nown*ncol*sizeof(double));
+  bigint bbytes = (bigint) nown * ncol * sizeof(double);
+  memset(out,0,bbytes);
 
   // accumulate per-surf values from different procs to my owned surfs
 
@@ -1221,7 +1226,6 @@ void Surf::spread_own2local(int n, int type, void *in, void *out)
 /* ----------------------------------------------------------------------
    allreduce algorithm for spread_own2local
    owned surf data combined for data for all nlocal surfs on all procs
-   NOTE: check for overflow of n*nall or n*nall*sizeof()
 ---------------------------------------------------------------------- */
 
 void Surf::spread_own2local_reduce(int n, int type, void *in, void *out)
@@ -1233,8 +1237,13 @@ void Surf::spread_own2local_reduce(int n, int type, void *in, void *out)
     int *ovec = (int *) out;
 
     int *myvec;
-    memory->create(myvec,n*nlocal,"surf/spread:myvec");
-    memset(myvec,0,n*nlocal*sizeof(int));
+    bigint bcount = (bigint) nlocal * n;
+    if (bcount > MAXSMALLINT)
+      error->all(FLERR,"Overflow in spread_own2local_reduce");
+    bigint bbytes = (bigint) nlocal * n * sizeof(int);
+    
+    memory->create(myvec,nlocal*n,"surf/spread:myvec");
+    memset(myvec,0,bbytes);
 
     if (n == 1) {
       for (i = 0; i < nown; i++) {
@@ -1259,8 +1268,13 @@ void Surf::spread_own2local_reduce(int n, int type, void *in, void *out)
     double *ovec = (double *) out;
 
     double *myvec;
-    memory->create(myvec,n*nlocal,"surf/spread:myvec");
-    memset(myvec,0,n*nlocal*sizeof(double));
+    bigint bcount = (bigint) nlocal * n;
+    if (bcount > MAXSMALLINT)
+      error->all(FLERR,"Overflow in spread_own2local_reduce");
+    bigint bbytes = (bigint) nlocal * n * sizeof(double);
+
+    memory->create(myvec,nlocal*n,"surf/spread:myvec");
+    memset(myvec,0,bbytes);
 
     if (n == 1) {
       for (i = 0; i < nown; i++) {
@@ -1568,7 +1582,8 @@ int Surf::rendezvous_unique(int n, char *inbuf,
   // loop over received requests
   // count duplicates of each owned surf
 
-  memset(duplicates,0,nown*sizeof(int));
+  bigint bbytes = (bigint) nown * sizeof(int);
+  memset(duplicates,0,bbytes);
 
   int *in_rvous = (int *) inbuf;
   int index;
@@ -1589,7 +1604,7 @@ int Surf::rendezvous_unique(int n, char *inbuf,
   // recount to find selected duplicate of each owned surf
   // send ownflag datum back to owner of that duplicate
 
-  memset(duplicates,0,nown*sizeof(int));
+  memset(duplicates,0,bbytes);
 
   k = 0;
   m = 0;
