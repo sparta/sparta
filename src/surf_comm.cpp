@@ -1196,16 +1196,271 @@ int Surf::rendezvous_implicit(int n, char *inbuf,
 // ----------------------------------------------------------------------
 // spread operations for surf-style variables or custom per-surf vecs/arrays
 // comm data from owned strided to nlocal+nghost for all or distributed
+// comm data from nlocal+nghost to owned strided for all or distributed
 // ----------------------------------------------------------------------
+
+/* ----------------------------------------------------------------------
+   spread values for N datums per surf from in vector to out vector
+   type = 0/1 = INT or DOUBLE datums
+   for explicit all surfs, use allreduce algorithm
+     in = owned surfs
+     out = nlocal surfs (all procs own copy)
+   for explicit distributed surfs, use rendezvous algorithm
+     in = owned surfs
+     out = nlocal+nghost surfs (for my owned + ghost cells)
+   only called for explicit surfs, all or distributed
+   called by spread_custom() and surf_collide.cpp
+------------------------------------------------------------------------- */
+
+void Surf::spread_own2local(int n, int type, void *in, void *out)
+{
+  if (!distributed) spread_own2local_reduce(n,type,in,out);
+  else spread_own2local_rendezvous(n,type,in,out);
+}
+
+/* ----------------------------------------------------------------------
+   allreduce algorithm for spread_own2local
+   owned surf data combined for data for all nlocal surfs on all procs
+   NOTE: check for overflow of n*nall or n*nall*sizeof()
+---------------------------------------------------------------------- */
+
+void Surf::spread_own2local_reduce(int n, int type, void *in, void *out)
+{
+  int i,j,m,ij,mj;
+  
+  if (type == INT) {
+    int *ivec = (int *) in;
+    int *ovec = (int *) out;
+
+    int *myvec;
+    memory->create(myvec,n*nlocal,"surf/spread:myvec");
+    memset(myvec,0,n*nlocal*sizeof(int));
+
+    if (n == 1) {
+      for (i = 0; i < nown; i++) {
+	m = me + i*nprocs;
+	myvec[m] = ivec[i];
+      }
+    } else {
+      for (i = 0; i < nown; i++) {
+	ij = i * n;
+	mj = (me + i*nprocs) * n;
+	for (j = 0; j < n; j++)
+	  myvec[mj++] = ivec[ij++];
+      }
+    }
+    
+    MPI_Allreduce(myvec,ovec,n*nlocal,MPI_INT,MPI_SUM,world);
+
+    memory->destroy(myvec);
+    
+  } else {
+    double *ivec = (double *) in;
+    double *ovec = (double *) out;
+
+    double *myvec;
+    memory->create(myvec,n*nlocal,"surf/spread:myvec");
+    memset(myvec,0,n*nlocal*sizeof(double));
+
+    if (n == 1) {
+      for (i = 0; i < nown; i++) {
+	m = me + i*nprocs;
+	myvec[m] = ivec[i];
+      }
+    } else {
+      for (i = 0; i < nown; i++) {
+	ij = i * n;
+	mj = (me + i*nprocs) * n;
+	for (j = 0; j < n; j++)
+	  myvec[mj++] = ivec[ij++];
+      }
+    }
+    
+    MPI_Allreduce(myvec,ovec,n*nlocal,MPI_DOUBLE,MPI_SUM,world);
+
+    memory->destroy(myvec);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   rendezvous algorithm for spread_own2local
+   owned surf data becomes data for nlocal+nghost surfs on each proc
+---------------------------------------------------------------------- */
+
+void Surf::spread_own2local_rendezvous(int n, int type, void *in, void *out)
+{
+  int i,j,k,m,index;
+
+  // allocate memory for rvous input
+
+  int nall = nlocal + nghost;
+
+  int *proclist;
+  memory->create(proclist,nall,"spread/own2local:proclist");
+  int *inbuf;
+  memory->create(inbuf,3*nall,"spread/own2local:inbuf");
+
+  // create rvous inputs
+  // proclist = owner of each surf
+  // inbuf = 3 ints per request = me, my index, index on owning proc
+
+  surfint surfID;
+
+  m = 0;
+  for (i = 0; i < nall; i++) {
+    if (dim == 2) surfID = lines[i].id;
+    else surfID = tris[i].id;
+    proclist[i] = (surfID-1) % nprocs;
+    inbuf[m] = me;
+    inbuf[m+1] = i;
+    inbuf[m+2] = (surfID-1) / nprocs;
+    m += 3;
+  }
+
+  // perform rendezvous operation
+  // each proc owns subset of surfs
+  // receives all surf requests to return per-surf values to each proc who needs it
+
+  spread_type = type;
+  spread_size = n;
+  spread_data = in;
+  
+  int outbytes;
+  if (type == INT) outbytes = (n+1) * sizeof(int);
+  else outbytes = (n+1) * sizeof(double);
+  char *buf;
+
+  int nreturn = comm->rendezvous(1,nall,(char *) inbuf,3*sizeof(int),
+				 0,proclist,rendezvous_own2local,
+				 0,buf,outbytes,(void *) this);
+  
+  memory->destroy(proclist);
+  memory->destroy(inbuf);
+
+  // loop over received datums for nlocal+nghost surfs
+  // copy per-surf values into out
+
+  int *ibuf,*ioutbuf;
+  double *dbuf,*doutbuf;
+
+  if (type == INT) ibuf = (int *) buf;
+  else if (type == DOUBLE) dbuf = (double *) dbuf;
+
+  m = 0;
+  if (type == INT) {
+    for (i = 0; i < nall; i++) {
+      index = ibuf[m++];
+      if (n == 1)
+	ioutbuf[index] = ibuf[m++];
+      else {
+	k = index * n;
+	for (j = 0; j < n; j++)
+	  ioutbuf[k++] = ibuf[m++];
+      }
+    }
+    
+  } else if (type == DOUBLE) {
+    for (i = 0; i < nall; i++) {
+      index = (int) ubuf(dbuf[m++]).i;
+      if (n == 1)
+	doutbuf[index] = dbuf[m++];
+      else {
+	k = index * n;
+	for (j = 0; j < n; j++)
+	  doutbuf[k++] = dbuf[m++];
+      }
+    }
+  }
+
+  memory->destroy(buf);
+}
+
+/* ----------------------------------------------------------------------
+   callback from spread_own2local_rendezvous rendezvous operation
+   process requests for data from surf elements I own
+------------------------------------------------------------------------- */
+
+int Surf::rendezvous_own2local(int n, char *inbuf,
+			       int &flag, int *&proclist, char *&outbuf,
+			       void *ptr)
+{
+  int i,j,k,m,idata;
+  int *ibuf,*iout;
+  double *dbuf,*dout;
+
+  Surf *sptr = (Surf *) ptr;
+  Memory *memory = sptr->memory;
+  int type = sptr->spread_type;
+  int size = sptr->spread_size;
+  if (type == INT) ibuf = (int *) sptr->spread_data;
+  else if (type == DOUBLE) dbuf = (double *) sptr->spread_data;
+
+  // allocate proclist & iout/dout, based on n, type, size
+
+  memory->create(proclist,n,"spread:proclist");
+  if (type == INT) memory->create(iout,(size+1)*n,"spread:iout");
+  else if (type == DOUBLE) memory->create(dout,(size+1)*n,"spread:dout");
+
+  // loop over received requests, pack data into iout/dout
+  
+  int *in_rvous = (int *) inbuf;
+  int oproc,oindex,index;
+  m = 0;
+  k = 0;
+  
+  if (type == INT) {
+    for (int i = 0; i < n; i++) {
+      oproc = in_rvous[m];
+      oindex = in_rvous[m+1];
+      index = in_rvous[m+2];
+      m += 3;
+      
+      proclist[i] = oproc;
+      iout[k++] = oindex;
+      if (size == 1)
+	iout[k++] = ibuf[index];
+      else {
+	idata = index * size;
+	for (j = 0; j < size; j++)
+	  iout[k++] = ibuf[idata++];
+      }
+    }
+    
+  } else if (type == DOUBLE) {
+    for (int i = 0; i < n; i++) {
+      oproc = in_rvous[m];
+      oindex = in_rvous[m+1];
+      index = in_rvous[m+2];
+      m += 3;
+      
+      proclist[i] = oproc;
+      dout[k++] = oindex;
+      if (size == 1)
+	dout[k++] = dbuf[index];
+      else {
+	idata = index * size;
+	for (j = 0; j < size; j++)
+	  dout[k++] = dbuf[idata++];
+      }
+    }
+  }
+
+  // flag = 2: new outbuf
+
+  flag = 2;
+  if (type == INT) outbuf = (char *) iout;
+  else if (type == DOUBLE) outbuf = (char *) dout;
+  return n;
+}
 
 /* ----------------------------------------------------------------------
    set nunique and unique vector on each proc
    for distributed surfs:
      each proc owns Nsurf/Nprocs fraction
      each proc stores Nlocal+Nghost surfs which overlap its owned+ghost cells
-     this means a unique owned surf can be in Nlocal list of many procs
-     if a unique owned surf is in Nlocal list of M procs
-       assign it randomly to one of those M procs with 1/M probability
+     this means a single owned surf can be in Nlocal list of many procs
+     if a single owned surf is in Nlocal list of M procs
+       assign it uniquely to one of those M procs with 1/M random probability
    nunique = # of my Nlocal surfs which are assigned to a unique owned surfs
    unique = list of indices in my local list of those nunique surfs
    only need to call this method when Nlocal+Nghost list change (e.g. LB, adapt)
@@ -1353,261 +1608,153 @@ int Surf::rendezvous_unique(int n, char *inbuf,
   return nown;
 }
 
-
-
-
-
-
 /* ----------------------------------------------------------------------
    spread values for N datums per surf from in vector to out vector
    type = 0/1 = INT or DOUBLE datums
-   for explicit all surfs, use allreduce algorithm
-     in = owned surfs
-     out = nlocal surfs (all procs own copy)
-   for explicit distributed surfs, use rendezvous algorithms
-     in = owned surfs
-     out = nlocal+nghost surfs (for my owned + ghost cells)
-   only called for explicit surfs, all or distributed
+   comm done via rendezvous algorithm
+   in = nlocal surfs (for my owned cells), only unique subset is used
+   out = mylines or mytris
+   only called for explicit distributed surfs
    called by spread_custom() and surf_collide.cpp
 ------------------------------------------------------------------------- */
 
-void Surf::spread_own2local(int n, int type, void *in, void *out)
+void Surf::spread_local2own(int n, int type, void *in, void *out)
 {
-  if (!distributed) spread_own2local_reduce(n,type,in,out);
-  else spread_own2local_rendezvous(n,type,in,out);
-}
-
-/* ----------------------------------------------------------------------
-   allreduce algorithm for spread_own2local
-   owned surf data combined for data for all nlocal surfs on all procs
-   NOTE: check for overflow of n*nall or n*nall*sizeof()
----------------------------------------------------------------------- */
-
-void Surf::spread_own2local_reduce(int n, int type, void *in, void *out)
-{
-  int i,j,m,ij,mj;
+  int i,j,k,idata;
+  int *iinput,*ibuf;
+  double *dinput,*dbuf;
   
-  if (type == INT) {
-    int *ivec = (int *) in;
-    int *ovec = (int *) out;
-
-    int *myvec;
-    memory->create(myvec,n*nlocal,"surf/spread:myvec");
-    memset(myvec,0,n*nlocal*sizeof(int));
-
-    if (n == 1) {
-      for (i = 0; i < nown; i++) {
-	m = me + i*nprocs;
-	myvec[m] = ivec[i];
-      }
-    } else {
-      for (i = 0; i < nown; i++) {
-	ij = i * n;
-	mj = (me + i*nprocs) * n;
-	for (j = 0; j < n; j++)
-	  myvec[mj++] = ivec[ij++];
-      }
-    }
-    
-    MPI_Allreduce(myvec,ovec,n*nlocal,MPI_INT,MPI_SUM,world);
-
-    memory->destroy(myvec);
-    
-  } else {
-    double *ivec = (double *) in;
-    double *ovec = (double *) out;
-
-    double *myvec;
-    memory->create(myvec,n*nlocal,"surf/spread:myvec");
-    memset(myvec,0,n*nlocal*sizeof(double));
-
-    if (n == 1) {
-      for (i = 0; i < nown; i++) {
-	m = me + i*nprocs;
-	myvec[m] = ivec[i];
-      }
-    } else {
-      for (i = 0; i < nown; i++) {
-	ij = i * n;
-	mj = (me + i*nprocs) * n;
-	for (j = 0; j < n; j++)
-	  myvec[mj++] = ivec[ij++];
-      }
-    }
-    
-    MPI_Allreduce(myvec,ovec,n*nlocal,MPI_DOUBLE,MPI_SUM,world);
-
-    memory->destroy(myvec);
-  }
-}
-
-/* ----------------------------------------------------------------------
-   rendezvous algorithm for spread_own2local
-   owned surf data becomes data for nlocal+nghost surfs on each proc
----------------------------------------------------------------------- */
-
-void Surf::spread_own2local_rendezvous(int n, int type, void *in, void *out)
-{
-  int i,j,k,m,index;
-
   // allocate memory for rvous input
 
-  int nall = nlocal + nghost;
-
   int *proclist;
-  memory->create(proclist,nall,"spread/own2local:proclist");
-  int *inbuf;
-  memory->create(inbuf,3*nall,"spread/own2local:inbuf");
+  memory->create(proclist,nunique,"spread/local2own:proclist");
 
-  // create rvous inputs
-  // proclist = owner of each surf
-  // inbuf = 3 ints per request = me, my index, index on owning proc
+  ibuf = NULL;
+  dbuf = NULL;
+  if (type == INT) {
+    iinput = (int *) in;
+    memory->create(ibuf,(n+1)*nunique,"spread/local2own:ibuf");
+  } else if (type == DOUBLE) {
+    dinput = (double *) in;
+    memory->create(dbuf,(n+1)*nunique,"spread/local2own:dbuf");
+  }
 
+  int isurf,index;
   surfint surfID;
-
-  m = 0;
-  for (i = 0; i < nall; i++) {
-    if (dim == 2) surfID = lines[i].id;
-    else surfID = tris[i].id;
+  
+  k = 0;
+  for (i = 0; i < nunique; i++) {
+    isurf = unique[i];
+    if (dim == 2) surfID = lines[isurf].id;
+    else surfID = tris[isurf].id;
     proclist[i] = (surfID-1) % nprocs;
-    inbuf[m] = me;
-    inbuf[m+1] = i;
-    inbuf[m+2] = (surfID-1) / nprocs;
-    m += 3;
+    index = (surfID-1) / nprocs;
+
+    if (type == INT) {
+      ibuf[k++] = index;
+      if (n == 1)
+	ibuf[k++] = iinput[isurf];
+      else {
+	idata = index * n;
+	for (j = 0; j < n; j++)
+	  ibuf[k++] = iinput[idata++];
+      }
+    } else {
+      dbuf[k++] = index;
+      if (n == 1)
+	dbuf[k++] = dinput[isurf];
+      else {
+	idata = index * n;
+	for (j = 0; j < n; j++)
+	  dbuf[k++] = dinput[idata++];
+      }
+    }
   }
 
   // perform rendezvous operation
-  // each proc owns subset of surfs
-  // receives all surf requests to return per-surf values to each proc who needs it
 
   spread_type = type;
   spread_size = n;
-  spread_data = (void *) in;
-  
-  int outbytes;
-  if (type == INT) outbytes = (n+1) * sizeof(int);
-  else outbytes = (n+1) * sizeof(double);
-  char *buf;
+  spread_data = out;
 
-  int nreturn = comm->rendezvous(1,nall,(char *) inbuf,3*sizeof(int),
-				 0,proclist,rendezvous_spread,
-				 0,buf,outbytes,(void *) this);
-  
-  memory->destroy(proclist);
-  memory->destroy(inbuf);
-
-  // loop over received datums for nlocal+nghost surfs
-  // copy per-surf values into out
-
-  int *ibuf,*ioutbuf;
-  double *dbuf,*doutbuf;
-
-  if (type == INT) ibuf = (int *) buf;
-  else if (type == DOUBLE) dbuf = (double *) dbuf;
-
-  m = 0;
+  char *in_rvous;
+  int inbytes;
   if (type == INT) {
-    for (i = 0; i < nall; i++) {
-      index = ibuf[m++];
-      if (n == 1)
-	ioutbuf[index] = ibuf[m++];
-      else {
-	k = index * n;
-	for (j = 0; j < n; j++)
-	  ioutbuf[k++] = ibuf[m++];
-      }
-    }
-    
+    in_rvous = (char *) ibuf;
+    inbytes = (n+1) * sizeof(int);
   } else if (type == DOUBLE) {
-    for (i = 0; i < nall; i++) {
-      index = (int) ubuf(dbuf[m++]).i;
-      if (n == 1)
-	doutbuf[index] = dbuf[m++];
-      else {
-	k = index * n;
-	for (j = 0; j < n; j++)
-	  doutbuf[k++] = dbuf[m++];
-      }
-    }
+    in_rvous = (char *) dbuf;
+    inbytes = (n+1) * sizeof(double);
   }
+  
+  char *buf;
+  int nreturn = comm->rendezvous(1,nunique,in_rvous,inbytes,
+				 0,proclist,rendezvous_local2own,
+				 0,buf,0,(void *) this);
 
-  memory->destroy(buf);
+  memory->destroy(proclist);
+  memory->destroy(ibuf);
+  memory->destroy(dbuf);
 }
 
 /* ----------------------------------------------------------------------
-   callback from spread_own2local_rendezvous rendezvous operation
-   process requests for data from surf elements I own
+   callback from spread_local2own rendezvous operation
+   receive values for surf elements I own
 ------------------------------------------------------------------------- */
 
-int Surf::rendezvous_spread(int n, char *inbuf,
-			    int &flag, int *&proclist, char *&outbuf,
-			    void *ptr)
+int Surf::rendezvous_local2own(int n, char *inbuf,
+			       int &flag, int *&proclist, char *&outbuf,
+			       void *ptr)
 {
-  int i,j,k,m,id;
-  int *idata,*iout;
-  double *ddata,*dout;
+  int i,j,k,m,idata;
+  int *ibuf,*iout;
+  double *dbuf,*dout;
 
   Surf *sptr = (Surf *) ptr;
   Memory *memory = sptr->memory;
   int type = sptr->spread_type;
   int size = sptr->spread_size;
-  if (type == INT) idata = (int *) sptr->spread_data;
-  else if (type == DOUBLE) ddata = (double *) sptr->spread_data;
 
-  // allocate proclist & iout/dout, based on n, type, size
+  if (type == INT) {
+    ibuf = (int *) inbuf;
+    iout = (int *) sptr->spread_data;
+  } else if (type == DOUBLE) {
+    dbuf = (double *) inbuf;
+    dout = (double *) sptr->spread_data;
+  }
 
-  memory->create(proclist,n,"spread:proclist");
-  if (type == INT) memory->create(iout,(size+1)*n,"spread:iout");
-  else if (type == DOUBLE) memory->create(dout,(size+1)*n,"spread:dout");
+  // loop over received datums, copy values to out
 
-  // loop over received requests, pack data into iout/dout
+  int index;
   
-  int *in_rvous = (int *) inbuf;
-  int oproc,oindex,index;
   m = 0;
   k = 0;
-  
   if (type == INT) {
     for (int i = 0; i < n; i++) {
-      oproc = in_rvous[m];
-      oindex = in_rvous[m+1];
-      index = in_rvous[m+2];
-      m += 3;
-      
-      proclist[i] = oproc;
-      iout[k++] = oindex;
+      index = ibuf[m++];
       if (size == 1)
-	iout[k++] = idata[index];
+	iout[index] = ibuf[m++];
       else {
-	id = index * size;
+	idata = index * size;
 	for (j = 0; j < size; j++)
-	  iout[k++] = idata[id++];
+	  iout[idata++] = ibuf[m++];
       }
     }
-    
   } else if (type == DOUBLE) {
     for (int i = 0; i < n; i++) {
-      oproc = in_rvous[m];
-      oindex = in_rvous[m+1];
-      index = in_rvous[m+2];
-      m += 3;
-      
-      proclist[i] = oproc;
-      dout[k++] = oindex;
+      index = static_cast<int> (dbuf[m++]);
       if (size == 1)
-	dout[k++] = ddata[index];
+	dout[index] = dbuf[m++];
       else {
-	id = index * size;
+	idata = index * size;
 	for (j = 0; j < size; j++)
-	  dout[k++] = ddata[id++];
+	  dout[idata++] = dbuf[m++];
       }
     }
   }
 
-  // flag = 2: new outbuf
-
-  flag = 2;
-  if (type == INT) outbuf = (char *) iout;
-  else if (type == DOUBLE) outbuf = (char *) dout;
-  return n;
+  // flag = 0: no second comm needed in rendezvous
+  
+  flag = 0;
+  return 0;
 }

@@ -89,7 +89,8 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
 
   me = comm->me;
   nprocs = comm->nprocs;
-
+  distributed = surf->distributed;
+  
   // 1st arg: gas chemistry or surf chemistry or both
 
   if (narg < 3) error->all(FLERR,"Illegal surf_react adsorb command");
@@ -473,7 +474,9 @@ void SurfReactAdsorb::init()
   if (!firstflag) return;
   firstflag = 0;
 
-  // one-time operations, including init of custom per-surf area & weight
+  // -------------------------
+  // one-time operations
+  // -------------------------
 
   // initialize GS and PS models
   // for PS, this sets nactive_ps
@@ -519,7 +522,7 @@ void SurfReactAdsorb::init()
 
   int isr;
 
-  if (!surf->distributed) {
+  if (!distributed) {
     if (domain->dimension == 2) {
       int m = 0;
       for (int isurf = me; isurf < nslocal; isurf += nprocs) {
@@ -541,7 +544,7 @@ void SurfReactAdsorb::init()
       }
     }
     
-  } else if (surf->distributed) {
+  } else if (distributed) {
     if (domain->dimension == 2) {
       for (int isurf = 0; isurf < nsown; isurf++) {
 	isr = mylines[isurf].isr;
@@ -577,6 +580,12 @@ void SurfReactAdsorb::init()
     weight = surf->edvec_local[weight_index];
     if (psflag) tau = surf->edarray_local[tau_index];
   }
+
+  // for distributed: setup list of unique surfs
+  // unique = subset of local surfs
+  // each owned surf in mylines/mytris has a single unique match in local/ghost
+
+  if (distributed) surf->assign_unique();
 }
 
 /* ----------------------------------------------------------------------
@@ -1189,7 +1198,7 @@ void SurfReactAdsorb::PS_chemistry()
     }
 
   } else if (mode == SURF) {
-    if (!surf->distributed) {
+    if (!distributed) {
       int nslocal = surf->nlocal;
       if (domain->dimension == 2) {
 	for (int isurf = me; isurf < nslocal; isurf += nprocs) {
@@ -2746,7 +2755,7 @@ void SurfReactAdsorb::readfile_ps(char *fname)
    perform on-surf reactions for one face or one surf element
    isurf = 0 to 5 for box faces
    isurf >= 0 for line or tri index in Surf::lines/tris
-     isurf is valid for surf distribution = all or distributed
+     isurf is valid for either surf distribution = all or distributed
    isc = index of SurfCollide model for isurf
    invoked once per Nsync steps
 ------------------------------------------------------------------------- */

@@ -107,9 +107,10 @@ class Surf : protected Pointers {
                             // implicit: not defined
   int maxown;               // max length of owned lines/tris vecs
 
-  int nunique;
-  int *unique;
-
+  int nunique;              // for distributed: # of my local surfs which are unique
+  int *unique;              // index list of those surfs
+                            // union of all unique surfs = union of mylines/mytris
+                            
   // surface collision and reaction models
   
   int nsc,nsr;              // # of surface collision and reaction models
@@ -245,8 +246,6 @@ class Surf : protected Pointers {
   void redistribute_surfs(int, Line *, Tri *,
 			  int, int *, double **, bigint, bigint);
 
-  void assign_unique();
-
   void compress_explicit();
   void compress_implicit();
 
@@ -263,6 +262,8 @@ class Surf : protected Pointers {
   void spread_own2local(int, int, void *, void *);
   void spread_own2local_reduce(int, int, void *, void *);
   void spread_own2local_rendezvous(int, int, void *, void *);
+  void assign_unique();
+  void spread_local2own(int, int, void *, void *);
 
   // surf_custom.cpp
 
@@ -273,6 +274,7 @@ class Surf : protected Pointers {
   virtual void remove_custom(int);
   
   void spread_custom(int);
+  void spread_inverse_custom(int);
   int extract_custom(double **&);
 
   void write_restart_custom(FILE *);
@@ -383,10 +385,12 @@ class Surf : protected Pointers {
                               int &, int *&, char *&, void *);
   static int rendezvous_tris(int, char *,
                              int &, int *&, char *&, void *);
-  static int rendezvous_spread(int, char *,
-			       int &, int *&, char *&, void *);
+  static int rendezvous_own2local(int, char *,
+				  int &, int *&, char *&, void *);
   static int rendezvous_unique(int, char *,
 			       int &, int *&, char *&, void *);
+  static int rendezvous_local2own(int, char *,
+				  int &, int *&, char *&, void *);
 
   // union data struct for packing 32-bit and 64-bit ints into double bufs
   // this avoids aliasing issues by having 2 pointers (double,int)

@@ -40,6 +40,8 @@ class SurfReactAdsorb : public SurfReact {
 
  private:
   int me,nprocs;
+  int distributed;
+  
   int gsflag,psflag;                // 0/1 if gas and/or surf chem enabled
   int mode;                         // FACE or SURF
   int nsync;                        // synchronize surf state
