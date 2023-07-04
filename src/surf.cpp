@@ -24,6 +24,7 @@
 #include "comm.h"
 #include "geometry.h"
 #include "input.h"
+#include "random_knuth.h"
 #include "math_extra.h"
 #include "math_const.h"
 #include "hash3.h"
@@ -166,6 +167,8 @@ Surf::~Surf()
   memory->sfree(edvec);
   memory->sfree(edarray);
   memory->destroy(edcol);
+
+  delete urandom;
 }
 
 /* ---------------------------------------------------------------------- */
