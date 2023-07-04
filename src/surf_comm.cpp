@@ -564,8 +564,8 @@ void Surf::collate_vector_reduce(int nrow, surfint *tally2surf,
   int nglobal = nsurf;
 
   double *one,*all;
-  memory->create(one,nglobal,"surf:one");
-  memory->create(all,nglobal,"surf:all");
+  memory->create(one,nglobal,"collate/vec:one");
+  memory->create(all,nglobal,"collate/vec:all");
 
   // zero all values and add in values I accumulated
 
@@ -605,13 +605,14 @@ void Surf::collate_vector_reduce(int nrow, surfint *tally2surf,
 void Surf::collate_vector_rendezvous(int nrow, surfint *tally2surf,
                                      double *in, int instride, double *out)
 {
+  int i,k,m;
+  
   // allocate memory for rvous input
 
   int *proclist;
-  memory->create(proclist,nrow,"surf:proclist");
-  InRvousVec *in_rvous =
-    (InRvousVec *) memory->smalloc((bigint) nrow*sizeof(InRvousVec),
-                                   "surf:in_rvous");
+  memory->create(proclist,nrow,"collate/vec:proclist");
+  double *dbuf;
+  memory->create(dbuf,2*nrow,"collate/vec:dbuf");
 
   // create rvous inputs
   // proclist = owner of each surf
@@ -620,12 +621,13 @@ void Surf::collate_vector_rendezvous(int nrow, surfint *tally2surf,
 
   surfint id;
 
-  int m = 0;
+  k = 0;
+  m = 0;
   for (int i = 0; i < nrow; i++) {
     id = tally2surf[i];
     proclist[i] = (id-1) % nprocs;
-    in_rvous[i].id = id;
-    in_rvous[i].value = in[m];
+    dbuf[k++] = ubuf(id).d;
+    dbuf[k++] = in[m];
     m += instride;
   }
 
@@ -636,12 +638,12 @@ void Surf::collate_vector_rendezvous(int nrow, surfint *tally2surf,
   out_rvous = out;
 
   char *buf;
-  int nout = comm->rendezvous(1,nrow,(char *) in_rvous,sizeof(InRvousVec),
+  int nout = comm->rendezvous(1,nrow,(char *) dbuf,2*sizeof(double),
                               0,proclist,rendezvous_vector,
                               0,buf,0,(void *) this);
 
   memory->destroy(proclist);
-  memory->destroy(in_rvous);
+  memory->destroy(dbuf);
 }
 
 /* ----------------------------------------------------------------------
@@ -654,6 +656,8 @@ void Surf::collate_vector_rendezvous(int nrow, surfint *tally2surf,
 int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
                             char *&outbuf, void *ptr)
 {
+  int i,k,m;
+  
   Surf *sptr = (Surf *) ptr;
   Memory *memory = sptr->memory;
   int nown = sptr->nown;
@@ -666,15 +670,15 @@ int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
   memset(out,0,nown*sizeof(double));
 
   // accumulate per-surf values from different procs to my owned surfs
-  // logic of (id-1-me) / nprocs maps
-  //   surf IDs [1,11,21,...] on 10 procs to [0,1,2,...] on proc 0
 
-  InRvousVec *in_rvous = (InRvousVec *) inbuf;
+  double *dbuf = (double *) inbuf;
+  surfint id;
 
-  int m;
-  for (int i = 0; i < n; i++) {
-    m = (in_rvous[i].id-1-me) / nprocs;
-    out[m] += in_rvous[i].value;
+  k = 0;
+  for (i = 0; i < n; i++) {
+    id = (surfint) ubuf(dbuf[k++]).i;
+    m = (id-1) / nprocs;
+    out[m] += dbuf[k++];
   }
 
   // flag = 0: no second comm needed in rendezvous
@@ -751,8 +755,6 @@ void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
     m++;
   }
 
-  // NOTE: could persist these for multiple invocations
-
   memory->destroy(one);
   memory->destroy(all);
 }
@@ -770,7 +772,7 @@ void Surf::collate_array_rendezvous(int nrow, int ncol, surfint *tally2surf,
 
   int *proclist;
   memory->create(proclist,nrow,"surf:proclist");
-  double *in_rvous = (double *)     // worry about overflow
+  double *in_rvous = (double *)
     memory->smalloc(nrow*(ncol+1)*sizeof(double*),"surf:in_rvous");
 
   // create rvous inputs
@@ -835,8 +837,6 @@ int Surf::rendezvous_array(int n, char *inbuf,
   memset(out,0,nown*ncol*sizeof(double));
 
   // accumulate per-surf values from different procs to my owned surfs
-  // logic of (id-1-me) / nprocs maps
-  //   surf IDs [1,11,21,...] on 10 procs to [0,1,2,...] on proc 0
 
   double *in_rvous = (double *) inbuf;
   surfint id;
@@ -844,7 +844,7 @@ int Surf::rendezvous_array(int n, char *inbuf,
   m = 0;
   for (int i = 0; i < n; i++) {
     id = (surfint) ubuf(in_rvous[m++]).i;
-    k = (id-1-me) / nprocs * ncol;
+    k = (id-1) / nprocs * ncol;
     for (j = 0; j < ncol; j++)
       out[k++] += in_rvous[m++];
   }
@@ -941,8 +941,8 @@ void Surf::collate_vector_implicit(int nrow, surfint *tally2surf,
     if (cells[icell].nsurf <= 0) continue;
     if (cells[icell].nsplit <= 0) continue;
     proclist[ncount] = hashlittle(&cells[icell].id,sizeof(cellint),0) % nprocs;
-    in_rvous[m++] = me;
-    in_rvous[m++] = cells[icell].id;    // NOTE: should use ubuf
+    in_rvous[m++] = ubuf(me).d;
+    in_rvous[m++] = ubuf(cells[icell].id).d;
     in_rvous[m++] = 0.0;
     ncount++;
   }
@@ -950,8 +950,8 @@ void Surf::collate_vector_implicit(int nrow, surfint *tally2surf,
   for (i = 0; i < nrow; i++) {
     if (hash.find(tally2cell[i]) == hash.end()) {
       proclist[ncount] = hashlittle(&tally2cell[i],sizeof(cellint),0) % nprocs;
-      in_rvous[m++] = -1;
-      in_rvous[m++] = tally2cell[i];    // NOTE: should use ubuf
+      in_rvous[m++] = ubuf(-1).d;
+      in_rvous[m++] = ubuf(tally2cell[i]).d;
       in_rvous[m++] = in[i];
       ncount++;
     }
@@ -973,7 +973,7 @@ void Surf::collate_vector_implicit(int nrow, surfint *tally2surf,
 
   m = 0;
   for (i = 0; i < nout; i++) {
-    cellID = out_rvous[m++];      // NOTE: should use ubuf
+    cellID = (cellint) ubuf(out_rvous[m++]).u;
     icell = hash[cellID];
     out[icell] += out_rvous[m++];
   }
@@ -1071,8 +1071,8 @@ void Surf::collate_array_implicit(int nrow, int ncol, surfint *tally2surf,
     if (cells[icell].nsurf <= 0) continue;
     if (cells[icell].nsplit <= 0) continue;
     proclist[ncount] = hashlittle(&cells[icell].id,sizeof(cellint),0) % nprocs;
-    in_rvous[m++] = me;
-    in_rvous[m++] = cells[icell].id;    // NOTE: should use ubuf
+    in_rvous[m++] = ubuf(me).d;
+    in_rvous[m++] = ubuf(cells[icell].id).d;
     for (j = 0; j < ncol; j++)
       in_rvous[m++] = 0.0;
     ncount++;
@@ -1081,8 +1081,8 @@ void Surf::collate_array_implicit(int nrow, int ncol, surfint *tally2surf,
   for (i = 0; i < nrow; i++) {
     if (hash.find(tally2cell[i]) == hash.end()) {
       proclist[ncount] = hashlittle(&tally2cell[i],sizeof(cellint),0) % nprocs;
-      in_rvous[m++] = -1;
-      in_rvous[m++] = tally2cell[i];    // NOTE: should use ubuf
+      in_rvous[m++] = ubuf(-1).d;
+      in_rvous[m++] = ubuf(tally2cell[i]).d;
       for (j = 0; j < ncol; j++)
         in_rvous[m++] = in[i][j];
       ncount++;
@@ -1106,7 +1106,7 @@ void Surf::collate_array_implicit(int nrow, int ncol, surfint *tally2surf,
 
   m = 0;
   for (i = 0; i < nout; i++) {
-    cellID = out_rvous[m++];      // NOTE: should use ubuf
+    cellID = (cellint) ubuf(out_rvous[m++]).u;
     icell = hash[cellID] - 1;     // subtract one for child cell index
     for (j = 0; j < ncol; j++)
       out[icell][j] += out_rvous[m++];
@@ -1142,8 +1142,8 @@ int Surf::rendezvous_implicit(int n, char *inbuf,
 
   m = 0;
   for (i = 0; i < n; i++) {
-    proc = static_cast<int> (in_rvous[m++]);
-    cellID = static_cast<cellint> (in_rvous[m++]);
+    proc = (int) ubuf(in_rvous[m++]).i;
+    cellID = (cellint) ubuf(in_rvous[m++]).u;
     if (proc >= 0 && phash.find(cellID) == phash.end()) phash[cellID] = proc;
     m += ncol;
   }
@@ -1165,8 +1165,8 @@ int Surf::rendezvous_implicit(int n, char *inbuf,
   k = m = 0;
 
   for (i = 0; i < n; i++) {
-    proc = static_cast<int> (in_rvous[m++]);
-    cellID = static_cast<cellint> (in_rvous[m++]);
+    proc = (int) ubuf(in_rvous[m++]).i;
+    cellID = (cellint) ubuf(in_rvous[m++]).u;
     if (proc >= 0) {
       m += ncol;                         // skip entries with novalues
       continue;
@@ -1174,7 +1174,7 @@ int Surf::rendezvous_implicit(int n, char *inbuf,
     if (ohash.find(cellID) == phash.end()) {
       ohash[cellID] = nout;              // add a new set of out values
       proclist[nout] = phash[cellID];
-      out[k++] = cellID;
+      out[k++] = ubuf(cellID).d;
       for (j = 0; j < ncol; j++)
         out[k++] = in_rvous[m++];
       nout++;

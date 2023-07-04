@@ -327,12 +327,7 @@ class Surf : protected Pointers {
   
   class RanKnuth *urandom;   // RNG for unique surf assignment
 
-  // collate vector rendezvous
-
-  struct InRvousVec {
-    surfint id;             // surface ID
-    double value;           // compute value
-  };
+  // collate rendezvous
 
   double *out_rvous;
   int ncol_rvous;
@@ -410,9 +405,12 @@ class Surf : protected Pointers {
   union ubuf {
     double d;
     int64_t i;
+    uint64_t u;
     ubuf(double arg) : d(arg) {}
     ubuf(int64_t arg) : i(arg) {}
     ubuf(int arg) : i(arg) {}
+    ubuf(uint64_t arg) : u(arg) {}
+    ubuf(uint32_t arg) : u(arg) {}
   };
 };
 
