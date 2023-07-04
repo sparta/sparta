@@ -83,6 +83,10 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   mylines = NULL;
   mytris = NULL;
 
+  nunique = 0;
+  unique = NULL;
+  uniqueID = NULL;
+  
   nsc = maxsc = 0;
   sc = NULL;
   nsr = maxsr = 0;
@@ -136,6 +140,9 @@ Surf::~Surf()
   memory->sfree(mylines);
   memory->sfree(mytris);
 
+  memory->destroy(unique);
+  memory->destroy(uniqueID);
+  
   for (int i = 0; i < nsc; i++) delete sc[i];
   memory->sfree(sc);
   for (int i = 0; i < nsr; i++) delete sr[i];

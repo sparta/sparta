@@ -1519,14 +1519,22 @@ void Surf::assign_unique()
   memory->destroy(inbuf);
 
   // copy rendezvous output into unique vector
-
+  // set corresponding surf IDs in uniqueID vector
+  
   int *out_rvous = (int *) buf;
 
   nunique = nout;
   memory->destroy(unique);
+  memory->destroy(uniqueID);
   memory->create(unique,nunique,"assign/unique:unique");
-  memcpy(unique,out_rvous,nout*sizeof(int));
+  memory->create(uniqueID,nunique,"assign/unique:uniqueID");
 
+  for (i = 0; i < nunique; i++) {
+    unique[i] = out_rvous[i];
+    if (dim == 2) uniqueID[i] = lines[unique[i]].id;
+    else uniqueID[i] = tris[unique[i]].id;
+  }
+  
   // clean-up
 
   memory->destroy(out_rvous);
@@ -1645,8 +1653,7 @@ void Surf::spread_local2own(int n, int type, void *in, void *out)
   k = 0;
   for (i = 0; i < nunique; i++) {
     isurf = unique[i];
-    if (dim == 2) surfID = lines[isurf].id;
-    else surfID = tris[isurf].id;
+    surfID = uniqueID[i];
     proclist[i] = (surfID-1) % nprocs;
     index = (surfID-1) / nprocs;
 

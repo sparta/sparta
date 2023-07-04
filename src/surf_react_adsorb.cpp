@@ -564,7 +564,7 @@ void SurfReactAdsorb::init()
   }
 
   // spread custom vec/array values to nlocal+nghost lines/tris
-  // one-time operation for static area, weight, tau
+  // one-time operation for static area, weight, tau unless grid changes
   // dynamic total_state and species_state are periodically updated
   
   if (mode == SURF) {
@@ -1156,6 +1156,62 @@ void SurfReactAdsorb::tally_update()
 
   ntotal += nsingle - nsingle_gs;
   for (int i = nlist_gs; i < nlist; i++) tally_total[i] += tally_single[i];
+}
+
+/* ----------------------------------------------------------------------
+   called when LB or adaptation changes grid, via grid->notify_changed()
+   only relevant for mode = SURF and distributed surfs
+   issue is the owned grid cells and their local+ghost surfs have changed
+   need to realloc surf data structs for local+ghost data
+---------------------------------------------------------------------- */
+
+void SurfReactAdsorb::grid_changed()
+{
+  if (mode == FACE || !distributed) return;
+
+  if (update->ntimestep % nsync)
+    error->all(FLERR,"Grid changed on timestep when "
+	       "surf_react adsorb sync did not occur");
+
+  // realloc species_delta and mark, init to zeroes
+
+  memory->destroy(surf_species_delta);
+  int nall = surf->nlocal + surf->nghost;
+  memory->create(surf_species_delta,nall,nspecies_surf,
+                 "react/adsorb:surf_species_delta");
+  if (nall) memset(&surf_species_delta[0][0],0,
+		   nall*nspecies_surf*sizeof(int));
+  species_delta = surf_species_delta;
+
+  memory->destroy(mark);
+  memory->create(mark,nall,"react/adsorb:mark");
+  memset(mark,0,nall*sizeof(int));
+
+  // inverse spread of tau from local to owned custom values
+  // needed because local unique surfs have been performing PS chem
+  //   and updating tau in local custom data struct
+  // OK to invoke now after new grid and new surfs,
+  //   b/c surf->unique and uniqueID store info from old local surfs
+  
+  if (psflag) surf->spread_inverse_custom(tau_index);
+  
+  // spread custom vec/array values to nlocal+nghost lines/tris
+  
+  surf->spread_custom(total_state_index);
+  surf->spread_custom(species_state_index);
+  surf->spread_custom(area_index);
+  surf->spread_custom(weight_index);
+  if (psflag) surf->spread_custom(tau_index);
+
+  total_state = surf->eivec_local[total_state_index];
+  species_state = surf->eiarray_local[species_state_index];
+  area = surf->edvec_local[area_index];
+  weight = surf->edvec_local[weight_index];
+  if (psflag) tau = surf->edarray_local[tau_index];
+  
+  // reset surf->unique and uniqueID vectors
+
+  surf->assign_unique();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -2755,7 +2811,7 @@ void SurfReactAdsorb::readfile_ps(char *fname)
    perform on-surf reactions for one face or one surf element
    isurf = 0 to 5 for box faces
    isurf >= 0 for line or tri index in Surf::lines/tris
-     isurf is valid for either surf distribution = all or distributed
+     isurf is valid for eithersurf distribution = all or distributed
    isc = index of SurfCollide model for isurf
    invoked once per Nsync steps
 ------------------------------------------------------------------------- */

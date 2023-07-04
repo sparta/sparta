@@ -18,6 +18,7 @@
 #include "domain.h"
 #include "region.h"
 #include "surf.h"
+#include "surf_react.h"
 #include "comm.h"
 #include "modify.h"
 #include "fix.h"
@@ -369,6 +370,9 @@ void Grid::notify_changed()
     if (compute[i]->per_grid_flag) compute[i]->reallocate();
     if (compute[i]->per_surf_flag) compute[i]->reallocate();
   }
+
+  for (int i = 0; i < surf->nsr; i++)
+    surf->sr[i]->grid_changed();
 
   for (int i = 0; i < output->ndump; i++)
     output->dump[i]->reset_grid_count();

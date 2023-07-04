@@ -37,6 +37,7 @@ class SurfReactAdsorb : public SurfReact {
   int match_product(char *, int);
 
   void tally_update();
+  void grid_changed();
 
  private:
   int me,nprocs;

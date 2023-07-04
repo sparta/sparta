@@ -386,7 +386,7 @@ void Surf::spread_inverse_custom(int index)
       else in = &edarray_local[ewhich[index]][0][0];
       if (size_custom_local[index] == 0) out = NULL;
       else out = &edarray[ewhich[index]][0][0];
-      spread_own2local(esize[index],DOUBLE,in,out);
+      spread_local2own(esize[index],DOUBLE,in,out);
     }
   }
 

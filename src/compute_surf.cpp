@@ -166,6 +166,7 @@ void ComputeSurf::init()
    distributed: nlocal + nghost
    called by init before each run (in case dt or fnum has changed)
    called whenever grid changes
+     NOTE: only needed in this case when surfs are distributed ??
 ------------------------------------------------------------------------- */
 
 void ComputeSurf::init_normflux()

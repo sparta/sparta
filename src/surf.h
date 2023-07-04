@@ -107,9 +107,13 @@ class Surf : protected Pointers {
                             // implicit: not defined
   int maxown;               // max length of owned lines/tris vecs
 
-  int nunique;              // for distributed: # of my local surfs which are unique
-  int *unique;              // index list of those surfs
-                            // union of all unique surfs = union of mylines/mytris
+  // for distributed surfs:
+  // union of unique surfs across all procs equal
+  // union of mylines/mytris across all procs
+
+  int nunique;              // # of my local surfs which are unique
+  int *unique;              // index of unique surfs within local list
+  surfint *uniqueID;        // IDs of unique surfs
                             
   // surface collision and reaction models
   
