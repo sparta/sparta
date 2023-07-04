@@ -16,6 +16,9 @@
 #include "domain.h"
 #include "comm.h"
 #include "grid.h"
+#include "update.h"
+#include "random_mars.h"
+#include "random_knuth.h"
 #include "memory.h"
 #include "error.h"
 
@@ -1194,6 +1197,166 @@ int Surf::rendezvous_implicit(int n, char *inbuf,
 // spread operations for surf-style variables or custom per-surf vecs/arrays
 // comm data from owned strided to nlocal+nghost for all or distributed
 // ----------------------------------------------------------------------
+
+/* ----------------------------------------------------------------------
+   set nunique and unique vector on each proc
+   for distributed surfs:
+     each proc owns Nsurf/Nprocs fraction
+     each proc stores Nlocal+Nghost surfs which overlap its owned+ghost cells
+     this means a unique owned surf can be in Nlocal list of many procs
+     if a unique owned surf is in Nlocal list of M procs
+       assign it randomly to one of those M procs with 1/M probability
+   nunique = # of my Nlocal surfs which are assigned to a unique owned surfs
+   unique = list of indices in my local list of those nunique surfs
+   only need to call this method when Nlocal+Nghost list change (e.g. LB, adapt)
+   only need to call this method when performing spread_inverse()
+     to map local+ghost custom data back to owned surfs
+   only called for distributed surfs
+------------------------------------------------------------------------- */
+
+void Surf::assign_unique()
+{
+  int i,m;
+  
+  // RNG for unique assignment among multiple copies
+
+  if (!urandom) {
+    urandom = new RanKnuth(update->ranmaster->uniform());
+    double seed = update->ranmaster->uniform();
+    urandom->reset(seed,me,100);
+  }
+
+  // allocate memory for rvous input
+
+  int *proclist;
+  memory->create(proclist,nlocal,"assign/unique:proclist");
+  int *inbuf;
+  memory->create(inbuf,3*nlocal,"assigh/unique:inbuf");
+
+  // create rvous inputs
+  // proclist = owner of each surf
+  // inbuf = 3 ints per request = me, my index, index on owning proc
+
+  surfint surfID;
+  
+  for (i = 0; i < nlocal; i++) {
+    if (dim == 2) surfID = lines[i].id;
+    else surfID = tris[i].id;
+    proclist[i] = (surfID-1) % nprocs;
+    inbuf[m] = me;
+    inbuf[m+1] = i;
+    inbuf[m+2] = (surfID-1) / nprocs;
+    m += 3;
+  }
+
+  // perform rendezvous operation
+  // each proc owns subset of surfs
+  // receives datum from each proc who onws a local copy of an owned surf
+
+  int outbytes = sizeof(int);
+  char *buf;
+  
+  int nout = comm->rendezvous(1,nlocal,(char *) inbuf,3*sizeof(int),
+			      0,proclist,rendezvous_unique,
+			      0,buf,outbytes,(void *) this);
+
+  memory->destroy(proclist);
+  memory->destroy(inbuf);
+
+  // copy rendezvous output into unique vector
+
+  int *out_rvous = (int *) buf;
+
+  nunique = nout;
+  memory->destroy(unique);
+  memory->create(unique,nunique,"assign/unique:unique");
+  memcpy(unique,out_rvous,nout*sizeof(int));
+
+  // clean-up
+
+  memory->destroy(out_rvous);
+}
+
+/* ----------------------------------------------------------------------
+   callback from assign_unique rendezvous operation
+   process copies of surf elements I own
+------------------------------------------------------------------------- */
+
+int Surf::rendezvous_unique(int n, char *inbuf,
+			    int &flag, int *&proclist, char *&outbuf,
+			    void *ptr)
+{
+  int i,k,m;
+
+  Surf *sptr = (Surf *) ptr;
+  Memory *memory = sptr->memory;
+  RanKnuth *urandom = sptr->urandom;
+  int nown = sptr->nown;
+  
+  // allocate proclist & ownflags & duplicates
+
+  int *ownflags,*duplicates,*selection;
+  
+  memory->create(proclist,nown,"unique/assign:proclist");
+  memory->create(ownflags,nown,"unique/assign:ownflags");
+  memory->create(duplicates,nown,"unique/assign:duplicates");
+  memory->create(selection,nown,"unique/assign:selection");
+
+  // loop over received requests
+  // count duplicates of each owned surf
+
+  memset(duplicates,0,nown*sizeof(int));
+
+  int *in_rvous = (int *) inbuf;
+  int index;
+  
+  m = 0;
+  for (i = 0; i < n; i++) {
+    index = in_rvous[m+2];
+    duplicates[index]++;
+    m += 3;
+  }
+
+  // select one randomly among duplicates for each owned surf
+
+  for (i = 0; i < nown; i++)
+    selection[i] = static_cast<int> (urandom->uniform() * duplicates[i]);
+
+  // loop over received requests
+  // recount to find selected duplicate of each owned surf
+  // send ownflag datum back to owner of that duplicate
+
+  memset(duplicates,0,nown*sizeof(int));
+
+  k = 0;
+  m = 0;
+  for (i = 0; i < n; i++) {
+    index = in_rvous[m+2];
+    if (duplicates[index] == selection[index]) {
+      proclist[k] = in_rvous[m];
+      ownflags[k] = in_rvous[m+1];
+      k++;
+    }
+    duplicates[index]++;
+    m += 3;
+  }
+
+  // clean up
+
+  memory->destroy(duplicates);
+  memory->destroy(selection);
+  
+  // flag = 2: new outbuf
+
+  flag = 2;
+  outbuf = (char *) ownflags;
+  return nown;
+}
+
+
+
+
+
 
 /* ----------------------------------------------------------------------
    spread values for N datums per surf from in vector to out vector

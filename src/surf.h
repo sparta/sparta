@@ -245,6 +245,8 @@ class Surf : protected Pointers {
   void redistribute_surfs(int, Line *, Tri *,
 			  int, int *, double **, bigint, bigint);
 
+  void assign_unique();
+
   void compress_explicit();
   void compress_implicit();
 
@@ -269,6 +271,7 @@ class Surf : protected Pointers {
   virtual void allocate_custom(int);
   virtual void reallocate_custom();
   virtual void remove_custom(int);
+  
   void spread_custom(int);
   int extract_custom(double **&);
 
@@ -313,6 +316,10 @@ class Surf : protected Pointers {
 
   int redistribute_nvalues_custom;
   int *redistribute_index_custom;
+
+  // used by assign_unique() method
+  
+  class RanKnuth *urandom;   // RNG for unique surf assignment
 
   // collate vector rendezvous
 
@@ -377,6 +384,8 @@ class Surf : protected Pointers {
   static int rendezvous_tris(int, char *,
                              int &, int *&, char *&, void *);
   static int rendezvous_spread(int, char *,
+			       int &, int *&, char *&, void *);
+  static int rendezvous_unique(int, char *,
 			       int &, int *&, char *&, void *);
 
   // union data struct for packing 32-bit and 64-bit ints into double bufs

@@ -89,6 +89,10 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
 
   tally_comm = TALLYAUTO;
 
+  // RNG for unique surf assignment
+
+  urandom = NULL;
+
   // custom per-surf vectors/arrays
 
   ncustom = 0;
