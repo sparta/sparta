@@ -1,0 +1,146 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>set command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>set style subset-ID region-ID custom-ID v_name keyword arg ... 
+</PRE>
+<UL><LI>style = <I>particle</I> or <I>grid</I> or <I>surf</I> 
+
+<LI>subset-ID = mixture ID (particles) or group ID (grid cells or surface elements) 
+
+<LI>region-ID = only apply to particle/grid/surf in region, NULL if not applicable 
+
+<LI>custom-ID = reference to custom attribute to set 
+
+<PRE>  p_ID = custom per-particle vector with ID
+  p_ID[N] = Nth column of custom per-particle array with ID
+  g_ID = custom per-grid vector with ID
+  g_ID[N] = Nth column of custom per-grid array with ID
+  s_ID = custom per-surf vector with ID
+  s_ID[N] = Nth column of custom per-surf array with ID 
+</PRE>
+<LI>v_name = equal- or particle- or grid- or surf-style variable with name 
+
+<LI>zero of more keyword/arg pairs may be appended 
+
+<PRE>keyword = <I>type</I> or <I>size</I>
+  <I>type</I> arg = <I>int</I> or <I>float</I>
+  <I>size</I> arg = M for number of columns in a new custom array 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>set particle air NULL p_flag 
+mixture air N O NO group lite
+mixture air N O NO vstream 250.0 0.0 0.0 group species
+mixture air N frac 0.8
+mixture air O frac 0.2 copy myAir
+mixture background N O 
+mixture air delete N NO 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Set values for a new or previouly defined custom attibute via a
+variable.  The attribute can be for particles, grid cells, or surface
+elements.  Custom attributes can be vectors (single value per entity)
+or arrays (mutiple values per entity).  See <A HREF = "Section_howto.html#howto_17">Section
+6.17</A> for more discussion of custom
+attributes.
+</P>
+<P>The specified <I>style</I> setting is <I>particle</I> or <I>grid</I> or <I>surf</I>
+depending on which kind of custom attribute is being set.
+</P>
+<P>There are two ways to limit which particles, grid cells, or surface
+elements are assigned a custom value, via <I>subset-ID</I> and <I>region-ID</I>.
+An individual particle, grid cell, or surface element must meet both
+criteria to have its custom value set, otherwise it's value is set to
+zero.
+</P>
+<P>The specified <I>subset-ID</I> is the ID of a mixture for particles or the
+ID of a group of grid cells or surface elements.  Only particles in
+the mixture or grid cells/surface elements in the group will be
+assigned values.  See the <A HREF = "mixture.html">mixture</A> and
+<A HREF = "group.html">group</A> commands for more details.  Note that "all" is a
+pre-defined mixture ID which contains all particles.  Likewise "all"
+is the name of a pre-defined group with all grid cells or surface
+elements.
+</P>
+<P>The specified <I>region-ID</I> is the ID of a geometric region defined by
+the <A HREF = "region.html">region</A> command.  Only particles or grid cells or
+surface elements in the region will have their values set.  The center
+point of a grid cell or surface element is used for the region check.
+If <I>region-ID</I> is specified as NULL, then the region criterion is not
+applied.
+</P>
+<P>The custom attribute is specified with a "p_" or "g_" or "s_" prefix
+followed by the name of the attribute, for particles, grid cells, and
+surface elements respectively.  Custom attributes can be vectors
+(single value per entity) or arrays (mutiple values per entity).  To
+set the values for a custom vector, use the name without brackets,
+e.g. s_temp.  To set the values for a single column of a custom array,
+use the name suffixed by a bracketed integer, e.g. p_dipole<B>3</B>.  The
+integer must be a value from 1 to M, where M is the number of columns
+(values per entity) in the array.
+</P>
+<P>If the named custom attribute already exists, its values are
+overwritten by this command.  If is does not exist, a new custom
+attribute is created, and all its values are set.  As noted above,
+values for entities not in the <I>subset-ID</I> or <I>region-ID</I> are set to
+zero.
+</P>
+<P>Two optional keywords affect the creation of a new custom vector or
+array.  The <I>type</I> keyword can be used with <I>int</I> or <I>float</I> as its
+arg.  The created custom attribute will then store integer versus
+floating-point values.  Floating point values are the default.  The
+<I>size</I> keyword can be used with arg = 0 to create a custom vector
+(which is the default).  It can also be used with an arg M >= 1 to
+create an array with M columns.  This means that if a new custom name
+is specified with no brackets, the <I>size</I> keyword is not necessary,
+because it refers to a custom vector.  But if a new custom name with a
+bracket is used, the <I>size</I> keyword must be used so that the column
+dimension of the array is known.
+</P>
+<P>The specified <I>v_name</I> is the name of a previously defined variable
+which this command will evaluate.  It must be either an equal-style or
+particle-style or grid-style or surf-style variable.  All of these
+styles define a mathematical formula which is used to compute the
+value(s) of the variable.  See the <A HREF = "variable.html">variable</A> for
+details.
+</P>
+<P>If an equal-style variable is specified, it produces a single value
+which will be assigned to all particles or grid cells or surface
+elements.  Otherwise a particle-style variable must be used for style
+= <I>particle</I>, a grid-style variable for style = <I>grid</I>, or a
+surf-style variable for style = <I>surf</I>.
+</P>
+<P>Note that the latter 3 variable styles can include the spatial
+position of the particle, grid cell, or surface element in their
+formula. So it is easy to calculate values for each entity which vary
+spatially and also which depend on the current timestep.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "mixture.html">mixture</A>, <A HREF = "group.html">group</A>, <A HREF = "region.html">region</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The default settings for creation of new custom attibute are type =
+float and size = 0.
+</P>
+</HTML>

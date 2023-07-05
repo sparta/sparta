@@ -45,7 +45,8 @@
   <I>getenv</I> arg = one string
   <I>file</I> arg = filename
   <I>internal</I> arg = numeric value
-  <I>equal</I> or <I>particle</I> or <I>grid</I> or <I>surf</I> args = one formula containing numbers, stats keywords, math operations, particle vectors, compute/fix/variable references
+  <I>equal</I> or <I>particle</I> or <I>grid</I> or <I>surf</I> args = one formula
+  containing numbers, stats keywords, math operations, particle vectors, compute/fix and custom attribute and surface collision/reaction and variable references
     numbers = 0.0, 100, -5.4, 2.8e-4, etc
     constants = PI
     stats keywords = step, np, vol, etc from <A HREF = "stats_style.html">stats_style</A>
@@ -819,7 +820,7 @@ produce only a global scalar or a per-particle or per-grid or per-surf
 vector, never more than one of these quantities.
 </P>
 <DIV ALIGN=center><TABLE  BORDER=1 >
-<TR><TD >v_name</TD><TD > scalar, or per-particle or per-grid or per-surf vector 
+<TR><TD >v_name</TD><TD > equal- or particle- or grid- or surf-style variable 
 </TD></TR></TABLE></DIV>
 
 <HR>

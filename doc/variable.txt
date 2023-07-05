@@ -40,7 +40,8 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
   {getenv} arg = one string
   {file} arg = filename
   {internal} arg = numeric value
-  {equal} or {particle} or {grid} or {surf} args = one formula containing numbers, stats keywords, math operations, particle vectors, compute/fix/variable references
+  {equal} or {particle} or {grid} or {surf} args = one formula
+  containing numbers, stats keywords, math operations, particle vectors, compute/fix and custom attribute and surface collision/reaction and variable references
     numbers = 0.0, 100, -5.4, 2.8e-4, etc
     constants = PI
     stats keywords = step, np, vol, etc from "stats_style"_stats_style.html
@@ -805,7 +806,7 @@ There is no ambiguity as to what a reference means, since variables
 produce only a global scalar or a per-particle or per-grid or per-surf
 vector, never more than one of these quantities.
 
-v_name: scalar, or per-particle or per-grid or per-surf vector :tb(s=:)
+v_name: equal- or particle- or grid- or surf-style variable :tb(s=:)
 
 :line
 
