@@ -346,6 +346,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "run"_run.html,
 "scale_particles"_scale_particles.html,
 "seed"_seed.html,
+"set"_set.html,
 "shell"_shell.html,
 "species"_species.html,
 "species_modify"_species_modify.html,
