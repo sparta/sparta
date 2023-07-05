@@ -165,6 +165,11 @@ void AdaptGrid::command(int narg, char **arg)
     grid->type_check();
   }
 
+  // if not before first run,
+  // notify all classes that store per-grid data that grid may have changed
+
+  if (update->first_update) grid->notify_changed();
+
   // if explicit distributed surfs
   // set redistribute timestep and clear custom status flags
 
