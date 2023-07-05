@@ -117,7 +117,7 @@ that the sum of probabilities for all possible reactions is <= 1.0,
 which should normally be the case if reasonable reaction coefficients
 are defined.
 </P>
-<P>For PS reactions, a time counter algorithm is used. Each reaction has
+<P>For PS reactions, a time counter algorithm is used.  Each reaction has
 a time counter <I>tau</I> that is increased by a value of <I>nsync*timestep</I>
 if all the reactants are available.  The rate for each reaction <I>R</I> is
 computed based on the specified reaction rate constants as well as the
@@ -372,7 +372,20 @@ reaction since the beginning of the current run.
 </P>
 <HR>
 
-<P><B>Restrictions:</B> none
+<P><B>Restrictions:</B>
+</P>
+<P>If the following conditions are met:
+</P>
+<UL><LI>this reaction model is assigned to surface elements
+<LI>on-surface PS reactions are defined
+<LI>surface elements are distributed across processors
+<LI>the <A HREF = "fix_balance.html">fix balance</A> or <A HREF = "fix_adapt.html">fix adapt</A> command is used 
+</UL>
+<P>then the timesteps on which balancing or grid adaptation are performed
+must be multiples of <I>Nsync</I>.  This is because surfaces are
+re-assigned to processors due to the change in the grid assignment to
+processors and the per-surface <I>tau</I> values must be upated
+appropriately when that occurs.
 </P>
 <P><B>Related commands:</B>
 </P>
