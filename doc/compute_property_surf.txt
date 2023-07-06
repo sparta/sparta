@@ -17,7 +17,7 @@ property/surf = style name of this compute command :l
 group-ID = group ID for which surface elements to perform calculation on :l
 input = one or more surface element attributes :l
   possible attributes = id, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v2y, v3z, xc, yc, zc, area, normx, normy, normz :pre
-
+  
   id = surface element ID
   v1x,v1y,v1z = coords of first line end point or triangle corner point
   v3x,v2y,v2z = coords of second line end point or triangle corner point
