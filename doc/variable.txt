@@ -53,11 +53,11 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
                      ramp(x,y), stagger(x,y), logfreq(x,y,z), stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
     special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
     particle vectors = mass, type, q, mu, x, y, z, vx, vy, vz
-    compute references = c_ID, c_ID\[i\], c_ID\[i\]\[j\]
-    fix references = f_ID, f_ID\[i\], f_ID\[i\]\[j\]
-    custom attribute references = p_ID, p_ID\[i\], g_ID, g_ID\[i\], s_ID, s_ID\[i\]
-    surface collision model references = sc_ID\[i\]
-    surface reaction model references = sr_ID\[i\]
+    compute references = c_ID, c_ID\[I\], c_ID\[I\]\[J\]
+    fix references = f_ID, f_ID\[I\], f_ID\[I\]\[J\]
+    custom attribute references = p_ID, p_ID\[I\], g_ID, g_ID\[I\], s_ID, s_ID\[I\]
+    surface collision model references = sc_ID\[I\]
+    surface reaction model references = sr_ID\[I\]
     variable references = v_name :pre
 :ule
 
@@ -357,11 +357,11 @@ Math functions: sqrt(x), exp(x), ln(x), log(x), abs(x), sin(x), cos(x), tan(x), 
      stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
 Special functions: sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
 Particle vectors: mass, type, q, mu, x, y, z, vx, vy, vz
-Compute references: c_ID, c_ID\[i\], c_ID\[i\]\[j\]
-Fix references: f_ID, f_ID\[i\], f_ID\[i\]\[j\]
-Custom attribute references = p_ID, p_ID\[i\], g_ID, g_ID\[i\], s_ID, s_ID\[i\]
-Surface collision model references: sc_ID\[i\]
-Surface reaction model references: sr_ID\[i\]
+Compute references: c_ID, c_ID\[I\], c_ID\[I\]\[J\]
+Fix references: f_ID, f_ID\[I\], f_ID\[I\]\[J\]
+Custom attribute references = p_ID, p_ID\[I\], g_ID, g_ID\[I\], s_ID, s_ID\[I\]
+Surface collision model references: sc_ID\[I\]
+Surface reaction model references: sr_ID\[I\]
 Other variables: v_name :tb(s=:)
 
 :line

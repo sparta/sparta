@@ -26,9 +26,9 @@
                       ngrid, nsplit, maxlevel,
 		      vol, lx, ly, lz,
 		      xlo, xhi, ylo, yhi, zlo, zhi,
-		      s_ID[I], r_ID[I],
 		      c_ID, c_ID[I], c_ID[I][J],
                       f_ID, f_ID[I], f_ID[I][J],
+		      sc_ID[I], sr_ID[I],
                       v_name 
 </PRE>
 <PRE>      step = timestep
@@ -56,14 +56,14 @@
       vol = volume of simulation box
       lx,ly,lz = simulation box lengths
       xlo,xhi,ylo,yhi,zlo,zhi = box boundaries,
-      s_ID[I] = Ith component of global vector calculated by a surface collision model with ID
-      r_ID[I] = Ith component of global vector calculated by a surface reaction model with ID
       c_ID = global scalar value calculated by a compute with ID
       c_ID[I] = Ith component of global vector calculated by a compute with ID, I can include wildcard (see below)
       c_ID[I][J] = I,J component of global array calculated by a compute with ID
       f_ID = global scalar value calculated by a fix with ID
       f_ID[I] = Ith component of global vector calculated by a fix with ID, I can include wildcard (see below)
       f_ID[I][J] = I,J component of global array calculated by a fix with ID
+      sc_ID[I] = Ith component of global vector calculated by a surface collision model with ID
+      sr_ID[I] = Ith component of global vector calculated by a surface reaction model with ID
       v_name = scalar value calculated by an equal-style variable with name 
 </PRE>
 
@@ -218,12 +218,6 @@ calculates a global scalar, vector, or array, then the keyword formats
 with 0, 1, or 2 brackets will reference a scalar value from the
 entity.
 </P>
-<P>The <I>s_ID[I]</I> and <I>r_ID[I]</I> keywords allow global values
-calculated by a surface collision model or surface reaction model to
-be output.  As discussed on the <A HREF = "surf_collide.html">surf_collide</A> and
-<A HREF = "surf_react.html">surf_react</A> doc pages, these models both calculate a
-global vector of quantities.
-</P>
 <P>The <I>c_ID</I> and <I>c_ID[I]</I> and <I>c_ID[I][J]</I> keywords allow global
 values calculated by a compute to be output.  As discussed on the
 <A HREF = "compute.html">compute</A> doc page, computes can calculate global,
@@ -244,6 +238,12 @@ values can be referenced in a <A HREF = "variable.html">variable</A> and the
 variable referenced, as discussed below.  See the discussion above for
 how the I in <I>f_ID[I]</I> can be specified with a wildcard asterisk to
 effectively specify multiple values from a global fix vector.
+</P>
+<P>The <I>sc_ID[I]</I> and <I>sr_ID[I]</I> keywords allow global values
+calculated by a surface collision model or surface reaction model to
+be output.  As discussed on the <A HREF = "surf_collide.html">surf_collide</A> and
+<A HREF = "surf_react.html">surf_react</A> doc pages, these models both calculate a
+global vector of quantities.
 </P>
 <P>The <I>v_name</I> keyword allow the current value of a variable to be
 output.  The name in the keyword should be replaced by the variable
