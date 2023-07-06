@@ -161,7 +161,7 @@ void Set::command(int narg, char **arg)
   } else if (mode == GRID) {
     cindex = grid->find_custom(cname);
     if (cindex >= 0) {
-      if (ctype != grid->etype[cindex] ||
+       if (ctype != grid->etype[cindex] ||
 	  csize != grid->esize[cindex])
 	error->all(FLERR,"Set custom attribute does not match "
 		   "already existing custom data");
@@ -231,7 +231,97 @@ void Set::command(int narg, char **arg)
 
 int Set::set_particle(double scalar, double *vector)
 {
+  Particle::OnePart *particles = particle->particles;
+  int *species2species = mixture->species2species;
+  int nlocal = particle->nlocal;
+
+  int *choose;
+  memory->create(choose,nlocal,"set:choose");
+  memset(choose,0,nlocal*sizeof(int));
+
+  int flag;
+
   int count = 0;
+  for (int i = 0; i < nlocal; i++) {
+    if (species2species[particles[i].ispecies] < 0) flag = 0;
+    if (flag && region) {
+      if (!region->inside(particles[i].x)) flag = 0;
+    }
+    if (!flag) continue;
+    
+    choose[i] = 1;
+    count++;
+  }
+ 
+  // set custom values via scalar or vector
+  
+  if (ctype == INT) {
+    int iscalar = static_cast<int> (scalar);
+
+    if (csize == 0) {
+      int *cvector = particle->eivec[particle->ewhich[cindex]];
+      if (vector) {
+	for (int i = 0 ; i < nlocal; i++) {
+	  if (choose[i]) cvector[i] = static_cast<int> (vector[i]);
+	  else cvector[i] = 0;
+	}
+      } else {
+	for (int i = 0 ; i < nlocal; i++) {
+	  if (choose[i]) cvector[i] = iscalar;
+	  else cvector[i] = 0;
+	}
+      }
+      
+    } else {
+      int **carray = particle->eiarray[particle->ewhich[cindex]];
+      ccol--;
+      if (vector) {
+	for (int i = 0 ; i < nlocal; i++) {
+	  if (choose[i]) carray[i][ccol] = static_cast<int> (vector[i]);
+	  else carray[i][ccol] = 0;
+	}
+      } else {
+	for (int i = 0 ; i < nlocal; i++) {
+	  if (choose[i]) carray[i][ccol] = iscalar;
+	  else carray[i][ccol] = 0;
+	}
+      }
+    }
+    
+  } else if (ctype == DOUBLE) {
+    if (csize == 0) {
+      double *cvector = particle->edvec[particle->ewhich[cindex]];
+      if (vector) {
+	for (int i = 0 ; i < nlocal; i++) {
+	  if (choose[i]) cvector[i] = vector[i];
+	  else cvector[i] = 0.0;
+	}
+      } else {
+	for (int i = 0 ; i < nlocal; i++) {
+	  if (choose[i]) cvector[i] = scalar;
+	  else cvector[i] = 0.0;
+	}
+      }
+      
+    } else {
+      double **carray = particle->edarray[particle->ewhich[cindex]];
+      ccol--;
+      if (vector) {
+	for (int i = 0 ; i < nlocal; i++) {
+	  if (choose[i]) carray[i][ccol] = vector[i];
+	  else carray[i][ccol] = 0.0;
+	}
+      } else {
+	for (int i = 0 ; i < nlocal; i++) {
+	  if (choose[i]) carray[i][ccol] = scalar;
+	  else carray[i][ccol] = 0.0;
+	}
+      }
+    }
+  }
+
+  memory->destroy(choose);
+
   return count;
 }
 
@@ -239,7 +329,101 @@ int Set::set_particle(double scalar, double *vector)
 
 int Set::set_grid(double scalar, double *vector)
 {
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
+
+  int *choose;
+  memory->create(choose,nglocal,"set:choose");
+  memset(choose,0,nglocal*sizeof(int));
+
+  int flag;
+  double point[3];
+
   int count = 0;
+  for (int i = 0; i < nglocal; i++) {
+    if (cinfo[i].mask & groupbit) flag = 0;
+    if (flag && region) {
+      point[0] = 0.5 * (cells[i].lo[0] + cells[i].hi[0]);
+      point[1] = 0.5 * (cells[i].lo[1] + cells[i].hi[1]);
+      point[2] = 0.5 * (cells[i].lo[2] + cells[i].hi[2]);
+      if (!region->inside(point)) flag = 0;
+    }
+    if (!flag) continue;
+    
+    choose[i] = 1;
+    count++;
+  }
+ 
+  // set custom values via scalar or vector
+  
+  if (ctype == INT) {
+    int iscalar = static_cast<int> (scalar);
+
+    if (csize == 0) {
+      int *cvector = grid->eivec[grid->ewhich[cindex]];
+      if (vector) {
+	for (int i = 0 ; i < nglocal; i++) {
+	  if (choose[i]) cvector[i] = static_cast<int> (vector[i]);
+	  else cvector[i] = 0;
+	}
+      } else {
+	for (int i = 0 ; i < nglocal; i++) {
+	  if (choose[i]) cvector[i] = iscalar;
+	  else cvector[i] = 0;
+	}
+      }
+      
+    } else {
+      int **carray = grid->eiarray[grid->ewhich[cindex]];
+      ccol--;
+      if (vector) {
+	for (int i = 0 ; i < nglocal; i++) {
+	  if (choose[i]) carray[i][ccol] = static_cast<int> (vector[i]);
+	  else carray[i][ccol] = 0;
+	}
+      } else {
+	for (int i = 0 ; i < nglocal; i++) {
+	  if (choose[i]) carray[i][ccol] = iscalar;
+	  else carray[i][ccol] = 0;
+	}
+      }
+    }
+    
+  } else if (ctype == DOUBLE) {
+    if (csize == 0) {
+      double *cvector = grid->edvec[grid->ewhich[cindex]];
+      if (vector) {
+	for (int i = 0 ; i < nglocal; i++) {
+	  if (choose[i]) cvector[i] = vector[i];
+	  else cvector[i] = 0.0;
+	}
+      } else {
+	for (int i = 0 ; i < nglocal; i++) {
+	  if (choose[i]) cvector[i] = scalar;
+	  else cvector[i] = 0.0;
+	}
+      }
+      
+    } else {
+      double **carray = grid->edarray[grid->ewhich[cindex]];
+      ccol--;
+      if (vector) {
+	for (int i = 0 ; i < nglocal; i++) {
+	  if (choose[i]) carray[i][ccol] = vector[i];
+	  else carray[i][ccol] = 0.0;
+	}
+      } else {
+	for (int i = 0 ; i < nglocal; i++) {
+	  if (choose[i]) carray[i][ccol] = scalar;
+	  else carray[i][ccol] = 0.0;
+	}
+      }
+    }
+  }
+
+  memory->destroy(choose);
+
   return count;
 }
 
