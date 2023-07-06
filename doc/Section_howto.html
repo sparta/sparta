@@ -1673,6 +1673,13 @@ attributes in various ways:
 <LI><A HREF = "variable.html">variable</A> - use a per-surf attribute in a surf-style variable formula
 <LI><A HREF = "write_surf.html">write_surf</A> - write per-surf attributes to a surf data file 
 </UL>
+<P>Per-surf custom attributes can be defined for explicit or
+explicit/distributed surface elements, as set by the <A HREF = "global.html">global
+surfs</A> comand.  But they cannot be used for implicit
+surface elements.  Conceptually, implicit surfaces are defined on a
+per-grid cell basis, so per-grid custom attributes should be used
+instead.
+</P>
 <P>Note that in some cases the name for a custom attribute is specified
 by the user, e.g. for the <A HREF = "read_grid.html">read_grid</A> or
 <A HREF = "read_surf.html">read_surf</A> commands.  In other cases, a command

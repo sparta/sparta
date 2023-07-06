@@ -19,8 +19,8 @@ model = {gs} or {ps} or {gs/ps} :l
   ps = pure-surface reactions
   gs/ps = both gas-surface and pure-surface reactions :pre
 infile(s) = file(s) with list of surface chemistry reactions :l
-  one file for model gs or ps
-  two files for model gs/ps, gs first, ps second :pre
+  one file for model {gs} or {ps}
+  two files for model }gs/ps}, gs file first, ps file second :pre
 Nsync = perform PS reactions and sync across processors every this many timesteps :l
 type = {face} or {surf} :l
   face = domain boundary treated as a surface
@@ -38,10 +38,10 @@ surf_react adsorb gs/ps gs_react.surf ps_react.surf nsync 1 face 300 3e9 O :pre
 [Description:]
 
 Define a model for surface chemistry reactions to perform when
-particles collide with surface elements or the global boundaries of
-the simulation box, which enables the particles to adsorb to the
-surface.  This model also has an option to encode chemical reactions
-that can occur on the surface itself.  
+particles collide with surface elements or the global boundaries
+(faces) of the simulation box, which enables the particles to adsorb
+to the surface.  This model also has an option to encode chemical
+reactions that can occur on the surface itself.
 
 One or more models can be defined and assigned to different surfaces
 or simulation box boundaries via the "surf_modify"_surf_modify.html or
@@ -123,7 +123,7 @@ al.} "(SG18)"_#SG18.
 
 :line
 
-The infile argument(s) specigy one or two filenames which contain a
+The infile argument(s) specify one or two filenames which contain a
 list of GS or PS reactions and their associated parameters.  Two files
 must be specified for the {gs/ps} model: a GS file first and a PS file
 second.
