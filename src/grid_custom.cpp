@@ -119,7 +119,6 @@ int Grid::add_custom(char *name, int type, int size, int ghostflag)
     }
   }
 
-
   if (!ghostflag)
     allocate_custom(index,nlocal);
   else
