@@ -1650,7 +1650,9 @@ user-specified value for the subsequent runs.
 
 The "compute dt/grid"_compute_dt_grid.html command is used to calculate the cell-based timesteps,
 and the "fix dt/reset"_fix_dt_reset.html command uses this data to calculate the global timestep.
-An internal time variable has been added to SPARTA to track elapsed physical time, and this
+An internal time variable has been added to SPARTA to track elapsed simulation time, and this
 time variable as well as the current timestep can be output using the {time} and {dt} keywords
 in the "stats_style"_stats_style.html command. These {time} and {dt} values are also included
 in the "read_restart"_read_restart.html and "write restart"_write_restart.html commands.
+The "fix halt"_fix_halt.html command has been added to enable a run to halt when the simulation
+time reaches a specified value.

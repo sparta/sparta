@@ -1660,9 +1660,11 @@ user-specified value for the subsequent runs.
 </P>
 <P>The <A HREF = "compute_dt_grid.html">compute dt/grid</A> command is used to calculate the cell-based timesteps,
 and the <A HREF = "fix_dt_reset.html">fix dt/reset</A> command uses this data to calculate the global timestep.
-An internal time variable has been added to SPARTA to track elapsed physical time, and this
+An internal time variable has been added to SPARTA to track elapsed simulation time, and this
 time variable as well as the current timestep can be output using the <I>time</I> and <I>dt</I> keywords
 in the <A HREF = "stats_style.html">stats_style</A> command. These <I>time</I> and <I>dt</I> values are also included
 in the <A HREF = "read_restart.html">read_restart</A> and <A HREF = "write_restart.html">write restart</A> commands.
+The <A HREF = "fix_halt.html">fix halt</A> command has been added to enable a run to halt when the simulation
+time reaches a specified value.
 </P>
 </HTML>

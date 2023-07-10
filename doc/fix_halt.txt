@@ -1,0 +1,28 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+fix halt command :h3
+
+[Syntax:]
+
+info goes here
+
+[Examples:]
+
+info goes here
+
+[Restart, output info:]
+
+info goes here
+
+[Related commands:]
+
+info goes here
+
+[Default:] none
+
