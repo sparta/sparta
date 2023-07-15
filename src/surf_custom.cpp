@@ -12,6 +12,8 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+#include "stdlib.h"
+#include "string.h"
 #include "surf.h"
 #include "memory.h"
 #include "error.h"
