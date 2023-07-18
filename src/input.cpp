@@ -1256,6 +1256,7 @@ void Input::dimension()
   domain->dimension = atoi(arg[0]);
   if (domain->dimension != 2 && domain->dimension != 3)
     error->all(FLERR,"Illegal dimension command");
+  surf->dim = domain->dimension;
 }
 
 /* ---------------------------------------------------------------------- */

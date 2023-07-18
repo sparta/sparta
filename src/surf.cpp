@@ -58,7 +58,6 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   distributed = 0;
   surf_collision_check = 1;
   localghost_changed_step = -1;
-  dim = domain->dimension;
   
   gnames = (char **) memory->smalloc(MAXGROUP*sizeof(char *),"surf:gnames");
   bitmask = (int *) memory->smalloc(MAXGROUP*sizeof(int),"surf:bitmask");
@@ -108,14 +107,14 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   
   ncustom_ivec = ncustom_iarray = 0;
   icustom_ivec = icustom_iarray = NULL;
-  eivec = NULL;
-  eiarray = NULL;
+  eivec = eivec_local = NULL;
+  eiarray = eiarray_local = NULL;
   eicol = NULL;
 
   ncustom_dvec = ncustom_darray = 0;
   icustom_dvec = icustom_darray = NULL;
-  edvec = NULL;
-  edarray = NULL;
+  edvec = edvec_local = NULL;
+  edarray = edarray_local = NULL;
   edcol = NULL;
 
   custom_restart_flag = NULL;
@@ -621,15 +620,15 @@ void Surf::add_surfs(int replace, int ncount,
   reallocate_custom();
 
   // offset IDs of new surfs by pre-existing nsurf_old
-  // for both lines/tris and custom data in cvalues
+  // for both new lines/tris and custom data in cvalues
 
   if (dim == 2)
     for (int i = 0; i < ncount; i++)
-      lines[i].id += nsurf_old;
+      newlines[i].id += nsurf_old;
   else
     for (int i = 0; i < ncount; i++)
-      tris[i].id += nsurf_old;
-
+      newtris[i].id += nsurf_old;
+ 
   if (nc) 
     for (int i = 0; i < ncount; i++)
       cvalues[i][0] = ((surfint) ubuf(cvalues[i][0]).i) + nsurf_old;

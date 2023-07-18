@@ -181,6 +181,10 @@ void ReadSurf::command(int narg, char **arg)
   // each file may list Points or not
   // store surfs in distributed fashion in local lines/tris for now
 
+  nsurf = maxsurf = 0;
+  lines = NULL;
+  tris = NULL;
+  
   if (!multiproc) read_single(file);
   else read_multiple(file);
 
@@ -906,7 +910,7 @@ void ReadSurf::read_lines()
   // read and broadcast one CHUNK of lines at a time
 
   int nread = 0;
-
+  
   while (nread < nsurf_file) {
     if (nsurf_file - nread > CHUNK) nchunk = CHUNK;
     else nchunk = nsurf_file - nread;
@@ -1949,8 +1953,6 @@ void ReadSurf::check_bounds()
 {
   int n;
   surfint id;
-  Surf::Line *lines;
-  Surf::Tri *tris;
 
   bigint smin = nsurf;
   bigint smax = 0;
