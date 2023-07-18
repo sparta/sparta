@@ -99,8 +99,8 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
   int proc;
   
   for (int i = 0; i < n; i++) {
-    if (dim == 2) id = lines[i].id;
-    else id = tris[i].id;
+    if (dim == 2) id = newlines[i].id;
+    else id = newtris[i].id;
     if (distributed)
       proc = (id-1) % nprocs;
     else {
@@ -197,7 +197,7 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
   if (nsurf) in_rvous = (char *) &cvalues[0][0];
   nbytes = (1+nvalues_custom) * sizeof(double);
 
-  nout = comm->rendezvous(1,nsurf,in_rvous,nbytes,
+  nout = comm->rendezvous(1,n,in_rvous,nbytes,
 			  0,proclist,rendezvous_redistribute_custom,
 			  0,buf,0,(void *) this);
 

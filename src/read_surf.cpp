@@ -266,10 +266,10 @@ void ReadSurf::command(int narg, char **arg)
 
   if (ncustom) {
     for (int ic = 0; ic < ncustom; ic++) delete [] name_custom[ic];
-    delete [] name_custom;
-    delete [] type_custom;
-    delete [] size_custom;
-    delete [] index_custom;
+    memory->sfree(name_custom);
+    memory->destroy(type_custom);
+    memory->destroy(size_custom);
+    memory->destroy(index_custom);
     memory->destroy(cvalues);
   }
   
@@ -1981,7 +1981,7 @@ void ReadSurf::check_bounds()
     error->all(FLERR,str);
   }
 
-  if (smaxall != nsurf) {
+  if (smaxall != nsurf_all) {
     char str[128];
     sprintf(str,"Read_surf maximum surface ID is " BIGINT_FORMAT,smaxall);
     error->all(FLERR,str);

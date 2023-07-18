@@ -158,20 +158,37 @@ Surf::~Surf()
   memory->destroy(ewhich);
   memory->destroy(size_custom_local);
 
-  for (int i = 0; i < ncustom_ivec; i++) memory->destroy(eivec[i]);
-  for (int i = 0; i < ncustom_iarray; i++) memory->destroy(eiarray[i]);
-  for (int i = 0; i < ncustom_dvec; i++) memory->destroy(edvec[i]);
-  for (int i = 0; i < ncustom_darray; i++) memory->destroy(edarray[i]);
+  for (int i = 0; i < ncustom_ivec; i++) {
+    memory->destroy(eivec[i]);
+    memory->destroy(eivec_local[i]);
+  }
+  for (int i = 0; i < ncustom_iarray; i++) {
+    memory->destroy(eiarray[i]);
+    memory->destroy(eiarray_local[i]);
+  }
+  for (int i = 0; i < ncustom_dvec; i++) {
+    memory->destroy(edvec[i]);
+    memory->destroy(edvec_local[i]);
+  }
+  for (int i = 0; i < ncustom_darray; i++) {
+    memory->destroy(edarray[i]);
+    memory->destroy(edarray_local[i]);
+  }
 
   memory->destroy(icustom_ivec);
   memory->destroy(icustom_iarray);
   memory->sfree(eivec);
+  memory->sfree(eivec_local);
   memory->sfree(eiarray);
+  memory->sfree(eiarray_local);
   memory->destroy(eicol);
+  
   memory->destroy(icustom_dvec);
   memory->destroy(icustom_darray);
   memory->sfree(edvec);
+  memory->sfree(edvec_local);
   memory->sfree(edarray);
+  memory->sfree(edarray_local);
   memory->destroy(edcol);
 
   delete urandom;
@@ -601,22 +618,23 @@ void Surf::add_surfs(int replace, int ncount,
   nsurf += nsurf_new;
 
   int nlocal_old = nlocal;
+
   int nown_old = nown;
-  
+  nown = nsurf / nprocs;
+  if (me < nsurf % nprocs) nown++;
+
   if (!distributed) {
     nlocal += nsurf_new;
     while (nmax < nlocal) nmax += DELTA;
     grow(nlocal_old);
   } else {
-    nown = nsurf / nprocs;
-    if (me < nsurf % nprocs) nown++;
     maxown = nown;
     grow_own(nown_old);
   }
 
   // reallocate data structs for adding new custom values
   // wait unto now b/c nown has now been reset
-  
+
   reallocate_custom();
 
   // offset IDs of new surfs by pre-existing nsurf_old
@@ -631,7 +649,7 @@ void Surf::add_surfs(int replace, int ncount,
  
   if (nc) 
     for (int i = 0; i < ncount; i++)
-      cvalues[i][0] = ((surfint) ubuf(cvalues[i][0]).i) + nsurf_old;
+      cvalues[i][0] = ubuf(((surfint) ubuf(cvalues[i][0]).i) + nsurf_old).d;
 
   // redistribute surfs to correct layout in Surf data structs
   // also checks that new surfs have IDs contiguous from 1 to N
