@@ -161,6 +161,17 @@ void WriteSurf::command(int narg, char **arg)
     } else error->all(FLERR,"Illegal write_surf command");
   }
 
+  // for non-distributed surfs with custom values,
+  //   check if custom data needs to be spread to owned surfs
+
+  if (ncustom && !surf->distributed) {
+    for (int ic = 0; ic < ncustom; ic++) {
+      int index = index_custom[ic];
+      if (surf->estatus[index] == 0)
+        surf->spread_custom(index);
+    }
+  }
+  
   // write file(s)
 
   MPI_Barrier(world);
@@ -922,19 +933,19 @@ void WriteSurf::write_custom(int i)
   for (int ic = 0; ic < ncustom; ic++) {
     if (type_custom[ic] == 0) {
       if (size_custom[ic] == 0) {
-	int *ivector = surf->eivec[surf->ewhich[index_custom[ic]]];
+	int *ivector = surf->eivec_local[surf->ewhich[index_custom[ic]]];
 	fprintf(fp," %d",ivector[i]);
       } else {
-	int **iarray = surf->eiarray[surf->ewhich[index_custom[ic]]];
+	int **iarray = surf->eiarray_local[surf->ewhich[index_custom[ic]]];
 	for (int j = 0; j < size_custom[ic]; j++)
 	  fprintf(fp," %d",iarray[i][j]);
       }
     } else {
       if (size_custom[ic] == 0) {
-	double *dvector = surf->edvec[surf->ewhich[index_custom[ic]]];
+	double *dvector = surf->edvec_local[surf->ewhich[index_custom[ic]]];
 	fprintf(fp," %g",dvector[i]);
       } else {
-	double **darray = surf->edarray[surf->ewhich[index_custom[ic]]];
+	double **darray = surf->edarray_local[surf->ewhich[index_custom[ic]]];
 	for (int j = 0; j < size_custom[ic]; j++)
 	  fprintf(fp," %g",darray[i][j]);
       }

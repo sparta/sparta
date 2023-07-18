@@ -332,7 +332,7 @@ void Surf::spread_custom(int index)
       }
       
       spread_own2local(1,DOUBLE,edvec[ewhich[index]],
-		       &edvec_local[ewhich[index]]);
+		       edvec_local[ewhich[index]]);
       
     } else if (esize[index]) {
       if (nlocal+nghost != size_custom_local[index]) {

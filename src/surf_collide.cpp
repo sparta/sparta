@@ -164,7 +164,7 @@ void SurfCollide::check_tsurf()
 }
 
 /* ----------------------------------------------------------------------
-   recalculate Tsurf values which are dynamics
+   recalculate Tsurf values which are dynamic
    called by Update::setup() and Update::run()
 ---------------------------------------------------------------------- */
 

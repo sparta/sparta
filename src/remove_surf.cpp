@@ -273,5 +273,7 @@ bigint RemoveSurf::remove(int groupbit)
       }
   }
 
+  if (ncustom) memory->destroy(cvalues);
+  
   return ndiscard;
 }

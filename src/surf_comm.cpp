@@ -1291,7 +1291,7 @@ void Surf::spread_own2local_reduce(int n, int type, void *in, void *out)
 	  myvec[mj++] = ivec[ij++];
       }
     }
-    
+
     MPI_Allreduce(myvec,ovec,n*nlocal,MPI_DOUBLE,MPI_SUM,world);
 
     memory->destroy(myvec);
