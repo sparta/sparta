@@ -957,18 +957,23 @@ void ReadSurf::read_lines()
 	  icvalue = 0;
 	  for (ic = 0; ic < ncustom; ic++) {
 	    if (type_custom[ic] == 0) {
-	      if (size_custom[ic] == 0)
-		custom[icvalue++] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-	      else
+	      if (size_custom[ic] == 0) {
+                custom[icvalue++] =
+                  input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+	      } else
 		for (iv = 0; iv < size_custom[ic]; iv++)
-		  custom[icvalue++] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-	    }
-	      if (size_custom[ic] == 0)
-		custom[icvalue++] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-	      else
+		  custom[icvalue++] =
+                    input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+	    } else {
+              if (size_custom[ic] == 0)
+		custom[icvalue++] =
+                  input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+              else
 		for (iv = 0; iv < size_custom[ic]; iv++)
-		  custom[icvalue++] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-	  }
+		  custom[icvalue++] =
+                    input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+            }
+          }
 	}
 
 	if (nread+i % nprocs_file == me_file) {
@@ -1000,16 +1005,20 @@ void ReadSurf::read_lines()
 	  for (ic = 0; ic < ncustom; ic++) {
 	    if (type_custom[ic] == 0) {
 	      if (size_custom[ic] == 0)
-		custom[icvalue++] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+		custom[icvalue++] =
+                  input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
 	      else
 		for (iv = 0; iv < size_custom[ic]; iv++)
-		  custom[icvalue++] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+		  custom[icvalue++] =
+                    input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
 	    }
 	      if (size_custom[ic] == 0)
-		custom[icvalue++] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+		custom[icvalue++] =
+                  input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
 	      else
 		for (iv = 0; iv < size_custom[ic]; iv++)
-		  custom[icvalue++] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+		  custom[icvalue++] =
+                    input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
 	  }
 	}
 
