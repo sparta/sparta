@@ -1188,9 +1188,9 @@ double Variable::evaluate(char *str, Tree **tree)
 
         if (nbracket == 0 && compute->scalar_flag) {
 
-          if (update->first_update == 0)
+          if (!compute->first_init)
             error->all(FLERR,"Variable formula compute cannot be invoked"
-                       " before first run");
+                       " before initialized");
           if (!(compute->invoked_flag & INVOKED_SCALAR)) {
             compute->compute_scalar();
             compute->invoked_flag |= INVOKED_SCALAR;
@@ -1212,9 +1212,9 @@ double Variable::evaluate(char *str, Tree **tree)
           if (index1 > compute->size_vector)
             error->all(FLERR,"Variable formula compute vector "
                        "is accessed out-of-range");
-          if (update->first_update == 0)
+          if (!compute->first_init)
             error->all(FLERR,"Variable formula compute cannot be invoked"
-                       " before first run");
+                       " before initialized");
           if (!(compute->invoked_flag & INVOKED_VECTOR)) {
             compute->compute_vector();
             compute->invoked_flag |= INVOKED_VECTOR;
@@ -1239,9 +1239,9 @@ double Variable::evaluate(char *str, Tree **tree)
           if (index2 > compute->size_array_cols)
             error->all(FLERR,"Variable formula compute array "
                        "is accessed out-of-range");
-          if (update->first_update == 0)
+          if (!compute->first_init)
             error->all(FLERR,"Variable formula compute cannot be invoked"
-                       " before first run");
+                       " before initialized");
           if (!(compute->invoked_flag & INVOKED_ARRAY)) {
             compute->compute_array();
             compute->invoked_flag |= INVOKED_ARRAY;
@@ -1264,9 +1264,9 @@ double Variable::evaluate(char *str, Tree **tree)
           if (tree == NULL || treestyle != PARTICLE)
             error->all(FLERR,"Per-particle compute in "
                        "non particle-style variable formula");
-          if (update->first_update == 0)
+          if (!compute->first_init)
             error->all(FLERR,"Variable formula compute cannot be invoked"
-                       " before first run");
+                       " before initialized");
           if (!(compute->invoked_flag & INVOKED_PER_PARTICLE)) {
             compute->compute_per_particle();
             compute->invoked_flag |= INVOKED_PER_PARTICLE;
@@ -1291,9 +1291,9 @@ double Variable::evaluate(char *str, Tree **tree)
           if (index1 > compute->size_per_particle_cols)
             error->all(FLERR,"Variable formula compute array "
                        "is accessed out-of-range");
-          if (update->first_update == 0)
+          if (!compute->first_init)
             error->all(FLERR,"Variable formula compute cannot be invoked"
-                       " before first run");
+                       " before initialized");
           if (!(compute->invoked_flag & INVOKED_PER_PARTICLE)) {
             compute->compute_per_particle();
             compute->invoked_flag |= INVOKED_PER_PARTICLE;
@@ -1315,9 +1315,9 @@ double Variable::evaluate(char *str, Tree **tree)
           if (tree == NULL || treestyle != GRID)
             error->all(FLERR,"Per-grid compute in "
                        "non grid-style variable formula");
-          if (update->first_update == 0)
+          if (!compute->first_init)
             error->all(FLERR,"Variable formula compute cannot be invoked"
-                       " before first run");
+                       " before initialized");
           if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
             compute->compute_per_grid();
             compute->invoked_flag |= INVOKED_PER_GRID;
@@ -1352,9 +1352,9 @@ double Variable::evaluate(char *str, Tree **tree)
           if (index1 > compute->size_per_grid_cols)
             error->all(FLERR,"Variable formula compute array "
                        "is accessed out-of-range");
-          if (update->first_update == 0)
+          if (!compute->first_init)
             error->all(FLERR,"Variable formula compute cannot be invoked"
-                       " before first run");
+                       " before initialized");
           if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
             compute->compute_per_grid();
             compute->invoked_flag |= INVOKED_PER_GRID;
@@ -1386,9 +1386,9 @@ double Variable::evaluate(char *str, Tree **tree)
           if (tree == NULL || treestyle != SURF)
             error->all(FLERR,"Per-surf compute in "
                        "non surf-style variable formula");
-          if (update->first_update == 0)
+          if (!compute->first_init)
             error->all(FLERR,"Variable formula compute cannot be invoked"
-                       " before first run");
+                       " before initialized");
           if (!(compute->invoked_flag & INVOKED_PER_SURF)) {
             compute->compute_per_surf();
             compute->invoked_flag |= INVOKED_PER_SURF;
@@ -1415,9 +1415,9 @@ double Variable::evaluate(char *str, Tree **tree)
           if (index1 > compute->size_per_surf_cols)
             error->all(FLERR,"Variable formula compute array "
                        "is accessed out-of-range");
-          if (update->first_update == 0)
+          if (!compute->first_init)
             error->all(FLERR,"Variable formula compute cannot be invoked"
-                       " before first run");
+                       " before initialized");
           if (!(compute->invoked_flag & INVOKED_PER_SURF)) {
             compute->compute_per_surf();
             compute->invoked_flag |= INVOKED_PER_SURF;
@@ -3492,9 +3492,9 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
         error->all(FLERR,"Invalid compute ID in variable formula");
       compute = modify->compute[icompute];
       if (index == 0 && compute->vector_flag) {
-        if (update->first_update == 0)
+        if (!compute->first_init)
           error->all(FLERR,"Variable formula compute cannot be invoked"
-                     " before first run");
+                     " before initialized");
         if (!(compute->invoked_flag & INVOKED_VECTOR)) {
           compute->compute_vector();
           compute->invoked_flag |= INVOKED_VECTOR;
@@ -3505,9 +3505,9 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
         if (index > compute->size_array_cols)
           error->all(FLERR,"Variable formula compute array "
                      "is accessed out-of-range");
-        if (update->first_update == 0)
+        if (!compute->first_init)
           error->all(FLERR,"Variable formula compute cannot be invoked"
-                     " before first run");
+                     " before initialized");
         if (!(compute->invoked_flag & INVOKED_ARRAY)) {
           compute->compute_array();
           compute->invoked_flag |= INVOKED_ARRAY;

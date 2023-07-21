@@ -118,6 +118,7 @@ void Modify::init()
 
   for (i = 0; i < ncompute; i++) {
     compute[i]->init();
+    compute[i]->set_init();
     compute[i]->invoked_scalar = -1;
     compute[i]->invoked_vector = -1;
     compute[i]->invoked_array = -1;

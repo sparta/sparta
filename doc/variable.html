@@ -392,10 +392,7 @@ variable can use formula elements that produce either a scalar value
 or a per-surf vector, but not a per-particle or per-grid vector.
 </P>
 <P>The stats keywords allowed in a formula are those defined by the
-<A HREF = "stats_style.html">stats_style custom</A> command.  If a variable is
-evaluated directly in an input script (not during a run), then the
-values accessed by the stats keyword must be current.  See the
-discussion below about "Variable Accuracy".
+<A HREF = "stats_style.html">stats_style custom</A> command.
 </P>
 <HR>
 
@@ -889,7 +886,7 @@ is evaluated later.
 <P><B>Variable Accuracy:</B>
 </P>
 <P>Obviously, SPARTA attempts to evaluate variables containing formulas
-(<I>equal</I> and <I>particle</I> and <I>grid</I> style variables) accurately
+(<I>equal</I>, <I>particle</I>, <I>grid</I>, <I>surf</I> style variables) accurately
 whenever the evaluation is performed.  Depending on what is included
 in the formula, this may require invoking a <A HREF = "compute.html">compute</A>, or
 accessing a value previously calculated by a compute, or accessing a
@@ -899,115 +896,41 @@ pressure induced on a global boundary due to collisions, then these
 quantities need to be tallied during the timesteps on which the
 variable will need the values.
 </P>
-<P>SPARTA keeps track of all of this during a <A HREF = "run.html">run</A>.  An error
-will be generated if you attempt to evaluate a variable on timesteps
-when it cannot produce accurate values.  For example, if a
-<A HREF = "stats_style.html">stats_style custom</A> command prints a variable which
-accesses values stored by a <A HREF = "fix_ave_time.html">fix ave/time</A> command
-and the timesteps on which stats output is generated are not multiples
-of the averaging frequency used in the fix command, then an error will
-occur.
+<P>SPARTA keeps track of all of this as it performs a <A HREF = "run.html">run</A> as
+well as in between simulations.  An error will be generated if you
+attempt to evaluate a variable when SPARTA knows it cannot produce
+accurate values.  For example, if a <A HREF = "stats.html">stats</A> command prints
+a variable which accesses values stored by a <A HREF = "fix_ave_time.html">fix
+ave/time</A> command and the timesteps on which stats
+output is generated are not multiples of the averaging frequency used
+in the fix command, then an error will occur.
 </P>
-<P>An input script can also request variables be evaluated before or
-after or in between runs, e.g. by including them in a
-<A HREF = "print.html">print</A> command.  In this case, if a compute is needed to
-evaluate a variable (either directly or indirectly), SPARTA will not
-invoke the compute, but it will use a value previously calculated by
-the compute, and can do this only if it was invoked on the current
-timestep.  Fixes will always provide a quantity needed by a variable,
-but the quantity may or may not be current.  This leads to one of
-three kinds of behavior:
+<P>However, there are two special cases to be aware of when a variable
+requires invocation of a compute (directly or indirectly).  The first
+is if the variable is evaluated before a <A HREF = "run.html">run</A> command which
+follows the <A HREF = "compute.html">compute</A> command which created that compute.
+In this case, SPARTA will generate an error.  This is because some
+computes require initializations which does not take place unit a run
+is initialized.  One example is the <A HREF = "compute_property_surf.html">compute
+property/surf</A> command which creates a list
+of surface elements in the specified group.  This does not occur until
+a run begins.
 </P>
-<P>(1) The variable may be evaluated accurately.  If it contains
-references to a compute or fix, and these values were calculated on
-the last timestep of a preceeding run, then they will be accessed and
-used by the variable and the result will be accurate.
+<P>The second special case is when a variable that depends on a compute
+is evaluated in between <A HREF = "run.html">run</A> commands.  It is possible for
+other input script commands issued following the previous run, but
+before the variable is evaluated, to change the system.  For example,
+the <A HREF = "remove_surf.html">remove_surf</A> command could be used to remove
+surface elements.  If the variable depends on a <A HREF = "compute_property_surf.html">property/surf
+compute</A>, that compute will not
+re-initialize itself until the next simulation.  Thus it may generate
+an incorrect answer when evaluated.  Note that SPARTA will not
+generate an error in this case; the evaluated variable may simply be
+incorrect.
 </P>
-<P>(2) SPARTA may not be able to evaluate the variable and will generate
-an error message stating so.  For example, if the variable requires a
-quantity from a <A HREF = "compute.html">compute</A> that has not been invoked on
-the current timestep, SPARTA will generate an error.  This means, for
-example, that such a variable cannot be evaluated before the first run
-has occurred.  Likewise, in between runs, a variable containing a
-compute cannot be evaluated unless the compute was invoked on the last
-timestep of the preceding run, e.g. by stats output.
+<P>The way to get around both of these special cases is to perform a
+0-timestep run before evaluating the variable.
 </P>
-<P>One way to get around this problem is to perform a 0-timestep run
-before using the variable.  For example, these commands
-</P>
-<PRE>compute myTemp grid all temp
-variable t equal c_myTemp<B>1</B>
-print "Initial temperature = $t"
-run 1000 
-</PRE>
-<P>will generate an error if the run is the first run specified in the
-input script, because generating a value for the "t" variable requires
-a compute for calculating the temperature to be invoked.
-</P>
-<P>However, this sequence of commands would be fine:
-</P>
-<PRE>compute myTemp grid all temp
-variable t equal c_myTemp<B>1</B>
-run 0
-print "Initial temperature = $t"
-run 1000 
-</PRE>
-<P>The 0-timestep run initializes and invokes various computes, including
-the one for temperature, so that the value it stores is current and
-can be accessed by the variable "t" after the run has completed.  Note
-that a 0-timestep run does not alter the state of the system, so it
-does not change the input state for the 1000-timestep run that
-follows.  Also note that the 0-timestep run must actually use and
-invoke the compute in question (e.g. via <A HREF = "stats_style.html">stats</A> or
-<A HREF = "dump.html">dump</A> output) in order for it to enable the compute to be
-used in a variable after the run.  Thus if you are trying to print a
-variable that uses a compute you have defined, you can insure it is
-invoked on the last timestep of the preceding run by including it in
-stats output.
-</P>
-<P>Unlike computes, <A HREF = "fix.html">fixes</A> will never generate an error if
-their values are accessed by a variable in between runs.  They always
-return some value to the variable.  However, the value may not be what
-you expect if the fix has not yet calculated the quantity of interest
-or it is not current.  For example, the <A HREF = "fix_indent.html">fix indent</A>
-command stores the force on the indenter.  But this is not computed
-until a run is performed.  Thus if a variable attempts to print this
-value before the first run, zeroes will be output.  Again, performing
-a 0-timestep run before printing the variable has the desired effect.
-</P>
-<P>(3) The variable may be evaluated incorrectly.  And SPARTA may have
-no way to detect this has occurred.  Consider the following sequence
-of commands:
-</P>
-<PRE>compute myTemp grid all temp
-variable t equal c_myTemp<B>1</B>
-run 1000
-create_particles all n 10000
-print "Final temperature = $t" 
-</PRE>
-<P>The first run is performed using the current set of particles.  The
-temperature is evaluated on the final timestep and stored by the
-<A HREF = "compute_grid.html">compute grid</A> compute (when invoked by the
-<A HREF = "stats_style.html">stats_style</A> command).  Then new particles are added
-by the <A HREF = "create_particles.html">create_particles</A> command, altering the
-temperature of the system.  When the temperature is printed via the
-"t" variable, SPARTA will use the temperature value stored by the
-<A HREF = "compute_grid.html">compute grid</A> compute, thinking it is current.
-There are many other commands which could alter the state of the
-system between runs, causing a variable to evaluate incorrectly.
-</P>
-<P>The solution to this issue is the same as for case (2) above, namely
-perform a 0-timestep run before the variable is evaluated to insure
-the system is up-to-date.  For example, this sequence of commands
-would print a temperature that reflected the new particles:
-</P>
-<PRE>compute myTemp grid all temp
-variable t equal c_myTemp<B>1</B>
-run 1000
-create_particles all n 10000
-run 0
-print "Final temperature = $t" 
-</PRE>
 <HR>
 
 <P><B>Restrictions:</B>

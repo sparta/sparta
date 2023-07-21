@@ -66,6 +66,7 @@ class Compute : protected Pointers {
   int maxtime;        // max # of entries time list can hold
   bigint *tlist;      // list of timesteps the Compute is called on
 
+  int first_init;         // 0 if init() not yet called, otherwise 1
   int invoked_flag;       // non-zero if invoked or accessed this step, 0 if not
   bigint invoked_scalar;  // last timestep on which compute_scalar() was invoked
   bigint invoked_vector;       // ditto for compute_vector()
@@ -78,7 +79,8 @@ class Compute : protected Pointers {
   Compute(class SPARTA* sparta) : Pointers(sparta) {}
   virtual ~Compute();
   virtual void init() {}
-
+  void set_init();
+  
   virtual double compute_scalar() {return 0.0;}
   virtual void compute_vector() {}
   virtual void compute_array() {}
