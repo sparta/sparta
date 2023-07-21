@@ -342,7 +342,7 @@ int Set::set_grid(double scalar, double *vector)
 
   int count = 0;
   for (int i = 0; i < nglocal; i++) {
-    if (cinfo[i].mask & groupbit) flag = 0;
+    if (!(cinfo[i].mask & groupbit)) flag = 0;
     if (flag && region) {
       point[0] = 0.5 * (cells[i].lo[0] + cells[i].hi[0]);
       point[1] = 0.5 * (cells[i].lo[1] + cells[i].hi[1]);
@@ -464,9 +464,9 @@ int Set::set_surf(double scalar, double *vector)
   for (int i = start ; i < stop; i += skip) {
     flag = 1;
     if (dim == 2) {
-      if (lines[i].mask & groupbit) flag = 0;
+      if (!(lines[i].mask & groupbit)) flag = 0;
     } else {
-      if (tris[i].mask & groupbit) flag = 0;
+      if (!(tris[i].mask & groupbit)) flag = 0;
     }
     if (flag && region) {
       if (dim == 2) {
@@ -482,8 +482,7 @@ int Set::set_surf(double scalar, double *vector)
     }
     if (!flag) continue;
     
-    choose[i] = 1;
-    count++;
+    choose[count++] = 1;
   }
  
   // set custom values via scalar or vector

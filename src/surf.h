@@ -33,7 +33,6 @@ class Surf : protected Pointers {
                             // for assign of collision models to surfs
   bigint localghost_changed_step;  // last timestep expl distributed surfs
                                    // were remapped due to LB or adaptation
-  int dim;                  // domain->dimension;
   
   double bblo[3],bbhi[3];   // bounding box around surfs
   int tally_comm;           // style of comm for surf tallies

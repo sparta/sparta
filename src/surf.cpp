@@ -234,11 +234,10 @@ void Surf::modify_params(int narg, char **arg)
       // NOTE: is this also needed for mylines and mytris?
       // set surf collision model for each surf in surface group
 
-      if (dim == 2) {
+      if (domain->dimension == 2) {
         for (int i = 0; i < nlocal+nghost; i++)
           if (lines[i].mask & groupbit) lines[i].isc = isc;
-      }
-      if (dim == 3) {
+      } else {
         for (int i = 0; i < nlocal+nghost; i++)
           if (tris[i].mask & groupbit) tris[i].isc = isc;
       }
@@ -258,11 +257,10 @@ void Surf::modify_params(int narg, char **arg)
 
       // set surf reaction model for each surf in surface group
 
-      if (dim == 2) {
+      if (domain->dimension == 2) {
         for (int i = 0; i < nlocal+nghost; i++)
           if (lines[i].mask & groupbit) lines[i].isr = isr;
-      }
-      if (dim == 3) {
+      } else {
         for (int i = 0; i < nlocal+nghost; i++)
           if (tris[i].mask & groupbit) tris[i].isr = isr;
       }
@@ -289,11 +287,10 @@ void Surf::init()
   bigint flag,allflag;
 
   flag = 0;
-  if (dim == 2) {
+  if (domain->dimension == 2) {
     for (int i = 0; i < nlocal; i++)
       if (lines[i].type <= 0) flag++;
-  }
-  if (dim == 3) {
+  } else {
     for (int i = 0; i < nlocal; i++)
       if (tris[i].type <= 0) flag++;
   }
@@ -314,11 +311,10 @@ void Surf::init()
 
   if (surf_collision_check) {
     flag = 0;
-    if (dim == 2) {
+    if (domain->dimension == 2) {
       for (int i = 0; i < nlocal+nghost; i++)
         if (lines[i].isc < 0) flag++;
-    }
-    if (dim == 3) {
+    } else {
       for (int i = 0; i < nlocal+nghost; i++)
         if (tris[i].isc < 0) flag++;
     }
@@ -340,11 +336,10 @@ void Surf::init()
 
   if (surf_collision_check) {
     flag = 0;
-    if (dim == 2) {
+    if (domain->dimension == 2) {
       for (int i = 0; i < nlocal+nghost; i++)
         if (lines[i].isr >= 0 && sc[lines[i].isc]->allowreact == 0) flag++;
-    }
-    if (dim == 3) {
+    } else {
       for (int i = 0; i < nlocal+nghost; i++)
         if (tris[i].isr >= 0 && sc[tris[i].isc]->allowreact == 0) flag++;
     }
@@ -366,13 +361,12 @@ void Surf::init()
 
   if (surf_collision_check) {
     flag = 0;
-    if (dim == 2) {
+    if (domain->dimension == 2) {
       for (int i = 0; i < nlocal+nghost; i++) {
         if (!lines[i].transparent) continue;
         if (!sc[lines[i].isc]->transparent) flag++;
       }
-    }
-    if (dim == 3) {
+    } else {
       for (int i = 0; i < nlocal+nghost; i++) {
         if (!tris[i].transparent) continue;
         if (!sc[tris[i].isc]->transparent) flag++;
@@ -640,7 +634,7 @@ void Surf::add_surfs(int replace, int ncount,
   // offset IDs of new surfs by pre-existing nsurf_old
   // for both new lines/tris and custom data in cvalues
 
-  if (dim == 2)
+  if (domain->dimension == 2)
     for (int i = 0; i < ncount; i++)
       newlines[i].id += nsurf_old;
   else
@@ -665,7 +659,7 @@ void Surf::add_surfs(int replace, int ncount,
   if (me == nprocs-1) ncontig = nsurf_new - (nprocs-1)*surfperproc;
 
   int flag = 0;
-  if (dim == 2) {
+  if (domain->dimension == 2) {
     if (!distributed) {
       for (int i = nlocal_old; i < nlocal; i++)
 	if (lines[i].id == 0) flag++;
@@ -733,8 +727,7 @@ int Surf::all_transparent()
   if (domain->dimension == 2) {
     for (int i = 0; i < nlocal; i++)
       if (!lines[i].transparent) flag = 1;
-  }
-  if (domain->dimension == 3) {
+  } else {
     for (int i = 0; i < nlocal; i++)
       if (!tris[i].transparent) flag = 1;
   }
@@ -798,7 +791,7 @@ void Surf::bbox_all()
     bbhi_one[j] = -BIG;
   }
 
-  if (dim == 2) {
+  if (domain->dimension == 2) {
     for (i = istart; i < istop; i += idelta) {
       x = linelist[i].p1;
       for (j = 0; j < 2; j++) {
@@ -814,7 +807,7 @@ void Surf::bbox_all()
     bblo_one[2] = domain->boxlo[2];
     bbhi_one[2] = domain->boxhi[2];
 
-  } else if (dim == 3) {
+  } else {
     for (i = istart; i < istop; i += idelta) {
       x = trilist[i].p1;
       for (j = 0; j < 3; j++) {
@@ -1639,7 +1632,7 @@ void Surf::check_point_inside(int old)
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
 
-  if (dim == 2) {
+  if (domain->dimension == 2) {
     Line *newlines;
     int n;
     if (distributed) {
@@ -1662,7 +1655,7 @@ void Surf::check_point_inside(int old)
           x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
     }
 
-  } else if (dim == 3) {
+  } else {
     Tri *newtris;
     int n;
     if (distributed) {
@@ -1847,7 +1840,7 @@ void Surf::output_extent(int old)
   extent[0][0] = extent[1][0] = extent[2][0] = BIG;
   extent[0][1] = extent[1][1] = extent[2][1] = -BIG;
 
-  if (dim == 2) {
+  if (domain->dimension == 2) {
     Line *newlines;
     int n;
     if (!implicit && distributed) {
@@ -1899,17 +1892,17 @@ void Surf::output_extent(int old)
   extentall[2][0] = -extentall[2][0];
 
   double minlen,minarea;
-  if (dim == 2) minlen = shortest_line(old);
-  if (dim == 3) smallest_tri(old,minlen,minarea);
+  if (domain->dimension == 2) minlen = shortest_line(old);
+  else smallest_tri(old,minlen,minarea);
 
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"  %g %g xlo xhi\n",extentall[0][0],extentall[0][1]);
       fprintf(screen,"  %g %g ylo yhi\n",extentall[1][0],extentall[1][1]);
       fprintf(screen,"  %g %g zlo zhi\n",extentall[2][0],extentall[2][1]);
-      if (dim == 2)
+      if (domain->dimension == 2)
         fprintf(screen,"  %g min line length\n",minlen);
-      if (dim == 3) {
+      else {
         fprintf(screen,"  %g min triangle edge length\n",minlen);
         fprintf(screen,"  %g min triangle area\n",minarea);
       }
@@ -1918,9 +1911,9 @@ void Surf::output_extent(int old)
       fprintf(logfile,"  %g %g xlo xhi\n",extentall[0][0],extentall[0][1]);
       fprintf(logfile,"  %g %g ylo yhi\n",extentall[1][0],extentall[1][1]);
       fprintf(logfile,"  %g %g zlo zhi\n",extentall[2][0],extentall[2][1]);
-      if (dim == 2)
+      if (domain->dimension == 2)
         fprintf(logfile,"  %g min line length\n",minlen);
-      if (dim == 3) {
+      else {
         fprintf(logfile,"  %g min triangle edge length\n",minlen);
         fprintf(logfile,"  %g min triangle area\n",minarea);
       }
@@ -2156,6 +2149,8 @@ void Surf::group(int narg, char **arg)
   int igroup = find_group(arg[0]);
   if (igroup < 0) igroup = add_group(arg[0]);
   int bit = bitmask[igroup];
+
+  int dim = domain->dimension;
 
   // style = type or id
   // add surf to group if matches types/ids or condition

@@ -1011,7 +1011,7 @@ void ReadSurf::read_lines()
 		for (iv = 0; iv < size_custom[ic]; iv++)
 		  custom[icvalue++] =
                     input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-	    }
+	    } else {
 	      if (size_custom[ic] == 0)
 		custom[icvalue++] =
                   input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
@@ -1019,7 +1019,8 @@ void ReadSurf::read_lines()
 		for (iv = 0; iv < size_custom[ic]; iv++)
 		  custom[icvalue++] =
                     input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-	  }
+            }
+          }
 	}
 
 	if ((nread+i) % nprocs_file == me_file) {
@@ -1054,8 +1055,8 @@ void ReadSurf::read_tris()
   // nwords_required = # of words per line
 
   int nwords_required;
-  if (npoint_file) nwords_required = 3;
-  else nwords_required = 5;
+  if (npoint_file) nwords_required = 4;
+  else nwords_required = 10;
   if (typeflag) nwords_required++;
   nwords_required += nvalues_custom;
   double *custom = new double[nvalues_custom];
@@ -1113,19 +1114,24 @@ void ReadSurf::read_tris()
 	  for (ic = 0; ic < ncustom; ic++) {
 	    if (type_custom[ic] == 0) {
 	      if (size_custom[ic] == 0)
-		custom[icvalue++] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+		custom[icvalue++] =
+                  input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
 	      else
 		for (iv = 0; iv < size_custom[ic]; iv++)
-		  custom[icvalue++] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-	    }
-	      if (size_custom[ic] == 0)
-		custom[icvalue++] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+                  custom[icvalue++] =
+                    input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+	    } else {
+              if (size_custom[ic] == 0)
+		custom[icvalue++] =
+                  input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
 	      else
 		for (iv = 0; iv < size_custom[ic]; iv++)
-		  custom[icvalue++] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+		  custom[icvalue++] =
+                    input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+            }
 	  }
 	}
-
+        
 	if (nread+i % nprocs_file == me_file) {
 	  add_tri(id,type,pts[p1-1].x,pts[p2-1].x,pts[p3-1].x);
 	  if (ncustom) add_custom(id,custom);
@@ -1164,13 +1170,14 @@ void ReadSurf::read_tris()
 	      else
 		for (iv = 0; iv < size_custom[ic]; iv++)
 		  custom[icvalue++] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-	    }
+	    } else {
 	      if (size_custom[ic] == 0)
 		custom[icvalue++] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
 	      else
 		for (iv = 0; iv < size_custom[ic]; iv++)
 		  custom[icvalue++] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-	  }
+            }
+          }
 	}
 
 	if ((nread+i) % nprocs_file == me_file) {

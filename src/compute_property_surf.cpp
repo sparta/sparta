@@ -184,11 +184,11 @@ void ComputePropertySurf::init()
     if (dimension == 2) {
       if (!distributed) m = me + i*nprocs;
       else m = i;
-      if (lines[m].mask & groupbit) cglobal[nchoose] = m;
+      if (lines[m].mask & groupbit) cglobal[nchoose++] = m;
     } else {
       if (!distributed) m = me + i*nprocs;
       else m = i;
-      if (tris[m].mask & groupbit) cglobal[nchoose] = m;
+      if (tris[m].mask & groupbit) cglobal[nchoose++] = m;
     }
   }
 }
@@ -232,7 +232,7 @@ bigint ComputePropertySurf::memory_usage()
 void ComputePropertySurf::pack_id(int n)
 {
   int m;
-  
+
   if (dimension == 2) {
     Surf::Line *lines;
     if (distributed) lines = surf->mylines;

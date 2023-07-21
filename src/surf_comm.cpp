@@ -51,6 +51,8 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
 			      int nc, int *index_custom, double **cvalues,
 			      bigint nsurf_new, bigint nsurf_old)
 {
+  int dim = domain->dimension;
+  
   int nbytes;
   if (dim == 2) nbytes = sizeof(Line);
   else nbytes = sizeof(Tri);
@@ -219,10 +221,10 @@ int Surf::rendezvous_redistribute_surfs(int n, char *inbuf, int &flag,
   
   int me = sptr->me;
   int nprocs = sptr->nprocs;
-  int dim = sptr->dim;
   int distributed = sptr->distributed;
   Line *mylines = sptr->mylines;
   Tri *mytris = sptr->mytris;
+  int dim = sptr->domain->dimension;
 
   // Surf class variables peculiar to this rendevous operation
   
@@ -405,6 +407,7 @@ void Surf::compress_explicit()
   // convert grid cell csurfs to surf IDs so can reset after surf compression
   // skip cells with no surfs or sub-cells
 
+  int dim = domain->dimension;
   Grid::ChildCell *cells = grid->cells;
   int nglocal = grid->nlocal;
 
@@ -1309,6 +1312,7 @@ void Surf::spread_own2local_rendezvous(int n, int type, void *in, void *out)
 
   // allocate memory for rvous input
 
+  int dim = domain->dimension;
   int nall = nlocal + nghost;
 
   int *proclist;
@@ -1508,6 +1512,7 @@ void Surf::assign_unique()
   // proclist = owner of each surf
   // inbuf = 3 ints per request = me, my index, index on owning proc
 
+  int dim = domain->dimension;
   surfint surfID;
   
   for (i = 0; i < nlocal; i++) {
