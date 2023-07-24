@@ -404,8 +404,65 @@ void Surf::spread_inverse_custom(int index)
 
 int Surf::extract_custom(double **&cvalues)
 {
-  memory->create(cvalues,nown,2,"surf:cvalues");
-  return 2;
+  int i,j;
+  
+  // nvalues_custom = # of values per surf
+  
+  int nvalues_custom = 0;
+  for (int ic = 0; ic < ncustom; ic++) {
+    if (ename[ic] == NULL) continue;
+    if (esize[ic] == 0) nvalues_custom++;
+    else nvalues_custom += esize[ic];
+  }
+
+  memory->create(cvalues,nown,1+nvalues_custom,"surf:cvalues");
+
+  // fill cvalues with surf ID + per-surf values
+
+  surfint id;
+
+  for (i = 0; i < nown; i++) {
+    id = (surfint) i * nprocs + me;
+    cvalues[i][0] = ubuf(id).d;
+  }
+
+  int m = 1;
+  for (int ic = 0; ic < ncustom; ic++) {
+    if (ename[ic] == NULL) continue;
+
+    if (etype[ic] == INT) {
+      if (esize[ic] == 0) {
+        int *ivector = eivec[ewhich[ic]];
+        for (i = 0; i < nown; i++)
+          cvalues[i][m] = ubuf(ivector[i]).d;
+        m++;
+      } else {
+        int **iarray = eiarray[ewhich[ic]];
+        int n = esize[ic];
+        for (i = 0; i < nown; i++)
+          for (j = 0; j < n; j++)
+            cvalues[i][m+j] = ubuf(iarray[i][j]).d;
+        m += esize[ic];
+      }
+      
+    } else if (etype[ic] == DOUBLE) {
+      if (esize[ic] == 0) {
+        double *dvector = edvec[ewhich[ic]];
+        for (i = 0; i < nown; i++)
+          cvalues[i][m] = dvector[i];
+        m++;
+      } else {
+        double **darray = edarray[ewhich[ic]];
+        int n = esize[ic];
+        for (i = 0; i < nown; i++)
+          for (j = 0; j < n; j++)
+            cvalues[i][m+j] = darray[i][j];
+        m += esize[ic];
+      }
+    }
+  }
+  
+  return nvalues_custom;
 }
 
 /* ----------------------------------------------------------------------

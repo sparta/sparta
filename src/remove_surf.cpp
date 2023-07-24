@@ -273,6 +273,8 @@ bigint RemoveSurf::remove(int groupbit)
       }
   }
 
+  // clean up from call to surf->extract_custom()
+  
   if (ncustom) memory->destroy(cvalues);
   
   return ndiscard;
