@@ -165,7 +165,7 @@ void Set::command(int narg, char **arg)
 	  csize != grid->esize[cindex])
 	error->all(FLERR,"Set custom attribute does not match "
 		   "already existing custom data");
-    } else cindex = grid->add_custom(cname,ctype,csize,0);
+    } else cindex = grid->add_custom(cname,ctype,csize);
   } else if (mode == SURF) {
     cindex = surf->find_custom(cname);
     if (cindex >= 0) {

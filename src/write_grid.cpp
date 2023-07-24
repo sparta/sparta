@@ -97,6 +97,14 @@ void WriteGrid::command(int narg, char **arg)
 
   if (me == 0) fclose(fp);
 
+  // clean up custom data
+
+  if (ncustom) {
+    memory->destroy(index_custom);
+    memory->destroy(type_custom);
+    memory->destroy(size_custom);
+  }
+  
   // stats
 
   MPI_Barrier(world);
@@ -153,7 +161,7 @@ void WriteGrid::write()
   int nme = grid->nunsplitlocal + grid->nsplitlocal;
 
   // allocate memory for max of nme in idbuf and cbuf
-  // nvalues_custom = # of custom values per surf
+  // nvalues_custom = # of custom values per grid cell
 
   int nmax;
   MPI_Allreduce(&nme,&nmax,1,MPI_INT,MPI_MAX,world);
@@ -240,19 +248,19 @@ void WriteGrid::pack_custom(int i, double *vec)
   for (int ic = 0; ic < ncustom; ic++) {
     if (type_custom[ic] == 0) {
       if (size_custom[ic] == 0) {
-	int *ivector = surf->eivec[surf->ewhich[index_custom[ic]]];
+	int *ivector = grid->eivec[grid->ewhich[index_custom[ic]]];
 	vec[m++] = ivector[i];
       } else {
-	int **iarray = surf->eiarray[surf->ewhich[index_custom[ic]]];
+	int **iarray = grid->eiarray[grid->ewhich[index_custom[ic]]];
 	for (int j = 0; j < size_custom[ic]; j++)
 	  vec[m++] = iarray[i][j];
       }
     } else {
       if (size_custom[ic] == 0) {
-	double *dvector = surf->edvec[surf->ewhich[index_custom[ic]]];
+	double *dvector = grid->edvec[grid->ewhich[index_custom[ic]]];
 	vec[m++] = dvector[i];
       } else {
-	double **darray = surf->edarray[surf->ewhich[index_custom[ic]]];
+	double **darray = grid->edarray[grid->ewhich[index_custom[ic]]];
 	for (int j = 0; j < size_custom[ic]; j++)
 	  vec[m++] = darray[i][j];
       }

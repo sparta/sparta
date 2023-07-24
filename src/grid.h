@@ -269,16 +269,16 @@ class Grid : protected Pointers {
   // grid_custom.cpp
 
   int find_custom(char *);
-  int add_custom(char *, int, int, int);
-  void allocate_custom(int, int);
+  int add_custom(char *, int, int);
+  void allocate_custom(int);
   void reallocate_custom(int, int);
   void remove_custom(int);
-
+  void copy_custom(int, int);
+  
   void write_restart_custom(FILE *);
   void read_restart_custom(FILE *);
-  void pack_custom(int, char *);
-  void unpack_custom(char *, int);
-  int sizeof_custom();
+  int pack_custom(int, char *, int);
+  int unpack_custom(char *, int);
 
   // grid_surf.cpp
 
@@ -366,10 +366,7 @@ class Grid : protected Pointers {
   int *icustom_darray;      // index into ncustom for each double array
   int *edcol;               // # of columns in each double array (esize)
 
-  int *custom_ghost_flag;   // flag on each custom vec/arr for owned+ghost or not
   int *custom_restart_flag; // flag on each custom vec/array read from restart
-
-  int nbytes_custom;        // size of packed custom values for one grid cell
 
   // connection between one of my cells and a neighbor cell on another proc
 

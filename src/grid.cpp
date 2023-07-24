@@ -147,7 +147,6 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   edarray = NULL;
   edcol = NULL;
 
-  custom_ghost_flag = NULL;
   custom_restart_flag = NULL;
 
   cut2d = NULL;
@@ -184,16 +183,27 @@ Grid::~Grid()
   delete csubs;
   delete hash;
 
+  for (int i = 0; i < ncustom; i++) delete [] ename[i];
   memory->sfree(ename);
   memory->destroy(etype);
   memory->destroy(esize);
   memory->destroy(ewhich);
+
+  for (int i = 0; i < ncustom_ivec; i++)
+    memory->destroy(eivec[i]);
+  for (int i = 0; i < ncustom_iarray; i++)
+    memory->destroy(eiarray[i]);
+  for (int i = 0; i < ncustom_dvec; i++)
+    memory->destroy(edvec[i]);
+  for (int i = 0; i < ncustom_darray; i++)
+    memory->destroy(edarray[i]);
 
   memory->destroy(icustom_ivec);
   memory->destroy(icustom_iarray);
   memory->sfree(eivec);
   memory->sfree(eiarray);
   memory->destroy(eicol);
+  
   memory->destroy(icustom_dvec);
   memory->destroy(icustom_darray);
   memory->sfree(edvec);
@@ -244,8 +254,6 @@ void Grid::remove()
 
 void Grid::init()
 {
-  nbytes_custom = sizeof_custom();
-
   ncustom_particle = particle->ncustom;
   nbytes_particle = sizeof(Particle::OnePart);
   nbytes_particle_custom = particle->sizeof_custom();
@@ -498,7 +506,7 @@ void Grid::acquire_ghosts_all(int surfflag)
 
   nghost_new -= nlocal;
   grow_cells(nghost_new,0);
-
+  
   // create buf for holding all of my cells, not including sub cells
 
   bigint bsendsize = 0;
@@ -2008,7 +2016,8 @@ void Grid::weight_one(int icell)
 ///////////////////////////////////////////////////////////////////////////
 
 /* ----------------------------------------------------------------------
-   insure cells and cinfo can hold N and M new cells respectively
+   ensure cells and cinfo can hold N and M new cells respectively
+   if custom data exists, ensure custom vecs/array can hold N new cells
 ------------------------------------------------------------------------- */
 
 void Grid::grow_cells(int n, int m)
@@ -2020,6 +2029,7 @@ void Grid::grow_cells(int n, int m)
       memory->srealloc(cells,maxcell*sizeof(ChildCell),"grid:cells",
                        SPARTA_GET_ALIGN(ChildCell));
     memset(&cells[oldmax],0,(maxcell-oldmax)*sizeof(ChildCell));
+    if (ncustom) reallocate_custom(oldmax,maxcell);
   }
 
   if (nlocal+m >= maxlocal) {

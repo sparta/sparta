@@ -819,7 +819,7 @@ void DumpGrid::pack_custom(int n)
       }
     } else {
       int icol = argindex[n]-1;
-      double **array = grid->edarray[particle->ewhich[index]];
+      double **array = grid->edarray[grid->ewhich[index]];
       for (int i = 0; i < ncpart; i++) {
         buf[n] = array[cpart[i]][icol];
         n += size_one;

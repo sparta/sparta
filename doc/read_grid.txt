@@ -15,17 +15,16 @@ read_grid filename keyword args ... :pre
 filename = name of grid file :ulb,l
 zero or more keyword/args pairs may be appended :l
 keyword = {custom} :l
-  {custom} args = name datatype Nc ghost
+  {custom} args = name datatype Nc
     name = name of custom per-grid vector or array
     datatype = {int} or {float} = for integer or floating point values
-    Nc = 0 for a vector (single value), Nc >= 1 for an array (one or more values)
-    ghost = {yes} or {no} = for storage of custom values with ghost cells :pre
+    Nc = 0 for a vector (single value), Nc >= 1 for an array (one or more values) :pre
 :ule
 
 [Examples:]
 
 read_grid data.grid
-read_grid data.grid custom temperature double 0 yes :pre
+read_grid data.grid custom temperature double 0 :pre
 
 [Description:]
 
@@ -72,9 +71,7 @@ array.  The {datatytpe} argument is {int} or {float} which determines
 whether the vector/array stores integer or floating point values.  The
 {Nc} argument is 0 for a per-surgrid vector and an integer >= 1 for an
 array with {Nc} columns.  A per-grid vector stores a single value per
-grid cell; a per-grid array stores Nc values per grid cell.  The final
-{ghost} argument is {yes} or {no} for whether the custom values are
-stored for ghost cells or only for owned cells.
+grid cell; a per-grid array stores Nc values per grid cell.
 
 Each use of the {custom} keyword determines how many values are
 appended for each line following the grid cell ID.  For a custom
@@ -84,7 +81,7 @@ vectors or arrays in the order the {custom} keywords are specified.
 For example, for this read_grid command, 4 custom values should be
 added to the end of each line in the Cells section of the input file:
 
-read_grid grid.data custom temperature float 0 yes custom flags int 3 no :pre
+read_grid grid.data custom temperature float 0 custom flags int 3 :pre
 
 The first floating-point value will be the temperature, the next 3
 integers will be flags.
