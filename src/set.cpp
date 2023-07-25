@@ -243,6 +243,7 @@ int Set::set_particle(double scalar, double *vector)
 
   int count = 0;
   for (int i = 0; i < nlocal; i++) {
+    flag = 1;
     if (species2species[particles[i].ispecies] < 0) flag = 0;
     if (flag && region) {
       if (!region->inside(particles[i].x)) flag = 0;
@@ -342,6 +343,7 @@ int Set::set_grid(double scalar, double *vector)
 
   int count = 0;
   for (int i = 0; i < nglocal; i++) {
+    flag = 1;
     if (!(cinfo[i].mask & groupbit)) flag = 0;
     if (flag && region) {
       point[0] = 0.5 * (cells[i].lo[0] + cells[i].hi[0]);

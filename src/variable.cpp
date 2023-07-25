@@ -3662,7 +3662,7 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
    check if word matches a particle vector
    return 1 if yes, else 0
    customize by adding a particle vector:
-     x,y,z,vx,vy,vz,type,mass,q,mu
+     id,x,y,z,vx,vy,vz,type,mass,q,mu
 ------------------------------------------------------------------------- */
 
 int Variable::is_particle_vector(char *word)
@@ -3673,6 +3673,7 @@ int Variable::is_particle_vector(char *word)
   if (strcmp(word,"vx") == 0) return 1;
   if (strcmp(word,"vy") == 0) return 1;
   if (strcmp(word,"vz") == 0) return 1;
+  if (strcmp(word,"id") == 0) return 1;
   if (strcmp(word,"type") == 0) return 1;
   if (strcmp(word,"mass") == 0) return 1;
   if (strcmp(word,"q") == 0) return 1;
@@ -3685,7 +3686,7 @@ int Variable::is_particle_vector(char *word)
    push result onto tree
    word = particle vector
    customize by adding a particle vector:
-     x,y,z,vx,vy,vz,type,mass,q,mu
+     id,x,y,z,vx,vy,vz,type,mass,q,mu
 ------------------------------------------------------------------------- */
 
 void Variable::particle_vector(char *word, Tree **tree,
@@ -3716,7 +3717,10 @@ void Variable::particle_vector(char *word, Tree **tree,
   else if (strcmp(word,"vz") == 0)
     newtree->carray = (char *) &particles[0].v[2];
 
-  else if (strcmp(word,"type") == 0) {
+  else if (strcmp(word,"id") == 0) {
+    newtree->type = PARTARRAYINT;
+    newtree->carray = (char *) &particles[0].id;
+  } else if (strcmp(word,"type") == 0) {
     newtree->type = PARTARRAYINT;
     newtree->carray = (char *) &particles[0].ispecies;
   } else if (strcmp(word,"mass") == 0) {
