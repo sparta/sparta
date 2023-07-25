@@ -51,7 +51,7 @@ int Grid::pack_one(int icell, char *buf,
   ptr += sizeof(ChildCell);
   ptr = ROUNDUP(ptr);
 
-  // pack any custom grid data
+  // pack custom grid data
 
   if (ncustom) {
     ptr += pack_custom(icell,ptr,memflag);
@@ -213,7 +213,7 @@ int Grid::unpack_one(char *buf,
     cells[icell].ilocal = icell;
   }
 
-  // pack any custom grid data
+  // pack custom grid data
 
   if (ncustom) {
     ptr += unpack_custom(ptr,icell);
@@ -714,7 +714,7 @@ void Grid::compress()
       if (icell != nlocal) {
         memcpy(&cells[nlocal],&cells[icell],sizeof(ChildCell));
         memcpy(&cinfo[nlocal],&cinfo[icell],sizeof(ChildInfo));
-        if (ncustom) copy_custom(nlocal,icell);
+        if (ncustom) copy_custom(icell,nlocal);
         if (collide) collide->copy_grid_one(icell,nlocal);
         if (modify->n_pergrid) modify->copy_grid_one(icell,nlocal);
       }
@@ -765,7 +765,7 @@ void Grid::compress()
       if (icell != nlocal) {
         memcpy(&cells[nlocal],&cells[icell],sizeof(ChildCell));
         memcpy(&cinfo[nlocal],&cinfo[icell],sizeof(ChildInfo));
-        if (ncustom) copy_custom(nlocal,icell);
+        if (ncustom) copy_custom(icell,nlocal);
         if (collide) collide->copy_grid_one(icell,nlocal);
         if (modify->n_pergrid) modify->copy_grid_one(icell,nlocal);
       }

@@ -199,7 +199,7 @@ void WriteGrid::write()
       m++;
     }
   }
-  
+
   // write out cell IDs and custom values from all procs
 
   if (me == 0) {
@@ -211,8 +211,8 @@ void WriteGrid::write()
 			       iproc,0,world,&crequest);
         MPI_Send(&tmp,0,MPI_INT,iproc,0,world);
         MPI_Wait(&request,&status);
-	if (ncustom) MPI_Wait(&crequest,&cstatus);
         MPI_Get_count(&status,MPI_SPARTA_BIGINT,&nlines);
+	if (ncustom) MPI_Wait(&crequest,&cstatus);
       } else nlines = nme;
 
       for (i = 0; i < nlines; i++) {
@@ -226,7 +226,7 @@ void WriteGrid::write()
     MPI_Recv(&tmp,0,MPI_INT,0,0,world,&status);
     MPI_Rsend(idbuf,nme,MPI_SPARTA_BIGINT,0,0,world);
     if (ncustom) {
-      if (nme) MPI_Rsend(&cbuf[0][0],nme,MPI_DOUBLE,0,0,world);
+      if (nme) MPI_Rsend(&cbuf[0][0],nme*nvalues_custom,MPI_DOUBLE,0,0,world);
       else MPI_Rsend(NULL,nme,MPI_DOUBLE,0,0,world);
     }
   }
