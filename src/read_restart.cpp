@@ -181,7 +181,7 @@ void ReadRestart::command(int narg, char **arg)
   // same proc count in file and current simulation
   // each proc will own exactly what it owned in previous run
   // proc 0 reads a chunk and sends it to owning proc
-  // except skips its own chunk, then reads it at end
+  // except skips its own chunk, then reads it again at end
   // each proc:
   //   creates its grid cells from cell IDs
   //   assigns all particles to its cells
@@ -1232,7 +1232,11 @@ void ReadRestart::create_child_cells(int skipflag)
   cellint *ids = grid->id_restart;
   int *levels = grid->level_restart;
   int *nsplits = grid->nsplit_restart;
+  char *cvalues = grid->cvalues_restart;
 
+  int ncustom = grid->ncustom;
+  int csize = grid->sizeof_custom();
+    
   for (int i = 0; i < nlocal; i++) {
     id = ids[i];
     level = levels[i];
@@ -1249,8 +1253,10 @@ void ReadRestart::create_child_cells(int skipflag)
       grid->id_lohi(id,level,boxlo,boxhi,lo,hi);
       grid->add_child_cell(id,level,lo,hi);
       icell = grid->nlocal - 1;
+      if (ncustom) grid->unpack_custom(&cvalues[i*csize],icell);
       (*hash)[id] = icell;
       grid->cells[icell].nsplit = nsplit;
+
       if (nsplit > 1) {
         grid->nunsplitlocal--;
         grid->add_split_cell(1);
@@ -1270,6 +1276,7 @@ void ReadRestart::create_child_cells(int skipflag)
       index = (*hash)[id];
       grid->add_sub_cell(index,1);
       icell = grid->nlocal - 1;
+      if (ncustom) grid->unpack_custom(&cvalues[i*csize],icell);
       grid->cells[icell].nsplit = nsplit;
       isplit = grid->cells[icell].isplit;
       grid->sinfo[isplit].csubs[-nsplit] = icell;
@@ -1281,6 +1288,7 @@ void ReadRestart::create_child_cells(int skipflag)
   memory->destroy(grid->id_restart);
   memory->destroy(grid->level_restart);
   memory->destroy(grid->nsplit_restart);
+  memory->destroy(grid->cvalues_restart);
 }
 
 /* ----------------------------------------------------------------------

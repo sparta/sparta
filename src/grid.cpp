@@ -147,8 +147,6 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   edarray = NULL;
   edcol = NULL;
 
-  custom_restart_flag = NULL;
-
   cut2d = NULL;
   cut3d = NULL;
   
@@ -258,18 +256,6 @@ void Grid::init()
   nbytes_particle = sizeof(Particle::OnePart);
   nbytes_particle_custom = particle->sizeof_custom();
   nbytes_particle_total = nbytes_particle + nbytes_particle_custom;
-
-  // if first run after reading a restart file,
-  // delete any custom grid attributes that have not been re-defined
-  // use nactive since remove_custom() may alter ncustom
-
-  if (custom_restart_flag) {
-    int nactive = ncustom;
-    for (int i = 0; i < nactive; i++)
-      if (custom_restart_flag[i] == 0) remove_custom(i);
-    delete [] custom_restart_flag;
-    custom_restart_flag = NULL;
-  }
 }
 
 /* ----------------------------------------------------------------------
@@ -2499,7 +2485,7 @@ void Grid::read_restart(FILE *fp)
 /* ----------------------------------------------------------------------
    return size of child grid restart info for this proc
    using count of all owned cells
-  // NOTE: worry about N overflowing int, and in IROUNDUP ???
+   NOTE: worry about N overflowing int, and in IROUNDUP ???
 ------------------------------------------------------------------------- */
 
 int Grid::size_restart()
@@ -2512,6 +2498,7 @@ int Grid::size_restart()
   n = IROUNDUP(n);
   n += nlocal * sizeof(int);
   n = IROUNDUP(n);
+  n += nlocal * sizeof_custom();
   return n;
 }
 
@@ -2530,6 +2517,7 @@ int Grid::size_restart(int nlocal_restart)
   n = IROUNDUP(n);
   n += nlocal_restart * sizeof(int);
   n = IROUNDUP(n);
+  n += nlocal_restart * sizeof_custom();
   return n;
 }
 
@@ -2537,7 +2525,9 @@ int Grid::size_restart(int nlocal_restart)
    pack my child grid info into buf
    nlocal, clumped as scalars
    ID, level, nsplit as vectors for all owned cells
-   // NOTE: worry about N overflowing int, and in IROUNDUP ???
+   custom data as ints and doubles
+   return n = # of packed bytes
+   NOTE: worry about N overflowing int, and in IROUNDUP ???
 ------------------------------------------------------------------------- */
 
 int Grid::pack_restart(char *buf)
@@ -2568,6 +2558,11 @@ int Grid::pack_restart(char *buf)
   n += nlocal * sizeof(int);
   n = IROUNDUP(n);
 
+  if (ncustom) {
+    for (int i = 0; i < nlocal; i++)
+      n += pack_custom(i,&buf[n],1);
+  }
+
   return n;
 }
 
@@ -2575,13 +2570,15 @@ int Grid::pack_restart(char *buf)
    unpack child grid info into restart storage
    nlocal_restart, clumped as scalars
    id_restart, nsplit_restart as vectors
+   NOTE ?? custom data as ints and doubles
    allocate vectors here, will be deallocated by ReadRestart
 ------------------------------------------------------------------------- */
 
 int Grid::unpack_restart(char *buf)
 {
   int n;
-
+  int csize = sizeof_custom();
+  
   int *ibuf = (int *) buf;
   nlocal_restart = ibuf[0];
   clumped = ibuf[1];
@@ -2591,6 +2588,9 @@ int Grid::unpack_restart(char *buf)
   memory->create(id_restart,nlocal_restart,"grid:id_restart");
   memory->create(level_restart,nlocal_restart,"grid:nlevel_restart");
   memory->create(nsplit_restart,nlocal_restart,"grid:nsplit_restart");
+  cvalues_restart = NULL;
+  if (ncustom)
+    memory->create(cvalues_restart,nlocal_restart*csize,"grid::cvalues_restart");
 
   cellint *cbuf = (cellint *) &buf[n];
   for (int i = 0; i < nlocal_restart; i++)
@@ -2610,6 +2610,13 @@ int Grid::unpack_restart(char *buf)
   n += nlocal_restart * sizeof(int);
   n = IROUNDUP(n);
 
+  if (ncustom) {
+    for (int i = 0; i < nlocal_restart; i++) {
+      memcpy(&cvalues_restart[i*csize],&buf[n],csize);
+      n += csize;
+    }
+  }
+  
   return n;
 }
 

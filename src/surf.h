@@ -306,10 +306,6 @@ class Surf : protected Pointers {
   int *icustom_darray;      // index into ncustom for each double array
   int *edcol;               // # of columns in each double array (esize)
 
-  int *custom_restart_flag; // flag on each custom vec/array read from restart
-                            // used to delete them if not redefined in
-                            // restart script
-
   // redezvous operation data and callback info
   
   // redistribute_surfs rendezvous

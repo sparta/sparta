@@ -37,7 +37,7 @@ int Surf::find_custom(char *name)
 
 /* ----------------------------------------------------------------------
    add a custom attribute with name
-   assumes name does not already exist, except in case of restart
+   assumes name does not already exist, else error
    type = 0/1 for int/double
    size = 0 for vector, size > 0 for array with size columns
    return index of its location
@@ -47,17 +47,11 @@ int Surf::add_custom(char *name, int type, int size)
 {
   int index;
 
-  // if name already exists
-  // just return index if a restart script and re-defining the name
-  // else error
+  // error if name already exists
 
   index = find_custom(name);
-  if (index >= 0) {
-    if (custom_restart_flag == NULL || custom_restart_flag[index] == 1)
-      error->all(FLERR,"Custom surf attribute name already exists");
-    custom_restart_flag[index] = 1;
-    return index;
-  }
+  if (index >= 0)
+    error->all(FLERR,"Custom surf attribute name already exists");
 
   // ensure all existing custom data is correct current length
 
@@ -549,19 +543,13 @@ void Surf::read_restart_custom(FILE *fp)
     if (me == 0) tmp = fread(name,sizeof(char),n,fp);
     MPI_Bcast(name,n,MPI_CHAR,0,world);
     if (me == 0) tmp = fread(&type,sizeof(int),1,fp);
-    MPI_Bcast(&type,n,MPI_CHAR,0,world);
+    MPI_Bcast(&type,1,MPI_INT,0,world);
     if (me == 0) tmp = fread(&size,sizeof(int),1,fp);
-    MPI_Bcast(&size,n,MPI_CHAR,0,world);
+    MPI_Bcast(&size,1,MPI_INT,0,world);
 
     // create the custom attribute
 
     add_custom(name,type,size);
     delete [] name;
   }
-
-  // set flag for each newly created custom attribute to 0
-  // will be reset to 1 if restart script redefines attribute with same name
-
-  custom_restart_flag = new int[ncustom];
-  for (int i = 0; i < ncustom; i++) custom_restart_flag[i] = 0;
 }

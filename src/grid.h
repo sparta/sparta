@@ -209,7 +209,8 @@ class Grid : protected Pointers {
   int nlocal_restart;
   cellint *id_restart;
   int *level_restart,*nsplit_restart;
-
+  char *cvalues_restart;
+  
   // methods
 
   Grid(class SPARTA *);
@@ -277,6 +278,7 @@ class Grid : protected Pointers {
   
   void write_restart_custom(FILE *);
   void read_restart_custom(FILE *);
+  int sizeof_custom();
   int pack_custom(int, char *, int);
   int unpack_custom(char *, int);
 
@@ -365,8 +367,6 @@ class Grid : protected Pointers {
   int *icustom_dvec;        // index into ncustom for each double vector
   int *icustom_darray;      // index into ncustom for each double array
   int *edcol;               // # of columns in each double array (esize)
-
-  int *custom_restart_flag; // flag on each custom vec/array read from restart
 
   // connection between one of my cells and a neighbor cell on another proc
 

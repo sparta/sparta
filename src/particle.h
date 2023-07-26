@@ -177,9 +177,9 @@ class Particle : protected Pointers {
   virtual void grow_custom(int, int, int);
   virtual void remove_custom(int);
   virtual void copy_custom(int, int);
-  int sizeof_custom();
   void write_restart_custom(FILE *fp);
   void read_restart_custom(FILE *fp);
+  int sizeof_custom();
   virtual void pack_custom(int, char *);
   virtual void unpack_custom(char *, int);
 
@@ -218,10 +218,6 @@ class Particle : protected Pointers {
   int *icustom_dvec;        // index into ncustom for each double vector
   int *icustom_darray;      // index into ncustom for each double array
   int *edcol;               // # of columns in each double array (esize)
-
-  int *custom_restart_flag; // flag on each custom vec/array read from restart
-                            // used to delete them if not redefined in
-                            // restart script
 
   // private methods
 

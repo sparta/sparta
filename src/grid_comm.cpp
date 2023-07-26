@@ -213,7 +213,7 @@ int Grid::unpack_one(char *buf,
     cells[icell].ilocal = icell;
   }
 
-  // pack custom grid data
+  // unpack custom grid data
 
   if (ncustom) {
     ptr += unpack_custom(ptr,icell);

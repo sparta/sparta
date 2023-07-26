@@ -96,8 +96,6 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
   edarray = NULL;
   edcol = NULL;
 
-  custom_restart_flag = NULL;
-
   // RNG for particle weighting
 
   wrandom = NULL;
@@ -163,18 +161,6 @@ void Particle::init()
     wrandom = new RanKnuth(update->ranmaster->uniform());
     double seed = update->ranmaster->uniform();
     wrandom->reset(seed,me,100);
-  }
-
-  // if first run after reading a restart file,
-  // delete any custom particle attributes that have not been re-defined
-  // use nactive since remove_custom() may alter ncustom
-
-  if (custom_restart_flag) {
-    int nactive = ncustom;
-    for (int i = 0; i < nactive; i++)
-      if (custom_restart_flag[i] == 0) remove_custom(i);
-    delete [] custom_restart_flag;
-    custom_restart_flag = NULL;
   }
 
   // if vibstyle = DISCRETE,

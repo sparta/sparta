@@ -103,7 +103,7 @@ void WriteRestart::command(int narg, char **arg)
     fprintf(screen,"System init for write_restart ...\n");
   sparta->init();
 
-  // write single restart file
+  // write restart file(s)
 
   write(file);
   delete [] file;

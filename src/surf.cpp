@@ -117,8 +117,6 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   edarray = edarray_local = NULL;
   edcol = NULL;
 
-  custom_restart_flag = NULL;
-
   // allocate hash for surf IDs
 
   hash = new MySurfHash();
@@ -389,18 +387,6 @@ void Surf::init()
 
   for (int i = 0; i < nsc; i++) sc[i]->init();
   for (int i = 0; i < nsr; i++) sr[i]->init();
-
-  // if first run after reading a restart file,
-  // delete any custom surf attributes that have not been re-defined
-  // use nactive since remove_custom() may alter ncustom
-
-  if (custom_restart_flag) {
-    int nactive = ncustom;
-    for (int i = 0; i < nactive; i++)
-      if (custom_restart_flag[i] == 0) remove_custom(i);
-    delete [] custom_restart_flag;
-    custom_restart_flag = NULL;
-  }
 }
 
 /* ----------------------------------------------------------------------
