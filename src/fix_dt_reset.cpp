@@ -238,27 +238,11 @@ void FixDtReset::end_of_step()
 
   // reset global timestep if requested
   // also reset the global time
-  // NOTE: I'm not clear on when/why you want to issue a WARNING
 
   if (resetflag) {
     update->time += (update->ntimestep - update->time_last_update) * update->dt;
     update->time_last_update = update->ntimestep;
     update->dt = dtnew;
-
-    // old code - NOTE: there is an error->warnning() method to call
-
-    /*
-    if (mode == RESETWARN && update->dt > dt_global_calculated) {
-      if (me == 0) {
-        if (screen)
-          fprintf(screen,"WARNING: user-set global timestep(=%8.4e) is greater than the calculated global timestep(=%8.4e)\n\n",
-                  update->dt,dt_global_calculated);
-        if (logfile)
-          fprintf(logfile,"WARNING: user-set global timestep(=%8.4e) is greater than the calculated global timestep(=%8.4e)\n\n",
-                  update->dt,dt_global_calculated);
-      }
-    }
-    */
   }
 }
 

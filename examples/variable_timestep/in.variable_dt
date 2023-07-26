@@ -20,30 +20,27 @@ create_grid       10 10 10
 balance_grid      rcb part
 
 species           ar.species Ar
-mixture           air Ar vstream 0.0 0.0 0.0 temp 273.15
+mixture           mymixture Ar vstream 0.0 0.0 0.0 temp 273.15
 
 global            nrho 7.07043E22
 global            fnum 7.07043E6
 
-collide           vss air ar.vss
+collide           vss mymixture ar.vss
 
 timestep          7.00E-9
-create_particles  air n 10000 twopass
+create_particles  mymixture n 10000 twopass
 
-compute           1 grid all air nrho temp usq vsq wsq
+compute           1 grid all mymixture nrho temp usq vsq wsq
 fix               1 ave/grid all 1 100 100 c_1[*]
 
 compute           lambda lambda/grid c_1[1] c_1[2] Ar
 fix               lambda ave/grid all 1 100 100 c_lambda
 
-#compute           newstep dt/grid all 0.25 0.1 &
-#                  c_lambda f_1[2] f_1[3] f_1[4] f_1[5]
-compute           newstep dt/grid all 0.25 0.1 &
-                  f_lambda f_1[2] f_1[3] f_1[4] f_1[5]
+compute           tstep dt/grid all 0.25 0.1 &
+                  c_lambda f_1[2] f_1[3] f_1[4] f_1[5]
 
-fix               DT dt/reset 100 c_newstep 0.1 1
+fix               DT dt/reset 100 c_tstep 0.1 1
 
-stats             50
-compute           mytemp temp
-stats_style       step cpu np nattempt ncoll c_mytemp time dt
-run               2000
+stats             100
+stats_style       step cpu np nattempt ncoll time dt
+run               1000

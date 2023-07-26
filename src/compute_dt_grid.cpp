@@ -32,6 +32,7 @@ enum{NONE,COMPUTE,FIX};
 
 #define INVOKED_PER_GRID 16
 #define BIG 1.0e20
+#define EPSILON 1.0e-6
 
 /* ---------------------------------------------------------------------- */
 
@@ -593,12 +594,18 @@ void ComputeDtGrid::compute_per_grid()
 
   for (int i = 0; i < nglocal; ++i) {
     vector_grid[i] = 0.0;
+
+    // exclude cells not in the specified group
     if (!(cinfo[i].mask & groupbit)) continue;
+
+    // exclude cells that have no particles
+    //  (includes split cells and unsplit cells interior to surface objects)
+    if (cinfo[i].count == 0) continue;
 
     // check sufficiency of cell data to calculate cell dt
     vrm_max = sqrt(2.0*update->boltz * temp[i] / min_species_mass);
     velmag2 = usq[i] + vsq[i] + wsq[i];
-    if ( !((vrm_max > 0.) && (lambda[i] > 0.) && (velmag2 > 0.)) ) continue;
+    if ( !((vrm_max > EPSILON) && (lambda[i] > EPSILON) && (velmag2 > EPSILON)) ) continue;
 
     // cell dt based on mean collision time
     mean_collision_time = lambda[i]/vrm_max;
