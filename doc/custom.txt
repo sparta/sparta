@@ -6,11 +6,11 @@
 
 :line
 
-set command :h3
+custom command :h3
 
 [Syntax:]
 
-set style subset-ID region-ID custom-ID v_name keyword arg ... :pre
+custom style subset-ID region-ID custom-ID v_name keyword arg ... :pre
 
 style = {particle} or {grid} or {surf} :ulb,l
 subset-ID = mixture ID (particles) or group ID (grid cells or surface elements) :l
@@ -41,7 +41,7 @@ mixture air delete N NO :pre
 
 [Description:]
 
-Set values for a new or previouly defined custom attibute via a
+Set the values for a new or previouly defined custom attibute via a
 variable.  The attribute can be for particles, grid cells, or surface
 elements.  Custom attributes can be vectors (single value per entity)
 or arrays (mutiple values per entity).  See "Section
@@ -54,7 +54,7 @@ depending on which kind of custom attribute is being set.
 There are two ways to limit which particles, grid cells, or surface
 elements are assigned a custom value, via {subset-ID} and {region-ID}.
 An individual particle, grid cell, or surface element must meet both
-criteria to have its custom value set, otherwise it's value is set to
+criteria to have its custom value set, otherwise its value is set to
 zero.
 
 The specified {subset-ID} is the ID of a mixture for particles or the

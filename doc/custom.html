@@ -9,11 +9,11 @@
 
 <HR>
 
-<H3>set command 
+<H3>custom command 
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>set style subset-ID region-ID custom-ID v_name keyword arg ... 
+<PRE>custom style subset-ID region-ID custom-ID v_name keyword arg ... 
 </PRE>
 <UL><LI>style = <I>particle</I> or <I>grid</I> or <I>surf</I> 
 
@@ -52,7 +52,7 @@ mixture air delete N NO
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Set values for a new or previouly defined custom attibute via a
+<P>Set the values for a new or previouly defined custom attibute via a
 variable.  The attribute can be for particles, grid cells, or surface
 elements.  Custom attributes can be vectors (single value per entity)
 or arrays (mutiple values per entity).  See <A HREF = "Section_howto.html#howto_17">Section
@@ -65,7 +65,7 @@ depending on which kind of custom attribute is being set.
 <P>There are two ways to limit which particles, grid cells, or surface
 elements are assigned a custom value, via <I>subset-ID</I> and <I>region-ID</I>.
 An individual particle, grid cell, or surface element must meet both
-criteria to have its custom value set, otherwise it's value is set to
+criteria to have its custom value set, otherwise its value is set to
 zero.
 </P>
 <P>The specified <I>subset-ID</I> is the ID of a mixture for particles or the

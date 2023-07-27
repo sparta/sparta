@@ -1634,30 +1634,30 @@ attributes in various ways:
 [Per-particle custom attributes:]
 
 "compute reduce"_compute_reduce.html - reduce a per-particle attribute to a scalar value
+"custom"_custom.html - set the values of a per-particle attribute and optionally create it
 "dump particle"_dump.html - output per-particle attributes to a dump file
 "fix ambipolar"_fix_ambipolar.html - use a per-particle vector and array for ambipolar quantities
-"set"_set.html - set the values of a per-particle attribute and optionally create it
 "variable"_variable.html - use a per-particle attribute in a particle-style variable formula :ul
 
 [Per-grid custom attributes:]
 
 "compute reduce"_compute_reduce.html - reduce a per-grid attribute to a scalar value
+"custom"_custom.html - set the values of a per-grid attribute and optionally create it
 "dump grid"_dump.html - output per-grid attributes to a dump file
 "fix ave/grid"_fix_ave_grid.html - time-average a per-grid attribute
 "read_grid"_read_grid,html - define and initialize per-grid attributes
 surf_react implicit - use per-grid vectors and an array to store chemical state (not yet released in public SPARTA)
-"set"_set.html - set the values of a per-grid attribute and optionally create it
 "variable"_variable.html - use a per-grid attribute in a grid-style variable formula
 "write_grid"_write_grid.html - write per-grid attributes to a grid data file :ul
 
 [Per-surf custom attributes:]
 
 "compute reduce"_compute_reduce.html - reduce a per-surf attribute to a scalar value
+"custom"_custom.html - set the values of a per-surf attribute and optionally create it
 "dump surf"_dump.html - output per-surf attributes to a dump file
 "fix ave/surf"_fix_ave_surf.html - time-average a per-surf attribute
 "fix surf/temp"_fix_surf_temp.html - use a per-surf vector for temperature
 "read_surf"_read_surf.html - define and initialize per-surf attributes
-"set"_set.html - set the values of a per-surf attribute and optionally create it
 "surf_collide"_surf_collide.html - use a per-surf attribute as temperature for particle/surf collisions
 "surf_react adsorb"_surf_react_adsorb.html - use per-surf vectors and an array to store chemical state
 "variable"_variable.html - use a per-surf attribute in a surf-style variable formula
