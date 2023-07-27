@@ -111,6 +111,7 @@ class Particle : protected Pointers {
   // these variables are public, others below are private
 
   int ncustom;              // # of custom attributes, some may be deleted
+  char **ename;             // name of each attribute
   int *etype;               // type = INT/DOUBLE of each attribute
   int *esize;               // size = 0 for vector, N for array columns
   int *ewhich;              // index into eivec,eiarray,edvec,edarray for data
@@ -204,8 +205,6 @@ class Particle : protected Pointers {
   // extra custom vectors/arrays for per-particle data
   // ncustom > 0 if there are any extra arrays
   // these variables are private, others above are public
-
-  char **ename;             // name of each attribute
 
   int ncustom_ivec;         // # of integer vector attributes
   int ncustom_iarray;       // # of integer array attributes

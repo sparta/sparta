@@ -64,6 +64,7 @@ class Grid : protected Pointers {
   // these variables are public, others below are private
 
   int ncustom;              // # of custom grid attributes, some may be deleted
+  char **ename;             // name of each attribute
   int *etype;               // type = INT/DOUBLE of each attribute
   int *esize;               // size = 0 for vector, N for array columns
   int *ewhich;              // index into eivec,eiarray,edvec,edarray for data
@@ -353,8 +354,6 @@ class Grid : protected Pointers {
 
   // custom vectors/arrays for per-grid data
   // these variables are private, others above are public
-
-  char **ename;             // name of each attribute
 
   int ncustom_ivec;         // # of integer vector attributes
   int ncustom_iarray;       // # of integer array attributes

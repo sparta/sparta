@@ -14,7 +14,7 @@
 
 #include "stdlib.h"
 #include "string.h"
-#include "set.h"
+#include "custom.h"
 #include "domain.h"
 #include "comm.h"
 #include "particle.h"
@@ -36,11 +36,11 @@ enum{INT,DOUBLE};                       // several files
 
 /* ---------------------------------------------------------------------- */
 
-Set::Set(SPARTA *sparta) : Pointers(sparta) {}
+Custom::Custom(SPARTA *sparta) : Pointers(sparta) {}
 
 /* ---------------------------------------------------------------------- */
 
-void Set::command(int narg, char **arg)
+void Custom::command(int narg, char **arg)
 {
   if (narg < 5) error->all(FLERR,"Illegal set command");
 
@@ -54,21 +54,23 @@ void Set::command(int narg, char **arg)
   // mixture or group ID
 
   if (mode == PARTICLE) {
+    if (!particle->exist)
+      error->all(FLERR,"Cannot custom particle before particles are defined");
     int imix = particle->find_mixture(arg[1]);
-    if (imix < 0) error->all(FLERR,"Set mixture ID does not exist");
+    if (imix < 0) error->all(FLERR,"Custom mixture ID does not exist");
     mixture = particle->mixture[imix];
     mixture->init();
   } else if (mode == GRID) {
     if (!grid->exist)
-      error->all(FLERR,"Cannot set grid before grid is defined");
+      error->all(FLERR,"Cannot custom grid before grid is defined");
     int igroup = grid->find_group(arg[1]);
-    if (igroup < 0) error->all(FLERR,"Set grid group ID does not exist");
+    if (igroup < 0) error->all(FLERR,"Custom grid group ID does not exist");
     groupbit = grid->bitmask[igroup];
   } else if (mode == SURF) {
     if (!surf->exist)
-      error->all(FLERR,"Cannot set grid before surfs are defined");
+      error->all(FLERR,"Cannot custom surf before surfaces are defined");
     int igroup = surf->find_group(arg[1]);
-    if (igroup < 0) error->all(FLERR,"Set surf group ID does not exist");
+    if (igroup < 0) error->all(FLERR,"Custom surf group ID does not exist");
     groupbit = surf->bitmask[igroup];
   }
 
@@ -77,7 +79,7 @@ void Set::command(int narg, char **arg)
   if (strcmp(arg[2],"NULL") == 0) region = NULL;
   else {
     int iregion = domain->find_region(arg[2]);
-    if (iregion < 0) error->all(FLERR,"Set region ID does not exist");
+    if (iregion < 0) error->all(FLERR,"Custom region ID does not exist");
     region = domain->regions[iregion];
   }
 
@@ -86,11 +88,11 @@ void Set::command(int narg, char **arg)
   if ((strncmp(arg[3],"p_",2) == 0) || (strncmp(arg[3],"g_",2) == 0) ||
       (strncmp(arg[3],"s_",2) == 0)) {
     if (arg[3][0] == 'p' && mode != PARTICLE)
-      error->all(FLERR,"Set custom attribute is mismatched");
+      error->all(FLERR,"Custom attribute is mismatched");
     if (arg[3][0] == 'g' && mode != GRID)
-      error->all(FLERR,"Set custom attribute is mismatched");
+      error->all(FLERR,"Custom attribute is mismatched");
     if (arg[3][0] == 's' && mode != SURF)
-      error->all(FLERR,"Set custom attribute is mismatched");
+      error->all(FLERR,"Custom attribute is mismatched");
 
     int n = strlen(arg[3]);
     cname = new char[n];
@@ -99,12 +101,12 @@ void Set::command(int narg, char **arg)
     char *ptr = strchr(cname,'[');
     if (ptr) {
       if (cname[strlen(cname)-1] != ']')
-	error->all(FLERR,"Set custom attribute is invalid");
+	error->all(FLERR,"Custom attribute is invalid");
       ccol = atoi(ptr+1);
       *ptr = '\0';
     } else ccol = 0;
     
-  } else error->all(FLERR,"Set custom attribute is invalid");
+  } else error->all(FLERR,"Custom attribute is invalid");
 
   // variable name
 
@@ -116,16 +118,16 @@ void Set::command(int narg, char **arg)
     strcpy(vname,&arg[4][2]);
 
     vindex = variable->find(vname);
-    if (vindex < 0) error->all(FLERR,"Set variable name does not exist");
+    if (vindex < 0) error->all(FLERR,"Custom variable name does not exist");
     if (variable->equal_style(vindex)) vstyle = EQUAL;
     else if (variable->particle_style(vindex)) vstyle = PARTICLE;
     else if (variable->grid_style(vindex)) vstyle = GRID;
     else if (variable->surf_style(vindex)) vstyle = SURF;
-    else error->all(FLERR,"Set variable style is invalid");
+    else error->all(FLERR,"Custom variable style is invalid");
     if (vstyle != EQUAL && vstyle != mode)
-      error->all(FLERR,"Set variable style is invalid");
+      error->all(FLERR,"Custom variable style is invalid");
     
-  } else error->all(FLERR,"Set variable name is invalid");
+  } else error->all(FLERR,"Custom variable name is invalid");
 
   // optional keywords
 
@@ -135,17 +137,17 @@ void Set::command(int narg, char **arg)
   int iarg = 5;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"type") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Invalid set command");
+      if (iarg+2 > narg) error->all(FLERR,"Invalid custom command");
       if (strcmp(arg[iarg+1],"int") == 0) ctype = INT;
       else if (strcmp(arg[iarg+1],"float") == 0) ctype = DOUBLE;
-      else error->all(FLERR,"Invalid set command");
+      else error->all(FLERR,"Invalid custom command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"size") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Invalid set command");
+      if (iarg+2 > narg) error->all(FLERR,"Invalid custom command");
       csize = input->inumeric(FLERR,arg[iarg+1]);
-      if (csize < 0) error->all(FLERR,"Invalid set command");
+      if (csize < 0) error->all(FLERR,"Invalid custom command");
       iarg += 2;
-    } else error->all(FLERR,"Invalid set command");
+    } else error->all(FLERR,"Invalid custom command");
   }
 
   // create or check custom attribute
@@ -155,7 +157,7 @@ void Set::command(int narg, char **arg)
     if (cindex >= 0) {
       if (ctype != particle->etype[cindex] ||
 	  csize != particle->esize[cindex])
-	error->all(FLERR,"Set custom attribute does not match "
+	error->all(FLERR,"Custom attribute does not match "
 		   "already existing custom data");
     } else cindex = particle->add_custom(cname,ctype,csize);
   } else if (mode == GRID) {
@@ -163,7 +165,7 @@ void Set::command(int narg, char **arg)
     if (cindex >= 0) {
        if (ctype != grid->etype[cindex] ||
 	  csize != grid->esize[cindex])
-	error->all(FLERR,"Set custom attribute does not match "
+	error->all(FLERR,"Custom attribute does not match "
 		   "already existing custom data");
     } else cindex = grid->add_custom(cname,ctype,csize);
   } else if (mode == SURF) {
@@ -171,7 +173,7 @@ void Set::command(int narg, char **arg)
     if (cindex >= 0) {
       if (ctype != surf->etype[cindex] ||
 	  csize != surf->esize[cindex])
-	error->all(FLERR,"Set custom attribute does not match "
+	error->all(FLERR,"Custom attribute does not match "
 		   "already existing custom data");
     } else cindex = surf->add_custom(cname,ctype,csize);
   }
@@ -221,15 +223,15 @@ void Set::command(int narg, char **arg)
   
   if (comm->me == 0) {
     if (screen)
-      fprintf(screen,"Attributes set = " BIGINT_FORMAT "\n",bcountall);
+      fprintf(screen,"Custom attributes set = " BIGINT_FORMAT "\n",bcountall);
     if (logfile)
-      fprintf(logfile,"Attributes set = " BIGINT_FORMAT "\n",bcountall);
+      fprintf(logfile,"Custom attributes set = " BIGINT_FORMAT "\n",bcountall);
   }
 }
 
 /* ---------------------------------------------------------------------- */
 
-int Set::set_particle(double scalar, double *vector)
+int Custom::set_particle(double scalar, double *vector)
 {
   Particle::OnePart *particles = particle->particles;
   int *species2species = mixture->species2species;
@@ -328,7 +330,7 @@ int Set::set_particle(double scalar, double *vector)
 
 /* ---------------------------------------------------------------------- */
 
-int Set::set_grid(double scalar, double *vector)
+int Custom::set_grid(double scalar, double *vector)
 {
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -431,7 +433,7 @@ int Set::set_grid(double scalar, double *vector)
 
 /* ---------------------------------------------------------------------- */
 
-int Set::set_surf(double scalar, double *vector)
+int Custom::set_surf(double scalar, double *vector)
 {
   int dim = domain->dimension;
   int distributed = surf->distributed;

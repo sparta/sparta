@@ -846,6 +846,51 @@ void ReadRestart::command(int narg, char **arg)
 
   double time_total = time6-time1;
 
+  if (particle->ncustom) {
+    if (screen) {
+      fprintf(screen,"  Particle custom attributes:");
+      for (int i = 0; i < particle->ncustom; i++)
+        fprintf(screen," %s",particle->ename[i]);
+      fprintf(screen,"\n");
+    }
+    if (logfile) {
+      fprintf(logfile,"  Particle custom attributes:");
+      for (int i = 0; i < particle->ncustom; i++)
+        fprintf(logfile," %s",particle->ename[i]);
+      fprintf(logfile,"\n");
+    }
+  }
+
+  if (grid->ncustom) {
+    if (screen) {
+      fprintf(screen,"  Grid cell custom attributes:");
+      for (int i = 0; i < grid->ncustom; i++)
+        fprintf(screen," %s",grid->ename[i]);
+      fprintf(screen,"\n");
+    }
+    if (logfile) {
+      fprintf(logfile,"  Grid cell custom attributes:");
+      for (int i = 0; i < grid->ncustom; i++)
+        fprintf(logfile," %s",grid->ename[i]);
+      fprintf(logfile,"\n");
+    }
+  }
+
+  if (surf->ncustom) {
+    if (screen) {
+      fprintf(screen,"  Surface custom attributes:");
+      for (int i = 0; i < surf->ncustom; i++)
+        fprintf(screen," %s",surf->ename[i]);
+      fprintf(screen,"\n");
+    }
+    if (logfile) {
+      fprintf(logfile,"  Surface custom attributes:");
+      for (int i = 0; i < surf->ncustom; i++)
+        fprintf(logfile," %s",surf->ename[i]);
+      fprintf(logfile,"\n");
+    }
+  }
+
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"  CPU time = %g secs\n",time_total);

@@ -14,21 +14,21 @@
 
 #ifdef COMMAND_CLASS
 
-CommandStyle(set,Set)
+CommandStyle(custom,Custom)
 
 #else
 
-#ifndef SPARTA_SET_H
-#define SPARTA_SET_H
+#ifndef SPARTA_CUSTOM_H
+#define SPARTA_CUSTOM_H
 
 #include "pointers.h"
 
 namespace SPARTA_NS {
 
-class Set : protected Pointers {
+class Custom : protected Pointers {
 
  public:
-  Set(class SPARTA *);
+  Custom(class SPARTA *);
   void command(int, char **);
 
  private:
