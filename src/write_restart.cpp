@@ -44,7 +44,7 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      SPECIES,MIXTURE,
-     GRID,SURF,
+     GRID,SURF,SURF_ELEMENTS,
      PARTICLE_CUSTOM,GRID_CUSTOM,SURF_CUSTOM,
      MULTIPROC,PROCSPERFILE,PERPROC};    // new fields added after PERPROC
 
@@ -250,6 +250,16 @@ void WriteRestart::write(char *file)
   memory->create(buf,max_size,"write_restart:buf");
   memset(buf,0,max_size);
 
+  // if explicit/all surfs, proc 0 writes them all
+  // if multiple files, writes them into header file
+
+  if (surf->exist && !surf->implicit && !surf->distributed) {
+    if (me == 0) {
+      write_int(SURF_ELEMENTS,0);
+      surf->write_restart_all(fp);
+    }
+  }
+  
   // all procs write file layout info which may include per-proc sizes
 
   file_layout(send_size);
@@ -605,11 +615,15 @@ void WriteRestart::grid_params()
 
 /* ----------------------------------------------------------------------
    proc 0 writes out surface element into
+   for implicit surfs, no surfs are written to restart file
+     user must redefine implicit surfs by reading an implicit data file
 ------------------------------------------------------------------------- */
 
 void WriteRestart::surf_params()
 {
-  if (!surf->exist) {
+  // only explicit surfs are written to restart file
+  
+  if (!surf->exist || surf->implicit) {
     write_int(SURF,0);
     return;
   }
@@ -642,8 +656,6 @@ void WriteRestart::file_layout(int)
 // low-level fwrite methods
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
-
-/* ---------------------------------------------------------------------- */
 
 void WriteRestart::magic_string()
 {

@@ -47,7 +47,7 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      SPECIES,MIXTURE,
-     GRID,SURF,
+     GRID,SURF,SURF_ELEMENTS,
      PARTICLE_CUSTOM,GRID_CUSTOM,SURF_CUSTOM,
      MULTIPROC,PROCSPERFILE,PERPROC};    // new fields added after PERPROC
 
@@ -141,7 +141,7 @@ void ReadRestart::command(int narg, char **arg)
 
   // read header info which creates simulation box
   // also read particle params: species, mixture, custom attributes
-  // also read parent grid and surfs
+  // also read grid params and surf params
 
   header(incompatible);
 
@@ -152,11 +152,18 @@ void ReadRestart::command(int narg, char **arg)
   grid->exist = 1;
   surf->exist = surf_params();
 
-  if (surf->exist) {
+  // if explicit/all surfs, proc 0 reads them all
+  // if multiple files, they are in header file
+
+  if (surf->exist && !surf->implicit && !surf->distributed) {
+    int flag = read_int();
+    if (flag != SURF_ELEMENTS)
+      error->all(FLERR,"Invalid flag in surf section of restart file");
+    surf->read_restart_all(fp);
     if (domain->dimension == 2) surf->compute_line_normal(0);
     if (domain->dimension == 3) surf->compute_tri_normal(0);
   }
-
+  
   // read file layout info
 
   file_layout();
@@ -1214,13 +1221,17 @@ void ReadRestart::grid_params()
 
 int ReadRestart::surf_params()
 {
+  // only explicit surfs were written to restart file
+  // so return 0 even if surf->implicit
+  // user will need to read implicit surf data file to reset them
+  
   int flag = read_int();
   if (flag != SURF)
     error->all(FLERR,"Invalid flag in surf section of restart file");
-  int surfexist = read_int();
-  if (!surfexist) return 0;
+  int surfflag = read_int();
+  if (!surfflag) return 0;
 
-  if (surfexist) surf->read_restart(fp);
+  surf->read_restart(fp);
 
   flag = read_int();
   if (flag != SURF_CUSTOM)

@@ -49,7 +49,7 @@ FixBalance::FixBalance(SPARTA *sparta, int narg, char **arg) :
 
   scalar_flag = 1;
   vector_flag = 1;
-  size_vector = 2;
+  size_vector = 3;
   global_freq = 1;
 
   // parse arguments
@@ -126,6 +126,7 @@ FixBalance::FixBalance(SPARTA *sparta, int narg, char **arg) :
 
   last = 0.0;
   imbfinal = imbprev = imbalance_factor(maxperproc);
+  nbalance = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -191,6 +192,10 @@ void FixBalance::end_of_step()
 
   imbnow = imbalance_factor(maxperproc);
   if (imbnow <= thresh) return;
+
+  // perform rebalancing
+  
+  nbalance++;
   imbprev = imbnow;
 
   Grid::ChildCell *cells = grid->cells;
@@ -310,9 +315,10 @@ void FixBalance::end_of_step()
   }
   
   // final imbalance factor
-
+  // for RCB TIME, cannot compute imbalance from timers since grid cells moved
+  
   if (bstyle == BISECTION && rcbwt == TIME)
-    imbfinal = 0.0; // can't compute imbalance from timers since grid cells moved
+    imbfinal = 0.0; 
   else
     imbfinal = imbalance_factor(maxperproc);
 }
@@ -351,13 +357,14 @@ double FixBalance::compute_scalar()
 }
 
 /* ----------------------------------------------------------------------
-   return stats for last rebalance
+   return stats for last rebalance or cummulative count of rebalances
 ------------------------------------------------------------------------- */
 
 double FixBalance::compute_vector(int i)
 {
   if (i == 0) return maxperproc;
-  return imbprev;
+  if (i == 1) return imbprev;
+  return (double) nbalance;
 }
 
 /* -------------------------------------------------------------------- */
@@ -393,7 +400,7 @@ void FixBalance::timer_cell_weights(double* &weight)
       error->warning(FLERR,"No time history accumulated for fix balance "
         "rcb time, using rcb cell option instead");
     }
-return;
+    return;
   }
 
   Grid::ChildCell *cells = grid->cells;

@@ -2606,16 +2606,11 @@ int Surf::find_group(const char *id)
 // ----------------------------------------------------------------------
 
 /* ----------------------------------------------------------------------
-   proc 0 writes surf geometry to restart file
-   NOTE: needs to be generalized for distributed or implicit surfs
+   proc 0 writes surf groups to restart file
 ------------------------------------------------------------------------- */
 
 void Surf::write_restart(FILE *fp)
 {
-  if (distributed || implicit)
-    error->all(FLERR,
-               "Restart files with distributed surfaces are not yet supported");
-
   fwrite(&ngroup,sizeof(int),1,fp);
 
   int n;
@@ -2624,7 +2619,42 @@ void Surf::write_restart(FILE *fp)
     fwrite(&n,sizeof(int),1,fp);
     fwrite(gnames[i],sizeof(char),n,fp);
   }
+}
 
+/* ----------------------------------------------------------------------
+   proc 0 reads surf groups from restart file
+   bcast to other procs
+------------------------------------------------------------------------- */
+
+void Surf::read_restart(FILE *fp)
+{
+  int tmp;
+
+  int me = comm->me;
+
+  // if any groups exist, clear them before reading new ones
+
+  for (int i = 0; i < ngroup; i++) delete [] gnames[i];
+
+  if (me == 0) tmp = fread(&ngroup,sizeof(int),1,fp);
+  MPI_Bcast(&ngroup,1,MPI_INT,0,world);
+
+  int n;
+  for (int i = 0; i < ngroup; i++) {
+    if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
+    MPI_Bcast(&n,1,MPI_INT,0,world);
+    gnames[i] = new char[n];
+    if (me == 0) tmp = fread(gnames[i],sizeof(char),n,fp);
+    MPI_Bcast(gnames[i],n,MPI_CHAR,0,world);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 writes all non-distributed surfs to restart file
+------------------------------------------------------------------------- */
+
+void Surf::write_restart_all(FILE *fp)
+{
   if (domain->dimension == 2) {
     fwrite(&nsurf,sizeof(bigint),1,fp);
     for (int i = 0; i < nsurf; i++) {
@@ -2652,42 +2682,18 @@ void Surf::write_restart(FILE *fp)
 }
 
 /* ----------------------------------------------------------------------
-   proc 0 reads surf geometry from restart file
-   bcast to other procs
-   NOTE: needs to be generalized for distributed or implicit surfs
+   read all non-distributed surfs from restart file
+   proc 0 reads, Bcasts them to all procs
 ------------------------------------------------------------------------- */
 
-void Surf::read_restart(FILE *fp)
+void Surf::read_restart_all(FILE *fp)
 {
   int tmp;
-
-  if (distributed || implicit)
-    error->all(FLERR,
-               "Restart files with distributed surfaces are not yet supported");
-
-  int me = comm->me;
-
-  // if any exist, clear existing group names, before reading new ones
-
-  for (int i = 0; i < ngroup; i++) delete [] gnames[i];
-
-  if (me == 0) tmp = fread(&ngroup,sizeof(int),1,fp);
-  MPI_Bcast(&ngroup,1,MPI_INT,0,world);
-
-  int n;
-  for (int i = 0; i < ngroup; i++) {
-    if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
-    MPI_Bcast(&n,1,MPI_INT,0,world);
-    gnames[i] = new char[n];
-    if (me == 0) tmp = fread(gnames[i],sizeof(char),n,fp);
-    MPI_Bcast(gnames[i],n,MPI_CHAR,0,world);
-  }
-
+  
   if (domain->dimension == 2) {
     if (me == 0) tmp = fread(&nsurf,sizeof(bigint),1,fp);
     MPI_Bcast(&nsurf,1,MPI_SPARTA_BIGINT,0,world);
     lines = (Line *) memory->smalloc(nsurf*sizeof(Line),"surf:lines");
-    // NOTE: need different logic for different surf styles
     nlocal = nsurf;
     nmax = nlocal;
 
@@ -2712,7 +2718,6 @@ void Surf::read_restart(FILE *fp)
     if (me == 0) tmp = fread(&nsurf,sizeof(bigint),1,fp);
     MPI_Bcast(&nsurf,1,MPI_SPARTA_BIGINT,0,world);
     tris = (Tri *) memory->smalloc(nsurf*sizeof(Tri),"surf:tris");
-    // NOTE: need different logic for different surf styles
     nlocal = nsurf;
     nmax = nlocal;
 

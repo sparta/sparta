@@ -523,7 +523,7 @@ void Surf::read_restart_custom(FILE *fp)
   int tmp;
 
   // ncustom is 0 at time restart file is read
-  // will be incremented as add_custom() for each nactive
+  // will be incremented via add_custom() for each nactive
 
   int nactive;
   if (me == 0) tmp = fread(&nactive,sizeof(int),1,fp);
