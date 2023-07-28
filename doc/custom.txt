@@ -22,7 +22,7 @@ custom-ID = reference to custom attribute to set :l
   g_ID\[N\] = Nth column of custom per-grid array with ID
   s_ID = custom per-surf vector with ID
   s_ID\[N\] = Nth column of custom per-surf array with ID :pre
-v_name = equal- or particle- or grid- or surf-style variable with name :l
+v_name = equal- or particle- or grid- or surf-style variable with name or remove :l
 zero of more keyword/arg pairs may be appended :l
 keyword = {type} or {size}
   {type} arg = {int} or {float}
@@ -31,13 +31,23 @@ keyword = {type} or {size}
 
 [Examples:]
 
-set particle air NULL p_flag 
-mixture air N O NO group lite
-mixture air N O NO vstream 250.0 0.0 0.0 group species
-mixture air N frac 0.8
-mixture air O frac 0.2 copy myAir
-mixture background N O 
-mixture air delete N NO :pre
+custom particle p_ivec remove
+
+set             particle air NULL p_ivec v_ivec type int
+set             particle air NULL p_iarray[1] v_iarray1 type int size 2
+set             particle air NULL p_iarray[2] v_iarray2 type int size 2
+set             particle all NULL p_dvec v_dvec
+set             particle all NULL p_darray[1] v_darray1 size 3
+set             particle all NULL p_darray[2] v_darray2 size 3
+set             particle all NULL p_darray[3] v_darray3 size 3
+
+set                 surf all NULL s_ivec v_ivec type int
+set                 surf all NULL s_iarray[1] v_iarray1 type int size 2
+set                 surf all NULL s_iarray[2] v_iarray2 type int size 2
+set                 surf all NULL s_dvec v_dvec
+set                 surf all NULL s_darray[1] v_darray1 size 3
+set                 surf all NULL s_darray[2] v_darray2 size 3
+set                 surf all NULL s_darray[3] v_darray3 size 3
 
 [Description:]
 
