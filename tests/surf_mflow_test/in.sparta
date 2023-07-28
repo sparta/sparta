@@ -1,0 +1,89 @@
+############################################################
+#
+#               SPARTA INPUT FILE
+#
+############################################################
+
+
+seed            12345
+dimension       3 
+units           si
+
+boundary        oo oo oo
+create_box      0 0.0101    0 0.0011    0 0.0005     # xlo xhi ylo yhi zlo zhi 
+
+global surfmax 2000
+############################################################ INPUTS
+
+variable        T equal 300           	  # Temperature
+variable        S equal 0.9             	  # TMAC
+
+variable        pi equal 3        	  # pressure in
+variable        po equal 1        	  # pressure out
+
+variable        nX equal 108              # nCells in x
+variable        nY equal 12               # nCells in y
+variable        nZ equal 6                # nCells in z
+
+variable        rN equal 2.4143e20       #number density of gas
+variable        nP equal 4.38326e+06    # no of mols per DSMC particle
+
+variable        dt equal 0.5e-08         #time step
+variable	A equal "0.0004*0.001"
+############################################################ SYSTEM
+
+create_grid     ${nX} ${nY} ${nZ}
+
+global          gridcut 0.0
+balance_grid 	rcb cell 
+global          nrho ${rN}
+global          fnum ${nP}  # number of molecules per particle
+
+species         ar.species Ar   # read in information of Ar from file 
+mixture         Ar Ar vstream 0.0 0.0 0.0 temp $T
+
+read_surf           box.surf trans 0.00005 0.00005 0.00005 scale 0.001 0.001 0.001 group wall invert
+surf_collide        1 diffuse 300.0 0.9
+surf_modify         wall collide 1
+
+region              zmin  block 0.0 0.0101 0 0.0011 0 0.00006
+region              zplus block 0.0 0.0101 0 0.0011 0.0004 0.00046 
+region              zwalls union 2 zmin zplus
+
+group               specular surf region zwalls center
+surf_collide        2 diffuse 300 0
+surf_modify         specular collide 2
+
+region              xmin  block 0.0 0.0001 0 0.0011 0 0.0005
+group               inlet surf region xmin center
+
+region              xplus block 0.00999 0.0101 0 0.0011 0 0.0005 
+group               outlet surf region xplus center
+
+# apply boundary conditions to selected surfaces
+surf_collide        3 vanish
+surf_modify         inlet  collide 3
+surf_modify         outlet collide 3
+
+create_particles  Ar n 0
+
+compute         temp temp
+compute         vel grid all Ar nrho u v w temp
+
+fix                 X_in emit/surf_mflow Ar inlet normal no subsonic 4e-10 $T $A 10 999
+fix 		    X_out emit/surf_timeavg Ar outlet subsonic ${po} NULL 999
+
+collide         vss Ar ar.vss 
+
+############################################################ RUN EQUIL
+
+compute         total_mom momentum
+variable        mass_flow_x equal "c_total_mom[1]*v_nP/lx" 
+
+stats           100
+
+stats_style     step cpu tpcpu spcpu dt np nexit ncoll nbound nexit c_temp v_mass_flow_x
+
+timestep        ${dt}
+
+run             3000000
