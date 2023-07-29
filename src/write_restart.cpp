@@ -442,11 +442,10 @@ void WriteRestart::write_less_memory(char *file)
   memory->create(buf,max_size,"write_restart:buf");
   memset(buf,0,max_size);
 
-  // all procs write file layout info which may include per-proc sizes
 
-  int dummy = 0;
-  //file_layout(dummy);
 
+
+  
   // header info is complete
   // if multiproc output:
   //   close header file, open multiname file on each writing proc,
@@ -520,7 +519,7 @@ void WriteRestart::write_less_memory(char *file)
             n = grid->pack_restart(buf);
           else {
             n = step_size*nbytes;
-            if (i == 1) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
+            if (i == 1) n += IROUNDUP(sizeof(int));
             if (i == npasses-1) n = particle_send_size - total_write_part;
             total_write_part += n;
             particle->pack_restart(buf,step_size,i-1);
@@ -545,7 +544,7 @@ void WriteRestart::write_less_memory(char *file)
         n = grid->pack_restart(buf);
       else {
         n = step_size*nbytes;
-        if (i == 1) n += IROUNDUP(sizeof(int)); // ROUNDUP(ptr)
+        if (i == 1) n += IROUNDUP(sizeof(int));
         if (i == my_npasses-1) n = particle_send_size - total_write_part;
         total_write_part += n;
         particle->pack_restart(buf,step_size,i-1);
@@ -774,10 +773,10 @@ void WriteRestart::write_double_vec(int flag, int n, double *vec)
    write a flag and vector of N chars into restart file
 ------------------------------------------------------------------------- */
 
-void WriteRestart::write_char_vec(int flag, bigint n, char *vec)
+void WriteRestart::write_char_vec(int flag, int n, char *vec)
 {
   fwrite(&flag,sizeof(int),1,fp);
-  fwrite(&n,sizeof(bigint),1,fp);
+  fwrite(&n,sizeof(int),1,fp);
   fwrite(vec,sizeof(char),n,fp);
 }
 
