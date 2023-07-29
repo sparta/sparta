@@ -2650,8 +2650,73 @@ void Surf::read_restart(FILE *fp)
 }
 
 /* ----------------------------------------------------------------------
-   proc 0 writes all non-distributed surfs to restart file
+   return size of child grid restart info for this proc
+   using count of all owned cells
+   NOTE: worry about N overflowing int, and in IROUNDUP ???
 ------------------------------------------------------------------------- */
+
+int Surf::size_restart()
+{
+  int n = 2*sizeof(int);
+  /*
+  n = IROUNDUP(n);
+  n += nlocal * sizeof(cellint);
+  n = IROUNDUP(n);
+  n += nlocal * sizeof(int);
+  n = IROUNDUP(n);
+  n += nlocal * sizeof(int);
+  n = IROUNDUP(n);
+  n += nlocal * sizeof_custom();
+  */
+  return n;
+}
+
+/* ----------------------------------------------------------------------
+   pack my owned surf info buf
+   custom data as ints and doubles
+   return n = # of packed bytes
+   NOTE: worry about N overflowing int, and in IROUNDUP ???
+------------------------------------------------------------------------- */
+
+int Surf::pack_restart(char *buf)
+{
+  int n;
+
+  /*
+  int *ibuf = (int *) buf;
+  ibuf[0] = nlocal;
+  ibuf[1] = clumped;
+  n = 2*sizeof(int);
+  n = IROUNDUP(n);
+
+  cellint *cbuf = (cellint *) &buf[n];
+  for (int i = 0; i < nlocal; i++)
+    cbuf[i] = cells[i].id;
+  n += nlocal * sizeof(cellint);
+  n = IROUNDUP(n);
+
+  ibuf = (int *) &buf[n];
+  for (int i = 0; i < nlocal; i++)
+    ibuf[i] = cells[i].level;
+  n += nlocal * sizeof(int);
+  n = IROUNDUP(n);
+
+  ibuf = (int *) &buf[n];
+  for (int i = 0; i < nlocal; i++)
+    ibuf[i] = cells[i].nsplit;
+  n += nlocal * sizeof(int);
+  n = IROUNDUP(n);
+
+  if (ncustom) {
+    for (int i = 0; i < nlocal; i++)
+      n += pack_custom(i,&buf[n],1);
+  }
+  */
+  
+  return n;
+}
+
+/*
 
 void Surf::write_restart_all(FILE *fp)
 {
@@ -2680,11 +2745,6 @@ void Surf::write_restart_all(FILE *fp)
     }
   }
 }
-
-/* ----------------------------------------------------------------------
-   read all non-distributed surfs from restart file
-   proc 0 reads, Bcasts them to all procs
-------------------------------------------------------------------------- */
 
 void Surf::read_restart_all(FILE *fp)
 {
@@ -2740,6 +2800,7 @@ void Surf::read_restart_all(FILE *fp)
   }
 }
 
+*/
 /* ----------------------------------------------------------------------
    grow lines or tris data struct
    zero added lines/tris beyond old

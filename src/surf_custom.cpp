@@ -553,3 +553,112 @@ void Surf::read_restart_custom(FILE *fp)
     delete [] name;
   }
 }
+
+/* ----------------------------------------------------------------------
+   return size of all custom attributes in bytes for one surface element
+   used by callers to allocate buffer memory for surfs
+   assume integer attributes can be put at start of buffer
+   only alignment needed is between integers and doubles
+------------------------------------------------------------------------- */
+
+int Surf::sizeof_custom()
+{
+  int n = 0;
+
+  n += ncustom_ivec*sizeof(int);
+  if (ncustom_iarray)
+    for (int i = 0; i < ncustom_iarray; i++)
+      n += eicol[i]*sizeof(int);
+
+  n = IROUNDUP(n);
+
+  n += ncustom_dvec*sizeof(double);
+  if (ncustom_darray)
+    for (int i = 0; i < ncustom_darray; i++)
+      n += edcol[i]*sizeof(double);
+
+  return n;
+}
+
+/* ----------------------------------------------------------------------
+   pack a custom attributes for a single surf element ISURF into buf
+   memflag = 0/1 = no/yes to actually pack into buf, 0 = just length
+   this is done in order of 4 styles of vectors/arrays, not in ncustom order
+------------------------------------------------------------------------- */
+
+int Surf::pack_custom(int isurf, char *buf, int memflag)
+{
+  int i;
+  char *ptr = buf;
+
+  if (ncustom_ivec) {
+    for (i = 0; i < ncustom_ivec; i++) {
+      if (memflag) memcpy(ptr,&eivec[i][isurf],sizeof(int));
+      ptr += sizeof(int);
+    }
+  }
+  if (ncustom_iarray) {
+    for (i = 0; i < ncustom_iarray; i++) {
+      if (memflag) memcpy(ptr,eiarray[i][isurf],eicol[i]*sizeof(int));
+      ptr += eicol[i]*sizeof(int);
+    }
+  }
+
+  ptr = ROUNDUP(ptr);
+
+  if (ncustom_dvec) {
+    for (i = 0; i < ncustom_dvec; i++) {
+      if (memflag) memcpy(ptr,&edvec[i][isurf],sizeof(double));
+      ptr += sizeof(double);
+    }
+  }
+  if (ncustom_darray) {
+    for (i = 0; i < ncustom_darray; i++) {
+      if (memflag) memcpy(ptr,edarray[i][isurf],edcol[i]*sizeof(double));
+      ptr += edcol[i]*sizeof(double);
+    }
+  }
+
+  return ptr - buf;
+}
+
+/* ----------------------------------------------------------------------
+   unpack custom attributes for a single surf element ISURF from buf
+   this is done in order of 4 styles of vectors/arrays, not in ncustom order
+------------------------------------------------------------------------- */
+
+int Surf::unpack_custom(char *buf, int isurf)
+{
+  int i;
+  char *ptr = buf;
+
+  if (ncustom_ivec) {
+    for (i = 0; i < ncustom_ivec; i++) {
+      memcpy(&eivec[i][isurf],ptr,sizeof(int));
+      ptr += sizeof(int);
+    }
+  }
+  if (ncustom_iarray) {
+    for (i = 0; i < ncustom_iarray; i++) {
+      memcpy(eiarray[i][isurf],ptr,eicol[i]*sizeof(int));
+      ptr += eicol[i]*sizeof(int);
+    }
+  }
+
+  ptr = ROUNDUP(ptr);
+
+  if (ncustom_dvec) {
+    for (i = 0; i < ncustom_dvec; i++) {
+      memcpy(&edvec[i][isurf],ptr,sizeof(double));
+      ptr += sizeof(double);
+    }
+  }
+  if (ncustom_darray) {
+    for (i = 0; i < ncustom_darray; i++) {
+      memcpy(edarray[i][isurf],ptr,edcol[i]*sizeof(double));
+      ptr += edcol[i]*sizeof(double);
+    }
+  }
+
+  return ptr - buf;
+}

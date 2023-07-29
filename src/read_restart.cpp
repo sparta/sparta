@@ -46,10 +46,9 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      SURFTALLY,PARTICLE_REORDER,MEMLIMIT_GRID,MEMLIMIT,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
-     SPECIES,MIXTURE,
-     GRID,SURF,SURF_ELEMENTS,
+     SPECIES,MIXTURE,GRID,SURF,
      PARTICLE_CUSTOM,GRID_CUSTOM,SURF_CUSTOM,
-     MULTIPROC,PROCSPERFILE,PERPROC};    // new fields added after PERPROC
+     MULTIPROC,PROCSPERFILE,PERPROC};
 
 /* ---------------------------------------------------------------------- */
 
@@ -152,21 +151,18 @@ void ReadRestart::command(int narg, char **arg)
   grid->exist = 1;
   surf->exist = surf_params();
 
-  // if explicit/all surfs, proc 0 reads them all
-  // if multiple files, they are in header file
+  // read multiproc value
+  // expecting multiproc = 0 for single file, else # of restart files
 
-  if (surf->exist && !surf->implicit && !surf->distributed) {
-    int flag = read_int();
-    if (flag != SURF_ELEMENTS)
-      error->all(FLERR,"Invalid flag in surf section of restart file");
-    surf->read_restart_all(fp);
-    if (domain->dimension == 2) surf->compute_line_normal(0);
-    if (domain->dimension == 3) surf->compute_tri_normal(0);
-  }
+  int flag = read_int();
+  if (flag != MULTIPROC)
+    error->all(FLERR,"Invalid flag for multiproc value");
   
-  // read file layout info
-
-  file_layout();
+  multiproc_file = read_int();
+  if (multiproc == 0 && multiproc_file)
+    error->all(FLERR,"Restart file is multiple files");
+  if (multiproc && multiproc_file == 0)
+    error->all(FLERR,"Restart file is not multiple files");
 
   // close header file if in multiproc mode
 
@@ -174,7 +170,7 @@ void ReadRestart::command(int narg, char **arg)
 
   // read per-proc info, grid cells and particles
 
-  int flag,value,tmp,procmatch_check,procmatch;
+  int value,tmp,procmatch_check,procmatch;
   bigint n_big;
   int n;
   long filepos;
@@ -1107,12 +1103,10 @@ void ReadRestart::header(int incompatible)
       update->reorder_period = read_int();
     } else if (flag == MEMLIMIT_GRID) {
       // ignore value if already set
-
       if (mem_limit_flag) read_int();
       else update->mem_limit_grid_flag = read_int();
     } else if (flag == MEMLIMIT) {
       // ignore value if already set
-
       if (mem_limit_flag) read_int();
       else update->global_mem_limit = read_int();
     } else if (flag == NPARTICLE) {
@@ -1240,25 +1234,6 @@ int ReadRestart::surf_params()
   surf->read_restart_custom(fp);
 
   return 1;
-}
-
-/* ---------------------------------------------------------------------- */
-
-void ReadRestart::file_layout()
-{
-  int flag = read_int();
-  while (flag >= 0) {
-    if (flag == MULTIPROC) {
-      multiproc_file = read_int();
-      if (multiproc == 0 && multiproc_file)
-        error->all(FLERR,"Restart file is not a multi-proc file");
-      if (multiproc && multiproc_file == 0)
-        error->all(FLERR,"Restart file is a multi-proc file");
-
-    } else error->all(FLERR,"Invalid flag in layout section of restart file");
-
-    flag = read_int();
-  }
 }
 
 /* ----------------------------------------------------------------------

@@ -50,7 +50,6 @@ class ReadRestart : protected Pointers {
   void particle_params();
   void grid_params();
   int surf_params();
-  void file_layout();
 
   void create_child_cells(int);
   void assign_particles(int);

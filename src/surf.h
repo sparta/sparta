@@ -238,9 +238,9 @@ class Surf : protected Pointers {
 
   void write_restart(FILE *);
   void read_restart(FILE *);
-  void write_restart_all(FILE *);
-  void read_restart_all(FILE *);
-
+  int size_restart();
+  int pack_restart(char *);
+  
   virtual void grow(int);
   virtual void grow_own(int);
 
@@ -284,7 +284,10 @@ class Surf : protected Pointers {
 
   void write_restart_custom(FILE *);
   void read_restart_custom(FILE *);
-
+  int sizeof_custom();
+  int pack_custom(int, char *, int);
+  int unpack_custom(char *, int);
+  
  protected:
   int me,nprocs;
   int maxsc;                // max # of models in sc

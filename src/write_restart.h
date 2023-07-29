@@ -50,7 +50,6 @@ class WriteRestart : protected Pointers {
   void particle_params();
   void grid_params();
   void surf_params();
-  void file_layout(int);
 
   void magic_string();
   void endian();
