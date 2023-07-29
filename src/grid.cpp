@@ -2570,7 +2570,7 @@ int Grid::pack_restart(char *buf)
    unpack child grid info into restart storage
    nlocal_restart, clumped as scalars
    id_restart, nsplit_restart as vectors
-   NOTE ?? custom data as ints and doubles
+   custom data as ints and doubles
    allocate vectors here, will be deallocated by ReadRestart
 ------------------------------------------------------------------------- */
 

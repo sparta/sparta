@@ -33,12 +33,15 @@ class ReadRestart : protected Pointers {
 
  private:
   int me,nprocs,nprocs_file,multiproc_file,mem_limit_flag;
-  FILE *fp;
   int nfix_restart_global,nfix_restart_peratom;
+  FILE *fp;
 
   int multiproc;             // 0 = proc 0 writes for all
                              // else # of procs writing files
-
+  int filereader;            // 1 if this proc reads file, else 0
+  int procmatch_check;
+  int procmatch;
+  
   bigint nparticle_file;
   bigint nunsplit_file;
   int nsplit_file,nsub_file;
@@ -51,6 +54,16 @@ class ReadRestart : protected Pointers {
   void grid_params();
   int surf_params();
 
+  void read_grid_particles(char *);
+  void read_gp_single_file_same_procs();
+  void read_gp_single_file_diff_procs();
+  void read_gp_multi_file_less_procs(char *);
+  void read_gp_multi_file_more_procs(char *);
+  void read_gp_multi_file_less_procs_memlimit(char *);
+  void read_gp_multi_file_more_procs_memlimit(char *);
+
+  void read_surfs();
+  
   void create_child_cells(int);
   void assign_particles(int);
 
