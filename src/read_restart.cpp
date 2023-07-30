@@ -37,6 +37,7 @@ using namespace SPARTA_NS;
 #define ENDIAN 0x0001
 #define ENDIANSWAP 0x1000
 #define VERSION_NUMERIC 0
+#define DELTA 1024
 
 enum{VERSION,SMALLINT,CELLINT,BIGINT,
      UNITS,NTIMESTEP,NPROCS,
@@ -169,6 +170,9 @@ void ReadRestart::command(int narg, char **arg)
   if (multiproc && me == 0) fclose(fp);
 
   // read per-proc info = child grid cells and particles
+
+  particle->exist = 1;
+  procmatch_check = 0;
 
   read_grid_particles(file);
 
@@ -667,7 +671,7 @@ int ReadRestart::surf_params()
 {
   // only explicit surfs were written to restart file
   // so return 0 even if surf->implicit
-  // user will need to read implicit surf data file to reset them
+  // user needs to read_isurf with data file to reset them
   
   int flag = read_int();
   if (flag != SURF)
@@ -687,15 +691,17 @@ int ReadRestart::surf_params()
 }
 
 /* ----------------------------------------------------------------------
+   read per-proc sections of file(s) for grid cells and particles
+   different methods depending on:
+     single vs multiple files
+     current proc count vs proc count when restart file written
+     ulimited vs limited memory
    NOTE: confused by code setting versus file setting for memlimit
      b/c if file was written with memlimit, its format is different
 ------------------------------------------------------------------------- */
 
 void ReadRestart::read_grid_particles(char *file)
 {
-  particle->exist = 1;
-  procmatch_check = 0;
-
   if (!mem_limit_flag) {
     if (multiproc == 0 && nprocs_file == nprocs) {
       read_gp_single_file_same_procs();
@@ -724,8 +730,8 @@ void ReadRestart::read_grid_particles(char *file)
 /* ----------------------------------------------------------------------
    input of single file with same proc count in file and current simulation
    each proc will own exactly what it owned in previous run
-   proc 0 reads a chunk and sends it to owning proc
-   skips its own chunk, then reads it again at end
+   proc 0 reads a per-proc chunk and sends it to owning proc
+   skips its own per-proc chunk, then reads it again at end
    each proc:
      creates its grid cells from cell IDs
      assigns all particles to its cells
@@ -799,7 +805,7 @@ void ReadRestart::read_gp_single_file_same_procs()
 
 /* ----------------------------------------------------------------------
    input of single file, different proc count in file and current simulation
-   proc 0 reads a chunk and bcasts it to all other procs
+   proc 0 reads a per-proc chunk and bcasts it to all other procs
    each proc:
      creates 1/P fraction of grid cells from cell IDs
      assigns all particles to cells it owns
@@ -1466,9 +1472,244 @@ void ReadRestart::assign_particles(int skipflag)
 }
 
 /* ----------------------------------------------------------------------
+   read per-proc sections of file(s) for surface elements
+   different methods depending on:
+     single vs multiple files
+     current proc count vs proc count when restart file written
 ------------------------------------------------------------------------- */
 
 void ReadRestart::read_surfs()
+{
+  nsurf = maxsurf = 0;
+  lines = NULL;
+  tris = NULL;
+
+  // nvalues_custom_surf = # of new custom values per surf
+  // custom = vector for custom values for single surf
+
+  ncustom_surf = surf->ncustom;
+  nvalues_custom_surf = 0;
+  for (int ic = 0; ic < ncustom_surf; ic++) {
+    int index = surf->ewhich[ic];
+    if (surf->esize[index] == 0) nvalues_custom_surf++;
+    else nvalues_custom_surf += surf->esize[index];
+  }
+
+  if (multiproc == 0) {
+    read_surfs_single_file();
+  } else if (nprocs <= multiproc_file) {
+    read_surfs_multi_file_less_procs();
+  } else if (nprocs > multiproc_file) {
+    read_surfs_multi_file_more_procs();
+  }
+
+  // pass surf data stored locally by each proc to add_surfs()
+  
+  int *index_custom = new int[ncustom_surf];
+  for (int i = 0; i < ncustom_surf; i++) index_custom[i] = i;
+  
+  surf->add_surfs(1,nsurf,lines,tris,ncustom_surf,index_custom,cvalues);
+
+  memory->sfree(lines);
+  memory->sfree(tris);
+  memory->destroy(cvalues);
+}
+
+/* ----------------------------------------------------------------------
+   input of single file
+   proc 0 reads a per-proc chunk and bcasts it to all other procs
+------------------------------------------------------------------------- */
+
+void ReadRestart::read_surfs_single_file()
+{
+  int value,n;
+
+  int maxbuf = 0;
+  char *buf = NULL;
+
+  if (me == 0) filereader = 1;
+  else filereader = 0;
+
+  for (int iproc = 0; iproc < nprocs_file; iproc++) {
+    value = read_int();
+    if (value != PERPROC)
+      error->one(FLERR,"Invalid flag in peratom section of restart file");
+    
+    n = read_bigint();
+      
+    if (n > maxbuf) {
+      maxbuf = n;
+      memory->destroy(buf);
+      memory->create(buf,maxbuf,"read_restart:buf");
+    }
+
+    read_char_vec(n,buf);
+    unpack_surfs(buf);
+  }
+
+  // clean-up memory
+  
+  memory->destroy(buf);
+}
+
+/* ----------------------------------------------------------------------
+   unpack surf elements and custom data in one per-proc chunk
+   store info locally based on surf ID so can pass to add_surfs()
+------------------------------------------------------------------------- */
+
+void ReadRestart::unpack_surfs(char *buf)
+{
+  int type,mask,transparent;
+  surfint id;
+  double p1[3],p2[3],p3[3];
+  
+  int dim = domain->dimension;
+  double *custom = new double[1+nvalues_custom_surf];
+  
+  char *ptr = buf;
+
+  int *ibuf = (int *) ptr;
+  int nown = ibuf[0];
+  ptr += sizeof(int);
+  ptr = ROUNDUP(ptr);
+
+  int size_surf_one = surf->size_restart_one();
+  
+  for (int i = 0; i < nown; i++) {
+    surfint *sbuf = (surfint *) ptr;
+    id = sbuf[0];
+
+    // each proc only stores surf IDs it owns
+    
+    if (id % nprocs != me) {
+      ptr += size_surf_one;
+      continue;
+    }
+
+    ptr += sizeof(surfint);
+    ptr = ROUNDUP(ptr);
+
+    int *ibuf = (int *) ptr;
+    type = ibuf[0];
+    mask = ibuf[1];
+    transparent = ibuf[2];
+    ptr += 3*sizeof(int);
+    ptr = ROUNDUP(ptr);
+
+    double *dbuf = (double *) ptr;
+    memcpy(p1,&dbuf[0],3*sizeof(double));
+    memcpy(p2,&dbuf[3],3*sizeof(double));
+    if (dim == 3) memcpy(p3,&dbuf[6],3*sizeof(double));
+    ptr += dim * 3*sizeof(double);
+    ptr = ROUNDUP(ptr);
+
+    if (ncustom_surf) ptr += surf->unpack_custom(ptr,custom);
+    
+    if (dim == 2) {
+      add_line(id,type,mask,transparent,p1,p2);
+      if (ncustom_surf) add_custom(id,custom);
+    } else {
+      add_tri(id,type,mask,transparent,p1,p2,p3);
+      if (ncustom_surf) add_custom(id,custom);
+    }
+    
+    nsurf++;
+  }
+
+  delete [] custom;
+}
+
+/* ----------------------------------------------------------------------
+   add a line to read-in lines stored by this proc
+------------------------------------------------------------------------- */
+
+void ReadRestart::add_line(surfint id, int type, int mask, int transparent,
+                           double *p1, double *p2)
+{
+  if (nsurf == maxsurf) {
+    if ((bigint) maxsurf + DELTA > MAXSMALLINT)
+      error->one(FLERR,"Read_restart add_line overflowed");
+    maxsurf += DELTA;
+    lines = (Surf::Line *)
+      memory->srealloc(lines,maxsurf*sizeof(Surf::Line),"readrestart:lines");
+    if (ncustom_surf)
+      memory->grow(cvalues,maxsurf,1+nvalues_custom_surf,
+                   "readrestart:cvalues");
+  }
+
+  lines[nsurf].id = id;
+  lines[nsurf].type = type;
+  lines[nsurf].mask = mask;
+  lines[nsurf].isc = lines[nsurf].isr = -1;
+  lines[nsurf].p1[0] = p1[0];
+  lines[nsurf].p1[1] = p1[1];
+  lines[nsurf].p1[2] = 0.0;
+  lines[nsurf].p2[0] = p2[0];
+  lines[nsurf].p2[1] = p2[1];
+  lines[nsurf].p2[2] = 0.0;
+  lines[nsurf].norm[0] = lines[nsurf].norm[1] = lines[nsurf].norm[2] = 0.0;
+  lines[nsurf].transparent = transparent;
+}
+
+/* ----------------------------------------------------------------------
+   add a triangle to read-in triangles stored by this proc
+------------------------------------------------------------------------- */
+
+void ReadRestart::add_tri(surfint id, int type, int mask, int transparent,
+                       double *p1, double *p2, double *p3)
+{
+  if (nsurf == maxsurf) {
+    if ((bigint) maxsurf + DELTA > MAXSMALLINT)
+      error->one(FLERR,"Read_restart add_tri overflowed");
+    maxsurf += DELTA;
+    tris = (Surf::Tri *)
+      memory->srealloc(tris,maxsurf*sizeof(Surf::Tri),"readrestart:tris");
+    if (ncustom_surf)
+      memory->grow(cvalues,maxsurf,1+nvalues_custom_surf,
+                   "readrestart:cvalues");
+  }
+
+  tris[nsurf].id = id;
+  tris[nsurf].type = type;
+  tris[nsurf].mask = mask;
+  tris[nsurf].isc = tris[nsurf].isr = -1;
+  tris[nsurf].p1[0] = p1[0];
+  tris[nsurf].p1[1] = p1[1];
+  tris[nsurf].p1[2] = p1[2];
+  tris[nsurf].p2[0] = p2[0];
+  tris[nsurf].p2[1] = p2[1];
+  tris[nsurf].p2[2] = p2[2];
+  tris[nsurf].p3[0] = p3[0];
+  tris[nsurf].p3[1] = p3[1];
+  tris[nsurf].p3[2] = p3[2];
+  tris[nsurf].norm[0] = tris[nsurf].norm[1] = tris[nsurf].norm[2] = 0.0;
+  tris[nsurf].transparent = transparent;
+}
+
+/* ----------------------------------------------------------------------
+   add custom values for one line or one triangle to cvalues array
+------------------------------------------------------------------------- */
+
+void ReadRestart::add_custom(surfint id, double *custom)
+{
+  cvalues[nsurf][0] = ubuf(id).d;
+  for (int ivalue = 0; ivalue < nvalues_custom_surf; ivalue++)
+    cvalues[nsurf][ivalue+1] = custom[ivalue];
+}
+
+/* ----------------------------------------------------------------------
+   input of multiple files with procs <= files
+------------------------------------------------------------------------- */
+
+void ReadRestart::read_surfs_multi_file_less_procs()
+{
+}
+
+/* ----------------------------------------------------------------------
+   input of multiple files with procs > files
+------------------------------------------------------------------------- */
+
+void ReadRestart::read_surfs_multi_file_more_procs()
 {
 }
 

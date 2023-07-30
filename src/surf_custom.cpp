@@ -581,25 +581,24 @@ int Surf::sizeof_custom()
 }
 
 /* ----------------------------------------------------------------------
-   pack a custom attributes for a single surf element ISURF into buf
-   memflag = 0/1 = no/yes to actually pack into buf, 0 = just length
+   pack custom attributes for a single surf element ISURF into buf
    this is done in order of 4 styles of vectors/arrays, not in ncustom order
 ------------------------------------------------------------------------- */
 
-int Surf::pack_custom(int isurf, char *buf, int memflag)
+int Surf::pack_custom(int isurf, char *buf)
 {
   int i;
   char *ptr = buf;
 
   if (ncustom_ivec) {
     for (i = 0; i < ncustom_ivec; i++) {
-      if (memflag) memcpy(ptr,&eivec[i][isurf],sizeof(int));
+      memcpy(ptr,&eivec[i][isurf],sizeof(int));
       ptr += sizeof(int);
     }
   }
   if (ncustom_iarray) {
     for (i = 0; i < ncustom_iarray; i++) {
-      if (memflag) memcpy(ptr,eiarray[i][isurf],eicol[i]*sizeof(int));
+      memcpy(ptr,eiarray[i][isurf],eicol[i]*sizeof(int));
       ptr += eicol[i]*sizeof(int);
     }
   }
@@ -608,13 +607,13 @@ int Surf::pack_custom(int isurf, char *buf, int memflag)
 
   if (ncustom_dvec) {
     for (i = 0; i < ncustom_dvec; i++) {
-      if (memflag) memcpy(ptr,&edvec[i][isurf],sizeof(double));
+      memcpy(ptr,&edvec[i][isurf],sizeof(double));
       ptr += sizeof(double);
     }
   }
   if (ncustom_darray) {
     for (i = 0; i < ncustom_darray; i++) {
-      if (memflag) memcpy(ptr,edarray[i][isurf],edcol[i]*sizeof(double));
+      memcpy(ptr,edarray[i][isurf],edcol[i]*sizeof(double));
       ptr += edcol[i]*sizeof(double);
     }
   }
@@ -623,24 +622,30 @@ int Surf::pack_custom(int isurf, char *buf, int memflag)
 }
 
 /* ----------------------------------------------------------------------
-   unpack custom attributes for a single surf element ISURF from buf
+   unpack custom attributes from a single surf buf into custom
    this is done in order of 4 styles of vectors/arrays, not in ncustom order
 ------------------------------------------------------------------------- */
 
-int Surf::unpack_custom(char *buf, int isurf)
+int Surf::unpack_custom(char *buf, double *custom)
 {
-  int i;
+  int i,j;
   char *ptr = buf;
 
+  int ic = 0;
+  
   if (ncustom_ivec) {
+    int *ibuf = (int *) ptr;
     for (i = 0; i < ncustom_ivec; i++) {
-      memcpy(&eivec[i][isurf],ptr,sizeof(int));
+      custom[ic++] = ibuf[i];
       ptr += sizeof(int);
     }
   }
   if (ncustom_iarray) {
+    int *ibuf = (int *) ptr;
+    int m = 0;
     for (i = 0; i < ncustom_iarray; i++) {
-      memcpy(eiarray[i][isurf],ptr,eicol[i]*sizeof(int));
+      for (j = 0; j < eicol[i]; j++)
+        custom[ic++] = ibuf[m++];
       ptr += eicol[i]*sizeof(int);
     }
   }
@@ -648,14 +653,18 @@ int Surf::unpack_custom(char *buf, int isurf)
   ptr = ROUNDUP(ptr);
 
   if (ncustom_dvec) {
+    double *dbuf = (double *) ptr;
     for (i = 0; i < ncustom_dvec; i++) {
-      memcpy(&edvec[i][isurf],ptr,sizeof(double));
+      custom[ic++] = dbuf[i];
       ptr += sizeof(double);
     }
   }
   if (ncustom_darray) {
+    double *dbuf = (double *) ptr;
+    int m = 0;
     for (i = 0; i < ncustom_darray; i++) {
-      memcpy(edarray[i][isurf],ptr,edcol[i]*sizeof(double));
+      for (j = 0; j < edcol[i]; j++)
+        custom[ic++] = dbuf[m++];
       ptr += edcol[i]*sizeof(double);
     }
   }

@@ -23,6 +23,7 @@ CommandStyle(read_restart,ReadRestart)
 
 #include "stdio.h"
 #include "pointers.h"
+#include "surf.h"
 
 namespace SPARTA_NS {
 
@@ -46,7 +47,18 @@ class ReadRestart : protected Pointers {
   bigint nunsplit_file;
   int nsplit_file,nsub_file;
   int npoint_file,nsurf_file;
+  
+  // locally stored surfs
 
+  int nsurf,maxsurf;
+  Surf::Line *lines;
+  Surf::Tri *tris;
+  int ncustom_surf;
+  int nvalues_custom_surf;
+  double **cvalues;
+
+  // local methods
+  
   void file_search(char *, char *);
   void header(int);
   void box_params();
@@ -56,13 +68,20 @@ class ReadRestart : protected Pointers {
 
   void read_grid_particles(char *);
   void read_gp_single_file_same_procs();
-  void read_gp_single_file_diff_procs();
+  void read_gp_single_file_diff_procs(); 
   void read_gp_multi_file_less_procs(char *);
   void read_gp_multi_file_more_procs(char *);
   void read_gp_multi_file_less_procs_memlimit(char *);
   void read_gp_multi_file_more_procs_memlimit(char *);
 
   void read_surfs();
+  void read_surfs_single_file();
+  void read_surfs_multi_file_less_procs();
+  void read_surfs_multi_file_more_procs();
+  void unpack_surfs(char *);
+  void add_line(surfint, int, int, int, double *, double *);
+  void add_tri(surfint, int, int, int, double *, double *, double *);
+  void add_custom(surfint, double *);
   
   void create_child_cells(int);
   void assign_particles(int);
@@ -78,6 +97,25 @@ class ReadRestart : protected Pointers {
   void read_int_vec(int, int *);
   void read_double_vec(int, double *);
   void read_char_vec(bigint, char *);
+
+  // union data struct for packing 32-bit and 64-bit ints into double bufs
+  // this avoids aliasing issues by having 2 pointers (double,int)
+  //   to same buf memory
+  // constructor for 32-bit int prevents compiler
+  //   from possibly calling the double constructor when passed an int
+  // copy to a double *buf:
+  //   buf[m++] = ubuf(foo).d, where foo is a 32-bit or 64-bit int
+  // copy from a double *buf:
+  //   foo = (int) ubuf(buf[m++]).i;, where (int) or (tagint) match foo
+  //   the cast prevents compiler warnings about possible truncation
+
+  union ubuf {
+    double d;
+    int64_t i;
+    ubuf(double arg) : d(arg) {}
+    ubuf(int64_t arg) : i(arg) {}
+    ubuf(int arg) : i(arg) {}
+  };
 };
 
 }

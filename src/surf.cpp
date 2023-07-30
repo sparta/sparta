@@ -2650,157 +2650,129 @@ void Surf::read_restart(FILE *fp)
 }
 
 /* ----------------------------------------------------------------------
-   return size of child grid restart info for this proc
-   using count of all owned cells
+   return size of owned surf info for this proc
+   using count of all owned surfs
    NOTE: worry about N overflowing int, and in IROUNDUP ???
 ------------------------------------------------------------------------- */
 
+int Surf::size_restart_one()
+{
+  int n = sizeof(surfint);
+  n = IROUNDUP(n);
+  n += 3*sizeof(int);
+  n = IROUNDUP(n);
+  n += domain->dimension * 3*sizeof(double);
+  n = IROUNDUP(n);
+  n += sizeof_custom();
+  return n;
+}
+
 int Surf::size_restart()
 {
-  int n = 2*sizeof(int);
-  /*
+  int n = sizeof(int);
   n = IROUNDUP(n);
-  n += nlocal * sizeof(cellint);
-  n = IROUNDUP(n);
-  n += nlocal * sizeof(int);
-  n = IROUNDUP(n);
-  n += nlocal * sizeof(int);
-  n = IROUNDUP(n);
-  n += nlocal * sizeof_custom();
-  */
+  n += nown * size_restart_one();
   return n;
 }
 
 /* ----------------------------------------------------------------------
    pack my owned surf info buf
-   custom data as ints and doubles
+   include persistent attributes of lines and tris
+   include custom data as ints and doubles
+   works for explicit/all or explict/distributed
    return n = # of packed bytes
+   called by WriteRestart
+     implicit surfs are not written to restart files
    NOTE: worry about N overflowing int, and in IROUNDUP ???
 ------------------------------------------------------------------------- */
 
 int Surf::pack_restart(char *buf)
 {
-  int n;
+  int start,stop,stride;
+  Line *plines;
+  Tri *ptris;
 
-  /*
-  int *ibuf = (int *) buf;
-  ibuf[0] = nlocal;
-  ibuf[1] = clumped;
-  n = 2*sizeof(int);
-  n = IROUNDUP(n);
-
-  cellint *cbuf = (cellint *) &buf[n];
-  for (int i = 0; i < nlocal; i++)
-    cbuf[i] = cells[i].id;
-  n += nlocal * sizeof(cellint);
-  n = IROUNDUP(n);
-
-  ibuf = (int *) &buf[n];
-  for (int i = 0; i < nlocal; i++)
-    ibuf[i] = cells[i].level;
-  n += nlocal * sizeof(int);
-  n = IROUNDUP(n);
-
-  ibuf = (int *) &buf[n];
-  for (int i = 0; i < nlocal; i++)
-    ibuf[i] = cells[i].nsplit;
-  n += nlocal * sizeof(int);
-  n = IROUNDUP(n);
-
-  if (ncustom) {
-    for (int i = 0; i < nlocal; i++)
-      n += pack_custom(i,&buf[n],1);
-  }
-  */
+  // all versus distributed
   
-  return n;
-}
-
-/*
-
-void Surf::write_restart_all(FILE *fp)
-{
-  if (domain->dimension == 2) {
-    fwrite(&nsurf,sizeof(bigint),1,fp);
-    for (int i = 0; i < nsurf; i++) {
-      fwrite(&lines[i].id,sizeof(surfint),1,fp);
-      fwrite(&lines[i].type,sizeof(int),1,fp);
-      fwrite(&lines[i].mask,sizeof(int),1,fp);
-      fwrite(&lines[i].transparent,sizeof(int),1,fp);
-      fwrite(lines[i].p1,sizeof(double),3,fp);
-      fwrite(lines[i].p2,sizeof(double),3,fp);
-    }
+  if (!distributed) {
+    start = me;
+    stop = nlocal;
+    stride = nprocs;
+    plines = lines;
+    ptris = tris;
+  } else {
+    start = 0;
+    stop = nown;
+    stride = 1;
+    plines = mylines;
+    ptris = mytris;
   }
 
-  if (domain->dimension == 3) {
-    fwrite(&nsurf,sizeof(bigint),1,fp);
-    for (int i = 0; i < nsurf; i++) {
-      fwrite(&tris[i].id,sizeof(surfint),1,fp);
-      fwrite(&tris[i].type,sizeof(int),1,fp);
-      fwrite(&tris[i].mask,sizeof(int),1,fp);
-      fwrite(&tris[i].transparent,sizeof(int),1,fp);
-      fwrite(tris[i].p1,sizeof(double),3,fp);
-      fwrite(tris[i].p2,sizeof(double),3,fp);
-      fwrite(tris[i].p3,sizeof(double),3,fp);
-    }
-  }
-}
-
-void Surf::read_restart_all(FILE *fp)
-{
-  int tmp;
+  // pack nown = # of my owned surfs
+  // pack data for each surf, including custom data
   
+  char *ptr = buf;
+
+  int *ibuf = (int *) ptr;
+  ibuf[0] = nown;
+  ptr += sizeof(int);
+  ptr = ROUNDUP(ptr);
+
   if (domain->dimension == 2) {
-    if (me == 0) tmp = fread(&nsurf,sizeof(bigint),1,fp);
-    MPI_Bcast(&nsurf,1,MPI_SPARTA_BIGINT,0,world);
-    lines = (Line *) memory->smalloc(nsurf*sizeof(Line),"surf:lines");
-    nlocal = nsurf;
-    nmax = nlocal;
+    int count = 0;
+    for (int m = start; m < stop; m += stride) {
+      surfint *sbuf = (surfint *) ptr;
+      sbuf[0] = plines[m].id;
+      ptr += sizeof(surfint);
+      ptr = ROUNDUP(ptr);
+      
+      int *ibuf = (int *) ptr;
+      ibuf[0] = plines[m].type;
+      ibuf[1] = plines[m].mask;
+      ibuf[2] = plines[m].transparent;
+      ptr += 3*sizeof(int);
+      ptr = ROUNDUP(ptr);
 
-    if (me == 0) {
-      for (int i = 0; i < nsurf; i++) {
-        tmp = fread(&lines[i].id,sizeof(surfint),1,fp);
-        tmp = fread(&lines[i].type,sizeof(int),1,fp);
-        tmp = fread(&lines[i].mask,sizeof(int),1,fp);
-        tmp = fread(&lines[i].transparent,sizeof(int),1,fp);
-        lines[i].isc = lines[i].isr = -1;
-        tmp = fread(lines[i].p1,sizeof(double),3,fp);
-        tmp = fread(lines[i].p2,sizeof(double),3,fp);
-        lines[i].norm[0] = lines[i].norm[1] = lines[i].norm[2] = 0.0;
-      }
+      double *dbuf = (double *) ptr;
+      memcpy(&dbuf[0],plines[m].p1,3*sizeof(double));
+      memcpy(&dbuf[3],plines[m].p2,3*sizeof(double));
+      ptr += 2 * 3*sizeof(double);
+      ptr = ROUNDUP(ptr);
+
+      ptr += pack_custom(count,ptr);
+      count++;
     }
-    if (nsurf*sizeof(Line) > MAXSMALLINT)
-      error->all(FLERR,"Surf restart memory exceeded");
-    MPI_Bcast(lines,nsurf*sizeof(Line),MPI_CHAR,0,world);
-  }
+    
+  } else if (domain->dimension == 3) {
+    int count = 0;
+    for (int m = start; m < stop; m += stride) {
+      surfint *sbuf = (surfint *) ptr;
+      sbuf[0] = ptris[m].id;
+      ptr += sizeof(surfint);
+      ptr = ROUNDUP(ptr);
+      
+      int *ibuf = (int *) ptr;
+      ibuf[0] = ptris[m].type;
+      ibuf[1] = ptris[m].mask;
+      ibuf[2] = ptris[m].transparent;
+      ptr += 3*sizeof(int);
+      ptr = ROUNDUP(ptr);
 
-  if (domain->dimension == 3) {
-    if (me == 0) tmp = fread(&nsurf,sizeof(bigint),1,fp);
-    MPI_Bcast(&nsurf,1,MPI_SPARTA_BIGINT,0,world);
-    tris = (Tri *) memory->smalloc(nsurf*sizeof(Tri),"surf:tris");
-    nlocal = nsurf;
-    nmax = nlocal;
+      double *dbuf = (double *) ptr;
+      memcpy(&dbuf[0],ptris[m].p1,3*sizeof(double));
+      memcpy(&dbuf[3],ptris[m].p2,3*sizeof(double));
+      memcpy(&dbuf[6],ptris[m].p3,3*sizeof(double));
+      ptr += 3 * 3*sizeof(double);
+      ptr = ROUNDUP(ptr);
 
-    if (me == 0) {
-      for (int i = 0; i < nsurf; i++) {
-        tmp = fread(&tris[i].id,sizeof(surfint),1,fp);
-        tmp = fread(&tris[i].type,sizeof(int),1,fp);
-        tmp = fread(&tris[i].mask,sizeof(int),1,fp);
-        tmp = fread(&tris[i].transparent,sizeof(int),1,fp);
-        tris[i].isc = tris[i].isr = -1;
-        tmp = fread(tris[i].p1,sizeof(double),3,fp);
-        tmp = fread(tris[i].p2,sizeof(double),3,fp);
-        tmp = fread(tris[i].p3,sizeof(double),3,fp);
-        tris[i].norm[0] = tris[i].norm[1] = tris[i].norm[2] = 0.0;
-      }
+      ptr += pack_custom(count,ptr);
+      count++;
     }
-    if (nsurf*sizeof(Tri) > MAXSMALLINT)
-      error->all(FLERR,"Surf restart memory exceeded");
-    MPI_Bcast(tris,nsurf*sizeof(Tri),MPI_CHAR,0,world);
   }
+  
+  return ptr-buf;;
 }
 
-*/
 /* ----------------------------------------------------------------------
    grow lines or tris data struct
    zero added lines/tris beyond old

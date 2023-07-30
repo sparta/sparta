@@ -238,6 +238,7 @@ class Surf : protected Pointers {
 
   void write_restart(FILE *);
   void read_restart(FILE *);
+  int size_restart_one();
   int size_restart();
   int pack_restart(char *);
   
@@ -285,8 +286,8 @@ class Surf : protected Pointers {
   void write_restart_custom(FILE *);
   void read_restart_custom(FILE *);
   int sizeof_custom();
-  int pack_custom(int, char *, int);
-  int unpack_custom(char *, int);
+  int pack_custom(int, char *);
+  int unpack_custom(char *, double *);
   
  protected:
   int me,nprocs;
