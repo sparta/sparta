@@ -49,7 +49,7 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      SPECIES,MIXTURE,GRID,SURF,
      PARTICLE_CUSTOM,GRID_CUSTOM,SURF_CUSTOM,
-     MULTIPROC,PROCSPERFILE,PERPROC};
+     MULTIPROC,PROCSPERFILE,PERPROC_GRID,PERPROC_SURF};
 
 /* ---------------------------------------------------------------------- */
 
@@ -183,6 +183,7 @@ void ReadRestart::command(int narg, char **arg)
   // close restart file(s)
 
   if (filereader) fclose(fp);
+  delete [] file;
   
   // setup the grid
 
@@ -257,6 +258,8 @@ void ReadRestart::command(int narg, char **arg)
 
   if (surf->exist) {
     surf->setup_owned();
+    if (domain->dimension == 2) surf->compute_line_normal(0);
+    if (domain->dimension == 3) surf->compute_tri_normal(0);
     grid->clear_surf_restart();
     grid->surf2grid(0);
   }
@@ -753,13 +756,15 @@ void ReadRestart::read_gp_single_file_same_procs()
   if (filereader) {
     for (int iproc = 0; iproc < nprocs_file; iproc++) {
       tmp = fread(&value,sizeof(int),1,fp);
-      if (value != PERPROC)
+      printf("VALUE %d\n",value);
+      if (value != PERPROC_GRID)
         error->one(FLERR,"Invalid flag in peratom section of restart file");
       
       if (iproc == 0) filepos = ftell(fp);
       
-      tmp = fread(&n,sizeof(int),1,fp);
-      
+      tmp = fread(&n,sizeof(int),1,fp); 
+      printf("NSIZE %d\n",n);
+     
       if (n > maxbuf) {
         maxbuf = n;
         memory->destroy(buf);
@@ -771,7 +776,7 @@ void ReadRestart::read_gp_single_file_same_procs()
         MPI_Send(&n,1,MPI_INT,iproc,0,world);
         MPI_Recv(&tmp,0,MPI_INT,iproc,0,world,&status);
         MPI_Send(buf,n,MPI_CHAR,iproc,0,world);
-      } else fseek(fp,filepos+sizeof(bigint)+n,SEEK_SET);
+      } else fseek(fp,filepos + sizeof(int) + n,SEEK_SET);
     }
     
     // rewind and read proc 0 chunk
@@ -823,10 +828,10 @@ void ReadRestart::read_gp_single_file_diff_procs()
 
   for (int iproc = 0; iproc < nprocs_file; iproc++) {
     value = read_int();
-    if (value != PERPROC)
+    if (value != PERPROC_GRID)
       error->one(FLERR,"Invalid flag in peratom section of restart file");
     
-    n = read_bigint();
+    n = read_int();
       
     if (n > maxbuf) {
       maxbuf = n;
@@ -887,7 +892,7 @@ void ReadRestart::read_gp_multi_file_less_procs(char *file)
     
     for (int i = 0; i < procsperfile; i++) {
       tmp = fread(&flag,sizeof(int),1,fp);
-      if (flag != PERPROC)
+      if (flag != PERPROC_GRID)
         error->one(FLERR,"Invalid flag in peratom section of restart file");
       
       tmp = fread(&n,sizeof(int),1,fp);
@@ -985,7 +990,7 @@ void ReadRestart::read_gp_multi_file_more_procs(char *file)
   for (int i = 0; i < procsperfile; i++) {
     if (filereader) {
       tmp = fread(&flag,sizeof(int),1,fp);
-      if (flag != PERPROC)
+      if (flag != PERPROC_GRID)
         error->one(FLERR,"Invalid flag in peratom section of restart file");
       
       tmp = fread(&n,sizeof(int),1,fp);
@@ -1073,7 +1078,7 @@ void ReadRestart::read_gp_multi_file_less_procs_memlimit(char *file)
 
     for (int i = 0; i < procsperfile; i++) {
       tmp = fread(&flag,sizeof(int),1,fp);
-      if (flag != PERPROC)
+      if (flag != PERPROC_GRID)
         error->one(FLERR,"Invalid flag in peratom section of restart file");
       
       tmp = fread(&n_big,sizeof(bigint),1,fp);
@@ -1226,7 +1231,7 @@ void ReadRestart::read_gp_multi_file_more_procs_memlimit(char *file)
   for (int i = 0; i < procsperfile; i++) {
     if (filereader) {
       tmp = fread(&flag,sizeof(int),1,fp);
-      if (flag != PERPROC)
+      if (flag != PERPROC_GRID)
         error->one(FLERR,"Invalid flag in peratom section of restart file");
       
       tmp = fread(&n_big,sizeof(bigint),1,fp);
@@ -1483,6 +1488,7 @@ void ReadRestart::read_surfs()
   nsurf = maxsurf = 0;
   lines = NULL;
   tris = NULL;
+  cvalues = NULL;
 
   // nvalues_custom_surf = # of new custom values per surf
   // custom = vector for custom values for single surf
@@ -1490,9 +1496,8 @@ void ReadRestart::read_surfs()
   ncustom_surf = surf->ncustom;
   nvalues_custom_surf = 0;
   for (int ic = 0; ic < ncustom_surf; ic++) {
-    int index = surf->ewhich[ic];
-    if (surf->esize[index] == 0) nvalues_custom_surf++;
-    else nvalues_custom_surf += surf->esize[index];
+    if (surf->esize[ic] == 0) nvalues_custom_surf++;
+    else nvalues_custom_surf += surf->esize[ic];
   }
 
   if (multiproc == 0) {
@@ -1507,9 +1512,12 @@ void ReadRestart::read_surfs()
   
   int *index_custom = new int[ncustom_surf];
   for (int i = 0; i < ncustom_surf; i++) index_custom[i] = i;
+
+  printf("PRE ADD SURFS me %d nsurf %d\n",me,nsurf);
   
   surf->add_surfs(1,nsurf,lines,tris,ncustom_surf,index_custom,cvalues);
 
+  delete [] index_custom;
   memory->sfree(lines);
   memory->sfree(tris);
   memory->destroy(cvalues);
@@ -1532,11 +1540,13 @@ void ReadRestart::read_surfs_single_file()
 
   for (int iproc = 0; iproc < nprocs_file; iproc++) {
     value = read_int();
-    if (value != PERPROC)
+    if (value != PERPROC_SURF)
       error->one(FLERR,"Invalid flag in peratom section of restart file");
     
-    n = read_bigint();
-      
+    n = read_int();
+
+    printf("READ SURF chunk size N %d\n",n);
+    
     if (n > maxbuf) {
       maxbuf = n;
       memory->destroy(buf);
@@ -1569,13 +1579,15 @@ void ReadRestart::unpack_surfs(char *buf)
   char *ptr = buf;
 
   int *ibuf = (int *) ptr;
-  int nown = ibuf[0];
+  int nbuf = ibuf[0];
   ptr += sizeof(int);
   ptr = ROUNDUP(ptr);
 
   int size_surf_one = surf->size_restart_one();
-  
-  for (int i = 0; i < nown; i++) {
+
+  printf("NBUF %d sizeOne %d\n",nbuf,size_surf_one);
+
+  for (int i = 0; i < nbuf; i++) {
     surfint *sbuf = (surfint *) ptr;
     id = sbuf[0];
 

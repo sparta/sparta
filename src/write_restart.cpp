@@ -45,7 +45,7 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      SPECIES,MIXTURE,GRID,SURF,
      PARTICLE_CUSTOM,GRID_CUSTOM,SURF_CUSTOM,
-     MULTIPROC,PROCSPERFILE,PERPROC};
+     MULTIPROC,PROCSPERFILE,PERPROC_GRID,PERPROC_SURF};
 
 enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // update.cpp
 
@@ -306,7 +306,7 @@ void WriteRestart::write(char *file)
         MPI_Get_count(&status,MPI_CHAR,&recv_size);
       } else recv_size = send_size;
 
-      write_char_vec(PERPROC,recv_size,buf);
+      write_char_vec(PERPROC_GRID,recv_size,buf);
     }
 
   } else {
@@ -355,7 +355,7 @@ void WriteRestart::write(char *file)
         MPI_Get_count(&status,MPI_CHAR,&recv_size);
       } else recv_size = send_size;
 
-      write_char_vec(PERPROC,recv_size,buf);
+      write_char_vec(PERPROC_SURF,recv_size,buf);
     }
     fclose(fp);
 
@@ -441,10 +441,6 @@ void WriteRestart::write_less_memory(char *file)
   char *buf;
   memory->create(buf,max_size,"write_restart:buf");
   memset(buf,0,max_size);
-
-
-
-
   
   // header info is complete
   // if multiproc output:
@@ -527,7 +523,7 @@ void WriteRestart::write_less_memory(char *file)
           recv_size = n;
         }
         if (i == 0)
-          write_char_vec(PERPROC,total_recv_size,recv_size,buf);
+          write_char_vec(PERPROC_GRID,total_recv_size,recv_size,buf);
         else
           write_char_vec(recv_size,buf);
       }

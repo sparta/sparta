@@ -2770,7 +2770,7 @@ int Surf::pack_restart(char *buf)
     }
   }
   
-  return ptr-buf;;
+  return ptr - buf;
 }
 
 /* ----------------------------------------------------------------------
