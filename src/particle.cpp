@@ -649,6 +649,8 @@ int Particle::add_particle(int id, int ispecies, int icell,
   //p->dtremain = 0.0;    not needed due to memset in grow() ??
   //p->weight = 1.0;      not needed due to memset in grow() ??
 
+  if (ncustom) zero_custom(nlocal);
+
   nlocal++;
   return reallocflag;
 }

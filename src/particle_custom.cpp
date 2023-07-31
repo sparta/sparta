@@ -237,6 +237,33 @@ void Particle::remove_custom(int index)
 }
 
 /* ----------------------------------------------------------------------
+   zero info for particle I in custom attribute vectors/arrays
+   called from add_particle() when a new particle is added
+------------------------------------------------------------------------- */
+
+void Particle::zero_custom(int i)
+{
+  int j,m;
+
+  // 4 flavors of vectors/arrays
+
+  if (ncustom_ivec) {
+    for (m = 0; m < ncustom_ivec; m++) eivec[m][i] = 0;
+  }
+  if (ncustom_iarray) {
+    for (m = 0; m < ncustom_iarray; m++)
+      for (j = 0; j < eicol[m]; j++) eiarray[m][i][j] = 0;
+  }
+  if (ncustom_dvec) {
+    for (m = 0; m < ncustom_dvec; m++) edvec[m][i] = 0.0;
+  }
+  if (ncustom_darray) {
+    for (m = 0; m < ncustom_darray; m++)
+      for (j = 0; j < edcol[m]; j++) edarray[m][i][j] = 0.0;
+  }
+}
+
+/* ----------------------------------------------------------------------
    copy info for one particle in custom attribute vectors/arrays
    into location I from location J
 ------------------------------------------------------------------------- */

@@ -177,6 +177,7 @@ class Particle : protected Pointers {
   virtual int add_custom(char *, int, int);
   virtual void grow_custom(int, int, int);
   virtual void remove_custom(int);
+  virtual void zero_custom(int);
   virtual void copy_custom(int, int);
   void write_restart_custom(FILE *fp);
   void read_restart_custom(FILE *fp);
