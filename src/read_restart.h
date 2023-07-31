@@ -74,11 +74,11 @@ class ReadRestart : protected Pointers {
   void read_gp_multi_file_less_procs_memlimit(char *);
   void read_gp_multi_file_more_procs_memlimit(char *);
 
-  void read_surfs();
+  void read_surfs(char *);
   void read_surfs_single_file();
-  void read_surfs_multi_file_less_procs();
-  void read_surfs_multi_file_more_procs();
-  void unpack_surfs(char *);
+  void read_surfs_multi_file_less_procs(char *);
+  void read_surfs_multi_file_more_procs(char *);
+  void unpack_surfs(int, char *);
   void add_line(surfint, int, int, int, double *, double *);
   void add_tri(surfint, int, int, int, double *, double *, double *);
   void add_custom(surfint, double *);

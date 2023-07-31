@@ -575,7 +575,7 @@ void Surf::add_tri_copy(int ownflag, Tri *tri)
    index_custom = index for each custom vec or array in Surf custom lists
    cvalues = custom values for each surf in same order as newlines/newtris
      1st value is surf ID, remaining values are for nc vecs/arrays
-   called by ReadSurf and RemoveSurf
+   called by ReadSurf, RemoveSurf, ReadRestart
 ------------------------------------------------------------------------- */
 
 void Surf::add_surfs(int replace, int ncount,

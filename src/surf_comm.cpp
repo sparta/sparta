@@ -37,14 +37,16 @@ enum{INT,DOUBLE};                      // several files
    redistribute caller per-proc surfs to owning procs in Surf data structs
      for explicit surfs only, all or distributed
      use rendezvous algorithm to send surfs to owning procs
-     for all distribution, perform Allgatherv so all procs have a copy
+   result:
+     all: Allgatherv gives all procs a copy in their lines/tris
+     distributed: each proc has its owned subset in mylines/mytris
    n = # of new surfs contributed by this proc
    newlines/newtris = list of new surfs, other ptr is NULL
    nc = # of custom attributes (vecs/arrays) for each surf
    index_custom = index for each custom vec or array in Surf custom lists
    cvalues = custom values for each surf in same order as newlines/newtris
      1st value is surf ID, remaining values are for nc vecs/arrays
-   called from add_surfs() via ReadSurf or RemoveSurf
+   called from add_surfs() via ReadSurf or RemoveSurf or ReadRestart
 ------------------------------------------------------------------------- */
 
 void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
@@ -133,7 +135,7 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
   
   // if distribution is all:
   // perform Allgatherv with lines/tris_contig
-  // append to previous surfs in lines/tris
+  // target is to append to previous surfs in lines/tris
   
   if (!distributed) {
     int *recvcounts,*displs;
@@ -195,8 +197,9 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
 
   redistribute_nvalues_custom = nvalues_custom;
   redistribute_index_custom = index_custom;
-    
-  if (nsurf) in_rvous = (char *) &cvalues[0][0];
+
+  in_rvous = NULL;
+  if (n) in_rvous = (char *) &cvalues[0][0];
   nbytes = (1+nvalues_custom) * sizeof(double);
 
   nout = comm->rendezvous(1,n,in_rvous,nbytes,
