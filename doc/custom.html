@@ -13,15 +13,11 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>custom style subset-ID region-ID custom-ID v_name keyword arg ... 
+<PRE>custom style custom-ID action args ... keyword value ... 
 </PRE>
 <UL><LI>style = <I>particle</I> or <I>grid</I> or <I>surf</I> 
 
-<LI>subset-ID = mixture ID (particles) or group ID (grid cells or surface elements) 
-
-<LI>region-ID = only apply to particle/grid/surf in region, NULL if not applicable 
-
-<LI>custom-ID = reference to custom attribute to set 
+<LI>custom-ID = reference to custom attribute 
 
 <PRE>  p_ID = custom per-particle vector with ID
   p_ID[N] = Nth column of custom per-particle array with ID
@@ -30,9 +26,15 @@
   s_ID = custom per-surf vector with ID
   s_ID[N] = Nth column of custom per-surf array with ID 
 </PRE>
-<LI>v_name = equal- or particle- or grid- or surf-style variable with name or remove 
+<LI>action = <I>set</I> or <I>remove</I> 
 
-<LI>zero of more keyword/arg pairs may be appended 
+<PRE>  <I>set</I> args = v_name subset-ID region-ID
+    v_name = equal-, particle-, grid-, or surf-style variable with name
+    subset-ID = mixture ID (particles) or group ID (grid cells or surf elements)
+    region-ID = only apply to particle/grid/surf in region, NULL to not test
+  <I>remove</I> args = none 
+</PRE>
+<LI>zero of more keyword/arg pairs may be appended (only for action = set) 
 
 <PRE>keyword = <I>type</I> or <I>size</I>
   <I>type</I> arg = <I>int</I> or <I>float</I>
@@ -43,84 +45,43 @@
 <P><B>Examples:</B>
 </P>
 <P>custom particle p_ivec remove
-</P>
-<P>set             particle air NULL p_ivec v_ivec type int
-set             particle air NULL p_iarray<B>1</B> v_iarray1 type int size 2
-set             particle air NULL p_iarray<B>2</B> v_iarray2 type int size 2
-set             particle all NULL p_dvec v_dvec
-set             particle all NULL p_darray<B>1</B> v_darray1 size 3
-set             particle all NULL p_darray<B>2</B> v_darray2 size 3
-set             particle all NULL p_darray<B>3</B> v_darray3 size 3
-</P>
-<P>set                 surf all NULL s_ivec v_ivec type int
-set                 surf all NULL s_iarray<B>1</B> v_iarray1 type int size 2
-set                 surf all NULL s_iarray<B>2</B> v_iarray2 type int size 2
-set                 surf all NULL s_dvec v_dvec
-set                 surf all NULL s_darray<B>1</B> v_darray1 size 3
-set                 surf all NULL s_darray<B>2</B> v_darray2 size 3
-set                 surf all NULL s_darray<B>3</B> v_darray3 size 3
+custom surf s_ivec set air NULL v_ivec type int
 </P>
 <P><B>Description:</B>
 </P>
-<P>Set the values for a new or previouly defined custom attibute via a
-variable.  The attribute can be for particles, grid cells, or surface
-elements.  Custom attributes can be vectors (single value per entity)
-or arrays (mutiple values per entity).  See <A HREF = "Section_howto.html#howto_17">Section
-6.17</A> for more discussion of custom
-attributes.
+<P>Create or reset or remove a custom attribute for individual particles,
+grid cells, or surface elements.  To create or reset an attribute a
+variable is specified and evaluated.  Custom attributes can be can be
+vectors (single value per entity) or arrays (mutiple values per
+entity).  They can also be integer or floating point values.  See
+<A HREF = "Section_howto.html#howto_17">Section 6.17</A> for more discussion of
+custom attributes.
 </P>
 <P>The specified <I>style</I> setting is <I>particle</I> or <I>grid</I> or <I>surf</I>
-depending on which kind of custom attribute is being set.
+for per-particle, per-grid, or per-surf attributes.
 </P>
-<P>There are two ways to limit which particles, grid cells, or surface
-elements are assigned a custom value, via <I>subset-ID</I> and <I>region-ID</I>.
-An individual particle, grid cell, or surface element must meet both
-criteria to have its custom value set, otherwise its value is set to
-zero.
+<P>The <I>custom-ID</I> specifies the attribute to operate on.  It begins with
+a "p_" or "g_" or "s_" prefix for particles, grid cells, or surface
+elements respectively and is followed by the name of the attribute.
+The same name can be used for attributes of different styles, e.g.
+s_temp and g_temp.
 </P>
-<P>The specified <I>subset-ID</I> is the ID of a mixture for particles or the
-ID of a group of grid cells or surface elements.  Only particles in
-the mixture or grid cells/surface elements in the group will be
-assigned values.  See the <A HREF = "mixture.html">mixture</A> and
-<A HREF = "group.html">group</A> commands for more details.  Note that "all" is a
-pre-defined mixture ID which contains all particles.  Likewise "all"
-is the name of a pre-defined group with all grid cells or surface
-elements.
+<P>The <I>action</I> is specified as <I>set</I> or <I>remove</I>.
 </P>
-<P>The specified <I>region-ID</I> is the ID of a geometric region defined by
-the <A HREF = "region.html">region</A> command.  Only particles or grid cells or
-surface elements in the region will have their values set.  The center
-point of a grid cell or surface element is used for the region check.
-If <I>region-ID</I> is specified as NULL, then the region criterion is not
-applied.
+<P>If <I>remove</I> is used, then the <I>custom-ID</I> is simply the name of the
+attribute, whether it is a vector or array.  No trailing brackets are
+specified.  The attribute will be removed from the system.  No further
+arguments can be specified.
 </P>
-<P>The custom attribute is specified with a "p_" or "g_" or "s_" prefix
-followed by the name of the attribute, for particles, grid cells, and
-surface elements respectively.  Custom attributes can be vectors
-(single value per entity) or arrays (mutiple values per entity).  To
-set the values for a custom vector, use the name without brackets,
-e.g. s_temp.  To set the values for a single column of a custom array,
-use the name suffixed by a bracketed integer, e.g. p_dipole<B>3</B>.  The
+<P>If <I>set</I> is used, then the attribute is created if it does not already
+exist and its values are initialized.  If it already exists, its
+values are reset.  Custom attributes can be vectors (single value per
+entity) or arrays (mutiple values per entity).  To set the values for
+a custom vector, use a <I>custom-ID</I> without brackets, e.g. s_temp.  To
+set the values for a single column of a custom array, use a
+<I>custom-ID</I> suffixed by a bracketed integer, e.g. p_dipole<B>3</B>.  The
 integer must be a value from 1 to M, where M is the number of columns
 (values per entity) in the array.
-</P>
-<P>If the named custom attribute already exists, its values are
-overwritten by this command.  If is does not exist, a new custom
-attribute is created, and all its values are set.  As noted above,
-values for entities not in the <I>subset-ID</I> or <I>region-ID</I> are set to
-zero.
-</P>
-<P>Two optional keywords affect the creation of a new custom vector or
-array.  The <I>type</I> keyword can be used with <I>int</I> or <I>float</I> as its
-arg.  The created custom attribute will then store integer versus
-floating-point values.  Floating point values are the default.  The
-<I>size</I> keyword can be used with arg = 0 to create a custom vector
-(which is the default).  It can also be used with an arg M >= 1 to
-create an array with M columns.  This means that if a new custom name
-is specified with no brackets, the <I>size</I> keyword is not necessary,
-because it refers to a custom vector.  But if a new custom name with a
-bracket is used, the <I>size</I> keyword must be used so that the column
-dimension of the array is known.
 </P>
 <P>The specified <I>v_name</I> is the name of a previously defined variable
 which this command will evaluate.  It must be either an equal-style or
@@ -130,15 +91,53 @@ value(s) of the variable.  See the <A HREF = "variable.html">variable</A> for
 details.
 </P>
 <P>If an equal-style variable is specified, it produces a single value
-which will be assigned to all particles or grid cells or surface
-elements.  Otherwise a particle-style variable must be used for style
-= <I>particle</I>, a grid-style variable for style = <I>grid</I>, or a
-surf-style variable for style = <I>surf</I>.
+which will be assigned as the custom value to all particles or grid
+cells or surface elements.  Otherwise a particle-style variable must
+be used for style = <I>particle</I>, a grid-style variable for style =
+<I>grid</I>, or a surf-style variable for style = <I>surf</I>.  When it is
+evaluated it generates one value for each particle, grid cell, or
+surface element, which is assigned to the custom vector or to a column
+of the custom array.
 </P>
-<P>Note that the latter 3 variable styles can include the spatial
-position of the particle, grid cell, or surface element in their
-formula. So it is easy to calculate values for each entity which vary
-spatially and also which depend on the current timestep.
+<P>Note that the latter 3 variable styles can include outputs from
+<A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A> commands.  They can also
+include the spatial position of a particle, grid cell, or surface
+element in their formula. So it is easy to calculate values for each
+entity which vary spatially or which depend on the current timestep.
+</P>
+<P>The next two arguments, <I>subset-ID</I> and <I>region-ID</I>, can limit which
+particles, grid cells, or surface elements are assigned a custom
+value.  An individual particle, grid cell, or surface element must
+meet both criteria to have its custom value set, otherwise its value
+is set to zero.
+</P>
+<P>The <I>subset-ID</I> is the ID of a mixture for particles or the ID of a
+group of grid cells or surface elements.  Only particles in the
+mixture or grid cells/surface elements in the group will be assigned a
+value.  See the <A HREF = "mixture.html">mixture</A> and <A HREF = "group.html">group</A> commands
+for more details.  Note that "all" is a pre-defined mixture ID which
+contains all particles.  Likewise "all" is the name of a pre-defined
+group with all grid cells or surface elements.
+</P>
+<P>The <I>region-ID</I> is the ID of a geometric region defined by the
+<A HREF = "region.html">region</A> command.  Only particles or grid cells or surface
+elements in the region will have their values set.  The center point
+of a grid cell or surface element is used for the region check.  If
+<I>region-ID</I> is specified as NULL, then the region criterion is not
+applied.
+</P>
+<P>Two optional keywords affect the creation of a new custom vector or
+array.  The <I>type</I> keyword can be used with <I>int</I> or <I>float</I> as its
+arg.  The created custom attribute will then store either integer or
+floating-point values.  Floating point values are the default.
+</P>
+<P>The <I>size</I> keyword can be used with arg = 0 to create a custom vector
+(which is the default).  It can also be used with an arg M >= 1 to
+create an array with M columns.  This means that if a new <I>custom-ID</I>
+is specified with no brackets, the <I>size</I> keyword is not necessary,
+because it refers to a custom vector.  But if a new <I>custom-ID</I> with a
+bracket is used, the <I>size</I> keyword must be used so that the column
+dimension of the array is known.
 </P>
 <HR>
 

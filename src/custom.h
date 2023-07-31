@@ -32,14 +32,14 @@ class Custom : protected Pointers {
   void command(int, char **);
 
  private:
-  int mode,groupbit;
+  int mode,action,groupbit;
   int ctype,csize,cindex,ccol;
   int vindex,vstyle;
   char *cname,*vname;
   
+  class Variable *variable;
   class Mixture *mixture;
   class Region *region;
-  class Variable *variable;
 
   int set_particle(double, double *);
   int set_grid(double, double *);

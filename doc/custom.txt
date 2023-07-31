@@ -10,20 +10,23 @@ custom command :h3
 
 [Syntax:]
 
-custom style subset-ID region-ID custom-ID v_name keyword arg ... :pre
+custom style custom-ID action args ... keyword value ... :pre
 
 style = {particle} or {grid} or {surf} :ulb,l
-subset-ID = mixture ID (particles) or group ID (grid cells or surface elements) :l
-region-ID = only apply to particle/grid/surf in region, NULL if not applicable :l
-custom-ID = reference to custom attribute to set :l
+custom-ID = reference to custom attribute :l
   p_ID = custom per-particle vector with ID
   p_ID\[N\] = Nth column of custom per-particle array with ID
   g_ID = custom per-grid vector with ID
   g_ID\[N\] = Nth column of custom per-grid array with ID
   s_ID = custom per-surf vector with ID
   s_ID\[N\] = Nth column of custom per-surf array with ID :pre
-v_name = equal- or particle- or grid- or surf-style variable with name or remove :l
-zero of more keyword/arg pairs may be appended :l
+action = {set} or {remove} :l
+  {set} args = v_name subset-ID region-ID
+    v_name = equal-, particle-, grid-, or surf-style variable with name
+    subset-ID = mixture ID (particles) or group ID (grid cells or surf elements)
+    region-ID = only apply to particle/grid/surf in region, NULL to not test
+  {remove} args = none :pre
+zero of more keyword/arg pairs may be appended (only for action = set) :l
 keyword = {type} or {size}
   {type} arg = {int} or {float}
   {size} arg = M for number of columns in a new custom array :pre
@@ -32,84 +35,43 @@ keyword = {type} or {size}
 [Examples:]
 
 custom particle p_ivec remove
-
-set             particle air NULL p_ivec v_ivec type int
-set             particle air NULL p_iarray[1] v_iarray1 type int size 2
-set             particle air NULL p_iarray[2] v_iarray2 type int size 2
-set             particle all NULL p_dvec v_dvec
-set             particle all NULL p_darray[1] v_darray1 size 3
-set             particle all NULL p_darray[2] v_darray2 size 3
-set             particle all NULL p_darray[3] v_darray3 size 3
-
-set                 surf all NULL s_ivec v_ivec type int
-set                 surf all NULL s_iarray[1] v_iarray1 type int size 2
-set                 surf all NULL s_iarray[2] v_iarray2 type int size 2
-set                 surf all NULL s_dvec v_dvec
-set                 surf all NULL s_darray[1] v_darray1 size 3
-set                 surf all NULL s_darray[2] v_darray2 size 3
-set                 surf all NULL s_darray[3] v_darray3 size 3
+custom surf s_ivec set air NULL v_ivec type int
 
 [Description:]
 
-Set the values for a new or previouly defined custom attibute via a
-variable.  The attribute can be for particles, grid cells, or surface
-elements.  Custom attributes can be vectors (single value per entity)
-or arrays (mutiple values per entity).  See "Section
-6.17"_Section_howto.html#howto_17 for more discussion of custom
-attributes.
+Create or reset or remove a custom attribute for individual particles,
+grid cells, or surface elements.  To create or reset an attribute a
+variable is specified and evaluated.  Custom attributes can be can be
+vectors (single value per entity) or arrays (mutiple values per
+entity).  They can also be integer or floating point values.  See
+"Section 6.17"_Section_howto.html#howto_17 for more discussion of
+custom attributes.
 
 The specified {style} setting is {particle} or {grid} or {surf}
-depending on which kind of custom attribute is being set.
+for per-particle, per-grid, or per-surf attributes.
 
-There are two ways to limit which particles, grid cells, or surface
-elements are assigned a custom value, via {subset-ID} and {region-ID}.
-An individual particle, grid cell, or surface element must meet both
-criteria to have its custom value set, otherwise its value is set to
-zero.
+The {custom-ID} specifies the attribute to operate on.  It begins with
+a "p_" or "g_" or "s_" prefix for particles, grid cells, or surface
+elements respectively and is followed by the name of the attribute.
+The same name can be used for attributes of different styles, e.g.
+s_temp and g_temp.
 
-The specified {subset-ID} is the ID of a mixture for particles or the
-ID of a group of grid cells or surface elements.  Only particles in
-the mixture or grid cells/surface elements in the group will be
-assigned values.  See the "mixture"_mixture.html and
-"group"_group.html commands for more details.  Note that "all" is a
-pre-defined mixture ID which contains all particles.  Likewise "all"
-is the name of a pre-defined group with all grid cells or surface
-elements.
+The {action} is specified as {set} or {remove}.
 
-The specified {region-ID} is the ID of a geometric region defined by
-the "region"_region.html command.  Only particles or grid cells or
-surface elements in the region will have their values set.  The center
-point of a grid cell or surface element is used for the region check.
-If {region-ID} is specified as NULL, then the region criterion is not
-applied.
+If {remove} is used, then the {custom-ID} is simply the name of the
+attribute, whether it is a vector or array.  No trailing brackets are
+specified.  The attribute will be removed from the system.  No further
+arguments can be specified.
 
-The custom attribute is specified with a "p_" or "g_" or "s_" prefix
-followed by the name of the attribute, for particles, grid cells, and
-surface elements respectively.  Custom attributes can be vectors
-(single value per entity) or arrays (mutiple values per entity).  To
-set the values for a custom vector, use the name without brackets,
-e.g. s_temp.  To set the values for a single column of a custom array,
-use the name suffixed by a bracketed integer, e.g. p_dipole[3].  The
+If {set} is used, then the attribute is created if it does not already
+exist and its values are initialized.  If it already exists, its
+values are reset.  Custom attributes can be vectors (single value per
+entity) or arrays (mutiple values per entity).  To set the values for
+a custom vector, use a {custom-ID} without brackets, e.g. s_temp.  To
+set the values for a single column of a custom array, use a
+{custom-ID} suffixed by a bracketed integer, e.g. p_dipole[3].  The
 integer must be a value from 1 to M, where M is the number of columns
 (values per entity) in the array.
-
-If the named custom attribute already exists, its values are
-overwritten by this command.  If is does not exist, a new custom
-attribute is created, and all its values are set.  As noted above,
-values for entities not in the {subset-ID} or {region-ID} are set to
-zero.
-
-Two optional keywords affect the creation of a new custom vector or
-array.  The {type} keyword can be used with {int} or {float} as its
-arg.  The created custom attribute will then store integer versus
-floating-point values.  Floating point values are the default.  The
-{size} keyword can be used with arg = 0 to create a custom vector
-(which is the default).  It can also be used with an arg M >= 1 to
-create an array with M columns.  This means that if a new custom name
-is specified with no brackets, the {size} keyword is not necessary,
-because it refers to a custom vector.  But if a new custom name with a
-bracket is used, the {size} keyword must be used so that the column
-dimension of the array is known.
 
 The specified {v_name} is the name of a previously defined variable
 which this command will evaluate.  It must be either an equal-style or
@@ -119,15 +81,53 @@ value(s) of the variable.  See the "variable"_variable.html for
 details.
 
 If an equal-style variable is specified, it produces a single value
-which will be assigned to all particles or grid cells or surface
-elements.  Otherwise a particle-style variable must be used for style
-= {particle}, a grid-style variable for style = {grid}, or a
-surf-style variable for style = {surf}.
+which will be assigned as the custom value to all particles or grid
+cells or surface elements.  Otherwise a particle-style variable must
+be used for style = {particle}, a grid-style variable for style =
+{grid}, or a surf-style variable for style = {surf}.  When it is
+evaluated it generates one value for each particle, grid cell, or
+surface element, which is assigned to the custom vector or to a column
+of the custom array.
 
-Note that the latter 3 variable styles can include the spatial
-position of the particle, grid cell, or surface element in their
-formula. So it is easy to calculate values for each entity which vary
-spatially and also which depend on the current timestep.
+Note that the latter 3 variable styles can include outputs from
+"compute"_compute.html or "fix"_fix.html commands.  They can also
+include the spatial position of a particle, grid cell, or surface
+element in their formula. So it is easy to calculate values for each
+entity which vary spatially or which depend on the current timestep.
+
+The next two arguments, {subset-ID} and {region-ID}, can limit which
+particles, grid cells, or surface elements are assigned a custom
+value.  An individual particle, grid cell, or surface element must
+meet both criteria to have its custom value set, otherwise its value
+is set to zero.
+
+The {subset-ID} is the ID of a mixture for particles or the ID of a
+group of grid cells or surface elements.  Only particles in the
+mixture or grid cells/surface elements in the group will be assigned a
+value.  See the "mixture"_mixture.html and "group"_group.html commands
+for more details.  Note that "all" is a pre-defined mixture ID which
+contains all particles.  Likewise "all" is the name of a pre-defined
+group with all grid cells or surface elements.
+
+The {region-ID} is the ID of a geometric region defined by the
+"region"_region.html command.  Only particles or grid cells or surface
+elements in the region will have their values set.  The center point
+of a grid cell or surface element is used for the region check.  If
+{region-ID} is specified as NULL, then the region criterion is not
+applied.
+
+Two optional keywords affect the creation of a new custom vector or
+array.  The {type} keyword can be used with {int} or {float} as its
+arg.  The created custom attribute will then store either integer or
+floating-point values.  Floating point values are the default.
+
+The {size} keyword can be used with arg = 0 to create a custom vector
+(which is the default).  It can also be used with an arg M >= 1 to
+create an array with M columns.  This means that if a new {custom-ID}
+is specified with no brackets, the {size} keyword is not necessary,
+because it refers to a custom vector.  But if a new {custom-ID} with a
+bracket is used, the {size} keyword must be used so that the column
+dimension of the array is known.
 
 :line
 

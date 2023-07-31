@@ -31,6 +31,7 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
+enum{SET,REMOVE};
 enum{EQUAL,PARTICLE,GRID,SURF};
 enum{INT,DOUBLE};                       // several files
 
@@ -42,61 +43,36 @@ Custom::Custom(SPARTA *sparta) : Pointers(sparta) {}
 
 void Custom::command(int narg, char **arg)
 {
-  if (narg < 5) error->all(FLERR,"Illegal set command");
+  if (narg < 3) error->all(FLERR,"Illegal custom command");
 
   // mode
   
   if (strcmp(arg[0],"particle") == 0) mode = PARTICLE;
   else if (strcmp(arg[0],"grid") == 0) mode = GRID;
   else if (strcmp(arg[0],"surf") == 0) mode = SURF;
-  else error->all(FLERR,"Illegal set command");
-
-  // mixture or group ID
-
-  if (mode == PARTICLE) {
-    if (!particle->exist)
-      error->all(FLERR,"Cannot custom particle before particles are defined");
-    int imix = particle->find_mixture(arg[1]);
-    if (imix < 0) error->all(FLERR,"Custom mixture ID does not exist");
-    mixture = particle->mixture[imix];
-    mixture->init();
-  } else if (mode == GRID) {
-    if (!grid->exist)
-      error->all(FLERR,"Cannot custom grid before grid is defined");
-    int igroup = grid->find_group(arg[1]);
-    if (igroup < 0) error->all(FLERR,"Custom grid group ID does not exist");
-    groupbit = grid->bitmask[igroup];
-  } else if (mode == SURF) {
-    if (!surf->exist)
-      error->all(FLERR,"Cannot custom surf before surfaces are defined");
-    int igroup = surf->find_group(arg[1]);
-    if (igroup < 0) error->all(FLERR,"Custom surf group ID does not exist");
-    groupbit = surf->bitmask[igroup];
-  }
-
-  // region ID
+  else error->all(FLERR,"Illegal custom command");
   
-  if (strcmp(arg[2],"NULL") == 0) region = NULL;
-  else {
-    int iregion = domain->find_region(arg[2]);
-    if (iregion < 0) error->all(FLERR,"Custom region ID does not exist");
-    region = domain->regions[iregion];
-  }
+  if (mode == PARTICLE && !particle->exist)
+    error->all(FLERR,"Cannot use custom particle before particles are defined");
+  if (mode == GRID && !grid->exist)
+    error->all(FLERR,"Cannot use custom grid before a grid is defined");
+  if (mode == SURF && !surf->exist)
+    error->all(FLERR,"Cannot use custom surf before surfaces are defined");
 
   // custom attribute
   
-  if ((strncmp(arg[3],"p_",2) == 0) || (strncmp(arg[3],"g_",2) == 0) ||
-      (strncmp(arg[3],"s_",2) == 0)) {
-    if (arg[3][0] == 'p' && mode != PARTICLE)
+  if ((strncmp(arg[1],"p_",2) == 0) || (strncmp(arg[1],"g_",2) == 0) ||
+      (strncmp(arg[1],"s_",2) == 0)) {
+    if (arg[1][0] == 'p' && mode != PARTICLE)
       error->all(FLERR,"Custom attribute is mismatched");
-    if (arg[3][0] == 'g' && mode != GRID)
+    if (arg[1][0] == 'g' && mode != GRID)
       error->all(FLERR,"Custom attribute is mismatched");
-    if (arg[3][0] == 's' && mode != SURF)
+    if (arg[1][0] == 's' && mode != SURF)
       error->all(FLERR,"Custom attribute is mismatched");
 
-    int n = strlen(arg[3]);
+    int n = strlen(arg[1]);
     cname = new char[n];
-    strcpy(cname,&arg[3][2]);
+    strcpy(cname,&arg[1][2]);
 
     char *ptr = strchr(cname,'[');
     if (ptr) {
@@ -108,14 +84,42 @@ void Custom::command(int narg, char **arg)
     
   } else error->all(FLERR,"Custom attribute is invalid");
 
+  // action
+  
+  if (strcmp(arg[2],"set") == 0) action = SET;
+  else if (strcmp(arg[2],"remove") == 0) action = REMOVE;
+  else error->all(FLERR,"Illegal set command");
+
+  // remove a custom attribute and return
+  
+  if (action == REMOVE) {
+    if (narg > 3) error->all(FLERR,"Illegal custom command");
+    if (mode == PARTICLE) {
+      int index = particle->find_custom(cname);
+      if (index < 0) error->all(FLERR,"Custom attribute does not exist");
+      particle->remove_custom(index);
+    } else if (mode == GRID) {
+      int index = grid->find_custom(cname);
+      if (index < 0) error->all(FLERR,"Custom attribute does not exist");
+      grid->remove_custom(index);
+    } else if (mode == SURF) {
+      int index = surf->find_custom(cname);
+      if (index < 0) error->all(FLERR,"Custom attribute does not exist");
+      surf->remove_custom(index);
+    }
+    
+    return;
+  }
+
+  // set a custom attribute using remaining args
   // variable name
 
   variable = input->variable;
   
-  if (strncmp(arg[4],"v_",2) == 0) {
-    int n = strlen(arg[4]);
+  if (strncmp(arg[3],"v_",2) == 0) {
+    int n = strlen(arg[3]);
     vname = new char[n];
-    strcpy(vname,&arg[4][2]);
+    strcpy(vname,&arg[3][2]);
 
     vindex = variable->find(vname);
     if (vindex < 0) error->all(FLERR,"Custom variable name does not exist");
@@ -129,12 +133,38 @@ void Custom::command(int narg, char **arg)
     
   } else error->all(FLERR,"Custom variable name is invalid");
 
+  // mixture or group ID
+
+  if (mode == PARTICLE) {
+    int imix = particle->find_mixture(arg[4]);
+    if (imix < 0) error->all(FLERR,"Custom mixture ID does not exist");
+    mixture = particle->mixture[imix];
+    mixture->init();
+  } else if (mode == GRID) {
+    int igroup = grid->find_group(arg[4]);
+    if (igroup < 0) error->all(FLERR,"Custom grid group ID does not exist");
+    groupbit = grid->bitmask[igroup];
+  } else if (mode == SURF) {
+    int igroup = surf->find_group(arg[4]);
+    if (igroup < 0) error->all(FLERR,"Custom surf group ID does not exist");
+    groupbit = surf->bitmask[igroup];
+  }
+
+  // region ID
+  
+  if (strcmp(arg[5],"NULL") == 0) region = NULL;
+  else {
+    int iregion = domain->find_region(arg[5]);
+    if (iregion < 0) error->all(FLERR,"Custom region ID does not exist");
+    region = domain->regions[iregion];
+  }
+
   // optional keywords
 
   ctype = DOUBLE;
   csize = 0;
   
-  int iarg = 5;
+  int iarg = 6;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"type") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Invalid custom command");
@@ -179,7 +209,7 @@ void Custom::command(int narg, char **arg)
   }
 
   // evaluate variable
-  // store result as floating point scalar or vector for now
+  // store result as floating point scalar or vector
 
   double scalar = 0.0;
   double *vector = NULL;
@@ -187,13 +217,13 @@ void Custom::command(int narg, char **arg)
   if (vstyle == EQUAL) {
     scalar = variable->compute_equal(vindex);
   } else if (vstyle == PARTICLE) {
-    memory->create(vector,particle->nlocal,"set:vector");
+    memory->create(vector,particle->nlocal,"custom:vector");
     variable->compute_particle(vindex,vector,1,0);
   } else if (vstyle == GRID) {
-    memory->create(vector,grid->nlocal,"set:vector");
+    memory->create(vector,grid->nlocal,"custom:vector");
     variable->compute_grid(vindex,vector,1,0);
   } else if (vstyle == SURF) {
-    memory->create(vector,surf->nown,"set:vector");
+    memory->create(vector,surf->nown,"custom:vector");
     variable->compute_surf(vindex,vector,1,0);
   }
 
@@ -202,18 +232,10 @@ void Custom::command(int narg, char **arg)
   // assign zero value if particle/grid/surf not in mixture or group or region
 
   int count;
-  int *choose;
 
   if (mode == PARTICLE) count = set_particle(scalar,vector);
   else if (mode == GRID) count = set_grid(scalar,vector);
   else if (mode == SURF) count = set_surf(scalar,vector);
-  
-  // clean up
-
-  delete [] cname;
-  delete [] vname;
-  memory->destroy(vector);
-  memory->destroy(choose);
   
   // print stats
 
@@ -223,10 +245,18 @@ void Custom::command(int narg, char **arg)
   
   if (comm->me == 0) {
     if (screen)
-      fprintf(screen,"Custom attributes set = " BIGINT_FORMAT "\n",bcountall);
+      fprintf(screen,"Custom %s attributes set = " BIGINT_FORMAT "\n",
+              cname,bcountall);
     if (logfile)
-      fprintf(logfile,"Custom attributes set = " BIGINT_FORMAT "\n",bcountall);
+      fprintf(logfile,"Custom %s attributes set = " BIGINT_FORMAT "\n",
+              cname,bcountall);
   }
+
+  // clean up
+
+  delete [] cname;
+  delete [] vname;
+  memory->destroy(vector);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -478,9 +508,12 @@ int Custom::set_surf(double scalar, double *vector)
 	point[1] = 0.5 * (lines[i].p1[0] + lines[i].p2[0]);
 	point[2] = 0.0;
       } else {
-	point[0] = MathConst::THIRD * (tris[i].p1[0] + tris[i].p2[0] + tris[i].p3[0]);
-	point[1] = MathConst::THIRD * (tris[i].p1[1] + tris[i].p2[1] + tris[i].p3[1]);
-	point[2] = MathConst::THIRD * (tris[i].p1[2] + tris[i].p2[2] + tris[i].p3[2]);
+	point[0] = MathConst::THIRD *
+          (tris[i].p1[0] + tris[i].p2[0] + tris[i].p3[0]);
+	point[1] = MathConst::THIRD *
+          (tris[i].p1[1] + tris[i].p2[1] + tris[i].p3[1]);
+	point[2] = MathConst::THIRD *
+          (tris[i].p1[2] + tris[i].p2[2] + tris[i].p3[2]);
       }
       if (!region->inside(point)) flag = 0;
     }
