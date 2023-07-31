@@ -1,0 +1,266 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+fix emit/surf command :h3
+
+[Syntax:]
+
+fix ID emit/surf mix-ID group-ID keyword value ... :pre
+
+ID is documented in "fix"_fix.html command :ulb,l
+emit/surf = style name of this fix command :l
+mix-ID = ID of mixture to use when creating particles :l
+group-ID = ID of surface group that emits particles :l
+zero or more keyword/value pairs may be appended :l
+keyword = {n} or {normal} or {nevery} or {perspecies} or {region} or {subsonic} :l
+  {n} value = Np = number of particles to create
+  {normal} value = yes or no = emit normal to surface elements or with streaming velocity
+  {nevery} value = Nstep = add particles every this many timesteps
+  {perspecies} value = {yes} or {no}
+  {region} value = region-ID
+  {subsonic} values = Psub Tsub
+    Psub = pressure setting at inflow boundary (pressure units)
+    Tsub = temperature setting at inflow boundary, can be NULL (temperature units) :pre
+
+:ule
+
+[Examples:]
+
+fix in emit/surf air all
+fix in emit/face mymix myPatch region circle normal yes
+fix in emit/surf air all subsonic 0.1 300
+fix in emit/surf air all subsonic 0.05 NULL :pre
+
+[Description:]
+
+Emit particles from a group of surface elements, continuously during a
+simulation.  If invoked every timestep, this fix creates a continuous
+outflux of particles from the surface elements in the group.
+
+The properties of the added particles are determined by the mixture
+with ID {mix-ID}.  This sets the number and species of added
+particles, as well as their streaming velocity, thermal temperature,
+and internal energy modes.  The details are explained below.
+
+Which surface elements emit particles is specified by the {group-ID}
+for a surface group, which defines a set of surface elements.  The
+"group surf"_group.html is used to define surface groups.
+
+On each insertion timestep, each grid cell that overlaps with one or
+more emitting surface elements performs the following computations to
+add particles for each grid cell/surface element pairing.  The
+particles are added at the beginning of the SPARTA timestep.
+
+The molecular flux emitted from a surface element per unit time is
+given by equation 4.22 of "(Bird94)"_#Bird94.  The number of particles
+{M} to insert on the portion of a surface element that is contained
+within a grid cell is based on this flux and additional global, flow,
+and surface element properties:
+
+global property: {fnum} ratio as specified by the "global"_global.html" command
+flow properties: number density, streaming velocity, and thermal temperature
+surface element properties: portion of surface element area that overlaps with the grid cell and its orientation relative to the streaming velocity :ul
+
+The flow properties are defined for the specified mixture via the
+"mixture"_mixture.html command.
+
+If {M} has a fractional value, e.g. 12.5, then 12 particles are added,
+and a 13th depending on the value of a random number.  Each particle
+is added at a random location within the portion of the surface
+element that overlaps with the grid cell.  The particle species is
+chosen randomly in accord with the {frac} settings of the collection
+of species in the mixture, as set by the "mixture"_mixture.html
+command.
+
+IMPORTANT NOTE: The preceeding calculation is actually done using
+surface element areas associated with {weighted} cell volumes.  Grid
+cells can be weighted using the "global weight"_global.html command.
+
+The velocity of the particle is set to the sum of the streaming
+velocity and a thermal velocity sampled from the thermal temperature.
+The internal energy modes of the particle are determined by the {trot}
+and {tvib} settings of the mixture and the {rotate} and {vibrate}
+options of the "collide_modify"_collide_modify.html command.  Note
+that if the "collide"_collide.html command has not been specified
+(free molecular flow), then no rotational or vibrational energy will
+be assigned to created particles.  See the discussion of the {normal}
+keyword below for a way to change the velocity assignment to be
+oriented in the direction normal to the surface element, rather than
+in the direction of the streaming velocity.
+
+If the final particle velocity is not directed "out of" the surface
+element, then the velocity sampling procedure is repeated until it is.
+This insures that all added particles emit from the surface element,
+as desired.
+
+The first timestep that added particles are advected, they move for a
+random fraction of the timestep.  This insures a continuous flow field
+of particles emitting from each surface element.
+
+:line
+
+The {n} keyword can alter how many particles are added, which can be
+useful for debugging purposes.  If {Np} is set to 0, then the number
+of added particles is a function of {fnum}, {nrho}, and other mixture
+settings, as described above.  If {Np} is set to a value > 0, then the
+{fnum} and {nrho} settings are ignored, and exactly {Np} particles are
+added on each insertion timestep.  This is done by dividing {Np} by
+the total number of grid cell/surface element pairs and adding an
+equal number of particles per pair.
+
+The {normal} keyword can be used to alter how velocities are set for
+added particles.  If {normal} is set to {no}, then a particle's
+velocity is set as described above, using the mixture's streaming
+velocity superposed with a thermal velocity sampled from the
+temperature of the mixture.  Note that the same streaming velocity is
+used for all emitting surface elements, regardless of their
+orientation with respect to the streaming velocity.  If {normal} is
+set to {yes}, then each surface element is assigned its own
+"streaming" velocity in the following manner.  The streaming velocity
+points in the direction of the outward normal of the surface element,
+and its magnitude is set to the magnitude of the mixture's streaming
+velocity.  A velocity is then assigned to the particle in the same
+manner as before.  It is assigned the outward streaming velocity
+superposed with a thermal velocity sampled fromt he temperature of the
+mixture.  The effect is that particles effectively stream outward from
+each emitting surface element.
+
+The {nevery} keyword determines how often particles are added.  If
+{Nstep} > 1, this may give a non-continuous, clumpy distribution in
+the inlet flow field.
+
+The {perspecies} keyword determines how the species of each added
+particle is randomly determined.  This has an effect on the
+statistical properties of added particles.
+
+If {perspecies} is set to {yes}, then a target insertion number {M}
+for a grid cell/surface element pair is calculated for each species,
+which is a function of the relative number fraction of the species, as
+set by the "mixture nfrac"_mixture.html command.  If {M} has a
+fractional value, e.g. 12.5, then 12 particles of that species will
+always be added, and a 13th depending on the value of a random number.
+
+If {perspecies} is set to {no}, then a single target insertion number
+{M} for a grid cell/surface element pair is calculated for all the
+species.  Each time a particle is added, a random number is used to
+choose the species of the particle, based on the relative number
+fractions of all the species in the mixture.  As before, if {M} has a
+fractional value, e.g. 12.5, then 12 particles will always be added,
+and a 13th depending on the value of a random number.
+
+Here is a simple example that illustrates the difference between the
+two options.  Assume a mixture with 2 species, each with a relative
+number fraction of 0.5.  Assume a particular grid cell/surface element
+pair adds 10 particles from that mixture.  If {perspecies} is set to
+{yes}, then exactly 5 particles of each species will be added on every
+timestep insertions take place.  If {perspecies} is set to {no}, then
+exactly 10 particles will be added every time and on average there
+will be 5 particles of each of the two species.  But on one timestep
+it might be 6 of the first and 4 of the second.  On another timestep
+it might be 3 of the first and 7 of the second.
+
+If the {region} keyword is used, then a particle will only added if
+its position is within the specified {region-ID}.  This can be used to
+only allow particle insertion on a subset of the collective area of
+the specified group of surface elements.  Note that the {side} option
+for the "region"_region.html command can be used to define whether the
+inside or outside of the geometric region is considered to be "in" the
+region.
+
+IMPORTANT NOTE: If the {region} and {n} keywords are used together,
+less than N particles may be added on an insertion timestep.  This is
+because grid cell/suface element pairs will be candidates for particle
+insertion, unless the grid cell is entirely outside the bounding box
+that encloses the region.  Particles those grid cell/surface element
+pairs will attempt to add are included in the count for N, even if
+some or all of the particle insertions are rejected due to not being
+inside the region.
+
+The {subsonic} keyword uses the method of Fang and Liou
+"(Fang02)"_#Fang02 to determine the number of particles to insert in
+each grid cell on the emitting face(s).  They used the method of
+characteristics to calculate the mean properties of the incoming
+molecular flux, so that the prescribed pressure condition is achieved.
+These properties are then applied to calculate the molecular flux
+across a grid cell face per unit time, as given by equation 4.22 of
+"(Bird94)"_#Bird94.
+
+This keyword allows specification of both the pressure and temperature
+at the surface or just the pressure (by specifying the temperature as
+NULL).  If specified, the temperature must be > 0.0.  Currently,
+instantaneous values for the density, temperature, and stream velocity
+of particles in the cells containing the surface elements are computed
+and used to determine the properties of inserted particles on each
+timestep.
+
+IMPORTANT NOTE: Caution must be exercised when using the subsonic
+boundary condition without specifying an inlet temperature. In this
+case the code tries to estimate the temperature of the flow from the
+properties of the particles in the domain. If the domain contains few
+particles per cell it may lead to spurious results.  This boundary
+condition is meant more for an outlet than an inlet boundary
+condition, and performs well in cases where the cells are adequately
+populated.
+
+IMPORTANT NOTE: When using this keyword, you should also use an
+appropriate surface collision or chemistry model via the
+"surf_collide"_surf_collide.html or "surf_react"_surf_react.html
+commands, so that particles hitting the surface disappear as if they
+were exiting the simulation domain.  That is necessary to produce the
+correct subsonic conditions that the particle insertions due to this
+command are trying to achieve.
+
+:line
+
+[Restart, output info:]
+
+No information about this fix is written to "binary restart
+files"_restart.html.
+
+This fix computes a global vector of length 2 which can be accessed by
+various output commands.  The first element of the vector is the total
+number of particles added on the most recent insertion step.  The
+second element is the cummulative total number added since the
+beginning of the run.  The 2nd value is initialized to zero each time
+a run is performed.
+
+[Restrictions:]
+
+A {n} setting of {Np} > 0 can only be used with a {perspecies} setting
+of {no}.
+
+If {normal} is set to {no}, which is the default, then unlike the "fix
+emit/face"_fix_emit/face.html command, no warning is issued if a
+surface element has an inward normal in a direction opposing the
+streaming velocity, as defined by the mixture.
+
+For that surface element, particles will still be emitted, so long as
+a small fraction have a thermal velocity large enough to overcome the
+outward streaming velocity, so that their net velocity is inward.  The
+threshold for this is the thermal velocity for particles 3*sigma from
+the mean thermal velocity.
+
+[Related commands:]
+
+"mixture"_mixture.html, "create_particles"_create_particles.html, "fix
+emit/face"_fix_emit_face.html
+
+[Default:]
+
+The keyword defaults are n = 0, normal = no, nevery = 1, perspecies =
+yes, region = none, no subsonic settings.
+
+:line
+
+:link(Bird94)
+[(Bird94)] G. A. Bird, Molecular Gas Dynamics and the Direct
+Simulation of Gas Flows, Clarendon Press, Oxford (1994).
+
+:link(Fang02)
+[(Fang02)] Y. Fang and W. W. Liou, Microfluid Flow Computations
+Using a Parallel DSMC Code, AIAA 2002-1057. (2002).

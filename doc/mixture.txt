@@ -1,0 +1,247 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+mixture command :h3
+
+[Syntax:]
+
+mixture ID species1 species2 ... keyword args ... :pre
+
+ID = user-defined name of the mixture :ulb,l
+species1, species2, ... = zero or more species IDs to include in the mixture :l
+zero or more keyword/arg pairs may be appended :l
+keyword = {nrho} or {vstream} or {temp} or {frac} or {group} or {copy} or {delete} :l
+  {nrho} arg = density
+    density = number density of entire mixture (# per length^3 units)
+  {vstream} args = Vx Vy Vz
+    Vx,Vy,Vz = streaming velocity of entire mixture (velocity units)
+  {temp} arg = thermal
+    thermal = temperature of entire mixture (temperature units)
+  {trot} arg = Trot
+    Trot = rotational temperature of entire mixture (temperature units)
+  {tvib} arg = Tvib
+    Tvib = vibrational temperature of entire mixture (temperature units)
+  {frac} arg = fraction
+    fraction = number fraction for each listed species (0 to 1)
+  {group} arg = SELF or group-ID
+    SELF = put each listed species (or all species if none listed) in its own group
+    group-ID = put the listed species (or all species if none listed) in a group with this ID 
+  {copy} arg = new-ID
+    new-ID = ID of new mixture to create, as a copy of this one
+  {delete} args = sp1 sp2 ...
+    sp1,sp2,... = species to delete from the mixture :pre
+:ule
+
+[Examples:]
+
+mixture air N O NO group lite
+mixture air N O NO vstream 250.0 0.0 0.0 group species
+mixture air N frac 0.8
+mixture air O frac 0.2 copy myAir
+mixture background N O 
+mixture air delete N NO :pre
+
+[Description:]
+
+Define a gas mixture and its properties.  A mixture can be referenced
+by its ID in several other SPARTA commands such as
+"create_particles"_create_particles.html or "per-grid
+computes"_compute.html.  Any number of mixtures can be defined and
+used in a simulation.
+
+A mixture is a collection of one or more particle species as defined
+by the "species"_species.html command.  Each species belongs to a
+named group within the mixture so that particles of all species in the
+group can be acted on together by other commands.  The mixture has
+both global attributes and per-species attributes.  All attributes
+have default values unless they are explicitly specified.
+
+The ID for a mixture is used to identify the mixture in other
+commands.  Each mixture ID must be unique.  The ID can only contain
+alphanumeric characters and underscores.
+
+Note that the mixture command can be used multiple times with the same
+ID, to add species to the mixture, define groups within the mixture,
+or change its attributes.  Also note that a species can belong to more
+than one mixture.
+
+There are 2 default mixtures defined by SPARTA that always exist.
+
+The first default mixture has an ID = "all", and contains all species
+that have been defined.  When new species are created via the
+"species" command, they are automatically added to this mixture.  This
+mixture has only a single group, also named "all", which all species
+belong to.
+
+The second default mixture has an ID = "species", and also contains
+all species that have been defined.  When new species are created via
+the "species" command, they are also automatically added to this
+mixture.  This mixture defines one group per species, each with the
+species name, so that each species in the mixture belongs to its own
+group.
+
+:line
+
+Zero or more species can be specified in the mixture command.  If a
+listed species is not already in the mixture, due to a previous
+mixture command with the same ID, then that species is added to the
+mixture.  As discussed below, it will be assigned to a default group
+and assigned default per-species attributes, unless the appropriate
+keywords are also specified.
+
+Species can be specified which are already part of the mixture, to
+change their group assignment or their per-species proerties, as
+disussed below.
+
+Zero species can be specified, if other keywords are used which alter
+group assignments or change global attributes of the mixture, as
+discussed below.
+
+:line
+
+These keywords set global attributes of the mixture.
+
+The {nrho} keyword sets a global attribute of the mixture, namely its
+density.  For 3d simulations the units of the specified {density} are
+#/volume.  For 2d, the units are effectively #/area, since the
+z-dimension thickness of the simulation box = 1.0.
+
+The {vstream} keyword sets a global attribute of the mixture, namely
+the streaming velocity.  Particles created using the mixture will use
+the specified {Vx,Vy,Vz} values.
+
+The {temp} keyword sets a global attribute of the mixture, namely the
+thermal temperature of its particles.  It must be a value >= zero.
+When particles are created, this value is used to sample a Gaussian
+velocity distribution, which is superposed on the streaming velocity,
+when each particle's velocity is initialized.
+
+The {trot} keyword sets a global attribute of the mixture, namely the
+rotational temperature of its particles.  It must be a value >= zero.
+When particles are created, this value is used to sample a Gaussian
+energy distribution to define each particle's rotational energy.  If
+this keyword is not specified, the thermal temperature is used as the
+default.
+
+The {tvig} keyword sets a global attribute of the mixture, namely the
+vibrational temperature of its particles.  It must be a value >= zero.
+When particles are created, this value is used to sample a Gaussian
+energy distribution to define each particle's vibrational energy.  If
+this keyword is not specified, the thermal temperature is used as the
+default.
+
+:line
+
+This keyword sets per-species attributes of the mixture.
+
+The {frac} keyword sets a per-species attribute for individual species
+in the mixture.  Each species has a relative fractional density, such
+as 0.2, meaning one out of 5 particles is that species.  The sum of
+this value across all species in the mixture must equal 1.0.  The
+{frac} keyword sets this value for the listed species.  If this value
+has never been set for M species out of the total N species in the
+mixture, then when a simulation is run, the {frac} value for each of
+the M species is set to (1 - sum)/M, where sum is the sum of the
+{frac} values for the N-M assigned species.
+
+:line
+
+Each species in a mixture is assigned to exactly one group.  The
+{group} keyword can be used to set or change these assignments.  Every
+mixture has one or more named groups.
+
+As described by the "collide"_collide.html command, mixture groups are
+used when performing collisions so that collisions attempts, partners,
+and parameters can be treated on a per-group basis for accuracy and
+efficiency.  "Per-grid computes"_compute.html also use mixture groups
+to calculate per-grid quantities on a per-grid-cell, per-group basis,
+i.e. on subsets of particles within each grid cell.
+
+If the {group} keyword is not used in a mixture command, no changes to
+group assignements are made for species that are already in the
+mixture.  If one or more new species are specified, then all of them
+are assigned to a group with "default" as the group ID.  Note that
+this means that mixtures defined with mixture commands that never use
+the {group} keyword will have just a single group.
+
+If the {group} keyword is used, the group ID can be any string you
+choose.  Similar to the mixture ID, it can only contain alphanumeric
+characters and underscores.  Using SELF for the group ID has a special
+meaning as discussed below.
+
+The operation of the {group} keyword depends on whether no species or
+some species are specified explicitly in the mixture command.  It also
+depends on whether the group ID is SELF or a user-defined name.  In
+each case, after the operation is done, any group IDs for the mixture
+that have no species assigned to them are deleted.  This includes the
+"default" group if it was implicitly created by a previous mixture
+command.
+
+If no species are listed in the mixture command and the group ID is
+SELF, then every species already in the mixture is assigned to a group
+with its species ID as the group ID.  I.e. there will now be one
+species per group. :ulb,l
+
+If one or more species are listed and the group ID is SELF, then each
+listed species is assigned to a group with its species ID as the group
+ID. :l
+
+If no species are listed and the group ID is not SELF, then all
+species already in the mixture are assigned to a group with the
+specified ID. :l
+
+If one or more species are listed and the group ID is not SELF, then
+the listed species are all assigned to a group with the specified
+ID. :l,ule
+
+:line
+
+These keywords operate on one or more mixtures.
+
+The {copy} keyword creates a new mixture with {new-ID} which is
+an identical copy of the mixture with {ID}.  Regardless of where
+the {copy} keyword appears in the command, the operation
+is delayed until all other keywords have been invoked.
+
+This is useful if you wish to create a new mixture which is nearly the
+same as the current mixture.  Subsequent mixture commands can be used
+to change the properties of the new mixture.
+
+The {delete} keyword removes one or more species from the mixture,
+specified as {sp1}, {sp2}, etc.  No other keywords can be used with
+{delete}.  All arguments that follow it are assumed to be species IDs
+that are currently in the mixture.  When using {delete}, no species
+can be defined before the keyword, i.e. {species1}, {species2}, etc
+cannot be defined in the comand syntax described above.
+
+After the listed species are removed, any group IDs for the mixture
+that have no species assigned to them are also deleted.
+
+:line
+
+[Restrictions:]
+
+The streaming velocity and thermal temperature of the mixture cannot
+both be zero.  A zero streaming velocity means a zero vector =
+(0,0,0).
+
+The restrictions on use of the {delete} keyword are described above.
+
+[Related commands:]
+
+"global"_global.html, "create_particles"_create_particles.html
+
+[Default:]
+
+The {nrho}, {vstream}, and {temp} defaults are those defined for the
+background gas density, as set by the "global"_global.html command.
+The {trot} and {tvib} defaults are to use the thermal temperature
+{temp}, either its default or the value specified by this command.
+The {frac} default is described above.  The {group} keyword has no
+default; if it is not used, new species not already in the mixture are
+assigned to a group with a group ID = "default".

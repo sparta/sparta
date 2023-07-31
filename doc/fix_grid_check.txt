@@ -1,0 +1,100 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+fix grid/check command :h3
+fix grid/check/kk command :h3
+
+[Syntax:]
+
+fix ID grid/check N outflag keyword arg ... :pre
+
+ID is documented in "fix"_fix.html command :ulb,l
+grid/check = style name of this fix command :l
+N = check every N timesteps :l
+outflag = {error} or {warn} or {silent} :l
+zero or more keyword/args pairs may be appended :l
+keyword = {outside} :l
+  outside arg = {yes} or {no} :pre
+:ule
+
+[Examples:]
+
+fix 1 grid/check 100 error :pre
+
+[Description:]
+
+Check if particles are inside the grid cell they are supposed to be,
+based on their current coordinates.  This is useful as a debugging
+check to insure that no particles have been assigned to the incorrect
+grid cell during the particle move stage of the SPARTA timestepping
+algorithm.
+
+The check is performed once every {N} timesteps.  Particles not inside
+the correct grid cell are counted and the value of the count can be
+monitored (see below).  A value of 0 is "correct", meaning that no
+particle was found outside its assigned grid cell.
+
+If the {outside} keyword is set to {yes}, then a check for particles
+inside implicit surfaces is also performed.  If a particle is in a
+grid cell with implicit surface elements and the particles is "inside"
+the surfaces (which have possibly ablated), then the error count is
+incremented.
+
+If the outflag setting is {error}, SPARTA will print an error and stop
+if it finds a particle in an incorrect grid cell or inside the
+implicit surface elements.  For {warn}, it will print a warning
+message and continue.  For {silent}, it will print no message, but the
+count of such occurrences can be monitored as described below, e.g. by
+outputting the value with the "stats"_stats.html command.
+
+:line
+
+[Restart, output info:]
+
+No information about this fix is written to "binary restart
+files"_restart.html.
+
+This fix computes a global scalar which can be accessed by various
+output commands.  The scalar is the count of how many particles were
+not in the correct grid cell.  The count is cummulative over all the
+timesteps the check was performed since the start of the run.  It is
+initialized to zero each time a run is performed.
+
+:line
+
+Styles with a {kk} suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+"Accelerating SPARTA"_Section_accelerate.html section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+
+These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the "Making
+SPARTA"_Section_start.html#start_3 section for more info.
+
+You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the "-suffix command-line
+switch"_Section_start.html#start_6 when you invoke SPARTA, or you can
+use the "suffix"_suffix.html command in your input script.
+
+See the "Accelerating SPARTA"_Section_accelerate.html section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
+
+:line
+
+[Restrictions:] none
+
+[Related commands:] none
+
+[Default:]
+
+The option default is outside = no.
+

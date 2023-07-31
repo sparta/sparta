@@ -1,0 +1,13 @@
+To see movies of ablation occurring, uncomment the block of dump image
+and dump_modify lines in either of the input scripts.  Running each on
+more processors and for several 100 or 1000 steps will give longer,
+better movies (see comments in input files).  You can make a movie
+with the ImageMagick convert command as follows:
+
+% convert binary*ppm movie.gif
+
+Then load movie.gif as a file into your browser to see it animated.
+
+In 2d, the colors represent clumps of grid cells owned by each
+processor.  In 3d, the colors represent surface elements owned by each
+processor.

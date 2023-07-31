@@ -1,0 +1,10 @@
+# This file contains file patterns that triggers automatic
+# code review requests from users that are owners of these files
+# Order matters, the last match has the highest precedence
+
+# library folders
+lib/kokkos/*          @stanmoore1
+
+# packages
+src/KOKKOS            @stanmoore1
+

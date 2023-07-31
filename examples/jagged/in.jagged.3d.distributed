@@ -1,0 +1,53 @@
+################################################################################
+# 3d flow around a jagged object
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+
+global              gridcut 0.1 comm/sort yes surfs explicit/distributed
+
+boundary	    o r r
+
+create_box  	    -2 2 -2 2 -2 2
+create_grid         20 20 20
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.0005
+global              surfmax 1000
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0 
+
+read_surf           sdata.20x20x10x10x10 &
+                    origin 0.5 0.5 0.5 trans -0.5 -0.5 -0.5 scale 3.5 3.5 3.5
+
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide		    vss air air.vss
+
+fix		    in emit/face air xlo twopass 
+
+timestep 	    0.0001
+
+#compute             2 surf all all n press ke
+#fix                 save ave/surf all 1 50 50 c_2[*] ave running
+#region              slab block INF INF -1.0 1.0 -1.0 1.0
+#dump                2 image all 50 image.*.ppm type type pdiam 0.03 &
+#		    view 70 120 size 512 512 axes yes 0.9 0.02 &
+#                    surf f_save[2] 0.0
+#dump_modify	    2 pad 4 region slab
+#dump_modify         2 cmap surf min max cf 0.0 2 min orange max green
+
+#dump                3 surf all 500 tmp.dump2 id &
+#                    v1x v1y v1z v2x v2y v2z v3x v3y v3z
+
+stats		    100
+stats_style	    step cpu np nattempt ncoll nscoll nscheck
+run 		    1000

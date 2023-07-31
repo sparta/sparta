@@ -1,0 +1,127 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>compute react/isurf/grid command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>compute ID react/isurf/grid group-ID reaction-ID value1 value2 ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
+
+<LI>react/isurf/grid = style name of this compute command 
+
+<LI>group-ID = group ID for which grid cells to perform calculation on 
+
+<LI>reaction-ID = surface reaction ID which defines surface reactions 
+
+<LI>zero or more values can be appended 
+
+<LI>value = <I>r:s1/s2/s3 ...</I> or <I>p:s1/s2/s3 ...</I> 
+
+<PRE>  r: or p: = list of reactant species or product species
+  s1,s2,s3 = one or more species IDs, separated by "/" character 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>surf_react air prob air.surf
+compute 1 react/isurf/grid all air
+compute 2 react/isurf/grid all air r:N/O/N2/O2 p:N/O/NO 
+</PRE>
+<P>These commands will dump time averages for each surface element to a
+dump file every 1000 steps:
+</P>
+<PRE>compute 2 react/isurf/grid all air r:N/O/N2/O2 p:N/O/NO
+fix 1 ave/grid all 10 100 1000 c_2[*]
+dump 1 grid all 1000 tmp.surgrid id f_1[*] 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Define a computation that tallies counts of reactions for each grid
+cell containing implicit surface elements in a grid group, based on
+the particles that collide with those elements.  Only grid cells
+elements in the grid group specified by <I>group-ID</I> are included in the
+tallying.  See the <A HREF = "group.html">group grid</A> command for info on how
+grid cells can be assigned to grid groups.  Likewise only grid cells
+with surface elements assigned to the surface reaction model specified
+by <I>reaction-ID</I> are included in the tallying.
+</P>
+<P>Implicit surface elements are triangles for 3d simulations and line
+segments for 2d simulations.  Unlike explicit surface elements, each
+triangle or line segment is wholly contained within a single grid
+cell.  See the <A HREF = "read_isurf.html">read_isurf</A> command for details.
+</P>
+<P>This command can only be used for simulations with implicit surface
+elements.  See the similar <A HREF = "compute_react_surf.html">compute
+react/surf</A> command for use with simulations
+with explicit surface elements.
+</P>
+<P>Note that when a particle collides with a surface element, it can
+bounce off (possibly as a different species), be captured by the
+surface (vanish), or a 2nd particle can also be emitted.
+</P>
+<P>The doc page for the <A HREF = "surf_react.html">surf_react</A> command explains the
+different reactions that can occur for each specified style.
+</P>
+<P>If no values are specified each reaction specified by the
+<A HREF = "surf_react.html">surf_react</A> style is tallied individually for each
+grid cell.
+</P>
+<P>If M values are specified, then M tallies are made for each grid cell,
+one per value.  If the value starts with "r:" then any reaction which
+occurs with one (or more) of the listed species as a reactant is
+counted as part of that tally.  If the value starts with "p:" then any
+reaction which occurs with one (or more) of the listed species as a
+product is counted as part of that tally.  Note that these rules mean
+that a single reaction may be tallied multiple times depending on
+which values it matches.
+</P>
+<P>The results of this compute can be used by different commands in
+different ways.  The values for a single timestep can be output by the
+<A HREF = "dump.html">dump grid</A> command.
+</P>
+<P>The values over many sampling timesteps can be averaged by the <A HREF = "fix_ave_grid.html">fix
+ave/grid</A> command.  
+</P>
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>This compute calculates a per-grid array, with the number of columns
+either equal to the number of reactions defined by the
+<A HREF = "surf_react">surf_react</A> style (if no values are specified) or equal to
+M = the # of values specified.
+</P>
+<P>Grid cells not in the specified <I>group-ID</I> or whose implicit surfaces
+are not assigned to the specified <I>reaction-ID</I> will output zeroes for
+all their values.
+</P>
+<P>The array can be accessed by any command that uses per-grid values
+from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 6.4</A>
+for an overview of SPARTA output options.
+</P>
+<P>The per-grid array values are counts of the number of reactions that
+occurred on surface elements in that grid cell.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "fix_ave_grid.html">fix ave/grid</A>, <A HREF = "dump.html">dump grid</A>, <A HREF = "compute_react_surf.html">compute
+react/surf</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

@@ -1,0 +1,239 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix balance command 
+</H3>
+<H3>fix balance/kk command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID balance Nfreq thresh bstyle args 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command 
+
+<LI>balance = style name of this fix command 
+
+<LI>Nfreq = perform dynamic load balancing every this many steps 
+
+<LI>thresh = rebalance if imbalance factor is above this threshhold 
+
+<LI>bstyle = <I>random</I> or <I>proc</I> or <I>rcb</I> 
+
+<PRE>  <I>random</I> args = none 
+  <I>proc</I> args = none 
+  <I>rcb</I> args = weight
+    weight = <I>cell</I> or <I>part</I> or <I>time</I> 
+</PRE>
+<LI>zero or more keyword/value(s) pairs may be appended 
+
+<LI>keyword = <I>axes</I> or <I>flip</I> 
+
+<PRE>  <I>axes</I> value = dims
+    dims = string with any of "x", "y", or "z" characters in it
+  <I>flip</I> value = yes or no 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>fix 1 balance 1000 1.1 rcb cell
+fix 2 balance 10000 1.0 random 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>This command dynamically adjusts the assignment of grid cells and
+their particles to processors as a simulation runs, to attempt to
+balance the computational cost (load) evenly across processors.  The
+load balancing is "dynamic" in the sense that rebalancing is performed
+periodically during the simulation. To perform "static" balancing,
+before or between runs, see the <A HREF = "balance_grid.html">balance_grid</A>
+command.
+</P>
+<P>This command is useful to use during simulations where the spatial
+distribution of particles varies with time, leading to load imbalance.
+</P>
+<P>After grid cells have been assigned, they are migrated to new owning
+processors, along with any particles they own or other per-cell
+attributes stored by fixes.  The internal data structures within
+SPARTA for grid cells and particles are re-initialized with the new
+decomposition.
+</P>
+<P>The details of how child cells are assigned to processors by the
+various options of this command are described below.  The cells
+assigned to each processor will either be "clumped" or "dispersed".
+</P>
+<P>The <I>rcb</I> keyword will produce clumped assignments of child cells to
+each processor.  This means each processor's cells will be
+geometrically compact.  The <I>random</I> and <I>proc</I> keywords will produce
+dispersed assignments of child cells to each processor.
+</P>
+<P>IMPORTANT NOTE: See <A HREF = "Section_howto.html#howto_8">Section 6.8</A> of the
+manual for an explanation of clumped and dispersed grid cell
+assignments and their relative performance trade-offs.
+</P>
+<HR>
+
+<P>Rebalancing is attempted by this command once every <I>Nfreq</I> timesteps,
+but only if the current imbalance factor exceeds the specified
+<I>thresh</I>.  This factor is defined as the maximum number of particles
+owned by any processor, divided by the average number of particles per
+processor.  Thus an imbalance factor of 1.0 is perfect balance.  For
+10000 particles running on 10 processors, if the most heavily loaded
+processor has 1200 particles, then the factor is 1.2, meaning there is
+a 20% imbalance.  The <I>thresh</I> setting must be >= 1.0.
+</P>
+<P>IMPORTANT NOTE: This command attempts to minimize the imbalance
+factor, as defined above.  But computational cost is not strictly
+proportional to particle count, depending on the
+<A HREF = "collide.html">collision</A> and <A HREF = "react.html">chemistry</A> models being used.
+Also, changing the assignment of grid cells and particles to
+processors may lead to additional communication overheads, e.g.  when
+migrating particles between processors.  Thus you should benchmark the
+run times of your simulation to judge how often balancing should be
+performed, and how aggressively to set the <I>thresh</I> value.
+</P>
+<HR>
+
+<P>The <I>random</I> keyword means that each grid cell will be assigned
+randomly to one of the processors.  In this case every processor will
+typically not be assigned exactly the same number of grid cells.
+</P>
+<P>The <I>proc</I> keyword means that each processor will choose a random
+processor to assign its first grid cell to.  It will then loop over
+its grid cells and assign each to consecutive processors, wrapping
+around the collection of processors if necessary.  In this case every
+processor will typically not be assigned exactly the same number of
+grid cells.
+</P>
+<P>The <I>rcb</I> keyword uses a recurvise coordinate bisectioning (RCB)
+algorithm to assign spatially-compact clumps of grid cells to
+processors.  Each grid cell has a "weight" in this algorithm so that
+each processor is assigned an equal total weight of grid cells, as
+nearly as possible.
+</P>
+<P>If the <I>weight</I> argument is specified as <I>cell</I>, then the weight for
+each grid cell is 1.0, so that each processor will end up with an
+equal number of grid cells.
+</P>
+<P>If the <I>weight</I> argument is specified as <I>part</I>, than the weight for
+each grid cell is the number of particles it currently owns, so that
+each processor will end up with an equal number of particles.
+</P>
+<P>If the <I>weight</I> argument is specified as <I>time</I>, then timers are used
+to estimate the cost of each grid cell.  The cost from the timers is
+given on a per processor basis, and then assigned to grid cells by
+weighting by the relative number of particles in the grid cells. If no
+timing data has yet been collected at the point in a script where this
+command is issued, a <I>cell</I> style weight will be used instead of
+<I>time</I>.  A small warmup run (for example 100 timesteps) can be used
+before the balance command so that timer data is available. The number
+of timesteps <I>Nfreq</I> between balancing steps also needs to be large
+enough to give reliable timings. The timers used for balancing tally
+time from the move, sort, collide, and modify portions of each timestep.
+</P>
+<P>IMPORTANT NOTE: The <A HREF = "adapt_grid.html">adapt_grid</A> command zeros out
+timing data, so the weight <I>time</I> option is not available immediatly
+after this command.
+</P>
+<P>IMPORTANT NOTE: The coarsening option in <A HREF = "fix_adapt.html">fix_adapt</A> may
+shift cells to different processors, which makes the accumulated
+timing data for the weight <I>time</I> option less accurate when load
+balancing is performed immediately after this command.
+</P>
+<P>Here is an example of an RCB partitioning for 24 processors, of a 2d
+hierarchical grid with 5 levels, refined around a tilted ellipsoidal
+surface object (outlined in pink).  This is for a <I>weight cell</I>
+setting, yielding an equal number of grid cells per processor.  Each
+processor is assigned a different color of grid cells.  (Note that
+less colors than processors were used, so the disjoint yellow cells
+actually belong to three different processors).  This is an example of
+a clumped distribution where each processor's assigned cells can be
+compactly bounded by a rectangle.  Click for a larger version of the
+image.
+</P>
+<CENTER><A HREF = "JPG/partition.jpg"><IMG SRC = "JPG/partition_small.jpg"></A>
+</CENTER>
+<HR>
+
+<P>The optional keywords <I>axes</I> and <I>flip</I> only apply to the <I>rcb</I>
+style.  Otherwise they are ignored.
+</P>
+<P>The <I>axes</I> keyword allows limiting the partitioning created by the RCB
+algorithm to a subset of dimensions.  The default is to allow cuts in
+all dimension, e.g. x,y,z for 3d simulations.  The dims value is a
+string with 1, 2, or 3 characters.  The characters must be one of "x",
+"y", or "z".  They can be in any order and must be unique.  For
+example, in 3d, a dims = xz would only partition the 3d grid only in
+the x and z dimensions.
+</P>
+<P>The <I>flip</I> keyword is useful for debugging.  If it is set to <I>yes</I>
+then each time an RCB partitioning is done, the coordinates of grid
+cells will (internally only) undergo a sign flip to insure that the
+new owner of each grid cell is a different processor than the previous
+owner, at least when more than a few processors are used.  This will
+insure all particle and grid data moves to new processors, fully
+exercising the rebalancing code.
+</P>
+<HR>
+
+<P><B>Restart, output info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.
+</P>
+<P>This fix computes a global scalar which is the imbalance factor after
+the most recent rebalance and a global vector of length 2 with
+additional information about the most recent rebalancing. The 2 values
+in the vector are as follows:
+</P>
+<UL><LI>1 = max # of particles per processor
+<LI>2 = imbalance factor before the last rebalance was performed 
+</UL>
+<P>As explained above, the imbalance factor is the ratio of the maximum
+number of particles on any processor to the average number of
+particles per processor. For the <I>rcb</I> style's <I>time</I> option, the
+imbalance factor after the most recent rebalance cannot be computed
+and 0.0 is returned for the global scalar value.
+</P>
+<HR>
+
+<P>Styles with a <I>kk</I> suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+<A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+</P>
+<P>These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the <A HREF = "Section_start.html#start_3">Making
+SPARTA</A> section for more info.
+</P>
+<P>You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the <A HREF = "Section_start.html#start_6">-suffix command-line
+switch</A> when you invoke SPARTA, or you can
+use the <A HREF = "suffix.html">suffix</A> command in your input script.
+</P>
+<P>See the <A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "create_grid.html">create_grid</A>, <A HREF = "balance_grid.html">balance_grid</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

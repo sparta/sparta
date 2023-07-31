@@ -1,0 +1,1314 @@
+"Previous Section"_Section_commands.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_example.html :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line 
+
+6. How-to discussions :h3
+
+The following sections describe how to perform common tasks using
+SPARTA, as well as provide some techinical details about how
+SPARTA works.
+
+6.1 "2d simulations"_#howto_1
+6.2 "Axisymmetric simulations"_#howto_2
+6.3 "Running multiple simulations from one input script"_#howto_3
+6.4 "Output from SPARTA (stats, dumps, computes, fixes, variables)"_#howto_4
+6.5 "Visualizing SPARTA snapshots"_#howto_5
+6.6 "Library interface to SPARTA"_#howto_6
+6.7 "Coupling SPARTA to other codes"_#howto_7 
+6.8 "Details of grid geometry in SPARTA"_#howto_8
+6.9 "Details of surfaces in SPARTA"_#howto_9
+6.10 "Restarting a simulation"_#howto_10
+6.11 "Using the ambipolar approximation"_#howto_11
+6.12 "Using multiple vibrational energy levels"_#howto_12
+6.13 "Surface elements: explicit, implicit, distributed"_#howto_13
+6.14 "Implicit surface ablation"_#howto_14
+6.15 "Transparent surface elements"_#howto_15 :all(b)
+
+The example input scripts included in the SPARTA distribution and
+highlighted in "Section 5"_Section_example.html of the manual also
+show how to setup and run various kinds of simulations.
+
+:line
+:line
+
+6.1 2d simulations :link(howto_1),h4
+
+In SPARTA, as in other DSMC codes, a 2d simulation means that
+particles move only in the xy plane, but still have all 3 xyz
+components of velocity.  Only the xy components of velocity are used
+to advect the particles, so that they stay in the xy plane, but all 3
+components are used to compute collision parameters, temperatures,
+etc.  Here are the steps to take in an input script to setup a 2d
+model.
+
+Use the "dimension"_dimension.html command to specify a 2d simulation. :ulb,l
+
+Make the simulation box periodic in z via the "boundary"_boundary.html
+command.  This is the default. :l
+
+Using the "create box"_create_box.html command, set the z boundaries
+of the box to values that straddle the z = 0.0 plane.  I.e. zlo < 0.0
+and zhi > 0.0.  Typical values are -0.5 and 0.5, but regardless of the
+actual values, SPARTA computes the "volume" of 2d grid cells as if
+their z-dimension length is 1.0, in whatever "units"_units.html are
+defined.  This volume is used with the "global nrho"_global.html
+setting to calculate numbers of particles to create or insert.  It is
+also used to compute collision frequencies. :l
+
+If surfaces are defined via the "read_surf"_read_surf.html command,
+use 2d objects defined by line segements. :l,ule
+
+Many of the example input scripts included in the SPARTA distribution
+are for 2d models.
+
+:line
+
+6.2 Axisymmetric simulations :link(howto_2),h4
+
+In SPARTA, an axi-symmetric model is a 2d model.  An example input
+script is provided in the examples/axisymm directory.
+
+An axi-symmetric problem can be setup using the following commands:
+
+Set dimension = 2 via the "dimension"_dimension.html command.
+Set the y-dimension lower boundary to "a" via the "boundary"_boundary.html command.
+The y-dimension upper boundary can be anything except "a" or "p" for periodic.
+Use the "create_box"_create_box.html command to define a 2d simulation box with ylo = 0.0. :ul
+
+If desired, grid cell weighting can be enabled via the "global
+weight"_global.html command.  The {volume} or {radial} setting can be
+used for axi-symmetric models.
+
+Grid cell weighting affects how many particles per grid cell are
+created when using the "create_particles"_create_particles.html and
+"fix emit"_fix_emit_face.html command variants.
+
+During a run, it also triggers particle cloning and destruction as
+particles move from grid cell to grid cell.  This can be important for
+inducing every grid cell to contain roughly the same number of
+particles, even if cells are of varying volume, as they often are in
+axi-symmetric models.  Note that the effective volume of an
+axi-symmetric grid cell is the volume its 2d area sweeps out when
+rotated around the y=0 axis of symmetry.
+
+:line
+
+6.3 Running multiple simulations from one input script :link(howto_3),h4
+
+This can be done in several ways.  See the documentation for
+individual commands for more details on how these examples work.
+
+If "multiple simulations" means continue a previous simulation for
+more timesteps, then you simply use the "run"_run.html command
+multiple times.  For example, this script
+
+read_grid data.grid
+create_particles 1000000
+run 10000
+run 10000
+run 10000
+run 10000
+run 10000 :pre
+
+would run 5 successive simulations of the same system for a total of
+50,000 timesteps.
+
+If you wish to run totally different simulations, one after the other,
+the "clear"_clear.html command can be used in between them to
+re-initialize SPARTA.  For example, this script
+
+read_grid data.grid
+create_particles 1000000
+run 10000
+clear
+read_grid data.grid2
+create_particles 500000
+run 10000 :pre
+
+would run 2 independent simulations, one after the other.
+
+For large numbers of independent simulations, you can use
+"variables"_variable.html and the "next"_next.html and
+"jump"_jump.html commands to loop over the same input script multiple
+times with different settings.  For example, this script, named
+in.flow
+
+variable d index run1 run2 run3 run4 run5 run6 run7 run8
+shell cd $d
+read_grid data.grid
+create_particles 1000000
+run 10000
+shell cd ..
+clear
+next d
+jump in.flow :pre
+
+would run 8 simulations in different directories, using a data.grid
+file in each directory.  The same concept could be used to run the
+same system at 8 different gas densities, using a density variable and
+storing the output in different log and dump files, for example
+
+variable a loop 8
+variable rho index 1.0e18 4.0e18 1.0e19 4.0e19 1.0e20 4.0e20 1.0e21 4.0e21
+log log.$a
+read data.grid
+global nrho $\{rho\}
+...
+compute myGrid grid all all n temp
+dump 1 grid all 1000 dump.$a id c_myGrid
+run 100000
+clear
+next rho
+next a
+jump in.flow :pre
+
+All of the above examples work whether you are running on 1 or
+multiple processors, but assumed you are running SPARTA on a single
+partition of processors.  SPARTA can be run on multiple partitions via
+the "-partition" command-line switch as described in "Section
+2.5"_Section_start.html#start_6 of the manual.
+
+In the last 2 examples, if SPARTA were run on 3 partitions, the same
+scripts could be used if the "index" and "loop" variables were
+replaced with {universe}-style variables, as described in the
+"variable"_variable.html command.  Also, the "next rho" and "next a"
+commands would need to be replaced with a single "next a rho" command.
+With these modifications, the 8 simulations of each script would run
+on the 3 partitions one after the other until all were finished.
+Initially, 3 simulations would be started simultaneously, one on each
+partition.  When one finished, that partition would then start the 4th
+simulation, and so forth, until all 8 were completed.
+
+:line
+
+6.4 Output from SPARTA (stats, dumps, computes, fixes, variables) :link(howto_4),h4
+
+There are four basic kinds of SPARTA output:
+
+"Statistical output"_stats_style.html, which is a list of quantities
+printed every few timesteps to the screen and logfile. :ulb,l
+
+"Dump files"_dump.html, which contain snapshots of particle, grid
+cell, or surface element quantities and are written at a specified
+frequency. :l
+
+Certain fixes can output user-specified quantities directly to files:
+"fix ave/time"_fix_ave_time.html for time averaging, and "fix
+print"_fix_print.html for single-line output of
+"variables"_variable.html.  Fix print can also output to the
+screen. :l
+
+"Restart files"_restart.html. :l,ule
+
+A simulation prints one set of statistical output and (optionally)
+restart files.  It can generate any number of dump files and fix
+output files, depending on what "dump"_dump.html and "fix"_fix.html
+commands you specify.
+
+As discussed below, SPARTA gives you a variety of ways to determine
+what quantities are computed and printed when the statistics, dump, or
+fix commands listed above perform output.  Throughout this discussion,
+note that users can also add their own computes and fixes to SPARTA
+(see "Section 10"_Section_modify.html) which can generate values that
+can then be output with these commands.
+
+The following sub-sections discuss different SPARTA commands related
+to output and the kind of data they operate on and produce:
+
+"Global/per-particle/per-grid/per-surf data"_#global
+"Scalar/vector/array data"_#scalar
+"Statistical output"_#stat
+"Dump file output"_#dump
+"Fixes that write output files"_#fixoutput
+"Computes that process output quantities"_#computeoutput
+"Computes that generate values to output"_#compute
+"Fixes that generate values to output"_#fix
+"Variables that generate values to output"_#variable
+"Summary table of output options and data flow between commands"_#table :ul
+
+Global/per-particle/per-grid/per-surf data :h5,link(global)
+
+Various output-related commands work with four different styles of
+data: global, per particle, per grid, or per surf.  A global datum is
+one or more system-wide values, e.g. the temperature of the system.  A
+per particle datum is one or more values per partice, e.g. the kinetic
+energy of each particle.  A per grid datum is one or more values per
+grid cell, e.g. the temperature of the particles in the grid cell.  A
+per surf datum is one or more values per surface element, e.g. the
+count of particles that collided with the surface element.
+
+Scalar/vector/array data :h5,link(scalar)
+
+Global, per particle, per grid, and per surf datums can each come in
+three kinds: a single scalar value, a vector of values, or a 2d array
+of values.  The doc page for a "compute" or "fix" or "variable" that
+generates data will specify both the style and kind of data it
+produces, e.g. a per grid vector.
+
+When a quantity is accessed, as in many of the output commands
+discussed below, it can be referenced via the following bracket
+notation, where ID in this case is the ID of a compute.  The leading
+"c_" would be replaced by "f_" for a fix, or "v_" for a variable:
+
+c_ID | entire scalar, vector, or array
+c_ID\[I\] | one element of vector, one column of array
+c_ID\[I\]\[J\] | one element of array :tb(s=|)
+
+In other words, using one bracket reduces the dimension of the data
+once (vector -> scalar, array -> vector).  Using two brackets reduces
+the dimension twice (array -> scalar).  Thus a command that uses
+scalar values as input can typically also process elements of a vector
+or array.
+
+Statistical output :h5,link(stats)
+
+The frequency and format of statistical output is set by the
+"stats"_stats.html, "stats_style"_stats_style.html, and
+"stats_modify"_stats_modify.html commands.  The
+"stats_style"_stats_style.html command also specifies what values are
+calculated and written out.  Pre-defined keywords can be specified
+(e.g. np, ncoll, etc).  Three additional kinds of keywords can also be
+specified (c_ID, f_ID, v_name), where a "compute"_compute.html or
+"fix"_fix.html or "variable"_variable.html provides the value to be
+output.  In each case, the compute, fix, or variable must generate
+global values to be used as an argument of the
+"stats_style"_stats_style.html command.
+
+Dump file output :h5,link(dump)
+
+Dump file output is specified by the "dump"_dump.html and
+"dump_modify"_dump_modify.html commands.  There are several
+pre-defined formats: dump particle, dump grid, dump surf, etc.
+
+Each of these allows specification of what values are output with each
+particle, grid cell, or surface element.  Pre-defined attributes can
+be specified (e.g. id, x, y, z for particles or id, vol for grid
+cells, etc).  Three additional kinds of keywords can also be specified
+(c_ID, f_ID, v_name), where a "compute"_compute.html or "fix"_fix.html
+or "variable"_variable.html provides the values to be output.  In each
+case, the compute, fix, or variable must generate per particle, per
+grid, or per surf values for input to the corresponding
+"dump"_dump.html command.
+
+Fixes that write output files :h5,link(fixoutput)
+
+Two fixes take various quantities as input and can write output files:
+"fix ave/time"_fix_ave_time.html and "fix print"_fix_print.html.
+
+The "fix ave/time"_fix_ave_time.html command enables direct output to
+a file and/or time-averaging of global scalars or vectors.  The user
+specifies one or more quantities as input.  These can be global
+"compute"_compute.html values, global "fix"_fix.html values, or
+"variables"_variable.html of any style except the particle style which
+does not produce single values.  Since a variable can refer to
+keywords used by the "stats_style"_stats_style.html command (like
+particle count), a wide variety of quantities can be time averaged
+and/or output in this way.  If the inputs are one or more scalar
+values, then the fix generates a global scalar or vector of output.
+If the inputs are one or more vector values, then the fix generates a
+global vector or array of output.  The time-averaged output of this
+fix can also be used as input to other output commands.
+
+The "fix print"_fix_print.html command can generate a line of output
+written to the screen and log file or to a separate file, periodically
+during a running simulation.  The line can contain one or more
+"variable"_variable.html values for any style variable except the
+particle style.  As explained above, variables themselves can contain
+references to global values generated by "stats
+keywords"_stats_style.html, "computes"_compute.html, "fixes"_fix.html,
+or other "variables"_variable.html.  Thus the "fix
+print"_fix_print.html command is a means to output a wide variety of
+quantities separate from normal statistical or dump file output.
+
+Computes that process output quantities :h5,link(computeoutput)
+
+The "compute reduce"_compute_reduce.html command takes one or more per
+particle or per grid or per surf vector quantities as inputs and
+"reduces" them (sum, min, max, ave) to scalar quantities.  These are
+produced as output values which can be used as input to other output
+commands.
+
+Computes that generate values to output :h5,link(compute)
+
+Every "compute"_compute.html in SPARTA produces either global or per
+particle or per grid or per surf values.  The values can be scalars or
+vectors or arrays of data.  These values can be output using the other
+commands described in this section.  The doc page for each compute
+command describes what it produces.  Computes that produce per
+particle or per grid or per surf values have the word "particle" or
+"grid" or "surf" in their style name.  Computes without those words
+produce global values.
+
+Fixes that generate values to output :h5,link(fix)
+
+Some "fixes"_fix.html in SPARTA produces either global or per particle
+or per grid or per surf values which can be accessed by other
+commands.  The values can be scalars or vectors or arrays of data.
+These values can be output using the other commands described in this
+section.  The doc page for each fix command tells whether it produces
+any output quantities and describes them.
+
+Two fixes of particular interest for output are the "fix
+ave/grid"_fix_ave_grid.html and "fix ave/surf"_fix_ave_surf.html
+commands.
+
+The "fix ave/grid"_fix_ave_grid.html command enables time-averaging of
+per grid vectors.  The user specifies one or more quantities as input.
+These can be per grid vectors or ararys from "compute"_compute.html or
+"fix"_fix.html commands.  If the input is a single vector, then the
+fix generates a per grid vector.  If the input is multiple vectors or
+array, the fix generates a per grid array.  The time-averaged output
+of this fix can also be used as input to other output commands.
+
+The "fix ave/surf"_fix_ave_surf.html command enables time-averaging of
+per surf vectors.  The user specifies one or more quantities as input.
+These can be per surf vectors or ararys from "compute"_compute.html or
+"fix"_fix.html commands.  If the input is a single vector, then the
+fix generates a per surf vector.  If the input is multiple vectors or
+array, the fix generates a per surf array.  The time-averaged output
+of this fix can also be used as input to other output commands.
+
+Variables that generate values to output :h5,link(variable)
+
+"Variables"_variable.html defined in an input script generate either a
+global scalar value or a per particle vector (only particle-style
+variables) when it is accessed.  The formulas used to define equal-
+and particle-style variables can contain references to the
+"stats_style"_stats_style.html keywords and to global and per particle
+data generated by computes, fixes, and other variables.  The values
+generated by variables can be output using the other commands
+described in this section.
+
+Summary table of output options and data flow between commands :h5,link(table)
+
+This table summarizes the various commands that can be used for
+generating output from SPARTA.  Each command produces output data of
+some kind and/or writes data to a file.  Most of the commands can take
+data from other commands as input.  Thus you can link many of these
+commands together in pipeline form, where data produced by one command
+is used as input to another command and eventually written to the
+screen or to a file.  Note that to hook two commands together the
+output and input data types must match, e.g. global/per atom/local
+data and scalar/vector/array data.
+
+Also note that, as described above, when a command takes a scalar as
+input, that could be an element of a vector or array.  Likewise a
+vector input could be a column of an array.
+
+Command: Input: Output:
+"stats_style"_stats_style.html: global scalars: screen, log file:
+"dump particle"_dump.html: per particle vectors: dump file:
+"dump grid"_dump.html: per grid vectors: dump file:
+"dump surf"_dump.html: per surf vectors: dump file:
+"fix print"_fix_print.html: global scalar from variable: screen, file:
+"print"_print.html: global scalar from variable: screen:
+"computes"_compute.html: N/A: global or per particle/grid/surf scalar/vector/array:
+"fixes"_fix.html: N/A: global or per particle/grid/surf scalar/vector/array:
+"variables"_variable.html: global scalars, per particle vectors: global scalar, per particle vector:
+"compute reduce"_compute_reduce.html: per particle/grid/surf vectors: global scalar/vector:
+"fix ave/time"_fix_ave_time.html: global scalars/vectors: global scalar/vector/array, file:
+"fix ave/grid"_fix_ave_grid.html: per grid vectors/arrays: per grid vector/array:
+"fix ave/surf"_fix_ave_surf.html: per surf vectors/arrays: per surf vector/array:
+:tb(s=:)
+
+:line
+
+6.5 Visualizing SPARTA snapshots :link(howto_5),h4
+
+The "dump image"_dump_image.html command can be used to do on-the-fly
+visualization as a simulation proceeds.  It works by creating a series
+of JPG or PNG or PPM files on specified timesteps, as well as movies.
+The images can include particles, grid cell quantities, and/or surface
+element quantities.  This is not a substitute for using an interactive
+visualization package in post-processing mode, but on-the-fly
+visualization can be useful for debugging or making a high-quality
+image of a particular snapshot of the simulation.
+
+The "dump"_dump.html command can be used to create snapshots of
+particle, grid cell, or surface element data as a simulation runs.
+These can be post-processed and read in to other visualization
+packages.
+
+A Python-based toolkit distributed by our group can read SPARTA
+particle dump files with columns of user-specified particle
+information, and convert them to various formats or pipe them into
+visualization software directly.  See the "Pizza.py WWW site"_pizza
+for details.  Specifically, Pizza.py can convert SPARTA particle dump
+files into PDB, XYZ, "Ensight"_ensight, and VTK formats.  Pizza.py can
+pipe SPARTA dump files directly into the Raster3d and RasMol
+visualization programs.  Pizza.py has tools that do interactive 3d
+OpenGL visualization and one that creates SVG images of dump file
+snapshots.
+
+Additional Pizza.py tools may be added that allow visualization of
+surface and grid cell information as output by SPARTA.
+
+:link(pizza,http://www.sandia.gov/~sjplimp/pizza.html)
+:link(vmd,http://www.ks.uiuc.edu/Research/vmd)
+:link(ensight,http://www.ensight.com)
+
+:line
+
+6.6 Library interface to SPARTA :link(howto_6),h4
+
+As described in "Section 2.4"_Section_start.html#start_4, SPARTA can
+be built as a library, so that it can be called by another code, used
+in a "coupled manner"_Section_howto.html#howto_7 with other codes, or
+driven through a "Python interface"_Section_python.html.
+
+All of these methodologies use a C-style interface to SPARTA that is
+provided in the files src/library.cpp and src/library.h.  The
+functions therein have a C-style argument list, but contain C++ code
+you could write yourself in a C++ application that was invoking SPARTA
+directly.  The C++ code in the functions illustrates how to invoke
+internal SPARTA operations.  Note that SPARTA classes are defined
+within a SPARTA namespace (SPARTA_NS) if you use them from another C++
+application.
+
+Library.cpp contains these 4 functions:
+
+void sparta_open(int, char **, MPI_Comm, void **);
+void sparta_close(void *);
+void sparta_file(void *, char *);
+char *sparta_command(void *, char *); :pre
+
+The sparta_open() function is used to initialize SPARTA, passing in a
+list of strings as if they were "command-line
+arguments"_Section_start.html#start_6 when SPARTA is run in
+stand-alone mode from the command line, and a MPI communicator for
+SPARTA to run under.  It returns a ptr to the SPARTA object that is
+created, and which is used in subsequent library calls.  The
+sparta_open() function can be called multiple times, to create
+multiple instances of SPARTA.
+
+SPARTA will run on the set of processors in the communicator.  This
+means the calling code can run SPARTA on all or a subset of
+processors.  For example, a wrapper script might decide to alternate
+between SPARTA and another code, allowing them both to run on all the
+processors.  Or it might allocate half the processors to SPARTA and
+half to the other code and run both codes simultaneously before
+syncing them up periodically.  Or it might instantiate multiple
+instances of SPARTA to perform different calculations.
+
+The sparta_close() function is used to shut down an instance of SPARTA
+and free all its memory.
+
+The sparta_file() and sparta_command() functions are used to pass a
+file or string to SPARTA as if it were an input script or single
+command in an input script.  Thus the calling code can read or
+generate a series of SPARTA commands one line at a time and pass it
+thru the library interface to setup a problem and then run it,
+interleaving the sparta_command() calls with other calls to extract
+information from SPARTA, perform its own operations, or call another
+code's library.
+
+Other useful functions are also included in library.cpp. For example:
+
+void *sparta_extract_global(void *, char *)
+void *sparta_extract_compute(void *, char *, int, int)
+void *sparta_extract_variable(void *, char *, char *) :pre
+
+This can extract various global quantities from SPARTA as well as
+values calculated by a compute or variable.  See the library.cpp file
+and its associated header file library.h for details.
+
+Other functions may be added to the library interface as needed to
+allow reading from or writing to internal SPARTA data structures. 
+
+The key idea of the library interface is that you can write any
+functions you wish to define how your code talks to SPARTA and add
+them to src/library.cpp and src/library.h, as well as to the "Python
+interface"_Section_python.html.  The routines you add can in principle
+access or change any SPARTA data you wish.  The examples/COUPLE and
+python directories have example C++ and C and Python codes which show
+how a driver code can link to SPARTA as a library, run SPARTA on a
+subset of processors, grab data from SPARTA, change it, and put it
+back into SPARTA.
+
+IMPORTANT NOTE: The examples/COUPLE dir has not been added to the
+distribution yet.
+
+:line
+
+6.7 Coupling SPARTA to other codes :link(howto_7),h4
+
+SPARTA is designed to allow it to be coupled to other codes.  For
+example, a continuum finite element (FE) simulation might use SPARTA
+grid cell quantities as boundary conditions on FE nodal points,
+compute a FE solution, and return continuum flow conditions as
+boundary conditions for SPARTA to use.
+
+SPARTA can be coupled to other codes in at least 3 ways.  Each has
+advantages and disadvantages, which you'll have to think about in the
+context of your application.
+
+(1) Define a new "fix"_fix.html command that calls the other code.  In
+this scenario, SPARTA is the driver code.  During its timestepping,
+the fix is invoked, and can make library calls to the other code,
+which has been linked to SPARTA as a library.  See "Section
+8"_Section_modify.html of the documentation for info on how to add a
+new fix to SPARTA.
+
+(2) Define a new SPARTA command that calls the other code.  This is
+conceptually similar to method (1), but in this case SPARTA and the
+other code are on a more equal footing.  Note that now the other code
+is not called during the timestepping of a SPARTA run, but between
+runs.  The SPARTA input script can be used to alternate SPARTA runs
+with calls to the other code, invoked via the new command.  The
+"run"_run.html command facilitates this with its {every} option, which
+makes it easy to run a few steps, invoke the command, run a few steps,
+invoke the command, etc.
+
+In this scenario, the other code can be called as a library, as in
+(1), or it could be a stand-alone code, invoked by a system() call
+made by the command (assuming your parallel machine allows one or more
+processors to start up another program).  In the latter case the
+stand-alone code could communicate with SPARTA thru files that the
+command writes and reads.
+
+See "Section_modify"_Section_modify.html of the documentation for how
+to add a new command to SPARTA.
+
+(3) Use SPARTA as a library called by another code.  In this case the
+other code is the driver and calls SPARTA as needed.  Or a wrapper
+code could link and call both SPARTA and another code as libraries.
+Again, the "run"_run.html command has options that allow it to be
+invoked with minimal overhead (no setup or clean-up) if you wish to do
+multiple short runs, driven by another program.
+
+Examples of driver codes that call SPARTA as a library are included in
+the examples/COUPLE directory of the SPARTA distribution; see
+examples/COUPLE/README for more details.
+
+IMPORTANT NOTE: The examples/COUPLE dir has not been added to the
+distribution yet.
+
+"Section 2.3"_Section_start.html#start3 of the manual describes how to
+build SPARTA as a library.  Once this is done, you can interface with
+SPARTA either via C++, C, Fortran, or Python (or any other language
+that supports a vanilla C-like interface).  For example, from C++ you
+could create one (or more) "instances" of SPARTA, pass it an input
+script to process, or execute individual commands, all by invoking the
+correct class methods in SPARTA.  From C or Fortran you can make
+function calls to do the same things.  See
+"Section_9"_Section_python.html of the manual for a description of the
+Python wrapper provided with SPARTA that operates through the SPARTA
+library interface.
+
+The files src/library.cpp and library.h contain the C-style interface
+to SPARTA.  See "Section 6.6"_#howto_6 of the manual for a description
+of the interface and how to extend it for your needs.
+
+Note that the sparta_open() function that creates an instance of
+SPARTA takes an MPI communicator as an argument.  This means that
+instance of SPARTA will run on the set of processors in the
+communicator.  Thus the calling code can run SPARTA on all or a subset
+of processors.  For example, a wrapper script might decide to
+alternate between SPARTA and another code, allowing them both to run
+on all the processors.  Or it might allocate half the processors to
+SPARTA and half to the other code and run both codes simultaneously
+before syncing them up periodically.  Or it might instantiate multiple
+instances of SPARTA to perform different calculations.
+
+:line
+
+6.8 Details of grid geometry in SPARTA :link(howto_8),h4
+
+SPARTA overlays a grid over the simulation domain which is used to
+track particles and to co-locate particles in the same grid cell for
+performing collision and chemistry operations.  Surface elements are
+also assigned to grid cells they intersect with, so that
+particle/surface collisions can be efficiently computed.
+
+SPARTA uses a Cartesian hierarchical grid.  Cartesian means that the
+faces of a grid cell, at any level of the hierarchy, are aligned with
+the Cartesian xyz axes.  I.e. each grid cell is an axis-aligned
+pallelpiped or rectangular box.
+
+The hierarchy of grid cells is defined for N levels, from 1 to N.  The
+entire simulation box is a single parent grid cell, conceptually at
+level 0.  It is subdivided into a regular grid of Nx by Ny by Nz cells
+at level 1.  "Regular" means all the Nx*Ny*Nz sub-divided cells within
+any parent cell are the same size.  Each of those cells can be a child
+cell (no further sub-division) or it can be a parent cell which is
+further subdivided into Nx by Ny by Nz cells at level 2.  This can
+recurse to as many levels as desired.  Different cells can stop
+recursing at different levels.  The Nx,Ny,Nz values for each level of
+the grid can be different, but they are the same for every grid cell
+at the same level.  The per-level Nx,Ny,Nz values are defined by the
+"create_grid"_create_grid.html, "read_grid"_read_grid.html,
+"adapt_grid"_adapt_grid.html, or "fix_adapt"_fix_adapt.html commands.
+
+As described below, each child cell is assigned an ID which encodes
+the cell's logical position within in the hierarchical grid, as a
+32-bit or 64-bit unsigned integer ID.  The precision is set by the
+-DSPARTA_BIG or -DSPARTA_SMALL or -DSPARTA_BIGBIG compiler switch, as
+described in "Section 2.2"_Section_start.html#start2_2.  The number of
+grid levels that can be used depends on this precision and the
+resolution of the grid at each level.  For example, in a 3d
+simulation, a level that is refined with a 2x2x2 sub-grid requires 4
+bits of the ID.  Thus a maximum of 8 levels can be used for 32-bit IDs
+and 16 levels for 64-bit IDs.
+
+This manner of defining a hierarchical grid allows for flexible grid
+cell refinement in any region of the simulation domain.  E.g. around a
+surface, or in a high-density region of the gas flow.  Also note that
+a 3d oct-tree (quad-tree in 2d) is a special case of the SPARTA
+hierarchical grid, where Nx = Ny = Nz = 2 is used at every level.
+
+An example 2d hierarchical grid is shown in the diagram, for a
+circular surface object (in red) with the grid refined on the upwind
+side of the object (flow from left to right).  The first level coarse
+grid is 18x10.  2nd level grid cells are defined in a subset of those
+cells with a 3x3 sub-division.  A subset of the 2nd level cells
+contain 3rd level grid cells via a further 3x3 sub-division.
+
+:c,image(JPG/refine_grid.jpg)
+
+In the rest of the SPARTA manual, the following terminology is used to
+refer to the cells of the hierarchical grid.  The flow region is the
+portion of the simulation domain that is "outside" any surface objects
+and is typically filled with particles.
+
+root cell = the simulation box itself
+parent cell = a grid cell that is sub-divided (root cell = parent cell)
+child cell = a grid cell that is not sub-divided further
+unsplit cell = a child cell not intersected by any surface elements
+cut cell = a child cell intersected by one or more surface elements, one resulting flow region
+split cell = a child cell intersected by two or more surface elemments, two or more resulting disjoint flow regions
+sub cell = one disjoint flow region portion of a split cell :ul
+
+In SPARTA, parent cells are only conceptual.  They do not exist or
+require memory.  Child cells store various attributes and are
+distributed across processors, so that each child cell is owned by
+exactly one processor, as discussed below.
+
+When surface objects are defined via the "read_surf"_read_surf.html
+command, they intersect child cells.  In this contex "intersection" by
+a surface element means a geometric overlap between the area of the
+surface element and the volume of the grid cell (or length of element
+and area of grid cell in 2d).  Thus an intersection includes a surface
+triangle that only touches a grid cell on its face, edge, or at its
+corner point.  When intersected by one or more surface elements, a
+child cell becomes one of 3 flavors: unsplit, cut, or split.  A child
+cell not intersected by any surface elements is an unsplit cell.  It
+can be entirely in the flow region or entirely inside a surface
+object.  If a child cell is intersected so that it is partitioned into
+two contiguous volumes, one in the flow region, the other inside a
+surface object, then it is a cut cell.  This is the usual case.  Note
+that either the flow volume or inside volume can be of size zero, if
+the surface only "touches" the grid cell, i.e. the intersection is
+only on a face, edge, or corner point of the grid cell.  The left side
+of the diagram below is an example, where red represents the flow
+region.  Sometimes a child cell can be partitioned by surface elements
+so that more than one contiguous flow region is created.  Then it is a
+split cell.  Additionally, each of the two or more contiguous flow
+regions is a sub cell of the split cell.  The right side of the
+diagram shows a split cell with 3 sub cells.
+
+:c,image(JPG/split.jpg)
+
+The union of (1) unsplit cells that are in the flow region (not
+entirely interior to a surface object) and (2) flow region portions of
+cut cells and (3) sub cells is the entire flow region of the
+simulation domain.  These are the only kinds of child cells that store
+particles.  Split cells and unsplit cells interior to surface objects
+have no particles.
+
+Child cell IDs can be output in integer or string form by the "dump
+grid"_dump.html command, using its {id} and {idstr} attributes.  The
+integer form can also be output by the "compute
+property/grid"_compute_property_grid.html.
+
+Here is how a grid cell ID is computed by SPARTA, either for parent or
+child cells.  Say the level 1 grid is a 10x10x20 sub-division (2000
+cells) of the root cell.  The level 1 cells are numbered from 1 to
+2000 with the x-dimension varying fastest, then y, and finally the
+z-dimension slowest.  Now say the 374th (out of 2000, 14 in x, 19 in
+y, 1 in z) level 1 cell has a 2x2x2 sub-division (8 cells), and
+consider the 4th level 2 cell (2 in x, 2 in y, 1 in z) within the
+374th cell.  It could be a parent cell if it is further sub-divided,
+or a child cell if not.  In either case its ID is the same.  The
+rightmost 11 bits of the integer ID are encoded with 374.  This is
+because it requires 11 bits to represent 2000 cells (1 to 2000) at
+level 1.  The next 4 bits are used to encode 1 to 8, specifically 4 in
+the case of this cell.  Thus the cell ID in integer format is 4*2048 +
+374 = 8566.  In string format it will be printed as 4-374, with dashes
+separating the levels.
+
+Note that a child cell has the same ID whether it is unsplit, cut, or
+split.  Currently, sub cells of a split cell also have the same ID,
+though that may change in the future.
+
+The "create_grid"_create_grid.html and "balance"_balance.html and "fix
+balance"_fix_balance.html commands determine the assignment of child
+cells to processors.  If a child cell is assigned to a processor, that
+processor owns the cell whether it is an unsplit, cut, or split cell.
+It also owns any sub cells that are part of a split cell.
+
+Depending on which assignment options in these commands are used, the
+child cells assigned to each processor will either be "clumped" or
+"dispersed".
+
+Clumped means each processor's cells will be geometrically compact.
+Dispersed means the processor's cells will be geometrically dispersed
+across the simulation domain and so they cannot be enclosed in a small
+bounding box.
+
+An example of a clumped assignment is shown in this zoom-in of a 2d
+hierarchical grid with 5 levels, refined around a tilted ellipsoidal
+surface object (outlined in pink).  One processor owns the grid cells
+colored orange.  A compact bounding rectangle can be drawn around the
+orange cells which will contain only a few grid cells owned by other
+processors.  By contrast a dispersed assignment could scatter orange
+grid cells throughout the entire simulation domain.
+
+:c,image(JPG/partition_zoom.jpg)
+
+It is important to understand the difference between the two kinds of
+assignments and the effects they can have on performance of a
+simulation.  For example the create_grid and read_grid commands may
+produce dispersed assignments, depending on the options used, which
+can be converted to a clumped assignment by the balance_grid command.
+
+Simulations typically run faster with clumped grid cell assignments.
+This is because the cost of communicating particles is reduced if
+particles that move to a neighboring grid cell often stay
+on-processor.  Similarly, some stages of simulation setup may run
+faster with a clumped assignment.  Examples are the finding of nearby
+ghost grid cells and the computation of surface element intersections
+with grid cells.  The latter operation is invoked when the
+"read_surf"_read_surf.html command is used.
+
+If the spatial distribution of particles is highly irregular and/or
+dynamically changing, or if the computational work per grid cell is
+otherwise highly imbalanced, a clumped assignment of grid cells to
+processors may not lead to optimal balancing.  In these scenarios a
+dispersed assignment of grid cells to processsors may run faster even
+with the overhead of increased particle communication.  This is
+because randomly assigning grid cells to processors can balance the
+computational load in a statistical sense.
+
+:line
+
+6.9 Details of surfaces in SPARTA :link(howto_9),h4
+
+A SPARTA simulation can define one or more surface objects, each of
+which are read in via the "read_surf"_read_surf.html.  For 2d
+simulations a surface object is a collection of connected line
+segments.  For 3d simulations it is a collection of connected
+triangles.  The outward normal of lines or triangles, as defined in
+the surface file, points into the flow region of the simulation box
+which is typically filled with particles.  Depending on the
+orientation, surface objects can thus be obstacles that particles flow
+around, or they can represent the outer boundary of an irregular
+shaped region which particles are inside of.
+
+See the "read_surf"_read_surf.html doc page for a discussion of these
+topics:
+
+Requirement that a surface object be "watertight", so that particles
+do not enter inside the surface or escape it if used as an outer
+boundary. :ulb,l
+
+Surface objects (one per file) that contain more than one physical
+object, e.g. two or more spheres in a single file. :l
+
+Use of geometric transformations (translation, rotation, scaling,
+inversion) to convert the surface object in a file into different
+forms for use in different simulations. :l
+
+Clipping a surface object to the simulation box to effectively use a
+portion of the object in a simulation, e.g. a half sphere instead of a
+full sphere. :l
+
+The kinds of surface objects that are illegal, including infinitely
+thin objects, ones with duplicate points, or multiple surface or
+physical objects that touch or overlap. :l,ule
+
+The "read_surf"_read_surf.html command assigns an ID to the surface
+object in a file.  This can be used to reference the surface elements
+in the object in other commands.  For example, every surface object
+must have a collision model assigned to it so that particle bounces
+off the surface can be computed.  This is done via the
+"surf_modify"_surf_modify.html and "surf_collide"_surf_collide.html
+commands.
+
+As described in the previous "Section 6.8"_#howto_8, SPARTA overlays a
+grid over the simulation domain to track particles.  Surface elements
+are also assigned to grid cells they intersect with, so that
+particle/surface collisions can be efficiently computed.  Typically a
+grid cell size larger than the surface elements that intersect it may
+not desirable since it means flow around the surface object will not
+be well resolved.  The size of the smallest surface element in the
+system is printed when the surface file is read.  Note that if the
+surface object is clipped to the simulation box, small lines or
+triangles can result near the box boundary due to the clipping
+operation.
+
+The maximum number of surface elements that can intersect a single
+child grid cell is set by the "global surfmax"_global.html command.
+The default limit is 100.  The actual maximum number in any grid cell
+is also printed when the surface file is read.  Values this large or
+larger may cause particle moves to become expensive, since each time a
+particle moves within that grid cell, possible collisions with all its
+overlapping surface elements must be computed.
+
+:line
+
+6.10 Restarting a simulation :link(howto_10),h4
+
+There are two ways to continue a long SPARTA simulation.  Multiple
+"run"_run.html commands can be used in the same input script.  Each
+run will continue from where the previous run left off.  Or binary
+restart files can be saved to disk using the "restart"_restart.html
+command.  At a later time, these binary files can be read via a
+"read_restart"_read_restart.html command in a new script.
+
+Here is an example of a script that reads a binary restart file and
+then issues a new run command to continue where the previous run left
+off.  It illustrates what settings must be made in the new script.
+Details are discussed in the documentation for the
+"read_restart"_read_restart.html and
+"write_restart"_write_restart.html commands.
+
+Look at the {in.collide} input script provided in the {bench}
+directory of the SPARTA distribution to see the original script that
+this script is based on.  If that script had the line
+
+restart	        50 tmp.restart :pre
+
+added to it, it would produce 2 binary restart files (tmp.restart.50
+and tmp.restart.100) as it ran for 130 steps, one at step 50, and one
+at step 100.
+
+This script could be used to read the first restart file and re-run
+the last 80 timesteps:
+
+read_restart	    tmp.restart.50 :pre
+
+seed	    	    12345
+collide		    vss air ar.vss :pre
+
+stats		    10
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll c_temp :pre
+
+timestep 	    7.00E-9
+run 		    80 :pre
+
+Note that the following commands do not need to be repeated because
+their settings are included in the restart file: {dimension, global,
+boundary, create_box, create_grid, species, mixture}.  However these
+commands do need to be used, since their settings are not in the
+restart file: {seed, collide, compute, fix, stats_style, timestep}.
+The "read_restart"_read_restart.html doc page gives details.
+
+If you actually use this script to perform a restarted run, you will
+notice that the statistics output does not match exactly.  On step 50,
+the collision counts are 0 in the restarted run, because the line is
+printed before the restarted simulation begins.  The collision counts
+in subsequent steps are similar but not identical.  This is because
+new random numbers are used for collisions in the restarted run.  This
+affects all the randomized operations in a simulation, so in general
+you should only expect a restarted run to be statistically similar to
+the original run.
+
+:line
+
+6.11 Using the ambipolar approximation :link(howto_11),h4
+
+The ambipolar approximation is a computationally efficient way to
+model low-density plasmas which contain positively-charged ions and
+negatively-charged electrons.  In this model, electrons are not free
+particles which move independently.  This would require a simulation
+with a very small timestep due to electon's small mass and high speed
+(1000x that of an ion or neutral particle).
+
+Instead each ambipolar electron is assumed to stay "close" to its
+parent ion, so that the plasma gas appears macroscopically neutral.
+Each pair of particles thus moves together through the simulation
+domain, as if they were a single particle, which is how they are
+stored within SPARTA.  This means a normal timestep can be used.
+
+There are two stages during a timestep when the coupled particles are
+broken apart and treated as an independent ion and electron.  
+
+The first is during gas-phase collisions and chemistry.  The ionized
+ambipolar particles in a grid cell are each split into two particles
+(ion and electron) and each can participate in two-body collisions
+with any other particle in the cell.  Electron/electron collisions are
+actually not performed, but are tallied in the overall collision count
+(if using a collision mixture with a single group, not when using
+multiple groups).  If gas-phase chemistry is turned on, reactions
+involving ions and electrons can be specified, which include
+dissociation, ionization, exchange, and recombination reactions.  At
+the end of the collision/chemsitry operations for the grid cell, there
+is still a one-to-one pairing between ambipolar ions and electrons.
+Each pair is recombined into a single particle.
+
+The second is during collisions with surface (or the boundaries of the
+simulation box) if a surface reaction model is defined for the surface
+element or boundary.  Just as with gas-phase chemistry, surface
+reactions involving ambipolar species can be defined.  For example, an
+ambipolar ion/electron pair can re-combine into a neutral species during
+the collision.
+
+Here are the SPARTA commands you can use to run a simulation using the
+ambipolar approximation.  See the input scripts in examples/ambi for
+an example.
+
+Note that you will likely need to use two (or more mixtures) as
+arguments to various commands, one which includes the ambipolar
+electron species, and one which does not.  Example
+"mixture"_mixture.html commands for doing this are shown below.
+
+Use the "fix ambipolar"_fix_ambipolar.html command to specify which
+species is the ambipolar electron and what (multiple) species are
+ambipolar ions.  This is required for all the other options listed
+here to work.  The fix defines two custom per-particles attributes, an
+integer vector called "ionambi" which stores a 1 for a particle if it
+is an ambipolar ion, and a 0 otherwise.  And a floating-point array
+called "velambi" which stores a 3-vector with the velocity of the
+associated electron for each ambipolar ion or zeroes otherwise.  Note
+that no particles should ever exist in the simulation with a species
+matching ambipolar electrons.  Such particles are only generated (and
+destroyed) internally, as described above.
+
+Use the "collide_modify ambipolar yes"_collide_modify.html command if
+you want to perform gas-phase collisions using the ambipolar model.
+This is not required.  If you do this, you may also want to specify a
+mixture for the collide command which has two or more groups.  If this
+is the case, the ambipolar electron species must be in a group by
+itself.  The other group(s) can contain any combination of ion or
+neutral species.  Note that putting the ambipolar electron species in
+its own group should improve the efficiency of the code due to the
+large disparity in electron versus ion/neutral velocities.
+
+If you want to perform gas-phase chemistry for reactions involving
+ambipolar ions and electrons, use the "react"_react.html command with
+an input file of reactions that include the ambipolar electron and ion
+species defined by the fix ambipolar commmand.  See the
+"react"_react.html command doc page for info the syntax required for
+ambipolar reactions.  Their reactants and products must be listed in
+specific order.
+
+When creating particles, either by the
+"create_particles"_create_particles.html or "fix emit"_fix_emit.html
+command variants, do NOT use a mixture that includes the ambipolar
+electron species.  If you do this, you will create "free" electrons
+which are not coupled to an ambipolar ion.  You can include ambipolar
+ions in the mixture.  This will create ambipolar ions along with their
+associated electron.  The electron will be assigned a velocity
+consistent with its mass and the temperature of the created particles.
+You can use the "mixture copy"_mixture.html and "mixture
+delete"_mixture.html commands to create a mixture that excludes only
+the ambipolar electron species, e.g.
+
+mixture all copy noElectron
+mixture noElectron delete e :pre
+
+If you want ambipolar ions to re-combine with their electrons when
+they collide with surfaces, use the "surf_react"_surf_react.html
+command with an input file of surface reactions that includes
+recombination reactions like:
+
+N+ + e -> N :pre
+
+See the "surf_react"_surf_react.html doc page for syntax details.  A
+sample surface reaction data file is provided in data/air.surf.  You
+assign the surface reaction model to surface or the simulation box
+boundaries via the "surf_modify"_surf_modify.html and
+"bound_modify"_bound_modify.html commands.
+
+For diagnositics and output, you can use the "compute
+count"_compute_count.html and "dump particle"_dump.html commands.  The
+"compute count"_compute_count.html command generate counts of
+individual species, entire mixtures, and groups within mixtures.  For
+example these commands will include counts of ambipolar ions in
+statistical output:
+
+compute myCount O+ N+ NO+ e
+stats_style step nsreact nsreactave cpu np c_myCount :pre
+
+Note that the count for species "e" = ambipolar electrons should alwas
+be zero, since those particles only exist during gas and surface
+collisions.  The "stats_style"_stats_style.html {nsreact} and
+{nsreactave} keywords print tallies of surface reactions taking place.
+
+The "dump particle"_dump.html command can output the custom particle
+attributes defined by the "fix ambipolar"_fix_ambipolar.html command.
+E.g. this command
+
+dump 1 particle 1000 tmp.dump id type x y z p_ionambi p_velambi\[2\] :pre
+
+will output the ionambi flag = 1 for ambipolar ions, along with the vy
+of their associated ambipolar electrons.
+
+The "read_restart"_read_restart.html doc page explains how to restart
+ambipolar simulations where a fix like "fix
+ambipolar"_fix_ambipolar.html has been used to store extra
+per-particle properties.
+
+:line
+
+6.12 Using multiple vibrational energy levels :link(howto_12),h4
+
+DSMC models for collisions between one or more polyatomic species can
+include the effect of multiple discrete vibrational levels, where a
+collision transfers vibrational energy not just between the two
+particles in aggregate but between the various levels defined for each
+particle species.
+
+This kind of model can be enabled in SPARTA using the following
+commands:
+
+"species ... vibfile ..."_species.html
+"collide_modify vibrate discrete"_collide_modify.html
+"fix vibmode"_fix_vibmode.html
+"dump particle p_vibmode"_dump.html :ul
+
+The "species"_species.html command with its {vibfile} option allows a
+separate file with per-species vibrational information to be read.
+See data/air.species.vib for an example of such a file.
+
+Only species with 4,6,8 vibrational degrees of freedom, as defined in
+the species file read by the "species"_species.html command, need to
+be listed in the {vibfile}.  These species have N modes, where N =
+degrees of freedom / 2.  For each mode, a vibrational temperature,
+relaxation number, and degeneracy is defined in the {vibfile}.  These
+quantities are used in the energy exchange formulas for each
+collision.
+
+The "collide_modify vibrate discrete"_collide_modify.html command is
+used to enable the discrete model.  Other allowed settings are {none}
+and {smooth}.  The former turns off vibrational energy effects
+altogether.  The latter uses a single continuous value to represent
+vibrational energy; no per-mode information is used.
+
+The "fix vibmode"_fix_vibmode.html command is used to allocate
+per-particle storage for the population of levels appropriate to the
+particle's species.  This will be from 1 to 4 values for each species.
+Note that this command must be used before particles are created via
+the "create_particles"_create_particles.html command to allow the
+level populations for new particles to be set appropriately.  The "fix
+vibmode"_fix_vibmode.html command doc page has more details.
+
+The "dump particle"_dump.html command can output the custom particle
+attributes defined by the "fix vibmode"_fix_vibmode.html command.
+E.g. this command
+
+dump 1 particle 1000 tmp.dump id type x y z evib p_vibmode\[1\] p_vibmode\[2\] p_vibmode\[3\] :pre
+
+will output for each particle evib = total vibrational energy (summed
+across all levels), and the population counts for the first 3
+vibrational energy levels.  The vibmode count will be 0 for
+vibrational levels that do not exist for particles of a particular
+species.
+
+The "read_restart"_read_restart.html doc page explains how to restart
+simulations where a fix like "fix vibmode"_fix_vibmode.html has been
+used to store extra per-particle properties.
+
+:line
+
+6.13 Surface elements: explicit, implicit, distributed :link(howto_13),h4
+
+SPARTA can work with two kinds of surface elements: explicit and
+implicit.  Explicit surfaces are lines (2d) or triangles (3d) defined
+in surface data files read by the "read_surf"_read_surf.html command.
+An individual element can be any size; a single surface element can
+intersect many grid cells.  Implicit surfaces are lines (2d) or
+triangles (3d) defined by grid corner point data files read by the
+"read_isurf"_read_isurf.html command.  The corner point values define
+lines or triangles that are wholly contained with single grid cells.
+
+Note that you cannot mix explicit and implicit surfaces in the same
+simulation.
+
+The data and attributes of explicit surface elements can be stored in
+one of two ways.  The default is for each processor to store a copy of
+all the elements.  Memory-wise, this is fine for most models.  The
+other option is distributed, where each processor only stores copies
+of surface elements assigned to grid cells it owns or has a ghost copy
+of.  For models with huge numbers of surface elements, distributing
+them will use much less memory per processor.  Note that a surface
+element requires about 150 bytes of storage, so storing a million
+requires about 150 MBytes.
+
+Implicit surfaces are always stored in a distributed fashion.  Each
+processor only stores a copy of surface elements assigned to grid
+cells it owns or has a ghost copy of.  Note that 3d implicit surfs are
+not yet fully implemented.  Specifically, the
+"read_isurf"_read_isurf.html command will not yet read and create
+them.
+
+The "global surfs"_global.html command is used to specify the use of
+explicit versus implicit, and distributed versus non-distributed
+surface elements.
+
+Unless noted, the following surface-related commands work with either
+explict or implicit surfaces, whether they are distributed or not.
+For large data sets, the read and write surf and isurf commands have
+options to use multiple files and/or operate in parallel which can
+reduce I/O times.
+
+"adapt_grid"_adapt_grid.html
+"compute_isurf/grid"_compute_isurf_grid.html    # for implicit surfs
+"compute_surf"_compute_surf.html                # for explicit surfs
+"dump surf"_dump.html
+"dump image"_dump_image.html
+"fix adapt/grid"_fix_adapt_grid.html
+"fix emit/surf"_fix_emit_surf.html
+"group surf"_group.html
+"read_isurf"_read_isurf.html                    # for implicit surfs
+"read_surf"_read_surf.html                      # for explicit surfs
+"surf_modify"_surf_modify.html 
+"write_isurf"_write_surf.html                   # for implicit surfs
+"write_surf"_write_surf.html :ul
+
+These command do not yet support distributed surfaces:
+
+"move_surf"_move_surf.html
+"fix move/surf"_fix_move_surf.html
+"remove_surf"_remove_surf.html :ul
+
+:line
+
+6.14 Implicit surface ablation :link(howto_14),h4
+
+The implicit surfaces described in the previous section can be used to
+perform ablation simulations, where the set of implicit surface
+elements evolve over time to model a receding surface.  These are the
+relevant commands:
+
+"global surfs implicit"_global.html
+"read isurf"_read_isurf.html
+"fix ablate"_fix_ablate.html
+"compute isurf/grid"_compute_isurf_grid.html
+"compute react/isurf/grid"_compute_react_isurf_grid.html
+"fix ave/grid"_fix_ave_grid.html
+"write isurf"_write_isurf.html 
+"write_surf"_write_surf.html :ul
+
+The "read_isurf"_read_isurf.html command takes a binary file as an
+argument which contains a pixelated (2d) or voxelated (3d)
+representation of the surface (e.g. a porous heat shield material).
+It reads the file and assigns the pixel/voxel values to corner points
+of a region of the SPARTA grid.
+
+The "read_isurf"_read_isurf.html command also takes the ID of a "fix
+ablate"_fix_ablate.html command as an argument.  This fix is invoked
+to perform a Marching Squares (2d) or Marching Cubes (3d) algorithm to
+convert the corner point values to a set of line segments (2d) or
+triangles (3d) each of which is wholly contained in a grid cell.  It
+also stores the per grid cell corner point values.
+
+If the {Nevery} argument of the "fix ablate"_fix_ablate.html command
+is 0, ablation is never performed, the implicit surfaces are static.
+If it is non-zero, an ablation operation is performed every {Nevery}
+steps.  A per-grid cell value is used to decrement the corner point
+values in each grid cell.  The values can be (1) from a compute such
+as "compute isurf/grid"_compute_isurf_grid.html which tallies
+statistics about gas particle collisions with surfaces within each
+grid cell.  Or "compute
+react/isurf/grid"_compute_react_isurf_grid.html which tallies the
+number of surface reactions that take place.  Or values can be (2)
+from a fix such as "fix ave/grid"_fix_ave_grid.html which time
+averages these statistics over many timesteps.  Or they can be (3)
+generated randomly, which is useful for debugging.
+
+The decrement of grid corner point values is done in a manner that
+models recession of the surface elements within in each grid cell.
+All the current implicit surface elements are then discarded, and new
+ones are generated from the new corner point values via the Marching
+Squares or Marching Cubes algorithm. 
+
+IMPORTANT NOTE: Ideally these algorithms should preserve the gas flow
+volume inferred by the previous surfaces and only add to it with the
+new surfaces.  However there are a few cases for the 3d Marching Cubes
+algorithm where the gas flow volume is not strictly preserved.  This
+can trap existing particles inside the new surfaces.  Currently SPARTA
+checks for this condition and deletes the trapped particles.  In the
+future, we plan to modify the standard Marching Cubes algorithm to
+prevent this from happening.  In our testing, the fraction of trapped
+particles in an ablation operation is tiny (around 0.005% or 5 in
+100000).  The number of deleted particles can be monitored as an
+output option by the "fix ablate"_fix_ablate.html command.
+
+The "write_isurf"_write_isurf.html command can be used to periodically
+write out a pixelated/voxelated file of corner point values, in the
+same format that the "read_isurf"_read_isurf.html command reads.  Note
+that after ablation, corner point values are typically no longer
+integers, but floating point values.  The "read_isurf"_read_isurf.html
+and "write_isurf"_write_isurf.html commands have options to work with
+both kinds of files.  The "write_surf"_write_surf.html command can
+also output implicit surface elements for visualization by tools such
+as ParaView which can read SPARTA surface element files after suitable
+post-processing.  See the "Section tools
+paraview"_Section_tools.html#paraview doc page for more details.
+
+:line
+
+6.15 Transparent surface elements :link(howto_15),h4
+
+Transparent surfaces are useful for tallying flow statistics.
+Particles pass through them unaffected.  However the flux of particles
+through those surface elements can be tallied and output.
+
+Transparent surfaces are treated differently than regular surfaces.
+They do not need to be watertight.  E.g. you can define a set of line
+segments that form a straight (or curved) line in 2d.  Or a set of
+triangle that form a plane (or curved surface) in 3d.  You can define
+multiple such surfaces, e.g. multiple disjoint planes, and tally flow
+statistics through each of them.  To tally or sum the statistics
+separately, you may want to assign the triangles in each plane to a
+different surface group via the "read_surf group"_read_surf.html or
+"group surf"_group.html commands.
+
+Note that for purposes of collisions, transparent surface elements are
+one-sided.  A collision is only tallied for particles passing through
+the outward face of the element.  If you want to tally particles
+passing through in both directions, then define 2 transparent
+surfaces, with opposite orientation.  Again, you may want to put the 2
+surfaces in separate groups.
+
+There also should be no restriction on transparent surfaces
+intersecting each other or intersecting regular surfaces.  Though
+there may be some corner cases we haven't thought about or tested.
+
+These are the relevant commands.  See their doc pages for details:
+
+"read_surf transparent"_read_surf.html
+"surf_collide transparent"_surf_collide.html
+"compute surf"_compute_surf.html :ul
+
+The "read_surf"_read_surf.html command with its {transparent} keyword
+is used to flag all the read-in surface elements as transparent.  This
+means they must be in a file separate from regular non-transparent
+elements.
+
+The "surf_collide"_surf_collide.html command must be used with its
+{transparent} model and assigned to all transparent surface elements
+via the "surf_modify"_surf_modify.html command.
+
+The "compute_surf"_compute_surf.html command can be used to tally the
+count, mass flux, and energy flux of particles that pass through
+transparent surface elements.  These quantities can then be time
+averaged via the "fix ave/surf"_fix_ave_surf.html command or output
+via the "dump surf"_dump_surf.html command in the usual ways,
+as described in "Section 6.4"_Section_howto.html#howto_4.
+
+The examples/circle/in.circle.transparent script shows how to use
+these commands when modeling flow around a 2d circle.  Two additional
+transparent line segments are placed in front of the circle to tally
+particle count and kinetic energy flux in both directions in front of
+the object.  These are defined in the data.plane1 and data.plane2
+files.  The resulting tallies are output with the
+"stats_style"_stats_style.html command.  They could also be output
+with a "dump surf"_dump_surf.html command for more resolution if the 2
+lines were each defined as multiple line segments.

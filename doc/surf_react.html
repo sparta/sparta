@@ -1,0 +1,254 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>surf_react command 
+</H3>
+<H3><A HREF = "surf_react_adsorb.html">surf_react adsorb</A> command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>surf_react ID style args 
+</PRE>
+<UL><LI>ID = user-assigned name for the surface reaction model 
+
+<LI>style = <I>global</I> or <I>prob</I> or <I>adsorb</I> 
+
+<LI>args = arguments for that style 
+
+<PRE>  <I>global</I> args = pdelete pcreate
+    pdelete = probability that surface collision removes the incident particle
+    pcreate = probability that surface collision clones the incident particle
+  <I>prob</I> args = infile
+    infile = file with list of surface chemistry reactions 
+  <I>adsorb</I> args = model infile(s) n=Nsync type temp n_sites adsp1 adsp2 ...
+    model = <I>gs</I> or <I>ps</I> or <I>gs/ps</I>
+      gs = gas-surface reactions
+      ps = pure-surface reactions
+      gs/ps = both gas-surface and pure-surface reactions
+    infile(s) = file(s) with list of surface chemistry reactions
+                one file for model gs or ps
+                two files for model gs/ps, gs first, ps second
+    Nsync = perform PS reactions and sync across processors every this many timesteps
+    type = <I>face</I> or <I>surf</I>
+      face = domain boundary treated as a surface
+      surf = surface elements = triangles in 3d, lines in 2d 
+    temp = temperature of the surface
+    n_sites = # of available adsorption sites per unit area (3D) or length (2D)
+    adsp1,adsp2,... = list of species that can adsorb on surface 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>surf_react global 0.2 0.15
+surf_react prob air.surf  
+surf_react adsorb gs gs_react.surf nsync 10 surf 1000 6.022e18 O CO
+surf_react adsorb gs/ps gs_react.surf ps_react.surf nsync 1 face 300 3e9 O 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Define a model for surface chemistry reactions occurring when
+particles collide with surface elements or the global boundaries of
+the simulation box.  The <I>asorb</I> model also has an option to encode
+chemical reactions that can occur on the surface itself.  
+</P>
+<P>One or more models can be defined and assigned to different surfaces
+or simulation box boundaries via the <A HREF = "surf_modify.html">surf_modify</A> or
+<A HREF = "bound_modify.html">bound_modify</A> commands.  See <A HREF = "Section_howto.html#howto_9">Section
+6.9</A> for more details of how SPARTA defines
+surfaces as collections of geometric elements, triangles in 3d and
+line segments in 2d.  Also see the <A HREF = "react.html">react</A> command for
+specification of a gas-phase chemistry reaction model.
+</P>
+<P>The ID for a surface reaction model is used to identify it in other
+commands.  Each surface reaction model ID must be unique.  The ID can
+only contain alphanumeric characters and underscores.
+</P>
+<P>The surface reaction models for the different styles are described
+below.  When a a particle collides with a surface element or boundary,
+the list of all reactions possible with that species as a reactant is
+looped over.  A probability for each reaction is calculated, using the
+formulas discussed below, and a random number is used to decide which
+reaction (if any) takes place.  A check is made that the sum of
+probabilities for all possible reactions is <= 1.0, which should
+normally be the case if reasonable reaction coefficients are defined.
+</P>
+<P>IMPORTANT NOTE: A surface reaction model cannot be specified for
+surfaces whose surface collision style does not support reactions.
+Currently this is only the <I>vanish</I> collision style.  See the
+<A HREF = "surf_collide.html">surf_collide</A> doc page for details.
+</P>
+<HR>
+
+<P>The <I>global</I> style is a simple model that can be used to test whether
+surface reactions are occurring as expected.  There is no list of
+reactions for different species; all species are treated the same.
+This style thus defines two universal reactions, the first for
+particle deletion, the second for particle creation.
+</P>
+<P>The <I>global</I> style takes two parameters, <I>pdelete</I> and <I>pcreate</I>. The
+first is the probability that a "deletion" reaction takes place when a
+collision occurs.  If it does, the particle is deleted.  The second is
+the probablity that a "creation" reaction occurs, which clones the
+particle, so that one particle becomes two.  The two particles leave
+the surface according to whatever surface collision model is defined
+by the <A HREF = "surf_collide.html">surf_collide</A> command, and is assigned to
+that surface/boundary by the <A HREF = "surf_modify.html">surf_modify collide</A>
+command.
+</P>
+<P>The sum of <I>pdelete</I> and <I>pcreate</I> must be <= 1.0.
+</P>
+<P>Note that if you simply wish to delete all particles which hit the
+surface, you can use the <A HREF = "surf_collide.html">surf_collide vanish</A>
+command, which is simpler.
+</P>
+<HR>
+
+<P>For the <I>prob</I> style, a file is specified which contains a list of
+surface chemical reactions, with their associated parameters.  The
+reactions are read into SPARTA and stored in a list.  Each time a
+simulation is run via the <A HREF = "run.html">run</A> command, the list is scanned.
+Only reactions for which all the reactants and all the products are
+currently defined as species-IDs will be active for the simulation.
+Thus the file can contain more reactions than are used in a particular
+simulation.  See the <A HREF = "species.html">species</A> command for how species
+IDs are defined.  This style thus defines N reactions, where
+N is the number of reactions listed in the specified file.
+</P>
+<P>As explained below each reaction has a specified probability between
+0.0 and 1.0.  That probability is used to choose which reaction (if
+any) is performed.
+</P>
+<P>The format of the input surface reaction file is as follows.  Comments
+or blank lines are allowed in the file.  Comment lines start with a
+"#" character.  All other entries must come in 2-line pairs with
+values separated by whitespace in the following format
+</P>
+<PRE>R1 --> P1 + P2
+type style C1 C2 ... 
+</PRE>
+<P>The first line is a text-based description of a single reaction.  R1
+is a single reactant for the particle that collides with the
+surface/boundary, listed as a <A HREF = "species.html">species</A> IDs.  P1 and P2
+are one or two products, also listed as <A HREF = "species.html">species</A> IDs.
+The number of reactants is always 1.  The number of allowed products
+depends on the reaction type, as discussed below.  Individual
+reactants and products must be separated by whitespace and a "+" sign.
+The left-hand and right-hand sides of the equation must be separated
+by whitespace and "-->".
+</P>
+<P>The <I>type</I> of each reaction is a single character (upper or lower
+case) with the following meaning.  The type determines how many
+reactants and products can be specified in the first line.
+</P>
+<PRE>D = dissociation = 1 reactant and 2 products
+E = exchange = 1 reactant and 1 product
+R = recombination = 1 reactant and 1 product named NULL 
+</PRE>
+<P>A dissociation reaction means that R1 dissociates into P1 and P2 when
+it collides with the surface/boundary.  There is no restriction on the
+species involved in the reaction.
+</P>
+<P>An exchange reaction is a collision where R1 becomes a new product P1.
+There is no restriction on the species involved in the reaction.
+</P>
+<P>A recombination reaction is a collision where R1 is absorbed by the
+surface, so that the particle disappears.  There are no products which
+is indicated in the file by listing a single product as NULL.
+There is no restriction on the species involved in the reaction.
+</P>
+<P>The <I>style</I> of each reaction is a single character (upper or lower
+case) with the following meaning:
+</P>
+<UL><LI>S = Surface 
+</UL>
+<P>The style determines how many reaction coefficients are listed as C1,
+C2, etc, and how they are interpreted by SPARTA.
+</P>
+<P>For S = Surface style, there is a single coefficient:
+</P>
+<UL><LI>C1 = probability that the reaction occurs (0.0 to 1.0) 
+</UL>
+<HR>
+
+<P>For the <I>adsorb</I> style, gas particles can adsorb on the surface.
+Adsorbed particles can then undergo reactions with other adsorbed
+particles as well as with new gas-phase particles that strike the
+surface.  Each surface element stores its "state" for the counts of
+different particle species currently adsorbed on the element, which
+alters the probablity for future reactions to take place.
+</P>
+<P>A detailed description of the <I>adsorb</I> style and the list of reactions
+it supports is given on a separate
+<A HREF = "surf_react_adsorb.html">surf_react_adsorb</A> doc page.
+</P>
+<HR>
+
+<P>If the ambipolar approximation is being used, via the <A HREF = "fix_ambipolar.hmtl">fix
+ambipolar</A> command, then reactions which involve
+either ambipolar ions or the ambipolar electron have more restricitve
+rules about the ordering of reactants and products, than those
+described in the preceeding section for the <I>prob</I> style.
+</P>
+<P>The first is an "exchange" reaction which converts an ambipolar ion
+into a neutral species.  Internally this removes the ambipolar
+electron associated with the ion.  In the file of reactions this is
+done by having the reactant be an ambipolar ion, and the product not
+be an ambipolar ion.
+</P>
+<P>The second is a "dissociation" reaction where a neutral species is
+ionized by colliding with the surface/boundary, creating an ambipolar
+ion and ambipolar electron.  In the file of reactions this is done by
+having the reactant not be an ambipolar ion, the first product be an
+ambipolar ion, and the second product be an ambipolar electron.  The
+two products must be specified in this order.
+</P>
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>All the surface reaction models calculate a global vector of values.
+The values can be used by the <A HREF = "stats_style.html">stats_style</A> command
+and by <A HREF = "variable.html">variables</A> that define formulas.  The latter
+means they can be used by any command that uses a variable as input,
+e.g. "the <A HREF = "fix_ave_time.html">fix ave/time</A> command.  See <A HREF = "Section_howto.html#howto_4">Section
+4.4</A> for an overview of SPARTA output
+options.
+</P>
+<P>The <I>global</I>, <I>prob</I>, and <I>adsorb</I> styles each compute a vector of
+length 2 + 2*nlist.  For the <I>global</I> style, nlist = 2, for "delete"
+and "create" reactions.  For the <I>prob</I> style, nlist is the number of
+reactions listed in the file is read as input.  For the <I>adsorb</I>
+style, nlist is the sum of both the gas-surface and pure-surface
+reactions listed in the file(s) read as input.
+</P>
+<P>The first element of the vector is the count of particles that
+performed surface reactions for surface elements assigned to this
+reaction model during the current timestep.  The second element is the
+cummulative count of particles that have performed reactions since the
+beginning of the current run.  The next nlist elements are the count
+of each individual reaction that occurred during the current timestep.
+The final nlist elements are the cummulative count of each individual
+reaction since the beginning of the current run.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "react.html">react</A>, <A HREF = "surf_modify.html">surf_modify</A>,
+<A HREF = "bound_modify.html">bound_modify</A>,
+<A HREF = "surf_react_adsorb.html">surf_react_adsorb</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

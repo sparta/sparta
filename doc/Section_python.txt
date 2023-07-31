@@ -1,0 +1,516 @@
+"Previous Section"_Section_modify.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_errors.html :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+11. Python interface to SPARTA :h3
+
+This section describes how to build and use SPARTA via a Python
+interface.
+
+11.1 "Building SPARTA as a shared library"_#py_1
+11.2 "Installing the Python wrapper into Python"_#py_2
+11.3 "Extending Python with MPI to run in parallel"_#py_3
+11.4 "Testing the Python-SPARTA interface"_#py_4
+11.5 "Using SPARTA from Python"_#py_5
+11.6 "Example Python scripts that use SPARTA"_#py_6 :ul
+
+The SPARTA distribution includes the file python/sparta.py which wraps
+the library interface to SPARTA.  This file makes it possible to
+run SPARTA, invoke SPARTA commands or give it an input script, extract
+SPARTA results, and modify internal SPARTA variables, either from a
+Python script or interactively from a Python prompt.  You can do the
+former in serial or parallel.  Running Python interactively in
+parallel does not generally work, unless you have a package installed
+that extends your Python to enable multiple instances of Python to
+read what you type.
+
+"Python"_http://www.python.org is a powerful scripting and programming
+language which can be used to wrap software like SPARTA and many other
+packages.  It can be used to glue multiple pieces of software
+together, e.g. to run a coupled or multiscale model.  See "Section
+4.7"_Section_howto.html#howto_7 of the manual and the examples/COUPLE
+directory of the distribution for more ideas about coupling SPARTA to
+other codes.  See "Section 2.4"_Section_start.html#start_4 about how
+to build SPARTA as a library, and "Section
+4.6"_Section_howto.html#howto_6 for a description of the library
+interface provided in src/library.cpp and src/library.h and how to
+extend it for your needs.  As described below, that interface is what
+is exposed to Python.  It is designed to be easy to add functions to.
+This can extend the Python inteface as well.  See details below.
+
+IMPORTANT NOTE: The examples/COUPLE dir has not been added to the
+distribution yet.
+
+By using the Python interface, SPARTA can also be coupled with a GUI
+or other visualization tools that display graphs or animations in real
+time as SPARTA runs.  Examples of such scripts are included in the
+python directory.
+
+Two advantages of using Python are how concise the language is, and
+that it can be run interactively, enabling rapid development and
+debugging of programs.  If you use it to mostly invoke costly
+operations within SPARTA, such as running a simulation for a
+reasonable number of timesteps, then the overhead cost of invoking
+SPARTA thru Python will be negligible.
+
+Before using SPARTA from a Python script, you need to do two things.
+You need to build SPARTA as a dynamic shared library, so it can be
+loaded by Python.  And you need to tell Python how to find the library
+and the Python wrapper file python/sparta.py.  Both these steps are
+discussed below.  If you wish to run SPARTA in parallel from Python,
+you also need to extend your Python with MPI.  This is also discussed
+below.
+
+The Python wrapper for SPARTA uses the amazing and magical (to me)
+"ctypes" package in Python, which auto-generates the interface code
+needed between Python and a set of C interface routines for a library.
+Ctypes is part of standard Python for versions 2.5 and later.  You can
+check which version of Python you have installed, by simply typing
+"python" at a shell prompt.
+
+:line
+:line
+
+11.1 Building SPARTA as a shared library :link(py_1),h4
+
+Instructions on how to build SPARTA as a shared library are given in
+"Section 2.4"_Section_start.html#start_4.  A shared library is one
+that is dynamically loadable, which is what Python requires.  On Linux
+this is a library file that ends in ".so", not ".a".
+
+For make, from the src directory, type
+
+make mode=shlib foo :pre
+
+For CMake, from the build directory, tyoe
+
+cmake -C /path/to/sparta/cmake/presets/foo.cmake -DBUILD_SHARED_LIBS=ON /path/to/sparta/cmake
+make :pre
+
+where foo is the machine target name, such as icc or g++ or serial.
+This should create the file libsparta_foo.so in the src directory, as
+well as a soft link libsparta.so, which is what the Python wrapper
+will load by default.  Note that if you are building multiple machine
+versions of the shared library, the soft link is always set to the
+most recently built version.
+
+If this fails, see "Section 2.3"_Section_start.html#start_3 for more
+details, especially if your SPARTA build uses auxiliary libraries like
+MPI which may not be built as shared libraries on your system.
+
+:line
+
+11.2 Installing the Python wrapper into Python :link(py_2),h4
+
+For Python to invoke SPARTA, there are 2 files it needs to know about:
+
+python/sparta.py
+src/libsparta.so :ul
+
+Sparta.py is the Python wrapper on the SPARTA library interface.
+Libsparta.so is the shared SPARTA library that Python loads, as
+described above.
+
+You can insure Python can find these files in one of two ways:
+
+set two environment variables
+run the python/install.py script :ul
+
+If you set the paths to these files as environment variables, you only
+have to do it once.  For the csh or tcsh shells, add something like
+this to your ~/.cshrc file, one line for each of the two files:
+
+setenv PYTHONPATH ${PYTHONPATH}:/home/sjplimp/sparta/python
+setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/home/sjplimp/sparta/src :pre
+
+If you use the python/install.py script, you need to invoke it every
+time you rebuild SPARTA (as a shared library) or make changes to the
+python/sparta.py file.
+
+You can invoke install.py from the python directory as
+
+% python install.py \[libdir\] \[pydir\] :pre
+
+The optional libdir is where to copy the SPARTA shared library to; the
+default is /usr/local/lib.  The optional pydir is where to copy the
+sparta.py file to; the default is the site-packages directory of the
+version of Python that is running the install script.
+
+Note that libdir must be a location that is in your default
+LD_LIBRARY_PATH, like /usr/local/lib or /usr/lib.  And pydir must be a
+location that Python looks in by default for imported modules, like
+its site-packages dir.  If you want to copy these files to
+non-standard locations, such as within your own user space, you will
+need to set your PYTHONPATH and LD_LIBRARY_PATH environment variables
+accordingly, as above.
+
+If the install.py script does not allow you to copy files into system
+directories, prefix the python command with "sudo".  If you do this,
+make sure that the Python that root runs is the same as the Python you
+run.  E.g. you may need to do something like
+
+% sudo /usr/local/bin/python install.py \[libdir\] \[pydir\] :pre
+
+You can also invoke install.py from the make command in the src
+directory as
+
+% make install-python :pre
+
+In this mode you cannot append optional arguments.  Again, you may
+need to prefix this with "sudo".  In this mode you cannot control
+which Python is invoked by root.
+
+Note that if you want Python to be able to load different versions of
+the SPARTA shared library (see "this section"_#py_5 below), you will
+need to manually copy files like libsparta_g++.so into the appropriate
+system directory.  This is not needed if you set the LD_LIBRARY_PATH
+environment variable as described above.
+
+:line
+
+11.3 Extending Python with MPI to run in parallel :link(py_3),h4
+
+If you wish to run SPARTA in parallel from Python, you need to extend
+your Python with an interface to MPI.  This also allows you to
+make MPI calls directly from Python in your script, if you desire.
+
+There are several Python packages available that purport to wrap MPI
+as a library and allow MPI functions to be called from Python.
+
+These include
+
+"pyMPI"_http://pympi.sourceforge.net/
+"maroonmpi"_http://code.google.com/p/maroonmpi/
+"mpi4py"_http://code.google.com/p/mpi4py/
+"myMPI"_http://nbcr.sdsc.edu/forum/viewtopic.php?t=89&sid=c997fefc3933bd66204875b436940f16
+"Pypar"_http://code.google.com/p/pypar :ul
+
+All of these except pyMPI work by wrapping the MPI library and
+exposing (some portion of) its interface to your Python script.  This
+means Python cannot be used interactively in parallel, since they do
+not address the issue of interactive input to multiple instances of
+Python running on different processors.  The one exception is pyMPI,
+which alters the Python interpreter to address this issue, and (I
+believe) creates a new alternate executable (in place of "python"
+itself) as a result.
+
+In principle any of these Python/MPI packages should work to invoke
+SPARTA in parallel and MPI calls themselves from a Python script which
+is itself running in parallel.  However, when I downloaded and looked
+at a few of them, their documentation was incomplete and I had trouble
+with their installation.  It's not clear if some of the packages are
+still being actively developed and supported.
+
+The one I recommend, since I have successfully used it with SPARTA, is
+Pypar.  Pypar requires the ubiquitous "Numpy
+package"_http://numpy.scipy.org be installed in your Python.  After
+launching python, type
+
+import numpy :pre
+
+to see if it is installed.  If not, here is how to install it (version
+1.3.0b1 as of April 2009).  Unpack the numpy tarball and from its
+top-level directory, type
+
+python setup.py build
+sudo python setup.py install :pre
+
+The "sudo" is only needed if required to copy Numpy files into your
+Python distribution's site-packages directory.
+
+To install Pypar (version pypar-2.1.4_94 as of Aug 2012), unpack it
+and from its "source" directory, type
+
+python setup.py build
+sudo python setup.py install :pre
+
+Again, the "sudo" is only needed if required to copy Pypar files into
+your Python distribution's site-packages directory.
+
+If you have successully installed Pypar, you should be able to run
+Python and type
+
+import pypar :pre
+
+without error.  You should also be able to run python in parallel
+on a simple test script
+
+% mpirun -np 4 python test.py :pre
+
+where test.py contains the lines
+
+import pypar
+print "Proc %d out of %d procs" % (pypar.rank(),pypar.size()) :pre
+
+and see one line of output for each processor you run on.
+
+IMPORTANT NOTE: To use Pypar and SPARTA in parallel from Python, you
+must insure both are using the same version of MPI.  If you only have
+one MPI installed on your system, this is not an issue, but it can be
+if you have multiple MPIs.  Your SPARTA build is explicit about which
+MPI it is using, since you specify the details in your lo-level
+src/MAKE/Makefile.foo file.  Pypar uses the "mpicc" command to find
+information about the MPI it uses to build against.  And it tries to
+load "libmpi.so" from the LD_LIBRARY_PATH.  This may or may not find
+the MPI library that SPARTA is using.  If you have problems running
+both Pypar and SPARTA together, this is an issue you may need to
+address, e.g. by moving other MPI installations so that Pypar finds
+the right one.
+
+:line
+
+11.4 Testing the Python-SPARTA interface :link(py_4),h4
+
+To test if SPARTA is callable from Python, launch Python interactively
+and type:
+
+>>> from sparta import sparta
+>>> spa = sparta() :pre
+
+If you get no errors, you're ready to use SPARTA from Python.  If the
+2nd command fails, the most common error to see is
+
+OSError: Could not load SPARTA dynamic library :pre
+
+which means Python was unable to load the SPARTA shared library.  This
+typically occurs if the system can't find the SPARTA shared library or
+one of the auxiliary shared libraries it depends on, or if something
+about the library is incompatible with your Python.  The error message
+should give you an indication of what went wrong.
+
+You can also test the load directly in Python as follows, without
+first importing from the sparta.py file:
+
+>>> from ctypes import CDLL
+>>> CDLL("libsparta.so") :pre
+
+If an error occurs, carefully go thru the steps in "Section
+2.4"_Section_start.html#start_4 and above about building a shared
+library and about insuring Python can find the necessary two files it
+needs.
+
+[Test SPARTA and Python in serial:] :h5
+
+To run a SPARTA test in serial, type these lines into Python
+interactively from the bench directory:
+
+>>> from sparta import sparta
+>>> spa = sparta()
+>>> spa.file("in.free") :pre
+
+Or put the same lines in the file test.py and run it as
+
+% python test.py :pre
+
+Either way, you should see the results of running the in.free
+benchmark on a single processor appear on the screen, the same as if
+you had typed something like:
+
+spa_g++ < in.free :pre
+
+You can also pass command-line switches, e.g. to set input script
+variables, through the Python interface.
+
+Replacing the "spa = sparta()" line above with
+
+spa = sparta("",["-v","x","100","-v","y","100","-v","z","100"]) :pre
+
+is the same as typing 
+
+spa_g++ -v x 100 -v y 100 -v z 100 < in.free :pre
+
+from the command line.
+
+[Test SPARTA and Python in parallel:] :h5
+
+To run SPARTA in parallel, assuming you have installed the
+"Pypar"_http://datamining.anu.edu.au/~ole/pypar package as discussed
+above, create a test.py file containing these lines:
+
+import pypar
+from sparta import sparta
+spa = sparta()
+spa.file("in.free")
+print "Proc %d out of %d procs has" % (pypar.rank(),pypar.size()),lmp
+pypar.finalize() :pre
+
+You can then run it in parallel as:
+
+% mpirun -np 4 python test.py :pre
+
+and you should see the same output as if you had typed
+
+% mpirun -np 4 spa_g++ < in.lj :pre
+
+Note that if you leave out the 3 lines from test.py that specify Pypar
+commands you will instantiate and run SPARTA independently on each of
+the P processors specified in the mpirun command.  In this case you
+should get 4 sets of output, each showing that a SPARTA run was made
+on a single processor, instead of one set of output showing that
+SPARTA ran on 4 processors.  If the 1-processor outputs occur, it
+means that Pypar is not working correctly.
+
+Also note that once you import the PyPar module, Pypar initializes MPI
+for you, and you can use MPI calls directly in your Python script, as
+described in the Pypar documentation.  The last line of your Python
+script should be pypar.finalize(), to insure MPI is shut down
+correctly.
+
+[Running Python scripts:] :h5
+
+Note that any Python script (not just for SPARTA) can be invoked in
+one of several ways:
+
+% python foo.script
+% python -i foo.script
+% foo.script :pre
+
+The last command requires that the first line of the script be
+something like this:
+
+#!/usr/local/bin/python 
+#!/usr/local/bin/python -i :pre
+
+where the path points to where you have Python installed, and requires
+that you have made the script file executable:
+
+% chmod +x foo.script :pre
+
+Without the "-i" flag, Python will exit when the script finishes.
+With the "-i" flag, you will be left in the Python interpreter when
+the script finishes, so you can type subsequent commands.  As
+mentioned above, you can only run Python interactively when running
+Python on a single processor, not in parallel.
+
+:line
+:line
+
+11.5 Using SPARTA from Python :link(py_5),h4
+
+The Python interface to SPARTA consists of a Python "sparta" module,
+the source code for which is in python/sparta.py, which creates a
+"sparta" object, with a set of methods that can be invoked on that
+object.  The sample Python code below assumes you have first imported
+the "sparta" module in your Python script, as follows:
+
+from sparta import sparta :pre
+
+These are the methods defined by the sparta module.  If you look
+at the file src/library.cpp you will see that they correspond
+one-to-one with calls you can make to the SPARTA library from a C++ or
+C or Fortran program.
+
+spa = sparta()           # create a SPARTA object using the default libsparta.so library
+spa = sparta("g++")      # create a SPARTA object using the libsparta_g++.so library
+spa = sparta("",list)    # ditto, with command-line args, e.g. list = \["-echo","screen"\]
+spa = sparta("g++",list) :pre
+
+spa.close()              # destroy a SPARTA object :pre
+
+spa.file(file)           # run an entire input script, file = "in.lj"
+spa.command(cmd)         # invoke a single SPARTA command, cmd = "run 100" :pre
+
+fnum = spa.extract_global(name,type) # extract a global quantity
+                                     # name = "dt", "fnum", etc
+				     # type = 0 = int
+				     #        1 = double :pre
+
+temp = spa.extract_compute(id,style,type) # extract value(s) from a compute
+                                          # id = ID of compute
+					  # style = 0 = global data
+					  #	    1 = per particle data
+					  #	    2 = per grid cell data
+					  #	    3 = per surf element data
+					  # type = 0 = scalar
+					  #	   1 = vector
+					  #        2 = array :pre
+
+var = spa.extract_variable(name,flag)  # extract value(s) from a variable
+	                               # name = name of variable
+				       # flag = 0 = equal-style variable
+				       #        1 = particle-style variable :pre
+
+:line
+
+IMPORTANT NOTE: Currently, the creation of a SPARTA object from within
+sparta.py does not take an MPI communicator as an argument.  There
+should be a way to do this, so that the SPARTA instance runs on a
+subset of processors if desired, but I don't know how to do it from
+Pypar.  So for now, it runs with MPI_COMM_WORLD, which is all the
+processors.  If someone figures out how to do this with one or more of
+the Python wrappers for MPI, like Pypar, please let us know and we
+will amend these doc pages.
+
+Note that you can create multiple SPARTA objects in your Python
+script, and coordinate and run multiple simulations, e.g.
+
+from sparta import sparta
+spa1 = sparta()
+spa2 = sparta()
+spa1.file("in.file1")
+spa2.file("in.file2") :pre
+
+The file() and command() methods allow an input script or single
+commands to be invoked.
+
+The extract_global(), extract_compute(), and extract_variable()
+methods return values or pointers to data structures internal to
+SPARTA.
+
+For extract_global() see the src/library.cpp file for the list of
+valid names.  New names can easily be added.  A double or integer is
+returned.  You need to specify the appropriate data type via the type
+argument.
+
+For extract_compute(), the global, per particle, per grid cell, or per
+surface element results calulated by the compute can be accessed.
+What is returned depends on whether the compute calculates a scalar or
+vector or array.  For a scalar, a single double value is returned.  If
+the compute or fix calculates a vector or array, a pointer to the
+internal SPARTA data is returned, which you can use via normal Python
+subscripting.  See "Section 6.4"_Section_howto.html#howto_4 of the
+manual for a discussion of global, per particle, per grid, and per
+surf data, and of scalar, vector, and array data types.  See the doc
+pages for individual "computes"_compute.html for a description of what
+they calculate and store.
+
+For extract_variable(), an "equal-style or particle-style
+variable"_variable.html is evaluated and its result returned.
+
+For equal-style variables a single double value is returned and the
+group argument is ignored.  For particle-style variables, a vector of
+doubles is returned, one value per particle, which you can use via
+normal Python subscripting.
+
+:line 
+
+As noted above, these Python class methods correspond one-to-one with
+the functions in the SPARTA library interface in src/library.cpp and
+library.h.  This means you can extend the Python wrapper via the
+following steps:
+
+Add a new interface function to src/library.cpp and
+src/library.h. :ulb,l
+
+Rebuild SPARTA as a shared library. :l
+
+Add a wrapper method to python/sparta.py for this interface
+function. :l
+
+You should now be able to invoke the new interface function from a
+Python script.  Isn't ctypes amazing? :l,ule
+
+:line
+:line
+
+11.6 Example Python scripts that use SPARTA :link(py_6),h4
+
+There are demonstration Python scripts included in the python/examples
+directory of the SPARTA distribution, to illustrate what is possible
+when Python wraps SPARTA.
+
+See the python/README file for more details.

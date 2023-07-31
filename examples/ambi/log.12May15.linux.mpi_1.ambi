@@ -1,0 +1,141 @@
+SPARTA (13 Mar 2015)
+# flow around a cylinder with ambipolar reactions
+
+seed	    	    12345
+dimension   	    2
+boundary	    o o p
+global              gridcut 0.01 comm/sort yes
+create_box  	    -2.0 2.0 -2.0 2.0 -0.5 0.5
+Created orthogonal box = (-2 -2 -0.5) to (2 2 0.5)
+create_grid         50 50 1
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (../grid.cpp:369)
+Created 2500 child grid cells
+  parent cells = 1
+  CPU time = 0.0013411 secs
+  create/ghost percent = 96.4089 3.59111
+balance_grid        rcb cell
+Balance grid migrated 0 cells
+  CPU time = 0.00118303 secs
+  reassign/sort/migrate/ghost percent = 17.3317 0.584442 2.19669 79.8871
+
+global		    fnum 2.6404E16
+
+mixture		    species nrho 2.6404e20 vstream 12500.0 0 0 temp 217.63
+
+species             air.species N2 O2 N O NO N2+ O2+ N+ O+ NO+ e
+
+mixture             species copy noelectron
+mixture             noelectron delete e
+mixture             noelectron N2 frac 0.8
+mixture             noelectron O2 frac 0.2
+
+read_surf           data.circle invert
+  1001 points
+  1001 lines
+  -0.999995 1 xlo xhi
+  -0.999999 0.999999 ylo yhi
+  0 0 zlo zhi
+  0.0062769 min line length
+  100 = cells with surfs
+  1102 = total surfs in all grid cells
+  16 = max surfs in one grid cell
+  0.0784612 = min surf-size/cell-size ratio
+  1960 440 100 = cells outside/inside/overlapping surfs
+  100 = surf cells with 1,2,etc splits
+  12.8584 12.8584 = cell-wise and global flow volume
+  CPU time = 0.00386381 secs
+  read/surf2grid/error/ghost/inout percent = 21.6833 53.11 9.65692 11.0206 4.52919
+global              surfpush yes
+surf_collide	    1 diffuse 615.0 1.0
+surf_react          1 prob air.surf
+surf_modify         all collide 1 react 1
+
+fix                 ambi ambipolar e N+ N2+ NO+ O+ O2+
+
+collide		    vss species air.vss relax variable
+collide_modify      vremax 1000 yes vibrate discrete rotate yes
+collide_modify      ambipolar yes
+react               tce air.tce
+
+create_particles    noelectron n 0
+Created 128584 particles
+  CPU time = 0.056407 secs
+
+fix                 in emit/face noelectron xlo yhi
+fix                 load balance 100 1.1 rcb part
+
+# too large a timestep, but want to induce ambipolar reactions
+
+timestep 	    1.e-7
+
+compute             10 count species
+compute             temp temp
+stats_style         step cpu np nattempt ncoll nsreact c_temp                     c_10[6] c_10[7] c_10[8] c_10[9] c_10[10] c_10[11]
+
+#dump                2 image all 50 image.*.ppm type type #                    surf proc 0.01 size 512 512 axes yes 0.9 0.02
+#dump_modify	    2 pad 4 pdiam 6*10 0.2 pdiam 1*5 0.01
+
+stats               100
+
+run                 1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 17 17 17
+  grid      (ave,min,max) = 1.83114 1.83114 1.83114
+  surf      (ave,min,max) = 0.0725517 0.0725517 0.0725517
+  total     (ave,min,max) = 18.9037 18.9037 18.9037
+Step CPU Np Natt Ncoll Nsreact temp 10[6] 10[7] 10[8] 10[9] 10[10] 10[11] 
+       0            0   128584        0        0        0    180620.56            0            0            0            0            0            0 
+     100   0.92606497   128547      861      593        0    178259.18            0            0            0            0            0            0 
+     200    1.9993038   129032     1385      904        0    173618.84            0            0            0            0            0            0 
+     300    3.2046859   130181     2307     1331        0    168644.18            2            0            1            1            4            0 
+     400    4.5487089   131655     3879     2007        0    163231.76            9            2            4           10            8            0 
+     500    6.0584149   133414     6838     2929        0     157778.3           19            1           21           35           10            0 
+     600    7.7172899   135359    11080     4106        0    152257.87           30            2           44           89           15            0 
+     700    9.5142279   137340    17436     5487        1     146974.6           48            4           93          150           20            0 
+     800    11.503348   139565    25309     6499        1    141952.71           78            2          167          225           20            0 
+     900    13.719396   142470    34935     7906        0    137428.18           90           11          245          329           33            0 
+    1000    16.164649   146025     9368     3685        0     133381.1          112            6          334          455           28            0 
+Loop time of 16.1647 on 1 procs for 1000 steps with 146025 particles
+
+Particle moves    = 134492069 (134M)
+Cells touched     = 136403850 (136M)
+Particle comms    = 0 (0K)
+Boundary collides = 0 (0K)
+Boundary exits    = 48792 (48.8K)
+SurfColl checks   = 191698336 (192M)
+SurfColl occurs   = 101450 (0.101M)
+Surf reactions    = 234 (0.234K)
+Collide attempts  = 12601637 (12.6M)
+Collide occurs    = 3611928 (3.61M)
+Reactions         = 23411 (23.4K)
+Particles stuck   = 0
+
+Particle-moves/CPUsec/proc: 8.32012e+06
+Particle-moves/step: 134492
+Cell-touches/particle/step: 1.01421
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0
+Particle fraction exiting boundary: 0.000362787
+Surface-checks/particle/step: 1.42535
+Surface-collisions/particle/step: 0.00075432
+Surf-reactions/particle/step: 1.73988e-06
+Collision-attempts/particle/step: 0.093698
+Collisions/particle/step: 0.0268561
+Reactions/particle/step: 0.00017407
+
+Move  time (%) = 5.1843 (32.0718)
+Coll  time (%) = 9.89988 (61.2439)
+Sort  time (%) = 0.950405 (5.87952)
+Comm  time (%) = 0.0157344 (0.0973384)
+Outpt time (%) = 0.0247371 (0.153032)
+Other time (%) = 0.0896168 (0.554399)
+
+Particles: 146025 ave 146025 max 146025 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      2500 ave 2500 max 2500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0

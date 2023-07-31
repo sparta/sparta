@@ -1,0 +1,101 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>write_restart command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>write_restart file keyword value ... 
+</PRE>
+<UL><LI>file = name of file to write restart information to 
+
+<LI>zero or more keyword/value pairs may be appended 
+
+<LI>keyword = <I>fileper</I> or <I>nfile</I> 
+
+<PRE>  <I>fileper</I> arg = Np
+    Np = write one file for every this many processors
+  <I>nfile</I> arg = Nf
+    Nf = write this many files, one from each of Nf processors 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>write_restart restart.equil
+write_restart restart.equil.mpiio
+write_restart flow.%.* nfile 10 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Write a binary restart file with the current state of the simulation.
+</P>
+<P>During a long simulation, the <A HREF = "restart.html">restart</A> command can be
+used to output restart files periodically.  The write_restart command
+is useful at the end of a run or between two runs, whenever you wish
+to write out a single current restart file.
+</P>
+<P>Similar to <A HREF = "dump.html">dump</A> files, the restart filename can contain
+two wild-card characters.  If a "*" appears in the filename, it is
+replaced with the current timestep value.  If a "%" character appears
+in the filename, then one file is written by each processor and the
+"%" character is replaced with the processor ID from 0 to P-1.  An
+additional file with the "%" replaced by "base" is also written, which
+contains global information.  For example, the files written for
+filename restart.% would be restart.base, restart.0, restart.1, ...
+restart.P-1.  This creates smaller files and can be a fast mode of
+output and subsequent input on parallel machines that support parallel
+I/O.  The optional <I>fileper</I> and <I>nfile</I> keywords discussed below can
+alter the number of files written.
+</P>
+<P>Restart files can be read by a <A HREF = "read_restart.html">read_restart</A>
+command to restart a simulation from a particular state.  Because the
+file is binary, it may not be readable on another machine.
+</P>
+<P>IMPORTANT NOTE: Although the purpose of restart files is to enable
+restarting a simulation from where it left off, not all information
+about a simulation is stored in the file.  For example, the list of
+fixes that were specified during the initial run is not stored, which
+means the new input script must specify any fixes you want to use.
+See the <A HREF = "read_restart.html">read_restart</A> command for details about
+what is stored in a restart file.
+</P>
+<HR>
+
+<P>The optional <I>nfile</I> or <I>fileper</I> keywords can be used in conjunction
+with the "%" wildcard character in the specified restart file name.
+As explained above, the "%" character causes the restart file to be
+written in pieces, one piece for each of P processors.  By default P =
+the number of processors the simulation is running on.  The <I>nfile</I> or
+<I>fileper</I> keyword can be used to set P to a smaller value, which can
+be more efficient when running on a large number of processors.
+</P>
+<P>The <I>nfile</I> keyword sets P to the specified Nf value.  For example, if
+Nf = 4, and the simulation is running on 100 processors, 4 files will
+be written, by processors 0,25,50,75.  Each will collect information
+from itself and the next 24 processors and write it to a restart file.
+</P>
+<P>For the <I>fileper</I> keyword, the specified value of Np means write one
+file for every Np processors.  For example, if Np = 4, every 4th
+processor (0,4,8,12,etc) will collect information from itself and the
+next 3 processors and write it to a restart file.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "restart.html">restart</A>, <A HREF = "read_restart.html">read_restart</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

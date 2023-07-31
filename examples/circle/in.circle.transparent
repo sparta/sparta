@@ -1,0 +1,63 @@
+################################################################################
+# 2d flow around a circle with transparent surfaces in front to tally stats
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+global              gridcut 0.0 comm/sort yes
+
+boundary	    o r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    10 10 1 
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0 
+
+# data.circle = regular surface particles flow around
+# data.plane1 = line segment with normal into flow
+# data.plane2 = line segment with normal towards circle
+# the two line segments are on top of each other
+
+read_surf           data.circle group circle
+read_surf           data.plane1 group plane1 transparent
+read_surf           data.plane2 group plane2 transparent
+
+surf_collide	    1 diffuse 300.0 0.0
+surf_collide	    2 transparent
+
+surf_modify         circle collide 1
+surf_modify         plane1 collide 2
+surf_modify         plane2 collide 2
+
+collide             vss air air.vss
+
+fix		    in emit/face air xlo twopass # subsonic 0.1 NULL
+
+compute             plane1 surf plane1 all n ke
+compute             plane2 surf plane2 all n ke
+fix                 plane1 ave/surf plane1 1 100 100 c_plane1[*]
+fix                 plane2 ave/surf plane2 1 100 100 c_plane2[*]
+compute             reduce reduce sum f_plane1[*] f_plane2[*]
+                  
+timestep 	    0.0001
+
+#dump                2 image all 50 image.*.ppm type type pdiam 0.1 &
+#                    surf proc 0.01 size 512 512 zoom 1.75 &
+#                    gline yes 0.005 
+#dump_modify	    2 pad 4
+
+# the last 4 columns are the particle count and energy flux
+# through the 2 transparent surfaces in front of the circle
+
+stats		    100
+stats_style	    step cpu np nattempt ncoll nscoll nscheck c_reduce[*]
+run 		    1000

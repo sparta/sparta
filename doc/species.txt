@@ -1,0 +1,159 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+species command :h3
+
+[Syntax:]
+
+species file ID1 ID2 ... keyword value ... :pre
+
+file = filename with species info :ulb,l
+ID1, ID2, ... = one or more species names listed in file :l
+multi-species abbreviations can also be used (see below) :l
+zero or more keyword/value pairs may be appended :l
+keyword = {vibfile} :l
+  {vibfile} value = vfile = filename for extra vibrational info :pre
+:ule
+
+[Examples:]
+
+species air.species air
+species ar.species Ar
+species air.species air CO2 CO vibfile co2.species.vib
+species myfile H+ Cl- HCl :pre
+
+[Description:]
+
+Define one or more particle species to use in the simulation.  This
+command can be used as many times as desired to add species to the
+list of species that the simulation recognizes.
+
+The specified {file} is the name of a file containing definitions for
+a list of species, not all of which need to specified in this command,
+or used in a simulation.  Only those requested by ID will be extracted
+from the file and they must be present in the file.  The format of the
+species file is discussed below.  The data directory in the SPARTA
+distribution contains several species files, all with the suffix
+".species".
+
+Each {ID} is a character string used to identify the species, such as
+N or O2 or NO or D or Fe-.  The string can be any combination of
+alphanumeric characters or "+", "-", or underscore.
+
+Instead of specifying IDs for single species, one of several
+pre-defined multi-species names can be used, each of which is expanded
+into a list of several individual species IDs.  The list of currently
+recognized abbreviations is as follows:
+
+air = N, O, NO :ul
+
+These abbreviations can be used in combination with single-species IDs
+as in the 3rd example above.
+
+:line
+
+The format of a species file is as follows.  Comments or blank lines
+are allowed in the file.  Comment lines start with a "#" character.
+All other lines must have the following format with values separated
+by whitespace:
+
+species-ID prop1 prop2 ... prop9 prop10 :pre
+
+The species-ID is a string that will be matched against the requested
+species-ID, as described above.  The properties are as follows:
+
+prop1 = molecular weight (atomic mass units, e.g. 16 for oxygen)
+prop2 = molecular mass (mass units)
+prop3 = rotational degrees of freedom (integer, unitless)
+prop4 = inverse rotational relaxtion number (unitless)
+prop5 = vibrational degrees of freedom (integer, unitless)
+prop6 = inverse vibrational relaxation number (unitless)
+prop7 = vibrational temperature (temperature units)
+prop8 = species weight (unitless)
+prop9 = multiple of electon charge (1 for a proton) :ul
+
+The allowed values for rotational degrees of freedom (rotdof = prop3)
+are 0,2,3.  Typically, 0 = monatomic species, 2 = diatomic, 3 =
+anything else.
+
+The allowed values for vibrational degrees of freedom (vibdof = prop5)
+are 0,2,4,6,8.  The associated number of vibrational modes is vibdof
+divided by 2.  Typically, 0 modes = monatomic species, 1 mode =
+diatomic, 2/3/4 modes = triatomic or larger molecules.
+
+Note that all the listed rotational and vibrational values must be
+specified for each species, but in cases where they are not used by
+SPARTA, they can simply be specified as 0.0.  Whether or not the
+values are used for a species depends on the value of rotdof and
+vibdof.  Whether the values are used in a simulation also depends on
+the settings specified for the {rotation} and {vibration} keywords of
+the "collide_modify"_collide_modify.html command.
+
+Specifically, if prop3 for rotdof = 0, then prop4 is ignored.  If
+prop5 for vibdof = 0, then prop6 and prop7 are ignored.
+
+If vibdof = 4,6,8, then information for 2,3,4 vibrational modes can be
+specified for the species in a separate file using the optional
+{vibfile} keyword, as discussed below.  If the "collide_modify
+vibration"_collide_modify.html command is used with a setting of
+{discrete}, then this vibrational mode info must be specified for each
+species with a vibdof = 4,6,8.  Note that the "fix
+vibmode"_fix_vibmode.html command must also be used to allocate
+per-particle storage for these additional modes.
+
+NOTE: By default the maximum allowed number of vibrational modes is 4
+(dof = 8). If you have a model with species which need more, you can
+change the settings at the top of src/particle.h in the enum command
+for MAXVIBMODE=4 to a larger value and re-compile the code.  The
+format of the {vibfile}, as described next, is then enhanced
+accordingly.
+
+:line
+
+The optional {vibfile} keyword can be used to specify additional
+vibrational information in the specified {vfile}.  If this option is
+used, then an entry must appear in {vfile} for every species in this
+command with a vibdof value = 4,6,8.  Note that even if this
+vibrational info is read, it is ignored by SPARTA unless the
+"collide_modify vibrate"_collide_modify.html setting is specified as
+{discrete}.
+
+The format of a species vibrational file is as follows.  See
+data/co2.species.vib for an example. Comments or blank lines are
+allowed in the file.  Comment lines start with a "#" character.  All
+other lines must have the following format with values separated by
+whitespace:
+
+species-ID N temp1 relax1 degen1 temp2 relax2 degen2 ... tempN relaxN degenN :pre
+
+The species-ID is a string that will be matched against the requested
+species-ID, as described above.  N is the number of vibrational modes
+that follow, which must be either 2,3,4, and must match the
+corresponding vibdof value = 4,6,8 (divided by two) used in the
+species file.
+
+For each of the N modes, 3 values are listed:
+
+tempI = vibrational temperature of mode I (temperature units)
+relaxI = inverse vibrational relaxation number of mode I (unitless)
+degenI = degeneracy of mode I (integer, unitless) :ul
+
+These quantities are used during collisions if vibrational energy is
+modeled in discrete levels.
+
+Note that the values for temp1 and relax1 override the same values
+defined in the species file (prop7 and prop6) when they are listed for
+the same species in the {vibfile}.
+
+:line
+
+[Restrictions:] none
+
+[Related commands:] none
+
+[Default:] none

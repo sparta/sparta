@@ -1,0 +1,223 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>balance_grid command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>balance_grid style args ... 
+</PRE>
+<UL><LI>style = <I>none</I> or <I>stride</I> or <I>clump</I> or <I>block</I> or <I>random</I> or <I>proc</I> or <I>rcb</I> 
+
+<PRE>  <I>none</I> args = none
+  <I>stride</I> args = <I>xyz</I> or <I>xzy</I> or <I>yxz</I> or <I>yzx</I> or <I>zxy</I> or <I>zyx</I>
+  <I>clump</I> args = <I>xyz</I> or <I>xzy</I> or <I>yxz</I> or <I>yzx</I> or <I>zxy</I> or <I>zyx</I>
+  <I>block</I> args = Px Py Pz
+    Px,Py,Pz = # of processors in each dimension
+  <I>random</I> args = none 
+  <I>proc</I> args = none
+  <I>rcb</I> args = weight
+    weight = <I>cell</I> or <I>part</I> or <I>time</I> 
+</PRE>
+<LI>zero or more keyword/value(s) pairs may be appended 
+
+<LI>keyword = <I>axes</I> or <I>flip</I> 
+
+<PRE>  <I>axes</I> value = dims
+    dims = string with any of "x", "y", or "z" characters in it
+  <I>flip</I> value = yes or no 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>balance_grid block * * *
+balance_grid block * 4 *
+balance_grid clump yxz
+balance_grid random
+balance_grid rcb part
+balance_grid rcb part axes xz 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>This command adjusts the assignment of grid cells and their particles
+to processors, to attempt to balance the computational cost (load)
+evenly across processors.  The load balancing is "static" in the sense
+that this command performs the balancing once, before or between
+simulations. The assignments will remain static during the
+subsequent run.  To perform "dynamic" balancing, see the <A HREF = "fix_balance.html">fix
+balance</A> command, which can adjust the assignemt of
+grid cells to processors on-the-fly during a run.
+</P>
+<P>After grid cells have been assigned, they are migrated to new owning
+processors, along with any particles they own or other per-cell
+attributes stored by fixes.  The internal data structures within
+SPARTA for grid cells and particles are re-initialized with the new
+decomposition.
+</P>
+<P>This command can be used immediately after the grid is created, via
+the <A HREF = "create_grid.html">create_grid</A> or <A HREF = "read_restart.html">read_restart</A>
+commands.  In the former case balance_grid can be used to partition
+the grid in a more desirable manner than the default creation options
+allow for.  In the latter case, balance grid can be used to change the
+somewhat random assignment of grid cells to processors that will be
+made if the restart file is read by a different number of processors
+than it was written by.
+</P>
+<P>This command can also be used once particles have been created, or a
+simulation has come to equilibrium with a spatially varying density
+distribution of particles, so that the computational load is more
+evenly balanced across processors.
+</P>
+<P>The details of how child cells are assigned to processors by the
+various options of this command are described below.  The cells
+assigned to each processor will either be "clumped" or "dispersed".
+</P>
+<P>The <I>clump</I> and <I>block</I> and <I>rcb</I> styles will produce clumped
+assignments of child cells to each processor.  This means each
+processor's cells will be geometrically compact.  The <I>stride</I> and
+<I>random</I> and <I>proc</I> styles will produce dispersed assignments of
+child cells to each processor.
+</P>
+<P>IMPORTANT NOTE: See <A HREF = "Section_howto.html#howto_8">Section 6.8</A> of the
+manual for an explanation of clumped and dispersed grid cell
+assignments and their relative performance trade-offs.
+</P>
+<HR>
+
+<P>The <I>none</I> style will not change the assignment of grid cells to
+processors.  However it will update the internal data structures
+within SPARTA that store ghost cell information on each processor for
+cells owned by other processors.  This is useful if the <A HREF = "global.html">global
+gridcut</A> command was used after grid cells were already
+defined.  That command erases ghost cell information stored by
+processors, which then needs to be re-generated before a simulation is
+run.  Using the balance_grid none command will re-generate the ghost
+cell information.
+</P>
+<P>The <I>stride</I>, <I>clump</I>, and <I>block</I> styles can only be used if the grid
+is "uniform".  The grid in SPARTA is hierarchical with one or more
+levels, as defined by the <A HREF = "create_grid.html">create_grid</A> or
+<A HREF = "read_grid.html">read_grid</A> commlands.  If the parent cell of every
+grid cell is at the same level of the hierarchy, then for purposes of
+this command the grid is uniform, meaning the collection of grid cells
+effectively form a uniform fine grid overlaying the entire simulation
+domain.
+</P>
+<P>The meaning of the <I>stride</I>, <I>clump</I>, and <I>block</I> styles is exactly
+the same as when they are used as keywords with the
+<A HREF = "create_grid.html">create_grid</A> command.  See its doc page for details.
+</P>
+<P>The <I>random</I> style means that each grid cell will be assigned
+randomly to one of the processors.  Note that in this case every
+processor will typically not be assigned the exact same number of
+cells.
+</P>
+<P>The <I>proc</I> style means that each processor will choose a random
+processor to assign its first grid cell to.  It will then loop over
+its grid cells and assign each to consecutive processors, wrapping
+around the enumeration of processors if necessary.  Note that in this
+case every processor will typically not be assigned exactly the same
+number of cells.
+</P>
+<P>The <I>rcb</I> style uses a recursive coordinate bisectioning (RCB)
+algorithm to assign spatially-compact clumps of grid cells to
+processors.  Each grid cell has a "weight" in this algorithm so that
+each processor is assigned an equal total weight of grid cells, as
+nearly as possible.  
+</P>
+<P>If the <I>weight</I> argument is specified as <I>cell</I>, then the weight for
+each grid cell is 1.0, so that each processor will end up with an
+equal number of grid cells.  
+</P>
+<P>If the <I>weight</I> argument is specified as <I>part</I>, then the weight for
+each grid cell is the number of particles it currently owns, so that
+each processor will end up with an equal number of particles. 
+</P>
+<P>If the <I>weight</I> argument is specified as <I>time</I>, then timers are used
+to estimate the cost of each grid cell.  The cost from the timers is
+given on a per processor basis, and then assigned to grid cells by
+weighting by the relative number of particles in the grid cells. If no
+timing data has yet been collected at the point in a script where this
+command is issued, a <I>cell</I> style weight will be used instead of
+<I>time</I>.  A small warmup run (for example 100 timesteps) can be used
+before the balance command so that timer data is available. The timers
+used for balancing tally time from the move, sort, collide, and modify
+portions of each timestep.
+</P>
+<P>IMPORTANT NOTE: The <A HREF = "adapt_grid.html">adapt_grid</A> command zeros out
+timing data, so the weight <I>time</I> option is not available immediatly
+after this command.
+</P>
+<P>IMPORTANT NOTE: The coarsening option in <A HREF = "fix_adapt.html">fix_adapt</A> may
+shift cells to different processors, which makes the accumulated
+timing data for the weight <I>time</I> option less accurate when load
+balancing is performed immediately after this command.
+</P>
+<P>Here is an example of an RCB partitioning for 24 processors, of a 2d
+hierarchical grid with 5 levels, refined around a tilted ellipsoidal
+surface object (outlined in pink).  This is for a <I>weight cell</I>
+setting, yielding an equal number of grid cells per processor.  Each
+processor is assigned a different color of grid cells.  (Note that
+less colors than processors were used, so the disjoint yellow cells
+actually belong to three different processors).  This is an example of
+a clumped distribution where each processor's assigned cells can be
+compactly bounded by a rectangle.  Click for a larger version of the
+image.
+</P>
+<CENTER><A HREF = "JPG/partition.jpg"><IMG SRC = "JPG/partition_small.jpg"></A>
+</CENTER>
+<HR>
+
+<P>The optional keywords <I>axes</I> and <I>flip</I> only apply to the <I>rcb</I>
+style.  Otherwise they are ignored.
+</P>
+<P>The <I>axes</I> keyword allows limiting the partitioning created by the RCB
+algorithm to a subset of dimensions.  The default is to allow cuts in
+all dimension, e.g. x,y,z for 3d simulations.  The dims value is a
+string with 1, 2, or 3 characters.  The characters must be one of "x",
+"y", or "z".  They can be in any order and must be unique.  For
+example, in 3d, a dims = xz would only partition the 3d grid only in
+the x and z dimensions.
+</P>
+<P>The <I>flip</I> keyword is useful for debugging.  If it is set to <I>yes</I>
+then each time an RCB partitioning is done, the coordinates of grid
+cells will (internally only) undergo a sign flip to insure that the
+new owner of each grid cell is a different processor than the previous
+owner, at least when more than a few processors are used.  This will
+insure all particle and grid data moves to new processors, fully
+exercising the rebalancing code.
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>This command can only be used after the grid has been created by the
+<A HREF = "create_grid.html">create_grid</A>, <A HREF = "read_grid">read_grid</A>, or
+<A HREF = "read_restart.html">read_restart</A> commands.
+</P>
+<P>This command also initializes various options in SPARTA before
+performing the balancing.  This is so that grid cells are ready to
+migrate to new processors.  Thus if an error is flagged, e.g. that a
+simulation box boundary condition is not yet assigned, that operation
+needs to be performed in the input script before balancing can be
+performed.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "fix_balance.html">fix balance</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The default settings for the optional keywords are axes = xyz, flip =
+no.
+</P>
+</HTML>

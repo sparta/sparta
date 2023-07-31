@@ -1,0 +1,238 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>compute lambda/grid command 
+</H3>
+<H3>compute lambda/grid/kk command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>compute ID lambda/grid nrho temp species extra 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
+
+<LI>lambda/grid = style name of this compute command 
+
+<LI>nrho = compute or fix column for number density, prefaced by "c_" or "f_" 
+
+<LI>temp = NULL or compute or fix column for temperature, prefaced by "c_" or "f_" 
+
+<LI>species = species name used for reference properties 
+
+<LI>extra = <I>kall</I> or <I>kx</I> or <I>ky</I> or <I>kz</I> (optional) 
+
+<PRE>  <I>kall</I> = also calculate Knudsen number based on cell size in all dimensions
+  <I>kx</I> = also calculate Knudsen number based on cell size in x dimension
+  <I>ky</I> = also calculate Knudsen number based on cell size in y dimension
+  <I>kz</I> = also calculate Knudsen number based on cell size in z dimension 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compute 1 lambda/grid c_GR[1] NULL Ar
+compute 1 lambda/grid f_ave[2] f_ave[3] N2 kall 
+</PRE>
+<P>These commands will dump time averages for the mean free path for each
+grid cell to a dump file every 1000 steps:
+</P>
+<PRE>compute 1 grid species nrho temp
+fix 1 ave/grid 10 100 1000 c_1[*]
+compute 2 lambda/grid f_1[1] f_1[2] Ar
+dump 1 grid all 1000 tmp.grid id c_2 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Define a computation that calculates the mean free path (lambda)
+between molecular collisions for each grid cell, based on the
+particles in that cell.  Optionally, a Knudsen number for each cell
+can also be calculated, which is the mean free path divided by the
+cell size.  These quantities can be useful for estimating the optimal
+grid cell size when adapting the grid, e.g. via the
+<A HREF = "adapt_grid.html">adapt_grid</A> or <A HREF = "fix_adapt_grid.html">fix adapt/grid</A>
+commands.
+</P>
+<P>Unlike other computes that calculate per grid cell values, this
+compute does not take a "group-ID" for a grid cell group as an
+argument, nor a particle <A HREF = "mixture.html">mixture</A> ID as an argument.
+This is because it uses the number density and temperature calculated
+by other computes or fixes as input, and those computes or fixes use
+grid group IDs or mixture IDs as part of their computations.
+</P>
+<P>The results of this compute can be used by different commands in
+different ways.  For example, the values can be output by the
+<A HREF = "dump.html">dump grid</A> command.
+</P>
+<HR>
+
+<P>The formula used to calculate the mean free path (lambda) is given in
+<A HREF = "#Bird94">(Bird94)</A> as equation 4.65:
+</P>
+<CENTER><IMG SRC = "Eqs/lambda.jpg">
+</CENTER>
+<P>This is an approximate mean free path for a multi-species mixture,
+suitable for estimating optimal grid cell sizes as explained above.
+It is a simplied version of formulas 4.76 and 4.77 from the same
+reference.
+</P>
+<P>Dref and Tref and omega are collision properties for a reference
+species in the flow.  The reference species is specified by the
+<I>species</I> argument.  It must be a species defined by the
+<A HREF = "species.html">species</A> command and listed in the file of per-species
+collision properties read in by the <A HREF = "collide.html">collide</A> command.
+</P>
+<P>Specifically, Dref is the diameter of molecules of the species, Tref
+is the reference temperature, and omega is the viscosity
+temperature-dependence for the species.
+</P>
+<P>In the formula above, <I>n</I> is the number density and <I>T</I> is the thermal
+temperature of particles in a grid cell.  This compute does not
+calculate these quantities itself; instead it uses another compute or
+fix to perform the calculation.  This is done by specifying the <I>nrho</I>
+and <I>temp</I> arguments like this:
+</P>
+<UL><LI>c_ID = compute with ID that calculates nrho/temp as a vector output
+<LI>c_ID[m] = compute with ID that calculates nrho/temp as its Mth column of array output
+<LI>f_ID[m] = fix with ID that calculates a time-averaged nrho/temp as a vector output
+<LI>f_ID[m] = fix with ID that calculates a time-averaged nrho/temp as its Mth column of array output 
+</UL>
+<P>The <I>temp</I> argument can also be specified as NULL, which drops the
+(Tref/T) ratio term from the formula above.  That is also effectively
+the case if the reference species defines omega = 1/2.  In that case,
+the <I>temp</I> argument is ignored, whether it is NULL or not.
+</P>
+<P>Note that if the value of <I>n</I> is 0.0 for a grid cell, its
+mean-free-path will be set to 1.0e20 (infinite length).
+</P>
+<P>The <A HREF = "compute_grid.html">compute_grid</A> command can calculate a number
+density, using its <I>nrho</I> value.  It can also calculate a temperature
+using its <I>temp</I> value.  Note that this temperature is inferred from
+the translational kinetic energy of the particles, which is only
+appopriate for a mean free path calculation for systems with zero or
+small streaming velocities.  For systems with streaming flow, an
+appropriate temperature can be calculated by the <A HREF = "compute_thermal_grid.html">compute
+thermal/grid</A> command.  The formulas on its
+doc page show that the the center-of-mass velocity from the particles
+in each grid cell is subtracted from each particle's velocity to yield
+a translational thermal velocity, from which a thermal temperature is
+calculated.
+</P>
+<P>The <A HREF = "fix_ave_grid.html">fix ave/grid</A> command can calculate the same
+values in a time-averaged sense, assuming it uses these same computes
+as input.  Using this fix as input to this compute will thus yield
+less noisy values, due to the time averaging.
+</P>
+<P>Note that the compute or fix (via the compute(s) it uses as input) can
+perform its number density or temperature calculation for a subset of
+the particles based on the "mixture" it uses.  See the
+<A HREF = "mixture.html">mixture</A> command for how a set of species can be
+partitioned into groups.
+</P>
+<P>IMPORTANT NOTE: If the ID of a <A HREF = "fix_ave_grid.html">fix ave/grid</A>
+command is used as the <I>nrho</I> or <I>temp</I> argument, it only produces
+output on timesteps that are multiples of its <I>Nfreq</I> argument.  Thus
+this compute can only be invoked on those timesteps.  For example, if
+a <A HREF = "dump.html">dump grid</A> command invokes this compute to write values
+to a dump file, it must do so on timesteps that are multiples of
+<I>Nfreq</I>.
+</P>
+<P>One of the <I>kall</I> or <I>kx</I> or <I>ky</I> or <I>kz</I> extra arguments can be
+optionally appended.  If specified, this calculates an additional
+value per grid cell, namely the dimensionless Knudsen number which is
+the ratio of the mean free path to the cell size.  For <I>kall</I>, the
+cell size is taken to be the average of the three grid cell side
+lengths (or two cell lengths for a 2d simulation).  For <I>kx</I>, <I>ky</I>, or
+<I>kz</I>, the cell size is the single cell side length in the
+corresponding x,y,z dimension.
+</P>
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>This compute calculates a per-grid vector or array.  If one of <I>kall</I>,
+<I>kx</I>, <I>ky</I>, or <I>kz</I> is not specified, then it is a vector.  If one
+extra argument is specified, it is an array with two columns.  The
+vector or first column of the array is the mean free path; the second
+column is the Knudsen number.
+</P>
+<P>This compute performs calculations for all flavors of child grid cells
+in the simulation, which includes unsplit, cut, split, and sub cells.
+See <A HREF = "Section_howto.html#howto_8">Section 6.8</A> of the manual gives
+details of how SPARTA defines child, unsplit, split, and sub cells.
+Note that cells inside closed surfaces contain no particles.  These
+could be unsplit or cut cells (if they have zero flow volume).  Both
+of these kinds of cells will compute a zero result for all the
+individual values.  Likewise, split cells store no particles and will
+produce a zero result.  This is because their sub-cells actually
+contain the particles that are geometrically inside the split cell.
+</P>
+<P>The vector or array can be accessed by any command that uses per-grid
+values from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section
+4.4</A> for an overview of SPARTA output
+options.
+</P>
+<P>The per-grid array values for the vector or first column of the array
+will be in distance <A HREF = "units.html">units</A>.  The second column of the
+array will be dimensionless.
+</P>
+<HR>
+
+<P>Styles with a <I>kk</I> suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+<A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+</P>
+<P>These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the <A HREF = "Section_start.html#start_3">Making
+SPARTA</A> section for more info.
+</P>
+<P>You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the <A HREF = "Section_start.html#start_6">-suffix command-line
+switch</A> when you invoke SPARTA, or you can
+use the <A HREF = "suffix.html">suffix</A> command in your input script.
+</P>
+<P>See the <A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>To use this compute, a collision style must be defined via the
+<A HREF = "collide.html">collide</A> command, which defines properties for the
+reference <I>species</I>.
+</P>
+<P>As explained above, to use this compute with <I>nrho</I> or <I>temp</I> defined
+as input from a <A HREF = "fix_ave_grid.html">fix ave/grid</A> command, this compute
+must only be invoked on timesteps that are multiples of the <I>Nfreq</I>
+argument used by the fix, since those are the steps when it produces
+output.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "compute_grid.html">compute grid</A>, <A HREF = "compute_thermal/grid.html">compute
+thermal/grid</A>, <A HREF = "fix_ave_grid.html">fix
+ave/grid</A>, <A HREF = "dump.html">dump grid</A>
+</P>
+<P><B>Default:</B> none
+</P>
+<HR>
+
+<A NAME = "Bird94"></A>
+
+<P><B>(Bird94)</B> G. A. Bird, Molecular Gas Dynamics and the Direct
+Simulation of Gas Flows, Clarendon Press, Oxford (1994).
+</P>
+</HTML>

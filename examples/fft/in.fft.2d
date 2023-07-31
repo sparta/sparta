@@ -1,0 +1,52 @@
+################################################################################
+# advect particles via VSS collisional flow on a uniform grid
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+variable            x index 16
+variable            y index 16
+
+variable            lx equal $x*1.0e-5
+variable            ly equal $y*1.0e-5
+
+variable            n equal 10*$x*$y
+
+seed	    	    12345
+dimension   	    2
+global              comm/sort yes
+
+boundary	    p p p
+
+create_box  	    0 ${lx} 0 ${ly} -0.5 0.5
+create_grid 	    $x $y 1
+
+balance_grid        rcb part
+
+species		    ar.species Ar
+mixture		    air Ar vstream 0.0 0.0 0.0 temp 273.15
+
+global              nrho 7.07043E22
+global              fnum 7.07043E6
+
+collide		    vss air ar.vss
+
+create_particles    air n $n twopass
+
+stats		    100
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll c_temp
+
+# energy spectrum
+
+compute             1 grid all all u v w
+fix                 1 ave/grid all 10 100 1000 c_1[*]
+compute             2 fft/grid f_1[1] f_1[2] f_1[3]
+dump                1 grid all 1000 dump.grid.2d id c_2[*] f_1[*]
+
+timestep 	    7.00E-9
+
+run 		    1000

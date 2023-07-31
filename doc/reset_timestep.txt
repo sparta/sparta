@@ -1,0 +1,50 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+reset_timestep command :h3
+
+[Syntax:]
+
+reset_timestep N :pre
+
+N = timestep number :ul
+
+[Examples:]
+
+reset_timestep 0
+reset_timestep 4000000 :pre
+
+[Description:]
+
+Set the timestep counter to the specified value.  This command
+normally comes after the timestep has been set by reading a restart
+file via the "read_restart"_read_restart.html command, or a previous
+simulation advanced the timestep.
+
+The "create_box"_create_box.html command sets the timestep to 0; the
+"read_restart"_read_restart.html command sets the timestep to the
+value it had when the restart file was written.
+
+[Restrictions:] none
+
+This command cannot be used when any fixes are defined that keep track
+of elapsed time to perform certain kinds of time-dependent operations.
+Examples are the "fix ave/time"_fix_ave_time.html, "fix
+ave/grid"_fix_ave_grid.html, and "fix ave/surf"_fix_ave_surf.html
+commands.  Thus these fixes should be specified after the timestep has
+been reset.
+
+Resetting the timestep clears flags for "computes"_compute.html that
+may have calculated some quantity from a previous run.  This means
+these quantity cannot be accessed by a variable in between runs until
+a new run is performed.  See the "variable"_variable.html command for
+more details.
+
+[Related commands:] none
+
+[Default:] none

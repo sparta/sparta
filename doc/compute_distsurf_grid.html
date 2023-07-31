@@ -1,0 +1,166 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>compute distsurf/grid command 
+</H3>
+<H3>compute distsurf/grid/kk command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>compute ID distsurf/grid group-ID surf-ID keyword args ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
+
+<LI>distsurf/grid = style name of this compute command 
+
+<LI>group-ID = group ID for which grid cells to perform calculation on 
+
+<LI>surf-ID = group ID for which surface elements to consider 
+
+<LI>zero or more keyword/args pairs may be appended 
+
+<LI>keyword = <I>dir</I> 
+
+<PRE>  <I>dir</I> args = Sx Sy Sz
+    Sx,Sy,Sz = direction vector used to test surf elements 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compute 1 distsurf/grid all all
+compute 1 distsurf/grid subset sphere2 dir 1 0 0 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Define a computation that calculates the minimum distance from each
+grid cell in a grid cell group to any surface element in a surface
+element group.  This is useful for grid adaptation; the
+<A HREF = "adapt_grid.html">adapt_grid</A> command can use the compute as a
+criterion for refining or coarsening individual grid cells.
+</P>
+<P>Only grid cells in the grid group specified by <I>group-ID</I> are included
+in the calculation.  See the <A HREF = "group.html">group grid</A> command for info
+on how grid cells can be assigned to grid groups.  Only surface
+elements in the surface element group specified by <I>surf-ID</I> are
+included in the distance calculations.  See the <A HREF = "group.html">group
+surf</A> command for info on how surface elements can be
+assigned to surface element groups.
+</P>
+<P>If the <I>dir</I> keyword is specified it can exclude additional surface
+elements.  The Sx,Sy,Sz settings are components of a vector.  It's
+length does not matter, just its direction.  Only surface elements
+whose normal is opposed to the vector direction (in a dot product
+sense) are eligible surfaces for the distance calculations.  This can
+be useful to exclude surface elements that are not facing "upwind"
+with respect to the flow direction of the particles.  I.e.  by setting
+Sx,Sy,Sz to the flow direction.  If Sy,Sy,Sz = (0,0,0), which is the
+default, then no surface elements are excluded by this criterion.
+</P>
+<P>Each grid cell also only considers a subset of eligible surfaces in
+its distance calculations.  A vector from the grid cell center to the
+center of each surface element is calculated.  If that vector is
+opposed to the normal vector of the surface element (in a dot product
+sense), the distance from the grid cell to the surface is calculated.
+This means that for an individual grid cell, only surface elements
+that are "facing" the grid cell are considered.
+</P>
+<P>The "distance" between a grid cell and a surface element is the
+minimum distance between the two geometric entities.  If the surface
+element overlaps with the grid cell, the distance is 0.0.  Otherwise
+the distance is the minimum distance between the perimeter of the grid
+cell and the line segment (in 2d) or the perimeter of the triangle (in
+3d).
+</P>
+<P>Here is an example of using this compute with the
+<A HREF = "adapt_grid.html">adapt_grid</A> command to adapt the grid around the
+upwind side of a circular object (flow is from the left boundary of
+the box).  The first adapt_grid command uses a threshold distance
+value of 0.5 to create refine grid cells once.  The second adapt_grid
+command uses a threshold distance value of 0.1 to create some of the
+grid cells closer to the surface a second time.
+</P>
+<P>NOTE: include pic
+</P>
+<P>Here is an example of how to use this compute with two successive
+"adapt_grid" commands.  The first refines once for grid cells within a
+distance of 0.3 from surface elements facing upwind.  The second
+refines again for grid cells within a distance of 0.1 from the surface
+elements.
+</P>
+<PRE>compute 5 distsurf/grid all all dir 1 0 0
+adapt_grid all refine value c_5 0.3 0.0 thresh less more
+adapt_grid all refine value c_5 0.1 0.0 thresh less more 
+</PRE>
+<P>For a 2d simulation of flow around a circle (flow from right to left),
+these commands produce this kind of adapted grid (click for a larger
+image):
+</P>
+<CENTER><A HREF = "JPG/adapt_surf.jpg"><IMG SRC = "JPG/adapt_surf_small.jpg"></A>
+</CENTER>
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>This compute calculates a per-grid vector whose values are the
+distances of each grid cell from any of the surface elements.
+</P>
+<P>This compute performs calculations for all flavors of child grid cells
+in the simulation, which includes unsplit, cut, split, and sub cells.
+See <A HREF = "Section_howto.html#howto_8">Section 6.8</A> of the manual gives
+details of how SPARTA defines child, unsplit, split, and sub cells.
+</P>
+<P>Grid cells not in the specified <I>group-ID</I> will output zeroes for all
+their values.
+</P>
+<P>The vector can be accessed by any command that uses per-grid values
+from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 6.4</A>
+for an overview of SPARTA output options.
+</P>
+<P>The per-grid array values for the vector will be in distance
+<A HREF = "units.html">units</A>.
+</P>
+<HR>
+
+<P>Styles with a <I>kk</I> suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+<A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+</P>
+<P>These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the <A HREF = "Section_start.html#start_3">Making
+SPARTA</A> section for more info.
+</P>
+<P>You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the <A HREF = "Section_start.html#start_6">-suffix command-line
+switch</A> when you invoke SPARTA, or you can
+use the <A HREF = "suffix.html">suffix</A> command in your input script.
+</P>
+<P>See the <A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> None
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "adapt_grid.html">adapt_grid</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The keyword default is dir = 0,0,0.
+</P>
+</HTML>

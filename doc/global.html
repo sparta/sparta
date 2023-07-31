@@ -1,0 +1,424 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>global command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>global keyword values ... 
+</PRE>
+<UL><LI>one or more keyword/value pairs 
+
+<LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>gravity</I> or <I>surfs</I> or <I>surfgrid</I> or <I>surfmax</I> or <I>splitmax</I> or <I>surftally</I> or <I>gridcut</I> or <I>comm/sort</I> or <I>comm/style</I> or <I>weight</I> or <I>particle/reorder</I> or <I>mem/limit</I> 
+
+<PRE>  <I>fnum</I> value = ratio
+    ratio = Fnum ratio of physical particles to simulation particles
+  <I>nrho</I> value = density
+    density = number density of background gas (# per length^3 units)
+  <I>vstream</I> values = Vx Vy Vz
+    Vx,Vy,Vz = streaming velocity of background gas (velocity units)
+  <I>temp</I> values = thermal
+    thermal = temperature of background gas (temperature units)
+  <I>field</I> values = fstyle args
+    fstyle = <I>none</I> or <I>constant</I> or <I>variable</I> or <I>grid</I>
+      <I>field</I> arg = none
+      <I>constant</I> args = mag ex ey ez
+        mag = magnitude of field acceleration (acceleration units)
+        ex,ey,ez = direction vector which the field acts along
+      <I>particle</I> arg = fixID
+        fixID = ID of fix that computes per particle field components
+      <I>grid</I> args = fixID Nfreq
+        fixID = ID of fix that computes per grid cell field components
+        Nfreq = update field values every this many timesteps
+  <I>surfs</I> value = explicit or explicit/distributed or implicit
+    explicit = surfs defined in read_surf file, each proc owns copy of all surfs
+    explicit/distributed = surfs defined in read_surf file, each proc owns
+                           only the surfs for its owned_ghost grid cells
+    implicit = surfs defined in read_isurf file, each proc owns
+                           only the surfs for its owned+ghost grid cells
+  <I>surfgrid</I> value = <I>percell</I> or <I>persurf</I> or <I>auto</I>
+    percell = loop over my cells and check every surf
+    persurf = loop over my surfs and cells they overlap
+    auto = choose percell or persurf based on surface element and proc count
+  <I>surfmax</I> value = Nsurf
+    Nsurf = max # of surface elements allowed in single grid cell
+  <I>splitmax</I> value = Nsplit
+    Nsplit = max # of sub-cells one grid cell can be split into by surface elements
+  <I>surftally</I> value = <I>reduce</I> or <I>rvous</I> or <I>auto</I>
+    reduce = tally surf collision info via MPI_Allreduce operations
+    rvous = tally via a rendezvous algorithm
+    auto = choose reduce or rvous based on surface element and proc count
+  <I>gridcut</I> value = cutoff
+    cutoff = acquire ghost cells up to this far away (distance units)
+  <I>comm/sort</I> value = yes or no
+    yes/no = sort incoming messages by proc ID if yes, else no sort
+  <I>comm/style</I> value = neigh or all
+    neigh = setup particle comm with subset of near-neighbor processor
+    all = allow particle comm with potentially any processor
+  <I>weight</I> value = <I>wstyle</I> <I>mode</I>
+    wstyle = <I>cell</I>
+    mode = <I>none</I> or <I>volume</I> or <I>radius</I> or <I>radius/only</I>
+  <I>particle/reorder</I> value = <I>nsteps</I>
+    nsteps = reorder the particles every this many timesteps
+  <I>mem/limit</I> value = <I>grid</I> or bytes
+    grid = limit extra memory for load-balancing, particle reordering, and restart file read/write to grid cell memory
+    bytes = limit extra particle memory to this amount (in MBytes) 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>global fnum 1.0e20
+global vstream 100.0 0 0 fnum 5.0e18
+global temp 1000
+global weight cell radius 
+global mem/limit 100 
+global field constant 9.8 0 0 1 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Define global properties of the system.
+</P>
+<P>The <I>fnum</I> keyword sets the ratio of real, physical molecules to
+simulation particles.  E.g. a value of 1.0e20 means that one particle
+in the simulation represents 1.0e20 molecules of the particle species.
+</P>
+<P>The <I>nrho</I> keyword sets the number density of the background gas.  For
+3d simulations the units are #/volume.  For 2d, the units are
+effectively #/area since the z dimension is treated as having a length
+of 1.0.
+</P>
+<P>Assuming your simulation is populated by particles from the background
+gas, the <I>fnum</I> and <I>nrho</I> settings can determine how many particles
+will be present in your simulation, when using the
+<A HREF = "create_particles.html">create_particles</A> or <A HREF = "fix_emit_face.html">fix
+emit</A> command variants.
+</P>
+<P>The <I>vstream</I> keyword sets the streaming velocity of the background
+gas.
+</P>
+<P>The <I>temp</I> keyword sets the thermal temperature of the background gas.
+This is a Gaussian velocity distribution superposed on top of the
+streaming velocity.
+</P>
+<P>The <I>field</I> keyword adds an additional external field term which can
+included in the motion of particles.  The <I>fstyle</I> argument can be
+<I>none</I> or <I>constant</I>, <I>particle</I>, or <I>grid</I>.  Note that only one of
+these can be set by the global command.  If the <I>field</I> keyword is
+specified multiple times, only the last one has an effect.
+</P>
+<P>The <I>none</I> setting turns off any external field setting previously
+specified.  It is the default.
+</P>
+<P>The <I>constant</I> setting is for a field that has no spatial or time
+dependence; the same field vector acts on all particles.  Gravity is
+an example of a constant external field.  The <I>mag</I> arguement sets the
+magnitude of the field.  The (ex,ey,ez) components specify the
+direction the field acts in.  The components do not need to be a unit
+vector; the code converts them into a unit vector internally.  Note
+that a z-component cannot be used for 2d simulations.
+</P>
+<P>The <I>particle</I> setting is for a field that is computed on a per
+particle basis, depending on the position or other attributes of each
+particle.  A spatially- or time-dependent magnetic field, acting on
+the magnetic moment of each particle, is an example of a variable
+external field.  The fixID argument is the ID of a fix which computes
+the components of the field vector for each particle.  These may alter
+both the position and velocity of each particle when it is advected
+each timestep.  
+</P>
+<P>See the doc page for the <A HREF = "fix_field_particle.html">fix field/particle</A>
+command for the only current fix in SPARTA which is compatible with
+the <I>particle</I> setting.
+</P>
+<P>The <I>grid</I> setting is for a field that is computed on a per grid cell
+basis and applied to all the particles in the grid cell.  A spatially-
+or time-dependent magnetic field which is coarsened to act at the
+resolution of grid cells is an example of a per grid cell external
+field.  The fixID argument is the ID of a fix which computes the
+components of the field vector for each grid cell.  These may alter
+both the position and velocity or particles in the grid cell when they
+are advected each timestep.  The Nfreq argument specifies how often to
+re-compute the per grid cell field vectors.  For a field that has no
+time dependence you should set Nfreq to zero; the field will only be
+computed once at the beginning of each simulation run.  For a field
+with time-dependence you can choose how often to recompute the field,
+depending on how fast it varies.
+</P>
+<P>See the doc page for the <A HREF = "fix_field_grid.html">fix field/grid</A> command
+for the only current fix in SPARTA which is compatible with the
+<I>grid</I> setting.
+</P>
+<P>Note that there is a tradeoff between the <I>particle</I> and <I>grid</I>
+options.  For the <I>particle</I> option the field must be computed every
+timestep for all particles; the field values are accurately computed
+at precisely each particle's position but it is an expensive
+operation.  For the <I>grid</I> option the field is only computed once at
+the beginning of a run or once every Nfreq timesteps.  Even if it is
+computed every timestep, the number of grid cells is typically much
+smaller than the number of particles.  However the accuracy of the
+field applied to each particle is more approximate than for the
+<I>particle</I> option.  This is because the field applied to each particle
+is the value it has at the center of the particle's grid cell.
+</P>
+<HR>
+
+<P>The <I>surfs</I> keyword determines what kind of surface elements SPARTA
+uses and how they are distributed across processors.  Possible values
+are <I>explicit</I>, <I>explicit/distributed</I>, and <I>implicit</I>.  See the
+<A HREF = "Section_howto.html#howto_13">Howto 6.13</A> section of the manual for an
+explantion of explicit versus implicit surfaces.  The distributed
+option can be important for models with huge numbers of surface
+elements.  Each processor stores copies of only the surfaces that
+overlap grid cells it owns or has ghost copies of.  Implicit surfaces
+are always distributed.  The <I>explicit</I> setting is the default and
+means each processor stores a copy of all the defined surface
+elements.  Note that a surface element requires about 100 bytes of
+storage, so storing a million on a single processor requires about 100
+MBytes.
+</P>
+<P>The <I>surfgrid</I> keyword determines what algorithm is used to enumerate
+the overlaps (intersections) between grid cells and surface elements
+(lines in 2d, triangles in 3d).  The possible settings are <I>percell</I>,
+<I>persurf</I>, and <I>auto</I>.  The <I>auto</I> setting is the default and will
+choose between a <I>percell</I> or <I>persurf</I> algorithm based on the number
+of surface elements and processor count.  If there are more processors
+than surface elements, the <I>percell</I> algorithm is used.  Otherwise the
+<I>persurf</I> algorithm is used.  The <I>percell</I> algorithm loops over the
+subset of grid cells each processor owns.  All the surface elements
+are tested for overlap with each owned grid cell.  The <I>persurf</I>
+algorithm loops over a 1/P fraction of surface elements on each
+processor.  The bounding box around each surface is used to find all
+grid cells it possibly overlaps.  For large numbers of surface
+elements or processors, the <I>persurf</I> algorithm is generally faster.
+</P>
+<P>The <I>surfmax</I> keyword determines the maximum number of surface
+elements (lines in 2d, triangles in 3d) that can overlap a single grid
+cell.  The default is 100, which should be large enough for any
+simulation, unless you define very coarse grid cells relative to the
+size of surface elements they contain.
+</P>
+<P>The <I>splitmax</I> keyword determines the maximum number of sub-cells a
+single grid cell can be split into as a result of its intersection
+with multiple surface elements (lines in 2d, triangles in 3d).  The
+default is 10, which should be large enough for any simulation, unless
+you embed a complex-shaped surface object into one or a very few grid
+cells.
+</P>
+<P>The <I>surftally</I> keyword determines what algorithm is used to combine
+tallies of surface collisions across processors that own portions of
+the same surface element.  The possible settings are <I>reduce</I>,
+<I>rvous</I>, and <I>auto</I>.  The <I>auto</I> setting is the default and will
+choose between a <I>reduce</I> or <I>rvous</I> algorithm based on the number of
+surface elements and processor count.  If there are more processors
+than surface elements, the <I>reduce</I> algorithm is used.  Otherwise the
+<I>rvous</I> algorithm is used.  The <I>reduce</I> algorithm is suitable for
+relatively small surface elememt counts.  It creates a copy of a
+vector or array of length the global number of surface elements.  Each
+processor sums its tally contributions into the vector or array.  An
+MPI_Allreduce() is performed to sum it across all processors.  Each
+processor than extracts values for the N/P surfaces it owns.  The
+<I>rvous</I> algorithm is faster for large surface element counts.  A
+rendezvous style of communication is performed where every processor
+sends its tally contributions directly to the processor which owns the
+element as one of its N/P elements.
+</P>
+<HR>
+
+<P>The <I>gridcut</I> keyword determines the cutoff distance at which ghost
+grid cells will be stored by each processor.  Assuming the processor
+owns a compact clump of grid cells (see below), it will also store
+ghost cell information from nearby grid cells, up to this distance
+away.  If the setting is -1.0 (the default) then each processor owns a
+copy of ghost cells for all grid cells in the simulation.  This can
+require too much memory for large models.  If the cutoff is 0.0,
+processors own a minimal number of ghost cells.  This saves memory but
+may require multiple passes of communication each timestep to move all
+the particles and migrate them to new owning processors.  Typically a
+cutoff the size of 2-3 grid cell diameters is a good compromise that
+requires only modest memory to store ghost cells and allows all
+particle moves to complete in only one pass of communication.
+</P>
+<P>An example of the <I>gridcut</I> cutoff applied to a clumped assignment is
+shown in this zoom-in of a 2d hierarchical grid with 5 levels, refined
+around a tilted ellipsoidal surface object (outlined in pink).  One
+processor owns the grid cells colored orange.  A bounding rectangle
+around the orange cells, extended by a short cutoff distance, is drawn
+as a purple rectangle.  The rectangle contains only a few ghost grid
+cells owned by other processors.
+</P>
+<CENTER><IMG SRC = "JPG/partition_zoom_cutoff.jpg">
+</CENTER>
+<P>IMPORTANT NOTE: Using the <I>gridcut</I> keyword with a cutoff >= 0.0 is
+only allowed if the grid cells owned by each processor are "clumped".
+If each processor's grid cells are "dispersed", then ghost cells
+cannot be created with a <I>gridcut</I> cutoff >= 0.0.  Whenever ghost
+cells are generated, a warning to this effect will be triggered.  At a
+later point when surfaces are read in or a simulation is performed, an
+error will result.  The solution is to use the
+<A HREF = "balance_grid.html">balance_grid</A> command to change to a clumped grid
+cell assignment.  See <A HREF = "Section_howto.html#howto_8">Section 6.8</A> of the
+manual for an explanation of clumped and dispersed grid cell
+assignments and their relative performance trade-offs.
+</P>
+<P>IMPORTANT NOTE: If grid cells have already been defined via the
+<A HREF = "create_grid.html">create_grid</A>, <A HREF = "read_grid.html">read_grid</A>, or
+<A HREF = "read_restart.html">read_restart</A> commands, when the <I>gridcut</I> cutoff
+is specified, then any ghost cell information that is currently stored
+will be erased.  As discussed in the preceeding paragraph, a
+<A HREF = "balance_grid.html">balance_grid</A> command must then be invoked to
+regenerate ghost cell information.  If this is not done before
+surfaces are read in or a simulation is performed, an error will
+result.
+</P>
+<P>The <I>comm/sort</I> keyword determines whether the messages a proc
+receives for migrating particles (every step) and ghost grid cells (at
+setup and after re-balance) are sorted by processor ID.  Doing this
+requires a bit of overhead, but can make it easier to debug in
+parallel, because simulations should be reproducible when run on the
+same number of processors.  Without sorting, messages may arrive in a
+randomized order, which means lists of particles and grid cells end up
+in a different order leading to statistical differences between runs.
+</P>
+<P>The <I>comm/style</I> keyword determines the style of particle
+communication that is performed to migrate particles every step.  The
+most efficient method is typically for each processor to exchange
+messages with only the processors it has ghost cells for, which is the
+method used by the <I>neigh</I> setting.  The <I>all</I> setting performs a
+relatively cheap, but global communication operation to determine the
+exact set of neighbors that need to be communicated with at each step.
+For small processor counts there is typically little difference.  On
+large processor counts the <I>neigh</I> setting can be significantly
+faster.  However, if the flow is streaming in one dominant direction,
+there may be no particle migration needed to upwind processors, so the
+<I>all</I> method can generate smaller counts of neighboring processors.
+</P>
+<P>Note that the <I>neigh</I> style only has an effect (at run time) when the
+grid is decomposed by the RCB option of the <A HREF = "balance.html">balance</A> or
+<A HREF = "fix_balance.html">fix balance</A> commands.  If that is not the case,
+SPARTA performs the particle communication as if the <I>all</I> setting
+were in place.
+</P>
+<P>The <I>weight</I> keyword determines whether particle weighting is used.
+Currently the only style allowed, as specified by wstyle = <I>cell</I>, is
+per-cell weighting.  This is a mechanism for inducing every grid cell
+to contain roughly the same number of particles (even if cells are of
+varying size), so as to minimize the total number of particles used in
+a simulation while preserving accurate time and spatial averages of
+flow quantities.  The cell weights also affect how many particles per
+cell are created by the <A HREF = "create_particles.html">create_particles</A> and
+<A HREF = "fix_emit_face.html">fix emit</A> command variants.
+</P>
+<P>If the mode is set to <I>none</I>, per-cell weighting is turned off if it
+was previously enabled.  For mode = <I>volume</I> or <I>radius</I> or
+<I>radius/only</I>, per-cell weighting is enabled, which triggers two
+computations.  First, at the time this command is issued, each grid
+cell is assigned a "weight" which is calculated based either on the
+cell <I>volume</I> or <I>radius</I>, as specified by the <I>mode</I> setting.  For
+the <I>volume</I> setting, the weight of a cell is its 3d volume for a 3d
+model, and the weight is its 2d area for a 2d model.  For an
+axi-symmetric model, the weight is the 3d volume of the 2d
+axi-symmetric cell, i.e. the volume the area sweeps out when rotated
+around the y=0 axis of symmetry.  The <I>radius</I> and <I>radius/only</I>
+settings are only allowed for axisymmetric systems.  For the <I>radius</I>
+option, the weight is the distance the cell midpoint is from the y=0
+axis of symmetry, multiplied by the length of the cell in the x
+direction.  This mode attempts to preserve a uniform number of
+particles in each cell, regardless of the cell area, for a uniform
+targeted density.  For the <I>radius/only</I> option, the weight is just the
+distance the cell midpoint is from the y=0 axis of symmetry. This mode attempts to preserve a uniform distribution of particles
+per unit area, for a uniform targeted density.  See <A HREF = "Section_howto.html#howto_2">Section
+6.2</A> for more details on axi-symmetric
+models.
+</P>
+<P>Second, when a particle moves from an initial cell to a final cell,
+the initial/final ratio of the two cell weights is calculated.  If the
+ratio > 1, then additional particles may be created in the final cell,
+by cloning the attributes of the incoming particle.  E.g. if the ratio
+= 3.4, then two extra particle are created, and a 3rd is created with
+probability 0.4.  If the ratio < 1, then the incoming particle may be
+deleted.  E.g. if the ratio is 0.7, then the incoming particle is
+deleted with probability 0.3.
+</P>
+<P>Note that the first calculation of weights is performed whenever the
+<I>global weight</I> command is issued.  If particles already exist, they
+are not cloned or destroyed by the new weights.  The second
+calculation only happens when a simulation is run.
+</P>
+<P>The <I>particle/reorder</I> keyword determines how often the list of 
+particles on each processor is reordered to store particles in the same 
+grid cell contiguously in memory. This operation is performed every 
+<I>nsteps</I> as specified. A value of 0 means no reordering is ever done. 
+This option is only available when using the KOKKOS package and can 
+improve performance on certain hardware such as GPUs, but is typically 
+slower on CPUs except when running on thousands of nodes. 
+</P>
+<P>The <I>mem/limit</I> keyword limits the amount of memory allocated for 
+several operations: load balancing, reordering of particles, and restart 
+file read/write. This should only be necessary for very large 
+simulations where the memory footprint for particles and grid cells is a 
+significant fraction of available memory. In this case, these operations 
+can trigger a memory error due to the additional memory they require. 
+Setting a limit on the memory size will perform these operations more 
+incrementally so that memory errors do not occur. 
+</P>
+<P>A load-balance operation can use as much as 3x more memory than the 
+memory used to store particles (reported by SPARTA when a simulation 
+begins). Particle reordering temporarily doubles the memory needed to 
+store particles because it is performed out-of-place by default. Reading 
+and writing restart files also requires temporary buffers to hold grid 
+cells and particles and can double the memory required. 
+</P>
+<P>Specifying the value for <I>mem/limit</I> as <I>grid</I>, will allocate extra 
+memory limited to the size of memory for storing grid cells on each 
+processor. For most simulations this is typically much smaller than the 
+memory used to store particles. Specifying a numeric value for <I>bytes</I> 
+will allocate extra memory limited to that many MBytes on each 
+processor. <I>Bytes</I> can be specified as a floating point value or an 
+integer, e.g. 0.5 if you want to use 1/2 MByte of extra memory or 100 
+for a 100 MByte buffer. Specifying a value of 0 (the default) means no 
+limit is used. The value used for <I>mem/limit</I> must not exceed 2GB or an
+error will occur.
+</P>
+<P>For load-balancing, the communication of grid and particle data to new 
+processors will then be performed in multiple passes (if necessary) so 
+that only a portion of grid cells and their particles which fit into the 
+extra memory are migrated in each pass. Similarly for particle 
+reordering, multiple passes are performed using the extra memory to 
+reorder the particles nearly in-place. For reading/writing restart 
+files, multiple passes are used to read from or write to the restart 
+file as well. For reading restart files, this option is ignored unless 
+reading from multiple files (i.e. a "%" character was used in the 
+command to write out the restart) and the number of MPI ranks is greater 
+than the number of files. 
+</P>
+<P>Note that for these operations if the extra memory is too small, 
+performance will suffer due to the large number of multiple passes 
+required. 
+</P>
+<P><B>Restrictions:</B>
+</P>
+<P>The global surfmax command must be used before surface elements are
+defined, e.g. via the <A HREF = "read_surf.html">read_surf</A> command.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "mixture.html">mixture</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
+0.0, temp = 273.15, field = none, surfs = explicit, surfgrid = auto,
+surfmax = 100, splitmax = 10, surftally = auto,
+gridcut = -1.0, comm/sort = no, comm/style = neigh, weight = cell
+none, particle/reorder = 0, mem/limit = 0.
+</P>
+</HTML>

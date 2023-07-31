@@ -1,0 +1,161 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>package command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>package style args 
+</PRE>
+<UL><LI>style = <I>kokkos</I> 
+
+<LI>args = arguments specific to the style 
+
+<PRE>  <I>kokkos</I> args = keyword value ...
+    zero or more keyword/value pairs may be appended
+    keywords = <I>comm</I> or <I>reduction</I>
+      <I>comm</I> value = <I>threaded</I> or <I>classic</I>
+        threaded = perform pack/unpack using KOKKOS (e.g. on GPU or using OpenMP) (default)
+        classic = perform communication pack/unpack in non-KOKKOS mode
+      <I>reduction</I> = <I>parallel/reduce</I> or <I>atomic</I>
+        parallel/reduce = use parallel reduction for statistics (default)
+        atomic = use atomic reduction for statistics
+      <I>collide/extra</I> = <I>factor</I>
+        factor = increase memory used for collisions by this factor (default)
+      <I>collide/retry</I> = <I>yes</I> or <I>no</I>
+        yes = retry collision algorithm until successful
+        no = do not retry collision algorithm (default)
+      <I>gpu/aware</I> = <I>yes</I> or <I>no</I>
+        yes = use GPU-aware MPI (default)
+        no = do not use GPU-aware MPI 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>package kokkos comm classic
+package kokkos comm threaded reduction atomic
+package kokkos gpu/aware no 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>This command invokes package-specific settings for the KOKKOS
+accelerator package available in SPARTA.
+</P>
+<P>If this command is specified in an input script, it must be near the
+top of the script, before the simulation box has been created.  This
+is because it specifies settings that the accelerator package used in
+its initialization, before a simulation is defined.
+</P>
+<P>This command can also be specified from the command-line when
+launching SPARTA, using the "-pk" <A HREF = "Section_start.html#start_6">command-line
+switch</A>.  The syntax is exactly the same as
+when used in an input script.
+</P>
+<P>Note that the KOKKOS accelerator package requires the package command
+to be specified, if the package is to be used in a simulation (SPARTA
+can be built with the accelerator package without using it in a
+particular simulation).  However, a default version of the command is
+typically invoked by other accelerator settings. For example, the
+KOKKOS package requires a "-k on" <A HREF = "Section_start.html#start_6">command-line
+switch</A> respectively, which invokes a
+"package kokkos" command with default settings.
+</P>
+<P>NOTE: A package command for a particular style can be invoked multiple
+times when a simulation is setup, e.g. by the "-k on", "-sf", and
+"-pk" <A HREF = "Section_start.html#start_6">command-line switches</A>, and by using
+this command in an input script.  Each time it is used all of the
+style options are set, either to default values or to specified
+settings.  I.e. settings from previous invocations do not persist
+across multiple invocations.
+</P>
+<P>See the the <A HREF = "Section_accelerate.html#acc_3">Accelerating SPARTA</A>
+section of the manual for more details about using the various
+accelerator packages for speeding up SPARTA simulations.
+</P>
+<HR>
+
+<P>The <I>kokkos</I> style invokes settings associated with the use of the
+KOKKOS package.
+</P>
+<P>All of the settings are optional keyword/value pairs.  Each has a
+default value as listed below.
+</P>
+<P>The <I>reduction</I> keyword sets the type of reduction used to gather
+statistics. The <I>parallel/reduce</I> option uses a parallel reduction and
+is typically the preferred method when running on CPUs and Xeon Phis.
+The <I>atomic</I> option uses thread atomics and is typically faster when
+running on GPUs.
+</P>
+<P>Chemical reactions can increase the number of particles in the 
+simulation, which requires extra memory storage. It is not possible to 
+resize Kokkos data structures during the collide routine, so two 
+workarounds are provided. The default is to use the <I>collide/extra</I> 
+keyword, which ensures there is extra memory allocated to store new 
+particles. For example, if <I>collide/extra</I> is set to 1.1, then the 
+memory is over-allocated by 10%. If this space is still not sufficient to hold 
+new particles, the code will error out and the simulation must be 
+restarted using a larger value for <I>collide/extra</I>. Alternatively, if 
+the <I>collide/retry</I> option is set to <I>yes</I>, backup copies of the Kokkos 
+data structures are created. If space is exceeded during the collide 
+routine, the Kokkos data structures are restored from backup, their size 
+is increased, and the collide routine is started over from the 
+beginning. This guarantees that the collide routine will eventually 
+succeed without producing an error, but increased memory by a factor of 
+2 and also has overhead from making a backup copy of the data. If the 
+<I>collide/retry</I> option is set to <I>yes</I>, the <I>collide/extra</I> keyword will 
+be ignored. If reactions are not defined, both these options will be ignored.
+</P>
+<P>The <I>comm</I> keyword determines whether the host or device performs the
+packing and unpacking of data when communicating per-atom data between
+processors. The value options are <I>threaded</I> or <I>classic</I>.
+</P>
+<P>The optimal choice for this keyword depends on the hardware used.
+When running on CPUs or Xeon Phi, the <I>classic</I> option is typically
+fastest. When using GPUs, the <I>threaded</I> value will typically be
+optimal. In this case data can stay on the GPU for many timesteps
+without being moved between the host and GPU.  This requires that your
+MPI is able to access GPU memory directly.  Currently that is true for
+OpenMPI 1.8 (or later versions), Mvapich2 1.9 (or later), and CrayMPI.
+</P>
+<P>The <I>gpu/aware</I> keyword chooses whether GPU-aware MPI will be used. When 
+this keyword is set to <I>on</I>, buffers in GPU memory are passed directly 
+through MPI send/receive calls. This can reduce overhead of first 
+copying the data to the host CPU. However GPU-aware MPI is not supported on 
+all systems, which can lead to segmentation faults and would require 
+using a value of <I>off</I>. 
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>This command cannot be used after the simulation box is defined by a
+<A HREF = "create_box.html">create_box</A> command.
+</P>
+<P>The kk style of this command can only be invoked if SPARTA was built
+with the KOKKOS package.  See the <A HREF = "Section_start.html#start_3">Making
+SPARTA</A> section for more info.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "suffix.html">suffix</A>, "-pk" <A HREF = "Section_start.html#start_6">command-line
+setting</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>For the KOKKOS package, the option defaults are comm = threaded, 
+reduction = parallel/reduce, collide/extra = 1.1, and collide/retry = 
+no, gpu/aware yes. These settings are made automatically by the 
+required "-k on" <A HREF = "Section_start.html#start_6">command-line switch</A>. You 
+can change them by using the package kokkos command in your input script 
+or via the "-pk kokkos" <A HREF = "Section_start.html#start_6">command-line switch</A>. 
+</P>
+</HTML>

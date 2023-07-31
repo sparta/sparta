@@ -1,0 +1,484 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>dump command 
+</H3>
+<H3><A HREF = "dump_image.html">dump image</A> command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>dump ID style select-ID N file args 
+</PRE>
+<UL><LI>ID = user-assigned name for the dump 
+
+<LI>style = <I>particle</I> or <I>grid</I> or <I>surf</I> or <I>image</I> 
+
+<LI>select-ID = which particles, grid cells, surface elements to dump 
+
+<PRE>  for dump style = particle or image, use a mixture ID
+  for style = grid, use a grid group ID
+  for style = surf, use a surface group ID 
+</PRE>
+<LI>N = dump every this many timesteps 
+
+<LI>file = name of file to write dump info to 
+
+<LI>args = list of arguments for a particular style 
+
+<PRE>  <I>particle</I> args = list of particle attributes
+    possible attributes = id, type, proc, x, y, z, xs, ys, zs, vx, vy, vz,
+                          ke, erot, evib, 
+                          p_ID, p_ID[N], c_ID, c_ID[N], f_ID, f_ID[N], v_name 
+</PRE>
+<PRE>      id = particle ID
+      type = particle species
+      proc = ID of owning processor
+      x,y,z = unscaled particle coordinates
+      xs,ys,zs = scaled particle coordinates
+      vx,vy,vz = particle velocities
+      ke,erot,evib = translational, rotational, and vibrational energy
+      p_ID = custom per-particle vector with ID
+      p_ID[N] = Nth column of custom per-particle array with ID
+      c_ID = per-particle vector calculated by a compute with ID
+      c_ID[N] = Nth column of per-particle array calculated by a compute with ID, I can include wildcard (see below)
+      f_ID = per-particle vector calculated by a fix with ID
+      f_ID[N] = Nth column of per-particle array calculated by a fix with ID, I can include wildcard (see below)
+      v_name = per-particle vector calculated by a particle-style variable with name 
+</PRE>
+<PRE>  <I>grid</I> args = list of grid attributes
+    possible attributes = id, idstr, proc, xlo, ylo, zlo, xhi, yhi, zhi,
+                          c_ID, c_ID[N], f_ID, f_ID[N], v_name 
+</PRE>
+<PRE>      id = integer form of grid cell ID
+      idstr = string form of grid cell ID
+      split = integer, either 0 (unsplit cell) or 1..N (split cell index + 1)
+      proc = processor that owns grid cell
+      xlo,ylo,zlo = coords of lower left corner of grid cell
+      xhi,yhi,zhi = coords of lower left corner of grid cell
+      xc,yc,zc = coords of center of grid cell
+      vol = flow volume of grid cell (area in 2d)
+      c_ID = per-grid vector calculated by a compute with ID
+      c_ID[N] = Nth column of per-grid array calculated by a compute with ID, I can include wildcard (see below)
+      f_ID = per-grid vector calculated by a fix with ID
+      f_ID[N] = Nth column of per-grid array calculated by a fix with ID, I can include wildcard (see below)
+      v_name = per-grid vector calculated by a grid-style variable with name 
+</PRE>
+<PRE>  <I>surf</I> args = list of surf attributes
+    possible attributes = id, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z, 
+                          c_ID, c_ID[N], f_ID, f_ID[N], v_name 
+</PRE>
+<PRE>      id = surface element ID
+      v1x,v1y,v1z = coords of 1st vertex in surface element
+      v1x,v1y,v1z = coords of 2nd vertex in surface element
+      v1x,v1y,v1z = coords of 3rd vertex in surface element
+      c_ID = per-surf vector calculated by a compute with ID
+      c_ID[N] = Nth column of per-surf array calculated by a compute with ID, I can include wildcard (see below)
+      f_ID = per-surf vector calculated by a fix with ID
+      f_ID[N] = Nth column of per-surf array calculated by a fix with ID, I can include wildcard (see below)
+      v_name = per-surf vector calculated by a surf-style variable with name 
+</PRE>
+<PRE>  <I>image</I> args = discussed on <A HREF = "dump_image.html">dump image</A> doc page 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>dump 1 particle all 100 dump.myforce.* id type x y vx fx
+dump 2 particle inflow 100 dump.%.myforce id type c_myF[3] v_ke
+dump 3 grid all 1000 tmp.grid id proc xlo ylo zlo xhi yhi zhi 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Dump a snapshot of simulation quantities to one or more files every N
+timesteps in one of several styles.  The <I>image</I> style is the
+exception; it creates a JPG or PPM image file of the simulation
+configuration every N timesteps, as discussed on the <A HREF = "dump_image.html">dump
+image</A> doc page.
+</P>
+<P>The ID for a dump is used to identify the dump in other commands.
+Each dump ID must be unique.  The ID can only contain alphanumeric
+characters and underscores.  You can specify multiple dumpes of the
+same style so long as they have different IDs.  A dump can be deleted
+with the <A HREF = "undump.html">undump</A> command, after which its ID can be
+re-used.
+</P>
+<P>The <I>style</I> setting determines what quantities are written to the file
+and in what format.  The <I>particle</I>, <I>grid</I>, <I>surf</I> options are for
+particles, grid cells, or surface elements.  Settings made via the
+<A HREF = "dump_modify.html">dump_modify</A> command can also alter what info is
+included in the file and the format of individual values.
+</P>
+<P>The <I>select-ID</I> setting determines which particles, grid cells, or
+surface elements are output.  For <I>style</I> = <I>particle</I>, the
+<I>select-ID</I> is a mixture ID as defined by the <A HREF = "mixture.html">mixture</A>
+command.  Only particles whose species are part of the mixture are
+output.  For <I>style</I> = <I>grid</I>, the <I>select-ID</I> is for a grid group, as
+defined by the <A HREF = "group.html">group grid</A> command.  Only grid cells in
+the group are output.  For <I>style</I> = <I>surf</I>, the <I>select-ID</I> is for a
+surface eleemnt group, as defined by the <A HREF = "group.html">group surf</A>
+command.  Only surface elements in the group are output.
+</P>
+<P>As described below, the filename determines the kind of output (text
+or binary or gzipped, one big file or one per timestep, one big file
+or one per processor).
+</P>
+<P>The precision of values output to text-based dump files can be
+controlled by the <A HREF = "dump_modify.html">dump_modify format</A> command and
+its options.
+</P>
+<HR>
+
+<P>The <I>particle</I> and <I>grid</I> and <I>surf</I> styles create files in a simple
+text format that is self-explanatory when viewing a dump file.  Many
+of the SPARTA <A HREF = "Section_tools.html">post-processing tools</A>, including
+<A HREF = "http://pizza.sandia.gov">Pizza.py</A>, work with this format.
+</P>
+<P>For post-processing purposes the text files are self-describing in the
+following sense.
+</P>
+<P>The dimensions of the simulation box are included in each snapshot.
+This information is formatted as:
+</P>
+<PRE>ITEM: BOX BOUNDS xx yy zz
+xlo xhi
+ylo yhi
+zlo zhi 
+</PRE>
+<P>where xlo,xhi are the maximum extents of the simulation box in the
+x-dimension, and similarly for y and z.  The "xx yy zz" represent 6
+characters that encode the style of boundary for each of the 6
+simulation box boundaries (xlo,xhi and ylo,yhi and zlo,zhi).  Each of
+the 6 characters is either o = outflow, p = periodic, or s = specular.
+See the <A HREF = "doc/boundary.html">boundary</A> command for details.
+</P>
+<P>The "ITEM: NUMBER OF ATOMS" or "ITEM: NUMBER OF CELLS" or "ITEM:
+NUMBER OF SURFS" entry in each snapshot gives the number of particles,
+grid cells, surfaces to follow.
+</P>
+<P>The "ITEM: ATOMS" or "ITEM: CELLS" or "ITEM: SURFS" entry in each
+snapshot lists column descriptors for the per-particle or per-grid or
+per-surf lines that follow.  The descriptors are the attributes
+specied in the dump command for the style.  Possible attributes are
+listed above and will appear in the order specified.  An explanation
+of the possible attributes is given below.
+</P>
+<HR>
+
+<P>Dumps are performed on timesteps that are a multiple of N (including
+timestep 0).  Note that this means a dump will not be performed on the
+initial timestep after the dump command is invoked, if the current
+timestep is not a multiple of N.  This behavior can be changed via the
+<A HREF = "dump_modify.html">dump_modify first</A> command.  N can be changed
+between runs by using the <A HREF = "dump_modify.html">dump_modify every</A>
+command.
+</P>
+<P>The specified filename determines how the dump file(s) is written.
+The default is to write one large text file, which is opened when the
+dump command is invoked and closed when an <A HREF = "undump.html">undump</A>
+command is used or when SPARTA exits.
+</P>
+<P>Dump filenames can contain two wildcard characters.  If a "*"
+character appears in the filename, then one file per snapshot is
+written and the "*" character is replaced with the timestep value.
+For example, tmp.dump.* becomes tmp.dump.0, tmp.dump.10000,
+tmp.dump.20000, etc.  Note that the <A HREF = "dump_modify.html">dump_modify pad</A>
+command can be used to insure all timestep numbers are the same length
+(e.g. 00010), which can make it easier to read a series of dump files
+in order by some post-processing tools.
+</P>
+<P>If a "%" character appears in the filename, then one file is written
+for each processor and the "%" character is replaced with the
+processor ID from 0 to P-1.  For example, tmp.dump.% becomes
+tmp.dump.0, tmp.dump.1, ... tmp.dump.P-1, etc.  This creates smaller
+files and can be a fast mode of output on parallel machines that
+support parallel I/O for output.
+</P>
+<P>Note that the "*" and "%" characters can be used together to produce a
+large number of small dump files!
+</P>
+<P>If the filename ends with ".bin", the dump file (or files, if "*" or
+"%" is also used) is written in binary format.  A binary dump file
+will be about the same size as a text version, but will typically
+write out much faster.  Of course, when post-processing, you will need
+to convert it back to text format (see the <A HREF = "Section_tools.html#binary">binary2txt
+tool</A>) or write your own code to read the
+binary file.  The format of the binary file can be understood by
+looking at the tools/binary2txt.cpp file.
+</P>
+<P>If the filename ends with ".gz", the dump file (or files, if "*" or "%"
+is also used) is written in gzipped format.  A gzipped dump file will
+be about 3x smaller than the text version, but will also take longer
+to write.
+</P>
+<HR>
+
+<P>Note that in the discussion which follows, for styles which can
+reference values from a compute or fix, like the <I>particle</I>, <I>grid</I>,
+or <I>surf</I> styles, the bracketed index I can be specified using a
+wildcard asterisk with the index to effectively specify multiple
+values.  This takes the form "*" or "*n" or "n*" or "m*n".  If N = the
+size of the vector (for <I>mode</I> = scalar) or the number of columns in
+the array (for <I>mode</I> = vector), then an asterisk with no numeric
+values means all indices from 1 to N.  A leading asterisk means all
+indices from 1 to n (inclusive).  A trailing asterisk means all
+indices from n to N (inclusive).  A middle asterisk means all indices
+from m to n (inclusive).
+</P>
+<P>Using a wildcard is the same as if the individual columns of the array
+had been listed one by one.  E.g. these 2 dump commands are
+equivalent, since the <A HREF = "compute_grid.html">compute grid</A> command creates
+a per-grid array with 3 columns:
+</P>
+<PRE>compute myGrid all all u v w
+dump 2 grid all 100 tmp.dump id c_myGrid[*]
+dump 2 grid all 100 tmp.dump id c_myGrid[1] c_myGrid[2] c_myGrid[3] 
+</PRE>
+<HR>
+
+<P>This section explains the particle attributes that can be specified as
+part of the <I>particle</I> style.
+</P>
+<P><I>Id</I> is the particle ID.  <I>Type</I> is an integer index representing the
+particle species.  It is a value from 1 to Nspecies, The value
+corresponds to the order in which species were defined via the
+<A HREF = "species.html">species</A> command.  <I>Proc</I> is the ID of the processor
+which currently owns the particle.
+</P>
+<P>The <I>x</I>, <I>y</I>, <I>z</I> attributes write particle coordinates "unscaled", in
+the appropriate distance <A HREF = "units.html">units</A>.  Use <I>xs</I>, <I>ys</I>, <I>zs</I> to
+"scale" the coordinates to the box size, so that each value is 0.0 to
+1.0.
+</P>
+<P><I>Vx</I>, <I>vy</I>, <I>vz</I> are components of particle velocity.  The <I>ke</I>,
+<I>erot</I>, and <I>evib</I> attributes are the kinetic, rotational, and
+vibrational energies of the particle.  A particle's kinetic energy is
+given by 1/2 m (vx^2 + vy^2 + vz^2).  The way that rotational and
+vibrational energy is treated in collisions and stored by particles is
+affected by the <A HREF = "collid_modify.html">collide_modify</A> command.
+</P>
+<P>The <I>p_ID</I> and <I>p_ID[N]</I> attributes allow custom per-particle
+vectors or arrays defined by a <A HREF = "fix.html">fix</A> command to be output.
+The ID in the attribute should be replaced by the actual ID of the
+custom particle attribute that the fix defines.  See individal fix
+commands for details, e.g. the <A HREF = "fix_ambipolar.html">fix ambipolar</A>
+command which defines the custom vector "ionambi" and the custom array
+"velambi".
+</P>
+<P>If <I>p_ID</I> is used as a attribute, the custom attribute must be a
+vector, and it is output.  If <I>p_ID[N]</I> is used, the custom
+attribute must be an array, and N must be in the range from 1-M, which
+will output the Nth column of the M-column array.
+</P>
+<P>The <I>c_ID</I> and <I>c_ID[I]</I> attributes allow per-particle vectors or
+arrays calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in
+the attribute should be replaced by the actual ID of the compute that
+has been defined previously in the input script.  See the
+<A HREF = "compute.html">compute</A> command for details.
+</P>
+<P>If <I>c_ID</I> is used as a attribute, the compute must calculate a
+per-particle vector, and it is output.  If <I>c_ID[I]</I> is used, the
+compute must calculate a per-particle array, and I must be in the
+range from 1-M, which will output the Ith column of the M-column
+array.  See the discussion above for how I can be specified with a
+wildcard asterisk to effectively specify multiple values.
+</P>
+<P>The <I>f_ID</I> and <I>f_ID[I]</I> attributes allow vector or array
+per-particle quantities calculated by a <A HREF = "fix.html">fix</A> to be output.
+The ID in the attribute should be replaced by the actual ID of the fix
+that has been defined previously in the input script.
+</P>
+<P>If <I>f_ID</I> is used as a attribute, the fix must calculate a
+per-particle vector, and it is output.  If <I>f_ID[I]</I> is used, the
+fix must calculate a per-particle array, and I must be in the range
+from 1-M, which will output the Ith column of the M-column array.
+See the discussion above for how I can be specified with a
+wildcard asterisk to effectively specify multiple values.
+</P>
+<P>The <I>v_name</I> attribute allows per-particle vectors calculated by a
+<A HREF = "variable.html">variable</A> to be output.  The name in the attribute
+should be replaced by the actual name of the variable that has been
+defined previously in the input script.  Only a particle-style
+variable can be referenced, since it is the only style that generates
+per-particle values.  Variables of style <I>particle</I> can reference
+per-particle attributes, stats keywords, or invoke other computes,
+fixes, or variables when they are evaluated, so this is a very general
+means of creating quantities to output to a dump file.
+</P>
+<P>See <A HREF = "Section_modify.html">Section 10</A> of the manual for information on
+how to add new compute and fix styles to SPARTA to calculate
+per-particle quantities which could then be output into dump files.
+</P>
+<HR>
+
+<P>This section explains the grid cell attributes that can be specified
+as part of the <I>grid</I> style.
+</P>
+<P>Note that dump grid will output one line (per snapshot) for 3 kinds of
+child cells: unsplit cells, cut cells, and sub cells of split cells.
+<A HREF = "Section_howto.html#howto_8">Section 6.8</A> of the manual gives details
+of how SPARTA defines child, unsplit, cut, split, and sub cells.  This
+is different than <A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A> commands
+that produce per grid information, which also include split cells in
+their output.  The dump grid command discards that output since the
+sub cells of a split cell provide the needed information for further
+processing and visualization.  Note that unsplit cells can
+be outside (in the flow) or inside surface objects, if they exist.
+</P>
+<P><I>Id</I> and <I>idstr</I> are two different forms of the grid cell ID.  In
+SPARTA each grid cell is assigned a unique ID which represents its
+location, in a topological sense, within the hierarchical grid.  This
+ID is stored as an integer such as 5774983, but can also be decoded
+into a string such as 33-4-6, which makes it easier to understand the
+grid hierarchy.  In this case it means the grid cell is at the 3rd
+level of the hierarchy.  Its grandparent cell was 33 at the 1st level,
+its parent was cell 4 (at level 2) within cell 33, and the cell itself
+is cell 6 (at level 3) within cell 4 within cell 33.  If you specify
+<I>id</I>, the ID is printed directly as an integer.  If you specify
+<I>idstr</I>, it is printed as a string.
+</P>
+<P><I>Proc</I> is the ID of the processor which currently owns the grid cell.
+</P>
+<P>The <I>xlo</I>, <I>ylo</I>, <I>zlo</I> attributes write the coordinates of the
+lower-left corner of the grid cell in the appropriate distance
+<A HREF = "units.html">units</A>.  The <I>xhi</I>, <I>yhi</I>, <I>zhi</I> attributes write the
+coordinates of the upper-right corner of the grid cell.  The <I>xc</I>,
+<I>yc</I>, <I>zc</I> attributes write the coordinates of the center point of the
+grid cell.  The <I>zlo</I>, <I>zhi</I>, <I>zc</I> attributes cannot be used for a 2d
+simulation.
+</P>
+<P>The <I>vol</I> attribute is the flow volume of the grid cell (or area in
+2d) for unsplit or cut or sub cells.  <A HREF = "Section_howto.html#howto_8">Section
+4.8</A> of the manual gives details of how
+SPARTA defines unsplit and sub cells.  Flow volume is the portion of
+the grid cell that is accessible to particles, i.e. outside any closed
+surface that may intersect the cell.  Note that unsplit cells which
+are inside a surface object will have a flow volume of 0.0.  Likewise
+a cut cell which is inside a suface object but which is intersected by
+surface element(s) which only touch a face, edge, or corner point of
+the grid cell, will have a flow volume of 0.0.
+</P>
+<P>The <I>c_ID</I> and <I>c_ID[I]</I> attributes allow per-grid vectors or arrays
+calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in the
+attribute should be replaced by the actual ID of the compute that has
+been defined previously in the input script.  See the
+<A HREF = "compute.html">compute</A> command for details.
+</P>
+<P>If <I>c_ID</I> is used as a attribute, and the compute calculates a
+per-grid vector, then the per-grid vector is output.  If <I>c_ID[I]</I>
+is used, then I must be in the range from 1-M, which will output the
+Ith column of the M-column per-grid array calculated by the compute.
+See the discussion above for how I can be specified with a wildcard
+asterisk to effectively specify multiple values.
+</P>
+<P>The <I>f_ID</I> and <I>f_ID[I]</I> attributes allow per-grid vectors or arrays
+calculated by a <A HREF = "fix.html">fix</A> to be output.  The ID in the attribute
+should be replaced by the actual ID of the fix that has been defined
+previously in the input script.
+</P>
+<P>If <I>f_ID</I> is used as a attribute, and the fix calculates a per-grid
+vector, then the per-grid vector is output.  If <I>f_ID[I]</I> is used,
+then I must be in the range from 1-M, which will output the Ith column
+of the M-columne per-grid array calculated by the fix.  See the
+discussion above for how I can be specified with a wildcard asterisk
+to effectively specify multiple values.
+</P>
+<P>The <I>v_name</I> attribute allows per-grid vectors calculated by a
+<A HREF = "variable.html">variable</A> to be output.  The name in the attribute
+should be replaced by the actual name of the variable that has been
+defined previously in the input script.  Only a grid-style variable
+can be referenced, since it is the only style that generates per-grid
+values.  Variables of style <I>grid</I> can reference per-grid attributes,
+stats keywords, or invoke other computes, fixes, or variables when
+they are evaluated, so this is a very general means of creating
+quantities to output to a dump file.
+</P>
+<P>See <A HREF = "Section_modify.html">Section 10</A> of the manual for information on
+how to add new compute and fix styles to SPARTA to calculate per-grid
+quantities which could then be output into dump files.
+</P>
+<HR>
+
+<P>This section explains the surface element attributes that can be
+specified as part of the <I>surf</I> style.  For 2d simulations, a surface
+element is a line segment with 2 end points.  Crossing the unit +z
+vector into the vector (v2-v1) determines the outward normal of the
+line segment.  For 3d simulations, a surface element is a triangle
+with 3 corner points.  Crossing (v2-v1) into (v3-v1) determines the
+outward normal of the triangle.
+</P>
+<P><I>Id</I> is the surface element ID.
+</P>
+<P>The <I>v1x</I>, <I>v1y</I>, <I>v1z</I>, <I>v2x</I>, <I>v2y</I>, <I>v2z</I>, <I>v3x</I>, <I>v3y</I>, <I>v3z</I>
+attributes write the coordinates of the vertices of the end or corner
+points of the surface element.  The <I>v1z</I>, <I>v2z</I>, <I>v3x</I>, <I>v3y</I>, and
+<I>v3z</I> attributes cannot be used for a 2d simulation.
+</P>
+<P>The <I>c_ID</I> and <I>c_ID[I]</I> attributes allow per-surf vectors or arrays
+calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in the
+attribute should be replaced by the actual ID of the compute that has
+been defined previously in the input script.  See the
+<A HREF = "compute.html">compute</A> command for details.
+</P>
+<P>If <I>c_ID</I> is used as a attribute, and the compute calculates a per-srf
+vector, then the per-surf vector is output.  If <I>c_ID[I]</I> is used,
+then I must be in the range from 1-M, which will output the Ith column
+of the M-column per-surf array calculated by the compute.  See the
+discussion above for how I can be specified with a wildcard asterisk
+to effectively specify multiple values.
+</P>
+<P>The <I>f_ID</I> and <I>f_ID[I]</I> attributes allow per-surf vectors or arrays
+calculated by a <A HREF = "fix.html">fix</A> to be output.  The ID in the attribute
+should be replaced by the actual ID of the fix that has been defined
+previously in the input script.
+</P>
+<P>If <I>f_ID</I> is used as a attribute, and the fix calculates a per-surf
+vector, then the per-surf vector is output.  If <I>f_ID[I]</I> is used,
+then I must be in the range from 1-M, which will output the Ith column
+of the M-column per-surf array calculated by the fix.  See the
+discussion above for how I can be specified with a wildcard asterisk
+to effectively specify multiple values.
+</P>
+<P>The <I>v_name</I> attribute allows per-surf vectors calculated by a
+<A HREF = "variable.html">variable</A> to be output.  The name in the attribute
+should be replaced by the actual name of the variable that has been
+defined previously in the input script.  Only a surf-style variable
+can be referenced, since it is the only style that generates per-surf
+values.  Variables of style <I>surf</I> can reference per-surf attributes,
+stats keywords, or invoke other computes, fixes, or variables when
+they are evaluated, so this is a very general means of creating
+quantities to output to a dump file.
+</P>
+<P>IMPORTANT NOTE: Surf-style variables have not yet been implemented in
+SPARTA.
+</P>
+<P>See <A HREF = "Section_modify.html">Section 10</A> of the manual for information on
+how to add new compute and fix styles to SPARTA to calculate per-surf
+quantities which could then be output into dump files.
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>To write gzipped dump files, you must compile SPARTA with the
+-DSPARTA_GZIP option - see the <A HREF = "Section_start.html#start_2">Making SPARTA</A>
+section of the documentation.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "dump_image.html">dump image</A>, <A HREF = "dump_modify.html">dump_modify</A>,
+<A HREF = "undump.html">undump</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The defaults for the image style are listed on the <A HREF = "dump_image.html">dump
+image</A> doc page.
+</P>
+</HTML>

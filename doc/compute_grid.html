@@ -1,0 +1,354 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>compute grid command 
+</H3>
+<H3>compute grid/kk command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>compute ID grid group-ID mix-ID value1 value2 ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
+
+<LI>grid = style name of this compute command 
+
+<LI>group-ID = group ID for which grid cells to perform calculation on 
+
+<LI>mix-ID = mixture ID to perform calculation on 
+
+<LI>one or more values can be appended 
+
+<LI>value = <I>n</I> or <I>nrho</I> or <I>nfrac</I> or <I>mass</I> or <I>massrho</I> or <I>massfrac</I> or <I>u</I> or <I>v</I> or <I>w</I> or <I>usq</I> or <I>vsq</I> or <I>wsq</I> of <I>ke</I> or <I>temp</I> or <I>erot</I> or <I>trot</I> or <I>evib</I> or <I>tvib</I> or <I>pxrho</I> or <I>pyrho</I> or <I>pzrho</I> or <I>kerho</I> 
+
+<PRE>  <I>n</I> = particle count
+  <I>nrho</I> = number density
+  <I>nfrac</I> = number fraction
+  <I>mass</I> = mass
+  <I>massrho</I> = mass density
+  <I>massfrac</I> = mass fraction
+  <I>u</I> = x component of velocity
+  <I>v</I> = y component of velocity
+  <I>w</I> = z component of velocity
+  <I>usq</I> = x component of velocity squared
+  <I>vsq</I> = y component of velocity squared
+  <I>wsq</I> = z component of velocity squared
+  <I>ke</I> = kinetic energy
+  <I>temp</I> = temperature
+  <I>erot</I> = rotational energy
+  <I>trot</I> = rotational temperature
+  <I>evib</I> = vibrational energy 
+  <I>tvib</I> = vibrational temperature (classical definition)
+  <I>pxrho</I> = x component of momentum density
+  <I>pyrho</I> = y component of momentum density
+  <I>pzrho</I> = z component of momentum density
+  <I>kerho</I> = kinetic energy density 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compute 1 grid all species n u v w usq vsq wsq
+compute 1 grid subset air n u v w 
+</PRE>
+<P>These commands will dump time averages for each species and each grid
+cell to a dump file every 1000 steps:
+</P>
+<PRE>compute 1 grid all species n u v w usq vsq wsq
+fix 1 ave/grid 10 100 1000 c_1[*]
+dump 1 grid all 1000 tmp.grid id f_1[*] 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Define a computation that calculates one or more values for each grid
+cell in a grid cell group, based on the particles in the cell.  The
+values are tallied separately for each group of species in the
+specified mixture, as described in the Ouput section below.  See the
+<A HREF = "mixture.html">mixture</A> command for how a set of species can be
+partitioned into groups.  Only grid cells in the grid group specified
+by <I>group-ID</I> are included in the calculations.  See the <A HREF = "group.html">group
+grid</A> command for info on how grid cells can be assigned to
+grid groups.
+</P>
+<P>The results of this compute can be used by different commands in
+different ways.  The values for a single timestep can be output by the
+<A HREF = "dump.html">dump grid</A> command.
+</P>
+<P>The values over many sampling timesteps can be averaged by the <A HREF = "fix_ave_grid.html">fix
+ave/grid</A> command.  It does its averaging as if the
+particles in the cell at each sampling timestep were combined together
+into one large set of particles to compute the formulas below.
+</P>
+<P>Note that for most of the values, this is a different form of
+averaging than taking the values produced by the formulas below for a
+single timestep, summing those values over the sampling timesteps, and
+then dividing by the number of sampling steps.
+</P>
+<HR>
+
+<HR>
+
+<P>The <I>n</I> value counts the number of particles in each group.  When
+accumulated over multiple sampling steps, this value is normalized by
+the number of sampling steps.
+</P>
+<P>The <I>nrho</I> value computes the number density for the grid cell volume
+due to particles in each group:
+</P>
+<PRE>Nrho = fnum/volume * N 
+</PRE>
+<P>N is the number of particles (same as the <I>n</I> keyword), fnum is the
+real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
+command, and volume is the flow volume of the grid cell.  When
+accumulated over multiple sampling steps, this value is normalized by
+the number of sampling steps.  Note that if particle weighting is
+enabled via the <A HREF = "global.html">global weight</A> command, then the volume
+used in the formula is divided by the weight assigned to the grid
+cell.
+</P>
+<P>The <I>nfrac</I> value computes the number fraction of particles in each
+group:
+</P>
+<P>Nfrac = Ngroup / Ntotal
+</P>
+<P>Ngroup is the count of particles in the group and Ntotal is the total
+number of particles in all groups in the mixture.  Note that this
+total is not (necessarily) all particles in the cell.
+</P>
+<HR>
+
+<P>The <I>mass</I> value computes the average mass of particles in each group:
+</P>
+<PRE>Mass = Sum_i (mass_i) / N 
+</PRE>
+<P>where Sum_i is a sum over particles in the group.
+</P>
+<P>The <I>massrho</I> value computes the mass density for the grid cell volume
+due to particles in each group:
+</P>
+<PRE>Massrho = fnum/volume * Sum_i (mass_i) 
+</PRE>
+<P>where Sum_i is a sum over particles in the group, fnum is the
+real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
+command, and volume is the flow volume of the grid cell.  When
+accumulated over multiple sampling steps, this value is normalized by
+the number of sampling steps.  Note that if particle weighting is
+enabled via the <A HREF = "global.html">global weight</A> command, then the volume
+used in the formula is divided by the weight assigned to the grid
+cell.
+</P>
+<P>The <I>massfrac</I> value computes the mass fraction of particles in each
+group:
+</P>
+<PRE>Massfrac = Sum_i (mass_i) / Masstotal 
+</PRE>
+<P>where Sum_i is a sum over particles in the group and Masstotal is the
+total mass of particles in all groups in the mixture.  Note that this
+total is not (necessarily) the mass of all particles in the cell.
+</P>
+<HR>
+
+<P>The <I>u</I>, <I>v</I>, <I>w</I> values compute the components of the mass-weighted
+average velocity of particles in each group:
+</P>
+<PRE>U = Sum_i (mass_i Vx_i) / Sum_i (mass_i)
+V = Sum_i (mass_i Vy_i) / Sum_i (mass_i)
+W = Sum_i (mass_i Vz_i) / Sum_i (mass_i) 
+</PRE>
+<P>This is the same as the center-of-mass velocity of particles in each
+group.
+</P>
+<P>The <I>usq</I>, <I>vsq</I>, <I>wsq</I> values compute the average mass-weighted
+squared components of the velocity of particles in each group:
+</P>
+<PRE>Usq = Sum_i (mass_i Vx_i Vx_i) / Sum_i (mass_i)
+Vsq = Sum_i (mass_i Vy_i Vy_i) / Sum_i (mass_i)
+Wsq = Sum_i (mass_i Vz_i Vz_i) / Sum_i (mass_i) 
+</PRE>
+<HR>
+
+<P>The <I>ke</I> value computes the average kinetic energy of particles in
+each group:
+</P>
+<PRE>Vsq = Vx*Vx + Vy*Vy + Vz*Vz
+KE = Sum_i (1/2 mass_i Vsq_i) / N 
+</PRE>
+<P>Note that this is different than the group's contribution to the
+average kinetic energy of entire grid cells.  That can be calculated
+by multiplying the <I>ke</I> quantity by the <I>n</I> quantity.
+</P>
+<P>The <I>temp</I> value first computes the average kinetic energy of
+particles in each group, as for the <I>ke</I> value.  This is then
+converted to a temperature <I>T</I> by the following formula where <I>kB</I> is
+the Boltzmann factor:
+</P>
+<PRE>Vsq = Vx*Vx + Vy*Vy + Vz*Vz
+KE = Sum_i (1/2 mass_i Vsq_i) / N
+T = KE / (3/2 kB) 
+</PRE>
+<P>Note that this definition of temperature does not subtract out a net
+streaming velocity for particles in the grid cell, so it is not a
+thermal temperature when the particles have a non-zero streaming
+velocity.  See the <A HREF = "compute_thermal_grid.html">compute thermal/grid</A>
+command to calculate thermal temperatures after subtracting out
+streaming components of velocity.
+</P>
+<HR>
+
+<P>The <I>erot</I> value computes the average rotational energy of particles
+in each group:
+</P>
+<PRE>Erot = Sum_i (erot_i) / N 
+</PRE>
+<P>Note that this is different than the group's contribution to the
+average rotational energy of entire grid cells.  That can be
+calculated by multiplying the <I>erot</I> quantity by the <I>n</I> quantity.
+</P>
+<P>The <I>trot</I> value computes a rotational temperature by the following
+formula where <I>kB</I> is the Boltzmann factor:
+</P>
+<PRE>Trot = (2/kB) Sum_i (erot_i) / Sum_i (dof_i) 
+</PRE>
+<P>Dof_i is the number of rotational degrees of freedom for particle i.
+</P>
+<HR>
+
+<P>The <I>evib</I> value computes the average vibrational energy of particles
+in each group:
+</P>
+<PRE>Evib = Sum_i (evib_i) / N 
+</PRE>
+<P>Note that this is different than the group's contribution to the
+average vibrational energy of entire grid cells.  That can be
+calculated by multiplying the <I>evib</I> quantity by the <I>n</I> quantity.
+</P>
+<P>The <I>tvib</I> value computes a classical definition of vibrational
+temperature, valid for continous distributions of vibrational energy,
+by the following formula where <I>kB</I> is the Boltzmann factor:
+</P>
+<PRE>Tvib = (2/kB) Sum_i (evib_i) / Sum_i (dof_i) 
+</PRE>
+<P>Dof_i is the number of vibrational degrees of freedom for particle i.
+</P>
+<HR>
+
+<P>The <I>pxrho</I>, <I>pyrho</I>, <I>pzrho</I> values compute components of momentum
+density for the grid cell volume due to particles in each group:
+</P>
+<PRE>Pxrho = fnum/volume * Sum_i (mass_i * Vx_i)
+Pyrho = fnum/volume * Sum_i (mass_i * Vy_i)
+Pzrho = fnum/volume * Sum_i (mass_i * Vz_i) 
+</PRE>
+<P>where Sum_i is a sum over particles in the group, fnum is the
+real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
+command, and volume is the flow volume of the grid cell.  When
+accumulated over multiple sampling steps, this value is normalized by
+the number of sampling steps.  Note that if particle weighting is
+enabled via the <A HREF = "global.html">global weight</A> command, then the volume
+used in the formula is divided by the weight assigned to the grid
+cell.
+</P>
+<P>The <I>kerho</I> value computes the kinetic energy density for the grid
+cell volume due to particles in each group:
+</P>
+<PRE>Vsq = Vx*Vx + Vy*Vy + Vz*Vz
+KErho = fnum/volume * Sum_i (mass_i * Vsq_i) 
+</PRE>
+<P>where Sum_i is a sum over particles in the group, fnum is the
+real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
+command, and volume is the flow volume of the grid cell.  When
+accumulated over multiple sampling steps, this value is normalized by
+the number of sampling steps.  Note that if particle weighting is
+enabled via the <A HREF = "global.html">global weight</A> command, then the volume
+used in the formula is divided by the weight assigned to the grid
+cell.
+</P>
+<HR>
+
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>This compute calculates a per-grid array, with the number of columns
+equal to the number of values times the number of groups.  The
+ordering of columns is first by values, then by groups.  I.e. if the
+<I>n</I> and <I>u</I> values were specified as keywords, then the first two
+columns would be <I>n</I> and <I>u</I> for the first group, the 3rd and 4th
+columns would be <I>n</I> and <I>u</I> for the second group, etc.
+</P>
+<P>This compute performs calculations for all flavors of child grid cells
+in the simulation, which includes unsplit, cut, split, and sub cells.
+See <A HREF = "Section_howto.html#howto_8">Section 6.8</A> of the manual gives
+details of how SPARTA defines child, unsplit, split, and sub cells.
+Note that cells inside closed surfaces contain no particles.  These
+could be unsplit or cut cells (if they have zero flow volume).  Both
+of these kinds of cells will compute a zero result for all their
+values.  Likewise, split cells store no particles and will produce a
+zero result.  This is because their sub-cells actually contain the
+particles that are geometrically inside the split cell.
+</P>
+<P>Grid cells not in the specified <I>group-ID</I> will output zeroes for all
+their values.
+</P>
+<P>The array can be accessed by any command that uses per-grid values
+from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 6.4</A>
+for an overview of SPARTA output options.
+</P>
+<P>The per-grid array values will be in the <A HREF = "units.html">units</A>
+appropriate to the individual values as described above.  <I>N</I> is
+unitless.  <I>Nrho</I> is in 1/distance^3 units for 3d simulations and
+1/distance^2 units for 2d simulations.  <I>Mass</I> is in mass units.
+<I>Massrho</I> is in is in mass/distance^3 units for 3d simulations and
+mass/distance^2 units for 2d simulations.  <I>U</I>, <I>v</I>, and <I>w</I> are in
+velocity units.  <I>Usq</I>, <I>vsq</I>, and <I>wsq</I> are in velocity squared
+units.  <I>Ke</I>, <I>erot</I>, and <I>evib</I> are in energy units.  <I>Temp</I> and
+<I>trot</I> and <I>tvib</I> are in temperature units.  <I>Pxrho</I>, <I>pyrho</I>, <I>pzrho</I>
+are in momentum/distance^3 units for 3d simulations and
+momentum/distance^2 units for 2d simulations, where momentum is in
+units of mass*velocity.  <I>Kerho</I> is in units of energy/distance^3
+units for 3d simulations and energy/distance^2 units for 2d
+simulations.
+</P>
+<HR>
+
+<P>Styles with a <I>kk</I> suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+<A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+</P>
+<P>These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the <A HREF = "Section_start.html#start_3">Making
+SPARTA</A> section for more info.
+</P>
+<P>You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the <A HREF = "Section_start.html#start_6">-suffix command-line
+switch</A> when you invoke SPARTA, or you can
+use the <A HREF = "suffix.html">suffix</A> command in your input script.
+</P>
+<P>See the <A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "fix_ave_grid.html">fix ave/grid</A>, <A HREF = "dump.html">dump grid</A>, <A HREF = "compute_thermal_grid.html">compute
+thermal/grid</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

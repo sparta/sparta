@@ -1,0 +1,64 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+read_grid command :h3
+
+[Syntax:]
+
+read_grid filename :pre
+
+filename = name of grid file :ul
+
+[Examples:]
+
+read_grid data.grid :pre
+
+[Description:]
+
+Read a grid file in text format which lists the grid cell IDs to be
+used to construct a hierarchical grid that overalys the simulation
+domain defined by the "create_box"_create_box.html command.  The grid
+can also be defined by the "create_grid"_create_grid.html command.
+
+The grid file can be written by the "write_grid"_write_grid.html
+command in a previous simulation, or be created by some pre-processing
+tool.  See "Section 6.8"_Section_howto.html#howto_8 of the manual for
+a definition of hierarchical grids and grid cell IDs as used by
+SPARTA.
+
+The specified file can be a text file or a gzipped text file (detected
+by a .gz suffix).  See the "write_grid"_write.grid.html command for a
+description of the format of the file.
+
+The grid cell IDs read from the file to processors in a round-robin
+fashion, which means in general the set of cells a processor owns will
+not be contiguous in a geometric sense.  They are thus assumed to be a
+"dispersed" assignment of grid cells to each processor.
+
+IMPORTANT NOTE: See "Section 6.8"_Section_howto.html#howto_8 of the
+manual for an explanation of clumped and dispersed grid cell
+assignments and their relative performance trade-offs.  The
+"balance_grid"_balance_grid.html command can be used after the grid is
+read, to assign child cells to processors in different ways.  The "fix
+balance" command can be used to re-assign them in a load-balanced
+manner periodically during a running simulation.
+
+[Restrictions:]
+
+This command can only be used after the simulation box is defined by
+the "create_box"_create_box.html command.
+
+To read gzipped grid files, you must compile SPARTA with the
+-DSPARTA_GZIP option - see "Section 2.2"_Section_start.html#start_2 of
+the manual for details.
+
+[Related commands:]
+
+"create_box"_create_box.html, "create_grid"_create_grid.html
+
+[Default:] none

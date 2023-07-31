@@ -1,0 +1,33 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+unfix command :h3
+
+[Syntax:]
+
+unfix fix-ID :pre
+
+fix-ID = ID of a previously defined fix :ul
+
+[Examples:]
+
+unfix 2
+unfix lower-boundary :pre
+
+[Description:]
+
+Delete a fix that was previously defined with a "fix"_fix.html
+command.
+
+[Restrictions:] none
+
+[Related commands:]
+
+"fix"_fix.html
+
+[Default:] none

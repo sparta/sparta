@@ -1,0 +1,34 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+timestep command :h3
+
+[Syntax:]
+
+timestep dt :pre
+
+dt = timestep size (time units) :ul
+
+[Examples:]
+
+timestep 2.0 
+timestep 0.003 :pre
+
+[Description:]
+
+Set the timestep size for subsequent simulations.
+
+[Restrictions:] none
+
+[Related commands:]
+
+"run"_run.html
+
+[Default:]
+
+timestep 1.0 :pre

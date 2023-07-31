@@ -1,0 +1,57 @@
+"Previous Section"_Section_howto.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_perf.html :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+7. Example problems :h3
+
+The SPARTA distribution includes an examples sub-directory with
+several sample problems.  Each problem is in a sub-directory of its
+own.  They are all small problems that run quickly, requiring at most
+a couple of minutes to run on a desktop machine.  Many are 2d so that
+they run more quickly and can be easily visualized.  Each problem has
+an input script (in.*) and produces a log file (log.*) when it runs.
+The data files they use for chemical species or reaction parameters
+are copied from the data directory so the problems are self-contained.
+
+Sample log file outputs on different machines and different numbers of
+processors are included in the directories to compare your answers to.
+E.g. a log file like log.free.date.foo.P means it ran on P processors
+of machine "foo", using the dated SPARTA version.
+
+If the "dump image" lines in each script are uncommented, a series of
+image snapshots will be produced.  Animations of several of the
+examples can be viewed on the Movies section of the "SPARTA WWW
+Site"_sws.
+
+These are the sample problems in the examples sub-directories.  See
+the examples/README file for more details.
+
+chem = chemistry in a 3d box
+circle = 2d flow around a circular object
+collide = collisional motion in a 3d box
+free = free molecular motion in a 3d box
+sphere = 3d flow around a sphere
+spiky = 2d flow around a spiky circle
+step = 2d flow around a staircase of steps :ul
+
+Here is how you might run and visualize one of the sample problems:
+
+cd free
+cp ../../src/spa_g++ .           # copy SPARTA executable to this dir
+spa_g++ < in.free                # run the problem :pre
+
+Running the simulation produces the file log.sparta and optionall
+image.*.jpg.  If you have the freely available ImageMagick toolkit on
+your machine, you can run its "convert" command to create an animated
+GIF, and visualize it from the FireFox browser as follows:
+
+convert image*ppm movie.gif
+firefox ./movie.gif :pre
+
+A similar command should work with other browsers.  Or you can select
+"Open File" under the File menu of your browser and load the animated
+GIF file directly.

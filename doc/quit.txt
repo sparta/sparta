@@ -1,0 +1,37 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+quit command :h3
+
+[Syntax:]
+
+quit :pre
+
+[Examples:]
+
+quit
+if "$n > 10000" then quit :pre
+
+[Description:]
+
+This command causes SPARTA to exit, after shutting down all
+output cleanly.
+
+It can be used as a debug statement in an input script, to terminate
+the script at some intermediate point.
+
+It can also be used as an invoked command inside the
+"then" or "else" portion of an "if"_if.html command.
+
+[Restrictions:] none
+
+[Related commands:]
+
+"if"_if.html
+
+[Default:] none

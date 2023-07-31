@@ -1,0 +1,124 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix ambipolar command 
+</H3>
+<H3>fix ambipolar command/kk 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID ambipolar especies ion1 ion2 ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command
+<LI>ambipolar = style name of this fix command
+<LI>especies = species ID for ambipolar electrons
+<LI>ion1,ion2,... = species IDs for one or more ambipolar ions 
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>fix 1 ambipolar e N+ O+ NO+ 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Enable the ambipolar approximation to be used in a simulation.  The
+ambipolar approximation is a computationally efficient way to model
+low-density plasmas which contain positively-charged ions and
+negatively-charged electrons.  In this model, electrons are not free
+particles which move independently.  This would require a simulation
+with a very small timestep due to electon's small mass and high speed
+(1000x that of an ion or neutral particle).
+</P>
+<P>Instead each ambipolar electron is assumed to stay "close" to its
+parent ion, so that the plasma gas appears macroscopically neutral.
+Each pair of particles thus moves together through the simulation
+domain, as if they were a single particle, which is how they are
+stored within SPARTA.  This means a normal timestep can be used.
+</P>
+<P>An overview of how to run simulations with the ambipolar approximation
+is given in the <A HREF = "Section_howto.html#howto_11">Section 6.11</A>.  This
+includes gas-phase collisions and chemistry as well as surface
+chemistry when particles collide with surface elements or the global
+boundary of the simulation box.  The section also lists all the
+commands that can be used in an input script to invoke various options
+associated with the ambipolar approximation.  All of them depend on
+this fix ambipolar command being defined.
+</P>
+<P>This command defines <I>especies</I> which is the species ID associated
+with the ambipolar electrons.  It also specifies one or more species
+IDs as <I>ion1</I>, <I>ion2</I>, etc for ambipolar ions.  SPARTA checks that the
+especies has a negative charge (as read in by the
+<A HREF = "species.html">species</A> command), and the ions have positive charges.
+An error is flagged if that is not the case.
+</P>
+<P>Internally, this fix defines two custom particle attributes.  The
+first is named "ionambi" and is an integer vector (one integer per
+particle).  It stores a value of 1 for ambipolar ions, or 0 otherwise.
+The second is named "velambi" and is a floating-point arrays (3 values
+per particle).  It stores the velocity of the ambipolar electron
+associated with the ambipolar ion, or zeroes otherwise.
+</P>
+<HR>
+
+<P><B>Restart, output info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.
+</P>
+<P>However, the values of the two custom particle attributes defined by
+this fix are written to the restart file.  Namely the integer value
+"ionambi" and floating-point velocity values "velambi" for each
+particle.  As explained on the <A HREF = "read_restart.html">read_restart</A> doc
+page these values can be re-assigned to particles when a restart file
+is read, if a new fix ambipolar command is specified in the restart
+script before the first <A HREF = "run.html">run</A> command is used.
+</P>
+<P>No global or per-particle or per-grid quantities are stored by this
+fix for access by various output commands.
+</P>
+<P>However, the two custom particle attributes defined by this fix can be
+accessed by the <A HREF = "dump.html">dump particle</A> command, as p_ionambi and
+p_velambi.  That means those per-particle values can be written to
+particle dump files.
+</P>
+<HR>
+
+<P>Styles with a <I>kk</I> suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+<A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+</P>
+<P>These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the <A HREF = "Section_start.html#start_3">Making
+SPARTA</A> section for more info.
+</P>
+<P>You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the <A HREF = "Section_start.html#start_6">-suffix command-line
+switch</A> when you invoke SPARTA, or you can
+use the <A HREF = "suffix.html">suffix</A> command in your input script.
+</P>
+<P>See the <A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "collide_modify.html">collide_modify ambipolar yes</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

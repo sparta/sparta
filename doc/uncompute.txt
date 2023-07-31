@@ -1,0 +1,33 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+uncompute command :h3
+
+[Syntax:]
+
+uncompute compute-ID :pre
+
+compute-ID = ID of a previously defined compute :ul
+
+[Examples:]
+
+uncompute 2
+uncompute lower-boundary :pre
+
+[Description:]
+
+Delete a compute that was previously defined with a "compute"_compute.html
+command.
+
+[Restrictions:] none
+
+[Related commands:]
+
+"compute"_compute.html
+
+[Default:] none

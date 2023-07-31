@@ -1,0 +1,167 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>collide_modify command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>collide_modify keyword values ...  
+</PRE>
+<UL><LI>one or more keyword/value pairs may be listed 
+
+<LI>keywords = <I>vremax</I> or <I>remain</I> or <I>ambipolar</I> or <I>nearcp</I> or <I>rotate</I> or <I>vibrate</I> 
+
+<PRE>  <I>vremax</I> values = Nevery startflag
+    Nevery = zero vremax every this many timesteps
+    startflag = <I>yes</I> or <I>no</I> = zero vremax at start of every run
+  <I>remain</I> value = <I>yes</I> or <I>no</I> = hold remaining fraction of collisions over to next timestep
+  <I>nearcp</I> values = choice Nlimit
+    choice = <I>yes</I> or <I>no</I> to turn on/off near collision partners
+    Nlimit = max # of attempts made to find a collision partner
+  <I>ambipolar</I> value = <I>no</I> or <I>yes</I>
+  <I>rotate</I> value = <I>no</I> or <I>smooth</I>
+  <I>vibrate</I> value = <I>no</I> or <I>smooth</I> or <I>discrete</I> 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>collide_modify vremax 1000 yes
+collide_modify vremax 0 no remain no
+collide_modify ambipolar yes 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Set parameters that affect how collisions are performed.
+</P>
+<P>The <I>vremax</I> keyword affects how often the Vremax parameter, for
+collision frequency is re-zeroed during the simulation.  This
+parameter is stored for each grid cell and each pair of collision
+groups (groups are described by the <A HREF = "collide.html">collide</A> command).
+</P>
+<P>The value of Vremax affects how many events are attempted in each grid
+cell for a pair of groups, and thus the overall time spent performing
+collisions.  Vremax is continuously set to the largest difference in
+velocity between a pair of colliding particles.  The larger Vremax
+grows, the more collisions are attempted for the grid cell on each
+timestep, though this does not affect the number of collisions
+actually performed.  Thus if Vremax grows large, collisions become
+less efficient, though still accurate.
+</P>
+<P>For non-equilibrium flows, it is typically desirable to reset Vremax
+to zero fairly frequently (e.g. every 1000 steps) so that it does not
+become large, due to anomolously fast moving particles.  In contrast,
+when a system is at equilibrium, it is typically desirable to not
+reset Vremax to zero since it will also stay roughly constant.
+</P>
+<P>If <I>Nevery</I> is specified as 0, Vremax is not zeroed during a run.
+Otherwise Vremax is zeroed on timesteps that are a multiple of
+<I>Nevery</I>.  Additionally, if <I>startflag</I> is set to <I>yes</I>, Vremax is
+zeroed at the start of every run.  If it is set to <I>no</I>, it is not.
+</P>
+<P>The <I>remain</I> keyword affects how the number of attempted collisions
+for each grid cell is calculated each timestep.  If the value is set
+to <I>yes</I>, then any fractional collision count (for each grid cell and
+pair of grgroups) is carried over to the next timestep.  E.g. if the
+computed collision count is 7.3, then 7 attempts are made on this
+timestep, and 0.3 are carried over to the next timestep, to be added
+to the computed collision count for that step.  If the value is set to
+<I>no</I>, then no carry-over is made.  Instead, in this example, 7
+attempts are made and an 8th attempt is made conditionally with a
+probability of 0.3, using a random number.
+</P>
+<P>The <I>nearcp</I> keyword stands for "near collision partner" and affects
+how collision partners are selected.  If <I>no</I> is specified, which is
+the default, then collision partner pairs are selected randomly from
+all particles in the grid cell.  In this case the <I>Nlimit</I> parameter
+is ignored, though it must still be specfied.  
+</P>
+<P>If <I>yes</I> is specified, then up to <I>Nlimit</I> collision partners are
+considered for each collision.  The first partner I is chosen randomly
+from all particles in the grid cell.  A distance R that particle I
+moves in that timestep is calculated, based on its velocity.  <I>Nlimit</I>
+possible collision partners J are examined, starting at a random J.
+If one of them is within a distance R of particle I, it is immediately
+selected as the collision partner.  If none of the <I>Nlimit</I> particles
+are within a distance R, the closest J particle to I is selected.  An
+exception to these rules is that a particle J is not considered for a
+collision if the I,J pair were the most recent collision partners (in
+the current timestep) for each other.  The convergence properties of
+this near-neighbor algorithm are described in <A HREF = "#Gallis11">(Gallis11)</A>.
+Note that choosing <I>Nlimit</I> judiciously will avoid costly searches
+when there are large numbers of particles in some or all grid cells.
+</P>
+<P>If the <I>ambipolar</I> keyword is set to <I>yes</I>, then collisions within a
+grid cell with use the ambipolar approximation.  This requires use of
+the <A HREF = "fix_ambipolar.html">fix ambipolar</A> command to define which species
+is an electron and which species are ions.  There can be many of the
+latter.  When collisions within a single grid cell are performed, each
+ambipolar ion is split into two particles, the ion and an associated
+electron.  Collisions between the augmented set of particles are
+calculated.  Ion/electron chemistry can also occur if the
+<A HREF = "react.html">react</A> command has been used to read a file of reactions
+that include such reactions.  See the <A HREF = "react.html">react</A> command doc
+page.  After all collisions in the grid cell have been computed, there
+is still a one-to-one correspondence between ambipolar ions and
+electron, and each pair is recombined into a single ambipolar
+particle.
+</P>
+<P>The <I>rotate</I> keyword determines how rotational energy is treated in
+particle collisions and stored by particles.  If the value is set to
+<I>no</I>, then rotational energy is not tracked; every particle's
+rotational energy is 0.0.  If the value is set to <I>smooth</I>, a
+particle's rotational energy is a single continuous value.
+</P>
+<P>The <I>vibrate</I> keyword determines how vibrational energy is treated in
+particle collisions and stored by particles.  If the value is set to
+<I>no</I>, then vibrational energy is not tracked; every particle's
+vibrational energy is 0.0.  If the value is set to <I>smooth</I>, a
+particle's vibrational energy is a single continuous value.  If the
+value is set to <I>discrete</I>, each particle's vibrational energy is set
+to discrete values, namely multiples of kT where k = the Boltzmann
+constant and T is one or more characteristic vibrational temperatures
+set for the particle species.
+</P>
+<P>Note that in the <I>discrete</I> case, if any species are defined that have
+4,6,8 vibrational degrees of freedom, which correspond to 2,3,4
+vibrational modes, then the <A HREF = "species.html">species</A> command must be
+used with its optional <I>vibfile</I> keyword to set the vibrational info
+(temperature, relaxation number, degeneracy) for those species.
+</P>
+<P>Also note that if any such species are defined (with more than one
+vibrational mode, then use of the <I>discrete</I> option also requires the
+<A HREF = "fix_vibmode.html">fix vibmode</A> command be used to allocate storage for
+the per-particle mode values.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "collide.html">collide</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The option defaults are vremax = (0,yes), remain = yes, ambipolar no,
+nearcp no, rotate smooth, and vibrate = no.
+</P>
+<HR>
+
+<A NAME = "Gallis11"></A>
+
+<P><B>(Gallis11)</B> M. A. Gallis, J. R. Torczynski, "Effect of
+Collision-Partner Selection Schemes on the Accuracy and Efficiency of
+the Direct Simulation Monte Carlo Method," International Journal for
+Numerical Methods in Fluids, 67(8):1057-1072. DOI:10.1002/fld.2409
+(2011).
+</P>
+</HTML>

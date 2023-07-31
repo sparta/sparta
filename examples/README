@@ -1,0 +1,55 @@
+SPARTA example problems
+
+Each of these sub-directories contains a sample problem you can run
+with SPARTA.  They should all run quickly in a minute or less on a
+desktop machine.  Each problem has an input script (in.*) and produces
+a log file (log.*).  Most have dump commands that can be un-commented
+to produce a series of image files that animate the simulation.
+
+A few sample log file outputs on different machines and different
+numbers of processors are included in the directories to compare your
+answers to.  E.g. a log file like log.test.date.machine.P means it ran
+on P processors of machine "machine" with the dated version of SPARTA>
+Note that these problems should get statistically similar answers when
+run on different machines or different numbers of processors, but not
+identical answers to those in the included log files.
+
+These are the sample problems in the various sub-directories.  Many
+are 2d problems so that they run quickly and can be easily visualized.
+
+ablation = 2d and 3d ablation of implicit surfaces
+adapt = static and on-the-fly grid adaptation
+ambi = amibpolar approxiation for ionized flow around a cylinder
+axi = axisymmetric flow around a sphere
+bfield = external magnetic field affecting particle motion
+chem = chemistry in a 3d box
+circle = 2d flow around a circle
+collide = collisional motion in a 3d box
+emit = 2d particle emission from surfaces and box face
+fft = 2d and 3d FFTs of energy spectrum of a flow
+flowfile = particle influx defined by a file of mesh points
+free = free molecular motion in a 3d box
+sphere = 3d flow around a sphere
+spiky = 2d flow around a spiky circle
+step = 2d flow around a staircase of steps
+surf = change surfaces between or during runs
+surf_collide = variety of surface collision models
+surf_react_adsorb = surface reaction adsorb models, both GS and PS variants
+thermostat = use of fix temp/rescale as a thermostat
+vibrate = vibrational energy modes in collisions
+
+Here is an example of how one of the sample problems can be run and
+visualized:
+
+cd spiky
+cp ../../src/spa_g++ .          # copy DSMC executable to this dir
+spa_g++ < in.spiky              # run the problem
+
+Running the simulation produces the files log.sparta and image.*.ppm
+(if the dump lines in the input script are uncommented).
+
+View or animate the image files as follows:
+
+display image.0100.ppm         # ImageMagick display program
+convert image*ppm movie.gif    # ImageMagick convert -> to animated GIF
+firefox ./movie.gif            # run the animated GIF in a browser

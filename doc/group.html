@@ -1,0 +1,209 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>group command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>group ID which style args 
+</PRE>
+<UL><LI>ID = user-defined name of the grid or surface group 
+
+<LI>which = <I>grid</I> or <I>surf</I> 
+
+<LI>style options for which = grid: <I>region</I> or <I>subtract</I> or <I>union</I> or <I>intersect</I> or <I>clear</I> 
+
+<LI>style options for which = surf: <I>type</I> or <I>id</I> or <I>region</I> or <I>subtract</I> or <I>union</I> or <I>intersect</I> or <I>clear</I> 
+
+<PRE>  <I>type</I> or <I>id</I> args
+    args = list of one or more surface element types or IDs
+      any entry in list can be a range formatted as A:B
+      A = starting index, B = ending index
+    args = logical value
+      logical = "<" or "<=" or ">" or ">=" or "==" or "!="
+      value = a surface element type or ID
+    args = logical value1 value2
+      logical = "<>"
+      value1,value2 = surface element types or IDs
+  <I>region</I> args = region-ID rflag
+    region-ID = ID of region which grid cell or surface element must be in
+    rflag = <I>one</I> or <I>all</I> or <I>center</I>
+      <I>any</I> = one (or more) corner points of grid cell or surface element in region
+      <I>all</I> = all corner points of grid cell or surface element in region
+      <I>any</I> = center point of grid cell or surface element in region
+  <I>subtract</I> args = two or more group IDs
+  <I>union</I> args = one or more group IDs
+  <I>intersect</I> args = two or more group IDs
+  <I>clear</I> = no args 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>group sphere surf type 1 3
+group sphere surf id 50 100:150
+group sphere surf id <= 1000
+group sphere surf id <> 50 250
+group patch grid region leftedge
+group patch surf region cutout
+group boundary surf subtract all a2 a3
+group boundary grid union lower upper
+group boundary surf union lower upper
+group boundary surf intersect upper leftside 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Assign grid cells to grid groups or surface elements to surface
+groups.  In SPARTA, a "grid group" is a collection of one or more grid
+cells.  A "surface" group is a collection of one or more surface
+elements (line segements in 2d, triangles in 3d).  Other commands take
+group IDs as arguments so that they act on a set of grid cells or
+surface elements.  For example, see the <A HREF = "compute_grid.html">compute
+grid</A>, <A HREF = "compute_surf.html">compute surf</A>, <A HREF = "fix_ave_grid.html">fix
+ave/grid</A>, <A HREF = "fix_ave_surf.html">fix ave/surf</A>, <A HREF = "dump.html">dump
+grid</A>, or <A HREF = "dump.html">dump surf</A> commands.
+</P>
+<P>An individual grid cell can belong to multiple grid groups.  An
+individual surface element can belong to multiple surface groups.
+Each grid or surface group has a name which is specified as the <I>ID</I>
+in this command.  Each grid group and surface group ID must be unique,
+though the same ID can be used for both a grid and surface group.  IDs
+can only contain alphanumeric characters and underscores.
+</P>
+<P>If the specified group ID already exists, grid cells or surface
+elements are added to the group.  Otherwise a new group is created.
+This means the group command can be used multiple times with the same
+group ID to incrementally add grid cells or surface elements to the
+group.
+</P>
+<P>A grid group with the ID <I>all</I> is pre-defined.  All grid cells belong
+to this group.  Likewise, a surface group with the ID <I>all</I> is
+pre-defined.  All surface elements belong to this group.
+</P>
+<P>After this command has performed its grid cell or surface elements
+assignments, statistics about the group are printed to the screen, so
+that you can check if the command operated as you expect.
+</P>
+<P>Note that this command assigns all flavors of child grid cells to
+groups, which includes unsplit, cut, split, and sub cells.  See
+<A HREF = "Section_howto.html#howto_8">Section 6.8</A> of the manual gives details
+of how SPARTA defines child, unsplit, split, and sub cells.
+</P>
+<HR>
+
+<P>The following styles can be used for grid groups.
+</P>
+<P>The <I>region</I> style puts all grid cells in the region volume associated
+with the <I>region-ID</I> into the group.  See the <A HREF = "region.html">region</A>
+command for details on what kind of geometric regions can be defined.
+Note that the <I>side</I> option for the <A HREF = "region.html">region</A> command can
+be used to define whether the inside or outside of the geometric
+region is considered to be "in" the region.
+</P>
+<P>The <I>rflag</I> setting determines how a grid cell is judged to be in the
+region or not.  For <I>rflag</I> = <I>one</I>, it is in the region if any of its
+corner points (4 for 2d, 8 for 3d) is in the region.  For <I>rflag</I> =
+<I>all</I>, all its corner points must be in the region.  For <I>rflag</I> =
+<I>center</I>, the center point of the grid cell must be in the region.
+</P>
+<HR>
+
+<P>The following styles can be used for surface groups.
+</P>
+<P>The <I>type</I> and <I>id</I> styles put all surface elements with the specified
+types or surface element IDs into the group. These two styles can use
+arguments specified in one of two formats.
+</P>
+<P>For surface elements, the "type" of each element is defined when the
+elements are read from a surface file, via the
+<A HREF = "read_surf.html">read_surf</A> command.  In the file, a positive integer
+type value can be optionally defined for each element (default = 1).
+The specified type values can also be incremented using the <I>typeadd</I>
+keyword of the <A HREF = "read_surf.html">read_surf</A> commmand.
+</P>
+<P>For surface elements, the "ID" of each element is simply its index
+from 1 to N, for all N surface elements that have been read in via the
+<A HREF = "read_surf.html">read_surf</A> command.  The ordering of IDs is determined
+by the order the elements appear in the read-in surface file.  If
+multiple files are read (or the same file multiple times), IDs
+increase monotonically each time new surface elements are added.
+</P>
+<P>The first format is a list of values (types or IDs).  For example, the
+first command in the examples above puts all surface elements of type
+1 and 3 into the group named sphere.  Each entry in the list can
+optionally be a colon-separated range A:B, as in the second axample
+above.  A "range" is a series of values (types or IDs).  The second
+example with 100:150 adds all surface elements with IDs from 100 to
+150 (inclusive) to the group named sphere, along with element 50 since
+it also appears in the list of values.
+</P>
+<P>The second format is a logical operator followed by one or two values
+(type or ID). The 7 valid logicals are listed above.  All the logicals
+except "<>" take a single argument. The third example above adds all
+surface elements with IDs from 1 to 1000 to the group named
+sphere. The logical "<>" means "between" and takes 2 arguments. The
+fourth example above adds all surface elements IDs from 50 to 250
+(inclusive) to the group named sphere.
+</P>
+<P>The <I>region</I> style puts all surface elements in the region volume
+associated with the <I>region-ID</I> into the group.  See the
+<A HREF = "region.html">region</A> command for details on what kind of geometric
+regions can be defined.  Note that the <I>side</I> option for the
+<A HREF = "region.html">region</A> command can be used to define whether the inside
+or outside of the geometric region is considered to be "in" the
+region.
+</P>
+<P>The <I>rflag</I> setting determines how a surface element is judged to be
+in the region or not.  For <I>rflag</I> = <I>one</I>, it is in the region if any
+of its corner points (3 for triangle, 2 for line) is in the region.
+For <I>rflag</I> = <I>all</I>, all its corner points must be in the region.  For
+<I>rflag</I> = <I>center</I>, the center point of the line segment or centroid
+point of the triangle must be in the region.
+</P>
+<HR>
+
+<P>The following styles can be used for either grid or surface groups.
+</P>
+<P>The <I>subtract</I> style takes a list of two or more existing group names
+as arguments.  All grid cells or surface elements that belong to the
+1st group, but not to any of the other groups are added to the
+specified group.
+</P>
+<P>The <I>union</I> style takes a list of one or more existing group names as
+arguments.  All grid cells or surface elements that belong to any of
+the listed groups are added to the specified group.
+</P>
+<P>The <I>intersect</I> style takes a list of two or more existing group names
+as arguments.  Grid cells or surface elements that belong to every one
+of the listed groups are added to the specified group.
+</P>
+<P>The <I>clear</I> style un-assigns all grid cells or surface elements that
+were assigned to that group.  This is a way to empty a group before
+adding more grid cells or surface elements to it.
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>No more than 32 grid groups and no more than 32 surface groups can be
+defined, including "all".
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "dump.html">dump</A>, <A HREF = "region.html">region</A>, <A HREF = "compute_grid.html">compute
+grid</A>, <A HREF = "compute_surf.html">compute surf</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>All grid cells belong to the "all" grid group.  All surface elements
+belong to the "all" surface group.
+</P>
+</HTML>

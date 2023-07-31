@@ -1,0 +1,213 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>compute fft/grid command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>compute ID fft/grid value1 value2 ... keyword args ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
+
+<LI>fft/grid = style name of this compute command 
+
+<LI>one or more values can be appended 
+
+<LI>value = c_ID, c_ID[N], f_ID, f_ID[N], v_name 
+
+<PRE>  c_ID = per-grid vector calculated by a compute with ID
+  c_ID[I] = Ith column of per-grid array calculated by a compute with ID
+  f_ID = per-grid vector calculated by a fix with ID
+  f_ID[I] = Ith column of per-grid or array calculated by a fix with ID
+  v_name = per-grid vector calculated by a grid-style variable with name 
+</PRE>
+<LI>zero or more keyword/arg pairs can be appended 
+
+<LI>keyword = <I>sum</I> or <I>scale</I> or <I>conjugate</I> or <I>kmag</I> 
+
+<PRE>  <I>sum</I> = <I>yes</I> or <I>no</I> to sum all FFTs into a single output
+  <I>scale</I> = sfactor = numeric value to scale results by
+  <I>conjugate</I> = <I>yes</I> or <I>no</I> = perform complex conjugate multiply or not
+  <I>kx</I> = <I>yes</I> or <I>no</I> = calculate x-component of wavelength or not
+  <I>kx</I> = <I>yes</I> or <I>no</I> = calculate y-component of wavelength or not
+  <I>kx</I> = <I>yes</I> or <I>no</I> = calculate z-component of wavelength or not
+  <I>kmag</I> = <I>yes</I> or <I>no</I> = calculate wavelength magnitude or not 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compute 1 fft/grid c_1 
+</PRE>
+<P>These commands will dump FFTs of instantaneous and time-averaged
+velocity components in each grid cell to a dump file every 1000 steps:
+</P>
+<PRE>compute 1 grid all u v w
+fix 1 ave/grid 10 100 1000 c_1
+compute 2 fft/grid f_1<B>1</B> f_1<B>2</B> f_1<B>3</B>
+dump 1 grid all 1000 tmp.grid id c_2 f_1 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Define a computation that performs forward FFTs on per-grid values.  
+This can be useful, for example, in calculating the energy spectrum
+of a turbulent flow.
+</P>
+<P>The defined grid must be a regular one-level grid (not hierarchical)
+with an even number of grid cells in each dimension.  Depending on the
+<A HREF = "dimension.html">dimension</A> of the simulation, either 2d or 3d FFTs
+will be performed.  Because FFTs assume a periodic field, the
+simulation domain should be periodic in all dimensions, as set by the
+<A HREF = "boundary.html">boundary</A> command, though SPARTA does not check for
+that.
+</P>
+<P>The results of this compute can be used by different commands in
+different ways.  The values for a single timestep can be output by the
+<A HREF = "dump.html">dump grid</A> command.  The values over many sampling
+timesteps can be averaged by the <A HREF = "fix_ave_grid.html">fix ave/grid</A>
+command.
+</P>
+<P>A forward FFT is perfomed on each input value independently.
+</P>
+<P>Each listed input can be the result of a <A HREF = "compute.html">compute</A> or
+<A HREF = "fix.html">fix</A> or the evaluation of a <A HREF = "variable.html">variable</A>, all of
+which must generate per-grid quantities.
+</P>
+<P>If a value begins with "c_", a compute ID must follow which has been
+previously defined in the input script.  The compute must generate a
+per-grid vector or array.  See the individual <A HREF = "compute.html">compute</A>
+doc page for details.  If no bracketed integer is appended, the vector
+calculated by the compute is used.  If a bracketed integer is
+appended, the Ith column of the array calculated by the compute is
+used.  Users can also write code for their own compute styles and <A HREF = "Section_modify.html">add
+them to SPARTA</A>.
+</P>
+<P>If a value begins with "f_", a fix ID must follow which has been
+previously defined in the input script.  The fix must generate a
+per-grid vector or array.  See the individual <A HREF = "fix.html">fix</A> doc page
+for details.  Note that some fixes only produce their values on
+certain timesteps, which must be compatible with when this compute
+references the values, else an error results.  If no bracketed integer
+is appended, the vector calculated by the fix is used.  If a bracketed
+integer is appended, the Ith column of the array calculated by the fix
+is used.  Users can also write code for their own fix style and <A HREF = "Section_modify.html">add
+them to SPARTA</A>.
+</P>
+<P>If a value begins with "v_", a variable name must follow which has
+been previously defined in the input script.  It must be a <A HREF = "variable.html">grid-style
+variable</A>.  Such a variable defines a formula which can
+reference stats keywords or invoke other computes, fixes, or variables
+when they are evaluated.  So this is a very general means of creating
+a per-grid input to perform an FFT on.
+</P>
+<HR>
+
+<P>If the <I>sum</I> keyword is set to <I>yes</I>, the results of all FFTs
+will be summed together, grid value by grid value, to create
+a single output.
+</P>
+<P>The result of each FFT is scaled by the <I>sfactor</I> value of
+the <I>scale</I> keyword, whose default is 1.0.  Note that forward FFTs do
+not perform any scaling of their own; backward FFTs scale each output
+value by N = # of points in the FFT grid.
+</P>
+<P>If the <I>conjugate</I> keyword is set to <I>no</I>, the result of each FFT is 2
+values for each grid point, the real and imaginary parts of a complex
+number.  If the <I>conjugate</I> keyword is set to <I>yes</I>, the complex value
+for each grid point is multiplied by its complex conjugate to yield a
+single real-valued number for each grid point.  Note that this value
+is effectively the squared length of the complex 2-vector with real
+and imaginary components.
+</P>
+<P>If one or more of the <I>kx</I>, <I>ky</I>, <I>kz</I>, or <I>kmag</I> keywords are set to
+<I>yes</I>, then one or more extra columns of per-grid output is generated.
+For <I>kx</I> the x-component of the K-space wavevector is generated.
+Similarly for <I>ky</I> and <I>kz</I>.  For <I>kmag</I> the length of each K-space
+wavevector is generated.  These values can be useful, for example, for
+histogramming an energy spectrum computed from the FFT of a velocity
+field, as a function of wavelength or a component of the wavelength.
+</P>
+<P>Note that the wavevector for each grid cell is indexed as (Kx,Ky,Kz).
+Those indices are the x,y,z components output by the <I>kx</I>, <I>ky</I>, <I>kz</I>
+keywords.  The total wavelength, which is output by the <I>kmag</I>
+keyword, is sqrt(Kx^2 + Ky^2 + Kz^2) for 3d models and sqrt(Kx^2 +
+Ky^2) for 2d models.  For all keywords, the Kx,Ky,Kz represent
+distance from the origin in a periodic sense.  Thus for a grid that is
+NxMxP, the Kx values associated with the x-dimension and used in those
+formulas are not Kx = 0,1,2 ... N-2,N-1.  Rather they are Kx = 0,1,2,
+... N/2-1, N/2, N/2-1, ... 2,1.  Similary for Ky in the y-dimension
+with a max index of M/2, and Kz in the z-dimension with a max index of
+P/2.
+</P>
+<HR>
+
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>The number of per-grid values ouptut by this compute depends on the
+optional keyword settings.  The number of FFTs is equal to the number
+of specified input values.
+</P>
+<P>There are 2 columns of output per FFT if <I>sum</I> = no and <I>conjugate</I> =
+no, with real and imaginary components for each FFT.  There is 1
+column of output per FFT if <I>sum</I> = no and <I>conjugate</I> = yes.  There
+are 2 columns of output if <I>sum</I> = yes and <I>conjugate</I> = no, with real
+and imaginary components for the sum of all the FFTs.  There is one
+column of output for <I>sum</I> = yes and <I>conjugate</I> = yes.  For all these
+cases, there is one extra column of output for each of the <I>kx</I>, <I>ky</I>,
+<I>kz</I>, <I>kmag</I> keywords if they are set to <I>yes</I>.  The extra columns
+come before the FFT columns, in the order <I>kx</I>, <I>ky</I>, <I>kz</I>, <I>kmag</I>.
+Thus is only <I>ky</I> and <I>kmag</I> are set to yes, there will be 2 extra
+columns, the first for <I>ky</I> and the 2nd for <I>kmag</I>.
+</P>
+<P>If the total number of output columns = 1, then this compute produces
+a per-grid vector as output.  Otherwise it produces a per-grid array.
+</P>
+<P>This compute performs calculations for all flavors of child grid cells
+in the simulation, which includes unsplit, cut, split, and sub cells.
+See <A HREF = "Section_howto.html#howto_8">Section 6.8</A> of the manual gives
+details of how SPARTA defines child, unsplit, split, and sub cells.
+Note that cells inside closed surfaces contain no particles.  These
+could be unsplit or cut cells (if they have zero flow volume).  Both
+of these kinds of cells will compute a zero result for all their
+values.  Likewise, split cells store no particles and will produce a
+zero result.  This is because their sub-cells actually contain the
+particles that are geometrically inside the split cell.
+</P>
+<P>The array can be accessed by any command that uses per-grid values
+from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 6.4</A>
+for an overview of SPARTA output options.
+</P>
+<P>The per-grid vector or array values will be in the <A HREF = "units.html">units</A>
+appropriate to the FFT operations as described above.  The K-space
+wavevector magnitudes are effectively unitless, e.g. sqrt(Kx^2 + Ky^2
++ Kz^2) where Kx,Ky,Kz are integers.  The FFT values can be real or
+imaginary or squared values in K-space resulting from FFTs of per-grid
+quantities in whatever units the specified input values represent.
+</P>
+<P><B>Restrictions:</B>
+</P>
+<P>This style is part of the FFT package.  It is only enabled if SPARTA
+was built with that package.  See the <A HREF = "Section_start.html#start_3">Getting
+Started</A> section for more info.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "fix_ave_grid.html">fix ave/grid</A>, <A HREF = "dump.html">dump grid</A>, <A HREF = "compute_grid.html">compute
+grid</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The option defaults are sum = no, scale = 1.0, conjugate = no, kmag =
+no.
+</P>
+</HTML>

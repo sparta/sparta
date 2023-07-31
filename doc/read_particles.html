@@ -1,0 +1,77 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>read_particles command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>read_particles file Nstep 
+</PRE>
+<UL><LI>file = dump file to read snapshot from
+<LI>Nstep = timestep to read 
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>read_particles dump.sphere 10500 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Read a snapshot of particles from a previously created dump file and
+add them to the simulation domain.  This is a means of reading in
+particles from a previous SPARTA simulation or created as output by
+another code.  The <A HREF = "create_particles.html">create_particles</A>, <A HREF = "fix_emit_face.html">fix
+emit/face</A>, and <A HREF = "read_restart.html">read_restart</A>
+commands are alternate ways to generate particles for a simulation.
+</P>
+<P>The dump file must be in the SPARTA format created by the <A HREF = "dump.html">dump
+particles</A> command which is described on its doc page.
+</P>
+<P>Currently, each line of particle data in the file must have 8 fields
+in the following order.  At some point we may generalize this format.
+</P>
+<PRE>id, type, x, y, z, vx, vy, vz 
+</PRE>
+<P>The <I>id</I> is any positive integer, which can simply be set to values
+from 1 to Nparticles if desired.  The type is the species ID from 1 to
+Nspecies.  The value corresponds to the order in which species are
+defined in the current input script via the <A HREF = "species.html">species</A>
+command.  The x,y,z values are the particle coordinates which must be
+inside (or on the surface of) the simulation box.  If a particle is
+outside the box it will be skipped when the file is read.  For 2d or
+axisymmetric simulations z = 0.0 should be used, though SPARTA does
+not check for this.  The vx,vy,vz values are the particle velocity.
+The rotational and vibrational energies for the new particles are set
+to 0.0.
+</P>
+<P>When the reading of particles is complete, the number of particles
+read is printed to the screen.  If the number is smaller than the
+particles in the file, it is because some were outside the simulation
+box.
+</P>
+<P>A check is made for any particle inside a surface object which
+triggers an error.  However the check is only for grid cells entirely
+inside a surface object.  Particles in grid cells which are cut by
+surfaces are not checked.  It is your responsibility to insure
+particles close to surfaces are actually outside the surface object.
+If this is not the case, errors may be triggered once particles begin
+to move.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "create_particles.html">create_particles</A>, <A HREF = "fix_emit_face.html">fix emit/face</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

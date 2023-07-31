@@ -1,0 +1,12 @@
+The binary files used as input for the input scripts in this dir were
+generated as follows:
+
+2d inputs
+
+% python ../../tools/implicit_grid.py 2 101 101 1 12345 binary.101x101
+% python ../../tools/implicit_grid.py 2 51 101 1 54321 binary.51x101
+
+3d inputs
+
+% python ../../tools/implicit_grid.py 3 21 21 21 12345 binary.21x21x21
+% python ../../tools/implicit_grid.py 3 101 101 101 54321 binary.101x101x101

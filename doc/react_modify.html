@@ -1,0 +1,78 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>react_modify command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>react_modify keyword values ...  
+</PRE>
+<UL><LI>one or more keyword/value pairs may be listed 
+
+<LI>keywords = <I>recomb</I> or <I>rboost</I> 
+
+<PRE>  <I>recomb</I> value = yes or no = enable or disable defined recombination reactions
+  <I>rboost</I> value = rfactor
+    rfactor = boost probability of recombination reactions by this factor 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>react_modify recomb no
+react_modify rboost 100.0 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Set parameters that affect how reactions are performed.
+</P>
+<P>The <I>recomb</I> keyword turns on or off recombination reactions.  It is
+only relevant if recombination reactions were defined in the reaction
+file read in by the <A HREF = "react.html">react</A> command.  If the setting is
+<I>no</I> then they will be disabled even if they were listed in the
+reaction file.  This is useful to turn recombination reactions off, to
+see if they affect simulation results.
+</P>
+<P>The <I>rboost</I> keyword is a setting for recombination reactions.  It is
+ignored if no recombination reactions exist, or the <I>recomb</I> keyword
+is set to <I>no</I>.  The <I>rboost</I> setting does not affect the overalll
+statistical results of recombination reactions, but tries to improve
+their computational efficiency.  Recombination reactions typically
+occur with very low probability, which means the code spends time
+testing for reactions that rarely occur.  If the <I>rfactor</I> is set to N
+> 1, then recombination reactions are skipped N-1 out of N times, when
+one or more such reactions is defined for a pair of colliding
+particles.  A random number us used to select on that probability.  To
+compensate, when a recombination reaction is actually tested for
+occurrence, its rate is boosted by a factor of N, making it N times
+more likely to occur.
+</P>
+<P>The smallest value <I>rboost</I> can be set to is 1.0, which effectively
+applies no boost factor.
+</P>
+<P>IMPORTANT NOTE: Setting <I>rboost</I> too large could meant the probability
+of a recombination reaction becomes > 1.0, when it is does occur.
+SPARTA does not check for this, so you should estimate the largest
+boost factor that is safe to use for your model.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "react.html">react</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The option defaults are recomb = yes and rboost = 1000.0.
+</P>
+</HTML>

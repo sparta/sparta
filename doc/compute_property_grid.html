@@ -1,0 +1,150 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>compute property/grid command 
+</H3>
+<H3>compute property/grid/kk command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>compute ID property/grid group-ID input1 input2 ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
+
+<LI>property/grid = style name of this compute command 
+
+<LI>group-ID = group ID for which grid cells to perform calculation on 
+
+<LI>input = one or more grid attributes 
+
+<PRE>  possible attributes = id, proc, xlo, ylo, zlo, xhi, yhi, zhi, xc, yc, zc 
+</PRE>
+<PRE>  id = integer form of grid cell ID
+  proc = processor that owns grid cell
+  xlo,ylo,zlo = coords of lower left corner of grid cell
+  xhi,yhi,zhi = coords of lower left corner of grid cell
+  xc,yc,zc = coords of center of grid cell
+  vol = flow volume of grid cell (area in 2d) 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compute 1 property/grid all id xc yc zc 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Define a computation that simply stores grid attributes for each grid
+cell in a grid cell group.  This is useful so that the values can be
+used by other <A HREF = "Section_howto.html#howto_4">output commands</A> that take
+computes as inputs.  See for example, the <A HREF = "compute_reduce.html">compute
+reduce</A>, <A HREF = "fix_ave_atom.html">fix ave/grid</A>, and
+<A HREF = "dump.html">dump grid</A> commands.
+</P>
+<P>Only grid cells in the grid group specified by <I>group-ID</I> are included
+in the calculation.  See the <A HREF = "group.html">group grid</A> command for info
+on how grid cells can be assigned to grid groups.
+</P>
+<P>The values are stored in a per-grid vector or array as discussed
+below. 
+</P>
+<P><I>Id</I> is the grid cell ID.  In SPARTA each grid cell is assigned a
+unique ID which represents its logical location within the
+hierarchical grid.  This ID is stored as an integer such as 5774983,
+but can also be decoded into a string such as 33-4-6, which makes it
+easier to understand the grid hierarchy.  In this case it means the
+grid cell is at the 3rd level of the hierarchy.  Its grandparent cell
+was 33 at the 1st level, its parent was cell 4 (at level 2) within
+cell 33, and the cell itself is cell 6 (at level 3) within cell 4
+within cell 33.  If you specify <I>id</I>, the ID is printed directly as an
+integer.  The ID in string format can be accessed by the <A HREF = "dump.html">dump
+grid</A> command and its <I>idstr</I> argument.
+</P>
+<P><I>Proc</I> is the ID of the processor which currently owns the grid cell.
+</P>
+<P>The <I>xlo</I>, <I>ylo</I>, <I>zlo</I> attributes are the coordinates of the
+lower-left corner of the grid cell in the appropriate distance
+<A HREF = "units.html">units</A>.  The <I>xhi</I>, <I>yhi</I>, <I>zhi</I> are the coordinates of
+the upper-right corner of the grid cell.  The <I>xc</I>, <I>yc</I>, <I>zc</I>
+attributes are the coordinates of the center point of the grid cell.
+The <I>zlo</I>, <I>zhi</I>, <I>zc</I> attributes cannot be used for a 2d simulation.
+</P>
+<P>The <I>vol</I> attribute is the flow volume of the grid cell (or area in
+2d).  Flow volume is the portion of the grid cell that is accessible
+to particles, i.e. outside any closed surface that may intersect the
+cell.
+</P>
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>This compute calculates a per-grid vector or per-grid array depending
+on the number of input values.  If a single input is specified, a
+per-grid vector is produced.  If two or more inputs are specified, a
+per-grid array is produced where the number of columns = the number of
+inputs.
+</P>
+<P>This compute performs calculations for all flavors of child grid cells
+in the simulation, which includes unsplit, cut, split, and sub cells.
+See <A HREF = "Section_howto.html#howto_8">Section 6.8</A> of the manual gives
+details of how SPARTA defines child, unsplit, split, and sub cells.
+The <I>id</I> and <I>xlo,ylo,zlo</I> and <I>xhi,yhi,zhi</I> values for a split cell
+and its sub cells are all the same.  The <I>vol</I> of a cut cell is the
+portion of the cell in the flow.  The <I>vol</I> of a split cell is the
+same as if it were unsplit.  The <I>vol</I> of each sub cell within a split
+cell is its portion of the flow volume.
+</P>
+<P>Grid cells not in the specified <I>group-ID</I> will output zeroes for all
+their values.
+</P>
+<P>The vector or array can be accessed by any command that uses per-atom
+values from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section
+4.4</A> for an overview of SPARTA output
+options.
+</P>
+<P>The vector or array values will be in whatever <A HREF = "units.html">units</A> the
+corresponding attribute is in, e.g. distance units for xlo or xc.
+</P>
+<HR>
+
+<P>Styles with a <I>kk</I> suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+<A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+</P>
+<P>These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the <A HREF = "Section_start.html#start_3">Making
+SPARTA</A> section for more info.
+</P>
+<P>You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the <A HREF = "Section_start.html#start_6">-suffix command-line
+switch</A> when you invoke SPARTA, or you can
+use the <A HREF = "suffix.html">suffix</A> command in your input script.
+</P>
+<P>See the <A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "dump.html">dump grid</A>, <A HREF = "compute_reduce.html">compute reduce</A>, <A HREF = "fix_ave_grid.html">fix
+ave/grid</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

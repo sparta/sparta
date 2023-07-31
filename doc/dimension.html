@@ -1,0 +1,45 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>dimension command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>dimension N 
+</PRE>
+<UL><LI>N = 2 or 3 
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>dimension 2
+dimension 3 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Set the dimensionality of the simulation.  By default SPARTA runs 3d
+simulations, but 2d simulations can also be run.
+</P>
+<P>2d axi-symmetric models can be run by setting the dimension to 2, and
+defining the lower boundary in the y-dimension to axi-symmetric via
+the <A HREF = "boundary.html">boundary</A> command.
+</P>
+<P><B>Restrictions:</B>
+</P>
+<P>This command must be used before the simulation box is defined by a
+<A HREF = "create_box.html">create_box</A> command.
+</P>
+<P><B>Related commands:</B> none
+</P>
+<P><B>Default:</B>
+</P>
+<PRE>dimension 3 
+</PRE>
+</HTML>

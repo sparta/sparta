@@ -1,0 +1,216 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>read_restart command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>read_restart file keyword args ... 
+</PRE>
+<UL><LI>file = name of binary restart file to read in
+<LI>zero or one keyword/args pair may be listed 
+</UL>
+<PRE>keywords = <I>gridcut</I> or <I>balance</I>
+  <I>gridcut</I> arg = cutoff
+    cutoff = acquire ghost cells up to this far away (distance units)
+  <I>balance</I> args = same as for <A HREF = "balance_grid.html">balance_grid</A> command 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>read_restart save.10000
+read_restart restart.*
+read_restart flow.*.%
+read_restart save.10000 gridcut -1.0
+read_restart save.10000 balance rcb cell 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Read in a previously saved simulation from a restart file.  This
+allows continuation of a previous run on the same or different number
+of processors.  Information about what is stored in a restart file is
+given below.  Basically this operation will re-create the simulation
+box with all its particles, the hierarchical grid used to track
+particles, and surface elements embedded in the grid, all with their
+attributes at the point in time the information was written to the
+restart file by a previous simluation.
+</P>
+<P>Although restart files are saved in binary format to allow exact
+regeneration of information, the random numbers used in the continued
+run will not be identical to those used if the run had been continued.
+Hence the new run will not be identical to the continued original run,
+but should be statistically similar.
+</P>
+<P>IMPORTANT NOTE: Because restart files are binary, they may not be
+portable to other machines.  SPARTA will print an error message if
+it cannot read a restart file for this reason.
+</P>
+<P>If a restarted run is performed on the same number of processors as
+the original run, then the assignment of grid cells (and their
+particles) to processors will be the same as in the original
+simulation.  If the processor count changes, then the assignment will
+necessarily be different.  In particular, even if the original
+assignment was "clumped", meaning each processor's cells were
+geometrically compact, the new assignment will not be clumped; it will
+be "dispersed".  See <A HREF = "Section_howto.html#howto_8">Section 6.8</A> of the
+manual for an explanation of clumped and dispersed grid cell
+assignments and their relative performance trade-offs.
+</P>
+<P>Note that the restart file contains the setting for the <A HREF = "global.html">global
+gridcut</A> command.  If it is >= 0.0 and the assignment of
+grid cells to processors is "dispersed" (as described in the
+preceeding paragraph), and there are surface elements defined in the
+restart file, an error will be triggered.  This is because the
+read_restart command needs to mark all the grid cells as inside vs
+outside the defined surface and cannot do this without ghost cell
+information.  As explained on the doc page for the <A HREF = "global.html">global
+gridcut</A> command, ghost cells cannot be setup with gridcut
+>= 0.0 and "dispersed" grid cells.
+</P>
+<P>The solution is to use one of the two keywords listed above, either
+<I>gridcut</I> or <I>balance</I>.  The former allows you to reset the grid
+cutoff to -1.0 so that ghost cells can be setup.  Note however that
+this means each processor will own a copy of all grid cells (at least
+until you change it later), which may be undesirable or even
+impossible for large problems if it requires too much memory.  The
+other solution is to use the <I>balance</I> keyword to trigger a re-balance
+of the grid cells to processors as soon as the read_restart command
+reads them in.  The arguments for the <I>balance</I> keyword are identical
+to those for the <A HREF = "balance_grid.html">balance_grid</A> command.  If you
+choose a balancing style that results in a "clumped" assignment, then
+ghost cells will be setup successfully.
+</P>
+<HR>
+
+<P>Similar to how restart files are written (see the
+<A HREF = "write_restart.html">write_restart</A> and <A HREF = "restart.html">restart</A>
+commands), the restart filename can contain two wild-card characters.
+If a "*" appears in the filename, the directory is searched for all
+filenames that match the pattern where "*" is replaced with a timestep
+value.  The file with the largest timestep value is read in.  Thus,
+this effectively means, read the latest restart file.  It's useful if
+you want your script to continue a run from where it left off.  See
+the <A HREF = "run.html">run</A> command and its "upto" option for how to specify
+the run command so it doesn't need to be changed either.
+</P>
+<P>If a "%" character appears in the restart filename, SPARTA expects a
+set of multiple files to exist.  The <A HREF = "restart.html">restart</A> and
+<A HREF = "write_restart.html">write_restart</A> commands explain how such sets are
+created.  Read_restart will first read a filename where "%" is
+replaced by "base".  This file tells SPARTA how many processors
+created the set and how many files are in it.  Read_restart then reads
+the additional files.  For example, if the restart file was specified
+as save.% when it was written, then read_restart reads the files
+save.base, save.0, save.1, ... save.P-1, where P is the number of
+processors that created the restart file.
+</P>
+<P>Note that P could be the total number of processors in the previous
+simulation, or some subset of those processors, if the <I>fileper</I> or
+<I>nfile</I> options were used when the restart file was written; see the
+<A HREF = "restart.html">restart</A> and <A HREF = "write_restart.html">write_restart</A> commands
+for details.  The processors in the current SPARTA simulation share
+the work of reading these files; each reads a roughly equal subset of
+the files.  The number of processors which created the set can be
+different than the number of processors in the current SPARTA
+simulation.  This can be a fast mode of input on parallel machines
+that support parallel I/O.
+</P>
+<HR>
+
+<P>A restart file stores only the following information about a
+simulation, as specified by the associated commands:
+</P>
+<UL><LI><A HREF = "units.html">units</A>
+<LI><A HREF = "dimension.html">dimension</A>
+<LI><A HREF = "create_box.html">simulation box size</A> and <A HREF = "boundary.html">boundary conditions</A>
+<LI><A HREF = "global.html">global settings</A>
+<LI>particles with their individual attributes and custom attributes defined by fixes
+<LI><A HREF = "species.html">particle species info</A>
+<LI><A HREF = "mixture.html">mixtures</A>
+<LI>geometry of the hierarchical grid that overlays the simulation domain as <A HREF = "create_grid.html">created</A> or <A HREF = "read_grid.html">read from a file</A>
+<LI>geometry of all defined <A HREF = "read_surf.html">surface elements</A>
+<LI><A HREF = "group.html">group definitions</A> for grid cells and surface elements
+<LI>current timestep number 
+</UL>
+<P>No other information is stored in the restart file.  Specifically,
+information about these simulation entities and their associated
+commands is NOT stored:
+</P>
+<UL><LI><A HREF = "seed,html">random number seed</A>
+<LI><A HREF = "compute.html">computes</A>
+<LI><A HREF = "fix.html">fixes</A>
+<LI><A HREF = "collide.html">collision model</A>
+<LI><A HREF = "react.html">chemistry (reaction) model</A>
+<LI><A HREF = "surf_collide.html">surface collision models</A>
+<LI><A HREF = "surf_react.html">surface reaction models</A>
+<LI>assignment of surfaces/boundaries to surface models
+<LI><A HREF = "variable.html">variables</A>
+<LI><A HREF = "region.html">regions</A>
+<LI>output options for <A HREF = "stats_style.html">stats</A>, <A HREF = "dump.html">dump</A>, <A HREF = "restart.html">restart</A> files
+<LI><A HREF = "timestep.html">timestep size</A> 
+</UL>
+<P>This means any information specified in the original input script by
+these commands needs to be re-specified in the restart input script,
+assuming the continued simulation needs the information.
+</P>
+<P>Also note that many commands can be used after a restart file is read,
+to override a setting that was stored in the restart file.  For
+example, the <A HREF = "global.html">global</A> command can be used to reset the
+values of its specified keywords. If a global command is used in the
+input file before the restart file is read, then it will be overriden
+by values in the restart file. The only exception is the *mem/limit*
+command, since it affects how the restart file is processed.
+</P>
+<P>In particular, take note of the following issues:
+</P>
+<P>The status of time-averaging fixes, such as <A HREF = "fix_ave_time.html">fix
+ave/time</A>, <A HREF = "fix_ave_grid.html">fix ave/grid</A>, <A HREF = "fix_ave_surf.html">fix
+ave/surf</A>, does not carry over into the restarted
+run.  E.g. if the <I>ave running</I> option is used with those commands in
+the original script and again specified in the restart script, the
+running averaged quantities do not persist into the new run.
+</P>
+<P>The <A HREF = "surf_modify.html">surf_modify</A> command must be used in the restart
+script to assign surface collision models, specified by the
+<A HREF = "surf_collide.html">surf_collide</A> command, to all <A HREF = "boundary.html">global
+boundaries</A> of type "s", and to any surfaces contained
+in the restart file, as read in by the <A HREF = "read_surf.html">read_surf</A>
+command.
+</P>
+<P>If a collision model is specified in the restart script, and the
+<A HREF = "collide_modify.html">collide_modify vremax or remain</A> command is used
+to enable Vremax and fractional collision count to persist for many
+timesteps, no information about these quantities persists from the
+original simulation to the restarted simulation.  The initial run in
+the restart script will re-initialize these data structures.
+</P>
+<P>If a fix is used which defines custom attributes of particles, the
+vectors or arrays for these attributes are stored in the restart file.
+See the <A HREF = "fix_ambipolar">fix ambipolar</A> command as an example; it
+creates a custom vector called "ionambi" and a custom array called
+"velambi".  However, the restart script must specify the same fix
+before the first <A HREF = "run.html">run</A> command it uses, so that the same
+custom attributes are re-created, otherwise the custom attribute info
+from the restart file will be deleted.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "read_grid.html">read_grid</A>, <A HREF = "read_surf.html">read_surf</A>,
+<A HREF = "write_restart.html">write_restart</A>, <A HREF = "restart.html">restart</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

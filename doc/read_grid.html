@@ -1,0 +1,69 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>read_grid command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>read_grid filename 
+</PRE>
+<UL><LI>filename = name of grid file 
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>read_grid data.grid 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Read a grid file in text format which lists the grid cell IDs to be
+used to construct a hierarchical grid that overalys the simulation
+domain defined by the <A HREF = "create_box.html">create_box</A> command.  The grid
+can also be defined by the <A HREF = "create_grid.html">create_grid</A> command.
+</P>
+<P>The grid file can be written by the <A HREF = "write_grid.html">write_grid</A>
+command in a previous simulation, or be created by some pre-processing
+tool.  See <A HREF = "Section_howto.html#howto_8">Section 6.8</A> of the manual for
+a definition of hierarchical grids and grid cell IDs as used by
+SPARTA.
+</P>
+<P>The specified file can be a text file or a gzipped text file (detected
+by a .gz suffix).  See the <A HREF = "write.grid.html">write_grid</A> command for a
+description of the format of the file.
+</P>
+<P>The grid cell IDs read from the file to processors in a round-robin
+fashion, which means in general the set of cells a processor owns will
+not be contiguous in a geometric sense.  They are thus assumed to be a
+"dispersed" assignment of grid cells to each processor.
+</P>
+<P>IMPORTANT NOTE: See <A HREF = "Section_howto.html#howto_8">Section 6.8</A> of the
+manual for an explanation of clumped and dispersed grid cell
+assignments and their relative performance trade-offs.  The
+<A HREF = "balance_grid.html">balance_grid</A> command can be used after the grid is
+read, to assign child cells to processors in different ways.  The "fix
+balance" command can be used to re-assign them in a load-balanced
+manner periodically during a running simulation.
+</P>
+<P><B>Restrictions:</B>
+</P>
+<P>This command can only be used after the simulation box is defined by
+the <A HREF = "create_box.html">create_box</A> command.
+</P>
+<P>To read gzipped grid files, you must compile SPARTA with the
+-DSPARTA_GZIP option - see <A HREF = "Section_start.html#start_2">Section 2.2</A> of
+the manual for details.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "create_box.html">create_box</A>, <A HREF = "create_grid.html">create_grid</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

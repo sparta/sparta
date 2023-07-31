@@ -1,0 +1,203 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix ave/surf command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID ave/surf group-ID Nevery Nrepeat Nfreq value1 value2 ... keyword args ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command 
+
+<LI>ave/surf = style name of this fix command 
+
+<LI>group-ID = group ID for which surface elements to perform calculation on 
+
+<LI>Nevery = use input values every this many timesteps 
+
+<LI>Nrepeat = # of times to use input values for calculating averages 
+
+<LI>Nfreq = calculate averages every this many timesteps
+zero or more input values can be listed 
+
+<LI>value = c_ID, c_ID[i], f_ID, f_ID[i], v_name 
+
+<PRE>  c_ID = per-surf vector (or array) calculated by a compute with ID
+  c_ID[I] = Ith column of per-surf array calculated by a compute with ID, I can include wildcard (see below)
+  f_ID = per-surf vector (or array) calculated by a fix with ID
+  f_ID[I] = Ith column of per-surf array calculated by a fix with ID, I can include wildcard (see below) 
+</PRE>
+<LI>zero or more keyword/arg pairs may be appended 
+
+<PRE>keyword = <I>ave</I>
+  <I>ave</I> args = one or running
+    one = output a new average value every Nfreq steps
+    running = accumulate average continuously 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>fix 1 ave/surf all 1 100 100 c_surf ave running
+fix 1 ave/surf leftcircle 10 20 1000 c_mine[2]
+fix 1 ave/surf leftcircle 10 20 1000 c_mine[*] 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Use one or more per-surf vectors as inputs every few timesteps, and
+average them surface element by surface element by over longer
+timescales, applying appropriate normalization factors. The resulting
+per-surf averages can be used by other output commands such as the
+<A HREF = "dump.html">dump surf</A> command.  Only surface elements in the surface
+group specified by <I>group-ID</I> are included in the averaging.  See the
+<A HREF = "group.html">group surf</A> command for info on how surface elements can
+be assigned to surface groups.
+</P>
+<P>Each input value can be the result of a <A HREF = "compute.html">compute</A> or
+<A HREF = "fix.html">fix</A>.  The compute or fix must produce a per-surf vector or
+array, not a global or per-particle or per-grid quantity.  If you wish
+to time-average global quantities from a compute or fix then see the
+<A HREF = "fix_ave_time.html">fix ave/time</A> command.  To time-average per-grid
+quantities, see the <A HREF = "fix_ave_grid.html">fix ave/grid</A> command.
+</P>
+<P>Each per-surf value of each input vector is averaged independently.
+</P>
+<P><A HREF = "compute.html">Computes</A> that produce per-surf vectors or arrays are
+those which have the word <I>surf</I> in their style name.  See the doc
+pages for individual <A HREF = "fix.html">fixes</A> to determine which ones produce
+per-surf vectors or arrays.
+</P>
+<P>Note that for values from a compute or fix, the bracketed index I can
+be specified using a wildcard asterisk with the index to effectively
+specify multiple values.  This takes the form "*" or "*n" or "n*" or
+"m*n".  If N = the size of the vector (for <I>mode</I> = scalar) or the
+number of columns in the array (for <I>mode</I> = vector), then an asterisk
+with no numeric values means all indices from 1 to N.  A leading
+asterisk means all indices from 1 to n (inclusive).  A trailing
+asterisk means all indices from n to N (inclusive).  A middle asterisk
+means all indices from m to n (inclusive).
+</P>
+<P>Using a wildcard is the same as if the individual columns of the array
+had been listed one by one.  E.g. these 2 fix ave/surf commands are
+equivalent, since the <A HREF = "compute_grid.html">compute surf</A> command creates
+a per-surf array with 4 columns:
+</P>
+<PRE>compute mySurf all all n fx fy fz
+fix 1 ave/surf all 10 20 1000 c_mySurf[*]
+fix 1 ave/surf all 10 20 1000 c_mySurf[1] c_mySurf[2] &
+                              c_mySurf[3] c_mySurf[4] 
+</PRE>
+<HR>
+
+<P>The <I>Nevery</I>, <I>Nrepeat</I>, and <I>Nfreq</I> arguments specify on what
+timesteps the input values will be used in order to contribute to the
+average.  The final averaged quantities are generated on timesteps
+that are a multiple of <I>Nfreq</I>.  The average is over <I>Nrepeat</I>
+quantities, computed in the preceding portion of the simulation every
+<I>Nevery</I> timesteps.  <I>Nfreq</I> must be a multiple of <I>Nevery</I> and
+<I>Nevery</I> must be non-zero even if <I>Nrepeat</I> is 1.  Also, the timesteps
+contributing to the average value cannot overlap, i.e. Nfreq >
+(Nrepeat-1)*Nevery is required.
+</P>
+<P>For example, if Nevery=2, Nrepeat=6, and Nfreq=100, then values on
+timesteps 90,92,94,96,98,100 will be used to compute the final average
+on timestep 100.  Similarly for timesteps 190,192,194,196,198,200 on
+timestep 200, etc.
+</P>
+<HR>
+
+<P>If a value begins with "c_", a compute ID must follow which has been
+previously defined in the input script.  If no bracketed term is
+appended, and the compute calculates a per-surf vector, then the
+per-surf vector is used.  If <I>c_ID[I]</I> is used, then I must be in
+the range from 1-M, which will use the Ith column of the M-column
+per-surf array calculated by the compute.  See the discussion above
+for how I can be specified with a wildcard asterisk to effectively
+specify multiple values.
+</P>
+<P>Users can also write code for their own compute styles and <A HREF = "Section_modify.html">add them
+to SPARTA</A>.
+</P>
+<P>If a value begins with "f_", a fix ID must follow which has been
+previously defined in the input script.  If no bracketed term is
+appended, and the fix calculates a per-surf vector, then the per-surf
+vector is used.  If <I>f_ID[I]</I> is used, then I must be in the range
+from 1-M, which will use the Ith column of the M-column per-surf array
+calculated by the fix.  See the discussion above for how I can be
+specified with a wildcard asterisk to effectively specify multiple
+values.
+</P>
+<P>Note that some fixes only produce their values on certain timesteps,
+which must be compatible with <I>Nevery</I>, else an error will result.
+Users can also write code for their own fix styles and <A HREF = "Section_modify.html">add them to
+SPARTA</A>.
+</P>
+<HR>
+
+<P>For averaging of a value that comes from a compute or fix,
+normalization is performed as follows.  If the compute or fix is
+summing over particles to calculate a per-surf quantity (e.g. pressure
+or energy flux), this takes the form of a numerator divided by a
+denominator.  For example, see the formulas discussed on the <A HREF = "compute_surf.html">compute
+surf</A> doc page, where the denominator is 1 (for
+keyword n), area times dt (timestep) for the other quantities (press,
+shx, ke, etc).  When this command averages over a series of timesteps,
+the numerator and denominator are summed separately.  This means the
+numerator/denominator division only takes place when this fix produces
+output, every Nfreq timesteps.
+</P>
+<HR>
+
+<P>Additional optional keywords also affect the operation of this fix. 
+</P>
+<P>The <I>ave</I> keyword determines what happens to the accumulation of
+statistics every <I>Nfreq</I> timesteps.
+</P>
+<P>If the <I>ave</I> setting is <I>one</I>, then the values produced on timesteps
+that are multiples of Nfreq are independent of each other.
+Normalization as described above is performed, and all tallies are
+zeroed before accumulating over the next <I>Nfreq</I> steps.
+</P>
+<P>If the <I>ave</I> setting is <I>running</I>, then tallies are never zeroed.
+Thus the output at any <I>Nfreq</I> timestep is normalized over all
+previously accumulated samples since the fix was defined.  The tallies
+can only be zeroed by deleting the fix via the unfix command, or by
+re-defining the fix, or by re-specifying it.
+</P>
+<HR>
+
+<P><B>Restart, output info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.
+</P>
+<P>This fix produces a per-surf vector or array which can be accessed by
+various output commands.  A vector is produced if only a single
+quantity is averaged by this fix.  If two or more quantities are
+averaged, then an array of values is produced, where the number of
+columns is the number of quantities averaged.  The per-surf values can
+only be accessed on timesteps that are multiples of <I>Nfreq</I> since that
+is when averaging is performed.
+</P>
+<P>Surface elements not in the specified <I>group-ID</I> will output zeroes
+for all their values.
+</P>
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "compute.html">compute</A>, "<A HREF = "fix_ave_time.html">fix ave/time</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The option defaults are ave = one.
+</P>
+</HTML>

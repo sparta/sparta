@@ -1,0 +1,75 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>write_grid command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>write_grid filename 
+</PRE>
+<UL><LI>filename = name of file to write grid info to 
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>write_grid data.grid 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Write a grid file in text format listing the grid cell IDs in the
+current hierarchical grid.  See the <A HREF = "read_grid.html">read_grid</A> and
+<A HREF = "create_grid.html">create_grid</A> commands, as well as <A HREF = "Section_howto.html#howto_8">Section
+6.8</A> of the manual for a definition of
+hierarchical grids and grid cell IDs as used by SPARTA.
+</P>
+<P>The file is in the following format which is the same as the input
+file used by the <A HREF = "read_grid.html"">read_grid</A> command.  Thus the file
+can be used to start a subsequent simulation with the same grid
+topology.
+</P>
+<PRE>Description line 
+</PRE>
+<P>N cells
+M levels
+n1 n2 n3 level-1
+n1 n2 n3 level-2
+...
+n1 n2 n3 level-M
+</P>
+<PRE>Cells 
+</PRE>
+<PRE>id1
+id2
+...
+idN ... 
+</PRE>
+<P>The file begins with an arbitrary description line followed by zero or
+more blank lines.  The header section of the file then lists the
+number of grid cells N and the number of levels M in the hierarchical
+grid.  For each level the n1, n2, n3 values give the size of the
+sub-grid that parent cells (one level lower) are sub-divided into at
+this level.  The lines in the header section can be in any order
+except the the number of levels M must appear before any of the
+level-* lines.  A blank line ends the header section.
+</P>
+<P>The Cells section of the file lists all the grid cell IDs, one per
+line.  They may be in arbitrary order, particularly if the file is
+written in parallel, where each processor contributes a subset of the
+grid cell IDs.
+</P>
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "read_grid.html">read_grid</A>, <A HREF = "create_grid.html">create_grid</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

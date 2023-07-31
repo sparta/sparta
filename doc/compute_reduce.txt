@@ -1,0 +1,252 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+compute reduce command :h3
+
+[Syntax:]
+
+compute ID reduce mode input1 input2 ... keyword args ... :pre
+
+ID is documented in "compute"_compute.html command :ulb,l
+reduce = style name of this compute command :l
+mode = {sum} or {min} or {max} or {ave} or {sumsq} or {avesq} or (sum-area) or {ave-area} :l
+one or more inputs can be listed :l
+input = x, y, z, vx, vy, vz, ke, erot, evib, c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :l
+  x,y,z,vx,vy,vz = particle position or velocity component
+  ke,erot,evib = particle energy component
+  c_ID = per-particle or per-grid vector calculated by a compute with ID
+  c_ID\[I\] = Ith column of per-particle or per-grid array calculated by a compute with ID, I can include wildcard (see below)
+  f_ID = per-particle or per-grid or per-surf vector calculated by a fix with ID
+  f_ID\[I\] = Ith column of per-particle or per-grid or per-surf array calculated by a fix with ID, I can include wildcard (see below)
+  v_name = per-particle or per-grid vector calculated by a particle-style or grid-style variable with name :pre
+
+zero or more keyword/args pairs may be appended :l
+keyword = {replace} or {subset} :l
+  {replace} args = vec1 vec2
+    vec1 = reduced value from this input vector will be replaced
+    vec2 = replace it with vec1\[N\] where N is index of max/min value from vec2
+  {subset} arg = subsetID
+    subsetID = mixture-ID or grid group-ID or surface group-ID :pre
+:ule
+
+[Examples:]
+
+compute 1 reduce sum c_grid\[*\]
+compute 2 reduce min f_ave v_myKE subset trace_species
+compute 3 reduce max c_mine\[1\] c_mine\[2\] c_temp replace 1 3 replace 2 3 :pre
+
+These commands will include the average grid cell temperature, across
+all grid cells, in the stats output:
+
+compute 1 temp
+compute	2 grid all all temp
+compute 3 reduce ave c_2\[1\]
+stats_style step c_temp c_3 :pre
+
+[Description:]
+
+Define a calculation that "reduces" one or more vector inputs into
+scalar values, one per listed input.  The inputs can be per-particle
+or per-grid or per-surf quantities; they cannot be global quantities.
+Particle attributes are per-particle quantities,
+"computes"_compute.html may generate per-particle or per-grid
+quantities, "fixes"_fix.html may generate any of the three kinds of
+quantities, and "particle-style or grid-style variables"_variable.html
+generate per-particle or per-grid quantities.  See the
+"variable"_variable command and its special functions which can
+perform the same operations as the compute reduce command on global
+vectors.
+
+IMPORTANT NOTE: All inputs to a compute reduce command must be the
+same type: per-particle, per-grid, or per-surf.  You can use the
+command multiple times if you need to reduce values of different
+types.
+
+The reduction operation is specified by the {mode} setting.  The {sum}
+option adds the values in the vector into a global total.  The {min}
+or {max} operations find the minimum or maximum value across all
+vector values.  The {ave} operation adds the vector values into a
+global total, then divides by the number of values in the vector.  The
+{sumsq} operation sums the square of the values in the vector into a
+global total.  The {avesq} oepration does the same as {sumsq}, then
+divdes the sum of squares by the number of values.  These two
+operations can be useful for calculating the variance of some
+quantity, e.g. variance = sumsq - ave^2.
+
+The {sum-area} or {ave-area} options can only be used for per-surf
+inputs.  Both options multiply each per-surf value by the area of the
+surface element (triangle in 3d, line segment in 2d) and sum the
+resulting values over all surface elements.  That is the output for
+the {sum-area} option.  For the {ave-area} option the summed value is
+divided by the summed area of all elements.  Note that both of these
+options are designed to work with flux values (e.g. mass per area per
+time) produced by the "compute surf"_compute_surf.html command with
+its default {norm} = yes option.
+
+:line
+
+Each listed input vector is operated on independently.
+
+Each listed input vector can be a particle attribute or can be the
+result of a "compute"_compute.html or "fix"_fix.html or the evaluation
+of a "variable"_variable.html.
+
+Note that for values from a compute or fix, the bracketed index I can
+be specified using a wildcard asterisk with the index to effectively
+specify multiple values.  This takes the form "*" or "*n" or "n*" or
+"m*n".  If N = the size of the vector (for {mode} = scalar) or the
+number of columns in the array (for {mode} = vector), then an asterisk
+with no numeric values means all indices from 1 to N.  A leading
+asterisk means all indices from 1 to n (inclusive).  A trailing
+asterisk means all indices from n to N (inclusive).  A middle asterisk
+means all indices from m to n (inclusive).
+
+Using a wildcard is the same as if the individual columns of the array
+had been listed one by one.  E.g. these 2 compute reduce commands are
+equivalent, since the "compute grid"_compute_grid.html command creates
+a per-grid array with 3 columns:
+
+compute myGrid grid all all u v w
+compute 2 all reduce min c_myGrid\[*\]
+compute 2 all reduce min c_myGrid\[1\] c_myGrid\[2\] c_myGrid\[3\] :pre
+
+:line
+
+The particle attributes x,y,z,vx,vy,vz are position and velocity
+components.  The ke,erot,evib attributes are for kinetic, rotational,
+and vibrational energy of particles.
+
+If a value begins with "c_", a compute ID must follow which has been
+previously defined in the input script.  Computes can generate
+per-particle or per-grid quantities.  See the individual
+"compute"_compute.html doc page for details.  If no bracketed integer
+is appended, the vector calculated by the compute is used.  If a
+bracketed integer is appended, the Ith column of the array calculated
+by the compute is used.  Users can also write code for their own
+compute styles and "add them to SPARTA"_Section_modify.html.  See the
+discussion above for how I can be specified with a wildcard asterisk
+to effectively specify multiple values.
+
+IMPORTANT NOTE: A compute which generates per-surf quantities cannot
+be used as input.  This is because its values have not yet been
+combined across processors to sum the contributions from all
+processors whose particles collide with the same surface element.  The
+combining is performed by the "fix ave/surf"_fix_ave_surf.html
+command, at each of its {Nfreq} timesteps.  Thus to use this compute
+on per-surf values, specify a fix ID for a "fix
+ave/surf"_fix_ave_surf.html and insure the fix outputs its values when
+they are needed.
+
+If a value begins with "f_", a fix ID must follow which has been
+previously defined in the input script.  Fixes can generate
+per-particle or per-grid or per-surf quantities.  See the individual
+"fix"_fix.html doc page for details.  Note that some fixes only
+produce their values on certain timesteps, which must be compatible
+with when this compute references the values, else an error results.
+If no bracketed integer is appended, the vector calculated by the fix
+is used.  If a bracketed integer is appended, the Ith column of the
+array calculated by the fix is used.  Users can also write code for
+their own fix style and "add them to SPARTA"_Section_modify.html.  See
+the discussion above for how I can be specified with a wildcard
+asterisk to effectively specify multiple values.
+
+If a value begins with "v_", a variable name must follow which has
+been previously defined in the input script.  It must be a
+"particle-style or grid-style variable"_variable.html.  Both styles
+define formulas which can reference stats keywords or invoke other
+computes, fixes, or variables when they are evaluated.  Particle-style
+variables can also reference various per-particle attributes
+(position, velocity, etc).  So these variables are a very general
+means of creating per-particle or per-grid quantities to reduce.
+
+:line
+
+If the {replace} keyword is used, two indices {vec1} and {vec2} are
+specified, where each index ranges from 1 to the # of input values.
+The replace keyword can only be used if the {mode} is {min} or {max}.
+It works as follows.  A min/max is computed as usual on the {vec2}
+input vector.  The index N of that value within {vec2} is also stored.
+Then, instead of performing a min/max on the {vec1} input vector, the
+stored index is used to select the Nth element of the {vec1} vector.
+
+Here is an example which prints out both the grid cell ID and number
+of particles for the grid cell with the maximum number of particles:
+
+compute 1 property/grid id
+compute	2 grid all n
+compute	3 reduce max c_1 c_2\[1\] replace 1 2
+stats_style step c_temp c_3\[1\] c_3\[2\] :pre
+
+The first two input values in the compute reduce command are vectors
+with the ID and particle count of each grid cell.  Instead of taking
+the max of the ID vector, which does not yield useful information in
+this context, the {replace} keyword will extract the ID for the grid
+cell which has the maximum number of particles.  This ID and the
+cell's particle count will be printed with the statistical output.
+
+Note that the {replace} keyword can be used multiple times with
+different pairs of indices.
+
+:line
+
+The {subset} keyword allows selection of a subset of each input
+vectors quantities to be used for the reduce operation.  This may
+affect all of the reduction operations.  E.g. the ave and avesq
+operations will become averages for only a subset of numerical values.
+
+If inputs are per-particle values, then a mixture ID should be
+specified.  Only particle species belonging to the mixture will be
+included in the calculations.  See the "mixture"_mixture.html command
+for how a set of species is included in a mixture.
+
+If inputs are per-grid values, then a grid group ID should be
+specified.  Only grid cells in the grid group will be included in the
+calculations.  See the "group grid"_group.html command for info on how
+grid cells can be assigned to grid groups.
+
+If inputs are per-surface values, then a surface group ID should be
+specified.  Only surface elements in the surface group will be
+included in the calculations.  See the "group surf"_group.html command
+for info on how surface elements can be assigned to surface groups.
+
+IMPORTANT NOTE: If computes or fixes are used as inputs to compute
+reduce, they may define their own subsets of particles, grid cells, or
+surface elements which contribute to their output.  E.g. grid cells not
+in the grid group used by the "compute grid"_compute_grid.html command
+have zero values as output.  You typically should use an argument for
+the {subset} keyword which is consistent with the inputs, but that is
+not required.
+
+:line
+
+If a single input is specified this compute produces a global scalar
+value.  If multiple inputs are specified, this compute produces a
+global vector of values, the length of which is equal to the number of
+inputs specified.
+
+:line
+
+[Output info:]
+
+This compute calculates a global scalar if a single input value is
+specified or a global vector of length N where N is the number of
+inputs, and which can be accessed by indices 1 to N.  These values can
+be used by any command that uses global scalar or vector values from a
+compute as input.  See "Section 6.4"_Section_howto.html#howto_4 for an
+overview of SPARTA output options.
+
+The scalar or vector values will be in whatever "units"_units.html the
+quantities being reduced are in.
+
+[Restrictions:] none
+
+[Related commands:]
+
+"compute"_compute.html, "fix"_fix.html, "variable"_variable.html
+
+[Default:] none

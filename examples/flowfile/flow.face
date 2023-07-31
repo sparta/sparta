@@ -1,0 +1,11 @@
+# sample 2d inflow/file profile
+
+XLO
+NI 3
+NV 3
+VALUES vx temp N
+IMESH 2 5 8
+
+1 100.0 0.1 0.99
+2 300.0 2.0 0.0
+3 100.0 0.1 0.99

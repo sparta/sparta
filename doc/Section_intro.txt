@@ -1,0 +1,303 @@
+"Previous Section"_Manual.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_start.html :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+1. Introduction :h3
+
+These sections provide an overview of what SPARTA can do, describe
+what it means for SPARTA to be an open-source code, and acknowledge
+the funding and people who have contributed to SPARTA.
+
+1.1 "What is SPARTA"_#intro_1
+1.2 "SPARTA features"_#intro_2
+1.3 "Grids and surfaces in SPARTA"_#intro_3
+1.4 "Open source distribution"_#intro_4
+1.5 "Acknowledgments and citations"_#intro_5 :all(b)
+
+:line
+
+1.1 What is SPARTA :link(intro_1),h4
+
+SPARTA is a Direct Simulation Montel Carlo code that models rarefied
+gases, using collision, chemistry, and boundary condition models.  It
+uses a hierarchical Cartesian grid to track and group particles for 3d
+or 2d or axisymmetric models.  Objects emedded in the gas are
+represented as triangulated surfaces and cut through grid cells.
+
+For examples of SPARTA simulations, see the "SPARTA WWW Site"_sws.
+
+SPARTA runs efficiently on single-processor desktop or laptop
+machines, but is designed for parallel computers.  It will run on any
+parallel machine that compiles C++ and supports the "MPI"_mpi
+message-passing library.  This includes distributed- or shared-memory
+parallel machines as well as commodity clusters.
+
+:link(mpi,http://www-unix.mcs.anl.gov/mpi)
+
+SPARTA can model systems with only a few particles up to millions or
+billions.  See "Section 8"_Section_perf.html for information on SPARTA
+performance and scalability, or the Benchmarks section of the "SPARTA
+WWW Site"_sws.
+
+SPARTA is a freely-available open-source code, distributed under the
+terms of the "GNU Public License"_gnu, or sometimes by request under
+the terms of the "GNU Lesser General Public License (LGPL)"_gnu2,
+which means you can use or modify the code however you wish.  The only
+restrictions imposed by the GPL or LGPL are on how you distribute the
+code further.  See "Section 1.4"_#intro_4 below for a brief discussion
+of the open-source philosophy.
+
+:link(gnu,http://www.gnu.org/copyleft/gpl.html)
+
+SPARTA is designed to be easy to modify or extend with new
+capabilities, such as new collision or chemistry models, boundary
+conditions, or diagnostics.  See "Section 10"_Section_modify.html for
+more details.
+
+SPARTA is written in C++ which is used at a hi-level to structure the
+code and its options in an object-oriented fashion.  The kernel
+computations use simple data structures and C-like code for effciency.
+So SPARTA is really written in an object-oriented C style.
+
+SPARTA was developed with internal funding at "Sandia National
+Laboratories"_snl, a US Department of Energy lab.  See "Section
+1.5"_#intro_5 below for more information on SPARTA funding and
+individuals who have contributed to SPARTA.
+
+:link(snl,http://www.sandia.gov)
+
+:line
+
+1.2 SPARTA features :link(intro_2),h4
+
+This section highlights SPARTA features, with links to specific
+commands which give more details.  The "next section"_#intro_3
+illustrates the kinds of grid geometries and surface definitions which
+SPARTA supports.
+
+If SPARTA doesn't have your favorite collision model, boundary
+condition, or diagnostic, see "Section 10"_Section_modify.html of the
+manual, which describes how it can be added to SPARTA.
+
+General features :h4
+
+  runs on a single processor or in parallel
+  distributed-memory message-passing parallelism (MPI)
+  spatial-decomposition of simulation domain for parallelism
+  open-source distribution
+  highly portable C++
+  optional libraries used: MPI
+  "easy to extend"_Section_modify.html with new features and functionality
+  runs from an "input script"_Section_commands.html
+  syntax for defining and using "variables and formulas"_variable.html
+  syntax for "looping over runs"_jump.html and breaking out of loops
+  run one or "multiple simulations simultaneously"_Section_howto.html#howto_3 (in parallel) from one script
+  "build as library"_Section_start.html#start_4, invoke SPARTA thru "library interface"_Section_howto.html#howto_6 or provided "Python wrapper"_Section_python.html
+  "couple with other codes"_Section_howto.html#howto_7: SPARTA calls other code, other code calls SPARTA, umbrella code calls both :ul
+
+Models :h4
+
+  "3d or 2d"_dimension.html or "2d-axisymmetric"_Section_howto.html#howto_2 domains
+  variety of "global boundary conditions"_boundary.html
+  "create particles"_create_particles.html within flow volume
+  emit particles from simulation box faces due to "flow properties"_fix_emit_face.html
+  emit particles from simulation box faces due to "profile defined in file"_fix_emit_face_file.html
+  emit particles from surface elements due to "normal and flow properties"_fix_emit_surf.html
+  "ambipolar"_Section_howto.html#howto_11 approximation for ionized plasmas :ul
+
+Geometry :h4
+
+  "Cartesian, heirarchical grids"_#intro_3 with multiple levels of local refinement
+  "create grid from input script"_create_grid.html or "read from file"_read_grid.html
+  embed :triangulated (3d) or line-segmented (2d) surfaces"_#intro_3 in grid, "read in from file"_read_surf.html :ul
+
+Gas-phase collisions and chemistry :h4
+
+  collisions between all particles or pairs of species groups within grid cells
+  "collision models:"_collide.html VSS (variable soft sphere), VHS (variable hard sphere), HS (hard sphere)
+  "chemistry models:"_react.html TCE, QK :ul
+
+Surface collisions and chemistry :h4
+
+  for surface elements or global simulation box "boundaries"_bound_modify.html
+  "collisions:"_surf_collide.html specular or diffuse
+  "reactions"_surf_react.html :ul
+
+Performance :h4
+
+  "grid cell weighting"_global.html of particles
+  "adaptation"_adapt_grid.html of the grid cells between runs
+  "on-the-fly adaptation"_fix_adapt.html of the grid cells
+  "static"_balance_grid.html load-balancing of grid cells or particles
+  "dynamic"_fix_balance.html load-balancing of grid cells or particles :ul
+
+Diagnostics :h4
+
+  "global boundary statistics"_compute_boundary.html
+  "per grid cell statistics"_compute_grid.html
+  "per surface element statistics"_compute_surf.html
+  time-averaging of "global"_fix_ave_time.html, "grid"_fix_ave_grid.html, "surface"_fix_ave_surf.html statistics :ul
+
+Output :h4
+
+  "log file of statistical info"_stats_style.html
+  "dump files"_dump.html (text or binary) of per particle, per grid cell, per surface element values
+  binary "restart files"_restart.html
+  on-the-fly "rendered images and movies"_dump_image.html of particles, grid cells, surface elements :ul
+
+Pre- and post-processing :h4
+
+Various pre- and post-processing serial tools are packaged with
+SPARTA; see "Section 9"_Section_tools.html of the manual. :ulb,l
+
+Our group has also written and released a separate toolkit called
+"Pizza.py"_pizza which provides tools for doing setup, analysis,
+plotting, and visualization for SPARTA simulations.  Pizza.py is
+written in "Python"_python and is available for download from "the
+Pizza.py WWW site"_pizza. :l,ule
+
+:link(pizza,http://pizza.sandia.gov)
+:link(python,http://www.python.org)
+
+:line
+
+1.3 Grids and surfaces in SPARTA :link(intro_3),h4
+
+SPARTA overlays a grid over the simulation domain which is used to
+track particles and to co-locate particles in the same grid cell for
+performing collision and chemistry operations.  SPARTA uses a
+Cartesian hierarchical grid.  Cartesian means that the faces of a grid
+cell are aligned with the Cartesian xyz axes.  Hierarchical means that
+individual grid cells can be sub-divided into smaller cells,
+recursively.  This allows for flexible grid cell refinement in any
+region of the simulation domain.  E.g. around a surface, or in a
+high-density region of the gas flow.
+
+An example 2d hierarchical grid is shown in the diagram, for a
+circular surface object (in red) with the grid refined on the upwind
+side of the object (flow from left to right).
+
+:c,image(JPG/refine_grid.jpg)
+
+Objects represented with a surface triangulation (line segments in 2d)
+can also be read in to define objects which particles flow around.
+Individual surface elements are assigned to grid cells they intersect
+with, so that particle/surface collisions can be efficiently computed.
+
+As an example, here is coarsely triangulated representation of the
+space shuttle (only 616 triangles!), which could be embedded in a
+simulation box.  Click on the image for a larger picture.
+
+:c,image(JPG/shuttle_small.jpg,JPG/shuttle.jpg)
+
+See "Sections 4.9"_Section_howto.html#howto_9 and
+"4.10"_Section_howto.html# for more details of both the grids and
+surface objects that SPARTA supports and how to define them.
+
+:line
+
+1.4 Open source distribution :link(intro_4),h4
+
+SPARTA comes with no warranty of any kind.  As each source file states
+in its header, it is a copyrighted code that is distributed free-of-
+charge, under the terms of the "GNU Public License"_gnu (GPL).  This
+is often referred to as open-source distribution - see
+"www.gnu.org"_gnuorg or "www.opensource.org"_opensource for more
+details.  The legal text of the GPL is in the LICENSE file that is
+included in the SPARTA distribution.
+
+:link(gnuorg,http://www.gnu.org)
+:link(opensource,http://www.opensource.org)
+
+Here is a summary of what the GPL means for SPARTA users:
+
+(1) Anyone is free to use, modify, or extend SPARTA in any way they
+choose, including for commercial purposes.
+
+(2) If you distribute a modified version of SPARTA, it must remain
+open-source, meaning you distribute it under the terms of the GPL.
+You should clearly annotate such a code as a derivative version of
+SPARTA.
+
+(3) If you release any code that includes SPARTA source code, then it
+must also be open-sourced, meaning you distribute it under the terms
+of the GPL.
+
+(4) If you give SPARTA files to someone else, the GPL LICENSE file and
+source file headers (including the copyright and GPL notices) should
+remain part of the code.
+
+In the spirit of an open-source code, these are various ways you can
+contribute to making SPARTA better.  You can send email to the
+"developers"_http://sparta.sandia.gov/authors.html on any of these
+topics.
+
+Point prospective users to the "SPARTA WWW Site"_sws.  Mention it in
+talks or link to it from your WWW site. :ulb,l
+
+If you find an error or omission in this manual or on the "SPARTA WWW
+Site"_sws, or have a suggestion for something to clarify or include,
+send an email to the
+"developers"_http://sparta.sandia.gov/authors.html. :l
+
+If you find a bug, "Section 12.1"_Section_errors.html#err_2 describes
+how to report it. :l
+
+If you publish a paper using SPARTA results, send the citation (and
+any cool pictures or movies) to add to the Publications, Pictures, and
+Movies pages of the "SPARTA WWW Site"_sws, with links and attributions
+back to you. :l
+
+The tools sub-directory of the SPARTA distribution has various
+stand-alone codes for pre- and post-processing of SPARTA data.  More
+details are given in "Section 9"_Section_tools.html.  If you write a
+new tool that others will find useful, it can be added to the SPARTA
+distribution. :l
+
+SPARTA is designed to be easy to extend with new code for features
+like boundary conditions, collision or chemistry models, diagnostic
+computations, etc.  "Section 10"_Section_modify.html of the manual
+gives details.  If you add a feature of general interest, it can be
+added to the SPARTA distribution. :l
+
+The Benchmark page of the "SPARTA WWW Site"_sws lists SPARTA
+performance on various platforms.  The files needed to run the
+benchmarks are part of the SPARTA distribution.  If your machine is
+sufficiently different from those listed, your timing data can be
+added to the page. :l
+
+Cash.  Small denominations, unmarked bills preferred.  Paper sack OK.
+Leave on desk.  VISA also accepted.  Chocolate chip cookies
+encouraged. :ule,l
+
+:line
+
+1.5 Acknowledgments and citations :h4,link(intro_5)
+
+SPARTA development has been funded by the "US Department of
+Energy"_doe (DOE).
+
+:link(doe,http://www.doe.gov)
+
+If you use SPARTA results in your published work, please cite the
+paper(s) listed under the "Citing SPARTA
+link"_http://sparta.sandia.gov/cite.html of the SPARTA WWW page, and
+include a pointer to the "SPARTA WWW Site"_sws
+(http://sparta.sandia.gov):
+
+The "Publications link"_http://sparta.sandia.gov/papers.html on the
+SPARTA WWW page lists papers that have cited SPARTA.  If your paper is
+not listed there, feel free to send us the info.  If the simulations
+in your paper produced cool pictures or animations, we'll be pleased
+to add them to the "Pictures"_http://sparta.sandia.gov/pictures.html
+or "Movies"_http://sparta.sandia.gov/movies.html pages of the SPARTA
+WWW site.
+
+The core group of SPARTA developers is at Sandia National Labs:
+
+Steve Plimpton, sjplimp at sandia.gov
+Michael Gallis, magalli at sandia.gov :ul

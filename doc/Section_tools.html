@@ -1,0 +1,248 @@
+<HTML>
+<CENTER><A HREF = "Section_perf.html">Previous Section</A> - <A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA
+Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> - <A HREF = "Section_modify.html">Next
+Section</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>9. Additional tools 
+</H3>
+<P>SPARTA is designed to be a computational kernel for performing DSMC
+computations.  Additional pre- and post-processing steps are often
+necessary to setup and analyze a simulation.  A few additional tools
+are provided with the SPARTA distribution in the tools directory and
+are described briefly below.
+</P>
+<P>Our group has also written and released a separate toolkit called
+<A HREF = "http://pizza.sandia.gov">Pizza.py</A> which provides tools for doing setup, analysis,
+plotting, and visualization for SPARTA simulations.  Pizza.py is
+written in <A HREF = "http://www.python.org">Python</A> and is available for download from <A HREF = "http://pizza.sandia.gov">the
+Pizza.py web site</A>.
+</P>
+
+
+
+
+<P>Some of the Pizza.py tools relevant to SPARTA are as follows:
+</P>
+<UL><LI>dump - read, write, manipulate particle dump files
+<LI>gl - 3d interactive visualization via OpenGL of dump or surface files
+<LI>sdata - read, write, manipulate surface files
+<LI>olog - read log files and extract columns of data
+<LI>vcr - VCR-style GUI for 3d interactive OpenGL visualization of dump or surface files 
+</UL>
+<P>The dump, sdata, and olog tools are included in the SPARTA
+distribution in the tools/pizza directory, and are used by some of the
+scripts discussed below.
+</P>
+<P>This is the list of tools included in the tools directory of the
+SPARTA distribution.  Each is described in more detail below.
+</P>
+<UL><LI><A HREF = "#dump2cfg">dump2cfg</A> - convert a particle dump file to CFG format
+<LI><A HREF = "#dump2xyz">dump2xyz</A> - convert a particle dump file to XYZ format
+<LI><A HREF = "#gridrefine">grid_refine</A> - refine a grid around a surface
+<LI><A HREF = "#implicit">implicit_grid</A> - create a random porous region with implicit surfaces
+<LI><A HREF = "#jagged">jagged</A> - create jagged 2d/3d surfaces with explicit surfaces
+<LI><A HREF = "#log2txt">log2txt</A> - extract columns of info from a log file
+<LI><A HREF = "#logplot">logplot</A> - plot columns of info from a log file via GnuPlot
+<LI><A HREF = "#paraview">paraview</A> - converters of SPARTA data to <A HREF = "http://www.paraview.org">ParaView</A> format
+<LI><A HREF = "#stl2surf">stl2surf</A> - convert an STL text file into a SPARTA surface file
+<LI><A HREF = "#surfcreate">surf_create</A> - create a surface file with simple objects
+<LI><A HREF = "#surftransform">surf_transform</A> - transform surface via tranlate/scale/rotate operations 
+</UL>
+
+
+<HR>
+
+<HR>
+
+<H4><A NAME = "dump2cfg"></A>dump2cfg tool 
+</H4>
+<P>This is a Python script that converts a SPARTA particle dump file into
+extended CFG format so that it can be visualized by the
+<A HREF = "http://mt.seas.upenn.edu/Archive/Graphics/A">AtomEye</A> visualization
+program.  AtomEye is a very fast particle visualizer, capable of
+interactive visualizations of millions of particles on a desktop
+machine.  It is commonly used in the materials modeling community.
+</P>
+<P>See the header of the script for the syntax used to run it.
+</P>
+<P>This script uses one or more of the "Pizza.py" tools provided in the
+tools/pizza directory.  See the tools/README file for info on how to
+set an environment variable so that the Pizza.py tool files can be
+found by Python, as well as instructions on various ways to run a
+Python script.
+</P>
+<HR>
+
+<H4><A NAME = "dump2xyz"></A>dump2xyz tool 
+</H4>
+<P>This is a Python script that converts a SPARTA particle dump file into
+XYZ format so that it can be visualized by various visualization
+packages that read XYZ formatted files.  An example is
+<A HREF = "http://www.ks.uiuc.edu/Research/vmd">VMD</A> package, commonly used in
+the molecular dynamics modeling community.
+</P>
+<P>See the header of the script for the syntax used to run it.
+</P>
+<P>This script uses one or more of the "Pizza.py" tools provided in the
+tools/pizza directory.  See the tools/README file for info on how to
+set an environment variable so that the Pizza.py tool files can be
+found by Python, as well as instructions on various ways to run a
+Python script.
+</P>
+<HR>
+
+<H4><A NAME = "gridrefine"></A>grid_refine tool 
+</H4>
+<P>This is a Python script that creates a SPARTA grid file adapted
+around the lines or triangles in a SPARTA surface file.  The resulting
+grid file can be read by the <A HREF = "read_grid.html">read_grid</A> command.
+The surface file can be read by the <A HREF = "read_surf.html">read_surf</A> command.
+</P>
+<P>See the header of the script for the various adaptivity options that
+are supported, and the syntax used to run it.
+</P>
+<HR>
+
+<H4><A NAME = "jagged"></A>implicit_grid tool 
+</H4>
+<P>This is a Python script which can be used to generate binary files
+representing porous media samples, as read by the
+<A HREF = "read_isurf.html">read_isurf</A> command.  The output files contain
+randomized grid corner point values which induce implicit surfaces
+which can contain huge numbers of surface elements.  They are useful
+for stress testing the implicit surface options in SPARTA, as selected
+by the <A HREF = "global.html">global surfs</A> command.
+</P>
+<P>See the header of the script for the syntax used to run it.
+</P>
+<P>The examples/implicit directory uses these files as input.
+</P>
+<HR>
+
+<H4><A NAME = "jagged"></A>jagged tools 
+</H4>
+<P>These are 2 Python scripts (jagged2d.py and jagged3d.py) which can be
+used to generate SPARTA surface files in a pattern that can be very
+jagged.  The surfaces can contain huge numbers of surface elements and
+be read by the <A HREF = "read_surf.html">read_surf</A> command.  They are useful
+for stress testing the explict surface options in SPARTA, including
+distributed or non-distributed storage, as selected by the <A HREF = "global.html">global
+surfs</A> command.
+</P>
+<P>See the header of the scripts for the syntax used to run them.
+</P>
+<P>The examples/jagged directory uses these files as input.
+</P>
+<HR>
+
+<H4><A NAME = "log2txt"></A>log2txt tool 
+</H4>
+<P>This is a Python script that reads a SPARTA log file, extracts
+selected columns of statistical output, and writes them to a text
+file.  It knows how to concatenate log file info across multiple
+successive runs.  The columnar output can then be read by various
+plotting packages.
+</P>
+<P>See the header of the script for the syntax used to run it.
+</P>
+<P>This script uses one or more of the "Pizza.py" tools provided in the
+tools/pizza directory.  See the tools/README file for info on how to
+set an environment variable so that the Pizza.py tool files can be
+found by Python, as well as instructions on various ways to run a
+Python script.
+</P>
+<HR>
+
+<H4><A NAME = "logplot"></A>logplot tool 
+</H4>
+<P>This is a Python script that reads a SPARTA log file, extracts the
+selected columns of statistical output, and plots them via the GnuPlot
+program.  It knows how to concatenate log file info across multiple
+successive runs.
+</P>
+<P>See the header of the script for the syntax used to run it.  You must
+have GnuPlot installed on your system to use this script.  If you can
+type "gnuplot" from the command line to start GnuPlot, it should work.
+If not (e.g. because you need a path name), then edit these 2 lines as
+needed in pizza/gnu.py:
+</P>
+<PRE>except: PIZZA_GNUPLOT = "gnuplot"
+except: PIZZA_GNUTERM = "x11" 
+</PRE>
+<P>For example, the first could become "/home/smith/bin/gnuplot".  The
+second should only need changing if GnuPlot requires a different
+setting to plot to your screen.
+</P>
+<P>This script uses one or more of the "Pizza.py" tools provided in the
+tools/pizza directory.  See the tools/README file for info on how to
+set an environment variable so that the Pizza.py tool files can be
+found by Python, as well as instructions on various ways to run a
+Python script.
+</P>
+<HR>
+
+<H4><A NAME = "paraview"></A>paraview tools 
+</H4>
+<P>The tools/paraview directory has scripts which convert
+SPARTA grid and surface data (input and output) to ParaView format.
+</P>
+<P><A HREF = "http://www.paraview.org">ParaView</A> is a popular, powerful, freely-available
+visualization package.  You must have ParaView installed to use the
+Python scripts.  See tools/paraview/README for more details.
+</P>
+<P>The scripts were developed by Tom Otahal (Sandia).
+</P>
+<HR>
+
+<H4><A NAME = "stl2surf"></A>stl2surf tool 
+</H4>
+<P>This is a Python script that reads a stereolithography (STL) text file
+and converts it to a SPARTA surface file.  STL files contain a
+collection of triangles and can be created by various mesh-generation
+programs.  The format for SPARTA surface files is described on the
+<A HREF = "read_surf.html">read_surf</A> command doc page.
+</P>
+<P>See the header of the script for the syntax used to run it, e.g.
+</P>
+<PRE>% python stl2surf.py stlfile surffile 
+</PRE>
+<P>The script also checks the triangulated object to see if it is
+"watertight" and issues a warning if it is not, since SPARTA will
+perform the same check.  The <A HREF = "read_surf.html">read_surf</A> command doc
+page explains what watertight means for 3d objects.
+</P>
+<HR>
+
+<H4><A NAME = "surfcreate"></A>surf_create tool 
+</H4>
+<P>This is a Python script that creates a SPARTA surface file containing
+one or more simple objects whose surface is represented as triangules
+(3d) or line segments (2d).  Such files can be read by the
+<A HREF = "read_surf.html">read_surf</A> command.  The 3d objects it supports are a
+sphere, box, and spikysphere (randomized radius at each point).  The
+2d objects it supports are a circle, rectangle, triangle, and
+spikycircly (randomized radius at each point).
+</P>
+<P>See the header of the script for the syntax used to run it.
+</P>
+<HR>
+
+<H4><A NAME = "surftransform"></A>surf_transform tool 
+</H4>
+<P>This is a Python script that transforms a SPARTA surface file into a
+new surface file using various operations supported by the
+<A HREF = "read_surf.html">read_surf</A> command.  These operations include
+translation, scaling, rotation, and inversion (changing which side of
+the surface is inside vs outside).
+</P>
+<P>See the header of the script for the syntax used to run it.
+</P>
+</HTML>

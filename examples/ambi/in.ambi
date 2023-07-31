@@ -1,0 +1,61 @@
+################################################################################
+# flow around a cylinder with ambipolar reactions
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+boundary	    o o p
+global              gridcut 0.01 comm/sort yes
+create_box  	    -2.0 2.0 -2.0 2.0 -0.5 0.5
+create_grid         50 50 1
+balance_grid        rcb cell
+
+global		    fnum 2.6404E16 
+
+mixture		    species nrho 2.6404e20 vstream 12500.0 0 0 temp 217.63 
+
+species             air.species N2 O2 N O NO N2+ O2+ N+ O+ NO+ e
+
+mixture             species copy noelectron
+mixture             noelectron delete e
+mixture             noelectron N2 frac 0.8
+mixture             noelectron O2 frac 0.2
+
+read_surf           data.circle invert
+surf_collide	    1 diffuse 615.0 1.0
+surf_react          1 prob air.surf
+surf_modify         all collide 1 react 1
+
+fix                 ambi ambipolar e N+ N2+ NO+ O+ O2+
+
+collide		    vss species air.vss relax variable
+collide_modify      vremax 1000 yes vibrate discrete rotate smooth
+collide_modify      ambipolar yes
+react               tce air.tce
+
+create_particles    noelectron n 0 twopass
+
+fix                 in emit/face noelectron xlo yhi twopass
+fix                 load balance 100 1.1 rcb part
+
+# too large a timestep, but want to induce ambipolar reactions
+
+timestep 	    1.e-7
+
+compute             10 count species
+compute             temp temp
+stats_style         step cpu np nattempt ncoll nsreact c_temp &
+                    c_10[6] c_10[7] c_10[8] c_10[9] c_10[10] c_10[11]
+
+#dump                2 image all 50 image.*.ppm type type &
+#                    surf proc 0.01 size 512 512 zoom 1.75
+#dump_modify	    2 pad 4 pdiam 6*10 0.2 pdiam 1*5 0.01
+
+stats               100
+
+run                 1000

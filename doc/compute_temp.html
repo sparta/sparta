@@ -1,0 +1,85 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>compute temp command 
+</H3>
+<H3>compute temp/kk command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>compute ID temp 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command
+<LI>temp = style name of this compute command 
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compute 1 temp
+compute myTemp temp 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Define a computation that calculates the temperature of all particles.
+</P>
+<P>The temperature is calculated by the formula KE = dim/2 N kB T, where
+KE = total kinetic energy of the particles (sum of 1/2 m v^2), dim =
+dimensionality of the simulation, N = number of particles, kB =
+Boltzmann constant, and T = temperature.
+</P>
+<P>Note that this definition of temperature does not subtract out a net
+streaming velocity for particles, so it is not a thermal temperature
+when the particles have a non-zero streaming velocity.  See the
+<A HREF = "compute_thermal_grid.html">compute thermal/grid</A> command for
+calculation of thermal temperatures on a per grid cell basis.
+</P>
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>This compute calculates a global scalar (the temperature).  This value
+can be used by any command that uses global scalar values from a
+compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 6.4</A> for an
+overview of SPARTA output options.
+</P>
+<P>The scalar value will be in temperature <A HREF = "units.html">units</A>.
+</P>
+<HR>
+
+<P>Styles with a <I>kk</I> suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+<A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+</P>
+<P>These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the <A HREF = "Section_start.html#start_3">Making
+SPARTA</A> section for more info.
+</P>
+<P>You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the <A HREF = "Section_start.html#start_6">-suffix command-line
+switch</A> when you invoke SPARTA, or you can
+use the <A HREF = "suffix.html">suffix</A> command in your input script.
+</P>
+<P>See the <A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B> none
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

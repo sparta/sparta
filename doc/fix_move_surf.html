@@ -1,0 +1,118 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix move/surf command 
+</H3>
+<H3>fix move/surf/kk command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID move/surf groupID Nevery Nlarge args ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command
+<LI>move/surf = style name of this fix command
+<LI>group-ID = group ID for which surface elements to move
+<LI>Nevery = move surfaces incrementally every this many steps
+<LI>Nlarge = move surfaces the entire distance after this many timesteps
+<LI>args = all remaining args are identical to those defined for the <A HREF = "move_surf.html">move_surf</A> command starting with its "style" argument 
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>fix 1 move/surf all 100 1000 trans 1 0 0
+fix 1 move/surf partial 100 10000 rotate 360 0 0 1 5 5 0 connect yes
+fix 1 move/surf object2 100 50000 rotate 360 0 0 1 5 5 0 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>This command performs on-the-fly movement of all the surface elements
+in the specfied group via one of several styles.  See the <A HREF = "group.html">group
+surf</A> command for info on how surface elements can be
+assigned to surface groups.  Surface element moves can also be
+performed before or between simulations by using the
+<A HREF = "move_surf.html">move_surf</A> command.
+</P>
+<P>Moving surfaces during a simulation run can be useful if you want to
+to track transient changes in a flow while some attribute of the
+surface elements change, e.g. the separation between two spheres.
+</P>
+<P>All of the command arguments which appear after <I>Nlarge</I>, which
+determine how surface elements move, are exactly the same as for the
+<A HREF = "move_surf.html">move_surf</A> command, starting with its <I>style</I>
+argument.  This includes optional keywords it defines.  See its doc
+page for details.
+</P>
+<P><I>Nevery</I> specifies how often surface elements are moved incrementally
+along the path towards their final position.  The current timestep
+must be a multiple of <I>Nevery</I>.
+</P>
+<P><I>Nlarge</I> must be a multiple of <I>Nevery</I> and specifies how long it will
+take the surface elements to move to their final position.
+</P>
+<P>Thus if <I>Nlarge</I> = 100*<I>Nevery</I>, each surface elements will move 1/100 of
+its total distance every <I>Nevery</I> steps.
+</P>
+<P>The same rules that the <A HREF = "move_surf.html">move_surf</A> command follows for
+particle deletion after surface elements move, are followed by this
+command as well.  The criteria are applied after every incremental
+move.  This is to prevent particles from ending up inside surface
+objects.
+</P>
+<P>Likewise, the <I>connect</I> option of the <A HREF = "move_surf.html">move_surf</A>
+command should be used in the same manner by this command if you
+need to insure that moving only some elements of an object
+do not result in a non-watertight surface grid.
+</P>
+<HR>
+
+<P><B>Restart, output info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.  No global or per-particle or per-grid quantities
+are stored by this fix for access by various output commands.
+</P>
+<HR>
+
+<P>Styles with a <I>kk</I> suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+<A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+</P>
+<P>These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the <A HREF = "Section_start.html#start_3">Making
+SPARTA</A> section for more info.
+</P>
+<P>You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the <A HREF = "Section_start.html#start_6">-suffix command-line
+switch</A> when you invoke SPARTA, or you can
+use the <A HREF = "suffix.html">suffix</A> command in your input script.
+</P>
+<P>See the <A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>An error will be generated if any surface element vertex is moved
+outside the simulation box.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "read_surf.html">read_surf</A>, <A HREF = "move_surf.html">move_surf</A>,
+<A HREF = "remove_surf.html">remove_surf</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

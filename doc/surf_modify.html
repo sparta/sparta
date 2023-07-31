@@ -1,0 +1,84 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>surf_modify command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>surf_modify group-ID keyword args ... 
+</PRE>
+<LI>group-ID = ID of the surface group to operate on 
+
+<UL><LI>one or more keyword/arg pairs may be listed 
+
+<LI>keyword = <I>collide</I> or (react) 
+
+<PRE>  <I>collide</I> arg = sc-ID
+    sc-ID = ID of a surface collision model
+  <I>react</I> arg = sr-ID
+    sr-ID = ID of a surface reaction model or <I>none</I> 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>surf_modify sphere collide 1
+surf_modify all collide sphere react sphere 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Set parameters for a group of surface elements in the specified
+group-ID.  Surface elements are read in by the
+<A HREF = "read_surf.html">read_surf</A> command.  They can be assigned to groups by
+that command or via the <A HREF = "group.html">group</A> command.
+</P>
+<P>The <I>collide</I> keyword is used to assign a surface collision model.
+Surface collision models are defined by the
+<A HREF = "surf_collide.html">surf_collide</A> command, which assigns each a surface
+collision ID, specified here as <I>sc-ID</I>.
+</P>
+<P>The effect of this keyword is that particle collisions with surface
+elements in group-ID will be computed by the surface collision model
+with <I>sc-ID</I>.
+</P>
+<P>The <I>react</I> keyword is used to assign a surface reaction model.
+Surface reaction models are defined by the
+<A HREF = "surf_react.html">surf_react</A> command, which assigns each a surface
+reaction ID, specified here as <I>sr-ID</I> or the word "none".  The latter
+means no reaction model.
+</P>
+<P>The effect of this keyword is that particle collisions with surface
+elements in group-ID will induce reactions which are computed by the
+surface reaction model with <I>sr-ID</I>.  If "none" is used, no surface
+reactions occur.
+</P>
+<P>Note that if the same surface element is assigned to multiple groups,
+using this command multiple times may override the effect of a
+previous command that assigned a different collision or reaction model
+to a particular surface element.
+</P>
+<P><B>Restrictions:</B>
+</P>
+<P>All surface elements must be assigned to a surface collision model via
+the <I>collide</I> keyword before a simlulation can be performed.  Using a
+surface reaction model is optional.
+</P>
+<P>This command cannot be used before surfaces exist.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "read_surf.html">read_surf</A>, <A HREF = "bound_modify.html">bound_modify</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The default for surface reactions is none.
+</P>
+</HTML>

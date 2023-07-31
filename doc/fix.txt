@@ -1,0 +1,160 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+fix command :h3
+
+[Syntax:]
+
+fix ID style args :pre
+
+ID = user-assigned name for the fix
+style = one of a long list of possible style names (see below)
+args = arguments used by a particular style :ul
+
+[Examples:]
+
+fix 1 grid/check 100 warn
+fix 1 ave/time all 100 5 1000 c_myTemp c_thermo_temp file temp.profile :pre
+
+[Description:]
+
+Set a fix that will be applied to the system.  In SPARTA, a "fix" is
+an operation that is applied to the system during timestepping.
+Examples include adding particles via inlet boundary conditions or
+computing diagnostics.  Code for new fixes can be added to SPARTA; see
+"Section 10"_Section_modify.html of the manual for details.
+
+Fixes perform their operations at different stages of the timestep.
+If 2 or more fixes operate at the same stage of the timestep, they are
+invoked in the order they were specified in the input script.
+
+The ID for a fix is used to identify the fix in other commands.  Each
+fix ID must be unique; see an exception below.  The ID can only
+contain alphanumeric characters and underscores.  You can specify
+multiple fixes of the same style so long as they have different IDs.
+A fix can be deleted with the "unfix"_unfix.html command, after which
+its ID can be re-used.
+
+IMPORTANT NOTE: The "unfix"_unfix.html command is the only way to turn
+off a fix; simply specifying a new fix with the same style and a
+different ID will not turn off the first one.
+
+If you specify a new fix with the same ID and style as an existing
+fix, the old fix is deleted and the new one is created (presumably
+with new settings).  This is the same as if an "unfix" command were
+first performed on the old fix, except that the new fix is kept in the
+same order relative to the existing fixes as the old one originally
+was.
+
+Some fixes store an internal "state" which is written to binary
+restart files via the "restart"_restart.html or
+"write_restart"_write_restart.html commands.  This allows the fix to
+continue on with its calculations in a restarted simulation.  See the
+"read_restart"_read_restart.html command for info on how to re-specify
+a fix in an input script that reads a restart file.  See the doc pages
+for individual fixes for info on which ones can be restarted.
+
+:line
+
+Each fix style has its own doc page which describes its arguments and
+what it does, as listed below.  Here is an alphabetic list of fix
+styles available in SPARTA:
+
+"adapt"_fix_adapt.html - on-the-fly grid adaptation
+"adapt/kk"_fix_adapt.html - Kokkos version of fix adapt
+"ambipolar"_fix_ambipolar.html - ambipolar approximation for ionized plasmas
+"ave/grid"_fix_ave_grid.html - compute per grid cell time-averaged quantities
+"ave/grid/kk"_fix_ave_grid.html - Kokkos version of fix ave/grid
+"ave/histo"_fix_ave_histo.html - compute/output time averaged histograms
+"ave/histo/weight"_fix_ave_histo.html - compute/output weighted histograms
+"ave/surf"_fix_ave_surf.html - compute per surface element time-averaged quantities
+"ave/time"_fix_ave_time.html - compute/output global time-averaged quantities
+"balance"_fix_balance.html - perform dynamic load-balancing
+"balance/kk"_fix_balance.html - Kokkos version of fix balance
+"emit/face"_fix_emit_face.html - emit particles at global boundaries
+"emit/face/kk"_fix_emit_face.html - Kokkos version of fix emit/face
+"emit/face/file"_fix_emit_face_file.html - emit particles at global boundaries using a distribution defined in a file
+"emit/surf"_fix_emit_surf.html - emit particles at surfaces
+"field/grid"_fix_field_grid.html - apply an external field on a per grid cell basis
+"field/particle"_fix_field_particle.html - apply an external field on a per particle basis
+"grid/check"_fix_grid_check.html - check if particles are in the correct grid cell
+"grid/check/kk"_fix_grid_check.html - Kokkos version of fix grid/check
+"move/surf"_fix_move_surf.html - move surfaces dynamically during a simulation
+"move/surf/kk"_fix_move_surf.html - Kokkos version of fix move/surf
+"print"_fix_print.html - print text and variables during a simulation
+"vibmode"_fix_vibmode.html - discrete vibrational energy modes :ul
+
+There are also additional accelerated compute styles included in the
+SPARTA distribution for faster performance on specific hardware.  The
+list of these with links to the individual styles are given in the
+pair section of "this page"_Section_commands.html#cmd_5.
+
+:line
+
+In addition to the operation they perform, some fixes also produce one
+of four styles of quantities: global, per-particle, per-grid, or
+per-surf.  These can be used by other commands or output as described
+below.  A global quantity is one or more system-wide values, e.g. the
+temperature of the system.  A per-particle quantity is one or more
+values per particle, e.g. the kinetic energy of each particle.  A
+per-grid quantity is one or more values per grid cell.  A per-surf
+quantity is one or more values per surface element.
+
+Global, per-particle, per-grid, and per-surf quantities each come in
+two forms: a single scalar value or a vector of values.  Additionaly,
+global quantities can also be a 2d array of values.  The doc page for
+each fix describes the style and kind of values it produces, e.g. a
+per-particle vector.  Some fixes can produce more than one form of a
+single style, e.g. a global scalar and a global vector.
+
+When a fix quantity is accessed, as in many of the output commands
+discussed below, it can be referenced via the following bracket
+notation, where ID is the ID of the fix:
+
+f_ID | entire scalar, vector, or array
+f_ID\[I\] | one element of vector, one column of array
+f_ID\[I\]\[J\] | one element of array :tb(s=|)
+
+In other words, using one bracket reduces the dimension of the
+quantity once (vector -> scalar, array -> vector).  Using two brackets
+reduces the dimension twice (array -> scalar).  Thus a command that
+uses scalar fix values as input can also process elements of a vector
+or array.
+
+Note that commands and "variables"_variable.html which use fix
+quantities typically do not allow for all kinds, e.g. a command may
+require a vector of values, not a scalar.  This means there is no
+ambiguity about referring to a fix quantity as f_ID even if it
+produces, for example, both a scalar and vector.  The doc pages for
+various commands explain the details.
+
+:line
+
+Any values generated by a fix can be used in several ways:
+
+Global values can be output via the "stats_style"_stats_style.html
+command.  Or the values can be referenced in a "variable
+equal"_variable.html or "variable atom"_variable.html command. :ulb,l
+
+Per-particle values can be output via the "dump particle"_dump.html
+command.  Or the per-particle values can be referenced in an
+"particle-style variable"_variable.html. :l
+
+Per-grid values can be output via the "dump grid"_dump.html command.
+Or the per-grid values can be referenced in a "grid-style
+variable"_variable.html. :l,ule
+
+:line
+
+[Restrictions:] none
+
+[Related commands:]
+
+"unfix"_unfix.html
+
+[Default:] none

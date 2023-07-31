@@ -1,0 +1,122 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>move_surf command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>move_surf groupID style args ... keyword value ... 
+</PRE>
+<UL><LI>group-ID = group ID for which surface elements to move 
+
+<LI>style = <I>file</I> or <I>trans</I> or <I>rotate</I> 
+
+<PRE>  <I>file</I> args = filename entry
+  <I>trans</I> args = Dx Dy Dz
+    Dx,Dy,Dz = displacement applied to all surface points (distance units)
+  <I>rotate</I> args = theta Rx Ry Rz Ox Oy Oz 
+    theta = rotate surface points by this angle in counter-clockwise direction (degrees)
+    Rx,Ry,Rz = rotate around vector starting at origin pointing in this direction
+    Ox,Oy,Oz = origin to rotate around (distance units) 
+</PRE>
+<LI>zero  or more keyword/value pairs may be appended  
+
+<LI>keyword = <I>connect</I> 
+
+<PRE>  connect arg = yes or no 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>move_surf all trans 1 0 0
+move_surf partial rotate 360 0 0 1 5 5 0 connect yes
+move_surf object2 rotate 360 0 0 1 5 5 0 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>This command performs a one-time movement of all the surface elements
+in the specified group via the specified style.  See the <A HREF = "group.html">group
+surf</A> command for info on how surface elements can be
+assigned to surface groups.
+</P>
+<P>This command can be invoked as many times as desired, before or
+between simulation runs.  Surface points can also be moved on-the-fly
+during a simulation by using the <A HREF = "fix_move_surf.html">fix move/surf</A>
+command.
+</P>
+<P>Moving surfaces between simulations can be useful if you want to
+perform a series of runs from one input script, where some attribute
+of the surface elements change, e.g. the separation between two
+spheres.
+</P>
+<P>IMPORTANT NOTE: The <I>file</I> style is not yet implemented.  It will
+allow new positions of points to be listed in a file.
+</P>
+<P>In 2d, surface elements are line segments with 2 vertices each.  In
+3d, surface elements are triangles with 3 vertices each.  If a line
+segment or triangle belongs to the specified group, all of its
+vertices are moved.  This effectively moves the entire surface
+element.  
+</P>
+<P>IMPORTANT NOTE: Unless a vertex is on the simulation box boundary, it
+will be part of two surface elements (in 2d) or multiple surface
+elements (in 3d).  If you choose a surface groupID which does not
+include all the elements in a gridded object, then you cannot move
+them without breaking apart the object in a "watertight" sense (so
+that particles could erroneously move inside the object).  To prevent
+this use the optional <I>connect</I> keyword with its <I>yes</I> setting.  This
+will insure that multiple copies of the same vertex in other elements
+(not in the surface group) will also be moved.  This is a way to morph
+the shape of a gridded object, e.g. make a sphere more oblate, by
+moving only a portion of its elements.
+</P>
+<P>The <I>trans</I> style shifts or displaces each vertex by the vector
+(Dx,Dy,Dz).
+</P>
+<P>The <I>rotate</I> style rotates the coordinates of all vertices by an angle
+<I>theta</I> in a counter-clockwise direction, around the vector starting
+at (Ox,Oy,Oz) and pointing in the direction <I>Rx,Ry,Rz</I>.  Any desired
+rotation can be represented by an appropriate choice of (Ox,Oy,Oz),
+<I>theta</I>, and (Rx,Ry,Rz).
+</P>
+<P>After the surface has been moved, then all particles in grid cells
+that meet either of these criteria are deleted:
+</P>
+<UL><LI>the grid cell is now inside a surface
+<LI>the grid cell overlaps with a surface element that moved 
+</UL>
+<P>This is to prevent particles from ending up inside surface objects.
+</P>
+<P>Note that in this context, "overlaps" means that any part of the
+surface element touches any part of the grid cell, including its
+surface.  Also note that if a surface element object (e.g. a sphere)
+moved a long distance then grid cells that were inside the object in
+its old position and thus contained no particles, will still have no
+particles immediately after the move.  This will effectively leave a
+"void" in the flow until particles re-fill the grid cells that are now
+outside the object.
+</P>
+<P><B>Restrictions:</B>
+</P>
+<P>An error will be generated if any surface element vertex is moved
+outside the simulation box.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "read_surf.html">read_surf</A>, <A HREF = "fix_move_surf.html">fix move/surf</A>,
+<A HREF = "remove_surf.html">remove_surf</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The option default is connect = no.
+</P>
+</HTML>

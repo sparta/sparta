@@ -1,0 +1,40 @@
+This directory contains various kinds of input data files for SPARTA.
+You can add your own files to this directory, using the existing files
+as templates to get the format correct.  Or you can copy these into
+the directory where your input script is and modify them as you wish.
+
+Files that end in ".species" contain thermophysical properties of
+chemical species and are read by the species command.
+
+Files that end in ".species.vib" contain additional info about the
+vibrational modes of polyatomic chemcial species.  They are read by
+the species command via its "vibfile" option.
+
+Files that end in ".vss" or ".vhs" or ".hs" contain collision model
+parameters that can be for the variable soft sphere (VSS) or variable
+hard sphere (vhs) or hard-sphere (HS) models.  These are read by the
+collide command.
+
+Files that end in ".tce" list reactions gas-phase chemistry for the
+Total Collision Energy (TCE) model and are read by the react command.
+
+Files that start with "sdata." contain lists of surface elements and
+are read by the read_surf command.
+
+Files that end in ".stl" are STL-formatted surface files which can be
+converted to SPARTA formatted surface files via the stl2surf.py tool
+in the tools directory.
+
+Files that end in ".surf" list reactions for surface chemistry
+and are read by the surf_react command.
+
+These are the doc pages for various commands which describe the format
+of the corresponding files:
+
+species = doc/species.html
+species.vib = doc/species.html
+vss/vhs/hs = doc/collide.html
+tce = doc/react.html
+sdata = doc/read_surf.html
+stl = doc/Section_tools.html#stl2surf
+surf = doc/surf_react.html

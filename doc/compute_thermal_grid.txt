@@ -1,0 +1,187 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+compute thermal/grid command :h3
+compute thermal/grid/kk command :h3
+
+[Syntax:]
+
+compute ID thermal/grid group-ID mix-ID value1 value2 ... :pre
+
+ID is documented in "compute"_compute.html command :ulb,l
+thermal/grid = style name of this compute command :l
+group-ID = group ID for which grid cells to perform calculation on :l
+mix-ID = mixture ID to perform calculation on :l
+one or more values can be appended :l
+value = {temp} or {press} :l
+  {temp} = temperature
+  {press} = pressure :pre
+:ule
+
+[Examples:]
+
+compute 1 thermal/grid all species temp
+compute 1 thermal/grid subset air temp press :pre
+
+These commands will dump time averaged thermal temperatures for
+each species and each grid cell to a dump file every 1000 steps:
+
+compute 1 thermal/grid species temp
+fix 1 ave/grid 10 100 1000 c_1\[*\]
+dump 1 grid all 1000 tmp.grid id f_1\[*\] :pre
+
+[Description:]
+
+Define a computation that calculates one or more values for each grid
+cell in a grid cell group, which are based on the thermal temperature
+of the particles in each grid cell.  The values are tallied separately
+for each group of species in the specified mixture, as described in
+the Output section below.  See the mixture command for how a set of
+species can be partitioned into groups.
+
+Only grid cells in the grid group specified by {group-ID} are included
+in the calculation.  See the "group grid"_group.html command for info
+on how grid cells can be assigned to grid groups.
+
+The values listed above rely on first computing a thermal temperature
+which subtracts the center-of-mass (COM) velocity for all particles in
+the group and grid cell from each particle to yield a thermal
+velocity.  This thermal velocity is used to compute the temperature,
+as described below.  This is in contrast to some of the values tallied
+by the "compute grid temp"_compute_grid.html command which simply uses
+the full velocity of each particle to compute a temperature.  For
+non-streaming simulations, the two results should be similar, but for
+streaming flows, they will be different.
+
+The results of this compute can be used by different commands in
+different ways.  The values for a single timestep can be output by the
+"dump grid"_dump.html command.
+
+The values over many sampling timesteps can be averaged by the "fix
+ave/grid"_fix_ave_grid.html command.  It does its averaging as if the
+particles in the cell at each sampling timestep were combined together
+into one large set of particles to compute the formulas below.  
+
+Note that this is a different form of averaging than taking the values
+produced by the formulas below for a single timestep, summing those
+values over the sampling timesteps, and then dividing by the number of
+sampling steps.
+
+Also note that the center-of-mass (COM) velocity that is subtracted
+from each particle to yield a squared thermal velocity Csq for each
+particle, as described below, is also computed over one large set of
+particles (across all timesteps).  This is in contrast to using a COM
+velocity computed only for particles in the current timestep, which is
+what the "compute sonine/grid"_compute_sonine_grid.html command does.
+
+:line
+
+Calculation of the thermal temperature is done by first calcuating the
+center-of-mass (COM) velocity of particles for each group within a
+grid cell.  This is done as follows:
+
+COMx = Sum_i (mass_i Vx_i) / Sum_i (mass_i)
+COMy = Sum_i (mass_i Vy_i) / Sum_i (mass_i)
+COMz = Sum_i (mass_i Vz_i) / Sum_i (mass_i)
+Cx = Vx - COMx
+Cy = Vy - COMy
+Cz = Vz - COMz
+Csq = Cx*Cx + Cy*Cy + Cz*Cz :pre
+
+The COM velocity is (COMx,COMy,COMz).  The thermal velocity of each
+particle is (Cx,Cy,Cz), i.e. its velocity minus the COM velocity of
+particles in its group and cell.  This allows computation of Csq for
+each particle which is used to calculate the total kinetic energy due
+to particles in the group as follows:
+
+thermal_KE = Sum_i (1/2 mass_i Csq_i) :pre
+
+The {temp} value computes the thermal temperature T, due to particles
+in each group:
+
+T = thermal_KE / (3/2 N kB) :pre
+
+The {press} value uses the thermal_KE to compute a pressure P for the
+grid cell due to particles in the group:
+
+P = 2/3 fnum/volume * thermal_KE :pre
+
+Note that if multiple groups are defined in the mixture, one group's
+value is effectively a partial pressure due to particles in the group.
+When accumulated over multiple sampling steps, this value is
+normalized by the number of sampling steps.  Note that if particle
+weighting is enabled via the "global weight"_global.html command, then
+the volume used in the formula is divided by the weight assigned to
+the grid cell.
+
+:line
+
+[Output info:]
+
+This compute calculates a per-grid array, with the number of columns
+equal to the number of values times the number of groups.  The
+ordering of columns is first by values, then by groups.  I.e. if the
+{temp} and {press} values were specified as keywords, then the first
+two columns would be {temp} and {press} for the first group, the 3rd
+and 4th columns would be {temp} and {press} for the second group, etc.
+
+This compute performs calculations for all flavors of child grid cells
+in the simulation, which includes unsplit, cut, split, and sub cells.
+See "Section 6.8"_Section_howto.html#howto_8 of the manual gives
+details of how SPARTA defines child, unsplit, split, and sub cells.
+Note that cells inside closed surfaces contain no particles.  These
+could be unsplit or cut cells (if they have zero flow volume).  Both
+of these kinds of cells will compute a zero result for all their
+values.  Likewise, split cells store no particles and will produce a
+zero result.  This is because their sub-cells actually contain the
+particles that are geometrically inside the split cell.
+
+Grid cells not in the specified {group-ID} will output zeroes for all
+their values.
+
+The array can be accessed by any command that uses per-grid values
+from a compute as input.  See "Section 6.4"_Section_howto.html#howto_4
+for an overview of SPARTA output options.
+
+The per-grid array values will be in the "units"_units.html
+appropriate to the individual values as described above.  {Temp} is in
+temperature units.  {Press} is in prsesure units.
+
+:line
+
+Styles with a {kk} suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+"Accelerating SPARTA"_Section_accelerate.html section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+
+These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the "Making
+SPARTA"_Section_start.html#start_3 section for more info.
+
+You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the "-suffix command-line
+switch"_Section_start.html#start_6 when you invoke SPARTA, or you can
+use the "suffix"_suffix.html command in your input script.
+
+See the "Accelerating SPARTA"_Section_accelerate.html section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
+
+:line
+
+[Restrictions:] none
+
+[Related commands:]
+
+"compute grid"_compute_grid.txt, "fix ave/grid"_fix_ave_grid.html,
+"dump grid"_dump.html
+
+[Default:] none

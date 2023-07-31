@@ -1,0 +1,274 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>stats_style command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>stats_style arg1 arg2 ... 
+</PRE>
+<UL><LI>arg1,arg2,... = list of keywords 
+
+<PRE>  possible keywords = step, elapsed, elaplong, dt, cpu, tpcpu, spcpu, wall,
+                      np, npave, ntouch, ntouchave, ncomm, ncommave,
+                      nbound, nboundave, nexit, nexitave,
+		      nscoll, nscollave, nscheck, nscheckave,
+                      ncoll, ncollave, nattempt, nattemptave,
+                      nreact, nreactave, nsreact, nsreactave,
+                      ngrid, nsplit, maxlevel,
+		      vol, lx, ly, lz,
+		      xlo, xhi, ylo, yhi, zlo, zhi,
+		      s_ID[I], r_ID[I],
+		      c_ID, c_ID[I], c_ID[I][J],
+                      f_ID, f_ID[I], f_ID[I][J],
+                      v_name 
+</PRE>
+<PRE>      step = timestep
+      elapsed = timesteps since start of this run
+      elaplong = timesteps since start of initial run in a series of runs
+      dt = timestep size
+      cpu = elapsed CPU time in seconds within a run
+      tpcpu = time per CPU second
+      spcpu = timesteps per CPU second
+      wall = wallclock time in seconds
+      np,npave = # of particles (this step, per-step)
+      ntouch,ntouchave = # of cell touches by particles (this step, per-step)
+      ncomm,ncommave = # of particles communicated (this step, per-step)
+      nbound,nboundave = # of boundary collisions (this step, per-step)
+      nexit,nexitave = # of boundary exits (this step, per-step)
+      nscoll,nscollave = # of surface collisions (this step, per-step)
+      nscheck,nscheckave = # of surface checks (this step, per-step)
+      ncoll,ncollave = # of particle/particle collisions (this step, per-step)
+      nattempt,nattemptave = # of attempted collisions (this step, per-step)
+      nreact,nreactave = # of chemical reactions (this step, per-step)
+      nsreact,nsreactave = # of chemical reactions on surfs and boundaries (this step, per-step)
+      ngrid = # of grid cells (including split cells)
+      nsplit = # of split cells
+      maxlevel = # of refinement levels in current grid
+      vol = volume of simulation box
+      lx,ly,lz = simulation box lengths
+      xlo,xhi,ylo,yhi,zlo,zhi = box boundaries,
+      s_ID[I] = Ith component of global vector calculated by a surface collision model with ID
+      r_ID[I] = Ith component of global vector calculated by a surface reaction model with ID
+      c_ID = global scalar value calculated by a compute with ID
+      c_ID[I] = Ith component of global vector calculated by a compute with ID, I can include wildcard (see below)
+      c_ID[I][J] = I,J component of global array calculated by a compute with ID
+      f_ID = global scalar value calculated by a fix with ID
+      f_ID[I] = Ith component of global vector calculated by a fix with ID, I can include wildcard (see below)
+      f_ID[I][J] = I,J component of global array calculated by a fix with ID
+      v_name = scalar value calculated by an equal-style variable with name 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>stats_style step cpu np
+stats_style step cpu spcpu np xlo xhi c_myCount[2]
+stats_style step cpu spcpu np xlo xhi c_myCount[*] 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Determine what statistical data is printed to the screen and log file.
+</P>
+<P>The values printed by the various keywords are instantaneous values,
+calculated on the current timestep.  The exception is the keywords
+suffixed by "ave", which print a running total divided by the number
+of timesteps.
+</P>
+<P>Options invoked by the <A HREF = "stats_modify.html">stats_modify</A> command can
+be used to set the numeric precision of each printed value, as well as
+other attributes of the statistics.
+</P>
+<HR>
+
+<P>The <I>step</I> and <I>elapsed</I> keywords refer to timestep count.  <I>Step</I> is
+the current timestep.  <I>Elapsed</I> is the number of timesteps elapsed
+since the beginning of this run.  <I>Elaplong</I> is the number of
+timesteps elapsed since the beginning of an initial run in a series of
+runs.  See the <I>start</I> and <I>stop</I> keywords for the <A HREF = "run.html">run</A>
+command for info on how to invoke a series of runs that keep track of
+an initial starting time. If these keywords are not used, then
+<I>elapsed</I> and <I>elaplong</I> are the same value.
+</P>
+<P>The <I>cpu</I> keyword is elapsed CPU seconds since the beginning of this
+run.  The <I>tpcpu</I> and <I>spcpu</I> keywords are measures of how fast your
+simulation is currently running.  The <I>tpcpu</I> keyword is simulation
+time per CPU second, where simulation time is in time
+<A HREF = "units.html">units</A>.  The <I>spcpu</I> keyword is the number of timesteps
+per CPU second.  Both quantities are on-the-fly metrics, measured
+relative to the last time they were invoked.  Thus if you are printing
+out statistical output every 100 timesteps, the two keywords will
+continually output the time and timestep rate for the last 100 steps.
+</P>
+<P>The <I>wall</I> keyword is elapsed time in seconds since SPARTA was
+launched.  This can be used to time portions of the input script in
+the following manner:
+</P>
+<PRE>variable            t equal wall
+variable            t1 equal $t
+portion of input script
+variable            t2 equal $t
+variable            delta equal v_2-v_1
+print               "Delta time = $<I>delta</I>" 
+</PRE>
+<HR>
+
+<P>The <I>np</I>, <I>ntouch</I>, <I>ncomm</I>, <I>nbound</I>, <I>nexit</I>, <I>nscoll</I>, <I>nscheck</I>,
+<I>ncoll</I>, <I>nattempt</I>, <I>nreact</I>, and <I>nsreact</I> keywords all generate
+counts for the current timestep.
+</P>
+<P>The <I>npave</I>, <I>ntouchave</I>, <I>ncommave</I>, <I>nboundave</I>, <I>nexitave</I>,
+<I>nscollave</I>, <I>nscheckave</I>, <I>ncollave</I>, <I>nattemptave</I>, <I>nreactave</I>, and
+<I>nsreactave</I> keywords all generate values that are the cummulative
+total of the corresponding count divided by <I>elapsed</I> = the number of
+timesteps since the start of the current run.
+</P>
+<P>The <I>np</I> keyword is the number of particles.
+</P>
+<P>The <I>ntouch</I> keyword is the number of cells touched by the particles
+during the move portion of the timestep.  E.g. if a particle moves
+from cell A to adjacent cell B, it touches 2 cells.
+</P>
+<P>The <I>ncomm</I> keyword is the number of particles communicated
+to other processors.
+</P>
+<P>The <I>nbound</I> keyword is the number of particles that collided with a
+global boundary.  Crossing a periodic boundary or exiting an outflow
+boundary is not counted.
+</P>
+<P>The <I>nexit</I> keyword is the number of particles that exited the
+simulation box through an outflow boundary.
+</P>
+<P>The <I>nscoll</I> keyword is the number of particle/surface collisions that
+occurred, where a particle collided with a geometric surface.
+</P>
+<P>The <I>nscheck</I> keyword is the number of particle/surface collisions
+that were checked for.  If a cell is overlapped by N surface elements,
+all N must be checked for collisions each time a particle in that cell
+moves.
+</P>
+<P>The <I>ncoll</I> keyword is the number of particle/particle collisions that
+occurred.
+</P>
+<P>The <I>nattempt</I> keyword is the number of particle/particle collisions
+that were attempted.
+</P>
+<P>The <I>nreact</I> keyword is the number of chemical reactions that
+occurred.  The <I>nsreact</I> keyword is the number of chemical reactions
+on surfaces that occurred, including the global boundaries if they are
+treated as reacting surfaces, via the <A HREF = "bound_modify.html">bound_modify</A>
+command.
+</P>
+<P>The <I>ngrid</I> keyword is the number of grid cells which includes both
+unsplit and split cells.  The <I>nsplit</I> keyword is the number of split
+cells.  See <A HREF = "Section_howto.html#howto_8">Section howto 4.8</A> for a
+description of the hierarchical grid used by SPARTA and a definition
+of these kinds of grid cells.
+</P>
+<P>The <I>maxlevel</I> keyword is the # of levels of grid refinement currently
+used in the simulation. This may change due to dynamic grid
+adaptation.
+</P>
+<P>The <I>vol</I> keyword is the volume (or area in 2d) of the simulation box.
+</P>
+<P>The <I>lx</I>, <I>ly</I>, <I>lz</I> keywords are the dimensions of the simulation
+box.
+</P>
+<P>The <I>xlo</I>, <I>xhi</I>, <I>ylo</I>, <I>yhi</I>, <I>zlo</I>, <I>zhi</I> keywords are the
+boundaries of the simulation box.
+</P>
+<HR>
+
+<P>For output values from a compute or fix, the bracketed index I used to
+index a vector, as in <I>c_ID[I]</I> or <I>f_ID[I]</I>, can be specified
+using a wildcard asterisk with the index to effectively specify
+multiple values.  This takes the form "*" or "*n" or "n*" or "m*n".
+If N = the size of the vector (for <I>mode</I> = scalar) or the number of
+columns in the array (for <I>mode</I> = vector), then an asterisk with no
+numeric values means all indices from 1 to N.  A leading asterisk
+means all indices from 1 to n (inclusive).  A trailing asterisk means
+all indices from n to N (inclusive).  A middle asterisk means all
+indices from m to n (inclusive).
+</P>
+<P>Using a wildcard is the same as if the individual elements of the
+vector had been listed one by one.  E.g. these 2 stats_style commands
+are equivalent, since the <A HREF = "compute_reduce.html">compute reduce</A> command
+creates a global vector with 6 values.
+</P>
+<PRE>compute myCount reduce max x y z vx vy vz
+stats_style step np c_myCount[*]
+stats_style step np c_myCount[1] c_myCount[2] c_myCount[3] &
+                    c_myCount[4] c_myCount[5] c_myCount[6] 
+</PRE>
+<HR>
+
+<P>For the following keywords, the ID in the keyword should be replaced
+by the actual ID of a surface collision model, surface reaction model,
+compute, fix, or variable name that has been defined elsewhere in the
+input script.  See those commands for details.  If the entity
+calculates a global scalar, vector, or array, then the keyword formats
+with 0, 1, or 2 brackets will reference a scalar value from the
+entity.
+</P>
+<P>The <I>s_ID[I]</I> and <I>r_ID[I]</I> keywords allow global values
+calculated by a surface collision model or surface reaction model to
+be output.  As discussed on the <A HREF = "surf_collide.html">surf_collide</A> and
+<A HREF = "surf_react.html">surf_react</A> doc pages, these models both calculate a
+global vector of quantities.
+</P>
+<P>The <I>c_ID</I> and <I>c_ID[I]</I> and <I>c_ID[I][J]</I> keywords allow global
+values calculated by a compute to be output.  As discussed on the
+<A HREF = "compute.html">compute</A> doc page, computes can calculate global,
+per-particle, per-grid, or per-surf values.  Only global values can be
+referenced by this command.  However, per-particle, per-grid, or
+per-surf compute values can be referenced in a
+<A HREF = "variable.html">variable</A> and the variable referenced, as discussed
+below.  See the discussion above for how the I in <I>c_ID[I]</I> can be
+specified with a wildcard asterisk to effectively specify multiple
+values from a global compute vector.
+</P>
+<P>The <I>f_ID</I> and <I>f_ID[I]</I> and <I>f_ID[I][J]</I> keywords allow global
+values calculated by a fix to be output.  As discussed on the
+<A HREF = "fix.html">fix</A> doc page, fixes can calculate global, per-particle,
+per-grid, or per-surf values.  Only global values can be referenced by
+this command.  However, per-particle or per-grid or per-surf fix
+values can be referenced in a <A HREF = "variable.html">variable</A> and the
+variable referenced, as discussed below.  See the discussion above for
+how the I in <I>f_ID[I]</I> can be specified with a wildcard asterisk to
+effectively specify multiple values from a global fix vector.
+</P>
+<P>The <I>v_name</I> keyword allow the current value of a variable to be
+output.  The name in the keyword should be replaced by the variable
+name that has been defined elsewhere in the input script.  Only
+equal-style variables can be referenced.  See the
+<A HREF = "variable.html">variable</A> command for details.  Variables of style
+<I>equal</I> can reference per-particle or per-grid or per-surf properties
+or stats keywords, or they can invoke other computes, fixes, or
+variables when evaluated, so this is a very general means of creating
+statistical output.
+</P>
+<P>See <A HREF = "Section_modify.html">Section_modify</A> for information on how to add
+new compute and fix styles to SPARTA to calculate quantities that can
+then be referenced with these keywords to generate statistical output.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "stats.html">stats</A>, <A HREF = "stats_modify.html">stats_modify</A>
+</P>
+<P><B>Default:</B>
+</P>
+<PRE>stats_style step cpu np 
+</PRE>
+</HTML>

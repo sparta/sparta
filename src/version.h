@@ -1,0 +1,1 @@
+#define SPARTA_VERSION "18 Jul 2022"

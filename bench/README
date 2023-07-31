@@ -1,0 +1,82 @@
+SPARTA benchmark problems
+
+This directory contains benchmark problems which are discussed in
+the Performance section of the SPARTA documentation, and on the
+Benchmark page of the SPARTA WWW site, http://sparta.sandia.gov/bench.
+
+----------------------------------------------------------------------
+
+Each of the benchmark problems has a default size of 10x10x10 for its
+number of grid cells.  Particle counts are always 10x the number of
+grid cells.  Command-line settings can be used to change the number of
+grid cells as shown below.
+
+Each problem can be run as a serial benchmark (on one processor) or in
+parallel.  In parallel, it can be run repeatedly in strong or weak
+scaling mode.  For strong scaling, the same problem size is run on
+various numbers of processors.  For weak scaling, the problem size is
+increased proportional to the the number of processors.  E.g. on 2
+processors, a 100K grid cell problem is run; on 8 processors a 400K
+grid cell problem is run.
+
+Each script equilibrates for a small number of steps with a large
+timestep to disorder the particles.  A benchmark run is then made for
+100 steps with a normal-size timestep.  The equilibration insures
+particles are not ordered in memory by grid cell, which can run faster
+(initially) until particles become disordered.
+
+A few sample log file outputs are included in this directory to
+compare your answers to.  A log file like log.date.collide.foo.N.P is
+for a run of the in.collide benchmakr with N particles (N/10 grid
+cells), run on P processors of machine "foo" with the dated version of
+SPARTA.
+
+The CPU time (in seconds) for the run is in the second "Loop time"
+line in the log file, e.g.
+
+Loop time of 2.03087 on 8 procs for 100 steps with 1000000 particles
+
+Timing results for problems of various sizes run on various machines
+are listed on the Benchmarks page of the SPARTA WWW Site.
+
+----------------------------------------------------------------------
+
+These are the 3 benchmark problems:
+
+in.free = free molecular flow (no collisions) in a box
+in.collide = collisional flow in a box
+in.sphere = flow around a sphere
+
+----------------------------------------------------------------------
+
+Here is how to run each problem, assuming the SPARTA executable is
+named spa_g++ and has been copied into this directory.
+
+Serial (one processor runs):
+
+spa_g++ < in.free
+spa_g++ < in.collide
+spa_g++ < in.sphere
+
+Parallel runs via mpirun (on 8 procs in this case):
+
+mpirun -np 8 spa_g++ < in.free
+mpirun -np 8 spa_g++ < in.collide
+mpirun -np 8 spa_g++ < in.sphere
+
+Changing the problem size, by changing the values of any of the x,y,z
+variables using the -v or -var command-line switch.  Their default
+values are set to x = y = z = 10 in the scripts.
+
+mpirun -np 16 spa_g++ -v x 100 -v y 100 -v z 100 < in.free
+mpirun -np 16 spa_g++ -v x 50 -v y 100 -v z 100 < in.collide
+mpirun -np 16 spa_g++ -v x 50 -v y 50 -v z 50 < in.sphere
+
+----------------------------------------------------------------------
+
+Here are the size problems run for the log files included in this dir:
+
+10K particles = 10 x 10 x 10 grid
+100K particles = 20 x 20 x 25 grid
+1M particles = 40 x 50 x 50 grid
+10M particles = 100 x 100 x 100 grid

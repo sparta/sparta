@@ -1,0 +1,10 @@
+# auto-generated stye files
+style_collide.h
+style_command.h
+style_compute.h
+style_dump.h
+style_fix.h
+style_react.h
+style_region.h
+style_surf_collide.h
+style_surf_react.h

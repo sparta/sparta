@@ -1,0 +1,123 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>write_surf command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>write_surf file 
+</PRE>
+<UL><LI>file = name of file to write surface element info to 
+
+<LI>zero or more keyword/args pairs may be appended 
+
+<LI>keyword = <I>points</I> or <I>fileper</I> or <I>nfile</I> 
+
+<PRE>  <I>points</I> arg = <I>yes</I> or <I>no</I> to include a Points section in the file
+  <I>fileper</I> arg = Np
+    Np = write one file for every this many processors
+  <I>nfile</I> arg = Nf
+    Nf = write this many files, one from each of Nf processors 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>write_surf data.surf
+write_surf data.surf points no
+write_surf data.surf.% nfile 50 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Write a surface file in text format describing the currently defined
+surface elements, whether they be explicit or implicit surfaces.  See
+the <A HREF = "read_surf.html">read_surf</A> and <A HREF = "read_isurf.html">read_isurf</A>
+commands for a definition of surface elements and how they are defined
+and used be SPARTA.  The surface file can be used for later input to a
+new simulation or for post-processing and visualization.
+</P>
+<P>Note that if surface objects were clipped when read in by the
+<A HREF = "read_surf.html">read_surf</A> command then some surface elements may have
+been deleted and new ones created.  Likewise for the points that
+define the end points or corner points of surface element lines (2d)
+or triangles (3d).  Similarly, if surface elements have been removed
+by the <A HREF = "remove_surf.html">remove_surf</A> command, then points may have
+also been deleted.  In either case, surface points and elements are
+renumbered by these operations to create compressed, contiguous lists.
+These lists are what is output by this command.
+</P>
+<P>The file is written as a text file in the same format as the
+<A HREF = "read_surf.html">read_surf</A> command reads in.  Note that a Points
+section is optional.  If the <I>points</I> keyword is specified with a
+value of <I>yes</I>, then a Points section is included in the file.  If the
+value is <I>no</I>, then point coordinates are included with individual
+lines or triangles.
+</P>
+<P>Similar to <A HREF = "dump.html">dump</A> files, the surface filename can contain
+two wild-card characters.  If a "*" appears in the filename, it is
+replaced with the current timestep value.  If a "%" character appears
+in the filename, then one file is written by each processor and the
+"%" character is replaced with the processor ID from 0 to P-1.  An
+additional file with the "%" replaced by "base" is also written, which
+contains global information, i.e. just the header information for the
+number of points and lines or triangles, as described on the
+<A HREF = "read_surf.html">read_surf</A> doc page.
+</P>
+<P>For example, the files written for filename data.% would be data.base,
+data.0, data.1, ..., data.P-1.  This creates smaller files and can be
+a fast mode of output and subsequent input on parallel machines that
+support parallel I/O.  The optional <I>fileper</I> and <I>nfile</I> keywords
+discussed below can alter the number of files written.
+</P>
+<P>Note that implicit surfaces read in by the
+<A HREF = "read_isurf.html">read_isurf</A> command can be written out by the
+write_surf command, e.g. for visualization purposes.  But they cannot
+be read back in to SPARTA via the <A HREF = "read_isurf.html">read_isurf</A>
+command, because write_surf creates files in an explicit surface
+format.  See the <A HREF = "Section_howto.html#howto_13">Howto 6.13</A> section of
+the manual for a discussion of explicit and implicit surfaces for an
+explantion of explicit versus implicit surfaces as well as distributed
+versus non-distributed storage.  You cannot mix explicit and implicit
+surfaces in the same simulation.
+</P>
+<HR>
+
+<P>The optional <I>nfile</I> or <I>fileper</I> keywords can be used in conjunction
+with the "%" wildcard character in the specified surface file name.
+As explained above, the "%" character causes the surface file to be
+written in pieces, one piece for each of P processors.  By default P =
+the number of processors the simulation is running on.  The <I>nfile</I> or
+<I>fileper</I> keyword can be used to set P to a smaller value, which can
+be more efficient when running on a large number of processors.
+</P>
+<P>The <I>nfile</I> keyword sets P to the specified Nf value.  For example, if
+Nf = 4, and the simulation is running on 100 processors, 4 files will
+be written, by processors 0,25,50,75.  Each will collect information
+from itself and the next 24 processors and write it to a surface file.
+</P>
+<P>For the <I>fileper</I> keyword, the specified value of Np means write one
+file for every Np processors.  For example, if Np = 4, every 4th
+processor (0,4,8,12,etc) will collect information from itself and the
+next 3 processors and write it to a surface file.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "read_surf.html">read_surf</A>, <A HREF = "read_isurf.html">read_isurf</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The default is points = yes.
+</P>
+</HTML>

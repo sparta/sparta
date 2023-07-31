@@ -893,7 +893,7 @@ void FixEmitSurf::subsonic_grid()
 
       if (np) {
         vsmag = (psubsonic - press_cell) / (massrho_cell*soundspeed_cell);
-        vstream[0] += vsmag*normal[0]; //vstream from f_avg[]
+        vstream[0] += vsmag*normal[0];
         vstream[1] += vsmag*normal[1];
         vstream[2] += vsmag*normal[2];
       }

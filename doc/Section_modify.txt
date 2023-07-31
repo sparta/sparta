@@ -1,0 +1,292 @@
+"Previous Section"_Section_tools.html - "SPARTA WWW Site"_sws -
+"SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next
+Section"_Section_python.html :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+10. Modifying & extending SPARTA :h3
+
+This section describes how to extend SPARTA by modifying its source code.
+
+10.1 "Compute styles"_#mod_1
+10.2 "Fix styles"_#mod_2
+10.3 "Region styles"_#mod_3
+10.4 "Collision styles"_#mod_4
+10.5 "Surface collision styles"_#mod_5
+10.6 "Chemistry styles"_#mod_6
+10.7 "Dump styles"_#mod_7
+10.8 "Input script commands"_#mod_8 :all(b)
+
+SPARTA is designed in a modular fashion so as to be easy to modify and
+extend with new functionality.
+
+In this section, changes and additions users can make are listed along
+with minimal instructions.  If you add a new feature to SPARTA and
+think it will be of general interest to users, please submit it to the
+"developers"_http://sparta.sandia.gov/authors.html for inclusion in
+the released version of SPARTA.
+
+The best way to add a new feature is to find a similar feature in
+SPARTA and look at the corresponding source and header files to figure
+out what it does. You will need some knowledge of C++ to be able to
+understand the hi-level structure of SPARTA and its class
+organization, but functions (class methods) that do actual
+computations are written in vanilla C-style code and operate on simple
+C-style data structures (vectors, arrays, structs).
+
+The new features described in this section require you to write a new
+C++ derived class. Creating a new class requires 2 files, a source
+code file (*.cpp) and a header file (*.h).  The derived class must
+provide certain methods to work as a new option.  Depending on how
+different your new feature is compared to existing features, you can
+either derive from the base class itself, or from a derived class that
+already exists.  Enabling SPARTA to invoke the new class is as simple
+as putting the two source files in the src dir and re-building SPARTA.
+
+The advantage of C++ and its object-orientation is that all the code
+and variables needed to define the new feature are in the 2 files you
+write, and thus shouldn't make the rest of SPARTA more complex or
+cause side-effect bugs.
+
+Here is a concrete example. Suppose you write 2 files collide_foo.cpp
+and collide_foo.h that define a new class CollideFoo that computes
+inter-particle collisions described in the classic 1997 paper by Foo,
+et al. If you wish to invoke those potentials in a SPARTA input script
+with a command like
+
+collide foo mix-ID params.foo 3.0
+
+then your collide_foo.h file should be structured as follows:
+
+#ifdef COLLIDE_CLASS
+CollideStyle(foo,CollideFoo)
+#else
+...
+(class definition for CollideFoo)
+...
+#endif 
+
+where "foo" is the style keyword in the collid command, and CollideFoo
+is the class name defined in your collide_foo.cpp and collide_foo.h
+files.
+
+When you re-build SPARTA, your new collision model becomes part of the
+executable and can be invoked with a "collide"_collide.html command
+like the example above.  Arguments like a mixture ID, params.foo (a
+file with collision parameters), and 3.0 can be defined and processed
+by your new class.
+
+As illustrated by this example, many kinds of options are referred to
+in the SPARTA documentation as the "style" of a particular command.
+
+The instructions below give the header file for the base class that
+these styles are derived from.  Public variables in that file are ones
+used and set by the derived classes which are also used by the base
+class.  Sometimes they are also used by the rest of SPARTA.  Virtual
+functions in the base class header file which are set = 0 are ones
+that must be defined in the new derived class to give it the
+functionality SPARTA expects.  Virtual functions that are not set to 0
+are functions that can be optionally defined.
+
+Here are additional guidelines for modifying SPARTA and adding new
+functionality:
+
+Think about whether what you want to do would be better as a pre- or
+post-processing step. Many computations are more easily and more
+quickly done that way. :ulb,l
+
+Don't do anything within the timestepping of a run that isn't
+parallel.  E.g. don't accumulate a large volume of data on a single
+processor and analyze it.  This runs the risk of seriously degrading
+the parallel efficiency. :l
+
+If you have a question about how to compute something or about
+internal SPARTA data structures or algorithms, feel free to send an
+email to the "developers"_http://sparta.sandia.gov/authors.html.
+
+If you add something you think is generally useful, also send an email
+to the "developers"_http://sparta.sandia.gov/authors.html so we can
+consider adding it to the SPARTA distribution. :ule,l
+
+:line
+:line
+
+10.1 Compute styles :link(mod_1),h4
+
+"Compute style commands"_compute.html calculate instantaneous
+properties of the simulated system.  They can be global properties, or
+per particle or per grid cell or per surface element properties.  The
+result can be single value or multiple values (global or per particle
+or per grid or per surf).
+
+Here is a brief description of methods to define in a new derived
+class.  See compute.h for details.  All of these methods are optional.
+
+init: initialization before a run
+compute_scalar: compute a global scalar quantity
+compute_vector: compute a global vector of quantities
+compute_per_particle: compute one or more quantities per particle
+compute_per_grid: compute one or more quantities per grid cell
+compute_per_surf: compute one or more quantities per surface element
+surf_tally: call when a particle hits a surface element
+boundary_tally: call when a particle hits a simulation box boundary
+memory_usage: tally memory usage :tb(s=:)
+
+Note that computes with "/particle" in their style name calculate per
+particle quantities, with "/grid" in their name calculate per grid
+cell quantities, and with "/surf" in their name calculate per surface
+element properties.  All others calcuulate global quantities.
+
+Flags may also need to be set by a compute to enable specific
+properties.  See the compute.h header file for one-line descriptions.
+
+:line
+
+10.2 Fix styles :link(mod_2),h4
+
+"Fix style commands"_fix.html perform operations during the
+timestepping loop of a simulation.  They can define methods which are
+invoked at different points within the timestep.  They can be used to
+insert particles, perform load-balancing, or perform time-averaging of
+various quantities.  They can also define and maintain new
+per-particle vectors and arrays that define quantities that move with
+particles when they migrate from processor to processor or when the
+grid is rebalanced or adapated.  They can also produce output of
+various kinds, similar to "compute"_compute.html commands.
+
+Here is a brief description of methods to define in a new derived
+class.  See fix.h for details.  All of these methods are optional,
+except setmask().
+
+setmask: set flags that determine when the fix is called within a timestep
+init: initialization before a run
+start_of_step: called at beginning of timestep
+end_of_step: called at end of timestep
+add_particle: called when a particle is created
+surf_react: called when a surface reaction occurs
+memory_usage: tally memory usage :tb(s=:)
+
+Flags may also need to be set by a fix to enable specific properties.
+See the fix.h header file for one-line descriptions.
+
+Fixes can interact with the Particle class to create new
+per-particle vectors and arrays and access and update their
+values.  These are the relevant Particle class methods:
+
+add_custom: add a new custom vector or array
+find_custom: find a previously defined custom vector or array
+remove_custom: remove a custom vector or array :tb(s=:)
+
+See the "fix ambipolar"_fix_ambipolar.html for an example of how these
+are used.  It define an integer vector called "ionambi" to flag
+particles as ambipolar ions, and a floatin-point array called
+"velambi" to store the velocity vector for the associated electron.
+
+:line
+
+10.3 Region styles :link(mod_3),h4
+
+"Region style commands"_region.html define geometric regions
+within the simulation box.  Other commands use regions
+to limit their computational scope.
+
+Here is a brief description of methods to define in a new derived
+class.  See region.h for details.  The inside() method is required.
+
+inside: determine whether a point is inside/outside the region 
+
+:line
+
+10.4 Collision styles :link(mod_4),h4
+
+"Collision style commands"_collide.html define collision models that
+calculate interactions between particles in the same grid cell.
+
+Here is a brief description of methods to define in a new derived
+class.  See collide.h for details.  All of these methods are required
+except init() and modify_params().
+
+init: initialization before a run
+modify_params: process style-specific options of the "collide_modify"_collide_modify.html command
+vremax_init: estimate VREmax settings
+attempt_collision: compute # of collisions to attempt for entire cell
+attempt_collision: compute # of collisions to attempt between 2 species groups
+test_collision: determine if a collision bewteen 2 particles occurs
+setup_collision: pre-computation before a 2-particle collision
+perform_collision: calculate the outcome of a 2-particle collision :tb(s=:)
+
+:line
+
+10.5 Surface collision styles :link(mod_5),h4
+
+"Surface collision style commands"_collide.html define collision
+models that calculate interactions between a particle and surface
+element.
+
+Here is a brief description of methods to define in a new derived
+class.  See surf_collide.h for details.  All of these methods are
+required except dynamic().
+
+init: initialization before a run
+collide: perform a particle/surface-element collision
+dynamic: allow surface property to change during a simulation :tb(s=:)
+
+:line
+
+10.6 Chemistry styles :link(mod_6),h4
+
+Particle/particle chemistry models in SPARTA are specified by
+"reaction style commands"_react.html which define lists of possible
+reactions and their parameters.
+
+Here is a brief description of methods to define in a new derived
+class.  See react.h for details.  The init() method is optional;
+the attempt() method is required.
+
+init: initialization before a run
+attempt: attempt a chemical reaction between two particles :tb(s=:)
+
+:line
+
+10.7 Dump styles :link(mod_7),h4
+
+"Dump commands"_dump.html output snapshots of simulation data to a
+file periodically during a simulation, in a particular file format.
+Per particle, per grid cell, or per surface element data can be
+output.
+
+Here is a brief description of methods to define in a new derived
+class.  See dump.h for details.  The init_style(), modify_param(), and
+memory_usage() methods are optional; all the others are required.
+
+init_style: style-specific initialization before a run
+modify_param: process style-specific options of the "dump_modify"_dump_modify.html command
+write_header: write the header of a snapshot to a file
+count: # of entities this processor will output
+pack: pack a processor's data into a buffer
+write_data: write a buffer of data to a file
+memory_usage: tally memory usage :tb(s=:)
+
+:line
+
+10.8 Input script commands :link(mod_8),h4
+
+New commands can be added to SPARTA that will be recognized in input
+scripts.  For example, the "create_particles"_create_particles.html,
+"read_surf"_read_surf.html, and "run"_run.html commands are all
+implemented in this fashion.  When such a command is encountered in an
+input script, SPARTA simply creates a class with the corresponding
+name, invokes the "command" method of the class, and passes it the
+arguments from the input script.  The command() method can perform
+whatever operations it wishes on SPARTA data structures.
+
+The single method the new class must define is as follows:
+
+command: operations performed by the input script command :tb(s=:)
+
+Of course, the new class can define other methods and variables as
+needed.

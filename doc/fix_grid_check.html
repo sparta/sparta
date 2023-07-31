@@ -1,0 +1,112 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix grid/check command 
+</H3>
+<H3>fix grid/check/kk command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID grid/check N outflag keyword arg ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command 
+
+<LI>grid/check = style name of this fix command 
+
+<LI>N = check every N timesteps 
+
+<LI>outflag = <I>error</I> or <I>warn</I> or <I>silent</I> 
+
+<LI>zero or more keyword/args pairs may be appended 
+
+<LI>keyword = <I>outside</I> 
+
+<PRE>  outside arg = <I>yes</I> or <I>no</I> 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>fix 1 grid/check 100 error 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Check if particles are inside the grid cell they are supposed to be,
+based on their current coordinates.  This is useful as a debugging
+check to insure that no particles have been assigned to the incorrect
+grid cell during the particle move stage of the SPARTA timestepping
+algorithm.
+</P>
+<P>The check is performed once every <I>N</I> timesteps.  Particles not inside
+the correct grid cell are counted and the value of the count can be
+monitored (see below).  A value of 0 is "correct", meaning that no
+particle was found outside its assigned grid cell.
+</P>
+<P>If the <I>outside</I> keyword is set to <I>yes</I>, then a check for particles
+inside implicit surfaces is also performed.  If a particle is in a
+grid cell with implicit surface elements and the particles is "inside"
+the surfaces (which have possibly ablated), then the error count is
+incremented.
+</P>
+<P>If the outflag setting is <I>error</I>, SPARTA will print an error and stop
+if it finds a particle in an incorrect grid cell or inside the
+implicit surface elements.  For <I>warn</I>, it will print a warning
+message and continue.  For <I>silent</I>, it will print no message, but the
+count of such occurrences can be monitored as described below, e.g. by
+outputting the value with the <A HREF = "stats.html">stats</A> command.
+</P>
+<HR>
+
+<P><B>Restart, output info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.
+</P>
+<P>This fix computes a global scalar which can be accessed by various
+output commands.  The scalar is the count of how many particles were
+not in the correct grid cell.  The count is cummulative over all the
+timesteps the check was performed since the start of the run.  It is
+initialized to zero each time a run is performed.
+</P>
+<HR>
+
+<P>Styles with a <I>kk</I> suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+<A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+</P>
+<P>These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the <A HREF = "Section_start.html#start_3">Making
+SPARTA</A> section for more info.
+</P>
+<P>You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the <A HREF = "Section_start.html#start_6">-suffix command-line
+switch</A> when you invoke SPARTA, or you can
+use the <A HREF = "suffix.html">suffix</A> command in your input script.
+</P>
+<P>See the <A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B> none
+</P>
+<P><B>Default:</B>
+</P>
+<P>The option default is outside = no.
+</P>
+</HTML>

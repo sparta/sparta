@@ -1,0 +1,361 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+create_particles command :h3
+create_particles/kk command :h3
+
+[Syntax:]
+
+create_particles mix-ID style args keyword value ... :pre
+
+mix-ID = ID of mixture to use when creating particles :ulb,l
+style = {n} or {single} :l
+  {n} args = Np
+    Np = 0 or number of particles to create
+  {single} args = species-ID x y z vx vy vz
+    species-ID = ID of species of single particle
+    x,y,z = position of particle (distance units)
+    vx,vy,vz = velocity of particle (velocity units) :pre
+zero or more keyword/value pairs may be appended :l
+keyword = {global} or {region} or {species} or {density} or {temperature} or {velocity} or {twopass} :l
+  {global} value = {yes} or {no}
+  {region} value = region-ID
+  {species} values = svar xvar yvar zvar
+    svar = name of equal-style variable for species
+    xvar,yvar,zvar = names of internal-style variables for x,y,z
+  {density} values = dvar xvar yvar zvar
+    svar = name of equal-style variable for density
+    xvar,yvar,zvar = names of internal-style variables for x,y,z
+  {temperature} values = tvar xvar yvar zvar
+    svar = name of equal-style variable for temperature
+    xvar,yvar,zvar = names of internal-style variables for x,y,z
+  {velocity} values = vxvar vyvar vzvar xvar yvar zvar
+    vxvar,vyvar,vzvar = names of equal-style variables for vx,vy,vz
+    xvar,yvar,zvar = names of internal-style variables for x,y,z
+  {twopass} values = none :pre
+:ule
+
+[Examples:]
+
+create_particles background n 0
+create_particles air n 100000 region sphere
+create_particles air n 100000 global yes
+create_particles air single 3 5.0 6.0 5.4 10.0 -1.0 0.0
+create_particles air n 0 species mySpecies xpos NULL zpos
+create_particles air n 0 density myDens xgrid ygrid NULL
+create_particles air n 0 temperature myTemp xgrid ygrid zgrid
+create_particles air n 0 velocity myVx NULL myVz xpos ypos NULL twopass :pre
+
+[Description:]
+
+Create particles and add them to the simulation domain.  The
+attributes of individual particles, such as species and velocity, are
+determined by the mixture attributes, as specied by the {mix-ID}.  In
+particular the {temp}, {trot}, {tvib}, and {vstream} attributes of the
+mixture affect create particle velocities and internal energy modes.
+See the "mixture"_mixture.html command for more details.  Note that
+this command can be used multiple times to add more and more
+particles.
+
+Particles are only created in grid cells which are entirely external
+to surfaces.  Particles are not created in grid cells cut by surfaces.
+
+IMPORTANT NOTE: When a particle is created at a specified temperature
+(as set by the "mixture"_mixture.html command), it's rotational and
+vibrational energy will also be initialized, consistent with the
+mixture temperatures.  The {rotate} and {vibrate} options of the
+"collide_modify"_collide_modify.html command determine how internal
+energy modes are initialized.  If the "collide"_collide.html command
+has not yet been specified, then no rotational or vibrational energy
+will be assigned to created particles.  Thus if you wish to create
+particles with non-zero internal energy, the "collide"_collide.html
+and (optionally) "collide_modify"_collide_modify.html commands must be
+used before this command.
+
+If the {n} style is used with {Np} = 0, then the number of created
+particles is calculated by SPARTA as a function of the global {fnum}
+value, the mixture number density, and the flow volume of the
+simulation domain.
+
+The {fnum} value is set by the "global fnum"_global.html command.  The
+mixture {nrho} is set by the "mixture"_mixture.html command.  The flow
+volume of the simulation is the total volume of the simulation domain
+as specified by the "create_box"_create_box.html command, minus any
+volume that is interior to surfaces defined by the
+"read_surf"_read_surf.html command.  Note that the flow volume
+includes volume contributions from grid cells cut by surfaces.
+However particles are only created in grid cells entirely external to
+surfaces.  This means that particles may be created in external cells
+at a (slightly) higher density to compensate for no particles being
+created in cut cells that still contribute to the overall flow volume.
+
+If the {n} style is used with a non-zero {Np}, then exactly {Np}
+particles are created, which can be useful for debugging or
+benchmarking purposes.
+
+Based on the value of {Np}, each grid cell will have a target number
+of particles {M} to insert, which is a function of the cell's volume
+as compared to the total system flow volume.  If {M} has a fractional
+value, e.g. 12.5, then 12 particles will be inserted, and a 13th
+depending on the outcome of a random number generation.  As grid cells
+are looped over, the remainder fraction is accumulated, so that
+exactly {Np} particles are created across all the processors.
+
+IMPORTANT NOTE: The preceeding calculation is actually done using
+{weighted} cell volumes.  Grid cells can be weighted using the "global
+weight"_global.html command.
+
+Each particle is inserted at a random location within the grid cell.
+The particle species is chosen randomly in accord with the {frac}
+settings of the collection of species in the mixture, as set by the
+"mixture"_mixture.html command.  The velocity of the particle is set
+to the sum of the streaming velocity of the mixture and a thermal
+velocity sampled from the thermal temperature of the mixture.  Both
+the streaming velocity and thermal temperature are also set by the
+"mixture"_mixture.html command.  The internal rotational and
+vibrational energies of the particle are also set based on the {trot}
+and {tvib} settings for the mixture, as explained above.
+
+The {single} style creates a single particle.  This can be useful for
+debugging purposes, e.g. to advect a single particle towards a
+surface.  A single particle of the specified species is inserted at
+the specified position and with the specified velocity.  In this case
+the {mix-ID} is ignored.
+
+:line
+
+This is the meaning of the other allowed keywords.
+
+The {global} keyword only applies when the {n} style is used, and
+controls how particles are generated in parallel.
+
+If the value is {yes}, then every processor loops over all {Np}
+particles.  As the coordinates of each is generated, each processor
+checks what grid cell it is in, and only stores the particle if it
+owns that grid cell.  Thus an identical set of particles are created,
+no matter how many processors are running the simulation
+
+IMPORTANT NOTE: The {global} yes option is not yet implemented.
+
+If the value is {no}, then each of the {P} processors generates a
+{N/P} subset of particles, using its own random number generation.  It
+only adds particles to grid cells that it owns, as described above.
+This is a faster way to generate a large number of particles, but
+means that the individual attributes of particles will depend on the
+number of processors and the mapping of grid cells to procesors.  The
+overall set of created particles should have the same statistical
+properties as with the {yes} setting.
+
+If the {region} keyword is used, then a particle will only added if
+its position is within the specified {region-ID}.  This can be used to
+only allow particle insertion within a subset of the simulation
+domain.  Note that the {side} option for the "region"_region.html
+command can be used to define whether the inside or outside of the
+geometric region is considered to be "in" the region.
+
+IMPORTANT NOTE: If the {region} and {n} keywords are used together,
+less than N particles may be added.  This is because grid cells will
+be candidates for particle insertion, unless they are entirely outside
+the bounding box that encloses the region.  Particles those grid cells
+attempt to add are included in the count for N, even if some or all of
+the particle insertions are rejected due to not being inside the
+region.
+
+The {species} keyword can be used to create particles with a
+spatially-dependent separation of species.  The specified {svar} is
+the name of an "equal-style variable"_variable.html whose formula
+should evaluate to a species number, i.e. an integer from 1 to Nsp,
+where Nsp is the number of species in the mixture with mix-ID.  Since
+equal-style variables evaluate to floating-point values, this value is
+truncated to an integer value.  The formula for the species variable
+can use one or two or three variables which will store the x, y, or z
+coordinates of the particle that is being created.  If used, these
+variables must be "internal-style variables"_variable.html defined in
+the input script; their initial numeric values can be anything.  They
+must be internal-style variables, because this command resets their
+values directly.  Their names are specified as {xvar}, {yvar}, and
+{zvar}.  If any of them is not used in the {svar} formula, it can be
+specified as NULL.
+
+When a particle is added, its coordinates are stored in the {xvar},
+{yvar}, {zvar} variables if they are specified.  The {svar} variable
+is then evaluated.  The returned value is used to set the species of
+that particle, based on the list of species defined for the mixture.
+If the returned value is <= 0 or greater than Nsp = the number of
+species in the mixture, then no particle is created.
+
+As an example, these commands can be used in a 2d simulation, to
+create a particle distribution with species 1 on top of species 2 with
+a sinudoidal interface between the two species, as illustrated in the
+snapshot of the initial particle distribution.  Click on the image for
+a larger version.  Note that when using this option less than the
+requested N particles can be created if the species variable returns
+values <= 0 or greater than Nsp = the number of species in the
+mixture.
+
+variable x internal 0
+variable y internal 0
+variable n equal 3
+variable s equal "(v_y < 0.5*(ylo+yhi) + 0.15*yhi*sin(2*PI*v_n*v_x/xhi)) + 1"
+create_particles species n 10000 species s x y NULL :pre
+
+:c,image(JPG/species_variation_small.jpg,JPG/species_variation.jpg)
+
+The {density} keyword can be used to create particles with a
+spatially-dependent density variation.  The specified {dvar} is the
+name of an "equal-style variable"_variable.html whose formula should
+evaluate to a positive value.  The formula for {dvar} can use one or
+two or three variables which will store the x, y, or z coordinates of
+the geometric center point of a grid cell.  If used, these other
+variables must be "internal-style variables"_variable.html defined in
+the input script; their initial numeric values can by anything.  Their
+names are specified as {xvar}, {yvar}, and {zvar}.  If any of them is
+not used in the {dvar} formula, it can be specified as NULL.
+
+When particles are added to a grid cell, its center point coordinates
+are stored in {xvar}, {yvar}, {zvar} if they are defined.  The {dvar}
+variable is then evaluated.  The returned value is used as a scale
+factor on the number of particles to create in that grid cell.  Thus a
+value of 0.5 would create half as many particles in that grid cell as
+would otherwise be the case, due to the global {fnum} and mixture
+{nrho} settings that define the density, as explained above.  A value
+of 1.2 would create 20% more particles in that grid cell.
+
+As an example, these commands can be used in a 2d simulation, to
+create more particles towards the upper right corner of the domain and
+less towards the lower left corner, as illustrated in the snapshot of
+the initial particle distribution.  Click on the image for a larger
+version.  Note that less than requested N particles will be created in
+this case because all the scale factors generated by the variable {d}
+are less than 1.0.
+
+variable x internal 0
+variable y internal 0
+variable d equal "v_x/xhi * v_y/yhi"
+create_particles air n 10000 density d x y NULL :pre
+
+:c,image(JPG/density_variation_small.jpg,JPG/density_variation.jpg)
+
+The {temperature} keyword can be used to create particles with a
+spatially-dependent thermal temperature variation.  The specified
+{tvar} is the name of an "equal-style variable"_variable.html whose
+formula should evaluate to a positive value.  The formula for the
+{tvar} variable can use one or two or three variables which will store
+the x, y, or z coordinates of the geometric center point of a grid
+cell.  If used, these other variables must be "internal-style
+variables"_variable.html defined in the input script; their initial
+numeric values can by anything.  Their names are specified as {xvar},
+{yvar}, and {zvar}.  If any of them is not used in the {tvar} formula,
+it can be specified as NULL.
+
+When particles are added to a grid cell, its center point coordinates
+are stored in {xvar}, {yvar}, {zvar} if they are defined.  The {tvar}
+variable is then evaluated.  The returned value is used as a scale
+factor on the thermal temperature number for particles created in that
+grid cell.  Thus a value of 0.5 would create particles with a thermal
+temperature half of what would otherwise be the case, due to the
+mixture {temp} setting which defines the thermal temperature, as
+explained above.  A value of 1.2 would create particles with a 20%
+higher thermal temperature.
+
+As an example, these commands can be used in a 2d simulation, to
+create a thermal temperature gradient in x, where the temperature on
+the left side of the box is the default value, and the temperature on
+the right side is 3x larger.
+
+variable x internal 0
+variable t equal "1.0 + 2.0*(v_x-xlo)/(xhi-xlo)"
+create_particles air n 10000 temperature t x NULL NULL :pre
+
+The {velocity} keyword can be used to create particles with a
+spatially-dependent streaming velocity.  The specified {vxvar},
+{vyvar}, {vzvar} are the names of "equal-style
+variables"_variable.html whose formulas should evaluate to the
+corresponding component of the streaming velocity.  If any of them are
+specified as NULL, then that streaming velocity component is set by
+the corresponding global or mixture streaming velocity component, the
+same as if the {velocity} keyword were not used.
+
+The formulas for the {vxvar}, {vyvar}, {vzvar} variables can use one
+or two or three variables which will store the x, y, or z coordinates
+of the particle that is being created.  If used, these other variables
+must be "internal-style variables"_variable.html defined in the input
+script; their initial numerica values can by anything.  Their names
+are specified as {xvar}, {yvar}, and {zvar}.  If any of them is not
+used in the {vxvar}, {vyvar}, {vzvar} formulas, it can be specified as
+NULL.
+
+When a particle is added, its coordinates are stored in {xvar},
+{yvar}, {zvar} if they are defined.  The {vxvar}, {vyvar}, {vzvar}
+variables are then evaluated.  The returned values are used to set the
+streaming velocity of that particle.  A thermal velocity is also added
+to the particle, using the the global or mixture temperature, as
+described above.
+
+As an example, these commands can be used in a 2d simulation, to give
+particles an initial velocity pointing towards the upper right corner
+of the domain with a magnitude that makes them all reach that point at
+the same time (assuming their thermal velocity is small and it is not
+a collisional flow).  Click on the image to play an animation of the
+effect.
+
+variable x internal 0
+variable y internal 0
+variable vx equal (xhi-v_x)/(1000*7.0e-9)  # timesteps and timestep-size
+variable vy equal (yhi-v_y)/(1000*7.0e-9)
+create_particles air n 10000 velocity vx vy NULL x y NULL :pre
+
+:c,image(JPG/velocity_variation_small.jpg,JPG/velocity_variation.gif)
+
+The {twopass} keyword does not require a value.  If used, the
+creation procedure will loop over the creation grid cells twice, the
+same as the KOKKOS package version of this command does, so that it can
+reallocate memory efficiently, e.g. on a GPU.  If this keyword is used
+the non-KOKKOS and KOKKOS version will generate exactly the same set
+of particles, which makes debugging easier.  If the keyword is not
+used, the non-KOKKOS and KOKKOS runs will use random numbers
+differently and thus generate different particles, though they will be
+statistically similar.
+
+:line
+
+This command (or more generically styles) can take a suffix as shown
+at the top of this page.
+
+Styles with a {kk} suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+"Accelerating SPARTA"_Section_accelerate.html section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+
+These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the "Making
+SPARTA"_Section_start.html#start_3 section for more info.
+
+You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the "-suffix command-line
+switch"_Section_start.html#start_6 when you invoke SPARTA, or you can
+use the "suffix"_suffix.html command in your input script.
+
+See the "Accelerating SPARTA"_Section_accelerate.html section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
+
+:line
+
+[Restrictions:] none
+
+[Related commands:]
+
+"mixture"_mixture.html, "fix emit/face"_fix_emit_face.html
+
+[Default:]
+
+The option default is global = no.
