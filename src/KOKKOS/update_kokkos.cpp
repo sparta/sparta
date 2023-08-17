@@ -944,7 +944,6 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,OPT,ATOMIC_REDUCTION>, cons
 	    d_ncomm_one()++;
 	  else
 	    reduce.ncomm_one++;
-	  }
         }
 
         return;
