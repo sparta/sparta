@@ -52,7 +52,7 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
                      random(x,y), normal(x,y), ceil(x), floor(x), round(x)
                      ramp(x,y), stagger(x,y), logfreq(x,y,z), stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
     special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
-    particle vectors = mass, type, q, mu, x, y, z, vx, vy, vz
+    particle vectors = id, type, mass, q, mu, x, y, z, vx, vy, vz
     compute references = c_ID, c_ID\[I\], c_ID\[I\]\[J\]
     fix references = f_ID, f_ID\[I\], f_ID\[I\]\[J\]
     custom attribute references = p_ID, p_ID\[I\], g_ID, g_ID\[I\], s_ID, s_ID\[I\]
@@ -356,7 +356,7 @@ Math functions: sqrt(x), exp(x), ln(x), log(x), abs(x), sin(x), cos(x), tan(x), 
      ceil(x), floor(x), round(x), ramp(x,y), stagger(x,y), logfreq(x,y,z), \
      stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
 Special functions: sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
-Particle vectors: mass, type, q, mu, x, y, z, vx, vy, vz
+Particle vectors: id, type, mass, q, mu, x, y, z, vx, vy, vz
 Compute references: c_ID, c_ID\[I\], c_ID\[I\]\[J\]
 Fix references: f_ID, f_ID\[I\], f_ID\[I\]\[J\]
 Custom attribute references = p_ID, p_ID\[I\], g_ID, g_ID\[I\], s_ID, s_ID\[I\]
@@ -618,9 +618,14 @@ Particle Vectors :h4
 
 Particle vectors generate one value per particle, so that a reference
 like "vx" means the x-component of each particles's velocity will be
-used when evaluating the variable.  Some values are per-species
-values, like mass and q and mu.  "Mass" is the mass for the particle's
-species, "q" is the particle's charge, "mu" is its magnetic moment.
+used when evaluating the variable.  The reference "type" is an integer
+index representing the particle species.  It is a value from 1 to
+Nspecies. The value corresponds to the order in which species were
+defined via the "species"_species.html command.
+
+Particle vectors for mass and q and mu are per-species values.  "Mass"
+is the mass for the particle's species, "q" is the particle's charge,
+"mu" is its magnetic moment.
 
 The meaning of the other particle vectors should be self-explanatory.
 

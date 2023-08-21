@@ -107,6 +107,8 @@ void Custom::command(int narg, char **arg)
       if (index < 0) error->all(FLERR,"Custom attribute does not exist");
       surf->remove_custom(index);
     }
+
+    delete [] cname;
     
     return;
   }

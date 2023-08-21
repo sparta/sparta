@@ -28,7 +28,7 @@ args = list of arguments for a particular style :l
                           p_ID, p_ID\[N\], c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
 
       id = particle ID
-      type = particle species
+      type = particle species as an integer index
       proc = ID of owning processor
       x,y,z = unscaled particle coordinates
       xs,ys,zs = scaled particle coordinates
@@ -239,7 +239,7 @@ This section explains the particle attributes that can be specified as
 part of the {particle} style.
 
 {Id} is the particle ID.  {Type} is an integer index representing the
-particle species.  It is a value from 1 to Nspecies, The value
+particle species.  It is a value from 1 to Nspecies. The value
 corresponds to the order in which species were defined via the
 "species"_species.html command.  {Proc} is the ID of the processor
 which currently owns the particle.

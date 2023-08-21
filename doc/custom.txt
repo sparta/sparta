@@ -34,8 +34,9 @@ keyword = {type} or {size}
 
 [Examples:]
 
+variable ivec particle id/100000
+custom particle p_ivec set v_ivec air NULL type int
 custom particle p_ivec remove
-custom surf s_ivec set air NULL v_ivec type int
 
 [Description:]
 

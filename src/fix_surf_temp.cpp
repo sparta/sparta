@@ -202,7 +202,9 @@ void FixSurfTemp::end_of_step()
   
   // access source compute or fix which is only surfs I own
   // set new temperature via Stefan-Boltzmann eq for nown surfs I own
-  // no reset if eng flux < threshold
+  // NOTE: which of these 2 options (set doc page accordingly):
+  //   set to Twall if eng flux to surf is too small
+  //   no reset if eng flux < threshold
 
   Surf::Line *lines;
   Surf::Tri *tris;
@@ -233,6 +235,7 @@ void FixSurfTemp::end_of_step()
       if (mask & groupbit) {
         qw = qwvector[i];
 	if (qw > threshold) tcustom[i] = pow(prefactor*qw,0.25);
+        else tcustom[i] = twall;
       }
     }
 
@@ -253,6 +256,7 @@ void FixSurfTemp::end_of_step()
       if (mask & groupbit) {
         qw = qwarray[i][icol];
         if (qw > threshold) tcustom[i] = pow(prefactor*qw,0.25);
+        else tcustom[i] = twall;
       }
     }
   }
