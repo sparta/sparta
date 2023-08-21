@@ -41,7 +41,7 @@ an energy flux.
 This fix creates a custom per-surf floating point vector with the
 specified name of {customID}.  It can be accessed by other commands
 which use the temperature of surface elements.  An example is the
-"surf_collide diffuse"_surf_collide.html command.
+"surf_collide diffuse"_surf_collide.html command, as shown above.
 
 The per-surface element temperatures computed by this fix can be
 output via the "dump surf"_dump.html command, using its {s_name}
