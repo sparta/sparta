@@ -537,8 +537,11 @@ template < int DIM, int SURF, int OPT > void Update::move()
             x[1] = xnew[1];
             x[2] = xnew[2];
 
-            if (cells[icell].proc != me)
+            if (cells[icell].proc != me) {
               mlist[nmigrate++] = i;
+              particles[i].flag = PDONE;
+              ncomm_one++;
+            }
 
             continue;
           }

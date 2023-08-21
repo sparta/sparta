@@ -935,6 +935,15 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,OPT,ATOMIC_REDUCTION>, cons
             indx = Kokkos::atomic_fetch_add(&d_nmigrate(),1);
           }
           k_mlist.d_view[indx] = i;
+
+          particle_i.flag = PDONE;
+
+	  if (ATOMIC_REDUCTION == 1)
+	    Kokkos::atomic_increment(&d_ncomm_one());
+	  else if (ATOMIC_REDUCTION == 0)
+	    d_ncomm_one()++;
+	  else
+	    reduce.ncomm_one++;
         }
 
         return;
