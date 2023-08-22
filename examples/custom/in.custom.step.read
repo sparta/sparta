@@ -100,6 +100,16 @@ dump          3 particle all 100 tmp.step.read.dump.particle id x y &
 
 # second run
 
+compute       1 reduce ave p_ivec p_iarray[1] p_iarray[1] &
+              p_dvec p_darray[1] p_darray[2] p_darray[3]
+compute       2 reduce ave g_ivec g_iarray[1] g_iarray[1] &
+              g_dvec g_darray[1] g_darray[2] g_darray[3]
+compute       3 reduce ave s_ivec s_iarray[1] s_iarray[1] &
+              s_dvec s_darray[1] s_darray[2] s_darray[3]
+
+stats_style	step cpu np nattempt ncoll nscoll nscheck f_1[*] &
+                c_1[*] c_2[*] c_3[*]
+
 balance_grid    rcb part flip yes
 
 run 		    500
@@ -136,5 +146,10 @@ custom         particle p_dvec remove
 custom         particle p_darray remove
 
 # third run
+
+uncompute       1
+uncompute       2
+uncompute       3
+stats_style	step cpu np nattempt ncoll nscoll nscheck f_1[*]
 
 run            500
