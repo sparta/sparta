@@ -128,9 +128,11 @@ FixSurfTemp::FixSurfTemp(SPARTA *sparta, int narg, char **arg) :
   char *id_custom = new char[n];
   strcpy(id_custom,arg[7]);
 
-  // create per-surf temperature vector
+  // check if custom attribute already exists, due to restart file
+  // else create per-surf temperature vector
 
-  tindex = surf->add_custom(id_custom,DOUBLE,0);
+  tindex = surf->find_custom(id_custom);
+  if (tindex < 0) tindex = surf->add_custom(id_custom,DOUBLE,0);
   delete [] id_custom;
 
   // prefactor and threshold in Stefan/Boltzmann equation

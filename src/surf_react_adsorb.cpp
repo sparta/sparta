@@ -408,32 +408,46 @@ void SurfReactAdsorb::create_per_face_state()
 
 /* ----------------------------------------------------------------------
    create and initialize custom per-surf-element data structs
-   this must be done exactly once even if multiple SRA instances are used
 ------------------------------------------------------------------------- */
 
 void SurfReactAdsorb::create_per_surf_state()
 {
-  // SRA instance with first_owner = 1 allocates the custom per-surf data
+  // check if 4 custom attributes already exist
+  //   due to multiple instances of SRA or restart file
+  // else create per-surf vectors and array
+  // error if only some of them exist
   // add_custom() initializes all state data to zero
   // add_custom() for tau is in init(), b/c nactive_ps is not yet known
 
-  if (surf->find_custom((char *) "nstick_total") < 0) {
-    first_owner = 1;
+  total_state_index = surf->find_custom((char *) "nstick_total");
+  species_state_index = surf->find_custom((char *) "nstick_species");
+  area_index = surf->find_custom((char *) "area");
+  weight_index = surf->find_custom((char *) "weight");
+  if (psflag) tau_index = -1;
+
+  int flag = 0;
+  if (total_state_index < 0) flag --;
+  if (species_state_index < 0) flag --;
+  if (area_index < 0) flag --;
+  if (weight_index < 0) flag --;
+
+  if (flag == -4) {
     total_state_index = surf->add_custom((char *) "nstick_total",INT,0);
     species_state_index = surf->add_custom((char *) "nstick_species",
-						INT,nspecies_surf);
+                                           INT,nspecies_surf);
     area_index = surf->add_custom((char *) "area",DOUBLE,0);
     weight_index = surf->add_custom((char *) "weight",DOUBLE,0);
-    if (psflag) tau_index = -1;
 
-  } else {
-    first_owner = 0;
-    total_state_index = surf->find_custom((char *) "nstick_total");
-    species_state_index = surf->find_custom((char *) "nstick_species");
-    area_index = surf->find_custom((char *) "area");
-    weight_index = surf->find_custom((char *) "weight");
-    if (psflag) tau_index = -1;
-  }
+  } else if (flag < 0)
+    error->all(FLERR,"Surf react/adsorb custom attribute(s) already exist");
+
+  // set first_owner = 1 if this is first instance of SRA, else 0
+  // at this point (constructor), this instance of SRA does not yet exist
+  // first_owner enables exactly one deletion of custom attributes in destructor
+
+  first_owner = 1;
+  for (int i = 0; i < surf->nsr; i++)
+    if (strcmp(surf->sr[i]->style,"react/adsorb") == 0) first_owner = 0;
 
   // allocate and intialize surf_species_delta
   // stores changes in each nlocal+nghost surf due to reactions
@@ -498,9 +512,9 @@ void SurfReactAdsorb::init()
       tau = face_tau;
 
     } else if (mode == SURF) {
-      if (surf->find_custom((char *) "tau") < 0)
+      tau_index = surf->find_custom((char *) "tau");
+      if (tau_index < 0)
 	tau_index = surf->add_custom((char *) "tau",DOUBLE,nactive_ps);
-      else tau_index = surf->find_custom((char *) "tau");
       tau = surf->edarray[surf->ewhich[tau_index]];
     }
   }

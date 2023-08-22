@@ -66,10 +66,22 @@ FixAmbipolar::FixAmbipolar(SPARTA *sparta, int narg, char **arg) :
   double seed = update->ranmaster->uniform();
   random->reset(seed,comm->me,100);
 
-  // create per-particle vector and array
+  // check if 2 custom attributes already exist, due to restart file
+  // else create per-particle vector and array
+  // error if one exists and other doesn't
 
-  ionindex = particle->add_custom((char *) "ionambi",INT,0);
-  velindex = particle->add_custom((char *) "velambi",DOUBLE,3);
+  ionindex = particle->find_custom((char *) "ionambi");
+  velindex = particle->find_custom((char *) "velambi");
+
+  int flag = 0;
+  if (ionindex < 0 && velindex >= 0) flag = 1;
+  if (ionindex >= 0 && velindex < 0) flag = 1;
+  if (flag) error->all(FLERR,"Fix ambipolar custom attribute already exists");
+      
+  if (ionindex < 0)
+    ionindex = particle->add_custom((char *) "ionambi",INT,0);
+  if (velindex < 0)
+    velindex = particle->add_custom((char *) "velambi",DOUBLE,3);
 }
 
 /* ---------------------------------------------------------------------- */
