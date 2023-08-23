@@ -1,4 +1,6 @@
-# 2d flow around a staircase of steps with different temperature for each surf
+# 2d flow around a staircase of 2 steps with different temperature for each surf
+# set temp via custom attribute in data file
+# remove one step and run further
 
 seed	    	    12345
 dimension   	    2
