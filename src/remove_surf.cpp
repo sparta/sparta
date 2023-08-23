@@ -189,7 +189,6 @@ bigint RemoveSurf::remove(int groupbit)
   // copy Surf::lines/tris to local lines/tris
   // local data is distributed via striding
 
-<<<<<<< HEAD
   lines = NULL;
   tris = NULL;
   nsurf = surf->nown;
@@ -245,23 +244,12 @@ bigint RemoveSurf::remove(int groupbit)
 
   bigint ndiscard_me = nsurf - n;
   nsurf = n;
-=======
-  int n = 0;
-  for (i = 0; i < nline; i++) {
-    if (lines[i].mask & groupbit) continue;
-    if (i != n) memcpy(&lines[n],&lines[i],nbytes);
-    n++;
-  }
-
-  surf->nsurf = surf->nlocal = n;
->>>>>>> master
 
   // ndiscard = total # of removed surfs
 
   bigint ndiscard;
   MPI_Allreduce(&ndiscard_me,&ndiscard,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
-<<<<<<< HEAD
   // if removed any surfs, renumber surf IDs across all procs
 
   if (ndiscard) {
@@ -283,57 +271,6 @@ bigint RemoveSurf::remove(int groupbit)
 	id = static_cast<surfint> (offset + i + 1);
 	cvalues[i][0] = ubuf(id).d;
       }
-=======
-  if (comm->me == 0) {
-    if (screen) {
-      fprintf(screen,"  removed %d lines\n",nline_remove);
-      fprintf(screen,"  " BIGINT_FORMAT " lines remain\n",surf->nsurf);
-    }
-    if (logfile) {
-      fprintf(logfile,"  removed %d lines\n",nline_remove);
-      fprintf(logfile,"  " BIGINT_FORMAT " lines remain\n",surf->nsurf);
-    }
-  }
-}
-
-/* ----------------------------------------------------------------------
-   remove all triangles in surf group
-   condense data structures by removing deleted points & triangles
-------------------------------------------------------------------------- */
-
-void RemoveSurf::remove_3d(int groupbit)
-{
-  int i;
-
-  // remove triangles in group
-
-  Surf::Tri *tris = surf->tris;
-  int ntri = surf->nsurf;
-  int nbytes = sizeof(Surf::Tri);
-
-  int n = 0;
-  for (i = 0; i < ntri; i++) {
-    if (tris[i].mask & groupbit) continue;
-    if (i != n) memcpy(&tris[n],&tris[i],nbytes);
-    n++;
-  }
-
-  surf->nsurf = surf->nlocal = n;
-
-  // print stats after removal
-
-  int ntri_remove = ntri - surf->nsurf;
-
-  if (comm->me == 0) {
-    if (screen) {
-      fprintf(screen,"  removed %d tris\n",ntri_remove);
-      fprintf(screen,"  " BIGINT_FORMAT " tris remain\n",surf->nsurf);
-    }
-    if (logfile) {
-      fprintf(logfile,"  removed %d tris\n",ntri_remove);
-      fprintf(logfile,"  " BIGINT_FORMAT " tris remain\n",surf->nsurf);
-    }
->>>>>>> master
   }
 
   // clean up from call to surf->extract_custom()
