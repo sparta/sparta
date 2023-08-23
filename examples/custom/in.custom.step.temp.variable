@@ -1,0 +1,54 @@
+# 2d flow around a staircase of steps with different temperature for each surf
+# set temp via surf-style variable
+
+seed	    	    12345
+dimension   	    2
+
+global              gridcut 0.0 comm/sort yes
+
+#global              surfs explicit
+global              surfs explicit/distributed
+
+boundary	    or r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid         20 20 1
+
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.01
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0 
+
+read_surf	    data.step &
+                    trans 5 5 0 scale 0.75 0.75 1 &
+                    rotate 45 0 0 1 invert
+
+compute             1 property/surf all xc yc
+variable            stemp surf 300.0*(abs(c_1[1])+abs(c_1[2]))
+
+surf_collide	    1 diffuse v_stemp 0.0 temp/freq 500
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+fix		    in emit/face air xlo twopass 
+
+timestep 	    0.0001
+
+# output
+
+dump          1 surf all 100 tmp.step.variable.dump.surf id type v_stemp
+
+dump                10 image all 500 tmp.step.temp.variable.image.*.ppm &
+                    type type pdiam 0.1 &
+                    surf proc 0.01 size 512 512 axes yes 0.9 0.02 zoom 1.5
+dump_modify	    10 pad 4
+
+# first run
+
+stats		    50
+stats_style	    step cpu np nattempt ncoll nscoll nscheck # f_1[*]
+
+run 		    500
