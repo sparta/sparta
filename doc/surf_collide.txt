@@ -19,11 +19,11 @@ args = arguments for specific style :l
     noslip = reflect all velocity components off surface (not just normal component)
   {diffuse} or {diffuse/kk} args = Tsurf acc
     Tsurf = temperature of surface (temperature units)
-                Tsurf can be a variable or custom per-surf attribute (see below)
+            Tsurf can be a variable or custom per-surf attribute (see below)
     acc = accommodation coefficient
   {cll} args = Tsurf acc_n acc_t acc_rot acc_vib
     Tsurf = temperature of surface (temperature units)
-                Tsurf can be a variable or custom per-surf attribute (see below)
+            Tsurf can be a variable or custom per-surf attribute (see below)
     acc_n = accommodation coefficient in the surface normal direction
     acc_t = accommodation coefficient in the surface tangential direction
     acc_rot = accommodation coefficient for the rotational modes
@@ -31,7 +31,7 @@ args = arguments for specific style :l
   {adiabatic} args = none
   {impulsive} args = Tsurf model param1 param2 var theta_peak pol_pow azi_pow
     Tsurf = temperature of surface (temperature units)
-                Tsurf can be a variable or custom per-surf attribute (see below)
+            Tsurf can be a variable or custom per-surf attribute (see below)
     model can be {softsphere} or {tempvar}
       {softsphere} args = en_ratio eff_mass
         param1 = en_ratio = fraction of energy lost in the collision
@@ -45,7 +45,7 @@ args = arguments for specific style :l
     azi_pow = cosine power represeting the azimuthal angular distribution
   {td} arg = Tsurf 
     Tsurf = temperature of surface (temperature units)
-                Tsurf can be a variable or custom per-surf attribute (see below)
+            Tsurf can be a variable or custom per-surf attribute (see below)
   {piston} or {piston/kk} args = Vwall
     Vwall = velocity of boundary wall (velocity units)
   {transparent} args = none :pre

@@ -227,9 +227,8 @@ void SurfCollide::dynamic()
     // estatus == 1 means owned values already spread to local+ghost values
     // if estatus == 0: owned values are new OR
     //   surfs are distributed and load balance/adaptation took place
-    
-    if (surf->estatus[tindex_custom]) return;
-    surf->spread_custom(tindex_custom);
+
+    if (surf->estatus[tindex_custom] == 0) surf->spread_custom(tindex_custom);
     t_persurf = surf->edvec_local[tindex_custom];
   }
 }

@@ -1366,12 +1366,17 @@ void Surf::spread_own2local_rendezvous(int n, int type, void *in, void *out)
   int *ibuf,*ioutbuf;
   double *dbuf,*doutbuf;
 
-  if (type == INT) ibuf = (int *) buf;
-  else if (type == DOUBLE) dbuf = (double *) dbuf;
+  if (type == INT) {
+    ibuf = (int *) buf;
+    ioutbuf = (int *) out;
+  } else if (type == DOUBLE) {
+    dbuf = (double *) buf;
+    doutbuf = (double *) out;
+  }
 
   m = 0;
   if (type == INT) {
-    for (i = 0; i < nall; i++) {
+    for (i = 0; i < nreturn; i++) {
       index = ibuf[m++];
       if (n == 1)
 	ioutbuf[index] = ibuf[m++];
@@ -1383,7 +1388,7 @@ void Surf::spread_own2local_rendezvous(int n, int type, void *in, void *out)
     }
     
   } else if (type == DOUBLE) {
-    for (i = 0; i < nall; i++) {
+    for (i = 0; i < nreturn; i++) {
       index = (int) ubuf(dbuf[m++]).i;
       if (n == 1)
 	doutbuf[index] = dbuf[m++];
@@ -1457,7 +1462,7 @@ int Surf::rendezvous_own2local(int n, char *inbuf,
       m += 3;
       
       proclist[i] = oproc;
-      dout[k++] = oindex;
+      dout[k++] = ubuf(oindex).d;
       if (size == 1)
 	dout[k++] = dbuf[index];
       else {

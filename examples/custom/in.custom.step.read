@@ -8,7 +8,7 @@ dimension   	    2
 global              gridcut 0.0 comm/sort yes
 #global              gridcut 2.0 comm/sort yes
 
-#global              surfs explicit/all
+#global              surfs explicit
 global              surfs explicit/distributed
 
 boundary	    or r p
