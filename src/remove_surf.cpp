@@ -80,8 +80,8 @@ void RemoveSurf::command(int narg, char **arg)
   // ncustom = # of current custom vecs/arrays
   // index_custom = indices for each custom vec/array in Surf custom list
   
+  int *index_custom = new int[surf->ncustom];
   int ncustom = 0;
-  int *index_custom = NULL;
 
   if (surf->ncustom) {
     for (int i = 0; i < surf->ncustom; i++) {
@@ -203,7 +203,7 @@ bigint RemoveSurf::remove(int groupbit)
       int nslocal = surf->nlocal;
       m = 0;
       for (int i = me; i < nslocal; i += nprocs)
-	memcpy(&lines[m],&surf->lines[i],nbytes);
+	memcpy(&lines[m++],&surf->lines[i],nbytes);
     }
   } else {
     tris = (Surf::Tri *) memory->smalloc(nsurf*nbytes,"remove/surf:tris");
@@ -212,7 +212,7 @@ bigint RemoveSurf::remove(int groupbit)
       int nslocal = surf->nlocal;
       m = 0;
       for (int i = me; i < nslocal; i += nprocs)
-	memcpy(&tris[m],&surf->tris[i],nbytes);
+	memcpy(&tris[m++],&surf->tris[i],nbytes);
     }
   }
   
@@ -222,23 +222,26 @@ bigint RemoveSurf::remove(int groupbit)
   int ncustom = surf->ncustom;
   int ncbytes = 0;
 
+  // DEBUG
+  int nvalues_custom;
+  
   if (ncustom) {
-    int nvalues_custom = surf->extract_custom(cvalues);
+    nvalues_custom = surf->extract_custom(cvalues);
     ncbytes = (1+nvalues_custom) * sizeof(double);
   }
-  
+
   // remove surfs in group, both from lines/tris and cvalues
 
   n = 0;
   for (i = 0; i < nsurf; i++) {
     if (dim == 2) {
-      if (!(lines[i].mask & groupbit)) continue;
+      if (lines[i].mask & groupbit) continue;
       if (i != n) memcpy(&lines[n],&lines[i],nbytes);
     } else {
-      if (!(tris[i].mask & groupbit)) continue;
+      if (tris[i].mask & groupbit) continue;
       if (i != n) memcpy(&tris[n],&tris[i],nbytes);
     }
-    if (ncustom) memcpy(&cvalues[n],&cvalues[i],ncbytes);
+    if (ncustom && i != n) memcpy(cvalues[n],cvalues[i],ncbytes);
     n++;
   }
 
@@ -273,9 +276,5 @@ bigint RemoveSurf::remove(int groupbit)
       }
   }
 
-  // clean up from call to surf->extract_custom()
-  
-  if (ncustom) memory->destroy(cvalues);
-  
   return ndiscard;
 }

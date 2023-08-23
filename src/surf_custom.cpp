@@ -416,7 +416,7 @@ int Surf::extract_custom(double **&cvalues)
   surfint id;
 
   for (i = 0; i < nown; i++) {
-    id = (surfint) i * nprocs + me;
+    id = (surfint) i*nprocs + me + 1;
     cvalues[i][0] = ubuf(id).d;
   }
 
