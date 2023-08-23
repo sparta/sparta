@@ -250,9 +250,11 @@ void FixEmitSurf::create_task(int icell)
   double *vscale = particle->mixture[imix]->vscale;
 
   // no tasks if no surfs in cell
+
   if (cells[icell].nsurf == 0) return;
 
   // no tasks if cell is outside of flow volume
+
   if (cinfo[icell].volume == 0.0) return;
 
   // loop over surfs in cell
