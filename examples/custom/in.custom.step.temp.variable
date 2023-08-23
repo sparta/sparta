@@ -26,9 +26,9 @@ read_surf	    data.step &
                     rotate 45 0 0 1 invert
 
 compute             1 property/surf all xc yc
-variable            stemp surf 300.0*(abs(c_1[1])+abs(c_1[2]))
+variable            stemp surf 300.0*(abs(c_1[1])+abs(c_1[2]))*(1+step/500)
 
-surf_collide	    1 diffuse v_stemp 0.0 temp/freq 500
+surf_collide	    1 diffuse v_stemp 0.0 temp/freq 100
 surf_modify         all collide 1
 
 collide             vss air air.vss
@@ -41,7 +41,7 @@ timestep 	    0.0001
 
 dump          1 surf all 100 tmp.step.variable.dump.surf id type v_stemp
 
-dump                10 image all 500 tmp.step.temp.variable.image.*.ppm &
+dump                10 image all 100 tmp.step.temp.variable.image.*.ppm &
                     type type pdiam 0.1 &
                     surf proc 0.01 size 512 512 axes yes 0.9 0.02 zoom 1.5
 dump_modify	    10 pad 4

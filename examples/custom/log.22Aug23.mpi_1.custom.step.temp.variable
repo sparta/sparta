@@ -17,13 +17,13 @@ create_box  	    0 10 0 10 -0.5 0.5
 Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
 create_grid         20 20 1
 Created 400 child grid cells
-  CPU time = 0.00159833 secs
-  create/ghost percent = 91.0291 8.97093
+  CPU time = 0.00153235 secs
+  create/ghost percent = 89.7429 10.2571
 
 balance_grid        rcb cell
 Balance grid migrated 0 cells
-  CPU time = 0.000241641 secs
-  reassign/sort/migrate/ghost percent = 54.5388 0.576889 12.8438 32.0405
+  CPU time = 0.000232507 secs
+  reassign/sort/migrate/ghost percent = 54.5192 0.689012 13.3794 31.4124
 
 global		    nrho 1.0 fnum 0.01
 
@@ -40,15 +40,15 @@ read_surf	    data.step                     trans 5 5 0 scale 0.75 0.75 1       
   312 44 44 = cells outside/inside/overlapping surfs
   44 = surf cells with 1,2,etc splits
   85.375 85.375 = cell-wise and global flow volume
-  CPU time = 0.000584345 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 7.27515 11.5321 2.36419 66.5968 12.2318 10.0299 0.0256698
-  surf2grid time = 0.000389155 secs
-  map/comm1/comm2/comm3/comm4/split percent = 40.3346 7.39654 17.088 3.38683 17.7145 10.3488
+  CPU time = 0.000642746 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 6.74637 11.4221 2.19791 67.8083 11.8254 9.98513 0.0399847
+  surf2grid time = 0.000435835 secs
+  map/comm1/comm2/comm3/comm4/split percent = 42.8224 4.58637 14.168 3.33131 20.4302 9.94275
 
 compute             1 property/surf all xc yc
-variable            stemp surf 300.0*(abs(c_1[1])+abs(c_1[2]))
+variable            stemp surf 300.0*(abs(c_1[1])+abs(c_1[2]))*(1+step/500)
 
-surf_collide	    1 diffuse v_stemp 0.0 temp/freq 500
+surf_collide	    1 diffuse v_stemp 0.0 temp/freq 100
 surf_modify         all collide 1
 
 collide             vss air air.vss
@@ -61,7 +61,7 @@ timestep 	    0.0001
 
 dump          1 surf all 100 tmp.step.variable.dump.surf id type v_stemp
 
-dump                10 image all 500 tmp.step.temp.variable.image.*.ppm                     type type pdiam 0.1                     surf proc 0.01 size 512 512 axes yes 0.9 0.02 zoom 1.5
+dump                10 image all 100 tmp.step.temp.variable.image.*.ppm                     type type pdiam 0.1                     surf proc 0.01 size 512 512 axes yes 0.9 0.02 zoom 1.5
 dump_modify	    10 pad 4
 
 # first run
@@ -77,28 +77,28 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 1.51721 1.51721 1.51721
 Step CPU Np Natt Ncoll Nscoll Nscheck 
        0            0        0        0        0        0        0 
-      50  0.001304817     1087        0        0        1       81 
-     100  0.002489698     2054        0        0       10      255 
-     150  0.004332684     2859        0        0        9      366 
-     200  0.006447969     3548        0        0       17      507 
-     250  0.009118802     4170        0        0       24      610 
-     300  0.012045241     4707        0        0       19      663 
-     350  0.015207746     5104        0        0       24      672 
-     400  0.018663524     5503        0        0       30      739 
-     450  0.022435833     5757        0        0       22      752 
-     500  0.031465816     6071        0        0       32      834 
-Loop time of 0.0314729 on 1 procs for 500 steps with 6071 particles
+      50  0.001081086     1087        0        0        1       81 
+     100  0.005769521     2054        0        0       10      255 
+     150   0.00750536     2859        0        0        9      366 
+     200   0.01308846     3548        0        0       17      507 
+     250  0.015735245     4170        0        0       24      610 
+     300  0.022634717     4707        0        0       19      663 
+     350  0.025766686     5104        0        0       24      672 
+     400  0.033381288     5503        0        0       30      739 
+     450  0.037030356     5757        0        0       22      752 
+     500  0.045353986     6071        0        0       32      834 
+Loop time of 0.0453575 on 1 procs for 500 steps with 6071 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.017588   | 0.017588   | 0.017588   |   0.0 | 55.88
-Coll    | 0.0041589  | 0.0041589  | 0.0041589  |   0.0 | 13.21
-Sort    | 0.0020371  | 0.0020371  | 0.0020371  |   0.0 |  6.47
-Comm    | 4.8172e-05 | 4.8172e-05 | 4.8172e-05 |   0.0 |  0.15
-Modify  | 0.0022314  | 0.0022314  | 0.0022314  |   0.0 |  7.09
-Output  | 0.0053723  | 0.0053723  | 0.0053723  |   0.0 | 17.07
-Other   |            | 3.697e-05  |            |       |  0.12
+Move    | 0.017478   | 0.017478   | 0.017478   |   0.0 | 38.53
+Coll    | 0.0040908  | 0.0040908  | 0.0040908  |   0.0 |  9.02
+Sort    | 0.0019164  | 0.0019164  | 0.0019164  |   0.0 |  4.23
+Comm    | 4.7746e-05 | 4.7746e-05 | 4.7746e-05 |   0.0 |  0.11
+Modify  | 0.0020686  | 0.0020686  | 0.0020686  |   0.0 |  4.56
+Output  | 0.01972    | 0.01972    | 0.01972    |   0.0 | 43.48
+Other   |            | 3.599e-05  |            |       |  0.08
 
 Particle moves    = 1900123 (1.9M)
 Cells touched     = 2178961 (2.18M)
@@ -114,7 +114,7 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 6.03733e+07
+Particle-moves/CPUsec/proc: 4.18921e+07
 Particle-moves/step: 3800.25
 Cell-touches/particle/step: 1.14675
 Particle comm iterations/step: 1
