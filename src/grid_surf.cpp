@@ -1832,20 +1832,20 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
 
   double minsize = MIN(hi[0]-lo[0],hi[1]-lo[1]);
   double displace = EPSSURF * minsize;
-  
+
   if (dim == 2) {
     int npoint;
     double cpath[4],a[2],b[2];
     double *norm;
     Surf::Line *line;
-    
+
     Surf::Line *lines = surf->lines;
 
     for (int i = 0; i < nsurf; i++) {
       line = &lines[csurfs[i]];
       if (line->transparent) continue;
       norm = line->norm;
-      
+
       npoint = cut2d->clip_external(line->p1,line->p2,lo,hi,cpath);
       if (npoint < 2) continue;
 
@@ -1862,7 +1862,7 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
       x[2] = 0.0;
       return 1;
     }
-    
+
   } else {
     int npoint;
     double cpath[24],a[2],b[2];
@@ -1875,10 +1875,10 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
       tri = &tris[csurfs[i]];
       if (tri->transparent) continue;
       norm = tri->norm;
-      
+
       npoint = cut3d->clip_external(tri->p1,tri->p2,tri->p3,lo,hi,cpath);
       if (npoint < 3) continue;
-                    
+
       int face = cut3d->sameface_external(&cpath[0],&cpath[3],&cpath[6],lo,hi);
       if (face) {
         if (face == 1 and norm[0] < 0.0) continue;
@@ -1901,7 +1901,7 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
   // means entire cell is actually outside or inside, just touched by surfs
   // if outside, caller does not need to call outside_surfs()
   // if inside, caller can detect that its flow volume = zero
-  
+
   return 0;
 }
 

@@ -608,18 +608,18 @@ void FixAblate::create_surfs(int outflag)
     particles[i].flag = PKEEP;
     icell = particles[i].icell;
     if (cells[icell].nsurf == 0) continue;
-    
+
     x = particles[i].x;
 
     // check that particle is outside surfs
     // if no xcell found, cannot check
-    
+
     pflag = grid->point_outside_surfs(icell,xcell);
     if (!pflag) continue;
     pflag = grid->outside_surfs(icell,x,xcell);
-    
+
     // check that particle is in correct split subcell
-    
+
     if (pflag && cells[icell].nsplit <= 0) {
       splitcell = sinfo[cells[icell].isplit].icell;
       if (dim == 2) subcell = update->split2d(splitcell,x);
@@ -628,7 +628,7 @@ void FixAblate::create_surfs(int outflag)
     }
 
     // discard the particle if either test failed
-    
+
     if (!pflag) {
       particles[i].flag = PDISCARD;
       // DEBUG - print message about MC flags for cell of deleted particle

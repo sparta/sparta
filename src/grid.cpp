@@ -149,7 +149,7 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
 
   cut2d = NULL;
   cut3d = NULL;
-  
+
   // allocate hash for cell IDs
 
   hash = new MyHash();

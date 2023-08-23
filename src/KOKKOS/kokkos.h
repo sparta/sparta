@@ -28,11 +28,10 @@ class KokkosSPARTA : protected Pointers {
   int prewrap;
   int auto_sync;
   int nthreads,ngpus;
-  int numa;
   int need_atomics;
   int gpu_aware_flag;
-  int collide_retry_flag;
-  double collide_extra;
+  int react_retry_flag;
+  double react_extra;
 
   KokkosSPARTA(class SPARTA *, int, char **);
   ~KokkosSPARTA();

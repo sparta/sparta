@@ -539,8 +539,11 @@ template < int DIM, int SURF, int OPT > void Update::move()
             x[1] = xnew[1];
             x[2] = xnew[2];
 
-            if (cells[icell].proc != me)
+            if (cells[icell].proc != me) {
               mlist[nmigrate++] = i;
+              particles[i].flag = PDONE;
+              ncomm_one++;
+            }
 
             continue;
           }
@@ -1283,7 +1286,7 @@ template < int DIM, int SURF, int OPT > void Update::move()
   // accumulate running totals
 
   niterate_running += niterate;
-  nmove_running += nlocal;
+  nmove_running += particle->nlocal;
   ntouch_running += ntouch_one;
   ncomm_running += ncomm_one;
   nboundary_running += nboundary_one;

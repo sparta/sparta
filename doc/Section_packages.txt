@@ -107,7 +107,7 @@ build and use this package.  Its styles can be invoked at run time via
 the "-sf kk" or "-suffix kk" "command-line
 switches"_Section_start.html#start_6.
 
-You must have a C++14 compatible compiler to use this package.
+You must have a C++17 compatible compiler to use this package.
 
 [Authors:] The KOKKOS package was created primarily by Stan Moore (Sandia),
 with contributions from other folks as well.
