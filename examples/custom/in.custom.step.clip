@@ -1,0 +1,70 @@
+# 2d flow around a staircase of steps with read_grid and read_surf
+# testing custom attributes
+
+seed	    	    12345
+dimension   	    2
+
+#global              gridcut -1.0 comm/sort yes
+global              gridcut 0.0 comm/sort yes
+#global              gridcut 2.0 comm/sort yes
+
+#global              surfs explicit
+global              surfs explicit/distributed
+
+boundary	    or r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+
+read_grid           data.step.grid &
+                    custom ivec int 0 &
+                    custom iarray int 2 &
+                    custom dvec float 0 &
+                    custom darray float 3
+                    
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.01
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0 
+
+read_surf	    data.step.custom &
+                    custom ivec int 0 &
+                    custom iarray int 2 &
+                    custom dvec float 0 &
+                    custom darray float 3 &
+                    trans 5 1 0 scale 0.75 0.75 1 &
+                    rotate 45 0 0 1 invert clip
+
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+fix		    in emit/face air xlo twopass 
+
+timestep 	    0.0001
+
+# output
+
+dump                10 image all 100 tmp.step.clip.image.*.ppm &
+                    type type pdiam 0.1 &
+                    surf proc 0.01 size 512 512 axes yes 0.9 0.02 zoom 1.5
+dump_modify	    10 pad 4
+
+dump          1 surf all 100 tmp.step.clip.dump.surf id type &
+              s_ivec s_iarray[1] s_iarray[2] &
+              s_dvec s_darray[1] s_darray[2] s_darray[3]
+
+write_surf      tmp.step.clip.data.surf type &
+                custom ivec custom iarray custom dvec custom darray &
+                points no
+
+# first run
+
+fix             1 balance 100 1.01 rcb part flip yes
+
+stats		    50
+stats_style	    step cpu np nattempt ncoll nscoll nscheck f_1[*]
+
+run 		    500

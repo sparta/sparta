@@ -259,14 +259,6 @@ void ReadSurf::command(int narg, char **arg)
   if (!distributed) nsurf_old_mine = surf->nlocal;
   else nsurf_old_mine = surf->nown;
 
-  printf("NSURF %d\n",nsurf);
-  printf("NCUSTOM %d\n",ncustom);
-  for (int i = 0; i < nsurf; i++)
-    printf(" i %d id " SURFINT_FORMAT " cval %g %g %g: %g %g %g %g\n",
-           i, (surfint) ubuf(cvalues[i][0]).i,
-           cvalues[i][1],cvalues[i][2],cvalues[i][3],
-           cvalues[i][4],cvalues[i][5],cvalues[i][6],cvalues[i][7]);
-  
   surf->add_surfs(0,nsurf,lines,tris,ncustom,index_custom,cvalues);
 
   memory->sfree(lines);
@@ -1902,7 +1894,7 @@ void ReadSurf::clip3d()
         // add a new tri
         // use same ID as modified tri for now, will renumber below
 
-        if (nsurf+1 == maxdiscard) {
+        if (nsurf+1 >= maxdiscard) {
           maxdiscard += DELTA_DISCARD;
           memory->grow(discard,maxdiscard,"readsurf:discard");
         }
