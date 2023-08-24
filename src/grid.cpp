@@ -2061,6 +2061,7 @@ void Grid::grow_sinfo(int n)
 void Grid::group(int narg, char **arg)
 {
   int i,flag;
+  bigint nme,nall;
   double x[3];
 
   if (narg < 3) error->all(FLERR,"Illegal group command");
@@ -2070,6 +2071,23 @@ void Grid::group(int narg, char **arg)
   int igroup = find_group(arg[0]);
   if (igroup < 0) igroup = add_group(arg[0]);
   int bit = bitmask[igroup];
+
+  // print initial count for group
+  
+  nme = 0;
+  for (i = 0; i < nlocal; i++)
+    if (cinfo[i].mask & bit) nme++;
+
+  MPI_Allreduce(&nme,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+
+  if (comm->me == 0) {
+    if (screen)
+      fprintf(screen,BIGINT_FORMAT " initial grid cell count in group %s\n",
+              nall,gnames[igroup]);
+    if (logfile)
+      fprintf(logfile,BIGINT_FORMAT " initial grid cell count in group %s\n",
+              nall,gnames[igroup]);
+  }
 
   // style = region
   // add grid cell to group if in region
@@ -2274,21 +2292,20 @@ void Grid::group(int narg, char **arg)
     for (i = 0; i < nlocal; i++) cinfo[i].mask &= inversebits;
   }
 
-  // print stats for changed group
-
-  bigint n = 0;
+  // print final count for group
+  
+  nme = 0;
   for (i = 0; i < nlocal; i++)
-    if (cinfo[i].mask & bit) n++;
+    if (cinfo[i].mask & bit) nme++;
 
-  bigint nall;
-  MPI_Allreduce(&n,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&nme,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
   if (comm->me == 0) {
     if (screen)
-      fprintf(screen,BIGINT_FORMAT " grid cells in group %s\n",
+      fprintf(screen,BIGINT_FORMAT " final grid cell count in group %s\n",
               nall,gnames[igroup]);
     if (logfile)
-      fprintf(logfile,BIGINT_FORMAT " grid cells in group %s\n",
+      fprintf(logfile,BIGINT_FORMAT " final grid cell count in group %s\n",
               nall,gnames[igroup]);
   }
 }

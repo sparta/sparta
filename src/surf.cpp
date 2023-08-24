@@ -2157,12 +2157,13 @@ int Surf::find_react(const char *id)
 
 /* ----------------------------------------------------------------------
    group surf command called via input script
-   for both nlocal+nghost lines/tris and mylines/mytris
+   add to masks for both nlocal+nghost lines/tris and mylines/mytris
 ------------------------------------------------------------------------- */
 
 void Surf::group(int narg, char **arg)
 {
   int i,flag;
+  bigint nme,nall;
   double x[3];
 
   if (narg < 3) error->all(FLERR,"Illegal group command");
@@ -2173,6 +2174,39 @@ void Surf::group(int narg, char **arg)
 
   int dim = domain->dimension;
 
+  // print initial count for group
+
+  nme = 0;
+  if (dim == 2) {
+    if (!distributed || implicit) {
+      for (i = 0; i < nlocal; i++)
+        if (lines[i].mask & bit) nme++;
+    } else {
+      for (i = 0; i < nown; i++)
+        if (mylines[i].mask & bit) nme++;
+    }
+  } else {
+    if (!distributed || implicit) {
+      for (i = 0; i < nlocal; i++)
+        if (tris[i].mask & bit) nme++;
+    } else {
+      for (i = 0; i < nown; i++)
+        if (mytris[i].mask & bit) nme++;
+    }
+  }
+
+  if (distributed) MPI_Allreduce(&nme,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  else nall = nme;
+
+  if (comm->me == 0) {
+    if (screen)
+      fprintf(screen,BIGINT_FORMAT " = initial surface count in group %s\n",
+              nall,gnames[igroup]);
+    if (logfile)
+      fprintf(logfile,BIGINT_FORMAT " = initial surface count in group %s\n",
+              nall,gnames[igroup]);
+  }
+  
   // style = type or id
   // add surf to group if matches types/ids or condition
 
@@ -2796,27 +2830,36 @@ void Surf::group(int narg, char **arg)
     }
   }
 
-  // print stats for changed group
+  // print final count for group
 
-  bigint n = 0;
+  nme = 0;
   if (dim == 2) {
-    for (i = 0; i < nlocal; i++)
-      if (lines[i].mask & bit) n++;
+    if (!distributed || implicit) {
+      for (i = 0; i < nlocal; i++)
+        if (lines[i].mask & bit) nme++;
+    } else {
+      for (i = 0; i < nown; i++)
+        if (mylines[i].mask & bit) nme++;
+    }
   } else {
-    for (i = 0; i < nlocal; i++)
-      if (tris[i].mask & bit) n++;
+    if (!distributed || implicit) {
+      for (i = 0; i < nlocal; i++)
+        if (tris[i].mask & bit) nme++;
+    } else {
+      for (i = 0; i < nown; i++)
+        if (mytris[i].mask & bit) nme++;
+    }
   }
 
-  bigint nall;
-  if (distributed) MPI_Allreduce(&n,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  else nall = n;
+  if (distributed) MPI_Allreduce(&nme,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  else nall = nme;
 
   if (comm->me == 0) {
     if (screen)
-      fprintf(screen,BIGINT_FORMAT " surfaces in group %s\n",
+      fprintf(screen,BIGINT_FORMAT " = final surface count in group %s\n",
               nall,gnames[igroup]);
     if (logfile)
-      fprintf(logfile,BIGINT_FORMAT " surfaces in group %s\n",
+      fprintf(logfile,BIGINT_FORMAT " = final surface count in group %s\n",
               nall,gnames[igroup]);
   }
 }

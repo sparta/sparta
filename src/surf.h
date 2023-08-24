@@ -27,7 +27,7 @@ class Surf : protected Pointers {
  public:
   int exist;                // 1 if any surfaces are defined, else 0
   int implicit;             // 1 = implicit surfs, 0 = explicit surfs
-  int distributed;          // 1 = surfs spread across procs (exp or impl)
+  int distributed;          // 1 = surfs spread across procs (expl or impl)
                             // 0 = each proc owns all surfs
   int surf_collision_check; // flag for whether init() check is required
                             // for assign of collision models to surfs
