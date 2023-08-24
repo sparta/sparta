@@ -1883,7 +1883,7 @@ void Grid::type_check(int outflag)
       } else x[2] = 0.0;
 
       if (Geometry::point_on_hex(x,boxlo,boxhi)) {
-        printf("BAD CORNER icell %d id %d type %d "
+        printf("BAD CORNER icell %d id " CELLINT_FORMAT"  type %d "
                "icorner %d x %g %g %g cflags %d %d %d %d\n",
                icell,cells[icell].id,cinfo[icell].type,i,x[0],x[1],x[2],
                cinfo[icell].corner[0],
@@ -2666,7 +2666,7 @@ void Grid::debug()
            cells[i].hi[0],cells[i].hi[1],cells[i].hi[2]);
     printf("  nsurf %d:",cells[i].nsurf);
     for (int j = 0; j < cells[i].nsurf; j++)
-      printf(" %d",cells[i].csurfs[j]);
+      printf(" " SURFINT_FORMAT,cells[i].csurfs[j]);
     printf("\n");
     printf("  nsplit %d isplit %d\n",cells[i].nsplit,cells[i].isplit);
     printf("  type %d corner %d %d %d %d %d %d %d %d\n",

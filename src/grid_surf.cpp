@@ -1074,7 +1074,7 @@ void Grid::surf2grid_split(int subflag, int outflag)
 
     } else {
       if (cells[icell].nsplit != nsplitone) {
-        printf("BAD %d %d: %d %d\n",icell,cells[icell].id,
+        printf("BAD %d " CELLINT_FORMAT ": %d %d\n",icell,cells[icell].id,
                nsplitone,cells[icell].nsplit);
         error->one(FLERR,
                    "Inconsistent surface to grid mapping in read_restart");

@@ -258,6 +258,14 @@ void ReadSurf::command(int narg, char **arg)
   int nsurf_old_mine;
   if (!distributed) nsurf_old_mine = surf->nlocal;
   else nsurf_old_mine = surf->nown;
+
+  printf("NSURF %d\n",nsurf);
+  printf("NCUSTOM %d\n",ncustom);
+  for (int i = 0; i < nsurf; i++)
+    printf(" i %d id " SURFINT_FORMAT " cval %g %g %g: %g %g %g %g\n",
+           i, (surfint) ubuf(cvalues[i][0]).i,
+           cvalues[i][1],cvalues[i][2],cvalues[i][3],
+           cvalues[i][4],cvalues[i][5],cvalues[i][6],cvalues[i][7]);
   
   surf->add_surfs(0,nsurf,lines,tris,ncustom,index_custom,cvalues);
 
@@ -1680,9 +1688,11 @@ void ReadSurf::clip2d()
   int n = 0;
   for (i = 0; i < nsurf; i++) {
     if (!discard[i]) {
-      if (n != i) memcpy(&lines[n],&lines[i],sizeof(Surf::Line));
-      if (ncustom)
-        memcpy(cvalues[n],cvalues[i],(1+nvalues_custom)*sizeof(double));
+      if (n != i) {
+        memcpy(&lines[n],&lines[i],sizeof(Surf::Line));
+        if (ncustom)
+          memcpy(cvalues[n],cvalues[i],(1+nvalues_custom)*sizeof(double));
+      }
       n++;
     }
   }
@@ -1703,9 +1713,11 @@ void ReadSurf::clip2d()
     MPI_Scan(&bnsurf,&offset,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
     offset -= bnsurf;
 
-    for (i = 0; i < nsurf; i++)
+    for (i = 0; i < nsurf; i++) {
       lines[i].id = static_cast<surfint> (offset + i + 1);
-
+      if (ncustom) cvalues[i][0] = ubuf(lines[i].id).d;
+    }
+    
     MPI_Allreduce(&bnsurf,&nsurf_all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   }
 
@@ -1896,7 +1908,7 @@ void ReadSurf::clip3d()
         }
 
         // cannot use in1 in add_tri() because it points into tris,
-        //   which may be reallocdd at start of add_tri()
+        //   which may be realloced at start of add_tri()
 
         double in1_copy[3];
         in1_copy[0] = in1[0];
@@ -1918,9 +1930,11 @@ void ReadSurf::clip3d()
   int n = 0;
   for (i = 0; i < nsurf; i++) {
     if (!discard[i]) {
-      if (n != i) memcpy(&tris[n],&tris[i],sizeof(Surf::Tri));
-      if (ncustom)
-	memcpy(cvalues[n],cvalues[i],(1+nvalues_custom)*sizeof(double));
+      if (n != i) {
+        memcpy(&tris[n],&tris[i],sizeof(Surf::Tri));
+        if (ncustom)
+          memcpy(cvalues[n],cvalues[i],(1+nvalues_custom)*sizeof(double));
+      }
       n++;
     }
   }
@@ -1942,9 +1956,11 @@ void ReadSurf::clip3d()
     MPI_Scan(&bnsurf,&offset,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
     offset -= bnsurf;
 
-    for (i = 0; i < nsurf; i++)
+    for (i = 0; i < nsurf; i++) {
       tris[i].id = static_cast<surfint> (offset + i + 1);
-
+      if (ncustom) cvalues[i][0] = ubuf(tris[i].id).d;
+    }
+    
     MPI_Allreduce(&bnsurf,&nsurf_all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   }
 
