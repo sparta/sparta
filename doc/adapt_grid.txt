@@ -12,7 +12,7 @@ adapt_grid command :h3
 
 adapt_grid group-ID action1 action2 style args ... keyword args ... :pre
 
-group-ID = group ID for which grid cell adaptation will be attempted :l
+group-ID = group ID for which grid cells adaptation will be attempted on :l
 action1 = {refine} or {coarsen} :l
 action2 = {coarsen} or {refine}, optional :l
 style = {particle} or {surf} or {value} or {random} :l
@@ -306,11 +306,13 @@ files, each time the grid iadapts.
 If the grid is partitioned across processors in a "clumped" manner
 before this command is invoked, it will still be clumped by processor
 after the adaptation.  Likewise if it is not clumped before, it will
-remain un-clumped after adaptation.  You can use the
-"balance_grid"_balance_grid.html command after this command to
-re-balance the new adapted grid cells and their particles across
-processors.  See "Section howto 4.8"_Section_howto.html#howto_8 for a
-description clumped and unclumped grids.
+remain un-clumped after adaptation.  See "Section howto
+4.8"_Section_howto.html#howto_8 for a description clumped and
+unclumped grids.
+
+If you want the grid partitioning (and their particles) to be
+rebalanced across processors after grid adaptation, you can use the
+"balance_grid"_balance_grid.html command after this command.
 
 [Restrictions:]
 
@@ -322,6 +324,13 @@ Currently a fix cannot be used with style {value} for {iterate} > 1.
 This is because the per-grid cell values accumulated by the fix are
 not interpolated to new grid cells so that the fix can be re-evaluated
 multiple times.  In the future we may revove this restriction.
+
+Currently, if there are custom attributes defined for grid cells, grid
+adaptation does not set new values for new grid cells created when
+either refinement or coarsening takes place.  The new cells will have
+zero values for their attributes.  This is because there is no simple
+way to determine how new attribute values should be computed.  This
+may be changed in the future.
 
 [Related commands:]
 

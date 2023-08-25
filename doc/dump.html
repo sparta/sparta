@@ -330,11 +330,12 @@ child cells: unsplit cells, cut cells, and sub cells of split cells.
 <A HREF = "Section_howto.html#howto_8">Section 6.8</A> of the manual gives details
 of how SPARTA defines child, unsplit, cut, split, and sub cells.  This
 is different than <A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A> commands
-that produce per grid information, which also include split cells in
-their output.  The dump grid command discards that output since the
-sub cells of a split cell provide the needed information for further
-processing and visualization.  Note that unsplit cells can
-be outside (in the flow) or inside surface objects, if they exist.
+which produce per grid information; they also include split cells in
+their output.  The dump grid command discards the split cell
+information since the sub cells of a split cell provide the needed
+information for further processing and visualization.  Note that
+unsplit cells can be outside (in the flow) or inside surface objects,
+if they exist.
 </P>
 <P><I>Id</I> and <I>idstr</I> are two different forms of the grid cell ID.  In
 SPARTA each grid cell is assigned a unique ID which represents its
@@ -348,6 +349,11 @@ is cell 6 (at level 3) within cell 4 within cell 33.  If you specify
 <I>id</I>, the ID is printed directly as an integer.  If you specify
 <I>idstr</I>, it is printed as a string.
 </P>
+<P>Note that the <I>id</I> and <I>idstr</I> of two or more sub-cells are the same
+as the <I>id</I> and <I>idstr</I> of the split cell they are part of.  This
+means that if a simulation has split cells, the dump file will contain
+duplicate IDs in the same snapshot.
+</P>
 <P><I>Proc</I> is the ID of the processor which currently owns the grid cell.
 </P>
 <P>The <I>xlo</I>, <I>ylo</I>, <I>zlo</I> attributes write the coordinates of the
@@ -356,7 +362,9 @@ lower-left corner of the grid cell in the appropriate distance
 coordinates of the upper-right corner of the grid cell.  The <I>xc</I>,
 <I>yc</I>, <I>zc</I> attributes write the coordinates of the center point of the
 grid cell.  The <I>zlo</I>, <I>zhi</I>, <I>zc</I> attributes cannot be used for a 2d
-simulation.
+simulation.  As with <I>id</I> and <I>idstr</I>, as explained above, these
+attributes are the same for multiple sub-cells of a single split cell
+they are part of.
 </P>
 <P>The <I>vol</I> attribute is the flow volume of the grid cell (or area in
 2d) for unsplit or cut or sub cells.  <A HREF = "Section_howto.html#howto_8">Section

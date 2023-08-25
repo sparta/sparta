@@ -338,8 +338,15 @@ void Grid::add_sub_cell(int icell, int ownflag)
   if (ownflag) inew = nlocal;
   else inew = nlocal + nghost;
 
+  // make copy of ChildCell
+  // for owned cells also make copy of ChildInfo
+  // for owned cells also make copy of custom attribute data if it exists
+  
   memcpy(&cells[inew],&cells[icell],sizeof(ChildCell));
-  if (ownflag) memcpy(&cinfo[inew],&cinfo[icell],sizeof(ChildInfo));
+  if (ownflag) {
+    memcpy(&cinfo[inew],&cinfo[icell],sizeof(ChildInfo));
+    if (ncustom) copy_custom(icell,inew);
+  }
 
   if (ownflag) {
     nsublocal++;

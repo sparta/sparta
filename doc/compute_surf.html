@@ -156,7 +156,9 @@ command.
 </P>
 <P>The <I>nflux</I> and <I>nflux_incident</I> values calculate the net and incident
 number flux imparted to the surface element by particles in the group
-respectively. These are computed as
+respectively. Incident flux sums over all the impacting particles,
+while net flux subtracts out reflected particles and includes effects
+from surface chemistry such as particle deletion. These are computed as
 </P>
 <PRE>Nflux = N / (A * dt / fnum) 
 </PRE>
@@ -172,7 +174,7 @@ keyword below.
 </P>
 <P>The <I>mflux</I> and <I>mflux_incident</I> values calculate the net and incident
 mass flux imparted to the surface element by particles in the group
-respectively. These are computed as
+respectively.  These are computed as
 </P>
 <PRE>Mflux = Sum_i (mass_i) / (A * dt / fnum) 
 </PRE>
