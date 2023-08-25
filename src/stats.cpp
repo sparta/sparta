@@ -601,10 +601,12 @@ void Stats::set_fields(int narg, char **arg)
       if (ptr == NULL) argindex1[nfield] = 0;
       else {
         *ptr = '\0';
-        argindex1[nfield] = input->variable->int_between_brackets(ptr,0);
+        argindex1[nfield] =
+          input->variable->int_between_brackets(ptr,0,"stats_style");
         ptr++;
         if (*ptr == '[') {
-          argindex2[nfield] = input->variable->int_between_brackets(ptr,0);
+          argindex2[nfield] =
+            input->variable->int_between_brackets(ptr,0,"stats_style");
           ptr++;
         } else argindex2[nfield] = 0;
       }
@@ -658,10 +660,12 @@ void Stats::set_fields(int narg, char **arg)
       if (ptr == NULL) argindex1[nfield] = 0;
       else {
         *ptr = '\0';
-        argindex1[nfield] = input->variable->int_between_brackets(ptr,0);
+        argindex1[nfield] =
+          input->variable->int_between_brackets(ptr,0,"stats_style");
         ptr++;
         if (*ptr == '[') {
-          argindex2[nfield] = input->variable->int_between_brackets(ptr,0);
+          argindex2[nfield] =
+            input->variable->int_between_brackets(ptr,0,"stats_style");
           ptr++;
         } else argindex2[nfield] = 0;
       }

@@ -1742,17 +1742,17 @@ double Variable::evaluate(char *str, Tree **tree)
 	  if (type == INT) {
 	    newtree->type = ARRAYINT;
 	    if (cwhich == PARTICLE_CUSTOM)
-	      newtree->iarray = particle->eivec[surf->ewhich[icustom]];
+	      newtree->iarray = particle->eivec[particle->ewhich[icustom]];
 	    else if (cwhich == GRID_CUSTOM)
-	      newtree->iarray = grid->eivec[surf->ewhich[icustom]];
+	      newtree->iarray = grid->eivec[grid->ewhich[icustom]];
 	    else if (cwhich == SURF_CUSTOM)
 	      newtree->iarray = surf->eivec[surf->ewhich[icustom]];
 	  } else if (type == DOUBLE) {
 	    newtree->type = ARRAY;
 	    if (cwhich == PARTICLE_CUSTOM)
-	      newtree->array = particle->edvec[surf->ewhich[icustom]];
+	      newtree->array = particle->edvec[particle->ewhich[icustom]];
 	    else if (cwhich == GRID_CUSTOM)
-	      newtree->array = grid->edvec[surf->ewhich[icustom]];
+	      newtree->array = grid->edvec[grid->ewhich[icustom]];
 	    else if (cwhich == SURF_CUSTOM)
 	      newtree->array = surf->edvec[surf->ewhich[icustom]];
 	  }
@@ -1767,17 +1767,17 @@ double Variable::evaluate(char *str, Tree **tree)
 	  if (type == INT) {
 	    newtree->type = ARRAYINT;
 	    if (cwhich == PARTICLE_CUSTOM)
-	      newtree->iarray = particle->eiarray[surf->ewhich[icustom]][index1-1];
+	      newtree->iarray = particle->eiarray[particle->ewhich[icustom]][index1-1];
 	    else if (cwhich == GRID_CUSTOM)
-	      newtree->iarray = grid->eiarray[surf->ewhich[icustom]][index1-1];
+	      newtree->iarray = grid->eiarray[grid->ewhich[icustom]][index1-1];
 	    else if (cwhich == SURF_CUSTOM)
 	      newtree->iarray = surf->eiarray[surf->ewhich[icustom]][index1-1];
 	  } else if (type == DOUBLE) {
 	    newtree->type = ARRAY;
 	    if (cwhich == PARTICLE_CUSTOM)
-	      newtree->array = particle->edvec[surf->ewhich[icustom]];
+	      newtree->array = particle->edvec[particle->ewhich[icustom]];
 	    else if (cwhich == GRID_CUSTOM)
-	      newtree->array = grid->edvec[surf->ewhich[icustom]];
+	      newtree->array = grid->edvec[grid->ewhich[icustom]];
 	    else if (cwhich == SURF_CUSTOM)
 	      newtree->array = surf->edvec[surf->ewhich[icustom]];
 	  }
@@ -2989,7 +2989,7 @@ int Variable::find_matching_paren(char *str, int i,char *&contents)
    if varallow = 1: also allow for v_name, where name is variable name
 ------------------------------------------------------------------------- */
 
-int Variable::int_between_brackets(char *&ptr, int varallow)
+int Variable::int_between_brackets(char *&ptr, int varallow, const char *caller)
 {
   int varflag,index;
 
@@ -3007,14 +3007,25 @@ int Variable::int_between_brackets(char *&ptr, int varallow)
   } else {
     varflag = 0;
     while (*ptr && *ptr != ']') {
-      if (!isdigit(*ptr))
-        error->all(FLERR,"Non digit character between brackets in variable");
+      if (!isdigit(*ptr)) {
+        char str[128];
+        sprintf(str,"Non digit character between brackets in %s",caller);
+        error->all(FLERR,str);
+      }
       ptr++;
     }
   }
 
-  if (*ptr != ']') error->all(FLERR,"Mismatched brackets in variable");
-  if (ptr == start) error->all(FLERR,"Empty brackets in variable");
+  if (*ptr != ']') {
+    char str[128];
+    sprintf(str,"Mismatched brackets in %s",caller);
+    error->all(FLERR,str);
+  }
+  if (ptr == start) {
+    char str[128];
+    sprintf(str,"Empty brackets in %s",caller);
+    error->all(FLERR,str);
+  }
 
   *ptr = '\0';
 
@@ -3039,8 +3050,11 @@ int Variable::int_between_brackets(char *&ptr, int varallow)
 
   *ptr = ']';
 
-  if (index == 0)
-    error->all(FLERR,"Index between variable brackets must be positive");
+  if (index == 0) {
+    char str[128];
+    sprintf(str,"Index between brackets must be positive in %s",caller);
+    error->all(FLERR,str);
+  }
   return index;
 }
 
