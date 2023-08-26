@@ -23,7 +23,7 @@
 
 <LI>one or more inputs can be listed 
 
-<LI>input = x, y, z, vx, vy, vz, ke, erot, evib, c_ID, c_ID[N], f_ID, f_ID[N], v_name, p_ID, p_ID[N], g_ID, g_ID[N], s_ID, s_ID[N] 
+<LI>input = x, y, z, vx, vy, vz, ke, erot, evib, c_ID, c_ID[N], f_ID, f_ID[N], v_name, p_name, p_name[N], g_name, g_name[N], s_name, s_name[N] 
 
 <PRE>  x,y,z,vx,vy,vz = particle position or velocity component
   ke,erot,evib = particle energy component
@@ -32,12 +32,12 @@
   f_ID = per-particle or per-grid or per-surf vector calculated by a fix with ID
   f_ID[I] = Ith column of per-particle or per-grid or per-surf array calculated by a fix with ID, I can include wildcard (see below)
   v_name = per-particle or per-grid or per-surf vector calculated by a particle-style or grid-style or surf-style variable with name
-  p_ID = custom per-particle vector with ID
-  p_ID[N] = Nth column of per-particle custom array with ID
-  g_ID = custom per-grid vector with ID
-  g_ID[N] = Nth column of per-grid custom array with ID
-  s_ID = custom per-surf vector with ID
-  s_ID[N] = Nth column of per-surf custom array with ID 
+  p_name = custom per-particle vector with name
+  p_name[N] = Nth column of per-particle custom array with name
+  g_name = custom per-grid vector with name
+  g_name[N] = Nth column of per-grid custom array with name
+  s_name = custom per-surf vector with name
+  s_name[N] = Nth column of per-surf custom array with name 
 </PRE>
 <LI>zero or more keyword/args pairs may be appended 
 
@@ -175,16 +175,16 @@ general means of creating per-particle or per-grid or per-surf
 quantities to reduce.
 </P>
 <P>If a value begins with "p_" or "g_" or "s_", then a custom
-per-particle, per-grid, or per-surf attribute with the specified ID is
-used.  Particles, grid cells, and surface elements can have custom
+per-particle, per-grid, or per-surf attribute with the specified name
+is used.  Particles, grid cells, and surface elements can have custom
 attributes which store either single or multiple values per particle,
 per grid cell, or per surface element.  They can be defined and
 initialized in data files, e.g. via the <A HREF = "read_surf.html">read_surf</A>
 command.  Or they can be defined and used by specific commands,
 e.g. <A HREF = "fix_ambipolar.html">fix ambipolar</A> or <A HREF = "fix_surf_temp.html">fix
 surf/temp</A> or <A HREF = "surf_react_adsorb.html">surf_react
-adsorb</A>.  The IDs (names) of each attribute are
-set by the user or defined by the command.  See <A HREF = "Section_howto.html#howto_17">Section
+adsorb</A>.  The name of each attribute is set by
+the user or defined by the command.  See <A HREF = "Section_howto.html#howto_17">Section
 6.17</A> for more discussion of custom
 attributes.
 </P>

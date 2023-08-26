@@ -10,7 +10,7 @@ fix surf/temp command :h3
 
 [Syntax:]
 
-fix ID surf/temp surf-ID Nevery source Tinit emisurf customID :pre
+fix ID surf/temp surf-ID Nevery source Tinit emisurf custom-name :pre
 
 ID is documented in "fix"_fix.html command :ulb,l
 surf/temp = style name of this fix command :l
@@ -21,7 +21,7 @@ source = computeID or fixID :l
   fixID = f_ID or f_ID\[N\] for a fix that calculates per surf values :pre
 Tinit = initial temperature of surface (temperature units) :l
 emisurf = emissivity of the surface (unitless, 0 < emisurf <= 1)  :l
-customID = name of a custom per-surf variable to create :l,ule
+custom-name = name of a custom per-surf variable to create :l,ule
 
 [Examples:]
 
@@ -39,7 +39,7 @@ that SPARTA does not check that the specified compute/fix calculates
 an energy flux.
 
 This fix creates a custom per-surf floating point vector with the
-specified name of {customID}.  It can be accessed by other commands
+specified name of {custom-name}.  It can be accessed by other commands
 which use the temperature of surface elements.  An example is the
 "surf_collide diffuse"_surf_collide.html command, as shown above.
 
@@ -103,10 +103,25 @@ different custom per-surf vector name.
 
 [Restart, output info:]
 
-This fix writes its per-surf temperatures values to restart files.  If
-the restart input script defines this fix after a restart file has
-been read, the temperature values will be set to the restart file
-values.
+No information about this fix is written to "binary restart
+files"_restart.html.
+
+However, the values of the custom particle attribute defined by this
+fix is written to the restart file.  Namely the floating-point vector
+of temperature values for each surface with the name assigned by this
+command.  As explained on the "read_restart"_read_restart.html doc
+page these values will be re-assigned to surface when a restart file
+is read.  If a new fix surf/temp command is specified in the restart
+script as well as a surface collision model which uses the custom
+attribute updated by this fix, then the per-surf temperatures and
+updating process will continue to be used in the continued run.
+
+No global or per-surf quantities are stored by this fix for access by
+various output commands.
+
+However, the custom per-surf attribute defined by this fix can be
+accessed by the "dump surf"_dump.html command, as s_name.  That means
+those per-surf values can be written to surface dump files.
 
 [Restrictions:]
 

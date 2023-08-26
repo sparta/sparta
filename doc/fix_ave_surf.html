@@ -28,15 +28,15 @@
 <LI>Nfreq = calculate averages every this many timesteps
 zero or more input values can be listed 
 
-<LI>value = c_ID, c_ID[N], f_ID, f_ID[N], v_name, s_ID, s_ID[N] 
+<LI>value = c_ID, c_ID[N], f_ID, f_ID[N], v_name, s_name, s_name[N] 
 
 <PRE>  c_ID = per-surf vector calculated by a compute with ID
   c_ID[N] = Nth column of per-surf array calculated by a compute with ID, N can include wildcard (see below)
   f_ID = per-surf vector calculated by a fix with ID
   f_ID[N] = Nth column of per-surf array calculated by a fix with ID, N can include wildcard (see below)
   v_name = per-surf vector calculated by a surf-style variable with name
-  s_ID = custom per-surf vector with ID
-  s_ID[N] = Nth column of per-surf custom array with ID 
+  s_name = custom per-surf vector with name
+  s_name[N] = Nth column of per-surf custom array with name 
 </PRE>
 <LI> zero or more keyword/arg pairs may be appended 
 
@@ -162,18 +162,16 @@ invoke other computes, fixes, or variables when they are evaluated, so
 this is a very general means of specifying quantities to time average.
 </P>
 <P>If a value begins with "s_", the name of a custom per-surf vector or
-array must follow. They can store either a single or multiple values
-per surface element.  They can be defined and initialized in data
-files, e.g. via the <A HREF = "read_surf.html">read_surf</A> command.  Or they can
-be defined and used by specific commands, e.g. <A HREF = "fix_surf_temp.html">fix
-surf/temp</A> or <A HREF = "surf_react_adsorb.html">surf_react
-adsorb</A>.  The IDs (names) of each attribute are
-set by the user or defined by the command.  See <A HREF = "Section_howto.html#howto_17">Section
+array must follow.  Custom attributes can store either a single or
+multiple values per surface element.  See <A HREF = "Section_howto.html#howto_17">Section
 6.17</A> for more discussion of custom
-attributes.
+attributes and command that define them.  For example, the
+<A HREF = "read_surf.html">read_surf</A>, <A HREF = "fix_surf_temp.html">fix surf/temp</A>, and
+<A HREF = "surf_react_adsorb.html">surf_react adsorb</A> commands can define
+per-surf attributes.
 </P>
-<P>If <I>s_ID</I> is used as a value, the custom attribute must be a vector.
-If <I>s_ID[N]</I> is used, the custom attribute must be an array, and N
+<P>If <I>s_name</I> is used as a value, the custom attribute must be a vector.
+If <I>s_name[N]</I> is used, the custom attribute must be an array, and N
 must be in the range from 1-M for an M-column array.
 </P>
 <HR>

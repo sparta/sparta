@@ -13,7 +13,7 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>fix ID surf/temp surf-ID Nevery source Tinit emisurf customID 
+<PRE>fix ID surf/temp surf-ID Nevery source Tinit emisurf custom-name 
 </PRE>
 <UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command 
 
@@ -32,7 +32,7 @@
 
 <LI>emisurf = emissivity of the surface (unitless, 0 < emisurf <= 1)  
 
-<LI>customID = name of a custom per-surf variable to create 
+<LI>custom-name = name of a custom per-surf variable to create 
 </UL>
 <P><B>Examples:</B>
 </P>
@@ -50,7 +50,7 @@ that SPARTA does not check that the specified compute/fix calculates
 an energy flux.
 </P>
 <P>This fix creates a custom per-surf floating point vector with the
-specified name of <I>customID</I>.  It can be accessed by other commands
+specified name of <I>custom-name</I>.  It can be accessed by other commands
 which use the temperature of surface elements.  An example is the
 <A HREF = "surf_collide.html">surf_collide diffuse</A> command, as shown above.
 </P>
@@ -114,10 +114,25 @@ different custom per-surf vector name.
 
 <P><B>Restart, output info:</B>
 </P>
-<P>This fix writes its per-surf temperatures values to restart files.  If
-the restart input script defines this fix after a restart file has
-been read, the temperature values will be set to the restart file
-values.
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.
+</P>
+<P>However, the values of the custom particle attribute defined by this
+fix is written to the restart file.  Namely the floating-point vector
+of temperature values for each surface with the name assigned by this
+command.  As explained on the <A HREF = "read_restart.html">read_restart</A> doc
+page these values will be re-assigned to surface when a restart file
+is read.  If a new fix surf/temp command is specified in the restart
+script as well as a surface collision model which uses the custom
+attribute updated by this fix, then the per-surf temperatures and
+updating process will continue to be used in the continued run.
+</P>
+<P>No global or per-surf quantities are stored by this fix for access by
+various output commands.
+</P>
+<P>However, the custom per-surf attribute defined by this fix can be
+accessed by the <A HREF = "dump.html">dump surf</A> command, as s_name.  That means
+those per-surf values can be written to surface dump files.
 </P>
 <P><B>Restrictions:</B>
 </P>

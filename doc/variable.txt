@@ -55,7 +55,7 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
     particle vectors = id, type, mass, q, mu, x, y, z, vx, vy, vz
     compute references = c_ID, c_ID\[I\], c_ID\[I\]\[J\]
     fix references = f_ID, f_ID\[I\], f_ID\[I\]\[J\]
-    custom attribute references = p_ID, p_ID\[I\], g_ID, g_ID\[I\], s_ID, s_ID\[I\]
+    custom attribute references = p_name, p_name\[I\], g_name, g_name\[I\], s_name, s_name\[I\]
     surface collision model references = sc_ID\[I\]
     surface reaction model references = sr_ID\[I\]
     variable references = v_name :pre
@@ -359,7 +359,7 @@ Special functions: sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
 Particle vectors: id, type, mass, q, mu, x, y, z, vx, vy, vz
 Compute references: c_ID, c_ID\[I\], c_ID\[I\]\[J\]
 Fix references: f_ID, f_ID\[I\], f_ID\[I\]\[J\]
-Custom attribute references = p_ID, p_ID\[I\], g_ID, g_ID\[I\], s_ID, s_ID\[I\]
+Custom attribute references = name_ID, name_ID\[I\], name_ID, name_ID\[I\], name_ID, name_ID\[I\]
 Surface collision model references: sc_ID\[I\]
 Surface reaction model references: sr_ID\[I\]
 Other variables: v_name :tb(s=:)
@@ -738,8 +738,8 @@ cell, or per surface element.  They can be defined and initialized in
 data files, e.g. via the "read_surf"_read_surf.html command.  Or they
 can be defined and used by specific commands, e.g. "fix
 ambipolar"_fix_ambipolar.html or "fix surf/temp"_fix_surf_temp.html or
-"surf_react adsorb"_surf_react_adsorb.html.  The IDs (names) of each
-attribute are set by the user or defined by the command.  See "Section
+"surf_react adsorb"_surf_react_adsorb.html.  The name of each
+attribute sis set by the user or defined by the command.  See "Section
 6.17"_Section_howto.html#howto_17 for more discussion of custom
 attributes.
 
@@ -748,12 +748,12 @@ per-surf vectors.  Multiple-value attributes are referred to as
 per-particle, per-grid, or per-surf arrays.  In variable formulas they
 can be referenced using the following syntax:
 
-p_ID: per-particle vector
-p_ID\[i\]: Ith column from per-particle array
-g_ID: per-grid vector
-g_ID\[i\]: Ith column from per-grid array
-s_ID: per-surf vector
-s_ID\[i\]: Ith column from per-surf array :tb(s=:)
+p_name: per-particle vector
+p_name\[I\]: Ith column from a per-particle array
+g_name: per-grid vector
+g_name\[I\]: Ith column from a per-grid array
+s_name: per-surf vector
+s_name\[I\]: Ith column from a per-surf array :tb(s=:)
 
 Particle attributes can only be used in particle-style variables.
 Grid cell attributes can only be used in grid-style variables.

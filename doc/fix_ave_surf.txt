@@ -19,14 +19,14 @@ Nevery = use input values every this many timesteps :l
 Nrepeat = # of times to use input values for calculating averages :l
 Nfreq = calculate averages every this many timesteps
 zero or more input values can be listed :l
-value = c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name, s_ID, s_ID\[N\] :l
+value = c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name, s_name, s_name\[N\] :l
   c_ID = per-surf vector calculated by a compute with ID
   c_ID\[N\] = Nth column of per-surf array calculated by a compute with ID, N can include wildcard (see below)
   f_ID = per-surf vector calculated by a fix with ID
   f_ID\[N\] = Nth column of per-surf array calculated by a fix with ID, N can include wildcard (see below)
   v_name = per-surf vector calculated by a surf-style variable with name
-  s_ID = custom per-surf vector with ID
-  s_ID\[N\] = Nth column of per-surf custom array with ID :pre
+  s_name = custom per-surf vector with name
+  s_name\[N\] = Nth column of per-surf custom array with name :pre
  zero or more keyword/arg pairs may be appended :l
 keyword = {ave}
   {ave} args = one or running
@@ -149,18 +149,16 @@ invoke other computes, fixes, or variables when they are evaluated, so
 this is a very general means of specifying quantities to time average.
 
 If a value begins with "s_", the name of a custom per-surf vector or
-array must follow. They can store either a single or multiple values
-per surface element.  They can be defined and initialized in data
-files, e.g. via the "read_surf"_read_surf.html command.  Or they can
-be defined and used by specific commands, e.g. "fix
-surf/temp"_fix_surf_temp.html or "surf_react
-adsorb"_surf_react_adsorb.html.  The IDs (names) of each attribute are
-set by the user or defined by the command.  See "Section
+array must follow.  Custom attributes can store either a single or
+multiple values per surface element.  See "Section
 6.17"_Section_howto.html#howto_17 for more discussion of custom
-attributes.
+attributes and command that define them.  For example, the
+"read_surf"_read_surf.html, "fix surf/temp"_fix_surf_temp.html, and
+"surf_react adsorb"_surf_react_adsorb.html commands can define
+per-surf attributes.
 
-If {s_ID} is used as a value, the custom attribute must be a vector.
-If {s_ID\[N\]} is used, the custom attribute must be an array, and N
+If {s_name} is used as a value, the custom attribute must be a vector.
+If {s_name\[N\]} is used, the custom attribute must be an array, and N
 must be in the range from 1-M for an M-column array.
 
 :line

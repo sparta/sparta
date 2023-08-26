@@ -129,16 +129,16 @@ only contain alphanumeric characters and underscores.
 <HR>
 
 <P>Several of the surface collision models specify <I>Tsurf</I> as an argument
-for the temperature of the surface.  It can be specified in several
+for the temperature of the surface.  It can be specified in three
 different ways.
 </P>
-<P><I>Tsurf</I> can be a numeric value.  The temperature of all surface
+<P>First, <I>Tsurf</I> can be a numeric value.  The temperature of all surface
 elements assigned to the model will be the same and will be constant
 for the duration of the simulation.
 </P>
-<P><I>Tsurf</I> can be a variable specified as v_name where <I>name</I> is the name
-of the variable defined by the <A HREF = "variable.html">variable</A> command.  Two
-different styles of variable can be used.
+<P>Second, <I>Tsurf</I> can be a variable specified as v_name where <I>name</I> is
+the name of the variable defined by the <A HREF = "variable.html">variable</A>
+command.  Two different styles of variable can be used.
 </P>
 <P>The first is an equal-style variable which evaulates to a single
 scalar value, which will be the temperature assigned to every surface
@@ -161,8 +161,8 @@ evaluate, because they require inter-processor communication in
 parallel, so you may wish to set the <I>temp/freq</I> keyword to a larger
 value.
 </P>
-<P><I>Tsurf</I> can be a custom per-surf attribute specified as s_ID, where ID
-is the name of the attribute.  It must be a custom per-surf vector
+<P>Third, <I>Tsurf</I> can be a custom per-surf attribute specified as s_name
+with the name of the attribute.  It must be a custom per-surf vector
 with floating point values for the temperature for each surface
 element.  These could be static values initialized, for example, by
 the <A HREF = "read_surf.html">read_surf</A> command.  Or they could be dynamic

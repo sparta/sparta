@@ -10,16 +10,12 @@ custom command :h3
 
 [Syntax:]
 
-custom style custom-ID action args ... keyword value ... :pre
+custom style attribute action args ... keyword value ... :pre
 
 style = {particle} or {grid} or {surf} :ulb,l
-custom-ID = reference to custom attribute :l
-  p_ID = custom per-particle vector with ID
-  p_ID\[N\] = Nth column of custom per-particle array with ID
-  g_ID = custom per-grid vector with ID
-  g_ID\[N\] = Nth column of custom per-grid array with ID
-  s_ID = custom per-surf vector with ID
-  s_ID\[N\] = Nth column of custom per-surf array with ID :pre
+attribute = name of custom attribute :l
+  name = custom vector attribute with name
+  name\[N\] = Nth column of custom array attribute with name
 action = {set} or {remove} :l
   {set} args = v_name subset-ID region-ID
     v_name = equal-, particle-, grid-, or surf-style variable with name
@@ -35,8 +31,8 @@ keyword = {type} or {size}
 [Examples:]
 
 variable ivec particle id/100000
-custom particle p_ivec set v_ivec air NULL type int
-custom particle p_ivec remove
+custom particle ivec set v_ivec air NULL type int
+custom particle ivec remove
 
 [Description:]
 
@@ -51,28 +47,33 @@ custom attributes.
 The specified {style} setting is {particle} or {grid} or {surf}
 for per-particle, per-grid, or per-surf attributes.
 
-The {custom-ID} specifies the attribute to operate on.  It begins with
-a "p_" or "g_" or "s_" prefix for particles, grid cells, or surface
-elements respectively and is followed by the name of the attribute.
-The same name can be used for attributes of different styles, e.g.
-s_temp and g_temp.
+The {attribute} specifies the naem of the attribute to operate on.
+The same name can be used for attributes of different styles.
+E.g. there can be a custom attribute with the name "flag" for both
+particles and surface elements.  If the attribute name is specified
+without brackets, it refers to a custom vector (single value per
+entity).  If the attribute name is specified with a bracketed integer,
+it refers to the column of a custom array (one or more values per
+entity).  The integer {N} must be between 1 and M = # of columns in
+the array (values per entity).  See the {size} keyword discussion
+below for how to specify M if it is a new custom array.
 
 The {action} is specified as {set} or {remove}.
 
-If {remove} is used, then the {custom-ID} is simply the name of the
-attribute, whether it is a vector or array.  No trailing brackets are
-specified.  The attribute will be removed from the system.  No further
-arguments can be specified.
+If {remove} is used, then the {attribute} should be simply the name of
+the attribute, whether it is a vector or array.  No trailing brackets
+are specified.  The attribute will be removed from the system.  No
+further arguments can be specified.
 
 If {set} is used, then the attribute is created if it does not already
 exist and its values are initialized.  If it already exists, its
 values are reset.  Custom attributes can be vectors (single value per
 entity) or arrays (mutiple values per entity).  To set the values for
-a custom vector, use a {custom-ID} without brackets, e.g. s_temp.  To
-set the values for a single column of a custom array, use a
-{custom-ID} suffixed by a bracketed integer, e.g. p_dipole[3].  The
-integer must be a value from 1 to M, where M is the number of columns
-(values per entity) in the array.
+a custom vector, use an {attribute} name} without brackets,
+e.g. temperature.  To set the values for a single column of a custom
+array, use an {attribute} name suffixed by a bracketed integer,
+e.g. dipole[3].  The integer must be a value from 1 to M, where M is
+the number of columns (values per entity) in the array.
 
 The specified {v_name} is the name of a previously defined variable
 which this command will evaluate.  It must be either an equal-style or
@@ -124,11 +125,11 @@ floating-point values.  Floating point values are the default.
 
 The {size} keyword can be used with arg = 0 to create a custom vector
 (which is the default).  It can also be used with an arg M >= 1 to
-create an array with M columns.  This means that if a new {custom-ID}
-is specified with no brackets, the {size} keyword is not necessary,
-because it refers to a custom vector.  But if a new {custom-ID} with a
-bracket is used, the {size} keyword must be used so that the column
-dimension of the array is known.
+create an array with M columns (values per entity).  This means that
+if a new {attribute} name is specified with no brackets, the {size}
+keyword is not necessary, because it refers to a custom vector.  But
+if a new {attribute} name with a bracket is used, the {size} keyword
+must be used so that the column dimension of the array is known.
 
 :line
 

@@ -117,16 +117,16 @@ only contain alphanumeric characters and underscores.
 :line
 
 Several of the surface collision models specify {Tsurf} as an argument
-for the temperature of the surface.  It can be specified in several
+for the temperature of the surface.  It can be specified in three
 different ways.
 
-{Tsurf} can be a numeric value.  The temperature of all surface
+First, {Tsurf} can be a numeric value.  The temperature of all surface
 elements assigned to the model will be the same and will be constant
 for the duration of the simulation.
 
-{Tsurf} can be a variable specified as v_name where {name} is the name
-of the variable defined by the "variable"_variable.html command.  Two
-different styles of variable can be used.
+Second, {Tsurf} can be a variable specified as v_name where {name} is
+the name of the variable defined by the "variable"_variable.html
+command.  Two different styles of variable can be used.
 
 The first is an equal-style variable which evaulates to a single
 scalar value, which will be the temperature assigned to every surface
@@ -149,8 +149,8 @@ evaluate, because they require inter-processor communication in
 parallel, so you may wish to set the {temp/freq} keyword to a larger
 value.
 
-{Tsurf} can be a custom per-surf attribute specified as s_ID, where ID
-is the name of the attribute.  It must be a custom per-surf vector
+Third, {Tsurf} can be a custom per-surf attribute specified as s_name
+with the name of the attribute.  It must be a custom per-surf vector
 with floating point values for the temperature for each surface
 element.  These could be static values initialized, for example, by
 the "read_surf"_read_surf.html command.  Or they could be dynamic

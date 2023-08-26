@@ -36,7 +36,7 @@
 <PRE>  <I>particle</I> args = list of particle attributes
     possible attributes = id, type, proc, x, y, z, xs, ys, zs, vx, vy, vz,
                           ke, erot, evib, 
-                          p_ID, p_ID[N], c_ID, c_ID[N], f_ID, f_ID[N], v_name 
+                          c_ID, c_ID[N], f_ID, f_ID[N], v_name, p_name, p_name[N] 
 </PRE>
 <PRE>      id = particle ID
       type = particle species as an integer index
@@ -45,17 +45,17 @@
       xs,ys,zs = scaled particle coordinates
       vx,vy,vz = particle velocities
       ke,erot,evib = translational, rotational, and vibrational energy
-      p_ID = custom per-particle vector with ID
-      p_ID[N] = Nth column of custom per-particle array with ID
       c_ID = per-particle vector calculated by a compute with ID
       c_ID[N] = Nth column of per-particle array calculated by a compute with ID, I can include wildcard (see below)
       f_ID = per-particle vector calculated by a fix with ID
       f_ID[N] = Nth column of per-particle array calculated by a fix with ID, I can include wildcard (see below)
-      v_name = per-particle vector calculated by a particle-style variable with name 
+      v_name = per-particle vector calculated by a particle-style variable with name
+      p_name = custom per-particle vector with name
+      p_name[N] = Nth column of custom per-particle array with name 
 </PRE>
 <PRE>  <I>grid</I> args = list of grid attributes
     possible attributes = id, idstr, split, proc, xlo, ylo, zlo, xhi, yhi, zhi,
-                          c_ID, c_ID[N], f_ID, f_ID[N], v_name 
+                          c_ID, c_ID[N], f_ID, f_ID[N], v_name, g_name, g_name[N] 
 </PRE>
 <PRE>      id = integer form of grid cell ID
       idstr = string form of grid cell ID
@@ -65,29 +65,29 @@
       xhi,yhi,zhi = coords of lower left corner of grid cell
       xc,yc,zc = coords of center of grid cell
       vol = flow volume of grid cell (area in 2d)
-      g_ID = custom per-grid vector with ID
-      g_ID[N] = Nth column of custom per-grid array with ID
       c_ID = per-grid vector calculated by a compute with ID
       c_ID[N] = Nth column of per-grid array calculated by a compute with ID, I can include wildcard (see below)
       f_ID = per-grid vector calculated by a fix with ID
       f_ID[N] = Nth column of per-grid array calculated by a fix with ID, I can include wildcard (see below)
-      v_name = per-grid vector calculated by a grid-style variable with name 
+      v_name = per-grid vector calculated by a grid-style variable with name
+      g_name = custom per-grid vector with name
+      g_name[N] = Nth column of custom per-grid array with name 
 </PRE>
 <PRE>  <I>surf</I> args = list of surf attributes
     possible attributes = id, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z, 
-                          p_ID, p_ID[N], c_ID, c_ID[N], f_ID, f_ID[N], v_name 
+                          c_ID, c_ID[N], f_ID, f_ID[N], v_name, s_name, s_name[N] 
 </PRE>
 <PRE>      id = surface element ID
       v1x,v1y,v1z = coords of 1st vertex in surface element
       v2x,v2y,v3z = coords of 2nd vertex in surface element
       v3x,v3y,v3z = coords of 3rd vertex in surface element
-      s_ID = custom per-surf vector with ID
-      s_ID[N] = Nth column of custom per-surf array with ID
       c_ID = per-surf vector calculated by a compute with ID
       c_ID[N] = Nth column of per-surf array calculated by a compute with ID, I can include wildcard (see below)
       f_ID = per-surf vector calculated by a fix with ID
       f_ID[N] = Nth column of per-surf array calculated by a fix with ID, I can include wildcard (see below)
-      v_name = per-surf vector calculated by a surf-style variable with name 
+      v_name = per-surf vector calculated by a surf-style variable with name
+      s_name = custom per-surf vector with name
+      s_name[N] = Nth column of custom per-surf array with name 
 </PRE>
 <PRE>  <I>image</I> args = discussed on <A HREF = "dump_image.html">dump image</A> doc page 
 </PRE>
@@ -268,19 +268,6 @@ given by 1/2 m (vx^2 + vy^2 + vz^2).  The way that rotational and
 vibrational energy is treated in collisions and stored by particles is
 affected by the <A HREF = "collid_modify.html">collide_modify</A> command.
 </P>
-<P>The <I>p_ID</I> and <I>p_ID[N]</I> attributes allow custom per-particle
-vectors or arrays defined by a <A HREF = "fix.html">fix</A> command to be output.
-The ID in the attribute should be replaced by the actual ID of the
-custom particle attribute that the fix defines.  See individal
-commands for details, e.g. the <A HREF = "fix_ambipolar.html">fix ambipolar</A>
-command which defines the custom vector "ionambi" and the custom array
-"velambi".
-</P>
-<P>If <I>p_ID</I> is used as a attribute, the custom attribute must be a
-vector, and it is output.  If <I>p_ID[N]</I> is used, the custom
-attribute must be an array, and N must be in the range from 1-M, which
-will output the Nth column of the M-column array.
-</P>
 <P>The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-particle vectors or
 arrays calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in
 the attribute should be replaced by the actual ID of the compute that
@@ -315,6 +302,19 @@ per-particle values.  Variables of style <I>particle</I> can reference
 per-particle attributes, stats keywords, or invoke other computes,
 fixes, or variables when they are evaluated, so this is a very general
 means of creating quantities to output to a dump file.
+</P>
+<P>The <I>p_name</I> and <I>p_name[N]</I> attributes allow custom per-particle
+vectors or arrays defined by some other command to be output.  The
+name should be replaced by the name of the attribute.  See <A HREF = "Section_howto.html#howto_17">Section
+6.17</A> for more discussion of custom
+attributes and command that define them.  For example, the <A HREF = "fix_ambipolar.html">fix
+ambipolar</A> command which defines the per-particle
+custom vector "ionambi" and custom array "velambi".
+</P>
+<P>If <I>p_name</I> is used as a attribute, the custom attribute must be a
+vector, and it is output.  If <I>p_name[N]</I> is used, the custom
+attribute must be an array, and N must be in the range from 1-M, which
+will output the Nth column of an M-column array.
 </P>
 <P>See <A HREF = "Section_modify.html">Section 10</A> of the manual for information on
 how to add new compute and fix styles to SPARTA to calculate
@@ -377,19 +377,6 @@ a cut cell which is inside a suface object but which is intersected by
 surface element(s) which only touch a face, edge, or corner point of
 the grid cell, will have a flow volume of 0.0.
 </P>
-<P>The <I>g_ID</I> and <I>g_ID[N]</I> attributes allow custom per-grid vectors or
-arrays defined by the <A HREF = "read_grid.html">read_grid</A> or <A HREF = "surf_react_implicit.html">surf_react
-implicit</A> command to be output.  (The
-surf/react implicit command has not yet been released in public
-SPPARKS).  The ID in the attribute should be replaced by the actual ID
-of the custom per-grid attribute that the command defines.  See
-individal commands for details.
-</P>
-<P>If <I>g_ID</I> is used as a attribute, the custom attribute must be a
-vector, and it is output.  If <I>g_ID[N]</I> is used, the custom
-attribute must be an array, and N must be in the range from 1-M, which
-will output the Nth column of the M-column array.
-</P>
 <P>The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-grid vectors or arrays
 calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in the
 attribute should be replaced by the actual ID of the compute that has
@@ -425,6 +412,21 @@ stats keywords, or invoke other computes, fixes, or variables when
 they are evaluated, so this is a very general means of creating
 quantities to output to a dump file.
 </P>
+<P>The <I>g_name</I> and <I>g_name[N]</I> attributes allow custom per-grid cell
+vectors or arrays defined by some other command to be output.  The
+name should be replaced by the name of the attribute.  See <A HREF = "Section_howto.html#howto_17">Section
+6.17</A> for more discussion of custom
+attributes and command that define them.  For example, the
+<A HREF = "read_grid.html">read_grid</A> and <A HREF = "surf_react_implicit.html">surf_react
+implicit</A> commands can define per-grid
+attributes.  (The surf/react implicit command has not yet been
+released in public SPPARKS).
+</P>
+<P>If <I>g_name</I> is used as a attribute, the custom attribute must be a
+vector, and it is output.  If <I>g_name[N]</I> is used, the custom
+attribute must be an array, and N must be in the range from 1-M, which
+will output the Nth column of an M-column array.
+</P>
 <P>See <A HREF = "Section_modify.html">Section 10</A> of the manual for information on
 how to add new compute and fix styles to SPARTA to calculate per-grid
 quantities which could then be output into dump files.
@@ -445,20 +447,6 @@ outward normal of the triangle.
 attributes write the coordinates of the vertices of the end or corner
 points of the surface element.  The <I>v1z</I>, <I>v2z</I>, <I>v3x</I>, <I>v3y</I>, and
 <I>v3z</I> attributes cannot be used for a 2d simulation.
-</P>
-<P>The <I>s_ID</I> and <I>s_ID[N]</I> attributes allow output of custom per-surf
-attributes which store either single or multiple values per surface
-element.  They can be defined and initialized in data files, e.g. via
-the <A HREF = "read_surf.html">read_surf</A> command.  Or they can be defined and
-used by specific commands, e.g. <A HREF = "fix_surf_temp.html">fix surf/temp</A> or
-<A HREF = "surf_react_adsorb.html">surf_react adsorb</A>.  The IDs (names) of each
-attribute are set by the user or defined by the command.  See <A HREF = "Section_howto.html#howto_17">Section
-6.17</A> for more discussion of custom
-attributes.
-</P>
-<P>If <I>s_ID</I> is used as a attribute, the custom attribute must be a
-vector.  If <I>s_ID[N]</I> is used, the custom attribute must be an
-array, and N must be in the range from 1-M for an M-column array.
 </P>
 <P>The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-surf vectors or arrays
 calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in the
@@ -495,8 +483,19 @@ stats keywords, or invoke other computes, fixes, or variables when
 they are evaluated, so this is a very general means of creating
 quantities to output to a dump file.
 </P>
-<P>IMPORTANT NOTE: Surf-style variables have not yet been implemented in
-SPARTA.
+<P>The <I>s_name</I> and <I>s_name[N]</I> attributes allow custom per-surface
+element vectors or arrays defined by some other command to be output.
+The name should be replaced by the name of the attribute.  See
+<A HREF = "Section_howto.html#howto_17">Section 6.17</A> for more discussion of
+custom attributes and command that define them.  For example, the
+<A HREF = "read_surf.html">read_surf</A>, <A HREF = "fix_surf_temp.html">fix surf/temp</A>, and
+<A HREF = "surf_react_adsorb.html">surf_react adsorb</A> commands can define
+per-surf attributes.
+</P>
+<P>If <I>s_name</I> is used as a attribute, the custom attribute must be a
+vector, and it is output.  If <I>s_name[N]</I> is used, the custom
+attribute must be an array, and N must be in the range from 1-M, which
+will output the Nth column of an M-column array.
 </P>
 <P>See <A HREF = "Section_modify.html">Section 10</A> of the manual for information on
 how to add new compute and fix styles to SPARTA to calculate per-surf

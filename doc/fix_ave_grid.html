@@ -30,15 +30,15 @@
 <LI>Nfreq = calculate averages every this many timesteps
 zero or more input values can be listed 
 
-<LI>value = c_ID, c_ID[N], f_ID, f_ID[N], v_name, g_ID, g_ID[N] 
+<LI>value = c_ID, c_ID[N], f_ID, f_ID[N], v_name, g_name, g_name[N] 
 
 <PRE>  c_ID = per-grid vector calculated by a compute with ID
   c_ID[N] = Ith column of per-grid array calculated by a compute with ID, I can include wildcard (see below)
   f_ID = per-grid vector calculated by a fix with ID
   f_ID[N] = Ith column of per-grid array calculated by a fix with ID, I can include wildcard (see below)
   v_name = per-grid vector calculated by a grid-style variable with name
-  g_ID = custom per-grid vector with ID
-  g_ID[N] = Nth column of per-grid custom array with ID 
+  g_name = custom per-grid vector with name
+  g_name[N] = Nth column of per-grid custom array with name 
 </PRE>
 <LI>zero or more keyword/arg pairs may be appended 
 
@@ -162,17 +162,17 @@ invoke other computes, fixes, or variables when they are evaluated, so
 this is a very general means of specifying quantities to time average.
 </P>
 <P>If a value begins with "g_", the name of a custom per-grid vector or
-array must follow. They can store either a single or multiple values
-per grid cell.  They can be defined and initialized in data files,
-e.g. via the <A HREF = "read_grid.html">read_grid</A> command.  Or they can be
-defined and used by specific commands, e.g. surf_react implicit (not
-yet released in public SPARTA).  The IDs (names) of each attribute are
-set by the user or defined by the command.  See <A HREF = "Section_howto.html#howto_17">Section
+array must follow.  Custom attributes can store either a single or
+multiple values per grid cell.  See <A HREF = "Section_howto.html#howto_17">Section
 6.17</A> for more discussion of custom
-attributes.
+attributes and command that define them.  For example, the
+<A HREF = "read_grid.html">read_grid</A> and <A HREF = "surf_react_implicit.html">surf_react
+implicit</A> commands can define per-grid
+attributes.  (The surf/react implicit command has not yet been
+released in public SPPARKS).
 </P>
-<P>If <I>g_ID</I> is used as a value, the custom attribute must be a vector.
-If <I>g_ID[N]</I> is used, the custom attribute must be an array, and N
+<P>If <I>g_name</I> is used as a value, the custom attribute must be a vector.
+If <I>g_name[N]</I> is used, the custom attribute must be an array, and N
 must be in the range from 1-M for an M-column array.
 </P>
 <HR>
