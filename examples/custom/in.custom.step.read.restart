@@ -64,26 +64,26 @@ write_surf      tmp.step.read.restart.data.surf2 type &
 write_grid      tmp.step.read.restart.data.grid2 &
                 custom ivec custom iarray custom dvec custom darray
 
-# remove all custom surfs
+# remove all custom attributes
 
 undump         1
 undump         2
 undump         3
 
-custom         surf s_ivec remove
-custom         surf s_iarray remove
-custom         surf s_dvec remove
-custom         surf s_darray remove
+custom         surf ivec remove
+custom         surf iarray remove
+custom         surf dvec remove
+custom         surf darray remove
 
-custom         grid g_ivec remove
-custom         grid g_iarray remove
-custom         grid g_dvec remove
-custom         grid g_darray remove
+custom         grid ivec remove
+custom         grid iarray remove
+custom         grid dvec remove
+custom         grid darray remove
 
-custom         particle p_ivec remove
-custom         particle p_iarray remove
-custom         particle p_dvec remove
-custom         particle p_darray remove
+custom         particle ivec remove
+custom         particle iarray remove
+custom         particle dvec remove
+custom         particle darray remove
 
 # fourth run
 
@@ -91,6 +91,5 @@ uncompute       1
 uncompute       2
 uncompute       3
 stats_style	step cpu np nattempt ncoll nscoll nscheck f_1[*]
-
 
 run            500

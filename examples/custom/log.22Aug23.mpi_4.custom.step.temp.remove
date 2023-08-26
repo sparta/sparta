@@ -17,15 +17,15 @@ boundary	    or r p
 create_box  	    0 10 0 10 -0.5 0.5
 Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
 create_grid         20 20 1
-WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (../grid.cpp:463)
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (../grid.cpp:470)
 Created 400 child grid cells
-  CPU time = 0.00147308 secs
-  create/ghost percent = 94.8558 5.14418
+  CPU time = 0.0010042 secs
+  create/ghost percent = 95.9675 4.03248
 
 balance_grid        rcb cell
 Balance grid migrated 280 cells
-  CPU time = 0.000669402 secs
-  reassign/sort/migrate/ghost percent = 56.3418 0.416043 26.1638 17.0784
+  CPU time = 0.000461329 secs
+  reassign/sort/migrate/ghost percent = 60.1625 0.317778 22.0641 17.4557
 
 global		    nrho 1.0 fnum 0.01
 
@@ -42,10 +42,10 @@ read_surf	    data.step.temperature custom temp float 0                     tran
   376 4 20 = cells outside/inside/overlapping surfs
   20 = surf cells with 1,2,etc splits
   95.84 95.84 = cell-wise and global flow volume
-  CPU time = 0.000662012 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 11.3891 15.3018 0.795605 60.4332 12.0803 14.4473 0.226582
-  surf2grid time = 0.000400075 secs
-  map/comm1/comm2/comm3/comm4/split percent = 33.7824 11.4671 11.1497 6.87746 25.2403 6.63126
+  CPU time = 0.000459974 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 9.87643 15.8137 0.784392 61.2154 12.31 13.8353 0.1624
+  surf2grid time = 0.000281575 secs
+  map/comm1/comm2/comm3/comm4/split percent = 34.4455 11.9169 11.1899 5.42058 25.6784 7.36394
 
 read_surf	    data.step.temperature custom temp float 0                     trans 7 7 0 scale 0.4 0.4 1                     rotate 45 0 0 1 invert group second
   16 lines
@@ -57,10 +57,10 @@ read_surf	    data.step.temperature custom temp float 0                     tran
   352 8 40 = cells outside/inside/overlapping surfs
   40 = surf cells with 1,2,etc splits
   91.68 91.68 = cell-wise and global flow volume
-  CPU time = 0.00045579 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 11.5999 13.6306 1.02108 58.776 14.9725 13.538 0.12067
-  surf2grid time = 0.000267895 secs
-  map/comm1/comm2/comm3/comm4/split percent = 36.0708 13.026 14.4329 6.83738 12.8965 11.6325
+  CPU time = 0.000260621 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 12.1594 14.2606 1.14726 54.1691 18.2637 18.7471 0.245184
+  surf2grid time = 0.000141176 secs
+  map/comm1/comm2/comm3/comm4/split percent = 34.9011 13.5937 15.5657 5.5831 12.2245 11.8745
 
 surf_collide	    1 diffuse s_temp 0.0
 surf_modify         all collide 1
@@ -89,28 +89,28 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 1.51538 1.51459 1.51617
 Step CPU Np Natt Ncoll Nscoll Nscheck 
        0            0        0        0        0        0        0 
-      50  0.002197198     1041        0        0        3       85 
-     100  0.009591839     1957        0        0       10      165 
-     150  0.011356253     2761        0        0       22      337 
-     200  0.020248496     3469        0        0       16      397 
-     250   0.02204584     4077        0        0       20      450 
-     300  0.029868473     4524        0        0       21      454 
-     350  0.031439612     4989        0        0       24      469 
-     400  0.037733849     5416        0        0       31      594 
-     450  0.039304409     5825        0        0       37      574 
-     500  0.046516474     6181        0        0       36      671 
-Loop time of 0.0465293 on 4 procs for 500 steps with 6181 particles
+      50  0.002198492     1041        0        0        3       85 
+     100   0.00821554     1957        0        0       10      165 
+     150  0.009326463     2761        0        0       22      337 
+     200  0.014946706     3469        0        0       16      397 
+     250  0.016264806     4077        0        0       20      450 
+     300  0.022218298     4524        0        0       21      454 
+     350  0.023839613     4989        0        0       24      469 
+     400   0.03001639     5416        0        0       31      594 
+     450  0.031553914     5825        0        0       37      574 
+     500  0.037986119     6181        0        0       36      671 
+Loop time of 0.0379984 on 4 procs for 500 steps with 6181 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.0022885  | 0.0052373  | 0.0077572  |   2.8 | 11.26
-Coll    | 0.00086145 | 0.0013407  | 0.0019164  |   1.1 |  2.88
-Sort    | 0.00034219 | 0.00064259 | 0.0010735  |   0.0 |  1.38
-Comm    | 0.0031924  | 0.0033449  | 0.0034658  |   0.2 |  7.19
-Modify  | 3.1193e-05 | 0.00088646 | 0.0019162  |   0.0 |  1.91
-Output  | 0.029649   | 0.02968    | 0.029709   |   0.0 | 63.79
-Other   |            | 0.005397   |            |       | 11.60
+Move    | 0.0022808  | 0.0046326  | 0.0062687  |   2.3 | 12.19
+Coll    | 0.00090172 | 0.0012897  | 0.001757   |   1.0 |  3.39
+Sort    | 0.0003226  | 0.00054814 | 0.00080841 |   0.0 |  1.44
+Comm    | 0.0030435  | 0.0031641  | 0.0032864  |   0.2 |  8.33
+Modify  | 3.0556e-05 | 0.00082953 | 0.0016281  |   0.0 |  2.18
+Output  | 0.0239     | 0.023924   | 0.023943   |   0.0 | 62.96
+Other   |            | 0.003611   |            |       |  9.50
 
 Particle moves    = 1863460 (1.86M)
 Cells touched     = 2150437 (2.15M)
@@ -126,7 +126,7 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 1.00123e+07
+Particle-moves/CPUsec/proc: 1.22601e+07
 Particle-moves/step: 3726.92
 Cell-touches/particle/step: 1.154
 Particle comm iterations/step: 1.998
@@ -155,7 +155,7 @@ Histogram: 4 0 0 0 0 0 0 0 0 0
 
 write_surf      tmp.step.temp.read.remove.data.surf type                 custom temp points no
   surf elements = 32
-  CPU time = 6.7806e-05 secs
+  CPU time = 6.6938e-05 secs
 
 # remove second set of surfs
 
@@ -166,8 +166,8 @@ remove_surf         second
   376 4 20 = cells outside/inside/overlapping surfs
   20 = surf cells with 1,2,etc splits
   95.84 95.84 = cell-wise and global flow volume
-  CPU time = 5.895e-05 secs
-  sort/remove/surf2grid/ghost percent = 45.0127 54.9873 266.005 130.93
+  CPU time = 4.88e-05 secs
+  sort/remove/surf2grid/ghost percent = 35.293 64.707 282.873 148.418
 
 # second run
 
@@ -179,28 +179,28 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 3.20209 3.20169 3.20328
 Step CPU Np Natt Ncoll Nscoll Nscheck 
      500            0     6181        0        0        0        0 
-     550  0.002142802     6428        0        0       11      288 
-     600  0.009704506     6723        0        0       13      350 
-     650  0.011503514     7018        0        0       20      375 
-     700  0.018500907     7301        0        0       11      359 
-     750  0.020213219     7599        0        0       10      301 
-     800  0.026879014     7868        0        0       14      393 
-     850  0.028645841     8128        0        0       27      404 
-     900  0.036250282     8346        0        0       23      404 
-     950  0.038074404     8541        0        0       20      405 
-    1000  0.045478243     8702        0        0       23      427 
-Loop time of 0.0454913 on 4 procs for 500 steps with 8702 particles
+     550  0.001568877     6428        0        0       11      288 
+     600  0.007964817     6723        0        0       13      350 
+     650  0.009624931     7018        0        0       20      375 
+     700  0.016129934     7301        0        0       11      359 
+     750  0.017866606     7599        0        0       10      301 
+     800  0.025425812     7868        0        0       14      393 
+     850  0.027169244     8128        0        0       27      404 
+     900   0.03427382     8346        0        0       23      404 
+     950  0.036114616     8541        0        0       20      405 
+    1000  0.042952425     8702        0        0       23      427 
+Loop time of 0.0429649 on 4 procs for 500 steps with 8702 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.0074017  | 0.0088434  | 0.0106     |   1.3 | 19.44
-Coll    | 0.0021284  | 0.0022949  | 0.0025544  |   0.3 |  5.04
-Sort    | 0.0010418  | 0.0011209  | 0.0012747  |   0.3 |  2.46
-Comm    | 0.002509   | 0.0026018  | 0.0027277  |   0.2 |  5.72
-Modify  | 3.3787e-05 | 0.00057064 | 0.0011233  |   0.0 |  1.25
-Output  | 0.027128   | 0.027144   | 0.027172   |   0.0 | 59.67
-Other   |            | 0.002916   |            |       |  6.41
+Move    | 0.0069806  | 0.008263   | 0.0099155  |   1.2 | 19.23
+Coll    | 0.0020201  | 0.0021534  | 0.0023787  |   0.3 |  5.01
+Sort    | 0.00095965 | 0.0010551  | 0.0011954  |   0.3 |  2.46
+Comm    | 0.0023116  | 0.0024129  | 0.002549   |   0.2 |  5.62
+Modify  | 3.2034e-05 | 0.00051215 | 0.00099503 |   0.0 |  1.19
+Output  | 0.025853   | 0.025868   | 0.025896   |   0.0 | 60.21
+Other   |            | 0.0027     |            |       |  6.28
 
 Particle moves    = 3771429 (3.77M)
 Cells touched     = 4318326 (4.32M)
@@ -216,7 +216,7 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 2.07261e+07
+Particle-moves/CPUsec/proc: 2.19448e+07
 Particle-moves/step: 7542.86
 Cell-touches/particle/step: 1.14501
 Particle comm iterations/step: 2.11
@@ -245,4 +245,4 @@ Histogram: 4 0 0 0 0 0 0 0 0 0
 
 write_surf      tmp.step.temp.read.remove.data.surf2 type                 custom temp points no
   surf elements = 16
-  CPU time = 5.7078e-05 secs
+  CPU time = 5.2699e-05 secs

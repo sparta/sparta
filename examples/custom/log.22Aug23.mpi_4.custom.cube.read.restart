@@ -19,8 +19,8 @@ read_restart    tmp.cube.read.restart.%
   Particle custom attributes: ivec iarray dvec darray
   Grid cell custom attributes: ivec iarray dvec darray
   Surface custom attributes: ivec iarray dvec darray
-  CPU time = 0.00692231 secs
-  read/surf2grid/rebalance/ghost/inout percent = 87.993 7.81414 0.00873986 2.95459 1.22953
+  CPU time = 0.00697731 secs
+  read/surf2grid/rebalance/ghost/inout percent = 88.0756 8.8582 0.00677912 2.36226 0.697117
 
 surf_collide	    1 diffuse 300.0 0.0
 surf_modify         all collide 1
@@ -42,11 +42,11 @@ dump          3 particle all 100 tmp.cube.read.restart.dump.particle id x y     
 
 write_surf      tmp.cube.read.restart.data.surf type                 custom ivec custom iarray custom dvec custom darray                 points no
   surf elements = 12
-  CPU time = 9.6092e-05 secs
+  CPU time = 8.9364e-05 secs
 
 write_grid      tmp.cube.read.restart.data.grid                 custom ivec custom iarray custom dvec custom darray
   grid cells = 1000
-  CPU time = 0.000873954 secs
+  CPU time = 0.000797905 secs
 
 # third run
 
@@ -66,31 +66,31 @@ Memory usage per proc in Mbytes:
   surf      (ave,min,max) = 0.00149536 0.00146484 0.00158691
   total     (ave,min,max) = 4.26529 4.26526 4.26538
 Step CPU Np Natt Ncoll Nscoll Nscheck f_1[1] f_1[2] f_1[3] c_1[1] c_1[2] c_1[3] c_1[4] c_1[5] c_1[6] c_1[7] c_2[1] c_2[2] c_2[3] c_2[4] c_2[5] c_2[6] c_2[7] c_3[1] c_3[2] c_3[3] c_3[4] c_3[5] c_3[6] c_3[7] 
-    1000            0    10229        0        0        0        0         2561    1.0014664            0    2434.4029    2434.6249    2434.6249    2435.2925    2435.5145    2435.7365    2435.9585     5003.083     5004.083     5004.083     5006.583     5007.583     5008.583     5009.583           65           66           66         68.5         69.5         70.5         71.5 
-    1050  0.002429391     9321        0        0        8     1633         2561    1.0014664            0      2379.76    2379.9767    2379.9767    2380.6284    2380.8451    2381.0618    2381.2785     5003.083     5004.083     5004.083     5006.583     5007.583     5008.583     5009.583           65           66           66         68.5         69.5         70.5         71.5 
-    1100  0.016265886     8431        0        0       13     1409         2114    1.1889456            1     2346.907    2347.1215    2347.1215    2347.7658    2347.9802    2348.1947    2348.4091    5006.6897    5007.6897    5007.6897    5010.1897    5011.1897    5012.1897    5013.1897           65           66           66         68.5         69.5         70.5         71.5 
-    1150  0.018666898     7494        0        0        9     1324         2114    1.1889456            1    2378.4219     2378.639     2378.639    2379.2917    2379.5088    2379.7259     2379.943    5006.6897    5007.6897    5007.6897    5010.1897    5011.1897    5012.1897    5013.1897           65           66           66         68.5         69.5         70.5         71.5 
-    1200  0.030426618     6563        0        0        9     1151         1647    1.0287978            2    2388.6777    2388.8961    2388.8961    2389.5519    2389.7703    2389.9886     2390.207      5023.33      5024.33      5024.33      5026.83      5027.83      5028.83      5029.83           65           66           66         68.5         69.5         70.5         71.5 
-    1250   0.03243618     5750        0        0        5      999         1647    1.0287978            2     2473.776    2474.0005    2474.0005    2474.6749    2474.8994     2475.124    2475.3485      5023.33      5024.33      5024.33      5026.83      5027.83      5028.83      5029.83           65           66           66         68.5         69.5         70.5         71.5 
-    1300  0.041807225     4974        0        0        3      829         1247    1.0776035            3    2577.1645    2577.3977    2577.3977    2578.0968    2578.3301    2578.5633    2578.7965    4991.8874    4992.8874    4992.8874    4995.3874    4996.3874    4997.3874    4998.3874           65           66           66         68.5         69.5         70.5         71.5 
-    1350  0.043485472     4290        0        0        2      670         1247    1.0776035            3    2634.3597    2634.6002    2634.6002    2635.3216    2635.5622    2635.8028    2636.0433    4991.8874    4992.8874    4992.8874    4995.3874    4996.3874    4997.3874    4998.3874           65           66           66         68.5         69.5         70.5         71.5 
-    1400   0.05484443     3742        0        0        5      663          939     1.030465            4    2822.4885    2822.7448    2822.7448     2823.512    2823.7683    2824.0246    2824.2809    5004.2391    5005.2391    5005.2391    5007.7391    5008.7391    5009.7391    5010.7391           65           66           66         68.5         69.5         70.5         71.5 
-    1450  0.055968992     3316        0        0        3      490          939     1.030465            4    2907.1324    2907.3951    2907.3951    2908.1819    2908.4446    2908.7073    2908.9699    5004.2391    5005.2391    5005.2391    5007.7391    5008.7391    5009.7391    5010.7391           65           66           66         68.5         69.5         70.5         71.5 
-    1500  0.065041446     2952        0        0        4      462          741    1.0474255            5    3028.6101    3028.8814    3028.8814    3029.6961    3029.9674    3030.2388    3030.5101    5005.5632    5006.5632    5006.5632    5009.0632    5010.0632    5011.0632    5012.0632           65           66           66         68.5         69.5         70.5         71.5 
-Loop time of 0.065064 on 4 procs for 500 steps with 2952 particles
+    1000            0    10229        0        0        0        0         2561    1.0014664            0    2434.4029    2434.6249    2434.6249    2435.2925    2435.5145    2435.7365    2435.9585         5005         5006         5006       5008.5       5009.5       5010.5       5011.5           65           66           66         68.5         69.5         70.5         71.5 
+    1050  0.002399352     9321        0        0        8     1633         2561    1.0014664            0      2379.76    2379.9767    2379.9767    2380.6284    2380.8451    2381.0618    2381.2785         5005         5006         5006       5008.5       5009.5       5010.5       5011.5           65           66           66         68.5         69.5         70.5         71.5 
+    1100   0.01424645     8431        0        0       13     1409         2114    1.1889456            1     2346.907    2347.1215    2347.1215    2347.7658    2347.9802    2348.1947    2348.4091         5005         5006         5006       5008.5       5009.5       5010.5       5011.5           65           66           66         68.5         69.5         70.5         71.5 
+    1150  0.016285191     7494        0        0        9     1324         2114    1.1889456            1    2378.4219     2378.639     2378.639    2379.2917    2379.5088    2379.7259     2379.943         5005         5006         5006       5008.5       5009.5       5010.5       5011.5           65           66           66         68.5         69.5         70.5         71.5 
+    1200  0.026390904     6563        0        0        9     1151         1647    1.0287978            2    2388.6777    2388.8961    2388.8961    2389.5519    2389.7703    2389.9886     2390.207         5005         5006         5006       5008.5       5009.5       5010.5       5011.5           65           66           66         68.5         69.5         70.5         71.5 
+    1250  0.028010652     5750        0        0        5      999         1647    1.0287978            2     2473.776    2474.0005    2474.0005    2474.6749    2474.8994     2475.124    2475.3485         5005         5006         5006       5008.5       5009.5       5010.5       5011.5           65           66           66         68.5         69.5         70.5         71.5 
+    1300  0.037165292     4974        0        0        3      829         1247    1.0776035            3    2577.1645    2577.3977    2577.3977    2578.0968    2578.3301    2578.5633    2578.7965         5005         5006         5006       5008.5       5009.5       5010.5       5011.5           65           66           66         68.5         69.5         70.5         71.5 
+    1350   0.03848667     4290        0        0        2      670         1247    1.0776035            3    2634.3597    2634.6002    2634.6002    2635.3216    2635.5622    2635.8028    2636.0433         5005         5006         5006       5008.5       5009.5       5010.5       5011.5           65           66           66         68.5         69.5         70.5         71.5 
+    1400   0.04674439     3742        0        0        5      663          939     1.030465            4    2822.4885    2822.7448    2822.7448     2823.512    2823.7683    2824.0246    2824.2809         5005         5006         5006       5008.5       5009.5       5010.5       5011.5           65           66           66         68.5         69.5         70.5         71.5 
+    1450  0.047861046     3316        0        0        3      490          939     1.030465            4    2907.1324    2907.3951    2907.3951    2908.1819    2908.4446    2908.7073    2908.9699         5005         5006         5006       5008.5       5009.5       5010.5       5011.5           65           66           66         68.5         69.5         70.5         71.5 
+    1500  0.057157208     2952        0        0        4      462          741    1.0474255            5    3028.6101    3028.8814    3028.8814    3029.6961    3029.9674    3030.2388    3030.5101         5005         5006         5006       5008.5       5009.5       5010.5       5011.5           65           66           66         68.5         69.5         70.5         71.5 
+Loop time of 0.0571752 on 4 procs for 500 steps with 2952 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.0084427  | 0.0087306  | 0.0089693  |   0.2 | 13.42
-Coll    | 0.002671   | 0.0027696  | 0.0028624  |   0.2 |  4.26
-Sort    | 0.00099409 | 0.0010046  | 0.0010153  |   0.0 |  1.54
-Comm    | 0.0028555  | 0.002934   | 0.0030065  |   0.1 |  4.51
-Modify  | 0.0016328  | 0.0016338  | 0.0016348  |   0.0 |  2.51
-Output  | 0.046124   | 0.046142   | 0.046183   |   0.0 | 70.92
-Other   |            | 0.00185    |            |       |  2.84
+Move    | 0.0078071  | 0.0080117  | 0.0081804  |   0.1 | 14.01
+Coll    | 0.0024386  | 0.0025375  | 0.0026246  |   0.2 |  4.44
+Sort    | 0.00090436 | 0.00091748 | 0.00092512 |   0.0 |  1.60
+Comm    | 0.0026087  | 0.0026659  | 0.0027129  |   0.1 |  4.66
+Modify  | 0.0014754  | 0.0014767  | 0.0014775  |   0.0 |  2.58
+Output  | 0.039835   | 0.039848   | 0.039884   |   0.0 | 69.70
+Other   |            | 0.001718   |            |       |  3.00
 
-Particle moves    = 3023839 (3.02M)
+Particle moves    = 3016566 (3.02M)
 Cells touched     = 3277676 (3.28M)
 Particle comms    = 23365 (23.4K)
 Boundary collides = 25075 (25.1K)
@@ -104,15 +104,15 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 1.16187e+07
-Particle-moves/step: 6047.68
-Cell-touches/particle/step: 1.08395
+Particle-moves/CPUsec/proc: 1.319e+07
+Particle-moves/step: 6033.13
+Cell-touches/particle/step: 1.08656
 Particle comm iterations/step: 2.01
-Particle fraction communicated: 0.00772693
-Particle fraction colliding with boundary: 0.00829244
-Particle fraction exiting boundary: 0.00240654
-Surface-checks/particle/step: 0.166776
-Surface-collisions/particle/step: 0.000874385
+Particle fraction communicated: 0.00774556
+Particle fraction colliding with boundary: 0.00831243
+Particle fraction exiting boundary: 0.00241235
+Surface-checks/particle/step: 0.167179
+Surface-collisions/particle/step: 0.000876493
 Surf-reactions/particle/step: 0
 Collision-attempts/particle/step: 0
 Collisions/particle/step: 0
@@ -133,33 +133,32 @@ Histogram: 3 0 0 0 0 0 0 0 0 1
 
 write_surf      tmp.cube.read.restart.data.surf2 type                 custom ivec custom iarray custom dvec custom darray                 points no
   surf elements = 12
-  CPU time = 8.0072e-05 secs
+  CPU time = 7.6942e-05 secs
 
 write_grid      tmp.cube.read.restart.data.grid2                 custom ivec custom iarray custom dvec custom darray
   grid cells = 1000
-  CPU time = 0.000795666 secs
+  CPU time = 0.000872568 secs
 
-
-# remove all custom surfs
+# remove all custom attributes
 
 undump         1
 undump         2
 undump         3
 
-custom         surf s_ivec remove
-custom         surf s_iarray remove
-custom         surf s_dvec remove
-custom         surf s_darray remove
+custom         surf ivec remove
+custom         surf iarray remove
+custom         surf dvec remove
+custom         surf darray remove
 
-custom         grid g_ivec remove
-custom         grid g_iarray remove
-custom         grid g_dvec remove
-custom         grid g_darray remove
+custom         grid ivec remove
+custom         grid iarray remove
+custom         grid dvec remove
+custom         grid darray remove
 
-custom         particle p_ivec remove
-custom         particle p_iarray remove
-custom         particle p_dvec remove
-custom         particle p_darray remove
+custom         particle ivec remove
+custom         particle iarray remove
+custom         particle dvec remove
+custom         particle darray remove
 
 # fourth run
 
@@ -176,30 +175,30 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 3.58112 3.58044 3.58215
 Step CPU Np Natt Ncoll Nscoll Nscheck f_1[1] f_1[2] f_1[3] 
     1500            0     2952        0        0        0        0          741    1.0474255            5 
-    1550  0.000895614     2651        0        0        3      392          741    1.0474255            5 
-    1600   0.00740462     2378        0        0        4      381          597    1.0378469            6 
-    1650  0.008229843     2136        0        0        0      324          597    1.0378469            6 
-    1700  0.016507851     1918        0        0        2      317          482    1.1386861            7 
-    1750  0.017408647     1759        0        0        3      317          482    1.1386861            7 
-    1800  0.024251383     1603        0        0        0      247          403    1.0230817            8 
-    1850  0.025156936     1462        0        0        3      277          403    1.0230817            8 
-    1900   0.03200019     1354        0        0        2      237          342    1.0516987            9 
-    1950  0.032713928     1262        0        0        0      202          342    1.0516987            9 
-    2000  0.038750002     1157        0        0        1      184          293    1.1235955           10 
-Loop time of 0.0387664 on 4 procs for 500 steps with 1157 particles
+    1550  0.000892365     2651        0        0        3      392          741    1.0474255            5 
+    1600  0.008102438     2378        0        0        4      381          597    1.0378469            6 
+    1650  0.008996289     2136        0        0        0      324          597    1.0378469            6 
+    1700  0.015434738     1918        0        0        2      317          482    1.1386861            7 
+    1750  0.016177741     1759        0        0        3      317          482    1.1386861            7 
+    1800  0.022756768     1603        0        0        0      247          403    1.0230817            8 
+    1850  0.023386817     1462        0        0        3      277          403    1.0230817            8 
+    1900  0.029720433     1354        0        0        2      237          342    1.0516987            9 
+    1950  0.030313914     1262        0        0        0      202          342    1.0516987            9 
+    2000  0.036109501     1157        0        0        1      184          293    1.1235955           10 
+Loop time of 0.0361277 on 4 procs for 500 steps with 1157 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.0027791  | 0.0028685  | 0.0029112  |   0.1 |  7.40
-Coll    | 0.0013308  | 0.0013521  | 0.0013802  |   0.0 |  3.49
-Sort    | 0.00041355 | 0.00043676 | 0.00045626 |   0.0 |  1.13
-Comm    | 0.0020942  | 0.0021344  | 0.0021819  |   0.1 |  5.51
-Modify  | 0.0013357  | 0.0013371  | 0.0013381  |   0.0 |  3.45
-Output  | 0.029474   | 0.029486   | 0.02952    |   0.0 | 76.06
-Other   |            | 0.001151   |            |       |  2.97
+Move    | 0.0025418  | 0.0025888  | 0.0026631  |   0.1 |  7.17
+Coll    | 0.0012331  | 0.0012425  | 0.0012611  |   0.0 |  3.44
+Sort    | 0.00034249 | 0.00037318 | 0.00039097 |   0.0 |  1.03
+Comm    | 0.0018663  | 0.0018816  | 0.0019048  |   0.0 |  5.21
+Modify  | 0.0011376  | 0.0011404  | 0.0011445  |   0.0 |  3.16
+Output  | 0.027905   | 0.027917   | 0.027952   |   0.0 | 77.27
+Other   |            | 0.0009843  |            |       |  2.72
 
-Particle moves    = 928327 (0.928M)
+Particle moves    = 926577 (0.927M)
 Cells touched     = 992400 (0.992M)
 Particle comms    = 5812 (5.81K)
 Boundary collides = 6520 (6.52K)
@@ -213,15 +212,15 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 5.98667e+06
-Particle-moves/step: 1856.65
-Cell-touches/particle/step: 1.06902
+Particle-moves/CPUsec/proc: 6.41182e+06
+Particle-moves/step: 1853.15
+Cell-touches/particle/step: 1.07104
 Particle comm iterations/step: 1.968
-Particle fraction communicated: 0.00626072
-Particle fraction colliding with boundary: 0.00702339
-Particle fraction exiting boundary: 0.00193359
-Surface-checks/particle/step: 0.15713
-Surface-collisions/particle/step: 0.000707725
+Particle fraction communicated: 0.00627255
+Particle fraction colliding with boundary: 0.00703665
+Particle fraction exiting boundary: 0.00193724
+Surface-checks/particle/step: 0.157427
+Surface-collisions/particle/step: 0.000709061
 Surf-reactions/particle/step: 0
 Collision-attempts/particle/step: 0
 Collisions/particle/step: 0

@@ -85,13 +85,13 @@ variable        pdarray1 particle p_dvec+1
 variable        pdarray2 particle v_pdarray1+1
 variable        pdarray3 particle v_pdarray2+1
 
-custom          particle p_ivec set v_pivec all NULL type int
-custom          particle p_iarray[1] set v_piarray1 all NULL type int size 2
-custom          particle p_iarray[2] set v_piarray2 all NULL type int size 2
-custom          particle p_dvec set v_pdvec all NULL
-custom          particle p_darray[1] set v_pdarray1 all NULL size 3
-custom          particle p_darray[2] set v_pdarray2 all NULL size 3
-custom          particle p_darray[3] set v_pdarray3 all NULL size 3
+custom          particle ivec set v_pivec all NULL type int
+custom          particle iarray[1] set v_piarray1 all NULL type int size 2
+custom          particle iarray[2] set v_piarray2 all NULL type int size 2
+custom          particle dvec set v_pdvec all NULL
+custom          particle darray[1] set v_pdarray1 all NULL size 3
+custom          particle darray[2] set v_pdarray2 all NULL size 3
+custom          particle darray[3] set v_pdarray3 all NULL size 3
 
 dump          3 particle all 100 tmp.step.read.dump.particle id x y &
               p_ivec p_iarray[1] p_iarray[2] &
@@ -130,20 +130,20 @@ undump         1
 undump         2
 undump         3
 
-custom         surf s_ivec remove
-custom         surf s_iarray remove
-custom         surf s_dvec remove
-custom         surf s_darray remove
+custom         surf ivec remove
+custom         surf iarray remove
+custom         surf dvec remove
+custom         surf darray remove
 
-custom         grid g_ivec remove
-custom         grid g_iarray remove
-custom         grid g_dvec remove
-custom         grid g_darray remove
+custom         grid ivec remove
+custom         grid iarray remove
+custom         grid dvec remove
+custom         grid darray remove
 
-custom         particle p_ivec remove
-custom         particle p_iarray remove
-custom         particle p_dvec remove
-custom         particle p_darray remove
+custom         particle ivec remove
+custom         particle iarray remove
+custom         particle dvec remove
+custom         particle darray remove
 
 # third run
 

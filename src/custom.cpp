@@ -59,30 +59,19 @@ void Custom::command(int narg, char **arg)
   if (mode == SURF && !surf->exist)
     error->all(FLERR,"Cannot use custom surf before surfaces are defined");
 
-  // custom attribute
+  // attribute name
   
-  if ((strncmp(arg[1],"p_",2) == 0) || (strncmp(arg[1],"g_",2) == 0) ||
-      (strncmp(arg[1],"s_",2) == 0)) {
-    if (arg[1][0] == 'p' && mode != PARTICLE)
-      error->all(FLERR,"Custom attribute is mismatched");
-    if (arg[1][0] == 'g' && mode != GRID)
-      error->all(FLERR,"Custom attribute is mismatched");
-    if (arg[1][0] == 's' && mode != SURF)
-      error->all(FLERR,"Custom attribute is mismatched");
+  int n = strlen(arg[1]) + 1;
+  aname = new char[n];
+  strcpy(aname,arg[1]);
 
-    int n = strlen(arg[1]);
-    cname = new char[n];
-    strcpy(cname,&arg[1][2]);
-
-    char *ptr = strchr(cname,'[');
-    if (ptr) {
-      if (cname[strlen(cname)-1] != ']')
-	error->all(FLERR,"Custom attribute is invalid");
-      ccol = atoi(ptr+1);
-      *ptr = '\0';
-    } else ccol = 0;
-    
-  } else error->all(FLERR,"Custom attribute is invalid");
+  char *ptr = strchr(aname,'[');
+  if (ptr) {
+    if (aname[strlen(aname)-1] != ']')
+      error->all(FLERR,"Custom attribute name is invalid");
+    ccol = atoi(ptr+1);
+    *ptr = '\0';
+  } else ccol = 0;
 
   // action
   
@@ -95,20 +84,20 @@ void Custom::command(int narg, char **arg)
   if (action == REMOVE) {
     if (narg > 3) error->all(FLERR,"Illegal custom command");
     if (mode == PARTICLE) {
-      int index = particle->find_custom(cname);
-      if (index < 0) error->all(FLERR,"Custom attribute does not exist");
+      int index = particle->find_custom(aname);
+      if (index < 0) error->all(FLERR,"Custom attribute name does not exist");
       particle->remove_custom(index);
     } else if (mode == GRID) {
-      int index = grid->find_custom(cname);
-      if (index < 0) error->all(FLERR,"Custom attribute does not exist");
+      int index = grid->find_custom(aname);
+      if (index < 0) error->all(FLERR,"Custom attribute name does not exist");
       grid->remove_custom(index);
     } else if (mode == SURF) {
-      int index = surf->find_custom(cname);
-      if (index < 0) error->all(FLERR,"Custom attribute does not exist");
+      int index = surf->find_custom(aname);
+      if (index < 0) error->all(FLERR,"Custom attribute name does not exist");
       surf->remove_custom(index);
     }
 
-    delete [] cname;
+    delete [] aname;
     
     return;
   }
@@ -185,29 +174,29 @@ void Custom::command(int narg, char **arg)
   // create or check custom attribute
 
   if (mode == PARTICLE) {
-    cindex = particle->find_custom(cname);
+    cindex = particle->find_custom(aname);
     if (cindex >= 0) {
       if (ctype != particle->etype[cindex] ||
 	  csize != particle->esize[cindex])
 	error->all(FLERR,"Custom attribute does not match "
 		   "already existing custom data");
-    } else cindex = particle->add_custom(cname,ctype,csize);
+    } else cindex = particle->add_custom(aname,ctype,csize);
   } else if (mode == GRID) {
-    cindex = grid->find_custom(cname);
+    cindex = grid->find_custom(aname);
     if (cindex >= 0) {
        if (ctype != grid->etype[cindex] ||
 	  csize != grid->esize[cindex])
 	error->all(FLERR,"Custom attribute does not match "
 		   "already existing custom data");
-    } else cindex = grid->add_custom(cname,ctype,csize);
+    } else cindex = grid->add_custom(aname,ctype,csize);
   } else if (mode == SURF) {
-    cindex = surf->find_custom(cname);
+    cindex = surf->find_custom(aname);
     if (cindex >= 0) {
       if (ctype != surf->etype[cindex] ||
 	  csize != surf->esize[cindex])
 	error->all(FLERR,"Custom attribute does not match "
 		   "already existing custom data");
-    } else cindex = surf->add_custom(cname,ctype,csize);
+    } else cindex = surf->add_custom(aname,ctype,csize);
   }
 
   // evaluate variable
@@ -244,19 +233,24 @@ void Custom::command(int narg, char **arg)
   bigint bcount = count;
   bigint bcountall;
   MPI_Allreduce(&bcount,&bcountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+
+  const char *mname;
+  if (mode == PARTICLE) mname = "particle";
+  else if (mode == GRID) mname = "grid";
+  else if (mode == SURF) mname = "surf";
   
   if (comm->me == 0) {
     if (screen)
-      fprintf(screen,"Custom %s attributes set = " BIGINT_FORMAT "\n",
-              cname,bcountall);
+      fprintf(screen,"Custom %s %s attributes set = " BIGINT_FORMAT "\n",
+              mname,aname,bcountall);
     if (logfile)
-      fprintf(logfile,"Custom %s attributes set = " BIGINT_FORMAT "\n",
-              cname,bcountall);
+      fprintf(logfile,"Custom %s %s attributes set = " BIGINT_FORMAT "\n",
+              mname,aname,bcountall);
   }
 
   // clean up
 
-  delete [] cname;
+  delete [] aname;
   delete [] vname;
   memory->destroy(vector);
 }

@@ -20,15 +20,15 @@ Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
 
 read_grid           data.step.grid                     custom ivec int 0                     custom iarray int 2                     custom dvec float 0                     custom darray float 3
   400 grid cells
-WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (../grid.cpp:463)
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (../grid.cpp:470)
   grid cells = 400
-  CPU time = 0.00329084 secs
-  read/setup percent = 98.5768 1.42316
+  CPU time = 0.00350886 secs
+  read/setup percent = 99.3683 0.631659
 
 balance_grid        rcb cell
 Balance grid migrated 0 cells
-  CPU time = 0.000396256 secs
-  reassign/sort/migrate/ghost percent = 47.0678 0.866611 10.0221 42.0435
+  CPU time = 0.000249598 secs
+  reassign/sort/migrate/ghost percent = 44.897 0.63462 10.0065 44.4619
 
 global		    nrho 1.0 fnum 0.01
 
@@ -46,10 +46,10 @@ read_surf	    data.step.custom                     custom ivec int 0            
   338 32 30 = cells outside/inside/overlapping surfs
   30 = surf cells with 1,2,etc splits
   89.5055 89.5055 = cell-wise and global flow volume
-  CPU time = 0.000959436 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 10.6725 22.9876 2.39578 53.4271 10.517 9.13297 0.0270993
-  surf2grid time = 0.000512599 secs
-  map/comm1/comm2/comm3/comm4/split percent = 40.9443 6.37204 17.8124 4.3377 15.1354 10.2683
+  CPU time = 0.000595844 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 11.7145 11.3548 2.6658 63.5863 10.6786 9.68861 0.0298736
+  surf2grid time = 0.000378875 secs
+  map/comm1/comm2/comm3/comm4/split percent = 43.0567 5.6937 17.6673 3.42514 14.4209 9.10617
 
 surf_collide	    1 diffuse 300.0 0.0
 surf_modify         all collide 1
@@ -69,7 +69,7 @@ dump          1 surf all 100 tmp.step.clip.dump.surf id type               s_ive
 
 write_surf      tmp.step.clip.data.surf type                 custom ivec custom iarray custom dvec custom darray                 points no
   surf elements = 13
-  CPU time = 0.000172134 secs
+  CPU time = 0.000115034 secs
 
 # first run
 
@@ -86,28 +86,28 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 1.51637 1.51637 1.51637
 Step CPU Np Natt Ncoll Nscoll Nscheck f_1[1] f_1[2] f_1[3] 
        0            0        0        0        0        0        0            0            1            0 
-      50  0.000926176     1088        0        0        0       23            0            1            0 
-     100  0.005421467     2125        0        0        7      152         2125            1            0 
-     150  0.007058865     3070        0        0        5      250         2125            1            0 
-     200  0.012894659     3927        0        0       12      368         3927            1            0 
-     250  0.015419833     4634        0        0       11      376         3927            1            0 
-     300  0.022550074     5250        0        0       14      491         5250            1            0 
-     350  0.025733414     5733        0        0       16      473         5250            1            0 
-     400  0.034198375     6173        0        0       27      583         6173            1            0 
-     450  0.037913122     6497        0        0       23      550         6173            1            0 
-     500  0.046697065     6819        0        0       21      580         6819            1            0 
-Loop time of 0.0467004 on 1 procs for 500 steps with 6819 particles
+      50  0.000962245     1088        0        0        0       23            0            1            0 
+     100  0.005039175     2125        0        0        7      152         2125            1            0 
+     150  0.006687602     3070        0        0        5      250         2125            1            0 
+     200  0.012888983     3927        0        0       12      368         3927            1            0 
+     250  0.015437021     4634        0        0       11      376         3927            1            0 
+     300  0.022399374     5250        0        0       14      491         5250            1            0 
+     350  0.025595044     5733        0        0       16      473         5250            1            0 
+     400  0.033754494     6173        0        0       27      583         6173            1            0 
+     450  0.037418734     6497        0        0       23      550         6173            1            0 
+     500  0.046141229     6819        0        0       21      580         6819            1            0 
+Loop time of 0.0461461 on 1 procs for 500 steps with 6819 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.017087   | 0.017087   | 0.017087   |   0.0 | 36.59
-Coll    | 0.0043526  | 0.0043526  | 0.0043526  |   0.0 |  9.32
-Sort    | 0.0020356  | 0.0020356  | 0.0020356  |   0.0 |  4.36
-Comm    | 3.9893e-05 | 3.9893e-05 | 3.9893e-05 |   0.0 |  0.09
-Modify  | 0.0019216  | 0.0019216  | 0.0019216  |   0.0 |  4.11
-Output  | 0.021234   | 0.021234   | 0.021234   |   0.0 | 45.47
-Other   |            | 3.028e-05  |            |       |  0.06
+Move    | 0.016757   | 0.016757   | 0.016757   |   0.0 | 36.31
+Coll    | 0.0043188  | 0.0043188  | 0.0043188  |   0.0 |  9.36
+Sort    | 0.0020047  | 0.0020047  | 0.0020047  |   0.0 |  4.34
+Comm    | 6.6805e-05 | 6.6805e-05 | 6.6805e-05 |   0.0 |  0.14
+Modify  | 0.0019923  | 0.0019923  | 0.0019923  |   0.0 |  4.32
+Output  | 0.020976   | 0.020976   | 0.020976   |   0.0 | 45.46
+Other   |            | 3.071e-05  |            |       |  0.07
 
 Particle moves    = 2106787 (2.11M)
 Cells touched     = 2422860 (2.42M)
@@ -123,7 +123,7 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 4.51128e+07
+Particle-moves/CPUsec/proc: 4.56547e+07
 Particle-moves/step: 4213.57
 Cell-touches/particle/step: 1.15003
 Particle comm iterations/step: 1
