@@ -40,8 +40,16 @@ action = <I>set</I> or <I>remove</I>
 <P><B>Examples:</B>
 </P>
 <P>variable ivec particle id/100000
-custom particle ivec set v_ivec air NULL type int
+variable sdvec surf c_1*10+3.5
+variable sdarray1 surf s_dvec+1
+variable sdarray2 surf v_sdarray1+1
+</P>
+<P>custom particle ivec set v_ivec air NULL type int
+custom surf dvec set v_sdvec all NULL
+custom surf darray<B>1</B> set v_sdarray1 all NULL size 2
+custom surf darray<B>2</B> set v_sdarray2 all NULL
 custom particle ivec remove
+custom surf darray remove
 </P>
 <P><B>Description:</B>
 </P>

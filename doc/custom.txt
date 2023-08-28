@@ -31,8 +31,16 @@ keyword = {type} or {size}
 [Examples:]
 
 variable ivec particle id/100000
+variable sdvec surf c_1*10+3.5
+variable sdarray1 surf s_dvec+1
+variable sdarray2 surf v_sdarray1+1
+
 custom particle ivec set v_ivec air NULL type int
+custom surf dvec set v_sdvec all NULL
+custom surf darray[1] set v_sdarray1 all NULL size 2
+custom surf darray[2] set v_sdarray2 all NULL
 custom particle ivec remove
+custom surf darray remove
 
 [Description:]
 
