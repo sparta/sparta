@@ -22,13 +22,13 @@ read_grid           data.step.grid                     custom ivec int 0        
   400 grid cells
 WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (../grid.cpp:470)
   grid cells = 400
-  CPU time = 0.00279553 secs
-  read/setup percent = 98.5636 1.43644
+  CPU time = 0.00319794 secs
+  read/setup percent = 99.3629 0.637128
 
 balance_grid        rcb cell
 Balance grid migrated 0 cells
-  CPU time = 0.000330384 secs
-  reassign/sort/migrate/ghost percent = 49.5687 0.734297 10.0807 39.6163
+  CPU time = 0.000271399 secs
+  reassign/sort/migrate/ghost percent = 44.0709 0.862568 15.8508 39.2157
 
 global		    nrho 1.0 fnum 0.01
 
@@ -45,10 +45,10 @@ read_surf	    data.step.custom                     custom ivec int 0            
   312 44 44 = cells outside/inside/overlapping surfs
   44 = surf cells with 1,2,etc splits
   85.375 85.375 = cell-wise and global flow volume
-  CPU time = 0.000859075 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 10.7722 10.3454 2.39281 64.6599 11.8297 11.2911 0.0409743
-  surf2grid time = 0.000555477 secs
-  map/comm1/comm2/comm3/comm4/split percent = 44.6559 5.11524 16.8866 4.86573 13.1102 10.7497
+  CPU time = 0.000585078 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 10.9823 12.2601 2.4137 62.9526 11.3913 10.0995 0.029056
+  surf2grid time = 0.000368322 secs
+  map/comm1/comm2/comm3/comm4/split percent = 39.4038 5.80063 17.0536 3.94302 16.6577 10.9638
 
 surf_collide	    1 diffuse 300.0 0.0
 surf_modify         all collide 1
@@ -64,17 +64,17 @@ timestep 	    0.0001
 dump                10 image all 100 tmp.step.read.image.*.ppm                     type type pdiam 0.1                     surf proc 0.01 size 512 512 axes yes 0.9 0.02 zoom 1.5
 dump_modify	    10 pad 4
 
-dump          1 surf all 100 tmp.step.read.dump.surf id type               s_ivec s_iarray[1] s_iarray[2]               s_dvec s_darray[1] s_darray[2] s_darray[3]
+dump          1 surf all 100 tmp.step.read.dump.surf id type               s_ivec s_iarray[*] s_dvec s_darray[*]
 
-dump          2 grid all 100 tmp.step.read.dump.grid id               g_ivec g_iarray[1] g_iarray[2]               g_dvec g_darray[1] g_darray[2] g_darray[3]
+dump          2 grid all 100 tmp.step.read.dump.grid id               g_ivec g_iarray[*] g_dvec g_darray[*]
 
 write_surf      tmp.step.read.data.surf type                 custom ivec custom iarray custom dvec custom darray                 points no
   surf elements = 16
-  CPU time = 0.000202998 secs
+  CPU time = 0.000135136 secs
 
 write_grid      tmp.step.read.data.grid                 custom ivec custom iarray custom dvec custom darray
   grid cells = 400
-  CPU time = 0.000959124 secs
+  CPU time = 0.000728776 secs
 
 # first run
 
@@ -91,28 +91,28 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 1.51697 1.51697 1.51697
 Step CPU Np Natt Ncoll Nscoll Nscheck f_1[1] f_1[2] f_1[3] 
        0            0        0        0        0        0        0            0            1            0 
-      50  0.000996788     1087        0        0        1       81            0            1            0 
-     100  0.005271772     2054        0        0       10      255         2054            1            0 
-     150  0.006924319     2859        0        0        9      366         2054            1            0 
-     200  0.012614513     3548        0        0       17      507         3548            1            0 
-     250  0.015062029     4170        0        0       24      610         3548            1            0 
-     300   0.02181976     4707        0        0       19      663         4707            1            0 
-     350  0.024762228     5104        0        0       24      672         4707            1            0 
-     400  0.032429252     5503        0        0       30      739         5503            1            0 
-     450   0.03580956     5757        0        0       22      752         5503            1            0 
-     500  0.044060794     6071        0        0       32      834         6071            1            0 
-Loop time of 0.0440647 on 1 procs for 500 steps with 6071 particles
+      50  0.001060884     1087        0        0        1       81            0            1            0 
+     100  0.005501075     2054        0        0       10      255         2054            1            0 
+     150  0.007187216     2859        0        0        9      366         2054            1            0 
+     200  0.013001648     3548        0        0       17      507         3548            1            0 
+     250  0.015454349     4170        0        0       24      610         3548            1            0 
+     300  0.022323427     4707        0        0       19      663         4707            1            0 
+     350  0.025338166     5104        0        0       24      672         4707            1            0 
+     400  0.033106055     5503        0        0       30      739         5503            1            0 
+     450  0.036579289     5757        0        0       22      752         5503            1            0 
+     500  0.045072364     6071        0        0       32      834         6071            1            0 
+Loop time of 0.0450761 on 1 procs for 500 steps with 6071 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.0159     | 0.0159     | 0.0159     |   0.0 | 36.08
-Coll    | 0.0040002  | 0.0040002  | 0.0040002  |   0.0 |  9.08
-Sort    | 0.0018047  | 0.0018047  | 0.0018047  |   0.0 |  4.10
-Comm    | 4.3625e-05 | 4.3625e-05 | 4.3625e-05 |   0.0 |  0.10
-Modify  | 0.0019898  | 0.0019898  | 0.0019898  |   0.0 |  4.52
-Output  | 0.020287   | 0.020287   | 0.020287   |   0.0 | 46.04
-Other   |            | 3.885e-05  |            |       |  0.09
+Move    | 0.016482   | 0.016482   | 0.016482   |   0.0 | 36.56
+Coll    | 0.0040114  | 0.0040114  | 0.0040114  |   0.0 |  8.90
+Sort    | 0.0018     | 0.0018     | 0.0018     |   0.0 |  3.99
+Comm    | 5.2805e-05 | 5.2805e-05 | 5.2805e-05 |   0.0 |  0.12
+Modify  | 0.0020525  | 0.0020525  | 0.0020525  |   0.0 |  4.55
+Output  | 0.020648   | 0.020648   | 0.020648   |   0.0 | 45.81
+Other   |            | 2.96e-05   |            |       |  0.07
 
 Particle moves    = 1900123 (1.9M)
 Cells touched     = 2178961 (2.18M)
@@ -128,7 +128,7 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 4.31212e+07
+Particle-moves/CPUsec/proc: 4.21537e+07
 Particle-moves/step: 3800.25
 Cell-touches/particle/step: 1.14675
 Particle comm iterations/step: 1
@@ -180,20 +180,20 @@ Custom particle darray attributes set = 6071
 custom          particle darray[3] set v_pdarray3 all NULL size 3
 Custom particle darray attributes set = 6071
 
-dump          3 particle all 100 tmp.step.read.dump.particle id x y               p_ivec p_iarray[1] p_iarray[2]               p_dvec p_darray[1] p_darray[2] p_darray[3]
+dump          3 particle all 100 tmp.step.read.dump.particle id x y               p_ivec p_iarray[*] p_dvec p_darray[*]
 
 # second run
 
-compute       1 reduce ave p_ivec p_iarray[1] p_iarray[1]               p_dvec p_darray[1] p_darray[2] p_darray[3]
-compute       2 reduce ave g_ivec g_iarray[1] g_iarray[1]               g_dvec g_darray[1] g_darray[2] g_darray[3]
-compute       3 reduce ave s_ivec s_iarray[1] s_iarray[1]               s_dvec s_darray[1] s_darray[2] s_darray[3]
+compute       1 reduce ave p_ivec p_iarray[*] p_dvec p_darray[*]
+compute       2 reduce ave g_ivec g_iarray[*] g_dvec g_darray[*]
+compute       3 reduce ave s_ivec s_iarray[*] s_dvec s_darray[*]
 
 stats_style	step cpu np nattempt ncoll nscoll nscheck f_1[*]                 c_1[*] c_2[*] c_3[*]
 
 balance_grid    rcb part flip yes
 Balance grid migrated 0 cells
-  CPU time = 0.000331153 secs
-  reassign/sort/migrate/ghost percent = 14.9097 1.99636 75.2812 7.8127
+  CPU time = 0.000121914 secs
+  reassign/sort/migrate/ghost percent = 44.3378 5.39397 29.3494 20.9188
 
 run 		    500
 Memory usage per proc in Mbytes:
@@ -202,29 +202,29 @@ Memory usage per proc in Mbytes:
   surf      (ave,min,max) = 0.00317383 0.00317383 0.00317383
   total     (ave,min,max) = 3.89197 3.89197 3.89197
 Step CPU Np Natt Ncoll Nscoll Nscheck f_1[1] f_1[2] f_1[3] c_1[1] c_1[2] c_1[3] c_1[4] c_1[5] c_1[6] c_1[7] c_2[1] c_2[2] c_2[3] c_2[4] c_2[5] c_2[6] c_2[7] c_3[1] c_3[2] c_3[3] c_3[4] c_3[5] c_3[6] c_3[7] 
-     500            0     6071        0        0        0        0         6071            1            0    10632.064    10633.064    10633.064    10636.065    10637.065    10638.065    10639.065         2005         2006         2006       2008.5       2009.5       2010.5       2011.5           85           86           86         88.5         89.5         90.5         91.5 
-     550  0.003760413     6394        0        0       39      933         6071            1            0    8868.6831     8869.516     8869.516    8872.0135    8872.8463    8873.6792     8874.512         2005         2006         2006       2008.5       2009.5       2010.5       2011.5           85           86           86         88.5         89.5         90.5         91.5 
-     600  0.018765385     6652        0        0       21      905         6652            1            0    7379.1425    7379.8364    7379.8364    7381.9166    7382.6105    7383.3045    7383.9984         2005         2006         2006       2008.5       2009.5       2010.5       2011.5           85           86           86         88.5         89.5         90.5         91.5 
-     650  0.022923397     6852        0        0       30      955         6652            1            0    6257.8311    6258.4194    6258.4194    6260.1836    6260.7719    6261.3602    6261.9485         2005         2006         2006       2008.5       2009.5       2010.5       2011.5           85           86           86         88.5         89.5         90.5         91.5 
-     700  0.038208472     7044        0        0       19      906         7044            1            0    5290.9574    5291.4583    5291.4583    5292.9594    5293.4602    5293.9611    5294.4619         2005         2006         2006       2008.5       2009.5       2010.5       2011.5           85           86           86         88.5         89.5         90.5         91.5 
-     750  0.042623578     7230        0        0       42     1009         7044            1            0    4509.2936    4509.7214    4509.7214     4511.004    4511.4318    4511.8596    4512.2874         2005         2006         2006       2008.5       2009.5       2010.5       2011.5           85           86           86         88.5         89.5         90.5         91.5 
-     800  0.058036184     7406        0        0       31     1049         7406            1            0     3897.766    3898.1361    3898.1361    3899.2447    3899.6148    3899.9849     3900.355         2005         2006         2006       2008.5       2009.5       2010.5       2011.5           85           86           86         88.5         89.5         90.5         91.5 
-     850  0.062864175     7543        0        0       37     1067         7406            1            0     3398.306    3398.6287    3398.6287    3399.5947    3399.9173      3400.24    3400.5627         2005         2006         2006       2008.5       2009.5       2010.5       2011.5           85           86           86         88.5         89.5         90.5         91.5 
-     900   0.07900403     7579        0        0       35     1106         7579            1            0    2971.2883    2971.5699    2971.5699     2972.412    2972.6936    2972.9751    2973.2567         2005         2006         2006       2008.5       2009.5       2010.5       2011.5           85           86           86         88.5         89.5         90.5         91.5 
-     950  0.083891587     7651        0        0       33     1102         7579            1            0    2603.2286    2603.4771    2603.4771    2604.2206    2604.4691    2604.7175     2604.966         2005         2006         2006       2008.5       2009.5       2010.5       2011.5           85           86           86         88.5         89.5         90.5         91.5 
-    1000  0.099571117     7747        0        0       33     1035         7747            1            0    2281.6761    2281.8953    2281.8953    2282.5513    2282.7705    2282.9897    2283.2089         2005         2006         2006       2008.5       2009.5       2010.5       2011.5           85           86           86         88.5         89.5         90.5         91.5 
-Loop time of 0.0995796 on 1 procs for 500 steps with 7747 particles
+     500            0     6071        0        0        0        0         6071            1            0    10632.064    10633.064    10634.064    10636.065    10637.065    10638.065    10639.065         2005         2006         2007       2008.5       2009.5       2010.5       2011.5           85           86           87         88.5         89.5         90.5         91.5 
+     550  0.003820118     6394        0        0       39      933         6071            1            0    8868.6831     8869.516    8870.3488    8872.0135    8872.8463    8873.6792     8874.512         2005         2006         2007       2008.5       2009.5       2010.5       2011.5           85           86           87         88.5         89.5         90.5         91.5 
+     600   0.01934168     6652        0        0       21      905         6652            1            0    7379.1425    7379.8364    7380.5304    7381.9166    7382.6105    7383.3045    7383.9984         2005         2006         2007       2008.5       2009.5       2010.5       2011.5           85           86           87         88.5         89.5         90.5         91.5 
+     650  0.023699726     6852        0        0       30      955         6652            1            0    6257.8311    6258.4194    6259.0077    6260.1836    6260.7719    6261.3602    6261.9485         2005         2006         2007       2008.5       2009.5       2010.5       2011.5           85           86           87         88.5         89.5         90.5         91.5 
+     700  0.039515332     7044        0        0       19      906         7044            1            0    5290.9574    5291.4583    5291.9591    5292.9594    5293.4602    5293.9611    5294.4619         2005         2006         2007       2008.5       2009.5       2010.5       2011.5           85           86           87         88.5         89.5         90.5         91.5 
+     750  0.044240319     7230        0        0       42     1009         7044            1            0    4509.2936    4509.7214    4510.1492     4511.004    4511.4318    4511.8596    4512.2874         2005         2006         2007       2008.5       2009.5       2010.5       2011.5           85           86           87         88.5         89.5         90.5         91.5 
+     800  0.060350867     7406        0        0       31     1049         7406            1            0     3897.766    3898.1361    3898.5062    3899.2447    3899.6148    3899.9849     3900.355         2005         2006         2007       2008.5       2009.5       2010.5       2011.5           85           86           87         88.5         89.5         90.5         91.5 
+     850   0.06526421     7543        0        0       37     1067         7406            1            0     3398.306    3398.6287    3398.9513    3399.5947    3399.9173      3400.24    3400.5627         2005         2006         2007       2008.5       2009.5       2010.5       2011.5           85           86           87         88.5         89.5         90.5         91.5 
+     900  0.081866743     7579        0        0       35     1106         7579            1            0    2971.2883    2971.5699    2971.8514     2972.412    2972.6936    2972.9751    2973.2567         2005         2006         2007       2008.5       2009.5       2010.5       2011.5           85           86           87         88.5         89.5         90.5         91.5 
+     950  0.087062014     7651        0        0       33     1102         7579            1            0    2603.2286    2603.4771    2603.7255    2604.2206    2604.4691    2604.7175     2604.966         2005         2006         2007       2008.5       2009.5       2010.5       2011.5           85           86           87         88.5         89.5         90.5         91.5 
+    1000   0.10368485     7747        0        0       33     1035         7747            1            0    2281.6761    2281.8953    2282.1145    2282.5513    2282.7705    2282.9897    2283.2089         2005         2006         2007       2008.5       2009.5       2010.5       2011.5           85           86           87         88.5         89.5         90.5         91.5 
+Loop time of 0.103697 on 1 procs for 500 steps with 7747 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.03119    | 0.03119    | 0.03119    |   0.0 | 31.32
-Coll    | 0.0067079  | 0.0067079  | 0.0067079  |   0.0 |  6.74
-Sort    | 0.0034556  | 0.0034556  | 0.0034556  |   0.0 |  3.47
-Comm    | 0.0002174  | 0.0002174  | 0.0002174  |   0.0 |  0.22
-Modify  | 0.0016715  | 0.0016715  | 0.0016715  |   0.0 |  1.68
-Output  | 0.056296   | 0.056296   | 0.056296   |   0.0 | 56.53
-Other   |            | 4.126e-05  |            |       |  0.04
+Move    | 0.032195   | 0.032195   | 0.032195   |   0.0 | 31.05
+Coll    | 0.0069479  | 0.0069479  | 0.0069479  |   0.0 |  6.70
+Sort    | 0.0035699  | 0.0035699  | 0.0035699  |   0.0 |  3.44
+Comm    | 0.00023918 | 0.00023918 | 0.00023918 |   0.0 |  0.23
+Modify  | 0.0016874  | 0.0016874  | 0.0016874  |   0.0 |  1.63
+Output  | 0.059021   | 0.059021   | 0.059021   |   0.0 | 56.92
+Other   |            | 3.616e-05  |            |       |  0.03
 
 Particle moves    = 3573082 (3.57M)
 Cells touched     = 4067693 (4.07M)
@@ -240,7 +240,7 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 3.58817e+07
+Particle-moves/CPUsec/proc: 3.4457e+07
 Particle-moves/step: 7146.16
 Cell-touches/particle/step: 1.13843
 Particle comm iterations/step: 1
@@ -269,11 +269,11 @@ Histogram: 1 0 0 0 0 0 0 0 0 0
 
 write_surf      tmp.step.read.data.surf2 type                 custom ivec custom iarray custom dvec custom darray                 points no
   surf elements = 16
-  CPU time = 3.2181e-05 secs
+  CPU time = 4.1568e-05 secs
 
 write_grid      tmp.step.read.data.grid2                 custom ivec custom iarray custom dvec custom darray
   grid cells = 400
-  CPU time = 0.000262104 secs
+  CPU time = 0.000291287 secs
 
 #write_restart   tmp.step.read.restart
 write_restart   tmp.step.read.restart.% fileper 2
@@ -314,28 +314,28 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 3.20447 3.20447 3.20447
 Step CPU Np Natt Ncoll Nscoll Nscheck f_1[1] f_1[2] f_1[3] 
     1000            0     7747        0        0        0        0         7747            1            0 
-    1050  0.004687792     7931        0        0       37     1132         7747            1            0 
-    1100  0.014692245     8023        0        0       38      999         8023            1            0 
-    1150  0.019483543     8117        0        0       32     1089         8023            1            0 
-    1200  0.029784409     8190        0        0       29     1034         8190            1            0 
-    1250  0.034602292     8160        0        0       45     1147         8190            1            0 
-    1300  0.044864489     8245        0        0       35     1211         8245            1            0 
-    1350  0.049809439     8253        0        0       43     1230         8245            1            0 
-    1400  0.060088772     8291        0        0       33     1126         8291            1            0 
-    1450  0.065101433     8296        0        0       35     1170         8291            1            0 
-    1500    0.0753864     8326        0        0       38     1122         8326            1            0 
-Loop time of 0.0753903 on 1 procs for 500 steps with 8326 particles
+    1050  0.005079235     7931        0        0       37     1132         7747            1            0 
+    1100  0.015512221     8023        0        0       38      999         8023            1            0 
+    1150  0.020404014     8117        0        0       32     1089         8023            1            0 
+    1200  0.031109213     8190        0        0       29     1034         8190            1            0 
+    1250  0.036060984     8160        0        0       45     1147         8190            1            0 
+    1300  0.047040643     8245        0        0       35     1211         8245            1            0 
+    1350  0.052262012     8253        0        0       43     1230         8245            1            0 
+    1400  0.063084193     8291        0        0       33     1126         8291            1            0 
+    1450  0.068295797     8296        0        0       35     1170         8291            1            0 
+    1500  0.079330703     8326        0        0       38     1122         8326            1            0 
+Loop time of 0.0793342 on 1 procs for 500 steps with 8326 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.035402   | 0.035402   | 0.035402   |   0.0 | 46.96
-Coll    | 0.0074746  | 0.0074746  | 0.0074746  |   0.0 |  9.91
-Sort    | 0.0038302  | 0.0038302  | 0.0038302  |   0.0 |  5.08
-Comm    | 6.7061e-05 | 6.7061e-05 | 6.7061e-05 |   0.0 |  0.09
-Modify  | 0.0015865  | 0.0015865  | 0.0015865  |   0.0 |  2.10
-Output  | 0.026967   | 0.026967   | 0.026967   |   0.0 | 35.77
-Other   |            | 6.292e-05  |            |       |  0.08
+Move    | 0.037017   | 0.037017   | 0.037017   |   0.0 | 46.66
+Coll    | 0.0078443  | 0.0078443  | 0.0078443  |   0.0 |  9.89
+Sort    | 0.004164   | 0.004164   | 0.004164   |   0.0 |  5.25
+Comm    | 6.8732e-05 | 6.8732e-05 | 6.8732e-05 |   0.0 |  0.09
+Modify  | 0.0015909  | 0.0015909  | 0.0015909  |   0.0 |  2.01
+Output  | 0.028615   | 0.028615   | 0.028615   |   0.0 | 36.07
+Other   |            | 3.478e-05  |            |       |  0.04
 
 Particle moves    = 4086179 (4.09M)
 Cells touched     = 4631569 (4.63M)
@@ -351,7 +351,7 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 5.42003e+07
+Particle-moves/CPUsec/proc: 5.15059e+07
 Particle-moves/step: 8172.36
 Cell-touches/particle/step: 1.13347
 Particle comm iterations/step: 1

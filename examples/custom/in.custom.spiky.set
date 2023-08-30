@@ -62,8 +62,7 @@ dump                10 image all 100 tmp.spiky.set.image.*.ppm &
 dump_modify	    10 pad 4
 
 dump          2 grid all 100 tmp.spiky.set.dump.grid id &
-              g_ivec g_iarray[1] g_iarray[2] &
-              g_dvec g_darray[1] g_darray[2] g_darray[3]
+              g_ivec g_iarray[*] g_dvec g_darray[*]
 
 # first run
 

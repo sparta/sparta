@@ -28,16 +28,16 @@
 <PRE>  x,y,z,vx,vy,vz = particle position or velocity component
   ke,erot,evib = particle energy component
   c_ID = per-particle or per-grid vector calculated by a compute with ID
-  c_ID[I] = Ith column of per-particle or per-grid array calculated by a compute with ID, I can include wildcard (see below)
+  c_ID[N] = Nth column of per-particle or per-grid array calculated by a compute with ID, N can include wildcard (see below)
   f_ID = per-particle or per-grid or per-surf vector calculated by a fix with ID
-  f_ID[I] = Ith column of per-particle or per-grid or per-surf array calculated by a fix with ID, I can include wildcard (see below)
+  f_ID[N] = Nth column of per-particle or per-grid or per-surf array calculated by a fix with ID, N can include wildcard (see below)
   v_name = per-particle or per-grid or per-surf vector calculated by a particle-style or grid-style or surf-style variable with name
   p_name = custom per-particle vector with name
-  p_name[N] = Nth column of per-particle custom array with name
+  p_name[N] = Nth column of per-particle custom array with name, N can include wildcard (see below)
   g_name = custom per-grid vector with name
-  g_name[N] = Nth column of per-grid custom array with name
+  g_name[N] = Nth column of per-grid custom array with name, N can include wildcard (see below)
   s_name = custom per-surf vector with name
-  s_name[N] = Nth column of per-surf custom array with name 
+  s_name[N] = Nth column of per-surf custom array with name, N can include wildcard (see below) 
 </PRE>
 <LI>zero or more keyword/args pairs may be appended 
 
@@ -115,15 +115,15 @@ result of a <A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A>
 of a <A HREF = "variable.html">variable</A>.  Or it can be a custom attribute of a
 particle, grid cell, or surface element.
 </P>
-<P>Note that for values from a compute or fix, the bracketed index I can
-be specified using a wildcard asterisk with the index to effectively
-specify multiple values.  This takes the form "*" or "*n" or "n*" or
-"m*n".  If N = the size of the vector (for <I>mode</I> = scalar) or the
-number of columns in the array (for <I>mode</I> = vector), then an asterisk
-with no numeric values means all indices from 1 to N.  A leading
-asterisk means all indices from 1 to n (inclusive).  A trailing
-asterisk means all indices from n to N (inclusive).  A middle asterisk
-means all indices from m to n (inclusive).
+<P>Note that for values from a compute or fix or custom attribute, the
+bracketed index I can be specified using a wildcard asterisk with the
+index to effectively specify multiple values.  This takes the form "*"
+or "*n" or "n*" or "m*n".  If N = the size of the vector (for <I>mode</I> =
+scalar) or the number of columns in the array (for <I>mode</I> = vector),
+then an asterisk with no numeric values means all indices from 1 to N.
+A leading asterisk means all indices from 1 to n (inclusive).  A
+trailing asterisk means all indices from n to N (inclusive).  A middle
+asterisk means all indices from m to n (inclusive).
 </P>
 <P>Using a wildcard is the same as if the individual columns of the array
 had been listed one by one.  E.g. these 2 compute reduce commands are
@@ -148,7 +148,7 @@ is appended, the vector calculated by the compute is used.  If a
 bracketed integer is appended, the Nth column of the array calculated
 by the compute is used.  Users can also write code for their own
 compute styles and <A HREF = "Section_modify.html">add them to SPARTA</A>.  See the
-discussion above for how I can be specified with a wildcard asterisk
+discussion above for how N can be specified with a wildcard asterisk
 to effectively specify multiple values.
 </P>
 <P>If a value begins with "f_", a fix ID must follow which has been
@@ -161,7 +161,7 @@ If no bracketed integer is appended, the vector calculated by the fix
 is used.  If a bracketed integer is appended, the Nth column of the
 array calculated by the fix is used.  Users can also write code for
 their own fix style and <A HREF = "Section_modify.html">add them to SPARTA</A>.  See
-the discussion above for how I can be specified with a wildcard
+the discussion above for how N can be specified with a wildcard
 asterisk to effectively specify multiple values.
 </P>
 <P>If a value begins with "v_", a variable name must follow which has
@@ -192,7 +192,9 @@ attributes.
 per-particle, per-grid, or per-surf vector (single value).  If a
 bracketed integer is appended, the custom attribute must be a
 per-particle, per-grid, or per-surf arayy (multiple values) and the
-Nth column of the custom array is used.
+Nth column of the custom array is used.  See the discussion above for
+how N can be specified with a wildcard asterisk to effectively specify
+multiple values.
 </P>
 <HR>
 

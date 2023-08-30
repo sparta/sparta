@@ -33,12 +33,12 @@ zero or more input values can be listed
 <LI>value = c_ID, c_ID[N], f_ID, f_ID[N], v_name, g_name, g_name[N] 
 
 <PRE>  c_ID = per-grid vector calculated by a compute with ID
-  c_ID[N] = Ith column of per-grid array calculated by a compute with ID, I can include wildcard (see below)
+  c_ID[N] = Nth column of per-grid array calculated by a compute with ID, N can include wildcard (see below)
   f_ID = per-grid vector calculated by a fix with ID
-  f_ID[N] = Ith column of per-grid array calculated by a fix with ID, I can include wildcard (see below)
+  f_ID[N] = Nth column of per-grid array calculated by a fix with ID, N can include wildcard (see below)
   v_name = per-grid vector calculated by a grid-style variable with name
   g_name = custom per-grid vector with name
-  g_name[N] = Nth column of per-grid custom array with name 
+  g_name[N] = Nth column of per-grid custom array with name, N can include wildcard (see below) 
 </PRE>
 <LI>zero or more keyword/arg pairs may be appended 
 
@@ -89,15 +89,15 @@ those which have the word <I>grid</I> in their style name.  See the doc
 pages for individual <A HREF = "fix.html">fixes</A> to determine which ones produce
 per-grid vectors or arrays. 
 </P>
-<P>Note that for values from a compute or fix, the bracketed index can be
-specified using a wildcard asterisk with the index to effectively
-specify multiple values.  This takes the form "*" or "*n" or "n*" or
-"m*n".  If N = the size of the vector (for <I>mode</I> = scalar) or the
-number of columns in the array (for <I>mode</I> = vector), then an asterisk
-with no numeric values means all indices from 1 to N.  A leading
-asterisk means all indices from 1 to n (inclusive).  A trailing
-asterisk means all indices from n to N (inclusive).  A middle asterisk
-means all indices from m to n (inclusive).
+<P>Note that for values from a compute or fix or custom attribute, the
+bracketed index can be specified using a wildcard asterisk with the
+index to effectively specify multiple values.  This takes the form "*"
+or "*n" or "n*" or "m*n".  If N = the size of the vector (for <I>mode</I> =
+scalar) or the number of columns in the array (for <I>mode</I> = vector),
+then an asterisk with no numeric values means all indices from 1 to N.
+A leading asterisk means all indices from 1 to n (inclusive).  A
+trailing asterisk means all indices from n to N (inclusive).  A middle
+asterisk means all indices from m to n (inclusive).
 </P>
 <P>Using a wildcard is the same as if the individual columns of the array
 had been listed one by one.  E.g. these 2 fix ave/grid commands are
@@ -173,7 +173,9 @@ released in public SPPARKS).
 </P>
 <P>If <I>g_name</I> is used as a value, the custom attribute must be a vector.
 If <I>g_name[N]</I> is used, the custom attribute must be an array, and N
-must be in the range from 1-M for an M-column array.
+must be in the range from 1-M for an M-column array.  See the
+discussion above for how N can be specified with a wildcard asterisk
+to effectively specify multiple values.
 </P>
 <HR>
 

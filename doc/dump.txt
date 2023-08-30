@@ -35,12 +35,12 @@ args = list of arguments for a particular style :l
       vx,vy,vz = particle velocities
       ke,erot,evib = translational, rotational, and vibrational energy
       c_ID = per-particle vector calculated by a compute with ID
-      c_ID\[N\] = Nth column of per-particle array calculated by a compute with ID, I can include wildcard (see below)
+      c_ID\[N\] = Nth column of per-particle array calculated by a compute with ID, N can include wildcard (see below)
       f_ID = per-particle vector calculated by a fix with ID
-      f_ID\[N\] = Nth column of per-particle array calculated by a fix with ID, I can include wildcard (see below)
+      f_ID\[N\] = Nth column of per-particle array calculated by a fix with ID, N can include wildcard (see below)
       v_name = per-particle vector calculated by a particle-style variable with name
       p_name = custom per-particle vector with name
-      p_name\[N\] = Nth column of custom per-particle array with name :pre
+      p_name\[N\] = Nth column of custom per-particle array with name, N can include wildcard (see below) :pre
 
   {grid} args = list of grid attributes
     possible attributes = id, idstr, split, proc, xlo, ylo, zlo, xhi, yhi, zhi,
@@ -55,12 +55,12 @@ args = list of arguments for a particular style :l
       xc,yc,zc = coords of center of grid cell
       vol = flow volume of grid cell (area in 2d)
       c_ID = per-grid vector calculated by a compute with ID
-      c_ID\[N\] = Nth column of per-grid array calculated by a compute with ID, I can include wildcard (see below)
+      c_ID\[N\] = Nth column of per-grid array calculated by a compute with ID, N can include wildcard (see below)
       f_ID = per-grid vector calculated by a fix with ID
-      f_ID\[N\] = Nth column of per-grid array calculated by a fix with ID, I can include wildcard (see below)
+      f_ID\[N\] = Nth column of per-grid array calculated by a fix with ID, N can include wildcard (see below)
       v_name = per-grid vector calculated by a grid-style variable with name
       g_name = custom per-grid vector with name
-      g_name\[N\] = Nth column of custom per-grid array with name :pre
+      g_name\[N\] = Nth column of custom per-grid array with name, N can include wildcard (see below) :pre
 
   {surf} args = list of surf attributes
     possible attributes = id, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z, 
@@ -71,12 +71,12 @@ args = list of arguments for a particular style :l
       v2x,v2y,v3z = coords of 2nd vertex in surface element
       v3x,v3y,v3z = coords of 3rd vertex in surface element
       c_ID = per-surf vector calculated by a compute with ID
-      c_ID\[N\] = Nth column of per-surf array calculated by a compute with ID, I can include wildcard (see below)
+      c_ID\[N\] = Nth column of per-surf array calculated by a compute with ID, N can include wildcard (see below)
       f_ID = per-surf vector calculated by a fix with ID
-      f_ID\[N\] = Nth column of per-surf array calculated by a fix with ID, I can include wildcard (see below)
+      f_ID\[N\] = Nth column of per-surf array calculated by a fix with ID, N can include wildcard (see below)
       v_name = per-surf vector calculated by a surf-style variable with name
       s_name = custom per-surf vector with name
-      s_name\[N\] = Nth column of custom per-surf array with name :pre
+      s_name\[N\] = Nth column of custom per-surf array with name, N can include wildcard (see below) :pre
 
   {image} args = discussed on "dump image"_dump_image.html doc page :pre
 :ule
@@ -213,16 +213,16 @@ to write.
 :line
 
 Note that in the discussion which follows, for styles which can
-reference values from a compute or fix, like the {particle}, {grid},
-or {surf} styles, the bracketed index I can be specified using a
-wildcard asterisk with the index to effectively specify multiple
-values.  This takes the form "*" or "*n" or "n*" or "m*n".  If N = the
-size of the vector (for {mode} = scalar) or the number of columns in
-the array (for {mode} = vector), then an asterisk with no numeric
-values means all indices from 1 to N.  A leading asterisk means all
-indices from 1 to n (inclusive).  A trailing asterisk means all
-indices from n to N (inclusive).  A middle asterisk means all indices
-from m to n (inclusive).
+reference values from a compute or fix or custom attribute, like the
+{particle}, {grid}, or {surf} styles, the bracketed index I can be
+specified using a wildcard asterisk with the index to effectively
+specify multiple values.  This takes the form "*" or "*n" or "n*" or
+"m*n".  If N = the size of the vector (for {mode} = scalar) or the
+number of columns in the array (for {mode} = vector), then an asterisk
+with no numeric values means all indices from 1 to N.  A leading
+asterisk means all indices from 1 to n (inclusive).  A trailing
+asterisk means all indices from n to N (inclusive).  A middle asterisk
+means all indices from m to n (inclusive).
 
 Using a wildcard is the same as if the individual columns of the array
 had been listed one by one.  E.g. these 2 dump commands are
@@ -302,7 +302,9 @@ custom vector "ionambi" and custom array "velambi".
 If {p_name} is used as a attribute, the custom attribute must be a
 vector, and it is output.  If {p_name\[N\]} is used, the custom
 attribute must be an array, and N must be in the range from 1-M, which
-will output the Nth column of an M-column array.
+will output the Nth column of an M-column array.  See the discussion
+above for how N can be specified with a wildcard asterisk to
+effectively specify multiple values.
 
 See "Section 10"_Section_modify.html of the manual for information on
 how to add new compute and fix styles to SPARTA to calculate
@@ -413,7 +415,9 @@ released in public SPPARKS).
 If {g_name} is used as a attribute, the custom attribute must be a
 vector, and it is output.  If {g_name\[N\]} is used, the custom
 attribute must be an array, and N must be in the range from 1-M, which
-will output the Nth column of an M-column array.
+will output the Nth column of an M-column array.  See the discussion
+above for how N can be specified with a wildcard asterisk to
+effectively specify multiple values.
 
 See "Section 10"_Section_modify.html of the manual for information on
 how to add new compute and fix styles to SPARTA to calculate per-grid
@@ -483,7 +487,9 @@ per-surf attributes.
 If {s_name} is used as a attribute, the custom attribute must be a
 vector, and it is output.  If {s_name\[N\]} is used, the custom
 attribute must be an array, and N must be in the range from 1-M, which
-will output the Nth column of an M-column array.
+will output the Nth column of an M-column array.  See the discussion
+above for how N can be specified with a wildcard asterisk to
+effectively specify multiple values.
 
 See "Section 10"_Section_modify.html of the manual for information on
 how to add new compute and fix styles to SPARTA to calculate per-surf
