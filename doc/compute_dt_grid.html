@@ -69,8 +69,9 @@ example formula for a candidate cell timestep below.
 the cell dimensions in each coordinate direction and the associated average particle velocity
 components in addition to the maximum most probable speed.  The selected cell timestep
 is the minumum of all candidate timesteps. The collision and transit fractions simply provide a
-user-defined safety margin for the collision time and transit time estimates.
-INCLUDE SOME ADVICE FOR USERS ON CHOOSING TFRACTION AND CFRACTION.
+user-defined safety margin for the collision time and transit time estimates. In <A HREF = "#Bird2013">(Bird2013)</A>, Bird
+recomnmends setting the collision fraction to 0.2, which is likely a good starting point for the selection
+of both of these fractions.
 </P>
 <P>The remaining 5 arguments specify either computes which calculate various per
 grid cell quantities or fixes which time average those
@@ -142,5 +143,11 @@ output.
 ave/grid</A>
 </P>
 <P><B>Default:</B> none
+</P>
+<HR>
+
+<A NAME = "Bird2013"></A>
+
+<P><B>(Bird2013)</B> G. A. Bird, The DSMC method, CreateSpace Independent Publishing Platform, 2013.
 </P>
 </HTML>
