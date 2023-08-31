@@ -9,7 +9,7 @@ struct ExclScan {
   using total_type = Kokkos::View<int, Device>;
   KOKKOS_INLINE_FUNCTION void init(value_type& update) const { update = 0; }
   KOKKOS_INLINE_FUNCTION void join(
-      volatile value_type& update, const volatile value_type& input) const {
+      value_type& update, const value_type& input) const {
     update = update + input;
   }
   view_type in_;

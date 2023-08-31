@@ -66,19 +66,6 @@ struct s_UPDATE_REDUCE {
     nstuck        += rhs.nstuck       ;
     naxibad       += rhs.naxibad      ;
   }
-
-  KOKKOS_INLINE_FUNCTION
-  void operator+=(const volatile s_UPDATE_REDUCE &rhs) volatile {
-    ntouch_one    += rhs.ntouch_one   ;
-    nexit_one     += rhs.nexit_one    ;
-    nboundary_one += rhs.nboundary_one;
-    ncomm_one     += rhs.ncomm_one    ;
-    nscheck_one   += rhs.nscheck_one  ;
-    nscollide_one += rhs.nscollide_one;
-    nreact_one    += rhs.nreact_one   ;
-    nstuck        += rhs.nstuck       ;
-    naxibad       += rhs.naxibad      ;
-  }
 };
 typedef struct s_UPDATE_REDUCE UPDATE_REDUCE;
 

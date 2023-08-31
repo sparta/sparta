@@ -19,6 +19,7 @@ group-ID = ID of surface group that emits particles :l
 zero or more keyword/value pairs may be appended :l
 keyword = {n} or {normal} or {nevery} or {perspecies} or {region} or {subsonic} :l
   {n} value = Np = number of particles to create
+                   Np can be a variable (see below)
   {normal} value = yes or no = emit normal to surface elements or with streaming velocity
   {nevery} value = Nstep = add particles every this many timesteps
   {perspecies} value = {yes} or {no}
@@ -62,9 +63,11 @@ given by equation 4.22 of "(Bird94)"_#Bird94.  The number of particles
 within a grid cell is based on this flux and additional global, flow,
 and surface element properties:
 
-global property: {fnum} ratio as specified by the "global"_global.html" command
-flow properties: number density, streaming velocity, and thermal temperature
-surface element properties: portion of surface element area that overlaps with the grid cell and its orientation relative to the streaming velocity :ul
+global property: {fnum} ratio as specified by the
+"global"_global.html" command flow properties: number density,
+streaming velocity, and thermal temperature surface element
+properties: portion of surface element area that overlaps with the
+grid cell and its orientation relative to the streaming velocity :ul
 
 The flow properties are defined for the specified mixture via the
 "mixture"_mixture.html command.
@@ -107,11 +110,28 @@ of particles emitting from each surface element.
 The {n} keyword can alter how many particles are added, which can be
 useful for debugging purposes.  If {Np} is set to 0, then the number
 of added particles is a function of {fnum}, {nrho}, and other mixture
-settings, as described above.  If {Np} is set to a value > 0, then the
-{fnum} and {nrho} settings are ignored, and exactly {Np} particles are
-added on each insertion timestep.  This is done by dividing {Np} by
-the total number of grid cell/surface element pairs and adding an
-equal number of particles per pair.
+settings, as described above.
+
+If {Np} is set to a value > 0, then the {fnum} and {nrho} settings are
+ignored, and roughly {Np} particles are added on each insertion
+timestep.  For each grid cell/surface element pair, its target number
+of emitted particles is set to its fraction of the total emission area
+(for all grid cell/surface element pairs), multiplied by {Np}.  If
+that results in a fractional value, then an extra particle is emitted
+depending on the value of a random number, as explained above.
+
+The {Np} value can be also be specified as an equal-style
+"variable"_variable.html.  If the value is a variable, it should be
+specified as v_name, where name is the variable name.  In this case,
+the variable will be evaluated on each emission timestep, and its
+value used as {Np} on that step to determine the target number of
+emitted particles for each grid cell/surface element pair, the same as
+described in the preceeding paragraph.
+
+Equal-style variables can specify formulas with various mathematical
+functions, and include "stats_style"_status_style.html command
+keywords for the simulation box parameters and timestep and elapsed
+time.  Thus it is easy to specify a time-dependent value of {Np}.
 
 The {normal} keyword can be used to alter how velocities are set for
 added particles.  If {normal} is set to {no}, then a particle's
@@ -231,8 +251,8 @@ a run is performed.
 
 [Restrictions:]
 
-A {n} setting of {Np} > 0 can only be used with a {perspecies} setting
-of {no}.
+A {n} setting of {Np} > 0 or {Np} as a variable can only be used with
+a {perspecies} setting of {no}.
 
 If {normal} is set to {no}, which is the default, then unlike the "fix
 emit/face"_fix_emit/face.html command, no warning is issued if a
