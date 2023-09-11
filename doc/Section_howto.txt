@@ -1,4 +1,4 @@
-"Previous Section"_Section_commands.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_example.html :c
+."Previous Section"_Section_commands.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_example.html :c
 
 :link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
@@ -27,7 +27,7 @@ SPARTA works.
 6.13 "Surface elements: explicit, implicit, distributed"_#howto_13
 6.14 "Implicit surface ablation"_#howto_14
 6.15 "Transparent surface elements"_#howto_15
-6.15 "Visualizing SPARTA output with ParaView"_#howto_16 :all(b)
+6.16 "Visualizing SPARTA output with ParaView"_#howto_16 :all(b)
 
 The example input scripts included in the SPARTA distribution and
 highlighted in "Section 5"_Section_example.html of the manual also
