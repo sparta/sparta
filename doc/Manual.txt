@@ -102,7 +102,8 @@ it gives quick access to documentation for all SPARTA commands.
 "Packages"_Section_packages.html :l
 "Accelerating SPARTA performance"_Section_accelerate.html :l
   5.1 "Measuring performance"_acc_1 :ulb,b
-  5.2 "Packages with optimized styles"_acc_2 :ule,b
+  5.2 "Packages with optimized styles"_acc_2 :b
+  5.3 "KOKKOS package"_acc_3 :ule,b
 "How-to discussions"_Section_howto.html :l
   6.1 "2d simulations"_howto_1 :ulb,b
   6.2 "Axisymmetric simulations"_howto_2 :b
@@ -118,7 +119,8 @@ it gives quick access to documentation for all SPARTA commands.
   6.12 "Using multiple vibrational energy levels"_howto_12 :b
   6.13 "Surface elements: explicit, implicit, distributed"_howto_13 :b
   6.14 "Implicit surface ablation"_howto_14 :b
-  6.15 "Transparent surface elements"_howto_15 :ule,b
+  6.15 "Transparent surface elements"_howto_15 :b
+  6.16 "Visualizing SPARTA output with ParaView"_howto_16 :ule,b
 "Example problems"_Section_example.html :l
 "Performance & scalability"_Section_perf.html :l
 "Additional tools"_Section_tools.html :l
@@ -132,13 +134,12 @@ it gives quick access to documentation for all SPARTA commands.
   10.7 "Dump styles"_mod_7 :b
   10.8 "Input script commands"_mod_8 :ule,b
 "Python interface"_Section_python.html :l
-  11.1 "Extending Python with a serial version of SPARTA"_py_1 :ulb,b
-  11.2 "Creating a shared MPI library"_py_2 :b
-  11.3 "Extending Python with a parallel version of SPARTA"_py_3 :b
-  11.4 "Extending Python with MPI"_py_4 :b
-  11.5 "Testing the Python-SPARTA interface"_py_5 :b
-  11.6 "Using SPARTA from Python"_py_6 :b
-  11.7 "Example Python scripts that use SPARTA"_py_7 :ule,b
+  11.1 "Creating a shared MPI library"_py_1 :ulb,b
+  11.2 "Extending Python with a parallel version of SPARTA"_py_2 :b
+  11.3 "Extending Python with MPI"_py_3 :b
+  11.4 "Testing the Python-SPARTA interface"_py_4 :b
+  11.5 "Using SPARTA from Python"_py_5 :b
+  11.6 "Example Python scripts that use SPARTA"_py_6 :ule,b
 "Errors"_Section_errors.html :l
   12.1 "Common problems"_err_1 :ulb,b
   12.2 "Reporting bugs"_err_2 :b
@@ -170,6 +171,7 @@ it gives quick access to documentation for all SPARTA commands.
 
 :link(acc_1,Section_accelerate.html#acc_1)
 :link(acc_2,Section_accelerate.html#acc_2)
+:link(acc_3,Section_accelerate.html#acc_3)
 
 :link(howto_1,Section_howto.html#howto_1)
 :link(howto_2,Section_howto.html#howto_2)
@@ -186,15 +188,16 @@ it gives quick access to documentation for all SPARTA commands.
 :link(howto_13,Section_howto.html#howto_13)
 :link(howto_14,Section_howto.html#howto_14)
 :link(howto_15,Section_howto.html#howto_15)
+:link(howto_16,Section_howto.html#howto_16)
 
-:link(mod_1,Section_python.html#mod_1)
-:link(mod_2,Section_python.html#mod_2)
-:link(mod_3,Section_python.html#mod_3)
-:link(mod_4,Section_python.html#mod_4)
-:link(mod_5,Section_python.html#mod_5)
-:link(mod_6,Section_python.html#mod_6)
-:link(mod_7,Section_python.html#mod_7)
-:link(mod_8,Section_python.html#mod_8)
+:link(mod_1,Section_modify.html#mod_1)
+:link(mod_2,Section_modify.html#mod_2)
+:link(mod_3,Section_modify.html#mod_3)
+:link(mod_4,Section_modify.html#mod_4)
+:link(mod_5,Section_modify.html#mod_5)
+:link(mod_6,Section_modify.html#mod_6)
+:link(mod_7,Section_modify.html#mod_7)
+:link(mod_8,Section_modify.html#mod_8)
 
 :link(py_1,Section_python.html#py_1)
 :link(py_2,Section_python.html#py_2)
@@ -202,7 +205,6 @@ it gives quick access to documentation for all SPARTA commands.
 :link(py_4,Section_python.html#py_4)
 :link(py_5,Section_python.html#py_5)
 :link(py_6,Section_python.html#py_6)
-:link(py_7,Section_python.html#py_7)
 
 :link(err_1,Section_errors.html#err_1)
 :link(err_2,Section_errors.html#err_2)

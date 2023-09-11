@@ -55,7 +55,7 @@ ext = external library: you will need to download and install it on your machine
 
 Package, Description, Doc page, Example, Library
 "FFT"_#FFT, fast Fourier transforms, "compute_style compute/fft/grid"_compute_fft_grid.html, fft, int or ext
-"KOKKOS"_#KOKKOS, Kokkos-enabled styles, "Section 5.3.3"_accelerate_kokkos.html, "Benchmarks"_http://sparta.sandia.gov/bench.html, - :tb(ea=c,ca1=l)
+"KOKKOS"_#KOKKOS, Kokkos-enabled styles, "Section 5.3"_Section_howto.html#acc_3, "Benchmarks"_http://sparta.sandia.gov/bench.html, - :tb(ea=c,ca1=l)
 
 :line
 
@@ -101,8 +101,8 @@ KOKKOS package :link(KOKKOS),h4
 Styles adapted to compile using the Kokkos library which can convert
 them to OpenMP or CUDA code so that they run efficiently on multicore
 CPUs, KNLs, or GPUs.  All the styles have a "kk" as a suffix in their
-style name.  "Section 5.3.3"_accelerate_kokkos.html gives details of
-what hardware and software is required on your system, and how to
+style name.  "Section 5.3"_Section_accelerate.html#acc_3 gives details
+of what hardware and software is required on your system, and how to
 build and use this package.  Its styles can be invoked at run time via
 the "-sf kk" or "-suffix kk" "command-line
 switches"_Section_start.html#start_6.
@@ -200,7 +200,7 @@ src/KOKKOS: filenames -> commands
 src/KOKKOS/README
 lib/kokkos/README
 the "Accelerating SPARTA"_Section_accelerate.html#acc_3 section
-"Section 5.3.3"_accelerate_kokkos.html
+"Section 5.3"_Section_accelerate.html#acc_3
 "Section 2.6 -k on ..."_Section_start.html#start_6
 "Section 2.6 -sf kk"_Section_start.html#start_6
 "Section 2.6 -pk kokkos"_Section_start.html#start_6
