@@ -13,7 +13,7 @@ variable command :h3
 variable name style args ... :pre
 
 name = name of variable to define :ulb,l
-style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {string} or {format} or {getenv} or {file} or {internal} or {equal} or {particle} or {grid} :l
+style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {string} or {format} or {getenv} or {file} or {internal} or {equal} or {particle} or {grid} or {surf} :l
   {delete} = no args
   {index} args = one or more strings
   {loop} args = N
