@@ -1662,8 +1662,6 @@ surf_react implicit - use per-grid vectors and an array to store chemical state 
 "variable"_variable.html - use a per-surf attribute in a surf-style variable formula
 "write_surf"_write_surf.html - write per-surf attributes to a surf data file :ul
 
-
-
 Per-surf custom attributes can be defined for explicit or
 explicit/distributed surface elements, as set by the "global
 surfs"_global.html comand.  But they cannot be used for implicit
