@@ -104,7 +104,7 @@ It also computes a global vector of length 3 with these values:
 
 [Related commands:]
 
-"compute dt/grid"_compute_dt_grid.html, "fix halt"_fix_halt.html
+"compute dt/grid"_compute_dt_grid.html
 
 [Default:] none
 
