@@ -144,6 +144,11 @@ void FixDtReset::init()
       error->all(FLERR,"Could not find fix dt/reset fix ID");
     fstep = modify->fix[ifix];
   }
+
+  for (int i = 0; i < modify->nfix; i++)
+    if (strstr(modify->fix[i]->style,"adapt") != NULL)
+      if (modify->fix[i]->nevery < nevery)
+        error->warning(FLERR,"Adapting grid more often than resetting global timestep");
 }
 
 /* ---------------------------------------------------------------------- */
