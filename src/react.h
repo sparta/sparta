@@ -31,7 +31,7 @@ class React : protected Pointers {
   int computeChemRates;      // 1 if only computing a TCE rate without
                              // actually doing reaction
 
-  int partialEnergy;         // 0 if using rDOF model, 1 if using all energy
+  int partialEnergy;         // 1 if using rDOF model, 0 if using all energy
   double recomb_density;     // num density of particles in collision grid cell
   double recomb_boost;       // rate boost param for recombination reactions
   double recomb_boost_inverse;   // inverse of boost parameter
