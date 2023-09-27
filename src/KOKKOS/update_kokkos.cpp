@@ -610,9 +610,9 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
                         -1 = use parallel_reduce
     */
 
-#ifdef SPARTA_KOKKOS_GPU
+#if defined SPARTA_KOKKOS_GPU
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,1> >(pstart,pstop),*this);
-#else
+#elif defined KOKKOS_ENABLE_SERIAL
       if constexpr(std::is_same<DeviceType,Kokkos::Serial>::value)
         Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,-1> >(pstart,pstop),*this,reduce);
       else {
@@ -621,6 +621,11 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
         else
           Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,-1> >(pstart,pstop),*this,reduce);
       }
+#else
+      if (!sparta->kokkos->need_atomics)
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,0> >(pstart,pstop),*this);
+      else
+        Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,-1> >(pstart,pstop),*this,reduce);
 #endif
 
       copymode = 0;
