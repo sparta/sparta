@@ -143,7 +143,7 @@ prepare and test a regular SPARTA simulation |
 enable specific accelerator support via '-k on' "command-line switch"_Section_start.html#start_6, |
   -k on g 1 |
 set any needed options for the package via "-pk" "command-line switch"_Section_start.html#start_6 or "package"_package.html command, |
-  only if defaults need to be changed, -pk kokkos reduction atomic |
+  only if defaults need to be changed, -pk kokkos react/retry yes |
 use accelerated styles in your input via "-sf" "command-line switch"_Section_start.html#start_6 or "suffix"_suffix.html command | lmp_kokkos_cuda -in in.script -sf kk
 :tb(c=2,s=|)
 
@@ -484,16 +484,12 @@ one or more nodes, each with two GPUs.
 mpirun -np 2 spa_kokkos_cuda -k on g 2 -sf kk -in in.collide          # 1 node,   2 MPI tasks/node, 2 GPUs/node
 mpirun -np 32 -ppn 2 spa_kokkos_cuda -k on g 2 -sf kk -in in.collide  # 16 nodes, 2 MPI tasks/node, 2 GPUs/node (32 GPUs total) :pre
 
-NOTE: The default for the "package kokkos"_package.html command is to
-use "parallel" reduction of statistics along with threaded
-communication.  However, using "atomic" reduction is typically faster
-for GPUs.  Use the "-pk kokkos" "command-line
+NOTE: Use the "-pk kokkos" "command-line
 switch"_Section_start.html#start_7 to change the default "package
 kokkos"_package.html options. See its doc page for details and default
-settings. Experimenting with its options can provide a speed-up for
-specific calculations. For example:
+settings. For example:
 
-mpirun -np 2 spa_kokkos_cuda -k on g 2 -sf kk -pk kokkos reduction atomic -in in.collide      # set reduction = atomic :pre
+mpirun -np 2 spa_kokkos_cuda -k on g 2 -sf kk -pk kokkos gpu/aware off -in in.collide      # set gpu/aware MPI support off :pre
 
 NOTE: Using OpenMP threading and CUDA together is currently not
 possible with the SPARTA KOKKOS package.
