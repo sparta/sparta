@@ -215,7 +215,7 @@ class UpdateKokkos : public Update {
 
   typedef void (UpdateKokkos::*FnPtr)();
   FnPtr moveptr;             // ptr to move method
-  template < int, int, int, int> void move();
+  template <int, int, int, int> void move();
 
   //typedef void (UpdateKokkos::*FnPtr2)(int, int, double, double *, double *) const;
   //FnPtr2 moveperturb;        // ptr to moveperturb method

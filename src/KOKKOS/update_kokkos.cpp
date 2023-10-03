@@ -1906,6 +1906,7 @@ int UpdateKokkos::split2d(int icell, double *x) const
 
     if (hitflag && side != INSIDE && param < minparam) {
       cflag = 1;
+      minparam = param;
       minsurfindex = m;
     }
   }
