@@ -211,7 +211,6 @@ void UpdateKokkos::init()
       error->all(FLERR,
                  "External field in y not allowed for axisymmetric model");
   } else if (fstyle == PFIELD) {
-  } else if (fstyle == PFIELD) {
     ifieldfix = modify->find_fix(fieldID);
     if (ifieldfix < 0) error->all(FLERR,"External field fix ID not found");
     if (!modify->fix[ifieldfix]->per_particle_field)
