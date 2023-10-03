@@ -139,10 +139,10 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
 
       if (sr_type == 0) {
         reaction = sr_kk_global_copy[m].obj.
-          react_kokkos(ip,isurf,norm,jp,velreset,d_retry,d_nlocal);
+          react_kokkos<ATOMIC_REDUCTION>(ip,isurf,norm,jp,velreset,d_retry,d_nlocal);
       } else if (sr_type == 1) {
         reaction = sr_kk_prob_copy[m].obj.
-          react_kokkos(ip,isurf,norm,jp,velreset,d_retry,d_nlocal);
+          react_kokkos<ATOMIC_REDUCTION>(ip,isurf,norm,jp,velreset,d_retry,d_nlocal);
       }
 
       if (reaction) {
