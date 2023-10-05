@@ -73,6 +73,9 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   beginstep = endstep = 0;
   runflag = 0;
 
+  time = 0.0;
+  time_last_update = 0;
+    
   unit_style = NULL;
   set_units("si");
 

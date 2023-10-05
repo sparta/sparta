@@ -53,6 +53,8 @@ action compute_count_kokkos.cpp
 action compute_count_kokkos.h
 action compute_distsurf_grid_kokkos.cpp
 action compute_distsurf_grid_kokkos.h
+action compute_dt_grid_kokkos.cpp
+action compute_dt_grid_kokkos.h
 action compute_eflux_grid_kokkos.cpp
 action compute_eflux_grid_kokkos.h
 action compute_grid_kokkos.cpp
@@ -91,6 +93,8 @@ action fix_ave_histo_kokkos.cpp
 action fix_ave_histo_kokkos.h
 action fix_ave_histo_weight_kokkos.cpp
 action fix_ave_histo_weight_kokkos.h
+action fix_dt_reset_kokkos.cpp
+action fix_dt_reset_kokkos.h
 action fix_surf_temp_kokkos.cpp
 action fix_surf_temp_kokkos.h
 action fix_move_surf_kokkos.cpp

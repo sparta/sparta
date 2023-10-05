@@ -46,7 +46,7 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      SPECIES,MIXTURE,
      GRID,SURF,
      PARTICLE_CUSTOM,GRID_CUSTOM,SURF_CUSTOM,
-     MULTIPROC,PROCSPERFILE,PERPROC};    // new fields added after PERPROC
+     MULTIPROC,PROCSPERFILE,PERPROC,DT,TIME};    // new fields added after TIME
 
 enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // update.cpp
 
@@ -527,6 +527,11 @@ void WriteRestart::header()
   write_double(NRHO,update->nrho);
   write_double_vec(VSTREAM,3,update->vstream);
   write_double(TEMP_THERMAL,update->temp_thermal);
+
+  write_double(DT,update->dt);
+  double time = update->time +
+    (update->ntimestep - update->time_last_update) * update->dt;
+  write_double(TIME,time);
 
   write_int(FSTYLE,update->fstyle);
   if (update->fstyle == CFIELD) write_double_vec(FIELD,3,update->field);

@@ -28,6 +28,10 @@ class Update : protected Pointers {
   bigint firststep,laststep;      // 1st & last step of this run
   bigint beginstep,endstep;       // 1st and last step of multiple runs
   int first_update;               // 0 before initial update, 1 after
+
+  double time;                    // simulation time at time_last_update
+  bigint time_last_update;        // last timestep that time was updated
+
   double dt;                      // timestep size
 
   char *unit_style;      // style of units used throughout simulation
