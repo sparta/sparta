@@ -34,9 +34,6 @@ SurfCollideStyle(diffuse/kk,SurfCollideDiffuseKokkos)
 
 namespace SPARTA_NS {
 
-#define KOKKOS_MAX_SURF_REACT_PER_TYPE 2
-#define KOKKOS_MAX_TOT_SURF_REACT 4
-
 enum{NONE,DISCRETE,SMOOTH};            // several files
 enum{NUMERIC,VARIABLE,CUSTOM};
 

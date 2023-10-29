@@ -16,18 +16,18 @@ N --> NULL
 R S 0.5 0.0
 
 
-# N + O --> NO
-O --> NO
-E S 0.25 1.043e-18
+## N + O --> NO
+#O --> NO
+#E S 0.25 1.043e-18
 
-N --> NO
-E S 0.25 1.043e-18
+#N --> NO
+#E S 0.25 1.043e-18
 
-O --> NULL
-R S 0.25 0.0
+#O --> NULL
+#R S 0.25 0.0
 
-N --> NULL
-R S 0.25 0.0
+#N --> NULL
+#R S 0.25 0.0
 
 
 #ions recombination
