@@ -17,8 +17,8 @@
 </PRE>
 <UL><LI>arg1,arg2,... = list of keywords 
 
-<PRE>  possible keywords = step, elapsed, elaplong, dt, cpu, tpcpu, spcpu, wall,
-                      np, npave, ntouch, ntouchave, ncomm, ncommave,
+<PRE>  possible keywords = step, elapsed, elaplong, dt, time, cpu, tpcpu, spcpu,
+                      wall, np, npave, ntouch, ntouchave, ncomm, ncommave,
                       nbound, nboundave, nexit, nexitave,
 		      nscoll, nscollave, nscheck, nscheckave,
                       ncoll, ncollave, nattempt, nattemptave,
@@ -35,6 +35,7 @@
       elapsed = timesteps since start of this run
       elaplong = timesteps since start of initial run in a series of runs
       dt = timestep size
+      time = simulation time
       cpu = elapsed CPU time in seconds within a run
       tpcpu = time per CPU second
       spcpu = timesteps per CPU second

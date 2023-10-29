@@ -2441,4 +2441,3 @@ void CollideVSSKokkos::restore()
     d_velambi_backup = decltype(d_velambi_backup)();
   }
 }
-

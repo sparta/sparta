@@ -73,6 +73,9 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   beginstep = endstep = 0;
   runflag = 0;
 
+  time = 0.0;
+  time_last_update = 0;
+    
   unit_style = NULL;
   set_units("si");
 
@@ -128,12 +131,12 @@ void Update::set_units(const char *style)
   // http://physics.nist.gov/cuu/Constants/Table/allascii.txt
 
   if (strcmp(style,"cgs") == 0) {
-    boltz = 1.3806488e-16;
+    boltz = 1.380649e-16;
     mvv2e = 1.0;
     dt = 1.0;
 
   } else if (strcmp(style,"si") == 0) {
-    boltz = 1.3806488e-23;
+    boltz = 1.380649e-23;
     mvv2e = 1.0;
     dt = 1.0;
 
@@ -537,8 +540,11 @@ template < int DIM, int SURF, int OPT > void Update::move()
             x[1] = xnew[1];
             x[2] = xnew[2];
 
-            if (cells[icell].proc != me)
+            if (cells[icell].proc != me) {
               mlist[nmigrate++] = i;
+              particles[i].flag = PDONE;
+              ncomm_one++;
+            }
 
             continue;
           }

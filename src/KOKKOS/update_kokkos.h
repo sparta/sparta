@@ -66,23 +66,10 @@ struct s_UPDATE_REDUCE {
     nstuck        += rhs.nstuck       ;
     naxibad       += rhs.naxibad      ;
   }
-
-  KOKKOS_INLINE_FUNCTION
-  void operator+=(const volatile s_UPDATE_REDUCE &rhs) volatile {
-    ntouch_one    += rhs.ntouch_one   ;
-    nexit_one     += rhs.nexit_one    ;
-    nboundary_one += rhs.nboundary_one;
-    ncomm_one     += rhs.ncomm_one    ;
-    nscheck_one   += rhs.nscheck_one  ;
-    nscollide_one += rhs.nscollide_one;
-    nreact_one    += rhs.nreact_one   ;
-    nstuck        += rhs.nstuck       ;
-    naxibad       += rhs.naxibad      ;
-  }
 };
 typedef struct s_UPDATE_REDUCE UPDATE_REDUCE;
 
-template<int DIM, int SURF, int OPT, int ATOMIC_REDUCTION>
+template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
 struct TagUpdateMove{};
 
 class UpdateKokkos : public Update {
@@ -101,13 +88,13 @@ class UpdateKokkos : public Update {
   void setup();
   void run(int);
 
-  template<int DIM, int SURF, int OPT, int ATOMIC_REDUCTION>
+  template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagUpdateMove<DIM,SURF,OPT,ATOMIC_REDUCTION>, const int&) const;
+  void operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>, const int&) const;
 
-  template<int DIM, int SURF, int OPT, int ATOMIC_REDUCTION>
+  template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagUpdateMove<DIM,SURF,OPT,ATOMIC_REDUCTION>, const int&, UPDATE_REDUCE&) const;
+  void operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>, const int&, UPDATE_REDUCE&) const;
 
  private:
 
@@ -228,7 +215,7 @@ class UpdateKokkos : public Update {
 
   typedef void (UpdateKokkos::*FnPtr)();
   FnPtr moveptr;             // ptr to move method
-  template < int, int, int > void move();
+  template <int, int, int, int> void move();
 
   //typedef void (UpdateKokkos::*FnPtr2)(int, int, double, double *, double *) const;
   //FnPtr2 moveperturb;        // ptr to moveperturb method

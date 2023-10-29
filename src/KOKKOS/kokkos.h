@@ -28,7 +28,6 @@ class KokkosSPARTA : protected Pointers {
   int prewrap;
   int auto_sync;
   int nthreads,ngpus;
-  int numa;
   int need_atomics;
   int gpu_aware_flag;
   int react_retry_flag;
