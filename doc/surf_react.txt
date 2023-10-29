@@ -165,10 +165,12 @@ S = Surface :ul
 The style determines how many reaction coefficients are listed as C1,
 C2, etc, and how they are interpreted by SPARTA.
 
-For S = Surface style, there is a single coefficient:
+For S = Surface style, there are two coefficients. The first is
+required and the second is optional and will be set to 0.0 if not
+specified:
 
 C1 = probability that the reaction occurs (0.0 to 1.0)
-C2 = catalytic chemical energy of reaction (positive for exothermic) :ul
+C2 = catalytic chemical energy of reaction (optional, positive for exothermic) :ul
 
 :line
 
