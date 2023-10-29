@@ -423,7 +423,7 @@ void SurfReactProb::readfile(char *fname)
     for (int i = 0; i < r->ncoeff; i++) {
       word = strtok(NULL," \t\n");
 
-      // second arg is optional
+      // second coeff is optional
 
       if (!word) {
         if (i == 0) error->all(FLERR,"Invalid reaction coefficients in file");
