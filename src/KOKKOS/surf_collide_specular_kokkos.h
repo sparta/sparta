@@ -89,12 +89,16 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
      resets particle(s) to post-collision outward velocity
   ------------------------------------------------------------------------- */
 
+  template<int REACT, int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
   Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, double &,
                                     int isurf, const double *norm, int isr, int &reaction,
                                     const DAT::t_int_scalar &d_retry, const DAT::t_int_scalar &d_nlocal) const
   {
-    Kokkos::atomic_increment(&d_nsingle());
+    if (ATOMIC_REDUCTION == 0)
+      d_nsingle()++;
+    else
+      Kokkos::atomic_increment(&d_nsingle());
 
     // if surface chemistry defined, attempt reaction
     // reaction = 1 to N for which reaction took place, 0 for none
@@ -105,7 +109,7 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
     reaction = 0;
     int velreset = 0;
 
-    if (isr >= 0) {
+    if (REACT) {
       if (ambi_flag || vibmode_flag) memcpy(&iorig,ip,sizeof(Particle::OnePart));
 
       int sr_type = sr_type_list[isr];
@@ -113,13 +117,18 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
 
       if (sr_type == 0) {
         reaction = sr_kk_global_copy[m].obj.
-          react_kokkos(ip,isurf,norm,jp,velreset,d_retry,d_nlocal);
+          react_kokkos<ATOMIC_REDUCTION>(ip,isurf,norm,jp,velreset,d_retry,d_nlocal);
       } else if (sr_type == 1) {
         reaction = sr_kk_prob_copy[m].obj.
-          react_kokkos(ip,isurf,norm,jp,velreset,d_retry,d_nlocal);
+          react_kokkos<ATOMIC_REDUCTION>(ip,isurf,norm,jp,velreset,d_retry,d_nlocal);
       }
 
-      if (reaction) Kokkos::atomic_increment(&d_nreact_one());
+      if (reaction) {
+        if (ATOMIC_REDUCTION == 0)
+          d_nreact_one()++;
+        else
+          Kokkos::atomic_increment(&d_nreact_one());
+      }
     }
 
     // specular or noslip reflection for each particle
@@ -152,7 +161,7 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
       //}
     }
 
-    if (jp) {
+    if (REACT && jp) {
       if (!velreset) {
         if (noslip_flag) {
 
@@ -178,7 +187,7 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
     // they may reset j to -1, e.g. fix ambipolar
     //   in which case newly created j is deleted
 
-    if (reaction && ambi_flag) {
+    if (REACT && reaction && ambi_flag) {
       int i = -1;
       if (ip) i = ip - d_particles.data();
       int j = -1;

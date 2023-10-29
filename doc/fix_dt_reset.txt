@@ -1,0 +1,110 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+fix dt/reset command :h3
+
+[Syntax:]
+
+fix ID dt/reset Nfreq step weight resetflag :pre
+
+ID is documented in "fix"_fix.html command :ulb,l
+dt/reset = style name of this fix command :l
+Nfreq = perform timestep calculation every this many steps :l
+step = compute or fix column for per-grid cell timestep, prefaced by "c_" or "f_" :l
+weight = weight (0.0 to 1.0) applied to average per-cell timestep when calculating global timestep :l
+resetflag = 1 to overwrite global timestep with new timestep, 0 to just calculate new timestep :l
+:ule
+
+[Examples:]
+
+compute 1 grid all mymixture nrho temp usq vsq wsq
+fix 1 ave/grid all 10 50 500 c_1\[*\]
+compute lambda lambda/grid f_1\[1\] f_1\[2\] Ar
+compute tstep dt/grid all 0.25 0.1 c_lambda f_1\[2\] f_1\[3\] f_1\[4\] f_1\[5\] :pre
+
+fix 2 dt/reset 500 c_tstep 0.1 1 :pre
+
+[Description:]
+
+Calculate a new global timestep for the simulation based on per grid
+cell timesteps calculated by a compute or fix.  The new global
+timestep can be output by the "stats_style"_stats_style.html command.
+Or it can be used to overwrite the current global timestep for a
+variable time simulation.  See this
+"section"_Section_howto.html#howto_17 of the manual for more
+information on variable timestep simulations.
+
+The {Nfreq} argument specifies how often the global timestep is calculated.
+
+The {step} argument specifies a compute which calculates a per grid
+cell timestep.  Or it specifies a fix which time averages a per grid
+cell timestep.  Currently the only compute that calculates a per grid
+cell timestep is "compute dt/grid"_compute_dt_grid.html.  The "fix
+ave/grid"_fix_ave_grid.html command could perform a time average of
+the compute.
+
+This is done by specifying the {step} argument like this:
+
+c_ID = compute with ID that calculates a per grid cell timestep as a vector output
+c_ID\[m\] = compute with ID that calculates a timestep as its Mth column of array output
+f_ID\[m\] = fix with ID that calculates a time-averaged timestep as a vector output
+f_ID\[m\] = fix with ID that calculates a time-averaged timestep as its Mth column of array output :ul
+
+IMPORTANT NOTE: If the ID of a "fix ave/grid"_fix_ave_grid.html
+command is used as the {step} argument, it only produces output on
+timesteps that are multiples of its {Nfreq} argument.  Thus this fix
+can only be invoked on those timesteps.
+
+Note that some of the per-cell timesteps may be zero for a number of reasons.  First,
+the data used to calculate the timestep, such as maximum most probable speed and mean
+free path, may be sufficiently close to zero.  Also, some cells may not contain particles,
+either due to their type or to local flow conditions.  For example, split cells
+(in which sub cells store the particles) and cells interior to surface objects do not
+store particles.  See "Section 6.8"_Section_howto.html#howto_8 of the manual for
+details of how SPARTA defines child, unsplit, split, and sub cells.
+
+From the per-cell timesteps, 3 values are extracted by this fix.  They
+are the minimum positive timestep (DTmin) for all cells, the maximum positive timestep
+(DTmax) for all cells, and the average positive timestep (DTave) over all
+cells.  Cells with a timestep value of zero are not included in the mininum,
+maximum, and average timestep calculations.
+
+A new global timestep is than calculated by this formula, using
+the specified {weight} argument:
+
+DTnew = (1-weight)*DTmin + weight*DTave :pre
+
+If the {resetflag} argument is specified as 1, then the global
+timestep for the simulation, initially specified by the
+"timestep"_timestep.html command, is overwritten with the new DTnew
+value.  If {resetflag} is 0, then the global timestep is not changed.
+
+:line
+
+[Restart, output info:]
+
+No information about this fix is written to "binary restart
+files"_restart.html.
+
+This fix computes a global scalar which is the new global timestep
+(DTnew above) after the most recent timestep re-calculation.  This
+value is accessible to other commands whether or not the global
+timestep is overwritten with the new value.
+
+It also computes a global vector of length 3 with these values:
+
+1 = DTmin
+2 = DTmax
+3 = DTave :ul
+
+[Related commands:]
+
+"compute dt/grid"_compute_dt_grid.html
+
+[Default:] none
+

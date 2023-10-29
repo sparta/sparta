@@ -53,6 +53,7 @@ available in SPARTA:
 "boundary"_compute_boundary.html - various quantities on each global boundary 
 "count"_compute_count.html - particle counts for species and mixtures and mixture groups
 "distsurf/grid"_compute_distsurf_grid.html - distance from grid cells to surface
+"dt/grid"_compute_dt_grid.html - optimal timestep per grid cell
 "eflux/grid"_compute_eflux_grid.html - energy flux density per grid cell
 "fft/grid"_compute_fft_grid.html - FFTs across grid cells
 "grid"_compute_grid.html - various per grid cell quantities

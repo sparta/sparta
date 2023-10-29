@@ -48,13 +48,6 @@ struct s_COLLIDE_REDUCE {
     ncollide_one += rhs.ncollide_one;
     nreact_one += rhs.nreact_one;
   }
-
-  KOKKOS_INLINE_FUNCTION
-  void operator+=(const volatile s_COLLIDE_REDUCE &rhs) volatile {
-    nattempt_one += rhs.nattempt_one;
-    ncollide_one += rhs.ncollide_one;
-    nreact_one += rhs.nreact_one;
-  }
 };
 typedef struct s_COLLIDE_REDUCE COLLIDE_REDUCE;
 

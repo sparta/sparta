@@ -77,6 +77,7 @@ class SurfReactGlobalKokkos : public SurfReactGlobal {
      if create, add particle and return ptr JP
   ------------------------------------------------------------------------- */
 
+  template<int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
   int react_kokkos(Particle::OnePart *&ip, int, const double *,
                    Particle::OnePart *&jp, int &,
@@ -88,8 +89,13 @@ class SurfReactGlobalKokkos : public SurfReactGlobal {
     // perform destroy reaction
 
     if (r < prob_destroy) {
-      Kokkos::atomic_increment(&d_nsingle());
-      Kokkos::atomic_increment(&d_tally_single[0]);
+      if (ATOMIC_REDUCTION == 0) {
+        d_nsingle()++;
+        d_tally_single(0)++;
+      } else {
+        Kokkos::atomic_increment(&d_nsingle());
+        Kokkos::atomic_increment(&d_tally_single(0));
+      }
       ip = NULL;
       rand_pool.free_state(rand_gen);
       return 1;
@@ -100,13 +106,25 @@ class SurfReactGlobalKokkos : public SurfReactGlobal {
     // if add_particle performs a realloc must retry
 
     if (r < prob_destroy+prob_create) {
-      Kokkos::atomic_increment(&d_nsingle());
-      Kokkos::atomic_increment(&d_tally_single[1]);
+      if (ATOMIC_REDUCTION == 0) {
+        d_nsingle()++;
+        d_tally_single(1)++;
+      } else {
+        Kokkos::atomic_increment(&d_nsingle());
+        Kokkos::atomic_increment(&d_tally_single(1));
+      }
       double x[3],v[3];
       int id = MAXSMALLINT*rand_gen.drand();
       memcpy(x,ip->x,3*sizeof(double));
       memcpy(v,ip->v,3*sizeof(double));
-      int index = Kokkos::atomic_fetch_add(&d_nlocal(),1);
+
+      int index;
+      if (ATOMIC_REDUCTION == 0) {
+        index = d_nlocal();
+        d_nlocal()++;
+      } else
+        index = Kokkos::atomic_fetch_add(&d_nlocal(),1);
+
       int reallocflag = ParticleKokkos::add_particle_kokkos(d_particles,index,id,ip->ispecies,ip->icell,x,v,0.0,0.0);
       if (reallocflag) {
         d_retry() = 1;
