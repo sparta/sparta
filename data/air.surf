@@ -1,16 +1,47 @@
 # reactions on surface
 
+# O + O --> O2
+O --> O2
+E S 0.5 8.215e-19
+
+O --> NULL
+R S 0.5 0.0
+
+
+# N + N --> N2
+N --> N2
+E S 0.5 1.563e-18
+
+N --> NULL
+R S 0.5 0.0
+
+
+# N + O --> NO
+O --> NO
+E S 0.25 1.043e-18
+
+N --> NO
+E S 0.25 1.043e-18
+
+O --> NULL
+R S 0.25 0.0
+
+N --> NULL
+R S 0.25 0.0
+
+
+#ions recombination
 O+ --> O
-E S 1.0
+E S 1.0 2.188e-18
 
 N+ --> N
-E S 1.0
+E S 1.0 2.322e-18
 
 N2+ --> N2
-E S 1.0
+E S 1.0 2.496e-18
 
 O2+ --> O2
-E S 1.0
+E S 1.0 1.934e-18
 
 NO+ --> NO
-E S 1.0
+E S 1.0 1.484e-18

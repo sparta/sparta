@@ -31,7 +31,7 @@ class Cut3d : protected Pointers {
   int surf2grid_list(cellint, double *, double *, int, surfint *,
                      surfint *, int);
   int surf2grid_one(double *, double *, double *, double *, double *);
-  
+
   int split(cellint, double *, double *, int, surfint *,
             double *&, int *, int *, int &, double *);
 
@@ -39,7 +39,7 @@ class Cut3d : protected Pointers {
                     double *, double *, double *);
   int sameface(double *, double *, double *);
   int sameface_external(double *, double *, double *, double *, double *);
-  
+
  private:
   int implicit;
 
@@ -120,7 +120,7 @@ class Cut3d : protected Pointers {
   class Cut2d *cut2d;
 
   // methods
-  
+
   int clip(double *, double *, double *);
   int split_try(cellint, int, surfint *,
                 double *&, int *, int *, int &, double *, int &);

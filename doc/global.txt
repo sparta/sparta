@@ -13,7 +13,7 @@ global command :h3
 global keyword values ... :pre
 
 one or more keyword/value pairs :ulb,l
-keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {surfgrid} or {surfmax} or {splitmax} or {surftally} or {gridcut} or {comm/sort} or {comm/style} or {weight} or {particle/reorder} or {mem/limit} :l
+keyword = {fnum} or {nrho} or {vstream} or {temp} or {field} or {surfs} or {surfgrid} or {surfmax} or {splitmax} or {surftally} or {gridcut} or {comm/sort} or {comm/style} or {weight} or {particle/reorder} or {mem/limit} :l
   {fnum} value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
   {nrho} value = density
@@ -65,7 +65,9 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {su
     nsteps = reorder the particles every this many timesteps
   {mem/limit} value = {grid} or bytes
     grid = limit extra memory for load-balancing, particle reordering, and restart file read/write to grid cell memory
-    bytes = limit extra particle memory to this amount (in MBytes) :pre
+    bytes = limit extra particle memory to this amount (in MBytes)
+  {optmove} value = yes or no
+    yes/no = use optimized particle move if yes, else use regular move :pre
 :ule
 
 [Examples:]
@@ -401,6 +403,21 @@ Note that for these operations if the extra memory is too small,
 performance will suffer due to the large number of multiple passes 
 required. 
 
+If the {optmove} keyword is set to {yes} then an optimized move
+algorithm will be used when possible. Normally, as particles advect
+through the mesh each intermediate grid cell crossing must be found
+since the particle may encounter a box boundary or surface element.
+However, if there are no surfaces and the grid is uniform (only a
+single level for all cells without further refinement) and the
+{optmove} keyword is set to {yes} then the particle will be moved to
+its final position in a single step, skipping all intermediate grid
+cell crossings, which can improve performance. If a particle hits a
+box boundary or leaves the owning proc's subdomain (including the
+ghost cell region), then the normal (non-optimized) move algorithm
+will be used for that specific particle on that timestep. The {optmove
+yes} option cannot be used when surfaces are defined, the grid is not
+uniform, or when fix adapt is enabled, otherwise an error will result.
+
 [Restrictions:]
 
 The global surfmax command must be used before surface elements are
@@ -416,4 +433,4 @@ The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
 0.0, temp = 273.15, field = none, surfs = explicit, surfgrid = auto,
 surfmax = 100, splitmax = 10, surftally = auto,
 gridcut = -1.0, comm/sort = no, comm/style = neigh, weight = cell
-none, particle/reorder = 0, mem/limit = 0.
+none, particle/reorder = 0, mem/limit = 0, optmove = no.

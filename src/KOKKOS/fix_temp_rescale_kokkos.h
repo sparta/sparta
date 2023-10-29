@@ -47,12 +47,6 @@ class FixTempRescaleKokkos : public FixTempRescale {
       t += rhs.t;
       return *this;
     }
-
-    KOKKOS_INLINE_FUNCTION
-    void operator+=(const volatile REDUCE &rhs) volatile {
-      n += rhs.n;
-      t += rhs.t;
-    }
   };
 
   FixTempRescaleKokkos(class SPARTA *, int, char **);

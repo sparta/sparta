@@ -2072,6 +2072,26 @@ void Surf::add_react(int narg, char **arg)
 
   // create new SurfReact class
 
+  if (sparta->suffix_enable) {
+    if (sparta->suffix) {
+      char estyle[256];
+      sprintf(estyle,"%s/%s",arg[1],sparta->suffix);
+
+      if (0) return;
+
+#define SURF_REACT_CLASS
+#define SurfReactStyle(key,Class) \
+      else if (strcmp(estyle,#key) == 0) { \
+        sr[nsr] = new Class(sparta,narg,arg); \
+        nsr++; \
+        return; \
+      }
+#include "style_surf_react.h"
+#undef SurfReactStyle
+#undef SURF_REACT_CLASS
+    }
+  }
+
   if (0) return;
 
 #define SURF_REACT_CLASS
