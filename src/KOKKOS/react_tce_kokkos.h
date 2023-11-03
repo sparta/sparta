@@ -35,19 +35,93 @@ class ReactTCEKokkos : public ReactBirdKokkos {
   void init();
   int attempt(Particle::OnePart *, Particle::OnePart *,
               double, double, double, double &, int &) { return 0; }
-  double newtonTvib(const int nmode, double Evib,
-                      const double VibTemp[],
-                      double Tvib0,
-                      double tol,
-                      int nmax);
 
-  double bird_dEvib(int nmode, double Tvib,
-                  double VibTemp[]);
+/* ---------------------------------------------------------------------- */
 
-  double bird_Evib(int nmode, double Tvib,
-                 double VibTemp[],
-                 double Evib);
+KOKKOS_INLINE_FUNCTION
+double bird_Evib(const int& nmode, const double& Tvib,
+                 const double vibtemp[],
+                 const double& Evib) const
+{
+  // Comutes f for Newton's search method outlined in newtonTvib()
 
+  double f = -Evib;
+  const double kb = 1.38064852e-23;
+
+  for (int i = 0; i < nmode; i++) {
+    const double vti = vibtemp[i];
+    f += (((kb*vti)/(exp(vti/Tvib)-1)));
+  }
+
+  return f;
+}
+
+/* ---------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+double bird_dEvib(const int& nmode, const double& Tvib, const double vibtemp[]) const
+{
+  // Comutes df for Newton's search method
+
+  double df = 0.0;
+  const double kb = 1.38064852e-23;
+
+  for (int i = 0; i < nmode; i++) {
+    const double vti = vibtemp[i];
+    const double vti2 = vti * vti; 
+    const double Tvib2 = Tvib * Tvib;
+    const double k1 = vti/Tvib;
+    const double k2 = exp(k1)-1;
+    const double k22 = k2 * k2;
+    df += (vti2*kb*exp(k1))/(Tvib2*k22);
+  }
+
+  return df;
+}
+
+/* ---------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+double newtonTvib(const int &nmode, const double& Evib, const double vibTemp[],
+               const double &Tvib0,
+               const double &tol,
+               const int& nmax) const
+{
+  // Function for converting vibrational energy to vibrational temperature
+  // Computes Tvib assuming the vibrational energy levels occupy a simple harmonic oscillator (SHO) spacing
+  // Search for Tvib begins at some initial value "Tvib0" until the search reaches a tolerance level "tol"
+
+  // Uses Newton's method to solve for a vibrational temperature given a
+  // distribution of vibrational energy levels
+
+  double Tvib_prev;
+
+  // f and df are computed for Newton's search
+  double f = bird_Evib(nmode,Tvib0,vibTemp,Evib);
+  double df = bird_dEvib(nmode,Tvib0,vibTemp);
+
+  // Update guess for Tvib and compute error
+  double Tvib = Tvib0 - (f/df);
+  double err = fabs(Tvib-Tvib0);
+
+  int i = 2;
+
+  // Continue to search for Tvib until the error is greater than the tolerance:
+  while((err >= tol) && (i <= nmax))
+  {
+    Tvib_prev = Tvib;
+
+    f = bird_Evib(nmode,Tvib,vibTemp,Evib);
+    df = bird_dEvib(nmode,Tvib,vibTemp);
+
+    Tvib = Tvib_prev-(f/df);
+    err = fabs(Tvib-Tvib_prev);
+
+    i = i+1;
+  }
+
+  return Tvib;
+}
 /* ---------------------------------------------------------------------- */
 
 enum{NONE,DISCRETE,SMOOTH};
@@ -125,7 +199,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
             //Instantaneous z for diatomic molecules
             if (d_species[isp].nvibmode == 1) {
                 avei = static_cast<int>
-                        (ievib / (update->boltz * d_species[isp].vibtemp[0]));
+                        (ievib / (boltz * d_species[isp].vibtemp[0]));
                 if (avei > 0) zi = 2.0 * avei * log(1.0 / avei + 1.0);
                 else zi = 0.0;
             } else if (d_species[isp].nvibmode > 1) {
@@ -133,20 +207,20 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
                 //Instantaneous T for polyatomic
                 else {
                   iTvib = newtonTvib(d_species[isp].nvibmode,ievib,d_species[isp].vibtemp,3000,1e-4,1000);
-                  zi = (2 * ievib)/(update->boltz * iTvib);
+                  zi = (2 * ievib)/(boltz * iTvib);
                 }
             } else zi = 0.0;
 
             if (d_species[jsp].nvibmode == 1) {
                 avej = static_cast<int>
-                        (jevib / (update->boltz * d_species[jsp].vibtemp[0]));
+                        (jevib / (boltz * d_species[jsp].vibtemp[0]));
                 if (avej > 0) zj = 2.0 * avej * log(1.0 / avej + 1.0);
                 else zj = 0.0;
             } else if (d_species[jsp].nvibmode > 1) {
                 if (jevib < 1e-26) zj = 0.0;
                 else {
                   jTvib = newtonTvib(d_species[jsp].nvibmode,jevib,d_species[jsp].vibtemp,3000,1e-4,1000);
-                  zj = (2 * jevib)/(update->boltz * jTvib);
+                  zj = (2 * jevib)/(boltz * jTvib);
                 }
             } else zj = 0.0;
 
@@ -255,6 +329,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 
  protected:
   int vibstyle;
+  double boltz;
 
   DAT::tdual_int_scalar k_error_flag;
   DAT::t_int_scalar d_error_flag;

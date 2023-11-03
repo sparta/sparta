@@ -377,6 +377,7 @@ void CollideVSSKokkos::collisions()
   dt = update->dt;
   fnum = update->fnum;
   boltz = update->boltz;
+  computeChemRates = react->computeChemRates;
 
   // perform collisions:
   // variant for single group or multiple groups (not yet supported)
@@ -1401,7 +1402,7 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
 
   kp = NULL;
 
-  if (reactflag && !react->computeChemRates) {
+  if (reactflag && !computeChemRates) {
 
     // add 3rd K particle if reaction created it
     // index of new K particle = nlocal-1
