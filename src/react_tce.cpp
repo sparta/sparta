@@ -245,37 +245,40 @@ double ReactTCE::bird_Evib(int nmode, double Tvib,
                             double vibtemp[],
                             double Evib)
 {
-
-  // COMPUTES f FOR NEWTON'S SEARCH METHOD OUTLINED IN "newtonTvib".
+  // Comutes f for Newton's search method outlined in newtonTvib()
 
   double f = -Evib;
   double kb = 1.38064852e-23;
 
   for (int i = 0; i < nmode; i++) {
-    f += (((kb*vibtemp[i])/(exp(vibtemp[i]/Tvib)-1)));
+    const double vti = vibtemp[i];
+    f += (((kb*vti)/(exp(vti/Tvib)-1)));
   }
 
   return f;
-
 }
-
 
 /* ---------------------------------------------------------------------- */
 
 double ReactTCE::bird_dEvib(int nmode, double Tvib, double vibtemp[])
 {
-
-  // COMPUTES df FOR NEWTON'S SEARCH METHOD
+  // Comutes df for Newton's search method
 
   double df = 0.0;
   double kb = 1.38064852e-23;
 
   for (int i = 0; i < nmode; i++) {
-    df += ((pow(vibtemp[i],2)*kb*exp(vibtemp[i]/Tvib))/(pow(Tvib,2)*pow(exp(vibtemp[i]/Tvib)-1,2)));
+    const double vti = vibtemp[i];
+    const double vti2 = vti * vti;
+    const double Tvib2 = Tvib * Tvib;
+    const double k1 = vti/Tvib;
+    const double ek1 = exp(k1);
+    const double k2 = ek1 - 1.0;
+    const double k22 = k2 * k2;
+    df += (vti2*kb*ek1)/(Tvib2*k22);
   }
 
   return df;
-
 }
 
 /* ---------------------------------------------------------------------- */
@@ -285,13 +288,9 @@ double ReactTCE::newtonTvib(int nmode, double Evib, double vibTemp[],
                double tol,
                int nmax)
 {
-
-
-  // FUNCTION FOR CONVERTING VIBRATIONAL ENERGY TO VIBRATIONAL TEMPERATURE
-  // Computes Tvib assuming the vibrational energy levels occupy a simple harmonic oscillator (SHO)
-  // spacing.
-  // Search for Tvib begins at some initial value "Tvib0" until the search reaches a tolerance level "tol".
-
+  // Function for converting vibrational energy to vibrational temperature
+  // Computes Tvib assuming the vibrational energy levels occupy a simple harmonic oscillator (SHO) spacing
+  // Search for Tvib begins at some initial value "Tvib0" until the search reaches a tolerance level "tol"
 
   double f;
   double df;
@@ -300,22 +299,24 @@ double ReactTCE::newtonTvib(int nmode, double Evib, double vibTemp[],
   int i;
 
   // Uses Newton's method to solve for a vibrational temperature given a
-  // distribution of vibrational energy levels.
+  // distribution of vibrational energy levels
 
   // f and df are computed for Newton's search
+
   f = bird_Evib(nmode,Tvib0,vibTemp,Evib);
   df = bird_dEvib(nmode,Tvib0,vibTemp);
 
   // Update guess for Tvib and compute error
+
   Tvib = Tvib0 - (f/df);
   err = fabs(Tvib-Tvib0);
 
-  i=2;
+  i = 2;
 
   // Continue to search for Tvib until the error is greater than the tolerance:
+
   while((err >= tol) && (i <= nmax))
   {
-
     Tvib_prev = Tvib;
 
     f = bird_Evib(nmode,Tvib,vibTemp,Evib);
@@ -324,10 +325,8 @@ double ReactTCE::newtonTvib(int nmode, double Evib, double vibTemp[],
     Tvib = Tvib_prev-(f/df);
     err = fabs(Tvib-Tvib_prev);
 
-    i=i+1;
-
+    i++;
   }
 
   return Tvib;
-
 }
