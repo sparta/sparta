@@ -139,7 +139,7 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
                 }
             } else zj = 0.0;
 
-            if (isnan(zi) || isnan(zj) || zi<0 || zj<0) error->all(FLERR,"Root-Finding Error");
+            if (isnan(zi) || isnan(zj) || zi < 0 || zj < 0) error->one(FLERR,"Root-Finding Error");
             z += 0.5 * (zi+zj);
        }
     }
