@@ -244,7 +244,6 @@ void ReactBird::init()
     double z = r->coeff[0];
 
     // add additional coeff for effective DOF
-    // added MAX() limit, 24Aug18
 
     double c1 = MY_PIS*epsilon*r->coeff[2]/(2.0*sigma) *
       sqrt(mr/(2.0*update->boltz*tref)) *
