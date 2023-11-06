@@ -213,7 +213,7 @@ class CollideVSSKokkos : public CollideVSS {
   t_params_2d d_params;
 
   double dt,fnum,boltz;
-  int maxcellcount,react_defined,computeChemRates;
+  int maxcellcount,react_defined;
 
   KOKKOS_INLINE_FUNCTION
   void SCATTER_TwoBodyScattering(Particle::OnePart *,
