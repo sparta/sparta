@@ -14,7 +14,7 @@ compute ID reduce mode input1 input2 ... keyword args ... :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
 reduce = style name of this compute command :l
-mode = {sum} or {min} or {max} or {ave} or {sumsq} or {avesq} or (sum-area) or {ave-area} :l
+mode = {sum} or {min} or {max} or {ave} or {sumsq} or {avesq} or {sum-area} or {ave-area} :l
 one or more inputs can be listed :l
 input = x, y, z, vx, vy, vz, ke, erot, evib, c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :l
   x,y,z,vx,vy,vz = particle position or velocity component

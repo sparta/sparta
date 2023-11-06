@@ -27,6 +27,9 @@
 #define MAX_TYPES_STACKPARAMS 12
 #define NeighClusterSize 8
 
+#define KOKKOS_MAX_SURF_REACT_PER_TYPE 2
+#define KOKKOS_MAX_TOT_SURF_REACT 4
+
 namespace Kokkos {
   static auto NoInit = [](std::string const& label) {
     return Kokkos::view_alloc(Kokkos::WithoutInitializing, label);
