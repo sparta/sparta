@@ -1715,8 +1715,17 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
           jpart->weight = particle_i.weight;
         }
 
-        Kokkos::atomic_increment(&d_nboundary_one());
-        Kokkos::atomic_decrement(&d_ntouch_one());    // decrement here since will increment below
+        if (ATOMIC_REDUCTION == 1) {
+          Kokkos::atomic_increment(&d_nboundary_one());
+          Kokkos::atomic_decrement(&d_ntouch_one());    // decrement here since will increment below
+        } else if (ATOMIC_REDUCTION == 0) {
+          d_nboundary_one()++;
+          d_ntouch_one()--;    // decrement here since will increment below
+        } else {
+          reduce.nboundary_one++;
+          reduce.ntouch_one--;    // decrement here since will increment below
+        }
+
       } else {
         if (ATOMIC_REDUCTION == 1) {
           Kokkos::atomic_increment(&d_nboundary_one());
