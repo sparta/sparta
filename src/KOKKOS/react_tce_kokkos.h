@@ -118,7 +118,7 @@ double newtonTvib(const int &nmode, const double& Evib, const double vibTemp[],
     Tvib = Tvib_prev-(f/df);
     err = fabs(Tvib-Tvib_prev);
 
-    i = i+1;
+    i++;
   }
 
   return Tvib;
