@@ -1,0 +1,138 @@
+################################################################################
+# 2d flow around a circle, computes heatflux of surface reactions
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+###################################
+# Trajectory inputs
+###################################
+variable            V equal 6000.0
+variable            nden equal 4.247e20
+variable            temp equal 200
+variable            surftemp equal 1000
+
+###################################
+# Simulation initialization standards
+###################################
+variable            ppc equal 1
+variable            cpmfp equal 1
+
+###################################
+# Parameter calculations
+###################################
+variable            mfp equal 1/(sqrt(2)*3.14159*(4.287e-10)^2*${nden}*(273/${temp})^(0.216))
+
+variable            xmin equal -0.2
+variable            xmax equal 0.65
+variable            ymin equal 0.0
+variable            ymax equal 0.4
+variable            zmin equal -0.5
+variable            zmax equal 0.5
+
+variable            xncells equal floor((${xmax}-${xmin})/${mfp}*${cpmfp})
+variable            yncells equal floor((${ymax}-${ymin})/${mfp}*${cpmfp})
+#variable            zncells equal floor((${zmax}-${zmin})/${mfp}*${cpmfp})
+
+variable            Fnum equal  ${nden}*(${xmax}-${xmin})*(${ymax}-${ymin})/${ppc}/${xncells}/${yncells}
+
+variable            tstep equal (-${xmin}+${xmax})/${V}/${xncells}/30
+
+###################################
+# Print variable values to log file
+###################################
+print               " Velocity  = ${V}"
+print               " Density  = ${nden}"
+print               " Temp  = ${temp}"
+print               " mean free path  = ${mfp}"
+print               " cells per free stream mean free path = ${cpmfp}"
+print               " x-min = ${xmin}"
+print               " x-max = ${xmax}"
+print               " y-min = ${ymin}"
+print               " y-max = ${ymax}"
+#print               " z-min = ${zmin}"
+#print               " z-max = ${zmax}"
+print               " x-cells = ${xncells}"
+print               " y-cells = ${yncells}"
+#print               " z-cells = ${zncells}"
+print               " Simulation Ratio = ${Fnum}"
+print               " Timestep = ${tstep}"
+
+###################################
+# Simulation parameters
+###################################
+seed	    	    847384
+dimension   	    2
+global		    nrho ${nden} fnum ${Fnum} gridcut 0.01
+global		    comm/sort yes
+timestep            ${tstep}
+
+###################################
+# Grid generation
+###################################
+boundary	    o ro p
+create_box          ${xmin} ${xmax} ${ymin} ${ymax} ${zmin} ${zmax}
+create_grid 	    ${xncells} ${yncells} 1 block * * * 
+balance_grid        rcb cell
+
+#####################################
+# Gas/Collision Model Specification #
+#####################################
+species             air.species N2 N
+mixture             all vstream ${V} 0 0 temp ${temp}
+mixture             all N2 frac 1.0
+
+collide             vss all air.vss
+collide_modify      vremax 1000 yes vibrate discrete
+
+react               tce air.tce
+react_modify        recomb no
+
+#####################################################
+# Surface generation and collision specification
+#####################################################
+read_surf	    circle.surf group 1
+write_surf          circle-clipped.out
+
+surf_collide        1 diffuse ${surftemp} 1.0
+surf_react          1 prob air.surf
+surf_modify         1 collide 1 react 1
+
+###################################
+# Boundary conditions
+###################################
+fix                 in emit/face all xlo twopass
+
+###################################
+# Initialize simulation
+###################################
+create_particles    all n 0 twopass
+balance_grid        rcb part
+
+###################################
+# Unsteady Output
+###################################
+compute             1 grid all all nrho
+compute             2 thermal/grid all all temp
+fix                 1 ave/grid all 1 1000 1000 c_1[*] c_2[*] ave one
+
+compute             1b lambda/grid f_1[1] f_1[2] N2 kall
+
+fix                 10 adapt 1000 all refine coarsen value c_1b[2] 0.8 1.6 &
+                    combine min thresh less more cells 2 2 1
+fix                 load balance 1000 1.1 rcb part
+
+compute             3 surf all all etot ke erot evib echem
+fix                 3 ave/surf all 1 1000 1000 c_3[*] ave one
+dump                3 surf all 1000 std_surf.* id f_3[*]
+
+compute             echem reduce ave f_3[5]
+
+stats_style         step cpu np ncoll nreact nscoll nsreact ngrid c_echem maxlevel
+stats_modify        flush yes
+stats               1000
+
+run                 3000

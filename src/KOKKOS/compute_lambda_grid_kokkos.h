@@ -30,7 +30,6 @@ namespace SPARTA_NS {
   struct TagComputeLambdaGrid_LoadNrhoVecFromArray{};
   struct TagComputeLambdaGrid_LoadTempVecFromArray{};
   struct TagComputeLambdaGrid_ComputePerGrid{};
-  struct TagComputeLambdaGrid_Junk{};
 
   class ComputeLambdaGridKokkos : public ComputeLambdaGrid, public KokkosBase {
   public:

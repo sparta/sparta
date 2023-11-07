@@ -61,6 +61,7 @@ class DumpSurf : public Dump {
   int *custom;               // list of indices for the Custom attributes
 
   int dimension;
+  int axisymmetric;
   int nsown;                 // # of surf elements owned by this proc
   int nchoose;               // # of surf elements output by this proc
   int *cglobal;              // indices of global elements for nchoose
@@ -117,6 +118,7 @@ class DumpSurf : public Dump {
   void pack_v3x(int);
   void pack_v3y(int);
   void pack_v3z(int);
+  void pack_area(int);
 };
 
 }

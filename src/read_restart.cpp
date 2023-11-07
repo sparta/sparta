@@ -49,7 +49,8 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      SPECIES,MIXTURE,GRID,SURF,
      PARTICLE_CUSTOM,GRID_CUSTOM,SURF_CUSTOM,
-     MULTIPROC,PROCSPERFILE,PERPROC_GRID,PERPROC_SURF};
+     MULTIPROC,PROCSPERFILE,PERPROC_GRID,PERPROC_SURF,
+     DT,TIME};    // new fields added after TIME
 
 enum{KEEPID,KEEPALL};
 
@@ -529,6 +530,12 @@ void ReadRestart::header(int incompatible)
       read_double_vec(3,update->vstream);
     } else if (flag == TEMP_THERMAL) {
       update->temp_thermal = read_double();
+
+    } else if (flag == DT) {
+      update->dt = read_double();
+    } else if (flag == TIME) {
+      update->time = read_double();
+      update->time_last_update = update->ntimestep;
 
     } else if (flag == FSTYLE) {
       update->fstyle = read_int();

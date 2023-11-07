@@ -496,8 +496,6 @@ void Stats::set_fields(int narg, char **arg)
       addfield("Elapsed",&Stats::compute_elapsed,BIGINT);
     } else if (strcmp(arg[i],"elaplong") == 0) {
       addfield("Elapsed",&Stats::compute_elaplong,BIGINT);
-    } else if (strcmp(arg[i],"dt") == 0) {
-      addfield("Dt",&Stats::compute_dt,FLOAT);
     } else if (strcmp(arg[i],"cpu") == 0) {
       addfield("CPU",&Stats::compute_cpu,FLOAT);
     } else if (strcmp(arg[i],"tpcpu") == 0) {
@@ -506,7 +504,10 @@ void Stats::set_fields(int narg, char **arg)
       addfield("S/CPU",&Stats::compute_spcpu,FLOAT);
     } else if (strcmp(arg[i],"wall") == 0) {
       addfield("WALL",&Stats::compute_wall,FLOAT);
-
+    } else if (strcmp(arg[i],"dt") == 0) {
+      addfield("Dt",&Stats::compute_dt,FLOAT);
+    } else if (strcmp(arg[i],"time") == 0) {
+      addfield("Time",&Stats::compute_time,FLOAT);
     } else if (strcmp(arg[i],"np") == 0) {
       addfield("Np",&Stats::compute_np,BIGINT);
     } else if (strcmp(arg[i],"ntouch") == 0) {
@@ -860,9 +861,6 @@ int Stats::evaluate_keyword(char *word, double *answer)
     compute_elaplong();
     dvalue = bivalue;
 
-  } else if (strcmp(word,"dt") == 0) {
-    compute_dt();
-
   } else if (strcmp(word,"cpu") == 0) {
     if (update->runflag == 0)
       error->all(FLERR,
@@ -883,6 +881,10 @@ int Stats::evaluate_keyword(char *word, double *answer)
 
   } else if (strcmp(word,"wall") == 0) {
     compute_wall();
+  } else if (strcmp(word,"dt") == 0) {
+    compute_dt();
+  } else if (strcmp(word,"time") == 0) {
+    compute_time();
 
   } else if (strcmp(word,"np") == 0) {
     compute_np();
@@ -1049,6 +1051,14 @@ void Stats::compute_dt()
 
 /* ---------------------------------------------------------------------- */
 
+void Stats::compute_time()
+{
+  dvalue = update->time +
+    (update->ntimestep - update->time_last_update) * update->dt;
+}
+
+/* ---------------------------------------------------------------------- */
+
 void Stats::compute_cpu()
 {
   if (firststep == 0) dvalue = 0.0;
@@ -1060,8 +1070,9 @@ void Stats::compute_cpu()
 void Stats::compute_tpcpu()
 {
   double new_cpu;
-  double new_time = update->ntimestep * update->dt;
-
+  double new_time = update->time +
+   (update->ntimestep - update->time_last_update) * update->dt;
+  
   if (firststep == 0) {
     new_cpu = 0.0;
     dvalue = 0.0;

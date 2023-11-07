@@ -134,6 +134,8 @@ geometry of the hierarchical grid that overlays the simulation domain as "create
 geometry of all defined "surface elements"_read_surf.html
 "group definitions"_group.html for grid cells and surface elements
 "custom attributes"_custom.html for particles, grid cells, or surface elements
+current simulation time
+current "timestep size"_timestep.html
 current timestep number :ul
 
 No other information is stored in the restart file.  Specifically,
@@ -150,8 +152,7 @@ commands is NOT stored:
 assignment of surfaces/boundaries to surface models
 "variables"_variable.html
 "regions"_region.html
-output options for "stats"_stats_style.html, "dump"_dump.html, "restart"_restart.html files
-"timestep size"_timestep.html :ul
+output options for "stats"_stats_style.html, "dump"_dump.html, "restart"_restart.html files :ul
 
 This means any information specified in the original input script by
 these commands needs to be re-specified in the restart input script,

@@ -13,8 +13,8 @@ stats_style command :h3
 stats_style arg1 arg2 ... :pre
 
 arg1,arg2,... = list of keywords :ulb,l
-  possible keywords = step, elapsed, elaplong, dt, cpu, tpcpu, spcpu, wall,
-                      np, npave, ntouch, ntouchave, ncomm, ncommave,
+  possible keywords = step, elapsed, elaplong, dt, time, cpu, tpcpu, spcpu,
+                      wall, np, npave, ntouch, ntouchave, ncomm, ncommave,
                       nbound, nboundave, nexit, nexitave,
 		      nscoll, nscollave, nscheck, nscheckave,
                       ncoll, ncollave, nattempt, nattemptave,
@@ -31,6 +31,7 @@ arg1,arg2,... = list of keywords :ulb,l
       elapsed = timesteps since start of this run
       elaplong = timesteps since start of initial run in a series of runs
       dt = timestep size
+      time = simulation time
       cpu = elapsed CPU time in seconds within a run
       tpcpu = time per CPU second
       spcpu = timesteps per CPU second

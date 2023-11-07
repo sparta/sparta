@@ -44,6 +44,8 @@ class SurfReactProbKokkos : public SurfReactProb {
   void backup();
   void restore();
 
+  DAT::t_float_2d d_coeffs;
+
  private:
   DAT::t_int_1d d_reactions_n;       // # of reactions in list
   DAT::t_int_2d d_list;
@@ -51,7 +53,6 @@ class SurfReactProbKokkos : public SurfReactProb {
   DAT::t_int_1d d_type;
   DAT::t_int_2d d_reactants;
   DAT::t_int_2d d_products;
-  DAT::t_float_2d d_coeffs;
 
   void init_reactions();
 
@@ -87,6 +88,7 @@ class SurfReactProbKokkos : public SurfReactProb {
      if dissociation, add particle and return ptr JP
   ------------------------------------------------------------------------- */
 
+  template<int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
   int react_kokkos(Particle::OnePart *&ip, int, const double *,
                    Particle::OnePart *&jp, int &,
@@ -112,8 +114,13 @@ class SurfReactProbKokkos : public SurfReactProb {
       react_prob += d_coeffs(j,0);
 
       if (react_prob > random_prob) {
-        Kokkos::atomic_increment(&d_nsingle());
-        Kokkos::atomic_increment(&d_tally_single(j));
+        if (ATOMIC_REDUCTION == 0) {
+          d_nsingle()++;
+          d_tally_single(j)++;
+        } else {
+          Kokkos::atomic_increment(&d_nsingle());
+          Kokkos::atomic_increment(&d_tally_single(j));
+        }
         switch (d_type(j)) {
         case DISSOCIATION:
           {
@@ -122,7 +129,14 @@ class SurfReactProbKokkos : public SurfReactProb {
             int id = MAXSMALLINT*rand_gen.drand();
             memcpy(x,ip->x,3*sizeof(double));
             memcpy(v,ip->v,3*sizeof(double));
-            int index = Kokkos::atomic_fetch_add(&d_nlocal(),1);
+
+            int index;
+            if (ATOMIC_REDUCTION == 0) {
+              index = d_nlocal();
+              d_nlocal()++;
+            } else
+              index = Kokkos::atomic_fetch_add(&d_nlocal(),1);
+
             int reallocflag = ParticleKokkos::add_particle_kokkos(d_particles,index,id,d_products(j,1),ip->icell,x,v,0.0,0.0);
             if (reallocflag) {
               d_retry() = 1;

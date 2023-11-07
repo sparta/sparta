@@ -52,12 +52,16 @@ class SurfCollideTransparentKokkos : public SurfCollideTransparent {
      return jp = NULL for no new particle
   ------------------------------------------------------------------------- */
 
+  template<int REACT, int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
   Particle::OnePart* collide_kokkos(Particle::OnePart *, double &,
                                     int, const double *, int, int &,
                                     const DAT::t_int_scalar &, const DAT::t_int_scalar &) const
   {
-    Kokkos::atomic_increment(&d_nsingle());
+    if (ATOMIC_REDUCTION == 0)
+      d_nsingle()++;
+    else
+      Kokkos::atomic_increment(&d_nsingle());
 
     return NULL;
   }

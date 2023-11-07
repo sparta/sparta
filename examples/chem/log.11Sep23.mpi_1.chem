@@ -1,0 +1,125 @@
+SPARTA (13 Apr 2023)
+Running on 1 MPI task(s)
+################################################################################
+# thermal gas in a 3d box with collisions and chemistry
+# particles reflect off global box boundaries
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5 comm/sort yes
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
+create_grid 	    10 10 10
+Created 1000 child grid cells
+  CPU time = 0.0010245 secs
+  create/ghost percent = 80.5174 19.4826
+
+balance_grid        rcb part
+Balance grid migrated 0 cells
+  CPU time = 0.0002407 secs
+  reassign/sort/migrate/ghost percent = 51.4333 0.457 10.7187 37.3909
+
+species		    air.species N2 N
+mixture		    air N2 N vstream 0.0 0.0 0.0 temp 20000.0
+mixture             air N2 frac 1.0
+mixture             air N frac 0.0
+
+global              nrho 7.07043E22
+global              fnum 7.07043E5
+
+collide		    vss air air.vss
+react               tce air.tce
+
+create_particles    air n 10000 twopass
+Created 10000 particles
+  CPU time = 0.00252281 secs
+
+stats		    100
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll nreact c_temp
+
+#dump                2 image all 100 image.*.ppm type type pdiam 3.0e-6 #		    size 512 512 gline yes 0.005
+#dump_modify	    2 pad 4
+
+timestep 	    7.00E-9
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.6875 1.6875 1.6875
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.20129 3.20129 3.20129
+Step CPU Np Natt Ncoll Nreact c_temp 
+       0            0    10000        0        0        0    19907.187 
+     100   0.32847576    10190     1000      262        3    18764.989 
+     200   0.66016572    10335     1011      269        2    18038.695 
+     300   0.99436759    10484     1079      255        4    17426.475 
+     400    1.3315569    10627     1070      238        1    16707.966 
+     500    1.6722369    10760     1124      289        3    16036.998 
+     600    2.0238532    10860     1140      273        2    15660.024 
+     700    2.3663946    10964     1141      244        1    15147.033 
+     800    2.7074586    11043     1168      260        2     14727.86 
+     900     3.053974    11110     1163      258        0    14414.344 
+    1000    3.3934945    11169     1159      256        0    14070.643 
+Loop time of 3.39972 on 1 procs for 1000 steps with 11169 particles
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 2.8822     | 2.8822     | 2.8822     |   0.0 | 84.78
+Coll    | 0.42334    | 0.42334    | 0.42334    |   0.0 | 12.45
+Sort    | 0.047096   | 0.047096   | 0.047096   |   0.0 |  1.39
+Comm    | 0.0003479  | 0.0003479  | 0.0003479  |   0.0 |  0.01
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.046236   | 0.046236   | 0.046236   |   0.0 |  1.36
+Other   |            | 0.0005269  |            |       |  0.02
+
+Particle moves    = 10694859 (10.7M)
+Cells touched     = 47986809 (48M)
+Particle comms    = 0 (0K)
+Boundary collides = 4143206 (4.14M)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 1083538 (1.08M)
+Collide occurs    = 260375 (0.26M)
+Reactions         = 1169 (1.17K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 3.1458e+06
+Particle-moves/step: 10694.9
+Cell-touches/particle/step: 4.4869
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0.387402
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.101314
+Collisions/particle/step: 0.0243458
+Reactions/particle/step: 0.000109305
+
+Gas reaction tallies:
+  style tce #-of-reactions 45
+  reaction N2 + N2 --> N + N + N2: 766
+  reaction N2 + N --> N + N + N: 403
+
+Particles: 11169 ave 11169 max 11169 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      1000 ave 1000 max 1000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0

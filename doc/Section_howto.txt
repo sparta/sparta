@@ -1,4 +1,4 @@
-"Previous Section"_Section_commands.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_example.html :c
+."Previous Section"_Section_commands.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_example.html :c
 
 :link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
@@ -28,7 +28,8 @@ SPARTA works.
 6.14 "Implicit surface ablation"_#howto_14
 6.15 "Transparent surface elements"_#howto_15
 6.16 "Visualizing SPARTA output with ParaView"_#howto_16
-6.17 "Custom per-particle, per-grid, per-surf attributes"_#howto_17 :all(b)
+6.17 "Variable timestep simulations"_#howto_17
+6.18 "Custom per-particle, per-grid, per-surf attributes"_#howto_18 :all(b)
 
 The example input scripts included in the SPARTA distribution and
 highlighted in "Section 5"_Section_example.html of the manual also
@@ -1317,9 +1318,9 @@ lines were each defined as multiple line segments.
 
 6.16 Visualizing SPARTA output with ParaView :link(howto_16),h4
 
-The {sparta/tools/paraview} directory contains two Python programs that can
-be used to convert SPARTA surface and grid data to ParaView {.pvd} format for
-visualization with ParaView:
+The {sparta/tools/paraview} directory contains two Python programs
+that can be used to convert SPARTA surface and grid data to ParaView
+{.pvd} format for visualization with ParaView:
 
 surf2paraview.py  
 grid2paraview.py :pre
@@ -1577,44 +1578,94 @@ of files as MPI ranks used to run the program.
 
 mpiexec -np 4 pvbatch -sym sort_sparta_grid_file.py data.grid :pre
 
-The program must be run using the ParaView {pvbatch} program with the {-sym} argument.
-The above command line will produce 4 output files containing SPARTA grid dashed ids
-of cells located in the same area of the grid. The output file names are based on
-the name of the {*.grid} file used as input ({data.grid} in this case). The output files
-will be named as shown below.
+The program must be run using the ParaView {pvbatch} program with the
+{-sym} argument.  The above command line will produce 4 output files
+containing SPARTA grid dashed ids of cells located in the same area of
+the grid. The output file names are based on the name of the {*.grid}
+file used as input ({data.grid} in this case). The output files will
+be named as shown below.
 
 data_sort_bucket_rank_0.txt
 data_sort_bucket_rank_1.txt
 data_sort_bucket_rank_2.txt
 data_sort_bucket_rank_3.txt :pre
 
-The program {grid2paraview_cells.py} takes similar inputs as the {grid2paraview.py}
-program described in section (3), and produces the same ParaView VTU file output
-and PVD file output.
+The program {grid2paraview_cells.py} takes similar inputs as the
+{grid2paraview.py} program described in section (3), and produces the
+same ParaView VTU file output and PVD file output.
 
 mpiexec -np 4 pvbatch -sym grid2paraview_cells.py grid.txt output -rf flow_files.txt --float --variables id f_1\[5\] f_1\[7\] :pre
 
-The program must be run using the ParaView {pvbatch} program with the {-sym} argument.
-The above command line will produce an {output.pvd} file and a directory name output/
-containing the ParaView VTU file data. The {grid.txt} file must contain a {read_grid}
-statement with the path to a SPARTA grid cell output file, and is otherwise the same
-as the {grid2paraview.py} version. The option {--float} outputs float precision numbers
-to the VTU files to save memory (default is double precision). The {--variables} option
-limits the output arrays to the names given on the command line (default is all variable
-names found in the flow files given by the {-rf} or {-r} options).
+The program must be run using the ParaView {pvbatch} program with the
+{-sym} argument.  The above command line will produce an {output.pvd}
+file and a directory name output/ containing the ParaView VTU file
+data. The {grid.txt} file must contain a {read_grid} statement with
+the path to a SPARTA grid cell output file, and is otherwise the same
+as the {grid2paraview.py} version. The option {--float} outputs float
+precision numbers to the VTU files to save memory (default is double
+precision). The {--variables} option limits the output arrays to the
+names given on the command line (default is all variable names found
+in the flow files given by the {-rf} or {-r} options).
 
-The {grid2paraview_cells.py} program will look for {*_sort_bucket_rank_?.txt} files
-produced by the sort_sparta_grid_file.py program. The matching will depend on the number
-of MPI ranks that {grid2paraview_cells.py} is run on and the name of the output directory
-given to {grid2paraview_cells.py}. If matching files are found, these will be used as
-input on each MPI rank. If no match is found, {grid2paraview_cells.py} will run
-{sort_sparta_grid_file.py} to produce sorted output files for each rank. The programs
-are decoupled in this way to allow faster {grid2paraview_cells.py} runs once a set
-of sorted files has been generated by {sort_sparta_grid_file.py}.
+The {grid2paraview_cells.py} program will look for
+{*_sort_bucket_rank_?.txt} files produced by the
+sort_sparta_grid_file.py program. The matching will depend on the
+number of MPI ranks that {grid2paraview_cells.py} is run on and the
+name of the output directory given to {grid2paraview_cells.py}. If
+matching files are found, these will be used as input on each MPI
+rank. If no match is found, {grid2paraview_cells.py} will run
+{sort_sparta_grid_file.py} to produce sorted output files for each
+rank. The programs are decoupled in this way to allow faster
+{grid2paraview_cells.py} runs once a set of sorted files has been
+generated by {sort_sparta_grid_file.py}.
 
 :line
 
-6.17 Custom per-particle, per-grid, per-surf attributes :link(howto_17),h4
+6.17 Variable timestep simulations :link(howto_17),h4
+
+As an alternative to utilization of a user-provided constant timestep,
+the variable timestep option enables SPARTA to compute global
+timesteps based on the current state of the physical processes being
+modeled. The timestep is global in the sense that all cells advance
+their particles in time using the same timestep value.  The timestep
+is adaptive in the sense that the global timestep can be recalculated
+periodically throughout the simulation to account for flow state
+changes.  Examples of situations where a variable timestep would be
+desired are problems with highly varying density or velocity
+throughout the domain and transient problems where the optimal
+timestep changes throughout the simulation.
+
+The global, variable timestep is computed at a user-specified
+frequency using cell-based timesteps that are calculated using cell
+mean collision and particle transit times.  These cell-based timesteps
+are only used to compute the global timestep and are not used to
+advance the solution locally. The benefit of the global timestep
+calculation is that it will automatically reduce the timestep if the
+intial value is too large, leading to higher accuracy, and it will
+automatically increase the timestep if the initial value is too small,
+speeding up the simulation. The overhead of using the variable timestep
+option is the computational time involved in computing the cell-based
+time quantities and performing parallel reductions over the grid to
+construct the global minimum and average cell timesteps needed for the
+global timestep calculation. For scenarios where ensembles of similar
+problems are being run, one strategy to mitigate this cost is to
+determine an optimal timestep using the variable timestep option for
+the first run and then to utilize this timestep as a user-specified
+value for the subsequent runs.
+
+The "compute dt/grid"_compute_dt_grid.html command is used to
+calculate the cell-based timesteps, and the "fix
+dt/reset"_fix_dt_reset.html command uses this data to calculate the
+global timestep.  An internal time variable has been added to SPARTA
+to track elapsed simulation time, and this time variable as well as
+the current timestep can be output using the {time} and {dt} keywords
+in the "stats_style"_stats_style.html command. These {time} and {dt}
+values are also included in the "read_restart"_read_restart.html and
+"write restart"_write_restart.html commands.
+
+:line
+
+6.18 Custom per-particle, per-grid, per-surf attributes :link(howto_18),h4
 
 Particles, grid cells, and surface elements can have custom attributes
 which store either single or multiple values per particle, per grid
@@ -1661,8 +1712,6 @@ surf_react implicit - use per-grid vectors and an array to store chemical state 
 "surf_react adsorb"_surf_react_adsorb.html - use per-surf vectors and an array to store chemical state
 "variable"_variable.html - use a per-surf attribute in a surf-style variable formula
 "write_surf"_write_surf.html - write per-surf attributes to a surf data file :ul
-
-
 
 Per-surf custom attributes can be defined for explicit or
 explicit/distributed surface elements, as set by the "global
