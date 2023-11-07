@@ -76,21 +76,25 @@ SurfReactProb::SurfReactProb(SPARTA *sparta, int narg, char **arg) :
 
 SurfReactProb::~SurfReactProb()
 {
+  if (copy) return;
+
   delete random;
 
-  for (int i = 0; i < maxlist_prob; i++) {
-    for (int j = 0; j < rlist[i].nreactant; j++)
-      delete [] rlist[i].id_reactants[j];
-    for (int j = 0; j < rlist[i].nproduct; j++)
-      delete [] rlist[i].id_products[j];
-    delete [] rlist[i].id_reactants;
-    delete [] rlist[i].id_products;
-    delete [] rlist[i].reactants;
-    delete [] rlist[i].products;
-    delete [] rlist[i].coeff;
-    delete [] rlist[i].id;
+  if (rlist) {
+    for (int i = 0; i < maxlist_prob; i++) {
+      for (int j = 0; j < rlist[i].nreactant; j++)
+        delete [] rlist[i].id_reactants[j];
+      for (int j = 0; j < rlist[i].nproduct; j++)
+        delete [] rlist[i].id_products[j];
+      delete [] rlist[i].id_reactants;
+      delete [] rlist[i].id_products;
+      delete [] rlist[i].reactants;
+      delete [] rlist[i].products;
+      delete [] rlist[i].coeff;
+      delete [] rlist[i].id;
+    }
+    memory->destroy(rlist);
   }
-  memory->destroy(rlist);
 
   memory->destroy(reactions);
   memory->destroy(indices);
@@ -177,6 +181,13 @@ int SurfReactProb::react(Particle::OnePart *&ip, int, double *,
 char *SurfReactProb::reactionID(int m)
 {
   return rlist[m].id;
+}
+
+/* ---------------------------------------------------------------------- */
+
+double SurfReactProb::reaction_coeff(int m)
+{
+  return rlist[m].coeff[1];
 }
 
 /* ---------------------------------------------------------------------- */
@@ -407,12 +418,19 @@ void SurfReactProb::readfile(char *fname)
     if (word[0] == 'S' || word[0] == 's') r->style = SIMPLE;
     else error->all(FLERR,"Invalid reaction style in file");
 
-    if (r->style == SIMPLE) r->ncoeff = 1;
+    if (r->style == SIMPLE) r->ncoeff = 2;
 
     for (int i = 0; i < r->ncoeff; i++) {
       word = strtok(NULL," \t\n");
-      if (!word) error->all(FLERR,"Invalid reaction coefficients in file");
-      r->coeff[i] = input->numeric(FLERR,word);
+
+      // second coeff is optional
+
+      if (!word) {
+        if (i == 0) error->all(FLERR,"Invalid reaction coefficients in file");
+        else r->coeff[i] = 0.0;
+      } else {
+        r->coeff[i] = input->numeric(FLERR,word);
+      }
     }
 
     word = strtok(NULL," \t\n");

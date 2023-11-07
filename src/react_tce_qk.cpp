@@ -129,7 +129,7 @@ int ReactTCEQK::attempt_tce(Particle::OnePart *ip, Particle::OnePart *jp,
   if (pre_ave_rotdof > 0.1) ecc += pre_erot*r->coeff[0]/pre_ave_rotdof;
 
   double e_excess = ecc - r->coeff[1];
-  if (e_excess > 0.0) return 0;
+  if (e_excess <= 0.0) return 0;
 
   // compute probability of reaction
 
@@ -194,7 +194,7 @@ int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
   if (pre_ave_rotdof > 0.1) ecc += pre_erot*r->coeff[0]/pre_ave_rotdof;
 
   double e_excess = ecc - r->coeff[1];
-  if (e_excess > 0.0) return 0;
+  if (e_excess <= 0.0) return 0;
 
   // compute probability of reaction
 

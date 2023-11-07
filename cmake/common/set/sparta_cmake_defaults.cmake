@@ -44,7 +44,9 @@ if(SPARTA_ENABLE_TESTING)
       "thermostat"
       "bfield"
       "adjust_temp"
-      "shock_tube")
+      "shock_tube"
+      "variable_timestep"
+      "surf_react_heatflux")
 
   set(SPARTA_DISABLED_TESTS
       "in.ablation.3d.reactions" # Failing

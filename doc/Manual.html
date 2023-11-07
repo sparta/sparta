@@ -1,7 +1,7 @@
 <HTML>
 <HEAD>
 <TITLE>SPARTA Users Manual</TITLE>
-<META NAME="docnumber" CONTENT="18 Jul 2022 version">
+<META NAME="docnumber" CONTENT="13 Apr 2023 version">
 <META NAME="author" CONTENT="http://sparta.sandia.gov - Sandia National Laboratories">
 <META NAME="copyright" CONTENT="Copyright (2014) Sandia Corporation.  This software and manual is distributed under the GNU General Public License.">
 </HEAD>
@@ -22,7 +22,7 @@
 
 <CENTER><H3>SPARTA Documentation 
 </H3></CENTER>
-<CENTER><H4>18 Jul 2022 version 
+<CENTER><H4>13 Apr 2023 version 
 </H4></CENTER>
 <H4>Version info: 
 </H4>
@@ -131,6 +131,8 @@ it gives quick access to documentation for all SPARTA commands.
 <UL>  5.1 <A HREF = "Section_accelerate.html#acc_1">Measuring performance</A> 
 <BR>
   5.2 <A HREF = "Section_accelerate.html#acc_2">Packages with optimized styles</A> 
+<BR>
+  5.3 <A HREF = "Section_accelerate.html#acc_3">KOKKOS package</A> 
 <BR></UL>
 <LI><A HREF = "Section_howto.html">How-to discussions</A> 
 
@@ -163,6 +165,8 @@ it gives quick access to documentation for all SPARTA commands.
   6.14 <A HREF = "Section_howto.html#howto_14">Implicit surface ablation</A> 
 <BR>
   6.15 <A HREF = "Section_howto.html#howto_15">Transparent surface elements</A> 
+<BR>
+  6.16 <A HREF = "Section_howto.html#howto_16">Visualizing SPARTA output with ParaView</A> 
 <BR></UL>
 <LI><A HREF = "Section_example.html">Example problems</A> 
 
@@ -172,37 +176,35 @@ it gives quick access to documentation for all SPARTA commands.
 
 <LI><A HREF = "Section_modify.html">Modifying & extending SPARTA</A> 
 
-<UL>  10.1 <A HREF = "Section_python.html#mod_1">Compute styles</A> 
+<UL>  10.1 <A HREF = "Section_modify.html#mod_1">Compute styles</A> 
 <BR>
-  10.2 <A HREF = "Section_python.html#mod_2">Fix styles</A> 
+  10.2 <A HREF = "Section_modify.html#mod_2">Fix styles</A> 
 <BR>
-  10.3 <A HREF = "Section_python.html#mod_3">Region styles</A> 
+  10.3 <A HREF = "Section_modify.html#mod_3">Region styles</A> 
 <BR>
-  10.4 <A HREF = "Section_python.html#mod_4">Collision styles</A> 
+  10.4 <A HREF = "Section_modify.html#mod_4">Collision styles</A> 
 <BR>
-  10.5 <A HREF = "Section_python.html#mod_5">Surface collision styles</A> 
+  10.5 <A HREF = "Section_modify.html#mod_5">Surface collision styles</A> 
 <BR>
-  10.6 <A HREF = "Section_python.html#mod_6">Chemistry styles</A> 
+  10.6 <A HREF = "Section_modify.html#mod_6">Chemistry styles</A> 
 <BR>
-  10.7 <A HREF = "Section_python.html#mod_7">Dump styles</A> 
+  10.7 <A HREF = "Section_modify.html#mod_7">Dump styles</A> 
 <BR>
-  10.8 <A HREF = "Section_python.html#mod_8">Input script commands</A> 
+  10.8 <A HREF = "Section_modify.html#mod_8">Input script commands</A> 
 <BR></UL>
 <LI><A HREF = "Section_python.html">Python interface</A> 
 
-<UL>  11.1 <A HREF = "Section_python.html#py_1">Extending Python with a serial version of SPARTA</A> 
+<UL>  11.1 <A HREF = "Section_python.html#py_1">Creating a shared MPI library</A> 
 <BR>
-  11.2 <A HREF = "Section_python.html#py_2">Creating a shared MPI library</A> 
+  11.2 <A HREF = "Section_python.html#py_2">Extending Python with a parallel version of SPARTA</A> 
 <BR>
-  11.3 <A HREF = "Section_python.html#py_3">Extending Python with a parallel version of SPARTA</A> 
+  11.3 <A HREF = "Section_python.html#py_3">Extending Python with MPI</A> 
 <BR>
-  11.4 <A HREF = "Section_python.html#py_4">Extending Python with MPI</A> 
+  11.4 <A HREF = "Section_python.html#py_4">Testing the Python-SPARTA interface</A> 
 <BR>
-  11.5 <A HREF = "Section_python.html#py_5">Testing the Python-SPARTA interface</A> 
+  11.5 <A HREF = "Section_python.html#py_5">Using SPARTA from Python</A> 
 <BR>
-  11.6 <A HREF = "Section_python.html#py_6">Using SPARTA from Python</A> 
-<BR>
-  11.7 <A HREF = "Section_python.html#py_7">Example Python scripts that use SPARTA</A> 
+  11.6 <A HREF = "Section_python.html#py_6">Example Python scripts that use SPARTA</A> 
 <BR></UL>
 <LI><A HREF = "Section_errors.html">Errors</A> 
 
@@ -220,6 +222,8 @@ it gives quick access to documentation for all SPARTA commands.
 <BR></UL>
 
 </OL>
+
+
 
 
 

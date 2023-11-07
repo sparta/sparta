@@ -25,6 +25,7 @@
 #include "cut2d.h"
 #include "cut3d.h"
 #include "input.h"
+#include "variable.h"
 #include "comm.h"
 #include "random_knuth.h"
 #include "math_extra.h"
@@ -37,6 +38,7 @@ using namespace MathConst;
 
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{NOSUBSONIC,PTBOTH,PONLY};
+enum{FLOW,CONSTANT,VARIABLE};
 
 #define DELTATASK 256
 #define TEMPLIMIT 1.0e5
@@ -60,6 +62,8 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
   // optional args
 
   np = 0;
+  npmode = FLOW;
+  npstr = NULL;
   normalflag = 0;
   subsonic = 0;
   subsonic_style = NOSUBSONIC;
@@ -73,9 +77,10 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
   if (!surf->exist)
     error->all(FLERR,"Fix emit/surf requires surface elements");
   if (surf->implicit)
-    error->all(FLERR,"Fix emit/surf not allowed for implicits surfaces");
-  if (np > 0 && perspecies)
-    error->all(FLERR,"Cannot use fix emit/face n > 0 with perspecies yes");
+    error->all(FLERR,"Fix emit/surf not allowed for implicit surfaces");
+  if ((npmode == CONSTANT || npmode == VARIABLE) && perspecies)
+    error->all(FLERR,"Cannot use fix emit/surf with n a constant or variable "
+               "with perspecies yes");
 
   // task list and subsonic data structs
 
@@ -97,6 +102,8 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
 
 FixEmitSurf::~FixEmitSurf()
 {
+  delete [] npstr;
+
   for (int i = 0; i < ntaskmax; i++) {
     delete [] tasks[i].ntargetsp;
     delete [] tasks[i].vscale;
@@ -177,6 +184,16 @@ void FixEmitSurf::init()
     }
   }
 
+  // check variable for npmode = VARIABLE
+
+  if (npmode == VARIABLE) {
+    npvar = input->variable->find(npstr);
+    if (npvar < 0)
+      error->all(FLERR,"Fix emit/surf variable name does not exist");
+    if (!input->variable->equal_style(npvar))
+      error->all(FLERR,"Fix emit/surf  variable is invalid style");
+  }
+
   // create tasks for all grid cells
 
   grid_changed();
@@ -193,35 +210,20 @@ void FixEmitSurf::grid_changed()
 {
   create_tasks();
 
-  // if Np > 0, nper = # of insertions per task
-  // set nthresh so as to achieve exactly Np insertions
-  // tasks > tasks_with_no_extra need to insert 1 extra particle
-  // NOTE: setting same # of insertions per task
-  //       should weight by overlap area of cell/surf
+  // for MODE = CONSTANT or VARIABLE
+  // set per-task ntarget to fraction of its area / total area
 
-  if (np > 0) {
-    int all,nupto,tasks_with_no_extra;
-    MPI_Allreduce(&ntask,&all,1,MPI_INT,MPI_SUM,world);
-    if (all) {
-      npertask = np / all;
-      tasks_with_no_extra = all - (np % all);
-    } else npertask = tasks_with_no_extra = 0;
+  if (npmode != FLOW) {
+    double areasum_me = 0.0;
+    for (int i = 0; i < ntask; i++)
+      areasum_me += tasks[i].area;
 
-    MPI_Scan(&ntask,&nupto,1,MPI_INT,MPI_SUM,world);
-    if (tasks_with_no_extra < nupto-ntask) nthresh = 0;
-    else if (tasks_with_no_extra >= nupto) nthresh = ntask;
-    else nthresh = tasks_with_no_extra - (nupto-ntask);
+    double areasum;
+    MPI_Allreduce(&areasum_me,&areasum,1,MPI_DOUBLE,MPI_SUM,world);
+
+    for (int i = 0; i < ntask; i++)
+      tasks[i].ntarget = tasks[i].area / areasum;
   }
-}
-
-/* ---------------------------------------------------------------------- */
-
-void FixEmitSurf::setup()
-{
-  // needed for Kokkos because pointers are changed in UpdateKokkos::setup()
-
-  //lines = surf->lines;
-  //tris = surf->tris;
 }
 
 /* ----------------------------------------------------------------------
@@ -250,6 +252,10 @@ void FixEmitSurf::create_task(int icell)
   // no tasks if no surfs in cell
 
   if (cells[icell].nsurf == 0) return;
+
+  // no tasks if cell is outside of flow volume
+
+  if (cinfo[icell].volume == 0.0) return;
 
   // loop over surfs in cell
   // use Cut2d/Cut3d to find overlap area and geoemtry of overlap
@@ -383,6 +389,7 @@ void FixEmitSurf::create_task(int icell)
     }
 
     // set ntarget and ntargetsp via mol_inflow()
+    // will be overwritten if mode != FLOW
     // skip task if final ntarget = 0.0, due to large outbound vstream
     // do not skip for subsonic since it resets ntarget every step
 
@@ -441,6 +448,14 @@ void FixEmitSurf::perform_task()
 
   if (subsonic) subsonic_inflow();
 
+  // if npmode = VARIABLE, set npcurrent to variable evaluation
+
+  double npcurrent;
+  if (npmode == VARIABLE) {
+    npcurrent = input->variable->compute_equal(npvar);
+    if (npcurrent <= 0.0) error->all(FLERR,"Fix emit/surf Np <= 0.0");
+  }
+
   // insert particles for each task = cell/surf pair
   // ntarget/ninsert is either perspecies or for all species
   // for one particle:
@@ -457,6 +472,7 @@ void FixEmitSurf::perform_task()
   // outer do-while loop:
   //   shift Maxwellian distribution by stream velocity component
   //   see Bird 1994, p 259, eq 12.5
+
 
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
@@ -482,6 +498,8 @@ void FixEmitSurf::perform_task()
     else vscale = particle->mixture[imix]->vscale;
     if (!normalflag) indot = vstream[0]*normal[0] + vstream[1]*normal[1] +
                        vstream[2]*normal[2];
+
+    // perspecies yes
 
     if (perspecies) {
       for (isp = 0; isp < nspecies; isp++) {
@@ -567,14 +585,20 @@ void FixEmitSurf::perform_task()
         nsingle += nactual;
       }
 
+    // perspecies no
+
     } else {
-      if (np == 0) {
-        ntarget = tasks[i].ntarget+random->uniform();
-        ninsert = static_cast<int> (ntarget);
-      } else {
-        ninsert = npertask;
-        if (i >= nthresh) ninsert++;
-      }
+
+      // set ntarget for insertion mode FLOW, CONSTANT, or VARIABLE
+      // for FLOW: ntarget is already set within task
+      // for CONSTANT or VARIABLE: task narget is fraction of its surf's area
+      //   scale fraction by np or npcurrent (variable evaluation)
+      // ninsert = rounded-down (ntarget + random number)
+
+      if (npmode == FLOW) ntarget = tasks[i].ntarget;
+      else if (npmode == CONSTANT) ntarget = np * tasks[i].ntarget;
+      else if (npmode == VARIABLE) ntarget = npcurrent * tasks[i].ntarget;
+      ninsert = static_cast<int> (ntarget + random->uniform());
 
       nactual = 0;
       for (int m = 0; m < ninsert; m++) {
@@ -965,8 +989,18 @@ int FixEmitSurf::option(int narg, char **arg)
 {
   if (strcmp(arg[0],"n") == 0) {
     if (2 > narg) error->all(FLERR,"Illegal fix emit/]surf/normal command");
-    np = atoi(arg[1]);
-    if (np <= 0) error->all(FLERR,"Illegal fix emit/surf/normal command");
+
+    if (strstr(arg[1],"v_") == arg[1]) {
+      npmode = VARIABLE;
+      int n = strlen(&arg[1][2]) + 1;
+      npstr = new char[n];
+      strcpy(npstr,&arg[1][2]);
+    } else {
+      np = atoi(arg[1]);
+      if (np <= 0) error->all(FLERR,"Illegal fix emit/surf/normal command");
+      if (np == 0) npmode = FLOW;
+      else npmode = CONSTANT;
+    }
     return 2;
   }
 

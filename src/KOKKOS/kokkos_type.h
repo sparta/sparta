@@ -27,6 +27,9 @@
 #define MAX_TYPES_STACKPARAMS 12
 #define NeighClusterSize 8
 
+#define KOKKOS_MAX_SURF_REACT_PER_TYPE 2
+#define KOKKOS_MAX_TOT_SURF_REACT 4
+
 namespace Kokkos {
   static auto NoInit = [](std::string const& label) {
     return Kokkos::view_alloc(Kokkos::WithoutInitializing, label);
@@ -45,19 +48,7 @@ namespace Kokkos {
       z+=tmp.z;
     }
     KOKKOS_INLINE_FUNCTION
-    void operator += (const sparta_float3& tmp) volatile {
-      x+=tmp.x;
-      y+=tmp.y;
-      z+=tmp.z;
-    }
-    KOKKOS_INLINE_FUNCTION
     void operator = (const sparta_float3& tmp) {
-      x=tmp.x;
-      y=tmp.y;
-      z=tmp.z;
-    }
-    KOKKOS_INLINE_FUNCTION
-    void operator = (const sparta_float3& tmp) volatile {
       x=tmp.x;
       y=tmp.y;
       z=tmp.z;
@@ -76,19 +67,7 @@ namespace Kokkos {
       z+=tmp.z;
     }
     KOKKOS_INLINE_FUNCTION
-    void operator += (const sparta_double3& tmp) volatile {
-      x+=tmp.x;
-      y+=tmp.y;
-      z+=tmp.z;
-    }
-    KOKKOS_INLINE_FUNCTION
     void operator = (const sparta_double3& tmp) {
-      x=tmp.x;
-      y=tmp.y;
-      z=tmp.z;
-    }
-    KOKKOS_INLINE_FUNCTION
-    void operator = (const sparta_double3& tmp) volatile {
       x=tmp.x;
       y=tmp.y;
       z=tmp.z;
@@ -340,18 +319,6 @@ struct s_EV_FLOAT {
 
   KOKKOS_INLINE_FUNCTION
   void operator+=(const s_EV_FLOAT &rhs) {
-    evdwl += rhs.evdwl;
-    ecoul += rhs.ecoul;
-    v[0] += rhs.v[0];
-    v[1] += rhs.v[1];
-    v[2] += rhs.v[2];
-    v[3] += rhs.v[3];
-    v[4] += rhs.v[4];
-    v[5] += rhs.v[5];
-  }
-
-  KOKKOS_INLINE_FUNCTION
-  void operator+=(const volatile s_EV_FLOAT &rhs) volatile {
     evdwl += rhs.evdwl;
     ecoul += rhs.ecoul;
     v[0] += rhs.v[0];

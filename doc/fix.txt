@@ -76,6 +76,7 @@ styles available in SPARTA:
 "ave/time"_fix_ave_time.html - compute/output global time-averaged quantities
 "balance"_fix_balance.html - perform dynamic load-balancing
 "balance/kk"_fix_balance.html - Kokkos version of fix balance
+"dt/reset"_fix_dt_reset.html - adjust global timestep dynamically
 "emit/face"_fix_emit_face.html - emit particles at global boundaries
 "emit/face/kk"_fix_emit_face.html - Kokkos version of fix emit/face
 "emit/face/file"_fix_emit_face_file.html - emit particles at global boundaries using a distribution defined in a file

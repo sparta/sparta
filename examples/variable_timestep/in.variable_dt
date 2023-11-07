@@ -1,0 +1,46 @@
+################################################################################
+# demonstrates use of dt fix for thermal gas in a 3d box with collisions
+# particles reflect off global box boundaries
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed              12345
+dimension         3
+global            gridcut 1.0e-5 comm/sort yes
+
+boundary          rr rr rr
+
+create_box        0 0.0001 0 0.0001 0 0.0001
+create_grid       10 10 10
+
+balance_grid      rcb part
+
+species           ar.species Ar
+mixture           mymixture Ar vstream 0.0 0.0 0.0 temp 273.15
+
+global            nrho 7.07043E22
+global            fnum 7.07043E6
+
+collide           vss mymixture ar.vss
+
+timestep          7.00E-9
+create_particles  mymixture n 10000 twopass
+
+compute           1 grid all mymixture nrho temp usq vsq wsq
+fix               1 ave/grid all 1 100 100 c_1[*]
+
+compute           lambda lambda/grid c_1[1] c_1[2] Ar
+fix               lambda ave/grid all 1 100 100 c_lambda
+
+compute           tstep dt/grid all 0.25 0.1 &
+                  c_lambda f_1[2] f_1[3] f_1[4] f_1[5]
+
+fix               DT dt/reset 100 c_tstep 0.1 1
+
+stats             100
+stats_style       step cpu np nattempt ncoll time dt
+run               1000

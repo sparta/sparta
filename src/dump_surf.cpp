@@ -49,6 +49,7 @@ DumpSurf::DumpSurf(SPARTA *sparta, int narg, char **arg) :
   buffer_flag = 1;
 
   dimension = domain->dimension;
+  axisymmetric = domain->axisymmetric;
 
   int igroup = surf->find_group(arg[2]);
   if (igroup < 0) error->all(FLERR,"Dump surf group ID does not exist");
@@ -481,6 +482,9 @@ int DumpSurf::parse_fields(int narg, char **arg)
       if (dimension == 2)
         error->all(FLERR,"Invalid dump surf field for 2d simulation");
       pack_choice[i] = &DumpSurf::pack_v3z;
+      vtype[i] = DOUBLE;
+    } else if (strcmp(arg[iarg],"area") == 0) {
+      pack_choice[i] = &DumpSurf::pack_area;
       vtype[i] = DOUBLE;
 
    // custom surf vector or array
@@ -1045,5 +1049,36 @@ void DumpSurf::pack_v3z(int n)
   for (int i = 0; i < nchoose; i++) {
     buf[n] = tris[cglobal[i]].p3[2];
     n += size_one;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpSurf::pack_area(int n)
+{
+  if (dimension == 2) {
+    Surf::Line *lines;
+    if (distributed && !implicit) lines = surf->mylines;
+    else lines = surf->lines;
+    if (axisymmetric) {
+      for (int i = 0; i < nchoose; i++) {
+        buf[n] = surf->axi_line_size(&lines[cglobal[i]]);
+        n += size_one;
+      }
+    } else {
+      for (int i = 0; i < nchoose; i++) {
+        buf[n] = surf->line_size(&lines[cglobal[i]]);
+        n += size_one;
+      }
+    }
+  } else if (dimension == 3) {
+    double tmp;
+    Surf::Tri *tris;
+    if (distributed && !implicit) tris = surf->mytris;
+    else tris = surf->tris;
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = surf->tri_size(&tris[cglobal[i]],tmp);
+      n += size_one;
+    }
   }
 }

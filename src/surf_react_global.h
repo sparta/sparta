@@ -28,13 +28,15 @@ namespace SPARTA_NS {
 class SurfReactGlobal : public SurfReact {
  public:
   SurfReactGlobal(class SPARTA *, int, char **);
-  ~SurfReactGlobal();
+  SurfReactGlobal(class SPARTA *sparta) : SurfReact(sparta) {}
+  virtual ~SurfReactGlobal();
   int react(Particle::OnePart *&, int, double *, Particle::OnePart *&, int &);
   char *reactionID(int);
+  double reaction_coeff(int) {return 0.0;};
   int match_reactant(char *, int) {return 1;}
   int match_product(char *, int) {return 1;}
 
- private:
+ protected:
   double prob_create,prob_destroy;
   class RanKnuth *random;     // RNG for reaction probabilities
 };

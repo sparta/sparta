@@ -80,6 +80,7 @@
       v1x,v1y,v1z = coords of 1st vertex in surface element
       v1x,v1y,v1z = coords of 2nd vertex in surface element
       v1x,v1y,v1z = coords of 3rd vertex in surface element
+      area = surface element area (3d, axisymmetric) or length (2d)
       s_ID = custom per-surf vector with ID
       s_ID[N] = Nth column of custom per-surf array with ID
       c_ID = per-surf vector calculated by a compute with ID
@@ -435,6 +436,10 @@ outward normal of the triangle.
 attributes write the coordinates of the vertices of the end or corner
 points of the surface element.  The <I>v1z</I>, <I>v2z</I>, <I>v3x</I>, <I>v3y</I>, and
 <I>v3z</I> attributes cannot be used for a 2d simulation.
+</P>
+<P>
+The <I>area</I> attribute writes the surface element area (3d and
+axisymmetric) or length (2d).
 </P>
 <P>The <I>s_ID</I> and <I>s_ID[N]</I> attributes allow custom per-surf vectors or
 arrays defined by a <A HREF = "fix.html">fix</A> or <A HREF = "surf_react.html">surf_react</A>

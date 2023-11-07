@@ -483,10 +483,11 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
   h_retry() = 1;
 
-  double extra_factor = sparta->kokkos->collide_extra;
-  if (sparta->kokkos->collide_retry_flag) extra_factor = 1.0;
-
   if (react) {
+    double extra_factor = 1.0;
+    if (sparta->kokkos->react_retry_flag)
+      extra_factor = sparta->kokkos->react_extra;
+
     auto maxdelete_extra = maxdelete*extra_factor;
     if (d_dellist.extent(0) < maxdelete_extra) {
       memoryKK->destroy_kokkos(k_dellist,dellist);
@@ -514,7 +515,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
   while (h_retry()) {
 
-    if (react && sparta->kokkos->collide_retry_flag)
+    if (react && sparta->kokkos->react_retry_flag)
       backup();
 
     h_retry() = 0;
@@ -538,7 +539,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
     if (h_retry()) {
       //printf("Retrying, reason %i %i %i !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",h_maxdelete() > d_dellist.extent(0),h_maxcellcount() > d_plist.extent(1),h_part_grow());
-      if (!sparta->kokkos->collide_retry_flag) {
+      if (!sparta->kokkos->react_retry_flag) {
         error->one(FLERR,"Ran out of space in Kokkos collisions, increase collide/extra"
                          " or use collide/retry");
       } else
@@ -547,25 +548,23 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
       reduce = COLLIDE_REDUCE();
 
       maxdelete = h_maxdelete();
-      auto maxdelete_extra = maxdelete*extra_factor;
-      if (d_dellist.extent(0) < maxdelete_extra) {
+      if (d_dellist.extent(0) < maxdelete) {
         memoryKK->destroy_kokkos(k_dellist,dellist);
-        memoryKK->grow_kokkos(k_dellist,dellist,maxdelete_extra,"collide:dellist");
+        memoryKK->grow_kokkos(k_dellist,dellist,maxdelete,"collide:dellist");
         d_dellist = k_dellist.d_view;
       }
 
       maxcellcount = h_maxcellcount();
       particle_kk->set_maxcellcount(maxcellcount);
-      auto maxcellcount_extra = maxcellcount*extra_factor;
-      if (d_plist.extent(1) < maxcellcount_extra) {
+      if (d_plist.extent(1) < maxcellcount) {
         d_plist = decltype(d_plist)();
-        Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
+        Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount);
         d_plist = grid_kk->d_plist;
       }
 
-      auto nlocal_extra = h_nlocal()*extra_factor;
-      if (d_particles.extent(0) < nlocal_extra) {
-        particle->grow(nlocal_extra - particle->nlocal);
+      auto nlocal_new = h_nlocal();
+      if (d_particles.extent(0) < nlocal_new) {
+        particle->grow(nlocal_new - particle->nlocal);
         d_particles = particle_kk->k_particles.d_view;
         k_eiarray = particle_kk->k_eiarray;
       }
@@ -809,10 +808,11 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 
   h_retry() = 1;
 
-  double extra_factor = sparta->kokkos->collide_extra;
-  if (sparta->kokkos->collide_retry_flag) extra_factor = 1.0;
-
   if (react) {
+    double extra_factor = 1.0;
+    if (sparta->kokkos->react_retry_flag)
+      extra_factor = sparta->kokkos->react_extra;
+ 
     maxcellcount = particle_kk->get_maxcellcount();
 
     auto maxelectron_extra = maxcellcount*extra_factor;
@@ -850,7 +850,7 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 
   while (h_retry()) {
 
-    if (react && sparta->kokkos->collide_retry_flag)
+    if (react && sparta->kokkos->react_retry_flag)
       backup();
 
     h_retry() = 0;
@@ -877,7 +877,7 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
       //printf("Retrying, reason %i %i %i %i !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",h_maxelectron() > d_elist.extent(1),h_maxdelete() > d_dellist.extent(0),h_maxcellcount() > d_plist.extent(1),h_part_grow());
       //printf("%i %i %i %i %i %i %i !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",h_maxelectron(),d_elist.extent(1),h_maxdelete(),d_dellist.extent(0),h_maxcellcount(),d_plist.extent(1),h_part_grow());
 
-      if (!sparta->kokkos->collide_retry_flag) {
+      if (!sparta->kokkos->react_retry_flag) {
         error->one(FLERR,"Ran out of space in Kokkos collisions, increase collide/extra"
                          " or use collide/retry");
       } else
@@ -886,32 +886,29 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
       reduce = COLLIDE_REDUCE();
 
       maxelectron = h_maxelectron();
-      auto maxelectron_extra = maxelectron*extra_factor;
-      if (d_elist.extent(1) < maxelectron_extra) {
+      if (d_elist.extent(1) < maxelectron) {
         d_elist = t_particle_2d(); // reduce memory use by deallocating first
-        d_elist = t_particle_2d(Kokkos::view_alloc("collide:elist",Kokkos::WithoutInitializing),nglocal,maxelectron_extra);
+        d_elist = t_particle_2d(Kokkos::view_alloc("collide:elist",Kokkos::WithoutInitializing),nglocal,maxelectron);
       }
 
       maxdelete = h_maxdelete();
-      auto maxdelete_extra = maxdelete*extra_factor;
-      if (d_dellist.extent(0) < maxdelete_extra) {
+      if (d_dellist.extent(0) < maxdelete) {
         memoryKK->destroy_kokkos(k_dellist,dellist);
-        memoryKK->grow_kokkos(k_dellist,dellist,maxdelete_extra,"collide:dellist");
+        memoryKK->grow_kokkos(k_dellist,dellist,maxdelete,"collide:dellist");
         d_dellist = k_dellist.d_view;
       }
 
       maxcellcount = h_maxcellcount();
       particle_kk->set_maxcellcount(maxcellcount);
-      auto maxcellcount_extra = maxcellcount*extra_factor;
-      if (d_plist.extent(1) < maxcellcount_extra) {
+      if (d_plist.extent(1) < maxcellcount) {
         d_plist = decltype(d_plist)();
-        Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
+        Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount);
         d_plist = grid_kk->d_plist;
       }
 
-      auto nlocal_extra = h_nlocal()*extra_factor;
-      if (d_particles.extent(0) < nlocal_extra) {
-        particle->grow(nlocal_extra - particle->nlocal);
+      auto nlocal_new = h_nlocal();
+      if (d_particles.extent(0) < nlocal_new) {
+        particle->grow(nlocal_new - particle->nlocal);
         d_particles = particle_kk->k_particles.d_view;
         auto h_ewhich = particle_kk->k_ewhich.h_view;
         k_eivec = particle_kk->k_eivec;
@@ -2444,4 +2441,3 @@ void CollideVSSKokkos::restore()
     d_velambi_backup = decltype(d_velambi_backup)();
   }
 }
-

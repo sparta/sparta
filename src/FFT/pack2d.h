@@ -54,8 +54,8 @@ struct pack_plan_2d {
 static void pack_2d(PACK_DATA *data, PACK_DATA *buf, struct pack_plan_2d *plan)
 
 {
-  register int in,out,fast,slow;
-  register int nfast,nslow,nstride;
+  int in,out,fast,slow;
+  int nfast,nslow,nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -76,8 +76,8 @@ static void pack_2d(PACK_DATA *data, PACK_DATA *buf, struct pack_plan_2d *plan)
 void unpack_2d(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *plan)
 
 {
-  register int in,out,fast,slow;
-  register int nfast,nslow,nstride;
+  int in,out,fast,slow;
+  int nfast,nslow,nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -98,8 +98,8 @@ void unpack_2d(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *plan)
 void unpack_2d_permute_1(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *plan)
 
 {
-  register int in,out,fast,slow;
-  register int nfast,nslow,nstride;
+  int in,out,fast,slow;
+  int nfast,nslow,nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -120,8 +120,8 @@ void unpack_2d_permute_1(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *p
 void unpack_2d_permute_2(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *plan)
 
 {
-  register int in,out,fast,slow;
-  register int nfast,nslow,nstride;
+  int in,out,fast,slow;
+  int nfast,nslow,nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -144,8 +144,8 @@ void unpack_2d_permute_2(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *p
 void unpack_2d_permute_n(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *plan)
 
 {
-  register int in,out,iqty,instart,fast,slow;
-  register int nfast,nslow,nstride,nqty;
+  int in,out,iqty,instart,fast,slow;
+  int nfast,nslow,nstride,nqty;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -177,9 +177,9 @@ void unpack_2d_permute_n(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *p
 void pack_2d(PACK_DATA *data, PACK_DATA *buf, struct pack_plan_2d *plan)
 
 {
-  register double *in,*out,*begin,*end;
-  register int slow;
-  register int nfast,nslow,nstride;
+  double *in,*out,*begin,*end;
+  int slow;
+  int nfast,nslow,nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -201,9 +201,9 @@ void pack_2d(PACK_DATA *data, PACK_DATA *buf, struct pack_plan_2d *plan)
 void unpack_2d(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *plan)
 
 {
-  register double *in,*out,*begin,*end;
-  register int slow;
-  register int nfast,nslow,nstride;
+  double *in,*out,*begin,*end;
+  int slow;
+  int nfast,nslow,nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -225,9 +225,9 @@ void unpack_2d(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *plan)
 void unpack_2d_permute_1(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *plan)
 
 {
-  register double *in,*out,*begin,*end;
-  register int slow;
-  register int nfast,nslow,nstride;
+  double *in,*out,*begin,*end;
+  int slow;
+  int nfast,nslow,nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -249,9 +249,9 @@ void unpack_2d_permute_1(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *p
 void unpack_2d_permute_2(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *plan)
 
 {
-  register double *in,*out,*begin,*end;
-  register int slow;
-  register int nfast,nslow,nstride;
+  double *in,*out,*begin,*end;
+  int slow;
+  int nfast,nslow,nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -275,9 +275,9 @@ void unpack_2d_permute_2(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *p
 void unpack_2d_permute_n(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *plan)
 
 {
-  register double *in,*out,*instart,*begin,*end;
-  register int iqty,slow;
-  register int nfast,nslow,nstride,nqty;
+  double *in,*out,*instart,*begin,*end;
+  int iqty,slow;
+  int nfast,nslow,nstride,nqty;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -312,9 +312,9 @@ void unpack_2d_permute_n(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *p
 void pack_2d(PACK_DATA *data, PACK_DATA *buf, struct pack_plan_2d *plan)
 
 {
-  register double *in,*out;
-  register int slow,size;
-  register int nfast,nslow,nstride;
+  double *in,*out;
+  int slow,size;
+  int nfast,nslow,nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -335,9 +335,9 @@ void pack_2d(PACK_DATA *data, PACK_DATA *buf, struct pack_plan_2d *plan)
 void unpack_2d(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *plan)
 
 {
-  register double *in,*out;
-  register int slow,size;
-  register int nfast,nslow,nstride;
+  double *in,*out;
+  int slow,size;
+  int nfast,nslow,nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -358,9 +358,9 @@ void unpack_2d(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *plan)
 void unpack_2d_permute_1(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *plan)
 
 {
-  register double *in,*out,*begin,*end;
-  register int slow;
-  register int nfast,nslow,nstride;
+  double *in,*out,*begin,*end;
+  int slow;
+  int nfast,nslow,nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -382,9 +382,9 @@ void unpack_2d_permute_1(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *p
 void unpack_2d_permute_2(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *plan)
 
 {
-  register double *in,*out,*begin,*end;
-  register int slow;
-  register int nfast,nslow,nstride;
+  double *in,*out,*begin,*end;
+  int slow;
+  int nfast,nslow,nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -408,9 +408,9 @@ void unpack_2d_permute_2(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *p
 void unpack_2d_permute_n(PACK_DATA *buf, PACK_DATA *data, struct pack_plan_2d *plan)
 
 {
-  register double *in,*out,*instart,*begin,*end;
-  register int iqty,slow;
-  register int nfast,nslow,nstride,nqty;
+  double *in,*out,*instart,*begin,*end;
+  int iqty,slow;
+  int nfast,nslow,nstride,nqty;
 
   nfast = plan->nfast;
   nslow = plan->nslow;

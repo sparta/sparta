@@ -1,0 +1,130 @@
+SPARTA (13 Apr 2023)
+Running on 4 MPI task(s)
+################################################################################
+# test of vibrational energy modes
+# thermal gas in a 3d box with collisions
+# particles reflect off global box boundaries
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    54345
+dimension   	    3
+timestep 	    5e-9
+global              nrho 1.E22
+global              fnum 10000 comm/sort yes
+
+boundary	    r r r
+create_box  	    0 1e-5 0 1e-5 0 1e-5
+Created orthogonal box = (0 0 0) to (1e-05 1e-05 1e-05)
+create_grid 	    2 2 2
+Created 8 child grid cells
+  CPU time = 0.0017909 secs
+  create/ghost percent = 91.5462 8.45385
+
+species		    co2.species N2 CO2 vibfile co2.species.vib
+
+mixture             mix CO2 frac 0.9
+mixture             mix N2 frac 0.1
+
+mixture             mix group all
+mixture		    mix vstream 0.0 0.0 0.0 temp 20000 trot 20000.00 tvib 10.0
+
+collide		    vss all co2.vss
+collide_modify      vibrate discrete rotate smooth
+fix                 1 vibmode
+
+create_particles    mix n 0 twopass
+Created 1000 particles
+  CPU time = 0.0025088 secs
+
+variable            collrate equal "ncoll*step*2/np"
+
+compute             1 temp
+
+compute             5 thermal/grid all all temp
+compute             St reduce ave c_5[1]
+
+compute             6 tvib/grid all species
+compute             Sv reduce ave c_6[2]
+
+compute             7 grid all all trot tvib
+compute             Sr reduce ave c_7[1]
+compute             Srv reduce ave c_7[2]
+
+variable            tempdiff equal "c_St-c_Sr"
+
+stats_style	    step cpu np nattempt ncoll c_St c_Sr c_Srv c_Sv
+stats		    10
+
+run 		    100
+WARNING: Using compute grid tvib with fix vibmode may give incorrect temperature, use compute tvib/grid instead (/home/runner/work/sparta/sparta/src/compute_grid.cpp:203)
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.875 1.875 1.875
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.38913 3.38913 3.38913
+Step CPU Np Natt Ncoll c_St c_Sr c_Srv c_Sv 
+       0            0     1000        0        0    20104.496    21068.716            0            0 
+      10  0.002308602     1000       39       32    19840.923    20922.471    150.30564    474.52708 
+      20  0.004340202     1000       43       32    19178.083    21007.121    474.13284    860.60841 
+      30  0.006395803     1000       43       28    19070.735    20679.554    710.67713    1137.4805 
+      40  0.008376104     1000       43       34    18996.971     20313.46     823.1302     1253.951 
+      50  0.010346405     1000       44       33    18910.578    20134.976    986.00947    1384.4316 
+      60  0.012325806     1000       44       27    18409.584    20309.008    1243.1413     1591.034 
+      70  0.014303407     1000       44       27    17959.733    20316.735    1404.6546    1777.1663 
+      80  0.016262908     1000       44       22    17526.465    20450.541      1630.97    2012.9074 
+      90  0.018222609     1000       44       27     17380.75    20027.941     1800.235    2131.8923 
+     100   0.02020011     1000       44       29     17257.03    19722.678    2033.8115    2316.6508 
+Loop time of 0.0202198 on 4 procs for 100 steps with 1000 particles
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.0051452  | 0.0052846  | 0.0053864  |   0.1 | 26.14
+Coll    | 0.0003089  | 0.0003264  | 0.0003365  |   0.0 |  1.61
+Sort    | 5.54e-05   | 5.61e-05   | 5.71e-05   |   0.0 |  0.28
+Comm    | 0.012632   | 0.013144   | 0.013471   |   0.3 | 65.01
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.0010816  | 0.0013832  | 0.0018391  |   0.8 |  6.84
+Other   |            | 2.552e-05  |            |       |  0.13
+
+Particle moves    = 100000 (0.1M)
+Cells touched     = 329989 (0.33M)
+Particle comms    = 74915 (74.9K)
+Boundary collides = 229899 (0.23M)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 4253 (4.25K)
+Collide occurs    = 2889 (2.89K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 1.23641e+06
+Particle-moves/step: 1000
+Cell-touches/particle/step: 3.29989
+Particle comm iterations/step: 1
+Particle fraction communicated: 0.74915
+Particle fraction colliding with boundary: 2.29899
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.04253
+Collisions/particle/step: 0.02889
+Reactions/particle/step: 0
+
+Particles: 250 ave 264 max 230 min
+Histogram: 1 0 0 0 1 0 0 0 0 2
+Cells:      2 ave 2 max 2 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 6 ave 6 max 6 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
