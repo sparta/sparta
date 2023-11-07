@@ -206,7 +206,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
       int icompute = modify->find_compute(ids[i]);
       if (icompute < 0)
         error->all(FLERR,"Compute ID for compute reduce does not exist");
-      
+
       if (modify->compute[icompute]->per_particle_flag) {
         flavor[i] = PARTICLE;
         if (argindex[i] == 0 &&
@@ -256,7 +256,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
       int ifix = modify->find_fix(ids[i]);
       if (ifix < 0)
         error->all(FLERR,"Fix ID for compute reduce does not exist");
-      
+
       if (modify->fix[ifix]->per_particle_flag) {
         flavor[i] = PARTICLE;
         if (argindex[i] == 0 &&
@@ -737,7 +737,7 @@ double ComputeReduce::compute_one(int m, int flag)
           }
         } else one = carray[flag][aidxm1];
       }
-      
+
     } else if (flavor[m] == SURF) {
       if (!(c->invoked_flag & INVOKED_PER_SURF)) {
         c->compute_per_surf();
@@ -767,7 +767,7 @@ double ComputeReduce::compute_one(int m, int flag)
         } else one = carray[flag][aidxm1];
       }
     }
-    
+
   // access fix fields, check if fix frequency is a match
 
   } else if (which[m] == FIX) {
@@ -958,7 +958,7 @@ double ComputeReduce::compute_one(int m, int flag)
 	  one = particle->edarray[particle->ewhich[vidx]][flag][aidxm1];
       }
     }
-    
+
   // access per-grid custom attribute
 
   } else if (which[m] == GCUSTOM) {
@@ -1010,7 +1010,7 @@ double ComputeReduce::compute_one(int m, int flag)
 	  one = grid->edarray[grid->ewhich[vidx]][flag][aidxm1];
       }
     }
-    
+
   // access per-surf custom attribute
 
   } else if (which[m] == SCUSTOM) {
@@ -1061,7 +1061,7 @@ double ComputeReduce::compute_one(int m, int flag)
       }
     }
   }
-  
+
   return one;
 }
 

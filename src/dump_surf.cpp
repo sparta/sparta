@@ -629,7 +629,7 @@ int DumpSurf::parse_fields(int narg, char **arg)
 
       field2index[i] = add_variable(suffix);
       delete [] suffix;
-      
+
     } else return iarg;
   }
 

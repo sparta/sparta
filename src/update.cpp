@@ -76,7 +76,7 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
 
   time = 0.0;
   time_last_update = 0;
-    
+
   unit_style = NULL;
   set_units("si");
 
@@ -531,7 +531,7 @@ template < int DIM, int SURF, int OPT > void Update::move()
           // particle outside ghost grid halo must use standard move
 
           if (grid->hash->find(cellIdx) != grid->hash->end()) {
-          
+
             int icell = (*(grid->hash))[cellIdx];
 
             // reset particle cell and coordinates

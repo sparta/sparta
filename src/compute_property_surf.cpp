@@ -34,7 +34,7 @@ ComputePropertySurf::ComputePropertySurf(SPARTA *sparta, int narg, char **arg) :
   if (narg < 4) error->all(FLERR,"Illegal compute property/surf command");
 
   dimension = domain->dimension;
-  
+
   int igroup = surf->find_group(arg[2]);
   if (igroup < 0) error->all(FLERR,"Compute surf group ID does not exist");
   groupbit = surf->bitmask[igroup];
@@ -51,14 +51,14 @@ ComputePropertySurf::ComputePropertySurf(SPARTA *sparta, int narg, char **arg) :
     i = iarg-3;
 
     // check for invalid fields in 2d
-    
+
     if (dimension == 2)
       if ((strcmp(arg[iarg],"v1z") == 0) || (strcmp(arg[iarg],"v2z") == 0) ||
 	  (strcmp(arg[iarg],"v3x") == 0) || (strcmp(arg[iarg],"v3y") == 0) ||
 	  (strcmp(arg[iarg],"v3z") == 0) || (strcmp(arg[iarg],"zc") == 0) ||
 	  (strcmp(arg[iarg],"normz") == 0))
         error->all(FLERR,"Invalid compute property/surf field for 2d simulation");
-    
+
     if (strcmp(arg[iarg],"id") == 0) {
       pack_choice[i] = &ComputePropertySurf::pack_id;
 
@@ -87,7 +87,7 @@ ComputePropertySurf::ComputePropertySurf(SPARTA *sparta, int narg, char **arg) :
       pack_choice[i] = &ComputePropertySurf::pack_yc;
     } else if (strcmp(arg[iarg],"zc") == 0) {
       pack_choice[i] = &ComputePropertySurf::pack_zc;
-      
+
     } else if (strcmp(arg[iarg],"area") == 0) {
       pack_choice[i] = &ComputePropertySurf::pack_area;
     } else if (strcmp(arg[iarg],"normx") == 0) {
@@ -100,13 +100,13 @@ ComputePropertySurf::ComputePropertySurf(SPARTA *sparta, int narg, char **arg) :
     } else error->all(FLERR,"Invalid keyword in compute property/surf command");
   }
 
-  
+
   per_surf_flag = 1;
   if (nvalues == 1) size_per_surf_cols = 0;
   else size_per_surf_cols = nvalues;
 
   firstflag = 1;
-  
+
   nsown = 0;
   cglobal = NULL;
   vector_surf = NULL;
@@ -145,7 +145,7 @@ void ComputePropertySurf::init()
 
   int me = comm->me;
   int nprocs = comm->nprocs;
-  
+
   if (!firstflag) return;
   firstflag = 0;
 
@@ -178,7 +178,7 @@ void ComputePropertySurf::init()
     memory->create(vector_surf,nsown,"property/surf:vector_surf");
   else
     memory->create(array_surf,nsown,nvalues,"property/surf:array_surf");
-  
+
   nchoose = 0;
   for (int i = 0; i < nsown; i++) {
     if (dimension == 2) {
@@ -261,7 +261,7 @@ void ComputePropertySurf::pack_id(int n)
 void ComputePropertySurf::pack_v1x(int n)
 {
   int m;
-  
+
   if (dimension == 2) {
     Surf::Line *lines;
     if (distributed) lines = surf->mylines;
@@ -290,7 +290,7 @@ void ComputePropertySurf::pack_v1x(int n)
 void ComputePropertySurf::pack_v1y(int n)
 {
   int m;
-  
+
   if (dimension == 2) {
     Surf::Line *lines;
     if (distributed) lines = surf->mylines;
@@ -319,7 +319,7 @@ void ComputePropertySurf::pack_v1y(int n)
 void ComputePropertySurf::pack_v1z(int n)
 {
   int m;
-  
+
   Surf::Tri *tris;
   if (distributed) tris = surf->mytris;
   else tris = surf->tris;
@@ -336,7 +336,7 @@ void ComputePropertySurf::pack_v1z(int n)
 void ComputePropertySurf::pack_v2x(int n)
 {
   int m;
-  
+
   if (dimension == 2) {
     Surf::Line *lines;
     if (distributed) lines = surf->mylines;
@@ -365,7 +365,7 @@ void ComputePropertySurf::pack_v2x(int n)
 void ComputePropertySurf::pack_v2y(int n)
 {
   int m;
-  
+
   if (dimension == 2) {
     Surf::Line *lines;
     if (distributed) lines = surf->mylines;
@@ -394,7 +394,7 @@ void ComputePropertySurf::pack_v2y(int n)
 void ComputePropertySurf::pack_v2z(int n)
 {
   int m;
-  
+
   Surf::Tri *tris;
   if (distributed) tris = surf->mytris;
   else tris = surf->tris;
@@ -411,7 +411,7 @@ void ComputePropertySurf::pack_v2z(int n)
 void ComputePropertySurf::pack_v3x(int n)
 {
   int m;
-  
+
   Surf::Tri *tris;
   if (distributed) tris = surf->mytris;
   else tris = surf->tris;
@@ -428,7 +428,7 @@ void ComputePropertySurf::pack_v3x(int n)
 void ComputePropertySurf::pack_v3y(int n)
 {
   int m;
-  
+
   Surf::Tri *tris;
   if (distributed) tris = surf->mytris;
   else tris = surf->tris;
@@ -445,7 +445,7 @@ void ComputePropertySurf::pack_v3y(int n)
 void ComputePropertySurf::pack_v3z(int n)
 {
   int m;
-  
+
   Surf::Tri *tris;
   if (distributed) tris = surf->mytris;
   else tris = surf->tris;
@@ -462,7 +462,7 @@ void ComputePropertySurf::pack_v3z(int n)
 void ComputePropertySurf::pack_xc(int n)
 {
   int m;
-  
+
   if (dimension == 2) {
     Surf::Line *lines;
     if (distributed) lines = surf->mylines;
@@ -493,7 +493,7 @@ void ComputePropertySurf::pack_xc(int n)
 void ComputePropertySurf::pack_yc(int n)
 {
   int m;
-  
+
   if (dimension == 2) {
     Surf::Line *lines;
     if (distributed) lines = surf->mylines;
@@ -524,7 +524,7 @@ void ComputePropertySurf::pack_yc(int n)
 void ComputePropertySurf::pack_zc(int n)
 {
   int m;
-  
+
   Surf::Tri *tris;
   if (distributed) tris = surf->mytris;
   else tris = surf->tris;
@@ -542,7 +542,7 @@ void ComputePropertySurf::pack_zc(int n)
 void ComputePropertySurf::pack_area(int n)
 {
   int m;
-  
+
   if (dimension == 2) {
     Surf::Line *lines;
     if (distributed) lines = surf->mylines;
@@ -579,7 +579,7 @@ void ComputePropertySurf::pack_area(int n)
 void ComputePropertySurf::pack_normx(int n)
 {
   int m;
-  
+
   if (dimension == 2) {
     Surf::Line *lines;
     if (distributed) lines = surf->mylines;
@@ -608,7 +608,7 @@ void ComputePropertySurf::pack_normx(int n)
 void ComputePropertySurf::pack_normy(int n)
 {
   int m;
-  
+
   if (dimension == 2) {
     Surf::Line *lines;
     if (distributed) lines = surf->mylines;
@@ -637,7 +637,7 @@ void ComputePropertySurf::pack_normy(int n)
 void ComputePropertySurf::pack_normz(int n)
 {
   int m;
-  
+
   Surf::Tri *tris;
   if (distributed) tris = surf->mytris;
   else tris = surf->tris;

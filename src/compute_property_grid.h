@@ -44,7 +44,7 @@ class ComputePropertyGrid : public Compute {
 
   void pack_id(int);
   void pack_proc(int);
-  
+
   void pack_xlo(int);
   void pack_ylo(int);
   void pack_zlo(int);

@@ -719,7 +719,7 @@ char *Variable::retrieve(char *name)
     str = data[ivar][0];
   } else if (style[ivar] == PARTICLE || style[ivar] == GRID ||
 	     style[ivar] == SURF) return NULL;
-  
+
   return str;
 }
 
@@ -1403,7 +1403,7 @@ double Variable::evaluate(char *str, Tree **tree)
           newtree->selfalloc = 0;
           newtree->left = newtree->middle = newtree->right = NULL;
           treestack[ntreestack++] = newtree;
-	  
+	
 	// c_ID[i] = vector from per-surf array
 
         } else if (nbracket == 1 && compute->per_surf_flag &&
@@ -1434,7 +1434,7 @@ double Variable::evaluate(char *str, Tree **tree)
           treestack[ntreestack++] = newtree;
 
 	// unrecognized compute
-	  
+	
         } else error->all(FLERR,"Mismatched compute in variable formula");
 
       // ----------------
@@ -1660,7 +1660,7 @@ double Variable::evaluate(char *str, Tree **tree)
           treestack[ntreestack++] = newtree;
 
 	// unrecognized fix
-	  
+	
 	} else error->all(FLERR,"Mismatched fix in variable formula");
 
       // ----------------
@@ -1713,7 +1713,7 @@ double Variable::evaluate(char *str, Tree **tree)
 	  size = surf->esize[icustom];
 	  type = surf->etype[icustom];
 	}
-	  
+	
         delete [] id;
 
         // parse zero or one or two trailing brackets
@@ -1737,7 +1737,7 @@ double Variable::evaluate(char *str, Tree **tree)
         }
 	
 	if (nbracket == 0 && size == 0) {
-	  
+	
 	  Tree *newtree = new Tree();
 	  if (type == INT) {
 	    newtree->type = ARRAYINT;
@@ -1760,9 +1760,9 @@ double Variable::evaluate(char *str, Tree **tree)
 	  newtree->selfalloc = 0;
 	  newtree->left = newtree->middle = newtree->right = NULL;
 	  treestack[ntreestack++] = newtree;
-	  
+	
 	} else if (nbracket == 1 && size > 0) {
-	  
+	
 	  Tree *newtree = new Tree();
 	  if (type == INT) {
 	    newtree->type = ARRAYINT;
@@ -1787,7 +1787,7 @@ double Variable::evaluate(char *str, Tree **tree)
 	  treestack[ntreestack++] = newtree;
 
 	// unrecognized custom attribute
-	  
+	
 	} else error->all(FLERR,"Mismatched custom attribute in variable formula");
 
       // ----------------
@@ -1999,7 +1999,7 @@ double Variable::evaluate(char *str, Tree **tree)
           treestack[ntreestack++] = newtree;
 
 	// unrecognized variable
-	  
+	
         } else error->all(FLERR,"Mismatched variable in variable formula");
 
         delete [] id;

@@ -52,7 +52,7 @@ void WriteGrid::command(int narg, char **arg)
   index_custom = NULL;
   type_custom = NULL;
   size_custom = NULL;
-  
+
   while (iarg < narg) {
     if (strcmp(arg[iarg],"custom") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Invalid write_grid command");
@@ -71,7 +71,7 @@ void WriteGrid::command(int narg, char **arg)
       iarg += 2;
     } else error->all(FLERR,"Invalid write_grid command");
   }
-  
+
   // open file on proc 0
 
   int me = comm->me;
@@ -104,7 +104,7 @@ void WriteGrid::command(int narg, char **arg)
     memory->destroy(type_custom);
     memory->destroy(size_custom);
   }
-  
+
   // stats
 
   MPI_Barrier(world);
@@ -165,7 +165,7 @@ void WriteGrid::write()
 
   int nmax;
   MPI_Allreduce(&nme,&nmax,1,MPI_INT,MPI_MAX,world);
-  
+
   bigint *idbuf;
   memory->create(idbuf,nmax,"write_grid:idbuf");
 
@@ -178,10 +178,10 @@ void WriteGrid::write()
       else nvalues_custom += size_custom[ic];
     memory->create(cbuf,nmax,nvalues_custom,"write_grid:cbuf");
   }
-  
+
   // pack ID of each child cell into idbuf, skipping sub cells
   // pack custom values into cbuf
-  
+
   Grid::ChildCell *cells = grid->cells;
   int nglocal = grid->nlocal;
 
@@ -244,7 +244,7 @@ void WriteGrid::write()
 void WriteGrid::pack_custom(int i, double *vec)
 {
   int m = 0;
-  
+
   for (int ic = 0; ic < ncustom; ic++) {
     if (type_custom[ic] == 0) {
       if (size_custom[ic] == 0) {
@@ -276,7 +276,7 @@ void WriteGrid::pack_custom(int i, double *vec)
 void WriteGrid::write_custom(double *vec)
 {
   int m = 0;
-  
+
   for (int ic = 0; ic < ncustom; ic++) {
     if (type_custom[ic] == 0) {
       if (size_custom[ic] == 0) {

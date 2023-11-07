@@ -34,15 +34,15 @@ class RemoveSurf : protected Pointers {
   void command(int, char **);
 
  private:
-  int nsurf;               
+  int nsurf;
   bigint nremove;          // total # of removed surfs
   bigint nsurf_old;        // total # of surfs before removal
   bigint nsurf_new;        // total # of surfs after removal
- 
+
   Surf::Line *lines;       // local copy of Surf lines
   Surf::Tri *tris;         // local copy of Surf tris
   double **cvalues;        // local copy of custom per-surf data
-  
+
   bigint remove(int);
 
   // union data struct for packing 32-bit and 64-bit ints into double bufs

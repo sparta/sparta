@@ -566,7 +566,7 @@ void FixAveGrid::end_of_step()
 	    } else if (grid->etype[n] == DOUBLE) {
 	      double *custom_vector = grid->edvec[grid->ewhich[n]];
 	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_vector[i];
-	    } 
+	    }
 	  } else {
 	    if (grid->etype[n] == INT) {
 	      int *custom_vector = grid->eivec[grid->ewhich[n]];
@@ -587,7 +587,7 @@ void FixAveGrid::end_of_step()
 	      double **custom_array = grid->edarray[grid->ewhich[n]];
 	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_array[i][jm1];
 	    }
-	  } else { 
+	  } else {
 	    if (grid->etype[n] == INT) {
 	      int **custom_array = grid->eiarray[grid->ewhich[n]];
 	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_array[i][jm1];
@@ -599,7 +599,7 @@ void FixAveGrid::end_of_step()
 	}
       }
     }
-      
+
   // PERGRIDSURF = all values are computes which tally info on collisions
   //               with implicit surfs and store them as per-grid-cell tallies
 
@@ -755,7 +755,7 @@ void FixAveGrid::end_of_step()
       surf->collate_array_implicit(ntallyID,nvalues,tally2cell,
                                    array_tally,array_grid);
     }
-    
+
     Grid::ChildCell *cells = grid->cells;
 
     if (nvalues == 1) {

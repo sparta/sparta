@@ -56,7 +56,7 @@ int Surf::add_custom(char *name, int type, int size)
   // ensure all existing custom data is correct current length
 
   reallocate_custom();
-  
+
   // assign index to new custom data
   // use first available NULL entry or allocate a new one
 
@@ -104,7 +104,7 @@ int Surf::add_custom(char *name, int type, int size)
       memory->grow(eicol,ncustom_iarray,"surf:eicol");
       eicol[ncustom_iarray-1] = size;
     }
-    
+
   } else if (type == DOUBLE) {
     if (size == 0) {
       ewhich[index] = ncustom_dvec++;
@@ -146,7 +146,7 @@ int Surf::add_custom(char *name, int type, int size)
 void Surf::allocate_custom(int index)
 {
   int n = nown;
-  
+
   if (etype[index] == INT) {
     if (esize[index] == 0) {
       int *ivector = memory->create(eivec[ewhich[index]],n,"surf:eivec");
@@ -186,10 +186,10 @@ void Surf::reallocate_custom()
   int nold = size_custom;
   int nnew = nown;
   if (nnew == nold) return;
-  
+
   for (int index = 0; index < ncustom; index++) {
     if (ename[index] == NULL) continue;
-    
+
     if (etype[index] == INT) {
       if (esize[index] == 0) {
 	int *ivector = memory->grow(eivec[ewhich[index]],nnew,"surf:eivec");
@@ -249,7 +249,7 @@ void Surf::remove_custom(int index)
         eicol[i] = eicol[i+1];
       }
     }
-    
+
   } else if (etype[index] == DOUBLE) {
     if (esize[index] == 0) {
       memory->destroy(edvec[ewhich[index]]);
@@ -294,10 +294,10 @@ void Surf::spread_custom(int index)
 	memory->create(eivec_local[ewhich[index]],size_custom_local[index],
 		       "surf/spread:eivec_local_vec");
       }
-      
+
       spread_own2local(1,INT,eivec[ewhich[index]],
 		       eivec_local[ewhich[index]]);
-      
+
     } else if (esize[index]) {
       if (nlocal+nghost != size_custom_local[index]) {
 	memory->destroy(eiarray_local[ewhich[index]]);
@@ -315,7 +315,7 @@ void Surf::spread_custom(int index)
       else out = &eiarray_local[ewhich[index]][0][0];
       spread_own2local(esize[index],INT,in,out);
     }
-    
+
   } else if (etype[index] == DOUBLE) {
     if (esize[index] == 0) {
       if (nlocal+nghost != size_custom_local[index]) {
@@ -324,10 +324,10 @@ void Surf::spread_custom(int index)
 	memory->create(edvec_local[ewhich[index]],size_custom_local[index],
 		       "surf/spread:edvec_local_vec");
       }
-      
+
       spread_own2local(1,DOUBLE,edvec[ewhich[index]],
 		       edvec_local[ewhich[index]]);
-      
+
     } else if (esize[index]) {
       if (nlocal+nghost != size_custom_local[index]) {
 	memory->destroy(edarray_local[ewhich[index]]);
@@ -361,7 +361,7 @@ void Surf::spread_inverse_custom(int index)
     if (esize[index] == 0) {
       spread_local2own(1,INT,eivec_local[ewhich[index]],
 		       eivec[ewhich[index]]);
-      
+
     } else if (esize[index]) {
       int *in,*out;
       if (nown == 0) in = NULL;
@@ -370,12 +370,12 @@ void Surf::spread_inverse_custom(int index)
       else out = &eiarray[ewhich[index]][0][0];
       spread_local2own(esize[index],INT,in,out);
     }
-    
+
   } else if (etype[index] == DOUBLE) {
     if (esize[index] == 0) {
       spread_local2own(1,DOUBLE,edvec_local[ewhich[index]],
 		       &edvec[ewhich[index]]);
-      
+
     } else if (esize[index]) {
       double *in,*out;
       if (nown == 0) in = NULL;
@@ -399,9 +399,9 @@ void Surf::spread_inverse_custom(int index)
 int Surf::extract_custom(double **&cvalues)
 {
   int i,j;
-  
+
   // nvalues_custom = # of values per surf
-  
+
   int nvalues_custom = 0;
   for (int ic = 0; ic < ncustom; ic++) {
     if (ename[ic] == NULL) continue;
@@ -438,7 +438,7 @@ int Surf::extract_custom(double **&cvalues)
             cvalues[i][m+j] = ubuf(iarray[i][j]).d;
         m += esize[ic];
       }
-      
+
     } else if (etype[ic] == DOUBLE) {
       if (esize[ic] == 0) {
         double *dvector = edvec[ewhich[ic]];
@@ -455,7 +455,7 @@ int Surf::extract_custom(double **&cvalues)
       }
     }
   }
-  
+
   return nvalues_custom;
 }
 
@@ -632,7 +632,7 @@ int Surf::unpack_custom(char *buf, double *custom)
   char *ptr = buf;
 
   int ic = 0;
-  
+
   if (ncustom_ivec) {
     int *ibuf = (int *) ptr;
     for (i = 0; i < ncustom_ivec; i++) {

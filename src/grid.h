@@ -211,7 +211,7 @@ class Grid : protected Pointers {
   cellint *id_restart;
   int *level_restart,*nsplit_restart;
   char *cvalues_restart;
-  
+
   // methods
 
   Grid(class SPARTA *);
@@ -276,7 +276,7 @@ class Grid : protected Pointers {
   void reallocate_custom(int, int);
   void remove_custom(int);
   void copy_custom(int, int);
-  
+
   void write_restart_custom(FILE *);
   void read_restart_custom(FILE *);
   int sizeof_custom();

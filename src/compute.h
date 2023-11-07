@@ -80,7 +80,7 @@ class Compute : protected Pointers {
   virtual ~Compute();
   virtual void init() {}
   void set_init();
-  
+
   virtual double compute_scalar() {return 0.0;}
   virtual void compute_vector() {}
   virtual void compute_array() {}

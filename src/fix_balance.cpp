@@ -194,7 +194,7 @@ void FixBalance::end_of_step()
   if (imbnow <= thresh) return;
 
   // perform rebalancing
-  
+
   nbalance++;
   imbprev = imbnow;
 
@@ -313,12 +313,12 @@ void FixBalance::end_of_step()
     for (int i = 0; i < surf->ncustom; i++)
       surf->estatus[i] = 0;
   }
-  
+
   // final imbalance factor
   // for RCB TIME, cannot compute imbalance from timers since grid cells moved
-  
+
   if (bstyle == BISECTION && rcbwt == TIME)
-    imbfinal = 0.0; 
+    imbfinal = 0.0;
   else
     imbfinal = imbalance_factor(maxperproc);
 }

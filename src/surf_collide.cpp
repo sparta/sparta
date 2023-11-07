@@ -60,7 +60,7 @@ SurfCollide::SurfCollide(SPARTA *sparta, int, char **arg) :
 
   n_owned = n_localghost = 0;
   t_owned = t_localghost = NULL;
-  
+
   kokkosable = copy = copymode = 0;
 }
 
@@ -125,7 +125,7 @@ void SurfCollide::parse_tsurf(char *str)
   }
 
   // error checks
-  
+
   if (tmode == VARIABLE) {
     tindex_var = input->variable->find(tname);
     if (tindex_var < 0)
@@ -172,7 +172,7 @@ void SurfCollide::dynamic()
 {
   // VAREQUAL mode
   // equal-style variable sets single tsurf value for all surfs
- 
+
   if (tmode == VAREQUAL) {
 
     // only evaluate variable if timestep is multiple of tfreq
@@ -183,12 +183,12 @@ void SurfCollide::dynamic()
 
   // VARSURF mode
   // surf-style variable sets new tsurf values for all surfs
-  // particle/surf collisions access t_persurf for local+ghost values 
-    
+  // particle/surf collisions access t_persurf for local+ghost values
+
   } else if (tmode == VARSURF) {
 
     // only evaluate variable if timestep is multiple of tfreq
-    
+
     int spreadflag = 0;
     if (update->ntimestep % tfreq == 0) {
       if (n_owned != surf->nown) {
@@ -196,7 +196,7 @@ void SurfCollide::dynamic()
 	n_owned = surf->nown;
 	memory->create(t_owned,n_owned,"surfcollide:t_owned");
       }
-      
+
       input->variable->compute_surf(tindex_var,t_owned,1,0);
       spreadflag = 1;
     }
@@ -204,7 +204,7 @@ void SurfCollide::dynamic()
     // spread t_owned values to t_localghost values via spread_own2local()
     // if just re-computed variable OR surfs are
     //   distributed and load balance/adaptation took place on previous step
-    
+
     if (spreadflag ||
 	(surf->distributed && surf->localghost_changed_step == update->ntimestep-1)) {
       if (n_localghost != surf->nlocal + surf->nghost) {
@@ -212,15 +212,15 @@ void SurfCollide::dynamic()
 	n_localghost = surf->nlocal + surf->nghost;
 	memory->create(t_localghost,n_localghost,"surfcollide:t_localghost");
       }
-      
+
       surf->spread_own2local(1,DOUBLE,t_owned,t_localghost);
       t_persurf = t_localghost;
     }
 
   // CUSTOM mode
   // ensure access to custom per-surf vec for tsurf values for all surfs
-  // particle/surf collisions access t_persurf for local+ghost values 
-    
+  // particle/surf collisions access t_persurf for local+ghost values
+
   } else if (tmode == CUSTOM) {
 
     // spread owned values to local+ghost values via spread_custom()

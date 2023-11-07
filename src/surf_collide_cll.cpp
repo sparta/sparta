@@ -54,7 +54,7 @@ SurfCollideCLL::SurfCollideCLL(SPARTA *sparta, int narg, char **arg) :
   if (narg < 7) error->all(FLERR,"Illegal surf_collide cll command");
 
   parse_tsurf(arg[2]);
-  
+
   acc_n = atof(arg[3]);
   acc_t = atof(arg[4]);
   acc_rot = atof(arg[5]);
@@ -181,7 +181,7 @@ collide(Particle::OnePart *&ip, double &,
   }
 
   // set temperature of isurf if VARSURF or CUSTOM
-  
+
   if (persurf_temperature) {
     tsurf = t_persurf[isurf];
     if (tsurf <= 0.0) error->one(FLERR,"Surf_collide tsurf <= 0.0");
@@ -463,7 +463,7 @@ void SurfCollideCLL::flags_and_coeffs(int *flags, double *coeffs)
                "does not support external caller");
 
   coeffs[0] = tsurf;
-  
+
   coeffs[1] = acc_n;
   coeffs[2] = acc_t;
   coeffs[3] = acc_rot;

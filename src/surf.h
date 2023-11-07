@@ -33,7 +33,7 @@ class Surf : protected Pointers {
                             // for assign of collision models to surfs
   bigint localghost_changed_step;  // last timestep expl distributed surfs
                                    // were remapped due to LB or adaptation
-  
+
   double bblo[3],bbhi[3];   // bounding box around surfs
   int tally_comm;           // style of comm for surf tallies
 
@@ -113,15 +113,15 @@ class Surf : protected Pointers {
   int nunique;              // # of my local surfs which are unique
   int *unique;              // index of unique surfs within local list
   surfint *uniqueID;        // IDs of unique surfs
-                            
+
   // surface collision and reaction models
-  
+
   int nsc,nsr;              // # of surface collision and reaction models
   class SurfCollide **sc;   // list of surface collision models
   class SurfReact **sr;     // list of surface reaction models
 
   // settings for mapping surfs to grid cells
-  
+
   int pushflag;             // set to 1 to push surf pts near grid cell faces
   double pushlo,pushhi;     // lo/hi ranges to push on
   double pushvalue;         // new position to push to
@@ -130,7 +130,7 @@ class Surf : protected Pointers {
   // only for explicit surfs, all or distributed
   // ncustom > 0 if there is any custom per-surf data
   // these variables are public, others below are private
-  
+
   int ncustom;              // # of custom attributes, some may be deleted
   char **ename;             // name of each attribute
   int *etype;               // type = INT/DOUBLE of each attribute
@@ -194,7 +194,7 @@ class Surf : protected Pointers {
   void add_tri(surfint, int, double *, double *, double *);
   void add_tri_copy(int, Tri *);
   void add_surfs(int, int, Line *, Tri *, int, int *, double **);
-  
+
   void rehash();
   int all_transparent();
 
@@ -207,7 +207,7 @@ class Surf : protected Pointers {
   void quad_corner_point(int, double *, double *, double *);
   void hex_corner_point(int, double *, double *, double *);
   void extract_masks(int *);
-  
+
   double line_size(int);
   double line_size(Line *);
   double line_size(double *, double *);
@@ -241,7 +241,7 @@ class Surf : protected Pointers {
   int size_restart_one();
   int size_restart();
   int pack_restart(char *);
-  
+
   virtual void grow(int);
   virtual void grow_own(int);
 
@@ -278,7 +278,7 @@ class Surf : protected Pointers {
   virtual void allocate_custom(int);
   virtual void reallocate_custom();
   virtual void remove_custom(int);
-  
+
   void spread_custom(int);
   void spread_inverse_custom(int);
   int extract_custom(double **&);
@@ -288,7 +288,7 @@ class Surf : protected Pointers {
   int sizeof_custom();
   int pack_custom(int, char *);
   int unpack_custom(char *, double *);
-  
+
  protected:
   int me,nprocs;
   int maxsc;                // max # of models in sc
@@ -299,7 +299,7 @@ class Surf : protected Pointers {
 
   int size_custom;          // current size of allocated vecs/arrays
   int *size_custom_local;   // size of each allocated nlocal+nghost vec/array
-  
+
   int ncustom_ivec;         // # of integer vector attributes
   int ncustom_iarray;       // # of integer array attributes
   int *icustom_ivec;        // index into ncustom for each integer vector
@@ -313,7 +313,7 @@ class Surf : protected Pointers {
   int *edcol;               // # of columns in each double array (esize)
 
   // redezvous operation data and callback info
-  
+
   // redistribute_surfs rendezvous
 
   bigint redistribute_nsurf_old;
@@ -325,7 +325,7 @@ class Surf : protected Pointers {
   int *redistribute_index_custom;
 
   // used by assign_unique() method
-  
+
   class RanKnuth *urandom;   // RNG for unique surf assignment
 
   // collate rendezvous
@@ -349,7 +349,7 @@ class Surf : protected Pointers {
 
   int spread_type,spread_size;
   void *spread_data;
-  
+
   // private methods
 
   void point_line_compare(double *, double *, double *, double, int &, int &);
@@ -367,7 +367,7 @@ class Surf : protected Pointers {
   void check_watertight_3d_distributed();
 
   // callback functions for rendezvous communication
-  
+
   static int rendezvous_redistribute_surfs(int, char *, int &, int *&,
 					   char *&, void *);
   static int rendezvous_redistribute_custom(int, char *, int &, int *&,

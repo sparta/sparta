@@ -73,7 +73,7 @@ void ReadGrid::command(int narg, char **arg)
   type_custom = NULL;
   size_custom = NULL;
   nvalues_custom = 0;
-  
+
   while (iarg < narg) {
     if (strcmp(arg[iarg],"custom") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Invalid read_grid command");
@@ -96,15 +96,15 @@ void ReadGrid::command(int narg, char **arg)
 
       if (size_custom[ncustom] == 0) nvalues_custom++;
       else nvalues_custom += size_custom[ncustom];
-      
+
       ncustom++;
-      
+
       iarg += 4;
     } else error->all(FLERR,"Invalid read_grid command");
   }
 
   // read file
-  
+
   read(arg[0],0);
 }
 
@@ -210,7 +210,7 @@ void ReadGrid::read_cells()
 
   nclocal = ncmax = 0;
   cvalues = NULL;
-  
+
   bigint count = 0;
   while (nread < ncell) {
     if (ncell-nread > CHUNK) nchunk = CHUNK;
@@ -319,7 +319,7 @@ void ReadGrid::create_cells(int n, char *buf)
   }
 
   // clean up custom value storage
-  
+
   delete [] custom;
 }
 
@@ -351,13 +351,13 @@ void ReadGrid::add_custom(double *custom)
 void ReadGrid::create_custom()
 {
   int i,j,index;
-  
+
   int nlocal = grid->nlocal;
   int icvalue = 0;
 
   for (int ic = 0; ic < ncustom; ic++) {
     index = grid->add_custom(name_custom[ic],type_custom[ic],size_custom[ic]);
-    
+
     if (type_custom[ic] == INT) {
       if (size_custom[ic] == 0) {
 	int *ivector = grid->eivec[grid->ewhich[index]];
@@ -371,7 +371,7 @@ void ReadGrid::create_custom()
 	    iarray[i][j] = static_cast<int> (cvalues[i][icvalue+j]);
 	icvalue += size_custom[ic];
       }
-      
+
     } else if (type_custom[ic] == DOUBLE) {
       if (size_custom[ic] == 0) {
 	double *dvector = grid->edvec[grid->ewhich[index]];

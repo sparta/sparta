@@ -44,7 +44,7 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
   if (narg < 4) error->all(FLERR,"Illegal surf_collide diffuse command");
 
   parse_tsurf(arg[2]);
-  
+
   acc = input->numeric(FLERR,arg[3]);
   if (acc < 0.0 || acc > 1.0)
     error->all(FLERR,"Illegal surf_collide diffuse command");
@@ -159,7 +159,7 @@ collide(Particle::OnePart *&ip, double &,
   }
 
   // set temperature of isurf if VARSURF or CUSTOM
-  
+
   if (persurf_temperature) {
     tsurf = t_persurf[isurf];
     if (tsurf <= 0.0) error->one(FLERR,"Surf_collide tsurf <= 0.0");

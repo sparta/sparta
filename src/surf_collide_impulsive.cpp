@@ -186,7 +186,7 @@ collide(Particle::OnePart *&ip, double &,
   }
 
   // set temperature of isurf if VARSURF or CUSTOM
-  
+
   if (persurf_temperature) {
     tsurf = t_persurf[isurf];
     if (tsurf <= 0.0) error->one(FLERR,"Surf_collide tsurf <= 0.0");

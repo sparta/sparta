@@ -201,7 +201,7 @@ void FixSurfTemp::end_of_step()
   int nprocs = comm->nprocs;
   int dimension = domain->dimension;
   int distributed = surf->distributed;
-  
+
   // access source compute or fix which is only surfs I own
   // set new temperature via Stefan-Boltzmann eq for nown surfs I own
   // NOTE: which of these 2 options (set doc page accordingly):
@@ -218,10 +218,10 @@ void FixSurfTemp::end_of_step()
     lines = surf->lines;
     tris = surf->tris;
   }
-  
+
   double *tcustom = surf->edvec[surf->ewhich[tindex]];
   int nsown = surf->nown;
-  
+
   if (qwindex == 0) {
     double *qwvector;
     if (source == COMPUTE) {

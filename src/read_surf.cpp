@@ -109,7 +109,7 @@ void ReadSurf::command(int narg, char **arg)
   type_custom = NULL;
   size_custom = NULL;
   index_custom = NULL;
-  
+
   while (iarg < narg) {
     if (strcmp(arg[iarg],"type") == 0) {
       typeflag = 1;
@@ -134,7 +134,7 @@ void ReadSurf::command(int narg, char **arg)
       if (size_custom[ncustom] < 0)
 	error->all(FLERR,"Invalid read_surf command");
       ncustom++;
-      
+
       iarg += 4;
     } else break;
   }
@@ -143,7 +143,7 @@ void ReadSurf::command(int narg, char **arg)
   // nvalues_custom = # of custom values per surf
   // cvalues = growable array with ID + custom values for each surf
   // if custom name already exists, check compatibility of type/size args
-  
+
   nvalues_custom = 0;
   cvalues = NULL;
 
@@ -161,12 +161,12 @@ void ReadSurf::command(int narg, char **arg)
 	index_custom[ic] =
 	  surf->add_custom(name_custom[ic],type_custom[ic],size_custom[ic]);
       }
-      
+
       if (size_custom[ic] == 0) nvalues_custom++;
       else nvalues_custom += size_custom[ic];
     }
   }
-  
+
   // -----------------------
   // read surface data from file(s)
   // -----------------------
@@ -184,7 +184,7 @@ void ReadSurf::command(int narg, char **arg)
   nsurf = maxsurf = 0;
   lines = NULL;
   tris = NULL;
-  
+
   if (!multiproc) read_single(file);
   else read_multiple(file);
 
@@ -217,7 +217,7 @@ void ReadSurf::command(int narg, char **arg)
   // parse command-line args after type/custom
   // apply geometric transformations when parsed
   // apply keywords group,typeadd,transparent,particle,file below
-  
+
   process_args(iarg,narg,arg);
 
   // add surface elements to specified group
@@ -233,7 +233,7 @@ void ReadSurf::command(int narg, char **arg)
   }
 
   // offset surface types
-  
+
   if (typeadd) {
     if (dim == 2)
       for (int i = 0; i < nsurf; i++) lines[i].type += typeadd;
@@ -242,14 +242,14 @@ void ReadSurf::command(int narg, char **arg)
   }
 
   // flag surfs as transparent
-  
+
   if (transparent_flag) {
     if (dim == 2)
       for (int i = 0; i < nsurf; i++) lines[i].transparent = 1;
     else
       for (int i = 0; i < nsurf; i++) tris[i].transparent = 1;
   }
-  
+
   // list of read-in surfs in lines/tris/cvalues is now final (post-clip)
   // add all read-in data to Surf data structs via add_surfs()
   // can then deallocate all local data
@@ -272,7 +272,7 @@ void ReadSurf::command(int narg, char **arg)
     memory->destroy(index_custom);
     memory->destroy(cvalues);
   }
-  
+
   // write out new surf file if requested
   // do this before grid cell assignment or checks, in case error occurs
 
@@ -302,7 +302,7 @@ void ReadSurf::command(int narg, char **arg)
   // error checks that can be done before surfs are mapped to grid cells
   // need to do watertight test on old + new surfs
   // could do neighbor norm test only on new surfs (currently a no-op)
-  
+
   if (dim == 2) {
     surf->check_watertight_2d();
     check_neighbor_norm_2d();
@@ -507,11 +507,11 @@ void ReadSurf::read_single(char *file)
 void ReadSurf::read_multiple(char *file)
 {
   // read base file, sets nsurf_all
-  
+
   base(file);
 
   // make procfile copy so can substitute for "%"
-  
+
   char *procfile = new char[strlen(file) + 16];
   char *ptr = strchr(file,'%');
 
@@ -547,7 +547,7 @@ void ReadSurf::read_multiple(char *file)
     if (filereader) nsurf_onefile = nsurf_file;
     MPI_Allreduce(&nsurf_onefile,&nsurf_allfiles,1,MPI_SPARTA_BIGINT,
 		  MPI_SUM,world);
-    
+
   // if nprocs <= files, each proc reads one or more files
 
   } else {
@@ -584,7 +584,7 @@ void ReadSurf::read_multiple(char *file)
 	    BIGINT_FORMAT ", actual " BIGINT_FORMAT "\n",nsurf_all,nsurf_allfiles);
     error->all(FLERR,str);
   }
-      
+
   // clean-up
 
   MPI_Comm_free(&filecomm);
@@ -607,7 +607,7 @@ void ReadSurf::read_file(char *file)
 
   pts = NULL;
   header();
-  
+
   // read and store data from Points section
 
   parse_keyword(1);
@@ -910,7 +910,7 @@ void ReadSurf::read_lines()
   // read and broadcast one CHUNK of lines at a time
 
   int nread = 0;
-  
+
   while (nread < nsurf_file) {
     if (nsurf_file - nread > CHUNK) nchunk = CHUNK;
     else nchunk = nsurf_file - nread;
@@ -940,7 +940,7 @@ void ReadSurf::read_lines()
     // augment line IDs by previously read surfaces
 
     int i,ic,iv,icvalue;
-    
+
     if (npoint_file) {
       for (i = 0; i < nchunk; i++) {
         next = strchr(buf,'\n');
@@ -1037,7 +1037,7 @@ void ReadSurf::read_lines()
   }
 
   // clean up custom value storage
-  
+
   delete [] custom;
 }
 
@@ -1131,7 +1131,7 @@ void ReadSurf::read_tris()
             }
 	  }
 	}
-        
+
 	if (nread+i % nprocs_file == me_file) {
 	  add_tri(id,type,pts[p1-1].x,pts[p2-1].x,pts[p3-1].x);
 	  if (ncustom) add_custom(id,custom);
@@ -1194,7 +1194,7 @@ void ReadSurf::read_tris()
   }
 
   // clean up custom value storage
-  
+
   delete [] custom;
 }
 
@@ -1709,7 +1709,7 @@ void ReadSurf::clip2d()
       lines[i].id = static_cast<surfint> (offset + i + 1);
       if (ncustom) cvalues[i][0] = ubuf(lines[i].id).d;
     }
-    
+
     MPI_Allreduce(&bnsurf,&nsurf_all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   }
 
@@ -1767,9 +1767,9 @@ void ReadSurf::clip3d()
     //   if 2 pts are inside, trapezoid remains, convert to 2 tris
     //   latter requires adding a triangle to tris list
     // use nsurf_face for loop since nsurf may be incremented by add_tri()
-    
+
     int nsurf_face = nsurf;
-    
+
     for (i = 0; i < nsurf_face; i++) {
       if (discard[i]) continue;
 
@@ -1952,7 +1952,7 @@ void ReadSurf::clip3d()
       tris[i].id = static_cast<surfint> (offset + i + 1);
       if (ncustom) cvalues[i][0] = ubuf(tris[i].id).d;
     }
-    
+
     MPI_Allreduce(&bnsurf,&nsurf_all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   }
 
@@ -2103,10 +2103,10 @@ void ReadSurf::check_neighbor_norm_2d()
   // NOTE: and for all, now that surfs are stored with point coords
   // NOTE: may need rendezvous comm to do this
   // NOTE: could do this before transferring local lines to Surf::lines
-  
+
   if (distributed || !distributed) return;
 
-  /* 
+  /*
   int p1,p2;
 
   // count[I] = # of lines that vertex I is part of
@@ -2175,7 +2175,7 @@ void ReadSurf::check_neighbor_norm_3d()
   // NOTE: and for all, now that surfs are stored with point coords
   // NOTE: may need rendezvous comm to do this
   // NOTE: could do this before transferring local tris to Surf::tris
-  
+
   if (distributed || !distributed) return;
 
   /*

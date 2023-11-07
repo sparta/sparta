@@ -143,7 +143,7 @@ void ComputeSurf::init()
     error->all(FLERR,"Cannot use compute surf when surfs do not exist");
   if (surf->implicit)
     error->all(FLERR,"Cannot use compute surf with implicit surfs");
-  
+
   if (ngroup != particle->mixture[imix]->ngroup)
     error->all(FLERR,"Number of groups in compute surf mixture has changed");
 
@@ -246,7 +246,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
                              Particle::OnePart *ip, Particle::OnePart *jp)
 {
   // skip if no particle, called by SurfReactAdsorb for on-surf reaction
-  
+
   if (!iorig) return;
 
   // skip if isurf not in surface group

@@ -36,7 +36,7 @@ class Custom : protected Pointers {
   int ctype,csize,cindex,ccol;
   int vindex,vstyle;
   char *aname,*vname;
-  
+
   class Variable *variable;
   class Mixture *mixture;
   class Region *region;

@@ -60,7 +60,7 @@ class ReadSurf : protected Pointers {
   int me_file,nprocs_file;  // info for cluster of procs that read a file
 
   double origin[3];
-  
+
   Surf::Line *lines;        // lines read from all files, distributed over procs
   Surf::Tri *tris;          // tris read from all files, distributed over procs
 
@@ -68,7 +68,7 @@ class ReadSurf : protected Pointers {
   int maxsurf;              // max allocation of lines or tris
   bigint nsurf_all;         // # of read-in surfs across all procs
   int nsurf_file;           // # of surfs read-in from one file
-  
+
   struct Point {
     double x[3];            // point coords
   };
@@ -78,9 +78,9 @@ class ReadSurf : protected Pointers {
 
   int filereader;
   MPI_Comm filecomm;
-  
+
   // methods
-  
+
   void read_single(char *);
   void read_multiple(char *);
   void read_file(char *);
