@@ -67,6 +67,11 @@ ComputeSurfKokkos::~ComputeSurfKokkos()
 
   memoryKK->destroy_kokkos(k_tally2surf,tally2surf);
   memoryKK->destroy_kokkos(k_array_surf_tally,array_surf_tally);
+
+  for (int i = 0; i < KOKKOS_MAX_SURF_REACT_PER_TYPE; i++) {
+    sr_kk_global_copy[i].uncopy();
+    sr_kk_prob_copy[i].uncopy();
+  }
 }
 
 /* ---------------------------------------------------------------------- */
