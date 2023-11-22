@@ -285,17 +285,17 @@ class Surf : protected Pointers {
   // constructor for 32-bit int prevents compiler
   //   from possibly calling the double constructor when passed an int
   // copy to a double *buf:
-  //   buf[m++] = ubuf(foo).d, where foo is a 32-bit or 64-bit int
+  //   buf[m++] = ubuf(foo).d where foo is a 32/64-bit int
   // copy from a double *buf:
-  //   foo = (int) ubuf(buf[m++]).i;, where (int) or (tagint) match foo
+  //   foo = (int) ubuf(buf[m++]).i where (int cast) matches foo
   //   the cast prevents compiler warnings about possible truncation
 
   union ubuf {
     double d;
     int64_t i;
     ubuf(double arg) : d(arg) {}
-    ubuf(int64_t arg) : i(arg) {}
     ubuf(int arg) : i(arg) {}
+    ubuf(int64_t arg) : i(arg) {}
   };
 
   // extra custom vectors/arrays for per-surf data

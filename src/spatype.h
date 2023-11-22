@@ -89,6 +89,7 @@ typedef int64_t bigint;
 #define CELLINT_FORMAT "%u"
 #define SURFINT_FORMAT "%d"
 #define BIGINT_FORMAT "%" PRId64
+#define BIGUINT_FORMAT "%" PRIu64
 #define ATOCELLINT atoi
 #define ATOSURFINT atoi
 #define ATOBIGINT ATOLL
@@ -111,6 +112,7 @@ typedef int64_t bigint;
 #define CELLINT_FORMAT "%" PRIu64
 #define SURFINT_FORMAT "%" PRId64
 #define BIGINT_FORMAT "%" PRId64
+#define BIGUINT_FORMAT "%" PRIu64
 #define ATOCELLINT ATOLL
 #define ATOSURFINT ATOLL
 #define ATOBIGINT ATOLL
@@ -133,6 +135,7 @@ typedef int bigint;
 #define CELLINT_FORMAT "%u"
 #define SURFINT_FORMAT "%d"
 #define BIGINT_FORMAT "%d"
+#define BIGUINT_FORMAT "%u"
 #define ATOCELLINT atoi
 #define ATOSURFINT atoi
 #define ATOBIGINT atoi

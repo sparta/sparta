@@ -160,9 +160,13 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
       post_etotal = pre_etotal + r->coeff[4];
 
-      return 1;
+      // return reaction from 1 to N
+      
+      return list[i] + 1;
     }
   }
 
+  // no reaction performed
+  
   return 0;
 }
