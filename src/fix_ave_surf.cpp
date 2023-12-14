@@ -136,7 +136,7 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Illegal fix ave/surf command");
 
   int count_tally = 0;
-  
+
   for (int i = 0; i < nvalues; i++) {
     if (which[i] == COMPUTE) {
       int icompute = modify->find_compute(ids[i]);
@@ -156,7 +156,7 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
           argindex[i] > modify->compute[icompute]->size_per_surf_cols)
         error->all(FLERR,"Fix ave/surf compute array is accessed out-of-range");
       if (modify->compute[icompute]->surf_tally_flag) count_tally++;
-      
+
     } else if (which[i] == FIX) {
       int ifix = modify->find_fix(ids[i]);
       if (ifix < 0)
@@ -216,7 +216,7 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
 
   // allocate accumulators for owned surfaces
   // if ave = RUNNING, allocate extra set of accvec/accarray
-  
+
   if (count_tally) {
     bufvec = NULL;
     bufarray = NULL;
@@ -524,7 +524,7 @@ void FixAveSurf::end_of_step()
 	  } else if (surf->etype[n] == DOUBLE) {
 	    double *custom_vector = surf->edvec[surf->ewhich[n]];
 	    for (i = 0; i < nown; i++) accvec[i] += custom_vector[i];
-	  } 
+	  }
 	} else {
 	  if (surf->etype[n] == INT) {
 	    int *custom_vector = surf->eivec[surf->ewhich[n]];
@@ -545,7 +545,7 @@ void FixAveSurf::end_of_step()
 	    double **custom_array = surf->edarray[surf->ewhich[n]];
 	    for (i = 0; i < nown; i++) accvec[i] += custom_array[i][jm1];
 	  }
-	} else { 
+	} else {
 	  if (surf->etype[n] == INT) {
 	    int **custom_array = surf->eiarray[surf->ewhich[n]];
 	    for (i = 0; i < nown; i++) accarray[i][m] += custom_array[i][jm1];

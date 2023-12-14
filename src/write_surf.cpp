@@ -76,7 +76,7 @@ void WriteSurf::command(int narg, char **arg)
   type_custom = NULL;
   size_custom = NULL;
   nvalues_custom = 0;
-  
+
   if (multiproc) {
     nclusterprocs = 1;
     filewriter = 1;
@@ -101,7 +101,7 @@ void WriteSurf::command(int narg, char **arg)
     } else if (strcmp(arg[iarg],"type") == 0) {
       typeflag = 1;
       iarg++;
-      
+
     } else if (strcmp(arg[iarg],"custom") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Invalid write_surf command");
       if (surf->implicit)
@@ -119,7 +119,7 @@ void WriteSurf::command(int narg, char **arg)
       if (size_custom[ncustom] == 0) nvalues_custom++;
       else nvalues_custom += size_custom[ncustom];
       ncustom++;
-      
+
       iarg += 2;
 
     } else if (strcmp(arg[iarg],"fileper") == 0) {
@@ -176,7 +176,7 @@ void WriteSurf::command(int narg, char **arg)
         surf->spread_custom(index);
     }
   }
-  
+
   // write file(s)
 
   MPI_Barrier(world);
@@ -193,7 +193,7 @@ void WriteSurf::command(int narg, char **arg)
   memory->destroy(index_custom);
   memory->destroy(type_custom);
   memory->destroy(size_custom);
-    
+
   // output stats on surfs written out
   // if called from ReadSurf or ReadIsurf, statflag is unset by caller
 
@@ -337,7 +337,7 @@ void WriteSurf::write_file_all_points(char *file)
 	fprintf(fp,"\n");
 	m += 3;
       }
-    
+
   }
 
   fclose(fp);
@@ -382,7 +382,7 @@ void WriteSurf::write_file_all_nopoints(char *file)
   if (dim == 2) {
     Surf::Line *lines = surf->lines;
     fprintf(fp,"\nLines\n\n");
-    
+
     if (typeflag)
       for (int i = istart; i < istop; i++) {
 	fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g %20.15g",
@@ -421,7 +421,7 @@ void WriteSurf::write_file_all_nopoints(char *file)
 	if (ncustom) write_custom_all(i);
 	fprintf(fp,"\n");
       }
-    else 
+    else
       for (int i = istart; i < istop; i++) {
 	fprintf(fp,SURFINT_FORMAT " %20.15g %20.15g %20.15g "
 		"%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g",
@@ -616,7 +616,7 @@ void WriteSurf::write_file_distributed_points(char *file)
   // pack my custom data into cvalues
 
   double **cvalues = NULL;
-  
+
   if (ncustom) {
     memory->create(cvalues,nmine,nvalues_custom,"write_surf:cvalues");
     pack_custom(nmine,cvalues);
@@ -786,7 +786,7 @@ void WriteSurf::write_file_distributed_nopoints(char *file)
   // pack my custom data into cvalues
 
   double **cvalues = NULL;
-  
+
   if (ncustom) {
     memory->create(cvalues,nmine,nvalues_custom,"write_surf:cvalues");
     pack_custom(nmine,cvalues);

@@ -597,7 +597,7 @@ void Stats::set_fields(int narg, char **arg)
       // parse zero or one or two trailing brackets from ID
       // argindex1,argindex2 = int inside each bracket pair, 0 if no bracket
       // error check for one bracket, not zero or two
-      
+
       char *ptr = strchr(id,'[');
       if (ptr == NULL) argindex1[nfield] = 0;
       else {
@@ -1072,7 +1072,7 @@ void Stats::compute_tpcpu()
   double new_cpu;
   double new_time = update->time +
    (update->ntimestep - update->time_last_update) * update->dt;
-  
+
   if (firststep == 0) {
     new_cpu = 0.0;
     dvalue = 0.0;

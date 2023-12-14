@@ -109,7 +109,7 @@ int Grid::add_custom(char *name, int type, int size)
       edcol[ncustom_darray-1] = size;
     }
   }
-  
+
   allocate_custom(index);
 
   return index;
@@ -124,7 +124,7 @@ int Grid::add_custom(char *name, int type, int size)
 void Grid::allocate_custom(int index)
 {
   int n = maxcell;
-  
+
   if (etype[index] == INT) {
     if (esize[index] == 0) {
       int *ivector = memory->create(eivec[ewhich[index]],n,"grid:eivec");
@@ -166,7 +166,7 @@ void Grid::reallocate_custom(int nold, int nnew)
           memset(&iarray[nold][0],0,
                  (nnew-nold)*eicol[ewhich[ic]]*sizeof(int));
       }
-      
+
     } else {
       if (esize[ic] == 0) {
         double *dvector = memory->grow(edvec[ewhich[ic]],nnew,"grid:edvec");

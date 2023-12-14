@@ -90,7 +90,7 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
   me = comm->me;
   nprocs = comm->nprocs;
   distributed = surf->distributed;
-  
+
   // 1st arg: gas chemistry or surf chemistry or both
 
   if (narg < 3) error->all(FLERR,"Illegal surf_react adsorb command");
@@ -451,13 +451,13 @@ void SurfReactAdsorb::create_per_surf_state()
 
   // allocate and intialize surf_species_delta
   // stores changes in each nlocal+nghost surf due to reactions
-  
+
   int nall = surf->nlocal + surf->nghost;
   memory->create(surf_species_delta,nall,nspecies_surf,
                  "react/adsorb:surf_species_delta");
   if (nall) memset(&surf_species_delta[0][0],0,
 		   nall*nspecies_surf*sizeof(int));
-  
+
   species_delta = surf_species_delta;
 
   // allocate data structs user for periodic state update
@@ -526,7 +526,7 @@ void SurfReactAdsorb::init()
   // cannot do until now b/c surf->sr[isr] not set until run is performed
 
   if (mode == FACE) return;
-  
+
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
   Surf::Line *mylines = surf->mylines;
@@ -557,7 +557,7 @@ void SurfReactAdsorb::init()
 	m++;
       }
     }
-    
+
   } else if (distributed) {
     if (domain->dimension == 2) {
       for (int isurf = 0; isurf < nsown; isurf++) {
@@ -580,7 +580,7 @@ void SurfReactAdsorb::init()
   // spread custom vec/array values to nlocal+nghost lines/tris
   // one-time operation for static area, weight, tau unless grid changes
   // dynamic total_state and species_state are periodically updated
-  
+
   if (mode == SURF) {
     surf->spread_custom(total_state_index);
     surf->spread_custom(species_state_index);
@@ -1206,11 +1206,11 @@ void SurfReactAdsorb::grid_changed()
   //   and updating tau in local custom data struct
   // OK to invoke now after new grid and new surfs,
   //   b/c surf->unique and uniqueID store info from old local surfs
-  
+
   if (psflag) surf->spread_inverse_custom(tau_index);
-  
+
   // spread custom vec/array values to nlocal+nghost lines/tris
-  
+
   surf->spread_custom(total_state_index);
   surf->spread_custom(species_state_index);
   surf->spread_custom(area_index);
@@ -1222,7 +1222,7 @@ void SurfReactAdsorb::grid_changed()
   area = surf->edvec_local[area_index];
   weight = surf->edvec_local[weight_index];
   if (psflag) tau = surf->edarray_local[tau_index];
-  
+
   // reset surf->unique and uniqueID vectors
 
   surf->assign_unique();
@@ -1257,7 +1257,7 @@ void SurfReactAdsorb::PS_chemistry()
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
   int isc;
-  
+
   if (mode == FACE) {
     if (me == 0) {
       for (int iface = 0; iface < nface; iface++) {
@@ -1285,12 +1285,12 @@ void SurfReactAdsorb::PS_chemistry()
 	  mark[isurf] = 1;
 	}
       }
-      
+
     } else {
       int *unique = surf->unique;
       int nunique = surf->nunique;
       int isurf;
-      
+
       if (domain->dimension == 2) {
 	for (int m = 0; m < nunique; m++) {
 	  isurf = unique[m];
@@ -1406,11 +1406,11 @@ void SurfReactAdsorb::update_state_surf()
   //   incollate = species deltas for each marked surf
   // re-zero species_delta values for each marked surf
   // also clear mark
-  
+
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
   int nall = surf->nlocal + surf->nghost;
-  
+
   int ntally = 0;
 
   if (domain->dimension == 2) {
@@ -1470,7 +1470,7 @@ void SurfReactAdsorb::update_state_surf()
   // set total_stat = sum of species_state over species
 
   int nsown = surf->nown;
-  
+
   for (i = 0; i < nsown; i++) {
     total_state[i] = 0;
     for (j = 0; j < nspecies_surf; j++) {

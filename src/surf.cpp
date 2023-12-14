@@ -58,7 +58,7 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   distributed = 0;
   surf_collision_check = 1;
   localghost_changed_step = -1;
-  
+
   gnames = (char **) memory->smalloc(MAXGROUP*sizeof(char *),"surf:gnames");
   bitmask = (int *) memory->smalloc(MAXGROUP*sizeof(int),"surf:bitmask");
   inversemask = (int *) memory->smalloc(MAXGROUP*sizeof(int),
@@ -85,7 +85,7 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   nunique = 0;
   unique = NULL;
   uniqueID = NULL;
-  
+
   nsc = maxsc = 0;
   sc = NULL;
   nsr = maxsr = 0;
@@ -104,7 +104,7 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   etype = esize = estatus = ewhich = NULL;
   size_custom = 0;
   size_custom_local = NULL;
-  
+
   ncustom_ivec = ncustom_iarray = 0;
   icustom_ivec = icustom_iarray = NULL;
   eivec = eivec_local = NULL;
@@ -139,7 +139,7 @@ Surf::~Surf()
 
   memory->destroy(unique);
   memory->destroy(uniqueID);
-  
+
   for (int i = 0; i < nsc; i++) delete sc[i];
   memory->sfree(sc);
   for (int i = 0; i < nsr; i++) delete sr[i];
@@ -180,7 +180,7 @@ Surf::~Surf()
   memory->sfree(eiarray);
   memory->sfree(eiarray_local);
   memory->destroy(eicol);
-  
+
   memory->destroy(icustom_dvec);
   memory->destroy(icustom_darray);
   memory->sfree(edvec);
@@ -231,18 +231,18 @@ void Surf::modify_params(int narg, char **arg)
 
       // set surf collision model for each surf in surface group
       // for both nlocal+nghost lines/tris and mylines/mytris
-      
+
       if (domain->dimension == 2) {
         for (int i = 0; i < nlocal+nghost; i++)
           if (lines[i].mask & groupbit) lines[i].isc = isc;
-        if (!implicit && distributed) 
+        if (!implicit && distributed)
           for (int i = 0; i < nown; i++)
             if (mylines[i].mask & groupbit) mylines[i].isc = isc;
-         
+
       } else {
         for (int i = 0; i < nlocal+nghost; i++)
-          if (tris[i].mask & groupbit) tris[i].isc = isc; 
-        if (!implicit && distributed) 
+          if (tris[i].mask & groupbit) tris[i].isc = isc;
+        if (!implicit && distributed)
           for (int i = 0; i < nown; i++)
             if (mytris[i].mask & groupbit) mytris[i].isc = isc;
       }
@@ -266,14 +266,14 @@ void Surf::modify_params(int narg, char **arg)
       if (domain->dimension == 2) {
         for (int i = 0; i < nlocal+nghost; i++)
           if (lines[i].mask & groupbit) lines[i].isr = isr;
-        if (!implicit && distributed) 
+        if (!implicit && distributed)
           for (int i = 0; i < nown; i++)
             if (mylines[i].mask & groupbit) mylines[i].isr = isr;
-        
+
       } else {
         for (int i = 0; i < nlocal+nghost; i++)
           if (tris[i].mask & groupbit) tris[i].isr = isr;
-        if (!implicit && distributed) 
+        if (!implicit && distributed)
           for (int i = 0; i < nown; i++)
             if (mytris[i].mask & groupbit) mytris[i].isr = isr;
       }
@@ -331,7 +331,7 @@ void Surf::init()
       for (int i = 0; i < nlocal+nghost; i++)
         if (tris[i].isc < 0) flag++;
     }
-    
+
     if (distributed)
       MPI_Allreduce(&flag,&allflag,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
     else allflag = flag;
@@ -414,12 +414,12 @@ void Surf::clear_explicit()
   nsurf = 0;
   nlocal = nghost = nmax = 0;
   nown = maxown = 0;
-  
+
   memory->sfree(lines);
   memory->sfree(tris);
   memory->sfree(mylines);
   memory->sfree(mytris);
-  
+
   lines = NULL;
   tris = NULL;
   mylines = NULL;
@@ -599,10 +599,10 @@ void Surf::add_surfs(int replace, int ncount,
 {
   // if replace: remove all existing surfs and their memory
   // remove ghost surfs for replace or add
-  
+
   if (replace) clear_explicit();
   remove_ghosts();
-  
+
   // (re)allocate data structs for adding new surfs
 
   bigint bncount = ncount;
@@ -641,14 +641,14 @@ void Surf::add_surfs(int replace, int ncount,
   else
     for (int i = 0; i < ncount; i++)
       newtris[i].id += nsurf_old;
- 
-  if (nc) 
+
+  if (nc)
     for (int i = 0; i < ncount; i++)
       cvalues[i][0] = ubuf(((surfint) ubuf(cvalues[i][0]).i) + nsurf_old).d;
-  
+
   // redistribute surfs to correct layout in Surf data structs
   // also checks that new surfs have IDs contiguous from 1 to N
-  
+
   redistribute_surfs(ncount,newlines,newtris,nc,index_custom,cvalues,
 		     nsurf_new,nsurf_old);
 
@@ -2206,7 +2206,7 @@ void Surf::group(int narg, char **arg)
       fprintf(logfile,BIGINT_FORMAT " = initial surface count in group %s\n",
               nall,gnames[igroup]);
   }
-  
+
   // style = type or id
   // add surf to group if matches types/ids or condition
 
@@ -2251,98 +2251,98 @@ void Surf::group(int narg, char **arg)
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id < bound1) lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mylines[i].id < bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id < bound1) tris[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].id < bound1) mytris[i].mask |= bit;
           }
-          
+
         } else if (condition == LE) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id <= bound1) lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mylines[i].id <= bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id <= bound1) tris[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].id <= bound1) mytris[i].mask |= bit;
           }
-          
+
         } else if (condition == GT) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id > bound1) lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mylines[i].id > bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id > bound1) tris[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].id > bound1) mytris[i].mask |= bit;
           }
-          
+
         } else if (condition == GE) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id >= bound1) lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mylines[i].id >= bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id >= bound1) tris[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].id >= bound1) mytris[i].mask |= bit;
           }
-          
+
         } else if (condition == EQ) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id == bound1) lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mylines[i].id == bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id == bound1) tris[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].id == bound1) mytris[i].mask |= bit;
           }
-          
+
         } else if (condition == NEQ) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id != bound1) lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mylines[i].id != bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id != bound1) tris[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].id != bound1) mytris[i].mask |= bit;
           }
-          
+
         } else if (condition == BETWEEN) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id >= bound1 && lines[i].id <= bound2)
                 lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mylines[i].id >= bound1 && mylines[i].id <= bound2)
                   mylines[i].mask |= bit;
@@ -2350,111 +2350,111 @@ void Surf::group(int narg, char **arg)
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id >= bound1 && tris[i].id <= bound2)
                 tris[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].id >= bound1 && mytris[i].id <= bound2)
                   mytris[i].mask |= bit;
           }
         }
 
-        
+
       } else if (category == TYPE) {
         if (condition == LT) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type < bound1) lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mylines[i].type < bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type < bound1) lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].type < bound1) mytris[i].mask |= bit;
           }
-          
+
         } else if (condition == LE) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type <= bound1) lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mylines[i].type <= bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type <= bound1) lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].type <= bound1) mytris[i].mask |= bit;
           }
-          
+
         } else if (condition == GT) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type > bound1) lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mylines[i].type > bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type > bound1) lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].type > bound1) mytris[i].mask |= bit;
           }
-          
+
         } else if (condition == GE) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type >= bound1) lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mylines[i].type >= bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type >= bound1) lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].type >= bound1) mytris[i].mask |= bit;
           }
-          
+
         } else if (condition == EQ) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type == bound1) lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mylines[i].type == bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type == bound1) lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].type == bound1) mytris[i].mask |= bit;
           }
-          
+
         } else if (condition == NEQ) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type != bound1) lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mylines[i].type != bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type != bound1) lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].type != bound1) mytris[i].mask |= bit;
           }
-          
+
         } else if (condition == BETWEEN) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type >= bound1 && lines[i].type <= bound2)
                 lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (i = 0; i < nown; i++)
                 if (mylines[i].type >= bound1 && mylines[i].type <= bound2)
                   mylines[i].mask |= bit;
@@ -2462,7 +2462,7 @@ void Surf::group(int narg, char **arg)
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type >= bound1 && tris[i].type <= bound2)
                 tris[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (i = 0; i < nown; i++)
                 if (mytris[i].type >= bound1 && mytris[i].type <= bound2)
                   mytris[i].mask |= bit;
@@ -2494,7 +2494,7 @@ void Surf::group(int narg, char **arg)
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id >= start && lines[i].id <= stop)
                 lines[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (i = 0; i < nown; i++)
                 if (mylines[i].id >= start && mylines[i].id <= stop)
                   mylines[i].mask |= bit;
@@ -2502,18 +2502,18 @@ void Surf::group(int narg, char **arg)
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id >= start && tris[i].id <= stop)
                 tris[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (i = 0; i < nown; i++)
                 if (mytris[i].id >= start && mytris[i].id <= stop)
                   mytris[i].mask |= bit;
           }
-          
+
         } else if (category == TYPE) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type >= start && lines[i].type <= stop)
-                lines[i].mask |= bit; 
-            if (!implicit && distributed) 
+                lines[i].mask |= bit;
+            if (!implicit && distributed)
               for (i = 0; i < nown; i++)
                 if (mylines[i].type >= start && mylines[i].type <= stop)
                   mylines[i].mask |= bit;
@@ -2521,7 +2521,7 @@ void Surf::group(int narg, char **arg)
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type >= start && tris[i].type <= stop)
                 tris[i].mask |= bit;
-            if (!implicit && distributed) 
+            if (!implicit && distributed)
               for (i = 0; i < nown; i++)
                 if (mytris[i].type >= start && mytris[i].type <= stop)
                   mytris[i].mask |= bit;
@@ -2577,7 +2577,7 @@ void Surf::group(int narg, char **arg)
             if (flag) mylines[i].mask |= bit;
           }
         }
-        
+
       } else if (rstyle == REGION_CENTER) {
         for (i = 0; i < nlocal+nghost; i++) {
           x[0] = 0.5 * (lines[i].p1[0] + lines[i].p2[0]);
@@ -2613,7 +2613,7 @@ void Surf::group(int narg, char **arg)
             if (flag) mytris[i].mask |= bit;
           }
         }
-        
+
       } else if (rstyle == REGION_ONE) {
         for (i = 0; i < nlocal+nghost; i++) {
           flag = 0;
@@ -2992,7 +2992,7 @@ int Surf::pack_restart(char *buf)
   Tri *ptris;
 
   // all versus distributed
-  
+
   if (!distributed) {
     start = me;
     stop = nlocal;
@@ -3009,7 +3009,7 @@ int Surf::pack_restart(char *buf)
 
   // pack nown = # of my owned surfs
   // pack data for each surf, including custom data
-  
+
   char *ptr = buf;
 
   int *ibuf = (int *) ptr;
@@ -3024,7 +3024,7 @@ int Surf::pack_restart(char *buf)
       sbuf[0] = plines[m].id;
       ptr += sizeof(surfint);
       ptr = ROUNDUP(ptr);
-      
+
       int *ibuf = (int *) ptr;
       ibuf[0] = plines[m].type;
       ibuf[1] = plines[m].mask;
@@ -3041,7 +3041,7 @@ int Surf::pack_restart(char *buf)
       ptr += pack_custom(count,ptr);
       count++;
     }
-    
+
   } else if (domain->dimension == 3) {
     int count = 0;
     for (int m = start; m < stop; m += stride) {
@@ -3049,7 +3049,7 @@ int Surf::pack_restart(char *buf)
       sbuf[0] = ptris[m].id;
       ptr += sizeof(surfint);
       ptr = ROUNDUP(ptr);
-      
+
       int *ibuf = (int *) ptr;
       ibuf[0] = ptris[m].type;
       ibuf[1] = ptris[m].mask;
@@ -3068,7 +3068,7 @@ int Surf::pack_restart(char *buf)
       count++;
     }
   }
-  
+
   return ptr - buf;
 }
 

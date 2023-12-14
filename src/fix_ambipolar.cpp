@@ -77,7 +77,7 @@ FixAmbipolar::FixAmbipolar(SPARTA *sparta, int narg, char **arg) :
   if (ionindex < 0 && velindex >= 0) flag = 1;
   if (ionindex >= 0 && velindex < 0) flag = 1;
   if (flag) error->all(FLERR,"Fix ambipolar custom attribute already exists");
-      
+
   if (ionindex < 0)
     ionindex = particle->add_custom((char *) "ionambi",INT,0);
   if (velindex < 0)

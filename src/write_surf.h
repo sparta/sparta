@@ -44,7 +44,7 @@ class WriteSurf : protected Pointers {
   int ncustom;               // number of custom per-surf attributes to output
   int *index_custom,*type_custom,*size_custom;  // flags for custom attributes
   int nvalues_custom;        // number of custom values per surf
-  
+
   int multiproc;             // 0 = proc 0 writes for all
                              // else # of procs writing files
   int filewriter;            // 1 if this proc writes to file, else 0

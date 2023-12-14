@@ -61,7 +61,7 @@ class SurfCollide : protected Pointers {
   double one[2],all[2];
 
   // variables used by all SC classes which define Tsurf
-  
+
   int tmode;               // possible modes = NUMERIC,VAREQUAL,VARSURF,CUSTOM
   double tsurf;            // single value for NUMERIC or VAREQUAL
   char *tname;             // name for variable or custom attribute
@@ -73,9 +73,9 @@ class SurfCollide : protected Pointers {
    double *t_owned;        // values for VARSURF for owned surfs
   double *t_localghost;    // values for VARSURF for local+ghost surfs
   double *t_persurf;       // ptr to VARSURF or CUSTOM local values
-  
+
   // functions used by all SC classes which define Tsurf
-  
+
   void parse_tsurf(char *);
   void check_tsurf();
 };

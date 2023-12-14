@@ -46,12 +46,12 @@ void Custom::command(int narg, char **arg)
   if (narg < 3) error->all(FLERR,"Illegal custom command");
 
   // mode
-  
+
   if (strcmp(arg[0],"particle") == 0) mode = PARTICLE;
   else if (strcmp(arg[0],"grid") == 0) mode = GRID;
   else if (strcmp(arg[0],"surf") == 0) mode = SURF;
   else error->all(FLERR,"Illegal custom command");
-  
+
   if (mode == PARTICLE && !particle->exist)
     error->all(FLERR,"Cannot use custom particle before particles are defined");
   if (mode == GRID && !grid->exist)
@@ -60,7 +60,7 @@ void Custom::command(int narg, char **arg)
     error->all(FLERR,"Cannot use custom surf before surfaces are defined");
 
   // attribute name
-  
+
   int n = strlen(arg[1]) + 1;
   aname = new char[n];
   strcpy(aname,arg[1]);
@@ -74,13 +74,13 @@ void Custom::command(int narg, char **arg)
   } else ccol = 0;
 
   // action
-  
+
   if (strcmp(arg[2],"set") == 0) action = SET;
   else if (strcmp(arg[2],"remove") == 0) action = REMOVE;
   else error->all(FLERR,"Illegal set command");
 
   // remove a custom attribute and return
-  
+
   if (action == REMOVE) {
     if (narg > 3) error->all(FLERR,"Illegal custom command");
     if (mode == PARTICLE) {
@@ -98,7 +98,7 @@ void Custom::command(int narg, char **arg)
     }
 
     delete [] aname;
-    
+
     return;
   }
 
@@ -106,7 +106,7 @@ void Custom::command(int narg, char **arg)
   // variable name
 
   variable = input->variable;
-  
+
   if (strncmp(arg[3],"v_",2) == 0) {
     int n = strlen(arg[3]);
     vname = new char[n];
@@ -121,7 +121,7 @@ void Custom::command(int narg, char **arg)
     else error->all(FLERR,"Custom variable style is invalid");
     if (vstyle != EQUAL && vstyle != mode)
       error->all(FLERR,"Custom variable style is invalid");
-    
+
   } else error->all(FLERR,"Custom variable name is invalid");
 
   // mixture or group ID
@@ -142,7 +142,7 @@ void Custom::command(int narg, char **arg)
   }
 
   // region ID
-  
+
   if (strcmp(arg[5],"NULL") == 0) region = NULL;
   else {
     int iregion = domain->find_region(arg[5]);
@@ -154,7 +154,7 @@ void Custom::command(int narg, char **arg)
 
   ctype = DOUBLE;
   csize = 0;
-  
+
   int iarg = 6;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"type") == 0) {
@@ -204,7 +204,7 @@ void Custom::command(int narg, char **arg)
 
   double scalar = 0.0;
   double *vector = NULL;
-  
+
   if (vstyle == EQUAL) {
     scalar = variable->compute_equal(vindex);
   } else if (vstyle == PARTICLE) {
@@ -227,7 +227,7 @@ void Custom::command(int narg, char **arg)
   if (mode == PARTICLE) count = set_particle(scalar,vector);
   else if (mode == GRID) count = set_grid(scalar,vector);
   else if (mode == SURF) count = set_surf(scalar,vector);
-  
+
   // print stats
 
   bigint bcount = count;
@@ -238,7 +238,7 @@ void Custom::command(int narg, char **arg)
   if (mode == PARTICLE) mname = "particle";
   else if (mode == GRID) mname = "grid";
   else if (mode == SURF) mname = "surf";
-  
+
   if (comm->me == 0) {
     if (screen)
       fprintf(screen,"Custom %s %s attributes set = " BIGINT_FORMAT "\n",
@@ -277,13 +277,13 @@ int Custom::set_particle(double scalar, double *vector)
       if (!region->inside(particles[i].x)) flag = 0;
     }
     if (!flag) continue;
-    
+
     choose[i] = 1;
     count++;
   }
- 
+
   // set custom values via scalar or vector
-  
+
   if (ctype == INT) {
     int iscalar = static_cast<int> (scalar);
 
@@ -300,7 +300,7 @@ int Custom::set_particle(double scalar, double *vector)
 	  else cvector[i] = 0;
 	}
       }
-      
+
     } else {
       int **carray = particle->eiarray[particle->ewhich[cindex]];
       ccol--;
@@ -316,7 +316,7 @@ int Custom::set_particle(double scalar, double *vector)
 	}
       }
     }
-    
+
   } else if (ctype == DOUBLE) {
     if (csize == 0) {
       double *cvector = particle->edvec[particle->ewhich[cindex]];
@@ -331,7 +331,7 @@ int Custom::set_particle(double scalar, double *vector)
 	  else cvector[i] = 0.0;
 	}
       }
-      
+
     } else {
       double **carray = particle->edarray[particle->ewhich[cindex]];
       ccol--;
@@ -380,13 +380,13 @@ int Custom::set_grid(double scalar, double *vector)
       if (!region->inside(point)) flag = 0;
     }
     if (!flag) continue;
-    
+
     choose[i] = 1;
     count++;
   }
- 
+
   // set custom values via scalar or vector
-  
+
   if (ctype == INT) {
     int iscalar = static_cast<int> (scalar);
 
@@ -403,7 +403,7 @@ int Custom::set_grid(double scalar, double *vector)
 	  else cvector[i] = 0;
 	}
       }
-      
+
     } else {
       int **carray = grid->eiarray[grid->ewhich[cindex]];
       ccol--;
@@ -419,7 +419,7 @@ int Custom::set_grid(double scalar, double *vector)
 	}
       }
     }
-    
+
   } else if (ctype == DOUBLE) {
     if (csize == 0) {
       double *cvector = grid->edvec[grid->ewhich[cindex]];
@@ -434,7 +434,7 @@ int Custom::set_grid(double scalar, double *vector)
 	  else cvector[i] = 0.0;
 	}
       }
-      
+
     } else {
       double **carray = grid->edarray[grid->ewhich[cindex]];
       ccol--;
@@ -481,7 +481,7 @@ int Custom::set_surf(double scalar, double *vector)
     stop = surf->nown;
     skip = 1;
   }
-  
+
   int nsown = surf->nown;
   int *choose;
   memory->create(choose,nsown,"set:choose");
@@ -514,12 +514,12 @@ int Custom::set_surf(double scalar, double *vector)
       if (!region->inside(point)) flag = 0;
     }
     if (!flag) continue;
-    
+
     choose[count++] = 1;
   }
- 
+
   // set custom values via scalar or vector
-  
+
   if (ctype == INT) {
     int iscalar = static_cast<int> (scalar);
 
@@ -536,7 +536,7 @@ int Custom::set_surf(double scalar, double *vector)
 	  else cvector[i] = 0;
 	}
       }
-      
+
     } else {
       int **carray = surf->eiarray[surf->ewhich[cindex]];
       ccol--;
@@ -552,7 +552,7 @@ int Custom::set_surf(double scalar, double *vector)
 	}
       }
     }
-    
+
   } else if (ctype == DOUBLE) {
     if (csize == 0) {
       double *cvector = surf->edvec[surf->ewhich[cindex]];
@@ -567,7 +567,7 @@ int Custom::set_surf(double scalar, double *vector)
 	  else cvector[i] = 0.0;
 	}
       }
-      
+
     } else {
       double **carray = surf->edarray[surf->ewhich[cindex]];
       ccol--;

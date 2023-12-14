@@ -79,7 +79,7 @@
 </PRE>
 <PRE>      id = surface element ID
       v1x,v1y,v1z = coords of 1st vertex in surface element
-      v2x,v2y,v3z = coords of 2nd vertex in surface element
+      v2x,v2y,v2z = coords of 2nd vertex in surface element
       v3x,v3y,v3z = coords of 3rd vertex in surface element
       area = surface element area (3d, axisymmetric) or length (2d)
       c_ID = per-surf vector calculated by a compute with ID
@@ -453,10 +453,20 @@ attributes write the coordinates of the vertices of the end or corner
 points of the surface element.  The <I>v1z</I>, <I>v2z</I>, <I>v3x</I>, <I>v3y</I>, and
 <I>v3z</I> attributes cannot be used for a 2d simulation.
 </P>
-<P>The <I>area</I> attribute writes the surface element area (3d and
+<P><<<<<<< HEAD
+=======
+<<<<<<< HEAD
+The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-surf vectors or arrays
+=======
+>>>>>>> f44a1461b646d40a891cb17d93e46d5b45920412
+The <I>area</I> attribute writes the surface element area (3d and
 axisymmetric) or length (2d).
 </P>
 <P>The <I>c_ID</I> and <I>c_ID[I]</I> attributes allow per-surf vectors or arrays
+<<<<<<< HEAD
+=======
+>>>>>>> 3e480423cb20b5ba9f67aaa8ae087d9d36453110
+>>>>>>> f44a1461b646d40a891cb17d93e46d5b45920412
 calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in the
 attribute should be replaced by the actual ID of the compute that has
 been defined previously in the input script.  See the

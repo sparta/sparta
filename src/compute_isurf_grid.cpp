@@ -476,7 +476,7 @@ void ComputeISurfGrid::post_process_isurf_grid()
 
   Grid::ChildInfo *cinfo = grid->cinfo;
   int j;
-  
+
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) {
       for (j = 0; j < ntotal; j++)

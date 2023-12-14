@@ -79,7 +79,7 @@ void RemoveSurf::command(int narg, char **arg)
   // replace surfs in Surf with reduced set of local surfs and custom values
   // ncustom = # of current custom vecs/arrays
   // index_custom = indices for each custom vec/array in Surf custom list
-  
+
   int *index_custom = new int[surf->ncustom];
   int ncustom = 0;
 
@@ -89,7 +89,7 @@ void RemoveSurf::command(int narg, char **arg)
       index_custom[ncustom++] = i;
     }
   }
-  
+
   if (nremove) surf->add_surfs(1,nsurf,lines,tris,
 			       ncustom,index_custom,cvalues);
 
@@ -97,18 +97,18 @@ void RemoveSurf::command(int narg, char **arg)
   memory->sfree(tris);
   memory->destroy(cvalues);
   delete [] index_custom;
-  
+
   // check that remaining surfs are still watertight
 
   if (domain->dimension == 2) surf->check_watertight_2d();
   else surf->check_watertight_3d();
-  
+
   MPI_Barrier(world);
   double time3 = MPI_Wtime();
 
   // reset grid due to changing surfs
   // assign surfs to grid cells
-  
+
   surf->setup_owned();
   grid->unset_neighbors();
   grid->remove_ghosts();
@@ -185,7 +185,7 @@ bigint RemoveSurf::remove(int groupbit)
   int nbytes;
   if (dim == 2) nbytes = sizeof(Surf::Line);
   else nbytes = sizeof(Surf::Tri);
-  
+
   // copy Surf::lines/tris to local lines/tris
   // local data is distributed via striding
 
@@ -195,7 +195,7 @@ bigint RemoveSurf::remove(int groupbit)
 
   int me = comm->me;
   int nprocs = comm->nprocs;
-  
+
   if (dim == 2) {
     lines = (Surf::Line *) memory->smalloc(nsurf*nbytes,"remove/surf:lines");
     if (distributed) memcpy(lines,surf->mylines,nsurf*nbytes);
@@ -215,7 +215,7 @@ bigint RemoveSurf::remove(int groupbit)
 	memcpy(&tris[m++],&surf->tris[i],nbytes);
     }
   }
-  
+
   // copy Surf custom data to local custom data
 
   cvalues = NULL;
@@ -224,7 +224,7 @@ bigint RemoveSurf::remove(int groupbit)
 
   // DEBUG
   int nvalues_custom;
-  
+
   if (ncustom) {
     nvalues_custom = surf->extract_custom(cvalues);
     ncbytes = (1+nvalues_custom) * sizeof(double);

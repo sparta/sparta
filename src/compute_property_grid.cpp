@@ -39,15 +39,15 @@ ComputePropertyGrid::ComputePropertyGrid(SPARTA *sparta, int narg, char **arg) :
   // customize a new keyword by adding to if statement
 
   dimension = domain->dimension;
-  
+
   pack_choice = new FnPtrPack[nvalues];
 
   int i;
   for (int iarg = 3; iarg < narg; iarg++) {
     i = iarg-3;
-    
+
     // check for invalid fields in 2d
-    
+
     if (dimension == 2)
       if ((strcmp(arg[iarg],"zlo") == 0) || (strcmp(arg[iarg],"zhi") == 0) ||
 	  (strcmp(arg[iarg],"zc") == 0))
@@ -57,7 +57,7 @@ ComputePropertyGrid::ComputePropertyGrid(SPARTA *sparta, int narg, char **arg) :
       pack_choice[i] = &ComputePropertyGrid::pack_id;
     } else if (strcmp(arg[iarg],"proc") == 0) {
       pack_choice[i] = &ComputePropertyGrid::pack_proc;
-      
+
     } else if (strcmp(arg[iarg],"xlo") == 0) {
       pack_choice[i] = &ComputePropertyGrid::pack_xlo;
     } else if (strcmp(arg[iarg],"ylo") == 0) {
@@ -70,14 +70,14 @@ ComputePropertyGrid::ComputePropertyGrid(SPARTA *sparta, int narg, char **arg) :
       pack_choice[i] = &ComputePropertyGrid::pack_yhi;
     } else if (strcmp(arg[iarg],"zhi") == 0) {
       pack_choice[i] = &ComputePropertyGrid::pack_zhi;
-      
+
     } else if (strcmp(arg[iarg],"xc") == 0) {
       pack_choice[i] = &ComputePropertyGrid::pack_xc;
     } else if (strcmp(arg[iarg],"yc") == 0) {
       pack_choice[i] = &ComputePropertyGrid::pack_yc;
     } else if (strcmp(arg[iarg],"zc") == 0) {
       pack_choice[i] = &ComputePropertyGrid::pack_zc;
-      
+
     } else if (strcmp(arg[iarg],"vol") == 0) {
       pack_choice[i] = &ComputePropertyGrid::pack_vol;
 

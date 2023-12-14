@@ -54,7 +54,7 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
 			      bigint nsurf_new, bigint nsurf_old)
 {
   int dim = domain->dimension;
-  
+
   int nbytes;
   if (dim == 2) nbytes = sizeof(Line);
   else nbytes = sizeof(Tri);
@@ -71,7 +71,7 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
   // for distributed:
   //   target is mylines/mytris owning strided IDs
   //   no need to allocate here
-  
+
   int *proclist;
   memory->create(proclist,n,"readsurf:proclist");
 
@@ -82,7 +82,7 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
   Line *lines_contig = NULL;
   Tri *tris_contig = NULL;
   bigint bbytes = (bigint) ncontig * nbytes;
-  
+
   if (!distributed) {
     if (dim == 2) {
       lines_contig = (Line *)
@@ -94,14 +94,14 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
       memset(tris_contig,0,bbytes);
     }
   }
-  
+
   // create rvous inputs
   // proclist = owner of each surf based on surf ID
   // receivers own contiguous IDs for all, strided for distributed
-  
+
   surfint id;
   int proc;
-  
+
   for (int i = 0; i < n; i++) {
     if (dim == 2) id = newlines[i].id;
     else id = newtris[i].id;
@@ -121,7 +121,7 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
   redistribute_surfperproc = surfperproc;
   redistribute_lines_contig = lines_contig;
   redistribute_tris_contig = tris_contig;
-  
+
   char *in_rvous;
   if (dim == 2) in_rvous = (char *) newlines;
   else in_rvous = (char *) newtris;
@@ -132,20 +132,20 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
                               0,buf,0,(void *) this);
 
   memory->destroy(proclist);
-  
+
   // if distribution is all:
   // perform Allgatherv with lines/tris_contig
   // target is to append to previous surfs in lines/tris
-  
+
   if (!distributed) {
     int *recvcounts,*displs;
     memory->create(recvcounts,nprocs,"readsurf:recvcounts");
     memory->create(displs,nprocs,"readsurf:displs");
-  
+
     int nbsize;
     if (dim == 2) nbsize = ncontig * sizeof(Line);
     else nbsize = ncontig * sizeof(Tri);
-  
+
     MPI_Allgather(&nbsize,1,MPI_INT,recvcounts,1,MPI_INT,world);
     displs[0] = 0;
     for (int i = 1; i < nprocs; i++) displs[i] = displs[i-1] + recvcounts[i-1];
@@ -175,7 +175,7 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
 
   // proclist = owner of each surf based on surf ID
   // surf IDs in cvalues are already augmented by old surfs
-  
+
   memory->create(proclist,n,"surf:proclist");
 
   for (int i = 0; i < n; i++) {
@@ -184,7 +184,7 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
   }
 
   // nvalues_custom = # of new custom values per surf
-  
+
   int nvalues_custom = 0;
   for (int ic = 0; ic < nc; ic++) {
     int index = index_custom[ic];
@@ -221,7 +221,7 @@ int Surf::rendezvous_redistribute_surfs(int n, char *inbuf, int &flag,
   Surf *sptr = (Surf *) ptr;
 
   // generic Surf class variables
-  
+
   int me = sptr->me;
   int nprocs = sptr->nprocs;
   int distributed = sptr->distributed;
@@ -230,12 +230,12 @@ int Surf::rendezvous_redistribute_surfs(int n, char *inbuf, int &flag,
   int dim = sptr->domain->dimension;
 
   // Surf class variables peculiar to this rendevous operation
-  
+
   bigint nsurf_old = sptr->redistribute_nsurf_old;
   int surfperproc = sptr->redistribute_surfperproc;
   Line *lines_contig = sptr->redistribute_lines_contig;
   Tri *tris_contig = sptr->redistribute_tris_contig;
-  
+
   int nbytes;
   if (dim == 2) nbytes = sizeof(Line);
   else nbytes = sizeof(Tri);
@@ -298,7 +298,7 @@ int Surf::rendezvous_redistribute_custom(int n, char *inbuf, int &flag,
   int ***eiarray = sptr->eiarray;
   double **edvec = sptr->edvec;
   double ***edarray = sptr->edarray;
-  
+
   // Surf class variables peculiar to this rendevous operation
 
   int nvalues_custom = sptr->redistribute_nvalues_custom;
@@ -308,19 +308,19 @@ int Surf::rendezvous_redistribute_custom(int n, char *inbuf, int &flag,
   // copy each value into appropriate locataion in custom vec or array
 
   double *in_custom = (double *) inbuf;
-  
+
   int i,j,k,m;
   int index,type,size;
   surfint id;
 
   int skip = 1 + nvalues_custom;
   int offset = 1;
-  
+
   for (int ic = 0; ic < ncustom; ic++) {
     index = index_custom[ic];
     type = etype[index];
     size = esize[index];
-    
+
     if (type == 0) {
       if (size == 0) {
 	int *ivector = eivec[ewhich[index]];
@@ -357,7 +357,7 @@ int Surf::rendezvous_redistribute_custom(int n, char *inbuf, int &flag,
 	  dvector[j] = in_custom[m+offset];
 	  m += skip;
 	}
-	  
+	
       } else {
 	double **darray = edarray[ewhich[index]];
 
@@ -375,7 +375,7 @@ int Surf::rendezvous_redistribute_custom(int n, char *inbuf, int &flag,
     if (size == 0) offset++;
     else offset += size;
   }
-    
+
   // flag = 0: no second comm needed in rendezvous
 
   flag = 0;
@@ -616,7 +616,7 @@ void Surf::collate_vector_rendezvous(int nrow, surfint *tally2surf,
                                      double *in, int instride, double *out)
 {
   int i,k,m;
-  
+
   // allocate memory for rvous input
 
   int *proclist;
@@ -667,7 +667,7 @@ int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
                             char *&outbuf, void *ptr)
 {
   int i,k,m;
-  
+
   Surf *sptr = (Surf *) ptr;
   Memory *memory = sptr->memory;
   int nown = sptr->nown;
@@ -1239,7 +1239,7 @@ void Surf::spread_own2local(int n, int type, void *in, void *out)
 void Surf::spread_own2local_reduce(int n, int type, void *in, void *out)
 {
   int i,j,m,ij,mj;
-  
+
   if (type == INT) {
     int *ivec = (int *) in;
     int *ovec = (int *) out;
@@ -1249,7 +1249,7 @@ void Surf::spread_own2local_reduce(int n, int type, void *in, void *out)
     if (bcount > MAXSMALLINT)
       error->all(FLERR,"Overflow in spread_own2local_reduce");
     bigint bbytes = (bigint) nlocal * n * sizeof(int);
-    
+
     memory->create(myvec,nlocal*n,"surf/spread:myvec");
     memset(myvec,0,bbytes);
 
@@ -1266,11 +1266,11 @@ void Surf::spread_own2local_reduce(int n, int type, void *in, void *out)
 	  myvec[mj++] = ivec[ij++];
       }
     }
-    
+
     MPI_Allreduce(myvec,ovec,n*nlocal,MPI_INT,MPI_SUM,world);
 
     memory->destroy(myvec);
-    
+
   } else {
     double *ivec = (double *) in;
     double *ovec = (double *) out;
@@ -1347,7 +1347,7 @@ void Surf::spread_own2local_rendezvous(int n, int type, void *in, void *out)
   spread_type = type;
   spread_size = n;
   spread_data = in;
-  
+
   int outbytes;
   if (type == INT) outbytes = (n+1) * sizeof(int);
   else outbytes = (n+1) * sizeof(double);
@@ -1356,7 +1356,7 @@ void Surf::spread_own2local_rendezvous(int n, int type, void *in, void *out)
   int nreturn = comm->rendezvous(1,nall,(char *) inbuf,3*sizeof(int),
 				 0,proclist,rendezvous_own2local,
 				 0,buf,outbytes,(void *) this);
-  
+
   memory->destroy(proclist);
   memory->destroy(inbuf);
 
@@ -1386,7 +1386,7 @@ void Surf::spread_own2local_rendezvous(int n, int type, void *in, void *out)
 	  ioutbuf[k++] = ibuf[m++];
       }
     }
-    
+
   } else if (type == DOUBLE) {
     for (i = 0; i < nreturn; i++) {
       index = (int) ubuf(dbuf[m++]).i;
@@ -1430,19 +1430,19 @@ int Surf::rendezvous_own2local(int n, char *inbuf,
   else if (type == DOUBLE) memory->create(dout,(size+1)*n,"spread:dout");
 
   // loop over received requests, pack data into iout/dout
-  
+
   int *in_rvous = (int *) inbuf;
   int oproc,oindex,index;
   m = 0;
   k = 0;
-  
+
   if (type == INT) {
     for (int i = 0; i < n; i++) {
       oproc = in_rvous[m];
       oindex = in_rvous[m+1];
       index = in_rvous[m+2];
       m += 3;
-      
+
       proclist[i] = oproc;
       iout[k++] = oindex;
       if (size == 1)
@@ -1453,14 +1453,14 @@ int Surf::rendezvous_own2local(int n, char *inbuf,
 	  iout[k++] = ibuf[idata++];
       }
     }
-    
+
   } else if (type == DOUBLE) {
     for (int i = 0; i < n; i++) {
       oproc = in_rvous[m];
       oindex = in_rvous[m+1];
       index = in_rvous[m+2];
       m += 3;
-      
+
       proclist[i] = oproc;
       dout[k++] = ubuf(oindex).d;
       if (size == 1)
@@ -1500,7 +1500,7 @@ int Surf::rendezvous_own2local(int n, char *inbuf,
 void Surf::assign_unique()
 {
   int i,m;
-  
+
   // RNG for unique assignment among multiple copies
 
   if (!urandom) {
@@ -1522,7 +1522,7 @@ void Surf::assign_unique()
 
   int dim = domain->dimension;
   surfint surfID;
-  
+
   for (i = 0; i < nlocal; i++) {
     if (dim == 2) surfID = lines[i].id;
     else surfID = tris[i].id;
@@ -1539,7 +1539,7 @@ void Surf::assign_unique()
 
   int outbytes = sizeof(int);
   char *buf;
-  
+
   int nout = comm->rendezvous(1,nlocal,(char *) inbuf,3*sizeof(int),
 			      0,proclist,rendezvous_unique,
 			      0,buf,outbytes,(void *) this);
@@ -1549,7 +1549,7 @@ void Surf::assign_unique()
 
   // copy rendezvous output into unique vector
   // set corresponding surf IDs in uniqueID vector
-  
+
   int *out_rvous = (int *) buf;
 
   nunique = nout;
@@ -1563,7 +1563,7 @@ void Surf::assign_unique()
     if (dim == 2) uniqueID[i] = lines[unique[i]].id;
     else uniqueID[i] = tris[unique[i]].id;
   }
-  
+
   // clean-up
 
   memory->destroy(out_rvous);
@@ -1584,11 +1584,11 @@ int Surf::rendezvous_unique(int n, char *inbuf,
   Memory *memory = sptr->memory;
   RanKnuth *urandom = sptr->urandom;
   int nown = sptr->nown;
-  
+
   // allocate proclist & ownflags & duplicates
 
   int *ownflags,*duplicates,*selection;
-  
+
   memory->create(proclist,nown,"unique/assign:proclist");
   memory->create(ownflags,nown,"unique/assign:ownflags");
   memory->create(duplicates,nown,"unique/assign:duplicates");
@@ -1602,7 +1602,7 @@ int Surf::rendezvous_unique(int n, char *inbuf,
 
   int *in_rvous = (int *) inbuf;
   int index;
-  
+
   m = 0;
   for (i = 0; i < n; i++) {
     index = in_rvous[m+2];
@@ -1638,7 +1638,7 @@ int Surf::rendezvous_unique(int n, char *inbuf,
 
   memory->destroy(duplicates);
   memory->destroy(selection);
-  
+
   // flag = 2: new outbuf
 
   flag = 2;
@@ -1661,7 +1661,7 @@ void Surf::spread_local2own(int n, int type, void *in, void *out)
   int i,j,k,idata;
   int *iinput,*ibuf;
   double *dinput,*dbuf;
-  
+
   // allocate memory for rvous input
 
   int *proclist;
@@ -1679,7 +1679,7 @@ void Surf::spread_local2own(int n, int type, void *in, void *out)
 
   int isurf,index;
   surfint surfID;
-  
+
   k = 0;
   for (i = 0; i < nunique; i++) {
     isurf = unique[i];
@@ -1723,7 +1723,7 @@ void Surf::spread_local2own(int n, int type, void *in, void *out)
     in_rvous = (char *) dbuf;
     inbytes = (n+1) * sizeof(double);
   }
-  
+
   char *buf;
   int nreturn = comm->rendezvous(1,nunique,in_rvous,inbytes,
 				 0,proclist,rendezvous_local2own,
@@ -1763,7 +1763,7 @@ int Surf::rendezvous_local2own(int n, char *inbuf,
   // loop over received datums, copy values to out
 
   int index;
-  
+
   m = 0;
   k = 0;
   if (type == INT) {
@@ -1791,7 +1791,7 @@ int Surf::rendezvous_local2own(int n, char *inbuf,
   }
 
   // flag = 0: no second comm needed in rendezvous
-  
+
   flag = 0;
   return 0;
 }

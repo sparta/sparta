@@ -46,7 +46,7 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      SPECIES,MIXTURE,GRID,SURF,
      PARTICLE_CUSTOM,GRID_CUSTOM,SURF_CUSTOM,
      MULTIPROC,PROCSPERFILE,PERPROC_GRID,PERPROC_SURF,
-     DT,TIME};   // new fields added after TIME
+     DT,TIME};    // new fields added after TIME
 
 enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // update.cpp
 
@@ -339,7 +339,7 @@ void WriteRestart::write(char *file)
   memset(buf,0,max_size);
 
   // pack my owned surfs into buf
-  
+
   n = surf->pack_restart(buf);
 
   // write owned surf data into file(s)
@@ -442,7 +442,7 @@ void WriteRestart::write_less_memory(char *file)
   char *buf;
   memory->create(buf,max_size,"write_restart:buf");
   memset(buf,0,max_size);
-  
+
   // header info is complete
   // if multiproc output:
   //   close header file, open multiname file on each writing proc,
@@ -664,7 +664,7 @@ void WriteRestart::grid_params()
 void WriteRestart::surf_params()
 {
   // only explicit surfs are written to restart file
-  
+
   if (!surf->exist || surf->implicit) {
     write_int(SURF,0);
     return;

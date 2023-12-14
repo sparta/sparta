@@ -42,12 +42,12 @@ class ReadRestart : protected Pointers {
   int filereader;            // 1 if this proc reads file, else 0
   int procmatch_check;
   int procmatch;
-  
+
   bigint nparticle_file;
   bigint nunsplit_file;
   int nsplit_file,nsub_file;
   int npoint_file,nsurf_file;
-  
+
   // locally stored surfs
 
   int nsurf,maxsurf;
@@ -58,7 +58,7 @@ class ReadRestart : protected Pointers {
   double **cvalues;
 
   // local methods
-  
+
   void file_search(char *, char *);
   void header(int);
   void box_params();
@@ -68,7 +68,7 @@ class ReadRestart : protected Pointers {
 
   void read_grid_particles(char *);
   void read_gp_single_file_same_procs();
-  void read_gp_single_file_diff_procs(); 
+  void read_gp_single_file_diff_procs();
   void read_gp_multi_file_less_procs(char *);
   void read_gp_multi_file_more_procs(char *);
   void read_gp_multi_file_less_procs_memlimit(char *);
@@ -82,7 +82,7 @@ class ReadRestart : protected Pointers {
   void add_line(surfint, int, int, int, double *, double *);
   void add_tri(surfint, int, int, int, double *, double *, double *);
   void add_custom(surfint, double *);
-  
+
   void create_child_cells(int);
   void assign_particles(int);
 

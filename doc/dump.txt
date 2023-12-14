@@ -68,7 +68,7 @@ args = list of arguments for a particular style :l
 
       id = surface element ID
       v1x,v1y,v1z = coords of 1st vertex in surface element
-      v2x,v2y,v3z = coords of 2nd vertex in surface element
+      v2x,v2y,v2z = coords of 2nd vertex in surface element
       v3x,v3y,v3z = coords of 3rd vertex in surface element
       area = surface element area (3d, axisymmetric) or length (2d)
       c_ID = per-surf vector calculated by a compute with ID
@@ -441,10 +441,20 @@ attributes write the coordinates of the vertices of the end or corner
 points of the surface element.  The {v1z}, {v2z}, {v3x}, {v3y}, and
 {v3z} attributes cannot be used for a 2d simulation.
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+The {c_ID} and {c_ID\[N\]} attributes allow per-surf vectors or arrays
+=======
+>>>>>>> f44a1461b646d40a891cb17d93e46d5b45920412
 The {area} attribute writes the surface element area (3d and
 axisymmetric) or length (2d).
 
 The {c_ID} and {c_ID\[I\]} attributes allow per-surf vectors or arrays
+<<<<<<< HEAD
+=======
+>>>>>>> 3e480423cb20b5ba9f67aaa8ae087d9d36453110
+>>>>>>> f44a1461b646d40a891cb17d93e46d5b45920412
 calculated by a "compute"_compute.html to be output.  The ID in the
 attribute should be replaced by the actual ID of the compute that has
 been defined previously in the input script.  See the

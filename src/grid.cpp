@@ -201,7 +201,7 @@ Grid::~Grid()
   memory->sfree(eivec);
   memory->sfree(eiarray);
   memory->destroy(eicol);
-  
+
   memory->destroy(icustom_dvec);
   memory->destroy(icustom_darray);
   memory->sfree(edvec);
@@ -341,7 +341,7 @@ void Grid::add_sub_cell(int icell, int ownflag)
   // make copy of ChildCell
   // for owned cells also make copy of ChildInfo
   // for owned cells also make copy of custom attribute data if it exists
-  
+
   memcpy(&cells[inew],&cells[icell],sizeof(ChildCell));
   if (ownflag) {
     memcpy(&cinfo[inew],&cinfo[icell],sizeof(ChildInfo));
@@ -499,7 +499,7 @@ void Grid::acquire_ghosts_all(int surfflag)
 
   nghost_new -= nlocal;
   grow_cells(nghost_new,0);
-  
+
   // create buf for holding all of my cells, not including sub cells
 
   bigint bsendsize = 0;
@@ -2080,7 +2080,7 @@ void Grid::group(int narg, char **arg)
   int bit = bitmask[igroup];
 
   // print initial count for group
-  
+
   nme = 0;
   for (i = 0; i < nlocal; i++)
     if (cinfo[i].mask & bit) nme++;
@@ -2300,7 +2300,7 @@ void Grid::group(int narg, char **arg)
   }
 
   // print final count for group
-  
+
   nme = 0;
   for (i = 0; i < nlocal; i++)
     if (cinfo[i].mask & bit) nme++;
@@ -2602,7 +2602,7 @@ int Grid::unpack_restart(char *buf)
 {
   int n;
   int csize = sizeof_custom();
-  
+
   int *ibuf = (int *) buf;
   nlocal_restart = ibuf[0];
   clumped = ibuf[1];
@@ -2640,7 +2640,7 @@ int Grid::unpack_restart(char *buf)
       n += csize;
     }
   }
-  
+
   return n;
 }
 
