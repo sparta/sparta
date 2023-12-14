@@ -92,7 +92,7 @@ global		    nrho ${nden}
 global              fnum ${Fnum}
 
 timestep            ${tstep}
-global              gridcut 1.E-1 particle/reorder 100
+global              gridcut 1.E-1 particle/reorder 100 comm/sort yes
 
 ###################################
 # Grid generation

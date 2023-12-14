@@ -69,7 +69,7 @@ struct s_UPDATE_REDUCE {
 };
 typedef struct s_UPDATE_REDUCE UPDATE_REDUCE;
 
-template<int DIM, int SURF, int OPT, int ATOMIC_REDUCTION>
+template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
 struct TagUpdateMove{};
 
 class UpdateKokkos : public Update {
@@ -88,13 +88,13 @@ class UpdateKokkos : public Update {
   void setup();
   void run(int);
 
-  template<int DIM, int SURF, int OPT, int ATOMIC_REDUCTION>
+  template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagUpdateMove<DIM,SURF,OPT,ATOMIC_REDUCTION>, const int&) const;
+  void operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>, const int&) const;
 
-  template<int DIM, int SURF, int OPT, int ATOMIC_REDUCTION>
+  template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagUpdateMove<DIM,SURF,OPT,ATOMIC_REDUCTION>, const int&, UPDATE_REDUCE&) const;
+  void operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>, const int&, UPDATE_REDUCE&) const;
 
  private:
 
@@ -215,7 +215,7 @@ class UpdateKokkos : public Update {
 
   typedef void (UpdateKokkos::*FnPtr)();
   FnPtr moveptr;             // ptr to move method
-  template < int, int, int > void move();
+  template <int, int, int, int> void move();
 
   //typedef void (UpdateKokkos::*FnPtr2)(int, int, double, double *, double *) const;
   //FnPtr2 moveperturb;        // ptr to moveperturb method

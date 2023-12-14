@@ -24,6 +24,9 @@ ComputeStyle(surf/kk,ComputeSurfKokkos)
 #include "compute_surf.h"
 #include "kokkos_type.h"
 #include "math_extra_kokkos.h"
+#include "kokkos_copy.h"
+#include "surf_react_global_kokkos.h"
+#include "surf_react_prob_kokkos.h"
 
 namespace SPARTA_NS {
 
@@ -43,7 +46,7 @@ class ComputeSurfKokkos : public ComputeSurf {
   void post_surf_tally();
 
 enum{NUM,NUMWT,NFLUX,NFLUXIN,MFLUX,MFLUXIN,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
-     XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ETOT};
+     XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ECHEM,ETOT};
 
 /* ----------------------------------------------------------------------
    tally values for a single particle in icell
@@ -78,15 +81,17 @@ void surf_tally_kk(int isurf, int icell, int reaction,
   // itally = tally index of isurf
   // grow tally list if needed
 
-  int itally,transparent;
+  int itally,transparent,isr;
 
   surfint surfID;
   if (dim == 2) {
     surfID = d_lines[isurf].id;
     transparent = d_lines[isurf].transparent;
+    isr = d_lines[isurf].isr;
   } else {
     surfID = d_tris[isurf].id;
     transparent = d_tris[isurf].transparent;
+    isr = d_tris[isurf].isr;
   }
 
   // thread-safe, tally array will be compressed later
@@ -289,6 +294,16 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       else
         a_array_surf_tally(itally,k++) -= weight * (ievib + jevib - iorig->evib) * fluxscale;
       break;
+    case ECHEM:
+      if (reaction && !transparent) {
+        int sr_type = sr_type_list[isr];
+        int m = sr_map[isr];
+        double r_coeff = 0.0;
+        if (sr_type == 1)
+          r_coeff = sr_kk_prob_copy[m].obj.d_coeffs(reaction-1,1);
+        a_array_surf_tally(itally,k++) += weight * r_coeff * fluxscale;
+      }
+      break;
     case ETOT:
       vsqpre = origmass * MathExtraKokkos::lensq3(vorig);
       otherpre = iorig->erot + iorig->evib;
@@ -302,9 +317,18 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       } else jvsqpost = jother = 0.0;
       if (transparent)
         etot = -0.5*mvv2e*vsqpre - weight*otherpre;
-      else
+      else {
         etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
           weight * (iother + jother - otherpre);
+        if (reaction) {
+          int sr_type = sr_type_list[isr];
+          int m = sr_map[isr];
+          double r_coeff = 0.0;
+          if (sr_type == 1)
+            r_coeff = sr_kk_prob_copy[m].obj.d_coeffs(reaction-1,1);
+          etot -= weight * r_coeff;
+        }
+      }
       a_array_surf_tally(itally,k++) -= etot * fluxscale;
       break;
     }
@@ -334,6 +358,11 @@ void surf_tally_kk(int isurf, int icell, int reaction,
 
   t_line_1d d_lines;
   t_tri_1d d_tris;
+
+  int sr_type_list[KOKKOS_MAX_TOT_SURF_REACT];
+  int sr_map[KOKKOS_MAX_TOT_SURF_REACT];
+  KKCopy<SurfReactGlobalKokkos> sr_kk_global_copy[KOKKOS_MAX_SURF_REACT_PER_TYPE];
+  KKCopy<SurfReactProbKokkos> sr_kk_prob_copy[KOKKOS_MAX_SURF_REACT_PER_TYPE];
 
   void grow_tally();
 };

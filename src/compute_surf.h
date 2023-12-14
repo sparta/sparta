@@ -23,6 +23,7 @@ ComputeStyle(surf,ComputeSurf)
 
 #include "compute.h"
 #include "surf.h"
+#include "surf_react.h"
 #include "hash3.h"
 
 namespace SPARTA_NS {

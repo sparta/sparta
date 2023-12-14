@@ -173,9 +173,12 @@ case) with the following meaning:
 <P>The style determines how many reaction coefficients are listed as C1,
 C2, etc, and how they are interpreted by SPARTA.
 </P>
-<P>For S = Surface style, there is a single coefficient:
+<P>For S = Surface style, there are two coefficients. The first is
+required and the second is optional and will be set to 0.0 if not
+specified:
 </P>
-<UL><LI>C1 = probability that the reaction occurs (0.0 to 1.0) 
+<UL><LI>C1 = probability that the reaction occurs (0.0 to 1.0)
+<LI>C2 = catalytic chemical energy of reaction (optional, positive for exothermic) 
 </UL>
 <HR>
 

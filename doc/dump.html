@@ -74,13 +74,14 @@
       g_name[N] = Nth column of custom per-grid array with name, N can include wildcard (see below) 
 </PRE>
 <PRE>  <I>surf</I> args = list of surf attributes
-    possible attributes = id, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z, 
+    possible attributes = id, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z, area,
                           c_ID, c_ID[N], f_ID, f_ID[N], v_name, s_name, s_name[N] 
 </PRE>
 <PRE>      id = surface element ID
       v1x,v1y,v1z = coords of 1st vertex in surface element
       v2x,v2y,v3z = coords of 2nd vertex in surface element
       v3x,v3y,v3z = coords of 3rd vertex in surface element
+      area = surface element area (3d, axisymmetric) or length (2d)
       c_ID = per-surf vector calculated by a compute with ID
       c_ID[N] = Nth column of per-surf array calculated by a compute with ID, N can include wildcard (see below)
       f_ID = per-surf vector calculated by a fix with ID
@@ -452,7 +453,10 @@ attributes write the coordinates of the vertices of the end or corner
 points of the surface element.  The <I>v1z</I>, <I>v2z</I>, <I>v3x</I>, <I>v3y</I>, and
 <I>v3z</I> attributes cannot be used for a 2d simulation.
 </P>
-<P>The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-surf vectors or arrays
+<P>The <I>area</I> attribute writes the surface element area (3d and
+axisymmetric) or length (2d).
+</P>
+<P>The <I>c_ID</I> and <I>c_ID[I]</I> attributes allow per-surf vectors or arrays
 calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in the
 attribute should be replaced by the actual ID of the compute that has
 been defined previously in the input script.  See the

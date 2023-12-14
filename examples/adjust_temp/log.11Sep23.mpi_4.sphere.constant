@@ -1,0 +1,148 @@
+SPARTA (13 Apr 2023)
+Running on 4 MPI task(s)
+###############################################################################
+# hypersonic flow around a 3D sphere
+# non-reacting argon flow
+# grid adptation
+# diffuse surface with temperature adjustment
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global		    nrho 4.247e19 fnum 2e14 gridcut 0.01 comm/sort yes
+timestep            3.5e-7
+
+boundary	    o ro ro
+create_box          -0.2 0.65 0.0 0.4 0.0 0.4
+Created orthogonal box = (-0.2 0 0) to (0.65 0.4 0.4)
+create_grid 	    30 15 15 block * * *
+Created 6750 child grid cells
+  CPU time = 0.00469531 secs
+  create/ghost percent = 55.858 44.142
+
+species             ar.species Ar
+mixture             all vstream 2634.1 0 0 temp 200.0
+
+collide             vss all ar.vss
+collide_modify      vremax 1000 yes
+
+read_surf	    sphere.surf clip group 1
+  900 points
+  300 triangles
+  clipped to 300 tris
+  0 0.3048 xlo xhi
+  0 0.1524 ylo yhi
+  0 0.1524 zlo zhi
+  0.0153362 min triangle edge length
+  0.000102101 min triangle area
+  149 0 = cells overlapping surfs, overlap cells with unmarked corner pts
+  40 tiny edges removed
+  6481 120 149 = cells outside/inside/overlapping surfs
+  149 = surf cells with 1,2,etc splits
+  0.132337 0.132337 = cell-wise and global flow volume
+  CPU time = 0.0139372 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 15.3747 6.24444 1.13151 53.9032 23.3462 5.04836 0.271934
+  surf2grid time = 0.00751261 secs
+  map/comm1/comm2/comm3/comm4/split percent = 10.2534 4.01991 9.06743 5.21524 3.60194 64.5063
+
+compute             1 surf all all etot
+fix                 1 ave/surf all 1 250 250 c_1[*] ave one
+#fix                 2 surf/temp all 250 f_1[*] 100 0.9 temperature
+
+surf_collide        1 diffuse 100 1.0
+surf_modify         1 collide 1
+
+fix                 in emit/face all xlo twopass
+create_particles    all n 0 twopass
+WARNING: Created unexpected # of particles: 28099 versus 28101 (/home/runner/work/sparta/sparta/src/create_particles.cpp:346)
+Created 28099 particles
+  CPU time = 0.00577071 secs
+
+compute             3 grid all all nrho
+compute             4 thermal/grid all all temp
+fix                 3 ave/grid all 1 250 250 c_3[*] c_4[*] ave one
+
+compute             1b lambda/grid f_3[1] f_3[2] Ar kall
+
+fix                 10 adapt 250 all refine coarsen value c_1b[2] 2.0 4.5                     combine min thresh less more cells 2 2 2 maxlevel 3
+
+dump                2 surf all 500 dump.sphere.constant id f_1[*]
+
+stats_style         step cpu np nattempt ncoll nscoll ngrid maxlevel
+stats_modify        flush yes
+stats               250
+
+run                 2000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.6875 1.6875 1.6875
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0.0377655 0.0377655 0.0377655
+  total     (ave,min,max) = 3.49712 3.47996 3.51429
+Step CPU Np Natt Ncoll Nscoll Ngrid Maxlevel 
+       0            0    28099        0        0        0     6750        1 
+     250   0.21634462    27254       96       77        5    52271        2 
+     500   0.78579777    26640       61       44        7   197059        3 
+     750    2.3325593    27392       65       53       11   255845        3 
+    1000    4.5455143    28017        3        3       11   281780        3 
+    1250    6.8044157    28485       53       38        5   293001        3 
+    1500    9.1733283    29011       70       52        6   298650        3 
+    1750    11.620959    29072       89       71        8   301520        3 
+    2000    14.108494    29407        0        0       12   301632        3 
+Loop time of 14.1085 on 4 procs for 2000 steps with 29407 particles
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.50663    | 0.78223    | 0.91872    |  19.0 |  5.54
+Coll    | 0.38645    | 0.54237    | 0.63517    |  12.8 |  3.84
+Sort    | 0.50652    | 0.70861    | 0.8597     |  16.4 |  5.02
+Comm    | 0.8629     | 3.7749     | 6.8326     | 127.6 | 26.76
+Modify  | 4.1082     | 4.965      | 5.5721     |  24.9 | 35.19
+Output  | 0.010028   | 0.013936   | 0.018051   |   2.4 |  0.10
+Other   |            | 3.322      |            |       | 23.54
+
+Particle moves    = 56174254 (56.2M)
+Cells touched     = 61770598 (61.8M)
+Particle comms    = 66315 (66.3K)
+Boundary collides = 10887 (10.9K)
+Boundary exits    = 61295 (61.3K)
+SurfColl checks   = 4272720 (4.27M)
+SurfColl occurs   = 12680 (12.7K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 123053 (0.123M)
+Collide occurs    = 94250 (94.2K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 995395
+Particle-moves/step: 28087.1
+Cell-touches/particle/step: 1.09962
+Particle comm iterations/step: 1
+Particle fraction communicated: 0.00118052
+Particle fraction colliding with boundary: 0.000193808
+Particle fraction exiting boundary: 0.00109116
+Surface-checks/particle/step: 0.0760619
+Surface-collisions/particle/step: 0.000225726
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.00219056
+Collisions/particle/step: 0.00167781
+Reactions/particle/step: 0
+
+Particles: 7351.75 ave 8894 max 4793 min
+Histogram: 1 0 0 0 0 0 1 0 1 1
+Cells:      75408 ave 92695 max 53690 min
+Histogram: 1 0 0 0 1 0 0 1 0 1
+GhostCell: 7675.75 ave 8599 max 6874 min
+Histogram: 1 0 0 1 0 1 0 0 0 1
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+Surfs:    300 ave 300 max 300 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostSurf: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0

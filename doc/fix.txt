@@ -74,6 +74,7 @@ styles available in SPARTA:
 "ave/surf"_fix_ave_surf.html - compute per surface element time-averaged quantities
 "ave/time"_fix_ave_time.html - compute/output global time-averaged quantities
 "balance"_fix_balance.html - perform dynamic load-balancing
+"dt/reset"_fix_dt_reset.html - adjust global timestep dynamically
 "emit/face"_fix_emit_face.html - emit particles at global boundaries
 "emit/face/file"_fix_emit_face_file.html - emit particles at global boundaries using a distribution defined in a file
 "emit/surf"_fix_emit_surf.html - emit particles at surfaces

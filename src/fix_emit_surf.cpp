@@ -988,7 +988,7 @@ void FixEmitSurf::grow_task()
 int FixEmitSurf::option(int narg, char **arg)
 {
   if (strcmp(arg[0],"n") == 0) {
-    if (2 > narg) error->all(FLERR,"Illegal fix emit/]surf/normal command");
+    if (2 > narg) error->all(FLERR,"Illegal fix emit/surf command");
 
     if (strstr(arg[1],"v_") == arg[1]) {
       npmode = VARIABLE;
@@ -997,7 +997,7 @@ int FixEmitSurf::option(int narg, char **arg)
       strcpy(npstr,&arg[1][2]);
     } else {
       np = atoi(arg[1]);
-      if (np <= 0) error->all(FLERR,"Illegal fix emit/surf/normal command");
+      if (np <= 0) error->all(FLERR,"Illegal fix emit/surf command");
       if (np == 0) npmode = FLOW;
       else npmode = CONSTANT;
     }
@@ -1005,19 +1005,19 @@ int FixEmitSurf::option(int narg, char **arg)
   }
 
   if (strcmp(arg[0],"normal") == 0) {
-    if (2 > narg) error->all(FLERR,"Illegal fix emit/surf/normal command");
+    if (2 > narg) error->all(FLERR,"Illegal fix emit/surf command");
     if (strcmp(arg[1],"yes") == 0) normalflag = 1;
     else if (strcmp(arg[1],"no") == 0) normalflag = 0;
-    else error->all(FLERR,"Illegal fix emit/surf/normal command");
+    else error->all(FLERR,"Illegal fix emit/surf command");
     return 2;
   }
 
   if (strcmp(arg[0],"subsonic") == 0) {
-    if (3 > narg) error->all(FLERR,"Illegal fix emit/face command");
+    if (3 > narg) error->all(FLERR,"Illegal fix emit/surf command");
     subsonic = 1;
     subsonic_style = PTBOTH;
     psubsonic = input->numeric(FLERR,arg[1]);
-    if (psubsonic < 0.0) error->all(FLERR,"Illegal fix emit/face command");
+    if (psubsonic < 0.0) error->all(FLERR,"Illegal fix emit/surf command");
     if (strcmp(arg[2],"NULL") == 0) subsonic_style = PONLY;
     else {
       tsubsonic = input->numeric(FLERR,arg[2]);
@@ -1028,6 +1028,6 @@ int FixEmitSurf::option(int narg, char **arg)
     return 3;
   }
 
-  error->all(FLERR,"Illegal fix emit/surf/normal command");
+  error->all(FLERR,"Illegal fix emit/surf command");
   return 0;
 }

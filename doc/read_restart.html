@@ -139,6 +139,8 @@ simulation, as specified by the associated commands:
 <LI>geometry of all defined <A HREF = "read_surf.html">surface elements</A>
 <LI><A HREF = "group.html">group definitions</A> for grid cells and surface elements
 <LI><A HREF = "custom.html">custom attributes</A> for particles, grid cells, or surface elements
+<LI>current simulation time
+<LI>current <A HREF = "timestep.html">timestep size</A>
 <LI>current timestep number 
 </UL>
 <P>No other information is stored in the restart file.  Specifically,
@@ -155,8 +157,7 @@ commands is NOT stored:
 <LI>assignment of surfaces/boundaries to surface models
 <LI><A HREF = "variable.html">variables</A>
 <LI><A HREF = "region.html">regions</A>
-<LI>output options for <A HREF = "stats_style.html">stats</A>, <A HREF = "dump.html">dump</A>, <A HREF = "restart.html">restart</A> files
-<LI><A HREF = "timestep.html">timestep size</A> 
+<LI>output options for <A HREF = "stats_style.html">stats</A>, <A HREF = "dump.html">dump</A>, <A HREF = "restart.html">restart</A> files 
 </UL>
 <P>This means any information specified in the original input script by
 these commands needs to be re-specified in the restart input script,
