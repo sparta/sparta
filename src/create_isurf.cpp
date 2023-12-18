@@ -54,14 +54,12 @@ void CreateISurf::command(int narg, char **arg)
 {
   if (!grid->exist)
     error->all(FLERR,"Cannot create_isurf before grid is defined");
-  if (surf->implicit)
+  if (surf->implicit && surf->exist)
     error->all(FLERR,"Cannot have pre-existing implicit surfaces");
 
   int dim = domain->dimension;
 
   if (narg != 4) error->all(FLERR,"Illegal create_isurf command");
-  surf->implicit = 1;
-  // surf->distributed = 1; <- is this needed?
 
   // grid group
   ggroup = grid->find_group(arg[0]);
@@ -105,6 +103,10 @@ void CreateISurf::command(int narg, char **arg)
 
   // remove old explicit surfaces
   remove_old();
+
+  surf->implicit = 1;
+  surf->distributed = 1; // <- is this needed?
+  surf->exist = 1;
 
   tvalues = NULL; // TODO: Add per-surface type
   int cpushflag = 0; // don't push
@@ -667,10 +669,12 @@ void CreateISurf::cleanup()
 
         // no intersections
         if(nval == 0) cvalues[i] = cin;
-        // need to set these points as outside to avoid very small volume error
-        else if(ivalsum == 0) cvalues[i] = MAX(thresh-1,cout);
         else {
-          cvalues[i] = param2in(ivalsum/nval,0.0);
+          ivalsum /= nval;
+          // add small buffer to avoid very small volumes/areas
+          ivalsum = std::max(ivalsum, thresh*1.02);
+          ivalsum = std::min(ivalsum, cout*0.98);
+          cvalues[i] = param2in(ivalsum,0.0);
         }
       }
 	  }// end "for" for grid cells
@@ -974,6 +978,9 @@ void CreateISurf::remove_old()
 
   if (particle->exist) particle->sort();
   MPI_Barrier(world);
+
+  surf->nsurf = 0;
+  surf->exist = 0;
 
   surf->setup_owned();
   grid->unset_neighbors();
