@@ -2371,7 +2371,7 @@ int Grid::check_uniform_group(int igroup, int *nxyz,
 
   int allsflag;
   MPI_Allreduce(&sflag,&allsflag,1,MPI_INT,MPI_SUM,world);
-  if (allsflag) {
+  if (allsflag && surf->implicit) {
     char str[128];
     sprintf(str,
             "Read_isurfs adding surfs to %d cells which already have surfs",

@@ -319,6 +319,28 @@ class Surf : protected Pointers {
                             // used to delete them if not redefined in
                             // restart script
 
+	// For generating implicit surfaces
+
+	int ggroup;							  // group id for grid cells
+  int cpushflag;            // push to max / min corner values
+	double thresh;            // lower threshold for corner values
+  double corner[3];         // corners of grid group
+  double xyzsize[3];        // size of lowest level cell (must be uniform grid)
+  int nxyz[3], Nxyz;        // dimensions of grid
+  double *cvalues;          // array of corner point values
+  double *mvalues;          // minimum intersection value
+  int *svalues;             // marks corners as in or out
+  double **ivalues;         // point of intersection between corner points
+
+  double **icvalues;        // corner values for Fix Ablate
+  int *tvalues;             // vector of per grid cell surf types
+
+  int aveFlag;              // flag for how corners in unknown cells are set
+  double mind;              // minimum cell length
+  double cin, cout;         // in and out corner values
+  double cl[3], ch[3];      // cell bounds
+  class FixAblate *ablate;  // ablate fix
+
   // private methods
 
   void point_line_compare(double *, double *, double *, double, int &, int &);
@@ -348,6 +370,27 @@ class Surf : protected Pointers {
                               int &, int *&, char *&, void *);
   static int rendezvous_tris(int, char *,
                              int &, int *&, char *&, void *);
+
+	// functions to set corner values
+
+	void set_corners();
+  void set_surfcell2d();
+  void set_surfcell3d();
+  int corner_hit2d(double*, double*, Line*, double&, int&, int&);
+  int corner_hit3d(double*, double*, Tri*, double&, int&, int&);
+  void corner2cell();
+  int get_cxyz(int *, double *);
+  int get_cell(int, int, int);
+  int get_corner(int, int, int);
+  int get_corner(double, double, double);
+  double param2in(double, double);
+  double param2out(double, double);
+
+  // functions to remove old explicit surfaces
+
+  void remove_2d(int);
+  void remove_3d(int);
+
 };
 
 }

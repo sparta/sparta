@@ -1,0 +1,67 @@
+################################################################################
+# 2d flow around a circle
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed						12345
+dimension				3
+
+boundary				p p p
+
+#variable R equal 1.5
+#variable L equal ${R}*2.0
+variable L equal 1.0
+variable N equal 50
+create_box			-${L} ${L} -${L} ${L} -${L} ${L}
+create_grid			${N} ${N} ${N}
+balance_grid		rcb cell
+
+global					nrho 1.0 fnum 0.001
+
+species					air.species N2
+mixture					air N2 vstream 0.0 0 0 
+
+region					inner block -0.8 0.8 -0.8 0.8 -0.8 0.8
+group						inner grid region inner one
+
+read_surf       data.box3d invert
+#read_surf       data.sphere3d invert
+surf_collide		1 diffuse 300.0 0.0
+surf_modify			all collide 1
+
+#fix							f1 ablate all 0 0.2 random 0
+#surf_modify     all implicit yes 80.0 f1 all inout
+#surf_modify     all implicit yes 80.0 f1 all ave
+
+fix							f1 ablate inner 0 0.2 random 0
+surf_modify     all implicit yes 80.0 f1 inner ave
+
+create_particles    air n 0 twopass
+
+collide					vss air air.vss
+
+timestep				0.001
+
+#dump 1 image all 1000 dump.* type type gline yes 0.005 surf one 0.03 particle yes pdiam 0.02
+#dump_modify 1 glinecolor blue
+
+dump 1 image all 1000 dump3d1.* type type sline yes 0.005 surf one 0.02 particle no view 60 30
+dump_modify 1 slinecolor black
+
+dump 2 image all 1000 dump3d2.* type type sline yes 0.005 surf one 0.02 particle no view 0 0
+dump_modify 2 slinecolor red
+
+dump 3 image all 1000 dump3d3.* type type sline yes 0.005 surf one 0.02 particle no view 90 0
+dump_modify 3 slinecolor blue
+
+dump 4 image all 1000 dump3d4.* type type sline yes 0.005 surf one 0.02 particle no view 0 90
+dump_modify 4 slinecolor green
+
+stats						5
+stats_style			step cpu np nattempt ncoll nscoll nscheck
+run							1000
+
