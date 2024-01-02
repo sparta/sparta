@@ -492,6 +492,7 @@ void FixEmitSurf::perform_task()
     temp_thermal = tasks[i].temp_thermal;
     temp_rot = tasks[i].temp_rot;
     temp_vib = tasks[i].temp_vib;
+    temp_elec = tasks[i].temp_elec;
     vstream = tasks[i].vstream;
 
     if (subsonic_style == PONLY) vscale = tasks[i].vscale;
@@ -568,6 +569,7 @@ void FixEmitSurf::perform_task()
 
           erot = particle->erot(ispecies,temp_rot,random);
           evib = particle->evib(ispecies,temp_vib,random);
+          double eelec = particle->eelec(ispecies,temp_elec,random);
           id = MAXSMALLINT*random->uniform();
 
           particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
@@ -667,6 +669,7 @@ void FixEmitSurf::perform_task()
 
         erot = particle->erot(ispecies,temp_rot,random);
         evib = particle->evib(ispecies,temp_vib,random);
+        double eelec = particle->eelec(ispecies,temp_elec,random);
         id = MAXSMALLINT*random->uniform();
 
         particle->add_particle(id,ispecies,pcell,x,v,erot,evib);

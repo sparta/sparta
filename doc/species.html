@@ -27,6 +27,8 @@
 
 <PRE>  <I>vibfile</I> value = vfile = filename for extra vibrational info 
 </PRE>
+<PRE>  <I>elecfile</I> value = efile = filename for extra electronic info 
+</PRE>
 
 </UL>
 <P><B>Examples:</B>
@@ -160,7 +162,44 @@ defined in the species file (prop7 and prop6) when they are listed for
 the same species in the <I>vibfile</I>.
 </P>
 <HR>
+<P>
+The optional <I>elecfile</I> keyword can be used in conjuction with
+<I>collide_modify electronic discrete</I> and <I>fix elecmode</I> to model
+electronic excitation. If this option is used, then an entry must
+appear in <I>elecfile</I> for every species in this command.
+</P>
+<P>The format of a species electronic file is as follows. Comments or
+blank lines are allowed in the file. Comment lines start with a "#"
+character. All other lines must have one of the following formats:
+</P>
+<PRE>species-ID N temp1 relax1 degen1 spin1 temp2 relax2 degen2 spin2 ... tempN relaxN degenN spinN
+</PRE>
+<P>
+The species-ID is a string that will be matched against the requested species-ID.
+N is the number of electronic states.
+</P>
+For each of the N states, 4 values are listed:
+</P>
+<UL><LI>tempI = electronic temperature of state I (temperature units)
+<LI>relaxI = inverse electronic relaxation number of state I (unitless). Must
+match for all states in a given species
+<LI>degenI = degenercy of state I (integer, unitless)
+<LI>spinI = spin degeneracy of the state (e.g. singlet = 1, triplet = 3, etc.)
+</UL>
 
+<P>The other accepted format is:</P>
+<PRE>species-ID1 species-ID2 conserve_spin relax1 ... relaxN
+</PRE>
+<UL><LI>species-ID1 is a string of a species ID with electronic modes defined.
+<LI>species-ID2 is another species ID with which species-ID1 will collide.
+<LI>conserve_spin is either a "T" or a "F". When "F", then any electronic state
+for the relaxing particle is considered for the post-collision state. If "T"
+then only states with the same spin degeneracy number will be considered for relaxation.
+<LI>relaxI is the same as relaxI for the other format, i.e. inverse electronic
+relaxation number for state I of species-ID1 when colliding with species-ID2.
+These values override the default values set in the line with the first format.
+</UL>
+<HR>
 <P><B>Restrictions:</B> none
 </P>
 <P><B>Related commands:</B> none

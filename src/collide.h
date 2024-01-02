@@ -28,6 +28,7 @@ class Collide : protected Pointers {
   char *style;
   int rotstyle;       // none/smooth rotational modes
   int vibstyle;       // none/discrete/smooth vibrational modes
+  int elecstyle;      // none/discrete electronic modes
   int nearcp;         // 1 for near neighbor collisions
   int nearlimit;      // limit on neighbor serach for near neigh collisions
 

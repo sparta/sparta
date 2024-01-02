@@ -31,7 +31,7 @@ class ReactTCE : public ReactBird {
   ReactTCE(class SPARTA *, int, char **);
   void init();
   int attempt(Particle::OnePart *, Particle::OnePart *,
-              double, double, double, double &, int &);
+              double, double, double, double, double &, int &);
 };
 
 }

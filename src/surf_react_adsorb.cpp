@@ -2887,7 +2887,7 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
             int id = MAXSMALLINT*random->uniform();
             random_point(isurf,x);
             v[0] = v[1] = v[2] = 0.0;
-
+	
             particle->add_particle(id,r->products[0],0,x,v,0.0,0.0);
             p = &particle->particles[particle->nlocal-1];
             p->dtremain = update->dt*random->uniform();
@@ -2910,19 +2910,19 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
 
         case LH2:
           {
-            double x[3],v[3];
+	          double x[3],v[3];
 
-            int id = MAXSMALLINT*random->uniform();
-            random_point(isurf,x);
-            v[0] = v[1] = v[2] = 0.0;
+	          int id = MAXSMALLINT*random->uniform();
+	          random_point(isurf,x);
+	          v[0] = v[1] = v[2] = 0.0;
+	
+	          particle->add_particle(id,r->products[0],0,x,v,0.0,0.0);
+	          p = &particle->particles[particle->nlocal-1];
+	          p->dtremain = update->dt*random->uniform();
 
-            particle->add_particle(id,r->products[0],0,x,v,0.0,0.0);
-            p = &particle->particles[particle->nlocal-1];
-            p->dtremain = update->dt*random->uniform();
-
-            if (r->cmodel_ip != NOMODEL)
-              cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
-                                             r->cmodel_ip_coeffs);
+	          if (r->cmodel_ip != NOMODEL)
+	            cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
+					          r->cmodel_ip_coeffs);
             else {
               if (modePS == PSFACE) isc = domain->surf_collide[isurf];
               else if (modePS == PSLINE) isc = lines[isurf].isc;
@@ -2930,10 +2930,10 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
               surf->sc[isc]->wrapper(p,norm,NULL,NULL);
             }
 
-            add_particle_mine(p);
-            particle->nlocal--;
-
-            break;
+	          add_particle_mine(p);
+	          particle->nlocal--;
+	
+	          break;
           }
 
         case LH4:

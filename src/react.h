@@ -42,7 +42,7 @@ class React : protected Pointers {
   virtual int recomb_exist(int, int) = 0;
   virtual void ambi_check() = 0;
   virtual int attempt(Particle::OnePart *, Particle::OnePart *,
-                      double, double, double, double &, int &) = 0;
+                      double, double, double, double, double &, int &) = 0;
   virtual char *reactionID(int) = 0;
   virtual double extract_tally(int) = 0;
 

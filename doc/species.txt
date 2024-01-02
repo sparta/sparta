@@ -18,6 +18,8 @@ multi-species abbreviations can also be used (see below) :l
 zero or more keyword/value pairs may be appended :l
 keyword = {vibfile} :l
   {vibfile} value = vfile = filename for extra vibrational info :pre
+keyword = {elecfile} :l
+  {elecfile} value = efile = filename for extra electronic info :pre
 :ule
 
 [Examples:]
@@ -151,6 +153,39 @@ defined in the species file (prop7 and prop6) when they are listed for
 the same species in the {vibfile}.
 
 :line
+
+The optional {elecfile} keyword can be used in conjuction with
+"collide_modify electronic discrete" and "fix elecmode" to model
+electronic excitation. If this option is used, then an entry must
+appear in {elecfile} for every species in this command.
+
+The format of a species electronic file is as follows. Comments or
+blank lines are allowed in the file. Comment lines start with a "#"
+character. All other lines must have one of the following formats:
+
+species-ID N temp1 relax1 degen1 spin1 temp2 relax2 degen2 spin2 ... tempN relaxN degenN spinN:pre
+
+The species-ID is a string that will be matched against the requested species-ID.
+N is the number of electronic states. For each of the N states, 3 values are
+listed:
+
+tempI = electronic temperature of state I (temperature units)
+relaxI = inverse electronic relaxation number of state I (unitless)
+degenI = degenercy of state I (integer, unitless) :ul
+spinI = spin degeneracy of the state (e.g. singlet = 1, triplet = 3, etc.)
+
+The other accepted format is:
+
+species-ID1 species-ID2 conserve_spin relax1 ... relaxN
+
+species-ID1 is a string of a species ID with electronic modes defined.
+species-ID2 is another species ID with which species-ID1 will collide.
+conserve_spin is either a "T" or a "F". When "F", then any electronic state
+for the relaxing particle is considered for the post-collision state. If "T"
+then only states with the same spin degeneracy number will be considered for relaxation.
+relaxI is the same as relaxI for the other format, i.e. inverse electronic
+relaxation number for state I of species-ID1 when colliding with species-ID2.
+These values override the default values set in the line with the first format.
 
 [Restrictions:] none
 

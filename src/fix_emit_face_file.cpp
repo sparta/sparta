@@ -346,7 +346,7 @@ void FixEmitFaceFile::create_task(int icell)
 void FixEmitFaceFile::perform_task()
 {
   int pcell,ninsert,nactual,isp,ispecies,id;
-  double temp_thermal,temp_rot,temp_vib;
+  double temp_thermal,temp_rot,temp_vib,temp_elec;
   double indot,scosine,rn,ntarget,vr;
   double beta_un,normalized_distbn_fn,theta,erot,evib;
   double x[3],v[3];
@@ -425,9 +425,10 @@ void FixEmitFaceFile::perform_task()
           v[qdim] = vr * cos(theta) + vstream[qdim];
           erot = particle->erot(ispecies,temp_rot,random);
           evib = particle->evib(ispecies,temp_vib,random);
+          double eelec = particle->eelec(ispecies,temp_elec,random);
           id = MAXSMALLINT*random->uniform();
 
-          particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+	        particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
           nactual++;
 
           p = &particle->particles[particle->nlocal-1];
@@ -479,9 +480,10 @@ void FixEmitFaceFile::perform_task()
         v[qdim] = vr * cos(theta) + vstream[qdim];
         erot = particle->erot(ispecies,temp_rot,random);
         evib = particle->evib(ispecies,temp_vib,random);
+        double eelec = particle->eelec(ispecies,temp_elec,random);
         id = MAXSMALLINT*random->uniform();
 
-        particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+	      particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
         nactual++;
 
         p = &particle->particles[particle->nlocal-1];

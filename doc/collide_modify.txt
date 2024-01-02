@@ -24,6 +24,7 @@ keywords = {vremax} or {remain} or {ambipolar} or {nearcp} or {rotate} or {vibra
   {ambipolar} value = {no} or {yes}
   {rotate} value = {no} or {smooth}
   {vibrate} value = {no} or {smooth} or {discrete} :pre
+  {electronic} value = {no} or {discrete} :pre
 :ule
 
 [Examples:]
@@ -134,6 +135,15 @@ Also note that if any such species are defined (with more than one
 vibrational mode, then use of the {discrete} option also requires the
 "fix vibmode"_fix_vibmode.html command be used to allocate storage for
 the per-particle mode values.
+
+The {electronic} keyword determines whether the electronic energy of
+particles is tracked. If the value is set to {no}, then electronic
+energy is not tracked. If the value is set to {discrete}, then each
+particle is in one of several defined electronic states. The use of
+electronic modes also requires the "fix elecmode"_fix_elecmode.html
+command be used to allocate storage for the per-particle electronic
+state values. Likewise, the "species elecfile" must also be used to
+provide electronic state information.
 
 :line
 

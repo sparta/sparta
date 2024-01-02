@@ -26,6 +26,8 @@ class Particle : protected Pointers {
   int sorted;               // 1 if particles are sorted by grid cell
 
   enum{MAXVIBMODE=4};       // increase value if species need more vib modes
+  enum{MAXELECSTATE=12};      // increase value if species need more electronic states
+  enum{MAXSPECIES=16};      // increase value if more species are needed for species-specific electronic relaxation rates
 
   struct Species {          // info on each particle species, read from file
     char id[16];            // species ID
@@ -37,11 +39,17 @@ class Particle : protected Pointers {
     double rottemp[3];      // rotational temperature(s)
     double vibtemp[MAXVIBMODE];   // vibrational temperature(s)
     double vibrel[MAXVIBMODE];    // inverse vibrational relaxation number(s)
+    double electemp[MAXELECSTATE];  // electronic temperatures for each electronic state
+    double elecrel[MAXSPECIES][MAXELECSTATE];   // inverse electronic collision numbers
+    bool enforce_spin_conservation[MAXSPECIES];
     int vibdegen[MAXVIBMODE];     // vibrational mode degeneracies
-    int rotdof,vibdof;      // rotational/vibrational DOF
-    int nrottemp,nvibmode;  // # of rotational/vibrational temps/modes defined
+    int elecdegen[MAXELECSTATE];    // electronic state degeneracies
+    int elecspin[MAXELECSTATE];    // electronic state spin degeneracy (singlet, triplet, etc)
+    int rotdof,vibdof,elecdof;      // rotational/vibrational DOF
+    int nrottemp,nvibmode,nelecstate;  // # of rotational/vibrational/electronic temps/modes defined
     int internaldof;        // 1 if either rotdof or vibdof != 0
     int vibdiscrete_read;   // 1 if species.vib file read for this species
+    int elecdiscrete_read;   // 1 if species.elec file read for this species
     double magmoment;       // magnetic moment, set by species_modify command
   };
 
@@ -59,9 +67,20 @@ class Particle : protected Pointers {
     int nmode;
   };
 
+  struct ElecFile {
+    char id[16];
+    double elecrel[MAXSPECIES][MAXELECSTATE];
+    bool enforce_spin_conservation[MAXSPECIES];
+    double electemp[MAXELECSTATE];
+    int elecdegen[MAXELECSTATE];
+    int elecspin[MAXELECSTATE];
+    int nmode;
+  };
+
   Species *species;         // list of particle species info
   int nspecies;             // # of defined species
   int maxvibmode;           // max vibmode of any species (mode = dof/2)
+  int maxelecstate;
 
   class Mixture **mixture;
   int nmixture;
@@ -158,6 +177,8 @@ class Particle : protected Pointers {
   int find_mixture(char *);
   double erot(int, double, class RanKnuth *);
   double evib(int, double, class RanKnuth *);
+  double eelec(int, double, class RanKnuth *);
+  void electronic_distribution_func(int, double, double*);
 
   void write_restart_species(FILE *fp);
   void read_restart_species(FILE *fp);
@@ -198,6 +219,7 @@ class Particle : protected Pointers {
   Species *filespecies;     // list of species read from file
   RotFile *filerot;         // list of species rotation info read from file
   VibFile *filevib;         // list of species vibration info read from file
+  ElecFile *fileelec;         // list of species electronic info read from file
 
   class RanKnuth *wrandom;   // RNG for particle weighting
 
@@ -228,6 +250,7 @@ class Particle : protected Pointers {
   void read_species_file();
   void read_rotation_file();
   void read_vibration_file();
+  void read_electronic_file();
   int wordcount(char *, char **);
 };
 

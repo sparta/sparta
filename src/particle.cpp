@@ -11,7 +11,6 @@
 
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
-
 #include "mpi.h"
 #include "math.h"
 #include "string.h"
@@ -59,6 +58,7 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
   nspecies = maxspecies = 0;
   species = NULL;
   maxvibmode = 0;
+  maxelecstate = 0;
 
   //maxgrid = 0;
   //cellcount = NULL;
@@ -772,6 +772,8 @@ void Particle::add_species(int narg, char **arg)
       break;
     } else if (strcmp(arg[iarg],"vibfile") == 0) {
       break;
+    } else if (strcmp(arg[iarg],"elecfile") == 0) {
+      break;
     } else {
       names[newspecies++] = arg[iarg];
     }
@@ -825,6 +827,7 @@ void Particle::add_species(int narg, char **arg)
 
   int rotindex = 0;
   int vibindex = 0;
+  int elecindex = 0;
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"rotfile") == 0) {
@@ -840,6 +843,12 @@ void Particle::add_species(int narg, char **arg)
       if (vibindex)
         error->all(FLERR,"Species command can only use a single vibfile");
       vibindex = iarg+1;
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"elecfile") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal species command");
+      if (elecindex)
+        error->all(FLERR,"Species command can only use a single elecfile");
+      elecindex = iarg+1;
       iarg += 2;
     } else error->all(FLERR,"Illegal species command");
   }
@@ -945,6 +954,63 @@ void Particle::add_species(int narg, char **arg)
     memory->sfree(filevib);
   }
 
+  if (elecindex) {
+    if (me == 0) {
+      fp = fopen(arg[elecindex],"r");
+      if (fp == NULL) {
+        char str[128];
+        sprintf(str,"Cannot open electronic file %s",arg[elecindex]);
+        error->one(FLERR,str);
+      }
+    }
+
+    nfile = maxfile = 0;
+    fileelec = NULL;
+
+    if (me == 0) read_electronic_file();
+    MPI_Bcast(&nfile,1,MPI_INT,0,world);
+
+    if (comm->me) {
+      fileelec = (ElecFile *)
+        memory->smalloc(nfile*sizeof(ElecFile),"particle:fileelec");
+    }
+    MPI_Bcast(fileelec,nfile*sizeof(ElecFile),MPI_BYTE,0,world);
+
+    for (i = 0; i < newspecies; i++) {
+      int ii = nspecies_original + i;
+
+      for (j = 0; j < nfile; j++)
+        if (strcmp(names[i],fileelec[j].id) == 0) break;
+      if (j == nfile) {
+        if (species[ii].elecdof <= 2) continue;
+        error->all(FLERR,"Species ID does not appear in electronic file");
+      }
+
+      int nmode = fileelec[j].nmode;
+      species[ii].nelecstate = nmode;
+      for (int isp = 0; isp < particle->nspecies; ++isp) {
+        species[ii].enforce_spin_conservation[isp] = fileelec[j].enforce_spin_conservation[isp];
+      }
+      for (k = 0; k < nmode; k++) {
+        species[ii].electemp[k] = fileelec[j].electemp[k];
+        for (int isp = 0; isp < particle->nspecies; ++isp) {
+            if (fileelec[j].elecrel[isp][k] < 0) {
+              species[ii].elecrel[isp][k] = fileelec[j].elecrel[ii][k];
+            } else {
+              // Default to value from original line
+              species[ii].elecrel[isp][k] = fileelec[j].elecrel[isp][k];
+            }
+        }
+        species[ii].elecdegen[k] = fileelec[j].elecdegen[k];
+        species[ii].elecspin[k] = fileelec[j].elecspin[k];
+      }
+
+      maxelecstate = MAX(maxelecstate,species[ii].nelecstate);
+      species[ii].elecdiscrete_read = 1;
+    }
+
+    memory->sfree(fileelec);
+  }
   // clean up
 
   delete [] names;
@@ -1099,6 +1165,52 @@ double Particle::evib(int isp, double temp_thermal, RanKnuth *erandom)
   }
 
   return eng;
+}
+
+double Particle::eelec(int isp, double temp_elec, RanKnuth *erandom)
+{
+  double energy = 0.0;
+
+  int elecstyle = NONE;
+  if (collide) elecstyle = collide->elecstyle;
+  if (elecstyle == DISCRETE) {
+    Species species = particle->species[isp];
+    double cumulative_probabilities[species.nelecstate];
+
+    electronic_distribution_func( isp, temp_elec, cumulative_probabilities );
+
+    for (int i = 1; i < species.nelecstate; ++i) {
+      cumulative_probabilities[i] += cumulative_probabilities[i-1];
+    }
+
+    double ran = erandom->uniform();
+    int i = 0;
+    while (ran > cumulative_probabilities[i]) {
+      ++i;
+    }
+    energy = update->boltz*species.electemp[i];
+  }
+  return energy;
+}
+
+void Particle::electronic_distribution_func( int isp, double temp_elec, double* distribution ) {
+  int elecstyle = NONE;
+  if (collide) elecstyle = collide->elecstyle;
+  if (elecstyle == DISCRETE) {
+    Particle::Species species = particle->species[isp];
+    double partition_function = 0.0;
+
+    for (int i = 0; i < species.nelecstate; ++i) {
+      // Calculate boltzmann fractions
+      distribution[i] = species.elecdegen[i]*exp(-species.electemp[i]/temp_elec);
+      // Calculate partition function
+      partition_function += distribution[i];
+    }
+
+    for (int i = 0; i < species.nelecstate; ++i) {
+      distribution[i] /= partition_function;
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -1305,6 +1417,107 @@ void Particle::read_vibration_file()
   fclose(fp);
 }
 
+/* ----------------------------------------------------------------------
+   read list of extra electronic info in electronic file
+   store info in fileelec and nfile
+   only invoked by proc 0
+------------------------------------------------------------------------- */
+
+void Particle::read_electronic_file()
+{
+  // read file line by line
+  // skip blank lines or comment lines starting with '#'
+  // all other lines can have up to NWORDS
+
+  int NWORDS = 2 + 4*MAXELECSTATE;
+  char **words = new char*[NWORDS];
+  char line[MAXLINE],copy[MAXLINE];
+
+  while (fgets(line,MAXLINE,fp)) {
+    int pre = strspn(line," \t\n\r");
+    if (pre == strlen(line) || line[pre] == '#') continue;
+
+    strcpy(copy,line);
+    int nwords = wordcount(copy,NULL);
+    if (nwords < 3)
+      error->one(FLERR,"Incorrect line format in electronic file");
+
+    if (nfile == maxfile) {
+      maxfile += DELTASPECIES;
+      fileelec = (ElecFile *)
+	memory->srealloc(fileelec,maxfile*sizeof(ElecFile),
+			 "particle:fileelec");
+      memset(&fileelec[nfile],0,(maxfile-nfile)*sizeof(ElecFile));
+    }
+
+    nwords = wordcount(line,words);
+    ElecFile *vsp = &fileelec[nfile];
+
+    if (strlen(words[0]) + 1 > 16)
+      error->one(FLERR,"Invalid species ID in electronic file");
+    strcpy(vsp->id,words[0]);
+
+    if (particle->nspecies > MAXSPECIES) {
+      error->one(FLERR,"Not enough memory allocated for electronic state parsing. Increase MAXSPECIES\n");
+    }
+    int isp = particle->find_species(words[0]);
+    if (isp < 0) continue;
+
+    for (int j = 0; j < MAXSPECIES; ++j) {
+      for (int i = 0; i < MAXELECSTATE; ++i) {
+        vsp->elecrel[j][i] = -1.0;
+      }
+    }
+    int test_nmode = atoi(words[1]);
+    if (test_nmode > 0) {
+      vsp->nmode = test_nmode;
+
+      // Line defining electronic states for one species
+      if (vsp->nmode < 2 || vsp->nmode > MAXELECSTATE)
+        error->one(FLERR,"Invalid N count in electronic file");
+      if (nwords != 2 + 4*vsp->nmode)
+        error->one(FLERR,"Incorrect line format in electronic file");
+
+      int j = 2;
+      for (int i = 0; i < vsp->nmode; ++i) {
+        vsp->electemp[i] = atof(words[j++]);
+        vsp->elecrel[isp][i] = atof(words[j++]);
+        vsp->elecdegen[i] = atoi(words[j++]);
+        vsp->elecspin[i] = atoi(words[j++]);
+      }
+      nfile++;
+    } else {
+      // Cross-species line defining species-specific relaxation collision numbers
+      for (int i = 0; i < nfile; ++i) {
+        if (strcmp(words[0],fileelec[i].id) == 0) {
+          vsp = &fileelec[i];
+          break;
+        }
+      }
+      if (nwords != 3 + vsp->nmode)
+        error->one(FLERR,"Incorrect line format in electronic file");
+
+      int jsp = particle->find_species(words[1]);
+      if ( jsp < 0 ) continue;
+
+      if (strcmp(words[2],"T") == 0) {
+        vsp->enforce_spin_conservation[jsp] = true;
+      } else if (strcmp(words[2],"F") == 0) {
+        vsp->enforce_spin_conservation[jsp] = false;
+      } else {
+        error->one(FLERR,"Must specify 'T' or 'F' for spin conservation flag");
+      }
+      int j = 3;
+      for (int i = 0; i < vsp->nmode; ++i) {
+        vsp->elecrel[jsp][i] = atof(words[j++]);
+      }
+    }
+  }
+
+  delete [] words;
+
+  fclose(fp);
+}
 /* ----------------------------------------------------------------------
    count whitespace-delimited words in line
    line will be modified, since strtok() inserts NULLs
@@ -2076,3 +2289,5 @@ bigint Particle::memory_usage()
     bytes += (bigint) maxlocal*edcol[i] * sizeof(double);
   return bytes;
 }
+
+/* ---------------------------------------------------------------------- */

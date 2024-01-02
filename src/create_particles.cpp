@@ -379,6 +379,7 @@ void CreateParticles::create_single()
   double temp_thermal = particle->mixture[imix]->temp_thermal;
   double temp_rot = particle->mixture[imix]->temp_rot;
   double temp_vib = particle->mixture[imix]->temp_vib;
+  double temp_elec = particle->mixture[imix]->temp_elec;
   vstream[0] = vstream[1] = vstream[2] = 0.0;
 
   if (domain->dimension == 2 && x[2] != 0.0)
@@ -422,6 +423,7 @@ void CreateParticles::create_single()
     int id = MAXSMALLINT*random->uniform();
     double erot = particle->erot(mspecies,temp_rot,random);
     double evib = particle->evib(mspecies,temp_vib,random);
+    double eelec = particle->eelec(mspecies,temp_elec,random);
     particle->add_particle(id,mspecies,iwhich,x,v,erot,evib);
     if (nfix_update_custom)
       modify->update_custom(particle->nlocal-1,temp_thermal,
@@ -537,6 +539,7 @@ void CreateParticles::create_local()
   double temp_thermal = particle->mixture[imix]->temp_thermal;
   double temp_rot = particle->mixture[imix]->temp_rot;
   double temp_vib = particle->mixture[imix]->temp_vib;
+  double temp_elec = particle->mixture[imix]->temp_elec;
 
   int npercell,ncreate,isp,ispecies,id,pflag,subcell;
   double x[3],v[3],xcell[3],vstream_variable[3];
@@ -660,6 +663,7 @@ void CreateParticles::create_local()
 
       erot = particle->erot(ispecies,temp_rot*tempscale,random);
       evib = particle->evib(ispecies,temp_vib*tempscale,random);
+      double eelec = particle->eelec(ispecies,temp_elec,random);
 
       id = MAXSMALLINT*random->uniform();
 
@@ -785,6 +789,7 @@ void CreateParticles::create_local_twopass()
   double temp_thermal = particle->mixture[imix]->temp_thermal;
   double temp_rot = particle->mixture[imix]->temp_rot;
   double temp_vib = particle->mixture[imix]->temp_vib;
+  double temp_elec = particle->mixture[imix]->temp_elec;
 
   int npercell,ncreate,isp,ispecies,id,pflag,subcell;
   double x[3],v[3],xcell[3],vstream_variable[3];
@@ -938,11 +943,11 @@ void CreateParticles::create_local_twopass()
 
       erot = particle->erot(ispecies,temp_rot*tempscale,random);
       evib = particle->evib(ispecies,temp_vib*tempscale,random);
+      double eelec = particle->eelec(ispecies,temp_elec,random);
 
       id = MAXSMALLINT*random->uniform();
 
       particle->add_particle(id,ispecies,icell,x,v,erot,evib);
-
       if (nfix_update_custom)
         modify->update_custom(particle->nlocal-1,temp_thermal,
                              temp_rot,temp_vib,vstream);

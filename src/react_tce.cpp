@@ -43,7 +43,7 @@ void ReactTCE::init()
 /* ---------------------------------------------------------------------- */
 
 int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
-                      double pre_etrans, double pre_erot, double pre_evib,
+                      double pre_etrans, double pre_erot, double pre_evib, double pre_eelec,
                       double &post_etotal, int &kspecies)
 {
   double pre_etotal,ecc,e_excess;
@@ -71,7 +71,7 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
     // ignore energetically impossible reactions
 
-    pre_etotal = pre_etrans + pre_erot + pre_evib;
+    pre_etotal = pre_etrans + pre_erot + pre_evib + pre_eelec;
 
     ecc = pre_etrans;
     if (pre_ave_rotdof > 0.1) ecc += pre_erot*r->coeff[0]/pre_ave_rotdof;

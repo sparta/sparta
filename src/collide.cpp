@@ -81,6 +81,7 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   remain = NULL;
   rotstyle = SMOOTH;
   vibstyle = NONE;
+  elecstyle = NONE;
   nearcp = 0;
   nearlimit = 10;
 
@@ -205,6 +206,14 @@ void Collide::init()
     }
   }
 
+  if (elecstyle == DISCRETE) {
+    int index_elecstate = particle->find_custom((char *) "elecstate");
+    
+    if (index_elecstate < 0) {
+        error->all(FLERR,
+                   "Fix elecmode must be used with discrete electronic modes");
+    }
+  }
   // reallocate one-cell data structs for one or many groups
 
   oldgroups = ngroups;
@@ -362,6 +371,12 @@ void Collide::modify_params(int narg, char **arg)
       if (strcmp(arg[iarg+1],"no") == 0) vibstyle = NONE;
       else if (strcmp(arg[iarg+1],"discrete") == 0) vibstyle = DISCRETE;
       else if (strcmp(arg[iarg+1],"smooth") == 0) vibstyle = SMOOTH;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"electronic") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"no") == 0) elecstyle = NONE;
+      else if (strcmp(arg[iarg+1],"discrete") == 0) elecstyle = DISCRETE;
       else error->all(FLERR,"Illegal collide_modify command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"ambipolar") == 0) {

@@ -464,7 +464,7 @@ void FixEmitFace::perform_task_onepass()
   int pcell,ninsert,nactual,isp,ispecies,ndim,pdim,qdim,id;
   double indot,scosine,rn,ntarget,vr;
   double beta_un,normalized_distbn_fn,theta,erot,evib;
-  double temp_thermal,temp_rot,temp_vib;
+  double temp_thermal,temp_rot,temp_vib,temp_elec;
   double x[3],v[3];
   double *lo,*hi,*normal,*vstream,*vscale;
   Particle::OnePart *p;
@@ -547,6 +547,7 @@ void FixEmitFace::perform_task_onepass()
           v[qdim] = vr * cos(theta) + vstream[qdim];
           erot = particle->erot(ispecies,temp_rot,random);
           evib = particle->evib(ispecies,temp_vib,random);
+          double eelec = particle->eelec(ispecies,temp_elec,random);
           id = MAXSMALLINT*random->uniform();
 
           particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
@@ -606,9 +607,10 @@ void FixEmitFace::perform_task_onepass()
         v[qdim] = vr * cos(theta) + vstream[qdim];
         erot = particle->erot(ispecies,temp_rot,random);
         evib = particle->evib(ispecies,temp_vib,random);
+        double eelec = particle->eelec(ispecies,temp_elec,random);
         id = MAXSMALLINT*random->uniform();
 
-        particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+	      particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
         nactual++;
 
         p = &particle->particles[particle->nlocal-1];
@@ -635,7 +637,7 @@ void FixEmitFace::perform_task_twopass()
   int pcell,ninsert,nactual,isp,ispecies,ndim,pdim,qdim,id;
   double indot,scosine,rn,ntarget,vr;
   double beta_un,normalized_distbn_fn,theta,erot,evib;
-  double temp_thermal,temp_rot,temp_vib;
+  double temp_thermal,temp_rot,temp_vib,temp_elec;
   double x[3],v[3];
   double *lo,*hi,*normal,*vstream,*vscale;
   Particle::OnePart *p;
@@ -740,6 +742,7 @@ void FixEmitFace::perform_task_twopass()
           v[qdim] = vr * cos(theta) + vstream[qdim];
           erot = particle->erot(ispecies,temp_rot,random);
           evib = particle->evib(ispecies,temp_vib,random);
+          double eelec = particle->eelec(ispecies,temp_elec,random);
           id = MAXSMALLINT*random->uniform();
 
           particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
@@ -793,6 +796,7 @@ void FixEmitFace::perform_task_twopass()
         v[qdim] = vr * cos(theta) + vstream[qdim];
         erot = particle->erot(ispecies,temp_rot,random);
         evib = particle->evib(ispecies,temp_vib,random);
+        double eelec = particle->eelec(ispecies,temp_elec,random);
         id = MAXSMALLINT*random->uniform();
 
         particle->add_particle(id,ispecies,pcell,x,v,erot,evib);

@@ -1,0 +1,64 @@
+################################################################################
+# thermal gas in a 3d box with collisions
+# particles reflect off global box boundaries
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5 comm/sort yes
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+create_grid 	    2 2 2
+
+balance_grid        rcb part
+
+species		    air.species N2 O2 N2+ e elecfile air.elec
+mixture		    air N2 O2 N2+ e vstream 0.0 0.0 0.0 temp 20000.0 trot 100.0 tvib 100.0 telec 100.0
+
+mixture             air copy noelectron
+mixture             noelectron delete e
+mixture             noelectron N2 frac 0.45
+mixture             noelectron O2 frac 0.45
+mixture             noelectron N2+ frac 0.10
+
+global              nrho 7.07043E22
+global              fnum 7.07043E4
+
+fix                 ambi ambipolar e N2+
+
+collide		    vss air air.vss relax constant
+collide_modify      rotate no vibrate no electronic discrete
+collide_modify      ambipolar yes
+fix                 electronic elecmode
+collide_modify      remain no
+
+create_particles    noelectron n 40000 twopass
+
+stats		    1
+compute             temp temp
+compute             T thermal/grid all all temp
+compute             Ttrans reduce ave c_T[1]
+
+compute             elec grid all species eelec
+compute             Eelec reduce ave c_elec[1]
+
+compute             telec telec/grid all air
+compute             Telec reduce ave c_telec
+
+compute             den grid all species nrho
+compute             Den reduce ave c_den[1]
+compute             Den2 reduce ave c_den[2]
+compute             Den3 reduce ave c_den[3]
+
+#stats_style	    step cpu np nattempt ncoll c_Erot c_Evib c_Eelec
+stats_style	    step cpu np nattempt ncoll c_Ttrans c_Eelec c_Telec c_Den c_Den2 c_Den3
+
+timestep 	    1.00E-9
+run 		    1000

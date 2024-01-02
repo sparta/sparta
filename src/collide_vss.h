@@ -47,10 +47,12 @@ class CollideVSS : public Collide {
     double imass,jmass;
     double ave_rotdof;
     double ave_vibdof;
+    double ave_elecdof;
     double ave_dof;
     double etrans;
     double erot;
     double evib;
+    double eelec;
     double eexchange;
     double eint;
     double etotal;
@@ -97,6 +99,11 @@ class CollideVSS : public Collide {
   double sample_bl(RanKnuth *, double, double);
   double rotrel (int, double);
   double vibrel (int, double);
+
+  void relax_electronic_mode(Particle::OnePart *, Particle::OnePart *, double&);
+  double get_elec_phi(int, int, int, double);
+  double calc_elec_coll_temp(Particle::OnePart *, double, double);
+  int select_elec_state(Particle::OnePart *, Particle::OnePart *, double, double, bool);
 
   void read_param_file(char *);
   int wordparse(int, char *, char **);
