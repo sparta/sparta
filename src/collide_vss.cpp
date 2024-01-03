@@ -678,13 +678,13 @@ int CollideVSS::select_elec_state(Particle::OnePart *p, Particle::OnePart *jp, d
   // Calculate number of total states, including degeneracies
   double state_probability[Particle::MAXELECSTATE];
   for( int state = 0; state <= max_level; ++state) {
+    if (state != 0) {
+      state_probability[state] = state_probability[state-1];
+    } else {
+      state_probability[state] = 0.0;
+    }
     if ( ! enforce_spin_conservation || 
            species[p->ispecies].elecspin[state] == species[p->ispecies].elecspin[estates[p - particle->particles]]) {
-      if (state != 0) {
-        state_probability[state] = state_probability[state-1];
-      } else {
-        state_probability[state] = 0.0;
-      }
       // Note we can use E_Dispose here since the current implementation requires the collision numbers
       // to be collision invariant (and therefore depend on E_Dispose, the trans + elec energy) but this
       // algorithm allows that to be relaxed. If other models are needed, the correct data would need passed

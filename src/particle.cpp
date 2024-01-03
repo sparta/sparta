@@ -982,8 +982,8 @@ void Particle::add_species(int narg, char **arg)
       for (j = 0; j < nfile; j++)
         if (strcmp(names[i],fileelec[j].id) == 0) break;
       if (j == nfile) {
-        if (species[ii].elecdof <= 2) continue;
-        error->all(FLERR,"Species ID does not appear in electronic file");
+        species[ii].nelecstate = 0;
+        continue;
       }
 
       int nmode = fileelec[j].nmode;
