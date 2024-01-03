@@ -32,7 +32,7 @@ class ReactTCEKokkos : public ReactBirdKokkos {
   ReactTCEKokkos(class SPARTA* sparta) : ReactBirdKokkos(sparta) {};
   void init();
   int attempt(Particle::OnePart *, Particle::OnePart *,
-              double, double, double, double &, int &) { return 0; }
+              double, double, double, double, double &, int &) { return 0; }
 
 /* ---------------------------------------------------------------------- */
 
@@ -40,7 +40,7 @@ enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};   // other files
 
 KOKKOS_INLINE_FUNCTION
 int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
-         double pre_etrans, double pre_erot, double pre_evib,
+         double pre_etrans, double pre_erot, double pre_evib, double pre_eelec,
          double &post_etotal, int &kspecies,
          int &recomb_species, double &recomb_density, const t_species_1d_const &d_species) const
 {
@@ -69,7 +69,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 
     // ignore energetically impossible reactions
 
-    const double pre_etotal = pre_etrans + pre_erot + pre_evib;
+    const double pre_etotal = pre_etrans + pre_erot + pre_evib + pre_eelec;
 
     double ecc = pre_etrans;
     if (pre_ave_rotdof > 0.1) ecc += pre_erot*r->d_coeff[0]/pre_ave_rotdof;

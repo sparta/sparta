@@ -1391,7 +1391,7 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
   if (react_defined)
     reactflag = react_kk_copy.obj.attempt_kk(ip,jp,
                                              precoln.etrans,precoln.erot,
-                                             precoln.evib,postcoln.etotal,kspecies,
+                                             precoln.evib,precoln.eelec,postcoln.etotal,kspecies,
                                              recomb_species,recomb_density,d_species);
   else reactflag = 0;
 
