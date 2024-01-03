@@ -166,7 +166,7 @@ character. All other lines must have one of the following formats:
 species-ID N temp1 relax1 degen1 spin1 temp2 relax2 degen2 spin2 ... tempN relaxN degenN spinN:pre
 
 The species-ID is a string that will be matched against the requested species-ID.
-N is the number of electronic states. For each of the N states, 3 values are
+N is the number of electronic states. For each of the N states, 4 values are
 listed:
 
 tempI = electronic temperature of state I (temperature units)
