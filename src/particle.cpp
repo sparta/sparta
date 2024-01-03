@@ -1467,6 +1467,7 @@ void Particle::read_electronic_file()
       for (int i = 0; i < MAXELECSTATE; ++i) {
         vsp->elecrel[j][i] = -1.0;
       }
+      vsp->enforce_spin_conservation[j] = true;
     }
     int test_nmode = atoi(words[1]);
     if (test_nmode > 0) {
