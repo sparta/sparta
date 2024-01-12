@@ -72,6 +72,7 @@ MarchingCubes::MarchingCubes(SPARTA *sparta, int ggroup_caller,
 void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
 {
   int i,j,ipt,isurf,nsurf,icase,which;
+  surfint surfID;
   surfint *ptr;
 
   Grid::ChildCell *cells = grid->cells;
@@ -79,6 +80,10 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
   MyPage<surfint> *csurfs = grid->csurfs;
   int nglocal = grid->nlocal;
   int groupbit = grid->bitmask[ggroup];
+
+  bigint maxsurfID = 0;
+  if (sizeof(surfint) == 32) maxsurfID = MAXSMALLINT;
+  if (sizeof(surfint) == 64) maxsurfID = MAXBIGINT;
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
@@ -411,14 +416,21 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
     // populate Grid and Surf data structs
     // points will be duplicated, not unique
     // surf ID = cell ID for all surfs in cell
+    // check if uint cell ID overflows int surf ID
+
+    if (nsurf) {
+      if (cells[icell].id > maxsurfID)
+        error->one(FLERR,"Grid cell ID overflows implicit surf ID");
+      surfID = cells[icell].id;
+    }
 
     ptr = csurfs->get(nsurf);
 
     ipt = 0;
     for (i = 0; i < nsurf; i++) {
-      if (svalues) surf->add_tri(cells[icell].id,svalues[icell],
+      if (svalues) surf->add_tri(surfID,svalues[icell],
                                  pt[ipt+2],pt[ipt+1],pt[ipt]);
-      else surf->add_tri(cells[icell].id,1,pt[ipt+2],pt[ipt+1],pt[ipt]);
+      else surf->add_tri(surfID,1,pt[ipt+2],pt[ipt+1],pt[ipt]);
       ipt += 3;
       isurf = surf->nlocal - 1;
       ptr[i] = isurf;

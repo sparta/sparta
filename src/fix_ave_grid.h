@@ -81,18 +81,18 @@ class FixAveGrid : public Fix {
 
   int ntallyID;            // # of cells I have tallies for
   int maxtallyID;          // # of tallies currently allocated
-  surfint *tally2cell;     // tally2cell[I] = cell ID of Ith tally
+  surfint *tally2surf;     // tally2surf[I] = surf ID of Ith tally
   double *vec_tally;       // tally values, maxtally in length
   double **array_tally;
 
   // hash for cell IDs
 
 #ifdef SPARTA_MAP
-  typedef std::map<cellint,int> MyHash;
+  typedef std::map<surfint,int> MyHash;
 #elif defined SPARTA_UNORDERED_MAP
-  typedef std::unordered_map<cellint,int> MyHash;
+  typedef std::unordered_map<surfint,int> MyHash;
 #else
-  typedef std::tr1::unordered_map<cellint,int> MyHash;
+  typedef std::tr1::unordered_map<surfint,int> MyHash;
 #endif
 
   MyHash *hash;

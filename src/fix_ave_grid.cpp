@@ -353,7 +353,7 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   // tally accumulators for flavor = PERGRIDSURF
 
   ntallyID = maxtallyID = 0;
-  tally2cell = NULL;
+  tally2surf = NULL;
   vec_tally = NULL;
   array_tally = NULL;
 
@@ -386,7 +386,7 @@ FixAveGrid::~FixAveGrid()
 
   memory->destroy(tally);
 
-  memory->destroy(tally2cell);
+  memory->destroy(tally2surf);
   memory->destroy(vec_tally);
   memory->destroy(array_tally);
 
@@ -457,7 +457,7 @@ void FixAveGrid::end_of_step()
 {
   int i,j,k,m,n,itally;
   int ntally_col,kk;
-  cellint cellID;
+  surfint surfID;
   int *itmp;
   double *vec;
   double **ctally;
@@ -476,7 +476,7 @@ void FixAveGrid::end_of_step()
         tally[i][j] = 0.0;
   }
 
-  // clear hash of cellID tallies if ave = ONE and first sample
+  // clear hash of surfID tallies if ave = ONE and first sample
 
   if (flavor == PERGRIDSURF && ave == ONE && irepeat == 0) {
     hash->clear();
@@ -602,6 +602,7 @@ void FixAveGrid::end_of_step()
 
   // PERGRIDSURF = all values are computes which tally info on collisions
   //               with implicit surfs and store them as per-grid-cell tallies
+  //               for implicit surfs, surfIDs are also cellIDs
 
   } else if (flavor == PERGRIDSURF) {
 
@@ -621,19 +622,18 @@ void FixAveGrid::end_of_step()
 
       surfint *tally2surf_compute;
       int ntallyID_compute = compute->tallyinfo(tally2surf_compute);
-      cellint *tally2cell_compute = (cellint *) tally2surf_compute;
 
       if (j == 0) {
         double *vector = compute->vector_surf_tally;
         if (nvalues == 1) {
           for (i = 0; i < ntallyID_compute; i++) {
-            cellID = tally2cell_compute[i];
-            if (hash->find(cellID) != hash->end()) itally = (*hash)[cellID];
+            surfID = tally2surf_compute[i];
+            if (hash->find(surfID) != hash->end()) itally = (*hash)[surfID];
             else {
               if (ntallyID == maxtallyID) grow_tally();
               itally = ntallyID;
-              (*hash)[cellID] = itally;
-              tally2cell[itally] = cellID;
+              (*hash)[surfID] = itally;
+              tally2surf[itally] = surfID;
               vec_tally[itally] = 0.0;
               ntallyID++;
             }
@@ -641,13 +641,13 @@ void FixAveGrid::end_of_step()
           }
         } else {
           for (i = 0; i < ntallyID_compute; i++) {
-            cellID = tally2cell_compute[i];
-            if (hash->find(cellID) != hash->end()) itally = (*hash)[cellID];
+            surfID = tally2surf_compute[i];
+            if (hash->find(surfID) != hash->end()) itally = (*hash)[surfID];
             else {
               if (ntallyID == maxtallyID) grow_tally();
               itally = ntallyID;
-              (*hash)[cellID] = itally;
-              tally2cell[itally] = cellID;
+              (*hash)[surfID] = itally;
+              tally2surf[itally] = surfID;
               vec = array_tally[itally];
               for (k = 0; k < nvalues; k++) vec[k] = 0.0;
               ntallyID++;
@@ -660,13 +660,13 @@ void FixAveGrid::end_of_step()
         double **array = compute->array_surf_tally;
         if (nvalues == 1) {
           for (i = 0; i < ntallyID_compute; i++) {
-            cellID = tally2cell_compute[i];
-            if (hash->find(cellID) != hash->end()) itally = (*hash)[cellID];
+            surfID = tally2surf_compute[i];
+            if (hash->find(surfID) != hash->end()) itally = (*hash)[surfID];
             else {
               if (ntallyID == maxtallyID) grow_tally();
               itally = ntallyID;
-              (*hash)[cellID] = itally;
-              tally2cell[itally] = cellID;
+              (*hash)[surfID] = itally;
+              tally2surf[itally] = surfID;
               vec_tally[itally] = 0.0;
               ntallyID++;
             }
@@ -674,13 +674,13 @@ void FixAveGrid::end_of_step()
           }
         } else {
           for (i = 0; i < ntallyID_compute; i++) {
-            cellID = tally2cell_compute[i];
-            if (hash->find(cellID) != hash->end()) itally = (*hash)[cellID];
+            surfID = tally2surf_compute[i];
+            if (hash->find(surfID) != hash->end()) itally = (*hash)[surfID];
             else {
               if (ntallyID == maxtallyID) grow_tally();
               itally = ntallyID;
-              (*hash)[cellID] = itally;
-              tally2cell[itally] = cellID;
+              (*hash)[surfID] = itally;
+              tally2surf[itally] = surfID;
               vec = array_tally[itally];
               for (k = 0; k < nvalues; k++) vec[k] = 0.0;
               ntallyID++;
@@ -740,21 +740,23 @@ void FixAveGrid::end_of_step()
     }
 
   // final PERGRIDSURF values for output
-  // invoke surf->collate() on cellID tallies this fix stores for multiple steps
+  // invoke surf->collate() on tallies this fix stores for multiple steps
   //   this merges tallies to owned grid cells
-  // must zero vector_grid and array_grid b/c collate_implicit requires it
-  // divide results by nsample
-  // copy split cell values to their sub cells, used by dump grid
+  // for implicit surfs, surfIDs are also cellIDs
+  // array_surf_tally can be NULL if this proc has performed no tallies
+  // must zero vector/array_grid b/c collate_implicit() requires it
 
   } else if (flavor == PERGRIDSURF) {
     if (nvalues == 1) {
       memset(vector_grid,0,nglocal*sizeof(double));
-      surf->collate_vector_implicit(ntallyID,tally2cell,vec_tally,vector_grid);
+      surf->collate_vector_implicit(ntallyID,tally2surf,vec_tally,vector_grid);
     } else {
       if (nglocal) memset(&array_grid[0][0],0,nglocal*nvalues*sizeof(double));
-      surf->collate_array_implicit(ntallyID,nvalues,tally2cell,
+      surf->collate_array_implicit(ntallyID,nvalues,tally2surf,
                                    array_tally,array_grid);
     }
+    
+    // divide results by nsample
 
     Grid::ChildCell *cells = grid->cells;
 
@@ -766,6 +768,8 @@ void FixAveGrid::end_of_step()
         for (m = 0; m < nvalues; m++)
           array_grid[icell][m] /= nsample;
     }
+
+    // copy split cell values to their sub cells, used by dump grid
 
     Grid::SplitInfo *sinfo = grid->sinfo;
 
@@ -1020,7 +1024,7 @@ void FixAveGrid::grow_percell(int nnew)
 void FixAveGrid::grow_tally()
 {
   maxtallyID += DELTASURF;
-  memory->grow(tally2cell,maxtallyID,"ave/grid:tally2cell");
+  memory->grow(tally2surf,maxtallyID,"ave/grid:tally2cell");
   if (nvalues == 1)
     memory->grow(vec_tally,maxtallyID,"ave/grid:vec_tally");
   else
@@ -1037,7 +1041,7 @@ double FixAveGrid::memory_usage()
   bytes += maxgrid*nvalues * sizeof(double);    // vector or array grid
   if (flavor == PERGRID) bytes += ntotal*maxgrid * sizeof(double);
   if (flavor == PERGRIDSURF) {
-    bytes += maxtallyID * sizeof(cellint);
+    bytes += maxtallyID * sizeof(surfint);
     bytes += nvalues*maxtallyID * sizeof(double);
   }
   return bytes;

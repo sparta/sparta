@@ -233,7 +233,6 @@ void ComputeReactISurfGrid::surf_tally(int isurf, int icell, int reaction,
   // itally = tally index of isurf
   // if 1st reaction on this isurf, add surf ID to hash
   // grow tally list if needed
-  // for implicit surfs, surfID is really a cellID
 
   int itally;
   double *vec;
@@ -296,13 +295,13 @@ void ComputeReactISurfGrid::post_process_isurf_grid()
     memory->create(array_grid,maxgrid,ntotal,"isurf/grid:array_grid");
   }
 
-  // zero array_grid b/c collate_array_implicit() requires it
-
-  if (nglocal) memset(&array_grid[0][0],0,nglocal*ntotal*sizeof(double));
 
   // perform rendezvous comm on tallies to sum them to my grid cells
+  // for implicit surfs, surfIDs are also cellIDs
   // array_surf_tally can be NULL if this proc has performed no tallies
+  // must zero array_grid b/c collate_array_implicit() requires it
 
+  if (nglocal) memset(&array_grid[0][0],0,nglocal*ntotal*sizeof(double));
   surf->collate_array_implicit(ntally,ntotal,tally2surf,
                                array_surf_tally,array_grid);
 
