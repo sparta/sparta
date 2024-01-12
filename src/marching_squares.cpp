@@ -68,8 +68,8 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
   int groupbit = grid->bitmask[ggroup];
 
   bigint maxsurfID = 0;
-  if (sizeof(surfint) == 32) maxsurfID = MAXSMALLINT;
-  if (sizeof(surfint) == 64) maxsurfID = MAXBIGINT;
+  if (sizeof(surfint) == 4) maxsurfID = MAXSMALLINT;
+  if (sizeof(surfint) == 8) maxsurfID = MAXBIGINT;
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;

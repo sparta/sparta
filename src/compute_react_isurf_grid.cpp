@@ -295,7 +295,6 @@ void ComputeReactISurfGrid::post_process_isurf_grid()
     memory->create(array_grid,maxgrid,ntotal,"isurf/grid:array_grid");
   }
 
-
   // perform rendezvous comm on tallies to sum them to my grid cells
   // for implicit surfs, surfIDs are also cellIDs
   // array_surf_tally can be NULL if this proc has performed no tallies

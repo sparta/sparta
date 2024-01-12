@@ -85,7 +85,7 @@ class FixAveGrid : public Fix {
   double *vec_tally;       // tally values, maxtally in length
   double **array_tally;
 
-  // hash for cell IDs
+  // hash for surf IDs
 
 #ifdef SPARTA_MAP
   typedef std::map<surfint,int> MyHash;
