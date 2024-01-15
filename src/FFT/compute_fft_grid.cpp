@@ -71,7 +71,7 @@ ComputeFFTGrid::ComputeFFTGrid(SPARTA *sparta, int narg, char **arg) :
     error->warning(FLERR,"Grid is not periodic for compute fft/grid");
 
   if (grid->maxlevel != 1)
-    error->all(FLERR,"Compute fft/grid require uniform one-level grid");
+    error->all(FLERR,"Compute fft/grid requires uniform one-level grid");
   if (grid->nsplit)
     error->all(FLERR,"Compute fft/grid cannot use grid with split cells");
   if (grid->unx % 2 || grid->uny % 2)
@@ -241,16 +241,6 @@ ComputeFFTGrid::ComputeFFTGrid(SPARTA *sparta, int narg, char **arg) :
 
   if (ncol == 1) size_per_grid_cols = 0;
   else size_per_grid_cols = ncol;
-
-  // partition for FFTs
-  // allocate bufs for grid and FFT decomps
-  // NOTE: could avoid allocating inbuf in some cases, depends on values
-
-  fft_create();
-
-  memory->create(fft,2*nfft,"fft/grid:fft");
-  memory->create(fftwork,nfft,"fft/grid:fftwork");
-
   irregular1 = irregular2 = NULL;
   map1 = map2 = NULL;
   ingrid = gridwork = NULL;
@@ -259,13 +249,14 @@ ComputeFFTGrid::ComputeFFTGrid(SPARTA *sparta, int narg, char **arg) :
   array_grid = NULL;
 
   nglocal = 0;
-  reallocate();
 }
 
 /* ---------------------------------------------------------------------- */
 
 ComputeFFTGrid::~ComputeFFTGrid()
 {
+  if (copymode) return;
+
   for (int i = 0; i < nvalues; i++) delete [] ids[i];
   delete [] which;
   delete [] argindex;
@@ -293,13 +284,29 @@ ComputeFFTGrid::~ComputeFFTGrid()
 
 /* ---------------------------------------------------------------------- */
 
+void ComputeFFTGrid::post_constructor()
+{
+  // partition for FFTs
+  // allocate bufs for grid and FFT decomps
+  // NOTE: could avoid allocating inbuf in some cases, depends on values
+
+  fft_create();
+
+  memory->create(fft,2*nfft,"fft/grid:fft");
+  memory->create(fftwork,nfft,"fft/grid:fftwork");
+
+  reallocate();
+}
+
+/* ---------------------------------------------------------------------- */
+
 void ComputeFFTGrid::init()
 {
   // check that grid has not adapted
   // check that grid still has no split cells
 
   if (grid->maxlevel != 1)
-    error->all(FLERR,"Compute fft/grid require uniform one-level grid");
+    error->all(FLERR,"Compute fft/grid requires uniform one-level grid");
   if (grid->nsplit)
     error->all(FLERR,"Compute fft/grid cannot use grid with split cells");
 
@@ -349,7 +356,7 @@ void ComputeFFTGrid::compute_per_grid()
   // NOTE: also need to check it has not been re-balanced?
 
   if (grid->maxlevel != 1)
-    error->all(FLERR,"Compute fft/grid require uniform one-level grid");
+    error->all(FLERR,"Compute fft/grid requires uniform one-level grid");
 
   // if sumflag set, zero output vector/array, but not K-space indices
   // so can sum each value's result into it
@@ -403,6 +410,7 @@ void ComputeFFTGrid::compute_per_grid()
       if (update->ntimestep % modify->fix[vidx]->per_grid_freq)
         error->all(FLERR,"Fix used in compute fft/grid not "
                    "computed at compatible time");
+
       if (aidx == 0) {
         ingridptr = fix->vector_grid;
       } else {
@@ -805,7 +813,7 @@ void ComputeFFTGrid::irregular_create()
 
   irregular2 = new Irregular(sparta);
 
-  memory->create(proclist3,nfft,"fft/grid:proclist2");
+  memory->create(proclist3,nfft,"fft/grid:proclist3");
   irregular1->reverse(nrecv,proclist3);
 
   memory->create(proclist2,nfft,"fft/grid:proclist2");

@@ -10,6 +10,7 @@
 /kokkos.cpp
 /kokkos.h
 /kokkos_base.h
+/kokkos_base_fft.h
 /kokkos_copy.h
 /kokkos_scan.cpp
 /kokkos_scan.h
@@ -35,4 +36,5 @@
 /remap2d.h
 /remap3d.cpp
 /remap3d.h
+/spafftsettings.h
 

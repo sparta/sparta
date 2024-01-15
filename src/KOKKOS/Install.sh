@@ -154,6 +154,22 @@ action fix_grid_check_kokkos.h
 action read_surf_kokkos.cpp
 action read_surf_kokkos.h
 
+action compute_fft_grid_kokkos.cpp compute_fft_grid.cpp
+action compute_fft_grid_kokkos.h compute_fft_grid.h
+action fftdata_kokkos.h fftdata.h
+action fft3d_kokkos.cpp fft3d.cpp
+action fft3d_kokkos.h fft3d.h
+action fft2d_kokkos.cpp fft2d.cpp
+action fft2d_kokkos.h fft2d.h
+action kissfft_kokkos.h kissfft.h
+action pack2d_kokkos.h pack2d.h
+action pack3d_kokkos.h pack3d.h
+action remap2d_kokkos.cpp remap2d.cpp
+action remap2d_kokkos.h remap2d.h
+action remap3d_kokkos.cpp remap3d.cpp
+action remap3d_kokkos.h remap3d.h
+action kokkos_base_fft.h fftdata.h
+
 # edit 2 Makefile.package files to include/exclude package info
 # allow user to specify sed.  Useful on Mac OSX to specify SED=gsed
 SED="${SED:-sed}"

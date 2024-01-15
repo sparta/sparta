@@ -409,7 +409,6 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagIrregularPackBuffer<0> >(0,count),*this);
     DeviceType().fence();
-    //pack_buffer_serial(0,count);
     copymode = 0;
 
     if (sparta->kokkos->gpu_aware_flag)
@@ -440,14 +439,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
 template<int NEED_ATOMICS>
 KOKKOS_INLINE_FUNCTION
 void IrregularKokkos::operator()(TagIrregularPackBuffer<NEED_ATOMICS>, const int &i) const {
-  int n;
-  if (NEED_ATOMICS)
-    n = Kokkos::atomic_fetch_add(&d_n(),1);
-  else {
-    n = d_n();
-    d_n()++;
-  }
-  const int m = d_index_send[n];
+  const int m = d_index_send[i];
   memcpy(&d_buf[i*nbytes],&d_sendbuf[m*nbytes],nbytes);
 }
 
@@ -455,13 +447,4 @@ KOKKOS_INLINE_FUNCTION
 void IrregularKokkos::operator()(TagIrregularUnpackBuffer, const int &i) const {
   const int m = d_index_self[i];
   memcpy(&d_recvbuf[i*nbytes],&d_sendbuf[m*nbytes],nbytes);
-}
-
-inline
-void IrregularKokkos::pack_buffer_serial(const int start, const int end) const {
-  int n = 0;
-  for (int i = start; i < end; i++) {
-    const int m = d_index_send[n++];
-    memcpy(&d_buf[i*nbytes],&d_sendbuf[m*nbytes],nbytes);
-  }
 }

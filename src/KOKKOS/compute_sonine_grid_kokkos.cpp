@@ -379,7 +379,7 @@ void ComputeSonineGridKokkos::post_process_grid_kokkos(int index,
   if (!d_etally.data()) {
     d_etally = d_tally;
     emap = map[index];
-    d_vec = d_vector;
+    d_vec = d_vector_grid;
   }
 
   this->d_etally = d_etally;
@@ -416,7 +416,7 @@ void ComputeSonineGridKokkos::reallocate()
 
   nglocal = grid->nlocal;
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"sonine/grid:vector_grid");
-  d_vector = k_vector_grid.d_view;
+  d_vector_grid = k_vector_grid.d_view;
   memoryKK->create_kokkos(k_tally,tally,nglocal,ntotal,"sonine/grid:tally");
   d_tally = k_tally.d_view;
   d_vcom = DAT::t_float_3d ("d_vcom",nglocal,ngroup,4);

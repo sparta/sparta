@@ -97,7 +97,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       computeKKBase->post_process_grid_kokkos(lambda_index,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
 
     if (lambda_index == 0 || clambda->post_process_grid_flag)
-      Kokkos::deep_copy(d_lambda_vector, computeKKBase->d_vector);
+      Kokkos::deep_copy(d_lambda_vector, computeKKBase->d_vector_grid);
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
@@ -109,7 +109,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(flambda);
     if (lambda_index == 0)
-      d_lambda_vector = computeKKBase->d_vector;
+      d_lambda_vector = computeKKBase->d_vector_grid;
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
@@ -130,7 +130,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       computeKKBase->post_process_grid_kokkos(temp_index,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
 
     if (temp_index == 0 || ctemp->post_process_grid_flag)
-      Kokkos::deep_copy(d_temp_vector, computeKKBase->d_vector);
+      Kokkos::deep_copy(d_temp_vector, computeKKBase->d_vector_grid);
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
@@ -142,7 +142,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(ftemp);
     if (temp_index == 0)
-      d_temp_vector = computeKKBase->d_vector;
+      d_temp_vector = computeKKBase->d_vector_grid;
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
@@ -163,7 +163,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       computeKKBase->post_process_grid_kokkos(usq_index,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
 
     if (usq_index == 0 || cusq->post_process_grid_flag)
-      Kokkos::deep_copy(d_usq_vector, computeKKBase->d_vector);
+      Kokkos::deep_copy(d_usq_vector, computeKKBase->d_vector_grid);
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
@@ -175,7 +175,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(fusq);
     if (usq_index == 0)
-      d_usq_vector = computeKKBase->d_vector;
+      d_usq_vector = computeKKBase->d_vector_grid;
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
@@ -196,7 +196,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       computeKKBase->post_process_grid_kokkos(vsq_index,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
 
     if (vsq_index == 0 || cvsq->post_process_grid_flag)
-      Kokkos::deep_copy(d_vsq_vector, computeKKBase->d_vector);
+      Kokkos::deep_copy(d_vsq_vector, computeKKBase->d_vector_grid);
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
@@ -208,7 +208,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(fvsq);
     if (vsq_index == 0)
-      d_vsq_vector = computeKKBase->d_vector;
+      d_vsq_vector = computeKKBase->d_vector_grid;
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
@@ -229,7 +229,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       computeKKBase->post_process_grid_kokkos(wsq_index,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
 
     if (wsq_index == 0 || cwsq->post_process_grid_flag)
-      Kokkos::deep_copy(d_wsq_vector, computeKKBase->d_vector);
+      Kokkos::deep_copy(d_wsq_vector, computeKKBase->d_vector_grid);
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
@@ -241,7 +241,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(fwsq);
     if (wsq_index == 0)
-      d_wsq_vector = computeKKBase->d_vector;
+      d_wsq_vector = computeKKBase->d_vector_grid;
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
@@ -304,7 +304,7 @@ void ComputeDtGridKokkos::operator()(TagComputeDtGrid_LoadWsqVecFromArray, const
 KOKKOS_INLINE_FUNCTION
 void ComputeDtGridKokkos::operator()(TagComputeDtGrid_ComputePerGrid, const int &i) const {
 
-  d_vector(i) = 0.;
+  d_vector_grid(i) = 0.;
 
   // exclude cells not in the specified group
   if (!(d_cinfo[i].mask & groupbit)) return;
@@ -356,7 +356,7 @@ void ComputeDtGridKokkos::operator()(TagComputeDtGrid_ComputePerGrid, const int 
     cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
   }
 
-  d_vector(i) = cell_dt_desired;
+  d_vector_grid(i) = cell_dt_desired;
 }
 
 /* ----------------------------------------------------------------------
@@ -370,7 +370,7 @@ void ComputeDtGridKokkos::reallocate()
 
   memoryKK->destroy_kokkos(k_vector_grid,vector_grid);
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"ComputeDtGridKokkos:vector_grid");
-  d_vector = k_vector_grid.d_view;
+  d_vector_grid = k_vector_grid.d_view;
 
   d_lambda_vector = DAT::t_float_1d ("d_lambda_vector", nglocal);
   d_temp_vector = DAT::t_float_1d ("d_temp_vector", nglocal);

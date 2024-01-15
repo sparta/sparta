@@ -78,6 +78,7 @@ class Compute : protected Pointers {
   Compute(class SPARTA* sparta) : Pointers(sparta) {}
   virtual ~Compute();
   virtual void init() {}
+  virtual void post_constructor() {}
 
   virtual double compute_scalar() {return 0.0;}
   virtual void compute_vector() {}
