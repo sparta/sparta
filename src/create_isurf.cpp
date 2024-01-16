@@ -365,7 +365,7 @@ void CreateISurf::surface_edge2d()
             if(param == 0) svalues[c1] = 0;
             else if(svalues[c1] == 2) 0; // do nothing
             // conflicting sides from two surfaces meeting at corner
-            else if(std::abs(mvalues[c1]-param) < EPSILON_GRID && svalues[c1] != side) svalues[c1] = 2;
+            else if(fabs(mvalues[c1]-param) < EPSILON_GRID && svalues[c1] != side) svalues[c1] = 2;
             else svalues[c1] = side;
 
             mvalues[c1] = param;
@@ -374,7 +374,7 @@ void CreateISurf::surface_edge2d()
           if(mvalues[c2] < 0 || oparam <= mvalues[c2]) {
             if(oparam == 0) svalues[c2] = 0;
             else if(svalues[c2] == 2) 0; // do nothing
-            else if(std::abs(mvalues[c2]-oparam) < EPSILON_GRID && svalues[c2] != !side) svalues[c2] = 2;
+            else if(fabs(mvalues[c2]-oparam) < EPSILON_GRID && svalues[c2] != !side) svalues[c2] = 2;
             else svalues[c2] = !side;
 
             mvalues[c2] = oparam;
@@ -902,7 +902,7 @@ int CreateISurf::get_cxyz(int *ic, double *lc)
   double lclo[3];
   for(int d = 0; d < 3; d++) {
     lclo[d] = lo[d] + lc[d];
-    ic[d] = static_cast<int> (std::round(lclo[d] / xyzsize[d]));
+    ic[d] = static_cast<int> (round(lclo[d] / xyzsize[d]));
   }
 
   int icell = get_corner(ic[0], ic[1], ic[2]);
@@ -957,7 +957,7 @@ int CreateISurf::get_corner(double dcx, double dcy, double dcz)
   lc[2] = dcz;
   for(int d = 0; d < 3; d++) {
     lclo[d] = lo[d] + lc[d];
-    ic[d] = static_cast<int> (std::round(lclo[d] / xyzsize[d]));
+    ic[d] = static_cast<int> (round(lclo[d] / xyzsize[d]));
   }
 
   int icell;
