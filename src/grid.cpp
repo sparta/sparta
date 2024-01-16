@@ -2344,6 +2344,7 @@ int Grid::check_uniform_group(int igroup, int *nxyz,
   int maxlev = 0;
 
   int count = 0;
+  int splitcount = 0;
   lo[0] = domain->boxhi[0];
   lo[1] = domain->boxhi[1];
   lo[2] = domain->boxhi[2];
@@ -2356,6 +2357,7 @@ int Grid::check_uniform_group(int igroup, int *nxyz,
   for (int icell = 0; icell < nlocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsurf) sflag++;
+    if (cells[icell].nsplit > 1) splitcount += cells[icell].nsplit;
     minlev = MIN(minlev,cells[icell].level);
     maxlev = MAX(maxlev,cells[icell].level);
     lo[0] = MIN(lo[0],cells[icell].lo[0]);
@@ -2416,9 +2418,13 @@ int Grid::check_uniform_group(int igroup, int *nxyz,
   bigint bcount = count;
   MPI_Allreduce(&bcount,&allbcount,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
-  //printf("nxyz: %i, %i, %i; allbcount: %i\n", nxyz[0], nxyz[1], nxyz[2], allbcount);
-  //if ((bigint) nxyz[0]*nxyz[1]*nxyz[2] != allbcount)
-  //  error->all(FLERR,"Read_isurfs grid group is not a contiguous brick");
+  bigint allscount;
+  bigint scount = splitcount;
+  MPI_Allreduce(&scount,&allscount,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+
+  // some inconsistency here if surface file is large (comment out for now)
+  if ((bigint) nxyz[0]*nxyz[1]*nxyz[2] != (allbcount-allscount))
+    error->all(FLERR,"Read_isurfs grid group is not a contiguous brick");
 
   return count;
 }
