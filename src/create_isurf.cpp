@@ -105,7 +105,7 @@ void CreateISurf::command(int narg, char **arg)
   remove_old();
 
   surf->implicit = 1;
-  surf->distributed = 1; // <- is this needed?
+  //surf->distributed = 1; // <- is this needed?
   surf->exist = 1;
 
   tvalues = NULL; // TODO: Add per-surface type
@@ -150,6 +150,7 @@ void CreateISurf::set_corners()
   int npairs; // number of points around corner point
   int ncorners; // number of corner points per cell
 
+  printf("begin surface_edge\n");
   if(domain->dimension==2) {
     ncorners = 4;
     memory->create(icvalues,grid->nlocal,ncorners,"createisurf:icvalues");
@@ -343,7 +344,6 @@ void CreateISurf::surface_edge2d()
 
         // once a hit is found
         if(hitflag) {
-
           if(ic==0) {
             n1 = 1;
             n2 = 0;
@@ -379,7 +379,6 @@ void CreateISurf::surface_edge2d()
 
             mvalues[c2] = oparam;
           }
-
         } // end "if" hitflag
       }// end "for" for surfaces
 		}// end "for" for corners in cell
@@ -894,15 +893,15 @@ int CreateISurf::get_cxyz(int *ic, double *lc)
 
   // find lower bounds
   double lo[3];
-  lo[0] = domain->boxhi[0];
-  lo[1] = domain->boxhi[1];
-  lo[2] = domain->boxhi[2];
+  lo[0] = domain->boxlo[0];
+  lo[1] = domain->boxlo[1];
+  lo[2] = domain->boxlo[2];
 
   // shift by lower bounds
   double lclo[3];
   for(int d = 0; d < 3; d++) {
-    lclo[d] = lo[d] + lc[d];
-    ic[d] = static_cast<int> (round(lclo[d] / xyzsize[d]));
+    lclo[d] = lc[d]-lo[d];
+    ic[d] = static_cast<int> (lc[d] / xyzsize[d] + 0.5);
   }
 
   int icell = get_corner(ic[0], ic[1], ic[2]);
@@ -920,6 +919,8 @@ int CreateISurf::get_cell(int icx, int icy, int icz)
   if(domain->dimension == 2) icell = icx + icy*nxyz[0];
   else icell = icx + icy*nxyz[0] + icz*nxyz[0]*nxyz[1];
 
+  if(icell >= nxyz[0]*nxyz[1]*nxyz[2] || icell < 0) error->one(FLERR,"bad calculation");
+
   return icell;
 }
 
@@ -933,6 +934,11 @@ int CreateISurf::get_corner(int icx, int icy, int icz)
   if(domain->dimension == 2) icell = icx + icy*(nxyz[0]+1);
   else icell = icx + icy*(nxyz[0]+1) + icz*(nxyz[0]+1)*(nxyz[1]+1);
 
+  if(icell >= Nxyz || icell < 0) {
+    printf("icell: %i\n", icell);
+    error->one(FLERR,"bad corner");
+  }
+
   return icell;
 }
 
@@ -944,25 +950,27 @@ int CreateISurf::get_corner(double dcx, double dcy, double dcz)
 {
   // find lower bounds
   double lo[3];
-  lo[0] = domain->boxhi[0];
-  lo[1] = domain->boxhi[1];
-  lo[2] = domain->boxhi[2];
+  lo[0] = domain->boxlo[0];
+  lo[1] = domain->boxlo[1];
+  lo[2] = domain->boxlo[2];
 
   // shift by lower bounds
   double lclo[3];
-  double ic[3];
+  int ic[3];
   double lc[3];
   lc[0] = dcx;
   lc[1] = dcy; 
   lc[2] = dcz;
   for(int d = 0; d < 3; d++) {
-    lclo[d] = lo[d] + lc[d];
-    ic[d] = static_cast<int> (round(lclo[d] / xyzsize[d]));
+    lclo[d] = lc[d]-lo[d];
+    ic[d] = static_cast<int> (lc[d] / xyzsize[d] + 0.5);
   }
 
   int icell;
   if(domain->dimension == 2) icell = ic[0] + ic[1]*(nxyz[0]+1);
   else icell = ic[0] + ic[1]*(nxyz[0]+1) + ic[2]*(nxyz[0]+1)*(nxyz[1]+1);
+
+  if(icell >= Nxyz || icell < 0) error->one(FLERR,"bad calculation");
 
   return icell;
 }
