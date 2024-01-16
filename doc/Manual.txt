@@ -120,7 +120,8 @@ it gives quick access to documentation for all SPARTA commands.
   6.13 "Surface elements: explicit, implicit, distributed"_howto_13 :b
   6.14 "Implicit surface ablation"_howto_14 :b
   6.15 "Transparent surface elements"_howto_15 :b
-  6.16 "Visualizing SPARTA output with ParaView"_howto_16 :ule,b
+  6.16 "Visualizing SPARTA output with ParaView"_howto_16 :b
+  6.17 "Variable timestep simulations"_howto_17 :ule,b
 "Example problems"_Section_example.html :l
 "Performance & scalability"_Section_perf.html :l
 "Additional tools"_Section_tools.html :l
