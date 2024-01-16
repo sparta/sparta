@@ -203,7 +203,7 @@ Here is an example using mean-free path (MFP) as calculated by the
 adaptation criterion.  Note the use of "thresh less more" to refine
 when MFP is less than the specified threshold (0.05).
 
-compute 1 lambda/grid c_1[2] NULL N2 kall
+compute 1 lambda/grid f_1[2] NULL N2 kall
 adapt_grid refine coarsen value c_1[2] 0.05 0.1 &
            combine min thresh less more :pre
 
