@@ -12,9 +12,9 @@ read_restart command :h3
 
 read_restart file keyword args ... :pre
 
-file = name of binary restart file to read in
-zero or one keyword/args pair may be listed :ul
-keywords = {gridcut} or {balance}
+file = name of binary restart file to read in :ulb,l
+zero or one keyword/args pair may be listed :l
+keywords = {gridcut} or {balance} :l
   {gridcut} arg = cutoff
     cutoff = acquire ghost cells up to this far away (distance units)
   {balance} args = same as for "balance_grid"_balance_grid.html command :pre
@@ -83,6 +83,9 @@ reads them in.  The arguments for the {balance} keyword are identical
 to those for the "balance_grid"_balance_grid.html command.  If you
 choose a balancing style that results in a "clumped" assignment, then
 ghost cells will be setup successfully.
+
+NOTE: Only the {gridcut} or the {balance} keyword can be used, not
+both of them.
 
 :line
 

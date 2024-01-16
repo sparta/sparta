@@ -188,6 +188,19 @@ void ReadRestart::command(int narg, char **arg)
   if (!multiproc && me == 0) fclose(fp);
   delete [] file;
 
+  // if surf->implicit, then previous simulation used implicit surfs
+  // implicit surfs are not in restart file
+  // however grid cells may be split, so need to
+  //   assign sub-cell particles to parent split cells and remove sub-cells
+  // allows a new read_isurf command to operate correctly
+
+  if (surf->implicit) {
+    grid->clear_surf_implicit();
+    nunsplit_file += nsplit_file;
+    nsplit_file = 0;
+    nsub_file = 0;
+  }
+  
   // setup the grid
 
   if (grid->cellweightflag) grid->weight(-1,NULL);
@@ -202,7 +215,8 @@ void ReadRestart::command(int narg, char **arg)
   //   read matching # of per-proc chunks in that file,
   //   do this check via MPI_Allreduce()
 
-  if (nprocs_file != nprocs) grid->clumped = 0;
+  if (nprocs == 1) grid->clumped = 1;
+  else if (nprocs_file != nprocs) grid->clumped = 0;
   else if (procmatch_check) {
     int allcheck;
     MPI_Allreduce(&procmatch,&allcheck,1,MPI_INT,MPI_MIN,world);
@@ -225,7 +239,7 @@ void ReadRestart::command(int narg, char **arg)
     error->all(FLERR,"Did not assign all restart split grid cells correctly");
   if (grid->nsub != nsub_file)
     error->all(FLERR,"Did not assign all restart sub grid cells correctly");
-
+  
   bigint btmp = particle->nlocal;
   MPI_Allreduce(&btmp,&particle->nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
@@ -277,7 +291,7 @@ void ReadRestart::command(int narg, char **arg)
   // gridcut can be reset to negative value
   // re-balance can be triggered (with no output)
 
-  if (surf->exist && grid->cutoff >= 0.0 && grid->clumped == 0) {
+  if (grid->cutoff >= 0.0 && grid->clumped == 0) {
     if (gridcutflag) grid->cutoff = input->numeric(FLERR,arg[gridcutflag]);
     else if (balanceflag) {
       BalanceGrid *bg = new BalanceGrid(sparta);
@@ -1376,7 +1390,8 @@ void ReadRestart::create_child_cells(int skipflag)
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
 
-  int level,nsplit,icell,isplit,index;
+  int icell,isplit,index;
+  int level,nsplit,mask;
   cellint id,ichild;
   double lo[3],hi[3];
 
@@ -1388,6 +1403,7 @@ void ReadRestart::create_child_cells(int skipflag)
   cellint *ids = grid->id_restart;
   int *levels = grid->level_restart;
   int *nsplits = grid->nsplit_restart;
+  int *masks = grid->mask_restart;
   char *cvalues = grid->cvalues_restart;
 
   int ncustom = grid->ncustom;
@@ -1397,7 +1413,8 @@ void ReadRestart::create_child_cells(int skipflag)
     id = ids[i];
     level = levels[i];
     nsplit = nsplits[i];
-
+    mask = masks[i];
+    
     // unsplit or split cell
     // for skipflag == 1, add only if I own this cell
     // add as child cell to grid->cells
@@ -1412,6 +1429,7 @@ void ReadRestart::create_child_cells(int skipflag)
       if (ncustom) grid->unpack_custom(&cvalues[i*csize],icell);
       (*hash)[id] = icell;
       grid->cells[icell].nsplit = nsplit;
+      grid->cinfo[icell].mask = mask;
 
       if (nsplit > 1) {
         grid->nunsplitlocal--;
@@ -1434,6 +1452,7 @@ void ReadRestart::create_child_cells(int skipflag)
       icell = grid->nlocal - 1;
       if (ncustom) grid->unpack_custom(&cvalues[i*csize],icell);
       grid->cells[icell].nsplit = nsplit;
+      grid->cinfo[icell].mask = mask;
       isplit = grid->cells[icell].isplit;
       grid->sinfo[isplit].csubs[-nsplit] = icell;
     }
@@ -1444,6 +1463,7 @@ void ReadRestart::create_child_cells(int skipflag)
   memory->destroy(grid->id_restart);
   memory->destroy(grid->level_restart);
   memory->destroy(grid->nsplit_restart);
+  memory->destroy(grid->mask_restart);
   memory->destroy(grid->cvalues_restart);
 }
 

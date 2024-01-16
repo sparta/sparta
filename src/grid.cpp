@@ -2522,6 +2522,8 @@ int Grid::size_restart()
   n = IROUNDUP(n);
   n += nlocal * sizeof(int);
   n = IROUNDUP(n);
+  n += nlocal * sizeof(int);
+  n = IROUNDUP(n);
   n += nlocal * sizeof_custom();
   return n;
 }
@@ -2541,6 +2543,8 @@ int Grid::size_restart(int nlocal_restart)
   n = IROUNDUP(n);
   n += nlocal_restart * sizeof(int);
   n = IROUNDUP(n);
+  n += nlocal_restart * sizeof(int);
+  n = IROUNDUP(n);
   n += nlocal_restart * sizeof_custom();
   return n;
 }
@@ -2548,7 +2552,7 @@ int Grid::size_restart(int nlocal_restart)
 /* ----------------------------------------------------------------------
    pack my child grid info into buf
    nlocal, clumped as scalars
-   ID, level, nsplit as vectors for all owned cells
+   ID, level, nsplit, mask as vectors for all owned cells
    custom data as ints and doubles
    return n = # of packed bytes
    NOTE: worry about N overflowing int, and in IROUNDUP ???
@@ -2582,6 +2586,12 @@ int Grid::pack_restart(char *buf)
   n += nlocal * sizeof(int);
   n = IROUNDUP(n);
 
+  ibuf = (int *) &buf[n];
+  for (int i = 0; i < nlocal; i++)
+    ibuf[i] = cinfo[i].mask;
+  n += nlocal * sizeof(int);
+  n = IROUNDUP(n);
+
   if (ncustom) {
     for (int i = 0; i < nlocal; i++)
       n += pack_custom(i,&buf[n],1);
@@ -2593,7 +2603,7 @@ int Grid::pack_restart(char *buf)
 /* ----------------------------------------------------------------------
    unpack child grid info into restart storage
    nlocal_restart, clumped as scalars
-   id_restart, nsplit_restart as vectors
+   id_restart, level_restart, nsplit_restart, mask_restart as vectors
    custom data as ints and doubles
    allocate vectors here, will be deallocated by ReadRestart
 ------------------------------------------------------------------------- */
@@ -2612,6 +2622,7 @@ int Grid::unpack_restart(char *buf)
   memory->create(id_restart,nlocal_restart,"grid:id_restart");
   memory->create(level_restart,nlocal_restart,"grid:nlevel_restart");
   memory->create(nsplit_restart,nlocal_restart,"grid:nsplit_restart");
+  memory->create(mask_restart,nlocal_restart,"grid:mask_restart");
   cvalues_restart = NULL;
   if (ncustom)
     memory->create(cvalues_restart,nlocal_restart*csize,"grid::cvalues_restart");
@@ -2631,6 +2642,12 @@ int Grid::unpack_restart(char *buf)
   ibuf = (int *) &buf[n];
   for (int i = 0; i < nlocal_restart; i++)
     nsplit_restart[i] = ibuf[i];
+  n += nlocal_restart * sizeof(int);
+  n = IROUNDUP(n);
+
+  ibuf = (int *) &buf[n];
+  for (int i = 0; i < nlocal_restart; i++)
+    mask_restart[i] = ibuf[i];
   n += nlocal_restart * sizeof(int);
   n = IROUNDUP(n);
 

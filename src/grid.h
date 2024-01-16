@@ -210,6 +210,7 @@ class Grid : protected Pointers {
   int nlocal_restart;
   cellint *id_restart;
   int *level_restart,*nsplit_restart;
+  int *mask_restart;
   char *cvalues_restart;
 
   // methods
@@ -289,6 +290,7 @@ class Grid : protected Pointers {
   void surf2grid_implicit(int, int outflag=1);
   void surf2grid_one(int, int, int, int, class Cut3d *, class Cut2d *);
   void clear_surf();
+  void clear_surf_implicit();
   void clear_surf_restart();
   void combine_split_cell_particles(int, int);
   void assign_split_cell_particles(int);
