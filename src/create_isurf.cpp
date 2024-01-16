@@ -150,7 +150,6 @@ void CreateISurf::set_corners()
   int npairs; // number of points around corner point
   int ncorners; // number of corner points per cell
 
-  printf("begin surface_edge\n");
   if(domain->dimension==2) {
     ncorners = 4;
     memory->create(icvalues,grid->nlocal,ncorners,"createisurf:icvalues");
@@ -901,7 +900,7 @@ int CreateISurf::get_cxyz(int *ic, double *lc)
   double lclo[3];
   for(int d = 0; d < 3; d++) {
     lclo[d] = lc[d]-lo[d];
-    ic[d] = static_cast<int> (lc[d] / xyzsize[d] + 0.5);
+    ic[d] = static_cast<int> (lclo[d] / xyzsize[d] + 0.5);
   }
 
   int icell = get_corner(ic[0], ic[1], ic[2]);
@@ -919,7 +918,7 @@ int CreateISurf::get_cell(int icx, int icy, int icz)
   if(domain->dimension == 2) icell = icx + icy*nxyz[0];
   else icell = icx + icy*nxyz[0] + icz*nxyz[0]*nxyz[1];
 
-  if(icell >= nxyz[0]*nxyz[1]*nxyz[2] || icell < 0) error->one(FLERR,"bad calculation");
+  if(icell >= nxyz[0]*nxyz[1]*nxyz[2] || icell < 0) error->one(FLERR,"bad cell from int");
 
   return icell;
 }
@@ -936,7 +935,7 @@ int CreateISurf::get_corner(int icx, int icy, int icz)
 
   if(icell >= Nxyz || icell < 0) {
     printf("icell: %i\n", icell);
-    error->one(FLERR,"bad corner");
+    error->one(FLERR,"bad corner from int");
   }
 
   return icell;
@@ -963,14 +962,18 @@ int CreateISurf::get_corner(double dcx, double dcy, double dcz)
   lc[2] = dcz;
   for(int d = 0; d < 3; d++) {
     lclo[d] = lc[d]-lo[d];
-    ic[d] = static_cast<int> (lc[d] / xyzsize[d] + 0.5);
+    ic[d] = static_cast<int> (lclo[d] / xyzsize[d] + 0.5);
   }
 
   int icell;
   if(domain->dimension == 2) icell = ic[0] + ic[1]*(nxyz[0]+1);
   else icell = ic[0] + ic[1]*(nxyz[0]+1) + ic[2]*(nxyz[0]+1)*(nxyz[1]+1);
 
-  if(icell >= Nxyz || icell < 0) error->one(FLERR,"bad calculation");
+  if(icell >= Nxyz || icell < 0) {
+    printf("dc: %4.3e, %4.3e, %4.3e\n", dcx, dcy, dcz);
+    printf("icell: %i\n", icell);
+    error->one(FLERR,"bad corner from double");
+  }
 
   return icell;
 }
