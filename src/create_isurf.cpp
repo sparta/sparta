@@ -307,7 +307,7 @@ void CreateISurf::surface_edge2d()
 
     // smallest cell length
     // should only have to do this once
-    mind = std::min(ch[0]-cl[0], ch[1]-cl[1]);
+    mind = MIN(ch[0]-cl[0], ch[1]-cl[1]);
 
 		// determine corner values
     csurfs = cells[icell].csurfs;
@@ -445,8 +445,8 @@ void CreateISurf::surface_edge3d()
 
     // smallest cell length
     // should only have to do this once
-    mind = std::min(ch[0]-cl[0], ch[1]-cl[1]);
-    mind = std::min(mind, ch[2]-cl[2]);
+    mind = MIN(ch[0]-cl[0], ch[1]-cl[1]);
+    mind = MIN(mind, ch[2]-cl[2]);
 
 		// determine corner values
     csurfs = cells[icell].csurfs;
@@ -503,7 +503,7 @@ void CreateISurf::surface_edge3d()
             if(param == 0) svalues[c1] = 0;
             else if(svalues[c1] == 2) 0; // do nothing
             // conflicting sides from two surfaces meeting at corner
-            else if(std::abs(mvalues[c1]-param) < EPSILON_GRID && svalues[c1] != side) svalues[c1] = 2;
+            else if(fabs(mvalues[c1]-param) < EPSILON_GRID && svalues[c1] != side) svalues[c1] = 2;
             else svalues[c1] = side;
 
             mvalues[c1] = param;
@@ -512,7 +512,7 @@ void CreateISurf::surface_edge3d()
           if(mvalues[c2] < 0 || oparam <= mvalues[c2]) {
             if(oparam == 0) svalues[c2] = 0;
             else if(svalues[c2] == 2) 0; // do nothing
-            else if(std::abs(mvalues[c2]-oparam) < EPSILON_GRID && svalues[c2] != !side) svalues[c2] = 2;
+            else if(fabs(mvalues[c2]-oparam) < EPSILON_GRID && svalues[c2] != !side) svalues[c2] = 2;
             else svalues[c2] = !side;
 
             mvalues[c2] = oparam;
@@ -672,8 +672,8 @@ void CreateISurf::cleanup()
         else {
           ivalsum /= nval;
           // add small buffer to avoid very small volumes/areas
-          ivalsum = std::max(ivalsum, thresh*1.02);
-          ivalsum = std::min(ivalsum, cout*0.98);
+          ivalsum = MAX(ivalsum, 0.05);
+          ivalsum = MIN(ivalsum, 0.95);
           cvalues[i] = param2in(ivalsum,0.0);
         }
       }

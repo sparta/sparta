@@ -26,19 +26,19 @@ global					nrho 1.0 fnum 0.001
 species					air.species N2
 mixture					air N2 vstream 0.0 0 0 
 
-region					inner block -1.00 1.00 -1.00 1.00 INF INF
+region					inner block -0.9 0.9 -0.9 0.9 INF INF
 group						inner grid region inner one
 
 #read_surf       data.square2d invert
 #read_surf       data.diamond2d invert
-read_surf       data.circle2d invert
-#read_surf       data.hour2d invert
+#read_surf       data.circle2d invert
+read_surf       data.hour2d invert
 surf_collide		1 diffuse 300.0 0.0
 surf_modify			all collide 1
 
 fix							fablate ablate inner 0 0.2 random 0
-#surf_modify     all implicit yes 40.0 fablate inner inout
-surf_modify     all implicit yes 40.0 fablate inner ave
+#create_isurf     inner fablate 40.0 inout
+create_isurf     inner fablate 40.0 ave
 
 #adapt_grid      all refine nsurf all 2 iterate 5
 
@@ -48,10 +48,10 @@ collide					vss air air.vss
 
 timestep				0.001
 
-dump 1 image all 1000 dump.* type type gline yes 0.001 surf one 0.01 particle yes pdiam 0.02
+dump 1 image all 1000 tmp.*.jpg type type gline no 0.001 surf one 0.01 particle yes pdiam 0.02
 dump_modify 1 glinecolor blue
 
-#dump 1 image all 1000 dump.* type type surf one 0.005 particle yes pdiam 0.02
+#dump 1 image all 1000 exp_imp.jpg type type surf one 0.005 particle yes pdiam 0.02
 #dump_modify 1 glinecolor blue
 
 stats						5
