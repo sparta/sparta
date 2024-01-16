@@ -123,7 +123,7 @@ surf_collide	      1 diffuse ${surftemp} 1.0
 surf_modify         1 collide 1 
 
 fix							fablate ablate all 0 0.2 random 0
-create_isurf     all fablate 20.0 ave
+create_isurf     all fablate 40.0 ave
 
 ###################################
 # Initialize simulation
