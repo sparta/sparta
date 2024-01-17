@@ -1120,7 +1120,7 @@ void Surf::collate_array_implicit(int nrow, int ncol, surfint *tally2surf,
   m = 0;
   for (i = 0; i < nout; i++) {
     cellID = (cellint) ubuf(out_rvous[m++]).u;
-    icell = hash[cellID] - 1;     // subtract one for child cell index
+    icell = hash[cellID];
     for (j = 0; j < ncol; j++)
       out[icell][j] += out_rvous[m++];
   }
