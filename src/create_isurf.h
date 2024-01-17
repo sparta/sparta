@@ -37,9 +37,9 @@ class CreateISurf : protected Pointers {
  protected:
   int me,nprocs;
 
-	// For generating implicit surfaces
-	int ggroup;							  // group id for grid cells
-	double thresh;            // lower threshold for corner values
+  // For generating implicit surfaces
+  int ggroup;               // group id for grid cells
+  double thresh;            // lower threshold for corner values
   double corner[3];         // corners of grid group
   double xyzsize[3];        // size of lowest level cell (must be uniform grid)
   int nxyz[3], Nxyz;        // dimensions of grid
@@ -56,9 +56,9 @@ class CreateISurf : protected Pointers {
   double cin, cout;         // in and out corner values
   class FixAblate *ablate;  // ablate fix
 
-	// functions to set corner values
+  // functions to set corner values
 
-	void set_corners();
+  void set_corners();
 
   // sets corner values whose cells have surfaces
   void surface_edge2d();

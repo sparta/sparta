@@ -121,8 +121,8 @@ void CreateISurf::command(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-	 Determines corner values given an explicit surface. Cvalues then used
-	 later in ablate to create the implicit surfaces
+   Determines corner values given an explicit surface. Cvalues then used
+   later in ablate to create the implicit surfaces
 ------------------------------------------------------------------------- */
 
 void CreateISurf::set_corners()
@@ -162,7 +162,7 @@ void CreateISurf::set_corners()
     // -x, +x, -y, +y
     npairs = 4;
     memory->create(ivalues,Nxyz,npairs,"createisurf:ivalues");
-	  
+    
     for(int ic = 0; ic < Nxyz; ic++) {
       svalues[ic] = -1;
       mvalues[ic] = -1.0;
@@ -183,13 +183,13 @@ void CreateISurf::set_corners()
     // -x, +x, -y, +y, -z, +z
     npairs = 6;
     memory->create(ivalues,Nxyz,npairs,"createisurf:ivalues");
-	  
+    
     for(int ic = 0; ic < Nxyz; ic++) {
       svalues[ic] = -1;
       mvalues[ic] = -1.0;
       for(int jc = 0; jc < npairs; jc++) ivalues[ic][jc] = -1.0;
     }
-	  
+    
     for(int ic = 0; ic < Nxyz; ic++) {
       svalues[ic] = -1;
       mvalues[ic] = -1.0;
@@ -223,11 +223,11 @@ void CreateISurf::set_corners()
     }
   }
 
-	// store into icvalues for generating implicit surface
+  // store into icvalues for generating implicit surface
   Grid::ChildCell *cells = grid->cells;
   int xyzcell, ic[3];
   double lc[3];
-	for(int icell = 0; icell < grid->nlocal; icell++) {
+  for(int icell = 0; icell < grid->nlocal; icell++) {
 
     lc[0] = cells[icell].lo[0];
     lc[1] = cells[icell].lo[1];
@@ -254,7 +254,7 @@ void CreateISurf::set_corners()
       icvalues[icell][7] = cvalues[xyzcell];
     }
   }
-	return;
+  return;
 }
 
 /* ----------------------------------------------------------------------
@@ -267,8 +267,8 @@ void CreateISurf::surface_edge2d()
 
   Grid::ChildCell *cells = grid->cells;
   double cl[3], ch[3]; // cell bounds
-	double cx[8], cy[8], cz[8]; // store all corners
-	double pi[3], pj[3]; // corner coordinate
+  double cx[8], cy[8], cz[8]; // store all corners
+  double pi[3], pj[3]; // corner coordinate
   Surf::Line *line;
   Surf::Line *lines = surf->lines;
   surfint *csurfs;
@@ -284,7 +284,7 @@ void CreateISurf::surface_edge2d()
   ci[2] = 3; cj[2] = 2;
   ci[3] = 2; cj[3] = 0;
 
-	for(int icell = 0; icell < grid->nlocal; icell++) {
+  for(int icell = 0; icell < grid->nlocal; icell++) {
 
     // if no surfs, continue
     nsurf = cells[icell].nsurf;
@@ -295,7 +295,7 @@ void CreateISurf::surface_edge2d()
       ch[d] = cells[icell].hi[d];
     }
 
-		// store cell corners
+    // store cell corners
     cx[0] = cx[2] = cl[0];
     cx[1] = cx[3] = ch[0];
 
@@ -309,9 +309,9 @@ void CreateISurf::surface_edge2d()
     // should only have to do this once
     mind = MIN(ch[0]-cl[0], ch[1]-cl[1]);
 
-		// determine corner values
+    // determine corner values
     csurfs = cells[icell].csurfs;
-		for(int ic = 0; ic < nedge; ic++) {
+    for(int ic = 0; ic < nedge; ic++) {
       i = ci[ic];
       pi[0] = cx[i];
       pi[1] = cy[i];
@@ -380,10 +380,10 @@ void CreateISurf::surface_edge2d()
           }
         } // end "if" hitflag
       }// end "for" for surfaces
-		}// end "for" for corners in cell
-	}// end "for" for grid cells
+    }// end "for" for corners in cell
+  }// end "for" for grid cells
 
-	return;
+  return;
 }
 
 /* ----------------------------------------------------------------------
@@ -396,8 +396,8 @@ void CreateISurf::surface_edge3d()
 
   Grid::ChildCell *cells = grid->cells;
   double cl[3], ch[3]; // cell bounds
-	double cx[8], cy[8], cz[8]; // store all corners
-	double pi[3], pj[3]; // corner coordinate
+  double cx[8], cy[8], cz[8]; // store all corners
+  double pi[3], pj[3]; // corner coordinate
   Surf::Tri *tri;
   Surf::Tri *tris = surf->tris;
   surfint *csurfs;
@@ -421,7 +421,7 @@ void CreateISurf::surface_edge3d()
   ci[10] = 7; cj[10] = 6;
   ci[11] = 6; cj[11] = 4;
 
-	for(int icell = 0; icell < grid->nlocal; icell++) {
+  for(int icell = 0; icell < grid->nlocal; icell++) {
 
     // if no surfs, continue
     nsurf = cells[icell].nsurf;
@@ -446,9 +446,9 @@ void CreateISurf::surface_edge3d()
     mind = MIN(ch[0]-cl[0], ch[1]-cl[1]);
     mind = MIN(mind, ch[2]-cl[2]);
 
-		// determine corner values
+    // determine corner values
     csurfs = cells[icell].csurfs;
-		for(int ic = 0; ic < nedge; ic++) {
+    for(int ic = 0; ic < nedge; ic++) {
       i = ci[ic];
       pi[0] = cx[i];
       pi[1] = cy[i];
@@ -518,10 +518,10 @@ void CreateISurf::surface_edge3d()
 
         } // end "if" hitflag
       }// end "for" for surfaces
-		}// end "for" for corners in cellfe
-	}// end "for" for grid cells
+    }// end "for" for corners in cellfe
+  }// end "for" for grid cells
 
-	return;
+  return;
 }
 
 /* ----------------------------------------------------------------------
@@ -534,7 +534,7 @@ void CreateISurf::set_inout()
   Grid::ChildInfo *cinfo = grid->cinfo;
   double cl[3], ch[3]; // cell bounds
   int itype, sval, xyzcell, cxyz[3];
-	for(int icell = 0; icell < grid->nlocal; icell++) {
+  for(int icell = 0; icell < grid->nlocal; icell++) {
 
     cl[0] = cells[icell].lo[0];
     cl[1] = cells[icell].lo[1];
@@ -653,7 +653,7 @@ void CreateISurf::cleanup()
   if(aveFlag) {
     int nval;
     double ivalsum;
-	  for(int i = 0; i < Nxyz; i++) {
+    for(int i = 0; i < Nxyz; i++) {
       ivalsum = 0.0;
       if(svalues[i] == 0) cvalues[i] = cout;
       else {
@@ -680,7 +680,7 @@ void CreateISurf::cleanup()
           cvalues[i] = param2in(ivalsum,0.0);
         }
       }
-	  }// end "for" for grid cells
+    }// end "for" for grid cells
 
   } else {
     for(int i = 0; i < Nxyz; i++) {
@@ -691,7 +691,7 @@ void CreateISurf::cleanup()
 }
 
 /* ----------------------------------------------------------------------
-	 Determines if surface is inline with cell edge.
+   Determines if surface is inline with cell edge.
 
    Side = 0,1 -> [out,in]
 ------------------------------------------------------------------------- */
@@ -765,7 +765,7 @@ int CreateISurf::corner_hit2d(double *p1, double *p2,
 }
 
 /* ----------------------------------------------------------------------
-	 Same as corner_hit2d but for 3d
+   Same as corner_hit2d but for 3d
 ------------------------------------------------------------------------- */
 
 int CreateISurf::corner_hit3d(double *p1, double *p2,
@@ -850,7 +850,7 @@ int CreateISurf::corner_hit3d(double *p1, double *p2,
 
 
 /* ----------------------------------------------------------------------
-	 Find inside corner value from corner value
+   Find inside corner value from corner value
 ------------------------------------------------------------------------- */
 double CreateISurf::param2in(double param, double v1)
 {
@@ -869,8 +869,8 @@ double CreateISurf::param2in(double param, double v1)
 }
 
 /* ----------------------------------------------------------------------
-	 Determines corner values given an explicit surface. Cvalues then used
-	 later in ablate to create the implicit surfaces
+   Determines corner values given an explicit surface. Cvalues then used
+   later in ablate to create the implicit surfaces
 ------------------------------------------------------------------------- */
 
 int CreateISurf::get_cxyz(int *ic, double *lc)
@@ -895,7 +895,7 @@ int CreateISurf::get_cxyz(int *ic, double *lc)
 }
 
 /* ----------------------------------------------------------------------
-	 Get cell from coordinates
+   Get cell from coordinates
 ------------------------------------------------------------------------- */
 
 int CreateISurf::get_cell(int icx, int icy, int icz)
@@ -910,7 +910,7 @@ int CreateISurf::get_cell(int icx, int icy, int icz)
 }
 
 /* ----------------------------------------------------------------------
-	 Get corner values from coordinates
+   Get corner values from coordinates
 ------------------------------------------------------------------------- */
 
 int CreateISurf::get_corner(int icx, int icy, int icz)
@@ -928,7 +928,7 @@ int CreateISurf::get_corner(int icx, int icy, int icz)
 }
 
 /* ----------------------------------------------------------------------
-	 Get corner values from coordinates
+   Get corner values from coordinates
 ------------------------------------------------------------------------- */
 
 int CreateISurf::get_corner(double dcx, double dcy, double dcz)
@@ -965,7 +965,7 @@ int CreateISurf::get_corner(double dcx, double dcy, double dcz)
 }
 
 /* ----------------------------------------------------------------------
-	 Removes old explicit surfaces
+   Removes old explicit surfaces
 ------------------------------------------------------------------------- */
 void CreateISurf::remove_old()
 {
