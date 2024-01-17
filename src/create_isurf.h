@@ -79,7 +79,6 @@ class CreateISurf : protected Pointers {
   int get_corner(int, int, int);
   int get_corner(double, double, double);
   double param2in(double, double);
-  double param2out(double, double);
 };
 
 }

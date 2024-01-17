@@ -15,8 +15,8 @@ boundary				p p p
 #variable R equal 1.5
 #variable L equal ${R}*2.0
 variable L equal 1.0
-variable Nx equal 80
-variable Ny equal 80
+variable Nx equal 100
+variable Ny equal 100
 create_box			-${L} ${L} -${L} ${L} -0.5 0.5
 create_grid			${Nx} ${Ny} 1 
 balance_grid		rcb cell
@@ -29,15 +29,14 @@ mixture					air N2 vstream 0.0 0 0
 region					inner block -0.9 0.9 -0.9 0.9 INF INF
 group						inner grid region inner one
 
-#read_surf       data.square2d invert
+read_surf       data.square2d invert
 #read_surf       data.diamond2d invert
 #read_surf       data.circle2d invert
-read_surf       data.hour2d invert
+#read_surf       data.hour2d invert
 surf_collide		1 diffuse 300.0 0.0
 surf_modify			all collide 1
 
 fix							fablate ablate inner 0 0.2 random 0
-#create_isurf     inner fablate 40.0 inout
 create_isurf     inner fablate 40.0 ave
 
 #adapt_grid      all refine nsurf all 2 iterate 5
@@ -48,13 +47,10 @@ collide					vss air air.vss
 
 timestep				0.001
 
-dump 1 image all 1000 tmp.*.jpg type type gline no 0.001 surf one 0.01 particle yes pdiam 0.02
-dump_modify 1 glinecolor blue
-
-#dump 1 image all 1000 exp_imp.jpg type type surf one 0.005 particle yes pdiam 0.02
-#dump_modify 1 glinecolor blue
+dump 1 image all 10000 square2di.* type type surf one 0.01 particle yes pdiam 0.02 zoom 2
+dump_modify 1 scolor * gray
 
 stats						5
 stats_style			step cpu np nattempt ncoll nscoll nscheck
-run							1000
+run							100
 

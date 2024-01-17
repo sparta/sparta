@@ -34,9 +34,9 @@ variable            ppc equal 1
 #variable            ycells equal round(722*1.08)
 #variable            zcells equal round(1360*1.08)
 
-variable            xcells equal round(1982*0.3)
-variable            ycells equal round(722*0.1)
-variable            zcells equal round(1360*0.3)
+variable            xcells equal round(1982*0.15)
+variable            ycells equal round(722*0.40)
+variable            zcells equal round(1360*0.15)
 
 #Upper wall is moving at twice the speed
 variable            vwall equal 92.37*5.0
@@ -75,7 +75,7 @@ surf_collide        1 diffuse 273.15 1.0
 surf_modify         1 collide 1
 
 fix							fablate ablate all 0 0.2 random 0
-create_isurf     all fablate 20.0 ave
+create_isurf     all fablate 40.0 ave
 
 species		    air.species N2
 mixture		    air N2 vstream 0.0 0.0 0.0 temp 273.15
@@ -85,8 +85,7 @@ collide_modify      vremax 10000 no
 
 create_particles    air n 0
 
-dump 1 image all 10 imp0.* type type sline yes 0.000 surf one 0.02 zoom 4 particle no view 65 140
-dump_modify 1 slinecolor red
+dump 1 image all 100 egg3di.* type type sline yes 0.000 surf one 0.02 zoom 4 particle no view 65 140 box no 0.000
 
 stats		    1
-run 		    1
+run 		    10

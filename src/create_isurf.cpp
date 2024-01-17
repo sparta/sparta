@@ -670,8 +670,13 @@ void CreateISurf::cleanup()
         else {
           ivalsum /= nval;
           // add small buffer to avoid very small volumes/areas
-          ivalsum = MAX(ivalsum, 0.05);
-          ivalsum = MIN(ivalsum, 0.95);
+          if(domain->dimension == 3) {
+            ivalsum = MAX(ivalsum, 0.045);
+            ivalsum = MIN(ivalsum, 0.955);
+          } else {
+            ivalsum = MAX(ivalsum, 0.01);
+            ivalsum = MIN(ivalsum, 0.99);
+          }
           cvalues[i] = param2in(ivalsum,0.0);
         }
       }
@@ -861,25 +866,6 @@ double CreateISurf::param2in(double param, double v1)
   //v0 = MAX(v0,thresh);
   v0 = MIN(v0,255.0);
   return v0;
-}
-
-/* ----------------------------------------------------------------------
-	 Find outside corner value from corner value
-------------------------------------------------------------------------- */
-double CreateISurf::param2out(double param, double v0)
-{
-  double v1;
-  // param is proportional to cell length so 
-  // ... lo = 0; hi = 1
-  // trying to find v0
-  // param = (thresh  - v0) / (v1 - v0)
-  if(param == 0.0) return 255.0;
-  v1 = ((thresh - v0) / param) + v0;
-
-  // bound by limits
-  //v1 = MAX(v1,thresh);
-  v1 = MIN(v1,255.0);
-  return v1;
 }
 
 /* ----------------------------------------------------------------------

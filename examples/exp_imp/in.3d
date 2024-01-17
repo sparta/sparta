@@ -15,7 +15,7 @@ boundary				p p p
 #variable R equal 1.5
 #variable L equal ${R}*2.0
 variable L equal 1.0
-variable N equal 250
+variable N equal 200
 create_box			-${L} ${L} -${L} ${L} -${L} ${L}
 create_grid			${N} ${N} ${N}
 balance_grid		rcb cell
@@ -34,9 +34,8 @@ read_surf       data.sphere3d invert
 surf_collide		1 diffuse 300.0 0.0
 surf_modify			all collide 1
 
-#fix							fablate ablate inner 0 0.2 random 0
-#create_isurf     inner fablate 40.0 inout
-#create_isurf     inner fablate 40.0 ave
+fix							fablate ablate inner 0 0.2 random 0
+create_isurf     inner fablate 40.0 ave
 
 create_particles    air n 0 twopass
 
@@ -44,22 +43,10 @@ collide					vss air air.vss
 
 timestep				0.001
 
-#dump 1 image all 1000 dump.* type type gline yes 0.005 surf one 0.03 particle yes pdiam 0.02
-#dump_modify 1 glinecolor blue
+dump 1 image all 1000 sphere3di_200_200_200.* type type surf one 0.02 particle no zoom 1.5 box no 0.0 view 65 140
+dump_modify 1 scolor * gray
 
-dump 1 image all 1000 dump3d1.* type type sline yes 0.000 surf one 0.02 particle no view 60 30
-dump_modify 1 slinecolor red
-
-dump 2 image all 1000 dump3d2.* type type sline yes 0.005 surf one 0.02 particle no view 0 0
-dump_modify 2 slinecolor red
-
-dump 3 image all 1000 dump3d3.* type type sline yes 0.005 surf one 0.02 particle no view 90 0
-dump_modify 3 slinecolor blue
-
-dump 4 image all 1000 dump3d4.* type type sline yes 0.005 surf one 0.02 particle no view 0 90
-dump_modify 4 slinecolor green
-
-stats						10
+stats						1
 stats_style			step cpu np nattempt ncoll nscoll nscheck
-run							1000
+run							10
 
