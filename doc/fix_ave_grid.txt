@@ -256,10 +256,10 @@ effectively.
 [Restrictions:]
 
 If one of the specified values is a compute which tallies information
-about particle/implicit surface element collisions within each grid
-cell, then all the values must be for compute(s) which do this.
-I.e. you cannot mix tallying computes for implicit surfaces with other
-kinds of values in the same fix ave/grid command.
+on collisions between particles and implicit surface element within
+each grid cell, then all the values must be for compute(s) which do
+this.  I.e. you cannot mix computes which operate on implicit surfaces
+with other kinds of per-grid values in the same fix ave/grid command.
 
 Examples of computes which tally particle/implicit surface element
 collision info within each grid cell are "compute

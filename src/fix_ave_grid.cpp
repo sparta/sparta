@@ -740,19 +740,16 @@ void FixAveGrid::end_of_step()
     }
 
   // final PERGRIDSURF values for output
-  // invoke surf->collate() on tallies this fix stores for multiple steps
-  //   this merges tallies to owned grid cells
+  // perform rendezvous comm on tallies this fix stores for multiple steps
+  //   to sum ghost tallies to my owned grid cells
   // for implicit surfs, surfIDs are also cellIDs
-  // array_surf_tally can be NULL if this proc has performed no tallies
-  // must zero vector/array_grid b/c collate_implicit() requires it
 
   } else if (flavor == PERGRIDSURF) {
     if (nvalues == 1) {
-      memset(vector_grid,0,nglocal*sizeof(double));
-      surf->collate_vector_implicit(ntallyID,tally2surf,vec_tally,vector_grid);
+      grid->collate_vector_implicit(ntallyID,(cellint *) tally2surf,
+                                    vec_tally,vector_grid);
     } else {
-      if (nglocal) memset(&array_grid[0][0],0,nglocal*nvalues*sizeof(double));
-      surf->collate_array_implicit(ntallyID,nvalues,tally2surf,
+      grid->collate_array_implicit(ntallyID,nvalues,(cellint *) tally2surf,
                                    array_tally,array_grid);
     }
     

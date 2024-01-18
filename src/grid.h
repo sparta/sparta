@@ -259,6 +259,20 @@ class Grid : protected Pointers {
 
   void debug();
 
+  // grid_collate.cpp
+  // including callback functions and callback data
+
+  void collate_vector_implicit(int, cellint *, double *, double *);
+  void collate_array_implicit(int, int, cellint *, double **, double **);
+  void owned_to_ghost_array(int, int, cellint *, double **, double **);
+  void owned_to_ghost_array_all(int, int, cellint *, double **, double **);
+  void owned_to_ghost_array_neighbors(int, int, cellint *, double **, double **);
+
+  static int rendezvous_owned_to_ghost(int, char *, int &, int *&,
+                                       char *&, void *);
+  int ncol_rvous;
+  double **owned_data_rvous;
+
   // grid_comm.cpp
 
   int pack_one(int, char *, int, int, int, int);
@@ -403,6 +417,29 @@ class Grid : protected Pointers {
 
   struct OutRvousTri {
     Surf::Tri tri;
+  };
+
+  // union data struct for packing 32-bit and 64-bit ints into double bufs
+  // this avoids aliasing issues by having 3 pointers (double,int,uint)
+  //   to same buf memory
+  // constructor for 32-bit int or uint prevents compiler
+  //   from possibly calling the double constructor when passed an int/uint
+  // copy to a double *buf:
+  //   buf[m++] = ubuf(foo).d, where foo is a 32-bit or 64-bit int or uint
+  // copy from a double *buf:
+  //   foo = (int) ubuf(buf[m++]).i or foo = (cellint) ubuf(buf[m++]).u
+  //         where (int) or (surfint) or (cellint) matches foo
+  //   the cast prevents compiler warnings about possible truncation
+
+  union ubuf {
+    double d;
+    int64_t i;
+    uint64_t u;
+    ubuf(double arg) : d(arg) {}
+    ubuf(int64_t arg) : i(arg) {}
+    ubuf(int arg) : i(arg) {}
+    ubuf(uint64_t arg) : u(arg) {}
+    ubuf(uint32_t arg) : u(arg) {}
   };
 
   // surf ID hashes

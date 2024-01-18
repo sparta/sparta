@@ -247,13 +247,8 @@ class Surf : protected Pointers {
 
   bigint memory_usage();
 
-  // surf_comm.cpp
-
-  void redistribute_surfs(int, Line *, Tri *,
-			  int, int *, double **, bigint, bigint);
-
-  void compress_explicit();
-  void compress_implicit();
+  // surf_collate.cpp
+  // including callback functions
 
   void collate_vector(int, surfint *, double *, int, double *);
   void collate_vector_reduce(int, surfint *, double *, int, double *);
@@ -262,14 +257,29 @@ class Surf : protected Pointers {
   void collate_array(int, int, surfint *, double **, double **);
   void collate_array_reduce(int, int, surfint *, double **, double **);
   void collate_array_rendezvous(int, int, surfint *, double **, double **);
-  void collate_vector_implicit(int, surfint *, double *, double *);
-  void collate_array_implicit(int, int, surfint *, double **, double **);
+
+  static int rendezvous_vector(int, char *, int &, int *&, char *&, void *);
+  static int rendezvous_array(int, char *, int &, int *&, char *&, void *);
+
+  // surf_comm.cp
+  // including callback functions
+
+  void redistribute_surfs(int, Line *, Tri *,
+			  int, int *, double **, bigint, bigint);
+
+  void compress_explicit();
+  void compress_implicit();
 
   void spread_own2local(int, int, void *, void *);
   void spread_own2local_reduce(int, int, void *, void *);
   void spread_own2local_rendezvous(int, int, void *, void *);
   void assign_unique();
   void spread_local2own(int, int, void *, void *);
+
+  static int rendezvous_redistribute_surfs(int, char *, int &, int *&,
+					   char *&, void *);
+  static int rendezvous_redistribute_custom(int, char *, int &, int *&,
+					    char *&, void *);
 
   // surf_custom.cpp
 
@@ -368,23 +378,14 @@ class Surf : protected Pointers {
 
   // callback functions for rendezvous communication
 
-  static int rendezvous_redistribute_surfs(int, char *, int &, int *&,
-					   char *&, void *);
-  static int rendezvous_redistribute_custom(int, char *, int &, int *&,
-
-					    char *&, void *);
-
-  static int rendezvous_vector(int, char *, int &, int *&, char *&, void *);
-  static int rendezvous_array(int, char *, int &, int *&, char *&, void *);
-  static int rendezvous_implicit(int, char *, int &, int *&, char *&, void *);
   static int rendezvous_watertight_2d(int, char *,
                                       int &, int *&, char *&, void *);
   static int rendezvous_watertight_3d(int, char *,
                                       int &, int *&, char *&, void *);
-  static int rendezvous_lines(int, char *,
-                              int &, int *&, char *&, void *);
-  static int rendezvous_tris(int, char *,
-                             int &, int *&, char *&, void *);
+  //static int rendezvous_lines(int, char *,
+   ///                           int &, int *&, char *&, void *);
+  //static int rendezvous_tris(int, char *,
+  //                           int &, int *&, char *&, void *);
   static int rendezvous_own2local(int, char *,
 				  int &, int *&, char *&, void *);
   static int rendezvous_unique(int, char *,

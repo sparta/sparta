@@ -15,11 +15,13 @@
 </P>
 <PRE>read_restart file keyword args ... 
 </PRE>
-<UL><LI>file = name of binary restart file to read in
+<UL><LI>file = name of binary restart file to read in 
+
 <LI>zero or one keyword/args pair may be listed 
-</UL>
-<PRE>keywords = <I>gridcut</I> or <I>balance</I>
-  <I>gridcut</I> arg = cutoff
+
+<LI>keywords = <I>gridcut</I> or <I>balance</I> 
+
+<PRE>  <I>gridcut</I> arg = cutoff
     cutoff = acquire ghost cells up to this far away (distance units)
   <I>balance</I> args = same as for <A HREF = "balance_grid.html">balance_grid</A> command 
 </PRE>
@@ -88,6 +90,9 @@ reads them in.  The arguments for the <I>balance</I> keyword are identical
 to those for the <A HREF = "balance_grid.html">balance_grid</A> command.  If you
 choose a balancing style that results in a "clumped" assignment, then
 ghost cells will be setup successfully.
+</P>
+<P>NOTE: Only the <I>gridcut</I> or the <I>balance</I> keyword can be used, not
+both of them.
 </P>
 <HR>
 
