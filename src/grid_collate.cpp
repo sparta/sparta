@@ -85,10 +85,18 @@ void Grid::collate_vector_implicit(int n, cellint *ids,
   }
 
   // perform rendezvous operation
-  // 1st arg = which = 0 for irregular comm
+  // which = 0 for irregular comm, 1 for all2all comm
+  // use irregular comm with clumped grid decomposition
+  //   ghost tallies should need sending to a handful of nearby procs,
+  //   even if cutoff is infinite
+  // use all2all comm with dispersed grid decomposition
+  //   ghost tallies could need sending to nearly all other procs
+
+  int which = 0;
+  if (!clumped) which = 1;
   
   char *buf;
-  int nout = comm->rendezvous(0,nsend,(char *) in_rvous,
+  int nout = comm->rendezvous(which,nsend,(char *) in_rvous,
                               2*sizeof(double),
                               0,proclist,NULL,
                               0,buf,2*sizeof(double),(void *) this);
@@ -179,10 +187,18 @@ void Grid::collate_array_implicit(int nrow, int ncol, cellint *ids,
   }
 
   // perform rendezvous operation
-  // 1st arg = which = 0 for irregular comm
+  // which = 0 for irregular comm, 1 for all2all comm
+  // use irregular comm with clumped grid decomposition
+  //   ghost tallies should need sending to a handful of nearby procs,
+  //   even if cutoff is infinite
+  // use all2all comm with dispersed grid decomposition
+  //   ghost tallies could need sending to nearly all other procs
+
+  int which = 0;
+  if (!clumped) which = 1;
   
   char *buf;
-  int nout = comm->rendezvous(0,nsend,(char *) in_rvous,
+  int nout = comm->rendezvous(which,nsend,(char *) in_rvous,
                               (ncol+1)*sizeof(double),
                               0,proclist,NULL,
                               0,buf,(ncol+1)*sizeof(double),(void *) this);
@@ -207,14 +223,12 @@ void Grid::collate_array_implicit(int nrow, int ncol, cellint *ids,
 }
 
 // ----------------------------------------------------------------------
-// operations to communicate grid data from owned cells to ghost cells
+// operation to communicate grid data from owned cells to ghost cells
 // ----------------------------------------------------------------------
 
 /* ----------------------------------------------------------------------
    array version of owned->ghost comm with ncol values per grid cell
    requested ghost cells receive copy of data in corresponding owned cell
-   if every proc owns all cells, communication via MPI_Allreduce()
-     otherwise rendezvous communication performed
    nrequest = # of my ghost cells which need values
    ncol = # of values per cell
    ghostIDs = cell IDs of nrequest ghost cells
@@ -225,34 +239,6 @@ void Grid::collate_array_implicit(int nrow, int ncol, cellint *ids,
 
 void Grid::owned_to_ghost_array(int nrequest, int ncol, cellint *ghostIDs,
                                 double **in, double **out)
-{
-  //if (cutoff < 0.0) owned_to_ghost_array_all(nrequest,ncol,ghostIDs,in,out);
-  //else owned_to_ghost_array_neighbors(nrequest,ncol,ghostIDs,in,out);
-
-  owned_to_ghost_array_neighbors(nrequest,ncol,ghostIDs,in,out);
-}
-
-/* ----------------------------------------------------------------------
-   requested ghost cells receive copy of data in corresponding owned cell
-   every proc owns all cells, communication via MPI_Allreduce()
-------------------------------------------------------------------------- */
-
-void Grid::owned_to_ghost_array_all(int nrequest, int ncol, cellint *ghostIDs,
-                                    double **in, double **out)
-{
-  // SJP: still need to provide this option
-  // possible that only subset of owned cells have data provided in **in
-  // how to setup Allreduce with consistent ordering of grid cells
-  // maybe need access to grid group used for this set of surfs
-}
-
-/* ----------------------------------------------------------------------
-   each requested ghost cell receives copy of data in corresponding owned cell
-   each proc owns only ghost cells within a cutoff distance, use rendezvous comm
-------------------------------------------------------------------------- */
-
-void Grid::owned_to_ghost_array_neighbors(int nrequest, int ncol, cellint *ghostIDs,
-                                          double **in, double **out)
 {
   int i,j,icell,itally;
   cellint cellID;
@@ -286,13 +272,20 @@ void Grid::owned_to_ghost_array_neighbors(int nrequest, int ncol, cellint *ghost
   }
 
   // perform rendezvous operation
-  // 1st arg = which = 0 for irregular comm
+  // which = 0 for irregular comm, 1 for all2all comm
+  // use irregular comm with grid cutoff (requires clumped decomp)
+  //   my owned cells only sent to handful of nearby procs
+  // use all2all comm with infinite cutoff (clumped or dispersed grid)
+  //   my owned cells will be sent to all other procs
+
+  int which = 0;
+  if (cutoff < 0.0) which = 1;
 
   ncol_rvous = ncol;
   owned_data_rvous = in;
   
   char *buf;
-  int nout = comm->rendezvous(0,nsend,(char *) in_rvous,
+  int nout = comm->rendezvous(which,nsend,(char *) in_rvous,
                               2*sizeof(double),
                               0,proclist,rendezvous_owned_to_ghost,
                               0,buf,(ncol+1)*sizeof(double),(void *) this);

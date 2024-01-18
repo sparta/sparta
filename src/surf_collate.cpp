@@ -364,7 +364,8 @@ int Surf::rendezvous_array(int n, char *inbuf,
 }
 
 // OLD methods for implicit surf collates, now done in Grid class
-// these used All2All rendezvous, Grid class uses irretular rendezvous (faster)
+// these used All2All rendezvous
+// Grid class uses irregular rendezvous when appropriate (faster)
 
 /* ----------------------------------------------------------------------
    comm of tallies across all procs for a single value (vector)

@@ -35,7 +35,7 @@ class Surf : protected Pointers {
                                    // were remapped due to LB or adaptation
 
   double bblo[3],bbhi[3];   // bounding box around surfs
-  int tally_comm;           // style of comm for surf tallies
+  int tally_comm;           // style of comm for explicit surf tallies
 
   int nreact_one;           // surface reactions in current step
   bigint nreact_running;    // running count of surface reactions

@@ -260,13 +260,11 @@ class Grid : protected Pointers {
   void debug();
 
   // grid_collate.cpp
-  // including callback functions and callback data
+  // including callback function and callback data
 
   void collate_vector_implicit(int, cellint *, double *, double *);
   void collate_array_implicit(int, int, cellint *, double **, double **);
   void owned_to_ghost_array(int, int, cellint *, double **, double **);
-  void owned_to_ghost_array_all(int, int, cellint *, double **, double **);
-  void owned_to_ghost_array_neighbors(int, int, cellint *, double **, double **);
 
   static int rendezvous_owned_to_ghost(int, char *, int &, int *&,
                                        char *&, void *);
