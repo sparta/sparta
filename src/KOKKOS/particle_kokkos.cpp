@@ -65,7 +65,7 @@ ParticleKokkos::ParticleKokkos(SPARTA *sparta) : Particle(sparta)
 
 ParticleKokkos::~ParticleKokkos()
 {
-  if (copy || copymode) return;
+  if (!uncopy && (copy || copymode)) return;
 
   particles = NULL;
   species = NULL;

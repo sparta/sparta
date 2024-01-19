@@ -29,7 +29,7 @@ namespace SPARTA_NS {
 class SurfCollideDiffuse : public SurfCollide {
  public:
   SurfCollideDiffuse(class SPARTA *, int, char **);
-  SurfCollideDiffuse(class SPARTA *sparta) : SurfCollide(sparta) {}
+  SurfCollideDiffuse(class SPARTA *sparta) : SurfCollide(sparta) {} // needed Kokkos
   virtual ~SurfCollideDiffuse();
   virtual void init();
   Particle::OnePart *collide(Particle::OnePart *&, double &,

@@ -63,6 +63,13 @@ ComputeSurfKokkos::ComputeSurfKokkos(SPARTA *sparta) :
 
 ComputeSurfKokkos::~ComputeSurfKokkos()
 {
+  if (uncopy) {
+    for (int i=0; i<KOKKOS_MAX_SURF_REACT_PER_TYPE; i++) {
+      sr_kk_global_copy[i].uncopy();
+      sr_kk_prob_copy[i].uncopy();
+    }
+  }
+
   if (copy || copymode) return;
 
   memoryKK->destroy_kokkos(k_tally2surf,tally2surf);

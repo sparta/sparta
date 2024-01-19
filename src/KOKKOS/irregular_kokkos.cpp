@@ -404,10 +404,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
     }
 
     copymode = 1;
-    if (sparta->kokkos->need_atomics)
-      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagIrregularPackBuffer<1> >(0,count),*this);
-    else
-      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagIrregularPackBuffer<0> >(0,count),*this);
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagIrregularPackBuffer>(0,count),*this);
     DeviceType().fence();
     copymode = 0;
 
@@ -436,9 +433,8 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
   }
 }
 
-template<int NEED_ATOMICS>
 KOKKOS_INLINE_FUNCTION
-void IrregularKokkos::operator()(TagIrregularPackBuffer<NEED_ATOMICS>, const int &i) const {
+void IrregularKokkos::operator()(TagIrregularPackBuffer, const int &i) const {
   const int m = d_index_send[i];
   memcpy(&d_buf[i*nbytes],&d_sendbuf[m*nbytes],nbytes);
 }

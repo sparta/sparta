@@ -20,7 +20,6 @@
 
 namespace SPARTA_NS {
 
-template<int NEED_ATOMICS>
 struct TagIrregularPackBuffer{};
 
 struct TagIrregularUnpackBuffer{};
@@ -34,9 +33,8 @@ class IrregularKokkos : public Irregular {
   int augment_data_uniform(int, int *);
   void exchange_uniform(DAT::t_char_1d, int, char *, DAT::t_char_1d);
 
-  template<int NEED_ATOMICS>
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagIrregularPackBuffer<NEED_ATOMICS>, const int&) const;
+  void operator()(TagIrregularPackBuffer, const int&) const;
 
   KOKKOS_INLINE_FUNCTION
   void operator()(TagIrregularUnpackBuffer, const int&) const;

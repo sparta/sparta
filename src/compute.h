@@ -75,7 +75,7 @@ class Compute : protected Pointers {
   bigint invoked_per_surf;     // ditto for compute_per_surf()
 
   Compute(class SPARTA *, int, char **);
-  Compute(class SPARTA* sparta) : Pointers(sparta) {}
+  Compute(class SPARTA* sparta) : Pointers(sparta) {} // needed for Kokkos
   virtual ~Compute();
   virtual void init() {}
   virtual void post_constructor() {}
@@ -113,8 +113,8 @@ class Compute : protected Pointers {
   // Kokkos methods
 
   int kokkos_flag;          // 1 if Kokkos-enabled
-  int copy,copymode;        // 1 if copy of class (prevents deallocation of
-                            //  base class when child copy is destroyed)
+  int copy,uncopy,copymode; // prevent deallocation of
+                            //  base class when child copy is destroyed
 };
 
 }

@@ -241,10 +241,12 @@ ComputeFFTGrid::ComputeFFTGrid(SPARTA *sparta, int narg, char **arg) :
 
   if (ncol == 1) size_per_grid_cols = 0;
   else size_per_grid_cols = ncol;
+  fft2d = NULL;
+  fft3d = NULL;
   irregular1 = irregular2 = NULL;
   map1 = map2 = NULL;
-  ingrid = gridwork = NULL;
-  gridworkcomplex = NULL;
+  fftwork = ingrid = gridwork = NULL;
+  fft = gridworkcomplex = NULL;
   vector_grid = NULL;
   array_grid = NULL;
 

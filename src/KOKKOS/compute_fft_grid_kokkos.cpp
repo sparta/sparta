@@ -363,7 +363,7 @@ void ComputeFFTGridKokkos::reallocate()
 
   if (startcol || conjugate) {
     MemKK::realloc_kokkos(d_gridwork,"fft/grid:gridwork",nglocal);
-    auto d_gridwork_char = DAT::t_char_1d((char *)d_gridwork.data(),d_gridwork.size()*sizeof(double));
+    d_gridwork_char = DAT::t_char_1d((char *)d_gridwork.data(),d_gridwork.size()*sizeof(double));
   }
 
   if (!conjugate) {
@@ -430,6 +430,8 @@ void ComputeFFTGridKokkos::reallocate()
 
     irregular2KK->exchange_uniform(d_fftwork_char,sizeof(double),
                                  (char *) d_gridwork_char.data(),d_gridwork_char);
+
+    copymode = 1;
 
     Kokkos::parallel_for(nglocal, SPARTA_CLASS_LAMBDA(int i) {
       d_array_grid(d_map2[i],icol) = d_gridwork[i];
@@ -566,7 +568,7 @@ void ComputeFFTGridKokkos::irregular_create()
   //   increment until find ipy consistent with
   //   ipy*ny/npy to (ipy+1)*ny/npy bounds of that proc's FFT partition
 
-  Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
+  Kokkos::parallel_for(nglocal, SPARTA_CLASS_LAMBDA(int i) {
     const cellint gid = d_cells[i].id;
     const int iy = ((gid-1) / nx) % ny;
     const int iz = (gid-1) / (nx*ny);

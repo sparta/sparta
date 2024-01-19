@@ -33,10 +33,12 @@ class React : protected Pointers {
   double recomb_boost_inverse;   // inverse of boost parameter
   Particle::OnePart *recomb_part3;  // ptr to 3rd particle in recomb reaction
 
-  int copy,copymode;         // 1 if class copy
+  int copy,uncopy,copymode;  // prevent deallocation of
+                             //  base class when child copy is destroyed
 
   React(class SPARTA *, int, char **);
-  React(class SPARTA *sparta) : Pointers(sparta) { style = NULL; random = NULL; }
+  React(class SPARTA *sparta) : Pointers(sparta) // needed for Kokkos
+    { style = NULL; random = NULL; }
   virtual ~React();
   virtual void init() {}
   virtual int recomb_exist(int, int) = 0;

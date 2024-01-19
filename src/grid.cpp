@@ -157,14 +157,14 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   hash = new MyHash();
   hashfilled = 0;
 
-  copy = copymode = 0;
+  copy = uncopy = copymode = 0;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Grid::~Grid()
 {
-  if (copy || copymode) return;
+  if (!uncopy && (copy || copymode)) return;
 
   for (int i = 0; i < ngroup; i++) delete [] gnames[i];
   memory->sfree(gnames);
@@ -176,7 +176,8 @@ Grid::~Grid()
   memory->sfree(sinfo);
   memory->sfree(pcells);
 
-  delete [] plevels;
+  if (plevels)
+    delete [] plevels;
 
   delete csurfs;
   delete csplits;
