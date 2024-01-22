@@ -36,13 +36,13 @@ RemapKokkos2d<DeviceType>::RemapKokkos2d(SPARTA *sparta, MPI_Comm comm,
              int out_ilo, int out_ihi, int out_jlo, int out_jhi,
              int nqty, int permute, int memory,
              int precision, int usecollective,
-             int usecuda_aware) : Pointers(sparta)
+             int usegpu_aware) : Pointers(sparta)
 {
   plan = remap_2d_create_plan_kokkos(comm,
                               in_ilo,in_ihi,in_jlo,in_jhi,
                               out_ilo,out_ihi,out_jlo,out_jhi,
                               nqty,permute,memory,precision,usecollective,
-                              usecuda_aware);
+                              usegpu_aware);
   if (plan == nullptr) error->one(FLERR,"Could not create 2d remap plan");
 }
 
@@ -118,7 +118,7 @@ void RemapKokkos2d<DeviceType>::remap_2d_kokkos(typename FFT_AT::t_FFT_SCALAR_1d
   // post all recvs into scratch space
 
   FFT_SCALAR* v_scratch = d_scratch.data();
-  if (!plan->usecuda_aware) {
+  if (!plan->usegpu_aware) {
     plan->h_scratch = Kokkos::create_mirror_view(d_scratch);
     v_scratch = plan->h_scratch.data();
   }
@@ -131,7 +131,7 @@ void RemapKokkos2d<DeviceType>::remap_2d_kokkos(typename FFT_AT::t_FFT_SCALAR_1d
   }
 
   FFT_SCALAR* v_sendbuf = plan->d_sendbuf.data();
-  if (!plan->usecuda_aware) {
+  if (!plan->usegpu_aware) {
     plan->h_sendbuf = Kokkos::create_mirror_view(plan->d_sendbuf);
     v_sendbuf = plan->h_sendbuf.data();
   }
@@ -143,7 +143,7 @@ void RemapKokkos2d<DeviceType>::remap_2d_kokkos(typename FFT_AT::t_FFT_SCALAR_1d
     plan->pack(d_in,in_offset,
                plan->d_sendbuf,0,&plan->packplan[isend]);
 
-    if (!plan->usecuda_aware)
+    if (!plan->usegpu_aware)
       Kokkos::deep_copy(plan->h_sendbuf,plan->d_sendbuf);
 
     MPI_Send(v_sendbuf,plan->send_size[isend],MPI_FFT_SCALAR,
@@ -175,7 +175,7 @@ void RemapKokkos2d<DeviceType>::remap_2d_kokkos(typename FFT_AT::t_FFT_SCALAR_1d
     int scratch_offset = plan->recv_bufloc[irecv];
     int out_offset = plan->recv_offset[irecv];
 
-    if (!plan->usecuda_aware)
+    if (!plan->usegpu_aware)
       Kokkos::deep_copy(d_scratch,plan->h_scratch);
 
     plan->unpack(d_scratch,scratch_offset,
@@ -203,7 +203,7 @@ void RemapKokkos2d<DeviceType>::remap_2d_kokkos(typename FFT_AT::t_FFT_SCALAR_1d
                           1 = single precision (4 bytes per datum)
                           2 = double precision (8 bytes per datum)
    usecollective        whether to use collective MPI or point-to-point
-   usecuda_aware        whether to use CUDA-Aware MPI or not
+   usegpu_aware        whether to use GPU-Aware MPI or not
 ------------------------------------------------------------------------- */
 
 template<class DeviceType>
@@ -212,7 +212,7 @@ struct remap_plan_2d_kokkos<DeviceType>* RemapKokkos2d<DeviceType>::remap_2d_cre
   int in_ilo, int in_ihi, int in_jlo, int in_jhi,
   int out_ilo, int out_ihi, int out_jlo, int out_jhi,
   int nqty, int permute, int memory, int /*precision*/,
-  int usecollective, int usecuda_aware)
+  int usecollective, int usegpu_aware)
 {
 
   struct remap_plan_2d_kokkos<DeviceType> *plan;
@@ -230,7 +230,7 @@ struct remap_plan_2d_kokkos<DeviceType>* RemapKokkos2d<DeviceType>::remap_2d_cre
   plan = new struct remap_plan_2d_kokkos<DeviceType>;
   if (plan == nullptr) return nullptr;
   plan->usecollective = usecollective;
-  plan->usecuda_aware = usecuda_aware;
+  plan->usegpu_aware = usegpu_aware;
 
   // store parameters in local data structs
 

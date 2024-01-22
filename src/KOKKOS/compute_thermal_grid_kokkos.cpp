@@ -127,7 +127,7 @@ template<int NEED_ATOMICS>
 KOKKOS_INLINE_FUNCTION
 void ComputeThermalGridKokkos::operator()(TagComputeThermalGrid_compute_per_grid_atomic<NEED_ATOMICS>, const int &i) const {
 
-  // The tally array is duplicated for OpenMP, atomic for CUDA, and neither for Serial
+  // The tally array is duplicated for OpenMP, atomic for GPUs, and neither for Serial
 
   auto v_tally = ScatterViewHelper<typename NeedDup<NEED_ATOMICS,DeviceType>::value,decltype(dup_tally),decltype(ndup_tally)>::get(dup_tally,ndup_tally);
   auto a_tally = v_tally.template access<typename AtomicDup<NEED_ATOMICS,DeviceType>::value>();

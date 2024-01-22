@@ -36,7 +36,7 @@ FFT2dKokkos<DeviceType>::FFT2dKokkos(SPARTA *sparta, MPI_Comm comm, int nfast, i
              int in_ilo, int in_ihi, int in_jlo, int in_jhi,
              int out_ilo, int out_ihi, int out_jlo, int out_jhi,
              int scaled, int permute, int *nbuf, int usecollective,
-             int usecuda_aware) :
+             int usegpu_aware) :
   Pointers(sparta)
 {
   int nthreads = sparta->kokkos->nthreads;
@@ -72,7 +72,7 @@ FFT2dKokkos<DeviceType>::FFT2dKokkos(SPARTA *sparta, MPI_Comm comm, int nfast, i
   plan = fft_2d_create_plan_kokkos(comm,nfast,nslow,
                             in_ilo,in_ihi,in_jlo,in_jhi,
                             out_ilo,out_ihi,out_jlo,out_jhi,
-                            scaled,permute,nbuf,usecollective,nthreads,usecuda_aware);
+                            scaled,permute,nbuf,usecollective,nthreads,usegpu_aware);
   if (plan == nullptr) error->one(FLERR,"Could not create 2d FFT plan");
 }
 
@@ -327,7 +327,7 @@ void FFT2dKokkos<DeviceType>::fft_2d_kokkos(typename FFT_AT::t_FFT_DATA_1d d_in,
                           1 = permute = slow->fast, fast->slow
    nbuf                 returns size of internal storage buffers used by FFT
    usecollective        use collective MPI operations for remapping data
-   usecuda_aware        use CUDA-Aware MPI or not
+   usegpu_aware        use GPU-Aware MPI or not
 ------------------------------------------------------------------------- */
 
 template<class DeviceType>
@@ -336,7 +336,7 @@ struct fft_plan_2d_kokkos<DeviceType>* FFT2dKokkos<DeviceType>::fft_2d_create_pl
        int in_ilo, int in_ihi, int in_jlo, int in_jhi,
        int out_ilo, int out_ihi, int out_jlo, int out_jhi,
        int scaled, int permute, int *nbuf, int usecollective,
-       int nthreads, int usecuda_aware)
+       int nthreads, int usegpu_aware)
 {
   struct fft_plan_2d_kokkos<DeviceType> *plan;
   int me,nprocs;
@@ -382,7 +382,7 @@ struct fft_plan_2d_kokkos<DeviceType>* FFT2dKokkos<DeviceType>::fft_2d_create_pl
       remapKK->remap_2d_create_plan_kokkos(comm,in_ilo,in_ihi,in_jlo,in_jhi,
                   first_ilo,first_ihi,first_jlo,first_jhi,
                            2,0,0,FFT_PRECISION,
-                           usecollective,usecuda_aware);
+                           usecollective,usegpu_aware);
     if (plan->pre_plan == nullptr) return nullptr;
   }
 
@@ -418,7 +418,7 @@ struct fft_plan_2d_kokkos<DeviceType>* FFT2dKokkos<DeviceType>::fft_2d_create_pl
     remapKK->remap_2d_create_plan_kokkos(comm,first_ilo,first_ihi,first_jlo,first_jhi,
                                          second_ilo,second_ihi,second_jlo,second_jhi,
                                          FFT_PRECISION,1,0,2,
-                                         usecollective,usecuda_aware);
+                                         usecollective,usegpu_aware);
   if (plan->mid_plan == nullptr) return nullptr;
 
   // 1d FFTs along slow axis
@@ -441,7 +441,7 @@ struct fft_plan_2d_kokkos<DeviceType>* FFT2dKokkos<DeviceType>::fft_2d_create_pl
       remapKK->remap_2d_create_plan_kokkos(comm,second_jlo,second_jhi,second_ilo,second_ihi,
                   out_jlo,out_jhi,out_ilo,out_ihi,
                   FFT_PRECISION,(permute+1)%2,0,2,
-                  usecollective,usecuda_aware);
+                  usecollective,usegpu_aware);
       if (plan->post_plan == nullptr) return nullptr;
   }
 
