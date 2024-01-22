@@ -392,6 +392,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
   k_n.sync_device();
   d_n = k_n.d_view;
 
+  offset_send = 0;
   for (int isend = 0; isend < nsend; isend++) {
     count = num_send[isend];
 
@@ -414,6 +415,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
       Kokkos::deep_copy(h_buf,d_buf);
       MPI_Send(h_buf.data(),count*nbytes,MPI_CHAR,proc_send[isend],0,world);
     }
+    offset_send += count;
   }
 
   // copy datums to self, put at beginning of recvbuf
@@ -435,7 +437,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
 
 KOKKOS_INLINE_FUNCTION
 void IrregularKokkos::operator()(TagIrregularPackBuffer, const int &i) const {
-  const int m = d_index_send[i];
+  const int m = d_index_send[offset_send + i];
   memcpy(&d_buf[i*nbytes],&d_sendbuf[m*nbytes],nbytes);
 }
 

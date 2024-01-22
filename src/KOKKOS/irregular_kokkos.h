@@ -43,6 +43,8 @@ class IrregularKokkos : public Irregular {
   void pack_buffer_serial(const int, const int) const;
 
  private:
+  int offset_send;
+
   DAT::tdual_int_1d k_index_send;
   DAT::t_int_1d d_index_send;
   DAT::tdual_int_1d k_index_self;

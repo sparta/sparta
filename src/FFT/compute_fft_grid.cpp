@@ -847,7 +847,7 @@ void ComputeFFTGrid::irregular_create()
 
   idrecv = (cellint *) rbuf2;
 
-  memory->create(map2,nglocal,"fft/grid:map1");
+  memory->create(map2,nglocal,"fft/grid:map2");
   for (i = 0; i < nglocal; i++) {
     gid = idrecv[i];
     map2[i] = (*hash)[gid];

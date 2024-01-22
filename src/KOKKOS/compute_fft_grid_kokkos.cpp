@@ -557,7 +557,6 @@ void ComputeFFTGridKokkos::irregular_create()
     gridKK->sync(Device,CELL_MASK);
   }
 
-
   memoryKK->create_kokkos(k_proclist1,proclist1,nglocal,"fft/grid:proclist1");
   auto d_proclist1 = k_proclist1.d_view;
 
@@ -598,7 +597,7 @@ void ComputeFFTGridKokkos::irregular_create()
   MemKK::realloc_kokkos(d_sbuf1,"fft/grid:sbuf1",nglocal*sizeof(cellint));
   MemKK::realloc_kokkos(d_rbuf1,"fft/grid:rbuf1",nfft*sizeof(cellint));
 
-  DAT::t_cellint_1d d_idsend = DAT::t_cellint_1d((cellint *)d_sbuf1.data(),d_sbuf1.size()/sizeof(cellint));
+  DAT::t_cellint_1d d_idsend = DAT::t_cellint_1d((cellint *)d_sbuf1.data(),nglocal);
 
   Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
     d_idsend[i] = d_cells[i].id;
@@ -608,7 +607,7 @@ void ComputeFFTGridKokkos::irregular_create()
 
   MemKK::realloc_kokkos(d_map1,"fft/grid:map1",nfft);
 
-  DAT::t_cellint_1d d_idrecv = DAT::t_cellint_1d((cellint *)d_rbuf1.data(),d_rbuf1.size()/sizeof(cellint));
+  DAT::t_cellint_1d d_idrecv = DAT::t_cellint_1d((cellint *)d_rbuf1.data(),nfft);
 
   Kokkos::parallel_for(nfft, SPARTA_CLASS_LAMBDA(int i) {
     const cellint gid = d_idrecv[i];
@@ -652,7 +651,7 @@ void ComputeFFTGridKokkos::irregular_create()
   MemKK::realloc_kokkos(d_sbuf2,"fft/grid:sbuf2",nfft*sizeof(cellint));
   MemKK::realloc_kokkos(d_rbuf2,"fft/grid:rbuf2",nglocal*sizeof(cellint));
 
-  d_idsend = DAT::t_cellint_1d((cellint *)d_sbuf2.data(),d_sbuf2.size()/sizeof(cellint));
+  d_idsend = DAT::t_cellint_1d((cellint *)d_sbuf2.data(),nfft);
 
   Kokkos::parallel_for(nfft, SPARTA_CLASS_LAMBDA(int i) {
     d_idsend[d_map1[i]] = d_idrecv[i];
@@ -660,9 +659,9 @@ void ComputeFFTGridKokkos::irregular_create()
 
   irregular2KK->exchange_uniform(d_sbuf2,sizeof(cellint),d_rbuf2.data(),d_rbuf2);
 
-  d_idrecv = DAT::t_cellint_1d((cellint *)d_rbuf2.data(),d_rbuf2.size()/sizeof(cellint));
+  d_idrecv = DAT::t_cellint_1d((cellint *)d_rbuf2.data(),nglocal);
 
-  MemKK::realloc_kokkos(d_map2,"fft/grid:map2",nfft);
+  MemKK::realloc_kokkos(d_map2,"fft/grid:map2",nglocal);
 
   // insure grid cell IDs are hashed, so can use them to build map2
 
