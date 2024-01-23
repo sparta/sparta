@@ -22,7 +22,7 @@ namespace SPARTA_NS {
 
 struct TagIrregularPackBuffer{};
 
-struct TagIrregularUnpackBuffer{};
+struct TagIrregularUnpackBufferSelf{};
 
 class IrregularKokkos : public Irregular {
  public:
@@ -37,7 +37,7 @@ class IrregularKokkos : public Irregular {
   void operator()(TagIrregularPackBuffer, const int&) const;
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagIrregularUnpackBuffer, const int&) const;
+  void operator()(TagIrregularUnpackBufferSelf, const int&) const;
 
   inline
   void pack_buffer_serial(const int, const int) const;
@@ -50,12 +50,7 @@ class IrregularKokkos : public Irregular {
   DAT::tdual_int_1d k_index_self;
   DAT::t_int_1d d_index_self;
 
-  DAT::tdual_int_scalar k_n;
-  DAT::t_int_scalar d_n;
-  HAT::t_int_scalar h_n;
-
   DAT::t_char_1d d_sendbuf;
-  char* d_recvbuf_ptr;
   DAT::t_char_1d d_recvbuf;
   DAT::t_char_1d d_buf;
   HAT::t_char_1d h_recvbuf;

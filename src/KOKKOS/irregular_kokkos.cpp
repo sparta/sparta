@@ -46,7 +46,6 @@ int compare_standalone(const void *, const void *);
 
 IrregularKokkos::IrregularKokkos(SPARTA *sparta) : Irregular(sparta)
 {
-  k_n = DAT::tdual_int_scalar("comm:n");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -171,6 +170,8 @@ int IrregularKokkos::create_data_uniform(int n, int *proclist, int sort)
       index_send[work2[isend]++] = i;
     }
   }
+  k_index_self.modify_host();
+  k_index_send.modify_host();
 
   // tell receivers how many datums I send them
   // sendmax = largest # of datums I send in a single message
@@ -293,11 +294,14 @@ int IrregularKokkos::augment_data_uniform(int n, int *proclist)
         index_send[work2[isend]++] = i;
       }
     }
+    k_index_self.modify_host();
+    k_index_send.modify_host();
   } else {
     for (i = 0; i < n; i++) {
       isend = work1[proclist[i]];
       index_send[work2[isend]++] = i;
     }
+    k_index_send.modify_host();
   }
 
   // tell receivers how many datums I send them
@@ -340,13 +344,10 @@ int IrregularKokkos::augment_data_uniform(int n, int *proclist)
 ------------------------------------------------------------------------- */
 
 void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_in,
-                                       char* d_recvbuf_ptr_in, DAT::t_char_1d d_recvbuf_in)
+                                       char* d_recvbuf_ptr, DAT::t_char_1d d_recvbuf_in)
 {
-  int offset,count;
-
   nbytes = nbytes_in;
   d_sendbuf = d_sendbuf_in;
-  d_recvbuf_ptr = d_recvbuf_ptr_in;
   d_recvbuf = d_recvbuf_in;
 
   if (!sparta->kokkos->gpu_aware_flag &&
@@ -356,7 +357,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
 
   // post all receives, starting after self copies
 
-  offset = num_self*nbytes;
+  int offset = num_self*nbytes;
   for (int irecv = 0; irecv < nrecv; irecv++) {
     if (sparta->kokkos->gpu_aware_flag) {
       MPI_Irecv(&d_recvbuf_ptr[offset],num_recv[irecv]*nbytes,MPI_CHAR,
@@ -370,38 +371,37 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
 
   // reallocate buf for largest send if necessary
 
-  if (sendmax*nbytes > bufmax) {
-    bufmax = sendmax*nbytes;
-    d_buf = DAT::t_char_1d("Irregular:buf",bufmax);
-  } else if (d_buf.extent(0) < bufmax) {
-    d_buf = DAT::t_char_1d("Irregular:buf",bufmax);
+  if (sparta->kokkos->gpu_aware_flag) {
+    if (sendmax*nbytes > bufmax) {
+      bufmax = sendmax*nbytes;
+      d_buf = DAT::t_char_1d("Irregular:buf",bufmax);
+    } else if (d_buf.extent(0) < bufmax) {
+      d_buf = DAT::t_char_1d("Irregular:buf",bufmax);
+    }
   }
 
   // send each message
   // pack buf with list of datums
   // m = index of datum in sendbuf
 
-  k_index_send.modify_host();
+  if (sparta->kokkos->gpu_aware_flag)
+    k_index_self.sync_device();
+
   k_index_send.sync_device();
-
-  k_index_self.modify_host();
-  k_index_self.sync_device();
-
-  k_n.h_view() = 0;
-  k_n.modify_host();
-  k_n.sync_device();
-  d_n = k_n.d_view;
 
   offset_send = 0;
   for (int isend = 0; isend < nsend; isend++) {
-    count = num_send[isend];
+    const int count = num_send[isend];
 
     if (!sparta->kokkos->gpu_aware_flag) {
 
       // allocate exact buffer size to reduce GPU <--> CPU memory transfer
 
-      d_buf = DAT::t_char_1d(Kokkos::view_alloc("irregular:buf",Kokkos::WithoutInitializing),count*nbytes);
-      h_buf = HAT::t_char_1d(Kokkos::view_alloc("irregular:buf:mirror",Kokkos::WithoutInitializing),count*nbytes);
+      if (bufmax != count*nbytes) {
+        bufmax = count*nbytes;
+        d_buf = DAT::t_char_1d(Kokkos::view_alloc("irregular:buf",Kokkos::WithoutInitializing),bufmax);
+        h_buf = HAT::t_char_1d(Kokkos::view_alloc("irregular:buf:mirror",Kokkos::WithoutInitializing),bufmax);
+      }
     }
 
     copymode = 1;
@@ -420,19 +420,32 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
 
   // copy datums to self, put at beginning of recvbuf
 
-  copymode = 1;
-  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagIrregularUnpackBuffer>(0,num_self),*this);
-  DeviceType().fence();
-  copymode = 0;
+  if (num_self) {
+    if (sparta->kokkos->gpu_aware_flag) {
+      copymode = 1;
+      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagIrregularUnpackBufferSelf>(0,num_self),*this);
+      DeviceType().fence();
+      copymode = 0;
+    } else { // unpack on host
+      auto h_sendbuf = Kokkos::create_mirror_view_and_copy(SPAHostType(),d_sendbuf);
+
+      k_index_self.sync_host();
+
+      for (int i = 0; i < num_self; i++) {
+        const int m = k_index_self.h_view[i];
+        memcpy(&h_recvbuf[i*nbytes],&h_sendbuf[m*nbytes],nbytes);
+      }
+    }
+  }
 
   // wait on all incoming messages
 
-  if (nrecv) {
+  if (nrecv)
     MPI_Waitall(nrecv,request,status);
 
-    if (!sparta->kokkos->gpu_aware_flag)
+  if (!sparta->kokkos->gpu_aware_flag)
+    if (nrecv || num_self)
       Kokkos::deep_copy(d_recvbuf,h_recvbuf);
-  }
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -442,7 +455,7 @@ void IrregularKokkos::operator()(TagIrregularPackBuffer, const int &i) const {
 }
 
 KOKKOS_INLINE_FUNCTION
-void IrregularKokkos::operator()(TagIrregularUnpackBuffer, const int &i) const {
+void IrregularKokkos::operator()(TagIrregularUnpackBufferSelf, const int &i) const {
   const int m = d_index_self[i];
   memcpy(&d_recvbuf[i*nbytes],&d_sendbuf[m*nbytes],nbytes);
 }
