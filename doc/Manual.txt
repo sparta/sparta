@@ -190,6 +190,7 @@ it gives quick access to documentation for all SPARTA commands.
 :link(howto_14,Section_howto.html#howto_14)
 :link(howto_15,Section_howto.html#howto_15)
 :link(howto_16,Section_howto.html#howto_16)
+:link(howto_17,Section_howto.html#howto_17)
 
 :link(mod_1,Section_modify.html#mod_1)
 :link(mod_2,Section_modify.html#mod_2)
