@@ -61,7 +61,7 @@ keyword = {mode} or {file} or {region} or {mix} or {group} or {ave} or {start} o
 
 [Examples:]
 
-fix 1 ave/histo 100 5 1000 0.5 1.5 50 c_myGrid[*] file temp.histo ave running
+fix 1 ave/histo 100 5 1000 0.5 1.5 50 c_myGrid\[*\] file temp.histo ave running
 fix 1 ave/histo 100 5 1000 0 5 100 c_kePart "My output values"
 fix 1 ave/histo/weight 1 100 1000 -2.0 2.0 18 vx vy ave running beyond extra :pre 
 
