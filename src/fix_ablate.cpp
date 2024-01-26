@@ -280,7 +280,8 @@ int FixAblate::setmask()
 void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
                               double *cornerlo_caller, double *xyzsize_caller,
                               double **cvalues_caller, int *tvalues_caller,
-                              double thresh_caller, char *sgroupID, int pushflag)
+                              double thresh_caller, char *sgroupID, int pushflag,
+                              int aveFlag)
 {
   storeflag = 1;
 
@@ -338,6 +339,8 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
     ixyz[icell][2] =
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
+
+  if(aveFlag>=0) sync_explicit(aveFlag);
 
   // push corner pt values that are fully external/internal to 0 or 255
 
@@ -937,6 +940,104 @@ void FixAblate::sync()
 
       if (total > cvalues[icell][i]) cvalues[icell][i] = 0.0;
       else cvalues[icell][i] -= total;
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   sync all copies of corner points values for all owned grid cells
+   algorithm:
+     comm my cdelta values that are shared by neighbor
+     each corner point is shared by N cells, less on borders
+     dsum = sum of decrements to that point by all N cells
+     newvalue = MAX(oldvalue-dsum,0)
+   all N copies of corner pt are set to newvalue
+     in numerically consistent manner (same order of operations)
+   if in/out, if total cvalue is > thresh, set as 255
+   if ave, if max cvalue > thresh, set as max val
+------------------------------------------------------------------------- */
+
+void FixAblate::sync_explicit(int aveFlag)
+{
+  error->one(FLERR,"check");
+  int i,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
+  int icell,jcell;
+  int ntotal;
+  double temp;
+
+  comm_neigh_corners(CVALUE);
+
+  // perform update of corner pts for all my owned grid cells
+  //   using contributions from all cells that share the corner point
+  // insure order of numeric operations will give exact same answer
+  //   for all Ncorner duplicates of a corner point (stored by other cells)
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  for (icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    ix = ixyz[icell][0];
+    iy = ixyz[icell][1];
+    iz = ixyz[icell][2];
+
+    // loop over corner points
+
+    for (i = 0; i < ncorner; i++) {
+
+      // ixyz first = offset from icell of lower left cell of 2x2x2 stencil
+      //              that shares the Ith corner point
+
+      ixfirst = (i % 2) - 1;
+      iyfirst = (i/2 % 2) - 1;
+      if (dim == 2) izfirst = 0;
+      else izfirst = (i / 4) - 1;
+
+      // loop over 2x2x2 stencil of cells that share the corner point
+      // also works for 2d, since izfirst = 0
+
+      ntotal = 0;
+      temp = 0.0;
+      jcorner = ncorner;
+
+      for (jz = izfirst; jz <= izfirst+1; jz++) {
+        for (jy = iyfirst; jy <= iyfirst+1; jy++) {
+          for (jx = ixfirst; jx <= ixfirst+1; jx++) {
+            jcorner--;
+
+            // check if neighbor cell is within bounds of ablate grid
+
+            if (ix+jx < 1 || ix+jx > nx) continue;
+            if (iy+jy < 1 || iy+jy > ny) continue;
+            if (iz+jz < 1 || iz+jz > nz) continue;
+
+            // jcell = local index of (jx,jy,jz) neighbor cell of icell
+
+            jcell = walk_to_neigh(icell,jx,jy,jz);
+
+            // update total with one corner point of jcell
+            // jcorner descends from ncorner
+
+            if (jcell < nglocal) {
+              if(cdelta[jcell][jcorner] >= thresh) {
+                if(aveFlag == 0) temp = 255.0;
+                else temp = MAX(cdelta[jcell][jcorner],temp);
+                ntotal++;
+              }
+            } else if (cdelta_ghost[jcell-nglocal][jcorner] >= thresh) {
+              if(aveFlag == 0) temp = 255.0;
+              else temp = MAX(cdelta_ghost[jcell-nglocal][jcorner],temp);
+              ntotal++;
+            }
+
+          }
+        }
+      }
+
+      if(temp >= thresh) cvalues[icell][i] = temp;
+      else cvalues[icell][i] = 0.0;
     }
   }
 }

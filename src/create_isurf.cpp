@@ -102,7 +102,7 @@ void CreateISurf::command(int narg, char **arg)
   MPI_Barrier(world);
 
   // remove old explicit surfaces
-  remove_old();
+  //remove_old();
 
   surf->implicit = 1;
   //surf->distributed = 1; // <- is this needed?
