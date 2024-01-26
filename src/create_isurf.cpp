@@ -54,8 +54,12 @@ void CreateISurf::command(int narg, char **arg)
 {
   if (!grid->exist)
     error->all(FLERR,"Cannot create_isurf before grid is defined");
+  if(!surf->exist)
+    error->all(FLERR,"Must read in surface first with read_surf");
   if (surf->implicit && surf->exist)
     error->all(FLERR,"Cannot have pre-existing implicit surfaces");
+  if (!surf->distributed)
+    error->all(FLERR,"Explicit surface must be distributed");
 
   int dim = domain->dimension;
 
@@ -86,6 +90,9 @@ void CreateISurf::command(int narg, char **arg)
   else if (strcmp(arg[3],"ave") == 0) aveFlag = 1;
   else error->all(FLERR,"Unknown surface corner mode called");
 
+  if(aveFlag && comm->nprocs > 1)
+    error->all(FLERR,"Create_isurf averaging not possible in parallel");
+
   // nxyz already takes into account subcells
   // find corner values for all grid cells initially
   // only store those within ggroup when calling ablate->store
@@ -105,7 +112,6 @@ void CreateISurf::command(int narg, char **arg)
   //remove_old();
 
   surf->implicit = 1;
-  //surf->distributed = 1; // <- is this needed?
   surf->exist = 1;
 
   tvalues = NULL; // TODO: Add per-surface type

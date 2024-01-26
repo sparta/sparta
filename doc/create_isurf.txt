@@ -99,7 +99,7 @@ point values to surface elements (line segments or triangles) and also
 optinally allows for the surface to be ablated during a simulation due
 to particles colliding with the surface elements.
 
-MPORTANT NOTE: The corner point values are a 2d or 3d regular array
+IMPORTANT NOTE: The corner point values are a 2d or 3d regular array
 which must be ordered as follows.  The x indices (1 to Nxfile) vary
 fastest, then the y indices (1 to Nyfile), and the z indices slowest
 (1 to Nzfile).  These will be assigned as corner points to each child
@@ -139,6 +139,7 @@ surface are always marked as zero. The inside corner point value is then
 extrapolated from the outside corner point and the point of intersection.
 For each inner corner point, the average is then found from all extrapolated
 values.
+
 :line
 
 [Restrictions:]
@@ -153,8 +154,21 @@ are implicit surfaces. If particles already exist in the simulation,
 you must insure particles do not end up inside the set of implicit 
 surfaces.
 
+:line
+
+Explicit surface must be distributed when first read in by {read_surf}.
+
+:line
+
+The {ave} mode is not currently stable for parallel runs. If a parallel
+run using the {ave} mod is desired, a preliminary input should be used in 
+serial solely for the purpose of writing the implicit surface to a file using
+{write_isurf}. Then the implicit surface file may be passed to a second input
+which calls multiple processors. Adjustments to the algorith will be added in future releases to obviate this workflow.
+
+
 [Related commands:]
 
-"read_surf"_read_surf.html, "fix ablate"_fix_ablate.html
+"read_surf"_read_surf.html, "fix_ablate"_fix_ablate.html, "write_isurf"_write_isurf.html
 
 [Default:] There are no default values

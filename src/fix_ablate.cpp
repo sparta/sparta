@@ -340,7 +340,11 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
 
+  MPI_Barrier(world);
+  printf("Beginning sync explicit: %i\n", comm->me); 
   if(aveFlag>=0) sync_explicit(aveFlag);
+  printf("Finished sync explicit: %i\n", comm->me);
+  MPI_Barrier(world);
 
   // push corner pt values that are fully external/internal to 0 or 255
 
@@ -959,7 +963,6 @@ void FixAblate::sync()
 
 void FixAblate::sync_explicit(int aveFlag)
 {
-  error->one(FLERR,"check");
   int i,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
   int ntotal;
