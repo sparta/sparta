@@ -38,6 +38,7 @@ jobs:
         ctest --output-on-failure -j4
 
     - uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: 'mpi-Artifacts'
         path: 'build/examples/'
