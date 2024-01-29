@@ -63,7 +63,7 @@ boost factor that is safe to use for your model.
 The {compute_chem_rates} keyword is a setting that allows the user to
 only compute Arrhenius rates for chemical reactions without performing them.
 Currently only the TCE reaction model supports this keyword; an error
-will occur when using the QK reaction model with this keyword.
+will occur when using the QK or TCE/QK reaction model with this keyword.
 
 The {partial_energy} keyword is a setting that allows the user to choose
 the amount of internal energy and internal degrees of freedom used in the
