@@ -128,11 +128,11 @@ examples/ablation/in.ablation.3d.reactions input script:
 surf_react	    2 prob air.surf 
 </PRE>
 <PRE>compute             10 react/isurf/grid all 2
-fix                 10 ave/grid all 1 100 100 c_10<B>*</B>
-dump                10 grid all 100 tmp.grid id c_10<B>1</B> 
+fix                 10 ave/grid all 1 100 100 c_10[*]
+dump                10 grid all 100 tmp.grid id c_10[1] 
 </PRE>
 <PRE>global              surfs implicit
-fix                 ablate ablate all 100 2.0 c_10<B>1</B>   # could be f_10
+fix                 ablate ablate all 100 2.0 c_10[1]   # could be f_10
 read_isurf          all 20 20 20 binary.21x21x21 99.5 ablate 
 </PRE>
 <PRE>surf_modify         all collide 1 react 2 
