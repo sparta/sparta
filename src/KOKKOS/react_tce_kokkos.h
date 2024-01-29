@@ -317,9 +317,11 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
         else kspecies = -1;
 
         post_etotal = pre_etotal + r->d_coeff[4];
-      }
 
-      return 1;
+        return 1;
+      } else {
+        return 0;
+      }
     }
   }
 

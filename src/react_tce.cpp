@@ -207,32 +207,34 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
       tally_reactions[list[i]]++;
 
       if (!computeChemRates) {
-          ip->ispecies = r->products[0];
+        ip->ispecies = r->products[0];
 
-          switch (r->type) {
-          case DISSOCIATION:
-          case IONIZATION:
-          case EXCHANGE:
-            {
-              jp->ispecies = r->products[1];
-              break;
-            }
-          case RECOMBINATION:
-            {
-              // always destroy 2nd reactant species
-
-              jp->ispecies = -1;
-              break;
-            }
+        switch (r->type) {
+        case DISSOCIATION:
+        case IONIZATION:
+        case EXCHANGE:
+          {
+            jp->ispecies = r->products[1];
+            break;
           }
+        case RECOMBINATION:
+          {
+            // always destroy 2nd reactant species
 
-          if (r->nproduct > 2) kspecies = r->products[2];
-          else kspecies = -1;
+            jp->ispecies = -1;
+            break;
+          }
+        }
 
-          post_etotal = pre_etotal + r->coeff[4];
+        if (r->nproduct > 2) kspecies = r->products[2];
+        else kspecies = -1;
+
+        post_etotal = pre_etotal + r->coeff[4];
+
+        return 1;
+      } else {
+        return 0;
       }
-
-      return 1;
     }
   }
 
