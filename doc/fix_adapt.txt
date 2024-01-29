@@ -24,7 +24,7 @@ fix 1 adapt 1000 all refine particle 10 50
 fix 1 adapt 1000 all coarsen particle 10 50
 fix 1 adapt 500 subset refine coarsen particle 10 50
 fix 1 adapt 10000 all refine surf 0.15 iterate 1 dir 1 0 0 
-fix 10 adapt 1000 all refine coarsen value c_1[1] 5.0 10.0 iterate 2 :pre
+fix 10 adapt 1000 all refine coarsen value c_1\[1\] 5.0 10.0 iterate 2 :pre
 
 [Description:]
 
