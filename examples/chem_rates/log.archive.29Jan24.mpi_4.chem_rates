@@ -22,13 +22,13 @@ Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
 create_grid 	    10 10 10
 WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/home/runner/work/sparta/sparta/src/grid.cpp:465)
 Created 1000 child grid cells
-  CPU time = 0.00329664 secs
-  create/ghost percent = 93.2203 6.77973
+  CPU time = 0.000867156 secs
+  create/ghost percent = 90.972 9.02802
 
 balance_grid        rcb part
 Balance grid migrated 740 cells
-  CPU time = 0.00579946 secs
-  reassign/sort/migrate/ghost percent = 67.7329 0.372448 12.0047 19.89
+  CPU time = 0.000667601 secs
+  reassign/sort/migrate/ghost percent = 46.9198 0.483223 18.0416 34.5554
 
 species		    air.species N2 N
 mixture		    air N2 N vstream 0.0 0.0 0.0 temp 20000.0
@@ -46,7 +46,7 @@ react_modify        recomb no compute_chem_rates yes partial_energy no
 
 create_particles    air n 10000 twopass
 Created 10000 particles
-  CPU time = 0.00562866 secs
+  CPU time = 0.00146052 secs
 
 stats		    100
 compute             temp temp
@@ -64,28 +64,28 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 3.20129 3.20129 3.20129
 Step CPU Np Natt Ncoll Nreact c_temp 
        0            0    10000        0        0        0    20031.071 
-     100   0.16863896    10000      959      234        2    20062.356 
-     200   0.30274666    10000      962      272        4     20091.53 
-     300    0.4307933    10000      987      252        2    20119.095 
-     400   0.55903143    10000      947      241        5    20067.286 
-     500   0.69055201    10000      946      231        0    20023.669 
-     600   0.83565112    10000      914      237        6    19962.278 
-     700   0.96703149    10000      931      256        1    19918.508 
-     800    1.0988067    10000      918      229        3    19814.948 
-     900    1.2301237    10000      937      257        8    19726.751 
-    1000     1.358935    10000      956      249        3    20044.973 
-Loop time of 1.35871 on 4 procs for 1000 steps with 10000 particles
+     100  0.054784536    10000      959      234        0    20062.356 
+     200   0.10885028    10000      962      272        0     20091.53 
+     300    0.1627472    10000      987      252        0    20119.095 
+     400   0.21665969    10000      947      241        0    20067.286 
+     500   0.26979776    10000      946      231        0    20023.669 
+     600   0.32251972    10000      914      237        0    19962.278 
+     700   0.37513933    10000      931      256        0    19918.508 
+     800   0.42736701    10000      918      229        0    19814.948 
+     900   0.47974027    10000      937      257        0    19726.751 
+    1000   0.53266737    10000      956      249        0    20044.973 
+Loop time of 0.532728 on 4 procs for 1000 steps with 10000 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.40737    | 0.41066    | 0.41277    |   0.3 | 30.22
-Coll    | 0.063092   | 0.064717   | 0.066887   |   0.6 |  4.76
-Sort    | 0.012782   | 0.013723   | 0.014479   |   0.6 |  1.01
-Comm    | 0.31926    | 0.5049     | 0.69043    |  18.9 | 37.16
+Move    | 0.3593     | 0.36149    | 0.36393    |   0.3 | 67.86
+Coll    | 0.058267   | 0.058501   | 0.058855   |   0.1 | 10.98
+Sort    | 0.015176   | 0.015543   | 0.015754   |   0.2 |  2.92
+Comm    | 0.076816   | 0.077376   | 0.078574   |   0.3 | 14.52
 Modify  | 0          | 0          | 0          |   0.0 |  0.00
-Output  | 0.0039648  | 0.0041101  | 0.0043394  |   0.2 |  0.30
-Other   |            | 0.3606     |            |       | 26.54
+Output  | 0.00026414 | 0.00048109 | 0.0010837  |   0.0 |  0.09
+Other   |            | 0.01934    |            |       |  3.63
 
 Particle moves    = 10000000 (10M)
 Cells touched     = 47319511 (47.3M)
@@ -97,11 +97,11 @@ SurfColl occurs   = 0 (0K)
 Surf reactions    = 0 (0K)
 Collide attempts  = 946340 (0.946M)
 Collide occurs    = 252354 (0.252M)
-Reactions         = 3188 (3.19K)
+Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 1.83998e+06
+Particle-moves/CPUsec/proc: 4.69283e+06
 Particle-moves/step: 10000
 Cell-touches/particle/step: 4.73195
 Particle comm iterations/step: 2.996
@@ -113,7 +113,7 @@ Surface-collisions/particle/step: 0
 Surf-reactions/particle/step: 0
 Collision-attempts/particle/step: 0.094634
 Collisions/particle/step: 0.0252354
-Reactions/particle/step: 0.0003188
+Reactions/particle/step: 0
 
 Gas reaction tallies:
   style tce #-of-reactions 45

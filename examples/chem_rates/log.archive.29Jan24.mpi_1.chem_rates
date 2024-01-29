@@ -21,13 +21,13 @@ create_box  	    0 0.0001 0 0.0001 0 0.0001
 Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
 create_grid 	    10 10 10
 Created 1000 child grid cells
-  CPU time = 0.00148112 secs
-  create/ghost percent = 74.9915 25.0085
+  CPU time = 0.000979836 secs
+  create/ghost percent = 78.7229 21.2771
 
 balance_grid        rcb part
 Balance grid migrated 0 cells
-  CPU time = 0.000344104 secs
-  reassign/sort/migrate/ghost percent = 46.2657 0.871829 9.82261 43.0399
+  CPU time = 0.000230753 secs
+  reassign/sort/migrate/ghost percent = 53.53 0.572907 12.4436 33.4535
 
 species		    air.species N2 N
 mixture		    air N2 N vstream 0.0 0.0 0.0 temp 20000.0
@@ -45,7 +45,7 @@ react_modify        recomb no compute_chem_rates yes partial_energy no
 
 create_particles    air n 10000 twopass
 Created 10000 particles
-  CPU time = 0.00345084 secs
+  CPU time = 0.00287997 secs
 
 stats		    100
 compute             temp temp
@@ -63,28 +63,28 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 3.20129 3.20129 3.20129
 Step CPU Np Natt Ncoll Nreact c_temp 
        0            0    10000        0        0        0    19747.334 
-     100   0.37202437    10000      962      239        4    19857.775 
-     200   0.75608239    10000      946      259        2    19689.977 
-     300    1.1601937    10000      938      254        2    19775.531 
-     400    1.5474172    10000      934      265        1    19808.174 
-     500    1.9463682    10000      947      246        2    19850.955 
-     600    2.3244305    10000      943      258        1    19907.334 
-     700    2.6830541    10000      949      250        0    19952.362 
-     800    3.0582838    10000      958      257        5    19823.915 
-     900    3.4107608    10000      939      239        2    19921.082 
-    1000    3.7752938    10000      940      225        3    20029.613 
-Loop time of 3.78479 on 1 procs for 1000 steps with 10000 particles
+     100   0.15610946    10000      962      239        0    19857.775 
+     200   0.31787808    10000      946      259        0    19689.977 
+     300   0.47430177    10000      938      254        0    19775.531 
+     400   0.63801588    10000      934      265        0    19808.174 
+     500   0.79493056    10000      947      246        0    19850.955 
+     600   0.95660425    10000      943      258        0    19907.334 
+     700     1.113501    10000      949      250        0    19952.362 
+     800    1.2754618    10000      958      257        0    19823.915 
+     900    1.4328064    10000      939      239        0    19921.082 
+    1000    1.5936988    10000      940      225        0    20029.613 
+Loop time of 1.59373 on 1 procs for 1000 steps with 10000 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 3.1453     | 3.1453     | 3.1453     |   0.0 | 83.10
-Coll    | 0.49571    | 0.49571    | 0.49571    |   0.0 | 13.10
-Sort    | 0.10482    | 0.10482    | 0.10482    |   0.0 |  2.77
-Comm    | 0.00070231 | 0.00070231 | 0.00070231 |   0.0 |  0.02
+Move    | 1.3113     | 1.3113     | 1.3113     |   0.0 | 82.28
+Coll    | 0.25107    | 0.25107    | 0.25107    |   0.0 | 15.75
+Sort    | 0.029731   | 0.029731   | 0.029731   |   0.0 |  1.87
+Comm    | 0.00022269 | 0.00022269 | 0.00022269 |   0.0 |  0.01
 Modify  | 0          | 0          | 0          |   0.0 |  0.00
-Output  | 0.029077   | 0.029077   | 0.029077   |   0.0 |  0.77
-Other   |            | 0.009189   |            |       |  0.24
+Output  | 0.0010803  | 0.0010803  | 0.0010803  |   0.0 |  0.07
+Other   |            | 0.0002951  |            |       |  0.02
 
 Particle moves    = 10000000 (10M)
 Cells touched     = 46582802 (46.6M)
@@ -96,11 +96,11 @@ SurfColl occurs   = 0 (0K)
 Surf reactions    = 0 (0K)
 Collide attempts  = 946442 (0.946M)
 Collide occurs    = 251794 (0.252M)
-Reactions         = 3018 (3.02K)
+Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 2.64215e+06
+Particle-moves/CPUsec/proc: 6.27459e+06
 Particle-moves/step: 10000
 Cell-touches/particle/step: 4.65828
 Particle comm iterations/step: 1
@@ -112,7 +112,7 @@ Surface-collisions/particle/step: 0
 Surf-reactions/particle/step: 0
 Collision-attempts/particle/step: 0.0946442
 Collisions/particle/step: 0.0251794
-Reactions/particle/step: 0.0003018
+Reactions/particle/step: 0
 
 Gas reaction tallies:
   style tce #-of-reactions 45
