@@ -60,11 +60,11 @@ class Grid : protected Pointers {
                         //  base class when child copy is destroyed)
 
   // custom vectors/arrays for per-grid data
-  // ncustom > 0 if there are any extra arrays
-  // custom grid attributes are created by various commands
-  // these variables are public
+  // ncustom > 0 if there is any custom per-grid datta
+  // these variables are public, others below are private
 
   int ncustom;              // # of custom grid attributes, some may be deleted
+  char **ename;             // name of each attribute
   int *etype;               // type = INT/DOUBLE of each attribute
   int *esize;               // size = 0 for vector, N for array columns
   int *ewhich;              // index into eivec,eiarray,edvec,edarray for data
@@ -210,6 +210,8 @@ class Grid : protected Pointers {
   int nlocal_restart;
   cellint *id_restart;
   int *level_restart,*nsplit_restart;
+  int *mask_restart;
+  char *cvalues_restart;
 
   // methods
 
@@ -257,6 +259,18 @@ class Grid : protected Pointers {
 
   void debug();
 
+  // grid_collate.cpp
+  // including callback function and callback data
+
+  void collate_vector_implicit(int, cellint *, double *, double *);
+  void collate_array_implicit(int, int, cellint *, double **, double **);
+  void owned_to_ghost_array(int, int, cellint *, double **, double **);
+
+  static int rendezvous_owned_to_ghost(int, char *, int &, int *&,
+                                       char *&, void *);
+  int ncol_rvous;
+  double **owned_data_rvous;
+
   // grid_comm.cpp
 
   int pack_one(int, char *, int, int, int, int);
@@ -270,16 +284,17 @@ class Grid : protected Pointers {
   // grid_custom.cpp
 
   int find_custom(char *);
-  int add_custom(char *, int, int, int);
-  void allocate_custom(int, int);
+  int add_custom(char *, int, int);
+  void allocate_custom(int);
   void reallocate_custom(int, int);
   void remove_custom(int);
+  void copy_custom(int, int);
 
   void write_restart_custom(FILE *);
   void read_restart_custom(FILE *);
-  void pack_custom(int, char *);
-  void unpack_custom(char *, int);
   int sizeof_custom();
+  int pack_custom(int, char *, int);
+  int unpack_custom(char *, int);
 
   // grid_surf.cpp
 
@@ -287,6 +302,7 @@ class Grid : protected Pointers {
   void surf2grid_implicit(int, int outflag=1);
   void surf2grid_one(int, int, int, int, class Cut3d *, class Cut2d *);
   void clear_surf();
+  void clear_surf_implicit();
   void clear_surf_restart();
   void combine_split_cell_particles(int, int);
   void assign_split_cell_particles(int);
@@ -339,10 +355,19 @@ class Grid : protected Pointers {
   int maxsplit;            // size of sinfo
   int maxbits;             // max bits allowed in a cell ID
 
+  int neighmask[6];        // bit-masks for each face in nmask
+  int neighshift[6];       // bit-shifts for each face in nmask
+
+  class Cut2d *cut2d;
+  class Cut3d *cut3d;
+
+  // Particle class values used for packing/unpacking particles in grid comm
+
+  int ncustom_particle;
+  int nbytes_particle,nbytes_particle_custom,nbytes_particle_total;
+
   // custom vectors/arrays for per-grid data
   // these variables are private, others above are public
-
-  char **ename;             // name of each attribute
 
   int ncustom_ivec;         // # of integer vector attributes
   int ncustom_iarray;       // # of integer array attributes
@@ -355,17 +380,6 @@ class Grid : protected Pointers {
   int *icustom_dvec;        // index into ncustom for each double vector
   int *icustom_darray;      // index into ncustom for each double array
   int *edcol;               // # of columns in each double array (esize)
-
-  int *custom_ghost_flag;   // flag on each custom vec/arr for owned+ghost or not
-  int *custom_restart_flag; // flag on each custom vec/array read from restart
-
-  int nbytes_custom;        // size of packed custom values for one grid cell
-
-  int neighmask[6];        // bit-masks for each face in nmask
-  int neighshift[6];       // bit-shifts for each face in nmask
-
-  class Cut2d *cut2d;
-  class Cut3d *cut3d;
 
   // connection between one of my cells and a neighbor cell on another proc
 
@@ -403,6 +417,29 @@ class Grid : protected Pointers {
     Surf::Tri tri;
   };
 
+  // union data struct for packing 32-bit and 64-bit ints into double bufs
+  // this avoids aliasing issues by having 3 pointers (double,int,uint)
+  //   to same buf memory
+  // constructor for 32-bit int or uint prevents compiler
+  //   from possibly calling the double constructor when passed an int/uint
+  // copy to a double *buf:
+  //   buf[m++] = ubuf(foo).d, where foo is a 32-bit or 64-bit int or uint
+  // copy from a double *buf:
+  //   foo = (int) ubuf(buf[m++]).i or foo = (cellint) ubuf(buf[m++]).u
+  //         where (int) or (surfint) or (cellint) matches foo
+  //   the cast prevents compiler warnings about possible truncation
+
+  union ubuf {
+    double d;
+    int64_t i;
+    uint64_t u;
+    ubuf(double arg) : d(arg) {}
+    ubuf(int64_t arg) : i(arg) {}
+    ubuf(int arg) : i(arg) {}
+    ubuf(uint64_t arg) : u(arg) {}
+    ubuf(uint32_t arg) : u(arg) {}
+  };
+
   // surf ID hashes
 
 #ifdef SPARTA_MAP
@@ -415,11 +452,6 @@ class Grid : protected Pointers {
     typedef std::tr1::unordered_map<surfint,int> MySurfHash;
     typedef std::tr1::unordered_map<surfint,int>::iterator MyIterator;
 #endif
-
-  // Particle class values used for packing/unpacking particles in grid comm
-
-  int ncustom_particle;
-  int nbytes_particle,nbytes_particle_custom,nbytes_particle_total;
 
   // private methods
 

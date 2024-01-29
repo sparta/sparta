@@ -1,0 +1,68 @@
+# 2d flow around a staircase of 2 steps with different temperature for each surf
+# set temp via custom attribute in data file
+# remove one step and run further
+
+seed	    	    12345
+dimension   	    2
+
+global              gridcut 0.0 comm/sort yes
+
+#global              surfs explicit
+global              surfs explicit/distributed
+
+boundary	    or r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid         20 20 1
+
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.01
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0 
+
+read_surf	    data.step.temperature custom temp float 0 &
+                    trans 3 3 0 scale 0.4 0.4 1 &
+                    rotate 45 0 0 1 invert
+
+read_surf	    data.step.temperature custom temp float 0 &
+                    trans 7 7 0 scale 0.4 0.4 1 &
+                    rotate 45 0 0 1 invert group second
+
+surf_collide	    1 diffuse s_temp 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+fix		    in emit/face air xlo twopass 
+
+timestep 	    0.0001
+
+# output
+
+dump                10 image all 100 tmp.step.temp.read.remove.image.*.ppm &
+                    type type pdiam 0.1 &
+                    surf proc 0.01 size 512 512 axes yes 0.9 0.02 zoom 1.5
+dump_modify	    10 pad 4
+
+# first run
+
+stats		    50
+stats_style	    step cpu np nattempt ncoll nscoll nscheck
+
+run 		    500
+
+write_surf      tmp.step.temp.read.remove.data.surf type &
+                custom temp points no
+
+# remove second set of surfs
+
+remove_surf         second
+
+# second run
+
+run 		    500
+
+write_surf      tmp.step.temp.read.remove.data.surf2 type &
+                custom temp points no

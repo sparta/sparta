@@ -42,7 +42,7 @@ class SurfCollide : protected Pointers {
   virtual void wrapper(Particle::OnePart *, double *, int *, double *) {}
   virtual void flags_and_coeffs(int *, double *) {}
 
-  virtual void dynamic() {}
+  void dynamic();
   void tally_reset();
   void tally_update();
   double compute_vector(int i);
@@ -59,6 +59,25 @@ class SurfCollide : protected Pointers {
 
   int ntotal;
   double one[2],all[2];
+
+  // variables used by all SC classes which define Tsurf
+
+  int tmode;               // possible modes = NUMERIC,VAREQUAL,VARSURF,CUSTOM
+  double tsurf;            // single value for NUMERIC or VAREQUAL
+  char *tname;             // name for variable or custom attribute
+  int tindex_var;          // index of variable
+  int tindex_custom;       // index of custom attribute
+  int tfreq;               // frequency to update variables
+  int persurf_temperature; // 1 if VARSURF or CUSTOM
+  int n_owned,n_localghost;  // # of owned and local+ghost variable values
+   double *t_owned;        // values for VARSURF for owned surfs
+  double *t_localghost;    // values for VARSURF for local+ghost surfs
+  double *t_persurf;       // ptr to VARSURF or CUSTOM local values
+
+  // functions used by all SC classes which define Tsurf
+
+  void parse_tsurf(char *);
+  void check_tsurf();
 };
 
 }

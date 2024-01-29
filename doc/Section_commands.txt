@@ -311,6 +311,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "create_box"_create_box.html,
 "create_grid"_create_grid.html,
 "create_particles"_create_particles.html,
+"custom"_custom.html,
 "dimension"_dimension.html,
 "dump"_dump.html,
 "dump image"_dump_image.html,
@@ -394,7 +395,7 @@ This is indicated by additional letters in parenthesis: k = KOKKOS.
 "field/particle"_fix_field_particle.html,
 "grid/check (k)"_fix_grid_check.html,
 "move/surf (k)"_fix_move_surf.html,
-"print"_fix_print.html,"
+"print"_fix_print.html,
 "surf/temp"_fix_surf_temp.html,
 "temp/global/rescale"_fix_temp_global_rescale.html,
 "temp/rescale (k)"_fix_temp_rescale.html,

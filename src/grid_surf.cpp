@@ -62,7 +62,7 @@ enum{SOUTSIDE,SINSIDE,ONSURF2OUT,ONSURF2IN};  // several files (changed 2 words)
    for distributed surfs, have to use surf alg
    PERAUTO option chooses based on total nsurfs vs nprocs
    see info on subflag, outflag options with surf2grid_split()
-   called from Readsurf, MoveSurf, RemoveSurf, ReadRestart, and FixMoveSurf
+   called from ReadSurf, MoveSurf, RemoveSurf, ReadRestart, and FixMoveSurf
 ------------------------------------------------------------------------- */
 
 void Grid::surf2grid(int subflag, int outflag)
@@ -317,7 +317,8 @@ void Grid::surf2grid_cell_algorithm(int outflag)
 }
 
 /* ----------------------------------------------------------------------
-   find surfs that overlap owned grid cells, for non-distributed or distributed
+   find surfs that overlap owned grid cells
+     for non-distributed or distributed explicit surfs
    algorithm:
      each proc responsible for subset of surfs
      loop over levels of hierarchical grid
@@ -329,7 +330,7 @@ void Grid::surf2grid_cell_algorithm(int outflag)
      each proc can then identify surf/grid intersections for its RCB grid cells
        done recursively by dropping each surf down conceptual tree of parent cells
        until reach child cells that exist at level
-     irregular comm the surf/grid intersection pairs back to procs that own grid cells
+     irregular comm of surf/grid intersection pairs back to procs that own grid cells
    in cells: set nsurf, csurfs
    in cinfo: set type=OVERLAP for cells with surfs
 ------------------------------------------------------------------------- */
@@ -852,7 +853,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
     // allocate memory for rvous input
 
     int *proclist;
-    memory->create(proclist,ncount,"surf2grid:proclist2");
+    memory->create(proclist,ncount,"surf2grid:proclist");
     InRvous *inbuf =
       (InRvous *) memory->smalloc((bigint) ncount*sizeof(InRvous),
                                   "surf2grid:inbuf");
@@ -983,7 +984,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
    if subflag = 1, create new owned split and sub cells as needed
      called from ReadSurf, RemoveSurf, MoveSurf, FixAblate
    if subflag = 0, split/sub cells already exist
-     called from ReadRestart
+     called from ReadRestart, only for explicit surfs
    outflag = 1 for timing and statistics info
    in cells: set nsplit, isplit
    in cinfo: set corner, volume
@@ -1073,7 +1074,7 @@ void Grid::surf2grid_split(int subflag, int outflag)
 
     } else {
       if (cells[icell].nsplit != nsplitone) {
-        printf("BAD %d %d: %d %d\n",icell,cells[icell].id,
+        printf("BAD %d " CELLINT_FORMAT ": %d %d\n",icell,cells[icell].id,
                nsplitone,cells[icell].nsplit);
         error->one(FLERR,
                    "Inconsistent surface to grid mapping in read_restart");
@@ -1615,6 +1616,88 @@ void Grid::clear_surf()
   csurfs->reset();
   csplits->reset();
   csubs->reset();
+
+  // reset all cell counters
+
+  nunsplitlocal = nlocal;
+  nsplitlocal = nsublocal = 0;
+}
+
+/* ----------------------------------------------------------------------
+   remove effects of implicit surf split cells on grid and particles
+   reassign particles in sub-cells to parent split cell
+   remove sub-cells from grid list and set all cells to unsplit
+   allows a subsequent read_isurf command to work correctly
+   called by read_restart after reading restart file for simulation
+     which used implicit surfs and thus may have had split cells
+------------------------------------------------------------------------- */
+
+void Grid::clear_surf_implicit()
+{
+  int icell;
+  double *lo,*hi;
+
+  int dimension = domain->dimension;
+  int ncorner = 8;
+  if (dimension == 2) ncorner = 4;
+
+  // reset icell of particles in sub-cells to split cell
+  // since sinfo does not yet exist, do this via hashing
+  // create hash that stores IDs of split cells and their icell
+  // sub-cells will have same ID as parent split cell
+
+  hash->clear();
+
+  for (icell = 0; icell < nlocal; icell++) {
+    if (cells[icell].nsplit <= 1) continue;
+    (*hash)[cells[icell].id] = icell;
+  }
+
+  Particle::OnePart *particles = particle->particles;
+  int nplocal = particle->nlocal;
+
+  for (int i = 0; i < nplocal; i++) {
+    icell = particles[i].icell;
+    if (cells[icell].nsplit <= 0)
+      particles[i].icell = (*hash)[cells[icell].id];
+  }
+
+  hash->clear();
+  hashfilled = 0;
+
+  // compress cell list to remove all sub-cells
+  // reset cell and corner types, and cell volume
+  
+  int celltype = OUTSIDE;
+  int cornertype = UNKNOWN;
+
+  icell = 0;
+  while (icell < nlocal) {
+    if (cells[icell].nsplit <= 0) {
+      if (icell != nlocal-1) {
+        memcpy(&cells[icell],&cells[nlocal-1],sizeof(ChildCell));
+        memcpy(&cinfo[icell],&cinfo[nlocal-1],sizeof(ChildInfo));
+      }
+      nlocal--;
+    } else {
+      cells[icell].ilocal = icell;
+      cells[icell].nsurf = 0;
+      cells[icell].csurfs = NULL;
+      cells[icell].nsplit = 1;
+      cells[icell].isplit = -1;
+      cinfo[icell].type = celltype;
+      for (int m = 0; m < ncorner; m++) cinfo[icell].corner[m] = UNKNOWN;
+      lo = cells[icell].lo;
+      hi = cells[icell].hi;
+      if (dimension == 3)
+        cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+      else if (domain->axisymmetric)
+        cinfo[icell].volume = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
+      else
+        cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
+      icell++;
+    }
+  }
 
   // reset all cell counters
 

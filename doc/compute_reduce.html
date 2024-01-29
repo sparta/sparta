@@ -23,15 +23,21 @@
 
 <LI>one or more inputs can be listed 
 
-<LI>input = x, y, z, vx, vy, vz, ke, erot, evib, c_ID, c_ID[N], f_ID, f_ID[N], v_name 
+<LI>input = x, y, z, vx, vy, vz, ke, erot, evib, c_ID, c_ID[N], f_ID, f_ID[N], v_name, p_name, p_name[N], g_name, g_name[N], s_name, s_name[N] 
 
 <PRE>  x,y,z,vx,vy,vz = particle position or velocity component
   ke,erot,evib = particle energy component
   c_ID = per-particle or per-grid vector calculated by a compute with ID
-  c_ID[I] = Ith column of per-particle or per-grid array calculated by a compute with ID, I can include wildcard (see below)
+  c_ID[N] = Nth column of per-particle or per-grid array calculated by a compute with ID, N can include wildcard (see below)
   f_ID = per-particle or per-grid or per-surf vector calculated by a fix with ID
-  f_ID[I] = Ith column of per-particle or per-grid or per-surf array calculated by a fix with ID, I can include wildcard (see below)
-  v_name = per-particle or per-grid vector calculated by a particle-style or grid-style variable with name 
+  f_ID[N] = Nth column of per-particle or per-grid or per-surf array calculated by a fix with ID, N can include wildcard (see below)
+  v_name = per-particle or per-grid or per-surf vector calculated by a particle-style or grid-style or surf-style variable with name
+  p_name = custom per-particle vector with name
+  p_name[N] = Nth column of per-particle custom array with name, N can include wildcard (see below)
+  g_name = custom per-grid vector with name
+  g_name[N] = Nth column of per-grid custom array with name, N can include wildcard (see below)
+  s_name = custom per-surf vector with name
+  s_name[N] = Nth column of per-surf custom array with name, N can include wildcard (see below) 
 </PRE>
 <LI>zero or more keyword/args pairs may be appended 
 
@@ -64,11 +70,12 @@ stats_style step c_temp c_3
 <P>Define a calculation that "reduces" one or more vector inputs into
 scalar values, one per listed input.  The inputs can be per-particle
 or per-grid or per-surf quantities; they cannot be global quantities.
-Particle attributes are per-particle quantities,
-<A HREF = "compute.html">computes</A> may generate per-particle or per-grid
-quantities, <A HREF = "fix.html">fixes</A> may generate any of the three kinds of
-quantities, and <A HREF = "variable.html">particle-style or grid-style variables</A>
-generate per-particle or per-grid quantities.  See the
+Particle attributes are per-particle quantities.
+<A HREF = "compute.html">Computes</A> and <A HREF = "fix.html">fixes</A> may generate any of the
+three kinds of quantities.  <A HREF = "variable.html">Particle-style, grid-style, and
+surf-style variables</A> generate per-particle, per-grid,
+or per-surf quantities respectively.  Custom attributes can be
+per-particle, per-grid, or per-surf quantities.  See the
 <A HREF = "variable">variable</A> command and its special functions which can
 perform the same operations as the compute reduce command on global
 vectors.
@@ -105,17 +112,18 @@ its default <I>norm</I> = yes option.
 </P>
 <P>Each listed input vector can be a particle attribute or can be the
 result of a <A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A> or the evaluation
-of a <A HREF = "variable.html">variable</A>.
+of a <A HREF = "variable.html">variable</A>.  Or it can be a custom attribute of a
+particle, grid cell, or surface element.
 </P>
-<P>Note that for values from a compute or fix, the bracketed index I can
-be specified using a wildcard asterisk with the index to effectively
-specify multiple values.  This takes the form "*" or "*n" or "n*" or
-"m*n".  If N = the size of the vector (for <I>mode</I> = scalar) or the
-number of columns in the array (for <I>mode</I> = vector), then an asterisk
-with no numeric values means all indices from 1 to N.  A leading
-asterisk means all indices from 1 to n (inclusive).  A trailing
-asterisk means all indices from n to N (inclusive).  A middle asterisk
-means all indices from m to n (inclusive).
+<P>Note that for values from a compute or fix or custom attribute, the
+bracketed index I can be specified using a wildcard asterisk with the
+index to effectively specify multiple values.  This takes the form "*"
+or "*n" or "n*" or "m*n".  If N = the size of the vector (for <I>mode</I> =
+scalar) or the number of columns in the array (for <I>mode</I> = vector),
+then an asterisk with no numeric values means all indices from 1 to N.
+A leading asterisk means all indices from 1 to n (inclusive).  A
+trailing asterisk means all indices from n to N (inclusive).  A middle
+asterisk means all indices from m to n (inclusive).
 </P>
 <P>Using a wildcard is the same as if the individual columns of the array
 had been listed one by one.  E.g. these 2 compute reduce commands are
@@ -137,21 +145,11 @@ previously defined in the input script.  Computes can generate
 per-particle or per-grid quantities.  See the individual
 <A HREF = "compute.html">compute</A> doc page for details.  If no bracketed integer
 is appended, the vector calculated by the compute is used.  If a
-bracketed integer is appended, the Ith column of the array calculated
+bracketed integer is appended, the Nth column of the array calculated
 by the compute is used.  Users can also write code for their own
 compute styles and <A HREF = "Section_modify.html">add them to SPARTA</A>.  See the
-discussion above for how I can be specified with a wildcard asterisk
+discussion above for how N can be specified with a wildcard asterisk
 to effectively specify multiple values.
-</P>
-<P>IMPORTANT NOTE: A compute which generates per-surf quantities cannot
-be used as input.  This is because its values have not yet been
-combined across processors to sum the contributions from all
-processors whose particles collide with the same surface element.  The
-combining is performed by the <A HREF = "fix_ave_surf.html">fix ave/surf</A>
-command, at each of its <I>Nfreq</I> timesteps.  Thus to use this compute
-on per-surf values, specify a fix ID for a <A HREF = "fix_ave_surf.html">fix
-ave/surf</A> and insure the fix outputs its values when
-they are needed.
 </P>
 <P>If a value begins with "f_", a fix ID must follow which has been
 previously defined in the input script.  Fixes can generate
@@ -160,20 +158,43 @@ per-particle or per-grid or per-surf quantities.  See the individual
 produce their values on certain timesteps, which must be compatible
 with when this compute references the values, else an error results.
 If no bracketed integer is appended, the vector calculated by the fix
-is used.  If a bracketed integer is appended, the Ith column of the
+is used.  If a bracketed integer is appended, the Nth column of the
 array calculated by the fix is used.  Users can also write code for
 their own fix style and <A HREF = "Section_modify.html">add them to SPARTA</A>.  See
-the discussion above for how I can be specified with a wildcard
+the discussion above for how N can be specified with a wildcard
 asterisk to effectively specify multiple values.
 </P>
 <P>If a value begins with "v_", a variable name must follow which has
 been previously defined in the input script.  It must be a
-<A HREF = "variable.html">particle-style or grid-style variable</A>.  Both styles
-define formulas which can reference stats keywords or invoke other
-computes, fixes, or variables when they are evaluated.  Particle-style
-variables can also reference various per-particle attributes
-(position, velocity, etc).  So these variables are a very general
-means of creating per-particle or per-grid quantities to reduce.
+<A HREF = "variable.html">particle-style or grid-style or surf-style variable</A>.
+These styles define formulas which can reference stats keywords or
+invoke other computes, fixes, or variables when they are evaluated.
+Particle-style variables can also reference various per-particle
+attributes (position, velocity, etc).  So these variables are a very
+general means of creating per-particle or per-grid or per-surf
+quantities to reduce.
+</P>
+<P>If a value begins with "p_" or "g_" or "s_", then a custom
+per-particle, per-grid, or per-surf attribute with the specified name
+is used.  Particles, grid cells, and surface elements can have custom
+attributes which store either single or multiple values per particle,
+per grid cell, or per surface element.  They can be defined and
+initialized in data files, e.g. via the <A HREF = "read_surf.html">read_surf</A>
+command.  Or they can be defined and used by specific commands,
+e.g. <A HREF = "fix_ambipolar.html">fix ambipolar</A> or <A HREF = "fix_surf_temp.html">fix
+surf/temp</A> or <A HREF = "surf_react_adsorb.html">surf_react
+adsorb</A>.  The name of each attribute is set by
+the user or defined by the command.  See <A HREF = "Section_howto.html#howto_17">Section
+6.17</A> for more discussion of custom
+attributes.
+</P>
+<P>If no bracketed integer is appended, the custom attribute must be a
+per-particle, per-grid, or per-surf vector (single value).  If a
+bracketed integer is appended, the custom attribute must be a
+per-particle, per-grid, or per-surf arayy (multiple values) and the
+Nth column of the custom array is used.  See the discussion above for
+how N can be specified with a wildcard asterisk to effectively specify
+multiple values.
 </P>
 <HR>
 
@@ -220,18 +241,18 @@ specified.  Only grid cells in the grid group will be included in the
 calculations.  See the <A HREF = "group.html">group grid</A> command for info on how
 grid cells can be assigned to grid groups.
 </P>
-<P>If inputs are per-surface values, then a surface group ID should be
+<P>If inputs are per-surf values, then a surface group ID should be
 specified.  Only surface elements in the surface group will be
 included in the calculations.  See the <A HREF = "group.html">group surf</A> command
 for info on how surface elements can be assigned to surface groups.
 </P>
 <P>IMPORTANT NOTE: If computes or fixes are used as inputs to compute
 reduce, they may define their own subsets of particles, grid cells, or
-surface elements which contribute to their output.  E.g. grid cells not
-in the grid group used by the <A HREF = "compute_grid.html">compute grid</A> command
-have zero values as output.  You typically should use an argument for
-the <I>subset</I> keyword which is consistent with the inputs, but that is
-not required.
+surface elements which contribute to their output.  Typically output
+from those computes or fixes will be zero for grid cells or surface
+elements not in the grid or surface group specified for those
+commands.  Thus you may want to use an argument for the <I>subset</I>
+keyword which is consistent with the inputs, but that is not required.
 </P>
 <HR>
 

@@ -13,7 +13,7 @@ variable command :h3
 variable name style args ... :pre
 
 name = name of variable to define :ulb,l
-style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {string} or {format} or {getenv} or {file} or {internal} or {equal} or {particle} or {grid} :l
+style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {string} or {format} or {getenv} or {file} or {internal} or {equal} or {particle} or {grid} or {surf} :l
   {delete} = no args
   {index} args = one or more strings
   {loop} args = N
@@ -40,7 +40,8 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
   {getenv} arg = one string
   {file} arg = filename
   {internal} arg = numeric value
-  {equal} or {particle} or {grid} args = one formula containing numbers, stats keywords, math operations, particle vectors, grid vectors, compute/fix/variable references
+  {equal} or {particle} or {grid} or {surf} args = one formula
+  containing numbers, stats keywords, math operations, particle vectors, compute/fix and custom attribute and surface collision/reaction and variable references
     numbers = 0.0, 100, -5.4, 2.8e-4, etc
     constants = PI
     stats keywords = step, np, vol, etc from "stats_style"_stats_style.html
@@ -51,12 +52,12 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
                      random(x,y), normal(x,y), ceil(x), floor(x), round(x)
                      ramp(x,y), stagger(x,y), logfreq(x,y,z), stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
     special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
-    particle vectors = mass, type, q, mu, x, y, z, vx, vy, vz
-    grid vectors = xc, yc, zc
-    compute references = c_ID, c_ID\[i\], c_ID\[i\]\[j\]
-    fix references = f_ID, f_ID\[i\], f_ID\[i\]\[j\]
-    surface collision model references = s_ID\[i\]
-    surface reaction model references = r_ID\[i\]
+    particle vectors = id, type, mass, q, mu, x, y, z, vx, vy, vz
+    compute references = c_ID, c_ID\[I\], c_ID\[I\]\[J\]
+    fix references = f_ID, f_ID\[I\], f_ID\[I\]\[J\]
+    custom attribute references = p_name, p_name\[I\], g_name, g_name\[I\], s_name, s_name\[I\]
+    surface collision model references = sc_ID\[I\]
+    surface reaction model references = sr_ID\[I\]
     variable references = v_name :pre
 :ule
 
@@ -64,8 +65,8 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
 
 variable x index run1 run2 run3 run4 run5 run6 run7 run8
 variable LoopVar loop $n
-variable beta equal temp/3.0
-variable beta equal "temp / 3.0"
+variable beta equal vol/ngrid
+variable beta equal "vol / ngrid"
 variable b equal c_myTemp
 variable b particle x*y/vol
 variable foo string myfile
@@ -93,10 +94,11 @@ print"_fix_print.html, and "run every"_run.html commands) or as part
 of statistical output (see the "stats_style"_stats_style.html
 command), or used as input to an averaging fix (see the "fix
 ave/time"_fix_ave_time.html command).  Variables of style {particle}
-store a formula which when evaluated produces one numeric value per
-particle which can be output to a dump file (see the "dump
-particle"_dump.html command).  Variables of style {internal} are used
-by a few commands which set their value directly.
+or {grid} or {surf} store a formula which when evaluated produces one
+numeric value per particle or grid cell or surface element which can
+be output to the appropriate styles of dump file (see the
+"dump"_dump.html command).  Variables of style {internal} are used by
+a few commands which set their value directly.
 
 In the discussion that follows, the "name" of the variable is the
 arbitrary string that is the 1st argument in the variable command.
@@ -110,15 +112,16 @@ different values when it is evaluated at different times during a
 simulation.
 
 IMPORTANT NOTE: When an input script line is encountered that defines
-a variable of style {equal} or {particle} or {grid} that contains a
-formula, the formula is NOT immediately evaluated and the result
-stored.  See the discussion below about "Immediate Evaluation of
-Variables" if you want to do this.  This is also true of the {format}
-style variable since it evaluates another variable when it is invoked.
+a variable of style {equal} or {particle} or {grid} of {surf} that
+contains a formula, the formula is NOT immediately evaluated and the
+result stored.  See the discussion below about "Immediate Evaluation
+of Variables" if you want to do this.  This is also true of the
+{format} style variable since it evaluates another variable when it is
+invoked.
 
-Variables of style {equal} and {particle} and {grid} can be used as
-inputs to various other commands which evaluate their formulas as
-needed, e.g. at different timesteps during a "run"_run.html.
+Variables of style {equal} and {particle} and {grid} and {surf} can be
+used as inputs to various other commands which evaluate their formulas
+as needed, e.g. at different timesteps during a "run"_run.html.
 
 Variables of style {internal} can be used in place of an equal-style
 variable, except by commands that set the value stored by the
@@ -138,12 +141,12 @@ means that using the "command-line switch"_Section_start.html#start_6
 script.
 
 There are two exceptions to this rule.  First, variables of style
-{string}, {getenv}, {internal}, {equal}, and {particle} ARE redefined
-each time the command is encountered.  This allows these style of
-variables to be redefined multiple times in an input script.  In a
-loop, this means the formula associated with an {equal} or {particle}
-style variable can change if it contains a substitution for another
-variable, e.g. $x or v_x.
+{string}, {getenv}, {internal}, {equal}, {particle}, {grid}, and
+{surf} ARE redefined each time the command is encountered.  This
+allows these style of variables to be redefined multiple times in an
+input script.  In a loop, this means the formula associated with an
+{equal} or {particle} or {grid} or {surf} style variable can change if
+it contains a substitution for another variable, e.g. $x or v_x.
 
 Second, as described below, if a variable is iterated on to the end of
 its list of strings via the "next"_next.html command, it is removed
@@ -299,23 +302,29 @@ another command that allows for equal-style variables.
 
 :line
 
-For the {equal} and {particle} and {grid} styles, a single string is
-specified which represents a formula that will be evaluated afresh
-each time the variable is used.  If you want spaces in the string,
-enclose it in double quotes so the parser will treat it as a single
-argument.  For {equal} style variables the formula computes a scalar
-quantity, which becomes the value of the variable whenever it is
-evaluated.  For {particle} style variables the formula computes one
-quantity for each particle whenever it is evaluated.  For {grid} style
-variables the formula computes one quantity for each grid cell
-whenever it is evaluated.  A {grid} style variable computes quantites
-for all flavors of child grid cells in the simulation, which includes
-unsplit, cut, split, and sub cells.  See "Section
-4.8"_Section_howto.html#howto_8 of the manual gives details of how
-SPARTA defines child, unsplit, split, and sub cells.
+For the {equal}, {particle}, {grid}, and {surf} styles, a single
+string is specified which represents a formula that will be evaluated
+afresh each time the variable is used.  If you want spaces in the
+string, enclose it in double quotes so the parser will treat it as a
+single argument.  For {equal} style variables the formula computes a
+scalar quantity, which becomes the value of the variable whenever it
+is evaluated.
 
-Note that {equal} and {particle} and {grid} variables can produce
-different values at different stages of the input script or at
+For {particle} style variables the formula computes one quantity for
+each particle whenever it is evaluated.  For {grid} style variables
+the formula computes one quantity for each grid cell whenever it is
+evaluated.  A {grid} style variable computes quantites for all flavors
+of child grid cells in the simulation, which includes unsplit, cut,
+split, and sub cells.  See "Section 4.8"_Section_howto.html#howto_8 of
+the manual gives details of how SPARTA defines child, unsplit, split,
+and sub cells.  For {surf} style variables the formula computes one
+quantity for each surface element (line or triangle) whenever it is
+evaluated.  They can only be defined for explicit surfaces, not
+implicit surfaces.  See "Section 4.9"_Section_howto.html#howto_9 of
+the manual for a description of both kinds of surface elements.
+
+Note that {equal}, {particle}, {grid}, and {surf} variables can
+produce different values at different stages of the input script or at
 different times during a run.  For example, if an {equal} variable is
 used in a "fix print"_fix_print.html command, different values could
 be printed each timestep it was invoked.  If you want a variable to be
@@ -323,10 +332,10 @@ evaluated immediately, so that the result is stored by the variable
 instead of the string, see the section below on "Immediate Evaluation
 of Variables".
 
-The next command cannot be used with {equal} or {particle} or {grid}
-style variables, since there is only one string.
+The next command cannot be used with {equal}, {particle}, {grid}, or
+{surf} style variables, since there is only one string.
 
-The formula for an {equal} or {particle} or {grid} variable can
+The formula for an {equal}, {particle}, {grid}, or {surf} variable can
 contain a variety of quantities.  The syntax for each kind of quantity
 is simple, but multiple quantities can be nested and combined in
 various ways to build up formulas of arbitrary complexity.  For
@@ -335,8 +344,8 @@ example, this is a valid (though strange) variable formula:
 variable x equal "np + c_MyTemp / vol^(1/3)" :pre
 
 Specifically, a formula can contain numbers, stats keywords, math
-operators, math functions, particle vectors, grid vectors, compute
-references, fix references, and references to other variables.
+operators, math functions, particle vectors, compute references, fix
+references, custom attribute references, and other variables.
 
 Number: 0.2, 100, 1.0e20, -15.4, etc
 Constant: PI
@@ -347,38 +356,38 @@ Math functions: sqrt(x), exp(x), ln(x), log(x), abs(x), sin(x), cos(x), tan(x), 
      ceil(x), floor(x), round(x), ramp(x,y), stagger(x,y), logfreq(x,y,z), \
      stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
 Special functions: sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
-Particle vectors: mass, type, q, mu, x, y, z, vx, vy, vz
-Grid vectors: xc, yc, zc
-Compute references: c_ID, c_ID\[i\], c_ID\[i\]\[j\]
-Fix references: f_ID, f_ID\[i\], f_ID\[i\]\[j\]
-Surface collision model references: s_ID\[i\]
-Surface reaction model references: r_ID\[i\]
+Particle vectors: id, type, mass, q, mu, x, y, z, vx, vy, vz
+Compute references: c_ID, c_ID\[I\], c_ID\[I\]\[J\]
+Fix references: f_ID, f_ID\[I\], f_ID\[I\]\[J\]
+Custom attribute references = name_ID, name_ID\[I\], name_ID, name_ID\[I\], name_ID, name_ID\[I\]
+Surface collision model references: sc_ID\[I\]
+Surface reaction model references: sr_ID\[I\]
 Other variables: v_name :tb(s=:)
 
 :line
 
 Most of the formula elements produce a scalar value.  A few produce a
-per-particle vector or per-grid vector of values.  These are the
-particle vectors or grid vectors, compute references that represent a
-per-particle or per-grid vector, fix references that represent a
-per-particle or per-grid vector, and variables that are particle-style
-or grid-style variables.  Math functions that operate on scalar values
-produce a scalar value; math function that operate on per-particle
-vectors do so element-by-element and produce a per-particle vector.
+per-particle vector or per-grid vector or per-surf vector of values.
+These are the particle vectors, compute and fix references that
+represent a per-particle or per-grid vector or per-surf vector, and
+variables that are particle-style or grid-style or surf-style
+variables.  Math functions that operate on scalar values produce a
+scalar value; math functions that operate on per-particle or per-grid
+or per-surf vectors do so element-by-element and produce a
+per-particle or per-grid or per-surf vectors.
 
 A formula for equal-style variables cannot use any formula element
-that produces a per-particle or per-grid vector.  A formula for a
-particle-style variable can use formula elements that produce either a
-scalar value or a per-particle vector, but not a per-grid vector.
-Likewise a grid-style variable can use formula elements that produce
-either a scalar value or a per-grid vector, but not a per-particle
-vector.
+that produces a per-particle or per-grid or per-surf vector.  A
+formula for a particle-style variable can use formula elements that
+produce either a scalar value or a per-particle vector, but not a
+per-grid or per-surf vector.  Likewise a grid-style variable can use
+formula elements that produce either a scalar value or a per-grid
+vector, but not a per-particle or per-surf vector.  And a surf-style
+variable can use formula elements that produce either a scalar value
+or a per-surf vector, but not a per-particle or per-grid vector.
 
 The stats keywords allowed in a formula are those defined by the
-"stats_style custom"_stats_style.html command.  If a variable is
-evaluated directly in an input script (not during a run), then the
-values accessed by the stats keyword must be current.  See the
-discussion below about "Variable Accuracy".
+"stats_style custom"_stats_style.html command.
 
 :line
 
@@ -609,29 +618,21 @@ Particle Vectors :h4
 
 Particle vectors generate one value per particle, so that a reference
 like "vx" means the x-component of each particles's velocity will be
-used when evaluating the variable.  Some values are per-species
-values, like mass and q and mu.  "Mass" is the mass for the particle's
-species, "q" is the particle's charge, "mu" is its magnetic moment.
+used when evaluating the variable.  The reference "type" is an integer
+index representing the particle species.  It is a value from 1 to
+Nspecies. The value corresponds to the order in which species were
+defined via the "species"_species.html command.
+
+Particle vectors for mass and q and mu are per-species values.  "Mass"
+is the mass for the particle's species, "q" is the particle's charge,
+"mu" is its magnetic moment.
 
 The meaning of the other particle vectors should be self-explanatory.
 
-Particle vectors can only be used in {particle} style variables,
-not in {equal} or {grid} style varaibles.
+Particle vectors can only be used in {particle} style variables, not
+in {equal} or {grid} or {surf} style varaibles.
 
-:line
-
-Grid Vectors :h4
-
-Particle vectors generate one value per grid cell, so that a reference
-like "xc" means the x-component of the center point of the grid cell.
-
-The xc, yc, zc values are for the geometric center point of the grid
-cell.
-
-Grid vectors can only be used in {grid} style variables, not in
-{equal} or {particle} style varaibles.
-
-:line
+z:line
 
 Compute References :h4
 
@@ -640,8 +641,10 @@ Compute references access quantities calculated by a
 the ID of a compute defined elsewhere in the input script.  As
 discussed in the doc page for the "compute"_compute.html command,
 computes can produce global, per-particle, per-grid, or per-surf
-values.  Only global and per-particle and per-grid values can be used
-in a variable.  Computes can also produce a scalar, vector, or array.
+values.  Computes can also produce a scalar, vector, or array.  See
+the doc pages for individual computes to see what kind of values they
+produce.
+
 An equal-style variable can only use scalar values, which means a
 global scalar, or an element of a global vector or array.
 Particle-style variables can use the same scalar values.  They can
@@ -649,16 +652,18 @@ also use per-particle vector values.  A vector value can be a
 per-particle vector itself, or a column of an per-particle array.
 Grid-style variables can use the same scalar values.  They can also
 use per-grid vector values.  A vector value can be a per-grid vector
-itself, or a column of an per-grid array.  See the doc pages for
-individual computes to see what kind of values they produce.
+itself, or a column of an per-grid array.  Surf-style variables can
+use the same scalar values.  They can also use per-surf vector values.
+A vector value can be a per-surf vector itself, or a column of an
+per-surf array.
 
 Examples of different kinds of compute references are as follows.
 There is no ambiguity as to what a reference means, since computes
-only produce global or per-particle or per-grid quantities, never more
-than one kind of quantity.
+only produce global, per-particle, per-grid, or per-surf quantities,
+never more than one kind of quantity.
 
-c_ID: global scalar, or per-particle or per-grid vector
-c_ID\[I\]: Ith element of global vector, or Ith column from per-particle or per-grid array
+c_ID: global scalar, or per-particle or per-grid or per-surf vector
+c_ID\[I\]: Ith element of global vector, or Ith column from per-particle or per-grid or per-surf array
 c_ID\[I\]\[J\]: I,J element of global array :tb(s=:)
 
 For I and J, integers can be specified or a variable name, specified
@@ -683,17 +688,21 @@ Fix references access quantities calculated by a "fix"_compute.html.
 The ID in the reference should be replaced by the ID of a fix defined
 elsewhere in the input script.  As discussed in the doc page for the
 "fix"_fix.html command, fixes can produce global, per-particle,
-per-grid, or per-surf values.  Only global and per-particle and
-per-grid values can be used in a variable.  Fixes can also produce a
-scalar, vector, or array.  An equal-style variable can only use scalar
-values, which means a global scalar, or an element of a global vector
-or array.  Particle-style variables can use the same scalar values.
-They can also use per-particle vector values.  A vector value can be a
+per-grid, or per-surf values.  Fixes can also produce a scalar,
+vector, or array.  See the doc pages for individual fixes to see what
+kind of values they produce.
+
+An equal-style variable can only use scalar values, which means a
+global scalar, or an element of a global vector or array.
+Particle-style variables can use the same scalar values.  They can
+also use per-particle vector values.  A vector value can be a
 per-particle vector itself, or a column of an per-particle array.
 Grid-style variables can use the same scalar values.  They can also
 use per-grid vector values.  A vector value can be a per-grid vector
-itself, or a column of an per-grid array.  See the doc pages for
-individual fixes to see what kind of values they produce.
+itself, or a column of an per-grid array.  Surf-style variables can
+use the same scalar values.  They can also use per-surf vector values.
+A vector value can be a per-surf vector itself, or a column of an
+per-surf array.
 
 The different kinds of fix references are exactly the same as the
 compute references listed in the above table, where "c_" is replaced
@@ -701,8 +710,8 @@ by "f_".  Again, there is no ambiguity as to what a reference means,
 since fixes only produce global or per-particle or per-grid
 quantities, never more than one kind of quantity.
 
-f_ID: global scalar, or per-particle or per-grid vector
-f_ID\[I\]: Ith element of global vector, or Ith column from per-particle or per-grid array
+f_ID: global scalar, or per-particle or per-grid or per-surf vector
+f_ID\[I\]: Ith element of global vector, or Ith column from per-particle or per-grid or per-surf array
 f_ID\[I\]\[J\]: I,J element of global array :tb(s=:)
 
 For I and J, integers can be specified or a variable name, specified
@@ -721,6 +730,37 @@ the doc pages for individual fix commands for details.
 
 :line
 
+Custom Attribute References :h4
+
+Particles, grid cells, and surface elements can have custom attributes
+which store either single or multiple values per particle, per grid
+cell, or per surface element.  They can be defined and initialized in
+data files, e.g. via the "read_surf"_read_surf.html command.  Or they
+can be defined and used by specific commands, e.g. "fix
+ambipolar"_fix_ambipolar.html or "fix surf/temp"_fix_surf_temp.html or
+"surf_react adsorb"_surf_react_adsorb.html.  The name of each
+attribute sis set by the user or defined by the command.  See "Section
+6.17"_Section_howto.html#howto_17 for more discussion of custom
+attributes.
+
+Single-value attributes are referred to as per-particle, per-grid, or
+per-surf vectors.  Multiple-value attributes are referred to as
+per-particle, per-grid, or per-surf arrays.  In variable formulas they
+can be referenced using the following syntax:
+
+p_name: per-particle vector
+p_name\[I\]: Ith column from a per-particle array
+g_name: per-grid vector
+g_name\[I\]: Ith column from a per-grid array
+s_name: per-surf vector
+s_name\[I\]: Ith column from a per-surf array :tb(s=:)
+
+Particle attributes can only be used in particle-style variables.
+Grid cell attributes can only be used in grid-style variables.
+Surface element attributes can only be used in surf-style variables.
+
+:line
+
 Surface Collision and Surface Reaction Model References :h4
 
 These references access quantities calculated by a
@@ -730,11 +770,11 @@ surface collision or surface reaction model defined elsewhere in the
 input script.  As discussed in the doc pages for the
 "surf_collide"_surf_collide.html and "surf_react"_surf_react.html
 commands, these commmands produce global vectors, the elements of
-which can be accessed by equal-style or particle-style or grid-style
-variables, e.g.
+which can be accessed by equal-style, particle-style, grid-style, or
+surf-style variables, e.g.
 
-s_ID\[I\]: Ith element of global vector for a surface collision model
-r_ID\[I\]: Ith element of global vector for a surface reaction model :tb(s=:)
+sc_ID\[I\]: Ith element of global vector for a surface collision model
+sr_ID\[I\]: Ith element of global vector for a surface reaction model :tb(s=:)
 
 :line
 
@@ -748,23 +788,27 @@ elsewhere in the input script.
 As discussed on this doc page, equal-style variables generate a global
 scalar numeric value; particle-style variables generate a per-particle
 vector of numeric values; grid-style variables generate a per-grid
-vector of numeric values; all other variables store a string.  The
-formula for an equal-style variable can use any style of variable
-except a particle- or grid-style.  The formula for a particle-style
-variable can use any style of variable except a grid-style.  The
-formula for a grid-style variable can use any style of variable except
-a particle-style.  If a string-storing variable is used, the string is
-converted to a numeric value.  Note that this will typically produce a
-0.0 if the string is not a numeric string, which is likely not what
-you want.  The formula for a particle-style variable can use any style
-of variable, including other particle-style variables.
+vector of numeric values; surf-style variables generate a per-surf
+vector of numeric values; all other variables store a string.
+
+The formula for an equal-style variable can use any style of variable
+except a particle- or grid- or surf-style.  The formula for a
+particle-style variable can use any style of variable except a grid-
+or surf-style.  The formula for a grid-style variable can use any
+style of variable except a particle- or surf-style.  The formula for a
+surf-style variable can use any style of variable except a particle-
+or grid-style.
+
+If a string-storing variable is used, the string is converted to a
+numeric value.  Note that this will typically produce a 0.0 if the
+string is not a numeric string, which is likely not what you want.
 
 Examples of different kinds of variable references are as follows.
 There is no ambiguity as to what a reference means, since variables
-produce only a global scalar or a per-particle or per-grid vector,
-never more than one of these quantities.
+produce only a global scalar or a per-particle or per-grid or per-surf
+vector, never more than one of these quantities.
 
-v_name: scalar, or per-particle or per-grid vector :tb(s=:)
+v_name: equal- or particle- or grid- or surf-style variable :tb(s=:)
 
 :line
 
@@ -784,11 +828,10 @@ string between the parenthesis as an equal-style variable formula.
 Referencing a variable with a leading "v_" is an optional or required
 kind of argument for some commands (e.g. the "fix
 ave/spatial"_fix_ave_spatial.html or "dump custom"_dump.html or
-"stats_style"_stats_style.html commands) if you wish it to evaluate
-a variable periodically during a run.  It can also be used in a
-variable formula if you wish to reference a second variable.  The
-second variable will be evaluated whenever the first variable is
-evaluated.
+"stats_style"_stats_style.html commands) if you wish it to evaluate a
+variable periodically during a run.  It can also be used in a variable
+formula if you wish to reference a second variable.  The second
+variable will be evaluated whenever the first variable is evaluated.
 
 As an example, suppose you use this command in your input script to
 define the variable "n" as
@@ -833,7 +876,7 @@ is evaluated later.
 [Variable Accuracy:]
 
 Obviously, SPARTA attempts to evaluate variables containing formulas
-({equal} and {particle} and {grid} style variables) accurately
+({equal}, {particle}, {grid}, {surf} style variables) accurately
 whenever the evaluation is performed.  Depending on what is included
 in the formula, this may require invoking a "compute"_compute.html, or
 accessing a value previously calculated by a compute, or accessing a
@@ -843,114 +886,40 @@ pressure induced on a global boundary due to collisions, then these
 quantities need to be tallied during the timesteps on which the
 variable will need the values.
 
-SPARTA keeps track of all of this during a "run"_run.html.  An error
-will be generated if you attempt to evaluate a variable on timesteps
-when it cannot produce accurate values.  For example, if a
-"stats_style custom"_stats_style.html command prints a variable which
-accesses values stored by a "fix ave/time"_fix_ave_time.html command
-and the timesteps on which stats output is generated are not multiples
-of the averaging frequency used in the fix command, then an error will
-occur.
+SPARTA keeps track of all of this as it performs a "run"_run.html as
+well as in between simulations.  An error will be generated if you
+attempt to evaluate a variable when SPARTA knows it cannot produce
+accurate values.  For example, if a "stats"_stats.html command prints
+a variable which accesses values stored by a "fix
+ave/time"_fix_ave_time.html command and the timesteps on which stats
+output is generated are not multiples of the averaging frequency used
+in the fix command, then an error will occur.
 
-An input script can also request variables be evaluated before or
-after or in between runs, e.g. by including them in a
-"print"_print.html command.  In this case, if a compute is needed to
-evaluate a variable (either directly or indirectly), SPARTA will not
-invoke the compute, but it will use a value previously calculated by
-the compute, and can do this only if it was invoked on the current
-timestep.  Fixes will always provide a quantity needed by a variable,
-but the quantity may or may not be current.  This leads to one of
-three kinds of behavior:
+However, there are two special cases to be aware of when a variable
+requires invocation of a compute (directly or indirectly).  The first
+is if the variable is evaluated before a "run"_run.html command which
+follows the "compute"_compute.html command which created that compute.
+In this case, SPARTA will generate an error.  This is because some
+computes require initializations which does not take place unit a run
+is initialized.  One example is the "compute
+property/surf"_compute_property_surf.html command which creates a list
+of surface elements in the specified group.  This does not occur until
+a run begins.
 
-(1) The variable may be evaluated accurately.  If it contains
-references to a compute or fix, and these values were calculated on
-the last timestep of a preceeding run, then they will be accessed and
-used by the variable and the result will be accurate.
+The second special case is when a variable that depends on a compute
+is evaluated in between "run"_run.html commands.  It is possible for
+other input script commands issued following the previous run, but
+before the variable is evaluated, to change the system.  For example,
+the "remove_surf"_remove_surf.html command could be used to remove
+surface elements.  If the variable depends on a "property/surf
+compute"_compute_property_surf.html, that compute will not
+re-initialize itself until the next simulation.  Thus it may generate
+an incorrect answer when evaluated.  Note that SPARTA will not
+generate an error in this case; the evaluated variable may simply be
+incorrect.
 
-(2) SPARTA may not be able to evaluate the variable and will generate
-an error message stating so.  For example, if the variable requires a
-quantity from a "compute"_compute.html that has not been invoked on
-the current timestep, SPARTA will generate an error.  This means, for
-example, that such a variable cannot be evaluated before the first run
-has occurred.  Likewise, in between runs, a variable containing a
-compute cannot be evaluated unless the compute was invoked on the last
-timestep of the preceding run, e.g. by stats output.
-
-One way to get around this problem is to perform a 0-timestep run
-before using the variable.  For example, these commands
-
-compute myTemp grid all temp
-variable t equal c_myTemp[1]
-print "Initial temperature = $t"
-run 1000 :pre
-
-will generate an error if the run is the first run specified in the
-input script, because generating a value for the "t" variable requires
-a compute for calculating the temperature to be invoked.
-
-However, this sequence of commands would be fine:
-
-compute myTemp grid all temp
-variable t equal c_myTemp[1]
-run 0
-print "Initial temperature = $t"
-run 1000 :pre
-
-The 0-timestep run initializes and invokes various computes, including
-the one for temperature, so that the value it stores is current and
-can be accessed by the variable "t" after the run has completed.  Note
-that a 0-timestep run does not alter the state of the system, so it
-does not change the input state for the 1000-timestep run that
-follows.  Also note that the 0-timestep run must actually use and
-invoke the compute in question (e.g. via "stats"_stats_style.html or
-"dump"_dump.html output) in order for it to enable the compute to be
-used in a variable after the run.  Thus if you are trying to print a
-variable that uses a compute you have defined, you can insure it is
-invoked on the last timestep of the preceding run by including it in
-stats output.
-
-Unlike computes, "fixes"_fix.html will never generate an error if
-their values are accessed by a variable in between runs.  They always
-return some value to the variable.  However, the value may not be what
-you expect if the fix has not yet calculated the quantity of interest
-or it is not current.  For example, the "fix indent"_fix_indent.html
-command stores the force on the indenter.  But this is not computed
-until a run is performed.  Thus if a variable attempts to print this
-value before the first run, zeroes will be output.  Again, performing
-a 0-timestep run before printing the variable has the desired effect.
-
-(3) The variable may be evaluated incorrectly.  And SPARTA may have
-no way to detect this has occurred.  Consider the following sequence
-of commands:
-
-compute myTemp grid all temp
-variable t equal c_myTemp[1]
-run 1000
-create_particles all n 10000
-print "Final temperature = $t" :pre
-
-The first run is performed using the current set of particles.  The
-temperature is evaluated on the final timestep and stored by the
-"compute grid"_compute_grid.html compute (when invoked by the
-"stats_style"_stats_style.html command).  Then new particles are added
-by the "create_particles"_create_particles.html command, altering the
-temperature of the system.  When the temperature is printed via the
-"t" variable, SPARTA will use the temperature value stored by the
-"compute grid"_compute_grid.html compute, thinking it is current.
-There are many other commands which could alter the state of the
-system between runs, causing a variable to evaluate incorrectly.
-
-The solution to this issue is the same as for case (2) above, namely
-perform a 0-timestep run before the variable is evaluated to insure
-the system is up-to-date.  For example, this sequence of commands
-would print a temperature that reflected the new particles:
-
-compute myTemp grid all temp
-variable t equal c_myTemp[1]
-run 1000
-create_particles all n 10000
-run 0
-print "Final temperature = $t" :pre
+The way to get around both of these special cases is to perform a
+0-timestep run before evaluating the variable.
 
 :line
 

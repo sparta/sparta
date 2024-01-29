@@ -21,13 +21,10 @@
 
 <PRE>  <I>kokkos</I> args = keyword value ...
     zero or more keyword/value pairs may be appended
-    keywords = <I>comm</I> or <I>reduction</I>
+    keywords = <I>comm</I> or <I>react/extra</I> or <I>react/retry</I> or <I>gpu/aware</I>
       <I>comm</I> value = <I>threaded</I> or <I>serial</I>
         threaded = perform pack/unpack using KOKKOS (e.g. on GPU or using OpenMP) (default for GPUs)
         serial = perform communication pack/unpack in non-KOKKOS mode (default for CPUs)
-      <I>reduction</I> = <I>parallel/reduce</I> or <I>atomic</I>
-        parallel/reduce = use parallel reduction for statistics (default for CPUs)
-        atomic = use atomic reduction for statistics (default for GPUs)
       <I>react/extra</I> = <I>factor</I>
         factor = increase memory used for collisions by this factor (default)
       <I>react/retry</I> = <I>yes</I> or <I>no</I>
@@ -42,7 +39,7 @@
 <P><B>Examples:</B>
 </P>
 <PRE>package kokkos comm serial
-package kokkos comm threaded reduction atomic
+package kokkos comm threaded react/retry yes
 package kokkos gpu/aware no 
 </PRE>
 <P><B>Description:</B>
@@ -88,12 +85,6 @@ KOKKOS package.
 </P>
 <P>All of the settings are optional keyword/value pairs.  Each has a
 default value as listed below.
-</P>
-<P>The <I>reduction</I> keyword sets the type of reduction used to gather
-statistics. The <I>parallel/reduce</I> option uses a parallel reduction and
-is typically the preferred method when running on CPUs and Xeon Phis.
-The <I>atomic</I> option uses thread atomics and is typically faster when
-running on GPUs.
 </P>
 <P>Chemical reactions (gas or surface) can increase the number of
 particles in the simulation, which requires extra memory storage. It
@@ -151,11 +142,11 @@ setting</A>
 <P><B>Default:</B>
 </P>
 <P>For the KOKKOS package, the option defaults are react/extra = 1.1,
-react/retry = no, and gpu/aware yes. For CPUs: comm = serial,
-reduction = parallel/reduce, and for GPUs: comm = threaded, reduction =
-atomic. These settings are made automatically by the required "-k on"
-<A HREF = "Section_start.html#start_6">command-line switch</A>. You can change them
-by using the package kokkos command in your input script or via the
-"-pk kokkos" <A HREF = "Section_start.html#start_6">command-line switch</A>. 
+react/retry = no, and gpu/aware yes. For CPUs: comm = serial, and for
+GPUs: comm = threaded.  These settings are made automatically by the
+required "-k on" <A HREF = "Section_start.html#start_6">command-line switch</A>. You
+can change them by using the package kokkos command in your input script
+or via the "-pk kokkos" <A HREF = "Section_start.html#start_6">command-line
+switch</A>. 
 </P>
 </HTML>

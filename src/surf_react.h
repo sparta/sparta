@@ -44,6 +44,7 @@ class SurfReact : protected Pointers {
 
   virtual void tally_reset();
   virtual void tally_update();
+  virtual void grid_changed() {}
   double compute_vector(int i);
 
  protected:

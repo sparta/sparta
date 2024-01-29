@@ -1,0 +1,87 @@
+# 2d flow around a spiky circle
+# add custom grid data between create_grid and read surf
+# read surf will split grid cells
+# see if custom data propagates to split cells correctly
+
+seed	    	    12345
+dimension   	    2
+
+#global              gridcut -1.0 comm/sort yes
+global              gridcut 0.0 comm/sort yes
+#global              gridcut 2.0 comm/sort yes
+
+boundary	    or r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    20 20 1 
+balance_grid        rcb cell
+
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.001
+
+compute             1 property/grid all id
+
+run                 0
+
+variable            givec grid c_1*10
+variable            giarray1 grid g_ivec+1
+variable            giarray2 grid v_giarray1+1
+variable            gdvec grid c_1*10+3.5
+variable            gdarray1 grid g_dvec+1
+variable            gdarray2 grid v_gdarray1+1
+variable            gdarray3 grid v_gdarray2+1
+
+custom              grid ivec set v_givec all NULL type int
+custom              grid iarray[1] set v_giarray1 all NULL type int size 2
+custom              grid iarray[2] set v_giarray2 all NULL type int size 2
+custom              grid dvec set v_gdvec all NULL
+custom              grid darray[1] set v_gdarray1 all NULL size 3
+custom              grid darray[2] set v_gdarray2 all NULL size 3
+custom              grid darray[3] set v_gdarray3 all NULL size 3
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0 
+
+read_surf           data.spiky trans 5 5 0 scale 0.4 0.4 1
+
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+fix		    in emit/face air xlo twopass 
+
+timestep 	    0.0001
+
+# output
+
+dump                10 image all 100 tmp.spiky.set.image.*.ppm &
+                    type type pdiam 0.1 &
+                    surf proc 0.01 size 512 512 axes yes 0.9 0.02 zoom 1.5
+dump_modify	    10 pad 4
+
+dump          2 grid all 100 tmp.spiky.set.dump.grid id &
+              g_ivec g_iarray[*] g_dvec g_darray[*]
+
+# first run
+
+fix             1 balance 100 1.01 rcb part flip yes
+
+stats		    50
+stats_style	    step cpu ngrid nsplit np nattempt ncoll nscoll nscheck f_1[*]
+
+run 		    500
+
+# second run with adapted grid
+# unfix and re-specify fix balance so it comes after fix adapt
+
+unfix           1
+#adapt_grid      all refine particle 100 0 
+fix             2 adapt 100 all refine particle 200 0 
+fix             1 balance 100 1.01 rcb part flip yes
+
+run 		    500
+
+write_grid      tmp.spiky.set.data.grid &
+                custom ivec custom iarray custom dvec custom darray

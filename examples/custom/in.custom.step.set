@@ -1,0 +1,188 @@
+# 2d flow around a staircase of steps with create_grid and custom surf
+# testing custom attributes
+
+seed	    	    12345
+dimension   	    2
+
+#global              gridcut -1.0 comm/sort yes
+global              gridcut 0.0 comm/sort yes
+#global              gridcut 2.0 comm/sort yes
+
+#global              surfs explicit
+global              surfs explicit/distributed
+
+boundary	    or r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+
+create_grid 	    20 20 1 
+
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.01
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0 
+
+read_surf	    data.step &
+                    trans 5 5 0 scale 0.75 0.75 1 &
+                    rotate 45 0 0 1 invert
+
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+# setup up per-surf custom attributes
+
+compute             1 property/surf all id
+
+run                 0
+
+variable            sivec surf c_1*10
+variable            siarray1 surf s_ivec+1
+variable            siarray2 surf v_siarray1+1
+variable            sdvec surf c_1*10+3.5
+variable            sdarray1 surf s_dvec+1
+variable            sdarray2 surf v_sdarray1+1
+variable            sdarray3 surf v_sdarray2+1
+
+custom              surf ivec set v_sivec all NULL type int
+custom              surf iarray[1] set v_siarray1 all NULL type int size 2
+custom              surf iarray[2] set v_siarray2 all NULL type int size 2
+custom              surf dvec set v_sdvec all NULL
+custom              surf darray[1] set v_sdarray1 all NULL size 3
+custom              surf darray[2] set v_sdarray2 all NULL size 3
+custom              surf darray[3] set v_sdarray3 all NULL size 3
+
+# setup up per-grid custom attributes
+
+compute             2 property/grid all id
+
+run                 0
+
+variable            givec grid c_2*10
+variable            giarray1 grid g_ivec+1
+variable            giarray2 grid v_giarray1+1
+variable            gdvec grid c_2*10+3.5
+variable            gdarray1 grid g_dvec+1
+variable            gdarray2 grid v_gdarray1+1
+variable            gdarray3 grid v_gdarray2+1
+
+custom              grid ivec set v_givec all NULL type int
+custom              grid iarray[1] set v_giarray1 all NULL type int size 2
+custom              grid iarray[2] set v_giarray2 all NULL type int size 2
+custom              grid dvec set v_gdvec all NULL
+custom              grid darray[1] set v_gdarray1 all NULL size 3
+custom              grid darray[2] set v_gdarray2 all NULL size 3
+custom              grid darray[3] set v_gdarray3 all NULL size 3
+
+# emission fix
+
+fix		    in emit/face air xlo twopass 
+
+timestep 	    0.0001
+
+# output
+
+dump                10 image all 100 tmp.step.set.image.*.ppm &
+                    type type pdiam 0.1 &
+                    surf proc 0.01 size 512 512 axes yes 0.9 0.02 zoom 1.5
+dump_modify	    10 pad 4
+
+dump          1 surf all 100 tmp.step.set.dump.surf id type &
+              s_ivec s_iarray[*] s_dvec s_darray[*]
+
+dump          2 grid all 100 tmp.step.set.dump.grid id &
+              g_ivec g_iarray[*] g_dvec g_darray[*]
+
+write_surf      tmp.step.set.data.surf type &
+                custom ivec custom iarray custom dvec custom darray &
+                points no
+
+write_grid      tmp.step.set.data.grid &
+                custom ivec custom iarray custom dvec custom darray
+
+# first run
+
+fix             1 balance 100 1.01 rcb part flip yes
+
+stats		    50
+stats_style	    step cpu np nattempt ncoll nscoll nscheck f_1[*]
+
+run 		    500
+
+# setup up per-particle custom attributes
+
+variable        pivec particle id/100000
+variable        piarray1 particle p_ivec+1
+variable        piarray2 particle v_piarray1+1
+variable        pdvec particle id/100000+3.5
+variable        pdarray1 particle p_dvec+1
+variable        pdarray2 particle v_pdarray1+1
+variable        pdarray3 particle v_pdarray2+1
+
+custom          particle ivec set v_pivec all NULL type int
+custom          particle iarray[1] set v_piarray1 all NULL type int size 2
+custom          particle iarray[2] set v_piarray2 all NULL type int size 2
+custom          particle dvec set v_pdvec all NULL
+custom          particle darray[1] set v_pdarray1 all NULL size 3
+custom          particle darray[2] set v_pdarray2 all NULL size 3
+custom          particle darray[3] set v_pdarray3 all NULL size 3
+
+dump          3 particle all 100 tmp.step.set.dump.particle id x y &
+              p_ivec p_iarray[*] p_dvec p_darray[*]
+
+# second run
+
+balance_grid    rcb part flip yes
+
+compute       3 reduce ave p_ivec p_iarray[*] p_dvec p_darray[*]
+compute       4 reduce ave g_ivec g_iarray[*] g_dvec g_darray[*]
+compute       5 reduce ave s_ivec s_iarray[*] s_dvec s_darray[*]
+
+stats		50
+stats_style	step cpu np nattempt ncoll nscoll nscheck f_1[*] &
+                c_3[*] c_4[*] c_5[*]
+
+run 		    500
+
+write_surf      tmp.step.set.data.surf2 type &
+                custom ivec custom iarray custom dvec custom darray &
+                points no
+
+write_grid      tmp.step.set.data.grid2 &
+                custom ivec custom iarray custom dvec custom darray
+
+#write_restart   tmp.step.read.restart
+write_restart   tmp.step.read.restart.% fileper 2
+
+# remove all custom attributes
+
+undump         1
+undump         2
+undump         3
+
+custom         surf ivec remove
+custom         surf iarray remove
+custom         surf dvec remove
+custom         surf darray remove
+
+custom         grid ivec remove
+custom         grid iarray remove
+custom         grid dvec remove
+custom         grid darray remove
+
+custom         particle ivec remove
+custom         particle iarray remove
+custom         particle dvec remove
+custom         particle darray remove
+
+# third run
+
+uncompute       3
+uncompute       4
+uncompute       5
+stats_style	step cpu np nattempt ncoll nscoll nscheck f_1[*]
+
+run            500
