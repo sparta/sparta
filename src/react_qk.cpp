@@ -52,7 +52,6 @@ void ReactQK::init()
   if (computeChemRates)
     error->all(FLERR,
                "React qk does not currently support the 'react_modify compute_chem_rates' option");
-
 }
 
 /* ---------------------------------------------------------------------- */
