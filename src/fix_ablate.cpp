@@ -341,9 +341,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   }
 
   MPI_Barrier(world);
-  printf("Beginning sync explicit: %i\n", comm->me); 
   if(aveFlag>=0) sync_explicit(aveFlag);
-  printf("Finished sync explicit: %i\n", comm->me);
   MPI_Barrier(world);
 
   // push corner pt values that are fully external/internal to 0 or 255
@@ -525,8 +523,9 @@ void FixAblate::create_surfs(int outflag)
 
   // watertight check can be done before surfs are mapped to grid cells
 
-  if (dim == 2) surf->check_watertight_2d();
-  else surf->check_watertight_3d();
+  // some freezing here if explicit surface already existed
+  //if (dim == 2) surf->check_watertight_2d();
+  //else surf->check_watertight_3d();
 
   // if no surfs created, use clear_surf to set all celltypes = OUTSIDE
 
