@@ -18,11 +18,13 @@
 #include "react_tce.h"
 #include "particle.h"
 #include "collide.h"
+#include "update.h"
 #include "random_knuth.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
 
+enum{NONE,DISCRETE,SMOOTH};
 enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};   // other files
 
 /* ---------------------------------------------------------------------- */
@@ -46,12 +48,15 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
                       double pre_etrans, double pre_erot, double pre_evib,
                       double &post_etotal, int &kspecies)
 {
-  double pre_etotal,ecc,e_excess;
+  double pre_etotal,ecc,e_excess,z;
+  int inmode,jnmode;
   OneReaction *r;
 
   Particle::Species *species = particle->species;
   int isp = ip->ispecies;
   int jsp = jp->ispecies;
+  double ievib = ip->evib;
+  double jevib = jp->evib;
 
   double pre_ave_rotdof = (species[isp].rotdof + species[jsp].rotdof)/2.0;
 
@@ -63,6 +68,12 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
   double react_prob = 0.0;
   double random_prob = random->uniform();
+  double zi = 0.0;
+  double zj = 0.0;
+  int avei = 0;
+  int avej = 0;
+  double iTvib = 0.0;
+  double jTvib = 0.0;
 
   // loop over possible reactions for these 2 species
 
@@ -73,11 +84,65 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
     pre_etotal = pre_etrans + pre_erot + pre_evib;
 
-    ecc = pre_etrans;
-    if (pre_ave_rotdof > 0.1) ecc += pre_erot*r->coeff[0]/pre_ave_rotdof;
+    // two options for total energy in TCE model
+    // 0: partialEnergy = true: rDOF model
+    // 1: partialEnergy = false: TCE: Rotation + Vibration
 
-    e_excess = ecc - r->coeff[1];
+    // average DOFs participating in the reaction
+
+    if (partialEnergy) {
+       ecc = pre_etrans;
+       z = r->coeff[0];
+       if (pre_ave_rotdof > 0.1) ecc += pre_erot*z/pre_ave_rotdof;
+    } else {
+       ecc = pre_etotal;
+       z = pre_ave_rotdof;
+    }
+
+    // Cover cases where coeff[1].neq.coeff[4]
+    if (r->coeff[1]>((-1)*r->coeff[4])) e_excess = ecc - r->coeff[1];
+    else e_excess = ecc + r->coeff[4];
     if (e_excess <= 0.0) continue;
+
+
+    if (!partialEnergy) {
+
+       if (collide->vibstyle == SMOOTH) z += (species[isp].vibdof + species[jsp].vibdof)/2.0;
+       else if (collide->vibstyle == DISCRETE) {
+            inmode = species[isp].nvibmode;
+            jnmode = species[jsp].nvibmode;
+            //Instantaneous z for diatomic molecules
+            if (inmode == 1) {
+                avei = static_cast<int>
+                        (ievib / (update->boltz * species[isp].vibtemp[0]));
+                if (avei > 0) zi = 2.0 * avei * log(1.0 / avei + 1.0);
+                else zi = 0.0;
+            } else if (inmode > 1) {
+                if (ievib < 1e-26 ) zi = 0.0; //Low Energy Cut-Off to prevent nan solutions to newtonTvib
+                //Instantaneous T for polyatomic
+                else {
+                  iTvib = newtonTvib(inmode,ievib,species[isp].vibtemp,3000,1e-4,1000);
+                  zi = (2 * ievib)/(update->boltz * iTvib);
+                }
+            } else zi = 0.0;
+
+            if (jnmode == 1) {
+                avej = static_cast<int>
+                        (jevib / (update->boltz * species[jsp].vibtemp[0]));
+                if (avej > 0) zj = 2.0 * avej * log(1.0 / avej + 1.0);
+                else zj = 0.0;
+            } else if (jnmode > 1) {
+                if (jevib < 1e-26) zj = 0.0;
+                else {
+                  jTvib = newtonTvib(jnmode,jevib,species[jsp].vibtemp,3000,1e-4,1000);
+                  zj = (2 * jevib)/(update->boltz * jTvib);
+                }
+            } else zj = 0.0;
+
+            if (isnan(zi) || isnan(zj) || zi < 0 || zj < 0) error->one(FLERR,"Root-Finding Error");
+            z += 0.5 * (zi+zj);
+       }
+    }
 
     // compute probability of reaction
 
@@ -86,9 +151,9 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
     case IONIZATION:
     case EXCHANGE:
       {
-        react_prob += r->coeff[2] *
-          pow(ecc-r->coeff[1],r->coeff[3]) *
-          pow(1.0-r->coeff[1]/ecc,r->coeff[5]);
+        react_prob += r->coeff[2] * tgamma(z+2.5-r->coeff[5]) / MAX(1.0e-6,tgamma(z+r->coeff[3]+1.5)) *
+          pow(ecc-r->coeff[1],r->coeff[3]-1+r->coeff[5]) *
+          pow(1.0-r->coeff[1]/ecc,z+1.5-r->coeff[5]);
         break;
       }
 
@@ -107,10 +172,14 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
         if (sp2recomb[recomb_species] != list[i]) continue;
 
         react_prob += recomb_boost * recomb_density * r->coeff[2] *
-          pow(ecc,r->coeff[3]) *
-          pow(1.0-r->coeff[1]/ecc,r->coeff[5]);
+          tgamma(z+2.5-r->coeff[5]) / MAX(1.0e-6,tgamma(z+r->coeff[3]+1.5)) *
+          pow(ecc-r->coeff[1],r->coeff[3]-1+r->coeff[5]) *  // extended to general recombination case with non-zero activation energy
+          pow(1.0-r->coeff[1]/ecc,z+1.5-r->coeff[5]);
         break;
       }
+
+    if (react_prob < 0) error->warning(FLERR,"Negative reaction probability");
+    else if (react_prob > 1) error->warning(FLERR,"Reaction probability greater than 1");
 
     default:
       error->one(FLERR,"Unknown outcome in reaction");
@@ -136,33 +205,130 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
     if (react_prob > random_prob) {
       tally_reactions[list[i]]++;
-      ip->ispecies = r->products[0];
 
-      switch (r->type) {
-      case DISSOCIATION:
-      case IONIZATION:
-      case EXCHANGE:
-        {
-          jp->ispecies = r->products[1];
-          break;
-        }
-      case RECOMBINATION:
-        {
-          // always destroy 2nd reactant species
+      if (!computeChemRates) {
+        ip->ispecies = r->products[0];
 
-          jp->ispecies = -1;
-          break;
+        switch (r->type) {
+        case DISSOCIATION:
+        case IONIZATION:
+        case EXCHANGE:
+          {
+            jp->ispecies = r->products[1];
+            break;
+          }
+        case RECOMBINATION:
+          {
+            // always destroy 2nd reactant species
+
+            jp->ispecies = -1;
+            break;
+          }
         }
+
+        if (r->nproduct > 2) kspecies = r->products[2];
+        else kspecies = -1;
+
+        post_etotal = pre_etotal + r->coeff[4];
+
+        return 1;
+      } else {
+        return 0;
       }
-
-      if (r->nproduct > 2) kspecies = r->products[2];
-      else kspecies = -1;
-
-      post_etotal = pre_etotal + r->coeff[4];
-
-      return 1;
     }
   }
 
   return 0;
+}
+
+/* ---------------------------------------------------------------------- */
+
+double ReactTCE::bird_Evib(int nmode, double Tvib,
+                            double vibtemp[],
+                            double Evib)
+{
+  // Comutes f for Newton's search method outlined in newtonTvib()
+
+  double f = -Evib;
+  double kb = 1.38064852e-23;
+
+  for (int i = 0; i < nmode; i++) {
+    const double vti = vibtemp[i];
+    f += (((kb*vti)/(exp(vti/Tvib)-1)));
+  }
+
+  return f;
+}
+
+/* ---------------------------------------------------------------------- */
+
+double ReactTCE::bird_dEvib(int nmode, double Tvib, double vibtemp[])
+{
+  // Comutes df for Newton's search method
+
+  double df = 0.0;
+  double kb = 1.38064852e-23;
+
+  for (int i = 0; i < nmode; i++) {
+    const double vti = vibtemp[i];
+    const double vti2 = vti * vti;
+    const double Tvib2 = Tvib * Tvib;
+    const double k1 = vti/Tvib;
+    const double ek1 = exp(k1);
+    const double k2 = ek1 - 1.0;
+    const double k22 = k2 * k2;
+    df += (vti2*kb*ek1)/(Tvib2*k22);
+  }
+
+  return df;
+}
+
+/* ---------------------------------------------------------------------- */
+
+double ReactTCE::newtonTvib(int nmode, double Evib, double vibTemp[],
+               double Tvib0,
+               double tol,
+               int nmax)
+{
+  // Function for converting vibrational energy to vibrational temperature
+  // Computes Tvib assuming the vibrational energy levels occupy a simple harmonic oscillator (SHO) spacing
+  // Search for Tvib begins at some initial value "Tvib0" until the search reaches a tolerance level "tol"
+
+  double f;
+  double df;
+  double Tvib, Tvib_prev;
+  double err;
+  int i;
+
+  // Uses Newton's method to solve for a vibrational temperature given a
+  // distribution of vibrational energy levels
+
+  // f and df are computed for Newton's search
+
+  f = bird_Evib(nmode,Tvib0,vibTemp,Evib);
+  df = bird_dEvib(nmode,Tvib0,vibTemp);
+
+  // Update guess for Tvib and compute error
+
+  Tvib = Tvib0 - (f/df);
+  err = fabs(Tvib-Tvib0);
+
+  i = 2;
+
+  // Continue to search for Tvib until the error is greater than the tolerance:
+
+  while((err >= tol) && (i <= nmax))
+  {
+    Tvib_prev = Tvib;
+
+    f = bird_Evib(nmode,Tvib,vibTemp,Evib);
+    df = bird_dEvib(nmode,Tvib,vibTemp);
+
+    Tvib = Tvib_prev-(f/df);
+    err = fabs(Tvib-Tvib_prev);
+
+    i++;
+  }
+
+  return Tvib;
 }
