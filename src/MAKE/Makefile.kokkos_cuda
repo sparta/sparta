@@ -1,4 +1,4 @@
-# kokkos_cuda = KOKKOS package with CUDA backend, default MPI, nvcc/mpicxx compiler with OpenMPI or MPICH
+# kokkos_cuda = KOKKOS package with CUDA backend, default MPI, nvcc/mpicxx compiler with OpenMPI or MPICH, cuFFT
 
 SHELL = /bin/sh
 
@@ -46,6 +46,17 @@ SPARTA_INC =	-DSPARTA_GZIP
 MPI_INC =       -DMPICH_SKIP_MPICXX -DOMPI_SKIP_MPICXX=1
 MPI_PATH =      
 MPI_LIB =	
+
+# FFT library, OPTIONAL
+# see discussion in doc/Section_start.html#2_2 (step 6)
+# can be left blank to use provided KISS FFT library
+# INC = -DFFT setting, e.g. -DFFT_FFTW, FFT compiler settings
+# PATH = path for FFT library
+# LIB = name of FFT library
+
+FFT_INC = -DFFT_CUFFT
+FFT_PATH = 
+FFT_LIB = -lcufft
 
 # JPEG library, OPTIONAL
 # see discussion in doc/Section_start.html#2_2 (step 7)

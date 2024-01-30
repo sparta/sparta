@@ -1,4 +1,4 @@
-# kokkos_hip = KOKKOS/HIP, AMD MI250X GPU and AMD EPYC Gen3 CPU, Cray MPICH, hipcc compiler
+# hip_kokkos = KOKKOS/HIP, AMD MI250X GPU and AMD EPYC 7A53 "Optimized 3rd Gen EPYC" CPU, Cray MPICH, hipcc compiler, hipFFT
 
 SHELL = /bin/sh
 
@@ -43,6 +43,19 @@ MPI_INC =       -DMPICH_SKIP_MPICXX -DOMPI_SKIP_MPICXX=1 -I${MPICH_DIR}/include
 MPI_PATH = 
 MPI_LIB = -L${MPICH_DIR}/lib -lmpi -L${CRAY_MPICH_ROOTDIR}/gtl/lib -lmpi_gtl_hsa
 
+# FFT library, OPTIONAL
+# see discussion in doc/Section_start.html#2_2 (step 6)
+# can be left blank to use provided KISS FFT library
+# INC = -DFFT setting, e.g. -DFFT_FFTW, FFT compiler settings
+# PATH = path for FFT library
+# LIB = name of FFT library
+
+MY_HIP_EXE = $(shell which hipcc)
+MY_HIP_PATH = $(dir ${MY_HIP_EXE})
+
+FFT_INC = -DFFT_HIPFFT
+FFT_PATH =
+FFT_LIB = -L${MY_HIP_PATH}../lib -lhipfft
 
 # JPEG library, OPTIONAL
 # see discussion in doc/Section_start.html#2_2 (step 7)

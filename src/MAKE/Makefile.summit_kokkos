@@ -1,4 +1,4 @@
-# summit_kokkos = KOKKOS package with CUDA backend, NVIDIA V100 GPU + IBM Power9 CPU, default MPI, nvcc/mpicxx compiler
+# summit_kokkos = KOKKOS package with CUDA backend, NVIDIA V100 GPU + IBM Power9 CPU, default MPI, nvcc/mpicxx compiler, cuFFT
 
 SHELL = /bin/sh
 
@@ -47,6 +47,17 @@ MY_MPI_PATH = $(dir ${MY_MPI_EXE})
 MPI_INC =       -DMPICH_SKIP_MPICXX -DOMPI_SKIP_MPICXX=1 -I${MY_MPI_PATH}../include
 MPI_PATH =      
 MPI_LIB =	-L${MY_MPI_PATH}../lib -lmpi_ibm
+
+# FFT library, OPTIONAL
+# see discussion in doc/Section_start.html#2_2 (step 6)
+# can be left blank to use provided KISS FFT library
+# INC = -DFFT setting, e.g. -DFFT_FFTW, FFT compiler settings
+# PATH = path for FFT library
+# LIB = name of FFT library
+
+FFT_INC = -DFFT_CUFFT
+FFT_PATH =
+FFT_LIB = -lcufft
 
 # JPEG library, OPTIONAL
 # see discussion in doc/Section_start.html#2_2 (step 7)
