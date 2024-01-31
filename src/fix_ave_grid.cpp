@@ -406,7 +406,8 @@ int FixAveGrid::setmask()
 
 void FixAveGrid::init()
 {
-  // set indices and check validity of all computes,fixes,variables
+  // set indices and check validity of all computes,fixes,variables,
+  //  custom attributes
 
   for (int m = 0; m < nvalues; m++) {
     if (which[m] == COMPUTE) {
@@ -578,7 +579,6 @@ void FixAveGrid::end_of_step()
 	  }
 	} else {
 	  int jm1 = j - 1;
-	  double **custom_array = modify->fix[n]->array_surf;
 	  if (nvalues == 1) {
 	    if (grid->etype[n] == INT) {
 	      int **custom_array = grid->eiarray[grid->ewhich[n]];

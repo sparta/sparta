@@ -471,7 +471,6 @@ void ComputeISurfGrid::post_process_isurf_grid()
   // cinfo does not have mask values for ghost cells
 
   Grid::ChildInfo *cinfo = grid->cinfo;
-  int j;
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) {

@@ -284,17 +284,17 @@ class Grid : protected Pointers {
   // grid_custom.cpp
 
   int find_custom(char *);
-  int add_custom(char *, int, int);
-  void allocate_custom(int);
-  void reallocate_custom(int, int);
-  void remove_custom(int);
-  void copy_custom(int, int);
+  virtual int add_custom(char *, int, int);
+  virtual void allocate_custom(int);
+  virtual void reallocate_custom(int, int);
+  virtual void remove_custom(int);
+  virtual void copy_custom(int, int);
 
   void write_restart_custom(FILE *);
   void read_restart_custom(FILE *);
   int sizeof_custom();
-  int pack_custom(int, char *, int);
-  int unpack_custom(char *, int);
+  virtual int pack_custom(int, char *, int);
+  virtual int unpack_custom(char *, int);
 
   // grid_surf.cpp
 

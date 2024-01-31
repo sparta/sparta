@@ -64,6 +64,10 @@ void surf_tally_kk(int isurf, int icell, int reaction,
                    Particle::OnePart *iorig,
                    Particle::OnePart *ip, Particle::OnePart *jp) const
 {
+  // skip if no particle, called by SurfReactAdsorb for on-surf reaction
+
+  if (!iorig) return;
+
   // skip if isurf not in surface group
 
   if (dim == 2) {

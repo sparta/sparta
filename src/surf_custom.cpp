@@ -88,7 +88,7 @@ int Surf::add_custom(char *name, int type, int size)
         memory->srealloc(eivec,ncustom_ivec*sizeof(int *),"surf:eivec");
       eivec_local = (int **)
         memory->srealloc(eivec_local,ncustom_ivec*sizeof(int *),
-			 "surf:eivec_local");
+                         "surf:eivec_local");
       memory->grow(icustom_ivec,ncustom_ivec,"surf:icustom_ivec");
       icustom_ivec[ncustom_ivec-1] = index;
     } else {
@@ -112,7 +112,7 @@ int Surf::add_custom(char *name, int type, int size)
         memory->srealloc(edvec,ncustom_dvec*sizeof(double *),"surf:edvec");
       edvec_local = (double **)
         memory->srealloc(edvec_local,ncustom_dvec*sizeof(double *),
-			 "surf:edvec_local");
+                         "surf:edvec_local");
       memory->grow(icustom_dvec,ncustom_dvec,"surf:icustom_dvec");
       icustom_dvec[ncustom_dvec-1] = index;
     } else {
@@ -192,24 +192,24 @@ void Surf::reallocate_custom()
 
     if (etype[index] == INT) {
       if (esize[index] == 0) {
-	int *ivector = memory->grow(eivec[ewhich[index]],nnew,"surf:eivec");
-	if (nnew > nold) memset(&ivector[nold],0,(nnew-nold)*sizeof(int));
+        int *ivector = memory->grow(eivec[ewhich[index]],nnew,"surf:eivec");
+        if (nnew > nold) memset(&ivector[nold],0,(nnew-nold)*sizeof(int));
       } else {
-	int **iarray = memory->grow(eiarray[ewhich[index]],
-				    nnew,eicol[ewhich[index]],"surf:eiarray");
-	if (nnew > nold)
-	  memset(iarray[nold],0,(nnew-nold)*eicol[ewhich[index]]*sizeof(int));
+        int **iarray = memory->grow(eiarray[ewhich[index]],
+                                    nnew,eicol[ewhich[index]],"surf:eiarray");
+        if (nnew > nold)
+        memset(iarray[nold],0,(nnew-nold)*eicol[ewhich[index]]*sizeof(int));
       }
 
     } else {
       if (esize[index] == 0) {
-	double *dvector = memory->grow(edvec[ewhich[index]],nnew,"surf:edvec");
-	if (nnew > nold) memset(&dvector[nold],0,(nnew-nold)*sizeof(double));
+        double *dvector = memory->grow(edvec[ewhich[index]],nnew,"surf:edvec");
+        if (nnew > nold) memset(&dvector[nold],0,(nnew-nold)*sizeof(double));
       } else {
-	double **darray = memory->grow(edarray[ewhich[index]],
-				       nnew,edcol[ewhich[index]],"surf:eearray");
-	if (nnew > nold)
-	  memset(darray[nold],0,(nnew-nold)*edcol[ewhich[index]]*sizeof(double));
+        double **darray = memory->grow(edarray[ewhich[index]],
+                                       nnew,edcol[ewhich[index]],"surf:eearray");
+        if (nnew > nold)
+          memset(darray[nold],0,(nnew-nold)*edcol[ewhich[index]]*sizeof(double));
       }
     }
   }
@@ -239,7 +239,7 @@ void Surf::remove_custom(int index)
         ewhich[icustom_ivec[i]] = i;
         eivec[i] = eivec[i+1];
       }
-    } else{
+    } else {
       memory->destroy(eiarray[ewhich[index]]);
       ncustom_iarray--;
       for (int i = ewhich[index]; i < ncustom_iarray; i++) {
@@ -289,23 +289,23 @@ void Surf::spread_custom(int index)
   if (etype[index] == INT) {
     if (esize[index] == 0) {
       if (nlocal+nghost != size_custom_local[index]) {
-	memory->destroy(eivec_local[ewhich[index]]);
-	size_custom_local[index] = nlocal + nghost;
-	memory->create(eivec_local[ewhich[index]],size_custom_local[index],
-		       "surf/spread:eivec_local_vec");
+        memory->destroy(eivec_local[ewhich[index]]);
+        size_custom_local[index] = nlocal + nghost;
+        memory->create(eivec_local[ewhich[index]],size_custom_local[index],
+                       "surf/spread:eivec_local_vec");
       }
 
       spread_own2local(1,INT,eivec[ewhich[index]],
-		       eivec_local[ewhich[index]]);
+                       eivec_local[ewhich[index]]);
 
     } else if (esize[index]) {
       if (nlocal+nghost != size_custom_local[index]) {
-	memory->destroy(eiarray_local[ewhich[index]]);
-	size_custom_local[index] = nlocal + nghost;
-	if (size_custom_local[index])
-	  memory->create(eiarray_local[ewhich[index]],size_custom_local[index],
-			 esize[index],"surf/spread:eiarray_local_array");
-	else eiarray_local[ewhich[index]] = NULL;
+        memory->destroy(eiarray_local[ewhich[index]]);
+        size_custom_local[index] = nlocal + nghost;
+        if (size_custom_local[index])
+          memory->create(eiarray_local[ewhich[index]],size_custom_local[index],
+                         esize[index],"surf/spread:eiarray_local_array");
+        else eiarray_local[ewhich[index]] = NULL;
       }
 
       int *in,*out;
@@ -319,23 +319,23 @@ void Surf::spread_custom(int index)
   } else if (etype[index] == DOUBLE) {
     if (esize[index] == 0) {
       if (nlocal+nghost != size_custom_local[index]) {
-	memory->destroy(edvec_local[ewhich[index]]);
-	size_custom_local[index] = nlocal + nghost;
-	memory->create(edvec_local[ewhich[index]],size_custom_local[index],
-		       "surf/spread:edvec_local_vec");
+        memory->destroy(edvec_local[ewhich[index]]);
+        size_custom_local[index] = nlocal + nghost;
+        memory->create(edvec_local[ewhich[index]],size_custom_local[index],
+                       "surf/spread:edvec_local_vec");
       }
 
       spread_own2local(1,DOUBLE,edvec[ewhich[index]],
-		       edvec_local[ewhich[index]]);
+                       edvec_local[ewhich[index]]);
 
     } else if (esize[index]) {
       if (nlocal+nghost != size_custom_local[index]) {
-	memory->destroy(edarray_local[ewhich[index]]);
-	size_custom_local[index] = nlocal + nghost;
-	if (size_custom_local[index])
-	  memory->create(edarray_local[ewhich[index]],size_custom_local[index],
-			 esize[index],"surf/spread:edvec_local_array");
-	else edarray_local[ewhich[index]] = NULL;
+        memory->destroy(edarray_local[ewhich[index]]);
+        size_custom_local[index] = nlocal + nghost;
+        if (size_custom_local[index])
+          memory->create(edarray_local[ewhich[index]],size_custom_local[index],
+                         esize[index],"surf/spread:edvec_local_array");
+        else edarray_local[ewhich[index]] = NULL;
       }
 
       double *in,*out;
@@ -360,7 +360,7 @@ void Surf::spread_inverse_custom(int index)
   if (etype[index] == INT) {
     if (esize[index] == 0) {
       spread_local2own(1,INT,eivec_local[ewhich[index]],
-		       eivec[ewhich[index]]);
+                       eivec[ewhich[index]]);
 
     } else if (esize[index]) {
       int *in,*out;
@@ -374,7 +374,7 @@ void Surf::spread_inverse_custom(int index)
   } else if (etype[index] == DOUBLE) {
     if (esize[index] == 0) {
       spread_local2own(1,DOUBLE,edvec_local[ewhich[index]],
-		       &edvec[ewhich[index]]);
+                       &edvec[ewhich[index]]);
 
     } else if (esize[index]) {
       double *in,*out;

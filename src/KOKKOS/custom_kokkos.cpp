@@ -12,53 +12,50 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#include "mpi.h"
-#include "string.h"
 #include "stdlib.h"
-#include "ctype.h"
-#include "read_surf_kokkos.h"
-#include "math_extra.h"
-#include "surf_kokkos.h"
+#include "string.h"
+#include "custom.h"
 #include "domain.h"
-#include "grid.h"
 #include "comm.h"
-#include "geometry.h"
+#include "particle.h"
+#include "grid.h"
+#include "surf.h"
+#include "mixture.h"
+#include "region.h"
 #include "input.h"
-#include "write_surf.h"
+#include "variable.h"
 #include "math_const.h"
-#include "memory_kokkos.h"
+#include "memory.h"
 #include "error.h"
-#include "kokkos_type.h"
-#include "sparta_masks.h"
-#include "kokkos.h"
 
 using namespace SPARTA_NS;
 using namespace MathConst;
 
-enum{NEITHER,BAD,GOOD};
-enum{NONE,CHECK,KEEP};
-enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
-
-#define MAXLINE 256
-#define CHUNK 1024
-#define EPSILON_NORM 1.0e-12
-#define EPSILON_GRID 1.0e-3
-#define BIG 1.0e20
-#define DELTA 1024
+enum{SET,REMOVE};
+enum{EQUAL,PARTICLE,GRID,SURF};
+enum{INT,DOUBLE};                       // several files
 
 /* ---------------------------------------------------------------------- */
 
-ReadSurfKokkos::ReadSurfKokkos(SPARTA *sparta) : ReadSurf(sparta)
+CustomKokkos::CustomKokkos(SPARTA *sparta) : Custom(sparta) {}
+
+/* ---------------------------------------------------------------------- */
+
+int CustomKokkos::set_particle(double scalar, double *vector)
 {
 
 }
 
 /* ---------------------------------------------------------------------- */
 
-void ReadSurfKokkos::command(int narg, char **arg)
+int CustomKokkos::set_grid(double scalar, double *vector)
 {
-  ReadSurf::command(narg,arg);
 
-  SurfKokkos* surf_kk = (SurfKokkos*) surf;
-  surf_kk->modify(Host,ALL_MASK);
+}
+
+/* ---------------------------------------------------------------------- */
+
+int CustomKokkos::set_surf(double scalar, double *vector)
+{
+
 }
