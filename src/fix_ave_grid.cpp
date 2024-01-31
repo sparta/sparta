@@ -544,9 +544,9 @@ void FixAveGrid::end_of_step()
             tally[i][k] += fix_vector[i];
         } else {
           int jm1 = j - 1;
-        double **fix_array = modify->fix[n]->array_grid;
-        for (i = 0; i < nglocal; i++)
-          tally[i][k] += fix_array[i][jm1];
+          double **fix_array = modify->fix[n]->array_grid;
+          for (i = 0; i < nglocal; i++)
+            tally[i][k] += fix_array[i][jm1];
         }
 
       // evaluate grid-style variable, sum values to Kth column of tally array
@@ -560,42 +560,22 @@ void FixAveGrid::end_of_step()
       } else if (which[m] == CUSTOM) {
         k = umap[m][0];
 	if (j == 0) {
-	  if (nvalues == 1) {
-	    if (grid->etype[n] == INT) {
-	      int *custom_vector = grid->eivec[grid->ewhich[n]];
-	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_vector[i];
-	    } else if (grid->etype[n] == DOUBLE) {
-	      double *custom_vector = grid->edvec[grid->ewhich[n]];
-	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_vector[i];
-	    }
-	  } else {
-	    if (grid->etype[n] == INT) {
-	      int *custom_vector = grid->eivec[grid->ewhich[n]];
-	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_vector[i];
-	    } else if (grid->etype[n] == DOUBLE) {
-	      double *custom_vector = grid->edvec[grid->ewhich[n]];
-	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_vector[i];
-	    }
-	  }
+          if (grid->etype[n] == INT) {
+            int *custom_vector = grid->eivec[grid->ewhich[n]];
+            for (i = 0; i < nglocal; i++) tally[i][k] += custom_vector[i];
+          } else if (grid->etype[n] == DOUBLE) {
+            double *custom_vector = grid->edvec[grid->ewhich[n]];
+            for (i = 0; i < nglocal; i++) tally[i][k] += custom_vector[i];
+          }
 	} else {
 	  int jm1 = j - 1;
-	  if (nvalues == 1) {
-	    if (grid->etype[n] == INT) {
-	      int **custom_array = grid->eiarray[grid->ewhich[n]];
-	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_array[i][jm1];
-	    } else if (grid->etype[n] == DOUBLE) {
-	      double **custom_array = grid->edarray[grid->ewhich[n]];
-	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_array[i][jm1];
-	    }
-	  } else {
-	    if (grid->etype[n] == INT) {
-	      int **custom_array = grid->eiarray[grid->ewhich[n]];
-	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_array[i][jm1];
-	    } else if (grid->etype[n] == DOUBLE) {
-	      double **custom_array = grid->edarray[grid->ewhich[n]];
-	      for (i = 0; i < nglocal; i++) tally[i][k] += custom_array[i][jm1];
-	    }
-	  }
+          if (grid->etype[n] == INT) {
+            int **custom_array = grid->eiarray[grid->ewhich[n]];
+            for (i = 0; i < nglocal; i++) tally[i][k] += custom_array[i][jm1];
+          } else if (grid->etype[n] == DOUBLE) {
+            double **custom_array = grid->edarray[grid->ewhich[n]];
+            for (i = 0; i < nglocal; i++) tally[i][k] += custom_array[i][jm1];
+          }
 	}
       }
     }
