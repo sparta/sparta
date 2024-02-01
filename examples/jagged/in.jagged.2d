@@ -23,7 +23,7 @@ global              surfmax 1000
 species		    air.species N O
 mixture		    air N O vstream 100.0 0 0 
 
-read_surf           sdata.100x100 &
+read_surf           sdata.100x100 type &
                     origin 0.5 0.5 0.0 trans 4.5 4.5 0.0 scale 9 9 1
 
 surf_collide	    1 diffuse 300.0 0.0
