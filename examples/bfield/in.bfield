@@ -57,7 +57,7 @@ variable gradBy particle "mu/mass * (v_ByEps - v_By) / v_eps"
 fix      1 field/particle gradBx gradBy NULL
 global   field particle 1
 
-dump                10 particle all 1000 tmp.dump.* id type f_1[*]
+#dump                10 particle all 1000 tmp.dump.* id type f_1[*]
 
 # ---------------------------------------
 
