@@ -38,13 +38,13 @@ ComputeTelecGrid::ComputeTelecGrid(SPARTA *sparta, int narg, char **arg) :
   while (iarg < narg) {
     error->all(FLERR,"Illegal compute telec/grid command");
   }
-  
+
   ngroup = particle->mixture[imix]->ngroup;
   mixspecies = particle->mixture[imix]->nspecies;
   nspecies = particle->nspecies;
 
   ntally = 2*mixspecies;
-  
+
   per_grid_flag = 1;
   size_per_grid_cols = 0;
   post_process_grid_flag = 1;

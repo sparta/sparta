@@ -208,7 +208,7 @@ void Collide::init()
 
   if (elecstyle == DISCRETE) {
     int index_elecstate = particle->find_custom((char *) "elecstate");
-    
+
     if (index_elecstate < 0) {
         error->all(FLERR,
                    "Fix elecmode must be used with discrete electronic modes");

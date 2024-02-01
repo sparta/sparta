@@ -620,7 +620,7 @@ void CollideVSS::relax_electronic_mode(Particle::OnePart *p, Particle::OnePart *
     params[p->ispecies][jp->ispecies].omega,
     species[p->ispecies].enforce_spin_conservation[jp->ispecies] );
   double eelec = species[p->ispecies].electemp[ielec]*update->boltz;
-  
+
   eelecs[p - particle->particles] = eelec;
 
   char data_name_2[] = "elecstate";
@@ -682,7 +682,7 @@ int CollideVSS::select_elec_state(Particle::OnePart *p, Particle::OnePart *jp, d
     ++max_level;
   }
   --max_level;
-         
+
   // Calculate number of total states, including degeneracies
   double state_probability[Particle::MAXELECSTATE];
   for( int state = 0; state <= max_level; ++state) {
@@ -691,7 +691,7 @@ int CollideVSS::select_elec_state(Particle::OnePart *p, Particle::OnePart *jp, d
     } else {
       state_probability[state] = 0.0;
     }
-    if ( ! enforce_spin_conservation || 
+    if ( ! enforce_spin_conservation ||
            species[p->ispecies].elecspin[state] == species[p->ispecies].elecspin[estates[p - particle->particles]]) {
       // Note we can use E_Dispose here since the current implementation requires the collision numbers
       // to be collision invariant (and therefore depend on E_Dispose, the trans + elec energy) but this

@@ -1067,7 +1067,7 @@ void Stats::compute_tpcpu()
   double new_cpu;
   double new_time = update->time +
    (update->ntimestep - update->time_last_update) * update->dt;
-  
+
   if (firststep == 0) {
     new_cpu = 0.0;
     dvalue = 0.0;

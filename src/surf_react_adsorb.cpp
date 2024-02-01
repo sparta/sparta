@@ -2887,7 +2887,7 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
             int id = MAXSMALLINT*random->uniform();
             random_point(isurf,x);
             v[0] = v[1] = v[2] = 0.0;
-  
+
             particle->add_particle(id,r->products[0],0,x,v,0.0,0.0);
             p = &particle->particles[particle->nlocal-1];
             p->dtremain = update->dt*random->uniform();
@@ -2915,7 +2915,7 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
             int id = MAXSMALLINT*random->uniform();
             random_point(isurf,x);
             v[0] = v[1] = v[2] = 0.0;
-  
+
             particle->add_particle(id,r->products[0],0,x,v,0.0,0.0);
             p = &particle->particles[particle->nlocal-1];
             p->dtremain = update->dt*random->uniform();
@@ -2932,7 +2932,7 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
 
             add_particle_mine(p);
             particle->nlocal--;
-  
+
             break;
           }
 
