@@ -613,7 +613,7 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,1> >(pstart,pstop),*this);
 #elif defined KOKKOS_ENABLE_SERIAL
       if constexpr(std::is_same<DeviceType,Kokkos::Serial>::value)
-        Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,0> >(pstart,pstop),*this,reduce);
+        Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,-1> >(pstart,pstop),*this,reduce);
       else {
         if (!sparta->kokkos->need_atomics)
           Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,0> >(pstart,pstop),*this);
@@ -954,12 +954,12 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
 
           particle_i.flag = PDONE;
 
-	  if (ATOMIC_REDUCTION == 1)
-	    Kokkos::atomic_increment(&d_ncomm_one());
-	  else if (ATOMIC_REDUCTION == 0)
-	    d_ncomm_one()++;
-	  else
-	    reduce.ncomm_one++;
+          if (ATOMIC_REDUCTION == 1)
+            Kokkos::atomic_increment(&d_ncomm_one());
+          else if (ATOMIC_REDUCTION == 0)
+            d_ncomm_one()++;
+          else
+            reduce.ncomm_one++;
         }
 
         return;
@@ -1715,17 +1715,8 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
           jpart->weight = particle_i.weight;
         }
 
-        if (ATOMIC_REDUCTION == 1) {
-          Kokkos::atomic_increment(&d_nboundary_one());
-          Kokkos::atomic_decrement(&d_ntouch_one());    // decrement here since will increment below
-        } else if (ATOMIC_REDUCTION == 0) {
-          d_nboundary_one()++;
-          d_ntouch_one()--;    // decrement here since will increment below
-        } else {
-          reduce.nboundary_one++;
-          reduce.ntouch_one--;    // decrement here since will increment below
-        }
-
+        Kokkos::atomic_increment(&d_nboundary_one());
+        Kokkos::atomic_decrement(&d_ntouch_one());    // decrement here since will increment below
       } else {
         if (ATOMIC_REDUCTION == 1) {
           Kokkos::atomic_increment(&d_nboundary_one());

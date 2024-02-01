@@ -610,7 +610,7 @@ void FixEmitFace::perform_task_onepass()
         double eelec = particle->eelec(ispecies,temp_elec,random);
         id = MAXSMALLINT*random->uniform();
 
-	      particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+        particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
         nactual++;
 
         p = &particle->particles[particle->nlocal-1];

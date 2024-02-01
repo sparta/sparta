@@ -1167,6 +1167,8 @@ double Particle::evib(int isp, double temp_thermal, RanKnuth *erandom)
   return eng;
 }
 
+/* ---------------------------------------------------------------------- */
+
 double Particle::eelec(int isp, double temp_elec, RanKnuth *erandom)
 {
   double energy = 0.0;
@@ -1192,6 +1194,8 @@ double Particle::eelec(int isp, double temp_elec, RanKnuth *erandom)
   }
   return energy;
 }
+
+/* ---------------------------------------------------------------------- */
 
 void Particle::electronic_distribution_func( int isp, double temp_elec, double* distribution ) {
   int elecstyle = NONE;
@@ -1445,8 +1449,8 @@ void Particle::read_electronic_file()
     if (nfile == maxfile) {
       maxfile += DELTASPECIES;
       fileelec = (ElecFile *)
-	memory->srealloc(fileelec,maxfile*sizeof(ElecFile),
-			 "particle:fileelec");
+      memory->srealloc(fileelec,maxfile*sizeof(ElecFile),
+                       "particle:fileelec");
       memset(&fileelec[nfile],0,(maxfile-nfile)*sizeof(ElecFile));
     }
 
