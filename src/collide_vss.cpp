@@ -225,8 +225,7 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 
   precoln.ave_rotdof = 0.5 * (species[isp].rotdof + species[jsp].rotdof);
   precoln.ave_vibdof = 0.5 * (species[isp].vibdof + species[jsp].vibdof);
-  precoln.ave_elecdof = 0.5 * (species[isp].elecdof + species[jsp].elecdof);
-  precoln.ave_dof = (precoln.ave_rotdof + precoln.ave_vibdof + precoln.ave_elecdof)/3.;
+  precoln.ave_dof = (precoln.ave_rotdof + precoln.ave_vibdof)/2.;
 
   double imass = precoln.imass = species[isp].mass;
   double jmass = precoln.jmass = species[jsp].mass;

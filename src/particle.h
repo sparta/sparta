@@ -45,8 +45,9 @@ class Particle : protected Pointers {
     int vibdegen[MAXVIBMODE];     // vibrational mode degeneracies
     int elecdegen[MAXELECSTATE];    // electronic state degeneracies
     int elecspin[MAXELECSTATE];    // electronic state spin degeneracy (singlet, triplet, etc)
-    int rotdof,vibdof,elecdof;      // rotational/vibrational DOF
-    int nrottemp,nvibmode,nelecstate;  // # of rotational/vibrational/electronic temps/modes defined
+    int rotdof,vibdof;      // rotational/vibrational DOF
+    int nrottemp,nvibmode;  // # of rotational/vibrational/electronic temps/modes defined
+    int nelecstate;
     int internaldof;        // 1 if either rotdof or vibdof != 0
     int vibdiscrete_read;   // 1 if species.vib file read for this species
     int elecdiscrete_read;   // 1 if species.elec file read for this species

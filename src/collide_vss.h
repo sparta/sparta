@@ -47,7 +47,6 @@ class CollideVSS : public Collide {
     double imass,jmass;
     double ave_rotdof;
     double ave_vibdof;
-    double ave_elecdof;
     double ave_dof;
     double etrans;
     double erot;
