@@ -83,7 +83,6 @@ class CollideVSS : public Collide {
 
   Params **params;             // VSS params for each species
   int nparams;                // # of per-species params read in
-  int eelec_index;
 
   void SCATTER_TwoBodyScattering(Particle::OnePart *,
                                  Particle::OnePart *);

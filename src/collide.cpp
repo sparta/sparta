@@ -207,7 +207,8 @@ void Collide::init()
   }
 
   if (elecstyle == DISCRETE) {
-    int index_elecstate = particle->find_custom((char *) "elecstate");
+    index_elecstate = particle->find_custom((char *) "elecstate");
+    index_eelec = particle->find_custom((char *) "eelec");
 
     if (index_elecstate < 0) {
         error->all(FLERR,

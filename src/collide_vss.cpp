@@ -94,10 +94,6 @@ void CollideVSS::init()
   if (nparams != particle->nspecies)
     error->all(FLERR,"VSS parameters do not match current species");
 
-  eelec_index = 0;
-  char data_name[] = "eelec";
-  eelec_index = particle->find_custom(data_name);
-
   Collide::init();
 }
 
@@ -234,8 +230,8 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
   precoln.erot = ip->erot + jp->erot;
   precoln.evib = ip->evib + jp->evib;
   precoln.eelec = 0.0;
-  if (eelec_index >= 0) {
-    double *eelecs = particle->edvec[particle->ewhich[eelec_index]];
+  if (index_eelec >= 0) {
+    double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
     if (species[isp].nelecstate > 0)
       precoln.eelec += eelecs[ip - particle->particles];
     if (species[jsp].nelecstate > 0)
@@ -347,8 +343,8 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
       // but still need to add 3rd body internal energy
 
       double partial_energy =  postcoln.etotal + p3->erot + p3->evib;
-      if (eelec_index >= 0) {
-        double *eelecs = particle->edvec[particle->ewhich[eelec_index]];
+      if (index_eelec >= 0) {
+        double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
         if (species[p3->ispecies].nelecstate > 0)
           partial_energy += eelecs[p3 - particle->particles];
       }
@@ -572,9 +568,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
         postcoln.evib += p->evib;
       } // end of vibdof if
       if (species[sp].nelecstate > 0) {
-        char data_name[] = "elecstate";
-        int estate_index = particle->find_custom(data_name);
-        int *estates = particle->eivec[particle->ewhich[estate_index]];
+        int *estates = particle->eivec[particle->ewhich[index_elecstate]];
         double elec_phi = get_elec_phi(p->ispecies, jp->ispecies, estates[p - particle->particles], E_Dispose);
         if (elec_phi >= random->uniform()) {
           relax_electronic_mode(p, jp, E_Dispose);
@@ -588,8 +582,8 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   postcoln.erot = ip->erot + jp->erot;
   postcoln.evib = ip->evib + jp->evib;
   postcoln.eelec = 0.0;
-  if (eelec_index >= 0) {
-    double *eelecs = particle->edvec[particle->ewhich[eelec_index]];
+  if (index_eelec >= 0) {
+    double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
     if (species[ip->ispecies].nelecstate > 0)
       postcoln.eelec += eelecs[ip - particle->particles];
     if (species[jp->ispecies].nelecstate > 0)
@@ -607,7 +601,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
 void CollideVSS::relax_electronic_mode(Particle::OnePart *p, Particle::OnePart *jp, double& E_Dispose)
 {
   Particle::Species *species = particle->species;
-  double *eelecs = particle->edvec[particle->ewhich[eelec_index]];
+  double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
   E_Dispose += eelecs[p - particle->particles];
 
   int ielec = select_elec_state(
@@ -618,9 +612,7 @@ void CollideVSS::relax_electronic_mode(Particle::OnePart *p, Particle::OnePart *
 
   eelecs[p - particle->particles] = eelec;
 
-  char data_name_2[] = "elecstate";
-  int estate_index = particle->find_custom(data_name_2);
-  int *estates = particle->eivec[particle->ewhich[estate_index]];
+  int *estates = particle->eivec[particle->ewhich[index_elecstate]];
   estates[p - particle->particles] = ielec;
   E_Dispose -= eelecs[p - particle->particles];
 }
@@ -665,10 +657,8 @@ int CollideVSS::select_elec_state(Particle::OnePart *p, Particle::OnePart *jp, d
   int max_level;
   double AdjustFactor = 0.99999999;
   Particle::Species *species = particle->species;
-  double *eelecs = particle->edvec[particle->ewhich[eelec_index]];
-  char data_name_2[] = "elecstate";
-  int estate_index = particle->find_custom(data_name_2);
-  int *estates = particle->eivec[particle->ewhich[estate_index]];
+  double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
+  int *estates = particle->eivec[particle->ewhich[index_elecstate]];
   // Find the maximum electronic level it can be in, given the current E_dispose
   max_level = 0;
   while (E_Dispose > species[p->ispecies].electemp[max_level]*update->boltz && max_level < species[p->ispecies].nelecstate) {
@@ -738,8 +728,8 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
   double mr = mass_ij * mass_k / (mass_ij + mass_k);
   postcoln.eint = ip->erot + jp->erot + kp->erot
                 + ip->evib + jp->evib + kp->evib;
-  if (eelec_index >= 0) {
-    double *eelecs = particle->edvec[particle->ewhich[eelec_index]];
+  if (index_eelec >= 0) {
+    double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
     if (species[ip->ispecies].nelecstate > 0)
       postcoln.eint += eelecs[ip - particle->particles];
     if (species[jp->ispecies].nelecstate > 0)
@@ -805,15 +795,15 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
   double AdjustFactor = 0.99999999;
 
   double *eelecs = NULL;
-  if (eelec_index >= 0) {
-    eelecs = particle->edvec[particle->ewhich[eelec_index]];
+  if (index_eelec >= 0) {
+    eelecs = particle->edvec[particle->ewhich[index_eelec]];
   }
   if (!kp) {
     ip->erot = 0.0;
     jp->erot = 0.0;
     ip->evib = 0.0;
     jp->evib = 0.0;
-    if (eelec_index >= 0) {
+    if (index_eelec >= 0) {
       if (species[ip->ispecies].nelecstate > 0)
         eelecs[ip - particle->particles] = 0.0;
       if (species[jp->ispecies].nelecstate > 0)
@@ -828,7 +818,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     ip->evib = 0.0;
     jp->evib = 0.0;
     kp->evib = 0.0;
-    if (eelec_index >= 0) {
+    if (index_eelec >= 0) {
       if (species[ip->ispecies].nelecstate > 0)
         eelecs[ip - particle->particles] = 0.0;
       if (species[jp->ispecies].nelecstate > 0)
@@ -928,9 +918,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
       }
     }
     if (species[sp].nelecstate > 0) {
-      char data_name[] = "elecstate";
-      int estate_index = particle->find_custom(data_name);
-      int *estates = particle->eivec[particle->ewhich[estate_index]];
+      int *estates = particle->eivec[particle->ewhich[index_elecstate]];
       double elec_phi = get_elec_phi(p->ispecies, jp->ispecies, estates[p - particle->particles], E_Dispose);
       if (elec_phi >= random->uniform()) {
         relax_electronic_mode(p, jp, E_Dispose);
@@ -943,8 +931,8 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
   postcoln.erot = ip->erot + jp->erot;
   postcoln.evib = ip->evib + jp->evib;
   postcoln.eelec = 0.0;
-  if (eelec_index >= 0) {
-    double *eelecs = particle->edvec[particle->ewhich[eelec_index]];
+  if (index_eelec >= 0) {
+    double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
     if (species[ip->ispecies].nelecstate > 0)
       postcoln.eelec += eelecs[ip - particle->particles];
     if (species[jp->ispecies].nelecstate > 0)
@@ -954,8 +942,8 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
   if (kp) {
     postcoln.erot += kp->erot;
     postcoln.evib += kp->evib;
-    if (eelec_index >= 0) {
-      double *eelecs = particle->edvec[particle->ewhich[eelec_index]];
+    if (index_eelec >= 0) {
+      double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
       if (species[kp->ispecies].nelecstate > 0)
         postcoln.eelec += eelecs[kp - particle->particles];
     }

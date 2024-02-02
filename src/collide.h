@@ -111,6 +111,11 @@ class Collide : protected Pointers {
 
   int index_vibmode;   // index to custom vibmode vector
 
+  // electronic excitation data structs
+
+  int index_elecstate; // index to custom elecstate vector
+  int index_eelec;     // index to custom eelec vector
+
   // ambipolar approximation data structs
 
   int ambiflag;       // 1 if ambipolar option is enabled
