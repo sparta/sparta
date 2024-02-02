@@ -103,6 +103,6 @@ void FixElecmode::update_custom(int index, double temp_thermal,
 
   if (nstate == 0) return;
 
-  elecstate[index - particle->particles] = 0;
-  eelec[index - particle->particles] = 0.0;
+  elecstate[index] = 0;
+  eelec[index] = 0.0;
 }
