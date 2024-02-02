@@ -58,6 +58,7 @@
                      ramp(x,y), stagger(x,y), logfreq(x,y,z), stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
     special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
     particle vectors = id, type, mass, q, mu, x, y, z, vx, vy, vz
+    grid vectors = cxlo, cxhi, cylo, cyhi, czlo, czhi
     compute references = c_ID, c_ID[I], c_ID[I][J]
     fix references = f_ID, f_ID[I], f_ID[I][J]
     custom attribute references = p_name, p_name[I], g_name, g_name[I], s_name, s_name[I]
@@ -350,8 +351,9 @@ example, this is a valid (though strange) variable formula:
 <PRE>variable x equal "np + c_MyTemp / vol^(1/3)" 
 </PRE>
 <P>Specifically, a formula can contain numbers, stats keywords, math
-operators, math functions, particle vectors, compute references, fix
-references, custom attribute references, and other variables.
+operators, math functions, particle vectors, grid vectors, compute
+references, fix references, custom attribute references, and other
+variables.
 </P>
 <DIV ALIGN=center><TABLE  BORDER=1 >
 <TR><TD >Number</TD><TD > 0.2, 100, 1.0e20, -15.4, etc</TD></TR>
@@ -361,6 +363,7 @@ references, custom attribute references, and other variables.
 <TR><TD >Math functions</TD><TD > sqrt(x), exp(x), ln(x), log(x), abs(x), sin(x), cos(x), tan(x),      asin(x), acos(x), atan(x), atan2(y,x), erf(x), random(x,y,z), normal(x,y,z),      ceil(x), floor(x), round(x), ramp(x,y), stagger(x,y), logfreq(x,y,z),      stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)</TD></TR>
 <TR><TD >Special functions</TD><TD > sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)</TD></TR>
 <TR><TD >Particle vectors</TD><TD > id, type, mass, q, mu, x, y, z, vx, vy, vz</TD></TR>
+<TR><TD >Grid vectors = cxlo, cxhi, cylo, cyhi, czlo, czhi</TD></TR>
 <TR><TD >Compute references</TD><TD > c_ID, c_ID[I], c_ID[I][J]</TD></TR>
 <TR><TD >Fix references</TD><TD > f_ID, f_ID[I], f_ID[I][J]</TD></TR>
 <TR><TD >Custom attribute references = name_ID, name_ID[I], name_ID, name_ID[I], name_ID, name_ID[I]</TD></TR>
@@ -373,12 +376,12 @@ references, custom attribute references, and other variables.
 
 <P>Most of the formula elements produce a scalar value.  A few produce a
 per-particle vector or per-grid vector or per-surf vector of values.
-These are the particle vectors, compute and fix references that
-represent a per-particle or per-grid vector or per-surf vector, and
-variables that are particle-style or grid-style or surf-style
-variables.  Math functions that operate on scalar values produce a
-scalar value; math functions that operate on per-particle or per-grid
-or per-surf vectors do so element-by-element and produce a
+These are the particle vectors, grid vectors, compute and fix
+references that represent a per-particle or per-grid vector or
+per-surf vector, and variables that are particle-style or grid-style
+or surf-style variables.  Math functions that operate on scalar values
+produce a scalar value; math functions that operate on per-particle or
+per-grid or per-surf vectors do so element-by-element and produce a
 per-particle or per-grid or per-surf vectors.
 </P>
 <P>A formula for equal-style variables cannot use any formula element
@@ -637,8 +640,21 @@ is the mass for the particle's species, "q" is the particle's charge,
 <P>Particle vectors can only be used in <I>particle</I> style variables, not
 in <I>equal</I> or <I>grid</I> or <I>surf</I> style varaibles.
 </P>
-<P>z:line
+<HR>
+
+<H4>Grid Vectors 
+</H4>
+<P>Grid vectors generate one value per grid cell, so that a reference
+like "cxhi" means the x-component of each grid cell's upper right
+corner will be used when evaluating the variable.
 </P>
+<P>The meaning of the other grid vectors should be self-explanatory.
+</P>
+<P>Grid vectors can only be used in <I>grid</I> style variables, not in
+<I>equal</I> or <I>particle</I> or <I>surf</I> style varaibles.
+</P>
+<HR>
+
 <H4>Compute References 
 </H4>
 <P>Compute references access quantities calculated by a
