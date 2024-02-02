@@ -63,7 +63,8 @@ FixElecmode::~FixElecmode()
   if (copy) return;
 
   delete random;
-  particle->remove_custom(elecmodeindex);
+  particle->remove_custom(elecstateindex);
+  particle->remove_custom(eelecindex);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -93,8 +94,8 @@ void FixElecmode::update_custom(int index, double temp_thermal,
                                double temp_rot, double temp_vib,
                                double *vstream)
 {
-  int *elecstate = particle->eivec[particle->ewhich[elecmodeindex]];
-  double *eelec = particle->edvec(particle->ewhich[eelecindex]];
+  int *elecstate = particle->eivec[particle->ewhich[elecstateindex]];
+  double *eelec = particle->edvec[particle->ewhich[eelecindex]];
 
   int isp = particle->particles[index].ispecies;
   int nstate = particle->species[isp].nelecstate;
