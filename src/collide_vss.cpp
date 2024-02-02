@@ -97,7 +97,7 @@ void CollideVSS::init()
   eelec_index = 0;
   char data_name[] = "eelec";
   eelec_index = particle->find_custom(data_name);
-  
+
   Collide::init();
 }
 
