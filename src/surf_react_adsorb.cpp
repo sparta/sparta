@@ -534,6 +534,9 @@ void SurfReactAdsorb::init()
   int nslocal = surf->nlocal;
   int nsown = surf->nown;
 
+  area = surf->edvec[surf->ewhich[area_index]];
+  weight = surf->edvec[surf->ewhich[weight_index]];
+  
   int isr;
 
   if (!distributed) {
@@ -588,11 +591,11 @@ void SurfReactAdsorb::init()
     surf->spread_custom(weight_index);
     if (psflag) surf->spread_custom(tau_index);
 
-    total_state = surf->eivec_local[total_state_index];
-    species_state = surf->eiarray_local[species_state_index];
-    area = surf->edvec_local[area_index];
-    weight = surf->edvec_local[weight_index];
-    if (psflag) tau = surf->edarray_local[tau_index];
+    total_state = surf->eivec_local[surf->ewhich[total_state_index]];
+    species_state = surf->eiarray_local[surf->ewhich[species_state_index]];
+    area = surf->edvec_local[surf->ewhich[area_index]];
+    weight = surf->edvec_local[surf->ewhich[weight_index]];
+    if (psflag) tau = surf->edarray_local[surf->ewhich[tau_index]];
   }
 
   // for distributed: setup list of unique surfs
@@ -1217,11 +1220,11 @@ void SurfReactAdsorb::grid_changed()
   surf->spread_custom(weight_index);
   if (psflag) surf->spread_custom(tau_index);
 
-  total_state = surf->eivec_local[total_state_index];
-  species_state = surf->eiarray_local[species_state_index];
-  area = surf->edvec_local[area_index];
-  weight = surf->edvec_local[weight_index];
-  if (psflag) tau = surf->edarray_local[tau_index];
+  total_state = surf->eivec_local[surf->ewhich[total_state_index]];
+  species_state = surf->eiarray_local[surf->ewhich[species_state_index]];
+  area = surf->edvec_local[surf->ewhich[area_index]];
+  weight = surf->edvec_local[surf->ewhich[weight_index]];
+  if (psflag) tau = surf->edarray_local[surf->ewhich[tau_index]];
 
   // reset surf->unique and uniqueID vectors
 
