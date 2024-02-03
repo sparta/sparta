@@ -109,7 +109,7 @@ void CreateISurf::command(int narg, char **arg)
   MPI_Barrier(world);
 
   // remove old explicit surfaces
-  //remove_old();
+  remove_old();
 
   surf->implicit = 1;
   surf->exist = 1;
@@ -982,12 +982,56 @@ void CreateISurf::remove_old()
   if (particle->exist) particle->sort();
   MPI_Barrier(world);
 
-  surf->nsurf = 0;
-  surf->exist = 0;
+  // finish implementing custom values
+  cuvalues = NULL;
+  int *index_custom = new int[surf->ncustom];
+  int ncustom = 0;
+
+  if (surf->ncustom) {
+    for (int i = 0; i < surf->ncustom; i++) {
+      if (!surf->ename[i]) continue;
+      index_custom[ncustom++] = i;
+    }
+  }
+
+  llines = NULL;
+  ltris = NULL;
+  int nsurf = surf->nown;
+
+  int nbytes;
+  if (domain->dimension == 2) nbytes = sizeof(Surf::Line);
+  else nbytes = sizeof(Surf::Tri);
+
+  if (domain->dimension == 2) {
+    llines = (Surf::Line *) memory->smalloc(nsurf*nbytes,"createisurf:lines");
+    memcpy(llines,surf->mylines,nsurf*nbytes);
+  } else {
+    ltris = (Surf::Tri *) memory->smalloc(nsurf*nbytes,"createisurf:ltris");
+    memcpy(ltris,surf->mytris,nsurf*nbytes);
+  }
+
+  surf->add_surfs(1,0,llines,ltris,ncustom,index_custom,cuvalues);
+
+  memory->sfree(llines);
+  memory->sfree(ltris);
+  memory->destroy(cuvalues);
+  delete [] index_custom;
+
+  // check that remaining surfs are still watertight
+
+  if (domain->dimension == 2) surf->check_watertight_2d();
+  else surf->check_watertight_3d();
+
+  MPI_Barrier(world);
+
+  // reset grid due to changing surfs
+  // assign surfs to grid cells
 
   surf->setup_owned();
   grid->unset_neighbors();
   grid->remove_ghosts();
+
+  // reassign split cell particles to parent split cell
 
   if (particle->exist && grid->nsplitlocal) {
     Grid::ChildCell *cells = grid->cells;
@@ -998,7 +1042,9 @@ void CreateISurf::remove_old()
   }
 
   grid->clear_surf();
-  MPI_Barrier(world);
+  //if (surf->exist) grid->surf2grid(1); // surf shouldn't exist
+
+  // reassign particles in split cells to sub cell owner
 
   if (particle->exist && grid->nsplitlocal) {
     Grid::ChildCell *cells = grid->cells;
@@ -1007,7 +1053,11 @@ void CreateISurf::remove_old()
       if (cells[icell].nsplit > 1)
         grid->assign_split_cell_particles(icell);
   }
+
   MPI_Barrier(world);
+  double time4 = MPI_Wtime();
+
+  // re-setup owned and ghost cell info
 
   grid->setup_owned();
   grid->acquire_ghosts();
@@ -1016,6 +1066,7 @@ void CreateISurf::remove_old()
 
   grid->set_inout();
   grid->type_check();
+
   MPI_Barrier(world);
 
   if (me == 0)

@@ -51,6 +51,10 @@ class CreateISurf : protected Pointers {
   double **icvalues;        // corner values for Fix Ablate
   int *tvalues;             // vector of per grid cell surf types
 
+  Surf::Line *llines;       // local copy of Surf lines
+  Surf::Tri *ltris;         // local copy of Surf tris
+  double **cuvalues;        // local copy of custom per-surf data
+
   int aveFlag;              // flag for how corners in unknown cells are set
   double mind;              // minimum cell length
   double cin, cout;         // in and out corner values

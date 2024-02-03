@@ -341,9 +341,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   }
 
   MPI_Barrier(world);
-  printf("Beginning sync explicit: %i\n", comm->me); 
   if(aveFlag>=0) sync_explicit(aveFlag);
-  printf("Finished sync explicit: %i\n", comm->me);
   MPI_Barrier(world);
 
   // push corner pt values that are fully external/internal to 0 or 255
