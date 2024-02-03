@@ -109,16 +109,12 @@ void CreateISurf::command(int narg, char **arg)
   MPI_Barrier(world);
 
   // remove old explicit surfaces
-  //remove_old();
-
-  surf->implicit = 1;
-  surf->exist = 1;
+  remove_old();
 
   tvalues = NULL; // TODO: Add per-surface type
   int cpushflag = 0; // don't push
   char *sgroupID = arg[0];
 
-  surf->exist = 1;
   ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
                   icvalues,tvalues,thresh,sgroupID,cpushflag);
 
@@ -982,13 +978,6 @@ void CreateISurf::remove_old()
   if (particle->exist) particle->sort();
   MPI_Barrier(world);
 
-  surf->nsurf = 0;
-  surf->exist = 0;
-
-  surf->setup_owned();
-  grid->unset_neighbors();
-  grid->remove_ghosts();
-
   if (particle->exist && grid->nsplitlocal) {
     Grid::ChildCell *cells = grid->cells;
     int nglocal = grid->nlocal;
@@ -997,16 +986,18 @@ void CreateISurf::remove_old()
         grid->combine_split_cell_particles(icell,1);
   }
 
-  grid->clear_surf();
-  MPI_Barrier(world);
+  // from PR 428
+  surf->clear_explicit();
 
-  if (particle->exist && grid->nsplitlocal) {
-    Grid::ChildCell *cells = grid->cells;
-    int nglocal = grid->nlocal;
-    for (int icell = 0; icell < nglocal; icell++)
-      if (cells[icell].nsplit > 1)
-        grid->assign_split_cell_particles(icell);
-  }
+  // check that remaining surfs are still watertight
+
+  if (domain->dimension == 2) surf->check_watertight_2d();
+  else surf->check_watertight_3d();
+
+  surf->setup_owned();
+  grid->unset_neighbors();
+  grid->remove_ghosts();
+  grid->clear_surf();
   MPI_Barrier(world);
 
   grid->setup_owned();
