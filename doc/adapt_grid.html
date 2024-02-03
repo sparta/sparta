@@ -73,7 +73,7 @@
 adapt_grid all coarsen particle 50 10
 adapt_grid all refine coarsen particle 50 10
 adapt_grid all refine surf all 0.15 iterate 1 dir 1 0 0 
-adapt_grid all refine coarsen value c_1<B>1</B> 5.0 10.0 iterate 2 
+adapt_grid all refine coarsen value c_1[1] 5.0 10.0 iterate 2 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -195,7 +195,7 @@ will be refined if its count > 25, and a parent cell coarsened if
 the sum of its children cell counts < 10.
 </P>
 <PRE>compute 1 grid all n nrho
-adapt_grid refine coarsen value c_1<B>1</B> 25 10 
+adapt_grid refine coarsen value c_1[1] 25 10 
 </PRE>
 <P>The same thing could be accomplished with this command:
 </P>
@@ -205,17 +205,17 @@ adapt_grid refine coarsen value c_1<B>1</B> 25 10
 criterion in the same manner:
 </P>
 <PRE>compute 1 grid all n nrho
-fix 1 ave/grid 10 100 1000 c_1<B>1</B>
+fix 1 ave/grid 10 100 1000 c_1[1]
 run 1000    # run to accumulate time averages
-adapt_grid refine coarsen value f_1<B>1</B> 25 10 
+adapt_grid refine coarsen value f_1[1] 25 10 
 </PRE>
 <P>Here is an example using mean-free path (MFP) as calculated by the
 <A HREF = "compute_lambda_grid.html">compute lambda/grid</A> command as an
 adaptation criterion.  Note the use of "thresh less more" to refine
 when MFP is less than the specified threshold (0.05).
 </P>
-<PRE>compute 1 lambda/grid c_1<B>2</B> NULL N2 kall
-adapt_grid refine coarsen value c_1<B>2</B> 0.05 0.1 &
+<PRE>compute 1 lambda/grid f_1[2] NULL N2 kall
+adapt_grid refine coarsen value c_1[2] 0.05 0.1 &
            combine min thresh less more 
 </PRE>
 <P>The <I>random</I> style is provided for test and debugging purposes.  For

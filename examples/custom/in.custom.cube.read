@@ -1,5 +1,14 @@
-# 3d flow around a cube  with read_grid and read_surf
-# testing custom attributes
+################################################################################
+## 3d flow around a cube with read_grid and read_surf
+## testing custom attributes
+##
+## Notes:
+##  - The "comm/sort” option to the “global” command is used to match
+#MPI runs.
+##  - The “twopass” option is used to match Kokkos runs.
+## The "comm/sort" and "twopass" options should not be used for
+#production runs.
+#################################################################################
 
 seed	    	    12345
 

@@ -42,7 +42,7 @@ class SurfCollide : protected Pointers {
   virtual void wrapper(Particle::OnePart *, double *, int *, double *) {}
   virtual void flags_and_coeffs(int *, double *) {}
 
-  void dynamic();
+  virtual void dynamic();
   void tally_reset();
   void tally_update();
   double compute_vector(int i);

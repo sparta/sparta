@@ -46,6 +46,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
   SurfCollideDiffuseKokkos(class SPARTA *);
   ~SurfCollideDiffuseKokkos();
   void init();
+  void dynamic();
   void pre_collide();
   void post_collide();
   void backup();
@@ -66,7 +67,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
 
   RanKnuth* random_backup;
 
-  DAT::t_float_1d d_tvector;
+  DAT::t_float_1d d_t_persurf;
 
   typedef Kokkos::DualView<int[2], DeviceType::array_layout, DeviceType> tdual_int_2;
   typedef tdual_int_2::t_dev t_int_2;
@@ -150,30 +151,35 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
       }
     }
 
+    // set temperature of isurf if VARSURF or CUSTOM
+
+    double tsurf_local = tsurf;
+    if (persurf_temperature) {
+      tsurf_local = d_t_persurf[isurf]; ////////
+      if (tsurf_local <= 0.0) Kokkos::abort("Surf_collide tsurf <= 0.0");
+    }
+
     // diffuse reflection for each particle
     // only if SurfReact did not already reset velocities
-    // also both partiticles need to trigger any fixes
+    // also both particles need to trigger any fixes
     //   to update per-particle properties which depend on
     //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 
-    double twall_local = twall;
-    if (tmode == CUSTOM) twall_local = d_tvector[isurf];
-
     if (ip) {
-      if (!velreset) diffuse(ip,norm,twall_local);
+      if (!velreset) diffuse(ip,norm,tsurf_local);
       int i = ip - d_particles.data();
       if (ambi_flag)
-        fix_ambi_kk_copy.obj.update_custom_kokkos(i,twall_local,twall_local,twall_local,vstream);
+        fix_ambi_kk_copy.obj.update_custom_kokkos(i,tsurf_local,tsurf_local,tsurf_local,vstream);
       if (vibmode_flag)
-        fix_vibmode_kk_copy.obj.update_custom_kokkos(i,twall_local,twall_local,twall_local,vstream);
+        fix_vibmode_kk_copy.obj.update_custom_kokkos(i,tsurf_local,tsurf_local,tsurf_local,vstream);
     }
     if (REACT && jp) {
-      if (!velreset) diffuse(jp,norm,twall_local);
+      if (!velreset) diffuse(jp,norm,tsurf_local);
       int j = jp - d_particles.data();
       if (ambi_flag)
-        fix_ambi_kk_copy.obj.update_custom_kokkos(j,twall_local,twall_local,twall_local,vstream);
+        fix_ambi_kk_copy.obj.update_custom_kokkos(j,tsurf_local,tsurf_local,tsurf_local,vstream);
       if (vibmode_flag)
-        fix_vibmode_kk_copy.obj.update_custom_kokkos(j,twall_local,twall_local,twall_local,vstream);
+        fix_vibmode_kk_copy.obj.update_custom_kokkos(j,tsurf_local,tsurf_local,tsurf_local,vstream);
     }
 
     // call any fixes with a surf_react() method

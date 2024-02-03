@@ -976,7 +976,7 @@ void ReadSurf::read_lines()
           }
 	}
 
-	if (nread+i % nprocs_file == me_file) {
+	if ((nread+i) % nprocs_file == me_file) {
 	  add_line(id,type,pts[p1-1].x,pts[p2-1].x);
 	  if (ncustom) add_custom(id,custom);
 	  nsurf++;
@@ -1132,7 +1132,7 @@ void ReadSurf::read_tris()
 	  }
 	}
 
-	if (nread+i % nprocs_file == me_file) {
+	if ((nread+i) % nprocs_file == me_file) {
 	  add_tri(id,type,pts[p1-1].x,pts[p2-1].x,pts[p3-1].x);
 	  if (ncustom) add_custom(id,custom);
 	  nsurf++;

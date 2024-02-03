@@ -92,6 +92,7 @@ void GridKokkos::grow_cells(int n, int m)
   } else {
 
     if (nlocal+nghost+n >= maxcell) {
+      const int oldmax = maxcell;
       while (maxcell < nlocal+nghost+n) maxcell += DELTA;
       if (cells == NULL)
           k_cells = tdual_cell_1d("grid:cells",maxcell);
@@ -101,6 +102,8 @@ void GridKokkos::grow_cells(int n, int m)
         this->modify(Device,CELL_MASK); // needed for auto sync
       }
       cells = k_cells.h_view.data();
+
+      if (ncustom) reallocate_custom(oldmax,maxcell);
     }
 
     if (nlocal+m >= maxlocal) {

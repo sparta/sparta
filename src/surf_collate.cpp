@@ -17,6 +17,7 @@
 #include "grid.h"
 #include "memory.h"
 #include "error.h"
+#include "string.h"
 
 using namespace SPARTA_NS;
 

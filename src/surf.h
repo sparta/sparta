@@ -289,15 +289,15 @@ class Surf : protected Pointers {
   virtual void reallocate_custom();
   virtual void remove_custom(int);
 
-  void spread_custom(int);
+  virtual void spread_custom(int);
   void spread_inverse_custom(int);
   int extract_custom(double **&);
 
   void write_restart_custom(FILE *);
   void read_restart_custom(FILE *);
   int sizeof_custom();
-  int pack_custom(int, char *);
-  int unpack_custom(char *, double *);
+  virtual int pack_custom(int, char *);
+  virtual int unpack_custom(char *, double *);
 
  protected:
   int me,nprocs;

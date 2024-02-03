@@ -118,7 +118,6 @@ void CreateISurf::command(int narg, char **arg)
   int cpushflag = 0; // don't push
   char *sgroupID = arg[0];
 
-  surf->exist = 1;
   ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
                   icvalues,tvalues,thresh,sgroupID,cpushflag);
 

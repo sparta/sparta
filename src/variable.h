@@ -101,6 +101,8 @@ class Variable : protected Pointers {
 
   int is_particle_vector(char *);
   void particle_vector(char *, Tree **, Tree **, int &);
+  int is_grid_vector(char *);
+  void grid_vector(char *, Tree **, Tree **, int &);
   int is_constant(char *);
   double constant(char *);
   char *find_next_comma(char *);

@@ -13,7 +13,7 @@ jobs:
   mpi:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install Dependencies
       run: sudo apt install openmpi-bin libopenmpi-dev
@@ -37,14 +37,15 @@ jobs:
         sudo ln -s /bin/bash /bin/sh
         ctest --output-on-failure -j4
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: 'mpi-Artifacts'
         path: 'build/examples/'
   mpi-stubs-fft:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Configure
       run: |
@@ -66,7 +67,7 @@ jobs:
         sudo ln -s /bin/bash /bin/sh
         ctest --output-on-failure -j4
 
-    #- uses: actions/upload-artifact@v3
+    #- uses: actions/upload-artifact@v4
     #  if: '!cancelled()'
     #  with:
     #    name: 'mpi-stubs-fft-Artifacts'
@@ -74,7 +75,7 @@ jobs:
   mpi-stubs-kokkos-exact-fft:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Configure
       run: |
@@ -98,7 +99,7 @@ jobs:
 #        sudo ln -s /bin/bash /bin/sh
 #        ctest --output-on-failure -j4
 
-    #- uses: actions/upload-artifact@v3
+    #- uses: actions/upload-artifact@v4
     #  if: '!cancelled()'
     #  with:
     #    name: 'mpi-stubs-kokkos-exact-fft-Artifacts'
@@ -106,7 +107,7 @@ jobs:
   bigbig:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install Dependencies
       run: sudo apt install openmpi-bin libopenmpi-dev

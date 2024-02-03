@@ -731,6 +731,7 @@ struct MemsetZeroFunctor {
 };
 
 #define SPARTA_LAMBDA KOKKOS_LAMBDA
+#define SPARTA_CLASS_LAMBDA KOKKOS_CLASS_LAMBDA
 
 namespace SPARTA_NS {
 template <typename Device>
