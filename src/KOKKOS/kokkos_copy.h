@@ -34,6 +34,7 @@ class KKCopy {
   obj(sparta) {
     ptr_temp = NULL;
     obj.copy = 1;
+    obj.copymode = 0;
     save();
   }
 
