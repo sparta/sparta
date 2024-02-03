@@ -74,8 +74,9 @@ read_surf           eggcarton_coarse.surf group 1
 surf_collide        1 diffuse 273.15 1.0
 surf_modify         1 collide 1
 
-fix							fablate ablate all 0 0.2 random 0
-create_isurf     all fablate 40.0 ave
+#global surfs implicit
+fix							fablate ablate all 100 0.2 random 5
+create_isurf     all fablate 39.8 inout
 
 species		    air.species N2
 mixture		    air N2 vstream 0.0 0.0 0.0 temp 273.15
@@ -85,7 +86,7 @@ collide_modify      vremax 10000 no
 
 create_particles    air n 0
 
-dump 1 image all 100 egg3di.* type type sline yes 0.000 surf one 0.02 zoom 4 particle no view 65 140 box no 0.000
+#dump 1 image all 100 egg3di.* type type sline yes 0.000 surf one 0.02 zoom 4 particle no view 65 140 box no 0.000
 
 stats		    1
-run 		    10
+run 		    10000
