@@ -441,7 +441,7 @@ void FixAblate::create_surfs(int outflag)
   grid->unset_neighbors();
   grid->remove_ghosts();
   grid->clear_surf();
-  surf->clear();
+  surf->clear_implicit();
 
   // perform Marching Squares/Cubes to create new implicit surfs
   // cvalues = corner point values
@@ -1252,9 +1252,7 @@ void FixAblate::comm_neigh_corners(int which)
             if (j == nsend) {
               if (nsend == maxsend) grow_send();
               proclist[nsend] = proc;
-              // NOTE: change locallist to another name
-              // NOTE: what about cellint vs int
-              locallist[nsend++] = cells[icell].id;   // no longer an int
+              locallist[nsend++] = cells[icell].id;
             }
           }
         }
@@ -1289,7 +1287,7 @@ void FixAblate::comm_neigh_corners(int which)
 
     n = numsend[icell];
     for (i = 0; i < n; i++) {
-      sbuf[m++] = locallist[nsend];
+      sbuf[m++] = ubuf(locallist[nsend]).d;
       if (which == CDELTA) {
         for (j = 0; j < ncorner; j++)
           sbuf[m++] = cdelta[icell][j];
@@ -1325,7 +1323,7 @@ void FixAblate::comm_neigh_corners(int which)
 
   m = 0;
   for (i = 0; i < nrecv; i++) {
-    cellID = static_cast<cellint> (rbuf[m++]);   // NOTE: need ubuf logic
+    cellID = (cellint) ubuf(rbuf[m++]).u;
     ilocal = (*hash)[cellID];
     icell = ilocal - nglocal;
     for (j = 0; j < ncorner; j++)

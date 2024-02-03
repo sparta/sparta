@@ -38,58 +38,49 @@ ComputePropertyGrid::ComputePropertyGrid(SPARTA *sparta, int narg, char **arg) :
   // parse input values
   // customize a new keyword by adding to if statement
 
+  dimension = domain->dimension;
+
   pack_choice = new FnPtrPack[nvalues];
-  index = new int[nvalues];
 
   int i;
   for (int iarg = 3; iarg < narg; iarg++) {
     i = iarg-3;
 
+    // check for invalid fields in 2d
+
+    if (dimension == 2)
+      if ((strcmp(arg[iarg],"zlo") == 0) || (strcmp(arg[iarg],"zhi") == 0) ||
+	  (strcmp(arg[iarg],"zc") == 0))
+        error->all(FLERR,"Invalid compute property/grid field for 2d simulation");
+
     if (strcmp(arg[iarg],"id") == 0) {
       pack_choice[i] = &ComputePropertyGrid::pack_id;
-      index[i] = 0;
     } else if (strcmp(arg[iarg],"proc") == 0) {
       pack_choice[i] = &ComputePropertyGrid::pack_proc;
-      index[i] = 1;
+
     } else if (strcmp(arg[iarg],"xlo") == 0) {
       pack_choice[i] = &ComputePropertyGrid::pack_xlo;
-      index[i] = 2;
     } else if (strcmp(arg[iarg],"ylo") == 0) {
       pack_choice[i] = &ComputePropertyGrid::pack_ylo;
-      index[i] = 3;
     } else if (strcmp(arg[iarg],"zlo") == 0) {
-      if (domain->dimension == 2)
-        error->all(FLERR,
-                   "Invalid compute property/grid field for 2d simulation");
       pack_choice[i] = &ComputePropertyGrid::pack_zlo;
-      index[i] = 4;
     } else if (strcmp(arg[iarg],"xhi") == 0) {
       pack_choice[i] = &ComputePropertyGrid::pack_xhi;
-      index[i] = 5;
     } else if (strcmp(arg[iarg],"yhi") == 0) {
       pack_choice[i] = &ComputePropertyGrid::pack_yhi;
-      index[i] = 6;
     } else if (strcmp(arg[iarg],"zhi") == 0) {
-      if (domain->dimension == 2)
-        error->all(FLERR,
-                   "Invalid compute property/grid field for 2d simulation");
       pack_choice[i] = &ComputePropertyGrid::pack_zhi;
-      index[i] = 7;
+
     } else if (strcmp(arg[iarg],"xc") == 0) {
       pack_choice[i] = &ComputePropertyGrid::pack_xc;
-      index[i] = 8;
     } else if (strcmp(arg[iarg],"yc") == 0) {
       pack_choice[i] = &ComputePropertyGrid::pack_yc;
-      index[i] = 9;
     } else if (strcmp(arg[iarg],"zc") == 0) {
-      if (domain->dimension == 2)
-        error->all(FLERR,
-                   "Invalid compute property/grid field for 2d simulation");
       pack_choice[i] = &ComputePropertyGrid::pack_zc;
-      index[i] = 10;
+
     } else if (strcmp(arg[iarg],"vol") == 0) {
       pack_choice[i] = &ComputePropertyGrid::pack_vol;
-      index[i] = 11;
+
     } else error->all(FLERR,"Invalid keyword in compute property/grid command");
   }
 
@@ -108,7 +99,6 @@ ComputePropertyGrid::~ComputePropertyGrid()
 {
   if (copymode) return;
   delete [] pack_choice;
-  delete [] index;
   memory->destroy(vector_grid);
   memory->destroy(array_grid);
 }

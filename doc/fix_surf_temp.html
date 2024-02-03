@@ -13,7 +13,7 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>fix ID surf/temp surf-ID Nevery source Tsurf emisurf customID 
+<PRE>fix ID surf/temp surf-ID Nevery source Tinit emisurf custom-name 
 </PRE>
 <UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command 
 
@@ -25,40 +25,39 @@
 
 <LI>source = computeID or fixID 
 
-<PRE>  computeID = c_ID or c_ID[n] for a compute that calculates per surf values
-  fixID = f_ID or f_ID[n] for a fix that calculates per surf values 
+<PRE>  computeID = c_ID or c_ID[N] for a compute that calculates per surf values
+  fixID = f_ID or f_ID[N] for a fix that calculates per surf values 
 </PRE>
-<LI>Tsurf = initial temperature of surface (temperature units) 
+<LI>Tinit = initial temperature of surface (temperature units) 
 
 <LI>emisurf = emissivity of the surface (unitless, 0 < emisurf <= 1)  
 
-<LI>customID = name of a custom per-surf variable to create 
+<LI>custom-name = name of a custom per-surf variable to create 
 </UL>
 <P><B>Examples:</B>
 </P>
 <PRE>compute 1 surf all all etot
-fix 1 surf/temp all 1000 c_1 250 0.9 temperature 
+fix 1 surf/temp all 1000 c_1 250 0.9 temperature
+surf_collide 1 diffuse s_temperature 0.5 
 </PRE>
-<P>surf_collide 1 diffuse s_temperature 0.5
-</P>
 <P><B>Description:</B>
 </P>
 <P>Compute a new temperature for each surface element in the group once
 every Nevery steps.  This command uses a compute or fix ID which
-should compute the flux of total energy onto each surface elements,
+should compute the flux of total energy onto each surface element,
 e.g. <I>etot</I> from the <A HREF = "compute_surf.html">compute surf</A> command.  Note
-that SPARTA does not check that the compute/fix specified calculates
+that SPARTA does not check that the specified compute/fix calculates
 an energy flux.
 </P>
-<P>This fix creates a custom per-surf vector with the specified name of
-<I>customID</I>.  It can be accessed by other commands which use the
-current temperature of surface elements.  An example is the
-<A HREF = "surf_collide.html">surf_collide diffuse</A> command.
+<P>This fix creates a custom per-surf floating point vector with the
+specified name of <I>custom-name</I>.  It can be accessed by other commands
+which use the temperature of surface elements.  An example is the
+<A HREF = "surf_collide.html">surf_collide diffuse</A> command, as shown above.
 </P>
 <P>The per-surface element temperatures computed by this fix can be
-output via the <A HREF = "dump.html">dump surf</A> command, using the <I>s_name</I>
-syntax to output the custom temparture variable created by this fix.
-See the examples/adjust_temp dir for scripts that use this fix.
+output via the <A HREF = "dump.html">dump surf</A> command, using its <I>s_name</I>
+syntax.  See the examples/adjust_temp directory for input scripts that
+use this fix.
 </P>
 <P>The specified <I>group-ID</I> must be the name of a surface element group,
 as defined by the <A HREF = "group.html">group surf</A> command, which contains a
@@ -74,13 +73,13 @@ which performs time-averaging of per-surf quantities, such as <A HREF = "fix_ave
 ave/surf</A>.
 </P>
 <P>If the specified <I>source</I> has no bracketed term appended, the compute
-or fix must calculate a per-surf vector.  If <I>c_ID[I]</I> or
-<I>f_ID[I]</I> is used, then I must be in the range from 1-M, which will
-use the Ith column of the M-column per-surf array calculated by the
+or fix must calculate a per-surf vector.  If <I>c_ID[N]</I> or
+<I>f_ID[N]</I> is used, then N must be in the range from 1-M, which will
+use the Nth column of the M-column per-surf array calculated by the
 compute or fix.
 </P>
-<P>The temperature of the surface element is calculated from the
-Stefan-Boltzmann law for a gray-body, which states that
+<P>The temperature of each surface element is calculated from the
+Stefan-Boltzmann law for a gray-body as follows:
 </P>
 <PRE>q_wall = sigma * emisurf * Tsurf^4 
 </PRE>
@@ -94,42 +93,51 @@ and <I>Tsurf</I> is the resulting surface temperature.
 coefficient of 1.0 means the surface is a black-body that radiates all
 the energy it receives.
 </P>
-<P>The specified <I>Tsurf</I> value is used to set the initial temperature of
-every surface element in the system.  The temperature values for only
-surface elements in the <I>surf-ID</I> group will be reset every <I>Nevery</I>
-timesteps by the formula above.  The the temperature values for
-surfaces not in the <I>surf-ID</I> group will always be <I>Tsurf</I>.
+<P>The specified <I>Tinit</I> value is used to set the initial temperature of
+every surface element in the system.  New temperature values for only
+the surface elements in the <I>surf-ID</I> group will be reset every
+<I>Nevery</I> timesteps by the formula above.  Thus temperature values for
+surfaces not in the <I>surf-ID</I> group will always be <I>Tinit</I>.
 </P>
-<P>Note that these temperature values are stored in a custom per-surf
-vector.  The commands that use these values determine whether they
-access only surface element values in the <I>surf-ID</I> group or others as
-well.  E.g. the <A HREF = "surf_collide.html">surf_collide diffuse</A> command can
-also be assigned to a group of surface elements via the
-<A HREF = "surf_modify.html">surf_modify</A> command.  If the same surface group ID
-and same custom per-surf vector name is used for both surf_collide
-diffuse and this command, then only surface elements with time-varying
-temperatures set by this fix will be accessed for surface collision
-calculations.
-</P>
-<P>It is also possible to defined multiple <A HREF = "surf_collide.html">surf_collide
-diffuse</A> and fix surf/temp commands could be
-defined, each pair of which use a different surface group and
+<P>Note that commands which use these temperature values can determine
+which surface element values they access by their own <I>surf-ID</I> group.
+E.g. the <A HREF = "surf_collide.html">surf_collide diffuse</A> command is assigned
+to a group of surface elements via the <A HREF = "surf_modify.html">surf_modify</A>
+command.  It its Tsurf value is set to the custom vector defined by
+this fix, then you likely want the two surface groups to be
+consistent.  Note that it also possible to define multiple
+<A HREF = "surf_collide.html">surf_collide diffuse</A> and multiple fix surf/temp
+commands, each pair of which use a different surface group and
 different custom per-surf vector name.
 </P>
 <HR>
 
 <P><B>Restart, output info:</B>
 </P>
-<P>This fix writes its per-surf temperatures values to the restart file.
-If the restart input script defines this fix after a restart file has
-been read, the temperature values should be set to the restart file
-values.
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.
+</P>
+<P>However, the values of the custom particle attribute defined by this
+fix is written to the restart file.  Namely the floating-point vector
+of temperature values for each surface with the name assigned by this
+command.  As explained on the <A HREF = "read_restart.html">read_restart</A> doc
+page these values will be re-assigned to surface when a restart file
+is read.  If a new fix surf/temp command is specified in the restart
+script as well as a surface collision model which uses the custom
+attribute updated by this fix, then the per-surf temperatures and
+updating process will continue to be used in the continued run.
+</P>
+<P>No global or per-surf quantities are stored by this fix for access by
+various output commands.
+</P>
+<P>However, the custom per-surf attribute defined by this fix can be
+accessed by the <A HREF = "dump.html">dump surf</A> command, as s_name.  That means
+those per-surf values can be written to surface dump files.
 </P>
 <P><B>Restrictions:</B>
 </P>
-<P>Currently this fix can only be used in simulations that define
-explicit non-distributed surfaces.  Support for distributed or
-implicit surfaces may be added at a later time.
+<P>This fix can only be used in simulations that define explicit
+surfaces, not for implicit surface models.
 </P>
 <P><B>Related commands:</B> none
 </P>

@@ -12,18 +12,45 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+#ifdef COMMAND_CLASS
+
+CommandStyle(custom,Custom)
+
+#else
+
+#ifndef SPARTA_CUSTOM_H
+#define SPARTA_CUSTOM_H
+
+#include "pointers.h"
+
+namespace SPARTA_NS {
+
+class Custom : protected Pointers {
+
+ public:
+  Custom(class SPARTA *);
+  void command(int, char **);
+
+ private:
+  int mode,action,groupbit;
+  int ctype,csize,cindex,ccol;
+  int vindex,vstyle;
+  char *aname,*vname;
+
+  class Variable *variable;
+  class Mixture *mixture;
+  class Region *region;
+
+  int set_particle(double, double *);
+  int set_grid(double, double *);
+  int set_surf(double, double *);
+};
+
+}
+
+#endif
+#endif
+
 /* ERROR/WARNING messages:
-
-E: Too many surfs in one cell
-
-Use the global surfmax command to increase this max allowed number of
-surfs per grid cell.
-
-E: Inconsistent surface to grid mapping in read_restart
-
-When surface elements were mapped to grid cells after reading a
-restart file, an inconsitent count of elements in a grid cell was
-found, as compared to the original simulation, which should not
-happen.  Please report the issue to the SPARTA developers.
 
 */

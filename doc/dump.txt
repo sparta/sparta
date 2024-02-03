@@ -25,26 +25,26 @@ args = list of arguments for a particular style :l
   {particle} args = list of particle attributes
     possible attributes = id, type, proc, x, y, z, xs, ys, zs, vx, vy, vz,
                           ke, erot, evib, 
-                          p_ID, p_ID\[N\], c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
+                          c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name, p_name, p_name\[N\] :pre
 
       id = particle ID
-      type = particle species
+      type = particle species as an integer index
       proc = ID of owning processor
       x,y,z = unscaled particle coordinates
       xs,ys,zs = scaled particle coordinates
       vx,vy,vz = particle velocities
       ke,erot,evib = translational, rotational, and vibrational energy
-      p_ID = custom per-particle vector with ID
-      p_ID\[N\] = Nth column of custom per-particle array with ID
       c_ID = per-particle vector calculated by a compute with ID
-      c_ID\[N\] = Nth column of per-particle array calculated by a compute with ID, I can include wildcard (see below)
+      c_ID\[N\] = Nth column of per-particle array calculated by a compute with ID, N can include wildcard (see below)
       f_ID = per-particle vector calculated by a fix with ID
-      f_ID\[N\] = Nth column of per-particle array calculated by a fix with ID, I can include wildcard (see below)
-      v_name = per-particle vector calculated by a particle-style variable with name :pre
+      f_ID\[N\] = Nth column of per-particle array calculated by a fix with ID, N can include wildcard (see below)
+      v_name = per-particle vector calculated by a particle-style variable with name
+      p_name = custom per-particle vector with name
+      p_name\[N\] = Nth column of custom per-particle array with name, N can include wildcard (see below) :pre
 
   {grid} args = list of grid attributes
     possible attributes = id, idstr, split, proc, xlo, ylo, zlo, xhi, yhi, zhi,
-                          c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
+                          c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name, g_name, g_name\[N\] :pre
 
       id = integer form of grid cell ID
       idstr = string form of grid cell ID
@@ -55,27 +55,29 @@ args = list of arguments for a particular style :l
       xc,yc,zc = coords of center of grid cell
       vol = flow volume of grid cell (area in 2d)
       c_ID = per-grid vector calculated by a compute with ID
-      c_ID\[N\] = Nth column of per-grid array calculated by a compute with ID, I can include wildcard (see below)
+      c_ID\[N\] = Nth column of per-grid array calculated by a compute with ID, N can include wildcard (see below)
       f_ID = per-grid vector calculated by a fix with ID
-      f_ID\[N\] = Nth column of per-grid array calculated by a fix with ID, I can include wildcard (see below)
-      v_name = per-grid vector calculated by a grid-style variable with name :pre
+      f_ID\[N\] = Nth column of per-grid array calculated by a fix with ID, N can include wildcard (see below)
+      v_name = per-grid vector calculated by a grid-style variable with name
+      g_name = custom per-grid vector with name
+      g_name\[N\] = Nth column of custom per-grid array with name, N can include wildcard (see below) :pre
 
   {surf} args = list of surf attributes
-    possible attributes = id, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z, 
-                          p_ID, p_ID\[N\], c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
+    possible attributes = id, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z, area,
+                          c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name, s_name, s_name\[N\] :pre
 
       id = surface element ID
       v1x,v1y,v1z = coords of 1st vertex in surface element
-      v1x,v1y,v1z = coords of 2nd vertex in surface element
-      v1x,v1y,v1z = coords of 3rd vertex in surface element
+      v2x,v2y,v2z = coords of 2nd vertex in surface element
+      v3x,v3y,v3z = coords of 3rd vertex in surface element
       area = surface element area (3d, axisymmetric) or length (2d)
-      s_ID = custom per-surf vector with ID
-      s_ID\[N\] = Nth column of custom per-surf array with ID
       c_ID = per-surf vector calculated by a compute with ID
-      c_ID\[N\] = Nth column of per-surf array calculated by a compute with ID, I can include wildcard (see below)
+      c_ID\[N\] = Nth column of per-surf array calculated by a compute with ID, N can include wildcard (see below)
       f_ID = per-surf vector calculated by a fix with ID
-      f_ID\[N\] = Nth column of per-surf array calculated by a fix with ID, I can include wildcard (see below)
-      v_name = per-surf vector calculated by a surf-style variable with name :pre
+      f_ID\[N\] = Nth column of per-surf array calculated by a fix with ID, N can include wildcard (see below)
+      v_name = per-surf vector calculated by a surf-style variable with name
+      s_name = custom per-surf vector with name
+      s_name\[N\] = Nth column of custom per-surf array with name, N can include wildcard (see below) :pre
 
   {image} args = discussed on "dump image"_dump_image.html doc page :pre
 :ule
@@ -212,16 +214,16 @@ to write.
 :line
 
 Note that in the discussion which follows, for styles which can
-reference values from a compute or fix, like the {particle}, {grid},
-or {surf} styles, the bracketed index I can be specified using a
-wildcard asterisk with the index to effectively specify multiple
-values.  This takes the form "*" or "*n" or "n*" or "m*n".  If N = the
-size of the vector (for {mode} = scalar) or the number of columns in
-the array (for {mode} = vector), then an asterisk with no numeric
-values means all indices from 1 to N.  A leading asterisk means all
-indices from 1 to n (inclusive).  A trailing asterisk means all
-indices from n to N (inclusive).  A middle asterisk means all indices
-from m to n (inclusive).
+reference values from a compute or fix or custom attribute, like the
+{particle}, {grid}, or {surf} styles, the bracketed index I can be
+specified using a wildcard asterisk with the index to effectively
+specify multiple values.  This takes the form "*" or "*n" or "n*" or
+"m*n".  If N = the size of the vector (for {mode} = scalar) or the
+number of columns in the array (for {mode} = vector), then an asterisk
+with no numeric values means all indices from 1 to N.  A leading
+asterisk means all indices from 1 to n (inclusive).  A trailing
+asterisk means all indices from n to N (inclusive).  A middle asterisk
+means all indices from m to n (inclusive).
 
 Using a wildcard is the same as if the individual columns of the array
 had been listed one by one.  E.g. these 2 dump commands are
@@ -238,7 +240,7 @@ This section explains the particle attributes that can be specified as
 part of the {particle} style.
 
 {Id} is the particle ID.  {Type} is an integer index representing the
-particle species.  It is a value from 1 to Nspecies, The value
+particle species.  It is a value from 1 to Nspecies. The value
 corresponds to the order in which species were defined via the
 "species"_species.html command.  {Proc} is the ID of the processor
 which currently owns the particle.
@@ -255,42 +257,29 @@ given by 1/2 m (vx^2 + vy^2 + vz^2).  The way that rotational and
 vibrational energy is treated in collisions and stored by particles is
 affected by the "collide_modify"_collid_modify.html command.
 
-The {p_ID} and {p_ID\[N\]} attributes allow custom per-particle
-vectors or arrays defined by a "fix"_fix.html command to be output.
-The ID in the attribute should be replaced by the actual ID of the
-custom particle attribute that the fix defines.  See individal fix
-commands for details, e.g. the "fix ambipolar"_fix_ambipolar.html
-command which defines the custom vector "ionambi" and the custom array
-"velambi".
-
-If {p_ID} is used as a attribute, the custom attribute must be a
-vector, and it is output.  If {p_ID\[N\]} is used, the custom
-attribute must be an array, and N must be in the range from 1-M, which
-will output the Nth column of the M-column array.
-
-The {c_ID} and {c_ID\[I\]} attributes allow per-particle vectors or
+The {c_ID} and {c_ID\[N\]} attributes allow per-particle vectors or
 arrays calculated by a "compute"_compute.html to be output.  The ID in
 the attribute should be replaced by the actual ID of the compute that
 has been defined previously in the input script.  See the
 "compute"_compute.html command for details.
 
 If {c_ID} is used as a attribute, the compute must calculate a
-per-particle vector, and it is output.  If {c_ID\[I\]} is used, the
-compute must calculate a per-particle array, and I must be in the
-range from 1-M, which will output the Ith column of the M-column
-array.  See the discussion above for how I can be specified with a
+per-particle vector, and it is output.  If {c_ID\[N\]} is used, the
+compute must calculate a per-particle array, and N must be in the
+range from 1-M, which will output the Nth column of the M-column
+array.  See the discussion above for how N can be specified with a
 wildcard asterisk to effectively specify multiple values.
 
-The {f_ID} and {f_ID\[I\]} attributes allow vector or array
+The {f_ID} and {f_ID\[N\]} attributes allow vector or array
 per-particle quantities calculated by a "fix"_fix.html to be output.
 The ID in the attribute should be replaced by the actual ID of the fix
 that has been defined previously in the input script.
 
 If {f_ID} is used as a attribute, the fix must calculate a
-per-particle vector, and it is output.  If {f_ID\[I\]} is used, the
-fix must calculate a per-particle array, and I must be in the range
-from 1-M, which will output the Ith column of the M-column array.
-See the discussion above for how I can be specified with a
+per-particle vector, and it is output.  If {f_ID\[N\]} is used, the
+fix must calculate a per-particle array, and N must be in the range
+from 1-M, which will output the Nth column of the M-column array.
+See the discussion above for how N can be specified with a
 wildcard asterisk to effectively specify multiple values.
 
 The {v_name} attribute allows per-particle vectors calculated by a
@@ -302,6 +291,21 @@ per-particle values.  Variables of style {particle} can reference
 per-particle attributes, stats keywords, or invoke other computes,
 fixes, or variables when they are evaluated, so this is a very general
 means of creating quantities to output to a dump file.
+
+The {p_name} and {p_name\[N\]} attributes allow custom per-particle
+vectors or arrays defined by some other command to be output.  The
+name should be replaced by the name of the attribute.  See "Section
+6.17"_Section_howto.html#howto_17 for more discussion of custom
+attributes and command that define them.  For example, the "fix
+ambipolar"_fix_ambipolar.html command which defines the per-particle
+custom vector "ionambi" and custom array "velambi".
+
+If {p_name} is used as a attribute, the custom attribute must be a
+vector, and it is output.  If {p_name\[N\]} is used, the custom
+attribute must be an array, and N must be in the range from 1-M, which
+will output the Nth column of an M-column array.  See the discussion
+above for how N can be specified with a wildcard asterisk to
+effectively specify multiple values.
 
 See "Section 10"_Section_modify.html of the manual for information on
 how to add new compute and fix styles to SPARTA to calculate
@@ -317,11 +321,12 @@ child cells: unsplit cells, cut cells, and sub cells of split cells.
 "Section 6.8"_Section_howto.html#howto_8 of the manual gives details
 of how SPARTA defines child, unsplit, cut, split, and sub cells.  This
 is different than "compute"_compute.html or "fix"_fix.html commands
-that produce per grid information, which also include split cells in
-their output.  The dump grid command discards that output since the
-sub cells of a split cell provide the needed information for further
-processing and visualization.  Note that unsplit cells can
-be outside (in the flow) or inside surface objects, if they exist.
+which produce per grid information; they also include split cells in
+their output.  The dump grid command discards the split cell
+information since the sub cells of a split cell provide the needed
+information for further processing and visualization.  Note that
+unsplit cells can be outside (in the flow) or inside surface objects,
+if they exist.
 
 {Id} and {idstr} are two different forms of the grid cell ID.  In
 SPARTA each grid cell is assigned a unique ID which represents its
@@ -335,6 +340,11 @@ is cell 6 (at level 3) within cell 4 within cell 33.  If you specify
 {id}, the ID is printed directly as an integer.  If you specify
 {idstr}, it is printed as a string.
 
+Note that the {id} and {idstr} of two or more sub-cells are the same
+as the {id} and {idstr} of the split cell they are part of.  This
+means that if a simulation has split cells, the dump file will contain
+duplicate IDs in the same snapshot.
+
 {Proc} is the ID of the processor which currently owns the grid cell.
 
 The {xlo}, {ylo}, {zlo} attributes write the coordinates of the
@@ -343,7 +353,9 @@ lower-left corner of the grid cell in the appropriate distance
 coordinates of the upper-right corner of the grid cell.  The {xc},
 {yc}, {zc} attributes write the coordinates of the center point of the
 grid cell.  The {zlo}, {zhi}, {zc} attributes cannot be used for a 2d
-simulation.
+simulation.  As with {id} and {idstr}, as explained above, these
+attributes are the same for multiple sub-cells of a single split cell
+they are part of.
 
 The {vol} attribute is the flow volume of the grid cell (or area in
 2d) for unsplit or cut or sub cells.  "Section
@@ -356,29 +368,29 @@ a cut cell which is inside a suface object but which is intersected by
 surface element(s) which only touch a face, edge, or corner point of
 the grid cell, will have a flow volume of 0.0.
 
-The {c_ID} and {c_ID\[I\]} attributes allow per-grid vectors or arrays
+The {c_ID} and {c_ID\[N\]} attributes allow per-grid vectors or arrays
 calculated by a "compute"_compute.html to be output.  The ID in the
 attribute should be replaced by the actual ID of the compute that has
 been defined previously in the input script.  See the
 "compute"_compute.html command for details.
 
 If {c_ID} is used as a attribute, and the compute calculates a
-per-grid vector, then the per-grid vector is output.  If {c_ID\[I\]}
-is used, then I must be in the range from 1-M, which will output the
-Ith column of the M-column per-grid array calculated by the compute.
-See the discussion above for how I can be specified with a wildcard
+per-grid vector, then the per-grid vector is output.  If {c_ID\[N\]}
+is used, then N must be in the range from 1-M, which will output the
+Nth column of the M-column per-grid array calculated by the compute.
+See the discussion above for how N can be specified with a wildcard
 asterisk to effectively specify multiple values.
 
-The {f_ID} and {f_ID\[I\]} attributes allow per-grid vectors or arrays
+The {f_ID} and {f_ID\[N\]} attributes allow per-grid vectors or arrays
 calculated by a "fix"_fix.html to be output.  The ID in the attribute
 should be replaced by the actual ID of the fix that has been defined
 previously in the input script.
 
 If {f_ID} is used as a attribute, and the fix calculates a per-grid
-vector, then the per-grid vector is output.  If {f_ID\[I\]} is used,
-then I must be in the range from 1-M, which will output the Ith column
+vector, then the per-grid vector is output.  If {f_ID\[N\]} is used,
+then N must be in the range from 1-M, which will output the Nth column
 of the M-columne per-grid array calculated by the fix.  See the
-discussion above for how I can be specified with a wildcard asterisk
+discussion above for how N can be specified with a wildcard asterisk
 to effectively specify multiple values.
 
 The {v_name} attribute allows per-grid vectors calculated by a
@@ -390,6 +402,23 @@ values.  Variables of style {grid} can reference per-grid attributes,
 stats keywords, or invoke other computes, fixes, or variables when
 they are evaluated, so this is a very general means of creating
 quantities to output to a dump file.
+
+The {g_name} and {g_name\[N\]} attributes allow custom per-grid cell
+vectors or arrays defined by some other command to be output.  The
+name should be replaced by the name of the attribute.  See "Section
+6.17"_Section_howto.html#howto_17 for more discussion of custom
+attributes and command that define them.  For example, the
+"read_grid"_read_grid.html and "surf_react
+implicit"_surf_react_implicit.html commands can define per-grid
+attributes.  (The surf/react implicit command has not yet been
+released in public SPPARKS).
+
+If {g_name} is used as a attribute, the custom attribute must be a
+vector, and it is output.  If {g_name\[N\]} is used, the custom
+attribute must be an array, and N must be in the range from 1-M, which
+will output the Nth column of an M-column array.  See the discussion
+above for how N can be specified with a wildcard asterisk to
+effectively specify multiple values.
 
 See "Section 10"_Section_modify.html of the manual for information on
 how to add new compute and fix styles to SPARTA to calculate per-grid
@@ -412,47 +441,42 @@ attributes write the coordinates of the vertices of the end or corner
 points of the surface element.  The {v1z}, {v2z}, {v3x}, {v3y}, and
 {v3z} attributes cannot be used for a 2d simulation.
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+The {c_ID} and {c_ID\[N\]} attributes allow per-surf vectors or arrays
+=======
+>>>>>>> f44a1461b646d40a891cb17d93e46d5b45920412
 The {area} attribute writes the surface element area (3d and
 axisymmetric) or length (2d).
 
-The {s_ID} and {s_ID\[N\]} attributes allow custom per-surf vectors or
-arrays defined by a "fix"_fix.html or "surf_react"_surf_react.html
-command to be output.  The ID in the attribute should be replaced by
-the actual ID of the custom per-surf attribute that the fix or
-surf_react command defines.  See individal commands for details.
-E.g. the "fix surf/temp"_fix_surf_temp.html command defines a custom
-vector named by the user for the temperature of each surface element.
-And the "surf_react adsorb"_surf_react_adsorb.html command defines one
-per-surf array and 3 vectors.
-
-If {s_ID} is used as a attribute, the custom attribute must be a
-vector, and it is output.  If {s_ID\[N\]} is used, the custom
-attribute must be an array, and N must be in the range from 1-M, which
-will output the Nth column of the M-column array.
-
 The {c_ID} and {c_ID\[I\]} attributes allow per-surf vectors or arrays
+<<<<<<< HEAD
+=======
+>>>>>>> 3e480423cb20b5ba9f67aaa8ae087d9d36453110
+>>>>>>> f44a1461b646d40a891cb17d93e46d5b45920412
 calculated by a "compute"_compute.html to be output.  The ID in the
 attribute should be replaced by the actual ID of the compute that has
 been defined previously in the input script.  See the
 "compute"_compute.html command for details.
 
 If {c_ID} is used as a attribute, and the compute calculates a per-srf
-vector, then the per-surf vector is output.  If {c_ID\[I\]} is used,
-then I must be in the range from 1-M, which will output the Ith column
+vector, then the per-surf vector is output.  If {c_ID\[N\]} is used,
+then N must be in the range from 1-M, which will output the Nth column
 of the M-column per-surf array calculated by the compute.  See the
-discussion above for how I can be specified with a wildcard asterisk
+discussion above for how N can be specified with a wildcard asterisk
 to effectively specify multiple values.
 
-The {f_ID} and {f_ID\[I\]} attributes allow per-surf vectors or arrays
+The {f_ID} and {f_ID\[N\]} attributes allow per-surf vectors or arrays
 calculated by a "fix"_fix.html to be output.  The ID in the attribute
 should be replaced by the actual ID of the fix that has been defined
 previously in the input script.
 
 If {f_ID} is used as a attribute, and the fix calculates a per-surf
-vector, then the per-surf vector is output.  If {f_ID\[I\]} is used,
-then I must be in the range from 1-M, which will output the Ith column
+vector, then the per-surf vector is output.  If {f_ID\[N\]} is used,
+then N must be in the range from 1-M, which will output the Nth column
 of the M-column per-surf array calculated by the fix.  See the
-discussion above for how I can be specified with a wildcard asterisk
+discussion above for how N can be specified with a wildcard asterisk
 to effectively specify multiple values.
 
 The {v_name} attribute allows per-surf vectors calculated by a
@@ -465,8 +489,21 @@ stats keywords, or invoke other computes, fixes, or variables when
 they are evaluated, so this is a very general means of creating
 quantities to output to a dump file.
 
-IMPORTANT NOTE: Surf-style variables have not yet been implemented in
-SPARTA.
+The {s_name} and {s_name\[N\]} attributes allow custom per-surface
+element vectors or arrays defined by some other command to be output.
+The name should be replaced by the name of the attribute.  See
+"Section 6.17"_Section_howto.html#howto_17 for more discussion of
+custom attributes and command that define them.  For example, the
+"read_surf"_read_surf.html, "fix surf/temp"_fix_surf_temp.html, and
+"surf_react adsorb"_surf_react_adsorb.html commands can define
+per-surf attributes.
+
+If {s_name} is used as a attribute, the custom attribute must be a
+vector, and it is output.  If {s_name\[N\]} is used, the custom
+attribute must be an array, and N must be in the range from 1-M, which
+will output the Nth column of an M-column array.  See the discussion
+above for how N can be specified with a wildcard asterisk to
+effectively specify multiple values.
 
 See "Section 10"_Section_modify.html of the manual for information on
 how to add new compute and fix styles to SPARTA to calculate per-surf

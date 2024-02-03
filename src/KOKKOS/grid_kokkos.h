@@ -42,6 +42,14 @@ class GridKokkos : public Grid {
   void sync(ExecutionSpace, unsigned int);
   void modify(ExecutionSpace, unsigned int);
 
+  int add_custom(char *, int, int) override;
+  void allocate_custom(int) override;
+  void reallocate_custom(int, int) override;
+  void remove_custom(int) override;
+  void copy_custom(int,int) override;
+  int pack_custom(int, char *, int) override;
+  int unpack_custom(char *, int) override;
+
 // operations with grid cell IDs
   void update_hash();
 
@@ -166,6 +174,18 @@ class GridKokkos : public Grid {
   // hash for all cell IDs (owned,ghost,parent).  The _d postfix refers to the
   // fact that this hash lives on "device"
   hash_type hash_kk;
+
+  DAT::tdual_int_1d k_ewhich,k_eicol,k_edcol;
+
+  tdual_struct_tdual_int_1d_1d k_eivec;
+  tdual_struct_tdual_float_1d_1d k_edvec;
+  tdual_struct_tdual_int_2d_1d k_eiarray;
+  tdual_struct_tdual_float_2d_1d k_edarray;
+
+  tdual_struct_tdual_int_1d_1d k_eivec_local;
+  tdual_struct_tdual_float_1d_1d k_edvec_local;
+  tdual_struct_tdual_int_2d_1d k_eiarray_local;
+  tdual_struct_tdual_float_2d_1d k_edarray_local;
 
  private:
   void grow_cells(int, int);

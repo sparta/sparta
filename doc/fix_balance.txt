@@ -177,12 +177,14 @@ No information about this fix is written to "binary restart
 files"_restart.html.
 
 This fix computes a global scalar which is the imbalance factor after
-the most recent rebalance and a global vector of length 2 with
-additional information about the most recent rebalancing. The 2 values
-in the vector are as follows:
+the most recent rebalance.  It also computes a global vector of length
+3 with additional information about the most recent rebalancing and
+the cummulative count of rebalancings.  The 3 values in the vector are
+as follows:
 
-1 = max # of particles per processor
-2 = imbalance factor before the last rebalance was performed :ul
+1 = max particle count on any processor after last rebalance
+2 = imbalance factor before the last rebalance was performed
+3 = cummulative count of rebalances since the fix was specified :ul
 
 As explained above, the imbalance factor is the ratio of the maximum
 number of particles on any processor to the average number of

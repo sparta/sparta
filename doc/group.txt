@@ -55,7 +55,7 @@ group boundary surf intersect upper leftside :pre
 
 Assign grid cells to grid groups or surface elements to surface
 groups.  In SPARTA, a "grid group" is a collection of one or more grid
-cells.  A "surface" group is a collection of one or more surface
+cells.  A "surface group" is a collection of one or more surface
 elements (line segements in 2d, triangles in 3d).  Other commands take
 group IDs as arguments so that they act on a set of grid cells or
 surface elements.  For example, see the "compute
