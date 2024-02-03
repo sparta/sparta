@@ -190,12 +190,14 @@ exercising the rebalancing code.
 files</A>.
 </P>
 <P>This fix computes a global scalar which is the imbalance factor after
-the most recent rebalance and a global vector of length 2 with
-additional information about the most recent rebalancing. The 2 values
-in the vector are as follows:
+the most recent rebalance.  It also computes a global vector of length
+3 with additional information about the most recent rebalancing and
+the cummulative count of rebalancings.  The 3 values in the vector are
+as follows:
 </P>
-<UL><LI>1 = max # of particles per processor
-<LI>2 = imbalance factor before the last rebalance was performed 
+<UL><LI>1 = max particle count on any processor after last rebalance
+<LI>2 = imbalance factor before the last rebalance was performed
+<LI>3 = cummulative count of rebalances since the fix was specified 
 </UL>
 <P>As explained above, the imbalance factor is the ratio of the maximum
 number of particles on any processor to the average number of

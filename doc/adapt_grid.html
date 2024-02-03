@@ -15,7 +15,7 @@
 </P>
 <PRE>adapt_grid group-ID action1 action2 style args ... keyword args ... 
 </PRE>
-<LI>group-ID = group ID for which grid cell adaptation will be attempted 
+<LI>group-ID = group ID for which grid cells adaptation will be attempted on 
 
 <LI>action1 = <I>refine</I> or <I>coarsen</I> 
 
@@ -317,11 +317,13 @@ files, each time the grid iadapts.
 <P>If the grid is partitioned across processors in a "clumped" manner
 before this command is invoked, it will still be clumped by processor
 after the adaptation.  Likewise if it is not clumped before, it will
-remain un-clumped after adaptation.  You can use the
-<A HREF = "balance_grid.html">balance_grid</A> command after this command to
-re-balance the new adapted grid cells and their particles across
-processors.  See <A HREF = "Section_howto.html#howto_8">Section howto 4.8</A> for a
-description clumped and unclumped grids.
+remain un-clumped after adaptation.  See <A HREF = "Section_howto.html#howto_8">Section howto
+4.8</A> for a description clumped and
+unclumped grids.
+</P>
+<P>If you want the grid partitioning (and their particles) to be
+rebalanced across processors after grid adaptation, you can use the
+<A HREF = "balance_grid.html">balance_grid</A> command after this command.
 </P>
 <P><B>Restrictions:</B>
 </P>
@@ -333,6 +335,13 @@ description clumped and unclumped grids.
 This is because the per-grid cell values accumulated by the fix are
 not interpolated to new grid cells so that the fix can be re-evaluated
 multiple times.  In the future we may revove this restriction.
+</P>
+<P>Currently, if there are custom attributes defined for grid cells, grid
+adaptation does not set new values for new grid cells created when
+either refinement or coarsening takes place.  The new cells will have
+zero values for their attributes.  This is because there is no simple
+way to determine how new attribute values should be computed.  This
+may be changed in the future.
 </P>
 <P><B>Related commands:</B>
 </P>

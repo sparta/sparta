@@ -40,10 +40,10 @@ class Variable : protected Pointers {
   double compute_equal(char *);
   void compute_particle(int, double *, int, int);
   void compute_grid(int, double *, int, int);
-  void compute_surf(int, double *, int, int) {}  // not yet supported
+  void compute_surf(int, double *, int, int);
   void internal_set(int, double);
 
-  int int_between_brackets(char *&, int);
+  int int_between_brackets(char *&, int, const char * = "variable");
   double evaluate_boolean(char *);
 
  private:
@@ -77,7 +77,8 @@ class Variable : protected Pointers {
 
   struct Tree {            // parse tree for particle-style variables
     double value;          // single scalar
-    double *array;         // per-atom or per-type list of doubles
+    double *array;         // ptr to vector of doubles with nstride
+    int *iarray;           // ptr to vector of integers with nstride
     char *carray;          // ptr into data struct with nstride = sizeof(struct)
     int type;              // operation, see enum{} in variable.cpp
     int nstride;           // stride between atoms if array is a 2d array
@@ -97,6 +98,7 @@ class Variable : protected Pointers {
   int math_function(char *, char *, Tree **, Tree **, int &, double *, int &);
   int special_function(char *, char *, Tree **, Tree **,
                        int &, double *, int &);
+
   int is_particle_vector(char *);
   void particle_vector(char *, Tree **, Tree **, int &);
   int is_grid_vector(char *);

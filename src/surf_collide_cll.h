@@ -36,10 +36,7 @@ class SurfCollideCLL : public SurfCollide {
   void wrapper(Particle::OnePart *, double *, int *, double*);
   void flags_and_coeffs(int *, double *);
 
-  void dynamic();
-
  private:
-  double twall;                         // surface temperature
   double acc_n,acc_t,acc_rot,acc_vib;   // surface accomodation coeffs
   double vx,vy,vz;                      // translational velocity of surface
   double wx,wy,wz;                      // angular velocity of surface
@@ -51,11 +48,6 @@ class SurfCollideCLL : public SurfCollide {
   int trflag;                // 1 if either tflag or rflag is set
   int pflag;                 // 1 if partially energy accommodation
                              // with partial/fully diffuse scattering
-
-  int tmode;                 // Twall is NUMERIC,VARIABLE,CUSTOM
-  char *tstr;                // temperature variable name (NULL if constant)
-  int tvar;                  // index of equal-style variable
-  double *tvector;           // custom per-surf temperature vector
 
   double vstream[3];
   class RanKnuth *random;     // RNG for particle reflection

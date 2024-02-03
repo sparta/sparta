@@ -31,11 +31,11 @@ Note that the remaining surface elements must still constitute a
 watertight is explained in the Restrictions section of the
 "read_surf"_read_surf.html doc page.
 
-After surface elements have been deleted, any surface points that are
-no longer part of a surface element are also deleted.  The remaining
-surface points and elements are renumbered to create compressed,
-contiguous lists.  The new list of surface elements can be output via
-the "write_surf"_write_surf.html command.
+After surface elements have been deleted the IDs of the remaining
+surface points and elements are renumbered so that the remaining N
+elements have IDs from 1 to N.  The new list of surface elements can
+be output via the "write_surf"_write_surf.html or "dump
+surf"_dump.html commands.
 
 [Restrictions:] none
 

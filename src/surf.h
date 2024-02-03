@@ -27,13 +27,15 @@ class Surf : protected Pointers {
  public:
   int exist;                // 1 if any surfaces are defined, else 0
   int implicit;             // 1 = implicit surfs, 0 = explicit surfs
-  int distributed;          // 1 = surfs spread across procs (exp or impl)
-                            // 0 = each proc owns all
+  int distributed;          // 1 = surfs spread across procs (expl or impl)
+                            // 0 = each proc owns all surfs
   int surf_collision_check; // flag for whether init() check is required
                             // for assign of collision models to surfs
+  bigint localghost_changed_step;  // last timestep expl distributed surfs
+                                   // were remapped due to LB or adaptation
 
   double bblo[3],bbhi[3];   // bounding box around surfs
-  int tally_comm;           // style of comm for surf tallies
+  int tally_comm;           // style of comm for explicit surf tallies
 
   int nreact_one;           // surface reactions in current step
   bigint nreact_running;    // running count of surface reactions
@@ -49,10 +51,10 @@ class Surf : protected Pointers {
   //   tris = all surfs, nown = Nsurf/P, mytris = NULL
   // explicit, distributed: each proc owns N/P surfs
   //   nlocal/nghost = surfs in owned/ghost grid cells
-  //   tris = nloc+ngh surfs, nown = Nsurf/P, mytris = surfs I uniquely own
+  //   tris = nlocal+nghost surfs, nown = Nsurf/P, mytris = surfs I uniquely own
   // implicit, distributed: each proc owns surfs in its owned grid cells
   //   nlocal = surfs in owned grid cells, nghost = surfs in ghost grid cells
-  //   tris = nloc+ngh surfs, nown = nlocal, mytris = NULL
+  //   tris = nlocal+nghost surfs, nown = nlocal, mytris = NULL
 
   bigint nsurf;             // total # of surf elements, lines or tris
 
@@ -104,33 +106,49 @@ class Surf : protected Pointers {
                             // implicit: not defined
   int maxown;               // max length of owned lines/tris vecs
 
-  Line *tmplines;           // list of temporary lines, filled by ReadSurf
-  Tri *tmptris;             // list of temporary tris, filled by ReadSurf
-  int ntmp;                 // # of temporary surfs
-  int nmaxtmp;              // max size of tmplines/tmptris
+  // for distributed surfs:
+  // union of unique surfs across all procs equal
+  // union of mylines/mytris across all procs
+
+  int nunique;              // # of my local surfs which are unique
+  int *unique;              // index of unique surfs within local list
+  surfint *uniqueID;        // IDs of unique surfs
+
+  // surface collision and reaction models
 
   int nsc,nsr;              // # of surface collision and reaction models
   class SurfCollide **sc;   // list of surface collision models
   class SurfReact **sr;     // list of surface reaction models
 
+  // settings for mapping surfs to grid cells
+
   int pushflag;             // set to 1 to push surf pts near grid cell faces
   double pushlo,pushhi;     // lo/hi ranges to push on
   double pushvalue;         // new position to push to
 
-  // extra custom vectors/arrays for per-surf data
-  // ncustom > 0 if there are any extra arrays
-  // custom attributes are created by various commands
+  // custom vectors/array for per-surf data
+  // only for explicit surfs, all or distributed
+  // ncustom > 0 if there is any custom per-surf data
   // these variables are public, others below are private
 
   int ncustom;              // # of custom attributes, some may be deleted
+  char **ename;             // name of each attribute
   int *etype;               // type = INT/DOUBLE of each attribute
   int *esize;               // size = 0 for vector, N for array columns
+  int *estatus;             // status = 0/1 for each attribute
+                            //   0 = only owned surf values are stored
+                            //   1 = owned + local/ghost surf values are stored
   int *ewhich;              // index into eivec,eiarray,edvec,edarray for data
 
-  int **eivec;              // pointer to each integer vector
-  int ***eiarray;           // pointer to each integer array
-  double **edvec;           // pointer to each double vector
-  double ***edarray;        // pointer to each double array
+  int **eivec;              // pointer to each integer vector, owned surfs
+  int ***eiarray;           // pointer to each integer array, owned surfs
+  double **edvec;           // pointer to each double vector, owned surfs
+  double ***edarray;        // pointer to each double array, owned surfs
+
+  int **eivec_local;        // pointer to each integer vector, local+ghost surfs
+  int ***eiarray_local;     // pointer to each integer array, local+ghost surfs
+  double **edvec_local;     // pointer to each double vector, local+ghost surfs
+  double ***edarray_local;  // pointer to each double array, local+ghost surfs
 
 #include "hash_options.h"
 
@@ -167,17 +185,16 @@ class Surf : protected Pointers {
   void global(char *);
   void modify_params(int, char **);
   void init();
-  void clear();
+  void clear_explicit();
+  void clear_implicit();
   void remove_ghosts();
+
   void add_line(surfint, int, double *, double *);
   void add_line_copy(int, Line *);
-  void add_line_own(surfint, int, double *, double *);
-  void add_line_temporary(surfint, int, double *, double *);
   void add_tri(surfint, int, double *, double *, double *);
   void add_tri_copy(int, Tri *);
-  void add_tri_own(surfint, int, double *, double *, double *);
-  void add_tri_own_clip(surfint, int, double *, double *, double *);
-  void add_tri_temporary(surfint, int, double *, double *, double *);
+  void add_surfs(int, int, Line *, Tri *, int, int *, double **);
+
   void rehash();
   int all_transparent();
 
@@ -189,6 +206,7 @@ class Surf : protected Pointers {
   void compute_tri_normal(int);
   void quad_corner_point(int, double *, double *, double *);
   void hex_corner_point(int, double *, double *, double *);
+  void extract_masks(int *);
 
   double line_size(int);
   double line_size(Line *);
@@ -218,8 +236,19 @@ class Surf : protected Pointers {
   int add_group(const char *);
   int find_group(const char *);
 
-  void compress_explicit();
-  void compress_implicit();
+  void write_restart(FILE *);
+  void read_restart(FILE *);
+  int size_restart_one();
+  int size_restart();
+  int pack_restart(char *);
+
+  virtual void grow(int);
+  virtual void grow_own(int);
+
+  bigint memory_usage();
+
+  // surf_collate.cpp
+  // including callback functions
 
   void collate_vector(int, surfint *, double *, int, double *);
   void collate_vector_reduce(int, surfint *, double *, int, double *);
@@ -228,80 +257,58 @@ class Surf : protected Pointers {
   void collate_array(int, int, surfint *, double **, double **);
   void collate_array_reduce(int, int, surfint *, double **, double **);
   void collate_array_rendezvous(int, int, surfint *, double **, double **);
-  void collate_vector_implicit(int, surfint *, double *, double *);
-  void collate_array_implicit(int, int, surfint *, double **, double **);
 
-  void redistribute_lines_clip(int, int);
-  void redistribute_lines_temporary(int);
-  void redistribute_tris_clip(int, int);
-  void redistribute_tris_temporary(int);
+  static int rendezvous_vector(int, char *, int &, int *&, char *&, void *);
+  static int rendezvous_array(int, char *, int &, int *&, char *&, void *);
+
+  // surf_comm.cp
+  // including callback functions
+
+  void redistribute_surfs(int, Line *, Tri *,
+			  int, int *, double **, bigint, bigint);
+
+  void compress_explicit();
+  void compress_implicit();
+
+  void spread_own2local(int, int, void *, void *);
+  void spread_own2local_reduce(int, int, void *, void *);
+  void spread_own2local_rendezvous(int, int, void *, void *);
+  void assign_unique();
+  void spread_local2own(int, int, void *, void *);
+
+  static int rendezvous_redistribute_surfs(int, char *, int &, int *&,
+					   char *&, void *);
+  static int rendezvous_redistribute_custom(int, char *, int &, int *&,
+					    char *&, void *);
+
+  // surf_custom.cpp
 
   int find_custom(char *);
-  void error_custom();
   virtual int add_custom(char *, int, int);
-  virtual void allocate_custom(int, int);
+  virtual void allocate_custom(int);
+  virtual void reallocate_custom();
   virtual void remove_custom(int);
 
-  void write_restart(FILE *);
-  void read_restart(FILE *);
+  virtual void spread_custom(int);
+  void spread_inverse_custom(int);
+  int extract_custom(double **&);
+
   void write_restart_custom(FILE *);
   void read_restart_custom(FILE *);
-
-  virtual void grow(int);
-  virtual void grow_own(int);
-  virtual void grow_temporary(int);
-  bigint memory_usage();
+  int sizeof_custom();
+  virtual int pack_custom(int, char *);
+  virtual int unpack_custom(char *, double *);
 
  protected:
   int me,nprocs;
   int maxsc;                // max # of models in sc
   int maxsr;                // max # of models in sr
 
-  // collate vector rendezvous data
-
-  struct InRvousVec {
-    surfint id;             // surface ID
-    double value;           // compute value
-  };
-
-  double *out_rvous;
-  int ncol_rvous;
-
-  // watertight rendezvous data
-
-  struct InRvousPoint {
-    double x[2];            // 2d point coords
-    int which;              // 1 for first endpoint, 2 for second endpoint
-  };
-
-  struct InRvousEdge {
-    double x1[3],x2[3];     // 3d edge point coords
-    int which;              // 1 for forward order, 2 for reverse order
-  };
-
-  // union data struct for packing 32-bit and 64-bit ints into double bufs
-  // this avoids aliasing issues by having 2 pointers (double,int)
-  //   to same buf memory
-  // constructor for 32-bit int prevents compiler
-  //   from possibly calling the double constructor when passed an int
-  // copy to a double *buf:
-  //   buf[m++] = ubuf(foo).d, where foo is a 32-bit or 64-bit int
-  // copy from a double *buf:
-  //   foo = (int) ubuf(buf[m++]).i;, where (int) or (tagint) match foo
-  //   the cast prevents compiler warnings about possible truncation
-
-  union ubuf {
-    double d;
-    int64_t i;
-    ubuf(double arg) : d(arg) {}
-    ubuf(int64_t arg) : i(arg) {}
-    ubuf(int arg) : i(arg) {}
-  };
-
-  // extra custom vectors/arrays for per-surf data
+  // custom vectors/arrays for per-grid data
   // these variables are private, others above are public
 
-  char **ename;             // name of each attribute
+  int size_custom;          // current size of allocated vecs/arrays
+  int *size_custom_local;   // size of each allocated nlocal+nghost vec/array
 
   int ncustom_ivec;         // # of integer vector attributes
   int ncustom_iarray;       // # of integer array attributes
@@ -315,9 +322,43 @@ class Surf : protected Pointers {
   int *icustom_darray;      // index into ncustom for each double array
   int *edcol;               // # of columns in each double array (esize)
 
-  int *custom_restart_flag; // flag on each custom vec/array read from restart
-                            // used to delete them if not redefined in
-                            // restart script
+  // redezvous operation data and callback info
+
+  // redistribute_surfs rendezvous
+
+  bigint redistribute_nsurf_old;
+  int redistribute_surfperproc;
+  Line *redistribute_lines_contig;
+  Tri *redistribute_tris_contig;
+
+  int redistribute_nvalues_custom;
+  int *redistribute_index_custom;
+
+  // used by assign_unique() method
+
+  class RanKnuth *urandom;   // RNG for unique surf assignment
+
+  // collate rendezvous
+
+  double *out_rvous;
+  int ncol_rvous;
+
+  // watertight rendezvous
+
+  struct InRvousPoint {
+    double x[2];            // 2d point coords
+    int which;              // 1 for first endpoint, 2 for second endpoint
+  };
+
+  struct InRvousEdge {
+    double x1[3],x2[3];     // 3d edge point coords
+    int which;              // 1 for forward order, 2 for reverse order
+  };
+
+  // spread rendezvous
+
+  int spread_type,spread_size;
+  void *spread_data;
 
   // private methods
 
@@ -337,17 +378,43 @@ class Surf : protected Pointers {
 
   // callback functions for rendezvous communication
 
-  static int rendezvous_vector(int, char *, int &, int *&, char *&, void *);
-  static int rendezvous_array(int, char *, int &, int *&, char *&, void *);
-  static int rendezvous_implicit(int, char *, int &, int *&, char *&, void *);
   static int rendezvous_watertight_2d(int, char *,
                                       int &, int *&, char *&, void *);
   static int rendezvous_watertight_3d(int, char *,
                                       int &, int *&, char *&, void *);
-  static int rendezvous_lines(int, char *,
-                              int &, int *&, char *&, void *);
-  static int rendezvous_tris(int, char *,
-                             int &, int *&, char *&, void *);
+  //static int rendezvous_lines(int, char *,
+   ///                           int &, int *&, char *&, void *);
+  //static int rendezvous_tris(int, char *,
+  //                           int &, int *&, char *&, void *);
+  static int rendezvous_own2local(int, char *,
+				  int &, int *&, char *&, void *);
+  static int rendezvous_unique(int, char *,
+			       int &, int *&, char *&, void *);
+  static int rendezvous_local2own(int, char *,
+				  int &, int *&, char *&, void *);
+
+  // union data struct for packing 32-bit and 64-bit ints into double bufs
+  // this avoids aliasing issues by having 3 pointers (double,int,uint)
+  //   to same buf memory
+  // constructor for 32-bit int or uint prevents compiler
+  //   from possibly calling the double constructor when passed an int/uint
+  // copy to a double *buf:
+  //   buf[m++] = ubuf(foo).d, where foo is a 32-bit or 64-bit int or uint
+  // copy from a double *buf:
+  //   foo = (int) ubuf(buf[m++]).i or foo = (cellint) ubuf(buf[m++]).u
+  //         where (int) or (surfint) or (cellint) matches foo
+  //   the cast prevents compiler warnings about possible truncation
+
+  union ubuf {
+    double d;
+    int64_t i;
+    uint64_t u;
+    ubuf(double arg) : d(arg) {}
+    ubuf(int64_t arg) : i(arg) {}
+    ubuf(int arg) : i(arg) {}
+    ubuf(uint64_t arg) : u(arg) {}
+    ubuf(uint32_t arg) : u(arg) {}
+  };
 };
 
 }

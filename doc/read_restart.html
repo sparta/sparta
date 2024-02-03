@@ -15,11 +15,13 @@
 </P>
 <PRE>read_restart file keyword args ... 
 </PRE>
-<UL><LI>file = name of binary restart file to read in
+<UL><LI>file = name of binary restart file to read in 
+
 <LI>zero or one keyword/args pair may be listed 
-</UL>
-<PRE>keywords = <I>gridcut</I> or <I>balance</I>
-  <I>gridcut</I> arg = cutoff
+
+<LI>keywords = <I>gridcut</I> or <I>balance</I> 
+
+<PRE>  <I>gridcut</I> arg = cutoff
     cutoff = acquire ghost cells up to this far away (distance units)
   <I>balance</I> args = same as for <A HREF = "balance_grid.html">balance_grid</A> command 
 </PRE>
@@ -89,6 +91,9 @@ to those for the <A HREF = "balance_grid.html">balance_grid</A> command.  If you
 choose a balancing style that results in a "clumped" assignment, then
 ghost cells will be setup successfully.
 </P>
+<P>NOTE: Only the <I>gridcut</I> or the <I>balance</I> keyword can be used, not
+both of them.
+</P>
 <HR>
 
 <P>Similar to how restart files are written (see the
@@ -133,12 +138,12 @@ simulation, as specified by the associated commands:
 <LI><A HREF = "dimension.html">dimension</A>
 <LI><A HREF = "create_box.html">simulation box size</A> and <A HREF = "boundary.html">boundary conditions</A>
 <LI><A HREF = "global.html">global settings</A>
-<LI>particles with their individual attributes and custom attributes defined by fixes
 <LI><A HREF = "species.html">particle species info</A>
 <LI><A HREF = "mixture.html">mixtures</A>
 <LI>geometry of the hierarchical grid that overlays the simulation domain as <A HREF = "create_grid.html">created</A> or <A HREF = "read_grid.html">read from a file</A>
 <LI>geometry of all defined <A HREF = "read_surf.html">surface elements</A>
 <LI><A HREF = "group.html">group definitions</A> for grid cells and surface elements
+<LI><A HREF = "custom.html">custom attributes</A> for particles, grid cells, or surface elements
 <LI>current simulation time
 <LI>current <A HREF = "timestep.html">timestep size</A>
 <LI>current timestep number 
@@ -194,14 +199,18 @@ timesteps, no information about these quantities persists from the
 original simulation to the restarted simulation.  The initial run in
 the restart script will re-initialize these data structures.
 </P>
-<P>If a fix is used which defines custom attributes of particles, the
-vectors or arrays for these attributes are stored in the restart file.
-See the <A HREF = "fix_ambipolar">fix ambipolar</A> command as an example; it
-creates a custom vector called "ionambi" and a custom array called
-"velambi".  However, the restart script must specify the same fix
-before the first <A HREF = "run.html">run</A> command it uses, so that the same
-custom attributes are re-created, otherwise the custom attribute info
-from the restart file will be deleted.
+<P>As noted above, custom attributes of particles, grid cells, or surface
+elements defined in the previous input script and stored in the
+restart file, will be re-assigned when the restart file is read.
+</P>
+<P>If an input script command which normally defines a custom attribute
+is specified, e.g. <A HREF = "fix_ambipolar.html">fix ambipolar</A>, then if the
+custom data for that attribute already exists, it will be re-used.  If
+a corresponding input script command is not used, then the custom data
+will be stored in the simulation (with particle in this case), but not
+be used, which can be inefficient.  The <A HREF = "custom.html">custom remove</A>
+command can be used after the restart file is read, to delete unneded
+custom attributes and their data.
 </P>
 <HR>
 

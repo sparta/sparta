@@ -19,8 +19,8 @@ model = {gs} or {ps} or {gs/ps} :l
   ps = pure-surface reactions
   gs/ps = both gas-surface and pure-surface reactions :pre
 infile(s) = file(s) with list of surface chemistry reactions :l
-  one file for model gs or ps
-  two files for model gs/ps, gs first, ps second :pre
+  one file for model {gs} or {ps}
+  two files for model }gs/ps}, gs file first, ps file second :pre
 Nsync = perform PS reactions and sync across processors every this many timesteps :l
 type = {face} or {surf} :l
   face = domain boundary treated as a surface
@@ -38,10 +38,10 @@ surf_react adsorb gs/ps gs_react.surf ps_react.surf nsync 1 face 300 3e9 O :pre
 [Description:]
 
 Define a model for surface chemistry reactions to perform when
-particles collide with surface elements or the global boundaries of
-the simulation box, which enables the particles to adsorb to the
-surface.  This model also has an option to encode chemical reactions
-that can occur on the surface itself.  
+particles collide with surface elements or the global boundaries
+(faces) of the simulation box, which enables the particles to adsorb
+to the surface.  This model also has an option to encode chemical
+reactions that can occur on the surface itself.
 
 One or more models can be defined and assigned to different surfaces
 or simulation box boundaries via the "surf_modify"_surf_modify.html or
@@ -103,7 +103,7 @@ that the sum of probabilities for all possible reactions is <= 1.0,
 which should normally be the case if reasonable reaction coefficients
 are defined.
 
-For PS reactions, a time counter algorithm is used. Each reaction has
+For PS reactions, a time counter algorithm is used.  Each reaction has
 a time counter {tau} that is increased by a value of {nsync*timestep}
 if all the reactants are available.  The rate for each reaction {R} is
 computed based on the specified reaction rate constants as well as the
@@ -123,7 +123,7 @@ al.} "(SG18)"_#SG18.
 
 :line
 
-The infile argument(s) specigy one or two filenames which contain a
+The infile argument(s) specify one or two filenames which contain a
 list of GS or PS reactions and their associated parameters.  Two files
 must be specified for the {gs/ps} model: a GS file first and a PS file
 second.
@@ -356,7 +356,20 @@ reaction since the beginning of the current run.
 
 :line
 
-[Restrictions:] none
+[Restrictions:]
+
+If the following conditions are met:
+
+this reaction model is assigned to surface elements
+on-surface PS reactions are defined
+surface elements are distributed across processors
+the "fix balance"_fix_balance.html or "fix adapt"_fix_adapt.html command is used :ul
+
+then the timesteps on which balancing or grid adaptation are performed
+must be multiples of {Nsync}.  This is because surfaces are
+re-assigned to processors due to the change in the grid assignment to
+processors and the per-surface {tau} values must be upated
+appropriately when that occurs.
 
 [Related commands:]
 

@@ -36,13 +36,39 @@ ComputePropertyGridKokkos::ComputePropertyGridKokkos(SPARTA *sparta, int narg, c
   ComputePropertyGrid(sparta, narg, arg)
 {
   kokkos_flag = 1;
-  k_index = DAT::tdual_int_1d("compute/property/grid:index",nvalues);
-  for (int n = 0; n < nvalues; n++){
-    k_index.h_view(n) = index[n];
+  d_index = DAT::t_int_1d("compute/property/grid:index",nvalues);
+  auto h_index = Kokkos::create_mirror_view(d_index);
+
+  for (int iarg = 3; iarg < narg; iarg++) {
+    int i = iarg-3;
+
+    if (strcmp(arg[iarg],"id") == 0)
+      h_index[i] = 0;
+    else if (strcmp(arg[iarg],"proc") == 0)
+      h_index[i] = 1;
+    else if (strcmp(arg[iarg],"xlo") == 0)
+      h_index[i] = 2;
+    else if (strcmp(arg[iarg],"ylo") == 0)
+      h_index[i] = 3;
+    else if (strcmp(arg[iarg],"zlo") == 0)
+      h_index[i] = 4;
+    else if (strcmp(arg[iarg],"xhi") == 0)
+      h_index[i] = 5;
+    else if (strcmp(arg[iarg],"yhi") == 0)
+      h_index[i] = 6;
+    else if (strcmp(arg[iarg],"zhi") == 0)
+      h_index[i] = 7;
+    else if (strcmp(arg[iarg],"xc") == 0)
+      h_index[i] = 8;
+    else if (strcmp(arg[iarg],"yc") == 0)
+      h_index[i] = 9;
+    else if (strcmp(arg[iarg],"zc") == 0)
+      h_index[i] = 10;
+    else if (strcmp(arg[iarg],"vol") == 0)
+      h_index[i] = 11;
   }
-  k_index.modify_host();
-  k_index.sync_device();
-  d_index = k_index.d_view;
+
+  Kokkos::deep_copy(d_index,h_index);
 }
 
 /* ---------------------------------------------------------------------- */
