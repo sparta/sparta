@@ -321,11 +321,18 @@ SurfReactAdsorb::~SurfReactAdsorb()
   // in case multiple surf react/adsorb instances are used
 
   if (mode == SURF && first_owner) {
+    total_state_index = surf->find_custom((char *) "nstick_total");
     surf->remove_custom(total_state_index);
+    species_state_index = surf->find_custom((char *) "nstick_species");
     surf->remove_custom(species_state_index);
+    area_index = surf->find_custom((char *) "area");
     surf->remove_custom(area_index);
+    weight_index = surf->find_custom((char *) "weight");
     surf->remove_custom(weight_index);
-    if (psflag) surf->remove_custom(tau_index);
+    if (psflag) {
+      tau_index = surf->find_custom((char *) "tau");
+      surf->remove_custom(tau_index);
+    }
   }
 
   // delete local face and per-surf data
