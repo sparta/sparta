@@ -214,6 +214,9 @@ void Collide::init()
         error->all(FLERR,
                    "Fix elecmode must be used with discrete electronic modes");
     }
+  } else {
+    index_elecstate = -1;
+    index_eelec = -1;
   }
   // reallocate one-cell data structs for one or many groups
 
