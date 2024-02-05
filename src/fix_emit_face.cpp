@@ -433,6 +433,7 @@ void FixEmitFace::create_task(int icell)
     tasks[ntask].temp_thermal = particle->mixture[imix]->temp_thermal;
     tasks[ntask].temp_rot = particle->mixture[imix]->temp_rot;
     tasks[ntask].temp_vib = particle->mixture[imix]->temp_vib;
+    tasks[ntask].temp_elec = particle->mixture[imix]->temp_elec;
     tasks[ntask].vstream[0] = particle->mixture[imix]->vstream[0];
     tasks[ntask].vstream[1] = particle->mixture[imix]->vstream[1];
     tasks[ntask].vstream[2] = particle->mixture[imix]->vstream[2];
@@ -702,6 +703,7 @@ void FixEmitFace::perform_task_twopass()
     temp_thermal = tasks[i].temp_thermal;
     temp_rot = tasks[i].temp_rot;
     temp_vib = tasks[i].temp_vib;
+    temp_elec = tasks[i].temp_elec;
     vstream = tasks[i].vstream;
 
     if (subsonic_style == PONLY) vscale = tasks[i].vscale;
