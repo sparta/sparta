@@ -157,7 +157,7 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
 
       //if (modify->n_update_custom) {
       //  int i = ip - particle->particles;
-      //  modify->update_custom(i,twall,twall,twall,vstream);
+      //  modify->update_custom(i,twall,twall,twall,twall,vstream);
       //}
     }
 
@@ -179,7 +179,7 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
 
     //  if (modify->n_update_custom) {
     //    int j = jp - particle->particles;
-    //    modify->update_custom(j,twall,twall,twall,vstream);
+    //    modify->update_custom(j,twall,twall,twall,twall,vstream);
     //}
     }
 

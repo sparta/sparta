@@ -99,11 +99,11 @@ void FixVibmodeKokkos::pre_update_custom_kokkos()
 
 void FixVibmodeKokkos::update_custom(int index, double temp_thermal,
                                      double temp_rot, double temp_vib,
-                                     double *vstream)
+                                     double temp_elec, double *vstream)
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Host,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
-  FixVibmode::update_custom(index, temp_thermal, temp_rot, temp_vib, vstream);
+  FixVibmode::update_custom(index, temp_thermal, temp_rot, temp_vib, temp_elec, vstream);
   particle_kk->modify(Host,PARTICLE_MASK|CUSTOM_MASK);
 }
 

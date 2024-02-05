@@ -507,6 +507,7 @@ void FixEmitFace::perform_task_onepass()
     temp_thermal = tasks[i].temp_thermal;
     temp_rot = tasks[i].temp_rot;
     temp_vib = tasks[i].temp_vib;
+    temp_elec = tasks[i].temp_elec;
     vstream = tasks[i].vstream;
 
     if (subsonic_style == PONLY) vscale = tasks[i].vscale;

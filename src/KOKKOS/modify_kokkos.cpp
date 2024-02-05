@@ -220,7 +220,8 @@ void ModifyKokkos::grid_changed()
 ------------------------------------------------------------------------- */
 
 void ModifyKokkos::update_custom(int index, double temp_thermal,
-                                 double temp_rot, double temp_vib, double *vstream)
+                                 double temp_rot, double temp_vib,
+                                 double temp_elec, double *vstream)
 {
   for (int i = 0; i < n_update_custom; i++) {
     int j = list_update_custom[i];
@@ -229,7 +230,7 @@ void ModifyKokkos::update_custom(int index, double temp_thermal,
     if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
 
     fix[list_update_custom[i]]->update_custom(index,temp_thermal,temp_rot,
-                                            temp_vib,vstream);
+                                            temp_vib,temp_elec,vstream);
 
     sparta->kokkos->auto_sync = prev_auto_sync;
     particle_kk->modify(fix[j]->execution_space,fix[j]->datamask_modify);

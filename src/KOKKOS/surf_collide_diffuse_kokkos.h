@@ -163,17 +163,17 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
       if (!velreset) diffuse(ip,norm,twall_local);
       int i = ip - d_particles.data();
       if (ambi_flag)
-        fix_ambi_kk_copy.obj.update_custom_kokkos(i,twall_local,twall_local,twall_local,vstream);
+        fix_ambi_kk_copy.obj.update_custom_kokkos(i,twall_local,twall_local,twall_local,twall_local,,vstream);
       if (vibmode_flag)
-        fix_vibmode_kk_copy.obj.update_custom_kokkos(i,twall_local,twall_local,twall_local,vstream);
+        fix_vibmode_kk_copy.obj.update_custom_kokkos(i,twall_local,twall_local,twall_local,twall_local,vstream);
     }
     if (REACT && jp) {
       if (!velreset) diffuse(jp,norm,twall_local);
       int j = jp - d_particles.data();
       if (ambi_flag)
-        fix_ambi_kk_copy.obj.update_custom_kokkos(j,twall_local,twall_local,twall_local,vstream);
+        fix_ambi_kk_copy.obj.update_custom_kokkos(j,twall_local,twall_local,twall_local,twall_local,vstream);
       if (vibmode_flag)
-        fix_vibmode_kk_copy.obj.update_custom_kokkos(j,twall_local,twall_local,twall_local,vstream);
+        fix_vibmode_kk_copy.obj.update_custom_kokkos(j,twall_local,twall_local,twall_local,twall_local,vstream);
     }
 
     // call any fixes with a surf_react() method
