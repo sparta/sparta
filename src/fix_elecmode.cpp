@@ -105,6 +105,6 @@ void FixElecmode::update_custom(int index, double temp_thermal,
 
   if (nstate == 0) return;
 
-  elecstate[index] = 0;
-  eelec[index] = 0.0;
+  elecstate[index] = 0; // Need to update somehow or remove
+  eelec[index] = particle->eelec(isp,temp_elec,random);
 }
