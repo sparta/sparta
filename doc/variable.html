@@ -893,7 +893,7 @@ timestep of the preceding run, e.g. by stats output.
 before using the variable.  For example, these commands
 </P>
 <PRE>compute myTemp grid all temp
-variable t equal c_myTemp<B>1</B>
+variable t equal c_myTemp[1]
 print "Initial temperature = $t"
 run 1000 
 </PRE>
@@ -904,7 +904,7 @@ a compute for calculating the temperature to be invoked.
 <P>However, this sequence of commands would be fine:
 </P>
 <PRE>compute myTemp grid all temp
-variable t equal c_myTemp<B>1</B>
+variable t equal c_myTemp[1]
 run 0
 print "Initial temperature = $t"
 run 1000 
@@ -937,7 +937,7 @@ no way to detect this has occurred.  Consider the following sequence
 of commands:
 </P>
 <PRE>compute myTemp grid all temp
-variable t equal c_myTemp<B>1</B>
+variable t equal c_myTemp[1]
 run 1000
 create_particles all n 10000
 print "Final temperature = $t" 
@@ -959,7 +959,7 @@ the system is up-to-date.  For example, this sequence of commands
 would print a temperature that reflected the new particles:
 </P>
 <PRE>compute myTemp grid all temp
-variable t equal c_myTemp<B>1</B>
+variable t equal c_myTemp[1]
 run 1000
 create_particles all n 10000
 run 0
