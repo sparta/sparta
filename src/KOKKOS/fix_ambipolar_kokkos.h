@@ -140,7 +140,7 @@ class FixAmbipolarKokkos : public FixAmbipolar {
       if (d_ions[d_particles[i].ispecies] == 0) return;
       if (d_particles[j].ispecies != especies) return;
       update_custom_kokkos(i,temp_thermal,temp_thermal,
-                           temp_thermal,temp_therma,vstream);
+                           temp_thermal,temp_thermal,vstream);
       j = -1;
     }
   }

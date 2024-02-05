@@ -576,6 +576,9 @@ void ParticleKokkos::update_class_variables() {
     vibstyle = collide->vibstyle;
     if (collide->rotstyle != NONE) collide_rot = 1;
   }
+
+  elecstyle = NONE;
+  if (collide) elecstyle = collide->elecstyle;
 }
 
 /* ----------------------------------------------------------------------

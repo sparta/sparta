@@ -230,9 +230,11 @@ void ComputeGrid::compute_per_grid()
   int i,j,k,m,ispecies,igroup,icell;
   double mass;
   double *v,*vec;
-  char data_name[] = "eelec";
-  int eelec_index = particle->find_custom(data_name);
+
   double *eelecs = NULL;
+  int index_eelec = particle->find_custom((char *) "eelec");
+  if (index_eelec >= 0)
+    eelecs = particle->edvec[particle->ewhich[index_eelec]];
 
   // zero all accumulators - could do this with memset()
 
@@ -300,10 +302,8 @@ void ComputeGrid::compute_per_grid()
         vec[k++] += particles[i].evib;
         break;
       case ENGELEC:
-        if (eelec_index >= 0) {
-          eelecs = particle->edvec[particle->ewhich[eelec_index]];
+        if (index_eelec >= 0)
           vec[k++] += eelecs[i];
-        }
         break;
       case DOFROT:
         vec[k++] += species[ispecies].rotdof;

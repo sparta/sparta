@@ -36,8 +36,8 @@ class FixElecmode : public Fix {
   virtual void update_custom(int, double, double, double, double, double *);
 
  protected:
-  int elecstateindex;      // index into particle custom data structs
-  int eelecindex;
+  int index_elecstate;      // index into particle custom data structs
+  int index_eelec;
   class RanKnuth *random;
 };
 

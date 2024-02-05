@@ -45,6 +45,7 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta, int narg, cha
   SurfCollideDiffuse(sparta, narg, arg),
   fix_ambi_kk_copy(sparta),
   fix_vibmode_kk_copy(sparta),
+  fix_elecmode_kk_copy(sparta),
   sr_kk_global_copy{VAL_2(KKCopy<SurfReactGlobalKokkos>(sparta))},
   sr_kk_prob_copy{VAL_2(KKCopy<SurfReactProbKokkos>(sparta))},
   rand_pool(12345 + comm->me
@@ -76,6 +77,7 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta) :
   SurfCollideDiffuse(sparta),
   fix_ambi_kk_copy(sparta),
   fix_vibmode_kk_copy(sparta),
+  fix_elecmode_kk_copy(sparta),
   sr_kk_global_copy{VAL_2(KKCopy<SurfReactGlobalKokkos>(sparta))},
   sr_kk_prob_copy{VAL_2(KKCopy<SurfReactProbKokkos>(sparta))},
   rand_pool(12345 // seed doesn't matter since it will just be copied over
@@ -99,6 +101,7 @@ SurfCollideDiffuseKokkos::~SurfCollideDiffuseKokkos()
 
   fix_ambi_kk_copy.uncopy(1);
   fix_vibmode_kk_copy.uncopy(1);
+  fix_elecmode_kk_copy.uncopy(1);
 
   for (int i = 0; i < KOKKOS_MAX_SURF_REACT_PER_TYPE; i++) {
     sr_kk_global_copy[i].uncopy();
@@ -118,7 +121,7 @@ void SurfCollideDiffuseKokkos::init()
 {
   SurfCollideDiffuse::init();
 
-  ambi_flag = vibmode_flag = 0;
+  ambi_flag = vibmode_flag = elecmode_flag = 0;
   if (modify->n_update_custom) {
     for (int ifix = 0; ifix < modify->nfix; ifix++) {
       if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0) {
@@ -133,6 +136,12 @@ void SurfCollideDiffuseKokkos::init()
         if (!vfix->kokkos_flag)
           error->all(FLERR,"Must use fix vibmode/kk when Kokkos is enabled");
         vfix_kk = (FixVibmodeKokkos*)vfix;
+      } else if (strcmp(modify->fix[ifix]->style,"elecmode") == 0) {
+        elecmode_flag = 1;
+        FixElecmode *efix = (FixElecmode *) modify->fix[ifix];
+        if (!efix->kokkos_flag)
+          error->all(FLERR,"Must use fix elecmode/kk when Kokkos is enabled");
+        efix_kk = (FixElecmodeKokkos*)efix;
       }
     }
   }
@@ -150,6 +159,11 @@ void SurfCollideDiffuseKokkos::pre_collide()
   if (vibmode_flag) {
     vfix_kk->pre_update_custom_kokkos();
     fix_vibmode_kk_copy.copy(vfix_kk);
+  }
+
+  if (elecmode_flag) {
+    efix_kk->pre_update_custom_kokkos();
+    fix_elecmode_kk_copy.copy(efix_kk);
   }
 
   if (surf->nsr > KOKKOS_MAX_TOT_SURF_REACT)
@@ -224,7 +238,8 @@ void SurfCollideDiffuseKokkos::pre_collide()
 void SurfCollideDiffuseKokkos::post_collide()
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
-  if (ambi_flag || vibmode_flag) particle_kk->modify(Device,CUSTOM_MASK);
+  if (ambi_flag || vibmode_flag || elecmode_flag)
+    particle_kk->modify(Device,CUSTOM_MASK);
 
   Kokkos::deep_copy(h_scalars,d_scalars);
 

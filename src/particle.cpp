@@ -1177,19 +1177,17 @@ double Particle::eelec(int isp, double temp_elec, RanKnuth *erandom)
   if (collide) elecstyle = collide->elecstyle;
   if (elecstyle == DISCRETE) {
     Species species = particle->species[isp];
-    double cumulative_probabilities[species.nelecstate];
+    double cumulative_probabilities[species.nelecstate]; //////
 
-    electronic_distribution_func( isp, temp_elec, cumulative_probabilities );
+    electronic_distribution_func(isp, temp_elec, cumulative_probabilities);
 
-    for (int i = 1; i < species.nelecstate; ++i) {
+    for (int i = 1; i < species.nelecstate; ++i)
       cumulative_probabilities[i] += cumulative_probabilities[i-1];
-    }
 
     double ran = erandom->uniform();
     int i = 0;
-    while (ran > cumulative_probabilities[i]) {
+    while (ran > cumulative_probabilities[i])
       ++i;
-    }
     energy = update->boltz*species.electemp[i];
   }
   return energy;
@@ -1197,7 +1195,7 @@ double Particle::eelec(int isp, double temp_elec, RanKnuth *erandom)
 
 /* ---------------------------------------------------------------------- */
 
-void Particle::electronic_distribution_func( int isp, double temp_elec, double* distribution ) {
+void Particle::electronic_distribution_func(int isp, double temp_elec, double* distribution) {
   int elecstyle = NONE;
   if (collide) elecstyle = collide->elecstyle;
   if (elecstyle == DISCRETE) {
@@ -1211,9 +1209,8 @@ void Particle::electronic_distribution_func( int isp, double temp_elec, double* 
       partition_function += distribution[i];
     }
 
-    for (int i = 0; i < species.nelecstate; ++i) {
+    for (int i = 0; i < species.nelecstate; ++i)
       distribution[i] /= partition_function;
-    }
   }
 }
 
@@ -1503,7 +1500,7 @@ void Particle::read_electronic_file()
         error->one(FLERR,"Incorrect line format in electronic file");
 
       int jsp = particle->find_species(words[1]);
-      if ( jsp < 0 ) continue;
+      if (jsp < 0) continue;
 
       if (strcmp(words[2],"T") == 0) {
         vsp->enforce_spin_conservation[jsp] = true;

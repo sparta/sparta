@@ -28,7 +28,6 @@ SurfCollideStyle(specular/kk,SurfCollideSpecularKokkos)
 #include "rand_pool_wrap.h"
 #include "kokkos_copy.h"
 #include "fix_ambipolar_kokkos.h"
-#include "fix_vibmode_kokkos.h"
 #include "surf_react_global_kokkos.h"
 #include "surf_react_prob_kokkos.h"
 
@@ -64,11 +63,9 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
 
   t_particle_1d d_particles;
 
-  int ambi_flag,vibmode_flag;
+  int ambi_flag;
   FixAmbipolarKokkos* afix_kk;
-  FixVibmodeKokkos* vfix_kk;
   KKCopy<FixAmbipolarKokkos> fix_ambi_kk_copy;
-  KKCopy<FixVibmodeKokkos> fix_vibmode_kk_copy;
 
   int sr_type_list[KOKKOS_MAX_TOT_SURF_REACT];
   int sr_map[KOKKOS_MAX_TOT_SURF_REACT];
@@ -110,7 +107,8 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
     int velreset = 0;
 
     if (REACT) {
-      if (ambi_flag || vibmode_flag) memcpy(&iorig,ip,sizeof(Particle::OnePart));
+      if (ambi_flag)
+        memcpy(&iorig,ip,sizeof(Particle::OnePart));
 
       int sr_type = sr_type_list[isr];
       int m = sr_map[isr];

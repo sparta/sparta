@@ -52,8 +52,8 @@ FixElecmode::FixElecmode(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Cannot use fix elecmode without "
                "collide_modify electronic discrete");
 
-  elecstateindex = particle->add_custom((char *) "elecstate",INT,0);
-  eelecindex = particle->add_custom((char *) "eelec",DOUBLE,0);
+  index_elecstate = particle->add_custom((char *) "elecstate",INT,0);
+  index_eelec = particle->add_custom((char *) "eelec",DOUBLE,0);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -63,8 +63,8 @@ FixElecmode::~FixElecmode()
   if (copy) return;
 
   delete random;
-  particle->remove_custom(elecstateindex);
-  particle->remove_custom(eelecindex);
+  particle->remove_custom(index_elecstate);
+  particle->remove_custom(index_eelec);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -95,8 +95,8 @@ void FixElecmode::update_custom(int index, double temp_thermal,
                                double temp_elec,
                                double *vstream)
 {
-  int *elecstate = particle->eivec[particle->ewhich[elecstateindex]];
-  double *eelec = particle->edvec[particle->ewhich[eelecindex]];
+  int *elecstate = particle->eivec[particle->ewhich[index_elecstate]];
+  double *eelec = particle->edvec[particle->ewhich[index_eelec]];
 
   int isp = particle->particles[index].ispecies;
   int nstate = particle->species[isp].nelecstate;

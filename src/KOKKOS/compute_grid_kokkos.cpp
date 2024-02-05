@@ -29,13 +29,13 @@ using namespace SPARTA_NS;
 // user keywords
 
 enum{NUM,NRHO,NFRAC,MASS,MASSRHO,MASSFRAC,
-     U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE,EROT,TROT,EVIB,TVIB,
+     U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE,EROT,TROT,EVIB,TVIB,EELEC,
      PXRHO,PYRHO,PZRHO,KERHO};
 
 // internal accumulators
 
 enum{COUNT,MASSSUM,MVX,MVY,MVZ,MVXSQ,MVYSQ,MVZSQ,MVSQ,
-     ENGROT,ENGVIB,DOFROT,DOFVIB,CELLCOUNT,CELLMASS,LASTSIZE};
+     ENGROT,ENGVIB,ENGELEC,DOFROT,DOFVIB,CELLCOUNT,CELLMASS,LASTSIZE};
 
 // max # of quantities to accumulate for any user value
 
@@ -54,6 +54,8 @@ ComputeGridKokkos::ComputeGridKokkos(SPARTA *sparta, int narg, char **arg) :
   k_unique.modify_host();
   k_unique.sync_device();
   d_unique = k_unique.d_view;
+
+  index_eelec = -1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -100,6 +102,14 @@ void ComputeGridKokkos::compute_per_grid_kokkos()
 
   d_s2g = particle_kk->k_species2group.d_view;
   int nlocal = particle->nlocal;
+
+  index_eelec = particle->find_custom((char *) "eelec");
+  if (index_eelec >= 0) {
+    d_ewhich = particle_kk->k_ewhich.d_view;
+    k_edvec = particle_kk->k_edvec;
+
+    particle_kk->sync(Device,CUSTOM_MASK);
+  }
 
   // zero all accumulators
 
@@ -203,6 +213,12 @@ void ComputeGridKokkos::operator()(TagComputeGrid_compute_per_grid_atomic<NEED_A
     case ENGVIB:
       a_tally(icell,k++) += d_particles[i].evib;
       break;
+    case ENGELEC:
+      if (index_eelec >= 0) {
+        auto &d_eelecs = k_edvec.d_view[d_ewhich[index_eelec]].k_view.d_view;
+        a_tally(icell,k++) += d_eelecs[i];
+      }
+      break;
     case DOFROT:
       a_tally(icell,k++) += d_species[ispecies].rotdof;
       break;
@@ -272,6 +288,12 @@ void ComputeGridKokkos::operator()(TagComputeGrid_compute_per_grid, const int &i
         break;
       case ENGVIB:
         d_tally(icell,k++) += d_particles[i].evib;
+        break;
+      case ENGELEC:
+        if (index_eelec >= 0) {
+          auto &d_eelecs = k_edvec.d_view[d_ewhich[index_eelec]].k_view.d_view;
+          d_tally(icell,k++) += d_eelecs[i];
+        }
         break;
       case DOFROT:
         d_tally(icell,k++) += d_species[ispecies].rotdof;
@@ -417,6 +439,7 @@ void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
 
   case EROT:
   case EVIB:
+  case EELEC:
     {
       eng = emap[0];
       count = emap[1];

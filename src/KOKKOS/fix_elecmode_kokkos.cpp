@@ -13,7 +13,7 @@
 ------------------------------------------------------------------------- */
 
 #include "math.h"
-#include "fix_vibmode_kokkos.h"
+#include "fix_elecmode_kokkos.h"
 #include "update.h"
 #include "particle.h"
 #include "collide.h"
@@ -32,8 +32,8 @@ enum{NONE,DISCRETE,SMOOTH};            // several files
 
 /* ---------------------------------------------------------------------- */
 
-FixVibmodeKokkos::FixVibmodeKokkos(SPARTA *sparta, int narg, char **arg) :
-  FixVibmode(sparta, narg, arg),
+FixElecmodeKokkos::FixElecmodeKokkos(SPARTA *sparta, int narg, char **arg) :
+  FixElecmode(sparta, narg, arg),
   rand_pool(12345 + comm->me
 #ifdef SPARTA_KOKKOS_EXACT
             , sparta
@@ -52,8 +52,8 @@ FixVibmodeKokkos::FixVibmodeKokkos(SPARTA *sparta, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-FixVibmodeKokkos::FixVibmodeKokkos(SPARTA *sparta) :
-  FixVibmode(sparta),
+FixElecmodeKokkos::FixElecmodeKokkos(SPARTA *sparta) :
+  FixElecmode(sparta),
   rand_pool(12345 // seed doesn't matter since it will just be copied over
 #ifdef SPARTA_KOKKOS_EXACT
             , sparta
@@ -67,7 +67,7 @@ FixVibmodeKokkos::FixVibmodeKokkos(SPARTA *sparta) :
 
 /* ---------------------------------------------------------------------- */
 
-FixVibmodeKokkos::~FixVibmodeKokkos()
+FixElecmodeKokkos::~FixElecmodeKokkos()
 {
   if (copy) return;
 
@@ -78,7 +78,7 @@ FixVibmodeKokkos::~FixVibmodeKokkos()
 
 /* ---------------------------------------------------------------------- */
 
-void FixVibmodeKokkos::pre_update_custom_kokkos()
+void FixElecmodeKokkos::pre_update_custom_kokkos()
 {
   boltz = update->boltz;
 
@@ -87,22 +87,24 @@ void FixVibmodeKokkos::pre_update_custom_kokkos()
   d_particles = particle_kk->k_particles.d_view;
   d_species = particle_kk->k_species.d_view;
   auto h_ewhich = particle_kk->k_ewhich.h_view;
-  auto k_eiarray = particle_kk->k_eiarray;
-  d_vibmode = k_eiarray.h_view[h_ewhich[index_vibmode]].k_view.d_view;
+  auto k_edvec = particle_kk->k_edvec;
+  auto k_eivec = particle_kk->k_eivec;
+  d_eelec = k_edvec.h_view[h_ewhich[index_eelec]].k_view.d_view;
+  d_elecstate = k_eivec.h_view[h_ewhich[index_elecstate]].k_view.d_view;
 }
 
 /* ----------------------------------------------------------------------
    called when a particle with index is created
     or when temperature dependent properties need to be updated
-   populate all vibrational modes and set evib = sum of mode energies
+   populate an electronic state and set eelec
 ------------------------------------------------------------------------- */
 
-void FixVibmodeKokkos::update_custom(int index, double temp_thermal,
-                                     double temp_rot, double temp_vib,
-                                     double temp_elec, double *vstream)
+void FixElecmodeKokkos::update_custom(int index, double temp_thermal,
+                                     double temp_rot, double temp_vib, double temp_elec,
+                                     double *vstream)
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Host,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
-  FixVibmode::update_custom(index, temp_thermal, temp_rot, temp_vib, temp_elec, vstream);
+  FixElecmode::update_custom(index, temp_thermal, temp_rot, temp_vib, temp_elec, vstream);
   particle_kk->modify(Host,PARTICLE_MASK|CUSTOM_MASK);
 }

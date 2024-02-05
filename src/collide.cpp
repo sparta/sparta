@@ -103,6 +103,8 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   ncollide_one = nattempt_one = nreact_one = 0;
   ncollide_running = nattempt_running = nreact_running = 0;
 
+  index_elecstate = index_eelec = -1;
+
   copymode = kokkos_flag = 0;
 }
 
@@ -214,10 +216,8 @@ void Collide::init()
         error->all(FLERR,
                    "Fix elecmode must be used with discrete electronic modes");
     }
-  } else {
-    index_elecstate = -1;
-    index_eelec = -1;
   }
+
   // reallocate one-cell data structs for one or many groups
 
   oldgroups = ngroups;

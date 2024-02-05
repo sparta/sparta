@@ -140,6 +140,7 @@ class CollideVSSKokkos : public CollideVSS {
   DAT::t_int_1d d_ewhich;
   tdual_struct_tdual_int_1d_1d k_eivec;
   tdual_struct_tdual_int_2d_1d k_eiarray;
+  tdual_struct_tdual_float_1d_1d k_edvec;
   tdual_struct_tdual_float_2d_1d k_edarray;
   DAT::t_int_1d d_ionambi;
   DAT::t_float_2d_lr d_velambi;
@@ -234,6 +235,17 @@ class CollideVSSKokkos : public CollideVSS {
                                    Particle::OnePart *,
                                    Particle::OnePart *,
                                    struct State &, struct State &, rand_type &) const;
+
+  KOKKOS_INLINE_FUNCTION
+  void relax_electronic_mode(Particle::OnePart *, Particle::OnePart *,
+                             double&, rand_type &rand_gen) const;
+  KOKKOS_INLINE_FUNCTION
+  double get_elec_phi(int, int, int, double) const;
+  KOKKOS_INLINE_FUNCTION
+  double calc_elec_coll_temp(Particle::OnePart *, double, double) const;
+  KOKKOS_INLINE_FUNCTION
+  int select_elec_state(Particle::OnePart *, Particle::OnePart *,
+                        double, double, bool, rand_type &rand_gen) const;
 
   KOKKOS_INLINE_FUNCTION
   double sample_bl(rand_type &, double, double) const;
