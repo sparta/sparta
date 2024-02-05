@@ -179,14 +179,14 @@ collide(Particle::OnePart *&ip, double &,
     if (!velreset) td(ip,norm);
     if (modify->n_update_custom) {
       int i = ip - particle->particles;
-      modify->update_custom(i,twall,twall,twall,vstream);
+      modify->update_custom(i,twall,twall,twall,twall,vstream);
     }
   }
   if (jp) {
     if (!velreset) td(jp,norm);
     if (modify->n_update_custom) {
       int j = jp - particle->particles;
-      modify->update_custom(j,twall,twall,twall,vstream);
+      modify->update_custom(j,twall,twall,twall,twall,vstream);
     }
   }
 

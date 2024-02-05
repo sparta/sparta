@@ -92,6 +92,7 @@ void FixElecmode::init()
 
 void FixElecmode::update_custom(int index, double temp_thermal,
                                double temp_rot, double temp_vib,
+                               double temp_elec,
                                double *vstream)
 {
   int *elecstate = particle->eivec[particle->ewhich[elecstateindex]];

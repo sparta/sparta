@@ -569,7 +569,6 @@ void FixEmitSurf::perform_task()
 
           erot = particle->erot(ispecies,temp_rot,random);
           evib = particle->evib(ispecies,temp_vib,random);
-          double eelec = particle->eelec(ispecies,temp_elec,random);
           id = MAXSMALLINT*random->uniform();
 
           particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
@@ -581,7 +580,7 @@ void FixEmitSurf::perform_task()
 
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
-                                 temp_rot,temp_vib,vstream);
+                                 temp_rot,temp_vib,temp_elec,vstream);
         }
 
         nsingle += nactual;
@@ -669,7 +668,6 @@ void FixEmitSurf::perform_task()
 
         erot = particle->erot(ispecies,temp_rot,random);
         evib = particle->evib(ispecies,temp_vib,random);
-        double eelec = particle->eelec(ispecies,temp_elec,random);
         id = MAXSMALLINT*random->uniform();
 
         particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
@@ -681,7 +679,7 @@ void FixEmitSurf::perform_task()
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,
-                               temp_rot,temp_vib,vstream);
+                               temp_rot,temp_vib,temp_elec,vstream);
       }
 
       nsingle += nactual;
