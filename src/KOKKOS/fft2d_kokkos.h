@@ -84,7 +84,7 @@ class FFT2dKokkos : protected Pointers {
   struct fft_plan_2d_kokkos<DeviceType> *plan;
   RemapKokkos2d<DeviceType> *remapKK;
 
-#ifdef FFT_KOKKOS_KISSFFT
+#ifdef FFT_KOKKOS_KISS
   KissFFTKokkos<DeviceType> *kissfftKK;
 #endif
 

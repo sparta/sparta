@@ -15,8 +15,8 @@
 #ifndef SPA_FFT3D_WRAP_H
 #define SPA_FFT3D_WRAP_H
 
-#include "pointers.h"
 #include "fft3d.h"
+#include "pointers.h"
 
 namespace SPARTA_NS {
 

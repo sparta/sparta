@@ -56,7 +56,7 @@ FFT2dKokkos<DeviceType>::FFT2dKokkos(SPARTA *sparta, MPI_Comm comm, int nfast, i
   if (ngpus > 0 && execution_space == Host)
     sparta->error->all(FLERR,"Cannot use the hipFFT library with Kokkos on the host CPUs");
 
-#elif defined(FFT_KOKKOS_KISSFFT)
+#elif defined(FFT_KOKKOS_KISS)
   // The compiler can't statically determine the stack size needed for
   //  recursive function calls in KISS FFT and the default per-thread
   //  stack size on GPUs needs to be increased to prevent stack overflows
@@ -161,7 +161,7 @@ public:
   }
 };
 
-#ifdef FFT_KOKKOS_KISSFFT
+#ifdef FFT_KOKKOS_KISS
 template<class DeviceType>
 struct kiss_fft_functor {
 public:
@@ -633,7 +633,7 @@ void FFT2dKokkos<DeviceType>::fft_2d_destroy_plan_kokkos(struct fft_plan_2d_kokk
   FFTW_API(cleanup_threads)();
 #endif
 
-#elif defined (FFT_KOKKOS_KISSFFT)
+#elif defined (FFT_KOKKOS_KISS)
   delete kissfftKK;
 #endif
 
