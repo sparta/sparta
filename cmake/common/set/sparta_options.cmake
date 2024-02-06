@@ -43,6 +43,8 @@ sparta_option(BUILD_PNG "Enable or disable PNG TPL. Default: OFF." OFF
               SPARTA_BUILD_TPL_LIST)
 
 option(FFT "Select a FFT TPL from FFTW2, FFTW3, and MKL. Default: OFF." OFF)
+option(FFT_KOKKOS "Select a FFT TPL for Kokkos from FFTW3_KOKKOS,
+MKL_KOKKOS, CUFFT_KOKKOS, and HIPFFT_KOKKOS. Default: OFF." OFF)
 # ######### END   SPARTA TPL DEPENDENCIES ##########
 
 # ######### BEGIN SPARTA EXTRA OPTIONS ##########
