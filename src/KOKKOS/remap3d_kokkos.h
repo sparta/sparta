@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic Parallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -54,7 +54,7 @@ struct remap_plan_3d_kokkos {
   int usecollective;                // use collective or point-to-point MPI
   int commringlen;                  // length of commringlist
   int *commringlist;                // ranks on communication ring of this plan
-  int usegpu_aware;                // use GPU-Aware MPI or not
+  int usegpu_aware;                 // use GPU-Aware MPI or not
 };
 
 template<class DeviceType>

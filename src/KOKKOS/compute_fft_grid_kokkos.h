@@ -29,34 +29,6 @@ ComputeStyle(fft/grid/kk,ComputeFFTGridKokkos)
 #include "kokkos_base.h"
 #include "kokkos_type.h"
 
-#ifdef KOKKOS_ENABLE_CUDA
-# if defined(FFT_FFTW)
-#  undef FFT_FFTW
-# endif
-# if defined(FFT_FFTW3)
-#  undef FFT_FFTW3
-# endif
-# if defined(FFT_MKL)
-#  undef FFT_MKL
-# endif
-# if !defined(FFT_CUFFT) && !defined(FFT_KISSFFT)
-#  define FFT_KISSFFT
-# endif
-#elif defined(KOKKOS_ENABLE_HIP)
-# if defined(FFT_FFTW)
-#  undef FFT_FFTW
-# endif
-# if defined(FFT_FFTW3)
-#  undef FFT_FFTW3
-# endif
-# if defined(FFT_MKL)
-#  undef FFT_MKL
-# endif
-# if !defined(FFT_HIPFFT) && !defined(FFT_KISSFFT)
-#  define FFT_KISSFFT
-# endif
-#endif
-
 namespace SPARTA_NS {
 
 class ComputeFFTGridKokkos : public ComputeFFTGrid, public KokkosBase {

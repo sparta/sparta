@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -43,18 +43,18 @@ struct fft_plan_2d_kokkos {
   double norm;                      // normalization factor for rescaling
 
                                     // system specific 1d FFT info
-#if defined(FFT_MKL)
+#if defined(FFT_KOKKOS_MKL)
   DFTI_DESCRIPTOR *handle_fast;
   DFTI_DESCRIPTOR *handle_slow;
-#elif defined(FFT_FFTW3)
+#elif defined(FFT_KOKKOS_FFTW3)
   FFTW_API(plan) plan_fast_forward;
   FFTW_API(plan) plan_fast_backward;
   FFTW_API(plan) plan_slow_forward;
   FFTW_API(plan) plan_slow_backward;
-#elif defined(FFT_CUFFT)
+#elif defined(FFT_KOKKOS_CUFFT)
   cufftHandle plan_fast;
   cufftHandle plan_slow;
-#elif defined(FFT_HIPFFT)
+#elif defined(FFT_KOKKOS_HIPFFT)
   hipfftHandle plan_fast;
   hipfftHandle plan_slow;
 #else
@@ -84,7 +84,7 @@ class FFT2dKokkos : protected Pointers {
   struct fft_plan_2d_kokkos<DeviceType> *plan;
   RemapKokkos2d<DeviceType> *remapKK;
 
-#ifdef FFT_KISSFFT
+#ifdef FFT_KOKKOS_KISSFFT
   KissFFTKokkos<DeviceType> *kissfftKK;
 #endif
 

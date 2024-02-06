@@ -1,7 +1,7 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
@@ -209,7 +209,7 @@ void RemapKokkos3d<DeviceType>::remap_3d_kokkos(typename FFT_AT::t_FFT_SCALAR_1d
                           1 = single precision (4 bytes per datum)
                           2 = double precision (8 bytes per datum)
    usecollective        whether to use collective MPI or point-to-point
-   usegpu_aware        whether to use GPU-Aware MPI or not
+   usegpu_aware         whether to use GPU-Aware MPI or not
 ------------------------------------------------------------------------- */
 
 template<class DeviceType>
