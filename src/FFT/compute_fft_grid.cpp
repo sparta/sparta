@@ -345,16 +345,7 @@ void ComputeFFTGrid::init()
     } else value2index[m] = -1;
   }
 
-  if (comm->me == 0) {
-    char str[64];
-    if (sparta->kokkos)
-      sprintf(str,"Using " SPARTA_FFT_PREC " precision " SPARTA_FFT_KOKKOS_LIB " for FFTs\n");
-    else
-      sprintf(str,"Using " SPARTA_FFT_PREC " precision " SPARTA_FFT_LIB " for FFTs\n");
-
-    if (screen) fprintf(screen,"%s",str);
-    if (logfile) fprintf(logfile,"%s",str);
-  }
+  print_FFT_info();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -937,6 +928,20 @@ int ComputeFFTGrid::factorable(int n)
   }
 
   return 1;
+}
+
+/* ----------------------------------------------------------------------
+   print out FFT precision and library
+------------------------------------------------------------------------- */
+
+void ComputeFFTGrid::print_FFT_info()
+{
+  if (comm->me == 0) {
+    char str[64];
+    sprintf(str,"Using " SPARTA_FFT_PREC " precision " SPARTA_FFT_LIB " for FFTs\n");
+    if (screen) fprintf(screen,"%s",str);
+    if (logfile) fprintf(logfile,"%s",str);
+  }
 }
 
 /* ----------------------------------------------------------------------

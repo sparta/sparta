@@ -86,6 +86,7 @@ class ComputeFFTGrid : public Compute {
   virtual void irregular_create();
   void procs2grid2d(int, int, int, int &, int &);
   int factorable(int);
+  virtual void print_FFT_info();
   void debug(const char *, int, double *, int *, cellint *, int stride=1);
 };
 

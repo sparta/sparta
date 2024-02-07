@@ -78,6 +78,7 @@ class ComputeFFTGridKokkos : public ComputeFFTGrid, public KokkosBase {
   IrregularKokkos *irregular1KK,*irregular2KK;
 
   void fft_create();
+  void print_FFT_info();
 };
 
 }

@@ -691,3 +691,18 @@ void ComputeFFTGridKokkos::irregular_create()
 
   copymode = 0;
 }
+
+/* ----------------------------------------------------------------------
+   print out FFT precision and library
+------------------------------------------------------------------------- */
+
+void ComputeFFTGridKokkos::print_FFT_info()
+{
+  if (comm->me == 0) {
+    char str[64];
+    sprintf(str,"Using " SPARTA_FFT_PREC " precision " SPARTA_FFT_KOKKOS_LIB " for FFTs\n");
+    if (screen) fprintf(screen,"%s",str);
+    if (logfile) fprintf(logfile,"%s",str);
+  }
+}
+
