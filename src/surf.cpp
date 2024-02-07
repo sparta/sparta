@@ -647,7 +647,6 @@ void Surf::add_surfs(int replace, int ncount,
       cvalues[i][0] = ubuf(((surfint) ubuf(cvalues[i][0]).i) + nsurf_old).d;
 
   // redistribute surfs to correct layout in Surf data structs
-  // also checks that new surfs have IDs contiguous from 1 to N
 
   redistribute_surfs(ncount,newlines,newtris,nc,index_custom,cvalues,
 		     nsurf_new,nsurf_old);

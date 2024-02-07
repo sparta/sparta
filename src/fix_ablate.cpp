@@ -726,7 +726,7 @@ void FixAblate::set_delta_random()
 /* ----------------------------------------------------------------------
    set per-cell delta vector from compute/fix/variable source
    celldelta = nevery * scale * source-value
-   // NOTE: how does this work for split cells? should only do parent split?
+   NOTE: how does this work for split cells? should only do parent split?
 ------------------------------------------------------------------------- */
 
 void FixAblate::set_delta()
