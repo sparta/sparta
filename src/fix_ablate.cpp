@@ -340,7 +340,10 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
 
-  if(aveFlag>=0) sync_explicit(aveFlag);
+  if(aveFlag>=0) {
+    //sync_explicit(aveFlag);
+    sync();
+  }
   MPI_Barrier(world);
 
   // push corner pt values that are fully external/internal to 0 or 255
@@ -524,8 +527,8 @@ void FixAblate::create_surfs(int outflag)
   // watertight check can be done before surfs are mapped to grid cells
 
   // some freezing here if explicit surface already existed
-  //if (dim == 2) surf->check_watertight_2d();
-  //else surf->check_watertight_3d();
+  if (dim == 2) surf->check_watertight_2d();
+  else surf->check_watertight_3d();
 
   // if no surfs created, use clear_surf to set all celltypes = OUTSIDE
 
@@ -1022,23 +1025,15 @@ void FixAblate::sync_explicit(int aveFlag)
             // update total with one corner point of jcell
             // jcorner descends from ncorner
 
-            if (jcell < nglocal) {
-              if(cdelta[jcell][jcorner] >= thresh) {
-                if(aveFlag == 0) temp = 255.0;
-                else temp = MAX(cdelta[jcell][jcorner],temp);
-                ntotal++;
-              }
-            } else if (cdelta_ghost[jcell-nglocal][jcorner] >= thresh) {
-              if(aveFlag == 0) temp = 255.0;
-              else temp = MAX(cdelta_ghost[jcell-nglocal][jcorner],temp);
-              ntotal++;
-            }
-
+            if (jcell < nglocal && cdelta[jcell][jcorner] > thresh)
+              temp = 255.0;
+            else if (cdelta_ghost[jcell-nglocal][jcorner] > thresh)
+              temp = 255.0;
           }
         }
       }
 
-      if(temp >= thresh) cvalues[icell][i] = temp;
+      if(temp > thresh) cvalues[icell][i] = 255.0;
       else cvalues[icell][i] = 0.0;
     }
   }
