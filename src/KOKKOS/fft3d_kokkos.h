@@ -12,8 +12,8 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#ifndef SPA_FFT3D_KOKKOS_H
-#define SPA_FFT3D_KOKKOS_H
+#ifndef SPARTA_FFT3D_KOKKOS_H
+#define SPARTA_FFT3D_KOKKOS_H
 
 #include "pointers.h"
 #include "remap3d_kokkos.h"

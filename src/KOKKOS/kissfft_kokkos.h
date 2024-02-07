@@ -57,8 +57,8 @@
 */
 
 
-#ifndef SPA_KISSFFT_KOKKOS_H
-#define SPA_KISSFFT_KOKKOS_H
+#ifndef SPARTA_KISSFFT_KOKKOS_H
+#define SPARTA_KISSFFT_KOKKOS_H
 
 #include <stdlib.h>
 #include <string.h>

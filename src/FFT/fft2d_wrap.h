@@ -12,8 +12,8 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#ifndef SPA_FFT2D_WRAP_H
-#define SPA_FFT2D_WRAP_H
+#ifndef SPARTA_FFT2D_WRAP_H
+#define SPARTA_FFT2D_WRAP_H
 
 #include "fft2d.h"
 #include "pointers.h"

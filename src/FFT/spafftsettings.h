@@ -14,41 +14,113 @@
 
 // common FFT library related defines and compilation settings
 
-#ifndef SPA_FFT_SETTINGS_H
-#define SPA_FFT_SETTINGS_H
+#ifndef SPARTA_FFT_SETTINGS_H
+#define SPARTA_FFT_SETTINGS_H
 
-// if user set FFTW, it means FFTW3
+#include "accelerator_kokkos_defs.h"
+
+// if a user sets FFTW, it means FFTW3
 
 #ifdef FFT_FFTW
 #ifndef FFT_FFTW3
+#undef FFT_FFTW
 #define FFT_FFTW3
 #endif
+#endif
+
+#ifdef SPARTA_KOKKOS
+# ifdef FFT_KOKKOS_FFTW
+#  undef FFT_KOKKOS_FFTW
+#  define FFT_KOKKOS_FFTW3
+# endif
+# ifdef FFT_KOKKOS_FFTW_THREADS
+#  if !defined(FFT_KOKKOS_FFTW3)
+#   error "Must use -DFFT_KOKKOS_FFTW3 with -DFFT_KOKKOS_FFTW_THREADS"
+#  endif
+# endif
 #endif
 
 // set strings for library info output
 
 #if defined(FFT_FFTW3)
-#define SPA_FFT_LIB "FFTW3"
+#define SPARTA_FFT_LIB "FFTW3"
 #elif defined(FFT_MKL)
-#define SPA_FFT_LIB "MKL FFT"
+#define SPARTA_FFT_LIB "MKL FFT"
 #elif defined(FFT_CUFFT)
-#define SPA_FFT_LIB "cuFFT"
+#define SPARTA_FFT_LIB "cuFFT"
 #elif defined(FFT_HIPFFT)
-#define SPA_FFT_LIB "hipFFT"
+#define SPARTA_FFT_LIB "hipFFT"
 #else
-#define SPA_FFT_LIB "KISS FFT"
+#define SPARTA_FFT_LIB "KISS FFT"
+#endif
+
+#ifdef SPARTA_KOKKOS
+
+// with KOKKOS in CUDA or HIP mode we can only have
+//  CUFFT/HIPFFT or KISS, thus undefine all other
+//  FFTs here
+
+#ifdef KOKKOS_ENABLE_CUDA
+# if defined(FFT_KOKKOS_FFTW)
+#  undef FFT_KOKKOS_FFTW
+# endif
+# if defined(FFT_KOKKOS_FFTW3)
+#  undef FFT_KOKKOS_FFTW3
+# endif
+# if defined(FFT_KOKKOS_MKL)
+#  undef FFT_KOKKOS_MKL
+# endif
+# if !defined(FFT_KOKKOS_CUFFT) && !defined(FFT_KOKKOS_KISS)
+#  define FFT_KOKKOS_KISS
+# endif
+#elif defined(KOKKOS_ENABLE_HIP)
+# if defined(FFT_KOKKOS_FFTW)
+#  undef FFT_KOKKOS_FFTW
+# endif
+# if defined(FFT_KOKKOS_FFTW3)
+#  undef FFT_KOKKOS_FFTW3
+# endif
+# if defined(FFT_KOKKOS_MKL)
+#  undef FFT_KOKKOS_MKL
+# endif
+# if !defined(FFT_KOKKOS_HIPFFT) && !defined(FFT_KOKKOS_KISS)
+#  define FFT_KOKKOS_KISS
+# endif
+#else
+# if defined(FFT_KOKKOS_CUFFT)
+#  error "Must enable CUDA with KOKKOS to use -DFFT_KOKKOS_CUFFT"
+# endif
+# if defined(FFT_KOKKOS_HIPFFT)
+#  error "Must enable HIP with KOKKOS to use -DFFT_KOKKOS_HIPFFT"
+# endif
+#endif
+
+#if defined(FFT_KOKKOS_CUFFT)
+#define SPARTA_FFT_KOKKOS_LIB "cuFFT"
+#elif defined(FFT_KOKKOS_HIPFFT)
+#define SPARTA_FFT_KOKKOS_LIB "hipFFT"
+#elif defined(FFT_KOKKOS_FFTW3)
+#define SPARTA_FFT_KOKKOS_LIB "FFTW3"
+#elif defined(FFT_KOKKOS_MKL)
+#define SPARTA_FFT_KOKKOS_LIB "MKL FFT"
+#else
+#define SPARTA_FFT_KOKKOS_LIB "KISS FFT"
+#endif
+
+#else
+#define SPARTA_FFT_KOKKOS_LIB ""
 #endif
 
 #ifdef FFT_SINGLE
 typedef float FFT_SCALAR;
 #define FFT_PRECISION 1
-#define SPA_FFT_PREC "single"
+#define SPARTA_FFT_PREC "single"
 #define MPI_FFT_SCALAR MPI_FLOAT
 #else
 
 typedef double FFT_SCALAR;
 #define FFT_PRECISION 2
-#define SPA_FFT_PREC "double"
+#define SPARTA_FFT_PREC "double"
 #define MPI_FFT_SCALAR MPI_DOUBLE
 #endif
 

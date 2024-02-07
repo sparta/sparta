@@ -10,8 +10,8 @@
    the GNU General Public License.
 ------------------------------------------------------------------------- */
 
-#ifndef SPA_KOKKOS_BASE_FFT_H
-#define SPA_KOKKOS_BASE_FFT_H
+#ifndef SPARTA_KOKKOS_BASE_FFT_H
+#define SPARTA_KOKKOS_BASE_FFT_H
 
 #include "fftdata_kokkos.h"
 

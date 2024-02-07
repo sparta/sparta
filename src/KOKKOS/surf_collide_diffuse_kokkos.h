@@ -54,7 +54,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
  private:
   double boltz;
   int rotstyle, vibstyle;
-  int dimension;  
+  int dimension;
 
 #ifndef SPARTA_KOKKOS_EXACT
   Kokkos::Random_XorShift64_Pool<DeviceType> rand_pool;
@@ -81,7 +81,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
   HAT::t_int_scalar h_nreact_one;
 
   t_particle_1d d_particles;
-  t_species_1d d_species; 
+  t_species_1d d_species;
 
   int ambi_flag,vibmode_flag;
   FixAmbipolarKokkos* afix_kk;
@@ -118,7 +118,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
       d_nsingle()++;
     else
       Kokkos::atomic_increment(&d_nsingle());
- 
+
     // if surface chemistry defined, attempt reaction
     // reaction = 1 to N for which reaction took place, 0 for none
     // velreset = 1 if reaction reset post-collision velocity, else 0

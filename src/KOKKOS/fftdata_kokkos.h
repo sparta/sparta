@@ -14,8 +14,8 @@
 
 // data types for 2d/3d FFTs
 
-#ifndef SPA_FFT_DATA_KOKKOS_H
-#define SPA_FFT_DATA_KOKKOS_H
+#ifndef SPARTA_FFT_DATA_KOKKOS_H
+#define SPARTA_FFT_DATA_KOKKOS_H
 
 #include "kokkos_type.h"
 

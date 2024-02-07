@@ -54,6 +54,13 @@ ComputeGridKokkos::ComputeGridKokkos(SPARTA *sparta, int narg, char **arg) :
   k_unique.modify_host();
   k_unique.sync_device();
   d_unique = k_unique.d_view;
+
+#if defined (SPARTA_KOKKOS_GPU)
+  #if defined(FFT_KOKKOS_KISS)
+    if (comm->me == 0)
+      error->warning(FLERR,"Using default KISS FFT with Kokkos GPU backends may give suboptimal performance");
+  #endif
+#endif
 }
 
 /* ---------------------------------------------------------------------- */

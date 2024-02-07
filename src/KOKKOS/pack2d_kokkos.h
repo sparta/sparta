@@ -62,7 +62,7 @@ public:
 
   KOKKOS_INLINE_FUNCTION
   void operator() (const int &index) const {
- 
+
     const int slow = index / nfast;
     const int fast = index % nfast;
     const int in = slow*nfast + fast;

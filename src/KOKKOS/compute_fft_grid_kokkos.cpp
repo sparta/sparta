@@ -61,6 +61,13 @@ ComputeFFTGridKokkos::ComputeFFTGridKokkos(SPARTA *sparta, int narg, char **arg)
   fft2dKK = NULL;
   fft3dKK = NULL;
   irregular1KK = irregular2KK = NULL;
+
+#if defined (SPARTA_KOKKOS_GPU)
+  #if defined(FFT_KOKKOS_KISS)
+    if (comm->me == 0)
+      error->warning(FLERR,"Using default KISS FFT with Kokkos GPU backends may give suboptimal performance");
+  #endif
+#endif
 }
 
 /* ---------------------------------------------------------------------- */
@@ -101,7 +108,7 @@ void ComputeFFTGridKokkos::post_constructor()
 
   MemKK::realloc_kokkos(d_fft, "fft/grid:fft", 2*nfft);
   d_fft_char = DAT::t_char_1d((char *)d_fft.data(),d_fft.size()*sizeof(FFT_SCALAR));
- 
+
   memoryKK->create_kokkos(k_fftwork, fftwork, nfft, "fft/grid:fftwork");
   d_fftwork = k_fftwork.d_view;
   d_fftwork_char = DAT::t_char_1d((char *)d_fftwork.data(),d_fftwork.size()*sizeof(double));
@@ -355,7 +362,7 @@ void ComputeFFTGridKokkos::reallocate()
   memoryKK->destroy_kokkos(k_ingrid, ingrid);
   memoryKK->destroy_kokkos(k_vector_grid, vector_grid);
   memoryKK->destroy_kokkos(k_array_grid, array_grid);
-  
+
   nglocal = grid->nlocal;
 
   memoryKK->create_kokkos(k_ingrid,ingrid,nglocal,"fft/grid:ingrid");

@@ -14,6 +14,7 @@
 
 #include "string.h"
 #include "stdlib.h"
+#include "comm.h"
 #include "compute_fft_grid.h"
 #include "update.h"
 #include "domain.h"
@@ -27,6 +28,7 @@
 #include "fft2d_wrap.h"
 #include "memory.h"
 #include "error.h"
+#include "spafftsettings.h"
 
 #ifdef SPARTA_MAP
 #include <map>
@@ -341,6 +343,17 @@ void ComputeFFTGrid::init()
       value2index[m] = ivariable;
 
     } else value2index[m] = -1;
+  }
+
+  if (comm->me == 0) {
+    char str[64];
+    if (sparta->kokkos)
+      sprintf(str,"Using " SPARTA_FFT_PREC " precision " SPARTA_FFT_KOKKOS_LIB " for FFTs\n");
+    else
+      sprintf(str,"Using " SPARTA_FFT_PREC " precision " SPARTA_FFT_LIB " for FFTs\n");
+
+    if (screen) fprintf(screen,"%s",str);
+    if (logfile) fprintf(logfile,"%s",str);
   }
 }
 
