@@ -274,7 +274,7 @@ int ComputeTvibGridKokkos::query_tally_grid_kokkos(DAT::t_float_2d_lr &d_array)
 ------------------------------------------------------------------------- */
 
 void ComputeTvibGridKokkos::
-post_process_grid_kokkos(int index, int nsample,
+post_process_grid_kokkos(int index, int /*nsample*/,
                          DAT::t_float_2d_lr d_etally, int *emap,
                          DAT::t_float_1d_strided d_vec)
 {
@@ -284,7 +284,6 @@ post_process_grid_kokkos(int index, int nsample,
   int hi = nglocal;
 
   if (!d_etally.data()) {
-    nsample = 1;
     d_etally = d_tally;
     emap = map[index];
     d_vec = d_vector_grid;

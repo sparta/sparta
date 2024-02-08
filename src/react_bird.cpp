@@ -241,7 +241,7 @@ void ReactBird::init()
 
     // read effective internal DOFs participating in the reaction
 
-    double z = r->coeff[0];
+    //double z = r->coeff[0];
 
     // add additional coeff for effective DOF
 

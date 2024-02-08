@@ -335,7 +335,7 @@ void SurfCollideImpulsive::impulsive(Particle::OnePart *p, double *norm)
     double mu = species[ispecies].molwt/eff_mass;
     double cos_khi = cos(MY_PI - theta_i - theta_f);
     double sin_khi_sq = 1 - cos_khi*cos_khi;
-    double dE, E_f_avg, v_f_mag;
+    double dE, E_f_avg;
 
     dE = 2*mu/((mu+1)*(mu+1)) *
       (1 + mu*sin_khi_sq + eng_ratio*(mu+1)/(2*mu) -

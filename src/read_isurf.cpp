@@ -495,7 +495,7 @@ void ReadISurf::assign_types(int n, bigint offset, uint8_t *buf)
 
 void ReadISurf::read_corners_parallel(char *gridfile)
 {
-  int nchunk,tmp;
+  int tmp;
   int nxyz[3];
   FILE *fp;
 

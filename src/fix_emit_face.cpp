@@ -267,7 +267,6 @@ void FixEmitFace::create_task(int icell)
 
   // loop over 6 faces of icell
 
-  int ntaskorig = ntask;
   int nmask = cells[icell].nmask;
 
   for (i = 0; i < 6; i++) {

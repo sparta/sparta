@@ -2338,7 +2338,7 @@ int Grid::find_group(const char *id)
 int Grid::check_uniform_group(int igroup, int *nxyz,
                               double *corner, double *xyzsize)
 {
-  double lo[3],hi[3],onesize[3];
+  double lo[3],hi[3];
 
   int sflag = 0;
   int minlev = maxlevel;

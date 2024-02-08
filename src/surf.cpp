@@ -900,7 +900,6 @@ void Surf::compute_line_normal(int old)
 
 void Surf::compute_tri_normal(int old)
 {
-  int p1,p2,p3;
   double delta12[3],delta13[3];
 
   int n;
@@ -2692,7 +2691,6 @@ void Surf::compress_explicit()
 void Surf::compress_implicit()
 {
   int j,ns,icell;
-  cellint cellID;
   surfint *csurfs;
 
   if (!grid->hashfilled) grid->rehash();
@@ -2792,11 +2790,6 @@ void Surf::collate_vector_reduce(int nrow, surfint *tally2surf,
 
   memset(one,0,nglobal*sizeof(double));
 
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
-  int dim = domain->dimension;
-  surfint id;
-
   j = 0;
   for (i = 0; i < nrow; i++) {
     m = (int) tally2surf[i] - 1;
@@ -2840,10 +2833,6 @@ void Surf::collate_vector_rendezvous(int nrow, surfint *tally2surf,
   // logic of (id-1) % nprocs sends
   //   surf IDs 1,11,21,etc on 10 procs to proc 0
 
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
-  int dim = domain->dimension;
-
   surfint id;
 
   int m = 0;
@@ -2881,7 +2870,6 @@ int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
                             char *&outbuf, void *ptr)
 {
   Surf *sptr = (Surf *) ptr;
-  Memory *memory = sptr->memory;
   int nown = sptr->nown;
   double *out = sptr->out_rvous;
   int nprocs = sptr->comm->nprocs;
@@ -2958,10 +2946,6 @@ void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
 
   memset(&one[0][0],0,nglobal*ncol*sizeof(double));
 
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
-  int dim = domain->dimension;
-
   for (i = 0; i < nrow; i++) {
     m = (int) tally2surf[i] - 1;
     for (j = 0; j < ncol; j++)
@@ -2993,7 +2977,7 @@ void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
 void Surf::collate_array_rendezvous(int nrow, int ncol, surfint *tally2surf,
                                     double **in, double **out)
 {
-  int i,j,m;
+  int j,m;
 
   // allocate memory for rvous input
 
@@ -3007,9 +2991,6 @@ void Surf::collate_array_rendezvous(int nrow, int ncol, surfint *tally2surf,
   // logic of (id-1) % nprocs sends
   //   surf IDs 1,11,21,etc on 10 procs to proc 0
 
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
-  int dim = domain->dimension;
   surfint id;
 
   m = 0;
@@ -3050,10 +3031,9 @@ int Surf::rendezvous_array(int n, char *inbuf,
                            int &flag, int *&proclist, char *&outbuf,
                            void *ptr)
 {
-  int i,j,k,m;
+  int j,k,m;
 
   Surf *sptr = (Surf *) ptr;
-  Memory *memory = sptr->memory;
   int nown = sptr->nown;
   int ncol = sptr->ncol_rvous;
   double *out = sptr->out_rvous;
@@ -3101,7 +3081,7 @@ int Surf::rendezvous_array(int n, char *inbuf,
 void Surf::collate_vector_implicit(int nrow, surfint *tally2surf,
                                    double *in, double *out)
 {
-  int i,j,m,icell;
+  int i,m,icell;
   cellint cellID;
 
   int me = comm->me;
@@ -3538,7 +3518,7 @@ int Surf::rendezvous_lines(int n, char *inbuf,
                            int &flag, int *&proclist, char *&outbuf,
                            void *ptr)
 {
-  int i,j,k,m;
+  int m;
 
   Surf *sptr = (Surf *) ptr;
   Line *lines = sptr->mylines;
@@ -3680,7 +3660,7 @@ int Surf::rendezvous_tris(int n, char *inbuf,
                           int &flag, int *&proclist, char *&outbuf,
                           void *ptr)
 {
-  int i,j,k,m;
+  int m;
 
   Surf *sptr = (Surf *) ptr;
   Tri *tris = sptr->mytris;
@@ -4103,7 +4083,7 @@ void Surf::read_restart_custom(FILE *fp)
   // order that custom vectors/arrays are in restart file
   //   matches order the per-particle custom values will be read from file
 
-  int n,type,size,ghostflag;
+  int n,type,size;
   char *name;
 
   for (int i = 0; i < nactive; i++) {

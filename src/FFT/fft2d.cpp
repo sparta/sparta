@@ -199,11 +199,10 @@ struct fft_plan_2d *fft_2d_create_plan(
 {
   struct fft_plan_2d *plan;
   int me,nprocs;
-  int flag,remapflag,fftflag;
+  int flag,remapflag;
   int first_ilo,first_ihi,first_jlo,first_jhi;
   int second_ilo,second_ihi,second_jlo,second_jhi;
   int out_size,first_size,second_size,copy_size,scratch_size;
-  int list[50];
 
   // query MPI info
 

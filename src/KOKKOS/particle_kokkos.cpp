@@ -254,7 +254,6 @@ void ParticleKokkos::sort_kokkos()
 
     if (resize) {
       Kokkos::deep_copy(d_cellcount,0);
-      int old = maxcellcount;
       maxcellcount = MAX(maxcellcount+MAX(DELTACELLCOUNT,maxcellcount*0.1),resize);
       d_plist = decltype(d_plist)();
       MemKK::realloc_kokkos(grid_kk->d_plist,"particle:plist",ngrid,maxcellcount);

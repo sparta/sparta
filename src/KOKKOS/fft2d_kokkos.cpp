@@ -189,7 +189,6 @@ public:
 template<class DeviceType>
 void FFT2dKokkos<DeviceType>::fft_2d_kokkos(typename FFT_AT::t_FFT_DATA_1d d_in, typename FFT_AT::t_FFT_DATA_1d d_out, int flag, struct fft_plan_2d_kokkos<DeviceType> *plan)
 {
-  int total,length;
   typename FFT_AT::t_FFT_DATA_1d d_data,d_copy;
   typename FFT_AT::t_FFT_SCALAR_1d d_in_scalar,d_data_scalar,d_out_scalar,d_copy_scalar,d_scratch_scalar;
 
@@ -212,9 +211,6 @@ void FFT2dKokkos<DeviceType>::fft_2d_kokkos(typename FFT_AT::t_FFT_DATA_1d d_in,
 
   // 1d FFTs along fast axis
 
-  total = plan->total1;
-  length = plan->length1;
-
   #if defined(FFT_KOKKOS_MKL)
     if (flag == 1)
       DftiComputeForward(plan->handle_fast,d_data.data());
@@ -230,6 +226,9 @@ void FFT2dKokkos<DeviceType>::fft_2d_kokkos(typename FFT_AT::t_FFT_DATA_1d d_in,
   #elif defined(FFT_KOKKOS_HIPFFT)
     hipfftExec(plan->plan_fast,d_data.data(),d_data.data(),-flag);
   #else
+    int total = plan->total1;
+    int length = plan->length1;
+
     typename FFT_AT::t_FFT_DATA_1d d_tmp =
      typename FFT_AT::t_FFT_DATA_1d(Kokkos::view_alloc("fft_2d:tmp",Kokkos::WithoutInitializing),d_data.extent(0));
     kiss_fft_functor<DeviceType> f;
@@ -258,9 +257,6 @@ void FFT2dKokkos<DeviceType>::fft_2d_kokkos(typename FFT_AT::t_FFT_DATA_1d d_in,
 
   // 1d FFTs along slow axis
 
-  total = plan->total2;
-  length = plan->length2;
-
   #if defined(FFT_KOKKOS_MKL)
     if (flag == 1)
       DftiComputeForward(plan->handle_slow,d_data.data());
@@ -276,6 +272,9 @@ void FFT2dKokkos<DeviceType>::fft_2d_kokkos(typename FFT_AT::t_FFT_DATA_1d d_in,
   #elif defined(FFT_KOKKOS_HIPFFT)
     hipfftExec(plan->plan_slow,d_data.data(),d_data.data(),-flag);
   #else
+    total = plan->total2;
+    length = plan->length2;
+
     d_tmp = typename FFT_AT::t_FFT_DATA_1d(Kokkos::view_alloc("fft_2d:tmp",Kokkos::WithoutInitializing),d_data.extent(0));
     if (flag == 1)
       f = kiss_fft_functor<DeviceType>(d_data,d_tmp,plan->cfg_slow_forward,length);
@@ -341,7 +340,6 @@ struct fft_plan_2d_kokkos<DeviceType>* FFT2dKokkos<DeviceType>::fft_2d_create_pl
   int first_ilo,first_ihi,first_jlo,first_jhi;
   int second_ilo,second_ihi,second_jlo,second_jhi;
   int out_size,first_size,second_size,copy_size,scratch_size;
-  int np1,np2,ip1,ip2;
 
   // query MPI info
 

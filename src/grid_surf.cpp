@@ -336,10 +336,9 @@ void Grid::surf2grid_cell_algorithm(int outflag)
 
 void Grid::surf2grid_surf_algorithm(int outflag)
 {
-  int i,j,n,ix,iy,iz,icell,isurf;
+  int i,n,icell,isurf;
   cellint childID,parentID;
   double t1,t2,t3,t4,t5;
-  double ctr[3];
   Irregular *irregular;
 
   double *boxlo,*boxhi;             // corner points of entire simulation box
@@ -992,10 +991,10 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
 void Grid::surf2grid_split(int subflag, int outflag)
 {
-  int i,isub,nsurf,nsplitone,xsub;
+  int i,isub,nsplitone,xsub;
   int *surfmap,*ptr;
   double t1,t2;
-  double *lo,*hi,*vols;
+  double *vols;
   double xsplit[3];
   ChildCell *c;
   SplitInfo *s;
@@ -1823,7 +1822,6 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
   if (dim == 3 && !cut3d) cut3d = new Cut3d(sparta);
   else if (dim == 2 && !cut2d) cut2d = new Cut2d(sparta,domain->axisymmetric);
 
-  cellint id = cells[icell].id;
   double *lo = cells[icell].lo;
   double *hi = cells[icell].hi;
   surfint *csurfs = cells[icell].csurfs;
@@ -1834,7 +1832,7 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
 
   if (dim == 2) {
     int npoint;
-    double cpath[4],a[2],b[2];
+    double cpath[4];
     double *norm;
     Surf::Line *line;
 
@@ -1864,7 +1862,7 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
 
   } else {
     int npoint;
-    double cpath[24],a[2],b[2];
+    double cpath[24];
     double *norm;
     Surf::Tri *tri;
 
