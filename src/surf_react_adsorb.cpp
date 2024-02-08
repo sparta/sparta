@@ -1426,6 +1426,7 @@ void SurfReactAdsorb::update_state_surf()
   if (domain->dimension == 2) {
     for (int i = 0; i < nall; i++) {
       if (!mark[i]) continue;
+
       mark[i] = 0;
       isr = lines[i].isr;
       if (surf->sr[isr] != this) continue;
@@ -1474,10 +1475,14 @@ void SurfReactAdsorb::update_state_surf()
 
   surf->collate_array(ntally,nspecies_surf,tally2surf,incollate,outcollate);
 
-  // update custome species_state array with outcollate values
+  // update custom species_state array with outcollate values
   //   outcollate = summed deltas to species_state from all contributing procs
   // insure no species counts < 0
-  // set total_stat = sum of species_state over species
+  // set total_state = sum of species_state over species
+  // total_state and species_state must be for owned, not local values
+  
+  total_state = surf->eivec[surf->ewhich[total_state_index]];
+  species_state = surf->eiarray[surf->ewhich[species_state_index]];
 
   int nsown = surf->nown;
 
@@ -1491,9 +1496,13 @@ void SurfReactAdsorb::update_state_surf()
   }
 
   // spread new total and species state to all nlocal+nghost surfs
-
+  // reset total_state and species_state to local values
+  
   surf->spread_custom(total_state_index);
   surf->spread_custom(species_state_index);
+
+  total_state = surf->eivec_local[surf->ewhich[total_state_index]];
+  species_state = surf->eiarray_local[surf->ewhich[species_state_index]];
 }
 
 /* ---------------------------------------------------------------------- */
