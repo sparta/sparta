@@ -119,7 +119,7 @@ void CreateISurf::command(int narg, char **arg)
   char *sgroupID = arg[0];
 
   ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
-                  icvalues,tvalues,thresh,sgroupID,cpushflag);
+                  icvalues,tvalues,thresh,sgroupID,cpushflag,1);
 
   if (ablate->nevery == 0) modify->delete_fix(ablateID);
   MPI_Barrier(world);
@@ -153,13 +153,11 @@ void CreateISurf::set_corners()
 
   // find corner values for all cells with surfaces
   int npairs; // number of points around corner point
-  int ncorners; // number of corner points per cell
 
   if(domain->dimension==2) {
-    ncorners = 4;
-    memory->create(icvalues,grid->nlocal,ncorners,"createisurf:icvalues");
+    memory->create(icvalues,grid->nlocal,4,"createisurf:icvalues");
     for (int i = 0; i < grid->nlocal; i++) {
-      for (int j = 0; j < ncorners; j++)
+      for (int j = 0; j < 4; j++)
         icvalues[i][j] = 0.0;
     }
 
@@ -177,10 +175,9 @@ void CreateISurf::set_corners()
     // find intersections between edges and surfaces
     surface_edge2d();
   } else {
-    ncorners = 8;
-    memory->create(icvalues,grid->nlocal,ncorners,"createisurf:icvalues");
+    memory->create(icvalues,grid->nlocal,8,"createisurf:icvalues");
     for (int i = 0; i < grid->nlocal; i++) {
-      for (int j = 0; j < ncorners; j++)
+      for (int j = 0; j < 8; j++)
         icvalues[i][j] = 0.0;
     }
 
@@ -204,8 +201,37 @@ void CreateISurf::set_corners()
     surface_edge3d();
   }
 
-  // fill in corner values
+  // fill in corner values based on if grid cell is in or out
   set_inout();
+  MPI_Barrier(world);
+
+  /*for(int ic = 0; ic < Nxyz; ic++) {
+    printf("comm: %i; ic: %i; sval: %i\n", comm->me, ic, svalues[ic]);
+  }
+  MPI_Barrier(world);*/
+
+  // sync svalues
+  if (me == 0)
+    if (screen) fprintf(screen,"Syncing svalues ...\n");
+  int lsval, maxsval;
+  for(int ic = 0; ic < Nxyz; ic++) {
+    lsval = svalues[ic];
+    MPI_Allreduce(&lsval,&maxsval,1,MPI_INT,MPI_MAX,world);
+    svalues[ic] = maxsval;
+    if(ic % 10000 == 0)
+      if (me == 0)
+        if (screen) printf("s -- ic: %i / %i\n", ic, Nxyz);
+  }
+  MPI_Barrier(world);
+
+  /*for(int ic = 0; ic < Nxyz; ic++) {
+    printf("a-comm: %i; ic: %i; sval: %i\n", comm->me, ic, svalues[ic]);
+  }
+  MPI_Barrier(world);*/ 
+
+  // find remaining corner values based on neighbors
+  if (me == 0)
+    if (screen) fprintf(screen,"Cleanup corners ...\n");
   cleanup();
 
   // free up memory since these are no longer needed
@@ -215,18 +241,37 @@ void CreateISurf::set_corners()
 
   // initialize corner point matrix for fix-ablate
   if(domain->dimension==2) {
-    memory->create(icvalues,grid->nlocal,ncorners,"createisurf:icvalues");
+    memory->create(icvalues,grid->nlocal,4,"createisurf:icvalues");
     for (int i = 0; i < grid->nlocal; i++) {
-      for (int j = 0; j < ncorners; j++)
+      for (int j = 0; j < 4; j++)
         icvalues[i][j] = 0.0;
     }
   } else {
-    memory->create(icvalues,grid->nlocal,ncorners,"createisurf:icvalues");
+    memory->create(icvalues,grid->nlocal,8,"createisurf:icvalues");
     for (int i = 0; i < grid->nlocal; i++) {
-      for (int j = 0; j < ncorners; j++)
+      for (int j = 0; j < 8; j++)
         icvalues[i][j] = 0.0;
     }
   }
+
+  // DEBUG: check no negative values
+  for(int ic = 0; ic < Nxyz; ic++)
+    if(cvalues[ic] < 0) printf("negative cvalue\n");
+
+  // sync cvalues
+  // may not be necessary
+  if (me == 0)
+    if (screen) fprintf(screen,"Syncing cvalues ...\n");
+  int lcval, maxcval;
+  for(int ic = 0; ic < Nxyz; ic++) {
+    lcval = cvalues[ic];
+    MPI_Allreduce(&lcval,&maxcval,1,MPI_DOUBLE,MPI_MAX,world);
+    cvalues[ic] = maxcval;
+    if(ic % 10000 == 0)
+      if (me == 0)
+        if (screen) printf("c -- ic: %i / %i\n", ic, Nxyz);
+  }
+  MPI_Barrier(world);
 
   // store into icvalues for generating implicit surface
   Grid::ChildCell *cells = grid->cells;
@@ -247,6 +292,10 @@ void CreateISurf::set_corners()
     xyzcell = get_corner(ic[0]+1, ic[1]+1, ic[2]);
     icvalues[icell][3] = cvalues[xyzcell];
 
+    if(icvalues[icell][0] < 0 ||
+       icvalues[icell][1] < 0 ||
+       icvalues[icell][2] < 0 ||
+       icvalues[icell][3] < 0) printf("negative corner value 2d\n");
 
     if(domain->dimension==3) {
       xyzcell = get_corner(ic[0], ic[1], ic[2]+1);
@@ -257,6 +306,11 @@ void CreateISurf::set_corners()
       icvalues[icell][6] = cvalues[xyzcell];
       xyzcell = get_corner(ic[0]+1, ic[1]+1, ic[2]+1);
       icvalues[icell][7] = cvalues[xyzcell];
+
+      if(icvalues[icell][4] < 0 ||
+         icvalues[icell][5] < 0 ||
+         icvalues[icell][6] < 0 ||
+         icvalues[icell][7] < 0) printf("negative corner value 3d\n");
     }
   }
   return;
@@ -279,6 +333,8 @@ void CreateISurf::surface_edge2d()
   surfint *csurfs;
   int isurf, nsurf, side, hitflag;
   double param, oparam;
+  // initialize param to avoid error 
+  param = 0.0;
 
   // number of edges in a cell
   int nedge = 4;
@@ -408,6 +464,8 @@ void CreateISurf::surface_edge3d()
   surfint *csurfs;
   int isurf, nsurf, hitflag, side;
   double param, oparam;
+  // initialize param to avoid error 
+  param = 0.0;
 
   // number of edges in a cell
   int nedge = 12;
@@ -595,11 +653,77 @@ void CreateISurf::cleanup()
   int j;
   int filled, attempt;
   filled = attempt = 0;
-  while(!filled) {
-    filled = 1;
-
+  while(filled==0) {
+    filled=1;
     for(int i = 0; i < Nxyz; i++) {
       if(svalues[i] == 0 || svalues[i] == 1) continue;
+
+      /*
+      // try x-neighbor
+      j = i - 1;
+      if(j >= 0 && (svalues[j] == 0 || svalues[j] == 1)) {
+        if(ivalues[i][0] <= 0) svalues[i] = svalues[j];
+        else {
+          if(svalues[j] == 0) svalues[i] = 1;
+          else svalues[i] = 0;
+        }
+        continue;
+      } 
+
+      j = i + 1;
+      if(j < Nxyz && (svalues[j] == 0 || svalues[j] == 1)) {
+        if(ivalues[i][1] <= 0) svalues[i] = svalues[j];
+        else {
+          if(svalues[j] == 0) svalues[i] = 1;
+          else svalues[i] = 0;
+        }
+        continue;
+      }
+
+      // try y-neighbor
+      j = i - (nxyz[0]+1);
+      if(j >= 0 && (svalues[j] == 0 || svalues[j] == 1)) {
+        if(ivalues[i][2] <= 0) svalues[i] = svalues[j];
+        else {
+          if(svalues[j] == 0) svalues[i] = 1;
+          else svalues[i] = 0;
+        }
+        continue;
+      }
+
+      j = i + (nxyz[0]+1);
+      if(j < Nxyz && (svalues[j] == 0 || svalues[j] == 1)) {
+        if(ivalues[i][3] <= 0) svalues[i] = svalues[j];
+        else {
+          if(svalues[j] == 0) svalues[i] = 1;
+          else svalues[i] = 0;
+        }
+        continue;
+      }
+
+      if(domain->dimension=3) {
+        // try z-neighbor
+        j = i - (nxyz[0]+1)*(nxyz[1]+1);
+        if(j >= 0 && (svalues[j] == 0 || svalues[j] == 1)) {
+          if(ivalues[i][4] <= 0) svalues[i] = svalues[j];
+          else {
+            if(svalues[j] == 0) svalues[i] = 1;
+            else svalues[i] = 0;
+          }
+          continue;
+        }
+
+        j = i + (nxyz[0]+1)*(nxyz[1]+1);
+        if(j < Nxyz && (svalues[j] == 0 || svalues[j] == 1)) {
+          if(ivalues[i][5] <= 0) svalues[i] = svalues[j];
+          else {
+            if(svalues[j] == 0) svalues[i] = 1;
+            else svalues[i] = 0;
+          }
+          continue;
+        }
+      }
+      */
 
       // try x-neighbor
       j = i - 1;
@@ -641,14 +765,19 @@ void CreateISurf::cleanup()
           continue;
         }
       }
-      filled = 0;
     }
 
+    for(int i = 0; i < Nxyz; i++)
+      if(svalues[i] < 0) filled = 0;
+
     attempt++;
-    if(attempt>20) break;
+    if(attempt>20) error->one(FLERR,"too many attempts");
 
   }
-  if(!filled) error->one(FLERR,"cannot find reference");
+  //if(!filled) error->one(FLERR,"cannot find reference");
+
+  for(int i = 0; i < Nxyz; i++)
+    if(svalues[i] < 0) error->one(FLERR,"bad sval");
 
   int npairs;
   if(domain->dimension==2) npairs = 4;
@@ -691,6 +820,7 @@ void CreateISurf::cleanup()
     for(int i = 0; i < Nxyz; i++) {
       if(svalues[i] == 0) cvalues[i] = cout;
       else if(svalues[i] == 1) cvalues[i] = cin;
+      else error->one(FLERR,"bad svalues");
     }// end "for" for grid cells
   }
 }
