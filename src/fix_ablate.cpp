@@ -281,7 +281,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
                               double *cornerlo_caller, double *xyzsize_caller,
                               double **cvalues_caller, int *tvalues_caller,
                               double thresh_caller, char *sgroupID, int pushflag,
-                              int aveFlag)
+                              int fromexp)
 {
   storeflag = 1;
 
@@ -340,8 +340,8 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
 
-  if(aveFlag>=0) {
-    //sync_explicit(aveFlag);
+  if(fromexp>=0) {
+    sync_explicit();
     sync();
   }
   MPI_Barrier(world);
@@ -963,11 +963,10 @@ void FixAblate::sync()
    if ave, if max cvalue > thresh, set as max val
 ------------------------------------------------------------------------- */
 
-void FixAblate::sync_explicit(int aveFlag)
+void FixAblate::sync_explicit()
 {
   int i,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
-  int ntotal;
   double temp;
 
   comm_neigh_corners(CVALUE);
@@ -1003,7 +1002,6 @@ void FixAblate::sync_explicit(int aveFlag)
       // loop over 2x2x2 stencil of cells that share the corner point
       // also works for 2d, since izfirst = 0
 
-      ntotal = 0;
       temp = 0.0;
       jcorner = ncorner;
 
@@ -1025,10 +1023,11 @@ void FixAblate::sync_explicit(int aveFlag)
             // update total with one corner point of jcell
             // jcorner descends from ncorner
 
-            if (jcell < nglocal && cdelta[jcell][jcorner] > thresh)
+            if (jcell < nglocal && cvalues[jcell][jcorner] > thresh)
               temp = 255.0;
             else if (cdelta_ghost[jcell-nglocal][jcorner] > thresh)
               temp = 255.0;
+
           }
         }
       }
