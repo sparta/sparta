@@ -91,6 +91,10 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta) :
   random_backup = NULL;
   id = NULL;
   style = NULL;
+
+
+  t_owned = NULL;
+  t_localghost = NULL;
 }
 
 /* ---------------------------------------------------------------------- */

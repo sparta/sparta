@@ -57,6 +57,9 @@ SurfCollideSpecularKokkos::SurfCollideSpecularKokkos(SPARTA *sparta) :
 {
   id = NULL;
   style = NULL;
+
+  t_owned = NULL;
+  t_localghost = NULL;
 }
 
 /* ---------------------------------------------------------------------- */

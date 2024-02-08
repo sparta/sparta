@@ -85,9 +85,17 @@ ParticleKokkos::~ParticleKokkos()
   for (int i = 0; i < k_edarray.extent(0); i++)
     k_edarray.h_view(i).k_view = decltype(k_edarray.h_view(i).k_view)();
 
+  eivec = NULL;
+  eiarray = NULL;
+  edvec = NULL;
+  edarray = NULL;
+
   ewhich = NULL;
   eicol = NULL;
   edcol = NULL;
+
+  ncustom_ivec = ncustom_iarray = 0;
+  ncustom_dvec = ncustom_darray = 0;
 }
 
 #ifndef SPARTA_KOKKOS_EXACT

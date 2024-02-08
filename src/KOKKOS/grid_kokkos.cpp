@@ -75,6 +75,32 @@ GridKokkos::~GridKokkos()
   sinfo = NULL;
   pcells = NULL;
   plevels = NULL;
+
+  // deallocate views of views in serial to prevent race condition in profiling tools
+
+  for (int i = 0; i < k_eivec.extent(0); i++)
+    k_eivec.h_view(i).k_view = decltype(k_eivec.h_view(i).k_view)();
+
+  for (int i = 0; i < k_eiarray.extent(0); i++)
+    k_eiarray.h_view(i).k_view = decltype(k_eiarray.h_view(i).k_view)();
+
+  for (int i = 0; i < k_edvec.extent(0); i++)
+    k_edvec.h_view(i).k_view = decltype(k_edvec.h_view(i).k_view)();
+
+  for (int i = 0; i < k_edarray.extent(0); i++)
+    k_edarray.h_view(i).k_view = decltype(k_edarray.h_view(i).k_view)();
+
+  eivec = NULL;
+  eiarray = NULL;
+  edvec = NULL;
+  edarray = NULL;
+
+  ewhich = NULL;
+  eicol = NULL;
+  edcol = NULL;
+
+  ncustom_ivec = ncustom_iarray = 0;
+  ncustom_dvec = ncustom_darray = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////
