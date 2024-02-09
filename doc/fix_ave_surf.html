@@ -28,14 +28,17 @@
 <LI>Nfreq = calculate averages every this many timesteps
 zero or more input values can be listed 
 
-<LI>value = c_ID, c_ID[i], f_ID, f_ID[i], v_name 
+<LI>value = c_ID, c_ID[N], f_ID, f_ID[N], v_name, s_name, s_name[N] 
 
-<PRE>  c_ID = per-surf vector (or array) calculated by a compute with ID
-  c_ID[I] = Ith column of per-surf array calculated by a compute with ID, I can include wildcard (see below)
-  f_ID = per-surf vector (or array) calculated by a fix with ID
-  f_ID[I] = Ith column of per-surf array calculated by a fix with ID, I can include wildcard (see below) 
+<PRE>  c_ID = per-surf vector calculated by a compute with ID
+  c_ID[N] = Nth column of per-surf array calculated by a compute with ID, N can include wildcard (see below)
+  f_ID = per-surf vector calculated by a fix with ID
+  f_ID[N] = Nth column of per-surf array calculated by a fix with ID, N can include wildcard (see below)
+  v_name = per-surf vector calculated by a surf-style variable with name
+  s_name = custom per-surf vector with name
+  s_name[N] = Nth column of per-surf custom array with name, N can include wildcard (see below) 
 </PRE>
-<LI>zero or more keyword/arg pairs may be appended 
+<LI> zero or more keyword/arg pairs may be appended 
 
 <PRE>keyword = <I>ave</I>
   <I>ave</I> args = one or running
@@ -48,7 +51,15 @@ zero or more input values can be listed
 </P>
 <PRE>fix 1 ave/surf all 1 100 100 c_surf ave running
 fix 1 ave/surf leftcircle 10 20 1000 c_mine[2]
-fix 1 ave/surf leftcircle 10 20 1000 c_mine[*] 
+fix 1 ave/surf leftcircle 10 20 1000 c_mine[*]
+fix 1 ave/surf all 5 20 100 v_myEng 
+</PRE>
+<P>These commands will dump time averages for each species and each
+surface element to a dump file every 1000 steps:
+</P>
+<PRE>compute 1 surf all species n press shx shy shz
+fix 1 ave/surf all 10 100 1000 c_1[*]
+dump 1 surf all 1000 tmp.surf id f_1[*] 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -62,11 +73,13 @@ group specified by <I>group-ID</I> are included in the averaging.  See the
 be assigned to surface groups.
 </P>
 <P>Each input value can be the result of a <A HREF = "compute.html">compute</A> or
-<A HREF = "fix.html">fix</A>.  The compute or fix must produce a per-surf vector or
-array, not a global or per-particle or per-grid quantity.  If you wish
-to time-average global quantities from a compute or fix then see the
-<A HREF = "fix_ave_time.html">fix ave/time</A> command.  To time-average per-grid
-quantities, see the <A HREF = "fix_ave_grid.html">fix ave/grid</A> command.
+<A HREF = "fix.html">fix</A> or <A HREF = "variable.html">surf-style variable</A> or a custom
+per-surf attribute..  The compute or fix must produce a per-surf
+vector or array, not a global or per-particle or per-grid quantity.
+If you wish to time-average global quantities from a compute or fix
+then see the <A HREF = "fix_ave_time.html">fix ave/time</A> command.  To
+time-average per-grid quantities, see the <A HREF = "fix_ave_surf.html">fix
+ave/grid</A> command.
 </P>
 <P>Each per-surf value of each input vector is averaged independently.
 </P>
@@ -75,15 +88,15 @@ those which have the word <I>surf</I> in their style name.  See the doc
 pages for individual <A HREF = "fix.html">fixes</A> to determine which ones produce
 per-surf vectors or arrays.
 </P>
-<P>Note that for values from a compute or fix, the bracketed index I can
-be specified using a wildcard asterisk with the index to effectively
-specify multiple values.  This takes the form "*" or "*n" or "n*" or
-"m*n".  If N = the size of the vector (for <I>mode</I> = scalar) or the
-number of columns in the array (for <I>mode</I> = vector), then an asterisk
-with no numeric values means all indices from 1 to N.  A leading
-asterisk means all indices from 1 to n (inclusive).  A trailing
-asterisk means all indices from n to N (inclusive).  A middle asterisk
-means all indices from m to n (inclusive).
+<P>Note that for values from a compute or fix or custom attribute, the
+bracketed index can be specified using a wildcard asterisk with the
+index to effectively specify multiple values.  This takes the form "*"
+or "*n" or "n*" or "m*n".  If N = the size of the vector (for <I>mode</I> =
+scalar) or the number of columns in the array (for <I>mode</I> = vector),
+then an asterisk with no numeric values means all indices from 1 to N.
+A leading asterisk means all indices from 1 to n (inclusive).  A
+trailing asterisk means all indices from n to N (inclusive).  A middle
+asterisk means all indices from m to n (inclusive).
 </P>
 <P>Using a wildcard is the same as if the individual columns of the array
 had been listed one by one.  E.g. these 2 fix ave/surf commands are
@@ -116,22 +129,22 @@ timestep 200, etc.
 
 <P>If a value begins with "c_", a compute ID must follow which has been
 previously defined in the input script.  If no bracketed term is
-appended, and the compute calculates a per-surf vector, then the
-per-surf vector is used.  If <I>c_ID[I]</I> is used, then I must be in
-the range from 1-M, which will use the Ith column of the M-column
-per-surf array calculated by the compute.  See the discussion above
-for how I can be specified with a wildcard asterisk to effectively
-specify multiple values.
+appended, the compute must calculate a per-surf vector.  If
+<I>c_ID[N]</I> is used, the compute must calculate a per-surf array with
+M columns and N must be in the range from 1-M, which will use the Nth
+column of the M-column per-surf array.  See the discussion above for
+how N can be specified with a wildcard asterisk to effectively specify
+multiple values.
 </P>
 <P>Users can also write code for their own compute styles and <A HREF = "Section_modify.html">add them
 to SPARTA</A>.
 </P>
 <P>If a value begins with "f_", a fix ID must follow which has been
 previously defined in the input script.  If no bracketed term is
-appended, and the fix calculates a per-surf vector, then the per-surf
-vector is used.  If <I>f_ID[I]</I> is used, then I must be in the range
-from 1-M, which will use the Ith column of the M-column per-surf array
-calculated by the fix.  See the discussion above for how I can be
+appended, the fix must calculates a per-surf vector.  If <I>f_ID[N]</I>
+is used, the fix must calculate a per-surf array with M columns and N
+must be in the range from 1-M, which will use the Nth column of the
+M-column per-surf array.  See the discussion above for how N can be
 specified with a wildcard asterisk to effectively specify multiple
 values.
 </P>
@@ -140,19 +153,44 @@ which must be compatible with <I>Nevery</I>, else an error will result.
 Users can also write code for their own fix styles and <A HREF = "Section_modify.html">add them to
 SPARTA</A>.
 </P>
+<P>If a value begins with "v_", a variable name must follow which has
+been previously defined in the input script.  Only surf-style
+variables can be referenced.  See the <A HREF = "variable.html">variable</A> command
+for details.  Note that surf-style variables define a formula which
+can reference <A HREF = "stats_style.html">stats_style</A> keywords, or they can
+invoke other computes, fixes, or variables when they are evaluated, so
+this is a very general means of specifying quantities to time average.
+</P>
+<P>If a value begins with "s_", the name of a custom per-surf vector or
+array must follow.  Custom attributes can store either a single or
+multiple values per surface element.  See <A HREF = "Section_howto.html#howto_17">Section
+6.17</A> for more discussion of custom
+attributes and command that define them.  For example, the
+<A HREF = "read_surf.html">read_surf</A>, <A HREF = "fix_surf_temp.html">fix surf/temp</A>, and
+<A HREF = "surf_react_adsorb.html">surf_react adsorb</A> commands can define
+per-surf attributes.
+</P>
+<P>If <I>s_name</I> is used as a value, the custom attribute must be a vector.
+If <I>s_name[N]</I> is used, the custom attribute must be an array, and N
+must be in the range from 1-M for an M-column array.  See the
+discussion above for how N can be specified with a wildcard asterisk
+to effectively specify multiple values.
+</P>
 <HR>
 
 <P>For averaging of a value that comes from a compute or fix,
-normalization is performed as follows.  If the compute or fix is
-summing over particles to calculate a per-surf quantity (e.g. pressure
-or energy flux), this takes the form of a numerator divided by a
-denominator.  For example, see the formulas discussed on the <A HREF = "compute_surf.html">compute
-surf</A> doc page, where the denominator is 1 (for
-keyword n), area times dt (timestep) for the other quantities (press,
-shx, ke, etc).  When this command averages over a series of timesteps,
-the numerator and denominator are summed separately.  This means the
-numerator/denominator division only takes place when this fix produces
-output, every Nfreq timesteps.
+normalization is performed as follows.  Note that no normalization is
+performed on a value produced by a surf-style variable.
+</P>
+<P>If the compute or fix is summing over particles to calculate a
+per-surf quantity (e.g. pressure or energy flux), this takes the form
+of a numerator divided by a denominator.  For example, see the
+formulas discussed on the <A HREF = "compute_surf.html">compute surf</A> doc page,
+where the denominator is 1 (for keyword n), area times dt (timestep)
+for the other quantities (press, shx, ke, etc).  When this command
+averages over a series of timesteps, the numerator and denominator are
+summed separately.  This means the numerator/denominator division only
+takes place when this fix produces output, every Nfreq timesteps.
 </P>
 <HR>
 
@@ -190,11 +228,20 @@ is when averaging is performed.
 <P>Surface elements not in the specified <I>group-ID</I> will output zeroes
 for all their values.
 </P>
-<P><B>Restrictions:</B> none
+<P><B>Restrictions:</B>
+</P>
+<P>If one of the specified values is a compute which tallies information
+about particle/surface element collisions, then all the values must be
+for compute(s) which do this.  I.e. you cannot mix tallying computes
+with other kinds of values in the same fix ave/surf command.
+</P>
+<P>Examples of computes which tally particle/surface element collision
+info are <A HREF = "compute_surf.html">compute surf</A> and <A HREF = "compute_react_surf.html">compute
+react/surf</A>.
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "compute.html">compute</A>, "<A HREF = "fix_ave_time.html">fix ave/time</A>
+<P><A HREF = "compute.html">compute</A>, <A HREF = "fix_ave_time.html">fix ave/time</A>
 </P>
 <P><B>Default:</B>
 </P>

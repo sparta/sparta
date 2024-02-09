@@ -34,11 +34,11 @@ surface elements in the specified <I>surfID</I> group.
 watertight is explained in the Restrictions section of the
 <A HREF = "read_surf.html">read_surf</A> doc page.
 </P>
-<P>After surface elements have been deleted, any surface points that are
-no longer part of a surface element are also deleted.  The remaining
-surface points and elements are renumbered to create compressed,
-contiguous lists.  The new list of surface elements can be output via
-the <A HREF = "write_surf.html">write_surf</A> command.
+<P>After surface elements have been deleted the IDs of the remaining
+surface points and elements are renumbered so that the remaining N
+elements have IDs from 1 to N.  The new list of surface elements can
+be output via the <A HREF = "write_surf.html">write_surf</A> or <A HREF = "dump.html">dump
+surf</A> commands.
 </P>
 <P><B>Restrictions:</B> none
 </P>

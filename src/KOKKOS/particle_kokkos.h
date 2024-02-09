@@ -56,6 +56,7 @@ class ParticleKokkos : public Particle {
   void pre_weight() override;
   void post_weight() override;
   void update_class_variables();
+
   int add_custom(char *, int, int) override;
   void grow_custom(int, int, int) override;
   void remove_custom(int) override;
@@ -212,6 +213,44 @@ int ParticleKokkos::add_particle_kokkos(t_particle_1d particles, int index, int 
   }
 
   return realloc;
+}
+
+/* ----------------------------------------------------------------------
+   copy info for one particle in custom attribute vectors/arrays
+   into location I from location J
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+void ParticleKokkos::copy_custom_kokkos(int i, int j) const
+{
+  int m,ncol;
+
+  // caller does not always check this
+  // shouldn't be a problem, but valgrind can complain if memcpy to self
+  // oddly memcpy(&particles[i],&particles[j],sizeof(OnePart)) seems OK
+
+  if (i == j) return;
+
+  // 4 flavors of vectors/arrays
+
+  if (ncustom_ivec) {
+    for (m = 0; m < ncustom_ivec; m++)
+      k_eivec.d_view[m].k_view.d_view[i] = k_eivec.d_view[m].k_view.d_view[j];
+  }
+  if (ncustom_iarray) {
+    for (m = 0; m < ncustom_iarray; m++)
+      for (ncol = 0; ncol < k_eicol.d_view[m]; ncol++)
+        k_eiarray.d_view[m].k_view.d_view(i,ncol) = k_eiarray.d_view[m].k_view.d_view(j,ncol);
+  }
+  if (ncustom_dvec) {
+    for (m = 0; m < ncustom_dvec; m++)
+      k_edvec.d_view[m].k_view.d_view[i] = k_edvec.d_view[m].k_view.d_view[j];
+  }
+  if (ncustom_darray) {
+    for (m = 0; m < ncustom_darray; m++)
+      for (ncol = 0; ncol < k_edcol.d_view[m]; ncol++)
+        k_edarray.d_view[m].k_view.d_view(i,ncol) = k_edarray.d_view[m].k_view.d_view(j,ncol);
+  }
 }
 
 /* ----------------------------------------------------------------------

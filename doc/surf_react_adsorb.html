@@ -27,8 +27,8 @@
 </PRE>
 <LI>infile(s) = file(s) with list of surface chemistry reactions 
 
-<PRE>  one file for model gs or ps
-  two files for model gs/ps, gs first, ps second 
+<PRE>  one file for model <I>gs</I> or <I>ps</I>
+  two files for model </I>gs/ps</I>, gs file first, ps file second 
 </PRE>
 <LI>Nsync = perform PS reactions and sync across processors every this many timesteps 
 
@@ -52,10 +52,10 @@ surf_react adsorb gs/ps gs_react.surf ps_react.surf nsync 1 face 300 3e9 O
 <P><B>Description:</B>
 </P>
 <P>Define a model for surface chemistry reactions to perform when
-particles collide with surface elements or the global boundaries of
-the simulation box, which enables the particles to adsorb to the
-surface.  This model also has an option to encode chemical reactions
-that can occur on the surface itself.  
+particles collide with surface elements or the global boundaries
+(faces) of the simulation box, which enables the particles to adsorb
+to the surface.  This model also has an option to encode chemical
+reactions that can occur on the surface itself.
 </P>
 <P>One or more models can be defined and assigned to different surfaces
 or simulation box boundaries via the <A HREF = "surf_modify.html">surf_modify</A> or
@@ -117,7 +117,7 @@ that the sum of probabilities for all possible reactions is <= 1.0,
 which should normally be the case if reasonable reaction coefficients
 are defined.
 </P>
-<P>For PS reactions, a time counter algorithm is used. Each reaction has
+<P>For PS reactions, a time counter algorithm is used.  Each reaction has
 a time counter <I>tau</I> that is increased by a value of <I>nsync*timestep</I>
 if all the reactants are available.  The rate for each reaction <I>R</I> is
 computed based on the specified reaction rate constants as well as the
@@ -137,7 +137,7 @@ al.</I> <A HREF = "#SG18">(SG18)</A>.
 </P>
 <HR>
 
-<P>The infile argument(s) specigy one or two filenames which contain a
+<P>The infile argument(s) specify one or two filenames which contain a
 list of GS or PS reactions and their associated parameters.  Two files
 must be specified for the <I>gs/ps</I> model: a GS file first and a PS file
 second.
@@ -372,7 +372,20 @@ reaction since the beginning of the current run.
 </P>
 <HR>
 
-<P><B>Restrictions:</B> none
+<P><B>Restrictions:</B>
+</P>
+<P>If the following conditions are met:
+</P>
+<UL><LI>this reaction model is assigned to surface elements
+<LI>on-surface PS reactions are defined
+<LI>surface elements are distributed across processors
+<LI>the <A HREF = "fix_balance.html">fix balance</A> or <A HREF = "fix_adapt.html">fix adapt</A> command is used 
+</UL>
+<P>then the timesteps on which balancing or grid adaptation are performed
+must be multiples of <I>Nsync</I>.  This is because surfaces are
+re-assigned to processors due to the change in the grid assignment to
+processors and the per-surface <I>tau</I> values must be upated
+appropriately when that occurs.
 </P>
 <P><B>Related commands:</B>
 </P>

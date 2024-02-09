@@ -33,8 +33,9 @@
 using namespace SPARTA_NS;
 
 enum{PERGRID,PERGRIDSURF};
-enum{COMPUTE,FIX,VARIABLE};
-enum{ONE,RUNNING};                // multiple files
+enum{COMPUTE,FIX,VARIABLE,CUSTOM};
+enum{ONE,RUNNING};                      // multiple files
+enum{INT,DOUBLE};                       // several files
 
 #define INVOKED_PER_GRID 16
 #define DELTAGRID 1024            // must be bigger than split cells per cell
@@ -119,7 +120,7 @@ FixAveGridKokkos::~FixAveGridKokkos()
 
 void FixAveGridKokkos::init()
 {
-  // set indices and check validity of all computes,fixes,variables
+  // set indices and check validity of all computes,fixes,variables,custom attributes
 
   for (int m = 0; m < nvalues; m++) {
     if (which[m] == COMPUTE) {
@@ -172,7 +173,7 @@ void FixAveGridKokkos::end_of_step()
   if (ave == ONE && irepeat == 0)
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Zero_tally>(0,nglocal),*this);
 
-  // accumulate results of computes,fixes,variables
+  // accumulate results of computes,fixes,variables,custom attributes
   // compute/fix/variable may invoke computes so wrap with clear/add
   // NOTE: add more logic for fixes and variables if enable them
 
@@ -238,8 +239,102 @@ void FixAveGridKokkos::end_of_step()
       error->all(FLERR,"Cannot (yet) use variables with fix ave/grid/kk");
       //k = umap[m][0];
       //input->variable->compute_grid(n,&tally[0][k],ntotal,1); // need Kokkos version
-    }
 
+    // access custom attribute
+
+    } else if (which[m] == CUSTOM) {
+
+      auto gridKK = (GridKokkos*) grid;
+      gridKK->sync(Device,CUSTOM_MASK);
+
+      k = umap[m][0];
+      if (j == 0) {
+        if (nvalues == 1) {
+          if (grid->etype[n] == INT) {
+            auto h_ewhich = gridKK->k_ewhich.h_view;
+            auto h_eivec = gridKK->k_eivec.h_view;
+            auto d_custom_vector = h_eivec[h_ewhich[n]].k_view.d_view;
+
+            Kokkos::parallel_for(nglocal, SPARTA_CLASS_LAMBDA(int i) {
+              d_tally(i,k) += d_custom_vector[i];
+            });
+
+          } else if (grid->etype[n] == DOUBLE) {
+            auto h_ewhich = gridKK->k_ewhich.h_view;
+            auto h_edvec = gridKK->k_edvec.h_view;
+            auto d_custom_vector = h_edvec[h_ewhich[n]].k_view.d_view;
+
+            Kokkos::parallel_for(nglocal, SPARTA_CLASS_LAMBDA(int i) {
+              d_tally(i,k) += d_custom_vector[i];
+            });
+
+          }
+        } else {
+          if (grid->etype[n] == INT) {
+            auto h_ewhich = gridKK->k_ewhich.h_view;
+            auto h_eivec = gridKK->k_eivec.h_view;
+            auto d_custom_vector = h_eivec[h_ewhich[n]].k_view.d_view;
+
+            Kokkos::parallel_for(nglocal, SPARTA_CLASS_LAMBDA(int i) {
+              d_tally(i,k) += d_custom_vector[i];
+            });
+
+          } else if (grid->etype[n] == DOUBLE) {
+            auto h_ewhich = gridKK->k_ewhich.h_view;
+            auto h_edvec = gridKK->k_edvec.h_view;
+            auto d_custom_vector = h_edvec[h_ewhich[n]].k_view.d_view;
+
+            Kokkos::parallel_for(nglocal, SPARTA_CLASS_LAMBDA(int i) {
+              d_tally(i,k) += d_custom_vector[i];
+            });
+
+          }
+        }
+      } else {
+        int jm1 = j - 1;
+        if (nvalues == 1) {
+          if (grid->etype[n] == INT) {
+            auto h_ewhich = gridKK->k_ewhich.h_view;
+            auto h_eiarray = gridKK->k_eiarray.h_view;
+            auto d_custom_array = h_eiarray[h_ewhich[n]].k_view.d_view;
+
+            Kokkos::parallel_for(nglocal, SPARTA_CLASS_LAMBDA(int i) {
+              d_tally(i,k) += d_custom_array(i,jm1);
+            });
+
+          } else if (grid->etype[n] == DOUBLE) {
+            auto h_ewhich = gridKK->k_ewhich.h_view;
+            auto h_edarray = gridKK->k_edarray.h_view;
+            auto d_custom_array = h_edarray[h_ewhich[n]].k_view.d_view;
+
+            Kokkos::parallel_for(nglocal, SPARTA_CLASS_LAMBDA(int i) {
+              d_tally(i,k) += d_custom_array(i,jm1);
+            });
+
+          }
+        } else {
+          if (grid->etype[n] == INT) {
+            auto h_ewhich = gridKK->k_ewhich.h_view;
+            auto h_edarray = gridKK->k_edarray.h_view;
+            auto d_custom_array = h_edarray[h_ewhich[n]].k_view.d_view;
+
+            Kokkos::parallel_for(nglocal, SPARTA_CLASS_LAMBDA(int i) {
+              d_tally(i,k) += d_custom_array(i,jm1);
+            });
+
+          } else if (grid->etype[n] == DOUBLE) {
+            auto h_ewhich = gridKK->k_ewhich.h_view;
+            auto h_edarray = gridKK->k_edarray.h_view;
+            auto d_custom_array = h_edarray[h_ewhich[n]].k_view.d_view;
+
+            Kokkos::parallel_for(nglocal, SPARTA_CLASS_LAMBDA(int i) {
+              d_tally(i,k) += d_custom_array(i,jm1);
+            });
+
+          }
+        }
+      }
+    }
   }
 
   // done if irepeat < nrepeat

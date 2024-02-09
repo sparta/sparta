@@ -34,11 +34,8 @@ class SurfCollideTD : public SurfCollide {
                              int, double *, int, int &);
   void wrapper(Particle::OnePart *, double *, int *, double*);
   void flags_and_coeffs(int *, double *);
-  void dynamic();
 
  private:
-  double twall;              // surface temperature
-
   double barrier_val;
   double initen_trans, initen_rot, initen_vib;
   double bond_trans, bond_rot, bond_vib;
@@ -48,11 +45,6 @@ class SurfCollideTD : public SurfCollide {
   double px,py,pz;           // point to rotate surface around
 
   int barrier_flag, initen_flag,bond_flag; // optional flags
-
-  int tmode;                 // Twall is NUMERIC,VARIABLE,CUSTOM
-  char *tstr;                // temperature variable name (NULL if constant)
-  int tvar;                  // index of equal-style variable
-  double *tvector;           // custom per-surf temperature vector
 
   double vstream[3];
   class RanKnuth *random;     // RNG for particle reflection

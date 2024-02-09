@@ -59,7 +59,12 @@ FixVibmode::FixVibmode(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"No multiple vibrational modes in fix vibmode "
                "for any species");
 
-  index_vibmode = particle->add_custom((char *) "vibmode",INT,maxmode);
+  // check if custom attribute already exists, due to restart file
+  // else create per-particle attribute
+
+  index_vibmode = particle->find_custom((char *) "vibmode");
+  if (index_vibmode < 0)
+    index_vibmode = particle->add_custom((char *) "vibmode",INT,maxmode);
 }
 
 /* ---------------------------------------------------------------------- */

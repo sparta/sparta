@@ -112,6 +112,10 @@ DumpSurf::DumpSurf(SPARTA *sparta, int narg, char **arg) :
   size_one = nfield;
   ioptional = narg - noptional;
 
+  // max length of per-surf variable vectors
+
+  maxsurf = 0;
+
   // setup format strings
 
   vformat = new char*[nfield];
@@ -251,13 +255,12 @@ void DumpSurf::init_style()
   if (multifile == 0) openfile();
 
   // one-time setup of lists of owned elements contributing to dump
-  // NOTE: will need to recalculate, if allow addition of surf elements
-  // nown = # of surf elements I own
-  // nchoose = # of nown surf elements in surface group
+  // nsown = # of surf elements I own
+  // nchoose = # of nsown surf elements in surface group
   // cglobal[] = global indices for nchoose elements
   //             used to access lines/tris in Surf
   // clocal[] = local indices for nchoose elements
-  //            used to access nown data from per-surf computes,fixes,variables
+  //            used to access nsown data from per-surf computes,fixes,variables
 
   if (!firstflag) return;
   firstflag = 0;
@@ -270,11 +273,11 @@ void DumpSurf::init_style()
   if (distributed && !implicit) tris = surf->mytris;
   else tris = surf->tris;
 
-  nown = surf->nown;
+  nsown = surf->nown;
   int m;
 
   nchoose = 0;
-  for (int i = 0; i < nown; i++) {
+  for (int i = 0; i < nsown; i++) {
     if (dimension == 2) {
       if (!distributed) m = me + i*nprocs;
       else m = i;
@@ -288,10 +291,10 @@ void DumpSurf::init_style()
 
   memory->create(cglobal,nchoose,"dump/surf:cglobal");
   memory->create(clocal,nchoose,"dump/surf:clocal");
-  memory->create(buflocal,nown,"dump/surf:buflocal");
+  memory->create(buflocal,nsown,"dump/surf:buflocal");
 
   nchoose = 0;
-  for (int i = 0; i < nown; i++)
+  for (int i = 0; i < nsown; i++)
     if (dimension == 2) {
       if (!distributed) m = me + i*nprocs;
       else m = i;
@@ -354,6 +357,16 @@ void DumpSurf::header_item(bigint ndump)
 
 int DumpSurf::count()
 {
+  // grow variable vbuf arrays if needed
+
+  if (surf->nown > maxsurf) {
+    maxsurf = surf->nown;
+    for (int i = 0; i < nvariable; i++) {
+      memory->destroy(vbuf[i]);
+      memory->create(vbuf[i],maxsurf,"dump:vbuf");
+    }
+  }
+
   // invoke Computes for per-surf quantities
 
   if (ncompute) {
@@ -503,6 +516,8 @@ int DumpSurf::parse_fields(int narg, char **arg)
       n = surf->find_custom(suffix);
       if (n < 0)
         error->all(FLERR,"Could not find dump surf custom attribute");
+      if (surf->implicit)
+        error->all(FLERR,"Cannot use dump surf custom with implicit surfs");
 
       vtype[i] = surf->etype[n];
       if (argindex[i] == 0 && surf->esize[n] > 0)
@@ -607,6 +622,8 @@ int DumpSurf::parse_fields(int narg, char **arg)
 
       n = input->variable->find(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump surf variable name");
+      if (surf->implicit)
+        error->all(FLERR,"Cannot use dump surf variable with implicit surfs");
       if (input->variable->surf_style(n) == 0)
         error->all(FLERR,"Dump surf variable is not surf-style variable");
 
@@ -777,8 +794,6 @@ void DumpSurf::pack_variable(int n)
 {
   double *vector = vbuf[field2index[n]];
 
-  // NOTE: when add surf variables, check this logic
-
   for (int i = 0; i < nchoose; i++) {
     buf[n] = vector[clocal[i]];
     n += size_one;
@@ -791,49 +806,35 @@ void DumpSurf::pack_variable(int n)
 
 void DumpSurf::pack_custom(int n)
 {
-  int m;
-
   int index = custom[field2index[n]];
-
-  // for now, custom data only allowed for explicit all
-  // so custom data is nlocal in length, not nown
-  // when enable distributed, commented out lines replace 2 previous ones
 
   if (surf->etype[index] == INT) {
     if (surf->esize[index] == 0) {
       int *vector = surf->eivec[surf->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
-        m = me + i*nprocs;
-        buf[n] = vector[m];
-        //buf[n] = vector[clocal[i]];
+        buf[n] = vector[clocal[i]];
         n += size_one;
       }
     } else {
       int icol = argindex[n]-1;
       int **array = surf->eiarray[surf->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
-        m = me + i*nprocs;
-        buf[n] = array[m][icol];
-        //buf[n] = array[clocal[i]][icol];
+        buf[n] = array[clocal[i]][icol];
         n += size_one;
       }
     }
   } else {
-    if (surf->esize[index] == 0) {
+    if (surf->esize[index] == INT) {
       double *vector = surf->edvec[surf->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
-        m = me + i*nprocs;
-        buf[n] = vector[m];
-        //buf[n] = vector[clocal[i]];
+        buf[n] = vector[clocal[i]];
         n += size_one;
       }
     } else {
       int icol = argindex[n]-1;
       double **array = surf->edarray[surf->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
-        m = me + i*nprocs;
-        buf[n] = array[m][icol];
-        //buf[n] = array[clocal[i]][icol];
+        buf[n] = array[clocal[i]][icol];
         n += size_one;
       }
     }

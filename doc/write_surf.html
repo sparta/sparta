@@ -19,9 +19,12 @@
 
 <LI>zero or more keyword/args pairs may be appended 
 
-<LI>keyword = <I>points</I> or <I>fileper</I> or <I>nfile</I> 
+<LI>keyword = <I>points</I> or <I>type</I> or <I>custom</I> or <I>fileper</I> or <I>nfile</I> 
 
 <PRE>  <I>points</I> arg = <I>yes</I> or <I>no</I> to include a Points section in the file
+  <I>type</I> arg = none
+  <I>custom</I> arg = name
+    name = name of custom per-surf vector or array
   <I>fileper</I> arg = Np
     Np = write one file for every this many processors
   <I>nfile</I> arg = Nf
@@ -32,6 +35,7 @@
 <P><B>Examples:</B>
 </P>
 <PRE>write_surf data.surf
+write_surf data.surf type custom temperature custom flags
 write_surf data.surf points no
 write_surf data.surf.% nfile 50 
 </PRE>
@@ -54,12 +58,9 @@ also been deleted.  In either case, surface points and elements are
 renumbered by these operations to create compressed, contiguous lists.
 These lists are what is output by this command.
 </P>
-<P>The file is written as a text file in the same format as the
-<A HREF = "read_surf.html">read_surf</A> command reads in.  Note that a Points
-section is optional.  If the <I>points</I> keyword is specified with a
-value of <I>yes</I>, then a Points section is included in the file.  If the
-value is <I>no</I>, then point coordinates are included with individual
-lines or triangles.
+<P>The output file is written as a text file in the same format as the
+file the <A HREF = "read_surf.html">read_surf</A> command reads for explicit
+surfaces.
 </P>
 <P>Similar to <A HREF = "dump.html">dump</A> files, the surface filename can contain
 two wild-card characters.  If a "*" appears in the filename, it is
@@ -79,18 +80,41 @@ discussed below can alter the number of files written.
 </P>
 <P>Note that implicit surfaces read in by the
 <A HREF = "read_isurf.html">read_isurf</A> command can be written out by the
-write_surf command, e.g. for visualization purposes.  But they cannot
-be read back in to SPARTA via the <A HREF = "read_isurf.html">read_isurf</A>
-command, because write_surf creates files in an explicit surface
-format.  See the <A HREF = "Section_howto.html#howto_13">Howto 6.13</A> section of
-the manual for a discussion of explicit and implicit surfaces for an
-explantion of explicit versus implicit surfaces as well as distributed
-versus non-distributed storage.  You cannot mix explicit and implicit
-surfaces in the same simulation.
+write_surf command, e.g. for visualization purposes.  But the file
+created by this command cannot be read back in to SPARTA via the
+<A HREF = "read_isurf.html">read_isurf</A> command, because this command creates
+files in an explicit surface format.
+</P>
+<P>See the <A HREF = "Section_howto.html#howto_13">Howto 6.13</A> section of the manual
+for a discussion of explicit and implicit surfaces as well as
+distributed versus non-distributed storage of surface elements.  You
+cannot mix explicit and implicit surfaces in the same simulation.
 </P>
 <HR>
 
-<P>The optional <I>nfile</I> or <I>fileper</I> keywords can be used in conjunction
+<P>The following optional keywords can be used with this command.
+</P>
+<P>If the <I>points</I> keyword is specified with a value of <I>yes</I>, then a
+Points section is included in the written file.  The Lines or
+Triangles section will reference indices from the Points section.  If
+the <I>points</I> keyword is specified with a value of <I>no</I>, then a Points
+section is not included. The Lines or Triangles section will list the
+coordinates of line segment or trianges corners directly.
+</P>
+<P>If the <I>type</I> keyword is specified, then a surface element type is
+included for each line or triangle in the Lines or Triangles section.
+If it is not specified, element types are not incuded.
+</P>
+<P>If the <I>custom</I> keyword is specified along with the <I>name</I> of a custom
+per-surf vector or array, then the per-surf values for that vector or
+array are added to the end of the line of output for each line or
+triangle in the Lines or Triangles section.  A per-surf vector is a
+single value per element; a per-surf array is 1 or more values per
+element, depending on how it was defined.  If the <I>custom</I> keyword is
+used multiple times, then the value(s) for each <I>name</I> are appended in
+the order the <I>custom</I> keywords are specified.
+</P>
+<P>The <I>nfile</I> or <I>fileper</I> keywords can be used in conjunction
 with the "%" wildcard character in the specified surface file name.
 As explained above, the "%" character causes the surface file to be
 written in pieces, one piece for each of P processors.  By default P =
@@ -118,6 +142,7 @@ next 3 processors and write it to a surface file.
 </P>
 <P><B>Default:</B>
 </P>
-<P>The default is points = yes.
+<P>The default is points = yes.  If the <I>fileper</I> or <I>nfile</I> keywords are
+not used, a single file is written.
 </P>
 </HTML>

@@ -44,7 +44,7 @@ using namespace SPARTA_NS;
 using namespace MathConst;
 
 enum{NONE,DISCRETE,SMOOTH};
-enum{NUMERIC,VARIABLE,CUSTOM};
+enum{NUMERIC,CUSTOM,VARIABLE,VAREQUAL,VARSURF};   // surf_collide classes
 
 /* ---------------------------------------------------------------------- */
 
@@ -53,24 +53,7 @@ SurfCollideCLL::SurfCollideCLL(SPARTA *sparta, int narg, char **arg) :
 {
   if (narg < 7) error->all(FLERR,"Illegal surf_collide cll command");
 
-  tstr = NULL;
-
-  if (strstr(arg[2],"v_") == arg[2]) {
-    dynamicflag = 1;
-    tmode = VARIABLE;
-    int n = strlen(&arg[2][2]) + 1;
-    tstr = new char[n];
-    strcpy(tstr,&arg[2][2]);
-  } else if (strstr(arg[2],"s_") == arg[2]) {
-    tmode = CUSTOM;
-    int n = strlen(&arg[2][2]) + 1;
-    tstr = new char[n];
-    strcpy(tstr,&arg[2][2]);
-  } else {
-    tmode = NUMERIC;
-    twall = input->numeric(FLERR,arg[2]);
-    if (twall <= 0.0) error->all(FLERR,"Surf_collide cll temp <= 0.0");
-  }
+  parse_tsurf(arg[2]);
 
   acc_n = atof(arg[3]);
   acc_t = atof(arg[4]);
@@ -90,8 +73,13 @@ SurfCollideCLL::SurfCollideCLL(SPARTA *sparta, int narg, char **arg) :
 
   int iarg = 7;
   while (iarg < narg) {
-
-    if (strcmp(arg[iarg],"partial") == 0) {
+    if (strcmp(arg[iarg],"temp/freq") == 0) {
+      if (iarg+2 > narg)
+        error->all(FLERR,"Illegal surf_collide cll command");
+      tfreq = atoi(arg[iarg+1]);
+      if (tfreq <= 0) error->all(FLERR,"Illegal surf_collide cll command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"partial") == 0) {
         if (iarg+2 > narg) error->all(FLERR,"Illegal surf_collide cll command");
         if (acc_n != acc_t)
           error->all(FLERR,"Surf_collide cll partial requires acc_n = acc_t");
@@ -148,7 +136,6 @@ SurfCollideCLL::SurfCollideCLL(SPARTA *sparta, int narg, char **arg) :
 
 SurfCollideCLL::~SurfCollideCLL()
 {
-  delete [] tstr;
   delete random;
 }
 
@@ -157,16 +144,7 @@ SurfCollideCLL::~SurfCollideCLL()
 void SurfCollideCLL::init()
 {
   SurfCollide::init();
-
-  // check variable
-
-  if (tstr) {
-    tvar = input->variable->find(tstr);
-    if (tvar < 0)
-      error->all(FLERR,"Surf_collide cll variable name does not exist");
-    if (!input->variable->equal_style(tvar))
-      error->all(FLERR,"Surf_collide cll variable is invalid style");
-  }
+  check_tsurf();
 }
 
 /* ----------------------------------------------------------------------
@@ -202,26 +180,31 @@ collide(Particle::OnePart *&ip, double &,
     if (reaction) surf->nreact_one++;
   }
 
+  // set temperature of isurf if VARSURF or CUSTOM
+
+  if (persurf_temperature) {
+    tsurf = t_persurf[isurf];
+    if (tsurf <= 0.0) error->one(FLERR,"Surf_collide tsurf <= 0.0");
+  }
+
   // CLL reflection for each particle
   // only if SurfReact did not already reset velocities
   // also both partiticles need to trigger any fixes
   //   to update per-particle properties which depend on
   //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 
-  if (tmode == CUSTOM) twall = tvector[isurf];
-
   if (ip) {
     if (!velreset) cll(ip,norm);
     if (modify->n_update_custom) {
       int i = ip - particle->particles;
-      modify->update_custom(i,twall,twall,twall,twall,vstream);
+      modify->update_custom(i,tsurf,tsurf,tsurf,tsurf,vstream);
     }
   }
   if (jp) {
     if (!velreset) cll(jp,norm);
     if (modify->n_update_custom) {
       int j = jp - particle->particles;
-      modify->update_custom(j,twall,twall,twall,twall,vstream);
+      modify->update_custom(j,tsurf,tsurf,tsurf,tsurf,vstream);
     }
   }
 
@@ -282,7 +265,7 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
 
   double tan1 = MathExtra::dot3(v,tangent1);
 
-  vrm = sqrt(2.0*update->boltz * twall / species[ispecies].mass);
+  vrm = sqrt(2.0*update->boltz * tsurf / species[ispecies].mass);
 
   // CLL model normal velocity
 
@@ -380,7 +363,7 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
       species[ispecies].rotdof < 2) p->erot = 0.0;
 
   else {
-    double erot_mag = sqrt(p->erot*(1-acc_rot)/(update->boltz*twall));
+    double erot_mag = sqrt(p->erot*(1-acc_rot)/(update->boltz*tsurf));
 
     double r_rot,cos_theta_rot,A_rot,X_rot;
     if (species[ispecies].rotdof == 2) {
@@ -397,7 +380,7 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
       cos_theta_rot = 2*random->uniform() - 1;
     }
 
-    p->erot = update->boltz * twall *
+    p->erot = update->boltz * tsurf *
       (r_rot*r_rot + erot_mag*erot_mag + 2*r_rot*erot_mag*cos_theta_rot);
     }
 
@@ -415,17 +398,17 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
       -log(1 - random->uniform() *
            (1 - exp(-update->boltz*species[ispecies].vibtemp[0])));
     evib_val = p->evib + evib_star;
-    evib_mag = sqrt(evib_val*(1-acc_vib)/(update->boltz*twall));
+    evib_mag = sqrt(evib_val*(1-acc_vib)/(update->boltz*tsurf));
     r_vib = sqrt(-acc_vib*log(random->uniform()));
     cos_theta_vib = cos(MY_2PI*random->uniform());
-    evib_val = update->boltz * twall *
+    evib_val = update->boltz * tsurf *
       (r_vib*r_vib + evib_mag*evib_mag + 2*r_vib*evib_mag*cos_theta_vib);
     int ivib =  evib_val / (update->boltz*species[ispecies].vibtemp[0]);
     p->evib = ivib * update->boltz * species[ispecies].vibtemp[0];
   }
 
   else if (sparta->collide->vibstyle == SMOOTH || vibdof >= 2) {
-    evib_mag = sqrt(p->evib*(1-acc_vib)/(update->boltz*twall));
+    evib_mag = sqrt(p->evib*(1-acc_vib)/(update->boltz*tsurf));
     if (vibdof == 2) {
       r_vib = sqrt(-acc_vib*log(random->uniform()));
       cos_theta_vib = cos(MY_2PI*random->uniform());
@@ -439,7 +422,7 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
       cos_theta_vib = 2*random->uniform() - 1;
     }
 
-    p->evib = update->boltz * twall *
+    p->evib = update->boltz * tsurf *
       (r_vib*r_vib + evib_mag*evib_mag + 2*r_vib*evib_mag*cos_theta_vib);
   }
 }
@@ -455,7 +438,7 @@ void SurfCollideCLL::wrapper(Particle::OnePart *p, double *norm,
                              int *flags, double *coeffs)
 {
   if (flags) {
-    twall = coeffs[0];
+    tsurf = coeffs[0];
     acc_n = coeffs[1];
     acc_t = coeffs[2];
     acc_rot = coeffs[3];
@@ -474,11 +457,12 @@ void SurfCollideCLL::wrapper(Particle::OnePart *p, double *norm,
 
 void SurfCollideCLL::flags_and_coeffs(int *flags, double *coeffs)
 {
-  if (tmode == CUSTOM)
-    error->all(FLERR,"Surf_collide cll with custom per-surf Twall "
+  if (tmode != NUMERIC)
+    error->all(FLERR,"Surf_collide cll with non-numeric Tsurf "
                "does not support external caller");
 
-  coeffs[0] = twall;
+  coeffs[0] = tsurf;
+
   coeffs[1] = acc_n;
   coeffs[2] = acc_t;
   coeffs[3] = acc_rot;
@@ -489,14 +473,4 @@ void SurfCollideCLL::flags_and_coeffs(int *flags, double *coeffs)
     flags[0] = 1;
     coeffs[5] = eccen;
   }
-}
-
-/* ----------------------------------------------------------------------
-   set current surface temperature
-------------------------------------------------------------------------- */
-
-void SurfCollideCLL::dynamic()
-{
-  twall = input->variable->compute_equal(tvar);
-  if (twall <= 0.0) error->all(FLERR,"Surf_collide cll temp <= 0.0");
 }

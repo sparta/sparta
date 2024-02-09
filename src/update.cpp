@@ -69,9 +69,10 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   MPI_Comm_size(world,&nprocs);
 
   ntimestep = 0;
+  runflag = 0;
   firststep = laststep = 0;
   beginstep = endstep = 0;
-  runflag = 0;
+  first_update = 0;
 
   time = 0.0;
   time_last_update = 0;
@@ -262,6 +263,7 @@ void Update::setup()
   dynamic_setup();
 
   modify->setup();
+  if (dynamic) dynamic_update();
   output->setup(1);
 }
 
