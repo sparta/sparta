@@ -154,7 +154,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
 
     double tsurf_local = tsurf;
     if (persurf_temperature) {
-      tsurf_local = d_t_persurf[isurf]; ////////
+      tsurf_local = d_t_persurf[isurf];
       if (tsurf_local <= 0.0) Kokkos::abort("Surf_collide tsurf <= 0.0");
     }
 

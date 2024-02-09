@@ -28,8 +28,6 @@ enum{INT,DOUBLE};                      // several files
 
 // per particle custom attributes
 
-
-
 /* ----------------------------------------------------------------------
    add a custom attribute with name
    assumes name does not already exist, except in case of restart

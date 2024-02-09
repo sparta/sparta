@@ -336,12 +336,48 @@ void GridKokkos::sync(ExecutionSpace space, unsigned int mask)
     if (mask & PCELL_MASK) k_pcells.sync_device();
     if (mask & SINFO_MASK) k_sinfo.sync_device();
     if (mask & PLEVEL_MASK) k_plevels.sync_device();
+    if (mask & CUSTOM_MASK) {
+      if (ncustom) {
+        if (ncustom_ivec)
+          for (int i = 0; i < ncustom_ivec; i++)
+            k_eivec.h_view[i].k_view.sync_device();
+
+        if (ncustom_iarray)
+          for (int i = 0; i < ncustom_iarray; i++)
+            k_eiarray.h_view[i].k_view.sync_device();
+
+        if (ncustom_dvec)
+          for (int i = 0; i < ncustom_dvec; i++)
+            k_edvec.h_view[i].k_view.sync_device();
+
+        if (ncustom_darray)
+          for (int i = 0; i < ncustom_darray; i++)
+            k_edarray.h_view[i].k_view.sync_device();
+      }
+    }
   } else {
     if (mask & CELL_MASK) k_cells.sync_host();
     if (mask & CINFO_MASK) k_cinfo.sync_host();
     if (mask & PCELL_MASK) k_pcells.sync_host();
     if (mask & SINFO_MASK) k_sinfo.sync_host();
     if (mask & PLEVEL_MASK) k_plevels.sync_host();
+    if (mask & CUSTOM_MASK) {
+      if (ncustom_ivec)
+        for (int i = 0; i < ncustom_ivec; i++)
+          k_eivec.h_view[i].k_view.sync_host();
+
+      if (ncustom_iarray)
+        for (int i = 0; i < ncustom_iarray; i++)
+          k_eiarray.h_view[i].k_view.sync_host();
+
+      if (ncustom_dvec)
+        for (int i = 0; i < ncustom_dvec; i++)
+          k_edvec.h_view[i].k_view.sync_host();
+
+      if (ncustom_darray)
+        for (int i = 0; i < ncustom_darray; i++)
+          k_edarray.h_view[i].k_view.sync_host();
+    }
   }
 }
 
@@ -362,6 +398,25 @@ void GridKokkos::modify(ExecutionSpace space, unsigned int mask)
     if (mask & PCELL_MASK) k_pcells.modify_device();
     if (mask & SINFO_MASK) k_sinfo.modify_device();
     if (mask & PLEVEL_MASK) k_plevels.modify_device();
+    if (mask & CUSTOM_MASK) {
+      if (ncustom) {
+        if (ncustom_ivec)
+          for (int i = 0; i < ncustom_ivec; i++)
+            k_eivec.h_view[i].k_view.modify_device();
+
+        if (ncustom_iarray)
+          for (int i = 0; i < ncustom_iarray; i++)
+            k_eiarray.h_view[i].k_view.modify_device();
+
+        if (ncustom_dvec)
+          for (int i = 0; i < ncustom_dvec; i++)
+            k_edvec.h_view[i].k_view.modify_device();
+
+        if (ncustom_darray)
+          for (int i = 0; i < ncustom_darray; i++)
+            k_edarray.h_view[i].k_view.modify_device();
+      }
+    }
     if (sparta->kokkos->auto_sync)
       sync(Host,mask);
   } else {
@@ -370,5 +425,24 @@ void GridKokkos::modify(ExecutionSpace space, unsigned int mask)
     if (mask & PCELL_MASK) k_pcells.modify_host();
     if (mask & SINFO_MASK) k_sinfo.modify_host();
     if (mask & PLEVEL_MASK) k_plevels.modify_host();
+    if (mask & CUSTOM_MASK) {
+      if (ncustom) {
+        if (ncustom_ivec)
+          for (int i = 0; i < ncustom_ivec; i++)
+            k_eivec.h_view[i].k_view.modify_host();
+
+        if (ncustom_iarray)
+          for (int i = 0; i < ncustom_iarray; i++)
+            k_eiarray.h_view[i].k_view.modify_host();
+
+        if (ncustom_dvec)
+          for (int i = 0; i < ncustom_dvec; i++)
+            k_edvec.h_view[i].k_view.modify_host();
+
+        if (ncustom_darray)
+          for (int i = 0; i < ncustom_darray; i++)
+            k_edarray.h_view[i].k_view.modify_host();
+      }
+    }
   }
 }
