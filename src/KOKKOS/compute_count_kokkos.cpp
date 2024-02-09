@@ -185,7 +185,7 @@ template<int NEED_ATOMICS>
 KOKKOS_INLINE_FUNCTION
 void ComputeCountKokkos::operator()(TagComputeCount_per_species_tally_atomic<NEED_ATOMICS>, const int& i) const {
 
-  // The tally (count) array is duplicated for OpenMP, atomic for CUDA, and neither for Serial
+  // The tally (count) array is duplicated for OpenMP, atomic for GPUs, and neither for Serial
 
   auto v_count = ScatterViewHelper<typename NeedDup<NEED_ATOMICS,DeviceType>::value,decltype(dup_count),decltype(ndup_count)>::get(dup_count,ndup_count);
   auto a_count = v_count.template access<typename AtomicDup<NEED_ATOMICS,DeviceType>::value>();

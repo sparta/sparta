@@ -49,7 +49,7 @@ SurfCollide::SurfCollide(SPARTA *sparta, int, char **arg) :
 
   nsingle = ntotal = 0;
 
-  kokkosable = copy = copymode = 0;
+  kokkosable = copy = uncopy = copymode = 0;
 }
 
 /* ---------------------------------------------------------------------- */

@@ -49,7 +49,7 @@ MarchingSquares::MarchingSquares(SPARTA *sparta, int ggroup_caller,
 
 void MarchingSquares::invoke(double **cvalues, int *svalues)
 {
-  int i,ipt,isurf,nsurf,which,splitflag;
+  int i,ipt,isurf,nsurf,which;
   double v00,v01,v10,v11;
   int bit0,bit1,bit2,bit3;
   double ave;
@@ -87,7 +87,6 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
     bit3 = v10 <= thresh ? 0 : 1;
 
     which = (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
-    splitflag = 0;
 
     switch (which) {
 
@@ -131,7 +130,6 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
       nsurf = 2;
       ave = 0.25 * (v00 + v01 + v10 + v11);
       if (ave > thresh) {
-        splitflag = 1;
         pt[0][0] = lo[0];
         pt[0][1] = interpolate(v00,v10,lo[1],hi[1]);
         pt[1][0] = interpolate(v10,v11,lo[0],hi[0]);
@@ -188,7 +186,6 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
       nsurf = 2;
       ave = 0.25 * (v00 + v01 + v10 + v11);
       if (ave > thresh) {
-        splitflag = 1;
         pt[0][0] = interpolate(v00,v01,lo[0],hi[0]);
         pt[0][1] = lo[1];
         pt[1][0] = lo[0];

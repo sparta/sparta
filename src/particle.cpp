@@ -102,14 +102,14 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
 
   wrandom = NULL;
 
-  copy = copymode = 0;
+  copy = uncopy = copymode = 0;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Particle::~Particle()
 {
-  if (copy || copymode) return;
+  if (!uncopy && (copy || copymode)) return;
 
   memory->sfree(species);
   for (int i = 0; i < nmixture; i++) delete mixture[i];

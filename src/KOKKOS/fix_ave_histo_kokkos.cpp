@@ -240,7 +240,7 @@ void FixAveHistoKokkos::end_of_step()
           compute->post_process_isurf_grid();
 
         if (j == 0 || compute->post_process_grid_flag)
-          bin_grid_cells(reducer, computeKKBase->d_vector);
+          bin_grid_cells(reducer, computeKKBase->d_vector_particle);
         else if (computeKKBase->d_array_grid.data())
           // @stamoor: fix_ave_histo.cpp passes compute->array_grid[0][j-1],
           // @stamoor: so send subview of d_array_grid.
@@ -282,7 +282,7 @@ void FixAveHistoKokkos::end_of_step()
           bin_particles(reducer, fix->array_particle[j-1],fix->size_per_particle_cols);
       } else if (kind == PERGRID) {
         if (j == 0) {
-          bin_grid_cells(reducer, fixKKBase->d_vector);
+          bin_grid_cells(reducer, fixKKBase->d_vector_particle);
         } else if (fixKKBase->d_array_grid.data()) {
           // @stamoor: fix_ave_histo.cpp passes fix->array_grid[j-1], which is
           // not the same as what happens above with the compute object, it is

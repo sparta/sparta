@@ -139,8 +139,6 @@ FixSurfTemp::FixSurfTemp(SPARTA *sparta, int narg, char **arg) :
   // units of prefactor (SI) is K^4 / (watt - m^2)
   // same in 3d vs 2d, since SPARTA treats 2d cell volume as 1 m in z
 
-  int dimension = domain->dimension;
-
   if (strcmp(update->unit_style,"si") == 0) {
     prefactor = 1.0 / (emi * SB_SI);
     threshold = 1.0e-6;

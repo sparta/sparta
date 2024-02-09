@@ -1462,7 +1462,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
 {
   int n,n1,n2,eof;
   char line1[MAXLINE],line2[MAXLINE];
-  char copy1[MAXLINE],copy2[MAXLINE],copy3[MAXLINE],copy4[MAXLINE];
+  char copy1[MAXLINE],copy2[MAXLINE];
   char *word;
   OneReaction_GS *r;
 
@@ -2736,7 +2736,7 @@ void SurfReactAdsorb::PS_react(int modePS, int isurf, double *norm)
   double ms_inv = factor/max_cover;
 
   Particle::OnePart *p;
-  int id,isc;
+  int isc;
 
   double nu_react[nactive_ps];
   OneReaction_PS *r;

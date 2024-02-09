@@ -18,8 +18,8 @@ FixStyle(ave/grid/kk,FixAveGridKokkos)
 
 #else
 
-#ifndef LMP_FIX_AVE_GRID_KOKKOS_H
-#define LMP_FIX_AVE_GRID_KOKKOS_H
+#ifndef SPARTA_FIX_AVE_GRID_KOKKOS_H
+#define SPARTA_FIX_AVE_GRID_KOKKOS_H
 
 #include "fix_ave_grid.h"
 #include "kokkos_type.h"

@@ -190,14 +190,14 @@ void ComputeDistSurfGridKokkos::operator()(TagComputeDistSurfGrid_surf_distance,
     // if split cell, also set vector_grid = 0.0 for sub-cells
 
     if (i < n) {
-      d_vector[icell] = 0.0;
+      d_vector_grid[icell] = 0.0;
       if (d_cells[icell].nsplit > 1) {
         n = d_cells[icell].nsplit;
         int isplit = d_cells[icell].isplit;
         auto csubs_begin = d_csubs.row_map(isplit);
         for (i = 0; i < n; i++) {
           m = d_csubs.entries(csubs_begin + i);
-          d_vector[m] = 0.0;
+          d_vector_grid[m] = 0.0;
         }
       }
       return;
@@ -230,7 +230,7 @@ void ComputeDistSurfGridKokkos::operator()(TagComputeDistSurfGrid_surf_distance,
     mindist = MIN(mindist,dist);
   }
 
-  d_vector[icell] = mindist;
+  d_vector_grid[icell] = mindist;
 }
 
 /* ----------------------------------------------------------------------
@@ -247,5 +247,5 @@ void ComputeDistSurfGridKokkos::reallocate()
   memory->destroy(vector_grid);
   nglocal = grid->nlocal;
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"distsurf/grid:vector_grid");
-  d_vector = k_vector_grid.d_view;
+  d_vector_grid = k_vector_grid.d_view;
 }

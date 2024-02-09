@@ -68,7 +68,7 @@ GridKokkos::GridKokkos(SPARTA *sparta) : Grid(sparta)
 
 GridKokkos::~GridKokkos()
 {
-  if (copy || copymode) return;
+  if (!uncopy && (copy || copymode)) return;
 
   cells = NULL;
   cinfo = NULL;
