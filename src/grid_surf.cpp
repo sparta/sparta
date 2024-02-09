@@ -1668,7 +1668,6 @@ void Grid::clear_surf_implicit()
   // reset cell and corner types, and cell volume
 
   int celltype = OUTSIDE;
-  int cornertype = UNKNOWN;
 
   icell = 0;
   while (icell < nlocal) {

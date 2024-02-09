@@ -240,7 +240,7 @@ void Grid::collate_array_implicit(int nrow, int ncol, cellint *ids,
 void Grid::owned_to_ghost_array(int nrequest, int ncol, cellint *ghostIDs,
                                 double **in, double **out)
 {
-  int i,j,icell,itally;
+  int i,j,icell;
   cellint cellID;
 
   int me = comm->me;

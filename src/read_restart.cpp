@@ -959,7 +959,6 @@ void ReadRestart::read_gp_multi_file_less_procs(char *file)
 void ReadRestart::read_gp_multi_file_more_procs(char *file)
 {
   int tmp,n,flag,procsperfile;
-  long filepos;
 
   int maxbuf = 0;
   char *buf = NULL;
@@ -1076,7 +1075,7 @@ void ReadRestart::read_gp_multi_file_more_procs(char *file)
 
 void ReadRestart::read_gp_multi_file_less_procs_memlimit(char *file)
 {
-  int tmp,n,flag,procsperfile;
+  int tmp,n,flag;
   bigint n_big;
 
   int maxbuf = 0;

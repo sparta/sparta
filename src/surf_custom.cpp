@@ -541,7 +541,7 @@ void Surf::read_restart_custom(FILE *fp)
   // order that custom vectors/arrays are in restart file
   //   matches order the per-particle custom values will be read from file
 
-  int n,type,size,ghostflag;
+  int n,type,size;
   char *name;
 
   for (int i = 0; i < nactive; i++) {

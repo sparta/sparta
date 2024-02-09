@@ -77,10 +77,6 @@ void Surf::collate_vector_reduce(int nrow, surfint *tally2surf,
   bigint bbytes = (bigint) nglobal * sizeof(double);
   memset(one,0,bbytes);
 
-  Line *lines = surf->lines;
-  Tri *tris = surf->tris;
-  surfint id;
-
   j = 0;
   for (i = 0; i < nrow; i++) {
     m = (int) tally2surf[i] - 1;
@@ -111,7 +107,7 @@ void Surf::collate_vector_reduce(int nrow, surfint *tally2surf,
 void Surf::collate_vector_rendezvous(int nrow, surfint *tally2surf,
                                      double *in, int instride, double *out)
 {
-  int i,k,m;
+  int k,m;
 
   // allocate memory for rvous input
 
@@ -165,11 +161,9 @@ int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
   int i,k,m;
 
   Surf *sptr = (Surf *) ptr;
-  Memory *memory = sptr->memory;
   int nown = sptr->nown;
   double *out = sptr->out_rvous;
   int nprocs = sptr->comm->nprocs;
-  int me = sptr->comm->me;
 
   // zero my owned surf values
 
@@ -274,7 +268,7 @@ void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
 void Surf::collate_array_rendezvous(int nrow, int ncol, surfint *tally2surf,
                                     double **in, double **out)
 {
-  int i,j,m;
+  int j,m;
 
   // allocate memory for rvous input
 
@@ -288,8 +282,6 @@ void Surf::collate_array_rendezvous(int nrow, int ncol, surfint *tally2surf,
   // logic of (id-1) % nprocs sends
   //   surf IDs 1,11,21,etc on 10 procs to proc 0
 
-  Line *lines = surf->lines;
-  Tri *tris = surf->tris;
   surfint id;
 
   m = 0;
@@ -330,15 +322,13 @@ int Surf::rendezvous_array(int n, char *inbuf,
                            int &flag, int *&proclist, char *&outbuf,
                            void *ptr)
 {
-  int i,j,k,m;
+  int j,k,m;
 
   Surf *sptr = (Surf *) ptr;
-  Memory *memory = sptr->memory;
   int nown = sptr->nown;
   int ncol = sptr->ncol_rvous;
   double *out = sptr->out_rvous;
   int nprocs = sptr->comm->nprocs;
-  int me = sptr->comm->me;
 
   // zero my owned surf values
 

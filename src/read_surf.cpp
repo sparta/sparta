@@ -1090,7 +1090,7 @@ void ReadSurf::read_tris()
 
     // if Points section in file, each read line has indices into it
 
-    int i,ic,iv,icvalue;
+    int ic,iv,icvalue;
 
     if (npoint_file) {
       for (int i = 0; i < nchunk; i++) {
@@ -1970,7 +1970,6 @@ void ReadSurf::clip3d()
 
 void ReadSurf::check_bounds()
 {
-  int n;
   surfint id;
 
   bigint smin = nsurf_all;

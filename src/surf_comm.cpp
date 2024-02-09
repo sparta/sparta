@@ -189,7 +189,6 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
 
   int nvalues_custom = 0;
   for (int ic = 0; ic < nc; ic++) {
-    int index = index_custom[ic];
     if (esize[ic] == 0) nvalues_custom++;
     else nvalues_custom += esize[ic];
   }
@@ -477,7 +476,6 @@ void Surf::compress_explicit()
 void Surf::compress_implicit()
 {
   int j,ns,icell;
-  cellint cellID;
   surfint *csurfs;
 
   if (!grid->hashfilled) grid->rehash();
@@ -735,7 +733,7 @@ int Surf::rendezvous_own2local(int n, char *inbuf,
 			       int &flag, int *&proclist, char *&outbuf,
 			       void *ptr)
 {
-  int i,j,k,m,idata;
+  int j,k,m,idata;
   int *ibuf,*iout;
   double *dbuf,*dout;
 
@@ -1066,12 +1064,11 @@ int Surf::rendezvous_local2own(int n, char *inbuf,
 			       int &flag, int *&proclist, char *&outbuf,
 			       void *ptr)
 {
-  int i,j,k,m,idata;
+  int j,m,idata;
   int *ibuf,*iout;
   double *dbuf,*dout;
 
   Surf *sptr = (Surf *) ptr;
-  Memory *memory = sptr->memory;
   int type = sptr->spread_type;
   int size = sptr->spread_size;
 
@@ -1088,7 +1085,6 @@ int Surf::rendezvous_local2own(int n, char *inbuf,
   int index;
 
   m = 0;
-  k = 0;
   if (type == INT) {
     for (int i = 0; i < n; i++) {
       index = ibuf[m++];

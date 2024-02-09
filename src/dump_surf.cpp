@@ -806,8 +806,6 @@ void DumpSurf::pack_variable(int n)
 
 void DumpSurf::pack_custom(int n)
 {
-  int m;
-
   int index = custom[field2index[n]];
 
   if (surf->etype[index] == INT) {

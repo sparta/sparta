@@ -1408,7 +1408,7 @@ void SurfReactAdsorb::update_state_face()
 
 void SurfReactAdsorb::update_state_surf()
 {
-  int i,j,m,isr;
+  int i,j,isr;
 
   // use species_delta for my nlocal+nghost surfs to create:
   //   ntally = # of surfs I marked

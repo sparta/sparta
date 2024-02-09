@@ -654,10 +654,6 @@ void Surf::add_surfs(int replace, int ncount,
   // check if new surf IDs are contiguous from 1 to Nsurf_new
   // if any ID = 0 in rendezvous output, new surf IDs were NOT contiguous
 
-  int surfperproc = nsurf_new / nprocs;
-  int ncontig = surfperproc;
-  if (me == nprocs-1) ncontig = nsurf_new - (nprocs-1)*surfperproc;
-
   int flag = 0;
   if (domain->dimension == 2) {
     if (!distributed) {
