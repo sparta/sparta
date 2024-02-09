@@ -198,7 +198,7 @@ void SurfCollideDiffuseKokkos::dynamic()
       t_persurf = t_localghost;
 
       auto h_t_persurf = HAT::t_float_1d(t_persurf,n_localghost);
-      Kokkos::deep_copy(d_t_persurf,h_t_persurf);
+      d_t_persurf = Kokkos::create_mirror_view_and_copy(SPADeviceType(),h_t_persurf);
     }
 
   // CUSTOM mode
@@ -206,7 +206,6 @@ void SurfCollideDiffuseKokkos::dynamic()
   // particle/surf collisions access t_persurf for local+ghost values
 
   } else if (tmode == CUSTOM) {
-
     SurfKokkos* surf_kk = (SurfKokkos*) surf;
     surf_kk->sync(Device,SURF_CUSTOM_MASK);
     auto h_edvec_local = surf_kk->k_edvec_local.h_view;

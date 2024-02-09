@@ -101,6 +101,28 @@ SurfKokkos::~SurfKokkos()
 
 /* ---------------------------------------------------------------------- */
 
+void SurfKokkos::clear_explicit()
+{
+  nsurf = 0;
+  nlocal = nghost = nmax = 0;
+  nown = maxown = 0;
+
+  k_lines = decltype(k_lines)();
+  k_tris = decltype(k_tris)();
+  k_mylines = decltype(k_mylines)();
+  k_mytris = decltype(k_mytris)();
+
+  lines = NULL;
+  tris = NULL;
+  mylines = NULL;
+  mytris = NULL;
+
+  hash->clear();
+  hashfilled = 0;
+}
+
+/* ---------------------------------------------------------------------- */
+
 void SurfKokkos::wrap_kokkos()
 {
   if (domain->dimension == 2) {

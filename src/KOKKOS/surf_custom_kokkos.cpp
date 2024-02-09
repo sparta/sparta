@@ -395,6 +395,8 @@ void SurfKokkos::spread_custom(int index)
   k_edvec_local.sync_host();
   k_edarray_local.sync_host();
 
+  this->sync(Host,CUSTOM_MASK);
+
   if (etype[index] == INT) {
     if (esize[index] == 0) {
       if (nlocal+nghost != size_custom_local[index]) {
@@ -474,11 +476,6 @@ void SurfKokkos::spread_custom(int index)
   k_eiarray_local.modify_host();
   k_edvec_local.modify_host();
   k_edarray_local.modify_host();
-
-  //k_eivec_local.sync_device();
-  //k_eiarray_local.sync_device();
-  //k_edvec_local.sync_device();
-  //k_edarray_local.sync_device();
 
   this->modify(Host,CUSTOM_MASK);
 }

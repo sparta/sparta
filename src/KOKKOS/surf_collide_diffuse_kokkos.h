@@ -35,7 +35,6 @@ SurfCollideStyle(diffuse/kk,SurfCollideDiffuseKokkos)
 namespace SPARTA_NS {
 
 enum{NONE,DISCRETE,SMOOTH};            // several files
-enum{NUMERIC,VARIABLE,CUSTOM};
 
 class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
  public:
