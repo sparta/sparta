@@ -43,19 +43,18 @@
 <P><B>Description:</B>
 </P>
 <P>Define a computation that simply stores grid attributes for each grid
-cell in a grid cell group.  This is useful so that the values can be
+cell in a grid cell group.  This is useful for values which can be
 used by other <A HREF = "Section_howto.html#howto_4">output commands</A> that take
 computes as inputs.  See for example, the <A HREF = "compute_reduce.html">compute
-reduce</A>, <A HREF = "fix_ave_atom.html">fix ave/grid</A>, and
-<A HREF = "dump.html">dump grid</A> commands.
+reduce</A>, <A HREF = "fix_ave_grid.html">fix ave/grid</A>, <A HREF = "dump.html">dump
+grid</A>, and <A HREF = "variable.html">grid-style variable</A> commands.
 </P>
 <P>Only grid cells in the grid group specified by <I>group-ID</I> are included
 in the calculation.  See the <A HREF = "group.html">group grid</A> command for info
 on how grid cells can be assigned to grid groups.
 </P>
-<P>The values are stored in a per-grid vector or array as discussed
-below. 
-</P>
+<HR>
+
 <P><I>Id</I> is the grid cell ID.  In SPARTA each grid cell is assigned a
 unique ID which represents its logical location within the
 hierarchical grid.  This ID is stored as an integer such as 5774983,
@@ -138,7 +137,10 @@ effectively.
 </P>
 <HR>
 
-<P><B>Restrictions:</B> none
+<P><B>Restrictions:</I>
+</P>
+<P>For 2d simulations, none of the attributes which refer to the 3rd
+dimension may be used.
 </P>
 <P><B>Related commands:</B>
 </P>

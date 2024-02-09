@@ -1,0 +1,156 @@
+################################################################################
+# 2d flow around a staircase of steps with read_grid and read_surf
+# testing custom attributes
+#
+# Notes:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+
+#global              gridcut -1.0 comm/sort yes
+global              gridcut 0.0 comm/sort yes
+#global              gridcut 2.0 comm/sort yes
+
+#global              surfs explicit
+global              surfs explicit/distributed
+
+boundary	    or r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+
+read_grid           data.step.grid &
+                    custom ivec int 0 &
+                    custom iarray int 2 &
+                    custom dvec float 0 &
+                    custom darray float 3
+                    
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.01
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0 
+
+read_surf	    data.step.custom &
+                    custom ivec int 0 &
+                    custom iarray int 2 &
+                    custom dvec float 0 &
+                    custom darray float 3 &
+                    trans 5 5 0 scale 0.75 0.75 1 &
+                    rotate 45 0 0 1 invert
+
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+fix		    in emit/face air xlo twopass 
+
+timestep 	    0.0001
+
+# output
+
+dump                10 image all 100 tmp.step.read.image.*.ppm &
+                    type type pdiam 0.1 &
+                    surf proc 0.01 size 512 512 axes yes 0.9 0.02 zoom 1.5
+dump_modify	    10 pad 4
+
+dump          1 surf all 100 tmp.step.read.dump.surf id type &
+              s_ivec s_iarray[*] s_dvec s_darray[*]
+
+dump          2 grid all 100 tmp.step.read.dump.grid id &
+              g_ivec g_iarray[*] g_dvec g_darray[*]
+
+write_surf      tmp.step.read.data.surf type &
+                custom ivec custom iarray custom dvec custom darray &
+                points no
+
+write_grid      tmp.step.read.data.grid &
+                custom ivec custom iarray custom dvec custom darray
+
+# first run
+
+fix             1 balance 100 1.01 rcb part flip yes
+
+stats		    50
+stats_style	    step cpu np nattempt ncoll nscoll nscheck f_1[*]
+
+run 		    500
+
+# setup up per-particle custom attributes
+
+variable        pivec particle id/100000
+variable        piarray1 particle p_ivec+1
+variable        piarray2 particle v_piarray1+1
+variable        pdvec particle id/100000+3.5
+variable        pdarray1 particle p_dvec+1
+variable        pdarray2 particle v_pdarray1+1
+variable        pdarray3 particle v_pdarray2+1
+
+custom          particle ivec set v_pivec all NULL type int
+custom          particle iarray[1] set v_piarray1 all NULL type int size 2
+custom          particle iarray[2] set v_piarray2 all NULL type int size 2
+custom          particle dvec set v_pdvec all NULL
+custom          particle darray[1] set v_pdarray1 all NULL size 3
+custom          particle darray[2] set v_pdarray2 all NULL size 3
+custom          particle darray[3] set v_pdarray3 all NULL size 3
+
+dump          3 particle all 100 tmp.step.read.dump.particle id x y &
+              p_ivec p_iarray[*] p_dvec p_darray[*]
+
+# second run
+
+compute       1 reduce ave p_ivec p_iarray[*] p_dvec p_darray[*]
+compute       2 reduce ave g_ivec g_iarray[*] g_dvec g_darray[*]
+compute       3 reduce ave s_ivec s_iarray[*] s_dvec s_darray[*]
+
+stats_style	step cpu np nattempt ncoll nscoll nscheck f_1[*] &
+                c_1[*] c_2[*] c_3[*]
+
+balance_grid    rcb part flip yes
+
+run 		    500
+
+write_surf      tmp.step.read.data.surf2 type &
+                custom ivec custom iarray custom dvec custom darray &
+                points no
+
+write_grid      tmp.step.read.data.grid2 &
+                custom ivec custom iarray custom dvec custom darray
+
+#write_restart   tmp.step.read.restart
+write_restart   tmp.step.read.restart.% fileper 2
+
+# remove all custom attributes
+
+undump         1
+undump         2
+undump         3
+
+custom         surf ivec remove
+custom         surf iarray remove
+custom         surf dvec remove
+custom         surf darray remove
+
+custom         grid ivec remove
+custom         grid iarray remove
+custom         grid dvec remove
+custom         grid darray remove
+
+custom         particle ivec remove
+custom         particle iarray remove
+custom         particle dvec remove
+custom         particle darray remove
+
+# third run
+
+uncompute       1
+uncompute       2
+uncompute       3
+stats_style	step cpu np nattempt ncoll nscoll nscheck f_1[*]
+
+run            500

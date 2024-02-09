@@ -24,6 +24,7 @@
 #include "comm.h"
 #include "geometry.h"
 #include "input.h"
+#include "random_knuth.h"
 #include "math_extra.h"
 #include "math_const.h"
 #include "hash3.h"
@@ -37,7 +38,6 @@ enum{TALLYAUTO,TALLYREDUCE,TALLYRVOUS};         // same as Update
 enum{REGION_ALL,REGION_ONE,REGION_CENTER};      // same as Grid
 enum{TYPE,MOLECULE,ID};
 enum{LT,LE,GT,GE,EQ,NEQ,BETWEEN};
-enum{INT,DOUBLE};                      // several files
 
 #define DELTA 1024
 #define DELTAMODEL 4
@@ -57,6 +57,7 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   implicit = 0;
   distributed = 0;
   surf_collision_check = 1;
+  localghost_changed_step = -1;
 
   gnames = (char **) memory->smalloc(MAXGROUP*sizeof(char *),"surf:gnames");
   bitmask = (int *) memory->smalloc(MAXGROUP*sizeof(int),"surf:bitmask");
@@ -81,6 +82,10 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   mylines = NULL;
   mytris = NULL;
 
+  nunique = 0;
+  unique = NULL;
+  uniqueID = NULL;
+
   nsc = maxsc = 0;
   sc = NULL;
   nsr = maxsr = 0;
@@ -88,25 +93,29 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
 
   tally_comm = TALLYAUTO;
 
+  // RNG for unique surf assignment
+
+  urandom = NULL;
+
   // custom per-surf vectors/arrays
 
   ncustom = 0;
   ename = NULL;
-  etype = esize = ewhich = NULL;
+  etype = esize = estatus = ewhich = NULL;
+  size_custom = 0;
+  size_custom_local = NULL;
 
   ncustom_ivec = ncustom_iarray = 0;
   icustom_ivec = icustom_iarray = NULL;
-  eivec = NULL;
-  eiarray = NULL;
+  eivec = eivec_local = NULL;
+  eiarray = eiarray_local = NULL;
   eicol = NULL;
 
   ncustom_dvec = ncustom_darray = 0;
   icustom_dvec = icustom_darray = NULL;
-  edvec = NULL;
-  edarray = NULL;
+  edvec = edvec_local = NULL;
+  edarray = edarray_local = NULL;
   edcol = NULL;
-
-  custom_restart_flag = NULL;
 
   // allocate hash for surf IDs
 
@@ -128,6 +137,9 @@ Surf::~Surf()
   memory->sfree(mylines);
   memory->sfree(mytris);
 
+  memory->destroy(unique);
+  memory->destroy(uniqueID);
+
   for (int i = 0; i < nsc; i++) delete sc[i];
   memory->sfree(sc);
   for (int i = 0; i < nsr; i++) delete sr[i];
@@ -140,23 +152,44 @@ Surf::~Surf()
   memory->sfree(ename);
   memory->destroy(etype);
   memory->destroy(esize);
+  memory->destroy(estatus);
   memory->destroy(ewhich);
+  memory->destroy(size_custom_local);
 
-  for (int i = 0; i < ncustom_ivec; i++) memory->destroy(eivec[i]);
-  for (int i = 0; i < ncustom_iarray; i++) memory->destroy(eiarray[i]);
-  for (int i = 0; i < ncustom_dvec; i++) memory->destroy(edvec[i]);
-  for (int i = 0; i < ncustom_darray; i++) memory->destroy(edarray[i]);
+  for (int i = 0; i < ncustom_ivec; i++) {
+    memory->destroy(eivec[i]);
+    memory->destroy(eivec_local[i]);
+  }
+  for (int i = 0; i < ncustom_iarray; i++) {
+    memory->destroy(eiarray[i]);
+    memory->destroy(eiarray_local[i]);
+  }
+  for (int i = 0; i < ncustom_dvec; i++) {
+    memory->destroy(edvec[i]);
+    memory->destroy(edvec_local[i]);
+  }
+  for (int i = 0; i < ncustom_darray; i++) {
+    memory->destroy(edarray[i]);
+    memory->destroy(edarray_local[i]);
+  }
 
   memory->destroy(icustom_ivec);
   memory->destroy(icustom_iarray);
   memory->sfree(eivec);
+  memory->sfree(eivec_local);
   memory->sfree(eiarray);
+  memory->sfree(eiarray_local);
   memory->destroy(eicol);
+
   memory->destroy(icustom_dvec);
   memory->destroy(icustom_darray);
   memory->sfree(edvec);
+  memory->sfree(edvec_local);
   memory->sfree(edarray);
+  memory->sfree(edarray_local);
   memory->destroy(edcol);
+
+  delete urandom;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -187,8 +220,6 @@ void Surf::modify_params(int narg, char **arg)
   if (igroup < 0) error->all(FLERR,"Surf_modify surface group is not defined");
   int groupbit = bitmask[igroup];
 
-  int dim = domain->dimension;
-
   int iarg = 1;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"collide") == 0) {
@@ -198,16 +229,22 @@ void Surf::modify_params(int narg, char **arg)
       int isc = find_collide(arg[iarg+1]);
       if (isc < 0) error->all(FLERR,"Could not find surf_modify sc-ID");
 
-      // NOTE: is this also needed for mylines and mytris?
       // set surf collision model for each surf in surface group
+      // for both nlocal+nghost lines/tris and mylines/mytris
 
-      if (dim == 2) {
+      if (domain->dimension == 2) {
         for (int i = 0; i < nlocal+nghost; i++)
           if (lines[i].mask & groupbit) lines[i].isc = isc;
-      }
-      if (dim == 3) {
+        if (!implicit && distributed)
+          for (int i = 0; i < nown; i++)
+            if (mylines[i].mask & groupbit) mylines[i].isc = isc;
+
+      } else {
         for (int i = 0; i < nlocal+nghost; i++)
           if (tris[i].mask & groupbit) tris[i].isc = isc;
+        if (!implicit && distributed)
+          for (int i = 0; i < nown; i++)
+            if (mytris[i].mask & groupbit) mytris[i].isc = isc;
       }
 
       iarg += 2;
@@ -224,14 +261,21 @@ void Surf::modify_params(int narg, char **arg)
       }
 
       // set surf reaction model for each surf in surface group
+      // for both nlocal+nghost lines/tris and mylines/mytris
 
-      if (dim == 2) {
+      if (domain->dimension == 2) {
         for (int i = 0; i < nlocal+nghost; i++)
           if (lines[i].mask & groupbit) lines[i].isr = isr;
-      }
-      if (dim == 3) {
+        if (!implicit && distributed)
+          for (int i = 0; i < nown; i++)
+            if (mylines[i].mask & groupbit) mylines[i].isr = isr;
+
+      } else {
         for (int i = 0; i < nlocal+nghost; i++)
           if (tris[i].mask & groupbit) tris[i].isr = isr;
+        if (!implicit && distributed)
+          for (int i = 0; i < nown; i++)
+            if (mytris[i].mask & groupbit) mytris[i].isr = isr;
       }
 
       iarg += 2;
@@ -244,9 +288,6 @@ void Surf::modify_params(int narg, char **arg)
 
 void Surf::init()
 {
-  int dim = domain->dimension;
-  bigint flag,allflag;
-
   // warn if surfs are distributed (explicit or implicit)
   //   and grid->cutoff < 0.0, since each proc will have copy of all cells
 
@@ -256,12 +297,13 @@ void Surf::init()
 
   // check that surf element types are all values >= 1
 
+  bigint flag,allflag;
+
   flag = 0;
-  if (dim == 2) {
+  if (domain->dimension == 2) {
     for (int i = 0; i < nlocal; i++)
       if (lines[i].type <= 0) flag++;
-  }
-  if (dim == 3) {
+  } else {
     for (int i = 0; i < nlocal; i++)
       if (tris[i].type <= 0) flag++;
   }
@@ -282,11 +324,10 @@ void Surf::init()
 
   if (surf_collision_check) {
     flag = 0;
-    if (dim == 2) {
+    if (domain->dimension == 2) {
       for (int i = 0; i < nlocal+nghost; i++)
         if (lines[i].isc < 0) flag++;
-    }
-    if (dim == 3) {
+    } else {
       for (int i = 0; i < nlocal+nghost; i++)
         if (tris[i].isc < 0) flag++;
     }
@@ -308,11 +349,10 @@ void Surf::init()
 
   if (surf_collision_check) {
     flag = 0;
-    if (dim == 2) {
+    if (domain->dimension == 2) {
       for (int i = 0; i < nlocal+nghost; i++)
         if (lines[i].isr >= 0 && sc[lines[i].isc]->allowreact == 0) flag++;
-    }
-    if (dim == 3) {
+    } else {
       for (int i = 0; i < nlocal+nghost; i++)
         if (tris[i].isr >= 0 && sc[tris[i].isc]->allowreact == 0) flag++;
     }
@@ -334,13 +374,12 @@ void Surf::init()
 
   if (surf_collision_check) {
     flag = 0;
-    if (dim == 2) {
+    if (domain->dimension == 2) {
       for (int i = 0; i < nlocal+nghost; i++) {
         if (!lines[i].transparent) continue;
         if (!sc[lines[i].isc]->transparent) flag++;
       }
-    }
-    if (dim == 3) {
+    } else {
       for (int i = 0; i < nlocal+nghost; i++) {
         if (!tris[i].transparent) continue;
         if (!sc[tris[i].isc]->transparent) flag++;
@@ -363,26 +402,39 @@ void Surf::init()
 
   for (int i = 0; i < nsc; i++) sc[i]->init();
   for (int i = 0; i < nsr; i++) sr[i]->init();
-
-  // if first run after reading a restart file,
-  // delete any custom surf attributes that have not been re-defined
-  // use nactive since remove_custom() may alter ncustom
-
-  if (custom_restart_flag) {
-    int nactive = ncustom;
-    for (int i = 0; i < nactive; i++)
-      if (custom_restart_flag[i] == 0) remove_custom(i);
-    delete [] custom_restart_flag;
-    custom_restart_flag = NULL;
-  }
 }
 
 /* ----------------------------------------------------------------------
-   remove all surfs
+   remove all explicit surfs and deallocate memory
+   called by add_surfs() via ReadSurf and RemoveSurf
+------------------------------------------------------------------------- */
+
+void Surf::clear_explicit()
+{
+  nsurf = 0;
+  nlocal = nghost = nmax = 0;
+  nown = maxown = 0;
+
+  memory->sfree(lines);
+  memory->sfree(tris);
+  memory->sfree(mylines);
+  memory->sfree(mytris);
+
+  lines = NULL;
+  tris = NULL;
+  mylines = NULL;
+  mytris = NULL;
+
+  hash->clear();
+  hashfilled = 0;
+}
+
+/* ----------------------------------------------------------------------
+   remove all implicit surfs but do not deallocate memory
    called by FixAblate
 ------------------------------------------------------------------------- */
 
-void Surf::clear()
+void Surf::clear_implicit()
 {
   nsurf = 0;
   nlocal = nghost = 0;
@@ -402,7 +454,7 @@ void Surf::remove_ghosts()
 
 /* ----------------------------------------------------------------------
    add a line to lines list
-   called by ReadSurf (for non-distributed surfs) and ReadISurf
+   called by ReadISurf or FixAblate via Marching Squares
 ------------------------------------------------------------------------- */
 
 void Surf::add_line(surfint id, int itype, double *p1, double *p2)
@@ -429,7 +481,7 @@ void Surf::add_line(surfint id, int itype, double *p1, double *p2)
 }
 
 /* ----------------------------------------------------------------------
-   add a line to owned or ghost lines list, depending on ownflag
+   add a line to owned or ghost list, depending on ownflag
    called by Grid::unpack_one() or Grid::coarsen_cell()
 ------------------------------------------------------------------------- */
 
@@ -462,62 +514,8 @@ void Surf::add_line_copy(int ownflag, Line *line)
 }
 
 /* ----------------------------------------------------------------------
-   add a line to mylines list
-   called by ReadSurf for distributed surfs
-   NOT adding one line at a time, rather inserting at location M based on ID
-   assume mylines has been pre-allocated to correct length
-   caller sets surf->nown
-------------------------------------------------------------------------- */
-
-void Surf::add_line_own(surfint id, int itype, double *p1, double *p2)
-{
-  int m = (id-1) / nprocs;
-
-  mylines[m].id = id;
-  mylines[m].type = itype;
-  mylines[m].mask = 1;
-  mylines[m].isc = mylines[m].isr = -1;
-  mylines[m].p1[0] = p1[0];
-  mylines[m].p1[1] = p1[1];
-  mylines[m].p1[2] = 0.0;
-  mylines[m].p2[0] = p2[0];
-  mylines[m].p2[1] = p2[1];
-  mylines[m].p2[2] = 0.0;
-  mylines[m].transparent = 0;
-}
-
-/* ----------------------------------------------------------------------
-   add a line to tmplines list
-   called by ReadSurf for multiple file input
-------------------------------------------------------------------------- */
-
-void Surf::add_line_temporary(surfint id, int itype, double *p1, double *p2)
-{
-  if (ntmp == nmaxtmp) {
-    if ((bigint) nmaxtmp + DELTA > MAXSMALLINT)
-      error->one(FLERR,"Surf add_line_tmeporary overflowed");
-    nmaxtmp += DELTA;
-    grow_temporary(nmaxtmp-DELTA);
-  }
-
-  tmplines[ntmp].id = id;
-  tmplines[ntmp].type = itype;
-  tmplines[ntmp].mask = 1;
-  tmplines[ntmp].isc = tmplines[ntmp].isr = -1;
-  tmplines[ntmp].p1[0] = p1[0];
-  tmplines[ntmp].p1[1] = p1[1];
-  tmplines[ntmp].p1[2] = 0.0;
-  tmplines[ntmp].p2[0] = p2[0];
-  tmplines[ntmp].p2[1] = p2[1];
-  tmplines[ntmp].p2[2] = 0.0;
-  tmplines[ntmp].transparent = 0;
-  ntmp++;
-}
-
-/* ----------------------------------------------------------------------
    add a triangle to tris list
-   called by ReadSurf (for non-distributed surfs) and
-     by ReadISurf via FixAblate and Marching Cubes/Squares
+   called by ReadISurf or FixAblate via Marching Cubes
 ------------------------------------------------------------------------- */
 
 void Surf::add_tri(surfint id, int itype, double *p1, double *p2, double *p3)
@@ -548,7 +546,7 @@ void Surf::add_tri(surfint id, int itype, double *p1, double *p2, double *p3)
 
 /* ----------------------------------------------------------------------
    add a triangle to owned or ghost list, depending on ownflag
-   called by Grid::unpack_one
+   called by Grid::unpack_one or Grid::coarsen_cell()
 ------------------------------------------------------------------------- */
 
 void Surf::add_tri_copy(int ownflag, Tri *tri)
@@ -580,99 +578,108 @@ void Surf::add_tri_copy(int ownflag, Tri *tri)
 }
 
 /* ----------------------------------------------------------------------
-   add a triangls's info to mytris list
-   called by ReadSurf for distributed surfs
-   NOT adding one tri at a time, rather inserting at location M based on ID
-   assume mytris has been pre-allocated to correct length
-   caller sets surf->nown
+   add list of surfs created by caller to Surf data structs
+     for explicit surfs only, all or distributed
+   replace = 0: add newlines/newtris to existing ones
+   replace = 1: wipe out existing surfs, replace with newlines/newtris
+   ncount = # of new surfs contributed by this proc
+     new surfs are distributed across procs
+     can be in any order, but IDs need to be unique and contiguous
+   newlines/newtris = list of new surfs, other ptr is NULL
+   nc = # of custom attributes (vecs/arrays) for each surf
+   index_custom = index for each custom vec or array in Surf custom lists
+   cvalues = custom values for each surf in same order as newlines/newtris
+     1st value is surf ID, remaining values are for nc vecs/arrays
+   called by ReadSurf, RemoveSurf, ReadRestart
 ------------------------------------------------------------------------- */
 
-void Surf::add_tri_own(surfint id, int itype, double *p1, double *p2, double *p3)
+void Surf::add_surfs(int replace, int ncount,
+		     Line *newlines, Tri *newtris,
+		     int nc, int *index_custom, double **cvalues)
 {
-  int m = (id-1) / nprocs;
+  // if replace: remove all existing surfs and their memory
+  // remove ghost surfs for replace or add
 
-  mytris[m].id = id;
-  mytris[m].type = itype;
-  mytris[m].mask = 1;
-  mytris[m].isc = mytris[m].isr = -1;
-  mytris[m].p1[0] = p1[0];
-  mytris[m].p1[1] = p1[1];
-  mytris[m].p1[2] = p1[2];
-  mytris[m].p2[0] = p2[0];
-  mytris[m].p2[1] = p2[1];
-  mytris[m].p2[2] = p2[2];
-  mytris[m].p3[0] = p3[0];
-  mytris[m].p3[1] = p3[1];
-  mytris[m].p3[2] = p3[2];
-  mytris[m].transparent = 0;
-}
+  if (replace) clear_explicit();
+  remove_ghosts();
 
-/* ----------------------------------------------------------------------
-   add a triangls's info to mytris list
-   called by ReadSurf for distributed surfs when clip3d adds one
-   ARE adding one tri at a time, IDs will be renumbered after
-     and tris re-distributed to procs
-   check if mytris needs to be reallocated
-   increment nown
-------------------------------------------------------------------------- */
+  // (re)allocate data structs for adding new surfs
 
-void Surf::add_tri_own_clip(surfint id, int itype,
-                            double *p1, double *p2, double *p3)
-{
-  if (nown == maxown) {
-    if ((bigint) maxown + DELTA > MAXSMALLINT)
-      error->one(FLERR,"Surf add_tri overflowed");
-    maxown += DELTA;
-    grow_own(maxown-DELTA);
+  bigint bncount = ncount;
+  bigint nsurf_new;
+  MPI_Allreduce(&bncount,&nsurf_new,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+
+  bigint nsurf_old = nsurf;
+  nsurf += nsurf_new;
+
+  int nlocal_old = nlocal;
+
+  int nown_old = nown;
+  nown = nsurf / nprocs;
+  if (me < nsurf % nprocs) nown++;
+
+  if (!distributed) {
+    nlocal += nsurf_new;
+    while (nmax < nlocal) nmax += DELTA;
+    grow(nlocal_old);
+  } else {
+    maxown = nown;
+    grow_own(nown_old);
   }
 
-  mytris[nown].id = id;
-  mytris[nown].type = itype;
-  mytris[nown].mask = 1;
-  mytris[nown].isc = mytris[nown].isr = -1;
-  mytris[nown].p1[0] = p1[0];
-  mytris[nown].p1[1] = p1[1];
-  mytris[nown].p1[2] = p1[2];
-  mytris[nown].p2[0] = p2[0];
-  mytris[nown].p2[1] = p2[1];
-  mytris[nown].p2[2] = p2[2];
-  mytris[nown].p3[0] = p3[0];
-  mytris[nown].p3[1] = p3[1];
-  mytris[nown].p3[2] = p3[2];
-  mytris[nown].transparent = 0;
-  nown++;
-}
+  // reallocate data structs for adding new custom values
+  // wait unto now b/c nown has now been reset
 
-/* ----------------------------------------------------------------------
-   add a triangle to tmptris list
-   called by ReadSurf for mutliple file input
-------------------------------------------------------------------------- */
+  reallocate_custom();
 
-void Surf::add_tri_temporary(surfint id, int itype,
-                             double *p1, double *p2, double *p3)
-{
-  if (ntmp == nmaxtmp) {
-    if ((bigint) nmaxtmp + DELTA > MAXSMALLINT)
-      error->one(FLERR,"Surf add_tri_temporary overflowed");
-    nmaxtmp += DELTA;
-    grow_temporary(nmaxtmp-DELTA);
+  // offset IDs of new surfs by pre-existing nsurf_old
+  // for both new lines/tris and custom data in cvalues
+
+  if (domain->dimension == 2)
+    for (int i = 0; i < ncount; i++)
+      newlines[i].id += nsurf_old;
+  else
+    for (int i = 0; i < ncount; i++)
+      newtris[i].id += nsurf_old;
+
+  if (nc)
+    for (int i = 0; i < ncount; i++)
+      cvalues[i][0] = ubuf(((surfint) ubuf(cvalues[i][0]).i) + nsurf_old).d;
+
+  // redistribute surfs to correct layout in Surf data structs
+
+  redistribute_surfs(ncount,newlines,newtris,nc,index_custom,cvalues,
+		     nsurf_new,nsurf_old);
+
+  // check if new surf IDs are contiguous from 1 to Nsurf_new
+  // if any ID = 0 in rendezvous output, new surf IDs were NOT contiguous
+
+  int flag = 0;
+  if (domain->dimension == 2) {
+    if (!distributed) {
+      for (int i = nlocal_old; i < nlocal; i++)
+	if (lines[i].id == 0) flag++;
+    } else {
+      for (int i = nown_old; i < nown; i++)
+	if (surf->mylines[i].id == 0) flag++;
+    }
+  } else {
+    if (!distributed) {
+      for (int i = nlocal_old; i < nlocal; i++)
+	if (tris[i].id == 0) flag++;
+    } else {
+      for (int i = nown_old; i < nown; i++)
+	if (surf->mytris[i].id == 0) flag++;
+    }
   }
 
-  tmptris[ntmp].id = id;
-  tmptris[ntmp].type = itype;
-  tmptris[ntmp].mask = 1;
-  tmptris[ntmp].isc = tmptris[ntmp].isr = -1;
-  tmptris[ntmp].p1[0] = p1[0];
-  tmptris[ntmp].p1[1] = p1[1];
-  tmptris[ntmp].p1[2] = p1[2];
-  tmptris[ntmp].p2[0] = p2[0];
-  tmptris[ntmp].p2[1] = p2[1];
-  tmptris[ntmp].p2[2] = p2[2];
-  tmptris[ntmp].p3[0] = p3[0];
-  tmptris[ntmp].p3[1] = p3[1];
-  tmptris[ntmp].p3[2] = p3[2];
-  tmptris[ntmp].transparent = 0;
-  ntmp++;
+  int flagall;
+  MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
+  if (flagall) {
+    char str[128];
+    sprintf(str,"Missing read_surf IDs = %d",flagall);
+    error->all(FLERR,str);
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -716,8 +723,7 @@ int Surf::all_transparent()
   if (domain->dimension == 2) {
     for (int i = 0; i < nlocal; i++)
       if (!lines[i].transparent) flag = 1;
-  }
-  if (domain->dimension == 3) {
+  } else {
     for (int i = 0; i < nlocal; i++)
       if (!tris[i].transparent) flag = 1;
   }
@@ -758,8 +764,6 @@ void Surf::bbox_all()
   double bblo_one[3],bbhi_one[3];
   double *x;
 
-  int dim = domain->dimension;
-
   int istart,istop,idelta;
   Line *linelist;
   Tri *trilist;
@@ -783,7 +787,7 @@ void Surf::bbox_all()
     bbhi_one[j] = -BIG;
   }
 
-  if (dim == 2) {
+  if (domain->dimension == 2) {
     for (i = istart; i < istop; i += idelta) {
       x = linelist[i].p1;
       for (j = 0; j < 2; j++) {
@@ -799,7 +803,7 @@ void Surf::bbox_all()
     bblo_one[2] = domain->boxlo[2];
     bbhi_one[2] = domain->boxhi[2];
 
-  } else if (dim == 3) {
+  } else {
     for (i = istart; i < istop; i += idelta) {
       x = trilist[i].p1;
       for (j = 0; j < 3; j++) {
@@ -948,6 +952,34 @@ void Surf::hex_corner_point(int icorner, double *lo, double *hi, double *pt)
   else pt[1] = lo[1];
   if (icorner / 4) pt[2] = hi[2];
   else pt[2] = lo[2];
+}
+
+/* ----------------------------------------------------------------------
+   return vector of masks for my owned surfs
+   for distributed or non-distributed explicit surfs
+   called by other classes which need to select owned surfs in surf group
+------------------------------------------------------------------------- */
+
+void Surf::extract_masks(int *masks)
+{
+  if (distributed) {
+    if (domain->dimension == 2) {
+      for (int i = 0; i < nown; i++)
+        masks[i] = mylines[i].mask;
+    } else {
+      for (int i = 0; i < nown; i++)
+	masks[i] = mytris[i].mask;
+    }
+  } else {
+    int m = 0;
+    if (domain->dimension == 2) {
+      for (int i = me; i < nsurf; i += nprocs)
+        masks[m++] = lines[i].mask;
+    } else {
+      for (int i = me; i < nsurf; i += nprocs)
+        masks[m++] = tris[i].mask;
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -1592,11 +1624,10 @@ void Surf::check_point_inside(int old)
   int nbad;
   double *x;
 
-  int dim = domain->dimension;
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
 
-  if (dim == 2) {
+  if (domain->dimension == 2) {
     Line *newlines;
     int n;
     if (distributed) {
@@ -1619,7 +1650,7 @@ void Surf::check_point_inside(int old)
           x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
     }
 
-  } else if (dim == 3) {
+  } else {
     Tri *newtris;
     int n;
     if (distributed) {
@@ -1804,9 +1835,7 @@ void Surf::output_extent(int old)
   extent[0][0] = extent[1][0] = extent[2][0] = BIG;
   extent[0][1] = extent[1][1] = extent[2][1] = -BIG;
 
-  int dim = domain->dimension;
-
-  if (dim == 2) {
+  if (domain->dimension == 2) {
     Line *newlines;
     int n;
     if (!implicit && distributed) {
@@ -1858,17 +1887,17 @@ void Surf::output_extent(int old)
   extentall[2][0] = -extentall[2][0];
 
   double minlen,minarea;
-  if (dim == 2) minlen = shortest_line(old);
-  if (dim == 3) smallest_tri(old,minlen,minarea);
+  if (domain->dimension == 2) minlen = shortest_line(old);
+  else smallest_tri(old,minlen,minarea);
 
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"  %g %g xlo xhi\n",extentall[0][0],extentall[0][1]);
       fprintf(screen,"  %g %g ylo yhi\n",extentall[1][0],extentall[1][1]);
       fprintf(screen,"  %g %g zlo zhi\n",extentall[2][0],extentall[2][1]);
-      if (dim == 2)
+      if (domain->dimension == 2)
         fprintf(screen,"  %g min line length\n",minlen);
-      if (dim == 3) {
+      else {
         fprintf(screen,"  %g min triangle edge length\n",minlen);
         fprintf(screen,"  %g min triangle area\n",minarea);
       }
@@ -1877,9 +1906,9 @@ void Surf::output_extent(int old)
       fprintf(logfile,"  %g %g xlo xhi\n",extentall[0][0],extentall[0][1]);
       fprintf(logfile,"  %g %g ylo yhi\n",extentall[1][0],extentall[1][1]);
       fprintf(logfile,"  %g %g zlo zhi\n",extentall[2][0],extentall[2][1]);
-      if (dim == 2)
+      if (domain->dimension == 2)
         fprintf(logfile,"  %g min line length\n",minlen);
-      if (dim == 3) {
+      else {
         fprintf(logfile,"  %g min triangle edge length\n",minlen);
         fprintf(logfile,"  %g min triangle area\n",minarea);
       }
@@ -2122,21 +2151,55 @@ int Surf::find_react(const char *id)
 
 /* ----------------------------------------------------------------------
    group surf command called via input script
-   NOTE: need to apply this also to mylines and mytris ??
+   add to masks for both nlocal+nghost lines/tris and mylines/mytris
 ------------------------------------------------------------------------- */
 
 void Surf::group(int narg, char **arg)
 {
   int i,flag;
+  bigint nme,nall;
   double x[3];
 
   if (narg < 3) error->all(FLERR,"Illegal group command");
 
-  int dim = domain->dimension;
-
   int igroup = find_group(arg[0]);
   if (igroup < 0) igroup = add_group(arg[0]);
   int bit = bitmask[igroup];
+
+  int dim = domain->dimension;
+
+  // print initial count for group
+
+  nme = 0;
+  if (dim == 2) {
+    if (!distributed || implicit) {
+      for (i = 0; i < nlocal; i++)
+        if (lines[i].mask & bit) nme++;
+    } else {
+      for (i = 0; i < nown; i++)
+        if (mylines[i].mask & bit) nme++;
+    }
+  } else {
+    if (!distributed || implicit) {
+      for (i = 0; i < nlocal; i++)
+        if (tris[i].mask & bit) nme++;
+    } else {
+      for (i = 0; i < nown; i++)
+        if (mytris[i].mask & bit) nme++;
+    }
+  }
+
+  if (distributed) MPI_Allreduce(&nme,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  else nall = nme;
+
+  if (comm->me == 0) {
+    if (screen)
+      fprintf(screen,BIGINT_FORMAT " = initial surface count in group %s\n",
+              nall,gnames[igroup]);
+    if (logfile)
+      fprintf(logfile,BIGINT_FORMAT " = initial surface count in group %s\n",
+              nall,gnames[igroup]);
+  }
 
   // style = type or id
   // add surf to group if matches types/ids or condition
@@ -2182,119 +2245,221 @@ void Surf::group(int narg, char **arg)
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id < bound1) lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mylines[i].id < bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id < bound1) tris[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mytris[i].id < bound1) mytris[i].mask |= bit;
           }
+
         } else if (condition == LE) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id <= bound1) lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mylines[i].id <= bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id <= bound1) tris[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mytris[i].id <= bound1) mytris[i].mask |= bit;
           }
+
         } else if (condition == GT) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id > bound1) lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mylines[i].id > bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id > bound1) tris[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mytris[i].id > bound1) mytris[i].mask |= bit;
           }
+
         } else if (condition == GE) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id >= bound1) lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mylines[i].id >= bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id >= bound1) tris[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mytris[i].id >= bound1) mytris[i].mask |= bit;
           }
+
         } else if (condition == EQ) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id == bound1) lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mylines[i].id == bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id == bound1) tris[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mytris[i].id == bound1) mytris[i].mask |= bit;
           }
+
         } else if (condition == NEQ) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id != bound1) lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mylines[i].id != bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id != bound1) tris[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mytris[i].id != bound1) mytris[i].mask |= bit;
           }
+
         } else if (condition == BETWEEN) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id >= bound1 && lines[i].id <= bound2)
                 lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mylines[i].id >= bound1 && mylines[i].id <= bound2)
+                  mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id >= bound1 && tris[i].id <= bound2)
                 tris[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mytris[i].id >= bound1 && mytris[i].id <= bound2)
+                  mytris[i].mask |= bit;
           }
         }
+
+
       } else if (category == TYPE) {
         if (condition == LT) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type < bound1) lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mylines[i].type < bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type < bound1) lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mytris[i].type < bound1) mytris[i].mask |= bit;
           }
+
         } else if (condition == LE) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type <= bound1) lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mylines[i].type <= bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type <= bound1) lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mytris[i].type <= bound1) mytris[i].mask |= bit;
           }
+
         } else if (condition == GT) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type > bound1) lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mylines[i].type > bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type > bound1) lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mytris[i].type > bound1) mytris[i].mask |= bit;
           }
+
         } else if (condition == GE) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type >= bound1) lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mylines[i].type >= bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type >= bound1) lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mytris[i].type >= bound1) mytris[i].mask |= bit;
           }
+
         } else if (condition == EQ) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type == bound1) lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mylines[i].type == bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type == bound1) lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mytris[i].type == bound1) mytris[i].mask |= bit;
           }
+
         } else if (condition == NEQ) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type != bound1) lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mylines[i].type != bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type != bound1) lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (int i = 0; i < nown; i++)
+                if (mytris[i].type != bound1) mytris[i].mask |= bit;
           }
+
         } else if (condition == BETWEEN) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type >= bound1 && lines[i].type <= bound2)
                 lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (i = 0; i < nown; i++)
+                if (mylines[i].type >= bound1 && mylines[i].type <= bound2)
+                  mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type >= bound1 && tris[i].type <= bound2)
                 tris[i].mask |= bit;
+            if (!implicit && distributed)
+              for (i = 0; i < nown; i++)
+                if (mytris[i].type >= bound1 && mytris[i].type <= bound2)
+                  mytris[i].mask |= bit;
           }
         }
       }
@@ -2323,20 +2488,37 @@ void Surf::group(int narg, char **arg)
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].id >= start && lines[i].id <= stop)
                 lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (i = 0; i < nown; i++)
+                if (mylines[i].id >= start && mylines[i].id <= stop)
+                  mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].id >= start && tris[i].id <= stop)
                 tris[i].mask |= bit;
+            if (!implicit && distributed)
+              for (i = 0; i < nown; i++)
+                if (mytris[i].id >= start && mytris[i].id <= stop)
+                  mytris[i].mask |= bit;
           }
+
         } else if (category == TYPE) {
           if (dim == 2) {
             for (i = 0; i < nlocal+nghost; i++)
               if (lines[i].type >= start && lines[i].type <= stop)
                 lines[i].mask |= bit;
+            if (!implicit && distributed)
+              for (i = 0; i < nown; i++)
+                if (mylines[i].type >= start && mylines[i].type <= stop)
+                  mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
               if (tris[i].type >= start && tris[i].type <= stop)
                 tris[i].mask |= bit;
+            if (!implicit && distributed)
+              for (i = 0; i < nown; i++)
+                if (mytris[i].type >= start && mytris[i].type <= stop)
+                  mytris[i].mask |= bit;
           }
         }
       }
@@ -2365,6 +2547,15 @@ void Surf::group(int narg, char **arg)
           if (!region->match(lines[i].p2)) flag = 0;
           if (flag) lines[i].mask |= bit;
         }
+        if (!implicit && distributed) {
+          for (i = 0; i < nown; i++) {
+            flag = 1;
+            if (!region->match(mylines[i].p1)) flag = 0;
+            if (!region->match(mylines[i].p2)) flag = 0;
+            if (flag) mylines[i].mask |= bit;
+          }
+        }
+
       } else if (rstyle == REGION_ONE) {
         for (i = 0; i < nlocal+nghost; i++) {
           flag = 0;
@@ -2372,12 +2563,29 @@ void Surf::group(int narg, char **arg)
           if (region->match(lines[i].p2)) flag = 1;
           if (flag) lines[i].mask |= bit;
         }
+        if (!implicit && distributed) {
+          for (i = 0; i < nown; i++) {
+            flag = 0;
+            if (region->match(mylines[i].p1)) flag = 1;
+            if (region->match(mylines[i].p2)) flag = 1;
+            if (flag) mylines[i].mask |= bit;
+          }
+        }
+
       } else if (rstyle == REGION_CENTER) {
         for (i = 0; i < nlocal+nghost; i++) {
           x[0] = 0.5 * (lines[i].p1[0] + lines[i].p2[0]);
           x[1] = 0.5 * (lines[i].p1[1] + lines[i].p2[1]);
           x[2] = 0.0;
           if (region->match(x)) lines[i].mask |= bit;
+        }
+        if (!implicit && distributed) {
+          for (i = 0; i < nown; i++) {
+            x[0] = 0.5 * (mylines[i].p1[0] + mylines[i].p2[0]);
+            x[1] = 0.5 * (mylines[i].p1[1] + mylines[i].p2[1]);
+            x[2] = 0.0;
+            if (region->match(x)) mylines[i].mask |= bit;
+          }
         }
       }
 
@@ -2390,6 +2598,16 @@ void Surf::group(int narg, char **arg)
           if (!region->match(tris[i].p3)) flag = 0;
           if (flag) tris[i].mask |= bit;
         }
+        if (!implicit && distributed) {
+          for (i = 0; i < nown; i++) {
+            flag = 1;
+            if (!region->match(mytris[i].p1)) flag = 0;
+            if (!region->match(mytris[i].p2)) flag = 0;
+            if (!region->match(mytris[i].p3)) flag = 0;
+            if (flag) mytris[i].mask |= bit;
+          }
+        }
+
       } else if (rstyle == REGION_ONE) {
         for (i = 0; i < nlocal+nghost; i++) {
           flag = 0;
@@ -2398,12 +2616,30 @@ void Surf::group(int narg, char **arg)
           if (region->match(tris[i].p3)) flag = 1;
           if (flag) tris[i].mask |= bit;
         }
+        if (!implicit && distributed) {
+          for (i = 0; i < nown; i++) {
+            flag = 0;
+            if (region->match(mytris[i].p1)) flag = 1;
+            if (region->match(mytris[i].p2)) flag = 1;
+            if (region->match(mytris[i].p3)) flag = 1;
+            if (flag) mytris[i].mask |= bit;
+          }
+        }
+
       } else if (rstyle == REGION_CENTER) {
         for (i = 0; i < nlocal+nghost; i++) {
           x[0] = (tris[i].p1[0] + tris[i].p2[0] + tris[i].p3[0]) / 3.0;
           x[1] = (tris[i].p1[1] + tris[i].p2[1] + tris[i].p3[1]) / 3.0;
           x[2] = (tris[i].p1[2] + tris[i].p2[2] + tris[i].p3[2]) / 3.0;
           if (region->match(x)) tris[i].mask |= bit;
+        }
+        if (!implicit && distributed) {
+          for (i = 0; i < nown; i++) {
+            x[0] = (mytris[i].p1[0] + mytris[i].p2[0] + mytris[i].p3[0]) / 3.0;
+            x[1] = (mytris[i].p1[1] + mytris[i].p2[1] + mytris[i].p3[1]) / 3.0;
+            x[2] = (mytris[i].p1[2] + mytris[i].p2[2] + mytris[i].p3[2]) / 3.0;
+            if (region->match(x)) mytris[i].mask |= bit;
+          }
         }
       }
     }
@@ -2430,9 +2666,15 @@ void Surf::group(int narg, char **arg)
     if (dim == 2) {
       for (i = 0; i < nlocal+nghost; i++)
         if (lines[i].mask & otherbit) lines[i].mask |= bit;
+      if (!implicit && distributed)
+        for (i = 0; i < nown; i++)
+          if (mylines[i].mask & otherbit) mylines[i].mask |= bit;
     } else {
       for (i = 0; i < nlocal+nghost; i++)
         if (tris[i].mask & otherbit) tris[i].mask |= bit;
+      if (!implicit && distributed)
+        for (i = 0; i < nown; i++)
+          if (mytris[i].mask & otherbit) mytris[i].mask |= bit;
     }
 
     // remove surfs if they are in any of the other groups
@@ -2445,9 +2687,15 @@ void Surf::group(int narg, char **arg)
       if (dim == 2) {
         for (i = 0; i < nlocal+nghost; i++)
           if (lines[i].mask & otherbit) lines[i].mask &= inverse;
+        if (!implicit && distributed)
+          for (i = 0; i < nown; i++)
+            if (mylines[i].mask & otherbit) mylines[i].mask &= inverse;
       } else {
         for (i = 0; i < nlocal+nghost; i++)
           if (tris[i].mask & otherbit) tris[i].mask &= inverse;
+        if (!implicit && distributed)
+          for (i = 0; i < nown; i++)
+            if (mytris[i].mask & otherbit) mytris[i].mask &= inverse;
       }
     }
 
@@ -2477,9 +2725,15 @@ void Surf::group(int narg, char **arg)
       if (dim == 2) {
         for (i = 0; i < nlocal+nghost; i++)
           if (lines[i].mask & otherbit) lines[i].mask |= bit;
+        if (!implicit && distributed)
+          for (i = 0; i < nown; i++)
+            if (mylines[i].mask & otherbit) mylines[i].mask |= bit;
       } else {
         for (i = 0; i < nlocal+nghost; i++)
           if (tris[i].mask & otherbit) tris[i].mask |= bit;
+        if (!implicit && distributed)
+          for (i = 0; i < nown; i++)
+            if (mytris[i].mask & otherbit) mytris[i].mask |= bit;
       }
     }
 
@@ -2513,6 +2767,17 @@ void Surf::group(int narg, char **arg)
         }
         if (ok) lines[i].mask |= bit;
       }
+      if (!implicit && distributed) {
+        for (i = 0; i < nown; i++) {
+          ok = 1;
+          for (ilist = 0; ilist < length; ilist++) {
+            otherbit = bitmask[list[ilist]];
+            if ((mylines[i].mask & otherbit) == 0) ok = 0;
+          }
+          if (ok) mylines[i].mask |= bit;
+        }
+      }
+
     } else {
       for (i = 0; i < nlocal+nghost; i++) {
         ok = 1;
@@ -2521,6 +2786,16 @@ void Surf::group(int narg, char **arg)
           if ((tris[i].mask & otherbit) == 0) ok = 0;
         }
         if (ok) tris[i].mask |= bit;
+      }
+      if (!implicit && distributed) {
+        for (i = 0; i < nown; i++) {
+          ok = 1;
+          for (ilist = 0; ilist < length; ilist++) {
+            otherbit = bitmask[list[ilist]];
+            if ((mytris[i].mask & otherbit) == 0) ok = 0;
+          }
+          if (ok) mytris[i].mask |= bit;
+        }
       }
     }
 
@@ -2534,33 +2809,51 @@ void Surf::group(int narg, char **arg)
     int inversebits = inversemask[igroup];
 
     if (dim == 2) {
-      for (i = 0; i < nlocal+nghost; i++) lines[i].mask &= inversebits;
+      for (i = 0; i < nlocal+nghost; i++)
+        lines[i].mask &= inversebits;
+      if (!implicit && distributed)
+        for (i = 0; i < nown; i++)
+          mylines[i].mask &= inversebits;
+
     } else {
-      for (i = 0; i < nlocal+nghost; i++) tris[i].mask &= inversebits;
+      for (i = 0; i < nlocal+nghost; i++)
+        tris[i].mask &= inversebits;
+      if (!implicit && distributed)
+        for (i = 0; i < nown; i++)
+          mytris[i].mask &= inversebits;
     }
   }
 
-  // print stats for changed group
+  // print final count for group
 
-  bigint n = 0;
+  nme = 0;
   if (dim == 2) {
-    for (i = 0; i < nlocal; i++)
-      if (lines[i].mask & bit) n++;
+    if (!distributed || implicit) {
+      for (i = 0; i < nlocal; i++)
+        if (lines[i].mask & bit) nme++;
+    } else {
+      for (i = 0; i < nown; i++)
+        if (mylines[i].mask & bit) nme++;
+    }
   } else {
-    for (i = 0; i < nlocal; i++)
-      if (tris[i].mask & bit) n++;
+    if (!distributed || implicit) {
+      for (i = 0; i < nlocal; i++)
+        if (tris[i].mask & bit) nme++;
+    } else {
+      for (i = 0; i < nown; i++)
+        if (mytris[i].mask & bit) nme++;
+    }
   }
 
-  bigint nall;
-  if (distributed) MPI_Allreduce(&n,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  else nall = n;
+  if (distributed) MPI_Allreduce(&nme,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  else nall = nme;
 
   if (comm->me == 0) {
     if (screen)
-      fprintf(screen,BIGINT_FORMAT " surfaces in group %s\n",
+      fprintf(screen,BIGINT_FORMAT " = final surface count in group %s\n",
               nall,gnames[igroup]);
     if (logfile)
-      fprintf(logfile,BIGINT_FORMAT " surfaces in group %s\n",
+      fprintf(logfile,BIGINT_FORMAT " = final surface count in group %s\n",
               nall,gnames[igroup]);
   }
 }
@@ -2601,1295 +2894,16 @@ int Surf::find_group(const char *id)
   return igroup;
 }
 
-/* ----------------------------------------------------------------------
-   compress owned explicit distributed surfs to account for deleted grid cells
-     either due to load-balancing migration or grid adapt coarsening
-   called from Comm::migrate_cells() and AdaptGrid::coarsen()
-     AFTER grid cells are compressed
-   discard nlocal surfs that are no longer referenced by owned grid cells
-   use hash to store referenced surfs
-   only called for explicit distributed surfs
-------------------------------------------------------------------------- */
-
-void Surf::compress_explicit()
-{
-  int i,m,ns;
-  surfint *csurfs;
-
-  int dim = domain->dimension;
-
-  // keep = 1 if a local surf is referenced by a compressed local grid cell
-
-  int *keep;
-  memory->create(keep,nlocal,"surf:keep");
-  for (i = 0; i < nlocal; i++) keep[i] = 0;
-
-  // convert grid cell csurfs to surf IDs so can reset after surf compression
-  // skip cells with no surfs or sub-cells
-
-  Grid::ChildCell *cells = grid->cells;
-  int nglocal = grid->nlocal;
-
-  for (i = 0; i < nglocal; i++) {
-    if (!cells[i].nsurf) continue;
-    if (cells[i].nsplit <= 0) continue;
-    csurfs = cells[i].csurfs;
-    ns = cells[i].nsurf;
-    if (dim == 2) {
-      for (m = 0; m < ns; m++) {
-        keep[csurfs[m]] = 1;
-        csurfs[m] = lines[csurfs[m]].id;
-      }
-    } else {
-      for (m = 0; m < ns; m++) {
-        keep[csurfs[m]] = 1;
-        csurfs[m] = tris[csurfs[m]].id;
-      }
-    }
-  }
-
-  // compress nlocal surfs based on keep flags
-
-  m = 0;
-  while (i < nlocal) {
-    if (!keep[i]) {
-      if (dim == 2) memcpy(&lines[i],&lines[nlocal-1],sizeof(Line));
-      else memcpy(&tris[i],&tris[nlocal-1],sizeof(Tri));
-      keep[i] = keep[nlocal-1];
-      nlocal--;
-    } else i++;
-  }
-
-  memory->destroy(keep);
-
-  // reset grid cell csurfs IDs back to local surf indices
-  // hash compressed surf list, then clear hash
-  // skip cells with no surfs or sub-cells
-
-  rehash();
-
-  for (i = 0; i < nglocal; i++) {
-    if (!cells[i].nsurf) continue;
-    if (cells[i].nsplit <= 0) continue;
-    csurfs = cells[i].csurfs;
-    ns = cells[i].nsurf;
-    for (m = 0; m < ns; m++) csurfs[m] = (*hash)[csurfs[m]];
-  }
-
-  hash->clear();
-  hashfilled = 0;
-}
-
-/* ----------------------------------------------------------------------
-   compress owned implicit surfs to account for migrating grid cells
-   called from Comm::migrate_cells() BEFORE grid cells are compressed
-   migrating grid cells are ones with proc != me
-   reset csurfs indices for kept cells
-   only called for implicit surfs
-------------------------------------------------------------------------- */
-
-void Surf::compress_implicit()
-{
-  int j,ns,icell;
-  surfint *csurfs;
-
-  if (!grid->hashfilled) grid->rehash();
-
-  Grid::ChildCell *cells = grid->cells;
-  Grid::MyHash *ghash = grid->hash;
-  int me = comm->me;
-  int n = 0;
-
-  if (domain->dimension == 2) {
-    for (int i = 0; i < nlocal; i++) {
-      icell = (*ghash)[lines[i].id];
-      if (cells[icell].proc != me) continue;
-      if (i != n) {
-        // compress my surf list
-        memcpy(&lines[n],&lines[i],sizeof(Line));
-        // reset matching csurfs index in grid cell from i to n
-        csurfs = cells[icell].csurfs;
-        ns = cells[icell].nsurf;
-        for (j = 0; j < ns; j++)
-          if (csurfs[j] == i) {
-            csurfs[j] = n;
-            break;
-          }
-      }
-      n++;
-    }
-
-  } else {
-    for (int i = 0; i < nlocal; i++) {
-      icell = (*ghash)[tris[i].id];
-      if (cells[icell].proc != me) continue;
-      if (i != n) {
-        // compress my surf list
-        memcpy(&tris[n],&tris[i],sizeof(Tri));
-        // reset matching csurfs index in grid cell from i to n
-        csurfs = cells[icell].csurfs;
-        ns = cells[icell].nsurf;
-        for (j = 0; j < ns; j++)
-          if (csurfs[j] == i) {
-            csurfs[j] = n;
-            break;
-          }
-      }
-      n++;
-    }
-  }
-
-  nlocal = n;
-}
-
-/* ----------------------------------------------------------------------
-   comm of tallies across all procs
-   nrow = # of tally entries in input vector
-   tally2surf = surf index of each entry in input vector
-   in = input vector of tallies
-   instride = stride between entries in input vector
-   return out = summed tallies for explicit surfs I own
-------------------------------------------------------------------------- */
-
-void Surf::collate_vector(int nrow, surfint *tally2surf,
-                          double *in, int instride, double *out)
-{
-  // collate version depends on tally_comm setting
-
-  if (tally_comm == TALLYAUTO) {
-    if (nprocs > nsurf)
-      collate_vector_reduce(nrow,tally2surf,in,instride,out);
-    else collate_vector_rendezvous(nrow,tally2surf,in,instride,out);
-  } else if (tally_comm == TALLYREDUCE) {
-    collate_vector_reduce(nrow,tally2surf,in,instride,out);
-  } else if (tally_comm == TALLYRVOUS) {
-    collate_vector_rendezvous(nrow,tally2surf,in,instride,out);
-  }
-}
-
-/* ----------------------------------------------------------------------
-   allreduce version of collate
-------------------------------------------------------------------------- */
-
-void Surf::collate_vector_reduce(int nrow, surfint *tally2surf,
-                                 double *in, int instride, double *out)
-{
-  int i,j,m;
-
-  if (nsurf > MAXSMALLINT)
-    error->all(FLERR,"Two many surfs to tally reduce - "
-               "use global surf/comm auto or rvous");
-
-  int nglobal = nsurf;
-
-  double *one,*all;
-  memory->create(one,nglobal,"surf:one");
-  memory->create(all,nglobal,"surf:all");
-
-  // zero all values and add in values I accumulated
-
-  memset(one,0,nglobal*sizeof(double));
-
-  j = 0;
-  for (i = 0; i < nrow; i++) {
-    m = (int) tally2surf[i] - 1;
-    one[m] = in[j];
-    j += instride;
-  }
-
-  // global allreduce
-
-  MPI_Allreduce(one,all,nglobal,MPI_DOUBLE,MPI_SUM,world);
-
-  // out = only surfs I own
-
-  m = 0;
-  for (i = me; i < nglobal; i += nprocs)
-    out[m++] = all[i];
-
-  // NOTE: could persist these for multiple invocations
-
-  memory->destroy(one);
-  memory->destroy(all);
-}
-
-/* ----------------------------------------------------------------------
-   rendezvous version of collate
-------------------------------------------------------------------------- */
-
-void Surf::collate_vector_rendezvous(int nrow, surfint *tally2surf,
-                                     double *in, int instride, double *out)
-{
-  // allocate memory for rvous input
-
-  int *proclist;
-  memory->create(proclist,nrow,"surf:proclist");
-  InRvousVec *in_rvous =
-    (InRvousVec *) memory->smalloc((bigint) nrow*sizeof(InRvousVec),
-                                   "surf:in_rvous");
-
-  // create rvous inputs
-  // proclist = owner of each surf
-  // logic of (id-1) % nprocs sends
-  //   surf IDs 1,11,21,etc on 10 procs to proc 0
-
-  surfint id;
-
-  int m = 0;
-  for (int i = 0; i < nrow; i++) {
-    id = tally2surf[i];
-    proclist[i] = (id-1) % nprocs;
-    in_rvous[i].id = id;
-    in_rvous[i].value = in[m];
-    m += instride;
-  }
-
-  // perform rendezvous operation
-  // each proc owns subset of surfs
-  // receives all tally contributions to surfs it owns
-
-  out_rvous = out;
-
-  char *buf;
-  int nout = comm->rendezvous(1,nrow,(char *) in_rvous,sizeof(InRvousVec),
-                              0,proclist,rendezvous_vector,
-                              0,buf,0,(void *) this);
-
-  memory->destroy(proclist);
-  memory->destroy(in_rvous);
-}
-
-/* ----------------------------------------------------------------------
-   callback from rendezvous operation
-   process tallies for surfs assigned to me
-   inbuf = list of N Inbuf datums
-   no outbuf
-------------------------------------------------------------------------- */
-
-int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
-                            char *&outbuf, void *ptr)
-{
-  Surf *sptr = (Surf *) ptr;
-  int nown = sptr->nown;
-  double *out = sptr->out_rvous;
-  int nprocs = sptr->comm->nprocs;
-  int me = sptr->comm->me;
-
-  // zero my owned surf values
-
-  for (int i = 0; i < nown; i++) out[i] = 0.0;
-
-  // accumulate per-surf values from different procs to my owned surfs
-  // logic of (id-1-me) / nprocs maps
-  //   surf IDs [1,11,21,...] on 10 procs to [0,1,2,...] on proc 0
-
-  Surf::InRvousVec *in_rvous = (Surf::InRvousVec *) inbuf;
-
-  int m;
-  for (int i = 0; i < n; i++) {
-    m = (in_rvous[i].id-1-me) / nprocs;
-    out[m] += in_rvous[i].value;
-  }
-
-  // flag = 0: no second comm needed in rendezvous
-
-  flag = 0;
-  return 0;
-}
-
-/* ----------------------------------------------------------------------
-   comm of tallies across all procs
-   nrow,ncol = # of entries and columns in input array
-   tally2surf = global surf index of each entry in input array
-   in = input array of tallies
-   return out = summed tallies for explicit surfs I own
-------------------------------------------------------------------------- */
-
-void Surf::collate_array(int nrow, int ncol, surfint *tally2surf,
-                         double **in, double **out)
-{
-  // collate version depends on tally_comm setting
-
-  if (tally_comm == TALLYAUTO) {
-    if (nprocs > nsurf)
-      collate_array_reduce(nrow,ncol,tally2surf,in,out);
-    else collate_array_rendezvous(nrow,ncol,tally2surf,in,out);
-  } else if (tally_comm == TALLYREDUCE) {
-    collate_array_reduce(nrow,ncol,tally2surf,in,out);
-  } else if (tally_comm == TALLYRVOUS) {
-    collate_array_rendezvous(nrow,ncol,tally2surf,in,out);
-  }
-}
-
-/* ----------------------------------------------------------------------
-   allreduce version of collate
-------------------------------------------------------------------------- */
-
-void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
-                                double **in, double **out)
-{
-  int i,j,m;
-
-  bigint ntotal = (bigint) nsurf * ncol;
-
-  if (ntotal > MAXSMALLINT)
-    error->all(FLERR,"Two many surfs to tally reduce - "
-               "use global surf/comm auto or rvous");
-
-  int nglobal = nsurf;
-
-  double **one,**all;
-  memory->create(one,nglobal,ncol,"surf:one");
-  memory->create(all,nglobal,ncol,"surf:all");
-
-  // zero all values and set values I accumulated
-
-  memset(&one[0][0],0,nglobal*ncol*sizeof(double));
-
-  for (i = 0; i < nrow; i++) {
-    m = (int) tally2surf[i] - 1;
-    for (j = 0; j < ncol; j++)
-      one[m][j] = in[i][j];
-  }
-
-  // global allreduce
-
-  MPI_Allreduce(&one[0][0],&all[0][0],ntotal,MPI_DOUBLE,MPI_SUM,world);
-
-  // out = only surfs I own
-
-  m = 0;
-  for (i = me; i < nglobal; i += nprocs) {
-    for (j = 0; j < ncol; j++) out[m][j] = all[i][j];
-    m++;
-  }
-
-  // NOTE: could persist these for multiple invocations
-
-  memory->destroy(one);
-  memory->destroy(all);
-}
-
-/* ----------------------------------------------------------------------
-   rendezvous version of collate
-------------------------------------------------------------------------- */
-
-void Surf::collate_array_rendezvous(int nrow, int ncol, surfint *tally2surf,
-                                    double **in, double **out)
-{
-  int j,m;
-
-  // allocate memory for rvous input
-
-  int *proclist;
-  memory->create(proclist,nrow,"surf:proclist");
-  double *in_rvous = (double *)     // worry about overflow
-    memory->smalloc(nrow*(ncol+1)*sizeof(double*),"surf:in_rvous");
-
-  // create rvous inputs
-  // proclist = owner of each surf
-  // logic of (id-1) % nprocs sends
-  //   surf IDs 1,11,21,etc on 10 procs to proc 0
-
-  surfint id;
-
-  m = 0;
-  for (int i = 0; i < nrow; i++) {
-    id = tally2surf[i];
-    proclist[i] = (id-1) % nprocs;
-    in_rvous[m++] = ubuf(id).d;
-    for (j = 0; j < ncol; j++)
-      in_rvous[m++] = in[i][j];
-  }
-
-  // perform rendezvous operation
-  // each proc owns subset of surfs
-  // receives all tally contributions to surfs it owns
-
-  ncol_rvous = ncol;
-  if (out == NULL) out_rvous = NULL;
-  else out_rvous = &out[0][0];
-  int size = (ncol+1) * sizeof(double);
-
-  char *buf;
-  int nout = comm->rendezvous(1,nrow,(char *) in_rvous,size,
-                              0,proclist,rendezvous_array,
-                              0,buf,0,(void *) this);
-
-  memory->destroy(proclist);
-  memory->sfree(in_rvous);
-}
-
-/* ----------------------------------------------------------------------
-   callback from rendezvous operation
-   process tallies for surfs assigned to me
-   inbuf = list of N Inbuf datums
-   no outbuf
-------------------------------------------------------------------------- */
-
-int Surf::rendezvous_array(int n, char *inbuf,
-                           int &flag, int *&proclist, char *&outbuf,
-                           void *ptr)
-{
-  int j,k,m;
-
-  Surf *sptr = (Surf *) ptr;
-  int nown = sptr->nown;
-  int ncol = sptr->ncol_rvous;
-  double *out = sptr->out_rvous;
-  int nprocs = sptr->comm->nprocs;
-  int me = sptr->comm->me;
-
-  // zero my owned surf values
-  // NOTE: is this needed if caller zeroes ?
-
-  int ntotal = nown*ncol;
-  for (m = 0; m < ntotal; m++) out[m] = 0.0;
-
-  // accumulate per-surf values from different procs to my owned surfs
-  // logic of (id-1-me) / nprocs maps
-  //   surf IDs [1,11,21,...] on 10 procs to [0,1,2,...] on proc 0
-
-  double *in_rvous = (double *) inbuf;
-  surfint id;
-
-  m = 0;
-  for (int i = 0; i < n; i++) {
-    id = (surfint) ubuf(in_rvous[m++]).i;
-    k = (id-1-me) / nprocs * ncol;
-    for (j = 0; j < ncol; j++)
-      out[k++] += in_rvous[m++];
-  }
-
-  // flag = 0: no second comm needed in rendezvous
-
-  flag = 0;
-  return 0;
-}
-
-/* ----------------------------------------------------------------------
-   comm of tallies across all procs
-   called from compute isurf/grid and fix ave/grid
-     for implicit surf tallies by grid cell
-   nrow = # of tallies
-   tally2surf = surf ID for each tally (same as cell ID)
-   in = vectir of tally values
-   return out = summed tallies for grid cells I own
-   done via rendezvous algorithm
-------------------------------------------------------------------------- */
-
-void Surf::collate_vector_implicit(int nrow, surfint *tally2surf,
-                                   double *in, double *out)
-{
-  int i,m,icell;
-  cellint cellID;
-
-  int me = comm->me;
-  int nprocs = comm->nprocs;
-
-  // create a grid cell hash for only my owned cells
-
-  Grid::ChildCell *cells = grid->cells;
-  int nglocal = grid->nlocal;
-
-  MyCellHash hash;
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    hash[cells[icell].id] = icell;
-  }
-
-  // for implicit surfs, tally2surf stores cellIDs
-
-  cellint *tally2cell = (cellint *) tally2surf;
-
-  // if I own tally grid cell, sum tallies to out directly
-  // else nsend = # of tallies to contribute to rendezvous
-
-  int nsend = 0;
-  for (i = 0; i < nrow; i++) {
-    if (hash.find(tally2cell[i]) == hash.end()) nsend++;
-    else {
-      icell = hash[tally2cell[i]];
-      out[icell] += in[i];
-    }
-  }
-
-  // done if just one proc
-
-  if (nprocs == 1) return;
-
-  // ncell = # of owned grid cells with implicit surfs, excluding sub cells
-  // NOTE: could limit to cell group of caller
-
-  int ncell = 0;
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsurf <= 0) continue;
-    if (cells[icell].nsplit <= 0) continue;
-    ncell++;
-  }
-
-  // allocate memory for rvous input
-  // ncount = ncell + nsend
-  // 3 doubles for each input = proc, cellID, tally
-
-  int ncount = ncell + nsend;
-
-  int *proclist;
-  double *in_rvous;
-  memory->create(proclist,ncount,"surf:proclist");
-  memory->create(in_rvous,3*ncount,"surf:in_rvous");
-
-  // create rvous inputs
-  // owning proc for each datum = random hash of cellID
-  // flavor 1: one per ncell with proc and cellID, no tally
-  // flavor 2: one per nsend with proc = -1, cellID, one tally
-
-  ncount = m = 0;
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsurf <= 0) continue;
-    if (cells[icell].nsplit <= 0) continue;
-    proclist[ncount] = hashlittle(&cells[icell].id,sizeof(cellint),0) % nprocs;
-    in_rvous[m++] = me;
-    in_rvous[m++] = cells[icell].id;    // NOTE: should use ubuf
-    in_rvous[m++] = 0.0;
-    ncount++;
-  }
-
-  for (i = 0; i < nrow; i++) {
-    if (hash.find(tally2cell[i]) == hash.end()) {
-      proclist[ncount] = hashlittle(&tally2cell[i],sizeof(cellint),0) % nprocs;
-      in_rvous[m++] = -1;
-      in_rvous[m++] = tally2cell[i];    // NOTE: should use ubuf
-      in_rvous[m++] = in[i];
-      ncount++;
-    }
-  }
-
-  // perform rendezvous operation
-
-  ncol_rvous = 1;
-  char *buf;
-  int nout = comm->rendezvous(1,ncount,(char *) in_rvous,3*sizeof(double),
-                              0,proclist,rendezvous_implicit,
-                              0,buf,2*sizeof(double),(void *) this);
-  double *out_rvous = (double *) buf;
-
-  memory->destroy(proclist);
-  memory->destroy(in_rvous);
-
-  // sum tallies returned for grid cells I own into out
-
-  m = 0;
-  for (i = 0; i < nout; i++) {
-    cellID = out_rvous[m++];      // NOTE: should use ubuf
-    icell = hash[cellID];
-    out[icell] += out_rvous[m++];
-  }
-
-  // clean-up
-
-  memory->destroy(out_rvous);
-}
-
-/* ----------------------------------------------------------------------
-   comm of tallies across all procs
-   called from compute isurf/grid and fix ave/grid
-     for implicit surf tallies by grid cell
-   nrow = # of tallies
-   ncol = # of values per tally
-   tally2surf = surf ID for each tally (same as cell ID)
-   in = array of tally values, nrow by ncol
-   return out = summed tallies for grid cells I own, nlocal by ncol
-   done via rendezvous algorithm
-------------------------------------------------------------------------- */
-
-void Surf::collate_array_implicit(int nrow, int ncol, surfint *tally2surf,
-                                  double **in, double **out)
-{
-  int i,j,m,icell;
-  cellint cellID;
-
-  int me = comm->me;
-  int nprocs = comm->nprocs;
-
-  // create a grid cell hash for only my owned cells
-
-  Grid::ChildCell *cells = grid->cells;
-  int nglocal = grid->nlocal;
-
-  MyCellHash hash;
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    hash[cells[icell].id] = icell;
-  }
-
-  // for implicit surfs, tally2surf stores cellIDs
-
-  cellint *tally2cell = (cellint *) tally2surf;
-
-  // if I own tally grid cell, sum tallies to out directly
-  // else nsend = # of tallies to contribute to rendezvous
-
-  int nsend = 0;
-  for (i = 0; i < nrow; i++) {
-    if (hash.find(tally2cell[i]) == hash.end()) nsend++;
-    else {
-      icell = hash[tally2cell[i]];
-      for (j = 0; j < ncol; j++)
-        out[icell][j] += in[i][j];
-    }
-  }
-
-  // done if just one proc
-
-  if (nprocs == 1) return;
-
-  // ncell = # of owned grid cells with implicit surfs, excluding sub cells
-  // NOTE: could limit to cell group of caller
-
-  int ncell = 0;
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsurf <= 0) continue;
-    if (cells[icell].nsplit <= 0) continue;
-    ncell++;
-  }
-
-  // allocate memory for rvous input
-  // ncount = ncell + nsend
-  // ncol+2 doubles for each input = proc, cellID, ncol values
-
-  int ncount = ncell + nsend;
-
-  int *proclist;
-  double *in_rvous;
-  memory->create(proclist,ncount,"surf:proclist");
-  memory->create(in_rvous,ncount*(ncol+2),"surf:in_rvous");
-
-  // create rvous inputs
-  // owning proc for each datum = random hash of cellID
-  // flavor 1: one per ncell with proc and cellID, no tallies
-  // flavor 2: one per nsend with proc = -1, cellID, tallies
-
-  ncount = m = 0;
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsurf <= 0) continue;
-    if (cells[icell].nsplit <= 0) continue;
-    proclist[ncount] = hashlittle(&cells[icell].id,sizeof(cellint),0) % nprocs;
-    in_rvous[m++] = me;
-    in_rvous[m++] = cells[icell].id;    // NOTE: should use ubuf
-    for (j = 0; j < ncol; j++)
-      in_rvous[m++] = 0.0;
-    ncount++;
-  }
-
-  for (i = 0; i < nrow; i++) {
-    if (hash.find(tally2cell[i]) == hash.end()) {
-      proclist[ncount] = hashlittle(&tally2cell[i],sizeof(cellint),0) % nprocs;
-      in_rvous[m++] = -1;
-      in_rvous[m++] = tally2cell[i];    // NOTE: should use ubuf
-      for (j = 0; j < ncol; j++)
-        in_rvous[m++] = in[i][j];
-      ncount++;
-    }
-  }
-
-  // perform rendezvous operation
-
-  ncol_rvous = ncol;
-  char *buf;
-  int nout = comm->rendezvous(1,ncount,(char *) in_rvous,
-                              (ncol+2)*sizeof(double),
-                              0,proclist,rendezvous_implicit,
-                              0,buf,(ncol+1)*sizeof(double),(void *) this);
-  double *out_rvous = (double *) buf;
-
-  memory->destroy(proclist);
-  memory->destroy(in_rvous);
-
-  // sum tallies returned for grid cells I own into out
-
-  m = 0;
-  for (i = 0; i < nout; i++) {
-    cellID = out_rvous[m++];      // NOTE: should use ubuf
-    icell = hash[cellID];
-    for (j = 0; j < ncol; j++)
-      out[icell][j] += out_rvous[m++];
-  }
-
-  // clean-up
-
-  memory->destroy(out_rvous);
-}
-
-/* ----------------------------------------------------------------------
-   callback from rendezvous operation
-   create summed tallies for each grid cell assigned to me
-   inbuf = list of N input datums
-   send cellID + Ncol values back to owning proc of each grid cell
-------------------------------------------------------------------------- */
-
-int Surf::rendezvous_implicit(int n, char *inbuf,
-                              int &flag, int *&proclist, char *&outbuf, void *ptr)
-{
-  int i,j,k,m,proc,iout;
-  cellint cellID;
-
-  Surf *sptr = (Surf *) ptr;
-  Memory *memory = sptr->memory;
-  int ncol = sptr->ncol_rvous;
-
-  // scan inbuf for (proc,cellID) entries
-  // create phash so can lookup the proc for each cellID
-
-  double *in_rvous = (double *) inbuf;
-  MyCellHash phash;
-
-  m = 0;
-  for (i = 0; i < n; i++) {
-    proc = static_cast<int> (in_rvous[m++]);
-    cellID = static_cast<cellint> (in_rvous[m++]);
-    if (proc >= 0 && phash.find(cellID) == phash.end()) phash[cellID] = proc;
-    m += ncol;
-  }
-
-  // allocate proclist & outbuf, based on size of max-size of phash
-
-  int nmax = phash.size();
-  memory->create(proclist,nmax,"surf:proclist");
-  double *out;
-  memory->create(out,nmax*(ncol+1),"surf:out");
-
-  // scan inbuf for (cellID,tallies) entries
-  // create a 2nd hash so can lookup the outbuf entry for each cellID
-  // create proclist and outbuf with summed tallies for every cellID
-
-  MyCellHash ohash;
-
-  int nout = 0;
-  k = m = 0;
-
-  for (i = 0; i < n; i++) {
-    proc = static_cast<int> (in_rvous[m++]);
-    cellID = static_cast<cellint> (in_rvous[m++]);
-    if (proc >= 0) {
-      m += ncol;                         // skip entries with novalues
-      continue;
-    }
-    if (ohash.find(cellID) == phash.end()) {
-      ohash[cellID] = nout;              // add a new set of out values
-      proclist[nout] = phash[cellID];
-      out[k++] = cellID;
-      for (j = 0; j < ncol; j++)
-        out[k++] = in_rvous[m++];
-      nout++;
-    } else {
-      iout = ohash[cellID] * (ncol+1);   // offset into existing out values
-      iout++;                            // skip cellID;
-      for (j = 0; j < ncol; j++)
-        out[iout++] += in_rvous[m++];    // sum to existing values
-    }
-  }
-
-  // flag = 2: new outbuf
-
-  flag = 2;
-  outbuf = (char *) out;
-  return nout;
-}
-
-/* ----------------------------------------------------------------------
-   redistribute newly created distributed lines to owing procs
-   nold = original nown value before new surfs were read in
-   nown = current nown value that includes my new surfs to redistribute
-   nnew = nown value after new surfs from all procs are assigned to me
-   called by ReadSurf:clip() after proc creates new surfs via clipping
-   only called for distributed surfs
-------------------------------------------------------------------------- */
-
-void Surf::redistribute_lines_clip(int nold, int nnew)
-{
-  // allocate memory for rvous input
-
-  int nsend = nown - nold;
-
-  int *proclist;
-  memory->create(proclist,nsend,"surf:proclist");
-  Line *in_rvous = (Line *) memory->smalloc(nsend*sizeof(Line),"surf:in_rvous");
-
-  // create rvous inputs
-  // proclist = owner of each surf = (id-1) % nprocs
-
-  surfint id;
-
-  int i = nold;
-  for (int m = 0; m < nsend; m++) {
-    id = mylines[i].id;
-    proclist[m] = (id-1) % nprocs;
-    memcpy(&in_rvous[m],&mylines[i],sizeof(Line));
-    i++;
-  }
-
-  // insure mylines is allocated sufficient for new lines
-  // reset nown to new value after rendezvous
-
-  if (nnew > maxown) {
-    int old = maxown;
-    maxown = nnew;
-    grow_own(old);
-  }
-  nown = nnew;
-
-  // perform rendezvous operation
-  // each proc owns subset of new surfs
-  // receives them from other procs
-
-  char *buf;
-  int nout = comm->rendezvous(1,nsend,(char *) in_rvous,sizeof(Line),
-                              0,proclist,rendezvous_lines,
-                              0,buf,0,(void *) this);
-
-  memory->destroy(proclist);
-  memory->sfree(in_rvous);
-}
-
-/* ----------------------------------------------------------------------
-   redistribute newly created distributed lines to owing procs
-   nnew = nown value after new surfs from all procs are assigned to me
-   called by ReadSurf:read_multiple()
-   only called for distributed surfs
-------------------------------------------------------------------------- */
-
-void Surf::redistribute_lines_temporary(int nnew)
-{
-  // allocate memory for rvous input
-
-  int nsend = ntmp;
-
-  int *proclist;
-  memory->create(proclist,nsend,"surf:proclist");
-  Line *in_rvous = (Line *) memory->smalloc(nsend*sizeof(Line),"surf:in_rvous");
-
-  // create rvous inputs
-  // proclist = owner of each surf = (id-1) % nprocs
-
-  surfint id;
-
-  for (int i = 0; i < nsend; i++) {
-    id = tmplines[i].id;
-    proclist[i] = (id-1) % nprocs;
-    memcpy(&in_rvous[i],&tmplines[i],sizeof(Line));
-  }
-
-  // insure mylines is allocated sufficient for new lines
-  // reset nown to new value after rendezvous
-
-  if (nnew > maxown) {
-    int old = maxown;
-    maxown = nnew;
-    grow_own(old);
-  }
-  nown = nnew;
-
-  // perform rendezvous operation
-  // each proc owns subset of new surfs
-  // receives them from other procs
-
-  char *buf;
-  int nout = comm->rendezvous(1,nsend,(char *) in_rvous,sizeof(Line),
-                              0,proclist,rendezvous_lines,
-                              0,buf,0,(void *) this);
-
-  memory->destroy(proclist);
-  memory->sfree(in_rvous);
-}
-
-/* ----------------------------------------------------------------------
-   callback from rendezvous operation
-   store received surfs assigned to me in correct location in mylines
-   inbuf = list of N Inbuf datums
-   no outbuf
-------------------------------------------------------------------------- */
-
-int Surf::rendezvous_lines(int n, char *inbuf,
-                           int &flag, int *&proclist, char *&outbuf,
-                           void *ptr)
-{
-  int m;
-
-  Surf *sptr = (Surf *) ptr;
-  Line *lines = sptr->mylines;
-  int nprocs = sptr->comm->nprocs;
-  int me = sptr->comm->me;
-
-  // zero my owned surf values
-
-  Line *in_rvous = (Line *) inbuf;
-  surfint id;
-
-  for (int i = 0; i < n; i++) {
-    id = in_rvous[i].id;
-    m = (id-1-me) / nprocs;
-    memcpy(&lines[m],&in_rvous[i],sizeof(Line));
-  }
-
-  // flag = 0: no second comm needed in rendezvous
-
-  flag = 0;
-  return 0;
-}
-
-/* ----------------------------------------------------------------------
-   redistribute newly created distributed tris to owing procs
-   nold = original nown value before new surfs were read in
-   nown = current nown value that includes my new surfs to redistribute
-   nnew = nown value after new surfs from all procs are assigned to me
-   old = starting index that skips previously distributed surfs
-   called by ReadSurf:clip() after proc create new surfs via clipping
-   only called for distributed surfs
-------------------------------------------------------------------------- */
-
-void Surf::redistribute_tris_clip(int nold, int nnew)
-{
-  // allocate memory for rvous input
-
-  int nsend = nown - nold;
-
-  int *proclist;
-  memory->create(proclist,nsend,"surf:proclist");
-  Tri *in_rvous = (Tri *) memory->smalloc(nsend*sizeof(Tri),"surf:in_rvous");
-
-  // create rvous inputs
-  // proclist = owner of each surf = (id-1) % nprocs
-
-  surfint id;
-
-  int i = nold;
-  for (int m = 0; m < nsend; m++) {
-    id = mytris[i].id;
-    proclist[m] = (id-1) % nprocs;
-    memcpy(&in_rvous[m],&mytris[i],sizeof(Tri));
-    i++;
-  }
-
-  // insure mytris is allocated sufficient for new tris
-  // reset nown to new value after rendezvous
-
-  if (nnew > maxown) {
-    int old = maxown;
-    maxown = nnew;
-    grow_own(old);
-  }
-  nown = nnew;
-
-  // perform rendezvous operation
-  // each proc owns subset of new surfs
-  // receives them from other procs
-
-  char *buf;
-  int nout = comm->rendezvous(1,nsend,(char *) in_rvous,sizeof(Tri),
-                              0,proclist,rendezvous_tris,
-                              0,buf,0,(void *) this);
-
-  memory->destroy(proclist);
-  memory->sfree(in_rvous);
-}
-
-/* ----------------------------------------------------------------------
-   redistribute newly created distributed tris to owing procs
-   nnew = nown value after new surfs from all procs are assigned to me
-   called by ReadSurf:read_multiple()
-   only called for distributed surfs
-------------------------------------------------------------------------- */
-
-void Surf::redistribute_tris_temporary(int nnew)
-{
-  // allocate memory for rvous input
-
-  int nsend = ntmp;
-
-  int *proclist;
-  memory->create(proclist,nsend,"surf:proclist");
-  Tri *in_rvous = (Tri *) memory->smalloc(nsend*sizeof(Tri),"surf:in_rvous");
-
-  // create rvous inputs
-  // proclist = owner of each surf = (id-1) % nprocs
-
-  surfint id;
-
-  for (int i = 0; i < nsend; i++) {
-    id = tmptris[i].id;
-    proclist[i] = (id-1) % nprocs;
-    memcpy(&in_rvous[i],&tmptris[i],sizeof(Tri));
-  }
-
-  // insure mytris is allocated sufficient for new tris
-  // reset nown to new value after rendezvous
-
-  if (nnew > maxown) {
-    int old = maxown;
-    maxown = nnew;
-    grow_own(old);
-  }
-  nown = nnew;
-
-  // perform rendezvous operation
-  // each proc owns subset of new surfs
-  // receives them from other procs
-
-  char *buf;
-  int nout = comm->rendezvous(1,nsend,(char *) in_rvous,sizeof(Tri),
-                              0,proclist,rendezvous_tris,
-                              0,buf,0,(void *) this);
-
-  memory->destroy(proclist);
-  memory->sfree(in_rvous);
-}
-
-/* ----------------------------------------------------------------------
-   callback from rendezvous operation
-   store received surfs assigned to me in correct location in mytris
-   inbuf = list of N Inbuf datums
-   no outbuf
-------------------------------------------------------------------------- */
-
-int Surf::rendezvous_tris(int n, char *inbuf,
-                          int &flag, int *&proclist, char *&outbuf,
-                          void *ptr)
-{
-  int m;
-
-  Surf *sptr = (Surf *) ptr;
-  Tri *tris = sptr->mytris;
-  int nprocs = sptr->comm->nprocs;
-  int me = sptr->comm->me;
-
-  // zero my owned surf values
-
-  Tri *in_rvous = (Tri *) inbuf;
-  surfint id;
-
-  for (int i = 0; i < n; i++) {
-    id = in_rvous[i].id;
-    m = (id-1-me) / nprocs;
-    memcpy(&tris[m],&in_rvous[i],sizeof(Tri));
-  }
-
-  // flag = 0: no second comm needed in rendezvous
-
-  flag = 0;
-  return 0;
-}
-
-// ----------------------------------------------------------------------
-// methods for per-surf custom attributes
-// ----------------------------------------------------------------------
-
-/* ----------------------------------------------------------------------
-   find custom per-atom vector/array with name
-   return index if found
-   return -1 if not found
-------------------------------------------------------------------------- */
-
-int Surf::find_custom(char *name)
-{
-  for (int i = 0; i < ncustom; i++)
-    if (ename[i] && strcmp(ename[i],name) == 0) return i;
-  return -1;
-}
-
-/* ----------------------------------------------------------------------
-   add a custom attribute with name
-   assumes name does not already exist, except in case of restart
-   type = 0/1 for int/double
-   size = 0 for vector, size > 0 for array with size columns
-   return index of its location
-------------------------------------------------------------------------- */
-
-int Surf::add_custom(char *name, int type, int size)
-{
-  int index;
-
-  // if name already exists
-  // just return index if a restart script and re-defining the name
-  // else error
-
-  index = find_custom(name);
-  if (index >= 0) {
-    if (custom_restart_flag == NULL || custom_restart_flag[index] == 1)
-      error->all(FLERR,"Custom surf attribute name already exists");
-    custom_restart_flag[index] = 1;
-    return index;
-  }
-
-  // use first available NULL entry or allocate a new one
-
-  for (index = 0; index < ncustom; index++)
-    if (ename[index] == NULL) break;
-
-  if (index == ncustom) {
-    ncustom++;
-    ename = (char **) memory->srealloc(ename,ncustom*sizeof(char *),
-                                       "surf:ename");
-    memory->grow(etype,ncustom,"surf:etype");
-    memory->grow(esize,ncustom,"surf:etype");
-    memory->grow(ewhich,ncustom,"surf:etype");
-  }
-
-  int n = strlen(name) + 1;
-  ename[index] = new char[n];
-  strcpy(ename[index],name);
-  etype[index] = type;
-  esize[index] = size;
-
-  if (type == INT) {
-    if (size == 0) {
-      ewhich[index] = ncustom_ivec++;
-      eivec = (int **)
-        memory->srealloc(eivec,ncustom_ivec*sizeof(int *),"surf:eivec");
-      memory->grow(icustom_ivec,ncustom_ivec,"surf:icustom_ivec");
-      icustom_ivec[ncustom_ivec-1] = index;
-    } else {
-      ewhich[index] = ncustom_iarray++;
-      eiarray = (int ***)
-        memory->srealloc(eiarray,ncustom_iarray*sizeof(int **),
-                         "surf:eiarray");
-      memory->grow(icustom_iarray,ncustom_iarray,"surf:icustom_iarray");
-      icustom_iarray[ncustom_iarray-1] = index;
-      memory->grow(eicol,ncustom_iarray,"surf:eicol");
-      eicol[ncustom_iarray-1] = size;
-    }
-  } else if (type == DOUBLE) {
-    if (size == 0) {
-      ewhich[index] = ncustom_dvec++;
-      edvec = (double **)
-        memory->srealloc(edvec,ncustom_dvec*sizeof(double *),"surf:edvec");
-      memory->grow(icustom_dvec,ncustom_dvec,"surf:icustom_dvec");
-      icustom_dvec[ncustom_dvec-1] = index;
-    } else {
-      ewhich[index] = ncustom_darray++;
-      edarray = (double ***)
-        memory->srealloc(edarray,ncustom_darray*sizeof(double **),
-                         "surf:edarray");
-      memory->grow(icustom_darray,ncustom_darray,"surf:icustom_darray");
-      icustom_darray[ncustom_darray-1] = index;
-      memory->grow(edcol,ncustom_darray,"surf:edcol");
-      edcol[ncustom_darray-1] = size;
-    }
-  }
-
-  allocate_custom(index,nlocal);
-
-  return index;
-}
-
-/* ----------------------------------------------------------------------
-   allocate vector/array associated with custom attribute with index
-   set new values to 0 via memset()
-------------------------------------------------------------------------- */
-
-void Surf::allocate_custom(int index, int n)
-{
-  if (etype[index] == INT) {
-    if (esize[index] == 0) {
-      int *ivector = memory->create(eivec[ewhich[index]],n,"surf:eivec");
-      if (ivector) memset(ivector,0,n*sizeof(int));
-    } else {
-      int **iarray = memory->create(eiarray[ewhich[index]],
-                                    n,eicol[ewhich[index]],"surf:eiarray");
-      if (iarray) memset(&iarray[0][0],0,n*eicol[ewhich[index]]*sizeof(int));
-    }
-
-  } else {
-    if (esize[index] == 0) {
-      double *dvector = memory->create(edvec[ewhich[index]],n,"surf:edvec");
-      if (dvector) memset(dvector,0,n*sizeof(double));
-    } else {
-      double **darray = memory->create(edarray[ewhich[index]],
-                                       n,edcol[ewhich[index]],"surf:eearray");
-      if (darray) memset(&darray[0][0],0,n*edcol[ewhich[index]]*sizeof(double));
-    }
-  }
-}
-
-/* ----------------------------------------------------------------------
-   remove a custom attribute at location index
-   free memory for name and vector/array and set ptrs to NULL
-   ncustom lists never shrink, but indices stored between
-     the ncustom list and the dense vector/array lists must be reset
-------------------------------------------------------------------------- */
-
-void Surf::remove_custom(int index)
-{
-  delete [] ename[index];
-  ename[index] = NULL;
-
-  if (etype[index] == INT) {
-    if (esize[index] == 0) {
-      memory->destroy(eivec[ewhich[index]]);
-      ncustom_ivec--;
-      for (int i = ewhich[index]; i < ncustom_ivec; i++) {
-        icustom_ivec[i] = icustom_ivec[i+1];
-        ewhich[icustom_ivec[i]] = i;
-        eivec[i] = eivec[i+1];
-      }
-    } else{
-      memory->destroy(eiarray[ewhich[index]]);
-      ncustom_iarray--;
-      for (int i = ewhich[index]; i < ncustom_iarray; i++) {
-        icustom_iarray[i] = icustom_iarray[i+1];
-        ewhich[icustom_iarray[i]] = i;
-        eiarray[i] = eiarray[i+1];
-        eicol[i] = eicol[i+1];
-      }
-    }
-  } else if (etype[index] == DOUBLE) {
-    if (esize[index] == 0) {
-      memory->destroy(edvec[ewhich[index]]);
-      ncustom_dvec--;
-      for (int i = ewhich[index]; i < ncustom_dvec; i++) {
-        icustom_dvec[i] = icustom_dvec[i+1];
-        ewhich[icustom_dvec[i]] = i;
-        edvec[i] = edvec[i+1];
-      }
-    } else{
-      memory->destroy(edarray[ewhich[index]]);
-      ncustom_darray--;
-      for (int i = ewhich[index]; i < ncustom_darray; i++) {
-        icustom_darray[i] = icustom_darray[i+1];
-        ewhich[icustom_darray[i]] = i;
-        edarray[i] = edarray[i+1];
-        edcol[i] = edcol[i+1];
-      }
-    }
-  }
-
-  // set ncustom = 0 if custom list is now entirely empty
-
-  int empty = 1;
-  for (int i = 0; i < ncustom; i++)
-    if (ename[i]) empty = 0;
-  if (empty) ncustom = 0;
-}
-
 // ----------------------------------------------------------------------
 // methods for write/read restart info
 // ----------------------------------------------------------------------
 
 /* ----------------------------------------------------------------------
-   proc 0 writes surf geometry to restart file
-   NOTE: needs to be generalized for distributed or implicit surfs
+   proc 0 writes surf groups to restart file
 ------------------------------------------------------------------------- */
 
 void Surf::write_restart(FILE *fp)
 {
-  if (distributed || implicit)
-    error->all(FLERR,
-               "Restart files with distributed surfaces are not yet supported");
-
   fwrite(&ngroup,sizeof(int),1,fp);
 
   int n;
@@ -3898,50 +2912,20 @@ void Surf::write_restart(FILE *fp)
     fwrite(&n,sizeof(int),1,fp);
     fwrite(gnames[i],sizeof(char),n,fp);
   }
-
-  if (domain->dimension == 2) {
-    fwrite(&nsurf,sizeof(bigint),1,fp);
-    for (int i = 0; i < nsurf; i++) {
-      fwrite(&lines[i].id,sizeof(surfint),1,fp);
-      fwrite(&lines[i].type,sizeof(int),1,fp);
-      fwrite(&lines[i].mask,sizeof(int),1,fp);
-      fwrite(&lines[i].transparent,sizeof(int),1,fp);
-      fwrite(lines[i].p1,sizeof(double),3,fp);
-      fwrite(lines[i].p2,sizeof(double),3,fp);
-    }
-  }
-
-  if (domain->dimension == 3) {
-    fwrite(&nsurf,sizeof(bigint),1,fp);
-    for (int i = 0; i < nsurf; i++) {
-      fwrite(&tris[i].id,sizeof(surfint),1,fp);
-      fwrite(&tris[i].type,sizeof(int),1,fp);
-      fwrite(&tris[i].mask,sizeof(int),1,fp);
-      fwrite(&tris[i].transparent,sizeof(int),1,fp);
-      fwrite(tris[i].p1,sizeof(double),3,fp);
-      fwrite(tris[i].p2,sizeof(double),3,fp);
-      fwrite(tris[i].p3,sizeof(double),3,fp);
-    }
-  }
 }
 
 /* ----------------------------------------------------------------------
-   proc 0 reads surf geometry from restart file
+   proc 0 reads surf groups from restart file
    bcast to other procs
-   NOTE: needs to be generalized for distributed or implicit surfs
 ------------------------------------------------------------------------- */
 
 void Surf::read_restart(FILE *fp)
 {
   int tmp;
 
-  if (distributed || implicit)
-    error->all(FLERR,
-               "Restart files with distributed surfaces are not yet supported");
-
   int me = comm->me;
 
-  // if any exist, clear existing group names, before reading new ones
+  // if any groups exist, clear them before reading new ones
 
   for (int i = 0; i < ngroup; i++) delete [] gnames[i];
 
@@ -3956,165 +2940,136 @@ void Surf::read_restart(FILE *fp)
     if (me == 0) tmp = fread(gnames[i],sizeof(char),n,fp);
     MPI_Bcast(gnames[i],n,MPI_CHAR,0,world);
   }
+}
+
+/* ----------------------------------------------------------------------
+   return size of owned surf info for this proc
+   using count of all owned surfs
+   NOTE: worry about N overflowing int, and in IROUNDUP ???
+------------------------------------------------------------------------- */
+
+int Surf::size_restart_one()
+{
+  int n = sizeof(surfint);
+  n = IROUNDUP(n);
+  n += 3*sizeof(int);
+  n = IROUNDUP(n);
+  n += domain->dimension * 3*sizeof(double);
+  n = IROUNDUP(n);
+  n += sizeof_custom();
+  return n;
+}
+
+int Surf::size_restart()
+{
+  int n = sizeof(int);
+  n = IROUNDUP(n);
+  n += nown * size_restart_one();
+  return n;
+}
+
+/* ----------------------------------------------------------------------
+   pack my owned surf info buf
+   include persistent attributes of lines and tris
+   include custom data as ints and doubles
+   works for explicit/all or explict/distributed
+   return n = # of packed bytes
+   called by WriteRestart
+     implicit surfs are not written to restart files
+   NOTE: worry about N overflowing int, and in IROUNDUP ???
+------------------------------------------------------------------------- */
+
+int Surf::pack_restart(char *buf)
+{
+  int start,stop,stride;
+  Line *plines;
+  Tri *ptris;
+
+  // all versus distributed
+
+  if (!distributed) {
+    start = me;
+    stop = nlocal;
+    stride = nprocs;
+    plines = lines;
+    ptris = tris;
+  } else {
+    start = 0;
+    stop = nown;
+    stride = 1;
+    plines = mylines;
+    ptris = mytris;
+  }
+
+  // pack nown = # of my owned surfs
+  // pack data for each surf, including custom data
+
+  char *ptr = buf;
+
+  int *ibuf = (int *) ptr;
+  ibuf[0] = nown;
+  ptr += sizeof(int);
+  ptr = ROUNDUP(ptr);
 
   if (domain->dimension == 2) {
-    if (me == 0) tmp = fread(&nsurf,sizeof(bigint),1,fp);
-    MPI_Bcast(&nsurf,1,MPI_SPARTA_BIGINT,0,world);
-    lines = (Line *) memory->smalloc(nsurf*sizeof(Line),"surf:lines");
-    // NOTE: need different logic for different surf styles
-    nlocal = nsurf;
-    nmax = nlocal;
+    int count = 0;
+    for (int m = start; m < stop; m += stride) {
+      surfint *sbuf = (surfint *) ptr;
+      sbuf[0] = plines[m].id;
+      ptr += sizeof(surfint);
+      ptr = ROUNDUP(ptr);
 
-    if (me == 0) {
-      for (int i = 0; i < nsurf; i++) {
-        tmp = fread(&lines[i].id,sizeof(surfint),1,fp);
-        tmp = fread(&lines[i].type,sizeof(int),1,fp);
-        tmp = fread(&lines[i].mask,sizeof(int),1,fp);
-        tmp = fread(&lines[i].transparent,sizeof(int),1,fp);
-        lines[i].isc = lines[i].isr = -1;
-        tmp = fread(lines[i].p1,sizeof(double),3,fp);
-        tmp = fread(lines[i].p2,sizeof(double),3,fp);
-        lines[i].norm[0] = lines[i].norm[1] = lines[i].norm[2] = 0.0;
-      }
+      int *ibuf = (int *) ptr;
+      ibuf[0] = plines[m].type;
+      ibuf[1] = plines[m].mask;
+      ibuf[2] = plines[m].transparent;
+      ptr += 3*sizeof(int);
+      ptr = ROUNDUP(ptr);
+
+      double *dbuf = (double *) ptr;
+      memcpy(&dbuf[0],plines[m].p1,3*sizeof(double));
+      memcpy(&dbuf[3],plines[m].p2,3*sizeof(double));
+      ptr += 2 * 3*sizeof(double);
+      ptr = ROUNDUP(ptr);
+
+      ptr += pack_custom(count,ptr);
+      count++;
     }
-    if (nsurf*sizeof(Line) > MAXSMALLINT)
-      error->all(FLERR,"Surf restart memory exceeded");
-    MPI_Bcast(lines,nsurf*sizeof(Line),MPI_CHAR,0,world);
+
+  } else if (domain->dimension == 3) {
+    int count = 0;
+    for (int m = start; m < stop; m += stride) {
+      surfint *sbuf = (surfint *) ptr;
+      sbuf[0] = ptris[m].id;
+      ptr += sizeof(surfint);
+      ptr = ROUNDUP(ptr);
+
+      int *ibuf = (int *) ptr;
+      ibuf[0] = ptris[m].type;
+      ibuf[1] = ptris[m].mask;
+      ibuf[2] = ptris[m].transparent;
+      ptr += 3*sizeof(int);
+      ptr = ROUNDUP(ptr);
+
+      double *dbuf = (double *) ptr;
+      memcpy(&dbuf[0],ptris[m].p1,3*sizeof(double));
+      memcpy(&dbuf[3],ptris[m].p2,3*sizeof(double));
+      memcpy(&dbuf[6],ptris[m].p3,3*sizeof(double));
+      ptr += 3 * 3*sizeof(double);
+      ptr = ROUNDUP(ptr);
+
+      ptr += pack_custom(count,ptr);
+      count++;
+    }
   }
 
-  if (domain->dimension == 3) {
-    if (me == 0) tmp = fread(&nsurf,sizeof(bigint),1,fp);
-    MPI_Bcast(&nsurf,1,MPI_SPARTA_BIGINT,0,world);
-    tris = (Tri *) memory->smalloc(nsurf*sizeof(Tri),"surf:tris");
-    // NOTE: need different logic for different surf styles
-    nlocal = nsurf;
-    nmax = nlocal;
-
-    if (me == 0) {
-      for (int i = 0; i < nsurf; i++) {
-        tmp = fread(&tris[i].id,sizeof(surfint),1,fp);
-        tmp = fread(&tris[i].type,sizeof(int),1,fp);
-        tmp = fread(&tris[i].mask,sizeof(int),1,fp);
-        tmp = fread(&tris[i].transparent,sizeof(int),1,fp);
-        tris[i].isc = tris[i].isr = -1;
-        tmp = fread(tris[i].p1,sizeof(double),3,fp);
-        tmp = fread(tris[i].p2,sizeof(double),3,fp);
-        tmp = fread(tris[i].p3,sizeof(double),3,fp);
-        tris[i].norm[0] = tris[i].norm[1] = tris[i].norm[2] = 0.0;
-      }
-    }
-    if (nsurf*sizeof(Tri) > MAXSMALLINT)
-      error->all(FLERR,"Surf restart memory exceeded");
-    MPI_Bcast(tris,nsurf*sizeof(Tri),MPI_CHAR,0,world);
-  }
+  return ptr - buf;
 }
 
 /* ----------------------------------------------------------------------
-   proc 0 writes custom attribute definition info to restart file
-------------------------------------------------------------------------- */
-
-void Surf::write_restart_custom(FILE *fp)
-{
-  int m,index;
-
-  // nactive = # of ncustom that have active vectors/arrays
-
-  int nactive = 0;
-  for (int i = 0; i < ncustom; i++)
-    if (ename[i]) nactive++;
-
-  fwrite(&nactive,sizeof(int),1,fp);
-
-  // must write custom info in same order
-  //   the per-surf custom values will be written into file
-  // not necessarily the same as ncustom list, due to deletions & additions
-
-  for (m = 0; m < ncustom_ivec; m++) {
-    index = icustom_ivec[m];
-    int n = strlen(ename[index]) + 1;
-    fwrite(&n,sizeof(int),1,fp);
-    fwrite(ename[index],sizeof(char),n,fp);
-    fwrite(&etype[index],sizeof(int),1,fp);
-    fwrite(&esize[index],sizeof(int),1,fp);
-  }
-  for (m = 0; m < ncustom_iarray; m++) {
-    index = icustom_iarray[m];
-    int n = strlen(ename[index]) + 1;
-    fwrite(&n,sizeof(int),1,fp);
-    fwrite(ename[index],sizeof(char),n,fp);
-    fwrite(&etype[index],sizeof(int),1,fp);
-    fwrite(&esize[index],sizeof(int),1,fp);
-  }
-  for (m = 0; m < ncustom_dvec; m++) {
-    index = icustom_dvec[m];
-    int n = strlen(ename[index]) + 1;
-    fwrite(&n,sizeof(int),1,fp);
-    fwrite(ename[index],sizeof(char),n,fp);
-    fwrite(&etype[index],sizeof(int),1,fp);
-    fwrite(&esize[index],sizeof(int),1,fp);
-  }
-  for (m = 0; m < ncustom_darray; m++) {
-    index = icustom_darray[m];
-    int n = strlen(ename[index]) + 1;
-    fwrite(&n,sizeof(int),1,fp);
-    fwrite(ename[index],sizeof(char),n,fp);
-    fwrite(&etype[index],sizeof(int),1,fp);
-    fwrite(&esize[index],sizeof(int),1,fp);
-  }
-}
-
-/* ----------------------------------------------------------------------
-   proc 0 reads custom attribute definition info from restart file
-   bcast to other procs and all procs instantiate series of custom properties
-------------------------------------------------------------------------- */
-
-void Surf::read_restart_custom(FILE *fp)
-{
-  int tmp;
-
-  // ncustom is 0 at time restart file is read
-  // will be incremented as add_custom() for each nactive
-
-  int nactive;
-  if (me == 0) tmp = fread(&nactive,sizeof(int),1,fp);
-  MPI_Bcast(&nactive,1,MPI_INT,0,world);
-  if (nactive == 0) return;
-
-  // order that custom vectors/arrays are in restart file
-  //   matches order the per-particle custom values will be read from file
-
-  int n,type,size;
-  char *name;
-
-  for (int i = 0; i < nactive; i++) {
-    if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
-    MPI_Bcast(&n,1,MPI_INT,0,world);
-    name = new char[n];
-    if (me == 0) tmp = fread(name,sizeof(char),n,fp);
-    MPI_Bcast(name,n,MPI_CHAR,0,world);
-    if (me == 0) tmp = fread(&type,sizeof(int),1,fp);
-    MPI_Bcast(&type,n,MPI_CHAR,0,world);
-    if (me == 0) tmp = fread(&size,sizeof(int),1,fp);
-    MPI_Bcast(&size,n,MPI_CHAR,0,world);
-
-    // create the custom attribute
-
-    add_custom(name,type,size);
-    delete [] name;
-  }
-
-  // set flag for each newly created custom attribute to 0
-  // will be reset to 1 if restart script redefines attribute with same name
-
-  custom_restart_flag = new int[ncustom];
-  for (int i = 0; i < ncustom; i++) custom_restart_flag[i] = 0;
-}
-
-// ----------------------------------------------------------------------
-// methods for growing line/tri data structs
-// ----------------------------------------------------------------------
-
-/* ---------------------------------------------------------------------- */
+   grow lines or tris data struct
+   zero added lines/tris beyond old
+---------------------------------------------------------------------- */
 
 void Surf::grow(int old)
 {
@@ -4131,33 +3086,21 @@ void Surf::grow(int old)
   }
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   grow (or shrink) mylines or mytris data struct
+   zero added lines/tris beyond old
+---------------------------------------------------------------------- */
 
 void Surf::grow_own(int old)
 {
   if (domain->dimension == 2) {
     mylines = (Surf::Line *)
       memory->srealloc(mylines,maxown*sizeof(Line),"surf:mylines");
-    memset(&mylines[old],0,(maxown-old)*sizeof(Line));
+    if (maxown > old) memset(&mylines[old],0,(maxown-old)*sizeof(Line));
   } else {
     mytris = (Surf::Tri *)
       memory->srealloc(mytris,maxown*sizeof(Tri),"surf:mytris");
-    memset(&mytris[old],0,(maxown-old)*sizeof(Tri));
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-
-void Surf::grow_temporary(int old)
-{
-  if (domain->dimension == 2) {
-    tmplines = (Surf::Line *)
-      memory->srealloc(tmplines,nmaxtmp*sizeof(Line),"surf:lines");
-    memset(&tmplines[old],0,(nmaxtmp-old)*sizeof(Line));
-  } else {
-    tmptris = (Surf::Tri *)
-      memory->srealloc(tmptris,nmaxtmp*sizeof(Tri),"surf:tris");
-    memset(&tmptris[old],0,(nmaxtmp-old)*sizeof(Tri));
+    if (maxown > old) memset(&mytris[old],0,(maxown-old)*sizeof(Tri));
   }
 }
 

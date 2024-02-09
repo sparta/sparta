@@ -111,6 +111,7 @@ class Particle : protected Pointers {
   // these variables are public, others below are private
 
   int ncustom;              // # of custom attributes, some may be deleted
+  char **ename;             // name of each attribute
   int *etype;               // type = INT/DOUBLE of each attribute
   int *esize;               // size = 0 for vector, N for array columns
   int *ewhich;              // index into eivec,eiarray,edvec,edarray for data
@@ -176,10 +177,11 @@ class Particle : protected Pointers {
   virtual int add_custom(char *, int, int);
   virtual void grow_custom(int, int, int);
   virtual void remove_custom(int);
+  virtual void zero_custom(int);
   virtual void copy_custom(int, int);
-  int sizeof_custom();
   void write_restart_custom(FILE *fp);
   void read_restart_custom(FILE *fp);
+  int sizeof_custom();
   virtual void pack_custom(int, char *);
   virtual void unpack_custom(char *, int);
 
@@ -205,8 +207,6 @@ class Particle : protected Pointers {
   // ncustom > 0 if there are any extra arrays
   // these variables are private, others above are public
 
-  char **ename;             // name of each attribute
-
   int ncustom_ivec;         // # of integer vector attributes
   int ncustom_iarray;       // # of integer array attributes
   int *icustom_ivec;        // index into ncustom for each integer vector
@@ -218,10 +218,6 @@ class Particle : protected Pointers {
   int *icustom_dvec;        // index into ncustom for each double vector
   int *icustom_darray;      // index into ncustom for each double array
   int *edcol;               // # of columns in each double array (esize)
-
-  int *custom_restart_flag; // flag on each custom vec/array read from restart
-                            // used to delete them if not redefined in
-                            // restart script
 
   // private methods
 

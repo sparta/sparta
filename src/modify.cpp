@@ -118,6 +118,7 @@ void Modify::init()
 
   for (i = 0; i < ncompute; i++) {
     compute[i]->init();
+    compute[i]->set_init();
     compute[i]->invoked_scalar = -1;
     compute[i]->invoked_vector = -1;
     compute[i]->invoked_array = -1;
@@ -234,7 +235,7 @@ void Modify::grid_changed()
 ------------------------------------------------------------------------- */
 
 void Modify::update_custom(int index, double temp_thermal,
-                          double temp_rot, double temp_vib, double *vstream)
+			   double temp_rot, double temp_vib, double *vstream)
 {
   for (int i = 0; i < n_update_custom; i++)
     fix[list_update_custom[i]]->update_custom(index,temp_thermal,temp_rot,

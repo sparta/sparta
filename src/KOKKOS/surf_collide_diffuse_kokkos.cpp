@@ -36,6 +36,9 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
+enum{INT,DOUBLE};                        // several files
+enum{NUMERIC,CUSTOM,VARIABLE,VAREQUAL,VARSURF};   // surf_collide classes
+
 #define VAL_1(X) X
 #define VAL_2(X) VAL_1(X), VAL_1(X)
 
@@ -84,11 +87,13 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta) :
 #endif
            )
 {
-  tstr = NULL;
   random = NULL;
   random_backup = NULL;
   id = NULL;
   style = NULL;
+
+  t_owned = NULL;
+  t_localghost = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -135,6 +140,83 @@ void SurfCollideDiffuseKokkos::init()
         vfix_kk = (FixVibmodeKokkos*)vfix;
       }
     }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   recalculate Tsurf values which are dynamic
+   called by Update::setup() and Update::run()
+---------------------------------------------------------------------- */
+
+void SurfCollideDiffuseKokkos::dynamic()
+{
+  // VAREQUAL mode
+  // equal-style variable sets single tsurf value for all surfs
+
+  if (tmode == VAREQUAL) {
+
+    // only evaluate variable if timestep is multiple of tfreq
+
+    if (update->ntimestep % tfreq) return;
+    tsurf = input->variable->compute_equal(tindex_var);
+    if (tsurf <= 0.0) error->all(FLERR,"Surf_collide tsurf <= 0.0");
+
+  // VARSURF mode
+  // surf-style variable sets new tsurf values for all surfs
+  // particle/surf collisions access t_persurf for local+ghost values
+
+  } else if (tmode == VARSURF) {
+
+    // only evaluate variable if timestep is multiple of tfreq
+
+    int spreadflag = 0;
+    if (update->ntimestep % tfreq == 0) {
+      if (n_owned != surf->nown) {
+        memory->destroy(t_owned);
+        n_owned = surf->nown;
+        memory->create(t_owned,n_owned,"surfcollide:t_owned");
+      }
+
+      input->variable->compute_surf(tindex_var,t_owned,1,0);
+      spreadflag = 1;
+    }
+
+    // spread t_owned values to t_localghost values via spread_own2local()
+    // if just re-computed variable OR surfs are
+    //   distributed and load balance/adaptation took place on previous step
+
+    if (spreadflag ||
+        (surf->distributed && surf->localghost_changed_step == update->ntimestep-1)) {
+      if (n_localghost != surf->nlocal + surf->nghost) {
+        memory->destroy(t_localghost);
+        n_localghost = surf->nlocal + surf->nghost;
+        memory->create(t_localghost,n_localghost,"surfcollide:t_localghost");
+      }
+
+      surf->spread_own2local(1,DOUBLE,t_owned,t_localghost);
+      t_persurf = t_localghost;
+
+      auto h_t_persurf = HAT::t_float_1d(t_persurf,n_localghost);
+      d_t_persurf = Kokkos::create_mirror_view_and_copy(SPADeviceType(),h_t_persurf);
+    }
+
+  // CUSTOM mode
+  // ensure access to custom per-surf vec for tsurf values for all surfs
+  // particle/surf collisions access t_persurf for local+ghost values
+
+  } else if (tmode == CUSTOM) {
+    SurfKokkos* surf_kk = (SurfKokkos*) surf;
+    auto h_edvec_local = surf_kk->k_edvec_local.h_view;
+
+    // spread owned values to local+ghost values via spread_custom()
+    // estatus == 1 means owned values already spread to local+ghost values
+    // if estatus == 0: owned values are new OR
+    //   surfs are distributed and load balance/adaptation took place
+
+    if (surf->estatus[tindex_custom] == 0) surf->spread_custom(tindex_custom);
+
+    h_edvec_local[tindex_custom].k_view.sync_device();
+    d_t_persurf = h_edvec_local[tindex_custom].k_view.d_view;
   }
 }
 
@@ -199,17 +281,6 @@ void SurfCollideDiffuseKokkos::pre_collide()
   d_particles = particle_kk->k_particles.d_view;
   d_species = particle_kk->k_species.d_view;
   boltz = update->boltz;
-
-  SurfKokkos* surf_kk = (SurfKokkos*) surf;
-
-  if (tmode == CUSTOM) {
-    surf_kk->sync(Device,SURF_CUSTOM_MASK);
-
-    int tindex = surf->find_custom(tstr);
-    auto h_ewhich = surf_kk->k_ewhich.h_view;
-    auto h_edvec = surf_kk->k_edvec.h_view;
-    d_tvector = h_edvec[h_ewhich[tindex]].k_view.d_view;
-  }
 
   rotstyle = NONE;
   if (Pointers::collide) rotstyle = Pointers::collide->rotstyle;

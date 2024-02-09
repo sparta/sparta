@@ -37,57 +37,64 @@ class ReadSurf : protected Pointers {
 
  protected:
   int me,nprocs;
+  int dim;
+  int distributed;
+
   char *line,*keyword,*buffer;
   FILE *fp;
   int compressed;
-  int distributed;
+
+  int typeflag,typeadd;
+  int grouparg,transparent_flag;
   int partflag,filearg;
 
+  char **name_custom;
+  int *type_custom,*size_custom,*index_custom;
+
+  int ncustom;              // # of custom per-surf vecs/arrays
+  int nvalues_custom;       // # of custom values per surf
+  double **cvalues;         // surfID + read-in per-surf custom values
+
   int multiproc;            // 1 if multiple files to read from
-  int nfiles;               // # of proc files along with base file
-  bigint nsurf_basefile;    // surface count in base file
+  int nfiles;               // # of proc files in addition to base file
   int me_file,nprocs_file;  // info for cluster of procs that read a file
 
-  int dim;
   double origin[3];
+
+  Surf::Line *lines;        // lines read from all files, distributed over procs
+  Surf::Tri *tris;          // tris read from all files, distributed over procs
+
+  int nsurf;                // # of read-in surfs on this proc
+  int maxsurf;              // max allocation of lines or tris
+  bigint nsurf_all;         // # of read-in surfs across all procs
+  int nsurf_file;           // # of surfs read-in from one file
 
   struct Point {
     double x[3];            // point coords
   };
 
-  Point *pts;               // storage for points read from input file
-
-  bigint nsurf_total_old;   // # of total system surfs before read
-  int nsurf_old;            // # of surfs on this proc before read
-  int nsurf_new;            // # of surfs on this proc after read
   int npoint_file;          // # of points in one file
-  int nsurf_file;           // # of surfs in one file
+  Point *pts;               // storage for points read from one file
 
   int filereader;
   MPI_Comm filecomm;
 
-#ifdef SPARTA_MAP
-  typedef std::map<bigint,int> MyHash;
-  typedef std::map<bigint,int>::iterator MyIterator;
-#elif defined SPARTA_UNORDERED_MAP
-  typedef std::unordered_map<bigint,int> MyHash;
-  typedef std::unordered_map<bigint,int>::iterator MyIterator;
-#else
-  typedef std::tr1::unordered_map<bigint,int> MyHash;
-  typedef std::tr1::unordered_map<bigint,int>::iterator MyIterator;
-#endif
+  // methods
 
   void read_single(char *);
   void read_multiple(char *);
+  void read_file(char *);
 
-  void surf_counts();
+  void base(char *);
   void header();
-  void base(char *file);
 
-  void read_file(char *, int);
   void read_points();
-  void read_lines(int);
-  void read_tris(int);
+  void read_lines();
+  void read_tris();
+
+  void add_line(surfint, int, double *, double *);
+  void add_tri(surfint, int, double *, double *, double *);
+  void add_custom(surfint, double *);
 
   void process_args(int, int, char **);
 
@@ -97,9 +104,8 @@ class ReadSurf : protected Pointers {
   void invert();
   void clip2d();
   void clip3d();
-  void transparent();
 
-  void check_consecutive();
+  void check_bounds();
   void push_points_to_boundary(double);
   void check_neighbor_norm_2d();
   void check_neighbor_norm_3d();
@@ -108,6 +114,25 @@ class ReadSurf : protected Pointers {
   void file_search(char *, char *);
   void parse_keyword(int);
   int count_words(char *);
+
+  // union data struct for packing 32-bit and 64-bit ints into double bufs
+  // this avoids aliasing issues by having 2 pointers (double,int)
+  //   to same buf memory
+  // constructor for 32-bit int prevents compiler
+  //   from possibly calling the double constructor when passed an int
+  // copy to a double *buf:
+  //   buf[m++] = ubuf(foo).d, where foo is a 32-bit or 64-bit int
+  // copy from a double *buf:
+  //   foo = (int) ubuf(buf[m++]).i;, where (int) or (tagint) match foo
+  //   the cast prevents compiler warnings about possible truncation
+
+  union ubuf {
+    double d;
+    int64_t i;
+    ubuf(double arg) : d(arg) {}
+    ubuf(int64_t arg) : i(arg) {}
+    ubuf(int arg) : i(arg) {}
+  };
 };
 
 }

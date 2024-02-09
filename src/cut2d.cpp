@@ -1230,7 +1230,7 @@ void Cut2d::failed_cell()
   printf("  # of surfs = %d out of " BIGINT_FORMAT "\n",nsurf,surf->nsurf);
   printf("  # of surfs = %d\n",nsurf);
   printf("  surfs:");
-  for (int i = 0; i < nsurf; i++) printf(" %d",surfs[i]);
+  for (int i = 0; i < nsurf; i++) printf(" " SURFINT_FORMAT,surfs[i]);
   printf("\n");
 }
 

@@ -104,6 +104,7 @@ action fix_temp_rescale_kokkos.h
 action fix_vibmode_kokkos.cpp
 action fix_vibmode_kokkos.h
 action geometry_kokkos.h
+action grid_custom_kokkos.cpp
 action grid_id_kokkos.cpp
 action grid_kokkos.cpp
 action grid_kokkos.h
@@ -118,6 +119,7 @@ action math_extra_kokkos.h
 action memory_kokkos.h
 action modify_kokkos.cpp
 action modify_kokkos.h
+action particle_custom_kokkos.cpp
 action particle_kokkos.cpp
 action particle_kokkos.h
 action rand_pool_wrap.cpp
@@ -136,6 +138,7 @@ action surf_collide_transparent_kokkos.cpp
 action surf_collide_transparent_kokkos.h
 action surf_collide_vanish_kokkos.cpp
 action surf_collide_vanish_kokkos.h
+action surf_custom_kokkos.cpp
 action surf_kokkos.cpp
 action surf_kokkos.h
 action surf_react_global_kokkos.cpp

@@ -10,13 +10,21 @@ read_grid command :h3
 
 [Syntax:]
 
-read_grid filename :pre
+read_grid filename keyword args ... :pre
 
-filename = name of grid file :ul
+filename = name of grid file :ulb,l
+zero or more keyword/args pairs may be appended :l
+keyword = {custom} :l
+  {custom} args = name datatype Nc
+    name = name of custom per-grid vector or array
+    datatype = {int} or {float} = for integer or floating point values
+    Nc = 0 for a vector (single value), Nc >= 1 for an array (one or more values) :pre
+:ule
 
 [Examples:]
 
-read_grid data.grid :pre
+read_grid data.grid
+read_grid data.grid custom temperature double 0 :pre
 
 [Description:]
 
@@ -35,10 +43,11 @@ The specified file can be a text file or a gzipped text file (detected
 by a .gz suffix).  See the "write_grid"_write.grid.html command for a
 description of the format of the file.
 
-The grid cell IDs read from the file to processors in a round-robin
-fashion, which means in general the set of cells a processor owns will
-not be contiguous in a geometric sense.  They are thus assumed to be a
-"dispersed" assignment of grid cells to each processor.
+The grid cell IDs read from the file (one per line) are assigned to
+processors in a round-robin fashion, which means in general the set of
+cells a processor owns will not be contiguous in a geometric sense.
+They are thus assumed to be a "dispersed" assignment of grid cells to
+each processor.
 
 IMPORTANT NOTE: See "Section 6.8"_Section_howto.html#howto_8 of the
 manual for an explanation of clumped and dispersed grid cell
@@ -47,6 +56,35 @@ assignments and their relative performance trade-offs.  The
 read, to assign child cells to processors in different ways.  The "fix
 balance" command can be used to re-assign them in a load-balanced
 manner periodically during a running simulation.
+
+The {custom} keyword allows a custom per-grid vector or array to be
+created and initialized.  Custom vectors or arrays associate a single
+value or multiple values with each grid cell.  They can be output by
+the "dump grid"_dump.html command and uses as inputs by other
+commands.  For example, many of the models for the
+"surf_collide"_surf_collide.html command take temperature as an input;
+use of a per-surf vector allows the temperature of individual surface
+elements to be specified.
+
+The {name} argument is the name assigned to the new custom vector or
+array.  The {datatytpe} argument is {int} or {float} which determines
+whether the vector/array stores integer or floating point values.  The
+{Nc} argument is 0 for a per-surgrid vector and an integer >= 1 for an
+array with {Nc} columns.  A per-grid vector stores a single value per
+grid cell; a per-grid array stores Nc values per grid cell.
+
+Each use of the {custom} keyword determines how many values are
+appended for each line following the grid cell ID.  For a custom
+per-grid vector, a single value is appended.  For a custom per-grid
+array, Nc values are appended.  The values are assigned to custom
+vectors or arrays in the order the {custom} keywords are specified.
+For example, for this read_grid command, 4 custom values should be
+added to the end of each line in the Cells section of the input file:
+
+read_grid grid.data custom temperature float 0 custom flags int 3 :pre
+
+The first floating-point value will be the temperature, the next 3
+integers will be flags.
 
 [Restrictions:]
 
@@ -59,6 +97,7 @@ the manual for details.
 
 [Related commands:]
 
-"create_box"_create_box.html, "create_grid"_create_grid.html
+"create_box"_create_box.html, "create_grid"_create_grid.html,
+"write_grid"_write_grid.html
 
 [Default:] none
