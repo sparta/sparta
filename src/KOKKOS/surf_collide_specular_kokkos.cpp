@@ -66,10 +66,10 @@ SurfCollideSpecularKokkos::SurfCollideSpecularKokkos(SPARTA *sparta) :
 
 SurfCollideSpecularKokkos::~SurfCollideSpecularKokkos()
 {
-  if (copy) return;
+  if (!uncopy) return;
 
-  fix_ambi_kk_copy.uncopy(1);
-  fix_vibmode_kk_copy.uncopy(1);
+  fix_ambi_kk_copy.uncopy();
+  fix_vibmode_kk_copy.uncopy();
 
   for (int i = 0; i < KOKKOS_MAX_SURF_REACT_PER_TYPE; i++) {
     sr_kk_global_copy[i].uncopy();

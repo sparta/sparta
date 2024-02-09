@@ -908,7 +908,6 @@ void Surf::compute_line_normal(int old)
 
 void Surf::compute_tri_normal(int old)
 {
-  int p1,p2,p3;
   double delta12[3],delta13[3];
 
   int n;

@@ -260,9 +260,6 @@ void CreateGrid::command(int narg, char **arg)
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
 
-  Grid::ChildCell *cells = grid->cells;
-  int nglocal = grid->nlocal;
-
   // invoke grid methods to complete grid setup
 
   if (nprocs == 1 || pstyle == CLUMP || pstyle == BLOCK) grid->clumped = 1;
@@ -310,7 +307,7 @@ void CreateGrid::command(int narg, char **arg)
 
 void CreateGrid::create_block()
 {
-  int ix,iy,iz,level;
+  int ix,iy,iz;
   cellint childID;
   double lo[3],hi[3];
   Stack *s;
@@ -364,24 +361,24 @@ void CreateGrid::create_block()
 
 void CreateGrid::create_clump()
 {
-  int ix,iy,iz,level;
-  int i1,i2,i3,n1,n2,n3;
+  int ix,iy,iz;
+  int i1,i2,i3,n1,n2;
   cellint childID;
   double lo[3],hi[3];
   Stack *s;
 
   if (order == XYZ) {
-    n1 = nx; n2 = ny; n3 = nz;
+    n1 = nx; n2 = ny;
   } else if (order == XZY) {
-    n1 = nx; n2 = nz; n3 = ny;
+    n1 = nx; n2 = nz;
   } else if (order == YXZ) {
-    n1 = ny; n2 = nx; n3 = nz;
+    n1 = ny; n2 = nx;
   } else if (order == YZX) {
-    n1 = ny; n2 = nz; n3 = nx;
+    n1 = ny; n2 = nz;
   } else if (order == ZXY) {
-    n1 = nz; n2 = nx; n3 = ny;
+    n1 = nz; n2 = nx;
   } else if (order == ZYX) {
-    n1 = nz; n2 = ny; n3 = nx;
+    n1 = nz; n2 = ny;
   }
 
   // loop over my clump of ordered cells in requested order
@@ -432,24 +429,24 @@ void CreateGrid::create_clump()
 
 void CreateGrid::create_stride()
 {
-  int ix,iy,iz,level;
-  int i1,i2,i3,n1,n2,n3;
+  int ix,iy,iz;
+  int i1,i2,i3,n1,n2;
   cellint childID;
   double lo[3],hi[3];
   Stack *s;
 
   if (order == XYZ) {
-    n1 = nx; n2 = ny; n3 = nz;
+    n1 = nx; n2 = ny;
   } else if (order == XZY) {
-    n1 = nx; n2 = nz; n3 = ny;
+    n1 = nx; n2 = nz;
   } else if (order == YXZ) {
-    n1 = ny; n2 = nx; n3 = nz;
+    n1 = ny; n2 = nx;
   } else if (order == YZX) {
-    n1 = ny; n2 = nz; n3 = nx;
+    n1 = ny; n2 = nz;
   } else if (order == ZXY) {
-    n1 = nz; n2 = nx; n3 = ny;
+    n1 = nz; n2 = nx;
   } else if (order == ZYX) {
-    n1 = nz; n2 = ny; n3 = nx;
+    n1 = nz; n2 = ny;
   }
 
   // stride over all ntotal cells in requested order
@@ -500,7 +497,7 @@ void CreateGrid::create_stride()
 
 void CreateGrid::create_random()
 {
-  int proc,level;
+  int proc;
   cellint childID;
   double lo[3],hi[3];
   Stack *s;
@@ -545,7 +542,6 @@ void CreateGrid::create_random()
 void CreateGrid::recurse_levels(int istack)
 {
   int ix,iy,iz;
-  double lo[3],hi[3];
 
   Grid::ParentLevel *plevels = grid->plevels;
   Stack *s = &stack[istack];

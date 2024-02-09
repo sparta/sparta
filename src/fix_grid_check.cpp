@@ -204,7 +204,7 @@ void FixGridCheck::end_of_step()
     if (cells[icell].nsurf == 0) continue;
     if (cinfo[icell].volume == 0.0) continue;
 
-    int pflag,splitcell,subcell;
+    int pflag,splitcell;
     double xcell[3];
 
     // check that particle is outside surfs

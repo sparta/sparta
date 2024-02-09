@@ -1045,7 +1045,7 @@ void ReadSurf::read_lines()
 
 void ReadSurf::read_tris()
 {
-  int i,m,nchunk,type,p1,p2,p3,ipt;
+  int i,m,nchunk,type,p1,p2,p3;
   surfint id;
   double x1[3],x2[3],x3[3];
   char *next,*buf;
@@ -1595,7 +1595,6 @@ void ReadSurf::clip2d()
 {
   int i,dim,side,flag1,flag2;
   double value,param;
-  double x[3];
   double *p1,*p2,*inpt,*outpt;
 
   int *discard;

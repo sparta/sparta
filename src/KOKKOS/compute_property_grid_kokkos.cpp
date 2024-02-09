@@ -124,55 +124,55 @@ void ComputePropertyGridKokkos::operator()(TagComputePropertyGrid_ComputePerGrid
 {
   switch (d_index[0]) {
   case ID:
-    if (d_cinfo[i].mask & groupbit) d_vector[i] = d_cells[i].id;
-    else d_vector[i] = 0.0;
+    if (d_cinfo[i].mask & groupbit) d_vector_grid[i] = d_cells[i].id;
+    else d_vector_grid[i] = 0.0;
     break;
   case PROC:
-    if (d_cinfo[i].mask & groupbit) d_vector[i] = d_cells[i].proc;
-    else d_vector[i] = 0.0;
+    if (d_cinfo[i].mask & groupbit) d_vector_grid[i] = d_cells[i].proc;
+    else d_vector_grid[i] = 0.0;
     break;
   case XLO:
-    if (d_cinfo[i].mask & groupbit) d_vector[i] = d_cells[i].lo[0];
-    else d_vector[i] = 0.0;
+    if (d_cinfo[i].mask & groupbit) d_vector_grid[i] = d_cells[i].lo[0];
+    else d_vector_grid[i] = 0.0;
     break;
   case YLO:
-    if (d_cinfo[i].mask & groupbit) d_vector[i] = d_cells[i].lo[1];
-    else d_vector[i] = 0.0;
+    if (d_cinfo[i].mask & groupbit) d_vector_grid[i] = d_cells[i].lo[1];
+    else d_vector_grid[i] = 0.0;
     break;
   case ZLO:
-    if (d_cinfo[i].mask & groupbit) d_vector[i] = d_cells[i].lo[2];
-    else d_vector[i] = 0.0;
+    if (d_cinfo[i].mask & groupbit) d_vector_grid[i] = d_cells[i].lo[2];
+    else d_vector_grid[i] = 0.0;
     break;
   case XHI:
-    if (d_cinfo[i].mask & groupbit) d_vector[i] = d_cells[i].hi[0];
-    else d_vector[i] = 0.0;
+    if (d_cinfo[i].mask & groupbit) d_vector_grid[i] = d_cells[i].hi[0];
+    else d_vector_grid[i] = 0.0;
     break;
   case YHI:
-    if (d_cinfo[i].mask & groupbit) d_vector[i] = d_cells[i].hi[1];
-    else d_vector[i] = 0.0;
+    if (d_cinfo[i].mask & groupbit) d_vector_grid[i] = d_cells[i].hi[1];
+    else d_vector_grid[i] = 0.0;
     break;
   case ZHI:
-    if (d_cinfo[i].mask & groupbit) d_vector[i] = d_cells[i].hi[2];
-    else d_vector[i] = 0.0;
+    if (d_cinfo[i].mask & groupbit) d_vector_grid[i] = d_cells[i].hi[2];
+    else d_vector_grid[i] = 0.0;
     break;
   case XC:
     if (d_cinfo[i].mask & groupbit)
-      d_vector[i] = 0.5 * (d_cells[i].lo[0] + d_cells[i].hi[0]);
-    else d_vector[i] = 0.0;
+      d_vector_grid[i] = 0.5 * (d_cells[i].lo[0] + d_cells[i].hi[0]);
+    else d_vector_grid[i] = 0.0;
     break;
   case YC:
     if (d_cinfo[i].mask & groupbit)
-      d_vector[i] = 0.5 * (d_cells[i].lo[1] + d_cells[i].hi[1]);
-    else d_vector[i] = 0.0;
+      d_vector_grid[i] = 0.5 * (d_cells[i].lo[1] + d_cells[i].hi[1]);
+    else d_vector_grid[i] = 0.0;
     break;
   case ZC:
     if (d_cinfo[i].mask & groupbit)
-      d_vector[i] = 0.5 * (d_cells[i].lo[2] + d_cells[i].hi[2]);
-    else d_vector[i] = 0.0;
+      d_vector_grid[i] = 0.5 * (d_cells[i].lo[2] + d_cells[i].hi[2]);
+    else d_vector_grid[i] = 0.0;
     break;
   case VOL:
-    if (d_cinfo[i].mask & groupbit) d_vector[i] = d_cinfo[i].volume;
-    else d_vector[i] = 0.0;
+    if (d_cinfo[i].mask & groupbit) d_vector_grid[i] = d_cinfo[i].volume;
+    else d_vector_grid[i] = 0.0;
     break;
   }
 }
@@ -250,7 +250,7 @@ void ComputePropertyGridKokkos::reallocate()
   if (nvalues == 1) {
     memoryKK->destroy_kokkos(k_vector_grid,vector_grid);
     memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"property/grid:vector_grid");
-    d_vector = k_vector_grid.d_view;
+    d_vector_grid = k_vector_grid.d_view;
   } else {
     memoryKK->destroy_kokkos(k_array_grid,array_grid);
     memoryKK->create_kokkos(k_array_grid,array_grid,nglocal,nvalues,"property/grid:array_grid");

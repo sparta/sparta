@@ -372,7 +372,7 @@ void FixAveSurf::setup()
 
 void FixAveSurf::end_of_step()
 {
-  int i,j,k,m,n,isurf,itally;
+  int i,j,k,m,n,itally;
   surfint surfID;
   double *vec;
 

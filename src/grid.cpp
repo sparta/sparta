@@ -155,14 +155,14 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   hash = new MyHash();
   hashfilled = 0;
 
-  copy = copymode = 0;
+  copy = uncopy = copymode = 0;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Grid::~Grid()
 {
-  if (copy || copymode) return;
+  if (!uncopy && (copy || copymode)) return;
 
   for (int i = 0; i < ngroup; i++) delete [] gnames[i];
   memory->sfree(gnames);
@@ -174,7 +174,8 @@ Grid::~Grid()
   memory->sfree(sinfo);
   memory->sfree(pcells);
 
-  delete [] plevels;
+  if (plevels)
+    delete [] plevels;
 
   delete csurfs;
   delete csplits;
@@ -2361,7 +2362,7 @@ int Grid::find_group(const char *id)
 int Grid::check_uniform_group(int igroup, int *nxyz,
                               double *corner, double *xyzsize)
 {
-  double lo[3],hi[3],onesize[3];
+  double lo[3],hi[3];
 
   int sflag = 0;
   int minlev = maxlevel;

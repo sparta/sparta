@@ -1607,7 +1607,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
 {
   int n,n1,n2,eof;
   char line1[MAXLINE],line2[MAXLINE];
-  char copy1[MAXLINE],copy2[MAXLINE],copy3[MAXLINE],copy4[MAXLINE];
+  char copy1[MAXLINE],copy2[MAXLINE];
   char *word;
   OneReaction_GS *r;
 

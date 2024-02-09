@@ -12,23 +12,9 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-// User-settable FFT precision
+#include <mpi.h>
 
-// FFT_PRECISION = 1 is single-precision complex (4-byte real, 4-byte imag)
-// FFT_PRECISION = 2 is double-precision complex (8-byte real, 8-byte imag)
-
-#ifdef FFT_SINGLE
-#define FFT_PRECISION 1
-typedef float FFT_SCALAR;
-#else
-#define FFT_PRECISION 2
-typedef double FFT_SCALAR;
-#endif
-
-#ifdef FFT_FFTW
-#define FFT_FFTW3
-#endif
-
+#include "spafftsettings.h"
 #include "fftdata.h"
 
 // -------------------------------------------------------------------------
@@ -55,13 +41,6 @@ struct fft_plan_3d {
   DFTI_DESCRIPTOR *handle_fast;
   DFTI_DESCRIPTOR *handle_mid;
   DFTI_DESCRIPTOR *handle_slow;
-#elif defined(FFT_FFTW2)
-  fftw_plan plan_fast_forward;
-  fftw_plan plan_fast_backward;
-  fftw_plan plan_mid_forward;
-  fftw_plan plan_mid_backward;
-  fftw_plan plan_slow_forward;
-  fftw_plan plan_slow_backward;
 #elif defined(FFT_FFTW3)
   FFTW_API(plan) plan_fast_forward;
   FFTW_API(plan) plan_fast_backward;
@@ -69,7 +48,7 @@ struct fft_plan_3d {
   FFTW_API(plan) plan_mid_backward;
   FFTW_API(plan) plan_slow_forward;
   FFTW_API(plan) plan_slow_backward;
-#elif defined(FFT_KISSFFT)
+#elif defined(FFT_KISS)
   kiss_fft_cfg cfg_fast_forward;
   kiss_fft_cfg cfg_fast_backward;
   kiss_fft_cfg cfg_mid_forward;

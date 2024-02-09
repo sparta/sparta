@@ -1392,7 +1392,7 @@ void ReadRestart::create_child_cells(int skipflag)
 
   int icell,isplit,index;
   int level,nsplit,mask;
-  cellint id,ichild;
+  cellint id;
   double lo[3],hi[3];
 
   // for skipflag = 0, add all child cells in Grid restart to my Grid::cells
