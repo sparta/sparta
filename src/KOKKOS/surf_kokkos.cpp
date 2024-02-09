@@ -243,7 +243,7 @@ void SurfKokkos::sync(ExecutionSpace space, unsigned int mask)
       modify(Host,mask);
     if (mask & LINE_MASK) k_lines.sync_device();
     if (mask & TRI_MASK) k_tris.sync_device();
-    if (mask & SURF_CUSTOM_MASK) {
+    if (mask & CUSTOM_MASK) {
       if (ncustom) {
         if (ncustom_ivec)
           for (int i = 0; i < ncustom_ivec; i++)
@@ -265,7 +265,7 @@ void SurfKokkos::sync(ExecutionSpace space, unsigned int mask)
   } else {
     if (mask & LINE_MASK) k_lines.sync_host();
     if (mask & TRI_MASK) k_tris.sync_host();
-    if (mask & SURF_CUSTOM_MASK) {
+    if (mask & CUSTOM_MASK) {
       if (ncustom_ivec)
         for (int i = 0; i < ncustom_ivec; i++)
           k_eivec.h_view[i].k_view.sync_host();
@@ -296,7 +296,7 @@ void SurfKokkos::modify(ExecutionSpace space, unsigned int mask)
   if (space == Device) {
     if (mask & LINE_MASK) k_lines.modify_device();
     if (mask & TRI_MASK) k_tris.modify_device();
-    if (mask & SURF_CUSTOM_MASK) {
+    if (mask & CUSTOM_MASK) {
       if (ncustom) {
         if (ncustom_ivec)
           for (int i = 0; i < ncustom_ivec; i++)
@@ -321,7 +321,7 @@ void SurfKokkos::modify(ExecutionSpace space, unsigned int mask)
   } else {
     if (mask & LINE_MASK) k_lines.modify_host();
     if (mask & TRI_MASK) k_tris.modify_host();
-    if (mask & SURF_CUSTOM_MASK) {
+    if (mask & CUSTOM_MASK) {
       if (ncustom) {
         if (ncustom_ivec)
           for (int i = 0; i < ncustom_ivec; i++)

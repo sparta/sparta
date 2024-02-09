@@ -390,16 +390,13 @@ void SurfKokkos::spread_custom(int index)
 {
   // modifies the inner part of eivec,eiarray,edvec,edarray on whatever, and the outer view on the host
 
-  k_eivec_local.sync_host();
-  k_eiarray_local.sync_host();
-  k_edvec_local.sync_host();
-  k_edarray_local.sync_host();
-
-  this->sync(Host,CUSTOM_MASK);
-
   if (etype[index] == INT) {
     if (esize[index] == 0) {
+      k_eivec.sync_host();
+      k_eivec_local.sync_host();
+
       if (nlocal+nghost != size_custom_local[index]) {
+
         size_custom_local[index] = nlocal + nghost;
         int *ivector_local = eivec_local[ewhich[index]];
         auto k_ivector_local = k_eivec_local.h_view[ewhich[index]].k_view;
@@ -408,12 +405,21 @@ void SurfKokkos::spread_custom(int index)
                               "surf/spread:eivec_local_vec");
         k_eivec_local.h_view[ewhich[index]].k_view = k_ivector_local;
         eivec_local[ewhich[index]] = ivector_local;
+
+        k_eivec_local.modify_host();
       }
+
+      k_eivec.h_view[index].k_view.sync_host();
 
       spread_own2local(1,INT,eivec[ewhich[index]],
                        eivec_local[ewhich[index]]);
 
+      k_eivec_local.h_view[index].k_view.modify_host();
+
     } else if (esize[index]) {
+      k_eiarray.sync_host();
+      k_eiarray_local.sync_host();
+
       if (nlocal+nghost != size_custom_local[index]) {
         size_custom_local[index] = nlocal + nghost;
         int **iarray_local = eiarray_local[ewhich[index]];
@@ -423,7 +429,11 @@ void SurfKokkos::spread_custom(int index)
                               "surf/spread:eiarray_local_array");
         k_eiarray_local.h_view[ewhich[index]].k_view = k_iarray_local;
         eiarray_local[ewhich[index]] = iarray_local;
+
+        k_eiarray_local.modify_host();
       }
+
+      k_eiarray.h_view[index].k_view.sync_host();
 
       int *in,*out;
       if (nown == 0) in = NULL;
@@ -431,10 +441,15 @@ void SurfKokkos::spread_custom(int index)
       if (size_custom_local[index] == 0) out = NULL;
       else out = &eiarray_local[ewhich[index]][0][0];
       spread_own2local(esize[index],INT,in,out);
+
+      k_eiarray_local.h_view[index].k_view.modify_host();
     }
 
   } else if (etype[index] == DOUBLE) {
     if (esize[index] == 0) {
+      k_edvec.sync_host();
+      k_edvec_local.sync_host();
+
       if (nlocal+nghost != size_custom_local[index]) {
         size_custom_local[index] = nlocal + nghost;
         double *dvector_local = edvec_local[ewhich[index]];
@@ -444,12 +459,21 @@ void SurfKokkos::spread_custom(int index)
                               "surf/spread:edvec_local_vec");
         k_edvec_local.h_view[ewhich[index]].k_view = k_dvector_local;
         edvec_local[ewhich[index]] = dvector_local;
+
+        k_edvec_local.modify_host();
       }
+
+      k_edvec.h_view[index].k_view.sync_host();
 
       spread_own2local(1,DOUBLE,edvec[ewhich[index]],
                        edvec_local[ewhich[index]]);
 
+      k_edvec_local.h_view[index].k_view.modify_host();
+
     } else if (esize[index]) {
+      k_edarray.sync_host();
+      k_edarray_local.sync_host();
+
       if (nlocal+nghost != size_custom_local[index]) {
         size_custom_local[index] = nlocal + nghost;
         double **darray_local = edarray_local[ewhich[index]];
@@ -459,7 +483,11 @@ void SurfKokkos::spread_custom(int index)
                               "surf/spread:edarray_local_array");
         k_edarray_local.h_view[ewhich[index]].k_view = k_darray_local;
         edarray_local[ewhich[index]] = darray_local;
+
+        k_edarray_local.modify_host();
       }
+
+      k_edarray.h_view[index].k_view.sync_host();
 
       double *in,*out;
       if (nown == 0) in = NULL;
@@ -467,17 +495,12 @@ void SurfKokkos::spread_custom(int index)
       if (size_custom_local[index] == 0) out = NULL;
       else out = &edarray_local[ewhich[index]][0][0];
       spread_own2local(esize[index],DOUBLE,in,out);
+
+      k_edarray_local.h_view[index].k_view.modify_host();
     }
   }
 
   estatus[index] = 1;
-
-  k_eivec_local.modify_host();
-  k_eiarray_local.modify_host();
-  k_edvec_local.modify_host();
-  k_edarray_local.modify_host();
-
-  this->modify(Host,CUSTOM_MASK);
 }
 
 /* ----------------------------------------------------------------------

@@ -207,7 +207,6 @@ void SurfCollideDiffuseKokkos::dynamic()
 
   } else if (tmode == CUSTOM) {
     SurfKokkos* surf_kk = (SurfKokkos*) surf;
-    surf_kk->sync(Device,SURF_CUSTOM_MASK);
     auto h_edvec_local = surf_kk->k_edvec_local.h_view;
 
     // spread owned values to local+ghost values via spread_custom()
@@ -216,6 +215,8 @@ void SurfCollideDiffuseKokkos::dynamic()
     //   surfs are distributed and load balance/adaptation took place
 
     if (surf->estatus[tindex_custom] == 0) surf->spread_custom(tindex_custom);
+
+    h_edvec_local[tindex_custom].k_view.sync_device();
     d_t_persurf = h_edvec_local[tindex_custom].k_view.d_view;
   }
 }
