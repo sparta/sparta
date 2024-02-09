@@ -1667,7 +1667,7 @@ void Grid::clear_surf_implicit()
 
   // compress cell list to remove all sub-cells
   // reset cell and corner types, and cell volume
-  
+
   int celltype = OUTSIDE;
   int cornertype = UNKNOWN;
 

@@ -262,7 +262,7 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
         error->one(FLERR,"Grid cell ID overflows implicit surf ID");
       surfID = cells[icell].id;
     }
-    
+
     ptr = csurfs->get(nsurf);
 
     ipt = 0;

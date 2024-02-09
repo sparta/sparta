@@ -543,7 +543,7 @@ void SurfReactAdsorb::init()
 
   area = surf->edvec[surf->ewhich[area_index]];
   weight = surf->edvec[surf->ewhich[weight_index]];
-  
+
   int isr;
 
   if (!distributed) {
@@ -1480,7 +1480,7 @@ void SurfReactAdsorb::update_state_surf()
   // insure no species counts < 0
   // set total_state = sum of species_state over species
   // total_state and species_state must be for owned, not local values
-  
+
   total_state = surf->eivec[surf->ewhich[total_state_index]];
   species_state = surf->eiarray[surf->ewhich[species_state_index]];
 
@@ -1497,7 +1497,7 @@ void SurfReactAdsorb::update_state_surf()
 
   // spread new total and species state to all nlocal+nghost surfs
   // reset total_state and species_state to local values
-  
+
   surf->spread_custom(total_state_index);
   surf->spread_custom(species_state_index);
 

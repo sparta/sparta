@@ -80,7 +80,7 @@ void ReadISurf::command(int narg, char **arg)
 
   if (particle->exist)
     if (me == 0) error->warning(FLERR,"Using read_isurf when particles exist");
-  
+
   surf->exist = 1;
 
   if (narg < 7) error->all(FLERR,"Illegal read_isurf command");
