@@ -90,8 +90,8 @@ void CreateISurf::command(int narg, char **arg)
   else if (strcmp(arg[3],"ave") == 0) aveFlag = 1;
   else error->all(FLERR,"Unknown surface corner mode called");
 
-  if(aveFlag && comm->nprocs > 1)
-    error->all(FLERR,"Create_isurf averaging not possible in parallel");
+  //if(aveFlag && comm->nprocs > 1)
+  //  error->all(FLERR,"Create_isurf averaging not possible in parallel");
 
   // nxyz already takes into account subcells
   // find corner values for all grid cells initially
@@ -119,7 +119,7 @@ void CreateISurf::command(int narg, char **arg)
   char *sgroupID = arg[0];
 
   ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
-                  icvalues,tvalues,thresh,sgroupID,cpushflag,1);
+                  icvalues,tvalues,thresh,sgroupID,cpushflag);
 
   if (ablate->nevery == 0) modify->delete_fix(ablateID);
   MPI_Barrier(world);
@@ -142,7 +142,6 @@ void CreateISurf::set_corners()
   // .. icvalues is cvalues in read_isurf and fix_ablate
   memory->create(cvalues,Nxyz,"createisurf:cvalues");
   for (int i = 0; i < Nxyz; i++) cvalues[i] = -1.0;
-
 
   // mvalues stores minimum param
   // also used to determine side
@@ -205,29 +204,41 @@ void CreateISurf::set_corners()
   set_inout();
   MPI_Barrier(world);
 
-  /*for(int ic = 0; ic < Nxyz; ic++) {
-    printf("comm: %i; ic: %i; sval: %i\n", comm->me, ic, svalues[ic]);
-  }
-  MPI_Barrier(world);*/
-
   // sync svalues
+  // might need to sync ivalues as well
   if (me == 0)
-    if (screen) fprintf(screen,"Syncing svalues ...\n");
-  int lsval, maxsval;
+    if (screen) fprintf(screen,"Syncing intermediate values ...\n");
+
+  int lsval, gsval;
+  double lival, gival;
+  int lsgn, gsgn;
   for(int ic = 0; ic < Nxyz; ic++) {
-    lsval = svalues[ic];
-    MPI_Allreduce(&lsval,&maxsval,1,MPI_INT,MPI_MAX,world);
-    svalues[ic] = maxsval;
-    if(ic % 10000 == 0)
-      if (me == 0)
-        if (screen) printf("s -- ic: %i / %i\n", ic, Nxyz);
+    // sync side values
+    if(svalues[ic] < 2) lsval = svalues[ic];
+    else lsval = -1;
+    MPI_Allreduce(&lsval,&gsval,1,MPI_INT,MPI_MAX,world);
+    if(gsval > svalues[ic]) svalues[ic] = gsval;
+
+    // sync intersection values
+    for(int jc = 0; jc < npairs; jc++) {
+      lival = ivalues[ic][jc];
+      if(lival > 0) lsgn = 1;
+      else {
+        lsgn = 0;
+        lival = 0.0;
+      }
+
+      MPI_Allreduce(&lsgn,&gsgn,1,MPI_INT,MPI_SUM,world);
+      MPI_Allreduce(&lival,&gival,1,MPI_DOUBLE,MPI_SUM,world);
+      gsgn = MAX(gsgn,1);
+      ivalues[ic][jc] = gival/static_cast<double>(gsgn);
+      if(ivalues[ic][jc]>1.0 && me==0) {
+        printf("ival: %4.3e; nval: %i\n", ivalues[ic][jc], gsgn);
+        error->one(FLERR,"ival too big");
+      }
+    }
   }
   MPI_Barrier(world);
-
-  /*for(int ic = 0; ic < Nxyz; ic++) {
-    printf("a-comm: %i; ic: %i; sval: %i\n", comm->me, ic, svalues[ic]);
-  }
-  MPI_Barrier(world);*/ 
 
   // find remaining corner values based on neighbors
   if (me == 0)
@@ -262,15 +273,33 @@ void CreateISurf::set_corners()
   // may not be necessary
   if (me == 0)
     if (screen) fprintf(screen,"Syncing cvalues ...\n");
-  int lcval, maxcval;
+  /*double lcval, maxcval;
   for(int ic = 0; ic < Nxyz; ic++) {
     lcval = cvalues[ic];
     MPI_Allreduce(&lcval,&maxcval,1,MPI_DOUBLE,MPI_MAX,world);
     cvalues[ic] = maxcval;
-    if(ic % 10000 == 0)
-      if (me == 0)
-        if (screen) printf("c -- ic: %i / %i\n", ic, Nxyz);
+  }*/
+
+  double lcval, gcval;
+  for(int ic = 0; ic < Nxyz; ic++) {
+    lcval = cvalues[ic];
+    if(lcval >= thresh) lsgn = 1;
+    else {
+      lsgn = 0;
+      lcval = 0.0;
+    }
+    MPI_Allreduce(&lsgn,&gsgn,1,MPI_INT,MPI_SUM,world);
+    MPI_Allreduce(&lcval,&gcval,1,MPI_DOUBLE,MPI_SUM,world);
+    gsgn = MAX(gsgn,1);
+    cvalues[ic] = gcval/gsgn;
+    if(cvalues[ic]>255.0 && me==0) {
+      printf("cval: %4.3e; nval: %i\n", gcval, gsgn);
+      error->one(FLERR,"cval too big");
+    }
+    //if(me==0 && cvalues[ic] > thresh)
+    //  printf("ic: %i; cval: %4.2e\n", ic, cvalues[ic]);
   }
+
   MPI_Barrier(world);
 
   // store into icvalues for generating implicit surface
@@ -658,7 +687,6 @@ void CreateISurf::cleanup()
     for(int i = 0; i < Nxyz; i++) {
       if(svalues[i] == 0 || svalues[i] == 1) continue;
 
-      /*
       // try x-neighbor
       j = i - 1;
       if(j >= 0 && (svalues[j] == 0 || svalues[j] == 1)) {
@@ -723,8 +751,8 @@ void CreateISurf::cleanup()
           continue;
         }
       }
-      */
 
+      /*
       // try x-neighbor
       j = i - 1;
       if(j >= 0 && ivalues[i][0] < 0) {
@@ -765,16 +793,17 @@ void CreateISurf::cleanup()
           continue;
         }
       }
+      */
+
     }
 
     for(int i = 0; i < Nxyz; i++)
       if(svalues[i] < 0) filled = 0;
 
     attempt++;
-    if(attempt>20) error->one(FLERR,"too many attempts");
+    if(attempt>20) error->one(FLERR,"Cannot find reference");
 
   }
-  //if(!filled) error->one(FLERR,"cannot find reference");
 
   for(int i = 0; i < Nxyz; i++)
     if(svalues[i] < 0) error->one(FLERR,"bad sval");
@@ -803,14 +832,15 @@ void CreateISurf::cleanup()
         if(nval == 0) cvalues[i] = cin;
         else {
           ivalsum /= nval;
+          if(ivalsum > 1.0) error->one(FLERR,"over 1");
           // add small buffer to avoid very small volumes/areas
-          if(domain->dimension == 3) {
+          /*if(domain->dimension == 3) {
             ivalsum = MAX(ivalsum, 0.045);
             ivalsum = MIN(ivalsum, 0.955);
           } else {
             ivalsum = MAX(ivalsum, 0.01);
             ivalsum = MIN(ivalsum, 0.99);
-          }
+          }*/
           cvalues[i] = param2in(ivalsum,0.0);
         }
       }

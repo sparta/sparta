@@ -98,6 +98,7 @@ timestep            ${tstep}
 global              gridcut 1.E-1
 #global              comm/sort yes
 global             surfmax 20000
+global             surfs explicit/distributed
 ###################################
 # Grid generation
 ###################################
@@ -123,7 +124,7 @@ surf_collide	      1 diffuse ${surftemp} 1.0
 surf_modify         1 collide 1 
 
 fix							fablate ablate all 0 0.2 random 0
-create_isurf     all fablate 40.0 ave
+create_isurf     all fablate 39.5 inout
 
 ###################################
 # Initialize simulation
@@ -148,4 +149,4 @@ dump 4 image all 10 imp3.* type type sline yes 0.000 surf one 0.02 particle no v
 dump_modify 4 slinecolor green
 
 stats               1
-run                 5
+run                 10

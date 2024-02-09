@@ -27,7 +27,6 @@ variable            blx equal ${lx}/2.
 variable            bly equal ${ly}/2.
 variable            blz equal ${lz}/2.
 
-print " blz ${blz}"
 variable            nden equal 4.82354E24*1.08
 variable            ppc equal 1
 #variable            xcells equal round(1982*1.08)
@@ -86,7 +85,7 @@ collide_modify      vremax 10000 no
 
 create_particles    air n 0
 
-#dump 1 image all 100 egg3di.* type type sline yes 0.000 surf one 0.02 zoom 4 particle no view 65 140 box no 0.000
+dump 1 image all 100 egg3di.* type type sline yes 0.000 surf one 0.02 zoom 4 particle no view 65 140 box no 0.000
 
 stats		    1
-run 		    10000
+run 		    100

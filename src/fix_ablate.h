@@ -49,7 +49,7 @@ class FixAblate : public Fix {
   double memory_usage();
 
   void store_corners(int, int, int, double *, double *,
-                     double **, int *, double, char *, int, int fromexp=-1);
+                     double **, int *, double, char *, int);
 
  protected:
   int me;
@@ -100,7 +100,6 @@ class FixAblate : public Fix {
   void set_delta();
   void decrement();
   void sync();
-  void sync_explicit();
   void epsilon_adjust();
   void push_lohi();
   void comm_neigh_corners(int);

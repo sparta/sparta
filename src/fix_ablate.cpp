@@ -280,8 +280,7 @@ int FixAblate::setmask()
 void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
                               double *cornerlo_caller, double *xyzsize_caller,
                               double **cvalues_caller, int *tvalues_caller,
-                              double thresh_caller, char *sgroupID, int pushflag,
-                              int fromexp)
+                              double thresh_caller, char *sgroupID, int pushflag)
 {
   storeflag = 1;
 
@@ -319,10 +318,6 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   for (int icell = 0; icell < nglocal; icell++) {
     for (int m = 0; m < ncorner; m++)
       cvalues[icell][m] = cvalues_caller[icell][m];
-
-    for (int m = 0; m < ncorner; m++)
-      if(cvalues[icell][m] < 0) 
-        printf("negative corner value (ablate): %i\n", icell);
     if (tvalues_flag) tvalues[icell] = tvalues_caller[icell];
   }
 
@@ -344,53 +339,6 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
 
-  if(fromexp>=0) {
-    // not needed anymore since this is done in create_isurf
-    //sync_explicit();
-    //printf("finish sync_explicit--------------\n");
-    sync();
-  }
-  MPI_Barrier(world);
-
-  // DEBUG: check that each cell has same corner values
-  /*for (int icell = 0; icell < nglocal; icell++) {
-    if(dim==2) {
-      if(cvalues[icell][0] == 255.0 &&
-         cvalues[icell][1] == 255.0 &&
-         cvalues[icell][2] == 255.0 &&
-         cvalues[icell][3] == 255.0) continue;
-      if(cvalues[icell][0] == 0.0 &&
-         cvalues[icell][1] == 0.0 &&
-         cvalues[icell][2] == 0.0 &&
-         cvalues[icell][3] == 0.0) continue;
-      printf("c: %i, %i, %i; cval: %4.2e,%4.2e,%4.2e,%4.2e\n",
-        ixyz[icell][0], ixyz[icell][1], ixyz[icell][2],
-        cvalues[icell][0],cvalues[icell][1],cvalues[icell][2],cvalues[icell][3]);
-    } else {
-      if(cvalues[icell][0] == 255.0 &&
-      cvalues[icell][1] == 255.0 &&
-      cvalues[icell][2] == 255.0 &&
-      cvalues[icell][3] == 255.0 &&
-      cvalues[icell][4] == 255.0 &&
-      cvalues[icell][5] == 255.0 &&
-      cvalues[icell][6] == 255.0 &&
-      cvalues[icell][7] == 255.0) continue;
-      if(cvalues[icell][0] == 0.0 &&
-      cvalues[icell][1] == 0.0 &&
-      cvalues[icell][2] == 0.0 &&
-      cvalues[icell][3] == 0.0 &&
-      cvalues[icell][4] == 0.0 &&
-      cvalues[icell][5] == 0.0 &&
-      cvalues[icell][6] == 0.0 &&
-      cvalues[icell][7] == 0.0) continue;
-      printf("c: %i, %i, %i; \
-        cval: %4.2e,%4.2e,%4.2e,%4.2e,%4.2e,%4.2e,%4.2e,%4.2e\n",
-        ixyz[icell][0], ixyz[icell][1], ixyz[icell][2],
-        cvalues[icell][0],cvalues[icell][1],cvalues[icell][2],cvalues[icell][3],
-        cvalues[icell][4],cvalues[icell][5],cvalues[icell][6],cvalues[icell][7]);
-    }
-  }*/
-
   // push corner pt values that are fully external/internal to 0 or 255
 
   if (pushflag) push_lohi();
@@ -404,7 +352,6 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   // create implicit surfaces
   create_surfs(1);
   MPI_Barrier(world);
-  //error->all(FLERR,"check");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -992,100 +939,6 @@ void FixAblate::sync()
 
       if (total > cvalues[icell][i]) cvalues[icell][i] = 0.0;
       else cvalues[icell][i] -= total;
-    }
-  }
-}
-
-/* ----------------------------------------------------------------------
-   sync all copies of corner points values for all owned grid cells
-   algorithm:
-     comm my cdelta values that are shared by neighbor
-     each corner point is shared by N cells, less on borders
-     dsum = sum of decrements to that point by all N cells
-     newvalue = MAX(oldvalue-dsum,0)
-   all N copies of corner pt are set to newvalue
-     in numerically consistent manner (same order of operations)
-   if in/out, if total cvalue is > thresh, set as 255
-   if ave, if max cvalue > thresh, set as max val
-------------------------------------------------------------------------- */
-
-void FixAblate::sync_explicit()
-{
-  int i,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
-  int icell,jcell;
-  double total;
-
-  comm_neigh_corners(CVALUE);
-
-  // perform update of corner pts for all my owned grid cells
-  //   using contributions from all cells that share the corner point
-  // insure order of numeric operations will give exact same answer
-  //   for all Ncorner duplicates of a corner point (stored by other cells)
-
-  Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-
-  for (icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-
-    ix = ixyz[icell][0];
-    iy = ixyz[icell][1];
-    iz = ixyz[icell][2];
-
-    // loop over corner points
-
-    for (i = 0; i < ncorner; i++) {
-
-      // ixyz first = offset from icell of lower left cell of 2x2x2 stencil
-      //              that shares the Ith corner point
-
-      ixfirst = (i % 2) - 1;
-      iyfirst = (i/2 % 2) - 1;
-      if (dim == 2) izfirst = 0;
-      else izfirst = (i / 4) - 1;
-
-      // loop over 2x2x2 stencil of cells that share the corner point
-      // also works for 2d, since izfirst = 0
-
-      total = 0.0;
-      jcorner = ncorner;
-
-      for (jz = izfirst; jz <= izfirst+1; jz++) {
-        for (jy = iyfirst; jy <= iyfirst+1; jy++) {
-          for (jx = ixfirst; jx <= ixfirst+1; jx++) {
-            jcorner--;
-
-            // check if neighbor cell is within bounds of ablate grid
-
-            if (ix+jx < 1 || ix+jx > nx) continue;
-            if (iy+jy < 1 || iy+jy > ny) continue;
-            if (iz+jz < 1 || iz+jz > nz) continue;
-
-            // jcell = local index of (jx,jy,jz) neighbor cell of icell
-
-            jcell = walk_to_neigh(icell,jx,jy,jz);
-
-            // update total with one corner point of jcell
-            // jcorner descends from ncorner
-
-            if (jcell < nglocal) 
-              if(cvalues[jcell][jcorner] > thresh) total = 255.0;
-            else 
-              if (cdelta_ghost[jcell-nglocal][jcorner] > thresh)
-                total = 255.0;
-
-            //if (jcell < nglocal && cvalues[jcell][jcorner] > thresh)
-            //  cvalues[icell][i] = 255.0;
-            //else if (cdelta_ghost[jcell-nglocal][jcorner] > thresh)
-            //  cvalues[icell][i] = 255.0;
-          }
-        }
-      }
-
-      if(icell > nglocal || i > ncorner) error->one(FLERR,"seg");
-      //printf("total: %4.3e\n", total);
-      //cvalues[icell][i] = total;
     }
   }
 }

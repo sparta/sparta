@@ -9,7 +9,7 @@ boundary				p p p
 
 #variable R equal 1.5
 #variable L equal ${R}*2.0
-variable L equal 1.0
+variable L equal 0.7
 variable N equal 100
 create_box			-${L} ${L} -${L} ${L} -${L} ${L}
 create_grid			${N} ${N} ${N}
@@ -21,7 +21,7 @@ global surfs explicit/distributed
 species					air.species N2
 mixture					air N2 vstream 0.0 0 0 
 
-read_surf       coarse_sphere.surf invert
+read_surf       coarse_sphere.surf
 surf_collide		1 diffuse 300.0 0.0
 surf_modify			all collide 1
 
@@ -34,7 +34,7 @@ collide					vss air air.vss
 
 timestep				0.001
 
-#dump 1 image all 1000 sphere3di.* type type surf one 0.02 particle no #zoom 1.5 box no 0.0 view 65 140
+dump 1 image all 1000 sphere3di.* type type surf one 0.02 particle no #zoom 1.5 box no 0.0 view 65 140
 #dump_modify 1 scolor * gray
 
 stats						1
