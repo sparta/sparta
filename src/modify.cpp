@@ -437,6 +437,11 @@ void Modify::add_compute(int narg, char **arg)
   }
 
   ncompute++;
+
+  // post_constructor() can call virtual methods in parent or child
+  //   which would otherwise not yet be visible in child class
+
+  compute[ncompute-1]->post_constructor();
 }
 
 /* ----------------------------------------------------------------------

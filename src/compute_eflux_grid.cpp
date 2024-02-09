@@ -303,7 +303,6 @@ void ComputeEFluxGrid::post_process_grid(int index, int nsample,
                                          double *vec, int nstride)
 {
   index--;
-  int ivalue = index % nvalue;
 
   int lo = 0;
   int hi = nglocal;

@@ -308,7 +308,6 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
-  Grid::SplitInfo *sinfo = grid->sinfo;
   nglocal = grid->nlocal;
 
   grow_percell(0);
@@ -593,7 +592,6 @@ void FixAblate::create_surfs(int outflag)
   // similar code as in fix grid/check
 
   Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
   Grid::SplitInfo *sinfo = grid->sinfo;
   Particle::OnePart *particles = particle->particles;
   int pnlocal = particle->nlocal;
@@ -1094,7 +1092,7 @@ void FixAblate::push_lohi()
 
 void FixAblate::comm_neigh_corners(int which)
 {
-  int i,j,m,n,ix,iy,iz,ixfirst,iyfirst,izfirst,jx,jy,jz;
+  int i,j,m,n,ix,iy,iz,jx,jy,jz;
   int icell,ifirst,jcell,proc,ilocal;
 
   Grid::ChildCell *cells = grid->cells;

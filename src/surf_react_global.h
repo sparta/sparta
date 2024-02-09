@@ -28,7 +28,7 @@ namespace SPARTA_NS {
 class SurfReactGlobal : public SurfReact {
  public:
   SurfReactGlobal(class SPARTA *, int, char **);
-  SurfReactGlobal(class SPARTA *sparta) : SurfReact(sparta) {}
+  SurfReactGlobal(class SPARTA *sparta) : SurfReact(sparta) {} // needed for Kokkos
   virtual ~SurfReactGlobal();
   int react(Particle::OnePart *&, int, double *, Particle::OnePart *&, int &);
   char *reactionID(int);

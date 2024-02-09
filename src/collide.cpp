@@ -455,7 +455,7 @@ void Collide::collisions()
 
 template < int NEARCP > void Collide::collisions_one()
 {
-  int i,j,k,m,n,ip,np;
+  int i,j,k,n,ip,np;
   int nattempt,reactflag;
   double attempt,volume;
   Particle::OnePart *ipart,*jpart,*kpart;
@@ -594,7 +594,7 @@ template < int NEARCP > void Collide::collisions_one()
 
 template < int NEARCP > void Collide::collisions_group()
 {
-  int i,j,k,m,n,ii,jj,kk,ip,np,isp,ng;
+  int i,j,k,n,ii,jj,ip,np,isp,ng;
   int pindex,ipair,igroup,jgroup,newgroup,ngmax;
   int nattempt,reactflag;
   int *ni,*nj,*ilist,*jlist;
@@ -866,7 +866,7 @@ template < int NEARCP > void Collide::collisions_group()
 
 void Collide::collisions_one_ambipolar()
 {
-  int i,j,k,n,ip,np,nelectron,nptotal,ispecies,jspecies,tmp;
+  int i,j,k,n,ip,np,nelectron,nptotal,jspecies,tmp;
   int nattempt,reactflag;
   double attempt,volume;
   Particle::OnePart *ipart,*jpart,*kpart,*p,*ep;
@@ -1008,7 +1008,6 @@ void Collide::collisions_one_ambipolar()
       // ijspecies = species before collision chemistry
       // continue to next collision if no reaction
 
-      ispecies = ipart->ispecies;
       jspecies = jpart->ispecies;
       setup_collision(ipart,jpart);
       reactflag = perform_collision(ipart,jpart,kpart);
@@ -1159,7 +1158,7 @@ void Collide::collisions_one_ambipolar()
 void Collide::collisions_group_ambipolar()
 {
   int i,j,k,n,ii,jj,ip,np,isp,ng;
-  int pindex,ipair,igroup,jgroup,newgroup,ispecies,jspecies,tmp;
+  int pindex,ipair,igroup,jgroup,newgroup,jspecies,tmp;
   int nattempt,reactflag,nelectron;
   int *ni,*nj,*ilist,*jlist,*tmpvec;
   double attempt,volume;
@@ -1362,7 +1361,6 @@ void Collide::collisions_group_ambipolar()
         // ijspecies = species before collision chemistry
         // continue to next collision if no reaction
 
-        ispecies = ipart->ispecies;
         jspecies = jpart->ispecies;
         setup_collision(ipart,jpart);
         reactflag = perform_collision(ipart,jpart,kpart);

@@ -162,7 +162,7 @@ install-python:
 tar:
 	@cd STUBS; $(MAKE) clean
 	@cd ..; tar cvzf src/$(ROOT)_src.tar.gz \
-	  src/Make* src/Package.sh src/Install.sh \
+	  src/Make* src/Package.sh src/Depend.sh src/Install.sh \
 	  src/MAKE src/*.cpp src/*.h src/STUBS \
 	  $(patsubst %,src/%,$(PACKAGEUC)) \
 	  $(patsubst %,src/%,$(PACKAGEUC)) $(patsubst %,src/%,$(PACKUSERUC)) \
@@ -203,9 +203,11 @@ yes-%:
 	elif [ -e $(YESDIR)/Install.sh ]; then \
 	  echo "Installing package $(@:yes-%=%)"; \
 	  cd $(YESDIR); $(SHELL) Install.sh 1; cd ..; \
+		$(SHELL) Depend.sh $(YESDIR) 1; \
 	else \
 	  echo "Installing package $(@:yes-%=%)"; \
 	  cd $(YESDIR); $(SHELL) ../Install.sh 1; cd ..; \
+		$(SHELL) Depend.sh $(YESDIR) 1; \
 	fi;
 
 no-%:
@@ -214,9 +216,11 @@ no-%:
 	elif [ -e $(NODIR)/Install.sh ]; then \
 	  echo "Uninstalling package $(@:no-%=%)"; \
 	  cd $(NODIR); $(SHELL) Install.sh 0; cd ..; \
+		$(SHELL) Depend.sh $(NODIR) 0; \
 	else \
 	  echo "Uninstalling package $(@:no-%=%)"; \
 	  cd $(NODIR); $(SHELL) ../Install.sh 0; cd ..; \
+		$(SHELL) Depend.sh $(NODIR) 0; \
         fi;
 
 # status = list src files that differ from package files
