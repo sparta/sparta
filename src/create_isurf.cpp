@@ -240,21 +240,7 @@ void CreateISurf::set_corners()
   if(dim==2) full = find_side_2d();
   else full = find_side_3d();
   if(!full) error->all(FLERR,"could not fill");
-  //else error->all(FLERR,"filled!");
 
-  /*int full = 0;
-  while(!full) {
-    if(dim==2) full = find_side_2d();
-    else full = find_side_3d();
-    if(!full) error->all(FLERR,"could not fill");
-    if(!full) {
-      if (me == 0)
-        if (screen) fprintf(screen,
-            "Could not fill sides. Sync and try again\n");
-      sync(SVAL);
-    }
-  }
-  */
   set_cvalues();
   MPI_Barrier(world);
 
@@ -623,7 +609,8 @@ void CreateISurf::sync(int which)
                   }
                 } 
               } else if(which==CVAL) {
-                dtotal[0] = MAX(dtotal[0],cvalues[jcell][jcorner]);
+                dtotal[0] = 
+                  MAX(dtotal[0],cvalues[jcell][jcorner]);
               }
             } else {
               if(which==SVAL) {
@@ -631,7 +618,7 @@ void CreateISurf::sync(int which)
                   dtotal[0] = 
                     MAX(dtotal[0],
                     static_cast<double>(sghost[jcell-nglocal][jcorner]));
-              } else if(which==IVAL){ 
+              } else if(which==IVAL) { 
                 for(jadj = 0; jadj < nadj; jadj++) {
                   double dtemp = ighost[jcell-nglocal][jcorner][jadj];
                   if(dtemp>=0) {
@@ -805,9 +792,6 @@ void CreateISurf::comm_neigh_corners(int which)
     if (which == SVAL) {
       for (j = 0; j < ncorner; j++) 
         sghost[icell][j] = static_cast<int> (rbuf[m++]);
-      //printf("sghost -- me: %i; icell: %i; val: %i, %i, %i, %i\n", 
-      //  comm->me, icell,
-      //  sghost[icell][0],sghost[icell][1],sghost[icell][2],sghost[icell][3]);
     } else if (which == IVAL) {
       for (j = 0; j < ncorner; j++)
         for(k = 0; k < nadj; k++)
@@ -959,17 +943,17 @@ int CreateISurf::find_side_2d()
               // n are the corners next to corner i
               // na is n relative to corner i
             if(jcorner==3) {
-              n1 = 1; na1 = 3;
-              n2 = 2; na2 = 1;
+              n1 = 1; na1 = 2;
+              n2 = 2; na2 = 0;
             } else if(jcorner==2) {
-              n1 = 0; na1 = 3;
-              n2 = 3; na2 = 0;
+              n1 = 0; na1 = 2;
+              n2 = 3; na2 = 1;
             } else if(jcorner==1) {
-              n1 = 0; na1 = 1;
-              n2 = 3; na2 = 2;
+              n1 = 0; na1 = 0;
+              n2 = 3; na2 = 3;
             } else {
-              n1 = 1; na1 = 0;
-              n2 = 2; na2 = 2;
+              n1 = 1; na1 = 1;
+              n2 = 2; na2 = 3;
             }
 
             // jcell = local index of (jx,jy,jz) neighbor cell of icell
@@ -982,7 +966,7 @@ int CreateISurf::find_side_2d()
               // try first neighbor
               int itemp = svalues[jcell][n1];
               if(itemp == 0 || itemp == 1) {
-                if(ivalues[jcell][n1][na1] <= 0)
+                if(ivalues[jcell][jcorner][na1] <= 0)
                   svalues[icell][i] = itemp;
                 else {
                   if(itemp == 0) svalues[icell][i] = 1;
@@ -994,7 +978,7 @@ int CreateISurf::find_side_2d()
               // try second neighbor
               itemp = svalues[jcell][n2];
               if(itemp == 0 || itemp == 1) {
-                if(ivalues[jcell][n2][na2] <= 0)
+                if(ivalues[jcell][jcorner][na2] <= 0)
                   svalues[icell][i] = itemp;
                 else {
                   if(itemp == 0) svalues[icell][i] = 1;
@@ -1006,7 +990,7 @@ int CreateISurf::find_side_2d()
               // try first neighbor
               int itemp = sghost[jcell-nglocal][n1];
               if(itemp == 0 || itemp == 1) {
-                if(ighost[jcell-nglocal][n1][na1] <= 0)
+                if(ighost[jcell-nglocal][jcorner][na1] <= 0)
                   svalues[icell][i] = itemp;
                 else {
                   if(itemp == 0) svalues[icell][i] = 1;
@@ -1018,7 +1002,7 @@ int CreateISurf::find_side_2d()
               // try second neighbor
               itemp = sghost[jcell-nglocal][n2];
               if(itemp == 0 || itemp == 1) {
-                if(ighost[jcell-nglocal][n2][na2] <= 0)
+                if(ighost[jcell-nglocal][jcorner][na2] <= 0)
                   svalues[icell][i] = itemp;
                 else {
                   if(itemp == 0) svalues[icell][i] = 1;
@@ -1053,6 +1037,7 @@ int CreateISurf::find_side_2d()
     for(int ic = 0; ic < ncorner; ic++)
       if(svalues[icell][ic] < 0) error->one(FLERR,"bad sval");
   }
+
   return 1;
 }
 
@@ -1076,27 +1061,13 @@ int CreateISurf::find_side_3d()
     for(int icell = 0; icell < nglocal; icell++) {
       if (!(cinfo[icell].mask & groupbit)) continue;
       if (cells[icell].nsplit <= 0) continue;
-      //printf("icell: %i / %i\n", icell, nglocal);
 
       ix = ixyz[icell][0];
       iy = ixyz[icell][1];
       iz = ixyz[icell][2];
 
-      // DEBUG
-      int thiscell = (cells[icell].lo[0]-corner[0])/xyzsize[0] +
-              (cells[icell].lo[1]-corner[1])/xyzsize[1]*nxyz[0] +
-              (cells[icell].lo[2]-corner[2])/xyzsize[2]*(nxyz[0]*nxyz[1]);
-
-      //printf("icell: %i; -- %i, %i, %i\n", thiscell, ix, iy, iz);
-      //printf("sval: %i, %i, %i, %i, %i, %i, %i, %i\n",
-      //  svalues[icell][0],svalues[icell][1],
-      //  svalues[icell][2],svalues[icell][3],
-      //  svalues[icell][4],svalues[icell][5],
-      //  svalues[icell][6],svalues[icell][7]);
-
       for(int i = 0; i < ncorner; i++) {
         if(svalues[icell][i] > -1 && svalues[icell][i] < 2) continue;
-        //printf("corner: %i\n", i);
         
         ixfirst = (i % 2) - 1;
         iyfirst = (i/2 % 2) - 1;
@@ -1154,14 +1125,10 @@ int CreateISurf::find_side_3d()
               // jcell = local index of (jx,jy,jz) neighbor cell of icell
 
               jcell = walk_to_neigh(icell,jx,jy,jz);
-              //printf("jcell: %i -- %i, %i, %i\n",
-              //  jcell, jcorner, jx, jy, jz);
 
               // compare with neighbor as reference
 
               if (jcell < nglocal) {
-                //printf("n: %i, %i, %i\n",
-                //  svalues[jcell][n1],svalues[jcell][n2],svalues[jcell][n3]);
 
                 // try first neighbor
                 int itemp = svalues[jcell][n1];
@@ -1251,44 +1218,11 @@ int CreateISurf::find_side_3d()
         if(svalues[icell][i] < 0 || svalues[icell][i] > 1) filled = 0;
     }
 
-    /*for(int icell = 0; icell < nglocal; icell++) {
-      if (!(cinfo[icell].mask & groupbit)) continue;
-      if (cells[icell].nsplit <= 0) continue;
-      for(int i = 0; i < ncorner; i++) {
-        if(svalues[icell][i] < 0 || svalues[icell][i] > 1) {
-          printf("icell: %i\n", icell);
-          printf("sval: %i, %i, %i, %i, %i, %i, %i, %i\n",
-            svalues[icell][0],svalues[icell][1],
-            svalues[icell][2],svalues[icell][3],
-            svalues[icell][4],svalues[icell][5],
-            svalues[icell][6],svalues[icell][7]);
-          error->one(FLERR,"ck 2");
-        }
-      }
-    }
-    error->one(FLERR,"ck 3");*/
-
     attempt++;
     if(attempt>20) return 0;
 
   } // end while
 
-  for(int icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-    for(int ic = 0; ic < ncorner; ic++) {
-      if(svalues[icell][ic] < 0 || svalues[icell][ic] > 2) {
-          printf("icell: %i; ic: %i\n", icell, ic);
-          printf("sval: %i, %i, %i, %i, %i, %i, %i, %i\n",
-            svalues[icell][0],svalues[icell][1],
-            svalues[icell][2],svalues[icell][3],
-            svalues[icell][4],svalues[icell][5],
-            svalues[icell][6],svalues[icell][7]);
-        error->one(FLERR,"bad sval");
-      }
-    }
-  }
-  
   return 1;
 }
 
@@ -1522,103 +1456,6 @@ double CreateISurf::param2in(double param, double v1)
   //v0 = MAX(v0,thresh);
   v0 = MIN(v0,255.0);
   return v0;
-}
-
-/* ----------------------------------------------------------------------
-   Determines corner values given an explicit surface. Cvalues then used
-   later in ablate to create the implicit surfaces
-------------------------------------------------------------------------- */
-
-int CreateISurf::get_cxyz(int *ic, double *lc)
-{
-
-  // find lower bounds
-  double lo[3];
-  lo[0] = domain->boxlo[0];
-  lo[1] = domain->boxlo[1];
-  lo[2] = domain->boxlo[2];
-
-  // shift by lower bounds
-  double lclo[3];
-  for(int d = 0; d < 3; d++) {
-    lclo[d] = lc[d]-lo[d];
-    ic[d] = static_cast<int> (lclo[d] / xyzsize[d] + 0.5);
-  }
-
-  int icell = get_corner(ic[0], ic[1], ic[2]);
-
-  return icell;
-}
-
-/* ----------------------------------------------------------------------
-   Get cell from coordinates
-------------------------------------------------------------------------- */
-
-int CreateISurf::get_cell(int icx, int icy, int icz)
-{
-  int icell;
-  if(dim == 2) icell = icx + icy*nxyz[0];
-  else icell = icx + icy*nxyz[0] + icz*nxyz[0]*nxyz[1];
-
-  if(icell >= nxyz[0]*nxyz[1]*nxyz[2] || icell < 0)
-    error->one(FLERR,"bad cell from int");
-
-  return icell;
-}
-
-/* ----------------------------------------------------------------------
-   Get corner values from coordinates
-------------------------------------------------------------------------- */
-
-int CreateISurf::get_corner(int icx, int icy, int icz)
-{
-  int icell;
-  if(dim == 2) icell = icx + icy*(nxyz[0]+1);
-  else icell = icx + icy*(nxyz[0]+1) + icz*(nxyz[0]+1)*(nxyz[1]+1);
-
-  if(icell >= Nxyz || icell < 0) {
-    printf("icell: %i\n", icell);
-    error->one(FLERR,"bad corner from int");
-  }
-
-  return icell;
-}
-
-/* ----------------------------------------------------------------------
-   Get corner values from coordinates
-------------------------------------------------------------------------- */
-
-int CreateISurf::get_corner(double dcx, double dcy, double dcz)
-{
-  // find lower bounds
-  double lo[3];
-  lo[0] = domain->boxlo[0];
-  lo[1] = domain->boxlo[1];
-  lo[2] = domain->boxlo[2];
-
-  // shift by lower bounds
-  double lclo[3];
-  int ic[3];
-  double lc[3];
-  lc[0] = dcx;
-  lc[1] = dcy; 
-  lc[2] = dcz;
-  for(int d = 0; d < 3; d++) {
-    lclo[d] = lc[d]-lo[d];
-    ic[d] = static_cast<int> (lclo[d] / xyzsize[d] + 0.5);
-  }
-
-  int icell;
-  if(dim == 2) icell = ic[0] + ic[1]*(nxyz[0]+1);
-  else icell = ic[0] + ic[1]*(nxyz[0]+1) + ic[2]*(nxyz[0]+1)*(nxyz[1]+1);
-
-  if(icell >= Nxyz || icell < 0) {
-    printf("dc: %4.3e, %4.3e, %4.3e\n", dcx, dcy, dcz);
-    printf("icell: %i\n", icell);
-    error->one(FLERR,"bad corner from double");
-  }
-
-  return icell;
 }
 
 /* ----------------------------------------------------------------------

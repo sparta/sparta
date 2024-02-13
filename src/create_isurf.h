@@ -118,11 +118,6 @@ class CreateISurf : protected Pointers {
   // remove old surfaces
   void remove_old();
   // misc functions
-  void corner2cell();
-  int get_cxyz(int *, double *);
-  int get_cell(int, int, int);
-  int get_corner(int, int, int);
-  int get_corner(double, double, double);
   double param2in(double, double);
 };
 
