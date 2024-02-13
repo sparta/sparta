@@ -31,7 +31,13 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
+#define DELTAGRID 1024            // must be bigger than split cells per cell
+#define DELTASEND 1024
 #define EPSILON_GRID 1.0e-3
+
+enum{CVAL,SVAL,IVAL};
+enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
+enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Update
 
 /* ---------------------------------------------------------------------- */
 
@@ -39,13 +45,52 @@ CreateISurf::CreateISurf(SPARTA *sparta) : Pointers(sparta)
 {
   MPI_Comm_rank(world,&me);
   MPI_Comm_size(world,&nprocs);
+
+  dim = domain->dimension;
+  if(dim==2) nadj = 4;
+  else nadj = 12;
+
+  // for finding corner values
+  cvalues = NULL;
+  svalues = NULL;
+  mvalues = NULL;
+  ivalues = NULL;
+
+  // for communication
+  ixyz = NULL;
+  cghost = NULL;
+  sghost = NULL;
+  ighost = NULL;
+  numsend = NULL;
+  maxgrid = maxghost = 0;
+
+  proclist = NULL;
+  locallist = NULL;
+  maxsend = 0;
+
+  sbuf = NULL;
+  maxsbuf = 0;
 }
 
 /* ---------------------------------------------------------------------- */
 
 CreateISurf::~CreateISurf()
 {
+  memory->destroy(cvalues);
+  memory->destroy(svalues);
+  memory->destroy(mvalues);
+  memory->destroy(ivalues);
 
+  memory->destroy(ixyz);
+  memory->destroy(cghost);
+  memory->destroy(sghost);
+  memory->destroy(ighost);
+  memory->destroy(numsend);
+
+  memory->destroy(proclist);
+  memory->destroy(locallist);
+
+  memory->destroy(sbuf);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -61,13 +106,12 @@ void CreateISurf::command(int narg, char **arg)
   if (!surf->distributed)
     error->all(FLERR,"Explicit surface must be distributed");
 
-  int dim = domain->dimension;
-
   if (narg != 4) error->all(FLERR,"Illegal create_isurf command");
 
   // grid group
   ggroup = grid->find_group(arg[0]);
   if (ggroup < 0) error->all(FLERR,"Read_isurf grid group ID does not exist");
+  groupbit = grid->bitmask[ggroup];
 
   // ablate fix
   char *ablateID = arg[1];
@@ -98,6 +142,7 @@ void CreateISurf::command(int narg, char **arg)
   // only store those within ggroup when calling ablate->store
   // 0 check uniform grid for entire domain
   grid->check_uniform_group(0,nxyz,corner,xyzsize);
+  nglocal = grid->nlocal;
 
   // corner points needs one more in each dim
   Nxyz = (nxyz[0]+1)*(nxyz[1]+1);
@@ -105,7 +150,6 @@ void CreateISurf::command(int narg, char **arg)
 
   // find all corner values
   set_corners();
-  memory->destroy(cvalues);
   MPI_Barrier(world);
 
   // remove old explicit surfaces
@@ -118,8 +162,10 @@ void CreateISurf::command(int narg, char **arg)
   int cpushflag = 0; // don't push
   char *sgroupID = arg[0];
 
+  //ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
+  //                icvalues,tvalues,thresh,sgroupID,cpushflag);
   ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
-                  icvalues,tvalues,thresh,sgroupID,cpushflag);
+                  cvalues,tvalues,thresh,sgroupID,cpushflag);
 
   if (ablate->nevery == 0) modify->delete_fix(ablateID);
   MPI_Barrier(world);
@@ -132,216 +178,114 @@ void CreateISurf::command(int narg, char **arg)
 
 void CreateISurf::set_corners()
 {
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  // set cell spacing and indices
+  memory->grow(ixyz,nglocal,3,"createisurf:ixyz");
+  for (int icell = 0; icell < nglocal; icell++) {
+    ixyz[icell][0] = ixyz[icell][1] = ixyz[icell][2] = 0;
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    ixyz[icell][0] =
+      static_cast<int> ((cells[icell].lo[0]-corner[0]) / xyzsize[0] + 0.5) + 1;
+    ixyz[icell][1] =
+      static_cast<int> ((cells[icell].lo[1]-corner[1]) / xyzsize[1] + 0.5) + 1;
+    ixyz[icell][2] =
+      static_cast<int> ((cells[icell].lo[2]-corner[2]) / xyzsize[2] + 0.5) + 1;
+  }
+
+
+  if(dim==2) ncorner = 4;
+  else ncorner = 8;
+
   // first shift everything down by thresh
   // later shift back
   cout = 0.0;
   cin = 255.0;
 
-  // cvalues is the grid (no overlaps)
-  // icvalues is setting each corner for each cell based on cvalues
-  // .. icvalues is cvalues in read_isurf and fix_ablate
-  memory->create(cvalues,Nxyz,"createisurf:cvalues");
-  for (int i = 0; i < Nxyz; i++) cvalues[i] = -1.0;
+  memory->create(cvalues,nglocal,ncorner,"createisurf:cvalues");
+  memory->create(mvalues,nglocal,ncorner,"createisurf:mvalues");
+  memory->create(svalues,nglocal,ncorner,"createisurf:svalues");
+  memory->create(ivalues,nglocal,ncorner,nadj,"createisurf:ivalues");
 
-  // mvalues stores minimum param
-  // also used to determine side
-  memory->create(mvalues,Nxyz,"createisurf:mvalues");
-  // svalues stores side of minimum param
-  memory->create(svalues,Nxyz,"createisurf:svalues");
-  // array to keep track of param between corners
-
-  // find corner values for all cells with surfaces
-  int npairs; // number of points around corner point
-
-  if(domain->dimension==2) {
-    memory->create(icvalues,grid->nlocal,4,"createisurf:icvalues");
-    for (int i = 0; i < grid->nlocal; i++) {
-      for (int j = 0; j < 4; j++)
-        icvalues[i][j] = 0.0;
+  // initialize
+  for(int ic = 0; ic < nglocal; ic++) {
+    for(int jc = 0; jc < ncorner; jc++) {
+      cvalues[ic][jc] = -1.0;
+      svalues[ic][jc] = -1;
+      mvalues[ic][jc] = -1.0;
+      for(int kc = 0; kc < nadj; kc++) ivalues[ic][jc][kc] = -1.0;
     }
-
-    // each corner has 4 neighbors
-    // -x, +x, -y, +y
-    npairs = 4;
-    memory->create(ivalues,Nxyz,npairs,"createisurf:ivalues");
-    
-    for(int ic = 0; ic < Nxyz; ic++) {
-      svalues[ic] = -1;
-      mvalues[ic] = -1.0;
-      for(int jc = 0; jc < npairs; jc++) ivalues[ic][jc] = -1.0;
-    }
-
-    // find intersections between edges and surfaces
-    surface_edge2d();
-  } else {
-    memory->create(icvalues,grid->nlocal,8,"createisurf:icvalues");
-    for (int i = 0; i < grid->nlocal; i++) {
-      for (int j = 0; j < 8; j++)
-        icvalues[i][j] = 0.0;
-    }
-
-    // each corner has 6 neighbors
-    // -x, +x, -y, +y, -z, +z
-    npairs = 6;
-    memory->create(ivalues,Nxyz,npairs,"createisurf:ivalues");
-    
-    for(int ic = 0; ic < Nxyz; ic++) {
-      svalues[ic] = -1;
-      mvalues[ic] = -1.0;
-      for(int jc = 0; jc < npairs; jc++) ivalues[ic][jc] = -1.0;
-    }
-    
-    for(int ic = 0; ic < Nxyz; ic++) {
-      svalues[ic] = -1;
-      mvalues[ic] = -1.0;
-      for(int jc = 0; jc < npairs; jc++) ivalues[ic][jc] = -1.0;
-    }
-
-    surface_edge3d();
   }
+
+  // find intersections between edges and surfaces
+  if(dim==2) surface_edge2d();
+  else surface_edge3d();
 
   // fill in corner values based on if grid cell is in or out
   set_inout();
   MPI_Barrier(world);
 
-  // sync svalues
-  // might need to sync ivalues as well
+  // sync between procs
   if (me == 0)
     if (screen) fprintf(screen,"Syncing intermediate values ...\n");
 
-  int lsval, gsval;
-  double lival, gival;
-  int lsgn, gsgn;
-  for(int ic = 0; ic < Nxyz; ic++) {
-    // sync side values
-    if(svalues[ic] < 2) lsval = svalues[ic];
-    else lsval = -1;
-    MPI_Allreduce(&lsval,&gsval,1,MPI_INT,MPI_MAX,world);
-    if(gsval > svalues[ic]) svalues[ic] = gsval;
+  sync(SVAL);
+  MPI_Barrier(world);
 
-    // sync intersection values
-    for(int jc = 0; jc < npairs; jc++) {
-      lival = ivalues[ic][jc];
-      if(lival > 0) lsgn = 1;
-      else {
-        lsgn = 0;
-        lival = 0.0;
-      }
-
-      MPI_Allreduce(&lsgn,&gsgn,1,MPI_INT,MPI_SUM,world);
-      MPI_Allreduce(&lival,&gival,1,MPI_DOUBLE,MPI_SUM,world);
-      gsgn = MAX(gsgn,1);
-      ivalues[ic][jc] = gival/static_cast<double>(gsgn);
-      if(ivalues[ic][jc]>1.0 && me==0) {
-        printf("ival: %4.3e; nval: %i\n", ivalues[ic][jc], gsgn);
-        error->one(FLERR,"ival too big");
-      }
-    }
-  }
+  sync(IVAL);
   MPI_Barrier(world);
 
   // find remaining corner values based on neighbors
   if (me == 0)
     if (screen) fprintf(screen,"Cleanup corners ...\n");
-  cleanup();
+  find_side_2d();
+  set_cvalues();
+  MPI_Barrier(world);
+
+  if (me == 0)
+    if (screen) fprintf(screen,"Syncing corners ...\n");
+
+  /*printf("before\n");
+  int icell;
+  for(int ic = 0; ic < nglocal; ic++) {
+    icell = (cells[ic].lo[0]-corner[0])/xyzsize[0] +
+            (cells[ic].lo[1]-corner[1])/xyzsize[1]*nxyz[0] +
+            (cells[ic].lo[2]-corner[2])/xyzsize[2]*(nxyz[0]*nxyz[1]);
+    printf("comm: %i; icell: %i; \
+      cvalues: %2.1e, %2.1e, %2.1e, %2.1e\n",
+      comm->me, icell, cvalues[ic][0], cvalues[ic][1],
+      cvalues[ic][2], cvalues[ic][3]);
+  }*/
+
+  sync(CVAL);
+  MPI_Barrier(world);
+
+  /*printf("after\n");
+  for(int ic = 0; ic < nglocal; ic++) {
+    icell = (cells[ic].lo[0]-corner[0])/xyzsize[0] +
+            (cells[ic].lo[1]-corner[1])/xyzsize[1]*nxyz[0] +
+            (cells[ic].lo[2]-corner[2])/xyzsize[2]*(nxyz[0]*nxyz[1]);
+    printf("comm: %i; icell: %i; \
+      cvalues: %2.1e, %2.1e, %2.1e, %2.1e\n",
+      comm->me, icell, cvalues[ic][0], cvalues[ic][1],
+      cvalues[ic][2], cvalues[ic][3]);
+  }*/
+
+  //error->all(FLERR,"ck sync-cval");
 
   // free up memory since these are no longer needed
   memory->destroy(ivalues);
   memory->destroy(mvalues);
   memory->destroy(svalues);
 
-  // initialize corner point matrix for fix-ablate
-  if(domain->dimension==2) {
-    memory->create(icvalues,grid->nlocal,4,"createisurf:icvalues");
-    for (int i = 0; i < grid->nlocal; i++) {
-      for (int j = 0; j < 4; j++)
-        icvalues[i][j] = 0.0;
-    }
-  } else {
-    memory->create(icvalues,grid->nlocal,8,"createisurf:icvalues");
-    for (int i = 0; i < grid->nlocal; i++) {
-      for (int j = 0; j < 8; j++)
-        icvalues[i][j] = 0.0;
-    }
-  }
+  memory->destroy(cghost);
+  memory->destroy(sghost);
+  memory->destroy(ighost);
 
-  // DEBUG: check no negative values
-  for(int ic = 0; ic < Nxyz; ic++)
-    if(cvalues[ic] < 0) printf("negative cvalue\n");
-
-  // sync cvalues
-  // may not be necessary
-  if (me == 0)
-    if (screen) fprintf(screen,"Syncing cvalues ...\n");
-  /*double lcval, maxcval;
-  for(int ic = 0; ic < Nxyz; ic++) {
-    lcval = cvalues[ic];
-    MPI_Allreduce(&lcval,&maxcval,1,MPI_DOUBLE,MPI_MAX,world);
-    cvalues[ic] = maxcval;
-  }*/
-
-  double lcval, gcval;
-  for(int ic = 0; ic < Nxyz; ic++) {
-    lcval = cvalues[ic];
-    if(lcval >= thresh) lsgn = 1;
-    else {
-      lsgn = 0;
-      lcval = 0.0;
-    }
-    MPI_Allreduce(&lsgn,&gsgn,1,MPI_INT,MPI_SUM,world);
-    MPI_Allreduce(&lcval,&gcval,1,MPI_DOUBLE,MPI_SUM,world);
-    gsgn = MAX(gsgn,1);
-    cvalues[ic] = gcval/gsgn;
-    if(cvalues[ic]>255.0 && me==0) {
-      printf("cval: %4.3e; nval: %i\n", gcval, gsgn);
-      error->one(FLERR,"cval too big");
-    }
-    //if(me==0 && cvalues[ic] > thresh)
-    //  printf("ic: %i; cval: %4.2e\n", ic, cvalues[ic]);
-  }
-
-  MPI_Barrier(world);
-
-  // store into icvalues for generating implicit surface
-  Grid::ChildCell *cells = grid->cells;
-  int xyzcell, ic[3];
-  double lc[3];
-  for(int icell = 0; icell < grid->nlocal; icell++) {
-
-    lc[0] = cells[icell].lo[0];
-    lc[1] = cells[icell].lo[1];
-    lc[2] = cells[icell].lo[2];
-
-    xyzcell = get_cxyz(ic,lc);
-    icvalues[icell][0] = cvalues[xyzcell];
-    xyzcell = get_corner(ic[0]+1, ic[1], ic[2]);
-    icvalues[icell][1] = cvalues[xyzcell];
-    xyzcell = get_corner(ic[0], ic[1]+1, ic[2]);
-    icvalues[icell][2] = cvalues[xyzcell];
-    xyzcell = get_corner(ic[0]+1, ic[1]+1, ic[2]);
-    icvalues[icell][3] = cvalues[xyzcell];
-
-    if(icvalues[icell][0] < 0 ||
-       icvalues[icell][1] < 0 ||
-       icvalues[icell][2] < 0 ||
-       icvalues[icell][3] < 0) printf("negative corner value 2d\n");
-
-    if(domain->dimension==3) {
-      xyzcell = get_corner(ic[0], ic[1], ic[2]+1);
-      icvalues[icell][4] = cvalues[xyzcell];
-      xyzcell = get_corner(ic[0]+1, ic[1], ic[2]+1);
-      icvalues[icell][5] = cvalues[xyzcell];
-      xyzcell = get_corner(ic[0], ic[1]+1, ic[2]+1);
-      icvalues[icell][6] = cvalues[xyzcell];
-      xyzcell = get_corner(ic[0]+1, ic[1]+1, ic[2]+1);
-      icvalues[icell][7] = cvalues[xyzcell];
-
-      if(icvalues[icell][4] < 0 ||
-         icvalues[icell][5] < 0 ||
-         icvalues[icell][6] < 0 ||
-         icvalues[icell][7] < 0) printf("negative corner value 3d\n");
-    }
-  }
   return;
 }
 
@@ -351,7 +295,7 @@ void CreateISurf::set_corners()
 
 void CreateISurf::surface_edge2d()
 {
-  int i,j,c1,c2,n1,n2;
+  int i,j,n1,n2;
 
   Grid::ChildCell *cells = grid->cells;
   double cl[3], ch[3]; // cell bounds
@@ -365,8 +309,6 @@ void CreateISurf::surface_edge2d()
   // initialize param to avoid error 
   param = 0.0;
 
-  // number of edges in a cell
-  int nedge = 4;
   // indices for corners making up the cell edges
   int ci[4], cj[4];
   ci[0] = 0; cj[0] = 1;
@@ -374,7 +316,7 @@ void CreateISurf::surface_edge2d()
   ci[2] = 3; cj[2] = 2;
   ci[3] = 2; cj[3] = 0;
 
-  for(int icell = 0; icell < grid->nlocal; icell++) {
+  for(int icell = 0; icell < nglocal; icell++) {
 
     // if no surfs, continue
     nsurf = cells[icell].nsurf;
@@ -401,7 +343,7 @@ void CreateISurf::surface_edge2d()
 
     // determine corner values
     csurfs = cells[icell].csurfs;
-    for(int ic = 0; ic < nedge; ic++) {
+    for(int ic = 0; ic < 4; ic++) {
       i = ci[ic];
       pi[0] = cx[i];
       pi[1] = cy[i];
@@ -411,11 +353,6 @@ void CreateISurf::surface_edge2d()
       pj[0] = cx[j];
       pj[1] = cy[j];
       pj[2] = cz[j];
-
-      // get index for p1 and p2
-      // c1 is always lower from above
-      c1 = get_corner(pi[0], pi[1], pi[2]);
-      c2 = get_corner(pj[0], pj[1], pj[2]);
 
       // test all surfs+corners to see if any hit
       for (int m = 0; m < nsurf; m++) {
@@ -447,26 +384,30 @@ void CreateISurf::surface_edge2d()
             n2 = 3;
           }
 
-          if(ivalues[c1][n1] > param || ivalues[c1][n1] < 0) ivalues[c1][n1] = param;
-          if(ivalues[c2][n2] > oparam || ivalues[c2][n2] < 0) ivalues[c2][n2] = oparam;
+          if(ivalues[icell][i][n1] > param || ivalues[icell][i][n1] < 0)
+            ivalues[icell][i][n1] = param;
+          if(ivalues[icell][j][n2] > oparam || ivalues[icell][j][n2] < 0)
+            ivalues[icell][j][n2] = oparam;
 
-          if(mvalues[c1] < 0 || param <= mvalues[c1]) {
-            if(param == 0) svalues[c1] = 0;
-            else if(svalues[c1] == 2) 0; // do nothing
+          if(mvalues[icell][i] < 0 || param <= mvalues[icell][i]) {
+            if(param == 0) svalues[icell][i] = 0;
+            else if(svalues[icell][i] == 2) 0; // do nothing
             // conflicting sides from two surfaces meeting at corner
-            else if(fabs(mvalues[c1]-param) < EPSILON_GRID && svalues[c1] != side) svalues[c1] = 2;
-            else svalues[c1] = side;
+            else if(fabs(mvalues[icell][i]-param) < EPSILON_GRID
+              && svalues[icell][i] != side) svalues[icell][i] = 2;
+            else svalues[icell][i] = side;
 
-            mvalues[c1] = param;
+            mvalues[icell][i] = param;
           }
 
-          if(mvalues[c2] < 0 || oparam <= mvalues[c2]) {
-            if(oparam == 0) svalues[c2] = 0;
-            else if(svalues[c2] == 2) 0; // do nothing
-            else if(fabs(mvalues[c2]-oparam) < EPSILON_GRID && svalues[c2] != !side) svalues[c2] = 2;
-            else svalues[c2] = !side;
+          if(mvalues[icell][j] < 0 || oparam <= mvalues[icell][j]) {
+            if(oparam == 0) svalues[icell][j] = 0;
+            else if(svalues[icell][j] == 2) 0; // do nothing
+            else if(fabs(mvalues[icell][j]-oparam) < EPSILON_GRID
+              && svalues[icell][j] != !side) svalues[icell][j] = 2;
+            else svalues[icell][j] = !side;
 
-            mvalues[c2] = oparam;
+            mvalues[icell][j] = oparam;
           }
         } // end "if" hitflag
       }// end "for" for surfaces
@@ -482,7 +423,7 @@ void CreateISurf::surface_edge2d()
 
 void CreateISurf::surface_edge3d()
 {
-  int i,j,c1,c2,n1,n2;
+  int i,j,n1,n2;
 
   Grid::ChildCell *cells = grid->cells;
   double cl[3], ch[3]; // cell bounds
@@ -496,8 +437,6 @@ void CreateISurf::surface_edge3d()
   // initialize param to avoid error 
   param = 0.0;
 
-  // number of edges in a cell
-  int nedge = 12;
   // indices for corners making up the cell edges
   int ci[12], cj[12];
   ci[0] = 0; cj[0] = 1;
@@ -513,7 +452,7 @@ void CreateISurf::surface_edge3d()
   ci[10] = 7; cj[10] = 6;
   ci[11] = 6; cj[11] = 4;
 
-  for(int icell = 0; icell < grid->nlocal; icell++) {
+  for(int icell = 0; icell < nglocal; icell++) {
 
     // if no surfs, continue
     nsurf = cells[icell].nsurf;
@@ -540,7 +479,7 @@ void CreateISurf::surface_edge3d()
 
     // determine corner values
     csurfs = cells[icell].csurfs;
-    for(int ic = 0; ic < nedge; ic++) {
+    for(int ic = 0; ic < 12; ic++) {
       i = ci[ic];
       pi[0] = cx[i];
       pi[1] = cy[i];
@@ -550,10 +489,6 @@ void CreateISurf::surface_edge3d()
       pj[0] = cx[j];
       pj[1] = cy[j];
       pj[2] = cz[j];
-
-      // get corners
-      c1 = get_corner(pi[0], pi[1], pi[2]);
-      c2 = get_corner(pj[0], pj[1], pj[2]);
 
       // test all surfs+corners to see if any hit
       for (int m = 0; m < nsurf; m++) {
@@ -568,7 +503,6 @@ void CreateISurf::surface_edge3d()
 
         // once a hit is found
         if(hitflag) {
-
           if(ic==0 || ic==8) {
             n1 = 1;
             n2 = 0;
@@ -586,28 +520,29 @@ void CreateISurf::surface_edge3d()
             n2 = 4;
           }
 
-          if(ivalues[c1][n1] > param || ivalues[c1][n1] < 0) ivalues[c1][n1] = param;
-          if(ivalues[c2][n2] > oparam || ivalues[c2][n2] < 0) ivalues[c2][n2] = oparam;
+          if(ivalues[icell][i][n1] > param || ivalues[icell][i][n1] < 0)
+            ivalues[icell][i][n1] = param;
+          if(ivalues[icell][j][n2] > oparam || ivalues[icell][j][n2] < 0)
+            ivalues[icell][j][n2] = oparam;
 
-          if(mvalues[c1] < 0 || param <= mvalues[c1]) {
-            if(param == 0) svalues[c1] = 0;
-            else if(svalues[c1] == 2) 0; // do nothing
+          if(mvalues[icell][i] < 0 || param <= mvalues[icell][i]) {
+            if(param == 0) svalues[icell][i] = 0;
+            else if(svalues[icell][i] == 2) 0; // do nothing
             // conflicting sides from two surfaces meeting at corner
-            else if(fabs(mvalues[c1]-param) < EPSILON_GRID && svalues[c1] != side) svalues[c1] = 2;
-            else svalues[c1] = side;
-
-            mvalues[c1] = param;
+            else if(fabs(mvalues[icell][i]-param) < EPSILON_GRID
+              && svalues[icell][i] != side) svalues[icell][i] = 2;
+            else svalues[icell][i] = side;
+            mvalues[icell][i] = param;
           }
 
-          if(mvalues[c2] < 0 || oparam <= mvalues[c2]) {
-            if(oparam == 0) svalues[c2] = 0;
-            else if(svalues[c2] == 2) 0; // do nothing
-            else if(fabs(mvalues[c2]-oparam) < EPSILON_GRID && svalues[c2] != !side) svalues[c2] = 2;
-            else svalues[c2] = !side;
-
-            mvalues[c2] = oparam;
+          if(mvalues[icell][j] < 0 || oparam <= mvalues[icell][j]) {
+            if(oparam == 0) svalues[icell][j] = 0;
+            else if(svalues[icell][j] == 2) 0; // do nothing
+            else if(fabs(mvalues[icell][j]-oparam) < EPSILON_GRID
+              && svalues[icell][j] != !side) svalues[icell][j] = 2;
+            else svalues[icell][j] = !side;
+            mvalues[icell][j] = oparam;
           }
-
         } // end "if" hitflag
       }// end "for" for surfaces
     }// end "for" for corners in cellfe
@@ -617,6 +552,346 @@ void CreateISurf::surface_edge3d()
 }
 
 /* ----------------------------------------------------------------------
+   sync all copies of corner points values for all owned grid cells
+   algorithm:
+     comm my cdelta values that are shared by neighbor
+     each corner point is shared by N cells, less on borders
+     dsum = sum of decrements to that point by all N cells
+     newvalue = MAX(oldvalue-dsum,0)
+   all N copies of corner pt are set to newvalue
+     in numerically consistent manner (same order of operations)
+------------------------------------------------------------------------- */
+
+void CreateISurf::sync(int which)
+{
+  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner,jadj;
+  int icell,jcell,njcell;
+  double dtotal[nadj];
+
+  comm_neigh_corners(which);
+  MPI_Barrier(world);
+
+  // perform update of corner pts for all my owned grid cells
+  //   using contributions from all cells that share the corner point
+  // insure order of numeric operations will give exact same answer
+  //   for all Ncorner duplicates of a corner point (stored by other cells)
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  for (icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    ix = ixyz[icell][0];
+    iy = ixyz[icell][1];
+    iz = ixyz[icell][2];
+
+    // loop over corner points
+
+    for (i = 0; i < ncorner; i++) {
+      // ixyz first = offset from icell of lower left cell of 2x2x2 stencil
+      //              that shares the Ith corner point
+
+      ixfirst = (i % 2) - 1;
+      iyfirst = (i/2 % 2) - 1;
+      if (dim == 2) izfirst = 0;
+      else izfirst = (i / 4) - 1;
+
+      // loop over 2x2x2 stencil of cells that share the corner point
+      // also works for 2d, since izfirst = 0
+
+      for(j = 0; j < nadj; j++) dtotal[j] = -1.0;
+      jcorner = ncorner;
+
+      for (jz = izfirst; jz <= izfirst+1; jz++) {
+        for (jy = iyfirst; jy <= iyfirst+1; jy++) {
+          for (jx = ixfirst; jx <= ixfirst+1; jx++) {
+            jcorner--;
+
+            // check if neighbor cell is within bounds of ablate grid
+
+            if (ix+jx < 1 || ix+jx > nxyz[0]) continue;
+            if (iy+jy < 1 || iy+jy > nxyz[1]) continue;
+            if (iz+jz < 1 || iz+jz > nxyz[2]) continue;
+
+            // jcell = local index of (jx,jy,jz) neighbor cell of icell
+
+            jcell = walk_to_neigh(icell,jx,jy,jz);
+
+            // update total with one corner point of jcell
+            // jcorner descends from ncorner
+            if (jcell < nglocal) {
+              if(which==SVAL) {
+                if(svalues[jcell][jcorner] < 2)
+                  dtotal[0] = MAX(dtotal[0],svalues[jcell][jcorner]);
+              } else if(which==IVAL) {
+                for(jadj = 0; jadj < nadj; jadj++) {
+                  double dtemp = ivalues[jcell][jcorner][jadj];
+                  if(dtemp>0) {
+                    if(dtotal[jadj] < 0) dtotal[jadj] = dtemp;
+                    else dtotal[jadj] = MIN(dtotal[jadj],dtemp);
+                  }
+                } 
+              } else if(which==CVAL) {
+                dtotal[0] = MAX(dtotal[0],cvalues[jcell][jcorner]);
+              }
+            } else {
+              if(which==SVAL) {
+                if(sghost[jcell-nglocal][jcorner] < 2)
+                  dtotal[0] = 
+                    MAX(dtotal[0],sghost[jcell-nglocal][jcorner]);
+              } else if(which==IVAL){ 
+                for(jadj = 0; jadj < nadj; jadj++) {
+                  double dtemp = ighost[jcell-nglocal][jcorner][jadj];
+                  if(dtemp>0) {
+                    if(dtotal[jadj] < 0) dtotal[jadj] = dtemp;
+                    else dtotal[jadj] = MIN(dtotal[jadj],dtemp);
+                  }
+                }
+              } else if(which==CVAL) {
+                dtotal[0] =
+                  MAX(dtotal[0],cghost[jcell-nglocal][jcorner]);
+              }
+            }
+          }
+        }
+      }
+
+      if(which==SVAL) svalues[icell][i] = static_cast<int>(dtotal[0]);
+      else if(which==IVAL)
+        for(jadj = 0; jadj < nadj; jadj++)
+          ivalues[icell][i][jadj] = dtotal[jadj];
+      else if(which==CVAL) cvalues[icell][i] = dtotal[0];
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+  Set corner values for cells fully in or out for both 2D and 3D
+------------------------------------------------------------------------- */
+
+void CreateISurf::comm_neigh_corners(int which)
+{
+  int i,j,k,m,n,ix,iy,iz,ixfirst,iyfirst,izfirst,jx,jy,jz;
+  int icell,ifirst,jcell,proc,ilocal;
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  memory->grow(numsend,nglocal,"createisurf:numsend");
+
+  // make list of datums to send to neighbor procs
+  // 8 or 26 cells surrounding icell need icell's cdelta info
+  // but only if they are owned by a neighbor proc
+  // insure icell is only sent once to same neighbor proc
+  // also set proclist and locallist for each sent datum
+
+  int nsend = 0;
+
+  for (icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    ix = ixyz[icell][0];
+    iy = ixyz[icell][1];
+    iz = ixyz[icell][2];
+    ifirst = nsend;
+
+    // loop over 3x3x3 stencil of neighbor cells centered on icell
+
+    for (jz = -1; jz <= 1; jz++) {
+      for (jy = -1; jy <= 1; jy++) {
+        for (jx = -1; jx <= 1; jx++) {
+
+          // skip neigh = self
+
+          if (jx == 0 && jy == 0 && jz == 0) continue;
+
+          // check if neighbor cell is within bounds of ablate grid
+
+          if (ix+jx < 1 || ix+jx > nxyz[0]) continue;
+          if (iy+jy < 1 || iy+jy > nxyz[1]) continue;
+          if (iz+jz < 1 || iz+jz > nxyz[2]) continue;
+
+          // jcell = local index of (jx,jy,jz) neighbor cell of icell
+
+          jcell = walk_to_neigh(icell,jx,jy,jz);
+
+          // add a send list entry of icell to proc != me if haven't already
+
+          proc = cells[jcell].proc;
+          if (proc != me) {
+            for (j = ifirst; j < nsend; j++)
+              if (proc == proclist[j]) break;
+            if (j == nsend) {
+              if (nsend == maxsend) grow_send();
+              proclist[nsend] = proc;
+              locallist[nsend++] = cells[icell].id;
+            }
+          }
+        }
+      }
+    }
+
+    // # of neighbor procs to send icell to
+
+    numsend[icell] = nsend - ifirst;
+  }
+
+  // realloc sbuf if necessary
+  // ncomm = ilocal + Ncorner svalues (+ Ncorner*nadj)
+
+  int ncomm;
+  if (which == SVAL) ncomm = 1 + ncorner;
+  else if (which == IVAL) ncomm = 1 + ncorner*nadj;
+  else if (which == CVAL) ncomm = 1 + ncorner;
+
+  if (nsend*ncomm > maxsbuf) {
+    memory->destroy(sbuf);
+    maxsbuf = nsend*ncomm;
+    memory->create(sbuf,maxsbuf,"createisurf:sbuf");
+  }
+
+  // pack datums to send
+  // datum = ilocal of neigh cell on other proc + Ncorner values
+
+  nsend = 0;
+  m = 0;
+
+  for (icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    n = numsend[icell];
+    for (i = 0; i < n; i++) {
+      sbuf[m++] = ubuf(locallist[nsend]).d;
+      if (which == SVAL) {
+        for (j = 0; j < ncorner; j++)
+          sbuf[m++] = static_cast<double> (svalues[icell][j]);
+        //printf("sbuf -- me: %i; icell: %i; val: %4.1e, %4.1e, %4.1e, %4.1e\n", 
+        //  comm->me, icell,
+        //  sbuf[m-4],sbuf[m-3],sbuf[m-2],sbuf[m-1]);
+      } else if (which == IVAL) {
+        for (j = 0; j < ncorner; j++)
+          for(k = 0; k < nadj; k++)
+            sbuf[m++] = ivalues[icell][j][k];
+      } else if (which == CVAL) {
+        for (j = 0; j < ncorner; j++)
+          sbuf[m++] = cvalues[icell][j];
+      }
+      nsend++;
+    }
+  }
+
+
+  // perform irregular neighbor comm
+  // Comm class manages rbuf memory
+  double *rbuf;
+  int nrecv = comm->irregular_uniform_neighs(nsend,proclist,(char *) sbuf,
+                ncomm*sizeof(double),(char **) &rbuf);
+
+  // realloc val_ghost if necessary
+
+  if (grid->nghost > maxghost) {
+    memory->destroy(cghost);
+    memory->destroy(sghost);
+    memory->destroy(ighost);
+    maxghost = grid->nghost;
+    memory->create(cghost,maxghost,ncorner,"createisurf:cghost");
+    memory->create(sghost,maxghost,ncorner,"createisurf:sghost");
+    memory->create(ighost,maxghost,ncorner,nadj,"createisurf:ighost");
+  }
+
+  // unpack received data into val_ghost = ghost cell corner points
+
+  // NOTE: need to check if hashfilled
+  cellint cellID;
+  Grid::MyHash *hash = grid->hash;
+
+  m = 0;
+  for (i = 0; i < nrecv; i++) {
+    cellID = (cellint) ubuf(rbuf[m++]).u;
+    ilocal = (*hash)[cellID];
+    icell = ilocal - nglocal;
+
+    if (which == SVAL) {
+      for (j = 0; j < ncorner; j++) 
+        sghost[icell][j] = static_cast<int> (rbuf[m++]);
+      //printf("sghost -- me: %i; icell: %i; val: %i, %i, %i, %i\n", 
+      //  comm->me, icell,
+      //  sghost[icell][0],sghost[icell][1],sghost[icell][2],sghost[icell][3]);
+    } else if (which == IVAL) {
+      for (j = 0; j < ncorner; j++)
+        for(k = 0; k < nadj; k++)
+          ighost[icell][j][k] = rbuf[m++];
+    } else if (which == CVAL) {
+      for (j = 0; j < ncorner; j++)
+        cghost[icell][j] = rbuf[m++];
+    }
+
+  }
+
+}
+
+/* ----------------------------------------------------------------------
+   walk to neighbor of icell, offset by (jx,jy,jz)
+   walk first by x, then by y, last by z
+   return jcell = local index of neighbor cell
+------------------------------------------------------------------------- */
+
+int CreateISurf::walk_to_neigh(int icell, int jx, int jy, int jz)
+{
+  Grid::ChildCell *cells = grid->cells;
+
+  int jcell = icell;
+
+  if (jx < 0) {
+    if (grid->neigh_decode(cells[jcell].nmask,XLO) != NCHILD)
+      error->one(FLERR,"Walk to neighbor cell failed");
+    jcell = cells[jcell].neigh[0];
+  } else if (jx > 0) {
+    if (grid->neigh_decode(cells[jcell].nmask,XHI) != NCHILD)
+      error->one(FLERR,"Walk to neighbor cell failed");
+    jcell = cells[jcell].neigh[1];
+  }
+
+  if (jy < 0) {
+    if (grid->neigh_decode(cells[jcell].nmask,YLO) != NCHILD)
+      error->one(FLERR,"Walk to neighbor cell failed");
+    jcell = cells[jcell].neigh[2];
+  } else if (jy > 0) {
+    if (grid->neigh_decode(cells[jcell].nmask,YHI) != NCHILD)
+      error->one(FLERR,"Walk to neighbor cell failed");
+    jcell = cells[jcell].neigh[3];
+  }
+
+  if (jz < 0) {
+    if (grid->neigh_decode(cells[jcell].nmask,ZLO) != NCHILD)
+      error->one(FLERR,"Walk to neighbor cell failed");
+    jcell = cells[jcell].neigh[4];
+  } else if (jz > 0) {
+    if (grid->neigh_decode(cells[jcell].nmask,ZHI) != NCHILD)
+      error->one(FLERR,"Walk to neighbor cell failed");
+    jcell = cells[jcell].neigh[5];
+  }
+
+  return jcell;
+}
+
+/* ----------------------------------------------------------------------
+   reallocate send vectors
+------------------------------------------------------------------------- */
+
+void CreateISurf::grow_send()
+{
+  maxsend += DELTASEND;
+  memory->grow(proclist,maxsend,"createisurf:proclist");
+  memory->grow(locallist,maxsend,"createisurf:locallist");
+}
+
+
+/* ----------------------------------------------------------------------
   Set corner values for cells fully in or out for both 2D and 3D
 ------------------------------------------------------------------------- */
 
@@ -624,14 +899,10 @@ void CreateISurf::set_inout()
 {
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
+
   double cl[3], ch[3]; // cell bounds
   int itype, sval, xyzcell, cxyz[3];
-  for(int icell = 0; icell < grid->nlocal; icell++) {
-
-    cl[0] = cells[icell].lo[0];
-    cl[1] = cells[icell].lo[1];
-    cl[2] = cells[icell].lo[2];
-    xyzcell = get_cxyz(cxyz,cl);
+  for(int icell = 0; icell < nglocal; icell++) {
 
     // itype = 1 - fully outside
     // itype = 2 - fully inside
@@ -650,25 +921,8 @@ void CreateISurf::set_inout()
       continue;
     }
 
-    // set corners if not already set
-    if(svalues[xyzcell] < 0) svalues[xyzcell] = sval;
-    xyzcell = get_corner(cxyz[0]+1, cxyz[1], cxyz[2]);
-    if(svalues[xyzcell] < 0) svalues[xyzcell] = sval;
-    xyzcell = get_corner(cxyz[0], cxyz[1]+1, cxyz[2]);
-    if(svalues[xyzcell] < 0) svalues[xyzcell] = sval;
-    xyzcell = get_corner(cxyz[0]+1, cxyz[1]+1, cxyz[2]);
-    if(svalues[xyzcell] < 0) svalues[xyzcell] = sval;
-
-    if(domain->dimension==3) {
-      xyzcell = get_corner(cxyz[0], cxyz[1], cxyz[2]+1);
-      if(svalues[xyzcell] < 0) svalues[xyzcell] = sval;
-      xyzcell = get_corner(cxyz[0]+1, cxyz[1], cxyz[2]+1);
-      if(svalues[xyzcell] < 0) svalues[xyzcell] = sval;
-      xyzcell = get_corner(cxyz[0], cxyz[1]+1, cxyz[2]+1);
-      if(svalues[xyzcell] < 0) svalues[xyzcell] = sval;
-      xyzcell = get_corner(cxyz[0]+1, cxyz[1]+1, cxyz[2]+1);
-      if(svalues[xyzcell] < 0) svalues[xyzcell] = sval;
-    }
+    for(int m = 0; m < ncorner; m++)
+      if(svalues[icell][m] < 0) svalues[icell][m] = sval;
   }
   return;
 }
@@ -677,180 +931,177 @@ void CreateISurf::set_inout()
   Resolve unknown side values and fill in remaining corner values
 ------------------------------------------------------------------------- */
 
-void CreateISurf::cleanup()
+void CreateISurf::find_side_2d()
 {
-  int j;
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
   int filled, attempt;
+  int jcorner, jcell;
+  int ix, iy, ixfirst, iyfirst;
+  int n1, n2, na1, na2;
+
   filled = attempt = 0;
   while(filled==0) {
     filled=1;
-    for(int i = 0; i < Nxyz; i++) {
-      if(svalues[i] == 0 || svalues[i] == 1) continue;
+    for(int icell = 0; icell < nglocal; icell++) {
+      if (!(cinfo[icell].mask & groupbit)) continue;
+      if (cells[icell].nsplit <= 0) continue;
 
-      // try x-neighbor
-      j = i - 1;
-      if(j >= 0 && (svalues[j] == 0 || svalues[j] == 1)) {
-        if(ivalues[i][0] <= 0) svalues[i] = svalues[j];
-        else {
-          if(svalues[j] == 0) svalues[i] = 1;
-          else svalues[i] = 0;
-        }
-        continue;
-      } 
+      ix = ixyz[icell][0];
+      iy = ixyz[icell][1];
 
-      j = i + 1;
-      if(j < Nxyz && (svalues[j] == 0 || svalues[j] == 1)) {
-        if(ivalues[i][1] <= 0) svalues[i] = svalues[j];
-        else {
-          if(svalues[j] == 0) svalues[i] = 1;
-          else svalues[i] = 0;
-        }
-        continue;
-      }
+      for(int i = 0; i < ncorner; i++) {
+        if(svalues[icell][i] == 0 || svalues[icell][i] == 1) continue;
+        
+        ixfirst = (i % 2) - 1;
+        iyfirst = (i/2 % 2) - 1;
 
-      // try y-neighbor
-      j = i - (nxyz[0]+1);
-      if(j >= 0 && (svalues[j] == 0 || svalues[j] == 1)) {
-        if(ivalues[i][2] <= 0) svalues[i] = svalues[j];
-        else {
-          if(svalues[j] == 0) svalues[i] = 1;
-          else svalues[i] = 0;
-        }
-        continue;
-      }
+        // check around corner point
+        jcorner = ncorner;
 
-      j = i + (nxyz[0]+1);
-      if(j < Nxyz && (svalues[j] == 0 || svalues[j] == 1)) {
-        if(ivalues[i][3] <= 0) svalues[i] = svalues[j];
-        else {
-          if(svalues[j] == 0) svalues[i] = 1;
-          else svalues[i] = 0;
-        }
-        continue;
-      }
+        for (int jy = iyfirst; jy <= iyfirst+1; jy++) {
+          for (int jx = ixfirst; jx <= ixfirst+1; jx++) {
+            jcorner--;
+            // check if neighbor cell is within bounds of ablate grid
 
-      if(domain->dimension=3) {
-        // try z-neighbor
-        j = i - (nxyz[0]+1)*(nxyz[1]+1);
-        if(j >= 0 && (svalues[j] == 0 || svalues[j] == 1)) {
-          if(ivalues[i][4] <= 0) svalues[i] = svalues[j];
-          else {
-            if(svalues[j] == 0) svalues[i] = 1;
-            else svalues[i] = 0;
-          }
-          continue;
-        }
+            if (ix+jx < 1 || ix+jx > nxyz[0]) continue;
+            if (iy+jy < 1 || iy+jy > nxyz[1]) continue;
 
-        j = i + (nxyz[0]+1)*(nxyz[1]+1);
-        if(j < Nxyz && (svalues[j] == 0 || svalues[j] == 1)) {
-          if(ivalues[i][5] <= 0) svalues[i] = svalues[j];
-          else {
-            if(svalues[j] == 0) svalues[i] = 1;
-            else svalues[i] = 0;
-          }
-          continue;
-        }
-      }
+            // n1 and n2 are the corners to compare to
+            if(jcorner==3) {
+              n1 = 1; na1 = 3;
+              n2 = 2; na2 = 1;
+            } else if(jcorner==2) {
+              n1 = 0; na1 = 3;
+              n2 = 3; na2 = 0;
+            } else if(jcorner==1) {
+              n1 = 0; na1 = 1;
+              n2 = 3; na2 = 2;
+            } else {
+              n1 = 1; na1 = 0;
+              n2 = 2; na2 = 2;
+            }
 
-      /*
-      // try x-neighbor
-      j = i - 1;
-      if(j >= 0 && ivalues[i][0] < 0) {
-        svalues[i] = svalues[j];
-        continue;
-      }
+            // jcell = local index of (jx,jy,jz) neighbor cell of icell
 
-      j = i + 1;
-      if(j < Nxyz && ivalues[i][1] < 0) {
-        svalues[i] = svalues[j];
-        continue;
-      }
+            jcell = walk_to_neigh(icell,jx,jy,0);
 
-      // try y-neighbor
-      j = i - (nxyz[0]+1);
-      if(j >= 0 && ivalues[i][2] < 0) {
-        svalues[i] = svalues[j];
-        continue;
-      }
+            // compare with neighbor as reference
 
-      j = i + (nxyz[0]+1);
-      if(j < Nxyz && ivalues[i][3] < 0) {
-        svalues[i] = svalues[j];
-        continue;
-      }
+            if (jcell < nglocal) {
+              // try first neighbor
+              int itemp = svalues[jcell][n1];
+              if(itemp == 0 || itemp == 1) {
+                if(ivalues[jcell][n1][na1] <= 0)
+                  svalues[icell][i] = itemp;
+                else {
+                  if(itemp == 0) svalues[icell][i] = 1;
+                  else svalues[icell][i] = 0;
+                }
+                continue;
+              }
 
-      if(domain->dimension=3) {
-        // try z-neighbor
-        j = i - (nxyz[0]+1)*(nxyz[1]+1);
-        if(j >= 0 && ivalues[i][4] < 0) {
-          svalues[i] = svalues[j];
-          continue;
-        }
+              // try second neighbor
+              itemp = svalues[jcell][n2];
+              if(itemp == 0 || itemp == 1) {
+                if(ivalues[jcell][n2][na2] <= 0)
+                  svalues[icell][i] = itemp;
+                else {
+                  if(itemp == 0) svalues[icell][i] = 1;
+                  else svalues[icell][i] = 0;
+                }
+                continue;
+              }
+            } else {
+              // try first neighbor
+              int itemp = sghost[jcell-nglocal][n1];
+              if(itemp == 0 || itemp == 1) {
+                if(ighost[jcell-nglocal][n1][na1] <= 0)
+                  svalues[icell][i] = itemp;
+                else {
+                  if(itemp == 0) svalues[icell][i] = 1;
+                  else svalues[icell][i] = 0;
+                }
+                continue;
+              }
 
-        j = i + (nxyz[0]+1)*(nxyz[1]+1);
-        if(j < Nxyz && ivalues[i][5] < 0) {
-          svalues[i] = svalues[j];
-          continue;
-        }
-      }
-      */
+              // try second neighbor
+              itemp = sghost[jcell-nglocal][n2];
+              if(itemp == 0 || itemp == 1) {
+                if(ighost[jcell-nglocal][n2][na2] <= 0)
+                  svalues[icell][i] = itemp;
+                else {
+                  if(itemp == 0) svalues[icell][i] = 1;
+                  else svalues[icell][i] = 0;
+                }
+                continue;
+              }
 
-    }
+            } // end jcell if nlocal
 
-    for(int i = 0; i < Nxyz; i++)
-      if(svalues[i] < 0) filled = 0;
+          } // end jx
+        } // end jy
+
+      } // end corners
+    }// end icell
+
+    for(int icell = 0; icell < nglocal; icell++)
+      for(int ic = 0; ic < ncorner; ic++)
+        if(svalues[icell][ic] < 0) filled = 0;
 
     attempt++;
     if(attempt>20) error->one(FLERR,"Cannot find reference");
 
-  }
+  } // end white
 
-  for(int i = 0; i < Nxyz; i++)
-    if(svalues[i] < 0) error->one(FLERR,"bad sval");
+  for(int icell = 0; icell < nglocal; icell++)
+    for(int ic = 0; ic < ncorner; ic++)
+      if(svalues[icell][ic] < 0) error->one(FLERR,"bad sval");
+}
 
-  int npairs;
-  if(domain->dimension==2) npairs = 4;
-  else npairs = 6;
+/* ----------------------------------------------------------------------
+  Resolve unknown side values and fill in remaining corner values
+------------------------------------------------------------------------- */
 
+void CreateISurf::set_cvalues()
+{
   // initially set inside as cin and outside as cout
   if(aveFlag) {
     int nval;
     double ivalsum;
-    for(int i = 0; i < Nxyz; i++) {
-      ivalsum = 0.0;
-      if(svalues[i] == 0) cvalues[i] = cout;
-      else {
-        nval = 0;
-        for(int j = 0; j < npairs; j++) {
-          if(ivalues[i][j] >= 0) {
-            ivalsum += ivalues[i][j];
-            nval++;
-          }
-        }
-
-        // no intersections
-        if(nval == 0) cvalues[i] = cin;
+    for(int icell = 0; icell < nglocal; icell++) {
+      for(int ic = 0; ic < ncorner; ic++) {
+        ivalsum = 0.0;
+        if(svalues[icell][ic] == 0) cvalues[icell][ic] = cout;
         else {
-          ivalsum /= nval;
-          if(ivalsum > 1.0) error->one(FLERR,"over 1");
-          // add small buffer to avoid very small volumes/areas
-          /*if(domain->dimension == 3) {
-            ivalsum = MAX(ivalsum, 0.045);
-            ivalsum = MIN(ivalsum, 0.955);
-          } else {
-            ivalsum = MAX(ivalsum, 0.01);
-            ivalsum = MIN(ivalsum, 0.99);
-          }*/
-          cvalues[i] = param2in(ivalsum,0.0);
-        }
-      }
-    }// end "for" for grid cells
+          nval = 0;
+          for(int iadj = 0; iadj < nadj; iadj++) {
+            if(ivalues[icell][ic][iadj] >= 0) {
+              ivalsum += ivalues[icell][ic][iadj];
+              nval++;
+            }
+          }
+
+          // no intersections
+          if(nval == 0) cvalues[icell][ic] = cin;
+          else {
+            ivalsum /= nval;
+            if(ivalsum > 1.0) error->one(FLERR,"over 1");
+            cvalues[icell][ic] = param2in(ivalsum,0.0);
+          }
+
+        } // end svalues
+      } // end corners
+    } // end grid cells
 
   } else {
-    for(int i = 0; i < Nxyz; i++) {
-      if(svalues[i] == 0) cvalues[i] = cout;
-      else if(svalues[i] == 1) cvalues[i] = cin;
-      else error->one(FLERR,"bad svalues");
+    for(int icell = 0; icell < nglocal; icell++) {
+      for(int ic = 0; ic < ncorner; ic++) {
+        if(svalues[icell][ic] == 0) cvalues[icell][ic] = cout;
+        else if(svalues[icell][ic] == 1) cvalues[icell][ic] = cin;
+        else error->one(FLERR,"bad svalues");
+      } // end corners
     }// end "for" for grid cells
   }
 }
@@ -907,7 +1158,8 @@ int CreateISurf::corner_hit2d(double *p1, double *p2,
     p2p[1] = p2[1] + dy[i];
 
     h = Geometry::
-      line_line_intersect(p1p,p2p,line->p1,line->p2,line->norm,d3dum,tparam,tside);
+      line_line_intersect(p1p,p2p,line->p1,line->p2,
+      line->norm,d3dum,tparam,tside);
     if(h) {
       if(tside == 1 || tside == 2 || tside == 5) {
         //side = 2;
@@ -1066,10 +1318,11 @@ int CreateISurf::get_cxyz(int *ic, double *lc)
 int CreateISurf::get_cell(int icx, int icy, int icz)
 {
   int icell;
-  if(domain->dimension == 2) icell = icx + icy*nxyz[0];
+  if(dim == 2) icell = icx + icy*nxyz[0];
   else icell = icx + icy*nxyz[0] + icz*nxyz[0]*nxyz[1];
 
-  if(icell >= nxyz[0]*nxyz[1]*nxyz[2] || icell < 0) error->one(FLERR,"bad cell from int");
+  if(icell >= nxyz[0]*nxyz[1]*nxyz[2] || icell < 0)
+    error->one(FLERR,"bad cell from int");
 
   return icell;
 }
@@ -1081,7 +1334,7 @@ int CreateISurf::get_cell(int icx, int icy, int icz)
 int CreateISurf::get_corner(int icx, int icy, int icz)
 {
   int icell;
-  if(domain->dimension == 2) icell = icx + icy*(nxyz[0]+1);
+  if(dim == 2) icell = icx + icy*(nxyz[0]+1);
   else icell = icx + icy*(nxyz[0]+1) + icz*(nxyz[0]+1)*(nxyz[1]+1);
 
   if(icell >= Nxyz || icell < 0) {
@@ -1117,7 +1370,7 @@ int CreateISurf::get_corner(double dcx, double dcy, double dcz)
   }
 
   int icell;
-  if(domain->dimension == 2) icell = ic[0] + ic[1]*(nxyz[0]+1);
+  if(dim == 2) icell = ic[0] + ic[1]*(nxyz[0]+1);
   else icell = ic[0] + ic[1]*(nxyz[0]+1) + ic[2]*(nxyz[0]+1)*(nxyz[1]+1);
 
   if(icell >= Nxyz || icell < 0) {
@@ -1158,10 +1411,10 @@ void CreateISurf::remove_old()
   int nsurf = surf->nown;
 
   int nbytes;
-  if (domain->dimension == 2) nbytes = sizeof(Surf::Line);
+  if (dim == 2) nbytes = sizeof(Surf::Line);
   else nbytes = sizeof(Surf::Tri);
 
-  if (domain->dimension == 2) {
+  if (dim == 2) {
     llines = (Surf::Line *) memory->smalloc(nsurf*nbytes,"createisurf:lines");
     memcpy(llines,surf->mylines,nsurf*nbytes);
   } else {
@@ -1178,7 +1431,7 @@ void CreateISurf::remove_old()
 
   // check that remaining surfs are still watertight
 
-  if (domain->dimension == 2) surf->check_watertight_2d();
+  if (dim == 2) surf->check_watertight_2d();
   else surf->check_watertight_3d();
 
   MPI_Barrier(world);
@@ -1194,7 +1447,6 @@ void CreateISurf::remove_old()
 
   if (particle->exist && grid->nsplitlocal) {
     Grid::ChildCell *cells = grid->cells;
-    int nglocal = grid->nlocal;
     for (int icell = 0; icell < nglocal; icell++)
       if (cells[icell].nsplit > 1)
         grid->combine_split_cell_particles(icell,1);
@@ -1207,7 +1459,6 @@ void CreateISurf::remove_old()
 
   if (particle->exist && grid->nsplitlocal) {
     Grid::ChildCell *cells = grid->cells;
-    int nglocal = grid->nlocal;
     for (int icell = 0; icell < nglocal; icell++)
       if (cells[icell].nsplit > 1)
         grid->assign_split_cell_particles(icell);

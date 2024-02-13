@@ -36,17 +36,22 @@ class CreateISurf : protected Pointers {
 
  protected:
   int me,nprocs;
+  int dim;
+  int nglocal;
 
   // For generating implicit surfaces
   int ggroup;               // group id for grid cells
+  int groupbit;
+  int ncorner;              // number of corners
+  int nadj;                 // number of adjacent neighbors
   double thresh;            // lower threshold for corner values
   double corner[3];         // corners of grid group
   double xyzsize[3];        // size of lowest level cell (must be uniform grid)
   int nxyz[3], Nxyz;        // dimensions of grid
-  double *cvalues;          // array of corner point values
-  double *mvalues;          // minimum intersection value
-  int *svalues;             // marks corners as in or out
-  double **ivalues;         // point of intersection between corner points
+  double **cvalues;          // array of corner point values
+  double **mvalues;          // minimum intersection value
+  int **svalues;             // marks corners as in or out
+  double ***ivalues;         // point of intersection between corner points
 
   double **icvalues;        // corner values for Fix Ablate
   int *tvalues;             // vector of per grid cell surf types
@@ -60,9 +65,43 @@ class CreateISurf : protected Pointers {
   double cin, cout;         // in and out corner values
   class FixAblate *ablate;  // ablate fix
 
+  // for communicating
+  int **ixyz;             // ix,iy,iz indices (1 to Nxyz) of my cells
+                          // in 2d/3d ablate grid (iz = 1 for 2d)
+
+  int **sghost;
+  double **cghost;
+  double ***ighost;  // ditto for my ghost cells communicated to me
+  int maxgrid;            // max size of per-cell vectors/arrays
+  int maxghost;           // max size of cdelta_ghost
+
+  int *proclist;
+  cellint *locallist;
+  int *numsend;
+  int maxsend;
+
+  double *sbuf;
+  int maxsbuf;
+
+  union ubuf {
+    double d;
+    int64_t i;
+    uint64_t u;
+    ubuf(double arg) : d(arg) {}
+    ubuf(int64_t arg) : i(arg) {}
+    ubuf(int arg) : i(arg) {}
+    ubuf(uint64_t arg) : u(arg) {}
+    ubuf(uint32_t arg) : u(arg) {}
+  };
+
   // functions to set corner values
 
   void set_corners();
+  // send/recv values between neighborind cells (similar to one in fix_ablate)
+  void sync(int);
+  void comm_neigh_corners(int);
+  void grow_send();
+  int walk_to_neigh(int, int, int, int);
 
   // sets corner values whose cells have surfaces
   void surface_edge2d();
@@ -70,7 +109,8 @@ class CreateISurf : protected Pointers {
   // marks corners which have no surfaces
   void set_inout();
   // find remaining corners
-  void cleanup();
+  void find_side_2d();
+  void set_cvalues();
   // detects intersection between surfaces and cell edges
   int corner_hit2d(double*, double*, Surf::Line*, double&, int&);
   int corner_hit3d(double*, double*, Surf::Tri*, double&, int&);
