@@ -9,15 +9,18 @@ boundary				p p p
 
 #variable R equal 1.5
 #variable L equal ${R}*2.0
-variable L equal 0.85
-variable Nx equal 5
-variable Ny equal 5
+variable L equal 1.00
+variable Nx equal 100
+variable Ny equal 100
 create_box			-${L} ${L} -${L} ${L} -0.5 0.5
 create_grid			${Nx} ${Ny} 1 
 balance_grid		rcb cell
 
+variable dx equal 2.0*${L}/${Nx}
+variable ctoff equal ${dx}*2.0
 global					nrho 1.0 fnum 0.001
 global surfs explicit/distributed
+#global gridcut 0.04
 
 species					air.species N2
 mixture					air N2 vstream 0.0 0 0 
@@ -26,21 +29,19 @@ read_surf       data.circle2d invert
 surf_collide		1 diffuse 300.0 0.0
 surf_modify			all collide 1
 
-fix							fablate ablate all 100 0.2 random 2
-create_isurf     all fablate 39.5 inout
-
+#fix							fablate ablate all 100 0.2 random 2
+#create_isurf     all fablate 39.5 inout
 #adapt_grid      all refine nsurf all 2 iterate 5
 
 create_particles    air n 0 twopass
-
 collide					vss air air.vss
 
 timestep				0.001
 
-#dump 1 image all 10000 square2di.* type type surf one 0.01 particle yes pdiam 0.02 #zoom 2
+dump 1 image all 10000 square2di.* type type surf one 0.01 particle yes pdiam 0.02 zoom 2
 #dump_modify 1 scolor * gray
 
 stats						5
 stats_style			step cpu np nattempt ncoll nscoll nscheck
-run							1
+run							0
 

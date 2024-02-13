@@ -109,7 +109,8 @@ class CreateISurf : protected Pointers {
   // marks corners which have no surfaces
   void set_inout();
   // find remaining corners
-  void find_side_2d();
+  int find_side_2d();
+  int find_side_3d();
   void set_cvalues();
   // detects intersection between surfaces and cell edges
   int corner_hit2d(double*, double*, Surf::Line*, double&, int&);
