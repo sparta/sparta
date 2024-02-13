@@ -892,7 +892,7 @@ int AdaptGrid::perform_refine()
 
 void AdaptGrid::candidates_coarsen()
 {
-  int m,n,proc,level,nxyz,nchild;
+  int m,n,level,nxyz,nchild;
   cellint parentID;
   double lo[3],hi[3];
 
@@ -1301,7 +1301,7 @@ void AdaptGrid::coarsen_random()
 
 void AdaptGrid::particle_surf_comm()
 {
-  int j,m,plevel,ihalf,jhalf,khalf,ichild,nchild,owner;
+  int m,plevel,ihalf,jhalf,khalf,ichild,nchild,owner;
   int icell,jcell,np,nsplit;
   cellint parentID;
   int *csubs;
@@ -1492,8 +1492,8 @@ void AdaptGrid::particle_surf_comm()
 
 int AdaptGrid::perform_coarsen()
 {
-  int i,m,icell,nchild,newcell,mask;
-  int plevel,nsplit,jcell,ip;
+  int i,nchild,newcell,mask;
+  int plevel,nsplit,jcell;
   cellint parentID;
   double plo[3],phi[3];
   int *csubs;

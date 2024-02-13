@@ -25,8 +25,6 @@ enum{INT,DOUBLE};                               // several files
 
 // per grid cell custom attributes
 
-
-
 /* ----------------------------------------------------------------------
    add a custom attribute with name
    assumes name does not already exist, else error

@@ -37,8 +37,8 @@ class Domain : protected Pointers {
 
   int surfreactany;                 // 1 if any boundary has surf reactions
 
-  int copy,copymode;            // 1 if copy of class (prevents deallocation of
-                                //  base class when child copy is destroyed)
+  int copy,uncopy,copymode;         // used by Kokkos, prevent deallocation of
+                                    //  base class when child copy is destroyed
 
   int nregion;                      // # of defined Regions
   int maxregion;                    // max # regions can hold

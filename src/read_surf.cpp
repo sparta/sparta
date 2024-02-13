@@ -937,7 +937,6 @@ void ReadSurf::read_lines()
       error->all(FLERR,"Incorrect line format in surf file");
 
     // if Points section in file, each read line has indices into it
-    // augment line IDs by previously read surfaces
 
     int i,ic,iv,icvalue;
 
@@ -986,7 +985,6 @@ void ReadSurf::read_lines()
       }
 
     // if no Points section, each read line has point coords
-    // augment line IDs by previously read surfaces
 
     } else {
       for (int i = 0; i < nchunk; i++) {
@@ -1047,7 +1045,7 @@ void ReadSurf::read_lines()
 
 void ReadSurf::read_tris()
 {
-  int i,m,nchunk,type,p1,p2,p3,ipt;
+  int i,m,nchunk,type,p1,p2,p3;
   surfint id;
   double x1[3],x2[3],x3[3];
   char *next,*buf;
@@ -1091,9 +1089,8 @@ void ReadSurf::read_tris()
       error->all(FLERR,"Incorrect line format in surf file");
 
     // if Points section in file, each read line has indices into it
-    // augment tri IDs by previously read surfaces
 
-    int i,ic,iv,icvalue;
+    int ic,iv,icvalue;
 
     if (npoint_file) {
       for (int i = 0; i < nchunk; i++) {
@@ -1142,7 +1139,6 @@ void ReadSurf::read_tris()
       }
 
     // if no Points section, each read line has point coords
-    // augment tri IDs by previously read surfaces
 
     } else {
       for (int i = 0; i < nchunk; i++) {
@@ -1599,7 +1595,6 @@ void ReadSurf::clip2d()
 {
   int i,dim,side,flag1,flag2;
   double value,param;
-  double x[3];
   double *p1,*p2,*inpt,*outpt;
 
   int *discard;
@@ -1975,10 +1970,9 @@ void ReadSurf::clip3d()
 
 void ReadSurf::check_bounds()
 {
-  int n;
   surfint id;
 
-  bigint smin = nsurf;
+  bigint smin = nsurf_all;
   bigint smax = 0;
 
   if (dim == 2) {

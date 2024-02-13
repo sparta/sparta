@@ -332,7 +332,6 @@ void FixBalance::end_of_step()
 double FixBalance::imbalance_factor(double &maxcost)
 {
   double mycost,totalcost;
-  double mycost_proc_weighted,maxcost_proc_weighted,nprocs_weighted;
 
   if (bstyle == BISECTION && rcbwt == TIME) {
     timer_cost();

@@ -44,11 +44,11 @@ FixSurfTempKokkos::~FixSurfTempKokkos()
 void FixSurfTempKokkos::init()
 {
   SurfKokkos* surf_kk = (SurfKokkos*) surf;
-  surf_kk->sync(Host,SURF_CUSTOM_MASK);
+  surf_kk->sync(Host,CUSTOM_MASK);
 
   FixSurfTemp::init();
 
-  surf_kk->modify(Host,SURF_CUSTOM_MASK);
+  surf_kk->modify(Host,CUSTOM_MASK);
 }
 
 /* ----------------------------------------------------------------------
@@ -59,9 +59,9 @@ void FixSurfTempKokkos::init()
 void FixSurfTempKokkos::end_of_step()
 {
   SurfKokkos* surf_kk = (SurfKokkos*) surf;
-  surf_kk->sync(Host,LINE_MASK|TRI_MASK|SURF_CUSTOM_MASK);
+  surf_kk->sync(Host,LINE_MASK|TRI_MASK|CUSTOM_MASK);
 
   FixSurfTemp::end_of_step();
 
-  surf_kk->modify(Host,SURF_CUSTOM_MASK);
+  surf_kk->modify(Host,CUSTOM_MASK);
 }

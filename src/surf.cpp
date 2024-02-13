@@ -647,17 +647,12 @@ void Surf::add_surfs(int replace, int ncount,
       cvalues[i][0] = ubuf(((surfint) ubuf(cvalues[i][0]).i) + nsurf_old).d;
 
   // redistribute surfs to correct layout in Surf data structs
-  // also checks that new surfs have IDs contiguous from 1 to N
 
   redistribute_surfs(ncount,newlines,newtris,nc,index_custom,cvalues,
 		     nsurf_new,nsurf_old);
 
   // check if new surf IDs are contiguous from 1 to Nsurf_new
   // if any ID = 0 in rendezvous output, new surf IDs were NOT contiguous
-
-  int surfperproc = nsurf_new / nprocs;
-  int ncontig = surfperproc;
-  if (me == nprocs-1) ncontig = nsurf_new - (nprocs-1)*surfperproc;
 
   int flag = 0;
   if (domain->dimension == 2) {
@@ -909,7 +904,6 @@ void Surf::compute_line_normal(int old)
 
 void Surf::compute_tri_normal(int old)
 {
-  int p1,p2,p3;
   double delta12[3],delta13[3];
 
   int n;

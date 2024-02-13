@@ -185,7 +185,7 @@ class Surf : protected Pointers {
   void global(char *);
   void modify_params(int, char **);
   void init();
-  void clear_explicit();
+  virtual void clear_explicit();
   void clear_implicit();
   void remove_ghosts();
 

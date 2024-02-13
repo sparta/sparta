@@ -31,10 +31,10 @@ class SurfCollide : protected Pointers {
   int vector_flag;          // 0/1 if compute_vector() function exists
   int size_vector;          // length of global vector
   int kokkosable;           // 1 if Kokkos version
-  int copy,copymode;        // 1 if copy of class, used by Kokkos
-
+  int copy,uncopy,copymode; // used by Kokkos, prevent deallocation of
+                            //  base class when child copy is destroyed
   SurfCollide(class SPARTA *, int, char **);
-  SurfCollide(class SPARTA *sparta) : Pointers(sparta) {}
+  SurfCollide(class SPARTA *sparta) : Pointers(sparta) {} // needed for Kokkos
   virtual ~SurfCollide();
   virtual void init();
   virtual Particle::OnePart *collide(Particle::OnePart *&, double &,

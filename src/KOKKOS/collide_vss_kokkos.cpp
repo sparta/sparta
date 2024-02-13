@@ -812,7 +812,7 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
     double extra_factor = 1.0;
     if (sparta->kokkos->react_retry_flag)
       extra_factor = sparta->kokkos->react_extra;
- 
+
     maxcellcount = particle_kk->get_maxcellcount();
 
     auto maxelectron_extra = maxcellcount*extra_factor;

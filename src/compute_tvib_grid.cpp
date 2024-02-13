@@ -363,7 +363,7 @@ int ComputeTvibGrid::query_tally_grid(int index, double **&array, int *&cols)
    if norm = 0.0, set result to 0.0 directly so do not divide by 0.0
 ------------------------------------------------------------------------- */
 
-void ComputeTvibGrid::post_process_grid(int index, int nsample,
+void ComputeTvibGrid::post_process_grid(int index, int /*nsample*/,
                                         double **etally, int *emap,
                                         double *vec, int nstride)
 {
@@ -374,7 +374,6 @@ void ComputeTvibGrid::post_process_grid(int index, int nsample,
   int k = 0;
 
   if (!etally) {
-    nsample = 1;
     etally = tally;
     emap = map[index];
     vec = vector_grid;
@@ -449,8 +448,6 @@ void ComputeTvibGrid::post_process_grid(int index, int nsample,
 
   } else if (modeflag == 1) {
     int nsp = nmap[index] / maxmode / 2;
-    int **vibmode =
-      particle->eiarray[particle->ewhich[index_vibmode]];
 
     for (int icell = lo; icell < hi; icell++) {
       evib = emap[0];
@@ -507,8 +504,6 @@ void ComputeTvibGrid::post_process_grid(int index, int nsample,
   } else if (modeflag == 2) {
     int nsp = nmap[index] / maxmode / 2;
     imode = index % maxmode;
-    int **vibmode =
-      particle->eiarray[particle->ewhich[index_vibmode]];
 
     for (int icell = lo; icell < hi; icell++) {
       evib = emap[2*imode];

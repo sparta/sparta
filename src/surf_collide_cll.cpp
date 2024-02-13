@@ -289,9 +289,8 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
 
   if (pflag) {
     double tan2 = MathExtra::dot3(v,tangent2);
-    double theta_i, phi_i, psi_i, theta_f, phi_f, psi_f, cos_beta;
+    double phi_i, psi_i, theta_f, phi_f, psi_f, cos_beta;
 
-    theta_i = acos(dot/sqrt(MathExtra::lensq3(v)));
     psi_i = acos(dot*dot/MathExtra::lensq3(v));
     phi_i = atan2(tan2,tan1);
 

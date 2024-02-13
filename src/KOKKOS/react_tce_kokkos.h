@@ -68,7 +68,7 @@ double bird_dEvib(const int& nmode, const double& Tvib, const double vibtemp[]) 
 
   for (int i = 0; i < nmode; i++) {
     const double vti = vibtemp[i];
-    const double vti2 = vti * vti; 
+    const double vti2 = vti * vti;
     const double Tvib2 = Tvib * Tvib;
     const double k1 = vti/Tvib;
     const double ek1 = exp(k1);

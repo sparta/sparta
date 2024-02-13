@@ -56,8 +56,8 @@ class Grid : protected Pointers {
   double tmap,tsplit;   // timing breakdowns of both grid2surf() algs
   double tcomm1,tcomm2,tcomm3,tcomm4;
 
-  int copy,copymode;    // 1 if copy of class (prevents deallocation of
-                        //  base class when child copy is destroyed)
+  int copy,uncopy,copymode; // used by Kokkos, prevent deallocation of
+                            //  base class when child copy is destroyed
 
   // custom vectors/arrays for per-grid data
   // ncustom > 0 if there is any custom per-grid datta

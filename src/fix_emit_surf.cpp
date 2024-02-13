@@ -260,8 +260,6 @@ void FixEmitSurf::create_task(int icell)
   // loop over surfs in cell
   // use Cut2d/Cut3d to find overlap area and geoemtry of overlap
 
-  int ntaskorig = ntask;
-
   double *lo = cells[icell].lo;
   double *hi = cells[icell].hi;
   surfint *csurfs = cells[icell].csurfs;

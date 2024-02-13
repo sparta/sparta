@@ -1721,7 +1721,7 @@ double Variable::evaluate(char *str, Tree **tree)
         // nbracket = # of bracket pairs
         // index1,index2 = int inside each bracket pair
 
-        int nbracket,index1,index2;
+        int nbracket,index1;
         if (str[i] != '[') nbracket = 0;
         else {
           nbracket = 1;
@@ -1731,7 +1731,6 @@ double Variable::evaluate(char *str, Tree **tree)
           if (str[i] == '[') {
             nbracket = 2;
             ptr = &str[i];
-            index2 = int_between_brackets(ptr,1);
             i = ptr-str+1;
           }
         }

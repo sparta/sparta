@@ -35,7 +35,6 @@ SurfCollideStyle(diffuse/kk,SurfCollideDiffuseKokkos)
 namespace SPARTA_NS {
 
 enum{NONE,DISCRETE,SMOOTH};            // several files
-enum{NUMERIC,VARIABLE,CUSTOM};
 
 class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
  public:
@@ -55,7 +54,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
  private:
   double boltz;
   int rotstyle, vibstyle;
-  int dimension;  
+  int dimension;
 
 #ifndef SPARTA_KOKKOS_EXACT
   Kokkos::Random_XorShift64_Pool<DeviceType> rand_pool;
@@ -82,7 +81,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
   HAT::t_int_scalar h_nreact_one;
 
   t_particle_1d d_particles;
-  t_species_1d d_species; 
+  t_species_1d d_species;
 
   int ambi_flag,vibmode_flag;
   FixAmbipolarKokkos* afix_kk;
@@ -119,7 +118,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
       d_nsingle()++;
     else
       Kokkos::atomic_increment(&d_nsingle());
- 
+
     // if surface chemistry defined, attempt reaction
     // reaction = 1 to N for which reaction took place, 0 for none
     // velreset = 1 if reaction reset post-collision velocity, else 0
@@ -155,7 +154,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
 
     double tsurf_local = tsurf;
     if (persurf_temperature) {
-      tsurf_local = d_t_persurf[isurf]; ////////
+      tsurf_local = d_t_persurf[isurf];
       if (tsurf_local <= 0.0) Kokkos::abort("Surf_collide tsurf <= 0.0");
     }
 
