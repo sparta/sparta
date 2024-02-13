@@ -59,7 +59,7 @@ cmake -C /path/to/<NAME>.cmake /path/to/sparta/cmake
 * BUILD_MPI
   * Whether to enable the SPARTA MPI TPL.
 * FFT
-  * Which SPARTA FFT TPL to enable: FFTW2, FFTW3, or MKL.
+  * Which SPARTA FFT TPL to enable: FFTW3, or MKL.
 
 Note: To point to a TPL installation, export <TPL>_ROOT=/path/to/tpl/install
 before running cmake.

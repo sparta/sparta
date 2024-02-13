@@ -216,8 +216,8 @@ void ComputeISurfGrid::clear()
 ------------------------------------------------------------------------- */
 
 void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
-                                   Particle::OnePart *iorig,
-                                   Particle::OnePart *ip, Particle::OnePart *jp)
+                                  Particle::OnePart *iorig,
+                                  Particle::OnePart *ip, Particle::OnePart *jp)
 {
   // skip if species not in mixture group
 

@@ -94,7 +94,7 @@ void Grid::collate_vector_implicit(int n, cellint *ids,
 
   int which = 0;
   if (!clumped) which = 1;
-  
+
   char *buf;
   int nout = comm->rendezvous(which,nsend,(char *) in_rvous,
                               2*sizeof(double),
@@ -113,9 +113,9 @@ void Grid::collate_vector_implicit(int n, cellint *ids,
     icell = (*hash)[cellID];
     out[icell] += out_rvous[m++];
   }
-  
+
   // clean-up
-  
+
   memory->destroy(out_rvous);
 }
 
@@ -130,11 +130,11 @@ void Grid::collate_vector_implicit(int n, cellint *ids,
    return out = summed values for my owned cells, including ghost contributions
      will only be values for unsplit and split cells, not sub-cells
    communication of ghost tallies done via rendezvous with irregular option
-   called from compute isurf/grid, compute react/isurf/grid, 
+   called from compute isurf/grid, compute react/isurf/grid,
      fix ave/grid, surf react/implicit
 ------------------------------------------------------------------------- */
 
-void Grid::collate_array_implicit(int nrow, int ncol, cellint *ids, 
+void Grid::collate_array_implicit(int nrow, int ncol, cellint *ids,
                                   double **in, double **out)
 {
   int i,j,icell;
@@ -196,7 +196,7 @@ void Grid::collate_array_implicit(int nrow, int ncol, cellint *ids,
 
   int which = 0;
   if (!clumped) which = 1;
-  
+
   char *buf;
   int nout = comm->rendezvous(which,nsend,(char *) in_rvous,
                               (ncol+1)*sizeof(double),
@@ -216,9 +216,9 @@ void Grid::collate_array_implicit(int nrow, int ncol, cellint *ids,
     for (j = 0; j < ncol; j++)
       out[icell][j] += out_rvous[m++];
   }
-  
+
   // clean-up
-  
+
   memory->destroy(out_rvous);
 }
 
@@ -240,22 +240,22 @@ void Grid::collate_array_implicit(int nrow, int ncol, cellint *ids,
 void Grid::owned_to_ghost_array(int nrequest, int ncol, cellint *ghostIDs,
                                 double **in, double **out)
 {
-  int i,j,icell,itally;
+  int i,j,icell;
   cellint cellID;
 
   int me = comm->me;
-  
+
   // if grid cell hash is not current, create it
 
   if (!hashfilled) rehash();
-  
+
   // zero output values for ghost cells
 
   if (out) memset(&out[nlocal][0],0,nghost*ncol*sizeof(double));
-  
+
   // send ghost cell IDs to owning procs as request for data
   // datum = sending proc, ghost cell ID
-  
+
   int *proclist;
   memory->create(proclist,nrequest,"grid:proclist");
   double *in_rvous;
@@ -283,7 +283,7 @@ void Grid::owned_to_ghost_array(int nrequest, int ncol, cellint *ghostIDs,
 
   ncol_rvous = ncol;
   owned_data_rvous = in;
-  
+
   char *buf;
   int nout = comm->rendezvous(which,nsend,(char *) in_rvous,
                               2*sizeof(double),
@@ -303,9 +303,9 @@ void Grid::owned_to_ghost_array(int nrequest, int ncol, cellint *ghostIDs,
     for (j = 0; j < ncol; j++)
       out[icell][j] += out_rvous[m++];
   }
-  
+
   // clean-up
-  
+
   memory->destroy(out_rvous);
 }
 
@@ -322,13 +322,13 @@ int Grid::rendezvous_owned_to_ghost(int n, char *inbuf,
 {
   int i,j,k,m,proc;
   cellint cellID;
-  
+
   Grid *gptr = (Grid *) ptr;
   Memory *memory = gptr->memory;
   MyHash *hash = gptr->hash;
   int ncol = gptr->ncol_rvous;
   double **owned_data = gptr->owned_data_rvous;
-  
+
   // allocate proclist & outbuf based on size of inbuf
 
   memory->create(proclist,n,"grid:proclist");
@@ -337,15 +337,15 @@ int Grid::rendezvous_owned_to_ghost(int n, char *inbuf,
 
   // loop over (proc,cellID) datums in inbuf
   // copy data from corresponding owned cell ID into out
-  
+
   double *in = (double *) inbuf;
-  
+
   m = k = 0;
   for (i = 0; i < n; i++) {
     proc = (int) ubuf(in[m++]).i;
     cellID = (cellint) ubuf(in[m++]).u;
     int icell = (*hash)[cellID];
-    
+
     proclist[i] = proc;
     out[k++] = ubuf(cellID).d;
     for (j = 0; j < ncol; j++)

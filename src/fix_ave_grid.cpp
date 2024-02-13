@@ -732,7 +732,7 @@ void FixAveGrid::end_of_step()
       grid->collate_array_implicit(ntallyID,nvalues,(cellint *) tally2surf,
                                    array_tally,array_grid);
     }
-    
+
     // divide results by nsample
 
     Grid::ChildCell *cells = grid->cells;

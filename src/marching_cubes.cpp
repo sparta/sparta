@@ -71,7 +71,7 @@ MarchingCubes::MarchingCubes(SPARTA *sparta, int ggroup_caller,
 
 void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
 {
-  int i,j,ipt,isurf,nsurf,icase,which;
+  int i,ipt,isurf,nsurf,icase,which;
   surfint surfID;
   surfint *ptr;
 
@@ -493,8 +493,7 @@ void MarchingCubes::cleanup()
   int i,j,k,m,icell,iface,nsurf,idim,nflag,inwardnorm;
   int ntri_other,othercell,otherface,otherproc,otherlocal,othernsurf;
   surfint *oldcsurfs;
-  surfint *ptr,*csurfs_other;
-  cellint cellID;
+  surfint *ptr;
   double *lo,*hi;
   double *norm;
 
@@ -502,10 +501,6 @@ void MarchingCubes::cleanup()
   Grid::ChildCell *cells = grid->cells;
   MyPage<surfint> *csurfs = grid->csurfs;
   int nglocal = grid->nlocal;
-
-  Surf::Tri *tlist = NULL;
-  int nlist = 0;
-  int maxlist = 0;
 
   // DEBUG
 
@@ -855,7 +850,6 @@ void MarchingCubes::cleanup()
 
   tris = surf->tris;
   int nslocal = surf->nlocal;
-  cellint celllID;
   for (i = 0; i < ndelete; i++) {
     m = dellist[i];
     if (m != nslocal-1) memcpy(&tris[m],&tris[nslocal-1],sizeof(Surf::Tri));

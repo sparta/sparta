@@ -788,7 +788,7 @@ void Cut3d::clip_tris()
   int i,n,dim,lohi,ivert,iedge,jedge,idir,jdir,nedge;
   int p1flag,p2flag;
   double value;
-  double *p1,*p2,*p3;
+  double *p1,*p2;
   Edge *edge,*newedge;
 
   // loop over all 6 faces of cell
@@ -1219,7 +1219,7 @@ int Cut3d::edge2face()
 {
   int n,iface,nface,ivert;
   int faces[6];
-  double dot0,dot1;
+  double dot0;
   double norm_inward[3];
   double *trinorm;
   Edge *edge;

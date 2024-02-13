@@ -26,6 +26,7 @@ class SurfKokkos : public Surf {
  public:
   SurfKokkos(class SPARTA *);
   ~SurfKokkos() override;
+  void clear_explicit() override;
   void wrap_kokkos();
   void grow(int) override;
   void grow_own(int) override;

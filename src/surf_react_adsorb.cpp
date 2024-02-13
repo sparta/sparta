@@ -321,11 +321,18 @@ SurfReactAdsorb::~SurfReactAdsorb()
   // in case multiple surf react/adsorb instances are used
 
   if (mode == SURF && first_owner) {
+    total_state_index = surf->find_custom((char *) "nstick_total");
     surf->remove_custom(total_state_index);
+    species_state_index = surf->find_custom((char *) "nstick_species");
     surf->remove_custom(species_state_index);
+    area_index = surf->find_custom((char *) "area");
     surf->remove_custom(area_index);
+    weight_index = surf->find_custom((char *) "weight");
     surf->remove_custom(weight_index);
-    if (psflag) surf->remove_custom(tau_index);
+    if (psflag) {
+      tau_index = surf->find_custom((char *) "tau");
+      surf->remove_custom(tau_index);
+    }
   }
 
   // delete local face and per-surf data
@@ -534,6 +541,9 @@ void SurfReactAdsorb::init()
   int nslocal = surf->nlocal;
   int nsown = surf->nown;
 
+  area = surf->edvec[surf->ewhich[area_index]];
+  weight = surf->edvec[surf->ewhich[weight_index]];
+
   int isr;
 
   if (!distributed) {
@@ -588,11 +598,11 @@ void SurfReactAdsorb::init()
     surf->spread_custom(weight_index);
     if (psflag) surf->spread_custom(tau_index);
 
-    total_state = surf->eivec_local[total_state_index];
-    species_state = surf->eiarray_local[species_state_index];
-    area = surf->edvec_local[area_index];
-    weight = surf->edvec_local[weight_index];
-    if (psflag) tau = surf->edarray_local[tau_index];
+    total_state = surf->eivec_local[surf->ewhich[total_state_index]];
+    species_state = surf->eiarray_local[surf->ewhich[species_state_index]];
+    area = surf->edvec_local[surf->ewhich[area_index]];
+    weight = surf->edvec_local[surf->ewhich[weight_index]];
+    if (psflag) tau = surf->edarray_local[surf->ewhich[tau_index]];
   }
 
   // for distributed: setup list of unique surfs
@@ -1217,11 +1227,11 @@ void SurfReactAdsorb::grid_changed()
   surf->spread_custom(weight_index);
   if (psflag) surf->spread_custom(tau_index);
 
-  total_state = surf->eivec_local[total_state_index];
-  species_state = surf->eiarray_local[species_state_index];
-  area = surf->edvec_local[area_index];
-  weight = surf->edvec_local[weight_index];
-  if (psflag) tau = surf->edarray_local[tau_index];
+  total_state = surf->eivec_local[surf->ewhich[total_state_index]];
+  species_state = surf->eiarray_local[surf->ewhich[species_state_index]];
+  area = surf->edvec_local[surf->ewhich[area_index]];
+  weight = surf->edvec_local[surf->ewhich[weight_index]];
+  if (psflag) tau = surf->edarray_local[surf->ewhich[tau_index]];
 
   // reset surf->unique and uniqueID vectors
 
@@ -1398,7 +1408,7 @@ void SurfReactAdsorb::update_state_face()
 
 void SurfReactAdsorb::update_state_surf()
 {
-  int i,j,m,isr;
+  int i,j,isr;
 
   // use species_delta for my nlocal+nghost surfs to create:
   //   ntally = # of surfs I marked
@@ -1416,6 +1426,7 @@ void SurfReactAdsorb::update_state_surf()
   if (domain->dimension == 2) {
     for (int i = 0; i < nall; i++) {
       if (!mark[i]) continue;
+
       mark[i] = 0;
       isr = lines[i].isr;
       if (surf->sr[isr] != this) continue;
@@ -1464,10 +1475,14 @@ void SurfReactAdsorb::update_state_surf()
 
   surf->collate_array(ntally,nspecies_surf,tally2surf,incollate,outcollate);
 
-  // update custome species_state array with outcollate values
+  // update custom species_state array with outcollate values
   //   outcollate = summed deltas to species_state from all contributing procs
   // insure no species counts < 0
-  // set total_stat = sum of species_state over species
+  // set total_state = sum of species_state over species
+  // total_state and species_state must be for owned, not local values
+
+  total_state = surf->eivec[surf->ewhich[total_state_index]];
+  species_state = surf->eiarray[surf->ewhich[species_state_index]];
 
   int nsown = surf->nown;
 
@@ -1481,9 +1496,13 @@ void SurfReactAdsorb::update_state_surf()
   }
 
   // spread new total and species state to all nlocal+nghost surfs
+  // reset total_state and species_state to local values
 
   surf->spread_custom(total_state_index);
   surf->spread_custom(species_state_index);
+
+  total_state = surf->eivec_local[surf->ewhich[total_state_index]];
+  species_state = surf->eiarray_local[surf->ewhich[species_state_index]];
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1588,7 +1607,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
 {
   int n,n1,n2,eof;
   char line1[MAXLINE],line2[MAXLINE];
-  char copy1[MAXLINE],copy2[MAXLINE],copy3[MAXLINE],copy4[MAXLINE];
+  char copy1[MAXLINE],copy2[MAXLINE];
   char *word;
   OneReaction_GS *r;
 

@@ -661,7 +661,7 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
     // END of pstart/pstop loop advecting all particles
 
     nmigrate = h_nmigrate();
-    
+
     particle->nlocal = h_nlocal();
 
     int error_flag;

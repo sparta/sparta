@@ -65,7 +65,7 @@ ParticleKokkos::ParticleKokkos(SPARTA *sparta) : Particle(sparta)
 
 ParticleKokkos::~ParticleKokkos()
 {
-  if (copy || copymode) return;
+  if (!uncopy && (copy || copymode)) return;
 
   particles = NULL;
   species = NULL;
@@ -85,9 +85,17 @@ ParticleKokkos::~ParticleKokkos()
   for (int i = 0; i < k_edarray.extent(0); i++)
     k_edarray.h_view(i).k_view = decltype(k_edarray.h_view(i).k_view)();
 
+  eivec = NULL;
+  eiarray = NULL;
+  edvec = NULL;
+  edarray = NULL;
+
   ewhich = NULL;
   eicol = NULL;
   edcol = NULL;
+
+  ncustom_ivec = ncustom_iarray = 0;
+  ncustom_dvec = ncustom_darray = 0;
 }
 
 #ifndef SPARTA_KOKKOS_EXACT
@@ -254,7 +262,6 @@ void ParticleKokkos::sort_kokkos()
 
     if (resize) {
       Kokkos::deep_copy(d_cellcount,0);
-      int old = maxcellcount;
       maxcellcount = MAX(maxcellcount+MAX(DELTACELLCOUNT,maxcellcount*0.1),resize);
       d_plist = decltype(d_plist)();
       MemKK::realloc_kokkos(grid_kk->d_plist,"particle:plist",ngrid,maxcellcount);

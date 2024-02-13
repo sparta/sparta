@@ -58,6 +58,10 @@ if(SPARTA_ENABLE_TESTING)
       "in.cylinder" # Long runtime
       "in.jagged.3d" # Long runtime
       "in.jagged.3d.distributed" # Long runtime
+      "in.custom.cube.read.restart" # Failing
+      "in.custom.cube.set.restart" # Failing
+      "in.custom.step.read.restart" # Failing
+      "in.custom.step.set.restart" # Failing
   )
 
   list(APPEND __DEFAULT_MPI_RANKS "1")

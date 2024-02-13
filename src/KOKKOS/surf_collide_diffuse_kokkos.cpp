@@ -91,16 +91,19 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta) :
   random_backup = NULL;
   id = NULL;
   style = NULL;
+
+  t_owned = NULL;
+  t_localghost = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
 
 SurfCollideDiffuseKokkos::~SurfCollideDiffuseKokkos()
 {
-  if (copy) return;
+  if (!uncopy) return;
 
-  fix_ambi_kk_copy.uncopy(1);
-  fix_vibmode_kk_copy.uncopy(1);
+  fix_ambi_kk_copy.uncopy();
+  fix_vibmode_kk_copy.uncopy();
 
   for (int i = 0; i < KOKKOS_MAX_SURF_REACT_PER_TYPE; i++) {
     sr_kk_global_copy[i].uncopy();
@@ -194,7 +197,7 @@ void SurfCollideDiffuseKokkos::dynamic()
       t_persurf = t_localghost;
 
       auto h_t_persurf = HAT::t_float_1d(t_persurf,n_localghost);
-      Kokkos::deep_copy(d_t_persurf,h_t_persurf);
+      d_t_persurf = Kokkos::create_mirror_view_and_copy(SPADeviceType(),h_t_persurf);
     }
 
   // CUSTOM mode
@@ -202,9 +205,7 @@ void SurfCollideDiffuseKokkos::dynamic()
   // particle/surf collisions access t_persurf for local+ghost values
 
   } else if (tmode == CUSTOM) {
-
     SurfKokkos* surf_kk = (SurfKokkos*) surf;
-    surf_kk->sync(Device,SURF_CUSTOM_MASK);
     auto h_edvec_local = surf_kk->k_edvec_local.h_view;
 
     // spread owned values to local+ghost values via spread_custom()
@@ -213,6 +214,8 @@ void SurfCollideDiffuseKokkos::dynamic()
     //   surfs are distributed and load balance/adaptation took place
 
     if (surf->estatus[tindex_custom] == 0) surf->spread_custom(tindex_custom);
+
+    h_edvec_local[tindex_custom].k_view.sync_device();
     d_t_persurf = h_edvec_local[tindex_custom].k_view.d_view;
   }
 }

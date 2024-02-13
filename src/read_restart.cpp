@@ -200,7 +200,7 @@ void ReadRestart::command(int narg, char **arg)
     nsplit_file = 0;
     nsub_file = 0;
   }
-  
+
   // setup the grid
 
   if (grid->cellweightflag) grid->weight(-1,NULL);
@@ -239,7 +239,7 @@ void ReadRestart::command(int narg, char **arg)
     error->all(FLERR,"Did not assign all restart split grid cells correctly");
   if (grid->nsub != nsub_file)
     error->all(FLERR,"Did not assign all restart sub grid cells correctly");
-  
+
   bigint btmp = particle->nlocal;
   MPI_Allreduce(&btmp,&particle->nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
@@ -959,7 +959,6 @@ void ReadRestart::read_gp_multi_file_less_procs(char *file)
 void ReadRestart::read_gp_multi_file_more_procs(char *file)
 {
   int tmp,n,flag,procsperfile;
-  long filepos;
 
   int maxbuf = 0;
   char *buf = NULL;
@@ -1076,7 +1075,7 @@ void ReadRestart::read_gp_multi_file_more_procs(char *file)
 
 void ReadRestart::read_gp_multi_file_less_procs_memlimit(char *file)
 {
-  int tmp,n,flag,procsperfile;
+  int tmp,n,flag;
   bigint n_big;
 
   int maxbuf = 0;
@@ -1392,7 +1391,7 @@ void ReadRestart::create_child_cells(int skipflag)
 
   int icell,isplit,index;
   int level,nsplit,mask;
-  cellint id,ichild;
+  cellint id;
   double lo[3],hi[3];
 
   // for skipflag = 0, add all child cells in Grid restart to my Grid::cells
@@ -1414,7 +1413,7 @@ void ReadRestart::create_child_cells(int skipflag)
     level = levels[i];
     nsplit = nsplits[i];
     mask = masks[i];
-    
+
     // unsplit or split cell
     // for skipflag == 1, add only if I own this cell
     // add as child cell to grid->cells
