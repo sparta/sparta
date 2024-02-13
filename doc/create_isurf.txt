@@ -150,22 +150,11 @@ created by the "create_grid"_create_grid.html command. Additionally,
 the explicit surfaces must already be defined by "read_surf" as well
 as the fix ablate by "fix_ablate". A simulation cannot have both
 explicit and implicit surfaces. The grid cannot be adapted if there
-are implicit surfaces. If particles already exist in the simulation, 
-you must insure particles do not end up inside the set of implicit 
-surfaces.
+are implicit surfaces.
 
 :line
 
 Explicit surface must be distributed when first read in by {read_surf}.
-
-:line
-
-The {ave} mode is not currently stable for parallel runs. If a parallel
-run using the {ave} mod is desired, a preliminary input should be used in 
-serial solely for the purpose of writing the implicit surface to a file using
-{write_isurf}. Then the implicit surface file may be passed to a second input
-which calls multiple processors. Adjustments to the algorith will be added in future releases to obviate this workflow.
-
 
 [Related commands:]
 
