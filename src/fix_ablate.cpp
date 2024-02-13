@@ -349,8 +349,8 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   else mc = new MarchingCubes(sparta,igroup,thresh);
 
   // create implicit surfaces
+
   create_surfs(1);
-  MPI_Barrier(world);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -447,7 +447,6 @@ void FixAblate::create_surfs(int outflag)
   surf->nown = surf->nlocal;
   bigint nlocal = surf->nlocal;
   MPI_Allreduce(&nlocal,&surf->nsurf,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  // nown and nlocal agree up to here
 
   // output extent of implicit surfs, some may be tiny
 
@@ -518,7 +517,6 @@ void FixAblate::create_surfs(int outflag)
 
   // watertight check can be done before surfs are mapped to grid cells
 
-  // some freezing here if explicit surface already existed
   if (dim == 2) surf->check_watertight_2d();
   else surf->check_watertight_3d();
 
