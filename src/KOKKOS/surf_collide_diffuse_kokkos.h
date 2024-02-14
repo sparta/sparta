@@ -172,7 +172,6 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
       if (!velreset) diffuse(ip,norm,tsurf_local);
       int i = ip - d_particles.data();
       if (ambi_flag)
-<<<<<<< HEAD
         fix_ambi_kk_copy.obj.update_custom_kokkos(i,tsurf_local,tsurf_local,tsurf_local,tsurf_local,vstream);
       if (vibmode_flag)
         fix_vibmode_kk_copy.obj.update_custom_kokkos(i,tsurf_local,tsurf_local,tsurf_local,tsurf_local,vstream);
