@@ -54,6 +54,13 @@ list(APPEND TARGET_SPARTA_BUILD_TPLS ${TARGET_SPARTA_BUILD_MPI})
 # ################### END PROCESS MPI TPL/PKG ####################
 
 # ################### BEGIN PROCESS PKGS ####################
+if(PKG_KOKKOS)
+  # Sparta's Kokkos package requires dependencies from the PKG_FFT target.
+  set(PKG_FFT
+      ON
+      CACHE STRING "" FORCE)
+endif()
+
 if(FFT AND PKG_FFT)
   message(WARNING "Both FFT: ${FFT} and PKG_FFT: ${PKG_FFT} are selected. "
                   "Defaulting to PKG_FFT.")
