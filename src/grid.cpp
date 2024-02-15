@@ -2447,7 +2447,6 @@ int Grid::check_uniform_group(int igroup, int *nxyz,
   bigint scount = splitcount;
   MPI_Allreduce(&scount,&allscount,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
-  // some inconsistency here if surface file is large (comment out for now)
   if ((bigint) nxyz[0]*nxyz[1]*nxyz[2] != (allbcount-allscount))
     error->all(FLERR,"Read_isurfs grid group is not a contiguous brick");
 

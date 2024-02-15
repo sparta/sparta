@@ -110,7 +110,7 @@ void CreateISurf::command(int narg, char **arg)
 
   // grid group
   ggroup = grid->find_group(arg[0]);
-  if (ggroup < 0) error->all(FLERR,"Read_isurf grid group ID does not exist");
+  if (ggroup < 0) error->all(FLERR,"Create_isurf grid group ID does not exist");
   groupbit = grid->bitmask[ggroup];
 
   // ablate fix
@@ -122,7 +122,7 @@ void CreateISurf::command(int narg, char **arg)
     error->all(FLERR,"Fix for read_surf is not a fix ablate");
   ablate = (FixAblate *) modify->fix[ifix];
   if (ggroup != ablate->igroup)
-    error->all(FLERR,"Read_surf group does not match fix ablate group");
+    error->all(FLERR,"Create_isurf group does not match fix ablate group");
 
   // threshold for corner value
   thresh = input->numeric(FLERR,arg[2]);
@@ -239,7 +239,9 @@ void CreateISurf::set_corners()
   int full;
   if(dim==2) full = find_side_2d();
   else full = find_side_3d();
-  if(!full) error->all(FLERR,"could not fill");
+  if(!full)
+    error->all(FLERR,"Create_isurf could not determine whether some corner \
+                      values are inside or outside with respect to the surface");
 
   set_cvalues();
   MPI_Barrier(world);
@@ -249,15 +251,6 @@ void CreateISurf::set_corners()
 
   sync(CVAL);
   MPI_Barrier(world);
-
-  // free up memory since these are no longer needed
-  //memory->destroy(ivalues);
-  //memory->destroy(mvalues);
-  //memory->destroy(svalues);
-
-  //memory->destroy(cghost);
-  //memory->destroy(sghost);
-  //memory->destroy(ighost);
 
   return;
 }

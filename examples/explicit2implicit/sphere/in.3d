@@ -8,38 +8,34 @@
 ################################################################################
 
 seed						12345
-dimension				2
+dimension				3
 
 boundary				p p p
 
 #variable R equal 1.5
 #variable L equal ${R}*2.0
 variable L equal 1.0
-variable Nx equal 100
-variable Ny equal 100
-create_box			-${L} ${L} -${L} ${L} -0.5 0.5
-create_grid			${Nx} ${Ny} 1 
+variable N equal 200
+create_box			-${L} ${L} -${L} ${L} -${L} ${L}
+create_grid			${N} ${N} ${N}
 balance_grid		rcb cell
 
 global					nrho 1.0 fnum 0.001
+global surfs explicit/distributed
+#global              gridcut 0.04
 
 species					air.species N2
 mixture					air N2 vstream 0.0 0 0 
 
-region					inner block -0.9 0.9 -0.9 0.9 INF INF
+region					inner block -0.75 0.75 -0.75 0.75 -0.75 0.75
 group						inner grid region inner one
 
-read_surf       data.square2d invert
-#read_surf       data.diamond2d invert
-#read_surf       data.circle2d invert
-#read_surf       data.hour2d invert
+read_surf       data.sphere3d invert
 surf_collide		1 diffuse 300.0 0.0
 surf_modify			all collide 1
 
 fix							fablate ablate inner 0 0.2 random 0
-create_isurf     inner fablate 40.0 ave
-
-#adapt_grid      all refine nsurf all 2 iterate 5
+create_isurf     inner fablate 39.5 inout
 
 create_particles    air n 0 twopass
 
@@ -47,10 +43,10 @@ collide					vss air air.vss
 
 timestep				0.001
 
-dump 1 image all 10000 square2di.* type type surf one 0.01 particle yes pdiam 0.02 zoom 2
+dump 1 image all 1000 sphere3di_200_200_200.* type type surf one 0.02 particle no zoom 1.5 box no 0.0 view 65 140
 dump_modify 1 scolor * gray
 
-stats						5
+stats						1
 stats_style			step cpu np nattempt ncoll nscoll nscheck
-run							100
+run							10
 

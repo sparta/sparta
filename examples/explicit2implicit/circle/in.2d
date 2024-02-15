@@ -8,34 +8,36 @@
 ################################################################################
 
 seed						12345
-dimension				3
+dimension				2
 
 boundary				p p p
 
 #variable R equal 1.5
 #variable L equal ${R}*2.0
 variable L equal 1.0
-variable N equal 200
-create_box			-${L} ${L} -${L} ${L} -${L} ${L}
-create_grid			${N} ${N} ${N}
+variable Nx equal 100
+variable Ny equal 100
+create_box			-${L} ${L} -${L} ${L} -0.5 0.5
+create_grid			${Nx} ${Ny} 1 
 balance_grid		rcb cell
 
 global					nrho 1.0 fnum 0.001
-global surfs explicit/distributed
+global          surfs explicit/distributed
 
 species					air.species N2
 mixture					air N2 vstream 0.0 0 0 
 
-region					inner block -0.75 0.75 -0.75 0.75 -0.75 0.75
+region					inner block -0.9 0.9 -0.9 0.9 INF INF
 group						inner grid region inner one
 
-#read_surf       data.box3d invert
-read_surf       data.sphere3d invert
+read_surf       data.circle2d invert
 surf_collide		1 diffuse 300.0 0.0
 surf_modify			all collide 1
 
 fix							fablate ablate inner 0 0.2 random 0
 create_isurf     inner fablate 40.0 ave
+
+#adapt_grid      all refine nsurf all 2 iterate 5
 
 create_particles    air n 0 twopass
 
@@ -43,10 +45,10 @@ collide					vss air air.vss
 
 timestep				0.001
 
-dump 1 image all 1000 sphere3di_200_200_200.* type type surf one 0.02 particle no zoom 1.5 box no 0.0 view 65 140
+dump 1 image all 10000 circle2di.* type type surf one 0.01 particle yes pdiam 0.02 zoom 2
 dump_modify 1 scolor * gray
 
-stats						1
+stats						5
 stats_style			step cpu np nattempt ncoll nscoll nscheck
-run							10
+run							100
 
