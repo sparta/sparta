@@ -58,7 +58,6 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
   nspecies = maxspecies = 0;
   species = NULL;
   maxvibmode = 0;
-  maxelecstate = 0;
 
   //maxgrid = 0;
   //cellcount = NULL;
@@ -596,6 +595,13 @@ void Particle::grow_species()
 {
   species = (Species *)
     memory->srealloc(species,maxspecies*sizeof(Species),"particle:species");
+
+  for (int isp = 0; isp < nspecies; ++isp) {
+    if (species[isp].elecdat != NULL) {
+      memory->srealloc(species[isp].elecdat->species_rel, maxspecies*sizeof(double*),"elecdat:species_rel");
+      memory->grow(species[isp].elecdat->enforce_spin_conservation, maxspecies, "elecdat:enforce_spin_conservation");
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -967,33 +973,44 @@ void Particle::add_species(int narg, char **arg)
     for (i = 0; i < newspecies; i++) {
       int ii = nspecies_original + i;
 
+      // Allocate memory for the electronic mode only for species with
+      // such data defined in the elecfile.
       for (j = 0; j < nfile; j++)
         if (strcmp(names[i],fileelec[j].id) == 0) break;
       if (j == nfile) {
-        species[ii].nelecstate = 0;
+        species[ii].elecdat = NULL;
         continue;
       }
 
       int nmode = fileelec[j].nmode;
-      species[ii].nelecstate = nmode;
+      species[ii].elecdat = new ElectronicData();
+      species[ii].elecdat->nelecstate = nmode;
+      species[ii].elecdat->states = (ElecState*) memory->smalloc(nmode*sizeof(ElecState),"elecdat:elecstate");
+      memory->create(species[ii].elecdat->default_rel, nmode, "elecdat:default_rel");
+      species[ii].elecdat->species_rel = (double**) memory->smalloc(maxspecies*sizeof(double*),"elecdat:species_rel");
+      memory->create(species[ii].elecdat->enforce_spin_conservation, maxspecies, "elecdat:enforce_spin_conservation");
       for (int isp = 0; isp < particle->nspecies; ++isp) {
-        species[ii].enforce_spin_conservation[isp] = fileelec[j].enforce_spin_conservation[isp];
+        species[ii].elecdat->species_rel[isp] = NULL;
+      }
+      for (int isp = 0; isp < particle->nspecies; ++isp) {
+        species[ii].elecdat->enforce_spin_conservation[isp] = fileelec[j].enforce_spin_conservation[isp];
       }
       for (k = 0; k < nmode; k++) {
-        species[ii].electemp[k] = fileelec[j].electemp[k];
-        for (int isp = 0; isp < particle->nspecies; ++isp) {
-            if (fileelec[j].elecrel[isp][k] < 0) {
-              species[ii].elecrel[isp][k] = fileelec[j].elecrel[ii][k];
-            } else {
-              // Default to value from original line
-              species[ii].elecrel[isp][k] = fileelec[j].elecrel[isp][k];
-            }
-        }
-        species[ii].elecdegen[k] = fileelec[j].elecdegen[k];
-        species[ii].elecspin[k] = fileelec[j].elecspin[k];
-      }
+        species[ii].elecdat->states[k].temp = fileelec[j].electemp[k];
+        species[ii].elecdat->states[k].degen = fileelec[j].elecdegen[k];
+        species[ii].elecdat->states[k].spin = fileelec[j].elecspin[k];
+        species[ii].elecdat->default_rel[k] = fileelec[j].elecrel[ii][k];
 
-      maxelecstate = MAX(maxelecstate,species[ii].nelecstate);
+      }
+      for (int isp = 0; isp < particle->nspecies; ++isp) {
+        if (isp == ii) continue;
+        if (fileelec[j].elecrel[isp][0] >= 0) {
+          memory->create(species[ii].elecdat->species_rel[isp], nmode, "elecdat:species_rel[]");
+          for (k = 0; k < nmode; k++) {
+            species[ii].elecdat->species_rel[isp][k] = fileelec[j].elecrel[isp][k];
+          }
+        }
+      }
       species[ii].elecdiscrete_read = 1;
     }
 
@@ -1165,18 +1182,21 @@ double Particle::eelec(int isp, double temp_elec, RanKnuth *erandom)
   if (collide) elecstyle = collide->elecstyle;
   if (elecstyle == DISCRETE) {
     Species species = particle->species[isp];
-    double cumulative_probabilities[species.nelecstate]; //////
+    if (species.elecdat == NULL) return 0.0;
+
+    double* cumulative_probabilities = (double*) memory->smalloc(species.elecdat->nelecstate*sizeof(double), "eelec:cumulative_probabilities");
 
     electronic_distribution_func(isp, temp_elec, cumulative_probabilities);
 
-    for (int i = 1; i < species.nelecstate; ++i)
+    for (int i = 1; i < species.elecdat->nelecstate; ++i)
       cumulative_probabilities[i] += cumulative_probabilities[i-1];
 
     double ran = erandom->uniform();
     int i = 0;
     while (ran > cumulative_probabilities[i])
       ++i;
-    energy = update->boltz*species.electemp[i];
+    energy = update->boltz*species.elecdat->states[i].temp;
+    memory->sfree(cumulative_probabilities);
   }
   return energy;
 }
@@ -1190,14 +1210,14 @@ void Particle::electronic_distribution_func(int isp, double temp_elec, double* d
     Particle::Species species = particle->species[isp];
     double partition_function = 0.0;
 
-    for (int i = 0; i < species.nelecstate; ++i) {
+    for (int i = 0; i < species.elecdat->nelecstate; ++i) {
       // Calculate boltzmann fractions
-      distribution[i] = species.elecdegen[i]*exp(-species.electemp[i]/temp_elec);
+      distribution[i] = species.elecdat->states[i].degen*exp(-species.elecdat->states[i].temp/temp_elec);
       // Calculate partition function
       partition_function += distribution[i];
     }
 
-    for (int i = 0; i < species.nelecstate; ++i)
+    for (int i = 0; i < species.elecdat->nelecstate; ++i)
       distribution[i] /= partition_function;
   }
 }

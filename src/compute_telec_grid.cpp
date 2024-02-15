@@ -154,13 +154,13 @@ void ComputeTelecGrid::compute_per_grid() {
 
 double ComputeTelecGrid::elec_energy(int isp, double temp_elec) {
     Particle::Species species = particle->species[isp];
-    double state_probabilities[species.nelecstate];
+    double state_probabilities[species.elecdat->nelecstate];
 
     particle->electronic_distribution_func( isp, temp_elec, state_probabilities );
 
     double total_energy = 0.0;
-    for (int i = 0; i < species.nelecstate; ++i) {
-      total_energy += state_probabilities[i]*species.electemp[i]*update->boltz;
+    for (int i = 0; i < species.elecdat->nelecstate; ++i) {
+      total_energy += state_probabilities[i]*species.elecdat->states[i].temp*update->boltz;
     }
 
     return total_energy;
@@ -195,7 +195,7 @@ void ComputeTelecGrid::post_process_grid(int index, int nsample,
     count = eelec+1;
     for (isp = 0; isp < nsp; isp++) {
       ispecies = t2s[eelec-emap[0]];
-      if (species[ispecies].nelecstate == 0 ||
+      if (species[ispecies].elecdat == NULL ||
           etally[icell][eelec] == 0.0) {
         tspecies[isp] = 0.0;
         eelec += 2;
@@ -205,9 +205,9 @@ void ComputeTelecGrid::post_process_grid(int index, int nsample,
       // We calculate a first guess at the temp assuming
       // all the electronic energy is stored in the first
       // excited state
-      first_elec_eng = species[ispecies].electemp[1]*boltz;
-      degen0 = species[ispecies].elecdegen[0];
-      degen1 = species[ispecies].elecdegen[1];
+      first_elec_eng = species[ispecies].elecdat->states[1].temp*boltz;
+      degen0 = species[ispecies].elecdat->states[0].degen;
+      degen1 = species[ispecies].elecdat->states[1].degen;
       t_elec = first_elec_eng / (boltz*(
           - log( etally[icell][eelec]*degen0 /
               (etally[icell][count]*first_elec_eng*degen1)

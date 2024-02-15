@@ -29,6 +29,25 @@ class Particle : protected Pointers {
   enum{MAXELECSTATE=12};      // increase value if species need more electronic states
   enum{MAXSPECIES=16};      // increase value if more species are needed for species-specific electronic relaxation rates
 
+  struct ElecState {
+    double temp;    // Energy (K)
+    int degen;      // Total degeneracy
+    int spin;       // Spin degeneracy (e.g. singlet, triplet, etc)
+  };
+
+  struct ElectronicData {
+    int nelecstate;                  // Number of electronic states
+    ElecState* states;               // Contains per-state constants
+    double* default_rel;             // Vector length nelecstates. Contains
+                                     //   1/collision relaxation number for
+                                     //   each state
+    double** species_rel;            // Array nspecies x nelecstates. Row only
+                                     //   defined if species specific relaxation
+                                     //   numbers were input, otherwise NULL,
+                                     //   defaulting to default_rel
+    bool* enforce_spin_conservation; // Vector length nspecies.
+  };
+
   struct Species {          // info on each particle species, read from file
     char id[16];            // species ID
     double molwt;           // molecular weight
@@ -39,15 +58,10 @@ class Particle : protected Pointers {
     double rottemp[3];      // rotational temperature(s)
     double vibtemp[MAXVIBMODE];   // vibrational temperature(s)
     double vibrel[MAXVIBMODE];    // inverse vibrational relaxation number(s)
-    double electemp[MAXELECSTATE];  // electronic temperatures for each electronic state
-    double elecrel[MAXSPECIES][MAXELECSTATE];   // inverse electronic collision numbers
-    bool enforce_spin_conservation[MAXSPECIES];
+    ElectronicData* elecdat;      // NULL if no states defined for this species
     int vibdegen[MAXVIBMODE];     // vibrational mode degeneracies
-    int elecdegen[MAXELECSTATE];    // electronic state degeneracies
-    int elecspin[MAXELECSTATE];    // electronic state spin degeneracy (singlet, triplet, etc)
     int rotdof,vibdof;      // rotational/vibrational DOF
     int nrottemp,nvibmode;  // # of rotational/vibrational/electronic temps/modes defined
-    int nelecstate;
     int internaldof;        // 1 if either rotdof or vibdof != 0
     int vibdiscrete_read;   // 1 if species.vib file read for this species
     int elecdiscrete_read;   // 1 if species.elec file read for this species
@@ -81,7 +95,6 @@ class Particle : protected Pointers {
   Species *species;         // list of particle species info
   int nspecies;             // # of defined species
   int maxvibmode;           // max vibmode of any species (mode = dof/2)
-  int maxelecstate;
 
   class Mixture **mixture;
   int nmixture;
