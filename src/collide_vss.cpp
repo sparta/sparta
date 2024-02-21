@@ -670,7 +670,7 @@ int CollideVSS::select_elec_state(Particle::OnePart *p, Particle::OnePart *jp, d
   --max_level;
 
   // Calculate number of total states, including degeneracies
-  double state_probability[Particle::MAXELECSTATE];
+  double* state_probability = (double*) memory->smalloc((max_level+1)*sizeof(double), "select_elec_state:state_probability");
   for( int state = 0; state <= max_level; ++state) {
     if (state != 0) {
       state_probability[state] = state_probability[state-1];
@@ -704,6 +704,7 @@ int CollideVSS::select_elec_state(Particle::OnePart *p, Particle::OnePart *jp, d
     State_prob = pow((1.0 - eelec / E_Dispose),
                      (1.5 - omega));
   } while (State_prob < random->uniform());
+  memory->sfree(state_probability);
   return ielec;
 }
 
