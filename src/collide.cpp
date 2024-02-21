@@ -33,7 +33,8 @@ using namespace SPARTA_NS;
 
 enum{NONE,DISCRETE,SMOOTH};       // several files  (NOTE: change order)
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
-enum{ENERGY,HEAT,STRESS};   // several files
+enum{ENERGY,HEAT,STRESS};   // particle reduction choices
+enum{BINARY,WEIGHT,OPTIMIZE} // grouping choices
 
 #define DELTAGRID 1000            // must be bigger than split cells per cell
 #define DELTADELETE 1024
@@ -382,7 +383,7 @@ void Collide::modify_params(int narg, char **arg)
         error->all(FLERR,"Illegal collide_modify command");
       iarg += 3;
     } else if (strcmp(arg[iarg],"swpm") == 0) {
-      if (iarg+7 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (iarg+8 > narg) error->all(FLERR,"Illegal collide_modify command");
       if (strcmp(arg[iarg+1],"no") == 0) swpm = 0;
       else if (strcmp(arg[iarg+1],"yes") == 0) swpm = 1;
       else error->all(FLERR,"Illegal collide_modify command");
@@ -397,7 +398,11 @@ void Collide::modify_params(int narg, char **arg)
       else Ngmin = 6;
       Ncmax = atoi(arg[iarg+5]);
       Ngmax = atoi(arg[iarg+6]);
-      iarg += 7;
+      if (strcmp(arg[iarg+7],"BINARY") == 0) group_type = BINARY;
+      else if (strcmp(arg[iarg+7],"WEIGHT") == 0) reduction_type = WEIGHT;
+      else if (strcmp(arg[iarg+7],"OPT") == 0) reduction_type = OPTIMIZE;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 8;
     } else error->all(FLERR,"Illegal collide_modify command");
   }
 }
@@ -1805,24 +1810,29 @@ void Collide::prep_reduce()
     }
 
     if (n <= Nmax) continue;
-
     n0 = n;
-    while(n > Nmax) {
-      // create particle list
-      ip = cinfo[icell].first;
-      n = 0;
-      while (ip >= 0) {
-        ipart = &particles[ip];
-        g = ipart->sw;
-        if(g > 0) plist[n++] = ip;
-        ip = next[ip];
+
+    if(group_type == BINARY) {
+      while(n > Nmax) {
+        // create particle list
+        ip = cinfo[icell].first;
+        n = 0;
+        while (ip >= 0) {
+          ipart = &particles[ip];
+          g = ipart->sw;
+          if(g > 0) plist[n++] = ip;
+          ip = next[ip];
+        }
+
+        // reduce more if the number of particles is still too many
+        // AND if the reduction is still reducing
+        group(plist,n);
       }
+    } else if(group_type == WEIGHT) {
 
-      // reduce more if the number of particles is still too many
-      // AND if the reduction is still reducing
-      group(plist,n);
+    } else if(group_type == OPTIMIZE) {
+
     }
-
     cinfo[icell].ndel += (n0-n);
 
   }// loop for cells
@@ -1944,7 +1954,7 @@ void Collide::group(int *node, int np)
 void Collide::reduce(int *node, int np, double rho, double *V,
                      double **pij, double T, double *q)
 {
-  int ip,jp;
+  int ip,jp,pred;
   Particle::OnePart *ipart, *jpart;
 
   // shuffle particle list
@@ -1972,6 +1982,7 @@ void Collide::reduce(int *node, int np, double rho, double *V,
       ipart->v[d] = V[d] + sqT*uvec[d];
       jpart->v[d] = V[d] - sqT*uvec[d];
     }
+    pred = 2;
   } else if(reduction_type == HEAT) {
     double A, theta;
     double alpha, beta, phi;
@@ -2005,6 +2016,8 @@ void Collide::reduce(int *node, int np, double rho, double *V,
       ipart->v[d] = V[d] + alpha*uvec[d];
       jpart->v[d] = V[d] - beta*uvec[d];
     }
+
+    pred = 2;
   } else {
     // Find eigenpairs for the stress tensor
     double eval, evec[3];
@@ -2048,10 +2061,11 @@ void Collide::reduce(int *node, int np, double rho, double *V,
         jpart->v[d] = V[d] - 1.0/gamma*sqrt(nK*ieval[iK]/rho)*ievec[d][iK];
       }
     }
+    pred = nK*2;
   }
 
   // delete other particles
-  for(int idel = Ngmin; idel < np; idel++) {
+  for(int idel = pred; idel < np; idel++) {
     if (ndelete == maxdelete) {
       maxdelete += DELTADELETE;
       memory->grow(dellist,maxdelete,"collide:dellist");

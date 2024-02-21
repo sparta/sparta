@@ -135,6 +135,7 @@ class Collide : protected Pointers {
   int Ngmax;            // maximum number of particles in group before reduce
   double Ggamma;        // defines weight transfer function
   int reduction_type;   // type of particle reduction to use
+  int group_type;       // type of grouping
   
 
   // inline functions
