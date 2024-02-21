@@ -361,6 +361,8 @@ class Grid : protected Pointers {
   class Cut2d *cut2d;
   class Cut3d *cut3d;
 
+  int unset_flag;          // flag for unset/reset neighbor methods
+
   // Particle class values used for packing/unpacking particles in grid comm
 
   int ncustom_particle;
