@@ -970,6 +970,38 @@ void Particle::add_species(int narg, char **arg)
     }
     MPI_Bcast(fileelec,nfile*sizeof(ElecFile),MPI_BYTE,0,world);
 
+    if (comm->me) {
+      for (i = 0; i < nfile; ++i) {
+        fileelec[i].default_rel = (double*) memory->smalloc(
+          fileelec[i].nmode*sizeof(double), "vsp:default_rel");
+        fileelec[i].elecrel = (double**) memory->smalloc(
+          nspecies*sizeof(double*), "vsp:elecrel");
+        for (int j = 0; j < nspecies; ++j) {
+          fileelec[i].elecrel[j] = (double*) memory->smalloc(
+            fileelec[i].nmode*sizeof(double), "vsp:elecrel[]");
+        }
+        fileelec[i].enforce_spin_conservation = (bool*) memory->smalloc(
+          nspecies*sizeof(bool), "vsp:enforce_spin_conservation");
+        fileelec[i].electemp = (double*) memory->smalloc(
+          fileelec[i].nmode*sizeof(double), "vsp:electemp");
+        fileelec[i].elecdegen = (int*) memory->smalloc(
+          fileelec[i].nmode*sizeof(int), "vsp:elecdegen");
+        fileelec[i].elecspin = (int*) memory->smalloc(
+          fileelec[i].nmode*sizeof(int), "vsp:elecspin");
+      }
+    }
+
+    for (i = 0; i < nfile; ++i) {
+      MPI_Bcast(fileelec[i].default_rel,fileelec[i].nmode*sizeof(double),MPI_BYTE,0,world);
+      for (int j = 0; j < nspecies; ++j) {
+        MPI_Bcast(fileelec[i].elecrel[j],fileelec[i].nmode*sizeof(double),MPI_BYTE,0,world);
+      }
+      MPI_Bcast(fileelec[i].enforce_spin_conservation,nspecies*sizeof(bool),MPI_BYTE,0,world);
+      MPI_Bcast(fileelec[i].electemp,fileelec[i].nmode*sizeof(double),MPI_BYTE,0,world);
+      MPI_Bcast(fileelec[i].elecdegen,fileelec[i].nmode*sizeof(int),MPI_BYTE,0,world);
+      MPI_Bcast(fileelec[i].elecspin,fileelec[i].nmode*sizeof(int),MPI_BYTE,0,world);
+    }
+
     for (i = 0; i < newspecies; i++) {
       int ii = nspecies_original + i;
 
@@ -999,7 +1031,7 @@ void Particle::add_species(int narg, char **arg)
         species[ii].elecdat->states[k].temp = fileelec[j].electemp[k];
         species[ii].elecdat->states[k].degen = fileelec[j].elecdegen[k];
         species[ii].elecdat->states[k].spin = fileelec[j].elecspin[k];
-        species[ii].elecdat->default_rel[k] = fileelec[j].elecrel[ii][k];
+        species[ii].elecdat->default_rel[k] = fileelec[j].default_rel[k];
 
       }
       for (int isp = 0; isp < particle->nspecies; ++isp) {
@@ -1013,7 +1045,17 @@ void Particle::add_species(int narg, char **arg)
       }
       species[ii].elecdiscrete_read = 1;
     }
-
+    for (i = 0; i < nfile; ++i) {
+      memory->sfree(fileelec[i].default_rel);
+      for (int j = 0; j < nspecies; ++j) {
+        memory->sfree(fileelec[i].elecrel[j]);
+      }
+      memory->sfree(fileelec[i].elecrel);
+      memory->sfree(fileelec[i].enforce_spin_conservation);
+      memory->sfree(fileelec[i].electemp);
+      memory->sfree(fileelec[i].elecdegen);
+      memory->sfree(fileelec[i].elecspin);
+    }
     memory->sfree(fileelec);
   }
   // clean up
@@ -1436,10 +1478,8 @@ void Particle::read_electronic_file()
 {
   // read file line by line
   // skip blank lines or comment lines starting with '#'
-  // all other lines can have up to NWORDS
 
-  int NWORDS = 2 + 4*MAXELECSTATE;
-  char **words = new char*[NWORDS];
+  char **words = new char*[128];
   char line[MAXLINE],copy[MAXLINE];
 
   while (fgets(line,MAXLINE,fp)) {
@@ -1466,32 +1506,40 @@ void Particle::read_electronic_file()
       error->one(FLERR,"Invalid species ID in electronic file");
     strcpy(vsp->id,words[0]);
 
-    if (particle->nspecies > MAXSPECIES) {
-      error->one(FLERR,"Not enough memory allocated for electronic state parsing. Increase MAXSPECIES\n");
-    }
     int isp = particle->find_species(words[0]);
     if (isp < 0) continue;
 
-    for (int j = 0; j < MAXSPECIES; ++j) {
-      for (int i = 0; i < MAXELECSTATE; ++i) {
-        vsp->elecrel[j][i] = -1.0;
-      }
-      vsp->enforce_spin_conservation[j] = true;
-    }
     int test_nmode = atoi(words[1]);
     if (test_nmode > 0) {
       vsp->nmode = test_nmode;
 
       // Line defining electronic states for one species
-      if (vsp->nmode < 2 || vsp->nmode > MAXELECSTATE)
+      if (vsp->nmode < 2)
         error->one(FLERR,"Invalid N count in electronic file");
       if (nwords != 2 + 4*vsp->nmode)
         error->one(FLERR,"Incorrect line format in electronic file");
 
+      vsp->default_rel = (double*) memory->smalloc(vsp->nmode*sizeof(double), "vsp:default_rel");
+      vsp->elecrel = (double**) memory->smalloc(nspecies*sizeof(double*), "vsp:elecrel");
+      for (int i = 0; i < nspecies; ++i) {
+        vsp->elecrel[i] = (double*) memory->smalloc(vsp->nmode*sizeof(double), "vsp:elecrel[]");
+      }
+      vsp->enforce_spin_conservation = (bool*) memory->smalloc(nspecies*sizeof(bool), "vsp:enforce_spin_conservation");
+      vsp->electemp = (double*) memory->smalloc(vsp->nmode*sizeof(double), "vsp:electemp");
+      vsp->elecdegen = (int*) memory->smalloc(vsp->nmode*sizeof(int), "vsp:elecdegen");
+      vsp->elecspin = (int*) memory->smalloc(vsp->nmode*sizeof(int), "vsp:elecspin");
+
+      for (int j = 0; j < nspecies; ++j) {
+        for (int i = 0; i < vsp->nmode; ++i) {
+          vsp->elecrel[j][i] = -1.0;
+        }
+        vsp->enforce_spin_conservation[j] = true;
+      }
+
       int j = 2;
       for (int i = 0; i < vsp->nmode; ++i) {
         vsp->electemp[i] = atof(words[j++]);
-        vsp->elecrel[isp][i] = atof(words[j++]);
+        vsp->default_rel[i] = atof(words[j++]);
         vsp->elecdegen[i] = atoi(words[j++]);
         vsp->elecspin[i] = atoi(words[j++]);
       }

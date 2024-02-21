@@ -26,8 +26,6 @@ class Particle : protected Pointers {
   int sorted;               // 1 if particles are sorted by grid cell
 
   enum{MAXVIBMODE=4};       // increase value if species need more vib modes
-  enum{MAXELECSTATE=12};      // increase value if species need more electronic states
-  enum{MAXSPECIES=16};      // increase value if more species are needed for species-specific electronic relaxation rates
 
   struct ElecState {
     double temp;    // Energy (K)
@@ -84,11 +82,12 @@ class Particle : protected Pointers {
 
   struct ElecFile {
     char id[16];
-    double elecrel[MAXSPECIES][MAXELECSTATE];
-    bool enforce_spin_conservation[MAXSPECIES];
-    double electemp[MAXELECSTATE];
-    int elecdegen[MAXELECSTATE];
-    int elecspin[MAXELECSTATE];
+    double* default_rel;
+    double** elecrel;
+    bool* enforce_spin_conservation;
+    double* electemp;
+    int* elecdegen;
+    int* elecspin;
     int nmode;
   };
 
