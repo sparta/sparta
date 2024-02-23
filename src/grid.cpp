@@ -1282,13 +1282,18 @@ void Grid::find_neighbors()
    nmask is not changed
    called before cells data structure changes
      e.g. due to cell migration or new surfs inducing split cells
-   can later use reset_neighbors() instead of find_neighbors() to
+   will later use reset_neighbors() instead of find_neighbors() to
      change neigh[] back to local indices
    no-op if ghosts don't exist
 ------------------------------------------------------------------------- */
 
 void Grid::unset_neighbors()
 {
+  // set unset_flag = 0/1 depending on whether unset is performed
+  // so that reset_neighbors() can check it
+  
+  unset_flag = 0;
+  
   if (!exist_ghost) return;
 
   // no change in neigh[] needed if nflag = NUNKNOWN, NPBUNKNOWN, or NBOUND
@@ -1309,6 +1314,8 @@ void Grid::unset_neighbors()
         neigh[i] = pcells[neigh[i]].id;
     }
   }
+
+  unset_flag = 1;
 }
 
 /* ----------------------------------------------------------------------
@@ -1323,6 +1330,17 @@ void Grid::reset_neighbors()
 {
   if (!exist_ghost) return;
 
+  // if unset operation was not performed, cannot reset
+  // instead must perform full find_neighbors() operation
+  // this can happen if "global gridcut" is used after grid is created
+  
+  if (!unset_flag) {
+    find_neighbors();
+    return;
+  }
+  
+  unset_flag = 0;
+  
   // insure all cell IDs (owned + ghost) are hashed
 
   rehash();
