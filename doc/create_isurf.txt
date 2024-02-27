@@ -25,36 +25,31 @@ create_isurf     subset fablate 100.0 ave
 
 [Description:]
 
-Read and convert the geometry of a surface from the specified file. In 
-SPARTA, a "surface" is a collection of surface elements that represent
-the surface of one or more physical objects which will be embedded in
-the global simulation box. 
-
-This command converts explicit surfaces into implicit surfaces. Explicit
-surfaces are read from a previous "read_surf" command. See
-the "read_surf"_read_surf.html command to read explicit surfaces from
-a different kind of file.  See the "How to
+This command converts the geometry of explicit surfaces read from a
+specified file into implicit surfaces. In SPARTA, a "surface" is a
+collection of surface elements that represent the surface of one or more
+physical objects which will be embedded in the global simulation box.
+Explicit surfaces are read from a previous "read_surf" command and must
+be "distributed". See the "read_surf"_read_surf.html command to read
+explicit surfaces from a different kind of file.  See the "How to
 6.13"_Section_howto.html#howto_13 section of the manual for an
 explantion of explicit versus implicit surfaces as well as distributed
-versus non-distributed storage. You cannot mix explicit and implicit
-surfaces in the same simulation. Thus, all explicit surfaces from all surface 
-groups are converted, and no additional explicit surfaces can be added after
-this command is called.
+versus non-distributed storage.
 
-Surface elements are triangles in 3d or line segments in 2d.  Surface
+Explicit surface elements are triangles in 3d or line segments in 2d.  Surface
 elements for each physical object are required to be a complete,
-connected set that tile the entire surface of the object.  
-The surface elements in a single surface file must represent a
-"watertight" surface.  For a 2d simulation this means that every point
-is part of exactly 2 line segments.  For a 3d simulation it means that
-every triangle edge is part of exactly 2 triangles.  Exceptions to
-these rules allow for triangle edges (in 3d) that lie entirely in a
-global face of the simulation box, or for line points (in 2d) that are
-on a global edge of the simulation box.  This can be the case after
-clipping, which allows for use of watertight surface object (e.g. a
-sphere) that is only partially inside the simulation box, but which
-when clipped to the box becomes non-watertight, e.g. half of a sphere. 
-Implicit surfaces will always be watertight.
+connected set that tile the entire surface of the object.  The surface
+elements in a single surface file must represent a "watertight" surface.
+For a 2d simulation this means that every point is part of exactly 2
+line segments.  For a 3d simulation it means that every triangle edge is
+part of exactly 2 triangles.  Exceptions to these rules allow for
+triangle edges (in 3d) that lie entirely in a global face of the
+simulation box, or for line points (in 2d) that are on a global edge of
+the simulation box.  This can be the case after clipping, which allows
+for use of watertight surface object (e.g. a sphere) that is only
+partially inside the simulation box, but which when clipped to the box
+becomes non-watertight, e.g. half of a sphere. Generated implicit surfaces will
+always be watertight.
 
 While not currently implemented, implicit surface elements can have a 
 surface type that is defined in each grid cell.
@@ -91,30 +86,30 @@ contiguous 3d array, with specified extent {Nx} by {Ny} by {Nz}.  For
 comprise a 2d array of cells that is {Nx} by {Ny}. These are the grid
 cells within which implicit surfaces will be created.
 
-The specified {ablateID} is the fix ID of a "fix
-ablate"_fix_ablate.html command which has been previously specified in
-the input script.  It stores the grid corner point values for each
-grid cell.  It also has the code logic for converting grid corner
-point values to surface elements (line segments or triangles) and also
-optinally allows for the surface to be ablated during a simulation due
-to particles colliding with the surface elements.
+The specified {ablateID} is the fix ID of a "fix ablate"_fix_ablate.html
+command which has been previously specified in the input script.  It
+stores the grid corner point values for each grid cell.  It also has the
+code logic for converting grid corner point values to surface elements
+(line segments or triangles) and also optinally allows for the surface
+to be ablated during a simulation due to particles colliding with the
+surface elements.
 
 IMPORTANT NOTE: The corner point values are a 2d or 3d regular array
 which must be ordered as follows.  The x indices (1 to Nxfile) vary
-fastest, then the y indices (1 to Nyfile), and the z indices slowest
-(1 to Nzfile).  These will be assigned as corner points to each child
-grid cell in the Nx by Ny by Nz simulation domain.  For mapping corner
-points to grid cells, the ordering of the regular array of grid cells
-in the simulation domain is the same: their x indices vary fastest,
-then y, and their z indices very slowest.
+fastest, then the y indices (1 to Nyfile), and the z indices slowest (1
+to Nzfile).  These will be assigned as corner points to each child grid
+cell in the Nx by Ny by Nz simulation domain.  For mapping corner points
+to grid cells, the ordering of the regular array of grid cells in the
+simulation domain is the same: their x indices vary fastest, then y, and
+their z indices very slowest.
 
 The 8 corner point values (4 in 2d) for each grid cell are used with a
 marching cubes algorithm (marching squares in 2d) to infer a set of
 triangles (line segments in 2d) which are created in the grid cell. 
 
 IMPORTANT NOTE: All triangles (line segments in 2d) created within the
-same grid cell are assigned the same surface ID, which is the grid
-cell ID.
+same grid cell are assigned the same surface ID, which is the grid cell
+ID.
 
 A good description of the two algorithms is given on these Wikipedia
 webpages:
@@ -144,20 +139,24 @@ values.
 
 [Restrictions:]
 
-This command can only be used after the simulation box is defined by
-the "create_box"_create_box.html command, and after a grid has been
-created by the "create_grid"_create_grid.html command. Additionally,
-the explicit surfaces must already be defined by "read_surf" as well
-as the fix ablate by "fix_ablate". A simulation cannot have both
-explicit and implicit surfaces. The grid cannot be adapted if there
-are implicit surfaces.
+Explicit and implicit surfaces cannot be mixed in the same simulation.
+Thus, all explicit surfaces from all surface groups are converted into
+implicit surfaces, and no additional explicit surfaces can be added
+after this command is called.
 
-:line
+This command can only be used after the simulation box is defined by the
+"create_box"_create_box.html command, and after a grid has been created
+by the "create_grid"_create_grid.html command. Additionally, the
+explicit surfaces must already be defined by "read_surf" as well as the
+fix ablate defined by "fix_ablate".  The grid cannot be adapted if
+implicit surfaces exist.
 
 Explicit surface must be distributed when first read in by {read_surf}.
+
+:line
 
 [Related commands:]
 
 "read_surf"_read_surf.html, "fix_ablate"_fix_ablate.html, "write_isurf"_write_isurf.html
 
-[Default:] There are no default values
+[Default:] There are no default values.
