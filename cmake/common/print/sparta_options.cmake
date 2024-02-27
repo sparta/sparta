@@ -21,6 +21,10 @@ if(FFT)
   message(STATUS "  ${FFT}")
 endif()
 
+if(FFT_KOKKOS)
+  message(STATUS "  ${FFT_KOKKOS}")
+endif()
+
 message(STATUS "")
 
 message(STATUS "Enabled extra options")
