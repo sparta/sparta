@@ -30,6 +30,7 @@ class Collide : protected Pointers {
   int vibstyle;       // none/discrete/smooth vibrational modes
   int nearcp;         // 1 for near neighbor collisions
   int nearlimit;      // limit on neighbor serach for near neigh collisions
+  int swpm_flag;      // flag for stochastic weighted particle method
 
   int ncollide_one,nattempt_one,nreact_one;
   bigint ncollide_running,nattempt_running,nreact_running;
@@ -49,7 +50,8 @@ class Collide : protected Pointers {
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *) = 0;
   virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
                                 Particle::OnePart *&) = 0;
-
+  virtual int split(Particle::OnePart *&, Particle::OnePart *&,
+                     Particle::OnePart *&, Particle::OnePart *&) = 0;
   virtual double extract(int, int, const char *) {return 0.0;}
 
   virtual int pack_grid_one(int, char *, int);
@@ -128,12 +130,14 @@ class Collide : protected Pointers {
   int kokkos_flag;        // 1 if collide method supports Kokkos
 
   // stochastic weighted particle method
-  int swpm;             // flag for stochastic weighted collisions
-  int Ncmin;            // minimum number of particles needed to split
+  // if Ncmin > Ncmax, then particles always split
+  int Ncmin;            // minimum number of particles in cell to NOT split
   int Ncmax;            // maximum number of particles in cell before reduce
-  int Ngmin;            // minimum number of particles in each group to reduce
+  int Ngmin;            // minimum number of particles in group to reduce
   int Ngmax;            // maximum number of particles in group before reduce
-  double Ggamma;        // defines weight transfer function
+  double wtf;           // weight transfer function
+  double pre_wtf;       // scale weight transfer function
+  double g_max;         // maximum particle weight in cell at time t
   int reduction_type;   // type of particle reduction to use
   int group_type;       // type of grouping
   
@@ -175,9 +179,11 @@ class Collide : protected Pointers {
   void ambi_reset(int, int, int, Particle::OnePart *, Particle::OnePart *,
                   Particle::OnePart *, int *);
   void ambi_check();
-  void sw_reduce();
-  void group();
-  void reduce(int *, int, double, double *, double **, double, double *);
+  void group_reduce();
+  void group(int, int);
+  void reduce(int, int, double, double *, double);
+  void reduce(int, int, double, double *, double, double *);
+  void reduce(int, int, double, double *, double, double *, double [3][3]);
   void grow_percell(int);
 
   int find_nn(int, int);

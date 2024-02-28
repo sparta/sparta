@@ -78,6 +78,7 @@ class Particle : protected Pointers {
     int flag;               // used for migration status
     double dtremain;        // portion of move timestep remaining
     double weight;          // particle or cell weight, if weighting enabled
+    double g;               // particle weight (= FNUM if DSMC used)
   };
 
   struct OnePartRestart {
@@ -90,6 +91,7 @@ class Particle : protected Pointers {
     double v[3];            // particle velocity
     double erot;            // rotational energy
     double evib;            // vibrational energy
+    double g;               // particle weight
   };
 
   bigint nglobal;           // global # of particles
@@ -149,7 +151,8 @@ class Particle : protected Pointers {
   virtual void pre_weight();
   virtual void post_weight();
 
-  virtual int add_particle(int, int, int, double *, double *, double, double);
+  virtual int add_particle(int, int, int, double *, double *,
+    double, double, double g=-1.0);
   virtual int add_particle();
   int clone_particle(int);
   void add_species(int, char **);

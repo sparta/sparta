@@ -13,6 +13,9 @@
 ------------------------------------------------------------------------- */
 
 #include "math.h"
+#include "math_extra.h"
+#include "math_eigen.h"
+#include "math_eigen_impl.h"
 #include "string.h"
 #include "collide.h"
 #include "particle.h"
@@ -34,7 +37,7 @@ using namespace SPARTA_NS;
 enum{NONE,DISCRETE,SMOOTH};       // several files  (NOTE: change order)
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{ENERGY,HEAT,STRESS};   // particle reduction choices
-enum{BINARY,WEIGHT,OPTIMIZE} // grouping choices
+enum{BINARY,WEIGHT,OPTIMIZE}; // grouping choices
 
 #define DELTAGRID 1000            // must be bigger than split cells per cell
 #define DELTADELETE 1024
@@ -42,6 +45,7 @@ enum{BINARY,WEIGHT,OPTIMIZE} // grouping choices
 
 #define BIG 1.0e20
 #define SMALL 1.0e-16
+#define LESSSMALL 1.0e-8
 
 /* ---------------------------------------------------------------------- */
 
@@ -92,6 +96,10 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   ambiflag = 0;
   maxelectron = 0;
   elist = NULL;
+
+  // stochastic weighted particle method
+  swpm_flag = 0;
+  g_max = update->fnum;
 
   // used if near-neighbor model is invoked
 
@@ -384,20 +392,21 @@ void Collide::modify_params(int narg, char **arg)
       iarg += 3;
     } else if (strcmp(arg[iarg],"swpm") == 0) {
       if (iarg+8 > narg) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+1],"no") == 0) swpm = 0;
-      else if (strcmp(arg[iarg+1],"yes") == 0) swpm = 1;
+      if (strcmp(arg[iarg+1],"no") == 0) swpm_flag = 0;
+      else if (strcmp(arg[iarg+1],"yes") == 0) swpm_flag = 1;
       else error->all(FLERR,"Illegal collide_modify command");
       Ncmin = atoi(arg[iarg+2]);
-      Ggamma = atof(arg[iarg+3]);
-      if(Ggamma < 0) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+4],"ENERGY") == 0) reduction_type = ENERGY;
-      else if (strcmp(arg[iarg+4],"HEAT") == 0) reduction_type = HEAT;
-      else if (strcmp(arg[iarg+4],"STRESS") == 0) reduction_type = STRESS;
+      Ncmax = atoi(arg[iarg+3]);
+      wtf = atof(arg[iarg+4]);
+      if(wtf < 0) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+5],"ENERGY") == 0) reduction_type = ENERGY;
+      else if (strcmp(arg[iarg+5],"HEAT") == 0) reduction_type = HEAT;
+      else if (strcmp(arg[iarg+5],"STRESS") == 0) reduction_type = STRESS;
       else error->all(FLERR,"Illegal collide_modify command");
       if(reduction_type == ENERGY || reduction_type == HEAT) Ngmin = 2;
       else Ngmin = 6;
-      Ncmax = atoi(arg[iarg+5]);
       Ngmax = atoi(arg[iarg+6]);
+      if(Ngmax < Ngmin) error->all(FLERR,"Illegal collide_modify command");
       if (strcmp(arg[iarg+7],"BINARY") == 0) group_type = BINARY;
       else if (strcmp(arg[iarg+7],"WEIGHT") == 0) reduction_type = WEIGHT;
       else if (strcmp(arg[iarg+7],"OPT") == 0) reduction_type = OPTIMIZE;
@@ -445,9 +454,9 @@ void Collide::collisions()
   // variant for nearcp flag or not
   // variant for ambipolar approximation or not
   // variant for stochastic weighted collisions or not
-  if (swpm) {
-    collsions_one_sw();
-    prep_reduce();
+  if (swpm_flag) {
+    collisions_one_sw();
+    group_reduce();
   } if (!ambiflag) {
     if (nearcp == 0) {
       if (ngroups == 1) collisions_one<0>();
@@ -1690,10 +1699,10 @@ void Collide::ambi_reset(int i, int j, int jsp,
 
 void Collide::collisions_one_sw()
 {
-  int i,j,n,ip,np;
+  int i,j,n,ip,np,newp;
   int nattempt;
-  double attempt,volume,gmx;
-  Particle::OnePart *ipart,*jpart,*kpart,*lpart;
+  double attempt,volume,gmx,gi;
+  Particle::OnePart *ipart,*jpart,*kpart,*lpart,*mpart;
 
   // loop over cells I own
 
@@ -1703,7 +1712,6 @@ void Collide::collisions_one_sw()
   int *next = particle->next;
 
   for (int icell = 0; icell < nglocal; icell++) {
-    cinfo[icell].ndel = 0;
     np = cinfo[icell].count;
     if (np <= 1) continue;
 
@@ -1720,21 +1728,26 @@ void Collide::collisions_one_sw()
 
     // build particle list and find maximum particle weight
     n = 0;
-    gmx = 0.0;
+    g_max = 0.0;
     while (ip >= 0) {
       plist[n++] = ip;
       ipart = &particles[ip];
-      gmx = MAX(gmx,ipart->sw);
+      gi = ipart->g;
+      g_max = MAX(g_max,gi);
 
       if(gi != gi) error->all(FLERR,"Particle has NaN weight");
       if(gi < 0) error->all(FLERR,"Paritlce has negative weight");
       ip = next[ip];
     }
 
+    if(np > Ncmin) pre_wtf = 0.0;
+    else pre_wtf = 1.0;
+
     // attempt = exact collision attempt count for all particles in cell
     // nattempt = rounded attempt with RN
     // if no attempts, continue to next grid cell
-    attempt = attempt_collision_sw(icell,np,volume,gmx);
+
+    attempt = attempt_collision(icell,np,volume);
     nattempt = static_cast<int> (attempt);
 
     if (!nattempt) continue;
@@ -1744,54 +1757,56 @@ void Collide::collisions_one_sw()
       i = np * random->uniform();
       j = np * random->uniform();
       while (i == j) j = np * random->uniform();
+
       ipart = &particles[plist[i]];
       jpart = &particles[plist[j]];
 
-      if (!test_collision_sw(icell,0,0,ipart,jpart)) continue;
+      if (!test_collision(icell,0,0,ipart,jpart)) continue;
 
-      // split +2 and collide
-      if(np < Nmin || Nmin < 0) {
-        split(ipart,jpart,kpart,lpart);
-        if(kpart) {
-          perform_collision_sw(kpart,lpart);
-          if (np+2 >= npmax) {
-            npmax += DELTAPART;
-            memory->grow(plist,npmax,"collide:plist");
-          }
-          // note two were added
-          plist[np++] = particle->nlocal-2;
-          plist[np++] = particle->nlocal-1;
-          particles = particle->particles;
-        } else {
-          perform_collision_sw(ipart,jpart);
+      newp = split(ipart,jpart,kpart,lpart);
+
+      if(newp > 1) {
+        
+        if (np+2 >= npmax) {
+          npmax += DELTAPART;
+          memory->grow(plist,npmax,"collide:plist");
         }
-      // split +1/+0 and collide
-      } else {
-        perform_collision_sw(ipart,jpart,kpart);
-        if (kpart) {
-          if (np >= npmax) {
-            npmax += DELTAPART;
-            memory->grow(plist,npmax,"collide:plist");
-          }
-          plist[np++] = particle->nlocal-1;
-          particles = particle->particles;
+        plist[np++] = particle->nlocal-2;
+        plist[np++] = particle->nlocal-1;
+        particles = particle->particles;
+
+      } else if(newp > 0) {
+
+        if (np+1 >= npmax) {
+          npmax += DELTAPART;
+          memory->grow(plist,npmax,"collide:plist");
         }
+        plist[np++] = particle->nlocal-1;
+        particles = particle->particles;
+
       }
+
+      // since ipart and jpart have same weight, do not need
+      // ... to account for weight during collision itself
+      // also the splits are all handled beforehand
+      mpart = NULL; // dummy particle
+      perform_collision(ipart,jpart,mpart);
       ncollide_one++;
-    } // loop for attempts
 
-    // removes very small weighted particles
-    remove_small();
+      // removes very small weighted particles
+      //remove_small();
 
+    } // end attempt loop
   } // loop for cells
 }
+
 /* ----------------------------------------------------------------------
-   Particle Reduction
+   Reorder plist depending on grouping strategy used
 ------------------------------------------------------------------------- */
 
-void Collide::prep_reduce()
+void Collide::group_reduce()
 {
-  int n,n0,ip;
+  int n,np,ip;
   double g;
 
   Particle::OnePart *ipart;
@@ -1800,59 +1815,55 @@ void Collide::prep_reduce()
   int *next = particle->next;
 
   for (int icell = 0; icell < nglocal; icell++) {
-    cinfo[icell].ndel = 0;
-    // create particle list
-    ip = cinfo[icell].first;
-    n = 0;
-    while (ip >= 0) {
-      plist[n++] = ip;
-      ip = next[ip];
-    }
+    np = cinfo[icell].count;
+    if (np <= Ngmax) continue;
 
-    if (n <= Nmax) continue;
-    n0 = n;
+    n = np;
+    while(n > np) {
 
-    if(group_type == BINARY) {
-      while(n > Nmax) {
-        // create particle list
-        ip = cinfo[icell].first;
-        n = 0;
-        while (ip >= 0) {
-          ipart = &particles[ip];
-          g = ipart->sw;
-          if(g > 0) plist[n++] = ip;
-          ip = next[ip];
+      if(group_type == BINARY) {
+        while(n > Ngmax) {
+          // create particle list
+          ip = cinfo[icell].first;
+          n = 0;
+          while (ip >= 0) {
+            ipart = &particles[ip];
+            g = ipart->g;
+            if(g > 0) plist[n++] = ip;
+            ip = next[ip];
+          }
+
+          // reduce more if the number of particles is still too many
+          // AND if the reduction is still reducing
+          group(0,n);
         }
+      } else if(group_type == WEIGHT) {
 
-        // reduce more if the number of particles is still too many
-        // AND if the reduction is still reducing
-        group(plist,n);
+      } else if(group_type == OPTIMIZE) {
+
       }
-    } else if(group_type == WEIGHT) {
-
-    } else if(group_type == OPTIMIZE) {
 
     }
-    cinfo[icell].ndel += (n0-n);
 
   }// loop for cells
 
 }
 
 /* ----------------------------------------------------------------------
-   Group particles together
+   Rearrange plist into groups
 ------------------------------------------------------------------------- */
-void Collide::group(int *node, int np)
+void Collide::group(int pfirst, int plast)
 {
-  int pid;
-  Particle::OnePart *ip;
+  Particle::OnePart *ipart;
   Particle::OnePart *particles = particle->particles;
+  int np = plast-pfirst;
 
   // ignore groups which have too few particles
   if(np<=Ngmin)
     return;
 
-  // compute covariance
+  // compute stress tensor since it's needed for
+  // .. further dividing and reduction
   double gsum, gV[3], gVV[3][3], gVVV[3];
   gsum = 0.0;
   for(int i = 0; i < 3; i++) {
@@ -1863,10 +1874,10 @@ void Collide::group(int *node, int np)
   }
 
 	double gp, vp[3], vpsq;
-  for(int p = 0; p < np; p++) {
-    ip = &particles[node[p]];
-    gp = ip->sw;
-    memcpy(vp, ip->v, 3*sizeof(double));
+  for(int p = pfirst; p < plast; p++) {
+    ipart = &particles[plist[p]];
+    gp = ipart->g;
+    memcpy(vp, ipart->v, 3*sizeof(double));
    	gsum += gp;
     for(int i = 0; i < 3; i++) {
       gV[i] += (gp*vp[i]);
@@ -1880,11 +1891,11 @@ void Collide::group(int *node, int np)
     for(int i = 0; i < 3; i++) gVVV[i] += 0.5*(gp*vp[i]*vpsq);
   }
 
-  // find mean velocity
+  // mean velocity
 	double V[3];
   for(int i = 0; i < 3; i++) V[i] = gV[i]/gsum;
 
-  // Compute covariance matrix
+  // stress tensor
   double pij[3][3];
   for(int i = 0; i < 3; i++)
     for(int j = 0; j < 3; j++)
@@ -1897,13 +1908,20 @@ void Collide::group(int *node, int np)
 
     // heat flux
     double Vsq = V[0]*V[0] + V[1]*V[1] + V[2]*V[2];
+    double q[3];
     for(int i = 0; i < 3; i++) q[i] = gVVV[i] -
       (pij[i][0]*V[0] + pij[i][1]*V[1] + pij[i][2]*V[2]) -
       0.5*gsum*V[i]*Vsq - 1.5*gsum*T*V[i];
 
-    reduce(node, np, gsum, V, pij, T, q);
-  // group still too large so divide further
+    if(reduction_type == ENERGY) {
+      reduce(pfirst, plast, gsum, V, T);
+    } else if(reduction_type == HEAT) {
+      reduce(pfirst, plast, gsum, V, T, q);
+    } else if(reduction_type == STRESS) {
+      reduce(pfirst, plast, gsum, V, T, q, pij);
+    }
 
+  // group still too large so divide further
   } else {
 
     // Compute covariance matrix
@@ -1932,148 +1950,206 @@ void Collide::group(int *node, int np)
 
     // Separate based on particle velocity
     double center = V[0]*maxevec[0] + V[1]*maxevec[1] + V[2]*maxevec[2];
-    int pidL[np];
-    int pidR[np];
-    int npL, npR;
-    npL = npR = 0;
+    int npmid = 0;
     for(int i = 0; i < np; i++) {
-      ip = &particles[node[i]];
-      if(MathExtra::dot3(ip->v,maxevec) < center) pidL[npL++] = node[i];
-      else pidR[npR++] = node[i];
+      ipart = &particles[plist[i]];
+      if(MathExtra::dot3(ipart->v,maxevec) < center)
+        std::swap(plist[npmid++],plist[i]);
     }
-    group(pidL,npL);
-    group(pidR,npR);
+    group(pfirst,npmid);
+    group(npmid,plast);
   }
 
   return;
 }
 
 /* ----------------------------------------------------------------------
-   Reduce particles in the group
+   Merge particles using energy scheme
 ------------------------------------------------------------------------- */
-void Collide::reduce(int *node, int np, double rho, double *V,
-                     double **pij, double T, double *q)
+void Collide::reduce(int pfirst, int plast,
+                     double rho, double *V, double T)
 {
-  int ip,jp,pred;
+  // shuffle indices to choose random positions
+  int j;
+  for(int i = plast-1; i > pfirst; i--) {
+    j = random->uniform()*(i+1);
+    std::swap(plist[i], plist[j]);
+  }
+
+  // reduced particles chosen as first two in group
+  Particle::OnePart *particles = particle->particles;
   Particle::OnePart *ipart, *jpart;
+  ipart = &particles[plist[pfirst]];
+  jpart = &particles[plist[pfirst+1]];
 
-  // shuffle particle list
-  // effectively gives random positions
-  for(ip = np-1; ip > 0; ip--) {
-    jp = random->uniform()*(ip+1);
-    std::swap(node[ip], node[jp]);
-  }
-
-  double sqT = sqrt(3.0*T);
+  // find direction of velocity wrt CoM frame
+  double theta = 2.0 * 3.14159 * random->uniform();
+  double phi = acos(1.0 - 2.0 * random->uniform());
   double uvec[3];
-  if(reduction_type == ENERGY) {
-    double theta = 2.0 * 3.14159 * random->uniform();
-    double phi = acos(1.0 - 2.0 * random->uniform());
-    uvec[0] = sin(phi) * cos(theta);
-    uvec[1] = sin(phi) * sin(theta);
-    uvec[2] = cos(phi);
+  uvec[0] = sin(phi) * cos(theta);
+  uvec[1] = sin(phi) * sin(theta);
+  uvec[2] = cos(phi);
 
-    ipart = &particles[node[0]];
-    jpart = &particles[node[1]];
-
-    ipart->g = rho * 0.5;
-    jpart->g = rho * 0.5;
-    for(int d = 0; d < 3; d++) {
-      ipart->v[d] = V[d] + sqT*uvec[d];
-      jpart->v[d] = V[d] - sqT*uvec[d];
-    }
-    pred = 2;
-  } else if(reduction_type == HEAT) {
-    double A, theta;
-    double alpha, beta, phi;
-    double qmag = sqrt(q[0]*q[0] + q[1]*q[1] + q[2]*q[2]);
-    double qge;
-    if(qmag<SMALL) {
-      qmag = 0.0;
-      alpha = sqT;
-      beta = sqT;
-      for (int d = 0; d < 3; d++) {
-        A = sqrt(-log(random->uniform()));
-        theta = 6.283185308 * random->uniform();
-        if(random->uniform()<0.5) uvec[d] = A * cos(theta);
-        else uvec[d] = A * sin(theta);
-      }
-    } else {
-      for(int d = 0; d < 3; d++) uvec[d] = q[d]/qmag;
-      qge = qmag / (rho * pow(sqT,3.0));
-      if(qge<=0.0) qge = 0.0;
-      phi = qge + sqrt(1.0 + qge * qge);
-      alpha = phi*sqT; 
-      beta = sqT/phi;
-    }
-
-    ipart = &particles[node[0]];
-    jpart = &particles[node[1]];
-
-    ipart->g = rho / (1.0 + phi*phi);
-    jpart->g = rho - ipart->g;
-    for(int d = 0; d < 3; d++) {
-      ipart->v[d] = V[d] + alpha*uvec[d];
-      jpart->v[d] = V[d] - beta*uvec[d];
-    }
-
-    pred = 2;
-  } else {
-    // Find eigenpairs for the stress tensor
-    double eval, evec[3];
-    int ierror = MathEigen::jacobi3(pij,eval,evec);
-
-    // Find number of nonzero eigenpair
-    int nK = 0;
-    double ieval[3], ievec[3][3];
-    for (int i = 0; i < 3; i++) {
-      if( std::abs(eval[i]) >= SMALLNUM && eval[i] > 0) {
-        ieval[nK] = eval[i];
-        for(int d = 0; d < 3; d++) ievec[nK][d] = evec[i][d];
-        nK++;
-      }
-    }
-
-    // find particle weights and velocities
-    double qli;
-    double rhoklam, qrhoklam, gamma;
-    double orhoklam;
-    for(int iK = 0; iK < nK; iK++) {
-
-      ip = 2*iK;
-      jp = 2*iK+1;
-      ipart = &particles[node[ip]];
-      jpart = &particles[node[jp]];
-
-      // determine direction of eigenvector
-      qli = ievec[0][iK]*q[0] + ievec[1][iK]*q[1] + ievec[2][iK]*q[2];
-      if(qli<0)
-        for(int d = 0; d < 3; d++) ievec[d][iK] *= -1.0;
-      qli = fabs(qli);
-
-      gamma = sqrt(igsum) * qli / (sqrt(nK) * pow(ieval[iK],1.5))
-        + sqrt(1.0 + (igsum*qli*qli)/(nK*pow(ieval[iK],3.0)));
-
-      ipart->g = rho / (1.0 + gamma*gamma);
-      jpart->g = rho - ipart->g;
-      for(int d = 0; d < 3; d++) {
-        ipart->v[d] = V[d] + gamma*sqrt(nK*ieval[iK]/rho)*ievec[d][iK];
-        jpart->v[d] = V[d] - 1.0/gamma*sqrt(nK*ieval[iK]/rho)*ievec[d][iK];
-      }
-    }
-    pred = nK*2;
+  // set reduced particle velocities
+  double sqT = sqrt(3.0*T);
+  for(int d = 0; d < 3; d++) {
+    ipart->v[d] = V[d] + sqT*uvec[d];
+    jpart->v[d] = V[d] - sqT*uvec[d];
   }
+
+  // set reduced particle weights
+  ipart->g = rho*0.5;
+  jpart->g = rho*0.5;
 
   // delete other particles
-  for(int idel = pred; idel < np; idel++) {
+  for(int i = pfirst+2; i < plast; i++) {
     if (ndelete == maxdelete) {
       maxdelete += DELTADELETE;
       memory->grow(dellist,maxdelete,"collide:dellist");
     }
-    ipart = &particles[node[idel]];
-    ipart->g = -1; // needed to do multple merge cycles
-    dellist[ndelete++] = node[idel];
+    ipart = &particles[plist[i]];
+    ipart->g = -1.0;
+    dellist[ndelete++] = plist[i];
   }
+
+  return;
+}
+
+/* ----------------------------------------------------------------------
+   Merge particles using heat flux scheme
+------------------------------------------------------------------------- */
+void Collide::reduce(int pfirst, int plast,
+                     double rho, double *V, double T, double *q)
+{
+  // shuffle indices to choose random positions
+  int j;
+  for(int i = plast-1; i > pfirst; i--) {
+    j = random->uniform()*(i+1);
+    std::swap(plist[i], plist[j]);
+  }
+
+  // reduced particles chosen as first two in group
+  Particle::OnePart *particles = particle->particles;
+  Particle::OnePart *ipart, *jpart;
+  ipart = &particles[plist[pfirst]];
+  jpart = &particles[plist[pfirst+1]];
+
+  // precompute
+  double sqT = sqrt(3.0*T);
+  double qmag = sqrt(q[0]*q[0] + q[1]*q[1] + q[2]*q[2]);
+  if(qmag<LESSSMALL) qmag = 0.0;
+  double qge = qmag / (rho * pow(sqT,3.0));
+  double itheta = qge + sqrt(1.0 + qge*qge);
+  double alpha = sqT*itheta;
+  double beta = sqT/itheta;
+
+  // find direction of velocity wrt CoM frame
+  double uvec[3];
+  if(qmag == 0) {
+    for (int d = 0; d < 3; d++) {
+      double A = sqrt(-log(random->uniform()));
+      double phi = 6.283185308 * random->uniform();
+      if(random->uniform()<0.5) uvec[d] = A * cos(phi);
+      else uvec[d] = A * sin(phi);
+    }
+  } else 
+    for(int d = 0; d < 3; d++) uvec[d] = q[d]/qmag;
+
+  // set reduced particle velocities
+  for(int d = 0; d < 3; d++) {
+    ipart->v[d] = V[d] + alpha*uvec[d];
+    jpart->v[d] = V[d] - beta*uvec[d];
+  }
+
+  // set reduced particle weights
+  ipart->g = rho/(1.0+itheta*itheta);
+  jpart->g = rho - ipart->g;
+
+  // delete other particles
+  for(int i = pfirst+2; i < plast; i++) {
+    if (ndelete == maxdelete) {
+      maxdelete += DELTADELETE;
+      memory->grow(dellist,maxdelete,"collide:dellist");
+    }
+    ipart = &particles[plist[i]];
+    ipart->g = -1.0;
+    dellist[ndelete++] = plist[i];
+  }
+
+  return;
+}
+
+/* ----------------------------------------------------------------------
+   Merge particles using stress scheme
+------------------------------------------------------------------------- */
+void Collide::reduce(int pfirst, int plast,
+                     double rho, double *V, double T, double *q, double pij[3][3])
+{
+  // shuffle indices to choose random positions
+  int j;
+  for(int i = plast-1; i > pfirst; i--) {
+    j = random->uniform()*(i+1);
+    std::swap(plist[i], plist[j]);
+  }
+
+  // find eigenpairs of stress tensor
+  double eval[3], evec[3][3];
+  int ierror = MathEigen::jacobi3(pij,eval,evec);
+
+  int nK = 0; // number of non-zero eigenvalues
+  for (int i = 0; i < 3; i++) {
+    if( fabs(eval[i]) >= LESSSMALL && eval[i] > 0) {
+      eval[nK] = eval[i];
+      for(int d = 0; d < 3; d++) evec[nK][d] = evec[i][d];
+      nK++;
+    }
+  }
+
+  // iterate through nK pairs
+  Particle::OnePart *particles = particle->particles;
+  Particle::OnePart *ipart, *jpart;
+
+  double qli, itheta;
+  double uvec[3];
+  for(int iK = 0; iK < nK; iK++) {
+
+    // reduced particles chosen as first two
+    ipart = &particles[plist[pfirst]];
+    jpart = &particles[plist[pfirst+1]];
+
+    qli = evec[0][iK]*q[0] + evec[1][iK]*q[1] + evec[2][iK]*q[2];
+    if(qli<0)
+      for(int d = 0; d < 3; d++) evec[d][iK] *= -1.0;
+    qli = fabs(qli);
+
+    itheta = sqrt(rho) * qli / (sqrt(nK) * pow(eval[iK],1.5))
+      + sqrt(1.0 + (rho*qli*qli)/(nK*pow(eval[iK],3.0)));
+
+    // set reduced particle velocities
+    for(int d = 0; d < 3; d++) {
+      ipart->v[d] = V[d] + itheta*sqrt(nK*eval[iK]/rho)*evec[d][iK];
+      jpart->v[d] = V[d] - 1.0/itheta*sqrt(nK*eval[iK]/rho)*evec[d][iK];
+    }
+
+    // set reduced particle weights
+    ipart->g = rho/(nK*(1.0+itheta*itheta));
+    jpart->g = rho - ipart->g;
+
+    // move onto next pair
+    pfirst += 2;
+  } // end nK
+
+  // delete other particles
+  for(int i = pfirst; i < plast; i++) {
+    if (ndelete == maxdelete) {
+      maxdelete += DELTADELETE;
+      memory->grow(dellist,maxdelete,"collide:dellist");
+    }
+    ipart = &particles[plist[i]];
+    ipart->g = -1.0;
+    dellist[ndelete++] = plist[i];
+  }
+
   return;
 }
 

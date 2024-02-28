@@ -623,7 +623,8 @@ void Particle::grow_next()
 ------------------------------------------------------------------------- */
 
 int Particle::add_particle(int id, int ispecies, int icell,
-                           double *x, double *v, double erot, double evib)
+                           double *x, double *v, double erot, double evib,
+                           double g)
 {
   int reallocflag = 0;
   if (nlocal == maxlocal) {
@@ -645,6 +646,8 @@ int Particle::add_particle(int id, int ispecies, int icell,
   p->erot = erot;
   p->evib = evib;
   p->flag = PKEEP;
+  if(collide->swpm_flag) p->g = g;
+  else p->g = update->fnum; // ignore input if not using swpm
 
   //p->dtremain = 0.0;    not needed due to memset in grow() ??
   //p->weight = 1.0;      not needed due to memset in grow() ??
@@ -1466,6 +1469,7 @@ int Particle::pack_restart(char *buf)
     pr->v[2] = p->v[2];
     pr->erot = p->erot;
     pr->evib = p->evib;
+    pr->g    = p->g;
 
     ptr += sizeof(OnePartRestart);
     if (!ncustom) continue;
@@ -1519,6 +1523,7 @@ void Particle::pack_restart(char *buf, int step, int pass)
     pr->v[2] = p->v[2];
     pr->erot = p->erot;
     pr->evib = p->evib;
+    pr->g    = p->g;
 
     ptr += sizeof(OnePartRestart);
     if (!ncustom) continue;
