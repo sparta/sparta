@@ -30,7 +30,8 @@ enum{HEATX,HEATY,HEATZ};
 
 // internal accumulators
 
-enum{gSum,gVx,gVy,gVz,
+enum{gSum,  massSum,
+     gVx,   gVy,   gVz,
      gVxVx, gVyVy, gVzVz,
      gVxVy, gVxVz, gVyVz,
      gVxVV, gVyVV, gVzVV,
@@ -72,6 +73,7 @@ ComputeEFluxGridSW::ComputeEFluxGridSW(SPARTA *sparta, int narg, char **arg) :
     if (strcmp(arg[iarg],"heatx") == 0) {
       value[ivalue] = HEATX;
       set_map(ivalue,gSum);
+      set_map(ivalue,massSum);
       set_map(ivalue,gVx);
       set_map(ivalue,gVy);
       set_map(ivalue,gVz);
@@ -85,6 +87,7 @@ ComputeEFluxGridSW::ComputeEFluxGridSW(SPARTA *sparta, int narg, char **arg) :
     } else if (strcmp(arg[iarg],"heaty") == 0) {
       value[ivalue] = HEATY;
       set_map(ivalue,gSum);
+      set_map(ivalue,massSum);
       set_map(ivalue,gVy);
       set_map(ivalue,gVz);
       set_map(ivalue,gVx);
@@ -98,6 +101,7 @@ ComputeEFluxGridSW::ComputeEFluxGridSW(SPARTA *sparta, int narg, char **arg) :
     } else if (strcmp(arg[iarg],"heatz") == 0) {
       value[ivalue] = HEATZ;
       set_map(ivalue,gSum);
+      set_map(ivalue,massSum);
       set_map(ivalue,gVz);
       set_map(ivalue,gVx);
       set_map(ivalue,gVy);
@@ -202,6 +206,9 @@ void ComputeEFluxGridSW::compute_per_grid()
     for (m = 0; m < npergroup; m++) {
       switch (unique[m]) {
       case gSum:
+        vec[k++] += g;
+        break;
+      case massSum:
         vec[k++] += mass*g;
         break;
       case gVx:
@@ -299,18 +306,19 @@ void ComputeEFluxGridSW::post_process_grid(int index, int nsample,
   double *t;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  int mass = emap[0];
-  int mv   = emap[1];
-  int mv1  = emap[2];
-  int mv2  = emap[3];
+  int gsum = emap[0];
+  int mass = emap[1];
+  int mv   = emap[2];
+  int mv1  = emap[3];
+  int mv2  = emap[4];
 
-  int mvv   = emap[4];
-  int mv1v1 = emap[5];
-  int mv2v2 = emap[6];
+  int mvv   = emap[5];
+  int mv1v1 = emap[6];
+  int mv2v2 = emap[7];
 
-  int mvv1  = emap[7];
-  int mvv2  = emap[8];
-  int mv1v2 = emap[9];
+  int mvv1  = emap[8];
+  int mvv2  = emap[9];
+  int mv1v2 = emap[10];
 
   int mvvv  = emap[10];
 
@@ -334,12 +342,12 @@ void ComputeEFluxGridSW::post_process_grid(int index, int nsample,
     pv1v2 = t[mv1v2] - t[mass]*V1*V2;
 
     Vsq = V*V + V1*V1 + V2*V2;
-    T = (pvv + pv1v1 + pv2v2) / (3.0 * t[mass]);
+    T = (pvv + pv1v1 + pv2v2) / (3.0 * t[gsum] * update->boltz);
  
     wt = cinfo[icell].weight / cinfo[icell].volume;
 
     vec[k] = wt/nsample * (t[mvvv] - (pvv*V + pvv1*V1 + pvv2*V2) -
-      0.5*t[mass]*V*Vsq - 1.5*t[mass]*T*V);
+      0.5*t[mass]*V*Vsq - 1.5*update->boltz*V*t[gsum]*T);
     k += nstride;
   }
 }

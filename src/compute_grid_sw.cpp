@@ -27,14 +27,14 @@ using namespace SPARTA_NS;
 
 // user keywords
 
-enum{CORUY,CORVY,CORWY,NUM,NRHO,NFRAC,MASS,MASSRHO,MASSFRAC,
+enum{NUM,NRHO,NFRAC,MASS,MASSRHO,MASSFRAC,
      U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE,EROT,TROT,EVIB,TVIB,
      PXRHO,PYRHO,PZRHO,KERHO};
 
 // internal accumulators
 
 enum{NP,COUNT,MASSSUM,MVX,MVY,MVZ,MVXSQ,MVYSQ,MVZSQ,MVSQ,
-     ENGROT,ENGVIB,DOFROT,DOFVIB,CELLCOUNT,CELLMASS,UY,VY,WY,LASTSIZE};
+     ENGROT,ENGVIB,DOFROT,DOFVIB,CELLCOUNT,CELLMASS,LASTSIZE};
 
 // max # of quantities to accumulate for any user value
 
@@ -121,8 +121,12 @@ ComputeGridSW::ComputeGridSW(SPARTA *sparta, int narg, char **arg) :
       set_map(ivalue,COUNT);
     } else if (strcmp(arg[iarg],"temp") == 0) {
       value[ivalue] = TEMPERATURE;
-      set_map(ivalue,MVSQ);
       set_map(ivalue,COUNT);
+      set_map(ivalue,MASSSUM);
+      set_map(ivalue,MVX);
+      set_map(ivalue,MVY);
+      set_map(ivalue,MVZ);
+      set_map(ivalue,MVSQ);
     } else if (strcmp(arg[iarg],"erot") == 0) {
       value[ivalue] = EROT;
       set_map(ivalue,ENGROT);
@@ -151,20 +155,6 @@ ComputeGridSW::ComputeGridSW(SPARTA *sparta, int narg, char **arg) :
     } else if (strcmp(arg[iarg],"kerho") == 0) {
       value[ivalue] = KERHO;
       set_map(ivalue,MVSQ);
-    // Correlations between particle velocity and position
-    // Only correlations with y-position implemented (easy to add others)
-    } else if (strcmp(arg[iarg],"coruy") == 0) {
-      value[ivalue] = CORUY;
-      set_map(ivalue,UY);
-      set_map(ivalue,COUNT);
-    } else if (strcmp(arg[iarg],"corvy") == 0) {
-      value[ivalue] = CORVY;
-      set_map(ivalue,VY);
-      set_map(ivalue,COUNT);
-    } else if (strcmp(arg[iarg],"corwy") == 0) {
-      value[ivalue] = CORWY;
-      set_map(ivalue,WY);
-      set_map(ivalue,COUNT);
     } else error->all(FLERR,"Illegal compute grid command");
 
     ivalue++;
@@ -240,8 +230,6 @@ void ComputeGridSW::compute_per_grid()
   double *v,*vec,*x;
   double g;
 
-  double ylo, yhi, yp;
-
   // zero all accumulators - could do this with memset()
 
   for (i = 0; i < nglocal; i++)
@@ -264,9 +252,6 @@ void ComputeGridSW::compute_per_grid()
     x = particles[i].x;
     v = particles[i].v;
     g = particles[i].g;
-    ylo = cells[icell].lo[1];
-    yhi = cells[icell].hi[1];
-    yp = x[1] - (ylo+yhi)*0.5; // position relative to cell center
 
     vec = tally[icell];
     if (cellmass) vec[cellmass] += mass;
@@ -320,16 +305,6 @@ void ComputeGridSW::compute_per_grid()
         break;
       case DOFVIB:
         vec[k++] += species[ispecies].vibdof;
-        break;
-      // this might be unweighted?
-      case UY:
-        vec[k++] += g*v[0]*yp;
-        break;
-      case VY:
-        vec[k++] += g*v[1]*yp;
-        break;
-      case WY:
-        vec[k++] += g*v[2]*yp;
         break;
       }
     }
@@ -504,13 +479,24 @@ void ComputeGridSW::post_process_grid(int index, int nsample,
 
   case TEMPERATURE: // count -> sum of weights
     {
-      double norm;
-      int mvsq = emap[0];
-      int count = emap[1];
+      double norm, vx, vy, vz, vsq;
+      int gsum = emap[0];
+      int msum = emap[1];
+      int mvx = emap[2];
+      int mvy = emap[3];
+      int mvz = emap[4];
+      int mvsq = emap[5];
       for (int icell = lo; icell < hi; icell++) {
-        norm = etally[icell][count];
+        norm = etally[icell][gsum];
         if (norm == 0.0) vec[k] = 0.0;
-        else vec[k] = tprefactor * etally[icell][mvsq] / norm;
+        else {
+          vx = etally[icell][mvx]/etally[icell][msum];
+          vy = etally[icell][mvy]/etally[icell][msum];
+          vz = etally[icell][mvz]/etally[icell][msum];
+          vsq = vx*vx + vy*vy + vz*vz;
+
+          vec[k] = (mvsq - msum*vsq) * tprefactor / etally[icell][gsum];
+        }
         k += nstride;
       }
       break;
@@ -581,22 +567,6 @@ void ComputeGridSW::post_process_grid(int index, int nsample,
           wt = cinfo[icell].weight / norm;
           vec[k] = eprefactor * wt * etally[icell][ke] / nsample;
         }
-        k += nstride;
-      }
-      break;
-    }
-
-  case CORUY:
-  case CORVY:
-  case CORWY:
-    {
-      double norm;
-      int vx = emap[0]; // velocity.position correlatino
-      int count = emap[1];
-      for (int icell = lo; icell < hi; icell++) {
-        norm = etally[icell][count];
-        if(norm == 0.0) vec[k] = 0.0;
-        else vec[k] = etally[icell][vx] / norm;
         k += nstride;
       }
       break;

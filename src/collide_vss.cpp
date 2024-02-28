@@ -776,6 +776,7 @@ int CollideVSS::split(Particle::OnePart *&ip,
                       Particle::OnePart *&kp,
                       Particle::OnePart *&lp)
 {
+
   int reactflag,kspecies;
   double xk[3],vk[3];
   double xl[3],vl[3];

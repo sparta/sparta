@@ -646,7 +646,7 @@ int Particle::add_particle(int id, int ispecies, int icell,
   p->erot = erot;
   p->evib = evib;
   p->flag = PKEEP;
-  if(collide->swpm_flag) p->g = g;
+  if(g > 0) p->g = g;
   else p->g = update->fnum; // ignore input if not using swpm
 
   //p->dtremain = 0.0;    not needed due to memset in grow() ??

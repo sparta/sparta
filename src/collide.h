@@ -61,6 +61,10 @@ class Collide : protected Pointers {
   virtual void add_grid_one();
   virtual void adapt_grid();
 
+  // DEBUG
+  double rho0, E0, V0[3];
+  template <int> void check_particles();
+
   int ngroups;        // # of groups
 
  protected:
@@ -179,7 +183,7 @@ class Collide : protected Pointers {
   void ambi_reset(int, int, int, Particle::OnePart *, Particle::OnePart *,
                   Particle::OnePart *, int *);
   void ambi_check();
-  void group_reduce();
+  int group_reduce();
   void group(int, int);
   void reduce(int, int, double, double *, double);
   void reduce(int, int, double, double *, double, double *);
