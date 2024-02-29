@@ -37,7 +37,7 @@ using namespace SPARTA_NS;
 enum{NONE,DISCRETE,SMOOTH};       // several files  (NOTE: change order)
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{ENERGY,HEAT,STRESS};   // particle reduction choices
-enum{BINARY,WEIGHT,OPTIMIZE}; // grouping choices
+enum{BINARY,WEIGHT,OCTREE,OPTIMIZE}; // grouping choices
 
 #define DELTAGRID 1000            // must be bigger than split cells per cell
 #define DELTADELETE 1024
@@ -409,6 +409,7 @@ void Collide::modify_params(int narg, char **arg)
       if(Ngmax < Ngmin) error->all(FLERR,"Illegal collide_modify command");
       if (strcmp(arg[iarg+7],"BINARY") == 0) group_type = BINARY;
       else if (strcmp(arg[iarg+7],"WEIGHT") == 0) reduction_type = WEIGHT;
+      else if (strcmp(arg[iarg+7],"OCTREE") == 0) reduction_type = OCTREE;
       else if (strcmp(arg[iarg+7],"OPT") == 0) reduction_type = OPTIMIZE;
       else error->all(FLERR,"Illegal collide_modify command");
       iarg += 8;
@@ -1886,25 +1887,74 @@ int Collide::group_reduce()
 
     n = np;
     while(n >= Ncmax) {
+      // create particle list
+      ip = cinfo[icell].first;
+      n = 0;
+      while (ip >= 0) {
+        ipart = &particles[ip];
+        g = ipart->g;
+        if(g > 0) plist[n++] = ip;
+        ip = next[ip];
+      }
 
       if(group_type == BINARY) {
-        // create particle list
+        // shuffle indices to choose random positions
+        int j;
+        for(int i = n-1; i > 0; --i) {
+          j = random->uniform()*i;
+          if(j < 0 || j >= n) error->one(FLERR,"bad index");
+          std::swap(plist[i], plist[j]);
+        }
+
+        group_bt(0,n);
+      } else if(group_type == WEIGHT) {
+        // determine weight limits
+
+        // find weight mean and variance
+        double gmean = 0.0;
+        for(int i = 0; i < n; i++) gmean += particles[plist[i]].g;
+        gmean /= n;
+
+        double gvar = 0.0;
+        for(int i = 0; i < n; i++)
+          gvar += (particles[plist[i]].g - gmean)*(particles[plist[i]].g - gmean);
+        double gstd = sqrt(gvar/n);
+
+        double lLim = MAX(gmean-gstd,0);
+        double uLim = gmean+2.0*gstd;
+
+        // recreate particle list and omit large weighted particles
         ip = cinfo[icell].first;
         n = 0;
         while (ip >= 0) {
           ipart = &particles[ip];
           g = ipart->g;
-          if(g > 0) plist[n++] = ip;
+          if(g > 0 && g < uLim) plist[n++] = ip;
           ip = next[ip];
         }
 
-        // reduce more if the number of particles is still too many
-        // AND if the reduction is still reducing
-        group(0,n);
-      } else if(group_type == WEIGHT) {
+        int pmid = 0;
+        for(int i = 0; i < n; i++) {
+          ipart = &particles[plist[i]];
+          if(ipart->g < lLim)
+            std::swap(plist[pmid++],plist[i]);
+        }
 
+        // can reuse binary tree division here
+        group_bt(0,pmid);
+        group_bt(pmid,n);
+
+      } else if(group_type == OCTREE) {
+        int j;
+        for(int i = n-1; i > 0; --i) {
+          j = random->uniform()*i;
+          if(j < 0 || j >= n) error->one(FLERR,"bad index");
+          std::swap(plist[i], plist[j]);
+        }
+
+        group_ot(0,n);
       } else if(group_type == OPTIMIZE) {
-
+        error->all(FLERR,"not implemented yet");
       }
 
     }
@@ -1916,7 +1966,7 @@ int Collide::group_reduce()
 /* ----------------------------------------------------------------------
    Rearrange plist into groups (assumes single species)
 ------------------------------------------------------------------------- */
-void Collide::group(int pfirst, int plast)
+void Collide::group_bt(int pfirst, int plast)
 {
   Particle::OnePart *ipart;
   Particle::OnePart *particles = particle->particles;
@@ -1929,55 +1979,55 @@ void Collide::group(int pfirst, int plast)
 
   // compute stress tensor since it's needed for
   // .. further dividing and reduction
-  double gsum, gV[3], gVV[3][3], gVVV[3];
-  gsum = 0.0;
+  double gsum, msum, mV[3], mVV[3][3], mVVV[3][3];
+  gsum = msum = 0.0;
   for(int i = 0; i < 3; i++) {
-    gV[i] = 0.0;
-    gVVV[i] = 0.0;
-    for(int j = 0; j < 3; j++)
-      gVV[i][j] = 0.0;
+    mV[i] = 0.0;
+    for(int j = 0; j < 3; j++) {
+      mVV[i][j] = 0.0;
+      mVVV[i][j] = 0.0;
+    }
   }
 
-  // should clean up this logic later
+  // find maximum particle weight
   int ispecies;
-	double mass, gp, vp[3], vpsq;
+	double mass, gp, mgp, vp[3];
   for(int p = pfirst; p < plast; p++) {
     ipart = &particles[plist[p]];
     ispecies = ipart->ispecies;
     mass = species[ispecies].mass;
 
     gp = ipart->g;
+    mgp = gp * mass;
     memcpy(vp, ipart->v, 3*sizeof(double));
    	gsum += gp;
+    msum += mgp;
     for(int i = 0; i < 3; i++) {
-      gV[i] += (gp*vp[i]);
+      mV[i] += (mgp*vp[i]);
       for(int j = 0; j < 3; j++) {
-        gVV[i][j] += (gp*vp[i]*vp[j]);
+        mVV[i][j] += (mgp*vp[i]*vp[j]);
+        mVVV[i][j] += (mgp*vp[i]*vp[j]*vp[j]);
       }
     }
-    vpsq = vp[0]*vp[0]+vp[1]*vp[1]+vp[2]*vp[2];
-
-    // heat flux (3rd)
-    for(int i = 0; i < 3; i++) gVVV[i] += 0.5*(gp*vp[i]*vpsq);
   }
 
   // mean velocity
 	double V[3];
-  for(int i = 0; i < 3; i++) V[i] = gV[i]/gsum;
+  for(int i = 0; i < 3; i++) V[i] = mV[i]/msum;
 
   // stress tensor
   double pij[3][3];
   for(int i = 0; i < 3; i++)
     for(int j = 0; j < 3; j++)
-      pij[i][j] = mass*(gVV[i][j] - gsum*V[i]*V[j]);
+      pij[i][j] = mVV[i][j] - mV[i]*mV[j]/msum;
 
   // if group is small enough, merge the particles
 
   if(np <= Ngmax) {
     // remove small stress tensor components
-    for(int i = 0; i < 3; i++)
-      for(int j = 0; j < 3; j++)
-        if(fabs(pij[i][j]/mass) < SMALLISH) pij[i][j] = 0.0;
+    //for(int i = 0; i < 3; i++)
+    //  for(int j = 0; j < 3; j++)
+    //    if(fabs(pij[i][j]/mass) < SMALLISH) pij[i][j] = 0.0;
 
     // temperature
     double T = (pij[0][0] + pij[1][1] + pij[2][2])/
@@ -1985,14 +2035,46 @@ void Collide::group(int pfirst, int plast)
 
     // heat flux
     double Vsq = V[0]*V[0] + V[1]*V[1] + V[2]*V[2];
-    double q[3];
-    for(int i = 0; i < 3; i++) q[i] = mass * gVVV[i] -
-      (pij[i][0]*V[0] + pij[i][1]*V[1] + pij[i][2]*V[2]) -
-      1.5*update->boltz*V[i]*gsum*T - 0.5*mass*gsum*V[i]*Vsq;
+    double h,h1,h2,q[3];
+    int i1,i2;
+    for(int i = 0; i < 3; i++) {
+      if(i==0) {
+        i1 = 1;
+        i2 = 2;
+      } else if(i==1) {
+        i1 = 2;
+        i2 = 0;
+      } else {
+        i1 = 0;
+        i2 = 1;
+      }
+
+      h  = mVVV[i][i] - 3.0*mV[i]*mVV[i][i]/msum +
+           2.0*mV[i]*mV[i]*mV[i]/msum/msum;
+      h1 = mVVV[i][i1] - 2.0*mVV[i][i1]*mV[i1]/msum -
+           mV[i]*mVV[i1][i1]/msum + 2.0*mV[i]*mV[i1]*mV[i1]/msum/msum;
+      h2 = mVVV[i][i2] - 2.0*mVV[i][i2]*mV[i2]/msum -
+           mV[i]*mVV[i2][i2]/msum + 2.0*mV[i]*mV[i2]*mV[i2]/msum/msum;
+      q[i] = (h + h1 + h2) * 0.5;
+    }
+
+    // DEBUG
+    /*for(int p = pfirst; p < plast; p++) {
+      ipart = &particles[plist[p]];
+      printf("[%4.3e,%4.3e,%4.3e,%4.3e],\n",
+        ipart->g, ipart->v[0], ipart->v[1], ipart->v[2]);
+    }
+    printf("rho: %4.3e; T: %4.3e\n", gsum, T);
+    printf("pij: %4.3e,%4.3e,%4.3e\n",pij[0][0],pij[0][1],pij[0][2]);
+    printf("pij: %4.3e,%4.3e,%4.3e\n",pij[1][0],pij[1][1],pij[1][2]);
+    printf("pij: %4.3e,%4.3e,%4.3e\n",pij[2][0],pij[2][1],pij[2][2]);
+    printf("q: %4.3e,%4.3e,%4.3e\n\n", q[0],q[1],q[2]);*/
+    //error->one(FLERR,"ck");
+    // END DEBUG
 
     // remove small heat fluxes
-    for(int i = 0; i < 3; i++)
-      if(fabs(q[i]/mass) < SMALLISH) q[i] = 0.0;
+    //for(int i = 0; i < 3; i++)
+    //  if(fabs(q[i]/mass) < SMALLISH) q[i] = 0.0;
 
     // scale values to be consistent with definitions in
     // .. stochastic numerics book
@@ -2000,15 +2082,6 @@ void Collide::group(int pfirst, int plast)
     for(int i = 0; i < 3; i++) {
       q[i] /= mass;
       for(int j = 0; j < 3; j++) pij[i][j] /= mass;
-    }
-
-    // shuffle indices to choose random positions
-    int j, dp;
-    for(int i = plast-1; i > pfirst; i--) {
-      dp = i - pfirst;
-      j = static_cast<int>(floor(random->uniform()*dp)+pfirst);
-      if(j < pfirst || j >= plast) error->one(FLERR,"bad index");
-      std::swap(plist[i], plist[j]);
     }
 
     // reduce based on type
@@ -2056,8 +2129,171 @@ void Collide::group(int pfirst, int plast)
         std::swap(plist[pmid++],plist[i]);
     }
 
-    group(pfirst,pmid);
-    group(pmid,plast);
+    group_bt(pfirst,pmid);
+    group_bt(pmid,plast);
+  }
+
+  return;
+}
+
+/* ----------------------------------------------------------------------
+   Rearrange plist into groups (assumes single species)
+------------------------------------------------------------------------- */
+void Collide::group_ot(int pfirst, int plast)
+{
+  Particle::OnePart *ipart;
+  Particle::OnePart *particles = particle->particles;
+  Particle::Species *species = particle->species;
+  int np = plast-pfirst;
+
+  // ignore groups which have too few particles
+  if(np<=Ngmin)
+    return;
+
+  // compute stress tensor since it's needed for
+  // .. further dividing and reduction
+  double gsum, msum, mV[3], mVV[3][3], mVVV[3][3];
+  gsum = msum = 0.0;
+  for(int i = 0; i < 3; i++) {
+    mV[i] = 0.0;
+    for(int j = 0; j < 3; j++) {
+      mVV[i][j] = 0.0;
+      mVVV[i][j] = 0.0;
+    }
+  }
+
+  // find maximum particle weight
+  int ispecies;
+	double mass, gp, mgp, vp[3];
+  for(int p = pfirst; p < plast; p++) {
+    ipart = &particles[plist[p]];
+    ispecies = ipart->ispecies;
+    mass = species[ispecies].mass;
+
+    gp = ipart->g;
+    mgp = gp * mass;
+    memcpy(vp, ipart->v, 3*sizeof(double));
+   	gsum += gp;
+    msum += mgp;
+    for(int i = 0; i < 3; i++) {
+      mV[i] += (mgp*vp[i]);
+      for(int j = 0; j < 3; j++) {
+        mVV[i][j] += (mgp*vp[i]*vp[j]);
+        mVVV[i][j] += (mgp*vp[i]*vp[j]*vp[j]);
+      }
+    }
+  }
+
+  // mean velocity
+	double V[3];
+  for(int i = 0; i < 3; i++) V[i] = mV[i]/msum;
+
+  // stress tensor
+  double pij[3][3];
+  for(int i = 0; i < 3; i++)
+    for(int j = 0; j < 3; j++)
+      pij[i][j] = mVV[i][j] - mV[i]*mV[j]/msum;
+
+  // if group is small enough, merge the particles
+
+  if(np <= Ngmax) {
+    // remove small stress tensor components
+    //for(int i = 0; i < 3; i++)
+    //  for(int j = 0; j < 3; j++)
+    //    if(fabs(pij[i][j]/mass) < SMALLISH) pij[i][j] = 0.0;
+
+    // temperature
+    double T = (pij[0][0] + pij[1][1] + pij[2][2])/
+      (3.0 * gsum * update->boltz);
+
+    // heat flux
+    double Vsq = V[0]*V[0] + V[1]*V[1] + V[2]*V[2];
+    double h,h1,h2,q[3];
+    int i1,i2;
+    for(int i = 0; i < 3; i++) {
+      if(i==0) {
+        i1 = 1;
+        i2 = 2;
+      } else if(i==1) {
+        i1 = 2;
+        i2 = 0;
+      } else {
+        i1 = 0;
+        i2 = 1;
+      }
+
+      h  = mVVV[i][i] - 3.0*mV[i]*mVV[i][i]/msum +
+           2.0*mV[i]*mV[i]*mV[i]/msum/msum;
+      h1 = mVVV[i][i1] - 2.0*mVV[i][i1]*mV[i1]/msum -
+           mV[i]*mVV[i1][i1]/msum + 2.0*mV[i]*mV[i1]*mV[i1]/msum/msum;
+      h2 = mVVV[i][i2] - 2.0*mVV[i][i2]*mV[i2]/msum -
+           mV[i]*mVV[i2][i2]/msum + 2.0*mV[i]*mV[i2]*mV[i2]/msum/msum;
+      q[i] = (h + h1 + h2) * 0.5;
+    }
+
+    // remove small heat fluxes
+    //for(int i = 0; i < 3; i++)
+    //  if(fabs(q[i]/mass) < SMALLISH) q[i] = 0.0;
+
+    // scale values to be consistent with definitions in
+    // .. stochastic numerics book
+    T *= update->boltz/mass;
+    for(int i = 0; i < 3; i++) {
+      q[i] /= mass;
+      for(int j = 0; j < 3; j++) pij[i][j] /= mass;
+    }
+
+    // reduce based on type
+    if(reduction_type == ENERGY) {
+      reduce(pfirst, plast, gsum, V, T);
+    } else if(reduction_type == HEAT) {
+      reduce(pfirst, plast, gsum, V, T, q);
+    } else if(reduction_type == STRESS) {
+      reduce(pfirst, plast, gsum, V, T, q, pij);
+    }
+
+  // group still too large so divide further
+  } else {
+
+    // sort particles into octants
+    int temp[np][8];
+    int ip, iquad, nquad, nq[8];
+    for(int i = 0; i < 8; i++) nq[i] = 0;
+    
+    for(int i = pfirst; i < plast; i++) {
+      ip = plist[i];
+      ipart = &particles[ip];
+      memcpy(vp, ipart->v, 3*sizeof(double));
+
+      iquad = 0;
+      if(vp[0] > V[0]) iquad += 1;
+      if(vp[1] > V[1]) iquad += 2;
+      if(vp[2] > V[2]) iquad += 4;
+
+      nquad = nq[iquad];
+      temp[nquad++][iquad] = ip;
+      nq[iquad] = nquad;
+    }
+
+    // rebuild particle list
+    ip = pfirst;
+    for(int i = 0; i < 8; i++) {
+      nquad = nq[i];
+      for(int j = 0; j < nquad; j++) {
+        plist[ip++] = temp[i][j];
+      }
+    }
+
+    // start next iteration
+    int start, end;
+    start = pfirst;
+    end = pfirst + nq[0];
+    group_ot(start,end);
+    for(int i = 0; i < 8; i++) {
+      start = end;
+      end += nq[i];
+      group_ot(start,end);
+    }
   }
 
   return;
@@ -2130,7 +2366,7 @@ void Collide::reduce(int pfirst, int plast,
 
   // find direction of velocity wrt CoM frame
   double uvec[3];
-  if(qmag == 0) {
+  if(qmag < SMALL) {
     for (int d = 0; d < 3; d++) {
       double A = sqrt(-log(random->uniform()));
       double phi = 6.283185308 * random->uniform();

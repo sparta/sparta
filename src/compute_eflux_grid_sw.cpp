@@ -30,12 +30,9 @@ enum{HEATX,HEATY,HEATZ};
 
 // internal accumulators
 
-enum{gSum,  massSum,
-     gVx,   gVy,   gVz,
-     gVxVx, gVyVy, gVzVz,
-     gVxVy, gVxVz, gVyVz,
-     gVxVV, gVyVV, gVzVV,
-     LASTSIZE};
+enum{MASSSUM,mVx,mVy,mVz,mVxVx,mVyVy,mVzVz,mVxVy,mVyVz,mVxVz,
+     mVxVxVx,mVyVyVy,mVzVzVz,
+     mVxVyVy,mVxVzVz,mVyVxVx,mVyVzVz,mVzVxVx,mVzVyVy,LASTSIZE};
 
 // max # of quantities to accumulate for any user value
 
@@ -69,49 +66,49 @@ ComputeEFluxGridSW::ComputeEFluxGridSW(SPARTA *sparta, int narg, char **arg) :
 
   int ivalue = 0;
   int iarg = 4;
-  while (iarg < narg) {
+while (iarg < narg) {
     if (strcmp(arg[iarg],"heatx") == 0) {
       value[ivalue] = HEATX;
-      set_map(ivalue,gSum);
-      set_map(ivalue,massSum);
-      set_map(ivalue,gVx);
-      set_map(ivalue,gVy);
-      set_map(ivalue,gVz);
-      set_map(ivalue,gVxVx);
-      set_map(ivalue,gVyVy);
-      set_map(ivalue,gVzVz);
-      set_map(ivalue,gVxVy);
-      set_map(ivalue,gVxVz);
-      set_map(ivalue,gVyVz);
-      set_map(ivalue,gVxVV);
+      set_map(ivalue,MASSSUM);
+      set_map(ivalue,mVx);
+      set_map(ivalue,mVy);
+      set_map(ivalue,mVz);
+      set_map(ivalue,mVxVx);
+      set_map(ivalue,mVyVy);
+      set_map(ivalue,mVzVz);
+      set_map(ivalue,mVxVy);
+      set_map(ivalue,mVxVz);
+      set_map(ivalue,mVxVxVx);
+      set_map(ivalue,mVxVyVy);
+      set_map(ivalue,mVxVzVz);
     } else if (strcmp(arg[iarg],"heaty") == 0) {
-      value[ivalue] = HEATY;
-      set_map(ivalue,gSum);
-      set_map(ivalue,massSum);
-      set_map(ivalue,gVy);
-      set_map(ivalue,gVz);
-      set_map(ivalue,gVx);
-      set_map(ivalue,gVyVy);
-      set_map(ivalue,gVzVz);
-      set_map(ivalue,gVxVx);
-      set_map(ivalue,gVyVz);
-      set_map(ivalue,gVxVy);
-      set_map(ivalue,gVxVz);
-      set_map(ivalue,gVyVV);
+      value[ivalue] = HEATX;
+      set_map(ivalue,MASSSUM);
+      set_map(ivalue,mVy);
+      set_map(ivalue,mVx);
+      set_map(ivalue,mVz);
+      set_map(ivalue,mVyVy);
+      set_map(ivalue,mVxVx);
+      set_map(ivalue,mVzVz);
+      set_map(ivalue,mVxVy);
+      set_map(ivalue,mVyVz);
+      set_map(ivalue,mVyVyVy);
+      set_map(ivalue,mVyVxVx);
+      set_map(ivalue,mVyVzVz);
     } else if (strcmp(arg[iarg],"heatz") == 0) {
-      value[ivalue] = HEATZ;
-      set_map(ivalue,gSum);
-      set_map(ivalue,massSum);
-      set_map(ivalue,gVz);
-      set_map(ivalue,gVx);
-      set_map(ivalue,gVy);
-      set_map(ivalue,gVzVz);
-      set_map(ivalue,gVxVx);
-      set_map(ivalue,gVyVy);
-      set_map(ivalue,gVxVz);
-      set_map(ivalue,gVyVz);
-      set_map(ivalue,gVxVy);
-      set_map(ivalue,gVzVV);
+      value[ivalue] = HEATX;
+      set_map(ivalue,MASSSUM);
+      set_map(ivalue,mVz);
+      set_map(ivalue,mVx);
+      set_map(ivalue,mVy);
+      set_map(ivalue,mVzVz);
+      set_map(ivalue,mVxVx);
+      set_map(ivalue,mVyVy);
+      set_map(ivalue,mVxVz);
+      set_map(ivalue,mVyVz);
+      set_map(ivalue,mVzVzVz);
+      set_map(ivalue,mVzVxVx);
+      set_map(ivalue,mVzVyVy);
     } else error->all(FLERR,"Illegal compute eflux/grid/sw command");
 
     ivalue++;
@@ -174,9 +171,8 @@ void ComputeEFluxGridSW::compute_per_grid()
   int nlocal = particle->nlocal;
 
   int i,j,k,m,ispecies,igroup,icell;
-  double mass, vsq;
+  double mass, g;
   double *v,*vec;
-  double g;
 
   // zero all accumulators - could do this with memset()
   for (i = 0; i < nglocal; i++)
@@ -194,7 +190,6 @@ void ComputeEFluxGridSW::compute_per_grid()
     mass = species[ispecies].mass;
     v = particles[i].v;
     g = particles[i].g;
-    vsq = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
 
     vec = tally[icell];
 
@@ -203,54 +198,71 @@ void ComputeEFluxGridSW::compute_per_grid()
     // NOTE: at some point may need prefactors v,v^2,v^3 converted to p,eng
 
     k = igroup*npergroup;
+
     for (m = 0; m < npergroup; m++) {
       switch (unique[m]) {
-      case gSum:
-        vec[k++] += g;
-        break;
-      case massSum:
+      case MASSSUM:
         vec[k++] += mass*g;
         break;
-      case gVx:
+      case mVx:
         vec[k++] += mass*v[0]*g;
         break;
-      case gVy:
+      case mVy:
         vec[k++] += mass*v[1]*g;
         break;
-      case gVz:
+      case mVz:
         vec[k++] += mass*v[2]*g;
         break;
-      case gVxVx:
+      case mVxVx:
         vec[k++] += mass*v[0]*v[0]*g;
         break;
-      case gVyVy:
+      case mVyVy:
         vec[k++] += mass*v[1]*v[1]*g;
         break;
-      case gVzVz:
+      case mVzVz:
         vec[k++] += mass*v[2]*v[2]*g;
         break;
-      case gVxVy:
+      case mVxVy:
         vec[k++] += mass*v[0]*v[1]*g;
         break;
-      case gVxVz:
-        vec[k++] += mass*v[0]*v[2]*g;
-        break;
-      case gVyVz:
+      case mVyVz:
         vec[k++] += mass*v[1]*v[2]*g;
         break;
-      case gVxVV:
-        vec[k++] += mass*v[0]*vsq*g*0.5;
+      case mVxVz:
+        vec[k++] += mass*v[0]*v[2]*g;
         break;
-      case gVyVV:
-        vec[k++] += mass*v[1]*vsq*g*0.5;
+      case mVxVxVx:
+        vec[k++] += mass*v[0]*v[0]*v[0]*g;
         break;
-      case gVzVV:
-        vec[k++] += mass*v[2]*vsq*g*0.5;
+      case mVyVyVy:
+        vec[k++] += mass*v[1]*v[1]*v[1]*g;
+        break;
+      case mVzVzVz:
+        vec[k++] += mass*v[2]*v[2]*v[2]*g;
+        break;
+      case mVxVyVy:
+        vec[k++] += mass*v[0]*v[1]*v[1]*g;
+        break;
+      case mVxVzVz:
+        vec[k++] += mass*v[0]*v[2]*v[2]*g;
+        break;
+      case mVyVxVx:
+        vec[k++] += mass*v[1]*v[0]*v[0]*g;
+        break;
+      case mVyVzVz:
+        vec[k++] += mass*v[1]*v[2]*v[2]*g;
+        break;
+      case mVzVxVx:
+        vec[k++] += mass*v[2]*v[0]*v[0]*g;
+        break;
+      case mVzVyVy:
+        vec[k++] += mass*v[2]*v[1]*v[1]*g;
         break;
       }
     }
   }
 }
+
 
 /* ----------------------------------------------------------------------
    query info about internal tally array for this compute
@@ -303,51 +315,39 @@ void ComputeEFluxGridSW::post_process_grid(int index, int nsample,
     nstride = 1;
   }
 
+  double summass,h,h1,h2,wt;
   double *t;
+
+  double fnum = update->fnum;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  int gsum = emap[0];
-  int mass = emap[1];
-  int mv   = emap[2];
-  int mv1  = emap[3];
-  int mv2  = emap[4];
-
-  int mvv   = emap[5];
-  int mv1v1 = emap[6];
-  int mv2v2 = emap[7];
-
-  int mvv1  = emap[8];
-  int mvv2  = emap[9];
-  int mv1v2 = emap[10];
-
-  int mvvv  = emap[10];
-
-  double wt;
-  double V, V1, V2;
-  double pvv, pv1v1, pv2v2;
-  double pvv1, pvv2, pv1v2;
-  double Vsq, T;
+  int mass = emap[0];
+  int mv = emap[1];
+  int mv1 = emap[2];
+  int mv2 = emap[3];
+  int mvv = emap[4];
+  int mv1v1 = emap[5];
+  int mv2v2 = emap[6];
+  int mvv1 = emap[7];
+  int mvv2 = emap[8];
+  int mvvv = emap[9];
+  int mvv1v1 = emap[10];
+  int mvv2v2 = emap[11];
 
   for (int icell = lo; icell < hi; icell++) {
     t = etally[icell];
-    V = t[mv]/t[mass];
-    V1 = t[mv1]/t[mass];
-    V2 = t[mv2]/t[mass];
-
-    pvv = t[mvv] - t[mass]*V*V;
-    pv1v1 = t[mv1v1] - t[mass]*V1*V1;
-    pv2v2 = t[mv2v2] - t[mass]*V2*V2;
-    pvv1 = t[mvv1] - t[mass]*V*V1;
-    pvv2 = t[mvv2] - t[mass]*V*V2;
-    pv1v2 = t[mv1v2] - t[mass]*V1*V2;
-
-    Vsq = V*V + V1*V1 + V2*V2;
-    T = (pvv + pv1v1 + pv2v2) / (3.0 * t[gsum] * update->boltz);
- 
-    wt = cinfo[icell].weight / cinfo[icell].volume;
-
-    vec[k] = wt/nsample * (t[mvvv] - (pvv*V + pvv1*V1 + pvv2*V2) -
-      0.5*t[mass]*V*Vsq - 1.5*update->boltz*V*t[gsum]*T);
+    summass = t[mass];
+    if (summass == 0.0) vec[k] = 0.0;
+    else {
+      h = t[mvvv] - 3.0*t[mv]*t[mvv]/summass +
+        2.0*t[mv]*t[mv]*t[mv]/summass/summass;
+      h1 = t[mvv1v1] - 2.0*t[mvv1]*t[mv1]/summass - t[mv]*t[mv1v1]/summass +
+        2.0*t[mv]*t[mv1]*t[mv1]/summass/summass;
+      h2 = t[mvv2v2] - 2.0*t[mvv2]*t[mv2]/summass - t[mv]*t[mv2v2]/summass +
+        2.0*t[mv]*t[mv2]*t[mv2]/summass/summass;
+      wt = 0.5 * cinfo[icell].weight / cinfo[icell].volume;
+      vec[k] = wt/nsample * (h + h1 + h2);
+    }
     k += nstride;
   }
 }

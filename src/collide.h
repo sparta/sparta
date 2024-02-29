@@ -184,7 +184,8 @@ class Collide : protected Pointers {
                   Particle::OnePart *, int *);
   void ambi_check();
   int group_reduce();
-  void group(int, int);
+  void group_bt(int, int);
+  void group_ot(int, int);
   void reduce(int, int, double, double *, double);
   void reduce(int, int, double, double *, double, double *);
   void reduce(int, int, double, double *, double, double *, double [3][3]);
