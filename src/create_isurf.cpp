@@ -140,9 +140,6 @@ void CreateISurf::command(int narg, char **arg)
   else if (strcmp(arg[3],"ave") == 0) aveFlag = 1;
   else error->all(FLERR,"Unknown surface corner mode called");
 
-  //if (aveFlag && comm->nprocs > 1)
-  //  error->all(FLERR,"Create_isurf averaging not possible in parallel");
-
   // nxyz already takes into account subcells
   // find corner values for all grid cells initially
   // only store those within ggroup when calling ablate->store
@@ -163,8 +160,10 @@ void CreateISurf::command(int narg, char **arg)
   surf->implicit = 1;
   surf->exist = 1;
 
-  tvalues = NULL; // TODO: Add per-surface type
-  int pushflag = 0; // don't push
+  // TODO LATER: Add per-surface type capability
+  tvalues = NULL;
+  // Don't push corner point values. This will override averaging option
+  int pushflag = 0;
   char *sgroupID = arg[0];
   ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
                   cvalues,tvalues,thresh,sgroupID,pushflag);

@@ -51,11 +51,8 @@ partially inside the simulation box, but which when clipped to the box
 becomes non-watertight, e.g. half of a sphere. Generated implicit surfaces will
 always be watertight.
 
-While not currently implemented, implicit surface elements can have a 
-surface type that is defined in each grid cell.
-
-Here are images of a 2D cirlce, 3D idealized rough surface, and
-3D cone as explicit surfaces and converted to implicit
+Here are images of a 2D circle, 3D idealized rough surface, and
+3D cone which were originally explicit surfaces and converted to implicit
 surfaces. For each pair, the left image is the explicit surface and the 
 right image is the implicit surface.
 
