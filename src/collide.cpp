@@ -408,9 +408,9 @@ void Collide::modify_params(int narg, char **arg)
       Ngmax = atoi(arg[iarg+6]);
       if(Ngmax < Ngmin) error->all(FLERR,"Illegal collide_modify command");
       if (strcmp(arg[iarg+7],"BINARY") == 0) group_type = BINARY;
-      else if (strcmp(arg[iarg+7],"WEIGHT") == 0) reduction_type = WEIGHT;
-      else if (strcmp(arg[iarg+7],"OCTREE") == 0) reduction_type = OCTREE;
-      else if (strcmp(arg[iarg+7],"OPT") == 0) reduction_type = OPTIMIZE;
+      else if (strcmp(arg[iarg+7],"WEIGHT") == 0) group_type = WEIGHT;
+      else if (strcmp(arg[iarg+7],"OCTREE") == 0) group_type = OCTREE;
+      else if (strcmp(arg[iarg+7],"OPT") == 0) group_type = OPTIMIZE;
       else error->all(FLERR,"Illegal collide_modify command");
       iarg += 8;
     } else error->all(FLERR,"Illegal collide_modify command");
@@ -1885,17 +1885,17 @@ int Collide::group_reduce()
     if (np < Ncmax) continue;
     reduced = 1;
 
-    n = np;
+    // create particle list
+    ip = cinfo[icell].first;
+    n = 0;
+    while (ip >= 0) {
+      ipart = &particles[ip];
+      g = ipart->g;
+      if(g > 0) plist[n++] = ip;
+      ip = next[ip];
+    }
+
     while(n >= Ncmax) {
-      // create particle list
-      ip = cinfo[icell].first;
-      n = 0;
-      while (ip >= 0) {
-        ipart = &particles[ip];
-        g = ipart->g;
-        if(g > 0) plist[n++] = ip;
-        ip = next[ip];
-      }
 
       if(group_type == BINARY) {
         // shuffle indices to choose random positions
@@ -1908,18 +1908,29 @@ int Collide::group_reduce()
 
         group_bt(0,n);
       } else if(group_type == WEIGHT) {
-        // determine weight limits
 
-        // find weight mean and variance
-        double gmean = 0.0;
-        for(int i = 0; i < n; i++) gmean += particles[plist[i]].g;
-        gmean /= n;
+        // find mean / standard deviation of weight
+        double gmean, gvar;
+        double d1, d2;
+        ip = cinfo[icell].first;
+        n = 0;
+        gmean = gvar = 0.0;
+        while (ip >= 0) {
+          ipart = &particles[ip];
+          g = ipart->g;
 
-        double gvar = 0.0;
-        for(int i = 0; i < n; i++)
-          gvar += (particles[plist[i]].g - gmean)*(particles[plist[i]].g - gmean);
+          // Incremental variance
+          if(g > 0) {
+            n++;
+            d1 = g - gmean;
+            gmean += (d1/n);
+            gvar += (n-1.0)/n*d1*d1;
+          }
+          ip = next[ip];
+        }
         double gstd = sqrt(gvar/n);
 
+        // weight limits to separate particles
         double lLim = MAX(gmean-gstd,0);
         double uLim = gmean+2.0*gstd;
 
@@ -1933,6 +1944,15 @@ int Collide::group_reduce()
           ip = next[ip];
         }
 
+        // shuffle indices to choose random positions
+        int j;
+        for(int i = n-1; i > 0; --i) {
+          j = random->uniform()*i;
+          if(j < 0 || j >= n) error->one(FLERR,"bad index");
+          std::swap(plist[i], plist[j]);
+        }
+
+        // rearrange so that small weighted particles in front
         int pmid = 0;
         for(int i = 0; i < n; i++) {
           ipart = &particles[plist[i]];
@@ -1953,8 +1973,19 @@ int Collide::group_reduce()
         }
 
         group_ot(0,n);
+
       } else if(group_type == OPTIMIZE) {
         error->all(FLERR,"not implemented yet");
+      }
+
+      // recreate particle list after reduction
+      ip = cinfo[icell].first;
+      n = 0;
+      while (ip >= 0) {
+        ipart = &particles[ip];
+        g = ipart->g;
+        if(g > 0) plist[n++] = ip;
+        ip = next[ip];
       }
 
     }
@@ -2057,20 +2088,6 @@ void Collide::group_bt(int pfirst, int plast)
            mV[i]*mVV[i2][i2]/msum + 2.0*mV[i]*mV[i2]*mV[i2]/msum/msum;
       q[i] = (h + h1 + h2) * 0.5;
     }
-
-    // DEBUG
-    /*for(int p = pfirst; p < plast; p++) {
-      ipart = &particles[plist[p]];
-      printf("[%4.3e,%4.3e,%4.3e,%4.3e],\n",
-        ipart->g, ipart->v[0], ipart->v[1], ipart->v[2]);
-    }
-    printf("rho: %4.3e; T: %4.3e\n", gsum, T);
-    printf("pij: %4.3e,%4.3e,%4.3e\n",pij[0][0],pij[0][1],pij[0][2]);
-    printf("pij: %4.3e,%4.3e,%4.3e\n",pij[1][0],pij[1][1],pij[1][2]);
-    printf("pij: %4.3e,%4.3e,%4.3e\n",pij[2][0],pij[2][1],pij[2][2]);
-    printf("q: %4.3e,%4.3e,%4.3e\n\n", q[0],q[1],q[2]);*/
-    //error->one(FLERR,"ck");
-    // END DEBUG
 
     // remove small heat fluxes
     //for(int i = 0; i < 3; i++)
