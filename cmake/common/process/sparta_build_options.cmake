@@ -53,10 +53,55 @@ endif()
 list(APPEND TARGET_SPARTA_BUILD_TPLS ${TARGET_SPARTA_BUILD_MPI})
 # ################### END PROCESS MPI TPL/PKG ####################
 
-# ################### BEGIN PROCESS PKGS ####################
+# ################### BEGIN PROCESS FFT_KOKKOS TPL ####################
+if(FFT_KOKKOS STREQUAL "KISS")
+  set(PKG_KOKKOS
+  ON
+  CACHE BOOL "Enable or disable sparta kokkos package. Default: OFF.")
+endif()
+
+if(FFT AND FFT_KOKKOS)
+  message(FATAL_ERROR  "Both FFT: ${FFT} and FFT_KOKKOS: ${FFT_KOKKOS} are selected. ")
+endif()
+
+if(FFT_KOKKOS STREQUAL "CUFFT" AND NOT Kokkos_ENABLE_CUDA)
+  message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} requires Kokkos_ENABLE_CUDA: ON.")
+endif()
+
+if(FFT_KOKKOS STREQUAL "HIPFFT" AND NOT Kokkos_ENABLE_HIP)
+  message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} requires Kokkos_ENABLE_HIP: ON.")
+endif()
+
+if(FFT_KOKKOS STREQUAL "FFTW3")
+  if(Kokkos_ENABLE_CUDA OR Kokkos_ENABLE_HIP OR Kokkos_ENABLE_ROCM)
+    message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} cannot run with a kokkos GPU backend.")
+  endif()
+endif()
+
+if(FFT_KOKKOS STREQUAL "MKL")
+  if(Kokkos_ENABLE_CUDA OR Kokkos_ENABLE_HIP OR Kokkos_ENABLE_ROCM)
+    message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} cannot run with a kokkos GPU backend.")
+  endif()
+endif()
+
+if(FFT_KOKKOS STREQUAL "FFTW3" OR FFT_KOKKOS STREQUAL "MKL")
+  if((NOT Kokkos_ENABLE_SERIAL) AND (NOT Kokkos_ENABLE_OPENMP))
+    message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} requires either Kokkos_ENABLE_OPENMP or Kokkos_ENABLE_SERIAL")
+  endif()
+endif()
+
 if(FFT AND PKG_FFT)
   message(WARNING "Both FFT: ${FFT} and PKG_FFT: ${PKG_FFT} are selected. "
                   "Defaulting to PKG_FFT.")
+endif()
+# ################### END PROCESS FFT_KOKKOS TPL ####################
+
+# ################### BEGIN PROCESS PKGS ####################
+if(PKG_KOKKOS)
+  # Sparta's Kokkos package requires dependencies from the PKG_FFT target.
+  set(PKG_FFT
+      ON
+      CACHE STRING "" FORCE)
 endif()
 
 if(PKG_FFT)
