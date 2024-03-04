@@ -1,14 +1,19 @@
-##########################################
+################################################################################
 # advect particles on uniform Cartesian grid
 # single-step moves that cross grid cell boundaries are detected
 # particle effectively moves from cell to cell
 # particles reflect off global box boundaries
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
 
 ###################################
 # Trajectory inputs
 ###################################
 variable            V equal 7800.00
-#variable 	    nden equal 3.275E19
 variable 	    nden equal 3.275E20
 variable            temp equal 196.7
 variable            pi equal 3.14159
@@ -96,15 +101,14 @@ global              fnum ${Fnum}
 
 timestep            ${tstep}
 global              gridcut 1.E-1
-#global              comm/sort yes
-global             surfmax 20000
-global             surfs explicit/distributed
+global              comm/sort yes
+global              surfmax 20000
+global              surfs explicit/distributed
 ###################################
 # Grid generation
 ###################################
 boundary	    p p p 
 create_box          ${xmin} ${xmax} ${ymin} ${ymax} ${zmin} ${zmax}
-#create_box          ${xmin} ${xmax} 0.0 ${ymax} -0.5 0.5
 create_grid 	    ${xncells} ${yncells} ${zncells} block * * * 
 
 balance_grid        rcb cell
@@ -113,23 +117,23 @@ balance_grid        rcb cell
 # Gas/Collision Model Specification #
 #####################################
 species             air.species N2
-mixture					    air N2 vstream 0.0 0.0 0.0
-collide					    vss air air.vss
+mixture		    air N2 vstream 0.0 0.0 0.0
+collide		    vss air air.vss
 
 #####################################################
 # Surface generation and collision specification
 #####################################################
 read_surf	    bluntcone.surf group 1 scale 0.001 0.001 0.001 
-surf_collide	      1 diffuse ${surftemp} 1.0 
+surf_collide        1 diffuse ${surftemp} 1.0 
 surf_modify         1 collide 1 
 
-fix							fablate ablate all 0 0.2 random 0
-create_isurf     all fablate 39.5 inout
+fix		    fablate ablate all 0 0.2 random 0
+create_isurf        all fablate 39.5 inout
 
 ###################################
 # Initialize simulation
 ###################################
-create_particles    air n 0
+create_particles    air n 0 twopass
 
 ###################################
 # Unsteady Output
@@ -137,7 +141,7 @@ create_particles    air n 0
 stats_style         step cpu np nattempt ncoll
 
 dump 1 image all 100 cone_isurf.* type type sline yes 0.000 surf one 0.02 particle no view 65 140
-dump_modify 1 slinecolor red
+dump_modify         1 slinecolor red
 
 stats               1
 run                 100
