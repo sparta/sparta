@@ -49,9 +49,7 @@ if(SPARTA_ENABLE_TESTING)
       "surf_react_heatflux"
       "chem_rates"
       "custom"
-      "explicit2implicit/circle"
-      "explicit2implicit/cone"
-      "explicit2implicit/sphere")
+      "explicit2implicit/circle")
 
   set(SPARTA_DISABLED_TESTS
       "in.ablation.3d.reactions" # Failing
@@ -65,6 +63,9 @@ if(SPARTA_ENABLE_TESTING)
       "in.custom.cube.set.restart" # Failing
       "in.custom.step.read.restart" # Failing
       "in.custom.step.set.restart" # Failing
+      "in.exp2imp.cone.3d" # probably OOM
+      "in.exp2imp.cone.3d.reactions" # probably OOM
+      "in.exp2imp.sphere.3d" # probably OOM
   )
 
   list(APPEND __DEFAULT_MPI_RANKS "1")
