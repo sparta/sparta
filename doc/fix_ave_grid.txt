@@ -155,7 +155,7 @@ attributes and command that define them.  For example, the
 "read_grid"_read_grid.html and "surf_react
 implicit"_surf_react_implicit.html commands can define per-grid
 attributes.  (The surf/react implicit command has not yet been
-released in public SPPARKS).
+released in public SPARTA).
 
 If {g_name} is used as a value, the custom attribute must be a vector.
 If {g_name\[N\]} is used, the custom attribute must be an array, and N
