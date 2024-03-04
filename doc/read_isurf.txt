@@ -30,9 +30,9 @@ keyword = {group} or {type} or {push} or {precision} or {read} :l
 
 [Examples:]
 
-read_isurf portion 100 100 1 isurf.material.2d 180.5 group mesh
-read_isurf subset 150 100 50 isurf.materials.3d 120.5 type isurf.type
-read_isurf subset 150 100 50 isurf.materials.3d 120.5 read parallel :pre
+read_isurf portion 100 100 1 isurf.material.2d 180.5 fablate group mesh
+read_isurf subset 150 100 50 isurf.materials.3d 120.5 fablate type isurf.type
+read_isurf subset 150 100 50 isurf.materials.3d 120.5 fablate read parallel :pre
 
 [Description:]
 
