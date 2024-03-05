@@ -45,6 +45,7 @@ class CreateISurfDev : protected Pointers {
   int groupbit;
   int ncorner;              // number of corners
   int nadj;                 // number of adjacent neighbors
+  int nedge;                // number of cell edges
   double thresh;            // lower threshold for corner values
   double corner[3];         // corners of grid group
   double xyzsize[3];        // size of lowest level cell (must be uniform grid)
@@ -133,8 +134,7 @@ class CreateISurfDev : protected Pointers {
 
   // misc functions
 
-  double param2in(double, double);
-  double param2out(double, double);
+  double param2cval(double, double);
   double interpolate(double, double, double, double);
 };
 

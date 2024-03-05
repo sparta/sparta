@@ -47,8 +47,16 @@ CreateISurf::CreateISurf(SPARTA *sparta) : Pointers(sparta)
   MPI_Comm_size(world,&nprocs);
 
   dim = domain->dimension;
-  if (dim == 2) nadj = 4;
-  else nadj = 12;
+
+  if (dim == 2) {
+    ncorner = 4;
+    nedge = 4;
+    nadj = 4;
+  } else {
+    ncorner = 8;
+    nedge = 12;
+    nadj = 6;
+  } 
 
   // for finding corner values
 
@@ -199,10 +207,6 @@ void CreateISurf::set_corners()
       static_cast<int> ((cells[icell].lo[2]-corner[2]) / xyzsize[2] + 0.5) + 1;
   }
 
-
-  if (dim == 2) ncorner = 4;
-  else ncorner = 8;
-
   // first shift everything down by thresh
   // later shift back
 
@@ -330,10 +334,10 @@ void CreateISurf::surface_edge2d()
 
     mind = MIN(ch[0]-cl[0], ch[1]-cl[1]);
 
-    // determine corner values
+    // iterate over all edges
 
     csurfs = cells[icell].csurfs;
-    for (int ic = 0; ic < nadj; ic++) {
+    for (int ic = 0; ic < nedge; ic++) {
       i = ci[ic];
       pi[0] = cx[i];
       pi[1] = cy[i];
@@ -486,7 +490,7 @@ void CreateISurf::surface_edge3d()
     // determine corner values
 
     csurfs = cells[icell].csurfs;
-    for (int ic = 0; ic < nadj; ic++) {
+    for (int ic = 0; ic < nedge; ic++) {
       i = ci[ic];
       pi[0] = cx[i];
       pi[1] = cy[i];

@@ -49,7 +49,7 @@ class FixAblateDev : public Fix {
   double memory_usage();
 
   void store_corners(int, int, int, double *, double *,
-                     double ***, int *, double, char *, int);
+                     double ***,  double ***, int *, double, char *, int);
 
  protected:
   int me;
@@ -59,6 +59,7 @@ class FixAblateDev : public Fix {
   int storeflag;
   int ncorner;
   int nadj;
+  int nedge;
   int sgroupbit;
   double thresh;
   double sum_delta;
@@ -67,6 +68,7 @@ class FixAblateDev : public Fix {
   int nglocal;            // # of owned grid cells
 
   double ***cvalues;       // corner point values
+  double ***ivalues;
   int *tvalues;           // per-cell type value
   int tvalues_flag;       // 1 if tvalues is defined (by ReadIsurf)
 
@@ -102,6 +104,8 @@ class FixAblateDev : public Fix {
   void decrement();
   void sync();
   void epsilon_adjust();
+  void intersect_adjust();
+  void find_intersections();
   void push_lohi();
   void comm_neigh_corners(int);
   int walk_to_neigh(int, int, int, int);

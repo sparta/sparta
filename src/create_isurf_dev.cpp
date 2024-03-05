@@ -47,8 +47,16 @@ CreateISurfDev::CreateISurfDev(SPARTA *sparta) : Pointers(sparta)
   MPI_Comm_size(world,&nprocs);
 
   dim = domain->dimension;
-  if (dim == 2) nadj = 4;
-  else nadj = 12;
+
+  if (dim == 2) {
+    ncorner = 4;
+    nedge = 4;
+    nadj = 4;
+  } else {
+    ncorner = 8;
+    nedge = 12;
+    nadj = 6;
+  }  
 
   // for finding corner values
 
@@ -166,11 +174,10 @@ void CreateISurfDev::command(int narg, char **arg)
   int pushflag = 0;
   char *sgroupID = arg[0];
   ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
-                  cvalues,tvalues,thresh,sgroupID,pushflag);
+                  cvalues,ivalues,tvalues,thresh,sgroupID,pushflag);
 
   if (ablate->nevery == 0) modify->delete_fix(ablateID);
   MPI_Barrier(world);
-  error->one(FLERR,"ck");
 }
 
 /* ----------------------------------------------------------------------
@@ -200,15 +207,6 @@ void CreateISurfDev::set_corners()
       static_cast<int> ((cells[icell].lo[2]-corner[2]) / xyzsize[2] + 0.5) + 1;
   }
 
-
-  if (dim == 2) {
-    ncorner = 4;
-    nadj = 4;
-  } else {
-    ncorner = 8;
-    nadj = 6;
-  }
-
   cout = 0.0;
   cin = 255.0;
 
@@ -221,12 +219,10 @@ void CreateISurfDev::set_corners()
 
   for (int ic = 0; ic < nglocal; ic++) {
     for (int jc = 0; jc < ncorner; jc++) {
+      for (int kc = 0; kc < nadj; kc++) cvalues[ic][jc][kc] = -1.0;
       svalues[ic][jc] = -1;
       mvalues[ic][jc] = -1.0;
-      for (int kc = 0; kc < nadj; kc++) {
-        cvalues[ic][jc][kc] = -1.0;
-        ivalues[ic][jc][kc] = -1.0;
-      }
+      for (int kc = 0; kc < nadj; kc++) ivalues[ic][jc][kc] = -1.0;
     }
   }
 
@@ -336,10 +332,10 @@ void CreateISurfDev::surface_edge2d()
 
     mind = MIN(ch[0]-cl[0], ch[1]-cl[1]);
 
-    // determine corner values
+    // iterate over all edges
 
     csurfs = cells[icell].csurfs;
-    for (int ic = 0; ic < nadj; ic++) {
+    for (int ic = 0; ic < nedge; ic++) {
       i = ci[ic];
       pi[0] = cx[i];
       pi[1] = cy[i];
@@ -413,7 +409,7 @@ void CreateISurfDev::surface_edge2d()
           }
         } // end "if" hitflag
       }// end "for" for surfaces
-    }// end "for" for edges in cell
+    }// end "for" for corners in cell
   }// end "for" for grid cells
 
   return;
@@ -492,7 +488,7 @@ void CreateISurfDev::surface_edge3d()
     // determine corner values
 
     csurfs = cells[icell].csurfs;
-    for (int ic = 0; ic < nadj; ic++) {
+    for (int ic = 0; ic < nedge; ic++) {
       i = ci[ic];
       pi[0] = cx[i];
       pi[1] = cy[i];
@@ -576,7 +572,7 @@ void CreateISurfDev::surface_edge3d()
 
 void CreateISurfDev::sync(int which)
 {
-  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner,jadj;
+  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner,jedge,jadj;
   int icell,jcell,njcell;
   double dtotal[nadj];
 
@@ -1339,60 +1335,41 @@ void CreateISurfDev::set_cvalues()
 
   // now handle the overlap cells
 
-  double ival;
-  double cval;
+  double ival, cval;
 
   // value of inside corner point next to surface
-  double cedge = param2in(0.05,0.0);
+  double cedge = param2cval(0.02,0.0);
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
-    printf("icell: %i\n", icell);
     for (int ic = 0; ic < ncorner; ic++) {
-      for(int iadj = 0; iadj < nadj; iadj++) {
-        ival = ivalues[icell][ic][iadj];
-        if(svalues[icell][ic]==1)
-          cvalues[icell][ic][iadj] = cedge;
-        else if(ival > 0)
-          cvalues[icell][ic][iadj] = param2in(ival,cedge);
-        else
-          cvalues[icell][ic][iadj] = cout;
+      for(int k = 0; k < nadj; k++) {
+        // bound the intersection values
+        ival = ivalues[icell][ic][k];
+        if(ival >= 0.0) {
+          ival = MAX(ival, 0.005);
+          ival = MIN(ival, 0.995);
+        }
+        ivalues[icell][ic][k] = ival;
 
-        /*if(ival > 0 && svalues[icell][ic] == 0)
-          printf("now: %4.3e ; expected: %4.3e; cval: %4.3e\n",
-            interpolate(cvalues[icell][ic][iadj], cedge, 0, 1),
-            ival,cvalues[icell][ic][iadj]);*/
-
-        if(ival > 0 && svalues[icell][ic] == 1)
-          printf("now: %4.3e ; expected: %4.3e; cval: %4.3e\n",
-            interpolate(param2in(ival,0.0), 0.0, 0, 1),
-            ival,param2in(ival,0.0));
-      } // end nadj
-
-      // TODO: Check that new corner point values give 
-      // .. correct interpolated value
-      if(dim==2) {
-        //printf("ivalues: %4.3e,%4.3e,%4.3e,%4.3e\n",
-        //  ivalues[icell][ic][0], ivalues[icell][ic][1],
-        //  ivalues[icell][ic][2], ivalues[icell][ic][3]);
-        //printf("cval: %4.3e,%4.3e,%4.3e,%4.3e; ival: %4.3e,%4.3e,%4.3e,%4.3e\n",
-        //  cvalues[icell][ic][0], cvalues[icell][ic][1],
-        //  cvalues[icell][ic][2], cvalues[icell][ic][3],
-        //  ivalues[icell][ic][0], ivalues[icell][ic][1],
-        //  ivalues[icell][ic][2], ivalues[icell][ic][3]
-        //);
+        if(svalues[icell][ic]==1) cvalues[icell][ic][k] = cedge;
+        else if(ival > 0) cvalues[icell][ic][k] = param2cval(ival,cedge);
+        else cvalues[icell][ic][k] = cout;
       }
+
     } // end ncorner
-    printf("\n\n");
   } // end cells
 }
 
 /* ----------------------------------------------------------------------
    Find inside corner value from corner value
 ------------------------------------------------------------------------- */
-double CreateISurfDev::param2in(double param, double v1)
+double CreateISurfDev::param2cval(double param, double v1)
 {
+
+  if(param < 0) return cout;
+
   double v0;
 
   // param is proportional to cell length so 
@@ -1404,48 +1381,9 @@ double CreateISurfDev::param2in(double param, double v1)
   v0 = (thresh - v1*param) / (1.0 - param);
 
   // bound by limits
-  //v0 = MAX(v0,thresh);
-
+  v0 = MAX(v0,0.0);
   v0 = MIN(v0,255.0);
   return v0;
-}
-
-/* ----------------------------------------------------------------------
-   Find outside corner value from corner value
-------------------------------------------------------------------------- */
-double CreateISurfDev::param2out(double param, double v0)
-{
-  double v1;
-
-  // param is proportional to cell length so 
-  // ... lo = 0; hi = 1
-  // trying to find v1
-  // param = (thresh  - v0) / (v1 - v0)
-
-  if (param == 0.0) return 0.0;
-  v1 = (thresh-v0)/param + v0;
-  
-  // bound by limits
-  //v1 = MAX(v1,cout);
-  //v1 = MIN(v1,thresh);
-  return v1;
-}
-
-/* ----------------------------------------------------------------------
-   interpolate function used by both marching squares and cubes
-   lo/hi = coordinates of end points of edge of square
-   v0/v1 = values at lo/hi end points
-   value = interpolated coordinate for thresh value
-   for debugging
-------------------------------------------------------------------------- */
-
-double CreateISurfDev::interpolate(double v0, double v1, double lo, double hi)
-{
-  double value = lo + (hi-lo)*(thresh-v0)/(v1-v0);
-  printf("new -- %4.3e, %4.3e, %4.3e\n", v1, v0, (thresh-v0)/(v1-v0));
-  value = MAX(value,lo);
-  value = MIN(value,hi);
-  return value;
 }
 
 /* ----------------------------------------------------------------------
