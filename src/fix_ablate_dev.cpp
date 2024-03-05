@@ -37,7 +37,7 @@
 using namespace SPARTA_NS;
 
 enum{COMPUTE,FIX,VARIABLE,RANDOM};
-enum{CVALUE,CDELTA};
+enum{CVALUE,CDELTA,IVALUE};
 
 #define INVOKED_PER_GRID 16
 #define DELTAGRID 1024            // must be bigger than split cells per cell
@@ -188,14 +188,10 @@ FixAblateDev::FixAblateDev(SPARTA *sparta, int narg, char **arg) :
   array_grid = NULL;
   cvalues = NULL;
   tvalues = NULL;
-  ivalues = NULL;
   ncorner = size_per_grid_cols;
 
   if(dim == 2) nadj = 4;
   else nadj = 6;
-
-  if(dim == 2) nedge = 4;
-  else nedge = 12;
 
   // local storage
 
@@ -249,7 +245,6 @@ FixAblateDev::~FixAblateDev()
 {
   delete [] idsource;
   memory->destroy(cvalues);
-  memory->destroy(ivalues);
   memory->destroy(tvalues);
 
   memory->destroy(ixyz);
@@ -288,8 +283,7 @@ int FixAblateDev::setmask()
 
 void FixAblateDev::store_corners(int nx_caller, int ny_caller, int nz_caller,
                               double *cornerlo_caller, double *xyzsize_caller,
-                              double ***cvalues_caller, double ***ivalues_caller,
-                              int *tvalues_caller,
+                              double ***cvalues_caller, int *tvalues_caller,
                               double thresh_caller, char *sgroupID, int pushflag)
 {
   storeflag = 1;
@@ -325,12 +319,9 @@ void FixAblateDev::store_corners(int nx_caller, int ny_caller, int nz_caller,
   // copy caller values into local values of FixAblate
 
   for (int icell = 0; icell < nglocal; icell++) {
-    for (int m = 0; m < ncorner; m++) {
-      for(int n = 0; n < nadj; n++) {
+    for (int m = 0; m < ncorner; m++)
+      for(int n = 0; n < nadj; n++)
         cvalues[icell][m][n] = cvalues_caller[icell][m][n];
-        ivalues[icell][m][n] = ivalues_caller[icell][m][n];
-      }
-    }
     if (tvalues_flag) tvalues[icell] = tvalues_caller[icell];
   }
 
@@ -410,7 +401,7 @@ void FixAblateDev::end_of_step()
 
   sync();
   epsilon_adjust();
-  find_intersections();
+  //find_intersections();
 
   // re-create implicit surfs
 
@@ -453,8 +444,8 @@ void FixAblateDev::create_surfs(int outflag)
   // cvalues = corner point values
   // tvalues = surf type for surfs in each grid cell
 
-  if (dim == 2) ms->invoke(cvalues,ivalues,tvalues);
-  else mc->invoke(cvalues,ivalues,tvalues,mcflags);
+  if (dim == 2) ms->invoke(cvalues,tvalues);
+  else mc->invoke(cvalues,tvalues,mcflags);
 
   // set surf->nsurf and surf->nown
 
@@ -954,7 +945,6 @@ void FixAblateDev::intersect_adjust()
     if (cells[icell].nsplit <= 0) continue;
 
     // manually check each edge
-    ival = ivalues[icell][0][1];
     
 
 
@@ -1009,7 +999,6 @@ void FixAblateDev::comm_neigh_corners(int which)
   // insure icell is only sent once to same neighbor proc
   // also set proclist and locallist for each sent datum
 
-  // TEMP: Comment out to compile
   /*int nsend = 0;
 
   for (icell = 0; icell < nglocal; icell++) {
@@ -1187,13 +1176,9 @@ int FixAblateDev::pack_grid_one(int icell, char *buf, int memflag)
   Grid::ChildCell *cells = grid->cells;
   Grid::SplitInfo *sinfo = grid->sinfo;
 
-  if (memflag) {
-    for(int j = 0; j < ncorner; j++) {
-      memcpy(ptr,cvalues[icell][j],nadj*sizeof(double));
-      ptr += nadj*sizeof(double);
-      memcpy(ptr,ivalues[icell][j],nadj*sizeof(double));
-      ptr += nadj*sizeof(double);
-    }
+  for(int j = 0; j < ncorner; j++) {
+    if (memflag) memcpy(ptr,cvalues[icell][j],nadj*sizeof(double));
+    ptr += nadj*sizeof(double);
   }
 
   if (tvalues_flag) {
@@ -1231,8 +1216,6 @@ int FixAblateDev::pack_grid_one(int icell, char *buf, int memflag)
       for(int j = 0; j < ncorner; j++) {
         if (memflag) memcpy(ptr,cvalues[jcell][j],nadj*sizeof(double));
         ptr += nadj*sizeof(double);
-        if (memflag) memcpy(ptr,ivalues[jcell][j],nadj*sizeof(double));
-        ptr += nadj*sizeof(double);
       }
     }
   }
@@ -1253,10 +1236,10 @@ int FixAblateDev::unpack_grid_one(int icell, char *buf)
 
   grow_percell(1);
 
-  memcpy(cvalues[icell],ptr,ncorner*sizeof(double));
-  ptr += ncorner*sizeof(double);
-  memcpy(ivalues[icell],ptr,ncorner*sizeof(double));
-  ptr += ncorner*sizeof(double);
+  for(int j = 0; j < ncorner; j++) {
+    memcpy(cvalues[icell][j],ptr,nadj*sizeof(double));
+    ptr += nadj*sizeof(double);
+  }
 
   if (tvalues_flag) {
     double *dbuf = (double *) ptr;
@@ -1285,10 +1268,14 @@ int FixAblateDev::unpack_grid_one(int icell, char *buf)
     grow_percell(nsplit);
     for (int i = 0; i < nsplit; i++) {
       int jcell = sinfo[isplit].csubs[i];
-      memcpy(cvalues[jcell],ptr,ncorner*sizeof(double));
-      ptr += ncorner*sizeof(double);
-      memcpy(ivalues[jcell],ptr,ncorner*sizeof(double));
-      ptr += ncorner*sizeof(double);
+      for(int j = 0; j < ncorner; j++) {
+        memcpy(cvalues[jcell][j],ptr,nadj*sizeof(double));
+        ptr += nadj*sizeof(double);
+      }
+      for(int j = 0; j < ncorner; j++) {
+        memcpy(cvalues[jcell][j],ptr,nadj*sizeof(double));
+        ptr += nadj*sizeof(double);
+      }
     }
     nglocal += nsplit;
   }
@@ -1304,8 +1291,9 @@ int FixAblateDev::unpack_grid_one(int icell, char *buf)
 
 void FixAblateDev::copy_grid_one(int icell, int jcell)
 {
-  memcpy(cvalues[jcell],cvalues[icell],ncorner*nadj*sizeof(double));
-  memcpy(ivalues[jcell],ivalues[icell],ncorner*nadj*sizeof(double));
+  for (int j = 0; j < ncorner; j++)
+    memcpy(cvalues[jcell][j],cvalues[icell][j],nadj*sizeof(double));
+
   if (tvalues_flag) tvalues[jcell] = tvalues[icell];
 
   ixyz[jcell][0] = ixyz[icell][0];
@@ -1328,12 +1316,9 @@ void FixAblateDev::add_grid_one()
 {
   grow_percell(1);
 
-  for (int i = 0; i < ncorner; i++) {
-    for (int j = 0; j < nadj; j++) {
+  for (int i = 0; i < ncorner; i++)
+    for (int j = 0; j < nadj; j++)
       cvalues[nglocal][i][j] = 0.0;
-      ivalues[nglocal][i][j] = 0.0;
-    }
-  }
 
   if (tvalues_flag) tvalues[nglocal] = 0;
   ixyz[nglocal][0] = 0;
@@ -1367,7 +1352,6 @@ void FixAblateDev::grow_percell(int nnew)
   if (nnew == 0) maxgrid = nglocal;
   else maxgrid += DELTAGRID;
   memory->grow(cvalues,maxgrid,ncorner,nadj,"ablate_dev:cvalues");
-  memory->grow(ivalues,maxgrid,ncorner,nadj,"ablate_dev:ivalues");
   if (tvalues_flag) memory->grow(tvalues,maxgrid,"ablate_dev:tvalues");
   memory->grow(ixyz,maxgrid,3,"ablate_dev:ixyz");
   memory->grow(mcflags,maxgrid,4,"ablate_dev:mcflags");
@@ -1375,7 +1359,7 @@ void FixAblateDev::grow_percell(int nnew)
   memory->grow(cdelta,maxgrid,ncorner,"ablate_dev:celldelta");
   memory->grow(numsend,maxgrid,"ablate_dev:numsend");
 
-  // TEMP: Need to figure out this
+  // TODO: Need to figure this out
   array_grid = cvalues[0];
 }
 
@@ -1404,6 +1388,7 @@ double FixAblateDev::compute_scalar()
   Grid::ChildInfo *cinfo = grid->cinfo;
 
   double sum = 0.0;
+  double cavg;
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
@@ -1414,7 +1399,12 @@ double FixAblateDev::compute_scalar()
 
     if (dim == 2 && (ix == 0 || iy == 0)) continue;
     if (dim == 3 && (ix == 0 || iy == 0 || iz == 0)) continue;
-    sum += cvalues[icell][0][0];
+
+    cavg = 0.0;
+    for (int j = 0; j < nadj; j++) cavg += cvalues[icell][0][j];
+    cavg /= nadj;
+    
+    sum += cavg;
   }
 
   double sumall;
@@ -1442,7 +1432,7 @@ double FixAblateDev::compute_vector(int i)
 double FixAblateDev::memory_usage()
 {
   double bytes = 0.0;
-  bytes += maxgrid*ncorner * sizeof(double);   // cvalues
+  bytes += maxgrid*ncorner*nadj * sizeof(double);   // cvalues
   if (tvalues_flag) bytes += maxgrid * sizeof(int);   // tvalues
   bytes += maxgrid*3 * sizeof(int);            // ixyz
   // NOTE: add for mcflags if keep

@@ -23,7 +23,7 @@ class MarchingSquaresDev : protected Pointers {
  public:
   MarchingSquaresDev(class SPARTA *, int, double);
   ~MarchingSquaresDev() {}
-  void invoke(double ***, double ***, int *);
+  void invoke(double ***, int *);
 
  private:
   int ggroup;

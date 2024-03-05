@@ -69,9 +69,9 @@ MarchingCubesDev::MarchingCubesDev(SPARTA *sparta, int ggroup_caller,
      based on ave value at cell center
 ------------------------------------------------------------------------- */
 
-void MarchingCubesDev::invoke(double ***cvalues, double ***ivalues, int *svalues, int **mcflags)
+void MarchingCubesDev::invoke(double ***cvalues, int *svalues, int **mcflags)
 {
-  int i,ipt,isurf,nsurf,icase,which;
+  int i,j,ipt,isurf,nsurf,icase,which;
   surfint surfID;
   surfint *ptr;
 
@@ -85,6 +85,7 @@ void MarchingCubesDev::invoke(double ***cvalues, double ***ivalues, int *svalues
   if (sizeof(surfint) == 4) maxsurfID = MAXSMALLINT;
   if (sizeof(surfint) == 8) maxsurfID = MAXBIGINT;
 
+  double cval, vc[8];
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
@@ -109,7 +110,7 @@ void MarchingCubesDev::invoke(double ***cvalues, double ***ivalues, int *svalues
 
     // set corner point to average of adjacent values
 
-    /*for (i = 0; i < 6; i++) {
+    for (i = 0; i < 6; i++) {
       v000 += cvalues[icell][0][i];
       v001 += cvalues[icell][1][i];
       v010 += cvalues[icell][2][i];
@@ -127,18 +128,7 @@ void MarchingCubesDev::invoke(double ***cvalues, double ***ivalues, int *svalues
     v100 /= 6.0;
     v101 /= 6.0;
     v110 /= 6.0;
-    v111 /= 6.0;*/
-
-    for (i = 0; i < 6; i++) {
-      v000 = MAX(cvalues[icell][0][i],v000);
-      v001 = MAX(cvalues[icell][1][i],v001);
-      v010 = MAX(cvalues[icell][2][i],v010);
-      v011 = MAX(cvalues[icell][3][i],v011);
-      v100 = MAX(cvalues[icell][4][i],v100);
-      v101 = MAX(cvalues[icell][5][i],v101);
-      v110 = MAX(cvalues[icell][6][i],v110);
-      v111 = MAX(cvalues[icell][7][i],v111);
-    }
+    v111 /= 6.0;
 
     v000iso = v000 - thresh;
     v001iso = v001 - thresh;
@@ -151,68 +141,20 @@ void MarchingCubesDev::invoke(double ***cvalues, double ***ivalues, int *svalues
 
     // intersection of surfaces on all cell edges on normalized length
 
-    i0  = ivalues[icell][0][1];
-    i1  = ivalues[icell][1][3];
-    i2  = ivalues[icell][2][1];
-    i3  = ivalues[icell][0][3];
+    i0  = interpolate(cvalues[icell][0][1],cvalues[icell][1][0],lo[0],hi[0]);
+    i1  = interpolate(cvalues[icell][1][3],cvalues[icell][3][2],lo[1],hi[1]);
+    i2  = interpolate(cvalues[icell][2][1],cvalues[icell][3][0],lo[0],hi[0]);
+    i3  = interpolate(cvalues[icell][0][3],cvalues[icell][2][2],lo[1],hi[1]);
 
-    i4  = ivalues[icell][0][5];
-    i5  = ivalues[icell][1][5];
-    i6  = ivalues[icell][3][5];
-    i7  = ivalues[icell][2][5];
+    i4  = interpolate(cvalues[icell][0][5],cvalues[icell][4][4],lo[2],hi[2]);
+    i5  = interpolate(cvalues[icell][1][5],cvalues[icell][5][4],lo[2],hi[2]);
+    i6  = interpolate(cvalues[icell][3][5],cvalues[icell][7][4],lo[2],hi[2]);
+    i7  = interpolate(cvalues[icell][2][5],cvalues[icell][6][4],lo[2],hi[2]);
 
-    i8  = ivalues[icell][4][1];
-    i9  = ivalues[icell][5][3];
-    i10 = ivalues[icell][6][1];
-    i11 = ivalues[icell][4][3];
-
-    // absolute point of intersection
-    // negative i-values should be ignored and
-    // .. arbitrarily set as the lo for now
-
-    if (i0<0) i0 = lo[0];
-    else i0 = lo[0] + (hi[0]-lo[0])*i0;
-    if (i1<0) i1 = lo[1];
-    else i1 = lo[1] + (hi[1]-lo[1])*i1;
-    if (i2<0) i2 = lo[0];
-    else i2 = lo[0] + (hi[0]-lo[0])*i2;
-    if (i3<0) i3 = lo[1];
-    else i3 = lo[1] + (hi[1]-lo[1])*i3;
-
-    if (i4<0) i4 = lo[2];
-    else i4 = lo[2] + (hi[2]-lo[2])*i4;
-    if (i5<0) i5 = lo[2];
-    else i5 = lo[2] + (hi[2]-lo[2])*i5;
-    if (i6<0) i6 = lo[2];
-    else i6 = lo[2] + (hi[2]-lo[2])*i6;
-    if (i7<0) i7 = lo[2];
-    else i7 = lo[2] + (hi[2]-lo[2])*i7;
-
-    if (i8<0) i8 = lo[0];
-    else i8 = lo[0] + (hi[0]-lo[0])*i8;
-    if (i9<0) i9 = lo[1];
-    else i9 = lo[1] + (hi[1]-lo[1])*i9;
-    if (i10<0) i10 = lo[0];
-    else i10 = lo[0] + (hi[0]-lo[0])*i10;
-    if (i11<0) i11 = lo[1];
-    else i11 = lo[1] + (hi[1]-lo[1])*i11;
-
-    // check intersections within cell bounds
-
-    if(i0 < lo[0] || i0 > hi[0]) error->one(FLERR,"out");
-    if(i1 < lo[1] || i1 > hi[1]) error->one(FLERR,"out");
-    if(i2 < lo[0] || i2 > hi[0]) error->one(FLERR,"out");
-    if(i3 < lo[1] || i3 > hi[1]) error->one(FLERR,"out");
-
-    if(i4 < lo[2] || i4 > hi[2]) error->one(FLERR,"out");
-    if(i5 < lo[2] || i5 > hi[2]) error->one(FLERR,"out");
-    if(i6 < lo[2] || i6 > hi[2]) error->one(FLERR,"out");
-    if(i7 < lo[2] || i7 > hi[2]) error->one(FLERR,"out");
-
-    if(i8 < lo[0]  || i8 > hi[0])  error->one(FLERR,"out");
-    if(i9 < lo[1]  || i9 > hi[1])  error->one(FLERR,"out");
-    if(i10 < lo[0] || i10 > hi[0]) error->one(FLERR,"out");
-    if(i11 < lo[1] || i11 > hi[1]) error->one(FLERR,"out");
+    i8  = interpolate(cvalues[icell][4][1],cvalues[icell][5][0],lo[0],hi[0]);
+    i9  = interpolate(cvalues[icell][5][3],cvalues[icell][7][2],lo[1],hi[1]);
+    i10 = interpolate(cvalues[icell][6][1],cvalues[icell][7][0],lo[0],hi[0]);
+    i11 = interpolate(cvalues[icell][4][3],cvalues[icell][6][2],lo[1],hi[1]);
 
     // make bits 2, 3, 6 and 7 consistent with Lewiner paper (see NOTE above)
 

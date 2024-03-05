@@ -174,7 +174,7 @@ void CreateISurfDev::command(int narg, char **arg)
   int pushflag = 0;
   char *sgroupID = arg[0];
   ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
-                  cvalues,ivalues,tvalues,thresh,sgroupID,pushflag);
+                  cvalues,tvalues,thresh,sgroupID,pushflag);
 
   if (ablate->nevery == 0) modify->delete_fix(ablateID);
   MPI_Barrier(world);
@@ -641,7 +641,7 @@ void CreateISurfDev::sync(int which)
                   double dtemp = ivalues[jcell][jcorner][jadj];
                   if (dtemp>=0) {
                     if (dtotal[jadj] < 0) dtotal[jadj] = dtemp;
-                    else dtotal[jadj] = MIN(dtotal[jadj],dtemp);
+                    else dtotal[jadj] = MAX(dtotal[jadj],dtemp);
                   }
                 } 
               } else if (which == CVAL) {
@@ -649,7 +649,7 @@ void CreateISurfDev::sync(int which)
                   double dtemp = cvalues[jcell][jcorner][jadj];
                   if (dtemp>=0) {
                     if (dtotal[jadj] < 0) dtotal[jadj] = dtemp;
-                    else dtotal[jadj] = MAX(dtotal[jadj],dtemp);
+                    else dtotal[jadj] = MIN(dtotal[jadj],dtemp);
                   }
                 }
               }
@@ -664,7 +664,7 @@ void CreateISurfDev::sync(int which)
                   double dtemp = ighost[jcell-nglocal][jcorner][jadj];
                   if (dtemp>=0) {
                     if (dtotal[jadj] < 0) dtotal[jadj] = dtemp;
-                    else dtotal[jadj] = MIN(dtotal[jadj],dtemp);
+                    else dtotal[jadj] = MAX(dtotal[jadj],dtemp);
                   }
                 }
               } else if (which == CVAL) {
@@ -672,7 +672,7 @@ void CreateISurfDev::sync(int which)
                   double dtemp = cghost[jcell-nglocal][jcorner][jadj];
                   if (dtemp>=0) {
                     if (dtotal[jadj] < 0) dtotal[jadj] = dtemp;
-                    else dtotal[jadj] = MAX(dtotal[jadj],dtemp);
+                    else dtotal[jadj] = MIN(dtotal[jadj],dtemp);
                   }
                 }
               }
@@ -1348,8 +1348,8 @@ void CreateISurfDev::set_cvalues()
         // bound the intersection values
         ival = ivalues[icell][ic][k];
         if(ival >= 0.0) {
-          ival = MAX(ival, 0.005);
-          ival = MIN(ival, 0.995);
+          ival = MAX(ival, 0.01);
+          ival = MIN(ival, 0.99);
         }
         ivalues[icell][ic][k] = ival;
 

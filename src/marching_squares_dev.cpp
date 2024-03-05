@@ -48,7 +48,7 @@ MarchingSquaresDev::MarchingSquaresDev(SPARTA *sparta, int ggroup_caller,
      based on ave value at cell center
 ------------------------------------------------------------------------- */
 
-void MarchingSquaresDev::invoke(double ***cvalues, double ***ivalues, int *svalues)
+void MarchingSquaresDev::invoke(double ***cvalues, int *svalues)
 {
   int i,ipt,isurf,nsurf,which;
   double v00,v01,v10,v11;
@@ -92,44 +92,17 @@ void MarchingSquaresDev::invoke(double ***cvalues, double ***ivalues, int *svalu
       v11 += cvalues[icell][3][i];
     }
 
-    v00 /= 4;
-    v01 /= 4;
-    v10 /= 4;
-    v11 /= 4;
+    v00 /= 4.0;
+    v01 /= 4.0;
+    v10 /= 4.0;
+    v11 /= 4.0;
 
-    if(v00 > thresh) v00 = 255.0;
-    else v00 = 0.0;
-    if(v01 > thresh) v01 = 255.0;
-    else v01 = 0.0;
-    if(v10 > thresh) v10 = 255.0;
-    else v10 = 0.0;
-    if(v11 > thresh) v11 = 255.0;
-    else v11 = 0.0;
+    // intersection of surfaces on all cell edges on normalized length
 
-    // intersection of surfaces on cell edges
-
-    i0 = ivalues[icell][0][1];
-    i1 = ivalues[icell][1][3];
-    i2 = ivalues[icell][2][1];
-    i3 = ivalues[icell][0][3];
-
-    if (i0<0) i0 = lo[0];
-    else i0 = lo[0] + (hi[0]-lo[0])*i0;
-    if (i1<0) i1 = lo[1];
-    else i1 = lo[1] + (hi[1]-lo[1])*i1;
-    if (i2<0) i2 = lo[0];
-    else i2 = lo[0] + (hi[0]-lo[0])*i2;
-    if (i3<0) i3 = lo[1];
-    else i3 = lo[1] + (hi[1]-lo[1])*i3;
-
-    //printf("i: %4.3e, %4.3e, %4.3e, %4.3e\n", i0, i1, i2, i3);
-    //printf("l: %4.3e, %4.3e, %4.3e, %4.3e\n", lo[0],lo[1], lo[0], lo[1]);
-    //printf("u: %4.3e, %4.3e, %4.3e, %4.3e\n", hi[0],hi[1], hi[0], hi[1]);
-
-    if(i0 < lo[0] || i0 > hi[0]) error->one(FLERR,"out");
-    if(i1 < lo[1] || i1 > hi[1]) error->one(FLERR,"out");
-    if(i2 < lo[0] || i2 > hi[0]) error->one(FLERR,"out");
-    if(i3 < lo[1] || i3 > hi[1]) error->one(FLERR,"out");
+    i0  = interpolate(cvalues[icell][0][1],cvalues[icell][1][0],lo[0],hi[0]);
+    i1  = interpolate(cvalues[icell][1][3],cvalues[icell][3][2],lo[1],hi[1]);
+    i2  = interpolate(cvalues[icell][2][1],cvalues[icell][3][0],lo[0],hi[0]);
+    i3  = interpolate(cvalues[icell][0][3],cvalues[icell][2][2],lo[1],hi[1]);
 
     // make last 2 bits consistent with Wiki page (see NOTE above)
 
@@ -137,9 +110,6 @@ void MarchingSquaresDev::invoke(double ***cvalues, double ***ivalues, int *svalu
     bit1 = v01 <= thresh ? 0 : 1;
     bit2 = v11 <= thresh ? 0 : 1;
     bit3 = v10 <= thresh ? 0 : 1;
-
-    // TODO: Cases 5 and 10 may not be correct since more than one surface
-    // Need to use minimum
 
     which = (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
 
