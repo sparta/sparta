@@ -63,7 +63,7 @@ variable gradBy grid "(v_ByEps - v_By) / v_eps"
 fix      1 field/grid gradBx gradBy NULL
 global   field grid 1 0
 
-dump                10 grid all 1000 tmp.dump.* id xc yc zc f_1[*]
+#dump                10 grid all 1000 tmp.dump.* id xc yc zc f_1[*]
 
 # ---------------------------------------
 

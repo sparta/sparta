@@ -75,10 +75,11 @@ void ReadISurf::command(int narg, char **arg)
     error->all(FLERR,"Cannot read_isurf unless global surfs implicit is set");
   if (surf->exist)
     error->all(FLERR,"Cannot read_isurf when surfs already exist");
-  if (particle->exist)
-    error->all(FLERR,"Cannot read_isurf when particles exist");
   if (domain->axisymmetric)
     error->all(FLERR,"Cannot read_isurf for axisymmetric domains");
+
+  if (particle->exist)
+    if (me == 0) error->warning(FLERR,"Using read_isurf when particles exist");
 
   surf->exist = 1;
 
@@ -495,7 +496,7 @@ void ReadISurf::assign_types(int n, bigint offset, uint8_t *buf)
 
 void ReadISurf::read_corners_parallel(char *gridfile)
 {
-  int nchunk,tmp;
+  int tmp;
   int nxyz[3];
   FILE *fp;
 

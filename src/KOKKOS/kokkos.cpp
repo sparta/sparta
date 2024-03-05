@@ -55,7 +55,7 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
     } else if (strcmp(arg[iarg],"g") == 0 ||
                strcmp(arg[iarg],"gpus") == 0) {
 #ifndef SPARTA_KOKKOS_GPU
-      error->all(FLERR,"GPUs are requested but Kokkos has not been compiled for CUDA or HIP");
+      error->all(FLERR,"GPUs are requested but Kokkos has not been compiled with a GPU-enabled backend");
 #endif
       if (iarg+2 > narg) error->all(FLERR,"Invalid Kokkos command-line args");
       ngpus = atoi(arg[iarg+1]);
@@ -69,37 +69,37 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
 
       int set_flag = 0;
       char *str;
-      if (str = getenv("SLURM_LOCALID")) {
+      if ((str = getenv("SLURM_LOCALID"))) {
         int local_rank = atoi(str);
         device = local_rank % ngpus;
         if (device >= skip_gpu) device++;
         set_flag = 1;
       }
-      if (str = getenv("FLUX_TASK_LOCAL_ID")) {
+      if ((str = getenv("FLUX_TASK_LOCAL_ID"))) {
         int local_rank = atoi(str);
         device = local_rank % ngpus;
         if (device >= skip_gpu) device++;
         set_flag = 1;
       }
-      if (str = getenv("MPT_LRANK")) {
+      if ((str = getenv("MPT_LRANK"))) {
         int local_rank = atoi(str);
         device = local_rank % ngpus;
         if (device >= skip_gpu) device++;
         set_flag = 1;
       }
-      if (str = getenv("MV2_COMM_WORLD_LOCAL_RANK")) {
+      if ((str = getenv("MV2_COMM_WORLD_LOCAL_RANK"))) {
         int local_rank = atoi(str);
         device = local_rank % ngpus;
         if (device >= skip_gpu) device++;
         set_flag = 1;
       }
-      if (str = getenv("OMPI_COMM_WORLD_LOCAL_RANK")) {
+      if ((str = getenv("OMPI_COMM_WORLD_LOCAL_RANK"))) {
         int local_rank = atoi(str);
         device = local_rank % ngpus;
         if (device >= skip_gpu) device++;
         set_flag = 1;
       }
-      if (str = getenv("PMI_LOCAL_RANK")) {
+      if ((str = getenv("PMI_LOCAL_RANK"))) {
         int local_rank = atoi(str);
         device = local_rank % ngpus;
         if (device >= skip_gpu) device++;
@@ -108,7 +108,7 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
 
       if (ngpus > 1 && !set_flag)
         error->all(FLERR,"Could not determine local MPI rank for multiple "
-                           "GPUs with Kokkos CUDA or HIP because MPI library not recognized");
+                           "GPUs with because MPI library not recognized");
 
     } else if (strcmp(arg[iarg],"t") == 0 ||
                strcmp(arg[iarg],"threads") == 0) {
@@ -128,9 +128,9 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
     if (logfile) fprintf(logfile,"  requested %d thread(s) per MPI task\n",nthreads);
   }
 
-#ifdef KOKKOS_ENABLE_CUDA
+#ifdef SPARTA_KOKKOS_GPU
   if (ngpus <= 0)
-    error->all(FLERR,"Kokkos has been compiled for CUDA but no GPUs are requested");
+    error->all(FLERR,"Kokkos has been compiled with a GPU-enabled backend but no GPUs are requested");
 #endif
 
 #ifndef KOKKOS_ENABLE_SERIAL

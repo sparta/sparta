@@ -171,6 +171,7 @@ void ComputeSurf::init()
    distributed: nlocal + nghost
    called by init before each run (in case dt or fnum has changed)
    called whenever grid changes
+     NOTE: only needed in this case when surfs are distributed ??
 ------------------------------------------------------------------------- */
 
 void ComputeSurf::init_normflux()
@@ -244,6 +245,10 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
                              Particle::OnePart *iorig,
                              Particle::OnePart *ip, Particle::OnePart *jp)
 {
+  // skip if no particle, called by SurfReactAdsorb for on-surf reaction
+
+  if (!iorig) return;
+
   // skip if isurf not in surface group
 
   if (dim == 2) {
@@ -545,25 +550,9 @@ void ComputeSurf::post_process_surf()
     memory->create(array_surf,maxsurf,ntotal,"surf:array_surf");
   }
 
-  // zero array_surf
-  // NOTE: is this needed if collate zeroes ?
-
-  int i,j;
-  for (i = 0; i < nown; i++)
-    for (j = 0; j < ntotal; j++)
-      array_surf[i][j] = 0.0;
-
   // collate entire array of results
 
   surf->collate_array(ntally,ntotal,tally2surf,array_surf_tally,array_surf);
-
-  /*
-  if (array_surf_tally)
-    surf->collate_vector(ntally,tally2surf,
-                         &array_surf_tally[0][index-1],ntotal,vector_surf);
-  else
-    surf->collate_vector(ntally,tally2surf,NULL,ntotal,vector_surf);
-  */
 }
 
 

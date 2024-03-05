@@ -28,7 +28,7 @@ namespace SPARTA_NS {
 class SurfReactProb : public SurfReact {
  public:
   SurfReactProb(class SPARTA *, int, char **);
-  SurfReactProb(class SPARTA *sparta) : SurfReact(sparta) {}
+  SurfReactProb(class SPARTA *sparta) : SurfReact(sparta) {} // needed for Kokkos
   virtual ~SurfReactProb();
   virtual void init();
   int react(Particle::OnePart *&, int, double *, Particle::OnePart *&, int &);

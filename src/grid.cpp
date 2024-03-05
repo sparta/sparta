@@ -18,6 +18,7 @@
 #include "domain.h"
 #include "region.h"
 #include "surf.h"
+#include "surf_react.h"
 #include "comm.h"
 #include "modify.h"
 #include "fix.h"
@@ -146,9 +147,6 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   edarray = NULL;
   edcol = NULL;
 
-  custom_ghost_flag = NULL;
-  custom_restart_flag = NULL;
-
   cut2d = NULL;
   cut3d = NULL;
 
@@ -157,14 +155,14 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   hash = new MyHash();
   hashfilled = 0;
 
-  copy = copymode = 0;
+  copy = uncopy = copymode = 0;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Grid::~Grid()
 {
-  if (copy || copymode) return;
+  if (!uncopy && (copy || copymode)) return;
 
   for (int i = 0; i < ngroup; i++) delete [] gnames[i];
   memory->sfree(gnames);
@@ -176,23 +174,35 @@ Grid::~Grid()
   memory->sfree(sinfo);
   memory->sfree(pcells);
 
-  delete [] plevels;
+  if (plevels)
+    delete [] plevels;
 
   delete csurfs;
   delete csplits;
   delete csubs;
   delete hash;
 
+  for (int i = 0; i < ncustom; i++) delete [] ename[i];
   memory->sfree(ename);
   memory->destroy(etype);
   memory->destroy(esize);
   memory->destroy(ewhich);
+
+  for (int i = 0; i < ncustom_ivec; i++)
+    memory->destroy(eivec[i]);
+  for (int i = 0; i < ncustom_iarray; i++)
+    memory->destroy(eiarray[i]);
+  for (int i = 0; i < ncustom_dvec; i++)
+    memory->destroy(edvec[i]);
+  for (int i = 0; i < ncustom_darray; i++)
+    memory->destroy(edarray[i]);
 
   memory->destroy(icustom_ivec);
   memory->destroy(icustom_iarray);
   memory->sfree(eivec);
   memory->sfree(eiarray);
   memory->destroy(eicol);
+
   memory->destroy(icustom_dvec);
   memory->destroy(icustom_darray);
   memory->sfree(edvec);
@@ -243,24 +253,10 @@ void Grid::remove()
 
 void Grid::init()
 {
-  nbytes_custom = sizeof_custom();
-
   ncustom_particle = particle->ncustom;
   nbytes_particle = sizeof(Particle::OnePart);
   nbytes_particle_custom = particle->sizeof_custom();
   nbytes_particle_total = nbytes_particle + nbytes_particle_custom;
-
-  // if first run after reading a restart file,
-  // delete any custom grid attributes that have not been re-defined
-  // use nactive since remove_custom() may alter ncustom
-
-  if (custom_restart_flag) {
-    int nactive = ncustom;
-    for (int i = 0; i < nactive; i++)
-      if (custom_restart_flag[i] == 0) remove_custom(i);
-    delete [] custom_restart_flag;
-    custom_restart_flag = NULL;
-  }
 }
 
 /* ----------------------------------------------------------------------
@@ -343,8 +339,15 @@ void Grid::add_sub_cell(int icell, int ownflag)
   if (ownflag) inew = nlocal;
   else inew = nlocal + nghost;
 
+  // make copy of ChildCell
+  // for owned cells also make copy of ChildInfo
+  // for owned cells also make copy of custom attribute data if it exists
+
   memcpy(&cells[inew],&cells[icell],sizeof(ChildCell));
-  if (ownflag) memcpy(&cinfo[inew],&cinfo[icell],sizeof(ChildInfo));
+  if (ownflag) {
+    memcpy(&cinfo[inew],&cinfo[icell],sizeof(ChildInfo));
+    if (ncustom) copy_custom(icell,inew);
+  }
 
   if (ownflag) {
     nsublocal++;
@@ -369,6 +372,9 @@ void Grid::notify_changed()
     if (compute[i]->per_grid_flag) compute[i]->reallocate();
     if (compute[i]->per_surf_flag) compute[i]->reallocate();
   }
+
+  for (int i = 0; i < surf->nsr; i++)
+    surf->sr[i]->grid_changed();
 
   for (int i = 0; i < output->ndump; i++)
     output->dump[i]->reset_grid_count();
@@ -1276,13 +1282,18 @@ void Grid::find_neighbors()
    nmask is not changed
    called before cells data structure changes
      e.g. due to cell migration or new surfs inducing split cells
-   can later use reset_neighbors() instead of find_neighbors() to
+   will later use reset_neighbors() instead of find_neighbors() to
      change neigh[] back to local indices
    no-op if ghosts don't exist
 ------------------------------------------------------------------------- */
 
 void Grid::unset_neighbors()
 {
+  // set unset_flag = 0/1 depending on whether unset is performed
+  // so that reset_neighbors() can check it
+  
+  unset_flag = 0;
+  
   if (!exist_ghost) return;
 
   // no change in neigh[] needed if nflag = NUNKNOWN, NPBUNKNOWN, or NBOUND
@@ -1303,6 +1314,8 @@ void Grid::unset_neighbors()
         neigh[i] = pcells[neigh[i]].id;
     }
   }
+
+  unset_flag = 1;
 }
 
 /* ----------------------------------------------------------------------
@@ -1317,6 +1330,17 @@ void Grid::reset_neighbors()
 {
   if (!exist_ghost) return;
 
+  // if unset operation was not performed, cannot reset
+  // instead must perform full find_neighbors() operation
+  // this can happen if "global gridcut" is used after grid is created
+  
+  if (!unset_flag) {
+    find_neighbors();
+    return;
+  }
+  
+  unset_flag = 0;
+  
   // insure all cell IDs (owned + ghost) are hashed
 
   rehash();
@@ -1885,7 +1909,7 @@ void Grid::type_check(int outflag)
       } else x[2] = 0.0;
 
       if (Geometry::point_on_hex(x,boxlo,boxhi)) {
-        printf("BAD CORNER icell %d id %d type %d "
+        printf("BAD CORNER icell %d id " CELLINT_FORMAT"  type %d "
                "icorner %d x %g %g %g cflags %d %d %d %d\n",
                icell,cells[icell].id,cinfo[icell].type,i,x[0],x[1],x[2],
                cinfo[icell].corner[0],
@@ -2004,7 +2028,8 @@ void Grid::weight_one(int icell)
 ///////////////////////////////////////////////////////////////////////////
 
 /* ----------------------------------------------------------------------
-   insure cells and cinfo can hold N and M new cells respectively
+   ensure cells and cinfo can hold N and M new cells respectively
+   if custom data exists, ensure custom vecs/array can hold N new cells
 ------------------------------------------------------------------------- */
 
 void Grid::grow_cells(int n, int m)
@@ -2016,6 +2041,7 @@ void Grid::grow_cells(int n, int m)
       memory->srealloc(cells,maxcell*sizeof(ChildCell),"grid:cells",
                        SPARTA_GET_ALIGN(ChildCell));
     memset(&cells[oldmax],0,(maxcell-oldmax)*sizeof(ChildCell));
+    if (ncustom) reallocate_custom(oldmax,maxcell);
   }
 
   if (nlocal+m >= maxlocal) {
@@ -2029,7 +2055,7 @@ void Grid::grow_cells(int n, int m)
 
 /* ----------------------------------------------------------------------
    grow pcells
-   NOTE: need this function for Kokkos
+   need this function for Kokkos
 ------------------------------------------------------------------------- */
 
 void Grid::grow_pcells()
@@ -2061,6 +2087,7 @@ void Grid::grow_sinfo(int n)
 void Grid::group(int narg, char **arg)
 {
   int i,flag;
+  bigint nme,nall;
   double x[3];
 
   if (narg < 3) error->all(FLERR,"Illegal group command");
@@ -2070,6 +2097,23 @@ void Grid::group(int narg, char **arg)
   int igroup = find_group(arg[0]);
   if (igroup < 0) igroup = add_group(arg[0]);
   int bit = bitmask[igroup];
+
+  // print initial count for group
+
+  nme = 0;
+  for (i = 0; i < nlocal; i++)
+    if (cinfo[i].mask & bit) nme++;
+
+  MPI_Allreduce(&nme,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+
+  if (comm->me == 0) {
+    if (screen)
+      fprintf(screen,BIGINT_FORMAT " initial grid cell count in group %s\n",
+              nall,gnames[igroup]);
+    if (logfile)
+      fprintf(logfile,BIGINT_FORMAT " initial grid cell count in group %s\n",
+              nall,gnames[igroup]);
+  }
 
   // style = region
   // add grid cell to group if in region
@@ -2274,21 +2318,20 @@ void Grid::group(int narg, char **arg)
     for (i = 0; i < nlocal; i++) cinfo[i].mask &= inversebits;
   }
 
-  // print stats for changed group
+  // print final count for group
 
-  bigint n = 0;
+  nme = 0;
   for (i = 0; i < nlocal; i++)
-    if (cinfo[i].mask & bit) n++;
+    if (cinfo[i].mask & bit) nme++;
 
-  bigint nall;
-  MPI_Allreduce(&n,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&nme,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
   if (comm->me == 0) {
     if (screen)
-      fprintf(screen,BIGINT_FORMAT " grid cells in group %s\n",
+      fprintf(screen,BIGINT_FORMAT " final grid cell count in group %s\n",
               nall,gnames[igroup]);
     if (logfile)
-      fprintf(logfile,BIGINT_FORMAT " grid cells in group %s\n",
+      fprintf(logfile,BIGINT_FORMAT " final grid cell count in group %s\n",
               nall,gnames[igroup]);
   }
 }
@@ -2337,7 +2380,7 @@ int Grid::find_group(const char *id)
 int Grid::check_uniform_group(int igroup, int *nxyz,
                               double *corner, double *xyzsize)
 {
-  double lo[3],hi[3],onesize[3];
+  double lo[3],hi[3];
 
   int sflag = 0;
   int minlev = maxlevel;
@@ -2485,7 +2528,7 @@ void Grid::read_restart(FILE *fp)
 /* ----------------------------------------------------------------------
    return size of child grid restart info for this proc
    using count of all owned cells
-  // NOTE: worry about N overflowing int, and in IROUNDUP ???
+   NOTE: worry about N overflowing int, and in IROUNDUP ???
 ------------------------------------------------------------------------- */
 
 int Grid::size_restart()
@@ -2498,6 +2541,9 @@ int Grid::size_restart()
   n = IROUNDUP(n);
   n += nlocal * sizeof(int);
   n = IROUNDUP(n);
+  n += nlocal * sizeof(int);
+  n = IROUNDUP(n);
+  n += nlocal * sizeof_custom();
   return n;
 }
 
@@ -2516,14 +2562,19 @@ int Grid::size_restart(int nlocal_restart)
   n = IROUNDUP(n);
   n += nlocal_restart * sizeof(int);
   n = IROUNDUP(n);
+  n += nlocal_restart * sizeof(int);
+  n = IROUNDUP(n);
+  n += nlocal_restart * sizeof_custom();
   return n;
 }
 
 /* ----------------------------------------------------------------------
    pack my child grid info into buf
    nlocal, clumped as scalars
-   ID, level, nsplit as vectors for all owned cells
-   // NOTE: worry about N overflowing int, and in IROUNDUP ???
+   ID, level, nsplit, mask as vectors for all owned cells
+   custom data as ints and doubles
+   return n = # of packed bytes
+   NOTE: worry about N overflowing int, and in IROUNDUP ???
 ------------------------------------------------------------------------- */
 
 int Grid::pack_restart(char *buf)
@@ -2554,19 +2605,32 @@ int Grid::pack_restart(char *buf)
   n += nlocal * sizeof(int);
   n = IROUNDUP(n);
 
+  ibuf = (int *) &buf[n];
+  for (int i = 0; i < nlocal; i++)
+    ibuf[i] = cinfo[i].mask;
+  n += nlocal * sizeof(int);
+  n = IROUNDUP(n);
+
+  if (ncustom) {
+    for (int i = 0; i < nlocal; i++)
+      n += pack_custom(i,&buf[n],1);
+  }
+
   return n;
 }
 
 /* ----------------------------------------------------------------------
    unpack child grid info into restart storage
    nlocal_restart, clumped as scalars
-   id_restart, nsplit_restart as vectors
+   id_restart, level_restart, nsplit_restart, mask_restart as vectors
+   custom data as ints and doubles
    allocate vectors here, will be deallocated by ReadRestart
 ------------------------------------------------------------------------- */
 
 int Grid::unpack_restart(char *buf)
 {
   int n;
+  int csize = sizeof_custom();
 
   int *ibuf = (int *) buf;
   nlocal_restart = ibuf[0];
@@ -2577,6 +2641,10 @@ int Grid::unpack_restart(char *buf)
   memory->create(id_restart,nlocal_restart,"grid:id_restart");
   memory->create(level_restart,nlocal_restart,"grid:nlevel_restart");
   memory->create(nsplit_restart,nlocal_restart,"grid:nsplit_restart");
+  memory->create(mask_restart,nlocal_restart,"grid:mask_restart");
+  cvalues_restart = NULL;
+  if (ncustom)
+    memory->create(cvalues_restart,nlocal_restart*csize,"grid::cvalues_restart");
 
   cellint *cbuf = (cellint *) &buf[n];
   for (int i = 0; i < nlocal_restart; i++)
@@ -2595,6 +2663,19 @@ int Grid::unpack_restart(char *buf)
     nsplit_restart[i] = ibuf[i];
   n += nlocal_restart * sizeof(int);
   n = IROUNDUP(n);
+
+  ibuf = (int *) &buf[n];
+  for (int i = 0; i < nlocal_restart; i++)
+    mask_restart[i] = ibuf[i];
+  n += nlocal_restart * sizeof(int);
+  n = IROUNDUP(n);
+
+  if (ncustom) {
+    for (int i = 0; i < nlocal_restart; i++) {
+      memcpy(&cvalues_restart[i*csize],&buf[n],csize);
+      n += csize;
+    }
+  }
 
   return n;
 }
@@ -2628,7 +2709,7 @@ void Grid::debug()
            cells[i].hi[0],cells[i].hi[1],cells[i].hi[2]);
     printf("  nsurf %d:",cells[i].nsurf);
     for (int j = 0; j < cells[i].nsurf; j++)
-      printf(" %d",cells[i].csurfs[j]);
+      printf(" " SURFINT_FORMAT,cells[i].csurfs[j]);
     printf("\n");
     printf("  nsplit %d isplit %d\n",cells[i].nsplit,cells[i].isplit);
     printf("  type %d corner %d %d %d %d %d %d %d %d\n",

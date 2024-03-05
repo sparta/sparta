@@ -17,8 +17,12 @@ foreach(opt IN LISTS SPARTA_BUILD_TPL_LIST)
   endif()
 endforeach()
 
-if(FFT)
+if(PKG_FFT AND FFT)
   message(STATUS "  ${FFT}")
+endif()
+
+if(PKG_FFT AND FFT_KOKKOS)
+  message(STATUS "  ${FFT_KOKKOS}")
 endif()
 
 message(STATUS "")

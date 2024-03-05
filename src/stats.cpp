@@ -583,33 +583,36 @@ void Stats::set_fields(int narg, char **arg)
     } else if (strcmp(arg[i],"zhi") == 0) {
       addfield("Zhi",&Stats::compute_zhi,FLOAT);
 
-    // surf collide value = s_ID, surf react value = r_ID
+    // surf collide value = sc_ID, surf react value = sr_ID
     // count trailing [] and store int arguments
     // copy = at most 8 chars of ID to pass to addfield
 
-    } else if ((strncmp(arg[i],"s_",2) == 0) ||
-               (strncmp(arg[i],"r_",2) == 0)) {
+    } else if ((strncmp(arg[i],"sc_",3) == 0) ||
+               (strncmp(arg[i],"sr_",3) == 0)) {
 
       int n = strlen(arg[i]);
       char *id = new char[n];
-      strcpy(id,&arg[i][2]);
+      strcpy(id,&arg[i][3]);
 
       // parse zero or one or two trailing brackets from ID
       // argindex1,argindex2 = int inside each bracket pair, 0 if no bracket
+      // error check for one bracket, not zero or two
 
       char *ptr = strchr(id,'[');
       if (ptr == NULL) argindex1[nfield] = 0;
       else {
         *ptr = '\0';
-        argindex1[nfield] = input->variable->int_between_brackets(ptr,0);
+        argindex1[nfield] =
+          input->variable->int_between_brackets(ptr,0,"stats_style");
         ptr++;
         if (*ptr == '[') {
-          argindex2[nfield] = input->variable->int_between_brackets(ptr,0);
+          argindex2[nfield] =
+            input->variable->int_between_brackets(ptr,0,"stats_style");
           ptr++;
         } else argindex2[nfield] = 0;
       }
 
-      if (arg[i][0] == 's') {
+      if (arg[i][1] == 'c') {
         n = surf->find_collide(id);
         if (n < 0) error->all(FLERR,"Could not find stats surf collide ID");
         if (argindex1[nfield] == 0 || argindex2[nfield] > 0)
@@ -623,7 +626,7 @@ void Stats::set_fields(int narg, char **arg)
         field2index[nfield] = add_surf_collide(id);
         addfield(arg[i],&Stats::compute_surf_collide,FLOAT);
 
-      } else if (arg[i][0] == 'r') {
+      } else if (arg[i][1] == 'r') {
         n = surf->find_react(id);
         if (n < 0) error->all(FLERR,"Could not find stats surf react ID");
         if (argindex1[nfield] == 0 || argindex2[nfield] > 0)
@@ -658,10 +661,12 @@ void Stats::set_fields(int narg, char **arg)
       if (ptr == NULL) argindex1[nfield] = 0;
       else {
         *ptr = '\0';
-        argindex1[nfield] = input->variable->int_between_brackets(ptr,0);
+        argindex1[nfield] =
+          input->variable->int_between_brackets(ptr,0,"stats_style");
         ptr++;
         if (*ptr == '[') {
-          argindex2[nfield] = input->variable->int_between_brackets(ptr,0);
+          argindex2[nfield] =
+            input->variable->int_between_brackets(ptr,0,"stats_style");
           ptr++;
         } else argindex2[nfield] = 0;
       }
@@ -1067,7 +1072,7 @@ void Stats::compute_tpcpu()
   double new_cpu;
   double new_time = update->time +
    (update->ntimestep - update->time_last_update) * update->dt;
-  
+
   if (firststep == 0) {
     new_cpu = 0.0;
     dvalue = 0.0;

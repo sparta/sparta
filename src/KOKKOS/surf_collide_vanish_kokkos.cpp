@@ -37,6 +37,9 @@ SurfCollideVanishKokkos::SurfCollideVanishKokkos(SPARTA *sparta) :
 {
   id = NULL;
   style = NULL;
+
+  t_owned = NULL;
+  t_localghost = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -53,8 +56,8 @@ void SurfCollideVanishKokkos::post_collide()
   Kokkos::deep_copy(h_nsingle,d_nsingle);
 
   // can't modify the copy directly, use the original
- 
+
   int m = surf->find_collide(id);
-  auto sc = surf->sc[m]; 
+  auto sc = surf->sc[m];
   sc->nsingle += h_nsingle();
 }

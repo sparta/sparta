@@ -177,7 +177,7 @@ void ComputeTvibGridKokkos::compute_per_grid_kokkos()
 template<int NEED_ATOMICS>
 KOKKOS_INLINE_FUNCTION
 void ComputeTvibGridKokkos::operator()(TagComputeTvibGrid_compute_per_grid_atomic<NEED_ATOMICS>, const int &i) const {
-  // The tally array is duplicated for OpenMP, atomic for CUDA, and neither for Serial
+  // The tally array is duplicated for OpenMP, atomic for GPUs, and neither for Serial
 
   auto v_tally = ScatterViewHelper<typename NeedDup<NEED_ATOMICS,DeviceType>::value,decltype(dup_tally),decltype(ndup_tally)>::get(dup_tally,ndup_tally);
   auto a_tally = v_tally.template access<typename AtomicDup<NEED_ATOMICS,DeviceType>::value>();
@@ -274,7 +274,7 @@ int ComputeTvibGridKokkos::query_tally_grid_kokkos(DAT::t_float_2d_lr &d_array)
 ------------------------------------------------------------------------- */
 
 void ComputeTvibGridKokkos::
-post_process_grid_kokkos(int index, int nsample,
+post_process_grid_kokkos(int index, int /*nsample*/,
                          DAT::t_float_2d_lr d_etally, int *emap,
                          DAT::t_float_1d_strided d_vec)
 {
@@ -284,10 +284,9 @@ post_process_grid_kokkos(int index, int nsample,
   int hi = nglocal;
 
   if (!d_etally.data()) {
-    nsample = 1;
     d_etally = d_tally;
     emap = map[index];
-    d_vec = d_vector;
+    d_vec = d_vector_grid;
     nstride = 1;
   }
 
@@ -485,7 +484,7 @@ void ComputeTvibGridKokkos::reallocate()
   memoryKK->destroy_kokkos(k_tally,tally);
   nglocal = grid->nlocal;
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"tvib/grid:vector_grid");
-  d_vector = k_vector_grid.d_view;
+  d_vector_grid = k_vector_grid.d_view;
   memoryKK->create_kokkos(k_tally,tally,nglocal,ntally,"tvib/grid:tally");
   d_tally = k_tally.d_view;
 }

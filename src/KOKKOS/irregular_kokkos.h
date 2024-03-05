@@ -20,10 +20,9 @@
 
 namespace SPARTA_NS {
 
-template<int NEED_ATOMICS>
 struct TagIrregularPackBuffer{};
 
-struct TagIrregularUnpackBuffer{};
+struct TagIrregularUnpackBufferSelf{};
 
 class IrregularKokkos : public Irregular {
  public:
@@ -34,28 +33,24 @@ class IrregularKokkos : public Irregular {
   int augment_data_uniform(int, int *);
   void exchange_uniform(DAT::t_char_1d, int, char *, DAT::t_char_1d);
 
-  template<int NEED_ATOMICS>
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagIrregularPackBuffer<NEED_ATOMICS>, const int&) const;
+  void operator()(TagIrregularPackBuffer, const int&) const;
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagIrregularUnpackBuffer, const int&) const;
+  void operator()(TagIrregularUnpackBufferSelf, const int&) const;
 
   inline
   void pack_buffer_serial(const int, const int) const;
 
  private:
+  int offset_send;
+
   DAT::tdual_int_1d k_index_send;
   DAT::t_int_1d d_index_send;
   DAT::tdual_int_1d k_index_self;
   DAT::t_int_1d d_index_self;
 
-  DAT::tdual_int_scalar k_n;
-  DAT::t_int_scalar d_n;
-  HAT::t_int_scalar h_n;
-
   DAT::t_char_1d d_sendbuf;
-  char* d_recvbuf_ptr;
   DAT::t_char_1d d_recvbuf;
   DAT::t_char_1d d_buf;
   HAT::t_char_1d h_recvbuf;

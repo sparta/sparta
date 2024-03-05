@@ -484,7 +484,8 @@ void Input::substitute(char *&str, char *&str2, int &max, int &max2, int flag)
 }
 
 /* ----------------------------------------------------------------------
-   expand arg to earg, for arguments with syntax c_ID[*] or f_ID[*]
+   expand arg to earg, for arguments with syntax c_ID[*], f_ID[*],
+     p_ID[*], g_ID[*], or s_ID[*]
    fields to consider in input arg range from iarg to narg
    return new expanded # of values, and copy them w/out "*" into earg
    if any expansion occurs, earg is new allocation, must be freed by caller
@@ -493,7 +494,7 @@ void Input::substitute(char *&str, char *&str2, int &max, int &max2, int flag)
 
 int Input::expand_args(int narg, char **arg, int mode, char **&earg)
 {
-  int n,iarg,index,nlo,nhi,nmax,expandflag,icompute,ifix;
+  int n,iarg,index,nlo,nhi,nmax,expandflag,icompute,ifix,icustom;
   char *ptr1,*ptr2,*str;
 
   ptr1 = NULL;
@@ -517,7 +518,10 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
     expandflag = 0;
 
     if (strncmp(arg[iarg],"c_",2) == 0 ||
-        strncmp(arg[iarg],"f_",2) == 0) {
+        strncmp(arg[iarg],"f_",2) == 0 ||
+        strncmp(arg[iarg],"p_",2) == 0 ||
+        strncmp(arg[iarg],"g_",2) == 0 ||
+        strncmp(arg[iarg],"s_",2) == 0) {
 
       ptr1 = strchr(&arg[iarg][2],'[');
       if (ptr1) {
@@ -525,6 +529,9 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
         if (ptr2) {
           *ptr2 = '\0';
           if (strchr(ptr1,'*')) {
+
+            // compute
+
             if (arg[iarg][0] == 'c') {
               *ptr1 = '\0';
               icompute = modify->find_compute(&arg[iarg][2]);
@@ -554,6 +561,9 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
                   expandflag = 1;
                 }
               }
+
+            // fix
+
             } else if (arg[iarg][0] == 'f') {
               *ptr1 = '\0';
               ifix = modify->find_fix(&arg[iarg][2]);
@@ -580,6 +590,48 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
                 } else if (modify->fix[ifix]->per_surf_flag &&
                            modify->fix[ifix]->size_per_surf_cols) {
                   nmax = modify->fix[ifix]->size_per_surf_cols;
+                  expandflag = 1;
+                }
+              }
+
+            // per-particle custom attribute
+
+            } else if (arg[iarg][0] == 'p') {
+              *ptr1 = '\0';
+              icustom = particle->find_custom(&arg[iarg][2]);
+              *ptr1 = '[';
+
+              if (icustom >= 0) {
+                if (particle->esize[icustom]) {
+                  nmax = particle->esize[icustom];
+                  expandflag = 1;
+                }
+              }
+
+            // per-grid custom attribute
+
+            } else if (arg[iarg][0] == 'g') {
+              *ptr1 = '\0';
+              icustom = grid->find_custom(&arg[iarg][2]);
+              *ptr1 = '[';
+
+              if (icustom >= 0) {
+                if (grid->esize[icustom]) {
+                  nmax = grid->esize[icustom];
+                  expandflag = 1;
+                }
+              }
+
+            // per-surf custom attribute
+
+            } else if (arg[iarg][0] == 's') {
+              *ptr1 = '\0';
+              icustom = surf->find_custom(&arg[iarg][2]);
+              *ptr1 = '[';
+
+              if (icustom >= 0) {
+                if (surf->esize[icustom]) {
+                  nmax = surf->esize[icustom];
                   expandflag = 1;
                 }
               }

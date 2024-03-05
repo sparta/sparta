@@ -80,7 +80,7 @@ void FixDtResetKokkos::end_of_step()
       computeKKBase->post_process_grid_kokkos(step_index,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
 
     if (step_index == 0 || cstep->post_process_grid_flag)
-      Kokkos::deep_copy(d_gridstep, computeKKBase->d_vector);
+      Kokkos::deep_copy(d_gridstep, computeKKBase->d_vector_grid);
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
@@ -92,7 +92,7 @@ void FixDtResetKokkos::end_of_step()
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with fix dt/reset/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(fstep);
     if (step_index == 0)
-      d_gridstep = computeKKBase->d_vector;
+      d_gridstep = computeKKBase->d_vector_grid;
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;

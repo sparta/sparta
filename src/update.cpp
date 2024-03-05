@@ -69,13 +69,14 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   MPI_Comm_size(world,&nprocs);
 
   ntimestep = 0;
+  runflag = 0;
   firststep = laststep = 0;
   beginstep = endstep = 0;
-  runflag = 0;
+  first_update = 0;
 
   time = 0.0;
   time_last_update = 0;
-    
+
   unit_style = NULL;
   set_units("si");
 
@@ -262,6 +263,7 @@ void Update::setup()
   dynamic_setup();
 
   modify->setup();
+  if (dynamic) dynamic_update();
   output->setup(1);
 }
 
@@ -529,7 +531,7 @@ template < int DIM, int SURF, int OPT > void Update::move()
           // particle outside ghost grid halo must use standard move
 
           if (grid->hash->find(cellIdx) != grid->hash->end()) {
-          
+
             int icell = (*(grid->hash))[cellIdx];
 
             // reset particle cell and coordinates

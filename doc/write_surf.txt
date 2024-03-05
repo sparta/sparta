@@ -14,8 +14,11 @@ write_surf file :pre
 
 file = name of file to write surface element info to :ulb,l
 zero or more keyword/args pairs may be appended :l
-keyword = {points} or {fileper} or {nfile} :l
+keyword = {points} or {type} or {custom} or {fileper} or {nfile} :l
   {points} arg = {yes} or {no} to include a Points section in the file
+  {type} arg = none
+  {custom} arg = name
+    name = name of custom per-surf vector or array
   {fileper} arg = Np
     Np = write one file for every this many processors
   {nfile} arg = Nf
@@ -25,6 +28,7 @@ keyword = {points} or {fileper} or {nfile} :l
 [Examples:]
 
 write_surf data.surf
+write_surf data.surf type custom temperature custom flags
 write_surf data.surf points no
 write_surf data.surf.% nfile 50 :pre
 
@@ -47,12 +51,9 @@ also been deleted.  In either case, surface points and elements are
 renumbered by these operations to create compressed, contiguous lists.
 These lists are what is output by this command.
 
-The file is written as a text file in the same format as the
-"read_surf"_read_surf.html command reads in.  Note that a Points
-section is optional.  If the {points} keyword is specified with a
-value of {yes}, then a Points section is included in the file.  If the
-value is {no}, then point coordinates are included with individual
-lines or triangles.
+The output file is written as a text file in the same format as the
+file the "read_surf"_read_surf.html command reads for explicit
+surfaces.
 
 Similar to "dump"_dump.html files, the surface filename can contain
 two wild-card characters.  If a "*" appears in the filename, it is
@@ -72,18 +73,41 @@ discussed below can alter the number of files written.
 
 Note that implicit surfaces read in by the
 "read_isurf"_read_isurf.html command can be written out by the
-write_surf command, e.g. for visualization purposes.  But they cannot
-be read back in to SPARTA via the "read_isurf"_read_isurf.html
-command, because write_surf creates files in an explicit surface
-format.  See the "Howto 6.13"_Section_howto.html#howto_13 section of
-the manual for a discussion of explicit and implicit surfaces for an
-explantion of explicit versus implicit surfaces as well as distributed
-versus non-distributed storage.  You cannot mix explicit and implicit
-surfaces in the same simulation.
+write_surf command, e.g. for visualization purposes.  But the file
+created by this command cannot be read back in to SPARTA via the
+"read_isurf"_read_isurf.html command, because this command creates
+files in an explicit surface format.
+
+See the "Howto 6.13"_Section_howto.html#howto_13 section of the manual
+for a discussion of explicit and implicit surfaces as well as
+distributed versus non-distributed storage of surface elements.  You
+cannot mix explicit and implicit surfaces in the same simulation.
 
 :line
 
-The optional {nfile} or {fileper} keywords can be used in conjunction
+The following optional keywords can be used with this command.
+
+If the {points} keyword is specified with a value of {yes}, then a
+Points section is included in the written file.  The Lines or
+Triangles section will reference indices from the Points section.  If
+the {points} keyword is specified with a value of {no}, then a Points
+section is not included. The Lines or Triangles section will list the
+coordinates of line segment or trianges corners directly.
+
+If the {type} keyword is specified, then a surface element type is
+included for each line or triangle in the Lines or Triangles section.
+If it is not specified, element types are not incuded.
+
+If the {custom} keyword is specified along with the {name} of a custom
+per-surf vector or array, then the per-surf values for that vector or
+array are added to the end of the line of output for each line or
+triangle in the Lines or Triangles section.  A per-surf vector is a
+single value per element; a per-surf array is 1 or more values per
+element, depending on how it was defined.  If the {custom} keyword is
+used multiple times, then the value(s) for each {name} are appended in
+the order the {custom} keywords are specified.
+
+The {nfile} or {fileper} keywords can be used in conjunction
 with the "%" wildcard character in the specified surface file name.
 As explained above, the "%" character causes the surface file to be
 written in pieces, one piece for each of P processors.  By default P =
@@ -111,4 +135,5 @@ next 3 processors and write it to a surface file.
 
 [Default:]
 
-The default is points = yes.
+The default is points = yes.  If the {fileper} or {nfile} keywords are
+not used, a single file is written.

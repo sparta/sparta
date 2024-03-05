@@ -24,7 +24,7 @@ fix 1 adapt 1000 all refine particle 10 50
 fix 1 adapt 1000 all coarsen particle 10 50
 fix 1 adapt 500 subset refine coarsen particle 10 50
 fix 1 adapt 10000 all refine surf 0.15 iterate 1 dir 1 0 0 
-fix 10 adapt 1000 all refine coarsen value c_1[1] 5.0 10.0 iterate 2 :pre
+fix 10 adapt 1000 all refine coarsen value c_1\[1\] 5.0 10.0 iterate 2 :pre
 
 [Description:]
 
@@ -61,6 +61,15 @@ The one exception is that the {iterate} keyword cannot be used with
 the fix adapt command.  Only a single iteration of the action1 and
 action2 parameters (described on the "adapt_grid"_adapt_grid.html doc
 page) can be performed each time grid adaptation is performed.
+
+Note that if you want the grid partitioning (and their particles) to
+be rebalanced across processors after grid adaptation, you can use the
+"fix_balance"_fix_balance.html command.  If you set the {Nfreq}
+setting for this command and the "fix_balance"_fix_balance.html
+command to the same value, then both operations will occur on the same
+timesteps.  However, the fix balance command needs to appear in the
+input script after the fix adapt command, if you want balancing to
+occur after adaptation (whether the Nfreq values are the same or not).
 
 :line
 
@@ -102,10 +111,17 @@ effectively.
 
 :line
 
-[Restrictions:] none
+[Restrictions:]
+
+Currently, if there are custom attributes defined for grid cells, grid
+adaptation does not set new values for new grid cells created when
+either refinement or coarsening takes place.  The new cells will have
+zero values for their attributes.  This is because there is no simple
+way to determine how new attribute values should be computed.  This
+may be changed in the future.
 
 [Related commands:]
 
-"adapt_grid"_adapt_grid.html, "balance_grid"_balance_grid.html
+"adapt_grid"_adapt_grid.html, "fix balance"_fix_balance.html
 
 [Default:] none

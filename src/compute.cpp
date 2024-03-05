@@ -56,11 +56,13 @@ Compute::Compute(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   ntime = maxtime = 0;
   tlist = NULL;
 
+  first_init = 0;
   invoked_scalar = invoked_vector = invoked_array = -1;
   invoked_per_particle = invoked_per_grid = invoked_per_surf = -1;
+  invoked_flag = 0;
 
   kokkos_flag = 0;
-  copy = copymode = 0;
+  copy = uncopy = copymode = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -72,6 +74,17 @@ Compute::~Compute()
   delete [] id;
   delete [] style;
   memory->destroy(tlist);
+}
+
+/* ----------------------------------------------------------------------
+   set first_init = 1
+   called by Modify::init()
+   used by Variable to check if computes can be invoked
+------------------------------------------------------------------------- */
+
+void Compute::set_init()
+{
+  first_init = 1;
 }
 
 /* ----------------------------------------------------------------------
