@@ -170,7 +170,8 @@ https://en.wikipedia.org/wiki/Marching_squares :ul
 The algorithms require a threshold value as input, which is the
 {thresh} value in the read_isurf command.  For corner point values
 that bracket the threshold, it determines precisely where in the grid
-cell the corner points of the inferred implicit surface(s) will be.
+cell the corner points of the inferred implicit surface elements will
+be.
 
 The threshold must be specified as a floating point value such that 0
 < thresh < 255.  An integer value for thresh (e.g. 128 or 128.0) is
@@ -200,7 +201,7 @@ periodic boundary.
 
 The specified {ablateID} is the fix ID of a "fix
 ablate"_fix_ablate.html command which has been previously specified in
-the input script.  It stores the grid corner point values for each
+the input script.  It will store the grid corner point values for each
 grid cell.  It also has the code logic for converting grid corner
 point values to surface elements (line segments or triangles) and also
 optinally allows for the surface to be ablated during a simulation due
@@ -314,6 +315,8 @@ the "create_box"_create_box.html command, and after a grid has been
 created by the "create_grid"_create_grid.html command.  If particles
 already exist in the simulation, you must insure particles do not end
 up inside the set of implicit surfaces.
+
+Simulations with implicit surfaces cannot perform grid adaptation.
 
 [Related commands:]
 
