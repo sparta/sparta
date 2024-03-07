@@ -49,7 +49,7 @@ if(SPARTA_ENABLE_TESTING)
       "surf_react_heatflux"
       "chem_rates"
       "custom"
-      "explicit2implicit/circle")
+      "explicit2implicit")
 
   set(SPARTA_DISABLED_TESTS
       "in.ablation.3d.reactions" # Failing
