@@ -201,7 +201,7 @@ resulting implicit surfaces in a non-continuous manner.
 <P>Examples of the effects of last two bullet points are illustrated in
 the following diagrams for 2d geomtries (similar effects occur in 3d).
 The black lines are grid cells.  The red lines are explicit surfaces
-which pass through multiple grid cells.  The blue lines are induced
+which overlap multiple grid cells.  The blue lines are induced
 implicit surfaces within a grid cell, which in these examples do not
 match the explicit surfaces exactly.
 </P>
@@ -211,11 +211,13 @@ match the explicit surfaces exactly.
 
 <IMG SRC = "JPG/implicit_pointy_small.png">
 
-<P>Note that in the last example with 3 grid cells, the pointy object is
-truncated so there are no implicit surfaces in the top 2 cells when
-the red apex is near the left-to-right middle of the grid cells.  But
-there is almost no truncation (implicit surfs in all 3 cells) when the
-apex is close to the vertical grid line.
+<P>The 2 diagrams with a single grid cell illustrate the 2nd bullet point
+above.  The 2 diagrams with 3 grid cells illustrate the 3rd bullet
+point above.  The pointy red object is truncated so there are no
+implicit surfaces in the top 2 cells when the red apex is near the
+left-to-right middle of the grid cells.  But there is almost no
+truncation (implicit surfs in all 3 cells) when the apex is close to
+the vertical grid line.
 </P>
 <HR>
 
