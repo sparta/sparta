@@ -16,7 +16,7 @@ group-ID = grid ID for which grid cells to perform calculation on :ulb,l
 ablateID = ID of a "fix ablate"_fix_ablate.html command :l
 thresh = threshold for corner values used to generate implicit surfaces, value > 0.0 and < 255.0 :l
 mode = {inout} or {ave} :l
-  {inout} = mark cells as either indside or outside surf
+  {inout} = mark corner points as either inside or outside surf
   {ave} = smooth values by averaging expected corner point values based on intersections between the explicit surfaces and cell edges :pre
 :ule
 
@@ -47,14 +47,15 @@ the SPARTA grid.  It then calculates appropriate implicit line
 segments or triangles within each grid cell based on its 4 or 8 corner
 points.  See the "read_isurf"_read_isurf command for details.
 
-This command uses the set of explicit surfaces to define the 2d or 3d
-grid of corner point values, rather then reading them from a file.  It
-then proceeds similarly to the "read_isurf"_read_isurf command to
-calculate implicit line segments or triangles within each grid cell
-based on its 4 or 8 corner points.  When the process is complete, all
-explicit surfaces are removed by this command.  The
-"read_isurf"_read_isurf doc page has additional information about
-using implicit surfaces in a simulation, which also apply to this
+This command derives the 2d or 3d grid of corner point values from the set 
+of explicit surface elements, rather then reading them from a file.  It
+then proceeds similarly to the "read_isurf"_read_isurf command where 
+implicit line segments or triangles within each grid cell are calculated
+from the 4 or 8 corner points.  When the process is complete, all
+explicit surfaces are removed by this command.  This is because SPARTA
+does not currently allow both implicit and explicit surfaces to simulataneously
+exist.  The "read_isurf"_read_isurf doc page has additional information 
+about using implicit surfaces in a simulation, which also apply to this
 command.
 
 IMPORTANT NOTE: As for the "read_surf"_read_surf.html command, all
@@ -65,7 +66,7 @@ cell are assigned the same surface ID, which is the grid cell ID.
 
 Here are 3 pairs of images for a 2D circle, a 3D idealized bumpy
 surface, and a 3D cone.  For each pair, the image on the left is the
-explicit surface compased of line segments or triangles.  The image on
+explicit surface composed of line segments or triangles.  The image on
 the right is the corresponding implicit surfaces created by this
 command.  Click on each image for a larger version:
 
@@ -79,29 +80,30 @@ command.  Click on each image for a larger version:
 
 The specified {group-ID} must be the name of a grid cell group, as
 defined by the "group grid"_group.html command, which contains a set
-of grid cells, all of which are the same size, and which comprise a
-contiguous 3d array, with specified extent {Nx} by {Ny} by {Nz}.  For
+of grid cells, all of which are the same size and comprise a
+contiguous 3d array with a specified extent {Nx} by {Ny} by {Nz}.  For
 2d simulations, {Nz} must be specified as 1, and the group must
-comprise a 2d array of cells that is {Nx} by {Ny}. These are the grid
-cells within which implicit surfaces will be created.
+comprise a 2d array of cells that is {Nx} by {Ny}.  These are the grid
+cells within which implicit surfaces will be created.  It is assumed that
+the user correctly identifies the region within which contains all explicit
+surfaces.  
 
-NOTE: Does the code figure out the extent of the explicit surfs to
-define this grid group, or does the user have to be sure to define a
-group which includes all the explicit surfs (and possibly some border
-cells) otherwise an error message results ?
+NOTE: If the user defines a region which omits a portion of the explicit surface,
+the command will proceed but may create an implicit surface unlike the 
+explicit surface.
 
 The specified {ablateID} is the fix ID of a "fix
 ablate"_fix_ablate.html command which has been previously specified in
 the input script.  It will store the grid corner point values for each
 grid cell.  It also has the code logic for converting grid corner
 point values to surface elements (line segments or triangles) and also
-optinally allows for the surface to be ablated during a simulation due
+optionally allows for the surface to be ablated during a simulation due
 to particles colliding with the surface elements.
 
 As with the "read_isurf" command, the algorithm to create the implicit
 surfaces requires a threshold value as input, which is the {thresh}
 value.  For corner point values that bracket the threshold, it
-determines precisely where in the grid cell the corner points of the
+determines precisely where in the grid cell the vertices of the
 inferred implicit surface elements will be.
 
 The threshold must be specified as a floating point value such that 0
@@ -110,34 +112,33 @@ The threshold must be specified as a floating point value such that 0
 The specified {mode} can be either {inout} or {ave}. The {inout} mode
 sets corner point values to zero if they are outside the volume or
 area enclosed by the explicit surfaces.  Conversely it sets corner point
-values to 255 if they are inside the volume or area.
+values to 255 if they are inside the volume or area. If the explicit surface
+exactly intersects a grid cell corner, the code interprets that corner as outside
+the surface. 
 
-NOTE: What if a corner point is exactly "on" the explicit surface ?
-
-NOTE: Make sure this next paragraph is correct ?
-
-The {ave} mode does something more complex to try and generate a
-implicit surfaces which more closely align with the explicit surfaces.
+The {ave} mode is meant to more precisely capture the explicit surfaces.
 As with {inout} mode, corner point values outside the surface are set
-to zero.  But if an explicit surface element intersects a grid cell
-edge, the inside corner point of the edge is set to a value X such
-that when a linear interpolation along the edge from 0 to X is
-performed, it will produce the specified {thresh} value at the surface
-element intersection point.  If the same inside corner point is part
-of multiple cell edges with surface intersections, the final inside
-corner point value is set to the average of the values associated with
-the individual edges.
-
-NOTE: mention any other issues in this list-of-two which you think are
-important for users to understand ?
+to zero.  For corner points which are inside the surface, the intersection 
+between each cell edge touching the corner point and the
+explicit surfaces are recorded. In 2D, there are at most 4 intersections;
+in 3D, there are at most 6 intersections.  In the case more than one line 
+or triangle intersects a given cell edge, only the surface whose intersection 
+is closer to the corner point is considered.  Given the coordinates af 
+each intersection, since the outside corner point values are always zero, 
+the inside corner point value can be extrapolated.  Where multiple intersections
+are found around a corner point,  the final inside corner point values is 
+taken as the average of all the inside corner point values corresponding 
+to each intersection.
 
 Note that no matter which mode is used, implicit surfaces are an
 approximation to the original explicit surfaces.  In particular:
 
 The set of implicit surfaces cannot fully resolve features smaller
 than the size of the uniform grid cells used to overlay the
-triangulated object.  In general, shrinking the grid cell size (more
-grid cells), will give a better match to the explicit surface
+triangulated object.  Furthermore, both the {inout} and {ave} mode do not
+conserve the normal of each surface element, so an exact match
+is generally not possible.  In general, shrinking the grid cell size
+(more grid cells) will give a better match to the explicit surface
 elements.  :ulb,l
 
 If two adjoining explicit surfaces have different normal vectors, then
@@ -171,11 +172,11 @@ used before using the "read_surf"_read_surf.html command which defined
 the explicit surfaces.  This is because implicit surfaces are always
 distributed.
 
-NOTE: is this next sentence true ?
-
 If particles already exist in the simulation along with the explicit
 surfaces, they should always end up outside the implicit surfaces (in
-the flow volume) as well.
+the flow volume) as well.  Following the explicit to implicit surface
+conversion, any particles which were previously outside but now inside
+the surface are immediately deleted.
 
 :line
 
