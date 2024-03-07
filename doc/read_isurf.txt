@@ -183,21 +183,21 @@ procedure must represent a watertight object(s), the same as explained
 for the "read_surf"_read_surf.html command, otherwise SPARTA will
 generate an error.  The marching cube and square algorithms guarantee
 this.  However, if the Nx by Ny by Nz array of grid cells is interior
-to the simulation box, the entire outer boundary of the Nxfile by
-Nyfile by Nzfile grid of corner points should have values = 0.  This
-will insure no surface element touches the outer boundary (which would
+to the simulation box, the entire outer boundary of the Nx+1 by Ny+1
+by Nz+1 grid of corner points should have values = 0.  This will
+insure no surface element touches the outer boundary (which would
 induce a non-watertight surface).  If the array of grid cells touches
-the simulation box face, then this is not a requirement (the same as
-if a set of explicit surfs were clipped at the box boundary).
-However, if a boundary is periodic in a particular dimension and the
-array of grid cells touches that boundary, then you must insure the
-Nxfile by Nyfile by Nzfile grid of corner points spans that entire
-dimension, and its values are periodic in the same sense the
-simulation box is.  E.g. if the y dimension is periodic, then the
-corner point values at the y = 1 and y = Nyfile lines or planes of the
-2d or 3d corner point array must be identical.  Otherwise the
-aggregate set of implicit surfaces will not be consistent across the y
-periodic boundary.
+a simulation box face, then this is not a requirement (the same as if
+a set of explicit surfs were clipped at the box boundary).  However,
+if a boundary is periodic in a particular dimension and the array of
+grid cells touches that boundary, then you must insure the Nx+1 by
+Ny+1 by Nz+1 grid of corner points spans that entire dimension, and
+its values are periodic in the same sense the simulation box is.
+E.g. if the y dimension is periodic, then the corner point values at
+the y = 1 and y = Ny+1 lines or planes of the 2d or 3d corner point
+array must be identical for each x and z coordinate.  Otherwise the
+aggregate set of induced implicit surfaces will not be consistent
+across the y periodic boundary.
 
 The specified {ablateID} is the fix ID of a "fix
 ablate"_fix_ablate.html command which has been previously specified in
