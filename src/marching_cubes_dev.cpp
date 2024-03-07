@@ -110,7 +110,7 @@ void MarchingCubesDev::invoke(double ***cvalues, int *svalues, int **mcflags)
 
     // set corner point to average of adjacent values
 
-    for (i = 0; i < 6; i++) {
+    /*for (i = 0; i < 6; i++) {
       v000 += cvalues[icell][0][i];
       v001 += cvalues[icell][1][i];
       v010 += cvalues[icell][2][i];
@@ -129,6 +129,36 @@ void MarchingCubesDev::invoke(double ***cvalues, int *svalues, int **mcflags)
     v101 /= 6.0;
     v110 /= 6.0;
     v111 /= 6.0;
+
+    v000 = v000 <= thresh ? 0 : 255.0;
+    v001 = v001 <= thresh ? 0 : 255.0;
+    v010 = v010 <= thresh ? 0 : 255.0;
+    v011 = v011 <= thresh ? 0 : 255.0;
+    v100 = v100 <= thresh ? 0 : 255.0;
+    v101 = v101 <= thresh ? 0 : 255.0;
+    v110 = v110 <= thresh ? 0 : 255.0;
+    v111 = v111 <= thresh ? 0 : 255.0;*/
+
+    /*for (i = 0; i < 6; i++) {
+      if(cvalues[icell][0][i] > thresh) v000 = MAX(cvalues[icell][0][i],v000);
+      if(cvalues[icell][1][i] > thresh) v001 = MAX(cvalues[icell][1][i],v001);
+      if(cvalues[icell][2][i] > thresh) v010 = MAX(cvalues[icell][2][i],v010);
+      if(cvalues[icell][3][i] > thresh) v011 = MAX(cvalues[icell][3][i],v011);
+      if(cvalues[icell][4][i] > thresh) v100 = MAX(cvalues[icell][4][i],v100);
+      if(cvalues[icell][5][i] > thresh) v101 = MAX(cvalues[icell][5][i],v101);
+      if(cvalues[icell][6][i] > thresh) v110 = MAX(cvalues[icell][6][i],v110);
+      if(cvalues[icell][7][i] > thresh) v111 = MAX(cvalues[icell][7][i],v111);
+    }*/
+
+    v000 = (cvalues[icell][0][1]+cvalues[icell][0][3]+cvalues[icell][0][5])/3.0;
+    v001 = (cvalues[icell][1][0]+cvalues[icell][1][3]+cvalues[icell][1][5])/3.0;
+    v010 = (cvalues[icell][2][1]+cvalues[icell][2][2]+cvalues[icell][2][5])/3.0;
+    v011 = (cvalues[icell][3][0]+cvalues[icell][3][2]+cvalues[icell][3][5])/3.0;
+
+    v100 = (cvalues[icell][4][1]+cvalues[icell][4][3]+cvalues[icell][4][4])/3.0;
+    v101 = (cvalues[icell][5][0]+cvalues[icell][5][3]+cvalues[icell][5][4])/3.0;
+    v110 = (cvalues[icell][6][1]+cvalues[icell][6][2]+cvalues[icell][6][4])/3.0;
+    v111 = (cvalues[icell][7][0]+cvalues[icell][7][2]+cvalues[icell][7][4])/3.0;
 
     v000iso = v000 - thresh;
     v001iso = v001 - thresh;

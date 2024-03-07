@@ -649,7 +649,7 @@ void CreateISurfDev::sync(int which)
                   double dtemp = cvalues[jcell][jcorner][jadj];
                   if (dtemp>=0) {
                     if (dtotal[jadj] < 0) dtotal[jadj] = dtemp;
-                    else dtotal[jadj] = MIN(dtotal[jadj],dtemp);
+                    else dtotal[jadj] = MAX(dtotal[jadj],dtemp);
                   }
                 }
               }
@@ -672,7 +672,7 @@ void CreateISurfDev::sync(int which)
                   double dtemp = cghost[jcell-nglocal][jcorner][jadj];
                   if (dtemp>=0) {
                     if (dtotal[jadj] < 0) dtotal[jadj] = dtemp;
-                    else dtotal[jadj] = MIN(dtotal[jadj],dtemp);
+                    else dtotal[jadj] = MAX(dtotal[jadj],dtemp);
                   }
                 }
               }

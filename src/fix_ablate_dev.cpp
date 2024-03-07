@@ -37,7 +37,7 @@
 using namespace SPARTA_NS;
 
 enum{COMPUTE,FIX,VARIABLE,RANDOM};
-enum{CVALUE,CDELTA,IVALUE};
+enum{CVALUE,CDELTA};
 
 #define INVOKED_PER_GRID 16
 #define DELTAGRID 1024            // must be bigger than split cells per cell
@@ -200,6 +200,7 @@ FixAblateDev::FixAblateDev(SPARTA *sparta, int narg, char **arg) :
   celldelta = NULL;
   cdelta = NULL;
   cdelta_ghost = NULL;
+  cvalues_ghost = NULL;
   numsend = NULL;
   maxgrid = maxghost = 0;
 
@@ -252,6 +253,7 @@ FixAblateDev::~FixAblateDev()
   memory->destroy(celldelta);
   memory->destroy(cdelta);
   memory->destroy(cdelta_ghost);
+  memory->destroy(cvalues_ghost);
   memory->destroy(numsend);
 
   memory->destroy(proclist);
@@ -397,11 +399,13 @@ void FixAblateDev::end_of_step()
 
   decrement();
 
+  //if(dim==2) decrement2d();
+  //else decrement3d();
+
   // sync shared corner point values
 
   sync();
   epsilon_adjust();
-  //find_intersections();
 
   // re-create implicit surfs
 
@@ -787,55 +791,144 @@ void FixAblateDev::set_delta()
 }
 
 /* ----------------------------------------------------------------------
-   decrement corner points of each owned grid cell
+   determine decrement for each corner point of each owned grid cell
    skip cells not in group, with no surfs, and sub-cells
    algorithm:
      no corner pt value can be < 0.0
      decrement smallest corner pt by full delta
      if cannot, decrement to 0.0, decrement next smallest by remainder, etc
 ------------------------------------------------------------------------- */
-// TODO: Modify to decrement two/three lowest to preserve normal
+
 void FixAblateDev::decrement()
 {
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  int i,imin;
+  int i,j,imin;
   double minvalue,total;
-  double **corners;
-
-  return;
+  double cmax[ncorner];
 
   // total = full amount to decrement from cell
   // cdelta[icell] = amount to decrement from each corner point of icell
 
-  // TEMP: Comment out to compile
-  /*for (int icell = 0; icell < nglocal; icell++) {
+  for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
 
     for (i = 0; i < ncorner; i++) cdelta[icell][i] = 0.0;
 
     total = celldelta[icell];
-    corners = cvalues[icell];
     while (total > 0.0) {
+      // first find max in each corner
+      for (i = 0; i < ncorner; i++) {
+        cmax[i] = 0.0;
+        // iterate through inner indices of each corner
+        for (j = 0; j < nadj; j++) cmax[i] = MAX(cmax[i],cvalues[icell][i][j]);
+      }
+
       imin = -1;
       minvalue = 256.0;
       for (i = 0; i < ncorner; i++) {
-        if (corners[i] > 0.0 && corners[i] < minvalue &&
-            cdelta[icell][i] == 0.0) {
-          imin = i;
-          minvalue = corners[i];
+        if (cmax[i] > 0.0 && cdelta[icell][i] == 0.0) {
+          if(cmax[i] < minvalue) {
+            imin = i;
+            minvalue = cmax[i];
+          // if same values, randomly choose between them
+          } else if (fabs(cmax[i] - minvalue)/minvalue < EPSILON
+            && random->uniform() > 0.5) {
+            imin = i;
+          }
         }
       }
       if (imin == -1) break;
-      if (total < corners[imin]) {
+      if (total < cmax[imin]) {
         cdelta[icell][imin] += total;
         total = 0.0;
       } else {
-        cdelta[icell][imin] = corners[imin];
-        total -= corners[imin];
+        cdelta[icell][imin] = cmax[imin];
+        total -= cmax[imin];
       }
+    }
+
+    //for (i = 0; i < ncorner; i++)
+    //  printf("cd[%i]:%4.3e\n",i,cdelta[icell][i]);
+    //printf("\n\n");
+
+  }
+}
+
+
+/* ----------------------------------------------------------------------
+   determines decrement value for each corner point. similar to decrement 
+   in fix_ablate but also accounts for the surface normal and the 
+   inner indices at each corner
+------------------------------------------------------------------------- */
+// TODO: Finish
+void FixAblateDev::decrement2d()
+{
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  return;
+  /*int i,j,imin1,imin2;
+  int bit0, bit1, bit2, bit3;
+  int which;
+  double minvalue1,minvalue2,total;
+  double **corners;
+
+  int nopen, open[4];
+  double cmax[4], ctmp1[4], ctmp2[4];
+  double cu1, cu2;
+
+  // total = full amount to decrement from cell
+  // cdelta[icell] = amount to decrement from each corner point of icell
+
+  // TEMP: Comment out to compile
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    for (i = 0; i < ncorner; i++)
+      cdelta[icell][i] = 0.0;
+
+    total = celldelta[icell];
+
+    // do a split approach
+    while (total > 0.0) {
+
+      // find average values and two smallest
+      which = 0;
+      cmax[0] = cmax[1] = cmax[2] = cmax[3] = -1.0;
+      for (i = 0; i < 4; i++) // corners
+        for (j = 0; j < 4; j++) // adjacents
+          cmax[i] = MAX(cvalues[icell][i][j],cmax);
+
+      bit0 = (cmax[0] < thresh) ? 0 : 1;
+      bit1 = (cmax[1] < thresh) ? 0 : 1;
+      bit2 = (cmax[2] < thresh) ? 0 : 1;
+      bit3 = (cmax[3] < thresh) ? 0 : 1;
+      which = (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
+
+      if(which == 0) break;
+      // determine case
+      switch(which) {
+
+      case 1:
+        // reduce
+        if(cmax[1] < total)
+          for (i = 0; i < 4; i++) ctmp1[i] = cvalues[icell][1][i] - total;
+        else
+          for (i = 0; i < 4; i++) ctmp1[i] = cvalues[icell][1][i] - cmax[1];
+
+        if(cmax[2] < total)
+          for (i = 0; i < 4; i++) ctmp2[i] = cvalues[icell][2][i] - total;
+        else
+          for (i = 0; i < 4; i++) ctmp2[i] = cvalues[icell][2][i] - cmax[2];
+
+        // find underflow
+        cu1 = ctmp1[0] + ctmp1[1] + ctmp1[2] + ctmp[3])/
+
+      }
+
     }
   }*/
 }
@@ -850,12 +943,11 @@ void FixAblateDev::decrement()
    all N copies of corner pt are set to newvalue
      in numerically consistent manner (same order of operations)
 ------------------------------------------------------------------------- */
-// TODO: Modify to account for new adjacent values
 void FixAblateDev::sync()
 {
-  int i,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
+  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
-  double total;
+  double total, cmax;
 
   comm_neigh_corners(CDELTA);
 
@@ -870,6 +962,8 @@ void FixAblateDev::sync()
   for (icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
+
+    //printf("icell: %i\n", icell);
 
     ix = ixyz[icell][0];
     iy = ixyz[icell][1];
@@ -917,16 +1011,40 @@ void FixAblateDev::sync()
         }
       }
 
-      // TEMP: Comment out to compile
-      //if (total > cvalues[icell][i]) cvalues[icell][i] = 0.0;
-      //else cvalues[icell][i] -= total;
+      if(total == 0) continue;
+
+      //for(j = 0; j < nadj; j++)
+      //  printf("b - cval[%i][%i]: %4.3e\n", i,j,cvalues[icell][i][j]);
+
+      // find max inner value
+
+      cmax = 0.0;
+      for(j = 0; j < nadj; j++)
+        cmax = MAX(cmax,cvalues[icell][i][j]);
+
+      // now decrement corners
+
+      if (total > cmax) {
+        for(j = 0; j < nadj; j++)
+          cvalues[icell][i][j] = 0.0;
+      } else {
+        for(j = 0; j < nadj; j++) {
+          cvalues[icell][i][j] -= total;
+          if(cvalues[icell][i][j] < 0) cvalues[icell][i][j] = 0.0;
+        }
+      }
+
+      //for(j = 0; j < nadj; j++)
+      //  printf("a - cval[%i][%i]: %4.3e\n", i,j,cvalues[icell][i][j]);
     }
+    //printf("\n");
   }
 }
 
 
 /* ----------------------------------------------------------------------
-   adjust corner point values such that there are no small volumes
+   adjust corner point values based on intersection between surface
+   and cell edge
 ------------------------------------------------------------------------- */
 // TODO: Finish this
 void FixAblateDev::intersect_adjust()
@@ -985,13 +1103,11 @@ void FixAblateDev::epsilon_adjust()
 
 void FixAblateDev::comm_neigh_corners(int which)
 {
-  int i,j,m,n,ix,iy,iz,jx,jy,jz;
+  int i,j,k,m,n,ix,iy,iz,jx,jy,jz;
   int icell,ifirst,jcell,proc,ilocal;
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
-
-  return;
 
   // make list of datums to send to neighbor procs
   // 8 or 26 cells surrounding icell need icell's cdelta info
@@ -999,7 +1115,7 @@ void FixAblateDev::comm_neigh_corners(int which)
   // insure icell is only sent once to same neighbor proc
   // also set proclist and locallist for each sent datum
 
-  /*int nsend = 0;
+  int nsend = 0;
 
   for (icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
@@ -1080,7 +1196,8 @@ void FixAblateDev::comm_neigh_corners(int which)
           sbuf[m++] = cdelta[icell][j];
       } else if (which == CVALUE) {
         for (j = 0; j < ncorner; j++)
-          sbuf[m++] = cvalues[icell][j];
+          for (k = 0; k < nadj; k++)
+            sbuf[m++] = cvalues[icell][j][k];
       }
       nsend++;
     }
@@ -1098,8 +1215,10 @@ void FixAblateDev::comm_neigh_corners(int which)
 
   if (grid->nghost > maxghost) {
     memory->destroy(cdelta_ghost);
+    memory->destroy(cvalues_ghost);
     maxghost = grid->nghost;
     memory->create(cdelta_ghost,maxghost,ncorner,"ablate_dev:cdelta_ghost");
+    memory->create(cvalues_ghost,maxghost,ncorner,"ablate_dev:cvalues_ghost");
   }
 
   // unpack received data into cdelta_ghost = ghost cell corner points
@@ -1113,9 +1232,15 @@ void FixAblateDev::comm_neigh_corners(int which)
     cellID = (cellint) ubuf(rbuf[m++]).u;
     ilocal = (*hash)[cellID];
     icell = ilocal - nglocal;
-    for (j = 0; j < ncorner; j++)
-      cdelta_ghost[icell][j] = rbuf[m++];
-  }*/
+    if (which == CDELTA) {
+      for (j = 0; j < ncorner; j++)
+        cdelta_ghost[icell][j] = rbuf[m++];
+    } else if (which == CVALUE) {
+        for (j = 0; j < ncorner; j++)
+          for (k = 0; k < nadj; k++)
+            cvalues_ghost[icell][j][k] = rbuf[m++];
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -1439,6 +1564,7 @@ double FixAblateDev::memory_usage()
   bytes += maxgrid * sizeof(double);           // celldelta
   bytes += maxgrid*ncorner * sizeof(double);   // cdelta
   bytes += maxghost*ncorner * sizeof(double);  // cdelta_ghost
+  bytes += maxghost*ncorner*nadj * sizeof(double);  // cvalues_ghost
   bytes += 3*maxsend * sizeof(int);            // proclist,locallist,numsend
   bytes += maxbuf * sizeof(double);            // sbuf
   return bytes;

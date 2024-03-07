@@ -85,7 +85,7 @@ void MarchingSquaresDev::invoke(double ***cvalues, int *svalues)
 
     // set corner point to average of adjacent values
 
-    for (i = 0; i < 4; i++) {
+    /*for (i = 0; i < 4; i++) {
       v00 += cvalues[icell][0][i];
       v01 += cvalues[icell][1][i];
       v10 += cvalues[icell][2][i];
@@ -95,7 +95,14 @@ void MarchingSquaresDev::invoke(double ***cvalues, int *svalues)
     v00 /= 4.0;
     v01 /= 4.0;
     v10 /= 4.0;
-    v11 /= 4.0;
+    v11 /= 4.0;*/
+
+    for (i = 0; i < 4; i++) {
+      v00 = MAX(v00,cvalues[icell][0][i]);
+      v01 = MAX(v01,cvalues[icell][1][i]);
+      v10 = MAX(v10,cvalues[icell][2][i]);
+      v11 = MAX(v11,cvalues[icell][3][i]);
+    }
 
     // intersection of surfaces on all cell edges on normalized length
 

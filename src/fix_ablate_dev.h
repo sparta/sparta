@@ -75,11 +75,12 @@ class FixAblateDev : public Fix {
   // DEBUG
   int **mcflags;
 
-  double *celldelta;      // per-cell delta from compute or fix source
-  double **cdelta;        // per-corner point deltas
-  double **cdelta_ghost;  // ditto for my ghost cells communicated to me
-  int maxgrid;            // max size of per-cell vectors/arrays
-  int maxghost;           // max size of cdelta_ghost
+  double *celldelta;       // per-cell delta from compute or fix source
+  double **cdelta;         // per-corner point deltas
+  double **cdelta_ghost;   // ditto for my ghost cells communicated to me
+  double ***cvalues_ghost;
+  int maxgrid;             // max size of per-cell vectors/arrays
+  int maxghost;            // max size of cdelta_ghost
 
   int *proclist;
   cellint *locallist;
@@ -100,6 +101,8 @@ class FixAblateDev : public Fix {
   void set_delta_random();
   void set_delta();
   void decrement();
+  void decrement2d();
+  void decrement3d();
   void sync();
   void epsilon_adjust();
   void intersect_adjust();
