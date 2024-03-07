@@ -42,8 +42,8 @@ sparta_option(BUILD_JPEG "Enable or disable JPEG TPL. Default: OFF." OFF
 sparta_option(BUILD_PNG "Enable or disable PNG TPL. Default: OFF." OFF
               SPARTA_BUILD_TPL_LIST)
 
-option(FFT "Select a FFT TPL from FFTW3, MKL, or KISS. Default: OFF." OFF)
-option(FFT_KOKKOS "Select a FFT TPL for Kokkos from CUFFT, HIPFFT, FFTW3, MKL, or KISS. Default: OFF." OFF)
+set(FFT "OFF" CACHE STRING "Select a FFT TPL from FFTW3, MKL, or KISS. Default: KISS.")
+set(FFT_KOKKOS "OFF" CACHE STRING "Select a FFT TPL for Kokkos from CUFFT, HIPFFT, FFTW3, MKL, or KISS. Default: KISS.")
 # ######### END   SPARTA TPL DEPENDENCIES ##########
 
 # ######### BEGIN SPARTA EXTRA OPTIONS ##########

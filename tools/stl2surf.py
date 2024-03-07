@@ -146,7 +146,11 @@ for edge in ehash:
     
 if dup or unmatch:
   print("WARNING: surface is not watertight")
+
+if dup:
   print("Duplicate edge count:",dup)
-  print("Unmatched edge count:",unmatch)
   print("One duplicate edge:",dupedge)
+
+if unmatch:
+  print("Unmatched edge count:",unmatch)
   print("One unmatched edge:",unmatchedge)
