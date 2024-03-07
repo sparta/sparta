@@ -53,83 +53,105 @@ endif()
 list(APPEND TARGET_SPARTA_BUILD_TPLS ${TARGET_SPARTA_BUILD_MPI})
 # ################### END PROCESS MPI TPL/PKG ####################
 
-# ################### BEGIN PROCESS FFT_KOKKOS TPL ####################
-if(FFT_KOKKOS STREQUAL "KISS")
-  set(PKG_KOKKOS
-  ON
-  CACHE BOOL "Enable or disable sparta kokkos package. Default: OFF.")
+# ################### BEGIN PROCESS FFT TPL/PKG ####################
+
+if((NOT PKG_FFT) AND (NOT (FFT_KOKKOS STREQUAL "OFF")))
+  message(FATAL_ERROR  "Setting FFT_KOKKOS library requires PKG_FFT: ON.")
 endif()
 
-if(FFT AND FFT_KOKKOS)
-  message(FATAL_ERROR  "Both FFT: ${FFT} and FFT_KOKKOS: ${FFT_KOKKOS} are selected. ")
-endif()
-
-if(FFT_KOKKOS STREQUAL "CUFFT" AND NOT Kokkos_ENABLE_CUDA)
-  message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} requires Kokkos_ENABLE_CUDA: ON.")
-endif()
-
-if(FFT_KOKKOS STREQUAL "HIPFFT" AND NOT Kokkos_ENABLE_HIP)
-  message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} requires Kokkos_ENABLE_HIP: ON.")
-endif()
-
-if(FFT_KOKKOS STREQUAL "FFTW3")
-  if(Kokkos_ENABLE_CUDA OR Kokkos_ENABLE_HIP OR Kokkos_ENABLE_ROCM)
-    message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} cannot run with a kokkos GPU backend.")
-  endif()
-endif()
-
-if(FFT_KOKKOS STREQUAL "MKL")
-  if(Kokkos_ENABLE_CUDA OR Kokkos_ENABLE_HIP OR Kokkos_ENABLE_ROCM)
-    message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} cannot run with a kokkos GPU backend.")
-  endif()
-endif()
-
-if(FFT_KOKKOS STREQUAL "FFTW3" OR FFT_KOKKOS STREQUAL "MKL")
-  if((NOT Kokkos_ENABLE_SERIAL) AND (NOT Kokkos_ENABLE_OPENMP))
-    message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} requires either Kokkos_ENABLE_OPENMP or Kokkos_ENABLE_SERIAL")
-  endif()
-endif()
-
-if(FFT AND PKG_FFT)
-  message(WARNING "Both FFT: ${FFT} and PKG_FFT: ${PKG_FFT} are selected. "
-                  "Defaulting to PKG_FFT.")
-endif()
-# ################### END PROCESS FFT_KOKKOS TPL ####################
-
-# ################### BEGIN PROCESS PKGS ####################
-if(PKG_KOKKOS)
-  # Sparta's Kokkos package requires dependencies from the PKG_FFT target.
-  set(PKG_FFT
-      ON
-      CACHE STRING "" FORCE)
+if((NOT PKG_FFT) AND (NOT (FFT STREQUAL "OFF")))
+  message(FATAL_ERROR  "Setting FFT library requires PKG_FFT: ON.")
 endif()
 
 if(PKG_FFT)
-  set(FFT
-      OFF
-      CACHE STRING "" FORCE)
+
+  if(FFT STREQUAL "OFF")
+    set(FFT "KISS" CACHE STRING "Select a FFT TPL for CPU from FFTW3, MKL, or KISS. Default: KISS." FORCE)
+  endif()
+
   set(TARGET_SPARTA_PKG_FFT pkg_fft)
   list(APPEND TARGET_SPARTA_PKGS ${TARGET_SPARTA_PKG_FFT})
-  set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS -DFFT_NONE
-                                       ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
-endif()
 
-if(FFT AND NOT PKG_FFT)
-  find_package(${FFT} REQUIRED)
-  set(TARGET_SPARTA_BUILD_FFT ${FFT}::${FFT})
+  string(TOUPPER ${FFT_KOKKOS} FFT_KOKKOS)
+
   set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS -DFFT_${FFT}
                                        ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
-  list(APPEND TARGET_SPARTA_BUILD_TPLS ${TARGET_SPARTA_BUILD_FFT})
 
-  set(PKG_FFT
-      ON
-      CACHE STRING "" FORCE)
-  set(TARGET_SPARTA_PKG_FFT pkg_fft)
-  list(APPEND TARGET_SPARTA_PKGS ${TARGET_SPARTA_PKG_FFT})
+  if(NOT FFT STREQUAL "KISS")
+    find_package(${FFT} REQUIRED)
+
+    set(TARGET_SPARTA_BUILD_FFT ${FFT}::${FFT})
+    list(APPEND TARGET_SPARTA_BUILD_TPLS ${TARGET_SPARTA_BUILD_FFT})
+
+    set(TARGET_SPARTA_PKG_FFT pkg_fft)
+    list(APPEND TARGET_SPARTA_PKGS ${TARGET_SPARTA_PKG_FFT})
+  endif()
+
   if(SPARTA_ENABLE_TESTING)
     set(SPARTA_ENABLED_TEST_SUITES ${SPARTA_ENABLED_TEST_SUITES} "fft")
   endif()
+
+  if(PKG_KOKKOS)
+    if(FFT_KOKKOS STREQUAL "OFF")
+      set(FFT_KOKKOS "KISS" CACHE STRING "Select a FFT TPL for Kokkos from CUFFT, HIPFFT, FFTW3, MKL, or KISS. Default: KISS." FORCE)
+    endif()
+
+    string(TOUPPER ${FFT_KOKKOS} FFT_KOKKOS)
+
+    if(FFT_KOKKOS STREQUAL "CUFFT" AND NOT Kokkos_ENABLE_CUDA)
+      message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} requires Kokkos_ENABLE_CUDA: ON.")
+    endif()
+
+    if(FFT_KOKKOS STREQUAL "HIPFFT" AND NOT Kokkos_ENABLE_HIP)
+      message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} requires Kokkos_ENABLE_HIP: ON.")
+    endif()
+
+    if(FFT_KOKKOS STREQUAL "FFTW3" OR FFT_KOKKOS STREQUAL "MKL")
+      if((NOT Kokkos_ENABLE_SERIAL) AND (NOT Kokkos_ENABLE_OPENMP))
+        message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} requires either Kokkos_ENABLE_OPENMP or Kokkos_ENABLE_SERIAL")
+      endif()
+
+      if(Kokkos_ENABLE_CUDA OR Kokkos_ENABLE_HIP OR Kokkos_ENABLE_ROCM)
+        message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} cannot run with a kokkos GPU backend.")
+      endif()
+    endif()
+
+    if(Kokkos_ENABLE_CUDA)
+      if(NOT ((FFT_KOKKOS STREQUAL "KISS") OR (FFT_KOKKOS STREQUAL "CUFFT")))
+        message(FATAL_ERROR "The CUDA backend of Kokkos requires either KISS FFT or CUFFT.")
+      elseif(FFT_KOKKOS STREQUAL "KISS")
+        message(WARNING "Using KISS FFT with the CUDA backend of Kokkos may be sub-optimal.")
+      elseif(FFT_KOKKOS STREQUAL "CUFFT")
+        find_library(CUFFT_LIBRARY cufft)
+        if (CUFFT_LIBRARY STREQUAL "CUFFT_LIBRARY-NOTFOUND")
+          message(FATAL_ERROR "Required cuFFT library not found. Check your environment or set CUFFT_LIBRARY to its location")
+        endif()
+        link_libraries(${CUFFT_LIBRARY})
+      endif()
+    elseif(Kokkos_ENABLE_HIP)
+      if(NOT ((FFT_KOKKOS STREQUAL "KISS") OR (FFT_KOKKOS STREQUAL "HIPFFT")))
+        message(FATAL_ERROR "The HIP backend of Kokkos requires either KISS FFT or HIPFFT.")
+      elseif(FFT_KOKKOS STREQUAL "KISS")
+        message(WARNING "Using KISS FFT with the HIP backend of Kokkos may be sub-optimal.")
+      elseif(FFT_KOKKOS STREQUAL "HIPFFT")
+        include(DetectHIPInstallation)
+        find_package(hipfft REQUIRED)
+        link_libraries(hip::hipfft)
+      endif()
+    endif()
+
+    if(FFT_KOKKOS STREQUAL "FFTW3" OR FFT_KOKKOS STREQUAL "MKL")
+      find_package(${FFT_KOKKOS} REQUIRED)
+    endif()
+
+    set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS -DFFT_KOKKOS_${FFT_KOKKOS}
+                                         ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
+
+  endif()
+
 endif()
+
+# ################### BEGIN PROCESS PKGS ####################
 
 if(PKG_KOKKOS)
   set(TARGET_SPARTA_PKG_KOKKOS pkg_kokkos)
@@ -175,12 +197,9 @@ set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS ${SPARTA_CXX_COMPILE_FLAGS}
 # ################### BEGIN COMBINE CXX FLAGS ####################
 
 if(BUILD_MPI)
-  set(CRAYPE_VERSION $ENV{CRAYPE_VERSION})
-  if(NOT CRAYPE_VERSION)
-    set_property(
-      TARGET ${TARGET_SPARTA_BUILD_MPI}
-      PROPERTY INTERFACE_COMPILE_OPTIONS ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
-  endif()
+  set_property(
+    TARGET ${TARGET_SPARTA_BUILD_MPI}
+    PROPERTY INTERFACE_COMPILE_OPTIONS ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
 endif()
 
 if(SPARTA_CTEST_CONFIGS)
