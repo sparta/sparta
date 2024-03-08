@@ -135,15 +135,13 @@ void CreateISurf::command(int narg, char **arg)
     error->all(FLERR,"Create_isurf group does not match fix ablate group");
 
   // threshold for corner values
-  // ANDREW: does thresh for create_isurf have the same non-integer restriction as read_isurf
-  //  if yes, make these lines like the one in read_isurf
-  
+
   thresh = input->numeric(FLERR,arg[2]);
   if (thresh < 0 || thresh > 255)
     error->all(FLERR,"Create_isurf thresh must be bounded as (0,255)");
-  //int ithresh = static_cast<int> (thresh);
-  //if (ithresh == thresh)
-  //  error->all(FLERR,"An integer value for create_isurf thresh is not allowed");
+  int ithresh = static_cast<int> (thresh);
+  if (ithresh == thresh)
+    error->all(FLERR,"An integer value for create_isurf thresh is not allowed");
 
   // mode to determine corner values
 
@@ -160,10 +158,6 @@ void CreateISurf::command(int narg, char **arg)
 
   set_corners();
 
-  // ANDREW: I don't think any barriers should be necessary?  I've commented all of them out
-  
-  // MPI_Barrier(world);
-
   // remove all explicit surfs
 
   remove_old();
@@ -174,7 +168,6 @@ void CreateISurf::command(int narg, char **arg)
   // store corner point values in fix ablate instance
   // this call will also create implicit surfs
   // set pushflag = 0 so averaging option is not overridden
-  // NOTE: add grid-cell types later with non-NULL tvalues
   
   tvalues = NULL;
   int pushflag = 0;
@@ -183,8 +176,6 @@ void CreateISurf::command(int narg, char **arg)
                         cvalues,tvalues,thresh,sgroupID,pushflag);
 
   if (ablate->nevery == 0) modify->delete_fix(ablateID);
-
-  // MPI_Barrier(world);
 }
 
 /* ----------------------------------------------------------------------
@@ -245,49 +236,44 @@ void CreateISurf::set_corners()
   if (dim == 2) surface_edge2d();
   else surface_edge3d();
 
-  // fill in corner values based on if grid cell is in or out
+  // fill in side and corner values based on if grid cell is in or out
 
   set_inout();
-  // MPI_Barrier(world);
 
-  // sync between procs
-
-  // ANDREW - remove all fprintf() outputs when ready for final merge
-  
-  if (me == 0)
-    if (screen) fprintf(screen,"Syncing intermediate values ...\n");
+  // sync side and intersection values between procs
 
   sync(SVAL);
-  // MPI_Barrier(world);
-
   sync(IVAL);
-  // MPI_Barrier(world);
 
-  // find remaining corner values based on neighbors
+  // find remaining side values based on neighbors
 
-  if (me == 0)
-    if (screen) fprintf(screen,"Cleanup corners ...\n");
-
-  // ANDREW - it looks like the full value is local to a proc ?
-  // so some may return 0, others 1 ?
-  // which means you can only call error->one() or better yet
-  //   you should do an MPI_Allreduce on full to insure all procs call error->all()
-  
   int full;
   if (dim == 2) full = find_side_2d();
   else full = find_side_3d();
-  if (!full)
-    error->all(FLERR,"Create_isurf could not determine whether some corner \
-                      values are inside or outside with respect to the surface");
+
+  // check all procs successfully filled side values
+
+  int ofull;
+  if(full) ofull = 0;
+  else ofull = 1;
+  int allofull;
+  MPI_Allreduce(&ofull,&allofull,1,MPI_INT,MPI_SUM,world);
+  if (allofull) {
+    char str[128];
+    sprintf(str,
+            "Create_isurf could not determine whether some corner \
+             values are inside or outside with respect to the surface",
+            allofull);
+    error->all(FLERR,str);
+  }
+
+  // from side (and intersection) values, determine corner point values
 
   set_cvalues();
-  // MPI_Barrier(world);
 
-  if (me == 0)
-    if (screen) fprintf(screen,"Syncing corners ...\n");
+  // sync corner point values between procs
 
   sync(CVAL);
-  // MPI_Barrier(world);
 }
 
 /* ----------------------------------------------------------------------
@@ -703,9 +689,11 @@ void CreateISurf::sync(int which)
 }
 
 /* ----------------------------------------------------------------------
-   set corner values for cells fully in or out for both 2D and 3D
-   ANDREW - this method comment is the same as the one for set_inout() ?
-            seems like it should be different ?
+   communicate my side, intersection, or corner values that are shared by 
+   neighbor cells each corner point is shared by N cells, less on borders
+   done via irregular comm
+
+   Modified versions of comm_neigh_corners from fix_ablate
 ------------------------------------------------------------------------- */
 
 void CreateISurf::comm_neigh_corners(int which)
@@ -839,9 +827,6 @@ void CreateISurf::comm_neigh_corners(int which)
 
   // unpack received data into val_ghost = ghost cell corner points
 
-  // ANDREW - is this an important note ?
-  // NOTE: need to check if hashfilled
-
   cellint cellID;
   Grid::MyHash *hash = grid->hash;
 
@@ -964,8 +949,7 @@ void CreateISurf::set_inout()
 }
 
 /* ----------------------------------------------------------------------
-   resolve unknown side values and fill in remaining corner values
-   2d version
+   resolve unknown side values (2D version)
 ------------------------------------------------------------------------- */
 
 int CreateISurf::find_side_2d()
@@ -1114,8 +1098,7 @@ int CreateISurf::find_side_2d()
 }
 
 /* ----------------------------------------------------------------------
-   resolve unknown side values and fill in remaining corner values
-   3d version
+   resolve unknown side values (3D version)
 ------------------------------------------------------------------------- */
 
 int CreateISurf::find_side_3d()
@@ -1309,9 +1292,10 @@ int CreateISurf::find_side_3d()
 }
 
 /* ----------------------------------------------------------------------
-   resolve unknown side values and fill in remaining corner values
-   ANDREW - this method comment is same as fill_side() above
-     seems like it should be different ?
+   determine corner values for each grid cell. If the inout option is
+   used, the corner value only depends on the side values. If the ave
+   option is used, corner value is extrapolated from the intersection
+   values between the surfaces and the cell edges
 ------------------------------------------------------------------------- */
 
 void CreateISurf::set_cvalues()
@@ -1536,7 +1520,8 @@ int CreateISurf::corner_hit3d(double *p1, double *p2,
 }
 
 /* ----------------------------------------------------------------------
-   find inside corner value from corner value
+   find inside corner value from outside corner value and intersection
+   value
 ------------------------------------------------------------------------- */
 
 double CreateISurf::param2in(double param, double v1)
@@ -1565,14 +1550,7 @@ double CreateISurf::param2in(double param, double v1)
 
 void CreateISurf::remove_old()
 {
-  if (me == 0)
-    if (screen) fprintf(screen,"Removing explicit surfs ...\n");
-
   if (particle->exist) particle->sort();
-  // MPI_Barrier(world);
-
-  // finish implementing custom values
-  // ANDREW: is this a note for additional coding that is needed ?
 
   cuvalues = NULL;
   int *index_custom = new int[surf->ncustom];
@@ -1613,8 +1591,6 @@ void CreateISurf::remove_old()
   if (dim == 2) surf->check_watertight_2d();
   else surf->check_watertight_3d();
 
-  // MPI_Barrier(world);
-
   // reset grid due to changing surfs
   // assign surfs to grid cells
 
@@ -1644,9 +1620,6 @@ void CreateISurf::remove_old()
         grid->assign_split_cell_particles(icell);
   }
 
-  // MPI_Barrier(world);
-  // double time4 = MPI_Wtime();
-
   // re-setup owned and ghost cell info
 
   grid->setup_owned();
@@ -1656,9 +1629,4 @@ void CreateISurf::remove_old()
 
   grid->set_inout();
   grid->type_check();
-
-  // MPI_Barrier(world);
-
-  if (me == 0)
-    if (screen) fprintf(screen,"Finished deleting old explicit surfaces\n");
 }

@@ -89,9 +89,6 @@ within which implicit surfaces will be created.  It is important that
 the specified group of grid cells wholly contain the explicit
 surfaces as explained in the next paragraph.
 
-ANDREW: I added this paragraph (adapted from the read_isurf doc page)
-to try and explain how the user needs to define the grid group.
-
 IMPORTANT NOTE: The aggregate set of implicit surfaces created by this
 command must represent a watertight object(s), the same as explained
 for the read_surf command, otherwise SPARTA will generate an
@@ -138,10 +135,6 @@ point values to 255 if they are inside the volume or area. If the
 explicit surface exactly intersects a grid cell corner, the corner
 point is treated as outside (value = zero).
 
-ANDREW: I re-worked a bit your changes to this paragraph to try
-and make it more clear (at least to me).  Check is this is an
-accurate description of the algorithm ?
-
 The {ave} mode is meant to generate implicit surfaces which more
 precisely represent the explicit surfaces.  As with {inout} mode,
 corner point values outside (or on) the surface are set to zero.  For
@@ -160,7 +153,7 @@ corner point are intersected by explicit surface elements, the value
 assigned to the inside corner point is the average of the values
 computed for the individual cell edges.
 
-Note that no matter which mode is used, implicit surfaces are an
+NOTE: Regarless of which mode is used, implicit surfaces are an
 approximation to the original explicit surfaces.  In particular:
 
 The set of implicit surfaces cannot fully resolve features smaller
@@ -186,10 +179,6 @@ grid cell edges with respect to the explicit surfaces.  Thus
 incrementing or decrementing {Nx} or {Ny} or {Nz} can change the
 resulting implicit surfaces in a non-continuous manner. :l,ule
 
-ANDREW: Added a 3rd bullet point above.
-
-ANDREW: See if you agree with what these diagrams are showing ?
-
 Examples of the effects of last two bullet points are illustrated in
 the following diagrams for 2d geomtries (similar effects occur in 3d).
 The black lines are grid cells.  The red lines are explicit surfaces
@@ -197,17 +186,21 @@ which overlap multiple grid cells.  The blue lines are induced
 implicit surfaces within a grid cell, which in these examples do not
 match the explicit surfaces exactly.
 
+:image(JPG/implicit_bend_uneven_small.png)
 :image(JPG/implicit_bend_small.png)
 :image(JPG/implicit_corner_small.png)
 :image(JPG/implicit_pointy_small.png)
 
-The 2 diagrams with a single grid cell illustrate the 2nd bullet point
-above.  The 2 diagrams with 3 grid cells illustrate the 3rd bullet
-point above.  The pointy red object is truncated so there are no
-implicit surfaces in the top 2 cells when the red apex is near the
-left-to-right middle of the grid cells.  But there is almost no
-truncation (implicit surfs in all 3 cells) when the apex is close to
-the vertical grid line.
+In the images above, the explicit surface is represented by the solid
+red line whereas the generated implicit surface is the dotted blue line.
+The solid black lines are the outline of the grid cell.  The leftmost
+diagram illustrates the 1st bullet point.  The next 2 diagrams with a 
+single grid cell illustrate the 2nd bullet point above.  The 2 diagrams
+with two grid cells illustrate the 3rd bullet point above.  The pointy red
+object is truncated so there are no implicit surfaces in the top 2 cells
+when the red apex is near the left-to-right middle of the grid cells.  But
+there is almost no truncation (implicit surfs in both cells) when the apex
+is close to the vertical grid line.
 
 :line
 
@@ -229,8 +222,6 @@ The "global surfs explicit/distributed"_global.html command must be
 used before using the "read_surf"_read_surf.html command which defined
 the explicit surfaces.  This is because implicit surfaces are always
 distributed.
-
-ANDREW: changed this paragraph a bit - is it correct ?
 
 If particles already exist in the simulation along with the explicit
 surfaces, they will generally end up outside the implicit surfaces (in
