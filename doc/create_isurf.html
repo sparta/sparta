@@ -189,10 +189,6 @@ resulting implicit surfaces in a non-continuous manner.
 </UL>
 <P>Examples of the effects of last two bullet points are illustrated in
 the following diagrams for 2d geomtries (similar effects occur in 3d).
-The black lines are grid cells.  The red lines are explicit surfaces
-which overlap multiple grid cells.  The blue lines are induced
-implicit surfaces within a grid cell, which in these examples do not
-match the explicit surfaces exactly.
 </P>
 <IMG SRC = "JPG/implicit_bend_uneven_small.png">
 
@@ -202,16 +198,20 @@ match the explicit surfaces exactly.
 
 <IMG SRC = "JPG/implicit_pointy_small.png">
 
-<P>In the images above, the explicit surface is represented by the solid
-red line whereas the generated implicit surface is the dotted blue line.
-The solid black lines are the outline of the grid cell.  The leftmost
-diagram illustrates the 1st bullet point.  The next 2 diagrams with a 
-single grid cell illustrate the 2nd bullet point above.  The 2 diagrams
-with two grid cells illustrate the 3rd bullet point above.  The pointy red
-object is truncated so there are no implicit surfaces in the top 2 cells
-when the red apex is near the left-to-right middle of the grid cells.  But
-there is almost no truncation (implicit surfs in both cells) when the apex
-is close to the vertical grid line.
+<P>In the images above, the explicit surface is represented by solid red
+lines whereas the generated implicit surface is dotted blue lines.
+The solid black lines are the outlines of grid cells.  The leftmost
+diagram illustrates the 1st bullet point.  The blue line cannot match
+the slope of the red line because the lower-right corner point is
+assinged a value which is the average of the two values which would be
+needed to match both intersection points of the red line with the grid
+cell edges.  The next 2 diagrams with a single grid cell illustrate
+the 2nd bullet point above.  The 2 diagrams with two grid cells
+illustrate the 3rd bullet point above.  The pointy red object is
+truncated so there are no implicit surfaces in the top cell when the
+red apex is near the left-to-right middle of the grid cells.  But
+there is almost no truncation (implicit surfs in both cells) when the
+apex is close to the vertical grid line.
 </P>
 <HR>
 
