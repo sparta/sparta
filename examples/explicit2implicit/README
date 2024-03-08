@@ -1,0 +1,10 @@
+There are three inputs which demonstrate an explicit surface being converted to an implicit surface. Each surface is outputted where the outline of the surface is in grey. The particles are also drawn in the 2D case but not in the 3D case.
+
+1) The in.exp2imp.circle.2d input is a 2D circle which is converted to 
+   an implicit surface.
+2) The in.exp2imp.sphere.3d input is a 3D sphere which is converted to 
+   an implicit surface
+3) The in.exp2imp.sphere.3d.ablate input is the same as 2) but the sphere
+   is ablated after being converted to an implicit surface
+
+To see the ablation of the sphere more clearly in 3), the runtime should be increased by increasing the value in the run command.
