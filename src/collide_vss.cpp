@@ -704,7 +704,6 @@ int CollideVSS::select_elec_state(Particle::OnePart *p, Particle::OnePart *jp, d
     State_prob = pow((1.0 - eelec / E_Dispose),
                      (1.5 - omega));
   } while (State_prob < random->uniform());
-  memory->sfree(state_probability);
   return ielec;
 }
 
