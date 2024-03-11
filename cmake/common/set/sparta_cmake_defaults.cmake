@@ -63,9 +63,6 @@ if(SPARTA_ENABLE_TESTING)
       "in.custom.cube.set.restart" # Failing
       "in.custom.step.read.restart" # Failing
       "in.custom.step.set.restart" # Failing
-      "in.exp2imp.cone.3d" # probably OOM
-      "in.exp2imp.cone.3d.reactions" # probably OOM
-      "in.exp2imp.sphere.3d" # probably OOM
   )
 
   list(APPEND __DEFAULT_MPI_RANKS "1")
