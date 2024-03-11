@@ -39,7 +39,7 @@ class CreateISurf : protected Pointers {
   int dim;
   int nglocal;
 
-  // For generating implicit surfaces
+  // for generating implicit surfaces
 
   int ggroup;               // group id for grid cells
   int groupbit;
@@ -50,10 +50,10 @@ class CreateISurf : protected Pointers {
   double corner[3];         // corners of grid group
   double xyzsize[3];        // size of lowest level cell (must be uniform grid)
   int nxyz[3], Nxyz;        // dimensions of grid
-  double **cvalues;          // array of corner point values
-  double **mvalues;          // minimum intersection value
-  int **svalues;             // marks corners as in or out
-  double ***ivalues;         // point of intersection between corner points
+  double **cvalues;         // array of corner point values
+  double **mvalues;         // minimum intersection value
+  int **svalues;            // marks corners as in or out
+  double ***ivalues;        // point of intersection between corner points
 
   double **icvalues;        // corner values for Fix Ablate
   int *tvalues;             // vector of per grid cell surf types
@@ -74,7 +74,7 @@ class CreateISurf : protected Pointers {
 
   int **sghost;
   double **cghost;
-  double ***ighost;  // ditto for my ghost cells communicated to me
+  double ***ighost;       // ditto for my ghost cells communicated to me
   int maxgrid;            // max size of per-cell vectors/arrays
   int maxghost;           // max size of cdelta_ghost
 
@@ -101,7 +101,7 @@ class CreateISurf : protected Pointers {
 
   void set_corners();
 
-  // send/recv values between neighborind cells (similar to one in fix_ablate)
+  // send/recv values between neighborind cells (similar to fix_ablate)
 
   void sync(int);
   void comm_neigh_corners(int);
