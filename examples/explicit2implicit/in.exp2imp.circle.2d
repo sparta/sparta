@@ -42,8 +42,8 @@ collide			vss air air.vss
 
 timestep		0.001
 
-dump                    1 image all 10 circle.* type type surf one 0.01 particle yes pdiam 0.02 zoom 2
-dump_modify             1 scolor * gray
+#dump                    1 image all 10 circle.*.ppm type type surf one 0.01 particle yes pdiam 0.02 zoom 2
+#dump_modify             1 scolor * gray
 
 stats			5
 stats_style		step cpu np nattempt ncoll nscoll nscheck
