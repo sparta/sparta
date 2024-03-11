@@ -44,8 +44,8 @@ group sphere surf type 1 3
 group sphere surf id 50 100:150
 group sphere surf id <= 1000
 group sphere surf id <> 50 250
-group patch grid region leftedge
-group patch surf region cutout
+group patch grid region leftedge all
+group patch surf region cutout center
 group boundary surf subtract all a2 a3
 group boundary grid union lower upper
 group boundary surf union lower upper
