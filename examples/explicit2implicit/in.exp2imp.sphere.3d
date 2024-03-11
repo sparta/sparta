@@ -50,4 +50,3 @@ dump_modify             1 scolor * gray
 stats			1
 stats_style		step cpu np nattempt ncoll nscoll nscheck
 run			20
-

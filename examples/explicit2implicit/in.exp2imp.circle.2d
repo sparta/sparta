@@ -29,12 +29,12 @@ global                  surfs explicit/distributed
 species			air.species N2
 mixture			air N2 vstream 0.0 0 0 
 
-read_surf       data.circle2d invert
+read_surf               data.circle2d invert
 surf_collide		1 diffuse 300.0 0.0
-surf_modify		  all collide 1
+surf_modify		all collide 1
 
-fix			        fablate ablate all 0 0.2 random 0
-create_isurf    all fablate 39.5 ave
+fix		        fablate ablate all 0 0.2 random 0
+create_isurf            all fablate 39.5 ave
 
 create_particles        air n 0 twopass
 
