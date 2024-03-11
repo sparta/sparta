@@ -585,7 +585,6 @@ void CreateISurf::sync(int which)
   double dtotal[nadj];
 
   comm_neigh_corners(which);
-  // MPI_Barrier(world);
 
   // perform update of corner pts for all my owned grid cells
   //   using contributions from all cells that share the corner point
