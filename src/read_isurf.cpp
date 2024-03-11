@@ -98,7 +98,7 @@ void ReadISurf::command(int narg, char **arg)
 
   thresh = input->numeric(FLERR,arg[5]);
   if (thresh <= 0 || thresh >= 255)
-    error->all(FLERR,"Invalid read_isurf command");
+    error->all(FLERR,"Read_isurf thresh must be bounded as (0,255)");
   int ithresh = static_cast<int> (thresh);
   if (ithresh == thresh)
     error->all(FLERR,"An integer value for read_isurf thresh is not allowed");
@@ -108,7 +108,7 @@ void ReadISurf::command(int narg, char **arg)
   if (ifix < 0)
     error->all(FLERR,"Fix ID for read_isurf does not exist");
   if (strcmp(modify->fix[ifix]->style,"ablate") != 0)
-    error->all(FLERR,"Fix for read_surf is not a fix ablate");
+    error->all(FLERR,"Fix for read_isurf is not a fix ablate");
   ablate = (FixAblate *) modify->fix[ifix];
   if (ggroup != ablate->igroup)
     error->all(FLERR,"Read_isurf group does not match fix ablate group");
