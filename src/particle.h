@@ -94,6 +94,7 @@ class Particle : protected Pointers {
   Species *species;         // list of particle species info
   int nspecies;             // # of defined species
   int maxvibmode;           // max vibmode of any species (mode = dof/2)
+  int maxelecstate;         // max number of elec states from any species
 
   class Mixture **mixture;
   int nmixture;

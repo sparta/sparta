@@ -58,6 +58,7 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
   nspecies = maxspecies = 0;
   species = NULL;
   maxvibmode = 0;
+  maxelecstate = 0;
 
   //maxgrid = 0;
   //cellcount = NULL;
@@ -1015,6 +1016,7 @@ void Particle::add_species(int narg, char **arg)
       }
 
       int nmode = fileelec[j].nmode;
+      maxelecstate = MAX(maxelecstate, nmode);
       species[ii].elecdat = new ElectronicData();
       species[ii].elecdat->nelecstate = nmode;
       species[ii].elecdat->states = (ElecState*) memory->smalloc(nmode*sizeof(ElecState),"elecdat:elecstate");
