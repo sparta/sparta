@@ -178,6 +178,7 @@ void Particle::init()
     }
   }
 
+  cumulative_probabilities = (double*) memory->smalloc(maxelecstate*sizeof(double), "particle:cumulative_probabilities");
   // reallocate cellcount and first lists as needed
   // NOTE: when grid becomes dynamic, will need to do this in sort()
 
@@ -1218,6 +1219,29 @@ double Particle::evib(int isp, double temp_thermal, RanKnuth *erandom)
 
 /* ---------------------------------------------------------------------- */
 
+int Particle::ielec(int isp, double temp_elec, RanKnuth *erandom)
+{
+  int ielec = 0;
+
+  int elecstyle = NONE;
+  if (collide) elecstyle = collide->elecstyle;
+  if (elecstyle == DISCRETE) {
+    Species species = particle->species[isp];
+    if (species.elecdat == NULL) return 0.0;
+
+    electronic_distribution_func(isp, temp_elec, cumulative_probabilities);
+
+    for (int i = 1; i < species.elecdat->nelecstate; ++i)
+      cumulative_probabilities[i] += cumulative_probabilities[i-1];
+
+    double ran = erandom->uniform();
+    ielec = 0;
+    while (ran > cumulative_probabilities[ielec])
+      ++ielec;
+  }
+  return ielec;
+}
+
 double Particle::eelec(int isp, double temp_elec, RanKnuth *erandom)
 {
   double energy = 0.0;
@@ -1227,20 +1251,8 @@ double Particle::eelec(int isp, double temp_elec, RanKnuth *erandom)
   if (elecstyle == DISCRETE) {
     Species species = particle->species[isp];
     if (species.elecdat == NULL) return 0.0;
-
-    double* cumulative_probabilities = (double*) memory->smalloc(species.elecdat->nelecstate*sizeof(double), "eelec:cumulative_probabilities");
-
-    electronic_distribution_func(isp, temp_elec, cumulative_probabilities);
-
-    for (int i = 1; i < species.elecdat->nelecstate; ++i)
-      cumulative_probabilities[i] += cumulative_probabilities[i-1];
-
-    double ran = erandom->uniform();
-    int i = 0;
-    while (ran > cumulative_probabilities[i])
-      ++i;
-    energy = update->boltz*species.elecdat->states[i].temp;
-    memory->sfree(cumulative_probabilities);
+    int ielec = this->ielec(isp, temp_elec, erandom);
+    energy = update->boltz*species.elecdat->states[ielec].temp;
   }
   return energy;
 }

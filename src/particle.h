@@ -95,6 +95,7 @@ class Particle : protected Pointers {
   int nspecies;             // # of defined species
   int maxvibmode;           // max vibmode of any species (mode = dof/2)
   int maxelecstate;         // max number of elec states from any species
+  double* cumulative_probabilities; // Working array used for sampling electronic states
 
   class Mixture **mixture;
   int nmixture;
@@ -192,6 +193,7 @@ class Particle : protected Pointers {
   int find_mixture(char *);
   double erot(int, double, class RanKnuth *);
   double evib(int, double, class RanKnuth *);
+  int ielec(int, double, class RanKnuth *);
   double eelec(int, double, class RanKnuth *);
   void electronic_distribution_func(int, double, double*);
 

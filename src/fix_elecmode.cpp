@@ -104,6 +104,6 @@ void FixElecmode::update_custom(int index, double temp_thermal,
 
   int nstate = particle->species[isp].elecdat->nelecstate;
 
-  elecstate[index] = 0; // Need to update somehow or remove
-  eelec[index] = particle->eelec(isp,temp_elec,random);
+  elecstate[index] = particle->ielec(isp,temp_elec,random); // Need to update somehow or remove
+  eelec[index] = update->boltz*particle->species[isp].elecdat->states[elecstate[index]].temp;
 }
