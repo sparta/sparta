@@ -1703,7 +1703,7 @@ void Collide::ambi_reset(int i, int j, int jsp,
 }
 
 /* ----------------------------------------------------------------------
-   SWPM algorithm for a single group
+   DEBUG : Checks particles
 ------------------------------------------------------------------------- */
 
 /*template <int ORD> void Collide::check_particles()
@@ -1871,7 +1871,8 @@ void Collide::collisions_one_sw()
 }
 
 /* ----------------------------------------------------------------------
-   Reorder plist depending on grouping strategy used
+   Reorder plist depending on grouping strategy used and prepare for
+   grouping and particle reduction
 ------------------------------------------------------------------------- */
 
 void Collide::group_reduce()
@@ -2014,7 +2015,7 @@ void Collide::group_reduce()
 }
 
 /* ----------------------------------------------------------------------
-   Rearrange plist into groups (assumes single species)
+   Recursivley divides particles using the binary tree strategy
 ------------------------------------------------------------------------- */
 void Collide::group_bt(int pfirst, int plast)
 {
@@ -2172,7 +2173,7 @@ void Collide::group_bt(int pfirst, int plast)
 }
 
 /* ----------------------------------------------------------------------
-   Rearrange plist into groups (assumes single species)
+   Recursivley divides particles using the octree strategy
 ------------------------------------------------------------------------- */
 void Collide::group_ot(int pfirst, int plast)
 {
