@@ -51,7 +51,7 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
 {
   MPI_Comm_rank(world,&me);
 
-  exist = sorted = 0;
+  exist = sorted = swpm = 0;
   nglobal = 0;
   nlocal = maxlocal = 0;
   particles = NULL;
@@ -646,8 +646,9 @@ int Particle::add_particle(int id, int ispecies, int icell,
   p->erot = erot;
   p->evib = evib;
   p->flag = PKEEP;
-  if(g > 0) p->g = g;
-  else p->g = update->fnum; // ignore input if not using swpm
+
+  if(g < 0) p->g = update->fnum;
+  else p->g = g;
 
   //p->dtremain = 0.0;    not needed due to memset in grow() ??
   //p->weight = 1.0;      not needed due to memset in grow() ??

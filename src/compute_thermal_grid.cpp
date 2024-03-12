@@ -146,6 +146,7 @@ void ComputeThermalGrid::compute_per_grid()
 
     mass = species[ispecies].mass;
     v = particles[i].v;
+    if(particle->swpm) mass *= particles[i].g/update->fnum;
 
     // 6 tallies per particle: N, Mass, mVx, mVy, mVz, mV^2
 

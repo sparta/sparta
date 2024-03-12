@@ -135,8 +135,9 @@ double CollideVSS::vremax_init(int igroup, int jgroup)
 double CollideVSS::attempt_collision(int icell, int np, double volume)
 {
   double fnum;
-  if(swpm_flag) fnum = g_max*(1.0+pre_wtf*wtf);
+  if (particle->swpm) fnum = g_max*(1.0+pre_wtf*wtf);
   else fnum = update->fnum;
+
   double dt = update->dt;
 
   double nattempt;
@@ -200,7 +201,7 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
   double vro  = pow(vr2,1.0-params[ispecies][jspecies].omega);
 
   double gp;
-  if(swpm_flag) gp = MAX(ip->g, jp->g)/g_max;
+  if (particle->swpm) gp = MAX(ip->g, jp->g)/g_max;
   else gp = 1.0;
 
   // although the vremax is calculated for the group,

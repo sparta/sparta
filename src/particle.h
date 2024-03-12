@@ -24,6 +24,7 @@ class Particle : protected Pointers {
  public:
   int exist;                // 1 if particles exist
   int sorted;               // 1 if particles are sorted by grid cell
+  int swpm;                 // 1 if particles have stochastic weights
 
   enum{MAXVIBMODE=4};       // increase value if species need more vib modes
 
@@ -152,7 +153,7 @@ class Particle : protected Pointers {
   virtual void post_weight();
 
   virtual int add_particle(int, int, int, double *, double *,
-    double, double, double g=-1.0);
+    double, double, double g = -1.0);
   virtual int add_particle();
   int clone_particle(int);
   void add_species(int, char **);

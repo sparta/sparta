@@ -30,7 +30,6 @@ class Collide : protected Pointers {
   int vibstyle;       // none/discrete/smooth vibrational modes
   int nearcp;         // 1 for near neighbor collisions
   int nearlimit;      // limit on neighbor serach for near neigh collisions
-  int swpm_flag;      // flag for stochastic weighted particle method
 
   int ncollide_one,nattempt_one,nreact_one;
   bigint ncollide_running,nattempt_running,nreact_running;
@@ -139,12 +138,14 @@ class Collide : protected Pointers {
   int Ncmax;            // maximum number of particles in cell before reduce
   int Ngmin;            // minimum number of particles in group to reduce
   int Ngmax;            // maximum number of particles in group before reduce
+  int gbuf;             // group size buffer
+  double g_max;         // maximum particle weight in cell at time t
   double wtf;           // weight transfer function
   double pre_wtf;       // scale weight transfer function
-  double g_max;         // maximum particle weight in cell at time t
+
+  int reduce_flag;      // 1 if particles can reduce
   int reduction_type;   // type of particle reduction to use
   int group_type;       // type of grouping
-  
 
   // inline functions
   // add particle N to Igroup and set its g2p entry in plist to K
@@ -183,7 +184,8 @@ class Collide : protected Pointers {
   void ambi_reset(int, int, int, Particle::OnePart *, Particle::OnePart *,
                   Particle::OnePart *, int *);
   void ambi_check();
-  int group_reduce();
+
+  void group_reduce();
   void group_bt(int, int);
   void group_ot(int, int);
   void reduce(int, int, double, double *, double);

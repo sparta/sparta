@@ -246,6 +246,7 @@ void ComputeGrid::compute_per_grid()
 
     mass = species[ispecies].mass;
     v = particles[i].v;
+    if(particle->swpm) mass *= particles[i].g/update->fnum;
 
     vec = tally[icell];
     if (cellmass) vec[cellmass] += mass;
