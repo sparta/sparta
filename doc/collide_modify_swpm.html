@@ -1,0 +1,136 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>collide_modify swpm command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>collide_modify keyword values ...  
+</PRE>
+<UL><LI>one or more keyword/value pairs may be listed 
+
+keywords = <I>swpm</I> or <I>reduce</I>
+  <I>swpm</I> values = choice Nsplit gamma
+    choice = <I>yes</I> or <I>no</I> to allow particle weights to stochastistically change
+    Nsplit = maximum number of particles in a cell to split particles
+    gamma = weight transfer functino which is a value > 0
+  <I>reduce</I> values = reduction_choice Nreduce group_choice Ngroup
+    reduction_choice = <I>ENERGY</I> or <I>HEAT</I> or <I>STRESS</I> = how to reduce particles
+    Nreduce = minimum number of particles in a cell needed to reduce particles
+    group_choice = <I>BINARY</I> or <I>WEIGHT</I> or <I>OCTREE</I> = how to group particles
+    Ngroup = maximum number of particles in each group
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<P>collide_modify swpm yes 16.0 1.0
+collide_modify reduce ENERGY 24.0 BINARY 4.0
+</P>
+<P><B>Description:</B>
+</P>
+<P>Set parameters that allow collisions are performed to be modeled according to
+the stochastic weight particle method (SWPM) <A HREF = "#Rjasanow05">(Rjasanow05)</A>. 
+</P>
+<P>The <I>swpm</I> keyword enables or disables SWPM. If <I>no</I> is specified,
+the DSMC model, which is the default, is used.
+</P>
+<P>If <I>yes</I> is specified, then SWPM is used. SWPM is typically composed of two
+stages: particle splitting and particle reduction. As the name suggests, during
+the first stage, particles can split, usually via collisions with one another.
+The two candidate particles which are accepted to collide first have their
+weights reduced according to a weight transfer function, which is represented
+as G. The weight transfer function indicates the amount of weight which is
+decremented from each of the particles (parent_ and are transferred to create
+two new particles (child). The weight of each childe particle is set as <I>G</I> to
+conserve mass and copy the velociies of the parent particles. The child particles
+then collide according to the molecular model used whereas the parent particles
+have their velocities unchanged. 
+</P>
+<P>The <I>Nsplit</I> keyword indicates the particle threshold in each cell. If a cell
+has less than <I>Nsplt</I>, after each split, the child particles have a weight <I>G</I>
+as described above. If a cell has more than <I>Nsplit</I>, <I>gamma</I> (which is defined
+later) is temporarily changed to zero which implies that <I>G</I> = max(<I>g_i</I>,<I>g_j</I>).
+Notice that one parent particle has all their weight deleted. In this case,
+that parent particle is removed, and the net gain in each particle collision
+is one particle. 
+</P>
+<P>The <I>gamma</I> keyword is used to define the weight transfer function <I>G</I>.
+The weight transfer function is assumed to have the form
+<I>G</I> = max(<I>g_i</I>,<I>g_j</I>)/(1 + <I>gamma</I>), where <I>g_i</I> and <I>g_j</I> are the
+particle weights. <I>gamma</I> must be a value greater than zero.
+</P>
+<P>The <I>reduce</I> keyword points to the second stage of SWPM which is particle
+reduction. Particle reduction is the general term where the particles in
+a cell are replaced by a smaller sample while conserving certain physical
+quantities of interest. If <I>no</I> is specificed, particle reduction is not used.
+If <I>yes</I> is specified, particle reduction is used. In SPARTA, the particles
+are first divided into groups and each group of particles is reduced.
+</P>
+<P>The <I>reduction_choice</I> keyword is either <I>ENERGY</I>, <I>HEAT</I>, or <I>STRESS</I>.
+In all choices, the mass and momentum of each group (and thus the ensemble)
+is conserved. If <I>ENERGY</I> is chosen, the energy of each group is conserved.
+If <I>HEAT</I> is chosen, the energy and heat flux in each group is conserved.
+If <I>STRESS</I> is chosen, the energy, heat flux, and stress tensor is each group
+is conserved. 
+</P>
+<P>NOTE: <I>STRESS</I> reduction yields six particles instead of two
+</P>
+<P>The <I>Nreduce</I> keyword is the minimum number of particles a cell must have to
+be eligible for particle reduction. In other words, a cell at any point should
+not have more than <I>Nreduce</I> particles. <I>Nreduce</I> must be greater than 2
+if <I>ENERGY</I> or <I>HEAT</I> reduction is used. If <I>STRESS</I> reduction is used,
+<I>Nreduce</I> must be greater than 6. 
+</P>
+<P>The <I>group_choice</I> keyword is either <I>BINARY</I> or <I>OCTREE</I> or <I>WEIGHT</I>.
+The grouping particles algorithm involves recursively dividing the particles as
+a tree. The root node contains all particles. From each root node, the
+particles are divided according to their velocity and contained in leaf nodes.
+The leaf nodes recursively divide until the number of particles in that node
+is less than <I>Ngroup</I> (which is defined later). The number of leaves from
+each parent node is two if <I>BINARY</I> or <I>WEIGHT</I> is used and 8 if <I>OCTREE</I> is
+used. If <I>BINARY</I> grouping is used, the particle are divided by comparing
+their velocities with respect to a plane. That plane has a normal in the
+same direction of the eigenvector corresponding to the largest eigenvluae of
+the covariance matrix of the particle velocities. The <I>WEIGHT</I> grouping is
+similar to <I>BINARY</I> grouping but first divides the particles in the root node
+by weight. Three groups are identified which are defined as having small,
+medium, and large weights. Particles with large weights are not eligible
+to reduce. Medium and small particles are reduced separately. If <I>OCTREE</I>
+grouping is used, the velocity space is divided into 8 octants centered around
+the mean velocity. The particles are then binned into each octant. 
+</P>
+<P>The <I>Ngroup</I> keyword is the maximum number of particles that can be in a
+group before being reduced. <I>Ngroup</I> must be greater than 2 if <I>ENERGY</I> or
+<I>HEAT</I> reduction is used. If <I>STRESS</I> reduction is used, <I>Nreduce</I> must be
+greater than 6. 
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>The SWPM capabilities are currently limited to monoatomic, homogeneous gases. 
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "collide.html">collide</A>, <A HREF = "collide_modify.html">collide_modify</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The option defaults are swpm = no and reduce = no
+</P>
+<HR>
+
+<A NAME = "Rjasanow05"></A>
+
+<P><B>(Rjasanow05)</B> S. Rjasanow, W. Wagner, "Stochastic Numerics for the Boltzmann
+Equation," Springer. (2005).
+</P>
+</HTML>

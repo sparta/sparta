@@ -1,0 +1,122 @@
+################################################################################
+# 2D Fourier flow with diffuse walls of unequal temperature
+# Verify that Kn_q has a small effect on the conductivity
+################################################################################
+
+seed               12137
+dimension          3
+
+#############
+# Constants #
+#############
+variable kb        equal 1.380658E-23
+variable pi        equal 3.14159
+
+##################
+# Gas parameters #
+##################
+variable gamma     equal 1.4
+
+#####################
+# Chosen Parameters #
+#####################
+variable T         equal 298.15
+variable p         equal 101325.0
+variable Ma        equal 0.2
+variable ppc       equal 32.0
+
+################
+# Precalculate #
+################
+variable mass_ref  equal 5.0e-26
+variable R_ref     equal ${kb}/${mass_ref}
+variable RT        equal ${R_ref}*${T}
+variable rho       equal ${p}/${RT}
+variable nden      equal ${rho}/${mass_ref}
+variable mu_ref    equal 2.0e-5
+variable lam       equal ${mu_ref}/${p}*sqrt(${pi}*${RT}*0.5)
+variable cbar      equal sqrt(2.*${RT})
+variable a         equal sqrt(${gamma}*${RT})
+variable vb        equal 20.0
+
+###########
+# Species #
+###########
+species            air.species Ar
+
+mixture            air Ar vstream 0.0 0.0 0.0 temp ${T}
+mixture            air Ar frac 1.0
+
+collide            vss air opt.vss
+collide_modify     remain no
+# swpm (yes/no) (min to split) (min to reduce) weight_transfer_function ...
+# reduction_type (min per group) grouping_type
+collide_modify     swpm yes 32.0 1.0
+collide_modify     reduce ENERGY 32.0 BINARY 4.0
+#collide_modify     reduce HEAT 32.0 WEIGHT 4.0
+#collide_modify     reduce STRESS 32.0 BINARY 12.0
+
+#####################
+# Boundary/Geometry #
+#####################
+variable Lx        equal 0.0001
+variable Ly        equal 0.0001
+variable Lz        equal 0.0001
+
+variable nx        equal 1
+variable ny        equal 1
+variable nz        equal 1 
+
+boundary           p p p
+
+create_box         0.0 ${Lx} 0.0 ${Ly} 0.0 ${Lz}
+create_grid        ${nx} ${ny} ${nz} block * * * 
+balance_grid       rcb part
+
+variable N         equal ${ny}*${ppc}
+variable Fnum      equal ${nden}/(${N}/(${Lx}*${Ly}*${Lz}))
+
+global nrho ${nden}
+global fnum ${Fnum}
+
+create_particles   air n 0
+
+#####################
+# More Precalculate #
+#####################
+variable td        equal ${rho}*${Ly}*${Ly}/${mu_ref}
+variable dy        equal ${Ly}/${ny}
+variable dyolam    equal ${dy}/${lam}
+variable dt        equal 1.0e-11
+variable Nsteady   equal ceil(${td}/${dt})*5.0
+variable tsteady   equal ${Nsteady}*${dt}
+variable Kn_g      equal ${lam}/${Ly}
+
+#####################################
+# Print variable values to log file #
+##################################### 
+print " Boundary velocity = ${vb}"
+print " Most probable speed = ${cbar}" 
+print " Mean free path = ${lam}"
+print " Kn_system = ${Kn_g}"
+print " dy/lam = ${dyolam}"
+print " Time step=${dt}"
+print " Diffusion time in dt=${Nsteady}"
+
+###########
+# Outputs #
+###########
+compute 1     thermal/grid all all temp press
+compute 2     grid all all mass u v w temp
+compute 3     pflux/grid all all momxx momxy momxz momyy momyz momzz
+compute 4     eflux/grid all all heatx heaty heatz
+#dump 1        grid all 1 out_swpm.* c_1[*] c_2[*] c_3[*] c_4[*]
+
+#############
+# Transient #
+#############
+stats              10
+stats_style        step np nattempt ncoll
+
+timestep           ${dt}
+run                100
