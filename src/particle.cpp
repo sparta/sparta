@@ -59,6 +59,7 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
   species = NULL;
   maxvibmode = 0;
   maxelecstate = 0;
+  cumulative_probabilities = NULL;
 
   //maxgrid = 0;
   //cellcount = NULL;
@@ -139,6 +140,7 @@ Particle::~Particle()
   memory->sfree(edvec);
   memory->sfree(edarray);
   memory->destroy(edcol);
+  if (cumulative_probabilities) memory->sfree(cumulative_probabilities);
 
   delete wrandom;
 }
@@ -178,7 +180,6 @@ void Particle::init()
     }
   }
 
-  cumulative_probabilities = (double*) memory->smalloc(maxelecstate*sizeof(double), "particle:cumulative_probabilities");
   // reallocate cellcount and first lists as needed
   // NOTE: when grid becomes dynamic, will need to do this in sort()
 
@@ -1062,6 +1063,8 @@ void Particle::add_species(int narg, char **arg)
     memory->sfree(fileelec);
   }
   // clean up
+  if (cumulative_probabilities) memory->sfree(cumulative_probabilities);
+  cumulative_probabilities = (double*) memory->smalloc(maxelecstate*sizeof(double), "particle:cumulative_probabilities");
 
   delete [] names;
 }
