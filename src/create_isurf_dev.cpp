@@ -168,11 +168,9 @@ void CreateISurfDev::command(int narg, char **arg)
   surf->implicit = 1;
   surf->exist = 1;
 
-  // TODO LATER: Add per-surface type capability
   tvalues = NULL;
-  // Don't push corner point values. This will override averaging option
   int pushflag = 0;
-  char *sgroupID = arg[0];
+  char *sgroupID = 0;
   ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
                   cvalues,tvalues,thresh,sgroupID,pushflag);
 

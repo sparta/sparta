@@ -280,6 +280,268 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
 }
 
 /* ----------------------------------------------------------------------
+   Same as above but relies on adjacent values at each corner point
+------------------------------------------------------------------------- */
+
+void MarchingSquares::invoke(double ***cvalues, int *svalues)
+{
+  int i,ipt,isurf,nsurf,which;
+  double v00,v01,v10,v11;
+  double i0, i1, i2, i3;
+  int bit0,bit1,bit2,bit3;
+  double ave;
+  double *lo,*hi;
+  surfint surfID;
+  surfint *ptr;
+
+  double pt[4][3];
+  pt[0][2] = pt[1][2] = pt[2][2] = pt[3][2] = 0.0;
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  MyPage<surfint> *csurfs = grid->csurfs;
+  int nglocal = grid->nlocal;
+  int groupbit = grid->bitmask[ggroup];
+
+  bigint maxsurfID = 0;
+  if (sizeof(surfint) == 4) maxsurfID = MAXSMALLINT;
+  if (sizeof(surfint) == 8) maxsurfID = MAXBIGINT;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+
+    // cvalues are ordered lower-left, lower-right, upper-left, upper-right
+    // Vyx encodes this as 0/1 in each dim
+
+    v00 = v01 = v10 = v11 = 0.0;
+
+    // set corner point to average of adjacent values
+
+    /*for (i = 0; i < 4; i++) {
+      v00 += cvalues[icell][0][i];
+      v01 += cvalues[icell][1][i];
+      v10 += cvalues[icell][2][i];
+      v11 += cvalues[icell][3][i];
+    }
+
+    v00 /= 4.0;
+    v01 /= 4.0;
+    v10 /= 4.0;
+    v11 /= 4.0;*/
+
+    for (i = 0; i < 4; i++) {
+      v00 = MAX(v00,cvalues[icell][0][i]);
+      v01 = MAX(v01,cvalues[icell][1][i]);
+      v10 = MAX(v10,cvalues[icell][2][i]);
+      v11 = MAX(v11,cvalues[icell][3][i]);
+    }
+
+    // intersection of surfaces on all cell edges on normalized length
+
+    i0  = interpolate(cvalues[icell][0][1],cvalues[icell][1][0],lo[0],hi[0]);
+    i1  = interpolate(cvalues[icell][1][3],cvalues[icell][3][2],lo[1],hi[1]);
+    i2  = interpolate(cvalues[icell][2][1],cvalues[icell][3][0],lo[0],hi[0]);
+    i3  = interpolate(cvalues[icell][0][3],cvalues[icell][2][2],lo[1],hi[1]);
+
+    // make last 2 bits consistent with Wiki page (see NOTE above)
+
+    bit0 = v00 <= thresh ? 0 : 1;
+    bit1 = v01 <= thresh ? 0 : 1;
+    bit2 = v11 <= thresh ? 0 : 1;
+    bit3 = v10 <= thresh ? 0 : 1;
+
+    which = (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
+
+    switch (which) {
+
+    case 0:
+      nsurf = 0;
+      break;
+
+    case 1:
+      nsurf = 1;
+      pt[0][0] = lo[0];
+      pt[0][1] = i3;
+      pt[1][0] = i0;
+      pt[1][1] = lo[1];
+      break;
+
+    case 2:
+      nsurf = 1;
+      pt[0][0] = i0;
+      pt[0][1] = lo[1];
+      pt[1][0] = hi[0];
+      pt[1][1] = i1;
+      break;
+
+    case 3:
+      nsurf = 1;
+      pt[0][0] = lo[0];
+      pt[0][1] = i3;
+      pt[1][0] = hi[0];
+      pt[1][1] = i1;
+      break;
+
+    case 4:
+      nsurf = 1;
+      pt[0][0] = hi[0];
+      pt[0][1] = i1;
+      pt[1][0] = i2;
+      pt[1][1] = hi[1];
+      break;
+
+    case 5:
+      nsurf = 2;
+      ave = 0.25 * (v00 + v01 + v10 + v11);
+      if (ave > thresh) {
+       pt[0][0] = lo[0];
+        pt[0][1] = i3;
+        pt[1][0] = i2;
+        pt[1][1] = hi[1];
+        pt[2][0] = hi[0];
+        pt[2][1] = i1;
+        pt[3][0] = i0;
+        pt[3][1] = lo[1];
+      } else {
+        pt[0][0] = lo[0];
+        pt[0][1] = i3;
+        pt[1][0] = i0;
+        pt[1][1] = lo[1];
+        pt[2][0] = hi[0];
+        pt[2][1] = i1;
+        pt[3][0] = i2;
+        pt[3][1] = hi[1];
+      }
+      break;
+
+    case 6:
+      nsurf = 1;
+      pt[0][0] = i0;
+      pt[0][1] = lo[1];
+      pt[1][0] = i2;
+      pt[1][1] = hi[1];
+      break;
+
+    case 7:
+      nsurf = 1;
+      pt[0][0] = lo[0];
+      pt[0][1] = i3;
+      pt[1][0] = i2;
+      pt[1][1] = hi[1];
+      break;
+
+    case 8:
+      nsurf = 1;
+      pt[0][0] = i2;
+      pt[0][1] = hi[1];
+      pt[1][0] = lo[0];
+      pt[1][1] = i3;
+      break;
+
+    case 9:
+      nsurf = 1;
+      pt[0][0] = i2;
+      pt[0][1] = hi[1];
+      pt[1][0] = i0;
+      pt[1][1] = lo[1];
+      break;
+
+    case 10:
+      nsurf = 2;
+      ave = 0.25 * (v00 + v01 + v10 + v11);
+      if (ave > thresh) {
+        pt[0][0] = i0;
+        pt[0][1] = lo[1];
+        pt[1][0] = lo[0];
+        pt[1][1] = i3;
+        pt[2][0] = i2;
+        pt[2][1] = hi[1];
+        pt[3][0] = hi[0];
+        pt[3][1] = i1;
+      } else {
+        pt[0][0] = i2;
+        pt[0][1] = hi[1];
+        pt[1][0] = lo[0];
+        pt[1][1] = i3;
+        pt[2][0] = i0;
+        pt[2][1] = lo[1];
+        pt[3][0] = hi[0];
+        pt[3][1] = i1;
+      }
+      break;
+
+    case 11:
+      nsurf = 1;
+      pt[0][0] = i2;
+      pt[0][1] = hi[1];
+      pt[1][0] = hi[0];
+      pt[1][1] = i1;
+      break;
+
+    case 12:
+      nsurf = 1;
+      pt[0][0] = hi[0];
+      pt[0][1] = i1;
+      pt[1][0] = lo[0];
+      pt[1][1] = i3;
+      break;
+
+    case 13:
+      nsurf = 1;
+      pt[0][0] = hi[0];
+      pt[0][1] = i1;
+      pt[1][0] = i0;
+      pt[1][1] = lo[1];
+      break;
+
+    case 14:
+      nsurf = 1;
+      pt[0][0] = i0;
+      pt[0][1] = lo[1];
+      pt[1][0] = lo[0];
+      pt[1][1] = i3;
+      break;
+
+    case 15:
+      nsurf = 0;
+      break;
+    }
+
+    // populate Grid and Surf data structs
+    // points will be duplicated, not unique
+    // surf ID = cell ID for all surfs in cell
+    // check if uint cell ID overflows int surf ID
+
+    if (nsurf) {
+      if (cells[icell].id > maxsurfID)
+        error->one(FLERR,"Grid cell ID overflows implicit surf ID");
+      surfID = cells[icell].id;
+    }
+
+    ptr = csurfs->get(nsurf);
+
+    ipt = 0;
+    for (i = 0; i < nsurf; i++) {
+      if (svalues) surf->add_line(surfID,svalues[icell],pt[ipt],pt[ipt+1]);
+      else surf->add_line(surfID,1,pt[ipt],pt[ipt+1]);
+      ipt += 2;
+      isurf = surf->nlocal - 1;
+      ptr[i] = isurf;
+    }
+
+    cells[icell].nsurf = nsurf;
+    if (nsurf) {
+      cells[icell].csurfs = ptr;
+      cinfo[icell].type = OVERLAP;
+    }
+  }
+}
+
+
+/* ----------------------------------------------------------------------
    interpolate function used by both marching squares and cubes
    lo/hi = coordinates of end points of edge of square
    v0/v1 = values at lo/hi end points
