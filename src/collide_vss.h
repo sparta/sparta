@@ -39,8 +39,6 @@ class CollideVSS : public Collide {
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *);
   virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
                         Particle::OnePart *&);
-  virtual int split(Particle::OnePart *&, Particle::OnePart *&,
-                        Particle::OnePart *&, Particle::OnePart *&);
   double extract(int, int, const char *);
 
   struct State {      // two-particle state

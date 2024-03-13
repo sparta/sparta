@@ -200,9 +200,17 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
   double vr2 = du*du + dv*dv + dw*dw;
   double vro  = pow(vr2,1.0-params[ispecies][jspecies].omega);
 
-  double gp;
-  if (particle->swpm) gp = MAX(ip->g, jp->g)/g_max;
-  else gp = 1.0;
+  double gp = 1.0;
+  int index = particle->find_custom((char *) "sweight");
+  if (index >= 0) {
+    double *sweights = particle->edvec[particle->ewhich[index]];
+    double swi = sweights[ip - particle->particles];
+    double swj = sweights[jp - particle->particles];
+    gp = MAX(swi ,swj)/g_max;
+  }
+
+  //if (particle->swpm)
+  //  gp = MAX(ip->g, jp->g)/g_max;
 
   // although the vremax is calculated for the group,
   // the individual collisions calculated species dependent vre
@@ -772,13 +780,12 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
 
 /* ---------------------------------------------------------------------- */
 
-int CollideVSS::split(Particle::OnePart *&ip,
+/*int CollideVSS::split(Particle::OnePart *&ip,
                       Particle::OnePart *&jp,
                       Particle::OnePart *&kp,
                       Particle::OnePart *&lp)
 {
 
-  int reactflag,kspecies;
   double xk[3],vk[3];
   double xl[3],vl[3];
   int ks, ls;
@@ -867,7 +874,7 @@ int CollideVSS::split(Particle::OnePart *&ip,
   jp->g = dg;
 
   return newp;
-}
+}*/
 
 /* ---------------------------------------------------------------------- */
 

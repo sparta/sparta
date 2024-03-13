@@ -24,7 +24,6 @@ class Particle : protected Pointers {
  public:
   int exist;                // 1 if particles exist
   int sorted;               // 1 if particles are sorted by grid cell
-  int swpm;                 // 1 if particles have stochastic weights
 
   enum{MAXVIBMODE=4};       // increase value if species need more vib modes
 
@@ -79,7 +78,6 @@ class Particle : protected Pointers {
     int flag;               // used for migration status
     double dtremain;        // portion of move timestep remaining
     double weight;          // particle or cell weight, if weighting enabled
-    double g;               // particle weight (= FNUM if DSMC used)
   };
 
   struct OnePartRestart {
@@ -92,7 +90,6 @@ class Particle : protected Pointers {
     double v[3];            // particle velocity
     double erot;            // rotational energy
     double evib;            // vibrational energy
-    double g;               // particle weight
   };
 
   bigint nglobal;           // global # of particles
