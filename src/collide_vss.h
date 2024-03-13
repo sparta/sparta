@@ -99,7 +99,6 @@ class CollideVSS : public Collide {
   double rotrel (int, double);
   double vibrel (int, double);
 
-  double* state_probability;
   void relax_electronic_mode(Particle::OnePart *, Particle::OnePart *, double&);
   double get_elec_phi(int, int, int, double);
   double calc_elec_coll_temp(Particle::OnePart *, double, double);

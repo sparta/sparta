@@ -94,7 +94,6 @@ void CollideVSS::init()
   if (nparams != particle->nspecies)
     error->all(FLERR,"VSS parameters do not match current species");
 
-  state_probability = (double*) memory->smalloc((particle->maxelecstate+1)*sizeof(double), "collide_vss:state_probability");
   Collide::init();
 }
 
@@ -668,6 +667,8 @@ int CollideVSS::select_elec_state(Particle::OnePart *p, Particle::OnePart *jp, d
     ++max_level;
   }
   --max_level;
+
+  double* state_probability = particle->cumulative_probabilities;
 
   // Calculate number of total states, including degeneracies
   for (int state = 0; state <= max_level; ++state) {

@@ -1065,7 +1065,7 @@ void Particle::add_species(int narg, char **arg)
   // clean up
   if (cumulative_probabilities) memory->destroy(cumulative_probabilities);
   if (maxelecstate)
-    memory->create(cumulative_probabilities, maxelecstate, "particle:cumulative_probabilities");
+    memory->create(cumulative_probabilities, maxelecstate+1, "particle:cumulative_probabilities");
 
   delete [] names;
 }
