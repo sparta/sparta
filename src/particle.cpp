@@ -140,7 +140,7 @@ Particle::~Particle()
   memory->sfree(edvec);
   memory->sfree(edarray);
   memory->destroy(edcol);
-  if (cumulative_probabilities) memory->sfree(cumulative_probabilities);
+  memory->destroy(cumulative_probabilities);
 
   delete wrandom;
 }
@@ -1063,8 +1063,9 @@ void Particle::add_species(int narg, char **arg)
     memory->sfree(fileelec);
   }
   // clean up
-  if (cumulative_probabilities) memory->sfree(cumulative_probabilities);
-  cumulative_probabilities = (double*) memory->smalloc(maxelecstate*sizeof(double), "particle:cumulative_probabilities");
+  if (cumulative_probabilities) memory->destroy(cumulative_probabilities);
+  if (maxelecstate)
+    memory->create(cumulative_probabilities, maxelecstate, "particle:cumulative_probabilities");
 
   delete [] names;
 }
@@ -1232,7 +1233,7 @@ int Particle::ielec(int isp, double temp_elec, RanKnuth *erandom)
     Species species = particle->species[isp];
     if (species.elecdat == NULL) return 0.0;
 
-    electronic_distribution_func(isp, temp_elec, cumulative_probabilities);
+    electronic_distribution_func(isp, temp_elec);
 
     for (int i = 1; i < species.elecdat->nelecstate; ++i)
       cumulative_probabilities[i] += cumulative_probabilities[i-1];
@@ -1262,7 +1263,8 @@ double Particle::eelec(int isp, double temp_elec, RanKnuth *erandom)
 
 /* ---------------------------------------------------------------------- */
 
-void Particle::electronic_distribution_func(int isp, double temp_elec, double* distribution) {
+double* Particle::electronic_distribution_func(int isp, double temp_elec) {
+  double* distribution = cumulative_probabilities;
   int elecstyle = NONE;
   if (collide) elecstyle = collide->elecstyle;
   if (elecstyle == DISCRETE) {
@@ -1279,6 +1281,8 @@ void Particle::electronic_distribution_func(int isp, double temp_elec, double* d
     for (int i = 0; i < species.elecdat->nelecstate; ++i)
       distribution[i] /= partition_function;
   }
+
+  return distribution;
 }
 
 /* ----------------------------------------------------------------------

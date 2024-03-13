@@ -639,8 +639,7 @@ double CollideVSS::calc_elec_coll_temp(Particle::OnePart *p, double E_Dispose, d
   while ((t_high - t_low) > 1e-3) {
     t_mid = (t_high - t_low)/2.0 + t_low;
     double E_at_T = (2.5 - omega)*update->boltz*t_mid;
-    double probabilities_at_t[species[p->ispecies].elecdat->nelecstate];
-    particle->electronic_distribution_func( p->ispecies, t_mid, probabilities_at_t );
+    double* probabilities_at_t = particle->electronic_distribution_func(p->ispecies, t_mid);
     for ( int state = 0; state < species[p->ispecies].elecdat->nelecstate; ++state ) {
       E_at_T += probabilities_at_t[state]*species[p->ispecies].elecdat->states[state].temp*update->boltz;
     }
@@ -671,13 +670,13 @@ int CollideVSS::select_elec_state(Particle::OnePart *p, Particle::OnePart *jp, d
   --max_level;
 
   // Calculate number of total states, including degeneracies
-  for( int state = 0; state <= max_level; ++state) {
+  for (int state = 0; state <= max_level; ++state) {
     if (state != 0) {
       state_probability[state] = state_probability[state-1];
     } else {
       state_probability[state] = 0.0;
     }
-    if ( ! enforce_spin_conservation ||
+    if (!enforce_spin_conservation ||
            species[p->ispecies].elecdat->states[state].spin == species[p->ispecies].elecdat->states[estates[p - particle->particles]].spin) {
       // Note we can use E_Dispose here since the current implementation requires the collision numbers
       // to be collision invariant (and therefore depend on E_Dispose, the trans + elec energy) but this
@@ -693,7 +692,7 @@ int CollideVSS::select_elec_state(Particle::OnePart *p, Particle::OnePart *jp, d
     double rand_state = random->uniform()*state_probability[max_level];
     ielec = 0;
     while (rand_state >= 0) {
-      if ( ! enforce_spin_conservation ||
+      if (!enforce_spin_conservation ||
              species[p->ispecies].elecdat->states[ielec].spin == species[p->ispecies].elecdat->states[estates[p - particle->particles]].spin) {
         rand_state -= species[p->ispecies].elecdat->states[ielec].degen*get_elec_phi(p->ispecies, jp->ispecies, ielec, E_Dispose);
       }

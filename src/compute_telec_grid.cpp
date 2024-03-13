@@ -154,16 +154,14 @@ void ComputeTelecGrid::compute_per_grid() {
 
 double ComputeTelecGrid::elec_energy(int isp, double temp_elec) {
     Particle::Species species = particle->species[isp];
-    double* state_probabilities = (double*) memory->smalloc(species.elecdat->nelecstate*sizeof(double), "elec_energy:state_probabilities");
 
-    particle->electronic_distribution_func( isp, temp_elec, state_probabilities );
+    double* state_probabilities = particle->electronic_distribution_func(isp, temp_elec);
 
     double total_energy = 0.0;
     for (int i = 0; i < species.elecdat->nelecstate; ++i) {
       total_energy += state_probabilities[i]*species.elecdat->states[i].temp*update->boltz;
     }
 
-    memory->sfree(state_probabilities);
     return total_energy;
 }
 
