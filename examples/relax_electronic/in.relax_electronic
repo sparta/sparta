@@ -41,7 +41,7 @@ collide_modify      remain no
 
 create_particles    noelectron n 40000 twopass
 
-stats		    1
+stats		    100
 compute             temp temp
 compute             T thermal/grid all all temp
 compute             Ttrans reduce ave c_T[1]
