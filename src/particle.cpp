@@ -110,6 +110,20 @@ Particle::~Particle()
 {
   if (!uncopy && (copy || copymode)) return;
 
+  for (int i = 0; i < nspecies; i++) {
+    if (species[i].elecdat != NULL) {
+      memory->sfree(species[i].elecdat->states);
+      memory->destroy(species[i].elecdat->default_rel);
+      for (int j = 0; j < species[i].elecdat->nelecstate; j++) {
+        if (species[i].elecdat->species_rel[j] != NULL) {
+          memory->destroy(species[i].elecdat->species_rel[j]);
+        }
+      }
+      memory->sfree(species[i].elecdat->species_rel);
+      memory->destroy(species[i].elecdat->enforce_spin_conservation);
+      delete species[i].elecdat;
+    }
+  }
   memory->sfree(species);
   for (int i = 0; i < nmixture; i++) delete mixture[i];
   memory->sfree(mixture);
