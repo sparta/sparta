@@ -194,7 +194,6 @@ class Particle : protected Pointers {
   double erot(int, double, class RanKnuth *);
   double evib(int, double, class RanKnuth *);
   int ielec(int, double, class RanKnuth *);
-  double eelec(int, double, class RanKnuth *);
   double* electronic_distribution_func(int, double);
 
   void write_restart_species(FILE *fp);

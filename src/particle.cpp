@@ -1248,23 +1248,6 @@ int Particle::ielec(int isp, double temp_elec, RanKnuth *erandom)
 
 /* ---------------------------------------------------------------------- */
 
-double Particle::eelec(int isp, double temp_elec, RanKnuth *erandom)
-{
-  double energy = 0.0;
-
-  int elecstyle = NONE;
-  if (collide) elecstyle = collide->elecstyle;
-  if (elecstyle == DISCRETE) {
-    Species species = particle->species[isp];
-    if (species.elecdat == NULL) return 0.0;
-    int ielec = this->ielec(isp, temp_elec, erandom);
-    energy = update->boltz*species.elecdat->states[ielec].temp;
-  }
-  return energy;
-}
-
-/* ---------------------------------------------------------------------- */
-
 double* Particle::electronic_distribution_func(int isp, double temp_elec) {
   double* distribution = cumulative_probabilities;
   int elecstyle = NONE;
