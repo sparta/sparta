@@ -633,9 +633,7 @@ int CollideVSS::select_elec_state(Particle::OnePart *p, Particle::OnePart *jp, d
 {
   double State_prob;
   int max_level;
-  double AdjustFactor = 0.99999999;
   Particle::Species *species = particle->species;
-  double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
   int *estates = particle->eivec[particle->ewhich[index_elecstate]];
   // Find the maximum electronic level it can be in, given the current E_dispose
   max_level = 0;

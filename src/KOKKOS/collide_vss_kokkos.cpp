@@ -1608,7 +1608,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(int icell,
                                                       rand_type &rand_gen) const
 {
   double State_prob,Fraction_Rot,Fraction_Vib,E_Dispose;
-  int i,rotdof,vibdof,max_level,ivib,ielec;
+  int i,rotdof,vibdof,max_level,ivib;
 
   Particle::OnePart *p;
 
@@ -1810,7 +1810,6 @@ int CollideVSSKokkos::select_elec_state(int icell,Particle::OnePart *p,
 {
   double State_prob;
   int max_level;
-  double AdjustFactor = 0.99999999;
   auto &d_eelecs = k_edvec.d_view[d_ewhich[index_eelec]].k_view.d_view;
   auto &d_estates = k_eivec.d_view[d_ewhich[index_elecstate]].k_view.d_view;
   // Find the maximum electronic level it can be in, given the current E_dispose

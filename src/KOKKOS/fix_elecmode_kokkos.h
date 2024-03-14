@@ -136,7 +136,7 @@ void FixElecmodeKokkos::update_custom_kokkos(int index, double temp_thermal,
 
   rand_type rand_gen = rand_pool.get_state();
 
-  d_elecstate[index] = 0; // Need to update somehow or remove
+  d_elecstate[index] = 0;
   d_eelec[index] = ielec(index,isp,temp_elec,rand_gen);
 
   rand_pool.free_state(rand_gen);

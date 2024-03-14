@@ -117,13 +117,11 @@ void ComputeTelecGrid::compute_per_grid() {
 
   Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::OnePart *particles = particle->particles;
-  Particle::Species *species = particle->species;
 
   int *s2g = particle->mixture[imix]->species2group;
-  double boltz = update->boltz;
   int nlocal = particle->nlocal;
 
-  int i,j,ispecies,igroup,icell,imode,nmode;
+  int i,j,ispecies,igroup,icell;
 
   // zero all accumulators - could do this with memset()
 
