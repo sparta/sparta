@@ -53,6 +53,7 @@ class ParticleKokkos : public Particle {
   void sort_kokkos();
   void grow(int) override;
   void grow_species() override;
+  void add_species(int, char **) override;
   void pre_weight() override;
   void post_weight() override;
   void update_class_variables();
@@ -80,12 +81,6 @@ class ParticleKokkos : public Particle {
 
   KOKKOS_INLINE_FUNCTION
   double evib(int, double, rand_type &) const;
-
-  KOKKOS_INLINE_FUNCTION
-  double eelec(int, double, rand_type &) const;
-
-  KOKKOS_INLINE_FUNCTION
-  void electronic_distribution_func(int, double, double*) const;
 
   KOKKOS_INLINE_FUNCTION
   void pack_custom_kokkos(int, char *) const;
@@ -122,10 +117,15 @@ class ParticleKokkos : public Particle {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagSetIcellFromPlist, const int&) const;
 
-
   tdual_particle_1d k_particles;
   tdual_species_1d k_species;
   DAT::tdual_int_2d k_species2group;
+
+  DAT::t_int_1d d_nelecstates;
+  t_elecstate_2d d_elecstates;
+  DAT::t_float_2d d_elec_default_rels;
+  DAT::t_float_3d d_elec_species_rels;
+  DAT::t_int_2d d_enforce_spin_conservation;
 
   DAT::tdual_int_1d k_ewhich,k_eicol,k_edcol;
 
@@ -161,7 +161,7 @@ class ParticleKokkos : public Particle {
 
   int nbytes;
   int maxcellcount,ngrid;
-  int collide_rot,vibstyle,elecstyle;
+  int collide_rot,vibstyle;
   double boltz;
 
   DAT::t_int_2d d_plist;
@@ -316,54 +316,6 @@ double ParticleKokkos::evib(int isp, double temp_thermal, rand_type &erandom) co
   }
 
   return eng;
-}
-
-/* ---------------------------------------------------------------------- */
-
-KOKKOS_INLINE_FUNCTION
-double ParticleKokkos::eelec(int isp, double temp_elec, rand_type &erandom) const
-{
-  enum{NONE,DISCRETE,SMOOTH};            // several files
-  double energy = 0.0;
-  int nelecstate = d_species[isp].nelecstate;
-  double* electemp = &d_species[isp].electemp[0];
-
-  if (elecstyle == DISCRETE) {
-    double cumulative_probabilities[nelecstate]; ///////
-
-    electronic_distribution_func(isp, temp_elec, cumulative_probabilities);
-
-    for (int i = 1; i < nelecstate; ++i)
-      cumulative_probabilities[i] += cumulative_probabilities[i-1];
-
-    double ran = erandom.drand();
-    int i = 0;
-    while (ran > cumulative_probabilities[i])
-      ++i;
-    energy = boltz*electemp[i];
-  }
-  return energy;
-}
-
-/* ---------------------------------------------------------------------- */
-
-KOKKOS_INLINE_FUNCTION
-void ParticleKokkos::electronic_distribution_func(int isp, double temp_elec, double* distribution) const
-{
-  double partition_function = 0.0;
-  int nelecstate = d_species[isp].nelecstate;
-  int* elecdegen = &d_species[isp].elecdegen[0];
-  double* electemp = &d_species[isp].electemp[0];
-
-  for (int i = 0; i < nelecstate; ++i) {
-    // Calculate boltzmann fractions
-    distribution[i] = elecdegen[i]*exp(-electemp[i]/temp_elec);
-    // Calculate partition function
-    partition_function += distribution[i];
-  }
-
-  for (int i = 0; i < nelecstate; ++i)
-    distribution[i] /= partition_function;
 }
 
 /* ---------------------------------------------------------------------- */

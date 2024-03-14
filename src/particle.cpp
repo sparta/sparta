@@ -1246,6 +1246,8 @@ int Particle::ielec(int isp, double temp_elec, RanKnuth *erandom)
   return ielec;
 }
 
+/* ---------------------------------------------------------------------- */
+
 double Particle::eelec(int isp, double temp_elec, RanKnuth *erandom)
 {
   double energy = 0.0;

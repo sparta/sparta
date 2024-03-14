@@ -41,7 +41,7 @@ class FixElecmodeKokkos : public FixElecmode {
   void update_custom_kokkos(int, double, double, double, double, const double *) const;
 
  private:
-  int boltz;
+  int boltz,elecstyle;
 
 #ifndef SPARTA_KOKKOS_EXACT
   Kokkos::Random_XorShift64_Pool<DeviceType> rand_pool;
@@ -59,7 +59,62 @@ class FixElecmodeKokkos : public FixElecmode {
 
   DAT::t_float_1d d_eelec;
   DAT::t_int_1d d_elecstate;
+  DAT::t_int_1d d_nelecstates;
+  t_elecstate_2d d_elecstates;
+  DAT::t_float_2d d_cumulative_probabilities;
+
+  KOKKOS_INLINE_FUNCTION
+  void electronic_distribution_func(int, int, double) const;
+
+  KOKKOS_INLINE_FUNCTION
+  double ielec(int, int, double, rand_type &) const;
 };
+
+/* ---------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+void FixElecmodeKokkos::electronic_distribution_func(int index, int isp, double temp_elec) const
+{
+  auto &d_distribution = d_cumulative_probabilities;
+  double partition_function = 0.0;
+  const int nelecstate = d_nelecstates[isp];
+
+  for (int i = 0; i < nelecstate; ++i) {
+    // Calculate boltzmann fractions
+    d_distribution(index,i) = d_elecstates(isp,i).degen*exp(-d_elecstates(isp,i).temp/temp_elec);
+    // Calculate partition function
+    partition_function += d_distribution(index,i);
+  }
+
+  for (int i = 0; i < nelecstate; ++i)
+    d_distribution(index,i) /= partition_function;
+}
+
+/* ---------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+double FixElecmodeKokkos::ielec(int index, int isp, double temp_elec, rand_type &erandom) const
+{
+  enum{NONE,DISCRETE,SMOOTH};            // several files
+
+  int ielec = 0;
+
+  if (elecstyle == DISCRETE) {
+    int nelecstate = d_nelecstates[isp];
+    if (!nelecstate) return 0.0;
+
+    electronic_distribution_func(index, isp, temp_elec);
+
+    for (int i = 1; i < nelecstate; ++i)
+      d_cumulative_probabilities(index,i) += d_cumulative_probabilities(index,i-1);
+
+    double ran = erandom.drand();
+    ielec = 0;
+    while (ran > d_cumulative_probabilities(index,ielec))
+      ++ielec;
+  }
+  return ielec;
+}
 
 /* ----------------------------------------------------------------------
    called when a particle with index is created
@@ -73,14 +128,18 @@ void FixElecmodeKokkos::update_custom_kokkos(int index, double temp_thermal,
                                             double temp_elec, const double *) const
 {
   int isp = d_particles[index].ispecies;
-  int nstate = d_species[isp].nelecstate;
+  int nstate = d_nelecstates[isp];
 
   // no states, just return
 
   if (nstate == 0) return;
 
+  rand_type rand_gen = rand_pool.get_state();
+
   d_elecstate[index] = 0; // Need to update somehow or remove
-  d_eelec[index] = particle->eelec(isp,temp_elec,random);
+  d_eelec[index] = ielec(index,isp,temp_elec,rand_gen);
+
+  rand_pool.free_state(rand_gen);
 }
 
 }

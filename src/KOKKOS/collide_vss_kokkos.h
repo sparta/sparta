@@ -90,7 +90,7 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   void setup_collision_kokkos(Particle::OnePart *, Particle::OnePart *, struct State &, struct State &) const;
   KOKKOS_INLINE_FUNCTION
-  int perform_collision_kokkos(Particle::OnePart *&, Particle::OnePart *&,
+  int perform_collision_kokkos(int, Particle::OnePart *&, Particle::OnePart *&,
                         Particle::OnePart *&, struct State &, struct State &, rand_type &,
                         Particle::OnePart *&, int &, double &,
                         int &) const;
@@ -136,6 +136,13 @@ class CollideVSSKokkos : public CollideVSS {
   t_particle_1d d_particles;
   t_species_1d_const d_species;
   DAT::t_int_2d d_plist;
+
+  DAT::t_int_1d d_nelecstates;
+  t_elecstate_2d d_elecstates;
+  DAT::t_float_2d d_elec_default_rels;
+  DAT::t_float_3d d_elec_species_rels;
+  DAT::t_int_2d d_enforce_spin_conservation;
+  DAT::t_float_2d d_cumulative_probabilities;
 
   DAT::t_int_1d d_ewhich;
   tdual_struct_tdual_int_1d_1d k_eivec;
@@ -221,7 +228,7 @@ class CollideVSSKokkos : public CollideVSS {
                                  Particle::OnePart *,
                                  struct State &, struct State &, rand_type &) const;
   KOKKOS_INLINE_FUNCTION
-  void EEXCHANGE_NonReactingEDisposal(Particle::OnePart *,
+  void EEXCHANGE_NonReactingEDisposal(int icell, Particle::OnePart *,
                                       Particle::OnePart *,
                                       struct State &, struct State &, rand_type &) const;
 
@@ -231,20 +238,20 @@ class CollideVSSKokkos : public CollideVSS {
                                    Particle::OnePart *,
                                    struct State &, struct State &, rand_type &) const;
   KOKKOS_INLINE_FUNCTION
-  void EEXCHANGE_ReactingEDisposal(Particle::OnePart *,
+  void EEXCHANGE_ReactingEDisposal(int, Particle::OnePart *,
                                    Particle::OnePart *,
                                    Particle::OnePart *,
                                    struct State &, struct State &, rand_type &) const;
 
   KOKKOS_INLINE_FUNCTION
-  void relax_electronic_mode(Particle::OnePart *, Particle::OnePart *,
+  void relax_electronic_mode(int, Particle::OnePart *, Particle::OnePart *,
                              double&, rand_type &rand_gen) const;
   KOKKOS_INLINE_FUNCTION
   double get_elec_phi(int, int, int, double) const;
+  //KOKKOS_INLINE_FUNCTION
+  //double calc_elec_coll_temp(Particle::OnePart *, double, double) const;
   KOKKOS_INLINE_FUNCTION
-  double calc_elec_coll_temp(Particle::OnePart *, double, double) const;
-  KOKKOS_INLINE_FUNCTION
-  int select_elec_state(Particle::OnePart *, Particle::OnePart *,
+  int select_elec_state(int, Particle::OnePart *, Particle::OnePart *,
                         double, double, bool, rand_type &rand_gen) const;
 
   KOKKOS_INLINE_FUNCTION

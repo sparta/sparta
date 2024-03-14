@@ -186,7 +186,7 @@ class Particle : protected Pointers {
   virtual int add_particle(int, int, int, double *, double *, double, double);
   virtual int add_particle();
   int clone_particle(int);
-  void add_species(int, char **);
+  virtual void add_species(int, char **);
   int find_species(char *);
   void species_modify(int, char **);
   void add_mixture(int, char **);
