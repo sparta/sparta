@@ -28,6 +28,8 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
+enum{INT,DOUBLE};                      // several files
+
 /* ---------------------------------------------------------------------- */
 
 FixSWPM::FixSWPM(SPARTA *sparta, int narg, char **arg) :
@@ -79,7 +81,7 @@ void FixSWPM::update_custom(int index, double,
                                 double, double,
                                 double*)
 {
-  double *swpmweight = particle->eivec[particle->ewhich[swpmindex]];
+  double *swpmweight = particle->edvec[particle->ewhich[swpmindex]];
   swpmweight[index] = update->fnum;
 }
 

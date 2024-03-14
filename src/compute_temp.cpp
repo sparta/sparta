@@ -46,9 +46,14 @@ double ComputeTemp::compute_scalar()
   double g;
   double t = 0.0;
 
+  double *sweights;
+  int index_sweight = particle->find_custom((char *) "sweight");
+  if(index_sweight > 0)
+    sweights = particle->edvec[particle->ewhich[index_sweight]];
+
   for (int i = 0; i < nlocal; i++) {
     v = particles[i].v;
-    if (particle->swpm) g = particles[i].g;
+    if(index_sweight > 0) g = sweights[i]/update->fnum;
     else g = 1.0;
     t += (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]) *
       species[particles[i].ispecies].mass * g;

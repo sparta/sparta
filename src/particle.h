@@ -150,7 +150,7 @@ class Particle : protected Pointers {
   virtual void post_weight();
 
   virtual int add_particle(int, int, int, double *, double *,
-    double, double, double g = -1.0);
+    double, double);
   virtual int add_particle();
   int clone_particle(int);
   void add_species(int, char **);

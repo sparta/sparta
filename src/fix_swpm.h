@@ -28,8 +28,7 @@ namespace SPARTA_NS {
 
 class FixSWPM : public Fix {
  public:
-  int especies;               // index of electron species
-  int *ions;                  // 1 if a particle species is an ionx
+  int swpmindex;
 
   FixSWPM(class SPARTA *, int, char **);
   FixSWPM(class SPARTA *sparta) : Fix(sparta) {} // needed for Kokkos
@@ -37,11 +36,8 @@ class FixSWPM : public Fix {
   int setmask();
   void init();
   virtual void update_custom(int, double, double, double, double *);
-  void surf_react(Particle::OnePart *, int &, int &);
 
  protected:
-  int maxion;                 // length of ions vector
-  int ionindex,velindex;      // indices into particle custom data structs
   class RanKnuth *random;
 };
 

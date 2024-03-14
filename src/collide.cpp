@@ -98,7 +98,7 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   elist = NULL;
 
   // stochastic weighted particle method
-  g_max = update->fnum;
+  sweight_max = update->fnum;
   reduceflag = 0;
   Ncmin = Ncmax = Ngmin = Ngmax = 0;
 
@@ -1786,7 +1786,7 @@ void Collide::collisions_one_sw()
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
 
-  sweights = particle->edvec[particle->ewhich[index_sweight]];
+  double *sweights = particle->edvec[particle->ewhich[index_sweight]];
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
@@ -1814,7 +1814,7 @@ void Collide::collisions_one_sw()
       plist[n++] = ip;
       ipart = &particles[ip];
       //gi = ipart->sweight;
-      isw = sweights[ip - particles];
+      isw = sweights[ip];
       sweight_max = MAX(sweight_max,isw);
 
       if (isw != isw) error->all(FLERR,"Particle has NaN weight");
@@ -1890,7 +1890,6 @@ void Collide::collisions_one_sw()
   } // loop for cells
 }
 
-
 /* ----------------------------------------------------------------------
    Splits particles and generates two new particles (for SWPM)
 ------------------------------------------------------------------------- */
@@ -1915,7 +1914,7 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
   // weight transfer function is assumed to be
   // ... MIN(ip->sweight,jp->sweight)/(1 + pre_wtf * wtf)
 
-  sweights = particle->edvec[particle->ewhich[index_sweight]];
+  double *sweights = particle->edvec[particle->ewhich[index_sweight]];
   double isw = sweights[ip-particle->particles];
   double jsw = sweights[jp-particle->particles];
   double Gwtf, ksw, lsw;
@@ -2012,12 +2011,14 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
 void Collide::group_reduce()
 {
   int n,nold,np,ip;
-  double g;
+  double isw;
 
   Particle::OnePart *ipart;
   Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
+
+  double *sweights = particle->edvec[particle->ewhich[index_sweight]];
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
@@ -2029,8 +2030,8 @@ void Collide::group_reduce()
     n = 0;
     while (ip >= 0) {
       ipart = &particles[ip];
-      g = ipart->sweight;
-      if(g > 0) plist[n++] = ip;
+      isw = sweights[ip];
+      if(isw > 0) plist[n++] = ip;
       ip = next[ip];
     }
 
@@ -2055,31 +2056,31 @@ void Collide::group_reduce()
 
         // find mean / standard deviation of weight
 
-        double gmean, gvar;
+        double swmean, swvar;
         double d1, d2;
         ip = cinfo[icell].first;
         n = 0;
-        gmean = gvar = 0.0;
+        swmean = swvar = 0.0;
         while (ip >= 0) {
           ipart = &particles[ip];
-          g = ipart->sweight;
+          isw = sweights[ip];
 
           // Incremental variance
 
-          if(g > 0) {
+          if(isw > 0) {
             n++;
-            d1 = g - gmean;
-            gmean += (d1/n);
-            gvar += (n-1.0)/n*d1*d1;
+            d1 = isw - swmean;
+            swmean += (d1/n);
+            swvar += (n-1.0)/n*d1*d1;
           }
           ip = next[ip];
         }
-        double gstd = sqrt(gvar/n);
+        double swstd = sqrt(swvar/n);
 
         // weight limits to separate particles
 
-        double lLim = MAX(gmean-gstd,0);
-        double uLim = gmean+2.0*gstd;
+        double lLim = MAX(swmean-swstd,0);
+        double uLim = swmean+2.0*swstd;
 
         // recreate particle list and omit large weighted particles
 
@@ -2087,8 +2088,8 @@ void Collide::group_reduce()
         n = 0;
         while (ip >= 0) {
           ipart = &particles[ip];
-          g = ipart->sweight;
-          if(g > 0 && g < uLim) plist[n++] = ip;
+          isw = sweights[ip];
+          if(isw > 0 && isw < uLim) plist[n++] = ip;
           ip = next[ip];
         }
 
@@ -2106,7 +2107,8 @@ void Collide::group_reduce()
         int pmid = 0;
         for(int i = 0; i < n; i++) {
           ipart = &particles[plist[i]];
-          if(ipart->sweight < lLim)
+          isw = sweights[plist[i]];
+          if(isw < lLim)
             std::swap(plist[pmid++],plist[i]);
         }
 
@@ -2133,8 +2135,8 @@ void Collide::group_reduce()
       n = 0;
       while (ip >= 0) {
         ipart = &particles[ip];
-        g = ipart->sweight;
-        if(g > 0) plist[n++] = ip;
+        isw = sweights[ip];
+        if(isw > 0) plist[n++] = ip;
         ip = next[ip];
       }
 
@@ -2165,6 +2167,8 @@ void Collide::group_bt(int pfirst, int plast)
   // compute stress tensor since it's needed for
   // .. further dividing and reduction
 
+  double *sweights = particle->edvec[particle->ewhich[index_sweight]];
+
   double gsum, msum, mV[3], mVV[3][3], mVVV[3][3];
   gsum = msum = 0.0;
   for (int i = 0; i < 3; i++) {
@@ -2178,31 +2182,33 @@ void Collide::group_bt(int pfirst, int plast)
   // find maximum particle weight
 
   int ispecies;
-	double mass, gp, mgp, vp[3];
+	double mass, psw, pmsw, vp[3];
   for (int p = pfirst; p < plast; p++) {
     ipart = &particles[plist[p]];
     ispecies = ipart->ispecies;
     mass = species[ispecies].mass;
 
-    gp = ipart->sweight;
-    mgp = gp * mass;
+    psw = sweights[plist[p]];
+    pmsw = psw * mass;
     memcpy(vp, ipart->v, 3*sizeof(double));
-   	gsum += gp;
-    msum += mgp;
+   	gsum += psw;
+    msum += pmsw;
     for (int i = 0; i < 3; i++) {
-      mV[i] += (mgp*vp[i]);
+      mV[i] += (pmsw*vp[i]);
       for (int j = 0; j < 3; j++) {
-        mVV[i][j] += (mgp*vp[i]*vp[j]);
-        mVVV[i][j] += (mgp*vp[i]*vp[j]*vp[j]);
+        mVV[i][j] += (pmsw*vp[i]*vp[j]);
+        mVVV[i][j] += (pmsw*vp[i]*vp[j]*vp[j]);
       }
     }
   }
 
   // mean velocity
+
 	double V[3];
   for (int i = 0; i < 3; i++) V[i] = mV[i]/msum;
 
   // stress tensor
+
   double pij[3][3];
   for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
@@ -2211,7 +2217,9 @@ void Collide::group_bt(int pfirst, int plast)
   // if group is small enough, merge the particles
 
   if (np <= Ngmax+gbuf) {
+
     // remove small stress tensor components
+
     //for(int i = 0; i < 3; i++)
     //  for(int j = 0; j < 3; j++)
     //    if(fabs(pij[i][j]/mass) < SMALLISH) pij[i][j] = 0.0;
@@ -2251,6 +2259,7 @@ void Collide::group_bt(int pfirst, int plast)
 
     // scale values to be consistent with definitions in
     // .. stochastic numerics book
+
     T *= update->boltz/mass;
     for (int i = 0; i < 3; i++) {
       q[i] /= mass;
@@ -2267,19 +2276,23 @@ void Collide::group_bt(int pfirst, int plast)
     }
 
   // group still too large so divide further
+
   } else {
 
     // Compute covariance matrix
+
     double Rij[3][3];
     for (int i = 0; i < 3; i++)
       for (int j = 0; j < 3; j++)
         Rij[i][j] = pij[i][j]/gsum;
 
     // Find eigenpairs
+
     double eval[3], evec[3][3];
     int ierror = MathEigen::jacobi3(Rij,eval,evec);
 
     // Find largest eigenpair
+
     double maxeval;
     double maxevec[3]; // normal of splitting plane
 
@@ -2294,6 +2307,7 @@ void Collide::group_bt(int pfirst, int plast)
     }
 
     // Separate based on particle velocity
+
     double center = V[0]*maxevec[0] + V[1]*maxevec[1] + V[2]*maxevec[2];
     int pmid = pfirst;
     for (int i = pfirst; i < plast; i++) {
@@ -2327,6 +2341,8 @@ void Collide::group_ot(int pfirst, int plast)
   // compute stress tensor since it's needed for
   // .. further dividing and reduction
 
+  double *sweights = particle->edvec[particle->ewhich[index_sweight]];
+
   double gsum, msum, mV[3], mVV[3][3], mVVV[3][3];
   gsum = msum = 0.0;
   for (int i = 0; i < 3; i++) {
@@ -2340,22 +2356,22 @@ void Collide::group_ot(int pfirst, int plast)
   // find maximum particle weight
 
   int ispecies;
-	double mass, gp, mgp, vp[3];
+	double mass, psw, pmsw, vp[3];
   for (int p = pfirst; p < plast; p++) {
     ipart = &particles[plist[p]];
     ispecies = ipart->ispecies;
     mass = species[ispecies].mass;
 
-    gp = ipart->sweight;
-    mgp = gp * mass;
+    psw = sweights[plist[p]];
+    pmsw = psw * mass;
     memcpy(vp, ipart->v, 3*sizeof(double));
-   	gsum += gp;
-    msum += mgp;
+   	gsum += psw;
+    msum += pmsw;
     for (int i = 0; i < 3; i++) {
-      mV[i] += (mgp*vp[i]);
+      mV[i] += (pmsw*vp[i]);
       for (int j = 0; j < 3; j++) {
-        mVV[i][j] += (mgp*vp[i]*vp[j]);
-        mVVV[i][j] += (mgp*vp[i]*vp[j]*vp[j]);
+        mVV[i][j] += (pmsw*vp[i]*vp[j]);
+        mVVV[i][j] += (pmsw*vp[i]*vp[j]*vp[j]);
       }
     }
   }
@@ -2375,6 +2391,7 @@ void Collide::group_ot(int pfirst, int plast)
   // if group is small enough, merge the particles
 
   if (np <= Ngmax+gbuf) {
+
     // remove small stress tensor components
 
     //for(int i = 0; i < 3; i++)
@@ -2498,6 +2515,8 @@ void Collide::reduce(int pfirst, int plast,
   ipart = &particles[plist[pfirst]];
   jpart = &particles[plist[pfirst+1]];
 
+  double *sweights = particle->edvec[particle->ewhich[index_sweight]];
+
   // find direction of velocity wrt CoM frame
 
   double theta = 2.0 * 3.14159 * random->uniform();
@@ -2516,8 +2535,8 @@ void Collide::reduce(int pfirst, int plast,
   }
 
   // set reduced particle weights
-  ipart->sweight = rho*0.5;
-  jpart->sweight = rho*0.5;
+  sweights[plist[pfirst]] = rho*0.5;
+  sweights[plist[pfirst+1]] = rho*0.5;
 
   // delete other particles
   for (int i = pfirst+2; i < plast; i++) {
@@ -2526,7 +2545,7 @@ void Collide::reduce(int pfirst, int plast,
       memory->grow(dellist,maxdelete,"collide:dellist");
     }
     ipart = &particles[plist[i]];
-    ipart->sweight = -1.0;
+    sweights[plist[i]] = -1.0;
     dellist[ndelete++] = plist[i];
   }
 
@@ -2546,6 +2565,8 @@ void Collide::reduce(int pfirst, int plast,
   Particle::OnePart *ipart, *jpart;
   ipart = &particles[plist[pfirst]];
   jpart = &particles[plist[pfirst+1]];
+
+  double *sweights = particle->edvec[particle->ewhich[index_sweight]];
 
   // precompute
 
@@ -2576,8 +2597,11 @@ void Collide::reduce(int pfirst, int plast,
   }
 
   // set reduced particle weights
-  ipart->sweight = rho/(1.0+itheta*itheta);
-  jpart->sweight = rho - ipart->sweight;
+  double isw = rho/(1.0+itheta*itheta);
+  double jsw = rho - isw;
+
+  sweights[plist[pfirst]] = isw;
+  sweights[plist[pfirst+1]] = jsw;
 
   // delete other particles
   for (int i = pfirst+2; i < plast; i++) {
@@ -2586,7 +2610,7 @@ void Collide::reduce(int pfirst, int plast,
       memory->grow(dellist,maxdelete,"collide:dellist");
     }
     ipart = &particles[plist[i]];
-    ipart->sweight = -1.0;
+    sweights[plist[i]] = -1.0;
     dellist[ndelete++] = plist[i];
   }
 
@@ -2620,7 +2644,10 @@ void Collide::reduce(int pfirst, int plast,
   Particle::OnePart *particles = particle->particles;
   Particle::OnePart *ipart, *jpart;
 
+  double *sweights = particle->edvec[particle->ewhich[index_sweight]];
+
   double qli, itheta;
+  double isw, jsw;
   double uvec[3];
   for (int iK = 0; iK < nK; iK++) {
 
@@ -2643,8 +2670,11 @@ void Collide::reduce(int pfirst, int plast,
     }
 
     // set reduced particle weights
-    ipart->sweight = rho/(nK*(1.0+itheta*itheta));
-    jpart->sweight = rho/nK - ipart->sweight;
+    isw = rho/(nK*(1.0+itheta*itheta));
+    jsw = rho/nK - isw;
+
+    sweights[plist[pfirst]] = isw;
+    sweights[plist[pfirst+1]] = jsw;
 
     // move onto next pair
     pfirst += 2;
@@ -2658,7 +2688,7 @@ void Collide::reduce(int pfirst, int plast,
       memory->grow(dellist,maxdelete,"collide:dellist");
     }
     ipart = &particles[plist[i]];
-    ipart->sweight = -1.0;
+    sweights[plist[i]] = -1.0;
     dellist[ndelete++] = plist[i];
   }
 
