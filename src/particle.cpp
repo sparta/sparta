@@ -114,7 +114,7 @@ Particle::~Particle()
     if (species && species[i].elecdat != NULL) {
       memory->sfree(species[i].elecdat->states);
       memory->destroy(species[i].elecdat->default_rel);
-      for (int j = 0; j < species[i].elecdat->nelecstate; j++) {
+      for (int j = 0; j < nspecies; j++) {
         if (species[i].elecdat->species_rel[j] != NULL) {
           memory->destroy(species[i].elecdat->species_rel[j]);
         }
