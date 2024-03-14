@@ -373,8 +373,7 @@ void CollideVSSKokkos::collisions()
     vre_next += vre_every;
   }
 
-  //// need conditional
-  if (grid->maxlocal > (int)d_cumulative_probabilities.extent(0))
+  if (elecstyle == DISCRETE && grid->maxlocal > (int)d_cumulative_probabilities.extent(0))
     MemKK::realloc_kokkos(d_cumulative_probabilities,"collide:cumulative_probabilities",grid->maxlocal,particle->maxelecstate);
 
   // counters

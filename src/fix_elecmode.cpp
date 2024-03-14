@@ -99,7 +99,9 @@ void FixElecmode::update_custom(int index, double temp_thermal,
   double *eelec = particle->edvec[particle->ewhich[index_eelec]];
 
   int isp = particle->particles[index].ispecies;
-  // no states, just return
+
+  // if no states, just return
+
   if (particle->species[isp].elecdat == NULL) return;
 
   elecstate[index] = particle->ielec(isp,temp_elec,random);
