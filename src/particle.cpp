@@ -111,7 +111,7 @@ Particle::~Particle()
   if (!uncopy && (copy || copymode)) return;
 
   for (int i = 0; i < nspecies; i++) {
-    if (species[i].elecdat != NULL) {
+    if (species && species[i].elecdat != NULL) {
       memory->sfree(species[i].elecdat->states);
       memory->destroy(species[i].elecdat->default_rel);
       for (int j = 0; j < species[i].elecdat->nelecstate; j++) {

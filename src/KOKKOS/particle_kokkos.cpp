@@ -660,9 +660,12 @@ maxelecstate);
   auto h_elec_species_rels = Kokkos::create_mirror_view(d_elec_species_rels);
   auto h_enforce_spin_conservation = Kokkos::create_mirror_view(d_enforce_spin_conservation);
 
+  Kokkos::deep_copy(h_nelecstates,0);
   Kokkos::deep_copy(h_elec_species_rels,-1.0);
 
   for (int isp = 0; isp < nspecies; ++isp) {
+    if (!species[isp].elecdat) continue;
+
     const int nelecstate = species[isp].elecdat->nelecstate;
     h_nelecstates[isp] = nelecstate;
 

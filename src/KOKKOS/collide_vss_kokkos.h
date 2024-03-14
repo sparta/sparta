@@ -248,8 +248,6 @@ class CollideVSSKokkos : public CollideVSS {
                              double&, rand_type &rand_gen) const;
   KOKKOS_INLINE_FUNCTION
   double get_elec_phi(int, int, int, double) const;
-  //KOKKOS_INLINE_FUNCTION
-  //double calc_elec_coll_temp(Particle::OnePart *, double, double) const;
   KOKKOS_INLINE_FUNCTION
   int select_elec_state(int, Particle::OnePart *, Particle::OnePart *,
                         double, double, bool, rand_type &rand_gen) const;

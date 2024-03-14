@@ -229,7 +229,7 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
   precoln.erot = ip->erot + jp->erot;
   precoln.evib = ip->evib + jp->evib;
   precoln.eelec = 0.0;
-  if (index_eelec >= 0) {
+  if (elecstyle == DISCRETE) {
     double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
     if (species[isp].elecdat != NULL)
       precoln.eelec += eelecs[ip - particle->particles];
@@ -342,7 +342,7 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
       // but still need to add 3rd body internal energy
 
       double partial_energy =  postcoln.etotal + p3->erot + p3->evib;
-      if (index_eelec >= 0) {
+      if (elecstyle == DISCRETE) {
         double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
         if (species[p3->ispecies].elecdat != NULL)
           partial_energy += eelecs[p3 - particle->particles];
@@ -566,7 +566,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
         }
         postcoln.evib += p->evib;
       } // end of vibdof if
-      if (species[sp].elecdat != NULL) {
+      if (elecstyle == DISCRETE && species[sp].elecdat != NULL) {
         int *estates = particle->eivec[particle->ewhich[index_elecstate]];
         double elec_phi = get_elec_phi(p->ispecies, jp->ispecies, estates[p - particle->particles], E_Dispose);
         if (elec_phi >= random->uniform()) {
@@ -581,7 +581,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   postcoln.erot = ip->erot + jp->erot;
   postcoln.evib = ip->evib + jp->evib;
   postcoln.eelec = 0.0;
-  if (index_eelec >= 0) {
+  if (elecstyle == DISCRETE) {
     double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
     if (species[ip->ispecies].elecdat != NULL)
       postcoln.eelec += eelecs[ip - particle->particles];
@@ -639,7 +639,7 @@ int CollideVSS::select_elec_state(Particle::OnePart *p, Particle::OnePart *jp, d
   int *estates = particle->eivec[particle->ewhich[index_elecstate]];
   // Find the maximum electronic level it can be in, given the current E_dispose
   max_level = 0;
-  while (E_Dispose > species[p->ispecies].elecdat->states[max_level].temp*update->boltz && max_level < species[p->ispecies].elecdat->nelecstate) {
+  while (max_level < species[p->ispecies].elecdat->nelecstate && E_Dispose > species[p->ispecies].elecdat->states[max_level].temp*update->boltz) {
     ++max_level;
   }
   --max_level;
@@ -707,7 +707,7 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
   double mr = mass_ij * mass_k / (mass_ij + mass_k);
   postcoln.eint = ip->erot + jp->erot + kp->erot
                 + ip->evib + jp->evib + kp->evib;
-  if (index_eelec >= 0) {
+  if (elecstyle == DISCRETE) {
     double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
     if (species[ip->ispecies].elecdat != NULL)
       postcoln.eint += eelecs[ip - particle->particles];
@@ -774,7 +774,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
   double AdjustFactor = 0.99999999;
 
   double *eelecs = NULL;
-  if (index_eelec >= 0) {
+  if (elecstyle == DISCRETE) {
     eelecs = particle->edvec[particle->ewhich[index_eelec]];
   }
   if (!kp) {
@@ -782,7 +782,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     jp->erot = 0.0;
     ip->evib = 0.0;
     jp->evib = 0.0;
-    if (index_eelec >= 0) {
+    if (elecstyle == DISCRETE) {
       if (species[ip->ispecies].elecdat != NULL)
         eelecs[ip - particle->particles] = 0.0;
       if (species[jp->ispecies].elecdat != NULL)
@@ -797,7 +797,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     ip->evib = 0.0;
     jp->evib = 0.0;
     kp->evib = 0.0;
-    if (index_eelec >= 0) {
+    if (elecstyle == DISCRETE) {
       if (species[ip->ispecies].elecdat != NULL)
         eelecs[ip - particle->particles] = 0.0;
       if (species[jp->ispecies].elecdat != NULL)
@@ -896,7 +896,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
         }
       }
     }
-    if (species[sp].elecdat != NULL) {
+    if (elecstyle == DISCRETE && species[sp].elecdat != NULL) {
       int *estates = particle->eivec[particle->ewhich[index_elecstate]];
       double elec_phi = get_elec_phi(p->ispecies, jp->ispecies, estates[p - particle->particles], E_Dispose);
       if (elec_phi >= random->uniform()) {
@@ -910,7 +910,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
   postcoln.erot = ip->erot + jp->erot;
   postcoln.evib = ip->evib + jp->evib;
   postcoln.eelec = 0.0;
-  if (index_eelec >= 0) {
+  if (elecstyle == DISCRETE) {
     double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
     if (species[ip->ispecies].elecdat != NULL)
       postcoln.eelec += eelecs[ip - particle->particles];
@@ -921,7 +921,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
   if (kp) {
     postcoln.erot += kp->erot;
     postcoln.evib += kp->evib;
-    if (index_eelec >= 0) {
+    if (elecstyle == DISCRETE) {
       double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
       if (species[kp->ispecies].elecdat != NULL)
         postcoln.eelec += eelecs[kp - particle->particles];
