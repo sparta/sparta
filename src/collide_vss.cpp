@@ -629,30 +629,6 @@ double CollideVSS::get_elec_phi(int ispec1, int ispec2, int ielec, double)
 
 /* ---------------------------------------------------------------------- */
 
-double CollideVSS::calc_elec_coll_temp(Particle::OnePart *p, double E_Dispose, double omega)
-{
-  Particle::Species *species = particle->species;
-  double t_high, t_low, t_mid;
-  t_high = E_Dispose/(update->boltz*(2.5 - omega));
-  t_low = 0.0;
-  while ((t_high - t_low) > 1e-3) {
-    t_mid = (t_high - t_low)/2.0 + t_low;
-    double E_at_T = (2.5 - omega)*update->boltz*t_mid;
-    double* probabilities_at_t = particle->electronic_distribution_func(p->ispecies, t_mid);
-    for ( int state = 0; state < species[p->ispecies].elecdat->nelecstate; ++state ) {
-      E_at_T += probabilities_at_t[state]*species[p->ispecies].elecdat->states[state].temp*update->boltz;
-    }
-    if (E_at_T > E_Dispose) {
-      t_high = t_mid;
-    } else {
-      t_low = t_mid;
-    }
-  }
-  return t_mid;
-}
-
-/* ---------------------------------------------------------------------- */
-
 int CollideVSS::select_elec_state(Particle::OnePart *p, Particle::OnePart *jp, double E_Dispose, double omega, bool enforce_spin_conservation)
 {
   double State_prob;

@@ -101,7 +101,6 @@ class CollideVSS : public Collide {
 
   void relax_electronic_mode(Particle::OnePart *, Particle::OnePart *, double&);
   double get_elec_phi(int, int, int, double);
-  double calc_elec_coll_temp(Particle::OnePart *, double, double);
   int select_elec_state(Particle::OnePart *, Particle::OnePart *,
                         double, double, bool);
 
