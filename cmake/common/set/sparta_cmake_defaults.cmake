@@ -49,7 +49,8 @@ if(SPARTA_ENABLE_TESTING)
       "variable_timestep"
       "surf_react_heatflux"
       "chem_rates"
-      "custom")
+      "custom"
+      "explicit2implicit")
 
   set(SPARTA_DISABLED_TESTS
       "in.ablation.3d.reactions" # Failing

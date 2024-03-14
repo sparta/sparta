@@ -14,6 +14,7 @@
 
 #include "string.h"
 #include "compute_grid_kokkos.h"
+#include "comm.h"
 #include "particle_kokkos.h"
 #include "mixture.h"
 #include "grid_kokkos.h"
