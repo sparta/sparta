@@ -130,7 +130,7 @@ void ComputeTelecGrid::compute_per_grid() {
       tally[i][j] = 0.0;
 
   // loop over all particles, skip species not in mixture group
-  // tally vib eng and count for species
+  // tally electronic eng and count for species
   for (i = 0; i < nlocal; i++) {
       ispecies = particles[i].ispecies;
       igroup = s2g[ispecies];
