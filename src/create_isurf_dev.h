@@ -65,7 +65,7 @@ class CreateISurfDev : protected Pointers {
   int aveFlag;              // flag for how corners in unknown cells are set
   double mind;              // minimum cell length
   double cin, cout;         // in and out corner values
-  class FixAblateDev *ablate;  // ablate fix
+  class FixAblate *ablate;  // ablate fix
 
   // for communicating
 

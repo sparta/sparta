@@ -16,7 +16,7 @@
 #include "create_isurf_dev.h"
 #include "domain.h"
 #include "error.h"
-#include "fix_ablate_dev.h"
+#include "fix_ablate.h"
 #include "geometry.h"
 #include "grid.h"
 #include "input.h"
@@ -130,9 +130,9 @@ void CreateISurfDev::command(int narg, char **arg)
   int ifix = modify->find_fix(ablateID);
   if (ifix < 0)
     error->all(FLERR,"Fix ID for read_surf does not exist");
-  if (strcmp(modify->fix[ifix]->style,"ablate/dev") != 0)
+  if (strcmp(modify->fix[ifix]->style,"ablate") != 0)
     error->all(FLERR,"Fix for read_surf is not a fix ablate");
-  ablate = (FixAblateDev *) modify->fix[ifix];
+  ablate = (FixAblate *) modify->fix[ifix];
   if (ggroup != ablate->igroup)
     error->all(FLERR,"Create_isurf group does not match fix ablate group");
 

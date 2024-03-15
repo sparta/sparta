@@ -53,6 +53,7 @@ class MarchingCubes : protected Pointers {
 
   double interpolate(double, double, double, double);
   int add_triangle(int *, int);
+  int add_triangle_inner(int *, int);
   bool test_face(int);
   bool test_interior(int, int);
   bool modified_test_interior(int, int);
