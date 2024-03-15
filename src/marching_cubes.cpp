@@ -13,6 +13,7 @@
 ------------------------------------------------------------------------- */
 
 #include "math.h"
+#include "math_extra.h"
 #include "string.h"
 #include "marching_cubes.h"
 #include "grid.h"
@@ -98,40 +99,36 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
     // hi[3] = upper right corner pt of grid cell
     // pt = list of 3*nsurf points that are the corner pts of each tri
 
-    // cvalues are ordered
+    // cvalues in SPARTA are ordered
     // bottom-lower-left, bottom-lower-right,
     // bottom-upper-left, bottom-upper-right
     // top-lower-left, top-lower-right, top-upper-left, top-upper-right
     // Vzyx encodes this as 0/1 in each dim
 
-    v000 = cvalues[icell][0];
-    v001 = cvalues[icell][1];
-    v010 = cvalues[icell][2];
-    v011 = cvalues[icell][3];
-    v100 = cvalues[icell][4];
-    v101 = cvalues[icell][5];
-    v110 = cvalues[icell][6];
-    v111 = cvalues[icell][7];
+    // ordering in cvalues different from loop up table
+    // manually change for consistency
 
-    v000iso = v000 - thresh;
-    v001iso = v001 - thresh;
-    v010iso = v010 - thresh;
-    v011iso = v011 - thresh;
-    v100iso = v100 - thresh;
-    v101iso = v101 - thresh;
-    v110iso = v110 - thresh;
-    v111iso = v111 - thresh;
+    v[0] = cvalues[icell][0];
+    v[1] = cvalues[icell][1];
+    v[2] = cvalues[icell][3];
+    v[3] = cvalues[icell][2];
+    v[4] = cvalues[icell][4];
+    v[5] = cvalues[icell][5];
+    v[6] = cvalues[icell][7];
+    v[7] = cvalues[icell][6];
 
-    // make bits 2, 3, 6 and 7 consistent with Lewiner paper (see NOTE above)
+    // temporary viso values
 
-    bit0 = v000 <= thresh ? 0 : 1;
-    bit1 = v001 <= thresh ? 0 : 1;
-    bit2 = v011 <= thresh ? 0 : 1;
-    bit3 = v010 <= thresh ? 0 : 1;
-    bit4 = v100 <= thresh ? 0 : 1;
-    bit5 = v101 <= thresh ? 0 : 1;
-    bit6 = v111 <= thresh ? 0 : 1;
-    bit7 = v110 <= thresh ? 0 : 1;
+    for (i = 0; i < 8; i++) viso[i] = v[i] - thresh;
+
+    bit0 = v[0] <= thresh ? 0 : 1;
+    bit1 = v[1] <= thresh ? 0 : 1;
+    bit2 = v[2] <= thresh ? 0 : 1;
+    bit3 = v[3] <= thresh ? 0 : 1;
+    bit4 = v[4] <= thresh ? 0 : 1;
+    bit5 = v[5] <= thresh ? 0 : 1;
+    bit6 = v[6] <= thresh ? 0 : 1;
+    bit7 = v[7] <= thresh ? 0 : 1;
 
     which = (bit7 << 7) + (bit6 << 6) + (bit5 << 5) + (bit4 << 4) +
       (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
@@ -445,7 +442,9 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
 }
 
 /* ----------------------------------------------------------------------
-   Same as above but uses adjacent values
+   Same as above but uses inner values. Also if there are ambiguities,
+   the corner values corresponding to the intersections are first found
+   then the ambiguity tests are performed
 ------------------------------------------------------------------------- */
 
 void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
@@ -484,57 +483,57 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
     // top-lower-left, top-lower-right, top-upper-left, top-upper-right
     // Vzyx encodes this as 0/1 in each dim
 
-    v000 = v001 = v010 = v011 = 0.0;
-    v100 = v101 = v110 = v111 = 0.0;
+    // use averages for now
 
-    // set corner point to average of adjacent values
+    for (i = 0; i < 8; i++) v[i] = 0.0;
 
-    v000 = (cvalues[icell][0][1]+cvalues[icell][0][3]+cvalues[icell][0][5])/3.0;
-    v001 = (cvalues[icell][1][0]+cvalues[icell][1][3]+cvalues[icell][1][5])/3.0;
-    v010 = (cvalues[icell][2][1]+cvalues[icell][2][2]+cvalues[icell][2][5])/3.0;
-    v011 = (cvalues[icell][3][0]+cvalues[icell][3][2]+cvalues[icell][3][5])/3.0;
+    // ordering in cvalues different from loop up table
+    // manually change for consistency
 
-    v100 = (cvalues[icell][4][1]+cvalues[icell][4][3]+cvalues[icell][4][4])/3.0;
-    v101 = (cvalues[icell][5][0]+cvalues[icell][5][3]+cvalues[icell][5][4])/3.0;
-    v110 = (cvalues[icell][6][1]+cvalues[icell][6][2]+cvalues[icell][6][4])/3.0;
-    v111 = (cvalues[icell][7][0]+cvalues[icell][7][2]+cvalues[icell][7][4])/3.0;
+    for (j = 0; j < 6; j++) {
+      v[0] += cvalues[icell][0][j];
+      v[1] += cvalues[icell][1][j];
+      v[2] += cvalues[icell][3][j];
+      v[3] += cvalues[icell][2][j];
+      v[4] += cvalues[icell][4][j];
+      v[5] += cvalues[icell][5][j];
+      v[6] += cvalues[icell][7][j];
+      v[7] += cvalues[icell][6][j];
+    }      
 
-    v000iso = v000 - thresh;
-    v001iso = v001 - thresh;
-    v010iso = v010 - thresh;
-    v011iso = v011 - thresh;
-    v100iso = v100 - thresh;
-    v101iso = v101 - thresh;
-    v110iso = v110 - thresh;
-    v111iso = v111 - thresh;
+    for (i = 0; i < 8; i++) v[i] /= 6; 
 
-    // intersection of surfaces on all cell edges on normalized length
+    // temporary viso values
+
+    for (i = 0; i < 8; i++) viso[i] = v[i] - thresh;
+
+    // intersection of surfaces on all cell edges
 
     i0  = interpolate(cvalues[icell][0][1],cvalues[icell][1][0],lo[0],hi[0]);
     i1  = interpolate(cvalues[icell][1][3],cvalues[icell][3][2],lo[1],hi[1]);
     i2  = interpolate(cvalues[icell][2][1],cvalues[icell][3][0],lo[0],hi[0]);
     i3  = interpolate(cvalues[icell][0][3],cvalues[icell][2][2],lo[1],hi[1]);
 
-    i4  = interpolate(cvalues[icell][0][5],cvalues[icell][4][4],lo[2],hi[2]);
-    i5  = interpolate(cvalues[icell][1][5],cvalues[icell][5][4],lo[2],hi[2]);
-    i6  = interpolate(cvalues[icell][3][5],cvalues[icell][7][4],lo[2],hi[2]);
-    i7  = interpolate(cvalues[icell][2][5],cvalues[icell][6][4],lo[2],hi[2]);
+    i4  = interpolate(cvalues[icell][4][1],cvalues[icell][5][0],lo[0],hi[0]);
+    i5  = interpolate(cvalues[icell][5][3],cvalues[icell][7][2],lo[1],hi[1]);
+    i6  = interpolate(cvalues[icell][6][1],cvalues[icell][7][0],lo[0],hi[0]);
+    i7  = interpolate(cvalues[icell][4][3],cvalues[icell][6][2],lo[1],hi[1]);
 
-    i8  = interpolate(cvalues[icell][4][1],cvalues[icell][5][0],lo[0],hi[0]);
-    i9  = interpolate(cvalues[icell][5][3],cvalues[icell][7][2],lo[1],hi[1]);
-    i10 = interpolate(cvalues[icell][6][1],cvalues[icell][7][0],lo[0],hi[0]);
-    i11 = interpolate(cvalues[icell][4][3],cvalues[icell][6][2],lo[1],hi[1]);
+    i8  = interpolate(cvalues[icell][0][5],cvalues[icell][4][4],lo[2],hi[2]);
+    i9  = interpolate(cvalues[icell][1][5],cvalues[icell][5][4],lo[2],hi[2]);
+    i10 = interpolate(cvalues[icell][3][5],cvalues[icell][7][4],lo[2],hi[2]);
+    i11 = interpolate(cvalues[icell][2][5],cvalues[icell][6][4],lo[2],hi[2]);
 
     // make bits 2, 3, 6 and 7 consistent with Lewiner paper (see NOTE above)
 
-    bit0 = v000 <= thresh ? 0 : 1;
-    bit1 = v001 <= thresh ? 0 : 1;
-    bit2 = v011 <= thresh ? 0 : 1;
-    bit3 = v010 <= thresh ? 0 : 1;
-    bit4 = v100 <= thresh ? 0 : 1;
-    bit5 = v101 <= thresh ? 0 : 1;
-    bit6 = v111 <= thresh ? 0 : 1;
-    bit7 = v110 <= thresh ? 0 : 1;
+    bit0 = v[0] <= thresh ? 0 : 1;
+    bit1 = v[1] <= thresh ? 0 : 1;
+    bit2 = v[2] <= thresh ? 0 : 1;
+    bit3 = v[3] <= thresh ? 0 : 1;
+    bit4 = v[4] <= thresh ? 0 : 1;
+    bit5 = v[5] <= thresh ? 0 : 1;
+    bit6 = v[6] <= thresh ? 0 : 1;
+    bit7 = v[7] <= thresh ? 0 : 1;
 
     which = (bit7 << 7) + (bit6 << 6) + (bit5 << 5) + (bit4 << 4) +
       (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
@@ -559,13 +558,21 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
       break;
 
     case  3:
-      if (test_face(test3[config]))
+      if (test_face_inner(test3[config]))
         nsurf = add_triangle_inner(tiling3_2[config], 4); // 3.2
       else
         nsurf = add_triangle_inner(tiling3_1[config], 2); // 3.1
       break;
 
     case  4:
+      viso[0] = cvalues[icell][0][5] - thresh;
+      viso[1] = cvalues[icell][1][5] - thresh;
+      viso[2] = cvalues[icell][3][5] - thresh;
+      viso[3] = cvalues[icell][2][5] - thresh;
+      viso[4] = cvalues[icell][4][4] - thresh;
+      viso[5] = cvalues[icell][5][4] - thresh;
+      viso[6] = cvalues[icell][7][4] - thresh;
+      viso[7] = cvalues[icell][6][4] - thresh;
       if (modified_test_interior(test4[config],icase))
         nsurf = add_triangle_inner(tiling4_1[config], 2); // 4.1.1
       else
@@ -577,9 +584,17 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
       break;
 
     case  6:
-      if (test_face(test6[config][0]))
+      if (test_face_inner(test6[config][0]))
         nsurf = add_triangle_inner(tiling6_2[config], 5); // 6.2
       else {
+        viso[0] = cvalues[icell][0][5] - thresh;
+        viso[1] = cvalues[icell][1][5] - thresh;
+        viso[2] = cvalues[icell][3][5] - thresh;
+        viso[3] = cvalues[icell][2][5] - thresh;
+        viso[4] = cvalues[icell][4][4] - thresh;
+        viso[5] = cvalues[icell][5][4] - thresh;
+        viso[6] = cvalues[icell][7][4] - thresh;
+        viso[7] = cvalues[icell][6][4] - thresh;
         if (modified_test_interior(test6[config][1],icase))
           nsurf = add_triangle_inner(tiling6_1_1[config], 3); // 6.1.1
         else {
@@ -589,9 +604,9 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
       break;
 
     case  7:
-      if (test_face(test7[config][0])) subconfig +=  1;
-      if (test_face(test7[config][1])) subconfig +=  2;
-      if (test_face(test7[config][2])) subconfig +=  4;
+      if (test_face_inner(test7[config][0])) subconfig +=  1;
+      if (test_face_inner(test7[config][1])) subconfig +=  2;
+      if (test_face_inner(test7[config][2])) subconfig +=  4;
       switch (subconfig) {
       case 0:
         nsurf = add_triangle_inner(tiling7_1[config], 3); break;
@@ -608,6 +623,14 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
       case 6:
         nsurf = add_triangle_inner(tiling7_3[config][2], 9); break;
       case 7:
+        viso[0] = cvalues[icell][0][5] - thresh;
+        viso[1] = cvalues[icell][1][5] - thresh;
+        viso[2] = cvalues[icell][3][5] - thresh;
+        viso[3] = cvalues[icell][2][5] - thresh;
+        viso[4] = cvalues[icell][4][4] - thresh;
+        viso[5] = cvalues[icell][5][4] - thresh;
+        viso[6] = cvalues[icell][7][4] - thresh;
+        viso[7] = cvalues[icell][6][4] - thresh;
         if (test_interior(test7[config][3],icase))
           nsurf = add_triangle_inner(tiling7_4_2[config], 9);
         else
@@ -625,16 +648,24 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
       break;
 
     case 10:
-      if (test_face(test10[config][0])) {
-        if (test_face(test10[config][1]))
+      if (test_face_inner(test10[config][0])) {
+        if (test_face_inner(test10[config][1]))
           nsurf = add_triangle_inner(tiling10_1_1_[config], 4); // 10.1.1
         else {
           nsurf = add_triangle_inner(tiling10_2[config], 8); // 10.2
         }
       } else {
-        if (test_face(test10[config][1])) {
+        if (test_face_inner(test10[config][1])) {
           nsurf = add_triangle_inner(tiling10_2_[config], 8); // 10.2
         } else {
+          viso[0] = cvalues[icell][0][5] - thresh;
+          viso[1] = cvalues[icell][1][5] - thresh;
+          viso[2] = cvalues[icell][3][5] - thresh;
+          viso[3] = cvalues[icell][2][5] - thresh;
+          viso[4] = cvalues[icell][4][4] - thresh;
+          viso[5] = cvalues[icell][5][4] - thresh;
+          viso[6] = cvalues[icell][7][4] - thresh;
+          viso[7] = cvalues[icell][6][4] - thresh;
           if (test_interior(test10[config][2],icase))
             nsurf = add_triangle_inner(tiling10_1_1[config], 4); // 10.1.1
           else
@@ -648,16 +679,24 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
       break;
 
     case 12:
-      if (test_face(test12[config][0])) {
-        if (test_face(test12[config][1]))
+      if (test_face_inner(test12[config][0])) {
+        if (test_face_inner(test12[config][1]))
           nsurf = add_triangle_inner(tiling12_1_1_[config], 4); // 12.1.1
         else {
           nsurf = add_triangle_inner(tiling12_2[config], 8); // 12.2
         }
       } else {
-        if (test_face(test12[config][1])) {
+        if (test_face_inner(test12[config][1])) {
           nsurf = add_triangle_inner(tiling12_2_[config], 8); // 12.2
         } else {
+          viso[0] = cvalues[icell][0][5] - thresh;
+          viso[1] = cvalues[icell][1][5] - thresh;
+          viso[2] = cvalues[icell][3][5] - thresh;
+          viso[3] = cvalues[icell][2][5] - thresh;
+          viso[4] = cvalues[icell][4][4] - thresh;
+          viso[5] = cvalues[icell][5][4] - thresh;
+          viso[6] = cvalues[icell][7][4] - thresh;
+          viso[7] = cvalues[icell][6][4] - thresh;
           if (test_interior(test12[config][2],icase))
             nsurf = add_triangle_inner(tiling12_1_1[config], 4); // 12.1.1
           else
@@ -667,12 +706,12 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
       break;
 
     case 13:
-      if (test_face(test13[config][0])) subconfig +=  1;
-      if (test_face(test13[config][1])) subconfig +=  2;
-      if (test_face(test13[config][2])) subconfig +=  4;
-      if (test_face(test13[config][3])) subconfig +=  8;
-      if (test_face(test13[config][4])) subconfig += 16;
-      if (test_face(test13[config][5])) subconfig += 32;
+      if (test_face_inner(test13[config][0])) subconfig +=  1;
+      if (test_face_inner(test13[config][1])) subconfig +=  2;
+      if (test_face_inner(test13[config][2])) subconfig +=  4;
+      if (test_face_inner(test13[config][3])) subconfig +=  8;
+      if (test_face_inner(test13[config][4])) subconfig += 16;
+      if (test_face_inner(test13[config][5])) subconfig += 32;
 
       switch (subconfig13[subconfig]) {
       case 0:/* 13.1 */
@@ -734,6 +773,14 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
         break;
 
       case 24:/* 13.5 */
+        viso[0] = cvalues[icell][0][5] - thresh;
+        viso[1] = cvalues[icell][1][5] - thresh;
+        viso[2] = cvalues[icell][3][5] - thresh;
+        viso[3] = cvalues[icell][2][5] - thresh;
+        viso[4] = cvalues[icell][4][4] - thresh;
+        viso[5] = cvalues[icell][5][4] - thresh;
+        viso[6] = cvalues[icell][7][4] - thresh;
+        viso[7] = cvalues[icell][6][4] - thresh;
         subconfig = 1;
         if (interior_test_case13())
           nsurf = add_triangle_inner(tiling13_5_1[config][1], 6);
@@ -742,6 +789,14 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
         break;
 
       case 25:/* 13.5 */
+        viso[0] = cvalues[icell][0][5] - thresh;
+        viso[1] = cvalues[icell][1][5] - thresh;
+        viso[2] = cvalues[icell][3][5] - thresh;
+        viso[3] = cvalues[icell][2][5] - thresh;
+        viso[4] = cvalues[icell][4][4] - thresh;
+        viso[5] = cvalues[icell][5][4] - thresh;
+        viso[6] = cvalues[icell][7][4] - thresh;
+        viso[7] = cvalues[icell][6][4] - thresh;
         subconfig = 2;
         if (interior_test_case13())
           nsurf = add_triangle_inner(tiling13_5_1[config][2], 6);
@@ -750,6 +805,14 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
         break;
 
       case 26:/* 13.5 */
+        viso[0] = cvalues[icell][0][5] - thresh;
+        viso[1] = cvalues[icell][1][5] - thresh;
+        viso[2] = cvalues[icell][3][5] - thresh;
+        viso[3] = cvalues[icell][2][5] - thresh;
+        viso[4] = cvalues[icell][4][4] - thresh;
+        viso[5] = cvalues[icell][5][4] - thresh;
+        viso[6] = cvalues[icell][7][4] - thresh;
+        viso[7] = cvalues[icell][6][4] - thresh;
         subconfig = 3;
         if (interior_test_case13())
           nsurf = add_triangle_inner(tiling13_5_1[config][3], 6);
@@ -905,14 +968,6 @@ void MarchingCubes::cleanup()
   Grid::ChildCell *cells = grid->cells;
   MyPage<surfint> *csurfs = grid->csurfs;
   int nglocal = grid->nlocal;
-
-  // DEBUG
-
-  //int nstotal;
-  //MPI_Allreduce(&surf->nlocal,&nstotal,1,MPI_INT,MPI_SUM,world);
-  //if (me == 0) printf("TOTAL TRI before count: %d\n",nstotal);
-
-  // END of DEBUG
 
   // count # of tris on each face of every cell I own
 
@@ -1273,63 +1328,6 @@ void MarchingCubes::cleanup()
   surf->nlocal = nslocal;
   memory->destroy(dellist);
 
-  // DEBUG
-
-  /*
-  MPI_Allreduce(&surf->nlocal,&nstotal,1,MPI_INT,MPI_SUM,world);
-  if (me == 0) printf("TOTAL TRI after count: %d\n",nstotal);
-
-  int alltotal,alladd,alldel,allsend,allrecv;
-  MPI_Allreduce(&ntotal,&alltotal,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&nadd,&alladd,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&ndel,&alldel,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&nsend,&allsend,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&nrecv,&allrecv,1,MPI_INT,MPI_SUM,world);
-  if (me == 0)
-    printf("CLEANUP counts: total %d add %d del %d send %d recv %d\n",
-           alltotal,alladd,alldel,allsend,allrecv);
-
-  ntotal = 0;
-  int nbad = 0;
-  int nonface = 0;
-
-  for (icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    nsurf = cells[icell].nsurf;
-    if (nsurf == 0) continue;
-    ntotal += nsurf;
-
-    lo = cells[icell].lo;
-    hi = cells[icell].hi;
-
-    for (j = 0; j < nsurf; j++) {
-      m = cells[icell].csurfs[j];
-      iface = Geometry::tri_on_hex_face(tris[m].p1,tris[m].p2,tris[m].p3,lo,hi);
-      if (iface < 0) continue;
-
-      norm = tris[m].norm;
-      idim = iface/2;
-      if (iface % 2 && norm[idim] < 0.0) inwardnorm = 1;
-      else if (iface % 2 == 0 && norm[idim] > 0.0) inwardnorm = 1;
-      else inwardnorm = 0;
-
-      nonface++;
-      if (!inwardnorm) nbad++;
-    }
-  }
-
-  int nbadall;
-  MPI_Allreduce(&nbad,&nbadall,1,MPI_INT,MPI_SUM,world);
-  if (me == 0) printf("BAD NORM %d\n",nbadall);
-
-  int nonfaceall;
-  MPI_Allreduce(&nonface,&nonfaceall,1,MPI_INT,MPI_SUM,world);
-  if (me == 0) printf("Total onface %d\n",nonfaceall);
-
-  if (ntotal != surf->nlocal) error->one(FLERR,"Bad surf total");
-  */
-
-  // END of DEBUG
 }
 
 /* ----------------------------------------------------------------------
@@ -1341,139 +1339,139 @@ int MarchingCubes::add_triangle(int *trig, int n)
   for(int t = 0; t < 3*n; t++) {
     switch (trig[t]) {
     case 0:
-      pt[t][0] = interpolate(v000,v001,lo[0],hi[0]);
+      pt[t][0] = interpolate(v[0],v[1],lo[0],hi[0]);
       pt[t][1] = lo[1];
       pt[t][2] = lo[2];
       break;
     case 1:
       pt[t][0] = hi[0];
-      pt[t][1] = interpolate(v001,v011,lo[1],hi[1]);
+      pt[t][1] = interpolate(v[1],v[2],lo[1],hi[1]);
       pt[t][2] = lo[2];
       break;
     case 2:
-      pt[t][0] = interpolate(v010,v011,lo[0],hi[0]);
+      pt[t][0] = interpolate(v[3],v[2],lo[0],hi[0]);
       pt[t][1] = hi[1];
       pt[t][2] = lo[2];
       break;
     case 3:
       pt[t][0] = lo[0];
-      pt[t][1] = interpolate(v000,v010,lo[1],hi[1]);
+      pt[t][1] = interpolate(v[0],v[3],lo[1],hi[1]);
       pt[t][2] = lo[2];
       break;
     case 4:
-      pt[t][0] = interpolate(v100,v101,lo[0],hi[0]);
+      pt[t][0] = interpolate(v[4],v[5],lo[0],hi[0]);
       pt[t][1] = lo[1];
       pt[t][2] = hi[2];
       break;
     case 5:
       pt[t][0] = hi[0];
-      pt[t][1] = interpolate(v101,v111,lo[1],hi[1]);
+      pt[t][1] = interpolate(v[5],v[6],lo[1],hi[1]);
       pt[t][2] = hi[2];
       break;
     case 6:
-      pt[t][0] = interpolate(v110,v111,lo[0],hi[0]);
+      pt[t][0] = interpolate(v[7],v[6],lo[0],hi[0]);
       pt[t][1] = hi[1];
       pt[t][2] = hi[2];
       break;
     case 7:
       pt[t][0] = lo[0];
-      pt[t][1] = interpolate(v100,v110,lo[1],hi[1]);
+      pt[t][1] = interpolate(v[4],v[7],lo[1],hi[1]);
       pt[t][2] = hi[2];
       break;
     case 8:
       pt[t][0] = lo[0];
       pt[t][1] = lo[1];
-      pt[t][2] = interpolate(v000,v100,lo[2],hi[2]);
+      pt[t][2] = interpolate(v[0],v[4],lo[2],hi[2]);
       break;
     case 9:
       pt[t][0] = hi[0];
       pt[t][1] = lo[1];
-      pt[t][2] = interpolate(v001,v101,lo[2],hi[2]);
+      pt[t][2] = interpolate(v[1],v[5],lo[2],hi[2]);
       break;
     case 10:
       pt[t][0] = hi[0];
       pt[t][1] = hi[1];
-      pt[t][2] = interpolate(v011,v111,lo[2],hi[2]);
+      pt[t][2] = interpolate(v[2],v[6],lo[2],hi[2]);
       break;
     case 11:
       pt[t][0] = lo[0];
       pt[t][1] = hi[1];
-      pt[t][2] = interpolate(v010,v110,lo[2],hi[2]);
+      pt[t][2] = interpolate(v[3],v[7],lo[2],hi[2]);
       break;
     case 12: {
       int u = 0;
       pt[t][0] = pt[t][1] = pt[t][2] = 0.0;
       if (bit0 ^ bit1) {
         ++u;
-        pt[t][0] += interpolate(v000,v001,lo[0],hi[0]);
+        pt[t][0] += interpolate(v[0],v[1],lo[0],hi[0]);
         pt[t][1] += lo[1];
         pt[t][2] += lo[2];
       }
       if (bit1 ^ bit2) {
         ++u;
         pt[t][0] += hi[0];
-        pt[t][1] += interpolate(v001,v011,lo[1],hi[1]);
+        pt[t][1] += interpolate(v[1],v[2],lo[1],hi[1]);
         pt[t][2] += lo[2];
       }
       if (bit2 ^ bit3) {
         ++u;
-        pt[t][0] += interpolate(v010,v011,lo[0],hi[0]);
+        pt[t][0] += interpolate(v[3],v[2],lo[0],hi[0]);
         pt[t][1] += hi[1];
         pt[t][2] += lo[2];
       }
       if (bit3 ^ bit0) {
         ++u;
         pt[t][0] += lo[0];
-        pt[t][1] += interpolate(v000,v010,lo[1],hi[1]);
+        pt[t][1] += interpolate(v[0],v[3],lo[1],hi[1]);
         pt[t][2] += lo[2];
       }
       if (bit4 ^ bit5) {
         ++u;
-        pt[t][0] += interpolate(v100,v101,lo[0],hi[0]);
+        pt[t][0] += interpolate(v[4],v[5],lo[0],hi[0]);
         pt[t][1] += lo[1];
         pt[t][2] += hi[2];
       }
       if (bit5 ^ bit6) {
         ++u;
         pt[t][0] += hi[0];
-        pt[t][1] += interpolate(v101,v111,lo[1],hi[1]);
+        pt[t][1] += interpolate(v[5],v[6],lo[1],hi[1]);
         pt[t][2] += hi[2];
       }
       if (bit6 ^ bit7) {
         ++u;
-        pt[t][0] += interpolate(v110,v111,lo[0],hi[0]);
+        pt[t][0] += interpolate(v[7],v[6],lo[0],hi[0]);
         pt[t][1] += hi[1];
         pt[t][2] += hi[2];
       }
       if (bit7 ^ bit4) {
         ++u;
         pt[t][0] += lo[0];
-        pt[t][1] += interpolate(v100,v110,lo[1],hi[1]);
+        pt[t][1] += interpolate(v[4],v[7],lo[1],hi[1]);
         pt[t][2] += hi[2];
       }
       if (bit0 ^ bit4) {
         ++u;
         pt[t][0] += lo[0];
         pt[t][1] += lo[1];
-        pt[t][2] += interpolate(v000,v100,lo[2],hi[2]);
+        pt[t][2] += interpolate(v[0],v[4],lo[2],hi[2]);
       }
       if (bit1 ^ bit5) {
         ++u;
         pt[t][0] += hi[0];
         pt[t][1] += lo[1];
-        pt[t][2] += interpolate(v001,v101,lo[2],hi[2]);
+        pt[t][2] += interpolate(v[1],v[5],lo[2],hi[2]);
       }
       if (bit2 ^ bit6) {
         ++u;
         pt[t][0] += hi[0];
         pt[t][1] += hi[1];
-        pt[t][2] += interpolate(v011,v111,lo[2],hi[2]);
+        pt[t][2] += interpolate(v[2],v[6],lo[2],hi[2]);
       }
       if (bit3 ^ bit7) {
         ++u;
         pt[t][0] += lo[0];
         pt[t][1] += hi[1];
-        pt[t][2] += interpolate(v010,v110,lo[2],hi[2]);
+        pt[t][2] += interpolate(v[3],v[7],lo[2],hi[2]);
       }
 
       pt[t][0] /= static_cast<double> (u);
@@ -1519,44 +1517,44 @@ int MarchingCubes::add_triangle_inner(int *trig, int n)
       pt[t][2] = lo[2];
       break;
     case 4:
-      pt[t][0] = i8;
+      pt[t][0] = i4;
       pt[t][1] = lo[1];
       pt[t][2] = hi[2];
       break;
     case 5:
       pt[t][0] = hi[0];
-      pt[t][1] = i9;
+      pt[t][1] = i5;
       pt[t][2] = hi[2];
       break;
     case 6:
-      pt[t][0] = i10;
+      pt[t][0] = i6;
       pt[t][1] = hi[1];
       pt[t][2] = hi[2];
       break;
     case 7:
       pt[t][0] = lo[0];
-      pt[t][1] = i11;
+      pt[t][1] = i7;
       pt[t][2] = hi[2];
       break;
     case 8:
       pt[t][0] = lo[0];
       pt[t][1] = lo[1];
-      pt[t][2] = i4;
+      pt[t][2] = i8;
       break;
     case 9:
       pt[t][0] = hi[0];
       pt[t][1] = lo[1];
-      pt[t][2] = i5;
+      pt[t][2] = i9;
       break;
     case 10:
       pt[t][0] = hi[0];
       pt[t][1] = hi[1];
-      pt[t][2] = i6;
+      pt[t][2] = i10;
       break;
     case 11:
       pt[t][0] = lo[0];
       pt[t][1] = hi[1];
-      pt[t][2] = i7;
+      pt[t][2] = i11;
       break;
     case 12: {
       int u = 0;
@@ -1587,51 +1585,51 @@ int MarchingCubes::add_triangle_inner(int *trig, int n)
       }
       if (bit4 ^ bit5) {
         ++u;
-        pt[t][0] += i8;
+        pt[t][0] += i4;
         pt[t][1] += lo[1];
         pt[t][2] += hi[2];
       }
       if (bit5 ^ bit6) {
         ++u;
         pt[t][0] += hi[0];
-        pt[t][1] += i9;
+        pt[t][1] += i5;
         pt[t][2] += hi[2];
       }
       if (bit6 ^ bit7) {
         ++u;
-        pt[t][0] += i10;
+        pt[t][0] += i6;
         pt[t][1] += hi[1];
         pt[t][2] += hi[2];
       }
       if (bit7 ^ bit4) {
         ++u;
         pt[t][0] += lo[0];
-        pt[t][1] += i11;
+        pt[t][1] += i7;
         pt[t][2] += hi[2];
       }
       if (bit0 ^ bit4) {
         ++u;
         pt[t][0] += lo[0];
         pt[t][1] += lo[1];
-        pt[t][2] += i4;
+        pt[t][2] += i8;
       }
       if (bit1 ^ bit5) {
         ++u;
         pt[t][0] += hi[0];
         pt[t][1] += lo[1];
-        pt[t][2] += i5;
+        pt[t][2] += i9;
       }
       if (bit2 ^ bit6) {
         ++u;
         pt[t][0] += hi[0];
         pt[t][1] += hi[1];
-        pt[t][2] += i6;
+        pt[t][2] += i10;
       }
       if (bit3 ^ bit7) {
         ++u;
         pt[t][0] += lo[0];
         pt[t][1] += hi[1];
-        pt[t][2] += i7;
+        pt[t][2] += i11;
       }
 
       pt[t][0] /= static_cast<double> (u);
@@ -1660,45 +1658,111 @@ bool MarchingCubes::test_face(int face)
   switch (face) {
   case -1:
   case 1:
-    A = v000iso;
-    B = v100iso;
-    C = v101iso;
-    D = v001iso;
+    A = viso[0];
+    B = viso[4];
+    C = viso[5];
+    D = viso[1];
     break;
   case -2:
   case 2:
-    A = v001iso;
-    B = v101iso;
-    C = v111iso;
-    D = v011iso;
+    A = viso[1];
+    B = viso[5];
+    C = viso[6];
+    D = viso[2];
     break;
   case -3:
   case 3:
-    A = v011iso;
-    B = v111iso;
-    C = v110iso;
-    D = v010iso;
+    A = viso[2];
+    B = viso[6];
+    C = viso[7];
+    D = viso[3];
     break;
   case -4:
   case 4:
-    A = v010iso;
-    B = v110iso;
-    C = v100iso;
-    D = v000iso;
+    A = viso[3];
+    B = viso[7];
+    C = viso[4];
+    D = viso[0];
     break;
   case -5:
   case 5:
-    A = v000iso;
-    B = v010iso;
-    C = v011iso;
-    D = v001iso;
+    A = viso[0];
+    B = viso[3];
+    C = viso[2];
+    D = viso[1];
     break;
   case -6:
   case 6:
-    A = v100iso;
-    B = v110iso;
-    C = v111iso;
-    D = v101iso;
+    A = viso[4];
+    B = viso[7];
+    C = viso[6];
+    D = viso[5];
+    break;
+
+  default:
+    A = B = C = D = 0.0;
+    print_cube();
+    error->one(FLERR,"Invalid face code");
+  };
+
+  if (fabs(A*C - B*D) < EPSILON) return face >= 0;
+  return face * A * (A*C - B*D) >= 0 ;  // face and A invert signs
+}
+
+/* ----------------------------------------------------------------------
+   test a face
+   if face > 0 return true if the face contains a part of the surface
+------------------------------------------------------------------------- */
+
+bool MarchingCubes::test_face_inner(int face)
+{
+  double A,B,C,D;
+  double mat[4][4], b[4], phi[4];
+
+  //int sol; = MathExtra::mldivide4(mat, b, v);
+
+  switch (face) {
+  case -1:
+  case 1:
+    A = viso[0];
+    B = viso[4];
+    C = viso[5];
+    D = viso[1];
+    break;
+  case -2:
+  case 2:
+    A = viso[1];
+    B = viso[5];
+    C = viso[6];
+    D = viso[2];
+    break;
+  case -3:
+  case 3:
+    A = viso[2];
+    B = viso[6];
+    C = viso[7];
+    D = viso[3];
+    break;
+  case -4:
+  case 4:
+    A = viso[3];
+    B = viso[7];
+    C = viso[4];
+    D = viso[0];
+    break;
+  case -5:
+  case 5:
+    A = viso[0];
+    B = viso[3];
+    C = viso[2];
+    D = viso[1];
+    break;
+  case -6:
+  case 6:
+    A = viso[4];
+    B = viso[7];
+    C = viso[6];
+    D = viso[5];
     break;
 
   default:
@@ -1727,17 +1791,17 @@ bool MarchingCubes::test_interior(int s, int icase)
   switch (icase) {
   case  4 :
   case 10 :
-    a = ( v100iso - v000iso ) * ( v111iso - v011iso ) -
-      ( v110iso - v010iso ) * ( v101iso - v001iso ) ;
-    b =  v011iso * ( v100iso - v000iso ) + v000iso * ( v111iso - v011iso ) -
-      v001iso * ( v110iso - v010iso ) - v010iso * ( v101iso - v001iso ) ;
+    a = ( viso[4] - viso[0] ) * ( viso[6] - viso[2] ) -
+      ( viso[7] - viso[3] ) * ( viso[5] - viso[1] ) ;
+    b =  viso[2] * ( viso[4] - viso[0] ) + viso[0] * ( viso[6] - viso[2] ) -
+      viso[1] * ( viso[7] - viso[3] ) - viso[3] * ( viso[5] - viso[1] ) ;
     t = - b / (2*a) ;
     if (t < 0 || t > 1) return s>0 ;
 
-    At = v000iso + ( v100iso - v000iso ) * t ;
-    Bt = v010iso + ( v110iso - v010iso ) * t ;
-    Ct = v011iso + ( v111iso - v011iso ) * t ;
-    Dt = v001iso + ( v101iso - v001iso ) * t ;
+    At = viso[0] + ( viso[4] - viso[0] ) * t ;
+    Bt = viso[3] + ( viso[7] - viso[3] ) * t ;
+    Ct = viso[2] + ( viso[6] - viso[2] ) * t ;
+    Dt = viso[1] + ( viso[5] - viso[1] ) * t ;
     break ;
 
   case  6 :
@@ -1752,88 +1816,88 @@ bool MarchingCubes::test_interior(int s, int icase)
     }
     switch( edge ) {
     case  0 :
-      t  = v000iso / ( v000iso - v001iso ) ;
+      t  = viso[0] / ( viso[0] - viso[1] ) ;
       At = 0.0 ;
-      Bt = v010iso + ( v011iso - v010iso ) * t ;
-      Ct = v110iso + ( v111iso - v110iso ) * t ;
-      Dt = v100iso + ( v101iso - v100iso ) * t ;
+      Bt = viso[3] + ( viso[2] - viso[3] ) * t ;
+      Ct = viso[7] + ( viso[6] - viso[7] ) * t ;
+      Dt = viso[4] + ( viso[5] - viso[4] ) * t ;
       break ;
     case  1 :
-      t  = v001iso / ( v001iso - v011iso ) ;
+      t  = viso[1] / ( viso[1] - viso[2] ) ;
       At = 0.0 ;
-      Bt = v000iso + ( v010iso - v000iso ) * t ;
-      Ct = v100iso + ( v110iso - v100iso ) * t ;
-      Dt = v101iso + ( v111iso - v101iso ) * t ;
+      Bt = viso[0] + ( viso[3] - viso[0] ) * t ;
+      Ct = viso[4] + ( viso[7] - viso[4] ) * t ;
+      Dt = viso[5] + ( viso[6] - viso[5] ) * t ;
       break ;
     case  2 :
-      t  = v011iso / ( v011iso - v010iso ) ;
+      t  = viso[2] / ( viso[2] - viso[3] ) ;
       At = 0.0 ;
-      Bt = v001iso + ( v000iso - v001iso ) * t ;
-      Ct = v101iso + ( v100iso - v101iso ) * t ;
-      Dt = v111iso + ( v110iso - v111iso ) * t ;
+      Bt = viso[1] + ( viso[0] - viso[1] ) * t ;
+      Ct = viso[5] + ( viso[4] - viso[5] ) * t ;
+      Dt = viso[6] + ( viso[7] - viso[6] ) * t ;
       break ;
     case  3 :
-      t  = v010iso / ( v010iso - v000iso ) ;
+      t  = viso[3] / ( viso[3] - viso[0] ) ;
       At = 0.0 ;
-      Bt = v011iso + ( v001iso - v011iso ) * t ;
-      Ct = v111iso + ( v101iso - v111iso ) * t ;
-      Dt = v110iso + ( v100iso - v110iso ) * t ;
+      Bt = viso[2] + ( viso[1] - viso[2] ) * t ;
+      Ct = viso[6] + ( viso[5] - viso[6] ) * t ;
+      Dt = viso[7] + ( viso[4] - viso[7] ) * t ;
       break ;
     case  4 :
-      t  = v100iso / ( v100iso - v101iso ) ;
+      t  = viso[4] / ( viso[4] - viso[5] ) ;
       At = 0.0 ;
-      Bt = v110iso + ( v111iso - v110iso ) * t ;
-      Ct = v010iso + ( v011iso - v010iso ) * t ;
-      Dt = v000iso + ( v001iso - v000iso ) * t ;
+      Bt = viso[7] + ( viso[6] - viso[7] ) * t ;
+      Ct = viso[3] + ( viso[2] - viso[3] ) * t ;
+      Dt = viso[0] + ( viso[1] - viso[0] ) * t ;
       break ;
     case  5 :
-      t  = v101iso / ( v101iso - v111iso ) ;
+      t  = viso[5] / ( viso[5] - viso[6] ) ;
       At = 0.0 ;
-      Bt = v100iso + ( v110iso - v100iso ) * t ;
-      Ct = v000iso + ( v010iso - v000iso ) * t ;
-      Dt = v001iso + ( v011iso - v001iso ) * t ;
+      Bt = viso[4] + ( viso[7] - viso[4] ) * t ;
+      Ct = viso[0] + ( viso[3] - viso[0] ) * t ;
+      Dt = viso[1] + ( viso[2] - viso[1] ) * t ;
       break ;
     case  6 :
-      t  = v111iso / ( v111iso - v110iso ) ;
+      t  = viso[6] / ( viso[6] - viso[7] ) ;
       At = 0.0 ;
-      Bt = v101iso + ( v100iso - v101iso ) * t ;
-      Ct = v001iso + ( v000iso - v001iso ) * t ;
-      Dt = v011iso + ( v010iso - v011iso ) * t ;
+      Bt = viso[5] + ( viso[4] - viso[5] ) * t ;
+      Ct = viso[1] + ( viso[0] - viso[1] ) * t ;
+      Dt = viso[2] + ( viso[3] - viso[2] ) * t ;
       break ;
     case  7 :
-      t  = v110iso / ( v110iso - v100iso ) ;
+      t  = viso[7] / ( viso[7] - viso[4] ) ;
       At = 0.0 ;
-      Bt = v111iso + ( v101iso - v111iso ) * t ;
-      Ct = v011iso + ( v001iso - v011iso ) * t ;
-      Dt = v010iso + ( v000iso - v010iso ) * t ;
+      Bt = viso[6] + ( viso[5] - viso[6] ) * t ;
+      Ct = viso[2] + ( viso[1] - viso[2] ) * t ;
+      Dt = viso[3] + ( viso[0] - viso[3] ) * t ;
       break ;
     case  8 :
-      t  = v000iso / ( v000iso - v100iso ) ;
+      t  = viso[0] / ( viso[0] - viso[4] ) ;
       At = 0.0 ;
-      Bt = v010iso + ( v110iso - v010iso ) * t ;
-      Ct = v011iso + ( v111iso - v011iso ) * t ;
-      Dt = v001iso + ( v101iso - v001iso ) * t ;
+      Bt = viso[3] + ( viso[7] - viso[3] ) * t ;
+      Ct = viso[2] + ( viso[6] - viso[2] ) * t ;
+      Dt = viso[1] + ( viso[5] - viso[1] ) * t ;
       break ;
     case  9 :
-      t  = v001iso / ( v001iso - v101iso ) ;
+      t  = viso[1] / ( viso[1] - viso[5] ) ;
       At = 0.0 ;
-      Bt = v000iso + ( v100iso - v000iso ) * t ;
-      Ct = v010iso + ( v110iso - v010iso ) * t ;
-      Dt = v011iso + ( v111iso - v011iso ) * t ;
+      Bt = viso[0] + ( viso[4] - viso[0] ) * t ;
+      Ct = viso[3] + ( viso[7] - viso[3] ) * t ;
+      Dt = viso[2] + ( viso[6] - viso[2] ) * t ;
       break ;
     case 10 :
-      t  = v011iso / ( v011iso - v111iso ) ;
+      t  = viso[2] / ( viso[2] - viso[6] ) ;
       At = 0.0 ;
-      Bt = v001iso + ( v101iso - v001iso ) * t ;
-      Ct = v000iso + ( v100iso - v000iso ) * t ;
-      Dt = v010iso + ( v110iso - v010iso ) * t ;
+      Bt = viso[1] + ( viso[5] - viso[1] ) * t ;
+      Ct = viso[0] + ( viso[4] - viso[0] ) * t ;
+      Dt = viso[3] + ( viso[7] - viso[3] ) * t ;
       break ;
     case 11 :
-      t  = v010iso / ( v010iso - v110iso ) ;
+      t  = viso[3] / ( viso[3] - viso[7] ) ;
       At = 0.0 ;
-      Bt = v011iso + ( v111iso - v011iso ) * t ;
-      Ct = v001iso + ( v101iso - v001iso ) * t ;
-      Dt = v000iso + ( v100iso - v000iso ) * t ;
+      Bt = viso[2] + ( viso[6] - viso[2] ) * t ;
+      Ct = viso[1] + ( viso[5] - viso[1] ) * t ;
+      Dt = viso[0] + ( viso[4] - viso[0] ) * t ;
       break ;
 
     default:
@@ -1973,27 +2037,27 @@ int MarchingCubes::interior_ambiguity(int amb_face, int s)
   switch (amb_face) {
   case 1:
   case 3:
-    if (((v001iso * s) > 0) && ((v110iso * s) > 0)) edge = 4;
-    if (((v000iso * s) > 0) && ((v111iso * s) > 0)) edge = 5;
-    if (((v010iso * s) > 0) && ((v101iso * s) > 0)) edge = 6;
-    if (((v011iso * s) > 0) && ((v100iso * s) > 0)) edge = 7;
+    if (((viso[1] * s) > 0) && ((viso[7] * s) > 0)) edge = 4;
+    if (((viso[0] * s) > 0) && ((viso[6] * s) > 0)) edge = 5;
+    if (((viso[3] * s) > 0) && ((viso[5] * s) > 0)) edge = 6;
+    if (((viso[2] * s) > 0) && ((viso[4] * s) > 0)) edge = 7;
     break;
 
   case 2:
   case 4:
-    if (((v001iso * s) > 0) && ((v110iso * s) > 0)) edge = 0;
-    if (((v011iso * s) > 0) && ((v100iso * s) > 0)) edge = 1;
-    if (((v010iso * s) > 0) && ((v101iso * s) > 0)) edge = 2;
-    if (((v000iso * s) > 0) && ((v111iso * s) > 0)) edge = 3;
+    if (((viso[1] * s) > 0) && ((viso[7] * s) > 0)) edge = 0;
+    if (((viso[2] * s) > 0) && ((viso[4] * s) > 0)) edge = 1;
+    if (((viso[3] * s) > 0) && ((viso[5] * s) > 0)) edge = 2;
+    if (((viso[0] * s) > 0) && ((viso[6] * s) > 0)) edge = 3;
     break;
 
   case 5:
   case 6:
   case 0:
-    if (((v000iso * s) > 0) && ((v111iso * s) > 0)) edge = 8;
-    if (((v001iso * s) > 0) && ((v110iso * s) > 0)) edge = 9;
-    if (((v011iso * s) > 0) && ((v100iso * s) > 0)) edge = 10;
-    if (((v010iso * s) > 0) && ((v101iso * s) > 0)) edge = 11;
+    if (((viso[0] * s) > 0) && ((viso[6] * s) > 0)) edge = 8;
+    if (((viso[1] * s) > 0) && ((viso[7] * s) > 0)) edge = 9;
+    if (((viso[2] * s) > 0) && ((viso[4] * s) > 0)) edge = 10;
+    if (((viso[3] * s) > 0) && ((viso[5] * s) > 0)) edge = 11;
     break;
   }
 
@@ -2010,11 +2074,11 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
   switch (edge) {
 
   case 0:
-    a = (v000iso - v001iso) * (v110iso - v111iso)
-      - (v100iso - v101iso) * (v010iso - v011iso);
-    b = v111iso * (v000iso - v001iso) + v001iso * (v110iso - v111iso)
-      - v011iso * (v100iso - v101iso)
-      - v101iso * (v010iso - v011iso);
+    a = (viso[0] - viso[1]) * (viso[7] - viso[6])
+      - (viso[4] - viso[5]) * (viso[3] - viso[2]);
+    b = viso[6] * (viso[0] - viso[1]) + viso[1] * (viso[7] - viso[6])
+      - viso[2] * (viso[4] - viso[5])
+      - viso[5] * (viso[3] - viso[2]);
 
     if (a > 0)
       return 1;
@@ -2023,10 +2087,10 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     if (t < 0 || t > 1)
       return 1;
 
-    At = v001iso + (v000iso - v001iso) * t;
-    Bt = v101iso + (v100iso - v101iso) * t;
-    Ct = v111iso + (v110iso - v111iso) * t;
-    Dt = v011iso + (v010iso - v011iso) * t;
+    At = viso[1] + (viso[0] - viso[1]) * t;
+    Bt = viso[5] + (viso[4] - viso[5]) * t;
+    Ct = viso[6] + (viso[7] - viso[6]) * t;
+    Dt = viso[2] + (viso[3] - viso[2]) * t;
 
     verify = At * Ct - Bt * Dt;
 
@@ -2038,11 +2102,11 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     break;
 
   case 1:
-    a = (v010iso - v011iso) * (v100iso - v101iso)
-      - (v000iso - v001iso) * (v110iso - v111iso);
-    b = v101iso * (v010iso - v011iso) + v011iso * (v100iso - v101iso)
-      - v111iso * (v000iso - v001iso)
-      - v001iso * (v110iso - v111iso);
+    a = (viso[3] - viso[2]) * (viso[4] - viso[5])
+      - (viso[0] - viso[1]) * (viso[7] - viso[6]);
+    b = viso[5] * (viso[3] - viso[2]) + viso[2] * (viso[4] - viso[5])
+      - viso[6] * (viso[0] - viso[1])
+      - viso[1] * (viso[7] - viso[6]);
 
     if (a > 0)
       return 1;
@@ -2051,10 +2115,10 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     if (t < 0 || t > 1)
       return 1;
 
-    At = v011iso + (v010iso - v011iso) * t;
-    Bt = v001iso + (v000iso - v001iso) * t;
-    Ct = v101iso + (v100iso - v101iso) * t;
-    Dt = v111iso + (v110iso - v111iso) * t;
+    At = viso[2] + (viso[3] - viso[2]) * t;
+    Bt = viso[1] + (viso[0] - viso[1]) * t;
+    Ct = viso[5] + (viso[4] - viso[5]) * t;
+    Dt = viso[6] + (viso[7] - viso[6]) * t;
 
     verify = At * Ct - Bt * Dt;
 
@@ -2065,11 +2129,11 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     break;
 
   case 2:
-    a = (v011iso - v010iso) * (v101iso - v100iso)
-      - (v111iso - v110iso) * (v001iso - v000iso);
-    b = v100iso * (v011iso - v010iso) + v010iso * (v101iso - v100iso)
-      - v000iso * (v111iso - v110iso)
-      - v110iso * (v001iso - v000iso);
+    a = (viso[2] - viso[3]) * (viso[5] - viso[4])
+      - (viso[6] - viso[7]) * (viso[1] - viso[0]);
+    b = viso[4] * (viso[2] - viso[3]) + viso[3] * (viso[5] - viso[4])
+      - viso[0] * (viso[6] - viso[7])
+      - viso[7] * (viso[1] - viso[0]);
     if (a > 0)
       return 1;
 
@@ -2077,10 +2141,10 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     if (t < 0 || t > 1)
       return 1;
 
-    At = v010iso + (v011iso - v010iso) * t;
-    Bt = v110iso + (v111iso - v110iso) * t;
-    Ct = v100iso + (v101iso - v100iso) * t;
-    Dt = v000iso + (v001iso - v000iso) * t;
+    At = viso[3] + (viso[2] - viso[3]) * t;
+    Bt = viso[7] + (viso[6] - viso[7]) * t;
+    Ct = viso[4] + (viso[5] - viso[4]) * t;
+    Dt = viso[0] + (viso[1] - viso[0]) * t;
 
     verify = At * Ct - Bt * Dt;
 
@@ -2091,11 +2155,11 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     break;
 
   case 3:
-    a = (v001iso - v000iso) * (v111iso - v110iso)
-      - (v011iso - v010iso) * (v101iso - v100iso);
-    b = v110iso * (v001iso - v000iso) + v000iso * (v111iso - v110iso)
-      - v100iso * (v011iso - v010iso)
-      - v010iso * (v101iso - v100iso);
+    a = (viso[1] - viso[0]) * (viso[6] - viso[7])
+      - (viso[2] - viso[3]) * (viso[5] - viso[4]);
+    b = viso[7] * (viso[1] - viso[0]) + viso[0] * (viso[6] - viso[7])
+      - viso[4] * (viso[2] - viso[3])
+      - viso[3] * (viso[5] - viso[4]);
     if (a > 0)
       return 1;
 
@@ -2103,10 +2167,10 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     if (t < 0 || t > 1)
       return 1;
 
-    At = v000iso + (v001iso - v000iso) * t;
-    Bt = v010iso + (v011iso - v010iso) * t;
-    Ct = v110iso + (v111iso - v110iso) * t;
-    Dt = v100iso + (v101iso - v100iso) * t;
+    At = viso[0] + (viso[1] - viso[0]) * t;
+    Bt = viso[3] + (viso[2] - viso[3]) * t;
+    Ct = viso[7] + (viso[6] - viso[7]) * t;
+    Dt = viso[4] + (viso[5] - viso[4]) * t;
 
     verify = At * Ct - Bt * Dt;
 
@@ -2118,11 +2182,11 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
 
   case 4:
 
-    a = (v011iso - v001iso) * (v110iso - v100iso)
-      - (v010iso - v000iso) * (v111iso - v101iso);
-    b = v100iso * (v011iso - v001iso) + v001iso * (v110iso - v100iso)
-      - v101iso * (v010iso - v000iso)
-      - v000iso * (v111iso - v101iso);
+    a = (viso[2] - viso[1]) * (viso[7] - viso[4])
+      - (viso[3] - viso[0]) * (viso[6] - viso[5]);
+    b = viso[4] * (viso[2] - viso[1]) + viso[1] * (viso[7] - viso[4])
+      - viso[5] * (viso[3] - viso[0])
+      - viso[0] * (viso[6] - viso[5]);
 
     if (a > 0)
       return 1;
@@ -2131,10 +2195,10 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     if (t < 0 || t > 1)
       return 1;
 
-    At = v001iso + (v011iso - v001iso) * t;
-    Bt = v000iso + (v010iso - v000iso) * t;
-    Ct = v100iso + (v110iso - v100iso) * t;
-    Dt = v101iso + (v111iso - v101iso) * t;
+    At = viso[1] + (viso[2] - viso[1]) * t;
+    Bt = viso[0] + (viso[3] - viso[0]) * t;
+    Ct = viso[4] + (viso[7] - viso[4]) * t;
+    Dt = viso[5] + (viso[6] - viso[5]) * t;
 
     verify = At * Ct - Bt * Dt;
 
@@ -2146,11 +2210,11 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
 
   case 5:
 
-    a = (v010iso - v000iso) * (v111iso - v101iso)
-      - (v011iso - v001iso) * (v110iso - v100iso);
-    b = v101iso * (v010iso - v000iso) + v000iso * (v111iso - v101iso)
-      - v100iso * (v011iso - v001iso)
-      - v001iso * (v110iso - v100iso);
+    a = (viso[3] - viso[0]) * (viso[6] - viso[5])
+      - (viso[2] - viso[1]) * (viso[7] - viso[4]);
+    b = viso[5] * (viso[3] - viso[0]) + viso[0] * (viso[6] - viso[5])
+      - viso[4] * (viso[2] - viso[1])
+      - viso[1] * (viso[7] - viso[4]);
     if (a > 0)
       return 1;
 
@@ -2158,10 +2222,10 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     if (t < 0 || t > 1)
       return 1;
 
-    At = v000iso + (v010iso - v000iso) * t;
-    Bt = v001iso + (v011iso - v001iso) * t;
-    Ct = v101iso + (v111iso - v101iso) * t;
-    Dt = v100iso + (v110iso - v100iso) * t;
+    At = viso[0] + (viso[3] - viso[0]) * t;
+    Bt = viso[1] + (viso[2] - viso[1]) * t;
+    Ct = viso[5] + (viso[6] - viso[5]) * t;
+    Dt = viso[4] + (viso[7] - viso[4]) * t;
 
     verify = At * Ct - Bt * Dt;
 
@@ -2172,11 +2236,11 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     break;
 
   case 6:
-    a = (v000iso - v010iso) * (v101iso - v111iso)
-      - (v100iso - v110iso) * (v001iso - v011iso);
-    b = v111iso * (v000iso - v010iso) + v010iso * (v101iso - v111iso)
-      - v011iso * (v100iso - v110iso)
-      - v110iso * (v001iso - v011iso);
+    a = (viso[0] - viso[3]) * (viso[5] - viso[6])
+      - (viso[4] - viso[7]) * (viso[1] - viso[2]);
+    b = viso[6] * (viso[0] - viso[3]) + viso[3] * (viso[5] - viso[6])
+      - viso[2] * (viso[4] - viso[7])
+      - viso[7] * (viso[1] - viso[2]);
     if (a > 0)
       return 1;
 
@@ -2184,10 +2248,10 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     if (t < 0 || t > 1)
       return 1;
 
-    At = v010iso + (v000iso - v010iso) * t;
-    Bt = v110iso + (v100iso - v110iso) * t;
-    Ct = v111iso + (v101iso - v111iso) * t;
-    Dt = v011iso + (v001iso - v011iso) * t;
+    At = viso[3] + (viso[0] - viso[3]) * t;
+    Bt = viso[7] + (viso[4] - viso[7]) * t;
+    Ct = viso[6] + (viso[5] - viso[6]) * t;
+    Dt = viso[2] + (viso[1] - viso[2]) * t;
 
     verify = At * Ct - Bt * Dt;
 
@@ -2198,11 +2262,11 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     break;
 
   case 7:
-    a = (v001iso - v011iso) * (v100iso - v110iso)
-      - (v000iso - v010iso) * (v101iso - v111iso);
-    b = v110iso * (v001iso - v011iso) + v011iso * (v100iso - v110iso)
-      - v111iso * (v000iso - v010iso)
-      - v010iso * (v101iso - v111iso);
+    a = (viso[1] - viso[2]) * (viso[4] - viso[7])
+      - (viso[0] - viso[3]) * (viso[5] - viso[6]);
+    b = viso[7] * (viso[1] - viso[2]) + viso[2] * (viso[4] - viso[7])
+      - viso[6] * (viso[0] - viso[3])
+      - viso[3] * (viso[5] - viso[6]);
     if (a > 0)
       return 1;
 
@@ -2210,10 +2274,10 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     if (t < 0 || t > 1)
       return 1;
 
-    At = v011iso + (v001iso - v011iso) * t;
-    Bt = v010iso + (v000iso - v010iso) * t;
-    Ct = v110iso + (v100iso - v110iso) * t;
-    Dt = v111iso + (v101iso - v111iso) * t;
+    At = viso[2] + (viso[1] - viso[2]) * t;
+    Bt = viso[3] + (viso[0] - viso[3]) * t;
+    Ct = viso[7] + (viso[4] - viso[7]) * t;
+    Dt = viso[6] + (viso[5] - viso[6]) * t;
 
     verify = At * Ct - Bt * Dt;
 
@@ -2224,11 +2288,11 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     break;
 
   case 8:
-    a = (v100iso - v000iso) * (v111iso - v011iso)
-      - (v110iso - v010iso) * (v101iso - v001iso);
-    b = v011iso * (v100iso - v000iso) + v000iso * (v111iso - v011iso)
-      - v001iso * (v110iso - v010iso)
-      - v010iso * (v101iso - v001iso);
+    a = (viso[4] - viso[0]) * (viso[6] - viso[2])
+      - (viso[7] - viso[3]) * (viso[5] - viso[1]);
+    b = viso[2] * (viso[4] - viso[0]) + viso[0] * (viso[6] - viso[2])
+      - viso[1] * (viso[7] - viso[3])
+      - viso[3] * (viso[5] - viso[1]);
     if (a > 0)
       return 1;
 
@@ -2236,10 +2300,10 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     if (t < 0 || t > 1)
       return 1;
 
-    At = v000iso + (v100iso - v000iso) * t;
-    Bt = v010iso + (v110iso - v010iso) * t;
-    Ct = v011iso + (v111iso - v011iso) * t;
-    Dt = v001iso + (v101iso - v001iso) * t;
+    At = viso[0] + (viso[4] - viso[0]) * t;
+    Bt = viso[3] + (viso[7] - viso[3]) * t;
+    Ct = viso[2] + (viso[6] - viso[2]) * t;
+    Dt = viso[1] + (viso[5] - viso[1]) * t;
 
     verify = At * Ct - Bt * Dt;
 
@@ -2250,11 +2314,11 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     break;
 
   case 9:
-    a = (v101iso - v001iso) * (v110iso - v010iso)
-      - (v100iso - v000iso) * (v111iso - v011iso);
-    b = v010iso * (v101iso - v001iso) + v001iso * (v110iso - v010iso)
-      - v011iso * (v100iso - v000iso)
-      - v000iso * (v111iso - v011iso);
+    a = (viso[5] - viso[1]) * (viso[7] - viso[3])
+      - (viso[4] - viso[0]) * (viso[6] - viso[2]);
+    b = viso[3] * (viso[5] - viso[1]) + viso[1] * (viso[7] - viso[3])
+      - viso[2] * (viso[4] - viso[0])
+      - viso[0] * (viso[6] - viso[2]);
     if (a > 0)
       return 1;
 
@@ -2262,10 +2326,10 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     if (t < 0 || t > 1)
       return 1;
 
-    At = v001iso + (v101iso - v001iso) * t;
-    Bt = v000iso + (v100iso - v000iso) * t;
-    Ct = v010iso + (v110iso - v010iso) * t;
-    Dt = v011iso + (v111iso - v011iso) * t;
+    At = viso[1] + (viso[5] - viso[1]) * t;
+    Bt = viso[0] + (viso[4] - viso[0]) * t;
+    Ct = viso[3] + (viso[7] - viso[3]) * t;
+    Dt = viso[2] + (viso[6] - viso[2]) * t;
 
     verify = At * Ct - Bt * Dt;
 
@@ -2276,11 +2340,11 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     break;
 
   case 10:
-    a = (v111iso - v011iso) * (v100iso - v000iso)
-      - (v101iso - v001iso) * (v110iso - v010iso);
-    b = v000iso * (v111iso - v011iso) + v011iso * (v100iso - v000iso)
-      - v010iso * (v101iso - v001iso)
-      - v001iso * (v110iso - v010iso);
+    a = (viso[6] - viso[2]) * (viso[4] - viso[0])
+      - (viso[5] - viso[1]) * (viso[7] - viso[3]);
+    b = viso[0] * (viso[6] - viso[2]) + viso[2] * (viso[4] - viso[0])
+      - viso[3] * (viso[5] - viso[1])
+      - viso[1] * (viso[7] - viso[3]);
     if (a > 0)
       return 1;
 
@@ -2288,10 +2352,10 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     if (t < 0 || t > 1)
       return 1;
 
-    At = v011iso + (v111iso - v011iso) * t;
-    Bt = v001iso + (v101iso - v001iso) * t;
-    Ct = v000iso + (v100iso - v000iso) * t;
-    Dt = v010iso + (v110iso - v010iso) * t;
+    At = viso[2] + (viso[6] - viso[2]) * t;
+    Bt = viso[1] + (viso[5] - viso[1]) * t;
+    Ct = viso[0] + (viso[4] - viso[0]) * t;
+    Dt = viso[3] + (viso[7] - viso[3]) * t;
 
     verify = At * Ct - Bt * Dt;
 
@@ -2302,11 +2366,11 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     break;
 
   case 11:
-    a = (v110iso - v010iso) * (v101iso - v001iso)
-      - (v111iso - v011iso) * (v100iso - v000iso);
-    b = v001iso * (v110iso - v010iso) + v010iso * (v101iso - v001iso)
-      - v000iso * (v111iso - v011iso)
-      - v011iso * (v100iso - v000iso);
+    a = (viso[7] - viso[3]) * (viso[5] - viso[1])
+      - (viso[6] - viso[2]) * (viso[4] - viso[0]);
+    b = viso[1] * (viso[7] - viso[3]) + viso[3] * (viso[5] - viso[1])
+      - viso[0] * (viso[6] - viso[2])
+      - viso[2] * (viso[4] - viso[0]);
     if (a > 0)
       return 1;
 
@@ -2314,10 +2378,10 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
     if (t < 0 || t > 1)
       return 1;
 
-    At = v010iso + (v110iso - v010iso) * t;
-    Bt = v011iso + (v111iso - v011iso) * t;
-    Ct = v001iso + (v101iso - v001iso) * t;
-    Dt = v000iso + (v100iso - v000iso) * t;
+    At = viso[3] + (viso[7] - viso[3]) * t;
+    Bt = viso[2] + (viso[6] - viso[2]) * t;
+    Ct = viso[1] + (viso[5] - viso[1]) * t;
+    Dt = viso[0] + (viso[4] - viso[0]) * t;
 
     verify = At * Ct - Bt * Dt;
 
@@ -2342,12 +2406,12 @@ bool MarchingCubes::interior_test_case13()
   double t1, t2, At1 = 0.0, Bt1 = 0.0, Ct1 = 0.0, Dt1 = 0.0;
   double At2 = 0.0, Bt2 = 0.0, Ct2 = 0.0, Dt2 = 0.0, a = 0.0, b = 0.0, c = 0.0;
 
-  a = (v000iso - v001iso) * (v110iso - v111iso)
-    - (v100iso - v101iso) * (v010iso - v011iso);
-  b = v111iso * (v000iso - v001iso) + v001iso * (v110iso - v111iso)
-    - v011iso * (v100iso - v101iso)
-    - v101iso * (v010iso - v011iso);
-  c = v001iso*v111iso - v101iso*v011iso;
+  a = (viso[0] - viso[1]) * (viso[7] - viso[6])
+    - (viso[4] - viso[5]) * (viso[3] - viso[2]);
+  b = viso[6] * (viso[0] - viso[1]) + viso[1] * (viso[7] - viso[6])
+    - viso[2] * (viso[4] - viso[5])
+    - viso[5] * (viso[3] - viso[2]);
+  c = viso[1]*viso[6] - viso[5]*viso[2];
 
   double delta = b*b - 4*a*c;
 
@@ -2358,18 +2422,18 @@ bool MarchingCubes::interior_test_case13()
   // printf("delta = %f, t1 = %f, t2 = %f\n", delta, t1, t2);
 
   if ((t1 < 1)&&(t1>0) &&(t2 < 1)&&(t2 > 0)) {
-    At1 = v001iso + (v000iso - v001iso) * t1;
-    Bt1 = v101iso + (v100iso - v101iso) * t1;
-    Ct1 = v111iso + (v110iso - v111iso) * t1;
-    Dt1 = v011iso + (v010iso - v011iso) * t1;
+    At1 = viso[1] + (viso[0] - viso[1]) * t1;
+    Bt1 = viso[5] + (viso[4] - viso[5]) * t1;
+    Ct1 = viso[6] + (viso[7] - viso[6]) * t1;
+    Dt1 = viso[2] + (viso[3] - viso[2]) * t1;
 
     double x1 = (At1 - Dt1)/(At1 + Ct1 - Bt1 - Dt1);
     double y1 = (At1 - Bt1)/(At1 + Ct1 - Bt1 - Dt1);
 
-    At2 = v001iso + (v000iso - v001iso) * t2;
-    Bt2 = v101iso + (v100iso - v101iso) * t2;
-    Ct2 = v111iso + (v110iso - v111iso) * t2;
-    Dt2 = v011iso + (v010iso - v011iso) * t2;
+    At2 = viso[1] + (viso[0] - viso[1]) * t2;
+    Bt2 = viso[5] + (viso[4] - viso[5]) * t2;
+    Ct2 = viso[6] + (viso[7] - viso[6]) * t2;
+    Dt2 = viso[2] + (viso[3] - viso[2]) * t2;
 
     double x2 = (At2 - Dt2)/(At2 + Ct2 - Bt2 - Dt2);
     double y2 = (At2 - Bt2)/(At2 + Ct2 - Bt2 - Dt2);
@@ -2403,5 +2467,5 @@ int compare_indices(const void *iptr, const void *jptr)
 void MarchingCubes::print_cube()
 {
   fprintf(screen,"\t %d %d %d %d %d %d %d %d\n",
-         v000,v001,v011,v010,v100,v101,v111,v110);
+         v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7]);
 }
