@@ -51,6 +51,7 @@ class CreateISurf : protected Pointers {
   double xyzsize[3];        // size of lowest level cell (must be uniform grid)
   int nxyz[3], Nxyz;        // dimensions of grid
   double **cvalues;         // array of corner point values
+  double ***invalues;       // array of inner values
   double **mvalues;         // minimum intersection value
   int **svalues;            // marks corners as in or out
   double ***ivalues;        // point of intersection between corner points
@@ -62,7 +63,7 @@ class CreateISurf : protected Pointers {
   Surf::Tri *ltris;         // local copy of Surf tris
   double **cuvalues;        // local copy of custom per-surf data
 
-  int aveFlag;              // flag for how corners in unknown cells are set
+  int ctype;              // flag for how corners in unknown cells are set
   double mind;              // minimum cell length
   double cin, cout;         // in and out corner values
   class FixAblate *ablate;  // ablate fix
@@ -72,8 +73,11 @@ class CreateISurf : protected Pointers {
   int **ixyz;             // ix,iy,iz indices (1 to Nxyz) of my cells
                           // in 2d/3d ablate grid (iz = 1 for 2d)
 
+  // Various arrays to pass to other processors
+
   int **sghost;
   double **cghost;
+  double ***inghost;      
   double ***ighost;       // ditto for my ghost cells communicated to me
   int maxgrid;            // max size of per-cell vectors/arrays
   int maxghost;           // max size of cdelta_ghost
@@ -97,9 +101,10 @@ class CreateISurf : protected Pointers {
     ubuf(uint32_t arg) : u(arg) {}
   };
 
-  // functions to set corner values
+  // functions to set corner/inner values
 
   void set_corners();
+  void set_inner();
 
   // send/recv values between neighborind cells (similar to fix_ablate)
 
@@ -134,7 +139,7 @@ class CreateISurf : protected Pointers {
 
   // misc functions
 
-  double param2in(double, double);
+  double param2cval(double, double);
 };
 
 }
