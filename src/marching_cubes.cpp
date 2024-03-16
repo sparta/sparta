@@ -117,9 +117,28 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
     v[6] = cvalues[icell][7];
     v[7] = cvalues[icell][6];
 
-    // temporary viso values
+    // shifted corner values values
 
     for (i = 0; i < 8; i++) viso[i] = v[i] - thresh;
+
+    // precompute intersections (some will not be used)
+
+    iv[0]  = interpolate(v[0],v[1],lo[0],hi[0]);
+    iv[1]  = interpolate(v[1],v[2],lo[1],hi[1]);
+    iv[2]  = interpolate(v[3],v[2],lo[0],hi[0]);
+    iv[3]  = interpolate(v[0],v[3],lo[1],hi[1]);
+
+    iv[4]  = interpolate(v[4],v[5],lo[0],hi[0]);
+    iv[5]  = interpolate(v[5],v[6],lo[1],hi[1]);
+    iv[6]  = interpolate(v[7],v[6],lo[0],hi[0]);
+    iv[7]  = interpolate(v[4],v[7],lo[1],hi[1]);
+
+    iv[8]  = interpolate(v[0],v[4],lo[2],hi[2]);
+    iv[9]  = interpolate(v[1],v[5],lo[2],hi[2]);
+    iv[10] = interpolate(v[2],v[6],lo[2],hi[2]);
+    iv[11] = interpolate(v[3],v[7],lo[2],hi[2]);
+
+    // determine case
 
     bit0 = v[0] <= thresh ? 0 : 1;
     bit1 = v[1] <= thresh ? 0 : 1;
@@ -509,20 +528,20 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
 
     // intersection of surfaces on all cell edges
 
-    i0  = interpolate(cvalues[icell][0][1],cvalues[icell][1][0],lo[0],hi[0]);
-    i1  = interpolate(cvalues[icell][1][3],cvalues[icell][3][2],lo[1],hi[1]);
-    i2  = interpolate(cvalues[icell][2][1],cvalues[icell][3][0],lo[0],hi[0]);
-    i3  = interpolate(cvalues[icell][0][3],cvalues[icell][2][2],lo[1],hi[1]);
+    iv[0]  = interpolate(cvalues[icell][0][1],cvalues[icell][1][0],lo[0],hi[0]);
+    iv[1]  = interpolate(cvalues[icell][1][3],cvalues[icell][3][2],lo[1],hi[1]);
+    iv[2]  = interpolate(cvalues[icell][2][1],cvalues[icell][3][0],lo[0],hi[0]);
+    iv[3]  = interpolate(cvalues[icell][0][3],cvalues[icell][2][2],lo[1],hi[1]);
 
-    i4  = interpolate(cvalues[icell][4][1],cvalues[icell][5][0],lo[0],hi[0]);
-    i5  = interpolate(cvalues[icell][5][3],cvalues[icell][7][2],lo[1],hi[1]);
-    i6  = interpolate(cvalues[icell][6][1],cvalues[icell][7][0],lo[0],hi[0]);
-    i7  = interpolate(cvalues[icell][4][3],cvalues[icell][6][2],lo[1],hi[1]);
+    iv[4]  = interpolate(cvalues[icell][4][1],cvalues[icell][5][0],lo[0],hi[0]);
+    iv[5]  = interpolate(cvalues[icell][5][3],cvalues[icell][7][2],lo[1],hi[1]);
+    iv[6]  = interpolate(cvalues[icell][6][1],cvalues[icell][7][0],lo[0],hi[0]);
+    iv[7]  = interpolate(cvalues[icell][4][3],cvalues[icell][6][2],lo[1],hi[1]);
 
-    i8  = interpolate(cvalues[icell][0][5],cvalues[icell][4][4],lo[2],hi[2]);
-    i9  = interpolate(cvalues[icell][1][5],cvalues[icell][5][4],lo[2],hi[2]);
-    i10 = interpolate(cvalues[icell][3][5],cvalues[icell][7][4],lo[2],hi[2]);
-    i11 = interpolate(cvalues[icell][2][5],cvalues[icell][6][4],lo[2],hi[2]);
+    iv[8]  = interpolate(cvalues[icell][0][5],cvalues[icell][4][4],lo[2],hi[2]);
+    iv[9]  = interpolate(cvalues[icell][1][5],cvalues[icell][5][4],lo[2],hi[2]);
+    iv[10] = interpolate(cvalues[icell][3][5],cvalues[icell][7][4],lo[2],hi[2]);
+    iv[11] = interpolate(cvalues[icell][2][5],cvalues[icell][6][4],lo[2],hi[2]);
 
     // make bits 2, 3, 6 and 7 consistent with Lewiner paper (see NOTE above)
 
@@ -550,18 +569,18 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
       break;
 
     case  1:
-      nsurf = add_triangle_inner(tiling1[config], 1);
+      nsurf = add_triangle(tiling1[config], 1);
       break;
 
     case  2:
-      nsurf = add_triangle_inner(tiling2[config], 2);
+      nsurf = add_triangle(tiling2[config], 2);
       break;
 
     case  3:
       if (test_face_inner(test3[config]))
-        nsurf = add_triangle_inner(tiling3_2[config], 4); // 3.2
+        nsurf = add_triangle(tiling3_2[config], 4); // 3.2
       else
-        nsurf = add_triangle_inner(tiling3_1[config], 2); // 3.1
+        nsurf = add_triangle(tiling3_1[config], 2); // 3.1
       break;
 
     case  4:
@@ -574,18 +593,18 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
       viso[6] = cvalues[icell][7][4] - thresh;
       viso[7] = cvalues[icell][6][4] - thresh;
       if (modified_test_interior(test4[config],icase))
-        nsurf = add_triangle_inner(tiling4_1[config], 2); // 4.1.1
+        nsurf = add_triangle(tiling4_1[config], 2); // 4.1.1
       else
-        nsurf = add_triangle_inner(tiling4_2[config], 6); // 4.1.2
+        nsurf = add_triangle(tiling4_2[config], 6); // 4.1.2
       break;
 
     case  5:
-      nsurf = add_triangle_inner(tiling5[config], 3);
+      nsurf = add_triangle(tiling5[config], 3);
       break;
 
     case  6:
       if (test_face_inner(test6[config][0]))
-        nsurf = add_triangle_inner(tiling6_2[config], 5); // 6.2
+        nsurf = add_triangle(tiling6_2[config], 5); // 6.2
       else {
         viso[0] = cvalues[icell][0][5] - thresh;
         viso[1] = cvalues[icell][1][5] - thresh;
@@ -596,9 +615,9 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
         viso[6] = cvalues[icell][7][4] - thresh;
         viso[7] = cvalues[icell][6][4] - thresh;
         if (modified_test_interior(test6[config][1],icase))
-          nsurf = add_triangle_inner(tiling6_1_1[config], 3); // 6.1.1
+          nsurf = add_triangle(tiling6_1_1[config], 3); // 6.1.1
         else {
-          nsurf = add_triangle_inner(tiling6_1_2[config], 9); // 6.1.2
+          nsurf = add_triangle(tiling6_1_2[config], 9); // 6.1.2
         }
       }
       break;
@@ -609,19 +628,19 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
       if (test_face_inner(test7[config][2])) subconfig +=  4;
       switch (subconfig) {
       case 0:
-        nsurf = add_triangle_inner(tiling7_1[config], 3); break;
+        nsurf = add_triangle(tiling7_1[config], 3); break;
       case 1:
-        nsurf = add_triangle_inner(tiling7_2[config][0], 5); break;
+        nsurf = add_triangle(tiling7_2[config][0], 5); break;
       case 2:
-        nsurf = add_triangle_inner(tiling7_2[config][1], 5); break;
+        nsurf = add_triangle(tiling7_2[config][1], 5); break;
       case 3:
-        nsurf = add_triangle_inner(tiling7_3[config][0], 9); break;
+        nsurf = add_triangle(tiling7_3[config][0], 9); break;
       case 4:
-        nsurf = add_triangle_inner(tiling7_2[config][2], 5); break;
+        nsurf = add_triangle(tiling7_2[config][2], 5); break;
       case 5:
-        nsurf = add_triangle_inner(tiling7_3[config][1], 9); break;
+        nsurf = add_triangle(tiling7_3[config][1], 9); break;
       case 6:
-        nsurf = add_triangle_inner(tiling7_3[config][2], 9); break;
+        nsurf = add_triangle(tiling7_3[config][2], 9); break;
       case 7:
         viso[0] = cvalues[icell][0][5] - thresh;
         viso[1] = cvalues[icell][1][5] - thresh;
@@ -632,31 +651,31 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
         viso[6] = cvalues[icell][7][4] - thresh;
         viso[7] = cvalues[icell][6][4] - thresh;
         if (test_interior(test7[config][3],icase))
-          nsurf = add_triangle_inner(tiling7_4_2[config], 9);
+          nsurf = add_triangle(tiling7_4_2[config], 9);
         else
-          nsurf = add_triangle_inner(tiling7_4_1[config], 5);
+          nsurf = add_triangle(tiling7_4_1[config], 5);
         break;
       };
       break;
 
     case  8:
-      nsurf = add_triangle_inner(tiling8[config], 2);
+      nsurf = add_triangle(tiling8[config], 2);
       break;
 
     case  9:
-      nsurf = add_triangle_inner(tiling9[config], 4);
+      nsurf = add_triangle(tiling9[config], 4);
       break;
 
     case 10:
       if (test_face_inner(test10[config][0])) {
         if (test_face_inner(test10[config][1]))
-          nsurf = add_triangle_inner(tiling10_1_1_[config], 4); // 10.1.1
+          nsurf = add_triangle(tiling10_1_1_[config], 4); // 10.1.1
         else {
-          nsurf = add_triangle_inner(tiling10_2[config], 8); // 10.2
+          nsurf = add_triangle(tiling10_2[config], 8); // 10.2
         }
       } else {
         if (test_face_inner(test10[config][1])) {
-          nsurf = add_triangle_inner(tiling10_2_[config], 8); // 10.2
+          nsurf = add_triangle(tiling10_2_[config], 8); // 10.2
         } else {
           viso[0] = cvalues[icell][0][5] - thresh;
           viso[1] = cvalues[icell][1][5] - thresh;
@@ -667,27 +686,27 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
           viso[6] = cvalues[icell][7][4] - thresh;
           viso[7] = cvalues[icell][6][4] - thresh;
           if (test_interior(test10[config][2],icase))
-            nsurf = add_triangle_inner(tiling10_1_1[config], 4); // 10.1.1
+            nsurf = add_triangle(tiling10_1_1[config], 4); // 10.1.1
           else
-            nsurf = add_triangle_inner(tiling10_1_2[config], 8); // 10.1.2
+            nsurf = add_triangle(tiling10_1_2[config], 8); // 10.1.2
         }
       }
       break;
 
     case 11:
-      nsurf = add_triangle_inner(tiling11[config], 4);
+      nsurf = add_triangle(tiling11[config], 4);
       break;
 
     case 12:
       if (test_face_inner(test12[config][0])) {
         if (test_face_inner(test12[config][1]))
-          nsurf = add_triangle_inner(tiling12_1_1_[config], 4); // 12.1.1
+          nsurf = add_triangle(tiling12_1_1_[config], 4); // 12.1.1
         else {
-          nsurf = add_triangle_inner(tiling12_2[config], 8); // 12.2
+          nsurf = add_triangle(tiling12_2[config], 8); // 12.2
         }
       } else {
         if (test_face_inner(test12[config][1])) {
-          nsurf = add_triangle_inner(tiling12_2_[config], 8); // 12.2
+          nsurf = add_triangle(tiling12_2_[config], 8); // 12.2
         } else {
           viso[0] = cvalues[icell][0][5] - thresh;
           viso[1] = cvalues[icell][1][5] - thresh;
@@ -698,9 +717,9 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
           viso[6] = cvalues[icell][7][4] - thresh;
           viso[7] = cvalues[icell][6][4] - thresh;
           if (test_interior(test12[config][2],icase))
-            nsurf = add_triangle_inner(tiling12_1_1[config], 4); // 12.1.1
+            nsurf = add_triangle(tiling12_1_1[config], 4); // 12.1.1
           else
-            nsurf = add_triangle_inner(tiling12_1_2[config], 8); // 12.1.2
+            nsurf = add_triangle(tiling12_1_2[config], 8); // 12.1.2
         }
       }
       break;
@@ -715,61 +734,61 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
 
       switch (subconfig13[subconfig]) {
       case 0:/* 13.1 */
-        nsurf = add_triangle_inner(tiling13_1[config], 4); break;
+        nsurf = add_triangle(tiling13_1[config], 4); break;
 
       case 1:/* 13.2 */
-        nsurf = add_triangle_inner(tiling13_2[config][0], 6); break;
+        nsurf = add_triangle(tiling13_2[config][0], 6); break;
       case 2:/* 13.2 */
-        nsurf = add_triangle_inner(tiling13_2[config][1], 6); break;
+        nsurf = add_triangle(tiling13_2[config][1], 6); break;
       case 3:/* 13.2 */
-        nsurf = add_triangle_inner(tiling13_2[config][2], 6); break;
+        nsurf = add_triangle(tiling13_2[config][2], 6); break;
       case 4:/* 13.2 */
-        nsurf = add_triangle_inner(tiling13_2[config][3], 6); break;
+        nsurf = add_triangle(tiling13_2[config][3], 6); break;
       case 5:/* 13.2 */
-        nsurf = add_triangle_inner(tiling13_2[config][4], 6); break;
+        nsurf = add_triangle(tiling13_2[config][4], 6); break;
       case 6:/* 13.2 */
-        nsurf = add_triangle_inner(tiling13_2[config][5], 6); break;
+        nsurf = add_triangle(tiling13_2[config][5], 6); break;
 
       case 7:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3[config][0], 10); break;
+        nsurf = add_triangle(tiling13_3[config][0], 10); break;
       case 8:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3[config][1], 10); break;
+        nsurf = add_triangle(tiling13_3[config][1], 10); break;
       case 9:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3[config][2], 10); break;
+        nsurf = add_triangle(tiling13_3[config][2], 10); break;
       case 10:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3[config][3], 10); break;
+        nsurf = add_triangle(tiling13_3[config][3], 10); break;
       case 11:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3[config][4], 10); break;
+        nsurf = add_triangle(tiling13_3[config][4], 10); break;
       case 12:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3[config][5], 10); break;
+        nsurf = add_triangle(tiling13_3[config][5], 10); break;
       case 13:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3[config][6], 10); break;
+        nsurf = add_triangle(tiling13_3[config][6], 10); break;
       case 14:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3[config][7], 10); break;
+        nsurf = add_triangle(tiling13_3[config][7], 10); break;
       case 15:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3[config][8], 10); break;
+        nsurf = add_triangle(tiling13_3[config][8], 10); break;
       case 16:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3[config][9], 10); break;
+        nsurf = add_triangle(tiling13_3[config][9], 10); break;
       case 17:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3[config][10], 10); break;
+        nsurf = add_triangle(tiling13_3[config][10], 10); break;
       case 18:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3[config][11], 10); break;
+        nsurf = add_triangle(tiling13_3[config][11], 10); break;
 
       case 19:/* 13.4 */
-        nsurf = add_triangle_inner(tiling13_4[config][0], 12); break;
+        nsurf = add_triangle(tiling13_4[config][0], 12); break;
       case 20:/* 13.4 */
-        nsurf = add_triangle_inner(tiling13_4[config][1], 12); break;
+        nsurf = add_triangle(tiling13_4[config][1], 12); break;
       case 21:/* 13.4 */
-        nsurf = add_triangle_inner(tiling13_4[config][2], 12); break;
+        nsurf = add_triangle(tiling13_4[config][2], 12); break;
       case 22:/* 13.4 */
-        nsurf = add_triangle_inner(tiling13_4[config][3], 12); break;
+        nsurf = add_triangle(tiling13_4[config][3], 12); break;
 
       case 23:/* 13.5 */
         subconfig = 0;
         if (interior_test_case13())
-          nsurf = add_triangle_inner(tiling13_5_1[config][0], 6);
+          nsurf = add_triangle(tiling13_5_1[config][0], 6);
         else
-          nsurf = add_triangle_inner(tiling13_5_2[config][0], 10);
+          nsurf = add_triangle(tiling13_5_2[config][0], 10);
         break;
 
       case 24:/* 13.5 */
@@ -783,9 +802,9 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
         viso[7] = cvalues[icell][6][4] - thresh;
         subconfig = 1;
         if (interior_test_case13())
-          nsurf = add_triangle_inner(tiling13_5_1[config][1], 6);
+          nsurf = add_triangle(tiling13_5_1[config][1], 6);
         else
-          nsurf = add_triangle_inner(tiling13_5_2[config][1], 10);
+          nsurf = add_triangle(tiling13_5_2[config][1], 10);
         break;
 
       case 25:/* 13.5 */
@@ -799,9 +818,9 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
         viso[7] = cvalues[icell][6][4] - thresh;
         subconfig = 2;
         if (interior_test_case13())
-          nsurf = add_triangle_inner(tiling13_5_1[config][2], 6);
+          nsurf = add_triangle(tiling13_5_1[config][2], 6);
         else
-          nsurf = add_triangle_inner(tiling13_5_2[config][2], 10);
+          nsurf = add_triangle(tiling13_5_2[config][2], 10);
         break;
 
       case 26:/* 13.5 */
@@ -815,51 +834,51 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
         viso[7] = cvalues[icell][6][4] - thresh;
         subconfig = 3;
         if (interior_test_case13())
-          nsurf = add_triangle_inner(tiling13_5_1[config][3], 6);
+          nsurf = add_triangle(tiling13_5_1[config][3], 6);
         else
-          nsurf = add_triangle_inner(tiling13_5_2[config][3], 10);
+          nsurf = add_triangle(tiling13_5_2[config][3], 10);
         break;
 
       case 27:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3_[config][0], 10); break;
+        nsurf = add_triangle(tiling13_3_[config][0], 10); break;
       case 28:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3_[config][1], 10); break;
+        nsurf = add_triangle(tiling13_3_[config][1], 10); break;
       case 29:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3_[config][2], 10); break;
+        nsurf = add_triangle(tiling13_3_[config][2], 10); break;
       case 30:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3_[config][3], 10); break;
+        nsurf = add_triangle(tiling13_3_[config][3], 10); break;
       case 31:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3_[config][4], 10); break;
+        nsurf = add_triangle(tiling13_3_[config][4], 10); break;
       case 32:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3_[config][5], 10); break;
+        nsurf = add_triangle(tiling13_3_[config][5], 10); break;
       case 33:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3_[config][6], 10); break;
+        nsurf = add_triangle(tiling13_3_[config][6], 10); break;
       case 34:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3_[config][7], 10); break;
+        nsurf = add_triangle(tiling13_3_[config][7], 10); break;
       case 35:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3_[config][8], 10); break;
+        nsurf = add_triangle(tiling13_3_[config][8], 10); break;
       case 36:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3_[config][9], 10); break;
+        nsurf = add_triangle(tiling13_3_[config][9], 10); break;
       case 37:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3_[config][10], 10); break;
+        nsurf = add_triangle(tiling13_3_[config][10], 10); break;
       case 38:/* 13.3 */
-        nsurf = add_triangle_inner(tiling13_3_[config][11], 10); break;
+        nsurf = add_triangle(tiling13_3_[config][11], 10); break;
 
       case 39:/* 13.2 */
-        nsurf = add_triangle_inner(tiling13_2_[config][0], 6); break;
+        nsurf = add_triangle(tiling13_2_[config][0], 6); break;
       case 40:/* 13.2 */
-        nsurf = add_triangle_inner(tiling13_2_[config][1], 6); break;
+        nsurf = add_triangle(tiling13_2_[config][1], 6); break;
       case 41:/* 13.2 */
-        nsurf = add_triangle_inner(tiling13_2_[config][2], 6); break;
+        nsurf = add_triangle(tiling13_2_[config][2], 6); break;
       case 42:/* 13.2 */
-        nsurf = add_triangle_inner(tiling13_2_[config][3], 6); break;
+        nsurf = add_triangle(tiling13_2_[config][3], 6); break;
       case 43:/* 13.2 */
-        nsurf = add_triangle_inner(tiling13_2_[config][4], 6); break;
+        nsurf = add_triangle(tiling13_2_[config][4], 6); break;
       case 44:/* 13.2 */
-        nsurf = add_triangle_inner(tiling13_2_[config][5], 6); break;
+        nsurf = add_triangle(tiling13_2_[config][5], 6); break;
 
       case 45:/* 13.1 */
-        nsurf = add_triangle_inner(tiling13_1_[config], 4); break;
+        nsurf = add_triangle(tiling13_1_[config], 4); break;
 
       default:
         print_cube();
@@ -868,7 +887,7 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
       break;
 
     case 14:
-      nsurf = add_triangle_inner(tiling14[config], 4);
+      nsurf = add_triangle(tiling14[config], 4);
       break;
     };
 
@@ -1331,7 +1350,8 @@ void MarchingCubes::cleanup()
 }
 
 /* ----------------------------------------------------------------------
-   adding triangles
+   adding triangles. Each case corresponds to the edge ordered according
+   to difure 6 in Lewiner 2002
 ------------------------------------------------------------------------- */
 
 int MarchingCubes::add_triangle(int *trig, int n)
@@ -1339,297 +1359,139 @@ int MarchingCubes::add_triangle(int *trig, int n)
   for(int t = 0; t < 3*n; t++) {
     switch (trig[t]) {
     case 0:
-      pt[t][0] = interpolate(v[0],v[1],lo[0],hi[0]);
+      pt[t][0] = iv[0];
       pt[t][1] = lo[1];
       pt[t][2] = lo[2];
       break;
     case 1:
       pt[t][0] = hi[0];
-      pt[t][1] = interpolate(v[1],v[2],lo[1],hi[1]);
+      pt[t][1] = iv[1];
       pt[t][2] = lo[2];
       break;
     case 2:
-      pt[t][0] = interpolate(v[3],v[2],lo[0],hi[0]);
+      pt[t][0] = iv[2];
       pt[t][1] = hi[1];
       pt[t][2] = lo[2];
       break;
     case 3:
       pt[t][0] = lo[0];
-      pt[t][1] = interpolate(v[0],v[3],lo[1],hi[1]);
+      pt[t][1] = iv[3];
       pt[t][2] = lo[2];
       break;
     case 4:
-      pt[t][0] = interpolate(v[4],v[5],lo[0],hi[0]);
+      pt[t][0] = iv[4];
       pt[t][1] = lo[1];
       pt[t][2] = hi[2];
       break;
     case 5:
       pt[t][0] = hi[0];
-      pt[t][1] = interpolate(v[5],v[6],lo[1],hi[1]);
+      pt[t][1] = iv[5];
       pt[t][2] = hi[2];
       break;
     case 6:
-      pt[t][0] = interpolate(v[7],v[6],lo[0],hi[0]);
+      pt[t][0] = iv[6];
       pt[t][1] = hi[1];
       pt[t][2] = hi[2];
       break;
     case 7:
       pt[t][0] = lo[0];
-      pt[t][1] = interpolate(v[4],v[7],lo[1],hi[1]);
+      pt[t][1] = iv[7];
       pt[t][2] = hi[2];
       break;
     case 8:
       pt[t][0] = lo[0];
       pt[t][1] = lo[1];
-      pt[t][2] = interpolate(v[0],v[4],lo[2],hi[2]);
+      pt[t][2] = iv[8];
       break;
     case 9:
       pt[t][0] = hi[0];
       pt[t][1] = lo[1];
-      pt[t][2] = interpolate(v[1],v[5],lo[2],hi[2]);
+      pt[t][2] = iv[9];
       break;
     case 10:
       pt[t][0] = hi[0];
       pt[t][1] = hi[1];
-      pt[t][2] = interpolate(v[2],v[6],lo[2],hi[2]);
+      pt[t][2] = iv[10];
       break;
     case 11:
       pt[t][0] = lo[0];
       pt[t][1] = hi[1];
-      pt[t][2] = interpolate(v[3],v[7],lo[2],hi[2]);
+      pt[t][2] = iv[11];
       break;
     case 12: {
       int u = 0;
       pt[t][0] = pt[t][1] = pt[t][2] = 0.0;
       if (bit0 ^ bit1) {
         ++u;
-        pt[t][0] += interpolate(v[0],v[1],lo[0],hi[0]);
+        pt[t][0] += iv[0];
         pt[t][1] += lo[1];
         pt[t][2] += lo[2];
       }
       if (bit1 ^ bit2) {
         ++u;
         pt[t][0] += hi[0];
-        pt[t][1] += interpolate(v[1],v[2],lo[1],hi[1]);
+        pt[t][1] += iv[1];
         pt[t][2] += lo[2];
       }
       if (bit2 ^ bit3) {
         ++u;
-        pt[t][0] += interpolate(v[3],v[2],lo[0],hi[0]);
+        pt[t][0] += iv[2];
         pt[t][1] += hi[1];
         pt[t][2] += lo[2];
       }
       if (bit3 ^ bit0) {
         ++u;
         pt[t][0] += lo[0];
-        pt[t][1] += interpolate(v[0],v[3],lo[1],hi[1]);
+        pt[t][1] += iv[3];
         pt[t][2] += lo[2];
       }
       if (bit4 ^ bit5) {
         ++u;
-        pt[t][0] += interpolate(v[4],v[5],lo[0],hi[0]);
+        pt[t][0] += iv[4];
         pt[t][1] += lo[1];
         pt[t][2] += hi[2];
       }
       if (bit5 ^ bit6) {
         ++u;
         pt[t][0] += hi[0];
-        pt[t][1] += interpolate(v[5],v[6],lo[1],hi[1]);
+        pt[t][1] += iv[5];
         pt[t][2] += hi[2];
       }
       if (bit6 ^ bit7) {
         ++u;
-        pt[t][0] += interpolate(v[7],v[6],lo[0],hi[0]);
+        pt[t][0] += iv[6];
         pt[t][1] += hi[1];
         pt[t][2] += hi[2];
       }
       if (bit7 ^ bit4) {
         ++u;
         pt[t][0] += lo[0];
-        pt[t][1] += interpolate(v[4],v[7],lo[1],hi[1]);
+        pt[t][1] += iv[7];
         pt[t][2] += hi[2];
       }
       if (bit0 ^ bit4) {
         ++u;
         pt[t][0] += lo[0];
         pt[t][1] += lo[1];
-        pt[t][2] += interpolate(v[0],v[4],lo[2],hi[2]);
+        pt[t][2] += iv[8];
       }
       if (bit1 ^ bit5) {
         ++u;
         pt[t][0] += hi[0];
         pt[t][1] += lo[1];
-        pt[t][2] += interpolate(v[1],v[5],lo[2],hi[2]);
+        pt[t][2] += iv[9];
       }
       if (bit2 ^ bit6) {
         ++u;
         pt[t][0] += hi[0];
         pt[t][1] += hi[1];
-        pt[t][2] += interpolate(v[2],v[6],lo[2],hi[2]);
+        pt[t][2] += iv[10];
       }
       if (bit3 ^ bit7) {
         ++u;
         pt[t][0] += lo[0];
         pt[t][1] += hi[1];
-        pt[t][2] += interpolate(v[3],v[7],lo[2],hi[2]);
-      }
-
-      pt[t][0] /= static_cast<double> (u);
-      pt[t][1] /= static_cast<double> (u);
-      pt[t][2] /= static_cast<double> (u);
-      break;
-    }
-
-    default:
-      break;
-    }
-  }
-
-  return n;
-}
-
-/* ----------------------------------------------------------------------
-   adding triangles
-------------------------------------------------------------------------- */
-
-int MarchingCubes::add_triangle_inner(int *trig, int n)
-{
-  for(int t = 0; t < 3*n; t++) {
-    switch (trig[t]) {
-    case 0:
-      pt[t][0] = i0;
-      pt[t][1] = lo[1];
-      pt[t][2] = lo[2];
-      break;
-    case 1:
-      pt[t][0] = hi[0];
-      pt[t][1] = i1;
-      pt[t][2] = lo[2];
-      break;
-    case 2:
-      pt[t][0] = i2;
-      pt[t][1] = hi[1];
-      pt[t][2] = lo[2];
-      break;
-    case 3:
-      pt[t][0] = lo[0];
-      pt[t][1] = i3;
-      pt[t][2] = lo[2];
-      break;
-    case 4:
-      pt[t][0] = i4;
-      pt[t][1] = lo[1];
-      pt[t][2] = hi[2];
-      break;
-    case 5:
-      pt[t][0] = hi[0];
-      pt[t][1] = i5;
-      pt[t][2] = hi[2];
-      break;
-    case 6:
-      pt[t][0] = i6;
-      pt[t][1] = hi[1];
-      pt[t][2] = hi[2];
-      break;
-    case 7:
-      pt[t][0] = lo[0];
-      pt[t][1] = i7;
-      pt[t][2] = hi[2];
-      break;
-    case 8:
-      pt[t][0] = lo[0];
-      pt[t][1] = lo[1];
-      pt[t][2] = i8;
-      break;
-    case 9:
-      pt[t][0] = hi[0];
-      pt[t][1] = lo[1];
-      pt[t][2] = i9;
-      break;
-    case 10:
-      pt[t][0] = hi[0];
-      pt[t][1] = hi[1];
-      pt[t][2] = i10;
-      break;
-    case 11:
-      pt[t][0] = lo[0];
-      pt[t][1] = hi[1];
-      pt[t][2] = i11;
-      break;
-    case 12: {
-      int u = 0;
-      pt[t][0] = pt[t][1] = pt[t][2] = 0.0;
-      if (bit0 ^ bit1) {
-        ++u;
-        pt[t][0] += i0;
-        pt[t][1] += lo[1];
-        pt[t][2] += lo[2];
-      }
-      if (bit1 ^ bit2) {
-        ++u;
-        pt[t][0] += hi[0];
-        pt[t][1] += i1;
-        pt[t][2] += lo[2];
-      }
-      if (bit2 ^ bit3) {
-        ++u;
-        pt[t][0] += i2;
-        pt[t][1] += hi[1];
-        pt[t][2] += lo[2];
-      }
-      if (bit3 ^ bit0) {
-        ++u;
-        pt[t][0] += lo[0];
-        pt[t][1] += i3;
-        pt[t][2] += lo[2];
-      }
-      if (bit4 ^ bit5) {
-        ++u;
-        pt[t][0] += i4;
-        pt[t][1] += lo[1];
-        pt[t][2] += hi[2];
-      }
-      if (bit5 ^ bit6) {
-        ++u;
-        pt[t][0] += hi[0];
-        pt[t][1] += i5;
-        pt[t][2] += hi[2];
-      }
-      if (bit6 ^ bit7) {
-        ++u;
-        pt[t][0] += i6;
-        pt[t][1] += hi[1];
-        pt[t][2] += hi[2];
-      }
-      if (bit7 ^ bit4) {
-        ++u;
-        pt[t][0] += lo[0];
-        pt[t][1] += i7;
-        pt[t][2] += hi[2];
-      }
-      if (bit0 ^ bit4) {
-        ++u;
-        pt[t][0] += lo[0];
-        pt[t][1] += lo[1];
-        pt[t][2] += i8;
-      }
-      if (bit1 ^ bit5) {
-        ++u;
-        pt[t][0] += hi[0];
-        pt[t][1] += lo[1];
-        pt[t][2] += i9;
-      }
-      if (bit2 ^ bit6) {
-        ++u;
-        pt[t][0] += hi[0];
-        pt[t][1] += hi[1];
-        pt[t][2] += i10;
-      }
-      if (bit3 ^ bit7) {
-        ++u;
-        pt[t][0] += lo[0];
-        pt[t][1] += hi[1];
-        pt[t][2] += i11;
+        pt[t][2] += iv[11];
       }
 
       pt[t][0] /= static_cast<double> (u);

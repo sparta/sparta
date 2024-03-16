@@ -35,7 +35,7 @@ class MarchingCubes : protected Pointers {
   double *lo,*hi;
   int v[8];
   double viso[8];
-  double i0,i1,i2,i3,i4,i5,i6,i7,i8,i9,i10,i11;
+  double iv[12];
   int bit0,bit1,bit2,bit3,bit4,bit5,bit6,bit7;
   double pt[36][3];
 
