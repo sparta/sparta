@@ -361,8 +361,6 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
 
   cmin = MIN(cmin,255.0);
   cmax = MAX(cmax,0.0);
-  if(cmin < cmax) error->all(FLERR,"bad bounds");
-  if(cmax > thresh) error->all(FLERR,"cmax bigger than threshold");
 
   // push corner pt values that are fully external/internal to 0 or 255
 
