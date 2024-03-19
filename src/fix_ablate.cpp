@@ -343,10 +343,18 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
 
+  // new parameter which is for length_adjust
+  // intersection can be no closer than 2% of the cell length
+  // assumeds outside corner point is 0 (worst case scenario)
+
+  double alpha_low = 0.02;
+  cmin = (thresh - 0.0 * alpha_low) / (1.0 - alpha_low);
+
   // push corner pt values that are fully external/internal to 0 or 255
 
   if (pushflag) push_lohi();
-  epsilon_adjust();
+  //epsilon_adjust();
+  length_adjust();
 
   // create marching squares/cubes classes, now that have group & threshold
 
@@ -427,7 +435,8 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
 
-  epsilon_adjust();
+  //epsilon_adjust();
+  length_adjust();
 
   // create marching squares/cubes classes, now that have group & threshold
 
@@ -487,8 +496,8 @@ void FixAblate::end_of_step()
 
   // handle small corner values
 
-  if (!adjacentflag) epsilon_adjust();
-  else length_adjust(); // in theory can be used for normal MC
+  //epsilon_adjust();
+  length_adjust();
 
   // re-create implicit surfs
 
