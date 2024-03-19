@@ -66,8 +66,9 @@ class FixAblate : public Fix {
   int nglocal;            // # of owned grid cells
 
   double **cvalues;       // corner point values
-  double alpha_low;       // min length between a corner and an intersection
-  double cmin;            // min corner value point allowed
+  double surfbuffer;      // min length between corner and intersection
+  double cmin;            // min corner value point of inside corner
+  double cmax;            // max corner value point of outside corner
   int *tvalues;           // per-cell type value
   int tvalues_flag;       // 1 if tvalues is defined (by ReadIsurf)
 

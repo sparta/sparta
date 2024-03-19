@@ -354,7 +354,15 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   // intersection can be no closer than 2% of the cell length
   // assumeds outside corner point is 0 (worst case scenario)
 
-  cmin = (thresh - 0.0 * alpha_low) / (1.0 - alpha_low);
+  cmin = (thresh - 0.0 * surfbuffer) / (1.0 - surfbuffer);
+  cmax = (thresh - 255.0 * surfbuffer) / (1.0 - surfbuffer);
+
+  // bound corner value limits
+
+  cmin = MIN(cmin,255.0);
+  cmax = MAX(cmax,0.0);
+  if(cmin < cmax) error->all(FLERR,"bad bounds");
+  if(cmax > thresh) error->all(FLERR,"cmax bigger than threshold");
 
   // push corner pt values that are fully external/internal to 0 or 255
 
@@ -977,8 +985,8 @@ void FixAblate::epsilon_adjust()
     if (cells[icell].nsplit <= 0) continue;
 
     for (i = 0; i < ncorner; i++)
-      if (cvalues[icell][i] < cmin)
-        cvalues[icell][i] = 0.0;
+      if (cvalues[icell][i] < cmin && cvalues[icell][i] >= thresh)
+        cvalues[icell][i] = cmax;
   }
 }
 
@@ -1549,14 +1557,14 @@ double FixAblate::memory_usage()
 
 void FixAblate::process_args(int narg, char **arg)
 {
-  alpha_low = 0.02;
+  surfbuffer = 0.02;
 
   int iarg = 0;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"buffer") == 0)  {
       if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
-      alpha_low = atof(arg[iarg+1]);
-      if(alpha_low <= 0 || alpha_low >= 1)
+      surfbuffer = atof(arg[iarg+1]);
+      if(surfbuffer <= 0 || surfbuffer >= 1)
         error->all(FLERR,"Buffer must be a value between 0 and 1");
       iarg += 2;
     } else error->all(FLERR,"Invalid read_isurf command");
