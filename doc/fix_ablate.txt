@@ -10,7 +10,7 @@ fix ablate command :h3
 
 [Syntax:]
 
-fix ID ablate group-ID Nevery scale source maxrandom :pre
+fix ID ablate group-ID Nevery scale source maxrandom keyword args ... :pre
 
 ID is documented in "fix"_fix.html command :ulb,l
 ablate = style name of this fix command :l
@@ -23,6 +23,8 @@ source = computeID or fixID or random :l
   v_name = per-grid vector calculated by a grid-style variable with name
   random = perform a random decrement :pre
 maxrandom = maximum per grid cell decrement as an integer (only specified if source = random) :l
+keyword = {buffer} :l
+  buffer arg = minimum distance between corner and intersection (between 0 and 1) :pre
 :ule
 
 [Examples:]
@@ -105,6 +107,16 @@ and 1.0.  The second is a random integer between 1 and maxrandom.  If
 the first random # < {scale}, then the second random integer is the
 decrement value for the cell.  Thus {scale} is effectively the
 fraction of grid cells whose corner point values are decremented.
+
+The {buffer} is the minimum allowable distance between the vertices of 
+each triangle or line and any chosen corner in a grid cell. This implementation
+is based on the "isosurface stuffing" proposed 
+by Labelle and Shewchuk"(Labelle07)"_#Labelle07 With {buffer}, a minimum 
+inside corner value is calculated by extrapolating
+from an outside corner point value (which is zero). Any corner values which
+are below this minimum value is set as zero to make it less likely to 
+create degenerate or "skinny" triangles. The value of {buffer} is relative 
+to the cell length and is thus between 0 and 1. 
 
 :line
 
@@ -225,3 +237,8 @@ This fix can only be used in simulations that define implicit surfaces.
 "read isurf"_read_isurf.html
 
 [Default:] none
+
+:link(Labelle07)
+[(Labelle07)] F. Labelle, and J. R.. Shewchuk,
+"Isosurface stuffing: Fast Tetrahedral Meshes with Good Dihedral Angles,"
+SIGGRAPH (2007)

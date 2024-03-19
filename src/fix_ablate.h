@@ -66,6 +66,8 @@ class FixAblate : public Fix {
   int nglocal;            // # of owned grid cells
 
   double **cvalues;       // corner point values
+  double alpha_low;       // min length between a corner and an intersection
+  double cmin;            // min corner value point allowed
   int *tvalues;           // per-cell type value
   int tvalues_flag;       // 1 if tvalues is defined (by ReadIsurf)
 
@@ -94,6 +96,8 @@ class FixAblate : public Fix {
   class MarchingSquares *ms;
   class MarchingCubes *mc;
   class RanKnuth *random;
+
+  void process_args(int, char **);
 
   void create_surfs(int);
   void set_delta_random();

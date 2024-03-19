@@ -13,7 +13,7 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>fix ID ablate group-ID Nevery scale source maxrandom 
+<PRE>fix ID ablate group-ID Nevery scale source maxrandom keyword args ... 
 </PRE>
 <UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command 
 
@@ -34,6 +34,10 @@
 </PRE>
 <LI>maxrandom = maximum per grid cell decrement as an integer (only specified if source = random) 
 
+<LI>keyword = <I>buffer</I> 
+
+<PRE>  buffer arg = minimum distance between corner and intersection (between 0 and 1) 
+</PRE>
 
 </UL>
 <P><B>Examples:</B>
@@ -116,6 +120,16 @@ and 1.0.  The second is a random integer between 1 and maxrandom.  If
 the first random # < <I>scale</I>, then the second random integer is the
 decrement value for the cell.  Thus <I>scale</I> is effectively the
 fraction of grid cells whose corner point values are decremented.
+</P>
+<P>The <I>buffer</I> is the minimum allowable distance between the vertices of 
+each triangle or line and any chosen corner in a grid cell. This implementation
+is based on the "isosurface stuffing" proposed 
+by Labelle and Shewchuk<A HREF = "#Labelle07">(Labelle07)</A> With <I>buffer</I>, a minimum 
+inside corner value is calculated by extrapolating
+from an outside corner point value (which is zero). Any corner values which
+are below this minimum value is set as zero to make it less likely to 
+create degenerate or "skinny" triangles. The value of <I>buffer</I> is relative 
+to the cell length and is thus between 0 and 1. 
 </P>
 <HR>
 
@@ -236,5 +250,11 @@ an overview of SPARTA output options.
 <P><A HREF = "read_isurf.html">read isurf</A>
 </P>
 <P><B>Default:</B> none
+</P>
+<A NAME = "Labelle07"></A>
+
+<P><B>(Labelle07)</B> F. Labelle, and J. R.. Shewchuk,
+"Isosurface stuffing: Fast Tetrahedral Meshes with Good Dihedral Angles,"
+SIGGRAPH (2007)
 </P>
 </HTML>

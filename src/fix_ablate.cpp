@@ -84,6 +84,8 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   scale = atof(arg[4]);
   if (scale < 0.0) error->all(FLERR,"Illegal fix ablate command");
 
+  int iarg;
+
   if ((strncmp(arg[5],"c_",2) == 0) || (strncmp(arg[5],"f_",2) == 0)) {
     if (arg[5][0] == 'c') which = COMPUTE;
     else if (arg[5][0] == 'f') which = FIX;
@@ -105,6 +107,8 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     strcpy(idsource,suffix);
     delete [] suffix;
 
+    iarg = 6;
+
   } else if (strncmp(arg[5],"v_",2) == 0) {
     which = VARIABLE;
 
@@ -112,10 +116,14 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     char *idsource = new char[n];
     strcpy(idsource,&arg[5][2]);
 
+    iarg = 6;
+
   } else if (strcmp(arg[5],"random") == 0) {
-    if (narg != 7) error->all(FLERR,"Illegal fix ablate command");
+    if (narg < 7) error->all(FLERR,"Illegal fix ablate command");
     which = RANDOM;
     maxrandom = atoi(arg[6]);
+
+    iarg = 7;
 
   } else error->all(FLERR,"Illegal fix ablate command");
 
@@ -166,6 +174,10 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     if (input->variable->grid_style(ivariable) == 0)
       error->all(FLERR,"Fix ablate variable is not grid-style variable");
   }
+
+  // process optional command line args
+
+  process_args(narg-iarg,&arg[iarg]);
 
   // this fix produces a per-grid array and a scalar
 
@@ -337,6 +349,12 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
     ixyz[icell][2] =
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
+
+  // parameter which is for length_adjust
+  // intersection can be no closer than 2% of the cell length
+  // assumeds outside corner point is 0 (worst case scenario)
+
+  cmin = (thresh - 0.0 * alpha_low) / (1.0 - alpha_low);
 
   // push corner pt values that are fully external/internal to 0 or 255
 
@@ -959,8 +977,8 @@ void FixAblate::epsilon_adjust()
     if (cells[icell].nsplit <= 0) continue;
 
     for (i = 0; i < ncorner; i++)
-      if (fabs(cvalues[icell][i]-thresh) < EPSILON)
-        cvalues[icell][i] = thresh - EPSILON;
+      if (cvalues[icell][i] < cmin)
+        cvalues[icell][i] = 0.0;
   }
 }
 
@@ -1523,4 +1541,24 @@ double FixAblate::memory_usage()
   bytes += 3*maxsend * sizeof(int);            // proclist,locallist,numsend
   bytes += maxbuf * sizeof(double);            // sbuf
   return bytes;
+}
+
+/* ----------------------------------------------------------------------
+   process command line args
+------------------------------------------------------------------------- */
+
+void FixAblate::process_args(int narg, char **arg)
+{
+  alpha_low = 0.02;
+
+  int iarg = 0;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"buffer") == 0)  {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
+      alpha_low = atof(arg[iarg+1]);
+      if(alpha_low <= 0 || alpha_low >= 1)
+        error->all(FLERR,"Buffer must be a value between 0 and 1");
+      iarg += 2;
+    } else error->all(FLERR,"Invalid read_isurf command");
+  }
 }
