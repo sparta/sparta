@@ -32,6 +32,9 @@ class FixAblate : public Fix {
   double cornerlo[3];
   double xyzsize[3];
 
+  // might need to move this into protected
+  double cmin;            // lowest allowable corner value if intersection exists
+
   FixAblate(class SPARTA *, int, char **);
   ~FixAblate();
   int setmask();
@@ -108,6 +111,7 @@ class FixAblate : public Fix {
   void sync();
   void sync_adjacent();
   void epsilon_adjust();
+  void length_adjust();
   void push_lohi();
   void comm_neigh_corners(int);
   int walk_to_neigh(int, int, int, int);

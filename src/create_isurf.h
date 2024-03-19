@@ -56,6 +56,11 @@ class CreateISurf : protected Pointers {
   int **svalues;            // marks corners as in or out
   double ***ivalues;        // point of intersection between corner points
 
+  // buffer between corner point and intersection
+
+  double alpha_low;
+  double alpha_high;
+
   double **icvalues;        // corner values for Fix Ablate
   int *tvalues;             // vector of per grid cell surf types
 
@@ -63,9 +68,9 @@ class CreateISurf : protected Pointers {
   Surf::Tri *ltris;         // local copy of Surf tris
   double **cuvalues;        // local copy of custom per-surf data
 
-  int ctype;              // flag for how corners in unknown cells are set
+  int ctype;                // flag for how corners in unknown cells are set
   double mind;              // minimum cell length
-  double cin, cout;         // in and out corner values
+  double cin, cout, cmin;   // in and out corner values
   class FixAblate *ablate;  // ablate fix
 
   // for communicating
@@ -127,6 +132,9 @@ class CreateISurf : protected Pointers {
   int find_side_2d();
   int find_side_3d();
   void set_cvalues();
+  void set_cvalues_inout();
+  void set_cvalues_ave();
+  void set_cvalues_inner();
 
   // detects intersection between surfaces and cell edges
 
@@ -140,6 +148,7 @@ class CreateISurf : protected Pointers {
   // misc functions
 
   double param2cval(double, double);
+  double interpolate(double, double);
 };
 
 }

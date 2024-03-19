@@ -485,7 +485,10 @@ void FixAblate::end_of_step()
   if (!adjacentflag) sync();
   else sync_adjacent();
 
-  epsilon_adjust();
+  // handle small corner values
+
+  if (!adjacentflag) epsilon_adjust();
+  else length_adjust(); // in theory can be used for normal MC
 
   // re-create implicit surfs
 
@@ -966,7 +969,7 @@ void FixAblate::decrement_adjacent()
 
   int i,j,imin;
   double minvalue,total;
-  double cmax[ncorner], cavg;
+  double cmax[ncorner];
 
   // total = full amount to decrement from cell
   // cdelta[icell] = amount to decrement from each corner point of icell
@@ -979,11 +982,10 @@ void FixAblate::decrement_adjacent()
 
     total = celldelta[icell];
     while (total > 0.0) {
-
-      // first find max inner value
-
+      // first find max in each corner
       for (i = 0; i < ncorner; i++) {
         cmax[i] = 0.0;
+        // iterate through inner indices of each corner
         for (j = 0; j < nadj; j++) cmax[i] = MAX(cmax[i],cavalues[icell][i][j]);
       }
 
@@ -994,29 +996,20 @@ void FixAblate::decrement_adjacent()
           if(cmax[i] < minvalue) {
             imin = i;
             minvalue = cmax[i];
-
           // if same values, randomly choose between them
-
           } else if (fabs(cmax[i] - minvalue)/minvalue < EPSILON
-            && random->uniform() > 0.5) imin = i;
+            && random->uniform() > 0.5) {
+            imin = i;
+          }
         }
       }
-
       if (imin == -1) break;
-
-      // find average inner value of nonzero values at imin
-
-      cavg = 0.0;
-      for (j = 0; j < nadj; j++)
-        cavg += cavalues[icell][i][j];
-      cavg /= nadj;
-
-      if (total < cavg) {
+      if (total < cmax[imin]) {
         cdelta[icell][imin] += total;
         total = 0.0;
       } else {
-        cdelta[icell][imin] = cavg;
-        total -= cavg;
+        cdelta[icell][imin] = cmax[imin];
+        total -= cmax[imin];
       }
     }
 
@@ -1115,8 +1108,7 @@ void FixAblate::sync_adjacent()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
-  double total, cavg;
-  int npos;
+  double total, cmax;
 
   comm_neigh_corners(CDELTA);
 
@@ -1180,65 +1172,20 @@ void FixAblate::sync_adjacent()
 
       if(total == 0) continue;
 
-      // find average inner value and number of positive values
+      cmax = 0.0;
+      for(j = 0; j < nadj; j++)
+        cmax = MAX(cmax,cavalues[icell][i][j]);
 
-      cavg = 0.0;
-      npos = 0;
-      for(j = 0; j < nadj; j++) {
-        cavg += cavalues[icell][i][j];
-        if(cavalues[icell][i][j] > 0.0) npos++; // number of positive inner values
-      }
-      cavg /= nadj;
+      // now decrement corners
 
-      // now decrement inner values
-
-      if (total > cavg) {
+      if (total > cmax) {
         for(j = 0; j < nadj; j++)
           cavalues[icell][i][j] = 0.0;
       } else {
-
-        // only decrement from positive inner values
-
-        cavg *= (nadj/npos);
         for(j = 0; j < nadj; j++) {
-          if(cavalues[icell][i][j] > 0.0)
-            cavalues[icell][i][j] -= cavg;
-
-          // remove small inner values
-
-          if(fabs(cavalues[icell][i][j]) < EPSILON) 
-            cavalues[icell][i][j] = 0.0;
+          cavalues[icell][i][j] -= total;
+          if(cavalues[icell][i][j] < 0) cavalues[icell][i][j] = 0.0;
         }
-
-        // carryover any negative values to the remaining positive values
-
-        int ncarry;
-        double carryover;
-        while(1) {
-          ncarry = 0;
-          carryover = 0.0;
-          for(j = 0; j < nadj; j++) {
-            if(cavalues[icell][i][j] < 0.0) {
-              ncarry++;
-              carryover += fabs(cavalues[icell][i][j]);
-            }
-          }
-
-          // indicates all values are zero or positive
-
-          if(!ncarry) break;
-
-          // further decrement positive inner values
-
-          carryover /= ncarry;
-          for(j = 0; j < nadj; j++) {
-            if(cavalues[icell][i][j] > 0.0)
-              cavalues[icell][i][j] -= carryover;
-            if(fabs(cavalues[icell][i][j]) < EPSILON) 
-              cavalues[icell][i][j] = 0.0;
-          }
-        } // end carryover while loop
-
       }
 
     }
@@ -1272,6 +1219,38 @@ void FixAblate::epsilon_adjust()
         for (j = 0; j < nadj; j++)
           if (fabs(cavalues[icell][i][j]-thresh) < EPSILON)
             cavalues[icell][i][j] = thresh - EPSILON;
+      }
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   adjust corner point values based on position of intersection points
+   (refer to isosurface stuffing by Labelle and Shewchuk)
+------------------------------------------------------------------------- */
+
+void FixAblate::length_adjust()
+{
+  int i,j,icell;
+
+  // insure no corner point is within EPSILON of threshold
+  // if so, set it to threshold - EPSILON
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  for (icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    for (i = 0; i < ncorner; i++) {
+      if (!adjacentflag) {
+        if (cvalues[icell][i] < cmin)
+          cvalues[icell][i] = 0.0;
+      } else {
+        for (j = 0; j < nadj; j++)
+          if (cavalues[icell][i][j] < cmin)
+            cavalues[icell][i][j] = 0.0;
       }
     }
   }
@@ -1401,11 +1380,8 @@ void FixAblate::push_lohi()
    comm my cdelta values that are shared by neighbor cells
    each corner point is shared by N cells, less on borders
    done via irregular comm
-
-   currently, should never have to communicate cvalues if using
-   adjacnet since only push_lohi requires this and push_lohi will
-   override adjacent values
 ------------------------------------------------------------------------- */
+// TODO: update for adjacent
 void FixAblate::comm_neigh_corners(int which)
 {
   int i,j,m,n,ix,iy,iz,jx,jy,jz;
