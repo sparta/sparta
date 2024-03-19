@@ -281,7 +281,7 @@ int FixAblate::setmask()
    then create implicit surfaces
    called by ReadIsurf when corner point grid is read in
 ------------------------------------------------------------------------- */
-
+// TODO: Need to handle cmin and cmax here for read_isurf
 void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
                               double *cornerlo_caller, double *xyzsize_caller,
                               double **cvalues_caller, int *tvalues_caller,
@@ -342,13 +342,6 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
     ixyz[icell][2] =
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
-
-  // new parameter which is for length_adjust
-  // intersection can be no closer than 2% of the cell length
-  // assumeds outside corner point is 0 (worst case scenario)
-
-  double alpha_low = 0.02;
-  cmin = (thresh - 0.0 * alpha_low) / (1.0 - alpha_low);
 
   // push corner pt values that are fully external/internal to 0 or 255
 
@@ -496,8 +489,8 @@ void FixAblate::end_of_step()
 
   // handle small corner values
 
-  //epsilon_adjust();
-  length_adjust();
+  epsilon_adjust();
+  //length_adjust();
 
   // re-create implicit surfs
 
@@ -1248,18 +1241,21 @@ void FixAblate::length_adjust()
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
+  printf("cmin: %4.3e; cmax: %4.3e\n", cmin, cmax);
+  //error->one(FLERR,"ck");
+
   for (icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
 
     for (i = 0; i < ncorner; i++) {
       if (!adjacentflag) {
-        if (cvalues[icell][i] < cmin)
-          cvalues[icell][i] = 0.0;
+        if (cvalues[icell][i] < cmin && cvalues[icell][i] >= thresh)
+          cvalues[icell][i] = cmax;
       } else {
         for (j = 0; j < nadj; j++)
-          if (cavalues[icell][i][j] < cmin)
-            cavalues[icell][i][j] = 0.0;
+          if (cavalues[icell][i][j] < cmin && cavalues[icell][i][j] >= thresh)
+            cavalues[icell][i][j] = cmax;
       }
     }
   }

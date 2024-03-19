@@ -58,8 +58,7 @@ class CreateISurf : protected Pointers {
 
   // buffer between corner point and intersection
 
-  double alpha_low;
-  double alpha_high;
+  double surfbuffer;
 
   double **icvalues;        // corner values for Fix Ablate
   int *tvalues;             // vector of per grid cell surf types
@@ -105,6 +104,8 @@ class CreateISurf : protected Pointers {
     ubuf(uint64_t arg) : u(arg) {}
     ubuf(uint32_t arg) : u(arg) {}
   };
+
+  void process_args(int, char **);
 
   // functions to set corner/inner values
 

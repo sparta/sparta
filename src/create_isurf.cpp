@@ -127,7 +127,7 @@ void CreateISurf::command(int narg, char **arg)
   if (domain->axisymmetric)
     error->all(FLERR,"Cannot create_isurf for axisymmetric domains");
 
-  if (narg != 4) error->all(FLERR,"Illegal create_isurf command");
+  if (narg < 4) error->all(FLERR,"Illegal create_isurf command");
 
   // grid group
 
@@ -163,6 +163,10 @@ void CreateISurf::command(int narg, char **arg)
   else if (strcmp(arg[3],"inner") == 0) ctype = INNER;
   else error->all(FLERR,"Create_isurf corner mode is invalid");
 
+  // process optional command line args
+
+  process_args(narg-4,&arg[4]);
+
   // check if grid group is a uniform grid
 
   grid->check_uniform_group(ggroup,nxyz,corner,xyzsize);
@@ -187,11 +191,14 @@ void CreateISurf::command(int narg, char **arg)
   int pushflag = 0;
   char *sgroupID = 0;
 
+  // for epsilon_adjust in fix_ablate
+
+  ablate->cmin = (thresh - 0.0 * surfbuffer) / (1.0 - surfbuffer);
+  ablate->cmax = (thresh - 255. * surfbuffer) / (1.0 - surfbuffer);
+
   if (ctype == INNER) {
     ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
                           invalues,tvalues,thresh,sgroupID,pushflag);
-    ablate->cmin = cmin; // used when adjusting corner values
-
   } else {
     ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
                           cvalues,tvalues,thresh,sgroupID,pushflag);
@@ -1519,12 +1526,10 @@ void CreateISurf::set_cvalues_inner()
   // define cut-off for intersections to avoid degenerate triangles
   // refer to isosurface stuffing by labelle and shewchuk
 
-  alpha_low = 0.02; // relative to cell edge length
-  alpha_high = 1.0 - alpha_low;
+  double osurfbuffer = 1.0 - surfbuffer;
 
   cout = 0.0;
-  cin = param2cval(alpha_high,cout);
-  cmin = param2cval(alpha_low,cout);
+  cin = param2cval(osurfbuffer,cout);
 
   // first set corner point values of fully inside and outside cells
 
@@ -1556,8 +1561,6 @@ void CreateISurf::set_cvalues_inner()
 
   // value of inside corner point next to surface
 
-  double cedge = param2cval(alpha_low,0.0);
-
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
@@ -1566,8 +1569,8 @@ void CreateISurf::set_cvalues_inner()
         // bound the intersection values
         ival = ivalues[icell][ic][k];
         if(ival >= 0.0) {
-          ival = MAX(ival, alpha_low);
-          ival = MIN(ival, alpha_high);
+          ival = MAX(ival, surfbuffer);
+          ival = MIN(ival, osurfbuffer);
         }
         ivalues[icell][ic][k] = ival;
 
@@ -1762,9 +1765,7 @@ double CreateISurf::param2cval(double param, double v1)
   // trying to find v0
   // param = (thresh  - v0) / (v1 - v0)
 
-  double v0 = (thresh - v1*param) / (1.0 - param);
-
-  return v0;
+  return (thresh - v1*param) / (1.0 - param);
 }
 
 /* ----------------------------------------------------------------------
@@ -1853,4 +1854,24 @@ void CreateISurf::remove_old()
 
   grid->set_inout();
   grid->type_check();
+}
+
+/* ----------------------------------------------------------------------
+   process command line args
+------------------------------------------------------------------------- */
+
+void CreateISurf::process_args(int narg, char **arg)
+{
+  surfbuffer = 0.02;
+
+  int iarg = 0;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"buffer") == 0)  {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid create_isurf command");
+      surfbuffer = atof(arg[iarg+1]);
+      if(surfbuffer <= 0 || surfbuffer >= 0.5)
+        error->all(FLERR,"Buffer must be a value between 0 and 0.5");
+      iarg += 2;
+    } else error->all(FLERR,"Invalid create_isurf command");
+  }
 }

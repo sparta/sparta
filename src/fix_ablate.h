@@ -33,7 +33,8 @@ class FixAblate : public Fix {
   double xyzsize[3];
 
   // might need to move this into protected
-  double cmin;            // lowest allowable corner value if intersection exists
+  double cmin;  // min corner value point of inside corner
+  double cmax;  // max corner value point of outside corner  
 
   FixAblate(class SPARTA *, int, char **);
   ~FixAblate();

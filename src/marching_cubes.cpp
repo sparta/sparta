@@ -463,7 +463,6 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
   if (sizeof(surfint) == 4) maxsurfID = MAXSMALLINT;
   if (sizeof(surfint) == 8) maxsurfID = MAXBIGINT;
 
-  double cval, vc[8];
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
@@ -483,6 +482,12 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
     // top-lower-left, top-lower-right, top-upper-left, top-upper-right
     // Vzyx encodes this as 0/1 in each dim
 
+    // temporarily store all inner values
+
+    for (i = 0; i < 8; i++)
+      for (j = 0; j < 6; j++)
+        inval[i][j] = cvalues[icell][i][j];
+
     // use averages for now
 
     for (i = 0; i < 8; i++) v[i] = 0.0;
@@ -491,14 +496,14 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
     // manually change for consistency
 
     for (j = 0; j < 6; j++) {
-      v[0] += cvalues[icell][0][j];
-      v[1] += cvalues[icell][1][j];
-      v[2] += cvalues[icell][3][j];
-      v[3] += cvalues[icell][2][j];
-      v[4] += cvalues[icell][4][j];
-      v[5] += cvalues[icell][5][j];
-      v[6] += cvalues[icell][7][j];
-      v[7] += cvalues[icell][6][j];
+      v[0] += inval[0][j];
+      v[1] += inval[1][j];
+      v[2] += inval[3][j];
+      v[3] += inval[2][j];
+      v[4] += inval[4][j];
+      v[5] += inval[5][j];
+      v[6] += inval[7][j];
+      v[7] += inval[6][j];
     }      
 
     for (i = 0; i < 8; i++) v[i] /= 6; 
@@ -509,20 +514,37 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
 
     // intersection of surfaces on all cell edges
 
-    i0  = interpolate(cvalues[icell][0][1],cvalues[icell][1][0],lo[0],hi[0]);
-    i1  = interpolate(cvalues[icell][1][3],cvalues[icell][3][2],lo[1],hi[1]);
-    i2  = interpolate(cvalues[icell][2][1],cvalues[icell][3][0],lo[0],hi[0]);
-    i3  = interpolate(cvalues[icell][0][3],cvalues[icell][2][2],lo[1],hi[1]);
+    i0  = interpolate(inval[0][1],inval[1][0],lo[0],hi[0]);
+    i1  = interpolate(inval[1][3],inval[3][2],lo[1],hi[1]);
+    i2  = interpolate(inval[2][1],inval[3][0],lo[0],hi[0]);
+    i3  = interpolate(inval[0][3],inval[2][2],lo[1],hi[1]);
 
-    i4  = interpolate(cvalues[icell][4][1],cvalues[icell][5][0],lo[0],hi[0]);
-    i5  = interpolate(cvalues[icell][5][3],cvalues[icell][7][2],lo[1],hi[1]);
-    i6  = interpolate(cvalues[icell][6][1],cvalues[icell][7][0],lo[0],hi[0]);
-    i7  = interpolate(cvalues[icell][4][3],cvalues[icell][6][2],lo[1],hi[1]);
+    i4  = interpolate(inval[4][1],inval[5][0],lo[0],hi[0]);
+    i5  = interpolate(inval[5][3],inval[7][2],lo[1],hi[1]);
+    i6  = interpolate(inval[6][1],inval[7][0],lo[0],hi[0]);
+    i7  = interpolate(inval[4][3],inval[6][2],lo[1],hi[1]);
 
-    i8  = interpolate(cvalues[icell][0][5],cvalues[icell][4][4],lo[2],hi[2]);
-    i9  = interpolate(cvalues[icell][1][5],cvalues[icell][5][4],lo[2],hi[2]);
-    i10 = interpolate(cvalues[icell][3][5],cvalues[icell][7][4],lo[2],hi[2]);
-    i11 = interpolate(cvalues[icell][2][5],cvalues[icell][6][4],lo[2],hi[2]);
+    i8  = interpolate(inval[0][5],inval[4][4],lo[2],hi[2]);
+    i9  = interpolate(inval[1][5],inval[5][4],lo[2],hi[2]);
+    i10 = interpolate(inval[3][5],inval[7][4],lo[2],hi[2]);
+    i11 = interpolate(inval[2][5],inval[6][4],lo[2],hi[2]);
+
+    // intersection on unit cube
+
+    i0u  = interpolate(inval[0][1],inval[1][0],0,1);
+    i1u  = interpolate(inval[1][3],inval[3][2],0,1);
+    i2u  = interpolate(inval[2][1],inval[3][0],0,1);
+    i3u  = interpolate(inval[0][3],inval[2][2],0,1);
+
+    i4u  = interpolate(inval[4][1],inval[5][0],0,1);
+    i5u  = interpolate(inval[5][3],inval[7][2],0,1);
+    i6u  = interpolate(inval[6][1],inval[7][0],0,1);
+    i7u  = interpolate(inval[4][3],inval[6][2],0,1);
+
+    i8u  = interpolate(inval[0][5],inval[4][4],0,1);
+    i9u  = interpolate(inval[1][5],inval[5][4],0,1);
+    i10u = interpolate(inval[3][5],inval[7][4],0,1);
+    i11u = interpolate(inval[2][5],inval[6][4],0,1);
 
     // make bits 2, 3, 6 and 7 consistent with Lewiner paper (see NOTE above)
 
@@ -565,14 +587,14 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
       break;
 
     case  4:
-      viso[0] = cvalues[icell][0][5] - thresh;
-      viso[1] = cvalues[icell][1][5] - thresh;
-      viso[2] = cvalues[icell][3][5] - thresh;
-      viso[3] = cvalues[icell][2][5] - thresh;
-      viso[4] = cvalues[icell][4][4] - thresh;
-      viso[5] = cvalues[icell][5][4] - thresh;
-      viso[6] = cvalues[icell][7][4] - thresh;
-      viso[7] = cvalues[icell][6][4] - thresh;
+      viso[0] = inval[0][5] - thresh;
+      viso[1] = inval[1][5] - thresh;
+      viso[2] = inval[3][5] - thresh;
+      viso[3] = inval[2][5] - thresh;
+      viso[4] = inval[4][4] - thresh;
+      viso[5] = inval[5][4] - thresh;
+      viso[6] = inval[7][4] - thresh;
+      viso[7] = inval[6][4] - thresh;
       if (modified_test_interior(test4[config],icase))
         nsurf = add_triangle_inner(tiling4_1[config], 2); // 4.1.1
       else
@@ -587,14 +609,14 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
       if (test_face_inner(test6[config][0]))
         nsurf = add_triangle_inner(tiling6_2[config], 5); // 6.2
       else {
-        viso[0] = cvalues[icell][0][5] - thresh;
-        viso[1] = cvalues[icell][1][5] - thresh;
-        viso[2] = cvalues[icell][3][5] - thresh;
-        viso[3] = cvalues[icell][2][5] - thresh;
-        viso[4] = cvalues[icell][4][4] - thresh;
-        viso[5] = cvalues[icell][5][4] - thresh;
-        viso[6] = cvalues[icell][7][4] - thresh;
-        viso[7] = cvalues[icell][6][4] - thresh;
+        viso[0] = inval[0][5] - thresh;
+        viso[1] = inval[1][5] - thresh;
+        viso[2] = inval[3][5] - thresh;
+        viso[3] = inval[2][5] - thresh;
+        viso[4] = inval[4][4] - thresh;
+        viso[5] = inval[5][4] - thresh;
+        viso[6] = inval[7][4] - thresh;
+        viso[7] = inval[6][4] - thresh;
         if (modified_test_interior(test6[config][1],icase))
           nsurf = add_triangle_inner(tiling6_1_1[config], 3); // 6.1.1
         else {
@@ -623,14 +645,14 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
       case 6:
         nsurf = add_triangle_inner(tiling7_3[config][2], 9); break;
       case 7:
-        viso[0] = cvalues[icell][0][5] - thresh;
-        viso[1] = cvalues[icell][1][5] - thresh;
-        viso[2] = cvalues[icell][3][5] - thresh;
-        viso[3] = cvalues[icell][2][5] - thresh;
-        viso[4] = cvalues[icell][4][4] - thresh;
-        viso[5] = cvalues[icell][5][4] - thresh;
-        viso[6] = cvalues[icell][7][4] - thresh;
-        viso[7] = cvalues[icell][6][4] - thresh;
+        viso[0] = inval[0][5] - thresh;
+        viso[1] = inval[1][5] - thresh;
+        viso[2] = inval[3][5] - thresh;
+        viso[3] = inval[2][5] - thresh;
+        viso[4] = inval[4][4] - thresh;
+        viso[5] = inval[5][4] - thresh;
+        viso[6] = inval[7][4] - thresh;
+        viso[7] = inval[6][4] - thresh;
         if (test_interior(test7[config][3],icase))
           nsurf = add_triangle_inner(tiling7_4_2[config], 9);
         else
@@ -658,14 +680,14 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
         if (test_face_inner(test10[config][1])) {
           nsurf = add_triangle_inner(tiling10_2_[config], 8); // 10.2
         } else {
-          viso[0] = cvalues[icell][0][5] - thresh;
-          viso[1] = cvalues[icell][1][5] - thresh;
-          viso[2] = cvalues[icell][3][5] - thresh;
-          viso[3] = cvalues[icell][2][5] - thresh;
-          viso[4] = cvalues[icell][4][4] - thresh;
-          viso[5] = cvalues[icell][5][4] - thresh;
-          viso[6] = cvalues[icell][7][4] - thresh;
-          viso[7] = cvalues[icell][6][4] - thresh;
+          viso[0] = inval[0][5] - thresh;
+          viso[1] = inval[1][5] - thresh;
+          viso[2] = inval[3][5] - thresh;
+          viso[3] = inval[2][5] - thresh;
+          viso[4] = inval[4][4] - thresh;
+          viso[5] = inval[5][4] - thresh;
+          viso[6] = inval[7][4] - thresh;
+          viso[7] = inval[6][4] - thresh;
           if (test_interior(test10[config][2],icase))
             nsurf = add_triangle_inner(tiling10_1_1[config], 4); // 10.1.1
           else
@@ -689,14 +711,14 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
         if (test_face_inner(test12[config][1])) {
           nsurf = add_triangle_inner(tiling12_2_[config], 8); // 12.2
         } else {
-          viso[0] = cvalues[icell][0][5] - thresh;
-          viso[1] = cvalues[icell][1][5] - thresh;
-          viso[2] = cvalues[icell][3][5] - thresh;
-          viso[3] = cvalues[icell][2][5] - thresh;
-          viso[4] = cvalues[icell][4][4] - thresh;
-          viso[5] = cvalues[icell][5][4] - thresh;
-          viso[6] = cvalues[icell][7][4] - thresh;
-          viso[7] = cvalues[icell][6][4] - thresh;
+          viso[0] = inval[0][5] - thresh;
+          viso[1] = inval[1][5] - thresh;
+          viso[2] = inval[3][5] - thresh;
+          viso[3] = inval[2][5] - thresh;
+          viso[4] = inval[4][4] - thresh;
+          viso[5] = inval[5][4] - thresh;
+          viso[6] = inval[7][4] - thresh;
+          viso[7] = inval[6][4] - thresh;
           if (test_interior(test12[config][2],icase))
             nsurf = add_triangle_inner(tiling12_1_1[config], 4); // 12.1.1
           else
@@ -773,14 +795,14 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
         break;
 
       case 24:/* 13.5 */
-        viso[0] = cvalues[icell][0][5] - thresh;
-        viso[1] = cvalues[icell][1][5] - thresh;
-        viso[2] = cvalues[icell][3][5] - thresh;
-        viso[3] = cvalues[icell][2][5] - thresh;
-        viso[4] = cvalues[icell][4][4] - thresh;
-        viso[5] = cvalues[icell][5][4] - thresh;
-        viso[6] = cvalues[icell][7][4] - thresh;
-        viso[7] = cvalues[icell][6][4] - thresh;
+        viso[0] = inval[0][5] - thresh;
+        viso[1] = inval[1][5] - thresh;
+        viso[2] = inval[3][5] - thresh;
+        viso[3] = inval[2][5] - thresh;
+        viso[4] = inval[4][4] - thresh;
+        viso[5] = inval[5][4] - thresh;
+        viso[6] = inval[7][4] - thresh;
+        viso[7] = inval[6][4] - thresh;
         subconfig = 1;
         if (interior_test_case13())
           nsurf = add_triangle_inner(tiling13_5_1[config][1], 6);
@@ -789,14 +811,14 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
         break;
 
       case 25:/* 13.5 */
-        viso[0] = cvalues[icell][0][5] - thresh;
-        viso[1] = cvalues[icell][1][5] - thresh;
-        viso[2] = cvalues[icell][3][5] - thresh;
-        viso[3] = cvalues[icell][2][5] - thresh;
-        viso[4] = cvalues[icell][4][4] - thresh;
-        viso[5] = cvalues[icell][5][4] - thresh;
-        viso[6] = cvalues[icell][7][4] - thresh;
-        viso[7] = cvalues[icell][6][4] - thresh;
+        viso[0] = inval[0][5] - thresh;
+        viso[1] = inval[1][5] - thresh;
+        viso[2] = inval[3][5] - thresh;
+        viso[3] = inval[2][5] - thresh;
+        viso[4] = inval[4][4] - thresh;
+        viso[5] = inval[5][4] - thresh;
+        viso[6] = inval[7][4] - thresh;
+        viso[7] = inval[6][4] - thresh;
         subconfig = 2;
         if (interior_test_case13())
           nsurf = add_triangle_inner(tiling13_5_1[config][2], 6);
@@ -805,14 +827,14 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
         break;
 
       case 26:/* 13.5 */
-        viso[0] = cvalues[icell][0][5] - thresh;
-        viso[1] = cvalues[icell][1][5] - thresh;
-        viso[2] = cvalues[icell][3][5] - thresh;
-        viso[3] = cvalues[icell][2][5] - thresh;
-        viso[4] = cvalues[icell][4][4] - thresh;
-        viso[5] = cvalues[icell][5][4] - thresh;
-        viso[6] = cvalues[icell][7][4] - thresh;
-        viso[7] = cvalues[icell][6][4] - thresh;
+        viso[0] = inval[0][5] - thresh;
+        viso[1] = inval[1][5] - thresh;
+        viso[2] = inval[3][5] - thresh;
+        viso[3] = inval[2][5] - thresh;
+        viso[4] = inval[4][4] - thresh;
+        viso[5] = inval[5][4] - thresh;
+        viso[6] = inval[7][4] - thresh;
+        viso[7] = inval[6][4] - thresh;
         subconfig = 3;
         if (interior_test_case13())
           nsurf = add_triangle_inner(tiling13_5_1[config][3], 6);
@@ -1719,7 +1741,7 @@ bool MarchingCubes::test_face_inner(int face)
   double A,B,C,D;
   double mat[4][4], b[4], phi[4];
 
-  //int sol; = MathExtra::mldivide4(mat, b, v);
+  //int sol = MathExtra::mldivide4(mat, b, v);
 
   switch (face) {
   case -1:
