@@ -1564,8 +1564,8 @@ void FixAblate::process_args(int narg, char **arg)
     if (strcmp(arg[iarg],"buffer") == 0)  {
       if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
       surfbuffer = atof(arg[iarg+1]);
-      if(surfbuffer <= 0 || surfbuffer >= 1)
-        error->all(FLERR,"Buffer must be a value between 0 and 1");
+      if(surfbuffer <= 0 || surfbuffer >= 0.5)
+        error->all(FLERR,"Buffer must be a value between 0 and 0.5");
       iarg += 2;
     } else error->all(FLERR,"Invalid read_isurf command");
   }

@@ -126,10 +126,15 @@ each triangle or line and any chosen corner in a grid cell. This implementation
 is based on the "isosurface stuffing" proposed 
 by Labelle and Shewchuk<A HREF = "#Labelle07">(Labelle07)</A> With <I>buffer</I>, a minimum 
 inside corner value is calculated by extrapolating
-from an outside corner point value (which is zero). Any corner values which
-are below this minimum value is set as zero to make it less likely to 
-create degenerate or "skinny" triangles. The value of <I>buffer</I> is relative 
-to the cell length and is thus between 0 and 1. 
+from an outside corner point value. Any inside corner values which
+are below this minimum value is reduced such that the intersection of the 
+surface element and the cell edge is outside a buffer zone whose length is 
+<I>buffer</I> times the cell edge length.
+The inside corner point is also now an outside corner point.
+The value of <I>buffer</I> is relative 
+to the cell length and is thus between 0 and 0.5.
+In general, the larger the value of <I>buffer</I>,
+the less likely skinny or degenerate triangles are formed.
 </P>
 <HR>
 
