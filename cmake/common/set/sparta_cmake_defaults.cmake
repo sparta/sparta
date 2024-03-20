@@ -40,6 +40,7 @@ if(SPARTA_ENABLE_TESTING)
       "axi"
       "ambi"
       "relax_const"
+      "relax_electronic"
       "relax_variable"
       "thermostat"
       "bfield"

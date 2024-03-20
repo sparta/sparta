@@ -28,6 +28,7 @@ class Collide : protected Pointers {
   char *style;
   int rotstyle;       // none/smooth rotational modes
   int vibstyle;       // none/discrete/smooth vibrational modes
+  int elecstyle;      // none/discrete electronic modes
   int nearcp;         // 1 for near neighbor collisions
   int nearlimit;      // limit on neighbor serach for near neigh collisions
 
@@ -109,6 +110,11 @@ class Collide : protected Pointers {
   // discrete vibrational energy data structs
 
   int index_vibmode;   // index to custom vibmode vector
+
+  // electronic excitation data structs
+
+  int index_elecstate; // index to custom elecstate vector
+  int index_eelec;     // index to custom eelec vector
 
   // ambipolar approximation data structs
 

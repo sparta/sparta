@@ -125,6 +125,10 @@ class ComputeGridKokkos : public ComputeGrid, public KokkosBase {
   int count,mass,count_or_mass,cell_count_or_mass;
   int velocity,mvsq,eng,dof,mom,ke;
   int nsample,nstride;
+  int index_eelec;
+
+  DAT::t_int_1d d_ewhich;
+  tdual_struct_tdual_float_1d_1d k_edvec;
 };
 
 }
