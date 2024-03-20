@@ -13,8 +13,8 @@ dimension		2
 boundary		p p p
 
 variable                L equal 1.0
-variable                Nx equal 12
-variable                Ny equal 12
+variable                Nx equal 80
+variable                Ny equal 80
 
 global                  gridcut 1.E-1
 global                  comm/sort yes
@@ -45,6 +45,6 @@ timestep		0.001
 #dump                    1 image all 10 circle.*.ppm type type surf one 0.01 particle yes pdiam 0.02 zoom 2
 #dump_modify             1 scolor * gray
 
-stats			1
+stats			5
 stats_style		step cpu np nattempt ncoll nscoll nscheck
 run			10
