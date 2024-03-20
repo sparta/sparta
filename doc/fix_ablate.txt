@@ -243,6 +243,8 @@ This fix can only be used in simulations that define implicit surfaces.
 
 [Default:] none
 
+The option default is {buffer} = 0.02
+
 :link(Labelle07)
 [(Labelle07)] F. Labelle, and J. R.. Shewchuk,
 "Isosurface stuffing: Fast Tetrahedral Meshes with Good Dihedral Angles,"
