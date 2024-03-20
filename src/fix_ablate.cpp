@@ -281,7 +281,6 @@ int FixAblate::setmask()
    then create implicit surfaces
    called by ReadIsurf when corner point grid is read in
 ------------------------------------------------------------------------- */
-// TODO: Need to handle cmin and cmax here for read_isurf
 void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
                               double *cornerlo_caller, double *xyzsize_caller,
                               double **cvalues_caller, int *tvalues_caller,
@@ -346,8 +345,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   // push corner pt values that are fully external/internal to 0 or 255
 
   if (pushflag) push_lohi();
-  //epsilon_adjust();
-  length_adjust();
+  epsilon_adjust();
 
   // create marching squares/cubes classes, now that have group & threshold
 
@@ -428,8 +426,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
 
-  //epsilon_adjust();
-  length_adjust();
+  epsilon_adjust();
 
   // create marching squares/cubes classes, now that have group & threshold
 
@@ -490,7 +487,6 @@ void FixAblate::end_of_step()
   // handle small corner values
 
   epsilon_adjust();
-  //length_adjust();
 
   // re-create implicit surfs
 
@@ -955,6 +951,7 @@ void FixAblate::decrement()
   }
 }
 
+
 /* ----------------------------------------------------------------------
    determine decrement for each corner point of each owned grid cell
    skip cells not in group, with no surfs, and sub-cells
@@ -1215,47 +1212,12 @@ void FixAblate::epsilon_adjust()
 
     for (i = 0; i < ncorner; i++) {
       if (!adjacentflag) {
-        if (fabs(cvalues[icell][i]-thresh) < EPSILON)
-          cvalues[icell][i] = thresh - EPSILON;
+        if (cvalues[icell][i] < cbufmin && cvalues[icell][i] >= thresh)
+          cvalues[icell][i] = cbufmax;
       } else {
         for (j = 0; j < nadj; j++)
-          if (fabs(cavalues[icell][i][j]-thresh) < EPSILON)
-            cavalues[icell][i][j] = thresh - EPSILON;
-      }
-    }
-  }
-}
-
-/* ----------------------------------------------------------------------
-   adjust corner point values based on position of intersection points
-   (refer to isosurface stuffing by Labelle and Shewchuk)
-------------------------------------------------------------------------- */
-
-void FixAblate::length_adjust()
-{
-  int i,j,icell;
-
-  // insure no corner point is within EPSILON of threshold
-  // if so, set it to threshold - EPSILON
-
-  Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-
-  printf("cmin: %4.3e; cmax: %4.3e\n", cmin, cmax);
-  //error->one(FLERR,"ck");
-
-  for (icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-
-    for (i = 0; i < ncorner; i++) {
-      if (!adjacentflag) {
-        if (cvalues[icell][i] < cmin && cvalues[icell][i] >= thresh)
-          cvalues[icell][i] = cmax;
-      } else {
-        for (j = 0; j < nadj; j++)
-          if (cavalues[icell][i][j] < cmin && cavalues[icell][i][j] >= thresh)
-            cavalues[icell][i][j] = cmax;
+          if (cavalues[icell][i][j] < cbufmin && cavalues[icell][i][j] >= thresh)
+            cavalues[icell][i][j] = cbufmax;
       }
     }
   }

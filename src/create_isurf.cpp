@@ -193,8 +193,17 @@ void CreateISurf::command(int narg, char **arg)
 
   // for epsilon_adjust in fix_ablate
 
-  ablate->cmin = (thresh - 0.0 * surfbuffer) / (1.0 - surfbuffer);
-  ablate->cmax = (thresh - 255. * surfbuffer) / (1.0 - surfbuffer);
+  double cbufmin = (thresh - 0.0 * surfbuffer) / (1.0 - surfbuffer);
+  double cbufmax = (thresh - 255. * surfbuffer) / (1.0 - surfbuffer);
+
+  cbufmin = MAX(cbufmin,0.0);
+  cbufmin = MIN(cbufmin,255.0);
+
+  cbufmax = MAX(cbufmax,0.0);
+  cbufmax = MIN(cbufmax,255.0);
+  
+  ablate->cbufmin = cbufmin;
+  ablate->cbufmax = cbufmax;
 
   if (ctype == INNER) {
     ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
@@ -1759,13 +1768,21 @@ int CreateISurf::corner_hit3d(double *p1, double *p2,
 
 double CreateISurf::param2cval(double param, double v1)
 {
-
   // param is proportional to cell length so 
   // ... lo = 0; hi = 1
   // trying to find v0
   // param = (thresh  - v0) / (v1 - v0)
 
-  return (thresh - v1*param) / (1.0 - param);
+  double v0 = (thresh - v1*param) / (1.0 - param);
+
+  // bound by limits
+
+  if (ctype != INNER) {
+    v0 = MIN(v0,255.0);
+    v0 = MAX(v0,0.0);
+  }
+
+  return v0;
 }
 
 /* ----------------------------------------------------------------------
