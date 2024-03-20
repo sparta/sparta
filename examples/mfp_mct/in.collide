@@ -1,0 +1,44 @@
+################################################################################
+# thermal gas in a 3d box with collisions
+# compute mean free path and mean collision time
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5 comm/sort yes
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+create_grid 	    10 10 10
+
+species		    air.species N2 O2 NO N O
+mixture		    air N2 O2 NO N O temp 273.15
+mixture             air N2 frac 0.2
+mixture             air O2 frac 0.2
+mixture             air NO frac 0.2
+mixture             air N frac 0.2
+mixture             air O frac 0.2
+
+global              nrho 7.07043E22 fnum 7.07043E6
+
+collide		    vss air air.vss
+
+create_particles    air n 0
+balance_grid        rcb part
+
+compute             1 grid all species nrho
+compute             2 thermal/grid all all temp
+fix                 1 ave/grid all 1 250 250 c_1[*] ave running
+fix                 2 ave/grid all 1 250 250 c_2[1] ave running
+
+compute             3c lambda/grid c_1[*] c_2[1] kall #compute mfp and mct based on compute
+compute             3f lambda/grid f_1[*] f_2 kall #compute mfp and mct based on fix
+dump                1 grid all 250 tmp.grid.* id c_3c[*] c_3f[*] # choose to dump compute or fix or both
+
+stats		    100
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll c_temp
+
+timestep 	    7.00E-9
+run 		    1000
