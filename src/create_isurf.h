@@ -69,7 +69,8 @@ class CreateISurf : protected Pointers {
 
   int ctype;                // flag for how corners in unknown cells are set
   double mind;              // minimum cell length
-  double cin, cout, cmin;   // in and out corner values
+  double cin, cout;         // in and out corner values
+  double cbufmin, cbufmax;  // corner value buffer
   class FixAblate *ablate;  // ablate fix
 
   // for communicating

@@ -1739,9 +1739,10 @@ bool MarchingCubes::test_face(int face)
 bool MarchingCubes::test_face_inner(int face)
 {
   double A,B,C,D;
+  double AB, AD, BC, DC;
   double mat[4][4], b[4], phi[4];
 
-  //int sol = MathExtra::mldivide4(mat, b, v);
+  // set up linear system
 
   switch (face) {
   case -1:
@@ -1750,6 +1751,10 @@ bool MarchingCubes::test_face_inner(int face)
     B = viso[4];
     C = viso[5];
     D = viso[1];
+    AD = i0u;
+    AB = i8u;
+    BC = i4u;
+    DC = i9u;
     break;
   case -2:
   case 2:
@@ -1757,6 +1762,10 @@ bool MarchingCubes::test_face_inner(int face)
     B = viso[5];
     C = viso[6];
     D = viso[2];
+    AD = i1u;
+    AB = i9u;
+    BC = i5u;
+    DC = i10u;
     break;
   case -3:
   case 3:
@@ -1764,6 +1773,10 @@ bool MarchingCubes::test_face_inner(int face)
     B = viso[6];
     C = viso[7];
     D = viso[3];
+    AD = i2u;
+    AB = i10u;
+    BC = i6u;
+    DC = i11u;
     break;
   case -4:
   case 4:
@@ -1771,6 +1784,10 @@ bool MarchingCubes::test_face_inner(int face)
     B = viso[7];
     C = viso[4];
     D = viso[0];
+    AD = i3u;
+    AB = i11u;
+    BC = i7u;
+    DC = i8u;
     break;
   case -5:
   case 5:
@@ -1778,6 +1795,10 @@ bool MarchingCubes::test_face_inner(int face)
     B = viso[3];
     C = viso[2];
     D = viso[1];
+    AD = i0u;
+    AB = i3u;
+    BC = i2u;
+    DC = i1u;
     break;
   case -6:
   case 6:
@@ -1785,6 +1806,10 @@ bool MarchingCubes::test_face_inner(int face)
     B = viso[7];
     C = viso[6];
     D = viso[5];
+    AD = i4u;
+    AB = i7u;
+    BC = i6u;
+    DC = i5u;
     break;
 
   default:
@@ -1792,6 +1817,36 @@ bool MarchingCubes::test_face_inner(int face)
     print_cube();
     error->one(FLERR,"Invalid face code");
   };
+
+  // if the matrix is not singular, solve for corresponding
+  // corner value points; otherwise, use avreage values
+
+  /*if ( !(fabs(AD-BC)<0.01 || fabs(AB-DC)<0.01) &&
+       !(fabs(AD-AB)<0.01 || fabs(BC-DC)<0.01) ) {
+
+    for (int i = 0; i < 4; i++) {
+      b[i] = thresh;
+      for (int j = 0; j < 4; j++) mat[i][j] = 0.0;
+    }
+
+    mat[0][0] = 1.0-AD;
+    mat[0][1] = AD;
+    mat[1][0] = 1.0-AB;
+    mat[1][2] = AB;
+    mat[2][2] = 1.0-BC;
+    mat[2][3] = BC;
+    mat[3][1] = 1.0-DC;
+    mat[3][3] = DC;
+
+    int nosol = MathExtra::mldivide4(mat, b, phi);
+    if (!nosol) {
+      A = phi[0];
+      B = phi[1];
+      C = phi[2];
+      D = phi[3];
+    } else
+      error->one(FLERR,"Cannot find corresponding corner values");
+  }*/
 
   if (fabs(A*C - B*D) < EPSILON) return face >= 0;
   return face * A * (A*C - B*D) >= 0 ;  // face and A invert signs

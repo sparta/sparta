@@ -968,7 +968,7 @@ void FixAblate::decrement_adjacent()
 
   int i,j,imin;
   double minvalue,total;
-  double cmax[ncorner];
+  double cavg[ncorner];
 
   // total = full amount to decrement from cell
   // cdelta[icell] = amount to decrement from each corner point of icell
@@ -981,37 +981,32 @@ void FixAblate::decrement_adjacent()
 
     total = celldelta[icell];
     while (total > 0.0) {
-      // first find max in each corner
+
+      // first find average inner value in each corner
+
       for (i = 0; i < ncorner; i++) {
-        cmax[i] = 0.0;
-        // iterate through inner indices of each corner
-        for (j = 0; j < nadj; j++) cmax[i] = MAX(cmax[i],cavalues[icell][i][j]);
+        cavg[i] = 0.0;
+        for (j = 0; j < nadj; j++) cavg[i] += cavalues[icell][i][j];
+        cavg[i] /= nadj;
       }
 
       imin = -1;
       minvalue = 256.0;
       for (i = 0; i < ncorner; i++) {
-        if (cmax[i] > 0.0 && cdelta[icell][i] == 0.0) {
-          if(cmax[i] < minvalue) {
-            imin = i;
-            minvalue = cmax[i];
-          // if same values, randomly choose between them
-          } else if (fabs(cmax[i] - minvalue)/minvalue < EPSILON
-            && random->uniform() > 0.5) {
-            imin = i;
-          }
+        if (cavg[i] > 0.0 && cdelta[icell][i] == 0.0 && cavg[i] < minvalue) {
+          imin = i;
+          minvalue = cavg[i];
         }
       }
       if (imin == -1) break;
-      if (total < cmax[imin]) {
+      if (total < cavg[imin]) {
         cdelta[icell][imin] += total;
         total = 0.0;
       } else {
-        cdelta[icell][imin] = cmax[imin];
-        total -= cmax[imin];
+        cdelta[icell][imin] = cavg[imin];
+        total -= cavg[imin];
       }
     }
-
   }
 }
 
@@ -1107,7 +1102,8 @@ void FixAblate::sync_adjacent()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
-  double total, cmax;
+  int numin;
+  double total, cavg, cmin;
 
   comm_neigh_corners(CDELTA);
 
@@ -1171,20 +1167,31 @@ void FixAblate::sync_adjacent()
 
       if(total == 0) continue;
 
-      cmax = 0.0;
+      cavg = 0.0;
       for(j = 0; j < nadj; j++)
-        cmax = MAX(cmax,cavalues[icell][i][j]);
+        cavg += cavalues[icell][i][j];
+      cavg /= nadj;
 
       // now decrement corners
 
-      if (total > cmax) {
+      if (total > cavg) {
         for(j = 0; j < nadj; j++)
           cavalues[icell][i][j] = 0.0;
       } else {
+        cmin = 256.0;
+        numin = 0;
         for(j = 0; j < nadj; j++) {
           cavalues[icell][i][j] -= total;
-          if(cavalues[icell][i][j] < 0) cavalues[icell][i][j] = 0.0;
+          if(cavalues[icell][i][j] < 0.0) cavalues[icell][i][j] = 0.0;
+          if(cavalues[icell][i][j] < cmin) cmin = cavalues[icell][i][j];
+          if(cavalues[icell][i][j] > cbufmin) numin++;
         }
+
+        // if the inner values yield both in and out values, set all to cmin
+
+        cmin = MAX(cmin,0.0);
+        if(numin > 0 && numin < nadj)
+          for(j = 0; j < nadj; j++) cavalues[icell][i][j] = cmin;
       }
 
     }

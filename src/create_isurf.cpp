@@ -189,19 +189,10 @@ void CreateISurf::command(int narg, char **arg)
   
   tvalues = NULL;
   int pushflag = 0;
-  char *sgroupID = 0;
+  char *sgroupID = NULL;
 
-  // for epsilon_adjust in fix_ablate
+  // corner value cutoffs for epsilon_adjust in fix_ablate
 
-  double cbufmin = (thresh - 0.0 * surfbuffer) / (1.0 - surfbuffer);
-  double cbufmax = (thresh - 255. * surfbuffer) / (1.0 - surfbuffer);
-
-  cbufmin = MAX(cbufmin,0.0);
-  cbufmin = MIN(cbufmin,255.0);
-
-  cbufmax = MAX(cbufmax,0.0);
-  cbufmax = MIN(cbufmax,255.0);
-  
   ablate->cbufmin = cbufmin;
   ablate->cbufmax = cbufmax;
 
@@ -846,7 +837,7 @@ void CreateISurf::comm_neigh_corners(int which)
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  memory->grow(numsend,nglocal,"createisurfdev:numsend");
+  memory->grow(numsend,nglocal,"createisurf:numsend");
 
   // make list of datums to send to neighbor procs
   // 8 or 26 cells surrounding icell need icell's cdelta info
@@ -1452,6 +1443,20 @@ int CreateISurf::find_side_3d()
 
 void CreateISurf::set_cvalues()
 {
+  cout = 0.0;
+  cin = 255.0;
+
+  cbufmin = (thresh - cout * surfbuffer) / (1.0 - surfbuffer);
+  cbufmax = (thresh - cin * surfbuffer) / (1.0 - surfbuffer);
+
+  cbufmin = MAX(cbufmin,cout);
+  cbufmin = MIN(cbufmin,cin);
+
+  cbufmax = MAX(cbufmax,cout);
+  cbufmax = MIN(cbufmax,cin);
+
+  // every inside value must be larger than cbufmin
+
   if (ctype == INOUT) set_cvalues_inout();
   else if (ctype == AVE) set_cvalues_ave();
   else if (ctype == INNER) set_cvalues_inner();
@@ -1465,9 +1470,6 @@ void CreateISurf::set_cvalues_inout()
 {
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
-
-  cout = 0.0;
-  cin = 255.0;
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
@@ -1488,9 +1490,6 @@ void CreateISurf::set_cvalues_ave()
 {
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
-
-  cout = 0.0;
-  cin = 255.0;
 
   int nval;
   double ivalsum;
@@ -1515,7 +1514,7 @@ void CreateISurf::set_cvalues_ave()
         else {
           ivalsum /= nval;
           if (ivalsum > 1.0) error->one(FLERR,"over 1");
-          cvalues[icell][ic] = param2cval(ivalsum,0.0);
+          cvalues[icell][ic] = MAX(param2cval(ivalsum,0.0),cbufmin);
         }
 
       } // end svalues
@@ -1535,10 +1534,14 @@ void CreateISurf::set_cvalues_inner()
   // define cut-off for intersections to avoid degenerate triangles
   // refer to isosurface stuffing by labelle and shewchuk
 
-  double osurfbuffer = 1.0 - surfbuffer;
+  double ibuffer = surfbuffer*1.02;
+  double oibuffer = 1.0 - ibuffer;
 
-  cout = 0.0;
-  cin = param2cval(osurfbuffer,cout);
+  // find param of edge with 0 - 255. Determines if outside of inside
+  // corner point needs to be adjusted
+
+  double ivalth = (thresh - cin) / (cout - cin);
+  double oivalth = 1.0 - ivalth;
 
   // first set corner point values of fully inside and outside cells
 
@@ -1574,21 +1577,86 @@ void CreateISurf::set_cvalues_inner()
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
     for (int ic = 0; ic < ncorner; ic++) {
+
       for(int k = 0; k < nadj; k++) {
+
         // bound the intersection values
+
         ival = ivalues[icell][ic][k];
         if(ival >= 0.0) {
-          ival = MAX(ival, surfbuffer);
-          ival = MIN(ival, osurfbuffer);
+          ival = MAX(ival, ibuffer);
+          ival = MIN(ival, oibuffer);
         }
         ivalues[icell][ic][k] = ival;
 
-        if(svalues[icell][ic]==0) invalues[icell][ic][k] = cout;
-        else if(ival > 0) invalues[icell][ic][k] = param2cval(ival,cout);
-        else invalues[icell][ic][k] = cin;
+        // no intersection this edge
+        if (ival <= 0) {
+          if (svalues[icell][ic] == 0) cval = cout;
+          else cval = cin;
+        } else if (svalues[icell][ic] == 1) {
+          if (ival <= ivalth) cval = param2cval(ival,0.0);
+          else cval = cin;
+        } else {
+          if (ival < oivalth) cval = param2cval(ival,255.0);
+          else cval = 0.0;
+        }
+        invalues[icell][ic][k] = cval;
+
+        //if(ival > 0)
+        //  printf("cval[%i][%i][%i]: %4.3e - %4.3e - %4.3e\n",
+        //    icell, ic, k, cval, ival, ivalth);
+
+        //if(svalues[icell][ic]==0) invalues[icell][ic][k] = cout;
+        //else if(ival > 0) invalues[icell][ic][k] = param2cval(ival,cout);
+        //else invalues[icell][ic][k] = cin;
       }
     } // end ncorner
   } // end cells
+
+  // check all values bounded between (0,255) and all in or out
+
+  int inout;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+    for (int ic = 0; ic < ncorner; ic++) {
+
+      if(invalues[icell][ic][0] <= cbufmin) inout = 0;
+      else inout = 1;
+
+      for(int k = 0; k < nadj; k++) {
+        if(invalues[icell][ic][k]<0 || invalues[icell][ic][k]>255.0)
+          error->one(FLERR,"bad");
+        if(invalues[icell][ic][k] <= cbufmin && inout == 1)
+          error->one(FLERR,"inconsistent");
+        if(invalues[icell][ic][k] > cbufmin && inout == 0)
+          error->one(FLERR,"inconsistent");
+      }
+    }
+  }
+
+}
+
+/* ----------------------------------------------------------------------
+   find inside corner value from outside corner value and intersection
+   value
+------------------------------------------------------------------------- */
+
+double CreateISurf::param2cval(double param, double v1)
+{
+  // param is proportional to cell length so 
+  // ... lo = 0; hi = 1
+  // trying to find v0
+  // param = (thresh  - v0) / (v1 - v0)
+
+  double v0 = (thresh - v1*param) / (1.0 - param);
+
+  // bound by limits
+
+  v0 = MIN(v0,cin);
+  v0 = MAX(v0,cout);
+
+  return v0;
 }
 
 /* ----------------------------------------------------------------------
@@ -1759,30 +1827,6 @@ int CreateISurf::corner_hit3d(double *p1, double *p2,
   // true miss
 
   return false;
-}
-
-/* ----------------------------------------------------------------------
-   find inside corner value from outside corner value and intersection
-   value
-------------------------------------------------------------------------- */
-
-double CreateISurf::param2cval(double param, double v1)
-{
-  // param is proportional to cell length so 
-  // ... lo = 0; hi = 1
-  // trying to find v0
-  // param = (thresh  - v0) / (v1 - v0)
-
-  double v0 = (thresh - v1*param) / (1.0 - param);
-
-  // bound by limits
-
-  if (ctype != INNER) {
-    v0 = MIN(v0,255.0);
-    v0 = MAX(v0,0.0);
-  }
-
-  return v0;
 }
 
 /* ----------------------------------------------------------------------
