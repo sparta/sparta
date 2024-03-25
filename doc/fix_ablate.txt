@@ -30,6 +30,7 @@ keyword = {buffer} :l
 [Examples:]
 
 fix 1 ablate surfcells 0 0.0 random 10
+fix fablate ablate inner 0 0.2 random 0 buffer 0.1 
 fix 1 ablate surfcells 1000 10.0 c_tally :pre
 
 [Description:]
@@ -111,7 +112,7 @@ fraction of grid cells whose corner point values are decremented.
 The {buffer} is the minimum allowable distance between the vertices of 
 each triangle or line and any chosen corner in a grid cell. This implementation
 is based on the "isosurface stuffing" proposed 
-by Labelle and Shewchuk"(Labelle07)"_#Labelle07 With {buffer}, a minimum 
+by Labelle and Shewchuk"(Labelle07)"_#Labelle07. With {buffer}, a minimum 
 inside corner value is calculated by extrapolating
 from an outside corner point value. Any inside corner values which
 are below this minimum value is reduced such that the intersection of the 
