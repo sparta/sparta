@@ -33,12 +33,12 @@ create_grid		20 ${N} ${N}
 create_grid		20 20 ${N}
 create_grid		20 20 20
 Created 8000 child grid cells
-  CPU time = 0.0029336 secs
-  create/ghost percent = 37.555 62.445
+  CPU time = 0.00303248 secs
+  create/ghost percent = 39.0315 60.9685
 balance_grid		rcb cell
 Balance grid migrated 0 cells
-  CPU time = 0.0014839 secs
-  reassign/sort/migrate/ghost percent = 44.5025 1.95862 11.0185 42.5203
+  CPU time = 0.00144709 secs
+  reassign/sort/migrate/ghost percent = 40.6899 0.771269 11.8271 46.7117
 
 global			nrho 1.0 fnum 0.001
 global                  surfs explicit/distributed
@@ -63,14 +63,15 @@ read_surf               data.sphere3d
   5632 1304 1064 = cells outside/inside/overlapping surfs
   1064 = surf cells with 1,2,etc splits
   6.23823 6.23823 = cell-wise and global flow volume
-  CPU time = 0.0769795 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 4.83602 13.1118 0.203822 38.7707 43.0777 1.1198 0.000298781
-  surf2grid time = 0.0298455 secs
-  map/comm1/comm2/comm3/comm4/split percent = 10.8509 4.00925 2.59388 1.34155 4.62559 75.6575
+  CPU time = 0.0794685 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 5.03627 12.8253 0.217461 40.6427 41.2782 1.16984 0.000339757
+  surf2grid time = 0.0322982 secs
+  map/comm1/comm2/comm3/comm4/split percent = 10.7645 3.66226 2.36654 1.36647 4.72563 76.2233
 surf_collide		1 diffuse 300.0 0.0
 surf_modify		all collide 1
 
 fix			fablate ablate inner 0 0.2 random 0
+#fix			fablate ablate inner 0 0.2 random 0 buffer 0.1
 create_isurf            inner fablate 39.5 ave
   8000 0 0 = cells outside/inside/overlapping surfs
   0 = surf cells with 1,2,etc splits
@@ -78,80 +79,70 @@ create_isurf            inner fablate 39.5 ave
   -0.75 0.75 xlo xhi
   -0.75 0.75 ylo yhi
   -0.75 0.75 zlo zhi
-  0.00176777 min triangle edge length
-  1.35316e-06 min triangle area
+  0.00829196 min triangle edge length
+  8.52014e-05 min triangle area
   1064 = cells with surfs
   2120 = total surfs in all grid cells
   4 = max surfs in one grid cell
-  0.0176777 = min surf-size/cell-size ratio
+  0.0829196 = min surf-size/cell-size ratio
   1064 0 = cells overlapping surfs, overlap cells with unmarked corner pts
   440 tiny edges removed
-  5632 1304 1064 = cells outside/inside/overlapping surfs
+  5680 1256 1064 = cells outside/inside/overlapping surfs
   1064 = surf cells with 1,2,etc splits
-  6.24235 6.24235 = cell-wise and global flow volume
+  6.24337 6.24337 = cell-wise and global flow volume
 
 create_particles        air n 0 twopass
-WARNING: Created unexpected # of particles: 6241 versus 6242 (/home/runner/work/sparta/sparta/src/create_particles.cpp:346)
-Created 6241 particles
-  CPU time = 0.00147239 secs
+WARNING: Created unexpected # of particles: 6240 versus 6243 (/home/runner/work/sparta/sparta/src/create_particles.cpp:346)
+Created 6240 particles
+  CPU time = 0.00168894 secs
 
 collide			vss air air.vss
 
 timestep		0.001
 
-dump                    1 image all 10 sphere.* type type surf one 0.02 particle no zoom 1.5 box no 0.0 view 65 140
-dump_modify             1 scolor * gray
+#dump                    1 image all 10 sphere.*.ppm type type surf one 0.02 particle no zoom 1.5 box no 0.0 view 65 140
+#dump_modify             1 scolor * gray
 
 stats			1
 stats_style		step cpu np nattempt ncoll nscoll nscheck
-run			20
+run			10
 Memory usage per proc in Mbytes:
   particles (ave,min,max) = 1.6875 1.6875 1.6875
   grid      (ave,min,max) = 1.55194 1.55194 1.55194
   surf      (ave,min,max) = 0.258789 0.258789 0.258789
   total     (ave,min,max) = 3.49823 3.49823 3.49823
 Step CPU Np Natt Ncoll Nscoll Nscheck 
-       0            0     6241        0        0        0        0 
-       1   0.00255024     6241        0        0      778    10417 
-       2  0.004682415     6241        0        0      710    10303 
-       3  0.006804571     6241        0        0      788    11029 
-       4  0.008897983     6241        0        0      754    10104 
-       5  0.010995654     6241        0        0      772    10530 
-       6  0.013075251     6241        0        0      760    10544 
-       7  0.015194582     6241        0        0      755    10465 
-       8  0.017266004     6241        0        0      761    10613 
-       9  0.019359347     6241        0        0      748    10624 
-      10  0.035524158     6241        0        0      801    11268 
-      11  0.037847968     6241        0        0      784    10785 
-      12  0.040019176     6241        0        0      802    10933 
-      13  0.042116886     6241        0        0      774    10255 
-      14  0.044185192     6241        0        0      774    10396 
-      15  0.046323679     6241        0        0      783    10352 
-      16  0.048390332     6241        0        0      750    10352 
-      17  0.050487291     6241        0        0      711     9927 
-      18  0.052616881     6241        0        0      808    10887 
-      19  0.055046307     6241        0        0      779    10932 
-      20  0.072001074     6241        0        0      760    10636 
-Loop time of 0.0720653 on 1 procs for 20 steps with 6241 particles
+       0            0     6240        0        0        0        0 
+       1   0.00193605     6240        0        0      783     9852 
+       2  0.004072724     6240        0        0      779     9857 
+       3  0.006296731     6240        0        0      802     9806 
+       4  0.008565713     6240        0        0      810    10138 
+       5  0.010752411     6240        0        0      719     9071 
+       6  0.012862967     6240        0        0      753     9465 
+       7  0.015244228     6240        0        0      759     9785 
+       8  0.017349984     6240        0        0      771     9668 
+       9  0.019474486     6240        0        0      740     9915 
+      10  0.021670712     6240        0        0      778     9843 
+Loop time of 0.021705 on 1 procs for 10 steps with 6240 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.040976   | 0.040976   | 0.040976   |   0.0 | 56.86
-Coll    | 0.0009554  | 0.0009554  | 0.0009554  |   0.0 |  1.33
-Sort    | 0.00078845 | 0.00078845 | 0.00078845 |   0.0 |  1.09
-Comm    | 7.676e-06  | 7.676e-06  | 7.676e-06  |   0.0 |  0.01
+Move    | 0.020196   | 0.020196   | 0.020196   |   0.0 | 93.05
+Coll    | 0.00056746 | 0.00056746 | 0.00056746 |   0.0 |  2.61
+Sort    | 0.00049677 | 0.00049677 | 0.00049677 |   0.0 |  2.29
+Comm    | 4.728e-06  | 4.728e-06  | 4.728e-06  |   0.0 |  0.02
 Modify  | 0          | 0          | 0          |   0.0 |  0.00
-Output  | 0.029328   | 0.029328   | 0.029328   |   0.0 | 40.70
-Other   |            | 9.654e-06  |            |       |  0.01
+Output  | 0.0004345  | 0.0004345  | 0.0004345  |   0.0 |  2.00
+Other   |            | 5.612e-06  |            |       |  0.03
 
-Particle moves    = 124820 (0.125M)
-Cells touched     = 922398 (0.922M)
+Particle moves    = 62400 (62.4K)
+Cells touched     = 462686 (0.463M)
 Particle comms    = 0 (0K)
 Boundary collides = 0 (0K)
 Boundary exits    = 0 (0K)
-SurfColl checks   = 211352 (0.211M)
-SurfColl occurs   = 15352 (15.4K)
+SurfColl checks   = 97400 (97.4K)
+SurfColl occurs   = 7694 (7.69K)
 Surf reactions    = 0 (0K)
 Collide attempts  = 0 (0K)
 Collide occurs    = 0 (0K)
@@ -159,21 +150,21 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 1.73204e+06
-Particle-moves/step: 6241
-Cell-touches/particle/step: 7.38983
+Particle-moves/CPUsec/proc: 2.87492e+06
+Particle-moves/step: 6240
+Cell-touches/particle/step: 7.41484
 Particle comm iterations/step: 1
 Particle fraction communicated: 0
 Particle fraction colliding with boundary: 0
 Particle fraction exiting boundary: 0
-Surface-checks/particle/step: 1.69325
-Surface-collisions/particle/step: 0.122993
+Surface-checks/particle/step: 1.5609
+Surface-collisions/particle/step: 0.123301
 Surf-reactions/particle/step: 0
 Collision-attempts/particle/step: 0
 Collisions/particle/step: 0
 Reactions/particle/step: 0
 
-Particles: 6241 ave 6241 max 6241 min
+Particles: 6240 ave 6240 max 6240 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
 Cells:      8000 ave 8000 max 8000 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
