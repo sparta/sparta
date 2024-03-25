@@ -241,7 +241,7 @@ This fix can only be used in simulations that define implicit surfaces.
 
 "read isurf"_read_isurf.html
 
-[Default:] none
+[Default:]
 
 The option default is {buffer} = 0.02
 

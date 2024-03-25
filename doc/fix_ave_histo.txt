@@ -369,7 +369,7 @@ effectively.
 "compute"_compute.html, "fix ave/time"_fix_ave_time.html,
 "variable"_variable.html
 
-[Default:] none
+[Default:]
 
 The option defaults are mode = scalar, ave = one, start = 0, no file
 output, no region/mixture/group restriction on inclusion of particles
