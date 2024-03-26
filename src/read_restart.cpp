@@ -722,8 +722,6 @@ int ReadRestart::surf_params()
      single vs multiple files
      current proc count vs proc count when restart file written
      ulimited vs limited memory
-   NOTE: confused by code setting versus file setting for memlimit
-     b/c if file was written with memlimit, its format is different
 ------------------------------------------------------------------------- */
 
 void ReadRestart::read_grid_particles(char *file)
@@ -739,12 +737,9 @@ void ReadRestart::read_grid_particles(char *file)
       read_gp_multi_file_more_procs(file);
     }
   } else if (mem_limit_flag) {
-    if (multiproc == 0 && nprocs_file == nprocs) {
-      // is this correct ???
-      //read_gp_single_file_same_procs();
-    } else if (multiproc == 0) {
-      // is this correct ???
-      //read_gp_single_file_diff_procs();
+    if (multiproc == 0) {
+      error->all(FLERR,"Cannot (yet) use global mem/limit without "
+                 "% in restart file name");
     } else if (nprocs <= multiproc_file) {
       read_gp_multi_file_less_procs_memlimit(file);
     } else if (nprocs > multiproc_file) {
