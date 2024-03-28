@@ -210,6 +210,12 @@ void ComputeTelecGrid::post_process_grid(int index, int nsample,
               (etally[icell][count]*first_elec_eng*degen1)
              ))
         );
+      // If the electronic excitation is very high, the above calculation will
+      // give negative numbers, including -inf. Negative temperatures are physically
+      // meaningful if over 50% of particles are in excited states. However, in the
+      // case of a truly broken value (-inf) we initialize the guess at something
+      // more sane.
+      if (isinf(t_elec)) t_elec = -species[ispecies].elecdat->states[1].temp;
 
       // Bisection method to find T accurate to 1%
       double target_energy_per_part = etally[icell][eelec]/etally[icell][count];
