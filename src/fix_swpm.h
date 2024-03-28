@@ -28,7 +28,7 @@ namespace SPARTA_NS {
 
 class FixSWPM : public Fix {
  public:
-  int swpmindex;
+  int index_swpm;
 
   FixSWPM(class SPARTA *, int, char **);
   FixSWPM(class SPARTA *sparta) : Fix(sparta) {} // needed for Kokkos

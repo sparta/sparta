@@ -646,9 +646,6 @@ int Particle::add_particle(int id, int ispecies, int icell,
   p->evib = evib;
   p->flag = PKEEP;
 
-  //if(g < 0) p->g = update->fnum;
-  //else p->g = g;
-
   //p->dtremain = 0.0;    not needed due to memset in grow() ??
   //p->weight = 1.0;      not needed due to memset in grow() ??
 

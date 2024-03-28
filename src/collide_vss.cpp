@@ -200,10 +200,9 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
   double vr2 = du*du + dv*dv + dw*dw;
   double vro  = pow(vr2,1.0-params[ispecies][jspecies].omega);
 
-  double *sweights = particle->edvec[particle->ewhich[index_sweight]];
-
   double ijsw = 1.0;
   if (swpmflag) {
+    double *sweights = particle->edvec[particle->ewhich[index_sweight]];
     double isw = sweights[ip - particle->particles];
     double jsw = sweights[jp - particle->particles];
     ijsw = MAX(isw ,jsw)/sweight_max;
@@ -774,104 +773,6 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
   postcoln.eint = postcoln.erot + postcoln.evib;
   postcoln.etrans = E_Dispose;
 }
-
-/* ---------------------------------------------------------------------- */
-
-/*int CollideVSS::split(Particle::OnePart *&ip,
-                      Particle::OnePart *&jp,
-                      Particle::OnePart *&kp,
-                      Particle::OnePart *&lp)
-{
-
-  double xk[3],vk[3];
-  double xl[3],vl[3];
-  int ks, ls;
-  int kcell, lcell;
-
-  // checks if particles properly deleted
-  int id;
-  int reallocflag;
-  Particle::OnePart *particles = particle->particles;
-
-  kp = NULL;
-  lp = NULL;
-
-  // weight transfer function is assumed to be
-  // ... MIN(ip->g,jp->g)/(1 + pre_wtf * wtf)
-
-  double dg, gk, gl;
-  // particle ip has larger weight
-  if(ip->g >= jp->g) {
-    dg = jp->g/(1.0+pre_wtf*wtf);
-    gk = ip->g-dg;
-    gl = jp->g-dg;
-
-    ks = ip->ispecies;
-    ls = jp->ispecies;
-
-    kcell = ip->icell;
-    lcell = jp->icell;
-
-    memcpy(xk,ip->x,3*sizeof(double));
-    memcpy(vk,ip->v,3*sizeof(double));
-    memcpy(xl,jp->x,3*sizeof(double));
-    memcpy(vl,jp->v,3*sizeof(double));
-  // particle jp has larger weight
-  } else {
-    dg = ip->g/(1.0+pre_wtf*wtf);
-    gk = jp->g-dg;
-    gl = ip->g-dg;
-
-    ks = jp->ispecies;
-    ls = ip->ispecies;
-
-    kcell = jp->icell;
-    lcell = ip->icell;
-
-    memcpy(xk,jp->x,3*sizeof(double));
-    memcpy(vk,jp->v,3*sizeof(double));
-    memcpy(xl,ip->x,3*sizeof(double));
-    memcpy(vl,ip->v,3*sizeof(double));
-  }
-
-  // number of new particles
-  int newp = 0;
-
-  // gk is always the bigger of the two
-  if(gk > 0) {
-    id = MAXSMALLINT*random->uniform();
-    reallocflag = particle->add_particle(id,ks,kcell,xk,vk,0.0,0.0,gk);
-    if (reallocflag) {
-      ip = particle->particles + (ip - particles);
-      jp = particle->particles + (jp - particles);
-    }
-    kp = &particle->particles[particle->nlocal-1];
-    newp++;
-  }
-
-  // there should never be case where you add particle "l" if
-  // ... you did not add particle "k"
-  if(gl > 0) {
-    if(gk <= 0) error->one(FLERR,"Bad addition to particle list");
-    id = MAXSMALLINT*random->uniform();
-    reallocflag = particle->add_particle(id,ls,lcell,xl,vl,0.0,0.0,gl);
-    if (reallocflag) {
-      ip = particle->particles + (ip - particles);
-      jp = particle->particles + (jp - particles);
-      kp = particle->particles + (kp - particles);
-    }
-    lp = &particle->particles[particle->nlocal-1];
-    newp++;
-  }
-
-  // dg should never be negative or zero
-  if(dg <= 0.0) error->one(FLERR,"Negative weight assigned after split");
-  // update weights
-  ip->g = dg;
-  jp->g = dg;
-
-  return newp;
-}*/
 
 /* ---------------------------------------------------------------------- */
 

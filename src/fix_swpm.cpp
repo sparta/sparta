@@ -35,17 +35,15 @@ enum{INT,DOUBLE};                      // several files
 FixSWPM::FixSWPM(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
-  if (narg < 4) error->all(FLERR,"Illegal fix ambipolar command");
+  if (narg != 2) error->all(FLERR,"Illegal fix swpm command");
 
   flag_update_custom = 1;
-  flag_surf_react = 1;
 
-  swpmindex = particle->find_custom((char *) "sweight");
+  index_swpm = particle->find_custom((char *) "sweight");
+  if (index_swpm > 0)
+    error->all(FLERR,"Fix swpm custom attribute already exists");
 
-  if (swpmindex > 0)
-    error->all(FLERR,"Fix ambipolar custom attribute already exists");
-
-  swpmindex = particle->add_custom((char *) "sweight",DOUBLE,0);
+  index_swpm = particle->add_custom((char *) "sweight",DOUBLE,0);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -54,7 +52,7 @@ FixSWPM::~FixSWPM()
 {
   if (copy || copymode) return;
 
-  particle->remove_custom(swpmindex);
+  particle->remove_custom(index_swpm);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -81,8 +79,12 @@ void FixSWPM::update_custom(int index, double,
                                 double, double,
                                 double*)
 {
-  double *swpmweight = particle->edvec[particle->ewhich[swpmindex]];
-  swpmweight[index] = update->fnum;
+  double *swpmweight = particle->edvec[particle->ewhich[index_swpm]];
+
+  // conditional avoids weight reset during surface collisions
+  // only new particles (zero weight) have their weight set as fnum
+
+  if(swpmweight[index] == 0.0) swpmweight[index] = update->fnum;
 }
 
 
