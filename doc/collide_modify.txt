@@ -135,6 +135,8 @@ vibrational mode, then use of the {discrete} option also requires the
 "fix vibmode"_fix_vibmode.html command be used to allocate storage for
 the per-particle mode values.
 
+There is also an option to use the stochastic weighted particle method (refer to "collide_modify_swpm"_collide_modify_swpm.html)
+
 :line
 
 [Restrictions:] none
