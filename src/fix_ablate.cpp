@@ -1024,7 +1024,10 @@ void FixAblate::decrement_partial()
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  int i,imin;
+  int i,imin,icorner;
+  int bit0,bit1,bit2,bit3,bit4,bit5,bit6,bit7;
+  int sout[8];
+  double v[8];
   int Nnz;
   double minvalue,total;
   double *corners;
@@ -1040,30 +1043,53 @@ void FixAblate::decrement_partial()
 
     total = celldelta[icell];
     corners = cvalues[icell];
+
+    v[0] = cvalues[icell][0];
+    v[1] = cvalues[icell][1];
+    v[2] = cvalues[icell][3];
+    v[3] = cvalues[icell][2];
+    v[4] = cvalues[icell][4];
+    v[5] = cvalues[icell][5];
+    v[6] = cvalues[icell][7];
+    v[7] = cvalues[icell][6];
+
     while (total > 0.0) {
+
+      bit0 = v[0] <= thresh ? 0 : 1;
+      bit1 = v[1] <= thresh ? 0 : 1;
+      bit2 = v[2] <= thresh ? 0 : 1;
+      bit3 = v[3] <= thresh ? 0 : 1;
+      bit4 = v[4] <= thresh ? 0 : 1;
+      bit5 = v[5] <= thresh ? 0 : 1;
+      bit6 = v[6] <= thresh ? 0 : 1;
+      bit7 = v[7] <= thresh ? 0 : 1;
+
+      which = (bit7 << 7) + (bit6 << 6) + (bit5 << 5) + (bit4 << 4) +
+        (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
 
       // find number of nonzero corner points and index of minimum corner
 
-      Nnz = 0;
+      Nin = Ninside[which];
+      sout = outside[which];
+
       imin = -1;
       minvalue = 256.0;
-      for (i = 0; i < ncorner; i++) {
-        if (corners[i] > 0.0 && corners[i] < minvalue &&
-            cdelta[icell][i] == 0.0) {
+      for (i = 0; i < Nin; i++) {
+        icorner = sout[i];
+        if (corners[icorner] > 0.0 && corners[icorner] < minvalue &&
+            cdelta[icell][icorner] == 0.0) {
           imin = i;
-          minvalue = corners[i];
-        } else if(fabs(corners[i]-minvalue) < total*EPSILON) {
+          minvalue = corners[icorner];
+        } else if(fabs(corners[icorner]-minvalue) < total*EPSILON) {
           if(random->uniform() > 0.5) imin = i;
-          minvalue = corners[i];
+          minvalue = corners[icorner];
         }
-
-        if (corners[i] > 0.0) Nnz++;
       }
 
       if (imin == -1) break; // all zero
 
       Nnz = MIN(Nnz,dim);
-      if (total < minvalue  N) {
+      if (total/ < minvalue  N) {
         cdelta[icell][imin] += total;
         total = 0.0;
       } else {
