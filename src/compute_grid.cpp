@@ -251,7 +251,9 @@ void ComputeGrid::compute_per_grid()
 
     mass = species[ispecies].mass;
     v = particles[i].v;
-    if(index_sweight > 0) mass *= sweights[i]/update->fnum;
+    double swfrac = 1.0;
+    if(index_sweight > 0) swfrac = sweights[i]/update->fnum;
+    mass *= swfrac;
 
     vec = tally[icell];
     if (cellmass) vec[cellmass] += mass;
@@ -289,19 +291,19 @@ void ComputeGrid::compute_per_grid()
         vec[k++] += mass*v[2]*v[2];
         break;
       case MVSQ:
-        vec[k++] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+        vec[k++] += mass*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
         break;
       case ENGROT:
-        vec[k++] += particles[i].erot;
+        vec[k++] += particles[i].erot*swfrac;
         break;
       case ENGVIB:
-        vec[k++] += particles[i].evib;
+        vec[k++] += particles[i].evib*swfrac;
         break;
       case DOFROT:
-        vec[k++] += species[ispecies].rotdof;
+        vec[k++] += species[ispecies].rotdof*swfrac;
         break;
       case DOFVIB:
-        vec[k++] += species[ispecies].vibdof;
+        vec[k++] += species[ispecies].vibdof*swfrac;
         break;
       }
     }

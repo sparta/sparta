@@ -603,15 +603,25 @@ double ComputeReduce::compute_one(int m, int flag)
   if (mode == MINN) one = BIG;
   else if (mode == MAXX) one = -BIG;
 
+  double *sweights;
+  int index_sweight = particle->find_custom((char *) "sweight");
+  if(index_sweight > 0)
+    sweights = particle->edvec[particle->ewhich[index_sweight]];
+  double swfrac = 1.0;
+
   if (which[m] == X) {
     Particle::OnePart *particles = particle->particles;
     int n = particle->nlocal;
     if (flag < 0) {
       for (i = 0; i < n; i++) {
         if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-        combine(one,particles[i].x[aidx],i);
+        if(index_sweight > 0) swfrac = sweights[i]/update->fnum;
+        combine(one,particles[i].x[aidx] * swfrac,i);
       }
-    } else one = particles[flag].x[aidx];
+    } else {
+      if(index_sweight > 0) swfrac = sweights[flag]/update->fnum;
+      one = particles[flag].x[aidx] * swfrac;
+    }
 
   } else if (which[m] == V) {
     Particle::OnePart *particles = particle->particles;
@@ -619,9 +629,13 @@ double ComputeReduce::compute_one(int m, int flag)
     if (flag < 0) {
       for (i = 0; i < n; i++) {
         if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-        combine(one,particles[i].v[aidx],i);
+        if(index_sweight > 0) swfrac = sweights[i]/update->fnum;
+        combine(one,particles[i].v[aidx] * swfrac,i);
       }
-    } else one = particles[flag].v[aidx];
+    } else {
+      if(index_sweight > 0) swfrac = sweights[flag]/update->fnum;
+      one = particles[flag].v[aidx] * swfrac;
+    }
 
   } else if (which[m] == KE) {
     Particle::OnePart *particles = particle->particles;
@@ -637,14 +651,16 @@ double ComputeReduce::compute_one(int m, int flag)
         if (subsetID && s2g[particles[i].ispecies] < 0) continue;
         p = &particles[i];
         v = p->v;
-        ke = mvv2e * 0.5 * species[p->ispecies].mass *
+        if(index_sweight > 0) swfrac = sweights[i]/update->fnum;
+        ke = mvv2e * 0.5 * species[p->ispecies].mass * swfrac *
           (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
         combine(one,ke,i);
       }
     } else {
       p = &particles[flag];
       v = p->v;
-      one = mvv2e * 0.5 * species[p->ispecies].mass *
+      if(index_sweight > 0) swfrac = sweights[flag]/update->fnum;
+      one = mvv2e * 0.5 * species[p->ispecies].mass * swfrac *
         (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
     }
 
@@ -654,9 +670,13 @@ double ComputeReduce::compute_one(int m, int flag)
     if (flag < 0) {
       for (i = 0; i < n; i++) {
         if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-        combine(one,particles[i].erot,i);
+        if(index_sweight > 0) swfrac = sweights[i]/update->fnum;
+        combine(one,particles[i].erot * swfrac,i);
       }
-    } else one = particles[flag].erot;
+    } else {
+      if(index_sweight > 0) swfrac = sweights[flag]/update->fnum;
+      one = particles[flag].erot * swfrac;
+    }
 
   } else if (which[m] == EVIB) {
     Particle::OnePart *particles = particle->particles;
@@ -664,9 +684,13 @@ double ComputeReduce::compute_one(int m, int flag)
     if (flag < 0) {
       for (i = 0; i < n; i++) {
         if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-        combine(one,particles[i].evib,i);
+        if(index_sweight > 0) swfrac = sweights[i]/update->fnum;
+        combine(one,particles[i].evib * swfrac,i);
       }
-    } else one = particles[flag].evib;
+    } else {
+      if(index_sweight > 0) swfrac = sweights[flag]/update->fnum;
+      one = particles[flag].evib * swfrac;
+    }
 
   // invoke compute if not previously invoked
   // for per-grid compute, invoke post_process grid() or isurf_grid() method as needed
@@ -833,12 +857,12 @@ double ComputeReduce::compute_one(int m, int flag)
                    "computed at compatible time");
       if (aidx == 0) {
         double *fvec = fix->vector_surf;
-	int n = surf->nown;
+      	int n = surf->nown;
         if (flag < 0) {
           for (i = 0; i < n; i++) {
             if (subsetID && !(smasks[i] & surfgroupbit)) continue;
             combine(one,areasurf[i]*fvec[i],i);
-	  }
+      	  }
         } else one = fvec[flag];
       } else {
         double **farray = fix->array_surf;
@@ -846,9 +870,9 @@ double ComputeReduce::compute_one(int m, int flag)
         int aidxm1 = aidx - 1;
         if (flag < 0) {
           for (i = 0; i < n; i++) {
-	    if (subsetID && !(smasks[i] & surfgroupbit)) continue;
-	    combine(one,areasurf[i]*farray[i][aidxm1],i);
-	  }
+      	    if (subsetID && !(smasks[i] & surfgroupbit)) continue;
+      	    combine(one,areasurf[i]*farray[i][aidxm1],i);
+	        }
         } else one = farray[flag][aidxm1];
       }
     }
@@ -914,48 +938,54 @@ double ComputeReduce::compute_one(int m, int flag)
       Particle::OnePart *particles = particle->particles;
       int n = particle->nlocal;
       if (flag < 0) {
-	if (particle->etype[vidx] == INT) {
-	  int *cvec = particle->eivec[particle->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
+	      if (particle->etype[vidx] == INT) {
+	        int *cvec = particle->eivec[particle->ewhich[vidx]];
+	        for (i = 0; i < n; i++) {
             if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-	    combine(one,cvec[i],i);
-	  }
-	} else if (particle->etype[vidx] == DOUBLE) {
-	  double *cvec = particle->edvec[particle->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
+            if(index_sweight > 0) swfrac = sweights[i]/update->fnum;
+      	    combine(one,cvec[i] * swfrac,i);
+	        }
+        } else if (particle->etype[vidx] == DOUBLE) {
+          double *cvec = particle->edvec[particle->ewhich[vidx]];
+          for (i = 0; i < n; i++) {
             if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-	    combine(one,cvec[i],i);
-	  }
-	}
+            if(index_sweight > 0) swfrac = sweights[i]/update->fnum;
+            combine(one,cvec[i] * swfrac,i);
+          }
+        }
       } else {
-	if (particle->etype[vidx] == INT)
-	  one = particle->eivec[particle->ewhich[vidx]][flag];
-	else
-	  one = particle->edvec[particle->ewhich[vidx]][flag];
+        if(index_sweight > 0) swfrac = sweights[flag]/update->fnum;
+        if (particle->etype[vidx] == INT)
+          one = particle->eivec[particle->ewhich[vidx]][flag] * swfrac;
+        else
+          one = particle->edvec[particle->ewhich[vidx]][flag] * swfrac;
       }
     } else {
       Particle::OnePart *particles = particle->particles;
       int n = particle->nlocal;
       int aidxm1 = aidx - 1;
       if (flag < 0) {
-	if (particle->etype[vidx] == INT) {
-	  int **carray = particle->eiarray[particle->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
+        if (particle->etype[vidx] == INT) {
+          int **carray = particle->eiarray[particle->ewhich[vidx]];
+          for (i = 0; i < n; i++) {
             if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-	    combine(one,carray[i][aidxm1],i);
-	  }
-	} else if (particle->etype[vidx] == DOUBLE) {
-	  double **carray = particle->edarray[particle->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
+            if(index_sweight > 0) swfrac = sweights[i]/update->fnum;
+            combine(one,carray[i][aidxm1] * swfrac,i);
+          }
+        } else if (particle->etype[vidx] == DOUBLE) {
+          double **carray = particle->edarray[particle->ewhich[vidx]];
+          for (i = 0; i < n; i++) {
             if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-	    combine(one,carray[i][aidxm1],i);
-	  }
-	}
+            if(index_sweight > 0) swfrac = sweights[i]/update->fnum;
+            combine(one,carray[i][aidxm1] * swfrac,i);
+          }
+        }
       } else {
-	if (particle->etype[vidx] == INT)
-	  one = particle->eiarray[particle->ewhich[vidx]][flag][aidxm1];
-	else
-	  one = particle->edarray[particle->ewhich[vidx]][flag][aidxm1];
+        if(index_sweight > 0) swfrac = sweights[flag]/update->fnum;
+	      if (particle->etype[vidx] == INT)
+	        one = particle->eiarray[particle->ewhich[vidx]][flag][aidxm1] * swfrac;
+	      else
+	        one = particle->edarray[particle->ewhich[vidx]][flag][aidxm1] * swfrac;
       }
     }
 
@@ -966,48 +996,48 @@ double ComputeReduce::compute_one(int m, int flag)
       Grid::ChildInfo *cinfo = grid->cinfo;
       int n = grid->nlocal;
       if (flag < 0) {
-	if (grid->etype[vidx] == INT) {
-	  int *cvec = grid->eivec[grid->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
+        if (grid->etype[vidx] == INT) {
+          int *cvec = grid->eivec[grid->ewhich[vidx]];
+	        for (i = 0; i < n; i++) {
             if (subsetID && !(cinfo[i].mask & gridgroupbit)) continue;
-	    combine(one,cvec[i],i);
-	  }
-	} else if (grid->etype[vidx] == DOUBLE) {
-	  double *cvec = grid->edvec[grid->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
+	          combine(one,cvec[i],i);
+	        }
+	      } else if (grid->etype[vidx] == DOUBLE) {
+	        double *cvec = grid->edvec[grid->ewhich[vidx]];
+	        for (i = 0; i < n; i++) {
             if (subsetID && !(cinfo[i].mask & gridgroupbit)) continue;
-	    combine(one,cvec[i],i);
-	  }
-	}
+            combine(one,cvec[i],i);
+	        }
+        }
       } else {
-	if (grid->etype[vidx] == INT)
-	  one = grid->eivec[grid->ewhich[vidx]][flag];
-	else
-	  one = grid->edvec[grid->ewhich[vidx]][flag];
+        if (grid->etype[vidx] == INT)
+          one = grid->eivec[grid->ewhich[vidx]][flag];
+        else
+          one = grid->edvec[grid->ewhich[vidx]][flag];
       }
     } else {
       Grid::ChildInfo *cinfo = grid->cinfo;
       int n = grid->nlocal;
       int aidxm1 = aidx - 1;
       if (flag < 0) {
-	if (grid->etype[vidx] == INT) {
-	  int **carray = grid->eiarray[grid->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
-            if (subsetID && !(cinfo[i].mask & gridgroupbit)) continue;
-	    combine(one,carray[i][aidxm1],i);
-	  }
-	} else if (grid->etype[vidx] == DOUBLE) {
-	  double **carray = grid->edarray[grid->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
-            if (subsetID && !(cinfo[i].mask & gridgroupbit)) continue;
-	    combine(one,carray[i][aidxm1],i);
-	  }
-	}
+	      if (grid->etype[vidx] == INT) {
+	        int **carray = grid->eiarray[grid->ewhich[vidx]];
+	        for (i = 0; i < n; i++) {
+                  if (subsetID && !(cinfo[i].mask & gridgroupbit)) continue;
+	          combine(one,carray[i][aidxm1],i);
+	        }
+	      } else if (grid->etype[vidx] == DOUBLE) {
+	        double **carray = grid->edarray[grid->ewhich[vidx]];
+	        for (i = 0; i < n; i++) {
+                  if (subsetID && !(cinfo[i].mask & gridgroupbit)) continue;
+	          combine(one,carray[i][aidxm1],i);
+	        }
+	      }
       } else {
-	if (grid->etype[vidx] == INT)
-	  one = grid->eiarray[grid->ewhich[vidx]][flag][aidxm1];
-	else
-	  one = grid->edarray[grid->ewhich[vidx]][flag][aidxm1];
+	      if (grid->etype[vidx] == INT)
+	        one = grid->eiarray[grid->ewhich[vidx]][flag][aidxm1];
+	      else
+	        one = grid->edarray[grid->ewhich[vidx]][flag][aidxm1];
       }
     }
 
@@ -1017,47 +1047,47 @@ double ComputeReduce::compute_one(int m, int flag)
     if (aidx == 0) {
       int n = surf->nown;
       if (flag < 0) {
-	if (surf->etype[vidx] == INT) {
-	  int *cvec = surf->eivec[surf->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
-	    if (subsetID && !(smasks[i] & surfgroupbit)) continue;
-	    combine(one,areasurf[i]*cvec[i],i);
-	  }
-	} else if (surf->etype[vidx] == DOUBLE) {
-	  double *cvec = surf->edvec[surf->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
-	    if (subsetID && !(smasks[i] & surfgroupbit)) continue;
-	    combine(one,areasurf[i]*cvec[i],i);
-	  }
-	}
+	      if (surf->etype[vidx] == INT) {
+	        int *cvec = surf->eivec[surf->ewhich[vidx]];
+	        for (i = 0; i < n; i++) {
+	          if (subsetID && !(smasks[i] & surfgroupbit)) continue;
+	          combine(one,areasurf[i]*cvec[i],i);
+	        }
+	      } else if (surf->etype[vidx] == DOUBLE) {
+	        double *cvec = surf->edvec[surf->ewhich[vidx]];
+	        for (i = 0; i < n; i++) {
+	          if (subsetID && !(smasks[i] & surfgroupbit)) continue;
+	          combine(one,areasurf[i]*cvec[i],i);
+	        }
+	      }
       } else {
-	if (surf->etype[vidx] == INT)
-	  one = surf->eivec[surf->ewhich[vidx]][flag];
-	else
-	  one = surf->edvec[surf->ewhich[vidx]][flag];
+	      if (surf->etype[vidx] == INT)
+	        one = surf->eivec[surf->ewhich[vidx]][flag];
+	      else
+	        one = surf->edvec[surf->ewhich[vidx]][flag];
       }
     } else {
       int n = surf->nown;
       int aidxm1 = aidx - 1;
       if (flag < 0) {
-	if (surf->etype[vidx] == INT) {
-	  int **carray = surf->eiarray[surf->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
-	    if (subsetID && !(smasks[i] & surfgroupbit)) continue;
-	    combine(one,areasurf[i]*carray[i][aidxm1],i);
-	  }
-	} else if (surf->etype[vidx] == DOUBLE) {
-	  double **carray = surf->edarray[surf->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
-	    if (subsetID && !(smasks[i] & surfgroupbit)) continue;
-	    combine(one,areasurf[i]*carray[i][aidxm1],i);
-	  }
-	}
+	      if (surf->etype[vidx] == INT) {
+	        int **carray = surf->eiarray[surf->ewhich[vidx]];
+	        for (i = 0; i < n; i++) {
+	          if (subsetID && !(smasks[i] & surfgroupbit)) continue;
+	          combine(one,areasurf[i]*carray[i][aidxm1],i);
+	        }
+	      } else if (surf->etype[vidx] == DOUBLE) {
+	        double **carray = surf->edarray[surf->ewhich[vidx]];
+	        for (i = 0; i < n; i++) {
+	          if (subsetID && !(smasks[i] & surfgroupbit)) continue;
+	          combine(one,areasurf[i]*carray[i][aidxm1],i);
+	        }
+	      } 
       } else {
-	if (surf->etype[vidx] == INT)
-	  one = surf->eiarray[surf->ewhich[vidx]][flag][aidxm1];
-	else
-	  one = surf->edarray[surf->ewhich[vidx]][flag][aidxm1];
+	      if (surf->etype[vidx] == INT)
+	        one = surf->eiarray[surf->ewhich[vidx]][flag][aidxm1];
+	      else
+	        one = surf->edarray[surf->ewhich[vidx]][flag][aidxm1];
       }
     }
   }

@@ -282,6 +282,12 @@ void ComputeTvibGrid::compute_per_grid()
 
   int i,j,ispecies,igroup,icell,imode,nmode;
 
+  double *sweights;
+  int index_sweight = particle->find_custom((char *) "sweight");
+  if(index_sweight > 0)
+    sweights = particle->edvec[particle->ewhich[index_sweight]];
+  double swfrac = 1.0;
+
   // zero all accumulators - could do this with memset()
 
   for (i = 0; i < nglocal; i++)
@@ -301,9 +307,11 @@ void ComputeTvibGrid::compute_per_grid()
       icell = particles[i].icell;
       if (!(cinfo[icell].mask & groupbit)) continue;
 
+      if(index_sweight > 0) swfrac = sweights[i]/update->fnum;
+
       j = s2t[ispecies];
-      tally[icell][j] += particles[i].evib;
-      tally[icell][j+1] += 1.0;
+      tally[icell][j] += particles[i].evib * swfrac;
+      tally[icell][j+1] += swfrac;
     }
 
   } else if (modeflag >= 1) {
@@ -322,11 +330,13 @@ void ComputeTvibGrid::compute_per_grid()
 
       nmode = particle->species[ispecies].nvibmode;
       for (imode = 0; imode < nmode; imode++) {
+        if(index_sweight > 0) swfrac = sweights[i]/update->fnum;
+
         j = s2t_mode[ispecies][imode];
         if (nmode > 1) tally[icell][j] += vibmode[i][imode];
         else tally[icell][j] +=
-               particles[i].evib / (boltz*species[ispecies].vibtemp[0]);
-        tally[icell][j+1] += 1.0;
+               particles[i].evib * swfrac / (boltz*species[ispecies].vibtemp[0]);
+        tally[icell][j+1] += swfrac;
       }
     }
   }

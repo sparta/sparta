@@ -150,20 +150,23 @@ void ComputeThermalGrid::compute_per_grid()
     if (!(cinfo[icell].mask & groupbit)) continue;
 
     mass = species[ispecies].mass;
-    v = particles[i].v;
     if(index_sweight > 0) mass *= sweights[i]/update->fnum;
+    v = particles[i].v;
 
     // 6 tallies per particle: N, Mass, mVx, mVy, mVz, mV^2
 
     vec = tally[icell];
     k = igroup*npergroup;
 
-    vec[k++] += 1.0;
+    if(index_sweight > 0)
+      vec[k++] += sweights[i]/update->fnum;
+    else
+      vec[k++] += 1.0;
     vec[k++] += mass;
     vec[k++] += mass*v[0];
     vec[k++] += mass*v[1];
     vec[k++] += mass*v[2];
-    vec[k++] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+    vec[k++] += mass*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
   }
 }
 

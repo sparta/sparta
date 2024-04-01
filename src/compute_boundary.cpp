@@ -183,6 +183,17 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
   int igroup = particle->mixture[imix]->species2group[origspecies];
   if (igroup < 0) return;
 
+  double oswfrac, iswfrac, jswfrac;
+  oswfrac = iswfrac = jswfrac = 1.0;
+  double *sweights;
+  int index_sweight = particle->find_custom((char *) "sweight");
+  if(index_sweight > 0) {
+    sweights = particle->edvec[particle->ewhich[index_sweight]];
+    oswfrac = sweights[iorig - particle->particles]/update->fnum;
+    if(ip) iswfrac = sweights[ip - particle->particles]/update->fnum;
+    if(jp) jswfrac = sweights[jp - particle->particles]/update->fnum;
+  }
+
   // tally all values associated with group into array
   // set nflag and tflag if normal and tangent computation already done once
   // particle weight used for all keywords except NUM
@@ -225,17 +236,17 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
         vec[k++] += weight;
         break;
       case NFLUX:
-        vec[k++] += weight;
+        vec[k++] += weight*oswfrac;
         break;
       case MFLUX:
-        vec[k++] += origmass;
+        vec[k++] += origmass*oswfrac;
         break;
       case PRESS:
         if (!nflag) {
           nflag = 1;
           pre = MathExtra::dot3(vorig,norm);
         }
-        vec[k++] -= origmass * pre;
+        vec[k++] -= origmass * pre * oswfrac;
         break;
       case XSHEAR:
         if (!tflag) {
@@ -243,7 +254,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
           MathExtra::scale3(MathExtra::dot3(vorig,norm),norm,vnorm);
           MathExtra::sub3(vorig,vnorm,vtang);
         }
-        vec[k++] += origmass * vtang[0];
+        vec[k++] += origmass * vtang[0] * oswfrac;
         break;
       case YSHEAR:
         if (!tflag) {
@@ -251,7 +262,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
           MathExtra::scale3(MathExtra::dot3(vorig,norm),norm,vnorm);
           MathExtra::sub3(vorig,vnorm,vtang);
         }
-        vec[k++] += origmass * vtang[1];
+        vec[k++] += origmass * vtang[1] * oswfrac;
         break;
       case ZSHEAR:
         if (!tflag) {
@@ -259,22 +270,22 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
           MathExtra::scale3(MathExtra::dot3(vorig,norm),norm,vnorm);
           MathExtra::sub3(vorig,vnorm,vtang);
         }
-        vec[k++] += origmass * vtang[2];
+        vec[k++] += origmass * vtang[2] * oswfrac;
         break;
       case KE:
         vsqpre = MathExtra::lensq3(vorig);
-        vec[k++] += 0.5 * mvv2e * origmass * vsqpre;
+        vec[k++] += 0.5 * mvv2e * origmass * vsqpre * oswfrac;
         break;
       case EROT:
-        vec[k++] += weight * iorig->erot;
+        vec[k++] += weight * iorig->erot * oswfrac;
         break;
       case EVIB:
-        vec[k++] += weight * iorig->evib;
+        vec[k++] += weight * iorig->evib * oswfrac;
         break;
       case ETOT:
         vsqpre = MathExtra::lensq3(vorig);
         vec[k++] += 0.5*mvv2e*origmass*vsqpre +
-          weight*(iorig->erot+iorig->evib);
+          weight * (iorig->erot+iorig->evib) * oswfrac;
         break;
       }
     }
@@ -295,23 +306,23 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
         k++;
         break;
       case MFLUX:
-        vec[k] += origmass;
-        if (ip) vec[k] -= imass;
-        if (jp) vec[k] -= jmass;
+        vec[k] += origmass * oswfrac;
+        if (ip) vec[k] -= imass * iswfrac;
+        if (jp) vec[k] -= jmass * jswfrac;
         k++;
         break;
       case PRESS:
-        MathExtra::scale3(-origmass,vorig,pdelta);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        MathExtra::scale3(-origmass*oswfrac,vorig,pdelta);
+        if (ip) MathExtra::axpy3(imass*iswfrac,ip->v,pdelta);
+        if (jp) MathExtra::axpy3(jmass*jswfrac,jp->v,pdelta);
         vec[k++] += MathExtra::dot3(pdelta,norm);
         break;
       case XSHEAR:
         if (!tflag) {
           tflag = 1;
-          MathExtra::scale3(-origmass,vorig,pdelta);
-          if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
-          if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+          MathExtra::scale3(-origmass*oswfrac,vorig,pdelta);
+          if (ip) MathExtra::axpy3(imass*iswfrac,ip->v,pdelta);
+          if (jp) MathExtra::axpy3(jmass*jswfrac,jp->v,pdelta);
           MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
           MathExtra::sub3(pdelta,pnorm,ptang);
         }
@@ -320,9 +331,9 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
       case YSHEAR:
         if (!tflag) {
           tflag = 1;
-          MathExtra::scale3(-origmass,vorig,pdelta);
-          if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
-          if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+          MathExtra::scale3(-origmass*oswfrac,vorig,pdelta);
+          if (ip) MathExtra::axpy3(imass*iswfrac,ip->v,pdelta);
+          if (jp) MathExtra::axpy3(jmass*jswfrac,jp->v,pdelta);
           MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
           MathExtra::sub3(pdelta,pnorm,ptang);
         }
@@ -331,46 +342,46 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
       case ZSHEAR:
         if (!tflag) {
           tflag = 1;
-          MathExtra::scale3(-origmass,vorig,pdelta);
-          if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
-          if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+          MathExtra::scale3(-origmass*oswfrac,vorig,pdelta);
+          if (ip) MathExtra::axpy3(imass*iswfrac,ip->v,pdelta);
+          if (jp) MathExtra::axpy3(jmass*jswfrac,jp->v,pdelta);
           MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
           MathExtra::sub3(pdelta,pnorm,ptang);
         }
         vec[k++] -= ptang[2];
         break;
       case KE:
-        vsqpre = origmass * MathExtra::lensq3(vorig);
-        if (ip) ivsqpost = imass * MathExtra::lensq3(ip->v);
+        vsqpre = origmass * MathExtra::lensq3(vorig) * oswfrac;
+        if (ip) ivsqpost = imass * MathExtra::lensq3(ip->v) * iswfrac;
         else ivsqpost = 0.0;
-        if (jp) jvsqpost = jmass * MathExtra::lensq3(jp->v);
+        if (jp) jvsqpost = jmass * MathExtra::lensq3(jp->v) * jswfrac;
         else jvsqpost = 0.0;
         vec[k++] -= 0.5*mvv2e * (ivsqpost + jvsqpost - vsqpre);
         break;
       case EROT:
-        if (ip) ierot = ip->erot;
+        if (ip) ierot = ip->erot * iswfrac;
         else ierot = 0.0;
-        if (jp) jerot = jp->erot;
+        if (jp) jerot = jp->erot * jswfrac;
         else jerot = 0.0;
-        vec[k++] -= weight * (ierot + jerot - iorig->erot);
+        vec[k++] -= weight * (ierot + jerot - iorig->erot * oswfrac);
         break;
       case EVIB:
-        if (ip) ievib = ip->evib;
+        if (ip) ievib = ip->evib * iswfrac;
         else ievib = 0.0;
-        if (jp) jevib = jp->evib;
+        if (jp) jevib = jp->evib * jswfrac;
         else jevib = 0.0;
-        vec[k++] -= weight * (ievib + jevib - iorig->evib);
+        vec[k++] -= weight * (ievib + jevib - iorig->evib * oswfrac);
         break;
       case ETOT:
-        vsqpre = origmass * MathExtra::lensq3(vorig);
-        otherpre = iorig->erot + iorig->evib;
+        vsqpre = origmass * MathExtra::lensq3(vorig) * oswfrac;
+        otherpre = (iorig->erot + iorig->evib) * oswfrac;
         if (ip) {
-          ivsqpost = imass * MathExtra::lensq3(ip->v);
-          iother = ip->erot + ip->evib;
+          ivsqpost = imass * MathExtra::lensq3(ip->v) * iswfrac;
+          iother = (ip->erot + ip->evib) * iswfrac;
         } else ivsqpost = iother = 0.0;
         if (jp) {
-          jvsqpost = jmass * MathExtra::lensq3(jp->v);
-          jother = jp->erot + jp->evib;
+          jvsqpost = jmass * MathExtra::lensq3(jp->v) * jswfrac;
+          jother = (jp->erot + jp->evib) * jswfrac;
         } else jvsqpost = jother = 0.0;
         vec[k++] -= 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
           weight * (iother + jother - otherpre);
