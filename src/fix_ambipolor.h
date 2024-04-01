@@ -14,30 +14,35 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(swpm,FixSWPM)
+FixStyle(ambipolor,FixAmbipolor)
 
 #else
 
-#ifndef SPARTA_FIX_SWPM_H
-#define SPARTA_FIX_SWPM_H
+#ifndef SPARTA_FIX_AMBIPOLOR_H
+#define SPARTA_FIX_AMBIPOLOR_H
 
-#include "stdio.h"
 #include "fix.h"
 #include "particle.h"
 
 namespace SPARTA_NS {
 
-class FixSWPM : public Fix {
+class FixAmbipolor : public Fix {
  public:
-  FixSWPM(class SPARTA *, int, char **);
-  virtual ~FixSWPM();
+  int especies;               // index of electron species
+  int *ions;                  // 1 if a particle species is an ionx
+
+  FixAmbipolor(class SPARTA *, int, char **);
+  FixAmbipolor(class SPARTA *sparta) : Fix(sparta) {} // needed for Kokkos
+  virtual ~FixAmbipolor();
   int setmask();
   void init();
   virtual void update_custom(int, double, double, double, double *);
+  void surf_react(Particle::OnePart *, int &, int &);
 
  protected:
-  int index_swpm;
-  double sweight_new;
+  int maxion;                 // length of ions vector
+  int ionindex,velindex;      // indices into particle custom data structs
+  class RanKnuth *random;
 };
 
 }

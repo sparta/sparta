@@ -18,17 +18,12 @@
 #include "fix_swpm.h"
 #include "update.h"
 #include "particle.h"
-#include "comm.h"
-#include "random_mars.h"
-#include "random_knuth.h"
-#include "math_const.h"
 #include "memory.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
-using namespace MathConst;
 
-enum{INT,DOUBLE};                      // several files
+enum{INT,DOUBLE}; 
 
 /* ---------------------------------------------------------------------- */
 
@@ -44,6 +39,10 @@ FixSWPM::FixSWPM(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Fix swpm custom attribute already exists");
 
   index_swpm = particle->add_custom((char *) "sweight",DOUBLE,0);
+
+  sweight_new = atof(arg[1]);
+  printf("%4.3e\n", sweight_new);
+  error->one(FLERR,"ck");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -84,7 +83,7 @@ void FixSWPM::update_custom(int index, double,
   // conditional avoids weight reset during surface collisions
   // only new particles (zero weight) have their weight set as fnum
 
-  if(swpmweight[index] == 0.0) swpmweight[index] = update->fnum;
+  if(swpmweight[index] == 0.0) swpmweight[index] = sweight_new;
 }
 
 

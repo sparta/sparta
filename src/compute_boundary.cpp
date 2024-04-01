@@ -380,7 +380,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
           iother = (ip->erot + ip->evib) * iswfrac;
         } else ivsqpost = iother = 0.0;
         if (jp) {
-          jvsqpost = jmass * MathExtra::lensq3(jp->v);
+          jvsqpost = jmass * MathExtra::lensq3(jp->v) * jswfrac;
           jother = (jp->erot + jp->evib) * jswfrac;
         } else jvsqpost = jother = 0.0;
         vec[k++] -= 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
