@@ -47,6 +47,7 @@ species            air.species Ar
 mixture            air Ar vstream 0.0 0.0 0.0 temp ${T}
 mixture            air Ar frac 1.0
 
+fix 1 swpm
 collide            vss air opt.vss
 collide_modify     remain no
 # swpm (yes/no) (min to split) (min to reduce) weight_transfer_function ...
