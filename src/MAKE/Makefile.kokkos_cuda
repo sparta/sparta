@@ -11,7 +11,7 @@ export OMPI_CXX = $(KOKKOS_ABSOLUTE_PATH)/bin/nvcc_wrapper
 # specify flags and libraries needed for your compiler
 
 CC =		mpicxx
-CCFLAGS =	-g -O3
+CCFLAGS =	-g -O3 -std=c++11
 SHFLAGS =	-fPIC
 DEPFLAGS =	-M
 
