@@ -983,8 +983,10 @@ void FixAblate::epsilon_adjust()
     if (cells[icell].nsplit <= 0) continue;
 
     for (i = 0; i < ncorner; i++)
-      if (cvalues[icell][i] < cmin && cvalues[icell][i] >= thresh)
-        cvalues[icell][i] = cmax;
+      if (fabs(cvalues[icell][i]-thresh) < EPSILON)
+        cvalues[icell][i] = thresh - EPSILON;
+      //if (cvalues[icell][i] < cmin && cvalues[icell][i] >= thresh)
+      //  cvalues[icell][i] = cmax;
   }
 }
 
