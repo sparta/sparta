@@ -354,8 +354,13 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   // intersection can be no closer than 2% of the cell length
   // assumeds outside corner point is 0 (worst case scenario)
 
-  cmin = (thresh - 0.0 * surfbuffer) / (1.0 - surfbuffer);
-  cmax = (thresh - 255.0 * surfbuffer) / (1.0 - surfbuffer);
+  if(surfbuffer < EPSILON) {
+    cmin = thresh + EPSILON;
+    cmax = thresh - EPSILON;
+  } else {
+    cmin = (thresh - 0.0 * surfbuffer) / (1.0 - surfbuffer);
+    cmax = (thresh - 255.0 * surfbuffer) / (1.0 - surfbuffer);
+  }
 
   // bound corner value limits
 
@@ -983,10 +988,10 @@ void FixAblate::epsilon_adjust()
     if (cells[icell].nsplit <= 0) continue;
 
     for (i = 0; i < ncorner; i++)
-      if (fabs(cvalues[icell][i]-thresh) < EPSILON)
-        cvalues[icell][i] = thresh - EPSILON;
-      //if (cvalues[icell][i] < cmin && cvalues[icell][i] >= thresh)
-      //  cvalues[icell][i] = cmax;
+      if (cvalues[icell][i] >= thresh && cvalues[icell][i] < cmin)
+        cvalues[icell][i] = cmax;
+      else if(cvalues[icell][i] < thresh && cvalues[icell][i] > cmax)
+        cvalues[icell][i] = cmax;
   }
 }
 
@@ -1557,7 +1562,7 @@ double FixAblate::memory_usage()
 
 void FixAblate::process_args(int narg, char **arg)
 {
-  surfbuffer = 0.02;
+  surfbuffer = 0.0;
 
   int iarg = 0;
   while (iarg < narg) {
