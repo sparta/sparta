@@ -36,7 +36,7 @@
 
 <LI>keyword = <I>buffer</I> 
 
-<PRE>  buffer arg = minimum distance between corner and intersection (between 0 and 1) 
+<PRE>  buffer arg = minimum distance between corner and intersection (between 0 and 0.5) 
 </PRE>
 
 </UL>
@@ -123,15 +123,18 @@ decrement value for the cell.  Thus <I>scale</I> is effectively the
 fraction of grid cells whose corner point values are decremented.
 </P>
 <P>The <I>buffer</I> is the minimum allowable distance between the vertices of 
-each triangle or line and any chosen corner in a grid cell. This implementation
+each triangle or line and any chosen corner in a grid cell. Any vertices
+within <I>buffer</I> of a corner point are "pushed" away from the
+corner. This implementation
 is based on the "isosurface stuffing" proposed 
-by Labelle and Shewchuk<A HREF = "#Labelle07">(Labelle07)</A>. With <I>buffer</I>, a minimum 
-inside corner value is calculated by extrapolating
-from an outside corner point value. Any inside corner values which
-are below this minimum value is reduced such that the intersection of the 
-surface element and the cell edge is outside a buffer zone whose length is 
-<I>buffer</I> times the cell edge length.
-The inside corner point is also now an outside corner point.
+by Labelle and Shewchuk <A HREF = "#Labelle07">(Labelle07)</A>. With <I>buffer</I>, a minimum 
+inside corner value and maximum outside corner value
+is calculated by extrapolating
+from 0 and 255 respectively. Any inside corner values which
+are below the minimum inside corner value is reduced and becomes an
+outside corner point.
+Any outside corner value above the maximum outside corner value
+is also reduced and remains an outside corner point.
 The value of <I>buffer</I> is relative 
 to the cell length and is thus between 0 and 0.5.
 In general, the larger the value of <I>buffer</I>,
@@ -257,7 +260,7 @@ an overview of SPARTA output options.
 </P>
 <P><B>Default:</B>
 </P>
-<P>The option default is <I>buffer</I> = 0.02
+<P>The option default is <I>buffer</I> = 0.0001
 </P>
 <A NAME = "Labelle07"></A>
 

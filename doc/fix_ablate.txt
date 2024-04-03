@@ -24,7 +24,7 @@ source = computeID or fixID or random :l
   random = perform a random decrement :pre
 maxrandom = maximum per grid cell decrement as an integer (only specified if source = random) :l
 keyword = {buffer} :l
-  buffer arg = minimum distance between corner and intersection (between 0 and 1) :pre
+  buffer arg = minimum distance between corner and intersection (between 0 and 0.5) :pre
 :ule
 
 [Examples:]
@@ -110,15 +110,18 @@ decrement value for the cell.  Thus {scale} is effectively the
 fraction of grid cells whose corner point values are decremented.
 
 The {buffer} is the minimum allowable distance between the vertices of 
-each triangle or line and any chosen corner in a grid cell. This implementation
+each triangle or line and any chosen corner in a grid cell. Any vertices
+within {buffer} of a corner point are "pushed" away from the
+corner. This implementation
 is based on the "isosurface stuffing" proposed 
-by Labelle and Shewchuk"(Labelle07)"_#Labelle07. With {buffer}, a minimum 
-inside corner value is calculated by extrapolating
-from an outside corner point value. Any inside corner values which
-are below this minimum value is reduced such that the intersection of the 
-surface element and the cell edge is outside a buffer zone whose length is 
-{buffer} times the cell edge length.
-The inside corner point is also now an outside corner point.
+by Labelle and Shewchuk "(Labelle07)"_#Labelle07. With {buffer}, a minimum 
+inside corner value and maximum outside corner value
+is calculated by extrapolating
+from 0 and 255 respectively. Any inside corner values which
+are below the minimum inside corner value is reduced and becomes an
+outside corner point.
+Any outside corner value above the maximum outside corner value
+is also reduced and remains an outside corner point.
 The value of {buffer} is relative 
 to the cell length and is thus between 0 and 0.5.
 In general, the larger the value of {buffer},
@@ -244,7 +247,7 @@ This fix can only be used in simulations that define implicit surfaces.
 
 [Default:]
 
-The option default is {buffer} = 0.02
+The option default is {buffer} = 0.0001
 
 :link(Labelle07)
 [(Labelle07)] F. Labelle, and J. R.. Shewchuk,

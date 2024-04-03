@@ -50,4 +50,4 @@ timestep		0.001
 
 stats			1
 stats_style		step cpu np nattempt ncoll nscoll nscheck
-run			10
+run			20
