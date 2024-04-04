@@ -2023,7 +2023,7 @@ void Collide::group_reduce()
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
-    if (np < Ncmax) continue;
+    if (np <= Ncmax) continue;
 
     // create particle list
 
