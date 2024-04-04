@@ -36,7 +36,7 @@ class FixSWPM : public Fix {
   virtual void update_custom(int, double, double, double, double *);
 
  protected:
-  int index_swpm;
+  int index_sweight;
   double sweight_new;
 };
 

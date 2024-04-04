@@ -169,7 +169,7 @@ void ComputeSonineGrid::compute_per_grid()
 
   double *sweights;
   int index_sweight = particle->find_custom((char *) "sweight");
-  if(index_sweight > 0)
+  if(index_sweight >= 0)
     sweights = particle->edvec[particle->ewhich[index_sweight]];
 
   // compute COM velocity on this timestep for each cell and group
@@ -191,7 +191,7 @@ void ComputeSonineGrid::compute_per_grid()
     if (!(cinfo[icell].mask & groupbit)) continue;
 
     mass = species[ispecies].mass;
-    if(index_sweight > 0) mass *= sweights[i]/update->fnum;
+    if(index_sweight >= 0) mass *= sweights[i]/update->fnum;
     v = particles[i].v;
 
     vcom[icell][igroup][0] += mass * v[0];

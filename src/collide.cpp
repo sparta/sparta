@@ -1823,7 +1823,7 @@ void Collide::collisions_one_sw()
       ip = next[ip];
     }
 
-    if (np > Ncmin) pre_wtf = 0.0;
+    if (np >= Ncmin) pre_wtf = 0.0;
     else pre_wtf = 1.0;
 
     // attempt = exact collision attempt count for all particles in cell

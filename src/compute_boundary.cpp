@@ -187,7 +187,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
   oswfrac = iswfrac = jswfrac = 1.0;
   double *sweights;
   int index_sweight = particle->find_custom((char *) "sweight");
-  if(index_sweight > 0) {
+  if(index_sweight >= 0) {
     sweights = particle->edvec[particle->ewhich[index_sweight]];
     oswfrac = sweights[iorig - particle->particles]/update->fnum;
     if(ip) iswfrac = sweights[ip - particle->particles]/update->fnum;

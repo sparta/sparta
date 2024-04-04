@@ -284,9 +284,8 @@ void ComputeTvibGrid::compute_per_grid()
 
   double *sweights;
   int index_sweight = particle->find_custom((char *) "sweight");
-  if(index_sweight > 0)
+  if(index_sweight >= 0)
     sweights = particle->edvec[particle->ewhich[index_sweight]];
-  double swfrac = 1.0;
 
   // zero all accumulators - could do this with memset()
 
@@ -298,6 +297,7 @@ void ComputeTvibGrid::compute_per_grid()
   // mode = 0: tally vib eng and count for each species
   // mode >= 1: tally vib level and count for each species and each vib mode
 
+  double swfrac = 1.0;
   if (modeflag == 0) {
     for (i = 0; i < nlocal; i++) {
       ispecies = particles[i].ispecies;
@@ -307,7 +307,7 @@ void ComputeTvibGrid::compute_per_grid()
       icell = particles[i].icell;
       if (!(cinfo[icell].mask & groupbit)) continue;
 
-      if(index_sweight > 0) swfrac = sweights[i]/update->fnum;
+      if(index_sweight >= 0) swfrac = sweights[i]/update->fnum;
 
       j = s2t[ispecies];
       tally[icell][j] += particles[i].evib * swfrac;
@@ -330,7 +330,7 @@ void ComputeTvibGrid::compute_per_grid()
 
       nmode = particle->species[ispecies].nvibmode;
       for (imode = 0; imode < nmode; imode++) {
-        if(index_sweight > 0) swfrac = sweights[i]/update->fnum;
+        if(index_sweight >= 0) swfrac = sweights[i]/update->fnum;
 
         j = s2t_mode[ispecies][imode];
         if (nmode > 1) tally[icell][j] += vibmode[i][imode];

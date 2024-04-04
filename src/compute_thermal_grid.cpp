@@ -131,7 +131,7 @@ void ComputeThermalGrid::compute_per_grid()
 
   double *sweights;
   int index_sweight = particle->find_custom((char *) "sweight");
-  if(index_sweight > 0)
+  if(index_sweight >= 0)
     sweights = particle->edvec[particle->ewhich[index_sweight]];
 
   // zero all accumulators - could do this with memset()
@@ -142,6 +142,7 @@ void ComputeThermalGrid::compute_per_grid()
 
   // loop over all particles, skip species not in mixture group
 
+  double swfrac = 1.0;
   for (i = 0; i < nlocal; i++) {
     ispecies = particles[i].ispecies;
     igroup = s2g[ispecies];
@@ -150,7 +151,8 @@ void ComputeThermalGrid::compute_per_grid()
     if (!(cinfo[icell].mask & groupbit)) continue;
 
     mass = species[ispecies].mass;
-    if(index_sweight > 0) mass *= sweights[i]/update->fnum;
+    if(index_sweight >= 0) swfrac = sweights[i]/update->fnum;
+    mass *= swfrac;
     v = particles[i].v;
 
     // 6 tallies per particle: N, Mass, mVx, mVy, mVz, mV^2
@@ -158,10 +160,7 @@ void ComputeThermalGrid::compute_per_grid()
     vec = tally[icell];
     k = igroup*npergroup;
 
-    if(index_sweight > 0)
-      vec[k++] += sweights[i]/update->fnum;
-    else
-      vec[k++] += 1.0;
+    vec[k++] += swfrac;
     vec[k++] += mass;
     vec[k++] += mass*v[0];
     vec[k++] += mass*v[1];

@@ -34,13 +34,11 @@ FixSWPM::FixSWPM(SPARTA *sparta, int narg, char **arg) :
 
   flag_update_custom = 1;
 
-  index_swpm = particle->find_custom((char *) "sweight");
-  if (index_swpm > 0)
+  index_sweight = particle->find_custom((char *) "sweight");
+  if (index_sweight >= 0)
     error->all(FLERR,"Fix swpm custom attribute already exists");
 
-  index_swpm = particle->add_custom((char *) "sweight",DOUBLE,0);
-
-  error->one(FLERR,"ck");
+  index_sweight = particle->add_custom((char *) "sweight",DOUBLE,0);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -49,7 +47,7 @@ FixSWPM::~FixSWPM()
 {
   if (copy || copymode) return;
 
-  particle->remove_custom(index_swpm);
+  particle->remove_custom(index_sweight);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -76,7 +74,7 @@ void FixSWPM::update_custom(int index, double,
                                 double, double,
                                 double*)
 {
-  double *sweights = particle->edvec[particle->ewhich[index_swpm]];
+  double *sweights = particle->edvec[particle->ewhich[index_sweight]];
 
   // conditional avoids weight reset during surface collisions
   // only new particles (zero weight) have their weight set as fnum

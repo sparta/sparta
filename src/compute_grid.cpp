@@ -33,7 +33,7 @@ enum{NUM,NRHO,NFRAC,MASS,MASSRHO,MASSFRAC,
 
 // internal accumulators
 
-enum{COUNT,MASSSUM,MVX,MVY,MVZ,MVXSQ,MVYSQ,MVZSQ,MVSQ,
+enum{COUNT,SIMCOUNT,MASSSUM,MVX,MVY,MVZ,MVXSQ,MVYSQ,MVZSQ,MVSQ,
      ENGROT,ENGVIB,DOFROT,DOFVIB,CELLCOUNT,CELLMASS,LASTSIZE};
 
 // max # of quantities to accumulate for any user value
@@ -71,7 +71,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
   while (iarg < narg) {
     if (strcmp(arg[iarg],"n") == 0) {
       value[ivalue] = NUM;
-      set_map(ivalue,COUNT);
+      set_map(ivalue,SIMCOUNT);
     } else if (strcmp(arg[iarg],"nrho") == 0) {
       value[ivalue] = NRHO;
       set_map(ivalue,COUNT);
@@ -228,7 +228,7 @@ void ComputeGrid::compute_per_grid()
 
   double *sweights;
   int index_sweight = particle->find_custom((char *) "sweight");
-  if(index_sweight > 0)
+  if(index_sweight >= 0)
     sweights = particle->edvec[particle->ewhich[index_sweight]];
 
   // zero all accumulators - could do this with memset()
@@ -252,12 +252,12 @@ void ComputeGrid::compute_per_grid()
     mass = species[ispecies].mass;
     v = particles[i].v;
     double swfrac = 1.0;
-    if(index_sweight > 0) swfrac = sweights[i]/update->fnum;
+    if(index_sweight >= 0) swfrac = sweights[i]/update->fnum;
     mass *= swfrac;
 
     vec = tally[icell];
     if (cellmass) vec[cellmass] += mass;
-    if (cellcount) vec[cellcount] += 1.0;
+    if (cellcount) vec[cellcount] += swfrac;
 
     // loop has all possible values particle needs to accumulate
     // subset defined by user values are indexed by accumulate vector
@@ -267,6 +267,9 @@ void ComputeGrid::compute_per_grid()
     for (m = 0; m < npergroup; m++) {
       switch (unique[m]) {
       case COUNT:
+        vec[k++] += swfrac;
+        break;
+      case SIMCOUNT:
         vec[k++] += 1.0;
         break;
       case MASSSUM:

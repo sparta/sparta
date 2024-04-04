@@ -50,7 +50,9 @@ mixture            air Ar frac 1.0
 collide            vss air opt.vss
 collide_modify     remain no
 
-collide_modify     swpm yes 128.0 128.0 1.0 ENERGY 4.0 OCTREE
+fix 1 swpm
+collide_modify     swpm yes 32.0 1.0
+collide_modify     reduce energy 32.0 binary 4.0
 
 #####################
 # Boundary/Geometry #
