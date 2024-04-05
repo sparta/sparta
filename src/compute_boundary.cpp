@@ -189,17 +189,20 @@ void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
   double *sweights;
   int index_sweight = particle->find_custom((char *) "sweight");
   if(index_sweight >= 0) {
+    int nout = 0;
+    oswfrac = 0.0;
     sweights = particle->edvec[particle->ewhich[index_sweight]];
-    // iorig-particle->particles is returning seg fault
-    //oswfrac = sweights[iorig - particle->particles]/update->fnum;
     if(ip) {
       iswfrac = sweights[ip - particle->particles]/update->fnum;
-      oswfrac = iswfrac;
+      oswfrac += iswfrac;
+      nout++;
     }
     if(jp) {
       jswfrac = sweights[jp - particle->particles]/update->fnum;
-      oswfrac = jswfrac;
+      oswfrac += jswfrac;
+      nout++;
     }
+    if(nout > 0) oswfrac /= nout;
   }
 
   // tally all values associated with group into array
