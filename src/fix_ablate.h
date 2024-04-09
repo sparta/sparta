@@ -64,6 +64,7 @@ class FixAblate : public Fix {
   char *idsource;
   int storeflag;
   int adjacentflag;
+  int distributedflag;
   int ncorner;
   int nadj;
   int sgroupbit;
@@ -100,6 +101,9 @@ class FixAblate : public Fix {
   double *vbuf;
   int maxvar;
 
+  // new ablate with distributed decrement
+  int refcorners[8];
+
   class MarchingSquares *ms;
   class MarchingCubes *mc;
   class RanKnuth *random;
@@ -109,8 +113,11 @@ class FixAblate : public Fix {
   void set_delta();
   void decrement();
   void decrement_adjacent();
+  void decrement_distributed();
   void sync();
   void sync_adjacent();
+  void sync_distributed();
+  int setup_distributed();
   void epsilon_adjust();
   void length_adjust();
   void push_lohi();

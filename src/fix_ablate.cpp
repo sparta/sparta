@@ -184,7 +184,7 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   sum_delta = 0.0;
   ndelete = 0;
 
-  storeflag = adjacentflag = 0;
+  storeflag = adjacentflag = partialflag = 0;
   array_grid = cvalues = NULL;
   cavalues = NULL;
   tvalues = NULL;
@@ -951,6 +951,81 @@ void FixAblate::decrement()
   }
 }
 
+/* ----------------------------------------------------------------------
+   decrement corner points of each owned grid cell
+   skip cells not in group, with no surfs, and sub-cells
+   algorithm:
+     no corner pt value can be < 0.0
+     decrement smallest corner pt by full delta
+     if cannot, decrement to 0.0, decrement next smallest by remainder, etc
+   begin by only calculating cdelta
+------------------------------------------------------------------------- */
+
+void FixAblate::decrement_distributed()
+{
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  int i,imin,icorner;
+  int Nout;
+  double minvalue,total,perout;
+  double *corners;
+
+  // total = full amount to decrement from cell
+  // cdelta[icell] = amount to decrement from each corner point of icell
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    for (i = 0; i < ncorner; i++) cdelta[icell][i] = 0.0;
+
+    total = celldelta[icell];
+    corners = cvalues[icell];
+
+    while (total > 0.0) {
+
+      Nout = setup_distributed(icell, cdelta[icell]);
+
+      // find minimum corner value
+
+      imin = -1;
+      minvalue = 256.0;
+
+      for (i = 0; i < 8; i++) {
+        if (refcorners[i] == 0) continue;
+        if (corners[i] > 0.0 &&
+            corners[i] < minvalue &&
+            cdelta[icell][i] == 0 &&
+            cdelta[icell][i] != corners[imin]) {
+          imin = i;
+          minvalue = corners[i];
+        }
+      }
+
+      if (imin == -1) break; // all zero
+
+      perout = total/Nout;
+      if (perout < minvalue) {
+        for (i = 0; i < 8; i++) {
+          if (refcorners[i] != -1) continue;
+          cdelta[icell][imin] += perout;
+        }
+        total = 0.0;
+      } else {
+        // overwrite because total too big
+        perout = corners[imin];
+        for (i = 0; i < 8; i++) {
+          if (refcorners[i] != -1) continue;
+          cdelta[icell][imin] += perout;
+        }
+        total -= perout*Nout;
+      }
+
+    }
+  }
+}
+
 
 /* ----------------------------------------------------------------------
    determine decrement for each corner point of each owned grid cell
@@ -1009,97 +1084,6 @@ void FixAblate::decrement_adjacent()
     }
   }
 }
-
-/* ----------------------------------------------------------------------
-   decrement corner points of each owned grid cell
-   skip cells not in group, with no surfs, and sub-cells
-   algorithm:
-     no corner pt value can be < 0.0
-     decrement smallest corner pt by full delta
-     if cannot, decrement to 0.0, decrement next smallest by remainder, etc
-------------------------------------------------------------------------- */
-
-void FixAblate::decrement_partial()
-{
-  Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-
-  int i,imin,icorner;
-  int bit0,bit1,bit2,bit3,bit4,bit5,bit6,bit7;
-  int sout[8];
-  double v[8];
-  int Nnz;
-  double minvalue,total;
-  double *corners;
-
-  // total = full amount to decrement from cell
-  // cdelta[icell] = amount to decrement from each corner point of icell
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-
-    for (i = 0; i < ncorner; i++) cdelta[icell][i] = 0.0;
-
-    total = celldelta[icell];
-    corners = cvalues[icell];
-
-    v[0] = cvalues[icell][0];
-    v[1] = cvalues[icell][1];
-    v[2] = cvalues[icell][3];
-    v[3] = cvalues[icell][2];
-    v[4] = cvalues[icell][4];
-    v[5] = cvalues[icell][5];
-    v[6] = cvalues[icell][7];
-    v[7] = cvalues[icell][6];
-
-    while (total > 0.0) {
-
-      bit0 = v[0] <= thresh ? 0 : 1;
-      bit1 = v[1] <= thresh ? 0 : 1;
-      bit2 = v[2] <= thresh ? 0 : 1;
-      bit3 = v[3] <= thresh ? 0 : 1;
-      bit4 = v[4] <= thresh ? 0 : 1;
-      bit5 = v[5] <= thresh ? 0 : 1;
-      bit6 = v[6] <= thresh ? 0 : 1;
-      bit7 = v[7] <= thresh ? 0 : 1;
-
-      which = (bit7 << 7) + (bit6 << 6) + (bit5 << 5) + (bit4 << 4) +
-        (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
-
-      // find number of nonzero corner points and index of minimum corner
-
-      Nin = Ninside[which];
-      sout = outside[which];
-
-      imin = -1;
-      minvalue = 256.0;
-      for (i = 0; i < Nin; i++) {
-        icorner = sout[i];
-        if (corners[icorner] > 0.0 && corners[icorner] < minvalue &&
-            cdelta[icell][icorner] == 0.0) {
-          imin = i;
-          minvalue = corners[icorner];
-        } else if(fabs(corners[icorner]-minvalue) < total*EPSILON) {
-          if(random->uniform() > 0.5) imin = i;
-          minvalue = corners[icorner];
-        }
-      }
-
-      if (imin == -1) break; // all zero
-
-      Nnz = MIN(Nnz,dim);
-      if (total/ < minvalue  N) {
-        cdelta[icell][imin] += total;
-        total = 0.0;
-      } else {
-        cdelta[icell][imin] = corners[imin];
-        total -= corners[imin];
-      }
-    }
-  }
-}
-
 
 /* ----------------------------------------------------------------------
    sync all copies of corner points values for all owned grid cells
@@ -1183,6 +1167,159 @@ void FixAblate::sync()
     }
   }
 }
+
+/* ----------------------------------------------------------------------
+   sync all copies of corner points values for all owned grid cells
+   algorithm 
+------------------------------------------------------------------------- */
+
+void FixAblate::sync_distributed()
+{
+  int i,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
+  int icell,jcell;
+  double total[8], dtotal[8];
+
+  int Nneigh, neighbors[3];
+
+  comm_neigh_corners(CDELTA);
+
+  // perform update of corner pts for all my owned grid cells
+  //   using contributions from all cells that share the corner point
+  // insure order of numeric operations will give exact same answer
+  //   for all Ncorner duplicates of a corner point (stored by other cells)
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  for (icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    ix = ixyz[icell][0];
+    iy = ixyz[icell][1];
+    iz = ixyz[icell][2];
+
+    // loop over corner points
+
+    for (i = 0; i < ncorner; i++) {
+
+      // ixyz first = offset from icell of lower left cell of 2x2x2 stencil
+      //              that shares the Ith corner point
+
+      ixfirst = (i % 2) - 1;
+      iyfirst = (i/2 % 2) - 1;
+      if (dim == 2) izfirst = 0;
+      else izfirst = (i / 4) - 1;
+
+      // loop over 2x2x2 stencil of cells that share the corner point
+      // also works for 2d, since izfirst = 0
+
+      total[i] = 0.0;
+      jcorner = ncorner;
+
+      for (jz = izfirst; jz <= izfirst+1; jz++) {
+        for (jy = iyfirst; jy <= iyfirst+1; jy++) {
+          for (jx = ixfirst; jx <= ixfirst+1; jx++) {
+            jcorner--;
+
+            // check if neighbor cell is within bounds of ablate grid
+
+            if (ix+jx < 1 || ix+jx > nx) continue;
+            if (iy+jy < 1 || iy+jy > ny) continue;
+            if (iz+jz < 1 || iz+jz > nz) continue;
+
+            // jcell = local index of (jx,jy,jz) neighbor cell of icell
+
+            jcell = walk_to_neigh(icell,jx,jy,jz);
+
+            // update total with one corner point of jcell
+            // jcorner descends from ncorner
+
+            if (jcell < nglocal) total[i] += cdelta[jcell][jcorner];
+            else total[i] += cdelta_ghost[jcell-nglocal][jcorner];
+          }
+        }
+      }
+      //if (total > cvalues[icell][i]) cvalues[icell][i] = 0.0;
+      //else cvalues[icell][i] -= total;
+    }
+
+    setup_distributed(icell, total);
+
+    for (i = 0; i < ncorner; i++)
+      dtotal[i] = 0.0;
+
+    for (i = 0; i < ncorner; i++) {
+      if(total[i] > cvalues[icell][i]) {
+        neighbors = corner_neighbor[i];
+
+        // count which neighbors are inside and connected
+
+        Nneigh = 0;
+        for (j = 0; j < 3; j++)
+          if(refcorners[neighbors[i]] == 1) Nneigh++;
+
+        // record how much corner value to pass on
+
+        total_remain = (total[i] - cvalues[icell][i]) / Nneigh;
+
+        for (j = 0; j < 3; j++) {
+          icorner = refcorners[neighbors[i]];
+          if(icorner == 1) {
+            dtotal[icorner] += total_remain;
+          }
+        }
+      }
+    }
+
+    // update new total to decrement and update corner values
+
+    for (i = 0; i < ncorner; i++) {
+      total[i] += dtotal[i];
+      if (total[i] > cvalues[icell][i]) cvalues[icell][i] = 0.0;
+      else cvalues[icell][i] -= total;
+    }
+
+  }
+}
+
+/* ----------------------------------------------------------------------
+   sync all copies of corner points values for all owned grid cells
+   algorithm 
+------------------------------------------------------------------------- */
+
+int FixAblate::setup(int icell, double *dcvalue)
+{
+  double v, bit;
+  int i, which;
+
+  for (i = 0; i < ncorner; i++) {
+    v = cvalues[icell][i] - dcvalue[i];
+    bit = v <= thresh ? 0 : 1;
+    which += (bit << i);
+  }
+
+  // find number of nonzero corner points and index of minimum corner
+
+  int Nin = Ninside[which];
+  int Nout = Noutside[which];
+
+  int *incorners, *outcorners;
+  incorners = inside[which];
+  outcorners = outside[which];
+
+  // record which are inside and outside
+
+  for (i = 0; i < ncorner; i++)
+    refcorners[i] = 0;
+  for (i = 0; i < Nin; i++)
+    refcorners[incorners[i]] = 1;
+  for (i = 0; i < Nout; i++)
+    refcorners[outcorners[i]] = -1;
+
+  return Nout;
+}
+
 
 /* ----------------------------------------------------------------------
    sync all copies of adjacent values at each corner point
