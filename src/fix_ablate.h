@@ -117,7 +117,7 @@ class FixAblate : public Fix {
   void sync();
   void sync_adjacent();
   void sync_distributed();
-  int setup_distributed();
+  int setup_distributed(int, double*);
   void epsilon_adjust();
   void length_adjust();
   void push_lohi();

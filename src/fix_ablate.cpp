@@ -19,6 +19,7 @@
 #include "update.h"
 #include "grid.h"
 #include "domain.h"
+#include "decrement_lookup_table.h"
 #include "comm.h"
 #include "modify.h"
 #include "compute.h"
@@ -184,7 +185,7 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   sum_delta = 0.0;
   ndelete = 0;
 
-  storeflag = adjacentflag = partialflag = 0;
+  storeflag = adjacentflag = distributedflag = 0;
   array_grid = cvalues = NULL;
   cavalues = NULL;
   tvalues = NULL;
@@ -1175,11 +1176,11 @@ void FixAblate::sync()
 
 void FixAblate::sync_distributed()
 {
-  int i,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
+  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
   int icell,jcell;
-  double total[8], dtotal[8];
+  double total[8], dtotal[8], total_remain;
 
-  int Nneigh, neighbors[3];
+  int Nneigh, *neighbors;
 
   comm_neigh_corners(CDELTA);
 
@@ -1277,7 +1278,7 @@ void FixAblate::sync_distributed()
     for (i = 0; i < ncorner; i++) {
       total[i] += dtotal[i];
       if (total[i] > cvalues[icell][i]) cvalues[icell][i] = 0.0;
-      else cvalues[icell][i] -= total;
+      else cvalues[icell][i] -= total[i];
     }
 
   }
@@ -1288,15 +1289,27 @@ void FixAblate::sync_distributed()
    algorithm 
 ------------------------------------------------------------------------- */
 
-int FixAblate::setup(int icell, double *dcvalue)
+int FixAblate::setup_distributed(int icell, double *dcvalue)
 {
-  double v, bit;
-  int i, which;
+  double v;
+  int i, bit, which;
 
   for (i = 0; i < ncorner; i++) {
     v = cvalues[icell][i] - dcvalue[i];
     bit = v <= thresh ? 0 : 1;
-    which += (bit << i);
+
+    // manually do these for consistency in corner indices
+    if (i == 2) {
+      which += (bit << 3);
+    } else if (i == 3) {
+      which += (bit << 2);
+    } else if (i == 6) {
+      which += (bit << 7);
+    } else if (i == 7) {
+      which += (bit << 6);
+    } else {
+      which += (bit << i);
+    }
   }
 
   // find number of nonzero corner points and index of minimum corner
