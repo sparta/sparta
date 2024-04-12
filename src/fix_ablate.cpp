@@ -492,13 +492,9 @@ void FixAblate::end_of_step()
     sync();
   }
 
-  error->one(FLERR,"check decrement and sync");
-
   // handle small corner values
 
   epsilon_adjust();
-
-  error->one(FLERR,"check cvalues");
 
   // re-create implicit surfs
 
