@@ -108,6 +108,8 @@ class FixAblate : public Fix {
   class MarchingCubes *mc;
   class RanKnuth *random;
 
+  void process_args(int, char **);
+
   void create_surfs(int);
   void set_delta_random();
   void set_delta();
@@ -118,7 +120,8 @@ class FixAblate : public Fix {
   void sync();
   void sync_adjacent();
   void sync_distributed_outside();
-  int setup_distributed(int, double*);
+  void sync_distributed_inside();
+  int setup_distributed(int);
   void epsilon_adjust();
   void length_adjust();
   void push_lohi();
