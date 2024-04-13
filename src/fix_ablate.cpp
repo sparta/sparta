@@ -957,6 +957,11 @@ void FixAblate::decrement()
             cdelta[icell][i] == 0.0) {
           imin = i;
           minvalue = corners[i];
+        // avoid bias by randomly selecting between equal corners
+        } else if (fabs(corners[i]-minvalue) < EPSILON &&
+          random->uniform() > 0.5) {
+          imin = i;
+          minvalue = corners[i];
         }
       }
       if (imin == -1) break;
@@ -998,10 +1003,6 @@ void FixAblate::decrement_distributed_outside()
     corners = cvalues[icell];
 
     Nout = setup_distributed(icell);
-    //printf("icell: %i -- refcorners: %i, %i, %i, %i, %i, %i, %i, %i\n",
-    //  icell,
-    //  refcorners[0], refcorners[1], refcorners[2], refcorners[3],
-    //  refcorners[4], refcorners[5], refcorners[6], refcorners[7]);
 
     if (Nout == 0) continue; // all zero
 
@@ -1012,15 +1013,6 @@ void FixAblate::decrement_distributed_outside()
       cdelta[icell][i] += perout;
     }
   } // end cells
-
-  //for (int icell = 0; icell < nglocal; icell++) {
-  //  if (!(cinfo[icell].mask & groupbit)) continue;
-  //  if (cells[icell].nsplit <= 0) continue;
-  //  for (i = 0; i < ncorner; i++)
-  //    if(cdelta[icell][i] > 0)
-  //      printf("icell: %i ; i: %i : cdelta: %4.2e\n", icell, i, cdelta[icell][i]);
-  //} // end cells
-  //error->one(FLERR,"ck");
 }
 
 /* ----------------------------------------------------------------------
@@ -1053,10 +1045,6 @@ void FixAblate::decrement_distributed_inside()
     // only outside points were updated
 
     setup_distributed(icell);
-    //printf("icell: %i -- refcorners: %i, %i, %i, %i, %i, %i, %i, %i\n",
-    //  icell,
-    //  refcorners[0], refcorners[1], refcorners[2], refcorners[3],
-    //  refcorners[4], refcorners[5], refcorners[6], refcorners[7]);
 
     for (i = 0; i < ncorner; i++) {
       if (cvalues[icell][i] < 0) {
@@ -1085,17 +1073,6 @@ void FixAblate::decrement_distributed_inside()
       } // end if total
     } // end corner
   } // end cells
-  //error->one(FLERR,"ck dec");
-
-  //for (int icell = 0; icell < nglocal; icell++) {
-  //  if (!(cinfo[icell].mask & groupbit)) continue;
-  //  if (cells[icell].nsplit <= 0) continue;
-  //  for (i = 0; i < ncorner; i++)
-  //    if(cdelta[icell][i] > 0)
-  //      printf("icell: %i ; i: %i : cdelta: %4.2e\n", icell, i, cdelta[icell][i]);
-  //} // end cells
-  //error->one(FLERR,"ck dec inside");
-
 }
 
 
@@ -1238,15 +1215,6 @@ void FixAblate::sync()
       else cvalues[icell][i] -= total;
     }
   }
-
-  //for (icell = 0; icell < nglocal; icell++) {
-  //  if (!(cinfo[icell].mask & groupbit)) continue;
-  //  if (cells[icell].nsplit <= 0) continue;
-  //  for (i = 0; i < ncorner; i++)
-  //    if(cvalues[icell][i] > 0)
-  //      printf("ic: %i; i: %i; cval: %4.2f\n", icell, i, cvalues[icell][i]);
-  //}
-
 }
 
 /* ----------------------------------------------------------------------
