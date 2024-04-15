@@ -115,13 +115,16 @@ class FixAblate : public Fix {
   void set_delta();
   void decrement();
   void decrement_adjacent();
-  void decrement_distributed_outside();
   void decrement_distributed_inside();
+  void decrement_distributed_outside();
+  void decrement_adjacent_distributed_inside();
+  void decrement_adjacent_distributed_outside();
   void sync();
   void sync_adjacent();
   void sync_distributed_outside();
   void sync_distributed_inside();
-  int setup_distributed(int);
+  int setup_distributed3d(int);
+  int setup_distributed2d(int);
   void epsilon_adjust();
   void length_adjust();
   void push_lohi();
