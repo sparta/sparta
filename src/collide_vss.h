@@ -100,6 +100,7 @@ class CollideVSS : public Collide {
   double vibrel (int, double);
 
   void relax_electronic_mode(Particle::OnePart *, Particle::OnePart *, double&);
+  void relax_electronic_mode_reacting(Particle::OnePart *, double&);
   double get_elec_phi(int, int, int, double);
   int select_elec_state(Particle::OnePart *, Particle::OnePart *,
                         double, double, bool);
