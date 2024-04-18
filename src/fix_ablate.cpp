@@ -485,7 +485,8 @@ void FixAblate::end_of_step()
 {
   // set per-cell delta vector randomly or from compute/fix source
 
-  if (which == RANDOM) set_delta_random();
+  //if (which == RANDOM) set_delta_random();
+  if (which == RANDOM) set_delta_uniform();
   else set_delta();
 
   // find decrement at each corner -> sync decrements -> update corners
@@ -557,12 +558,12 @@ void FixAblate::create_surfs(int outflag)
   // cvalues = corner point values
   // tvalues = surf type for surfs in each grid cell
 
-  if (!adjacentflag) {
-    if (dim == 2) ms->invoke(cvalues,tvalues);
-    else mc->invoke(cvalues,tvalues,mcflags);
-  } else {
+  if (adjacentflag) {
     if (dim == 2) ms->invoke(cavalues,tvalues);
     else mc->invoke(cavalues,tvalues,mcflags);
+  } else {
+    if (dim == 2) ms->invoke(cvalues,tvalues);
+    else mc->invoke(cvalues,tvalues,mcflags);
   }
 
   // set surf->nsurf and surf->nown
@@ -829,20 +830,8 @@ void FixAblate::set_delta_random()
     icell = (*hash)[cellID];
     if (icell >= nglocal) continue;     // ghost cell
 
-    // TEMPORARY
-    //if (rn1 > scale) celldelta[icell] = 0.0;
-    //else celldelta[icell] = rn2;
-
-    int nin = 0; 
-    for (int j = 0; j < ncorner; j++) {
-      if (adjacentflag) {
-        if (cavalues[i][j][0] > thresh) nin++;
-      } else {
-        if (cvalues[i][j] > thresh) nin++;
-      }
-    }
-    if (nin == 0 || nin == ncorner) continue;
-    celldelta[icell] = maxrandom*scale;
+    if (rn1 > scale) celldelta[icell] = 0.0;
+    else celldelta[icell] = rn2;
   }
 
   // total decrement for output
@@ -856,6 +845,50 @@ void FixAblate::set_delta_random()
 
   MPI_Allreduce(&sum,&sum_delta,1,MPI_DOUBLE,MPI_SUM,world);
 }
+
+/* ----------------------------------------------------------------------
+   set per-cell delta vector randomly
+   celldelta = random integer between 0 and maxrandom
+   scale = fraction of cells that are decremented
+------------------------------------------------------------------------- */
+
+void FixAblate::set_delta_uniform()
+{
+  int nin;
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  // enforce same decrement no matter who owns which cells
+  // NOTE: could change this at some point, use differnet RNG for each proc
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    nin = 0;
+    for (int i = 0; i < ncorner; i++) {
+      if (adjacentflag) {
+        if (cavalues[icell][i][0] > thresh) nin++;
+      } else {
+        if (cvalues[icell][i] > thresh) nin++;
+      }
+    }
+    if (nin == 0 || nin == ncorner) celldelta[icell] = 0.0;
+    else celldelta[icell] = maxrandom*scale;
+  }
+
+  // total decrement for output
+
+  double sum = 0.0;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+    sum += celldelta[icell];
+  }
+
+  MPI_Allreduce(&sum,&sum_delta,1,MPI_DOUBLE,MPI_SUM,world);
+}
+
 
 /* ----------------------------------------------------------------------
    set per-cell delta vector from compute/fix/variable source
@@ -1528,26 +1561,18 @@ void FixAblate::sync_adjacent_distributed_inside()
               for (j = 0; j < nadj; j++) {
                 if (cadelta[jcell][jcorner][j] > 0) {
                   total[j] += cadelta[jcell][jcorner][j];
-                  /*if(icell==7) {
-                    printf("cdel[%i][%i][%i]: %4.3e -- %4.3e\n",
-                      icell, i, j, cadelta[jcell][jcorner][j], total[j]);
-                  }*/
                   ndelta[j] = ndelta[j] + 1;
                 }
               }
             } else {
               for (j = 0; j < nadj; j++) {
-                if (cdelta_ghost[jcell-nglocal][jcorner] > 0) {
+                if (cadelta_ghost[jcell-nglocal][jcorner][j] > 0) {
                   total[j] += cadelta_ghost[jcell-nglocal][jcorner][j];
-                  /*if(icell==7) {
-                    printf("cdel[%i][%i][%i]: %4.3e -- %4.3e\n\n",
-                      icell, i, j,
-                      cadelta_ghost[jcell-nglocal][jcorner][j], total[j]);
-                  }*/
                   ndelta[j] = ndelta[j] + 1;
                 }
               }
             }
+
           } // jz
         } // jy
       } // jx
@@ -2006,7 +2031,7 @@ void FixAblate::sync_adjacent()
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
   int numin;
-  double total[nadj], cmin, cmax, dc;
+  double total[nadj];
 
   comm_neigh_corners(CDELTA);
 
@@ -2076,24 +2101,10 @@ void FixAblate::sync_adjacent()
 
       // now decrement corners
 
-      cmax = 0.0;
-      cmin = 256.0;
       for(j = 0; j < nadj; j++) {
         cavalues[icell][i][j] -= total[j];
-        cmin = MIN(cavalues[icell][i][j],cmin);
-        cmax = MAX(cavalues[icell][i][j],cmax);
-      }
-
-      // if bounds include thresh, need to adjust
-
-      if (cmax > thresh && cmin < thresh) {
-        dc = cmax - cbufmax;
-        for(j = 0; j < nadj; j++) cavalues[icell][i][j] -= dc;
-      }
-
-      // zero out negative values
-      for(j = 0; j < nadj; j++)
         if (cavalues[icell][i][j] < 0) cavalues[icell][i][j] = 0.0;
+      }
 
       // check for consistency
 

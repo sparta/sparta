@@ -113,8 +113,9 @@ class FixAblate : public Fix {
   void process_args(int, char **);
 
   void create_surfs(int);
-  void set_delta_random();
   void set_delta();
+  void set_delta_random();
+  void set_delta_uniform();
   void decrement();
   void decrement_adjacent();
   void decrement_distributed_inside();
