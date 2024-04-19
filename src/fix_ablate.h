@@ -120,8 +120,7 @@ class FixAblate : public Fix {
   void decrement_adjacent();
   void decrement_distributed_inside();
   void decrement_distributed_outside();
-  void decrement_adjacent_distributed_inside2d();
-  void decrement_adjacent_distributed_inside3d();
+  void decrement_adjacent_distributed_inside();
   void sync();
   void sync_adjacent();
   void sync_distributed_outside();

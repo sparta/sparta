@@ -495,8 +495,7 @@ void FixAblate::end_of_step()
     decrement_distributed_outside();
     sync_distributed_outside();
     if (adjacentflag) {
-      if(dim == 2) decrement_adjacent_distributed_inside2d();
-      else decrement_adjacent_distributed_inside3d();
+      decrement_adjacent_distributed_inside();
       sync_adjacent_distributed_inside();
     } else {
       decrement_distributed_inside();
@@ -1165,13 +1164,13 @@ void FixAblate::decrement_adjacent()
    find how much to decrement outside corner points
 ------------------------------------------------------------------------- */
 
-void FixAblate::decrement_adjacent_distributed_inside2d()
+/*void FixAblate::decrement_adjacent_distributed_inside2d()
 {
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
   int i,j,k,ind;
-  int Nneigh, neigh1, neigh2;  
+  int Nneigh, *ineighbors, neighbors[2];  
   double total_remain;
 
   // to avoid couting same decrement multiple times in different cells
@@ -1181,7 +1180,7 @@ void FixAblate::decrement_adjacent_distributed_inside2d()
     if (cells[icell].nsplit <= 0) continue;
 
     for (i = 0; i < ncorner; i++)
-        for (j = 0; j < nadj; j++) cadelta[icell][i][j] = 0.0;
+      for (j = 0; j < nadj; j++) cadelta[icell][i][j] = 0.0;
 
     // reference should be same as decrement_distributed_outside since
     // only outside points were updated
@@ -1189,44 +1188,53 @@ void FixAblate::decrement_adjacent_distributed_inside2d()
     setup_distributed2d(icell);
 
     for (i = 0; i < ncorner; i++) {
-      for (j = 0; j < nadj; j++) {
-        if (cavalues[icell][i][j] < 0) {
+      if (refcorners[i] != 0) continue;
 
-          // count which neighbors are inside and connected
-          // record how much corner value to pass on if decrement was too large
+      if (i == 0 || i == 3) {
+        neighbors[0] = 1;
+        neighbors[1] = 2;
+      } else {
+        neighbors[0] = 0;
+        neighbors[1] = 3;
+      }
 
-          Nneigh = 0;
-          if (i == 0 || i == 3) {
-            neigh1 = 1;
-            neigh2 = 2;
-          } else {
-            neigh1 = 0;
-            neigh2 = 3;
+      Nneigh = 0;
+      if (refcorners[neighbors[0]] == 1) Nneigh++;
+      if (refcorners[neighbors[1]] == 1) Nneigh++;
+
+      // two inner neighbors to test
+      ineighbors = inner_neighbor[i];
+
+      for (k = 0; k < dim; k++) {
+        i_inner = ineighbors[k];
+        i_neighbor_corner = neighbors[k];
+
+        if (cavalues[icell][i][i_inner] < 0) {
+
+          if (refcorners[i_neighbor_corner] == 1) {
+
+            // which inner index for connected corner point
+            if (i_inner == 0) oinner = 1;
+            else if (i_inner == 1) oinner = 0;
+            else if (i_inner == 2) oinner = 3;
+            else if (i_inner == 3) oinner = 2;
+            else if (i_inner == 4) oinner = 5;
+            else if (i_inner == 5) oinner = 4;
+
+            total_remain = fabs(cavalues[icell][i][i_inner]) / Nneigh;
+            cadelta[icell][i_neighbor_corner][oinner] += total_remain;
           }
-
-          if (refcorners[neigh1] == 1) Nneigh++;
-          if (refcorners[neigh2] == 1) Nneigh++;
-
-          total_remain = fabs(cavalues[icell][i][j]) / Nneigh;
-
-          if (refcorners[neigh1] == 1) {
-            ind = find_inner(j,neigh1);
-            cadelta[icell][neigh1][ind] += total_remain;
-          }
-
-          if (refcorners[neigh2] == 1) {
-            ind = find_inner(j,neigh2);
-            cadelta[icell][neigh2][ind] += total_remain;
-          }
-
-          // set negative inner value to zero
-          cavalues[icell][i][j] = 0.0;
 
         } // end if for negative cvalues
-      } // end inner
+      } // end k-neighbors
+
+      // zero out negative values
+      for (j = 0; j < nadj; j++)
+        if (cavalues[icell][i][j] < 0) cavalues[icell][i][j] = 0.0;
+
     } // end corner
   } // end cells
-}
+}*/
 
 /* ----------------------------------------------------------------------
    find how much to decrement outside corner points
@@ -1395,7 +1403,7 @@ void FixAblate::sync_distributed_outside()
    find how much to decrement outside corner points
 ------------------------------------------------------------------------- */
 
-void FixAblate::decrement_adjacent_distributed_inside3d()
+void FixAblate::decrement_adjacent_distributed_inside()
 {
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -1411,43 +1419,30 @@ void FixAblate::decrement_adjacent_distributed_inside3d()
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
 
-    for (i = 0; i < ncorner; i++) {
-      for (j = 0; j < nadj; j++) {
-        cadelta[icell][i][j] = 0.0;
-      }
-    }
+    for (i = 0; i < ncorner; i++)
+      for (j = 0; j < nadj; j++) cadelta[icell][i][j] = 0.0;
 
     // reference should be same as decrement_distributed_outside since
     // only outside points were updated
 
-    setup_distributed3d(icell);
+    if (dim == 3) setup_distributed2d(icell);
+    else setup_distributed3d(icell);
 
     for (i = 0; i < ncorner; i++) {
+      if (refcorners[i] != 0) continue;
 
       // find neighboring corners and which are inside
       neighbors = corner_neighbor[i];
       Nneigh = 0;
-      for (k = 0; k < 3; k++)
+      for (k = 0; k < dim; k++)
         if (refcorners[neighbors[k]] == 1) Nneigh++;
-
-      //if (Nneigh > 0)
-      //  printf("[%i][%i]: %i\n", icell, i, Nneigh);
 
       // three inner neighbors to test
       ineighbors = inner_neighbor[i];
 
-      for (k = 0; k < 3; k++) {
+      for (k = 0; k < dim; k++) {
         i_inner = ineighbors[k];
         i_neighbor_corner = neighbors[k];
-
-        /*if (i_inner == 0) oinner = 1;
-        else if (i_inner == 1) oinner = 0;
-        else if (i_inner == 2) oinner = 3;
-        else if (i_inner == 3) oinner = 2;
-        else if (i_inner == 4) oinner = 5;
-        else if (i_inner == 5) oinner = 4;*/
-        //printf("%i: [%i] -> [%i] : inner: %i\n",
-        //  icell, i, i_neighbor_corner, i_inner);
 
         if (cavalues[icell][i][i_inner] < 0) {
 
@@ -1462,12 +1457,8 @@ void FixAblate::decrement_adjacent_distributed_inside3d()
             else if (i_inner == 4) oinner = 5;
             else if (i_inner == 5) oinner = 4;
 
-            //printf("%i: [%i][%i] -> [%i][%i]\n",
-            //  icell, i, i_inner, i_neighbor_corner, oinner);
-
             total_remain = fabs(cavalues[icell][i][i_inner]) / Nneigh;
             cadelta[icell][i_neighbor_corner][oinner] += total_remain;
-            //printf("cd: %4.3e\n", cadelta[icell][i_neighbor_corner][oinner]);
           }
         } // end if for negative cvalues
       } // end  k - neighbors
@@ -1645,66 +1636,18 @@ int FixAblate::find_inner(int istart, int iend)
 {
   int ind = -1;
 
-  if (dim == 2) {
-    if (istart == 0) {
-      if (iend == 1) ind = 0;
-      else if (iend == 2) ind = 2;
-
-    } else if (istart == 1) {
-      if (iend == 0) ind = 1;
-      else if (iend == 3) ind = 2;
-
-    } else if (istart == 2) {
-      if (iend == 0) ind = 3;
-      else if (iend == 3) ind = 0;
-
-    } else if (istart == 3) {
-      if (iend == 1) ind = 3;
-      else if (iend == 2) ind = 1;
-
-    }
-  } else {
-    if (istart == 0) {
-      if (iend == 1) ind = 0;
-      else if (iend == 2) ind = 2;
-      else if (iend == 4) ind = 4;
-
-    } else if (istart == 1) {
-      if (iend == 0) ind = 1;
-      else if (iend == 3) ind = 2;
-      else if (iend == 5) ind = 4;
-
-    } else if (istart == 2) {
-      if (iend == 0) ind = 3;
-      else if (iend == 3) ind = 0;
-      else if (iend == 6) ind = 4;
-
-    } else if (istart == 3) {
-      if (iend == 1) ind = 3;
-      else if (iend == 2) ind = 1;
-      else if (iend == 7) ind = 4;
-
-    } else if (istart == 4) {
-      if (iend == 5) ind = 0;
-      else if (iend == 6) ind = 2;
-      else if (iend == 0) ind = 5;
-
-    } else if (istart == 5) {
-      if (iend == 4) ind = 1;
-      else if (iend == 7) ind = 2;
-      else if (iend == 1) ind = 5;
-
-    } else if (istart == 6) {
-      if (iend == 4) ind = 3;
-      else if (iend == 7) ind = 0;
-      else if (iend == 2) ind = 5;
-
-    } else if (istart == 7) {
-      if (iend == 5) ind = 3;
-      else if (iend == 6) ind = 1;
-      else if (iend == 3) ind = 5;
-
-    }
+  if (istart == 0) {
+    if (iend == 1) ind = 0;
+    else if (iend == 2) ind = 2;
+  } else if (istart == 1) {
+    if (iend == 0) ind = 1;
+    else if (iend == 3) ind = 2;
+  } else if (istart == 2) {
+    if (iend == 0) ind = 3;
+    else if (iend == 3) ind = 0;
+  } else if (istart == 3) {
+    if (iend == 1) ind = 3;
+    else if (iend == 2) ind = 1;
   }
 
   return ind;
