@@ -128,7 +128,6 @@ class FixAblate : public Fix {
   void sync_adjacent_distributed_inside();
   int setup_distributed3d(int);
   int setup_distributed2d(int);
-  int find_inner(int,int);
   void epsilon_adjust();
   void epsilon_adjust_adjacent();
   void length_adjust();
