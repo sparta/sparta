@@ -1690,10 +1690,10 @@ int FixAblate::setup_distributed2d(int icell)
   // 1 inside points -> 4 cases
   } else if (Nin == 1) {
     Nout = 2;
-    if (refcorners[0] == 1) refcorners[2] = -1;
-    else if (refcorners[1] == 1) refcorners[3] = -1;
-    else if (refcorners[2] == 1) refcorners[0] = -1;
-    else refcorners[1] = -1;
+    if (refcorners[0] == 1) refcorners[3] = -1;
+    else if (refcorners[1] == 1) refcorners[2] = -1;
+    else if (refcorners[2] == 1) refcorners[1] = -1;
+    else refcorners[0] = -1;
   }
   else if (Nin == 2) Nout = 2;
   else if (Nin == 3) Nout = 1;
