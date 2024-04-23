@@ -117,8 +117,8 @@ is based on the "isosurface stuffing" proposed
 by Labelle and Shewchuk "(Labelle07)"_#Labelle07. With {buffer}, a minimum 
 inside corner value and maximum outside corner value
 is calculated by extrapolating
-from 0 and 255 respectively. Any inside corner values which
-are below the minimum inside corner value is reduced and becomes an
+from 0 and 255 respectively. Any inside corner value which
+is below the minimum inside corner value is reduced and becomes an
 outside corner point.
 Any outside corner value above the maximum outside corner value
 is also reduced and remains an outside corner point.
