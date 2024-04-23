@@ -32,12 +32,12 @@ create_grid		80 ${Ny} 1
 create_grid		80 80 1
 WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/home/runner/work/sparta/sparta/src/grid.cpp:471)
 Created 6400 child grid cells
-  CPU time = 0.000979496 secs
-  create/ghost percent = 89.1987 10.8013
+  CPU time = 0.000983816 secs
+  create/ghost percent = 89.7972 10.2028
 balance_grid		rcb cell
 Balance grid migrated 4800 cells
-  CPU time = 0.00210981 secs
-  reassign/sort/migrate/ghost percent = 25.0901 0.447814 24.7715 49.6906
+  CPU time = 0.00203516 secs
+  reassign/sort/migrate/ghost percent = 23.9977 0.507086 26.0013 49.4939
 
 global			nrho 1.0 fnum 0.001
 global                  surfs explicit/distributed
@@ -55,10 +55,10 @@ read_surf               data.circle2d invert
   3465 2692 243 = cells outside/inside/overlapping surfs
   243 = surf cells with 1,2,etc splits
   2.23402 2.23402 = cell-wise and global flow volume
-  CPU time = 0.00212197 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 18.6616 6.01701 1.98584 40.9587 32.3769 13.6181 0.887666
-  surf2grid time = 0.00086913 secs
-  map/comm1/comm2/comm3/comm4/split percent = 34.694 3.77515 23.7487 3.70025 14.6306 9.02592
+  CPU time = 0.00196213 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 8.5536 7.46963 3.38122 45.1092 35.4864 14.7283 0.971137
+  surf2grid time = 0.000885102 secs
+  map/comm1/comm2/comm3/comm4/split percent = 33.8842 3.80657 23.3641 4.33645 14.7445 8.88101
 surf_collide		1 diffuse 300.0 0.0
 surf_modify		all collide 1
 
@@ -82,7 +82,7 @@ create_isurf            all fablate 39.5 ave
 
 create_particles        air n 0 twopass
 Created 2234 particles
-  CPU time = 0.000937959 secs
+  CPU time = 0.000958559 secs
 
 collide			vss air air.vss
 
@@ -101,20 +101,20 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 3.20715 3.20715 3.20715
 Step CPU Np Natt Ncoll Nscoll Nscheck 
        0            0     2234        0        0        0        0 
-       5  0.001804864     2234        0        0      511     1759 
-      10  0.003711669     2234        0        0      537     1855 
-Loop time of 0.00374689 on 4 procs for 10 steps with 2234 particles
+       5  0.001762029     2234        0        0      511     1759 
+      10  0.003635716     2234        0        0      537     1855 
+Loop time of 0.00369094 on 4 procs for 10 steps with 2234 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.0026183  | 0.0027049  | 0.0028053  |   0.1 | 72.19
-Coll    | 8.514e-05  | 8.9756e-05 | 9.4568e-05 |   0.0 |  2.40
-Sort    | 0.0001129  | 0.00011565 | 0.00011753 |   0.0 |  3.09
-Comm    | 0.0004451  | 0.0004548  | 0.00047144 |   0.0 | 12.14
+Move    | 0.0026148  | 0.002671   | 0.0027501  |   0.1 | 72.37
+Coll    | 7.9981e-05 | 8.3852e-05 | 9.0869e-05 |   0.0 |  2.27
+Sort    | 0.00010734 | 0.00010925 | 0.00011304 |   0.0 |  2.96
+Comm    | 0.00043173 | 0.00044446 | 0.00045353 |   0.0 | 12.04
 Modify  | 0          | 0          | 0          |   0.0 |  0.00
-Output  | 2.9125e-05 | 4.0421e-05 | 6.7898e-05 |   0.0 |  1.08
-Other   |            | 0.0003414  |            |       |  9.11
+Output  | 3.136e-05  | 5.1106e-05 | 0.00010798 |   0.0 |  1.38
+Other   |            | 0.0003312  |            |       |  8.97
 
 Particle moves    = 22340 (22.3K)
 Cells touched     = 425672 (0.426M)
@@ -130,7 +130,7 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 1.49057e+06
+Particle-moves/CPUsec/proc: 1.51317e+06
 Particle-moves/step: 2234
 Cell-touches/particle/step: 19.0543
 Particle comm iterations/step: 3
