@@ -403,7 +403,8 @@ void ComputeTvibGrid::post_process_grid(int index, int /*nsample*/,
       evib = emap[0];
       count = evib+1;
       for (isp = 0; isp < nsp; isp++) {
-        ispecies = t2s[evib];
+        int itally = index*2 + evib - emap[0];
+        ispecies = t2s[itally];
         theta = species[ispecies].vibtemp[0];
         if (theta == 0.0 || etally[icell][count] == 0.0) {
           tspecies[isp] = 0.0;
@@ -453,7 +454,8 @@ void ComputeTvibGrid::post_process_grid(int index, int /*nsample*/,
       evib = emap[0];
       count = evib+1;
       for (isp = 0; isp < nsp; isp++) {
-        ispecies = t2s_mode[evib];
+        int itally = index*2*maxmode + evib - emap[0];
+        ispecies = t2s_mode[itally];
         for (imode = 0; imode < maxmode; imode++) {
           theta = species[ispecies].vibtemp[imode];
           if (theta == 0.0 || etally[icell][count] == 0.0) {
@@ -509,7 +511,8 @@ void ComputeTvibGrid::post_process_grid(int index, int /*nsample*/,
       evib = emap[2*imode];
       count = evib+1;
       for (isp = 0; isp < nsp; isp++) {
-        ispecies = t2s_mode[evib];
+        int itally = index*2*maxmode + evib - emap[0];
+        ispecies = t2s_mode[itally];
         theta = species[ispecies].vibtemp[imode];
         if (theta == 0.0 || etally[icell][count] == 0.0) {
           tspecies_mode[isp][imode] = 0.0;
