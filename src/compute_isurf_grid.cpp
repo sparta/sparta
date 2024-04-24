@@ -449,15 +449,7 @@ void ComputeISurfGrid::post_process_isurf_grid()
   if (combined) return;
   combined = 1;
 
-  // reallocate array_grid if necessary
-
   int nglocal = grid->nlocal;
-
-  if (nglocal > maxgrid) {
-    memory->destroy(array_grid);
-    maxgrid = nglocal;
-    memory->create(array_grid,maxgrid,ntotal,"isurf/grid:array_grid");
-  }
 
   // perform rendezvous comm on tallies to sum ghost tallies
   //   to my owned grid cells
@@ -514,6 +506,12 @@ void ComputeISurfGrid::grow_tally()
 
 void ComputeISurfGrid::reallocate()
 {
+  if (grid->nlocal == maxgrid) return;
+
+  memory->destroy(array_grid);
+  maxgrid = grid->nlocal;
+  memory->create(array_grid,maxgrid,ntotal,"isurf/grid:array_grid");
+
   init_normflux();
 }
 
