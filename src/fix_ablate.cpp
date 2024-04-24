@@ -1629,6 +1629,9 @@ void FixAblate::sync_distributed_inside()
 // 0 - connected
 // -1 - out
 // 1 - in
+
+// refcorners follow SPARTA ordering
+// incorners and outcorners follow standard orderin
 int FixAblate::setup_distributed2d(int icell)
 {
   for (int i = 0; i < ncorner; i++)
