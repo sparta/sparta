@@ -57,7 +57,7 @@ class ComputeTvibGridKokkos : public ComputeTvibGrid, public KokkosBase {
   DAT::tdual_float_1d k_vector_grid;
 
  private:
-  int nstride,count,evib,nsp,imode;
+  int nstride,count,evib,nsp,imode,index;
   double boltz;
 
   DAT::tdual_float_2d_lr k_tally;
@@ -81,14 +81,12 @@ class ComputeTvibGridKokkos : public ComputeTvibGrid, public KokkosBase {
   DAT::t_float_1d d_tspecies;
   DAT::t_float_2d_lr d_tspecies_mode;
 
+  DAT::t_int_2d d_groupspecies;
+
   DAT::tdual_int_1d k_s2t;
-  DAT::tdual_int_1d k_t2s;
-  DAT::tdual_int_1d k_t2s_mode;
   DAT::tdual_int_2d k_s2t_mode;
 
   DAT::t_int_1d d_s2t;
-  DAT::t_int_1d d_t2s;
-  DAT::t_int_1d d_t2s_mode;
   DAT::t_int_2d d_s2t_mode;
 
   DAT::t_int_1d d_ewhich;
