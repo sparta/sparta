@@ -434,6 +434,7 @@ letters in parenthesis: k = KOKKOS.
 "sonine/grid (k)"_compute_sonine_grid.html,
 "surf (k)"_compute_surf.html,
 "thermal/grid (k)"_compute_thermal_grid.html,
+"telec/grid (k)"_compute_telec_grid.html,
 "temp (k)"_compute_temp.html,
 "tvib/grid (k)"_compute_tvib_grid.html :tb(c=6,ea=c)
 

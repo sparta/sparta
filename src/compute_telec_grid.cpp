@@ -12,6 +12,11 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Contributing author: Zak Echo (Sandia)
+------------------------------------------------------------------------- */
+
+
 #include "compute_telec_grid.h"
 #include "error.h"
 #include "grid.h"
@@ -21,6 +26,8 @@
 #include "update.h"
 
 using namespace SPARTA_NS;
+
+/* ---------------------------------------------------------------------- */
 
 ComputeTelecGrid::ComputeTelecGrid(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
@@ -61,7 +68,6 @@ ComputeTelecGrid::ComputeTelecGrid(SPARTA *sparta, int narg, char **arg) :
   memory->create(map,ngroup,2*nmax,"telec/grid:map");
   tspecies = new double[nspecies];
   s2t = new int[nspecies];
-  t2s = new int[ntally];
 
   for (int isp = 0; isp < nspecies; isp++) s2t[isp] = -1;
 
@@ -72,8 +78,6 @@ ComputeTelecGrid::ComputeTelecGrid(SPARTA *sparta, int narg, char **arg) :
       map[igroup][2*n] = itally;
       map[igroup][2*n+1] = itally+1;
       s2t[groupspecies[igroup][n]] = itally;
-      t2s[itally] = groupspecies[igroup][n];
-      t2s[itally+1] = groupspecies[igroup][n];
       itally += 2;
     }
   }
@@ -82,6 +86,8 @@ ComputeTelecGrid::ComputeTelecGrid(SPARTA *sparta, int narg, char **arg) :
   vector_grid = NULL;
   tally = NULL;
 }
+
+/* ---------------------------------------------------------------------- */
 
 ComputeTelecGrid::~ComputeTelecGrid()
 {
@@ -92,13 +98,15 @@ ComputeTelecGrid::~ComputeTelecGrid()
 
   delete [] tspecies;
   delete [] s2t;
-  delete [] t2s;
 
   memory->destroy(vector_grid);
   memory->destroy(tally);
 }
 
-void ComputeTelecGrid::init() {
+/* ---------------------------------------------------------------------- */
+
+void ComputeTelecGrid::init()
+{
   if (ngroup != particle->mixture[imix]->ngroup)
     error->all(FLERR,"Number of groups in compute telec/grid "
                "mixture has changed");
@@ -109,10 +117,20 @@ void ComputeTelecGrid::init() {
     error->all(FLERR,"Number of total species in compute telec/grid "
                "has changed");
 
+  char data_name[] = "eelec";
+  index_eelec = particle->find_custom(data_name);
+  double *eelecs = NULL;
+
+  if (index_eelec < 0)
+    error->all(FLERR,"Discrete electronic states are required for compute telec/grid");
+
   reallocate();
 }
 
-void ComputeTelecGrid::compute_per_grid() {
+/* ---------------------------------------------------------------------- */
+
+void ComputeTelecGrid::compute_per_grid()
+{
   invoked_per_grid = update->ntimestep;
 
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -131,48 +149,82 @@ void ComputeTelecGrid::compute_per_grid() {
 
   // loop over all particles, skip species not in mixture group
   // tally electronic eng and count for species
-  for (i = 0; i < nlocal; i++) {
-      ispecies = particles[i].ispecies;
-      igroup = s2g[ispecies];
-      if (igroup < 0) continue;
-      icell = particles[i].icell;
-      if (!(cinfo[icell].mask & groupbit)) continue;
 
-      j = s2t[ispecies];
-      char data_name[] = "eelec";
-      int eelec_index = particle->find_custom(data_name);
-      double *eelecs = NULL;
-      if (eelec_index >= 0) {
-        eelecs = particle->edvec[particle->ewhich[eelec_index]];
-        tally[icell][j] += eelecs[i];
-        tally[icell][j+1] += 1.0;
-      }
+  for (i = 0; i < nlocal; i++) {
+    ispecies = particles[i].ispecies;
+    igroup = s2g[ispecies];
+    if (igroup < 0) continue;
+    icell = particles[i].icell;
+    if (!(cinfo[icell].mask & groupbit)) continue;
+
+    j = s2t[ispecies];
+    char data_name[] = "eelec";
+    int index_eelec = particle->find_custom(data_name);
+    double *eelecs = NULL;
+    if (index_eelec >= 0) {
+      eelecs = particle->edvec[particle->ewhich[index_eelec]];
+      tally[icell][j] += eelecs[i];
+      tally[icell][j+1] += 1.0;
     }
+  }
 }
+
+/* ---------------------------------------------------------------------- */
 
 double ComputeTelecGrid::elec_energy(int isp, double temp_elec) {
-    Particle::Species species = particle->species[isp];
+  Particle::Species species = particle->species[isp];
 
-    double* state_probabilities = particle->electronic_distribution_func(isp, temp_elec);
+  double* state_probabilities = particle->electronic_distribution_func(isp, temp_elec);
 
-    double total_energy = 0.0;
-    for (int i = 0; i < species.elecdat->nelecstate; ++i) {
-      total_energy += state_probabilities[i]*species.elecdat->states[i].temp*update->boltz;
-    }
+  double total_energy = 0.0;
+  for (int i = 0; i < species.elecdat->nelecstate; ++i)
+    total_energy += state_probabilities[i]*species.elecdat->states[i].temp*update->boltz;
 
-    return total_energy;
+  return total_energy;
 }
 
-void ComputeTelecGrid::post_process_grid(int index, int nsample,
-  double** etally, int* emap,
-  double* vec, int nstride)
+/* ----------------------------------------------------------------------
+   query info about internal tally array for this compute
+   index = which column of output (0 for vec, 1 to N for array)
+   return # of tally quantities for this index
+   also return array = ptr to tally array
+   also return cols = ptr to list of columns in tally for this index
+------------------------------------------------------------------------- */
+
+int ComputeTelecGrid::query_tally_grid(int index, double**& array, int*& cols)
 {
+  index--;
+  array = tally;
+  cols = map[index];
+  return nmap[index];
+}
+
+/* ----------------------------------------------------------------------
+   tally accumulated info to compute final normalized values
+   index = which column of output (0 for vec, 1 to N for array)
+   for etally = NULL:
+     use internal tallied info for single timestep, set nsample = 1
+     compute values for all grid cells
+       store results in vector_grid with nstride = 1 (single col of array_grid)
+   for etally = ptr to caller array:
+     use external tallied info for many timesteps
+     nsample = additional normalization factor used by some values
+     emap = list of etally columns to use, # of columns determined by index
+     store results in caller's vec, spaced by nstride
+   if norm = 0.0, set result to 0.0 directly so do not divide by 0.0
+------------------------------------------------------------------------- */
+
+void ComputeTelecGrid::post_process_grid(int index, int /*nsample*/,
+                                         double** etally, int* emap,
+                                         double* vec, int nstride)
+{
+  index--;
+
   int lo = 0;
   int hi = nglocal;
   int k = 0;
 
   if (!etally) {
-    nsample = 1;
     etally = tally;
     emap = map[index];
     vec = vector_grid;
@@ -180,6 +232,7 @@ void ComputeTelecGrid::post_process_grid(int index, int nsample,
   }
 
   Particle::Species *species = particle->species;
+  int **groupspecies = particle->mixture[imix]->groupspecies;
 
   int eelec,count,ispecies,isp;
   double first_elec_eng, t_elec, degen0, degen1, numer, denom;
@@ -191,7 +244,7 @@ void ComputeTelecGrid::post_process_grid(int index, int nsample,
     eelec = emap[0];
     count = eelec+1;
     for (isp = 0; isp < nsp; isp++) {
-      ispecies = t2s[eelec-emap[0]];
+      ispecies = groupspecies[index][isp];
       if (species[ispecies].elecdat == NULL ||
           etally[icell][eelec] == 0.0) {
         tspecies[isp] = 0.0;
@@ -200,8 +253,9 @@ void ComputeTelecGrid::post_process_grid(int index, int nsample,
         continue;
       }
       // We calculate a first guess at the temp assuming
-      // all the electronic energy is stored in the first
-      // excited state
+      //   all the electronic energy is stored in the first
+      //   excited state
+
       first_elec_eng = species[ispecies].elecdat->states[1].temp*boltz;
       degen0 = species[ispecies].elecdat->states[0].degen;
       degen1 = species[ispecies].elecdat->states[1].degen;
@@ -211,16 +265,19 @@ void ComputeTelecGrid::post_process_grid(int index, int nsample,
              ))
         );
       // If the electronic excitation is very high, the above calculation will
-      // give negative numbers, including -inf. Negative temperatures are physically
-      // meaningful if over 50% of particles are in excited states. However, in the
-      // case of a truly broken value (-inf) we initialize the guess at something
-      // more sane.
+      //   give negative numbers, including -inf. Negative temperatures are physically
+      //   meaningful if over 50% of particles are in excited states. However, in the
+      //   case of a truly broken value (-inf) we initialize the guess at something
+      //   more sane
+
       if (isinf(t_elec)) t_elec = -species[ispecies].elecdat->states[1].temp;
 
       // Bisection method to find T accurate to 1%
+
       double target_energy_per_part = etally[icell][eelec]/etally[icell][count];
 
       // Find initial bounds based on our first guess
+
       double T_low = 0.9*t_elec;
       while (elec_energy(isp, T_low) > target_energy_per_part) {
         T_low /= 2.0;
@@ -232,8 +289,9 @@ void ComputeTelecGrid::post_process_grid(int index, int nsample,
       }
 
       // Bisect
+
       double T_mid = t_elec;
-      double e_mid = elec_energy( isp, T_mid );
+      double e_mid = elec_energy(isp, T_mid);
       while ((T_high - T_low) > 0.01) {
         if (e_mid > target_energy_per_part) {
           T_high = T_mid;
@@ -261,14 +319,13 @@ void ComputeTelecGrid::post_process_grid(int index, int nsample,
   }
 }
 
-int ComputeTelecGrid::query_tally_grid(int index, double**& array, int*& cols) {
-  index--;
-  array = tally;
-  cols = map[index];
-  return nmap[index];
-}
+/* ----------------------------------------------------------------------
+   reallocate arrays if nglocal has changed
+   called by init() and whenever grid changes
+------------------------------------------------------------------------- */
 
-void ComputeTelecGrid::reallocate() {
+void ComputeTelecGrid::reallocate()
+{
   if (grid->nlocal == nglocal) return;
 
   memory->destroy(vector_grid);
@@ -276,10 +333,14 @@ void ComputeTelecGrid::reallocate() {
   nglocal = grid->nlocal;
   memory->create(vector_grid,nglocal,"telec/grid:vector_grid");
   memory->create(tally,nglocal,ntally,"telec/grid:tally");
-
 }
 
-bigint ComputeTelecGrid::memory_usage() {
+/* ----------------------------------------------------------------------
+   memory usage of local grid-based data
+------------------------------------------------------------------------- */
+
+bigint ComputeTelecGrid::memory_usage()
+{
   bigint bytes;
   bytes = nglocal * sizeof(double);
   bytes = ntally*nglocal * sizeof(double);

@@ -1272,9 +1272,13 @@ double* Particle::electronic_distribution_func(int isp, double temp_elec) {
     double partition_function = 0.0;
 
     for (int i = 0; i < species.elecdat->nelecstate; ++i) {
+
       // Calculate boltzmann fractions
+
       distribution[i] = species.elecdat->states[i].degen*exp(-species.elecdat->states[i].temp/temp_elec);
+
       // Calculate partition function
+
       partition_function += distribution[i];
     }
 

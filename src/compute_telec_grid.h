@@ -39,7 +39,7 @@ class ComputeTelecGrid : public Compute {
   double elec_energy(int, double);
 
  protected:
-  int groupbit,imix,ngroup,mixspecies,nspecies;
+  int groupbit,imix,ngroup,mixspecies,nspecies,index_eelec;
   int maxstate;               // max elec state for any species
 
   int ntally;                // total # of columns in tally array
@@ -61,14 +61,10 @@ class ComputeTelecGrid : public Compute {
 
   int *s2t;                  // s2t[i] = first tally column for species I
                              // size = Nspecies
-  int *t2s;                  // t2s[i] = species index for Ith tally column
-                             // size = Ntally = 2*Nspecies
 
   int **s2t_mode;            // s2tmode[i][j] =
                              //   first tally column for species I, mode J
                              // length = Nspecies by Nmode
-  int *t2s_mode;             // t2s_mode[i] = species index for Ith tally column
-                             // size = Ntally = 2*Nspecies*Nmode
 };
 
 }
