@@ -1683,11 +1683,11 @@ int CreateISurf::corner_hit2d(double *p1, double *p2,
     if (tside == 1 || tside == 2 || tside == 5) {
       side = 1;
       param = tparam;
-      return true;
+      return 1;
     } else {
       side = 0;
       param = tparam;
-      return true;
+      return 1;
     }
   }
 
@@ -1697,7 +1697,7 @@ int CreateISurf::corner_hit2d(double *p1, double *p2,
   double p2p[3];
 
   double dx[8], dy[8];
-  double dp = mind/1000.0;
+  double dp = mind*1e-2;
   dx[0] = dx[1] = dx[6] = dp;
   dx[2] = dx[5] = 0;
   dx[3] = dx[4] = dx[7] = -dp;
@@ -1720,28 +1720,22 @@ int CreateISurf::corner_hit2d(double *p1, double *p2,
                                       line->norm,d3dum,tparam,tside);
     if (h) {
       if (tside == 1 || tside == 2 || tside == 5) {
-
-        //side = 2;
-
         side = 1;
         if (tparam<0.5) param = 0.0;
         else param = 1.0;
-        return true;
+        return 1;
       } else {
-
-        //side = 2;
-
         side = 0;
         if (tparam<0.5) param = 0.0;
         else param = 1.0;
-        return true;
+        return 1;
       }
     }
   }
 
   // true miss
 
-  return false;
+  return 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -1774,13 +1768,13 @@ int CreateISurf::corner_hit3d(double *p1, double *p2,
   }
 
   // if miss, maybe surface very close to corner/edge
-  // perturb points
+  // perturb cell edge points
 
   double p1p[3];
   double p2p[3];
 
   double dx[26], dy[26], dz[26];
-  double dp = mind*1e-3;
+  double dp = mind*1e-2;
   dx[0] = dx[2] = dx[3] = dx[4] = 
     dx[15] = dx[16] = dx[18] = dx[23] = dx[24] = dp;
   dx[7] = dx[9] = dx[10] = dx[11] = 
