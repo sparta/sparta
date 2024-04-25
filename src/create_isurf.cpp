@@ -367,17 +367,6 @@ void CreateISurf::set_inner()
   if (dim == 2) surface_edge2d();
   else surface_edge3d();
 
-  printf("after surf-edge\n");
-  for (int ic = 221; ic < 234; ic++) {
-    for (int jc = 0; jc < ncorner; jc++) {
-      for (int kc = 0; kc < nadj; kc++) {
-          if(ivalues[ic][jc][kc] > 0 && cells[ic].lo[1] > 1)
-          printf("ivalues[%i][%i][%i] = %4.2e\n",
-            ic, jc, kc, ivalues[ic][jc][kc]);
-      }
-    }
-  }
-
   // fill in side and corner values based on if grid cell is in or out
 
   set_inout();
@@ -679,12 +668,15 @@ void CreateISurf::surface_edge3d()
             n2 = 4;
           }
 
-          if (ivalues[icell][i][n1] > param || ivalues[icell][i][n1] <= 0) {
+          if (ivalues[icell][i][n1] > param ||
+              ivalues[icell][i][n1] <= 0) {
+            ivalues[icell][i][n1] = param;
+            ivalues[icell][j][n2] = oparam;
+          } else if (ivalues[icell][j][n2] > oparam ||
+              ivalues[icell][j][n2] <= 0){
             ivalues[icell][i][n1] = param;
             ivalues[icell][j][n2] = oparam;
           }
-          //if (ivalues[icell][j][n2] > oparam || ivalues[icell][j][n2] <= 0)
-          //  ivalues[icell][j][n2] = oparam;
 
           if (mvalues[icell][i] < 0 || param <= mvalues[icell][i] && svalues[icell][i] != 0) {
             if (param == 0) svalues[icell][i] = 0;
@@ -1599,8 +1591,6 @@ void CreateISurf::set_cvalues_inner()
 
       for(int k = 0; k < nadj; k++) {
 
-        // bound the intersection values
-
         ival = ivalues[icell][ic][k];
 
         // no intersection this edge
@@ -1610,10 +1600,9 @@ void CreateISurf::set_cvalues_inner()
         } else if (svalues[icell][ic] == 1) {
           if (ival <= ivalth) cval = param2cval(ival,0.0);
           else cval = cin;
-          cval = MAX(cval,cbufmin);
         } else {
           if (ival < oivalth) cval = param2cval(ival,255.0);
-          else cval = 0.0;
+          else cval = cout;
         }
         invalues[icell][ic][k] = cval;
 
@@ -1642,9 +1631,9 @@ void CreateISurf::set_cvalues_inner()
       for(int k = 0; k < nadj; k++) {
         if(invalues[icell][ic][k]<0 || invalues[icell][ic][k]>255.0)
           error->one(FLERR,"bad");
-        if(invalues[icell][ic][k] <= cbufmin && inout == 1)
+        if(invalues[icell][ic][k] <= thresh && inout == 1)
           error->one(FLERR,"inconsistent");
-        if(invalues[icell][ic][k] > cbufmin && inout == 0)
+        if(invalues[icell][ic][k] > thresh && inout == 0)
           error->one(FLERR,"inconsistent");
       }
     }
@@ -1785,13 +1774,13 @@ int CreateISurf::corner_hit3d(double *p1, double *p2,
   }
 
   // if miss, maybe surface very close to corner/edge
-  // perturbed points
+  // perturb points
 
   double p1p[3];
   double p2p[3];
 
   double dx[26], dy[26], dz[26];
-  double dp = mind/1000.0;
+  double dp = mind*1e-3;
   dx[0] = dx[2] = dx[3] = dx[4] = 
     dx[15] = dx[16] = dx[18] = dx[23] = dx[24] = dp;
   dx[7] = dx[9] = dx[10] = dx[11] = 
