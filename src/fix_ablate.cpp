@@ -37,7 +37,7 @@
 
 using namespace SPARTA_NS;
 
-enum{COMPUTE,FIX,VARIABLE,RANDOM};
+enum{COMPUTE,FIX,VARIABLE,RANDOM,UNIFORM};
 enum{CVALUE,CDELTA};
 
 #define INVOKED_PER_GRID 16
@@ -118,6 +118,12 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     iarg++; // one additional input
     if (narg < 7) error->all(FLERR,"Illegal fix ablate command");
     which = RANDOM;
+    maxrandom = atoi(arg[6]);
+
+  } else if (strcmp(arg[5],"uniform") == 0) {
+    iarg++; // one additional input
+    if (narg < 7) error->all(FLERR,"Illegal fix ablate command");
+    which = UNIFORM;
     maxrandom = atoi(arg[6]);
 
   } else error->all(FLERR,"Illegal fix ablate command");
@@ -485,8 +491,8 @@ void FixAblate::end_of_step()
 {
   // set per-cell delta vector randomly or from compute/fix source
 
-  //if (which == RANDOM) set_delta_random();
-  if (which == RANDOM) set_delta_uniform();
+  if (which == RANDOM) set_delta_random();
+  else if (which == UNIFORM) set_delta_uniform();
   else set_delta();
 
   // find decrement at each corner -> sync decrements -> update corners
