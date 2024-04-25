@@ -60,8 +60,6 @@ class ComputeTvibGrid : public Compute {
 
   int *s2t;                  // s2t[i] = first tally column for species I
                              // size = Nspecies
-  int *t2s;                  // t2s[i] = species index for Ith tally column
-                             // size = Ntally = 2*Nspecies
 
   // modeflag = 1 or 2, tallying per grid cell, per species, per mode
 
@@ -72,8 +70,6 @@ class ComputeTvibGrid : public Compute {
   int **s2t_mode;            // s2tmode[i][j] =
                              //   first tally column for species I, mode J
                              // length = Nspecies by Nmode
-  int *t2s_mode;             // t2s_mode[i] = species index for Ith tally column
-                             // size = Ntally = 2*Nspecies*Nmode
 };
 
 }
