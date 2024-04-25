@@ -39,7 +39,7 @@ class ComputeTelecGrid : public Compute {
   double elec_energy(int, double);
 
  protected:
-  int groupbit,imix,ngroup,mixspecies,nspecies,index_eelec;
+  int groupbit,imix,ngroup,mixspecies,nspecies;
   int maxstate;               // max elec state for any species
 
   int ntally;                // total # of columns in tally array
@@ -47,14 +47,12 @@ class ComputeTelecGrid : public Compute {
   double **tally;            // array of tally quantities, ncells by ntally
 
   int *nmap;               // nmap[i] = # of tally values for Ith output column
-                           // size = # of outputs (Ngroup or Ngroup*Nmode)
+                           // size = # of outputs (Ngroup)
 
   int **map;               // map[i][j] = tally columns for Ith output column
-                           // size = # of outputs (Ngroup or Ngroup*Nmode)
-                           //   by # of tally columns (2*nmax or 2*nmax*Nmode)
+                           // size = # of outputs (Ngroup)
+                           //   by # of tally columns (2*nmax)
                            // nmax = max # of species in any group
-
-  // modeflag = 0, tallying per grid cell and per species
 
   double *tspecies;          // per-species electronic temps
                              // size = Nspecies
@@ -62,9 +60,7 @@ class ComputeTelecGrid : public Compute {
   int *s2t;                  // s2t[i] = first tally column for species I
                              // size = Nspecies
 
-  int **s2t_mode;            // s2tmode[i][j] =
-                             //   first tally column for species I, mode J
-                             // length = Nspecies by Nmode
+  int index_eelec;         // index into extra particle values for elecmodes
 };
 
 }

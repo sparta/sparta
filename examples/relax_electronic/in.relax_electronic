@@ -50,7 +50,7 @@ compute             elec grid all species eelec
 compute             Eelec reduce ave c_elec[1]
 
 compute             telec telec/grid all air
-compute             Telec reduce ave c_telec
+compute             Telec reduce ave c_telec[*]
 
 compute             den grid all species nrho
 compute             Den reduce ave c_den[1]

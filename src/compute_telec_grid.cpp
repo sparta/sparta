@@ -42,9 +42,8 @@ ComputeTelecGrid::ComputeTelecGrid(SPARTA *sparta, int narg, char **arg) :
   if (imix < 0) error->all(FLERR,"Compute telec/grid mixture ID does not exist");
 
   int iarg = 4;
-  while (iarg < narg) {
+  if (iarg < narg)
     error->all(FLERR,"Illegal compute telec/grid command");
-  }
 
   ngroup = particle->mixture[imix]->ngroup;
   mixspecies = particle->mixture[imix]->nspecies;
@@ -53,7 +52,7 @@ ComputeTelecGrid::ComputeTelecGrid(SPARTA *sparta, int narg, char **arg) :
   ntally = 2*mixspecies;
 
   per_grid_flag = 1;
-  size_per_grid_cols = 0;
+  size_per_grid_cols = ngroup;
   post_process_grid_flag = 1;
 
   particle->mixture[imix]->init();
@@ -66,6 +65,7 @@ ComputeTelecGrid::ComputeTelecGrid(SPARTA *sparta, int narg, char **arg) :
 
   nmap = new int[ngroup];
   memory->create(map,ngroup,2*nmax,"telec/grid:map");
+
   tspecies = new double[nspecies];
   s2t = new int[nspecies];
 
@@ -122,7 +122,8 @@ void ComputeTelecGrid::init()
   double *eelecs = NULL;
 
   if (index_eelec < 0)
-    error->all(FLERR,"Discrete electronic states are required for compute telec/grid");
+    error->all(FLERR,"Cannot use compute telec/grid mode without "
+               "fix elecmode defined");
 
   reallocate();
 }
@@ -158,14 +159,9 @@ void ComputeTelecGrid::compute_per_grid()
     if (!(cinfo[icell].mask & groupbit)) continue;
 
     j = s2t[ispecies];
-    char data_name[] = "eelec";
-    int index_eelec = particle->find_custom(data_name);
-    double *eelecs = NULL;
-    if (index_eelec >= 0) {
-      eelecs = particle->edvec[particle->ewhich[index_eelec]];
-      tally[icell][j] += eelecs[i];
-      tally[icell][j+1] += 1.0;
-    }
+    double* eelecs = particle->edvec[particle->ewhich[index_eelec]];
+    tally[icell][j] += eelecs[i];
+    tally[icell][j+1] += 1.0;
   }
 }
 
@@ -314,6 +310,7 @@ void ComputeTelecGrid::post_process_grid(int index, int /*nsample*/,
       denom += etally[icell][count];
       count += 2;
     }
+    if (denom == 0.0) vec[k] = 0.0;
     vec[k] = numer/denom;
     k += nstride;
   }
