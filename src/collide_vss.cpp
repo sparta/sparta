@@ -906,9 +906,8 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
         }
       }
     }
-    if (elecstyle == DISCRETE && species[sp].elecdat != NULL) {
+    if (elecstyle == DISCRETE && species[sp].elecdat != NULL)
       relax_electronic_mode(p, p, E_Dispose, true);
-    }
   }
 
   // compute post-collision internal energies

@@ -561,8 +561,8 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
     if (h_retry()) {
       //printf("Retrying, reason %i %i %i !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",h_maxdelete() > d_dellist.extent(0),h_maxcellcount() > d_plist.extent(1),h_part_grow());
       if (!sparta->kokkos->react_retry_flag) {
-        error->one(FLERR,"Ran out of space in Kokkos collisions, increase collide/extra"
-                         " or use collide/retry");
+        error->one(FLERR,"Ran out of space in Kokkos collisions, increase react/extra"
+                         " or use react/retry");
       } else
         restore();
 
@@ -911,8 +911,8 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
       //printf("%i %i %i %i %i %i %i !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",h_maxelectron(),d_elist.extent(1),h_maxdelete(),d_dellist.extent(0),h_maxcellcount(),d_plist.extent(1),h_part_grow());
 
       if (!sparta->kokkos->react_retry_flag) {
-        error->one(FLERR,"Ran out of space in Kokkos collisions, increase collide/extra"
-                         " or use collide/retry");
+        error->one(FLERR,"Ran out of space in Kokkos collisions, increase react/extra"
+                         " or use react/retry");
       } else
         restore();
 
@@ -1645,8 +1645,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(int icell,
         if (relaxflag == VARIABLE) rotn_phi = rotrel(sp,E_Dispose+p->erot);
         if (rotn_phi >= rand_gen.drand()) {
           if (rotstyle == NONE) {
-            p->erot = 0.0 ;
-
+            p->erot = 0.0;
           } else if (rotstyle != NONE && rotdof == 2) {
             E_Dispose += p->erot;
             Fraction_Rot =
@@ -2090,13 +2089,8 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(int icell,
         }
       }
     }
-    if (elecstyle == DISCRETE && d_nelecstates[sp] > 0) {
-      auto &d_estates = k_eivec.d_view[d_ewhich[index_elecstate]].k_view.d_view;
-      double elec_phi = get_elec_phi(p->ispecies, jp->ispecies, d_estates[p - d_particles.data()], E_Dispose);
-      if (elec_phi >= rand_gen.drand()) {
-        relax_electronic_mode(icell, p, p, E_Dispose, rand_gen, true);
-      }
-    }
+    if (elecstyle == DISCRETE && d_nelecstates[sp] > 0)
+      relax_electronic_mode(icell, p, p, E_Dispose, rand_gen, true);
   }
 
   // compute post-collision internal energies
