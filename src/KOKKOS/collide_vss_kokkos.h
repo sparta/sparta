@@ -245,12 +245,12 @@ class CollideVSSKokkos : public CollideVSS {
 
   KOKKOS_INLINE_FUNCTION
   void relax_electronic_mode(int, Particle::OnePart *, Particle::OnePart *,
-                             double&, rand_type &rand_gen) const;
+                             double&, rand_type &rand_gen, bool) const;
   KOKKOS_INLINE_FUNCTION
   double get_elec_phi(int, int, int, double) const;
   KOKKOS_INLINE_FUNCTION
   int select_elec_state(int, Particle::OnePart *, Particle::OnePart *,
-                        double, double, bool, rand_type &rand_gen) const;
+                        double, double, bool, rand_type &rand_gen, bool) const;
 
   KOKKOS_INLINE_FUNCTION
   double sample_bl(rand_type &, double, double) const;

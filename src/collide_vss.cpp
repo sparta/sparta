@@ -421,6 +421,7 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
       wc = scale * ( sinX*vrc[0]*sin(eps) );
     }
   }
+
   // new velocities for the products
 
   double divisor = 1.0 / (mass_i + mass_j);
@@ -437,7 +438,6 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
 void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
                                                 Particle::OnePart *jp)
 {
-
   double State_prob,Fraction_Rot,Fraction_Vib,E_Dispose;
   int i,rotdof,vibdof,max_level,ivib;
 

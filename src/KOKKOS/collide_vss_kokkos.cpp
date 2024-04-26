@@ -1609,7 +1609,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(int icell,
   double State_prob,Fraction_Rot,Fraction_Vib,E_Dispose;
   int i,rotdof,vibdof,max_level,ivib;
 
-  Particle::OnePart *p;
+  Particle::OnePart *p, *p2;
 
   double AdjustFactor = 0.99999999;
   postcoln.erot = 0.0;
@@ -1629,8 +1629,13 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(int icell,
     E_Dispose = precoln.etrans;
 
     for (i = 0; i < 2; i++) {
-      if (i == 0) p = ip;
-      else p = jp;
+      if (i == 0) {
+        p = ip;
+        p2 = jp;
+      } else {
+        p = jp;
+        p2 = ip;
+      }
 
       int sp = p->ispecies;
       rotdof = d_species[sp].rotdof;
@@ -1690,6 +1695,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(int icell,
               } while (State_prob < rand_gen.drand());
               E_Dispose -= p->evib;
             }
+
           } else if (vibdof > 2) {
             if (vibstyle == SMOOTH) {
               E_Dispose += p->evib;
@@ -1732,9 +1738,9 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(int icell,
 
       if (elecstyle == DISCRETE && d_nelecstates[sp] > 0) {
         auto &d_estates = k_eivec.d_view[d_ewhich[index_elecstate]].k_view.d_view;
-        double elec_phi = get_elec_phi(p->ispecies, jp->ispecies, d_estates[p - d_particles.data()], E_Dispose);
+        double elec_phi = get_elec_phi(p->ispecies, p2->ispecies, d_estates[p - d_particles.data()], E_Dispose);
         if (elec_phi >= rand_gen.drand()) {
-          relax_electronic_mode(icell, p, jp, E_Dispose, rand_gen);
+          relax_electronic_mode(icell, p, p2, E_Dispose, rand_gen, false);
         }
       }
     }
@@ -1766,7 +1772,8 @@ void CollideVSSKokkos::relax_electronic_mode(int icell,
                                              Particle::OnePart *p,
                                              Particle::OnePart *jp,
                                              double& E_Dispose,
-                                             rand_type &rand_gen) const
+                                             rand_type &rand_gen,
+                                             bool reacting) const
 {
   auto &d_eelecs = k_edvec.d_view[d_ewhich[index_eelec]].k_view.d_view;
   E_Dispose += d_eelecs[p - d_particles.data()];
@@ -1774,8 +1781,8 @@ void CollideVSSKokkos::relax_electronic_mode(int icell,
   int ielec = select_elec_state(
     icell, p, jp, E_Dispose,
     d_params(p->ispecies,jp->ispecies).omega,
-    d_enforce_spin_conservation(p->ispecies,jp->ispecies),
-    rand_gen);
+    d_enforce_spin_conservation(p->ispecies,jp->ispecies) && !reacting,
+    rand_gen, reacting);
   double eelec = d_elecstates(p->ispecies,ielec).temp*boltz;
 
   d_eelecs[p - d_particles.data()] = eelec;
@@ -1805,11 +1812,11 @@ int CollideVSSKokkos::select_elec_state(int icell,Particle::OnePart *p,
                                         Particle::OnePart *jp,
                                         double E_Dispose, double omega,
                                         bool enforce_spin_conservation,
-                                        rand_type &rand_gen) const
+                                        rand_type &rand_gen,
+                                        bool reacting) const
 {
   double State_prob;
   int max_level;
-  auto &d_eelecs = k_edvec.d_view[d_ewhich[index_eelec]].k_view.d_view;
   auto &d_estates = k_eivec.d_view[d_ewhich[index_elecstate]].k_view.d_view;
   // Find the maximum electronic level it can be in, given the current E_dispose
   max_level = 0;
@@ -1833,7 +1840,12 @@ int CollideVSSKokkos::select_elec_state(int icell,Particle::OnePart *p,
       // to be collision invariant (and therefore depend on E_Dispose, the trans + elec energy) but this
       // algorithm allows that to be relaxed. If other models are needed, the correct data would need passed
       // in here.
-      d_state_probability(icell,state) += d_elecstates(p->ispecies,state).degen*get_elec_phi(p->ispecies, jp->ispecies, state, E_Dispose);
+      if (reacting) {
+        // We are distributing energy after a reaction, so relaxation probability is 100%
+        d_state_probability(icell,state) += d_elecstates(p->ispecies,state).degen;
+      } else {
+        d_state_probability(icell,state) += d_elecstates(p->ispecies,state).degen*get_elec_phi(p->ispecies, jp->ispecies, state, E_Dispose);
+      }
     }
   }
   // Select a state from the distribution
@@ -1845,7 +1857,12 @@ int CollideVSSKokkos::select_elec_state(int icell,Particle::OnePart *p,
     while (rand_state >= 0) {
       if (!enforce_spin_conservation ||
              d_elecstates(p->ispecies,ielec).spin == d_elecstates(p->ispecies,d_estates[p - d_particles.data()]).spin) {
-        rand_state -= d_elecstates(p->ispecies,ielec).degen*get_elec_phi(p->ispecies, jp->ispecies, ielec, E_Dispose);
+        if (reacting) {
+          // We are distributing energy after a reaction, so relaxation probability is 100%
+          rand_state -= d_elecstates(p->ispecies,ielec).degen;
+        } else {
+          rand_state -= d_elecstates(p->ispecies,ielec).degen*get_elec_phi(p->ispecies, jp->ispecies, ielec, E_Dispose);
+        }
       }
       ++ielec;
     }
@@ -2077,7 +2094,7 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(int icell,
       auto &d_estates = k_eivec.d_view[d_ewhich[index_elecstate]].k_view.d_view;
       double elec_phi = get_elec_phi(p->ispecies, jp->ispecies, d_estates[p - d_particles.data()], E_Dispose);
       if (elec_phi >= rand_gen.drand()) {
-        relax_electronic_mode(icell, p, jp, E_Dispose, rand_gen);
+        relax_electronic_mode(icell, p, p, E_Dispose, rand_gen, true);
       }
     }
   }
