@@ -1299,7 +1299,7 @@ int Surf::rendezvous_watertight_2d(int n, char *inbuf, int &flag, int *&proclist
 
   int allbad;
   MPI_Allreduce(&nbad,&allbad,1,MPI_INT,MPI_SUM,world);
-  if (nbad) {
+  if (allbad) {
     char str[128];
     sprintf(str,"Watertight check failed with %d unmatched points",allbad);
     error->all(FLERR,str);
@@ -1601,7 +1601,7 @@ int Surf::rendezvous_watertight_3d(int n, char *inbuf, int &flag, int *&proclist
   int allbad;
   MPI_Allreduce(&nbad,&allbad,1,MPI_INT,MPI_SUM,world);
   allbad /= 2;              // avoid double counting
-  if (nbad) {
+  if (allbad) {
     char str[128];
     sprintf(str,"Watertight check failed with %d unmatched edges",allbad);
     error->all(FLERR,str);

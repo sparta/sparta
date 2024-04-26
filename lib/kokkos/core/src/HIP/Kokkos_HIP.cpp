@@ -18,9 +18,9 @@
 #define KOKKOS_IMPL_PUBLIC_INCLUDE
 #endif
 
+#include <Kokkos_Core.hpp>
 #include <HIP/Kokkos_HIP.hpp>
 #include <HIP/Kokkos_HIP_Instance.hpp>
-#include <HIP/Kokkos_HIP_Locks.hpp>
 
 #include <impl/Kokkos_DeviceManagement.hpp>
 #include <impl/Kokkos_ExecSpaceManager.hpp>
@@ -42,7 +42,9 @@ int HIP::impl_is_initialized() {
 }
 
 void HIP::impl_initialize(InitializationSettings const& settings) {
-  const int hip_device_id = Impl::get_gpu(settings);
+  const std::vector<int>& visible_devices = Impl::get_visible_devices();
+  const int hip_device_id =
+      Impl::get_gpu(settings).value_or(visible_devices[0]);
 
   Impl::HIPInternal::m_hipDev = hip_device_id;
   KOKKOS_IMPL_HIP_SAFE_CALL(
@@ -61,8 +63,6 @@ void HIP::impl_initialize(InitializationSettings const& settings) {
   if (Impl::HIPTraits::WarpSize < Impl::HIPInternal::m_maxWarpCount) {
     Impl::HIPInternal::m_maxWarpCount = Impl::HIPTraits::WarpSize;
   }
-  int constexpr WordSize              = sizeof(size_type);
-  Impl::HIPInternal::m_maxSharedWords = hipProp.sharedMemPerBlock / WordSize;
 
   //----------------------------------
   // Maximum number of blocks
@@ -79,7 +79,7 @@ void HIP::impl_initialize(InitializationSettings const& settings) {
       Impl::HIPInternal::m_maxWavesPerCU * Impl::HIPTraits::WarpSize;
 
   // Init the array for used for arbitrarily sized atomics
-  Impl::initialize_host_hip_lock_arrays();
+  desul::Impl::init_lock_arrays();  // FIXME
 
   // Allocate a staging buffer for constant mem in pinned host memory
   // and an event to avoid overwriting driver for previous kernel launches
@@ -92,10 +92,23 @@ void HIP::impl_initialize(InitializationSettings const& settings) {
 
   hipStream_t singleton_stream;
   KOKKOS_IMPL_HIP_SAFE_CALL(hipStreamCreate(&singleton_stream));
-  Impl::HIPInternal::singleton().initialize(singleton_stream, /*manage*/ true);
+  Impl::HIPInternal::singleton().initialize(singleton_stream);
 }
 
-void HIP::impl_finalize() { Impl::HIPInternal::singleton().finalize(); }
+void HIP::impl_finalize() {
+  (void)Impl::hip_global_unique_token_locks(true);
+
+  desul::Impl::finalize_lock_arrays();  // FIXME
+
+  KOKKOS_IMPL_HIP_SAFE_CALL(
+      hipEventDestroy(Impl::HIPInternal::constantMemReusable));
+  KOKKOS_IMPL_HIP_SAFE_CALL(
+      hipHostFree(Impl::HIPInternal::constantMemHostStaging));
+
+  Impl::HIPInternal::singleton().finalize();
+  KOKKOS_IMPL_HIP_SAFE_CALL(
+      hipStreamDestroy(Impl::HIPInternal::singleton().m_stream));
+}
 
 HIP::HIP()
     : m_space_instance(&Impl::HIPInternal::singleton(),
@@ -104,15 +117,23 @@ HIP::HIP()
       "HIP instance constructor");
 }
 
-HIP::HIP(hipStream_t const stream, bool manage_stream)
-    : m_space_instance(new Impl::HIPInternal, [](Impl::HIPInternal* ptr) {
-        ptr->finalize();
-        delete ptr;
-      }) {
+HIP::HIP(hipStream_t const stream, Impl::ManageStream manage_stream)
+    : m_space_instance(
+          new Impl::HIPInternal, [manage_stream](Impl::HIPInternal* ptr) {
+            ptr->finalize();
+            if (static_cast<bool>(manage_stream)) {
+              KOKKOS_IMPL_HIP_SAFE_CALL(hipStreamDestroy(ptr->m_stream));
+            }
+            delete ptr;
+          }) {
   Impl::HIPInternal::singleton().verify_is_initialized(
       "HIP instance constructor");
-  m_space_instance->initialize(stream, manage_stream);
+  m_space_instance->initialize(stream);
 }
+
+KOKKOS_DEPRECATED HIP::HIP(hipStream_t const stream, bool manage_stream)
+    : HIP(stream,
+          manage_stream ? Impl::ManageStream::yes : Impl::ManageStream::no) {}
 
 void HIP::print_configuration(std::ostream& os, bool /*verbose*/) const {
   os << "Device Execution Space:\n";

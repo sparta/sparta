@@ -574,7 +574,6 @@ KOKKOS_DEVICES=CUDA means an NVIDIA GPU running CUDA will be used.
 <TR><TD >ARMV8_THUNDERX </TD><TD > HOST </TD><TD > ARMv8 Cavium ThunderX CPU </TD></TR>
 <TR><TD >ARMV8_THUNDERX2 </TD><TD > HOST </TD><TD > ARMv8 Cavium ThunderX2 CPU </TD></TR>
 <TR><TD >A64FX </TD><TD > HOST </TD><TD > ARMv8.2 with SVE Support </TD></TR>
-<TR><TD >WSM </TD><TD > HOST </TD><TD > Intel Westmere CPU (SSE 4.2) </TD></TR>
 <TR><TD >SNB </TD><TD > HOST </TD><TD > Intel Sandy/Ivy Bridge CPU (AVX 1) </TD></TR>
 <TR><TD >HSW </TD><TD > HOST </TD><TD > Intel Haswell CPU (AVX 2) </TD></TR>
 <TR><TD >BDW </TD><TD > HOST </TD><TD > Intel Broadwell Xeon E-class CPU (AVX 2 + transactionalmem) </TD></TR>
@@ -585,10 +584,9 @@ KOKKOS_DEVICES=CUDA means an NVIDIA GPU running CUDA will be used.
 <TR><TD >SPR </TD><TD > HOST </TD><TD > Intel Sapphire Rapids Xeon Server CPU (AVX512) </TD></TR>
 <TR><TD >KNC </TD><TD > HOST </TD><TD > Intel Knights Corner Xeon Phi </TD></TR>
 <TR><TD >KNL </TD><TD > HOST </TD><TD > Intel Knights Landing Xeon Phi </TD></TR>
-<TR><TD >BGQ </TD><TD > HOST </TD><TD > IBM Blue Gene/Q CPU </TD></TR>
-<TR><TD >POWER7 </TD><TD > HOST </TD><TD > IBM POWER7 CPU </TD></TR>
 <TR><TD >POWER8 </TD><TD > HOST </TD><TD > IBM POWER8 CPU </TD></TR>
 <TR><TD >POWER9 </TD><TD > HOST </TD><TD > IBM POWER9 CPU </TD></TR>
+<TR><TD >RISCV_SG2042 </TD><TD > HOST </TD><TD > SG2042 (RISC-V) CPU </TD></TR>
 <TR><TD >KEPLER30 </TD><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.0 GPU </TD></TR>
 <TR><TD >KEPLER32 </TD><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.2 GPU </TD></TR>
 <TR><TD >KEPLER35 </TD><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.5 GPU </TD></TR>
@@ -605,12 +603,11 @@ KOKKOS_DEVICES=CUDA means an NVIDIA GPU running CUDA will be used.
 <TR><TD >AMPERE86 </TD><TD > GPU </TD><TD > NVIDIA Ampere generation CC 8.6 GPU </TD></TR>
 <TR><TD >ADA89 </TD><TD > GPU </TD><TD > NVIDIA Ada Lovelace generation CC 8.9 GPU </TD></TR>
 <TR><TD >HOPPER90 </TD><TD > GPU </TD><TD > NVIDIA Hopper generation CC 9.0 GPU </TD></TR>
-<TR><TD >VEGA900 </TD><TD > GPU </TD><TD > AMD GPU MI25 GFX900 </TD></TR>
-<TR><TD >VEGA906 </TD><TD > GPU </TD><TD > AMD GPU MI50/MI60 GFX906 </TD></TR>
-<TR><TD >VEGA908 </TD><TD > GPU </TD><TD > AMD GPU MI100 GFX908 </TD></TR>
-<TR><TD >VEGA90A </TD><TD > GPU </TD><TD > AMD GPU MI200 GFX90A </TD></TR>
-<TR><TD >NAVI1030 </TD><TD > GPU </TD><TD > AMD GPU V620/W6800 </TD></TR>
-<TR><TD >NAVI1100 </TD><TD > GPU </TD><TD > AMD GPU RX7900XTX </TD></TR>
+<TR><TD >AMD_GFX908 </TD><TD > GPU </TD><TD > AMD GPU MI100 </TD></TR>
+<TR><TD >AMD_GFX90A </TD><TD > GPU </TD><TD > AMD GPU MI200 </TD></TR>
+<TR><TD >AMD_GFX942 </TD><TD > GPU </TD><TD > AMD GPU MI300 </TD></TR>
+<TR><TD >AMD_GFX1030 </TD><TD > GPU </TD><TD > AMD GPU V620/W6800 </TD></TR>
+<TR><TD >AMD_GFX1100 </TD><TD > GPU </TD><TD > AMD GPU RX7900XTX </TD></TR>
 <TR><TD >INTEL_GEN GPU SPIR64-based devices, e.g. Intel GPUs, using JIT </TD><TD >INTEL_DG1 </TD><TD > GPU </TD></TR>
 <TR><TD > Intel Iris XeMAX GPU </TD><TD >INTEL_GEN9 </TD><TD > GPU </TD></TR>
 <TR><TD > Intel GPU Gen9 </TD><TD >INTEL_GEN11 </TD><TD > GPU </TD></TR>

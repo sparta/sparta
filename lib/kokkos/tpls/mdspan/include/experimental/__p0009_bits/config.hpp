@@ -1,46 +1,18 @@
-/*
 //@HEADER
 // ************************************************************************
 //
-//                        Kokkos v. 2.0
-//              Copyright (2019) Sandia Corporation
+//                        Kokkos v. 4.0
+//       Copyright (2022) National Technology & Engineering
+//               Solutions of Sandia, LLC (NTESS).
 //
-// Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+// Under the terms of Contract DE-NA0003525 with NTESS,
 // the U.S. Government retains certain rights in this software.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
+// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
+// See https://kokkos.org/LICENSE for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// 1. Redistributions of source code must retain the above copyright
-// notice, this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the Corporation nor the names of the
-// contributors may be used to endorse or promote products derived from
-// this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Questions? Contact Christian R. Trott (crtrott@sandia.gov)
-//
-// ************************************************************************
 //@HEADER
-*/
-
 #pragma once
 
 #ifndef __has_include
@@ -63,10 +35,17 @@
 #define MDSPAN_CXX_STD_14 201402L
 #define MDSPAN_CXX_STD_17 201703L
 #define MDSPAN_CXX_STD_20 202002L
+// Note GCC has not updated this in version 13
+#ifdef __clang__
+#define MDSPAN_CXX_STD_23 202302L
+#else
+#define MDSPAN_CXX_STD_23 202100L
+#endif
 
 #define MDSPAN_HAS_CXX_14 (_MDSPAN_CPLUSPLUS >= MDSPAN_CXX_STD_14)
 #define MDSPAN_HAS_CXX_17 (_MDSPAN_CPLUSPLUS >= MDSPAN_CXX_STD_17)
 #define MDSPAN_HAS_CXX_20 (_MDSPAN_CPLUSPLUS >= MDSPAN_CXX_STD_20)
+#define MDSPAN_HAS_CXX_23 (_MDSPAN_CPLUSPLUS >= MDSPAN_CXX_STD_23)
 
 static_assert(_MDSPAN_CPLUSPLUS >= MDSPAN_CXX_STD_14, "mdspan requires C++14 or later.");
 
@@ -110,6 +89,12 @@ static_assert(_MDSPAN_CPLUSPLUS >= MDSPAN_CXX_STD_14, "mdspan requires C++14 or 
 #  endif
 #endif
 
+#ifndef _MDSPAN_HAS_SYCL
+#  if defined(SYCL_LANGUAGE_VERSION)
+#    define _MDSPAN_HAS_SYCL SYCL_LANGUAGE_VERSION
+#  endif
+#endif
+
 #ifndef __has_cpp_attribute
 #  define __has_cpp_attribute(x) 0
 #endif
@@ -143,10 +128,14 @@ static_assert(_MDSPAN_CPLUSPLUS >= MDSPAN_CXX_STD_14, "mdspan requires C++14 or 
 #  define _MDSPAN_NO_UNIQUE_ADDRESS
 #endif
 
+// AMDs HIP compiler seems to have issues with concepts
+// it pretends concepts exist, but doesn't ship <concept>
+#ifndef __HIPCC__
 #ifndef _MDSPAN_USE_CONCEPTS
 #  if defined(__cpp_concepts) && __cpp_concepts >= 201507L
 #    define _MDSPAN_USE_CONCEPTS 1
 #  endif
+#endif
 #endif
 
 #ifndef _MDSPAN_USE_FOLD_EXPRESSIONS
@@ -216,20 +205,10 @@ static_assert(_MDSPAN_CPLUSPLUS >= MDSPAN_CXX_STD_14, "mdspan requires C++14 or 
 #endif
 
 #ifndef _MDSPAN_USE_CLASS_TEMPLATE_ARGUMENT_DEDUCTION
-// GCC 10's CTAD seems sufficiently broken to prevent its use.
-#  if (defined(_MDSPAN_COMPILER_CLANG) || !defined(__GNUC__) || __GNUC__ >= 11) \
-      && ((defined(__cpp_deduction_guides) && __cpp_deduction_guides >= 201703) \
-         || (!defined(__cpp_deduction_guides) && MDSPAN_HAS_CXX_17))
+#  if (!defined(__NVCC__) || (__CUDACC_VER_MAJOR__ >= 11 && __CUDACC_VER_MINOR__ >= 7)) && \
+      ((defined(__cpp_deduction_guides) && __cpp_deduction_guides >= 201703) || \
+       (!defined(__cpp_deduction_guides) && MDSPAN_HAS_CXX_17))
 #    define _MDSPAN_USE_CLASS_TEMPLATE_ARGUMENT_DEDUCTION 1
-#  endif
-#endif
-
-#ifndef _MDSPAN_USE_ALIAS_TEMPLATE_ARGUMENT_DEDUCTION
-// GCC 10's CTAD seems sufficiently broken to prevent its use.
-#  if (defined(_MDSPAN_COMPILER_CLANG) || !defined(__GNUC__) || __GNUC__ >= 11) \
-      && ((defined(__cpp_deduction_guides) && __cpp_deduction_guides >= 201907) \
-          || (!defined(__cpp_deduction_guides) && MDSPAN_HAS_CXX_20))
-#    define _MDSPAN_USE_ALIAS_TEMPLATE_ARGUMENT_DEDUCTION 1
 #  endif
 #endif
 
@@ -252,7 +231,7 @@ static_assert(_MDSPAN_CPLUSPLUS >= MDSPAN_CXX_STD_14, "mdspan requires C++14 or 
 #endif
 
 #ifndef MDSPAN_CONDITIONAL_EXPLICIT
-#  if MDSPAN_HAS_CXX_20 && !defined(_MDSPAN_COMPILER_MSVC)
+#  if MDSPAN_HAS_CXX_20
 #    define MDSPAN_CONDITIONAL_EXPLICIT(COND) explicit(COND)
 #  else
 #    define MDSPAN_CONDITIONAL_EXPLICIT(COND)

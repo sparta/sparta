@@ -11,6 +11,34 @@ SPDX-License-Identifier: (BSD-3-Clause)
 
 #include <desul/atomics/Config.hpp>
 
+// Intercept incompatible relocatable device code mode which leads to ODR violations
+#ifdef DESUL_ATOMICS_ENABLE_CUDA
+#if (defined(__clang__) && defined(__CUDA__) && defined(__CLANG_RDC__)) || \
+    defined(__CUDACC_RDC__)
+#define DESUL_IMPL_CUDA_RDC
+#endif
+
+#if (defined(DESUL_ATOMICS_ENABLE_CUDA_SEPARABLE_COMPILATION) &&  \
+     !defined(DESUL_IMPL_CUDA_RDC)) ||                            \
+    (!defined(DESUL_ATOMICS_ENABLE_CUDA_SEPARABLE_COMPILATION) && \
+     defined(DESUL_IMPL_CUDA_RDC))
+#error Relocatable device code mode incompatible with desul atomics configuration
+#endif
+
+#ifdef DESUL_IMPL_CUDA_RDC
+#undef DESUL_IMPL_CUDA_RDC
+#endif
+#endif
+
+#ifdef DESUL_ATOMICS_ENABLE_HIP
+#if (defined(DESUL_ATOMICS_ENABLE_HIP_SEPARABLE_COMPILATION) &&  \
+     !defined(__CLANG_RDC__)) ||                                 \
+    (!defined(DESUL_ATOMICS_ENABLE_HIP_SEPARABLE_COMPILATION) && \
+     defined(__CLANG_RDC__))
+#error Relocatable device code mode incompatible with desul atomics configuration
+#endif
+#endif
+
 // Macros
 
 #if defined(DESUL_ATOMICS_ENABLE_CUDA) && defined(__CUDACC__)
@@ -29,6 +57,10 @@ SPDX-License-Identifier: (BSD-3-Clause)
 #define DESUL_HAVE_OPENMP_ATOMICS
 #endif
 
+#if defined(DESUL_ATOMICS_ENABLE_OPENACC)
+#define DESUL_HAVE_OPENACC_ATOMICS
+#endif
+
 // ONLY use GNUC atomics if not explicitly say to use OpenMP atomics
 #if !defined(DESUL_HAVE_OPENMP_ATOMICS) && defined(__GNUC__)
 #define DESUL_HAVE_GCC_ATOMICS
@@ -37,12 +69,6 @@ SPDX-License-Identifier: (BSD-3-Clause)
 // Equivalent to above for MSVC atomics
 #if !defined(DESUL_HAVE_OPENMP_ATOMICS) && defined(_MSC_VER)
 #define DESUL_HAVE_MSVC_ATOMICS
-#endif
-
-#if (defined(DESUL_ATOMICS_ENABLE_CUDA) && defined(__CUDA_ARCH__)) ||         \
-    (defined(DESUL_ATOMICS_ENABLE_HIP) && defined(__HIP_DEVICE_COMPILE__)) || \
-    (defined(DESUL_ATOMICS_ENABLE_SYCL) && defined(__SYCL_DEVICE_ONLY__))
-#define DESUL_HAVE_GPU_LIKE_PROGRESS
 #endif
 
 #if defined(DESUL_HAVE_CUDA_ATOMICS) || defined(DESUL_HAVE_HIP_ATOMICS)
@@ -57,10 +83,6 @@ SPDX-License-Identifier: (BSD-3-Clause)
 #define DESUL_FUNCTION
 #define DESUL_IMPL_HOST_FUNCTION
 #define DESUL_IMPL_DEVICE_FUNCTION
-#endif
-
-#if !defined(DESUL_HAVE_GPU_LIKE_PROGRESS)
-#define DESUL_HAVE_FORWARD_PROGRESS
 #endif
 
 #define DESUL_IMPL_STRIP_PARENS(X) DESUL_IMPL_ESC(DESUL_IMPL_ISH X)
@@ -103,6 +125,30 @@ static constexpr bool desul_impl_omp_on_host() { return false; }
 #define DESUL_IF_ON_HOST(CODE) \
   { DESUL_IMPL_STRIP_PARENS(CODE) }
 #endif
+#endif
+
+#if defined(DESUL_HAVE_OPENACC_ATOMICS)
+#include <openacc.h>
+#ifdef __NVCOMPILER
+// FIXME_OPENACC We cannot determine in a constant expresion whether we are on host or
+// on device with NVHPC.  We use the device implementation on both sides.
+#define DESUL_IF_ON_DEVICE(CODE) \
+  { DESUL_IMPL_STRIP_PARENS(CODE) }
+#define DESUL_IF_ON_HOST(CODE) \
+  {}
+#else
+#define DESUL_IF_ON_DEVICE(CODE)                      \
+  if constexpr (acc_on_device(acc_device_not_host)) { \
+    DESUL_IMPL_STRIP_PARENS(CODE)                     \
+  }
+#define DESUL_IF_ON_HOST(CODE)                    \
+  if constexpr (acc_on_device(acc_device_host)) { \
+    DESUL_IMPL_STRIP_PARENS(CODE)                 \
+  }
+#endif
+#define DESUL_IMPL_ACC_ROUTINE_DIRECTIVE _Pragma("acc routine seq")
+#else
+#define DESUL_IMPL_ACC_ROUTINE_DIRECTIVE
 #endif
 
 #if !defined(DESUL_IF_ON_HOST) && !defined(DESUL_IF_ON_DEVICE)

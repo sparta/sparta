@@ -2368,9 +2368,10 @@ int Grid::find_group(const char *id)
 
 /* ----------------------------------------------------------------------
    check if a grid igroup is a uniform grid
-   no cells with surfs
-   all cells are at same level
-   group forms a contiguous 3d block of cells
+   uniform means all cells in group are at same level (ignore sub-cells)
+   uniform means the group forms a contiguous 3d block of cells
+   called from read_isurf and create_isurf
+     for create_isurf, explicit surfs exist and may induce split cells
    return count of my cells in the group
    set nxyz = extent of 3d block in each dim
    set corner = lower left corner of 3d block
@@ -2386,7 +2387,6 @@ int Grid::check_uniform_group(int igroup, int *nxyz,
   int minlev = maxlevel;
   int maxlev = 0;
 
-  int count = 0;
   lo[0] = domain->boxhi[0];
   lo[1] = domain->boxhi[1];
   lo[2] = domain->boxhi[2];
@@ -2395,9 +2395,11 @@ int Grid::check_uniform_group(int igroup, int *nxyz,
   hi[2] = domain->boxlo[2];
 
   int groupbit = bitmask[igroup];
+  int count = 0;
 
   for (int icell = 0; icell < nlocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
     if (cells[icell].nsurf) sflag++;
     minlev = MIN(minlev,cells[icell].level);
     maxlev = MAX(maxlev,cells[icell].level);
@@ -2410,11 +2412,12 @@ int Grid::check_uniform_group(int igroup, int *nxyz,
     count++;
   }
 
-  // check that no cells already have surfs
+  // error if cells already have implicit surfs
+  // not an error if already have explicit surfs (call is from create_isurf)
 
   int allsflag;
   MPI_Allreduce(&sflag,&allsflag,1,MPI_INT,MPI_SUM,world);
-  if (allsflag) {
+  if (allsflag && surf->implicit) {
     char str[128];
     sprintf(str,
             "Read_isurfs adding surfs to %d cells which already have surfs",
@@ -2428,7 +2431,7 @@ int Grid::check_uniform_group(int igroup, int *nxyz,
   MPI_Allreduce(&minlev,&allminlev,1,MPI_INT,MPI_MIN,world);
   MPI_Allreduce(&maxlev,&allmaxlev,1,MPI_INT,MPI_MAX,world);
   if (allminlev != allmaxlev)
-    error->all(FLERR,"Read_isurfs grid group is not all at uniform level");
+    error->all(FLERR,"Not all cells in group are at same level for implicit surface");
 
   // check that cell count matches a contiguous block of cells
   // xyzsize = size of one cell at allmaxlev
@@ -2459,8 +2462,8 @@ int Grid::check_uniform_group(int igroup, int *nxyz,
   bigint bcount = count;
   MPI_Allreduce(&bcount,&allbcount,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
-  if ((bigint) nxyz[0] * nxyz[1]*nxyz[2] != allbcount)
-    error->all(FLERR,"Read_isurfs grid group is not a contiguous brick");
+  if ((bigint) nxyz[0]*nxyz[1]*nxyz[2] != allbcount)
+    error->all(FLERR,"Grid cell group is not a contiguous brick");
 
   return count;
 }

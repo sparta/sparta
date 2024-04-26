@@ -17,6 +17,11 @@
 #ifndef KOKKOS_SETUP_SYCL_HPP_
 #define KOKKOS_SETUP_SYCL_HPP_
 
+// FIXME_SYCL Using in-order queues currently gives better performance on Intel
+// GPUs and we run into correctness issues with out-of-order queues on NVIDIA
+// GPUs.
+#define KOKKOS_IMPL_SYCL_USE_IN_ORDER_QUEUES
+
 // FIXME_SYCL the fallback assert is temporarily disabled by default in the
 // compiler so we need to force it
 #ifndef SYCL_ENABLE_FALLBACK_ASSERT
@@ -33,12 +38,11 @@
 #include <CL/sycl.hpp>
 #endif
 
-#ifdef __SYCL_DEVICE_ONLY__
-#define KOKKOS_IMPL_DO_NOT_USE_PRINTF(format, ...)                \
-  do {                                                            \
-    const __attribute__((opencl_constant)) char fmt[] = (format); \
-    sycl::ext::oneapi::experimental::printf(fmt, ##__VA_ARGS__);  \
-  } while (0)
+#if defined(__INTEL_LLVM_COMPILER) && __INTEL_LLVM_COMPILER >= 20230200
+#define KOKKOS_IMPL_SYCL_GET_MULTI_PTR(accessor) \
+  accessor.get_multi_ptr<sycl::access::decorated::yes>()
+#else
+#define KOKKOS_IMPL_SYCL_GET_MULTI_PTR(accessor) accessor.get_pointer()
 #endif
 
 #endif

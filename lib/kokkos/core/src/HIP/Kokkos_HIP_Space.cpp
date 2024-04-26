@@ -24,10 +24,8 @@
 #include <HIP/Kokkos_HIP_Space.hpp>
 
 #include <HIP/Kokkos_HIP_DeepCopy.hpp>
-#include <HIP/Kokkos_HIP_SharedAllocationRecord.hpp>
 
 #include <impl/Kokkos_Error.hpp>
-#include <impl/Kokkos_MemorySpace.hpp>
 #include <impl/Kokkos_DeviceManagement.hpp>
 #include <impl/Kokkos_ExecSpaceManager.hpp>
 
@@ -45,14 +43,6 @@ namespace {
 
 static std::atomic<bool> is_first_hip_managed_allocation(true);
 
-bool hip_driver_check_page_migration(int deviceId) {
-  // check with driver if page migrating memory is available
-  // this driver query is copied from the hip documentation
-  int hasManagedMemory = 0;  // false by default
-  KOKKOS_IMPL_HIP_SAFE_CALL(hipDeviceGetAttribute(
-      &hasManagedMemory, hipDeviceAttributeManagedMemory, deviceId));
-  return static_cast<bool>(hasManagedMemory);
-}
 }  // namespace
 
 /*--------------------------------------------------------------------------*/
@@ -153,7 +143,7 @@ void* HIPManagedSpace::impl_allocate(
     if (is_first_hip_managed_allocation.exchange(false) &&
         Kokkos::show_warnings()) {
       do {  // hack to avoid spamming users with too many warnings
-        if (!hip_driver_check_page_migration(m_device)) {
+        if (!impl_hip_driver_check_page_migration()) {
           std::cerr << R"warning(
 Kokkos::HIP::allocation WARNING: The combination of device and system configuration
                                  does not support page migration between device and host.
@@ -204,6 +194,19 @@ Kokkos::HIP::runtime WARNING: Kokkos did not find an environment variable 'HSA_X
   }
 
   return ptr;
+}
+bool HIPManagedSpace::impl_hip_driver_check_page_migration() const {
+  // check with driver if page migrating memory is available
+  // this driver query is copied from the hip documentation
+  int hasManagedMemory = 0;  // false by default
+  KOKKOS_IMPL_HIP_SAFE_CALL(hipDeviceGetAttribute(
+      &hasManagedMemory, hipDeviceAttributeManagedMemory, m_device));
+  if (!static_cast<bool>(hasManagedMemory)) return false;
+  // next, check pageableMemoryAccess
+  int hasPageableMemory = 0;  // false by default
+  KOKKOS_IMPL_HIP_SAFE_CALL(hipDeviceGetAttribute(
+      &hasPageableMemory, hipDeviceAttributePageableMemoryAccess, m_device));
+  return static_cast<bool>(hasPageableMemory);
 }
 
 void HIPSpace::deallocate(void* const arg_alloc_ptr,
@@ -282,22 +285,3 @@ void HIPManagedSpace::impl_deallocate(
 }
 
 }  // namespace Kokkos
-
-/*--------------------------------------------------------------------------*/
-/*--------------------------------------------------------------------------*/
-
-#include <impl/Kokkos_SharedAlloc_timpl.hpp>
-
-namespace Kokkos {
-namespace Impl {
-
-// To avoid additional compilation cost for something that's (mostly?) not
-// performance sensitive, we explicity instantiate these CRTP base classes here,
-// where we have access to the associated *_timpl.hpp header files.
-template class HostInaccessibleSharedAllocationRecordCommon<HIPSpace>;
-template class SharedAllocationRecordCommon<HIPSpace>;
-template class SharedAllocationRecordCommon<HIPHostPinnedSpace>;
-template class SharedAllocationRecordCommon<HIPManagedSpace>;
-
-}  // end namespace Impl
-}  // end namespace Kokkos

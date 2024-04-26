@@ -48,18 +48,18 @@ struct MyMovableType {
 TEST(std_algorithms_mod_ops_test, move) {
   MyMovableType a;
   using move_t = decltype(std::move(a));
-  static_assert(std::is_rvalue_reference<move_t>::value, "");
+  static_assert(std::is_rvalue_reference<move_t>::value);
 
   // move constr
   MyMovableType b(std::move(a));
-  EXPECT_EQ(b.m_value, 11);
-  EXPECT_EQ(a.m_value, -2);
+  ASSERT_EQ(b.m_value, 11);
+  ASSERT_EQ(a.m_value, -2);
 
   // move assign
   MyMovableType c;
   c = std::move(b);
-  EXPECT_EQ(c.m_value, 11);
-  EXPECT_EQ(b.m_value, -4);
+  ASSERT_EQ(c.m_value, 11);
+  ASSERT_EQ(b.m_value, -4);
 }
 
 template <class ViewType>
@@ -70,7 +70,7 @@ struct StdAlgoModSeqOpsTestMove {
   void operator()(const int index) const {
     typename ViewType::value_type a{11};
     using move_t = decltype(std::move(a));
-    static_assert(std::is_rvalue_reference<move_t>::value, "");
+    static_assert(std::is_rvalue_reference<move_t>::value);
     m_view(index) = std::move(a);
   }
 
@@ -82,50 +82,6 @@ TEST(std_algorithms_mod_ops_test, move_within_parfor) {
   view_t a("a", 10);
 
   StdAlgoModSeqOpsTestMove<view_t> fnc(a);
-  Kokkos::parallel_for(a.extent(0), fnc);
-  auto a_h = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), a);
-  for (std::size_t i = 0; i < a.extent(0); ++i) {
-    EXPECT_DOUBLE_EQ(a_h(0), 11.);
-  }
-}
-
-// ------------
-// swap
-// ------------
-TEST(std_algorithms_mod_ops_test, swap) {
-  {
-    int a = 1;
-    int b = 2;
-    KE::swap(a, b);
-    EXPECT_EQ(a, 2);
-    EXPECT_EQ(b, 1);
-  }
-
-  {
-    double a = 3.;
-    double b = 1.;
-    KE::swap(a, b);
-    EXPECT_DOUBLE_EQ(a, 1.);
-    EXPECT_DOUBLE_EQ(b, 3.);
-  }
-}
-
-template <class ViewType>
-struct StdAlgoModSeqOpsTestSwap {
-  ViewType m_view;
-
-  KOKKOS_INLINE_FUNCTION
-  void operator()(const int index) const {
-    typename ViewType::value_type newval{11};
-    KE::swap(m_view(index), newval);
-  }
-
-  StdAlgoModSeqOpsTestSwap(ViewType aIn) : m_view(aIn) {}
-};
-
-TEST(std_algorithms_mod_ops_test, swap_within_parfor) {
-  auto a = create_view<double>(stdalgos::DynamicTag{}, 10, "a");
-  StdAlgoModSeqOpsTestSwap<decltype(a)> fnc(a);
   Kokkos::parallel_for(a.extent(0), fnc);
   auto a_h = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), a);
   for (std::size_t i = 0; i < a.extent(0); ++i) {
@@ -151,17 +107,17 @@ void test_iter_swap(ViewType view) {
   using value_type = typename ViewType::value_type;
   auto a_dc        = create_deep_copyable_compatible_clone(view);
   auto a_h         = create_mirror_view_and_copy(Kokkos::HostSpace(), a_dc);
-  EXPECT_EQ(view.extent_int(0), 10);
-  EXPECT_EQ(a_h(0), value_type(3));
-  EXPECT_EQ(a_h(1), value_type(1));
-  EXPECT_EQ(a_h(2), value_type(2));
-  EXPECT_EQ(a_h(3), value_type(0));
-  EXPECT_EQ(a_h(4), value_type(6));
-  EXPECT_EQ(a_h(5), value_type(5));
-  EXPECT_EQ(a_h(6), value_type(4));
-  EXPECT_EQ(a_h(7), value_type(7));
-  EXPECT_EQ(a_h(8), value_type(8));
-  EXPECT_EQ(a_h(9), value_type(9));
+  ASSERT_EQ(view.extent_int(0), 10);
+  ASSERT_EQ(a_h(0), value_type(3));
+  ASSERT_EQ(a_h(1), value_type(1));
+  ASSERT_EQ(a_h(2), value_type(2));
+  ASSERT_EQ(a_h(3), value_type(0));
+  ASSERT_EQ(a_h(4), value_type(6));
+  ASSERT_EQ(a_h(5), value_type(5));
+  ASSERT_EQ(a_h(6), value_type(4));
+  ASSERT_EQ(a_h(7), value_type(7));
+  ASSERT_EQ(a_h(8), value_type(8));
+  ASSERT_EQ(a_h(9), value_type(9));
 }
 
 TEST(std_algorithms_mod_ops_test, iter_swap_static_view) {
