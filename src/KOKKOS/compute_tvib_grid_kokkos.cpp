@@ -44,27 +44,31 @@ ComputeTvibGridKokkos::ComputeTvibGridKokkos(SPARTA *sparta, int narg, char **ar
 {
   kokkos_flag = 1;
 
+  int **groupspecies = particle->mixture[imix]->groupspecies;
+  int *groupsize = particle->mixture[imix]->groupsize;
+  int mixspecies = particle->mixture[imix]->nspecies;
+
+  d_groupspecies = DAT::t_int_2d("compute/tvib/groupspecies",ngroup,mixspecies);
+  auto h_groupspecies = Kokkos::create_mirror_view(d_groupspecies);
+
+  for (int igroup = 0; igroup < ngroup; igroup++)
+    for (int n = 0; n < groupsize[igroup]; n++)
+      h_groupspecies(igroup,n) = groupspecies[igroup][n];
+
+  Kokkos::deep_copy(d_groupspecies,h_groupspecies);
+
   if (modeflag == 0) {
-    k_t2s = DAT::tdual_int_1d("compute/tvib/grid:t2s",ntally);
     k_s2t = DAT::tdual_int_1d("compute/tvib/grid:s2t",nspecies);
     d_tspecies = DAT::t_float_1d("d_tspecies",nspecies);
 
     for (int n = 0; n < nspecies; n++)
       k_s2t.h_view(n) = s2t[n];
 
-    for (int n = 0; n < ntally; n++)
-      k_t2s.h_view(n) = t2s[n];
-
     k_s2t.modify_host();
-    k_t2s.modify_host();
-
     k_s2t.sync_device();
-    k_t2s.sync_device();
 
     d_s2t = k_s2t.d_view;
-    d_t2s = k_t2s.d_view;
   } else {
-    k_t2s_mode = DAT::tdual_int_1d("compute/tvib/grid:t2s_mode",ntally);
     k_s2t_mode = DAT::tdual_int_2d("compute/tvib/grids2t_mode",nspecies,maxmode);
     d_tspecies_mode = DAT::t_float_2d_lr("d_tspecies_mode",nspecies,maxmode);
 
@@ -72,17 +76,10 @@ ComputeTvibGridKokkos::ComputeTvibGridKokkos(SPARTA *sparta, int narg, char **ar
       for (int m = 0; m < maxmode; m++)
         k_s2t_mode.h_view(n,m) = s2t_mode[n][m];
 
-    for (int n = 0; n < ntally; n++)
-      k_t2s_mode.h_view(n) = t2s_mode[n];
-
     k_s2t_mode.modify_host();
-    k_t2s_mode.modify_host();
-
     k_s2t_mode.sync_device();
-    k_t2s_mode.sync_device();
 
     d_s2t_mode = k_s2t_mode.d_view;
-    d_t2s_mode = k_t2s_mode.d_view;
   }
 
   boltz = update->boltz;
@@ -279,6 +276,7 @@ post_process_grid_kokkos(int index, int /*nsample*/,
                          DAT::t_float_1d_strided d_vec)
 {
   index--;
+  this->index = index;
 
   int lo = 0;
   int hi = nglocal;
@@ -337,7 +335,7 @@ void ComputeTvibGridKokkos::operator()(TagComputeTvibGrid_post_process_grid, con
   if (modeflag == 0) {
 
     for (int isp = 0; isp < nsp; ++isp) {
-      const int ispecies = d_t2s[evb-evib];
+      const int ispecies = d_groupspecies(index,isp);
       const double theta = d_species[ispecies].vibtemp[0];
       if (theta == 0.0 || d_etally(icell,cnt) == 0.0) {
         d_tspecies[isp] = 0.0;
@@ -381,7 +379,7 @@ void ComputeTvibGridKokkos::operator()(TagComputeTvibGrid_post_process_grid, con
     auto &d_vibmode = k_eiarray.d_view[d_ewhich[index_vibmode]].k_view.d_view;
 
     for (int isp = 0; isp < nsp; isp++) {
-      const int ispecies = d_t2s_mode[evb-evib];
+      const int ispecies = d_groupspecies(index,isp);
       for (int imode = 0; imode < maxmode; imode++) {
         const double theta = d_species[ispecies].vibtemp[imode];
         if (theta == 0.0 || d_etally(icell,cnt) == 0.0) {
@@ -431,7 +429,7 @@ void ComputeTvibGridKokkos::operator()(TagComputeTvibGrid_post_process_grid, con
     auto &d_vibmode = k_eiarray.d_view[d_ewhich[index_vibmode]].k_view.d_view;
 
     for (int isp = 0; isp < nsp; isp++) {
-      const int ispecies = d_t2s_mode[evb-evib];
+      const int ispecies = d_groupspecies(index,isp);
       const double theta = d_species[ispecies].vibtemp[imode];
       if (theta == 0.0 || d_etally(icell,cnt) == 0.0) {
         d_tspecies_mode(isp,imode) = 0.0;
