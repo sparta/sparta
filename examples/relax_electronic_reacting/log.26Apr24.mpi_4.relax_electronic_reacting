@@ -1,0 +1,191 @@
+SPARTA (7 Mar 2024)
+Running on 4 MPI task(s)
+################################################################################
+# thermal gas in a 3d box with collisions
+# particles reflect off global box boundaries
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5 comm/sort yes
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
+create_grid 	    2 2 2
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/home/runner/work/sparta/sparta/src/grid.cpp:471)
+Created 8 child grid cells
+  CPU time = 0.00112172 secs
+  create/ghost percent = 93.2058 6.79421
+
+balance_grid        rcb part
+Balance grid migrated 4 cells
+  CPU time = 0.000311543 secs
+  reassign/sort/migrate/ghost percent = 67.2787 0.627201 12.7571 19.337
+
+species		    air.species N2 O2 N2+ O2+ O N O+ N+ NO NO+ e elecfile air.elec
+mixture		    air N2 O2 N2+ O2+ O N O+ N+ NO NO+ e vstream 0.0 0.0 0.0 temp 20000.0 trot 20000.0 tvib 20000.0 telec 100.0
+
+mixture             air copy noelectron
+mixture             noelectron delete e
+mixture             noelectron N2 frac 0.80
+mixture             noelectron O2 frac 0.199
+mixture             noelectron N2+ frac 0.0001
+
+global              nrho 7.07043E22
+global              fnum 7.07043E5
+
+fix                 ambi ambipolar e N2+ O2+ NO+ N+ O+
+
+collide		    vss air air.vss relax constant
+collide_modify      rotate smooth vibrate discrete electronic discrete
+collide_modify      ambipolar yes
+fix                 electronic elecmode
+collide_modify      remain no
+react               tce air.tce
+
+create_particles    noelectron n 40000 twopass
+Created 40000 particles
+  CPU time = 0.0060731 secs
+
+stats		    100
+compute             temp temp
+compute             T thermal/grid all all temp
+compute             Ttrans reduce ave c_T[1]
+
+compute             rot grid all all trot erot
+compute             Trot reduce ave c_rot[1]
+compute             Erot reduce ave c_rot[2]
+
+compute             vib grid all all tvib evib
+compute             Tvib reduce ave c_vib[1]
+compute             Evib reduce ave c_vib[2]
+
+compute             elec grid all species eelec
+compute             Eelec reduce ave c_elec[1]
+
+compute             telec telec/grid all air
+compute             Telec reduce ave c_telec[*]
+
+compute             telec2 telec/grid all species
+compute             Telec2 reduce ave c_telec2[*]
+
+compute             den grid all species nrho
+compute             Den_N2 reduce ave c_den[1]
+compute             Den_O2 reduce ave c_den[2]
+compute             Den_N2p reduce ave c_den[3]
+compute             Den_O2p reduce ave c_den[4]
+compute             Den_O reduce ave c_den[5]
+compute             Den_N reduce ave c_den[6]
+compute             Den_Op reduce ave c_den[6]
+compute             Den_Np reduce ave c_den[7]
+compute             Den_NO reduce ave c_den[8]
+compute             Den_NOp reduce ave c_den[9]
+
+#stats_style	    step cpu np nattempt ncoll c_Erot c_Evib c_Eelec
+stats_style	    step cpu np nattempt ncoll c_Ttrans c_Trot c_Erot c_Tvib c_Evib c_Eelec c_Telec c_Den_N2 c_Den_O2 c_Den_N2p c_Den_O2p c_Den_O c_Den_N c_Den_Op c_Den_Np c_Den_NO c_Den_NOp
+
+timestep 	    1.00E-9
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 2.3125 2.3125 2.3125
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.82765 3.82765 3.82765
+Step CPU Np Natt Ncoll c_Ttrans c_Trot c_Erot c_Tvib c_Evib c_Eelec c_Telec c_Den_N2 c_Den_O2 c_Den_N2p c_Den_O2p c_Den_O c_Den_N c_Den_Op c_Den_Np c_Den_NO c_Den_NOp 
+       0            0    40000        0        0    19899.037     20055.62 2.7679354e-19     18359.88 2.5339025e-19            0            0 2.265083e+22 5.6110932e+21 1.414086e+18 3.535215e+18 4.242258e+18  7.07043e+17  7.07043e+17 3.535215e+18 2.121129e+18 2.828172e+18 
+     100   0.30513753    41612   124443      552    18267.953    19437.665 2.4748276e-19    18068.159 2.3004069e-19 1.2663113e-21     10039.76 2.2394173e+22 4.7180979e+21 1.414086e+18 3.535215e+18 1.7803343e+21 5.0412166e+20 5.0412166e+20 3.535215e+18 2.121129e+18 1.2726774e+19 
+     200   0.63478232    43019   133048      598    17086.988    18806.427 2.2311461e-19    17661.795 2.0953773e-19 2.0112302e-21    11864.361 2.2124083e+22 3.9587338e+21 2.828172e+18 3.535215e+18 3.2658316e+21 1.0096574e+21 1.0096574e+21 3.535215e+18  7.07043e+17 4.5957795e+19 
+     300   0.98540182    44279   140939      607    16145.659    18216.629 2.028185e-19    17144.578 1.9089533e-19 2.4283721e-21     13071.15 2.1844801e+22 3.304719e+21 2.828172e+18 2.828172e+18 4.5300245e+21 1.5257988e+21 1.5257988e+21 5.656344e+18            0 8.9794461e+19 
+     400    1.3474739    45309   147580      664     15407.05    17678.736 1.8680564e-19    16682.314 1.762711e-19 2.7541318e-21    13682.793 2.1573296e+22 2.7836283e+21 2.121129e+18 2.828172e+18 5.5064509e+21 2.0051739e+21 2.0051739e+21 6.363387e+18            0 1.5342833e+20 
+     500    1.7316234    46191   153433      610    14827.066    17260.168 1.7434217e-19    16133.295 1.629723e-19 2.973718e-21    14100.613 2.1318053e+22 2.3579884e+21 2.121129e+18 2.828172e+18 6.3004602e+21 2.4583885e+21 2.4583885e+21 6.363387e+18            0 2.1069881e+20 
+     600    2.1225316    46903   158183      698    14407.145    16855.399 1.6413824e-19    15597.395 1.5188602e-19 3.1619768e-21    14311.134 2.1092507e+22 2.0214359e+21 1.414086e+18 3.535215e+18 6.9127594e+21 2.8522115e+21 2.8522115e+21  7.07043e+18            0 2.6867634e+20 
+     700    2.5210976    47513   162313      668    13985.254      16546.8 1.5612417e-19      15211.3 1.4351473e-19 3.2849396e-21    14524.986 2.0862718e+22 1.742861e+21 1.414086e+18 4.242258e+18 7.3921346e+21 3.2354288e+21 3.2354288e+21  7.07043e+18            0 3.4574403e+20 
+     800    2.9335612    48016   165845      685    13704.168    16243.226 1.4932015e-19    14704.013 1.3516853e-19 3.3986605e-21    14598.248 2.064707e+22 1.5321622e+21 2.121129e+18 4.949301e+18 7.7421209e+21 3.5960207e+21 3.5960207e+21 7.777473e+18            0 4.1220607e+20 
+     900    3.3494929    48496   169195      685    13414.907    15971.357 1.4317128e-19    14335.653 1.2853072e-19 3.5761177e-21    14552.015 2.046041e+22 1.3405535e+21 2.121129e+18 4.949301e+18 8.0857437e+21 3.930452e+21 3.930452e+21 8.484516e+18            0 4.5109343e+20 
+    1000      3.77572    48924   172222      692    13216.349    15623.169 1.369471e-19    13904.175 1.2188349e-19 3.5727956e-21    14531.737 2.0268095e+22 1.1659139e+21  7.07043e+17 6.363387e+18 8.3657328e+21 4.2535707e+21 4.2535707e+21 1.0605645e+19            0 5.1543435e+20 
+Loop time of 3.77578 on 4 procs for 1000 steps with 48924 particles
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.19399    | 0.19551    | 0.19644    |   0.2 |  5.18
+Coll    | 3.26       | 3.2782     | 3.3046     |   1.0 | 86.82
+Sort    | 0.083963   | 0.086873   | 0.090101   |   0.9 |  2.30
+Comm    | 0.11419    | 0.11647    | 0.11837    |   0.5 |  3.08
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.0084023  | 0.0085852  | 0.0088397  |   0.2 |  0.23
+Other   |            | 0.09014    |            |       |  2.39
+
+Particle moves    = 45591664 (45.6M)
+Cells touched     = 48081533 (48.1M)
+Particle comms    = 1643909 (1.64M)
+Boundary collides = 2489920 (2.49M)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 149981486 (150M)
+Collide occurs    = 651364 (0.651M)
+Reactions         = 9993 (9.99K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 3.01869e+06
+Particle-moves/step: 45591.7
+Cell-touches/particle/step: 1.05461
+Particle comm iterations/step: 1
+Particle fraction communicated: 0.0360572
+Particle fraction colliding with boundary: 0.0546135
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 3.28967
+Collisions/particle/step: 0.0142869
+Reactions/particle/step: 0.000219185
+
+Gas reaction tallies:
+  style tce #-of-reactions 45
+  reaction O2 + N --> O + O + N: 571
+  reaction O2 + NO --> O + O + NO: 15
+  reaction O2 + N2 --> O + O + N2: 3426
+  reaction O2 + O2 --> O + O + O2: 437
+  reaction O2 + O --> O + O + O: 1662
+  reaction N2 + O --> N + N + O: 975
+  reaction N2 + O2 --> N + N + O2: 128
+  reaction N2 + NO --> N + N + NO: 3
+  reaction N2 + N2 --> N + N + N2: 1085
+  reaction N2 + N --> N + N + N: 356
+  reaction NO + N2 --> N + O + N2: 154
+  reaction NO + O2 --> N + O + O2: 18
+  reaction NO + O --> N + O + O: 81
+  reaction NO + N --> N + O + N: 28
+  reaction NO + O --> O2 + N: 5
+  reaction N2 + O --> NO + N: 834
+  reaction O2 + N --> NO + O: 179
+  reaction NO + N --> N2 + O: 4
+  reaction O + N --> NO+ + e: 12
+  reaction N + N --> N2+ + e: 1
+  reaction O + O --> O2+ + e: 2
+  reaction N2 + N+ --> N + N2+: 3
+  reaction NO+ + N --> N2 + O+: 5
+  reaction NO+ + O --> N + O2+: 1
+  reaction O2+ + N --> O + NO+: 1
+  reaction NO+ + O2 --> NO + O2+: 2
+  reaction N2+ + O --> N2 + O+ : 5
+
+Particles: 12231 ave 12339 max 12151 min
+Histogram: 1 0 0 2 0 0 0 0 0 1
+Cells:      2 ave 2 max 2 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 6 ave 6 max 6 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
