@@ -99,11 +99,10 @@ class CollideVSS : public Collide {
   double rotrel (int, double);
   double vibrel (int, double);
 
-  void relax_electronic_mode(Particle::OnePart *, Particle::OnePart *, double&);
-  void relax_electronic_mode_reacting(Particle::OnePart *, double&);
+  void relax_electronic_mode(Particle::OnePart *, Particle::OnePart *, double&, bool);
   double get_elec_phi(int, int, int, double);
   int select_elec_state(Particle::OnePart *, Particle::OnePart *,
-                        double, double, bool);
+                        double, double, bool, bool);
 
   void read_param_file(char *);
   int wordparse(int, char *, char **);
