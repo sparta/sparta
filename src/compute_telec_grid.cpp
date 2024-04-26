@@ -311,7 +311,7 @@ void ComputeTelecGrid::post_process_grid(int index, int /*nsample*/,
       count += 2;
     }
     if (denom == 0.0) vec[k] = 0.0;
-    vec[k] = numer/denom;
+    else vec[k] = numer/denom;
     k += nstride;
   }
 }

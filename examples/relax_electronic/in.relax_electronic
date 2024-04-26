@@ -52,13 +52,16 @@ compute             Eelec reduce ave c_elec[1]
 compute             telec telec/grid all air
 compute             Telec reduce ave c_telec[*]
 
+compute             telec2 telec/grid all species
+compute             Telec2 reduce ave c_telec2[*]
+
 compute             den grid all species nrho
 compute             Den reduce ave c_den[1]
 compute             Den2 reduce ave c_den[2]
 compute             Den3 reduce ave c_den[3]
 
 #stats_style	    step cpu np nattempt ncoll c_Erot c_Evib c_Eelec
-stats_style	    step cpu np nattempt ncoll c_Ttrans c_Eelec c_Telec c_Den c_Den2 c_Den3
+stats_style	    step cpu np nattempt ncoll c_Ttrans c_Eelec c_Telec c_Telec2[*] c_Den c_Den2 c_Den3
 
 timestep 	    1.00E-9
 run 		    1000
