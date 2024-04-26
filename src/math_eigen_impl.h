@@ -1,24 +1,24 @@
-// clang-format off
-/* -*- c++ -*- ----------------------------------------------------------
-   LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
-   https://www.lammps.org/, Sandia National Laboratories
-   LAMMPS development team: developers@lammps.org
+/* ----------------------------------------------------------------------
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   http://sparta.sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
+   Sandia National Laboratories
 
-   Copyright (2003) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under
-   the GNU General Public License.  (Some of the code in this file is also
-   available using a more premissive license.  See below for details.)
+   the GNU General Public License.
 
-   See the README file in the top-level LAMMPS directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
+
 /* ----------------------------------------------------------------------
    Contributing authors: Yuya Kurebayashi (Tohoku University, Lanczos algorithm)
                          Andrew Jewett (Scripps Research, Jacobi algorithm)
 ------------------------------------------------------------------------- */
 
-#ifndef LMP_MATH_EIGEN_IMPL_H
-#define LMP_MATH_EIGEN_IMPL_H
+#ifndef SPARTA_MATH_EIGEN_IMPL_H
+#define SPARTA_MATH_EIGEN_IMPL_H
 
 //        This file contains a library of functions and classes which can
 //        efficiently perform eigendecomposition for an extremely broad
@@ -1371,4 +1371,4 @@ PrincipalEigen(ConstMatrix matrix,
 
 
 
-#endif //#ifndef LMP_MATH_EIGEN_IMPL_H
+#endif //#ifndef SPARTA_MATH_EIGEN_IMPL_H

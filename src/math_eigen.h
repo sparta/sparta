@@ -1,18 +1,19 @@
-/* -*- c++ -*- ----------------------------------------------------------
-   LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
-   https://www.lammps.org/, Sandia National Laboratories
-   LAMMPS development team: developers@lammps.org
+/* ----------------------------------------------------------------------
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   http://sparta.sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
+   Sandia National Laboratories
 
-   Copyright (2003) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
-   See the README file in the top-level LAMMPS directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#ifndef LMP_MATH_EIGEN_H
-#define LMP_MATH_EIGEN_H
+#ifndef SPARTA_MATH_EIGEN_H
+#define SPARTA_MATH_EIGEN_H
 
 namespace MathEigen {
 
@@ -32,4 +33,4 @@ int jacobi3(double const mat[3][3], double *eval, double evec[3][3]);
 
 }    // namespace MathEigen
 
-#endif    //#ifndef LMP_MATH_EIGEN_H
+#endif    //#ifndef SPARTA_MATH_EIGEN_H
