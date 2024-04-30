@@ -9,7 +9,7 @@ global             gridcut 1e-7 comm/sort yes
 ###########
 # Species #
 ###########
-variable nden equal 1.0e23
+variable nden equal 1.0e20
 
 variable T equal 273.15
 variable kb equal 1.38e-23
@@ -51,7 +51,7 @@ create_box          0.0 ${Lx} 0.0 ${Ly} 0.0 ${Lz}
 create_grid         ${nx} ${ny} ${nz} block * * * 
 balance_grid        rcb part
 
-variable ppc equal 50000
+variable ppc equal 400000
 variable volume equal ${Lx}*${Ly}*${Lz}
 variable Fnum equal ${nden}*${volume}/${ppc}
 print "  fnum equal ${Fnum}"
@@ -69,11 +69,11 @@ read_particles particle0.dat 0
 
 compute             1 vmom/grid all all v4
 #compute             1 grid all all u
-fix                 1 ave/grid all 1 5 5 c_1[*] ave one
+fix                 1 ave/grid all 1 20 20 c_1[*] ave one
 compute 1a reduce ave f_1[*]
 
-stats               5
+stats               20
 stats_style         step np nattempt ncoll c_1a
 
-timestep            1.0e-10
-run                 10000
+timestep            1.0e-6
+run                 500
