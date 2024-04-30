@@ -1900,6 +1900,7 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
 {
   double xk[3],vk[3];
   double xl[3],vl[3];
+  double erotk, erotl;
   int ks, ls;
   int kcell, lcell;
 
@@ -1938,6 +1939,9 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
     memcpy(xl,jp->x,3*sizeof(double));
     memcpy(vl,jp->v,3*sizeof(double));
 
+    erotk = ip->erot;
+    erotl = jp->erot;
+
   // particle jp has larger weight
 
   } else {
@@ -1955,6 +1959,9 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
     memcpy(vk,jp->v,3*sizeof(double));
     memcpy(xl,ip->x,3*sizeof(double));
     memcpy(vl,ip->v,3*sizeof(double));
+
+    erotk = jp->erot;
+    erotl = ip->erot;
   }
 
   // number of new particles
@@ -1965,7 +1972,7 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
 
   if(ksw > 0) {
     id = MAXSMALLINT*random->uniform();
-    reallocflag = particle->add_particle(id,ks,kcell,xk,vk,0.0,0.0);
+    reallocflag = particle->add_particle(id,ks,kcell,xk,vk,erotk,0.0);
     if (reallocflag) {
       ip = particle->particles + (ip - particles);
       jp = particle->particles + (jp - particles);
@@ -1981,7 +1988,7 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
   if(lsw > 0) {
     if(ksw <= 0) error->one(FLERR,"Bad addition to particle list");
     id = MAXSMALLINT*random->uniform();
-    reallocflag = particle->add_particle(id,ls,lcell,xl,vl,0.0,0.0);
+    reallocflag = particle->add_particle(id,ls,lcell,xl,vl,erotl,0.0);
     if (reallocflag) {
       ip = particle->particles + (ip - particles);
       jp = particle->particles + (jp - particles);
@@ -2184,6 +2191,7 @@ void Collide::group_bt(int pfirst, int plast)
 
   int ispecies;
 	double mass, psw, pmsw, vp[3];
+  double Erot;
   for (int p = pfirst; p < plast; p++) {
     ipart = &particles[plist[p]];
     ispecies = ipart->ispecies;
@@ -2194,6 +2202,7 @@ void Collide::group_bt(int pfirst, int plast)
     memcpy(vp, ipart->v, 3*sizeof(double));
    	gsum += psw;
     msum += pmsw;
+    Erot += psw*ipart->erot;
     for (int i = 0; i < 3; i++) {
       mV[i] += (pmsw*vp[i]);
       for (int j = 0; j < 3; j++) {
@@ -2269,11 +2278,11 @@ void Collide::group_bt(int pfirst, int plast)
 
     // reduce based on type
     if (reduction_type == ENERGY) {
-      reduce(pfirst, plast, gsum, V, T);
+      reduce(pfirst, plast, gsum, V, T, Erot);
     } else if (reduction_type == HEAT) {
-      reduce(pfirst, plast, gsum, V, T, q);
+      reduce(pfirst, plast, gsum, V, T, Erot, q);
     } else if (reduction_type == STRESS) {
-      reduce(pfirst, plast, gsum, V, T, q, pij);
+      reduce(pfirst, plast, gsum, V, T, Erot, q, pij);
     }
 
   // group still too large so divide further
@@ -2358,6 +2367,7 @@ void Collide::group_ot(int pfirst, int plast)
 
   int ispecies;
 	double mass, psw, pmsw, vp[3];
+  double Erot = 0.0;
   for (int p = pfirst; p < plast; p++) {
     ipart = &particles[plist[p]];
     ispecies = ipart->ispecies;
@@ -2368,6 +2378,7 @@ void Collide::group_ot(int pfirst, int plast)
     memcpy(vp, ipart->v, 3*sizeof(double));
    	gsum += psw;
     msum += pmsw;
+    Erot += psw*ipart->erot;
     for (int i = 0; i < 3; i++) {
       mV[i] += (pmsw*vp[i]);
       for (int j = 0; j < 3; j++) {
@@ -2447,11 +2458,11 @@ void Collide::group_ot(int pfirst, int plast)
     // reduce based on type
 
     if (reduction_type == ENERGY) {
-      reduce(pfirst, plast, gsum, V, T);
+      reduce(pfirst, plast, gsum, V, T, Erot);
     } else if (reduction_type == HEAT) {
-      reduce(pfirst, plast, gsum, V, T, q);
+      reduce(pfirst, plast, gsum, V, T, Erot, q);
     } else if (reduction_type == STRESS) {
-      reduce(pfirst, plast, gsum, V, T, q, pij);
+      reduce(pfirst, plast, gsum, V, T, Erot, q, pij);
     }
 
   // group still too large so divide further
@@ -2506,7 +2517,7 @@ void Collide::group_ot(int pfirst, int plast)
    Merge particles using energy scheme
 ------------------------------------------------------------------------- */
 void Collide::reduce(int pfirst, int plast,
-                     double rho, double *V, double T)
+                     double rho, double *V, double T, double Erot)
 {
 
   // reduced particles chosen as first two in group
@@ -2535,11 +2546,18 @@ void Collide::reduce(int pfirst, int plast,
     jpart->v[d] = V[d] - sqT*uvec[d];
   }
 
+  // set reduced particle rotational energies
+
+  ipart->erot = Erot/(rho*0.5)*0.5;
+  jpart->erot = Erot/(rho*0.5)*0.5;
+
   // set reduced particle weights
+
   sweights[plist[pfirst]] = rho*0.5;
   sweights[plist[pfirst+1]] = rho*0.5;
 
   // delete other particles
+
   for (int i = pfirst+2; i < plast; i++) {
     if (ndelete == maxdelete) {
       maxdelete += DELTADELETE;
@@ -2557,7 +2575,7 @@ void Collide::reduce(int pfirst, int plast,
    Merge particles using heat flux scheme
 ------------------------------------------------------------------------- */
 void Collide::reduce(int pfirst, int plast,
-                     double rho, double *V, double T, double *q)
+                     double rho, double *V, double T, double Erot, double *q)
 {
 
   // reduced particles chosen as first two in group
@@ -2592,14 +2610,21 @@ void Collide::reduce(int pfirst, int plast,
     for (int d = 0; d < 3; d++) uvec[d] = q[d]/qmag;
 
   // set reduced particle velocities
+
   for (int d = 0; d < 3; d++) {
     ipart->v[d] = V[d] + alpha*uvec[d];
     jpart->v[d] = V[d] - beta*uvec[d];
   }
 
   // set reduced particle weights
+
   double isw = rho/(1.0+itheta*itheta);
   double jsw = rho - isw;
+
+  // set reduced particle rotational energies
+
+  ipart->erot = Erot/isw*0.5;
+  jpart->erot = Erot/jsw*0.5;
 
   sweights[plist[pfirst]] = isw;
   sweights[plist[pfirst+1]] = jsw;
@@ -2622,7 +2647,8 @@ void Collide::reduce(int pfirst, int plast,
    Merge particles using stress scheme
 ------------------------------------------------------------------------- */
 void Collide::reduce(int pfirst, int plast,
-                     double rho, double *V, double T, double *q, double pij[3][3])
+                     double rho, double *V, double T, double Erot,
+                     double *q, double pij[3][3])
 {
 
   // find eigenpairs of stress tensor
@@ -2642,6 +2668,7 @@ void Collide::reduce(int pfirst, int plast,
   }
 
   // iterate through nK pairs
+
   Particle::OnePart *particles = particle->particles;
   Particle::OnePart *ipart, *jpart;
 
@@ -2653,6 +2680,7 @@ void Collide::reduce(int pfirst, int plast,
   for (int iK = 0; iK < nK; iK++) {
 
     // reduced particles chosen as first two
+
     ipart = &particles[plist[pfirst]];
     jpart = &particles[plist[pfirst+1]];
 
@@ -2665,14 +2693,21 @@ void Collide::reduce(int pfirst, int plast,
       + sqrt(1.0 + (rho*qli*qli)/(nK*pow(eval[iK],3.0)));
 
     // set reduced particle velocities
+
     for (int d = 0; d < 3; d++) {
       ipart->v[d] = V[d] + itheta*sqrt(nK*eval[iK]/rho)*evec[d][iK];
       jpart->v[d] = V[d] - 1.0/itheta*sqrt(nK*eval[iK]/rho)*evec[d][iK];
     }
 
     // set reduced particle weights
+
     isw = rho/(nK*(1.0+itheta*itheta));
     jsw = rho/nK - isw;
+
+    // set reduced particle rotational energies
+
+    ipart->erot = Erot/isw*0.5/nK;
+    jpart->erot = Erot/jsw*0.5/nK;
 
     sweights[plist[pfirst]] = isw;
     sweights[plist[pfirst+1]] = jsw;

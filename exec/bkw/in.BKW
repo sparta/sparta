@@ -1,0 +1,79 @@
+################################################################################
+# 3D plume flow with symmetry boundary conditions
+################################################################################
+
+seed               12137
+dimension          3
+global             gridcut 1e-7 comm/sort yes
+
+###########
+# Species #
+###########
+variable nden equal 1.0e23
+
+variable T equal 273.15
+variable kb equal 1.38e-23
+variable m equal 6.63E-26
+variable mu equal 2.117e-5
+variable p equal ${nden}*${kb}*${T}
+variable mfp equal ${mu}/${p}*sqrt(3.14159*${kb}*${T}*0.5/${m})
+print "  mfp = ${mfp}"
+
+variable vth equal sqrt(2*${kb}*${T}/3.14159/${m})
+print "  mean thermal speed = ${vth}"
+variable tc equal ${mfp}/${vth}
+print "  mean collision time = ${tc}"
+
+species             air.species Mx
+mixture air Mx vstream 0.0 0.0 0.0 temp ${T} nrho ${nden}
+mixture air Mx frac 1.0
+
+###########
+# Collide #
+###########
+collide             vss all opt.vss
+collide_modify      remain no
+
+#####################
+# Boundary/Geometry #
+#####################
+variable Lx         equal 1.0e-5
+variable Ly         equal 1.0e-5
+variable Lz         equal 1.0e-5
+
+variable nx         equal 1
+variable ny         equal 1
+variable nz         equal 1
+
+boundary            p p p
+
+create_box          0.0 ${Lx} 0.0 ${Ly} 0.0 ${Lz}
+create_grid         ${nx} ${ny} ${nz} block * * * 
+balance_grid        rcb part
+
+variable ppc equal 50000
+variable volume equal ${Lx}*${Ly}*${Lz}
+variable Fnum equal ${nden}*${volume}/${ppc}
+print "  fnum equal ${Fnum}"
+
+global nrho ${nden}
+global fnum ${Fnum}
+
+#create_particles air n 0
+read_particles particle0.dat 0
+#read_particles particle.dump 0
+
+#############
+# Transient #
+#############
+
+compute             1 vmom/grid all all v4
+#compute             1 grid all all u
+fix                 1 ave/grid all 1 5 5 c_1[*] ave one
+compute 1a reduce ave f_1[*]
+
+stats               5
+stats_style         step np nattempt ncoll c_1a
+
+timestep            1.0e-10
+run                 10000

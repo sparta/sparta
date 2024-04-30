@@ -21,7 +21,7 @@ variable gamma     equal 1.4
 # Chosen Parameters #
 #####################
 variable T         equal 298.15
-variable p         equal 101325.0
+variable p         equal 1013.250
 variable Ma        equal 0.2
 variable ppc       equal 32.0
 
@@ -33,11 +33,6 @@ variable R_ref     equal ${kb}/${mass_ref}
 variable RT        equal ${R_ref}*${T}
 variable rho       equal ${p}/${RT}
 variable nden      equal ${rho}/${mass_ref}
-variable mu_ref    equal 2.0e-5
-variable lam       equal ${mu_ref}/${p}*sqrt(${pi}*${RT}*0.5)
-variable cbar      equal sqrt(2.*${RT})
-variable a         equal sqrt(${gamma}*${RT})
-variable vb        equal 20.0
 
 ###########
 # Species #
@@ -58,7 +53,7 @@ variable nx        equal 1
 variable ny        equal 1
 variable nz        equal 1 
 
-boundary           p p p
+boundary           p r p
 
 create_box         0.0 ${Lx} 0.0 ${Ly} 0.0 ${Lz}
 create_grid        ${nx} ${ny} ${nz} block * * * 
@@ -68,14 +63,13 @@ balance_grid       rcb part
 ###########
 # Collide #
 ###########
-fix 1 swpm
 collide            vss air opt.vss
 collide_modify     remain no
 
 # swpm
+#fix 1 swpm
 #collide_modify     swpm yes 64.0 1.0
 #collide_modify     reduce energy 32.0 binary 4.0
-
 
 variable N         equal ${nx}*${ny}*${nz}*${ppc}
 variable Fnum      equal ${nden}/(${N}/(${Lx}*${Ly}*${Lz}))
@@ -89,16 +83,16 @@ create_particles   air n 0
 # Outputs #
 ###########
 compute 1     thermal/grid all all temp press
-compute 2a     grid all all n nrho u v w usq vsq wsq ke temp
-compute 3     pflux/grid all all momxx momxy momxz momyy momyz momzz
+compute 2     grid all all n nrho u v w ke temp
+compute 3     pflux/grid all all momxx momyy momzz momxy momxz momyz 
 compute 4     eflux/grid all all heatx heaty heatz
-dump 1        grid all 1 out_swpm.* c_2a[*]
+#dump 1        grid all 20 out_swpm.* c_2[*]
 
 #############
 # Transient #
 #############
-stats              1
-stats_style        step np nattempt ncoll
+stats              50
+stats_style        step np nattempt ncoll nbound
 
-timestep           1.0e-11
-run                5
+timestep           1.0e-9
+run                1000

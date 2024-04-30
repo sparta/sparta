@@ -213,6 +213,7 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
 
   double vre = vro*prefactor[ispecies][jspecies];
   vremax[icell][igroup][jgroup] = MAX(vre,vremax[icell][igroup][jgroup]);
+  if (1.0-params[ispecies][jspecies].omega < 1e-8) vre = vremax[icell][igroup][jgroup];
   if (vre/vremax[icell][igroup][jgroup]*ijsw < random->uniform()) return 0;
   precoln.vr2 = vr2;
   return 1;

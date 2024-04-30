@@ -192,9 +192,9 @@ class Collide : protected Pointers {
   void group_reduce();
   void group_bt(int, int);
   void group_ot(int, int);
-  void reduce(int, int, double, double *, double);
-  void reduce(int, int, double, double *, double, double *);
-  void reduce(int, int, double, double *, double, double *, double [3][3]);
+  void reduce(int, int, double, double *, double, double);
+  void reduce(int, int, double, double *, double, double, double *);
+  void reduce(int, int, double, double *, double, double, double *, double [3][3]);
   void grow_percell(int);
 
   // functions for nearest neighbor
