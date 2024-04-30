@@ -34,9 +34,9 @@ class CreateParticles : protected Pointers {
   double erot(int);
 
  protected:
-  int imix,single,cutflag,mspecies,twopass;
+  int imix,single,cutflag,mspecies,twopass,bkw;
   bigint np;
-  double xp,yp,zp,vx,vy,vz;
+  double xp,yp,zp,vx,vy,vz,beta0;
   class Region *region;
 
   int speciesflag,densflag,velflag,tempflag,normflag;

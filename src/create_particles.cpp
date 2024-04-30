@@ -90,6 +90,7 @@ void CreateParticles::command(int narg, char **arg)
   cutflag = 1;
   int globalflag = 0;
   twopass = 0;
+  bkw = 0;
   region = NULL;
   speciesflag = densflag = velflag = tempflag = 0;
   sstr = sxstr = systr = szstr = NULL;
@@ -170,6 +171,11 @@ void CreateParticles::command(int narg, char **arg)
       if (iarg+1 > narg) error->all(FLERR,"Illegal create_particles command");
       twopass = 1;
       iarg += 1;
+    } else if (strcmp(arg[iarg],"bkw") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
+      bkw = 1;
+      beta0 = atof(arg[iarg+1]);
+      iarg += 2;
     } else error->all(FLERR,"Illegal create_particles command");
   }
 
@@ -642,20 +648,47 @@ void CreateParticles::create_local()
         sqrttempscale = sqrt(tempscale);
       }
 
-      vn = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
-      vr = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
-      theta1 = MY_2PI * random->uniform();
-      theta2 = MY_2PI * random->uniform();
+      if (bkw) {
+        double vmp = vscale[isp];
+        double vmax = 3.0*vmp;
+        double kTm = vmp*vmp*0.5;
+        double A = (1.0 + beta0)/kTm*0.5;
+        double pmax = exp(-A*vmp*vmp)*(1.+beta0*(A*vmp*vmp-1.5));
 
-      if (velflag) {
-        velocity_variable(x,vstream,vstream_variable);
-        v[0] = vstream_variable[0] + vn*cos(theta1);
-        v[1] = vstream_variable[1] + vr*cos(theta2);
-        v[2] = vstream_variable[2] + vr*sin(theta2);
+        int found = 0;
+        double vv, pvv;
+        double cx, cy, cz, rrr, theta;
+        while (!found) {
+          vv = vmax*pow(random->uniform(),(1./3.));
+          pvv = exp(-A*vv*vv)*(1.+beta0*(A*vv*vv-1.5));
+          if (pvv > pmax*random->uniform()) {
+            cz = 2*random->uniform()-1.;
+            rrr = sqrt(1-cz*cz);
+            theta = 2*MY_PI*random->uniform();
+            cx = rrr*cos(theta);
+            cy = rrr*sin(theta);
+
+            v[0] = vv*cx;
+            v[1] = vv*cy;
+            v[2] = vv*cz;
+          }
+        }
       } else {
-        v[0] = vstream[0] + vn*cos(theta1);
-        v[1] = vstream[1] + vr*cos(theta2);
-        v[2] = vstream[2] + vr*sin(theta2);
+        vn = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
+        vr = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
+        theta1 = MY_2PI * random->uniform();
+        theta2 = MY_2PI * random->uniform();
+
+        if (velflag) {
+          velocity_variable(x,vstream,vstream_variable);
+          v[0] = vstream_variable[0] + vn*cos(theta1);
+          v[1] = vstream_variable[1] + vr*cos(theta2);
+          v[2] = vstream_variable[2] + vr*sin(theta2);
+        } else {
+          v[0] = vstream[0] + vn*cos(theta1);
+          v[1] = vstream[1] + vr*cos(theta2);
+          v[2] = vstream[2] + vr*sin(theta2);
+        }
       }
 
       erot = particle->erot(ispecies,temp_rot*tempscale,random);
