@@ -1777,8 +1777,17 @@ void Collide::collisions_one_sw()
 {
   int i,j,n,ip,np,newp;
   int nattempt;
-  double attempt,volume,isw;
+  double attempt,volume;
   Particle::OnePart *ipart,*jpart,*kpart,*lpart,*mpart;
+
+  double Gwtf, isw, jsw, ksw, lsw;
+  double xk[3],vk[3];
+  double xl[3],vl[3];
+  double erotk, erotl;
+  int ks, ls;
+  int kcell, lcell;
+  int id;
+  int reallocflag;
 
   // loop over cells I own
 
@@ -1814,7 +1823,6 @@ void Collide::collisions_one_sw()
     while (ip >= 0) {
       plist[n++] = ip;
       ipart = &particles[ip];
-      //gi = ipart->sweight;
       isw = sweights[ip];
       sweight_max = MAX(sweight_max,isw);
 
@@ -1847,6 +1855,11 @@ void Collide::collisions_one_sw()
 
       if (!test_collision(icell,0,0,ipart,jpart)) continue;
 
+      // check if pair has zero or negative weight
+
+      if(sweights[i] <= 0.0 || sweights[j] <= 0.0)
+        error->one(FLERR,"bad weight before split");
+
       // split particles
 
       newp = split(ipart,jpart,kpart,lpart);
@@ -1872,7 +1885,7 @@ void Collide::collisions_one_sw()
 
       // reacquire the custom particle weights vector
 
-      sweights = particle->edvec[particle->ewhich[index_sweight]];;
+      sweights = particle->edvec[particle->ewhich[index_sweight]];
 
       // since ipart and jpart have same weight, do not need
       // ... to account for weight during collision itself
@@ -1964,6 +1977,12 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
     erotl = ip->erot;
   }
 
+  // Gwtf should never be negative or zero
+
+  if(Gwtf <= 0.0)
+    error->one(FLERR,"Negative weight assigned after split");
+
+
   // number of new particles
 
   int newp = 0;
@@ -1974,11 +1993,12 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
     id = MAXSMALLINT*random->uniform();
     reallocflag = particle->add_particle(id,ks,kcell,xk,vk,erotk,0.0);
     if (reallocflag) {
+      sweights = particle->edvec[particle->ewhich[index_sweight]];
       ip = particle->particles + (ip - particles);
       jp = particle->particles + (jp - particles);
     }
     kp = &particle->particles[particle->nlocal-1];
-    sweights[kp - particle->particles] = ksw;
+    sweights[particle->nlocal-1] = ksw;
     newp++;
   }
 
@@ -1990,18 +2010,14 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
     id = MAXSMALLINT*random->uniform();
     reallocflag = particle->add_particle(id,ls,lcell,xl,vl,erotl,0.0);
     if (reallocflag) {
+      sweights = particle->edvec[particle->ewhich[index_sweight]];
       ip = particle->particles + (ip - particles);
       jp = particle->particles + (jp - particles);
       kp = particle->particles + (kp - particles);
     }
-    lp = &particle->particles[particle->nlocal-1];
-    sweights[lp - particle->particles] = lsw;
+    sweights[particle->nlocal-1] = lsw;
     newp++;
   }
-
-  // Gwtf should never be negative or zero
-
-  if(Gwtf <= 0.0) error->one(FLERR,"Negative weight assigned after split");
 
   // update weights
 

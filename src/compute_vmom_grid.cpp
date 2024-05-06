@@ -203,7 +203,7 @@ void ComputeVmomGrid::compute_per_grid()
         vec[k++] += mass*vsq*v[2];
         break;
       case mV4:
-        vec[k++] += mass*vsq*vsq/3.0;
+        vec[k++] += mass*v[0]*v[0]*v[0]*v[0];
         break;
       }
     }

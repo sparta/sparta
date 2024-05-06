@@ -957,52 +957,20 @@ void CreateParticles::create_local_twopass()
         sqrttempscale = sqrt(tempscale);
       }
 
+      vn = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
+      vr = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
+      theta1 = MY_2PI * random->uniform();
+      theta2 = MY_2PI * random->uniform();
 
-      if (bkw) {
-        double vmp = vscale[isp];
-        double vmax = 3.0*vmp;
-        double kTm = vmp*vmp*0.5;
-        double A = (1.0 + beta0)/kTm*0.5;
-        double pmax = exp(-A*vmp*vmp)*(1.+beta0*(A*vmp*vmp-1.5));
-        pmax *= 3;
-
-        int found = 0;
-        double vv, pvv;
-        double cx, cy, cz, rrr, theta;
-        while (!found) {
-          vv = vmax*pow(random->uniform(),(1./3.));
-          pvv = exp(-A*vv*vv)*(1.+beta0*(A*vv*vv-1.5));
-          if (pvv > pmax) error->one(FLERR,"probabilty not bounded");
-
-          if (pvv > pmax*random->uniform()) {
-            cz = 2*random->uniform()-1.;
-            rrr = sqrt(1-cz*cz);
-            theta = 2*MY_PI*random->uniform();
-            cx = rrr*cos(theta);
-            cy = rrr*sin(theta);
-
-            v[0] = vv*cx;
-            v[1] = vv*cy;
-            v[2] = vv*cz;
-            found = 1;
-          }
-        }
+      if (velflag) {
+        velocity_variable(x,vstream,vstream_variable);
+        v[0] = vstream_variable[0] + vn*cos(theta1);
+        v[1] = vstream_variable[1] + vr*cos(theta2);
+        v[2] = vstream_variable[2] + vr*sin(theta2);
       } else {
-        vn = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
-        vr = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
-        theta1 = MY_2PI * random->uniform();
-        theta2 = MY_2PI * random->uniform();
-
-        if (velflag) {
-          velocity_variable(x,vstream,vstream_variable);
-          v[0] = vstream_variable[0] + vn*cos(theta1);
-          v[1] = vstream_variable[1] + vr*cos(theta2);
-          v[2] = vstream_variable[2] + vr*sin(theta2);
-        } else {
-          v[0] = vstream[0] + vn*cos(theta1);
-          v[1] = vstream[1] + vr*cos(theta2);
-          v[2] = vstream[2] + vr*sin(theta2);
-        }
+        v[0] = vstream[0] + vn*cos(theta1);
+        v[1] = vstream[1] + vr*cos(theta2);
+        v[2] = vstream[2] + vr*sin(theta2);
       }
 
       erot = particle->erot(ispecies,temp_rot*tempscale,random);
