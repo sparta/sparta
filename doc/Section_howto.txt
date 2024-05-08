@@ -1,4 +1,4 @@
-"Previous Section"_Section_commands.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_example.html :c
+."Previous Section"_Section_commands.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_example.html :c
 
 :link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
@@ -28,7 +28,9 @@ SPARTA works.
 6.14 "Implicit surface ablation"_#howto_14
 6.15 "Transparent surface elements"_#howto_15
 6.16 "Visualizing SPARTA output with ParaView"_#howto_16
-6.17 "Details of grid geometry in SPARTA"_#howto_17 :all(b)
+6.17 "Custom per-particle, per-grid, per-surf attributes"_#howto_17
+6.18 "Variable timestep simulations"_#howto_18
+6.19 "Details of particles in SPARTA"_#howto_19 :all(b)
 
 The example input scripts included in the SPARTA distribution and
 highlighted in "Section 5"_Section_example.html of the manual also
@@ -682,18 +684,18 @@ refer to the cells of the hierarchical grid.  The flow region is the
 portion of the simulation domain that is "outside" any surface objects
 and is typically filled with particles.
 
-root cell = the simulation box itself
-parent cell = a grid cell that is sub-divided (root cell = parent cell)
+root cell = the overall simulation box
+parent cell = a grid cell that is sub-divided (the root cell is a parent cell)
 child cell = a grid cell that is not sub-divided further
 unsplit cell = a child cell not intersected by any surface elements
-cut cell = a child cell intersected by one or more surface elements, one resulting flow region
-split cell = a child cell intersected by two or more surface elemments, two or more resulting disjoint flow regions
+cut cell = a child cell intersected by one or more surface elements, resulting in a single flow region
+split cell = a child cell intersected by two or more surface elements, resulting in two or more disjoint flow regions
 sub cell = one disjoint flow region portion of a split cell :ul
 
-In SPARTA, parent cells are only conceptual.  They do not exist or
-require memory.  Child cells store various attributes and are
-distributed across processors, so that each child cell is owned by
-exactly one processor, as discussed below.
+Note that in SPARTA, parent cells are only conceptual.  They do not
+exist as individual entities or require memory.  Child cells store
+various attributes and are distributed across processors, so that each
+child cell is owned by exactly one processor, as discussed below.
 
 When surface objects are defined via the "read_surf"_read_surf.html
 command, they intersect child cells.  In this contex "intersection" by
@@ -978,7 +980,7 @@ electron species, and one which does not.  Example
 Use the "fix ambipolar"_fix_ambipolar.html command to specify which
 species is the ambipolar electron and what (multiple) species are
 ambipolar ions.  This is required for all the other options listed
-here to work.  The fix defines two custom per-particles attributes, an
+here to work.  The fix defines two custom per-particle attributes, an
 integer vector called "ionambi" which stores a 1 for a particle if it
 is an ambipolar ion, and a 0 otherwise.  And a floating-point array
 called "velambi" which stores a 3-vector with the velocity of the
@@ -1057,10 +1059,8 @@ dump 1 particle 1000 tmp.dump id type x y z p_ionambi p_velambi\[2\] :pre
 will output the ionambi flag = 1 for ambipolar ions, along with the vy
 of their associated ambipolar electrons.
 
-The "read_restart"_read_restart.html doc page explains how to restart
-ambipolar simulations where a fix like "fix
-ambipolar"_fix_ambipolar.html has been used to store extra
-per-particle properties.
+The "fix ambipolar"_fix ambiploar.html doc page explains how to
+restart ambipolar simulations where the fix is used.
 
 :line
 
@@ -1325,9 +1325,9 @@ lines were each defined as multiple line segments.
 
 6.16 Visualizing SPARTA output with ParaView :link(howto_16),h4
 
-The {sparta/tools/paraview} directory contains two Python programs that can
-be used to convert SPARTA surface and grid data to ParaView {.pvd} format for
-visualization with ParaView:
+The {sparta/tools/paraview} directory contains two Python programs
+that can be used to convert SPARTA surface and grid data to ParaView
+{.pvd} format for visualization with ParaView:
 
 surf2paraview.py  
 grid2paraview.py :pre
@@ -1585,44 +1585,180 @@ of files as MPI ranks used to run the program.
 
 mpiexec -np 4 pvbatch -sym sort_sparta_grid_file.py data.grid :pre
 
-The program must be run using the ParaView {pvbatch} program with the {-sym} argument.
-The above command line will produce 4 output files containing SPARTA grid dashed ids
-of cells located in the same area of the grid. The output file names are based on
-the name of the {*.grid} file used as input ({data.grid} in this case). The output files
-will be named as shown below.
+The program must be run using the ParaView {pvbatch} program with the
+{-sym} argument.  The above command line will produce 4 output files
+containing SPARTA grid dashed ids of cells located in the same area of
+the grid. The output file names are based on the name of the {*.grid}
+file used as input ({data.grid} in this case). The output files will
+be named as shown below.
 
 data_sort_bucket_rank_0.txt
 data_sort_bucket_rank_1.txt
 data_sort_bucket_rank_2.txt
 data_sort_bucket_rank_3.txt :pre
 
-The program {grid2paraview_cells.py} takes similar inputs as the {grid2paraview.py}
-program described in section (3), and produces the same ParaView VTU file output
-and PVD file output.
+The program {grid2paraview_cells.py} takes similar inputs as the
+{grid2paraview.py} program described in section (3), and produces the
+same ParaView VTU file output and PVD file output.
 
 mpiexec -np 4 pvbatch -sym grid2paraview_cells.py grid.txt output -rf flow_files.txt --float --variables id f_1\[5\] f_1\[7\] :pre
 
-The program must be run using the ParaView {pvbatch} program with the {-sym} argument.
-The above command line will produce an {output.pvd} file and a directory name output/
-containing the ParaView VTU file data. The {grid.txt} file must contain a {read_grid}
-statement with the path to a SPARTA grid cell output file, and is otherwise the same
-as the {grid2paraview.py} version. The option {--float} outputs float precision numbers
-to the VTU files to save memory (default is double precision). The {--variables} option
-limits the output arrays to the names given on the command line (default is all variable
-names found in the flow files given by the {-rf} or {-r} options).
+The program must be run using the ParaView {pvbatch} program with the
+{-sym} argument.  The above command line will produce an {output.pvd}
+file and a directory name output/ containing the ParaView VTU file
+data. The {grid.txt} file must contain a {read_grid} statement with
+the path to a SPARTA grid cell output file, and is otherwise the same
+as the {grid2paraview.py} version. The option {--float} outputs float
+precision numbers to the VTU files to save memory (default is double
+precision). The {--variables} option limits the output arrays to the
+names given on the command line (default is all variable names found
+in the flow files given by the {-rf} or {-r} options).
 
-The {grid2paraview_cells.py} program will look for {*_sort_bucket_rank_?.txt} files
-produced by the sort_sparta_grid_file.py program. The matching will depend on the number
-of MPI ranks that {grid2paraview_cells.py} is run on and the name of the output directory
-given to {grid2paraview_cells.py}. If matching files are found, these will be used as
-input on each MPI rank. If no match is found, {grid2paraview_cells.py} will run
-{sort_sparta_grid_file.py} to produce sorted output files for each rank. The programs
-are decoupled in this way to allow faster {grid2paraview_cells.py} runs once a set
-of sorted files has been generated by {sort_sparta_grid_file.py}.
+The {grid2paraview_cells.py} program will look for
+{*_sort_bucket_rank_?.txt} files produced by the
+sort_sparta_grid_file.py program. The matching will depend on the
+number of MPI ranks that {grid2paraview_cells.py} is run on and the
+name of the output directory given to {grid2paraview_cells.py}. If
+matching files are found, these will be used as input on each MPI
+rank. If no match is found, {grid2paraview_cells.py} will run
+{sort_sparta_grid_file.py} to produce sorted output files for each
+rank. The programs are decoupled in this way to allow faster
+{grid2paraview_cells.py} runs once a set of sorted files has been
+generated by {sort_sparta_grid_file.py}.
 
 :line
 
-6.17 Details of particles in SPARTA :link(howto_17),h4
+6.17 Custom per-particle, per-grid, per-surf attributes :link(howto_17),h4
+
+Particles, grid cells, and surface elements can have custom attributes
+which store either single or multiple values per particle, per grid
+cell, or per surface element.  If a single value is stored, the
+attribute is referred to as a custom per-particle, per-grid, or
+per-surf vector.  If multiple values are stored, the attribute is
+referred to as a custom per-particle, per-grid, or per-surf array (an
+array can have a single column and thus a single value per entity).
+Each custom attribute has a name, which allows them to be specified in
+input scripts as arguments to various commands.  The values each
+attricute stores can be either integer or floating point numbers.
+
+Here are lists of current commands (as of August 2023) which use custom
+attributes in various ways:
+
+[Per-particle custom attributes:]
+
+"compute reduce"_compute_reduce.html - reduce a per-particle attribute to a scalar value
+"custom"_custom.html - set the values of a per-particle attribute and optionally create it
+"dump particle"_dump.html - output per-particle attributes to a dump file
+"fix ambipolar"_fix_ambipolar.html - use a per-particle vector and array for ambipolar quantities
+"variable"_variable.html - use a per-particle attribute in a particle-style variable formula :ul
+
+[Per-grid custom attributes:]
+
+"compute reduce"_compute_reduce.html - reduce a per-grid attribute to a scalar value
+"custom"_custom.html - set the values of a per-grid attribute and optionally create it
+"dump grid"_dump.html - output per-grid attributes to a dump file
+"fix ave/grid"_fix_ave_grid.html - time-average a per-grid attribute
+"read_grid"_read_grid,html - define and initialize per-grid attributes
+surf_react implicit - use per-grid vectors and an array to store chemical state (not yet released in public SPARTA)
+"variable"_variable.html - use a per-grid attribute in a grid-style variable formula
+"write_grid"_write_grid.html - write per-grid attributes to a grid data file :ul
+
+[Per-surf custom attributes:]
+
+"compute reduce"_compute_reduce.html - reduce a per-surf attribute to a scalar value
+"custom"_custom.html - set the values of a per-surf attribute and optionally create it
+"dump surf"_dump.html - output per-surf attributes to a dump file
+"fix ave/surf"_fix_ave_surf.html - time-average a per-surf attribute
+"fix surf/temp"_fix_surf_temp.html - use a per-surf vector for temperature
+"read_surf"_read_surf.html - define and initialize per-surf attributes
+"surf_collide"_surf_collide.html - use a per-surf attribute as temperature for particle/surf collisions
+"surf_react adsorb"_surf_react_adsorb.html - use per-surf vectors and an array to store chemical state
+"variable"_variable.html - use a per-surf attribute in a surf-style variable formula
+"write_surf"_write_surf.html - write per-surf attributes to a surf data file :ul
+
+Per-surf custom attributes can be defined for explicit or
+explicit/distributed surface elements, as set by the "global
+surfs"_global.html comand.  But they cannot be used for implicit
+surface elements.  Conceptually, implicit surfaces are defined on a
+per-grid cell basis, so per-grid custom attributes can be used instead
+for attributes of those implicit surfaces.
+
+Note that in some cases the name for a custom attribute is specified
+by the user, e.g. for the "read_grid"_read_grid.html or
+"read_surf"_read_surf.html commands.  In other cases, a command
+defines the name for the attributes and documents the name(s) it uses,
+e.g. for the "fix ambipolar"_fix_ambipolar.html or "surf_react
+adsorb"_surf_react_adsorb.html commands.
+
+Also note that custom attributes can be static or dynamic quantities.
+For example, the "read_surf"_read_surf.html command can be used to
+define a {static} temperature for each surface element it reads,
+stored as a custom per-surf vector.  By contrast, the "fix
+surf/temp"_fix_surf_temp.html command can be used to define a
+{dynamic} temperature for each surface element which is calculated
+once every N steps from the energy flux which colliding particles
+impart to each surface element, also stored in a custom per-surf
+vector.
+
+In both cases, the custom per-surf vector can be passed to the
+"surf_collide diffuse"_surf_collide.html command to each timestep when
+particle/surface element collisions take place.
+
+Another use of dynamic custom attributes is by the "fix
+ambipolar"_fix_ambipolar.html and "surf_react adsorb"_surf_react.html
+commands.  The former stores the ambipolar state of each particle in
+per-particle attributes.  The latter stores the chemical state of each
+surface element in per-surf attributes.  These will vary over the
+course of a simulation, and their status can be monitored with the
+various output commands listed above.
+
+:line
+
+6.18 Variable timestep simulations :link(howto_18),h4
+
+As an alternative to utilization of a user-provided constant timestep,
+the variable timestep option enables SPARTA to compute global
+timesteps based on the current state of the physical processes being
+modeled. The timestep is global in the sense that all cells advance
+their particles in time using the same timestep value.  The timestep
+is adaptive in the sense that the global timestep can be recalculated
+periodically throughout the simulation to account for flow state
+changes.  Examples of situations where a variable timestep would be
+desired are problems with highly varying density or velocity
+throughout the domain and transient problems where the optimal
+timestep changes throughout the simulation.
+
+The global, variable timestep is computed at a user-specified
+frequency using cell-based timesteps that are calculated using cell
+mean collision and particle transit times.  These cell-based timesteps
+are only used to compute the global timestep and are not used to
+advance the solution locally. The benefit of the global timestep
+calculation is that it will automatically reduce the timestep if the
+intial value is too large, leading to higher accuracy, and it will
+automatically increase the timestep if the initial value is too small,
+speeding up the simulation. The overhead of using the variable timestep
+option is the computational time involved in computing the cell-based
+time quantities and performing parallel reductions over the grid to
+construct the global minimum and average cell timesteps needed for the
+global timestep calculation. For scenarios where ensembles of similar
+problems are being run, one strategy to mitigate this cost is to
+determine an optimal timestep using the variable timestep option for
+the first run and then to utilize this timestep as a user-specified
+value for the subsequent runs.
+
+The "compute dt/grid"_compute_dt_grid.html command is used to
+calculate the cell-based timesteps, and the "fix
+dt/reset"_fix_dt_reset.html command uses this data to calculate the
+global timestep.  An internal time variable has been added to SPARTA
+to track elapsed simulation time, and this time variable as well as
+the current timestep can be output using the {time} and {dt} keywords
+in the "stats_style"_stats_style.html command. These {time} and {dt}
+values are also included in the "read_restart"_read_restart.html and
+"write restart"_write_restart.html commands.
+
+:line
+
+6.19 Details of particles in SPARTA :link(howto_19),h4
 
 Individual simulation particles in SPARTA are conceptually a
 collection of physical gas particles of the same molecular species.
@@ -1689,3 +1825,4 @@ This is the value output to a "dump particle"_dump.html file if the
 is determined by the "species"_species.html commands used in the input
 script. The first species name used is type=1, the next is type=2,
 etc.
+

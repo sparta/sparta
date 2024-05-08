@@ -423,13 +423,10 @@ cellint Grid::id_ichild(cellint childID, cellint parentID, int plevel)
 int Grid::id_level(cellint id)
 {
   int newbits;
-  cellint mask,ichild;
 
   int level = 0;
   while (level < maxlevel) {
     newbits = plevels[level].newbits;
-    mask = (1L << newbits) - 1;
-    ichild = id & mask;
     id = id >> newbits;
     if (!id) break;
     level++;
@@ -544,7 +541,7 @@ void Grid::id_num2str(cellint id, char *str)
     newbits = plevels[level].newbits;
     mask = (1L << newbits) - 1;
     ichild = id & mask;
-    sprintf(&str[offset],"%d",ichild);
+    sprintf(&str[offset],CELLINT_FORMAT,ichild);
     offset = strlen(str);
     id = id >> newbits;
     if (!id) return;

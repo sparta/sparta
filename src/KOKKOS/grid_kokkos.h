@@ -23,6 +23,12 @@ namespace SPARTA_NS {
 
 class GridKokkos : public Grid {
  public:
+  typedef ArrayTypes<DeviceType> AT;
+
+  typedef Kokkos::UnorderedMap<cellint,int> hash_type;
+  typedef hash_type::size_type size_type;    // uint32_t
+  typedef hash_type::key_type key_type;      // cellint
+  typedef hash_type::value_type value_type;  // int
 
   // make into a view
   //ChildCell *cells;           // list of owned and ghost child cells
@@ -35,6 +41,14 @@ class GridKokkos : public Grid {
   void wrap_kokkos_graphs();
   void sync(ExecutionSpace, unsigned int);
   void modify(ExecutionSpace, unsigned int);
+
+  int add_custom(char *, int, int) override;
+  void allocate_custom(int) override;
+  void reallocate_custom(int, int) override;
+  void remove_custom(int) override;
+  void copy_custom(int,int) override;
+  int pack_custom(int, char *, int) override;
+  int unpack_custom(char *, int) override;
 
 // operations with grid cell IDs
   void update_hash();
@@ -87,10 +101,6 @@ class GridKokkos : public Grid {
   int id_find_child(cellint parentID, int plevel,
                     double *oplo, double *ophi, double *x) const
   {
-    typedef hash_type::size_type size_type;    // uint32_t
-    typedef hash_type::key_type key_type;      // cellint
-    typedef hash_type::value_type value_type;  // int
-
     int ix,iy,iz,nx,ny,nz;
     double plo[3],phi[3],clo[3],chi[3];
     cellint childID,ichild;
@@ -161,17 +171,26 @@ class GridKokkos : public Grid {
   DAT::t_int_1d d_cellcount;
   DAT::t_int_2d d_plist;
 
+  // hash for all cell IDs (owned,ghost,parent).  The _d postfix refers to the
+  // fact that this hash lives on "device"
+  hash_type hash_kk;
+
+  DAT::tdual_int_1d k_ewhich,k_eicol,k_edcol;
+
+  tdual_struct_tdual_int_1d_1d k_eivec;
+  tdual_struct_tdual_float_1d_1d k_edvec;
+  tdual_struct_tdual_int_2d_1d k_eiarray;
+  tdual_struct_tdual_float_2d_1d k_edarray;
+
+  tdual_struct_tdual_int_1d_1d k_eivec_local;
+  tdual_struct_tdual_float_1d_1d k_edvec_local;
+  tdual_struct_tdual_int_2d_1d k_eiarray_local;
+  tdual_struct_tdual_float_2d_1d k_edarray_local;
+
  private:
   void grow_cells(int, int);
   void grow_sinfo(int);
   void grow_pcells();
-
-  // hash for all cell IDs (owned,ghost,parent).  The _d postfix refers to the
-  // fact that this hash lives on "device"
-
-  typedef Kokkos::UnorderedMap<cellint,int> hash_type;
-  hash_type hash_kk;
-
 };
 
 }

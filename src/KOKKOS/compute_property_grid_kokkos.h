@@ -51,7 +51,6 @@ namespace SPARTA_NS {
  private:
   t_cell_1d d_cells;
   t_cinfo_1d d_cinfo;
-  DAT::tdual_int_1d k_index;
   DAT::t_int_1d d_index;
 };
 

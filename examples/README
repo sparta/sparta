@@ -26,6 +26,7 @@ bfield = external magnetic field affecting particle motion
 chem = chemistry in a 3d box
 circle = 2d flow around a circle
 collide = collisional motion in a 3d box
+custom = custom attributes for particles, grid cells, surface elements
 emit = 2d particle emission from surfaces and box face
 fft = 2d and 3d FFTs of energy spectrum of a flow
 flowfile = particle influx defined by a file of mesh points
@@ -38,6 +39,7 @@ surf_collide = variety of surface collision models
 surf_react_adsorb = surface reaction adsorb models, both GS and PS variants
 tally_computes = tally gas or surface collision and reaction info
 thermostat = use of fix temp/rescale as a thermostat
+variable_timestep = use of a variable global timestep
 vibrate = vibrational energy modes in collisions
 
 Here is an example of how one of the sample problems can be run and

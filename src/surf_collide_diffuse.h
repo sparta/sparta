@@ -29,29 +29,21 @@ namespace SPARTA_NS {
 class SurfCollideDiffuse : public SurfCollide {
  public:
   SurfCollideDiffuse(class SPARTA *, int, char **);
-  SurfCollideDiffuse(class SPARTA *sparta) : SurfCollide(sparta) {}
-  ~SurfCollideDiffuse();
+  SurfCollideDiffuse(class SPARTA *sparta) : SurfCollide(sparta) {} // needed Kokkos
+  virtual ~SurfCollideDiffuse();
   virtual void init();
   Particle::OnePart *collide(Particle::OnePart *&, double &,
                              int, double *, int, int &);
   void wrapper(Particle::OnePart *, double *, int *, double*);
   void flags_and_coeffs(int *, double *);
 
-  void dynamic();
-
  protected:
-  double twall;              // surface temperature
   double acc;                // surface accomodation coeff
   double vx,vy,vz;           // translational velocity of surface
   double wx,wy,wz;           // angular velocity of surface
   double px,py,pz;           // point to rotate surface around
   int tflag,rflag;           // flags for translation and rotation
   int trflag;                // 1 if either tflag or rflag is set
-
-  int tmode;                 // Twall is NUMERIC,VARIABLE,CUSTOM
-  char *tstr;                // temperature variable name (NULL if constant)
-  int tvar;                  // index of equal-style variable
-  double *tvector;           // custom per-surf temperature vector
 
   Surf::Line *lines;
   Surf::Tri *tris;

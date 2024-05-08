@@ -180,7 +180,15 @@ int Comm::migrate_particles(int nmigrate, int *plist)
 
   // compress my list of particles
 
-  particle->compress_migrate(nmigrate,plist);
+  // for optimized particle moves, call compress_reactions rather than
+  //  compress_migrate since mlist is not guaranteed to be in ascending
+  //  order
+
+  if (update->optmove_flag)
+    particle->compress_reactions(nmigrate,plist);
+  else
+    particle->compress_migrate(nmigrate,plist);
+
   int ncompress = particle->nlocal;
 
   // create or augment irregular communication plan
@@ -697,12 +705,12 @@ void Comm::ring(int n, int nper, void *inbuf, int messtag,
      callback = caller function to invoke in rendezvous decomposition
                 takes input datums, returns output datums
      outorder = same as inorder, but for datums returned by callback()
+     outsize = byte size of each output datum
      ptr = pointer to caller class, passed to callback()
      statflag = 1 for stats output, else 0
    outputs:
      nout = # of output datums (function return)
      outbuf = vector of output datums
-     outsize = byte size of each output datum
    callback inputs:
      nrvous = # of rvous decomp datums in inbuf_rvous
      inbuf_rvous = vector of rvous decomp input datums

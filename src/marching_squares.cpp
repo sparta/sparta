@@ -15,6 +15,7 @@
 #include "marching_squares.h"
 #include "grid.h"
 #include "surf.h"
+#include "error.h"
 
 using namespace SPARTA_NS;
 
@@ -49,11 +50,12 @@ MarchingSquares::MarchingSquares(SPARTA *sparta, int ggroup_caller,
 
 void MarchingSquares::invoke(double **cvalues, int *svalues)
 {
-  int i,ipt,isurf,nsurf,which,splitflag;
+  int i,ipt,isurf,nsurf,which;
   double v00,v01,v10,v11;
   int bit0,bit1,bit2,bit3;
   double ave;
   double *lo,*hi;
+  surfint surfID;
   surfint *ptr;
 
   double pt[4][3];
@@ -64,6 +66,10 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
   MyPage<surfint> *csurfs = grid->csurfs;
   int nglocal = grid->nlocal;
   int groupbit = grid->bitmask[ggroup];
+
+  bigint maxsurfID = 0;
+  if (sizeof(surfint) == 4) maxsurfID = MAXSMALLINT;
+  if (sizeof(surfint) == 8) maxsurfID = MAXBIGINT;
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
@@ -87,7 +93,6 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
     bit3 = v10 <= thresh ? 0 : 1;
 
     which = (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
-    splitflag = 0;
 
     switch (which) {
 
@@ -131,7 +136,6 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
       nsurf = 2;
       ave = 0.25 * (v00 + v01 + v10 + v11);
       if (ave > thresh) {
-        splitflag = 1;
         pt[0][0] = lo[0];
         pt[0][1] = interpolate(v00,v10,lo[1],hi[1]);
         pt[1][0] = interpolate(v10,v11,lo[0],hi[0]);
@@ -188,7 +192,6 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
       nsurf = 2;
       ave = 0.25 * (v00 + v01 + v10 + v11);
       if (ave > thresh) {
-        splitflag = 1;
         pt[0][0] = interpolate(v00,v01,lo[0],hi[0]);
         pt[0][1] = lo[1];
         pt[1][0] = lo[0];
@@ -249,14 +252,20 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
     // populate Grid and Surf data structs
     // points will be duplicated, not unique
     // surf ID = cell ID for all surfs in cell
+    // check if uint cell ID overflows int surf ID
+
+    if (nsurf) {
+      if (cells[icell].id > maxsurfID)
+        error->one(FLERR,"Grid cell ID overflows implicit surf ID");
+      surfID = cells[icell].id;
+    }
 
     ptr = csurfs->get(nsurf);
 
     ipt = 0;
     for (i = 0; i < nsurf; i++) {
-      if (svalues) surf->add_line(cells[icell].id,svalues[icell],
-                                  pt[ipt],pt[ipt+1]);
-      else surf->add_line(cells[icell].id,1,pt[ipt],pt[ipt+1]);
+      if (svalues) surf->add_line(surfID,svalues[icell],pt[ipt],pt[ipt+1]);
+      else surf->add_line(surfID,1,pt[ipt],pt[ipt+1]);
       ipt += 2;
       isurf = surf->nlocal - 1;
       ptr[i] = isurf;

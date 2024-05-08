@@ -285,7 +285,7 @@ int ComputeSonineGrid::query_tally_grid(int index, double **&array, int *&cols)
 ------------------------------------------------------------------------- */
 
 void ComputeSonineGrid::
-post_process_grid(int index, int nsample,
+post_process_grid(int index, int /*nsample*/,
                   double **etally, int *emap, double *vec, int nstride)
 {
   index--;
@@ -295,7 +295,6 @@ post_process_grid(int index, int nsample,
   int k = 0;
 
   if (!etally) {
-    nsample = 1;
     etally = tally;
     emap = map[index];
     vec = vector_grid;

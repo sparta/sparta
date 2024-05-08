@@ -32,6 +32,8 @@ using namespace SPARTA_NS;
 // customize by adding keyword
 
 enum{DOUBLE,INT,BIGINT,UINT,BIGUINT,STRING};    // same as Dump
+enum{ID,PROC,XLO,YLO,ZLO,XHI,YHI,ZHI,XC,YC,ZC,VOL,
+     CUSTOM,COMPUTE,FIX,VARIABLE};
 
 #define INVOKED_PER_GRID 16
 #define CHUNK 8
@@ -73,7 +75,11 @@ DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
   field2index = new int[nfield];
   argindex = new int[nfield];
 
-  // computes, fixes, variables which the dump accesses
+  // custom props, computes, fixes, variables which the dump accesses
+
+  ncustom = 0;
+  id_custom = NULL;
+  custom = NULL;
 
   ncompute = 0;
   id_compute = NULL;
@@ -161,6 +167,10 @@ DumpGrid::~DumpGrid()
   delete [] field2index;
   delete [] argindex;
 
+  for (int i = 0; i < ncustom; i++) delete [] id_custom[i];
+  memory->sfree(id_custom);
+  delete [] custom;
+
   for (int i = 0; i < ncompute; i++) delete [] id_compute[i];
   memory->sfree(id_compute);
   delete [] compute;
@@ -195,6 +205,16 @@ void DumpGrid::init_style()
   if (binary) write_choice = &DumpGrid::write_binary;
   else if (buffer_flag == 1) write_choice = &DumpGrid::write_string;
   else write_choice = &DumpGrid::write_text;
+
+  // check that each grid custom attribute still exists
+
+  int icustom;
+  for (int i = 0; i < ncustom; i++) {
+    icustom = grid->find_custom(id_custom[i]);
+    if (icustom < 0)
+      error->all(FLERR,"Could not find dump grid custom attribute");
+    custom[i] = icustom;
+  }
 
   // find current ptr for each compute,fix,variable
   // check that fix frequency is acceptable
@@ -430,6 +450,44 @@ int DumpGrid::parse_fields(int narg, char **arg)
       pack_choice[i] = &DumpGrid::pack_vol;
       vtype[i] = DOUBLE;
 
+    // custom grid vector or array
+    // if no trailing [], then arg is set to 0, else arg is int between []
+
+    } else if (strncmp(arg[iarg],"g_",2) == 0) {
+      pack_choice[i] = &DumpGrid::pack_custom;
+
+      int n = strlen(arg[iarg]);
+      char *suffix = new char[n];
+      strcpy(suffix,&arg[iarg][2]);
+
+      char *ptr = strchr(suffix,'[');
+      if (ptr) {
+        if (suffix[strlen(suffix)-1] != ']')
+          error->all(FLERR,"Invalid attribute in dump grid command");
+        argindex[i] = atoi(ptr+1);
+        *ptr = '\0';
+      } else argindex[i] = 0;
+
+      n = grid->find_custom(suffix);
+      if (n < 0)
+        error->all(FLERR,"Could not find dump grid custom attribute");
+
+      vtype[i] = grid->etype[n];
+      if (argindex[i] == 0 && grid->esize[n] > 0)
+        error->all(FLERR,
+                   "Dump grid custom attribute does not store "
+                   "per-grid vector");
+      if (argindex[i] > 0 && grid->esize[n] == 0)
+        error->all(FLERR,
+                   "Dump grid custom attribute does not store "
+                   "per-grid array");
+      if (argindex[i] > 0 && argindex[i] > grid->esize[n])
+        error->all(FLERR,
+                   "Dump grid custom attribute is accessed out-of-range");
+
+      field2index[i] = add_custom(suffix);
+      delete [] suffix;
+
     // compute value = c_ID
     // if no trailing [], then index = 0, else index = int between []
 
@@ -523,6 +581,31 @@ int DumpGrid::parse_fields(int narg, char **arg)
   }
 
   return narg;
+}
+
+/* ----------------------------------------------------------------------
+   add Custom ID to list of grid custom attribute IDs used by dump
+   return index of where this custom attribute is in list
+   if already in list, do not add, just return index, else add to list
+------------------------------------------------------------------------- */
+
+int DumpGrid::add_custom(char *id)
+{
+  int icustom;
+  for (icustom = 0; icustom < ncustom; icustom++)
+    if (strcmp(id,id_custom[icustom]) == 0) break;
+  if (icustom < ncustom) return icustom;
+
+  id_custom = (char **)
+    memory->srealloc(id_custom,(ncustom+1)*sizeof(char *),"dump:id_custom");
+  delete [] custom;
+  custom = new int[ncustom+1];
+
+  int n = strlen(id) + 1;
+  id_custom[ncustom] = new char[n];
+  strcpy(id_custom[ncustom],id);
+  ncustom++;
+  return ncustom-1;
 }
 
 /* ----------------------------------------------------------------------
@@ -705,6 +788,47 @@ void DumpGrid::pack_variable(int n)
   for (int i = 0; i < ncpart; i++) {
     buf[n] = vector[cpart[i]];
     n += size_one;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   extraction of grid custom attribute
+------------------------------------------------------------------------- */
+
+void DumpGrid::pack_custom(int n)
+{
+  int index = custom[field2index[n]];
+
+  if (grid->etype[index] == INT) {
+    if (grid->esize[index] == 0) {
+      int *vector = grid->eivec[grid->ewhich[index]];
+      for (int i = 0; i < ncpart; i++) {
+        buf[n] = vector[cpart[i]];
+        n += size_one;
+      }
+    } else {
+      int icol = argindex[n]-1;
+      int **array = grid->eiarray[grid->ewhich[index]];
+      for (int i = 0; i < ncpart; i++) {
+        buf[n] = array[cpart[i]][icol];
+        n += size_one;
+      }
+    }
+  } else {
+    if (grid->esize[index] == 0) {
+      double *vector = grid->edvec[grid->ewhich[index]];
+      for (int i = 0; i < ncpart; i++) {
+        buf[n] = vector[cpart[i]];
+        n += size_one;
+      }
+    } else {
+      int icol = argindex[n]-1;
+      double **array = grid->edarray[grid->ewhich[index]];
+      for (int i = 0; i < ncpart; i++) {
+        buf[n] = array[cpart[i]][icol];
+        n += size_one;
+      }
+    }
   }
 }
 

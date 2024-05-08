@@ -1260,7 +1260,7 @@ void DumpImage::create_image()
 
     Compute *cx,*cy,*cz;
     Fix *fx,*fy,*fz;
-    int ppgflagx,ppgflagy,ppgflagz;
+    int ppgflagx;
 
     if (gridxflag && gxcolor == ATTRIBUTE) {
       if (gridxwhich == COMPUTE) {
@@ -1287,10 +1287,8 @@ void DumpImage::create_image()
           cy->compute_per_grid();
           cy->invoked_flag |= INVOKED_PER_GRID;
         }
-        ppgflagy = 0;
         if (cy->post_process_grid_flag) {
           cy->post_process_grid(gridycol,1,NULL,NULL,NULL,1);
-          ppgflagy = 1;
         } else if (cy->post_process_isurf_grid_flag)
           cy->post_process_isurf_grid();
       } else if (gridywhich == FIX) {
@@ -1305,10 +1303,8 @@ void DumpImage::create_image()
           cz->compute_per_grid();
           cz->invoked_flag |= INVOKED_PER_GRID;
         }
-        ppgflagz = 0;
         if (cz->post_process_grid_flag) {
           cz->post_process_grid(gridzcol,1,NULL,NULL,NULL,1);
-          ppgflagz = 1;
         } else if (cz->post_process_isurf_grid_flag)
           cz->post_process_isurf_grid();
       } else if (gridzwhich == FIX) {

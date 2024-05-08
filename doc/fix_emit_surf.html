@@ -28,6 +28,7 @@
 <LI>keyword = <I>n</I> or <I>normal</I> or <I>nevery</I> or <I>perspecies</I> or <I>region</I> or <I>subsonic</I> 
 
 <PRE>  <I>n</I> value = Np = number of particles to create
+                   Np can be a variable (see below)
   <I>normal</I> value = yes or no = emit normal to surface elements or with streaming velocity
   <I>nevery</I> value = Nstep = add particles every this many timesteps
   <I>perspecies</I> value = <I>yes</I> or <I>no</I>
@@ -71,9 +72,11 @@ given by equation 4.22 of <A HREF = "#Bird94">(Bird94)</A>.  The number of parti
 within a grid cell is based on this flux and additional global, flow,
 and surface element properties:
 </P>
-<UL><LI>global property: <I>fnum</I> ratio as specified by the <A HREF = "global.html"">global</A> command
-<LI>flow properties: number density, streaming velocity, and thermal temperature
-<LI>surface element properties: portion of surface element area that overlaps with the grid cell and its orientation relative to the streaming velocity 
+<UL><LI>global property: <I>fnum</I> ratio as specified by the
+<LI><A HREF = "global.html"">global</A> command flow properties: number density,
+<LI>streaming velocity, and thermal temperature surface element
+<LI>properties: portion of surface element area that overlaps with the
+<LI>grid cell and its orientation relative to the streaming velocity 
 </UL>
 <P>The flow properties are defined for the specified mixture via the
 <A HREF = "mixture.html">mixture</A> command.
@@ -116,11 +119,28 @@ of particles emitting from each surface element.
 <P>The <I>n</I> keyword can alter how many particles are added, which can be
 useful for debugging purposes.  If <I>Np</I> is set to 0, then the number
 of added particles is a function of <I>fnum</I>, <I>nrho</I>, and other mixture
-settings, as described above.  If <I>Np</I> is set to a value > 0, then the
-<I>fnum</I> and <I>nrho</I> settings are ignored, and exactly <I>Np</I> particles are
-added on each insertion timestep.  This is done by dividing <I>Np</I> by
-the total number of grid cell/surface element pairs and adding an
-equal number of particles per pair.
+settings, as described above.
+</P>
+<P>If <I>Np</I> is set to a value > 0, then the <I>fnum</I> and <I>nrho</I> settings are
+ignored, and roughly <I>Np</I> particles are added on each insertion
+timestep.  For each grid cell/surface element pair, its target number
+of emitted particles is set to its fraction of the total emission area
+(for all grid cell/surface element pairs), multiplied by <I>Np</I>.  If
+that results in a fractional value, then an extra particle is emitted
+depending on the value of a random number, as explained above.
+</P>
+<P>The <I>Np</I> value can be also be specified as an equal-style
+<A HREF = "variable.html">variable</A>.  If the value is a variable, it should be
+specified as v_name, where name is the variable name.  In this case,
+the variable will be evaluated on each emission timestep, and its
+value used as <I>Np</I> on that step to determine the target number of
+emitted particles for each grid cell/surface element pair, the same as
+described in the preceeding paragraph.
+</P>
+<P>Equal-style variables can specify formulas with various mathematical
+functions, and include <A HREF = "status_style.html">stats_style</A> command
+keywords for the simulation box parameters and timestep and elapsed
+time.  Thus it is easy to specify a time-dependent value of <I>Np</I>.
 </P>
 <P>The <I>normal</I> keyword can be used to alter how velocities are set for
 added particles.  If <I>normal</I> is set to <I>no</I>, then a particle's
@@ -135,7 +155,7 @@ points in the direction of the outward normal of the surface element,
 and its magnitude is set to the magnitude of the mixture's streaming
 velocity.  A velocity is then assigned to the particle in the same
 manner as before.  It is assigned the outward streaming velocity
-superposed with a thermal velocity sampled fromt he temperature of the
+superposed with a thermal velocity sampled from the temperature of the
 mixture.  The effect is that particles effectively stream outward from
 each emitting surface element.
 </P>
@@ -240,8 +260,8 @@ a run is performed.
 </P>
 <P><B>Restrictions:</B>
 </P>
-<P>A <I>n</I> setting of <I>Np</I> > 0 can only be used with a <I>perspecies</I> setting
-of <I>no</I>.
+<P>A <I>n</I> setting of <I>Np</I> > 0 or <I>Np</I> as a variable can only be used with
+a <I>perspecies</I> setting of <I>no</I>.
 </P>
 <P>If <I>normal</I> is set to <I>no</I>, which is the default, then unlike the <A HREF = "fix_emit/face.html">fix
 emit/face</A> command, no warning is issued if a

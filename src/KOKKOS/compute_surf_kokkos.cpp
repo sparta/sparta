@@ -28,17 +28,24 @@
 
 using namespace SPARTA_NS;
 
+#define VAL_1(X) X
+#define VAL_2(X) VAL_1(X), VAL_1(X)
+
 /* ---------------------------------------------------------------------- */
 
 ComputeSurfKokkos::ComputeSurfKokkos(SPARTA *sparta, int narg, char **arg) :
-  ComputeSurf(sparta, narg, arg)
+  ComputeSurf(sparta, narg, arg),
+  sr_kk_global_copy{VAL_2(KKCopy<SurfReactGlobalKokkos>(sparta))},
+  sr_kk_prob_copy{VAL_2(KKCopy<SurfReactProbKokkos>(sparta))}
 {
   kokkos_flag = 1;
   d_which = DAT::t_int_1d("surf:which",nvalue);
 }
 
 ComputeSurfKokkos::ComputeSurfKokkos(SPARTA *sparta) :
-  ComputeSurf(sparta)
+  ComputeSurf(sparta),
+  sr_kk_global_copy{VAL_2(KKCopy<SurfReactGlobalKokkos>(sparta))},
+  sr_kk_prob_copy{VAL_2(KKCopy<SurfReactProbKokkos>(sparta))}
 {
   hash = NULL;
   which = NULL;
@@ -56,10 +63,22 @@ ComputeSurfKokkos::ComputeSurfKokkos(SPARTA *sparta) :
 
 ComputeSurfKokkos::~ComputeSurfKokkos()
 {
+  if (uncopy) {
+    for (int i=0; i<KOKKOS_MAX_SURF_REACT_PER_TYPE; i++) {
+      sr_kk_global_copy[i].uncopy();
+      sr_kk_prob_copy[i].uncopy();
+    }
+  }
+
   if (copy || copymode) return;
 
   memoryKK->destroy_kokkos(k_tally2surf,tally2surf);
   memoryKK->destroy_kokkos(k_array_surf_tally,array_surf_tally);
+
+  for (int i = 0; i < KOKKOS_MAX_SURF_REACT_PER_TYPE; i++) {
+    sr_kk_global_copy[i].uncopy();
+    sr_kk_prob_copy[i].uncopy();
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -98,6 +117,7 @@ void ComputeSurfKokkos::init_normflux()
   memoryKK->grow_kokkos(k_tally2surf,tally2surf,nsurf,"surf:tally2surf");
   d_tally2surf = k_tally2surf.d_view;
   d_surf2tally = DAT::t_int_1d("surf:surf2tally",nsurf);
+  Kokkos::deep_copy(d_surf2tally,-1);
 
   memoryKK->grow_kokkos(k_array_surf_tally,array_surf_tally,nsurf,ntotal,"surf:array_surf_tally");
   d_array_surf_tally = k_array_surf_tally.d_view;
@@ -137,6 +157,36 @@ void ComputeSurfKokkos::pre_surf_tally()
     dup_array_surf_tally = Kokkos::Experimental::create_scatter_view<typename Kokkos::Experimental::ScatterSum, typename Kokkos::Experimental::ScatterDuplicated>(d_array_surf_tally);
   else
     ndup_array_surf_tally = Kokkos::Experimental::create_scatter_view<typename Kokkos::Experimental::ScatterSum, typename Kokkos::Experimental::ScatterNonDuplicated>(d_array_surf_tally);
+
+  if (surf->nsr > KOKKOS_MAX_TOT_SURF_REACT)
+    error->all(FLERR,"Kokkos currently supports two instances of each surface reaction method");
+
+  if (surf->nsr > 0) {
+    int nglob,nprob;
+    nglob = nprob = 0;
+    for (int n = 0; n < surf->nsr; n++) {
+      if (!surf->sr[n]->kokkosable)
+        error->all(FLERR,"Must use Kokkos-enabled surface reaction method with Kokkos");
+      if (strcmp(surf->sr[n]->style,"global") == 0) {
+        sr_kk_global_copy[nglob].copy((SurfReactGlobalKokkos*)(surf->sr[n]));
+        sr_kk_global_copy[nglob].obj.pre_react();
+        sr_type_list[n] = 0;
+        sr_map[n] = nprob;
+        nglob++;
+      } else if (strcmp(surf->sr[n]->style,"prob") == 0) {
+        sr_kk_prob_copy[nprob].copy((SurfReactProbKokkos*)(surf->sr[n]));
+        sr_kk_prob_copy[nprob].obj.pre_react();
+        sr_type_list[n] = 1;
+        sr_map[n] = nprob;
+        nprob++;
+      } else {
+        error->all(FLERR,"Unknown Kokkos surface reaction method");
+      }
+    }
+
+    if (nglob > KOKKOS_MAX_SURF_REACT_PER_TYPE || nprob > KOKKOS_MAX_SURF_REACT_PER_TYPE)
+      error->all(FLERR,"Kokkos currently supports two instances of each surface reaction method");
+  }
 }
 
 /* ---------------------------------------------------------------------- */

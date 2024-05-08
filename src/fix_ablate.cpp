@@ -308,7 +308,6 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
-  Grid::SplitInfo *sinfo = grid->sinfo;
   nglocal = grid->nlocal;
 
   grow_percell(0);
@@ -434,7 +433,7 @@ void FixAblate::create_surfs(int outflag)
   grid->unset_neighbors();
   grid->remove_ghosts();
   grid->clear_surf();
-  surf->clear();
+  surf->clear_implicit();
 
   // perform Marching Squares/Cubes to create new implicit surfs
   // cvalues = corner point values
@@ -593,7 +592,6 @@ void FixAblate::create_surfs(int outflag)
   // similar code as in fix grid/check
 
   Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
   Grid::SplitInfo *sinfo = grid->sinfo;
   Particle::OnePart *particles = particle->particles;
   int pnlocal = particle->nlocal;
@@ -608,18 +606,18 @@ void FixAblate::create_surfs(int outflag)
     particles[i].flag = PKEEP;
     icell = particles[i].icell;
     if (cells[icell].nsurf == 0) continue;
-    
+
     x = particles[i].x;
 
     // check that particle is outside surfs
     // if no xcell found, cannot check
-    
+
     pflag = grid->point_outside_surfs(icell,xcell);
     if (!pflag) continue;
     pflag = grid->outside_surfs(icell,x,xcell);
-    
+
     // check that particle is in correct split subcell
-    
+
     if (pflag && cells[icell].nsplit <= 0) {
       splitcell = sinfo[cells[icell].isplit].icell;
       if (dim == 2) subcell = update->split2d(splitcell,x);
@@ -628,7 +626,7 @@ void FixAblate::create_surfs(int outflag)
     }
 
     // discard the particle if either test failed
-    
+
     if (!pflag) {
       particles[i].flag = PDISCARD;
       // DEBUG - print message about MC flags for cell of deleted particle
@@ -726,7 +724,7 @@ void FixAblate::set_delta_random()
 /* ----------------------------------------------------------------------
    set per-cell delta vector from compute/fix/variable source
    celldelta = nevery * scale * source-value
-   // NOTE: how does this work for split cells? should only do parent split?
+   NOTE: how does this work for split cells? should only do parent split?
 ------------------------------------------------------------------------- */
 
 void FixAblate::set_delta()
@@ -1094,7 +1092,7 @@ void FixAblate::push_lohi()
 
 void FixAblate::comm_neigh_corners(int which)
 {
-  int i,j,m,n,ix,iy,iz,ixfirst,iyfirst,izfirst,jx,jy,jz;
+  int i,j,m,n,ix,iy,iz,jx,jy,jz;
   int icell,ifirst,jcell,proc,ilocal;
 
   Grid::ChildCell *cells = grid->cells;
@@ -1146,9 +1144,7 @@ void FixAblate::comm_neigh_corners(int which)
             if (j == nsend) {
               if (nsend == maxsend) grow_send();
               proclist[nsend] = proc;
-              // NOTE: change locallist to another name
-              // NOTE: what about cellint vs int
-              locallist[nsend++] = cells[icell].id;   // no longer an int
+              locallist[nsend++] = cells[icell].id;
             }
           }
         }
@@ -1183,7 +1179,7 @@ void FixAblate::comm_neigh_corners(int which)
 
     n = numsend[icell];
     for (i = 0; i < n; i++) {
-      sbuf[m++] = locallist[nsend];
+      sbuf[m++] = ubuf(locallist[nsend]).d;
       if (which == CDELTA) {
         for (j = 0; j < ncorner; j++)
           sbuf[m++] = cdelta[icell][j];
@@ -1219,7 +1215,7 @@ void FixAblate::comm_neigh_corners(int which)
 
   m = 0;
   for (i = 0; i < nrecv; i++) {
-    cellID = static_cast<cellint> (rbuf[m++]);   // NOTE: need ubuf logic
+    cellID = (cellint) ubuf(rbuf[m++]).u;
     ilocal = (*hash)[cellID];
     icell = ilocal - nglocal;
     for (j = 0; j < ncorner; j++)

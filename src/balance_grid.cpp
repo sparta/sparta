@@ -63,6 +63,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
   if (strcmp(arg[0],"none") == 0) {
     if (narg < 1) error->all(FLERR,"Illegal balance_grid command");
     bstyle = NONE;
+    iarg = 1;
 
   } else if (strcmp(arg[0],"stride") == 0) {
     if (narg < 2) error->all(FLERR,"Illegal balance_grid command");
@@ -74,7 +75,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
     else if (strcmp(arg[1],"zxy") == 0) order = ZXY;
     else if (strcmp(arg[1],"zyx") == 0) order = ZYX;
     else error->all(FLERR,"Illegal balance_grid command");
-    iarg = 1;
+    iarg = 2;
 
   } else if (strcmp(arg[0],"clump") == 0) {
     if (narg < 2) error->all(FLERR,"Illegal balance_grid command");
@@ -102,12 +103,12 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
   } else if (strcmp(arg[0],"random") == 0) {
     if (narg < 1) error->all(FLERR,"Illegal balance_grid command");
     bstyle = RANDOM;
-    iarg = 0;
+    iarg = 1;
 
   } else if (strcmp(arg[0],"proc") == 0) {
     if (narg < 1) error->all(FLERR,"Illegal balance_grid command");
     bstyle = PROC;
-    iarg = 0;
+    iarg = 1;
 
   } else if (strcmp(arg[0],"rcb") == 0) {
     if (narg < 2) error->all(FLERR,"Illegal balance_grid command");
@@ -405,6 +406,20 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
   if (ghost_previous) grid->reset_neighbors();
   else grid->find_neighbors();
   comm->reset_neighbors();
+
+  // if not before first run,
+  // notify all classes that store per-grid data that grid may have changed
+
+  if (update->first_update) grid->notify_changed();
+
+  // if explicit distributed surfs
+  // set redistribute timestep and clear custom status flags
+
+  if (surf->distributed && !surf->implicit) {
+    surf->localghost_changed_step = update->ntimestep;
+    for (int i = 0; i < surf->ncustom; i++)
+      surf->estatus[i] = 0;
+  }
 
   MPI_Barrier(world);
   double time5 = MPI_Wtime();

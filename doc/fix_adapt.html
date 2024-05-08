@@ -28,7 +28,7 @@
 fix 1 adapt 1000 all coarsen particle 10 50
 fix 1 adapt 500 subset refine coarsen particle 10 50
 fix 1 adapt 10000 all refine surf 0.15 iterate 1 dir 1 0 0 
-fix 10 adapt 1000 all refine coarsen value c_1<B>1</B> 5.0 10.0 iterate 2 
+fix 10 adapt 1000 all refine coarsen value c_1[1] 5.0 10.0 iterate 2 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -65,6 +65,15 @@ adaptation to a subset of current grid cells.  See the
 the fix adapt command.  Only a single iteration of the action1 and
 action2 parameters (described on the <A HREF = "adapt_grid.html">adapt_grid</A> doc
 page) can be performed each time grid adaptation is performed.
+</P>
+<P>Note that if you want the grid partitioning (and their particles) to
+be rebalanced across processors after grid adaptation, you can use the
+<A HREF = "fix_balance.html">fix_balance</A> command.  If you set the <I>Nfreq</I>
+setting for this command and the <A HREF = "fix_balance.html">fix_balance</A>
+command to the same value, then both operations will occur on the same
+timesteps.  However, the fix balance command needs to appear in the
+input script after the fix adapt command, if you want balancing to
+occur after adaptation (whether the Nfreq values are the same or not).
 </P>
 <HR>
 
@@ -106,11 +115,18 @@ effectively.
 </P>
 <HR>
 
-<P><B>Restrictions:</B> none
+<P><B>Restrictions:</B>
+</P>
+<P>Currently, if there are custom attributes defined for grid cells, grid
+adaptation does not set new values for new grid cells created when
+either refinement or coarsening takes place.  The new cells will have
+zero values for their attributes.  This is because there is no simple
+way to determine how new attribute values should be computed.  This
+may be changed in the future.
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "adapt_grid.html">adapt_grid</A>, <A HREF = "balance_grid.html">balance_grid</A>
+<P><A HREF = "adapt_grid.html">adapt_grid</A>, <A HREF = "fix_balance.html">fix balance</A>
 </P>
 <P><B>Default:</B> none
 </P>

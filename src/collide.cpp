@@ -414,7 +414,7 @@ void Collide::collisions()
 
 template < int NEARCP, int GASTALLY > void Collide::collisions_one()
 {
-  int i,j,k,m,n,ip,np;
+  int i,j,k,n,ip,np;
   int nattempt,reactflag;
   double attempt,volume;
   Particle::OnePart iorig,jorig;
@@ -566,7 +566,7 @@ template < int NEARCP, int GASTALLY > void Collide::collisions_one()
 
 template < int NEARCP, int GASTALLY > void Collide::collisions_group()
 {
-  int i,j,k,m,n,ii,jj,kk,ip,np,isp,ng;
+  int i,j,k,n,ii,jj,ip,np,isp,ng;
   int pindex,ipair,igroup,jgroup,newgroup,ngmax;
   int nattempt,reactflag;
   int *ni,*nj,*ilist,*jlist;
@@ -1001,7 +1001,6 @@ template < int GASTALLY > void Collide::collisions_one_ambipolar()
         memcpy(&jorig,jpart,sizeof(Particle::OnePart));
       }
 
-      ispecies = ipart->ispecies;
       jspecies = jpart->ispecies;
       setup_collision(ipart,jpart);
       reactflag = perform_collision(ipart,jpart,kpart);

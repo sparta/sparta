@@ -12,7 +12,6 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#include "math.h"
 #include "surf_collide_transparent_kokkos.h"
 #include "error.h"
 
@@ -23,6 +22,8 @@ using namespace SPARTA_NS;
 SurfCollideTransparentKokkos::SurfCollideTransparentKokkos(SPARTA *sparta, int narg, char **arg) :
   SurfCollideTransparent(sparta, narg, arg)
 {
+  kokkosable = 1;
+
   k_nsingle = DAT::tdual_int_scalar("SurfCollide:nsingle");
   d_nsingle = k_nsingle.d_view;
   h_nsingle = k_nsingle.h_view;
@@ -35,4 +36,27 @@ SurfCollideTransparentKokkos::SurfCollideTransparentKokkos(SPARTA *sparta) :
 {
   id = NULL;
   style = NULL;
+
+  t_owned = NULL;
+  t_localghost = NULL;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void SurfCollideTransparentKokkos::pre_collide()
+{
+  Kokkos::deep_copy(d_nsingle,0);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void SurfCollideTransparentKokkos::post_collide()
+{
+  Kokkos::deep_copy(h_nsingle,d_nsingle);
+
+  // can't modify the copy directly, use the original
+
+  int m = surf->find_collide(id);
+  auto sc = surf->sc[m];
+  sc->nsingle += h_nsingle();
 }

@@ -46,7 +46,11 @@ void ReactTCEQK::init()
   for (int i = 0; i < nlist; i++)
     if (rlist[i].active && rlist[i].type == RECOMBINATION)
       error->all(FLERR,
-                 "React qk does not currently support recombination reactions");
+                 "React tce/qk does not currently support recombination reactions");
+
+  if (computeChemRates)
+    error->all(FLERR,
+               "React tce/qk does not currently support the 'react_modify compute_chem_rates' option");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -129,7 +133,7 @@ int ReactTCEQK::attempt_tce(Particle::OnePart *ip, Particle::OnePart *jp,
   if (pre_ave_rotdof > 0.1) ecc += pre_erot*r->coeff[0]/pre_ave_rotdof;
 
   double e_excess = ecc - r->coeff[1];
-  if (e_excess > 0.0) return 0;
+  if (e_excess <= 0.0) return 0;
 
   // compute probability of reaction
 
@@ -194,7 +198,7 @@ int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
   if (pre_ave_rotdof > 0.1) ecc += pre_erot*r->coeff[0]/pre_ave_rotdof;
 
   double e_excess = ecc - r->coeff[1];
-  if (e_excess > 0.0) return 0;
+  if (e_excess <= 0.0) return 0;
 
   // compute probability of reaction
 

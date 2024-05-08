@@ -12,7 +12,7 @@ adapt_grid command :h3
 
 adapt_grid group-ID action1 action2 style args ... keyword args ... :pre
 
-group-ID = group ID for which grid cell adaptation will be attempted :l
+group-ID = group ID for which grid cells adaptation will be attempted on :l
 action1 = {refine} or {coarsen} :l
 action2 = {coarsen} or {refine}, optional :l
 style = {particle} or {surf} or {value} or {random} :l
@@ -62,7 +62,7 @@ adapt_grid all refine particle 50 10
 adapt_grid all coarsen particle 50 10
 adapt_grid all refine coarsen particle 50 10
 adapt_grid all refine surf all 0.15 iterate 1 dir 1 0 0 
-adapt_grid all refine coarsen value c_1[1] 5.0 10.0 iterate 2 :pre
+adapt_grid all refine coarsen value c_1\[1\] 5.0 10.0 iterate 2 :pre
 
 [Description:]
 
@@ -184,7 +184,7 @@ will be refined if its count > 25, and a parent cell coarsened if
 the sum of its children cell counts < 10.
 
 compute 1 grid all n nrho
-adapt_grid refine coarsen value c_1[1] 25 10 :pre
+adapt_grid refine coarsen value c_1\[1\] 25 10 :pre
 
 The same thing could be accomplished with this command:
 
@@ -194,17 +194,17 @@ These commands use a time-averaged particle count as an adaptation
 criterion in the same manner:
 
 compute 1 grid all n nrho
-fix 1 ave/grid 10 100 1000 c_1[1]
+fix 1 ave/grid 10 100 1000 c_1\[1\]
 run 1000    # run to accumulate time averages
-adapt_grid refine coarsen value f_1[1] 25 10 :pre
+adapt_grid refine coarsen value f_1\[1\] 25 10 :pre
 
 Here is an example using mean-free path (MFP) as calculated by the
 "compute lambda/grid"_compute_lambda_grid.html command as an
 adaptation criterion.  Note the use of "thresh less more" to refine
 when MFP is less than the specified threshold (0.05).
 
-compute 1 lambda/grid c_1[2] NULL N2 kall
-adapt_grid refine coarsen value c_1[2] 0.05 0.1 &
+compute 1 lambda/grid f_1\[2\] NULL N2 kall
+adapt_grid refine coarsen value c_1\[2\] 0.05 0.1 &
            combine min thresh less more :pre
 
 The {random} style is provided for test and debugging purposes.  For
@@ -306,11 +306,13 @@ files, each time the grid iadapts.
 If the grid is partitioned across processors in a "clumped" manner
 before this command is invoked, it will still be clumped by processor
 after the adaptation.  Likewise if it is not clumped before, it will
-remain un-clumped after adaptation.  You can use the
-"balance_grid"_balance_grid.html command after this command to
-re-balance the new adapted grid cells and their particles across
-processors.  See "Section howto 4.8"_Section_howto.html#howto_8 for a
-description clumped and unclumped grids.
+remain un-clumped after adaptation.  See "Section howto
+4.8"_Section_howto.html#howto_8 for a description clumped and
+unclumped grids.
+
+If you want the grid partitioning (and their particles) to be
+rebalanced across processors after grid adaptation, you can use the
+"balance_grid"_balance_grid.html command after this command.
 
 [Restrictions:]
 
@@ -322,6 +324,13 @@ Currently a fix cannot be used with style {value} for {iterate} > 1.
 This is because the per-grid cell values accumulated by the fix are
 not interpolated to new grid cells so that the fix can be re-evaluated
 multiple times.  In the future we may revove this restriction.
+
+Currently, if there are custom attributes defined for grid cells, grid
+adaptation does not set new values for new grid cells created when
+either refinement or coarsening takes place.  The new cells will have
+zero values for their attributes.  This is because there is no simple
+way to determine how new attribute values should be computed.  This
+may be changed in the future.
 
 [Related commands:]
 

@@ -1,0 +1,89 @@
+# restart of in.step.read
+
+seed      12345
+
+# NOTE - add rebalancing option to restart
+
+#read_restart    tmp.step.read.restart
+read_restart    tmp.step.read.restart.%
+
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+timestep 	    0.0001
+
+# output
+
+dump                10 image all 100 tmp.step.read.restart.image.*.ppm &
+                    type type pdiam 0.1 &
+                    surf proc 0.01 size 512 512 axes yes 0.9 0.02 zoom 1.5
+dump_modify	    10 pad 4
+
+dump          1 surf all 100 tmp.step.read.restart.dump.surf id type &
+              s_ivec s_iarray[*] s_dvec s_darray[*]
+
+dump          2 grid all 100 tmp.step.read.restart.dump.grid id &
+              g_ivec g_iarray[*] g_dvec g_darray[*]
+
+dump          3 particle all 100 tmp.step.read.restart.dump.particle id x y &
+              p_ivec p_iarray[*] p_dvec p_darray[*]
+
+write_surf      tmp.step.read.restart.data.surf type &
+                custom ivec custom iarray custom dvec custom darray &
+                points no
+
+write_grid      tmp.step.read.restart.data.grid &
+                custom ivec custom iarray custom dvec custom darray
+
+# third run
+
+fix             1 balance 100 1.01 rcb part flip yes
+
+compute       1 reduce ave p_ivec p_iarray[*] p_dvec p_darray[*]
+compute       2 reduce ave g_ivec g_iarray[*] g_dvec g_darray[*]
+compute       3 reduce ave s_ivec s_iarray[*] s_dvec s_darray[*]
+
+stats		50
+stats_style	step cpu np nattempt ncoll nscoll nscheck f_1[*] &
+                c_1[*] c_2[*] c_3[*]
+
+run            500
+
+write_surf      tmp.step.read.restart.data.surf2 type &
+                custom ivec custom iarray custom dvec custom darray &
+                points no
+
+write_grid      tmp.step.read.restart.data.grid2 &
+                custom ivec custom iarray custom dvec custom darray
+
+# remove all custom attributes
+
+undump         1
+undump         2
+undump         3
+
+custom         surf ivec remove
+custom         surf iarray remove
+custom         surf dvec remove
+custom         surf darray remove
+
+custom         grid ivec remove
+custom         grid iarray remove
+custom         grid dvec remove
+custom         grid darray remove
+
+custom         particle ivec remove
+custom         particle iarray remove
+custom         particle dvec remove
+custom         particle darray remove
+
+# fourth run
+
+uncompute       1
+uncompute       2
+uncompute       3
+stats_style	step cpu np nattempt ncoll nscoll nscheck f_1[*]
+
+run            500

@@ -311,6 +311,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "create_box"_create_box.html,
 "create_grid"_create_grid.html,
 "create_particles"_create_particles.html,
+"custom"_custom.html,
 "dimension"_dimension.html,
 "dump"_dump.html,
 "dump image"_dump_image.html,
@@ -386,6 +387,7 @@ This is indicated by additional letters in parenthesis: k = KOKKOS.
 "ave/surf"_fix_ave_surf.html,
 "ave/time"_fix_ave_time.html,
 "balance (k)"_fix_balance.html,
+"dt/reset (k)"_fix_dt_reset.html,
 "emit/face (k)"_fix_emit_face.html,
 "emit/face/file"_fix_emit_face_file.html,
 "emit/surf"_fix_emit_surf.html,
@@ -393,7 +395,7 @@ This is indicated by additional letters in parenthesis: k = KOKKOS.
 "field/particle"_fix_field_particle.html,
 "grid/check (k)"_fix_grid_check.html,
 "move/surf (k)"_fix_move_surf.html,
-"print"_fix_print.html,"
+"print"_fix_print.html,
 "surf/temp"_fix_surf_temp.html,
 "temp/global/rescale"_fix_temp_global_rescale.html,
 "temp/rescale (k)"_fix_temp_rescale.html,
@@ -413,8 +415,9 @@ letters in parenthesis: k = KOKKOS.
 "boundary (k)"_compute_boundary.html,
 "count (k)"_compute_count.html,
 "distsurf/grid (k)"_compute_distsurf_grid.html,
+"dt/grid (k)"_compute_dt_grid.html,
 "eflux/grid (k)"_compute_eflux_grid.html,
-"fft/grid"_compute_fft_grid.html,
+"fft/grid (k)"_compute_fft_grid.html,
 "gas/collision/tally (k)"_compute_gas_collision_tally.html,
 "gas/reaction/tally (k)"_compute_gas_reaction_tally.html,
 "grid (k)"_compute_grid.html,
@@ -470,8 +473,11 @@ letters in parenthesis: k = KOKKOS.
 Surface reaction styles :h4
 
 See the "surf_react"_surf_react.html command for details of each
-style.
+style. Some of the styles have accelerated versions, which can be
+used if SPARTA is built with the "appropriate accelerated
+package"_Section_accelerate.html.  This is indicated by additional
+letters in parenthesis: k = KOKKOS.
 
 "adsorb"_surf_adsorb.html,
-"global"_surf_react.html,
-"prob"_surf_react.html :tb(c=2,ea=c)
+"global (k)"_surf_react.html,
+"prob (k)"_surf_react.html :tb(c=2,ea=c)

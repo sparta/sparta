@@ -227,7 +227,7 @@ will use that data type.
 options can make for faster parallel FFTs on some platforms.  The
 -DPACK_ARRAY setting is the default.  See the <A HREF = "compute_fft_grid.html">compute
 fft/grid</A> command for info about FFTs.  See Step
-6 below for info about building SPPARKS with an FFT library.
+6 below for info about building SPARTA with an FFT library.
 </P>
 <P><B>Step 5</B>
 </P>
@@ -294,11 +294,23 @@ package in your build, you can also leave the 3 variables blank.
 </P>
 <P>Otherwise, select which kinds of FFTs to use as part of the FFT_INC
 setting by a switch of the form -DFFT_XXX. 
-Recommended values for XXX
-are: MKL or FFTW3.  FFTW2 and NONE are supported as legacy options.
-Selecting -DFFT_FFTW will use the FFTW3 library and -DFFT_NONE will
-use the KISS library described above.
-described above.
+Available values for XXX
+are: MKL or FFTW3.
+Selecting -DFFT_FFTW will use the FFTW3 library.
+</P>
+<P>Similarly a separate FFT library can be specified for KOKKOS package.
+By default, SPARTA will use a Kokkos version of the open-source <A HREF = "http://kissfft.sf.net">KISS
+FFT library</A>, which is included in the SPARTA
+distribution. Note that using the KISS FFT library on GPUs may give
+suboptimal performance. Other options can be specified using the form
+-DFFT_KOKKOS_XXX. Available values for XXX when using Kokkos are: CUFFT,
+HIPFFT, MKL or FFTW3. When using the Kokkos CUDA backend, either CUFFT
+or KISS must be used. When using the Kokkos HIP backend, either HIPFFT
+or KISS must be used. When using the Kokkos OpenMP or Serial backend,
+either MKL, FFTW3, or KISS must be used. The CUFFT option specifies the
+<A HREF = "https://developer.nvidia.com/cufft">cuFFT library</A> from NVIDIA. The
+HIPFFT option specifies the <A HREF = "https://rocm.docs.amd.com/projects/rocFFT/en/latest/">rocFFT
+library</A> from AMD.
 </P>
 <P>You may also need to set the FFT_INC, FFT_PATH, and FFT_LIB variables,
 so the compiler and linker can find the needed FFT header and library
@@ -310,16 +322,9 @@ trouble finding.
 </P>
 <P>FFTW is a fast, portable library that should also work on any
 platform.  You can download it from
-<A HREF = "http://www.fftw.org">www.fftw.org</A>.  Both the legacy version 2.1.X and
-the newer 3.X versions are supported as -DFFT_FFTW2 or -DFFT_FFTW3.
+<A HREF = "http://www.fftw.org">www.fftw.org</A>. The 3.X versions are supported
+as -DFFT_FFTW3.
 Building FFTW for your box should be as simple as ./configure; make.
-Note that on some platforms FFTW2 has been pre-installed, and uses
-renamed files indicating the precision it was compiled with,
-e.g. sfftw.h, or dfftw.h instead of fftw.h.  In this case, you can
-specify an additional define variable for FFT_INC called -DFFTW_SIZE,
-which will select the correct include file.  In this case, for FFT_LIB
-you must also manually specify the correct library, namely -lsfftw or
--ldfftw.
 </P>
 <P>The FFT_INC variable also allows for a -DFFT_SINGLE setting that will
 use single-precision FFTs, which can speed-up the calculation,
@@ -531,7 +536,7 @@ will use that data type.
 options can make for faster parallel FFTs on some platforms.  The
 -DPACK_ARRAY setting is the default.  See the <A HREF = "compute_fft_grid.html">compute
 fft/grid</A> command for info about FFTs.  See STEP
-??? below for info about building SPPARKS with an FFT library.
+7 below for info about building SPARTA with an FFT library.
 </P>
 <P><B>Step 5</B>
 </P>
@@ -601,9 +606,30 @@ Note that this documentation link is for CMake version 3.12.
 </P>
 <P><B>Step 7</B>
 </P>
-<P>You may select between 3 thiry party libraries (TPL) for FFT which SPARTA uses when
-configured with cmake -DFFT=<I>FFTW2,FFTW3,MKL</I>. SPARTA also provides a FFT
-package which can be selected with cmake -DPKG_FFT=ON.
+<P>When the SPARTA FFT package is enabled with cmake -DPKG_FFT=ON, you may select
+between 3 thiry party libraries (TPLs) for 1d FFTs, which SPARTA uses when
+configured with cmake -DFFT=<I>FFTW3,MKL,KISS</I>.
+</P>
+<P>By default SPARTA will use the open-source <A HREF = "http://kissfft.sf.net">KISS FFT
+library</A>, which is included in the SPARTA distribution.
+This library is portable to all platforms and for typical SPARTA simulations is
+almost as fast as FFTW or vendor optimized libraries.
+</P>
+<P>Similarly when using the KOKKOS package, you may select between 5 TPLs for FFT
+which SPARTA uses when configured with cmake
+-DFFT_KOKKOS=<I>CUFFT,HIPFFT,FFTW3,MKL,KISS</I>. This requires enabling the SPARTA
+FFT package which can be selected with cmake -DPKG_FFT=ON.
+</P>
+<P>By default, SPARTA will use a Kokkos version of the open-source <A HREF = "http://kissfft.sf.net">KISS FFT
+library</A>, which is included in the SPARTA distribution.
+Note that using the KISS FFT library on GPUs may give suboptimal performance.
+Other options for -DFFT_KOKKOS are CUFFT, HIPFFT, MKL or FFTW3. When using the
+Kokkos CUDA backend, either CUFFT or KISS must be used. When using the Kokkos
+HIP backend, either HIPFFT or KISS must be used. When using the Kokkos OpenMP
+or Serial backend, either MKL, FFTW3, or KISS must be used. The CUFFT option
+specifies the <A HREF = "https://developer.nvidia.com/cufft">cuFFT library</A> from NVIDIA.
+The HIPFFT option specifies the <A HREF = "https://rocm.docs.amd.com/projects/rocFFT/en/latest/">rocFFT
+library</A> from AMD.
 </P>
 <P>You may need to install the FFT TPL you're interested in using. If you're on a
 cluster or supercomputer, use module before running cmake so that cmake finds

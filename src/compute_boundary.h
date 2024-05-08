@@ -29,7 +29,7 @@ namespace SPARTA_NS {
 class ComputeBoundary : public Compute {
  public:
   ComputeBoundary(class SPARTA *, int, char **);
-  ComputeBoundary(class SPARTA* sparta) : Compute(sparta) {}
+  ComputeBoundary(class SPARTA* sparta) : Compute(sparta) {} // needed for Kokkos
   ~ComputeBoundary();
   virtual void init();
   virtual void compute_array();
