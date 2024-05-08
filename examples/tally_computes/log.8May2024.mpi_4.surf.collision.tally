@@ -1,4 +1,4 @@
-SPARTA (18 Jul 2022)
+SPARTA (7 Mar 2024)
 Running on 4 MPI task(s)
 ################################################################################
 # 2d flow around a circle
@@ -18,14 +18,14 @@ boundary	    o r p
 create_box  	    0 10 0 10 -0.5 0.5
 Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
 create_grid 	    20 20 1
-WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (../grid.cpp:465)
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (../grid.cpp:471)
 Created 400 child grid cells
-  CPU time = 0.000948957 secs
-  create/ghost percent = 95.2521 4.74795
+  CPU time = 0.00187478 secs
+  create/ghost percent = 95.4428 4.55724
 balance_grid        rcb cell
 Balance grid migrated 280 cells
-  CPU time = 0.000461973 secs
-  reassign/sort/migrate/ghost percent = 58.9788 0.437039 22.6784 17.9058
+  CPU time = 0.000795175 secs
+  reassign/sort/migrate/ghost percent = 60.1923 0.455246 21.1947 18.1578
 
 global		    nrho 1.0 fnum 0.001
 
@@ -33,7 +33,6 @@ species		    air.species N O
 mixture		    air N O vstream 100.0 0 0
 
 read_surf           data.circle
-  50 points
   50 lines
   2 8 xlo xhi
   2.00592 7.99408 ylo yhi
@@ -43,10 +42,10 @@ read_surf           data.circle
   264 88 48 = cells outside/inside/overlapping surfs
   48 = surf cells with 1,2,etc splits
   71.8 71.8 = cell-wise and global flow volume
-  CPU time = 0.000459368 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 25.1715 10.2706 0.763223 51.5042 12.2904 10.5837 0.224439
-  surf2grid time = 0.000236594 secs
-  map/comm1/comm2/comm3/comm4/split percent = 34.1623 10.5146 8.58517 5.06944 24.7999 9.17563
+  CPU time = 0.000922881 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 14.2922 21.7606 0.702799 53.4885 9.75597 8.62776 0.177488
+  surf2grid time = 0.000493635 secs
+  map/comm1/comm2/comm3/comm4/split percent = 33.263 10.2201 12.1389 4.98364 25.2365 6.82367
 surf_collide	    1 diffuse 300.0 0.0
 surf_modify         all collide 1
 
@@ -73,35 +72,35 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 1.51894 1.51894 1.51894
 Step CPU Np Natt Ncoll Nscoll Nscheck 
        0            0        0        0        0        0        0 
-     100  0.012282434    19726        0        0      110     4139 
-     200  0.031651251    31416        0        0      177     6661 
-     300  0.056908382    36914        0        0      179     7156 
-     400  0.083889915    39533        0        0      197     8003 
-     500   0.11193827    41089        0        0      205     8212 
-     600   0.14185984    42039        0        0      159     8099 
-     700   0.17256189    42715        0        0      186     8545 
-     800   0.20326983    43093        0        0      203     8658 
-     900   0.23359032    43246        0        0      169     8319 
-    1000   0.26360132    43518        0        0      183     8665 
-Loop time of 0.263608 on 4 procs for 1000 steps with 43518 particles
+     100  0.014915863    19726        0        0      110     4139 
+     200  0.049539936    31416        0        0      177     6661 
+     300  0.075506428    36914        0        0      179     7156 
+     400   0.10691595    39533        0        0      197     8003 
+     500   0.16029153    41089        0        0      205     8212 
+     600   0.19140135    42039        0        0      159     8099 
+     700   0.22310932    42715        0        0      186     8545 
+     800   0.25437352    43093        0        0      203     8658 
+     900   0.28432332    43246        0        0      169     8319 
+    1000   0.31655983    43518        0        0      183     8665 
+Loop time of 0.316569 on 4 procs for 1000 steps with 43518 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.035394   | 0.10414    | 0.1739     |  21.1 | 39.51
-Coll    | 0.0076875  | 0.02175    | 0.036052   |   9.5 |  8.25
-Sort    | 0.0040889  | 0.012435   | 0.020923   |   7.4 |  4.72
-Comm    | 0.0090528  | 0.0096292  | 0.0099945  |   0.4 |  3.65
-Modify  | 6.074e-05  | 0.0091396  | 0.018229   |   9.5 |  3.47
-Output  | 0.0013367  | 0.0015717  | 0.0017971  |   0.6 |  0.60
-Other   |            | 0.1049     |            |       | 39.81
+Move    | 0.036468   | 0.11677    | 0.21919    |  23.8 | 36.89
+Coll    | 0.0077744  | 0.02256    | 0.038668   |   9.8 |  7.13
+Sort    | 0.0042237  | 0.013087   | 0.022723   |   7.7 |  4.13
+Comm    | 0.0097698  | 0.010489   | 0.01097    |   0.5 |  3.31
+Modify  | 6.9635e-05 | 0.0095463  | 0.019878   |   9.7 |  3.02
+Output  | 0.001586   | 0.0018366  | 0.0020832  |   0.6 |  0.58
+Other   |            | 0.1423     |            |       | 44.94
 
-Particle moves    = 36496435 (36.5M)
-Cells touched     = 41340925 (41.3M)
+Particle moves    = 36329373 (36.3M)
+Cells touched     = 41340924 (41.3M)
 Particle comms    = 141471 (0.141M)
 Boundary collides = 172486 (0.172M)
 Boundary exits    = 167316 (0.167M)
-SurfColl checks   = 7199637 (7.2M)
+SurfColl checks   = 7199642 (7.2M)
 SurfColl occurs   = 173143 (0.173M)
 Surf reactions    = 0 (0K)
 Collide attempts  = 0 (0K)
@@ -110,15 +109,15 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 3.46124e+07
-Particle-moves/step: 36496.4
-Cell-touches/particle/step: 1.13274
+Particle-moves/CPUsec/proc: 2.86899e+07
+Particle-moves/step: 36329.4
+Cell-touches/particle/step: 1.13795
 Particle comm iterations/step: 1.997
-Particle fraction communicated: 0.0038763
-Particle fraction colliding with boundary: 0.00472611
-Particle fraction exiting boundary: 0.00458445
-Surface-checks/particle/step: 0.19727
-Surface-collisions/particle/step: 0.00474411
+Particle fraction communicated: 0.00389412
+Particle fraction colliding with boundary: 0.00474784
+Particle fraction exiting boundary: 0.00460553
+Surface-checks/particle/step: 0.198177
+Surface-collisions/particle/step: 0.00476592
 Surf-reactions/particle/step: 0
 Collision-attempts/particle/step: 0
 Collisions/particle/step: 0
