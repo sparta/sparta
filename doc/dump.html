@@ -19,14 +19,15 @@
 </PRE>
 <UL><LI>ID = user-assigned name for the dump 
 
-<LI>style = <I>particle</I> or <I>grid</I> or <I>surf</I> or <I>image</I> 
+<LI>style = <I>particle</I> or <I>grid</I> or <I>surf</I> or <I>tally</I> or <I>image</I> 
 
 <LI>select-ID = which particles, grid cells, surface elements to dump 
 
 <PRE>  for dump style = particle or image, use a mixture ID
   for style = grid, use a grid group ID
   for style = surf, use a surface group ID
-  for style = tally, select-ID is ignored 
+  for style = tally, select-ID is ignored
+  for style = image, see the <A HREF = "dump_image.html">dump image</A> doc page 
 </PRE>
 <LI>N = dump every this many timesteps 
 

@@ -14,12 +14,13 @@ dump command :h3
 dump ID style select-ID N file args :pre
 
 ID = user-assigned name for the dump :ulb,l
-style = {particle} or {grid} or {surf} or {image} :l
+style = {particle} or {grid} or {surf} or {tally} or {image} :l
 select-ID = which particles, grid cells, surface elements to dump :l
   for dump style = particle or image, use a mixture ID
   for style = grid, use a grid group ID
   for style = surf, use a surface group ID
-  for style = tally, select-ID is ignored :pre
+  for style = tally, select-ID is ignored
+  for style = image, see the "dump image"_dump_image.html doc page :pre
 N = dump every this many timesteps :l
 file = name of file to write dump info to :l
 args = list of arguments for a particular style :l
