@@ -1825,4 +1825,3 @@ This is the value output to a "dump particle"_dump.html file if the
 is determined by the "species"_species.html commands used in the input
 script. The first species name used is type=1, the next is type=2,
 etc.
-
