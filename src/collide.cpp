@@ -1780,23 +1780,19 @@ void Collide::collisions_one_sw()
   double attempt,volume;
   Particle::OnePart *ipart,*jpart,*kpart,*lpart,*mpart;
 
-  double Gwtf, isw, jsw, ksw, lsw;
-  double xk[3],vk[3];
-  double xl[3],vl[3];
-  double erotk, erotl;
-  int ks, ls;
-  int kcell, lcell;
-  int id;
-  int reallocflag;
+  int ilevel;
+  double np_scale;
 
   // loop over cells I own
 
   Grid::ChildInfo *cinfo = grid->cinfo;
+  Grid::ChildCell *cells = grid->cells;
 
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
 
   double *sweights = particle->edvec[particle->ewhich[index_sweight]];
+  double isw, jsw;
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
@@ -1812,8 +1808,6 @@ void Collide::collisions_one_sw()
       memory->destroy(plist);
       memory->create(plist,npmax,"collide:plist");
     }
-
-    // get stochastic weights
 
     // build particle list and find maximum particle weight
 
@@ -1831,7 +1825,10 @@ void Collide::collisions_one_sw()
       ip = next[ip];
     }
 
-    if (np >= Ncmin) pre_wtf = 0.0;
+    ilevel = cells[icell].level;
+    np_scale = pow(8,ilevel-1);
+
+    if (np >= Ncmin/np_scale) pre_wtf = 0.0;
     else pre_wtf = 1.0;
 
     // attempt = exact collision attempt count for all particles in cell
@@ -2039,14 +2036,21 @@ void Collide::group_reduce()
 
   Particle::OnePart *ipart;
   Grid::ChildInfo *cinfo = grid->cinfo;
+  Grid::ChildCell *cells = grid->cells;
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
+  int ilevel, nthresh;
+  double np_scale;
 
   double *sweights = particle->edvec[particle->ewhich[index_sweight]];
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
-    if (np <= Ncmax) continue;
+    ilevel = cells[icell].level;
+    np_scale = pow(8,ilevel-1);
+    nthresh = MAX(Ncmax/np_scale, Ngmax);
+    
+    if (np <= nthresh) continue;
 
     // create particle list
 
@@ -2061,7 +2065,7 @@ void Collide::group_reduce()
 
     gbuf = 0;
 
-    while (n >= Ncmax) {
+    while (n > nthresh) {
       nold = n;
       if (group_type == BINARY) {
 
