@@ -1624,8 +1624,8 @@ void Grid::clear_surf()
 
 /* ----------------------------------------------------------------------
    remove effects of implicit surf split cells on grid and particles
-   reassign particles in sub-cells to parent split cell
    remove sub-cells from grid list and set all cells to unsplit
+   reassign particles in sub-cells to parent split cell
    allows a subsequent read_isurf command to work correctly
    called by read_restart after reading restart file for simulation
      which used implicit surfs and thus may have had split cells
@@ -1640,29 +1640,17 @@ void Grid::clear_surf_implicit()
   int ncorner = 8;
   if (dimension == 2) ncorner = 4;
 
-  // reset icell of particles in sub-cells to split cell
-  // since sinfo does not yet exist, do this via hashing
-  // create hash that stores IDs of split cells and their icell
-  // sub-cells will have same ID as parent split cell
-
-  hash->clear();
-
-  for (icell = 0; icell < nlocal; icell++) {
-    if (cells[icell].nsplit <= 1) continue;
-    (*hash)[cells[icell].id] = icell;
-  }
-
+  // store cellIDs = list of cellID each particle is in
+  // sub-cells and parent split cell have the same cellID
+  
   Particle::OnePart *particles = particle->particles;
   int nplocal = particle->nlocal;
 
-  for (int i = 0; i < nplocal; i++) {
-    icell = particles[i].icell;
-    if (cells[icell].nsplit <= 0)
-      particles[i].icell = (*hash)[cells[icell].id];
-  }
+  cellint *cellIDs;
+  memory->create(cellIDs,nplocal,"grid:cellIDs");
 
-  hash->clear();
-  hashfilled = 0;
+  for (int i = 0; i < nplocal; i++)
+    cellIDs[i] = cells[particles[i].icell].id;
 
   // compress cell list to remove all sub-cells
   // reset cell and corner types, and cell volume
@@ -1701,6 +1689,25 @@ void Grid::clear_surf_implicit()
 
   nunsplitlocal = nlocal;
   nsplitlocal = nsublocal = 0;
+
+  // create hash for new set of owned grid cells
+
+  hash->clear();
+
+  for (icell = 0; icell < nlocal; icell++)
+    (*hash)[cells[icell].id] = icell;
+
+  // use hash to reassign each particle's index into cell list
+  // uses the temporary cellIDs list created above
+
+  for (int i = 0; i < nplocal; i++)
+    particles[i].icell = (*hash)[cellIDs[i]];
+
+  // clean up
+
+  memory->destroy(cellIDs);
+  hash->clear();
+  hashfilled = 0;
 }
 
 /* ----------------------------------------------------------------------
