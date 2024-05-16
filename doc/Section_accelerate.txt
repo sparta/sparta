@@ -574,7 +574,6 @@ ARMV81 | HOST | ARMv8.1 Compatible CPU |
 ARMV8_THUNDERX | HOST | ARMv8 Cavium ThunderX CPU |
 ARMV8_THUNDERX2 | HOST | ARMv8 Cavium ThunderX2 CPU |
 A64FX | HOST | ARMv8.2 with SVE Support |
-WSM | HOST | Intel Westmere CPU (SSE 4.2) |
 SNB | HOST | Intel Sandy/Ivy Bridge CPU (AVX 1) |
 HSW | HOST | Intel Haswell CPU (AVX 2) |
 BDW | HOST | Intel Broadwell Xeon E-class CPU (AVX 2 + transactional
@@ -586,10 +585,9 @@ ICX | HOST | Intel Ice Lake Xeon Server CPU (AVX512) |
 SPR | HOST | Intel Sapphire Rapids Xeon Server CPU (AVX512) |
 KNC | HOST | Intel Knights Corner Xeon Phi |
 KNL | HOST | Intel Knights Landing Xeon Phi |
-BGQ | HOST | IBM Blue Gene/Q CPU |
-POWER7 | HOST | IBM POWER7 CPU |
 POWER8 | HOST | IBM POWER8 CPU |
 POWER9 | HOST | IBM POWER9 CPU |
+RISCV_SG2042 | HOST | SG2042 (RISC-V) CPU |
 KEPLER30 | GPU | NVIDIA Kepler generation CC 3.0 GPU |
 KEPLER32 | GPU | NVIDIA Kepler generation CC 3.2 GPU |
 KEPLER35 | GPU | NVIDIA Kepler generation CC 3.5 GPU |

@@ -1651,7 +1651,7 @@ attributes in various ways:
 "custom"_custom.html - set the values of a per-grid attribute and optionally create it
 "dump grid"_dump.html - output per-grid attributes to a dump file
 "fix ave/grid"_fix_ave_grid.html - time-average a per-grid attribute
-"read_grid"_read_grid,html - define and initialize per-grid attributes
+"read_grid"_read_grid.html - define and initialize per-grid attributes
 surf_react implicit - use per-grid vectors and an array to store chemical state (not yet released in public SPARTA)
 "variable"_variable.html - use a per-grid attribute in a grid-style variable formula
 "write_grid"_write_grid.html - write per-grid attributes to a grid data file :ul
