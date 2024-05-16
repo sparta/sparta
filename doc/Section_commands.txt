@@ -288,7 +288,7 @@ Miscellaneous:
 
 "clear"_clear.html, "echo"_echo.html, "if"_if.html,
 "include"_include.html, "jump"_jump.html, "label"_label.html,
-"log"_log.html, "next"_next.html, "partition"_partition,html,
+"log"_log.html, "next"_next.html, "partition"_partition.html,
 "print"_print.html, "quit"_quit.html, "shell"_shell.html,
 "variable"_variable.html
 
