@@ -11,17 +11,14 @@ def read_dump(fname):
     arr = [];
     f = open(fname);
     for line in f: 
-        if(count == lim):
-            arr.append([float(x) for x in line.split()])
-        elif(count>lim):
+        if(count >= lim):
             arr.append([float(x) for x in line.split()])
         count =  count + 1;
     arr = np.asarray(arr);
     f.close()
     return arr
 
-fn = 40000;
-fname = '/gpfs/ayhong/swpm/exec/nozzle2dDSMC/out_dsmc.' +str(fn);
+fname = sys.argv[1]
 outDSMC = read_dump(fname);
 outDSMC = outDSMC[outDSMC[:, 0].argsort()]
 
@@ -79,20 +76,23 @@ for ix in range(nx):
     
         ind = np.intersect1d(indx,indz)
         ind = np.intersect1d(ind,indy)
-        nslice[ix,iz] = np.mean(nDSMC[ind])
+        nslice[ix,iz] = np.mean(NDSMC[ind])
         wslice[ix,iz] = np.mean(wDSMC[ind])
 
 #############################################################
-fig,(ax0) = plt.subplots(nrows=1,ncols=1);
+fig,(ax0,ax1) = plt.subplots(nrows=1,ncols=2);
 
 #############################################################
 sb.heatmap(-wslice,cmap="jet",ax=ax0,vmin=-130,vmax=740)
+nmax = np.max(np.log(nslice))
+nmin = np.min(np.log(nslice))
+sb.heatmap(np.log(nslice),cmap="jet",ax=ax1,vmin=nmin,vmax=nmax)
 
 fig.set_size_inches(8.5, 8.5)
 
 mng = plt.get_current_fig_manager()
 mng.full_screen_toggle()
-plt.savefig('plume.jpg',bbox_inches='tight')
+plt.savefig(sys.argv[2],bbox_inches='tight')
 
 sys.exit()
 

@@ -56,12 +56,17 @@ fix zbackground     emit/face air zhi region ocyl twopass
 collide             vss all opt.vss
 collide_modify      remain no
 
+# swpm (need to  be updated after running DSMC)
+fix 1 swpm
+collide_modify     swpm yes 10000.0 1.0
+collide_modify     reduce heat 4000.0 binary 4.0
+
 ####################
 # Create Particles #
 ####################
 
 global nrho ${nden}
-global fnum 1.0e8
+global fnum 1.0e8 # changed so particles near nozzle not affected as much
 global temp 300.0
 
 create_particles air n 0
@@ -103,6 +108,6 @@ compute             2 thermal/grid all all temp press
 compute             3 pflux/grid all all momxy momyz momxz
 compute             4 eflux/grid all all heatx heaty heatz
 fix                 1 ave/grid all 10 100 1000 c_1[*] c_2[*] c_3[*] c_4[*] ave running
-dump                1 grid all 10000 out_dsmc.* xc yc zc f_1[*]
+dump                1 grid all 10000 out_swpm.* xc yc zc f_1[*]
 
 run                 40000
