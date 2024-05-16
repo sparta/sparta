@@ -1821,7 +1821,7 @@ void Collide::collisions_one_sw()
       sweight_max = MAX(sweight_max,isw);
 
       if (isw != isw) error->all(FLERR,"Particle has NaN weight");
-      if (isw < 0) error->all(FLERR,"Paritlce has negative weight");
+      if (isw < 0) error->all(FLERR,"Particle has negative weight");
       ip = next[ip];
     }
 
@@ -1855,34 +1855,32 @@ void Collide::collisions_one_sw()
       // check if pair has zero or negative weight
 
       if(sweights[i] <= 0.0 || sweights[j] <= 0.0)
-        error->one(FLERR,"bad weight before split");
+        error->one(FLERR,"Bad weight before split");
 
       // split particles
 
-      newp = split(ipart,jpart,kpart,lpart);
+      newp = split(ipart,jpart,kpart,lpart,i,j);
 
       // add new particles to particle list
 
       if (newp > 1) {
+        particles = particle->particles;
+        sweights = particle->edvec[particle->ewhich[index_sweight]];
         if (np+2 >= npmax) {
           npmax += DELTAPART;
           memory->grow(plist,npmax,"collide:plist");
         }
         plist[np++] = particle->nlocal-2;
         plist[np++] = particle->nlocal-1;
-        particles = particle->particles;
       } else if (newp > 0) {
+        particles = particle->particles;
+        sweights = particle->edvec[particle->ewhich[index_sweight]];
         if (np+1 >= npmax) {
           npmax += DELTAPART;
           memory->grow(plist,npmax,"collide:plist");
         }
         plist[np++] = particle->nlocal-1;
-        particles = particle->particles;
       }
-
-      // reacquire the custom particle weights vector
-
-      sweights = particle->edvec[particle->ewhich[index_sweight]];
 
       // since ipart and jpart have same weight, do not need
       // ... to account for weight during collision itself
@@ -1906,7 +1904,7 @@ void Collide::collisions_one_sw()
 ------------------------------------------------------------------------- */
 
 int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
-                   Particle::OnePart *&kp, Particle::OnePart *&lp)
+                   Particle::OnePart *&kp, Particle::OnePart *&lp, int i, int j)
 {
   double xk[3],vk[3];
   double xl[3],vl[3];
@@ -1927,8 +1925,8 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
   // ... MIN(ip->sweight,jp->sweight)/(1 + pre_wtf * wtf)
 
   double *sweights = particle->edvec[particle->ewhich[index_sweight]];
-  double isw = sweights[ip-particle->particles];
-  double jsw = sweights[jp-particle->particles];
+  double isw = sweights[i];
+  double jsw = sweights[j];
   double Gwtf, ksw, lsw;
 
   // particle ip has larger weight
@@ -1990,6 +1988,7 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
     id = MAXSMALLINT*random->uniform();
     reallocflag = particle->add_particle(id,ks,kcell,xk,vk,erotk,0.0);
     if (reallocflag) {
+      particles = particle->particles;
       sweights = particle->edvec[particle->ewhich[index_sweight]];
       ip = particle->particles + (ip - particles);
       jp = particle->particles + (jp - particles);
@@ -2007,6 +2006,7 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
     id = MAXSMALLINT*random->uniform();
     reallocflag = particle->add_particle(id,ls,lcell,xl,vl,erotl,0.0);
     if (reallocflag) {
+      particles = particle->particles;
       sweights = particle->edvec[particle->ewhich[index_sweight]];
       ip = particle->particles + (ip - particles);
       jp = particle->particles + (jp - particles);
@@ -2107,7 +2107,7 @@ void Collide::group_reduce()
 
         // weight limits to separate particles
 
-        double lLim = MAX(swmean-swstd,0);
+        double lLim = MAX(swmean-1.25*swstd,0);
         double uLim = swmean+2.0*swstd;
 
         // recreate particle list and omit large weighted particles

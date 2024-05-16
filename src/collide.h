@@ -188,7 +188,7 @@ class Collide : protected Pointers {
   // methods for stochastic weight particle method
 
   int split(Particle::OnePart *&, Particle::OnePart *&,
-            Particle::OnePart *&, Particle::OnePart *&);
+            Particle::OnePart *&, Particle::OnePart *&, int, int);
   void group_reduce();
   void group_bt(int, int);
   void group_ot(int, int);
