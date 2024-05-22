@@ -1879,6 +1879,7 @@ int Grid::point_outside_surfs_implicit(int icell, double *x)
     edgelen = MathExtra::len3(edge);
     minedge = MIN(minedge,edgelen);
     MathExtra::sub3(tris[isurf].p3,tris[isurf].p1,edge);
+    edgelen = MathExtra::len3(edge);
     minedge = MIN(minedge,edgelen);
 
     displace = EPSSURF * minedge;
