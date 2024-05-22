@@ -2022,8 +2022,8 @@ int Grid::outside_surfs(int icell, double *x, double *xcell)
     if (dim == 3) {
       tri = &tris[isurf];
       hitflag = Geometry::
-        line_tri_intersect(x,xcell,tri->p1,tri->p2,tri->p3,
-                           tri->norm,xc,param,side);
+        line_tri_intersect_noeps(x,xcell,tri->p1,tri->p2,tri->p3,
+                                 tri->norm,xc,param,side);
     } else {
       line = &lines[isurf];
       hitflag = Geometry::
