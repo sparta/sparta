@@ -2005,18 +2005,17 @@ int Grid::outside_surfs(int icell, double *x, double *xcell)
   Surf::Tri *tris = surf->tris;
   surfint *csurfs = cells[icell].csurfs;
 
-  int m,isurf,minflag,hitflag,side,minside;
-  double param,minparam;
+  int m,isurf,hitflag,side;
+  double param;
   double xc[3];
   Surf::Line *line;
   Surf::Tri *tri;
 
-  // loop over surfs, ray-trace from x to xcell, see which surf is hit first
+  // loop over surfs, ray-trace from x to xcell, see how many surfaces were hit
 
   int nsurf = cells[icell].nsurf;
 
-  minflag = 0;
-  minparam = 2.0;
+  int cnt = 0;
   for (m = 0; m < nsurf; m++) {
     isurf = csurfs[m];
     if (dim == 3) {
@@ -2029,18 +2028,16 @@ int Grid::outside_surfs(int icell, double *x, double *xcell)
       hitflag = Geometry::
         line_line_intersect(x,xcell,line->p1,line->p2,line->norm,xc,param,side);
     }
-    if (hitflag && param < minparam) {
-      minflag = 1;
-      minparam = param;
-      minside = side;
-    }
+    if (hitflag) cnt++;
   }
 
   // if no surf was hit, particle is outside surfs
-  // else check which side of surf was hit
+  // else check how many surfaces were hit
+  //   odd number = inside, even number = outside
 
-  if (!minflag) return 1;
-  if (minside == SOUTSIDE || minside == ONSURF2OUT) return 1;
+  if (cnt == 0) return 1;
+  if (cnt % 2 == 0) return 1;
+
   return 0;
 }
 
