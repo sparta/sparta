@@ -142,6 +142,16 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
             if (isnan(zi) || isnan(zj) || zi < 0 || zj < 0) error->one(FLERR,"Root-Finding Error");
             z += 0.5 * (zi+zj);
        }
+
+      if (collide->elecstyle == DISCRETE) {
+        double ieelec = particle->edvec[particle->ewhich[collide->index_eelec]][ip - particle->particles];
+        double jeelec = particle->edvec[particle->ewhich[collide->index_eelec]][jp - particle->particles];
+        double iTelec = particle->bisectTelec(isp, ieelec, 1);
+        double jTelec = particle->bisectTelec(isp, ieelec, 1);
+        zi = (2 * ieelec)/(update->boltz * iTelec);
+        zj = (2 * jeelec)/(update->boltz * jTelec);
+        z += 0.5*(zi + zj);
+      }
     }
 
     // compute probability of reaction

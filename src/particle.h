@@ -195,6 +195,8 @@ class Particle : protected Pointers {
   double evib(int, double, class RanKnuth *);
   int ielec(int, double, class RanKnuth *);
   double* electronic_distribution_func(int, double);
+  double elec_energy(int isp, double temp_elec);
+  double bisectTelec(int isp, double eelec, int count);
 
   void write_restart_species(FILE *fp);
   void read_restart_species(FILE *fp);

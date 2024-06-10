@@ -32,6 +32,11 @@ class Collide : protected Pointers {
   int nearcp;         // 1 for near neighbor collisions
   int nearlimit;      // limit on neighbor serach for near neigh collisions
 
+  // electronic excitation data structs
+
+  int index_elecstate; // index to custom elecstate vector
+  int index_eelec;     // index to custom eelec vector
+
   int ncollide_one,nattempt_one,nreact_one;
   bigint ncollide_running,nattempt_running,nreact_running;
 
@@ -111,10 +116,6 @@ class Collide : protected Pointers {
 
   int index_vibmode;   // index to custom vibmode vector
 
-  // electronic excitation data structs
-
-  int index_elecstate; // index to custom elecstate vector
-  int index_eelec;     // index to custom eelec vector
 
   // ambipolar approximation data structs
 
