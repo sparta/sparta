@@ -19,9 +19,10 @@
 
 <LI>attribute = name of custom attribute 
 
-<LI>  name = custom vector attribute with name
-  name[N] = Nth column of custom array attribute with name
-action = <I>set</I> or <I>remove</I> 
+<PRE>  name = custom vector attribute with name
+  name[N] = Nth column of custom array attribute with name 
+</PRE>
+<LI>action = <I>set</I> or <I>remove</I> 
 
 <PRE>  <I>set</I> args = v_name subset-ID region-ID
     v_name = equal-, particle-, grid-, or surf-style variable with name
@@ -39,18 +40,18 @@ action = <I>set</I> or <I>remove</I>
 </UL>
 <P><B>Examples:</B>
 </P>
-<P>variable ivec particle id/100000
+<PRE>variable ivec particle id/100000
 variable sdvec surf c_1*10+3.5
 variable sdarray1 surf s_dvec+1
-variable sdarray2 surf v_sdarray1+1
-</P>
-<P>custom particle ivec set v_ivec air NULL type int
+variable sdarray2 surf v_sdarray1+1 
+</PRE>
+<PRE>custom particle ivec set v_ivec air NULL type int
 custom surf dvec set v_sdvec all NULL
 custom surf darray<B>1</B> set v_sdarray1 all NULL size 2
 custom surf darray<B>2</B> set v_sdarray2 all NULL
 custom particle ivec remove
-custom surf darray remove
-</P>
+custom surf darray remove 
+</PRE>
 <P><B>Description:</B>
 </P>
 <P>Create or reset or remove a custom attribute for individual particles,
