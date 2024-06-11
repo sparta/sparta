@@ -47,8 +47,8 @@ variable sdarray2 surf v_sdarray1+1
 </PRE>
 <PRE>custom particle ivec set v_ivec air NULL type int
 custom surf dvec set v_sdvec all NULL
-custom surf darray<B>1</B> set v_sdarray1 all NULL size 2
-custom surf darray<B>2</B> set v_sdarray2 all NULL
+custom surf darray[1] set v_sdarray1 all NULL size 2
+custom surf darray[2] set v_sdarray2 all NULL
 custom particle ivec remove
 custom surf darray remove 
 </PRE>
@@ -65,7 +65,7 @@ custom attributes.
 <P>The specified <I>style</I> setting is <I>particle</I> or <I>grid</I> or <I>surf</I>
 for per-particle, per-grid, or per-surf attributes.
 </P>
-<P>The <I>attribute</I> specifies the naem of the attribute to operate on.
+<P>The <I>attribute</I> specifies the name of the attribute to operate on.
 The same name can be used for attributes of different styles.
 E.g. there can be a custom attribute with the name "flag" for both
 particles and surface elements.  If the attribute name is specified
@@ -87,10 +87,10 @@ further arguments can be specified.
 exist and its values are initialized.  If it already exists, its
 values are reset.  Custom attributes can be vectors (single value per
 entity) or arrays (mutiple values per entity).  To set the values for
-a custom vector, use an <I>attribute</I> name</I> without brackets,
+a custom vector, use an <I>attribute</I> name without brackets,
 e.g. temperature.  To set the values for a single column of a custom
 array, use an <I>attribute</I> name suffixed by a bracketed integer,
-e.g. dipole<B>3</B>.  The integer must be a value from 1 to M, where M is
+e.g. dipole[3].  The integer must be a value from 1 to M, where M is
 the number of columns (values per entity) in the array.
 </P>
 <P>The specified <I>v_name</I> is the name of a previously defined variable
@@ -111,9 +111,10 @@ of the custom array.
 </P>
 <P>Note that the latter 3 variable styles can include outputs from
 <A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A> commands.  They can also
-include the spatial position of a particle, grid cell, or surface
-element in their formula. So it is easy to calculate values for each
-entity which vary spatially or which depend on the current timestep.
+include the current timestep or the spatial position of a particle,
+grid cell, or surface element in their formula. So it is easy to
+calculate values for each entity which vary spatially or which depend
+on the current timestep.
 </P>
 <P>The next two arguments, <I>subset-ID</I> and <I>region-ID</I>, can limit which
 particles, grid cells, or surface elements are assigned a custom
@@ -137,17 +138,20 @@ of a grid cell or surface element is used for the region check.  If
 applied.
 </P>
 <P>Two optional keywords affect the creation of a new custom vector or
-array.  The <I>type</I> keyword can be used with <I>int</I> or <I>float</I> as its
-arg.  The created custom attribute will then store either integer or
+array.  They are ignored if the custom vector or array already exists.
+</P>
+<P>The <I>type</I> keyword can be used with <I>int</I> or <I>float</I> as its arg.  The
+created custom attribute will then store either integer or
 floating-point values.  Floating point values are the default.
 </P>
 <P>The <I>size</I> keyword can be used with arg = 0 to create a custom vector
 (which is the default).  It can also be used with an arg M >= 1 to
 create an array with M columns (values per entity).  This means that
 if a new <I>attribute</I> name is specified with no brackets, the <I>size</I>
-keyword is not necessary, because it refers to a custom vector.  But
-if a new <I>attribute</I> name with a bracket is used, the <I>size</I> keyword
-must be used so that the column dimension of the array is known.
+keyword is not necessary, because it's default value refers to a
+custom vector.  But if a new <I>attribute</I> name with a bracket is used,
+the <I>size</I> keyword must be used so that the column dimension of the
+array is known.
 </P>
 <HR>
 
@@ -159,7 +163,7 @@ must be used so that the column dimension of the array is known.
 </P>
 <P><B>Default:</B>
 </P>
-<P>The default settings for creation of new custom attibute are type =
+<P>The default settings for creation of a new custom attibute are type =
 float and size = 0.
 </P>
 </HTML>
