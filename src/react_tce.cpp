@@ -144,12 +144,18 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
        }
 
       if (collide->elecstyle == DISCRETE) {
-        double ieelec = particle->edvec[particle->ewhich[collide->index_eelec]][ip - particle->particles];
-        double jeelec = particle->edvec[particle->ewhich[collide->index_eelec]][jp - particle->particles];
-        double iTelec = particle->bisectTelec(isp, ieelec, 1);
-        double jTelec = particle->bisectTelec(isp, ieelec, 1);
-        zi = (2 * ieelec)/(update->boltz * iTelec);
-        zj = (2 * jeelec)/(update->boltz * jTelec);
+        zi = 0.0;
+        if (species[isp].elecdat != NULL) {
+          double ieelec = particle->edvec[particle->ewhich[collide->index_eelec]][ip - particle->particles];
+          double iTelec = particle->bisectTelec(isp, ieelec, 1);
+          zi = (2 * ieelec)/(update->boltz * iTelec);
+        }
+        zj = 0.0;
+        if (species[jsp].elecdat != NULL) {
+          double jeelec = particle->edvec[particle->ewhich[collide->index_eelec]][jp - particle->particles];
+          double jTelec = particle->bisectTelec(jsp, jeelec, 1);
+          zj = (2 * jeelec)/(update->boltz * jTelec);
+        }
         z += 0.5*(zi + zj);
       }
     }
