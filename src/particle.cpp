@@ -1936,42 +1936,50 @@ double Particle::bisectTelec(int isp, double eelec, int count)
   double first_elec_eng, t_elec, degen0, degen1, numer, denom;
   double boltz = update->boltz;
 
-  // We calculate a first guess at the temp assuming
-  //   all the electronic energy is stored in the first
-  //   excited state
+  // Short circuit the function for the most common case.
+  if (eelec == 0.0) return 0.0;
 
   double target_energy_per_part = eelec/count;
-  first_elec_eng = species[isp].elecdat->states[1].temp*boltz;
-  degen0 = species[isp].elecdat->states[0].degen;
-  degen1 = species[isp].elecdat->states[1].degen;
-  t_elec = first_elec_eng / (boltz*(
-      - log( target_energy_per_part*degen0 /
-          (first_elec_eng*degen1)
-         ))
-    );
-  // If the electronic excitation is very high, the above calculation will
-  //   give negative numbers, including -inf. Negative temperatures are physically
-  //   meaningful if over 50% of particles are in excited states. However, in the
-  //   case of a truly broken value (-inf) we initialize the guess at something
-  //   more sane
 
-  if (isinf(t_elec)) t_elec = -species[isp].elecdat->states[1].temp;
+  t_elec = species[isp].elecdat->states[1].temp;
 
   // Bisection method to find T accurate to 1%
 
   // Find initial bounds based on our first guess
 
-  double T_low = 0.9*t_elec;
-  while (elec_energy(isp, T_low) > target_energy_per_part) {
-    T_low /= 2.0;
+  bool positive_t = true;
+  // This is a corner case where the energy is so high that
+  // even an infinite positive temp doesn't
+  // provide enough energy per particle.
+  if (target_energy_per_part > elec_energy(isp, 100*t_elec)) {
+    positive_t = false;
+    t_elec *= -1;
   }
 
-  double T_high = t_elec*1.1;
-  while (elec_energy(isp, T_high) < target_energy_per_part) {
-    T_high *= 2.0;
+  double low_mult, high_mult;
+  if (positive_t) {
+    low_mult = 0.9;
+    high_mult = 1.1;
+  } else {
+    low_mult = 1.1;
+    high_mult = 0.9;
+  }
+
+  double T_low = low_mult*t_elec;
+  while (elec_energy(isp, T_low) > target_energy_per_part) {
+    T_low *= low_mult;
+  }
+
+  double T_high = high_mult*t_elec;
+  while (elec_energy(isp, T_high) < target_energy_per_part && ! isinf(T_high)) {
+    T_high *= high_mult;
   }
 
   // Bisect
+
+  if (isinf(T_high)) {
+    throw 0;
+  }
 
   double T_mid = t_elec;
   double e_mid = elec_energy(isp, T_mid);
