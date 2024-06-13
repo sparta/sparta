@@ -33,10 +33,6 @@
 
 using namespace SPARTA_NS;
 
-// user keywords
-
-enum{NONE,COUNT,MASSWT,DOF};
-
 /* ---------------------------------------------------------------------- */
 
 ComputeTvibGridKokkos::ComputeTvibGridKokkos(SPARTA *sparta, int narg, char **arg) :

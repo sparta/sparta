@@ -1,0 +1,144 @@
+SPARTA (7 Mar 2024)
+Running on 1 MPI task(s)
+################################################################################
+# thermal gas in a 3d box with collisions
+# particles reflect off global box boundaries
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5 comm/sort yes
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
+create_grid 	    2 2 2
+Created 8 child grid cells
+  CPU time = 0.000806706 secs
+  create/ghost percent = 97.7509 2.24915
+
+balance_grid        rcb part
+Balance grid migrated 0 cells
+  CPU time = 8.018e-05 secs
+  reassign/sort/migrate/ghost percent = 78.4211 0.124719 16.7685 4.68571
+
+species		    air.species N2 O2 N2+ e elecfile air.elec
+mixture		    air N2 O2 N2+ e vstream 0.0 0.0 0.0 temp 20000.0 trot 100.0 tvib 100.0 telec 100.0
+
+mixture             air copy noelectron
+mixture             noelectron delete e
+mixture             noelectron N2 frac 0.45
+mixture             noelectron O2 frac 0.45
+mixture             noelectron N2+ frac 0.10
+
+global              nrho 7.07043E22
+global              fnum 7.07043E4
+
+fix                 ambi ambipolar e N2+
+
+collide		    vss air air.vss relax constant
+collide_modify      rotate no vibrate no electronic discrete
+collide_modify      ambipolar yes
+fix                 electronic elecmode
+collide_modify      remain no
+
+create_particles    noelectron n 40000 twopass
+Created 40000 particles
+  CPU time = 0.0161334 secs
+
+stats		    100
+compute             temp temp
+compute             T thermal/grid all all temp
+compute             Ttrans reduce ave c_T[1]
+
+compute             elec grid all species eelec
+compute             Eelec reduce ave c_elec[1]
+
+compute             telec telec/grid all air
+compute             Telec reduce ave c_telec[*]
+
+compute             telec2 telec/grid all species
+compute             Telec2 reduce ave c_telec2[*]
+
+compute             den grid all species nrho
+compute             Den reduce ave c_den[1]
+compute             Den2 reduce ave c_den[2]
+compute             Den3 reduce ave c_den[3]
+
+#stats_style	    step cpu np nattempt ncoll c_Erot c_Evib c_Eelec
+stats_style	    step cpu np nattempt ncoll c_Ttrans c_Eelec c_Telec c_Telec2[*] c_Den c_Den2 c_Den3
+
+timestep 	    1.00E-9
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 6.9375 6.9375 6.9375
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 8.45337 8.45337 8.45337
+Step CPU Np Natt Ncoll c_Ttrans c_Eelec c_Telec c_Telec2[1] c_Telec2[2] c_Telec2[3] c_Telec2[4] c_Den c_Den2 c_Den3 
+       0            0    40000        0        0    19957.062            0            0            0            0            0            0 1.281869e+21 1.2666675e+21 2.7963551e+20 
+     100   0.25382493    40000    13885      815    19948.854 1.3491171e-20    5434.1979    11985.991            0            0            0 1.281869e+21 1.2666675e+21 2.7963551e+20 
+     200   0.50969612    40000    13883      856    19938.888 1.5110491e-20     5521.319    12188.376            0            0            0 1.281869e+21 1.2666675e+21 2.7963551e+20 
+     300    0.7652058    40000    13887      847    19930.722 1.6357619e-20    5597.4121    12350.678            0            0            0 1.281869e+21 1.2666675e+21 2.7963551e+20 
+     400    1.0221978    40000    13886      863    19921.544 1.680633e-20    5628.1439    12417.279            0            0            0 1.281869e+21 1.2666675e+21 2.7963551e+20 
+     500    1.2943378    40000    13885      876    19916.625 1.7607671e-20    5669.4437    12507.136            0            0            0 1.281869e+21 1.2666675e+21 2.7963551e+20 
+     600    1.5628253    40000    13883      864    19915.331 1.7903807e-20    5678.9403    12533.132            0            0            0 1.281869e+21 1.2666675e+21 2.7963551e+20 
+     700    1.8164321    40000    13885      827    19905.467 1.8094045e-20    5694.3485    12564.928            0            0            0 1.281869e+21 1.2666675e+21 2.7963551e+20 
+     800    2.0676616    40000    13887      836    19898.039 1.8402171e-20    5704.5252    12587.847            0            0            0 1.281869e+21 1.2666675e+21 2.7963551e+20 
+     900     2.319668    40000    13889      800    19893.128 1.8982613e-20    5734.4075    12655.335            0            0            0 1.281869e+21 1.2666675e+21 2.7963551e+20 
+    1000    2.5753125    40000    13888      816    19887.524 1.9406035e-20    5753.0782    12691.155            0            0            0 1.281869e+21 1.2666675e+21 2.7963551e+20 
+Loop time of 2.57534 on 1 procs for 1000 steps with 40000 particles
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.68056    | 0.68056    | 0.68056    |   0.0 | 26.43
+Coll    | 1.7689     | 1.7689     | 1.7689     |   0.0 | 68.69
+Sort    | 0.11258    | 0.11258    | 0.11258    |   0.0 |  4.37
+Comm    | 0.00032248 | 0.00032248 | 0.00032248 |   0.0 |  0.01
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.012539   | 0.012539   | 0.012539   |   0.0 |  0.49
+Other   |            | 0.0003923  |            |       |  0.02
+
+Particle moves    = 40000000 (40M)
+Cells touched     = 42261466 (42.3M)
+Particle comms    = 0 (0K)
+Boundary collides = 2261574 (2.26M)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 13885498 (13.9M)
+Collide occurs    = 848609 (0.849M)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 1.55319e+07
+Particle-moves/step: 40000
+Cell-touches/particle/step: 1.05654
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0.0565394
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.347137
+Collisions/particle/step: 0.0212152
+Reactions/particle/step: 0
+
+Particles: 40000 ave 40000 max 40000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      8 ave 8 max 8 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0

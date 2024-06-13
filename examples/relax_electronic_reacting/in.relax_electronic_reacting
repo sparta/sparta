@@ -1,0 +1,83 @@
+################################################################################
+# thermal gas in a 3d box with collisions
+# particles reflect off global box boundaries
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5 comm/sort yes
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+create_grid 	    2 2 2
+
+balance_grid        rcb part
+
+species		    air.species N2 O2 N2+ O2+ O N O+ N+ NO NO+ e elecfile air.elec
+mixture		    air N2 O2 N2+ O2+ O N O+ N+ NO NO+ e vstream 0.0 0.0 0.0 temp 20000.0 trot 20000.0 tvib 20000.0 telec 100.0
+
+mixture             air copy noelectron
+mixture             noelectron delete e
+mixture             noelectron N2 frac 0.80
+mixture             noelectron O2 frac 0.199
+mixture             noelectron N2+ frac 0.0001
+
+global              nrho 7.07043E22
+global              fnum 7.07043E5
+
+fix                 ambi ambipolar e N2+ O2+ NO+ N+ O+
+
+collide		    vss air air.vss relax constant
+collide_modify      rotate smooth vibrate discrete electronic discrete
+collide_modify      ambipolar yes
+fix                 electronic elecmode
+collide_modify      remain no
+react               tce air.tce
+
+create_particles    noelectron n 40000 twopass
+
+stats		    100
+compute             temp temp
+compute             T thermal/grid all all temp
+compute             Ttrans reduce ave c_T[1]
+
+compute             rot grid all all trot erot
+compute             Trot reduce ave c_rot[1]
+compute             Erot reduce ave c_rot[2]
+
+compute             vib grid all all tvib evib
+compute             Tvib reduce ave c_vib[1]
+compute             Evib reduce ave c_vib[2]
+
+compute             elec grid all species eelec
+compute             Eelec reduce ave c_elec[1]
+
+compute             telec telec/grid all air
+compute             Telec reduce ave c_telec[*]
+
+compute             telec2 telec/grid all species
+compute             Telec2 reduce ave c_telec2[*]
+
+compute             den grid all species nrho
+compute             Den_N2 reduce ave c_den[1]
+compute             Den_O2 reduce ave c_den[2]
+compute             Den_N2p reduce ave c_den[3]
+compute             Den_O2p reduce ave c_den[4]
+compute             Den_O reduce ave c_den[5]
+compute             Den_N reduce ave c_den[6]
+compute             Den_Op reduce ave c_den[6]
+compute             Den_Np reduce ave c_den[7]
+compute             Den_NO reduce ave c_den[8]
+compute             Den_NOp reduce ave c_den[9]
+
+#stats_style	    step cpu np nattempt ncoll c_Erot c_Evib c_Eelec
+stats_style	    step cpu np nattempt ncoll c_Ttrans c_Trot c_Erot c_Tvib c_Evib c_Eelec c_Telec c_Den_N2 c_Den_O2 c_Den_N2p c_Den_O2p c_Den_O c_Den_N c_Den_Op c_Den_Np c_Den_NO c_Den_NOp
+
+timestep 	    1.00E-9
+run 		    1000

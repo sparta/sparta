@@ -81,6 +81,7 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   remain = NULL;
   rotstyle = SMOOTH;
   vibstyle = NONE;
+  elecstyle = NONE;
   nearcp = 0;
   nearlimit = 10;
 
@@ -101,6 +102,8 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
 
   ncollide_one = nattempt_one = nreact_one = 0;
   ncollide_running = nattempt_running = nreact_running = 0;
+
+  index_elecstate = index_eelec = -1;
 
   copymode = kokkos_flag = 0;
 }
@@ -202,6 +205,16 @@ void Collide::init()
       sprintf(str,"%d species do not define correct vibrational "
               "modes for discrete model",flag);
       error->all(FLERR,str);
+    }
+  }
+
+  if (elecstyle == DISCRETE) {
+    index_elecstate = particle->find_custom((char *) "elecstate");
+    index_eelec = particle->find_custom((char *) "eelec");
+
+    if (index_elecstate < 0) {
+        error->all(FLERR,
+                   "Fix elecmode must be used with discrete electronic modes");
     }
   }
 
@@ -362,6 +375,12 @@ void Collide::modify_params(int narg, char **arg)
       if (strcmp(arg[iarg+1],"no") == 0) vibstyle = NONE;
       else if (strcmp(arg[iarg+1],"discrete") == 0) vibstyle = DISCRETE;
       else if (strcmp(arg[iarg+1],"smooth") == 0) vibstyle = SMOOTH;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"electronic") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"no") == 0) elecstyle = NONE;
+      else if (strcmp(arg[iarg+1],"discrete") == 0) elecstyle = DISCRETE;
       else error->all(FLERR,"Illegal collide_modify command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"ambipolar") == 0) {

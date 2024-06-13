@@ -58,6 +58,7 @@ Mixture::Mixture(SPARTA *sparta, char *userid) : Pointers(sparta)
   temp_thermal_flag = 0;
   temp_rot_flag = 0;
   temp_vib_flag = 0;
+  temp_elec_flag = 0;
 
   fraction = NULL;
   fraction_user = NULL;
@@ -123,6 +124,15 @@ void Mixture::copy(Mixture *old)
   temp_thermal = old->temp_thermal;
   temp_thermal_flag = old->temp_thermal_flag;
   temp_thermal_user = old->temp_thermal_user;
+  temp_rot = old->temp_rot;
+  temp_rot_flag = old->temp_rot_flag;
+  temp_rot_user = old->temp_rot_user;
+  temp_vib = old->temp_vib;
+  temp_vib_flag = old->temp_vib_flag;
+  temp_vib_user = old->temp_vib_user;
+  temp_elec = old->temp_elec;
+  temp_elec_flag = old->temp_elec_flag;
+  temp_elec_user = old->temp_elec_user;
 
   nspecies = maxspecies = old->nspecies;
   allocate();
@@ -206,6 +216,8 @@ void Mixture::init()
   else temp_rot = temp_thermal;
   if (temp_vib_flag) temp_vib = temp_vib_user;
   else temp_vib = temp_thermal;
+  if (temp_elec_flag) temp_elec = temp_elec_user;
+  else temp_elec = temp_thermal;
 
   // mixture temperarate cannot be 0.0 if streaming velocity is 0.0
 
@@ -411,6 +423,13 @@ void Mixture::params(int narg, char **arg)
         error->all(FLERR,"Illegal mixture command");
       iarg += 2;
 
+    } else if (strcmp(arg[iarg],"telec") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
+      temp_elec_flag = 1;
+      temp_elec_user = atof(arg[iarg+1]);
+      if (temp_elec_user <= 0.0)
+        error->all(FLERR,"Illegal mixture command");
+      iarg += 2;
     } else if (strcmp(arg[iarg],"frac") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
       fracflag = 1;
@@ -663,6 +682,8 @@ void Mixture::write_restart(FILE *fp)
   if (temp_rot_flag) fwrite(&temp_rot_user,sizeof(double),1,fp);
   fwrite(&temp_vib_flag,sizeof(int),1,fp);
   if (temp_vib_flag) fwrite(&temp_vib_user,sizeof(double),1,fp);
+  fwrite(&temp_elec_flag,sizeof(int),1,fp);
+  if (temp_elec_flag) fwrite(&temp_elec_user,sizeof(double),1,fp);
 
   fwrite(fraction_flag,sizeof(int),nspecies,fp);
   fwrite(fraction_user,sizeof(double),nspecies,fp);
@@ -724,6 +745,11 @@ void Mixture::read_restart(FILE *fp)
   if (temp_vib_flag) {
     if (me == 0) tmp = fread(&temp_vib_user,sizeof(double),1,fp);
     MPI_Bcast(&temp_vib_user,1,MPI_DOUBLE,0,world);
+  }
+  MPI_Bcast(&temp_elec_flag,1,MPI_INT,0,world);
+  if (temp_elec_flag) {
+    if (me == 0) fread(&temp_elec_user,sizeof(double),1,fp);
+    MPI_Bcast(&temp_elec_user,1,MPI_DOUBLE,0,world);
   }
 
   if (me == 0) tmp = fread(fraction_flag,sizeof(int),nspecies,fp);

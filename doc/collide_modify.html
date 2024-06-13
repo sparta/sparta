@@ -30,6 +30,8 @@
   <I>rotate</I> value = <I>no</I> or <I>smooth</I>
   <I>vibrate</I> value = <I>no</I> or <I>smooth</I> or <I>discrete</I> 
 </PRE>
+<PRE>  <I>electronic</I> value = <I>no</I> or <I>discrete</I> 
+</PRE>
 
 </UL>
 <P><B>Examples:</B>
@@ -140,6 +142,15 @@ used with its optional <I>vibfile</I> keyword to set the vibrational info
 vibrational mode, then use of the <I>discrete</I> option also requires the
 <A HREF = "fix_vibmode.html">fix vibmode</A> command be used to allocate storage for
 the per-particle mode values.
+</P>
+<P>The <I>electronic</I> keyword determines whether the electronic energy of
+particles is tracked. If the value is set to <I>no</I>, then electronic
+energy is not tracked. If the value is set to <I>discrete</I>, then each
+particle is in one of several defined electronic states. The use of
+electronic modes also requires the <A HREF = "fix_elecmode.html">fix elecmode</A>
+command be used to allocate storage for the per-particle electronic
+state values. Likewise, the "species elecfile" must also be used to
+provide electronic state information.
 </P>
 <HR>
 

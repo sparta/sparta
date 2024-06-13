@@ -235,11 +235,12 @@ void Modify::grid_changed()
 ------------------------------------------------------------------------- */
 
 void Modify::update_custom(int index, double temp_thermal,
-			   double temp_rot, double temp_vib, double *vstream)
+                           double temp_rot, double temp_vib,
+                           double temp_elec, double *vstream)
 {
   for (int i = 0; i < n_update_custom; i++)
     fix[list_update_custom[i]]->update_custom(index,temp_thermal,temp_rot,
-                                              temp_vib,vstream);
+                                              temp_vib,temp_elec,vstream);
 }
 
 /* ----------------------------------------------------------------------
