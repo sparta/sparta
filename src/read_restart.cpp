@@ -586,11 +586,13 @@ void ReadRestart::header(int incompatible)
       int value = read_int();
       if (!mem_limit_flag) update->mem_limit_grid_flag = value;
       if (!mem_limit_file) mem_limit_file = value;
+      mem_limit_flag = update->have_mem_limit();
     } else if (flag == MEMLIMIT) {
       // ignore value if already set
       int value = read_int();
       if (!mem_limit_flag) update->global_mem_limit = value;
       if (!mem_limit_file) mem_limit_file = value;
+      mem_limit_flag = update->have_mem_limit();
     } else if (flag == NPARTICLE) {
       nparticle_file = read_bigint();
     } else if (flag == NUNSPLIT) {

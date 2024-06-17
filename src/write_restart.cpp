@@ -402,7 +402,7 @@ void WriteRestart::write_less_memory(char *file)
   }
 
   // proc 0 writes header info
-  // also simulation box, particle species, parent grid cells, surf info
+  // also simulation box, particle species, grid params, surf info
 
   bigint btmp = particle->nlocal;
   MPI_Allreduce(&btmp,&particle->nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
@@ -447,7 +447,8 @@ void WriteRestart::write_less_memory(char *file)
 
   // header info is complete
   // if multiproc output:
-  //   close header file, open multiname file on each writing proc,
+  //   close header file
+  //   open new multiname file on each writing proc
   //   write PROCSPERFILE into new file
 
   if (multiproc) {
@@ -531,7 +532,6 @@ void WriteRestart::write_less_memory(char *file)
           write_char_vec(recv_size,buf);
       }
     }
-    fclose(fp);
 
   } else {
     bigint total_write_part = 0;
