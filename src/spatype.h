@@ -12,6 +12,10 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+#if __cplusplus <= 199711L
+  #error SPARTA requires a C++11 compliant compiler
+#endif
+
 // define integer data types used by SPARTA and associated size limits
 
 // smallint = variables for on-procesor system (nlocal, nmax, etc)

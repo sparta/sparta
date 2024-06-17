@@ -154,6 +154,13 @@ endif()
 # ################### BEGIN PROCESS PKGS ####################
 
 if(PKG_KOKKOS)
+
+  # As of version 4.0.0 Kokkos requires C++17
+  if(CMAKE_CXX_STANDARD LESS 17)
+    message(FATAL_ERROR "The KOKKOS package requires the C++ standard to
+  be set to at least C++17")
+  endif()
+
   set(TARGET_SPARTA_PKG_KOKKOS pkg_kokkos)
   list(APPEND TARGET_SPARTA_PKGS ${TARGET_SPARTA_PKG_KOKKOS})
   set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS -DSPARTA_KOKKOS

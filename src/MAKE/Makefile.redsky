@@ -8,7 +8,7 @@ SHELL = /bin/sh
 # specify flags and libraries needed for your compiler
 
 CC =		mpic++
-CCFLAGS =	-O2 -xsse4.2 -funroll-loops -fstrict-aliasing
+CCFLAGS =	-O2 -xsse4.2 -funroll-loops -fstrict-aliasing -std=c++11
 SHFLAGS =	-fPIC
 DEPFLAGS =	-M
 
