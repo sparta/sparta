@@ -81,6 +81,7 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   set_units("si");
 
   fnum = 1.0;
+  fnum_emit = 0.0;
   nrho = 1.0;
   vstream[0] = vstream[1] = vstream[2] = 0.0;
   temp_thermal = 273.15;
@@ -1623,6 +1624,12 @@ void Update::global(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       fnum = input->numeric(FLERR,arg[iarg+1]);
       if (fnum <= 0.0) error->all(FLERR,"Illegal global command");
+      iarg += 2;
+    // can define different fnum for emit (for swpm)
+    } else if (strcmp(arg[iarg],"fnum/emit") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
+      fnum_emit = input->numeric(FLERR,arg[iarg+1]);
+      if (fnum_emit <= 0.0) error->all(FLERR,"Illegal global command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"optmove") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");

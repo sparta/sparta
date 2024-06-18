@@ -73,6 +73,7 @@ Dump::Dump(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   append_flag = 0;
   buffer_allow = 0;
   buffer_flag = 0;
+  header_flag = 0;
   padflag = 0;
 
   maxbuf = 0;
@@ -260,7 +261,7 @@ void Dump::write()
   if (multiproc)
     MPI_Allreduce(&bnme,&nheader,1,MPI_SPARTA_BIGINT,MPI_SUM,clustercomm);
 
-  if (filewriter) write_header(nheader);
+  if (filewriter && file_header_flag) write_header(nheader);
 
   // insure buf is sized for packing and communicating
   // use nmax to insure filewriter proc can receive info from others
@@ -494,6 +495,13 @@ void Dump::modify_params(int narg, char **arg)
       else error->all(FLERR,"Illegal dump_modify command");
       if (buffer_flag && buffer_allow == 0)
         error->all(FLERR,"Dump_modify buffer yes not allowed for this style");
+      iarg += 2;
+
+    } else if (strcmp(arg[iarg],"header") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal dump_modify command");
+      if (strcmp(arg[iarg+1],"yes") == 0) file_header_flag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) file_header_flag = 0;
+      else error->all(FLERR,"Illegal dump_modify command");
       iarg += 2;
 
     } else if (strcmp(arg[iarg],"every") == 0) {
