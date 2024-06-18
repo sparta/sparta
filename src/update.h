@@ -39,6 +39,7 @@ class Update : protected Pointers {
   double mvv2e;          // conversion of mv^2 to energy
 
   double fnum;           // ratio of real particles to simulation particles
+  double fnum_emit;      // ratio of real particles to simulation particles
   double nrho;           // number density of background gas
   double vstream[3];     // streaming velocity of background gas
   double temp_thermal;   // thermal temperature of background gas

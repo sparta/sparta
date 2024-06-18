@@ -147,6 +147,8 @@ class Collide : protected Pointers {
   int reduction_type;   // type of particle reduction to use
   int group_type;       // type of grouping
 
+  int *pL, *pLU;
+
   // inline functions
   // add particle N to Igroup and set its g2p entry in plist to K
   // delete Ith entry in Igroup and reset g2p entries as well
@@ -188,13 +190,13 @@ class Collide : protected Pointers {
   // methods for stochastic weight particle method
 
   int split(Particle::OnePart *&, Particle::OnePart *&,
-            Particle::OnePart *&, Particle::OnePart *&, int, int);
+            Particle::OnePart *&, Particle::OnePart *&);
   void group_reduce();
-  void group_bt(int, int);
+  void group_bt(int*, int);
   void group_ot(int, int);
-  void reduce(int, int, double, double *, double, double);
-  void reduce(int, int, double, double *, double, double, double *);
-  void reduce(int, int, double, double *, double, double, double *, double [3][3]);
+  void reduce(int*, int, double, double *, double, double);
+  void reduce(int*, int, double, double *, double, double, double *);
+  void reduce(int*, int, double, double *, double, double, double *, double [3][3]);
   void grow_percell(int);
 
   // functions for nearest neighbor

@@ -102,6 +102,8 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   sweight_max = update->fnum;
   reduceflag = 0;
   Ncmin = Ncmax = Ngmin = Ngmax = 0;
+  pL = NULL;
+  pLU = NULL;
 
   // used if near-neighbor model is invoked
 
@@ -149,6 +151,9 @@ Collide::~Collide()
   memory->destroy(nn_last_partner_jgroup);
 
   memory->destroy(recomb_ijflag);
+
+  memory->destroy(pL);
+  memory->destroy(pLU);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -226,8 +231,12 @@ void Collide::init()
   if (ngroups != oldgroups) {
     if (oldgroups == 1) {
       memory->destroy(plist);
+      memory->destroy(pL);
+      memory->destroy(pLU);
       npmax = 0;
       plist = NULL;
+      pL = NULL;
+      pLU = NULL;
     }
     if (oldgroups > 1) {
       delete [] ngroup;
@@ -244,6 +253,10 @@ void Collide::init()
     if (ngroups == 1) {
       npmax = DELTAPART;
       memory->create(plist,npmax,"collide:plist");
+      if(swpmflag) {
+        memory->create(pL,npmax,"collide:pL");
+        memory->create(pLU,npmax,"collide:pLU");
+      }
     }
     if (ngroups > 1) {
       ngroup = new int[ngroups];
@@ -1791,8 +1804,8 @@ void Collide::collisions_one_sw()
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
 
+  double isw;
   double *sweights = particle->edvec[particle->ewhich[index_sweight]];
-  double isw, jsw;
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
@@ -1807,7 +1820,11 @@ void Collide::collisions_one_sw()
       while (np > npmax) npmax += DELTAPART;
       memory->destroy(plist);
       memory->create(plist,npmax,"collide:plist");
+      memory->create(pL,npmax,"collide:pL");
+      memory->create(pLU,npmax,"collide:pLU");
     }
+
+    // get stochastic weights
 
     // build particle list and find maximum particle weight
 
@@ -1821,15 +1838,13 @@ void Collide::collisions_one_sw()
       sweight_max = MAX(sweight_max,isw);
 
       if (isw != isw) error->all(FLERR,"Particle has NaN weight");
-      if (isw < 0) error->all(FLERR,"Particle has negative weight");
+      if (isw <= 0.0) error->all(FLERR,"Particle has negative or zero weight");
       ip = next[ip];
     }
 
     ilevel = cells[icell].level;
-    np_scale = pow(8,ilevel-1);
-
-    if (np >= Ncmin/np_scale) pre_wtf = 0.0;
-    else pre_wtf = 1.0;
+    if(ilevel==1) np_scale = 1.0;
+    else np_scale = pow(8,ilevel-1);
 
     // attempt = exact collision attempt count for all particles in cell
     // nattempt = rounded attempt with RN
@@ -1854,12 +1869,16 @@ void Collide::collisions_one_sw()
 
       // check if pair has zero or negative weight
 
-      if(sweights[i] <= 0.0 || sweights[j] <= 0.0)
-        error->one(FLERR,"Bad weight before split");
+      if(sweights[i] <= 0.0 || sweights[j] <= 0.0) {
+        printf("i: %i -- %4.3e; j: %i -- %4.3e\n", i, sweights[i], j, sweights[j]);
+        error->one(FLERR,"bad weight before split");
+      }
 
       // split particles
+      if (np >= Ncmin/np_scale && Ncmin > 0.0) pre_wtf = 0.0;
+      else pre_wtf = 1.0;
 
-      newp = split(ipart,jpart,kpart,lpart,i,j);
+      newp = split(ipart,jpart,kpart,lpart);
 
       // add new particles to particle list
 
@@ -1869,17 +1888,23 @@ void Collide::collisions_one_sw()
         if (np+2 >= npmax) {
           npmax += DELTAPART;
           memory->grow(plist,npmax,"collide:plist");
+          memory->grow(pL,npmax,"collide:pL");
+          memory->grow(pLU,npmax,"collide:pLU");
         }
         plist[np++] = particle->nlocal-2;
         plist[np++] = particle->nlocal-1;
+        particles = particle->particles;
       } else if (newp > 0) {
         particles = particle->particles;
         sweights = particle->edvec[particle->ewhich[index_sweight]];
         if (np+1 >= npmax) {
           npmax += DELTAPART;
           memory->grow(plist,npmax,"collide:plist");
+          memory->grow(pL,npmax,"collide:pL");
+          memory->grow(pLU,npmax,"collide:pLU");
         }
         plist[np++] = particle->nlocal-1;
+        particles = particle->particles;
       }
 
       // since ipart and jpart have same weight, do not need
@@ -1904,7 +1929,7 @@ void Collide::collisions_one_sw()
 ------------------------------------------------------------------------- */
 
 int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
-                   Particle::OnePart *&kp, Particle::OnePart *&lp, int i, int j)
+                   Particle::OnePart *&kp, Particle::OnePart *&lp)
 {
   double xk[3],vk[3];
   double xl[3],vl[3];
@@ -1925,9 +1950,12 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
   // ... MIN(ip->sweight,jp->sweight)/(1 + pre_wtf * wtf)
 
   double *sweights = particle->edvec[particle->ewhich[index_sweight]];
-  double isw = sweights[i];
-  double jsw = sweights[j];
+  double isw = sweights[ip-particle->particles];
+  double jsw = sweights[jp-particle->particles];
   double Gwtf, ksw, lsw;
+
+  if (isw <= 0.0 || jsw <= 0.0)
+    error->one(FLERR,"Zero or negative weight before split");
 
   // particle ip has larger weight
 
@@ -1974,9 +2002,12 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
 
   // Gwtf should never be negative or zero
 
-  if(Gwtf <= 0.0)
+  if (Gwtf <= 0.0)
     error->one(FLERR,"Negative weight assigned after split");
 
+  if (Gwtf > 0.0 && pre_wtf > 0.0)
+    if (ksw <= 0.0 || lsw <= 0.0)
+      error->one(FLERR,"Zero or negative weight after split");
 
   // number of new particles
 
@@ -1988,7 +2019,6 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
     id = MAXSMALLINT*random->uniform();
     reallocflag = particle->add_particle(id,ks,kcell,xk,vk,erotk,0.0);
     if (reallocflag) {
-      particles = particle->particles;
       sweights = particle->edvec[particle->ewhich[index_sweight]];
       ip = particle->particles + (ip - particles);
       jp = particle->particles + (jp - particles);
@@ -2006,7 +2036,6 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
     id = MAXSMALLINT*random->uniform();
     reallocflag = particle->add_particle(id,ls,lcell,xl,vl,erotl,0.0);
     if (reallocflag) {
-      particles = particle->particles;
       sweights = particle->edvec[particle->ewhich[index_sweight]];
       ip = particle->particles + (ip - particles);
       jp = particle->particles + (jp - particles);
@@ -2043,13 +2072,22 @@ void Collide::group_reduce()
   double np_scale;
 
   double *sweights = particle->edvec[particle->ewhich[index_sweight]];
+  double swmean, swvar, swstd;
+  double d1, d2;
+  double lLim, uLim;
+  int npL, npLU;
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
+
     ilevel = cells[icell].level;
-    np_scale = pow(8,ilevel-1);
-    nthresh = MAX(Ncmax/np_scale, Ngmax);
-    
+    if(ilevel == 1) nthresh = Ncmax;
+    else {
+      np_scale = pow(8,ilevel-1);
+      // number of particles should at least exceed minimum group size
+      nthresh = MAX(Ncmax/np_scale, Ngmax);
+    }
+
     if (np <= nthresh) continue;
 
     // create particle list
@@ -2067,25 +2105,26 @@ void Collide::group_reduce()
 
     while (n > nthresh) {
       nold = n;
+
+      // seems to be more stable than weighted
+
       if (group_type == BINARY) {
 
         // shuffle indices to choose random positions
 
-        int j;
+        /*int j;
         for (int i = n-1; i > 0; --i) {
           j = random->uniform()*i;
           if (j < 0 || j >= n) error->one(FLERR,"bad index");
           std::swap(plist[i], plist[j]);
-        }
+        }*/
 
-        group_bt(0,n);
+        group_bt(plist,n);
 
       } else if (group_type == WEIGHT) {
 
         // find mean / standard deviation of weight
 
-        double swmean, swvar;
-        double d1, d2;
         ip = cinfo[icell].first;
         n = 0;
         swmean = swvar = 0.0;
@@ -2103,47 +2142,48 @@ void Collide::group_reduce()
           }
           ip = next[ip];
         }
-        double swstd = sqrt(swvar/n);
+        swstd = sqrt(swvar/n);
 
         // weight limits to separate particles
 
-        double lLim = MAX(swmean-1.25*swstd,0);
-        double uLim = swmean+2.0*swstd;
+        lLim = MAX(swmean-1.25*swstd,0);
+        uLim = swmean+2.0*swstd;
 
         // recreate particle list and omit large weighted particles
 
         ip = cinfo[icell].first;
-        n = 0;
+        npL = npLU = 0;
         while (ip >= 0) {
           ipart = &particles[ip];
           isw = sweights[ip];
-          if(isw > 0 && isw < uLim) plist[n++] = ip;
+          if(isw > 0 && isw < lLim) pL[npL++] = ip;
+          else if(isw >= lLim && isw < uLim) pLU[npLU++] = ip;
           ip = next[ip];
         }
 
         // shuffle indices to choose random positions
 
-        int j;
+        /*int j;
         for(int i = n-1; i > 0; --i) {
           j = random->uniform()*i;
           if(j < 0 || j >= n) error->one(FLERR,"bad index");
           std::swap(plist[i], plist[j]);
-        }
+        }*/
 
         // rearrange so that small weighted particles in front
 
-        int pmid = 0;
+        /*int pmid = 0;
         for(int i = 0; i < n; i++) {
           ipart = &particles[plist[i]];
           isw = sweights[plist[i]];
           if(isw < lLim)
             std::swap(plist[pmid++],plist[i]);
-        }
+        }*/
 
         // can reuse binary tree division here
 
-        group_bt(0,pmid);
-        group_bt(pmid,n);
+        group_bt(pL,  npL);
+        group_bt(pLU, npLU);
 
       } else if (group_type == OCTREE) {
         int j;
@@ -2170,23 +2210,23 @@ void Collide::group_reduce()
 
       // if no particles reduced, increase group size
       
-      if (n == nold) gbuf++;
+      if (gbuf > n) error->one(FLERR,"too big");
+
+      if (n == nold) gbuf += 2;
 
     }
   }// loop for cells
-
   return;
 }
 
 /* ----------------------------------------------------------------------
    Recursivley divides particles using the binary tree strategy
 ------------------------------------------------------------------------- */
-void Collide::group_bt(int pfirst, int plast)
+void Collide::group_bt(int *plist_leaf, int np)
 {
   Particle::OnePart *ipart;
   Particle::OnePart *particles = particle->particles;
   Particle::Species *species = particle->species;
-  int np = plast-pfirst;
 
   // ignore groups which have too few particles
 
@@ -2212,12 +2252,12 @@ void Collide::group_bt(int pfirst, int plast)
   int ispecies;
 	double mass, psw, pmsw, vp[3];
   double Erot;
-  for (int p = pfirst; p < plast; p++) {
-    ipart = &particles[plist[p]];
+  for (int p = 0; p < np; p++) {
+    ipart = &particles[plist_leaf[p]];
     ispecies = ipart->ispecies;
     mass = species[ispecies].mass;
 
-    psw = sweights[plist[p]];
+    psw = sweights[plist_leaf[p]];
     pmsw = psw * mass;
     memcpy(vp, ipart->v, 3*sizeof(double));
    	gsum += psw;
@@ -2298,11 +2338,11 @@ void Collide::group_bt(int pfirst, int plast)
 
     // reduce based on type
     if (reduction_type == ENERGY) {
-      reduce(pfirst, plast, gsum, V, T, Erot);
+      reduce(plist_leaf, np, gsum, V, T, Erot);
     } else if (reduction_type == HEAT) {
-      reduce(pfirst, plast, gsum, V, T, Erot, q);
+      reduce(plist_leaf, np, gsum, V, T, Erot, q);
     } else if (reduction_type == STRESS) {
-      reduce(pfirst, plast, gsum, V, T, Erot, q, pij);
+      reduce(plist_leaf, np, gsum, V, T, Erot, q, pij);
     }
 
   // group still too large so divide further
@@ -2339,15 +2379,20 @@ void Collide::group_bt(int pfirst, int plast)
     // Separate based on particle velocity
 
     double center = V[0]*maxevec[0] + V[1]*maxevec[1] + V[2]*maxevec[2];
-    int pmid = pfirst;
-    for (int i = pfirst; i < plast; i++) {
-      ipart = &particles[plist[i]];
+    int pid, pidL[np], pidR[np];
+    int npL, npR;
+    npL = npR = 0;
+    for (int i = 0; i < np; i++) {
+      pid = plist_leaf[i];
+      ipart = &particles[pid];
       if (MathExtra::dot3(ipart->v,maxevec) < center)
-        std::swap(plist[pmid++],plist[i]);
+        pidL[npL++] = pid;
+      else
+        pidR[npR++] = pid;
     }
 
-    group_bt(pfirst,pmid);
-    group_bt(pmid,plast);
+    if(npL > Ngmin) group_bt(pidL,npL);
+    if(npR > Ngmin) group_bt(pidR,npR);
   }
 
   return;
@@ -2478,11 +2523,11 @@ void Collide::group_ot(int pfirst, int plast)
     // reduce based on type
 
     if (reduction_type == ENERGY) {
-      reduce(pfirst, plast, gsum, V, T, Erot);
+      //reduce(plist_leaf, np, gsum, V, T, Erot);
     } else if (reduction_type == HEAT) {
-      reduce(pfirst, plast, gsum, V, T, Erot, q);
+      //reduce(plist_leaf, np, gsum, V, T, Erot, q);
     } else if (reduction_type == STRESS) {
-      reduce(pfirst, plast, gsum, V, T, Erot, q, pij);
+      //reduce(plist_leaf, np, gsum, V, T, Erot, q, pij);
     }
 
   // group still too large so divide further
@@ -2536,7 +2581,7 @@ void Collide::group_ot(int pfirst, int plast)
 /* ----------------------------------------------------------------------
    Merge particles using energy scheme
 ------------------------------------------------------------------------- */
-void Collide::reduce(int pfirst, int plast,
+void Collide::reduce(int *pleaf, int np,
                      double rho, double *V, double T, double Erot)
 {
 
@@ -2544,8 +2589,14 @@ void Collide::reduce(int pfirst, int plast,
 
   Particle::OnePart *particles = particle->particles;
   Particle::OnePart *ipart, *jpart;
-  ipart = &particles[plist[pfirst]];
-  jpart = &particles[plist[pfirst+1]];
+
+  int ip, jp;
+  ip = np * random->uniform();
+  jp = np * random->uniform();
+  while (ip == jp) jp = np * random->uniform();
+
+  ipart = &particles[pleaf[ip]];
+  jpart = &particles[pleaf[jp]];
 
   double *sweights = particle->edvec[particle->ewhich[index_sweight]];
 
@@ -2573,19 +2624,19 @@ void Collide::reduce(int pfirst, int plast,
 
   // set reduced particle weights
 
-  sweights[plist[pfirst]] = rho*0.5;
-  sweights[plist[pfirst+1]] = rho*0.5;
+  sweights[pleaf[ip]] = rho*0.5;
+  sweights[pleaf[jp]] = rho*0.5;
 
   // delete other particles
 
-  for (int i = pfirst+2; i < plast; i++) {
+  for (int i = 0; i < np; i++) {
+    if (i == ip || i == jp) continue;
     if (ndelete == maxdelete) {
       maxdelete += DELTADELETE;
       memory->grow(dellist,maxdelete,"collide:dellist");
     }
-    ipart = &particles[plist[i]];
-    sweights[plist[i]] = -1.0;
-    dellist[ndelete++] = plist[i];
+    sweights[pleaf[i]] = -1.0;
+    dellist[ndelete++] = pleaf[i];
   }
 
   return;
@@ -2594,7 +2645,7 @@ void Collide::reduce(int pfirst, int plast,
 /* ----------------------------------------------------------------------
    Merge particles using heat flux scheme
 ------------------------------------------------------------------------- */
-void Collide::reduce(int pfirst, int plast,
+void Collide::reduce(int *pleaf, int np,
                      double rho, double *V, double T, double Erot, double *q)
 {
 
@@ -2602,8 +2653,14 @@ void Collide::reduce(int pfirst, int plast,
 
   Particle::OnePart *particles = particle->particles;
   Particle::OnePart *ipart, *jpart;
-  ipart = &particles[plist[pfirst]];
-  jpart = &particles[plist[pfirst+1]];
+
+  int ip, jp;
+  ip = np * random->uniform();
+  jp = np * random->uniform();
+  while (ip == jp) jp = np * random->uniform();
+
+  ipart = &particles[pleaf[ip]];
+  jpart = &particles[pleaf[jp]];
 
   double *sweights = particle->edvec[particle->ewhich[index_sweight]];
 
@@ -2646,18 +2703,18 @@ void Collide::reduce(int pfirst, int plast,
   ipart->erot = Erot/isw*0.5;
   jpart->erot = Erot/jsw*0.5;
 
-  sweights[plist[pfirst]] = isw;
-  sweights[plist[pfirst+1]] = jsw;
+  sweights[pleaf[ip]] = isw;
+  sweights[pleaf[jp]] = jsw;
 
   // delete other particles
-  for (int i = pfirst+2; i < plast; i++) {
+  for (int i = 0; i < np; i++) {
+    if (i == ip || i == jp) continue;
     if (ndelete == maxdelete) {
       maxdelete += DELTADELETE;
       memory->grow(dellist,maxdelete,"collide:dellist");
     }
-    ipart = &particles[plist[i]];
-    sweights[plist[i]] = -1.0;
-    dellist[ndelete++] = plist[i];
+    sweights[pleaf[i]] = -1.0;
+    dellist[ndelete++] = pleaf[i];
   }
 
   return;
@@ -2666,7 +2723,7 @@ void Collide::reduce(int pfirst, int plast,
 /* ----------------------------------------------------------------------
    Merge particles using stress scheme
 ------------------------------------------------------------------------- */
-void Collide::reduce(int pfirst, int plast,
+void Collide::reduce(int *pleaf, int np,
                      double rho, double *V, double T, double Erot,
                      double *q, double pij[3][3])
 {
@@ -2697,12 +2754,13 @@ void Collide::reduce(int pfirst, int plast,
   double qli, itheta;
   double isw, jsw;
   double uvec[3];
+
   for (int iK = 0; iK < nK; iK++) {
 
     // reduced particles chosen as first two
 
-    ipart = &particles[plist[pfirst]];
-    jpart = &particles[plist[pfirst+1]];
+    ipart = &particles[pleaf[2*iK]];
+    jpart = &particles[pleaf[2*iK+1]];
 
     qli = evec[0][iK]*q[0] + evec[1][iK]*q[1] + evec[2][iK]*q[2];
     if (qli < 0)
@@ -2729,23 +2787,20 @@ void Collide::reduce(int pfirst, int plast,
     ipart->erot = Erot/isw*0.5/nK;
     jpart->erot = Erot/jsw*0.5/nK;
 
-    sweights[plist[pfirst]] = isw;
-    sweights[plist[pfirst+1]] = jsw;
-
-    // move onto next pair
-    pfirst += 2;
+    sweights[pleaf[2*iK]] = isw;
+    sweights[pleaf[2*iK+1]] = jsw;
   } // end nK
   
 
   // delete other particles
-  for (int i = pfirst; i < plast; i++) {
+  for (int i = 0; i < np; i++) {
+    if (i < 2*nK) continue;
     if (ndelete == maxdelete) {
       maxdelete += DELTADELETE;
       memory->grow(dellist,maxdelete,"collide:dellist");
     }
-    ipart = &particles[plist[i]];
-    sweights[plist[i]] = -1.0;
-    dellist[ndelete++] = plist[i];
+    sweights[pleaf[i]] = -1.0;
+    dellist[ndelete++] = pleaf[i];
   }
 
   return;
