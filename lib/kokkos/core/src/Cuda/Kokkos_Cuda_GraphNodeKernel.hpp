@@ -23,15 +23,13 @@
 
 #include <Kokkos_Graph_fwd.hpp>
 
-#include <impl/Kokkos_GraphImpl.hpp>    // GraphAccess needs to be complete
-#include <impl/Kokkos_SharedAlloc.hpp>  // SharedAllocationRecord
+#include <impl/Kokkos_GraphImpl.hpp>  // GraphAccess needs to be complete
 
 #include <Kokkos_Parallel.hpp>
 #include <Kokkos_Parallel_Reduce.hpp>
 #include <Kokkos_PointerOwnership.hpp>
 
-#include <Kokkos_Cuda.hpp>
-#include <cuda_runtime_api.h>
+#include <Cuda/Kokkos_Cuda.hpp>
 
 namespace Kokkos {
 namespace Impl {
@@ -51,10 +49,6 @@ class GraphNodeKernelImpl<Kokkos::Cuda, PolicyType, Functor, PatternTag,
   // covers and we're not modifying it
   Kokkos::ObservingRawPtr<const cudaGraph_t> m_graph_ptr    = nullptr;
   Kokkos::ObservingRawPtr<cudaGraphNode_t> m_graph_node_ptr = nullptr;
-  // Note: owned pointer to CudaSpace memory (used for global memory launches),
-  // which we're responsible for deallocating, but not responsible for calling
-  // its destructor.
-  using Record = Kokkos::Impl::SharedAllocationRecord<Kokkos::CudaSpace, void>;
   // Basically, we have to make this mutable for the same reasons that the
   // global kernel buffers in the Cuda instance are mutable...
   mutable Kokkos::OwningRawPtr<base_t> m_driver_storage = nullptr;
@@ -83,9 +77,7 @@ class GraphNodeKernelImpl<Kokkos::Cuda, PolicyType, Functor, PatternTag,
 
   ~GraphNodeKernelImpl() {
     if (m_driver_storage) {
-      // We should be the only owner, but this is still the easiest way to
-      // allocate and deallocate aligned memory for these sorts of things
-      Record::decrement(Record::get_record(m_driver_storage));
+      Kokkos::CudaSpace().deallocate(m_driver_storage, sizeof(base_t));
     }
   }
 
@@ -100,13 +92,8 @@ class GraphNodeKernelImpl<Kokkos::Cuda, PolicyType, Functor, PatternTag,
 
   Kokkos::ObservingRawPtr<base_t> allocate_driver_memory_buffer() const {
     KOKKOS_EXPECTS(m_driver_storage == nullptr)
-
-    auto* record = Record::allocate(
-        Kokkos::CudaSpace{}, "GraphNodeKernel global memory functor storage",
-        sizeof(base_t));
-
-    Record::increment(record);
-    m_driver_storage = reinterpret_cast<base_t*>(record->data());
+    m_driver_storage = static_cast<base_t*>(Kokkos::CudaSpace().allocate(
+        "GraphNodeKernel global memory functor storage", sizeof(base_t)));
     KOKKOS_ENSURES(m_driver_storage != nullptr)
     return m_driver_storage;
   }
@@ -133,8 +120,9 @@ template <class KernelType>
 struct get_graph_node_kernel_type<KernelType, Kokkos::ParallelReduceTag>
     : type_identity<GraphNodeKernelImpl<
           Kokkos::Cuda, typename KernelType::Policy,
-          typename KernelType::functor_type, Kokkos::ParallelReduceTag,
-          typename KernelType::reducer_type>> {};
+          CombinedFunctorReducer<typename KernelType::functor_type,
+                                 typename KernelType::reducer_type>,
+          Kokkos::ParallelReduceTag>> {};
 
 //==============================================================================
 // <editor-fold desc="get_cuda_graph_*() helper functions"> {{{1

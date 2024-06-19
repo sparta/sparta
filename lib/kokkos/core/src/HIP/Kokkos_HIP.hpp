@@ -27,7 +27,8 @@
 namespace Kokkos {
 namespace Impl {
 class HIPInternal;
-}
+enum class ManageStream : bool { no, yes };
+}  // namespace Impl
 /// \class HIP
 /// \brief Kokkos device for multicore processors in the host memory space.
 class HIP {
@@ -47,20 +48,24 @@ class HIP {
   using scratch_memory_space = ScratchMemorySpace<HIP>;
 
   HIP();
-  HIP(hipStream_t stream, bool manage_stream = false);
+  HIP(hipStream_t stream,
+      Impl::ManageStream manage_stream = Impl::ManageStream::no);
+  KOKKOS_DEPRECATED HIP(hipStream_t stream, bool manage_stream);
 
   //@}
   //------------------------------------
   //! \name Functions that all Kokkos devices must implement.
   //@{
 
-  KOKKOS_INLINE_FUNCTION static int in_parallel() {
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
+  KOKKOS_DEPRECATED KOKKOS_INLINE_FUNCTION static int in_parallel() {
 #if defined(__HIP_DEVICE_COMPILE__)
     return true;
 #else
     return false;
 #endif
   }
+#endif
 
   /** \brief Wait until all dispatched functors complete.
    *
@@ -91,9 +96,13 @@ class HIP {
 
   static int impl_is_initialized();
 
-  //  static size_type device_arch();
-
-  static size_type detect_device_count();
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
+  KOKKOS_DEPRECATED static size_type detect_device_count() {
+    int count;
+    KOKKOS_IMPL_HIP_SAFE_CALL(hipGetDeviceCount(&count));
+    return count;
+  }
+#endif
 
 #ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
   static int concurrency();
@@ -137,26 +146,6 @@ struct DeviceTypeTraits<HIP> {
 };
 }  // namespace Experimental
 }  // namespace Tools
-
-namespace Impl {
-template <class DT, class... DP>
-struct ZeroMemset<HIP, DT, DP...> {
-  ZeroMemset(const HIP& exec_space, const View<DT, DP...>& dst,
-             typename View<DT, DP...>::const_value_type&) {
-    KOKKOS_IMPL_HIP_SAFE_CALL(hipMemsetAsync(
-        dst.data(), 0,
-        dst.size() * sizeof(typename View<DT, DP...>::value_type),
-        exec_space.hip_stream()));
-  }
-
-  ZeroMemset(const View<DT, DP...>& dst,
-             typename View<DT, DP...>::const_value_type&) {
-    KOKKOS_IMPL_HIP_SAFE_CALL(
-        hipMemset(dst.data(), 0,
-                  dst.size() * sizeof(typename View<DT, DP...>::value_type)));
-  }
-};
-}  // namespace Impl
 }  // namespace Kokkos
 
 #endif

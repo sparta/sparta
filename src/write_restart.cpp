@@ -85,8 +85,7 @@ void WriteRestart::command(int narg, char **arg)
   if (strchr(arg[0],'%')) multiproc = nprocs;
   else multiproc = 0;
 
-  int mem_limit_flag = update->global_mem_limit > 0 ||
-           (update->mem_limit_grid_flag && !grid->nlocal);
+  int mem_limit_flag = update->have_mem_limit();
   if (mem_limit_flag && !multiproc)
     error->all(FLERR,"Cannot (yet) use global mem/limit without "
                "% in restart file name");
@@ -186,10 +185,7 @@ void WriteRestart::multiproc_options(int multiproc_caller,
 
 void WriteRestart::write(char *file)
 {
-  if (update->mem_limit_grid_flag)
-    update->set_mem_limit_grid();
-  if (update->global_mem_limit > 0 ||
-      (update->mem_limit_grid_flag && !grid->nlocal))
+  if (update->have_mem_limit())
     return write_less_memory(file);
 
   // open single restart file or base file for multiproc case
@@ -329,7 +325,7 @@ void WriteRestart::write(char *file)
 
   send_size_big = surf->size_restart();
   if (send_size_big > MAXSMALLINT)
-    error->one(FLERR,"Restart file write buffer too large, use global mem/limit");
+    error->one(FLERR,"Restart file write buffer for surfaces too large");
   send_size = send_size_big;
 
   MPI_Allreduce(&send_size,&max_size,1,MPI_INT,MPI_MAX,world);
@@ -406,7 +402,7 @@ void WriteRestart::write_less_memory(char *file)
   }
 
   // proc 0 writes header info
-  // also simulation box, particle species, parent grid cells, surf info
+  // also simulation box, particle species, grid params, surf info
 
   bigint btmp = particle->nlocal;
   MPI_Allreduce(&btmp,&particle->nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
@@ -443,9 +439,16 @@ void WriteRestart::write_less_memory(char *file)
   memory->create(buf,max_size,"write_restart:buf");
   memset(buf,0,max_size);
 
+  // finish header info with multiproc setting
+  // multiproc = # of procs which write restart files
+  // 0 for single file, else # of restart files
+
+  if (me == 0) write_int(MULTIPROC,multiproc);
+
   // header info is complete
   // if multiproc output:
-  //   close header file, open multiname file on each writing proc,
+  //   close header file
+  //   open new multiname file on each writing proc
   //   write PROCSPERFILE into new file
 
   if (multiproc) {
@@ -529,7 +532,6 @@ void WriteRestart::write_less_memory(char *file)
           write_char_vec(recv_size,buf);
       }
     }
-    fclose(fp);
 
   } else {
     bigint total_write_part = 0;
@@ -549,6 +551,56 @@ void WriteRestart::write_less_memory(char *file)
       MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
       MPI_Rsend(buf,n,MPI_CHAR,fileproc,0,world);
     }
+  }
+
+  // done if no surfs or surfs are implicit
+  // implicit surfs are restarted by new read_isurf command
+
+  if (!surf->exist || surf->implicit) {
+    if (filewriter) fclose(fp);
+    memory->destroy(buf);
+    return;
+  }
+
+  // comm buffer for per-proc surf info = lines/tris and custom data
+  // max_size = largest buffer needed by any proc
+
+  send_size = surf->size_restart();
+  if (send_size > MAXSMALLINT)
+    error->one(FLERR,"Restart file write buffer for surfaces too large");
+  int send_size_small = send_size;
+
+  MPI_Allreduce(&send_size_small,&max_size,1,MPI_INT,MPI_MAX,world);
+
+  memory->destroy(buf);
+  memory->create(buf,max_size,"write_restart:buf");
+  memset(buf,0,max_size);
+
+  // pack my owned surfs into buf
+
+  int n = surf->pack_restart(buf);
+
+  // write owned surf data into file(s)
+  // filewriter = 1 = this proc writes to file
+  // ping each proc in my cluster, receive its data, write data to file
+  // else wait for ping from fileproc, send my data to fileproc
+
+  if (filewriter) {
+    for (int iproc = 0; iproc < nclusterprocs; iproc++) {
+      if (iproc) {
+        MPI_Irecv(buf,max_size,MPI_CHAR,me+iproc,0,world,&request);
+        MPI_Send(&tmp,0,MPI_INT,me+iproc,0,world);
+        MPI_Wait(&request,&status);
+        MPI_Get_count(&status,MPI_CHAR,&recv_size);
+      } else recv_size = send_size_small;
+
+      write_char_vec(PERPROC_SURF,recv_size,buf);
+    }
+    fclose(fp);
+
+  } else {
+    MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
+    MPI_Rsend(buf,send_size_small,MPI_CHAR,fileproc,0,world);
   }
 
   // clean up

@@ -20,9 +20,8 @@
 
 #include <Kokkos_Concepts.hpp>
 #include <SYCL/Kokkos_SYCL_Instance.hpp>
-#include <Kokkos_SYCL.hpp>
+#include <SYCL/Kokkos_SYCL.hpp>
 #include <Kokkos_HostSpace.hpp>
-#include <Kokkos_Serial.hpp>
 #include <Kokkos_Core.hpp>
 #include <impl/Kokkos_Error.hpp>
 #include <impl/Kokkos_DeviceManagement.hpp>
@@ -60,6 +59,13 @@ SYCL::SYCL(const sycl::queue& stream)
         ptr->finalize();
         delete ptr;
       }) {
+  // In principle could be guarded with
+  // #ifdef KOKKOS_IMPL_SYCL_USE_IN_ORDER_QUEUES
+  // but we chose to require user-provided queues to be in-order
+  // unconditionally so that code downstream does not break
+  // when the backend setting changes.
+  if (!stream.is_in_order())
+    Kokkos::abort("User provided sycl::queues must be in-order!");
   Impl::SYCLInternal::singleton().verify_is_initialized(
       "SYCL instance constructor");
   m_space_instance->initialize(stream);
@@ -82,14 +88,57 @@ bool SYCL::impl_is_initialized() {
 void SYCL::impl_finalize() { Impl::SYCLInternal::singleton().finalize(); }
 
 void SYCL::print_configuration(std::ostream& os, bool verbose) const {
-  os << "Devices:\n";
-  os << "  KOKKOS_ENABLE_SYCL: yes\n";
-
   os << "\nRuntime Configuration:\n";
 
-  os << "macro  KOKKOS_ENABLE_SYCL : defined\n";
-  if (verbose)
+#ifdef KOKKOS_ENABLE_ONEDPL
+  os << "macro  KOKKOS_ENABLE_ONEDPL : defined\n";
+#else
+  os << "macro  KOKKOS_ENABLE_ONEDPL : undefined\n";
+#endif
+#ifdef KOKKOS_IMPL_SYCL_DEVICE_GLOBAL_SUPPORTED
+  os << "macro  KOKKOS_IMPL_SYCL_DEVICE_GLOBAL_SUPPORTED : defined\n";
+#else
+  os << "macro  KOKKOS_IMPL_SYCL_DEVICE_GLOBAL_SUPPORTED : undefined\n";
+#endif
+#ifdef SYCL_EXT_ONEAPI_DEVICE_GLOBAL
+  os << "macro  SYCL_EXT_ONEAPI_DEVICE_GLOBAL : defined\n";
+#else
+  os << "macro  SYCL_EXT_ONEAPI_DEVICE_GLOBAL : undefined\n";
+#endif
+#ifdef KOKKOS_IMPL_SYCL_USE_IN_ORDER_QUEUES
+  os << "macro  KOKKOS_IMPL_SYCL_USE_IN_ORDER_QUEUES : defined\n";
+#else
+  os << "macro  KOKKOS_IMPL_SYCL_USE_IN_ORDER_QUEUES : undefined\n";
+#endif
+
+  int counter       = 0;
+  int active_device = Kokkos::device_id();
+  std::cout << "\nAvailable devices: \n";
+  std::vector<sycl::device> devices = Impl::get_sycl_devices();
+  for (const auto& device : devices) {
+    std::string device_type;
+    switch (device.get_info<sycl::info::device::device_type>()) {
+      case sycl::info::device_type::cpu: device_type = "cpu"; break;
+      case sycl::info::device_type::gpu: device_type = "gpu"; break;
+      case sycl::info::device_type::accelerator:
+        device_type = "accelerator";
+        break;
+      case sycl::info::device_type::custom: device_type = "custom"; break;
+      case sycl::info::device_type::automatic: device_type = "automatic"; break;
+      case sycl::info::device_type::host: device_type = "host"; break;
+      case sycl::info::device_type::all: device_type = "all"; break;
+    }
+    os << "[" << device.get_backend() << "]:" << device_type << ':' << counter
+       << "] " << device.get_info<sycl::info::device::name>();
+    if (counter == active_device) os << " : Selected";
+    os << '\n';
+    ++counter;
+  }
+
+  if (verbose) {
+    os << '\n';
     SYCL::impl_sycl_info(os, m_space_instance->m_queue->get_device());
+  }
 }
 
 void SYCL::fence(const std::string& name) const {
@@ -119,23 +168,11 @@ void SYCL::impl_static_fence(const std::string& name) {
 }
 
 void SYCL::impl_initialize(InitializationSettings const& settings) {
-  std::vector<sycl::device> gpu_devices =
-      sycl::device::get_devices(sycl::info::device_type::gpu);
-  // If the device id is not specified and there are no GPUs, sidestep Kokkos
-  // device selection and use whatever is available (if no GPU architecture is
-  // specified).
-#if !defined(KOKKOS_ARCH_INTEL_GPU) && !defined(KOKKOS_ARCH_KEPLER) && \
-    !defined(KOKKOS_ARCH_MAXWELL) && !defined(KOKKOS_ARCH_PASCAL) &&   \
-    !defined(KOKKOS_ARCH_VOLTA) && !defined(KOKKOS_ARCH_TURING75) &&   \
-    !defined(KOKKOS_ARCH_AMPERE) && !defined(KOKKOS_ARCH_HOPPER)
-  if (!settings.has_device_id() && gpu_devices.empty()) {
-    Impl::SYCLInternal::singleton().initialize(sycl::device());
-    Impl::SYCLInternal::m_syclDev = 0;
-    return;
-  }
-#endif
-  const auto id = ::Kokkos::Impl::get_gpu(settings);
-  Impl::SYCLInternal::singleton().initialize(gpu_devices[id]);
+  const auto& visible_devices = ::Kokkos::Impl::get_visible_devices();
+  const auto id =
+      ::Kokkos::Impl::get_gpu(settings).value_or(visible_devices[0]);
+  std::vector<sycl::device> sycl_devices = Impl::get_sycl_devices();
+  Impl::SYCLInternal::singleton().initialize(sycl_devices[id]);
   Impl::SYCLInternal::m_syclDev = id;
 }
 
@@ -144,7 +181,6 @@ std::ostream& SYCL::impl_sycl_info(std::ostream& os,
   using namespace sycl::info;
   return os << "Name: " << device.get_info<device::name>()
             << "\nDriver Version: " << device.get_info<device::driver_version>()
-            << "\nIs Host: " << device.is_host()
             << "\nIs CPU: " << device.is_cpu()
             << "\nIs GPU: " << device.is_gpu()
             << "\nIs Accelerator: " << device.is_accelerator()
@@ -184,7 +220,6 @@ std::ostream& SYCL::impl_sycl_info(std::ostream& os,
             << "\nNative Vector Width Half: "
             << device.get_info<device::native_vector_width_half>()
             << "\nAddress Bits: " << device.get_info<device::address_bits>()
-            << "\nImage Support: " << device.get_info<device::image_support>()
             << "\nMax Mem Alloc Size: "
             << device.get_info<device::max_mem_alloc_size>()
             << "\nMax Read Image Args: "
@@ -217,26 +252,11 @@ std::ostream& SYCL::impl_sycl_info(std::ostream& os,
             << "\nLocal Mem Size: " << device.get_info<device::local_mem_size>()
             << "\nError Correction Support: "
             << device.get_info<device::error_correction_support>()
-            << "\nHost Unified Memory: "
-            << device.get_info<device::host_unified_memory>()
             << "\nProfiling Timer Resolution: "
             << device.get_info<device::profiling_timer_resolution>()
-            << "\nIs Endian Little: "
-            << device.get_info<device::is_endian_little>()
             << "\nIs Available: " << device.get_info<device::is_available>()
-            << "\nIs Compiler Available: "
-            << device.get_info<device::is_compiler_available>()
-            << "\nIs Linker Available: "
-            << device.get_info<device::is_linker_available>()
-            << "\nQueue Profiling: "
-            << device.get_info<device::queue_profiling>()
             << "\nVendor: " << device.get_info<device::vendor>()
-            << "\nProfile: " << device.get_info<device::profile>()
             << "\nVersion: " << device.get_info<device::version>()
-            << "\nPrintf Buffer Size: "
-            << device.get_info<device::printf_buffer_size>()
-            << "\nPreferred Interop User Sync: "
-            << device.get_info<device::preferred_interop_user_sync>()
             << "\nPartition Max Sub Devices: "
             << device.get_info<device::partition_max_sub_devices>()
             << "\nReference Count: "
@@ -245,9 +265,32 @@ std::ostream& SYCL::impl_sycl_info(std::ostream& os,
 
 namespace Impl {
 
+std::vector<sycl::device> get_sycl_devices() {
+#if defined(KOKKOS_ARCH_INTEL_GPU) || defined(KOKKOS_IMPL_ARCH_NVIDIA_GPU) || \
+    defined(KOKKOS_ARCH_AMD_GPU)
+  std::vector<sycl::device> devices =
+      sycl::device::get_devices(sycl::info::device_type::gpu);
+#if defined(KOKKOS_ARCH_INTEL_GPU)
+  sycl::backend backend = sycl::backend::ext_oneapi_level_zero;
+#elif defined(KOKKOS_IMPL_ARCH_NVIDIA_GPU)
+  sycl::backend backend = sycl::backend::ext_oneapi_cuda;
+#elif defined(KOKKOS_ARCH_AMD_GPU)
+  sycl::backend backend = sycl::backend::ext_oneapi_hip;
+#endif
+  devices.erase(std::remove_if(devices.begin(), devices.end(),
+                               [backend](const sycl::device& d) {
+                                 return d.get_backend() != backend;
+                               }),
+                devices.end());
+#else
+  std::vector<sycl::device> devices = sycl::device::get_devices();
+#endif
+  return devices;
+}
+
 int g_sycl_space_factory_initialized =
     Kokkos::Impl::initialize_space_factory<SYCL>("170_SYCL");
 
-}
+}  // namespace Impl
 }  // namespace Experimental
 }  // namespace Kokkos

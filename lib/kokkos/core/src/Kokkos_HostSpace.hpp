@@ -37,40 +37,8 @@ static_assert(false,
 #include <impl/Kokkos_Tools.hpp>
 
 #include "impl/Kokkos_HostSpace_deepcopy.hpp"
-#include <impl/Kokkos_MemorySpace.hpp>
 
 /*--------------------------------------------------------------------------*/
-
-namespace Kokkos {
-
-namespace Impl {
-
-/// \brief Initialize lock array for arbitrary size atomics.
-///
-/// Arbitrary atomics are implemented using a hash table of locks
-/// where the hash value is derived from the address of the
-/// object for which an atomic operation is performed.
-/// This function initializes the locks to zero (unset).
-void init_lock_array_host_space();
-
-/// \brief Acquire a lock for the address
-///
-/// This function tries to acquire the lock for the hash value derived
-/// from the provided ptr. If the lock is successfully acquired the
-/// function returns true. Otherwise it returns false.
-bool lock_address_host_space(void* ptr);
-
-/// \brief Release lock for the address
-///
-/// This function releases the lock for the hash value derived
-/// from the provided ptr. This function should only be called
-/// after previously successfully acquiring a lock with
-/// lock_address.
-void unlock_address_host_space(void* ptr);
-
-}  // namespace Impl
-
-}  // namespace Kokkos
 
 namespace Kokkos {
 /// \class HostSpace
@@ -95,27 +63,46 @@ class HostSpace {
   //! This memory space preferred device_type
   using device_type = Kokkos::Device<execution_space, memory_space>;
 
-  /**\brief  Default memory space instance */
-  HostSpace();
+  HostSpace()                     = default;
   HostSpace(HostSpace&& rhs)      = default;
   HostSpace(const HostSpace& rhs) = default;
   HostSpace& operator=(HostSpace&&) = default;
   HostSpace& operator=(const HostSpace&) = default;
   ~HostSpace()                           = default;
 
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
   /**\brief  Non-default memory space instance to choose allocation mechansim,
    * if available */
 
-  enum AllocationMechanism {
-    STD_MALLOC,
-    POSIX_MEMALIGN,
-    POSIX_MMAP,
-    INTEL_MM_ALLOC
-  };
+#if defined(KOKKOS_COMPILER_GNU) && KOKKOS_COMPILER_GNU < 1100
+  // We see deprecation warnings even when not using the deprecated
+  // HostSpace constructor below when using gcc before release 11.
+  enum
+#else
+  enum KOKKOS_DEPRECATED
+#endif
+      AllocationMechanism {
+        STD_MALLOC,
+        POSIX_MEMALIGN,
+        POSIX_MMAP,
+        INTEL_MM_ALLOC
+      };
 
+  KOKKOS_DEPRECATED
   explicit HostSpace(const AllocationMechanism&);
+#endif
 
   /**\brief  Allocate untracked memory in the space */
+  template <typename ExecutionSpace>
+  void* allocate(const ExecutionSpace&, const size_t arg_alloc_size) const {
+    return allocate(arg_alloc_size);
+  }
+  template <typename ExecutionSpace>
+  void* allocate(const ExecutionSpace&, const char* arg_label,
+                 const size_t arg_alloc_size,
+                 const size_t arg_logical_size = 0) const {
+    return allocate(arg_label, arg_alloc_size, arg_logical_size);
+  }
   void* allocate(const size_t arg_alloc_size) const;
   void* allocate(const char* arg_label, const size_t arg_alloc_size,
                  const size_t arg_logical_size = 0) const;
@@ -127,9 +114,6 @@ class HostSpace {
                   const size_t arg_logical_size = 0) const;
 
  private:
-  template <class, class, class, class>
-  friend class Kokkos::Experimental::LogicalMemorySpace;
-
   void* impl_allocate(const char* arg_label, const size_t arg_alloc_size,
                       const size_t arg_logical_size = 0,
                       const Kokkos::Tools::SpaceHandle =
@@ -145,9 +129,7 @@ class HostSpace {
   static constexpr const char* name() { return m_name; }
 
  private:
-  AllocationMechanism m_alloc_mech;
   static constexpr const char* m_name = "Host";
-  friend class Kokkos::Impl::SharedAllocationRecord<Kokkos::HostSpace, void>;
 };
 
 }  // namespace Kokkos
@@ -159,8 +141,7 @@ namespace Kokkos {
 namespace Impl {
 
 static_assert(Kokkos::Impl::MemorySpaceAccess<Kokkos::HostSpace,
-                                              Kokkos::HostSpace>::assignable,
-              "");
+                                              Kokkos::HostSpace>::assignable);
 
 template <typename S>
 struct HostMirror {
@@ -196,102 +177,13 @@ struct HostMirror {
 
 //----------------------------------------------------------------------------
 
-namespace Kokkos {
-
-namespace Impl {
-
-template <>
-class SharedAllocationRecord<Kokkos::HostSpace, void>
-    : public SharedAllocationRecordCommon<Kokkos::HostSpace> {
- private:
-  friend Kokkos::HostSpace;
-  friend class SharedAllocationRecordCommon<Kokkos::HostSpace>;
-
-  using base_t     = SharedAllocationRecordCommon<Kokkos::HostSpace>;
-  using RecordBase = SharedAllocationRecord<void, void>;
-
-  SharedAllocationRecord(const SharedAllocationRecord&) = delete;
-  SharedAllocationRecord& operator=(const SharedAllocationRecord&) = delete;
-
-#ifdef KOKKOS_ENABLE_DEBUG
-  /**\brief  Root record for tracked allocations from this HostSpace instance */
-  static RecordBase s_root_record;
-#endif
-
-  const Kokkos::HostSpace m_space;
-
- protected:
-  ~SharedAllocationRecord();
-  SharedAllocationRecord() = default;
-
-  // This constructor does not forward to the one without exec_space arg
-  // in order to work around https://github.com/kokkos/kokkos/issues/5258
-  // This constructor is templated so I can't just put it into the cpp file
-  // like the other constructor.
-  template <typename ExecutionSpace>
-  SharedAllocationRecord(
-      const ExecutionSpace& /* exec_space*/, const Kokkos::HostSpace& arg_space,
-      const std::string& arg_label, const size_t arg_alloc_size,
-      const RecordBase::function_type arg_dealloc = &deallocate)
-      : base_t(
-#ifdef KOKKOS_ENABLE_DEBUG
-            &SharedAllocationRecord<Kokkos::HostSpace, void>::s_root_record,
-#endif
-            Impl::checked_allocation_with_header(arg_space, arg_label,
-                                                 arg_alloc_size),
-            sizeof(SharedAllocationHeader) + arg_alloc_size, arg_dealloc,
-            arg_label),
-        m_space(arg_space) {
-    this->base_t::_fill_host_accessible_header_info(*RecordBase::m_alloc_ptr,
-                                                    arg_label);
-  }
-
-  SharedAllocationRecord(
-      const Kokkos::HostSpace& arg_space, const std::string& arg_label,
-      const size_t arg_alloc_size,
-      const RecordBase::function_type arg_dealloc = &deallocate);
-
- public:
-  KOKKOS_INLINE_FUNCTION static SharedAllocationRecord* allocate(
-      const Kokkos::HostSpace& arg_space, const std::string& arg_label,
-      const size_t arg_alloc_size) {
-    KOKKOS_IF_ON_HOST((return new SharedAllocationRecord(arg_space, arg_label,
-                                                         arg_alloc_size);))
-    KOKKOS_IF_ON_DEVICE(((void)arg_space; (void)arg_label; (void)arg_alloc_size;
-                         return nullptr;))
-  }
-};
-
-}  // namespace Impl
-
-}  // namespace Kokkos
+KOKKOS_IMPL_SHARED_ALLOCATION_SPECIALIZATION(Kokkos::HostSpace);
 
 //----------------------------------------------------------------------------
 
 namespace Kokkos {
 
 namespace Impl {
-
-template <class DT, class... DP>
-struct ZeroMemset<typename HostSpace::execution_space, DT, DP...> {
-  ZeroMemset(const typename HostSpace::execution_space& exec,
-             const View<DT, DP...>& dst,
-             typename View<DT, DP...>::const_value_type&) {
-    // Host spaces, except for HPX, are synchronous and we need to fence for HPX
-    // since we can't properly enqueue a std::memset otherwise.
-    // We can't use exec.fence() directly since we don't have a full definition
-    // of HostSpace here.
-    hostspace_fence(exec);
-    using ValueType = typename View<DT, DP...>::value_type;
-    std::memset(dst.data(), 0, sizeof(ValueType) * dst.size());
-  }
-
-  ZeroMemset(const View<DT, DP...>& dst,
-             typename View<DT, DP...>::const_value_type&) {
-    using ValueType = typename View<DT, DP...>::value_type;
-    std::memset(dst.data(), 0, sizeof(ValueType) * dst.size());
-  }
-};
 
 template <>
 struct DeepCopy<HostSpace, HostSpace, DefaultHostExecutionSpace> {
