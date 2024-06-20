@@ -18,18 +18,23 @@ group-ID = group ID for which surface elements to perform calculation on :l
 mix-ID = mixture ID to perform calculation on :l
 one or more values can be appended :l
 value = {id/pre} or {id/post} or {id/post2} or {type/pre} or {type/post} or {type/post2} or {id/surf} or {time} or {xc} or {yc} or {zc} or {vx/pre} or {vy/pre} or {vz/pre} or {vx/post} or {vy/post} or {vz/post} or {vx/post2} or {vy/post2} or {vz/post2} :l
-  {id/pre} = particle ID before collision
-  {id/post} = particle ID after collision/reaction
-  {id/post2} = particle ID of new 2nd particle after reaction
-  {type/pre} = particle type before collision
-  {type/post} = particle type after collision/reaction
-  {type/post2} = particle type of new 2nd particle after reaction
-  {id/surf} = surface element ID
-  {time} = time of collision (within timestep, see below)
-  {xc}, {yc}, {zc} = coordinates of collision point
-  {vx/pre}, {vy/pre}, {vz/pre} = velocity components before collision
-  {vxnew}, {vynew}, {vznew} = velocity components after collision/reaction
-  {vxnew2}, {vynew2}, {vznew2} = velocity components of outgoing particle :pre
+  {reaction} = which reaction occurred (1 to N)
+  {id/cell} = grid cell ID
+  {id1/pre} = particle ID of first particle before reaction
+  {id2/pre} = particle ID of second particle before reaction
+  {id1/post} = particle ID of first particle after reaction
+  {id2/post} = particle ID of second particle after reaction
+  {id3/post} = particle ID of third particle after reaction
+  {type1/pre} = particle species of first particle before reaction
+  {type2/pre} = particle species of second particle before reaction
+  {type1/post} = particle species of first particle before reaction
+  {type2/post} = particle species of second particle before reaction
+  {type3/post} = particle species of third particle before reaction
+  {vx1/pre}, {vy1/pre}, {vz1/pre} = velocity components of first particle before reaction
+  {vx2/pre}, {vy2/pre}, {vz2/pre} = velocity components of second particle before reaction
+  {vx1/post}, {vy1/post}, {vz1/post} = velocity components of first particle after reaction
+  {vx2/post}, {vy2/post}, {vz2/post} = velocity components of second particle after reaction
+  {vx3/post}, {vy3/post}, {vz3/post} = velocity components of thrid particle after reaction :pre
 :ule
 
 [Examples:]
@@ -43,89 +48,70 @@ dump 1 tally all 10 tmp.tally c_1\[*\] :pre
 
 [Description:]
 
-Tally various values for each collision of a particle with a surface
-element during the current timestep.  Only surface collisions which
-result in a chemical reaction are tallied by this command, as enabled
-by the "surf_react"_surf_react.html command.  See the related "compute
-collision/tally"_compute_reaction_tally.html command to tally simple
+Tally various values for each gas-phase reaction of two particles
+during the current timestep.  Only gas collisions which result in a
+chemical reactions are tallied by this command, as enabled by the
+"react"_react.html command.  See the related "compute
+gas/collide/tally"_compute_gas_collide_tally.html command to tally
 collisions which do not induce reactions.  It provides different tally
 value options than this compute.
 
-Only surface elements in the surface group specified by {group-ID} and
-particles with species in the mixture specified by {mix-ID} are
-included.  See the "group grid"_group.html command for info on how
-surface elements can be assigned to surface groups.
-
-This compute can be used for simulations with either explicit or
-implicit surface elements.  See "Section 6.13"_Section_howto_13 for
-more discussion of explicit and implicit surfaces.
+Only collisions within grid cells in the grid group specified by
+{group-ID} and pairs of particles with both species in the mixture
+specified by {mix-ID} are included.  See the "group grid"_group.html
+command for info on how grid cells can be assigned to grid groups.
 
 The results of this compute can be used by different commands in
 different ways.  The values for a single timestep can be output by the
-"dump tally"_dump.html command.  Currenlty this is the only option for
+"dump tally"_dump.html command.  Currently this is the only option for
 accessing the tallied values.
 
-Note that if a gas/surface reaction takes place
-"surf_react"_surf_react.html command, then a collision of a single
-particle with a surface can result in 0, 1, or 2 particles being
-produced.  The species of the 1 or 2 product particles may be
-different than the species of the reactant.  All of these attributes
-can be tallied using the values explained next.
+Note that if a gas-phase reaction takes place then a collision of two
+particles can result in 1, 2, or 3 particles being produced.  The
+species of the 1, 2, or product particles may be different than the
+species of the reactants.  All of these attributes can be tallied
+using the values explained next.
 
 :line
 
-The {id/pre} value is the ID of the incident particle.  Note that
-particle IDs are generated randomly.  Thus multiple particles in the
-system can potentially have the same ID.  See "Section
-6.17"_Section_howto_17 for more details on particle IDs.
+The {reaction} value is the index of which reaction occurred.  It is a
+number from 1 to N, where N is the number of reactions defined by the
+"react"_react.html command.
 
-The {id/post} and {id/post2} values are the post-collision IDs of the
-0, 1, or 2 resulting particles.  If the incident particle vanished in
-the reaction, then {id/post} will be 0.  Otherwise it will be the same
-as {id/pre}.  If {id/post2} is 0, no 2nd particle was created by the
-reaction, otherwise it is the random ID assigned to the newly created
-particle.
+The {id1/pre} and {id2/pre} values are the IDs of the reacting
+particles before the reaction.  Note that particle IDs are generated
+randomly.  Thus multiple particles in the system can potentially have
+the same ID.  See "Section 6.17"_Section_howto_17 for more details on
+particle IDs.
 
-The {type/pre} value is the integer index for the incident particle
-species.  It is a value from 1 to Nspecies. The value corresponds to
-the order in which species were defined via the "species"_species.html
-command.  See "Section 6.17"_Section_howto_17 for more details on
-particle types.
+The {id1/post}, {id2/post}, and {id3/post} values are the
+post-reaction IDs of the 1, 2, or 3 resulting particles.  If one of
+the particles vanished in the reaction, then {id2/post} will be 0.  If
+{id3/post} is 0, no 3rd particle was created by the reaction,
+otherwise it is the random ID assigned to the newly created particle.
 
-The {type/post} and {type/post2} values are the post-collision integer
-indices for the particle species of the 0, 1, or 2 resulting
-particles.  If the incident particle vanished in the reaction, then
-{type/post} will be 0.  Otherwise {type/post} is the new species index
-of the incident particle.  If {type/post2} is 0, no 2nd particle was
-created by the reaction, otherwise it is the species index of the
-newly created particle.
+The {type1/pre} and {type2/pre} value are the integer indices for the
+species of the reacting particles before the reaction.  They are
+values from 1 to Nspecies.  The values correspond to the order in
+which species were defined via the "species"_species.html command.
+See "Section 6.17"_Section_howto_17 for more details on particle
+types.
 
-The {id/surf} value is the ID of the surface element.  For explicit
-surfaces, surface element IDs are unique.  For implicit surfaces, the
-surface ID of all the surface elements within a grid cell are the grid
-cell ID.  See "Section 6.13"_Section_howto_13 for more discussion of
-explicit and implicit surfaces.
+The {type1/post}, {type/post2}, and {type/post3} values are the
+post-collision integer indices for the particle species of the 0, 1,
+or 2 resulting particles.  If one of the particles vanished in the
+reaction, then {type2/post} will be 0.  If {type/post3} is 0, no 3rd
+particle was created by the reaction, otherwise it is the species
+index of the newly created particle.
 
-The {time} value is the point in time within the timestep when the
-collision occured.  Thus if the timestep size is DT, as set by the
-"timestep"_timestep.html command, the {time} values will all be within
-the range of 0.0 to DT, for all collisions tallied by this compute on
-each timestep it is invoked.
+The values starting with {v} for particles 1 and 2 with a {pre} suffix
+are the velocity components of the two reacting particles before the
+reaction.
 
-The {xc}, {yc}, and {zc} are the coordinates of the collision point
-between the particle and the surface element.
-
-The {vx/pre}, {vy/pre}, {vz/pre} values are the velocity components of
-the incident particle before it collides with the surface element.
-
-The {vx/post}, {vy/post}, {vz/post} values are the velocity components
-of the incident particle after it collides with the surface element
-and has reacted.  These values will be zero if the paticle vanished in
-the reaction.
-
-If a 2nd particle was created by the reaction, the {vx/post2},
-{vy/post2}, {vz/post2} values are its velocity components.  If no 2nd
-particle was created, these values will be zero.
+The values starting with {v} for particles 1 and 2 and 3 with a {post}
+suffix are the velocity components of the 1, 2, or 3 resulting
+particles after the reaction.  Velocity components will be zero if the
+2nd or 3rd particle does not exist due to the reaction.
 
 :line
 
@@ -139,11 +125,8 @@ from a compute as input.  See "Section 6.4"_Section_howto.html#howto_4
 for an overview of SPARTA output options.
 
 The per-tally array values will be in the "units"_units.html
-appropriate to the individual values as described above.  {Time} is in
-time units; see above for details.  {Xc}, {yc}, and {zc} are in
-distance units.  {Vx/pre}, {vy/pre}, {vz/pre} are in velocity units,
-as are {vx/post}, {vy/post}, {vz/post} and {vx/post2}, {vy/post2},
-{vz/post2}.
+appropriate to the individual values as described above.  All the
+velocity components are in velocity units.
 
 :line
 
@@ -151,7 +134,8 @@ as are {vx/post}, {vy/post}, {vz/post} and {vx/post2}, {vy/post2},
 
 [Related commands:]
 
-"compute collision/tally"_compute_collision_tally.html, "dump tally"_dump.html
+"compute gas/collision/tally"_compute_gas_collision_tally.html, "dump
+tally"_dump.html
 
 [Default:] none
 

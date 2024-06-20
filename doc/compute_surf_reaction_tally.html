@@ -29,10 +29,10 @@
 
 <PRE>  <I>reaction</I> = which reaction occurred (1 to N)
   <I>id/surf</I> = surface element ID
-  <I>id/pre</I> = particle ID before collision
+  <I>id/pre</I> = particle ID before reaction
   <I>id1/post</I> = particle ID of first particle after reaction
   <I>id2/post</I> = particle ID of second particle after reaction
-  <I>type/pre</I> = particle species before collision
+  <I>type/pre</I> = particle species before reaction
   <I>type1/post</I> = particle species of first particle after reaction
   <I>type2/post</I> = particle species of second particle after reaction
   <I>time</I> = time of collision (within timestep, see below)
@@ -57,10 +57,10 @@ file every 10 steps:
 <P>Tally various values for each reaction of a particle with a surface
 element during the current timestep.  Only surface collisions which
 result in a chemical reaction are tallied by this command, as enabled
-by the <A HREF = "surf_react.html">surf_react</A> command.  See the related <A HREF = "compute_reaction_tally.html">compute
-surf/collision/tally</A> command to tally
-simple collisions which do not induce reactions.  It provides
-different tally value options than this compute.
+by the <A HREF = "surf_react.html">surf_react</A> command.  See the related <A HREF = "compute_surf_collision_tally.html">compute
+surf/collision/tally</A> command to
+tally collisions which do not induce reactions.  It provides different
+tally value options than this compute.
 </P>
 <P>Only surface elements in the surface group specified by <I>group-ID</I> and
 particles with species in the mixture specified by <I>mix-ID</I> are
@@ -76,12 +76,11 @@ different ways.  The values for a single timestep can be output by the
 <A HREF = "dump.html">dump tally</A> command.  Currently this is the only option for
 accessing the tallied values.
 </P>
-<P>Note that if a gas/surface reaction takes place
-<A HREF = "surf_react.html">surf_react</A> command, then a collision of a single
-particle with a surface can result in 0, 1, or 2 particles being
-produced.  The species of the product particles may be different than
-the species of the reactant.  All of these attributes can be tallied
-using the values explained next.
+<P>Note that if a gas/surface reaction takes place, then a collision of a
+single particle with a surface can result in 0, 1, or 2 particles
+being produced.  The species of the product particles may be different
+than the species of the reactant.  All of these attributes can be
+tallied using the values explained next.
 </P>
 <HR>
 

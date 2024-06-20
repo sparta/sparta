@@ -42,8 +42,8 @@ Tally various values for each collision of a particle with a surface
 element during the current timestep.  Only surface collisions which do
 not result in chemical reactions are tallied by this command.  See the
 related "compute surf/reaction/tally"_compute_reaction_tally.html
-command to tally reactions.  It provides different tally values than
-this compute.
+command to tally collisions which induce reactions.  It provides
+different tally value options than this compute.
 
 Only surface elements in the surface group specified by {group-ID} and
 particles with species in the mixture specified by {mix-ID} are

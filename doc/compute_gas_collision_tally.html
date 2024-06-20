@@ -51,11 +51,11 @@ file every 10 steps:
 <P>Tally various values for each gas-phase collision of two particles
 during the current timestep.  Only gas collisions which do not result
 in chemical reactions are tallied by this command.  See the related
-<A HREF = "compute_reaction_tally.html">compute gas/reaction/tally</A> command to
-tally reactions.  It provides different tally value options than this
-compute.
+<A HREF = "compute_gas_reaction_tally.html">compute gas/reaction/tally</A> command
+to tally collisions which induce reactions.  It provides different
+tally value options than this compute.
 </P>
-<P>Only collisions with grid cells in the grid group specified by
+<P>Only collisions within grid cells in the grid group specified by
 <I>group-ID</I> and pairs of particles with both species in the mixture
 specified by <I>mix-ID</I> are included.  See the <A HREF = "group.html">group grid</A>
 command for info on how grid cells can be assigned to grid groups.

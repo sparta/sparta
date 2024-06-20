@@ -41,11 +41,11 @@ dump 1 tally all 10 tmp.tally c_1\[*\] :pre
 Tally various values for each gas-phase collision of two particles
 during the current timestep.  Only gas collisions which do not result
 in chemical reactions are tallied by this command.  See the related
-"compute gas/reaction/tally"_compute_reaction_tally.html command to
-tally reactions.  It provides different tally value options than this
-compute.
+"compute gas/reaction/tally"_compute_gas_reaction_tally.html command
+to tally collisions which induce reactions.  It provides different
+tally value options than this compute.
 
-Only collisions with grid cells in the grid group specified by
+Only collisions within grid cells in the grid group specified by
 {group-ID} and pairs of particles with both species in the mixture
 specified by {mix-ID} are included.  See the "group grid"_group.html
 command for info on how grid cells can be assigned to grid groups.
