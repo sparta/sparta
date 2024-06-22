@@ -130,8 +130,9 @@ void ComputeGasReactionTally::clear()
 }
 
 /* ----------------------------------------------------------------------
-   tally values for a single particle in icell
-     colliding with surface element isurf, performing reaction (1 to N)
+   tally values for a single reaction in icell between 2 particles
+   reaction = 0 for collision only
+   reaction = 1 to N for which reaction
    iorig = particle before collision
    ip,jp = particles after collision
    ip = NULL means no particles after collision

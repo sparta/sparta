@@ -39,6 +39,9 @@ ComputeGasCollisionGrid::ComputeGasCollisionGrid(SPARTA *sparta, int narg, char 
 
   // setup
 
+  per_grid_flag = 1;
+  size_per_grid_cols = 0;
+
   gas_tally_flag = 1;         // triggers Collide to invoke gas_tally() for each collision
   timeflag = 1;               // tells Collide which timesteps to invoke gas_tally()
 
@@ -80,7 +83,6 @@ void ComputeGasCollisionGrid::compute_per_grid()
 void ComputeGasCollisionGrid::clear()
 {
   cinfo = grid->cinfo;
-
   memset(vector_grid,0,nglocal*sizeof(double));
 }
 
@@ -117,9 +119,7 @@ void ComputeGasCollisionGrid::gas_tally(int icell, int reaction,
   int jgroup = particle->mixture[imix]->species2group[jorig->ispecies];
   if (igroup < 0 || jgroup < 0) return;
 
-  // tally the collision to grid cell
-  // NOTE: should this be unsplit cell for subcells ?
-  //       check which cells are popluated by computes
+  // simply tally the collision to its grid cell
   
   vector_grid[icell] += 1.0;
 }
@@ -136,6 +136,14 @@ void ComputeGasCollisionGrid::reallocate()
   memory->destroy(vector_grid);
   nglocal = grid->nlocal;
   memory->create(vector_grid,nglocal,"gas/collision/grid:vector_grid");
+
+  // clear counts b/c may be accessed before tallying is done
+  //   e.g. on initial timestep of a new run, e.g. by dump grid
+  //   this is different than compute_grid.cpp b/c compute_per_grid() is a no-op
+  // also note if load-balancing is done, tallies will be lost
+  //   would need to implement (un)pack_grid_one() to avoid this
+  
+  memset(vector_grid,0,nglocal*sizeof(double));
 }
 
 /* ----------------------------------------------------------------------
