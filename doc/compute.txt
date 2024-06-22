@@ -56,7 +56,9 @@ available in SPARTA:
 "dt/grid"_compute_dt_grid.html - optimal timestep per grid cell
 "eflux/grid"_compute_eflux_grid.html - energy flux density per grid cell
 "fft/grid"_compute_fft_grid.html - FFTs across grid cells
+"gas/collision/grid"_compute_gas_collision_grid.html - gas particle collisions per grid cell
 "gas/collision/tally"_compute_gas_collision_tally.html - tallies for gas particle collisions
+"gas/reaction/grid"_compute_gas_reaction_grid.html - gas particle reactions per grid cell
 "gas/reaction/tally"_compute_gas_reaction_tally.html - tallies for gas particle reactions
 "grid"_compute_grid.html - various per grid cell quantities
 "isurf/grid"_compute_isurf_grid.html - various implicit surface element quantities

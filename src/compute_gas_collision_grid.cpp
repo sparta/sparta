@@ -35,7 +35,7 @@ ComputeGasCollisionGrid::ComputeGasCollisionGrid(SPARTA *sparta, int narg, char 
   groupbit = grid->bitmask[igroup];
 
   imix = particle->find_mixture(arg[3]);
-  if (imix < 0) error->all(FLERR,"Compute gas/reaction/grid mixture ID does not exist");
+  if (imix < 0) error->all(FLERR,"Compute gas/collision/grid mixture ID does not exist");
 
   // setup
 
@@ -97,11 +97,11 @@ void ComputeGasCollisionGrid::clear()
 ------------------------------------------------------------------------- */
 
 void ComputeGasCollisionGrid::gas_tally(int icell, int reaction,
-                                         Particle::OnePart *iorig,
-                                         Particle::OnePart *jorig,
-                                         Particle::OnePart *ip,
-                                         Particle::OnePart *jp,
-                                         Particle::OnePart *kp)
+                                        Particle::OnePart *iorig,
+                                        Particle::OnePart *jorig,
+                                        Particle::OnePart *ip,
+                                        Particle::OnePart *jp,
+                                        Particle::OnePart *kp)
 {
   // skip if a reaction
   // this compute only tallies collisions that do not induce a reaction
