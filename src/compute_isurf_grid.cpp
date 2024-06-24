@@ -215,7 +215,8 @@ void ComputeISurfGrid::clear()
      except sum tally to to per-grid-cell array_grid
 ------------------------------------------------------------------------- */
 
-void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
+void ComputeISurfGrid::surf_tally(double dtremain,
+                                  int isurf, int icell, int reaction,
                                   Particle::OnePart *iorig,
                                   Particle::OnePart *ip, Particle::OnePart *jp)
 {

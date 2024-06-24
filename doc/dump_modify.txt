@@ -192,7 +192,8 @@ completes.
 :line
 
 The {format} keyword can be used to change the default numeric format
-output by the text-based dump styles: {particle}, {grid}, {surf}.
+output by the text-based dump styles: {particle}, {grid}, {surf},
+{tally}.
 
 All the specified format strings are C-style formats, e.g. as used by
 the C/C++ printf() command.  The {line} keyword takes a single
