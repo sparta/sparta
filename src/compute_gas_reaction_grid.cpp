@@ -86,7 +86,7 @@ ComputeGasReactionGrid::ComputeGasReactionGrid(SPARTA *sparta, int narg, char **
   // setup
 
   per_grid_flag = 1;
-  size_per_grid_cols = 0;
+  size_per_grid_cols = ncol;
 
   gas_tally_flag = 1;         // triggers Collide to invoke gas_tally() for each collision
   timeflag = 1;               // tells Collide which timesteps to invoke gas_tally()

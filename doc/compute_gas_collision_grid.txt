@@ -59,8 +59,9 @@ for an overview of SPARTA output options.
 
 [Related commands:]
 
-"compute gas/collision/tally"_compute_gas_collision_tally.html,
-"dump grid"_dump.html
+"compute gas/reaction/grid"_compute_gas_reaction_grid.html, "compute
+gas/collision/tally"_compute_gas_collision_tally.html, "dump
+grid"_dump.html
 
 [Default:] none
 
