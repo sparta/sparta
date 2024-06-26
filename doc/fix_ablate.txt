@@ -10,7 +10,7 @@ fix ablate command :h3
 
 [Syntax:]
 
-fix ID ablate group-ID Nevery scale source maxrandom :pre
+fix ID ablate group-ID Nevery scale source maxrandom keyword args ... :pre
 
 ID is documented in "fix"_fix.html command :ulb,l
 ablate = style name of this fix command :l
@@ -23,11 +23,14 @@ source = computeID or fixID or random :l
   v_name = per-grid vector calculated by a grid-style variable with name
   random = perform a random decrement :pre
 maxrandom = maximum per grid cell decrement as an integer (only specified if source = random) :l
+keyword = {buffer} :l
+  buffer arg = minimum distance between corner and intersection (between 0 and 0.5) :pre
 :ule
 
 [Examples:]
 
 fix 1 ablate surfcells 0 0.0 random 10
+fix fablate ablate inner 0 0.2 random 0 buffer 0.1 
 fix 1 ablate surfcells 1000 10.0 c_tally :pre
 
 [Description:]
@@ -105,6 +108,24 @@ and 1.0.  The second is a random integer between 1 and maxrandom.  If
 the first random # < {scale}, then the second random integer is the
 decrement value for the cell.  Thus {scale} is effectively the
 fraction of grid cells whose corner point values are decremented.
+
+The {buffer} is the minimum allowable distance between the vertices of 
+each triangle or line and any chosen corner in a grid cell. Any vertices
+within {buffer} of a corner point are "pushed" away from the
+corner. This implementation
+is based on the "isosurface stuffing" proposed 
+by Labelle and Shewchuk "(Labelle07)"_#Labelle07. With {buffer}, a minimum 
+inside corner value and maximum outside corner value
+is calculated by extrapolating
+from 0 and 255 respectively. Any inside corner value which
+is below the minimum inside corner value is reduced and becomes an
+outside corner point.
+Any outside corner value above the maximum outside corner value
+is also reduced and remains an outside corner point.
+The value of {buffer} is relative 
+to the cell length and is thus between 0 and 0.5.
+In general, the larger the value of {buffer},
+the less likely skinny or degenerate triangles are formed.
 
 :line
 
@@ -224,4 +245,11 @@ This fix can only be used in simulations that define implicit surfaces.
 
 "read isurf"_read_isurf.html
 
-[Default:] none
+[Default:]
+
+The option default is {buffer} = 0.0001
+
+:link(Labelle07)
+[(Labelle07)] F. Labelle, and J. R.. Shewchuk,
+"Isosurface stuffing: Fast Tetrahedral Meshes with Good Dihedral Angles,"
+SIGGRAPH (2007)
