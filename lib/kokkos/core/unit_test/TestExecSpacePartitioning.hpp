@@ -29,30 +29,46 @@ struct SumFunctor {
 };
 
 template <class ExecSpace>
-void check_distinctive(ExecSpace, ExecSpace) {}
+void check_space_member_for_policies(const ExecSpace& exec) {
+  Kokkos::RangePolicy<ExecSpace> range_policy(exec, 0, 1);
+  ASSERT_EQ(range_policy.space(), exec);
+  Kokkos::MDRangePolicy<ExecSpace, Kokkos::Rank<2>> mdrange_policy(exec, {0, 0},
+                                                                   {1, 1});
+  ASSERT_EQ(mdrange_policy.space(), exec);
+  Kokkos::TeamPolicy<ExecSpace> team_policy(exec, 1, Kokkos::AUTO);
+  ASSERT_EQ(team_policy.space(), exec);
+}
 
-#ifdef KOKKOS_ENABLE_CUDA
-void check_distinctive(Kokkos::Cuda exec1, Kokkos::Cuda exec2) {
-  ASSERT_NE(exec1.cuda_stream(), exec2.cuda_stream());
-}
-#endif
-#ifdef KOKKOS_ENABLE_HIP
-void check_distinctive(Kokkos::HIP exec1, Kokkos::HIP exec2) {
-  ASSERT_NE(exec1.hip_stream(), exec2.hip_stream());
-}
-#endif
-#ifdef KOKKOS_ENABLE_SYCL
-void check_distinctive(Kokkos::Experimental::SYCL exec1,
-                       Kokkos::Experimental::SYCL exec2) {
-  ASSERT_NE(*exec1.impl_internal_space_instance()->m_queue,
-            *exec2.impl_internal_space_instance()->m_queue);
-}
+template <class ExecSpace>
+void check_distinctive([[maybe_unused]] ExecSpace exec1,
+                       [[maybe_unused]] ExecSpace exec2) {
+#ifdef KOKKOS_ENABLE_SERIAL
+  if constexpr (std::is_same_v<ExecSpace, Kokkos::Serial>) {
+    ASSERT_NE(exec1, exec2);
+  }
 #endif
 #ifdef KOKKOS_ENABLE_OPENMP
-void check_distinctive(Kokkos::OpenMP exec1, Kokkos::OpenMP exec2) {
-  ASSERT_NE(exec1, exec2);
-}
+  if constexpr (std::is_same_v<ExecSpace, Kokkos::OpenMP>) {
+    ASSERT_NE(exec1, exec2);
+  }
 #endif
+#ifdef KOKKOS_ENABLE_CUDA
+  if constexpr (std::is_same_v<ExecSpace, Kokkos::Cuda>) {
+    ASSERT_NE(exec1.cuda_stream(), exec2.cuda_stream());
+  }
+#endif
+#ifdef KOKKOS_ENABLE_HIP
+  if constexpr (std::is_same_v<ExecSpace, Kokkos::HIP>) {
+    ASSERT_NE(exec1.hip_stream(), exec2.hip_stream());
+  }
+#endif
+#ifdef KOKKOS_ENABLE_SYCL
+  if constexpr (std::is_same_v<ExecSpace, Kokkos::Experimental::SYCL>) {
+    ASSERT_NE(*exec1.impl_internal_space_instance()->m_queue,
+              *exec2.impl_internal_space_instance()->m_queue);
+  }
+#endif
+}
 }  // namespace
 
 #ifdef KOKKOS_ENABLE_OPENMP
@@ -84,6 +100,9 @@ void run_threaded_test(const Lambda1 l1, const Lambda2 l2) {
 
 void test_partitioning(std::vector<TEST_EXECSPACE>& instances) {
   check_distinctive(instances[0], instances[1]);
+  check_space_member_for_policies(instances[0]);
+  check_space_member_for_policies(instances[1]);
+
   int sum1, sum2;
   int N = 3910;
   run_threaded_test(
@@ -99,28 +118,6 @@ void test_partitioning(std::vector<TEST_EXECSPACE>& instances) {
       });
   ASSERT_EQ(sum1, sum2);
   ASSERT_EQ(sum1, N * (N - 1) / 2);
-
-#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || \
-    defined(KOKKOS_ENABLE_SYCL) || defined(KOKKOS_ENABLE_OPENMP)
-  // Eliminate unused function warning
-  // (i.e. when compiling for Serial and CUDA, during Serial compilation the
-  // Cuda overload is unused ...)
-  if (sum1 != sum2) {
-#ifdef KOKKOS_ENABLE_CUDA
-    check_distinctive(Kokkos::Cuda(), Kokkos::Cuda());
-#endif
-#ifdef KOKKOS_ENABLE_HIP
-    check_distinctive(Kokkos::HIP(), Kokkos::HIP());
-#endif
-#ifdef KOKKOS_ENABLE_SYCL
-    check_distinctive(Kokkos::Experimental::SYCL(),
-                      Kokkos::Experimental::SYCL());
-#endif
-#ifdef KOKKOS_ENABLE_OPENMP
-    check_distinctive(Kokkos::OpenMP(), Kokkos::OpenMP());
-#endif
-  }
-#endif
 }
 
 TEST(TEST_CATEGORY, partitioning_by_args) {
@@ -131,9 +128,9 @@ TEST(TEST_CATEGORY, partitioning_by_args) {
 }
 
 TEST(TEST_CATEGORY, partitioning_by_vector) {
-  std::vector<int> weights{1, 1};
-  auto instances =
-      Kokkos::Experimental::partition_space(TEST_EXECSPACE(), weights);
+  // Make sure we can use a temporary as argument for weights
+  auto instances = Kokkos::Experimental::partition_space(
+      TEST_EXECSPACE(), std::vector<int> /*weights*/ {1, 1});
   ASSERT_EQ(int(instances.size()), 2);
   test_partitioning(instances);
 }

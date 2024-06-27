@@ -17,7 +17,6 @@
 #ifndef KOKKOS_SIMD_COMMON_HPP
 #define KOKKOS_SIMD_COMMON_HPP
 
-#include <cmath>
 #include <cstring>
 
 #include <Kokkos_Core.hpp>
@@ -26,21 +25,22 @@ namespace Kokkos {
 
 namespace Experimental {
 
-template <class To, class From>
-[[nodiscard]] KOKKOS_FORCEINLINE_FUNCTION constexpr To bit_cast(
-    From const& src) {
-  To dst;
-  std::memcpy(&dst, &src, sizeof(To));
-  return dst;
-}
-
 template <class T, class Abi>
 class simd;
 
 template <class T, class Abi>
 class simd_mask;
 
-struct element_aligned_tag {};
+class simd_alignment_vector_aligned {};
+
+template <typename... Flags>
+struct simd_flags {};
+
+inline constexpr simd_flags<> simd_flag_default{};
+inline constexpr simd_flags<simd_alignment_vector_aligned> simd_flag_aligned{};
+
+using element_aligned_tag = simd_flags<>;
+using vector_aligned_tag  = simd_flags<simd_alignment_vector_aligned>;
 
 // class template declarations for const_where_expression and where_expression
 
@@ -100,14 +100,14 @@ class where_expression<bool, T> : public const_where_expression<bool, T> {
 };
 
 template <class T, class Abi>
-[[nodiscard]] KOKKOS_FORCEINLINE_FUNCTION
+[[nodiscard]] KOKKOS_IMPL_HOST_FORCEINLINE_FUNCTION
     where_expression<simd_mask<T, Abi>, simd<T, Abi>>
     where(typename simd<T, Abi>::mask_type const& mask, simd<T, Abi>& value) {
   return where_expression(mask, value);
 }
 
 template <class T, class Abi>
-[[nodiscard]] KOKKOS_FORCEINLINE_FUNCTION
+[[nodiscard]] KOKKOS_IMPL_HOST_FORCEINLINE_FUNCTION
     const_where_expression<simd_mask<T, Abi>, simd<T, Abi>>
     where(typename simd<T, Abi>::mask_type const& mask,
           simd<T, Abi> const& value) {
@@ -124,44 +124,6 @@ template <class T>
 [[nodiscard]] KOKKOS_FORCEINLINE_FUNCTION const_where_expression<bool, T> where(
     bool mask, T const& value) {
   return const_where_expression(mask, value);
-}
-
-// fallback simd multiplication using generator constructor
-// At the time of this writing, this fallback is only used
-// to multiply vectors of 64-bit signed integers for the AVX2 backend
-
-template <class T, class Abi>
-[[nodiscard]] KOKKOS_IMPL_HOST_FORCEINLINE_FUNCTION simd<T, Abi> operator*(
-    simd<T, Abi> const& lhs, simd<T, Abi> const& rhs) {
-  return simd<T, Abi>([&](std::size_t i) { return lhs[i] * rhs[i]; });
-}
-
-// fallback simd shift using generator constructor
-// At the time of this writing, these fallbacks are only used
-// to shift vectors of 64-bit unsigned integers for the NEON backend
-
-template <class T, class U, class Abi>
-[[nodiscard]] KOKKOS_IMPL_HOST_FORCEINLINE_FUNCTION simd<T, Abi> operator>>(
-    simd<T, Abi> const& lhs, unsigned int rhs) {
-  return simd<T, Abi>([&](std::size_t i) { return lhs[i] >> rhs; });
-}
-
-template <class T, class U, class Abi>
-[[nodiscard]] KOKKOS_IMPL_HOST_FORCEINLINE_FUNCTION simd<T, Abi> operator<<(
-    simd<T, Abi> const& lhs, unsigned int rhs) {
-  return simd<T, Abi>([&](std::size_t i) { return lhs[i] << rhs; });
-}
-
-template <class T, class U, class Abi>
-[[nodiscard]] KOKKOS_IMPL_HOST_FORCEINLINE_FUNCTION simd<T, Abi> operator>>(
-    simd<T, Abi> const& lhs, simd<U, Abi> const& rhs) {
-  return simd<T, Abi>([&](std::size_t i) { return lhs[i] >> rhs[i]; });
-}
-
-template <class T, class U, class Abi>
-[[nodiscard]] KOKKOS_IMPL_HOST_FORCEINLINE_FUNCTION simd<T, Abi> operator<<(
-    simd<T, Abi> const& lhs, simd<U, Abi> const& rhs) {
-  return simd<T, Abi>([&](std::size_t i) { return lhs[i] << rhs[i]; });
 }
 
 // The code below provides:
@@ -316,160 +278,38 @@ KOKKOS_FORCEINLINE_FUNCTION where_expression<M, T>& operator/=(
 // fallback implementations of reductions across simd_mask:
 
 template <class T, class Abi>
-[[nodiscard]] KOKKOS_FORCEINLINE_FUNCTION bool all_of(
+[[nodiscard]] KOKKOS_IMPL_HOST_FORCEINLINE_FUNCTION bool all_of(
     simd_mask<T, Abi> const& a) {
   return a == simd_mask<T, Abi>(true);
 }
 
 template <class T, class Abi>
-[[nodiscard]] KOKKOS_FORCEINLINE_FUNCTION bool any_of(
+[[nodiscard]] KOKKOS_IMPL_HOST_FORCEINLINE_FUNCTION bool any_of(
     simd_mask<T, Abi> const& a) {
   return a != simd_mask<T, Abi>(false);
 }
 
 template <class T, class Abi>
-[[nodiscard]] KOKKOS_FORCEINLINE_FUNCTION bool none_of(
+[[nodiscard]] KOKKOS_IMPL_HOST_FORCEINLINE_FUNCTION bool none_of(
     simd_mask<T, Abi> const& a) {
   return a == simd_mask<T, Abi>(false);
 }
 
-template <class T, class Abi>
-[[nodiscard]] KOKKOS_IMPL_HOST_FORCEINLINE_FUNCTION T
-hmin(const_where_expression<simd_mask<T, Abi>, simd<T, Abi>> const& x) {
-  auto const& v = x.value();
-  auto const& m = x.mask();
-  auto result   = Kokkos::reduction_identity<T>::min();
-  for (std::size_t i = 0; i < v.size(); ++i) {
-    if (m[i]) result = Kokkos::min(result, v[i]);
-  }
-  return result;
-}
+// A temporary device-callable implemenation of round half to nearest even
+template <typename T>
+[[nodiscard]] KOKKOS_FORCEINLINE_FUNCTION auto round_half_to_nearest_even(
+    T const& x) {
+  auto ceil  = Kokkos::ceil(x);
+  auto floor = Kokkos::floor(x);
 
-template <class T, class Abi>
-[[nodiscard]] KOKKOS_IMPL_HOST_FORCEINLINE_FUNCTION T
-hmax(const_where_expression<simd_mask<T, Abi>, simd<T, Abi>> const& x) {
-  auto const& v = x.value();
-  auto const& m = x.mask();
-  auto result   = Kokkos::reduction_identity<T>::max();
-  for (std::size_t i = 0; i < v.size(); ++i) {
-    if (m[i]) result = Kokkos::max(result, v[i]);
+  if (Kokkos::abs(ceil - x) == Kokkos::abs(floor - x)) {
+    auto rem = Kokkos::remainder(ceil, 2.0);
+    return (rem == 0) ? ceil : floor;
   }
-  return result;
-}
-
-template <class T, class Abi>
-[[nodiscard]] KOKKOS_IMPL_HOST_FORCEINLINE_FUNCTION T
-reduce(const_where_expression<simd_mask<T, Abi>, simd<T, Abi>> const& x, T,
-       std::plus<>) {
-  auto const& v = x.value();
-  auto const& m = x.mask();
-  auto result   = Kokkos::reduction_identity<T>::sum();
-  for (std::size_t i = 0; i < v.size(); ++i) {
-    if (m[i]) result += v[i];
-  }
-  return result;
+  return Kokkos::round(x);
 }
 
 }  // namespace Experimental
-
-template <class T, class Abi>
-[[nodiscard]] KOKKOS_FORCEINLINE_FUNCTION Experimental::simd<T, Abi> min(
-    Experimental::simd<T, Abi> const& a, Experimental::simd<T, Abi> const& b) {
-  Experimental::simd<T, Abi> result;
-  for (std::size_t i = 0; i < Experimental::simd<T, Abi>::size(); ++i) {
-    result[i] = Kokkos::min(a[i], b[i]);
-  }
-  return result;
-}
-
-template <class T, class Abi>
-[[nodiscard]] KOKKOS_FORCEINLINE_FUNCTION Experimental::simd<T, Abi> max(
-    Experimental::simd<T, Abi> const& a, Experimental::simd<T, Abi> const& b) {
-  Experimental::simd<T, Abi> result;
-  for (std::size_t i = 0; i < Experimental::simd<T, Abi>::size(); ++i) {
-    result[i] = Kokkos::max(a[i], b[i]);
-  }
-  return result;
-}
-
-// fallback implementations of <cmath> functions.
-// individual Abi types may provide overloads with more efficient
-// implementations.
-// These are not in the Experimental namespace because their double
-// overloads are not either
-
-#define KOKKOS_IMPL_SIMD_UNARY_FUNCTION(FUNC)                               \
-  template <class Abi>                                                      \
-  [[nodiscard]] KOKKOS_FORCEINLINE_FUNCTION Experimental::simd<double, Abi> \
-  FUNC(Experimental::simd<double, Abi> const& a) {                          \
-    Experimental::simd<double, Abi> result;                                 \
-    for (std::size_t i = 0; i < Experimental::simd<double, Abi>::size();    \
-         ++i) {                                                             \
-      result[i] = Kokkos::FUNC(a[i]);                                       \
-    }                                                                       \
-    return result;                                                          \
-  }
-
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(abs)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(exp)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(exp2)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(log)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(log10)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(log2)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(sqrt)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(cbrt)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(sin)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(cos)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(tan)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(asin)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(acos)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(atan)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(sinh)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(cosh)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(tanh)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(asinh)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(acosh)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(atanh)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(erf)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(erfc)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(tgamma)
-KOKKOS_IMPL_SIMD_UNARY_FUNCTION(lgamma)
-
-#define KOKKOS_IMPL_SIMD_BINARY_FUNCTION(FUNC)                              \
-  template <class Abi>                                                      \
-  [[nodiscard]] KOKKOS_FORCEINLINE_FUNCTION Experimental::simd<double, Abi> \
-  FUNC(Experimental::simd<double, Abi> const& a,                            \
-       Experimental::simd<double, Abi> const& b) {                          \
-    Experimental::simd<double, Abi> result;                                 \
-    for (std::size_t i = 0; i < Experimental::simd<double, Abi>::size();    \
-         ++i) {                                                             \
-      result[i] = Kokkos::FUNC(a[i], b[i]);                                 \
-    }                                                                       \
-    return result;                                                          \
-  }
-
-KOKKOS_IMPL_SIMD_BINARY_FUNCTION(pow)
-KOKKOS_IMPL_SIMD_BINARY_FUNCTION(hypot)
-KOKKOS_IMPL_SIMD_BINARY_FUNCTION(atan2)
-KOKKOS_IMPL_SIMD_BINARY_FUNCTION(copysign)
-
-#define KOKKOS_IMPL_SIMD_TERNARY_FUNCTION(FUNC)                             \
-  template <class Abi>                                                      \
-  [[nodiscard]] KOKKOS_FORCEINLINE_FUNCTION Experimental::simd<double, Abi> \
-  FUNC(Experimental::simd<double, Abi> const& a,                            \
-       Experimental::simd<double, Abi> const& b,                            \
-       Experimental::simd<double, Abi> const& c) {                          \
-    Experimental::simd<double, Abi> result;                                 \
-    for (std::size_t i = 0; i < Experimental::simd<double, Abi>::size();    \
-         ++i) {                                                             \
-      result[i] = Kokkos::FUNC(a[i], b[i], c[i]);                           \
-    }                                                                       \
-    return result;                                                          \
-  }
-
-KOKKOS_IMPL_SIMD_TERNARY_FUNCTION(fma)
-KOKKOS_IMPL_SIMD_TERNARY_FUNCTION(hypot)
-
 }  // namespace Kokkos
 
 #endif

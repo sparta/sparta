@@ -14,7 +14,7 @@ fix ID field/grid axvar ayvar azvar :pre
 
 ID is documented in "fix"_fix.html command
 field/grid = style name of this fix command
-axvar,ayvar,azvar = names of grid-style variables for acceleration components:ul
+axvar,ayvar,azvar = names of grid-style variables for acceleration components :ul
 
 [Examples:]
 

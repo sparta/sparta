@@ -145,10 +145,10 @@ void run_single_scenario(const InfoType& scenario_info) {
       KE::is_sorted_until("label", exespace(), KE::begin(view), KE::end(view));
   auto r3 = KE::is_sorted_until(exespace(), view);
   auto r4 = KE::is_sorted_until("label", exespace(), view);
-  EXPECT_EQ(r1, gold);
-  EXPECT_EQ(r2, gold);
-  EXPECT_EQ(r3, gold);
-  EXPECT_EQ(r4, gold);
+  ASSERT_EQ(r1, gold) << name << ", " << view_tag_to_string(Tag{});
+  ASSERT_EQ(r2, gold) << name << ", " << view_tag_to_string(Tag{});
+  ASSERT_EQ(r3, gold) << name << ", " << view_tag_to_string(Tag{});
+  ASSERT_EQ(r4, gold) << name << ", " << view_tag_to_string(Tag{});
 
 #if !defined KOKKOS_ENABLE_OPENMPTARGET
   CustomLessThanComparator<ValueType, ValueType> comp;
@@ -160,10 +160,10 @@ void run_single_scenario(const InfoType& scenario_info) {
   auto r8 = KE::is_sorted_until("label", exespace(), view, comp);
 #endif
 
-  EXPECT_EQ(r1, gold);
-  EXPECT_EQ(r2, gold);
-  EXPECT_EQ(r3, gold);
-  EXPECT_EQ(r4, gold);
+  ASSERT_EQ(r1, gold) << name << ", " << view_tag_to_string(Tag{});
+  ASSERT_EQ(r2, gold) << name << ", " << view_tag_to_string(Tag{});
+  ASSERT_EQ(r3, gold) << name << ", " << view_tag_to_string(Tag{});
+  ASSERT_EQ(r4, gold) << name << ", " << view_tag_to_string(Tag{});
 
   Kokkos::fence();
 }
@@ -176,21 +176,12 @@ void run_is_sorted_until_all_scenarios() {
       {"medium-a", 1003},    {"medium-b", 1003}, {"large-a", 101513},
       {"large-b", 101513}};
 
-  std::cout << "is_sorted_until: " << view_tag_to_string(Tag{})
-            << ", all overloads \n";
-
   for (const auto& it : scenarios) {
     run_single_scenario<Tag, ValueType>(it);
   }
 }
 
 TEST(std_algorithms_sorting_ops_test, is_sorted_until) {
-#if defined(KOKKOS_ENABLE_CUDA) && \
-    defined(KOKKOS_COMPILER_NVHPC)  // FIXME_NVHPC
-  if constexpr (std::is_same_v<exespace, Kokkos::Cuda>) {
-    GTEST_SKIP() << "FIXME wrong result";
-  }
-#endif
   run_is_sorted_until_all_scenarios<DynamicTag, double>();
   run_is_sorted_until_all_scenarios<StridedTwoTag, double>();
   run_is_sorted_until_all_scenarios<StridedThreeTag, double>();
