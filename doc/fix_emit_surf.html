@@ -37,7 +37,7 @@
     Psub = pressure setting at inflow boundary (pressure units)
     Tsub = temperature setting at inflow boundary, can be NULL (temperature units)
   <I>custom</I> values = attribute s_name
-    attribute = <I>nrho</I> or <I>vstream</I> or <I>speed</I> or <I>temp</I>
+    attribute = <I>nrho</I> or <I>vstream</I> or <I>speed</I> or <I>temp</I> or <I>fractions</I>
     s_name = custom per-surf vector or array with name 
 </PRE>
 
@@ -266,27 +266,48 @@ custom per-surf attributes.
 <UL><LI>nrho = number density = per-surf vector
 <LI>vstream = 3-component streaming velocity = per-surf array with 3 columns
 <LI>speed = length of streaming velocity vector in normal direction = per-surf vector
-<LI>temp = temperature = per-surf vector 
+<LI>temp = temperature = per-surf vector
+<LI>fractions = species fractions = per-surf array 
 </UL>
 <P>The <I>s_name</I> value of the <I>custom</I> keyword is the name of the custom
 per-surf vector or array.  It must store floating-point values and be
-a vector or 3-column array, as indicated in the list above.
+a vector or array, as indicated in the list above.
 </P>
 <P>When the fix emit/surf command calculates the number of particles (and
 their attributes) to be emitted from each surface element, by default
 it uses the mixture properties of the specified <I>mix-ID</I> for number
-density, streaming velocity, and temperature, i.e. the same values for
-all surface elements.  If the <I>custom</I> keyword is used for one or more
-of these properties, the values of the associated custom per-surf
-vector(s) or array(s) override the default mixture properties.
+density, streaming velocity, temperature, and relative species
+fractions.  The same values are used for all surface elements.  If the
+<I>custom</I> keyword is used for one or more of these properties, the
+values of the associated custom per-surf vector(s) or array(s)
+override the default mixture properties.
 </P>
-<P>Note that <I>custom</I> attribute <I>vstream</I> can only be used if the
-<I>normal</I> keyword is set to <I>no</I>, which is the default.  The <I>custom</I>
-attribute <I>speed</I> should be used instead if the <I>normal</I> keyword is
-set to <I>yes</I>.  In this case the custom per-surf vector should store
-the "speed" of the emission in the direction normal to each surface
-element.  I.e. the length of the streaming velocity vector, as
-described above for the <I>normal</I> keyword.
+<P>The <I>custom</I> attribute <I>vstream</I> can only be used if the <I>normal</I>
+keyword is set to <I>no</I>, which is the default.  In this case it must
+refer to a 3-column per-surf custom array which stores the 3 streaming
+velocity components for each surface element.  If the <I>normal</I> keyword
+is set to <I>yes</I>, then the <I>custom</I> atrribute <I>speed</I> should be used
+instead.  It must refer to a custom per-surf vector which stores the
+"speed" of the emission in the direction normal to each surface
+element.  I.e. it is the scalar length of the streaming velocity
+vector, as described above for the <I>normal</I> keyword.
+</P>
+<P>The <I>custom</I> attribute <I>fractions</I> must refer to a per-surf custom
+array with N columns, where N is the number of species in the mixture.
+For each surface element, the N values will be used to set the
+relative fractions of emitted particles for that element, using the
+logic for the <I>perspecies yes/no</I> keyword described above.
+</P>
+<P>For each surface element, the N per-species fractional values must sum
+to 1.0.  However, one or more of the numeric values can be < zero, say
+M of them.  In this case, each of the M values will be reset to (1 -
+sum)/M, where sum is the sum of the N-M values which are >= zero.
+</P>
+<P>Note that the order of species within the N columns of the custom
+per-surf array, if the same as the order of species within the mix-ID
+mixture.  This is determined by the <A HREF = "mixture.html">mixture</A> command.
+It is the order the gas species names were listed when the mixture
+command was specified (one or more times).
 </P>
 <HR>
 

@@ -91,10 +91,15 @@ class FixEmitSurf : public FixEmit {
 
   // custom options for per-surf emission properties
 
-  int custom_nrho_flag,custom_vstream_flag,custom_speed_flag,custom_temp_flag;
-  char *custom_nrho,*custom_vstream,*custom_speed,*custom_temp;
-  int icustom_nrho,icustom_vstream,icustom_speed,icustom_temp;
-  
+  int nrho_custom_flag,vstream_custom_flag,speed_custom_flag,temp_custom_flag,fractions_custom_flag;
+  char *nrho_custom_id,*vstream_custom_id,*speed_custom_id,*temp_custom_id,*fractions_custom_id;
+  int nrho_custom_index,vstream_custom_index,speed_custom_index,temp_custom_index,fractions_custom_index;
+  double *nrho_custom,*speed_custom,*temp_custom;
+  double **vstream_custom,**fractions_custom;
+
+  int max_cummulative;
+  double **cummulative_custom;     // local to this fix, not actually custom data
+
   // active grid cells assigned to tasks, used by subsonic sorting
 
   int maxactive;
