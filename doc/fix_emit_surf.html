@@ -251,6 +251,8 @@ were exiting the simulation domain.  That is necessary to produce the
 correct subsonic conditions that the particle insertions due to this
 command are trying to achieve.
 </P>
+<HR>
+
 <P>The <I>custom</I> keyword can be used to tailor the emission of particles
 from individual surface elements.  This is done by using custom
 per-surf vectors or arrays defined by other commands.  E.g. the
@@ -261,13 +263,17 @@ initialization by use of <A HREF = "variable.html">surf-style variables</A>.  Se
 <A HREF = "Section_howto.html#howto_17">Section Howto 6.17</A> for a discussion of
 custom per-surf attributes.
 </P>
-<P>The <I>attribute</I> value of the <I>custom</I> keyword can be any of the following:
+<P>IMPORTANT NOTE: The <I>custom</I> keyword cannot be used together with
+either the <I>n</I> or <I>subsonic</I> keywords.
 </P>
-<UL><LI>nrho = number density = per-surf vector
-<LI>vstream = 3-component streaming velocity = per-surf array with 3 columns
-<LI>speed = length of streaming velocity vector in normal direction = per-surf vector
-<LI>temp = temperature = per-surf vector
-<LI>fractions = species fractions = per-surf array 
+<P>The <I>attribute</I> value of the <I>custom</I> keyword can be any of the
+following:
+</P>
+<UL><LI>nrho = number density (# per length^3 units) = per-surf vector
+<LI>vstream = 3-component streaming velocity (velocity units) = per-surf array with 3 columns
+<LI>speed = length of streaming velocity vector in normal direction (velocity units) = per-surf vector
+<LI>temp = temperature (temperature units) = per-surf vector
+<LI>fractions = species fractions (unitless) = per-surf array 
 </UL>
 <P>The <I>s_name</I> value of the <I>custom</I> keyword is the name of the custom
 per-surf vector or array.  It must store floating-point values and be
@@ -291,6 +297,11 @@ instead.  It must refer to a custom per-surf vector which stores the
 "speed" of the emission in the direction normal to each surface
 element.  I.e. it is the scalar length of the streaming velocity
 vector, as described above for the <I>normal</I> keyword.
+</P>
+<P>The <I>custom</I> attribute <I>temp</I> sets a temperature for each surface
+element.  This temperature is used as the thermal temeperature for
+each inserted particle which means it affects its thermal velocity
+components as well as its rotational and vibrational energies.
 </P>
 <P>The <I>custom</I> attribute <I>fractions</I> must refer to a per-surf custom
 array with N columns, where N is the number of species in the mixture.

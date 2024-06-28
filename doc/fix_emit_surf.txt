@@ -241,6 +241,8 @@ were exiting the simulation domain.  That is necessary to produce the
 correct subsonic conditions that the particle insertions due to this
 command are trying to achieve.
 
+:line
+
 The {custom} keyword can be used to tailor the emission of particles
 from individual surface elements.  This is done by using custom
 per-surf vectors or arrays defined by other commands.  E.g. the
@@ -251,13 +253,17 @@ initialization by use of "surf-style variables"_variable.html.  See
 "Section Howto 6.17"_Section_howto.html#howto_17 for a discussion of
 custom per-surf attributes.
 
-The {attribute} value of the {custom} keyword can be any of the following:
+IMPORTANT NOTE: The {custom} keyword cannot be used together with
+either the {n} or {subsonic} keywords.
 
-nrho = number density = per-surf vector
-vstream = 3-component streaming velocity = per-surf array with 3 columns
-speed = length of streaming velocity vector in normal direction = per-surf vector
-temp = temperature = per-surf vector
-fractions = species fractions = per-surf array :ul
+The {attribute} value of the {custom} keyword can be any of the
+following:
+
+nrho = number density (# per length^3 units) = per-surf vector
+vstream = 3-component streaming velocity (velocity units) = per-surf array with 3 columns
+speed = length of streaming velocity vector in normal direction (velocity units) = per-surf vector
+temp = temperature (temperature units) = per-surf vector
+fractions = species fractions (unitless) = per-surf array :ul
 
 The {s_name} value of the {custom} keyword is the name of the custom
 per-surf vector or array.  It must store floating-point values and be
@@ -281,6 +287,11 @@ instead.  It must refer to a custom per-surf vector which stores the
 "speed" of the emission in the direction normal to each surface
 element.  I.e. it is the scalar length of the streaming velocity
 vector, as described above for the {normal} keyword.
+
+The {custom} attribute {temp} sets a temperature for each surface
+element.  This temperature is used as the thermal temeperature for
+each inserted particle which means it affects its thermal velocity
+components as well as its rotational and vibrational energies.
 
 The {custom} attribute {fractions} must refer to a per-surf custom
 array with N columns, where N is the number of species in the mixture.

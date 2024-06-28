@@ -91,6 +91,14 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Cannot use fix emit/surf with n a constant or variable "
                "with perspecies yes");
 
+  int custom_any = 0;
+  if (nrho_custom_flag || vstream_custom_flag || speed_custom_flag ||
+      temp_custom_flag || fractions_custom_flag) custom_any = 1;
+  if (custom_any && npmode != FLOW)
+    error->all(FLERR,"Cannot use fix emit/surf with n != 0 and custom options");
+  if (custom_any && subsonic)
+    error->all(FLERR,"Cannot use fix emit/surf with subsonic and custom options");
+
   // task list and subsonic data structs
 
   tasks = NULL;
@@ -303,7 +311,7 @@ void FixEmitSurf::init()
 
 void FixEmitSurf::grid_changed()
 {
-  // if any custom attributes are used
+  // if any custom attributes are used,
   // ensure owned custom values are spread to nlocal+nghost surfs
 
   if (nrho_custom_flag && surf->estatus[nrho_custom_index] == 0)
@@ -321,7 +329,7 @@ void FixEmitSurf::grid_changed()
   
   create_tasks();
 
-  // if custom fractions requested and perspecies = 0
+  // if custom fractions requested and perspecies = 0,
   // setup cummulaitve_custom array for nlocal surfs
 
   if (fractions_custom_flag && !perspecies) {
@@ -398,7 +406,9 @@ void FixEmitSurf::create_task(int icell)
   if (vstream_custom_flag) vstream_custom = surf->edarray_local[surf->ewhich[vstream_custom_index]];
   if (speed_custom_flag) speed_custom = surf->edvec_local[surf->ewhich[speed_custom_index]];
   if (temp_custom_flag) temp_custom = surf->edvec_local[surf->ewhich[temp_custom_index]];
-  if (fractions_custom_flag) fractions_custom = surf->edarray_local[surf->ewhich[fractions_custom_index]];
+  if (fractions_custom_flag) fractions_custom =
+                               surf->edarray_local[surf->ewhich[fractions_custom_index]];
+  double temp_thermal_custom;
   
   double *lo = cells[icell].lo;
   double *hi = cells[icell].hi;
@@ -422,7 +432,7 @@ void FixEmitSurf::create_task(int icell)
     if (nrho_custom_flag) nrho = nrho_custom[isurf];
     if (vstream_custom_flag) vstream = vstream_custom[isurf];
     if (speed_custom_flag) magvstream = speed_custom[isurf];
-    if (temp_custom_flag) temp_thermal = temp_custom[isurf];
+    if (temp_custom_flag) temp_thermal_custom = temp_custom[isurf];
     if (fractions_custom_flag) fraction = fractions_custom[isurf];
 
     // set cell parameters of task
@@ -561,10 +571,20 @@ void FixEmitSurf::create_task(int icell)
     // initialize other task values with mixture or per-surf custom properties
     // may be overwritten by subsonic methods
 
+    double utemp;
+    
     tasks[ntask].nrho = nrho;
-    tasks[ntask].temp_thermal = temp_thermal;
-    tasks[ntask].temp_rot = particle->mixture[imix]->temp_rot;
-    tasks[ntask].temp_vib = particle->mixture[imix]->temp_vib;
+    if (temp_custom_flag) {
+      tasks[ntask].temp_thermal = temp_thermal_custom;
+      tasks[ntask].temp_rot = temp_thermal_custom;
+      tasks[ntask].temp_vib = temp_thermal_custom;
+      utemp = temp_thermal_custom;
+    } else {
+      tasks[ntask].temp_thermal = temp_thermal;
+      tasks[ntask].temp_rot = particle->mixture[imix]->temp_rot;
+      tasks[ntask].temp_vib = particle->mixture[imix]->temp_vib;
+      utemp = temp_thermal;
+    }
     tasks[ntask].magvstream = magvstream;
     tasks[ntask].vstream[0] = vstream[0];
     tasks[ntask].vstream[1] = vstream[1];
@@ -625,7 +645,7 @@ void FixEmitSurf::perform_task()
 
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
-
+  
   int nfix_update_custom = modify->n_update_custom;
 
   for (i = 0; i < ntask; i++) {
@@ -640,13 +660,13 @@ void FixEmitSurf::perform_task()
     temp_thermal = tasks[i].temp_thermal;
     temp_rot = tasks[i].temp_rot;
     temp_vib = tasks[i].temp_vib;
-    indot = tasks[i].magvstream;
+    magvstream = tasks[i].magvstream;
     vstream = tasks[i].vstream;
 
     if (subsonic_style == PONLY) vscale = tasks[i].vscale;
     else vscale = particle->mixture[imix]->vscale;
-    if (!normalflag) indot = vstream[0]*normal[0] + vstream[1]*normal[1] +
-                       vstream[2]*normal[2];
+    if (normalflag) indot = magvstream;
+    else indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
 
     // perspecies yes
 
@@ -750,7 +770,7 @@ void FixEmitSurf::perform_task()
       else if (npmode == CONSTANT) ntarget = np * tasks[i].ntarget;
       else if (npmode == VARIABLE) ntarget = npcurrent * tasks[i].ntarget;
       ninsert = static_cast<int> (ntarget + random->uniform());
-          
+
       // loop over ninsert for all species
       // use cummulative fractions to assign species for each insertion
       // if requested, override cummulative from mixture with cummulative for isurf
@@ -1154,7 +1174,6 @@ int FixEmitSurf::option(int narg, char **arg)
       strcpy(npstr,&arg[1][2]);
     } else {
       np = atoi(arg[1]);
-      if (np <= 0) error->all(FLERR,"Illegal fix emit/surf command");
       if (np == 0) npmode = FLOW;
       else npmode = CONSTANT;
     }
