@@ -65,6 +65,7 @@ class FixEmitSurf : public FixEmit {
     double temp_thermal;        // from mixture or adjacent subsonic cell
     double temp_rot;            // from mixture or subsonic temp_thermal
     double temp_vib;            // from mixture or subsonic temp_thermal
+    double magvstream;          // from mixture
     double vstream[3];          // from mixture or adjacent subsonic cell
     double *ntargetsp;          // # of mols to insert for each species,
                                 //   only defined for PERSPECIES
@@ -87,6 +88,17 @@ class FixEmitSurf : public FixEmit {
 
   double magvstream;       // magnitude of mixture vstream
   double norm_vstream[3];  // direction of mixture vstream
+
+  // custom options for per-surf emission properties
+
+  int nrho_custom_flag,vstream_custom_flag,speed_custom_flag,temp_custom_flag,fractions_custom_flag;
+  char *nrho_custom_id,*vstream_custom_id,*speed_custom_id,*temp_custom_id,*fractions_custom_id;
+  int nrho_custom_index,vstream_custom_index,speed_custom_index,temp_custom_index,fractions_custom_index;
+  double *nrho_custom,*speed_custom,*temp_custom;
+  double **vstream_custom,**fractions_custom;
+
+  int max_cummulative;
+  double **cummulative_custom;     // local to this fix, not actually custom data
 
   // active grid cells assigned to tasks, used by subsonic sorting
 

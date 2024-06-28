@@ -670,7 +670,10 @@ bool line_line_intersect(double *start, double *stop,
   //     depending on direction of 2 lines
   //   thus this can lead to no collision with either line
   //   typical observed dot values were 1.0e-18, so use EPSSQ = 1.0e-16
-
+  // NOTE: EPSSQ and EPSSQNEG are not normalized to size of line
+  //   this means the test is not robust for lines of widely varying size
+  //   better test would be something like EPS * line-length
+  
   MathExtra::sub3(v1,v0,edge);
   MathExtra::sub3(point,v0,pvec);
   if (MathExtra::dot3(edge,pvec) < EPSSQNEG) return false;
@@ -1010,6 +1013,10 @@ bool line_tri_intersect(double *start, double *stop,
   //     depending on direction of 2 tri norms
   //   thus this can lead to no collision with either tri
   //   typical observed dot values were -1.0e-18, so use EPSSQNEG = -1.0e-16
+  // NOTE: EPSSQ and EPSSQNEG are not normalized to size of triangle
+  //   this means the test is not robust for tris of widely varying size
+  //   better test would be something like EPS * max-edge-length
+  //     but that would be expensive to calculate 
 
   MathExtra::sub3(v1,v0,edge);
   MathExtra::sub3(point,v0,pvec);
