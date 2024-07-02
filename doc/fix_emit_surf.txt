@@ -63,11 +63,9 @@ given by equation 4.22 of "(Bird94)"_#Bird94.  The number of particles
 within a grid cell is based on this flux and additional global, flow,
 and surface element properties:
 
-global property: {fnum} ratio as specified by the
-"global"_global.html" command flow properties: number density,
-streaming velocity, and thermal temperature surface element
-properties: portion of surface element area that overlaps with the
-grid cell and its orientation relative to the streaming velocity :ul
+global property: {fnum} ratio as specified by the "global"_global.html" command
+flow properties: number density, streaming velocity, and thermal temperature
+surface element properties: portion of surface element area that overlaps with the grid cell and its orientation relative to the streaming velocity :ul
 
 The flow properties are defined for the specified mixture via the
 "mixture"_mixture.html command.
