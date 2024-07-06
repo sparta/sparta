@@ -33,7 +33,7 @@ class ModifyKokkos : public Modify {
   void reset_grid_count(int);
   void grid_changed();
 
-  void update_custom(int, double, double, double, double *);
+  void update_custom(int, double, double, double, double, double *);
   void gas_react(int);
   void surf_react(Particle::OnePart *, int &, int &);
 
