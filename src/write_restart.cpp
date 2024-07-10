@@ -85,8 +85,7 @@ void WriteRestart::command(int narg, char **arg)
   if (strchr(arg[0],'%')) multiproc = nprocs;
   else multiproc = 0;
 
-  int mem_limit_flag = update->global_mem_limit > 0 ||
-           (update->mem_limit_grid_flag && !grid->nlocal);
+  int mem_limit_flag = update->have_mem_limit();
   if (mem_limit_flag && !multiproc)
     error->all(FLERR,"Cannot (yet) use global mem/limit without "
                "% in restart file name");
@@ -186,10 +185,7 @@ void WriteRestart::multiproc_options(int multiproc_caller,
 
 void WriteRestart::write(char *file)
 {
-  if (update->mem_limit_grid_flag)
-    update->set_mem_limit_grid();
-  if (update->global_mem_limit > 0 ||
-      (update->mem_limit_grid_flag && !grid->nlocal))
+  if (update->have_mem_limit())
     return write_less_memory(file);
 
   // open single restart file or base file for multiproc case
@@ -406,7 +402,7 @@ void WriteRestart::write_less_memory(char *file)
   }
 
   // proc 0 writes header info
-  // also simulation box, particle species, parent grid cells, surf info
+  // also simulation box, particle species, grid params, surf info
 
   bigint btmp = particle->nlocal;
   MPI_Allreduce(&btmp,&particle->nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
@@ -451,7 +447,8 @@ void WriteRestart::write_less_memory(char *file)
 
   // header info is complete
   // if multiproc output:
-  //   close header file, open multiname file on each writing proc,
+  //   close header file
+  //   open new multiname file on each writing proc
   //   write PROCSPERFILE into new file
 
   if (multiproc) {
@@ -535,7 +532,6 @@ void WriteRestart::write_less_memory(char *file)
           write_char_vec(recv_size,buf);
       }
     }
-    fclose(fp);
 
   } else {
     bigint total_write_part = 0;
