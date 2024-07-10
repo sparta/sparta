@@ -1109,6 +1109,24 @@ static int inner_neighbor[8][3] = {
 /* 7 */  {4,2,0}
 };
 
+/*--------------------------------------------------------------
+ Inner indices to match from different corners
+[icell][jcell][icell_inner]
+returns corresponding jcell_inner
+--------------------------------------------------------------*/
+
+/*int inner_match(int icorner, int jcorner, int i)
+{
+
+  if (icorner == jcorner) return i
+
+  if (icorner == 0) {
+    if (jcorner == 1) {
+      if (i == 0) return 1
+      if (i ==
+
+}*/
+
 //_____________________________________________________________________________
 
 #endif // _LOOKUPTABLE_H_
