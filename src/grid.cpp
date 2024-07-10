@@ -1291,9 +1291,9 @@ void Grid::unset_neighbors()
 {
   // set unset_flag = 0/1 depending on whether unset is performed
   // so that reset_neighbors() can check it
-  
+
   unset_flag = 0;
-  
+
   if (!exist_ghost) return;
 
   // no change in neigh[] needed if nflag = NUNKNOWN, NPBUNKNOWN, or NBOUND
@@ -1333,14 +1333,14 @@ void Grid::reset_neighbors()
   // if unset operation was not performed, cannot reset
   // instead must perform full find_neighbors() operation
   // this can happen if "global gridcut" is used after grid is created
-  
+
   if (!unset_flag) {
     find_neighbors();
     return;
   }
-  
+
   unset_flag = 0;
-  
+
   // insure all cell IDs (owned + ghost) are hashed
 
   rehash();
