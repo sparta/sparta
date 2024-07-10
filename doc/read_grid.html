@@ -44,7 +44,9 @@ can also be defined by the <A HREF = "create_grid.html">create_grid</A> command.
 command in a previous simulation, or be created by some pre-processing
 tool.  See <A HREF = "Section_howto.html#howto_8">Section 6.8</A> of the manual for
 a definition of hierarchical grids and grid cell IDs as used by
-SPARTA.
+SPARTA.  Note that if the grid is hierarchical, grid cell IDs are not
+simply numbered from 1 to N.  They also encode the cell's logical
+position within the grid hierarchy.
 </P>
 <P>The specified file can be a text file or a gzipped text file (detected
 by a .gz suffix).  See the <A HREF = "write.grid.html">write_grid</A> command for a

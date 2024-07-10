@@ -15,7 +15,7 @@ compute ID react/isurf/grid group-ID reaction-ID value1 value2 ... :pre
 ID is documented in "compute"_compute.html command :ulb,l
 react/isurf/grid = style name of this compute command :l
 group-ID = group ID for which grid cells to perform calculation on :l
-reaction-ID = surface reaction ID which defines surface reactions :l
+reaction-ID = ID of surface reaction model which defines surface reactions :l
 zero or more values can be appended :l
 value = {r:s1/s2/s3 ...} or {p:s1/s2/s3 ...} :l
   r: or p: = list of reactant species or product species
@@ -28,8 +28,8 @@ surf_react air prob air.surf
 compute 1 react/isurf/grid all air
 compute 2 react/isurf/grid all air r:N/O/N2/O2 p:N/O/NO :pre
 
-These commands will dump time averages for each surface element to a
-dump file every 1000 steps:
+These commands will dump time averages for each grid cell to a dump
+file every 1000 steps:
 
 compute 2 react/isurf/grid all air r:N/O/N2/O2 p:N/O/NO
 fix 1 ave/grid all 10 100 1000 c_2\[*\]
@@ -38,13 +38,14 @@ dump 1 grid all 1000 tmp.surgrid id f_1\[*\] :pre
 [Description:]
 
 Define a computation that tallies counts of reactions for each grid
-cell containing implicit surface elements in a grid group, based on
-the particles that collide with those elements.  Only grid cells
-elements in the grid group specified by {group-ID} are included in the
-tallying.  See the "group grid"_group.html command for info on how
-grid cells can be assigned to grid groups.  Likewise only grid cells
-with surface elements assigned to the surface reaction model specified
-by {reaction-ID} are included in the tallying.
+cell containing implicit surface elements, based on the particles that
+collide with those elements.  Only grid cells in the grid group
+specified by {group-ID} are included in the tallying.  See the "group
+grid"_group.html command for info on how grid cells can be assigned to
+grid groups.  Likewise only grid cells with surface elements assigned
+to the surface reaction model specified by {reaction-ID} are included
+in the tallying.  This assignment is done via the
+"surf_modify"_surf_modify.html command.
 
 Implicit surface elements are triangles for 3d simulations and line
 segments for 2d simulations.  Unlike explicit surface elements, each
