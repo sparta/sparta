@@ -1,3 +1,7 @@
+The commands below run all the input tests scripts in this dir.
+And rename the output log files to names that can be easily
+compared to the corresponding dated log files.
+
 # test the various input scripts which work with custom attributes
 # assumes spa_mpi executable is in this dir
 
