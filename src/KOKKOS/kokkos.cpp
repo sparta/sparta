@@ -44,7 +44,6 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
   ngpus = 0;
   int device = 0;
   nthreads = 1;
-  numa = 1;
 
   int iarg = 0;
   while (iarg < narg) {
@@ -56,7 +55,7 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
     } else if (strcmp(arg[iarg],"g") == 0 ||
                strcmp(arg[iarg],"gpus") == 0) {
 #ifndef SPARTA_KOKKOS_GPU
-      error->all(FLERR,"GPUs are requested but Kokkos has not been compiled for CUDA or HIP");
+      error->all(FLERR,"GPUs are requested but Kokkos has not been compiled with a GPU-enabled backend");
 #endif
       if (iarg+2 > narg) error->all(FLERR,"Invalid Kokkos command-line args");
       ngpus = atoi(arg[iarg+1]);
@@ -71,6 +70,12 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
       int set_flag = 0;
       char *str;
       if ((str = getenv("SLURM_LOCALID"))) {
+        int local_rank = atoi(str);
+        device = local_rank % ngpus;
+        if (device >= skip_gpu) device++;
+        set_flag = 1;
+      }
+      if ((str = getenv("FLUX_TASK_LOCAL_ID"))) {
         int local_rank = atoi(str);
         device = local_rank % ngpus;
         if (device >= skip_gpu) device++;
@@ -103,16 +108,11 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
 
       if (ngpus > 1 && !set_flag)
         error->all(FLERR,"Could not determine local MPI rank for multiple "
-                           "GPUs with Kokkos CUDA or HIP because MPI library not recognized");
+                           "GPUs with because MPI library not recognized");
 
     } else if (strcmp(arg[iarg],"t") == 0 ||
                strcmp(arg[iarg],"threads") == 0) {
       nthreads = atoi(arg[iarg+1]);
-      iarg += 2;
-
-    } else if (strcmp(arg[iarg],"n") == 0 ||
-               strcmp(arg[iarg],"numa") == 0) {
-      numa = atoi(arg[iarg+1]);
       iarg += 2;
 
     } else error->all(FLERR,"Invalid Kokkos command-line args");
@@ -128,9 +128,9 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
     if (logfile) fprintf(logfile,"  requested %d thread(s) per MPI task\n",nthreads);
   }
 
-#ifdef KOKKOS_ENABLE_CUDA
+#ifdef SPARTA_KOKKOS_GPU
   if (ngpus <= 0)
-    error->all(FLERR,"Kokkos has been compiled for CUDA but no GPUs are requested");
+    error->all(FLERR,"Kokkos has been compiled with a GPU-enabled backend but no GPUs are requested");
 #endif
 
 #ifndef KOKKOS_ENABLE_SERIAL
@@ -140,10 +140,9 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
                          "than the OpenMP backend");
 #endif
 
-  Kokkos::InitArguments args;
-  args.num_threads = nthreads;
-  args.num_numa = numa;
-  args.device_id = device;
+  Kokkos::InitializationSettings args;
+  args.set_num_threads(nthreads);
+  args.set_device_id(device);
 
   Kokkos::initialize(args);
 
@@ -165,8 +164,8 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
   if (nthreads == 1 && ngpus == 0)
     need_atomics = 0;
 
-  collide_retry_flag = 0;
-  collide_extra = 1.1;
+  react_retry_flag = 0;
+  react_extra = 1.1;
 
   // finalize Kokkos on abort
 
@@ -200,25 +199,17 @@ void KokkosSPARTA::accelerator(int narg, char **arg)
         comm_serial = 0;
       } else error->all(FLERR,"Illegal package kokkos command");
       iarg += 2;
-    } else if (strcmp(arg[iarg],"reduction") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal package kokkos command");
-      if (strcmp(arg[iarg+1],"atomic") == 0) {
-        atomic_reduction = 1;
-      } else if (strcmp(arg[iarg+1],"parallel/reduce") == 0) {
-        atomic_reduction = 0;
-      } else error->all(FLERR,"Illegal package kokkos command");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"collide/retry") == 0) {
+    } else if (strcmp(arg[iarg],"react/retry") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal package kokkos command");
       if (strcmp(arg[iarg+1],"yes") == 0) {
-        collide_retry_flag = 1;
+        react_retry_flag = 1;
       } else if (strcmp(arg[iarg+1],"no") == 0) {
-        collide_retry_flag = 0;
+        react_retry_flag = 0;
       } else error->all(FLERR,"Illegal package kokkos command");
       iarg += 2;
-    } else if (strcmp(arg[iarg],"collide/extra") == 0) {
+    } else if (strcmp(arg[iarg],"react/extra") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal package kokkos command");
-      collide_extra = atof(arg[iarg+1]);
+      react_extra = atof(arg[iarg+1]);
       iarg += 2;
     } else if ((strcmp(arg[iarg],"gpu/aware") == 0)
                || (strcmp(arg[iarg],"gpu/direct") == 0)) { // gpu/direct is deprecated

@@ -14,39 +14,48 @@ read_surf filename keyword args ... :pre
 
 filename = name of surface file :ulb,l
 zero or more keyword/args pairs may be appended :l
-keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or {transparent} or {invert} or {clip} or {group} or {typeadd} or {particle} or {file} :l
-  origin args = Ox Oy Oz
+keyword = {type} or {custom} or {origin} or {trans} or {atrans} or
+{ftrans} or {scale} or {rotate} or {transparent} or {invert} or {clip} or {group} or {typeadd} or {particle} or {file} :l
+  {type} arg = none
+    NOTE: if the type or custom keywords are used, they must come first
+  {custom} args = name datatype Nc
+    name = name of custom per-surf vector or array
+    datatype = {int} or {float} = for integer or floating point values
+    Nc = 0 for a vector (single value), Nc >= 1 for an array (one or more values)
+    NOTE: if the type or custom keywords are used, they must come first
+  {origin} args = Ox Oy Oz
     Ox,Oy,Oz = set origin of surface to this point (distance units)
-  trans args = Dx Dy Dz
+  {trans} args = Dx Dy Dz
     Dx,Dy,Dz = translate origin by this displacement (distance units)
-  atrans args = Ax Ay Az
+  {atrans} args = Ax Ay Az
     Ax,Ax,Az = translate origin to this absolute point (distance units)
-  ftrans args = Fx Fy Fz
+  {ftrans} args = Fx Fy Fz
     Fx,Fy,Fz = translate origin to this fractional point in simulation box
-  scale args = Sx Sy Sz
+  {scale} args = Sx Sy Sz
     Sx,Sy,Sz = scale surface by these factors around origin
-  rotate args = theta Rx Ry Rz
+  {rotate} args = theta Rx Ry Rz
     theta = rotate surface by this angle in counter-clockwise direction (degrees)
     Rx,Ry,Rz = rotate around vector starting at origin pointing in this direction
-  transparent args = none
-  invert args = none
-  clip args = none or fraction
+  {transparent} args = none
+  {invert} args = none
+  {clip} args = none or fraction
     fraction = push points close to the box boundary to the boundary (optional)
-  group arg = group-ID
+  {group} arg = group-ID
     group-ID = new or existing surface group to assign the surface elements to
-  typeadd arg = Noffset
+  {typeadd} arg = Noffset
     Noffset = add Noffset to the type value of each element
-  particle args = {none} or {check} or {keep}
+  {particle} args = {none} or {check} or {keep}
     none = allow no particles in simulation when read surfs (default)
     check = delete particles inside surfs or in cells intersected by surfs
     keep = keep all particles
-  file args = identical to those defined for the "write_surf"_write_surf.html command
-    this keyword must be last :pre
+  {file} args = identical to those defined for the "write_surf"_write_surf.html command
+    NOTE: if used, the file keyword must come last :pre
 :ule
 
 [Examples:]
 
 read_surf surf.sphere
+read_surf surf.sphere type custom temperature float 0
 read_surf surf.sphere group sphere2 typeadd 1
 read_surf surf.file trans 10 5 0 scale 3 3 3 invert clip
 read_surf surf.file trans 10 5 0 scale 3 3 3 invert clip 1.0e-6
@@ -111,6 +120,7 @@ for explicit surfaces, e.g. for files created by a mesh-generation
 program.
 
 :line
+:line
 
 If all the surface elements are contained in a single file, the
 specified file can be a text file or a gzipped text file (detected by
@@ -140,6 +150,8 @@ of input on parallel machines that support parallel I/O.
 The remainder of this section describes the format of a single surface
 file, whether it is the only file or one of multiple files flagged
 with a processor number.
+
+:line
 
 A surface file for explicit surfaces has a header and a body.
 The header appears first.  The first line of the header is always
@@ -186,6 +198,8 @@ a "base" file for a set of multiple files.  In that case, the {lines}
 and {triangles} keywords give the number of lines or triangles in the
 entire set.
 
+:line
+
 These are the recognized section keywords for the body of the file.
 
 {Points, Lines, Triangles} :ul
@@ -216,21 +230,26 @@ required.  You must either use both or neither.  As explained next, an
 optional format for the {Lines} or {Triangles} sections includes point
 coordinates directly with each line or triangle.
 
+:line
+
 The {Lines} section is only allowed for 2d simulations and consists of
 N entries, where N = # of lines.  All entries must be in the same
 format, either A or B.  If a Points section was included, use format
 A.  If it was not, use format B.
 
-line-ID (type) p1 p2               # format A
-line-ID (type) p1x p1y p2x p2y     # format B :pre
+line-ID (type) p1 p2 (custom1) (custom2) ...                      # format A
+line-ID (type) p1x p1y p2x p2y (custom1) (custom2) ...     # format B :pre
 
-The line-ID is stored internally with the line.  If the read_surf
-commmand is reading a single file, the line-IDs should be unique
-values from 1 to N where N is the number of lines specified in the
-header of the file.  For a set of multiple files, each line in the
-collection of all files should have a unique ID, and the IDs should
-range from 1 to N, where N is the number of lines specified in the
-base file.  SPARTA does not check line-IDs for uniqueness.  Note that
+The {line-ID} is stored internally with the line and can be output by
+the "dump surf"_dump.html command.  If the read_surf commmand is
+reading a single file, the line-IDs should be unique values from 1 to
+N where N is the number of lines specified in the header of the file.
+For a set of multiple files, each line in the collection of all files
+should have a unique ID, and the IDs should range from 1 to N, where N
+is the number of lines specified in the base file.
+
+Note that SPARTA does not check line-IDs for uniqueness, only that
+the smallest values is 1 and the largest value is N.  Also note that
 lines in an individual file (single or multiple) do not need to be
 listed by ID order; they can be in any order.
 
@@ -238,11 +257,11 @@ IMPORTANT NOTE: If the read_surf command is used when lines already
 exist, i.e. to add new lines, then each line-ID is incremented by
 Nprevious = the # of lines that already exist.
 
-{Type} is an optional integer value which must be specified for all or
-none of the lines in the file.  If used, it must be a positive integer
-value for each line.  If not specified, the type of each line is set
-to 1.  Line IDs and types can be used to assign lines to surface
-groups via the "group surf"_group.html command.
+{Type} is an optional integer value and can only be specified if the
+{type} keyword is used.  It must be a positive integer for each line.
+If not specified, the type of each line is set to 1.  Line IDs and
+types can be used to assign lines to surface groups via the "group
+surf"_group.html command.
 
 For format A, {p1} and {p2} are the indices of the 2 end points of the
 line segment, as found in the Points section.  Each is a value from 1
@@ -257,21 +276,41 @@ This is defined by a right-hand rule.  The outward normal N = (0,0,1)
 x (p2-p1).  In other words, a unit z-direction vector is crossed into
 the vector from {p1} to {p2} to determine the normal.
 
+The {custom} values are optional and can only be specified if the
+{custom} keyword is used one or more times.  Each use of the {custom}
+keyword determines how many values are appended to each line.  For a
+custom per-surf vector, a single value is appended.  For a custom
+per-surf array, Nc values are appended.  The values are assigned to
+custom vectors or arrays in the order the {custom} keywords are
+specified.  For example, for this read_surf command, 4 custom values
+should be added to the end of each line in the Lines section of the
+input file:
+
+read_surf surf.sphere type custom temperature float 0 custom flags int 3 :pre
+
+The first floating-point value will be the temperature, the next 3
+integers will be flags.
+
+:line
+
 The {Triangles} section is only allowed for 3d simulations and
 consists of N entries, where N = # of triangles.  All entries must be
 in the same format, either A or B.  If a Points section was included,
 use format A.  If it was not, use format B.
 
-tri-ID (type) p1 p2 p3                                  # format A
-tri-ID (type) p1x p1y p1z p2x p2y p2z p3x p3y p3z       # format B :pre
+tri-ID (type) p1 p2 p3 (custom1) (custom2) ...                                               # format A
+tri-ID (type) p1x p1y p1z p2x p2y p2z p3x p3y p3z (custom1) custom2) ...  # format B :pre
 
-The tri-ID is stored internally with the line.  If the read_surf
-commmand is reading a single file, the tri-IDs should be unique values
-from 1 to N where N is the number of triangles specified in the header
-of the file.  For a set of multiple files, each triangle in the
-collection of all files should have a unique ID, and the IDs should
-range from 1 to N, where N is the number of triangles specified in the
-base file.  SPARTA does not check tri-IDs for uniqueness.  Note that
+The tri-ID is stored internally with the triangle and can be output
+with the "dump surf"_dump_surf.html comand.  If the read_surf command
+is reading a single file, the tri-IDs should be unique values from 1
+to N where N is the number of triangles specified in the header of the
+file.  For a set of multiple files, each triangle in the collection of
+all files should have a unique ID, and the IDs should range from 1 to
+N, where N is the number of triangles specified in the base file.
+
+Note that SPARTA does not check tri-IDs for uniqueness, only that the
+smallest values is 1 and the largest value is N.  Also note that
 triangles in an individual file (single or multiple) do not need to be
 listed by ID order; they can be in any order.
 
@@ -279,11 +318,11 @@ IMPORTANT NOTE: If the read_surf command is used when triangles
 already exist, i.e. to add new triangles, then each tri-ID is
 incremented by Nprevious = the # of triangles that already exist.
 
-{Type} is an optional integer value which must be specified for all or
-none of the triangles in the file.  If used, it must be a positive
-integer value for each triangle.  If not specified, the type of each
-triangle is set to 1.  Triangle IDs and types can be used to assign
-triangles to surface groups via the "group surf"_group.html command.
+{Type} is an optional integer value and can only be specified if the
+{type} keyword is used.  It must be a positive integer for each
+triangle.  If not specified, the type of each triangle is set to 1.
+Triangle IDs and types can be used to assign triangles to surface
+groups via the "group surf"_group.html command.
 
 For format A, {p1}, {p2}, and {p3} are the indices of the 3 corner
 points of the triangle, as found in the Points section.  Each is a
@@ -298,12 +337,67 @@ triangle. This is defined by a right-hand rule.  The outward normal N
 = (p2-p1) x (p3-p1).  In other words, the edge from {p1} to {p2} is
 crossed into the edge from {p1} to {p3} to determine the normal.
 
+The {custom} values are optional and can only be specified if the
+{custom} keyword is used one or more times.  Each use of the {custom}
+keyword determines how many values are appended to each triangle.  For
+a custom per-surf vector, a single value is appended.  For a custom
+per-surf array, Nc values are appended.  The values are assigned to
+custom vectors or arrays in the order the {custom} keywords are
+specified.  For example, for this read_surf command, 4 custom values
+should be added to the end of each triangle in the Triangles section:
+
+read_surf surf.sphere type custom temperature float 0 custom flags int 3 :pre
+
+The first floating-point value will be the temperature, the next 3
+integers will be flags.
+
+:line
 :line
 
+The following optional keywords affect the format of the surface
+file(s) that are read.  If used, these two keywords must come before
+any other keywords.
+
+The {type} keyword means that each surface element in the Lines or
+Triangles section will include a surface element type, which is a
+positive integer.  See the discussion of the format of the Lines
+and Triangles sections above for details.
+
+The {custom} keyword allows a custom per-surf vector or array to be
+created and initialized.  Custom vectors or arrays associate a single
+value or multiple values with each surface element.  They can be
+output by the "dump surf"_dump.html command and uses as inputs by
+other commands.  For example, many of the models for the
+"surf_collide"_surf_collide.html command take temperature as an input;
+use of a per-surf vector allows the temperature of individual surface
+elements to be specified.
+
+The {name} argument is the name assigned to the new custom vector or
+array.  The {datatype} argument is {int} or {float} which determines
+whether the vector/array stores integer or floating point values.  The
+final {Nc} argument is 0 for a per-surf vector and an integer >= 1 for
+an array with {Nc} columns.  A per-surf vector stores a single value
+per surface element; a per-surf array stores Nc values per element.
+
+The {custom} keyword can be used multiple times.  See the discussion
+of the format of the Lines and Triangles sections above for details.
+
+If the read_surf command is used multiple times and the same custom
+options are not used when reading each file, then the same custom
+vectors or arrays attributes will be defined for all surface elements.
+However, their values will only be initialized for the elements in the
+surface files which included custom values.  Otherwise the custom
+attributes of elements that were not specified in surface files are
+are initialized to zero.
+
+:line
+ 
 The following optional keywords affect the geometry of the read-in
 surface elements.  The geometric transformations they describe are
 performed in the order they are listed, which gives flexibility in how
-surfaces can be manipulated.  Note that the order may be important;
+surfaces can be manipulated.
+
+Note that the order of these arguments may be important;
 e.g. performing an {origin} operation followed by a {rotate} operation
 may not be the same as a {rotate} operation followed by an {origin}
 operation.
@@ -422,8 +516,8 @@ reordering.
 :line
 
 The following optional keywords affect group and type settings for the
-read-in surface elements and output of the elements.  Also how
-particles are treated when surface elements are added.
+read-in surface elements as well as how particles are treated when
+surface elements are added.
 
 Surface groups are collections of surface elements.  Each surface
 element belongs to one or more surface groups; all elements belong to
@@ -470,24 +564,32 @@ a surface object, and a new object is being read in, and you know
 the new object is smaller than the one it replaced.  E.g. for a model
 of a shrinking or ablating object.
 
+:line
+
+IMPORTANT NOTE: The final optional keyword is {file}, which must be
+must be the last keyword specified.  This is because all the remaining
+arguments in the read_surf command are passed to the
+"write_surf"_write_surf.html command.
+
 If the {file} keyword is used, the surfaces will be written out to the
-specified {filename} immediately after they are read in.  The
-arguments for this keyword are identical to those used for the
+specified {filename} immediately after they are read in (and
+transformed by any of the optional keywords).
+
+The arguments for this keyword are identical to those used for the
 "write_surf"_write_surf.html command.  This includes a file name with
-optional "*" and "%" wildcard characters, as well as its optional
-keywords.
+optional "*" and "%" wildcard characters as well as the write_surf
+optional keyword/arguments.
 
-IMPORTANT NOTE: The {file} keyword must be the last keyword specified
-with the read_isurf command.  This is because all the remaining arguments
-are passed to the "write_surf"_write_surf.html command.
+The format for the output file is the same as for the file read by
+this command.
 
-The format for the output file is the same as the one written by the
-"write_surf"_write_surf.html command, or read by this command.  Note
-that it can be useful to write out a new surface file after reading
-one if clipping was performed; the new file will contain the surface
-element altered by clipping and will not contain any surface elements
-removed by clipping.
+Note that it can be useful to write out a new surface file after it is
+read if clipping was performed.  This is beacuse the new file will
+contain surface elements altered by clipping and will not contain any
+surface elements removed by clipping.  This may include a renumbering
+of the surface element IDs.
 
+:line
 :line
 
 [Restrictions:]
@@ -549,4 +651,4 @@ lead to unphysical particle dynamics.
 [Default:]
 
 The default origin for the vertices in the surface file is (0,0,0).
-The defaults for group = all, type = no, toffset = 0, particle = none.
+The defaults for group = all, typeadd = 0, particle = none.

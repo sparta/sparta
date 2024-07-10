@@ -12,9 +12,9 @@ read_restart command :h3
 
 read_restart file keyword args ... :pre
 
-file = name of binary restart file to read in
-zero or one keyword/args pair may be listed :ul
-keywords = {gridcut} or {balance}
+file = name of binary restart file to read in :ulb,l
+zero or one keyword/args pair may be listed :l
+keywords = {gridcut} or {balance} :l
   {gridcut} arg = cutoff
     cutoff = acquire ghost cells up to this far away (distance units)
   {balance} args = same as for "balance_grid"_balance_grid.html command :pre
@@ -84,6 +84,9 @@ to those for the "balance_grid"_balance_grid.html command.  If you
 choose a balancing style that results in a "clumped" assignment, then
 ghost cells will be setup successfully.
 
+NOTE: Only the {gridcut} or the {balance} keyword can be used, not
+both of them.
+
 :line
 
 Similar to how restart files are written (see the
@@ -128,19 +131,21 @@ simulation, as specified by the associated commands:
 "dimension"_dimension.html
 "simulation box size"_create_box.html and "boundary conditions"_boundary.html
 "global settings"_global.html
-particles with their individual attributes and custom attributes defined by fixes
 "particle species info"_species.html
 "mixtures"_mixture.html
 geometry of the hierarchical grid that overlays the simulation domain as "created"_create_grid.html or "read from a file"_read_grid.html
 geometry of all defined "surface elements"_read_surf.html
 "group definitions"_group.html for grid cells and surface elements
+"custom attributes"_custom.html for particles, grid cells, or surface elements
+current simulation time
+current "timestep size"_timestep.html
 current timestep number :ul
 
 No other information is stored in the restart file.  Specifically,
 information about these simulation entities and their associated
 commands is NOT stored:
 
-"random number seed"_seed,html
+"random number seed"_seed.html
 "computes"_compute.html
 "fixes"_fix.html
 "collision model"_collide.html
@@ -150,8 +155,7 @@ commands is NOT stored:
 assignment of surfaces/boundaries to surface models
 "variables"_variable.html
 "regions"_region.html
-output options for "stats"_stats_style.html, "dump"_dump.html, "restart"_restart.html files
-"timestep size"_timestep.html :ul
+output options for "stats"_stats_style.html, "dump"_dump.html, "restart"_restart.html files :ul
 
 This means any information specified in the original input script by
 these commands needs to be re-specified in the restart input script,
@@ -188,14 +192,18 @@ timesteps, no information about these quantities persists from the
 original simulation to the restarted simulation.  The initial run in
 the restart script will re-initialize these data structures.
 
-If a fix is used which defines custom attributes of particles, the
-vectors or arrays for these attributes are stored in the restart file.
-See the "fix ambipolar"_fix_ambipolar command as an example; it
-creates a custom vector called "ionambi" and a custom array called
-"velambi".  However, the restart script must specify the same fix
-before the first "run"_run.html command it uses, so that the same
-custom attributes are re-created, otherwise the custom attribute info
-from the restart file will be deleted.
+As noted above, custom attributes of particles, grid cells, or surface
+elements defined in the previous input script and stored in the
+restart file, will be re-assigned when the restart file is read.
+
+If an input script command which normally defines a custom attribute
+is specified, e.g. "fix ambipolar"_fix_ambipolar.html, then if the
+custom data for that attribute already exists, it will be re-used.  If
+a corresponding input script command is not used, then the custom data
+will be stored in the simulation (with particle in this case), but not
+be used, which can be inefficient.  The "custom remove"_custom.html
+command can be used after the restart file is read, to delete unneded
+custom attributes and their data.
 
 :line
 

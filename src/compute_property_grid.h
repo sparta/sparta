@@ -35,8 +35,8 @@ class ComputePropertyGrid : public Compute {
   bigint memory_usage();
 
  protected:
-  int groupbit,nvalues,nglocal;
-  int *index;
+  int groupbit,nvalues;
+  int dimension,nglocal;
   double *buf;
 
   typedef void (ComputePropertyGrid::*FnPtrPack)(int);
@@ -44,6 +44,7 @@ class ComputePropertyGrid : public Compute {
 
   void pack_id(int);
   void pack_proc(int);
+
   void pack_xlo(int);
   void pack_ylo(int);
   void pack_zlo(int);
@@ -53,6 +54,7 @@ class ComputePropertyGrid : public Compute {
   void pack_xc(int);
   void pack_yc(int);
   void pack_zc(int);
+
   void pack_vol(int);
 };
 

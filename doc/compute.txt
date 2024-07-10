@@ -53,6 +53,7 @@ available in SPARTA:
 "boundary"_compute_boundary.html - various quantities on each global boundary 
 "count"_compute_count.html - particle counts for species and mixtures and mixture groups
 "distsurf/grid"_compute_distsurf_grid.html - distance from grid cells to surface
+"dt/grid"_compute_dt_grid.html - optimal timestep per grid cell
 "eflux/grid"_compute_eflux_grid.html - energy flux density per grid cell
 "fft/grid"_compute_fft_grid.html - FFTs across grid cells
 "grid"_compute_grid.html - various per grid cell quantities
@@ -61,6 +62,7 @@ available in SPARTA:
 "lambda/grid"_compute_lambda_grid.html - mean-free path per grid cell
 "pflux/grid"_compute_pflux_grid.html - momentum flux density per grid cell
 "property/grid"_compute_property_grid.html - per grid cell properties
+"property/surf"_compute_property_surf.html - per surface element properties
 "react/boundary"_compute_react_boundary.html - reaction stats on global boundary
 "react/surf"_compute_react_surf.html = reaction stats for explicit surfs
 "react/isurf/grid"_compute_react_isurf_grid.html - reactions stats for implicit surfs

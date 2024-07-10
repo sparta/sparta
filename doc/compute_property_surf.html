@@ -1,0 +1,124 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>compute property/surf command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>compute ID property/surf group-ID input1 input2 ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
+
+<LI>property/surf = style name of this compute command 
+
+<LI>group-ID = group ID for which surface elements to perform calculation on 
+
+<LI>input = one or more surface element attributes 
+
+<PRE>  possible attributes = id, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v2y, v3z, xc, yc, zc, area, normx, normy, normz 
+</PRE>
+<PRE>  id = surface element ID
+  v1x,v1y,v1z = coords of first line end point or triangle corner point
+  v3x,v2y,v2z = coords of second line end point or triangle corner point
+  v3x,v3y,v3z = coords of third triangle corner point
+  xc,yc,zc = coords of center of line segment or triangle
+  area = length of line segment or area of triangle
+  normx, normy, normz = unit normal vector for line segment or triangle 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compute 1 property/surf all id xc yc zc 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Define a computation that simply stores surface element attributes for
+each explicit surface element in a surface group.  This is useful for
+values which can be used by other <A HREF = "Section_howto.html#howto_4">output
+commands</A> that take computes as inputs.
+See for example, the <A HREF = "compute_reduce.html">compute reduce</A>, <A HREF = "fix_ave_surf.html">fix
+ave/surf</A>, <A HREF = "dump.html">dump surf</A>, and <A HREF = "variable.html">surf-style
+variable</A> commands.
+</P>
+<P>Only surface elements in the surface group specified by <I>group-ID</I> are
+included in the calculation.  See the <A HREF = "group.html">group surf</A> command
+for info on how surface elements can be assigned to surface groups.
+</P>
+<P>This command can only be used for simulations with explicit surface
+elements.  Explicit surface elements are triangles for 3d simulations
+and line segments for 2d simulations.  Unlike implicit surface
+elements, each explicit triangle or line segment may span multiple
+grid cells.  See <A HREF = "Section_howto.html#howto_9">Section 4.9</A> of the
+manual for details.
+</P>
+<HR>
+
+<P><I>Id</I> is the surface element ID, as defined in the surface data file
+read by the <A HREF = "read_surf.html">read_surf</A> comand.
+</P>
+<P>The <I>v1x</I>, <I>v1y</I>, <I>v1z</I> attributes are the coordinates of the first
+end point of a line segment (2d) or first corner point of a triangle
+(3d).  Likewise, the <I>v2x</I>, <I>v2y</I>, <I>v2z</I> attributes are the
+coordinates of the second end point of a line segment (2d) or second
+corner point of a triangle (3d).  The <I>v3x</I>, <I>v3y</I>, <I>v23z</I> attributes
+are the coordinates of the third corner point of a triangle (3d).
+</P>
+<P>The <I>xc</I>, <I>yc</I>, <I>zc</I> attributes are the coordinates of the center
+point of a line segment or tringle.
+</P>
+<P>The <I>area</I> attribute is the length of a line segment (distance units
+in 2d), or area of a triangle (area units in 3d).
+</P>
+<P>The <I>normx</I>, <I>normy</I>, <I>normz</I> attributes are components of a unit
+normal perpendicular to the line segment or face of the trangle. It
+points into the flow volume of the simulation.
+</P>
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>This compute calculates a per-surf vector or per-surf array depending
+on the number of input values.  If a single input is specified, a
+per-surf vector is produced.  If two or more inputs are specified, a
+per-surf array is produced where the number of columns = the number of
+inputs.
+</P>
+<P>This compute performs calculations for each explicit surface element
+in the simulation.
+</P>
+<P>Surface elements not in the specified <I>group-ID</I> will output zeroes
+for all their values.
+</P>
+<P>The vector or array can be accessed by any command that uses per-surf
+values from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section
+4.4</A> for an overview of SPARTA output
+options.
+</P>
+<P>The vector or array values will be in whatever <A HREF = "units.html">units</A> the
+corresponding attribute is in, e.g. distance units for <I>v1x</I> or <I>xc</I>,
+length units for <I>area</I> in 2d, area units for <I>area</I> in 3d.
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>For 2d simulations, none of the attributes which refer to the 3rd
+dimension may be used.  Likewise <I>v3x</I>, <I>v3y</I>, <I>v3z</I> may not be used
+since they refer to triangles.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "dump.html">dump surf</A>, <A HREF = "fix_ave_surf.html">fix ave/surf</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

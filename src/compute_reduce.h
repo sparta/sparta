@@ -49,8 +49,10 @@ class ComputeReduce : public Compute {
   int *s2g;
   int gridgroupbit,surfgroupbit;
 
-  int maxparticle,maxgrid;
-  double *varparticle,*vargrid;
+  int maxparticle,maxgrid,maxsurf;
+  double *varparticle,*vargrid,*varsurf;
+
+  int *smasks;
   double *areasurf;
 
   struct Pair {

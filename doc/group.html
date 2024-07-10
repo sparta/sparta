@@ -52,8 +52,8 @@
 group sphere surf id 50 100:150
 group sphere surf id <= 1000
 group sphere surf id <> 50 250
-group patch grid region leftedge
-group patch surf region cutout
+group patch grid region leftedge all
+group patch surf region cutout center
 group boundary surf subtract all a2 a3
 group boundary grid union lower upper
 group boundary surf union lower upper
@@ -63,7 +63,7 @@ group boundary surf intersect upper leftside
 </P>
 <P>Assign grid cells to grid groups or surface elements to surface
 groups.  In SPARTA, a "grid group" is a collection of one or more grid
-cells.  A "surface" group is a collection of one or more surface
+cells.  A "surface group" is a collection of one or more surface
 elements (line segements in 2d, triangles in 3d).  Other commands take
 group IDs as arguments so that they act on a set of grid cells or
 surface elements.  For example, see the <A HREF = "compute_grid.html">compute

@@ -61,9 +61,9 @@ An error is flagged if that is not the case.
 <P>Internally, this fix defines two custom particle attributes.  The
 first is named "ionambi" and is an integer vector (one integer per
 particle).  It stores a value of 1 for ambipolar ions, or 0 otherwise.
-The second is named "velambi" and is a floating-point arrays (3 values
+The second is named "velambi" and is a floating-point array (3 values
 per particle).  It stores the velocity of the ambipolar electron
-associated with the ambipolar ion, or zeroes otherwise.
+associated with the ambipolar ion if it exists, or zeroes otherwise.
 </P>
 <HR>
 
@@ -76,16 +76,17 @@ files</A>.
 this fix are written to the restart file.  Namely the integer value
 "ionambi" and floating-point velocity values "velambi" for each
 particle.  As explained on the <A HREF = "read_restart.html">read_restart</A> doc
-page these values can be re-assigned to particles when a restart file
-is read, if a new fix ambipolar command is specified in the restart
-script before the first <A HREF = "run.html">run</A> command is used.
+page these values will be re-assigned to particles when a restart file
+is read.  If a new fix ambipolar command is specified in the restart
+script before the first <A HREF = "run.html">run</A> command is used, then the
+ambipolar model will continue to be used in the continued run.
 </P>
 <P>No global or per-particle or per-grid quantities are stored by this
 fix for access by various output commands.
 </P>
-<P>However, the two custom particle attributes defined by this fix can be
-accessed by the <A HREF = "dump.html">dump particle</A> command, as p_ionambi and
-p_velambi.  That means those per-particle values can be written to
+<P>However, the two custom per-particle attributes defined by this fix
+can be accessed by the <A HREF = "dump.html">dump particle</A> command, as p_ionambi
+and p_velambi.  That means those per-particle values can be written to
 particle dump files.
 </P>
 <HR>

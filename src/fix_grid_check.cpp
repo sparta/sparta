@@ -199,21 +199,21 @@ void FixGridCheck::end_of_step()
     // for split cell, also verify particle is in correct sub cell
     // expensive, so only do this check if requested
     // if cell volume = zero, error has already been flagged
-    
+
     if (!outside_check) continue;
     if (cells[icell].nsurf == 0) continue;
     if (cinfo[icell].volume == 0.0) continue;
 
-    int pflag,splitcell,subcell;
+    int pflag,splitcell;
     double xcell[3];
 
     // check that particle is outside surfs
     // if no xcell found, cannot check
-    
+
     pflag = grid->point_outside_surfs(icell,xcell);
     if (!pflag) continue;
     pflag = grid->outside_surfs(icell,x,xcell);
-    
+
     if (!pflag) {
       if (outflag == ERROR) {
         char str[128];
@@ -228,7 +228,7 @@ void FixGridCheck::end_of_step()
     }
 
     // check that particle is in correct split subcell
-    
+
     if (cells[icell].nsplit <= 0) {
       int subcell;
       splitcell = sinfo[cells[icell].isplit].icell;

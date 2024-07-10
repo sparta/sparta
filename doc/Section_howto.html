@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "Section_commands.html">Previous Section</A> - <A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> - <A HREF = "Section_example.html">Next Section</A> 
+<CENTER>.<A HREF = "Section_commands.html">Previous Section</A> - <A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> - <A HREF = "Section_example.html">Next Section</A> 
 </CENTER>
 
 
@@ -30,7 +30,9 @@ SPARTA works.
 6.13 <A HREF = "#howto_13">Surface elements: explicit, implicit, distributed</A><BR>
 6.14 <A HREF = "#howto_14">Implicit surface ablation</A><BR>
 6.15 <A HREF = "#howto_15">Transparent surface elements</A><BR>
-6.15 <A HREF = "#howto_16">Visualizing SPARTA output with ParaView</A> <BR>
+6.16 <A HREF = "#howto_16">Visualizing SPARTA output with ParaView</A><BR>
+6.17 <A HREF = "#howto_17">Custom per-particle, per-grid, per-surf attributes</A><BR>
+6.18 <A HREF = "#howto_18">Variable timestep simulations</A> <BR>
 
 <P>The example input scripts included in the SPARTA distribution and
 highlighted in <A HREF = "Section_example.html">Section 5</A> of the manual also
@@ -685,18 +687,18 @@ refer to the cells of the hierarchical grid.  The flow region is the
 portion of the simulation domain that is "outside" any surface objects
 and is typically filled with particles.
 </P>
-<UL><LI>root cell = the simulation box itself
-<LI>parent cell = a grid cell that is sub-divided (root cell = parent cell)
+<UL><LI>root cell = the overall simulation box
+<LI>parent cell = a grid cell that is sub-divided (the root cell is a parent cell)
 <LI>child cell = a grid cell that is not sub-divided further
 <LI>unsplit cell = a child cell not intersected by any surface elements
-<LI>cut cell = a child cell intersected by one or more surface elements, one resulting flow region
-<LI>split cell = a child cell intersected by two or more surface elemments, two or more resulting disjoint flow regions
+<LI>cut cell = a child cell intersected by one or more surface elements, resulting in a single flow region
+<LI>split cell = a child cell intersected by two or more surface elements, resulting in two or more disjoint flow regions
 <LI>sub cell = one disjoint flow region portion of a split cell 
 </UL>
-<P>In SPARTA, parent cells are only conceptual.  They do not exist or
-require memory.  Child cells store various attributes and are
-distributed across processors, so that each child cell is owned by
-exactly one processor, as discussed below.
+<P>Note that in SPARTA, parent cells are only conceptual.  They do not
+exist as individual entities or require memory.  Child cells store
+various attributes and are distributed across processors, so that each
+child cell is owned by exactly one processor, as discussed below.
 </P>
 <P>When surface objects are defined via the <A HREF = "read_surf.html">read_surf</A>
 command, they intersect child cells.  In this contex "intersection" by
@@ -981,7 +983,7 @@ electron species, and one which does not.  Example
 <P>Use the <A HREF = "fix_ambipolar.html">fix ambipolar</A> command to specify which
 species is the ambipolar electron and what (multiple) species are
 ambipolar ions.  This is required for all the other options listed
-here to work.  The fix defines two custom per-particles attributes, an
+here to work.  The fix defines two custom per-particle attributes, an
 integer vector called "ionambi" which stores a 1 for a particle if it
 is an ambipolar ion, and a 0 otherwise.  And a floating-point array
 called "velambi" which stores a 3-vector with the velocity of the
@@ -1060,10 +1062,8 @@ E.g. this command
 <P>will output the ionambi flag = 1 for ambipolar ions, along with the vy
 of their associated ambipolar electrons.
 </P>
-<P>The <A HREF = "read_restart.html">read_restart</A> doc page explains how to restart
-ambipolar simulations where a fix like <A HREF = "fix_ambipolar.html">fix
-ambipolar</A> has been used to store extra
-per-particle properties.
+<P>The <A HREF = "fix">fix ambipolar</A> ambiploar.html doc page explains how to
+restart ambipolar simulations where the fix is used.
 </P>
 <HR>
 
@@ -1328,9 +1328,9 @@ lines were each defined as multiple line segments.
 
 <A NAME = "howto_16"></A><H4>6.16 Visualizing SPARTA output with ParaView 
 </H4>
-<P>The <I>sparta/tools/paraview</I> directory contains two Python programs that can
-be used to convert SPARTA surface and grid data to ParaView <I>.pvd</I> format for
-visualization with ParaView:
+<P>The <I>sparta/tools/paraview</I> directory contains two Python programs
+that can be used to convert SPARTA surface and grid data to ParaView
+<I>.pvd</I> format for visualization with ParaView:
 </P>
 <PRE>surf2paraview.py  
 grid2paraview.py 
@@ -1588,39 +1588,175 @@ of files as MPI ranks used to run the program.
 </P>
 <PRE>mpiexec -np 4 pvbatch -sym sort_sparta_grid_file.py data.grid 
 </PRE>
-<P>The program must be run using the ParaView <I>pvbatch</I> program with the <I>-sym</I> argument.
-The above command line will produce 4 output files containing SPARTA grid dashed ids
-of cells located in the same area of the grid. The output file names are based on
-the name of the <I>*.grid</I> file used as input (<I>data.grid</I> in this case). The output files
-will be named as shown below.
+<P>The program must be run using the ParaView <I>pvbatch</I> program with the
+<I>-sym</I> argument.  The above command line will produce 4 output files
+containing SPARTA grid dashed ids of cells located in the same area of
+the grid. The output file names are based on the name of the <I>*.grid</I>
+file used as input (<I>data.grid</I> in this case). The output files will
+be named as shown below.
 </P>
 <PRE>data_sort_bucket_rank_0.txt
 data_sort_bucket_rank_1.txt
 data_sort_bucket_rank_2.txt
 data_sort_bucket_rank_3.txt 
 </PRE>
-<P>The program <I>grid2paraview_cells.py</I> takes similar inputs as the <I>grid2paraview.py</I>
-program described in section (3), and produces the same ParaView VTU file output
-and PVD file output.
+<P>The program <I>grid2paraview_cells.py</I> takes similar inputs as the
+<I>grid2paraview.py</I> program described in section (3), and produces the
+same ParaView VTU file output and PVD file output.
 </P>
 <PRE>mpiexec -np 4 pvbatch -sym grid2paraview_cells.py grid.txt output -rf flow_files.txt --float --variables id f_1[5] f_1[7] 
 </PRE>
-<P>The program must be run using the ParaView <I>pvbatch</I> program with the <I>-sym</I> argument.
-The above command line will produce an <I>output.pvd</I> file and a directory name output/
-containing the ParaView VTU file data. The <I>grid.txt</I> file must contain a <I>read_grid</I>
-statement with the path to a SPARTA grid cell output file, and is otherwise the same
-as the <I>grid2paraview.py</I> version. The option <I>--float</I> outputs float precision numbers
-to the VTU files to save memory (default is double precision). The <I>--variables</I> option
-limits the output arrays to the names given on the command line (default is all variable
-names found in the flow files given by the <I>-rf</I> or <I>-r</I> options).
+<P>The program must be run using the ParaView <I>pvbatch</I> program with the
+<I>-sym</I> argument.  The above command line will produce an <I>output.pvd</I>
+file and a directory name output/ containing the ParaView VTU file
+data. The <I>grid.txt</I> file must contain a <I>read_grid</I> statement with
+the path to a SPARTA grid cell output file, and is otherwise the same
+as the <I>grid2paraview.py</I> version. The option <I>--float</I> outputs float
+precision numbers to the VTU files to save memory (default is double
+precision). The <I>--variables</I> option limits the output arrays to the
+names given on the command line (default is all variable names found
+in the flow files given by the <I>-rf</I> or <I>-r</I> options).
 </P>
-<P>The <I>grid2paraview_cells.py</I> program will look for <I>*_sort_bucket_rank_?.txt</I> files
-produced by the sort_sparta_grid_file.py program. The matching will depend on the number
-of MPI ranks that <I>grid2paraview_cells.py</I> is run on and the name of the output directory
-given to <I>grid2paraview_cells.py</I>. If matching files are found, these will be used as
-input on each MPI rank. If no match is found, <I>grid2paraview_cells.py</I> will run
-<I>sort_sparta_grid_file.py</I> to produce sorted output files for each rank. The programs
-are decoupled in this way to allow faster <I>grid2paraview_cells.py</I> runs once a set
-of sorted files has been generated by <I>sort_sparta_grid_file.py</I>.
+<P>The <I>grid2paraview_cells.py</I> program will look for
+<I>*_sort_bucket_rank_?.txt</I> files produced by the
+sort_sparta_grid_file.py program. The matching will depend on the
+number of MPI ranks that <I>grid2paraview_cells.py</I> is run on and the
+name of the output directory given to <I>grid2paraview_cells.py</I>. If
+matching files are found, these will be used as input on each MPI
+rank. If no match is found, <I>grid2paraview_cells.py</I> will run
+<I>sort_sparta_grid_file.py</I> to produce sorted output files for each
+rank. The programs are decoupled in this way to allow faster
+<I>grid2paraview_cells.py</I> runs once a set of sorted files has been
+generated by <I>sort_sparta_grid_file.py</I>.
+</P>
+<HR>
+
+<A NAME = "howto_17"></A><H4>6.17 Custom per-particle, per-grid, per-surf attributes 
+</H4>
+<P>Particles, grid cells, and surface elements can have custom attributes
+which store either single or multiple values per particle, per grid
+cell, or per surface element.  If a single value is stored, the
+attribute is referred to as a custom per-particle, per-grid, or
+per-surf vector.  If multiple values are stored, the attribute is
+referred to as a custom per-particle, per-grid, or per-surf array (an
+array can have a single column and thus a single value per entity).
+Each custom attribute has a name, which allows them to be specified in
+input scripts as arguments to various commands.  The values each
+attricute stores can be either integer or floating point numbers.
+</P>
+<P>Here are lists of current commands (as of August 2023) which use custom
+attributes in various ways:
+</P>
+<P><B>Per-particle custom attributes:</B>
+</P>
+<UL><LI><A HREF = "compute_reduce.html">compute reduce</A> - reduce a per-particle attribute to a scalar value
+<LI><A HREF = "custom.html">custom</A> - set the values of a per-particle attribute and optionally create it
+<LI><A HREF = "dump.html">dump particle</A> - output per-particle attributes to a dump file
+<LI><A HREF = "fix_ambipolar.html">fix ambipolar</A> - use a per-particle vector and array for ambipolar quantities
+<LI><A HREF = "variable.html">variable</A> - use a per-particle attribute in a particle-style variable formula 
+</UL>
+<P><B>Per-grid custom attributes:</B>
+</P>
+<UL><LI><A HREF = "compute_reduce.html">compute reduce</A> - reduce a per-grid attribute to a scalar value
+<LI><A HREF = "custom.html">custom</A> - set the values of a per-grid attribute and optionally create it
+<LI><A HREF = "dump.html">dump grid</A> - output per-grid attributes to a dump file
+<LI><A HREF = "fix_ave_grid.html">fix ave/grid</A> - time-average a per-grid attribute
+<LI><A HREF = "read_grid.html">read_grid</A> - define and initialize per-grid attributes
+<LI>surf_react implicit - use per-grid vectors and an array to store chemical state (not yet released in public SPARTA)
+<LI><A HREF = "variable.html">variable</A> - use a per-grid attribute in a grid-style variable formula
+<LI><A HREF = "write_grid.html">write_grid</A> - write per-grid attributes to a grid data file 
+</UL>
+<P><B>Per-surf custom attributes:</B>
+</P>
+<UL><LI><A HREF = "compute_reduce.html">compute reduce</A> - reduce a per-surf attribute to a scalar value
+<LI><A HREF = "custom.html">custom</A> - set the values of a per-surf attribute and optionally create it
+<LI><A HREF = "dump.html">dump surf</A> - output per-surf attributes to a dump file
+<LI><A HREF = "fix_ave_surf.html">fix ave/surf</A> - time-average a per-surf attribute
+<LI><A HREF = "fix_surf_temp.html">fix surf/temp</A> - use a per-surf vector for temperature
+<LI><A HREF = "read_surf.html">read_surf</A> - define and initialize per-surf attributes
+<LI><A HREF = "surf_collide.html">surf_collide</A> - use a per-surf attribute as temperature for particle/surf collisions
+<LI><A HREF = "surf_react_adsorb.html">surf_react adsorb</A> - use per-surf vectors and an array to store chemical state
+<LI><A HREF = "variable.html">variable</A> - use a per-surf attribute in a surf-style variable formula
+<LI><A HREF = "write_surf.html">write_surf</A> - write per-surf attributes to a surf data file 
+</UL>
+<P>Per-surf custom attributes can be defined for explicit or
+explicit/distributed surface elements, as set by the <A HREF = "global.html">global
+surfs</A> comand.  But they cannot be used for implicit
+surface elements.  Conceptually, implicit surfaces are defined on a
+per-grid cell basis, so per-grid custom attributes can be used instead
+for attributes of those implicit surfaces.
+</P>
+<P>Note that in some cases the name for a custom attribute is specified
+by the user, e.g. for the <A HREF = "read_grid.html">read_grid</A> or
+<A HREF = "read_surf.html">read_surf</A> commands.  In other cases, a command
+defines the name for the attributes and documents the name(s) it uses,
+e.g. for the <A HREF = "fix_ambipolar.html">fix ambipolar</A> or <A HREF = "surf_react_adsorb.html">surf_react
+adsorb</A> commands.
+</P>
+<P>Also note that custom attributes can be static or dynamic quantities.
+For example, the <A HREF = "read_surf.html">read_surf</A> command can be used to
+define a <I>static</I> temperature for each surface element it reads,
+stored as a custom per-surf vector.  By contrast, the <A HREF = "fix_surf_temp.html">fix
+surf/temp</A> command can be used to define a
+<I>dynamic</I> temperature for each surface element which is calculated
+once every N steps from the energy flux which colliding particles
+impart to each surface element, also stored in a custom per-surf
+vector.
+</P>
+<P>In both cases, the custom per-surf vector can be passed to the
+<A HREF = "surf_collide.html">surf_collide diffuse</A> command to each timestep when
+particle/surface element collisions take place.
+</P>
+<P>Another use of dynamic custom attributes is by the <A HREF = "fix_ambipolar.html">fix
+ambipolar</A> and <A HREF = "surf_react.html">surf_react adsorb</A>
+commands.  The former stores the ambipolar state of each particle in
+per-particle attributes.  The latter stores the chemical state of each
+surface element in per-surf attributes.  These will vary over the
+course of a simulation, and their status can be monitored with the
+various output commands listed above.
+</P>
+<HR>
+
+<A NAME = "howto_18"></A><H4>6.18 Variable timestep simulations 
+</H4>
+<P>As an alternative to utilization of a user-provided constant timestep,
+the variable timestep option enables SPARTA to compute global
+timesteps based on the current state of the physical processes being
+modeled. The timestep is global in the sense that all cells advance
+their particles in time using the same timestep value.  The timestep
+is adaptive in the sense that the global timestep can be recalculated
+periodically throughout the simulation to account for flow state
+changes.  Examples of situations where a variable timestep would be
+desired are problems with highly varying density or velocity
+throughout the domain and transient problems where the optimal
+timestep changes throughout the simulation.
+</P>
+<P>The global, variable timestep is computed at a user-specified
+frequency using cell-based timesteps that are calculated using cell
+mean collision and particle transit times.  These cell-based timesteps
+are only used to compute the global timestep and are not used to
+advance the solution locally. The benefit of the global timestep
+calculation is that it will automatically reduce the timestep if the
+intial value is too large, leading to higher accuracy, and it will
+automatically increase the timestep if the initial value is too small,
+speeding up the simulation. The overhead of using the variable timestep
+option is the computational time involved in computing the cell-based
+time quantities and performing parallel reductions over the grid to
+construct the global minimum and average cell timesteps needed for the
+global timestep calculation. For scenarios where ensembles of similar
+problems are being run, one strategy to mitigate this cost is to
+determine an optimal timestep using the variable timestep option for
+the first run and then to utilize this timestep as a user-specified
+value for the subsequent runs.
+</P>
+<P>The <A HREF = "compute_dt_grid.html">compute dt/grid</A> command is used to
+calculate the cell-based timesteps, and the <A HREF = "fix_dt_reset.html">fix
+dt/reset</A> command uses this data to calculate the
+global timestep.  An internal time variable has been added to SPARTA
+to track elapsed simulation time, and this time variable as well as
+the current timestep can be output using the <I>time</I> and <I>dt</I> keywords
+in the <A HREF = "stats_style.html">stats_style</A> command. These <I>time</I> and <I>dt</I>
+values are also included in the <A HREF = "read_restart.html">read_restart</A> and
+<A HREF = "write_restart.html">write restart</A> commands.
 </P>
 </HTML>

@@ -36,13 +36,14 @@ namespace SPARTA_NS {
 class ComputeFFTGrid : public Compute {
  public:
   ComputeFFTGrid(class SPARTA *, int, char **);
-  ~ComputeFFTGrid();
+  virtual ~ComputeFFTGrid();
   void init();
-  void compute_per_grid();
-  void reallocate();
+  virtual void post_constructor();
+  virtual void compute_per_grid();
+  virtual void reallocate();
   bigint memory_usage();
 
- private:
+ protected:
   int me,nprocs;
   int nvalues;
   int *which,*argindex,*value2index;
@@ -81,10 +82,11 @@ class ComputeFFTGrid : public Compute {
   class FFT2D *fft2d;
   class Irregular *irregular1,*irregular2;
 
-  void fft_create();
-  void irregular_create();
+  virtual void fft_create();
+  virtual void irregular_create();
   void procs2grid2d(int, int, int, int &, int &);
   int factorable(int);
+  virtual void print_FFT_info();
   void debug(const char *, int, double *, int *, cellint *, int stride=1);
 };
 

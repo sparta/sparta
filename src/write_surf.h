@@ -39,6 +39,12 @@ class WriteSurf : protected Pointers {
   FILE *fp;
 
   int pointflag;             // 1/0 to include/exclude Points section in file
+  int typeflag;              // 1/0 to include/exclude element types
+
+  int ncustom;               // number of custom per-surf attributes to output
+  int *index_custom,*type_custom,*size_custom;  // flags for custom attributes
+  int nvalues_custom;        // number of custom values per surf
+
   int multiproc;             // 0 = proc 0 writes for all
                              // else # of procs writing files
   int filewriter;            // 1 if this proc writes to file, else 0
@@ -60,6 +66,29 @@ class WriteSurf : protected Pointers {
   void write_base(char *);
   void open(char *);
   void write_header(int);
+
+  void pack_custom(int, double **);
+  void write_custom_all(int);
+  void write_custom_distributed(int, double **);
+
+  // union data struct for packing 32-bit and 64-bit ints into double bufs
+  // this avoids aliasing issues by having 2 pointers (double,int)
+  //   to same buf memory
+  // constructor for 32-bit int prevents compiler
+  //   from possibly calling the double constructor when passed an int
+  // copy to a double *buf:
+  //   buf[m++] = ubuf(foo).d, where foo is a 32-bit or 64-bit int
+  // copy from a double *buf:
+  //   foo = (int) ubuf(buf[m++]).i;, where (int) or (tagint) match foo
+  //   the cast prevents compiler warnings about possible truncation
+
+  union ubuf {
+    double d;
+    int64_t i;
+    ubuf(double arg) : d(arg) {}
+    ubuf(int64_t arg) : i(arg) {}
+    ubuf(int arg) : i(arg) {}
+  };
 };
 
 }

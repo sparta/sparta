@@ -13,13 +13,23 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>write_grid filename 
+<PRE>write_grid filename keyword arg ... 
 </PRE>
 <UL><LI>filename = name of file to write grid info to 
+
+<LI>zero or more keyword/args pairs may be appended 
+
+<LI>keyword = <I>custom</I> 
+
+<PRE>  <I>custom</I> arg = name
+    name = name of custom per-surf vector or array 
+</PRE>
+
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>write_grid data.grid 
+<PRE>write_grid data.grid
+write_grid data.grid custom flags 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -27,7 +37,10 @@
 current hierarchical grid.  See the <A HREF = "read_grid.html">read_grid</A> and
 <A HREF = "create_grid.html">create_grid</A> commands, as well as <A HREF = "Section_howto.html#howto_8">Section
 6.8</A> of the manual for a definition of
-hierarchical grids and grid cell IDs as used by SPARTA.
+hierarchical grids and grid cell IDs as used by SPARTA.  Note that if
+the grid is hierarchical, grid cell IDs are not simply numbered from 1
+to N.  They also encode the cell's logical position within the grid
+hierarchy.
 </P>
 <P>The file is in the following format which is the same as the input
 file used by the <A HREF = "read_grid.html"">read_grid</A> command.  Thus the file
@@ -36,19 +49,19 @@ topology.
 </P>
 <PRE>Description line 
 </PRE>
-<P>N cells
+<PRE>N cells
 M levels
 n1 n2 n3 level-1
 n1 n2 n3 level-2
 ...
-n1 n2 n3 level-M
-</P>
+n1 n2 n3 level-M 
+</PRE>
 <PRE>Cells 
 </PRE>
-<PRE>id1
-id2
+<PRE>id1 (custom1a) (custom1b) ...
+id2 (custom2a) (custom2b) ...
 ...
-idN ... 
+idN (customNa) (customNb) ...  
 </PRE>
 <P>The file begins with an arbitrary description line followed by zero or
 more blank lines.  The header section of the file then lists the
@@ -63,6 +76,14 @@ level-* lines.  A blank line ends the header section.
 line.  They may be in arbitrary order, particularly if the file is
 written in parallel, where each processor contributes a subset of the
 grid cell IDs.
+</P>
+<P>If the optional <I>custom</I> keyword is specified along with the <I>name</I> of
+a custom per-grid vector or array, then the per-grid values for that
+vector or array are added following the grid cell ID.  A per-grid
+vector is a single value per grid cell; a per-grid array is 1 or more
+values per grid cell, depending on how it was defined.  If the
+<I>custom</I> keyword is used multiple times, then the value(s) for each
+<I>name</I> are appended in the order the <I>custom</I> keywords are specified.
 </P>
 <P><B>Restrictions:</B> none
 </P>

@@ -28,18 +28,24 @@ class SurfReact : protected Pointers {
   int nlist;                // # of reactions defined or read from file
   int vector_flag;          // 0/1 if compute_vector() function exists
   int size_vector;          // length of global vector
+  int kokkosable;           // 1 if Kokkos version
+  int copy,uncopy,copymode; // used by Kokkos, prevent deallocation of
+                            //  base class when child copy is destroyed
 
   SurfReact(class SPARTA *, int, char **);
+  SurfReact(class SPARTA *sparta) : Pointers(sparta) {} // needed for Kokkos
   virtual ~SurfReact();
   virtual void init();
   virtual int react(Particle::OnePart *&, int, double *,
                     Particle::OnePart *&, int &) = 0;
   virtual char *reactionID(int) = 0;
+  virtual double reaction_coeff(int) = 0;
   virtual int match_reactant(char *, int) = 0;
   virtual int match_product(char *, int) = 0;
 
-  void tally_reset();
+  virtual void tally_reset();
   virtual void tally_update();
+  virtual void grid_changed() {}
   double compute_vector(int i);
 
  protected:

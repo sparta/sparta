@@ -14,17 +14,22 @@ compute ID reduce mode input1 input2 ... keyword args ... :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
 reduce = style name of this compute command :l
-mode = {sum} or {min} or {max} or {ave} or {sumsq} or {avesq} or (sum-area) or {ave-area} :l
+mode = {sum} or {min} or {max} or {ave} or {sumsq} or {avesq} or {sum-area} or {ave-area} :l
 one or more inputs can be listed :l
-input = x, y, z, vx, vy, vz, ke, erot, evib, c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :l
+input = x, y, z, vx, vy, vz, ke, erot, evib, c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name, p_name, p_name\[N\], g_name, g_name\[N\], s_name, s_name\[N\] :l
   x,y,z,vx,vy,vz = particle position or velocity component
   ke,erot,evib = particle energy component
   c_ID = per-particle or per-grid vector calculated by a compute with ID
-  c_ID\[I\] = Ith column of per-particle or per-grid array calculated by a compute with ID, I can include wildcard (see below)
+  c_ID\[N\] = Nth column of per-particle or per-grid array calculated by a compute with ID, N can include wildcard (see below)
   f_ID = per-particle or per-grid or per-surf vector calculated by a fix with ID
-  f_ID\[I\] = Ith column of per-particle or per-grid or per-surf array calculated by a fix with ID, I can include wildcard (see below)
-  v_name = per-particle or per-grid vector calculated by a particle-style or grid-style variable with name :pre
-
+  f_ID\[N\] = Nth column of per-particle or per-grid or per-surf array calculated by a fix with ID, N can include wildcard (see below)
+  v_name = per-particle or per-grid or per-surf vector calculated by a particle-style or grid-style or surf-style variable with name
+  p_name = custom per-particle vector with name
+  p_name\[N\] = Nth column of per-particle custom array with name, N can include wildcard (see below)
+  g_name = custom per-grid vector with name
+  g_name\[N\] = Nth column of per-grid custom array with name, N can include wildcard (see below)
+  s_name = custom per-surf vector with name
+  s_name\[N\] = Nth column of per-surf custom array with name, N can include wildcard (see below) :pre
 zero or more keyword/args pairs may be appended :l
 keyword = {replace} or {subset} :l
   {replace} args = vec1 vec2
@@ -53,11 +58,12 @@ stats_style step c_temp c_3 :pre
 Define a calculation that "reduces" one or more vector inputs into
 scalar values, one per listed input.  The inputs can be per-particle
 or per-grid or per-surf quantities; they cannot be global quantities.
-Particle attributes are per-particle quantities,
-"computes"_compute.html may generate per-particle or per-grid
-quantities, "fixes"_fix.html may generate any of the three kinds of
-quantities, and "particle-style or grid-style variables"_variable.html
-generate per-particle or per-grid quantities.  See the
+Particle attributes are per-particle quantities.
+"Computes"_compute.html and "fixes"_fix.html may generate any of the
+three kinds of quantities.  "Particle-style, grid-style, and
+surf-style variables"_variable.html generate per-particle, per-grid,
+or per-surf quantities respectively.  Custom attributes can be
+per-particle, per-grid, or per-surf quantities.  See the
 "variable"_variable command and its special functions which can
 perform the same operations as the compute reduce command on global
 vectors.
@@ -94,17 +100,18 @@ Each listed input vector is operated on independently.
 
 Each listed input vector can be a particle attribute or can be the
 result of a "compute"_compute.html or "fix"_fix.html or the evaluation
-of a "variable"_variable.html.
+of a "variable"_variable.html.  Or it can be a custom attribute of a
+particle, grid cell, or surface element.
 
-Note that for values from a compute or fix, the bracketed index I can
-be specified using a wildcard asterisk with the index to effectively
-specify multiple values.  This takes the form "*" or "*n" or "n*" or
-"m*n".  If N = the size of the vector (for {mode} = scalar) or the
-number of columns in the array (for {mode} = vector), then an asterisk
-with no numeric values means all indices from 1 to N.  A leading
-asterisk means all indices from 1 to n (inclusive).  A trailing
-asterisk means all indices from n to N (inclusive).  A middle asterisk
-means all indices from m to n (inclusive).
+Note that for values from a compute or fix or custom attribute, the
+bracketed index I can be specified using a wildcard asterisk with the
+index to effectively specify multiple values.  This takes the form "*"
+or "*n" or "n*" or "m*n".  If N = the size of the vector (for {mode} =
+scalar) or the number of columns in the array (for {mode} = vector),
+then an asterisk with no numeric values means all indices from 1 to N.
+A leading asterisk means all indices from 1 to n (inclusive).  A
+trailing asterisk means all indices from n to N (inclusive).  A middle
+asterisk means all indices from m to n (inclusive).
 
 Using a wildcard is the same as if the individual columns of the array
 had been listed one by one.  E.g. these 2 compute reduce commands are
@@ -126,21 +133,11 @@ previously defined in the input script.  Computes can generate
 per-particle or per-grid quantities.  See the individual
 "compute"_compute.html doc page for details.  If no bracketed integer
 is appended, the vector calculated by the compute is used.  If a
-bracketed integer is appended, the Ith column of the array calculated
+bracketed integer is appended, the Nth column of the array calculated
 by the compute is used.  Users can also write code for their own
 compute styles and "add them to SPARTA"_Section_modify.html.  See the
-discussion above for how I can be specified with a wildcard asterisk
+discussion above for how N can be specified with a wildcard asterisk
 to effectively specify multiple values.
-
-IMPORTANT NOTE: A compute which generates per-surf quantities cannot
-be used as input.  This is because its values have not yet been
-combined across processors to sum the contributions from all
-processors whose particles collide with the same surface element.  The
-combining is performed by the "fix ave/surf"_fix_ave_surf.html
-command, at each of its {Nfreq} timesteps.  Thus to use this compute
-on per-surf values, specify a fix ID for a "fix
-ave/surf"_fix_ave_surf.html and insure the fix outputs its values when
-they are needed.
 
 If a value begins with "f_", a fix ID must follow which has been
 previously defined in the input script.  Fixes can generate
@@ -149,20 +146,43 @@ per-particle or per-grid or per-surf quantities.  See the individual
 produce their values on certain timesteps, which must be compatible
 with when this compute references the values, else an error results.
 If no bracketed integer is appended, the vector calculated by the fix
-is used.  If a bracketed integer is appended, the Ith column of the
+is used.  If a bracketed integer is appended, the Nth column of the
 array calculated by the fix is used.  Users can also write code for
 their own fix style and "add them to SPARTA"_Section_modify.html.  See
-the discussion above for how I can be specified with a wildcard
+the discussion above for how N can be specified with a wildcard
 asterisk to effectively specify multiple values.
 
 If a value begins with "v_", a variable name must follow which has
 been previously defined in the input script.  It must be a
-"particle-style or grid-style variable"_variable.html.  Both styles
-define formulas which can reference stats keywords or invoke other
-computes, fixes, or variables when they are evaluated.  Particle-style
-variables can also reference various per-particle attributes
-(position, velocity, etc).  So these variables are a very general
-means of creating per-particle or per-grid quantities to reduce.
+"particle-style or grid-style or surf-style variable"_variable.html.
+These styles define formulas which can reference stats keywords or
+invoke other computes, fixes, or variables when they are evaluated.
+Particle-style variables can also reference various per-particle
+attributes (position, velocity, etc).  So these variables are a very
+general means of creating per-particle or per-grid or per-surf
+quantities to reduce.
+
+If a value begins with "p_" or "g_" or "s_", then a custom
+per-particle, per-grid, or per-surf attribute with the specified name
+is used.  Particles, grid cells, and surface elements can have custom
+attributes which store either single or multiple values per particle,
+per grid cell, or per surface element.  They can be defined and
+initialized in data files, e.g. via the "read_surf"_read_surf.html
+command.  Or they can be defined and used by specific commands,
+e.g. "fix ambipolar"_fix_ambipolar.html or "fix
+surf/temp"_fix_surf_temp.html or "surf_react
+adsorb"_surf_react_adsorb.html.  The name of each attribute is set by
+the user or defined by the command.  See "Section
+6.17"_Section_howto.html#howto_17 for more discussion of custom
+attributes.
+
+If no bracketed integer is appended, the custom attribute must be a
+per-particle, per-grid, or per-surf vector (single value).  If a
+bracketed integer is appended, the custom attribute must be a
+per-particle, per-grid, or per-surf arayy (multiple values) and the
+Nth column of the custom array is used.  See the discussion above for
+how N can be specified with a wildcard asterisk to effectively specify
+multiple values.
 
 :line
 
@@ -209,18 +229,18 @@ specified.  Only grid cells in the grid group will be included in the
 calculations.  See the "group grid"_group.html command for info on how
 grid cells can be assigned to grid groups.
 
-If inputs are per-surface values, then a surface group ID should be
+If inputs are per-surf values, then a surface group ID should be
 specified.  Only surface elements in the surface group will be
 included in the calculations.  See the "group surf"_group.html command
 for info on how surface elements can be assigned to surface groups.
 
 IMPORTANT NOTE: If computes or fixes are used as inputs to compute
 reduce, they may define their own subsets of particles, grid cells, or
-surface elements which contribute to their output.  E.g. grid cells not
-in the grid group used by the "compute grid"_compute_grid.html command
-have zero values as output.  You typically should use an argument for
-the {subset} keyword which is consistent with the inputs, but that is
-not required.
+surface elements which contribute to their output.  Typically output
+from those computes or fixes will be zero for grid cells or surface
+elements not in the grid or surface group specified for those
+commands.  Thus you may want to use an argument for the {subset}
+keyword which is consistent with the inputs, but that is not required.
 
 :line
 

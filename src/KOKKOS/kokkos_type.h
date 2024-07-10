@@ -27,6 +27,9 @@
 #define MAX_TYPES_STACKPARAMS 12
 #define NeighClusterSize 8
 
+#define KOKKOS_MAX_SURF_REACT_PER_TYPE 2
+#define KOKKOS_MAX_TOT_SURF_REACT 4
+
 namespace Kokkos {
   static auto NoInit = [](std::string const& label) {
     return Kokkos::view_alloc(Kokkos::WithoutInitializing, label);
@@ -45,19 +48,7 @@ namespace Kokkos {
       z+=tmp.z;
     }
     KOKKOS_INLINE_FUNCTION
-    void operator += (const sparta_float3& tmp) volatile {
-      x+=tmp.x;
-      y+=tmp.y;
-      z+=tmp.z;
-    }
-    KOKKOS_INLINE_FUNCTION
     void operator = (const sparta_float3& tmp) {
-      x=tmp.x;
-      y=tmp.y;
-      z=tmp.z;
-    }
-    KOKKOS_INLINE_FUNCTION
-    void operator = (const sparta_float3& tmp) volatile {
       x=tmp.x;
       y=tmp.y;
       z=tmp.z;
@@ -76,19 +67,7 @@ namespace Kokkos {
       z+=tmp.z;
     }
     KOKKOS_INLINE_FUNCTION
-    void operator += (const sparta_double3& tmp) volatile {
-      x+=tmp.x;
-      y+=tmp.y;
-      z+=tmp.z;
-    }
-    KOKKOS_INLINE_FUNCTION
     void operator = (const sparta_double3& tmp) {
-      x=tmp.x;
-      y=tmp.y;
-      z=tmp.z;
-    }
-    KOKKOS_INLINE_FUNCTION
-    void operator = (const sparta_double3& tmp) volatile {
       x=tmp.x;
       y=tmp.y;
       z=tmp.z;
@@ -349,18 +328,6 @@ struct s_EV_FLOAT {
     v[4] += rhs.v[4];
     v[5] += rhs.v[5];
   }
-
-  KOKKOS_INLINE_FUNCTION
-  void operator+=(const volatile s_EV_FLOAT &rhs) volatile {
-    evdwl += rhs.evdwl;
-    ecoul += rhs.ecoul;
-    v[0] += rhs.v[0];
-    v[1] += rhs.v[1];
-    v[2] += rhs.v[2];
-    v[3] += rhs.v[3];
-    v[4] += rhs.v[4];
-    v[5] += rhs.v[5];
-  }
 };
 typedef struct s_EV_FLOAT EV_FLOAT;
 
@@ -522,6 +489,15 @@ typedef tdual_int_2d::t_dev_const_um t_int_2d_const_um;
 typedef tdual_int_2d::t_dev_const_randomread t_int_2d_randomread;
 
 typedef Kokkos::
+  DualView<SPARTA_NS::cellint*, DeviceType::array_layout, DeviceType>
+  tdual_cellint_1d;
+typedef tdual_cellint_1d::t_dev t_cellint_1d;
+typedef tdual_cellint_1d::t_dev_const t_cellint_1d_const;
+typedef tdual_cellint_1d::t_dev_um t_cellint_1d_um;
+typedef tdual_cellint_1d::t_dev_const_um t_cellint_1d_const_um;
+typedef tdual_cellint_1d::t_dev_const_randomread t_cellint_1d_randomread;
+
+typedef Kokkos::
   DualView<SPARTA_NS::surfint*, DeviceType::array_layout, DeviceType>
   tdual_surfint_1d;
 typedef tdual_surfint_1d::t_dev t_surfint_1d;
@@ -639,6 +615,13 @@ typedef tdual_int_2d::t_host_const t_int_2d_const;
 typedef tdual_int_2d::t_host_um t_int_2d_um;
 typedef tdual_int_2d::t_host_const_um t_int_2d_const_um;
 typedef tdual_int_2d::t_host_const_randomread t_int_2d_randomread;
+
+typedef Kokkos::DualView<SPARTA_NS::cellint*, DeviceType::array_layout, DeviceType> tdual_cellint_1d;
+typedef tdual_cellint_1d::t_host t_cellint_1d;
+typedef tdual_cellint_1d::t_host_const t_cellint_1d_const;
+typedef tdual_cellint_1d::t_host_um t_cellint_1d_um;
+typedef tdual_cellint_1d::t_host_const_um t_cellint_1d_const_um;
+typedef tdual_cellint_1d::t_host_const_randomread t_cellint_1d_randomread;
 
 typedef Kokkos::DualView<SPARTA_NS::surfint*, DeviceType::array_layout, DeviceType> tdual_surfint_1d;
 typedef tdual_surfint_1d::t_host t_surfint_1d;
@@ -764,6 +747,7 @@ struct MemsetZeroFunctor {
 };
 
 #define SPARTA_LAMBDA KOKKOS_LAMBDA
+#define SPARTA_CLASS_LAMBDA KOKKOS_CLASS_LAMBDA
 
 namespace SPARTA_NS {
 template <typename Device>

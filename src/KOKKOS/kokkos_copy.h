@@ -34,6 +34,8 @@ class KKCopy {
   obj(sparta) {
     ptr_temp = NULL;
     obj.copy = 1;
+    obj.copymode = 0;
+    obj.uncopy = 0;
     save();
   }
 
@@ -44,14 +46,13 @@ class KKCopy {
     obj.copy = 1;
   }
 
-  void uncopy(int copy = 0) {
+  void uncopy() {
     if (ptr_temp != NULL) {
       memcpy((void*)&obj, ptr_temp, sizeof(ClassStyle));
       free(ptr_temp);
       ptr_temp = NULL;
     }
-    obj.copy = copy;
-    obj.copymode = 0;
+    obj.uncopy = 1;
   }
 
  private:

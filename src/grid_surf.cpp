@@ -62,7 +62,7 @@ enum{SOUTSIDE,SINSIDE,ONSURF2OUT,ONSURF2IN};  // several files (changed 2 words)
    for distributed surfs, have to use surf alg
    PERAUTO option chooses based on total nsurfs vs nprocs
    see info on subflag, outflag options with surf2grid_split()
-   called from Readsurf, MoveSurf, RemoveSurf, ReadRestart, and FixMoveSurf
+   called from ReadSurf, MoveSurf, RemoveSurf, ReadRestart, and FixMoveSurf
 ------------------------------------------------------------------------- */
 
 void Grid::surf2grid(int subflag, int outflag)
@@ -317,7 +317,8 @@ void Grid::surf2grid_cell_algorithm(int outflag)
 }
 
 /* ----------------------------------------------------------------------
-   find surfs that overlap owned grid cells, for non-distributed or distributed
+   find surfs that overlap owned grid cells
+     for non-distributed or distributed explicit surfs
    algorithm:
      each proc responsible for subset of surfs
      loop over levels of hierarchical grid
@@ -329,17 +330,16 @@ void Grid::surf2grid_cell_algorithm(int outflag)
      each proc can then identify surf/grid intersections for its RCB grid cells
        done recursively by dropping each surf down conceptual tree of parent cells
        until reach child cells that exist at level
-     irregular comm the surf/grid intersection pairs back to procs that own grid cells
+     irregular comm of surf/grid intersection pairs back to procs that own grid cells
    in cells: set nsurf, csurfs
    in cinfo: set type=OVERLAP for cells with surfs
 ------------------------------------------------------------------------- */
 
 void Grid::surf2grid_surf_algorithm(int outflag)
 {
-  int i,j,n,ix,iy,iz,icell,isurf;
+  int i,n,icell,isurf;
   cellint childID,parentID;
   double t1,t2,t3,t4,t5;
-  double ctr[3];
   Irregular *irregular;
 
   double *boxlo,*boxhi;             // corner points of entire simulation box
@@ -852,7 +852,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
     // allocate memory for rvous input
 
     int *proclist;
-    memory->create(proclist,ncount,"surf2grid:proclist2");
+    memory->create(proclist,ncount,"surf2grid:proclist");
     InRvous *inbuf =
       (InRvous *) memory->smalloc((bigint) ncount*sizeof(InRvous),
                                   "surf2grid:inbuf");
@@ -983,7 +983,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
    if subflag = 1, create new owned split and sub cells as needed
      called from ReadSurf, RemoveSurf, MoveSurf, FixAblate
    if subflag = 0, split/sub cells already exist
-     called from ReadRestart
+     called from ReadRestart, only for explicit surfs
    outflag = 1 for timing and statistics info
    in cells: set nsplit, isplit
    in cinfo: set corner, volume
@@ -992,10 +992,10 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
 void Grid::surf2grid_split(int subflag, int outflag)
 {
-  int i,isub,nsurf,nsplitone,xsub;
+  int i,isub,nsplitone,xsub;
   int *surfmap,*ptr;
   double t1,t2;
-  double *lo,*hi,*vols;
+  double *vols;
   double xsplit[3];
   ChildCell *c;
   SplitInfo *s;
@@ -1073,7 +1073,7 @@ void Grid::surf2grid_split(int subflag, int outflag)
 
     } else {
       if (cells[icell].nsplit != nsplitone) {
-        printf("BAD %d %d: %d %d\n",icell,cells[icell].id,
+        printf("BAD %d " CELLINT_FORMAT ": %d %d\n",icell,cells[icell].id,
                nsplitone,cells[icell].nsplit);
         error->one(FLERR,
                    "Inconsistent surface to grid mapping in read_restart");
@@ -1623,6 +1623,94 @@ void Grid::clear_surf()
 }
 
 /* ----------------------------------------------------------------------
+   remove effects of implicit surf split cells on grid and particles
+   remove sub-cells from grid list and set all cells to unsplit
+   reassign particles in sub-cells to parent split cell
+   allows a subsequent read_isurf command to work correctly
+   called by read_restart after reading restart file for simulation
+     which used implicit surfs and thus may have had split cells
+------------------------------------------------------------------------- */
+
+void Grid::clear_surf_implicit()
+{
+  int icell;
+  double *lo,*hi;
+
+  int dimension = domain->dimension;
+  int ncorner = 8;
+  if (dimension == 2) ncorner = 4;
+
+  // store cellIDs = list of cellID each particle is in
+  // sub-cells and parent split cell have the same cellID
+
+  Particle::OnePart *particles = particle->particles;
+  int nplocal = particle->nlocal;
+
+  cellint *cellIDs;
+  memory->create(cellIDs,nplocal,"grid:cellIDs");
+
+  for (int i = 0; i < nplocal; i++)
+    cellIDs[i] = cells[particles[i].icell].id;
+
+  // compress cell list to remove all sub-cells
+  // reset cell and corner types, and cell volume
+
+  int celltype = OUTSIDE;
+
+  icell = 0;
+  while (icell < nlocal) {
+    if (cells[icell].nsplit <= 0) {
+      if (icell != nlocal-1) {
+        memcpy(&cells[icell],&cells[nlocal-1],sizeof(ChildCell));
+        memcpy(&cinfo[icell],&cinfo[nlocal-1],sizeof(ChildInfo));
+      }
+      nlocal--;
+    } else {
+      cells[icell].ilocal = icell;
+      cells[icell].nsurf = 0;
+      cells[icell].csurfs = NULL;
+      cells[icell].nsplit = 1;
+      cells[icell].isplit = -1;
+      cinfo[icell].type = celltype;
+      for (int m = 0; m < ncorner; m++) cinfo[icell].corner[m] = UNKNOWN;
+      lo = cells[icell].lo;
+      hi = cells[icell].hi;
+      if (dimension == 3)
+        cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+      else if (domain->axisymmetric)
+        cinfo[icell].volume = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
+      else
+        cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
+      icell++;
+    }
+  }
+
+  // reset all cell counters
+
+  nunsplitlocal = nlocal;
+  nsplitlocal = nsublocal = 0;
+
+  // create hash for new set of owned grid cells
+
+  hash->clear();
+
+  for (icell = 0; icell < nlocal; icell++)
+    (*hash)[cells[icell].id] = icell;
+
+  // use hash to reassign each particle's index into cell list
+  // uses the temporary cellIDs list created above
+
+  for (int i = 0; i < nplocal; i++)
+    particles[i].icell = (*hash)[cellIDs[i]];
+
+  // clean up
+
+  memory->destroy(cellIDs);
+  hash->clear();
+  hashfilled = 0;
+}
+
+/* ----------------------------------------------------------------------
    remove all surf info from owned grid cells and reset cell volumes
    do NOT remove sub cells by compressing grid cells list
    called from read_restart before reassigning surfs to grid cells
@@ -1791,6 +1879,7 @@ int Grid::point_outside_surfs_implicit(int icell, double *x)
     edgelen = MathExtra::len3(edge);
     minedge = MIN(minedge,edgelen);
     MathExtra::sub3(tris[isurf].p3,tris[isurf].p1,edge);
+    edgelen = MathExtra::len3(edge);
     minedge = MIN(minedge,edgelen);
 
     displace = EPSSURF * minedge;
@@ -1823,7 +1912,6 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
   if (dim == 3 && !cut3d) cut3d = new Cut3d(sparta);
   else if (dim == 2 && !cut2d) cut2d = new Cut2d(sparta,domain->axisymmetric);
 
-  cellint id = cells[icell].id;
   double *lo = cells[icell].lo;
   double *hi = cells[icell].hi;
   surfint *csurfs = cells[icell].csurfs;
@@ -1831,20 +1919,20 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
 
   double minsize = MIN(hi[0]-lo[0],hi[1]-lo[1]);
   double displace = EPSSURF * minsize;
-  
+
   if (dim == 2) {
     int npoint;
-    double cpath[4],a[2],b[2];
+    double cpath[4];
     double *norm;
     Surf::Line *line;
-    
+
     Surf::Line *lines = surf->lines;
 
     for (int i = 0; i < nsurf; i++) {
       line = &lines[csurfs[i]];
       if (line->transparent) continue;
       norm = line->norm;
-      
+
       npoint = cut2d->clip_external(line->p1,line->p2,lo,hi,cpath);
       if (npoint < 2) continue;
 
@@ -1861,10 +1949,10 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
       x[2] = 0.0;
       return 1;
     }
-    
+
   } else {
     int npoint;
-    double cpath[24],a[2],b[2];
+    double cpath[24];
     double *norm;
     Surf::Tri *tri;
 
@@ -1874,10 +1962,10 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
       tri = &tris[csurfs[i]];
       if (tri->transparent) continue;
       norm = tri->norm;
-      
+
       npoint = cut3d->clip_external(tri->p1,tri->p2,tri->p3,lo,hi,cpath);
       if (npoint < 3) continue;
-                    
+
       int face = cut3d->sameface_external(&cpath[0],&cpath[3],&cpath[6],lo,hi);
       if (face) {
         if (face == 1 and norm[0] < 0.0) continue;
@@ -1900,7 +1988,7 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
   // means entire cell is actually outside or inside, just touched by surfs
   // if outside, caller does not need to call outside_surfs()
   // if inside, caller can detect that its flow volume = zero
-  
+
   return 0;
 }
 
@@ -1918,42 +2006,39 @@ int Grid::outside_surfs(int icell, double *x, double *xcell)
   Surf::Tri *tris = surf->tris;
   surfint *csurfs = cells[icell].csurfs;
 
-  int m,isurf,minflag,hitflag,side,minside;
-  double param,minparam;
+  int m,isurf,hitflag,side;
+  double param;
   double xc[3];
   Surf::Line *line;
   Surf::Tri *tri;
 
-  // loop over surfs, ray-trace from x to xcell, see which surf is hit first
+  // loop over surfs, ray-trace from x to xcell, see how many surfaces were hit
 
   int nsurf = cells[icell].nsurf;
 
-  minflag = 0;
-  minparam = 2.0;
+  int cnt = 0;
   for (m = 0; m < nsurf; m++) {
     isurf = csurfs[m];
     if (dim == 3) {
       tri = &tris[isurf];
       hitflag = Geometry::
-        line_tri_intersect(x,xcell,tri->p1,tri->p2,tri->p3,
-                           tri->norm,xc,param,side);
+        line_tri_intersect_noeps(x,xcell,tri->p1,tri->p2,tri->p3,
+                                 tri->norm,xc,param,side);
     } else {
       line = &lines[isurf];
       hitflag = Geometry::
         line_line_intersect(x,xcell,line->p1,line->p2,line->norm,xc,param,side);
     }
-    if (hitflag && param < minparam) {
-      minflag = 1;
-      minparam = param;
-      minside = side;
-    }
+    if (hitflag) cnt++;
   }
 
   // if no surf was hit, particle is outside surfs
-  // else check which side of surf was hit
+  // else check how many surfaces were hit
+  //   odd number = inside, even number = outside
 
-  if (!minflag) return 1;
-  if (minside == SOUTSIDE || minside == ONSURF2OUT) return 1;
+  if (cnt == 0) return 1;
+  if (cnt % 2 == 0) return 1;
+
   return 0;
 }
 

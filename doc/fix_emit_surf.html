@@ -25,16 +25,20 @@
 
 <LI>zero or more keyword/value pairs may be appended 
 
-<LI>keyword = <I>n</I> or <I>normal</I> or <I>nevery</I> or <I>perspecies</I> or <I>region</I> or <I>subsonic</I> 
+<LI>keyword = <I>n</I> or <I>normal</I> or <I>nevery</I> or <I>perspecies</I> or <I>region</I> or <I>subsonic</I> or <I>custom</I> 
 
 <PRE>  <I>n</I> value = Np = number of particles to create
+                   Np can be a variable (see below)
   <I>normal</I> value = yes or no = emit normal to surface elements or with streaming velocity
   <I>nevery</I> value = Nstep = add particles every this many timesteps
   <I>perspecies</I> value = <I>yes</I> or <I>no</I>
   <I>region</I> value = region-ID
   <I>subsonic</I> values = Psub Tsub
     Psub = pressure setting at inflow boundary (pressure units)
-    Tsub = temperature setting at inflow boundary, can be NULL (temperature units) 
+    Tsub = temperature setting at inflow boundary, can be NULL (temperature units)
+  <I>custom</I> values = attribute s_name
+    attribute = <I>nrho</I> or <I>vstream</I> or <I>speed</I> or <I>temp</I> or <I>fractions</I>
+    s_name = custom per-surf vector or array with name 
 </PRE>
 
 </UL>
@@ -45,11 +49,17 @@ fix in emit/face mymix myPatch region circle normal yes
 fix in emit/surf air all subsonic 0.1 300
 fix in emit/surf air all subsonic 0.05 NULL 
 </PRE>
+<PRE>read_surf sdata.circle custom myrho float 0 custom mystream float 3
+fix in emit/surf air all custom nrho s_myrho custom vstream s_mystream 
+</PRE>
 <P><B>Description:</B>
 </P>
 <P>Emit particles from a group of surface elements, continuously during a
 simulation.  If invoked every timestep, this fix creates a continuous
-outflux of particles from the surface elements in the group.
+outflux of particles from the surface elements in the group.  This
+command can only be used with explicit surfaces, not implicit.  See
+<A HREF = "Section_howto.html#howto_13">Section Howto 6.13</A> for a discussion of
+explicit and implicit surface elements.
 </P>
 <P>The properties of the added particles are determined by the mixture
 with ID <I>mix-ID</I>.  This sets the number and species of added
@@ -116,11 +126,28 @@ of particles emitting from each surface element.
 <P>The <I>n</I> keyword can alter how many particles are added, which can be
 useful for debugging purposes.  If <I>Np</I> is set to 0, then the number
 of added particles is a function of <I>fnum</I>, <I>nrho</I>, and other mixture
-settings, as described above.  If <I>Np</I> is set to a value > 0, then the
-<I>fnum</I> and <I>nrho</I> settings are ignored, and exactly <I>Np</I> particles are
-added on each insertion timestep.  This is done by dividing <I>Np</I> by
-the total number of grid cell/surface element pairs and adding an
-equal number of particles per pair.
+settings, as described above.
+</P>
+<P>If <I>Np</I> is set to a value > 0, then the <I>fnum</I> and <I>nrho</I> settings are
+ignored, and roughly <I>Np</I> particles are added on each insertion
+timestep.  For each grid cell/surface element pair, its target number
+of emitted particles is set to its fraction of the total emission area
+(for all grid cell/surface element pairs), multiplied by <I>Np</I>.  If
+that results in a fractional value, then an extra particle is emitted
+depending on the value of a random number, as explained above.
+</P>
+<P>The <I>Np</I> value can be also be specified as an equal-style
+<A HREF = "variable.html">variable</A>.  If the value is a variable, it should be
+specified as v_name, where name is the variable name.  In this case,
+the variable will be evaluated on each emission timestep, and its
+value used as <I>Np</I> on that step to determine the target number of
+emitted particles for each grid cell/surface element pair, the same as
+described in the preceeding paragraph.
+</P>
+<P>Equal-style variables can specify formulas with various mathematical
+functions, and include <A HREF = "status_style.html">stats_style</A> command
+keywords for the simulation box parameters and timestep and elapsed
+time.  Thus it is easy to specify a time-dependent value of <I>Np</I>.
 </P>
 <P>The <I>normal</I> keyword can be used to alter how velocities are set for
 added particles.  If <I>normal</I> is set to <I>no</I>, then a particle's
@@ -135,7 +162,7 @@ points in the direction of the outward normal of the surface element,
 and its magnitude is set to the magnitude of the mixture's streaming
 velocity.  A velocity is then assigned to the particle in the same
 manner as before.  It is assigned the outward streaming velocity
-superposed with a thermal velocity sampled fromt he temperature of the
+superposed with a thermal velocity sampled from the temperature of the
 mixture.  The effect is that particles effectively stream outward from
 each emitting surface element.
 </P>
@@ -226,6 +253,75 @@ command are trying to achieve.
 </P>
 <HR>
 
+<P>The <I>custom</I> keyword can be used to tailor the emission of particles
+from individual surface elements.  This is done by using custom
+per-surf vectors or arrays defined by other commands.  E.g. the
+<A HREF = "read_surf.html">read_surf</A> command which can read per-surf attributes
+included in the surface data file.  Or the custom command which allows
+for definition of custom per-surf vectors or arrays and their
+initialization by use of <A HREF = "variable.html">surf-style variables</A>.  See
+<A HREF = "Section_howto.html#howto_17">Section Howto 6.17</A> for a discussion of
+custom per-surf attributes.
+</P>
+<P>IMPORTANT NOTE: The <I>custom</I> keyword cannot be used together with
+either the <I>n</I> or <I>subsonic</I> keywords.
+</P>
+<P>The <I>attribute</I> value of the <I>custom</I> keyword can be any of the
+following:
+</P>
+<UL><LI>nrho = number density (# per length^3 units) = per-surf vector
+<LI>vstream = 3-component streaming velocity (velocity units) = per-surf array with 3 columns
+<LI>speed = length of streaming velocity vector in normal direction (velocity units) = per-surf vector
+<LI>temp = temperature (temperature units) = per-surf vector
+<LI>fractions = species fractions (unitless) = per-surf array 
+</UL>
+<P>The <I>s_name</I> value of the <I>custom</I> keyword is the name of the custom
+per-surf vector or array.  It must store floating-point values and be
+a vector or array, as indicated in the list above.
+</P>
+<P>When the fix emit/surf command calculates the number of particles (and
+their attributes) to be emitted from each surface element, by default
+it uses the mixture properties of the specified <I>mix-ID</I> for number
+density, streaming velocity, temperature, and relative species
+fractions.  The same values are used for all surface elements.  If the
+<I>custom</I> keyword is used for one or more of these properties, the
+values of the associated custom per-surf vector(s) or array(s)
+override the default mixture properties.
+</P>
+<P>The <I>custom</I> attribute <I>vstream</I> can only be used if the <I>normal</I>
+keyword is set to <I>no</I>, which is the default.  In this case it must
+refer to a 3-column per-surf custom array which stores the 3 streaming
+velocity components for each surface element.  If the <I>normal</I> keyword
+is set to <I>yes</I>, then the <I>custom</I> atrribute <I>speed</I> should be used
+instead.  It must refer to a custom per-surf vector which stores the
+"speed" of the emission in the direction normal to each surface
+element.  I.e. it is the scalar length of the streaming velocity
+vector, as described above for the <I>normal</I> keyword.
+</P>
+<P>The <I>custom</I> attribute <I>temp</I> sets a temperature for each surface
+element.  This temperature is used as the thermal temeperature for
+each inserted particle which means it affects its thermal velocity
+components as well as its rotational and vibrational energies.
+</P>
+<P>The <I>custom</I> attribute <I>fractions</I> must refer to a per-surf custom
+array with N columns, where N is the number of species in the mixture.
+For each surface element, the N values will be used to set the
+relative fractions of emitted particles for that element, using the
+logic for the <I>perspecies yes/no</I> keyword described above.
+</P>
+<P>For each surface element, the N per-species fractional values must sum
+to 1.0.  However, one or more of the numeric values can be < zero, say
+M of them.  In this case, each of the M values will be reset to (1 -
+sum)/M, where sum is the sum of the N-M values which are >= zero.
+</P>
+<P>Note that the order of species within the N columns of the custom
+per-surf array, if the same as the order of species within the mix-ID
+mixture.  This is determined by the <A HREF = "mixture.html">mixture</A> command.
+It is the order the gas species names were listed when the mixture
+command was specified (one or more times).
+</P>
+<HR>
+
 <P><B>Restart, output info:</B>
 </P>
 <P>No information about this fix is written to <A HREF = "restart.html">binary restart
@@ -240,8 +336,8 @@ a run is performed.
 </P>
 <P><B>Restrictions:</B>
 </P>
-<P>A <I>n</I> setting of <I>Np</I> > 0 can only be used with a <I>perspecies</I> setting
-of <I>no</I>.
+<P>A <I>n</I> setting of <I>Np</I> > 0 or <I>Np</I> as a variable can only be used with
+a <I>perspecies</I> setting of <I>no</I>.
 </P>
 <P>If <I>normal</I> is set to <I>no</I>, which is the default, then unlike the <A HREF = "fix_emit/face.html">fix
 emit/face</A> command, no warning is issued if a

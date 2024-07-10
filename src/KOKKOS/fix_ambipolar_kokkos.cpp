@@ -87,6 +87,10 @@ FixAmbipolarKokkos::~FixAmbipolarKokkos()
 void FixAmbipolarKokkos::pre_update_custom_kokkos()
 {
   boltz = update->boltz;
+  temp_thermal = update->temp_thermal;
+  vstream[0] = update->vstream[0];
+  vstream[1] = update->vstream[1];
+  vstream[2] = update->vstream[2];
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
@@ -113,16 +117,4 @@ void FixAmbipolarKokkos::update_custom(int index, double temp_thermal,
   particle_kk->sync(Host,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
   FixAmbipolar::update_custom(index, temp_thermal, temp_rot, temp_vib, vstream);
   particle_kk->modify(Host,CUSTOM_MASK);
-}
-
-/* ----------------------------------------------------------------------
-   called when a surface reaction occurs
-   iorig = particle I before reaction
-   I,J = indices of two particles after reaction
-         either can be -1, meaning particle does not exist
-------------------------------------------------------------------------- */
-
-void FixAmbipolarKokkos::surf_react(Particle::OnePart *iorig, int &i, int &j)
-{
-  // not yet supported by Kokkos package
 }

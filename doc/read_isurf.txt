@@ -30,9 +30,9 @@ keyword = {group} or {type} or {push} or {precision} or {read} :l
 
 [Examples:]
 
-read_isurf portion 100 100 1 isurf.material.2d 180.5 group mesh
-read_isurf subset 150 100 50 isurf.materials.3d 120.5 type isurf.type
-read_isurf subset 150 100 50 isurf.materials.3d 120.5 read parallel :pre
+read_isurf portion 100 100 1 isurf.material.2d 180.5 fablate group mesh
+read_isurf subset 150 100 50 isurf.materials.3d 120.5 fablate type isurf.type
+read_isurf subset 150 100 50 isurf.materials.3d 120.5 fablate read parallel :pre
 
 [Description:]
 
@@ -170,7 +170,8 @@ https://en.wikipedia.org/wiki/Marching_squares :ul
 The algorithms require a threshold value as input, which is the
 {thresh} value in the read_isurf command.  For corner point values
 that bracket the threshold, it determines precisely where in the grid
-cell the corner points of the inferred implicit surface(s) will be.
+cell the corner points of the inferred implicit surface elements will
+be.
 
 The threshold must be specified as a floating point value such that 0
 < thresh < 255.  An integer value for thresh (e.g. 128 or 128.0) is
@@ -182,25 +183,25 @@ procedure must represent a watertight object(s), the same as explained
 for the "read_surf"_read_surf.html command, otherwise SPARTA will
 generate an error.  The marching cube and square algorithms guarantee
 this.  However, if the Nx by Ny by Nz array of grid cells is interior
-to the simulation box, the entire outer boundary of the Nxfile by
-Nyfile by Nzfile grid of corner points should have values = 0.  This
-will insure no surface element touches the outer boundary (which would
+to the simulation box, the entire outer boundary of the Nx+1 by Ny+1
+by Nz+1 grid of corner points should have values = 0.  This will
+insure no surface element touches the outer boundary (which would
 induce a non-watertight surface).  If the array of grid cells touches
-the simulation box face, then this is not a requirement (the same as
-if a set of explicit surfs were clipped at the box boundary).
-However, if a boundary is periodic in a particular dimension and the
-array of grid cells touches that boundary, then you must insure the
-Nxfile by Nyfile by Nzfile grid of corner points spans that entire
-dimension, and its values are periodic in the same sense the
-simulation box is.  E.g. if the y dimension is periodic, then the
-corner point values at the y = 1 and y = Nyfile lines or planes of the
-2d or 3d corner point array must be identical.  Otherwise the
-aggregate set of implicit surfaces will not be consistent across the y
-periodic boundary.
+a simulation box face, then this is not a requirement (the same as if
+a set of explicit surfs were clipped at the box boundary).  However,
+if a boundary is periodic in a particular dimension and the array of
+grid cells touches that boundary, then you must insure the Nx+1 by
+Ny+1 by Nz+1 grid of corner points spans that entire dimension, and
+its values are periodic in the same sense the simulation box is.
+E.g. if the y dimension is periodic, then the corner point values at
+the y = 1 and y = Ny+1 lines or planes of the 2d or 3d corner point
+array must be identical for each x and z coordinate.  Otherwise the
+aggregate set of induced implicit surfaces will not be consistent
+across the y periodic boundary.
 
 The specified {ablateID} is the fix ID of a "fix
 ablate"_fix_ablate.html command which has been previously specified in
-the input script.  It stores the grid corner point values for each
+the input script.  It will store the grid corner point values for each
 grid cell.  It also has the code logic for converting grid corner
 point values to surface elements (line segments or triangles) and also
 optinally allows for the surface to be ablated during a simulation due
@@ -314,6 +315,8 @@ the "create_box"_create_box.html command, and after a grid has been
 created by the "create_grid"_create_grid.html command.  If particles
 already exist in the simulation, you must insure particles do not end
 up inside the set of implicit surfaces.
+
+Simulations with implicit surfaces cannot perform grid adaptation.
 
 [Related commands:]
 

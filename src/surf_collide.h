@@ -30,9 +30,11 @@ class SurfCollide : protected Pointers {
   int transparent;          // 1 if transparent collision model
   int vector_flag;          // 0/1 if compute_vector() function exists
   int size_vector;          // length of global vector
-
+  int kokkosable;           // 1 if Kokkos version
+  int copy,uncopy,copymode; // used by Kokkos, prevent deallocation of
+                            //  base class when child copy is destroyed
   SurfCollide(class SPARTA *, int, char **);
-  SurfCollide(class SPARTA *sparta) : Pointers(sparta) {}
+  SurfCollide(class SPARTA *sparta) : Pointers(sparta) {} // needed for Kokkos
   virtual ~SurfCollide();
   virtual void init();
   virtual Particle::OnePart *collide(Particle::OnePart *&, double &,
@@ -40,22 +42,42 @@ class SurfCollide : protected Pointers {
   virtual void wrapper(Particle::OnePart *, double *, int *, double *) {}
   virtual void flags_and_coeffs(int *, double *) {}
 
-  virtual void dynamic() {}
+  virtual void dynamic();
   void tally_reset();
   void tally_update();
   double compute_vector(int i);
 
-  int copy,copymode;
+  // nsingle = all collisions in one step
+
+  int nsingle;
 
  protected:
 
   // tallies for collisions
-  // nsingle = all collisions in one step
   // ntotal = cumulative nsingle across all steps
   // one,all used in compute_vector()
 
-  int nsingle,ntotal;
+  int ntotal;
   double one[2],all[2];
+
+  // variables used by all SC classes which define Tsurf
+
+  int tmode;               // possible modes = NUMERIC,VAREQUAL,VARSURF,CUSTOM
+  double tsurf;            // single value for NUMERIC or VAREQUAL
+  char *tname;             // name for variable or custom attribute
+  int tindex_var;          // index of variable
+  int tindex_custom;       // index of custom attribute
+  int tfreq;               // frequency to update variables
+  int persurf_temperature; // 1 if VARSURF or CUSTOM
+  int n_owned,n_localghost;  // # of owned and local+ghost variable values
+   double *t_owned;        // values for VARSURF for owned surfs
+  double *t_localghost;    // values for VARSURF for local+ghost surfs
+  double *t_persurf;       // ptr to VARSURF or CUSTOM local values
+
+  // functions used by all SC classes which define Tsurf
+
+  void parse_tsurf(char *);
+  void check_tsurf();
 };
 
 }

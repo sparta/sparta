@@ -18,11 +18,13 @@ surf = style name of this compute command :l
 group-ID = group ID for which surface elements to perform calculation on :l
 mix-ID = mixture ID for particles to perform calculation on :l
 one or more values can be appended :l
-value = {n} or {nwt} or {nflux} or {mflux} or {fx} or {fy} or {fz} or {press} or {px} or {py} or {pz} or {shx} or {shy} or {shz} or {ke} :l
+value = {n} or {nwt} or {nflux} or {nflux_incident} or {mflux} or {mflux_incident} or {fx} or {fy} or {fz} or {press} or {px} or {py} or {pz} or {shx} or {shy} or {shz} or {ke} :l
   n = count of particles hitting surface element
   nwt = weighted count of particles hitting surface element
-  nflux = flux of particles on surface element
-  mflux = flux of mass on surface element
+  nflux = net flux of particles through surface element
+  nflux_incident = incident flux of particles on surface element
+  mflux = net flux of mass through surface element
+  mflux_incident = incident flux of mass on surface element
   fx,fy,fz = components of force on surface element
   press = magnitude of normal pressure on surface element
   px,py,pz = components of normal pressure on surface element
@@ -30,6 +32,7 @@ value = {n} or {nwt} or {nflux} or {mflux} or {fx} or {fy} or {fz} or {press} or
   ke = flux of particle kinetic energy on surface element
   erot = flux of particle rotational energy on surface element
   evib = flux of particle vibrational energy on surface element
+  echem = flux of particle chemical catalytic energy on surface element
   etot = flux of particle total energy on surface element :pre
 zero or more keyword/setting pairs can be appended :l
 keyword = {norm} :l
@@ -38,7 +41,7 @@ keyword = {norm} :l
 
 [Examples:]
 
-compute 1 surf all all n press eng
+compute 1 surf all all n press etot
 compute mine surf sphere species press shx shy shz
 compute 2 surf all all mflux ke erot norm flow :pre
 
@@ -71,15 +74,15 @@ specified by {group-ID} are included in the calculations.  See the
 "group surf"_group.html command for info on how surface elements can
 be assigned to surface groups.
 
-Explicit surface elements are triangles for 3d simulations and line
-segments for 2d simulations.  Unlike implicit surface elements, each
-explicit triangle or line segment may span multiple grid cells.  See
-the "read_surf"_read_surf.html command for details.
-
 This command can only be used for simulations with explicit surface
 elements.  See the similar "compute
 isurf/grid"_compute_isurf_grid.html command for use with simulations
 with implicit surface elements.
+
+Explicit surface elements are triangles for 3d simulations and line
+segments for 2d simulations.  Unlike implicit surface elements, each
+explicit triangle or line segment may span multiple grid cells.  See
+"Section 4.9"_Section_howto.html#howto_9 of the manual for details.
 
 Note that when a particle collides with a surface element, it can
 bounce off (possibly as a different species), be captured by the
@@ -138,8 +141,11 @@ occurs.  The {nwt} quantity will only be different than {n} if
 particle weighting is enabled via the "global weight"_global.html
 command.
 
-The {nflux} value calculates the number flux imparted to the surface
-element by particles in the group.  This is computed as
+The {nflux} and {nflux_incident} values calculate the net and incident
+number flux imparted to the surface element by particles in the group
+respectively. Incident flux sums over all the impacting particles,
+while net flux subtracts out reflected particles and includes effects
+from surface chemistry such as particle deletion. These are computed as
 
 Nflux = N / (A * dt / fnum) :pre
 
@@ -153,8 +159,9 @@ included in the Nflux formula.  The Nflux quantity becomes effectively
 a particle flow rate (count per time).  See discussion of the {norm}
 keyword below.
 
-The {mflux} value calculates the mass flux imparted to the surface
-element by particles in the group.  This is computed as
+The {mflux} and {mflux_incident} values calculate the net and incident
+mass flux imparted to the surface element by particles in the group
+respectively.  These are computed as
 
 Mflux = Sum_i (mass_i) / (A * dt / fnum) :pre
 
@@ -277,6 +284,18 @@ included in the Eflux formula.  Then Eflux quantity becomes
 effectively an energy flow rate (energy per time).  See discussion of
 the {norm} keyword below.
 
+The {echem} value calculates the chemical catalytic energy flux {Eflux}
+imparted to the surface element by particles in the group, such that
+energy lost by a particles recombining is a positive flux.  This is computed as
+
+Eflux = - Sum_i (e_recomb) / (A * dt / fnum)
+
+where e_recomb is the catalytic chemical energy of a particle pair
+(positive for an exothermic recombination reaction). The flux equation
+is the same as for the {ke} value. This option applies only to the
+{prob} style of surface reations. A value of 0.0 will be returned
+for other styles of surface reactions, e.g. {global} and {adsorb}.
+
 The {etot} value calculates the total energy flux imparted to the
 surface element by particles in the group, such that energy lost by a
 particle is a positive flux.  This is simply the sum of kinetic,
@@ -301,7 +320,7 @@ The {n} and {nwt} value are calculated the same for transparent
 surfaces as for non-transparent.  I.e. they are the count and weighted
 count of particles passing through the surface.
 
-The {nflux}, {mflux}, {ke}, {erot}. {evib}, and {etot} values are
+The {nflux}, {mflux}, {ke}, {erot}. {evib}, {echem}, and {etot} values are
 fluxes.  For transparent surfaces, they are calculated only for the
 incident particle as if it had struck the surface.  The outgoing
 particle is ignored.  This means the tally quantity is the flux of
@@ -372,7 +391,7 @@ for an overview of SPARTA output options.
 The per-surf array values will be in the "units"_units.html
 appropriate to the individual values as described above. {N} is
 unitless.  {Press}, {px}, {py}, {pz}, {shx}, {shy}, {shz} are in in
-pressure units.  {Ke}, {erot}, {evib}, and {etot} are in
+pressure units.  {Ke}, {erot}, {evib}, {echem}, and {etot} are in
 energy/area-time units for 3d simulations and energy/length-time units
 for 2d simulations.
 

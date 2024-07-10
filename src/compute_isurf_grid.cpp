@@ -216,8 +216,8 @@ void ComputeISurfGrid::clear()
 ------------------------------------------------------------------------- */
 
 void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
-                                   Particle::OnePart *iorig,
-                                   Particle::OnePart *ip, Particle::OnePart *jp)
+                                  Particle::OnePart *iorig,
+                                  Particle::OnePart *ip, Particle::OnePart *jp)
 {
   // skip if species not in mixture group
 
@@ -228,7 +228,6 @@ void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
   // itally = tally index of isurf
   // if 1st particle hitting isurf, add surf ID to hash
   // grow tally list if needed
-  // for implicit surfs, surfID is really a cellID
 
   int itally;
   double *vec;
@@ -431,7 +430,7 @@ void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
 }
 
 /* ----------------------------------------------------------------------
-   return # of tallies and their indices into my local surf list
+   return # of tallies and their indices into my owned+ghost cell list
 ------------------------------------------------------------------------- */
 
 int ComputeISurfGrid::tallyinfo(surfint *&ptr)
@@ -450,27 +449,13 @@ void ComputeISurfGrid::post_process_isurf_grid()
   if (combined) return;
   combined = 1;
 
-  // reallocate array_grid if necessary
-
   int nglocal = grid->nlocal;
 
-  if (nglocal > maxgrid) {
-    memory->destroy(array_grid);
-    maxgrid = nglocal;
-    memory->create(array_grid,maxgrid,ntotal,"isurf/grid:array_grid");
-  }
+  // perform rendezvous comm on tallies to sum ghost tallies
+  //   to my owned grid cells
+  // for implicit surfs, surfIDs are also cellIDs
 
-  // zero array_grid
-
-  int i,j;
-  for (i = 0; i < nglocal; i++)
-    for (j = 0; j < ntotal; j++)
-      array_grid[i][j] = 0.0;
-
-  // perform rendezvous comm on tallies to sum them to my grid cells
-  // array_surf_tally can be NULL if this proc has performed no tallies
-
-  surf->collate_array_implicit(ntally,ntotal,tally2surf,
+  grid->collate_array_implicit(ntally,ntotal,(cellint *) tally2surf,
                                array_surf_tally,array_grid);
 
   // zero out result if icell not in grid group
@@ -481,7 +466,7 @@ void ComputeISurfGrid::post_process_isurf_grid()
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) {
-      for (j = 0; j < ntotal; j++)
+      for (int j = 0; j < ntotal; j++)
         array_grid[icell][j] = 0.0;
     }
   }
@@ -521,6 +506,12 @@ void ComputeISurfGrid::grow_tally()
 
 void ComputeISurfGrid::reallocate()
 {
+  if (grid->nlocal == maxgrid) return;
+
+  memory->destroy(array_grid);
+  maxgrid = grid->nlocal;
+  memory->create(array_grid,maxgrid,ntotal,"isurf/grid:array_grid");
+
   init_normflux();
 }
 

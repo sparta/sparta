@@ -33,13 +33,17 @@ class SurfReactAdsorb : public SurfReact {
   int react(Particle::OnePart *&, int, double *, Particle::OnePart *&, int &);
 
   char *reactionID(int);
+  double reaction_coeff(int) {return 0.0;};
   int match_reactant(char *, int);
   int match_product(char *, int);
 
   void tally_update();
+  void grid_changed();
 
  private:
   int me,nprocs;
+  int distributed;
+
   int gsflag,psflag;                // 0/1 if gas and/or surf chem enabled
   int mode;                         // FACE or SURF
   int nsync;                        // synchronize surf state
@@ -48,6 +52,8 @@ class SurfReactAdsorb : public SurfReact {
   double max_cover;
   int this_index;                   // index of this surf reaction model
                                     // in Surf list of all reaction models
+
+  int firstflag;                    // 1 until init() of first run
 
   class RanKnuth *random;     // RNG for reaction probabilities
 
@@ -71,35 +77,32 @@ class SurfReactAdsorb : public SurfReact {
 
   // mode = SURF for surface elements (lines or tris)
 
-  int nstick_species_custom;    // indices to custom state in Surf
-  int nstick_total_custom;
-  int area_custom,weight_custom;
-  int tau_custom;
   int first_owner;       // 1 if this instance of SRA allocates custom Surf data
 
-  int **surf_species_state;     // ptrs to custom state vecs/arrays in Surf class
-  int *surf_total_state;
-  double *surf_area;
-  double *surf_weight;
-  double **surf_tau;
+  int total_state_index;        // indices to custom state in Surf
+  int species_state_index;
+  int area_index;
+  int weight_index;
+  int tau_index;
 
   int **surf_species_delta;     // changes to state between syncs
 
   int *mark;               // per-surf mark = 1 if reaction has occured, else 0
-  surfint *tally2surf;     // global surf index for each entry in incollate
-  int **intally,**outtally;      // used for Allreduce of state changes
-  double **incollate,**outcollate;   // used to collate state changes across procs
-  int maxtally;                  // allocated size of intally
+  surfint *tally2surf;     // surf ID for each tally entry in incollate
+  double **incollate;      // species changes for each tally
+  double **outcollate;     // collate output for summed changes for owned surfs
+  int maxtally;            // allocated size of idtally, incollate
 
   // ptrs to data for each box face or surface element
   // used in react() and react_PS() and sync operations
 
-  int **species_delta;       // change in perspecies count since last sync
-  int **species_state;       // perspecies count at last sync
   int *total_state;          // total count at last sync
+  int **species_state;       // perspecies count at last sync
   double *area;              // area of surf
   double *weight;            // weight of surf
   double **tau;              // PS time of surf
+
+  int **species_delta;       // change in perspecies count since last sync
 
   // GS (gas/surface) reaction model
 

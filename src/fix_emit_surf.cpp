@@ -25,6 +25,7 @@
 #include "cut2d.h"
 #include "cut3d.h"
 #include "input.h"
+#include "variable.h"
 #include "comm.h"
 #include "random_knuth.h"
 #include "math_extra.h"
@@ -37,6 +38,8 @@ using namespace MathConst;
 
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{NOSUBSONIC,PTBOTH,PONLY};
+enum{FLOW,CONSTANT,VARIABLE};
+enum{INT,DOUBLE};                                        // several files
 
 #define DELTATASK 256
 #define TEMPLIMIT 1.0e5
@@ -60,10 +63,20 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
   // optional args
 
   np = 0;
+  npmode = FLOW;
+  npstr = NULL;
   normalflag = 0;
   subsonic = 0;
   subsonic_style = NOSUBSONIC;
   subsonic_warning = 0;
+
+  nrho_custom_flag = vstream_custom_flag = speed_custom_flag =
+    temp_custom_flag = fractions_custom_flag = 0;
+  nrho_custom_id = vstream_custom_id = speed_custom_id =
+    temp_custom_id = fractions_custom_id = NULL;
+
+  max_cummulative = 0;
+  cummulative_custom = NULL;
 
   int iarg = 4;
   options(narg-iarg,&arg[iarg]);
@@ -73,9 +86,18 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
   if (!surf->exist)
     error->all(FLERR,"Fix emit/surf requires surface elements");
   if (surf->implicit)
-    error->all(FLERR,"Fix emit/surf not allowed for implicits surfaces");
-  if (np > 0 && perspecies)
-    error->all(FLERR,"Cannot use fix emit/face n > 0 with perspecies yes");
+    error->all(FLERR,"Fix emit/surf not allowed for implicit surfaces");
+  if ((npmode == CONSTANT || npmode == VARIABLE) && perspecies)
+    error->all(FLERR,"Cannot use fix emit/surf with n a constant or variable "
+               "with perspecies yes");
+
+  int custom_any = 0;
+  if (nrho_custom_flag || vstream_custom_flag || speed_custom_flag ||
+      temp_custom_flag || fractions_custom_flag) custom_any = 1;
+  if (custom_any && npmode != FLOW)
+    error->all(FLERR,"Cannot use fix emit/surf with n != 0 and custom options");
+  if (custom_any && subsonic)
+    error->all(FLERR,"Cannot use fix emit/surf with subsonic and custom options");
 
   // task list and subsonic data structs
 
@@ -97,6 +119,15 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
 
 FixEmitSurf::~FixEmitSurf()
 {
+  delete [] npstr;
+
+  delete [] nrho_custom_id;
+  delete [] vstream_custom_id;
+  delete [] speed_custom_id;
+  delete [] temp_custom_id;
+  delete [] fractions_custom_id;
+  memory->destroy(cummulative_custom);
+
   for (int i = 0; i < ntaskmax; i++) {
     delete [] tasks[i].ntargetsp;
     delete [] tasks[i].vscale;
@@ -177,6 +208,95 @@ void FixEmitSurf::init()
     }
   }
 
+  // check variable for npmode = VARIABLE
+
+  if (npmode == VARIABLE) {
+    npvar = input->variable->find(npstr);
+    if (npvar < 0)
+      error->all(FLERR,"Fix emit/surf variable name does not exist");
+    if (!input->variable->equal_style(npvar))
+      error->all(FLERR,"Fix emit/surf  variable is invalid style");
+  }
+
+  // check custom per-surf vectors or arrays
+
+  if (nrho_custom_flag) {
+    nrho_custom_index = surf->find_custom(nrho_custom_id);
+    if (nrho_custom_index < 0) error->all(FLERR,"Could not find fix surf/emit nrho custom attribute");
+    if (surf->etype[nrho_custom_index] != DOUBLE)
+      error->all(FLERR,"Fix emit/surf nrho custom attribute must be floating point");
+    if (surf->esize[nrho_custom_index] != 0)
+      error->all(FLERR,"Fix emit/surf nrho custom attribute must be a vector");
+  }
+
+  if (vstream_custom_flag) {
+    vstream_custom_index = surf->find_custom(vstream_custom_id);
+    if (vstream_custom_index < 0)
+      error->all(FLERR,"Could not find fix surf/emit vstream custom attribute");
+    if (surf->etype[vstream_custom_index] != DOUBLE)
+      error->all(FLERR,"Fix emit/surf vstream custom attribute must be floating point");
+    if (surf->esize[vstream_custom_index] != 3)
+      error->all(FLERR,"Fix emit/surf vstream custom attribute must be an array with 3 columns");
+  }
+
+  if (speed_custom_flag) {
+    speed_custom_index = surf->find_custom(speed_custom_id);
+    if (speed_custom_index < 0) error->all(FLERR,"Could not find fix surf/emit speed custom attribute");
+    if (surf->etype[speed_custom_index] != DOUBLE)
+      error->all(FLERR,"Fix emit/surf speed custom attribute must be floating point");
+    if (surf->esize[speed_custom_index] != 0)
+      error->all(FLERR,"Fix emit/surf speed custom attribute must be a vector");
+  }
+
+  if (temp_custom_flag) {
+    temp_custom_index = surf->find_custom(temp_custom_id);
+    if (temp_custom_index < 0) error->all(FLERR,"Could not find fix surf/emit temp custom attribute");
+    if (surf->etype[temp_custom_index] != DOUBLE)
+      error->all(FLERR,"Fix emit/surf temp custom attribute must be floating point");
+    if (surf->esize[temp_custom_index] != 0)
+      error->all(FLERR,"Fix emit/surf temp custom attribute must be a vector");
+  }
+
+  if (fractions_custom_flag) {
+    fractions_custom_index = surf->find_custom(fractions_custom_id);
+    if (fractions_custom_index < 0)
+      error->all(FLERR,"Could not find fix surf/emit fractions custom attribute");
+    if (surf->etype[fractions_custom_index] != DOUBLE)
+      error->all(FLERR,"Fix emit/surf fractions custom attribute must be floating point");
+    if (surf->esize[fractions_custom_index] != nspecies)
+      error->all(FLERR,"Fix emit/surf fractions custom attribute must be an array "
+                 "with columns = # of species in mixture");
+  }
+
+  // if custom fractions is set, reset any fractions which are less than zero
+  // do this for owned custom surfs, grid_changed() will propagate to nlocal+nghost surfs
+
+  if (fractions_custom_flag) {
+    double **fractions = surf->edarray[surf->ewhich[fractions_custom_index]];
+
+    int isp,nunset;
+    double sum,newfrac;
+
+    int nsown = surf->nown;
+    for (int i = 0; i < nsown; i++) {
+      nunset = 0;
+      sum = 0.0;
+      for (isp = 0; isp < nspecies; isp++) {
+        if (fractions[i][isp] >= 0.0) sum += fractions[i][isp];
+        else nunset++;
+      }
+
+      if (nunset == 0) {
+        if (sum != 1.0) error->all(FLERR,"Fix emit/surf custom fractions do not sum to 1.0");
+      } else {
+        newfrac = (1.0 - sum) / nunset;
+        for (isp = 0; isp < nspecies; isp++) {
+          if (fractions[i][isp] < 0.0) fractions[i][isp] = newfrac;
+        }
+      }
+    }
+  }
+
   // create tasks for all grid cells
 
   grid_changed();
@@ -191,37 +311,61 @@ void FixEmitSurf::init()
 
 void FixEmitSurf::grid_changed()
 {
+  // if any custom attributes are used,
+  // ensure owned custom values are spread to nlocal+nghost surfs
+
+  if (nrho_custom_flag && surf->estatus[nrho_custom_index] == 0)
+    surf->spread_custom(nrho_custom_index);
+  if (vstream_custom_flag && surf->estatus[vstream_custom_index] == 0)
+    surf->spread_custom(vstream_custom_index);
+  if (speed_custom_flag && surf->estatus[speed_custom_index] == 0)
+    surf->spread_custom(speed_custom_index);
+  if (temp_custom_flag && surf->estatus[temp_custom_index] == 0)
+    surf->spread_custom(temp_custom_index);
+  if (fractions_custom_flag && surf->estatus[fractions_custom_index] == 0)
+    surf->spread_custom(fractions_custom_index);
+
+  // create tasks for grid cell / surf pairs
+
   create_tasks();
 
-  // if Np > 0, nper = # of insertions per task
-  // set nthresh so as to achieve exactly Np insertions
-  // tasks > tasks_with_no_extra need to insert 1 extra particle
-  // NOTE: setting same # of insertions per task
-  //       should weight by overlap area of cell/surf
+  // if custom fractions requested and perspecies = 0,
+  // setup cummulaitve_custom array for nlocal surfs
 
-  if (np > 0) {
-    int all,nupto,tasks_with_no_extra;
-    MPI_Allreduce(&ntask,&all,1,MPI_INT,MPI_SUM,world);
-    if (all) {
-      npertask = np / all;
-      tasks_with_no_extra = all - (np % all);
-    } else npertask = tasks_with_no_extra = 0;
+  if (fractions_custom_flag && !perspecies) {
+    int nslocal = surf->nlocal;
+    if (nslocal > max_cummulative) {
+      memory->destroy(cummulative_custom);
+      max_cummulative = nslocal;
+      memory->create(cummulative_custom,nslocal,nspecies,"fix/emit/surf:cummulative_custom");
+    }
 
-    MPI_Scan(&ntask,&nupto,1,MPI_INT,MPI_SUM,world);
-    if (tasks_with_no_extra < nupto-ntask) nthresh = 0;
-    else if (tasks_with_no_extra >= nupto) nthresh = ntask;
-    else nthresh = tasks_with_no_extra - (nupto-ntask);
+    double **fractions = surf->edarray_local[surf->ewhich[fractions_custom_index]];
+    int isp;
+
+    for (int isurf = 0; isurf < nslocal; isurf++) {
+      for (isp = 0; isp < nspecies; isp++) {
+        if (isp) cummulative_custom[isurf][isp] =
+                   cummulative_custom[isurf][isp-1] + fractions[isurf][isp];
+        else cummulative_custom[isurf][isp] = fractions[isurf][isp];
+      }
+    }
   }
-}
 
-/* ---------------------------------------------------------------------- */
+  // for MODE = CONSTANT or VARIABLE
+  // set per-task ntarget to fraction of its area / total area
 
-void FixEmitSurf::setup()
-{
-  // needed for Kokkos because pointers are changed in UpdateKokkos::setup()
+  if (npmode != FLOW) {
+    double areasum_me = 0.0;
+    for (int i = 0; i < ntask; i++)
+      areasum_me += tasks[i].area;
 
-  //lines = surf->lines;
-  //tris = surf->tris;
+    double areasum;
+    MPI_Allreduce(&areasum_me,&areasum,1,MPI_DOUBLE,MPI_SUM,world);
+
+    for (int i = 0; i < ntask; i++)
+      tasks[i].ntarget = tasks[i].area / areasum;
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -236,30 +380,43 @@ void FixEmitSurf::create_task(int icell)
   double *normal,*p1,*p2,*p3,*path;
   double cpath[36],delta[3],e1[3],e2[3];
 
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
-
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   Grid::SplitInfo *sinfo = grid->sinfo;
-
-  double nrho = particle->mixture[imix]->nrho;
-  double *vstream = particle->mixture[imix]->vstream;
-  double *vscale = particle->mixture[imix]->vscale;
 
   // no tasks if no surfs in cell
 
   if (cells[icell].nsurf == 0) return;
 
-  // loop over surfs in cell
-  // use Cut2d/Cut3d to find overlap area and geoemtry of overlap
+  // no tasks if cell is outside of flow volume
 
-  int ntaskorig = ntask;
+  if (cinfo[icell].volume == 0.0) return;
+
+  // setup for loop over surfs
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+
+  double nrho = particle->mixture[imix]->nrho;
+  double *vstream = particle->mixture[imix]->vstream;
+  double *vscale = particle->mixture[imix]->vscale;
+  double temp_thermal = particle->mixture[imix]->temp_thermal;
+
+  if (nrho_custom_flag) nrho_custom = surf->edvec_local[surf->ewhich[nrho_custom_index]];
+  if (vstream_custom_flag) vstream_custom = surf->edarray_local[surf->ewhich[vstream_custom_index]];
+  if (speed_custom_flag) speed_custom = surf->edvec_local[surf->ewhich[speed_custom_index]];
+  if (temp_custom_flag) temp_custom = surf->edvec_local[surf->ewhich[temp_custom_index]];
+  if (fractions_custom_flag) fractions_custom =
+                               surf->edarray_local[surf->ewhich[fractions_custom_index]];
+  double temp_thermal_custom;
 
   double *lo = cells[icell].lo;
   double *hi = cells[icell].hi;
   surfint *csurfs = cells[icell].csurfs;
   int nsurf = cells[icell].nsurf;
+
+  // loop over surfs in cell
+  // use Cut2d/Cut3d to find overlap area and geoemtry of overlap
 
   for (i = 0; i < nsurf; i++) {
     isurf = csurfs[i];
@@ -269,6 +426,14 @@ void FixEmitSurf::create_task(int icell)
     } else {
       if (!(tris[isurf].mask & groupbit)) continue;
     }
+
+    // if requested, override mixture properties with custom per-surf attributes
+
+    if (nrho_custom_flag) nrho = nrho_custom[isurf];
+    if (vstream_custom_flag) vstream = vstream_custom[isurf];
+    if (speed_custom_flag) magvstream = speed_custom[isurf];
+    if (temp_custom_flag) temp_thermal_custom = temp_custom[isurf];
+    if (fractions_custom_flag) fraction = fractions_custom[isurf];
 
     // set cell parameters of task
     // pcell = sub cell for particles if a split cell
@@ -383,6 +548,7 @@ void FixEmitSurf::create_task(int icell)
     }
 
     // set ntarget and ntargetsp via mol_inflow()
+    // will be overwritten if mode != FLOW
     // skip task if final ntarget = 0.0, due to large outbound vstream
     // do not skip for subsonic since it resets ntarget every step
 
@@ -402,16 +568,27 @@ void FixEmitSurf::create_task(int icell)
                    "Fix emit/surf insertion count exceeds 32-bit int");
     }
 
-    // initialize other task values with mixture properties
+    // initialize other task values with mixture or per-surf custom properties
     // may be overwritten by subsonic methods
 
-    tasks[ntask].nrho = particle->mixture[imix]->nrho;
-    tasks[ntask].temp_thermal = particle->mixture[imix]->temp_thermal;
-    tasks[ntask].temp_rot = particle->mixture[imix]->temp_rot;
-    tasks[ntask].temp_vib = particle->mixture[imix]->temp_vib;
-    tasks[ntask].vstream[0] = particle->mixture[imix]->vstream[0];
-    tasks[ntask].vstream[1] = particle->mixture[imix]->vstream[1];
-    tasks[ntask].vstream[2] = particle->mixture[imix]->vstream[2];
+    double utemp;
+
+    tasks[ntask].nrho = nrho;
+    if (temp_custom_flag) {
+      tasks[ntask].temp_thermal = temp_thermal_custom;
+      tasks[ntask].temp_rot = temp_thermal_custom;
+      tasks[ntask].temp_vib = temp_thermal_custom;
+      utemp = temp_thermal_custom;
+    } else {
+      tasks[ntask].temp_thermal = temp_thermal;
+      tasks[ntask].temp_rot = particle->mixture[imix]->temp_rot;
+      tasks[ntask].temp_vib = particle->mixture[imix]->temp_vib;
+      utemp = temp_thermal;
+    }
+    tasks[ntask].magvstream = magvstream;
+    tasks[ntask].vstream[0] = vstream[0];
+    tasks[ntask].vstream[1] = vstream[1];
+    tasks[ntask].vstream[2] = vstream[2];
 
     // increment task counter
 
@@ -441,6 +618,14 @@ void FixEmitSurf::perform_task()
 
   if (subsonic) subsonic_inflow();
 
+  // if npmode = VARIABLE, set npcurrent to variable evaluation
+
+  double npcurrent;
+  if (npmode == VARIABLE) {
+    npcurrent = input->variable->compute_equal(npvar);
+    if (npcurrent <= 0.0) error->all(FLERR,"Fix emit/surf Np <= 0.0");
+  }
+
   // insert particles for each task = cell/surf pair
   // ntarget/ninsert is either perspecies or for all species
   // for one particle:
@@ -462,7 +647,6 @@ void FixEmitSurf::perform_task()
   Surf::Tri *tris = surf->tris;
 
   int nfix_update_custom = modify->n_update_custom;
-  indot = magvstream;
 
   for (i = 0; i < ntask; i++) {
     pcell = tasks[i].pcell;
@@ -476,12 +660,15 @@ void FixEmitSurf::perform_task()
     temp_thermal = tasks[i].temp_thermal;
     temp_rot = tasks[i].temp_rot;
     temp_vib = tasks[i].temp_vib;
+    magvstream = tasks[i].magvstream;
     vstream = tasks[i].vstream;
 
     if (subsonic_style == PONLY) vscale = tasks[i].vscale;
     else vscale = particle->mixture[imix]->vscale;
-    if (!normalflag) indot = vstream[0]*normal[0] + vstream[1]*normal[1] +
-                       vstream[2]*normal[2];
+    if (normalflag) indot = magvstream;
+    else indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
+
+    // perspecies yes
 
     if (perspecies) {
       for (isp = 0; isp < nspecies; isp++) {
@@ -489,6 +676,8 @@ void FixEmitSurf::perform_task()
         ntarget = tasks[i].ntargetsp[isp]+random->uniform();
         ninsert = static_cast<int> (ntarget);
         scosine = indot / vscale[isp];
+
+        // loop over ninsert for each species
 
         nactual = 0;
         for (m = 0; m < ninsert; m++) {
@@ -567,14 +756,26 @@ void FixEmitSurf::perform_task()
         nsingle += nactual;
       }
 
+    // perspecies no
+
     } else {
-      if (np == 0) {
-        ntarget = tasks[i].ntarget+random->uniform();
-        ninsert = static_cast<int> (ntarget);
-      } else {
-        ninsert = npertask;
-        if (i >= nthresh) ninsert++;
-      }
+
+      // set ntarget for insertion mode FLOW, CONSTANT, or VARIABLE
+      // for FLOW: ntarget is already set within task
+      // for CONSTANT or VARIABLE: task narget is fraction of its surf's area
+      //   scale fraction by np or npcurrent (variable evaluation)
+      // ninsert = rounded-down (ntarget + random number)
+
+      if (npmode == FLOW) ntarget = tasks[i].ntarget;
+      else if (npmode == CONSTANT) ntarget = np * tasks[i].ntarget;
+      else if (npmode == VARIABLE) ntarget = npcurrent * tasks[i].ntarget;
+      ninsert = static_cast<int> (ntarget + random->uniform());
+
+      // loop over ninsert for all species
+      // use cummulative fractions to assign species for each insertion
+      // if requested, override cummulative from mixture with cummulative for isurf
+
+      if (fractions_custom_flag) cummulative = cummulative_custom[isurf];
 
       nactual = 0;
       for (int m = 0; m < ninsert; m++) {
@@ -964,26 +1165,35 @@ void FixEmitSurf::grow_task()
 int FixEmitSurf::option(int narg, char **arg)
 {
   if (strcmp(arg[0],"n") == 0) {
-    if (2 > narg) error->all(FLERR,"Illegal fix emit/]surf/normal command");
-    np = atoi(arg[1]);
-    if (np <= 0) error->all(FLERR,"Illegal fix emit/surf/normal command");
+    if (2 > narg) error->all(FLERR,"Illegal fix emit/surf command");
+
+    if (strstr(arg[1],"v_") == arg[1]) {
+      npmode = VARIABLE;
+      int n = strlen(&arg[1][2]) + 1;
+      npstr = new char[n];
+      strcpy(npstr,&arg[1][2]);
+    } else {
+      np = atoi(arg[1]);
+      if (np == 0) npmode = FLOW;
+      else npmode = CONSTANT;
+    }
     return 2;
   }
 
   if (strcmp(arg[0],"normal") == 0) {
-    if (2 > narg) error->all(FLERR,"Illegal fix emit/surf/normal command");
+    if (2 > narg) error->all(FLERR,"Illegal fix emit/surf command");
     if (strcmp(arg[1],"yes") == 0) normalflag = 1;
     else if (strcmp(arg[1],"no") == 0) normalflag = 0;
-    else error->all(FLERR,"Illegal fix emit/surf/normal command");
+    else error->all(FLERR,"Illegal fix emit/surf command");
     return 2;
   }
 
   if (strcmp(arg[0],"subsonic") == 0) {
-    if (3 > narg) error->all(FLERR,"Illegal fix emit/face command");
+    if (3 > narg) error->all(FLERR,"Illegal fix emit/surf command");
     subsonic = 1;
     subsonic_style = PTBOTH;
     psubsonic = input->numeric(FLERR,arg[1]);
-    if (psubsonic < 0.0) error->all(FLERR,"Illegal fix emit/face command");
+    if (psubsonic < 0.0) error->all(FLERR,"Illegal fix emit/surf command");
     if (strcmp(arg[2],"NULL") == 0) subsonic_style = PONLY;
     else {
       tsubsonic = input->numeric(FLERR,arg[2]);
@@ -994,6 +1204,58 @@ int FixEmitSurf::option(int narg, char **arg)
     return 3;
   }
 
-  error->all(FLERR,"Illegal fix emit/surf/normal command");
+  if (strcmp(arg[0],"custom") == 0) {
+    if (3 > narg) error->all(FLERR,"Illegal fix emit/surf command");
+
+    if (strcmp(arg[1],"nrho") == 0) {
+      nrho_custom_flag = 1;
+      if (strstr(arg[2],"s_") != arg[2])
+        error->all(FLERR,"Illegal fix emit/surf command");
+      int n = strlen(arg[2]);
+      delete [] nrho_custom_id;
+      nrho_custom_id = new char[n];
+      strcpy(nrho_custom_id,&arg[2][2]);
+
+    } else if (strcmp(arg[1],"vstream") == 0) {
+      vstream_custom_flag = 1;
+      if (strstr(arg[2],"s_") != arg[2])
+        error->all(FLERR,"Illegal fix emit/surf command");
+      int n = strlen(arg[2]);
+      delete [] vstream_custom_id;
+      vstream_custom_id = new char[n];
+      strcpy(vstream_custom_id,&arg[2][2]);
+
+    } else if (strcmp(arg[1],"speed") == 0) {
+      speed_custom_flag = 1;
+      if (strstr(arg[2],"s_") != arg[2])
+        error->all(FLERR,"Illegal fix emit/surf command");
+      int n = strlen(arg[2]);
+      delete [] speed_custom_id;
+      speed_custom_id = new char[n];
+      strcpy(speed_custom_id,&arg[2][2]);
+
+    } else if (strcmp(arg[1],"temp") == 0) {
+      temp_custom_flag = 1;
+      if (strstr(arg[2],"s_") != arg[2])
+        error->all(FLERR,"Illegal fix emit/surf command");
+      int n = strlen(arg[2]);
+      delete [] temp_custom_id;
+      temp_custom_id = new char[n];
+      strcpy(temp_custom_id,&arg[2][2]);
+
+    } else if (strcmp(arg[1],"fractions") == 0) {
+      fractions_custom_flag = 1;
+      if (strstr(arg[2],"s_") != arg[2])
+        error->all(FLERR,"Illegal fix emit/surf command");
+      int n = strlen(arg[2]);
+      delete [] fractions_custom_id;
+      fractions_custom_id = new char[n];
+      strcpy(fractions_custom_id,&arg[2][2]);
+
+    } else error->all(FLERR,"Illegal fix emit/surf command");
+    return 3;
+  }
+
+  error->all(FLERR,"Illegal fix emit/surf command");
   return 0;
 }

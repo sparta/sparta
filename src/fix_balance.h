@@ -43,6 +43,7 @@ class FixBalance : public Fix {
   char eligible[4];
   double last,my_timer_cost;
 
+  int nbalance;                 // # of rebalancings performed
   double imbnow;                // current imbalance factor
   double imbprev;               // imbalance factor before last rebalancing
   double imbfinal;              // imbalance factor after last rebalancing

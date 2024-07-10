@@ -34,18 +34,17 @@ compute 1 property/grid all id xc yc zc :pre
 [Description:]
 
 Define a computation that simply stores grid attributes for each grid
-cell in a grid cell group.  This is useful so that the values can be
+cell in a grid cell group.  This is useful for values which can be
 used by other "output commands"_Section_howto.html#howto_4 that take
 computes as inputs.  See for example, the "compute
-reduce"_compute_reduce.html, "fix ave/grid"_fix_ave_atom.html, and
-"dump grid"_dump.html commands.
+reduce"_compute_reduce.html, "fix ave/grid"_fix_ave_grid.html, "dump
+grid"_dump.html, and "grid-style variable"_variable.html commands.
 
 Only grid cells in the grid group specified by {group-ID} are included
 in the calculation.  See the "group grid"_group.html command for info
 on how grid cells can be assigned to grid groups.
 
-The values are stored in a per-grid vector or array as discussed
-below. 
+:line
 
 {Id} is the grid cell ID.  In SPARTA each grid cell is assigned a
 unique ID which represents its logical location within the
@@ -129,7 +128,10 @@ effectively.
 
 :line
 
-[Restrictions:] none
+[Restrictions:}
+
+For 2d simulations, none of the attributes which refer to the 3rd
+dimension may be used.
 
 [Related commands:]
 
