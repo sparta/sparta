@@ -1,0 +1,135 @@
+################################################################################
+# 3d flow around a sphere
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed    		12345
+dimension		3
+
+global                  gridcut 1.0
+global                  comm/sort yes
+
+##########
+# Domain #
+##########
+
+variable xlow equal -2.5e-6
+variable ylow equal -2.5e-6
+variable zlow equal 0.0
+
+variable xhigh equal 12.5e-6
+variable yhigh equal 12.5e-6
+variable zhigh equal 42.0e-6
+
+variable nx equal 40
+variable ny equal 40
+variable nz equal 120
+
+boundary		rr rr so
+
+create_box		${xlow} ${xhigh} ${ylow} ${yhigh} ${zlow} ${zhigh}
+create_grid   ${nx} ${ny} ${nz}
+balance_grid		rcb cell
+
+##################
+# Gas properties #
+##################
+variable nden equal 6.61e23
+variable Tair equal 2890.0
+
+species air.species O2 CO2
+mixture air vstream 0.0 0.0 0.0 temp ${Tair} nrho ${nden}
+mixture air O2 frac 1.0
+mixture air CO2 frac 0.0
+
+variable kb equal 1.38e-23
+variable m equal 5.31e-26
+variable mu equal 1.95e-5
+variable p equal ${nden}*${kb}*${Tair}
+
+variable mfp equal ${mu}/${p}*sqrt(3.14159*${kb}*${Tair}*0.5/${m})
+print "  mfp = ${mfp}"
+variable Lxomfp equal (${xhigh}-${xlow})/${mfp}
+print "  Lx/mfp = ${Lxomfp}"
+variable Lzomfp equal (${zhigh}-${zlow})/${mfp}
+print "  Lz/mfp = ${Lzomfp}"
+variable vth equal sqrt(2*${kb}*${Tair}/3.14159/${m})
+print "  mean thermal speed = ${vth}"
+
+###########
+# Collide #
+###########
+collide             vss all air.vss
+collide_modify      remain no
+collide_modify      vremax 0 no
+
+######################
+# Surface conditions #
+######################
+global surfs explicit/distributed
+read_surf data.fiber scale 1e-6 1e-6 1e-6
+
+#surf_react 1 prob fiber.surf
+surf_react 1 prob fiber_diff_limit.surf
+surf_collide 1 diffuse ${Tair} 1.0
+
+compute 1s react/isurf/grid all 1 r:O2 p:CO2
+fix 1s ave/grid all 1 1 1 c_1s[*]
+
+fix fablate ablate all 1 1 f_1s[1] distributed no
+create_isurf all fablate 100.5 inner buffer 0.005
+
+surf_modify all collide 1 react 1
+
+#######################
+# Boundary conditions #
+#######################
+bound_modify zlo collide 1
+fix inflow emit/face air zhi
+
+variable ppc equal 40
+variable volume equal (${xhigh}-${xlow})*(${yhigh}-${ylow})*(${zhigh}-${zlow})
+variable Fnum equal ${nden}*${volume}/${ppc}/${nx}/${ny}/${nz}
+print "  fnum equal ${Fnum}"
+
+global      nrho ${nden} temp ${Tair} fnum ${Fnum}
+
+create_particles air n 0
+
+timestep		1e-9
+
+dump                    1 image all 50 snap.*.ppm type type surf one 0.02 particle no box yes 0.01 zoom 2
+dump_modify             1 scolor * gray
+
+stats			5
+stats_style		step cpu np nattempt ncoll nscoll
+
+compute 1 property/grid all vol
+compute 1r reduce sum c_1[*]
+
+variable vout equal c_1r
+fix massr print 1 "${vout}" append vol.dat screen no
+
+write_surf fiber_diff.*
+run 100
+write_surf fiber_diff.*
+run 100
+write_surf fiber_diff.*
+run 100
+write_surf fiber_diff.*
+run 100
+write_surf fiber_diff.*
+run 100
+write_surf fiber_diff.*
+run 100
+write_surf fiber_diff.*
+run 100
+write_surf fiber_diff.*
+
+
+
+

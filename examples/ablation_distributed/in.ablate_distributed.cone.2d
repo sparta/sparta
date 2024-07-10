@@ -1,0 +1,148 @@
+################################################################################
+# 2D Cone behind shock
+################################################################################
+
+seed    		9763
+dimension		2
+
+global                  gridcut 0.04
+global                  comm/sort yes
+
+##########
+# Domain #
+##########
+
+variable xlow equal -0.040
+variable ylow equal -0.055
+variable zlow equal -0.005
+
+variable xhigh equal 0.0698
+variable yhigh equal -${ylow}
+variable zhigh equal -${zlow}
+
+variable scale equal 0.01
+variable xl equal ${xlow}*${scale}
+variable yl equal ${ylow}*${scale}
+variable zl equal ${zlow}*${scale}
+
+variable xh equal ${xhigh}*${scale}
+variable yh equal ${yhigh}*${scale}
+variable zh equal ${zhigh}*${scale}
+
+variable Nx equal 325
+variable Ny equal 325
+variable Nz equal 1
+
+boundary		o o p
+
+create_box		${xl} ${xh} ${yl} ${yh} ${zl} ${zh}
+create_grid		${Nx} ${Ny} ${Nz}
+balance_grid		rcb cell
+
+##################
+# Gas properties #
+##################
+variable p equal 1000
+variable Tinf equal 300.0
+variable kb equal 1.38e-23
+variable nden equal ${p}/${kb}/${Tinf}
+
+variable Ma equal 5.0
+variable RO2 equal 259.8
+variable gamma equal 1.4
+variable c equal sqrt(${gamma}*${RO2}*${Tinf})
+variable Uinf equal ${c}*${Ma}
+print "  speed = ${Uinf}"
+
+species air.species O2 CO2
+mixture air vstream ${Uinf} 0.0 0.0 temp ${Tinf} nrho ${nden}
+mixture air O2 frac 1.0
+mixture air CO2 frac 0.0
+
+variable mu equal 1.95e-5
+variable m equal 5.31e-26
+variable mfp equal ${mu}/${p}*sqrt(3.14159*${kb}*${Tinf}*0.5/${m})
+print "  mfp = ${mfp}"
+variable Lxomfp equal (${xh}-${xl})/${mfp}
+print "  Lx/mfp = ${Lxomfp}"
+variable Lyomfp equal (${yh}-${yl})/${mfp}
+print "  Ly/mfp = ${Lyomfp}"
+variable vth equal sqrt(2*${kb}*${Tinf}/3.14159/${m})
+print "  mean thermal speed = ${vth}"
+
+###########
+# Collide #
+###########
+collide             vss all air.vss
+collide_modify      remain no
+collide_modify      vremax 0 no
+
+######################
+# Surface conditions #
+######################
+global surfs explicit/distributed
+read_surf data.cone2d scale ${scale} ${scale} 1.0
+
+# based on normal shock table for Ma = 4
+variable surftemp equal 4.0469*${Tinf}
+surf_react 1 prob cone.surf
+surf_collide 1 diffuse ${surftemp} 1.0
+surf_modify all collide 1 react 1
+
+compute 1s react/isurf/grid all 1 r:O2 p:CO2
+fix 1s ave/grid all 1 20 20 c_1s[*]
+
+variable scale_ablate equal 0.1
+
+#fix fablate ablate all 40 ${scale_ablate} f_1s[1] distributed no
+#create_isurf all fablate 100.5 ave
+
+fix fablate ablate all 40 ${scale_ablate} f_1s[1] distributed yes
+create_isurf all fablate 100.5 inner
+
+#######################
+# Boundary conditions #
+#######################
+fix inflow emit/face air xlo
+
+variable ppc equal 25
+variable area equal (${xh}-${xl})*(${yh}-${yl})
+variable Fnum equal ${nden}*${area}/${ppc}/${Nx}/${Ny}
+print "  fnum equal ${Fnum}"
+
+global      nrho ${nden} temp ${Tinf} fnum ${Fnum}
+
+create_particles air n 0
+
+variable tc equal ${mfp}/${vth}
+print "  mean collision time = ${tc}"
+variable dt equal 1e-9
+variable xadvect equal ${Uinf}*${dt}
+print "  mean advection distance in one dt = ${xadvect}"
+
+##################
+# Run and Output #
+##################
+
+timestep ${dt}
+
+compute 1d grid all all u v
+compute 2d thermal/grid all all temp
+compute 3d eflux/grid all all heatx heaty
+
+fix 1d ave/grid all 1 100 100 c_1d[*] c_2d[*] c_3d[*] ave one
+
+dump 1i image all 1000 u_new.*.ppm type type surf one 0.02 particle no box yes 0.005 grid f_1d[1]
+dump_modify 1i cmap grid 500 1600 cf 0.0 5 min black 0.25 blue 0.5 yellow 0.75 green max red
+
+dump 2i image all 1000 T_new.*.ppm type type surf one 0.02 particle no box yes 0.005 grid f_1d[3]
+dump_modify 2i cmap grid 300 1500 cf 0.0 5 min black 0.25 blue 0.5 yellow 0.75 green max red
+
+dump 1o grid all 1000 grid_cone_new.* xc yc f_1d[*] vol
+
+stats			10
+stats_style		step cpu np nattempt ncoll nscoll nscheck
+
+run 0
+
+

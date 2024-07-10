@@ -1,0 +1,9 @@
+# VSS collision model parameters for each species
+
+# diameter (m)
+# omega
+# tref
+# alpha
+
+O2   3.96E-10    0.77  273.15  1.4
+CO2  5.62E-10    0.8   273.0   1.0

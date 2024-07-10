@@ -1,0 +1,22 @@
+surf file from Pizza.py
+
+4 points
+4 lines
+
+Points
+
+1 0.5 0.5
+2 0.5 7.5
+3 15.5 7.5
+4 15.5 0.5
+
+Lines
+
+1 1 2
+2 2 3
+3 3 4
+4 4 1
+
+
+
+
