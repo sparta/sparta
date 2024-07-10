@@ -1642,7 +1642,7 @@ void Grid::clear_surf_implicit()
 
   // store cellIDs = list of cellID each particle is in
   // sub-cells and parent split cell have the same cellID
-  
+
   Particle::OnePart *particles = particle->particles;
   int nplocal = particle->nlocal;
 

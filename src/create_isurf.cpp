@@ -185,8 +185,8 @@ void CreateISurf::command(int narg, char **arg)
 
   // store corner point values in fix ablate instance
   // this call will also create implicit surfs
-  // set pushflag = 0 to not overwrite cvalues in fix_ablet
-  
+  // set pushflag = 0 so averaging option is not overridden
+
   tvalues = NULL;
   int pushflag = 0;
   char *sgroupID = NULL;
@@ -426,7 +426,7 @@ void CreateISurf::surface_edge2d()
   int isurf, nsurf, side, hitflag;
   double param, oparam;
 
-  // initialize param to avoid error 
+  // initialize param to avoid error
 
   param = 0.0;
 
@@ -574,7 +574,7 @@ void CreateISurf::surface_edge3d()
   int isurf, nsurf, hitflag, side;
   double param, oparam;
 
-  // initialize param to avoid error 
+  // initialize param to avoid error
 
   param = 0.0;
 
@@ -788,7 +788,7 @@ void CreateISurf::sync(int which)
                   }
                 }
               } else if (which == CVAL) {
-                dtotal[0] = 
+                dtotal[0] =
                   MAX(dtotal[0],cvalues[jcell][jcorner]);
               } else if (which == INVAL) {
                 for (jadj = 0; jadj < nadj; jadj++)
@@ -798,10 +798,10 @@ void CreateISurf::sync(int which)
             } else {
               if (which == SVAL) {
                 if (sghost[jcell-nglocal][jcorner] < 2)
-                  dtotal[0] = 
+                  dtotal[0] =
                     MAX(dtotal[0],
                     static_cast<double>(sghost[jcell-nglocal][jcorner]));
-              } else if (which == IVAL) { 
+              } else if (which == IVAL) {
                 for (jadj = 0; jadj < nadj; jadj++) {
                   double dtemp = ighost[jcell-nglocal][jcorner][jadj];
                   if (dtemp>=0) {
@@ -837,7 +837,7 @@ void CreateISurf::sync(int which)
 }
 
 /* ----------------------------------------------------------------------
-   communicate my side, intersection, or corner values that are shared by 
+   communicate my side, intersection, or corner values that are shared by
    neighbor cells each corner point is shared by N cells, less on borders
    done via irregular comm
 
@@ -994,7 +994,7 @@ void CreateISurf::comm_neigh_corners(int which)
     icell = ilocal - nglocal;
 
     if (which == SVAL) {
-      for (j = 0; j < ncorner; j++) 
+      for (j = 0; j < ncorner; j++)
         sghost[icell][j] = static_cast<int> (rbuf[m++]);
     } else if (which == IVAL) {
       for (j = 0; j < ncorner; j++)
@@ -1135,7 +1135,7 @@ int CreateISurf::find_side_2d()
 
       for (int i = 0; i < ncorner; i++) {
         if (svalues[icell][i] == 0 || svalues[icell][i] == 1) continue;
-        
+
         ixfirst = (i % 2) - 1;
         iyfirst = (i/2 % 2) - 1;
 
@@ -1285,7 +1285,7 @@ int CreateISurf::find_side_3d()
 
       for (int i = 0; i < ncorner; i++) {
         if (svalues[icell][i] > -1 && svalues[icell][i] < 2) continue;
-        
+
         ixfirst = (i % 2) - 1;
         iyfirst = (i/2 % 2) - 1;
         izfirst = (i / 4) - 1;
@@ -1772,26 +1772,26 @@ int CreateISurf::corner_hit3d(double *p1, double *p2,
   double p2p[3];
 
   double dx[26], dy[26], dz[26];
-  double dp = mind*1e-2;
-  dx[0] = dx[2] = dx[3] = dx[4] = 
+  double dp = mind/1000.0;
+  dx[0] = dx[2] = dx[3] = dx[4] =
     dx[15] = dx[16] = dx[18] = dx[23] = dx[24] = dp;
-  dx[7] = dx[9] = dx[10] = dx[11] = 
+  dx[7] = dx[9] = dx[10] = dx[11] =
     dx[14] = dx[17] = dx[19] = dx[22] = dx[25] = -dp;
-  dx[1] = dx[5] = dx[6] = dx[8] = 
+  dx[1] = dx[5] = dx[6] = dx[8] =
     dx[12] = dx[13] = dx[20] = dx[21] = 0;
 
-  dy[0] = dy[1] = dy[3] = dy[5] = 
+  dy[0] = dy[1] = dy[3] = dy[5] =
     dy[14] = dy[16] = dy[19] = dy[21] = dy[25] = dp;
-  dy[7] = dy[8] = dy[10] = dy[12] = 
+  dy[7] = dy[8] = dy[10] = dy[12] =
     dy[15] = dy[17] = dy[18] = dy[20] = dy[24] = -dp;
-  dy[2] = dy[4] = dy[6] = dy[9] = 
+  dy[2] = dy[4] = dy[6] = dy[9] =
     dy[11] = dy[13] = dy[22] = dy[23] = 0;
 
-  dz[0] = dz[1] = dz[2] = dz[6] = 
+  dz[0] = dz[1] = dz[2] = dz[6] =
     dz[14] = dz[15] = dz[17] = dz[20] = dz[22] = dp;
-  dz[7] = dz[8] = dz[9] = dz[13] = 
+  dz[7] = dz[8] = dz[9] = dz[13] =
     dz[16] = dz[18] = dz[19] = dz[21] = dz[23] = -dp;
-  dz[3] = dz[4] = dz[5] = dz[10] = 
+  dz[3] = dz[4] = dz[5] = dz[10] =
     dz[11] = dz[12] = dz[24] = dz[25] = 0;
 
   for (int i = 0; i < 26; i++) {
@@ -1802,7 +1802,7 @@ int CreateISurf::corner_hit3d(double *p1, double *p2,
     p2p[0] = p2[0] + dx[i];
     p2p[1] = p2[1] + dy[i];
     p2p[2] = p2[2] + dz[i];
- 
+
     h = Geometry::line_tri_intersect(p1p,p2p,tri->p1,tri->p2,tri->p3,
         tri->norm,d3dum,tparam,tside);
     if (h) {
@@ -1822,7 +1822,7 @@ int CreateISurf::corner_hit3d(double *p1, double *p2,
 
   // true miss
 
-  return 0;
+  return false;
 }
 
 /* ----------------------------------------------------------------------
