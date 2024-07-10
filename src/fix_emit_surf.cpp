@@ -69,7 +69,7 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
   subsonic = 0;
   subsonic_style = NOSUBSONIC;
   subsonic_warning = 0;
-  
+
   nrho_custom_flag = vstream_custom_flag = speed_custom_flag =
     temp_custom_flag = fractions_custom_flag = 0;
   nrho_custom_id = vstream_custom_id = speed_custom_id =
@@ -77,7 +77,7 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
 
   max_cummulative = 0;
   cummulative_custom = NULL;
-  
+
   int iarg = 4;
   options(narg-iarg,&arg[iarg]);
 
@@ -120,14 +120,14 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
 FixEmitSurf::~FixEmitSurf()
 {
   delete [] npstr;
-  
+
   delete [] nrho_custom_id;
   delete [] vstream_custom_id;
   delete [] speed_custom_id;
   delete [] temp_custom_id;
   delete [] fractions_custom_id;
   memory->destroy(cummulative_custom);
-  
+
   for (int i = 0; i < ntaskmax; i++) {
     delete [] tasks[i].ntargetsp;
     delete [] tasks[i].vscale;
@@ -219,7 +219,7 @@ void FixEmitSurf::init()
   }
 
   // check custom per-surf vectors or arrays
-  
+
   if (nrho_custom_flag) {
     nrho_custom_index = surf->find_custom(nrho_custom_id);
     if (nrho_custom_index < 0) error->all(FLERR,"Could not find fix surf/emit nrho custom attribute");
@@ -238,7 +238,7 @@ void FixEmitSurf::init()
     if (surf->esize[vstream_custom_index] != 3)
       error->all(FLERR,"Fix emit/surf vstream custom attribute must be an array with 3 columns");
   }
-    
+
   if (speed_custom_flag) {
     speed_custom_index = surf->find_custom(speed_custom_id);
     if (speed_custom_index < 0) error->all(FLERR,"Could not find fix surf/emit speed custom attribute");
@@ -276,7 +276,7 @@ void FixEmitSurf::init()
 
     int isp,nunset;
     double sum,newfrac;
-    
+
     int nsown = surf->nown;
     for (int i = 0; i < nsown; i++) {
       nunset = 0;
@@ -326,7 +326,7 @@ void FixEmitSurf::grid_changed()
     surf->spread_custom(fractions_custom_index);
 
   // create tasks for grid cell / surf pairs
-  
+
   create_tasks();
 
   // if custom fractions requested and perspecies = 0,
@@ -342,7 +342,7 @@ void FixEmitSurf::grid_changed()
 
     double **fractions = surf->edarray_local[surf->ewhich[fractions_custom_index]];
     int isp;
-    
+
     for (int isurf = 0; isurf < nslocal; isurf++) {
       for (isp = 0; isp < nspecies; isp++) {
         if (isp) cummulative_custom[isurf][isp] =
@@ -351,7 +351,7 @@ void FixEmitSurf::grid_changed()
       }
     }
   }
-  
+
   // for MODE = CONSTANT or VARIABLE
   // set per-task ntarget to fraction of its area / total area
 
@@ -409,7 +409,7 @@ void FixEmitSurf::create_task(int icell)
   if (fractions_custom_flag) fractions_custom =
                                surf->edarray_local[surf->ewhich[fractions_custom_index]];
   double temp_thermal_custom;
-  
+
   double *lo = cells[icell].lo;
   double *hi = cells[icell].hi;
   surfint *csurfs = cells[icell].csurfs;
@@ -572,7 +572,7 @@ void FixEmitSurf::create_task(int icell)
     // may be overwritten by subsonic methods
 
     double utemp;
-    
+
     tasks[ntask].nrho = nrho;
     if (temp_custom_flag) {
       tasks[ntask].temp_thermal = temp_thermal_custom;
@@ -645,7 +645,7 @@ void FixEmitSurf::perform_task()
 
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
-  
+
   int nfix_update_custom = modify->n_update_custom;
 
   for (i = 0; i < ntask; i++) {
@@ -678,7 +678,7 @@ void FixEmitSurf::perform_task()
         scosine = indot / vscale[isp];
 
         // loop over ninsert for each species
-        
+
         nactual = 0;
         for (m = 0; m < ninsert; m++) {
           if (dimension == 2) {
@@ -1206,7 +1206,7 @@ int FixEmitSurf::option(int narg, char **arg)
 
   if (strcmp(arg[0],"custom") == 0) {
     if (3 > narg) error->all(FLERR,"Illegal fix emit/surf command");
-    
+
     if (strcmp(arg[1],"nrho") == 0) {
       nrho_custom_flag = 1;
       if (strstr(arg[2],"s_") != arg[2])

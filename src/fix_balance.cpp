@@ -312,7 +312,7 @@ void FixBalance::end_of_step()
 
   // notify all classes that store per-grid data that grid may have changed
   // do this after clearing custom status flags in case classes use that info
-  
+
   grid->notify_changed();
 
   // final imbalance factor
