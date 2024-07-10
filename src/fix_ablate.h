@@ -74,6 +74,10 @@ class FixAblate : public Fix {
 
   int nglocal;            // # of owned grid cells
 
+  // TODO : comment out later
+  double **ocvalues;      // old corner point values
+  double ***ocavalues;      // old corner point values
+
   double **cvalues;       // corner point values
   double ***cavalues;     // corner and adjacent values
   int *tvalues;           // per-cell type value
@@ -89,6 +93,8 @@ class FixAblate : public Fix {
   double **cdelta_ghost;  // ditto for my ghost cells communicated to me
   double ***cadelta;       // per-corner point deltas
   double ***cadelta_ghost; // ditto for my ghost cells communicated to me
+  double **nvert;         // per-corner point deltas
+  double **nvert_ghost;  // ditto for my ghost cells communicated to me
   int maxgrid;            // max size of per-cell vectors/arrays
   int maxghost;           // max size of cdelta_ghost
 
@@ -120,12 +126,15 @@ class FixAblate : public Fix {
   void decrement_adjacent();
   void decrement_distributed_inside();
   void decrement_distributed_outside();
+  void decrement_adjacent_distributed_outside();
   void decrement_adjacent_distributed_inside();
   void sync();
   void sync_adjacent();
   void sync_distributed_outside();
   void sync_distributed_inside();
+  void sync_adjacent_distributed_outside();
   void sync_adjacent_distributed_inside();
+  void sync_vertices();
   int setup_distributed3d(int);
   int setup_distributed2d(int);
   void epsilon_adjust();

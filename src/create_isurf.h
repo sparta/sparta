@@ -73,6 +73,11 @@ class CreateISurf : protected Pointers {
   double cbufmin, cbufmax;  // corner value buffer
   class FixAblate *ablate;  // ablate fix
 
+  // easy generation of 3d flat plate
+
+  int yfillflag;
+  double yfill;
+
   // for communicating
 
   int **ixyz;             // ix,iy,iz indices (1 to Nxyz) of my cells
