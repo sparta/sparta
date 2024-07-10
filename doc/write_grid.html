@@ -37,7 +37,10 @@ write_grid data.grid custom flags
 current hierarchical grid.  See the <A HREF = "read_grid.html">read_grid</A> and
 <A HREF = "create_grid.html">create_grid</A> commands, as well as <A HREF = "Section_howto.html#howto_8">Section
 6.8</A> of the manual for a definition of
-hierarchical grids and grid cell IDs as used by SPARTA.
+hierarchical grids and grid cell IDs as used by SPARTA.  Note that if
+the grid is hierarchical, grid cell IDs are not simply numbered from 1
+to N.  They also encode the cell's logical position within the grid
+hierarchy.
 </P>
 <P>The file is in the following format which is the same as the input
 file used by the <A HREF = "read_grid.html"">read_grid</A> command.  Thus the file
