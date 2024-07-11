@@ -115,7 +115,7 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     strcpy(idsource,&arg[5][2]);
 
   } else if (strcmp(arg[5],"random") == 0) {
-    iarg++; // one additional input
+    iarg++;
     if (narg < 7) error->all(FLERR,"Illegal fix ablate command");
     which = RANDOM;
     maxrandom = atoi(arg[6]);
@@ -195,14 +195,14 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   sum_delta = 0.0;
   ndelete = 0;
 
-  storeflag = adjacentflag = 0;
+  storeflag = innerflag = multiflag = 0;
   array_grid = cvalues = NULL;
-  cavalues = NULL;
+  ivalues = NULL;
   tvalues = NULL;
   ncorner = size_per_grid_cols;
 
-  if(dim == 2) nadj = 4;
-  else nadj = 6;
+  if(dim == 2) ninner = 4;
+  else ninner = 6;
 
   // local storage
 
@@ -211,13 +211,10 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   celldelta = NULL;
   cdelta = NULL;
   cdelta_ghost = NULL;
-  cadelta = NULL;
-  cadelta_ghost = NULL;
+  idelta = NULL;
+  idelta_ghost = NULL;
   nvert = NULL;
   nvert_ghost = NULL;
-
-  //ocvalues = NULL;
-  //ocavalues = NULL;
 
   numsend = NULL;
   maxgrid = maxghost = 0;
@@ -266,21 +263,20 @@ FixAblate::~FixAblate()
 {
   delete [] idsource;
   memory->destroy(cvalues);
-  memory->destroy(cavalues);
+  memory->destroy(ivalues);
   memory->destroy(tvalues);
 
   memory->destroy(ixyz);
   memory->destroy(mcflags);
+
   memory->destroy(celldelta);
   memory->destroy(cdelta);
   memory->destroy(cdelta_ghost);
-  memory->destroy(cadelta);
-  memory->destroy(cadelta_ghost);
+  memory->destroy(idelta);
+  memory->destroy(idelta_ghost);
+
   memory->destroy(nvert);
   memory->destroy(nvert_ghost);
-
-  //memory->destroy(ocvalues);
-  //memory->destroy(ocavalues);
 
   memory->destroy(numsend);
 
@@ -353,15 +349,6 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
     if (tvalues_flag) tvalues[icell] = tvalues_caller[icell];
   }
 
-  // TODO: temp
-  
-  /*for (int icell = 0; icell < nglocal; icell++) {
-    for (int m = 0; m < ncorner; m++) {
-      if (cvalues[icell][m] < thresh) cvalues[icell][m] = 0.0;
-      else cvalues[icell][m] = 255.0;
-    }
-  }*/
-
   // set ix,iy,iz indices from 1 to Nxyz for each of my owned grid cells
   // same logic as ReadIsurf::create_hash()
 
@@ -384,7 +371,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
 
   if (pushflag) push_lohi();
 
-  if (adjacentflag) epsilon_adjust_adjacent();
+  if (innerflag) epsilon_adjust_inner();
   else epsilon_adjust();
 
   // create marching squares/cubes classes, now that have group & threshold
@@ -405,11 +392,11 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
 
 void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
                               double *cornerlo_caller, double *xyzsize_caller,
-                              double ***cavalues_caller, int *tvalues_caller,
+                              double ***ivalues_caller, int *tvalues_caller,
                               double thresh_caller, char *sgroupID, int pushflag)
 {
   storeflag = 1;
-  adjacentflag = 1;
+  innerflag = 1;
 
   nx = nx_caller;
   ny = ny_caller;
@@ -443,21 +430,10 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
 
   for (int icell = 0; icell < nglocal; icell++) {
     for (int m = 0; m < ncorner; m++)
-      for(int n = 0; n < nadj; n++)
-        cavalues[icell][m][n] = cavalues_caller[icell][m][n];
+      for(int n = 0; n < ninner; n++)
+        ivalues[icell][m][n] = ivalues_caller[icell][m][n];
     if (tvalues_flag) tvalues[icell] = tvalues_caller[icell];
   }
-
-  // TODO: temp
-
-  /*for (int icell = 0; icell < nglocal; icell++) {
-    for (int m = 0; m < ncorner; m++) {
-      for(int n = 0; n < nadj; n++) {
-        if (cavalues[icell][m][n] < thresh) cavalues[icell][m][n] = 0.0;
-        else cavalues[icell][m][n] = 255.0;
-      }
-    }
-  }*/
 
   // set ix,iy,iz indices from 1 to Nxyz for each of my owned grid cells
   // same logic as ReadIsurf::create_hash()
@@ -477,7 +453,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
 
-  if (adjacentflag) epsilon_adjust_adjacent();
+  if (innerflag) epsilon_adjust_inner();
   else epsilon_adjust();
 
   // create marching squares/cubes classes, now that have group & threshold
@@ -527,28 +503,26 @@ void FixAblate::end_of_step()
   else if (which == UNIFORM) set_delta_uniform();
   else set_delta();
 
-  // find decrement at each corner -> sync decrements -> update corners
+  // various decrement and sync routines depending on:
+  // 1) are inner indices used?
+  // 2) is the decrement distributed to multiple corner points?
 
-  if (distributedflag) {
-
-    // find number of intersections at each corner
-    // ... look at if neighbor is below or above thresh and opp of corner
-
-    if (adjacentflag) {
-      decrement_adjacent_distributed_outside(); // ok
-      sync_adjacent_distributed_outside(); // ok
-      decrement_adjacent_distributed_inside(); // ok
-      sync_adjacent_distributed_inside(); // scaling seems ok now
+  if (multiflag) {
+    if (innerflag) {
+      decrement_inner_multi_outside();
+      sync_inner_multi_outside();
+      decrement_inner_multi_inside();
+      sync_inner_multi_inside();
     } else {
-      decrement_distributed_outside();
-      sync_distributed_outside();
-      decrement_distributed_inside();
-      sync_distributed_inside();
+      decrement_multi_outside();
+      sync_multi_outside();
+      decrement_multi_inside();
+      sync_multi_inside();
     }
   } else {
-    if (adjacentflag) {
-      decrement_adjacent();
-      sync_adjacent();
+    if (innerflag) {
+      decrement_inner();
+      sync_inner();
     } else {
       decrement();
       sync();
@@ -557,7 +531,7 @@ void FixAblate::end_of_step()
 
   // handle small corner values
 
-  if (adjacentflag) epsilon_adjust_adjacent();
+  if (innerflag) epsilon_adjust_inner();
   else epsilon_adjust();
 
   // re-create implicit surfs
@@ -601,9 +575,9 @@ void FixAblate::create_surfs(int outflag)
   // cvalues = corner point values
   // tvalues = surf type for surfs in each grid cell
 
-  if (adjacentflag) {
-    if (dim == 2) ms->invoke(cavalues,tvalues);
-    else mc->invoke(cavalues,tvalues,mcflags);
+  if (innerflag) {
+    if (dim == 2) ms->invoke(ivalues,tvalues);
+    else mc->invoke(ivalues,tvalues,mcflags);
   } else {
     if (dim == 2) ms->invoke(cvalues,tvalues);
     else mc->invoke(cvalues,tvalues,mcflags);
@@ -890,8 +864,8 @@ void FixAblate::set_delta_random()
 }
 
 /* ----------------------------------------------------------------------
-   set per-cell delta vector randomly
-   celldelta = random integer between 0 and maxrandom
+   set per-cell delta vector uniformly
+   celldelta = maxrandom
    scale = fraction of cells that are decremented
 ------------------------------------------------------------------------- */
 
@@ -908,17 +882,18 @@ void FixAblate::set_delta_uniform()
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
 
+    // only ablate surfaces with a surface element (not fully inside or outside)
+
     nin = 0;
     for (int i = 0; i < ncorner; i++) {
-      if (adjacentflag) {
-        if (cavalues[icell][i][0] > thresh) nin++;
+      if (innerflag) {
+        if (ivalues[icell][i][0] > thresh) nin++;
       } else {
         if (cvalues[icell][i] > thresh) nin++;
       }
     }
     if (nin == 0 || nin == ncorner) celldelta[icell] = 0.0;
     else celldelta[icell] = maxrandom*scale;
-    if(nglocal < 10) celldelta[icell] *= icell;
   }
 
   // total decrement for output
@@ -1045,9 +1020,6 @@ void FixAblate::decrement()
 
     for (i = 0; i < ncorner; i++) cdelta[icell][i] = 0.0;
 
-    // record current values to check if total mass is decrementing correctly
-    //for (i = 0; i < ncorner; i++) ocvalues[icell][i] = cvalues[icell][i];
-
     total = celldelta[icell];
     corners = cvalues[icell];
     while (total > 0.0) {
@@ -1074,114 +1046,21 @@ void FixAblate::decrement()
 }
 
 /* ----------------------------------------------------------------------
-   determine decrement for each corner point of each owned grid cell
-   skip cells not in group, with no surfs, and sub-cells
+   sync all copies of corner points values for all owned grid cells
    algorithm:
-     no corner pt value can be < 0.0
-     decrement smallest corner pt by full delta
-     if cannot, decrement to 0.0, decrement next smallest by remainder, etc
+     comm my cdelta values that are shared by neighbor
+     each corner point is shared by N cells, less on borders
+     dsum = sum of decrements to that point by all N cells
+     newvalue = MAX(oldvalue-dsum,0)
+   all N copies of corner pt are set to newvalue
+     in numerically consistent manner (same order of operations)
 ------------------------------------------------------------------------- */
 
-void FixAblate::decrement_adjacent()
+void FixAblate::sync()
 {
-  Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-
-  int i,j,i_inner,jcorner,imin,jmin;
-  double minvalue,total;
-  int *ineighbors, *neighbors;
-  int k, l, oinner, opp;
-  double cmax[8];
-
-  // total = full amount to decrement from cell
-  // cdelta[icell] = amount to decrement from each corner point of icell
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-
-    for (i = 0; i < ncorner; i++) 
-      for (j = 0; j < nadj; j++)
-        cadelta[icell][i][j] = 0.0;
-
-    // record current values to check if total mass is decrementing correctly
-    //for (i = 0; i < ncorner; i++)
-    //  for (j = 0; j < nadj; j++)
-    //    ocavalues[icell][i][j] = cavalues[icell][i][j];
-
-
-    total = celldelta[icell];//*nadj;
-    while (total > 0.0) {
-
-      imin = -1;
-      minvalue = 256.0;
-      for (i = 0; i < ncorner; i++) {
-        ineighbors = inner_neighbor[i];
-        neighbors = corner_neighbor[i];
-
-        for (j = 0; j < dim; j++) {
-
-          jcorner = neighbors[j];
-          i_inner = ineighbors[j];
-
-          int opp = 1;
-          if (cavalues[icell][i][0] > thresh 
-            && cavalues[icell][jcorner][0] > thresh) opp = -1;
-          else if (cavalues[icell][i][0] <= thresh
-            && cavalues[icell][jcorner][0] <= thresh) opp = -1;
-
-          if(cadelta[icell][i][i_inner] == 0.0 &&
-             opp > 0 &&
-             cavalues[icell][i][i_inner] > 0.0) {
-            imin = i;
-            jmin = i_inner;
-            minvalue = cavalues[icell][imin][jmin];
-          }
-
-        }
-      }
-
-      if (imin == -1) break;
-
-      //ineighbors = inner_neighbor[imin];
-
-      // only inner indices pointing into cell are updated
-      // when consolidating all delta, if not scaled, the avg corner point
-      // values will not reflect expected cell decrement
-      // multiply by 2 (for both 2d and 3d)
-      if (total < minvalue) {
-        //for (j = 0; j < dim; j++)
-        //  cadelta[icell][imin][ineighbors[j]] += total*2.0;
-        //for (j = 0; j < nadj; j++)
-        //  cadelta[icell][imin][j] += total;
-        cadelta[icell][imin][jmin] += total;
-        total = 0.0;
-      } else {
-        //for (j = 0; j < dim; j++)
-        //  cadelta[icell][imin][ineighbors[j]] = minvalue*2.0;
-        //for (j = 0; j < nadj; j++)
-        //  cadelta[icell][imin][j] = minvalue;
-        cadelta[icell][imin][jmin] = minvalue;
-        total -= minvalue;
-      }
-    }
-  }
-  //error->one(FLERR,"Ck");
-}
-
-/* ----------------------------------------------------------------------
-   sync all copies of adjacent values at each corner point
-   for all owned grid cells ( very similar to sync )
-------------------------------------------------------------------------- */
-void FixAblate::sync_adjacent()
-{
-  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
+  int i,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
-  int numin;
-  double total[nadj], ctotal, iavg, oiavg, diavg;
-
-  //double omass = 0.0;
-  //double nmass = 0.0;
+  double total;
 
   comm_neigh_corners(CDELTA);
 
@@ -1205,9 +1084,159 @@ void FixAblate::sync_adjacent()
 
     for (i = 0; i < ncorner; i++) {
 
-      oiavg = 0.0;
-      for (j = 0; j < nadj; j++) oiavg += cavalues[icell][i][j];
-      oiavg /= nadj;
+      // ixyz first = offset from icell of lower left cell of 2x2x2 stencil
+      //              that shares the Ith corner point
+
+      ixfirst = (i % 2) - 1;
+      iyfirst = (i/2 % 2) - 1;
+      if (dim == 2) izfirst = 0;
+      else izfirst = (i / 4) - 1;
+
+      // loop over 2x2x2 stencil of cells that share the corner point
+      // also works for 2d, since izfirst = 0
+
+      total = 0.0;
+      jcorner = ncorner;
+
+      for (jz = izfirst; jz <= izfirst+1; jz++) {
+        for (jy = iyfirst; jy <= iyfirst+1; jy++) {
+          for (jx = ixfirst; jx <= ixfirst+1; jx++) {
+            jcorner--;
+
+            // check if neighbor cell is within bounds of ablate grid
+
+            if (ix+jx < 1 || ix+jx > nx) continue;
+            if (iy+jy < 1 || iy+jy > ny) continue;
+            if (iz+jz < 1 || iz+jz > nz) continue;
+
+            // jcell = local index of (jx,jy,jz) neighbor cell of icell
+
+            jcell = walk_to_neigh(icell,jx,jy,jz);
+
+            // update total with one corner point of jcell
+            // jcorner descends from ncorner
+
+            if (jcell < nglocal) total += cdelta[jcell][jcorner];
+            else total += cdelta_ghost[jcell-nglocal][jcorner];
+          }
+        }
+      }
+
+      if (total > cvalues[icell][i]) cvalues[icell][i] = 0.0;
+      else cvalues[icell][i] -= total;
+
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   version of decrement() function for inner indices
+------------------------------------------------------------------------- */
+
+void FixAblate::decrement_inner()
+{
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  int i,j,i_inner,jcorner,imin,jmin;
+  double minvalue,total;
+  int *ineighbors, *neighbors;
+  int opp;
+  double cmax[8];
+
+  // total = full amount to decrement from cell
+  // cdelta[icell] = amount to decrement from each corner point of icell
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    for (i = 0; i < ncorner; i++) 
+      for (j = 0; j < ninner; j++)
+        idelta[icell][i][j] = 0.0;
+
+    total = celldelta[icell];//*ninner; // uncomment for mass-preserving option
+    while (total > 0.0) {
+
+      imin = -1;
+      minvalue = 256.0;
+      for (i = 0; i < ncorner; i++) {
+        ineighbors = inner_neighbor[i];
+        neighbors = corner_neighbor[i];
+
+        for (j = 0; j < dim; j++) {
+
+          jcorner = neighbors[j];
+          i_inner = ineighbors[j];
+
+          // only consider inner indices which point to a corner point 
+          // of the opposite type. For example, an inner index which 
+          // is less than thresh should point to an inside corner point
+
+          opp = 1;
+          if (ivalues[icell][i][0] > thresh 
+            && ivalues[icell][jcorner][0] > thresh) opp = -1;
+          else if (ivalues[icell][i][0] <= thresh
+            && ivalues[icell][jcorner][0] <= thresh) opp = -1;
+
+          // search for smallest inner index at each corner
+
+          if(idelta[icell][i][i_inner] == 0.0 &&
+             opp > 0 &&
+             ivalues[icell][i][i_inner] > 0.0) {
+            imin = i;
+            jmin = i_inner;
+            minvalue = ivalues[icell][imin][jmin];
+          }
+
+        }
+      }
+
+      if (imin == -1) break;
+
+      // only inner indices with smallest value updated
+
+      if (total < minvalue) {
+        idelta[icell][imin][jmin] += total;
+        total = 0.0;
+      } else {
+        idelta[icell][imin][jmin] = minvalue;
+        total -= minvalue;
+      }
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   version of sync() for inner indices
+------------------------------------------------------------------------- */
+void FixAblate::sync_inner()
+{
+  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
+  int icell,jcell;
+  double total[ninner];
+
+  comm_neigh_corners(CDELTA);
+
+  // perform update of corner pts for all my owned grid cells
+  //   using contributions from all cells that share the corner point
+  // insure order of numeric operations will give exact same answer
+  //   for all Ncorner duplicates of a corner point (stored by other cells)
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  for (icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    ix = ixyz[icell][0];
+    iy = ixyz[icell][1];
+    iz = ixyz[icell][2];
+
+    // loop over corner points
+
+    for (i = 0; i < ncorner; i++) {
 
       /*-----------------------------------------------------------*/
 
@@ -1222,8 +1251,7 @@ void FixAblate::sync_adjacent()
       // loop over 2x2x2 stencil of cells that share the corner point
       // also works for 2d, since izfirst = 0
 
-      for (j = 0; j < nadj; j++) total[j] = 0.0;
-      //ctotal = 0.0;
+      for (j = 0; j < ninner; j++) total[j] = 0.0;
 
       jcorner = ncorner;
 
@@ -1245,309 +1273,44 @@ void FixAblate::sync_adjacent()
             // update total with one corner point of jcell
             // jcorner descends from ncorner
 
-            for (j = 0; j < nadj; j++) {
-              if (jcell < nglocal) total[j] += cadelta[jcell][jcorner][j];
-              else total[j] += cadelta_ghost[jcell-nglocal][jcorner][j];
+            for (j = 0; j < ninner; j++) {
+              if (jcell < nglocal) total[j] += idelta[jcell][jcorner][j];
+              else total[j] += idelta_ghost[jcell-nglocal][jcorner][j];
             }
-
-            //for (j = 0; j < nadj; j++) {
-            //  if (jcell < nglocal) ctotal += cadelta[jcell][jcorner][j];
-            //  else ctotal += cadelta_ghost[jcell-nglocal][jcorner][j];
-            //}
-
           }
         }
       }
 
       /*-----------------------------------------------------------*/
 
-      //double sumtotal = total[0]+total[1]+total[2]+total[3]+total[4]+total[5];
-      //if(sumtotal > 0)
-      //  printf("ic: %i; total: %2.1e,%2.1e,%2.1e,%2.1e,%2.1e,%2.1e; avg: %2.1e\n",
-      //    icell, total[0], total[1], total[2], total[3], total[4], total[5], sumtotal/6);
-
       // now decrement corners
 
-      for(j = 0; j < nadj; j++) {
-        cavalues[icell][i][j] -= total[j];
-        if (cavalues[icell][i][j] < 0.0) cavalues[icell][i][j] = 0.0;
+      for(j = 0; j < ninner; j++) {
+        ivalues[icell][i][j] -= total[j];
+        if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
       }
-
-      // scale all inner values so same amoutn of mass lost as cell decrement
-      //if (dim == 2) ctotal *= 0.5;
-      //else ctotal *= 0.25;
-
-      /*iavg = 0.0;
-      for (j = 0; j < nadj; j++) iavg += cavalues[icell][i][j];
-      iavg /= nadj;
-
-      oiavg -= ctotal;
-
-      diavg = iavg - oiavg;
-      for (j = 0; j < nadj; j++) cavalues[icell][i][j] -= diavg;*/
-
-      // check for consistency
-
-      //numin = 0;
-      //for(j = 0; j < nadj; j++)
-      //  if (cavalues[icell][i][j] < thresh) numin++;
-      //if (numin != 0 && numin != nadj) {
-      //  for(j = 0; j < nadj; j++)
-      //    printf("cval: %4.3e\n", cavalues[icell][i][j]);
-      //  error->one(FLERR,"bad inner values - sync");
-      //}
-
-      /*double oavg = 0.0;
-      double navg = 0.0;
-      for (j = 0; j < nadj; j++) { 
-        oavg += ocavalues[icell][i][j];
-        navg += cavalues[icell][i][j];
-      }*/
-
-      /*if(sumtotal > 0) {
-        printf("icell: %i;  corner: %i\n", icell, i);
-        printf("o: %4.3e, %4.3e, %4.3e, %4.3e, %4.3e, %4.3e; avg: %4.3e\n",
-          ocavalues[icell][i][0], ocavalues[icell][i][1],
-          ocavalues[icell][i][2], ocavalues[icell][i][3],
-          ocavalues[icell][i][4], ocavalues[icell][i][5],
-          oavg/nadj);
-        printf("n: %4.3e, %4.3e, %4.3e, %4.3e, %4.3e, %4.3e; avg: %4.3e\n",
-          cavalues[icell][i][0], cavalues[icell][i][1],
-          cavalues[icell][i][2], cavalues[icell][i][3],
-          cavalues[icell][i][4], cavalues[icell][i][5],
-          navg/nadj);
-      }*/
-
-      //omass += oavg/nadj;
-      //nmass += navg/nadj;
-
     } // end corners
   } // end cells
-
-  //printf("d: %4.3e; sum_delta: %4.3e\n", omass-nmass, pow(2,dim)*sum_delta);
-  //error->one(FLERR,"ck");
 }
 
 /* ----------------------------------------------------------------------
-   find how much to decrement outside corner points
+   Part 1 of 2 for multi-point decrement. Determine total amount to 
+   decrement in each interface corner point (an outside corner point
+   is connected to an inside one and vice versa). Also determines
+   number of vertices around each corner in each cell
+      - cell decrement evenly divided between each interface corner
+      - at this point, negative corner points are ok! Handled in part 2
+      - outside corner points (all neighbors are also outside) are not
+        touched
 ------------------------------------------------------------------------- */
 
-void FixAblate::decrement_distributed_inside()
+void FixAblate::decrement_multi_outside()
 {
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
-  int icell,jcell;
-  int Nneigh, *neighbors, i_neighbor_corner;
-  double total_remain, nvertices;
-  double *corners;
-
-  comm_neigh_corners(NVERT);
-
-  // to avoid couting same decrement multiple times in different cells
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-
-    ix = ixyz[icell][0];
-    iy = ixyz[icell][1];
-    iz = ixyz[icell][2];
-
-    for (i = 0; i < ncorner; i++) cdelta[icell][i] = 0.0;
-
-    // only outside points were updated
-
-    if (dim == 2) setup_distributed2d(icell);
-    else setup_distributed3d(icell);
-
-    for (i = 0; i < ncorner; i++) {
-
-      /*---------------------------------------------------------------*/
-
-      // first find number of vertices
-      ixfirst = (i % 2) - 1;
-      iyfirst = (i/2 % 2) - 1;
-      if (dim == 2) izfirst = 0;
-      else izfirst = (i / 4) - 1;
-
-      nvertices = 0.0;
-      jcorner = ncorner;
-
-      for (jz = izfirst; jz <= izfirst+1; jz++) {
-        for (jy = iyfirst; jy <= iyfirst+1; jy++) {
-          for (jx = ixfirst; jx <= ixfirst+1; jx++) {
-            jcorner--;
-
-            if (ix+jx < 1 || ix+jx > nx) continue;
-            if (iy+jy < 1 || iy+jy > ny) continue;
-            if (iz+jz < 1 || iz+jz > nz) continue;
-
-            jcell = walk_to_neigh(icell,jx,jy,jz);
-
-            if (jcell < nglocal) nvertices += nvert[jcell][jcorner];
-            else nvertices += nvert_ghost[jcell-nglocal][jcorner];
-
-          }
-        }
-      }
-
-      /*---------------------------------------------------------------*/
-
-
-      //printf("ic: %i; i: %i; cv: %2.1e\n", icell, i, cvalues[icell][i]);
-
-      if (cvalues[icell][i] < 0) {
-
-        if (dim == 2) nvertices *= 0.5;
-        else nvertices *= 0.25;
-
-        // count which neighbors are inside and connected
-        // record how much corner value to pass on if decrement was too large
-
-        neighbors = corner_neighbor[i];
-
-        // Nneigh should be nvertices
-
-        //Nneigh = 0;
-        //for (j = 0; j < dim; j++)
-        //  if (refcorners[neighbors[j]] == 1) Nneigh++;
-
-        for (j = 0; j < dim; j++) {
-          i_neighbor_corner = neighbors[j];
-
-          if(refcorners[i_neighbor_corner] == 1) {
-
-              //printf("ic: %i; i: %i; cv: %2.1e; Nn: %i; in: %i\n", icell, i, cvalues[icell][i], Nneigh, i_neighbor_corner); 
-
-            total_remain = fabs(cvalues[icell][i])/ nvertices;
-            cdelta[icell][i_neighbor_corner] += total_remain;
-
-            // decrement will be scaled in sync_out by number of vertices
-            //cdelta[icell][i_neighbor_corner] = fabs(cvalues[icell][i]);
-
-            //printf("ic: %i; i: %i; cv: %2.1e; nv: %2.1e; tr: %2.1e\n", icell, i, cvalues[icell][i], nvertices, total_remain);
-
-          }
-        }
-
-        // set negative corner value to zero
-        cvalues[icell][i] = 0.0;
-
-      } // end if for negative cvalues
-    } // end corner
-  } // end cells
-
-  /*for (int icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-
-
-    for (i = 0; i < ncorner; i++) {
-      if (cdelta[icell][i] > 0)
-        printf("ic: %i; i: %i; cv: %2.1e\n", icell, i, cdelta[icell][i]);
-    } // end corner
-  } // end cells 
-  error->one(FLERR,"ck");*/
-}
-
-/* ----------------------------------------------------------------------
-   find how much to decrement outside corner points
-------------------------------------------------------------------------- */
-
-void FixAblate::decrement_adjacent_distributed_inside()
-{
-  Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-
-  int i,j,k;
-  int i_inner, i_neighbor_corner;
-  int Nneigh, *ineighbors, *neighbors, oinner, kcorner;
-  double total_remain, nvertices;
-
-  // to avoid couting same decrement multiple times in different cells
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-
-    for (i = 0; i < ncorner; i++)
-      for (j = 0; j < nadj; j++) cadelta[icell][i][j] = 0.0;
-
-    if (dim == 2) setup_distributed2d(icell);
-    else setup_distributed3d(icell);
-
-    for (i = 0; i < ncorner; i++) {
-
-      // corner neighbors
-      neighbors = corner_neighbor[i];
-
-      // inner neighbors that point in dir. of corner neighbors
-      ineighbors = inner_neighbor[i];
-
-      for (k = 0; k < dim; k++) {
-        i_inner = ineighbors[k];
-        i_neighbor_corner = neighbors[k];
-
-        if (cavalues[icell][i][i_inner] < 0) {
-
-          // is the neighbor corner inside?
-          if (refcorners[i_neighbor_corner] == 1) {
-
-            // which inner index for connected corner point
-            if (i_inner == 0) oinner = 1;
-            else if (i_inner == 1) oinner = 0;
-            else if (i_inner == 2) oinner = 3;
-            else if (i_inner == 3) oinner = 2;
-            else if (i_inner == 4) oinner = 5;
-            else if (i_inner == 5) oinner = 4;
-
-            //printf("ic: %i; i: %i; j: %i; cv: %2.1e; Nn: %i; oinner: %i; in: %i\n", icell, i, i_inner, cavalues[icell][i][i_inner], Nneigh, oinner, i_neighbor_corner); 
-
-            total_remain = fabs(cavalues[icell][i][i_inner]);
-
-            cadelta[icell][i_neighbor_corner][oinner] += total_remain;
-          }
-        } // end if for negative cvalues
-      } // end  k - neighbors
-
-      // zero out negative values and adjust for inner
-      for (j = 0; j < nadj; j++)
-        if (cavalues[icell][i][j] < 0) cavalues[icell][i][j] = 0.0;
-
-    } // end corner
-  } // end cells
-
-  /*for (int icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-
-    for (i = 0; i < ncorner; i++)
-      for (j = 0; j < nadj; j++)
-        if(cadelta[icell][i][j] > 0)
-          printf("ic: %i; i: %i; j: %i; cv: %2.1e\n", icell, i, j, cadelta[icell][i][j]);
-
-  }
-  error->one(FLERR,"ck");*/
-}
-
-/* ----------------------------------------------------------------------
-   find how much to decrement outside corner points
-------------------------------------------------------------------------- */
-
-void FixAblate::decrement_distributed_outside()
-{
-  Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-
-  int i,j,Nout;
+  int i,j,Ninterface;
   double total,perout;
-
-  // find number of vertices around each corner
-  // also find total to decrement from each corner
-  // total = full amount to decrement from cell
-  // cdelta[icell] = amount to decrement from each corner point of icell
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
@@ -1555,24 +1318,31 @@ void FixAblate::decrement_distributed_outside()
 
     for (i = 0; i < ncorner; i++) {
       cdelta[icell][i] = 0.0;
-
-      // also count vertices
       nvert[icell][i] = 0.0;
     }
 
-    // record current values to check if total mass is decrementing correctly
-    //for (i = 0; i < ncorner; i++)
-    //  ocvalues[icell][i] = cvalues[icell][i];
+    // find which corners in the cell are inside, outside, and interface
+    // output how many interface points there are
 
-    if (dim == 2) Nout = setup_distributed2d(icell);
-    else Nout = setup_distributed3d(icell);
+    if (dim == 2) Ninterface = mark_corners_2d(icell);
+    else Ninterface = mark_corners_3d(icell);
 
-    if (Nout == 0) continue; // all zero
+    // if no interface points, then points are either all outside or all inside
+    // no mechanism for ablation if there is no surfaces so can skip
+
+    if (Ninterface == 0) continue;
+
+    // perout is how much to decrement at each interface point
 
     total = celldelta[icell];
-    perout = total/Nout;
+    perout = total/Ninterface;
+
+    // iterate to find the number of vertices around each corner
+    // also assign perout to the interface points
 
     for (i = 0; i < ncorner; i++) {
+
+      // outside points have zero vertices so can skip
 
       if (refcorners[i] == -1) continue;
 
@@ -1585,9 +1355,7 @@ void FixAblate::decrement_distributed_outside()
       // 5 -> 7
       // 6 -> 7
 
-      // only need to record connected
-
-      if (refcorners[i] == 0) { // this corner is a connected
+      if (refcorners[i] == 0) { // this corner is interface
         if (i == 0) {
           if (refcorners[1] == 1) nvert[icell][i] += 1.0;
           if (refcorners[2] == 1) nvert[icell][i] += 1.0;
@@ -1650,25 +1418,260 @@ void FixAblate::decrement_distributed_outside()
 
     } // end corners
   } // end cells
+}
 
-  /*for (int icell = 0; icell < nglocal; icell++) {
+/* ----------------------------------------------------------------------
+   sync and update interface corner values. some values may be negative.
+   this is ok. refer to sync() for more details about logic
+------------------------------------------------------------------------- */
+
+void FixAblate::sync_multi_outside()
+{
+  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
+  int icell,jcell;
+  double total;
+
+  comm_neigh_corners(CDELTA);
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  for (icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
 
-    for (i = 0; i < ncorner; i++) {
-      if(nvert[icell][i] > 0)
-        printf("ic: %i; i: %i; nv: %2.1e\n", icell, i, nvert[icell][i]);
-    }
-  }*/
+    ix = ixyz[icell][0];
+    iy = ixyz[icell][1];
+    iz = ixyz[icell][2];
 
-  //error->one(FLERR,"ck");
+    for (i = 0; i < ncorner; i++) {
+
+      ixfirst = (i % 2) - 1;
+      iyfirst = (i/2 % 2) - 1;
+      if (dim == 2) izfirst = 0;
+      else izfirst = (i / 4) - 1;
+
+      total = 0.0;
+      jcorner = ncorner;
+
+      for (jz = izfirst; jz <= izfirst+1; jz++) {
+        for (jy = iyfirst; jy <= iyfirst+1; jy++) {
+          for (jx = ixfirst; jx <= ixfirst+1; jx++) {
+            jcorner--;
+
+            if (ix+jx < 1 || ix+jx > nx) continue;
+            if (iy+jy < 1 || iy+jy > ny) continue;
+            if (iz+jz < 1 || iz+jz > nz) continue;
+
+            jcell = walk_to_neigh(icell,jx,jy,jz);
+
+            if (jcell < nglocal) total += cdelta[jcell][jcorner];
+            else total += cdelta_ghost[jcell-nglocal][jcorner];
+
+          } // end jx
+        } // end jy
+      } // end jz
+
+      cvalues[icell][i] -= total;
+
+    } // end corners
+  } // end cells
+}
+
+/* ----------------------------------------------------------------------
+   Part 2 of 2 for multi-point decrement. Based on the value of the 
+   neighboring interface values, update the inside corner point
+      - inside corner points must always be > 0.0
+------------------------------------------------------------------------- */
+
+void FixAblate::decrement_multi_inside()
+{
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
+  int icell,jcell;
+  int Nneigh, *neighbors, i_neighbor_corner;
+  double total_remain, nvertices;
+  double *corners;
+
+  // find total number of vertices around each corner point
+  // required to pass the correct amount from each interfact to inside point
+
+  comm_neigh_corners(NVERT);
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    ix = ixyz[icell][0];
+    iy = ixyz[icell][1];
+    iz = ixyz[icell][2];
+
+    for (i = 0; i < ncorner; i++) cdelta[icell][i] = 0.0;
+
+    // finds which corner points are inside, interface, and outside
+    // uses a lookup table. For 3D, this is decrement_lookup_table.h
+
+    if (dim == 2) mark_corners_2d(icell);
+    else mark_corners_3d(icell);
+
+    for (i = 0; i < ncorner; i++) {
+
+      /*---------------------------------------------------------------*/
+      // sync operation to find total number of vertices around each corner
+
+      ixfirst = (i % 2) - 1;
+      iyfirst = (i/2 % 2) - 1;
+      if (dim == 2) izfirst = 0;
+      else izfirst = (i / 4) - 1;
+
+      nvertices = 0.0;
+      jcorner = ncorner;
+
+      for (jz = izfirst; jz <= izfirst+1; jz++) {
+        for (jy = iyfirst; jy <= iyfirst+1; jy++) {
+          for (jx = ixfirst; jx <= ixfirst+1; jx++) {
+            jcorner--;
+
+            if (ix+jx < 1 || ix+jx > nx) continue;
+            if (iy+jy < 1 || iy+jy > ny) continue;
+            if (iz+jz < 1 || iz+jz > nz) continue;
+
+            jcell = walk_to_neigh(icell,jx,jy,jz);
+
+            if (jcell < nglocal) nvertices += nvert[jcell][jcorner];
+            else nvertices += nvert_ghost[jcell-nglocal][jcorner];
+
+          } // end jx
+        } // end jy
+      } // end jz
+
+      /*---------------------------------------------------------------*/
+
+      // evenly distribute the underflow from the interface points to the 
+      // adjacent inside corner points
+
+      if (cvalues[icell][i] < 0) {
+
+        // each cell edge is touched by two (four) cells in 2D (3D)
+        // scale appropriately to avoid multi-counting
+
+        if (dim == 2) nvertices *= 0.5;
+        else nvertices *= 0.25;
+
+        // determines which corners are the neighbors of "i"
+
+        neighbors = corner_neighbor[i];
+
+        // decrement neighboring inside points by the underflow value
+
+        for (j = 0; j < dim; j++) {
+          i_neighbor_corner = neighbors[j];
+
+          if(refcorners[i_neighbor_corner] == 1) {
+            total_remain = fabs(cvalues[icell][i])/ nvertices;
+            cdelta[icell][i_neighbor_corner] += total_remain;
+          }
+        } // end dim
+
+        // interface points has passed all decrement so zero it out now
+
+        cvalues[icell][i] = 0.0;
+
+      } // end if for negative cvalues
+    } // end corner
+  } // end cells
+}
+
+/* ----------------------------------------------------------------------
+   same as sync_multi_outside() but not the inside corner points
+   are updated
+------------------------------------------------------------------------- */
+
+void FixAblate::sync_multi_inside()
+{
+  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
+  int icell,jcell;
+  double total;
+
+  comm_neigh_corners(CDELTA);
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  for (icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    ix = ixyz[icell][0];
+    iy = ixyz[icell][1];
+    iz = ixyz[icell][2];
+
+    for (i = 0; i < ncorner; i++) {
+
+      ixfirst = (i % 2) - 1;
+      iyfirst = (i/2 % 2) - 1;
+      if (dim == 2) izfirst = 0;
+      else izfirst = (i / 4) - 1;
+
+      total = 0.0;
+      jcorner = ncorner;
+
+      for (jz = izfirst; jz <= izfirst+1; jz++) {
+        for (jy = iyfirst; jy <= iyfirst+1; jy++) {
+          for (jx = ixfirst; jx <= ixfirst+1; jx++) {
+            jcorner--;
+
+            if (ix+jx < 1 || ix+jx > nx) continue;
+            if (iy+jy < 1 || iy+jy > ny) continue;
+            if (iz+jz < 1 || iz+jz > nz) continue;
+
+            jcell = walk_to_neigh(icell,jx,jy,jz);
+
+            if (jcell < nglocal) {
+              if (cdelta[jcell][jcorner] > 0)
+                total += cdelta[jcell][jcorner];
+            } else {
+              if (cdelta_ghost[jcell-nglocal][jcorner] > 0)
+                total += cdelta_ghost[jcell-nglocal][jcorner];
+            }
+
+          } // end jx
+        } // end jy
+      } // end jz
+
+      // update the inside corner points based on the negative values
+      // passed from interface points
+
+      if (total > 0.0) {
+
+        // the interface corner points were sync'd previously. The total
+        // decrement will be counted by the number of cells which share 
+        // a common edge. This is 2 in 2D and 4 in 3D
+
+        if (dim == 2) total *= 0.5;
+        else total *= 0.25;
+
+        cvalues[icell][i] -= total;
+      }
+
+      // if decrement is too large, zero out the inside corner point
+      // should not underflow significantly. if it does, simulation parameters
+      // need to be changed because ablation time scale is much larger than 
+      // the time step
+
+      if (cvalues[icell][i] < 0) cvalues[icell][i] = 0.0;
+
+    } // end corners
+  } // end cells
 }
 
 /* ----------------------------------------------------------------------
    find how much to decrement outside corner points
 ------------------------------------------------------------------------- */
 
-void FixAblate::decrement_adjacent_distributed_outside()
+void FixAblate::decrement_inner_multi_outside()
 {
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -1687,20 +1690,15 @@ void FixAblate::decrement_adjacent_distributed_outside()
     if (cells[icell].nsplit <= 0) continue;
 
     for (i = 0; i < ncorner; i++)
-        for (j = 0; j < nadj; j++) cadelta[icell][i][j] = 0.0;
+        for (j = 0; j < ninner; j++) idelta[icell][i][j] = 0.0;
 
-    // record current values to check if total mass is decrementing correctly
-    //for (i = 0; i < ncorner; i++)
-    //  for (j = 0; j < nadj; j++)
-    //    ocavalues[icell][i][j] = cavalues[icell][i][j];
+    if (dim == 2) Nout = mark_corners_2d(icell);
+    else Nout = mark_corners_3d(icell);
 
-    if (dim == 2) Nout = setup_distributed2d(icell);
-    else Nout = setup_distributed3d(icell);
-
-    if (Nout == 0) continue; // all zero
+    if (Nout == 0) continue;
 
     total = celldelta[icell];
-    perout = total/Nout;//*nadj;
+    perout = total/Nout;//*ninner;
 
     for (i = 0; i < ncorner; i++) {
 
@@ -1715,128 +1713,23 @@ void FixAblate::decrement_adjacent_distributed_outside()
       }
 
       // only decrement inner neighbors
+
       for (j = 0; j < dim; j++) {
         if (refcorners[neighbors[j]] == 1) {
           i_inner = ineighbors[j];
-          cadelta[icell][i][i_inner] += perout/Nin;
+          idelta[icell][i][i_inner] += perout/Nin;
         }
-      }
-
-      //for (j = 0; j < nadj; j++)
-      //  cadelta[icell][i][j] += perout;
-
-      //for (j = 0; j < nadj; j++)
-      //  if(cadelta[icell][i][j] > 1.0)
-      //    printf("ic: %i; i: %i; j: %i: cd: %2.1e\n",
-      //        icell, i, j, cadelta[icell][i][j]);
+      } // end dim
 
     } // end corners
   } // end cells
-
-  /*for (int icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-
-    for (i = 0; i < ncorner; i++) {
-      for (j = 0; j < nadj; j++) {
-        if(cadelta[icell][i][j] > 0)
-          printf("ic: %i; i: %i; j: %i; cd: %2.1e\n", icell, i, j, cadelta[icell][i][j]);
-      }
-    }
-  }*/
-
-  //error->one(FLERR,"ck");
-}
-
-
-/* ----------------------------------------------------------------------
-   sync and update corner values. some values may be negative. this is
-   ok and will be handled in proceeding routines
-------------------------------------------------------------------------- */
-
-void FixAblate::sync_distributed_outside()
-{
-  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
-  int icell,jcell;
-  double total;
-
-  comm_neigh_corners(CDELTA);
-
-  // perform update of corner pts for all my owned grid cells
-  //   using contributions from all cells that share the corner point
-  // insure order of numeric operations will give exact same answer
-  //   for all Ncorner duplicates of a corner point (stored by other cells)
-
-  Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-
-  for (icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-
-    ix = ixyz[icell][0];
-    iy = ixyz[icell][1];
-    iz = ixyz[icell][2];
-
-    // loop over corner points
-
-    for (i = 0; i < ncorner; i++) {
-
-      // ixyz first = offset from icell of lower left cell of 2x2x2 stencil
-      //              that shares the Ith corner point
-
-      ixfirst = (i % 2) - 1;
-      iyfirst = (i/2 % 2) - 1;
-      if (dim == 2) izfirst = 0;
-      else izfirst = (i / 4) - 1;
-
-      // loop over 2x2x2 stencil of cells that share the corner point
-      // also works for 2d, since izfirst = 0
-
-      total = 0.0;
-      jcorner = ncorner;
-
-      for (jz = izfirst; jz <= izfirst+1; jz++) {
-        for (jy = iyfirst; jy <= iyfirst+1; jy++) {
-          for (jx = ixfirst; jx <= ixfirst+1; jx++) {
-            jcorner--;
-
-            // check if neighbor cell is within bounds of ablate grid
-
-            if (ix+jx < 1 || ix+jx > nx) continue;
-            if (iy+jy < 1 || iy+jy > ny) continue;
-            if (iz+jz < 1 || iz+jz > nz) continue;
-
-            // jcell = local index of (jx,jy,jz) neighbor cell of icell
-
-            jcell = walk_to_neigh(icell,jx,jy,jz);
-
-            // update total with one corner point of jcell
-            // jcorner descends from ncorner
-
-            if (jcell < nglocal) total += cdelta[jcell][jcorner];
-            else total += cdelta_ghost[jcell-nglocal][jcorner];
-
-          } // end jx
-        } // end jy
-      } // end jz
-
-      cvalues[icell][i] -= total;
-
-      //if (cvalues[icell][i] < 0.0)
-      //  printf("ic: %i; i: %i; cv: %2.1e\n", icell, i, cvalues[icell][i]);
-
-    } // end corners
-  } // end cells
-  //error->one(FLERR,"ck");
 }
 
 /* ----------------------------------------------------------------------
-   sync and update corner values. some values may be negative. this is
-   ok and will be handled in proceeding routines
+   version of sync_multi_outside() for inner indices
 ------------------------------------------------------------------------- */
 
-void FixAblate::sync_adjacent_distributed_outside()
+void FixAblate::sync_inner_multi_outside()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
   int icell,jcell;
@@ -1878,261 +1771,102 @@ void FixAblate::sync_adjacent_distributed_outside()
 
             jcell = walk_to_neigh(icell,jx,jy,jz);
 
-            for (j = 0; j < nadj; j++) {
-              if (jcell < nglocal) total[j] += cadelta[jcell][jcorner][j];
-              else total[j] += cadelta_ghost[jcell-nglocal][jcorner][j];
+            for (j = 0; j < ninner; j++) {
+              if (jcell < nglocal) total[j] += idelta[jcell][jcorner][j];
+              else total[j] += idelta_ghost[jcell-nglocal][jcorner][j];
             }
 
           } // end jx
         } // end jy
       } // end jz
 
-      //double sumtotal = 0.0;
-      //for (j = 0; j < nadj; j++) sumtotal += total[j];
-      //if(sumtotal > 0)
-      //  printf("ic: %i; i: %i: sum: %4.3e\n", icell, i, sumtotal);
-
-      for (j = 0; j < nadj; j++)
-        cavalues[icell][i][j] -= total[j];
-
-      /*for (j = 0; j < nadj; j++) {
-        if(total[j] > 0)
-        printf("ic: %i; i: %i; j: %i; t: %2.1e; cv: %2.1e\n", icell, i, j, total[j], cavalues[icell][i][j]);
-      }*/
+      for (j = 0; j < ninner; j++)
+        ivalues[icell][i][j] -= total[j];
 
     } // end corners
   } // end cells
-
-  //error->one(FLERR,"ck sync adj out");
-}
-
-
-/* ----------------------------------------------------------------------
-   sync all copies of corner points values for all owned grid cells
-   algorithm:
-     comm my cdelta values that are shared by neighbor
-     each corner point is shared by N cells, less on borders
-     dsum = sum of decrements to that point by all N cells
-     newvalue = MAX(oldvalue-dsum,0)
-   all N copies of corner pt are set to newvalue
-     in numerically consistent manner (same order of operations)
-------------------------------------------------------------------------- */
-
-void FixAblate::sync()
-{
-  int i,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
-  int icell,jcell;
-  double total;
-
-  //double omass=0.0;
-  //double nmass=0.0;
-
-  comm_neigh_corners(CDELTA);
-
-  // perform update of corner pts for all my owned grid cells
-  //   using contributions from all cells that share the corner point
-  // insure order of numeric operations will give exact same answer
-  //   for all Ncorner duplicates of a corner point (stored by other cells)
-
-  Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-
-  for (icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-
-    ix = ixyz[icell][0];
-    iy = ixyz[icell][1];
-    iz = ixyz[icell][2];
-
-    // loop over corner points
-
-    for (i = 0; i < ncorner; i++) {
-
-      // ixyz first = offset from icell of lower left cell of 2x2x2 stencil
-      //              that shares the Ith corner point
-
-      ixfirst = (i % 2) - 1;
-      iyfirst = (i/2 % 2) - 1;
-      if (dim == 2) izfirst = 0;
-      else izfirst = (i / 4) - 1;
-
-      // loop over 2x2x2 stencil of cells that share the corner point
-      // also works for 2d, since izfirst = 0
-
-      total = 0.0;
-      jcorner = ncorner;
-
-      for (jz = izfirst; jz <= izfirst+1; jz++) {
-        for (jy = iyfirst; jy <= iyfirst+1; jy++) {
-          for (jx = ixfirst; jx <= ixfirst+1; jx++) {
-            jcorner--;
-
-            // check if neighbor cell is within bounds of ablate grid
-
-            if (ix+jx < 1 || ix+jx > nx) continue;
-            if (iy+jy < 1 || iy+jy > ny) continue;
-            if (iz+jz < 1 || iz+jz > nz) continue;
-
-            // jcell = local index of (jx,jy,jz) neighbor cell of icell
-
-            jcell = walk_to_neigh(icell,jx,jy,jz);
-
-            // update total with one corner point of jcell
-            // jcorner descends from ncorner
-
-            if (jcell < nglocal) total += cdelta[jcell][jcorner];
-            else total += cdelta_ghost[jcell-nglocal][jcorner];
-          }
-        }
-      }
-
-
-      if (total > 0.0) cvalues[icell][i] -= total;
-
-      //nmass += cvalues[icell][i];
-      //omass += ocvalues[icell][i];
-
-      if (cvalues[icell][i] < 0) cvalues[icell][i] = 0.0;
-
-      //if (total > cvalues[icell][i]) cvalues[icell][i] = 0.0;
-      //else cvalues[icell][i] -= total;
-
-    }
-  }
-  //printf("d: %4.3e; sum_delta: %4.3e\n", omass-nmass, pow(2,dim)*sum_delta);
 }
 
 /* ----------------------------------------------------------------------
-   sync and update corner values.
+   version of decrement_multi_inside() for inner indices
 ------------------------------------------------------------------------- */
 
-void FixAblate::sync_distributed_inside()
+void FixAblate::decrement_inner_multi_inside()
 {
-  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
-  int icell,jcell;
-  double total;
-
-  //double omass = 0.0;
-  //double nmass = 0.0;
-  //printf("sync distr out\n");
-
-  comm_neigh_corners(CDELTA);
-
-  // perform update of corner pts for all my owned grid cells
-  //   using contributions from all cells that share the corner point
-  // insure order of numeric operations will give exact same answer
-  //   for all Ncorner duplicates of a corner point (stored by other cells)
-
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  for (icell = 0; icell < nglocal; icell++) {
+  int i,j,k;
+  int i_inner, i_neighbor_corner;
+  int Nneigh, *ineighbors, *neighbors, oinner, kcorner;
+  double total_remain, nvertices;
+
+  for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
 
-    ix = ixyz[icell][0];
-    iy = ixyz[icell][1];
-    iz = ixyz[icell][2];
+    for (i = 0; i < ncorner; i++)
+      for (j = 0; j < ninner; j++) idelta[icell][i][j] = 0.0;
 
-    //for (i = 0; i < ncorner; i++) {
-    //  if (nvert[icell][i] > 0)
-    //    printf("ic: %i; i: %i; nv: %2.1e\n", icell, i, nvert[icell][i]);
-    //}
-
-    // loop over corner points
+    if (dim == 2) mark_corners_2d(icell);
+    else mark_corners_3d(icell);
 
     for (i = 0; i < ncorner; i++) {
 
-      // ixyz first = offset from icell of lower left cell of 2x2x2 stencil
-      //              that shares the Ith corner point
+      // corner neighbors
 
-      ixfirst = (i % 2) - 1;
-      iyfirst = (i/2 % 2) - 1;
-      if (dim == 2) izfirst = 0;
-      else izfirst = (i / 4) - 1;
+      neighbors = corner_neighbor[i];
 
-      // loop over 2x2x2 stencil of cells that share the corner point
-      // also works for 2d, since izfirst = 0
+      // inner neighbors that point in dir. of corner neighbors
 
-      total = 0.0;
-      jcorner = ncorner;
+      ineighbors = inner_neighbor[i];
 
-      for (jz = izfirst; jz <= izfirst+1; jz++) {
-        for (jy = iyfirst; jy <= iyfirst+1; jy++) {
-          for (jx = ixfirst; jx <= ixfirst+1; jx++) {
-            jcorner--;
+      for (k = 0; k < dim; k++) {
+        i_inner = ineighbors[k];
+        i_neighbor_corner = neighbors[k];
 
-            // check if neighbor cell is within bounds of ablate grid
+        if (ivalues[icell][i][i_inner] < 0) {
 
-            if (ix+jx < 1 || ix+jx > nx) continue;
-            if (iy+jy < 1 || iy+jy > ny) continue;
-            if (iz+jz < 1 || iz+jz > nz) continue;
+          // is the neighbor corner inside?
 
-            // jcell = local index of (jx,jy,jz) neighbor cell of icell
+          if (refcorners[i_neighbor_corner] == 1) {
 
-            jcell = walk_to_neigh(icell,jx,jy,jz);
+            // which inner index for connected corner point
 
-            // update total with one corner point of jcell
-            // jcorner descends from ncorner
+            if (i_inner == 0) oinner = 1;
+            else if (i_inner == 1) oinner = 0;
+            else if (i_inner == 2) oinner = 3;
+            else if (i_inner == 3) oinner = 2;
+            else if (i_inner == 4) oinner = 5;
+            else if (i_inner == 5) oinner = 4;
 
-            if (jcell < nglocal) {
-              if (cdelta[jcell][jcorner] > 0)
-                total += cdelta[jcell][jcorner];
-            } else {
-              if (cdelta_ghost[jcell-nglocal][jcorner] > 0)
-                total += cdelta_ghost[jcell-nglocal][jcorner];
-            }
+            total_remain = fabs(ivalues[icell][i][i_inner]);
 
+            idelta[icell][i_neighbor_corner][oinner] += total_remain;
           }
-        }
-      }
+        } // end if for negative cvalues
+      } // end  k - neighbors
 
-      if (total > 0.0) {
+      // zero out negative values and adjust for inner
 
-        if (dim == 2) total *= 0.5;
-        else total *= 0.25;
+      for (j = 0; j < ninner; j++)
+        if (ivalues[icell][i][j] < 0) ivalues[icell][i][j] = 0.0;
 
-        //printf("ic: %i; i: %i; tot: %2.1e; cv: %2.1e\n", icell, i, total, cvalues[icell][i]);
-
-        cvalues[icell][i] -= total;
-      }
-
-      //omass += ocvalues[icell][i];
-      //nmass += cvalues[icell][i];
-
-      if (cvalues[icell][i] < 0) cvalues[icell][i] = 0.0;
-
-      //if (cvalues[icell][i] > thresh && icell == 0)
-      //  printf("ic: %i; i: %i; tot: %3.2e; cv: %3.2e\n", icell, i, total, cvalues[icell][i]);
-
-    } // end corners
+    } // end corner
   } // end cells
-
-  //printf("d: %4.3e; sum_delta: %4.3e\n", omass-nmass, pow(2,dim)*sum_delta);
-  //error->one(FLERR,"ck");
 }
 
 /* ----------------------------------------------------------------------
-   sync and update corner values. some values may be negative. this is
-   ok and will be handled in proceeding routines
+   version of sync_multi_inside() for inner indices
 ------------------------------------------------------------------------- */
 
-void FixAblate::sync_adjacent_distributed_inside()
+void FixAblate::sync_inner_multi_inside()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
   int icell,jcell;
-  int ndelta[nadj];
-  double total[nadj], ctotal, iavg, oiavg, diavg;
+  double total[ninner];
 
-  //double omass = 0.0;
-  //double nmass = 0.0;
   comm_neigh_corners(CDELTA);
-
-  // perform update of corner pts for all my owned grid cells
-  //   using contributions from all cells that share the corner point
-  // insure order of numeric operations will give exact same answer
-  //   for all Ncorner duplicates of a corner point (stored by other cells)
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -2145,27 +1879,14 @@ void FixAblate::sync_adjacent_distributed_inside()
     iy = ixyz[icell][1];
     iz = ixyz[icell][2];
 
-    // loop over corner points
-
     for (i = 0; i < ncorner; i++) {
-
-      //oiavg = 0.0;
-      //for (j = 0; j < nadj; j++) oiavg += cavalues[icell][i][j];
-      //oiavg /= nadj;
-
-      // ixyz first = offset from icell of lower left cell of 2x2x2 stencil
-      //              that shares the Ith corner point
 
       ixfirst = (i % 2) - 1;
       iyfirst = (i/2 % 2) - 1;
       if (dim == 2) izfirst = 0;
       else izfirst = (i / 4) - 1;
 
-      // loop over 2x2x2 stencil of cells that share the corner point
-      // also works for 2d, since izfirst = 0
-
-      for (j = 0; j < nadj; j++) total[j] = 0.0;
-      ctotal = 0.0;
+      for (j = 0; j < ninner; j++) total[j] = 0.0;
 
       jcorner = ncorner;
 
@@ -2174,35 +1895,23 @@ void FixAblate::sync_adjacent_distributed_inside()
           for (jx = ixfirst; jx <= ixfirst+1; jx++) {
             jcorner--;
 
-            // check if neighbor cell is within bounds of ablate grid
-
             if (ix+jx < 1 || ix+jx > nx) continue;
             if (iy+jy < 1 || iy+jy > ny) continue;
             if (iz+jz < 1 || iz+jz > nz) continue;
 
-            // jcell = local index of (jx,jy,jz) neighbor cell of icell
-
             jcell = walk_to_neigh(icell,jx,jy,jz);
-
-            // update total with one corner point of jcell
-            // jcorner descends from ncorner
 
             if (jcell < nglocal) {
 
-              // inner indices not aligning
-
-              for (j = 0; j < nadj; j++) {
-                if (cadelta[jcell][jcorner][j] > 0) {
-                  total[j] += cadelta[jcell][jcorner][j]; //wrong
-                  //printf("icell %i; i: %i; jcell: %i; jcorner: %i; j: %i; tot: %3.2e\n", icell, i, jcell, jcorner, j, cadelta[jcell][jcorner][j]);
-                  //ctotal += cadelta[jcell][jcorner][j];
+              for (j = 0; j < ninner; j++) {
+                if (idelta[jcell][jcorner][j] > 0) {
+                  total[j] += idelta[jcell][jcorner][j];
                 }
               }
             } else {
-              for (j = 0; j < nadj; j++) {
-                if (cadelta_ghost[jcell-nglocal][jcorner][j] > 0) {
-                  total[j] += cadelta_ghost[jcell-nglocal][jcorner][j];
-                  //ctotal += cadelta_ghost[jcell-nglocal][jcorner][j];
+              for (j = 0; j < ninner; j++) {
+                if (idelta_ghost[jcell-nglocal][jcorner][j] > 0) {
+                  total[j] += idelta_ghost[jcell-nglocal][jcorner][j];
                 }
               }
             }
@@ -2211,99 +1920,66 @@ void FixAblate::sync_adjacent_distributed_inside()
         } // jy
       } // jx
 
-      for (j = 0; j < nadj; j++) {
+      for (j = 0; j < ninner; j++) {
         if (total[j] > 0.0) {
 
           if (dim == 2) total[j] *= 0.5;
           else total[j] *= 0.25;
 
-          // there are decrements from neighboring images which do 
-          // not get sync'd?
-          cavalues[icell][i][j] -= total[j];
-
-          //printf("ic: %i; i: %i; j: %i; tot: %3.2e; cv: %3.2e\n", icell, i, j, total[j], cavalues[icell][i][j]);
+          ivalues[icell][i][j] -= total[j];
 
         }
       }
 
-      /*
-      // scale all inner values so same amoutn of mass lost as cell decrement
-      if (dim == 2) ctotal *= 0.5;
-      else ctotal *= 0.25;
-
-      iavg = 0.0;
-      for (j = 0; j < nadj; j++) iavg += cavalues[icell][i][j];
-      iavg /= nadj;
-
-      oiavg -= ctotal;
-
-      diavg = iavg - oiavg;
-      for (j = 0; j < nadj; j++) cavalues[icell][i][j] -= diavg;
-      */
-
-      /*double oavg = 0.0;
-      double navg = 0.0;
-      for (j = 0; j < nadj; j++) { 
-        oavg += ocavalues[icell][i][j];
-        navg += cavalues[icell][i][j];
-      }
-
-      omass += oavg/nadj;
-      nmass += navg/nadj;*/
-
-      for(j = 0; j < nadj; j++)
-        if (cavalues[icell][i][j] < 0) cavalues[icell][i][j] = 0.0;
-
-
-      //if(ctotal > 0.0)
-      //  printf("iavg: %4.3e; oiavg: %4.3e; ctotal: %4.3e; diavg: %4.3e\n", iavg, oiavg+ctotal, ctotal, diavg);
-
-      //if (cavalues[icell][i][0] > thresh && icell == 0)
-      //  printf("ic: %i; i: %i; j: %i; tot: %3.2e; cv: %3.2e\n", icell, i, 0, total[0], cavalues[icell][i][0]);
+      for(j = 0; j < ninner; j++)
+        if (ivalues[icell][i][j] < 0) ivalues[icell][i][j] = 0.0;
 
     } // end corners
   } // end cells
-
-  //printf("d: %4.3e; sum_delta: %4.3e\n", omass-nmass, pow(2,dim)*sum_delta);
-
-  //error->one(FLERR,"ck");
 }
 
 /* ----------------------------------------------------------------------
-   sync all copies of corner points values for all owned grid cells
-   algorithm for 2D
-------------------------------------------------------------------------- */
-// 0 - connected
-// -1 - out
-// 1 - in
+   determines how many interface points and marks each corner point as
+   either inside, outside, or interface. 
 
-// refcorners follow SPARTA ordering
-// incorners and outcorners follow standard orderin
-int FixAblate::setup_distributed2d(int icell)
+   1 - inside
+   -1 - outside
+   0 - interface
+
+   All neighbors of inside points have values >= thresh. Similarly, all
+   neighbors of outside poitns have values < thresh. An interface point
+   is has a value < thresh but at least one of its neighbors has a value
+   >= thresh. In other words, there is a vertex located between an interface
+   point and an inside point
+
+   refcorners stores corner point type and follows SPARTA corner ordering
+------------------------------------------------------------------------- */
+int FixAblate::mark_corners_2d(int icell)
 {
   for (int i = 0; i < ncorner; i++)
     refcorners[i] = 0;
 
   // mark inside corners first
+
   int Nin = 0;
 
-  if(adjacentflag) {
-    if (cavalues[icell][0][0] > thresh) {
+  if(innerflag) {
+    if (ivalues[icell][0][0] > thresh) {
       refcorners[0] = 1;
       Nin++;
     }
 
-    if (cavalues[icell][1][0] > thresh) {
+    if (ivalues[icell][1][0] > thresh) {
       refcorners[1] = 1;
       Nin++;
     }
 
-    if (cavalues[icell][2][0] > thresh) {
+    if (ivalues[icell][2][0] > thresh) {
       refcorners[2] = 1;
       Nin++;
     }
 
-    if (cavalues[icell][3][0] > thresh) {
+    if (ivalues[icell][3][0] > thresh) {
       refcorners[3] = 1;
       Nin++;
     }
@@ -2330,62 +2006,68 @@ int FixAblate::setup_distributed2d(int icell)
     }
   }
 
-  // built-in lookup table
+  // built-in lookup table for marking outside and interface points
 
-  // 0 inside points -> 1 case
-  int Nout;
+  int Ninterface;
   if (Nin == 0) {
-    Nout = 4;
+    Ninterface = 4;
     refcorners[0] = refcorners[1] = refcorners[2] = refcorners[3] = -1;
-  // 1 inside points -> 4 cases
   } else if (Nin == 1) {
-    Nout = 2;
+    Ninterface = 2;
     if (refcorners[0] == 1) refcorners[3] = -1;
     else if (refcorners[1] == 1) refcorners[2] = -1;
     else if (refcorners[2] == 1) refcorners[1] = -1;
     else refcorners[0] = -1;
   }
-  else if (Nin == 2) Nout = 2;
-  else if (Nin == 3) Nout = 1;
-  else Nout = 0;
+  else if (Nin == 2) Ninterface = 2;
+  else if (Nin == 3) Ninterface = 1;
+  else Ninterface = 0;
 
-  return Nout;
+  return Ninterface;
 }
 
 
 /* ----------------------------------------------------------------------
-   sync all copies of corner points values for all owned grid cells
-   algorithm 
+   same as mark_corners_2d() for 3d
+   - bit stores whether corner value is below or above thresh
+   
+   IMPORTANT: decrement_lookup_table follows "standard" ordering reported
+   in the literature and is different from SPARTA. Refer to diagrams in
+   decrement_lookup_table
 ------------------------------------------------------------------------- */
 
-int FixAblate::setup_distributed3d(int icell)
+int FixAblate::mark_corners_3d(int icell)
 {
+
+  // find which corners are inside or outside the surface
+
   int i, bit[8], which;
-  if (adjacentflag) {
+  if (innerflag) {
     for (i = 0; i < ncorner; i++)
-      bit[i] = cavalues[icell][i][0] <= thresh ? 0 : 1;
+      bit[i] = ivalues[icell][i][0] <= thresh ? 0 : 1;
   } else {
     for (i = 0; i < ncorner; i++)
       bit[i] = cvalues[icell][i] <= thresh ? 0 : 1;
   }
 
+  // find configuration case (whic)
+  // note: that because there are two different orderings, some indices
+  // are switched
+
   which = (bit[6] << 7) + (bit[7] << 6) + (bit[5] << 5) + (bit[4] << 4) +
     (bit[2] << 3) + (bit[3] << 2) + (bit[1] << 1) + bit[0];
 
-  // find number of nonzero corner points and index of minimum corner
-  // note: Nin + Nout does not always equal ncorner
+  // find how many inside and interface points based on configuration
+  // note: Nin + Ninterface does not always equal ncorner
+
   int Nin = Ninside[which];
-  int Nout = Noutside[which];
+  int Ninterface = Noutside[which];
 
   int *incorners, *outcorners;
-  incorners = inside[which]; // returns inside
-  outcorners = outside[which]; // returns connected
+  incorners = inside[which]; // returns list of inside corner points
+  outcorners = outside[which]; // returns list of oustide cornr points
 
-  // record which are inside and outside
-
-  // out = -1
-  // connected = 0
-  // in = 1
+  // mark the outside, then inside, then interface points
 
   int icorner;
   for (i = 0; i < ncorner; i++)
@@ -2399,7 +2081,7 @@ int FixAblate::setup_distributed3d(int icell)
     else refcorners[incorners[i]] = 1;
   }
 
-  for (i = 0; i < Nout; i++) {
+  for (i = 0; i < Ninterface; i++) {
     if (outcorners[i] == 2) refcorners[3] = 0;
     else if (outcorners[i] == 3) refcorners[2] = 0;
     else if (outcorners[i] == 6) refcorners[7] = 0;
@@ -2407,7 +2089,7 @@ int FixAblate::setup_distributed3d(int icell)
     else refcorners[outcorners[i]] = 0;
   }
 
-  return Nout;
+  return Ninterface;
 }
 
 /* ----------------------------------------------------------------------
@@ -2417,8 +2099,6 @@ int FixAblate::setup_distributed3d(int icell)
 
 void FixAblate::epsilon_adjust()
 {
-  double dcval;
-
   // insure no corner point is within EPSILON of threshold
   // if so, set it to threshold - EPSILON
 
@@ -2439,14 +2119,12 @@ void FixAblate::epsilon_adjust()
 }
 
 /* ----------------------------------------------------------------------
-   adjust corner point values by epsilon of too close to threshold
-   to avoid creating tiny or zero-size surface elements
+   version of epsilon_adjust for inner indices
 ------------------------------------------------------------------------- */
 
-void FixAblate::epsilon_adjust_adjacent()
+void FixAblate::epsilon_adjust_inner()
 {
   int allin, mixflag;
-  double dcval;
 
   // insure no corner point is within EPSILON of threshold
   // if so, set it to threshold - EPSILON
@@ -2461,58 +2139,34 @@ void FixAblate::epsilon_adjust_adjacent()
     for (int i = 0; i < ncorner; i++) {
 
       // check all in or out
-      if (cavalues[icell][i][0] > thresh) allin = 1;
+      if (ivalues[icell][i][0] > thresh) allin = 1;
       else allin = 0;
 
       mixflag = 0;
-      for (int j = 0; j < nadj; j++) {
-        if (cavalues[icell][i][j] < cbufmin && allin) mixflag = 1;
-        if (cavalues[icell][i][j] > cbufmin && !allin) mixflag = 1;
+      for (int j = 0; j < ninner; j++) {
+        if (ivalues[icell][i][j] < cbufmin && allin) mixflag = 1;
+        if (ivalues[icell][i][j] > cbufmin && !allin) mixflag = 1;
       }
 
       // if mixflag = 1, inner indices in disagreement in terms of side
       // set to all out (inside can become out but not vice versa)
       if (mixflag) {
-        for (int j = 0; j < nadj; j++)
-          cavalues[icell][i][j] = cbufmax;
+        for (int j = 0; j < ninner; j++)
+          ivalues[icell][i][j] = cbufmax;
 
       } else {
-        for (int j = 0; j < nadj; j++) {
-          if (cavalues[icell][i][j] < cbufmin &&
-              cavalues[icell][i][j] >= thresh)
-            cavalues[icell][i][j] = cbufmax;
-          else if (cavalues[icell][i][j] > cbufmax &&
-                   cavalues[icell][i][j] < thresh)
-            cavalues[icell][i][j] = cbufmax;
+        for (int j = 0; j < ninner; j++) {
+          if (ivalues[icell][i][j] < cbufmin &&
+              ivalues[icell][i][j] >= thresh)
+            ivalues[icell][i][j] = cbufmax;
+          else if (ivalues[icell][i][j] > cbufmax &&
+                   ivalues[icell][i][j] < thresh)
+            ivalues[icell][i][j] = cbufmax;
         }
       }
 
     } // end corner
   } // end cells
-
-  /*int bad;
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-
-    // loop over corner points
- 
-    for (int i = 0; i < ncorner; i++) {
-      if(cavalues[icell][i][0] < thresh) allin = 0;
-      else allin = 1;
-      bad = 0;
-      for (int j = 0; j < nadj; j++) {
-        if(cavalues[icell][i][j] > thresh && !allin) bad = 1;
-        if(cavalues[icell][i][j] < thresh && allin) bad = 1;
-      }
-      if(bad) {
-        for (int j = 0; j < nadj; j++) {
-          printf("cval: %4.3e\n", cavalues[icell][i][j]);
-        }
-        error->one(FLERR,"bad");
-      }
-    }
-  }*/
 }
 
 /* ----------------------------------------------------------------------
@@ -2711,7 +2365,7 @@ void FixAblate::comm_neigh_corners(int which)
   // ncomm = ilocal + Ncorner values
 
   int ncomm;
-  if(adjacentflag) ncomm = 1 + ncorner*nadj;
+  if(innerflag) ncomm = 1 + ncorner*ninner;
   else ncomm = 1 + ncorner;
 
   if (nsend*ncomm > maxbuf) {
@@ -2738,15 +2392,15 @@ void FixAblate::comm_neigh_corners(int which)
         for (j = 0; j < ncorner; j++)
           sbuf[m++] = nvert[icell][j];
       } else {
-        if (adjacentflag) {
+        if (innerflag) {
           if (which == CDELTA) {
             for (j = 0; j < ncorner; j++)
-              for (k = 0; k < nadj; k++)
-                sbuf[m++] = cadelta[icell][j][k];
+              for (k = 0; k < ninner; k++)
+                sbuf[m++] = idelta[icell][j][k];
           } else if (which == CVALUE) {
             for (j = 0; j < ncorner; j++)
-              for (k = 0; k < nadj; k++)
-               sbuf[m++] = cavalues[icell][j][k];
+              for (k = 0; k < ninner; k++)
+               sbuf[m++] = ivalues[icell][j][k];
           }
         } else {
           if (which == CDELTA) {
@@ -2774,10 +2428,10 @@ void FixAblate::comm_neigh_corners(int which)
   // realloc cdelta_ghost if necessary
 
   if (grid->nghost > maxghost) {
-    if (adjacentflag) {
-      memory->destroy(cadelta_ghost);
+    if (innerflag) {
+      memory->destroy(idelta_ghost);
       maxghost = grid->nghost;
-      memory->create(cadelta_ghost,maxghost,ncorner,nadj,"ablate:cadelta_ghost");
+      memory->create(idelta_ghost,maxghost,ncorner,ninner,"ablate:idelta_ghost");
     } else {
       memory->destroy(cdelta_ghost);
       maxghost = grid->nghost;
@@ -2805,10 +2459,10 @@ void FixAblate::comm_neigh_corners(int which)
         nvert_ghost[icell][j] = rbuf[m++];
     } else {
 
-      if (adjacentflag) {
+      if (innerflag) {
         for (j = 0; j < ncorner; j++)
-          for (k = 0; k < nadj; k++)
-            cadelta_ghost[icell][j][k] = rbuf[m++];
+          for (k = 0; k < ninner; k++)
+            idelta_ghost[icell][j][k] = rbuf[m++];
       } else {
         for (j = 0; j < ncorner; j++)
           cdelta_ghost[icell][j] = rbuf[m++];
@@ -2876,13 +2530,13 @@ int FixAblate::pack_grid_one(int icell, char *buf, int memflag)
   Grid::ChildCell *cells = grid->cells;
   Grid::SplitInfo *sinfo = grid->sinfo;
 
-  if (!adjacentflag) {
+  if (!innerflag) {
     if (memflag) memcpy(ptr,cvalues[icell],ncorner*sizeof(double));
     ptr += ncorner*sizeof(double);
   } else {
     for(int j = 0; j < ncorner; j++) {
-      if (memflag) memcpy(ptr,cavalues[icell][j],nadj*sizeof(double));
-      ptr += nadj*sizeof(double);
+      if (memflag) memcpy(ptr,ivalues[icell][j],ninner*sizeof(double));
+      ptr += ninner*sizeof(double);
     }
   }
 
@@ -2919,13 +2573,13 @@ int FixAblate::pack_grid_one(int icell, char *buf, int memflag)
     for (int i = 0; i < nsplit; i++) {
       int jcell = sinfo[isplit].csubs[i];
       
-      if (!adjacentflag) {
+      if (!innerflag) {
         if (memflag) memcpy(ptr,cvalues[jcell],ncorner*sizeof(double));
         ptr += ncorner*sizeof(double);
       } else {
         for(int j = 0; j < ncorner; j++) {
-          if (memflag) memcpy(ptr,cavalues[jcell][j],nadj*sizeof(double));
-          ptr += nadj*sizeof(double);
+          if (memflag) memcpy(ptr,ivalues[jcell][j],ninner*sizeof(double));
+          ptr += ninner*sizeof(double);
         }
       }
 
@@ -2948,13 +2602,13 @@ int FixAblate::unpack_grid_one(int icell, char *buf)
 
   grow_percell(1);
 
-  if (!adjacentflag) {
+  if (!innerflag) {
     memcpy(cvalues[icell],ptr,ncorner*sizeof(double));
     ptr += ncorner*sizeof(double);
   } else {
     for(int j = 0; j < ncorner; j++) {
-      memcpy(cavalues[icell][j],ptr,nadj*sizeof(double));
-      ptr += nadj*sizeof(double);
+      memcpy(ivalues[icell][j],ptr,ninner*sizeof(double));
+      ptr += ninner*sizeof(double);
     }
   }
 
@@ -2986,13 +2640,13 @@ int FixAblate::unpack_grid_one(int icell, char *buf)
     for (int i = 0; i < nsplit; i++) {
       int jcell = sinfo[isplit].csubs[i];
 
-      if (!adjacentflag) {
+      if (!innerflag) {
         memcpy(cvalues[jcell],ptr,ncorner*sizeof(double));
         ptr += ncorner*sizeof(double);
       } else {
         for(int j = 0; j < ncorner; j++) {
-          memcpy(cavalues[jcell][j],ptr,nadj*sizeof(double));
-          ptr += nadj*sizeof(double);
+          memcpy(ivalues[jcell][j],ptr,ninner*sizeof(double));
+          ptr += ninner*sizeof(double);
         }
       }
 
@@ -3011,11 +2665,11 @@ int FixAblate::unpack_grid_one(int icell, char *buf)
 
 void FixAblate::copy_grid_one(int icell, int jcell)
 {
-  if (!adjacentflag) {
+  if (!innerflag) {
     memcpy(cvalues[jcell],cvalues[icell],ncorner*sizeof(double));
   } else {
     for (int j = 0; j < ncorner; j++)
-      memcpy(cavalues[jcell][j],cavalues[icell][j],nadj*sizeof(double));
+      memcpy(ivalues[jcell][j],ivalues[icell][j],ninner*sizeof(double));
   }
 
   if (tvalues_flag) tvalues[jcell] = tvalues[icell];
@@ -3040,12 +2694,12 @@ void FixAblate::add_grid_one()
 {
   grow_percell(1);
 
-  if (!adjacentflag) {
+  if (!innerflag) {
     for (int i = 0; i < ncorner; i++) cvalues[nglocal][i] = 0.0;
   } else {
     for (int i = 0; i < ncorner; i++)
-      for (int j = 0; j < nadj; j++)
-        cavalues[nglocal][i][j] = 0.0;
+      for (int j = 0; j < ninner; j++)
+        ivalues[nglocal][i][j] = 0.0;
   }
 
   if (tvalues_flag) tvalues[nglocal] = 0;
@@ -3079,19 +2733,16 @@ void FixAblate::grow_percell(int nnew)
   if (nglocal+nnew < maxgrid) return;
   if (nnew == 0) maxgrid = nglocal;
   else maxgrid += DELTAGRID;
-  if (adjacentflag) memory->grow(cavalues,maxgrid,ncorner,nadj,"ablate:cavalues");
+  if (innerflag) memory->grow(ivalues,maxgrid,ncorner,ninner,"ablate:ivalues");
   else memory->grow(cvalues,maxgrid,ncorner,"ablate:cvalues");
   if (tvalues_flag) memory->grow(tvalues,maxgrid,"ablate:tvalues");
   memory->grow(ixyz,maxgrid,3,"ablate:ixyz");
   memory->grow(mcflags,maxgrid,4,"ablate:mcflags");
   memory->grow(celldelta,maxgrid,"ablate:celldelta");
-  if (adjacentflag) memory->grow(cadelta,maxgrid,ncorner,nadj,"ablate:cadelta");
+  if (innerflag) memory->grow(idelta,maxgrid,ncorner,ninner,"ablate:idelta");
   else memory->grow(cdelta,maxgrid,ncorner,"ablate:cdelta");
-  memory->grow(nvert,maxgrid,ncorner,"ablate:nvert");
-
-  //if (adjacentflag) memory->grow(ocavalues,maxgrid,ncorner,nadj,"ablate:ocavalues");
-  //else memory->grow(ocvalues,maxgrid,ncorner,"ablate:ocvalues");
-
+  if (!innerflag && multiflag)
+    memory->grow(nvert,maxgrid,ncorner,"ablate:nvert");
   memory->grow(numsend,maxgrid,"ablate:numsend");
 
   array_grid = cvalues;
@@ -3134,12 +2785,12 @@ double FixAblate::compute_scalar()
     if (dim == 2 && (ix == 0 || iy == 0)) continue;
     if (dim == 3 && (ix == 0 || iy == 0 || iz == 0)) continue;
 
-    if (!adjacentflag)
+    if (!innerflag)
       sum += cvalues[icell][0];
     else {
       cavg = 0.0;
-      for (int j = 0; j < nadj; j++) cavg += cavalues[icell][0][j];
-      sum += cavg/nadj;
+      for (int j = 0; j < ninner; j++) cavg += ivalues[icell][0][j];
+      sum += cavg/ninner;
     }
 
   }
@@ -3168,14 +2819,14 @@ double FixAblate::compute_vector(int i)
 
 void FixAblate::process_args(int narg, char **arg)
 {
-  distributedflag = 0;
+  multiflag = 0;
 
   int iarg = 0;
   while (iarg < narg) {
-    if(strcmp(arg[iarg],"distributed") == 0) {
+    if(strcmp(arg[iarg],"multiple") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
-      if (strcmp(arg[iarg+1],"no") == 0) distributedflag = 0;
-      else if (strcmp(arg[iarg+1],"yes") == 0) distributedflag = 1;
+      if (strcmp(arg[iarg+1],"no") == 0) multiflag = 0;
+      else if (strcmp(arg[iarg+1],"yes") == 0) multiflag = 1;
       else error->all(FLERR,"Illegal fix_ablate command");
       iarg += 2;
     } else error->all(FLERR,"Illegal fix_ablate command");
@@ -3185,17 +2836,20 @@ void FixAblate::process_args(int narg, char **arg)
 /* ----------------------------------------------------------------------
    memory usage
 ------------------------------------------------------------------------- */
-// TODO: Uppdate memory to account for adjacent and vertices
+
 double FixAblate::memory_usage()
 {
   double bytes = 0.0;
-  bytes += maxgrid*ncorner * sizeof(double);   // cvalues
+  if (innerflag) bytes += maxgrid*ncorner*ninner * sizeof(double); // ivalues
+  else bytes += maxgrid*ncorner * sizeof(double);   // cvalues
   if (tvalues_flag) bytes += maxgrid * sizeof(int);   // tvalues
   bytes += maxgrid*3 * sizeof(int);            // ixyz
   // NOTE: add for mcflags if keep
   bytes += maxgrid * sizeof(double);           // celldelta
-  bytes += maxgrid*ncorner * sizeof(double);   // cdelta
-  bytes += maxghost*ncorner * sizeof(double);  // cdelta_ghost
+  if (innerflag) bytes += maxgrid*ncorner*ninner * sizeof(double); // idelta
+  else bytes += maxgrid*ncorner * sizeof(double);   // cdelta
+  if (innerflag) bytes += maxgrid*ncorner*ninner * sizeof(double); // idelta_ghost
+  else bytes += maxgrid*ncorner * sizeof(double);   // cdelta_ghost
   bytes += 3*maxsend * sizeof(int);            // proclist,locallist,numsend
   bytes += maxbuf * sizeof(double);            // sbuf
   return bytes;
