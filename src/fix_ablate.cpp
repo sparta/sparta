@@ -216,8 +216,8 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   nvert = NULL;
   nvert_ghost = NULL;
 
-  ocvalues = NULL;
-  ocavalues = NULL;
+  //ocvalues = NULL;
+  //ocavalues = NULL;
 
   numsend = NULL;
   maxgrid = maxghost = 0;
@@ -279,8 +279,8 @@ FixAblate::~FixAblate()
   memory->destroy(nvert);
   memory->destroy(nvert_ghost);
 
-  memory->destroy(ocvalues);
-  memory->destroy(ocavalues);
+  //memory->destroy(ocvalues);
+  //memory->destroy(ocavalues);
 
   memory->destroy(numsend);
 
@@ -354,13 +354,13 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   }
 
   // TODO: temp
-
-  for (int icell = 0; icell < nglocal; icell++) {
+  
+  /*for (int icell = 0; icell < nglocal; icell++) {
     for (int m = 0; m < ncorner; m++) {
       if (cvalues[icell][m] < thresh) cvalues[icell][m] = 0.0;
       else cvalues[icell][m] = 255.0;
     }
-  }
+  }*/
 
   // set ix,iy,iz indices from 1 to Nxyz for each of my owned grid cells
   // same logic as ReadIsurf::create_hash()
@@ -450,14 +450,14 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
 
   // TODO: temp
 
-  for (int icell = 0; icell < nglocal; icell++) {
+  /*for (int icell = 0; icell < nglocal; icell++) {
     for (int m = 0; m < ncorner; m++) {
       for(int n = 0; n < nadj; n++) {
         if (cavalues[icell][m][n] < thresh) cavalues[icell][m][n] = 0.0;
         else cavalues[icell][m][n] = 255.0;
       }
     }
-  }
+  }*/
 
   // set ix,iy,iz indices from 1 to Nxyz for each of my owned grid cells
   // same logic as ReadIsurf::create_hash()
@@ -918,6 +918,7 @@ void FixAblate::set_delta_uniform()
     }
     if (nin == 0 || nin == ncorner) celldelta[icell] = 0.0;
     else celldelta[icell] = maxrandom*scale;
+    if(nglocal < 10) celldelta[icell] *= icell;
   }
 
   // total decrement for output
@@ -1045,7 +1046,7 @@ void FixAblate::decrement()
     for (i = 0; i < ncorner; i++) cdelta[icell][i] = 0.0;
 
     // record current values to check if total mass is decrementing correctly
-    for (i = 0; i < ncorner; i++) ocvalues[icell][i] = cvalues[icell][i];
+    //for (i = 0; i < ncorner; i++) ocvalues[icell][i] = cvalues[icell][i];
 
     total = celldelta[icell];
     corners = cvalues[icell];
@@ -1086,7 +1087,7 @@ void FixAblate::decrement_adjacent()
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  int i,j,imin,jmin;
+  int i,j,i_inner,jcorner,imin,jmin;
   double minvalue,total;
   int *ineighbors, *neighbors;
   int k, l, oinner, opp;
@@ -1104,21 +1105,12 @@ void FixAblate::decrement_adjacent()
         cadelta[icell][i][j] = 0.0;
 
     // record current values to check if total mass is decrementing correctly
-    for (i = 0; i < ncorner; i++)
-      for (j = 0; j < nadj; j++)
-        ocavalues[icell][i][j] = cavalues[icell][i][j];
+    //for (i = 0; i < ncorner; i++)
+    //  for (j = 0; j < nadj; j++)
+    //    ocavalues[icell][i][j] = cavalues[icell][i][j];
 
 
-    for (i = 0; i < ncorner; i++) {
-      cmax[i] = 0.0;
-      for (j = 0; j < nadj; j++) {
-        cmax[i] = MAX(cmax[i],cavalues[icell][i][j]);
-      } 
-    }        
-
-
-    total = celldelta[icell];
-    //if(total > 0) printf("ic: %i; total: %2.1e\n", icell, total);
+    total = celldelta[icell];//*nadj;
     while (total > 0.0) {
 
       imin = -1;
@@ -1127,15 +1119,25 @@ void FixAblate::decrement_adjacent()
         ineighbors = inner_neighbor[i];
         neighbors = corner_neighbor[i];
 
-        int allzero = 1;
-        for (j = 0; j < nadj; j++)
-          if(cadelta[icell][i][j] > 0.0) allzero = -1;
+        for (j = 0; j < dim; j++) {
 
-        if (cmax[i] > 0.0 &&
-            allzero > 0 &&
-            cmax[i] < minvalue) {
-          imin = i;
-          minvalue = cmax[imin];
+          jcorner = neighbors[j];
+          i_inner = ineighbors[j];
+
+          int opp = 1;
+          if (cavalues[icell][i][0] > thresh 
+            && cavalues[icell][jcorner][0] > thresh) opp = -1;
+          else if (cavalues[icell][i][0] <= thresh
+            && cavalues[icell][jcorner][0] <= thresh) opp = -1;
+
+          if(cadelta[icell][i][i_inner] == 0.0 &&
+             opp > 0 &&
+             cavalues[icell][i][i_inner] > 0.0) {
+            imin = i;
+            jmin = i_inner;
+            minvalue = cavalues[icell][imin][jmin];
+          }
+
         }
       }
 
@@ -1150,20 +1152,21 @@ void FixAblate::decrement_adjacent()
       if (total < minvalue) {
         //for (j = 0; j < dim; j++)
         //  cadelta[icell][imin][ineighbors[j]] += total*2.0;
-        for (j = 0; j < nadj; j++)
-          cadelta[icell][imin][j] += total;
-        //cadelta[icell][imin][jmin] += total;
+        //for (j = 0; j < nadj; j++)
+        //  cadelta[icell][imin][j] += total;
+        cadelta[icell][imin][jmin] += total;
         total = 0.0;
       } else {
         //for (j = 0; j < dim; j++)
         //  cadelta[icell][imin][ineighbors[j]] = minvalue*2.0;
-        for (j = 0; j < nadj; j++)
-          cadelta[icell][imin][j] = minvalue;
-        //cadelta[icell][imin][jmin] = minvalue;
+        //for (j = 0; j < nadj; j++)
+        //  cadelta[icell][imin][j] = minvalue;
+        cadelta[icell][imin][jmin] = minvalue;
         total -= minvalue;
       }
     }
   }
+  //error->one(FLERR,"Ck");
 }
 
 /* ----------------------------------------------------------------------
@@ -1177,8 +1180,8 @@ void FixAblate::sync_adjacent()
   int numin;
   double total[nadj], ctotal, iavg, oiavg, diavg;
 
-  double omass = 0.0;
-  double nmass = 0.0;
+  //double omass = 0.0;
+  //double nmass = 0.0;
 
   comm_neigh_corners(CDELTA);
 
@@ -1220,7 +1223,7 @@ void FixAblate::sync_adjacent()
       // also works for 2d, since izfirst = 0
 
       for (j = 0; j < nadj; j++) total[j] = 0.0;
-      ctotal = 0.0;
+      //ctotal = 0.0;
 
       jcorner = ncorner;
 
@@ -1247,10 +1250,10 @@ void FixAblate::sync_adjacent()
               else total[j] += cadelta_ghost[jcell-nglocal][jcorner][j];
             }
 
-            for (j = 0; j < nadj; j++) {
-              if (jcell < nglocal) ctotal += cadelta[jcell][jcorner][j];
-              else ctotal += cadelta_ghost[jcell-nglocal][jcorner][j];
-            }
+            //for (j = 0; j < nadj; j++) {
+            //  if (jcell < nglocal) ctotal += cadelta[jcell][jcorner][j];
+            //  else ctotal += cadelta_ghost[jcell-nglocal][jcorner][j];
+            //}
 
           }
         }
@@ -1265,8 +1268,10 @@ void FixAblate::sync_adjacent()
 
       // now decrement corners
 
-      for(j = 0; j < nadj; j++)
+      for(j = 0; j < nadj; j++) {
         cavalues[icell][i][j] -= total[j];
+        if (cavalues[icell][i][j] < 0.0) cavalues[icell][i][j] = 0.0;
+      }
 
       // scale all inner values so same amoutn of mass lost as cell decrement
       //if (dim == 2) ctotal *= 0.5;
@@ -1292,12 +1297,12 @@ void FixAblate::sync_adjacent()
       //  error->one(FLERR,"bad inner values - sync");
       //}
 
-      double oavg = 0.0;
+      /*double oavg = 0.0;
       double navg = 0.0;
       for (j = 0; j < nadj; j++) { 
         oavg += ocavalues[icell][i][j];
         navg += cavalues[icell][i][j];
-      }
+      }*/
 
       /*if(sumtotal > 0) {
         printf("icell: %i;  corner: %i\n", icell, i);
@@ -1313,11 +1318,8 @@ void FixAblate::sync_adjacent()
           navg/nadj);
       }*/
 
-      omass += oavg/nadj;
-      nmass += navg/nadj;
-
-      for(j = 0; j < nadj; j++)
-        if (cavalues[icell][i][j] < 0) cavalues[icell][i][j] = 0.0;
+      //omass += oavg/nadj;
+      //nmass += navg/nadj;
 
     } // end corners
   } // end cells
@@ -1559,8 +1561,8 @@ void FixAblate::decrement_distributed_outside()
     }
 
     // record current values to check if total mass is decrementing correctly
-    for (i = 0; i < ncorner; i++)
-      ocvalues[icell][i] = cvalues[icell][i];
+    //for (i = 0; i < ncorner; i++)
+    //  ocvalues[icell][i] = cvalues[icell][i];
 
     if (dim == 2) Nout = setup_distributed2d(icell);
     else Nout = setup_distributed3d(icell);
@@ -1688,9 +1690,9 @@ void FixAblate::decrement_adjacent_distributed_outside()
         for (j = 0; j < nadj; j++) cadelta[icell][i][j] = 0.0;
 
     // record current values to check if total mass is decrementing correctly
-    for (i = 0; i < ncorner; i++)
-      for (j = 0; j < nadj; j++)
-        ocavalues[icell][i][j] = cavalues[icell][i][j];
+    //for (i = 0; i < ncorner; i++)
+    //  for (j = 0; j < nadj; j++)
+    //    ocavalues[icell][i][j] = cavalues[icell][i][j];
 
     if (dim == 2) Nout = setup_distributed2d(icell);
     else Nout = setup_distributed3d(icell);
@@ -1698,7 +1700,7 @@ void FixAblate::decrement_adjacent_distributed_outside()
     if (Nout == 0) continue; // all zero
 
     total = celldelta[icell];
-    perout = total/Nout*nadj;
+    perout = total/Nout;//*nadj;
 
     for (i = 0; i < ncorner; i++) {
 
@@ -1707,11 +1709,16 @@ void FixAblate::decrement_adjacent_distributed_outside()
       ineighbors = inner_neighbor[i];
       neighbors = corner_neighbor[i];
 
+      int Nin = 0;
+      for (j = 0; j < dim; j++) {
+        if (refcorners[neighbors[j]] == 1) Nin++;
+      }
+
       // only decrement inner neighbors
       for (j = 0; j < dim; j++) {
         if (refcorners[neighbors[j]] == 1) {
           i_inner = ineighbors[j];
-          cadelta[icell][i][i_inner] += perout;
+          cadelta[icell][i][i_inner] += perout/Nin;
         }
       }
 
@@ -1719,7 +1726,9 @@ void FixAblate::decrement_adjacent_distributed_outside()
       //  cadelta[icell][i][j] += perout;
 
       //for (j = 0; j < nadj; j++)
-      //  printf("ic: %i; i: %i; j: %i: cd: %2.1e\n", icell, i, j, cadelta[icell][i][j]);
+      //  if(cadelta[icell][i][j] > 1.0)
+      //    printf("ic: %i; i: %i; j: %i: cd: %2.1e\n",
+      //        icell, i, j, cadelta[icell][i][j]);
 
     } // end corners
   } // end cells
@@ -1734,9 +1743,9 @@ void FixAblate::decrement_adjacent_distributed_outside()
           printf("ic: %i; i: %i; j: %i; cd: %2.1e\n", icell, i, j, cadelta[icell][i][j]);
       }
     }
-  }
+  }*/
 
-  error->one(FLERR,"ck");*/
+  //error->one(FLERR,"ck");
 }
 
 
@@ -1878,10 +1887,10 @@ void FixAblate::sync_adjacent_distributed_outside()
         } // end jy
       } // end jz
 
-      double sumtotal = 0.0;
-      for (j = 0; j < nadj; j++) sumtotal += total[j];
-      if(sumtotal > 0)
-        printf("ic: %i; i: %i: sum: %4.3e\n", icell, i, sumtotal);
+      //double sumtotal = 0.0;
+      //for (j = 0; j < nadj; j++) sumtotal += total[j];
+      //if(sumtotal > 0)
+      //  printf("ic: %i; i: %i: sum: %4.3e\n", icell, i, sumtotal);
 
       for (j = 0; j < nadj; j++)
         cavalues[icell][i][j] -= total[j];
@@ -1915,8 +1924,8 @@ void FixAblate::sync()
   int icell,jcell;
   double total;
 
-  double omass=0.0;
-  double nmass=0.0;
+  //double omass=0.0;
+  //double nmass=0.0;
 
   comm_neigh_corners(CDELTA);
 
@@ -1981,8 +1990,8 @@ void FixAblate::sync()
 
       if (total > 0.0) cvalues[icell][i] -= total;
 
-      nmass += cvalues[icell][i];
-      omass += ocvalues[icell][i];
+      //nmass += cvalues[icell][i];
+      //omass += ocvalues[icell][i];
 
       if (cvalues[icell][i] < 0) cvalues[icell][i] = 0.0;
 
@@ -2004,8 +2013,8 @@ void FixAblate::sync_distributed_inside()
   int icell,jcell;
   double total;
 
-  double omass = 0.0;
-  double nmass = 0.0;
+  //double omass = 0.0;
+  //double nmass = 0.0;
   //printf("sync distr out\n");
 
   comm_neigh_corners(CDELTA);
@@ -2089,8 +2098,8 @@ void FixAblate::sync_distributed_inside()
         cvalues[icell][i] -= total;
       }
 
-      omass += ocvalues[icell][i];
-      nmass += cvalues[icell][i];
+      //omass += ocvalues[icell][i];
+      //nmass += cvalues[icell][i];
 
       if (cvalues[icell][i] < 0) cvalues[icell][i] = 0.0;
 
@@ -2116,8 +2125,8 @@ void FixAblate::sync_adjacent_distributed_inside()
   int ndelta[nadj];
   double total[nadj], ctotal, iavg, oiavg, diavg;
 
-  double omass = 0.0;
-  double nmass = 0.0;
+  //double omass = 0.0;
+  //double nmass = 0.0;
   comm_neigh_corners(CDELTA);
 
   // perform update of corner pts for all my owned grid cells
@@ -2140,9 +2149,9 @@ void FixAblate::sync_adjacent_distributed_inside()
 
     for (i = 0; i < ncorner; i++) {
 
-      oiavg = 0.0;
-      for (j = 0; j < nadj; j++) oiavg += cavalues[icell][i][j];
-      oiavg /= nadj;
+      //oiavg = 0.0;
+      //for (j = 0; j < nadj; j++) oiavg += cavalues[icell][i][j];
+      //oiavg /= nadj;
 
       // ixyz first = offset from icell of lower left cell of 2x2x2 stencil
       //              that shares the Ith corner point
@@ -2186,14 +2195,14 @@ void FixAblate::sync_adjacent_distributed_inside()
                 if (cadelta[jcell][jcorner][j] > 0) {
                   total[j] += cadelta[jcell][jcorner][j]; //wrong
                   //printf("icell %i; i: %i; jcell: %i; jcorner: %i; j: %i; tot: %3.2e\n", icell, i, jcell, jcorner, j, cadelta[jcell][jcorner][j]);
-                  ctotal += cadelta[jcell][jcorner][j];
+                  //ctotal += cadelta[jcell][jcorner][j];
                 }
               }
             } else {
               for (j = 0; j < nadj; j++) {
                 if (cadelta_ghost[jcell-nglocal][jcorner][j] > 0) {
                   total[j] += cadelta_ghost[jcell-nglocal][jcorner][j];
-                  ctotal += cadelta_ghost[jcell-nglocal][jcorner][j];
+                  //ctotal += cadelta_ghost[jcell-nglocal][jcorner][j];
                 }
               }
             }
@@ -2232,7 +2241,7 @@ void FixAblate::sync_adjacent_distributed_inside()
       for (j = 0; j < nadj; j++) cavalues[icell][i][j] -= diavg;
       */
 
-      double oavg = 0.0;
+      /*double oavg = 0.0;
       double navg = 0.0;
       for (j = 0; j < nadj; j++) { 
         oavg += ocavalues[icell][i][j];
@@ -2240,7 +2249,7 @@ void FixAblate::sync_adjacent_distributed_inside()
       }
 
       omass += oavg/nadj;
-      nmass += navg/nadj;
+      nmass += navg/nadj;*/
 
       for(j = 0; j < nadj; j++)
         if (cavalues[icell][i][j] < 0) cavalues[icell][i][j] = 0.0;
@@ -2255,9 +2264,9 @@ void FixAblate::sync_adjacent_distributed_inside()
     } // end corners
   } // end cells
 
-  printf("d: %4.3e; sum_delta: %4.3e\n", omass-nmass, pow(2,dim)*sum_delta);
+  //printf("d: %4.3e; sum_delta: %4.3e\n", omass-nmass, pow(2,dim)*sum_delta);
 
-  error->one(FLERR,"ck");
+  //error->one(FLERR,"ck");
 }
 
 /* ----------------------------------------------------------------------
@@ -3080,8 +3089,8 @@ void FixAblate::grow_percell(int nnew)
   else memory->grow(cdelta,maxgrid,ncorner,"ablate:cdelta");
   memory->grow(nvert,maxgrid,ncorner,"ablate:nvert");
 
-  if (adjacentflag) memory->grow(ocavalues,maxgrid,ncorner,nadj,"ablate:ocavalues");
-  else memory->grow(ocvalues,maxgrid,ncorner,"ablate:ocvalues");
+  //if (adjacentflag) memory->grow(ocavalues,maxgrid,ncorner,nadj,"ablate:ocavalues");
+  //else memory->grow(ocvalues,maxgrid,ncorner,"ablate:ocvalues");
 
   memory->grow(numsend,maxgrid,"ablate:numsend");
 
