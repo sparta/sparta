@@ -21,10 +21,17 @@
 
 <LI>thresh = threshold for corner values used to generate implicit surfaces, value > 0.0 and < 255.0 
 
-<LI>mode = <I>inout</I> or <I>ave</I> 
+<LI>mode = <I>inout</I> or <I>ave</I> or <I>inner</I> 
 
 <PRE>  <I>inout</I> = mark corner points as either inside or outside surf
   <I>ave</I> = smooth values by averaging expected corner point values based on intersections between the explicit surfaces and cell edges 
+  <I>inner</I> = mark corners using inner indices 
+</PRE>
+<LI>zero or more keyword/value pairs may be appended 
+
+<LI>keyword = <I>buffer</I> 
+
+<PRE>  <I>buffer</I> value = minimum normalized distance between a vertex and cell corner 
 </PRE>
 
 </UL>
@@ -136,6 +143,14 @@ inferred implicit surface elements will be.
 <P>The threshold must be specified as a floating point value such that 0
 < thresh < 255.
 </P>
+<P>The specified <I>buffer</I> is the minimum allowable distance between the vertex
+of an implicit surface element and a corner point. The value is normalized
+by the cell length so it represents a percentage. For example, using the default
+value of 0.02, any vertex which is within two percent of any cell corner is 
+deemed too close. The vertex location is then pushed away from the corner along
+the cell edge. This approach is known as "isosurface stuffing" by
+Labelle and Shewchuck <A HREF = "#Labelle07">(Labelle07)</A>.
+</P>
 <P>The specified <I>mode</I> can be either <I>inout</I> or <I>ave</I>. The <I>inout</I> mode
 sets corner point values to zero if they are outside the volume or
 area enclosed by the explicit surfaces.  Conversely it sets corner
@@ -160,6 +175,18 @@ intersection point.  When multiple cell edges for the same inside
 corner point are intersected by explicit surface elements, the value
 assigned to the inside corner point is the average of the values
 computed for the individual cell edges.
+</P>
+<IMG SRC = "JPG/inner_values_small.png">
+
+<P>The <I>inner</I> mode utilizes inner indices. Each corner stores 4 values in 
+2D and 6 values in 3D. For each cell edge, there are two inner values 
+located at two different corner values which determine the location of
+the vertex. For example, the location of the purple 'x' mark is 
+determined by the third inner value in the top left corner and the 
+fourth inner value in the bottom left corner. 
+<I>inner</I> does not require averaging since all corner point
+values computed for each vertex can be stored. In general, inner indices
+distorts the surface less during the surface conversion.
 </P>
 <P>NOTE: Regardless of which mode is used, implicit surfaces are an
 approximation to the original explicit surfaces.  In particular:
@@ -236,7 +263,7 @@ distributed.
 </P>
 <P>If particles already exist in the simulation along with the explicit
 surfaces, they will generally end up outside the implicit surfaces (in
-the flow volume) as well.  In some cases the generated implicit
+the flow volume) as well.  In some cases, the generated implicit
 surfaces will reduce the flow volume slightly (for a particular grid
 cell).  If this occurs any particles which were previously outside the
 explicit surfaces but are now inside the implicit surfaces are
@@ -249,6 +276,16 @@ immediately deleted by this command.
 <P><A HREF = "read_surf.html">read_surf</A>, <A HREF = "fix_ablate.html">fix_ablate</A>,
 <A HREF = "write_isurf.html">write_isurf</A>
 </P>
-<P><B>Default:</B> There are no default values.
+<P><B>Default:</B>
+</P>
+<P><I>buffer</I> = 0.02
+</P>
+<HR>
+
+<A NAME = "Labelle07"></A>
+
+<P><B>(Labelle07)</B> F. Labelle and J. R. Shewchuk, Isosurface stuffing: fast
+tetrahedral meshese with good dihedral angels, ACM SIGGRAPH 2007 papers
+(2007).
 </P>
 </HTML>
