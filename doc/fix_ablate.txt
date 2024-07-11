@@ -10,7 +10,7 @@ fix ablate command :h3
 
 [Syntax:]
 
-fix ID ablate group-ID Nevery scale source maxrandom :pre
+fix ID ablate group-ID Nevery scale source maxrandom keyword value ... :pre
 
 ID is documented in "fix"_fix.html command :ulb,l
 ablate = style name of this fix command :l
@@ -21,8 +21,13 @@ source = computeID or fixID or random :l
   computeID = c_ID or c_ID\[n\] for a compute that calculates per grid cell values
   fixID = f_ID or f_ID\[n\] for a fix that calculates per grid cell values
   v_name = per-grid vector calculated by a grid-style variable with name
+  uniform = perform a uniform decrement
   random = perform a random decrement :pre
-maxrandom = maximum per grid cell decrement as an integer (only specified if source = random) :l
+maxrandom = maximum per grid cell decrement as an integer (only specified if source = random or uniform) :l
+zero or more keyword/value pairs may be appended :l
+keyword = {multiple} :l
+  {multiple} value = yes or no :pre
+
 :ule
 
 [Examples:]
@@ -105,6 +110,10 @@ and 1.0.  The second is a random integer between 1 and maxrandom.  If
 the first random # < {scale}, then the second random integer is the
 decrement value for the cell.  Thus {scale} is effectively the
 fraction of grid cells whose corner point values are decremented.
+
+For basic testing of new ablation capabilities, the {source} can be 
+specified as {uniform}. Any cell which contains part of the gas and the surface
+is decremented by {maxrandom}.
 
 :line
 
@@ -192,6 +201,33 @@ the scale of corner point values from 0 to 255.
 
 :line
 
+:c,image(JPG/multipoint_decrement_small.png)
+
+The {multiple} option allows a multipoint decrement to be used. In a cell,
+three types of corners are identified: inside, outside or interface. 
+An [inside] point is a point inside the surface (its values is greater than the specified threshold). An [outside] point is a point that is outside the surface and all corner points adjacent to that corner point within the cell are also 
+outside the surface.  
+An [interface] is a point outside the surface but one of its neighboring points is
+inside. Given a cell decrement, the multipoint decrement distributes that cell
+decrement evenly to each interface point. In the case the interface point 
+becomes negative, the negative value is evenly distributed to each of the
+adjoining inside points. The multipoint decrement may also be used with the inner
+indices.
+
+:c,image(JPG/multi_single_ablation_small.png)
+
+Multipoint decrement is distinct from the single point decrement in SPARTA. 
+A single point decrement visits each corner point one at a time and 
+reduces the minimum corner point value found. 
+The multipoint decrement reduces all interface points. A distributed decrement
+is advantageous when one is interested in preserving cell level features. In 
+the above example, a single cell is ablated (indicated by a red arrow). With a 
+single point decrement, only one corner point is updated and only the left side
+of the affected cell ablates. With the multipoint decrement, two corner points
+are reduced and the entire surface contained within the ablated cell recedes. 
+
+:line
+
 [Restart, output info:]
 
 No information about this fix is written to "binary restart
@@ -224,4 +260,6 @@ This fix can only be used in simulations that define implicit surfaces.
 
 "read isurf"_read_isurf.html
 
-[Default:] none
+[Default:]
+
+{multiple} = no
