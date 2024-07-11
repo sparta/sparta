@@ -16,17 +16,12 @@ variable xl equal 0.0
 variable yl equal 0.0
 variable zl equal -0.5
 
-variable xh equal 16.0
-variable yh equal 8.0
+variable xh equal 22.0
+variable yh equal 10.0
 variable zh equal 0.5
 
-# for debug
-#variable Nx equal 4
-#variable Ny equal 2
-#variable Nz equal 1
-
-variable Nx equal 16
-variable Ny equal 8
+variable Nx equal 44
+variable Ny equal 20
 variable Nz equal 1
 
 boundary		p p p
@@ -41,22 +36,22 @@ global      surfs explicit/distributed
 species			air.species O2
 mixture			air O2 vstream 0.0 0 0 
 
-read_surf               data.rectangle2d
+read_surf               data.etch2d
 surf_collide            1 diffuse 300.0 0.0
 surf_modify             all collide 1
 
-fix			                fablate ablate all 1 1 uniform 1 distributed yes
-create_isurf            all fablate 100.5 inner
+fix			                fablate ablate all 1 1 uniform 1 multiple yes
+create_isurf            all fablate 100.5 inner buffer 0.0005
 
 timestep		0.001
 
-dump                    1 image all 20 snap_rect.*.ppm type type surf one 0.02 particle no box no 0.0 gline yes 0.006 zoom 1.8
-dump_modify             1 scolor * red
+#compute 1 property/grid all vol
+#compute 1r reduce sum c_1[*]
 
-stats			5
+#variable vout equal c_1r
+#fix massr print 5 "${vout}" append vol_inner_multi.dat screen no
+
+stats			1
 stats_style		step cpu np nattempt ncoll nscoll nscheck
 
-run 300
-
-#write_surf ridges_new.*
-#run 5 
+run 200
