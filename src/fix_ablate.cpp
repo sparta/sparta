@@ -195,7 +195,7 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   sum_delta = 0.0;
   ndelete = 0;
 
-  storeflag = innerflag = multiflag = 0;
+  storeflag = innerflag = 0;
   array_grid = cvalues = NULL;
   ivalues = NULL;
   tvalues = NULL;
