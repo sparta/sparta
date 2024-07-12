@@ -349,6 +349,17 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
     if (tvalues_flag) tvalues[icell] = tvalues_caller[icell];
   }
 
+  // set all values to either min or max value
+
+  if (minmaxflag) {
+    for (int icell = 0; icell < nglocal; icell++) {
+      for (int m = 0; m < ncorner; m++) {
+        if (cvalues[icell][m] < thresh) cvalues[icell][m] = 0.0;
+        else cvalues[icell][m] = 255.0;
+      }
+    }
+  }
+
   // set ix,iy,iz indices from 1 to Nxyz for each of my owned grid cells
   // same logic as ReadIsurf::create_hash()
 
@@ -425,6 +436,28 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   nglocal = grid->nlocal;
 
   grow_percell(0);
+
+  // copy caller values into local values of FixAblate
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    for (int m = 0; m < ncorner; m++)
+      for(int n = 0; n < ninner; n++)
+        ivalues[icell][m][n] = ivalues_caller[icell][m][n];
+    if (tvalues_flag) tvalues[icell] = tvalues_caller[icell];
+  }
+
+  // set all values to either min or max value
+
+  if (minmaxflag) {
+    for (int icell = 0; icell < nglocal; icell++) {
+      for (int m = 0; m < ncorner; m++) {
+        for(int n = 0; n < ninner; n++) {
+          if (ivalues[icell][m][n] < thresh) ivalues[icell][m][n] = 0.0;
+          else ivalues[icell][m][n] = 255.0;
+        }
+      }
+    }
+  }
 
   // copy caller values into local values of FixAblate
 
@@ -2820,6 +2853,7 @@ double FixAblate::compute_vector(int i)
 void FixAblate::process_args(int narg, char **arg)
 {
   multiflag = 0;
+  minmaxflag = 0;
 
   int iarg = 0;
   while (iarg < narg) {
@@ -2827,6 +2861,12 @@ void FixAblate::process_args(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
       if (strcmp(arg[iarg+1],"no") == 0) multiflag = 0;
       else if (strcmp(arg[iarg+1],"yes") == 0) multiflag = 1;
+      else error->all(FLERR,"Illegal fix_ablate command");
+      iarg += 2;
+    } else if(strcmp(arg[iarg],"minmax") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
+      if (strcmp(arg[iarg+1],"no") == 0) minmaxflag = 0;
+      else if (strcmp(arg[iarg+1],"yes") == 0) minmaxflag = 1;
       else error->all(FLERR,"Illegal fix_ablate command");
       iarg += 2;
     } else error->all(FLERR,"Illegal fix_ablate command");

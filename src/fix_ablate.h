@@ -65,6 +65,7 @@ class FixAblate : public Fix {
   int storeflag;
   int innerflag;
   int multiflag;
+  int minmaxflag;
   int ncorner;
   int ninner;
   int sgroupbit;
