@@ -530,6 +530,168 @@ void FixAblate::init()
 
 void FixAblate::end_of_step()
 {
+
+/*---------------------------------------------------------------------------*/
+// check cases are consistent
+
+  /*int c0,c1,c2,c3,c4,c5,c6,c7,cval[8],bit[8];
+  int i,j,k,icase,iin,iout;
+  int which, nin, ninter, Nin, Ninter, Nout;
+  int *incorners, *outcorners;
+  int refcorners[8], rcorners[8];
+
+  icase = 0;
+  for (c0 = 0; c0 < 2; c0++) {
+  for (c1 = 0; c1 < 2; c1++) {
+  for (c2 = 0; c2 < 2; c2++) {
+  for (c3 = 0; c3 < 2; c3++) {
+  for (c4 = 0; c4 < 2; c4++) {
+  for (c5 = 0; c5 < 2; c5++) {
+  for (c6 = 0; c6 < 2; c6++) {
+  for (c7 = 0; c7 < 2; c7++) {
+
+    if(c0 == 0) cval[0] = 255.0;
+    else cval[0] = 0.0;
+    if(c1 == 0) cval[1] = 255.0;
+    else cval[1] = 0.0;
+    if(c2 == 0) cval[2] = 255.0;
+    else cval[2] = 0.0;
+    if(c3 == 0) cval[3] = 255.0;
+    else cval[3] = 0.0;
+    if(c4 == 0) cval[4] = 255.0;
+    else cval[4] = 0.0;
+    if(c5 == 0) cval[5] = 255.0;
+    else cval[5] = 0.0;
+    if(c6 == 0) cval[6] = 255.0;
+    else cval[6] = 0.0;
+    if(c7 == 0) cval[7] = 255.0;
+    else cval[7] = 0.0;
+
+    nin = ninter = 0;
+    for (i = 0; i < ncorner; i++) {
+      bit[i] = cval[i] <= thresh ? 0 : 1;
+      if(cval[i] > thresh) nin++;
+      rcorners[i] = -1;
+    }
+
+    for (i = 0; i < ncorner; i++)
+      if(cval[i] > thresh) rcorners[i] = 1;
+
+
+    if(cval[0] < thresh &&
+      (cval[1] > thresh || cval[2] > thresh || cval[4] > thresh)) {
+      ninter++;
+      rcorners[0] = 0;
+    }
+
+
+    if(cval[1] < thresh &&
+      (cval[0] > thresh || cval[3] > thresh || cval[5] > thresh)) {
+      ninter++;
+      rcorners[1] = 0;
+    }
+
+    if(cval[2] < thresh &&
+      (cval[0] > thresh || cval[3] > thresh || cval[6] > thresh)) {
+      ninter++;
+      rcorners[2] = 0;
+    }
+
+    if(cval[3] < thresh &&
+      (cval[1] > thresh || cval[2] > thresh || cval[7] > thresh)) {
+      ninter++;
+      rcorners[3] = 0;
+    }
+
+    if(cval[4] < thresh &&
+      (cval[5] > thresh || cval[6] > thresh || cval[0] > thresh)) {
+      ninter++;
+      rcorners[4] = 0;
+    }
+
+    if(cval[5] < thresh &&
+      (cval[4] > thresh || cval[7] > thresh || cval[1] > thresh)) {
+      ninter++;
+      rcorners[5] = 0;
+    }
+
+    if(cval[6] < thresh &&
+      (cval[4] > thresh || cval[7] > thresh || cval[2] > thresh)) {
+      ninter++;
+      rcorners[6] = 0;
+    }
+
+    if(cval[7] < thresh &&
+      (cval[5] > thresh || cval[6] > thresh || cval[3] > thresh)) {
+      ninter++;
+      rcorners[7] = 0;
+    }
+
+    which = (bit[6] << 7) + (bit[7] << 6) + (bit[5] << 5) + (bit[4] << 4) +
+      (bit[2] << 3) + (bit[3] << 2) + (bit[1] << 1) + bit[0];
+
+    Nin = Ninside[which];
+    Ninter = Noutside[which];
+    Nout = ncorner - Nin - Ninter;
+
+    // check number inside and interface are consistent
+    if (Nin != nin) error->one(FLERR,"incorrect inside");
+    if (Ninter != ninter) error->one(FLERR,"incorrect interface");
+
+    incorners = inside[which]; // returns list of inside corner points
+    outcorners = outside[which]; // returns list of oustide cornr points
+
+    for (int ic = 0; ic < ncorner; ic++)
+      refcorners[ic] = -1;
+
+    for (int ic = 0; ic < Nin; ic++) {
+      if (incorners[ic] == 2) refcorners[3] = 1;
+      else if (incorners[ic] == 3) refcorners[2] = 1;
+      else if (incorners[ic] == 6) refcorners[7] = 1;
+      else if (incorners[ic] == 7) refcorners[6] = 1;
+      else refcorners[incorners[ic]] = 1;
+    }
+
+    for (int ic = 0; ic < Ninter; ic++) {
+      if (outcorners[ic] == 2) refcorners[3] = 0;
+      else if (outcorners[ic] == 3) refcorners[2] = 0;
+      else if (outcorners[ic] == 6) refcorners[7] = 0;
+      else if (outcorners[ic] == 7) refcorners[6] = 0;
+      else refcorners[outcorners[ic]] = 0;
+    }
+
+    // check inside corners marked correctly
+    for (int ic = 0; ic < ncorner; ic++)
+      if (rcorners[ic] != refcorners[ic]) error->one(FLERR,"bad mark");
+
+    printf("case %i ok; in: %i;  %i,%i,%i,%i,%i,%i,%i,%i\n", icase, nin,
+      rcorners[0], rcorners[1], rcorners[2], rcorners[3],
+      rcorners[4], rcorners[5], rcorners[6], rcorners[7]);
+    icase++;
+  }
+  }
+  }
+  }
+  }
+  }
+  }
+  }
+
+  int *neighbors;
+  int *ineighbors;
+  for (int ic = 0; ic < ncorner; ic++) {
+    neighbors = corner_neighbor[ic];
+    ineighbors = inner_neighbor[ic];
+    printf("corner: %i; neighbors: %i -- %i; %i -- %i; %i -- %i\n", ic,
+      neighbors[0], ineighbors[0],
+      neighbors[1], ineighbors[1],
+      neighbors[2], ineighbors[2]);
+  }
+
+  error->one(FLERR,"Ck");*/
+
+/*---------------------------------------------------------------------------*/
+
   // set per-cell delta vector randomly or from compute/fix source
 
   if (which == RANDOM) set_delta_random();
@@ -1247,7 +1409,7 @@ void FixAblate::sync_inner()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
-  double total[ninner];
+  double total[ninner],inner_total;
 
   comm_neigh_corners(CDELTA);
 
@@ -1318,10 +1480,23 @@ void FixAblate::sync_inner()
 
       // now decrement corners
 
+      inner_total = 0.0;
       for(j = 0; j < ninner; j++) {
         ivalues[icell][i][j] -= total[j];
+        inner_total += total[j];
         if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
       }
+
+      // to conserve mass, further adjust each inner indice by 
+
+      inner_total = inner_total*(ninner-1)/ninner;
+      for(j = 0; j < ninner; j++) {
+        ivalues[icell][i][j] -= inner_total;
+        if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
+      }
+
+
+
     } // end corners
   } // end cells
 }
@@ -1897,7 +2072,7 @@ void FixAblate::sync_inner_multi_inside()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
   int icell,jcell;
-  double total[ninner];
+  double total[ninner], inner_total;
 
   comm_neigh_corners(CDELTA);
 
@@ -1953,6 +2128,7 @@ void FixAblate::sync_inner_multi_inside()
         } // jy
       } // jx
 
+      inner_total = 0.0;
       for (j = 0; j < ninner; j++) {
         if (total[j] > 0.0) {
 
@@ -1960,12 +2136,18 @@ void FixAblate::sync_inner_multi_inside()
           else total[j] *= 0.25;
 
           ivalues[icell][i][j] -= total[j];
+          inner_total += total[j];
 
         }
       }
 
-      for(j = 0; j < ninner; j++)
-        if (ivalues[icell][i][j] < 0) ivalues[icell][i][j] = 0.0;
+      // to conserve mass, further adjust each inner indice by 
+
+      inner_total = inner_total*(ninner-1)/ninner;
+      for(j = 0; j < ninner; j++) {
+        ivalues[icell][i][j] -= inner_total;
+        if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
+      }
 
     } // end corners
   } // end cells
