@@ -459,15 +459,6 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
     }
   }
 
-  // copy caller values into local values of FixAblate
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    for (int m = 0; m < ncorner; m++)
-      for(int n = 0; n < ninner; n++)
-        ivalues[icell][m][n] = ivalues_caller[icell][m][n];
-    if (tvalues_flag) tvalues[icell] = tvalues_caller[icell];
-  }
-
   // set ix,iy,iz indices from 1 to Nxyz for each of my owned grid cells
   // same logic as ReadIsurf::create_hash()
 
@@ -2130,6 +2121,7 @@ void FixAblate::sync_inner_multi_inside()
 
       inner_total = 0.0;
       for (j = 0; j < ninner; j++) {
+
         if (total[j] > 0.0) {
 
           if (dim == 2) total[j] *= 0.5;
@@ -2137,7 +2129,6 @@ void FixAblate::sync_inner_multi_inside()
 
           ivalues[icell][i][j] -= total[j];
           inner_total += total[j];
-
         }
       }
 
