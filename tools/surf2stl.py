@@ -97,16 +97,10 @@ def convert(fname,outname):
 import sys,re
 import numpy as np
 
-prefix = sys.argv[1]
-Nfiles = int(sys.argv[2])
-spf = int(sys.argv[3])
-outname = sys.argv[4]
+inname = sys.argv[1]
+outname = sys.argv[2]
 
-ifile = 0;
-for i in range(Nfiles):
-  ifname = prefix + "." + str(ifile)# + ".surf"
-  ioutname = outname + "." + str(ifile) + ".stl"
-  convert(ifname,ioutname)
-  ifile = ifile + spf
+ioutname = outname + ".stl"
+convert(inname,ioutname)
 
 sys.exit()
