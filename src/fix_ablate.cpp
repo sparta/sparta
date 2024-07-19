@@ -1337,7 +1337,7 @@ void FixAblate::decrement_inner()
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
 
-    for (i = 0; i < ncorner; i++) 
+    for (i = 0; i < ncorner; i++)
       for (j = 0; j < ninner; j++)
         idelta[icell][i][j] = 0.0;
 
@@ -1355,12 +1355,12 @@ void FixAblate::decrement_inner()
           jcorner = neighbors[j];
           i_inner = ineighbors[j];
 
-          // only consider inner indices which point to a corner point 
-          // of the opposite type. For example, an inner index which 
+          // only consider inner indices which point to a corner point
+          // of the opposite type. For example, an inner index which
           // is less than thresh should point to an inside corner point
 
           opp = 1;
-          if (ivalues[icell][i][0] > thresh 
+          if (ivalues[icell][i][0] > thresh
             && ivalues[icell][jcorner][0] > thresh) opp = -1;
           else if (ivalues[icell][i][0] <= thresh
             && ivalues[icell][jcorner][0] <= thresh) opp = -1;
@@ -1478,7 +1478,7 @@ void FixAblate::sync_inner()
         if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
       }
 
-      // to conserve mass, further adjust each inner indice by 
+      // to conserve mass, further adjust each inner indice by
 
       inner_total = inner_total*(ninner-1)/ninner;
       for(j = 0; j < ninner; j++) {
@@ -1493,7 +1493,7 @@ void FixAblate::sync_inner()
 }
 
 /* ----------------------------------------------------------------------
-   Part 1 of 2 for multi-point decrement. Determine total amount to 
+   Part 1 of 2 for multi-point decrement. Determine total amount to
    decrement in each interface corner point (an outside corner point
    is connected to an inside one and vice versa). Also determines
    number of vertices around each corner in each cell
@@ -1678,7 +1678,7 @@ void FixAblate::sync_multi_outside()
 }
 
 /* ----------------------------------------------------------------------
-   Part 2 of 2 for multi-point decrement. Based on the value of the 
+   Part 2 of 2 for multi-point decrement. Based on the value of the
    neighboring interface values, update the inside corner point
       - inside corner points must always be > 0.0
 ------------------------------------------------------------------------- */
@@ -1748,7 +1748,7 @@ void FixAblate::decrement_multi_inside()
 
       /*---------------------------------------------------------------*/
 
-      // evenly distribute the underflow from the interface points to the 
+      // evenly distribute the underflow from the interface points to the
       // adjacent inside corner points
 
       if (cvalues[icell][i] < 0) {
@@ -1846,7 +1846,7 @@ void FixAblate::sync_multi_inside()
       if (total > 0.0) {
 
         // the interface corner points were sync'd previously. The total
-        // decrement will be counted by the number of cells which share 
+        // decrement will be counted by the number of cells which share
         // a common edge. This is 2 in 2D and 4 in 3D
 
         if (dim == 2) total *= 0.5;
@@ -1857,7 +1857,7 @@ void FixAblate::sync_multi_inside()
 
       // if decrement is too large, zero out the inside corner point
       // should not underflow significantly. if it does, simulation parameters
-      // need to be changed because ablation time scale is much larger than 
+      // need to be changed because ablation time scale is much larger than
       // the time step
 
       if (cvalues[icell][i] < 0) cvalues[icell][i] = 0.0;
@@ -1876,7 +1876,7 @@ void FixAblate::decrement_inner_multi_outside()
   Grid::ChildInfo *cinfo = grid->cinfo;
 
   int i,j,Nout;
-  int i_inner, *ineighbors, *neighbors;  
+  int i_inner, *ineighbors, *neighbors;
   double total, perout;
 
   // find number of vertices around each corner
@@ -2132,7 +2132,7 @@ void FixAblate::sync_inner_multi_inside()
         }
       }
 
-      // to conserve mass, further adjust each inner indice by 
+      // to conserve mass, further adjust each inner indice by
 
       inner_total = inner_total*(ninner-1)/ninner;
       for(j = 0; j < ninner; j++) {
@@ -2146,7 +2146,7 @@ void FixAblate::sync_inner_multi_inside()
 
 /* ----------------------------------------------------------------------
    determines how many interface points and marks each corner point as
-   either inside, outside, or interface. 
+   either inside, outside, or interface.
 
    1 - inside
    -1 - outside
@@ -2236,7 +2236,7 @@ int FixAblate::mark_corners_2d(int icell)
 /* ----------------------------------------------------------------------
    same as mark_corners_2d() for 3d
    - bit stores whether corner value is below or above thresh
-   
+
    IMPORTANT: decrement_lookup_table follows "standard" ordering reported
    in the literature and is different from SPARTA. Refer to diagrams in
    decrement_lookup_table
@@ -2778,7 +2778,7 @@ int FixAblate::pack_grid_one(int icell, char *buf, int memflag)
     int nsplit = cells[icell].nsplit;
     for (int i = 0; i < nsplit; i++) {
       int jcell = sinfo[isplit].csubs[i];
-      
+
       if (!innerflag) {
         if (memflag) memcpy(ptr,cvalues[jcell],ncorner*sizeof(double));
         ptr += ncorner*sizeof(double);

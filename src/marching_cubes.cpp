@@ -504,9 +504,9 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
       v[5] += inval[5][j];
       v[6] += inval[7][j];
       v[7] += inval[6][j];
-    }      
+    }
 
-    for (i = 0; i < 8; i++) v[i] /= 6; 
+    for (i = 0; i < 8; i++) v[i] /= 6;
 
     // temporary viso values
 
