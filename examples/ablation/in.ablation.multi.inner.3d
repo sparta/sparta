@@ -41,7 +41,7 @@ surf_collide            1 diffuse 300.0 0.0
 surf_modify             all collide 1
 
 fix			                fablate ablate all 1 1 uniform 1 multiple yes
-create_isurf            all fablate 100.5 inner buffer 0.0005
+create_isurf            all fablate 100.5 inner
 
 timestep		0.001
 
@@ -54,4 +54,4 @@ timestep		0.001
 stats			1
 stats_style		step cpu np nattempt ncoll nscoll nscheck
 
-run 200
+run 100
