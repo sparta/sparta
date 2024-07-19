@@ -965,8 +965,6 @@ void CreateISurf::comm_neigh_corners(int which)
 
   // unpack received data into val_ghost = ghost cell corner points
 
-  // NOTE: need to check if hashfilled
-
   cellint cellID;
   Grid::MyHash *hash = grid->hash;
 
