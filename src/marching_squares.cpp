@@ -98,7 +98,7 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
     v00iso = v00 - thresh;
     v01iso = v01 - thresh;
     v10iso = v10 - thresh;
-    v11iso = v11 - thresh; 
+    v11iso = v11 - thresh;
 
     which = (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
 
@@ -355,7 +355,7 @@ void MarchingSquares::invoke(double ***cvalues, int *svalues)
     v00iso = v00 - thresh;
     v01iso = v01 - thresh;
     v10iso = v10 - thresh;
-    v11iso = v11 - thresh; 
+    v11iso = v11 - thresh;
 
     which = (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
 
@@ -543,7 +543,6 @@ void MarchingSquares::invoke(double ***cvalues, int *svalues)
     }
   }
 }
-
 
 /* ----------------------------------------------------------------------
    interpolate function used by both marching squares and cubes

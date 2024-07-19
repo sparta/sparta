@@ -152,8 +152,6 @@ int mldivide4(const double m[4][4], const double *v, double *ans)
   return 0;
 }
 
-
-
 /* ----------------------------------------------------------------------
    compute bounds implied by numeric str with a possible wildcard asterik
    1 = lower bound, Nmax = upper bound
