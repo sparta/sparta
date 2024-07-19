@@ -1938,20 +1938,3 @@ void CreateISurf::process_args(int narg, char **arg)
     } else error->all(FLERR,"Invalid create_isurf command");
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

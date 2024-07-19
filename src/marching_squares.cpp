@@ -544,7 +544,6 @@ void MarchingSquares::invoke(double ***cvalues, int *svalues)
   }
 }
 
-
 /* ----------------------------------------------------------------------
    interpolate function used by both marching squares and cubes
    lo/hi = coordinates of end points of edge of square
