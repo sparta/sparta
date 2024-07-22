@@ -1469,6 +1469,8 @@ void FixAblate::sync_inner()
 
       /*-----------------------------------------------------------*/
 
+      /*
+      KEEP: experimental way to update inner indices
       // now decrement corners
 
       inner_total = 0.0;
@@ -1484,9 +1486,16 @@ void FixAblate::sync_inner()
       for(j = 0; j < ninner; j++) {
         ivalues[icell][i][j] -= inner_total;
         if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
+      }*/
+
+      inner_total = 0.0;
+      for (j = 0; j < ninner; j++)
+        inner_total += total[j];
+
+      for (j = 0; j < ninner; j++) {
+        ivalues[icell][i][j] -= inner_total;
+        if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
       }
-
-
 
     } // end corners
   } // end cells
@@ -2120,7 +2129,7 @@ void FixAblate::sync_inner_multi_inside()
       } // jx
 
       /*
-      // KEEP: this is for next iteration (currently leads to square bug)
+      // KEEP: experimental way of updating inner indices
       double exp_avg = 0.0;
       double cur_avg = 0.0;
       inner_total = 0.0;
@@ -2989,7 +2998,7 @@ void FixAblate::grow_percell(int nnew)
   memory->grow(celldelta,maxgrid,"ablate:celldelta");
   if (innerflag) memory->grow(idelta,maxgrid,ncorner,ninner,"ablate:idelta");
   else memory->grow(cdelta,maxgrid,ncorner,"ablate:cdelta");
-  if (multiflag)
+  if (!innerflag && multiflag)
     memory->grow(nvert,maxgrid,ncorner,"ablate:nvert");
   memory->grow(numsend,maxgrid,"ablate:numsend");
 
