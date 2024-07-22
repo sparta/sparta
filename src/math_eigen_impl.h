@@ -1,24 +1,23 @@
-// clang-format off
-/* -*- c++ -*- ----------------------------------------------------------
-   LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
-   https://www.lammps.org/, Sandia National Laboratories
-   LAMMPS development team: developers@lammps.org
+/* ----------------------------------------------------------------------
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   http://sparta.sandia.gov
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
+   Sandia National Laboratories
 
-   Copyright (2003) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under
-   the GNU General Public License.  (Some of the code in this file is also
-   available using a more premissive license.  See below for details.)
+   the GNU General Public License.
 
-   See the README file in the top-level LAMMPS directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
+
 /* ----------------------------------------------------------------------
-   Contributing authors: Yuya Kurebayashi (Tohoku University, Lanczos algorithm)
-                         Andrew Jewett (Scripps Research, Jacobi algorithm)
+   Contributing authors: Andrew Jewett (Scripps Research, Jacobi algorithm)
 ------------------------------------------------------------------------- */
 
-#ifndef LMP_MATH_EIGEN_IMPL_H
-#define LMP_MATH_EIGEN_IMPL_H
+#ifndef SPARTA_MATH_EIGEN_IMPL_H
+#define SPARTA_MATH_EIGEN_IMPL_H
 
 //        This file contains a library of functions and classes which can
 //        efficiently perform eigendecomposition for an extremely broad
@@ -30,16 +29,6 @@
 // note
 //        The "Jacobi" and "PEigenDense" classes are used for calculating
 //        eigenvalues and eigenvectors of conventional dense square matrices.
-// note
-//        The "LambdaLanczos" class can calculate eigenalues and eigenvectors
-//        of more general types of matrices, especially large, sparse matrices.
-//        It uses C++ lambda expressions to simplify and generalize the way
-//        matrices can be represented.  This allows it to be applied to
-//        nearly any kind of sparse (or dense) matrix representation.
-// note
-//        The source code for Jacobi and LambdaLanczos is also available at:
-//        https://github.com/jewettaij/jacobi_pd   (CC0-1.0 license)
-//        https://github.com/mrcdr/lambda-lanczos  (MIT license)
 
 //#include <cassert>
 #include <numeric>
@@ -67,24 +56,6 @@ namespace MathEigen {
   void Dealloc2D(Entry ***paaX);     // pointer to 2D multidimensional array
 
   // --- Complex numbers ---
-
-  /// @brief
-  /// "realTypeMap" struct is used to the define "real_t<T>" type mapper.
-  /// The "real_t" type mapper is used by the "LambdaLanczos" and "PEigenDense"
-  /// classes, so it is documented here to help users understand those classes.
-  /// "real_t<T>" returns the C++ type corresponding to the real component of T.
-  ///
-  /// @details
-  /// For example, suppose you have a matrix of type std::complex<double>**.
-  /// The eigenvalues calculated by "LambdaLanczos" and "PEigenDense" should be
-  /// of type "double" (which is the same as "real_T<std::complex<double>>"),
-  /// not "std::complex<double>".  (This is because the algorithm assumes the
-  /// matrix is Hermitian, and the eigenvalues of a Hermitian matrix are always
-  /// real.  So if you attempt to pass a reference to a complex number as the
-  /// first argument to LambdaLanczos::run(), the compiler will complain.)
-  ///
-  /// Implementation details: "real_t<T>" is defined using C++ template
-  /// specializations.
 
   template <typename T>
   struct realTypeMap {
@@ -220,36 +191,6 @@ namespace MathEigen {
     Jacobi<Scalar, Vector, Matrix, ConstMatrix>& operator = (Jacobi<Scalar, Vector, Matrix, ConstMatrix> source);
 
   }; // class Jacobi
-
-  // ---- Eigendecomposition of large sparse (or dense) matrices ----
-
-  // Create random vectors used at the beginning of the Lanczos algorithm.
-  // note "Partially specialization of function" is not allowed, so
-  //       it is mimicked by wrapping the "init" function with a class template.
-  template <typename T>
-  struct VectorRandomInitializer {
-  public:
-    static void init(std::vector<T>&);
-  };
-
-  template <typename T>
-  struct VectorRandomInitializer<std::complex<T>> {
-  public:
-    static void init(std::vector<std::complex<T>>&);
-  };
-
-  //  Return the number of significant decimal digits of type T.
-  template <typename T>
-  inline constexpr int sig_decimal_digit() {
-    return (int)(std::numeric_limits<T>::digits *
-                 std::log10(std::numeric_limits<T>::radix));
-  }
-
-  //  Return 10^-n where n=number of significant decimal digits of type T.
-  template <typename T>
-  inline constexpr T minimum_effective_decimal() {
-    return std::pow(10, -sig_decimal_digit<T>());
-  }
 
 // --------------------------------------
 // ----------- IMPLEMENTATION -----------
@@ -767,43 +708,6 @@ operator = (Jacobi<Scalar, Vector, Matrix, ConstMatrix> source) {
 }
 
 
-
-// --- Implementation: Eigendecomposition of large matrices ----
-
-template <typename T>
-inline void VectorRandomInitializer<T>::
-init(std::vector<T>& v)
-{
-  std::random_device dev;
-  std::mt19937 mt(dev());
-  std::uniform_real_distribution<T> rand((T)(-1.0), (T)(1.0));
-
-  int n = v.size();
-  for (int i = 0;i < n;i++) {
-    v[i] = rand(mt);
-  }
-
-  normalize(v);
-}
-
-
-template <typename T>
-inline void VectorRandomInitializer<std::complex<T>>::
-init(std::vector<std::complex<T>>& v)
-{
-  std::random_device dev;
-  std::mt19937 mt(dev());
-  std::uniform_real_distribution<T> rand((T)(-1.0), (T)(1.0));
-
-  int n = v.size();
-  for (int i = 0;i < n;i++) {
-    v[i] = std::complex<T>(rand(mt), rand(mt));
-  }
-
-  normalize(v);
-}
-
-
 } //namespace MathEigen
 
 
@@ -812,4 +716,4 @@ init(std::vector<std::complex<T>>& v)
 
 
 
-#endif //#ifndef LMP_MATH_EIGEN_IMPL_H
+#endif //#ifndef SPARTA_MATH_EIGEN_IMPL_H
