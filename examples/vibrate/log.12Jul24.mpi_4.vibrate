@@ -1,5 +1,5 @@
 SPARTA (7 Mar 2024)
-Running on 1 MPI task(s)
+Running on 4 MPI task(s)
 ################################################################################
 # test of vibrational energy modes
 # thermal gas in a 3d box with collisions
@@ -22,8 +22,8 @@ create_box  	    0 1e-5 0 1e-5 0 1e-5
 Created orthogonal box = (0 0 0) to (1e-05 1e-05 1e-05)
 create_grid 	    2 2 2
 Created 8 child grid cells
-  CPU time = 0.000829175 secs
-  create/ghost percent = 98.3954 1.60461
+  CPU time = 0.000860103 secs
+  create/ghost percent = 93.2626 6.73745
 
 species		    co2.species N2 CO2 vibfile co2.species.vib
 
@@ -39,7 +39,7 @@ fix                 1 vibmode
 
 create_particles    mix n 0 twopass
 Created 1000 particles
-  CPU time = 0.00153731 secs
+  CPU time = 0.0012523 secs
 
 variable            collrate equal "ncoll*step*2/np"
 
@@ -63,68 +63,68 @@ stats		    10
 run 		    100
 WARNING: Using compute grid tvib with fix vibmode may give incorrect temperature, use compute tvib/grid instead (/home/runner/work/sparta/sparta/src/compute_grid.cpp:203)
 Memory usage per proc in Mbytes:
-  particles (ave,min,max) = 1.875 1.875 1.875
+  particles (ave,min,max) = 1.9375 1.9375 1.9375
   grid      (ave,min,max) = 1.51379 1.51379 1.51379
   surf      (ave,min,max) = 0 0 0
-  total     (ave,min,max) = 3.39014 3.39014 3.39014
+  total     (ave,min,max) = 3.45169 3.45169 3.45169
 Step CPU Np Natt Ncoll c_St c_Sr c_Srv c_Sv 
-       0            0     1000        0        0    20041.695    20342.218            0            0 
-      10  0.002212238     1000       42       25    19849.455    20046.876    183.95182    699.44312 
-      20  0.004388197     1000       41       27    19457.151    19902.578    434.49819     1109.864 
-      30  0.006572932     1000       44       30    19250.348    19902.098    582.89221    1360.3386 
-      40  0.008729795     1000       43       23    18734.443    19942.045    820.98505    1650.9228 
-      50   0.01084496     1000       43       29    18503.877    19753.022    994.50031    1857.9675 
-      60  0.013101199     1000       43       32    18118.924    19435.758    1304.1006    2211.3236 
-      70   0.01518719     1000       43       24    18125.632    18832.575    1495.8713    2428.0595 
-      80   0.01729969     1000       46       28    18131.753     18584.58    1627.9713    2572.8864 
-      90  0.019388084     1000       44       27    17885.556    18488.301    1791.2831    2751.3429 
-     100  0.021469937     1000       46       30    17810.562    18196.601    1883.5929    2852.6864 
-Loop time of 0.021511 on 1 procs for 100 steps with 1000 particles
+       0            0     1000        0        0    19750.722    21250.869            0            0 
+      10  0.001099912     1000       40       29    19584.106    20569.578    179.94805    581.31383 
+      20   0.00204286     1000       45       35    19517.758    20359.032    333.16715    872.99551 
+      30  0.003018749     1000       45       35    19023.886    20314.638    495.38299    1085.8964 
+      40   0.00399013     1000       43       29    18478.529    20230.419    775.61845    1437.0413 
+      50  0.004915165     1000       43       33    18189.411    20164.428    907.17702    1580.6091 
+      60  0.005841441     1000       44       28    17823.085    20197.993    1059.5758    1775.4883 
+      70  0.006737521     1000       44       32     17559.06    19893.231    1235.0641    1970.1942 
+      80  0.007771981     1000       44       29    16907.053    20287.099    1438.5541    2191.7101 
+      90  0.008669063     1000       43       25    16632.298    19978.181    1598.7441    2367.6259 
+     100  0.009600359     1000       45       27     16568.79    19614.025    1741.1069    2529.6526 
+Loop time of 0.0096493 on 4 procs for 100 steps with 1000 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.019111   | 0.019111   | 0.019111   |   0.0 | 88.84
-Coll    | 0.0013163  | 0.0013163  | 0.0013163  |   0.0 |  6.12
-Sort    | 0.00029095 | 0.00029095 | 0.00029095 |   0.0 |  1.35
-Comm    | 2.4725e-05 | 2.4725e-05 | 2.4725e-05 |   0.0 |  0.11
+Move    | 0.0045529  | 0.0045854  | 0.0045998  |   0.0 | 47.52
+Coll    | 0.00032341 | 0.00032793 | 0.00033003 |   0.0 |  3.40
+Sort    | 7.2893e-05 | 7.7937e-05 | 8.4618e-05 |   0.0 |  0.81
+Comm    | 0.0038536  | 0.0041274  | 0.0042462  |   0.2 | 42.77
 Modify  | 0          | 0          | 0          |   0.0 |  0.00
-Output  | 0.00076107 | 0.00076107 | 0.00076107 |   0.0 |  3.54
-Other   |            | 6.674e-06  |            |       |  0.03
+Output  | 0.0003919  | 0.00049521 | 0.00078913 |   0.0 |  5.13
+Other   |            | 3.536e-05  |            |       |  0.37
 
 Particle moves    = 100000 (0.1M)
-Cells touched     = 331309 (0.331M)
-Particle comms    = 0 (0K)
-Boundary collides = 231243 (0.231M)
+Cells touched     = 326495 (0.326M)
+Particle comms    = 74165 (74.2K)
+Boundary collides = 226537 (0.227M)
 Boundary exits    = 0 (0K)
 SurfColl checks   = 0 (0K)
 SurfColl occurs   = 0 (0K)
 Surf reactions    = 0 (0K)
-Collide attempts  = 4258 (4.26K)
-Collide occurs    = 2879 (2.88K)
+Collide attempts  = 4218 (4.22K)
+Collide occurs    = 2938 (2.94K)
 Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 4.64879e+06
+Particle-moves/CPUsec/proc: 2.59086e+06
 Particle-moves/step: 1000
-Cell-touches/particle/step: 3.31309
+Cell-touches/particle/step: 3.26495
 Particle comm iterations/step: 1
-Particle fraction communicated: 0
-Particle fraction colliding with boundary: 2.31243
+Particle fraction communicated: 0.74165
+Particle fraction colliding with boundary: 2.26537
 Particle fraction exiting boundary: 0
 Surface-checks/particle/step: 0
 Surface-collisions/particle/step: 0
 Surf-reactions/particle/step: 0
-Collision-attempts/particle/step: 0.04258
-Collisions/particle/step: 0.02879
+Collision-attempts/particle/step: 0.04218
+Collisions/particle/step: 0.02938
 Reactions/particle/step: 0
 
-Particles: 1000 ave 1000 max 1000 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
-Cells:      8 ave 8 max 8 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
-GhostCell: 0 ave 0 max 0 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
+Particles: 250 ave 267 max 230 min
+Histogram: 1 0 1 0 0 0 0 0 0 2
+Cells:      2 ave 2 max 2 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 6 ave 6 max 6 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
 EmptyCell: 0 ave 0 max 0 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
+Histogram: 4 0 0 0 0 0 0 0 0 0
