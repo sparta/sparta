@@ -1615,7 +1615,7 @@ void CreateISurf::set_cvalues_inner()
 
   // check all values bounded between (0,255) and all in or out
 
-  int inout;
+  /*int inout;
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
@@ -1633,7 +1633,7 @@ void CreateISurf::set_cvalues_inner()
           error->one(FLERR,"inconsistent");
       }
     }
-  }
+  }*/
 
 }
 

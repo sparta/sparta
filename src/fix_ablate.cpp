@@ -1907,9 +1907,8 @@ void FixAblate::decrement_inner_multi_outside()
       neighbors = corner_neighbor[i];
 
       int Nin = 0;
-      for (j = 0; j < dim; j++) {
+      for (j = 0; j < dim; j++)
         if (refcorners[neighbors[j]] == 1) Nin++;
-      }
 
       // only decrement inner neighbors
 
@@ -1933,7 +1932,7 @@ void FixAblate::sync_inner_multi_outside()
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
   int icell,jcell;
   double total[6];
-  double nvertices;
+  double inner_total;
 
   comm_neigh_corners(CDELTA);
 
@@ -2042,6 +2041,7 @@ void FixAblate::decrement_inner_multi_inside()
             total_remain = fabs(ivalues[icell][i][i_inner]);
 
             idelta[icell][i_neighbor_corner][oinner] += total_remain;
+
           }
         } // end if for negative cvalues
       } // end  k - neighbors
@@ -2119,9 +2119,15 @@ void FixAblate::sync_inner_multi_inside()
         } // jy
       } // jx
 
+      /*
+      // KEEP: this is for next iteration (currently leads to square bug)
+      double exp_avg = 0.0;
+      double cur_avg = 0.0;
       inner_total = 0.0;
       for (j = 0; j < ninner; j++) {
 
+        exp_avg += ivalues[icell][i][j];
+        
         if (total[j] > 0.0) {
 
           if (dim == 2) total[j] *= 0.5;
@@ -2130,18 +2136,42 @@ void FixAblate::sync_inner_multi_inside()
           ivalues[icell][i][j] -= total[j];
           inner_total += total[j];
         }
+
+        cur_avg += ivalues[icell][i][j];
       }
 
-      // to conserve mass, further adjust each inner indice by
+      // to conserve mass, scale values
 
-      inner_total = inner_total*(ninner-1)/ninner;
-      for(j = 0; j < ninner; j++) {
+      if (inner_total > 0.0) {
+
+        exp_avg /= ninner;
+        exp_avg -= inner_total;
+        cur_avg /= ninner;
+
+        for(j = 0; j < ninner; j++) {
+          ivalues[icell][i][j] *= exp_avg/cur_avg;
+          if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
+        }
+
+      }*/
+
+      inner_total = 0.0;
+      for (j = 0; j < ninner; j++) {
+        if (total[j] > 0.0) {
+          if (dim == 2) total[j] *= 0.5;
+          else total[j] *= 0.25;
+          inner_total += total[j];
+        }
+      }
+
+      for (j = 0; j < ninner; j++) {
         ivalues[icell][i][j] -= inner_total;
         if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
       }
 
     } // end corners
   } // end cells
+  //error->one(FLERR,"ck");
 }
 
 /* ----------------------------------------------------------------------
@@ -2357,18 +2387,30 @@ void FixAblate::epsilon_adjust_inner()
       // if mixflag = 1, inner indices in disagreement in terms of side
       // set to all out (inside can become out but not vice versa)
       if (mixflag) {
+        double max_mod = 0.0;
         for (int j = 0; j < ninner; j++)
-          ivalues[icell][i][j] = cbufmax;
+          max_mod = MAX(ivalues[icell][i][j]-cbufmax,max_mod);
 
-      } else {
-        for (int j = 0; j < ninner; j++) {
-          if (ivalues[icell][i][j] < cbufmin &&
-              ivalues[icell][i][j] >= thresh)
-            ivalues[icell][i][j] = cbufmax;
-          else if (ivalues[icell][i][j] > cbufmax &&
-                   ivalues[icell][i][j] < thresh)
-            ivalues[icell][i][j] = cbufmax;
-        }
+        for (int j = 0; j < ninner; j++)
+          ivalues[icell][i][j] -= max_mod;
+
+        //for (int j = 0; j < ninner; j++)
+        //  ivalues[icell][i][j] = cbufmax;
+
+      } else if (!allin) {
+        double max_mod = 0.0;
+        for (int j = 0; j < ninner; j++)
+          max_mod = MAX(max_mod, ivalues[icell][i][j]-cbufmax);
+
+        for (int j = 0; j < ninner; j++)
+          ivalues[icell][i][j] -= max_mod;
+
+        //for (int j = 0; j < ninner; j++) {
+        //  if (ivalues[icell][i][j] < cbufmin && ivalues[icell][i][j] >= thresh)
+        //    ivalues[icell][i][j] = cbufmax;
+        //  else if (ivalues[icell][i][j] > cbufmax && ivalues[icell][i][j] < thresh)
+        //    ivalues[icell][i][j] = cbufmax;
+        //}
       }
 
     } // end corner
@@ -2947,7 +2989,7 @@ void FixAblate::grow_percell(int nnew)
   memory->grow(celldelta,maxgrid,"ablate:celldelta");
   if (innerflag) memory->grow(idelta,maxgrid,ncorner,ninner,"ablate:idelta");
   else memory->grow(cdelta,maxgrid,ncorner,"ablate:cdelta");
-  if (!innerflag && multiflag)
+  if (multiflag)
     memory->grow(nvert,maxgrid,ncorner,"ablate:nvert");
   memory->grow(numsend,maxgrid,"ablate:numsend");
 
