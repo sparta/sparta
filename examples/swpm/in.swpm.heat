@@ -39,21 +39,6 @@ variable cbar      equal sqrt(2.*${RT})
 variable a         equal sqrt(${gamma}*${RT})
 variable vb        equal 20.0
 
-###########
-# Species #
-###########
-species            air.species Ar
-
-mixture            air Ar vstream 0.0 0.0 0.0 temp ${T}
-mixture            air Ar frac 1.0
-
-collide            vss air opt.vss
-collide_modify     remain no
-
-fix 1 swpm
-collide_modify     swpm yes 32.0 1.0
-collide_modify     reduce energy 32.0 binary 4.0
-
 #####################
 # Boundary/Geometry #
 #####################
@@ -76,6 +61,21 @@ surf_collide       2 diffuse 200 1.0 translate 0.0 0.0 0.0
 
 bound_modify       ylo collide 1
 bound_modify       yhi collide 2
+
+###########
+# Species #
+###########
+species            air.species Ar
+
+mixture            air Ar vstream 0.0 0.0 0.0 temp ${T}
+mixture            air Ar frac 1.0
+
+collide            vss air opt.vss
+collide_modify     remain no
+
+fix 1s swpm
+collide_modify     swpm yes 32.0 1.0
+collide_modify     reduce energy 32.0 binary 4.0
 
 variable N         equal ${ny}*${ppc}
 variable Fnum      equal ${nden}/(${N}/(${Lx}*${Ly}*${Lz}))
@@ -110,10 +110,8 @@ print " Diffusion time in dt=${Nsteady}"
 ###########
 # Outputs #
 ###########
-compute 1      thermal/grid/sw all all temp
-compute 2      grid/sw all all u v
-compute 3      eflux/grid/sw all all heaty
-compute 4      eflux/grid all all heaty
+compute 1      thermal/grid all all temp
+compute 2      eflux/grid all all heaty
 
 #############
 # Transient #
@@ -122,12 +120,8 @@ timestep           ${dt}
 
 stats              1
 stats_style        step np nattempt ncoll
-#run                2000000
-#fix 1         ave/grid all 5 100000 500000 c_1[*] c_3[*] ave running
-#dump 1        grid all 1000000 out_octree.* id f_1[*]
-#run                2000000
 
-fix 1         ave/grid all 5 1000 5000 c_3[*] c_4[*] ave running
+fix 1         ave/grid all 5 1000 5000 c_1[*] c_2[*] ave running
 dump 1        grid all 5000 out.* yc f_1[*]
 run                5000
 
