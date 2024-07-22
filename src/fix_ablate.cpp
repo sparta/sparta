@@ -206,8 +206,8 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
 
   // for epsilon_adjust
 
-  cbufmin = thresh + 1e-4;
-  cbufmax = thresh - 1e-4;
+  cbufmin = -1;
+  cbufmax = -1;
 
   // local storage
 
@@ -387,6 +387,11 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
 
   if (pushflag) push_lohi();
 
+  if (cbufmax < 0) {
+    cbufmax = thresh - 1e-4;
+    cbufmin = thresh + 1e-4;
+  }
+
   if (innerflag) epsilon_adjust_inner();
   else epsilon_adjust();
 
@@ -480,6 +485,11 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
       static_cast<int> ((cells[icell].lo[1]-cornerlo[1]) / xyzsize[1] + 0.5) + 1;
     ixyz[icell][2] =
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
+  }
+
+  if (cbufmax < 0) {
+    cbufmax = thresh - 1e-4;
+    cbufmin = thresh + 1e-4;
   }
 
   if (innerflag) epsilon_adjust_inner();
