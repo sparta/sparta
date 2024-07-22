@@ -52,9 +52,8 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
 {
   int i,ipt,isurf,nsurf,which;
   double v00,v01,v10,v11;
-  double v00iso,v01iso,v10iso,v11iso;
   int bit0,bit1,bit2,bit3;
-  double inout;
+  double ave;
   double *lo,*hi;
   surfint surfID;
   surfint *ptr;
@@ -92,13 +91,6 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
     bit1 = v01 <= thresh ? 0 : 1;
     bit2 = v11 <= thresh ? 0 : 1;
     bit3 = v10 <= thresh ? 0 : 1;
-
-    // shift values by thresh
-
-    v00iso = v00 - thresh;
-    v01iso = v01 - thresh;
-    v10iso = v10 - thresh;
-    v11iso = v11 - thresh;
 
     which = (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
 
@@ -142,8 +134,8 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
 
     case 5:
       nsurf = 2;
-      inout = v00*v11 - v01*v10;
-      if (inout > 0) {
+      ave = 0.25 * (v00 + v01 + v10 + v11);
+      if (ave > thresh) {
         pt[0][0] = lo[0];
         pt[0][1] = interpolate(v00,v10,lo[1],hi[1]);
         pt[1][0] = interpolate(v10,v11,lo[0],hi[0]);
@@ -198,8 +190,8 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
 
     case 10:
       nsurf = 2;
-      inout = v00*v11 - v01*v10;
-      if (inout > 0) {
+      ave = 0.25 * (v00 + v01 + v10 + v11);
+      if (ave > thresh) {
         pt[0][0] = interpolate(v00,v01,lo[0],hi[0]);
         pt[0][1] = lo[1];
         pt[1][0] = lo[0];
@@ -288,17 +280,16 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
 }
 
 /* ----------------------------------------------------------------------
-   Same as above but relies on adjacent values at each corner point
+   Same as above but for inner values
 ------------------------------------------------------------------------- */
 
 void MarchingSquares::invoke(double ***cvalues, int *svalues)
 {
   int i,ipt,isurf,nsurf,which;
   double v00,v01,v10,v11;
-  double v00iso,v01iso,v10iso,v11iso;
   double i0, i1, i2, i3;
   int bit0,bit1,bit2,bit3;
-  double inout;
+  double ave;
   double *lo,*hi;
   surfint surfID;
   surfint *ptr;
@@ -330,11 +321,16 @@ void MarchingSquares::invoke(double ***cvalues, int *svalues)
     // set corner point to average of adjacent values
 
     for (i = 0; i < 4; i++) {
-      v00 = MAX(v00,cvalues[icell][0][i]);
-      v01 = MAX(v01,cvalues[icell][1][i]);
-      v10 = MAX(v10,cvalues[icell][2][i]);
-      v11 = MAX(v11,cvalues[icell][3][i]);
+      v00 += cvalues[icell][0][i];
+      v01 += cvalues[icell][1][i];
+      v10 += cvalues[icell][2][i];
+      v11 += cvalues[icell][3][i];
     }
+
+    v00 /= 4.0;
+    v01 /= 4.0;
+    v10 /= 4.0;
+    v11 /= 4.0;
 
     // intersection of surfaces on all cell edges on normalized length
 
@@ -349,13 +345,6 @@ void MarchingSquares::invoke(double ***cvalues, int *svalues)
     bit1 = v01 <= thresh ? 0 : 1;
     bit2 = v11 <= thresh ? 0 : 1;
     bit3 = v10 <= thresh ? 0 : 1;
-
-    // shift values by thresh
-
-    v00iso = v00 - thresh;
-    v01iso = v01 - thresh;
-    v10iso = v10 - thresh;
-    v11iso = v11 - thresh;
 
     which = (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
 
@@ -399,8 +388,8 @@ void MarchingSquares::invoke(double ***cvalues, int *svalues)
 
     case 5:
       nsurf = 2;
-      inout = v00*v11 - v01*v10;
-      if (inout > 0) {
+      ave = 0.25 * (v00 + v01 + v10 + v11);
+      if (ave > thresh) {
        pt[0][0] = lo[0];
         pt[0][1] = i3;
         pt[1][0] = i2;
@@ -455,8 +444,8 @@ void MarchingSquares::invoke(double ***cvalues, int *svalues)
 
     case 10:
       nsurf = 2;
-      inout = v00*v11 - v01*v10;
-      if (inout > 0) {
+      ave = 0.25 * (v00 + v01 + v10 + v11);
+      if (ave > thresh) {
         pt[0][0] = i0;
         pt[0][1] = lo[1];
         pt[1][0] = lo[0];

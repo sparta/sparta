@@ -33,8 +33,8 @@ class MarchingCubes : protected Pointers {
   double thresh;
 
   double *lo,*hi;
-  int v[8];
-  double viso[8];
+  int v000,v001,v010,v011,v100,v101,v110,v111;
+  double v000iso,v001iso,v010iso,v011iso,v100iso,v101iso,v110iso,v111iso;
   double inval[8][6];
   double i0,i1,i2,i3,i4,i5,i6,i7,i8,i9,i10,i11;
   double i0u,i1u,i2u,i3u,i4u,i5u,i6u,i7u,i8u,i9u,i10u,i11u;
@@ -43,7 +43,6 @@ class MarchingCubes : protected Pointers {
 
   int config;     // configuration of the active cube
   int subconfig;  // subconfiguration of the active cube
-  int innerflag;  // 1 if inner values used
 
   // message datums for cleanup()
 
@@ -58,7 +57,6 @@ class MarchingCubes : protected Pointers {
   int add_triangle(int *, int);
   int add_triangle_inner(int *, int);
   bool test_face(int);
-  bool test_face_inner(int);
   bool test_interior(int, int);
   bool modified_test_interior(int, int);
   int interior_ambiguity(int, int);

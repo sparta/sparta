@@ -193,8 +193,13 @@ void CreateISurf::command(int narg, char **arg)
 
   // corner value cutoffs for epsilon_adjust in fix_ablate
 
-  ablate->cbufmin = cbufmin;
-  ablate->cbufmax = cbufmax;
+  if (surfbuffer == 0.0) { // old epsilon adjust
+    ablate->cbufmin = thresh + 1e-4;
+    ablate->cbufmax = thresh - 1e-4;
+  } else {
+    ablate->cbufmin = cbufmin;
+    ablate->cbufmax = cbufmax;
+  }
 
   if (ctype == INNER) {
     ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
@@ -1923,7 +1928,7 @@ void CreateISurf::remove_old()
 
 void CreateISurf::process_args(int narg, char **arg)
 {
-  surfbuffer = 0.02;
+  surfbuffer = 0.0;
 
   int iarg = 0;
   while (iarg < narg) {
