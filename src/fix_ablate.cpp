@@ -2354,12 +2354,19 @@ void FixAblate::epsilon_adjust()
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
 
+    /*
     for (int i = 0; i < ncorner; i++) {
       if (cvalues[icell][i] < cbufmin && cvalues[icell][i] >= thresh)
         cvalues[icell][i] = cbufmax;
       else if (cvalues[icell][i] > cbufmax && cvalues[icell][i] < thresh)
         cvalues[icell][i] = cbufmax;
     } // end corner
+    */
+
+    for (int i = 0; i < ncorner; i++)
+      if (fabs(cvalues[icell][i]-thresh) < 1.0e-4)
+        cvalues[icell][i] = thresh - 1.0e-4;
+
   } // end cells
 }
 
