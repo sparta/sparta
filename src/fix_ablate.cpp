@@ -2239,7 +2239,7 @@ void FixAblate::epsilon_adjust_inner()
     for (int i = 0; i < ncorner; i++) {
 
       // check all in or out
-      if (ivalues[icell][i][0] > thresh) allin = 1;
+      if (ivalues[icell][i][0] > cbufmin) allin = 1;
       else allin = 0;
 
       mixflag = 0;
@@ -2251,6 +2251,10 @@ void FixAblate::epsilon_adjust_inner()
       // if mixflag = 1, inner indices in disagreement in terms of side
       // set to all out (inside can become out but not vice versa)
       if (mixflag) {
+
+        // determine largest change among inner indices.
+        // displace all the largest change so surface orientation preserved
+
         double max_mod = 0.0;
         for (int j = 0; j < ninner; j++)
           max_mod = MAX(ivalues[icell][i][j]-cbufmax,max_mod);
@@ -2263,9 +2267,10 @@ void FixAblate::epsilon_adjust_inner()
         //  ivalues[icell][i][j] = cbufmax;
 
       } else if (!allin) {
+
         double max_mod = 0.0;
         for (int j = 0; j < ninner; j++)
-          max_mod = MAX(max_mod, ivalues[icell][i][j]-cbufmax);
+          max_mod = MAX(ivalues[icell][i][j]-cbufmax,max_mod);
 
         for (int j = 0; j < ninner; j++)
           ivalues[icell][i][j] -= max_mod;

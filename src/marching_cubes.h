@@ -43,6 +43,7 @@ class MarchingCubes : protected Pointers {
 
   int config;     // configuration of the active cube
   int subconfig;  // subconfiguration of the active cube
+  int innerflag;  // 1 if inner values used
 
   // message datums for cleanup()
 
@@ -57,6 +58,7 @@ class MarchingCubes : protected Pointers {
   int add_triangle(int *, int);
   int add_triangle_inner(int *, int);
   bool test_face(int);
+  bool test_face_inner(int);
   bool test_interior(int, int);
   bool modified_test_interior(int, int);
   int interior_ambiguity(int, int);
