@@ -96,14 +96,14 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
     // manually change for consistency
 
     for (j = 0; j < 6; j++) {
-      v000 += inval[0][j];
-      v001 += inval[1][j];
-      v010 += inval[3][j];
-      v011 += inval[2][j];
-      v100 += inval[4][j];
-      v101 += inval[5][j];
-      v110 += inval[7][j];
-      v111 += inval[6][j];
+      v000 += inval[0][j]; // v[0]
+      v001 += inval[1][j]; // v[1]
+      v010 += inval[3][j]; // v[2]
+      v011 += inval[2][j]; // v[3]
+      v100 += inval[4][j]; // v[4]
+      v101 += inval[5][j]; // v[5]
+      v110 += inval[7][j]; // v[6]
+      v111 += inval[6][j]; // v[7]
     }
 
     v000 /= 6.0;
@@ -162,12 +162,12 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
 
     bit0 = v000 <= thresh ? 0 : 1;
     bit1 = v001 <= thresh ? 0 : 1;
-    bit2 = v011 <= thresh ? 0 : 1;
-    bit3 = v010 <= thresh ? 0 : 1;
+    bit2 = v010 <= thresh ? 0 : 1;
+    bit3 = v011 <= thresh ? 0 : 1;
     bit4 = v100 <= thresh ? 0 : 1;
     bit5 = v101 <= thresh ? 0 : 1;
-    bit6 = v111 <= thresh ? 0 : 1;
-    bit7 = v110 <= thresh ? 0 : 1;
+    bit6 = v110 <= thresh ? 0 : 1;
+    bit7 = v111 <= thresh ? 0 : 1;
 
     which = (bit7 << 7) + (bit6 << 6) + (bit5 << 5) + (bit4 << 4) +
       (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
