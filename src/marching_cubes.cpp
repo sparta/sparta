@@ -105,14 +105,14 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
     // top-lower-left, top-lower-right, top-upper-left, top-upper-right
     // Vzyx encodes this as 0/1 in each dim
 
-    v000 = cvalues[icell][0]; // v[0]
-    v001 = cvalues[icell][1]; // v[1]
-    v010 = cvalues[icell][2]; // v[3]
-    v011 = cvalues[icell][3]; // v[2]
-    v100 = cvalues[icell][4]; // v[1]
-    v101 = cvalues[icell][5]; // v[1]
-    v110 = cvalues[icell][6]; // v[7]
-    v111 = cvalues[icell][7]; // v[6]
+    v000 = cvalues[icell][0];
+    v001 = cvalues[icell][1];
+    v010 = cvalues[icell][2];
+    v011 = cvalues[icell][3];
+    v100 = cvalues[icell][4];
+    v101 = cvalues[icell][5];
+    v110 = cvalues[icell][6];
+    v111 = cvalues[icell][7];
 
     v000iso = v000 - thresh;
     v001iso = v001 - thresh;

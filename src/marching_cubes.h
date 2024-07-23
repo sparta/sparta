@@ -43,7 +43,6 @@ class MarchingCubes : protected Pointers {
 
   int config;     // configuration of the active cube
   int subconfig;  // subconfiguration of the active cube
-  int innerflag;  // 1 if inner values used
 
   // message datums for cleanup()
 
