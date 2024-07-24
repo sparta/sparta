@@ -1323,9 +1323,7 @@ void FixAblate::sync_inner()
 
       /*-----------------------------------------------------------*/
 
-      // KEEP: experimental way to update inner indices
       // now decrement corners
-
       for(j = 0; j < ninner; j++) {
         ivalues[icell][i][j] -= total[j];
         if (j == 0) ivalues[icell][i][1] -= total[j];
@@ -1912,7 +1910,7 @@ void FixAblate::decrement_inner_multi_inside()
 
 void FixAblate::sync_inner_multi_inside()
 {
-  int i,j,k,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
+  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
   int icell,jcell;
   double total[ninner], inner_total;
 
@@ -1985,7 +1983,6 @@ void FixAblate::sync_inner_multi_inside()
           else if (j == 3) ivalues[icell][i][2] -= total[j];
           else if (j == 4) ivalues[icell][i][5] -= total[j];
           else ivalues[icell][i][4] -= total[j];
-          
         }
       }
 
@@ -2205,7 +2202,7 @@ void FixAblate::epsilon_adjust_inner()
 
       if (mixflag) {
 
-        // KEEP: Experiemntal update that avods small distortion around corner
+        // KEEP: Experimental -> less distortion around corner
         // determine largest change among inner indices.
         // displace all the largest change so surface orientation preserved
 
