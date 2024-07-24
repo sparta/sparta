@@ -1323,33 +1323,21 @@ void FixAblate::sync_inner()
 
       /*-----------------------------------------------------------*/
 
-      /*
-      KEEP: experimental way to update inner indices
+      // KEEP: experimental way to update inner indices
       // now decrement corners
 
-      inner_total = 0.0;
       for(j = 0; j < ninner; j++) {
         ivalues[icell][i][j] -= total[j];
-        inner_total += total[j];
-        if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
+        if (j == 0) ivalues[icell][i][1] -= total[j];
+        else if (j == 1) ivalues[icell][i][0] -= total[j];
+        else if (j == 2) ivalues[icell][i][3] -= total[j];
+        else if (j == 3) ivalues[icell][i][2] -= total[j];
+        else if (j == 4) ivalues[icell][i][5] -= total[j];
+        else ivalues[icell][i][4] -= total[j];
       }
 
-      // to conserve mass, further adjust each inner indice by
-
-      inner_total = inner_total*(ninner-1)/ninner;
-      for(j = 0; j < ninner; j++) {
-        ivalues[icell][i][j] -= inner_total;
+      for(j = 0; j < ninner; j++)
         if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
-      }*/
-
-      inner_total = 0.0;
-      for (j = 0; j < ninner; j++)
-        inner_total += total[j];
-
-      for (j = 0; j < ninner; j++) {
-        ivalues[icell][i][j] -= inner_total;
-        if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
-      }
 
     } // end corners
   } // end cells
@@ -1924,7 +1912,7 @@ void FixAblate::decrement_inner_multi_inside()
 
 void FixAblate::sync_inner_multi_inside()
 {
-  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
+  int i,j,k,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
   int icell,jcell;
   double total[ninner], inner_total;
 
@@ -1982,59 +1970,30 @@ void FixAblate::sync_inner_multi_inside()
         } // jy
       } // jx
 
-      /*
-      // KEEP: experimental way of updating inner indices
-      double exp_avg = 0.0;
-      double cur_avg = 0.0;
-      inner_total = 0.0;
       for (j = 0; j < ninner; j++) {
 
-        exp_avg += ivalues[icell][i][j];
-        
         if (total[j] > 0.0) {
 
           if (dim == 2) total[j] *= 0.5;
           else total[j] *= 0.25;
 
           ivalues[icell][i][j] -= total[j];
-          inner_total += total[j];
-        }
 
-        cur_avg += ivalues[icell][i][j];
-      }
-
-      // to conserve mass, scale values
-
-      if (inner_total > 0.0) {
-
-        exp_avg /= ninner;
-        exp_avg -= inner_total;
-        cur_avg /= ninner;
-
-        for(j = 0; j < ninner; j++) {
-          ivalues[icell][i][j] *= exp_avg/cur_avg;
-          if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
-        }
-
-      }*/
-
-      inner_total = 0.0;
-      for (j = 0; j < ninner; j++) {
-        if (total[j] > 0.0) {
-          if (dim == 2) total[j] *= 0.5;
-          else total[j] *= 0.25;
-          inner_total += total[j];
+          if (j == 0) ivalues[icell][i][1] -= total[j];
+          else if (j == 1) ivalues[icell][i][0] -= total[j];
+          else if (j == 2) ivalues[icell][i][3] -= total[j];
+          else if (j == 3) ivalues[icell][i][2] -= total[j];
+          else if (j == 4) ivalues[icell][i][5] -= total[j];
+          else ivalues[icell][i][4] -= total[j];
+          
         }
       }
 
-      for (j = 0; j < ninner; j++) {
-        ivalues[icell][i][j] -= inner_total;
+      for (j = 0; j < ninner; j++)
         if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
-      }
 
     } // end corners
   } // end cells
-  //error->one(FLERR,"ck");
 }
 
 /* ----------------------------------------------------------------------
@@ -2198,9 +2157,6 @@ int FixAblate::mark_corners_3d(int icell)
 
 void FixAblate::epsilon_adjust()
 {
-  // insure no corner point is within EPSILON of threshold
-  // if so, set it to threshold - EPSILON
-
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
@@ -2214,7 +2170,6 @@ void FixAblate::epsilon_adjust()
       else if (cvalues[icell][i] > cbufmax && cvalues[icell][i] < thresh)
         cvalues[icell][i] = cbufmax;
     } // end corner
-
   } // end cells
 }
 
@@ -2225,9 +2180,6 @@ void FixAblate::epsilon_adjust()
 void FixAblate::epsilon_adjust_inner()
 {
   int allin, mixflag;
-
-  // insure no corner point is within EPSILON of threshold
-  // if so, set it to threshold - EPSILON
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -2250,39 +2202,86 @@ void FixAblate::epsilon_adjust_inner()
 
       // if mixflag = 1, inner indices in disagreement in terms of side
       // set to all out (inside can become out but not vice versa)
+
       if (mixflag) {
 
+        // KEEP: Experiemntal update that avods small distortion around corner
         // determine largest change among inner indices.
         // displace all the largest change so surface orientation preserved
 
-        double max_mod = 0.0;
-        for (int j = 0; j < ninner; j++)
-          max_mod = MAX(ivalues[icell][i][j]-cbufmax,max_mod);
+        /*double ref = (thresh-cbufmin)/(0.0-cbufmin);
+
+        double dr[3];
+        dr[0] = dr[1] = dr[2] = 0.0;
+        
+        // find inner indices in each direction closet to corner
+        // these will be adjusted
+        // assume only one of the two inner indices in each direction is 
+        // .. close to the corner
+
+        // first find all vertices close to corner
+
+        int close[ninner];
+        for (int j = 0; j < ninner; j++) {
+          if (ivalues[icell][i][j] > thresh && ivalues[icell][i][j] < cbufmin)
+            close[j] = 1;
+          else close[j] = 0;
+        }
+
+        double rcorner;
+        if (close[0] == 1 && close[1] == 0) {
+          rcorner = (thresh-ivalues[icell][i][0])/(0.0-ivalues[icell][i][0]);
+          dr[0] = ref - rcorner;
+        }
+
+        if (close[1] == 1 && close[0] == 0) {
+          rcorner = (thresh-ivalues[icell][i][1])/(0.0-ivalues[icell][i][1]);
+          dr[0] = ref - rcorner;
+        }
+
+        if (close[2] == 1 && close[3] == 0) {
+          rcorner = (thresh-ivalues[icell][i][2])/(0.0-ivalues[icell][i][2]);
+          dr[1] = ref - rcorner;
+        }
+
+        if (close[3] == 1 && close[2] == 0) {
+          rcorner = (thresh-ivalues[icell][i][3])/(0.0-ivalues[icell][i][3]);
+          dr[1] = ref - rcorner;
+        }
+
+        if (dim == 3) {
+          if (close[5] == 1 && close[6] == 0) {
+            rcorner = (thresh-ivalues[icell][i][4])/(0.0-ivalues[icell][i][4]);
+            dr[2] = ref - rcorner;
+          }
+          if (close[6] == 1 && close[5] == 0) {
+            rcorner = (thresh-ivalues[icell][i][5])/(0.0-ivalues[icell][i][5]);
+            dr[2] = ref - rcorner;
+          }
+        }
+
+        double di[3];
+        di[0] = thresh - (thresh - 255.0 * dr[0]) / (1.0 - dr[0]);
+        di[1] = thresh - (thresh - 255.0 * dr[1]) / (1.0 - dr[1]);
+        di[2] = thresh - (thresh - 255.0 * dr[2]) / (1.0 - dr[2]);
+
+        ivalues[icell][i][0] = MAX(cbufmax - di[0], 0.0);
+        ivalues[icell][i][1] = MAX(cbufmax - di[0], 0.0);
+        ivalues[icell][i][2] = MAX(cbufmax - di[1], 0.0);
+        ivalues[icell][i][3] = MAX(cbufmax - di[1], 0.0);
+        if (dim == 3) {
+          ivalues[icell][i][4] = MAX(cbufmax - di[2], 0.0);
+          ivalues[icell][i][5] = MAX(cbufmax - di[2], 0.0);
+        }*/
 
         for (int j = 0; j < ninner; j++)
-          ivalues[icell][i][j] -= max_mod;
+          ivalues[icell][i][j] = cbufmax;
 
-        // KEEP: May need this more conservative approach
-        //for (int j = 0; j < ninner; j++)
-        //  ivalues[icell][i][j] = cbufmax;
-
+      // all out
       } else if (!allin) {
-
-        double max_mod = 0.0;
         for (int j = 0; j < ninner; j++)
-          max_mod = MAX(ivalues[icell][i][j]-cbufmax,max_mod);
-
-        for (int j = 0; j < ninner; j++)
-          ivalues[icell][i][j] -= max_mod;
-
-        // KEEP: May need this more conservative approach
-        //for (int j = 0; j < ninner; j++) {
-        //  if (ivalues[icell][i][j] < cbufmin && ivalues[icell][i][j] >= thresh)
-        //    ivalues[icell][i][j] = cbufmax;
-        //  else if (ivalues[icell][i][j] > cbufmax && ivalues[icell][i][j] < thresh)
-        //    ivalues[icell][i][j] = cbufmax;
-        //}
-
+          if (ivalues[icell][i][j] > cbufmax && ivalues[icell][i][j] < thresh)
+            ivalues[icell][i][j] = cbufmax;
       }
 
     } // end corner
