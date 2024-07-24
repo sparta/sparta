@@ -102,7 +102,7 @@ def read_elements(sif, num_points, num_elements, ug, three_d_file):
 
   for line in sif:
     s = clean_line(line)
-    if s and len(s.split()) == num_items_per_line:
+    if s and len(s.split()) >= num_items_per_line:
       if three_d_file:
         tri = vtk.vtkTriangle()
         i = int(s.split()[1])

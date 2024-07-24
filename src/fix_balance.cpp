@@ -301,10 +301,6 @@ void FixBalance::end_of_step()
   grid->reset_neighbors();
   comm->reset_neighbors();
 
-  // notify all classes that store per-grid data that grid may have changed
-
-  grid->notify_changed();
-
   // if explicit distributed surfs
   // set redistribute timestep and clear custom status flags
 
@@ -313,6 +309,11 @@ void FixBalance::end_of_step()
     for (int i = 0; i < surf->ncustom; i++)
       surf->estatus[i] = 0;
   }
+
+  // notify all classes that store per-grid data that grid may have changed
+  // do this after clearing custom status flags in case classes use that info
+
+  grid->notify_changed();
 
   // final imbalance factor
   // for RCB TIME, cannot compute imbalance from timers since grid cells moved
