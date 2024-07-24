@@ -342,12 +342,16 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
   int tflag = 0;
 
   for (int m = 0; m < nvalue; m++) {
-    pdelta_force[0] = 0;
-    pdelta_force[1] = 0;
-    pdelta_force[2] = 0;
-    pdelta[0] = 0;
-    pdelta[1] = 0;
-    pdelta[2] = 0;
+    if (!fflag) {
+      pdelta_force[0] = 0;
+      pdelta_force[1] = 0;
+      pdelta_force[2] = 0;
+    }
+    if (!nflag && !tflag) {
+      pdelta[0] = 0;
+      pdelta[1] = 0;
+      pdelta[2] = 0;
+    }
     switch (which[m]) {
     case NUM:
       vec[k++] += 1.0;
