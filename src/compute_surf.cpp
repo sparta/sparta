@@ -341,6 +341,12 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
   int tflag = 0;
 
   for (int m = 0; m < nvalue; m++) {
+    pdelta_force[0] = 0;
+    pdelta_force[1] = 0;
+    pdelta_force[2] = 0;
+    pdelta[0] = 0;
+    pdelta[1] = 0;
+    pdelta[2] = 0;
     switch (which[m]) {
     case NUM:
       vec[k++] += 1.0;
@@ -375,7 +381,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
     case FX:
       if (!fflag) {
         fflag = 1;
-        if (iorig) MathExtra::scale3(-origmass,vorig,pdelta_force);
+        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta_force);
         if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
         if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
       }
@@ -384,7 +390,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
     case FY:
       if (!fflag) {
         fflag = 1;
-        if (iorig) MathExtra::scale3(-origmass,vorig,pdelta_force);
+        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta_force);
         if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
         if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
       }
@@ -393,14 +399,14 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
     case FZ:
       if (!fflag) {
         fflag = 1;
-        if (iorig) MathExtra::scale3(-origmass,vorig,pdelta_force);
+        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta_force);
         if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
         if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
       }
       vec[k++] -= pdelta_force[2] * nfactor_inverse;
       break;
     case PRESS:
-      if (iorig) MathExtra::scale3(-origmass,vorig,pdelta);
+      if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
       if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
       if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
       vec[k++] += MathExtra::dot3(pdelta,norm) * fluxscale;
@@ -408,7 +414,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
     case XPRESS:
       if (!nflag) {
         nflag = 1;
-        if (iorig) MathExtra::scale3(-origmass,vorig,pdelta);
+        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
         if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
         if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
@@ -418,7 +424,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
     case YPRESS:
       if (!nflag) {
         nflag = 1;
-        if (iorig) MathExtra::scale3(-origmass,vorig,pdelta);
+        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
         if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
         if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
@@ -428,7 +434,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
     case ZPRESS:
       if (!nflag) {
         nflag = 1;
-        if (iorig) MathExtra::scale3(-origmass,vorig,pdelta);
+        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
         if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
         if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
@@ -438,7 +444,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
     case XSHEAR:
       if (!tflag) {
         tflag = 1;
-        if (iorig) MathExtra::scale3(-origmass,vorig,pdelta);
+        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
         if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
         if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
@@ -449,7 +455,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
     case YSHEAR:
       if (!tflag) {
         tflag = 1;
-        if (iorig) MathExtra::scale3(-origmass,vorig,pdelta);
+        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
         if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
         if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
@@ -460,7 +466,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
     case ZSHEAR:
       if (!tflag) {
         tflag = 1;
-        if (iorig) MathExtra::scale3(-origmass,vorig,pdelta);
+        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
         if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
         if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
