@@ -360,7 +360,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       vec[k++] += weight;
       break;
     case NFLUX:
-      vec[k] += weight * fluxscale;
+      if (iorig) vec[k] += weight * fluxscale;
       if (!transparent) {
         if (ip) vec[k] -= weight * fluxscale;
         if (jp) vec[k] -= weight * fluxscale;
@@ -372,7 +372,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       k++;
       break;
     case MFLUX:
-      vec[k] += origmass * fluxscale;
+      if (iorig) vec[k] += origmass * fluxscale;
       if (!transparent) {
         if (ip) vec[k] -= imass * fluxscale;
         if (jp) vec[k] -= jmass * fluxscale;
