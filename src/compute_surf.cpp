@@ -318,7 +318,8 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
 
   double origmass = 0;
   double imass,jmass;
-  if (weightflag) weight = iorig->weight;
+  if (weightflag && iorig) weight = iorig->weight;
+  else if (weightflag) weight = ip->weight;
   if (origspecies >= 0) origmass = particle->species[origspecies].mass * weight;
   if (ip) imass = particle->species[ip->ispecies].mass * weight;
   if (jp) jmass = particle->species[jp->ispecies].mass * weight;
