@@ -13,22 +13,22 @@ collide_modify swpm command :h3
 collide_modify keyword values ...  :pre
 
 one or more keyword/value pairs may be listed :ulb,l
-keywords = {swpm} or {reduce}
+keywords = {swpm} or {reduce} :l
   {swpm} values = choice Nsplit gamma
     choice = {yes} or {no} to allow particle weights to stochastistically change
-    Nsplit = maximum number of particles in a cell to split particles
-    gamma = weight transfer functino which is a value > 0
+    Nsplit = maximum number of particles in a cell before spitting stops
+    gamma = weight transfer function (value > 0)
   {reduce} values = reduction_choice Nreduce group_choice Ngroup
-    reduction_choice = {ENERGY} or {HEAT} or {STRESS} = how to reduce particles
-    Nreduce = minimum number of particles in a cell needed to reduce particles
-    group_choice = {BINARY} or {WEIGHT} or {OCTREE} = how to group particles
-    Ngroup = maximum number of particles in each group
+    reduction_choice = {energy} or {heat} or {stress} = how to reduce particles
+    Nreduce = minimum number of particles in a cell before reduction occurs
+    group_choice = {binary} or {weight} = how to group particles
+    Ngroup = maximum number of particles in each group :pre
 :ule
 
 [Examples:]
 
 collide_modify swpm yes 16.0 1.0
-collide_modify reduce ENERGY 24.0 BINARY 4.0
+collide_modify reduce energy 32.0 binary 4.0 :pre
 
 [Description:]
 
@@ -38,81 +38,82 @@ the stochastic weight particle method (SWPM) "(Rjasanow05)"_#Rjasanow05.
 The {swpm} keyword enables or disables SWPM. If {no} is specified,
 the DSMC model, which is the default, is used.
 
-If {yes} is specified, then SWPM is used. SWPM is typically composed of two
+If {yes} is specified, then SWPM is used. SWPM is composed of two
 stages: particle splitting and particle reduction. As the name suggests, during
 the first stage, particles can split, usually via collisions with one another.
-The two candidate particles which are accepted to collide first have their
-weights reduced according to a weight transfer function, which is represented
-as G. The weight transfer function indicates the amount of weight which is
-decremented from each of the particles (parent_ and are transferred to create
-two new particles (child). The weight of each childe particle is set as {G} to
-conserve mass and copy the velociies of the parent particles. The child particles
-then collide according to the molecular model used whereas the parent particles
-have their velocities unchanged. 
+For a colliding pair, each particles splits into two child particles. 
+Each child particle copies the velocit of the parent particle.
+The weight of each child particle is determined by the weight transfer function, {G}.
+The weight of each child particle is set as {G}.
+One child from each parent collides with the other child particles.
+The remaining two child particles do not collide.
 
-The {Nsplit} keyword indicates the particle threshold in each cell. If a cell
-has less than {Nsplt}, after each split, the child particles have a weight {G}
-as described above. If a cell has more than {Nsplit}, {gamma} (which is defined
-later) is temporarily changed to zero which implies that {G} = max({g_i},{g_j}).
-Notice that one parent particle has all their weight deleted. In this case,
-that parent particle is removed, and the net gain in each particle collision
-is one particle. 
+The {Nsplit} keyword indicates number threshold in each cell. If a cell
+has less than {Nsplit}, each parent particle can create two particles. 
+If a cell has more than {Nsplit}, {G} = max({g_i},{g_j}) temporarily.
+Here, {g_i} and {g_j} are the weights of the parent particle.
+One parent particle creates one child while the other parent particle
+creates two children. If both parent particles have the same weight,
+no children are produced.
 
 The {gamma} keyword is used to define the weight transfer function {G}.
 The weight transfer function is assumed to have the form
 {G} = max({g_i},{g_j})/(1 + {gamma}), where {g_i} and {g_j} are the
 particle weights. {gamma} must be a value greater than zero.
 
-The {reduce} keyword points to the second stage of SWPM which is particle
-reduction. Particle reduction is the general term where the particles in
-a cell are replaced by a smaller sample while conserving certain physical
+The {reduce} keyword is for the particle
+reduction. Particle reduction replaces particles in
+a cell with a smaller sample while conserving certain physical
 quantities of interest. If {no} is specificed, particle reduction is not used.
 If {yes} is specified, particle reduction is used. In SPARTA, the particles
-are first divided into groups and each group of particles is reduced.
+are first divided into groups and then each group of particles is reduced.
 
-The {reduction_choice} keyword is either {ENERGY}, {HEAT}, or {STRESS}.
-In all choices, the mass and momentum of each group (and thus the ensemble)
-is conserved. If {ENERGY} is chosen, the energy of each group is conserved.
-If {HEAT} is chosen, the energy and heat flux in each group is conserved.
-If {STRESS} is chosen, the energy, heat flux, and stress tensor is each group
+The {reduction_choice} keyword is either {energy}, {heat}, or {stress}.
+In all choices, the mass and momentum of each group
+is conserved. If {energy} is chosen, the energy of each group is conserved.
+If {heat} is chosen, the energy and heat flux in each group is conserved.
+If {stress} is chosen, the energy, heat flux, and stress tensor is each group
 is conserved. 
 
-NOTE: {STRESS} reduction yields six particles instead of two
+NOTE: {stress} reduction yields six particles instead of two
 
 The {Nreduce} keyword is the minimum number of particles a cell must have to
-be eligible for particle reduction. In other words, a cell at any point should
-not have more than {Nreduce} particles. {Nreduce} must be greater than 2
-if {ENERGY} or {HEAT} reduction is used. If {STRESS} reduction is used,
-{Nreduce} must be greater than 6. 
+be eligible for particle reduction. If a cell has more than {Nreduce} particles,
+particle reduction (if enabled) is called. Otherwise, particle reduction is skipped.
+{Nreduce} must be greater than 2 if {energy} or {heat} reduction is used.
+If {stress} reduction is used, {Nreduce} must be greater than 6. 
 
-The {group_choice} keyword is either {BINARY} or {OCTREE} or {WEIGHT}.
-The grouping particles algorithm involves recursively dividing the particles as
-a tree. The root node contains all particles. From each root node, the
-particles are divided according to their velocity and contained in leaf nodes.
+The {group_choice} keyword is either {binary} or {weight}.
+The grouping particles algorithm involves recursively dividing the particles in
+a binary tree structure.
+The root node contains all particles.
+The root node is split into two leaves.
+Particles are sorted into each leaf according to their velocity.
 The leaf nodes recursively divide until the number of particles in that node
-is less than {Ngroup} (which is defined later). The number of leaves from
-each parent node is two if {BINARY} or {WEIGHT} is used and 8 if {OCTREE} is
-used. If {BINARY} grouping is used, the particle are divided by comparing
-their velocities with respect to a plane. That plane has a normal in the
-same direction of the eigenvector corresponding to the largest eigenvluae of
-the covariance matrix of the particle velocities. The {WEIGHT} grouping is
-similar to {BINARY} grouping but first divides the particles in the root node
-by weight. Three groups are identified which are defined as having small,
-medium, and large weights. Particles with large weights are not eligible
-to reduce. Medium and small particles are reduced separately. If {OCTREE}
-grouping is used, the velocity space is divided into 8 octants centered around
-the mean velocity. The particles are then binned into each octant. 
+is less than {Ngroup} (which is defined later).
+If {binary} grouping is used, the particle are divided by comparing
+their velocities with respect to a plane.
+The plane has a normal in the same direction of the eigenvector corresponding 
+to the largest eigenvluae of the covariance matrix of the particle velocities.
+The {weight} grouping first divides the particles in the root node by weight. 
+Three groups are identified: small, medium, and large weights.
+Particles with large weights are not eligible to reduce.
+Medium and small particles are reduced separately.
+Each group is then recursively divided using the {binary} grouping. 
 
 The {Ngroup} keyword is the maximum number of particles that can be in a
-group before being reduced. {Ngroup} must be greater than 2 if {ENERGY} or
-{HEAT} reduction is used. If {STRESS} reduction is used, {Nreduce} must be
+group before being reduced. {Ngroup} must be greater than 2 if {energy} or
+{heat} reduction is used. If {stress} reduction is used, {Ngroup} must be
 greater than 6. 
 
 :line
 
 [Restrictions:]
 
-The SWPM capabilities are currently limited to monoatomic, homogeneous gases. 
+The SWPM capabilities are currently limited to monoatomic, single-species gases.
+
+SWPM can be used with adaptive grids but will cause a significant increase
+in the number of particles.
 
 [Related commands:]
 
