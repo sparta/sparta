@@ -355,11 +355,11 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   // assumeds outside corner point is 0 (worst case scenario)
 
   if (surfbuffer == 0.0) {
-    cmax = thresh + EPSILON;
-    cmin = thresh - EPSILON;
+    cmax = thresh+EPSILON;
+    cmin = thresh-EPSILON;
   } else {
-    cmax = (thresh - 0.0 * surfbuffer) / (1.0 - surfbuffer);
-    cmin = (thresh - 255.0 * surfbuffer) / (1.0 - surfbuffer);
+    cmax = (thresh-0.0*surfbuffer)/(1.0-surfbuffer);
+    cmin = (thresh-255.0*surfbuffer)/(1.0-surfbuffer);
   }
 
   // bound corner value limits
@@ -990,7 +990,7 @@ void FixAblate::epsilon_adjust()
     for (i = 0; i < ncorner; i++)
       if (cvalues[icell][i] >= thresh && cvalues[icell][i] < cmax)
         cvalues[icell][i] = cmin;
-      else if(cvalues[icell][i] < thresh && cvalues[icell][i] > cmin)
+      else if (cvalues[icell][i] < thresh && cvalues[icell][i] > cmin)
         cvalues[icell][i] = cmin;
   }
 }
