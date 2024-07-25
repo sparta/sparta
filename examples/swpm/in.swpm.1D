@@ -20,8 +20,8 @@ variable gamma     equal 1.4
 #####################
 # Chosen Parameters #
 #####################
-variable T         equal 298.15
-variable p         equal 1013.250
+variable T         equal 300.00
+variable p         equal 1000.00
 variable Ma        equal 0.2
 variable ppc       equal 16.0
 
@@ -50,15 +50,23 @@ variable Ly        equal 0.0001
 variable Lz        equal 0.0001
 
 variable nx        equal 1
-variable ny        equal 1
+variable ny        equal 50
 variable nz        equal 1 
 
-boundary           p p p
+boundary           p s p
 
 create_box         0.0 ${Lx} 0.0 ${Ly} 0.0 ${Lz}
 create_grid        ${nx} ${ny} ${nz} block * * * 
 balance_grid       rcb part
 
+#surf_collide       1 diffuse 300 1.0 translate 100.0 0.0 0.0
+#surf_collide       2 diffuse 300 1.0 translate 0.0 0.0 0.0
+
+surf_collide       1 diffuse 400 1.0 translate 0.0 0.0 0.0
+surf_collide       2 diffuse 200 1.0 translate 0.0 0.0 0.0
+
+bound_modify       ylo collide 1
+bound_modify       yhi collide 2
 
 ###########
 # Collide #
@@ -81,17 +89,17 @@ global fnum ${Fnum}
 
 create_particles   air n 0
 
+###########
+# Outputs #
+###########
+compute 1     grid all all n
+compute 1r reduce ave c_1[*]
+
 #######
 # Run #
 #######
-compute 1     thermal/grid all all temp
-compute 2     grid all all n
+stats              100
+stats_style        step np nattempt ncoll nbound c_1r
 
-compute 1r reduce ave c_1[*]
-compute 2r reduce ave c_2[*]
-
-stats              50
-stats_style        step np nattempt ncoll nbound c_1r c_2r
-
-timestep           4.0e-9
-run                1000
+timestep           1.0e-9
+run                500

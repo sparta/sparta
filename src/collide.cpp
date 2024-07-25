@@ -38,14 +38,13 @@ using namespace SPARTA_NS;
 enum{NONE,DISCRETE,SMOOTH};       // several files  (NOTE: change order)
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{ENERGY,HEAT,STRESS};   // particle reduction choices
-enum{BINARY,WEIGHT,OCTREE,OPTIMIZE}; // grouping choices
+enum{BINARY,WEIGHT}; // grouping choices
 
 #define DELTAGRID 1000            // must be bigger than split cells per cell
 #define DELTADELETE 1024
 #define DELTAELECTRON 128
 
 #define BIG 1.0e20
-#define SMALLISH 1.0e-12
 #define SMALL 1.0e-16
 
 /* ---------------------------------------------------------------------- */
@@ -435,7 +434,6 @@ void Collide::modify_params(int narg, char **arg)
       Ncmax = atoi(arg[iarg+2]);
       if (strcmp(arg[iarg+3],"binary") == 0) group_type = BINARY;
       else if (strcmp(arg[iarg+3],"weight") == 0) group_type = WEIGHT;
-      else if (strcmp(arg[iarg+3],"octree") == 0) group_type = OCTREE;
       else error->all(FLERR,"Requested grouping scheme not available");
       Ngmax = atoi(arg[iarg+4]);
       if(Ngmax < Ngmin) error->all(FLERR,"Max group size too small");
@@ -1722,206 +1720,6 @@ void Collide::ambi_reset(int i, int j, int jsp,
   } else if (!jp) {
     if (jsp == e) ionambi[i] = 0;   // 1st reactant is now 1st product neutral
   }
-}
-
-/* ----------------------------------------------------------------------
-   DEBUG : Checks particles
-------------------------------------------------------------------------- */
-
-/*template <int ORD> void Collide::check_particles()
-{
-  //if(ORD==0) printf("before collide\n");
-  //else if(ORD==1) printf("after collide\n");
-  //else if(ORD==2) printf("after sort\n");
-  //else if(ORD==3) printf("after reduce\n");
-  //else if(ORD==4) printf("after compress\n");
-
-  int i,j,m,n,ip,np;
-  int nattempt,reactflag;
-  double attempt,volume;
-  Particle::OnePart *ipart;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-  Particle::OnePart *particles = particle->particles;
-  int *next = particle->next;
-
-  double rho;
-  double E;
-  double V[3], vsq;
-  E = rho = 0.0;
-  V[0] = V[1] = V[2] = 0.0;
-  for (int icell = 0; icell < nglocal; icell++) {
-    // create particle list
-    ip = cinfo[icell].first;
-    while (ip >= 0) {
-      ipart = &particles[ip];
-      if(ipart->sweight > 0) {
-        rho += ipart->sweight;
-        vsq = ipart->v[0]*ipart->v[0]+
-              ipart->v[1]*ipart->v[1]+
-              ipart->v[2]*ipart->v[2];
-        for (int d = 0; d < 3; d++) V[d] += ipart->sweight*ipart->v[d];
-        E += ipart->sweight*vsq;
-      }
-      ip = next[ip];
-    }
-  }
-
-  if(update->ntimestep == 1) {
-    rho0 = rho;
-    for(int d = 0; d < 3; d++) V0[d] = V[d];
-    E0 = E;
-  }
-
-  if(update->ntimestep % 1000 == 0)
-    printf("drho: %2.8e; dE: %2.8e; dV: %2.8e,%2.8e,%2.8e\n",
-          1-rho/rho0,
-          1-E/E0,
-          1-V[0]/V0[0],
-          1-V[1]/V0[1],
-          1-V[2]/V0[2]);
-  return;
-}*/
-
-/* ----------------------------------------------------------------------
-   Stochastic weighted algorithm
-------------------------------------------------------------------------- */
-
-void Collide::collisions_one_sw()
-{
-  int i,j,n,ip,np,newp;
-  int nattempt;
-  double attempt,volume;
-  Particle::OnePart *ipart,*jpart,*kpart,*lpart,*mpart;
-
-  int ilevel;
-  double np_scale;
-
-  // loop over cells I own
-
-  Grid::ChildInfo *cinfo = grid->cinfo;
-  Grid::ChildCell *cells = grid->cells;
-
-  Particle::OnePart *particles = particle->particles;
-  int *next = particle->next;
-
-  double isw;
-  double *sweights = particle->edvec[particle->ewhich[index_sweight]];
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    np = cinfo[icell].count;
-    if (np <= 1) continue;
-
-    volume = cinfo[icell].volume / cinfo[icell].weight;
-    if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
-
-    // setup particle list for this cell
-
-    if (np > npmax) {
-      while (np > npmax) npmax += DELTAPART;
-      memory->destroy(plist);
-      memory->create(plist,npmax,"collide:plist");
-      memory->create(pL,npmax,"collide:pL");
-      memory->create(pLU,npmax,"collide:pLU");
-    }
-
-    // get stochastic weights
-
-    // build particle list and find maximum particle weight
-
-    ip = cinfo[icell].first;
-    n = 0;
-    sweight_max = 0.0;
-    while (ip >= 0) {
-      plist[n++] = ip;
-      ipart = &particles[ip];
-      isw = sweights[ip];
-      sweight_max = MAX(sweight_max,isw);
-
-      if (isw != isw) error->all(FLERR,"Particle has NaN weight");
-      if (isw <= 0.0) error->all(FLERR,"Particle has negative or zero weight");
-      ip = next[ip];
-    }
-
-    ilevel = cells[icell].level;
-    if(ilevel==1) np_scale = 1.0;
-    else np_scale = pow(8,ilevel-1);
-
-    // attempt = exact collision attempt count for all particles in cell
-    // nattempt = rounded attempt with RN
-    // if no attempts, continue to next grid cell
-
-    attempt = attempt_collision(icell,np,volume);
-    nattempt = static_cast<int> (attempt);
-
-    if (!nattempt) continue;
-    nattempt_one += nattempt;
-
-    for (int iattempt = 0; iattempt < nattempt; iattempt++) {
-
-      i = np * random->uniform();
-      j = np * random->uniform();
-      while (i == j) j = np * random->uniform();
-
-      ipart = &particles[plist[i]];
-      jpart = &particles[plist[j]];
-
-      if (!test_collision(icell,0,0,ipart,jpart)) continue;
-
-      // check if pair has zero or negative weight
-
-      if(sweights[i] <= 0.0 || sweights[j] <= 0.0) {
-        printf("i: %i -- %4.3e; j: %i -- %4.3e\n", i, sweights[i], j, sweights[j]);
-        error->one(FLERR,"bad weight before split");
-      }
-
-      // split particles
-      if (np >= Ncmin/np_scale && Ncmin > 0.0) pre_wtf = 0.0;
-      else pre_wtf = 1.0;
-
-      newp = split(ipart,jpart,kpart,lpart);
-
-      // add new particles to particle list
-
-      if (newp > 1) {
-        particles = particle->particles;
-        sweights = particle->edvec[particle->ewhich[index_sweight]];
-        if (np+2 >= npmax) {
-          npmax += DELTAPART;
-          memory->grow(plist,npmax,"collide:plist");
-          memory->grow(pL,npmax,"collide:pL");
-          memory->grow(pLU,npmax,"collide:pLU");
-        }
-        plist[np++] = particle->nlocal-2;
-        plist[np++] = particle->nlocal-1;
-        particles = particle->particles;
-      } else if (newp > 0) {
-        particles = particle->particles;
-        sweights = particle->edvec[particle->ewhich[index_sweight]];
-        if (np+1 >= npmax) {
-          npmax += DELTAPART;
-          memory->grow(plist,npmax,"collide:plist");
-          memory->grow(pL,npmax,"collide:pL");
-          memory->grow(pLU,npmax,"collide:pLU");
-        }
-        plist[np++] = particle->nlocal-1;
-        particles = particle->particles;
-      }
-
-      // since ipart and jpart have same weight, do not need
-      // ... to account for weight during collision itself
-      // also the splits are all handled beforehand
-
-      mpart = NULL; // dummy particle
-      setup_collision(ipart,jpart);
-      perform_collision(ipart,jpart,mpart);
-      ncollide_one++;
-
-    } // end attempt loop
-
-    // removes very small weighted particles
-    //remove_small();
-
-  } // loop for cells
 }
 
 /* ----------------------------------------------------------------------

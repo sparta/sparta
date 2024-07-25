@@ -35,18 +35,142 @@
 
 using namespace SPARTA_NS;
 
-enum{NONE,DISCRETE,SMOOTH};       // several files  (NOTE: change order)
-enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{ENERGY,HEAT,STRESS};   // particle reduction choices
-enum{BINARY,WEIGHT,OCTREE,OPTIMIZE}; // grouping choices
+enum{BINARY,WEIGHT}; // grouping choices
 
-#define DELTAGRID 1000            // must be bigger than split cells per cell
 #define DELTADELETE 1024
-#define DELTAELECTRON 128
 
 #define BIG 1.0e20
-#define SMALLISH 1.0e-12
 #define SMALL 1.0e-16
+
+/* ----------------------------------------------------------------------
+   Stochastic weighted algorithm
+------------------------------------------------------------------------- */
+
+void Collide::collisions_one_sw()
+{
+  int i,j,n,ip,np,newp;
+  int nattempt;
+  double attempt,volume;
+  Particle::OnePart *ipart,*jpart,*kpart,*lpart,*mpart;
+
+  // loop over cells I own
+
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  Grid::ChildCell *cells = grid->cells;
+
+  Particle::OnePart *particles = particle->particles;
+  int *next = particle->next;
+
+  double isw;
+  double *sweights = particle->edvec[particle->ewhich[index_sweight]];
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    np = cinfo[icell].count;
+    if (np <= 1) continue;
+
+    volume = cinfo[icell].volume / cinfo[icell].weight;
+    if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
+
+    // setup particle list for this cell
+
+    if (np > npmax) {
+      while (np > npmax) npmax += DELTAPART;
+      memory->destroy(plist);
+      memory->create(plist,npmax,"collide:plist");
+      memory->create(pL,npmax,"collide:pL");
+      memory->create(pLU,npmax,"collide:pLU");
+    }
+
+    // build particle list and find maximum particle weight
+
+    ip = cinfo[icell].first;
+    n = 0;
+    sweight_max = 0.0;
+    while (ip >= 0) {
+      plist[n++] = ip;
+      ipart = &particles[ip];
+      isw = sweights[ip];
+      sweight_max = MAX(sweight_max,isw);
+
+      if (isw != isw) error->all(FLERR,"Particle has NaN weight");
+      if (isw <= 0.0) error->all(FLERR,"Particle has negative or zero weight");
+      ip = next[ip];
+    }
+
+    // attempt = exact collision attempt count for all particles in cell
+    // nattempt = rounded attempt with RN
+    // if no attempts, continue to next grid cell
+
+    attempt = attempt_collision(icell,np,volume);
+    nattempt = static_cast<int> (attempt);
+
+    if (!nattempt) continue;
+    nattempt_one += nattempt;
+
+    for (int iattempt = 0; iattempt < nattempt; iattempt++) {
+
+      i = np * random->uniform();
+      j = np * random->uniform();
+      while (i == j) j = np * random->uniform();
+
+      ipart = &particles[plist[i]];
+      jpart = &particles[plist[j]];
+
+      if (!test_collision(icell,0,0,ipart,jpart)) continue;
+
+      // split particles
+
+      if (np >= Ncmin && Ncmin > 0.0) pre_wtf = 0.0;
+      else pre_wtf = 1.0;
+
+      newp = split(ipart,jpart,kpart,lpart);
+
+      // add new particles to particle list
+
+      if (newp > 1) {
+        particles = particle->particles;
+        sweights = particle->edvec[particle->ewhich[index_sweight]];
+        if (np+2 >= npmax) {
+          npmax += DELTAPART;
+          memory->grow(plist,npmax,"collide:plist");
+          memory->grow(pL,npmax,"collide:pL");
+          memory->grow(pLU,npmax,"collide:pLU");
+        }
+        plist[np++] = particle->nlocal-2;
+        plist[np++] = particle->nlocal-1;
+        particles = particle->particles;
+      } else if (newp > 0) {
+        particles = particle->particles;
+        sweights = particle->edvec[particle->ewhich[index_sweight]];
+        if (np+1 >= npmax) {
+          npmax += DELTAPART;
+          memory->grow(plist,npmax,"collide:plist");
+          memory->grow(pL,npmax,"collide:pL");
+          memory->grow(pLU,npmax,"collide:pLU");
+        }
+        plist[np++] = particle->nlocal-1;
+        particles = particle->particles;
+      }
+
+      // since ipart and jpart have same weight, do not need
+      // ... to account for weight during collision itself
+      // also the splits are all handled beforehand
+
+      mpart = NULL; // dummy particle
+      setup_collision(ipart,jpart);
+      perform_collision(ipart,jpart,mpart);
+      ncollide_one++;
+
+    } // end attempt loop
+  } // loop for cells
+
+  // remove tiny weighted particles
+
+  remove_tiny();
+
+  return;
+}
 
 /* ----------------------------------------------------------------------
    Splits particles and generates two new particles (for SWPM)
@@ -192,8 +316,6 @@ void Collide::group_reduce()
   Grid::ChildCell *cells = grid->cells;
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
-  int ilevel, nthresh;
-  double np_scale;
 
   double *sweights = particle->edvec[particle->ewhich[index_sweight]];
   double swmean, swvar, swstd;
@@ -204,15 +326,7 @@ void Collide::group_reduce()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
 
-    ilevel = cells[icell].level;
-    if(ilevel == 1) nthresh = Ncmax;
-    else {
-      np_scale = pow(8,ilevel-1);
-      // number of particles should at least exceed minimum group size
-      nthresh = MAX(Ncmax/np_scale, Ngmax);
-    }
-
-    if (np <= nthresh) continue;
+    if (np <= Ncmax) continue;
 
     // create particle list
 
@@ -227,21 +341,12 @@ void Collide::group_reduce()
 
     gbuf = 0;
 
-    while (n > nthresh) {
+    while (n > Ncmax) {
       nold = n;
 
       // seems to be more stable than weighted
 
       if (group_type == BINARY) {
-
-        // shuffle indices to choose random positions
-
-        /*int j;
-        for (int i = n-1; i > 0; --i) {
-          j = random->uniform()*i;
-          if (j < 0 || j >= n) error->one(FLERR,"bad index");
-          std::swap(plist[i], plist[j]);
-        }*/
 
         group_bt(plist,n);
 
@@ -285,39 +390,10 @@ void Collide::group_reduce()
           ip = next[ip];
         }
 
-        // shuffle indices to choose random positions
-
-        /*int j;
-        for(int i = n-1; i > 0; --i) {
-          j = random->uniform()*i;
-          if(j < 0 || j >= n) error->one(FLERR,"bad index");
-          std::swap(plist[i], plist[j]);
-        }*/
-
-        // rearrange so that small weighted particles in front
-
-        /*int pmid = 0;
-        for(int i = 0; i < n; i++) {
-          ipart = &particles[plist[i]];
-          isw = sweights[plist[i]];
-          if(isw < lLim)
-            std::swap(plist[pmid++],plist[i]);
-        }*/
-
         // can reuse binary tree division here
 
         group_bt(pL,  npL);
         group_bt(pLU, npLU);
-
-      } else if (group_type == OCTREE) {
-        int j;
-        for(int i = n-1; i > 0; --i) {
-          j = random->uniform()*i;
-          if(j < 0 || j >= n) error->one(FLERR,"bad index");
-          std::swap(plist[i], plist[j]);
-        }
-
-        group_ot(0,n);
 
       }
 
@@ -334,12 +410,11 @@ void Collide::group_reduce()
 
       // if no particles reduced, increase group size
       
-      if (gbuf > n) error->one(FLERR,"too big");
-
       if (n == nold) gbuf += 2;
 
-    }
+    } // while loop for n > ncmax
   }// loop for cells
+
   return;
 }
 
@@ -412,12 +487,6 @@ void Collide::group_bt(int *plist_leaf, int np)
 
   if (np <= Ngmax+gbuf) {
 
-    // remove small stress tensor components
-
-    //for(int i = 0; i < 3; i++)
-    //  for(int j = 0; j < 3; j++)
-    //    if(fabs(pij[i][j]/mass) < SMALLISH) pij[i][j] = 0.0;
-
     // temperature
     double T = (pij[0][0] + pij[1][1] + pij[2][2])/
       (3.0 * gsum * update->boltz);
@@ -446,10 +515,6 @@ void Collide::group_bt(int *plist_leaf, int np)
            mV[i]*mVV[i2][i2]/msum + 2.0*mV[i]*mV[i2]*mV[i2]/msum/msum;
       q[i] = (h + h1 + h2) * 0.5;
     }
-
-    // remove small heat fluxes
-    //for(int i = 0; i < 3; i++)
-    //  if(fabs(q[i]/mass) < SMALLISH) q[i] = 0.0;
 
     // scale values to be consistent with definitions in
     // .. stochastic numerics book
@@ -517,186 +582,6 @@ void Collide::group_bt(int *plist_leaf, int np)
 
     if(npL > Ngmin) group_bt(pidL,npL);
     if(npR > Ngmin) group_bt(pidR,npR);
-  }
-
-  return;
-}
-
-/* ----------------------------------------------------------------------
-   Recursivley divides particles using the octree strategy
-------------------------------------------------------------------------- */
-void Collide::group_ot(int pfirst, int plast)
-{
-  Particle::OnePart *ipart;
-  Particle::OnePart *particles = particle->particles;
-  Particle::Species *species = particle->species;
-  int np = plast-pfirst;
-
-  // ignore groups which have too few particles
-
-  if (np <= Ngmin)
-    return;
-
-  // compute stress tensor since it's needed for
-  // .. further dividing and reduction
-
-  double *sweights = particle->edvec[particle->ewhich[index_sweight]];
-
-  double gsum, msum, mV[3], mVV[3][3], mVVV[3][3];
-  gsum = msum = 0.0;
-  for (int i = 0; i < 3; i++) {
-    mV[i] = 0.0;
-    for (int j = 0; j < 3; j++) {
-      mVV[i][j] = 0.0;
-      mVVV[i][j] = 0.0;
-    }
-  }
-
-  // find maximum particle weight
-
-  int ispecies;
-	double mass, psw, pmsw, vp[3];
-  double Erot = 0.0;
-  for (int p = pfirst; p < plast; p++) {
-    ipart = &particles[plist[p]];
-    ispecies = ipart->ispecies;
-    mass = species[ispecies].mass;
-
-    psw = sweights[plist[p]];
-    pmsw = psw * mass;
-    memcpy(vp, ipart->v, 3*sizeof(double));
-   	gsum += psw;
-    msum += pmsw;
-    Erot += psw*ipart->erot;
-    for (int i = 0; i < 3; i++) {
-      mV[i] += (pmsw*vp[i]);
-      for (int j = 0; j < 3; j++) {
-        mVV[i][j] += (pmsw*vp[i]*vp[j]);
-        mVVV[i][j] += (pmsw*vp[i]*vp[j]*vp[j]);
-      }
-    }
-  }
-
-  // mean velocity
-
-	double V[3];
-  for (int i = 0; i < 3; i++) V[i] = mV[i]/msum;
-
-  // stress tensor
-
-  double pij[3][3];
-  for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++)
-      pij[i][j] = mVV[i][j] - mV[i]*mV[j]/msum;
-
-  // if group is small enough, merge the particles
-
-  if (np <= Ngmax+gbuf) {
-
-    // remove small stress tensor components
-
-    //for(int i = 0; i < 3; i++)
-    //  for(int j = 0; j < 3; j++)
-    //    if(fabs(pij[i][j]/mass) < SMALLISH) pij[i][j] = 0.0;
-
-    // temperature
-
-    double T = (pij[0][0] + pij[1][1] + pij[2][2])/
-      (3.0 * gsum * update->boltz);
-
-    // heat flux
-
-    double Vsq = V[0]*V[0] + V[1]*V[1] + V[2]*V[2];
-    double h,h1,h2,q[3];
-    int i1,i2;
-    for (int i = 0; i < 3; i++) {
-      if (i == 0) {
-        i1 = 1;
-        i2 = 2;
-      } else if(i == 1) {
-        i1 = 2;
-        i2 = 0;
-      } else {
-        i1 = 0;
-        i2 = 1;
-      }
-
-      h  = mVVV[i][i] - 3.0*mV[i]*mVV[i][i]/msum +
-           2.0*mV[i]*mV[i]*mV[i]/msum/msum;
-      h1 = mVVV[i][i1] - 2.0*mVV[i][i1]*mV[i1]/msum -
-           mV[i]*mVV[i1][i1]/msum + 2.0*mV[i]*mV[i1]*mV[i1]/msum/msum;
-      h2 = mVVV[i][i2] - 2.0*mVV[i][i2]*mV[i2]/msum -
-           mV[i]*mVV[i2][i2]/msum + 2.0*mV[i]*mV[i2]*mV[i2]/msum/msum;
-      q[i] = (h + h1 + h2) * 0.5;
-    }
-
-    // remove small heat fluxes
-
-    //for(int i = 0; i < 3; i++)
-    //  if(fabs(q[i]/mass) < SMALLISH) q[i] = 0.0;
-
-    // scale values to be consistent with definitions in
-    // .. stochastic numerics book
-
-    T *= update->boltz/mass;
-    for (int i = 0; i < 3; i++) {
-      q[i] /= mass;
-      for (int j = 0; j < 3; j++) pij[i][j] /= mass;
-    }
-
-    // reduce based on type
-
-    if (reduction_type == ENERGY) {
-      //reduce(plist_leaf, np, gsum, V, T, Erot);
-    } else if (reduction_type == HEAT) {
-      //reduce(plist_leaf, np, gsum, V, T, Erot, q);
-    } else if (reduction_type == STRESS) {
-      //reduce(plist_leaf, np, gsum, V, T, Erot, q, pij);
-    }
-
-  // group still too large so divide further
-
-  } else {
-
-    // sort particles into octants
-
-    int temp[8][np];
-    int ip, iquad, nquad, nq[8];
-    for (int i = 0; i < 8; i++) nq[i] = 0;
-
-    for (int i = pfirst; i < plast; i++) {
-      ip = plist[i];
-      ipart = &particles[ip];
-      memcpy(vp, ipart->v, 3*sizeof(double));
-
-      iquad = 0;
-      if (vp[0] > V[0]) iquad += 1;
-      if (vp[1] > V[1]) iquad += 2;
-      if (vp[2] > V[2]) iquad += 4;
-
-      nquad = nq[iquad];
-      temp[iquad][nquad] = ip;
-      nq[iquad] = nquad + 1;
-    }
-
-    // rebuild particle list
-
-    ip = pfirst;
-    for (int i = 0; i < 8; i++)
-      for (int j = 0; j < nq[i]; j++)
-        plist[ip++] = temp[i][j];
-
-    // start next iteration
-
-    int start, end;
-    start = pfirst;
-    end = pfirst + nq[0];
-    group_ot(start,end);
-    for (int i = 0; i < 7; i++) {
-      start = end;
-      end += nq[i+1];
-      group_ot(start,end);
-    }
   }
 
   return;
@@ -913,9 +798,9 @@ void Collide::reduce(int *pleaf, int np,
 
     sweights[pleaf[2*iK]] = isw;
     sweights[pleaf[2*iK+1]] = jsw;
+
   } // end nK
   
-
   // delete other particles
   for (int i = 0; i < np; i++) {
     if (i < 2*nK) continue;
@@ -929,3 +814,106 @@ void Collide::reduce(int *pleaf, int np,
 
   return;
 }
+
+/* ----------------------------------------------------------------------
+   Delete tiny weighted particles
+------------------------------------------------------------------------- */
+void Collide::remove_tiny()
+{
+  int np, ip, n;
+  double isw, sw_mean;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int *next = particle->next;
+  double *sweights = particle->edvec[particle->ewhich[index_sweight]];
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    np = cinfo[icell].count;
+
+    ip = cinfo[icell].first;
+    n = 0;
+    sw_mean = 0.0;
+    while (ip >= 0) {
+      isw = sweights[ip];
+      if (isw > 0) sw_mean += isw;
+      ip = next[ip];
+      n++;
+    }
+
+    sw_mean /= n;
+
+    // delete tiny weights
+
+    ip = cinfo[icell].first;
+    while (ip >= 0) {
+      if (isw < sw_mean*1e-5) {
+        if (ndelete == maxdelete) {
+          maxdelete += DELTADELETE;
+          memory->grow(dellist,maxdelete,"collide:dellist");
+        }
+        sweights[ip] = -1.0;
+        dellist[ndelete++] = ip;
+      }
+      ip = next[ip];
+    }
+  } // loop for cells
+
+  return;
+}
+
+/* ----------------------------------------------------------------------
+   DEBUG : Checks particles
+------------------------------------------------------------------------- */
+
+/*template <int ORD> void Collide::check_particles()
+{
+  //if(ORD==0) printf("before collide\n");
+  //else if(ORD==1) printf("after collide\n");
+  //else if(ORD==2) printf("after sort\n");
+  //else if(ORD==3) printf("after reduce\n");
+  //else if(ORD==4) printf("after compress\n");
+
+  int i,j,m,n,ip,np;
+  int nattempt,reactflag;
+  double attempt,volume;
+  Particle::OnePart *ipart;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  Particle::OnePart *particles = particle->particles;
+  int *next = particle->next;
+
+  double rho;
+  double E;
+  double V[3], vsq;
+  E = rho = 0.0;
+  V[0] = V[1] = V[2] = 0.0;
+  for (int icell = 0; icell < nglocal; icell++) {
+    // create particle list
+    ip = cinfo[icell].first;
+    while (ip >= 0) {
+      ipart = &particles[ip];
+      if(ipart->sweight > 0) {
+        rho += ipart->sweight;
+        vsq = ipart->v[0]*ipart->v[0]+
+              ipart->v[1]*ipart->v[1]+
+              ipart->v[2]*ipart->v[2];
+        for (int d = 0; d < 3; d++) V[d] += ipart->sweight*ipart->v[d];
+        E += ipart->sweight*vsq;
+      }
+      ip = next[ip];
+    }
+  }
+
+  if(update->ntimestep == 1) {
+    rho0 = rho;
+    for(int d = 0; d < 3; d++) V0[d] = V[d];
+    E0 = E;
+  }
+
+  if(update->ntimestep % 1000 == 0)
+    printf("drho: %2.8e; dE: %2.8e; dV: %2.8e,%2.8e,%2.8e\n",
+          1-rho/rho0,
+          1-E/E0,
+          1-V[0]/V0[0],
+          1-V[1]/V0[1],
+          1-V[2]/V0[2]);
+  return;
+}*/

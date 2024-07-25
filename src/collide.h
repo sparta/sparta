@@ -58,10 +58,6 @@ class Collide : protected Pointers {
   virtual void add_grid_one();
   virtual void adapt_grid();
 
-  // DEBUG
-  double rho0, E0, V0[3];
-  template <int> void check_particles();
-
   int ngroups;        // # of groups
 
  protected:
@@ -193,10 +189,13 @@ class Collide : protected Pointers {
             Particle::OnePart *&, Particle::OnePart *&);
   void group_reduce();
   void group_bt(int*, int);
-  void group_ot(int, int);
   void reduce(int*, int, double, double *, double, double);
   void reduce(int*, int, double, double *, double, double, double *);
   void reduce(int*, int, double, double *, double, double, double *, double [3][3]);
+  void remove_tiny();
+
+  // misc
+
   void grow_percell(int);
 
   // functions for nearest neighbor
