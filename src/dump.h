@@ -59,7 +59,6 @@ class Dump : protected Pointers {
   int append_flag;           // 1 if open file in append mode, 0 if not
   int buffer_allow;          // 1 if style allows for buffer_flag, 0 if not
   int buffer_flag;           // 1 if buffer output as one big string, 0 if not
-  int file_header_flag;      // 1 if output header, 0 if omit header
   int padflag;               // timestep padding in filename
   int singlefile_opened;     // 1 = one big file, already opened, else 0
 

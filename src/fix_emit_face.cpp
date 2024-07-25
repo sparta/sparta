@@ -136,7 +136,6 @@ void FixEmitFace::init()
 
   dimension = domain->dimension;
   fnum = update->fnum;
-  if (update->fnum_emit > 0.0) fnum = update->fnum_emit;
   dt = update->dt;
 
   nspecies = particle->mixture[imix]->nspecies;
@@ -871,7 +870,6 @@ void FixEmitFace::subsonic_inflow()
   Grid::ChildInfo *cinfo = grid->cinfo;
   int *mspecies = particle->mixture[imix]->species;
   double fnum = update->fnum;
-  if (update->fnum_emit > 0.0) fnum = update->fnum_emit;
   double boltz = update->boltz;
 
   for (int i = 0; i < ntask; i++) {
