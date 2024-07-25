@@ -260,10 +260,13 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
   // skip if species not in mixture group
 
   int origspecies = -1;
-  int igroup = -1;
+  int igroup;
   if (iorig) {
     origspecies = iorig->ispecies;
-    int igroup = particle->mixture[imix]->species2group[origspecies];
+    igroup = particle->mixture[imix]->species2group[origspecies];
+    if (igroup < 0) return;
+  } else {
+    igroup = particle->mixture[imix]->species2group[ip->ispecies];
     if (igroup < 0) return;
   }
 
