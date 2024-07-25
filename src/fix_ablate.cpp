@@ -354,7 +354,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   // intersection can be no closer than 2% of the cell length
   // assumeds outside corner point is 0 (worst case scenario)
 
-  if(surfbuffer < EPSILON) {
+  if (surfbuffer == 0.0) {
     cmin = thresh + EPSILON;
     cmax = thresh - EPSILON;
   } else {
