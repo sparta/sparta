@@ -17,6 +17,7 @@
 #include "string.h"
 #include "fix_ablate.h"
 #include "update.h"
+#include "geometry.h"
 #include "grid.h"
 #include "domain.h"
 #include "decrement_lookup_table.h"
@@ -932,6 +933,7 @@ void FixAblate::set_delta_uniform()
         if (cvalues[icell][i] > thresh) nin++;
       }
     }
+
     if (nin == 0 || nin == ncorner) celldelta[icell] = 0.0;
     else celldelta[icell] = maxrandom*scale;
   }
@@ -1195,7 +1197,8 @@ void FixAblate::decrement_inner()
       for (j = 0; j < ninner; j++)
         idelta[icell][i][j] = 0.0;
 
-    total = celldelta[icell];//*ninner; // uncomment for mass-preserving option
+    total = celldelta[icell];//*ninner;
+
     while (total > 0.0) {
 
       imin = -1;
@@ -1724,7 +1727,7 @@ void FixAblate::decrement_inner_multi_outside()
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  int i,j,Nout;
+  int i,j,Ninterface;
   int i_inner, *ineighbors, *neighbors;
   double total, perout;
 
@@ -1738,15 +1741,15 @@ void FixAblate::decrement_inner_multi_outside()
     if (cells[icell].nsplit <= 0) continue;
 
     for (i = 0; i < ncorner; i++)
-        for (j = 0; j < ninner; j++) idelta[icell][i][j] = 0.0;
+      for (j = 0; j < ninner; j++) idelta[icell][i][j] = 0.0;
 
-    if (dim == 2) Nout = mark_corners_2d(icell);
-    else Nout = mark_corners_3d(icell);
+    if (dim == 2) Ninterface = mark_corners_2d(icell);
+    else Ninterface = mark_corners_3d(icell);
 
-    if (Nout == 0) continue;
+    if (Ninterface == 0) continue;
 
     total = celldelta[icell];
-    perout = total/Nout;//*ninner;
+    perout = total/Ninterface;//*ninner;
 
     for (i = 0; i < ncorner; i++) {
 
@@ -1760,13 +1763,11 @@ void FixAblate::decrement_inner_multi_outside()
         if (refcorners[neighbors[j]] == 1) Nin++;
 
       // only decrement inner neighbors
+      // do not only decrement inner indices inside the cell
+      // -> causes the cell decrement to be too small -> square shape
 
-      for (j = 0; j < dim; j++) {
-        if (refcorners[neighbors[j]] == 1) {
-          i_inner = ineighbors[j];
-          idelta[icell][i][i_inner] += perout/Nin;
-        }
-      } // end dim
+      for (j = 0; j < ninner; j++)
+        idelta[icell][i][j] += perout/Nin;
 
     } // end corners
   } // end cells
@@ -1843,6 +1844,16 @@ void FixAblate::decrement_inner_multi_inside()
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
+  Surf::Line *line;
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tri;
+  Surf::Tri *tris = surf->tris;
+
+  surfint *csurfs;
+  double pt[3], norm[3], dec_vec[3];
+  double dist, mindist;
+  int nsurf, isurf;
+
   int i,j,k;
   int i_inner, i_neighbor_corner;
   int Nneigh, *ineighbors, *neighbors, oinner, kcorner;
@@ -1858,13 +1869,100 @@ void FixAblate::decrement_inner_multi_inside()
     if (dim == 2) mark_corners_2d(icell);
     else mark_corners_3d(icell);
 
+    // total number of surfs
+
+    nsurf = cells[icell].nsurf;
+    if (!nsurf) continue; // if no surfs, no interface points
+    csurfs = cells[icell].csurfs;
+
     for (i = 0; i < ncorner; i++) {
+
+      // only check inside corner points
+      // the inner indices should be consistent (all in or out)
+      // ... so just check first one
+
+      if (ivalues[icell][i][0] < thresh) continue;
+
+      // find location of corner
+
+      if (i == 0) {
+        pt[0] = cells[icell].lo[0];
+        pt[1] = cells[icell].lo[1];
+        pt[2] = cells[icell].lo[2];
+      } else if (i == 1) {
+        pt[0] = cells[icell].hi[0];
+        pt[1] = cells[icell].lo[1];
+        pt[2] = cells[icell].lo[2];
+      } else if (i == 2) {
+        pt[0] = cells[icell].lo[0];
+        pt[1] = cells[icell].hi[1];
+        pt[2] = cells[icell].lo[2];
+      } else if (i == 3) {
+        pt[0] = cells[icell].hi[0];
+        pt[1] = cells[icell].hi[1];
+        pt[2] = cells[icell].lo[2];
+      } else if (i == 4) {
+        pt[0] = cells[icell].lo[0];
+        pt[1] = cells[icell].lo[1];
+        pt[2] = cells[icell].hi[2];
+      } else if (i == 5) {
+        pt[0] = cells[icell].hi[0];
+        pt[1] = cells[icell].lo[1];
+        pt[2] = cells[icell].hi[2];
+      } else if (i == 6) {
+        pt[0] = cells[icell].lo[0];
+        pt[1] = cells[icell].hi[1];
+        pt[2] = cells[icell].hi[2];
+      } else {
+        pt[0] = cells[icell].hi[0];
+        pt[1] = cells[icell].hi[1];
+        pt[2] = cells[icell].hi[2];
+      }
+
+      // find closest surface and record the norm
+
+      mindist = -1;
+      norm[0] = norm[1] = norm[2] = 0.0;
+      for (int m = 0; m < nsurf; m++) {
+        isurf = csurfs[m];
+        
+        if (dim == 2) {
+          line = &lines[isurf];
+          dist = Geometry::distsq_point_line(pt, line->p1, line->p2);
+          dist = fabs(dist);
+          if (mindist < 0 || dist < mindist) {
+            mindist = dist;
+            norm[0] = line->norm[0];
+            norm[1] = line->norm[1];
+            norm[2] = line->norm[2];
+          }
+        } else {
+          tri = &tris[isurf];
+          dist = Geometry::distsq_point_tri(pt, tri->p1, tri->p2, tri->p3, tri->norm);
+          dist = fabs(dist);
+          if (mindist < 0 || dist < mindist) {
+            mindist = dist;
+            norm[0] = tri->norm[0];
+            norm[1] = tri->norm[1];
+            norm[2] = tri->norm[2];
+          }
+        }
+      }
+
+      // reflection of norm will also be applied so can take abs
+      // norm points outside so flip to point direction of surface recession
+
+      norm[0] = -norm[0];
+      norm[1] = -norm[1];
+      norm[2] = -norm[2];
 
       // corner neighbors
 
       neighbors = corner_neighbor[i];
 
       // inner neighbors that point in dir. of corner neighbors
+      // check from perspective of inside corner
+      // are the interface corners negative?
 
       ineighbors = inner_neighbor[i];
 
@@ -1872,35 +1970,44 @@ void FixAblate::decrement_inner_multi_inside()
         i_inner = ineighbors[k];
         i_neighbor_corner = neighbors[k];
 
-        if (ivalues[icell][i][i_inner] < 0) {
+        if (i_inner == 0) oinner = 1;
+        else if (i_inner == 1) oinner = 0;
+        else if (i_inner == 2) oinner = 3;
+        else if (i_inner == 3) oinner = 2;
+        else if (i_inner == 4) oinner = 5;
+        else if (i_inner == 5) oinner = 4;
 
-          // is the neighbor corner inside?
+        if (ivalues[icell][i_neighbor_corner][oinner] < 0) {
 
-          if (refcorners[i_neighbor_corner] == 1) {
+          // total magnitude to ablate
 
-            // which inner index for connected corner point
+          total_remain = fabs(ivalues[icell][i_neighbor_corner][oinner]);
 
-            if (i_inner == 0) oinner = 1;
-            else if (i_inner == 1) oinner = 0;
-            else if (i_inner == 2) oinner = 3;
-            else if (i_inner == 3) oinner = 2;
-            else if (i_inner == 4) oinner = 5;
-            else if (i_inner == 5) oinner = 4;
+          if (norm[0] < 0.0)
+            idelta[icell][i][1] += total_remain*fabs(norm[0]);
+          else if (norm[0] > 0.0)
+            idelta[icell][i][0] += total_remain*fabs(norm[0]);
 
-            total_remain = fabs(ivalues[icell][i][i_inner]);
+          if (norm[1] < 0.0)
+            idelta[icell][i][3] += total_remain*fabs(norm[1]);
+          else if (norm[1] > 0.0)
+            idelta[icell][i][2] += total_remain*fabs(norm[1]);
 
-            idelta[icell][i_neighbor_corner][oinner] += total_remain;
+          if (norm[2] < 0.0 && dim == 3)
+            idelta[icell][i][5] += total_remain*fabs(norm[2]);
+          else if (norm[2] > 0.0 && dim == 3)
+            idelta[icell][i][4] += total_remain*fabs(norm[2]);
 
-          }
         } // end if for negative cvalues
       } // end  k - neighbors
-
-      // zero out negative values and adjust for inner
-
-      for (j = 0; j < ninner; j++)
-        if (ivalues[icell][i][j] < 0) ivalues[icell][i][j] = 0.0;
-
     } // end corner
+
+    // zero out negative values
+
+    for (i = 0; i < ncorner; i++)
+      for (k = 0; k < ninner; k++)
+        if (ivalues[icell][i][k] < 0.0) ivalues[icell][i][k] = 0.0;
+
   } // end cells
 }
 
@@ -1977,12 +2084,12 @@ void FixAblate::sync_inner_multi_inside()
 
           ivalues[icell][i][j] -= total[j];
 
-          if (j == 0) ivalues[icell][i][1] -= total[j];
+          /*if (j == 0) ivalues[icell][i][1] -= total[j];
           else if (j == 1) ivalues[icell][i][0] -= total[j];
           else if (j == 2) ivalues[icell][i][3] -= total[j];
           else if (j == 3) ivalues[icell][i][2] -= total[j];
           else if (j == 4) ivalues[icell][i][5] -= total[j];
-          else ivalues[icell][i][4] -= total[j];
+          else ivalues[icell][i][4] -= total[j];*/
         }
       }
 
