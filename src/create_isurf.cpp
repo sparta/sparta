@@ -300,7 +300,7 @@ void CreateISurf::set_corners()
   // sync corner point values between procs
 
   if (ctype == INNER) sync(INVAL);
-  else  sync(CVAL);
+  else sync(CVAL);
 }
 
 /* ----------------------------------------------------------------------
@@ -370,7 +370,7 @@ void CreateISurf::set_inner()
   // check all procs successfully filled side values
 
   int ofull;
-  if(full) ofull = 0;
+  if (full) ofull = 0;
   else ofull = 1;
   int allofull;
   MPI_Allreduce(&ofull,&allofull,1,MPI_INT,MPI_SUM,world);
@@ -1562,13 +1562,13 @@ void CreateISurf::set_cvalues_inner()
     refsval = svalues[icell][0];
     allsame = 1;
     for (int ic = 1; ic < ncorner; ic++)
-      if(svalues[icell][ic] != refsval)
+      if (svalues[icell][ic] != refsval)
         allsame = 0;
 
-    if(allsame) {
+    if (allsame) {
       for (int ic = 0; ic < ncorner; ic++) {
-        for(int iin = 0; iin < ninner; iin++) {
-          if(refsval==1)
+        for (int iin = 0; iin < ninner; iin++) {
+          if (refsval==1)
             invalues[icell][ic][iin] = cin;
           else
             invalues[icell][ic][iin] = cout;
@@ -1588,12 +1588,12 @@ void CreateISurf::set_cvalues_inner()
     if (cells[icell].nsplit <= 0) continue;
     for (int ic = 0; ic < ncorner; ic++) {
 
-      for(int k = 0; k < ninner; k++) {
+      for (int k = 0; k < ninner; k++) {
 
         // bound the intersection values
 
         ival = ivalues[icell][ic][k];
-        if(ival >= 0.0) {
+        if (ival >= 0.0) {
           ival = MAX(ival, ibuffer);
           ival = MIN(ival, oibuffer);
         }
@@ -1935,7 +1935,7 @@ void CreateISurf::process_args(int narg, char **arg)
     if (strcmp(arg[iarg],"buffer") == 0)  {
       if (iarg+2 > narg) error->all(FLERR,"Invalid create_isurf command");
       surfbuffer = atof(arg[iarg+1]);
-      if(surfbuffer <= 0 || surfbuffer >= 0.5)
+      if (surfbuffer <= 0 || surfbuffer >= 0.5)
         error->all(FLERR,"Buffer must be a value between 0 and 0.5");
       iarg += 2;
     } else error->all(FLERR,"Invalid create_isurf command");

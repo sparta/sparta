@@ -452,7 +452,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
 
   for (int icell = 0; icell < nglocal; icell++) {
     for (int m = 0; m < ncorner; m++)
-      for(int n = 0; n < ninner; n++)
+      for (int n = 0; n < ninner; n++)
         ivalues[icell][m][n] = ivalues_caller[icell][m][n];
     if (tvalues_flag) tvalues[icell] = tvalues_caller[icell];
   }
@@ -462,7 +462,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   if (minmaxflag) {
     for (int icell = 0; icell < nglocal; icell++) {
       for (int m = 0; m < ncorner; m++) {
-        for(int n = 0; n < ninner; n++) {
+        for (int n = 0; n < ninner; n++) {
           if (ivalues[icell][m][n] < thresh) ivalues[icell][m][n] = 0.0;
           else ivalues[icell][m][n] = 255.0;
         }
@@ -1224,7 +1224,7 @@ void FixAblate::decrement_inner()
 
           // search for smallest inner index at each corner
 
-          if(idelta[icell][i][i_inner] == 0.0 &&
+          if (idelta[icell][i][i_inner] == 0.0 &&
              opp > 0 &&
              ivalues[icell][i][i_inner] > 0.0) {
             imin = i;
@@ -1327,7 +1327,7 @@ void FixAblate::sync_inner()
       /*-----------------------------------------------------------*/
 
       // now decrement corners
-      for(j = 0; j < ninner; j++) {
+      for (j = 0; j < ninner; j++) {
         ivalues[icell][i][j] -= total[j];
         if (j == 0) ivalues[icell][i][1] -= total[j];
         else if (j == 1) ivalues[icell][i][0] -= total[j];
@@ -1337,7 +1337,7 @@ void FixAblate::sync_inner()
         else ivalues[icell][i][4] -= total[j];
       }
 
-      for(j = 0; j < ninner; j++)
+      for (j = 0; j < ninner; j++)
         if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
 
     } // end corners
@@ -1883,7 +1883,7 @@ void FixAblate::decrement_inner_multi_inside()
 
       if (ivalues[icell][i][0] < thresh) continue;
 
-      // find location of corner
+      // find location of corner point
 
       if (i == 0) {
         pt[0] = cells[icell].lo[0];
@@ -1949,8 +1949,7 @@ void FixAblate::decrement_inner_multi_inside()
         }
       }
 
-      // reflection of norm will also be applied so can take abs
-      // norm points outside so flip to point direction of surface recession
+      // flip norm so it points in direction of surface recession
 
       norm[0] = -norm[0];
       norm[1] = -norm[1];
@@ -1961,10 +1960,10 @@ void FixAblate::decrement_inner_multi_inside()
       neighbors = corner_neighbor[i];
 
       // inner neighbors that point in dir. of corner neighbors
-      // check from perspective of inside corner
-      // are the interface corners negative?
 
       ineighbors = inner_neighbor[i];
+
+      // for each inside point, find interface points with negative inner values
 
       for (k = 0; k < dim; k++) {
         i_inner = ineighbors[k];
@@ -1982,6 +1981,8 @@ void FixAblate::decrement_inner_multi_inside()
           // total magnitude to ablate
 
           total_remain = fabs(ivalues[icell][i_neighbor_corner][oinner]);
+
+          // direct the mass flux to be in the direction of the surface normal
 
           if (norm[0] < 0.0)
             idelta[icell][i][1] += total_remain*fabs(norm[0]);
@@ -2090,6 +2091,7 @@ void FixAblate::sync_inner_multi_inside()
           else if (j == 3) ivalues[icell][i][2] -= total[j];
           else if (j == 4) ivalues[icell][i][5] -= total[j];
           else ivalues[icell][i][4] -= total[j];*/
+
         }
       }
 
@@ -2125,7 +2127,7 @@ int FixAblate::mark_corners_2d(int icell)
 
   int Nin = 0;
 
-  if(innerflag) {
+  if (innerflag) {
     if (ivalues[icell][0][0] > thresh) {
       refcorners[0] = 1;
       Nin++;
@@ -2588,7 +2590,7 @@ void FixAblate::comm_neigh_corners(int which)
   // ncomm = ilocal + Ncorner values
 
   int ncomm;
-  if(innerflag) ncomm = 1 + ncorner*ninner;
+  if (innerflag) ncomm = 1 + ncorner*ninner;
   else ncomm = 1 + ncorner;
 
   if (nsend*ncomm > maxbuf) {
@@ -2856,7 +2858,7 @@ int FixAblate::unpack_grid_one(int icell, char *buf)
 
   nglocal++;
 
- if (cells[icell].nsplit > 1) {
+  if (cells[icell].nsplit > 1) {
     int isplit = cells[icell].isplit;
     int nsplit = cells[icell].nsplit;
     grow_percell(nsplit);
@@ -3047,13 +3049,13 @@ void FixAblate::process_args(int narg, char **arg)
 
   int iarg = 0;
   while (iarg < narg) {
-    if(strcmp(arg[iarg],"multiple") == 0) {
+    if (strcmp(arg[iarg],"multiple") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
       if (strcmp(arg[iarg+1],"no") == 0) multiflag = 0;
       else if (strcmp(arg[iarg+1],"yes") == 0) multiflag = 1;
       else error->all(FLERR,"Illegal fix_ablate command");
       iarg += 2;
-    } else if(strcmp(arg[iarg],"minmax") == 0) {
+    } else if (strcmp(arg[iarg],"minmax") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
       if (strcmp(arg[iarg+1],"no") == 0) minmaxflag = 0;
       else if (strcmp(arg[iarg+1],"yes") == 0) minmaxflag = 1;
