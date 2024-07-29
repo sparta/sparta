@@ -350,24 +350,27 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
 
-  // parameter which is for length_adjust
-  // intersection can be no closer than 2% of the cell length
-  // assumeds outside corner point is 0 (worst case scenario)
+  // determine how close corner points values can be to threshold
+  // corner points inside the surface have values >= threshold
+  // corner points outside the surface (in the gas) have values < threshold
+  // corner_inside_min = min allowed value of an inside corner point
+  // corner_outside_max = max allowed value on an outside corner point
+  // use epsilon method (mindist = 0.0) or isosurface stuffing method
 
-  if(surfbuffer < EPSILON) {
-    cmin = thresh + EPSILON;
-    cmax = thresh - EPSILON;
+
+  if (mindist == 0.0) {
+    corner_inside_min = thresh + EPSILON;
+    corner_outside_max = thresh - EPSILON;
   } else {
-    cmin = (thresh - 0.0 * surfbuffer) / (1.0 - surfbuffer);
-    cmax = (thresh - 255.0 * surfbuffer) / (1.0 - surfbuffer);
+    corner_inside_min = (thresh - 0.0*mindist) / (1.0-mindist);
+    corner_outside_max = (thresh - 255.0*mindist) / (1.0-mindist);
   }
 
-  // bound corner value limits
+  corner_inside_min = MIN(corner_inside_min,255.0);
+  corner_outside_max = MAX(corner_outside_max,0.0);
 
-  cmin = MIN(cmin,255.0);
-  cmax = MAX(cmax,0.0);
-
-  // push corner pt values that are fully external/internal to 0 or 255
+  // push corner pt values with fully external/internal neighbors to 0 or 255
+  // adjust individual corner point values too close to threshold
 
   if (pushflag) push_lohi();
   epsilon_adjust();
@@ -423,6 +426,7 @@ void FixAblate::end_of_step()
   decrement();
 
   // sync shared corner point values
+  // adjust individual corner point values too close to threshold
 
   sync();
   epsilon_adjust();
@@ -969,16 +973,15 @@ void FixAblate::sync()
 }
 
 /* ----------------------------------------------------------------------
-   adjust corner point values by epsilon of too close to threshold
-   to avoid creating tiny or zero-size surface elements
+   ensure each corner point value is not too close to threshold
+   this avoids creating tiny or zero-size surface elements
+   corner_inside_min and corner_outside_max are set in store_corners()
+     via epsilon method or isosurface stuffing method
 ------------------------------------------------------------------------- */
 
 void FixAblate::epsilon_adjust()
 {
   int i,icell;
-
-  // insure no corner point is within EPSILON of threshold
-  // if so, set it to threshold - EPSILON
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -988,10 +991,10 @@ void FixAblate::epsilon_adjust()
     if (cells[icell].nsplit <= 0) continue;
 
     for (i = 0; i < ncorner; i++)
-      if (cvalues[icell][i] >= thresh && cvalues[icell][i] < cmin)
-        cvalues[icell][i] = cmax;
-      else if(cvalues[icell][i] < thresh && cvalues[icell][i] > cmax)
-        cvalues[icell][i] = cmax;
+      if (cvalues[icell][i] >= thresh && cvalues[icell][i] < corner_inside_min)
+        cvalues[icell][i] = corner_outside_max;
+      else if (cvalues[icell][i] < thresh && cvalues[icell][i] > corner_outside_max)
+        cvalues[icell][i] = corner_outside_max;;
   }
 }
 
@@ -1562,15 +1565,16 @@ double FixAblate::memory_usage()
 
 void FixAblate::process_args(int narg, char **arg)
 {
-  surfbuffer = 0.0;
+  mindist = 0.0;
 
   int iarg = 0;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"buffer") == 0)  {
+    if (strcmp(arg[iarg],"mindist") == 0)  {
       if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
-      surfbuffer = atof(arg[iarg+1]);
-      if(surfbuffer <= 0 || surfbuffer >= 0.5)
-        error->all(FLERR,"Buffer must be a value between 0 and 0.5");
+      mindist = atof(arg[iarg+1]);
+      if (mindist < 0.0 || midist >= 0.5)
+        error->all(FLERR,"Fix ablate mindist value must be >= 0.0 and < 0.5");
+      if (mindist < EPSILON) mindist = 0.0;
       iarg += 2;
     } else error->all(FLERR,"Invalid read_isurf command");
   }
