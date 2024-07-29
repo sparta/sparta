@@ -1572,7 +1572,7 @@ void FixAblate::process_args(int narg, char **arg)
     if (strcmp(arg[iarg],"mindist") == 0)  {
       if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
       mindist = atof(arg[iarg+1]);
-      if (mindist < 0.0 || midist >= 0.5)
+      if (mindist < 0.0 || mindist >= 0.5)
         error->all(FLERR,"Fix ablate mindist value must be >= 0.0 and < 0.5");
       if (mindist < EPSILON) mindist = 0.0;
       iarg += 2;
