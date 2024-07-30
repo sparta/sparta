@@ -113,7 +113,6 @@ class CreateISurf : protected Pointers {
   // functions to set corner/inner values
 
   void set_corners();
-  void set_voxels();
   void set_inner();
 
   // send/recv values between neighborind cells (similar to fix_ablate)

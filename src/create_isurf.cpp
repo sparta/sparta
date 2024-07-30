@@ -180,7 +180,6 @@ void CreateISurf::command(int narg, char **arg)
   // set grid corner point values based on existing explicit surfs and thresh
 
   if (ctype == INNER) set_inner();
-  //else if (ctype == VOXEL) set_voxels();
   else set_corners();
 
   // remove all explicit surfs
@@ -288,7 +287,7 @@ void CreateISurf::set_corners()
   // check all procs successfully filled side values
 
   int ofull;
-  if(full) ofull = 0;
+  if (full) ofull = 0;
   else ofull = 1;
   int allofull;
   MPI_Allreduce(&ofull,&allofull,1,MPI_INT,MPI_SUM,world);
@@ -309,99 +308,6 @@ void CreateISurf::set_corners()
   if (ctype == VOXEL) sync_voxels();
   else sync(CVAL);
 }
-
-/* ----------------------------------------------------------------------
-   set_corners but voxel-based
-------------------------------------------------------------------------- */
-
-/*void CreateISurf::set_voxels()
-{
-  Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-
-  // set cell spacing and indices
-
-  memory->grow(ixyz,nglocal,3,"create_isurf:ixyz");
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    ixyz[icell][0] = ixyz[icell][1] = ixyz[icell][2] = 0;
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-
-    ixyz[icell][0] =
-      static_cast<int> ((cells[icell].lo[0]-corner[0]) / xyzsize[0] + 0.5) + 1;
-    ixyz[icell][1] =
-      static_cast<int> ((cells[icell].lo[1]-corner[1]) / xyzsize[1] + 0.5) + 1;
-    ixyz[icell][2] =
-      static_cast<int> ((cells[icell].lo[2]-corner[2]) / xyzsize[2] + 0.5) + 1;
-  }
-
-  // first shift everything down by thresh
-  // later shift back
-
-  memory->create(cvalues,nglocal,ncorner,"createisurf:cvalues");
-  memory->create(tmp_cvalues,nglocal,ncorner,"createisurf:tmp_cvalues");
-  memory->create(mvalues,nglocal,ncorner,"createisurf:mvalues");
-  memory->create(svalues,nglocal,ncorner,"createisurf:svalues");
-  memory->create(ivalues,nglocal,ncorner,ninner,"createisurf:ivalues");
-
-  // initialize
-
-  for (int ic = 0; ic < nglocal; ic++) {
-    for (int jc = 0; jc < ncorner; jc++) {
-      tmp_cvalues[ic][jc] = 0.0;
-      svalues[ic][jc] = -1;
-      mvalues[ic][jc] = -1.0;
-      for (int kc = 0; kc < ninner; kc++) ivalues[ic][jc][kc] = -1.0;
-    }
-  }
-
-  // find intersections between edges and surfaces
-
-  if (dim == 2) surface_edge2d();
-  else surface_edge3d();
-
-  // fill in side and corner values based on if grid cell is in or out
-
-  set_inout();
-
-  // sync side and intersection values between procs
-
-  sync(SVAL);
-  sync(IVAL);
-
-  // find remaining side values based on neighbors
-
-  int full;
-  if (dim == 2) full = find_side_2d();
-  else full = find_side_3d();
-
-  // check all procs successfully filled side values
-
-  int ofull;
-  if(full) ofull = 0;
-  else ofull = 1;
-  int allofull;
-  MPI_Allreduce(&ofull,&allofull,1,MPI_INT,MPI_SUM,world);
-  if (allofull) {
-    char str[128];
-    sprintf(str,
-            "Create_isurf could not determine whether some corner \
-             values are inside or outside with respect to the surface");
-    error->all(FLERR,str);
-  }
-
-
-  // from side (and intersection) values, determine corner point values
-
-  set_cvalues();
-
-  // sync corner point values between procs
-
-  sync_voxels();
-
-  return;
-}*/
 
 /* ----------------------------------------------------------------------
    same as above but for inner values
