@@ -911,12 +911,6 @@ void CreateISurf::sync_voxels()
       if (dim == 2) vol_avg *= 0.25;
       else vol_avg *= 0.125;
 
-      //if (vol_avg < cbufmin && vol_avg > thresh) vol_avg = cbufmin;
-      //if (vol_avg > cbufmax && vol_avg < thresh) vol_avg = cbufmax;
-
-      //if (vol_avg > thresh) vol_avg = cin;
-      //if (vol_avg < thresh) vol_avg = cout;
-
       cvalues[icell][i] = vol_avg;
 
     }
@@ -1177,18 +1171,9 @@ void CreateISurf::set_inout()
 
     itype = cinfo[icell].type;
 
-    // fully inside so set all corner values to max
-
-    if (itype == 2) {
-      sval = 1;
-
-    // fully outside so set all corners to min
-
-    } else if (itype == 1) {
-      sval = 0;
-    } else {
-      continue;
-    }
+    if (itype == 2) sval = 1; // fully inside so set all corner values to max
+    else if (itype == 1) sval = 0; // fully outside so set all corners to min
+    else continue;
 
     for (int m = 0; m < ncorner; m++)
       if (svalues[icell][m] < 0) svalues[icell][m] = sval;
@@ -1211,6 +1196,7 @@ int CreateISurf::find_side_2d()
 
   filled = attempt = 0;
   while (filled == 0) {
+
     filled = 1;
     for (int icell = 0; icell < nglocal; icell++) {
       if (!(cinfo[icell].mask & groupbit)) continue;
@@ -1643,6 +1629,7 @@ void CreateISurf::set_cvalues_ave()
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
     for (int ic = 0; ic < ncorner; ic++) {
+
       ivalsum = 0.0;
       if (svalues[icell][ic] == 0) tmp_cvalues[icell][ic] = cout;
       else {
@@ -1676,18 +1663,6 @@ void CreateISurf::set_cvalues_inner()
 {
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
-
-  // define cut-off for intersections to avoid degenerate triangles
-  // refer to isosurface stuffing by labelle and shewchuk
-
-  //double ibuffer = surfbuffer;
-  //double oibuffer = 1.0 - ibuffer;
-
-  // find param of edge with 0 - 255. Determines if outside of inside
-  // corner point needs to be adjusted
-
-  //double ivalth = (thresh - cin) / (cout - cin);
-  //double oivalth = 1.0 - ivalth;
 
   // first set corner point values of fully inside and outside cells
 
@@ -1729,15 +1704,8 @@ void CreateISurf::set_cvalues_inner()
         // bound the intersection values
 
         ival = ivalues[icell][ic][k];
-        //if (ival >= 0.0) {
-        //  ival = MAX(ival, ibuffer);
-        //  ival = MIN(ival, oibuffer);
-        //}
-        ivalues[icell][ic][k] = ival;
-
-        // no intersection this edge
-
-        if (ival <= 0) {
+        
+        if (ival <= 0) { // no intersection this edge
           if (svalues[icell][ic] == 0) cval = cout;
           else cval = cin;
         } else if (svalues[icell][ic] == 1) {
@@ -1752,28 +1720,7 @@ void CreateISurf::set_cvalues_inner()
     } // end ncorner
   } // end cells
 
-  // check all values bounded between (0,255) and all in or out
-
-  /*int inout;
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-    for (int ic = 0; ic < ncorner; ic++) {
-
-      if (tmp_invalues[icell][ic][0] <= cbufmin) inout = 0;
-      else inout = 1;
-
-      for (int k = 0; k < ninner; k++) {
-        if (tmp_invalues[icell][ic][k]<0 || tmp_invalues[icell][ic][k]>255.0)
-          error->one(FLERR,"bad");
-        if (tmp_invalues[icell][ic][k] <= thresh && inout == 1)
-          error->one(FLERR,"inconsistent");
-        if (tmp_invalues[icell][ic][k] > thresh && inout == 0)
-          error->one(FLERR,"inconsistent");
-      }
-    }
-  }*/
-
+  return;
 }
 
 /* ----------------------------------------------------------------------
