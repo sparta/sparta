@@ -52,6 +52,8 @@ class CreateISurf : protected Pointers {
   int nxyz[3], Nxyz;        // dimensions of grid
   double **cvalues;         // array of corner point values
   double ***invalues;       // array of inner values
+  double **tmp_cvalues;     // temporary array of corner point values
+  double ***tmp_invalues;   // temporary array of inner values
   double **mvalues;         // minimum intersection value
   int **svalues;            // marks corners as in or out
   double ***ivalues;        // point of intersection between corner points
@@ -111,11 +113,13 @@ class CreateISurf : protected Pointers {
   // functions to set corner/inner values
 
   void set_corners();
+  void set_voxels();
   void set_inner();
 
   // send/recv values between neighborind cells (similar to fix_ablate)
 
   void sync(int);
+  void sync_voxels();
   void comm_neigh_corners(int);
   void grow_send();
   int walk_to_neigh(int, int, int, int);
@@ -135,6 +139,7 @@ class CreateISurf : protected Pointers {
   int find_side_3d();
   void set_cvalues();
   void set_cvalues_inout();
+  void set_cvalues_voxel();
   void set_cvalues_ave();
   void set_cvalues_inner();
 
