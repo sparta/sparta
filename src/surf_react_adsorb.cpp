@@ -2618,7 +2618,7 @@ void SurfReactAdsorb::readfile_ps(char *fname)
             if (r->state_products[i][0] == 'g')
               {
                 print_reaction(copy1,copy2);
-                error->all(FLERR,"Fas phase species must be "
+                error->all(FLERR,"Gas phase species must be "
                            "first product in DS reaction");
               }
           }
