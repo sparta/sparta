@@ -537,8 +537,8 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
               icompute = modify->find_compute(&arg[iarg][2]);
               *ptr1 = '[';
 
-              // check for global vector/array,
-              // per-particle array, per-grid array, per-surf array
+              // check for global vector/array
+              // or per-particle, per-grid, per-surf, per-tally array
 
               if (icompute >= 0) {
                 if (mode == 0 && modify->compute[icompute]->vector_flag) {
@@ -559,6 +559,10 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
                            modify->compute[icompute]->size_per_surf_cols) {
                   nmax = modify->compute[icompute]->size_per_surf_cols;
                   expandflag = 1;
+                } else if (modify->compute[icompute]->per_tally_flag &&
+                           modify->compute[icompute]->size_per_tally_cols) {
+                  nmax = modify->compute[icompute]->size_per_tally_cols;
+                  expandflag = 1;
                 }
               }
 
@@ -570,7 +574,7 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
               *ptr1 = '[';
 
               // check for global vector/array,
-              // per-particle array, per-grid array, per-surf array
+              // per-particle, per-grid, per-surf array
 
               if (ifix >= 0) {
                 if (mode == 0 && modify->fix[ifix]->vector_flag) {
