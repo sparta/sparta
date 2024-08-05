@@ -303,7 +303,7 @@ FixAveSurf::~FixAveSurf()
     memory->destroy(bufvec);
     memory->destroy(bufarray);
   }
-  
+
   if (nvalues == 1) memory->destroy(vector_surf);
   else memory->destroy(array_surf);
   if (ave == RUNNING) {
@@ -515,7 +515,7 @@ void FixAveSurf::end_of_step()
 	input->variable->compute_surf(n,accvec,1,1);
       else
 	input->variable->compute_surf(n,&accarray[0][m],nvalues,1);
-      
+
     // access custom attribute
 
     } else if (which[m] == CUSTOM) {
@@ -574,7 +574,7 @@ void FixAveSurf::end_of_step()
   irepeat = 0;
   nvalid = ntimestep+per_surf_freq - (nrepeat-1)*nevery;
   modify->addstep_compute(nvalid);
- 
+
   // if all input values are computes which tally particle/surf interactions:
   //   invoke surf->collate() on tallies this fix stores for multiple steps
   //   this merges tallies to owned surfs
