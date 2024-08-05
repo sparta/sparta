@@ -7,7 +7,7 @@ SHELL = /bin/sh
 # specify flags and libraries needed for your compiler
 
 CC =		mpic++
-CCFLAGS =	-O -g
+CCFLAGS =	-O -g -std=c++11
 SHFLAGS =	-fPIC
 DEPFLAGS =	-M
 
