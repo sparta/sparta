@@ -1605,11 +1605,9 @@ void CreateISurf::set_cvalues_voxel()
     if (sfrac < 0.0 || sfrac > 1.0) error->one(FLERR,"bad volume");
 
     for (int ic = 0; ic < ncorner; ic++) {
-      //if (svalues[icell][ic] == 0) tmp_cvalues[icell][ic] = cout;
-      //else if (svalues[icell][ic] == 1) tmp_cvalues[icell][ic] = sfrac*cin;
+      if (svalues[icell][ic] == 0) tmp_cvalues[icell][ic] = cout;
+      else if (svalues[icell][ic] == 1) tmp_cvalues[icell][ic] = sfrac*cin;
       //else error->one(FLERR,"bad svalues");
-
-      tmp_cvalues[icell][ic] = sfrac*cin;
     }
   } // end grid cells
 
