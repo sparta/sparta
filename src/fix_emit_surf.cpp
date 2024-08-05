@@ -16,6 +16,7 @@
 #include "string.h"
 #include "fix_emit_surf.h"
 #include "update.h"
+#include "compute.h"
 #include "domain.h"
 #include "region.h"
 #include "particle.h"
@@ -748,6 +749,10 @@ void FixEmitSurf::perform_task()
           p->flag = PSURF + 1 + isurf;
           p->dtremain = dt * random->uniform();
 
+          for (std::size_t c = 0; c < update->nsurf_tally; ++c) {
+            update->slist_active[c]->surf_tally(isurf, pcell, -1, NULL, p, NULL);
+          }
+
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
                                  temp_rot,temp_vib,vstream);
@@ -852,6 +857,10 @@ void FixEmitSurf::perform_task()
         p = &particle->particles[particle->nlocal-1];
         p->flag = PSURF + 1 + isurf;
         p->dtremain = dt * random->uniform();
+
+        for (std::size_t c = 0; c < update->nsurf_tally; ++c) {
+          update->slist_active[c]->surf_tally(isurf, pcell, -1, NULL, p, NULL);
+        }
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,
