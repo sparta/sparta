@@ -58,6 +58,8 @@ class FixAveSurf : public Fix {
   double *vec_tally;       // tally values, maxtally in length
   double **array_tally;
 
+  int count_tally;         // # of values which process particle/surf tallies
+
   // hash for surf IDs
 
 #ifdef SPARTA_MAP
