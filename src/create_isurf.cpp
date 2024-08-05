@@ -171,7 +171,7 @@ void CreateISurf::command(int narg, char **arg)
 
   tvalues = NULL;
   int pushflag = 0;
-  char *sgroupID = arg[0];
+  char *sgroupID = NULL;
   ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
                         cvalues,tvalues,thresh,sgroupID,pushflag);
 
@@ -260,8 +260,9 @@ void CreateISurf::set_corners()
   MPI_Allreduce(&ofull,&allofull,1,MPI_INT,MPI_SUM,world);
   if (allofull) {
     char str[128];
-    sprintf(str,"Create_isurf could not determine whether %d corner \
-             values are inside or outside surface",allofull);
+    sprintf(str,
+            "Create_isurf could not determine whether some corner \
+             values are inside or outside with respect to the surface");
     error->all(FLERR,str);
   }
 
@@ -390,9 +391,9 @@ void CreateISurf::surface_edge2d()
           if (ivalues[icell][j][n2] > oparam || ivalues[icell][j][n2] < 0)
             ivalues[icell][j][n2] = oparam;
 
-          if (mvalues[icell][i] < 0 || param <= mvalues[icell][i]) {
+          if ((mvalues[icell][i] < 0 || param <= mvalues[icell][i]) && 
+               svalues[icell][i] != 2) {
             if (param == 0) svalues[icell][i] = 0;
-            else if (svalues[icell][i] == 2) 0; // do nothing
 
             // conflicting sides from two surfaces meeting at corner
 
@@ -403,9 +404,9 @@ void CreateISurf::surface_edge2d()
             mvalues[icell][i] = param;
           }
 
-          if (mvalues[icell][j] < 0 || oparam <= mvalues[icell][j]) {
+          if ((mvalues[icell][j] < 0 || oparam <= mvalues[icell][j]) && 
+               svalues[icell][j] != 2) {
             if (oparam == 0) svalues[icell][j] = 0;
-            else if (svalues[icell][j] == 2) 0; // do nothing
             else if (fabs(mvalues[icell][j]-oparam) < EPSILON_GRID
               && svalues[icell][j] != !side) svalues[icell][j] = 2;
             else svalues[icell][j] = !side;
@@ -537,9 +538,9 @@ void CreateISurf::surface_edge3d()
           if (ivalues[icell][j][n2] > oparam || ivalues[icell][j][n2] < 0)
             ivalues[icell][j][n2] = oparam;
 
-          if (mvalues[icell][i] < 0 || param <= mvalues[icell][i]) {
+          if ((mvalues[icell][i] < 0 || param <= mvalues[icell][i]) && 
+               svalues[icell][i] != 2) {
             if (param == 0) svalues[icell][i] = 0;
-            else if (svalues[icell][i] == 2) 0; // do nothing
 
             // conflicting sides from two surfaces meeting at corner
 
@@ -549,9 +550,9 @@ void CreateISurf::surface_edge3d()
             mvalues[icell][i] = param;
           }
 
-          if (mvalues[icell][j] < 0 || oparam <= mvalues[icell][j]) {
+          if ((mvalues[icell][j] < 0 || oparam <= mvalues[icell][j]) && 
+               svalues[icell][j] != 2) {
             if (oparam == 0) svalues[icell][j] = 0;
-            else if (svalues[icell][j] == 2) 0; // do nothing
             else if (fabs(mvalues[icell][j]-oparam) < EPSILON_GRID
               && svalues[icell][j] != !side) svalues[icell][j] = 2;
             else svalues[icell][j] = !side;
