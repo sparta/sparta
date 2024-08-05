@@ -87,6 +87,7 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   if (scale < 0.0) error->all(FLERR,"Illegal fix ablate command");
 
   int iarg = 6;
+
   if ((strncmp(arg[5],"c_",2) == 0) || (strncmp(arg[5],"f_",2) == 0)) {
     if (arg[5][0] == 'c') which = COMPUTE;
     else if (arg[5][0] == 'f') which = FIX;
@@ -108,6 +109,8 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     strcpy(idsource,suffix);
     delete [] suffix;
 
+    iarg = 6;
+
   } else if (strncmp(arg[5],"v_",2) == 0) {
     which = VARIABLE;
 
@@ -115,8 +118,11 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     char *idsource = new char[n];
     strcpy(idsource,&arg[5][2]);
 
+    iarg = 6;
+
   } else if (strcmp(arg[5],"random") == 0) {
     iarg++;
+
     if (narg < 7) error->all(FLERR,"Illegal fix ablate command");
     which = RANDOM;
     maxrandom = atoi(arg[6]);
@@ -178,6 +184,10 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     if (input->variable->grid_style(ivariable) == 0)
       error->all(FLERR,"Fix ablate variable is not grid-style variable");
   }
+
+  // process optional command line args
+
+  process_args(narg-iarg,&arg[iarg]);
 
   // this fix produces a per-grid array and a scalar
 
@@ -384,7 +394,27 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
 
-  // push corner pt values that are fully external/internal to 0 or 255
+  // determine how close corner points values can be to threshold
+  // corner points inside the surface have values >= threshold
+  // corner points outside the surface (in the gas) have values < threshold
+  // corner_inside_min = min allowed value of an inside corner point
+  // corner_outside_max = max allowed value on an outside corner point
+  // use epsilon method (mindist = 0.0) or isosurface stuffing method
+
+
+  if (mindist == 0.0) {
+    corner_inside_min = thresh + EPSILON;
+    corner_outside_max = thresh - EPSILON;
+  } else {
+    corner_inside_min = (thresh - 0.0*mindist) / (1.0-mindist);
+    corner_outside_max = (thresh - 255.0*mindist) / (1.0-mindist);
+  }
+
+  corner_inside_min = MIN(corner_inside_min,255.0);
+  corner_outside_max = MAX(corner_outside_max,0.0);
+
+  // push corner pt values with fully external/internal neighbors to 0 or 255
+  // adjust individual corner point values too close to threshold
 
   if (pushflag) push_lohi();
 
@@ -570,7 +600,8 @@ void FixAblate::end_of_step()
     }
   }
 
-  // handle small corner values
+  // sync shared corner point values
+  // adjust individual corner point values too close to threshold
 
   if (innerflag) epsilon_adjust_inner();
   else epsilon_adjust();
@@ -1172,11 +1203,16 @@ void FixAblate::sync()
 }
 
 /* ----------------------------------------------------------------------
-   version of decrement() function for inner indices
+   ensure each corner point value is not too close to threshold
+   this avoids creating tiny or zero-size surface elements
+   corner_inside_min and corner_outside_max are set in store_corners()
+     via epsilon method or isosurface stuffing method
 ------------------------------------------------------------------------- */
 
 void FixAblate::decrement_inner()
 {
+  int i,icell;
+
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
@@ -1247,6 +1283,7 @@ void FixAblate::decrement_inner()
         total -= minvalue;
       }
     }
+
   }
 }
 
@@ -3085,4 +3122,25 @@ double FixAblate::memory_usage()
   bytes += 3*maxsend * sizeof(int);            // proclist,locallist,numsend
   bytes += maxbuf * sizeof(double);            // sbuf
   return bytes;
+}
+
+/* ----------------------------------------------------------------------
+   process command line args
+------------------------------------------------------------------------- */
+
+void FixAblate::process_args(int narg, char **arg)
+{
+  mindist = 0.0;
+
+  int iarg = 0;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"mindist") == 0)  {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
+      mindist = atof(arg[iarg+1]);
+      if (mindist < 0.0 || mindist >= 0.5)
+        error->all(FLERR,"Fix ablate mindist value must be >= 0.0 and < 0.5");
+      if (mindist < EPSILON) mindist = 0.0;
+      iarg += 2;
+    } else error->all(FLERR,"Invalid read_isurf command");
+  }
 }

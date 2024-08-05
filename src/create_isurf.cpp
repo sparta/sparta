@@ -196,23 +196,8 @@ void CreateISurf::command(int narg, char **arg)
   int pushflag = 0;
   char *sgroupID = NULL;
 
-  // corner value cutoffs for epsilon_adjust in fix_ablate
-
-  if (surfbuffer == 0.0) { // old epsilon adjust
-    ablate->cbufmin = thresh + 1e-4;
-    ablate->cbufmax = thresh - 1e-4;
-  } else {
-    ablate->cbufmin = cbufmin;
-    ablate->cbufmax = cbufmax;
-  }
-
-  if (ctype == INNER) {
-    ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
-                          invalues,tvalues,thresh,sgroupID,pushflag);
-  } else {
-    ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
-                          cvalues,tvalues,thresh,sgroupID,pushflag);
-  }
+  ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
+                        cvalues,tvalues,thresh,sgroupID,pushflag);
 
   if (ablate->nevery == 0) modify->delete_fix(ablateID);
 }
@@ -515,7 +500,8 @@ void CreateISurf::surface_edge2d()
           if (ivalues[icell][j][n2] > oparam || ivalues[icell][j][n2] < 0)
             ivalues[icell][j][n2] = oparam;
 
-          if ((mvalues[icell][i] < 0 || param <= mvalues[icell][i]) &&
+
+          if ((mvalues[icell][i] < 0 || param <= mvalues[icell][i]) && 
                svalues[icell][i] != 2) {
             if (param == 0) svalues[icell][i] = 0;
 
@@ -528,7 +514,7 @@ void CreateISurf::surface_edge2d()
             mvalues[icell][i] = param;
           }
 
-          if ((mvalues[icell][j] < 0 || oparam <= mvalues[icell][j]) &&
+          if ((mvalues[icell][j] < 0 || oparam <= mvalues[icell][j]) && 
                svalues[icell][j] != 2) {
             if (oparam == 0) svalues[icell][j] = 0;
             else if (fabs(mvalues[icell][j]-oparam) < EPSILON_GRID
@@ -674,7 +660,7 @@ void CreateISurf::surface_edge3d()
             mvalues[icell][i] = param;
           }
 
-          if ((mvalues[icell][j] < 0 || oparam <= mvalues[icell][j]) &&
+          if ((mvalues[icell][j] < 0 || oparam <= mvalues[icell][j]) && 
                svalues[icell][j] != 2) {
             if (oparam == 0) svalues[icell][j] = 0;
             else if (fabs(mvalues[icell][j]-oparam) < EPSILON_GRID

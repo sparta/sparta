@@ -475,6 +475,6 @@ used if SPARTA is built with the "appropriate accelerated
 package"_Section_accelerate.html.  This is indicated by additional
 letters in parenthesis: k = KOKKOS.
 
-"adsorb"_surf_adsorb.html,
+"adsorb"_surf_react_adsorb.html,
 "global (k)"_surf_react.html,
 "prob (k)"_surf_react.html :tb(c=2,ea=c)

@@ -32,12 +32,12 @@ create_grid		80 ${Ny} 1
 create_grid		80 80 1
 WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/home/runner/work/sparta/sparta/src/grid.cpp:471)
 Created 6400 child grid cells
-  CPU time = 0.000961183 secs
-  create/ghost percent = 91.552 8.44803
+  CPU time = 0.000983816 secs
+  create/ghost percent = 89.7972 10.2028
 balance_grid		rcb cell
 Balance grid migrated 4800 cells
-  CPU time = 0.00207837 secs
-  reassign/sort/migrate/ghost percent = 23.8288 0.443955 25.2329 50.4943
+  CPU time = 0.00203516 secs
+  reassign/sort/migrate/ghost percent = 23.9977 0.507086 26.0013 49.4939
 
 global			nrho 1.0 fnum 0.001
 global                  surfs explicit/distributed
@@ -55,10 +55,10 @@ read_surf               data.circle2d invert
   3465 2692 243 = cells outside/inside/overlapping surfs
   243 = surf cells with 1,2,etc splits
   2.23402 2.23402 = cell-wise and global flow volume
-  CPU time = 0.00191348 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 8.7794 7.76888 2.21262 45.3079 35.9312 15.1728 0.963898
-  surf2grid time = 0.000866958 secs
-  map/comm1/comm2/comm3/comm4/split percent = 34.6023 3.86086 23.9925 3.98566 14.0256 9.17657
+  CPU time = 0.00196213 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 8.5536 7.46963 3.38122 45.1092 35.4864 14.7283 0.971137
+  surf2grid time = 0.000885102 secs
+  map/comm1/comm2/comm3/comm4/split percent = 33.8842 3.80657 23.3641 4.33645 14.7445 8.88101
 surf_collide		1 diffuse 300.0 0.0
 surf_modify		all collide 1
 
@@ -82,14 +82,14 @@ create_isurf            all fablate 39.5 ave
 
 create_particles        air n 0 twopass
 Created 2234 particles
-  CPU time = 0.00132405 secs
+  CPU time = 0.000958559 secs
 
 collide			vss air air.vss
 
 timestep		0.001
 
-dump                    1 image all 10 circle.* type type surf one 0.01 particle yes pdiam 0.02 zoom 2
-dump_modify             1 scolor * gray
+#dump                    1 image all 10 circle.*.ppm type type surf one 0.01 particle yes pdiam 0.02 zoom 2
+#dump_modify             1 scolor * gray
 
 stats			5
 stats_style		step cpu np nattempt ncoll nscoll nscheck
@@ -101,20 +101,20 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 3.20715 3.20715 3.20715
 Step CPU Np Natt Ncoll Nscoll Nscheck 
        0            0     2234        0        0        0        0 
-       5  0.002165858     2234        0        0      511     1759 
-      10   0.01321303     2234        0        0      537     1855 
-Loop time of 0.0132617 on 4 procs for 10 steps with 2234 particles
+       5  0.001762029     2234        0        0      511     1759 
+      10  0.003635716     2234        0        0      537     1855 
+Loop time of 0.00369094 on 4 procs for 10 steps with 2234 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.0026645  | 0.0027532  | 0.002822   |   0.1 | 20.76
-Coll    | 0.00010103 | 0.00018506 | 0.00039778 |   0.0 |  1.40
-Sort    | 0.00011078 | 0.0001149  | 0.00011697 |   0.0 |  0.87
-Comm    | 0.00044284 | 0.00045469 | 0.00046977 |   0.0 |  3.43
+Move    | 0.0026148  | 0.002671   | 0.0027501  |   0.1 | 72.37
+Coll    | 7.9981e-05 | 8.3852e-05 | 9.0869e-05 |   0.0 |  2.27
+Sort    | 0.00010734 | 0.00010925 | 0.00011304 |   0.0 |  2.96
+Comm    | 0.00043173 | 0.00044446 | 0.00045353 |   0.0 | 12.04
 Modify  | 0          | 0          | 0          |   0.0 |  0.00
-Output  | 0.0092606  | 0.0092722  | 0.0093044  |   0.0 | 69.92
-Other   |            | 0.0004817  |            |       |  3.63
+Output  | 3.136e-05  | 5.1106e-05 | 0.00010798 |   0.0 |  1.38
+Other   |            | 0.0003312  |            |       |  8.97
 
 Particle moves    = 22340 (22.3K)
 Cells touched     = 425672 (0.426M)
@@ -130,7 +130,7 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 421137
+Particle-moves/CPUsec/proc: 1.51317e+06
 Particle-moves/step: 2234
 Cell-touches/particle/step: 19.0543
 Particle comm iterations/step: 3

@@ -80,6 +80,11 @@ class FixAblate : public Fix {
   int *tvalues;           // per-cell type value
   int tvalues_flag;       // 1 if tvalues is defined (by ReadIsurf)
 
+  double mindist;             // min fractional distance between any grid corner pt
+                              //   and a generated tri vertex or line segment endpt
+  double corner_inside_min;   // min allowed value for an inside corner point
+  double corner_outside_max;  // max allowed value for an outside corner point
+
   int **ixyz;             // ix,iy,iz indices (1 to Nxyz) of my cells
                           // in 2d/3d ablate grid (iz = 1 for 2d)
   // DEBUG

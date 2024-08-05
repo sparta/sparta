@@ -42,13 +42,16 @@
 <PRE>  <I>mindist</I> value = fraction
     fraction = minimum fractional distance along cell edge for triangle/line vertices (value > 0 and < 0.5)
   <I>multiple</I> value = yes or no 
+
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
+
 <PRE>fix 1 ablate surfcells 0 0.0 random 10
 fix 1 ablate surfcells 1000 10.0 c_tally
+
 fix fablate ablate inner 0 0.2 random 0 mindist 0.02 
 </PRE>
 <P><B>Description:</B>
@@ -127,10 +130,15 @@ the first random # < <I>scale</I>, then the second random integer is the
 decrement value for the cell.  Thus <I>scale</I> is effectively the
 fraction of grid cells whose corner point values are decremented.
 </P>
+
 <P>For basic testing of new ablation capabilities, the <I>source</I> can be 
 specified as <I>uniform</I>. Any cell which contains part of the gas and the surface
 is decremented by <I>maxrandom</I>.
 </P>
+
+<P>See the explanation for the optional <I>mindist</I> keyword below.
+</P>
+
 <HR>
 
 <P>Here is an example of commands that will couple ablation to surface
@@ -186,7 +194,7 @@ to set the boundary between solid material and void.
 cell containing porous material.  The marching cubes or squares
 algorithm is re-invoked on the new corner point values to create a new
 set of implicit surfaces, which effectively recess due to the
-decrement produced byt the ablative <I>source</I> factor.
+decrement produced by the ablative <I>source</I> factor.
 </P>
 <P>The manner in which the per-grid source decrement value is applied to
 the grid corner points is as follows.  Note that each grid cell has 4
@@ -298,6 +306,7 @@ the above example, a single cell is ablated (indicated by a red arrow). With a
 single point decrement, only one corner point is updated and only the left side
 of the affected cell ablates. With the multipoint decrement, two corner points
 are reduced and the entire surface contained within the ablated cell recedes. 
+
 </P>
 <HR>
 
@@ -338,8 +347,10 @@ an overview of SPARTA output options.
 <P>The default for the <I>mindist</I> keyword = 0.0, i.e. the epsilon method
 is used.
 </P>
+
 <P><I>multiple</I> = no
 </P>
+
 <HR>
 
 <A NAME = "Labelle07"></A>

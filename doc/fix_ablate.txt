@@ -23,6 +23,7 @@ source = computeID or fixID or random :l
   v_name = per-grid vector calculated by a grid-style variable with name
   uniform = perform a uniform decrement
   random = perform a random decrement :pre
+
 maxrandom = maximum per grid cell decrement as an integer (only specified if source = random or uniform) :l
 zero or more keyword/value pairs may be appended :l
 keyword = {mindist} or {multiple} :l
@@ -33,8 +34,8 @@ keyword = {mindist} or {multiple} :l
 
 [Examples:]
 
-fix 1 ablate surfcells 0 0.0 random 10
 fix 1 ablate surfcells 1000 10.0 c_tally
+fix 1 ablate surfcells 0 0.0 random 10
 fix fablate ablate inner 0 0.2 random 0 mindist 0.02 :pre
 
 [Description:]
@@ -117,6 +118,8 @@ For basic testing of new ablation capabilities, the {source} can be
 specified as {uniform}. Any cell which contains part of the gas and the surface
 is decremented by {maxrandom}.
 
+See the explanation for the optional {mindist} keyword below.
+
 :line
 
 Here is an example of commands that will couple ablation to surface
@@ -172,7 +175,7 @@ The ablation operation decrements the corner point values of each grid
 cell containing porous material.  The marching cubes or squares
 algorithm is re-invoked on the new corner point values to create a new
 set of implicit surfaces, which effectively recess due to the
-decrement produced byt the ablative {source} factor.
+decrement produced by the ablative {source} factor.
 
 The manner in which the per-grid source decrement value is applied to
 the grid corner points is as follows.  Note that each grid cell has 4
@@ -284,6 +287,7 @@ the above example, a single cell is ablated (indicated by a red arrow). With a
 single point decrement, only one corner point is updated and only the left side
 of the affected cell ablates. With the multipoint decrement, two corner points
 are reduced and the entire surface contained within the ablated cell recedes. 
+
 
 :line
 
