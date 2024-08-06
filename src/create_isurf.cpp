@@ -249,7 +249,6 @@ void CreateISurf::set_corners()
 
   for (int ic = 0; ic < nglocal; ic++) {
     for (int jc = 0; jc < ncorner; jc++) {
-      cvalues[ic][jc] = -1.0;
       tmp_cvalues[ic][jc] = -1.0;
       svalues[ic][jc] = -1;
       mvalues[ic][jc] = -1.0;
@@ -393,7 +392,6 @@ void CreateISurf::set_inner()
 
   sync(INVAL);
 
-  return;
 }
 
 /* ----------------------------------------------------------------------
@@ -459,7 +457,7 @@ void CreateISurf::surface_edge2d()
 
     mind = MIN(ch[0]-cl[0], ch[1]-cl[1]);
 
-    // determine corner values
+    // iterate over all edges
 
     csurfs = cells[icell].csurfs;
 
@@ -512,6 +510,7 @@ void CreateISurf::surface_edge2d()
             ivalues[icell][i][n1] = param;
           if (ivalues[icell][j][n2] > oparam || ivalues[icell][j][n2] < 0)
             ivalues[icell][j][n2] = oparam;
+
 
           if ((mvalues[icell][i] < 0 || param <= mvalues[icell][i]) && 
                svalues[icell][i] != 2) {
@@ -660,7 +659,7 @@ void CreateISurf::surface_edge3d()
           if (ivalues[icell][j][n2] > oparam || ivalues[icell][j][n2] < 0)
             ivalues[icell][j][n2] = oparam;
 
-          if ((mvalues[icell][i] < 0 || param <= mvalues[icell][i]) && 
+          if ((mvalues[icell][i] < 0 || param <= mvalues[icell][i]) &&
                svalues[icell][i] != 2) {
             if (param == 0) svalues[icell][i] = 0;
 
@@ -772,7 +771,7 @@ void CreateISurf::sync(int which)
                   dtemp = ivalues[jcell][jcorner][jin];
                   if (dtemp >= 0) {
                     if (dtotal[jin] < 0) dtotal[jin] = dtemp;
-                    else dtotal[jin] = MIN(dtotal[jin],dtemp);
+                    else dtotal[jin] = MAX(dtotal[jin],dtemp);
                   }
                 }
               } else if (which == CVAL) {
@@ -798,7 +797,7 @@ void CreateISurf::sync(int which)
                   dtemp = ighost[jcell-nglocal][jcorner][jin];
                   if (dtemp >= 0) {
                     if (dtotal[jin] < 0) dtotal[jin] = dtemp;
-                    else dtotal[jin] = MIN(dtotal[jin],dtemp);
+                    else dtotal[jin] = MAX(dtotal[jin],dtemp);
                   }
                 }
               } else if (which == CVAL) {
