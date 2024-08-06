@@ -1399,9 +1399,7 @@ void FixAblate::comm_neigh_corners(int which)
     if (which == NVERT) {
       for (j = 0; j < ncorner; j++)
         nvert_ghost[icell][j] = rbuf[m++];
-
     } else {
-
       if (innerflag) {
         for (j = 0; j < ncorner; j++)
           for (k = 0; k < ninner; k++)
@@ -1410,7 +1408,6 @@ void FixAblate::comm_neigh_corners(int which)
         for (j = 0; j < ncorner; j++)
           cdelta_ghost[icell][j] = rbuf[m++];
       }
-
     }
 
   }
@@ -1729,8 +1726,7 @@ double FixAblate::compute_scalar()
     if (dim == 2 && (ix == 0 || iy == 0)) continue;
     if (dim == 3 && (ix == 0 || iy == 0 || iz == 0)) continue;
 
-    if (!innerflag)
-      sum += cvalues[icell][0];
+    if (!innerflag) sum += cvalues[icell][0];
     else {
       cavg = 0.0;
       for (int j = 0; j < ninner; j++) cavg += ivalues[icell][0][j];
