@@ -300,8 +300,6 @@ void CreateISurf::set_corners()
 
   if (ctype == VOXEL) sync_voxels();
   else sync(CVAL);
-
-  return;
 }
 
 /* ----------------------------------------------------------------------
@@ -538,8 +536,6 @@ void CreateISurf::surface_edge2d()
       } // end "for" for surfaces
     } // end "for" for corners in cell
   } // end "for" for grid cells
-
-  return;
 }
 
 /* ----------------------------------------------------------------------
@@ -681,10 +677,9 @@ void CreateISurf::surface_edge3d()
           }
         } // end "if" hitflag
       } // end "for" for surfaces
-    } // end "for" for corners in cellfe
-  } // end "for" for grid cells
 
-  return;
+    } // end corners
+  } // end grid cells
 }
 
 /* ----------------------------------------------------------------------
@@ -831,7 +826,6 @@ void CreateISurf::sync(int which)
 
     } // end corners
   } // end cells
-  return;
 }
 
 /* ----------------------------------------------------------------------
@@ -893,27 +887,10 @@ void CreateISurf::sync_voxels()
 
       if (dim == 2) vol_avg *= 0.25;
       else vol_avg *= 0.125;
-
       cvalues[icell][i] = vol_avg;
-
-      // ensure side value and cvalue agree
-
-      //if (svalues[icell][i] == 1 && cvalues[icell][i] < thresh) {
-      //  printf("side: %i; vol: %2.1e\n", svalues[icell][i], vol_avg);
-      //  error->one(FLERR,"inconsistent");
-      //} else if (svalues[icell][i] == 0 && cvalues[icell][i] > thresh) {
-      //  printf("side: %i; vol: %2.1e\n", svalues[icell][i], vol_avg);
-      //  error->one(FLERR,"inconsistent");
-      //}
-
-      //if (svalues[icell][i] == 1 && cvalues[icell][i] < thresh)
-      //  cvalues[icell][i] = thresh + EPSILON_GRID;
-      //else if (svalues[icell][i] == 0 && cvalues[icell][i] > thresh)
-      //  cvalues[icell][i] = thresh - EPSILON_GRID;
 
     }
   }
-  return;
 }
 
 /* ----------------------------------------------------------------------
@@ -1301,6 +1278,7 @@ int CreateISurf::find_side_2d()
             } // end jcell if nlocal
           } // end jx
         } // end jy
+
       } // end corners
     } // end icell
 
@@ -1371,7 +1349,6 @@ int CreateISurf::find_side_3d()
 
               // n are the corners next to corner i
               // na is n relative to corner i
-              // these don't seem right
 
               if (jcorner == 7) { // 0
                 n1 = 3; na1 = 4;
@@ -1494,9 +1471,11 @@ int CreateISurf::find_side_3d()
                   continue;
                 }
               } // end jcell if nlocal
+
             } // end jx
           } // end jy
         } // end jz
+
       } // end corners
     } // end icell
 
@@ -1540,8 +1519,6 @@ void CreateISurf::set_cvalues()
   else if (ctype == VOXEL) set_cvalues_voxel();
   else if (ctype == AVE) set_cvalues_ave();
   else if (ctype == INNER) set_cvalues_inner();
-
-  return;
 }
 
 /* ----------------------------------------------------------------------
@@ -1590,11 +1567,9 @@ void CreateISurf::set_cvalues_voxel()
       error->one(FLERR,"Calculated solid fraction above one or negative");
 
     for (int ic = 0; ic < ncorner; ic++)
-      tmp_cvalues[icell][ic] = sfrac*cin;
+      tmp_cvalues[icell][ic] = MIN(MAX(sfrac*cin,0.0),255.0);
 
   } // end grid cells
-
-  return;
 }
 
 /* ----------------------------------------------------------------------
@@ -1629,11 +1604,12 @@ void CreateISurf::set_cvalues_ave()
         if (nval == 0) tmp_cvalues[icell][ic] = cin;
         else {
           ivalsum /= nval;
-          if (ivalsum > 1.0) error->one(FLERR,"Calculated vertex location outside cell");
+          if (ivalsum > 1.0)
+            error->one(FLERR,"Calculated vertex location outside cell");
           tmp_cvalues[icell][ic] = MAX(param2cval(ivalsum,0.0),0.0);
         }
-
       } // end svalues
+
     } // end corners
   } // end grid cells
 }
@@ -1687,7 +1663,6 @@ void CreateISurf::set_cvalues_inner()
         // bound the intersection values
 
         ival = ivalues[icell][ic][k];
-        
         if (ival <= 0) { // no intersection this edge
           if (svalues[icell][ic] == 0) cval = cout;
           else cval = cin;
@@ -1696,14 +1671,11 @@ void CreateISurf::set_cvalues_inner()
         } else {
           cval = param2cval(ival,255.0);
         }
-
         tmp_invalues[icell][ic][k] = cval;
 
       }
     } // end ncorner
   } // end cells
-
-  return;
 }
 
 /* ----------------------------------------------------------------------
