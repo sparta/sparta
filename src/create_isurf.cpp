@@ -39,7 +39,7 @@ using namespace MathConst;
 #define DELTASEND 1024
 #define EPSILON_GRID 1.0e-3
 
-enum{CVAL,SVAL,IVAL};
+enum{CVAL,SVAL,IVAL,INVAL};
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Update
 enum{INOUT,VOXEL,AVE,INNER}; // how to mark corner values
@@ -52,6 +52,7 @@ CreateISurf::CreateISurf(SPARTA *sparta) : Pointers(sparta)
   MPI_Comm_size(world,&nprocs);
 
   dim = domain->dimension;
+
   if (dim == 2) {
     ncorner = 4;
     ninner = 4;
@@ -130,7 +131,7 @@ void CreateISurf::command(int narg, char **arg)
   if (domain->axisymmetric)
     error->all(FLERR,"Cannot create_isurf for axisymmetric domains");
 
-  if (narg != 4) error->all(FLERR,"Illegal create_isurf command");
+  if (narg < 4) error->all(FLERR,"Illegal create_isurf command");
 
   // grid group
 
@@ -162,8 +163,14 @@ void CreateISurf::command(int narg, char **arg)
   // mode to determine corner values
 
   if (strcmp(arg[3],"inout") == 0) ctype = INOUT;
+  else if (strcmp(arg[3],"voxel") == 0) ctype = VOXEL;
   else if (strcmp(arg[3],"ave") == 0) ctype = AVE;
+  else if (strcmp(arg[3],"inner") == 0) ctype = INNER;
   else error->all(FLERR,"Create_isurf corner mode is invalid");
+
+  // process optional command line args (nothing to process for now)
+
+  //process_args(narg-4,&arg[4]);
 
   // check if grid group is a uniform grid
 
@@ -172,11 +179,14 @@ void CreateISurf::command(int narg, char **arg)
 
   // set grid corner point values based on existing explicit surfs and thresh
 
-  set_corners();
+  if (ctype == INNER) set_inner();
+  else set_corners();
 
   // remove all explicit surfs
 
   remove_old();
+
+  // update flags
 
   surf->implicit = 1;
   surf->exist = 1;
@@ -188,8 +198,13 @@ void CreateISurf::command(int narg, char **arg)
   tvalues = NULL;
   int pushflag = 0;
   char *sgroupID = NULL;
-  ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
-                        cvalues,tvalues,thresh,sgroupID,pushflag);
+  if (ctype == INNER) {
+    ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
+                          invalues,tvalues,thresh,sgroupID,pushflag);
+  } else {
+    ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
+                          cvalues,tvalues,thresh,sgroupID,pushflag);
+  }
 
   if (ablate->nevery == 0) modify->delete_fix(ablateID);
 }
@@ -225,6 +240,7 @@ void CreateISurf::set_corners()
   // later shift back
 
   memory->create(cvalues,nglocal,ncorner,"createisurf:cvalues");
+  memory->create(tmp_cvalues,nglocal,ncorner,"createisurf:tmp_cvalues");
   memory->create(mvalues,nglocal,ncorner,"createisurf:mvalues");
   memory->create(svalues,nglocal,ncorner,"createisurf:svalues");
   memory->create(ivalues,nglocal,ncorner,ninner,"createisurf:ivalues");
@@ -234,11 +250,13 @@ void CreateISurf::set_corners()
   for (int ic = 0; ic < nglocal; ic++) {
     for (int jc = 0; jc < ncorner; jc++) {
       cvalues[ic][jc] = -1.0;
+      tmp_cvalues[ic][jc] = -1.0;
       svalues[ic][jc] = -1;
       mvalues[ic][jc] = -1.0;
       for (int kc = 0; kc < ninner; kc++) ivalues[ic][jc][kc] = -1.0;
     }
   }
+
 
   // find intersections between edges and surfaces
 
@@ -281,7 +299,101 @@ void CreateISurf::set_corners()
 
   // sync corner point values between procs
 
-  sync(CVAL);
+  if (ctype == VOXEL) sync_voxels();
+  else sync(CVAL);
+
+  return;
+}
+
+/* ----------------------------------------------------------------------
+   same as above but for inner values
+------------------------------------------------------------------------- */
+
+void CreateISurf::set_inner()
+{
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  // set cell spacing and indices
+
+  memory->grow(ixyz,nglocal,3,"create_isurf:ixyz");
+  for (int icell = 0; icell < nglocal; icell++) {
+    ixyz[icell][0] = ixyz[icell][1] = ixyz[icell][2] = 0;
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    ixyz[icell][0] =
+      static_cast<int> ((cells[icell].lo[0]-corner[0]) / xyzsize[0] + 0.5) + 1;
+    ixyz[icell][1] =
+      static_cast<int> ((cells[icell].lo[1]-corner[1]) / xyzsize[1] + 0.5) + 1;
+    ixyz[icell][2] =
+      static_cast<int> ((cells[icell].lo[2]-corner[2]) / xyzsize[2] + 0.5) + 1;
+  }
+
+  // first shift everything down by thresh
+  // later shift back
+
+  memory->create(invalues,nglocal,ncorner,ninner,"createisurf:invalues");
+  memory->create(tmp_invalues,nglocal,ncorner,ninner,"createisurf:tmp_invalues");
+  memory->create(mvalues,nglocal,ncorner,"createisurf:mvalues");
+  memory->create(svalues,nglocal,ncorner,"createisurf:svalues");
+  memory->create(ivalues,nglocal,ncorner,ninner,"createisurf:ivalues");
+
+  // initialize
+
+  for (int ic = 0; ic < nglocal; ic++) {
+    for (int jc = 0; jc < ncorner; jc++) {
+      svalues[ic][jc] = -1;
+      mvalues[ic][jc] = -1.0;
+      for (int kc = 0; kc < ninner; kc++) ivalues[ic][jc][kc] = -1.0;
+      for (int kc = 0; kc < ninner; kc++) tmp_invalues[ic][jc][kc] = -1.0;
+    }
+  }
+
+  // find intersections between edges and surfaces
+
+  if (dim == 2) surface_edge2d();
+  else surface_edge3d();
+
+  // fill in side and corner values based on if grid cell is in or out
+
+  set_inout();
+
+  // sync side and intersection values between procs
+
+  sync(SVAL);
+  sync(IVAL);
+
+  // find remaining side values based on neighbors
+
+  int full;
+  if (dim == 2) full = find_side_2d();
+  else full = find_side_3d();
+
+  // check all procs successfully filled side values
+
+  int ofull;
+  if (full) ofull = 0;
+  else ofull = 1;
+  int allofull;
+  MPI_Allreduce(&ofull,&allofull,1,MPI_INT,MPI_SUM,world);
+  if (allofull) {
+    char str[128];
+    sprintf(str,
+            "Create_isurf could not determine whether some corner \
+             values are inside or outside with respect to the surface");
+    error->all(FLERR,str);
+  }
+
+  // from side (and intersection) values, determine corner point values
+
+  set_cvalues();
+
+  // sync corner point values between procs
+
+  sync(INVAL);
+
+  return;
 }
 
 /* ----------------------------------------------------------------------
@@ -350,6 +462,7 @@ void CreateISurf::surface_edge2d()
     // determine corner values
 
     csurfs = cells[icell].csurfs;
+
     for (int ic = 0; ic < nedge; ic++) {
       i = ci[ic];
       pi[0] = cx[i];
@@ -576,21 +689,24 @@ void CreateISurf::surface_edge3d()
 }
 
 /* ----------------------------------------------------------------------
-   sync all copies of corner points values across procs for all owned grid cells
-   algorithm:
-     comm my cdelta values that are shared by neighbor
-     each corner point is shared by N cells, less on borders
-     dsum = sum of decrements to that point by all N cells
-     newvalue = MAX(oldvalue-dsum,0)
-   all N copies of corner pt are set to newvalue
-     in numerically consistent manner (same order of operations)
+   sync all copies of values associated with each corner to neighboring
+   procs to ensure consistency between procs. Below, the behavior for 
+   each option is shown:
+
+   1) if SVAL, sets all svalues to max value (if one is inside, all are inside)
+   2) if IVAL, sets all ivalues to min value (closest vertex to corner)
+   3) if CVAL, sets all cvalues to max value (handled in previous routines)
+   4) if INVAL, sets all invalues to max value (handled in previous routines)
+
+   Temporary arrays are used for cvalues and ivalues to ensure so overwriting
+   during the sync operation
 ------------------------------------------------------------------------- */
 
 void CreateISurf::sync(int which)
 {
-  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner,jadj;
+  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner,jedge,jin;
   int icell,jcell,njcell;
-  double dtotal[nedge];
+  double dtotal[ninner], dtemp;
 
   comm_neigh_corners(which);
 
@@ -625,7 +741,7 @@ void CreateISurf::sync(int which)
       // loop over 2x2x2 stencil of cells that share the corner point
       // also works for 2d, since izfirst = 0
 
-      for (j = 0; j < nedge; j++) dtotal[j] = -1.0;
+      for (j = 0; j < ninner; j++) dtotal[j] = -1.0;
       jcorner = ncorner;
 
       for (jz = izfirst; jz <= izfirst+1; jz++) {
@@ -652,16 +768,24 @@ void CreateISurf::sync(int which)
                   dtotal[0] = MAX(dtotal[0],
                     static_cast<double>(svalues[jcell][jcorner]));
               } else if (which == IVAL) {
-                for (jadj = 0; jadj < nedge; jadj++) {
-                  double dtemp = ivalues[jcell][jcorner][jadj];
-                  if (dtemp>=0) {
-                    if (dtotal[jadj] < 0) dtotal[jadj] = dtemp;
-                    else dtotal[jadj] = MIN(dtotal[jadj],dtemp);
+                for (jin = 0; jin < ninner; jin++) {
+                  dtemp = ivalues[jcell][jcorner][jin];
+                  if (dtemp >= 0) {
+                    if (dtotal[jin] < 0) dtotal[jin] = dtemp;
+                    else dtotal[jin] = MIN(dtotal[jin],dtemp);
                   }
                 }
               } else if (which == CVAL) {
                 dtotal[0] =
-                  MAX(dtotal[0],cvalues[jcell][jcorner]);
+                  MAX(dtotal[0],tmp_cvalues[jcell][jcorner]);
+              } else if (which == INVAL) {
+                for (jin = 0; jin < ninner; jin++) {
+                  dtemp = tmp_invalues[jcell][jcorner][jin];
+                  if (dtemp >= 0) {
+                    if (dtotal[jin] < 0) dtotal[jin] = dtemp;
+                    else dtotal[jin] = MAX(dtotal[jin],dtemp);
+                  }
+                }
               }
             } else {
               if (which == SVAL) {
@@ -670,29 +794,112 @@ void CreateISurf::sync(int which)
                     MAX(dtotal[0],
                     static_cast<double>(sghost[jcell-nglocal][jcorner]));
               } else if (which == IVAL) {
-                for (jadj = 0; jadj < nedge; jadj++) {
-                  double dtemp = ighost[jcell-nglocal][jcorner][jadj];
-                  if (dtemp>=0) {
-                    if (dtotal[jadj] < 0) dtotal[jadj] = dtemp;
-                    else dtotal[jadj] = MIN(dtotal[jadj],dtemp);
+                for (jin = 0; jin < ninner; jin++) {
+                  dtemp = ighost[jcell-nglocal][jcorner][jin];
+                  if (dtemp >= 0) {
+                    if (dtotal[jin] < 0) dtotal[jin] = dtemp;
+                    else dtotal[jin] = MIN(dtotal[jin],dtemp);
                   }
                 }
               } else if (which == CVAL) {
                 dtotal[0] =
                   MAX(dtotal[0],cghost[jcell-nglocal][jcorner]);
+              } else if (which == INVAL) {
+                for (jin = 0; jin < ninner; jin++) {
+                  dtemp = inghost[jcell-nglocal][jcorner][jin];
+                  if (dtemp >= 0) {
+                    if (dtotal[jin] < 0) dtotal[jin] = dtemp;
+                    else dtotal[jin] = MAX(dtotal[jin],dtemp);
+                  }
+                }
               }
             }
+
+          } // end jx
+        } // end jy
+      } // end jz
+
+      if (which == SVAL) svalues[icell][i] = static_cast<int>(dtotal[0]);
+      else if (which == IVAL) {
+        for (jin = 0; jin < ninner; jin++)
+          ivalues[icell][i][jin] = dtotal[jin];
+      } else if (which == CVAL) {
+        cvalues[icell][i] = MAX(dtotal[0],0.0);
+      } else if (which == INVAL) {
+        for (jin = 0; jin < ninner; jin++)
+          invalues[icell][i][jin] = MAX(dtotal[jin],0.0);
+      }
+
+    } // end corners
+  } // end cells
+  return;
+}
+
+/* ----------------------------------------------------------------------
+   sync all copies of corner points values across procs for all owned grid cells
+   algorithm by computing average
+------------------------------------------------------------------------- */
+
+void CreateISurf::sync_voxels()
+{
+  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner,jedge,jin;
+  int icell,jcell,njcell;
+  double vol_avg;
+
+  comm_neigh_corners(CVAL);
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  for (icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    ix = ixyz[icell][0];
+    iy = ixyz[icell][1];
+    iz = ixyz[icell][2];
+
+    // loop over corner points
+
+    for (i = 0; i < ncorner; i++) {
+
+      vol_avg = 0.0;
+
+      ixfirst = (i % 2) - 1;
+      iyfirst = (i/2 % 2) - 1;
+      if (dim == 2) izfirst = 0;
+      else izfirst = (i / 4) - 1;
+
+      jcorner = ncorner;
+
+      for (jz = izfirst; jz <= izfirst+1; jz++) {
+        for (jy = iyfirst; jy <= iyfirst+1; jy++) {
+          for (jx = ixfirst; jx <= ixfirst+1; jx++) {
+            jcorner--;
+
+            if (ix+jx < 1 || ix+jx > nxyz[0]) continue;
+            if (iy+jy < 1 || iy+jy > nxyz[1]) continue;
+            if (iz+jz < 1 || iz+jz > nxyz[2]) continue;
+
+            jcell = walk_to_neigh(icell,jx,jy,jz);
+
+            if (jcell < nglocal) vol_avg += tmp_cvalues[jcell][jcorner];
+            else vol_avg += cghost[jcell-nglocal][jcorner];
+
           }
         }
       }
 
-      if (which == SVAL) svalues[icell][i] = static_cast<int>(dtotal[0]);
-      else if (which == IVAL) {
-        for (jadj = 0; jadj < ninner; jadj++)
-          ivalues[icell][i][jadj] = dtotal[jadj];
-      } else if (which == CVAL) cvalues[icell][i] = dtotal[0];
+      // set corner value as average of cell volumes around stencil
+
+      if (dim == 2) vol_avg *= 0.25;
+      else vol_avg *= 0.125;
+
+      cvalues[icell][i] = vol_avg;
+
     }
   }
+  return;
 }
 
 /* ----------------------------------------------------------------------
@@ -772,12 +979,13 @@ void CreateISurf::comm_neigh_corners(int which)
   }
 
   // realloc sbuf if necessary
-  // ncomm = ilocal + Ncorner svalues (+ Ncorner*nedge)
+  // ncomm = ilocal + Ncorner svalues (+ Ncorner*ninner)
 
   int ncomm;
   if (which == SVAL) ncomm = 1 + ncorner;
   else if (which == IVAL) ncomm = 1 + ncorner*ninner;
   else if (which == CVAL) ncomm = 1 + ncorner;
+  else if (which == INVAL) ncomm = 1 + ncorner*ninner;
 
   if (nsend*ncomm > maxsbuf) {
     memory->destroy(sbuf);
@@ -807,7 +1015,11 @@ void CreateISurf::comm_neigh_corners(int which)
             sbuf[m++] = ivalues[icell][j][k];
       } else if (which == CVAL) {
         for (j = 0; j < ncorner; j++)
-          sbuf[m++] = cvalues[icell][j];
+          sbuf[m++] = tmp_cvalues[icell][j];
+      } else if (which == INVAL) {
+        for (j = 0; j < ncorner; j++)
+          for (k = 0; k < ninner; k++)
+            sbuf[m++] = tmp_invalues[icell][j][k];
       }
       nsend++;
     }
@@ -818,15 +1030,17 @@ void CreateISurf::comm_neigh_corners(int which)
 
   double *rbuf;
   int nrecv = comm->irregular_uniform_neighs(nsend,proclist,(char *) sbuf,
-                                             ncomm*sizeof(double),(char **) &rbuf);
+                ncomm*sizeof(double),(char **) &rbuf);
 
   // realloc val_ghost if necessary
 
   if (grid->nghost > maxghost) {
+    memory->destroy(inghost);
     memory->destroy(cghost);
     memory->destroy(sghost);
     memory->destroy(ighost);
     maxghost = grid->nghost;
+    memory->create(inghost,maxghost,ncorner,ninner,"createisurf:inghost");
     memory->create(cghost,maxghost,ncorner,"createisurf:cghost");
     memory->create(sghost,maxghost,ncorner,"createisurf:sghost");
     memory->create(ighost,maxghost,ncorner,ninner,"createisurf:ighost");
@@ -853,6 +1067,10 @@ void CreateISurf::comm_neigh_corners(int which)
     } else if (which == CVAL) {
       for (j = 0; j < ncorner; j++)
         cghost[icell][j] = rbuf[m++];
+    } else if (which == INVAL) {
+      for (j = 0; j < ncorner; j++)
+        for (k = 0; k < ninner; k++)
+          inghost[icell][j][k] = rbuf[m++];
     }
   }
 }
@@ -922,8 +1140,7 @@ void CreateISurf::set_inout()
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  double cl[3], ch[3]; // cell bounds
-  int itype, sval, xyzcell, cxyz[3];
+  int itype, sval;
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
@@ -936,24 +1153,15 @@ void CreateISurf::set_inout()
 
     itype = cinfo[icell].type;
 
-    // fully inside so set all corner values to max
-
-    if (itype == 2) {
-      sval = 1;
-
-    // fully outside so set all corners to min
-
-    } else if (itype == 1) {
-      sval = 0;
-    } else {
-      continue;
-    }
+    if (itype == 2) sval = 1; // fully inside so set all corner values to max
+    else if (itype == 1) sval = 0; // fully outside so set all corners to min
+    else continue;
 
     for (int m = 0; m < ncorner; m++)
       if (svalues[icell][m] < 0) svalues[icell][m] = sval;
   }
-  return;
 }
+
 
 /* ----------------------------------------------------------------------
    resolve unknown side values (2D version)
@@ -1089,17 +1297,13 @@ int CreateISurf::find_side_2d()
         if (svalues[icell][ic] < 0) filled = 0;
     }
 
+    // updating sides may inform on correct side for adjacent corners
+    // should only iterate a few times
+
     attempt++;
     if (attempt > 20) return 0;
 
   } // end while
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-    for (int ic = 0; ic < ncorner; ic++)
-      if (svalues[icell][ic] < 0) error->one(FLERR,"bad sval");
-  }
 
   return 1;
 }
@@ -1290,6 +1494,9 @@ int CreateISurf::find_side_3d()
         if (svalues[icell][i] < 0 || svalues[icell][i] > 1) filled = 0;
     }
 
+    // updating sides may inform on correct side for adjacent corners
+    // should only iterate a few times
+
     attempt++;
     if (attempt > 20) return 0;
 
@@ -1313,50 +1520,177 @@ void CreateISurf::set_cvalues()
   cout = 0.0;
   cin = 255.0;
 
-  // initially set inside as cin and outside as cout
+  // assign corner values based on choice
 
-  if (ctype==AVE) {
-    int nval;
-    double ivalsum;
-    for (int icell = 0; icell < nglocal; icell++) {
-      if (!(cinfo[icell].mask & groupbit)) continue;
-      if (cells[icell].nsplit <= 0) continue;
-      for (int ic = 0; ic < ncorner; ic++) {
-        ivalsum = 0.0;
-        if (svalues[icell][ic] == 0) cvalues[icell][ic] = cout;
+  if (ctype == INOUT) set_cvalues_inout();
+  else if (ctype == VOXEL) set_cvalues_voxel();
+  else if (ctype == AVE) set_cvalues_ave();
+  else if (ctype == INNER) set_cvalues_inner();
+
+  return;
+}
+
+/* ----------------------------------------------------------------------
+   set corner point values depending on if corner is in or out of surface
+------------------------------------------------------------------------- */
+
+void CreateISurf::set_cvalues_inout()
+{
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+    for (int ic = 0; ic < ncorner; ic++) {
+      if (svalues[icell][ic] == 0) tmp_cvalues[icell][ic] = cout;
+      else if (svalues[icell][ic] == 1) tmp_cvalues[icell][ic] = cin;
+      else error->one(FLERR,"Corner point not marked inside or outside");
+    } // end corners
+  } // end "for" for grid cells
+}
+
+/* ----------------------------------------------------------------------
+   find corner point values using averaging
+------------------------------------------------------------------------- */
+
+void CreateISurf::set_cvalues_voxel()
+{
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  double dx,dy,dz;
+  double cvol, sfrac;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    cvol = cinfo[icell].volume;
+    dx = cells[icell].hi[0] - cells[icell].lo[0];
+    dy = cells[icell].hi[1] - cells[icell].lo[1];
+    dz = cells[icell].hi[2] - cells[icell].lo[2];
+    sfrac = (dx*dy*dz - cvol) / (dx*dy*dz);
+
+    if (sfrac < 0.0 || sfrac > 1.0) error->one(FLERR,"bad volume");
+
+    for (int ic = 0; ic < ncorner; ic++) {
+      if (svalues[icell][ic] == 0) tmp_cvalues[icell][ic] = cout;
+      else if (svalues[icell][ic] == 1) tmp_cvalues[icell][ic] = sfrac*cin;
+      //else error->one(FLERR,"bad svalues");
+    }
+  } // end grid cells
+
+  return;
+}
+
+/* ----------------------------------------------------------------------
+   find corner point values using averaging
+------------------------------------------------------------------------- */
+
+void CreateISurf::set_cvalues_ave()
+{
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  int nval;
+  double ivalsum;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+    for (int ic = 0; ic < ncorner; ic++) {
+
+      ivalsum = 0.0;
+      if (svalues[icell][ic] == 0) tmp_cvalues[icell][ic] = cout;
+      else {
+        nval = 0;
+        for (int iin = 0; iin < ninner; iin++) {
+          if (ivalues[icell][ic][iin] >= 0) {
+            ivalsum += ivalues[icell][ic][iin];
+            nval++;
+          }
+        }
+
+        // no intersections
+
+        if (nval == 0) tmp_cvalues[icell][ic] = cin;
         else {
-          nval = 0;
-          for (int iadj = 0; iadj < ninner; iadj++) {
-            if (ivalues[icell][ic][iadj] >= 0) {
-              ivalsum += ivalues[icell][ic][iadj];
-              nval++;
-            }
-          }
+          ivalsum /= nval;
+          if (ivalsum > 1.0) error->one(FLERR,"Calculated vertex location outside cell");
+          tmp_cvalues[icell][ic] = MAX(param2cval(ivalsum,0.0),0.0);
+        }
 
-          // no intersections
+      } // end svalues
+    } // end corners
+  } // end grid cells
+}
 
-          if (nval == 0) cvalues[icell][ic] = cin;
-          else {
-            ivalsum /= nval;
-            if (ivalsum > 1.0) error->one(FLERR,"over 1");
-            cvalues[icell][ic] = param2cval(ivalsum,0.0);
-          }
+/* ----------------------------------------------------------------------
+   set inner values of corner points
+------------------------------------------------------------------------- */
 
-        } // end svalues
-      } // end corners
-    } // end grid cells
+void CreateISurf::set_cvalues_inner()
+{
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
 
-  } else {
-    for (int icell = 0; icell < nglocal; icell++) {
-      if (!(cinfo[icell].mask & groupbit)) continue;
-      if (cells[icell].nsplit <= 0) continue;
+  // first set corner point values of fully inside and outside cells
+
+  int refsval, allsame;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+    refsval = svalues[icell][0];
+    allsame = 1;
+    for (int ic = 1; ic < ncorner; ic++)
+      if (svalues[icell][ic] != refsval)
+        allsame = 0;
+
+    if (allsame) {
       for (int ic = 0; ic < ncorner; ic++) {
-        if (svalues[icell][ic] == 0) cvalues[icell][ic] = cout;
-        else if (svalues[icell][ic] == 1) cvalues[icell][ic] = cin;
-        else error->one(FLERR,"bad svalues");
-      } // end corners
-    } // end "for" for grid cells
-  }
+        for (int iin = 0; iin < ninner; iin++) {
+          if (refsval==1)
+            tmp_invalues[icell][ic][iin] = cin;
+          else
+            tmp_invalues[icell][ic][iin] = cout;
+        }
+      }
+    }
+  } // end cells
+
+  // now handle the overlap cells
+
+  double ival, cval;
+
+  // value of inside corner point next to surface
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+    for (int ic = 0; ic < ncorner; ic++) {
+
+      for (int k = 0; k < ninner; k++) {
+
+        // bound the intersection values
+
+        ival = ivalues[icell][ic][k];
+        
+        if (ival <= 0) { // no intersection this edge
+          if (svalues[icell][ic] == 0) cval = cout;
+          else cval = cin;
+        } else if (svalues[icell][ic] == 1) {
+          cval = param2cval(ival,0.0);
+        } else {
+          cval = param2cval(ival,255.0);
+        }
+
+        tmp_invalues[icell][ic][k] = cval;
+
+      }
+    } // end ncorner
+  } // end cells
+
+  return;
 }
 
 /* ----------------------------------------------------------------------
@@ -1536,20 +1870,18 @@ int CreateISurf::corner_hit3d(double *p1, double *p2,
 
 double CreateISurf::param2cval(double param, double v1)
 {
-  double v0;
-
   // param is proportional to cell length so
   // ... lo = 0; hi = 1
   // trying to find v0
   // param = (thresh  - v0) / (v1 - v0)
 
-  if (param == 1.0) return 255.0;
-  v0 = (thresh - v1*param) / (1.0 - param);
+  double v0 = (thresh - v1*param) / (1.0 - param);
 
   // bound by limits
-  //v0 = MAX(v0,thresh);
 
-  v0 = MIN(v0,255.0);
+  v0 = MIN(v0,cin);
+  v0 = MAX(v0,cout);
+
   return v0;
 }
 
@@ -1639,4 +1971,13 @@ void CreateISurf::remove_old()
 
   grid->set_inout();
   grid->type_check();
+}
+
+/* ----------------------------------------------------------------------
+   process command line args
+------------------------------------------------------------------------- */
+
+void CreateISurf::process_args(int narg, char **arg)
+{
+  return;
 }
