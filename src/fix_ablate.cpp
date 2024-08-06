@@ -87,7 +87,6 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   if (scale < 0.0) error->all(FLERR,"Illegal fix ablate command");
 
   int iarg = 6;
-
   if ((strncmp(arg[5],"c_",2) == 0) || (strncmp(arg[5],"f_",2) == 0)) {
     if (arg[5][0] == 'c') which = COMPUTE;
     else if (arg[5][0] == 'f') which = FIX;
@@ -109,16 +108,12 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     strcpy(idsource,suffix);
     delete [] suffix;
 
-    iarg = 6;
-
   } else if (strncmp(arg[5],"v_",2) == 0) {
     which = VARIABLE;
 
     int n = strlen(arg[5]);
     char *idsource = new char[n];
     strcpy(idsource,&arg[5][2]);
-
-    iarg = 6;
 
   } else if (strcmp(arg[5],"random") == 0) {
     iarg++;
@@ -134,6 +129,8 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     maxrandom = atoi(arg[6]);
 
   } else error->all(FLERR,"Illegal fix ablate command");
+
+  // process optional command line args
 
   process_args(narg-iarg,&arg[iarg]);
 
@@ -184,10 +181,6 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     if (input->variable->grid_style(ivariable) == 0)
       error->all(FLERR,"Fix ablate variable is not grid-style variable");
   }
-
-  // process optional command line args
-
-  process_args(narg-iarg,&arg[iarg]);
 
   // this fix produces a per-grid array and a scalar
 
@@ -412,8 +405,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
 
   if (pushflag) push_lohi();
 
-  if (innerflag) epsilon_adjust_inner();
-  else epsilon_adjust();
+  epsilon_adjust();
 
   // create marching squares/cubes classes, now that have group & threshold
 
@@ -518,8 +510,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   corner_inside_min = MIN(corner_inside_min,255.0);
   corner_outside_max = MAX(corner_outside_max,0.0);
 
-  if (innerflag) epsilon_adjust_inner();
-  else epsilon_adjust();
+  epsilon_adjust_inner();
 
   // create marching squares/cubes classes, now that have group & threshold
 
@@ -1211,7 +1202,7 @@ void FixAblate::decrement_inner()
 
   int i,j,i_inner,jcorner,imin,jmin;
   double minvalue,total;
-  int *ineighbors, *neighbors;
+  int *ineighbors,*neighbors;
   int opp;
   double cmax[8];
 
@@ -1226,7 +1217,7 @@ void FixAblate::decrement_inner()
       for (j = 0; j < ninner; j++)
         idelta[icell][i][j] = 0.0;
 
-    total = celldelta[icell];//*ninner;
+    total = celldelta[icell];
 
     while (total > 0.0) {
 
@@ -1357,18 +1348,11 @@ void FixAblate::sync_inner()
       /*-----------------------------------------------------------*/
 
       // now decrement corners
+
       for (j = 0; j < ninner; j++) {
         ivalues[icell][i][j] -= total[j];
-        if (j == 0) ivalues[icell][i][1] -= total[j];
-        else if (j == 1) ivalues[icell][i][0] -= total[j];
-        else if (j == 2) ivalues[icell][i][3] -= total[j];
-        else if (j == 3) ivalues[icell][i][2] -= total[j];
-        else if (j == 4) ivalues[icell][i][5] -= total[j];
-        else ivalues[icell][i][4] -= total[j];
-      }
-
-      for (j = 0; j < ninner; j++)
         if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
+      }
 
     } // end corners
   } // end cells
@@ -1572,8 +1556,8 @@ void FixAblate::decrement_multi_inside()
 
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
   int icell,jcell;
-  int Nneigh, *neighbors, i_neighbor_corner;
-  double total_remain, nvertices;
+  int Nneigh,*neighbors,i_neighbor_corner;
+  double total_remain,nvertices;
   double *corners;
 
   // find total number of vertices around each corner point
@@ -1758,8 +1742,8 @@ void FixAblate::decrement_inner_multi_outside()
   Grid::ChildInfo *cinfo = grid->cinfo;
 
   int i,j,Ninterface;
-  int i_inner, *ineighbors, *neighbors;
-  double total, perout;
+  int i_inner,*ineighbors,*neighbors;
+  double total,perout;
 
   // find number of vertices around each corner
   // also find total to decrement from each corner
@@ -1880,14 +1864,14 @@ void FixAblate::decrement_inner_multi_inside()
   Surf::Tri *tris = surf->tris;
 
   surfint *csurfs;
-  double pt[3], norm[3], dec_vec[3];
-  double dist, mindist;
-  int nsurf, isurf;
+  double pt[3],norm[3],dec_vec[3];
+  double dist,smindist;
+  int nsurf,isurf;
 
   int i,j,k;
-  int i_inner, i_neighbor_corner;
-  int Nneigh, *ineighbors, *neighbors, oinner, kcorner;
-  double total_remain, nvertices;
+  int i_inner,i_neighbor_corner;
+  int Nneigh,*ineighbors,*neighbors,oinner,kcorner;
+  double total_remain,nvertices;
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
@@ -1951,7 +1935,7 @@ void FixAblate::decrement_inner_multi_inside()
 
       // find closest surface and record the norm
 
-      mindist = -1;
+      smindist = -1;
       norm[0] = norm[1] = norm[2] = 0.0;
       for (int m = 0; m < nsurf; m++) {
         isurf = csurfs[m];
@@ -1960,8 +1944,8 @@ void FixAblate::decrement_inner_multi_inside()
           line = &lines[isurf];
           dist = Geometry::distsq_point_line(pt, line->p1, line->p2);
           dist = fabs(dist);
-          if (mindist < 0 || dist < mindist) {
-            mindist = dist;
+          if (smindist < 0 || dist < smindist) {
+            smindist = dist;
             norm[0] = line->norm[0];
             norm[1] = line->norm[1];
             norm[2] = line->norm[2];
@@ -1970,8 +1954,8 @@ void FixAblate::decrement_inner_multi_inside()
           tri = &tris[isurf];
           dist = Geometry::distsq_point_tri(pt, tri->p1, tri->p2, tri->p3, tri->norm);
           dist = fabs(dist);
-          if (mindist < 0 || dist < mindist) {
-            mindist = dist;
+          if (smindist < 0 || dist < smindist) {
+            smindist = dist;
             norm[0] = tri->norm[0];
             norm[1] = tri->norm[1];
             norm[2] = tri->norm[2];
@@ -2050,7 +2034,7 @@ void FixAblate::sync_inner_multi_inside()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
   int icell,jcell;
-  double total[ninner], inner_total;
+  double total[ninner],inner_total;
 
   comm_neigh_corners(CDELTA);
 
@@ -2089,17 +2073,16 @@ void FixAblate::sync_inner_multi_inside()
 
             if (jcell < nglocal) {
 
-              for (j = 0; j < ninner; j++) {
-                if (idelta[jcell][jcorner][j] > 0) {
+              for (j = 0; j < ninner; j++)
+                if (idelta[jcell][jcorner][j] > 0)
                   total[j] += idelta[jcell][jcorner][j];
-                }
-              }
+
             } else {
-              for (j = 0; j < ninner; j++) {
-                if (idelta_ghost[jcell-nglocal][jcorner][j] > 0) {
+
+              for (j = 0; j < ninner; j++)
+                if (idelta_ghost[jcell-nglocal][jcorner][j] > 0)
                   total[j] += idelta_ghost[jcell-nglocal][jcorner][j];
-                }
-              }
+
             }
 
           } // jz
@@ -2114,13 +2097,6 @@ void FixAblate::sync_inner_multi_inside()
           else total[j] *= 0.25;
 
           ivalues[icell][i][j] -= total[j];
-
-          /*if (j == 0) ivalues[icell][i][1] -= total[j];
-          else if (j == 1) ivalues[icell][i][0] -= total[j];
-          else if (j == 2) ivalues[icell][i][3] -= total[j];
-          else if (j == 3) ivalues[icell][i][2] -= total[j];
-          else if (j == 4) ivalues[icell][i][5] -= total[j];
-          else ivalues[icell][i][4] -= total[j];*/
 
         }
       }
@@ -2204,7 +2180,7 @@ int FixAblate::mark_corners_2d(int icell)
 
   int Ninterface;
   if (Nin == 0) {
-    Ninterface = 4;
+    Ninterface = 0;
     refcorners[0] = refcorners[1] = refcorners[2] = refcorners[3] = -1;
   } else if (Nin == 1) {
     Ninterface = 2;
@@ -2235,7 +2211,7 @@ int FixAblate::mark_corners_3d(int icell)
 
   // find which corners are inside or outside the surface
 
-  int i, bit[8], which;
+  int i,bit[8],which;
   if (innerflag) {
     for (i = 0; i < ncorner; i++)
       bit[i] = ivalues[icell][i][0] <= thresh ? 0 : 1;
@@ -2316,7 +2292,7 @@ void FixAblate::epsilon_adjust()
 
 void FixAblate::epsilon_adjust_inner()
 {
-  int allin, mixflag;
+  int allin,mixflag;
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -2601,6 +2577,7 @@ void FixAblate::comm_neigh_corners(int which)
       }
 
       nsend++;
+
     }
   }
 
@@ -2644,6 +2621,7 @@ void FixAblate::comm_neigh_corners(int which)
     if (which == NVERT) {
       for (j = 0; j < ncorner; j++)
         nvert_ghost[icell][j] = rbuf[m++];
+
     } else {
 
       if (innerflag) {
@@ -2654,6 +2632,7 @@ void FixAblate::comm_neigh_corners(int which)
         for (j = 0; j < ncorner; j++)
           cdelta_ghost[icell][j] = rbuf[m++];
       }
+
     }
 
   }
@@ -3001,28 +2980,6 @@ double FixAblate::compute_vector(int i)
 }
 
 /* ----------------------------------------------------------------------
-   memory usage
-------------------------------------------------------------------------- */
-
-double FixAblate::memory_usage()
-{
-  double bytes = 0.0;
-  if (innerflag) bytes += maxgrid*ncorner*ninner * sizeof(double); // ivalues
-  else bytes += maxgrid*ncorner * sizeof(double);   // cvalues
-  if (tvalues_flag) bytes += maxgrid * sizeof(int);   // tvalues
-  bytes += maxgrid*3 * sizeof(int);            // ixyz
-  // NOTE: add for mcflags if keep
-  bytes += maxgrid * sizeof(double);           // celldelta
-  if (innerflag) bytes += maxgrid*ncorner*ninner * sizeof(double); // idelta
-  else bytes += maxgrid*ncorner * sizeof(double);   // cdelta
-  if (innerflag) bytes += maxgrid*ncorner*ninner * sizeof(double); // idelta_ghost
-  else bytes += maxgrid*ncorner * sizeof(double);   // cdelta_ghost
-  bytes += 3*maxsend * sizeof(int);            // proclist,locallist,numsend
-  bytes += maxbuf * sizeof(double);            // sbuf
-  return bytes;
-}
-
-/* ----------------------------------------------------------------------
    process command line args
 ------------------------------------------------------------------------- */
 
@@ -3056,4 +3013,27 @@ void FixAblate::process_args(int narg, char **arg)
     } else error->all(FLERR,"Illegal fix_ablate command");
   }
 }
+
+/* ----------------------------------------------------------------------
+   memory usage
+------------------------------------------------------------------------- */
+
+double FixAblate::memory_usage()
+{
+  double bytes = 0.0;
+  if (innerflag) bytes += maxgrid*ncorner*ninner * sizeof(double); // ivalues
+  else bytes += maxgrid*ncorner * sizeof(double);   // cvalues
+  if (tvalues_flag) bytes += maxgrid * sizeof(int);   // tvalues
+  bytes += maxgrid*3 * sizeof(int);            // ixyz
+  // NOTE: add for mcflags if keep
+  bytes += maxgrid * sizeof(double);           // celldelta
+  if (innerflag) bytes += maxgrid*ncorner*ninner * sizeof(double); // idelta
+  else bytes += maxgrid*ncorner * sizeof(double);   // cdelta
+  if (innerflag) bytes += maxgrid*ncorner*ninner * sizeof(double); // idelta_ghost
+  else bytes += maxgrid*ncorner * sizeof(double);   // cdelta_ghost
+  bytes += 3*maxsend * sizeof(int);            // proclist,locallist,numsend
+  bytes += maxbuf * sizeof(double);            // sbuf
+  return bytes;
+}
+
 
