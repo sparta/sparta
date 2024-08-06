@@ -215,11 +215,6 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   if(dim == 2) ninner = 4;
   else ninner = 6;
 
-  // for epsilon_adjust
-
-  cbufmin = -1;
-  cbufmax = -1;
-
   // local storage
 
   ixyz = NULL;
@@ -401,7 +396,6 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   // corner_outside_max = max allowed value on an outside corner point
   // use epsilon method (mindist = 0.0) or isosurface stuffing method
 
-
   if (mindist == 0.0) {
     corner_inside_min = thresh + EPSILON;
     corner_outside_max = thresh - EPSILON;
@@ -417,11 +411,6 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   // adjust individual corner point values too close to threshold
 
   if (pushflag) push_lohi();
-
-  if (cbufmax < 0) {
-    cbufmax = thresh - 1e-4;
-    cbufmin = thresh + 1e-4;
-  }
 
   if (innerflag) epsilon_adjust_inner();
   else epsilon_adjust();
@@ -518,10 +507,16 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
 
-  if (cbufmax < 0) {
-    cbufmax = thresh - 1e-4;
-    cbufmin = thresh + 1e-4;
+  if (mindist == 0.0) {
+    corner_inside_min = thresh + EPSILON;
+    corner_outside_max = thresh - EPSILON;
+  } else {
+    corner_inside_min = (thresh - 0.0*mindist) / (1.0-mindist);
+    corner_outside_max = (thresh - 255.0*mindist) / (1.0-mindist);
   }
+
+  corner_inside_min = MIN(corner_inside_min,255.0);
+  corner_outside_max = MAX(corner_outside_max,0.0);
 
   if (innerflag) epsilon_adjust_inner();
   else epsilon_adjust();
@@ -1211,8 +1206,6 @@ void FixAblate::sync()
 
 void FixAblate::decrement_inner()
 {
-  int i,icell;
-
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
@@ -2308,10 +2301,11 @@ void FixAblate::epsilon_adjust()
     if (cells[icell].nsplit <= 0) continue;
 
     for (int i = 0; i < ncorner; i++) {
-      if (cvalues[icell][i] < cbufmin && cvalues[icell][i] >= thresh)
-        cvalues[icell][i] = cbufmax;
-      else if (cvalues[icell][i] > cbufmax && cvalues[icell][i] < thresh)
-        cvalues[icell][i] = cbufmax;
+      if (cvalues[icell][i] < corner_inside_min && cvalues[icell][i] >= thresh)
+        cvalues[icell][i] = corner_outside_max;
+      else if (cvalues[icell][i] > corner_outside_max && cvalues[icell][i] < thresh)
+        cvalues[icell][i] = corner_outside_max;
+
     } // end corner
   } // end cells
 }
@@ -2334,13 +2328,13 @@ void FixAblate::epsilon_adjust_inner()
     for (int i = 0; i < ncorner; i++) {
 
       // check all in or out
-      if (ivalues[icell][i][0] > cbufmin) allin = 1;
+      if (ivalues[icell][i][0] > corner_inside_min) allin = 1;
       else allin = 0;
 
       mixflag = 0;
       for (int j = 0; j < ninner; j++) {
-        if (ivalues[icell][i][j] < cbufmin && allin) mixflag = 1;
-        if (ivalues[icell][i][j] > cbufmin && !allin) mixflag = 1;
+        if (ivalues[icell][i][j] < corner_inside_min && allin) mixflag = 1;
+        if (ivalues[icell][i][j] > corner_inside_min && !allin) mixflag = 1;
       }
 
       // if mixflag = 1, inner indices in disagreement in terms of side
@@ -2348,83 +2342,14 @@ void FixAblate::epsilon_adjust_inner()
 
       if (mixflag) {
 
-        // KEEP: Experimental -> less distortion around corner
-        // determine largest change among inner indices.
-        // displace all the largest change so surface orientation preserved
-
-        /*double ref = (thresh-cbufmin)/(0.0-cbufmin);
-
-        double dr[3];
-        dr[0] = dr[1] = dr[2] = 0.0;
-        
-        // find inner indices in each direction closet to corner
-        // these will be adjusted
-        // assume only one of the two inner indices in each direction is 
-        // .. close to the corner
-
-        // first find all vertices close to corner
-
-        int close[ninner];
-        for (int j = 0; j < ninner; j++) {
-          if (ivalues[icell][i][j] > thresh && ivalues[icell][i][j] < cbufmin)
-            close[j] = 1;
-          else close[j] = 0;
-        }
-
-        double rcorner;
-        if (close[0] == 1 && close[1] == 0) {
-          rcorner = (thresh-ivalues[icell][i][0])/(0.0-ivalues[icell][i][0]);
-          dr[0] = ref - rcorner;
-        }
-
-        if (close[1] == 1 && close[0] == 0) {
-          rcorner = (thresh-ivalues[icell][i][1])/(0.0-ivalues[icell][i][1]);
-          dr[0] = ref - rcorner;
-        }
-
-        if (close[2] == 1 && close[3] == 0) {
-          rcorner = (thresh-ivalues[icell][i][2])/(0.0-ivalues[icell][i][2]);
-          dr[1] = ref - rcorner;
-        }
-
-        if (close[3] == 1 && close[2] == 0) {
-          rcorner = (thresh-ivalues[icell][i][3])/(0.0-ivalues[icell][i][3]);
-          dr[1] = ref - rcorner;
-        }
-
-        if (dim == 3) {
-          if (close[5] == 1 && close[6] == 0) {
-            rcorner = (thresh-ivalues[icell][i][4])/(0.0-ivalues[icell][i][4]);
-            dr[2] = ref - rcorner;
-          }
-          if (close[6] == 1 && close[5] == 0) {
-            rcorner = (thresh-ivalues[icell][i][5])/(0.0-ivalues[icell][i][5]);
-            dr[2] = ref - rcorner;
-          }
-        }
-
-        double di[3];
-        di[0] = thresh - (thresh - 255.0 * dr[0]) / (1.0 - dr[0]);
-        di[1] = thresh - (thresh - 255.0 * dr[1]) / (1.0 - dr[1]);
-        di[2] = thresh - (thresh - 255.0 * dr[2]) / (1.0 - dr[2]);
-
-        ivalues[icell][i][0] = MAX(cbufmax - di[0], 0.0);
-        ivalues[icell][i][1] = MAX(cbufmax - di[0], 0.0);
-        ivalues[icell][i][2] = MAX(cbufmax - di[1], 0.0);
-        ivalues[icell][i][3] = MAX(cbufmax - di[1], 0.0);
-        if (dim == 3) {
-          ivalues[icell][i][4] = MAX(cbufmax - di[2], 0.0);
-          ivalues[icell][i][5] = MAX(cbufmax - di[2], 0.0);
-        }*/
-
         for (int j = 0; j < ninner; j++)
-          ivalues[icell][i][j] = cbufmax;
+          ivalues[icell][i][j] = corner_outside_max;
 
       // all out
       } else if (!allin) {
         for (int j = 0; j < ninner; j++)
-          if (ivalues[icell][i][j] > cbufmax && ivalues[icell][i][j] < thresh)
-            ivalues[icell][i][j] = cbufmax;
+          if (ivalues[icell][i][j] > corner_outside_max && ivalues[icell][i][j] < thresh)
+            ivalues[icell][i][j] = corner_outside_max;
       }
 
     } // end corner
@@ -3076,33 +3001,6 @@ double FixAblate::compute_vector(int i)
 }
 
 /* ----------------------------------------------------------------------
-   process command line args
-------------------------------------------------------------------------- */
-
-void FixAblate::process_args(int narg, char **arg)
-{
-  multiflag = 0;
-  minmaxflag = 0;
-
-  int iarg = 0;
-  while (iarg < narg) {
-    if (strcmp(arg[iarg],"multiple") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
-      if (strcmp(arg[iarg+1],"no") == 0) multiflag = 0;
-      else if (strcmp(arg[iarg+1],"yes") == 0) multiflag = 1;
-      else error->all(FLERR,"Illegal fix_ablate command");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"minmax") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
-      if (strcmp(arg[iarg+1],"no") == 0) minmaxflag = 0;
-      else if (strcmp(arg[iarg+1],"yes") == 0) minmaxflag = 1;
-      else error->all(FLERR,"Illegal fix_ablate command");
-      iarg += 2;
-    } else error->all(FLERR,"Illegal fix_ablate command");
-  }
-}
-
-/* ----------------------------------------------------------------------
    memory usage
 ------------------------------------------------------------------------- */
 
@@ -3131,6 +3029,8 @@ double FixAblate::memory_usage()
 void FixAblate::process_args(int narg, char **arg)
 {
   mindist = 0.0;
+  multiflag = 0;
+  minmaxflag = 0;
 
   int iarg = 0;
   while (iarg < narg) {
@@ -3141,6 +3041,19 @@ void FixAblate::process_args(int narg, char **arg)
         error->all(FLERR,"Fix ablate mindist value must be >= 0.0 and < 0.5");
       if (mindist < EPSILON) mindist = 0.0;
       iarg += 2;
-    } else error->all(FLERR,"Invalid read_isurf command");
+    } else if (strcmp(arg[iarg],"multiple") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
+      if (strcmp(arg[iarg+1],"no") == 0) multiflag = 0;
+      else if (strcmp(arg[iarg+1],"yes") == 0) multiflag = 1;
+      else error->all(FLERR,"Illegal fix_ablate command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"minmax") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
+      if (strcmp(arg[iarg+1],"no") == 0) minmaxflag = 0;
+      else if (strcmp(arg[iarg+1],"yes") == 0) minmaxflag = 1;
+      else error->all(FLERR,"Illegal fix_ablate command");
+      iarg += 2;
+    } else error->all(FLERR,"Illegal fix_ablate command");
   }
 }
+

@@ -168,9 +168,9 @@ void CreateISurf::command(int narg, char **arg)
   else if (strcmp(arg[3],"inner") == 0) ctype = INNER;
   else error->all(FLERR,"Create_isurf corner mode is invalid");
 
-  // process optional command line args
+  // process optional command line args (nothing to process for now)
 
-  process_args(narg-4,&arg[4]);
+  //process_args(narg-4,&arg[4]);
 
   // check if grid group is a uniform grid
 
@@ -196,8 +196,13 @@ void CreateISurf::command(int narg, char **arg)
   int pushflag = 0;
   char *sgroupID = NULL;
 
-  ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
-                        cvalues,tvalues,thresh,sgroupID,pushflag);
+  if (ctype == INNER) {
+    ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
+                          invalues,tvalues,thresh,sgroupID,pushflag);
+  } else {
+    ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
+                          cvalues,tvalues,thresh,sgroupID,pushflag);
+  }
 
   if (ablate->nevery == 0) modify->delete_fix(ablateID);
 }
@@ -1521,25 +1526,6 @@ void CreateISurf::set_cvalues()
   cout = 0.0;
   cin = 255.0;
 
-
-  double value = 1.0 - surfbuffer;
-
-  // min inside value
-
-  cbufmin = (thresh - cout * surfbuffer) / (1.0 - surfbuffer);
-
-  // max outside value
-
-  cbufmax = (thresh - cin * surfbuffer) / (1.0 - surfbuffer);
-
-  cbufmin = MAX(cbufmin,cout);
-  cbufmin = MIN(cbufmin,cin);
-
-  cbufmax = MAX(cbufmax,cout);
-  cbufmax = MIN(cbufmax,cin);
-
-  // every inside value must be larger than cbufmin
-
   if (ctype == INOUT) set_cvalues_inout();
   else if (ctype == VOXEL) set_cvalues_voxel();
   else if (ctype == AVE) set_cvalues_ave();
@@ -1633,7 +1619,7 @@ void CreateISurf::set_cvalues_ave()
         else {
           ivalsum /= nval;
           if (ivalsum > 1.0) error->one(FLERR,"over 1");
-          tmp_cvalues[icell][ic] = MAX(param2cval(ivalsum,0.0),cbufmin);
+          tmp_cvalues[icell][ic] = MAX(param2cval(ivalsum,0.0),thresh);
         }
 
       } // end svalues
@@ -1995,16 +1981,5 @@ void CreateISurf::remove_old()
 
 void CreateISurf::process_args(int narg, char **arg)
 {
-  surfbuffer = 0.0;
-
-  int iarg = 0;
-  while (iarg < narg) {
-    if (strcmp(arg[iarg],"buffer") == 0)  {
-      if (iarg+2 > narg) error->all(FLERR,"Invalid create_isurf command");
-      surfbuffer = atof(arg[iarg+1]);
-      if (surfbuffer <= 0 || surfbuffer >= 0.5)
-        error->all(FLERR,"Buffer must be a value between 0 and 0.5");
-      iarg += 2;
-    } else error->all(FLERR,"Invalid create_isurf command");
-  }
+  return;
 }

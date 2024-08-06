@@ -32,10 +32,6 @@ class FixAblate : public Fix {
   double cornerlo[3];
   double xyzsize[3];
 
-  // might need to move this into protected
-  double cbufmin;  // min corner value point of inside corner
-  double cbufmax;  // max corner value point of outside corner  
-
   FixAblate(class SPARTA *, int, char **);
   ~FixAblate();
   int setmask();
