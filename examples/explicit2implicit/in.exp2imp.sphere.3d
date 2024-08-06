@@ -12,8 +12,8 @@ dimension		3
 
 boundary		p p p
 
-variable                L equal 1.0
-variable                N equal 20
+variable                L equal 1.2
+variable                N equal 10
 
 global                  gridcut 0.04
 global                  comm/sort yes

@@ -896,6 +896,21 @@ void CreateISurf::sync_voxels()
 
       cvalues[icell][i] = vol_avg;
 
+      // ensure side value and cvalue agree
+
+      //if (svalues[icell][i] == 1 && cvalues[icell][i] < thresh) {
+      //  printf("side: %i; vol: %2.1e\n", svalues[icell][i], vol_avg);
+      //  error->one(FLERR,"inconsistent");
+      //} else if (svalues[icell][i] == 0 && cvalues[icell][i] > thresh) {
+      //  printf("side: %i; vol: %2.1e\n", svalues[icell][i], vol_avg);
+      //  error->one(FLERR,"inconsistent");
+      //}
+
+      //if (svalues[icell][i] == 1 && cvalues[icell][i] < thresh)
+      //  cvalues[icell][i] = thresh + EPSILON_GRID;
+      //else if (svalues[icell][i] == 0 && cvalues[icell][i] > thresh)
+      //  cvalues[icell][i] = thresh - EPSILON_GRID;
+
     }
   }
   return;
@@ -1571,10 +1586,11 @@ void CreateISurf::set_cvalues_voxel()
     dz = cells[icell].hi[2] - cells[icell].lo[2];
     sfrac = (dx*dy*dz - cvol) / (dx*dy*dz);
 
-    if (sfrac < 0.0 || sfrac > 1.0) error->one(FLERR,"bad volume");
+    if (sfrac < 0.0 || sfrac > 1.0)
+      error->one(FLERR,"Calculated solid fraction above one or negative");
 
     for (int ic = 0; ic < ncorner; ic++)
-      tmp_cvalues[icell][ic] = MIN(MAX(sfrac*cin,0.0),255.0);
+      tmp_cvalues[icell][ic] = sfrac*cin;
 
   } // end grid cells
 
