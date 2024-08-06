@@ -87,6 +87,7 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   if (scale < 0.0) error->all(FLERR,"Illegal fix ablate command");
 
   int iarg = 6;
+
   if ((strncmp(arg[5],"c_",2) == 0) || (strncmp(arg[5],"f_",2) == 0)) {
     if (arg[5][0] == 'c') which = COMPUTE;
     else if (arg[5][0] == 'f') which = FIX;
@@ -2269,6 +2270,8 @@ int FixAblate::mark_corners_3d(int icell)
 
 void FixAblate::epsilon_adjust()
 {
+  int i,icell;
+
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
@@ -2276,13 +2279,13 @@ void FixAblate::epsilon_adjust()
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
 
-    for (int i = 0; i < ncorner; i++) {
-      if (cvalues[icell][i] < corner_inside_min && cvalues[icell][i] >= thresh)
+    for (i = 0; i < ncorner; i++) {
+      if (cvalues[icell][i] >= thresh && cvalues[icell][i] < corner_inside_min)
         cvalues[icell][i] = corner_outside_max;
-      else if (cvalues[icell][i] > corner_outside_max && cvalues[icell][i] < thresh)
+      else if (cvalues[icell][i] < thresh && cvalues[icell][i] > corner_outside_max)
         cvalues[icell][i] = corner_outside_max;
-
     } // end corner
+
   } // end cells
 }
 
