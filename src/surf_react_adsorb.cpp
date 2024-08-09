@@ -76,8 +76,6 @@ enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 #define MAXLINE 1024
 #define DELTALIST 10
 
-int SurfReactAdsorb::first_owner_set = 0;
-
 // Syntax: surf_react ID adsorb (gs or ps or gs/ps) filename1 {filename2}
 //                    Nsync (face or surf) Tsurf max_cover O CO CO_a CO_b ...
 
@@ -319,11 +317,11 @@ SurfReactAdsorb::~SurfReactAdsorb()
   }
 
   // delete custom per-surf state data owned by Surf class
-  // this must be done exactly once by first_owner
+  // this must be done exactly once
   // in case multiple surf react/adsorb instances are used
 
-  if (mode == SURF && first_owner) {
-    total_state_index = surf->find_custom((char *) "nstick_total");
+  total_state_index = surf->find_custom((char *) "nstick_total");
+  if (mode == SURF && total_state_index != -1) {
     surf->remove_custom(total_state_index);
     species_state_index = surf->find_custom((char *) "nstick_species");
     surf->remove_custom(species_state_index);
@@ -449,15 +447,6 @@ void SurfReactAdsorb::create_per_surf_state()
 
   } else if (flag < 0)
     error->all(FLERR,"Surf react/adsorb custom attribute(s) already exist");
-
-  // set first_owner = 1 if this is first instance of SRA, else 0
-  // at this point (constructor), this instance of SRA does not yet exist
-  // first_owner enables exactly one deletion of custom attributes in destructor
-
-  if (!first_owner_set) {
-    first_owner = 1;
-    first_owner_set = 1;
-  } else first_owner = 0;
 
   // allocate and intialize surf_species_delta
   // stores changes in each nlocal+nghost surf due to reactions

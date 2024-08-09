@@ -77,9 +77,6 @@ class SurfReactAdsorb : public SurfReact {
 
   // mode = SURF for surface elements (lines or tris)
 
-  static int first_owner_set;   // 1 if first_owner set
-  int first_owner;              // 1 if this instance of SRA allocates custom Surf data
-
   int total_state_index;        // indices to custom state in Surf
   int species_state_index;
   int area_index;
