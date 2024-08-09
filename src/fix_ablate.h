@@ -50,6 +50,8 @@ class FixAblate : public Fix {
 
   void store_corners(int, int, int, double *, double *,
                      double **, int *, double, char *, int);
+  void store_corners(int, int, int, double *, double *,
+                     double ***, int *, double, char *, int);
 
  protected:
   int me;
@@ -57,7 +59,11 @@ class FixAblate : public Fix {
   double scale;
   char *idsource;
   int storeflag;
+  int innerflag;
+  int multiflag;
+  int minmaxflag;
   int ncorner;
+  int ninner;
   int sgroupbit;
   double thresh;
   double sum_delta;
@@ -66,6 +72,7 @@ class FixAblate : public Fix {
   int nglocal;            // # of owned grid cells
 
   double **cvalues;       // corner point values
+  double ***ivalues;      // corner innner values
   int *tvalues;           // per-cell type value
   int tvalues_flag;       // 1 if tvalues is defined (by ReadIsurf)
 
@@ -79,11 +86,16 @@ class FixAblate : public Fix {
   // DEBUG
   int **mcflags;
 
-  double *celldelta;      // per-cell delta from compute or fix source
-  double **cdelta;        // per-corner point deltas
-  double **cdelta_ghost;  // ditto for my ghost cells communicated to me
-  int maxgrid;            // max size of per-cell vectors/arrays
-  int maxghost;           // max size of cdelta_ghost
+  double *celldelta;       // per-cell delta from compute or fix source
+  double **cdelta;         // per-corner point deltas
+  double **cdelta_ghost;   // ditto for my ghost cells communicated to me
+  double ***idelta;        // cdelta for inner indices
+  double ***idelta_ghost;  // ditto for my ghost cells (inner indices)
+  double **nvert;          // number of vertices around each corner
+  double **nvert_ghost;    // ditto for my ghost cells communicated to me
+
+  int maxgrid;             // max size of per-cell vectors/arrays
+  int maxghost;            // max size of cdelta_ghost
 
   int *proclist;
   cellint *locallist;
@@ -96,6 +108,9 @@ class FixAblate : public Fix {
   double *vbuf;
   int maxvar;
 
+  // new ablate with distributed decrement
+  int refcorners[8];
+
   class MarchingSquares *ms;
   class MarchingCubes *mc;
   class RanKnuth *random;
@@ -103,11 +118,31 @@ class FixAblate : public Fix {
   void process_args(int, char **);
 
   void create_surfs(int);
-  void set_delta_random();
+
   void set_delta();
+  void set_delta_random();
+  void set_delta_uniform();
+
   void decrement();
+  void decrement_inner();
+  void decrement_multi_inside();
+  void decrement_multi_outside();
+  void decrement_inner_multi_outside();
+  void decrement_inner_multi_inside();
+
   void sync();
+  void sync_inner();
+  void sync_multi_outside();
+  void sync_multi_inside();
+  void sync_inner_multi_outside();
+  void sync_inner_multi_inside();
+
+  int mark_corners_2d(int);
+  int mark_corners_3d(int);
+
   void epsilon_adjust();
+  void epsilon_adjust_inner();
+  void length_adjust();
   void push_lohi();
   void comm_neigh_corners(int);
   int walk_to_neigh(int, int, int, int);
