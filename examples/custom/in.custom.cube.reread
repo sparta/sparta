@@ -1,0 +1,49 @@
+################################################################################
+## 3d flow around a cube with read_surf and writing surf
+## testing custom attributes are updated on reread
+## Specifically, data.cube.out.1 custom data should match data.cube.custom
+## and data.cube.out.2 should match data.cube.custom.2
+##
+## Notes:
+##  - The "comm/sort” option to the “global” command is used to match
+#MPI runs.
+##  - The “twopass” option is used to match Kokkos runs.
+## The "comm/sort" and "twopass" options should not be used for
+#production runs.
+#################################################################################
+
+seed	    	    12345
+
+#global              gridcut -1.0 comm/sort yes
+global              gridcut 0.0 comm/sort yes
+#global              gridcut 2.0 comm/sort yes
+
+global              surfs explicit
+#global              surfs explicit/distributed
+
+boundary	    or r r
+
+create_box  	    0 10 0 10 0 10
+create_grid 10 10 10
+
+read_surf           data.cube.custom &    
+                    custom ivec int 0 &    
+                    custom iarray int 2 &    
+                    custom dvec float 0 &    
+                    custom darray float 3 &    
+                    trans 4.5 4.5 4.5 origin 5 5 5 &    
+                    scale 3 3 3 rotate 45 1 1 1  &
+                    group 1 &
+                    file data.cube.out.1 custom ivec custom iarray custom dvec custom darray
+
+remove_surf 1
+
+read_surf           data.cube.custom.2 &    
+                    custom ivec int 0 &    
+                    custom iarray int 2 &    
+                    custom dvec float 0 &    
+                    custom darray float 3 &    
+                    trans 4.5 4.5 4.5 origin 5 5 5 &    
+                    scale 3 3 3 rotate 45 1 1 1  &
+                    group 1 &
+                    file data.cube.out.2 custom ivec custom iarray custom dvec custom darray
