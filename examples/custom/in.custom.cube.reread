@@ -24,7 +24,8 @@ global              surfs explicit
 boundary	    or r r
 
 create_box  	    0 10 0 10 0 10
-create_grid 10 10 10
+create_grid         10 10 10
+balance_grid        rcb cell
 
 read_surf           data.cube.custom &    
                     custom ivec int 0 &    
@@ -35,6 +36,9 @@ read_surf           data.cube.custom &
                     scale 3 3 3 rotate 45 1 1 1  &
                     group 1 &
                     file data.cube.out.1 custom ivec custom iarray custom dvec custom darray
+
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
 
 remove_surf 1
 
@@ -47,3 +51,10 @@ read_surf           data.cube.custom.2 &
                     scale 3 3 3 rotate 45 1 1 1  &
                     group 1 &
                     file data.cube.out.2 custom ivec custom iarray custom dvec custom darray
+
+surf_modify         all collide 1
+
+stats		    10
+stats_style	    step cpu np nattempt ncoll nscoll nscheck
+
+run            50
