@@ -538,7 +538,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       else {
         etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
           weight * (iother + jother - otherpre);
-        if (reaction) {
+        if (reaction >= 0) {
           sr = surf->sr[isr];
           r_coeff = sr->reaction_coeff(reaction-1);
           etot -= weight * r_coeff;
