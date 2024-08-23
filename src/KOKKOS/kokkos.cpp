@@ -154,7 +154,11 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
 
   if (ngpus > 0) {
     comm_serial = 0;
+#ifdef KOKKOS_ARCH_AMD_GFX942
+    atomic_reduction = 0;
+#else
     atomic_reduction = 1;
+#endif
   } else {
     comm_serial = 1;
     atomic_reduction = 0;
