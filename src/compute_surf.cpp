@@ -247,7 +247,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
 {
   // skip if no particle, called by SurfReactAdsorb for on-surf reaction
 
-  if (!iorig && reaction >= 0) return;
+  if (!iorig && reaction) return;
 
   // skip if isurf not in surface group
 
@@ -515,7 +515,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
         vec[k++] -= weight * (ievib + jevib - oevib) * fluxscale;
       break;
     case ECHEM:
-      if (reaction >= 0 && !transparent) {
+      if (reaction && !transparent) {
         sr = surf->sr[isr];
         r_coeff = sr->reaction_coeff(reaction-1);
         vec[k++] += weight * r_coeff * fluxscale;
@@ -538,7 +538,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       else {
         etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
           weight * (iother + jother - otherpre);
-        if (reaction >= 0) {
+        if (reaction) {
           sr = surf->sr[isr];
           r_coeff = sr->reaction_coeff(reaction-1);
           etot -= weight * r_coeff;
