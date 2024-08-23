@@ -647,6 +647,9 @@ void FixEmitSurf::perform_task()
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
 
+  int nsurf_tally = update->nsurf_tally;
+  Compute **slist_active = update->slist_active;
+  
   int nfix_update_custom = modify->n_update_custom;
 
   for (i = 0; i < ntask; i++) {
@@ -749,9 +752,9 @@ void FixEmitSurf::perform_task()
           p->flag = PSURF + 1 + isurf;
           p->dtremain = dt * random->uniform();
 
-          for (std::size_t c = 0; c < update->nsurf_tally; ++c) {
-            update->slist_active[c]->surf_tally(isurf, pcell, -1, NULL, p, NULL);
-          }
+          if (nsurf_tally)
+            for (int k = 0; k < nsurf_tally; k++)
+              slist_active[k]->surf_tally(isurf,pcell,0,NULL,p,NULL);
 
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
@@ -858,9 +861,9 @@ void FixEmitSurf::perform_task()
         p->flag = PSURF + 1 + isurf;
         p->dtremain = dt * random->uniform();
 
-        for (std::size_t c = 0; c < update->nsurf_tally; ++c) {
-          update->slist_active[c]->surf_tally(isurf, pcell, -1, NULL, p, NULL);
-        }
+        if (nsurf_tally)
+          for (int k = 0; k < nsurf_tally; k++)
+            slist_active[k]->surf_tally(isurf,pcell,0,NULL,p,NULL);
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,

@@ -245,8 +245,10 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
                              Particle::OnePart *iorig,
                              Particle::OnePart *ip, Particle::OnePart *jp)
 {
-  // skip if no particle, called by SurfReactAdsorb for on-surf reaction
-
+  // skip if no original particle and a reaction is taking place
+  //   called by SurfReactAdsorb for on-surf reaction
+  // FixEmitSurf calls with no original particle and no reaction
+  
   if (!iorig && reaction) return;
 
   // skip if isurf not in surface group
