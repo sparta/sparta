@@ -48,12 +48,12 @@ fix in emit/face/file mymix ylo file.txt oneface frac 0.1 nevery 10
 <P>Emit particles from a face of the simulation box, continuously during
 a simulation.  The particles are added using properties of the
 specified mixture and values read from an input file that can override
-those properties.  The input file can thus be used to create an influx
-of particles that varies spatially over the surface of the <I>face</I>.
-This can be useful, for example, to model an object inserted into a
-plume flow where the flow has spatially varying properties.  If
-invoked every timestep, this fix creates a continuous influx of
-particles thru the face.
+the default global values for those properties.  In particular, the
+input file can be used to create an influx of particles that varies
+spatially over the surface of the <I>face</I>.  This can be useful, for
+example, to model an object inserted into a plume flow where the flow
+has spatially varying properties.  If invoked every timestep, this fix
+creates a continuous influx of particles thru the face.
 </P>
 <P>The properties of the added particles are determined by the mixture
 with ID <I>mix-ID</I> and the input file.  Together they set the number and
@@ -115,58 +115,65 @@ of particles entering the simulation box.
 </P>
 <HR>
 
-<P>For 3d simulations, the input data file defines a 2d mesh of data
-points which conceptually overlays some portion or all of the
-specified face of the simulation box.  For a 2d simulation, a 1d mesh
-is defined.  The mesh is topologically regular, but can have uniform
-or non-uniform spacing in each of its two or one dimensions (for 3d or
-2d problems).  One or more values can be defined at every mesh point,
-which override any of the mixture settings defined by the
-<A HREF = "mixture.html">mixture</A> command.  These are the flow properties
-discussed above (number density, streaming velocity, and thermal
-temperature), as well as the number fraction of any species in the
-mixture.  Any value not defined in the input data file defaults to the
-mixture value.
+<P>For 3d simulations, the input data file defines a 2d <B>mesh of points</B>
+which conceptually overlays some portion or all of the specified face
+of the simulation box.  For a 2d simulation, a 1d <B>mesh of points</B> is
+defined.  The set of mesh points is topologically regular, but can
+have uniform or non-uniform spacing in each of its two or one
+dimensions (for 3d or 2d problems).  One or more values can be defined
+at every mesh point, which override any of the mixture settings
+defined by the <A HREF = "mixture.html">mixture</A> command.  These are the flow
+properties discussed above (number density, streaming velocity, and
+thermal temperature), as well as the number fraction of any species in
+the mixture.  Any value not defined in the input data file defaults to
+the mixture value.
 </P>
-<P>For 3d simulations, a 2d mesh is defined in the file using I,J
-indices.  (The 1d mesh for 2d simulations is described below).  I and
-J map to any of the simulation box faces in this manner.  A simulation
-box face has two varying dimensions (e.g. ylo face = x and z
-dimensions).  The I index in the file corresponds to the "lowest" of
+<P>IMPORTANT NOTE: It is critical to understand that the input data file
+defines <B>mesh points</B> on the face of the simulation box.  It does not
+define <B>mesh cells</B>, e.g. 2d squares or rectangles, each with a flow
+properties.
+</P>
+<P>For 3d simulations, 2d mesh points are defined in the file using I,J
+indices.  (The 1d mesh points for 2d simulations are described below).
+I and J map to any of the simulation box faces in this manner.  A
+simulation box face has two varying dimensions (e.g. ylo face = x and
+z dimensions).  The I index in the file corresponds to the "lowest" of
 these dimensions, where x < y < z.  The J index in the file
 corresponds to the higher.  Thus for face ylo, I = x and J = z.  A low
 I or J value corresponds to a low x or z value, regardless of whether
-the mapping is to the ylo or yhi face.  A 1d mesh for a 2d simulation
-is defined in an analogous manner, e.g. for face xlo, I = y.
+the mapping is to the ylo or yhi face.  1d mesh points for a 2d
+simulation are defined in an analogous manner, e.g. for face xlo, I =
+y.
 </P>
-<P>For a 3d simulation, interpolation from values on the 2d mesh to any
-grid cell face that is on the corresponding simulation box face is
-done in the following manner.  There are 3 cases to consider.
+<P>For a 3d simulation, interpolation from values on the 2d mesh points
+to any grid cell face that is on the corresponding simulation box face
+is done in the following manner.  There are 3 cases to consider.
 </P>
 <P>(a) For a grid cell face that is entirely inside the area defined by
-the file mesh, the centroid (center point) of the grid cell face is
-surrounded geometrically by 4 file mesh points.  The 4 values defined
-on those 4 file points are averaged in a weighted manner using
+the file mesh points, the centroid (center point) of the grid cell
+face is surrounded geometrically by 4 mesh points.  The 4 values
+defined on those 4 points are averaged in a weighted manner using
 bilinear interpolation (described below) to determine the value for
 the grid cell face.  This value is then used for the calculation
-described above for <I>M</I> = the number of particles to add on the
-cell face as well as the properties of the added particles.
+described above for <I>M</I> = the number of particles to add on the cell
+face as well as the properties of the added particles.
 </P>
 <P>(b) For a grid cell face that is entirely outside the area defined by
-the file mesh, no particles are added in that grid cell.
+the file mesh points, no particles are added in that grid cell.
 </P>
 <P>(c) For a grid cell face that partially overlaps the area defined by
-the file mesh, the extent of the overlap is computed.  The centroid
-(center point) of the overlap area is surrounded geometrically by 4
-file mesh points.  The values for those 4 points are used as in (a)
-above to determine properties of particles added in that grid cell.
-Note that the area of insertion, used to calculate <I>M</I>, is the overlap
-area, which is smaller than the grid cell face area.  Also, particles
-are only added within the overlap area of the grid cell face.
+the file mesh points, the extent of the overlap is computed.  The
+centroid (center point) of the overlap area is surrounded
+geometrically by 4 mesh points.  The values for those 4 points are
+used as in (a) above to determine properties of particles added in
+that grid cell.  Note that the area of insertion, used to calculate
+<I>M</I>, is the overlap area, which is smaller than the grid cell face
+area.  Also, particles are only added within the overlap area of the
+grid cell face.
 </P>
 <P>For a 2d simulation, the 3 cases are similar, except for (a) and (c)
 the centroid is the midpoint of a line segment, the centroid is
-surrounded by 2 file mesh points, and linear interpolation (described
+surrounded by 2 mesh points, and linear interpolation (described
 below) is performed to determine the value for the grid face.
 </P>
 <HR>
@@ -182,11 +189,11 @@ specified boundary-ID.  The lines that follow must be in this order:
 <PRE># plume ABC info           (one or more comment or blank lines) 
 </PRE>
 <PRE>PLUME_ABC                  (boundary-ID is first word on line)
-NIJ 4 10                   (mesh size: Ni by Nj)
+NIJ 4 10                   (mesh size: Ni by Nj points)
 NV 3                       (Nv = number of values per mesh point)
 VALUES nrho temp Ar        (list of Nv values per mesh point)
-IMESH 0.0 0.3 0.9 1.0      (mesh coordinates in I direction)
-JMESH ...                  (mesh coordinates in J direction)
+IMESH 0.0 0.3 0.9 1.0      (mesh point coordinates in I direction)
+JMESH ...                  (mesh point coordinates in J direction)
                            (blank)
 1 1 1.0 300.0 0.5          (I, J, value1, value2, ...)
 1 2 1.02 310.0 0.5           
@@ -284,27 +291,27 @@ command are trying to achieve.
 </P>
 <HR>
 
-<P>For 3d simulations, bilinear interpolation from the 2d mesh of values
-specified in the file is performed using this equation to calculate
-the value at the centroid point (i,j) in the grid cell face:
+<P>For 3d simulations, bilinear interpolation from the 2d mesh point
+values specified in the file is performed using this equation to
+calculate the value at the centroid point (i,j) in the grid cell face:
 </P>
 <PRE>f(i,j) = 1/area * (f(i1,j1)*(i2-i)*(j2-j) + f(i2,j1)*(i-i1)*(j2-j) +
                    f(i2,j2)*(i-i1)*(j-j1) + f(i1,j2)*(i2-i)*(j-j1)) 
 </PRE>
-<P>where the 4 surrounding file mesh points are (i1,j1), (i2,j1),
-(i2,j2), and (i1,j2).  The 4 f() values on the right-hand side are the
-values defined at the file mesh points.  The sum is normalized by the
-area of the overlap between the grid cell face and file mesh.
+<P>where the 4 surrounding mesh points are (i1,j1), (i2,j1), (i2,j2), and
+(i1,j2).  The 4 f() values on the right-hand side are the values
+defined at the mesh points.  The sum is normalized by the area of the
+overlap between the grid cell face and the file mesh.
 </P>
-<P>For 2d simulations, linear interpolation from the 1d mesh of values
+<P>For 2d simulations, linear interpolation from the 1d mesh point values
 specified in the file is performed using this equation to calculate
-the value at the centroid poitn (i) in the grid cell line:
+the value at the centroid point (i) in the grid cell line:
 </P>
 <PRE>f(i) = 1/length * (f(i1)*(i2-i) + f(i2)*(i-i1)
      = f(i1) + (i - i1)/(i2 - i1) * (f(i2) - f(i1)) 
 </PRE>
-<P>where the 2 surrounding file mesh points are (i1) and (i2).  The 2 f()
-values on the right-hand side are the values defined at the file mesh
+<P>where the 2 surrounding mesh points are (i1) and (i2).  The 2 f()
+values on the right-hand side are the values defined at the mesh
 points.  The sum is normalized by the length of the overlap between
 the grid cell line and file mesh.
 </P>
