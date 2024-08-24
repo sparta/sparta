@@ -3654,7 +3654,7 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
       treestack[ntreestack++] = newtree;
     } else argstack[nargstack++] = value;
 
-  // special function for file-style variable
+  // special function next() for file-style variable
 
   } else if (strcmp(word,"next") == 0) {
     if (narg != 1)
@@ -3682,7 +3682,8 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
 
     } else error->all(FLERR,"Invalid variable style in special function next");
 
-  // special function that allows per-particle access of grid quantities
+  // special function grid2part() that allows
+  // per-particle access of pre-grid quantities
     
   } else if (strcmp(word,"grid2part") == 0) {
     if (narg != 1)
