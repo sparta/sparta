@@ -118,7 +118,7 @@ the mixture value.
 
 IMPORTANT NOTE: It is critical to understand that the input data file
 defines [mesh points] on the face of the simulation box.  It does not
-define [mesh cells], e.g. 2d squares or rectangles, each with a flow
+define [mesh cells], e.g. 2d squares or rectangles, each with flow
 properties.
 
 For 3d simulations, 2d mesh points are defined in the file using I,J
