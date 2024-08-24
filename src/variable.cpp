@@ -3438,6 +3438,7 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
    push result onto tree or arg stack
    word = special function
    contents = str between parentheses with one,two,three args
+     currently, all special functions just take one arg
    return 0 if not a match, 1 if successfully processed
    customize by adding a special function:
      sum(x),min(x),max(x),ave(x),trap(x),slope(x),next(x),grid2part(x)
