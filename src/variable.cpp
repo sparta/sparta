@@ -2232,7 +2232,7 @@ double Variable::evaluate(char *str, Tree **tree)
 
   if (nopstack) error->all(FLERR,"Invalid syntax in variable formula");
 
-  // for particle-style variable, return remaining tree
+  // for particle-style, grid-style, or surf-style variable, return remaining tree
   // for equal-style variable, return remaining arg
 
   if (tree) {
