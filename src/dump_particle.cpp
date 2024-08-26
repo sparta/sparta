@@ -368,7 +368,7 @@ int DumpParticle::count()
   Grid::ChildCell *cells = grid->cells;
   Particle::OnePart *particles = particle->particles;
   int *species2species = particle->mixture[imix]->species2species;
-  
+
   for (i = 0; i < nlocal; i++)
     if (species2species[particles[i].ispecies] < 0) choose[i] = 0;
 
@@ -1347,7 +1347,7 @@ void DumpParticle::pack_cellid(int n)
   // NOTE: cellint (bigint) won't fit in double in some cases
 
   int icell;
-  
+
   for (int i = 0; i < nchoose; i++) {
     icell = particles[clist[i]].icell;
     buf[n] = cells[icell].id;

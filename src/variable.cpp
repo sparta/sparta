@@ -3685,20 +3685,20 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
 
   // special function grid2part() that allows
   // per-particle access of pre-grid quantities
-    
+
   } else if (strcmp(word,"grid2part") == 0) {
     if (narg != 1)
       error->all(FLERR,"Invalid special function in variable formula");
 
     if (tree == NULL || treestyle != PARTICLE)
       error->all(FLERR,"Variable grid2part() can only be used by particle-style variable");
-    
+
     Compute *compute = NULL;
     Fix *fix = NULL;
     int index,nvec,nstride;
 
     // compute that produces per-grid vector or array
-    
+
     if (strstr(arg1,"c_") == arg1) {
       ptr1 = strchr(arg1,'[');
       if (ptr1) {
@@ -3714,7 +3714,7 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
 
       if (!compute->per_grid_flag)
         error->all(FLERR,"Variable grid2part() arg is not a per-grid compute");
-      
+
       if (index == 0 && compute->size_per_grid_cols == 0) {
         if (!compute->first_init)
           error->all(FLERR,"Variable formula compute cannot be invoked"
@@ -3728,7 +3728,7 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
           compute->post_process_grid(0,1,NULL,NULL,NULL,1);
         else if (compute->post_process_isurf_grid_flag)
           compute->post_process_isurf_grid();
-       
+
         Tree *newtree = new Tree();
         newtree->type = PARTGRIDARRAY;
         newtree->array = compute->vector_grid;
@@ -3773,7 +3773,7 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
         newtree->selfalloc = 0;
         newtree->left = newtree->middle = newtree->right = NULL;
         treestack[ntreestack++] = newtree;
-        
+
       } else error->all(FLERR,"Mismatched compute in variable formula");
 
     // fix that produces per-grid vector or array
@@ -3789,7 +3789,7 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
       int ifix = modify->find_fix(&arg1[2]);
       if (ifix < 0) error->all(FLERR,"Invalid fix ID in variable formula");
       fix = modify->fix[ifix];
-      
+
       if (!fix->per_grid_flag)
         error->all(FLERR,"Variable grid2part() arg is not a per-grid fix");
       if (update->runflag > 0 && update->ntimestep % fix->per_grid_freq)
@@ -3803,7 +3803,7 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
         newtree->selfalloc = 0;
         newtree->left = newtree->middle = newtree->right = NULL;
         treestack[ntreestack++] = newtree;
-        
+
       } else if (index && fix->size_per_grid_cols != 0) {
         if (index > fix->size_per_grid_cols)
           error->all(FLERR,"Variable formula fix array is accessed out-of-range");
@@ -3815,7 +3815,7 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
         newtree->selfalloc = 0;
         newtree->left = newtree->middle = newtree->right = NULL;
         treestack[ntreestack++] = newtree;
-        
+
       } else error->all(FLERR,"Mismatched compute in variable formula");
 
     } else error->all(FLERR,"Invalid variable style in special function grid2part()");
