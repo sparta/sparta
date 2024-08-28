@@ -31,6 +31,7 @@ class Particle : protected Pointers {
     double temp;    // Energy (K)
     int degen;      // Total degeneracy
     int spin;       // Spin degeneracy (e.g. singlet, triplet, etc)
+    double dof;     // Effective DoF for use in chemistry models
   };
 
   struct ElectronicData {
@@ -88,6 +89,7 @@ class Particle : protected Pointers {
     double* electemp;
     int* elecdegen;
     int* elecspin;
+    double* elecdof;
     int nmode;
   };
 

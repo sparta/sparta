@@ -1006,6 +1006,8 @@ void Particle::add_species(int narg, char **arg)
           fileelec[i].nmode*sizeof(int), "vsp:elecdegen");
         fileelec[i].elecspin = (int*) memory->smalloc(
           fileelec[i].nmode*sizeof(int), "vsp:elecspin");
+        fileelec[i].elecdof = (double*) memory->smalloc(
+          fileelec[i].nmode*sizeof(double), "vsp:elecdof");
       }
     }
 
@@ -1018,6 +1020,7 @@ void Particle::add_species(int narg, char **arg)
       MPI_Bcast(fileelec[i].electemp,fileelec[i].nmode*sizeof(double),MPI_BYTE,0,world);
       MPI_Bcast(fileelec[i].elecdegen,fileelec[i].nmode*sizeof(int),MPI_BYTE,0,world);
       MPI_Bcast(fileelec[i].elecspin,fileelec[i].nmode*sizeof(int),MPI_BYTE,0,world);
+      MPI_Bcast(fileelec[i].elecdof,fileelec[i].nmode*sizeof(double),MPI_BYTE,0,world);
     }
 
     for (i = 0; i < newspecies; i++) {
@@ -1050,6 +1053,7 @@ void Particle::add_species(int narg, char **arg)
         species[ii].elecdat->states[k].temp = fileelec[j].electemp[k];
         species[ii].elecdat->states[k].degen = fileelec[j].elecdegen[k];
         species[ii].elecdat->states[k].spin = fileelec[j].elecspin[k];
+        species[ii].elecdat->states[k].dof = fileelec[j].elecdof[k];
         species[ii].elecdat->default_rel[k] = fileelec[j].default_rel[k];
 
       }
@@ -1074,6 +1078,7 @@ void Particle::add_species(int narg, char **arg)
       memory->sfree(fileelec[i].electemp);
       memory->sfree(fileelec[i].elecdegen);
       memory->sfree(fileelec[i].elecspin);
+      memory->sfree(fileelec[i].elecdof);
     }
     memory->sfree(fileelec);
   }
@@ -1541,7 +1546,7 @@ void Particle::read_electronic_file()
       // Line defining electronic states for one species
       if (vsp->nmode < 2)
         error->one(FLERR,"Invalid N count in electronic file");
-      if (nwords != 2 + 4*vsp->nmode)
+      if (nwords != 2 + 5*vsp->nmode)
         error->one(FLERR,"Incorrect line format in electronic file");
 
       vsp->default_rel = (double*) memory->smalloc(vsp->nmode*sizeof(double), "vsp:default_rel");
@@ -1553,6 +1558,7 @@ void Particle::read_electronic_file()
       vsp->electemp = (double*) memory->smalloc(vsp->nmode*sizeof(double), "vsp:electemp");
       vsp->elecdegen = (int*) memory->smalloc(vsp->nmode*sizeof(int), "vsp:elecdegen");
       vsp->elecspin = (int*) memory->smalloc(vsp->nmode*sizeof(int), "vsp:elecspin");
+      vsp->elecdof = (double*) memory->smalloc(vsp->nmode*sizeof(double), "vsp:elecdof");
 
       for (int j = 0; j < nspecies; ++j) {
         for (int i = 0; i < vsp->nmode; ++i) {
@@ -1567,6 +1573,7 @@ void Particle::read_electronic_file()
         vsp->default_rel[i] = atof(words[j++]);
         vsp->elecdegen[i] = atoi(words[j++]);
         vsp->elecspin[i] = atoi(words[j++]);
+        vsp->elecdof[i] = atoi(words[j++]);
       }
       nfile++;
     } else {
