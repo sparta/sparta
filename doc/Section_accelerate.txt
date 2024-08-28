@@ -574,6 +574,7 @@ ARMV81 | HOST | ARMv8.1 Compatible CPU |
 ARMV8_THUNDERX | HOST | ARMv8 Cavium ThunderX CPU |
 ARMV8_THUNDERX2 | HOST | ARMv8 Cavium ThunderX2 CPU |
 A64FX | HOST | ARMv8.2 with SVE Support |
+ARMV9_GRACE | HOST | ARMv9 NVIDIA Grace CPU |
 SNB | HOST | Intel Sandy/Ivy Bridge CPU (AVX 1) |
 HSW | HOST | Intel Haswell CPU (AVX 2) |
 BDW | HOST | Intel Broadwell Xeon E-class CPU (AVX 2 + transactional

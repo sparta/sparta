@@ -509,8 +509,7 @@ void CreateISurf::surface_edge2d()
           if (ivalues[icell][j][n2] > oparam || ivalues[icell][j][n2] < 0)
             ivalues[icell][j][n2] = oparam;
 
-
-          if ((mvalues[icell][i] < 0 || param <= mvalues[icell][i]) && 
+          if ((mvalues[icell][i] < 0 || param <= mvalues[icell][i]) &&
                svalues[icell][i] != 2) {
             if (param == 0) svalues[icell][i] = 0;
 
@@ -523,7 +522,7 @@ void CreateISurf::surface_edge2d()
             mvalues[icell][i] = param;
           }
 
-          if ((mvalues[icell][j] < 0 || oparam <= mvalues[icell][j]) && 
+          if ((mvalues[icell][j] < 0 || oparam <= mvalues[icell][j]) &&
                svalues[icell][j] != 2) {
             if (oparam == 0) svalues[icell][j] = 0;
             else if (fabs(mvalues[icell][j]-oparam) < EPSILON_GRID
@@ -667,7 +666,7 @@ void CreateISurf::surface_edge3d()
             mvalues[icell][i] = param;
           }
 
-          if ((mvalues[icell][j] < 0 || oparam <= mvalues[icell][j]) && 
+          if ((mvalues[icell][j] < 0 || oparam <= mvalues[icell][j]) &&
                svalues[icell][j] != 2) {
             if (oparam == 0) svalues[icell][j] = 0;
             else if (fabs(mvalues[icell][j]-oparam) < EPSILON_GRID
