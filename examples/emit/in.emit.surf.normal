@@ -32,7 +32,7 @@ fix		    in emit/surf air all normal yes perspecies no
 
 timestep 	    0.0001
 
-compute             csurf surf nflux mflux fx fy fz
+compute             csurf surf all all nflux mflux fx fy fz
 #dump                2 image all 10 image.*.ppm type type pdiam 0.1 &
 #                    surf proc 0.01 size 512 512 zoom 1.75
 #dump_modify	    2 pad 4
