@@ -66,10 +66,9 @@ stats_style step cpu np c_2\[1\] c_2\[2\] :pre
 
 Define a computation that calculates one or more values for each
 explicit surface element in a surface element group, based on the
-particles that collide with that element or are emitted from it.
-The values are summed for
-each group of species in the specified mixture.  See the
-"mixture"_mixture.html command for how a set of species can be
+particles that collide with that element or are emitted from it.  The
+values are summed for each group of species in the specified mixture.
+See the "mixture"_mixture.html command for how a set of species can be
 partitioned into groups.  Only surface elements in the surface group
 specified by {group-ID} are included in the calculations.  See the
 "group surf"_group.html command for info on how surface elements can
@@ -87,8 +86,9 @@ explicit triangle or line segment may span multiple grid cells.  See
 
 Note that when a particle collides with a surface element, it can
 bounce off (possibly as a different species), be captured by the
-surface (vanish), or a 2nd particle can also be emitted.  Additionally,
-surfaces can emit particles directly. The formulas
+surface (vanish), or a 2nd particle can also be emitted.
+Additionally, surface elements can emit particles directly -- see the
+"fix_emit_surf"_fix_emit_surf.html command doc page.  The formulas
 below account for all the possible outcomes.  For example, the kinetic
 energy flux {ke} onto a suface element for a single collision includes
 a positive contribution from the incoming particle and negative
