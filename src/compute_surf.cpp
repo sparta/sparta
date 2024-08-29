@@ -327,7 +327,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
 
   double vsqpre,ivsqpost,jvsqpost;
   double ierot,jerot,ievib,jevib,iother,jother,otherpre,etot;
-  double pdelta[3],pnorm[3],ptang[3],pdelta_force[3],rdisp[3],torque[3];
+  double pdelta[3],pnorm[3],ptang[3],pdelta_force[3],rdelta[3],torque[3];
   double *xcollide;
     
   double *norm;
@@ -421,13 +421,13 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       }
       if (!tqflag) {
         tqflag = 1;
-        // NOTE: x should be same for all 3 particles, just need to use non-NULL one
+        // NOTE: xcollide should be same for all 3 particles,
+        //       just need to use non-NULL one
         if (iorig) xcollide = iorig->x;
         else xcollide = ip->x;
-        MathExtra::sub3(xcollide,com,rdisp);
-        MathExtra::cross3(rdisp,pdelta_force,torque);
+        MathExtra::sub3(xcollide,com,rdelta);
+        MathExtra::cross3(rdelta,pdelta_force,torque);
       }
-      // NOTE: check sign on torque, similar to force
       vec[k++] -= torque[0] * nfactor_inverse;
       break;
       
