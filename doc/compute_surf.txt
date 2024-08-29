@@ -18,7 +18,7 @@ surf = style name of this compute command :l
 group-ID = group ID for which surface elements to perform calculation on :l
 mix-ID = mixture ID for particles to perform calculation on :l
 one or more values can be appended :l
-value = {n} or {nwt} or {nflux} or {nflux_incident} or {mflux} or {mflux_incident} or {fx} or {fy} or {fz} or {press} or {px} or {py} or {pz} or {shx} or {shy} or {shz} or {ke} :l
+value = {n} or {nwt} or {nflux} or {nflux_incident} or {mflux} or {mflux_incident} or {fx} or {fy} or {fz} or {tx} or {ty} or {tz} or {press} or {px} or {py} or {pz} or {shx} or {shy} or {shz} or {ke} :l
   n = count of particles hitting surface element
   nwt = weighted count of particles hitting surface element
   nflux = net flux of particles through surface element
@@ -26,6 +26,7 @@ value = {n} or {nwt} or {nflux} or {nflux_incident} or {mflux} or {mflux_inciden
   mflux = net flux of mass through surface element
   mflux_incident = incident flux of mass on surface element
   fx,fy,fz = components of force on surface element
+  tx,ty,tz = components of torque on body ceneter-of-mass
   press = magnitude of normal pressure on surface element
   px,py,pz = components of normal pressure on surface element
   shx,shy,shz = components of shear stress on surface element
@@ -35,8 +36,9 @@ value = {n} or {nwt} or {nflux} or {nflux_incident} or {mflux} or {mflux_inciden
   echem = flux of particle chemical catalytic energy on surface element
   etot = flux of particle total energy on surface element :pre
 zero or more keyword/setting pairs can be appended :l
-keyword = {norm} :l
-  norm arg = {flux} or {flow} for dividing flux quantities by area or not :pre
+keyword = {norm} or {com} :l
+  norm arg = {flux} or {flow} for dividing flux quantities by area or not
+  com args = Cx Cy Cz = coords of center-of-mass of body for calculating torque :pre
 :ule
 
 [Examples:]
@@ -173,19 +175,33 @@ included in the Nflux formula.  Then Mflux quantity becomes
 effectively a mass flow rate (mass per time).  See discussion of the
 {norm} keyword below.
 
-The {fx}, {fy}, {fz} values calculate the components of force extered
-on the surface element by particles in the group, with respect to the
-x, y, z coordinate axes.  These are computed as
+The {fx}, {fy}, {fz} values calculate the xyz components of force
+exerted on the surface element by particles in the group.  These are
+computed as
 
 p_delta = mass * (V_post - V_pre)
-Px = - Sum_i (p_delta_x) / (dt / fnum)
-Py = - Sum_i (p_delta_y) / (dt / fnum)
-Pz = - Sum_i (p_delta_z) / (dt / fnum) :pre
+Fx = - Sum_i (p_delta_x) / (dt / fnum)
+Fy = - Sum_i (p_delta_y) / (dt / fnum)
+Fz = - Sum_i (p_delta_z) / (dt / fnum) :pre
 
 where p_delta is the change in momentum of a particle, whose velocity
 changes from V_pre to V_post when colliding with the surface element.
 The force exerted on the surface element is the sum over all
 contributing p_delta, normalized by dt and fnum as defined before.
+
+The {tx}, {ty}, {tz} values calculate the xyz components of torque Tq
+exerted on the entire body by particles in the group colliding with
+this surface element.  These are computed as
+
+p_delta = mass * (V_post - V_pre)
+force = p_delta / (dt / fnum)
+r = Xcollide - Xcom
+Tq = r x force :pre
+
+where p_delta is the change in momentum of a particle, whose velocity
+changes from V_pre to V_post when colliding with the surface element.
+The force the particle exerts on the surface element is the sum over
+all contributing p_delta, normalized by dt and fnum as defined before.
 
 The {press} value calculates the pressure {P} exerted on the surface
 element in the normal direction by particles in the group, such that
