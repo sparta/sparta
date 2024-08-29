@@ -1406,7 +1406,7 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
     // add 3rd K particle if reaction created it
     // index of new K particle = nlocal-1
     // if add_particle() performs a realloc:
-    //   make copy of x,v, then repoint ip,jp to new particles data struct
+    //   make copy of x,v
 
     if (kspecies >= 0) {
       int id = MAXSMALLINT*rand_gen.drand();
