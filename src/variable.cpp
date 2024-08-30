@@ -769,6 +769,7 @@ void Variable::compute_particle(int ivar, double *result,
     error->all(FLERR,"Variable has circular dependency");
   eval_in_progress[ivar] = 1;
 
+  nvec_storage = 0;
   treestyle = PARTICLE;
   evaluate(data[ivar][0],&tree);
   collapse_tree(tree);
