@@ -89,7 +89,6 @@ void Collide::collisions_one_sw()
     sweight_max = 0.0;
     while (ip >= 0) {
       plist[n++] = ip;
-      ipart = &particles[ip];
       isw = sweights[ip];
       sweight_max = MAX(sweight_max,isw);
 
@@ -124,7 +123,7 @@ void Collide::collisions_one_sw()
       if (np >= Ncmin && Ncmin > 0.0) pre_wtf = 0.0;
       else pre_wtf = 1.0;
 
-      newp = split(ipart,jpart,kpart,lpart);
+      newp = split(plist[i],plist[j],ipart,jpart,kpart,lpart);
 
       // add new particles to particle list
 
@@ -139,7 +138,6 @@ void Collide::collisions_one_sw()
         }
         plist[np++] = particle->nlocal-2;
         plist[np++] = particle->nlocal-1;
-        particles = particle->particles;
       } else if (newp > 0) {
         particles = particle->particles;
         sweights = particle->edvec[particle->ewhich[index_sweight]];
@@ -150,7 +148,6 @@ void Collide::collisions_one_sw()
           memory->grow(pLU,npmax,"collide:pLU");
         }
         plist[np++] = particle->nlocal-1;
-        particles = particle->particles;
       }
 
       // since ipart and jpart have same weight, do not need
@@ -176,7 +173,8 @@ void Collide::collisions_one_sw()
    Splits particles and generates two new particles (for SWPM)
 ------------------------------------------------------------------------- */
 
-int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
+int Collide::split(int i, int j,
+                   Particle::OnePart *&ip, Particle::OnePart *&jp,
                    Particle::OnePart *&kp, Particle::OnePart *&lp)
 {
   double xk[3],vk[3];
@@ -198,8 +196,8 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
   // ... MIN(ip->sweight,jp->sweight)/(1 + pre_wtf * wtf)
 
   double *sweights = particle->edvec[particle->ewhich[index_sweight]];
-  double isw = sweights[ip-particle->particles];
-  double jsw = sweights[jp-particle->particles];
+  double isw = sweights[i];
+  double jsw = sweights[j];
   double Gwtf, ksw, lsw;
 
   if (isw <= 0.0 || jsw <= 0.0)
@@ -248,6 +246,11 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
     erotl = ip->erot;
   }
 
+  // update weights
+
+  sweights[i] = Gwtf;
+  sweights[j] = Gwtf;
+
   // Gwtf should never be negative or zero
 
   if (Gwtf <= 0.0)
@@ -267,6 +270,7 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
     id = MAXSMALLINT*random->uniform();
     reallocflag = particle->add_particle(id,ks,kcell,xk,vk,erotk,0.0);
     if (reallocflag) {
+      particles = particle->particles;
       sweights = particle->edvec[particle->ewhich[index_sweight]];
       ip = particle->particles + (ip - particles);
       jp = particle->particles + (jp - particles);
@@ -284,6 +288,7 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
     id = MAXSMALLINT*random->uniform();
     reallocflag = particle->add_particle(id,ls,lcell,xl,vl,erotl,0.0);
     if (reallocflag) {
+      particles = particle->particles;
       sweights = particle->edvec[particle->ewhich[index_sweight]];
       ip = particle->particles + (ip - particles);
       jp = particle->particles + (jp - particles);
@@ -292,11 +297,6 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
     sweights[particle->nlocal-1] = lsw;
     newp++;
   }
-
-  // update weights
-
-  sweights[ip - particle->particles] = Gwtf;
-  sweights[jp - particle->particles] = Gwtf;
 
   return newp;
 }
