@@ -34,13 +34,14 @@
 <LI>args = list of arguments for a particular style 
 
 <PRE>  <I>particle</I> args = list of particle attributes
-    possible attributes = id, type, proc, x, y, z, xs, ys, zs, vx, vy, vz,
+    possible attributes = id, type, proc, cellID, x, y, z, xs, ys, zs, vx, vy, vz,
                           ke, erot, evib, 
                           c_ID, c_ID[N], f_ID, f_ID[N], v_name, p_name, p_name[N] 
 </PRE>
 <PRE>      id = particle ID
       type = particle species as an integer index
       proc = ID of owning processor
+      cellID = ID of grid cell particle is in
       x,y,z = unscaled particle coordinates
       xs,ys,zs = scaled particle coordinates
       vx,vy,vz = particle velocities
