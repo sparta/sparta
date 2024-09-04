@@ -2,7 +2,7 @@
 "SPARTA Documentation"_ld - "SPARTA Commands"_lc - "Next
 Section"_Section_howto.html :c
 
-:link(lws,http://sparta.sandia.gov)
+:link(lws,https://sparta.github.io)
 :link(ld,Manual.html)
 :link(lc,Section_commands.html#comm)
 
@@ -23,7 +23,7 @@ multi-core CPUs, GPUs, and Intel Xeon Phi coprocessors.
 5.2 "Accelerator packages with optimized styles"_#acc_2 :l
 5.3 "KOKKOS package"_#acc_3 :l,ule
 
-The "Benchmark page"_http://sparta.sandia.gov/bench.html of the SPARTA
+The "Benchmark page"_https://sparta.github.io/bench.html of the SPARTA
 web site gives performance results for the various accelerator
 packages discussed in Section 5.2, for several of the standard SPARTA
 benchmark problems, as a function of problem size and number of
@@ -160,7 +160,7 @@ individual accelerator sections.  Or you can add
 "package"_package.html and "suffix"_suffix.html commands to your input
 script.
 
-The "Benchmark page"_http://sparta.sandia.gov/bench.html of the SPARTA
+The "Benchmark page"_https://sparta.github.io/bench.html of the SPARTA
 web site gives performance results for the various accelerator
 packages for several of the standard SPARTA benchmark problems, as a
 function of problem size and number of compute nodes, on different
@@ -540,7 +540,7 @@ Generally speaking, when running on CPUs only, with a single thread per MPI task
 performance difference of a KOKKOS style and (un-accelerated) styles
 (MPI-only mode) is typically small (less than 20%).
 
-See the "Benchmark page"_http://sparta.sandia.gov/bench.html of the
+See the "Benchmark page"_https://sparta.github.io/bench.html of the
 SPARTA web site for performance of the KOKKOS package on different
 hardware.
 
