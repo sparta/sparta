@@ -91,10 +91,6 @@ void surf_tally_kk(int isurf, int icell, int reaction,
     if (igroup < 0) return;
   }
 
-  int origspecies = iorig->ispecies;
-  int igroup = d_s2g(imix,origspecies);
-  if (igroup < 0) return;
-
   // itally = tally index of isurf
   // grow tally list if needed
 
@@ -127,7 +123,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
   // if surf is transparent, all flux tallying is for incident particle only
 
   double vsqpre,ivsqpost,jvsqpost;
-  double oerot,ierot,jerot,oevig,ievib,jevib,iother,jother,otherpre,etot;
+  double oerot,ierot,jerot,oevib,ievib,jevib,iother,jother,otherpre,etot;
   double pdelta[3],pnorm[3],ptang[3],pdelta_force[3];
 
   double *norm;
