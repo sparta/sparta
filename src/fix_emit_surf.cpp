@@ -649,7 +649,7 @@ void FixEmitSurf::perform_task()
 
   int nsurf_tally = update->nsurf_tally;
   Compute **slist_active = update->slist_active;
-  
+
   int nfix_update_custom = modify->n_update_custom;
 
   for (i = 0; i < ntask; i++) {

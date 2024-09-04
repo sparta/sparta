@@ -248,7 +248,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
   // skip if no original particle and a reaction is taking place
   //   called by SurfReactAdsorb for on-surf reaction
   // FixEmitSurf also calls with no original particle but no reaction
-  
+
   if (!iorig && reaction) return;
 
   // skip if isurf not in surface group
@@ -338,7 +338,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
     oerot = 0.0;
     oevib = 0.0;
   }
-  
+
   double mvv2e = update->mvv2e;
 
   vec = array_surf_tally[itally];
@@ -348,11 +348,11 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
   int tflag = 0;
 
   for (int m = 0; m < nvalue; m++) {
-    
+
     switch (which[m]) {
 
     // counts and fluxes
-      
+
     case NUM:
       vec[k++] += 1.0;
       break;
@@ -385,7 +385,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       break;
 
     // forces
-      
+
     case FX:
       if (!fflag) {
         fflag = 1;
@@ -418,7 +418,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       break;
 
     // pressures
-      
+
     case PRESS:
       if (!nflag && !tflag) {
         pdelta[0] = pdelta[1] = pdelta[2] = 0.0;
@@ -428,7 +428,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       }
       vec[k++] += MathExtra::dot3(pdelta,norm) * fluxscale;
       break;
-      
+
     case XPRESS:
       if (!nflag) {
         nflag = 1;
@@ -462,7 +462,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       }
       vec[k++] -= pnorm[2] * fluxscale;
       break;
-      
+
     case XSHEAR:
       if (!tflag) {
         tflag = 1;
@@ -501,7 +501,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       break;
 
     // energies
-      
+
     case KE:
       if (iorig) vsqpre = origmass * MathExtra::lensq3(vorig);
       else vsqpre = 0.0;

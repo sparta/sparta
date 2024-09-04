@@ -95,7 +95,7 @@ class Update : protected Pointers {
   // this info accessed by other classe to perform surface tallying
   // by SurfReactAdsorb for on-surface reactions
   // by FixEmitSurf for particles emitted from surfs
-  
+
   int nsurf_tally;         // # of Cmp tallying surf bounce info this step
   int nboundary_tally;     // # of Cmp tallying boundary bounce info this step
   class Compute **slist_active;   // list of active surf Computes this step
