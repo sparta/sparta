@@ -2,7 +2,7 @@
 "SPARTA Documentation"_ld - "SPARTA Commands"_lc - "Next
 Section"_Section_accelerate.html :c
 
-:link(lws,http://sparta.sandia.gov)
+:link(lws,https://sparta.github.io)
 :link(ld,Manual.html)
 :link(lc,Section_commands.html#comm)
 
@@ -55,7 +55,7 @@ ext = external library: you will need to download and install it on your machine
 
 Package, Description, Doc page, Example, Library
 "FFT"_#FFT, fast Fourier transforms, "compute_style compute/fft/grid"_compute_fft_grid.html, fft, int or ext
-"KOKKOS"_#KOKKOS, Kokkos-enabled styles, "Section 5.3"_Section_howto.html#acc_3, "Benchmarks"_http://sparta.sandia.gov/bench.html, - :tb(ea=c,ca1=l)
+"KOKKOS"_#KOKKOS, Kokkos-enabled styles, "Section 5.3"_Section_howto.html#acc_3, "Benchmarks"_https://sparta.github.io/bench.html, - :tb(ea=c,ca1=l)
 
 :line
 
@@ -211,4 +211,4 @@ the "Accelerating SPARTA"_Section_accelerate.html#acc_3 section
 "Section 2.6 -sf kk"_Section_start.html#start_6
 "Section 2.6 -pk kokkos"_Section_start.html#start_6
 "package kokkos"_package.html
-"Benchmarks page"_http://sparta.sandia.gov/bench.html of web site :ul
+"Benchmarks page"_https://sparta.github.io/bench.html of web site :ul

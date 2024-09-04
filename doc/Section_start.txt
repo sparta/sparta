@@ -1,6 +1,6 @@
 "Previous Section"_Section_intro.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_commands.html :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -77,12 +77,12 @@ must support C++17.
 If you have a build problem that you are convinced is a SPARTA issue
 (e.g. the compiler complains about a line of SPARTA source code), then
 please send an email to the
-"developers"_http://sparta.sandia.gov/authors.html.
+"developers"_https://sparta.github.io/authors.html.
 
 If you succeed in building SPARTA on a new kind of machine, for which
 there isn't a similar Makefile in the src/MAKE directory or .cmake file
 in cmake/presets, send it to the 
-"developers"_http://sparta.sandia.gov/authors.html and we'll include it in future SPARTA releases.
+"developers"_https://sparta.github.io/authors.html and we'll include it in future SPARTA releases.
 
 :line
 
@@ -805,7 +805,7 @@ standard Linux make or CMake, just as you would on any Linux box.
 You can also import the *.cpp and *.h files into Microsoft Visual
 Studio.  If someone does this and wants to provide project files or
 other Windows build tips, please send them to the
-"developers"_http://sparta.sandia.gov/authors.html and we will include
+"developers"_https://sparta.github.io/authors.html and we will include
 them in the distribution.
 
 :line
@@ -1253,7 +1253,7 @@ mpirun -np 4 spa_g++ < in.free :pre
 See "this page"_bench for timings for this and the other benchmarks on
 various platforms.
 
-:link(bench,http://sparta.sandia.gov/bench.html)
+:link(bench,https://sparta.github.io/bench.html)
 
 The screen output from SPARTA is described in the next section.  As it
 runs, SPARTA also writes a log.sparta file with the same information.
