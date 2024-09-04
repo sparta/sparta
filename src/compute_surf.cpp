@@ -352,6 +352,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
   if (jp) jmass = particle->species[jp->ispecies].mass * weight;
 
   double *vorig = NULL;
+  double oerot,oevib;
   if (iorig) {
     vorig = iorig->v;
     oerot = iorig->erot;
@@ -441,6 +442,8 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       vec[k++] -= pdelta_force[2] * nfactor_inverse;
       break;
 
+    // for torque, xcollide should be same for any non-NULL particle
+
     case TX:
       if (!fflag) {
         fflag = 1;
@@ -450,14 +453,44 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       }
       if (!tqflag) {
         tqflag = 1;
-        // NOTE: xcollide should be same for all 3 particles,
-        //       just need to use non-NULL one
-        if (iorig) xcollide = iorig->x;
-        else xcollide = ip->x;
+        if (ip) xcollide = ip->x;
+        else xcollide = iorig->x;
         MathExtra::sub3(xcollide,com,rdelta);
         MathExtra::cross3(rdelta,pdelta_force,torque);
       }
       vec[k++] -= torque[0] * nfactor_inverse;
+      break;
+    case TY:
+      if (!fflag) {
+        fflag = 1;
+        MathExtra::scale3(-origmass,vorig,pdelta_force);
+        if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
+        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+      }
+      if (!tqflag) {
+        tqflag = 1;
+        if (ip) xcollide = ip->x;
+        else xcollide = iorig->x;
+        MathExtra::sub3(xcollide,com,rdelta);
+        MathExtra::cross3(rdelta,pdelta_force,torque);
+      }
+      vec[k++] -= torque[1] * nfactor_inverse;
+      break;
+    case TZ:
+      if (!fflag) {
+        fflag = 1;
+        MathExtra::scale3(-origmass,vorig,pdelta_force);
+        if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
+        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+      }
+      if (!tqflag) {
+        tqflag = 1;
+        if (ip) xcollide = ip->x;
+        else xcollide = iorig->x;
+        MathExtra::sub3(xcollide,com,rdelta);
+        MathExtra::cross3(rdelta,pdelta_force,torque);
+      }
+      vec[k++] -= torque[2] * nfactor_inverse;
       break;
       
     // pressures
