@@ -383,6 +383,11 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
 
+  // push corner pt values with fully external/internal neighbors to 0 or 255
+  // adjust individual corner point values too close to threshold
+
+  if (pushflag) push_lohi();
+
   // determine how close corner points values can be to threshold
   // corner points inside the surface have values >= threshold
   // corner points outside the surface (in the gas) have values < threshold
@@ -400,11 +405,6 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
 
   corner_inside_min = MIN(corner_inside_min,255.0);
   corner_outside_max = MAX(corner_outside_max,0.0);
-
-  // push corner pt values with fully external/internal neighbors to 0 or 255
-  // adjust individual corner point values too close to threshold
-
-  if (pushflag) push_lohi();
 
   epsilon_adjust();
 
@@ -1306,7 +1306,7 @@ void FixAblate::comm_neigh_corners(int which)
   // ncomm = ilocal + Ncorner values
 
   int ncomm;
-  if (innerflag) ncomm = 1 + ncorner*ninner;
+  if (innerflag && which != NVERT) ncomm = 1 + ncorner*ninner;
   else ncomm = 1 + ncorner;
 
   if (nsend*ncomm > maxbuf) {
@@ -1682,8 +1682,7 @@ void FixAblate::grow_percell(int nnew)
   memory->grow(celldelta,maxgrid,"ablate:celldelta");
   if (innerflag) memory->grow(idelta,maxgrid,ncorner,ninner,"ablate:idelta");
   else memory->grow(cdelta,maxgrid,ncorner,"ablate:cdelta");
-  if (!innerflag && multiflag)
-    memory->grow(nvert,maxgrid,ncorner,"ablate:nvert");
+  if (multiflag) memory->grow(nvert,maxgrid,ncorner,"ablate:nvert");
   memory->grow(numsend,maxgrid,"ablate:numsend");
 
   array_grid = cvalues;
@@ -1786,6 +1785,7 @@ void FixAblate::process_args(int narg, char **arg)
       iarg += 2;
     } else error->all(FLERR,"Illegal fix_ablate command");
   }
+
 }
 
 /* ----------------------------------------------------------------------

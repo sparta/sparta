@@ -179,6 +179,8 @@ void CreateISurf::command(int narg, char **arg)
 
   // set grid corner point values based on existing explicit surfs and thresh
 
+  cout = 0.0;
+  cin = 255.0;
   if (ctype == INNER) set_inner();
   else set_corners();
 
@@ -1649,20 +1651,70 @@ void CreateISurf::set_cvalues_inner()
   // now handle the overlap cells
 
   double ival, cval;
+  int ic0, ic1, in0, in1;
 
   // value of inside corner point next to surface
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
+
+    // set each edge manually
+
+    /*ic0 = 0; ic1 = 1;
+    in0 = 1; in1 = 0;
+    set_invals(icell, ic0, in0, ic1, in1);
+
+    ic0 = 1; ic1 = 3;
+    in0 = 3; in1 = 2;
+    set_invals(icell, ic0, in0, ic1, in1);
+
+    ic0 = 2; ic1 = 3;
+    in0 = 1; in1 = 0;
+    set_invals(icell, ic0, in0, ic1, in1);
+
+    ic0 = 0; ic1 = 2;
+    in0 = 3; in1 = 2;
+    set_invals(icell, ic0, in0, ic1, in1);
+
+    if (dim == 3) {
+      ic0 = 4; ic1 = 5;
+      in0 = 1; in1 = 0;
+      set_invals(icell, ic0, in0, ic1, in1);
+
+      ic0 = 5; ic1 = 7;
+      in0 = 3; in1 = 2;
+      set_invals(icell, ic0, in0, ic1, in1);
+
+      ic0 = 6; ic1 = 7;
+      in0 = 1; in1 = 0;
+      set_invals(icell, ic0, in0, ic1, in1);
+
+      ic0 = 4; ic1 = 6;
+      in0 = 3; in1 = 2;
+      set_invals(icell, ic0, in0, ic1, in1);
+
+      ic0 = 0; ic1 = 4;
+      in0 = 5; in1 = 4;
+      set_invals(icell, ic0, in0, ic1, in1);
+
+      ic0 = 1; ic1 = 5;
+      in0 = 5; in1 = 4;
+      set_invals(icell, ic0, in0, ic1, in1);
+
+      ic0 = 3; ic1 = 7;
+      in0 = 5; in1 = 4;
+      set_invals(icell, ic0, in0, ic1, in1);
+
+      ic0 = 2; ic1 = 6;
+      in0 = 5; in1 = 4;
+      set_invals(icell, ic0, in0, ic1, in1);
+    }*/
+
     for (int ic = 0; ic < ncorner; ic++) {
-
       for (int k = 0; k < ninner; k++) {
-
-        // bound the intersection values
-
         ival = ivalues[icell][ic][k];
-        if (ival <= 0) { // no intersection this edge
+        if (ival < 0) { // no intersection this edge
           if (svalues[icell][ic] == 0) cval = cout;
           else cval = cin;
         } else if (svalues[icell][ic] == 1) {
@@ -1671,10 +1723,58 @@ void CreateISurf::set_cvalues_inner()
           cval = param2cval(ival,255.0);
         }
         tmp_invalues[icell][ic][k] = cval;
-
-      }
+      } // end inner
     } // end ncorner
+
   } // end cells
+}
+
+/* ----------------------------------------------------------------------
+   find corner point values from vertex
+------------------------------------------------------------------------- */
+
+void CreateISurf::set_invals(int icell, int ic0, int in0, int ic1, int in1)
+{
+  double ivalth = (thresh-255.0)/(0.0-255.0); // probably can precompute
+  double ival = ivalues[icell][ic0][in0];
+  double oival = 1.0-ival;
+
+  if (svalues[icell][ic0] == 1) {
+    if (ival < 0) {
+      tmp_invalues[icell][ic0][in0] = cin;
+      tmp_invalues[icell][ic1][in1] = cin;
+    } else if (ival < EPSILON_GRID) {
+      tmp_invalues[icell][ic0][in0] = thresh+EPSILON_GRID;
+      tmp_invalues[icell][ic1][in1] = cout;
+    } else if (ival > (1.0 - EPSILON_GRID)) {
+      tmp_invalues[icell][ic0][in0] = cin;
+      tmp_invalues[icell][ic1][in1] = thresh-EPSILON_GRID;
+    } else if (ival <= ivalth) {
+      tmp_invalues[icell][ic0][in0] = param2cval(ival,cout);
+      tmp_invalues[icell][ic1][in1] = cout;
+    } else {
+      tmp_invalues[icell][ic0][in0] = cin;
+      tmp_invalues[icell][ic1][in1] = param2cval(oival,cin);
+    }
+  } else {
+    if (ival < 0) {
+      tmp_invalues[icell][ic0][in0] = cout;
+      tmp_invalues[icell][ic1][in1] = cout;
+    } else if (ival < EPSILON_GRID) {
+      tmp_invalues[icell][ic0][in0] = thresh-EPSILON_GRID;
+      tmp_invalues[icell][ic1][in1] = cin;
+    } else if (ival > (1.0 - EPSILON_GRID)) {
+      tmp_invalues[icell][ic0][in0] = cout;
+      tmp_invalues[icell][ic1][in1] = thresh+EPSILON_GRID;
+    } else if (ival <= ivalth) {
+      tmp_invalues[icell][ic0][in0] = param2cval(ival,cin);
+      tmp_invalues[icell][ic1][in1] = cin;
+    } else {
+      tmp_invalues[icell][ic0][in0] = cout;
+      tmp_invalues[icell][ic1][in1] = param2cval(oival,cout);
+    }
+  }
+
 }
 
 /* ----------------------------------------------------------------------
@@ -1859,7 +1959,8 @@ double CreateISurf::param2cval(double param, double v1)
   // trying to find v0
   // param = (thresh  - v0) / (v1 - v0)
 
-  double v0 = (thresh - v1*param) / (1.0 - param);
+  double v0;
+  v0 = (thresh - v1*param) / (1.0 - param);
 
   // bound by limits
 

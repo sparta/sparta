@@ -155,6 +155,7 @@ class CreateISurf : protected Pointers {
 
   double param2cval(double, double);
   double interpolate(double, double);
+  void set_invals(int, int, int, int, int);
 };
 
 }

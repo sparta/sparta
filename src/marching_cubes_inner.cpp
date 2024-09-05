@@ -142,23 +142,6 @@ void MarchingCubes::invoke(double ***cvalues, int *svalues, int **mcflags)
     i10 = interpolate(inval[3][5],inval[7][4],lo[2],hi[2]);
     i11 = interpolate(inval[2][5],inval[6][4],lo[2],hi[2]);
 
-    // intersection on unit cube
-
-    i0u  = interpolate(inval[0][1],inval[1][0],0,1);
-    i1u  = interpolate(inval[1][3],inval[3][2],0,1);
-    i2u  = interpolate(inval[2][1],inval[3][0],0,1);
-    i3u  = interpolate(inval[0][3],inval[2][2],0,1);
-
-    i4u  = interpolate(inval[4][1],inval[5][0],0,1);
-    i5u  = interpolate(inval[5][3],inval[7][2],0,1);
-    i6u  = interpolate(inval[6][1],inval[7][0],0,1);
-    i7u  = interpolate(inval[4][3],inval[6][2],0,1);
-
-    i8u  = interpolate(inval[0][5],inval[4][4],0,1);
-    i9u  = interpolate(inval[1][5],inval[5][4],0,1);
-    i10u = interpolate(inval[3][5],inval[7][4],0,1);
-    i11u = interpolate(inval[2][5],inval[6][4],0,1);
-
     // make bits 2, 3, 6 and 7 consistent with Lewiner paper (see NOTE above)
 
     bit0 = v000 <= thresh ? 0 : 1;

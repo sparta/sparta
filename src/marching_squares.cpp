@@ -334,10 +334,10 @@ void MarchingSquares::invoke(double ***cvalues, int *svalues)
 
     // intersection of surfaces on all cell edges on normalized length
 
-    i0  = interpolate(cvalues[icell][0][1],cvalues[icell][1][0],lo[0],hi[0]);
-    i1  = interpolate(cvalues[icell][1][3],cvalues[icell][3][2],lo[1],hi[1]);
-    i2  = interpolate(cvalues[icell][2][1],cvalues[icell][3][0],lo[0],hi[0]);
-    i3  = interpolate(cvalues[icell][0][3],cvalues[icell][2][2],lo[1],hi[1]);
+    i0  = interpolate(cvalues[icell][0][1],cvalues[icell][1][0],lo[0],hi[0]); // 00-01
+    i1  = interpolate(cvalues[icell][1][3],cvalues[icell][3][2],lo[1],hi[1]); // 01-11
+    i2  = interpolate(cvalues[icell][2][1],cvalues[icell][3][0],lo[0],hi[0]); // 10-11
+    i3  = interpolate(cvalues[icell][0][3],cvalues[icell][2][2],lo[1],hi[1]); // 00-10
 
     // make last 2 bits consistent with Wiki page (see NOTE above)
 
