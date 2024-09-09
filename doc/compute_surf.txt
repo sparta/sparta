@@ -26,7 +26,7 @@ value = {n} or {nwt} or {nflux} or {nflux_incident} or {mflux} or {mflux_inciden
   mflux = net flux of mass through surface element
   mflux_incident = incident flux of mass on surface element
   fx,fy,fz = components of force on surface element
-  tx,ty,tz = components of torque on body ceneter-of-mass
+  tx,ty,tz = components of torque on body center-of-mass
   press = magnitude of normal pressure on surface element
   px,py,pz = components of normal pressure on surface element
   shx,shy,shz = components of shear stress on surface element
@@ -91,12 +91,12 @@ bounce off (possibly as a different species), be captured by the
 surface (vanish), or a 2nd particle can also be emitted.
 Additionally, surface elements can emit particles directly -- see the
 "fix_emit_surf"_fix_emit_surf.html command doc page.  The formulas
-below account for all the possible outcomes.  For example, the kinetic
-energy flux {ke} onto a suface element for a single collision includes
-a positive contribution from the incoming particle and negative
-contributions from 0, 1, or 2 outgoing particles.  The exception is
-the {n} and {nwt} values which simply tally counts of particles
-colliding with the surface element.
+below account for all these possible outcomes.  For example, the
+kinetic energy flux {ke} onto a suface element for a single collision
+includes a positive contribution from the incoming particle and
+negative contributions from 0, 1, or 2 outgoing particles.  The
+exception is the {n} and {nwt} values which simply tally counts of
+particles colliding with the surface element.
 
 If the explicit surface element is transparent, the particle will pass
 through the surface unaltered.  See the transparent keyword for the
@@ -193,17 +193,28 @@ contributing p_delta, normalized by dt and fnum as defined before.
 
 The {tx}, {ty}, {tz} values calculate the xyz components of torque Tq
 exerted on the entire body by particles in the group colliding with
-this surface element.  These are computed as
+this surface element.  Use of these values requires the the
+center-of-mass (COM) of the body be specified so the torque can be
+calculated around the COM.  The COM can be the geometric center of a
+triangulated object, or it can reflect an uneven distribution of mass
+within the body.  The torque components are computed as
 
 p_delta = mass * (V_post - V_pre)
 force = p_delta / (dt / fnum)
-r = Xcollide - Xcom
-Tq = r x force :pre
+R = Xcollide - Xcom
+Tq = R x force :pre
 
 where p_delta is the change in momentum of a particle, whose velocity
 changes from V_pre to V_post when colliding with the surface element.
-The force the particle exerts on the surface element is the sum over
-all contributing p_delta, normalized by dt and fnum as defined before.
+The vector R is from the COM specified by the {com} keyword Xcollide =
+the collision point on the surface.  The force exerted on then the
+surface element is the sum over all contributing p_delta, normalized
+by dt and fnum as defined before.
+
+Note that if the surfaces defined in a simulation represent multiple
+objects each with their own COM, then you should use this command
+multiple times with different surface groups, if you want to
+calculate the torque on each object.
 
 The {press} value calculates the pressure {P} exerted on the surface
 element in the normal direction by particles in the group, such that
@@ -374,7 +385,7 @@ un-normalized flux values produced by this compute.
 
 :line
 
-[Optional norm keyword:]
+[Optional keywords]
 
 If the {norm} keyword is used with a setting of {flow}, then the
 formulas above for all flux values will not use the surface element
@@ -385,8 +396,14 @@ The formulas thus compute the aggregate mass or energy flow to the
 surface (e.g. mass per time), not the flux (e.g. mass per area per
 time).
 
-If the setting is {flux} (the default), then the flux formulas will be
-calculated as shown with the area A in the denominator.
+If the {norm} keyword setting is {flux} (the default), then the flux
+formulas will be calculated as shown with the area A in the
+denominator.
+
+The {com} keyword is only used if torque is being computed by any of
+the {tx}, {ty}, {tz} values.  The {Cx}, {Cy}, {Cz} settings are the
+coordinates of the center-of-mass of the body around which the torque
+will be calculated.
 
 :line
 

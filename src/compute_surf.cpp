@@ -114,7 +114,7 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
 
   for (int i = 0; i < nvalue; i++)
     if (which[i] == TX || which[i] == TY || which[i] == TZ)
-      if (!comflag) error->all(FLERR,"Compute surf torque requires COM setting");
+      if (!comflag) error->all(FLERR,"Compute surf torque requires com keyword");
 
   // setup
 
