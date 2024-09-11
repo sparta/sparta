@@ -41,7 +41,7 @@ surf_collide            1 diffuse 300.0 0.0
 surf_modify             all collide 1
 
 fix			                fablate ablate all 1 1 uniform 1 multiple yes
-create_isurf            all fablate 100.5 inner
+create_isurf            all fablate 100.5 multi
 
 timestep		0.001
 

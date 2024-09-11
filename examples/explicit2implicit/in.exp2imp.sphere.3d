@@ -38,7 +38,7 @@ surf_modify		all collide 1
 fix			fablate ablate inner 0 0.2 random 0
 #fix			fablate ablate inner 0 0.2 random 0 mindist 0.01 
 create_isurf            inner fablate 39.5 voxel
-#create_isurf            inner fablate 39.5 inner
+#create_isurf            inner fablate 39.5 multi
 
 create_particles        air n 0 twopass
 
