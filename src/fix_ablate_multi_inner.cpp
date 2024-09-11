@@ -176,7 +176,7 @@ void FixAblate::decrement_multid_outside()
 
 void FixAblate::sync_multid_outside()
 {
-  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
+  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
   double total;
 
@@ -238,18 +238,17 @@ void FixAblate::decrement_multid_inside()
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
+  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
   int Nneigh,*neighbors,i_neighbor_corner;
   double total_remain,nvertices;
-  double *corners;
 
   // find total number of vertices around each corner point
   // required to pass the correct amount from each interfact to inside point
 
   comm_neigh_corners(NVERT);
 
-  for (int icell = 0; icell < nglocal; icell++) {
+  for (icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
 
@@ -340,7 +339,7 @@ void FixAblate::decrement_multid_inside()
 
 void FixAblate::sync_multid_inside()
 {
-  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
+  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
   double total;
 
@@ -580,11 +579,9 @@ void FixAblate::decrement_multiv()
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  int i,j,i_inner,jcorner,imin,jmin;
+  int i,j,i_inner,imin;
   double minvalue,total;
   double iavg;
-  int opp;
-  double cmax[8];
 
   // total = full amount to decrement from cell
   // cdelta[icell] = amount to decrement from each corner point of icell
@@ -777,10 +774,9 @@ void FixAblate::decrement_multiv_multid_outside()
 
 void FixAblate::sync_multiv_multid_outside()
 {
-  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
+  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
   double total[6];
-  double inner_total;
 
   comm_neigh_corners(CDELTA);
 
@@ -842,24 +838,10 @@ void FixAblate::decrement_multiv_multid_inside()
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  Surf::Line *line;
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tri;
-  Surf::Tri *tris = surf->tris;
-
-  surfint *csurfs;
-  double pt[3],norm[3],dec_vec[3];
-  double dist,smindist;
-  int nsurf,isurf;
-
-  int i,j,k,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
-  int icell, jcell;
-  int i_inner,i_neighbor_corner;
-  int Nneigh,*ineighbors,*jneighbors,*neighbors;
-  int *oneighbors,*ioneighbors,oinner,kcorner;
-  double total_remain,nvertices;
-
-  double decvec[ninner], decvec_mag, totaldec;
+  int i,j,icell;
+  int i_inner,oinner,i_neighbor_corner;
+  int *ineighbors,*neighbors;
+  double total_remain;
 
   for (icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
@@ -895,7 +877,6 @@ void FixAblate::decrement_multiv_multid_inside()
         else error->one(FLERR,"Bad inner index");
 
         total_remain = ivalues[icell][i_neighbor_corner][oinner];
-
         if (total_remain < 0)
           idelta[icell][i][i_inner] += fabs(total_remain);
       } // end dim
@@ -917,9 +898,9 @@ void FixAblate::decrement_multiv_multid_inside()
 
 void FixAblate::sync_multiv_multid_inside()
 {
-  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
+  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
-  double total[ninner],inner_total;
+  double total[ninner];
 
   comm_neigh_corners(CDELTA);
 
