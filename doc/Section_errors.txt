@@ -2,7 +2,7 @@
 "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next
 Section"_Section_history.html :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -44,7 +44,7 @@ you can fix the problem.  Of course, SPARTA cannot figure out physics
 or numerical mistakes, like choosing too big a timestep or specifying
 erroneous collision parameters.  If you run into errors that SPARTA
 doesn't catch that you think it should flag, please send an email to
-the "developers"_http://sparta.sandia.gov/authors.html.
+the "developers"_https://sparta.github.io/authors.html.
 
 If you get an error message about an invalid command in your input
 script, you can determine what command is causing the problem by
@@ -100,11 +100,11 @@ If you are confident that you have found a bug in SPARTA, please
 follow these steps.
 
 Check the "New features and bug
-fixes"_http://sparta.sandia.gov/bug.html section of the "SPARTA web
+fixes"_https://sparta.github.io/bug.html section of the "SPARTA web
 site"_sws to see if the bug has already been fixed.
 
 If not, please email a description of the problem to the
-"developers"_http://sparta.sandia.gov/authors.html.
+"developers"_https://sparta.github.io/authors.html.
 
 The most useful thing you can do to help us fix the bug is to isolate
 the problem.  Run it on the smallest number of particles and grid

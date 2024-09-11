@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -769,6 +769,7 @@ void Variable::compute_particle(int ivar, double *result,
     error->all(FLERR,"Variable has circular dependency");
   eval_in_progress[ivar] = 1;
 
+  nvec_storage = 0;
   treestyle = PARTICLE;
   evaluate(data[ivar][0],&tree);
   collapse_tree(tree);
