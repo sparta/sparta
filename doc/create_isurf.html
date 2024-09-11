@@ -21,11 +21,11 @@
 
 <LI>thresh = threshold for corner values used to generate implicit surfaces, value > 0.0 and < 255.0 
 
-<LI>mode = <I>inout</I> or <I>ave</I> or <I>inner</I> 
+<LI>mode = <I>inout</I> or <I>ave</I> or <I>multi</I> 
 
 <PRE>  <I>inout</I> = mark corner points as either inside or outside surf
   <I>ave</I> = smooth values by averaging expected corner point values based on intersections between the explicit surfaces and cell edges 
-  <I>inner</I> = mark corners using inner indices 
+  <I>multi</I> = mark corners using multivalues 
 </PRE>
 <LI>zero or more keyword/value pairs may be appended 
 
@@ -178,14 +178,14 @@ computed for the individual cell edges.
 </P>
 <CENTER><IMG SRC = "JPG/inner_values_small.png">
 </CENTER>
-<P>The <I>inner</I> mode utilizes inner indices. Each corner stores 4 values in 
-2D and 6 values in 3D. For each cell edge, there are two inner values 
+<P>The <I>multi</I> mode utilizes multivalues. Each corner stores 4 values in 
+2D and 6 values in 3D. For each cell edge, there are two multivalues 
 located at two different corner values which determine the location of
 the vertex. For example, the location of the purple 'x' mark is 
-determined by the third inner value in the top left corner and the 
-fourth inner value in the bottom left corner. 
-<I>inner</I> does not require averaging since all corner point
-values computed for each vertex can be stored. In general, inner indices
+determined by the third multivalue value in the top left corner and the 
+fourth multivalue value in the bottom left corner. 
+<I>multi</I> does not require averaging since all corner point
+values computed for each vertex can be stored. In general, multivalues
 distorts the surface less during the surface conversion.
 </P>
 <P>NOTE: Regardless of which mode is used, implicit surfaces are an

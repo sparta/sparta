@@ -59,8 +59,8 @@ class FixAblate : public Fix {
   double scale;
   char *idsource;
   int storeflag;
-  int innerflag;
-  int multiflag;
+  int multi_val_flag;
+  int multi_dec_flag;
   int minmaxflag;
   int ncorner;
   int ninner;
@@ -124,24 +124,24 @@ class FixAblate : public Fix {
   void set_delta_uniform();
 
   void decrement();
-  void decrement_inner();
-  void decrement_multi_inside();
-  void decrement_multi_outside();
-  void decrement_inner_multi_outside();
-  void decrement_inner_multi_inside();
+  void decrement_multiv();
+  void decrement_multid_inside();
+  void decrement_multid_outside();
+  void decrement_multiv_multid_outside();
+  void decrement_multiv_multid_inside();
 
   void sync();
-  void sync_inner();
-  void sync_multi_outside();
-  void sync_multi_inside();
-  void sync_inner_multi_outside();
-  void sync_inner_multi_inside();
+  void sync_multiv();
+  void sync_multid_outside();
+  void sync_multid_inside();
+  void sync_multiv_multid_outside();
+  void sync_multiv_multid_inside();
 
   int mark_corners_2d(int);
   int mark_corners_3d(int);
 
   void epsilon_adjust();
-  void epsilon_adjust_inner();
+  void epsilon_adjust_multiv();
   void length_adjust();
   void push_lohi();
   void comm_neigh_corners(int);

@@ -15,10 +15,10 @@ create_isurf group-ID ablateID thresh mode ... :pre
 group-ID = grid ID for which grid cells to perform calculation on :ulb,l
 ablateID = ID of a "fix ablate"_fix_ablate.html command :l
 thresh = threshold for corner values used to generate implicit surfaces, value > 0.0 and < 255.0 :l
-mode = {inout} or {ave} or {inner} :l
+mode = {inout} or {ave} or {multi} :l
   {inout} = mark corner points as either inside or outside surf
   {ave} = smooth values by averaging expected corner point values based on intersections between the explicit surfaces and cell edges 
-  {inner} = mark corners using inner indices :pre
+  {multi} = mark corners using multivalues :pre
 zero or more keyword/value pairs may be appended :l
 keyword = {buffer} :l
   {buffer} value = minimum normalized distance between a vertex and cell corner :pre
@@ -167,14 +167,14 @@ computed for the individual cell edges.
 
 :c,image(JPG/inner_values_small.png)
 
-The {inner} mode utilizes inner indices. Each corner stores 4 values in 
-2D and 6 values in 3D. For each cell edge, there are two inner values 
+The {multi} mode utilizes multivalues. Each corner stores 4 values in 
+2D and 6 values in 3D. For each cell edge, there are two multivalues 
 located at two different corner values which determine the location of
 the vertex. For example, the location of the purple 'x' mark is 
-determined by the third inner value in the top left corner and the 
-fourth inner value in the bottom left corner. 
-{inner} does not require averaging since all corner point
-values computed for each vertex can be stored. In general, inner indices
+determined by the third multivalue value in the top left corner and the 
+fourth multivalue value in the bottom left corner. 
+{multi} does not require averaging since all corner point
+values computed for each vertex can be stored. In general, multivalues
 distorts the surface less during the surface conversion.
 
 NOTE: Regardless of which mode is used, implicit surfaces are an

@@ -44,16 +44,16 @@ class CreateISurf : protected Pointers {
   int ggroup;               // group id for grid cells
   int groupbit;
   int ncorner;              // number of corners
-  int ninner;                 // number of adjacent neighbors
+  int nmulti;               // number of adjacent neighbors
   int nedge;                // number of cell edges
   double thresh;            // lower threshold for corner values
   double corner[3];         // corners of grid group
   double xyzsize[3];        // size of lowest level cell (must be uniform grid)
   int nxyz[3], Nxyz;        // dimensions of grid
   double **cvalues;         // array of corner point values
-  double ***invalues;       // array of inner values
+  double ***invalues;       // array of multi values
   double **tmp_cvalues;     // temporary array of corner point values
-  double ***tmp_invalues;   // temporary array of inner values
+  double ***tmp_invalues;   // temporary array of multi values
   double **mvalues;         // minimum intersection value
   int **svalues;            // marks corners as in or out
   double ***ivalues;        // point of intersection between corner points
@@ -110,10 +110,10 @@ class CreateISurf : protected Pointers {
 
   void process_args(int, char **);
 
-  // functions to set corner/inner values
+  // functions to set corner/multi values
 
   void set_corners();
-  void set_inner();
+  void set_multi();
 
   // send/recv values between neighborind cells (similar to fix_ablate)
 
@@ -140,7 +140,7 @@ class CreateISurf : protected Pointers {
   void set_cvalues_inout();
   void set_cvalues_voxel();
   void set_cvalues_ave();
-  void set_cvalues_inner();
+  void set_cvalues_multi();
 
   // detects intersection between surfaces and cell edges
 

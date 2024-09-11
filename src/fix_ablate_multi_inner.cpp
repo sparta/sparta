@@ -53,7 +53,7 @@ enum{CVALUE,CDELTA,NVERT};
         touched
 ------------------------------------------------------------------------- */
 
-void FixAblate::decrement_multi_outside()
+void FixAblate::decrement_multid_outside()
 {
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -174,7 +174,7 @@ void FixAblate::decrement_multi_outside()
    this is ok. refer to sync() for more details about logic
 ------------------------------------------------------------------------- */
 
-void FixAblate::sync_multi_outside()
+void FixAblate::sync_multid_outside()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
   int icell,jcell;
@@ -233,7 +233,7 @@ void FixAblate::sync_multi_outside()
       - inside corner points must always be > 0.0
 ------------------------------------------------------------------------- */
 
-void FixAblate::decrement_multi_inside()
+void FixAblate::decrement_multid_inside()
 {
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -338,7 +338,7 @@ void FixAblate::decrement_multi_inside()
    are updated
 ------------------------------------------------------------------------- */
 
-void FixAblate::sync_multi_inside()
+void FixAblate::sync_multid_inside()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
   int icell,jcell;
@@ -428,7 +428,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
                               double thresh_caller, char *sgroupID, int pushflag)
 {
   storeflag = 1;
-  innerflag = 1;
+  multi_val_flag = 1;
 
   nx = nx_caller;
   ny = ny_caller;
@@ -509,7 +509,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   corner_inside_min = MIN(corner_inside_min,255.0);
   corner_outside_max = MAX(corner_outside_max,0.0);
 
-  epsilon_adjust_inner();
+  epsilon_adjust_multiv();
 
   // create marching squares/cubes classes, now that have group & threshold
 
@@ -525,7 +525,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
    version of epsilon_adjust for inner indices
 ------------------------------------------------------------------------- */
 
-void FixAblate::epsilon_adjust_inner()
+void FixAblate::epsilon_adjust_multiv()
 {
   int allin,mixflag;
 
@@ -575,7 +575,7 @@ void FixAblate::epsilon_adjust_inner()
      via epsilon method or isosurface stuffing method
 ------------------------------------------------------------------------- */
 
-void FixAblate::decrement_inner()
+void FixAblate::decrement_multiv()
 {
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -635,7 +635,7 @@ void FixAblate::decrement_inner()
 /* ----------------------------------------------------------------------
    version of sync() for inner indices
 ------------------------------------------------------------------------- */
-void FixAblate::sync_inner()
+void FixAblate::sync_multiv()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
@@ -723,7 +723,7 @@ void FixAblate::sync_inner()
    find how much to decrement outside corner points
 ------------------------------------------------------------------------- */
 
-void FixAblate::decrement_inner_multi_outside()
+void FixAblate::decrement_multiv_multid_outside()
 {
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -775,7 +775,7 @@ void FixAblate::decrement_inner_multi_outside()
    version of sync_multi_outside() for inner indices
 ------------------------------------------------------------------------- */
 
-void FixAblate::sync_inner_multi_outside()
+void FixAblate::sync_multiv_multid_outside()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
   int icell,jcell;
@@ -837,7 +837,7 @@ void FixAblate::sync_inner_multi_outside()
    version of decrement_multi_inside() for inner indices
 ------------------------------------------------------------------------- */
 
-void FixAblate::decrement_inner_multi_inside()
+void FixAblate::decrement_multiv_multid_inside()
 {
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -915,7 +915,7 @@ void FixAblate::decrement_inner_multi_inside()
    version of sync_multi_inside() for inner indices
 ------------------------------------------------------------------------- */
 
-void FixAblate::sync_inner_multi_inside()
+void FixAblate::sync_multiv_multid_inside()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,icorner,jcorner;
   int icell,jcell;
@@ -1018,7 +1018,7 @@ int FixAblate::mark_corners_2d(int icell)
 
   int Nin = 0;
 
-  if (innerflag) {
+  if (multi_val_flag) {
     if (ivalues[icell][0][0] > thresh) {
       refcorners[0] = 1;
       Nin++;
@@ -1097,7 +1097,7 @@ int FixAblate::mark_corners_3d(int icell)
   // find which corners are inside or outside the surface
 
   int i,bit[8],which;
-  if (innerflag) {
+  if (multi_val_flag) {
     for (i = 0; i < ncorner; i++)
       bit[i] = ivalues[icell][i][0] <= thresh ? 0 : 1;
   } else {

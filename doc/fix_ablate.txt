@@ -128,7 +128,7 @@ surfaces.  These lines are taken from the
 examples/ablation/in.ablation.3d.reactions input script:
 
 surf_collide	    1 diffuse 300.0 1.0
-surf_react	    2 prob air.surf :pre
+surf_react	      2 prob air.surf :pre
 
 compute             10 react/isurf/grid all 2
 fix                 10 ave/grid all 1 100 100 c_10\[*\]
@@ -273,8 +273,7 @@ An [interface] is a point outside the surface but one of its neighboring points 
 inside. Given a cell decrement, the multipoint decrement distributes that cell
 decrement evenly to each interface point. In the case the interface point 
 becomes negative, the negative value is evenly distributed to each of the
-adjoining inside points. The multipoint decrement may also be used with the inner
-indices.
+adjoining inside points. The multipoint decrement may also be used with the multivalues.
 
 :c,image(JPG/multi_single_ablation_small.png)
 

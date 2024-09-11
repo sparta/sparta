@@ -42,16 +42,13 @@
 <PRE>  <I>mindist</I> value = fraction
     fraction = minimum fractional distance along cell edge for triangle/line vertices (value > 0 and < 0.5)
   <I>multiple</I> value = yes or no 
-
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
-
-<PRE>fix 1 ablate surfcells 0 0.0 random 10
-fix 1 ablate surfcells 1000 10.0 c_tally
-
+<PRE>fix 1 ablate surfcells 1000 10.0 c_tally
+fix 1 ablate surfcells 0 0.0 random 10
 fix fablate ablate inner 0 0.2 random 0 mindist 0.02 
 </PRE>
 <P><B>Description:</B>
@@ -130,15 +127,12 @@ the first random # < <I>scale</I>, then the second random integer is the
 decrement value for the cell.  Thus <I>scale</I> is effectively the
 fraction of grid cells whose corner point values are decremented.
 </P>
-
 <P>For basic testing of new ablation capabilities, the <I>source</I> can be 
 specified as <I>uniform</I>. Any cell which contains part of the gas and the surface
 is decremented by <I>maxrandom</I>.
 </P>
-
 <P>See the explanation for the optional <I>mindist</I> keyword below.
 </P>
-
 <HR>
 
 <P>Here is an example of commands that will couple ablation to surface
@@ -147,7 +141,7 @@ surfaces.  These lines are taken from the
 examples/ablation/in.ablation.3d.reactions input script:
 </P>
 <PRE>surf_collide	    1 diffuse 300.0 1.0
-surf_react	    2 prob air.surf 
+surf_react	      2 prob air.surf 
 </PRE>
 <PRE>compute             10 react/isurf/grid all 2
 fix                 10 ave/grid all 1 100 100 c_10[*]
@@ -292,8 +286,7 @@ An <B>interface</B> is a point outside the surface but one of its neighboring po
 inside. Given a cell decrement, the multipoint decrement distributes that cell
 decrement evenly to each interface point. In the case the interface point 
 becomes negative, the negative value is evenly distributed to each of the
-adjoining inside points. The multipoint decrement may also be used with the inner
-indices.
+adjoining inside points. The multipoint decrement may also be used with the multivalues.
 </P>
 <CENTER><IMG SRC = "JPG/multi_single_ablation_small.png">
 </CENTER>
@@ -306,7 +299,6 @@ the above example, a single cell is ablated (indicated by a red arrow). With a
 single point decrement, only one corner point is updated and only the left side
 of the affected cell ablates. With the multipoint decrement, two corner points
 are reduced and the entire surface contained within the ablated cell recedes. 
-
 </P>
 <HR>
 
@@ -347,10 +339,8 @@ an overview of SPARTA output options.
 <P>The default for the <I>mindist</I> keyword = 0.0, i.e. the epsilon method
 is used.
 </P>
-
 <P><I>multiple</I> = no
 </P>
-
 <HR>
 
 <A NAME = "Labelle07"></A>
