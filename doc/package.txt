@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_lws - "SPARTA Documentation"_ld - "SPARTA Commands"_lc :c
 
-:link(lws,http://sparta.sandia.gov)
+:link(lws,https://sparta.github.io)
 :link(ld,Manual.html)
 :link(lc,Section_commands.html#comm)
 

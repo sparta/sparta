@@ -1,7 +1,7 @@
 <HEAD>
 <TITLE>SPARTA Users Manual</TITLE>
-<META NAME="docnumber" CONTENT="7 Mar 2024 version">
-<META NAME="author" CONTENT="http://sparta.sandia.gov - Sandia National Laboratories">
+<META NAME="docnumber" CONTENT="4 Sep 2024 version">
+<META NAME="author" CONTENT="https://sparta.github.io - Sandia National Laboratories">
 <META NAME="copyright" CONTENT="Copyright (2014) Sandia Corporation.  This software and manual is distributed under the GNU General Public License.">
 </HEAD>
 
@@ -9,7 +9,7 @@
 
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -18,7 +18,7 @@
 <H1></H1>
 
 SPARTA Documentation :c,h3
-7 Mar 2024 version :c,h4
+4 Sep 2024 version :c,h4
 
 Version info: :h4
 
@@ -58,12 +58,12 @@ request under the terms of the GNU Lesser General Public License
 (LGPL).
 
 The primary developers of SPARTA are "Steve Plimpton"_sjp, and Michael
-Gallis who can be contacted at sjplimp,magalli at sandia.gov.  The
-"SPARTA WWW Site"_sws at http://sparta.sandia.gov has more information
-about the code and its uses.
+Gallis who can be contacted at sjplimp at gmail.com and magalli at
+sandia.gov.  The "SPARTA WWW Site"_sws at https://sparta.github.io has
+more information about the code and its uses.
 
-:link(bug,http://sparta.sandia.gov/bug.html)
-:link(sjp,http://www.sandia.gov/~sjplimp)
+:link(bug,https://sparta.github.io/bug.html)
+:link(sjp,https://sjplimp.github.io)
 
 :line
 
