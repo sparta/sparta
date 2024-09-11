@@ -461,7 +461,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
 
   for (int icell = 0; icell < nglocal; icell++) {
     for (int m = 0; m < ncorner; m++)
-      for (int n = 0; n < ninner; n++)
+      for (int n = 0; n < nmultiv; n++)
         ivalues[icell][m][n] = ivalues_caller[icell][m][n];
     if (tvalues_flag) tvalues[icell] = tvalues_caller[icell];
   }
@@ -471,7 +471,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   if (minmaxflag) {
     for (int icell = 0; icell < nglocal; icell++) {
       for (int m = 0; m < ncorner; m++) {
-        for (int n = 0; n < ninner; n++) {
+        for (int n = 0; n < nmultiv; n++) {
           if (ivalues[icell][m][n] < thresh) ivalues[icell][m][n] = 0.0;
           else ivalues[icell][m][n] = 255.0;
         }
@@ -542,7 +542,7 @@ void FixAblate::epsilon_adjust_multiv()
       else allin = 0;
 
       mixflag = 0;
-      for (int j = 0; j < ninner; j++) {
+      for (int j = 0; j < nmultiv; j++) {
         if (ivalues[icell][i][j] < corner_inside_min && allin) mixflag = 1;
         if (ivalues[icell][i][j] > corner_inside_min && !allin) mixflag = 1;
       }
@@ -552,12 +552,12 @@ void FixAblate::epsilon_adjust_multiv()
 
       if (mixflag) {
 
-        for (int j = 0; j < ninner; j++)
+        for (int j = 0; j < nmultiv; j++)
           ivalues[icell][i][j] = corner_outside_max;
 
       // all out
       } else if (!allin) {
-        for (int j = 0; j < ninner; j++)
+        for (int j = 0; j < nmultiv; j++)
           if (ivalues[icell][i][j] > corner_outside_max)
             ivalues[icell][i][j] = corner_outside_max;
       }
@@ -591,7 +591,7 @@ void FixAblate::decrement_multiv()
     if (cells[icell].nsplit <= 0) continue;
 
     for (i = 0; i < ncorner; i++)
-      for (j = 0; j < ninner; j++)
+      for (j = 0; j < nmultiv; j++)
         idelta[icell][i][j] = 0.0;
 
     total = celldelta[icell];
@@ -603,8 +603,8 @@ void FixAblate::decrement_multiv()
       for (i = 0; i < ncorner; i++) {
 
         iavg = 0;
-        for (j = 0; j < ninner; j++) iavg += ivalues[icell][i][j];
-        iavg /= ninner;
+        for (j = 0; j < nmultiv; j++) iavg += ivalues[icell][i][j];
+        iavg /= nmultiv;
 
         if (iavg > 0.0 && iavg < minvalue && idelta[icell][i][0] == 0.0) {
           imin = i;
@@ -616,11 +616,11 @@ void FixAblate::decrement_multiv()
       if (imin == -1) break;
 
       if (total < minvalue) {
-        for (j = 0; j < ninner; j++)
+        for (j = 0; j < nmultiv; j++)
           idelta[icell][imin][j] += total;
         total = 0.0;
       } else {
-        for (j = 0; j < ninner; j++)
+        for (j = 0; j < nmultiv; j++)
           idelta[icell][imin][j] = minvalue;
         total -= minvalue;
       }
@@ -636,7 +636,7 @@ void FixAblate::sync_multiv()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
-  double total[ninner],inner_total;
+  double total[nmultiv],inner_total;
 
   comm_neigh_corners(CDELTA);
 
@@ -673,7 +673,7 @@ void FixAblate::sync_multiv()
       // loop over 2x2x2 stencil of cells that share the corner point
       // also works for 2d, since izfirst = 0
 
-      for (j = 0; j < ninner; j++) total[j] = 0.0;
+      for (j = 0; j < nmultiv; j++) total[j] = 0.0;
 
       jcorner = ncorner;
 
@@ -695,7 +695,7 @@ void FixAblate::sync_multiv()
             // update total with one corner point of jcell
             // jcorner descends from ncorner
 
-            for (j = 0; j < ninner; j++) {
+            for (j = 0; j < nmultiv; j++) {
               if (jcell < nglocal) total[j] += idelta[jcell][jcorner][j];
               else total[j] += idelta_ghost[jcell-nglocal][jcorner][j];
             }
@@ -707,7 +707,7 @@ void FixAblate::sync_multiv()
 
       // now decrement corners
 
-      for (j = 0; j < ninner; j++) {
+      for (j = 0; j < nmultiv; j++) {
         ivalues[icell][i][j] -= total[j];
         if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
       }
@@ -738,7 +738,7 @@ void FixAblate::decrement_multiv_multid_outside()
     if (cells[icell].nsplit <= 0) continue;
 
     for (i = 0; i < ncorner; i++)
-      for (j = 0; j < ninner; j++) idelta[icell][i][j] = 0.0;
+      for (j = 0; j < nmultiv; j++) idelta[icell][i][j] = 0.0;
 
     if (dim == 2) Ninterface = mark_corners_2d(icell);
     else Ninterface = mark_corners_3d(icell);
@@ -813,7 +813,7 @@ void FixAblate::sync_multiv_multid_outside()
 
             jcell = walk_to_neigh(icell,jx,jy,jz);
 
-            for (j = 0; j < ninner; j++) {
+            for (j = 0; j < nmultiv; j++) {
               if (jcell < nglocal) total[j] += idelta[jcell][jcorner][j];
               else total[j] += idelta_ghost[jcell-nglocal][jcorner][j];
             }
@@ -822,7 +822,7 @@ void FixAblate::sync_multiv_multid_outside()
         } // end jy
       } // end jz
 
-      for (j = 0; j < ninner; j++)
+      for (j = 0; j < nmultiv; j++)
         ivalues[icell][i][j] -= total[j];
 
     } // end corners
@@ -848,7 +848,7 @@ void FixAblate::decrement_multiv_multid_inside()
     if (cells[icell].nsplit <= 0) continue;
 
     for (i = 0; i < ncorner; i++)
-      for (j = 0; j < ninner; j++) idelta[icell][i][j] = 0.0;
+      for (j = 0; j < nmultiv; j++) idelta[icell][i][j] = 0.0;
 
     if (dim == 2) mark_corners_2d(icell);
     else mark_corners_3d(icell);
@@ -886,7 +886,7 @@ void FixAblate::decrement_multiv_multid_inside()
     // zero out negative values
 
     for (i = 0; i < ncorner; i++)
-      for (j = 0; j < ninner; j++)
+      for (j = 0; j < nmultiv; j++)
         if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
 
   } // end cells
@@ -900,7 +900,7 @@ void FixAblate::sync_multiv_multid_inside()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
-  double total[ninner];
+  double total[nmultiv];
 
   comm_neigh_corners(CDELTA);
 
@@ -922,7 +922,7 @@ void FixAblate::sync_multiv_multid_inside()
       if (dim == 2) izfirst = 0;
       else izfirst = (i / 4) - 1;
 
-      for (j = 0; j < ninner; j++) total[j] = 0.0;
+      for (j = 0; j < nmultiv; j++) total[j] = 0.0;
 
       jcorner = ncorner;
 
@@ -939,13 +939,13 @@ void FixAblate::sync_multiv_multid_inside()
 
             if (jcell < nglocal) {
 
-              for (j = 0; j < ninner; j++)
+              for (j = 0; j < nmultiv; j++)
                 if (idelta[jcell][jcorner][j] > 0)
                   total[j] += idelta[jcell][jcorner][j];
 
             } else {
 
-              for (j = 0; j < ninner; j++)
+              for (j = 0; j < nmultiv; j++)
                 if (idelta_ghost[jcell-nglocal][jcorner][j] > 0)
                   total[j] += idelta_ghost[jcell-nglocal][jcorner][j];
 
@@ -955,19 +955,15 @@ void FixAblate::sync_multiv_multid_inside()
         } // jy
       } // jx
 
-      for (j = 0; j < ninner; j++) {
-
+      for (j = 0; j < nmultiv; j++) {
         if (total[j] > 0.0) {
-
           if (dim == 2) total[j] *= 0.5;
           else total[j] *= 0.25;
-
           ivalues[icell][i][j] -= total[j];
-
         }
       }
 
-      for (j = 0; j < ninner; j++)
+      for (j = 0; j < nmultiv; j++)
         if (ivalues[icell][i][j] < 0.0) ivalues[icell][i][j] = 0.0;
 
     } // end corners
