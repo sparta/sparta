@@ -139,6 +139,7 @@ class FixAblate : public Fix {
 
   int mark_corners_2d(int);
   int mark_corners_3d(int);
+  int find_nin();
 
   void epsilon_adjust();
   void epsilon_adjust_multiv();
