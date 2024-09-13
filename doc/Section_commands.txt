@@ -1,6 +1,6 @@
 "Previous Section"_Section_start.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_howto.html :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -289,7 +289,7 @@ Miscellaneous:
 
 "clear"_clear.html, "echo"_echo.html, "if"_if.html,
 "include"_include.html, "jump"_jump.html, "label"_label.html,
-"log"_log.html, "next"_next.html, "partition"_partition,html,
+"log"_log.html, "next"_next.html, "partition"_partition.html,
 "print"_print.html, "quit"_quit.html, "shell"_shell.html,
 "variable"_variable.html
 
@@ -478,6 +478,6 @@ used if SPARTA is built with the "appropriate accelerated
 package"_Section_accelerate.html.  This is indicated by additional
 letters in parenthesis: k = KOKKOS.
 
-"adsorb"_surf_adsorb.html,
+"adsorb"_surf_react_adsorb.html,
 "global (k)"_surf_react.html,
 "prob (k)"_surf_react.html :tb(c=2,ea=c)

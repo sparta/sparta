@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -670,6 +670,9 @@ bool line_line_intersect(double *start, double *stop,
   //     depending on direction of 2 lines
   //   thus this can lead to no collision with either line
   //   typical observed dot values were 1.0e-18, so use EPSSQ = 1.0e-16
+  // NOTE: EPSSQ and EPSSQNEG are not normalized to size of line
+  //   this means the test is not robust for lines of widely varying size
+  //   better test would be something like EPS * line-length
 
   MathExtra::sub3(v1,v0,edge);
   MathExtra::sub3(point,v0,pvec);
@@ -1010,6 +1013,10 @@ bool line_tri_intersect(double *start, double *stop,
   //     depending on direction of 2 tri norms
   //   thus this can lead to no collision with either tri
   //   typical observed dot values were -1.0e-18, so use EPSSQNEG = -1.0e-16
+  // NOTE: EPSSQ and EPSSQNEG are not normalized to size of triangle
+  //   this means the test is not robust for tris of widely varying size
+  //   better test would be something like EPS * max-edge-length
+  //     but that would be expensive to calculate
 
   MathExtra::sub3(v1,v0,edge);
   MathExtra::sub3(point,v0,pvec);
@@ -1025,6 +1032,94 @@ bool line_tri_intersect(double *start, double *stop,
   MathExtra::sub3(point,v2,pvec);
   MathExtra::cross3(edge,pvec,xproduct);
   if (MathExtra::dot3(xproduct,norm) < EPSSQNEG) return false;
+
+  // there is a valid intersection with triangle
+  // set side to ONSUFR, OUTSIDE, or INSIDE
+  // if start point is inside or outside then side = same
+  // if particle started on triangle, side = ONSURF OUT/IN based on dotstop
+
+  if (dotstart < 0.0) side = INSIDE;
+  else if (dotstart > 0.0) side = OUTSIDE;
+  else if (dotstop > 0.0) side = ONSURF2OUT;
+  else side = ONSURF2IN;
+
+  return true;
+}
+
+/* ----------------------------------------------------------------------
+   detect intersection between a directed line segment and a triangle
+   intersection is defined as any line segment pt (including end pts)
+     in common with any triangle pt (interior, edge, vertex)
+   one exception is if both line end pts are in plane of triangle,
+     then is NOT an intersection
+   start,stop = end points of directed line segment, can have zero length
+   v0,v1,v2 = 3 vertices of triangle
+   norm = unit vector normal to triangle plane
+     pointing OUTSIDE via right-hand rule
+   return TRUE if there is an intersection, else FALSE
+   if TRUE also return:
+     point = pt of intersection
+     param = intersection pt is this fraction along line (0-1 inclusive)
+     side = side of B that was hit = OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN
+   use 0.0 instead of EPSSQNEG as above when checking if particles
+     are inside surfaces
+------------------------------------------------------------------------- */
+
+bool line_tri_intersect_noeps(double *start, double *stop,
+                              double *v0, double *v1, double *v2, double *norm,
+                              double *point, double &param, int &side)
+{
+  double vec[3],start2stop[3],edge[3],pvec[3],xproduct[3];
+
+  // if start,stop are on same side of triangle, no intersection
+  // if start,stop are both in plane of triangle, no intersection
+
+  MathExtra::sub3(start,v0,vec);
+  double dotstart = MathExtra::dot3(norm,vec);
+  MathExtra::sub3(stop,v0,vec);
+  double dotstop = MathExtra::dot3(norm,vec);
+
+  if (dotstart < 0.0 && dotstop < 0.0) return false;
+  if (dotstart > 0.0 && dotstop > 0.0) return false;
+  if (dotstart == 0.0 && dotstop == 0.0) return false;
+
+  // param = parametric distance from start to stop
+  //   at which tri plane is intersected
+  // force param to be 0.0 to 1.0 inclusive
+
+  MathExtra::sub3(v0,start,vec);
+  MathExtra::sub3(stop,start,start2stop);
+  param = MathExtra::dot3(norm,vec) / MathExtra::dot3(norm,start2stop);
+  param = MAX(param,0.0);
+  param = MIN(param,1.0);
+
+  // point = intersection pt with plane of triangle
+
+  point[0] = start[0] + param * start2stop[0];
+  point[1] = start[1] + param * start2stop[1];
+  point[2] = start[2] + param * start2stop[2];
+
+  // test if intersection pt is inside triangle
+  // edge = edge vector of triangle
+  // pvec = vector from triangle vertex to intersection point
+  // xproduct = cross product of edge with pvec
+  // if dot product of xproduct with norm < 0.0 for any of 3 edges,
+  //   intersection point is outside tri
+
+  MathExtra::sub3(v1,v0,edge);
+  MathExtra::sub3(point,v0,pvec);
+  MathExtra::cross3(edge,pvec,xproduct);
+  if (MathExtra::dot3(xproduct,norm) < 0.0) return false;
+
+  MathExtra::sub3(v2,v1,edge);
+  MathExtra::sub3(point,v1,pvec);
+  MathExtra::cross3(edge,pvec,xproduct);
+  if (MathExtra::dot3(xproduct,norm) < 0.0) return false;
+
+  MathExtra::sub3(v0,v2,edge);
+  MathExtra::sub3(point,v2,pvec);
+  MathExtra::cross3(edge,pvec,xproduct);
+  if (MathExtra::dot3(xproduct,norm) < 0.0) return false;
 
   // there is a valid intersection with triangle
   // set side to ONSUFR, OUTSIDE, or INSIDE

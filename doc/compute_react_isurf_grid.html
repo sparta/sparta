@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "https://sparta.github.io">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -21,7 +21,7 @@
 
 <LI>group-ID = group ID for which grid cells to perform calculation on 
 
-<LI>reaction-ID = surface reaction ID which defines surface reactions 
+<LI>reaction-ID = ID of surface reaction model which defines surface reactions 
 
 <LI>zero or more values can be appended 
 
@@ -38,8 +38,8 @@
 compute 1 react/isurf/grid all air
 compute 2 react/isurf/grid all air r:N/O/N2/O2 p:N/O/NO 
 </PRE>
-<P>These commands will dump time averages for each surface element to a
-dump file every 1000 steps:
+<P>These commands will dump time averages for each grid cell to a dump
+file every 1000 steps:
 </P>
 <PRE>compute 2 react/isurf/grid all air r:N/O/N2/O2 p:N/O/NO
 fix 1 ave/grid all 10 100 1000 c_2[*]
@@ -48,13 +48,14 @@ dump 1 grid all 1000 tmp.surgrid id f_1[*]
 <P><B>Description:</B>
 </P>
 <P>Define a computation that tallies counts of reactions for each grid
-cell containing implicit surface elements in a grid group, based on
-the particles that collide with those elements.  Only grid cells
-elements in the grid group specified by <I>group-ID</I> are included in the
-tallying.  See the <A HREF = "group.html">group grid</A> command for info on how
-grid cells can be assigned to grid groups.  Likewise only grid cells
-with surface elements assigned to the surface reaction model specified
-by <I>reaction-ID</I> are included in the tallying.
+cell containing implicit surface elements, based on the particles that
+collide with those elements.  Only grid cells in the grid group
+specified by <I>group-ID</I> are included in the tallying.  See the <A HREF = "group.html">group
+grid</A> command for info on how grid cells can be assigned to
+grid groups.  Likewise only grid cells with surface elements assigned
+to the surface reaction model specified by <I>reaction-ID</I> are included
+in the tallying.  This assignment is done via the
+<A HREF = "surf_modify.html">surf_modify</A> command.
 </P>
 <P>Implicit surface elements are triangles for 3d simulations and line
 segments for 2d simulations.  Unlike explicit surface elements, each

@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -145,7 +145,7 @@ No other information is stored in the restart file.  Specifically,
 information about these simulation entities and their associated
 commands is NOT stored:
 
-"random number seed"_seed,html
+"random number seed"_seed.html
 "computes"_compute.html
 "fixes"_fix.html
 "collision model"_collide.html

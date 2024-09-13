@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -76,8 +76,6 @@ class SurfReactAdsorb : public SurfReact {
   double **face_norm;           // norm of each face
 
   // mode = SURF for surface elements (lines or tris)
-
-  int first_owner;       // 1 if this instance of SRA allocates custom Surf data
 
   int total_state_index;        // indices to custom state in Surf
   int species_state_index;

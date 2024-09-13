@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -55,7 +55,7 @@ keyword = {type} or {custom} or {origin} or {trans} or {atrans} or
 [Examples:]
 
 read_surf surf.sphere
-read_surf surf.sphere type custom temperature double 0
+read_surf surf.sphere type custom temperature float 0
 read_surf surf.sphere group sphere2 typeadd 1
 read_surf surf.file trans 10 5 0 scale 3 3 3 invert clip
 read_surf surf.file trans 10 5 0 scale 3 3 3 invert clip 1.0e-6

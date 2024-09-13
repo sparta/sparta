@@ -1,6 +1,6 @@
 /* -*- c++ -*- ----------------------------------------------------------
    SPARTA - Large-scale Atomic/Molecular Massively Parallel Simulator
-   http://sparta.sandia.gov, Sandia National Laboratories
+   http://sparta.github.io, Sandia National Laboratories
    Steve Plimpton, sjplimp@gmail.com
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract

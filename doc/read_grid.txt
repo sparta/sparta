@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -37,7 +37,9 @@ The grid file can be written by the "write_grid"_write_grid.html
 command in a previous simulation, or be created by some pre-processing
 tool.  See "Section 6.8"_Section_howto.html#howto_8 of the manual for
 a definition of hierarchical grids and grid cell IDs as used by
-SPARTA.
+SPARTA.  Note that if the grid is hierarchical, grid cell IDs are not
+simply numbered from 1 to N.  They also encode the cell's logical
+position within the grid hierarchy.
 
 The specified file can be a text file or a gzipped text file (detected
 by a .gz suffix).  See the "write_grid"_write.grid.html command for a

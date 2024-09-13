@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "https://sparta.github.io">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -56,7 +56,7 @@
                      sin(x), cos(x), tan(x), asin(x), acos(x), atan(x), atan2(y,x), erf(x),
                      random(x,y), normal(x,y), ceil(x), floor(x), round(x)
                      ramp(x,y), stagger(x,y), logfreq(x,y,z), stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
-    special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
+    special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x), grid2part(x)
     particle vectors = id, type, mass, q, mu, x, y, z, vx, vy, vz
     grid vectors = cxlo, cxhi, cylo, cyhi, czlo, czhi
     compute references = c_ID, c_ID[I], c_ID[I][J]
@@ -361,7 +361,7 @@ variables.
 <TR><TD >Stats keywords</TD><TD > step, np, vol, etc</TD></TR>
 <TR><TD >Math operators</TD><TD > (), -x, x+y, x-y, x*y, x/y, x^y, x%y, x==y, x!=y, x<y, x<=y, x>y, x>=y, x&&y, x||y, !x</TD></TR>
 <TR><TD >Math functions</TD><TD > sqrt(x), exp(x), ln(x), log(x), abs(x), sin(x), cos(x), tan(x),      asin(x), acos(x), atan(x), atan2(y,x), erf(x), random(x,y,z), normal(x,y,z),      ceil(x), floor(x), round(x), ramp(x,y), stagger(x,y), logfreq(x,y,z),      stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)</TD></TR>
-<TR><TD >Special functions</TD><TD > sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)</TD></TR>
+<TR><TD >Special functions</TD><TD > sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x), grid2part(x)</TD></TR>
 <TR><TD >Particle vectors</TD><TD > id, type, mass, q, mu, x, y, z, vx, vy, vz</TD></TR>
 <TR><TD >Grid vectors = cxlo, cxhi, cylo, cyhi, czlo, czhi</TD></TR>
 <TR><TD >Compute references</TD><TD > c_ID, c_ID[I], c_ID[I][J]</TD></TR>
@@ -619,6 +619,35 @@ when they are defined in the input script, this is the value that will
 be returned the first time the next() function is invoked.  If next()
 is invoked more times than there are lines in the file, the variable
 is deleted, similar to how the <A HREF = "next.html">next</A> command operates.
+</P>
+<P>The grid2part(x) function can only be used in a particle-style
+variable formula.  Its purpose is to enable each particle to access a
+per-grid quantity for the grid cell it is currently in.  The per-grid
+quantity must be produced by a compute or fix.  When the
+particle-style variable formula is evaluated for each particle, the
+per-grid vector or array from the compute or fix is accessed, using
+the grid cell index for each particle.
+</P>
+<P>An example of its usage is as follows:
+</P>
+<PRE>variable     csq particle "vx*vx + vy*vy + vz*vz"
+compute      therm thermal/grid all all temp press
+variable     csq_norm particle v_csq/grid2part(c_therm<B>1</B>) 
+</PRE>
+<P>The per-particle variable csq_norm will calculate the kinetic energy
+for each particle, normalized by the thermal temperature of the full
+set of particles for the grid cell it is in.  The latter is computed
+by the <A HREF = "compute_thermal_grid.html">compute thermal/grid</A> command.
+</P>
+<P>The grid2part(x) function takes 1 argument which is of the form "c_ID"
+or "c_ID[N]" or "f_ID" or "f_ID[N]".  The first two are computes
+and the second two are fixes; the ID in the reference should be
+replaced by the ID of a compute or fix defined elsewhere in the input
+script.  The compute or fix must produce either a per-grid vector or
+array.  If it produces a per-grid vector, then the notation without
+"[N]" should be used.  If it produces a per-grid array, then the
+notation with "[N]" should be used, when N is an integer, to specify
+which column of the per-grid array is being referenced.
 </P>
 <HR>
 

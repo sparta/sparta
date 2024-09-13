@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -135,7 +135,7 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
   if (per_surf_freq % nevery || (nrepeat-1)*nevery >= per_surf_freq)
     error->all(FLERR,"Illegal fix ave/surf command");
 
-  int count_tally = 0;
+  count_tally = 0;
 
   for (int i = 0; i < nvalues; i++) {
     if (which[i] == COMPUTE) {
@@ -297,9 +297,12 @@ FixAveSurf::~FixAveSurf()
   for (int i = 0; i < nvalues; i++) delete [] ids[i];
   delete [] ids;
 
-  memory->destroy(bufvec);
-  memory->destroy(bufarray);
   memory->destroy(masks);
+
+  if (count_tally) {
+    memory->destroy(bufvec);
+    memory->destroy(bufarray);
+  }
 
   if (nvalues == 1) memory->destroy(vector_surf);
   else memory->destroy(array_surf);
@@ -508,7 +511,7 @@ void FixAveSurf::end_of_step()
     // evaluate surf-style variable
 
     } else if (which[m] == VARIABLE) {
-      if (j == 0)
+      if (nvalues == 1)
 	input->variable->compute_surf(n,accvec,1,1);
       else
 	input->variable->compute_surf(n,&accarray[0][m],nvalues,1);
@@ -572,18 +575,20 @@ void FixAveSurf::end_of_step()
   nvalid = ntimestep+per_surf_freq - (nrepeat-1)*nevery;
   modify->addstep_compute(nvalid);
 
-  // invoke surf->collate() on tallies this fix stores for multiple steps
-  // this merges tallies to owned surfs
-  // NOTE: this should only be done if source is a COMPUTE ?
+  // if all input values are computes which tally particle/surf interactions:
+  //   invoke surf->collate() on tallies this fix stores for multiple steps
+  //   this merges tallies to owned surfs
 
-  if (nvalues == 1) {
-    surf->collate_vector(ntally,tally2surf,vec_tally,1,bufvec);
-    for (i = 0; i < nown; i++) accvec[i] += bufvec[i];
-  } else {
-    surf->collate_array(ntally,nvalues,tally2surf,array_tally,bufarray);
-    for (i = 0; i < nown; i++)
-      for (m = 0; m < nvalues; m++)
-        accarray[i][m] += bufarray[i][m];
+  if (count_tally) {
+    if (nvalues == 1) {
+      surf->collate_vector(ntally,tally2surf,vec_tally,1,bufvec);
+      for (i = 0; i < nown; i++) accvec[i] += bufvec[i];
+    } else {
+      surf->collate_array(ntally,nvalues,tally2surf,array_tally,bufarray);
+      for (i = 0; i < nown; i++)
+        for (m = 0; m < nvalues; m++)
+          accarray[i][m] += bufarray[i][m];
+    }
   }
 
   // normalize the accumulators for output on Nfreq timestep

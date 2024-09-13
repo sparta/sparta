@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -1450,7 +1450,7 @@ int CollideVSSKokkos::perform_collision_kokkos(int icell,
     // add 3rd K particle if reaction created it
     // index of new K particle = nlocal-1
     // if add_particle() performs a realloc:
-    //   make copy of x,v, then repoint ip,jp to new particles data struct
+    //   make copy of x,v
 
     if (kspecies >= 0) {
       int id = MAXSMALLINT*rand_gen.drand();

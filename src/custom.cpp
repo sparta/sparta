@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -171,33 +171,43 @@ void Custom::command(int narg, char **arg)
     } else error->all(FLERR,"Invalid custom command");
   }
 
-  // create or check custom attribute
+  // cindex = index of existing custom attribute
+  // otherwise create custom attribute if it does not exist
+  // error check that name or name[] matches new or existing attribute
 
   if (mode == PARTICLE) {
     cindex = particle->find_custom(aname);
     if (cindex >= 0) {
-      if (ctype != particle->etype[cindex] ||
-	  csize != particle->esize[cindex])
-	error->all(FLERR,"Custom attribute does not match "
-		   "already existing custom data");
-    } else cindex = particle->add_custom(aname,ctype,csize);
+      ctype = particle->etype[cindex];
+      csize = particle->esize[cindex];
+    } else {
+      cindex = particle->add_custom(aname,ctype,csize);
+    }
+
   } else if (mode == GRID) {
     cindex = grid->find_custom(aname);
     if (cindex >= 0) {
-       if (ctype != grid->etype[cindex] ||
-	  csize != grid->esize[cindex])
-	error->all(FLERR,"Custom attribute does not match "
-		   "already existing custom data");
-    } else cindex = grid->add_custom(aname,ctype,csize);
+      ctype = grid->etype[cindex];
+      csize = grid->esize[cindex];
+    } else {
+      cindex = grid->add_custom(aname,ctype,csize);
+    }
+
   } else if (mode == SURF) {
     cindex = surf->find_custom(aname);
     if (cindex >= 0) {
-      if (ctype != surf->etype[cindex] ||
-	  csize != surf->esize[cindex])
-	error->all(FLERR,"Custom attribute does not match "
-		   "already existing custom data");
-    } else cindex = surf->add_custom(aname,ctype,csize);
+      ctype = surf->etype[cindex];
+      csize = surf->esize[cindex];
+    } else {
+      cindex = surf->add_custom(aname,ctype,csize);
+    }
   }
+
+  int eflag = 0;
+  if (csize == 0 && ccol != 0) eflag = 1;
+  if (csize != 0 && ccol == 0) eflag = 1;
+  if (csize != 0 && ccol > csize) eflag = 1;
+  if (eflag) error->all(FLERR,"Custom name does not match new or existing custom attribute");
 
   // evaluate variable
   // store result as floating point scalar or vector

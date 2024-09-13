@@ -1,6 +1,6 @@
  /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -1624,8 +1624,8 @@ void Grid::clear_surf()
 
 /* ----------------------------------------------------------------------
    remove effects of implicit surf split cells on grid and particles
-   reassign particles in sub-cells to parent split cell
    remove sub-cells from grid list and set all cells to unsplit
+   reassign particles in sub-cells to parent split cell
    allows a subsequent read_isurf command to work correctly
    called by read_restart after reading restart file for simulation
      which used implicit surfs and thus may have had split cells
@@ -1640,29 +1640,17 @@ void Grid::clear_surf_implicit()
   int ncorner = 8;
   if (dimension == 2) ncorner = 4;
 
-  // reset icell of particles in sub-cells to split cell
-  // since sinfo does not yet exist, do this via hashing
-  // create hash that stores IDs of split cells and their icell
-  // sub-cells will have same ID as parent split cell
-
-  hash->clear();
-
-  for (icell = 0; icell < nlocal; icell++) {
-    if (cells[icell].nsplit <= 1) continue;
-    (*hash)[cells[icell].id] = icell;
-  }
+  // store cellIDs = list of cellID each particle is in
+  // sub-cells and parent split cell have the same cellID
 
   Particle::OnePart *particles = particle->particles;
   int nplocal = particle->nlocal;
 
-  for (int i = 0; i < nplocal; i++) {
-    icell = particles[i].icell;
-    if (cells[icell].nsplit <= 0)
-      particles[i].icell = (*hash)[cells[icell].id];
-  }
+  cellint *cellIDs;
+  memory->create(cellIDs,nplocal,"grid:cellIDs");
 
-  hash->clear();
-  hashfilled = 0;
+  for (int i = 0; i < nplocal; i++)
+    cellIDs[i] = cells[particles[i].icell].id;
 
   // compress cell list to remove all sub-cells
   // reset cell and corner types, and cell volume
@@ -1701,6 +1689,25 @@ void Grid::clear_surf_implicit()
 
   nunsplitlocal = nlocal;
   nsplitlocal = nsublocal = 0;
+
+  // create hash for new set of owned grid cells
+
+  hash->clear();
+
+  for (icell = 0; icell < nlocal; icell++)
+    (*hash)[cells[icell].id] = icell;
+
+  // use hash to reassign each particle's index into cell list
+  // uses the temporary cellIDs list created above
+
+  for (int i = 0; i < nplocal; i++)
+    particles[i].icell = (*hash)[cellIDs[i]];
+
+  // clean up
+
+  memory->destroy(cellIDs);
+  hash->clear();
+  hashfilled = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -1872,6 +1879,7 @@ int Grid::point_outside_surfs_implicit(int icell, double *x)
     edgelen = MathExtra::len3(edge);
     minedge = MIN(minedge,edgelen);
     MathExtra::sub3(tris[isurf].p3,tris[isurf].p1,edge);
+    edgelen = MathExtra::len3(edge);
     minedge = MIN(minedge,edgelen);
 
     displace = EPSSURF * minedge;
@@ -1998,42 +2006,39 @@ int Grid::outside_surfs(int icell, double *x, double *xcell)
   Surf::Tri *tris = surf->tris;
   surfint *csurfs = cells[icell].csurfs;
 
-  int m,isurf,minflag,hitflag,side,minside;
-  double param,minparam;
+  int m,isurf,hitflag,side;
+  double param;
   double xc[3];
   Surf::Line *line;
   Surf::Tri *tri;
 
-  // loop over surfs, ray-trace from x to xcell, see which surf is hit first
+  // loop over surfs, ray-trace from x to xcell, see how many surfaces were hit
 
   int nsurf = cells[icell].nsurf;
 
-  minflag = 0;
-  minparam = 2.0;
+  int cnt = 0;
   for (m = 0; m < nsurf; m++) {
     isurf = csurfs[m];
     if (dim == 3) {
       tri = &tris[isurf];
       hitflag = Geometry::
-        line_tri_intersect(x,xcell,tri->p1,tri->p2,tri->p3,
-                           tri->norm,xc,param,side);
+        line_tri_intersect_noeps(x,xcell,tri->p1,tri->p2,tri->p3,
+                                 tri->norm,xc,param,side);
     } else {
       line = &lines[isurf];
       hitflag = Geometry::
         line_line_intersect(x,xcell,line->p1,line->p2,line->norm,xc,param,side);
     }
-    if (hitflag && param < minparam) {
-      minflag = 1;
-      minparam = param;
-      minside = side;
-    }
+    if (hitflag) cnt++;
   }
 
   // if no surf was hit, particle is outside surfs
-  // else check which side of surf was hit
+  // else check how many surfaces were hit
+  //   odd number = inside, even number = outside
 
-  if (!minflag) return 1;
-  if (minside == SOUTSIDE || minside == ONSURF2OUT) return 1;
+  if (cnt == 0) return 1;
+  if (cnt % 2 == 0) return 1;
+
   return 0;
 }
 

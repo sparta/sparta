@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -20,6 +20,7 @@
 #include "domain.h"
 #include "region.h"
 #include "particle.h"
+#include "grid.h"
 #include "mixture.h"
 #include "modify.h"
 #include "compute.h"
@@ -33,7 +34,7 @@ using namespace SPARTA_NS;
 
 // customize by adding keyword
 
-enum{ID,TYPE,PROC,X,Y,Z,XS,YS,ZS,VX,VY,VZ,KE,EROT,EVIB,
+enum{ID,TYPE,PROC,CELLID,X,Y,Z,XS,YS,ZS,VX,VY,VZ,KE,EROT,EVIB,
      CUSTOM,COMPUTE,FIX,VARIABLE};
 enum{LT,LE,GT,GE,EQ,NEQ};
 enum{INT,DOUBLE,BIGINT,STRING};        // same as Dump
@@ -364,6 +365,7 @@ int DumpParticle::count()
 
   // un-choose if not in mixture
 
+  Grid::ChildCell *cells = grid->cells;
   Particle::OnePart *particles = particle->particles;
   int *species2species = particle->mixture[imix]->species2species;
 
@@ -406,6 +408,10 @@ int DumpParticle::count()
         nstride = 1;
       } else if (thresh_array[ithresh] == PROC) {
         for (i = 0; i < nlocal; i++) dchoose[i] = me;
+        ptr = dchoose;
+        nstride = 1;
+      } else if (thresh_array[ithresh] == CELLID) {
+        for (i = 0; i < nlocal; i++) dchoose[i] = cells[particles[i].icell].id;
         ptr = dchoose;
         nstride = 1;
 
@@ -660,6 +666,10 @@ int DumpParticle::parse_fields(int narg, char **arg)
     } else if (strcmp(arg[iarg],"proc") == 0) {
       pack_choice[i] = &DumpParticle::pack_proc;
       vtype[i] = INT;
+    } else if (strcmp(arg[iarg],"cellID") == 0) {
+      pack_choice[i] = &DumpParticle::pack_cellid;
+      if (sizeof(cellint) == sizeof(smallint)) vtype[i] = INT;
+      else vtype[i] = BIGINT;
 
     } else if (strcmp(arg[iarg],"x") == 0) {
       pack_choice[i] = &DumpParticle::pack_x;
@@ -992,6 +1002,7 @@ int DumpParticle::modify_param(int narg, char **arg)
     if (strcmp(arg[1],"id") == 0) thresh_array[nthresh] = ID;
     else if (strcmp(arg[1],"type") == 0) thresh_array[nthresh] = TYPE;
     else if (strcmp(arg[1],"proc") == 0) thresh_array[nthresh] = PROC;
+    else if (strcmp(arg[1],"cellID") == 0) thresh_array[nthresh] = CELLID;
 
     else if (strcmp(arg[1],"x") == 0) thresh_array[nthresh] = X;
     else if (strcmp(arg[1],"y") == 0) thresh_array[nthresh] = Y;
@@ -1322,6 +1333,24 @@ void DumpParticle::pack_proc(int n)
 {
   for (int i = 0; i < nchoose; i++) {
     buf[n] = me;
+    n += size_one;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpParticle::pack_cellid(int n)
+{
+  Particle::OnePart *particles = particle->particles;
+  Grid::ChildCell *cells = grid->cells;
+
+  // NOTE: cellint (bigint) won't fit in double in some cases
+
+  int icell;
+
+  for (int i = 0; i < nchoose; i++) {
+    icell = particles[clist[i]].icell;
+    buf[n] = cells[icell].id;
     n += size_one;
   }
 }
