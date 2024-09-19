@@ -17,7 +17,7 @@
 </PRE>
 <UL><LI>one or more keyword/value pairs may be listed 
 
-<LI>keywords = <I>vremax</I> or <I>remain</I> or <I>ambipolar</I> or <I>nearcp</I> or <I>rotate</I> or <I>vibrate</I> 
+<LI>keywords = <I>vremax</I> or <I>remain</I> or <I>ambipolar</I> or <I>nearcp</I> or <I>rotate</I> or <I>vibrate</I>or <I>swpm</I> or <I>reduce</I> 
 
 <PRE>  <I>vremax</I> values = Nevery startflag
     Nevery = zero vremax every this many timesteps
@@ -28,7 +28,16 @@
     Nlimit = max # of attempts made to find a collision partner
   <I>ambipolar</I> value = <I>no</I> or <I>yes</I>
   <I>rotate</I> value = <I>no</I> or <I>smooth</I>
-  <I>vibrate</I> value = <I>no</I> or <I>smooth</I> or <I>discrete</I> 
+  <I>vibrate</I> value = <I>no</I> or <I>smooth</I> or <I>discrete</I>
+  <I>swpm</I> values = choice nsplit gamma
+    choice = <I>yes</I> or <I>no</I> to use variable particle weights
+    nsplit = maximum number of particles in a cell before splitting stops
+    gamma = weight transfer function (value > 0)
+  <I>reduce</I> values = reduction_choice nreduce group_choice ngroup
+    reduction_choice = <I>energy</I> or <I>heat</I> or <I>stress</I> = how to reduce particles
+    nreduce = minimum number of particles in a cell before reduction occurs
+    group_choice = <I>binary</I> or <I>weight</I> = how to group particles
+    ngroup = maximum number of particles in each group 
 </PRE>
 
 </UL>
@@ -36,7 +45,9 @@
 </P>
 <PRE>collide_modify vremax 1000 yes
 collide_modify vremax 0 no remain no
-collide_modify ambipolar yes 
+collide_modify ambipolar yes
+collide_modify swpm yes 16.0 1.0
+collide_modify reduce energy 32.0 binary 4.0 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -141,11 +152,80 @@ vibrational mode, then use of the <I>discrete</I> option also requires the
 <A HREF = "fix_vibmode.html">fix vibmode</A> command be used to allocate storage for
 the per-particle mode values.
 </P>
-<P>There is also an option to use the stochastic weighted particle method (refer to <A HREF = "collide_modify_swpm.html">collide_modify_swpm</A>)
+<HR>
+
+<P>The <I>swpm</I> keyword enables or disables variable particle weights. 
+The variable particle weight model is the stochastic weighted particle method 
+(SWPM) <A HREF = "#Rjasanow05">(Rjasanow05)</A>. If <I>no</I> is specified, the DSMC model,
+which is the default, is used. 
+</P>
+<P>If <I>yes</I> is specified, then SWPM is used. SWPM is composed of two
+stages: particle splitting and particle reduction. Particle splitting
+will split particles if a cell has less than <I>nsplit</I> particles. Every colliding 
+pair creates two child particles so that the total number of particles after
+each collision is four. Only the child particles will collide while the velocities
+of the parent particles will remain unchanged.
+</P>
+<P>The weight of the child particles are defined
+by the weight transfer function, <I>G</I> where the weight of each child particle 
+is set as <I>G</I>. In SPARTA, it is assumed <I>G</I> = max(<I>g_i</I>,<I>g_j</I>)/(1 + <I>gamma</I>)
+where <I>g_i</I> and <I>g_j</I> are the weights of the parent particles. <I>gamma</I> is a 
+value that is greater than or equal to zero.
+</P>
+<P>The <I>reduce</I> keyword is for the particle
+reduction. Particle reduction replaces all particles in
+a cell with a smaller number of particles while conserving certain physical
+quantities of interest. If <I>no</I> is specificed, particle reduction is not used.
+If <I>yes</I> is specified, particle reduction is used. In SPARTA, the particles
+are first divided into groups and then each group of particles is reduced.
+</P>
+<P>Note: <I>reduce</I> can only be called after <I>swpm</I> is enabled first
+</P>
+<P>The <I>reduction_choice</I> keyword is either <I>energy</I>, <I>heat</I>, or <I>stress</I>.
+In all choices, the mass and momentum of each group
+is conserved. If <I>energy</I> is chosen, the energy of each group is conserved.
+If <I>heat</I> is chosen, the energy and heat flux in each group is conserved.
+If <I>stress</I> is chosen, the energy, heat flux, and stress tensor is each group
+is conserved.  For the first two choices, all particles in a group are replaced
+by two particles. For the last choice, all particles in a group are replaced 
+by at most six particles.
+</P>
+<P>The <I>nreduce</I> keyword is the minimum number of particles a cell must have to
+be eligible for particle reduction. If a cell has more than <I>nreduce</I> particles,
+particle reduction (if enabled) is called. Otherwise, particle reduction is skipped.
+<I>nreduce</I> must be greater than 2 if <I>energy</I> or <I>heat</I> reduction is used.
+If <I>stress</I> reduction is used, <I>nreduce</I> must be greater than 6. 
+</P>
+<P>The <I>group_choice</I> keyword is either <I>binary</I> or <I>weight</I>.
+Particles are grouped using a binary tree strategy. 
+The root node contains all particles.
+The root node is split into two leaves.
+Particles are sorted into each leaf according to their velocity.
+The leaf nodes recursively divide until the number of particles in that node
+is less than <I>ngroup</I>.
+If <I>binary</I> grouping is used, the particle are divided by comparing
+their velocities with respect to a plane.
+The plane has a normal in the same direction of the eigenvector corresponding 
+to the largest eigenvluae of the covariance matrix of the particle velocities.
+The <I>weight</I> grouping first divides the particles in the root node by weight. 
+Three groups are identified: small, medium, and large weights.
+Particles with large weights are not eligible to reduce.
+Medium and small particles are reduced separately.
+Each group is then recursively divided using the <I>binary</I> grouping. 
+</P>
+<P>The <I>ngroup</I> keyword is the maximum number of particles that can be in a
+group before being reduced. <I>ngroup</I> must be greater than 2 if <I>energy</I> or
+<I>heat</I> reduction is used. If <I>stress</I> reduction is used, <I>ngroup</I> must be
+greater than 6. 
 </P>
 <HR>
 
-<P><B>Restrictions:</B> none
+<P><B>Restrictions:</B>
+</P>
+<P>The SWPM capabilities are currently limited to monoatomic, single-species gases.
+</P>
+<P>SWPM can be used with adaptive grids but will cause a significant increase
+in the number of particles.
 </P>
 <P><B>Related commands:</B>
 </P>
@@ -154,7 +234,7 @@ the per-particle mode values.
 <P><B>Default:</B>
 </P>
 <P>The option defaults are vremax = (0,yes), remain = yes, ambipolar no,
-nearcp no, rotate smooth, and vibrate = no.
+nearcp no, rotate smooth, vibrate = no, <I>swpm</I> = no, and <I>reduce</I> = no.
 </P>
 <HR>
 
@@ -165,5 +245,10 @@ Collision-Partner Selection Schemes on the Accuracy and Efficiency of
 the Direct Simulation Monte Carlo Method," International Journal for
 Numerical Methods in Fluids, 67(8):1057-1072. DOI:10.1002/fld.2409
 (2011).
+</P>
+<A NAME = "Rjasanow05"></A>
+
+<P><B>(Rjasanow05)</B> S. Rjasanow, W. Wagner, "Stochastic Numerics for the Boltzmann
+Equation," Springer. (2005).
 </P>
 </HTML>
