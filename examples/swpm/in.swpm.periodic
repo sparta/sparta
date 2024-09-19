@@ -67,7 +67,6 @@ collide            vss air air.vss
 collide_modify     remain no
 
 # swpm
-fix 1 swpm
 collide_modify     swpm yes -1.0 1.0
 collide_modify     reduce energy 32.0 binary 4.0
 #collide_modify     reduce heat 32.0 weight 4.0

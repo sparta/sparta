@@ -28,7 +28,6 @@
 #include "modify.h"
 #include "fix.h"
 #include "fix_ambipolar.h"
-#include "fix_swpm.h"
 #include "random_mars.h"
 #include "random_knuth.h"
 #include "memory.h"

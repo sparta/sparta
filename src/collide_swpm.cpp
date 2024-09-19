@@ -27,7 +27,6 @@
 #include "modify.h"
 #include "fix.h"
 #include "fix_ambipolar.h"
-#include "fix_swpm.h"
 #include "random_mars.h"
 #include "random_knuth.h"
 #include "memory.h"
@@ -63,7 +62,6 @@ void Collide::collisions_one_sw()
   int *next = particle->next;
 
   double isw;
-  //double *sweights = particle->edvec[particle->ewhich[index_sweight]];
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
@@ -90,7 +88,6 @@ void Collide::collisions_one_sw()
     sweight_max = 0.0;
     while (ip >= 0) {
       plist[n++] = ip;
-      //isw = sweights[ip];
 
       ipart = &particles[ip];
       isw = ipart->weight;
