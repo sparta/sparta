@@ -52,6 +52,7 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
   MPI_Comm_rank(world,&me);
 
   exist = sorted = 0;
+  weightflag = 0;
   nglobal = 0;
   nlocal = maxlocal = 0;
   particles = NULL;

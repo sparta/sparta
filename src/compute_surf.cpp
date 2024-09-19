@@ -307,21 +307,20 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
   double fluxscale = normflux[isurf];
 
   // assume non-reacting and no splitting at boundary
+
   double oswfrac, iswfrac, jswfrac;
-  oswfrac = iswfrac = jswfrac = 1.0;
-  double *sweights;
-  int index_sweight = particle->find_custom((char *) "sweight");
-  if(index_sweight >= 0) {
+  iswfrac = jswfrac = oswfrac = 1.0;
+
+  if (particle->weightflag) {
     int nout = 0;
     oswfrac = 0.0;
-    sweights = particle->edvec[particle->ewhich[index_sweight]];
     if(ip) {
-      iswfrac = sweights[ip - particle->particles]/update->fnum;
+      iswfrac = ip->weight;
       oswfrac += iswfrac;
       nout++;
     }
     if(jp) {
-      jswfrac = sweights[jp - particle->particles]/update->fnum;
+      jswfrac = jp->weight;
       oswfrac += jswfrac;
       nout++;
     }
@@ -347,7 +346,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
   double imass,jmass;
   if (weightflag && iorig) weight = iorig->weight;
   else if (weightflag) weight = ip->weight;
-  if (origspecies >= 0)  origmass = particle->species[origspecies].mass * weight * oswfrac;
+  if (origspecies >= 0) origmass = particle->species[origspecies].mass * weight * oswfrac;
   if (ip) imass = particle->species[ip->ispecies].mass * weight * iswfrac;
   if (jp) jmass = particle->species[jp->ispecies].mass * weight * jswfrac;
 

@@ -45,15 +45,10 @@ double ComputeTemp::compute_scalar()
   double *v;
   double t = 0.0;
 
-  double *sweights;
-  int index_sweight = particle->find_custom((char *) "sweight");
-  if(index_sweight >= 0)
-    sweights = particle->edvec[particle->ewhich[index_sweight]];
-
   double swfrac = 1.0;
   for (int i = 0; i < nlocal; i++) {
     v = particles[i].v;
-    if(index_sweight >= 0) swfrac = sweights[i]/update->fnum;
+    if(particle->weightflag) swfrac = particles[i].weight;
     t += (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]) *
       species[particles[i].ispecies].mass * swfrac;
   }

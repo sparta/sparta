@@ -420,6 +420,8 @@ void Collide::modify_params(int narg, char **arg)
         error->all(FLERR,"SWPM cannot be used in axi-symmetric simulations");
       if (grid->cellweightflag)
         error->all(FLERR,"SWPM cannot be used with cell-based weighting");
+      // enable particle weighting
+      particle->weightflag = 1;
       if (strcmp(arg[iarg+1],"no") == 0) swpmflag = 0;
       else if (strcmp(arg[iarg+1],"yes") == 0) swpmflag = 1;
       else error->all(FLERR,"Illegal collide_modify command");

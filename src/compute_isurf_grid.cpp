@@ -250,21 +250,20 @@ void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
   double fluxscale = normflux[isurf];
 
   // assume non-reacting and no splitting at boundary
+
   double oswfrac, iswfrac, jswfrac;
-  oswfrac = iswfrac = jswfrac = 1.0;
-  double *sweights;
-  int index_sweight = particle->find_custom((char *) "sweight");
-  if(index_sweight >= 0) {
+  iswfrac = jswfrac = oswfrac = 1.0;
+
+  if (particle->weightflag) {
     int nout = 0;
     oswfrac = 0.0;
-    sweights = particle->edvec[particle->ewhich[index_sweight]];
     if(ip) {
-      iswfrac = sweights[ip - particle->particles]/update->fnum;
+      iswfrac = ip->weight;
       oswfrac += iswfrac;
       nout++;
     }
     if(jp) {
-      jswfrac = sweights[jp - particle->particles]/update->fnum;
+      jswfrac = jp->weight;
       oswfrac += jswfrac;
       nout++;
     }

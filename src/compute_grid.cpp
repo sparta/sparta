@@ -226,11 +226,6 @@ void ComputeGrid::compute_per_grid()
   double mass;
   double *v,*vec;
 
-  double *sweights;
-  int index_sweight = particle->find_custom((char *) "sweight");
-  if(index_sweight >= 0)
-    sweights = particle->edvec[particle->ewhich[index_sweight]];
-
   // zero all accumulators - could do this with memset()
 
   for (i = 0; i < nglocal; i++)
@@ -242,6 +237,7 @@ void ComputeGrid::compute_per_grid()
   // perform all tallies needed for each particle
   // depends on its species group and the user-requested values
 
+  double swfrac = 1.0;
   for (i = 0; i < nlocal; i++) {
     ispecies = particles[i].ispecies;
     igroup = s2g[ispecies];
@@ -251,8 +247,8 @@ void ComputeGrid::compute_per_grid()
 
     mass = species[ispecies].mass;
     v = particles[i].v;
-    double swfrac = 1.0;
-    if(index_sweight >= 0) swfrac = sweights[i]/update->fnum;
+    if (particle->weightflag) swfrac = particles[i].weight;
+
     mass *= swfrac;
 
     vec = tally[icell];

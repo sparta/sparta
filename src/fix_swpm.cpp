@@ -34,6 +34,7 @@ FixSWPM::FixSWPM(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"SWPM cannot be used in axi-symmetric simulations");
   if (grid->cellweightflag)
     error->all(FLERR,"SWPM cannot be used with cell-based weighting");
+  particle->weightflag = 1;
 
   if (narg != 2) error->all(FLERR,"Illegal fix swpm command");
 

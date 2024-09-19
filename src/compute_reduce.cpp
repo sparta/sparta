@@ -603,39 +603,33 @@ double ComputeReduce::compute_one(int m, int flag)
   if (mode == MINN) one = BIG;
   else if (mode == MAXX) one = -BIG;
 
-  double *sweights;
-  int index_sweight = particle->find_custom((char *) "sweight");
-  if(index_sweight >= 0)
-    sweights = particle->edvec[particle->ewhich[index_sweight]];
+  // for flagging if particle weight needed for not
+  int aveflag = 1;
+  if (mode == MINN || mode == MAXX) aveflag = 0;
 
-  double swfrac = 1.0;
   if (which[m] == X) {
     Particle::OnePart *particles = particle->particles;
     int n = particle->nlocal;
     if (flag < 0) {
+      double swfrac = 1.0;
       for (i = 0; i < n; i++) {
         if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-        if(index_sweight >= 0) swfrac = sweights[i]/update->fnum;
+        if (particle->weightflag && aveflag) swfrac = particles[i].weight;
         combine(one,particles[i].x[aidx] * swfrac,i);
       }
-    } else {
-      if(index_sweight >= 0) swfrac = sweights[flag]/update->fnum;
-      one = particles[flag].x[aidx] * swfrac;
-    }
+    } else one = particles[flag].x[aidx];
 
   } else if (which[m] == V) {
     Particle::OnePart *particles = particle->particles;
     int n = particle->nlocal;
     if (flag < 0) {
+      double swfrac = 1.0;
       for (i = 0; i < n; i++) {
         if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-        if(index_sweight >= 0) swfrac = sweights[i]/update->fnum;
+        if (particle->weightflag && aveflag) swfrac = particles[i].weight;
         combine(one,particles[i].v[aidx] * swfrac,i);
       }
-    } else {
-      if(index_sweight >= 0) swfrac = sweights[flag]/update->fnum;
-      one = particles[flag].v[aidx] * swfrac;
-    }
+    } else one = particles[flag].v[aidx];
 
   } else if (which[m] == KE) {
     Particle::OnePart *particles = particle->particles;
@@ -647,11 +641,12 @@ double ComputeReduce::compute_one(int m, int flag)
     double ke;
 
     if (flag < 0) {
+      double swfrac = 1.0;
       for (i = 0; i < n; i++) {
         if (subsetID && s2g[particles[i].ispecies] < 0) continue;
         p = &particles[i];
         v = p->v;
-        if(index_sweight >= 0) swfrac = sweights[i]/update->fnum;
+        if (particle->weightflag && aveflag) swfrac = particles[i].weight;
         ke = mvv2e * 0.5 * species[p->ispecies].mass * swfrac *
           (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
         combine(one,ke,i);
@@ -659,8 +654,7 @@ double ComputeReduce::compute_one(int m, int flag)
     } else {
       p = &particles[flag];
       v = p->v;
-      if(index_sweight >= 0) swfrac = sweights[flag]/update->fnum;
-      one = mvv2e * 0.5 * species[p->ispecies].mass * swfrac *
+      one = mvv2e * 0.5 * species[p->ispecies].mass *
         (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
     }
 
@@ -668,29 +662,26 @@ double ComputeReduce::compute_one(int m, int flag)
     Particle::OnePart *particles = particle->particles;
     int n = particle->nlocal;
     if (flag < 0) {
+      double swfrac = 1.0;
       for (i = 0; i < n; i++) {
         if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-        if(index_sweight >= 0) swfrac = sweights[i]/update->fnum;
+        if (particle->weightflag && aveflag) swfrac = particles[i].weight;
         combine(one,particles[i].erot * swfrac,i);
       }
-    } else {
-      if(index_sweight >= 0) swfrac = sweights[flag]/update->fnum;
-      one = particles[flag].erot * swfrac;
-    }
+    } else one = particles[flag].erot;
 
   } else if (which[m] == EVIB) {
     Particle::OnePart *particles = particle->particles;
     int n = particle->nlocal;
     if (flag < 0) {
+      double swfrac = 1.0;
       for (i = 0; i < n; i++) {
         if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-        if(index_sweight >= 0) swfrac = sweights[i]/update->fnum;
+        if (particle->weightflag && aveflag) swfrac = particles[i].weight;
         combine(one,particles[i].evib * swfrac,i);
       }
-    } else {
-      if(index_sweight >= 0) swfrac = sweights[flag]/update->fnum;
-      one = particles[flag].evib * swfrac;
-    }
+    } else one = particles[flag].evib;
+    
 
   // invoke compute if not previously invoked
   // for per-grid compute, invoke post_process grid() or isurf_grid() method as needed
@@ -938,54 +929,54 @@ double ComputeReduce::compute_one(int m, int flag)
       Particle::OnePart *particles = particle->particles;
       int n = particle->nlocal;
       if (flag < 0) {
+        double swfrac = 1.0;
 	      if (particle->etype[vidx] == INT) {
 	        int *cvec = particle->eivec[particle->ewhich[vidx]];
 	        for (i = 0; i < n; i++) {
             if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-            if(index_sweight >= 0) swfrac = sweights[i]/update->fnum;
+            if (particle->weightflag && aveflag) swfrac = particles[i].weight;
       	    combine(one,cvec[i] * swfrac,i);
 	        }
         } else if (particle->etype[vidx] == DOUBLE) {
           double *cvec = particle->edvec[particle->ewhich[vidx]];
           for (i = 0; i < n; i++) {
             if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-            if(index_sweight >= 0) swfrac = sweights[i]/update->fnum;
+            if (particle->weightflag && aveflag) swfrac = particles[i].weight;
             combine(one,cvec[i] * swfrac,i);
           }
         }
       } else {
-        if(index_sweight >= 0) swfrac = sweights[flag]/update->fnum;
         if (particle->etype[vidx] == INT)
-          one = particle->eivec[particle->ewhich[vidx]][flag] * swfrac;
+          one = particle->eivec[particle->ewhich[vidx]][flag];
         else
-          one = particle->edvec[particle->ewhich[vidx]][flag] * swfrac;
+          one = particle->edvec[particle->ewhich[vidx]][flag];
       }
     } else {
       Particle::OnePart *particles = particle->particles;
       int n = particle->nlocal;
       int aidxm1 = aidx - 1;
       if (flag < 0) {
+        double swfrac = 1.0;
         if (particle->etype[vidx] == INT) {
           int **carray = particle->eiarray[particle->ewhich[vidx]];
           for (i = 0; i < n; i++) {
             if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-            if(index_sweight >= 0) swfrac = sweights[i]/update->fnum;
+            if (particle->weightflag && aveflag) swfrac = particles[i].weight;
             combine(one,carray[i][aidxm1] * swfrac,i);
           }
         } else if (particle->etype[vidx] == DOUBLE) {
           double **carray = particle->edarray[particle->ewhich[vidx]];
           for (i = 0; i < n; i++) {
             if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-            if(index_sweight >= 0) swfrac = sweights[i]/update->fnum;
+            if (particle->weightflag && aveflag) swfrac = particles[i].weight;
             combine(one,carray[i][aidxm1] * swfrac,i);
           }
         }
       } else {
-        if(index_sweight >= 0) swfrac = sweights[flag]/update->fnum;
 	      if (particle->etype[vidx] == INT)
-	        one = particle->eiarray[particle->ewhich[vidx]][flag][aidxm1] * swfrac;
+	        one = particle->eiarray[particle->ewhich[vidx]][flag][aidxm1];
 	      else
-	        one = particle->edarray[particle->ewhich[vidx]][flag][aidxm1] * swfrac;
+	        one = particle->edarray[particle->ewhich[vidx]][flag][aidxm1];
       }
     }
 
