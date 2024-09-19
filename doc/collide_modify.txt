@@ -27,7 +27,7 @@ keywords = {vremax} or {remain} or {ambipolar} or {nearcp} or {rotate} or {vibra
   {swpm} values = choice nsplit gamma
     choice = {yes} or {no} to use variable particle weights
     nsplit = maximum number of particles in a cell before splitting stops
-    gamma = weight transfer function (value > 0)
+    gamma = weight transfer function (value >= 0)
   {reduce} values = reduction_choice nreduce group_choice ngroup
     reduction_choice = {energy} or {heat} or {stress} = how to reduce particles
     nreduce = minimum number of particles in a cell before reduction occurs
