@@ -90,6 +90,7 @@ class Particle : protected Pointers {
     double v[3];            // particle velocity
     double erot;            // rotational energy
     double evib;            // vibrational energy
+    double weight;          // particle or cell weight, if weighting enabled
   };
 
   bigint nglobal;           // global # of particles

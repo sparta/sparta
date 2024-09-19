@@ -33,11 +33,11 @@ class FixSWPM : public Fix {
   virtual ~FixSWPM();
   int setmask();
   void init();
-  virtual void update_custom(int, double, double, double, double *);
+  //virtual void update_custom(int, double, double, double, double *);
 
  protected:
-  int index_sweight;
-  double sweight_new;
+  //int index_sweight;
+  //double sweight_new;
 };
 
 }

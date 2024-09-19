@@ -13,6 +13,8 @@
 ------------------------------------------------------------------------- */
 
 #include "math.h"
+#include "domain.h"
+#include "grid.h"
 #include "stdlib.h"
 #include "string.h"
 #include "fix_swpm.h"
@@ -23,22 +25,25 @@
 
 using namespace SPARTA_NS;
 
-enum{INT,DOUBLE}; 
-
 /* ---------------------------------------------------------------------- */
 
 FixSWPM::FixSWPM(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
+  if (domain->axisymmetric)
+    error->all(FLERR,"SWPM cannot be used in axi-symmetric simulations");
+  if (grid->cellweightflag)
+    error->all(FLERR,"SWPM cannot be used with cell-based weighting");
+
   if (narg != 2) error->all(FLERR,"Illegal fix swpm command");
 
-  flag_update_custom = 1;
+  //flag_update_custom = 1;
 
-  index_sweight = particle->find_custom((char *) "sweight");
+  /*index_sweight = particle->find_custom((char *) "sweight");
   if (index_sweight >= 0)
     error->all(FLERR,"Fix swpm custom attribute already exists");
 
-  index_sweight = particle->add_custom((char *) "sweight",DOUBLE,0);
+  index_sweight = particle->add_custom((char *) "sweight",DOUBLE,0);*/
 }
 
 /* ---------------------------------------------------------------------- */
@@ -47,7 +52,7 @@ FixSWPM::~FixSWPM()
 {
   if (copy || copymode) return;
 
-  particle->remove_custom(index_sweight);
+  //particle->remove_custom(index_sweight);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -70,7 +75,7 @@ void FixSWPM::init()
    but index
 ------------------------------------------------------------------------- */
 
-void FixSWPM::update_custom(int index, double,
+/*void FixSWPM::update_custom(int index, double,
                                 double, double,
                                 double*)
 {
@@ -80,8 +85,4 @@ void FixSWPM::update_custom(int index, double,
   // only new particles (zero weight) have their weight set as fnum
 
   if(sweights[index] == 0.0) sweights[index] = update->fnum;
-}
-
-
-
-
+}*/

@@ -21,6 +21,7 @@
 #include "particle.h"
 #include "mixture.h"
 #include "update.h"
+#include "domain.h"
 #include "grid.h"
 #include "comm.h"
 #include "react.h"
@@ -415,6 +416,10 @@ void Collide::modify_params(int narg, char **arg)
       iarg += 3;
     } else if (strcmp(arg[iarg],"swpm") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (domain->axisymmetric)
+        error->all(FLERR,"SWPM cannot be used in axi-symmetric simulations");
+      if (grid->cellweightflag)
+        error->all(FLERR,"SWPM cannot be used with cell-based weighting");
       if (strcmp(arg[iarg+1],"no") == 0) swpmflag = 0;
       else if (strcmp(arg[iarg+1],"yes") == 0) swpmflag = 1;
       else error->all(FLERR,"Illegal collide_modify command");
