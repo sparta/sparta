@@ -2,7 +2,7 @@
 "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next
 Section"_Section_python.html :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -27,7 +27,7 @@ extend with new functionality.
 In this section, changes and additions users can make are listed along
 with minimal instructions.  If you add a new feature to SPARTA and
 think it will be of general interest to users, please submit it to the
-"developers"_http://sparta.sandia.gov/authors.html for inclusion in
+"developers"_https://sparta.github.io/authors.html for inclusion in
 the released version of SPARTA.
 
 The best way to add a new feature is to find a similar feature in
@@ -106,10 +106,10 @@ the parallel efficiency. :l
 
 If you have a question about how to compute something or about
 internal SPARTA data structures or algorithms, feel free to send an
-email to the "developers"_http://sparta.sandia.gov/authors.html.
+email to the "developers"_https://sparta.github.io/authors.html.
 
 If you add something you think is generally useful, also send an email
-to the "developers"_http://sparta.sandia.gov/authors.html so we can
+to the "developers"_https://sparta.github.io/authors.html so we can
 consider adding it to the SPARTA distribution. :ule,l
 
 :line
