@@ -1,6 +1,3 @@
-set(Kokkos_ENABLE_CUDA_LAMBDA
-    ON
-    CACHE STRING "")
 set(Kokkos_ENABLE_IMPL_CUDA_MALLOC_ASYNC
     OFF
     CACHE STRING "")
