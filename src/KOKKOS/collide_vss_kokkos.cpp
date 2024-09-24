@@ -453,13 +453,10 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
   grid_kk->sync(Device,CINFO_MASK);
   d_plist = grid_kk->d_plist;
 
-  grid_kk_copy.copy(grid_kk);
-
   if (react) {
     ReactTCEKokkos* react_kk = (ReactTCEKokkos*) react;
     if (!react_kk)
       error->all(FLERR,"Must use TCE reactions with Kokkos");
-    react_kk_copy.copy(react_kk);
   }
 
   copymode = 1;
@@ -526,6 +523,12 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
     h_nlocal() = particle->nlocal;
 
     Kokkos::deep_copy(d_scalars,h_scalars);
+
+    grid_kk_copy.copy(grid_kk);
+    if (react) {
+      ReactTCEKokkos* react_kk = (ReactTCEKokkos*) react;
+      react_kk_copy.copy(react_kk);
+    }
 
     if (sparta->kokkos->atomic_reduction) {
       if (sparta->kokkos->need_atomics)
