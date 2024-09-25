@@ -138,6 +138,6 @@ void ComputeBoundaryKokkos::post_boundary_tally()
 {
   if (need_dup) {
     Kokkos::Experimental::contribute(d_myarray, dup_myarray);
-    dup_myarray = decltype(dup_myarray)(); // free duplicated memory
+    dup_myarray = {}; // free duplicated memory
   }
 }

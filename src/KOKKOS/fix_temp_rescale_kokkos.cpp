@@ -60,7 +60,7 @@ void FixTempRescaleKokkos::end_of_step_no_average(double t_target_in)
 
   copymode = 0;
 
-  d_plist = decltype(d_plist)();
+  d_plist = {};
 }
 
 /* ---------------------------------------------------------------------- */
@@ -194,7 +194,7 @@ void FixTempRescaleKokkos::end_of_step_average(double t_target_in)
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixTempRescale_end_of_step_average2>(0,nglocal),*this);
 
   copymode = 0;
-  d_plist = decltype(d_plist)();
+  d_plist = {};
 }
 
 /* ---------------------------------------------------------------------- */

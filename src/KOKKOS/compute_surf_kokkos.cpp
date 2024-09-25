@@ -195,7 +195,7 @@ void ComputeSurfKokkos::post_surf_tally()
 {
   if (need_dup) {
     Kokkos::Experimental::contribute(d_array_surf_tally, dup_array_surf_tally);
-    dup_array_surf_tally = decltype(dup_array_surf_tally)(); // free duplicated memory
+    dup_array_surf_tally = {}; // free duplicated memory
   }
 
   k_tally2surf.modify_device();

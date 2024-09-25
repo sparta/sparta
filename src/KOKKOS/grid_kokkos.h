@@ -191,6 +191,15 @@ class GridKokkos : public Grid {
   void grow_cells(int, int);
   void grow_sinfo(int);
   void grow_pcells();
+
+  template <class TYPE>
+  void deallocate_views_of_views(TYPE h_view)
+  {
+    // deallocate views of views in serial to prevent race conditions
+
+    for (int i = 0; i < h_view.extent(0); i++)
+      h_view(i).k_view = {};
+  }
 };
 
 }
