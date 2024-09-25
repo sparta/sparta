@@ -1,3 +1,0 @@
-set(Kokkos_ENABLE_IMPL_CUDA_MALLOC_ASYNC
-    OFF
-    CACHE STRING "")

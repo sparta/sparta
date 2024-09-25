@@ -3,12 +3,45 @@ if(PKG_KOKKOS)
   # message(VERBOSE "${CMAKE_CURRENT_SOURCE_DIR}:
   # CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
 
+  ########################################################################
+  # consistency checks and Kokkos options/settings required by LAMMPS
+  if(Kokkos_ENABLE_CUDA)
+    option(Kokkos_ENABLE_IMPL_CUDA_MALLOC_ASYNC "CUDA asynchronous malloc support" OFF)
+    mark_as_advanced(Kokkos_ENABLE_IMPL_CUDA_MALLOC_ASYNC)
+    if(Kokkos_ENABLE_IMPL_CUDA_MALLOC_ASYNC)
+      message(STATUS "KOKKOS: CUDA malloc async support enabled")
+    else()
+      message(STATUS "KOKKOS: CUDA malloc async support disabled")
+    endif()
+  endif()
+
+  if(Kokkos_ENABLE_HIP)
+    option(Kokkos_ENABLE_HIP_MULTIPLE_KERNEL_INSTANTIATIONS "Enable multiple kernel instantiations with HIP" ON)
+    mark_as_advanced(Kokkos_ENABLE_HIP_MULTIPLE_KERNEL_INSTANTIATIONS)
+    option(Kokkos_ENABLE_ROCTHRUST "Use RoCThrust library" ON)
+    mark_as_advanced(Kokkos_ENABLE_ROCTHRUST)
+
+    if(Kokkos_ARCH_AMD_GFX942 OR Kokkos_ARCH_AMD_GFX940)
+      option(Kokkos_ENABLE_IMPL_HIP_UNIFIED_MEMORY "Enable unified memory with HIP" ON)
+      mark_as_advanced(Kokkos_ENABLE_IMPL_HIP_UNIFIED_MEMORY)
+    endif()
+  endif()
+
+  if(Kokkos_ENABLE_SERIAL)
+    if(NOT (Kokkos_ENABLE_OPENMP OR Kokkos_ENABLE_THREADS OR
+      Kokkos_ENABLE_CUDA OR Kokkos_ENABLE_HIP OR Kokkos_ENABLE_SYCL
+      OR Kokkos_ENABLE_OPENMPTARGET))
+    option(Kokkos_ENABLE_ATOMICS_BYPASS "Disable atomics for Kokkos Serial Backend" ON)
+    mark_as_advanced(Kokkos_ENABLE_ATOMICS_BYPASS)
+    endif()
+  endif()
+  ########################################################################
+
   if(BUILD_KOKKOS)
     include(${SPARTA_CMAKE_COMMON_DIR}/set/kokkos_cmake_defaults.cmake)
 
     # message(VERBOSE "Checking Kokkos_ENABLE_CUDA: ${Kokkos_ENABLE_CUDA}")
     if(Kokkos_ENABLE_CUDA)
-      include(${SPARTA_CMAKE_COMMON_DIR}/set/kokkos_cuda_cmake_defaults.cmake)
       set(ENV{MPICH_CXX} ${SPARTA_TPL_DIR}/kokkos/bin/nvcc_wrapper)
       set(ENV{OMPI_CXX} $ENV{MPICH_CXX})
       # message(VERBOSE "MPICH_CXX: $ENV{MPICH_CXX}") message(VERBOSE "OMPI_CXX:
@@ -32,6 +65,13 @@ if(PKG_KOKKOS)
     GLOB SPARTA_PKG_KOKKOS_SRC_FILES
     LIST_DIRECTORIES false
     CONFIGURE_DEPENDS *.cpp *.hpp *.h)
+
+  if (NOT PKG_FFT)
+    list(FILTER SPARTA_PKG_KOKKOS_SRC_FILES EXCLUDE REGEX ".*fft.*kokkos.*")
+    list(FILTER SPARTA_PKG_KOKKOS_SRC_FILES EXCLUDE REGEX ".*pack.*kokkos.*")
+    list(FILTER SPARTA_PKG_KOKKOS_SRC_FILES EXCLUDE REGEX ".*remap.*kokkos.*")
+    list(REMOVE_ITEM style_files kokkos_base_fft.h)
+  endif()
 
   include(${SPARTA_CMAKE_COMMON_DIR}/set/style_file_glob.cmake)
 
