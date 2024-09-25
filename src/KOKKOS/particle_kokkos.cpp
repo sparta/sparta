@@ -70,20 +70,10 @@ ParticleKokkos::~ParticleKokkos()
   particles = NULL;
   species = NULL;
 
-
-  // deallocate views of views in serial to prevent race condition in profiling tools
-
-  for (int i = 0; i < k_eivec.extent(0); i++)
-    k_eivec.h_view(i).k_view = {};
-
-  for (int i = 0; i < k_eiarray.extent(0); i++)
-    k_eiarray.h_view(i).k_view = {};
-
-  for (int i = 0; i < k_edvec.extent(0); i++)
-    k_edvec.h_view(i).k_view = {};
-
-  for (int i = 0; i < k_edarray.extent(0); i++)
-    k_edarray.h_view(i).k_view = {};
+  deallocate_views_of_views(k_eivec.h_view);
+  deallocate_views_of_views(k_eiarray.h_view);
+  deallocate_views_of_views(k_edvec.h_view);
+  deallocate_views_of_views(k_edarray.h_view);
 
   eivec = NULL;
   eiarray = NULL;
@@ -96,6 +86,17 @@ ParticleKokkos::~ParticleKokkos()
 
   ncustom_ivec = ncustom_iarray = 0;
   ncustom_dvec = ncustom_darray = 0;
+}
+
+/* ---------------------------------------------------------------------- */
+
+template <class TYPE>
+void ParticleKokkos::deallocate_views_of_views(TYPE h_view)
+{
+  // deallocate views of views in serial to prevent race conditions
+
+  for (int i = 0; i < h_view.extent(0); i++)
+    h_view(i).k_view = {};
 }
 
 #ifndef SPARTA_KOKKOS_EXACT

@@ -191,6 +191,9 @@ class GridKokkos : public Grid {
   void grow_cells(int, int);
   void grow_sinfo(int);
   void grow_pcells();
+
+  template <class TYPE>
+  void deallocate_views_of_views(TYPE h_view);
 };
 
 }

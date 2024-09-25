@@ -125,9 +125,11 @@ class ParticleKokkos : public Particle {
 
   tdual_struct_tdual_int_1d_1d k_eivec;
   tdual_struct_tdual_float_1d_1d k_edvec;
-
   tdual_struct_tdual_int_2d_1d k_eiarray;
   tdual_struct_tdual_float_2d_1d k_edarray;
+
+  template <class TYPE>
+  void deallocate_views_of_views(TYPE h_view);
 
   int sorted_kk;
 

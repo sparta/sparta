@@ -83,7 +83,8 @@ class ReactBirdKokkos : public ReactBird {
   typedef tdual_reaction_1d::t_dev t_reaction_1d;
   typedef tdual_reaction_1d::t_host t_host_reaction_1d;
 
-  t_reaction_1d d_rlist;              // list of all reactions read from file
+  tdual_reaction_1d k_rlist; // list of all reactions read from file
+  t_reaction_1d d_rlist;
 
   typedef Kokkos::
     DualView<ReactionIJKokkos**, DeviceType::array_layout, DeviceType> tdual_reactionIJ_2d;
@@ -92,6 +93,8 @@ class ReactBirdKokkos : public ReactBird {
 
   tdual_reactionIJ_2d k_reactions;     // reaction info for all IJ pairs of species
   t_reactionIJ_2d d_reactions;     // reaction info for all IJ pairs of species
+
+  void deallocate_views_of_views();
 
   RanKnuth* random_backup;
 

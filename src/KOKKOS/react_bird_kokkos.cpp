@@ -74,20 +74,21 @@ ReactBirdKokkos::~ReactBirdKokkos()
     delete random_backup;
 #endif
 
-  // deallocate views of views in serial to prevent race conditions in external tools
+  deallocate_views_of_views();
+}
 
-  //for (int i = 0; i < maxlist; i++) {
-  //  d_rlist(i).d_reactants = DAT::t_int_1d();
-  //  d_rlist(i).d_products = DAT::t_int_1d();
-  //  d_rlist(i).d_coeff = DAT::t_int_1d();
-  //}
+/* ---------------------------------------------------------------------- */
+
+void ReactBirdKokkos::deallocate_views_of_views()
+{
+  // deallocate views of views in serial to prevent race conditions
 
   int nspecies = k_reactions.h_view.extent(0);
   for (int i = 0; i < nspecies; i++) {
     for (int j = 0; j < nspecies; j++) {
       if (d_reactions.data()) {
-        k_reactions.h_view(i,j).d_list = DAT::t_int_1d();
-        k_reactions.h_view(i,j).d_sp2recomb = DAT::t_int_1d();
+        k_reactions.h_view(i,j).d_list = {};
+        k_reactions.h_view(i,j).d_sp2recomb = {};
       }
     }
   }
@@ -98,6 +99,8 @@ ReactBirdKokkos::~ReactBirdKokkos()
 void ReactBirdKokkos::init()
 {
   ReactBird::init();
+
+  deallocate_views_of_views();
 
   // copy data into device views
 
