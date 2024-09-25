@@ -83,7 +83,10 @@ int GridKokkos::add_custom(char *name, int type, int size)
       eivec = (int **)
         memory->srealloc(eivec,ncustom_ivec*sizeof(int *),"grid:eivec");
       eivec[ncustom_ivec-1] = NULL;
+      auto h_eivec = k_eivec.h_view;
       k_eivec.resize(ncustom_ivec);
+      if (h_eivec.data() != k_eivec.h_view.data())
+        deallocate_views_of_views(h_eivec);
       memory->grow(icustom_ivec,ncustom_ivec,"grid:icustom_ivec");
       icustom_ivec[ncustom_ivec-1] = index;
     } else {
@@ -92,7 +95,10 @@ int GridKokkos::add_custom(char *name, int type, int size)
         memory->srealloc(eiarray,ncustom_iarray*sizeof(int **),
                          "grid:eiarray");
       eiarray[ncustom_iarray-1] = NULL;
+      auto h_eiarray = k_eiarray.h_view;
       k_eiarray.resize(ncustom_iarray);
+      if (h_eiarray.data() != k_eiarray.h_view.data())
+        deallocate_views_of_views(h_eiarray);
       memory->grow(icustom_iarray,ncustom_iarray,"grid:icustom_iarray");
       icustom_iarray[ncustom_iarray-1] = index;
       memoryKK->grow_kokkos(k_eicol,eicol,ncustom_iarray,"grid:eicol");
@@ -104,7 +110,10 @@ int GridKokkos::add_custom(char *name, int type, int size)
       edvec = (double **)
         memory->srealloc(edvec,ncustom_dvec*sizeof(double *),"grid:edvec");
       edvec[ncustom_dvec-1] = NULL;
+      auto h_edvec = k_edvec.h_view;
       k_edvec.resize(ncustom_dvec);
+      if (h_edvec.data() != k_edvec.h_view.data())
+        deallocate_views_of_views(h_edvec);
       memory->grow(icustom_dvec,ncustom_dvec,"grid:icustom_dvec");
       icustom_dvec[ncustom_dvec-1] = index;
     } else {
@@ -113,7 +122,10 @@ int GridKokkos::add_custom(char *name, int type, int size)
         memory->srealloc(edarray,ncustom_darray*sizeof(double **),
                          "grid:edarray");
       edarray[ncustom_darray-1] = NULL;
+      auto h_edarray = k_edarray.h_view;
       k_edarray.resize(ncustom_darray);
+      if (h_edarray.data() != k_edarray.h_view.data())
+        deallocate_views_of_views(h_edarray);
       memory->grow(icustom_darray,ncustom_darray,"grid:icustom_darray");
       icustom_darray[ncustom_darray-1] = index;
       memoryKK->grow_kokkos(k_edcol,edcol,ncustom_darray,"grid:edcol");

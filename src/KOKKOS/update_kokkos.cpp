@@ -2021,5 +2021,5 @@ void UpdateKokkos::restore()
 
   // deallocate references to reduce memory use
 
-  d_particles_backup = decltype(d_particles_backup)();
+  d_particles_backup = {};
 }

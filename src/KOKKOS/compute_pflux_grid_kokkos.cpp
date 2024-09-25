@@ -130,7 +130,7 @@ void ComputePFluxGridKokkos::compute_per_grid_kokkos()
 
   if (need_dup) {
     Kokkos::Experimental::contribute(d_tally, dup_tally);
-    dup_tally = decltype(dup_tally)(); // free duplicated memory
+    dup_tally = {}; // free duplicated memory
   }
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
