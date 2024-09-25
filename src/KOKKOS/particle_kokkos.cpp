@@ -30,7 +30,7 @@
 #include "kokkos.h"
 #include "sparta_masks.h"
 
-#include <Kokkos_Vector.hpp>
+//#include <Kokkos_Vector.hpp>
 
 using namespace SPARTA_NS;
 
@@ -497,7 +497,7 @@ void ParticleKokkos::post_weight()
     Particle::post_weight();
     sparta->kokkos->auto_sync = prev_auto_sync;
     this->modify(Host,PARTICLE_MASK);
-  } else if (METHOD == 2) { // Kokkos-parallel, gives same (correct) answer
+  } /*else if (METHOD == 2) { // Kokkos-parallel, gives same (correct) answer
     Kokkos::View<double*> d_ratios("post_weight:ratios", nlocal);
     auto h_ratios = Kokkos::create_mirror_view(d_ratios);
     auto grid_kk = dynamic_cast<GridKokkos*>(grid);
@@ -557,7 +557,7 @@ void ParticleKokkos::post_weight()
     Kokkos::deep_copy(k_particles.d_view,d_newparticles);
     this->modify(Device,PARTICLE_MASK);
     d_particles = t_particle_1d();
-  }
+  }*/
 }
 
 /* ---------------------------------------------------------------------- */
