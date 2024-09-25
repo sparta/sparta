@@ -543,7 +543,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
     if (h_retry()) {
       //printf("Retrying, reason %i %i %i !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",h_maxdelete() > d_dellist.extent(0),h_maxcellcount() > d_plist.extent(1),h_part_grow());
       if (!sparta->kokkos->react_retry_flag) {
-        error->one(FLERR,"Ran out of space in Kokkos collisions, increase collide/extra"
+        error->one(FLERR,"Ran out of space in Kokkos collisions, increase react/extra"
                          " or use react/retry");
       } else
         restore();
@@ -787,13 +787,10 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
   grid_kk->sync(Device,CINFO_MASK);
   d_plist = grid_kk->d_plist;
 
-  grid_kk_copy.copy(grid_kk);
-
   if (react) {
     ReactTCEKokkos* react_kk = (ReactTCEKokkos*) react;
     if (!react_kk)
       error->all(FLERR,"Must use TCE reactions with Kokkos");
-    react_kk_copy.copy(react_kk);
   }
 
   copymode = 1;
@@ -866,6 +863,12 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 
     Kokkos::deep_copy(d_scalars,h_scalars);
 
+    grid_kk_copy.copy(grid_kk);
+    if (react) {
+      ReactTCEKokkos* react_kk = (ReactTCEKokkos*) react;
+      react_kk_copy.copy(react_kk);
+    }
+
     if (sparta->kokkos->atomic_reduction) {
       if (sparta->kokkos->need_atomics)
         Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneAmbipolar<1> >(0,nglocal),*this);
@@ -881,7 +884,7 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
       //printf("%i %i %i %i %i %i %i !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",h_maxelectron(),d_elist.extent(1),h_maxdelete(),d_dellist.extent(0),h_maxcellcount(),d_plist.extent(1),h_part_grow());
 
       if (!sparta->kokkos->react_retry_flag) {
-        error->one(FLERR,"Ran out of space in Kokkos collisions, increase collide/extra"
+        error->one(FLERR,"Ran out of space in Kokkos collisions, increase react/extra"
                          " or use react/retry");
       } else
         restore();
