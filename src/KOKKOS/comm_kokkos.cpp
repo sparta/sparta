@@ -229,7 +229,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d &d_pli
 
   particle_kk->modify(Device,PARTICLE_MASK);
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
-  d_plist = decltype(d_plist)();
+  d_plist = {};
 
   particle->nlocal += nrecv;
   ncomm += nsend;

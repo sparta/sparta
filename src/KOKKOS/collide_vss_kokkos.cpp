@@ -495,7 +495,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
     maxcellcount = particle_kk->get_maxcellcount();
     auto maxcellcount_extra = maxcellcount*extra_factor;
     if (d_plist.extent(1) < maxcellcount_extra) {
-      d_plist = decltype(d_plist)();
+      d_plist = {};
       Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
       d_plist = grid_kk->d_plist;
       if (NEARCP)
@@ -560,7 +560,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
       maxcellcount = h_maxcellcount();
       particle_kk->set_maxcellcount(maxcellcount);
       if (d_plist.extent(1) < maxcellcount) {
-        d_plist = decltype(d_plist)();
+        d_plist = {};
         Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount);
         d_plist = grid_kk->d_plist;
       }
@@ -586,8 +586,8 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
   particle_kk->modify(Device,PARTICLE_MASK);
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
-  d_nn_last_partner = decltype(d_nn_last_partner)();
-  d_plist = decltype(d_nn_last_partner)();
+  d_nn_last_partner = {};
+  d_plist = {};
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -833,7 +833,7 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 
     auto maxcellcount_extra = maxcellcount*extra_factor;
     if (d_plist.extent(1) < maxcellcount_extra) {
-      d_plist = decltype(d_plist)();
+      d_plist = {};
       Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
       d_plist = grid_kk->d_plist;
     }
@@ -904,7 +904,7 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
       maxcellcount = h_maxcellcount();
       particle_kk->set_maxcellcount(maxcellcount);
       if (d_plist.extent(1) < maxcellcount) {
-        d_plist = decltype(d_plist)();
+        d_plist = {};
         Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount);
         d_plist = grid_kk->d_plist;
       }
@@ -937,7 +937,7 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
   particle_kk->modify(Device,PARTICLE_MASK|CUSTOM_MASK);
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
-  d_plist = decltype(d_nn_last_partner)();
+  d_plist = {};
 }
 
 template < int ATOMIC_REDUCTION >
@@ -2434,13 +2434,13 @@ void CollideVSSKokkos::restore()
 
   // deallocate references to reduce memory use
 
-  d_particles_backup = decltype(d_particles_backup)();
-  d_plist_backup = decltype(d_plist_backup)();
-  d_vremax_backup = decltype(d_vremax_backup)();
-  d_remain_backup = decltype(d_remain_backup)();
+  d_particles_backup = {};
+  d_plist_backup = {};
+  d_vremax_backup = {};
+  d_remain_backup = {};
 
   if (ambiflag) {
-    d_ionambi_backup = decltype(d_ionambi_backup)();
-    d_velambi_backup = decltype(d_velambi_backup)();
+    d_ionambi_backup = {};
+    d_velambi_backup = {};
   }
 }

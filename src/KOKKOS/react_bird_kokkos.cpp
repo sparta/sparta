@@ -204,5 +204,5 @@ void ReactBirdKokkos::restore()
   memcpy(random,random_backup,sizeof(RanKnuth));
 #endif
 
-  d_tally_reactions_backup = decltype(d_tally_reactions_backup)();
+  d_tally_reactions_backup = {};
 }

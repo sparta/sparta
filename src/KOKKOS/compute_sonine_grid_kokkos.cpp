@@ -138,7 +138,7 @@ void ComputeSonineGridKokkos::compute_per_grid_kokkos()
 
   if (need_dup) {
     Kokkos::Experimental::contribute(d_vcom, dup_vcom_tally);
-    dup_vcom_tally = decltype(dup_vcom_tally)(); // free duplicated memory
+    dup_vcom_tally = {}; // free duplicated memory
   }
 
   // tally sonine moments
@@ -154,10 +154,10 @@ void ComputeSonineGridKokkos::compute_per_grid_kokkos()
 
   if (need_dup) {
     Kokkos::Experimental::contribute(d_tally, dup_tally);
-    dup_tally = decltype(dup_tally)(); // free duplicated memory
+    dup_tally = {}; // free duplicated memory
   }
 
-  d_plist = decltype(d_plist)();
+  d_plist = {};
 }
 
 /* ---------------------------------------------------------------------- */

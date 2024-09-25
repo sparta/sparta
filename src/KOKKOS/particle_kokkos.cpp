@@ -74,16 +74,16 @@ ParticleKokkos::~ParticleKokkos()
   // deallocate views of views in serial to prevent race condition in profiling tools
 
   for (int i = 0; i < k_eivec.extent(0); i++)
-    k_eivec.h_view(i).k_view = decltype(k_eivec.h_view(i).k_view)();
+    k_eivec.h_view(i).k_view = {};
 
   for (int i = 0; i < k_eiarray.extent(0); i++)
-    k_eiarray.h_view(i).k_view = decltype(k_eiarray.h_view(i).k_view)();
+    k_eiarray.h_view(i).k_view = {};
 
   for (int i = 0; i < k_edvec.extent(0); i++)
-    k_edvec.h_view(i).k_view = decltype(k_edvec.h_view(i).k_view)();
+    k_edvec.h_view(i).k_view = {};
 
   for (int i = 0; i < k_edarray.extent(0); i++)
-    k_edarray.h_view(i).k_view = decltype(k_edarray.h_view(i).k_view)();
+    k_edarray.h_view(i).k_view = {};
 
   eivec = NULL;
   eiarray = NULL;
@@ -210,7 +210,7 @@ void ParticleKokkos::sort_kokkos()
   d_plist = grid_kk->d_plist;
 
   if (ngrid > int(d_cellcount.extent(0))) {
-    d_cellcount = decltype(d_cellcount)();
+    d_cellcount = {};
     MemKK::realloc_kokkos(grid_kk->d_cellcount,"particle:cellcount",ngrid);
     d_cellcount = grid_kk->d_cellcount;
   }
@@ -218,7 +218,7 @@ void ParticleKokkos::sort_kokkos()
   Kokkos::deep_copy(d_cellcount,0);
 
   if (ngrid > int(d_plist.extent(0)) || maxcellcount > int(d_plist.extent(1))) {
-    d_plist = decltype(d_plist)();
+    d_plist = {};
     MemKK::realloc_kokkos(grid_kk->d_plist,"particle:plist",ngrid,maxcellcount);
     d_plist = grid_kk->d_plist;
   }
@@ -263,7 +263,7 @@ void ParticleKokkos::sort_kokkos()
     if (resize) {
       Kokkos::deep_copy(d_cellcount,0);
       maxcellcount = MAX(maxcellcount+MAX(DELTACELLCOUNT,maxcellcount*0.1),resize);
-      d_plist = decltype(d_plist)();
+      d_plist = {};
       MemKK::realloc_kokkos(grid_kk->d_plist,"particle:plist",ngrid,maxcellcount);
       d_plist = grid_kk->d_plist;
 
@@ -340,7 +340,7 @@ void ParticleKokkos::sort_kokkos()
   }
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
-  d_plist = decltype(d_plist)();
+  d_plist = {};
 }
 
 KOKKOS_INLINE_FUNCTION

@@ -79,16 +79,16 @@ GridKokkos::~GridKokkos()
   // deallocate views of views in serial to prevent race condition in profiling tools
 
   for (int i = 0; i < k_eivec.extent(0); i++)
-    k_eivec.h_view(i).k_view = decltype(k_eivec.h_view(i).k_view)();
+    k_eivec.h_view(i).k_view = {};
 
   for (int i = 0; i < k_eiarray.extent(0); i++)
-    k_eiarray.h_view(i).k_view = decltype(k_eiarray.h_view(i).k_view)();
+    k_eiarray.h_view(i).k_view = {};
 
   for (int i = 0; i < k_edvec.extent(0); i++)
-    k_edvec.h_view(i).k_view = decltype(k_edvec.h_view(i).k_view)();
+    k_edvec.h_view(i).k_view = {};
 
   for (int i = 0; i < k_edarray.extent(0); i++)
-    k_edarray.h_view(i).k_view = decltype(k_edarray.h_view(i).k_view)();
+    k_edarray.h_view(i).k_view = {};
 
   eivec = NULL;
   eiarray = NULL;

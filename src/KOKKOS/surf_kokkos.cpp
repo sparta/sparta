@@ -63,28 +63,28 @@ SurfKokkos::~SurfKokkos()
   // deallocate views of views in serial to prevent race condition in profiling tools
 
   for (int i = 0; i < k_eivec.extent(0); i++)
-    k_eivec.h_view(i).k_view = decltype(k_eivec.h_view(i).k_view)();
+    k_eivec.h_view(i).k_view = {};
 
   for (int i = 0; i < k_eiarray.extent(0); i++)
-    k_eiarray.h_view(i).k_view = decltype(k_eiarray.h_view(i).k_view)();
+    k_eiarray.h_view(i).k_view = {};
 
   for (int i = 0; i < k_edvec.extent(0); i++)
-    k_edvec.h_view(i).k_view = decltype(k_edvec.h_view(i).k_view)();
+    k_edvec.h_view(i).k_view = {};
 
   for (int i = 0; i < k_edarray.extent(0); i++)
-    k_edarray.h_view(i).k_view = decltype(k_edarray.h_view(i).k_view)();
+    k_edarray.h_view(i).k_view = {};
 
   for (int i = 0; i < k_eivec_local.extent(0); i++)
-    k_eivec_local.h_view(i).k_view = decltype(k_eivec_local.h_view(i).k_view)();
+    k_eivec_local.h_view(i).k_view = {};
 
   for (int i = 0; i < k_eiarray_local.extent(0); i++)
-    k_eiarray_local.h_view(i).k_view = decltype(k_eiarray_local.h_view(i).k_view)();
+    k_eiarray_local.h_view(i).k_view = {};
 
   for (int i = 0; i < k_edvec_local.extent(0); i++)
-    k_edvec_local.h_view(i).k_view = decltype(k_edvec_local.h_view(i).k_view)();
+    k_edvec_local.h_view(i).k_view = {};
 
   for (int i = 0; i < k_edarray_local.extent(0); i++)
-    k_edarray_local.h_view(i).k_view = decltype(k_edarray_local.h_view(i).k_view)();
+    k_edarray_local.h_view(i).k_view = {};
 
   eivec = NULL;
   eiarray = NULL;
@@ -107,10 +107,10 @@ void SurfKokkos::clear_explicit()
   nlocal = nghost = nmax = 0;
   nown = maxown = 0;
 
-  k_lines = decltype(k_lines)();
-  k_tris = decltype(k_tris)();
-  k_mylines = decltype(k_mylines)();
-  k_mytris = decltype(k_mytris)();
+  k_lines = {};
+  k_tris = {};
+  k_mylines = {};
+  k_mytris = {};
 
   lines = NULL;
   tris = NULL;
