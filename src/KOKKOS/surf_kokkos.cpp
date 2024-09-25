@@ -47,10 +47,10 @@ enum{LT,LE,GT,GE,EQ,NEQ,BETWEEN};
 
 SurfKokkos::SurfKokkos(SPARTA *sparta) : Surf(sparta)
 {
-  k_eivec = tdual_struct_tdual_int_1d_1d("particle:eivec",0);
-  k_eiarray = tdual_struct_tdual_int_2d_1d("particle:eiarray",0);
-  k_edvec = tdual_struct_tdual_float_1d_1d("particle:edvec",0);
-  k_edarray = tdual_struct_tdual_float_2d_1d("particle:edarray",0);
+  k_eivec = tdual_struct_tdual_int_1d_1d("surf:eivec",0);
+  k_eiarray = tdual_struct_tdual_int_2d_1d("surf:eiarray",0);
+  k_edvec = tdual_struct_tdual_float_1d_1d("surf:edvec",0);
+  k_edarray = tdual_struct_tdual_float_2d_1d("surf:edarray",0);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -89,17 +89,6 @@ SurfKokkos::~SurfKokkos()
 
   ncustom_ivec = ncustom_iarray = 0;
   ncustom_dvec = ncustom_darray = 0;
-}
-
-/* ---------------------------------------------------------------------- */
-
-template <class TYPE>
-void SurfKokkos::deallocate_views_of_views(TYPE h_view)
-{
-  // deallocate views of views in serial to prevent race conditions
-
-  for (int i = 0; i < h_view.extent(0); i++)
-    h_view(i).k_view = {};
 }
 
 /* ---------------------------------------------------------------------- */

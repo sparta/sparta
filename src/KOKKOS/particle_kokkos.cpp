@@ -88,17 +88,6 @@ ParticleKokkos::~ParticleKokkos()
   ncustom_dvec = ncustom_darray = 0;
 }
 
-/* ---------------------------------------------------------------------- */
-
-template <class TYPE>
-void ParticleKokkos::deallocate_views_of_views(TYPE h_view)
-{
-  // deallocate views of views in serial to prevent race conditions
-
-  for (int i = 0; i < h_view.extent(0); i++)
-    h_view(i).k_view = {};
-}
-
 #ifndef SPARTA_KOKKOS_EXACT
 /* ----------------------------------------------------------------------
    compress particle list to remove particles with indices in dellist

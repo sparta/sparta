@@ -65,10 +65,10 @@ GridKokkos::GridKokkos(SPARTA *sparta) : Grid(sparta)
   delete [] plevels;
   memoryKK->create_kokkos(k_plevels,plevels,MAXLEVEL,"grid:plevels");
 
-  k_eivec = tdual_struct_tdual_int_1d_1d("particle:eivec",0);
-  k_eiarray = tdual_struct_tdual_int_2d_1d("particle:eiarray",0);
-  k_edvec = tdual_struct_tdual_float_1d_1d("particle:edvec",0);
-  k_edarray = tdual_struct_tdual_float_2d_1d("particle:edarray",0);
+  k_eivec = tdual_struct_tdual_int_1d_1d("grid:eivec",0);
+  k_eiarray = tdual_struct_tdual_int_2d_1d("grid:eiarray",0);
+  k_edvec = tdual_struct_tdual_float_1d_1d("grid:edvec",0);
+  k_edarray = tdual_struct_tdual_float_2d_1d("grid:edarray",0);
 }
 
 GridKokkos::~GridKokkos()
@@ -98,18 +98,6 @@ GridKokkos::~GridKokkos()
   ncustom_ivec = ncustom_iarray = 0;
   ncustom_dvec = ncustom_darray = 0;
 }
-
-/* ---------------------------------------------------------------------- */
-
-template <class TYPE>
-void GridKokkos::deallocate_views_of_views(TYPE h_view)
-{
-  // deallocate views of views in serial to prevent race conditions
-
-  for (int i = 0; i < h_view.extent(0); i++)
-    h_view(i).k_view = {};
-}
-
 
 ///////////////////////////////////////////////////////////////////////////
 // grow cell list data structures
