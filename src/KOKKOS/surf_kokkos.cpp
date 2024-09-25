@@ -47,7 +47,10 @@ enum{LT,LE,GT,GE,EQ,NEQ,BETWEEN};
 
 SurfKokkos::SurfKokkos(SPARTA *sparta) : Surf(sparta)
 {
-
+  k_eivec = tdual_struct_tdual_int_1d_1d("surf:eivec",0);
+  k_eiarray = tdual_struct_tdual_int_2d_1d("surf:eiarray",0);
+  k_edvec = tdual_struct_tdual_float_1d_1d("surf:edvec",0);
+  k_edarray = tdual_struct_tdual_float_2d_1d("surf:edarray",0);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -60,36 +63,25 @@ SurfKokkos::~SurfKokkos()
   mylines = NULL;
   mytris = NULL;
 
-  // deallocate views of views in serial to prevent race condition in profiling tools
-
-  for (int i = 0; i < k_eivec.extent(0); i++)
-    k_eivec.h_view(i).k_view = decltype(k_eivec.h_view(i).k_view)();
-
-  for (int i = 0; i < k_eiarray.extent(0); i++)
-    k_eiarray.h_view(i).k_view = decltype(k_eiarray.h_view(i).k_view)();
-
-  for (int i = 0; i < k_edvec.extent(0); i++)
-    k_edvec.h_view(i).k_view = decltype(k_edvec.h_view(i).k_view)();
-
-  for (int i = 0; i < k_edarray.extent(0); i++)
-    k_edarray.h_view(i).k_view = decltype(k_edarray.h_view(i).k_view)();
-
-  for (int i = 0; i < k_eivec_local.extent(0); i++)
-    k_eivec_local.h_view(i).k_view = decltype(k_eivec_local.h_view(i).k_view)();
-
-  for (int i = 0; i < k_eiarray_local.extent(0); i++)
-    k_eiarray_local.h_view(i).k_view = decltype(k_eiarray_local.h_view(i).k_view)();
-
-  for (int i = 0; i < k_edvec_local.extent(0); i++)
-    k_edvec_local.h_view(i).k_view = decltype(k_edvec_local.h_view(i).k_view)();
-
-  for (int i = 0; i < k_edarray_local.extent(0); i++)
-    k_edarray_local.h_view(i).k_view = decltype(k_edarray_local.h_view(i).k_view)();
+  deallocate_views_of_views(k_eivec.h_view);
+  deallocate_views_of_views(k_eiarray.h_view);
+  deallocate_views_of_views(k_edvec.h_view);
+  deallocate_views_of_views(k_edarray.h_view);
 
   eivec = NULL;
   eiarray = NULL;
   edvec = NULL;
   edarray = NULL;
+
+  deallocate_views_of_views(k_eivec_local.h_view);
+  deallocate_views_of_views(k_eiarray_local.h_view);
+  deallocate_views_of_views(k_edvec_local.h_view);
+  deallocate_views_of_views(k_edarray_local.h_view);
+
+  eivec_local = NULL;
+  eiarray_local = NULL;
+  edvec_local = NULL;
+  edarray_local = NULL;
 
   ewhich = NULL;
   eicol = NULL;
@@ -107,10 +99,10 @@ void SurfKokkos::clear_explicit()
   nlocal = nghost = nmax = 0;
   nown = maxown = 0;
 
-  k_lines = decltype(k_lines)();
-  k_tris = decltype(k_tris)();
-  k_mylines = decltype(k_mylines)();
-  k_mytris = decltype(k_mytris)();
+  k_lines = {};
+  k_tris = {};
+  k_mylines = {};
+  k_mytris = {};
 
   lines = NULL;
   tris = NULL;
