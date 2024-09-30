@@ -103,14 +103,14 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
       if (iarg+4 > narg)
         error->all(FLERR,"Invalid compute surf optional keyword");
       comflag = 1;
-      com[0] = input->numeric(FLERR,arg[1+1]);
-      com[1] = input->numeric(FLERR,arg[1+2]);
-      com[2] = input->numeric(FLERR,arg[1+3]);
+      com[0] = input->numeric(FLERR,arg[iarg+1]);
+      com[1] = input->numeric(FLERR,arg[iarg+2]);
+      com[2] = input->numeric(FLERR,arg[iarg+3]);
       iarg += 4;
     } else error->all(FLERR,"Invalid compute surf value or optional keyword");
   }
 
-  // if a torque componenet is specified, COM must be set
+  // if a torque component is specified, COM must be set
 
   for (int i = 0; i < nvalue; i++)
     if (which[i] == TX || which[i] == TY || which[i] == TZ)
