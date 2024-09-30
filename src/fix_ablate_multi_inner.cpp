@@ -70,7 +70,7 @@ void FixAblate::decrement_multid_outside()
   Surf::Tri *tris = surf->tris;
 
   surfint *csurfs;
-  double norm[3],pt[3];
+  double norm[3],pt[3],totalnorm;
   double dist,smindist;
   int nsurf,isurf;
   int nin; // inside and connected to interface point
@@ -249,6 +249,20 @@ void FixAblate::decrement_multid_outside()
           }
         }
       } // end surfs
+
+      // scale values of norm so their sum is one (L1 norm over L2 norm)
+
+      if (dim == 2) {
+        totalnorm = fabs(norm[0]) + fabs(norm[1]);
+        norm[0] /= totalnorm;
+        norm[1] /= totalnorm;
+        norm[2] = 0.0;
+      } else {
+        totalnorm = fabs(norm[0]) + fabs(norm[1]) + fabs(norm[2]);
+        norm[0] /= totalnorm;
+        norm[1] /= totalnorm;
+        norm[2] /= totalnorm;
+      }
 
       // update interface point connected to inside point
 
@@ -866,7 +880,7 @@ void FixAblate::decrement_multiv_multid_outside()
   Surf::Tri *tris = surf->tris;
 
   surfint *csurfs;
-  double norm[3],pt[3];
+  double norm[3],pt[3],totalnorm;
   double dist,smindist;
   int nsurf,isurf;
   int nin, ninter; // inside and connected to interface point; total interface
@@ -968,11 +982,24 @@ void FixAblate::decrement_multiv_multid_outside()
         }
       } // end surfs
       
+      // scale values of norm so their sum is one (L1 norm over L2 norm)
+
+      if (dim == 2) {
+        totalnorm = fabs(norm[0]) + fabs(norm[1]);
+        norm[0] /= totalnorm;
+        norm[1] /= totalnorm;
+        norm[2] = 0.0;
+      } else {
+        totalnorm = fabs(norm[0]) + fabs(norm[1]) + fabs(norm[2]);
+        norm[0] /= totalnorm;
+        norm[1] /= totalnorm;
+        norm[2] /= totalnorm;
+      }
+
       // update inner indices of interface point connected to inside point
 
       neighbors = corner_neighbor[i];
       ineighbors = inner_neighbor[i];
-
 
       totalperout = 0.0;
       ninter = 0;
