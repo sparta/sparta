@@ -137,9 +137,9 @@ class FixAblate : public Fix {
   void sync_multiv_multid_outside();
   void sync_multiv_multid_inside();
 
-  int mark_corners_2d(int);
-  int mark_corners_3d(int);
-  int find_nin();
+  void mark_corners_2d(int);
+  void mark_corners_3d(int);
+  int find_ninter();
 
   void epsilon_adjust();
   void epsilon_adjust_multiv();

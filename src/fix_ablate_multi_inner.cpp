@@ -61,7 +61,7 @@ void FixAblate::decrement_multid_outside()
   int i,j,k,m;
   double total,perout,Ninterface;
 
-  int i_inner,oinner,i_neigbor_corner,i_neighbor_corner;
+  int i_in,i_neigbor_corner,i_cneigh;
   int *ineighbors,*neighbors;
 
   Surf::Line *line;
@@ -70,11 +70,9 @@ void FixAblate::decrement_multid_outside()
   Surf::Tri *tris = surf->tris;
 
   surfint *csurfs;
-  double pnorm[3],norm[3],pt[3],sumnorm,sumnormsq;
+  double norm[3],pt[3],sumnorm;
   double dist, smindist;
-  double icv, clx, cly, clz;
   int nsurf,isurf;
-  int nin; // inside and connected to interface point
   int order[3];
   double totalperout, scale, ninter;
 
@@ -94,19 +92,14 @@ void FixAblate::decrement_multid_outside()
     // find which corners in the cell are inside, outside, and interface
     // output how many interface points there are
 
-    if (dim == 2) Ninterface = mark_corners_2d(icell);
-    else Ninterface = mark_corners_3d(icell);
-
-    // if no interface points, then points are either all outside or all inside
-    // no mechanism for ablation if there is no surfaces so can skip
-
-    //if (Ninterface == 0) continue;
+    if (dim == 2) mark_corners_2d(icell);
+    else mark_corners_3d(icell);
 
     // perout is how much to decrement at each interface point
 
-    nin = find_nin();
+    Ninterface = find_ninter();
     total = celldelta[icell];
-    perout = total/Ninterface;//Ninterface;
+    perout = total/Ninterface;
 
     // iterate to find the number of vertices around each corner
     // also assign perout to the interface points
@@ -299,37 +292,25 @@ void FixAblate::decrement_multid_outside()
         order[2] = 0;
       }
 
-      sumnorm = norm[0] + norm[1] + norm[2];
-      sumnormsq = sumnorm * sumnorm;
-      pnorm[0] = pnorm[1] = pnorm[2] = 0.0;
-      for (k = 0; k < dim; k++) {
-        if (refcorners[neighbors[k]] == 1) pnorm[order[k]] = 0.0;
-        else if (refcorners[neighbors[k]] == 0) {
-          if (ninter == 1) pnorm[order[k]] = sumnorm;
-          // project onto (yz,xz,xy) plane
-          else if (order[k] == 0) pnorm[0] = sqrt(sumnormsq - norm[0]*norm[0]);
-          else if (order[k] == 1) pnorm[1] = sqrt(sumnormsq - norm[1]*norm[1]);
-          else if (order[k] == 2) pnorm[2] = sqrt(sumnormsq - norm[2]*norm[2]);
-        }
-      }
-      sumnorm = pnorm[0] + pnorm[1] + pnorm[2];
+      // zero out norm component if no outside interface point there
+
+      for (k = 0; k < dim; k++)
+        if (refcorners[neighbors[k]] == 1) norm[order[k]] = 0.0;
 
       // scale values so their sum is one (L1 norm over L2 norm)
 
-      for (k = 0; k < dim; k++) pnorm[k] /= sumnorm;
+      sumnorm = norm[0] + norm[1] + norm[2];
+      if (sumnorm <= 0.0) error->one(FLERR,"Bad");
+      for (k = 0; k < dim; k++) norm[k] /= sumnorm;
 
       for (k = 0; k < dim; k++) {
-        i_inner = ineighbors[k];
-        i_neighbor_corner = neighbors[k];
+        i_in = ineighbors[k];
+        i_cneigh = neighbors[k];
 
-        if (refcorners[i_neighbor_corner] == 0) {
-          if (i_inner < 2) {
-            cdelta[icell][i_neighbor_corner] += perout*fabs(pnorm[0]);
-          } else if (i_inner < 4) {
-            cdelta[icell][i_neighbor_corner] += perout*fabs(pnorm[1]);
-          } else {
-            cdelta[icell][i_neighbor_corner] += perout*fabs(pnorm[2]);
-          }
+        if (refcorners[i_cneigh] == 0) {
+          if (i_in < 2) cdelta[icell][i_cneigh] += perout*fabs(norm[0]);
+          else if (i_in < 4) cdelta[icell][i_cneigh] += perout*fabs(norm[1]);
+          else cdelta[icell][i_cneigh] += perout*fabs(norm[2]);
         }
       } // end dim
 
@@ -408,7 +389,7 @@ void FixAblate::decrement_multid_inside()
 
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
-  int Nneigh,*neighbors,i_neighbor_corner;
+  int Nneigh,*neighbors,i_cneigh;
   double total_remain,nvertices;
 
   // find total number of vertices around each corner point
@@ -483,11 +464,11 @@ void FixAblate::decrement_multid_inside()
         // decrement neighboring inside points by the underflow value
 
         for (j = 0; j < dim; j++) {
-          i_neighbor_corner = neighbors[j];
+          i_cneigh = neighbors[j];
 
-          if(refcorners[i_neighbor_corner] == 1) {
+          if(refcorners[i_cneigh] == 1) {
             total_remain = fabs(cvalues[icell][i])/ nvertices;
-            cdelta[icell][i_neighbor_corner] += total_remain;
+            cdelta[icell][i_cneigh] += total_remain;
           }
         } // end dim
 
@@ -896,7 +877,7 @@ void FixAblate::decrement_multiv_multid_outside()
   int i,j,k,m,icell;
   double total,perout,Ninterface;
 
-  int i_inner,oinner,i_neigbor_corner,i_neighbor_corner;
+  int i_in,oin,i_cneigh;
   int *ineighbors,*neighbors;
 
   Surf::Line *line;
@@ -905,11 +886,11 @@ void FixAblate::decrement_multiv_multid_outside()
   Surf::Tri *tris = surf->tris;
 
   surfint *csurfs;
-  double pnorm[3],norm[3],pt[3],sumnorm,sumnormsq;
+  double norm[3],pt[3],sumnorm;
   double dist,smindist;
   int order[3];
   int nsurf,isurf;
-  int nin, ninter; // inside and connected to interface point; total interface
+  int ninter; // inside and connected to interface point; total interface
   double totalperout;
 
   // find total to decrement from each corner
@@ -927,14 +908,12 @@ void FixAblate::decrement_multiv_multid_outside()
     if (!nsurf) continue; // if no surfs, no interface points
     csurfs = cells[icell].csurfs;
 
-    if (dim == 2) Ninterface = mark_corners_2d(icell);
-    else Ninterface = mark_corners_3d(icell);
-
-    //if (Ninterface == 0) continue;
+    if (dim == 2) mark_corners_2d(icell);
+    else mark_corners_3d(icell);
 
     // count number of inside points and total amount to decrement
 
-    nin = find_nin();
+    Ninterface = find_ninter();
     total = celldelta[icell];
     perout = total/Ninterface;
 
@@ -945,6 +924,8 @@ void FixAblate::decrement_multiv_multid_outside()
       neighbors = corner_neighbor[i];
       ineighbors = inner_neighbor[i];
 
+      // find inside interface points by checking number
+      // ... of adjacent outside interface points
       ninter = 0;
       for (k = 0; k < dim; k++)
         if (refcorners[neighbors[k]] == 0) ninter++;
@@ -1053,51 +1034,35 @@ void FixAblate::decrement_multiv_multid_outside()
         order[2] = 0;
       }
 
-      sumnorm = norm[0] + norm[1] + norm[2];
-      sumnormsq = sumnorm * sumnorm;
-      pnorm[0] = pnorm[1] = pnorm[2] = 0.0;
-      for (k = 0; k < dim; k++) {
-        if (refcorners[neighbors[k]] == 1) pnorm[order[k]] = 0.0;
-        else if (refcorners[neighbors[k]] == 0) {
-          if (ninter == 1) pnorm[order[k]] = sumnorm;
-          // project onto (yz,xz,xy) plane
-          else if (order[k] == 0) pnorm[0] = sqrt(sumnormsq - norm[0]*norm[0]);
-          else if (order[k] == 1) pnorm[1] = sqrt(sumnormsq - norm[1]*norm[1]);
-          else if (order[k] == 2) pnorm[2] = sqrt(sumnormsq - norm[2]*norm[2]);
-        }
-      }
-      sumnorm = pnorm[0] + pnorm[1] + pnorm[2];
-      if (sumnorm <= 0.0) error->one(FLERR,"Bad");
+      // zero out norm component if no outside interface point there
+
+      for (k = 0; k < dim; k++)
+        if (refcorners[neighbors[k]] == 1) norm[order[k]] = 0.0;
 
       // scale values so their sum is one (L1 norm over L2 norm)
 
-      for (k = 0; k < dim; k++) pnorm[k] /= sumnorm;
+      sumnorm = norm[0] + norm[1] + norm[2];
+      if (sumnorm <= 0.0) error->one(FLERR,"Bad");
+      for (k = 0; k < dim; k++) norm[k] /= sumnorm;
 
       // update inner indices of interface point connected to inside point
 
       sumnorm = 0.0;
       for (k = 0; k < dim; k++) {
-        i_inner = ineighbors[k];
-        i_neighbor_corner = neighbors[k];
+        i_in = ineighbors[k];
+        i_cneigh = neighbors[k];
 
-        if (i_inner == 0) oinner = 1;
-        else if (i_inner == 1) oinner = 0;
-        else if (i_inner == 2) oinner = 3;
-        else if (i_inner == 3) oinner = 2;
-        else if (i_inner == 4) oinner = 5;
-        else if (i_inner == 5) oinner = 4;
+        if (i_in == 0) oin = 1;
+        else if (i_in == 1) oin = 0;
+        else if (i_in == 2) oin = 3;
+        else if (i_in == 3) oin = 2;
+        else if (i_in == 4) oin = 5;
+        else if (i_in == 5) oin = 4;
 
-        if (refcorners[i_neighbor_corner] == 0) {
-          if (i_inner < 2) {
-            idelta[icell][i_neighbor_corner][oinner] += perout*fabs(pnorm[0]);
-            //idelta[icell][i_neighbor_corner][i_inner] += perout*fabs(pnorm[0]);
-          } else if (i_inner < 4) {
-            idelta[icell][i_neighbor_corner][oinner] += perout*fabs(pnorm[1]);
-            //idelta[icell][i_neighbor_corner][i_inner] += perout*fabs(pnorm[1]);
-          } else {
-            idelta[icell][i_neighbor_corner][oinner] += perout*fabs(pnorm[2]);
-            //idelta[icell][i_neighbor_corner][i_inner] += perout*fabs(pnorm[2]);
-          }
+        if (refcorners[i_cneigh] == 0) {
+          if (i_in < 2) idelta[icell][i_cneigh][oin] += perout*fabs(norm[0]);
+          else if (i_in < 4) idelta[icell][i_cneigh][oin] += perout*fabs(norm[1]);
+          else idelta[icell][i_cneigh][oin] += perout*fabs(norm[2]);
         }
       } // end dim
 
@@ -1176,7 +1141,7 @@ void FixAblate::decrement_multiv_multid_inside()
   Grid::ChildInfo *cinfo = grid->cinfo;
 
   int i,j,icell;
-  int i_inner,oinner,i_neighbor_corner;
+  int i_in,o_in,i_cneigh;
   int *ineighbors,*neighbors;
   double total_remain;
 
@@ -1202,20 +1167,20 @@ void FixAblate::decrement_multiv_multid_inside()
       ineighbors = inner_neighbor[i];
 
       for (j = 0; j < dim; j++) {
-        i_inner = ineighbors[j];
-        i_neighbor_corner = neighbors[j];
+        i_in = ineighbors[j];
+        i_cneigh = neighbors[j];
 
-        if (i_inner == 0) oinner = 1;
-        else if (i_inner == 1) oinner = 0;
-        else if (i_inner == 2) oinner = 3;
-        else if (i_inner == 3) oinner = 2;
-        else if (i_inner == 4) oinner = 5;
-        else if (i_inner == 5) oinner = 4;
+        if (i_in == 0) o_in = 1;
+        else if (i_in == 1) o_in = 0;
+        else if (i_in == 2) o_in = 3;
+        else if (i_in == 3) o_in = 2;
+        else if (i_in == 4) o_in = 5;
+        else if (i_in == 5) o_in = 4;
         else error->one(FLERR,"Bad inner index");
 
-        total_remain = ivalues[icell][i_neighbor_corner][oinner];
+        total_remain = ivalues[icell][i_cneigh][o_in];
         if (total_remain < 0)
-          idelta[icell][i][i_inner] += fabs(total_remain);
+          idelta[icell][i][i_in] += fabs(total_remain);
       } // end dim
 
     } // end corner
@@ -1322,10 +1287,8 @@ void FixAblate::sync_multiv_multid_inside()
    point and an inside point
 
    refcorners stores corner point type and follows SPARTA corner ordering
-
-   Ninterface is number of inside interface points
 ------------------------------------------------------------------------- */
-int FixAblate::mark_corners_2d(int icell)
+void FixAblate::mark_corners_2d(int icell)
 {
   for (int i = 0; i < ncorner; i++)
     refcorners[i] = 0;
@@ -1379,22 +1342,15 @@ int FixAblate::mark_corners_2d(int icell)
 
   // built-in lookup table for marking outside and interface points
 
-  int Ninterface;
   if (Nin == 0) {
-    Ninterface = 0;
     refcorners[0] = refcorners[1] = refcorners[2] = refcorners[3] = -1;
   } else if (Nin == 1) {
-    Ninterface = 1;
     if (refcorners[0] == 1) refcorners[3] = -1;
     else if (refcorners[1] == 1) refcorners[2] = -1;
     else if (refcorners[2] == 1) refcorners[1] = -1;
     else refcorners[0] = -1;
   }
-  else if (Nin == 2) Ninterface = 2;
-  else if (Nin == 3) Ninterface = 2;
-  else Ninterface = 0;
 
-  return Ninterface;
 }
 
 
@@ -1407,7 +1363,7 @@ int FixAblate::mark_corners_2d(int icell)
    decrement_lookup_table
 ------------------------------------------------------------------------- */
 
-int FixAblate::mark_corners_3d(int icell)
+void FixAblate::mark_corners_3d(int icell)
 {
 
   // find which corners are inside or outside the surface
@@ -1431,7 +1387,7 @@ int FixAblate::mark_corners_3d(int icell)
   // find how many inside and interface points based on configuration
   // note: Nin + Ninterface does not always equal ncorner
 
-  int Nin = Ninside[which];
+  int Nin = Ninside[which]; // inside (includes inside interface)
   int Nointerface = Noutside[which]; // outside interface
 
   int *incorners, *outcorners;
@@ -1459,53 +1415,24 @@ int FixAblate::mark_corners_3d(int icell)
     else if (outcorners[i] == 7) refcorners[6] = 0;
     else refcorners[outcorners[i]] = 0;
   }
-
-  int mark_inter[8];
-  for (i = 0; i < 8; i++) mark_inter[i] = 0;
-  int ninter = 0;
-  if (refcorners[0] == 1
-    && (refcorners[1] == 0 || refcorners[2] == 0 || refcorners[4] == 0)) ninter++;
-
-  if (refcorners[1] == 1
-    && (refcorners[0] == 0 || refcorners[3] == 0 || refcorners[5] == 0)) ninter++;
-
-  if (refcorners[2] == 1
-    && (refcorners[0] == 0 || refcorners[3] == 0 || refcorners[6] == 0)) ninter++;
-
-  if (refcorners[3] == 1
-    && (refcorners[1] == 0 || refcorners[2] == 0 || refcorners[7] == 0)) ninter++;
-
-  if (refcorners[4] == 1
-    && (refcorners[0] == 0 || refcorners[5] == 0 || refcorners[6] == 0)) ninter++;
-
-  if (refcorners[5] == 1
-    && (refcorners[1] == 0 || refcorners[4] == 0 || refcorners[7] == 0)) ninter++;
-
-  if (refcorners[6] == 1
-    && (refcorners[2] == 0 || refcorners[4] == 0 || refcorners[7] == 0)) ninter++;
-
-  if (refcorners[7] == 1
-    && (refcorners[3] == 0 || refcorners[5] == 0 || refcorners[6] == 0)) ninter++;
-
-  return ninter;
 }
 
 /* ----------------------------------------------------------------------
-   finds number of inside points touch an interface point
+   finds number of inside interface points
 ------------------------------------------------------------------------- */
 
-int FixAblate::find_nin()
+int FixAblate::find_ninter()
 {
   int total = 0;
   int add; 
-  int *neighbors, i_neighbor_corner;
+  int *neighbors, i_cneigh;
   for (int i = 0; i < ncorner; i++) {
     if (refcorners[i] == 1) {
       neighbors = corner_neighbor[i];
       add = 0;
       for (int j = 0; j < dim; j++) {
-        i_neighbor_corner = neighbors[j];
-        if (refcorners[i_neighbor_corner] == 0) add = 1;
+        i_cneigh = neighbors[j];
+        if (refcorners[i_cneigh] == 0) add = 1;
       }
       if (add) total++;
     }
