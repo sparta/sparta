@@ -38,7 +38,6 @@ enum{ENERGY,HEAT,STRESS};   // particle reduction choices
 enum{BINARY,WEIGHT}; // grouping choices
 
 #define DELTADELETE 1024
-
 #define BIG 1.0e20
 #define SMALL 1.0e-16
 
@@ -260,11 +259,10 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
 
   // gk is always the bigger of the two
 
-  int reallocflag;
   if(ksw > 0) {
     int id = MAXSMALLINT*random->uniform();
     Particle::OnePart *particles = particle->particles;
-    reallocflag = particle->add_particle(id,ks,kcell,xk,vk,erotk,0.0);
+    int reallocflag = particle->add_particle(id,ks,kcell,xk,vk,erotk,0.0);
     if (reallocflag) {
       ip = particle->particles + (ip - particles);
       jp = particle->particles + (jp - particles);
@@ -276,7 +274,6 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
 
   if (kp) {
     if (kp->weight <= 0.0) {
-      printf("realloc? %i\n", reallocflag);
       printf("ksw: %2.3e; kp->weight: %2.3e\n", ksw,kp->weight);
       error->one(FLERR,"New particle [k] has bad weight");
     }
@@ -289,7 +286,7 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
     if(ksw <= 0) error->one(FLERR,"Bad addition to particle list");
     int id = MAXSMALLINT*random->uniform();
     Particle::OnePart *particles = particle->particles;
-    reallocflag = particle->add_particle(id,ls,lcell,xl,vl,erotl,0.0);
+    int reallocflag = particle->add_particle(id,ls,lcell,xl,vl,erotl,0.0);
     if (reallocflag) {
       ip = particle->particles + (ip - particles);
       jp = particle->particles + (jp - particles);
@@ -300,10 +297,8 @@ int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
     newp++;
   }
 
-
   if (lp) {
     if (lp->weight <= 0.0) {
-      printf("realloc? %i\n", reallocflag);
       printf("lsw: %2.3e; lp->weight: %2.3e\n", lsw,lp->weight);
       error->one(FLERR,"New particle [l] has bad weight");
     }
@@ -868,60 +863,3 @@ void Collide::remove_tiny()
   return;
 }
 
-/* ----------------------------------------------------------------------
-   DEBUG : Checks particles
-------------------------------------------------------------------------- */
-
-/*template <int ORD> void Collide::check_particles()
-{
-  //if(ORD==0) printf("before collide\n");
-  //else if(ORD==1) printf("after collide\n");
-  //else if(ORD==2) printf("after sort\n");
-  //else if(ORD==3) printf("after reduce\n");
-  //else if(ORD==4) printf("after compress\n");
-
-  int i,j,m,n,ip,np;
-  int nattempt,reactflag;
-  double attempt,volume;
-  Particle::OnePart *ipart;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-  Particle::OnePart *particles = particle->particles;
-  int *next = particle->next;
-
-  double rho;
-  double E;
-  double V[3], vsq;
-  E = rho = 0.0;
-  V[0] = V[1] = V[2] = 0.0;
-  for (int icell = 0; icell < nglocal; icell++) {
-    // create particle list
-    ip = cinfo[icell].first;
-    while (ip >= 0) {
-      ipart = &particles[ip];
-      if(ipart->weight > 0) {
-        rho += ipart->weight;
-        vsq = ipart->v[0]*ipart->v[0]+
-              ipart->v[1]*ipart->v[1]+
-              ipart->v[2]*ipart->v[2];
-        for (int d = 0; d < 3; d++) V[d] += ipart->weight*ipart->v[d];
-        E += ipart->weight*vsq;
-      }
-      ip = next[ip];
-    }
-  }
-
-  if(update->ntimestep == 1) {
-    rho0 = rho;
-    for(int d = 0; d < 3; d++) V0[d] = V[d];
-    E0 = E;
-  }
-
-  if(update->ntimestep % 1000 == 0)
-    printf("drho: %2.8e; dE: %2.8e; dV: %2.8e,%2.8e,%2.8e\n",
-          1-rho/rho0,
-          1-E/E0,
-          1-V[0]/V0[0],
-          1-V[1]/V0[1],
-          1-V[2]/V0[2]);
-  return;
-}*/
