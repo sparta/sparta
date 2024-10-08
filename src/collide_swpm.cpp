@@ -139,6 +139,7 @@ void Collide::collisions_one_sw()
         }
         plist[np++] = particle->nlocal-2;
         plist[np++] = particle->nlocal-1;
+        particles = particle->particles;
       } else if (newp > 0) {
         if (np+1 >= npmax) {
           npmax += DELTAPART;
@@ -147,6 +148,7 @@ void Collide::collisions_one_sw()
           memory->grow(pLU,npmax,"collide:pLU");
         }
         plist[np++] = particle->nlocal-1;
+        particles = particle->particles;
       }
 
       // since ipart and jpart have same weight, do not need
@@ -343,9 +345,7 @@ void Collide::group_reduce()
       // seems to be more stable than weighted
 
       if (group_type == BINARY) {
-
         group_bt(plist,n);
-
       } else if (group_type == WEIGHT) {
 
         // find mean / standard deviation of weight
@@ -407,6 +407,7 @@ void Collide::group_reduce()
       // if no particles reduced, increase group size
       
       if (n == nold) gbuf += 2;
+      if (gbuf > n) break;
 
     } // while loop for n > ncmax
   }// loop for cells
