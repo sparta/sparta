@@ -202,9 +202,6 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
 
   double ijsw = 1.0;
   if (swpmflag) {
-    //double *sweights = particle->edvec[particle->ewhich[index_sweight]];
-    //double isw = sweights[ip - particle->particles];
-    //double jsw = sweights[jp - particle->particles];
     double isw = ip->weight*update->fnum;
     double jsw = jp->weight*update->fnum;
     ijsw = MAX(isw ,jsw)/sweight_max;
