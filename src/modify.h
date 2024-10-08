@@ -38,6 +38,7 @@ class Modify : protected Pointers {
   void setup();
   virtual void start_of_step();
   virtual void end_of_step();
+  virtual void post_run();
 
   virtual int pack_grid_one(int, char *, int);
   virtual int unpack_grid_one(int, char *);

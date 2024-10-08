@@ -290,6 +290,11 @@ void Update::run(int nsteps)
 
   for (int i = 0; i < nsteps; i++) {
 
+    if (timer->check_timeout(i)) {
+      update->nsteps = i;
+      break;
+    }
+
     ntimestep++;
 
     if (collide_react) collide_react_reset();
@@ -344,6 +349,8 @@ void Update::run(int nsteps)
       timer->stamp(TIME_OUTPUT);
     }
   }
+
+  modify->post_run();
 }
 
 /* ----------------------------------------------------------------------
