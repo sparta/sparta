@@ -104,6 +104,9 @@ void Collide::collisions_one_sw()
     // nattempt = rounded attempt with RN
     // if no attempts, continue to next grid cell
 
+    if (np >= Ncmin && Ncmin > 0.0) pre_wtf = 0.0;
+    else pre_wtf = 1.0;
+
     attempt = attempt_collision(icell,np,volume);
     nattempt = static_cast<int> (attempt);
 
@@ -115,7 +118,6 @@ void Collide::collisions_one_sw()
       i = np * random->uniform();
       j = np * random->uniform();
       while (i == j) j = np * random->uniform();
-
       ipart = &particles[plist[i]];
       jpart = &particles[plist[j]];
 
@@ -123,10 +125,7 @@ void Collide::collisions_one_sw()
 
       // split particles
 
-      if (np >= Ncmin && Ncmin > 0.0) pre_wtf = 0.0;
-      else pre_wtf = 1.0;
-
-      newp = split(plist[i],plist[j],ipart,jpart,kpart,lpart);
+      newp = split(ipart,jpart,kpart,lpart);
 
       // add new particles to particle list
 
@@ -174,8 +173,7 @@ void Collide::collisions_one_sw()
    Splits particles and generates two new particles (for SWPM)
 ------------------------------------------------------------------------- */
 
-int Collide::split(int i, int j,
-                   Particle::OnePart *&ip, Particle::OnePart *&jp,
+int Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
                    Particle::OnePart *&kp, Particle::OnePart *&lp)
 {
   double xk[3],vk[3];
@@ -185,10 +183,6 @@ int Collide::split(int i, int j,
   int kcell, lcell;
 
   // checks if particles properly deleted
-
-  int id;
-  int reallocflag;
-  Particle::OnePart *particles = particle->particles;
 
   kp = NULL;
   lp = NULL;
@@ -266,11 +260,12 @@ int Collide::split(int i, int j,
 
   // gk is always the bigger of the two
 
+  int reallocflag;
   if(ksw > 0) {
-    id = MAXSMALLINT*random->uniform();
+    int id = MAXSMALLINT*random->uniform();
+    Particle::OnePart *particles = particle->particles;
     reallocflag = particle->add_particle(id,ks,kcell,xk,vk,erotk,0.0);
     if (reallocflag) {
-      particles = particle->particles;
       ip = particle->particles + (ip - particles);
       jp = particle->particles + (jp - particles);
     }
@@ -279,15 +274,23 @@ int Collide::split(int i, int j,
     newp++;
   }
 
+  if (kp) {
+    if (kp->weight <= 0.0) {
+      printf("realloc? %i\n", reallocflag);
+      printf("ksw: %2.3e; kp->weight: %2.3e\n", ksw,kp->weight);
+      error->one(FLERR,"New particle [k] has bad weight");
+    }
+  }
+
   // there should never be case where you add particle "l" if
   // ... you did not add particle "k"
 
   if(lsw > 0) {
     if(ksw <= 0) error->one(FLERR,"Bad addition to particle list");
-    id = MAXSMALLINT*random->uniform();
+    int id = MAXSMALLINT*random->uniform();
+    Particle::OnePart *particles = particle->particles;
     reallocflag = particle->add_particle(id,ls,lcell,xl,vl,erotl,0.0);
     if (reallocflag) {
-      particles = particle->particles;
       ip = particle->particles + (ip - particles);
       jp = particle->particles + (jp - particles);
       kp = particle->particles + (kp - particles);
@@ -295,6 +298,15 @@ int Collide::split(int i, int j,
     lp = &particle->particles[particle->nlocal-1];
     lp->weight = lsw;
     newp++;
+  }
+
+
+  if (lp) {
+    if (lp->weight <= 0.0) {
+      printf("realloc? %i\n", reallocflag);
+      printf("lsw: %2.3e; lp->weight: %2.3e\n", lsw,lp->weight);
+      error->one(FLERR,"New particle [l] has bad weight");
+    }
   }
 
   return newp;
