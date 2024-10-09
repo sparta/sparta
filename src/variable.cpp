@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -60,18 +60,18 @@ enum{PARTICLE_CUSTOM,GRID_CUSTOM,SURF_CUSTOM};
 
 // customize by adding a function
 // if add before OR,
-// also set precedence level in constructor and precedence length in *.h
+//   also set precedence level in constructor and precedence length in *.h
 
 enum{DONE,ADD,SUBTRACT,MULTIPLY,DIVIDE,CARAT,MODULO,UNARY,
      NOT,EQ,NE,LT,LE,GT,GE,AND,OR,
      SQRT,EXP,LN,LOG,ABS,SIN,COS,TAN,ASIN,ACOS,ATAN,ATAN2,ERF,
      RANDOM,NORMAL,CEIL,FLOOR,ROUND,RAMP,STAGGER,LOGFREQ,STRIDE,
      VDISPLACE,SWIGGLE,CWIGGLE,
-     VALUE,ARRAY,ARRAYINT,PARTARRAYDOUBLE,PARTARRAYINT,SPECARRAY};
+     VALUE,ARRAY,ARRAYINT,PARTARRAYDOUBLE,PARTARRAYINT,SPECARRAY,PARTGRIDARRAY};
 
 // customize by adding a special function
 
-enum{SUM,XMIN,XMAX,AVE,TRAP,SLOPE};
+enum{SUM,XMIN,XMAX,AVE,TRAP,SLOPE,GRID2PART};
 
 #define INVOKED_SCALAR 1
 #define INVOKED_VECTOR 2
@@ -769,6 +769,7 @@ void Variable::compute_particle(int ivar, double *result,
     error->all(FLERR,"Variable has circular dependency");
   eval_in_progress[ivar] = 1;
 
+  nvec_storage = 0;
   treestyle = PARTICLE;
   evaluate(data[ivar][0],&tree);
   collapse_tree(tree);
@@ -1339,7 +1340,7 @@ double Variable::evaluate(char *str, Tree **tree)
         // c_ID[i] = vector from per-grid array
         // if compute sets post_process_grid_flag:
         //   then values are in computes's vector_grid,
-        //   must store them locally via add_vector()
+        //   must store them locally via add_storage()
         //   since compute's vector_grid will be overwritten
         //   if this variable accesses multiple columns from compute's array
 
@@ -2232,7 +2233,7 @@ double Variable::evaluate(char *str, Tree **tree)
 
   if (nopstack) error->all(FLERR,"Invalid syntax in variable formula");
 
-  // for particle-style variable, return remaining tree
+  // for particle-style, grid-style, or surf-style variable, return remaining tree
   // for equal-style variable, return remaining arg
 
   if (tree) {
@@ -2720,6 +2721,10 @@ double Variable::eval_tree(Tree *tree, int i)
   if (tree->type == SPECARRAY)
     return *((double *)
              &tree->carray[particle->particles[i].ispecies*tree->nstride]);
+  if (tree->type == PARTGRIDARRAY) {
+    int icell = particle->particles[i].icell;
+    return tree->array[icell*tree->nstride];
+  }
 
   if (tree->type == ADD)
     return eval_tree(tree->left,i) + eval_tree(tree->right,i);
@@ -3434,9 +3439,10 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
    push result onto tree or arg stack
    word = special function
    contents = str between parentheses with one,two,three args
+     currently, all special functions just take one arg
    return 0 if not a match, 1 if successfully processed
    customize by adding a special function:
-     sum(x),min(x),max(x),ave(x),trap(x),slope(x),next(x)
+     sum(x),min(x),max(x),ave(x),trap(x),slope(x),next(x),grid2part(x)
 ------------------------------------------------------------------------- */
 
 int Variable::special_function(char *word, char *contents, Tree **tree,
@@ -3449,7 +3455,7 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
 
   if (strcmp(word,"sum") && strcmp(word,"min") && strcmp(word,"max") &&
       strcmp(word,"ave") && strcmp(word,"trap") && strcmp(word,"slope") &&
-      strcmp(word,"next"))
+      strcmp(word,"next") && strcmp(word,"grid2part"))
     return 0;
 
   // parse contents for arg1,arg2,arg3 separated by commas
@@ -3499,6 +3505,8 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
     if (narg != 1)
       error->all(FLERR,"Invalid special function in variable formula");
 
+    // compute that produces global vector or array
+
     Compute *compute = NULL;
     Fix *fix = NULL;
     int index,nvec,nstride;
@@ -3539,6 +3547,8 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
         nvec = compute->size_array_rows;
         nstride = compute->size_array_cols;
       } else error->all(FLERR,"Mismatched compute in variable formula");
+
+    // fix that produces global vector or array
 
     } else if (strstr(arg1,"f_") == arg1) {
       ptr1 = strchr(arg1,'[');
@@ -3646,7 +3656,7 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
       treestack[ntreestack++] = newtree;
     } else argstack[nargstack++] = value;
 
-  // special function for file-style variable
+  // special function next() for file-style variable
 
   } else if (strcmp(word,"next") == 0) {
     if (narg != 1)
@@ -3673,6 +3683,143 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
       } else argstack[nargstack++] = value;
 
     } else error->all(FLERR,"Invalid variable style in special function next");
+
+  // special function grid2part() that allows
+  // per-particle access of pre-grid quantities
+
+  } else if (strcmp(word,"grid2part") == 0) {
+    if (narg != 1)
+      error->all(FLERR,"Invalid special function in variable formula");
+
+    if (tree == NULL || treestyle != PARTICLE)
+      error->all(FLERR,"Variable grid2part() can only be used by particle-style variable");
+
+    Compute *compute = NULL;
+    Fix *fix = NULL;
+    int index,nvec,nstride;
+
+    // compute that produces per-grid vector or array
+
+    if (strstr(arg1,"c_") == arg1) {
+      ptr1 = strchr(arg1,'[');
+      if (ptr1) {
+        ptr2 = ptr1;
+        index = int_between_brackets(ptr2,0);
+        *ptr1 = '\0';
+      } else index = 0;
+
+      int icompute = modify->find_compute(&arg1[2]);
+      if (icompute < 0)
+        error->all(FLERR,"Invalid compute ID in variable formula");
+      compute = modify->compute[icompute];
+
+      if (!compute->per_grid_flag)
+        error->all(FLERR,"Variable grid2part() arg is not a per-grid compute");
+
+      if (index == 0 && compute->size_per_grid_cols == 0) {
+        if (!compute->first_init)
+          error->all(FLERR,"Variable formula compute cannot be invoked"
+                     " before initialized");
+        if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
+          compute->compute_per_grid();
+          compute->invoked_flag |= INVOKED_PER_GRID;
+        }
+
+        if (compute->post_process_grid_flag)
+          compute->post_process_grid(0,1,NULL,NULL,NULL,1);
+        else if (compute->post_process_isurf_grid_flag)
+          compute->post_process_isurf_grid();
+
+        Tree *newtree = new Tree();
+        newtree->type = PARTGRIDARRAY;
+        newtree->array = compute->vector_grid;
+        newtree->nstride = 1;
+        newtree->selfalloc = 0;
+        newtree->left = newtree->middle = newtree->right = NULL;
+        treestack[ntreestack++] = newtree;
+
+      } else if (index && compute->size_per_grid_cols != 0) {
+
+        if (index > compute->size_per_grid_cols)
+          error->all(FLERR,"Variable formula compute array "
+                       "is accessed out-of-range");
+        if (!compute->first_init)
+          error->all(FLERR,"Variable formula compute cannot be invoked"
+                     " before initialized");
+        if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
+          compute->compute_per_grid();
+          compute->invoked_flag |= INVOKED_PER_GRID;
+        }
+
+        if (compute->post_process_grid_flag)
+          compute->post_process_grid(index,1,NULL,NULL,NULL,1);
+        else if (compute->post_process_isurf_grid_flag)
+          compute->post_process_isurf_grid();
+
+        // if compute sets post_process_grid_flag:
+        //   then values are in computes's vector_grid,
+        //   must store them locally via add_storage()
+        //   since compute's vector_grid will be overwritten
+        //   if this variable accesses multiple columns from compute's array
+
+        Tree *newtree = new Tree();
+        newtree->type = PARTGRIDARRAY;
+        if (compute->post_process_grid_flag) {
+          newtree->array = add_storage(compute->vector_grid);
+          newtree->nstride = 1;
+        } else {
+          newtree->array = &compute->array_grid[0][index-1];
+          newtree->nstride = compute->size_per_grid_cols;
+        }
+        newtree->selfalloc = 0;
+        newtree->left = newtree->middle = newtree->right = NULL;
+        treestack[ntreestack++] = newtree;
+
+      } else error->all(FLERR,"Mismatched compute in variable formula");
+
+    // fix that produces per-grid vector or array
+
+    } else if (strstr(arg1,"f_") == arg1) {
+      ptr1 = strchr(arg1,'[');
+      if (ptr1) {
+        ptr2 = ptr1;
+        index = int_between_brackets(ptr2,0);
+        *ptr1 = '\0';
+      } else index = 0;
+
+      int ifix = modify->find_fix(&arg1[2]);
+      if (ifix < 0) error->all(FLERR,"Invalid fix ID in variable formula");
+      fix = modify->fix[ifix];
+
+      if (!fix->per_grid_flag)
+        error->all(FLERR,"Variable grid2part() arg is not a per-grid fix");
+      if (update->runflag > 0 && update->ntimestep % fix->per_grid_freq)
+        error->all(FLERR,"Fix in variable not computed at compatible time");
+
+      if (index == 0 && fix->size_per_grid_cols == 0) {
+        Tree *newtree = new Tree();
+        newtree->type = PARTGRIDARRAY;
+        newtree->array = fix->vector_grid;
+        newtree->nstride = 1;
+        newtree->selfalloc = 0;
+        newtree->left = newtree->middle = newtree->right = NULL;
+        treestack[ntreestack++] = newtree;
+
+      } else if (index && fix->size_per_grid_cols != 0) {
+        if (index > fix->size_per_grid_cols)
+          error->all(FLERR,"Variable formula fix array is accessed out-of-range");
+
+        Tree *newtree = new Tree();
+        newtree->type = ARRAY;
+        newtree->array = &fix->array_grid[0][index-1];
+        newtree->nstride = fix->size_per_grid_cols;
+        newtree->selfalloc = 0;
+        newtree->left = newtree->middle = newtree->right = NULL;
+        treestack[ntreestack++] = newtree;
+
+      } else error->all(FLERR,"Mismatched compute in variable formula");
+
+    } else error->all(FLERR,"Invalid variable style in special function grid2part()");
   }
 
   delete [] arg1;
@@ -3864,6 +4011,7 @@ char *Variable::find_next_comma(char *str)
 
 /* ----------------------------------------------------------------------
    copy of cvec in local storage
+   used for per-grid vector which could otherwise be overidden
    return local ptr to copied vec
 ------------------------------------------------------------------------- */
 
