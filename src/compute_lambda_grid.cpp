@@ -405,7 +405,7 @@ void ComputeLambdaGrid::init()
 
 void ComputeLambdaGrid::compute_per_grid()
 {
-  int i,j,k,m,n,itally;
+  int i,j,k,n,itally;
   int ntally_col,kk;
   int *itmp;
   double **ctally;
@@ -544,19 +544,21 @@ void ComputeLambdaGrid::compute_per_grid()
             if (tempwhich == NONE || temp[i] == 0.0) {
               lambdainv[i][j] += (MY_PI * sqrt (1+mj/mk) * pow(dref,2.0) * nrho[i][k]);
               tauinv[i][j] += (2.0 * pow(dref,2.0) * nrho[i][k] * sqrt (2.0 * MY_PI * update->boltz * tref / mr));
-            }
-            else {
+            } else {
               lambdainv[i][j] += (MY_PI * sqrt (1+mj/mk) * pow(dref,2.0) * nrho[i][k] * pow(tref/temp[i],omega-0.5));
               tauinv[i][j] += (2.0 * pow(dref,2.0) * nrho[i][k] * sqrt (2.0 * MY_PI * update->boltz * tref / mr) * pow(temp[i]/tref,1.0-omega));
             }
         }
       }
-      for (int j = 0; j<ntotal; j++) {
+
+      for (int j = 0; j < ntotal; j++) {
         if (lambdainv[i][j] > 1e-30) lambda += nrho[i][j] / (nrhosum * lambdainv[i][j]);
         if (tauinv[i][j] > 1e-30) tau += nrho[i][j] / (nrhosum * tauinv[i][j]);
       }
+
       if (lambda == 0.0) array_grid[i][0] = BIG;
       else array_grid[i][0] = lambda;
+
       if (tau == 0.0) array_grid[i][1] = BIG;
       else array_grid[i][1] = tau;
   }
@@ -627,6 +629,7 @@ void ComputeLambdaGrid::reallocate()
 
   memory->destroy(nrho);
   memory->create(nrho,nglocal,ntotal,"lambda/grid:nrho");
+
   if (tempwhich != NONE) {
     memory->destroy(temp);
     memory->create(temp,nglocal,"lambda/grid:temp");
