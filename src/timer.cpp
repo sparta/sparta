@@ -13,8 +13,9 @@
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
-   Timeout code copied and adapted from LAMMPS (lammps.org), October 2024
-   Author: Axel Kohlmeyer (Temple U)
+   Timeout code adapted from LAMMPS (https://www.lammps.org), October 2024
+   Ported to SPARTA by: Stan Moore (SNL)
+   Original Author: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
 #include "mpi.h"

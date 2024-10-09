@@ -13,8 +13,9 @@
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
-   File copied and adapted from LAMMPS (lammps.org), October 2024
-   Author: Axel Kohlmeyer (Temple U)
+   File adapted from LAMMPS (https://www.lammps.org), October 2024
+   Ported to SPARTA by: Stan Moore (SNL)
+   Original Author: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
 #include "utils.h"
