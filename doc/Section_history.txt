@@ -1,6 +1,6 @@
 "Previous Section"_Section_errors.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Manual.html :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -19,15 +19,15 @@ molecular dynamics codes I've distributed.
 
 13.1 Coming attractions :h4,link(hist_1)
 
-The "wish list link"_http://sparta.sandia.gov/future.html on the
+The "wish list link"_https://sparta.github.io/future.html on the
 SPARTA web page gives a list of features we are planning to add to
 SPARTA in the future.  Please contact the
-"developers"__http://sparta.sandia.gov/authors.html you are interested
+"developers"__https://sparta.github.io/authors.html you are interested
 in contributing to the those developments or would be a future user of
 that feature.
 
 You can also send "email to the
-developers"_http://sparta.sandia.gov/authors.html if you want to add
+developers"_https://sparta.github.io/authors.html if you want to add
 your wish to the list.
 
 :line
@@ -36,7 +36,7 @@ your wish to the list.
 
 Sandia's predecessor to SPARTA is a DSMC code called ICARUS.  It was
 developed in the early 1990s by Tim Bartel and "Steve
-Plimpton"_http://www.sandia.gov/~sjplimp.  It was later modified and
+Plimpton"_https://sjplimp.github.io.  It was later modified and
 extended by Michael Gallis.
 
 ICARUS is a 2d code, written in Fortran, which models the flow
@@ -46,7 +46,7 @@ represented with analytic equations, which allows for fast particle
 tracking.
 
 Some details about ICARUS, including simulation snapshots and papers,
-are discussed on "this page"_http://www.sandia.gov/~sjplimp/dsmc.html
+are discussed on "this page"_http://sjplimp.github.io/dsmc.html
 
 Performance-wise ICARUS scaled quite well on several generations of
 parallel machines, and is still used by Sandia researchers today.
@@ -58,7 +58,7 @@ SPARTA development began in late 2011.  In contrast to ICARUS, it is a
 track particles.  Surfaces are embedded in the grid, which cuts and
 splits their flow volumes.
 
-The "Authors link"_http://sparta.sandia.gov/history.html on the SPARTA
+The "Authors link"_https://sparta.github.io/history.html on the SPARTA
 web page gives a timeline of features added to the code since it's
 initial open-source release.
 

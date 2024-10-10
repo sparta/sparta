@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -174,7 +174,7 @@ void Custom::command(int narg, char **arg)
   // cindex = index of existing custom attribute
   // otherwise create custom attribute if it does not exist
   // error check that name or name[] matches new or existing attribute
-  
+
   if (mode == PARTICLE) {
     cindex = particle->find_custom(aname);
     if (cindex >= 0) {
@@ -183,7 +183,7 @@ void Custom::command(int narg, char **arg)
     } else {
       cindex = particle->add_custom(aname,ctype,csize);
     }
-    
+
   } else if (mode == GRID) {
     cindex = grid->find_custom(aname);
     if (cindex >= 0) {
@@ -192,7 +192,7 @@ void Custom::command(int narg, char **arg)
     } else {
       cindex = grid->add_custom(aname,ctype,csize);
     }
-  
+
   } else if (mode == SURF) {
     cindex = surf->find_custom(aname);
     if (cindex >= 0) {
@@ -208,7 +208,7 @@ void Custom::command(int narg, char **arg)
   if (csize != 0 && ccol == 0) eflag = 1;
   if (csize != 0 && ccol > csize) eflag = 1;
   if (eflag) error->all(FLERR,"Custom name does not match new or existing custom attribute");
-  
+
   // evaluate variable
   // store result as floating point scalar or vector
 

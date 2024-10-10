@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -295,7 +295,7 @@ inputs.
 "compute"_compute.html, fix ave/grid"_fix_ave_grid.html, "fix
 ave/surf"_fix_ave_surf.html, "variable"_variable.html
 
-[Default:] none
+[Default:]
 
 The option defaults are mode = scalar, ave = one, start = 0, no file
 output, title 1,2,3 = strings as described above, and no off settings

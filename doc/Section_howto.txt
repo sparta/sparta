@@ -1,6 +1,6 @@
 ."Previous Section"_Section_commands.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_example.html :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -457,7 +457,7 @@ snapshots.
 Additional Pizza.py tools may be added that allow visualization of
 surface and grid cell information as output by SPARTA.
 
-:link(pizza,http://www.sandia.gov/~sjplimp/pizza.html)
+:link(pizza,http://lammps.github.io/pizza)
 :link(vmd,http://www.ks.uiuc.edu/Research/vmd)
 :link(ensight,http://www.ensight.com)
 

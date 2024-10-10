@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -195,7 +195,7 @@ void ComputeSurfKokkos::post_surf_tally()
 {
   if (need_dup) {
     Kokkos::Experimental::contribute(d_array_surf_tally, dup_array_surf_tally);
-    dup_array_surf_tally = decltype(dup_array_surf_tally)(); // free duplicated memory
+    dup_array_surf_tally = {}; // free duplicated memory
   }
 
   k_tally2surf.modify_device();

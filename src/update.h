@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -93,7 +93,10 @@ class Update : protected Pointers {
   double rcblo[3],rcbhi[3];    // debug info from RCB for dump image
 
   // hooks to computes doing on-surface collision/reaction tallying
-  // public b/c accessed by Collid and SurfReactAdsorb
+  // public b/c accessed
+  //   by SurfReactAdsorb for on-surface reactions
+  //   by FixEmitSurf for particles emitted from surfs
+  //   by Collide
 
   int ngas_tally;          // # of Comps tallying gas/gas info this step
   int nsurf_tally;         // # of Comps tallying gas/surf info this step

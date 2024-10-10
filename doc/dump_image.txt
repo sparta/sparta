@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -587,8 +587,8 @@ variety of file formats and decoders. :l
 % mplayer foo.mpg 
 % ffplay bar.avi :pre
 
-c) Use the "Pizza.py"_http://www.sandia.gov/~sjplimp/pizza.html
-"animate tool"_http://www.sandia.gov/~sjplimp/pizza/doc/animate.html,
+c) Use the "Pizza.py"_https://lammps.github.io/pizza
+"animate tool"_https://lammps.gitbug.io/pizza/doc/animate.html,
 which works directly on a series of image files. :l
 
 a = animate("foo*.jpg") :pre
