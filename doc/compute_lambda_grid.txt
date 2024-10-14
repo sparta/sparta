@@ -11,43 +11,52 @@ compute lambda/grid/kk command :h3
 
 [Syntax:]
 
-compute ID lambda/grid nrho temp extra :pre
+compute ID lambda/grid nrho temp value1 value2 ... :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
 lambda/grid = style name of this compute command :l
 nrho = compute or fix for number density, prefaced by "c_" or "f_" :l
 temp = NULL or compute or fix column for temperature, prefaced by "c_" or "f_" :l
-extra = {kall} or {kx} or {ky} or {kz} (optional) :l
-  {kall} = also calculate Knudsen number based on cell size in all dimensions
-  {kx} = also calculate Knudsen number based on cell size in x dimension
-  {ky} = also calculate Knudsen number based on cell size in y dimension
-  {kz} = also calculate Knudsen number based on cell size in z dimension :pre
+value = {lambda} or {tau} or {knall} or {knx} or {kny} or {knz} :l
+  {lambda} = calculate mean free path
+  {tau} = calculate mean collision time
+  {knall} = calculate Knudsen number based on cell size in all dimensions
+  {knx} = calculate Knudsen number based on cell size in x dimension
+  {kny} = calculate Knudsen number based on cell size in y dimension
+  {knz} = calculate Knudsen number based on cell size in z dimension :pre
 :ule
 
 [Examples:]
 
-compute 1 lambda/grid c_GR\[*\] NULL
-compute 1 lambda/grid f_ave\[*\] f_ave\[3\] kall :pre
+compute 1 lambda/grid c_GR\[*\] NULL lambda tau
+compute 1 lambda/grid f_ave\[*\] f_ave\[3\] lambda knall :pre
 
 These commands will dump time averages for the mean free path and mean
 collision time for each grid cell to a dump file every 1000 steps:
 
 compute 1 grid species nrho temp
 fix 1 ave/grid 10 100 1000 c_1\[*\]
-compute 2 lambda/grid f_1\[1\] f_1\[2\]
+compute 2 lambda/grid f_1\[1\] f_1\[2\] lambda tau
 dump 1 grid all 1000 tmp.grid id c_2 
 
 [Description:]
 
-Define a computation that calculates the mean free path (lambda)
-and mean collision time (tau) between molecular collisions for each grid cell,
-based on the particles in that cell.
-Optionally, a Knudsen number for each cell
-can also be calculated, which is the mean free path divided by the
-cell size.  These quantities can be useful for estimating the optimal
-grid cell size when adapting the grid, e.g. via the
-"adapt_grid"_adapt_grid.html or "fix adapt/grid"_fix_adapt_grid.html
-commands, as well as the optimal time step size.
+If the {lambda} keyword is specified, the mean free path will be
+computed. If the {tau} keyword is specified, the mean collision time
+between molecular collisions for each grid cell based on the particles
+in that cell will be computed. If one or more of the {knall} or {knx}
+or {kny} or {knz} keywords are specified, the dimensionless Knudsen
+number will be calculated, which is the ratio of the mean free path to
+the cell size. For {knall}, the cell size is taken to be the average
+of the three grid cell side lengths (or two cell lengths for a 2d
+simulation).  For {knx}, {kny}, or {knz}, the cell size is the single
+cell side length in the corresponding x,y,z dimension.  Optionally, a
+Knudsen number for each cell can also be calculated, which is the mean
+free path divided by the cell size.  These quantities can be useful
+for estimating the optimal grid cell size when adapting the grid, e.g.
+via the "adapt_grid"_adapt_grid.html or "fix
+adapt/grid"_fix_adapt_grid.html commands, as well as the optimal time
+step size.
 
 Unlike other computes that calculate per grid cell values, this
 compute does not take a "group-ID" for a grid cell group as an
@@ -72,8 +81,9 @@ The formula used to calculate the mean collision time (tau) is given in
 
 :c,image(Eqs/tau.jpg)
 
-These are the exact mean free path and mean collision time for a multi-species mixture,
-suitable for estimating optimal grid cell sizes and timestep as explained above.
+These are the exact mean free path and mean collision time for a
+multi-species mixture, suitable for estimating optimal grid cell sizes
+and timestep as explained above.
 
 dref and Tref and omega are collision properties for a pair of species
 species in the flow.
@@ -100,15 +110,17 @@ The {temp} argument can also be specified as NULL, which drops the
 the case if the reference species defines omega = 1/2.  In that case,
 the {temp} argument is ignored, whether it is NULL or not.
 
-IMPORTANT NOTE: In this new version of “compute_lambda_grid.html”_compute_lambda/grid,
-a per species number density array calculated by either a compute or a fix has to be specified.
-The code will automatically detect the number of species in the mixture to perform
-the mean free path and mean collision time calculation.
-The “compute_grid.html”_compute_grid command with mixture "species" has to be invoked
-to ensure that the number density of all the species in the mixture is computed.
+IMPORTANT NOTE: A per species number density array calculated by
+either a compute or a fix has to be specified.  The code will
+automatically detect the number of species in the mixture to perform
+the mean free path and mean collision time calculation.  The
+“compute_grid.html”_compute_grid command with mixture "species" has to
+be invoked to ensure that the number density of all the species in the
+mixture is computed.
 
 Note that if the value of {n} is 0.0 for a grid cell, its
-mean-free-path and mean-collision-time will be set to 1.0e20 (infinite length and time).
+mean-free-path and mean-collision-time will be set to 1.0e20 (infinite
+length and time).
 
 The “compute_grid.html”_compute_grid command can calculate a number
 density, using its {nrho} value.  It can also calculate a temperature
@@ -142,24 +154,13 @@ a “dump.html”_dump grid command invokes this compute to write values
 to a dump file, it must do so on timesteps that are multiples of
 {Nfreq}.
 
-One of the {kall} or {kx} or {ky} or {kz} extra arguments can be
-optionally appended.  If specified, this calculates an additional
-value per grid cell, namely the dimensionless Knudsen number which is
-the ratio of the mean free path to the cell size.  For {kall}, the
-cell size is taken to be the average of the three grid cell side
-lengths (or two cell lengths for a 2d simulation).  For {kx}, {ky}, or
-{kz}, the cell size is the single cell side length in the
-corresponding x,y,z dimension.
-
 :line
 
 [Output info:]
 
-This compute calculates a per-grid array.  If one of {kall},
-{kx}, {ky}, or {kz} is not specified, then it is an array with two columns.
-If one extra argument is specified, it is an array with three columns.  The
-vector or first column of the array is the mean free path; the second
-column is the mean collision time; the third is the Knudsen number.
+If one output value is specified, this compute calculates a per-grid
+vector. Otherwise it is a per-grid array with two columns or more
+columns, in the order the output values are specified in the input.
 
 This compute performs calculations for all flavors of child grid cells
 in the simulation, which includes unsplit, cut, split, and sub cells.
@@ -177,10 +178,11 @@ values from a compute as input.  See "Section
 4.4"_Section_howto.html#howto_4 for an overview of SPARTA output
 options.
 
-The per-grid array values for the first column of the array
-will be in distance “units.html”_units.  The second column of the
-array will be time distance divided by time “units.html”_units.
-The third column of the array will be dimensionless.
+The per-grid array values for the column of the array corresponding
+to {lambda} will will be in distance “units.html”_units. The column
+corresponding to {tau} will be time distance divided by time “units.html”_units.
+Columns of the array corresponding to {knall} or {knx} or {kny} or
+{knz} will be dimensionless.
 
 :line
 
@@ -218,6 +220,10 @@ as input from a “fix_ave_grid.html”_fix ave/grid command, this compute
 must only be invoked on timesteps that are multiples of the {Nfreq}
 argument used by the fix, since those are the steps when it produces
 output.
+
+One or more output value must be specified. The same output value
+cannot be repeated more than once. The {knz} value cannot but used in
+a two-dimensional simulation.
 
 [Related commands:]
 
