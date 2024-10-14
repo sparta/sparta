@@ -30,7 +30,7 @@ using namespace SPARTA_NS;
 using namespace MathConst;
 
 enum{NONE,COMPUTE,FIX};
-enum{KNONE,KALL,KX,KY,KZ};
+enum{LAMBDA,TAU,KNALL,KNX,KNY,KNZ};
 
 #define INVOKED_PER_GRID 16
 #define BIG 1.0e20
@@ -40,7 +40,7 @@ enum{KNONE,KALL,KX,KY,KZ};
 ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
 {
-  if (narg < 4 || narg > 5)
+  if (narg < 4 || narg > 10)
     error->all(FLERR,"Illegal compute lambda/grid command");
 
   // parse three required input fields
@@ -101,19 +101,61 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
   } else if (strcmp(arg[3],"NULL") == 0) tempwhich = NONE;
   else error->all(FLERR,"Illegal compute lambda/grid command");
 
-  // optional arg
+  lambdaflag = 0;
+  tauflag = 0;
+  knallflag = 0;
+  knxflag = 0;
+  knyflag = 0;
+  knzflag = 0;
+  knanyflag = 0;
 
-  kflag = KNONE;
-  if (narg == 5) {
-    if (strcmp(arg[4],"kall") == 0) kflag = KALL;
-    else if (strcmp(arg[4],"kx") == 0) kflag = KX;
-    else if (strcmp(arg[4],"ky") == 0) kflag = KY;
-    else if (strcmp(arg[4],"kz") == 0) kflag = KZ;
-    else error->all(FLERR,"Illegal compute lambda/grid command");
+  noutputs = narg - 4;
+
+  int maxoutput = 6;
+  output_order = new int[maxoutput];
+
+  for (int i = 0; i < maxoutput; i++)
+   output_order[i] = -1;
+
+  int ioutput = 0;
+  int iarg = 4;
+  int dupflag = 0;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"lambda") == 0) {
+      if (output_order[LAMBDA] != -1) dupflag = 1;
+      output_order[LAMBDA] = ioutput;
+      lambdaflag = 1;
+    } else if (strcmp(arg[iarg],"tau") == 0) {
+      if (output_order[TAU] != -1) dupflag = 1;
+      output_order[TAU] = ioutput;
+      tauflag = 1;
+    } else if (strcmp(arg[iarg],"knall") == 0) {
+      if (output_order[KNALL] != -1) dupflag = 1;
+      output_order[KNALL] = ioutput;
+      knallflag = 1;
+    } else if (strcmp(arg[iarg],"knx") == 0) {
+      if (output_order[KNX] != -1) dupflag = 1;
+      output_order[KNX] = ioutput;
+      knxflag = 1;
+    } else if (strcmp(arg[iarg],"kny") == 0) {
+      if (output_order[KNY] != -1) dupflag = 1;
+      output_order[KNY] = ioutput;
+      knyflag = 1;
+    } else if (strcmp(arg[iarg],"knz") == 0) {
+      if (output_order[KNZ] != -1) dupflag = 1;
+      output_order[KNZ] = ioutput;
+      knzflag = 1;
+    } else error->all(FLERR,"Illegal compute lambda/grid command");
+
+    ioutput++;
+    iarg++;
   }
 
-  if (kflag == KZ && domain->dimension == 2)
-    error->all(FLERR,"Cannot use compute lambda/grid kz for 2d simulation");
+  if (dupflag)
+    error->all(FLERR,"Duplicated output in compute lambda/grid");
+
+  if (knzflag && domain->dimension == 2)
+    error->all(FLERR,"Cannot use compute lambda/grid knz for 2d simulation");
 
   // expand args if any have wildcard character "*"
   // this can reset nvalues
@@ -216,8 +258,17 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
   nparams = particle->nspecies;
 
   per_grid_flag = 1;
-  if (kflag == KNONE) size_per_grid_cols = 2;
-  else size_per_grid_cols = 3;
+  if (noutputs > 1) size_per_grid_cols = noutputs;
+  else size_per_grid_cols = 0;
+
+  // knudsen number needs lambda
+
+  knanyflag = (knallflag || knxflag || knyflag || knzflag);
+
+  if (knanyflag && !lambdaflag) {
+    lambdaflag = 1;
+    output_order[LAMBDA] = 0;
+  }
 
   nglocal = 0;
   vector_grid = NULL;
@@ -531,68 +582,98 @@ void ComputeLambdaGrid::compute_per_grid()
   double nrhosum,lambda,tau;
 
   for (int i = 0; i < nglocal; i++) {
-      nrhosum = lambda = tau = 0.0;
-      for (int j = 0; j < ntotal; j++) {
-        nrhosum += nrho[i][j];
-        for (int k = 0; k < ntotal; k++) {
-            dref = collide->extract(j,k,"diam");
-            tref = collide->extract(j,k,"tref");
-            omega = collide->extract(j,k,"omega");
-            mj = particle->species[j].mass;
-            mk = particle->species[k].mass;
-            mr = mj * mk / (mj + mk);
-            if (tempwhich == NONE || temp[i] == 0.0) {
-              lambdainv[i][j] += (MY_PI * sqrt (1+mj/mk) * pow(dref,2.0) * nrho[i][k]);
-              tauinv[i][j] += (2.0 * pow(dref,2.0) * nrho[i][k] * sqrt (2.0 * MY_PI * update->boltz * tref / mr));
-            } else {
-              lambdainv[i][j] += (MY_PI * sqrt (1+mj/mk) * pow(dref,2.0) * nrho[i][k] * pow(tref/temp[i],omega-0.5));
-              tauinv[i][j] += (2.0 * pow(dref,2.0) * nrho[i][k] * sqrt (2.0 * MY_PI * update->boltz * tref / mr) * pow(temp[i]/tref,1.0-omega));
-            }
+    nrhosum = lambda = tau = 0.0;
+    for (int j = 0; j < ntotal; j++) {
+      nrhosum += nrho[i][j];
+      for (int k = 0; k < ntotal; k++) {
+        dref = collide->extract(j,k,"diam");
+        tref = collide->extract(j,k,"tref");
+        omega = collide->extract(j,k,"omega");
+        mj = particle->species[j].mass;
+        mk = particle->species[k].mass;
+        mr = mj * mk / (mj + mk);
+        if (tempwhich == NONE || temp[i] == 0.0) {
+          if (lambdaflag)
+            lambdainv[i][j] += (MY_PI * sqrt (1+mj/mk) * pow(dref,2.0) * nrho[i][k]);
+          if (tauflag)
+            tauinv[i][j] += (2.0 * pow(dref,2.0) * nrho[i][k] * sqrt (2.0 * MY_PI * update->boltz * tref / mr));
+        } else {
+          if (lambdaflag)
+            lambdainv[i][j] += (MY_PI * sqrt (1+mj/mk) * pow(dref,2.0) * nrho[i][k] * pow(tref/temp[i],omega-0.5));
+
+          if (tauflag)
+            tauinv[i][j] += (2.0 * pow(dref,2.0) * nrho[i][k] * sqrt (2.0 * MY_PI * update->boltz * tref / mr) * pow(temp[i]/tref,1.0-omega));
         }
       }
+    }
 
-      for (int j = 0; j < ntotal; j++) {
-        if (lambdainv[i][j] > 1e-30) lambda += nrho[i][j] / (nrhosum * lambdainv[i][j]);
-        if (tauinv[i][j] > 1e-30) tau += nrho[i][j] / (nrhosum * tauinv[i][j]);
-      }
+    for (int j = 0; j < ntotal; j++) {
+      if (lambdaflag && lambdainv[i][j] > 1e-30) lambda += nrho[i][j] / (nrhosum * lambdainv[i][j]);
+      if (tauflag && tauinv[i][j] > 1e-30) tau += nrho[i][j] / (nrhosum * tauinv[i][j]);
+    }
 
-      if (lambda == 0.0) array_grid[i][0] = BIG;
-      else array_grid[i][0] = lambda;
+    if (lambdaflag) {
+      if (lambda == 0.0) lambda  = BIG;
+      int index = output_order[LAMBDA];
+      if (noutputs == 1 && !knanyflag) vector_grid[i] = lambda;
+      else array_grid[i][output_order[LAMBDA]] = lambda;
+    }
 
-      if (tau == 0.0) array_grid[i][1] = BIG;
-      else array_grid[i][1] = tau;
+    if (tauflag) {
+      if (tau == 0.0) tau = BIG;
+      if (noutputs == 1) vector_grid[i] = tau;
+      else array_grid[i][output_order[TAU]] = tau;
+    }
   }
 
   // calculate per-cell Knudsen number
 
-  if (kflag == KNONE) return;
+  if (!knanyflag) return;
 
   Grid::ChildCell *cells = grid->cells;
   int dimension = domain->dimension;
+  double knx,kny,knz;
+  double sizeall,sizex,sizey,sizez;
 
-  if (kflag == KALL) {
-    double size;
-    for (int i = 0; i < nglocal; i++) {
-      size = (cells[i].hi[0] - cells[i].lo[0]);
-      size += (cells[i].hi[1] - cells[i].lo[1]);
-      if (dimension == 2) size *= 0.5;
+  for (int i = 0; i < nglocal; i++) {
+    double lambda = array_grid[i][output_order[LAMBDA]];
+
+    if (knxflag || knallflag)
+      sizex = (cells[i].hi[0] - cells[i].lo[0]);
+
+    if (knyflag || knallflag)
+      sizey = (cells[i].hi[1] - cells[i].lo[1]);
+
+    if (knzflag || (knallflag && dimension > 2))
+      sizez = (cells[i].hi[2] - cells[i].lo[2]);
+
+    if (knallflag) {
+      sizeall = sizex + sizey;
+
+      if (dimension == 2) sizeall *= 0.5;
       else {
-        size += (cells[i].hi[2] - cells[i].lo[2]);
-        size /= 3.0;
+        sizeall += sizez;
+        sizeall /= 3.0;
       }
-      array_grid[i][2] = array_grid[i][0] / size;
+      if (noutputs == 1) vector_grid[i] = lambda / sizeall;
+      else array_grid[i][output_order[KNALL]] = lambda / sizeall;
     }
-  } else if (kflag == KX) {
-    for (int i = 0; i < nglocal; i++)
-      array_grid[i][2] = array_grid[i][0] / (cells[i].hi[0] - cells[i].lo[0]);
-  } else if (kflag == KY) {
-    for (int i = 0; i < nglocal; i++)
-      array_grid[i][2] = array_grid[i][0] / (cells[i].hi[1] - cells[i].lo[1]);
-  } else if (kflag == KZ) {
-    for (int i = 0; i < nglocal; i++)
-      array_grid[i][2] = array_grid[i][0] / (cells[i].hi[2] - cells[i].lo[2]);
-  }
 
+    if (knxflag) {
+      if (noutputs == 1) vector_grid[i] = lambda / sizex;
+      else array_grid[i][output_order[KNX]] = lambda / sizex;
+    }
+
+    if (knyflag) {
+      if (noutputs == 1) vector_grid[i] = lambda / sizey;
+      array_grid[i][output_order[KNY]] = lambda / sizey;
+    }
+
+    if (knzflag) {
+      if (noutputs == 1) vector_grid[i] = lambda / sizez;
+      array_grid[i][output_order[KNZ]] = lambda / sizez;
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -606,21 +687,23 @@ void ComputeLambdaGrid::reallocate()
 
   nglocal = grid->nlocal;
 
-  if (nvalues == 1) {
-    memory->destroy(vector_grid);
-    memory->create(vector_grid,nglocal,"lambda/grid:vector_grid");
-    for (int i = 0; i < nglocal; i++) vector_grid[i] = 0.0;
-  } else {
+  memory->destroy(vector_grid);
+  memory->create(vector_grid,nglocal,"lambda/grid:vector_grid");
+  for (int i = 0; i < nglocal; i++) vector_grid[i] = 0.0;
+
+  if (nvalues > 1) {
     memory->destroy(array_grid1);
     memory->create(array_grid1,nglocal,nvalues,"lambda/grid:array_grid1");
     for (int i = 0; i < nglocal; i++)
       for (int m = 0; m < nvalues; m++) array_grid1[i][m] = 0.0;
   }
 
-  memory->destroy(array_grid);
-  memory->create(array_grid,nglocal,size_per_grid_cols,"lambda/grid:array_grid");
-  for (int i = 0; i < nglocal; i++)
-    for (int m = 0; m < size_per_grid_cols; m++) array_grid[i][m] = 0.0;
+  if (noutputs > 1 || knanyflag) {
+    memory->destroy(array_grid);
+    memory->create(array_grid,nglocal,noutputs,"lambda/grid:array_grid");
+    for (int i = 0; i < nglocal; i++)
+      for (int m = 0; m < noutputs; m++) array_grid[i][m] = 0.0;
+  }
 
   memory->destroy(lambdainv);
   memory->create(lambdainv,nglocal,ntotal,"lambda/grid:lambdainv");
@@ -643,10 +726,12 @@ void ComputeLambdaGrid::reallocate()
 bigint ComputeLambdaGrid::memory_usage()
 {
   bigint bytes;
-  bytes = nglocal * nvalues * sizeof(double);                  // vector_grid/array_grid1
-  bytes += nglocal * size_per_grid_cols * sizeof(double);      // array_grid
+  bytes = nglocal * sizeof(double);                            // vector_grid
+  if (nvalues > 1)
+    bytes = nglocal * nvalues * sizeof(double);                // array_grid1
+  bytes += nglocal * noutputs * sizeof(double);                // array_grid
   bytes += 2 * nglocal * ntotal * sizeof(double);              // lambdainv + tauinv
   bytes += nglocal * ntotal * sizeof(double);                  // nrho
-  if (tempwhich != KNONE) bytes += nglocal * sizeof(double);   // temp
+  if (tempwhich != NONE) bytes += nglocal * sizeof(double);    // temp
   return bytes;
 }

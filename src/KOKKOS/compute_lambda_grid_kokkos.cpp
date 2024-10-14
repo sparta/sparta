@@ -37,7 +37,7 @@ using namespace SPARTA_NS;
 using namespace MathConst;
 
 enum{NONE,COMPUTE,FIX};
-enum{KNONE,KALL,KX,KY,KZ};
+enum{LAMBDA,TAU,KNALL,KNX,KNY,KNZ};
 
 #define INVOKED_PER_GRID 16
 #define BIG 1.0e20
@@ -49,9 +49,9 @@ ComputeLambdaGridKokkos::ComputeLambdaGridKokkos(SPARTA *sparta, int narg, char 
 {
   kokkos_flag = 1;
 
-  k_numap = DAT::tdual_float_1d("lambda/grid:numap",nvalues);
-  k_umap = DAT::tdual_float_2d("lambda/grid:umap",nvalues,tmax);
-  k_uomap = DAT::tdual_float_2d("lambda/grid:uomap",nvalues,tmax);
+  auto k_numap = DAT::tdual_float_1d("lambda/grid:numap",nvalues);
+  auto k_umap = DAT::tdual_float_2d("lambda/grid:umap",nvalues,tmax);
+  auto k_uomap = DAT::tdual_float_2d("lambda/grid:uomap",nvalues,tmax);
 
   for (int i = 0; i < nvalues; i++) {
     k_numap.h_view(i) = numap[i];
@@ -71,6 +71,14 @@ ComputeLambdaGridKokkos::ComputeLambdaGridKokkos(SPARTA *sparta, int narg, char 
   k_uomap.modify_host();
   k_uomap.sync_device();
   d_uomap = k_uomap.d_view;
+
+  auto k_output_order = DAT::tdual_int_1d("lambda/grid:output_order",noutputs);
+
+  for (int i = 0; i < noutputs; i++)
+    k_output_order.h_view(i) = output_order[i];
+  k_output_order.modify_host();
+  k_output_order.sync_device();
+  d_output_order = k_output_order.d_view;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -253,37 +261,53 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
 
   // calculate per-cell Knudsen number
 
-  if (kflag == KNONE) return;
+  if (!knanyflag) return;
 
   GridKokkos* grid_kk = ((GridKokkos*)grid);
   grid_kk->sync(Device,CELL_MASK);
   auto d_cells = grid_kk->k_cells.d_view;
   const int dimension = domain->dimension;
 
-  if (kflag == KALL) {
-    Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
-      double size = (d_cells[i].hi[0] - d_cells[i].lo[0]);
-      size += (d_cells[i].hi[1] - d_cells[i].lo[1]);
-      if (dimension == 2) size *= 0.5;
+  Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
+    const double lambda = d_array_grid(i,d_output_order[LAMBDA]);
+    double sizex,sizey,sizez,sizeall;
+
+    if (knxflag || knallflag)
+      sizex = (d_cells[i].hi[0] - d_cells[i].lo[0]);
+
+    if (knyflag || knallflag)
+      sizey = (d_cells[i].hi[1] - d_cells[i].lo[1]);
+
+    if (knzflag || (knallflag && dimension > 2))
+      sizez = (d_cells[i].hi[2] - d_cells[i].lo[2]);
+
+    if (knallflag) {
+      sizeall = sizex + sizey;
+
+      if (dimension == 2) sizeall *= 0.5;
       else {
-        size += (d_cells[i].hi[2] - d_cells[i].lo[2]);
-        size /= 3.0;
+        sizeall += sizez;
+        sizeall /= 3.0;
       }
-      d_array_grid(i,2) = d_array_grid(i,0) / size;
-    });
-  } else if (kflag == KX) {
-    Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
-      d_array_grid(i,2) = d_array_grid(i,0) / (d_cells[i].hi[0] - d_cells[i].lo[0]);
-    });
-  } else if (kflag == KY) {
-    Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
-      d_array_grid(i,2) = d_array_grid(i,0) / (d_cells[i].hi[1] - d_cells[i].lo[1]);
-    });
-  } else if (kflag == KZ) {
-    Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
-      d_array_grid(i,2) = d_array_grid(i,0) / (d_cells[i].hi[2] - d_cells[i].lo[2]);
-    });
-  }
+      if (noutputs == 1) d_vector_grid[i] = lambda / sizeall;
+      else d_array_grid(i,d_output_order[KNALL]) = lambda / sizeall;
+    }
+
+    if (knxflag) {
+      if (noutputs == 1) d_vector_grid[i] = lambda / sizex;
+      else d_array_grid(i,d_output_order[KNX]) = lambda / sizex;
+    }
+
+    if (knyflag) {
+      if (noutputs == 1) d_vector_grid[i] = lambda / sizey;
+      d_array_grid(i,d_output_order[KNY]) = lambda / sizey;
+    }
+
+    if (knzflag) {
+      if (noutputs == 1) d_vector_grid[i] = lambda / sizez;
+      d_array_grid(i,d_output_order[KNZ]) = lambda / sizez;
+    }
+  });
 
   k_array_grid.modify_device();
   k_array_grid.sync_host();
@@ -298,32 +322,45 @@ void ComputeLambdaGridKokkos::operator()(TagComputeLambdaGrid_ComputePerGrid, co
   for (int j = 0; j < ntotal; j++) {
     nrhosum += d_nrho(i,j);
     for (int k = 0; k < ntotal; k++) {
-        const double dref = d_params_const(j,k).diam;
-        const double tref = d_params_const(j,k).tref;
-        const double omega = d_params_const(j,k).omega;
-        const double mj = d_species[j].mass;
-        const double mk = d_species[k].mass;
-        const double mr = mj * mk / (mj + mk);
-        if (tempwhich == NONE || d_temp[i] == 0.0) {
+      const double dref = d_params_const(j,k).diam;
+      const double tref = d_params_const(j,k).tref;
+      const double omega = d_params_const(j,k).omega;
+      const double mj = d_species[j].mass;
+      const double mk = d_species[k].mass;
+      const double mr = mj * mk / (mj + mk);
+
+      if (tempwhich == NONE || d_temp[i] == 0.0) {
+        if (lambdaflag)
           d_lambdainv(i,j) += (MY_PI * sqrt (1+mj/mk) * pow(dref,2.0) * d_nrho(i,k));
+        if (tauflag)
           d_tauinv(i,j) += (2.0 * pow(dref,2.0) * d_nrho(i,k) * sqrt (2.0 * MY_PI * boltz * tref / mr));
-        } else {
+      } else {
+        if (lambdaflag)
           d_lambdainv(i,j) += (MY_PI * sqrt (1+mj/mk) * pow(dref,2.0) * d_nrho(i,k) * pow(tref/d_temp[i],omega-0.5));
+
+        if (tauflag)
           d_tauinv(i,j) += (2.0 * pow(dref,2.0) * d_nrho(i,k) * sqrt (2.0 * MY_PI * boltz * tref / mr) * pow(d_temp[i]/tref,1.0-omega));
-        }
+      }
     }
   }
 
   for (int j = 0; j < ntotal; j++) {
-    if (d_lambdainv(i,j) > 1e-30) lambda += d_nrho(i,j) / (nrhosum * d_lambdainv(i,j));
-    if (d_tauinv(i,j) > 1e-30) tau += d_nrho(i,j) / (nrhosum * d_tauinv(i,j));
+    if (lambdaflag && d_lambdainv(i,j) > 1e-30) lambda += d_nrho(i,j) / (nrhosum * d_lambdainv(i,j));
+    if (tauflag && d_tauinv(i,j) > 1e-30) tau += d_nrho(i,j) / (nrhosum * d_tauinv(i,j));
   }
 
-  if (lambda == 0.0) d_array_grid(i,0) = BIG;
-  else d_array_grid(i,0) = lambda;
+  if (lambdaflag) {
+    if (lambda == 0.0) lambda  = BIG;
+    int index = output_order[LAMBDA];
+    if (noutputs == 1 && !knanyflag) d_vector_grid[i] = lambda;
+    else d_array_grid(i,d_output_order[LAMBDA]) = lambda;
+  }
 
-  if (tau == 0.0) d_array_grid(i,1) = BIG;
-  else d_array_grid(i,1) = tau;
+  if (tauflag) {
+    if (tau == 0.0) tau = BIG;
+    if (noutputs == 1) d_vector_grid[i] = tau;
+    else d_array_grid(i,output_order[TAU]) = tau;
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -343,7 +380,7 @@ void ComputeLambdaGridKokkos::reallocate()
     d_array_grid1 = decltype(d_array_grid1)("lambda/grid:array_grid1",nglocal,nvalues);
 
   memoryKK->destroy_kokkos(k_array_grid,array_grid);
-  memoryKK->create_kokkos(k_array_grid,array_grid,nglocal,size_per_grid_cols,"lambda/grid:array_grid");
+  memoryKK->create_kokkos(k_array_grid,array_grid,nglocal,noutputs,"lambda/grid:array_grid");
   d_array_grid = k_array_grid.d_view;
 
   d_lambdainv = decltype(d_lambdainv)("lambda/grid:lambdainv",nglocal,ntotal);

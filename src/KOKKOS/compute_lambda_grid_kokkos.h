@@ -56,11 +56,10 @@ namespace SPARTA_NS {
 
     DAT::t_float_2d d_diam,d_tref,d_omega;
 
-    DAT::tdual_float_1d k_numap;
     DAT::t_float_1d d_numap;
-
-    DAT::tdual_float_2d k_umap,k_uomap;
     DAT::t_float_2d d_umap,d_uomap;
+
+    DAT::t_int_1d d_output_order;
 };
 
 }

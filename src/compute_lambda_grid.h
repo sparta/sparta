@@ -35,12 +35,14 @@ class ComputeLambdaGrid : public Compute {
   bigint memory_usage();
 
  protected:
-  int nglocal,nvalues,nparams,tmax;
-  int tempwhich,kflag;
+  int nglocal,nvalues,nparams,tmax,noutputs;
+  int tempwhich;
+  int lambdaflag,tauflag;
+  int knallflag,knxflag,knyflag,knzflag,knanyflag;
 
-  char **ids_nrho;                // ID/name of compute,fix,variable to access
-  int *nrhowhich;                // COMPUTE or FIX or VARIABLE
-  int *nrhoindex;             // which column from compute or fix to access
+  char **ids_nrho;           // ID/name of compute,fix,variable to access
+  int *nrhowhich;            // COMPUTE or FIX or VARIABLE
+  int *nrhoindex;            // which column from compute or fix to access
   int *value2index;          // index of compute,fix,variable
   int *post_process;         // 1 if need compute->post_process() on value
 
@@ -57,6 +59,7 @@ class ComputeLambdaGrid : public Compute {
   int **umap;                // indices of tally quants in tally for each value
   int **uomap;               // indices of corresponding quantities (0 to N-1)
                              //   in compute/fix tally array, for each value
+  int *output_order;
 
   char *id_temp;
   int tempindex;
