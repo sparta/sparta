@@ -37,8 +37,8 @@ compute             2 thermal/grid all all temp
 fix                 1 ave/grid all 1 100 100 c_1[*] ave running
 fix                 2 ave/grid all 1 100 100 c_2[1] ave running
 
-compute             3c lambda/grid c_1[*] c_2[1] kall #compute mfp and mct based on compute
-compute             3f lambda/grid f_1[*] f_2 kall #compute mfp and mct based on fix
+compute             3c lambda/grid c_1[*] c_2[1] lambda tau knall #compute mfp and mct based on compute
+compute             3f lambda/grid f_1[*] f_2 lambda tau knall #compute mfp and mct based on fix
 #dump                1 grid all 250 tmp.grid.* id c_3c[*] c_3f[*] # choose to dump compute or fix or both
 
 compute             3c_reduced reduce ave c_3c[*]

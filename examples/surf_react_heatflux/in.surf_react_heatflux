@@ -119,7 +119,7 @@ compute             1 grid all all nrho
 compute             2 thermal/grid all all temp
 fix                 1 ave/grid all 1 1000 1000 c_1[*] c_2[*] ave one
 
-compute             1b lambda/grid f_1[1] f_1[2] N2 kall
+compute             1b lambda/grid f_1[1] f_1[2] lambda knall
 
 fix                 10 adapt 1000 all refine coarsen value c_1b[2] 0.8 1.6 &
                     combine min thresh less more cells 2 2 1
