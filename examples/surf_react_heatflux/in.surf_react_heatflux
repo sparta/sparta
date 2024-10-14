@@ -81,7 +81,7 @@ balance_grid        rcb cell
 #####################################
 # Gas/Collision Model Specification #
 #####################################
-species             air.species N2 N
+species             air.species N2
 mixture             all vstream ${V} 0 0 temp ${temp}
 mixture             all N2 frac 1.0
 
@@ -95,7 +95,7 @@ react_modify        recomb no
 # Surface generation and collision specification
 #####################################################
 read_surf	    circle.surf group 1
-write_surf          circle-clipped.out
+#write_surf          circle-clipped.out
 
 surf_collide        1 diffuse ${surftemp} 1.0
 surf_react          1 prob air.surf
@@ -127,7 +127,7 @@ fix                 load balance 1000 1.1 rcb part
 
 compute             3 surf all all etot ke erot evib echem
 fix                 3 ave/surf all 1 1000 1000 c_3[*] ave one
-dump                3 surf all 1000 std_surf.* id f_3[*]
+#dump                3 surf all 1000 std_surf.* id f_3[*]
 
 compute             echem reduce ave f_3[5]
 
