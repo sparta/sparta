@@ -146,7 +146,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
 
       if (post_process[m]) {
         const int ntally_col = numap[m];
-        DAT::t_float_2d l_ctally;
+        DAT::t_float_2d_lr l_ctally;
         auto l_umap = d_umap;
         auto l_uomap = d_uomap;
         cKKBase->query_tally_grid_kokkos(l_ctally);
