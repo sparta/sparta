@@ -414,6 +414,8 @@ void SurfKokkos::spread_custom(int index)
 {
   // modifies the inner part of eivec,eiarray,edvec,edarray on whatever, and the outer view on the host
 
+  error->all(FLERR,"Custom 'spread' routine not (yet) supported by KOKKOS package");
+
   if (etype[index] == INT) {
     if (esize[index] == 0) {
       k_eivec.sync_host();
