@@ -32,6 +32,7 @@ using namespace SPARTA_NS;
 
 #define START_OF_STEP  1
 #define END_OF_STEP    2
+#define POST_RUN       3
 
 /* ---------------------------------------------------------------------- */
 
@@ -158,6 +159,20 @@ void Modify::end_of_step()
   for (int i = 0; i < n_end_of_step; i++)
     if (update->ntimestep % end_of_step_every[i] == 0)
       fix[list_end_of_step[i]]->end_of_step();
+}
+
+/* ----------------------------------------------------------------------
+   post_run call
+------------------------------------------------------------------------- */
+
+void Modify::post_run()
+{
+  for (int i = 0; i < nfix; i++) fix[i]->post_run();
+
+  // must reset this to its default value, since computes may be added
+  // or removed between runs and with this change we will redirect any
+  // calls to addstep_compute() to addstep_compute_all() instead.
+  n_timeflag = -1;
 }
 
 /* ----------------------------------------------------------------------
