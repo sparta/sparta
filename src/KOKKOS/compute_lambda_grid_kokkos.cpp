@@ -120,7 +120,6 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
   // grab nrho and temp values from compute or fix
   // invoke nrho and temp computes as needed
 
-
   auto l_nrho = d_nrho;
 
   for (int m = 0; m < nvalues; m++) {
