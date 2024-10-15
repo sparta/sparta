@@ -629,6 +629,56 @@ void ParticleKokkos::grow_species()
   }
 }
 
+/* ----------------------------------------------------------------------
+   add one or more species to species list
+------------------------------------------------------------------------- */
+
+void ParticleKokkos::add_species(int narg, char **arg)
+{
+  Particle::add_species(narg,arg);
+
+  MemKK::realloc_kokkos(d_nelecstates,"particle:nelecstates",nspecies);
+  MemKK::realloc_kokkos(d_elecstates,"particle:elecstates",nspecies,
+maxelecstate);
+  MemKK::realloc_kokkos(d_elec_default_rels,"particle:elec_default_rels",nspecies,maxelecstate);
+  MemKK::realloc_kokkos(d_elec_species_rels,"particle:elec_species_rels",nspecies,nspecies,maxelecstate);
+  MemKK::realloc_kokkos(d_enforce_spin_conservation,"particle:enforce_spin_conservation",nspecies,nspecies);
+
+  auto h_nelecstates = Kokkos::create_mirror_view(d_nelecstates);
+  auto h_elecstates = Kokkos::create_mirror_view(d_elecstates);
+  auto h_elec_default_rels = Kokkos::create_mirror_view(d_elec_default_rels);
+  auto h_elec_species_rels = Kokkos::create_mirror_view(d_elec_species_rels);
+  auto h_enforce_spin_conservation = Kokkos::create_mirror_view(d_enforce_spin_conservation);
+
+  Kokkos::deep_copy(h_nelecstates,0);
+  Kokkos::deep_copy(h_elec_species_rels,-1.0);
+
+  for (int isp = 0; isp < nspecies; ++isp) {
+    if (!species[isp].elecdat) continue;
+
+    const int nelecstate = species[isp].elecdat->nelecstate;
+    h_nelecstates[isp] = nelecstate;
+
+    for (int k = 0; k < nelecstate; k++) {
+      h_elecstates(isp,k) = species[isp].elecdat->states[k];
+      h_elec_default_rels(isp,k) = species[isp].elecdat->default_rel[k];
+    }
+
+    for (int jsp = 0; jsp < particle->nspecies; ++jsp) {
+      h_enforce_spin_conservation(isp,jsp) = species[isp].elecdat->enforce_spin_conservation[jsp];
+      if (species[isp].elecdat->species_rel[jsp])
+        for (int k = 0; k < nelecstate; k++)
+          h_elec_species_rels(isp,jsp,k) = species[isp].elecdat->species_rel[jsp][k];
+    }
+  }
+
+  Kokkos::deep_copy(d_nelecstates,h_nelecstates);
+  Kokkos::deep_copy(d_elecstates,h_elecstates);
+  Kokkos::deep_copy(d_elec_default_rels,h_elec_default_rels);
+  Kokkos::deep_copy(d_elec_species_rels,h_elec_species_rels);
+  Kokkos::deep_copy(d_enforce_spin_conservation,h_enforce_spin_conservation);
+}
+
 /* ---------------------------------------------------------------------- */
 
 void ParticleKokkos::wrap_kokkos()

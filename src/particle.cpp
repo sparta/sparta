@@ -59,6 +59,8 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
   nspecies = maxspecies = 0;
   species = NULL;
   maxvibmode = 0;
+  maxelecstate = 0;
+  cumulative_probabilities = NULL;
 
   //maxgrid = 0;
   //cellcount = NULL;
@@ -109,6 +111,20 @@ Particle::~Particle()
 {
   if (!uncopy && (copy || copymode)) return;
 
+  for (int i = 0; i < nspecies; i++) {
+    if (species && species[i].elecdat != NULL) {
+      memory->sfree(species[i].elecdat->states);
+      memory->destroy(species[i].elecdat->default_rel);
+      for (int j = 0; j < nspecies; j++) {
+        if (species[i].elecdat->species_rel[j] != NULL) {
+          memory->destroy(species[i].elecdat->species_rel[j]);
+        }
+      }
+      memory->sfree(species[i].elecdat->species_rel);
+      memory->destroy(species[i].elecdat->enforce_spin_conservation);
+      delete species[i].elecdat;
+    }
+  }
   memory->sfree(species);
   for (int i = 0; i < nmixture; i++) delete mixture[i];
   memory->sfree(mixture);
@@ -139,6 +155,7 @@ Particle::~Particle()
   memory->sfree(edvec);
   memory->sfree(edarray);
   memory->destroy(edcol);
+  memory->destroy(cumulative_probabilities);
 
   delete wrandom;
 }
@@ -596,6 +613,13 @@ void Particle::grow_species()
 {
   species = (Species *)
     memory->srealloc(species,maxspecies*sizeof(Species),"particle:species");
+
+  for (int isp = 0; isp < nspecies; ++isp) {
+    if (species[isp].elecdat != NULL) {
+      memory->srealloc(species[isp].elecdat->species_rel, maxspecies*sizeof(double*),"elecdat:species_rel");
+      memory->grow(species[isp].elecdat->enforce_spin_conservation, maxspecies, "elecdat:enforce_spin_conservation");
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -760,6 +784,8 @@ void Particle::add_species(int narg, char **arg)
       break;
     } else if (strcmp(arg[iarg],"vibfile") == 0) {
       break;
+    } else if (strcmp(arg[iarg],"elecfile") == 0) {
+      break;
     } else {
       names[newspecies++] = arg[iarg];
     }
@@ -813,6 +839,7 @@ void Particle::add_species(int narg, char **arg)
 
   int rotindex = 0;
   int vibindex = 0;
+  int elecindex = 0;
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"rotfile") == 0) {
@@ -828,6 +855,12 @@ void Particle::add_species(int narg, char **arg)
       if (vibindex)
         error->all(FLERR,"Species command can only use a single vibfile");
       vibindex = iarg+1;
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"elecfile") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal species command");
+      if (elecindex)
+        error->all(FLERR,"Species command can only use a single elecfile");
+      elecindex = iarg+1;
       iarg += 2;
     } else error->all(FLERR,"Illegal species command");
   }
@@ -933,7 +966,126 @@ void Particle::add_species(int narg, char **arg)
     memory->sfree(filevib);
   }
 
+  if (elecindex) {
+    if (me == 0) {
+      fp = fopen(arg[elecindex],"r");
+      if (fp == NULL) {
+        char str[128];
+        sprintf(str,"Cannot open electronic file %s",arg[elecindex]);
+        error->one(FLERR,str);
+      }
+    }
+
+    nfile = maxfile = 0;
+    fileelec = NULL;
+
+    if (me == 0) read_electronic_file();
+    MPI_Bcast(&nfile,1,MPI_INT,0,world);
+
+    if (comm->me) {
+      fileelec = (ElecFile *)
+        memory->smalloc(nfile*sizeof(ElecFile),"particle:fileelec");
+    }
+    MPI_Bcast(fileelec,nfile*sizeof(ElecFile),MPI_BYTE,0,world);
+
+    if (comm->me) {
+      for (i = 0; i < nfile; ++i) {
+        fileelec[i].default_rel = (double*) memory->smalloc(
+          fileelec[i].nmode*sizeof(double), "vsp:default_rel");
+        fileelec[i].elecrel = (double**) memory->smalloc(
+          nspecies*sizeof(double*), "vsp:elecrel");
+        for (int j = 0; j < nspecies; ++j) {
+          fileelec[i].elecrel[j] = (double*) memory->smalloc(
+            fileelec[i].nmode*sizeof(double), "vsp:elecrel[]");
+        }
+        fileelec[i].enforce_spin_conservation = (bool*) memory->smalloc(
+          nspecies*sizeof(bool), "vsp:enforce_spin_conservation");
+        fileelec[i].electemp = (double*) memory->smalloc(
+          fileelec[i].nmode*sizeof(double), "vsp:electemp");
+        fileelec[i].elecdegen = (int*) memory->smalloc(
+          fileelec[i].nmode*sizeof(int), "vsp:elecdegen");
+        fileelec[i].elecspin = (int*) memory->smalloc(
+          fileelec[i].nmode*sizeof(int), "vsp:elecspin");
+        fileelec[i].elecdof = (double*) memory->smalloc(
+          fileelec[i].nmode*sizeof(double), "vsp:elecdof");
+      }
+    }
+
+    for (i = 0; i < nfile; ++i) {
+      MPI_Bcast(fileelec[i].default_rel,fileelec[i].nmode*sizeof(double),MPI_BYTE,0,world);
+      for (int j = 0; j < nspecies; ++j) {
+        MPI_Bcast(fileelec[i].elecrel[j],fileelec[i].nmode*sizeof(double),MPI_BYTE,0,world);
+      }
+      MPI_Bcast(fileelec[i].enforce_spin_conservation,nspecies*sizeof(bool),MPI_BYTE,0,world);
+      MPI_Bcast(fileelec[i].electemp,fileelec[i].nmode*sizeof(double),MPI_BYTE,0,world);
+      MPI_Bcast(fileelec[i].elecdegen,fileelec[i].nmode*sizeof(int),MPI_BYTE,0,world);
+      MPI_Bcast(fileelec[i].elecspin,fileelec[i].nmode*sizeof(int),MPI_BYTE,0,world);
+      MPI_Bcast(fileelec[i].elecdof,fileelec[i].nmode*sizeof(double),MPI_BYTE,0,world);
+    }
+
+    for (i = 0; i < newspecies; i++) {
+      int ii = nspecies_original + i;
+
+      // Allocate memory for the electronic mode only for species with
+      // such data defined in the elecfile.
+      for (j = 0; j < nfile; j++)
+        if (strcmp(names[i],fileelec[j].id) == 0) break;
+      if (j == nfile) {
+        species[ii].elecdat = NULL;
+        continue;
+      }
+
+      int nmode = fileelec[j].nmode;
+      maxelecstate = MAX(maxelecstate, nmode);
+      species[ii].elecdat = new ElectronicData();
+      species[ii].elecdat->nelecstate = nmode;
+      species[ii].elecdat->states = (ElecState*) memory->smalloc(nmode*sizeof(ElecState),"elecdat:elecstate");
+      memory->create(species[ii].elecdat->default_rel, nmode, "elecdat:default_rel");
+      species[ii].elecdat->species_rel = (double**) memory->smalloc(maxspecies*sizeof(double*),"elecdat:species_rel");
+      memory->create(species[ii].elecdat->enforce_spin_conservation, maxspecies, "elecdat:enforce_spin_conservation");
+      for (int isp = 0; isp < particle->nspecies; ++isp) {
+        species[ii].elecdat->species_rel[isp] = NULL;
+      }
+      for (int isp = 0; isp < particle->nspecies; ++isp) {
+        species[ii].elecdat->enforce_spin_conservation[isp] = fileelec[j].enforce_spin_conservation[isp];
+      }
+      for (k = 0; k < nmode; k++) {
+        species[ii].elecdat->states[k].temp = fileelec[j].electemp[k];
+        species[ii].elecdat->states[k].degen = fileelec[j].elecdegen[k];
+        species[ii].elecdat->states[k].spin = fileelec[j].elecspin[k];
+        species[ii].elecdat->states[k].dof = fileelec[j].elecdof[k];
+        species[ii].elecdat->default_rel[k] = fileelec[j].default_rel[k];
+
+      }
+      for (int isp = 0; isp < particle->nspecies; ++isp) {
+        if (isp == ii) continue;
+        if (fileelec[j].elecrel[isp][0] >= 0) {
+          memory->create(species[ii].elecdat->species_rel[isp], nmode, "elecdat:species_rel[]");
+          for (k = 0; k < nmode; k++) {
+            species[ii].elecdat->species_rel[isp][k] = fileelec[j].elecrel[isp][k];
+          }
+        }
+      }
+      species[ii].elecdiscrete_read = 1;
+    }
+    for (i = 0; i < nfile; ++i) {
+      memory->sfree(fileelec[i].default_rel);
+      for (int j = 0; j < nspecies; ++j) {
+        memory->sfree(fileelec[i].elecrel[j]);
+      }
+      memory->sfree(fileelec[i].elecrel);
+      memory->sfree(fileelec[i].enforce_spin_conservation);
+      memory->sfree(fileelec[i].electemp);
+      memory->sfree(fileelec[i].elecdegen);
+      memory->sfree(fileelec[i].elecspin);
+      memory->sfree(fileelec[i].elecdof);
+    }
+    memory->sfree(fileelec);
+  }
   // clean up
+  if (cumulative_probabilities) memory->destroy(cumulative_probabilities);
+  if (maxelecstate)
+    memory->create(cumulative_probabilities, maxelecstate+1, "particle:cumulative_probabilities");
 
   delete [] names;
 }
@@ -1087,6 +1239,59 @@ double Particle::evib(int isp, double temp_thermal, RanKnuth *erandom)
   }
 
   return eng;
+}
+
+/* ---------------------------------------------------------------------- */
+
+int Particle::ielec(int isp, double temp_elec, RanKnuth *erandom)
+{
+  int ielec = 0;
+
+  int elecstyle = NONE;
+  if (collide) elecstyle = collide->elecstyle;
+  if (elecstyle == DISCRETE) {
+    Species species = particle->species[isp];
+    if (species.elecdat == NULL) return 0.0;
+
+    electronic_distribution_func(isp, temp_elec);
+
+    for (int i = 1; i < species.elecdat->nelecstate; ++i)
+      cumulative_probabilities[i] += cumulative_probabilities[i-1];
+
+    double ran = erandom->uniform();
+    ielec = 0;
+    while (ran > cumulative_probabilities[ielec])
+      ++ielec;
+  }
+  return ielec;
+}
+
+/* ---------------------------------------------------------------------- */
+
+double* Particle::electronic_distribution_func(int isp, double temp_elec) {
+  double* distribution = cumulative_probabilities;
+  int elecstyle = NONE;
+  if (collide) elecstyle = collide->elecstyle;
+  if (elecstyle == DISCRETE) {
+    Particle::Species species = particle->species[isp];
+    double partition_function = 0.0;
+
+    for (int i = 0; i < species.elecdat->nelecstate; ++i) {
+
+      // Calculate boltzmann fractions
+
+      distribution[i] = species.elecdat->states[i].degen*exp(-species.elecdat->states[i].temp/temp_elec);
+
+      // Calculate partition function
+
+      partition_function += distribution[i];
+    }
+
+    for (int i = 0; i < species.elecdat->nelecstate; ++i)
+      distribution[i] /= partition_function;
+  }
+
+  return distribution;
 }
 
 /* ----------------------------------------------------------------------
@@ -1293,6 +1498,116 @@ void Particle::read_vibration_file()
   fclose(fp);
 }
 
+/* ----------------------------------------------------------------------
+   read list of extra electronic info in electronic file
+   store info in fileelec and nfile
+   only invoked by proc 0
+------------------------------------------------------------------------- */
+
+void Particle::read_electronic_file()
+{
+  // read file line by line
+  // skip blank lines or comment lines starting with '#'
+
+  char **words = new char*[128];
+  char line[MAXLINE],copy[MAXLINE];
+
+  while (fgets(line,MAXLINE,fp)) {
+    int pre = strspn(line," \t\n\r");
+    if (pre == strlen(line) || line[pre] == '#') continue;
+
+    strcpy(copy,line);
+    int nwords = wordcount(copy,NULL);
+    if (nwords < 3)
+      error->one(FLERR,"Incorrect line format in electronic file");
+
+    if (nfile == maxfile) {
+      maxfile += DELTASPECIES;
+      fileelec = (ElecFile *)
+      memory->srealloc(fileelec,maxfile*sizeof(ElecFile),
+                       "particle:fileelec");
+      memset(&fileelec[nfile],0,(maxfile-nfile)*sizeof(ElecFile));
+    }
+
+    nwords = wordcount(line,words);
+    ElecFile *vsp = &fileelec[nfile];
+
+    if (strlen(words[0]) + 1 > 16)
+      error->one(FLERR,"Invalid species ID in electronic file");
+    strcpy(vsp->id,words[0]);
+
+    int isp = particle->find_species(words[0]);
+    if (isp < 0) continue;
+
+    int test_nmode = atoi(words[1]);
+    if (test_nmode > 0) {
+      vsp->nmode = test_nmode;
+
+      // Line defining electronic states for one species
+      if (vsp->nmode < 2)
+        error->one(FLERR,"Invalid N count in electronic file");
+      if (nwords != 2 + 5*vsp->nmode)
+        error->one(FLERR,"Incorrect line format in electronic file");
+
+      vsp->default_rel = (double*) memory->smalloc(vsp->nmode*sizeof(double), "vsp:default_rel");
+      vsp->elecrel = (double**) memory->smalloc(nspecies*sizeof(double*), "vsp:elecrel");
+      for (int i = 0; i < nspecies; ++i) {
+        vsp->elecrel[i] = (double*) memory->smalloc(vsp->nmode*sizeof(double), "vsp:elecrel[]");
+      }
+      vsp->enforce_spin_conservation = (bool*) memory->smalloc(nspecies*sizeof(bool), "vsp:enforce_spin_conservation");
+      vsp->electemp = (double*) memory->smalloc(vsp->nmode*sizeof(double), "vsp:electemp");
+      vsp->elecdegen = (int*) memory->smalloc(vsp->nmode*sizeof(int), "vsp:elecdegen");
+      vsp->elecspin = (int*) memory->smalloc(vsp->nmode*sizeof(int), "vsp:elecspin");
+      vsp->elecdof = (double*) memory->smalloc(vsp->nmode*sizeof(double), "vsp:elecdof");
+
+      for (int j = 0; j < nspecies; ++j) {
+        for (int i = 0; i < vsp->nmode; ++i) {
+          vsp->elecrel[j][i] = -1.0;
+        }
+        vsp->enforce_spin_conservation[j] = true;
+      }
+
+      int j = 2;
+      for (int i = 0; i < vsp->nmode; ++i) {
+        vsp->electemp[i] = atof(words[j++]);
+        vsp->default_rel[i] = atof(words[j++]);
+        vsp->elecdegen[i] = atoi(words[j++]);
+        vsp->elecspin[i] = atoi(words[j++]);
+        vsp->elecdof[i] = atoi(words[j++]);
+      }
+      nfile++;
+    } else {
+      // Cross-species line defining species-specific relaxation collision numbers
+      for (int i = 0; i < nfile; ++i) {
+        if (strcmp(words[0],fileelec[i].id) == 0) {
+          vsp = &fileelec[i];
+          break;
+        }
+      }
+      if (nwords != 3 + vsp->nmode)
+        error->one(FLERR,"Incorrect line format in electronic file");
+
+      int jsp = particle->find_species(words[1]);
+      if (jsp < 0) continue;
+
+      if (strcmp(words[2],"T") == 0) {
+        vsp->enforce_spin_conservation[jsp] = true;
+      } else if (strcmp(words[2],"F") == 0) {
+        vsp->enforce_spin_conservation[jsp] = false;
+      } else {
+        error->one(FLERR,"Must specify 'T' or 'F' for spin conservation flag");
+      }
+      int j = 3;
+      for (int i = 0; i < vsp->nmode; ++i) {
+        vsp->elecrel[jsp][i] = atof(words[j++]);
+      }
+    }
+  }
+
+  delete [] words;
+
+  fclose(fp);
+}
 /* ----------------------------------------------------------------------
    count whitespace-delimited words in line
    line will be modified, since strtok() inserts NULLs
@@ -1606,3 +1921,86 @@ bigint Particle::memory_usage()
     bytes += (bigint) maxlocal*edcol[i] * sizeof(double);
   return bytes;
 }
+
+/* ---------------------------------------------------------------------- */
+
+double Particle::elec_energy(int isp, double temp_elec) {
+  Particle::Species species = particle->species[isp];
+
+  double* state_probabilities = particle->electronic_distribution_func(isp, temp_elec);
+
+  double total_energy = 0.0;
+  for (int i = 0; i < species.elecdat->nelecstate; ++i)
+    total_energy += state_probabilities[i]*species.elecdat->states[i].temp*update->boltz;
+
+  return total_energy;
+}
+
+/* ---------------------------------------------------------------------- */
+
+double Particle::bisectTelec(int isp, double eelec, int count)
+{
+  double first_elec_eng, t_elec, degen0, degen1, numer, denom;
+  double boltz = update->boltz;
+
+  // Short circuit the function for the most common case.
+  if (eelec == 0.0) return 0.0;
+
+  double target_energy_per_part = eelec/count;
+
+  t_elec = species[isp].elecdat->states[1].temp;
+
+  // Bisection method to find T accurate to 1%
+
+  // Find initial bounds based on our first guess
+
+  bool positive_t = true;
+  // This is a corner case where the energy is so high that
+  // even an infinite positive temp doesn't
+  // provide enough energy per particle.
+  if (target_energy_per_part > elec_energy(isp, 100*t_elec)) {
+    positive_t = false;
+    t_elec *= -1;
+  }
+
+  double low_mult, high_mult;
+  if (positive_t) {
+    low_mult = 0.9;
+    high_mult = 1.1;
+  } else {
+    low_mult = 1.1;
+    high_mult = 0.9;
+  }
+
+  double T_low = low_mult*t_elec;
+  while (elec_energy(isp, T_low) > target_energy_per_part) {
+    T_low *= low_mult;
+  }
+
+  double T_high = high_mult*t_elec;
+  while (elec_energy(isp, T_high) < target_energy_per_part && ! isinf(T_high)) {
+    T_high *= high_mult;
+  }
+
+  // Bisect
+
+  if (isinf(T_high)) {
+    throw 0;
+  }
+
+  double T_mid = t_elec;
+  double e_mid = elec_energy(isp, T_mid);
+  while ((T_high - T_low) > 0.01) {
+    if (e_mid > target_energy_per_part) {
+      T_high = T_mid;
+    } else {
+      T_low = T_mid;
+    }
+    T_mid = (T_high - T_low)/2.0 + T_low;
+    e_mid = elec_energy(isp, T_mid);
+  }
+
+  return T_mid;
+}
+
+/* ---------------------------------------------------------------------- */

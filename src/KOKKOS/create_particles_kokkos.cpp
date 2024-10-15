@@ -132,6 +132,7 @@ void CreateParticlesKokkos::create_local(bigint np)
   double temp_thermal = particle->mixture[imix]->temp_thermal;
   double temp_rot = particle->mixture[imix]->temp_rot;
   double temp_vib = particle->mixture[imix]->temp_vib;
+  double temp_elec = particle->mixture[imix]->temp_elec;
 
   double tempscale = 1.0;
   double sqrttempscale = 1.0;
@@ -311,7 +312,7 @@ void CreateParticlesKokkos::create_local(bigint np)
       if (!h_keep(cand)) continue;
       auto inew = h_cands2new(cand) + nlocal_before;
       if (nfix_update_custom)
-        modify->update_custom(inew,temp_thermal,temp_rot,temp_vib,vstream);
+        modify->update_custom(inew,temp_thermal,temp_rot,temp_vib,temp_elec,vstream);
     }
   }
 

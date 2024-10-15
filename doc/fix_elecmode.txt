@@ -1,0 +1,103 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+fix elecmode command :h3
+fix elecmode command/kk :h3
+
+[Syntax:]
+
+fix ID elecmode :pre
+
+ID is documented in "fix"_fix.html command
+elecmode = style name of this fix command :ul
+
+[Examples:]
+
+fix 1 elecmode :pre
+
+[Description:]
+
+Enable electronic energy states, defined on a per-species
+basis, to be used in a simulation.  This fix is meant to be used with
+the "collide_modify electronic discrete"_collide_modify.html setting.
+This fix allocates per-particle storage for the electronic state.
+Collisions between pairs of particles will then transfer energy
+between the different electronic states of the two particles.
+
+Internally, this fix defines custom particle attributes named
+"elecstate" and "eelec". They are integer and double typed arrays
+with a single value for each particle. See the "species"
+command for how the electronic states are defined for each 
+species.
+
+:line
+
+[Restart, output info:]
+
+No information about this fix is written to "binary restart
+files"_restart.html.
+
+However, the values of the custom particle attribute defined by this
+fix are written to the restart file. As explained on the
+"read_restart"_read_restart.html doc page these values can be
+re-assigned to particles when a restart file is read, if a new fix
+elecmode command is specified in the restart script before the first
+"run"_run.html command is used.
+
+No global or per-particle or per-grid quantities are stored by this
+fix for access by various output commands.
+
+However, the custom particle attributes defined by this fix can be
+accessed by the "dump particle"_dump.html command, as p_elecstate and p_eelec.
+That means those per-particle values can be written to particle dump files.
+
+:line
+
+Styles with a {kk} suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+"Accelerating SPARTA"_Section_accelerate.html section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+
+These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the "Making
+SPARTA"_Section_start.html#start_3 section for more info.
+
+You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the "-suffix command-line
+switch"_Section_start.html#start_6 when you invoke SPARTA, or you can
+use the "suffix"_suffix.html command in your input script.
+
+See the "Accelerating SPARTA"_Section_accelerate.html section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
+
+:line
+
+[Restrictions:]
+
+This fix is required if "collide_modify electronic discrete" is used.
+In this scenario, if it is not defined, an
+error will occur when a "create_particles" or "run"_run.html command
+is issued.
+
+Defining this fix after particles have been created will not populate
+the electronic energy modes of particles that already exist.  An
+exception is if the "read_restart"_read_restart.html command is used
+to read in particles from a previous simulation where this fix was
+used.  In that case, defining this fix after reading the restart file
+will enable the particles to keep their previous electronic energy
+mode values.
+
+[Related commands:]
+
+"collide_modify electronic discrete"_collide_modify.html
+
+[Default:] none

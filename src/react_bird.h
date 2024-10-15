@@ -30,7 +30,7 @@ class ReactBird : public React {
   int recomb_exist(int, int);
   void ambi_check();
   virtual int attempt(Particle::OnePart *, Particle::OnePart *,
-                      double, double, double, double &, int &) = 0;
+                      double, double, double, double, double &, int &) = 0;
   char *reactionID(int);
   virtual double extract_tally(int);
 

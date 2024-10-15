@@ -331,13 +331,14 @@ void FixEmitFaceKokkos::perform_task()
       auto temp_thermal = tasks[task].temp_thermal;
       auto temp_rot = tasks[task].temp_rot;
       auto temp_vib = tasks[task].temp_vib;
+      auto temp_elec = tasks[task].temp_elec;
       auto vstream = tasks[task].vstream;
 
       auto inew = h_cands2new(cand);
       auto ilocal = nlocal_before + inew;
 
       modify->update_custom(ilocal,temp_thermal,
-          temp_rot,temp_vib,vstream);
+          temp_rot,temp_vib,temp_elec,vstream);
     }
   }
 }

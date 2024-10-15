@@ -45,7 +45,7 @@ void ReactTCE::init()
 /* ---------------------------------------------------------------------- */
 
 int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
-                      double pre_etrans, double pre_erot, double pre_evib,
+                      double pre_etrans, double pre_erot, double pre_evib, double pre_eelec,
                       double &post_etotal, int &kspecies)
 {
   double pre_etotal,ecc,e_excess,z;
@@ -82,7 +82,7 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
     // ignore energetically impossible reactions
 
-    pre_etotal = pre_etrans + pre_erot + pre_evib;
+    pre_etotal = pre_etrans + pre_erot + pre_evib + pre_eelec;
 
     // two options for total energy in TCE model
     // 0: partialEnergy = true: rDOF model
@@ -142,6 +142,20 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
             if (isnan(zi) || isnan(zj) || zi < 0 || zj < 0) error->one(FLERR,"Root-Finding Error");
             z += 0.5 * (zi+zj);
        }
+
+      if (collide->elecstyle == DISCRETE) {
+        zi = 0.0;
+        if (species[isp].elecdat != NULL) {
+          int ielec = particle->eivec[particle->ewhich[collide->index_elecstate]][ip - particle->particles];
+          zi = species[isp].elecdat->states[ielec].dof;
+        }
+        zj = 0.0;
+        if (species[jsp].elecdat != NULL) {
+          int ielec = particle->eivec[particle->ewhich[collide->index_elecstate]][jp - particle->particles];
+          zj = species[jsp].elecdat->states[ielec].dof;
+        }
+        z += 0.5*(zi + zj);
+      }
     }
 
     // compute probability of reaction

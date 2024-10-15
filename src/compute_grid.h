@@ -53,6 +53,7 @@ class ComputeGrid : public Compute {
   double eprefactor;         // conversion from velocity^2 to energy
   double tprefactor;         // conversion from KE to temperature
   double rvprefactor;        // conversion from rot/vib E to temperature
+  double elecprefactor;      // conversion from electronic E to temperature
 
   void set_map(int, int);
   void reset_map();

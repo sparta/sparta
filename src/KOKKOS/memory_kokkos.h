@@ -323,12 +323,6 @@ static void realloc_kokkos(TYPE &data, const char *name, Indices... ns)
   data = TYPE(Kokkos::NoInit(std::string(name)), ns...);
 }
 
-template <typename TYPE, typename... Indices>
-static void realloc_kokkos(TYPE &data, Indices... ns, const char *name)
-{
-  realloc_kokkos(data, name, ns...);
-}
-
 /* ----------------------------------------------------------------------
    get memory usage of Kokkos view in bytes
 ------------------------------------------------------------------------- */

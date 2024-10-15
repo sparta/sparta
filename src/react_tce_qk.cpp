@@ -56,7 +56,7 @@ void ReactTCEQK::init()
 /* ---------------------------------------------------------------------- */
 
 int ReactTCEQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
-                        double pre_etrans, double pre_erot, double pre_evib,
+                        double pre_etrans, double pre_erot, double pre_evib, double pre_eelec,
                         double &post_etotal, int &kspecies)
 {
   double pre_etotal;
@@ -79,7 +79,7 @@ int ReactTCEQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
     // ignore energetically impossible reactions
 
-    pre_etotal = pre_etrans + pre_erot + pre_evib;
+    pre_etotal = pre_etrans + pre_erot + pre_evib + pre_eelec;
 
     ecc = pre_etotal;
 
@@ -91,11 +91,11 @@ int ReactTCEQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
     if (r->style == ARRHENIUS)
       reaction = attempt_tce(ip,jp,r,
                              pre_etrans,pre_erot,
-                             pre_evib,post_etotal,kspecies);
+                             pre_evib,pre_eelec,post_etotal,kspecies);
     else if (r->style == QUANTUM)
       reaction = attempt_qk(ip,jp,r,
                             pre_etrans,pre_erot,
-                            pre_evib,post_etotal,kspecies);
+                            pre_evib,pre_eelec,post_etotal,kspecies);
 
     if (reaction) tally_reactions[list[i]]++;
   }
@@ -107,7 +107,7 @@ int ReactTCEQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
 int ReactTCEQK::attempt_tce(Particle::OnePart *ip, Particle::OnePart *jp,
                             OneReaction *r,
-                            double pre_etrans, double pre_erot, double pre_evib,
+                            double pre_etrans, double pre_erot, double pre_evib, double pre_eelec,
                             double &post_etotal, int &kspecies)
 {
   Particle::Species *species = particle->species;
@@ -121,7 +121,7 @@ int ReactTCEQK::attempt_tce(Particle::OnePart *ip, Particle::OnePart *jp,
   double react_prob = 0.0;
   double random_prob = random->uniform();
 
-  double pre_etotal = pre_etrans + pre_erot + pre_evib;
+  double pre_etotal = pre_etrans + pre_erot + pre_evib + pre_eelec;
 
   double ecc = pre_etrans;
   if (pre_ave_rotdof > 0.1) ecc += pre_erot*r->coeff[0]/pre_ave_rotdof;
@@ -166,7 +166,7 @@ int ReactTCEQK::attempt_tce(Particle::OnePart *ip, Particle::OnePart *jp,
 
 int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
                            OneReaction * r,
-                           double pre_etrans, double pre_erot, double pre_evib,
+                           double pre_etrans, double pre_erot, double pre_evib, double pre_eelec,
                            double &post_etotal, int &kspecies)
 {
   double prob,evib,inverse_kT;
@@ -186,7 +186,7 @@ int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
   double react_prob = 0.0;
   double random_prob = random->uniform();
 
-  double pre_etotal = pre_etrans + pre_erot + pre_evib;
+  double pre_etotal = pre_etrans + pre_erot + pre_evib + pre_eelec;
 
   double ecc = pre_etrans;
   if (pre_ave_rotdof > 0.1) ecc += pre_erot*r->coeff[0]/pre_ave_rotdof;
