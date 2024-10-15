@@ -74,6 +74,19 @@ The formula used to calculate the mean free path (lambda) is given in
 
 :c,image(Eqs/lambda.jpg)
 
+NOTE: On 10/15/2024, the formula to compute the mean free path was updated
+to the equation above, from "(Bird94)"_#Bird94, equation 4.65:
+
+:c,image(Eqs/lambda_old.jpg)
+
+The new formula is more accurate as it uses the number densities, 
+translational temperatures and VSS parameters of each gases in the
+mixture, as opposed to using the flow total number density and the
+VSS parameters of only one species.
+This will make a significant difference for gas mixtures, in particular
+for reacting flow problems where the composition of the mixture changes
+significantly in time.
+
 The formula used to calculate the mean collision time (tau) is given in
 "(Bird94)"_#Bird94 as equation 1.38 combined with 4.75:
 
@@ -82,6 +95,8 @@ The formula used to calculate the mean collision time (tau) is given in
 These are the exact mean free path and mean collision time for a
 multi-species mixture, suitable for estimating optimal grid cell sizes
 and timestep as explained above.
+
+
 
 {dref} and {Tref} and {omega} are collision properties for a pair of
 species species in the flow. Specifically, {dref} is the diameter of
