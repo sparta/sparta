@@ -39,6 +39,7 @@ using namespace MathConst;
 enum{NONE,COMPUTE,FIX};
 enum{LAMBDA,TAU,KNALL,KNX,KNY,KNZ};
 
+#define MAXOUTPUT 6
 #define INVOKED_PER_GRID 16
 #define BIG 1.0e20
 
@@ -72,9 +73,9 @@ ComputeLambdaGridKokkos::ComputeLambdaGridKokkos(SPARTA *sparta, int narg, char 
   k_uomap.sync_device();
   d_uomap = k_uomap.d_view;
 
-  auto k_output_order = DAT::tdual_int_1d("lambda/grid:output_order",noutputs);
+  auto k_output_order = DAT::tdual_int_1d("lambda/grid:output_order",MAXOUTPUT);
 
-  for (int i = 0; i < noutputs; i++)
+  for (int i = 0; i < MAXOUTPUT; i++)
     k_output_order.h_view(i) = output_order[i];
 
   k_output_order.modify_host();

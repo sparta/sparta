@@ -32,6 +32,7 @@ using namespace MathConst;
 enum{NONE,COMPUTE,FIX};
 enum{LAMBDA,TAU,KNALL,KNX,KNY,KNZ};
 
+#define MAXOUTPUT 6
 #define INVOKED_PER_GRID 16
 #define BIG 1.0e20
 
@@ -111,10 +112,8 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
 
   noutputs = narg - 4;
 
-  int maxoutput = 6;
-  output_order = new int[maxoutput];
-
-  for (int i = 0; i < maxoutput; i++)
+  output_order = new int[MAXOUTPUT];
+  for (int i = 0; i < MAXOUTPUT; i++)
    output_order[i] = -1;
 
   int ioutput = 0;
@@ -390,6 +389,8 @@ ComputeLambdaGrid::~ComputeLambdaGrid()
   delete [] numap;
   memory->destroy(umap);
   memory->destroy(uomap);
+
+  delete [] output_order;
 
   if (nvalues == 1) memory->destroy(vector_grid);
   else memory->destroy(array_grid1);
