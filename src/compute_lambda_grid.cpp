@@ -40,7 +40,7 @@ enum{LAMBDA,TAU,KNALL,KNX,KNY,KNZ};
 ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
 {
-  if (narg < 4 || narg > 10)
+  if (narg < 5 || narg > 10)
     error->all(FLERR,"Illegal compute lambda/grid command");
 
   // parse three required input fields
@@ -614,7 +614,6 @@ void ComputeLambdaGrid::compute_per_grid()
 
     if (lambdaflag) {
       if (lambda == 0.0) lambda  = BIG;
-      int index = output_order[LAMBDA];
       if (noutputs == 1 && !knanyflag) vector_grid[i] = lambda;
       else array_grid[i][output_order[LAMBDA]] = lambda;
     }
@@ -632,7 +631,6 @@ void ComputeLambdaGrid::compute_per_grid()
 
   Grid::ChildCell *cells = grid->cells;
   int dimension = domain->dimension;
-  double knx,kny,knz;
   double sizeall,sizex,sizey,sizez;
 
   for (int i = 0; i < nglocal; i++) {

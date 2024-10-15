@@ -51,7 +51,7 @@ namespace SPARTA_NS {
     t_species_1d d_species;
     CollideVSSKokkos::t_params_2d_const d_params_const;
 
-    DAT::t_float_1d d_vector_grid,d_temp;
+    DAT::t_float_1d d_temp;
     DAT::t_float_2d d_array_grid1,d_nrho,d_lambdainv,d_tauinv;
 
     DAT::t_float_2d d_diam,d_tref,d_omega;
