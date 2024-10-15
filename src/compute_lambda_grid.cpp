@@ -577,7 +577,7 @@ void ComputeLambdaGrid::compute_per_grid()
   }
 
   // compute mean free path for each grid cell
-  // formula from Bird, eq 4.65
+  // formula from Bird, eq 4.77
 
   double nrhosum,lambda,tau;
 

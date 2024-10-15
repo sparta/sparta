@@ -74,7 +74,7 @@ The formula used to calculate the mean free path (lambda) is given in
 
 :c,image(Eqs/lambda.jpg)
 
-NOTE: On 10/15/2024, the formula to compute the mean free path was updated
+NOTE: In October 2024, the formula to compute the mean free path was updated
 to the equation above, from "(Bird94)"_#Bird94, equation 4.65:
 
 :c,image(Eqs/lambda_old.jpg)
