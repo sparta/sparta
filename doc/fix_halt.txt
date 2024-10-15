@@ -66,6 +66,14 @@ fix 10 halt 10 tlimit > 3600.0 :pre
 variable cpu equal cpu
 fix 10 halt 10 v_cpu > 3600.0 :pre
 
+The commands above apply only to the time spent in the current run
+command. If multiple run commands are used in the same input script,
+one can also stop the run after a predetermined amount of {total}
+walltime:
+
+variable wall equal wall
+fix 10 halt 10 v_wall > 3600.0 :pre
+
 Similarly one can stop the run after a predetermined amount of
 simulation time, which is useful when using a "variable
 timestep"_fix_dt_reset.html:
@@ -121,7 +129,9 @@ This fix produces no output.
 
 [Restrictions:] none
 
-[Related commands:] none
+[Related commands:]
+
+"run"_run.html
 
 [Default:]
 

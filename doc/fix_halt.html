@@ -79,6 +79,14 @@ stop the run after an hour of walltime:
 <PRE>variable cpu equal cpu
 fix 10 halt 10 v_cpu > 3600.0 
 </PRE>
+<P>The commands above apply only to the time spent in the current run
+command. If multiple run commands are used in the same input script,
+one can also stop the run after a predetermined amount of <I>total</I>
+walltime:
+</P>
+<PRE>variable wall equal wall
+fix 10 halt 10 v_wall > 3600.0 
+</PRE>
 <P>Similarly one can stop the run after a predetermined amount of
 simulation time, which is useful when using a <A HREF = "fix_dt_reset.html">variable
 timestep</A>:
@@ -134,7 +142,9 @@ files</A>.
 
 <P><B>Restrictions:</B> none
 </P>
-<P><B>Related commands:</B> none
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "run.html">run</A>
 </P>
 <P><B>Default:</B>
 </P>
