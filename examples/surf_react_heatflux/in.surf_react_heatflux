@@ -81,7 +81,7 @@ balance_grid        rcb cell
 #####################################
 # Gas/Collision Model Specification #
 #####################################
-species             air.species N2
+species             air.species N2 N
 mixture             all vstream ${V} 0 0 temp ${temp}
 mixture             all N2 frac 1.0
 
@@ -115,11 +115,11 @@ balance_grid        rcb part
 ###################################
 # Unsteady Output
 ###################################
-compute             1 grid all all nrho
+compute             1 grid all species nrho
 compute             2 thermal/grid all all temp
 fix                 1 ave/grid all 1 1000 1000 c_1[*] c_2[*] ave one
 
-compute             1b lambda/grid f_1[1] f_1[2] lambda knall
+compute             1b lambda/grid f_1[1*2] f_1[3] lambda knall
 
 fix                 10 adapt 1000 all refine coarsen value c_1b[2] 0.8 1.6 &
                     combine min thresh less more cells 2 2 1
