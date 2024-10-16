@@ -414,7 +414,6 @@ void SurfKokkos::spread_custom(int index)
 {
   // modifies the inner part of eivec,eiarray,edvec,edarray on whatever, and the outer view on the host
 
-  error->all(FLERR,"Custom 'spread' routine not (yet) supported by KOKKOS package");
 
   if (etype[index] == INT) {
     if (esize[index] == 0) {
@@ -422,6 +421,9 @@ void SurfKokkos::spread_custom(int index)
       k_eivec_local.sync_host();
 
       if (nlocal+nghost != size_custom_local[index]) {
+
+        error->all(FLERR,"Custom 'spread' routine with local data not "
+                           "(yet) supported by KOKKOS package");
 
         size_custom_local[index] = nlocal + nghost;
         int *ivector_local = eivec_local[ewhich[index]];
@@ -447,6 +449,10 @@ void SurfKokkos::spread_custom(int index)
       k_eiarray_local.sync_host();
 
       if (nlocal+nghost != size_custom_local[index]) {
+
+        error->all(FLERR,"Custom 'spread' routine with local data not "
+                           "(yet) supported by KOKKOS package");
+
         size_custom_local[index] = nlocal + nghost;
         int **iarray_local = eiarray_local[ewhich[index]];
         auto k_iarray_local = k_eiarray_local.h_view[ewhich[index]].k_view;
@@ -477,6 +483,10 @@ void SurfKokkos::spread_custom(int index)
       k_edvec_local.sync_host();
 
       if (nlocal+nghost != size_custom_local[index]) {
+
+        error->all(FLERR,"Custom 'spread' routine with local data not "
+                           "(yet) supported by KOKKOS package");
+
         size_custom_local[index] = nlocal + nghost;
         double *dvector_local = edvec_local[ewhich[index]];
         auto k_dvector_local = k_edvec_local.h_view[ewhich[index]].k_view;
@@ -501,6 +511,10 @@ void SurfKokkos::spread_custom(int index)
       k_edarray_local.sync_host();
 
       if (nlocal+nghost != size_custom_local[index]) {
+
+        error->all(FLERR,"Custom 'spread' routine with local data not "
+                           "(yet) supported by KOKKOS package");
+
         size_custom_local[index] = nlocal + nghost;
         double **darray_local = edarray_local[ewhich[index]];
         auto k_darray_local = k_edarray_local.h_view[ewhich[index]].k_view;
