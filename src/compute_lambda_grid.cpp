@@ -614,7 +614,7 @@ void ComputeLambdaGrid::compute_per_grid()
     }
 
     if (lambdaflag) {
-      if (lambda == 0.0) lambda  = BIG;
+      if (lambda == 0.0) lambda = BIG;
       if (noutputs == 1 && !knanyflag) vector_grid[i] = lambda;
       else array_grid[i][output_order[LAMBDA]] = lambda;
     }

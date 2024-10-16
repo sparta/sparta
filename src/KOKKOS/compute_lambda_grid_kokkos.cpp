@@ -370,7 +370,7 @@ void ComputeLambdaGridKokkos::operator()(TagComputeLambdaGrid_ComputePerGrid, co
   }
 
   if (lambdaflag) {
-    if (lambda == 0.0) lambda  = BIG;
+    if (lambda == 0.0) lambda = BIG;
     if (noutputs == 1 && !knanyflag) d_vector_grid[i] = lambda;
     else d_array_grid(i,d_output_order[LAMBDA]) = lambda;
   }
@@ -378,7 +378,7 @@ void ComputeLambdaGridKokkos::operator()(TagComputeLambdaGrid_ComputePerGrid, co
   if (tauflag) {
     if (tau == 0.0) tau = BIG;
     if (noutputs == 1) d_vector_grid[i] = tau;
-    else d_array_grid(i,output_order[TAU]) = tau;
+    else d_array_grid(i,d_output_order[TAU]) = tau;
   }
 }
 
