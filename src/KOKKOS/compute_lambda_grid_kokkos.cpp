@@ -273,56 +273,62 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
 
   // calculate per-cell Knudsen number
 
-  if (!knanyflag) return;
+  if (knanyflag) {
 
-  GridKokkos* grid_kk = ((GridKokkos*)grid);
-  grid_kk->sync(Device,CELL_MASK);
-  auto l_cells = grid_kk->k_cells.d_view;
-  auto l_vector_grid = d_vector_grid;
-  auto l_array_grid = d_array_grid;
-  auto l_output_order = d_output_order;
-  const int dimension = domain->dimension;
+    GridKokkos* grid_kk = ((GridKokkos*)grid);
+    grid_kk->sync(Device,CELL_MASK);
+    auto l_cells = grid_kk->k_cells.d_view;
+    auto l_vector_grid = d_vector_grid;
+    auto l_array_grid = d_array_grid;
+    auto l_output_order = d_output_order;
+    const int dimension = domain->dimension;
+    auto l_knxflag = knxflag;
+    auto l_knyflag = knyflag;
+    auto l_knzflag = knzflag;
+    auto l_knallflag = knallflag;
+    auto l_noutputs = noutputs;
 
-  Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
-    const double lambda = l_array_grid(i,l_output_order[LAMBDA]);
-    double sizex,sizey,sizez,sizeall;
+    Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
+      const double lambda = l_array_grid(i,l_output_order[LAMBDA]);
+      double sizex,sizey,sizez,sizeall;
 
-    if (knxflag || knallflag)
-      sizex = (l_cells[i].hi[0] - l_cells[i].lo[0]);
+      if (l_knxflag || l_knallflag)
+        sizex = (l_cells[i].hi[0] - l_cells[i].lo[0]);
 
-    if (knyflag || knallflag)
-      sizey = (l_cells[i].hi[1] - l_cells[i].lo[1]);
+      if (l_knyflag || l_knallflag)
+        sizey = (l_cells[i].hi[1] - l_cells[i].lo[1]);
 
-    if (knzflag || (knallflag && dimension > 2))
-      sizez = (l_cells[i].hi[2] - l_cells[i].lo[2]);
+      if (l_knzflag || (l_knallflag && dimension > 2))
+        sizez = (l_cells[i].hi[2] - l_cells[i].lo[2]);
 
-    if (knallflag) {
-      sizeall = sizex + sizey;
+      if (l_knallflag) {
+        sizeall = sizex + sizey;
 
-      if (dimension == 2) sizeall *= 0.5;
-      else {
-        sizeall += sizez;
-        sizeall /= 3.0;
+        if (dimension == 2) sizeall *= 0.5;
+        else {
+          sizeall += sizez;
+          sizeall /= 3.0;
+        }
+        if (l_noutputs == 1) l_vector_grid[i] = lambda / sizeall;
+        else l_array_grid(i,l_output_order[KNALL]) = lambda / sizeall;
       }
-      if (noutputs == 1) l_vector_grid[i] = lambda / sizeall;
-      else l_array_grid(i,l_output_order[KNALL]) = lambda / sizeall;
-    }
 
-    if (knxflag) {
-      if (noutputs == 1) l_vector_grid[i] = lambda / sizex;
-      else l_array_grid(i,l_output_order[KNX]) = lambda / sizex;
-    }
+      if (l_knxflag) {
+        if (l_noutputs == 1) l_vector_grid[i] = lambda / sizex;
+        else l_array_grid(i,l_output_order[KNX]) = lambda / sizex;
+      }
 
-    if (knyflag) {
-      if (noutputs == 1) l_vector_grid[i] = lambda / sizey;
-      l_array_grid(i,l_output_order[KNY]) = lambda / sizey;
-    }
+      if (l_knyflag) {
+        if (l_noutputs == 1) l_vector_grid[i] = lambda / sizey;
+        l_array_grid(i,l_output_order[KNY]) = lambda / sizey;
+      }
 
-    if (knzflag) {
-      if (noutputs == 1) l_vector_grid[i] = lambda / sizez;
-      l_array_grid(i,l_output_order[KNZ]) = lambda / sizez;
-    }
-  });
+      if (l_knzflag) {
+        if (l_noutputs == 1) l_vector_grid[i] = lambda / sizez;
+        l_array_grid(i,l_output_order[KNZ]) = lambda / sizez;
+      }
+    });
+  }
 
   if (noutputs == 1) {
     k_vector_grid.modify_device();
