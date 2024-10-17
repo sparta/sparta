@@ -13,6 +13,7 @@
 ------------------------------------------------------------------------- */
 
 #include "math.h"
+#include "math_extra.h"
 #include "string.h"
 #include "marching_cubes.h"
 #include "grid.h"
@@ -98,7 +99,7 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
     // hi[3] = upper right corner pt of grid cell
     // pt = list of 3*nsurf points that are the corner pts of each tri
 
-    // cvalues are ordered
+    // cvalues in SPARTA are ordered
     // bottom-lower-left, bottom-lower-right,
     // bottom-upper-left, bottom-upper-right
     // top-lower-left, top-lower-right, top-upper-left, top-upper-right
@@ -502,14 +503,6 @@ void MarchingCubes::cleanup()
   MyPage<surfint> *csurfs = grid->csurfs;
   int nglocal = grid->nlocal;
 
-  // DEBUG
-
-  //int nstotal;
-  //MPI_Allreduce(&surf->nlocal,&nstotal,1,MPI_INT,MPI_SUM,world);
-  //if (me == 0) printf("TOTAL TRI before count: %d\n",nstotal);
-
-  // END of DEBUG
-
   // count # of tris on each face of every cell I own
 
   int **nfacetri;
@@ -869,63 +862,6 @@ void MarchingCubes::cleanup()
   surf->nlocal = nslocal;
   memory->destroy(dellist);
 
-  // DEBUG
-
-  /*
-  MPI_Allreduce(&surf->nlocal,&nstotal,1,MPI_INT,MPI_SUM,world);
-  if (me == 0) printf("TOTAL TRI after count: %d\n",nstotal);
-
-  int alltotal,alladd,alldel,allsend,allrecv;
-  MPI_Allreduce(&ntotal,&alltotal,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&nadd,&alladd,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&ndel,&alldel,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&nsend,&allsend,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&nrecv,&allrecv,1,MPI_INT,MPI_SUM,world);
-  if (me == 0)
-    printf("CLEANUP counts: total %d add %d del %d send %d recv %d\n",
-           alltotal,alladd,alldel,allsend,allrecv);
-
-  ntotal = 0;
-  int nbad = 0;
-  int nonface = 0;
-
-  for (icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    nsurf = cells[icell].nsurf;
-    if (nsurf == 0) continue;
-    ntotal += nsurf;
-
-    lo = cells[icell].lo;
-    hi = cells[icell].hi;
-
-    for (j = 0; j < nsurf; j++) {
-      m = cells[icell].csurfs[j];
-      iface = Geometry::tri_on_hex_face(tris[m].p1,tris[m].p2,tris[m].p3,lo,hi);
-      if (iface < 0) continue;
-
-      norm = tris[m].norm;
-      idim = iface/2;
-      if (iface % 2 && norm[idim] < 0.0) inwardnorm = 1;
-      else if (iface % 2 == 0 && norm[idim] > 0.0) inwardnorm = 1;
-      else inwardnorm = 0;
-
-      nonface++;
-      if (!inwardnorm) nbad++;
-    }
-  }
-
-  int nbadall;
-  MPI_Allreduce(&nbad,&nbadall,1,MPI_INT,MPI_SUM,world);
-  if (me == 0) printf("BAD NORM %d\n",nbadall);
-
-  int nonfaceall;
-  MPI_Allreduce(&nonface,&nonfaceall,1,MPI_INT,MPI_SUM,world);
-  if (me == 0) printf("Total onface %d\n",nonfaceall);
-
-  if (ntotal != surf->nlocal) error->one(FLERR,"Bad surf total");
-  */
-
-  // END of DEBUG
 }
 
 /* ----------------------------------------------------------------------
@@ -937,139 +873,139 @@ int MarchingCubes::add_triangle(int *trig, int n)
   for(int t = 0; t < 3*n; t++) {
     switch (trig[t]) {
     case 0:
-      pt[t][0] = interpolate(v000,v001,lo[0],hi[0]);
+      pt[t][0] = interpolate(v000,v001,lo[0],hi[0]); // i0
       pt[t][1] = lo[1];
       pt[t][2] = lo[2];
       break;
     case 1:
       pt[t][0] = hi[0];
-      pt[t][1] = interpolate(v001,v011,lo[1],hi[1]);
+      pt[t][1] = interpolate(v001,v011,lo[1],hi[1]); // i1
       pt[t][2] = lo[2];
       break;
     case 2:
-      pt[t][0] = interpolate(v010,v011,lo[0],hi[0]);
+      pt[t][0] = interpolate(v010,v011,lo[0],hi[0]); // i2
       pt[t][1] = hi[1];
       pt[t][2] = lo[2];
       break;
     case 3:
       pt[t][0] = lo[0];
-      pt[t][1] = interpolate(v000,v010,lo[1],hi[1]);
+      pt[t][1] = interpolate(v000,v010,lo[1],hi[1]); // i3
       pt[t][2] = lo[2];
       break;
     case 4:
-      pt[t][0] = interpolate(v100,v101,lo[0],hi[0]);
+      pt[t][0] = interpolate(v100,v101,lo[0],hi[0]); // i4
       pt[t][1] = lo[1];
       pt[t][2] = hi[2];
       break;
     case 5:
       pt[t][0] = hi[0];
-      pt[t][1] = interpolate(v101,v111,lo[1],hi[1]);
+      pt[t][1] = interpolate(v101,v111,lo[1],hi[1]); // i5
       pt[t][2] = hi[2];
       break;
     case 6:
-      pt[t][0] = interpolate(v110,v111,lo[0],hi[0]);
+      pt[t][0] = interpolate(v110,v111,lo[0],hi[0]); // i6
       pt[t][1] = hi[1];
       pt[t][2] = hi[2];
       break;
     case 7:
       pt[t][0] = lo[0];
-      pt[t][1] = interpolate(v100,v110,lo[1],hi[1]);
+      pt[t][1] = interpolate(v100,v110,lo[1],hi[1]); // i7
       pt[t][2] = hi[2];
       break;
     case 8:
       pt[t][0] = lo[0];
       pt[t][1] = lo[1];
-      pt[t][2] = interpolate(v000,v100,lo[2],hi[2]);
+      pt[t][2] = interpolate(v000,v100,lo[2],hi[2]); // i8
       break;
     case 9:
       pt[t][0] = hi[0];
       pt[t][1] = lo[1];
-      pt[t][2] = interpolate(v001,v101,lo[2],hi[2]);
+      pt[t][2] = interpolate(v001,v101,lo[2],hi[2]); // i9
       break;
     case 10:
       pt[t][0] = hi[0];
       pt[t][1] = hi[1];
-      pt[t][2] = interpolate(v011,v111,lo[2],hi[2]);
+      pt[t][2] = interpolate(v011,v111,lo[2],hi[2]); // i10
       break;
     case 11:
       pt[t][0] = lo[0];
       pt[t][1] = hi[1];
-      pt[t][2] = interpolate(v010,v110,lo[2],hi[2]);
+      pt[t][2] = interpolate(v010,v110,lo[2],hi[2]); // i11
       break;
     case 12: {
       int u = 0;
       pt[t][0] = pt[t][1] = pt[t][2] = 0.0;
       if (bit0 ^ bit1) {
         ++u;
-        pt[t][0] += interpolate(v000,v001,lo[0],hi[0]);
+        pt[t][0] += interpolate(v000,v001,lo[0],hi[0]); // i0
         pt[t][1] += lo[1];
         pt[t][2] += lo[2];
       }
       if (bit1 ^ bit2) {
         ++u;
         pt[t][0] += hi[0];
-        pt[t][1] += interpolate(v001,v011,lo[1],hi[1]);
+        pt[t][1] += interpolate(v001,v011,lo[1],hi[1]); // i1
         pt[t][2] += lo[2];
       }
       if (bit2 ^ bit3) {
         ++u;
-        pt[t][0] += interpolate(v010,v011,lo[0],hi[0]);
+        pt[t][0] += interpolate(v010,v011,lo[0],hi[0]); // i2
         pt[t][1] += hi[1];
         pt[t][2] += lo[2];
       }
       if (bit3 ^ bit0) {
         ++u;
         pt[t][0] += lo[0];
-        pt[t][1] += interpolate(v000,v010,lo[1],hi[1]);
+        pt[t][1] += interpolate(v000,v010,lo[1],hi[1]); // i3
         pt[t][2] += lo[2];
       }
       if (bit4 ^ bit5) {
         ++u;
-        pt[t][0] += interpolate(v100,v101,lo[0],hi[0]);
+        pt[t][0] += interpolate(v100,v101,lo[0],hi[0]); // i4
         pt[t][1] += lo[1];
         pt[t][2] += hi[2];
       }
       if (bit5 ^ bit6) {
         ++u;
         pt[t][0] += hi[0];
-        pt[t][1] += interpolate(v101,v111,lo[1],hi[1]);
+        pt[t][1] += interpolate(v101,v111,lo[1],hi[1]); // i5
         pt[t][2] += hi[2];
       }
       if (bit6 ^ bit7) {
         ++u;
-        pt[t][0] += interpolate(v110,v111,lo[0],hi[0]);
+        pt[t][0] += interpolate(v110,v111,lo[0],hi[0]); // i6
         pt[t][1] += hi[1];
         pt[t][2] += hi[2];
       }
       if (bit7 ^ bit4) {
         ++u;
         pt[t][0] += lo[0];
-        pt[t][1] += interpolate(v100,v110,lo[1],hi[1]);
+        pt[t][1] += interpolate(v100,v110,lo[1],hi[1]); // i7
         pt[t][2] += hi[2];
       }
       if (bit0 ^ bit4) {
         ++u;
         pt[t][0] += lo[0];
         pt[t][1] += lo[1];
-        pt[t][2] += interpolate(v000,v100,lo[2],hi[2]);
+        pt[t][2] += interpolate(v000,v100,lo[2],hi[2]); // i8
       }
       if (bit1 ^ bit5) {
         ++u;
         pt[t][0] += hi[0];
         pt[t][1] += lo[1];
-        pt[t][2] += interpolate(v001,v101,lo[2],hi[2]);
+        pt[t][2] += interpolate(v001,v101,lo[2],hi[2]); // i9
       }
       if (bit2 ^ bit6) {
         ++u;
         pt[t][0] += hi[0];
         pt[t][1] += hi[1];
-        pt[t][2] += interpolate(v011,v111,lo[2],hi[2]);
+        pt[t][2] += interpolate(v011,v111,lo[2],hi[2]); // i10
       }
       if (bit3 ^ bit7) {
         ++u;
         pt[t][0] += lo[0];
         pt[t][1] += hi[1];
-        pt[t][2] += interpolate(v010,v110,lo[2],hi[2]);
+        pt[t][2] += interpolate(v010,v110,lo[2],hi[2]); // i11
       }
 
       pt[t][0] /= static_cast<double> (u);
