@@ -313,6 +313,7 @@ void CollideVSSKokkos::init()
   k_params.modify_host();
   k_params.sync_device();
   d_params = k_params.d_view;
+  d_params_const = k_params.d_view;
 
   k_prefactor.modify_host();
   k_prefactor.sync_device();

@@ -117,6 +117,12 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
 
+  typedef Kokkos::
+    DualView<Params**, Kokkos::LayoutRight, DeviceType> tdual_params_2d;
+  typedef tdual_params_2d::t_dev t_params_2d;
+  typedef tdual_params_2d::t_dev_const t_params_2d_const;
+  t_params_2d_const d_params_const;
+
  private:
   KOKKOS_INLINE_FUNCTION
   void ambi_reset_kokkos(int, int, int, int,
@@ -206,9 +212,6 @@ class CollideVSSKokkos : public CollideVSS {
   DAT::tdual_float_2d k_prefactor;
   DAT::t_float_2d d_prefactor;
 
-  typedef Kokkos::
-    DualView<Params**, Kokkos::LayoutRight, DeviceType> tdual_params_2d;
-  typedef tdual_params_2d::t_dev t_params_2d;
   tdual_params_2d k_params;
   t_params_2d d_params;
 
