@@ -1,0 +1,153 @@
+<HTML>
+<CENTER><A HREF = "https://sparta.github.io">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix halt command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID halt N attribute operator avalue keyword value ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command 
+
+<LI>halt = style name of this fix command 
+
+<LI>N = check halt condition every N timesteps 
+
+<LI>attribute = <I>tlimit</I> or v_name 
+
+<PRE>  tlimit = elapsed CPU time (in seconds)
+  v_name = name of <A HREF = "variable.html">equal-style variable</A> 
+</PRE>
+<LI>operator = "<" or "<=" or ">" or ">=" or "==" or "!=" or "|^" 
+
+<LI>avalue = numeric value to compare attribute to 
+
+<LI>zero or more keyword/value pairs may be appended 
+
+<LI>keyword = <I>error</I> or <I>message</I> 
+
+<PRE>  error value = <I>hard</I> or <I>soft</I> or <I>continue</I>
+  message value = <I>yes</I> or <I>no</I> 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>fix 10 halt 10 tlimit > 3600.0
+fix 10 halt 10 v_myCheck != 0 error soft 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Check a condition every N steps during a simulation run. N must be
+>=1. If the condition is met, exit the run.
+</P>
+<P>The specified <I>attribute</I> can be one of the options listed above,
+namely <I>tlimit</I>, or an <A HREF = "variable.html">equal-style variable</A> referenced
+as <I>v_name</I>, where "name" is the name of a variable that has been
+defined previously in the input script.
+</P>
+<P>The <I>tlimit</I> attribute queries the elapsed CPU time (in seconds) since
+the current run began, and sets <I>attribute</I> to that value. The clock
+starts at the beginning of the current run (not when the fix command
+is specified), so that any setup time for the run is not included in
+the elapsed time. The timer invocation and syncing across all
+processors (via MPI_Allreduce) is performed (typically) only a small
+number of times and the elapsed times are used to predict when the
+end-of-the-run will be.  This can be useful when performing benchmark
+calculations for a desired length of time with minimal overhead.
+</P>
+<P>Equal-style variables evaluate to a numeric value. See the
+<A HREF = "variable.html">variable</A> command for a description. They calculate
+formulas which can involve mathematical operations, particle
+properties, grid properties, surface properties, global values
+calculated by a <A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A>, or
+references to other <A HREF = "varible.html">variables</A>. Thus they are a very
+general means of computing some attribute of the current system.  For
+example, the following two versions of a fix halt command will both
+stop the run after an hour of walltime:
+</P>
+<PRE>fix 10 halt 10 tlimit > 3600.0 
+</PRE>
+<PRE>variable cpu equal cpu
+fix 10 halt 10 v_cpu > 3600.0 
+</PRE>
+<P>The commands above apply only to the time spent in the current run
+command. If multiple run commands are used in the same input script,
+one can also stop the run after a predetermined amount of <I>total</I>
+walltime:
+</P>
+<PRE>variable wall equal wall
+fix 10 halt 10 v_wall > 3600.0 
+</PRE>
+<P>Similarly one can stop the run after a predetermined amount of
+simulation time, which is useful when using a <A HREF = "fix_dt_reset.html">variable
+timestep</A>:
+</P>
+<PRE>variable time equal time
+fix 10 halt 10 v_time > 1.0e-3 
+</PRE>
+<P>The choice of operators listed above are the usual comparison
+operators. The XOR operation (exclusive or) is also included as "|^".
+In this context, XOR means that if either the attribute or avalue is
+0.0 and the other is non-zero, then the result is "true". Otherwise it
+is "false".
+</P>
+<P>The specified <I>avalue</I> must be a numeric value.
+</P>
+<P>The optional <I>error</I> keyword determines how the current run is halted.
+If its value is <I>hard</I>, then SPARTA will stop with an error message.
+</P>
+<P>If its value is <I>soft</I>, SPARTA will exit the current run, but continue
+to execute subsequent commands in the input script. However,
+additional <A HREF = "run.html">run</A> commands will be skipped. For example, this
+allows a script to output the current state of the system, e.g. via a
+<A HREF = "write_grid.html">write_grid</A> or <A HREF = "write_restart.html">write_restart</A>
+command.
+</P>
+<P>If its value is <I>continue</I>, the behavior is the same as for soft,
+except subsequent run commands are executed. This allows your script
+to remedy the condition that triggered the halt, if necessary.  Note
+that you may wish use the <A HREF = "unfix.html">unfix</A> command on the fix halt
+ID, so that the same condition is not immediately triggered in a
+subsequent run.
+</P>
+<HR>
+
+<P>The optional <I>message</I> keyword determines whether a message is printed
+to the screen and logfile when the halt condition is triggered. If
+<I>message</I> is set to <I>yes</I>, a one line message with the values that
+triggered the halt is printed. If <I>message</I> is set to <I>no</I>, no message
+is printed; the run simply exits. The latter may be desirable for
+post-processing tools that extract statistical information from log
+files.
+</P>
+<HR>
+
+<P><B>Restart, output info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.
+</P>
+<P>This fix produces no output.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "run.html">run</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The option defaults are error = soft and message = yes.
+</P>
+</HTML>
