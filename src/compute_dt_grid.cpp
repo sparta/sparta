@@ -26,14 +26,14 @@
 #include "memory.h"
 #include "error.h"
 #include "string.h"
-
+#include <iostream>
 using namespace SPARTA_NS;
 
 enum{NONE,COMPUTE,FIX};
 
 #define INVOKED_PER_GRID 16
 #define BIG 1.0e20
-#define EPSILON 1.0e-6
+#define EPSILON 1.0e-12
 
 /* ---------------------------------------------------------------------- */
 
@@ -56,7 +56,7 @@ ComputeDtGrid::ComputeDtGrid(SPARTA *sparta, int narg, char **arg) :
   if (collision_fraction < 0.0)
     error->all(FLERR,"Compute dt/grid cfraction must be positive");
 
-  id_lambda = NULL;
+  id_tau = NULL;
   id_temp = NULL;
   id_usq = NULL;
   id_vsq = NULL;
@@ -65,52 +65,52 @@ ComputeDtGrid::ComputeDtGrid(SPARTA *sparta, int narg, char **arg) :
   int n;
   char *ptr;
 
-  // parse lambda as compute or fix
+  // parse tau (mean collision time) as compute or fix
 
-  if (strncmp(arg[5],"c_",2) == 0) lambda_which = COMPUTE;
-  else if (strncmp(arg[5],"f_",2) == 0) lambda_which = FIX;
-  else error->all(FLERR,"Invalid lambda in compute dt/grid command");
+  if (strncmp(arg[5],"c_",2) == 0) tau_which = COMPUTE;
+  else if (strncmp(arg[5],"f_",2) == 0) tau_which = FIX;
+  else error->all(FLERR,"Invalid tau in compute dt/grid command");
 
   n = strlen(arg[5]);
-  id_lambda = new char[n];
-  strcpy(id_lambda,&arg[5][2]);
-  ptr = strchr(id_lambda,'[');
+  id_tau = new char[n];
+  strcpy(id_tau,&arg[5][2]);
+  ptr = strchr(id_tau,'[');
   if (ptr) {
-    if (id_lambda[strlen(id_lambda)-1] != ']')
-      error->all(FLERR,"Invalid lambda in compute dt/grid command");
-    lambda_index = atoi(ptr+1);
+    if (id_tau[strlen(id_tau)-1] != ']')
+      error->all(FLERR,"Invalid tau in compute dt/grid command");
+    tau_index = atoi(ptr+1);
     *ptr = '\0';
-  } else lambda_index = 0;
+  } else tau_index = 0;
 
-  if (lambda_which == COMPUTE) {
-    int m = modify->find_compute(id_lambda);
+  if (tau_which == COMPUTE) {
+    int m = modify->find_compute(id_tau);
     if (m < 0)
       error->all(FLERR,"Could not find compute dt/grid compute ID");
     if (modify->compute[m]->per_grid_flag == 0)
       error->all(FLERR,"Compute dt/grid compute does not "
                  "compute per-grid info");
-    if (lambda_index == 0 && modify->compute[m]->size_per_grid_cols > 0)
+    if (tau_index == 0 && modify->compute[m]->size_per_grid_cols > 0)
       error->all(FLERR,"Compute dt/grid compute does not"
                  "compute per-grid vector");
-    if (lambda_index > 0 && modify->compute[m]->size_per_grid_cols == 0)
+    if (tau_index > 0 && modify->compute[m]->size_per_grid_cols == 0)
       error->all(FLERR,"Compute dt/grid compute does not "
                  "compute per-grid array");
-    if (lambda_index > 0 && lambda_index > modify->compute[m]->size_per_grid_cols)
+    if (tau_index > 0 && tau_index > modify->compute[m]->size_per_grid_cols)
       error->all(FLERR,"Compute dt/grid compute array is "
                  "accessed out-of-range");
-  } else if (lambda_which == FIX) {
-    int m = modify->find_fix(id_lambda);
+  } else if (tau_which == FIX) {
+    int m = modify->find_fix(id_tau);
     if (m < 0) error->all(FLERR,"Could not find compute dt/grid fix ID");
     if (modify->fix[m]->per_grid_flag == 0)
       error->all(FLERR,"Compute dt/grid fix does not "
                  "compute per-grid info");
-    if (lambda_index == 0 && modify->fix[m]->size_per_grid_cols > 0)
+    if (tau_index == 0 && modify->fix[m]->size_per_grid_cols > 0)
       error->all(FLERR,"Compute dt/grid fix does not "
                  "compute per-grid vector");
-    if (lambda_index > 0 && modify->fix[m]->size_per_grid_cols == 0)
+    if (tau_index > 0 && modify->fix[m]->size_per_grid_cols == 0)
       error->all(FLERR,"Compute dt/grid fix does not "
                  "compute per-grid array");
-    if (lambda_index > 0 && lambda_index > modify->fix[m]->size_per_grid_cols)
+    if (tau_index > 0 && tau_index > modify->fix[m]->size_per_grid_cols)
       error->all(FLERR,"Compute dt/grid fix array is "
                  "accessed out-of-range");
   }
@@ -329,7 +329,7 @@ ComputeDtGrid::ComputeDtGrid(SPARTA *sparta, int narg, char **arg) :
 
   nglocal = 0;
   vector_grid = NULL;
-  lambda = temp = usq = vsq = wsq = NULL;
+  tau = temp = usq = vsq = wsq = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -338,14 +338,14 @@ ComputeDtGrid::~ComputeDtGrid()
 {
   if (copymode) return;
 
-  delete [] id_lambda;
+  delete [] id_tau;
   delete [] id_temp;
   delete [] id_usq;
   delete [] id_vsq;
   delete [] id_wsq;
 
   memory->destroy(vector_grid);
-  memory->destroy(lambda);
+  memory->destroy(tau);
   memory->destroy(temp);
   memory->destroy(usq);
   memory->destroy(vsq);
@@ -358,19 +358,19 @@ void ComputeDtGrid::init()
 {
   reallocate();
 
-  // clambda/flambda = compute or fix that calculates per grid cell lambda
+  // ctau/ftau = compute or fix that calculates per grid cell tau
   // ditto for temp,usq,vsq,wsq
 
-  if (lambda_which == COMPUTE) {
-    int icompute = modify->find_compute(id_lambda);
+  if (tau_which == COMPUTE) {
+    int icompute = modify->find_compute(id_tau);
     if (icompute < 0)
       error->all(FLERR,"Could not find compute dt/grid compute ID");
-    clambda = modify->compute[icompute];
-  } else if (lambda_which == FIX) {
-    int ifix = modify->find_fix(id_lambda);
+    ctau = modify->compute[icompute];
+  } else if (tau_which == FIX) {
+    int ifix = modify->find_fix(id_tau);
     if (ifix < 0)
       error->all(FLERR,"Could not find compute dt/grid fix ID");
-    flambda = modify->fix[ifix];
+    ftau = modify->fix[ifix];
   }
 
   if (temp_which == COMPUTE) {
@@ -430,8 +430,8 @@ void ComputeDtGrid::compute_per_grid()
 
   // check that fixes are computed at compatible times
 
-  if (lambda_which == FIX && update->ntimestep % flambda->per_grid_freq)
-    error->all(FLERR,"Fix dt lambda fix not computed at compatible time");
+  if (tau_which == FIX && update->ntimestep % ftau->per_grid_freq)
+    error->all(FLERR,"Fix dt tau fix not computed at compatible time");
   if (temp_which == FIX && update->ntimestep % ftemp->per_grid_freq)
     error->all(FLERR,"Fix dt temp fix not computed at compatible time");
   if (usq_which == FIX && update->ntimestep % fusq->per_grid_freq)
@@ -441,33 +441,33 @@ void ComputeDtGrid::compute_per_grid()
   if (wsq_which == FIX && update->ntimestep % fwsq->per_grid_freq)
     error->all(FLERR,"Fix dt wsq fix not computed at compatible time");
 
-  // grab per grid cell lambda from compute or fix, invoke compute if needed
+  // grab per grid cell tau from compute or fix, invoke compute if needed
   // ditto for temp,usq,vsq,wsq
 
-  if (lambda_which == COMPUTE) {
-    if (!(clambda->invoked_flag & INVOKED_PER_GRID)) {
-      clambda->compute_per_grid();
-      clambda->invoked_flag |= INVOKED_PER_GRID;
+  if (tau_which == COMPUTE) {
+    if (!(ctau->invoked_flag & INVOKED_PER_GRID)) {
+      ctau->compute_per_grid();
+      ctau->invoked_flag |= INVOKED_PER_GRID;
     }
-    if (clambda->post_process_grid_flag)
-      clambda->post_process_grid(lambda_index,1,NULL,NULL,NULL,1);
+    if (ctau->post_process_grid_flag)
+      ctau->post_process_grid(tau_index,1,NULL,NULL,NULL,1);
 
-    if (lambda_index == 0)
-      memcpy(lambda,clambda->vector_grid,nglocal*sizeof(double));
+    if (tau_index == 0)
+      memcpy(tau,ctau->vector_grid,nglocal*sizeof(double));
     else {
-      int index = lambda_index-1;
-      double **array = clambda->array_grid;
+      int index = tau_index-1;
+      double **array = ctau->array_grid;
       for (int i = 0; i < nglocal; i++)
-        lambda[i] = array[i][index];
+        tau[i] = array[i][index];
     }
-  } else if (lambda_which == FIX) {
-    if (lambda_index == 0) {
-      memcpy(lambda,flambda->vector_grid,nglocal*sizeof(double));
+  } else if (tau_which == FIX) {
+    if (tau_index == 0) {
+      memcpy(tau,ftau->vector_grid,nglocal*sizeof(double));
     } else {
-      double **array = flambda->array_grid;
-      int index = lambda_index-1;
+      double **array = ftau->array_grid;
+      int index = tau_index-1;
       for (int i = 0; i < nglocal; i++)
-        lambda[i] = array[i][index];
+        tau[i] = array[i][index];
     }
   }
 
@@ -588,7 +588,7 @@ void ComputeDtGrid::compute_per_grid()
   double dx,dy,dz;
   double umag,vmag,wmag,velmag2;
   double vrm_max;
-  double cell_dt_desired,mean_collision_time;
+  double cell_dt_desired;
   double dt_candidate;
 
   for (int i = 0; i < nglocal; ++i) {
@@ -604,11 +604,10 @@ void ComputeDtGrid::compute_per_grid()
     // check sufficiency of cell data to calculate cell dt
     vrm_max = sqrt(2.0*update->boltz * temp[i] / min_species_mass);
     velmag2 = usq[i] + vsq[i] + wsq[i];
-    if ( !((vrm_max > EPSILON) && (lambda[i] > EPSILON) && (velmag2 > EPSILON)) ) continue;
+    if ( !( (tau[i] > EPSILON) && (velmag2 > EPSILON)) ) continue;
 
     // cell dt based on mean collision time
-    mean_collision_time = lambda[i]/vrm_max;
-    cell_dt_desired = collision_fraction*mean_collision_time;
+    cell_dt_desired = collision_fraction*tau[i];
 
     // cell size = dx,dy,dz
     dx = cells[i].hi[0] - cells[i].lo[0];
@@ -661,14 +660,14 @@ void ComputeDtGrid::reallocate()
   nglocal = grid->nlocal;
 
   memory->destroy(vector_grid);
-  memory->destroy(lambda);
+  memory->destroy(tau);
   memory->destroy(temp);
   memory->destroy(usq);
   memory->destroy(vsq);
   memory->destroy(wsq);
 
   memory->create(vector_grid,nglocal,"dt/grid:vector_grid");
-  memory->create(lambda,nglocal,"dt/grid:lambda");
+  memory->create(tau,nglocal,"dt/grid:tau");
   memory->create(temp,nglocal,"dt/grid:temp");
   memory->create(usq,nglocal,"dt/grid:usq");
   memory->create(vsq,nglocal,"dt/grid:vsq");
@@ -683,7 +682,9 @@ bigint ComputeDtGrid::memory_usage()
 {
   bigint bytes;
   bytes = nglocal * sizeof(double);      // vector_grid
-  bytes += 5*nglocal * sizeof(double);   // lambda,temp,usq,vsq,wsq
+  bytes += 5*nglocal * sizeof(double);   // tau,temp,usq,vsq,wsq
   return bytes;
 }
+
+TODO: remove max most probable speed calc and sort out EPSILON use
 
