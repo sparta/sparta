@@ -34,7 +34,7 @@ enum{NONE,COMPUTE,FIX};
 
 #define INVOKED_PER_GRID 16
 #define BIG 1.0e20
-#define EPSILON 1.0e-6
+#define EPSILON 1.0e-12
 
 /* ---------------------------------------------------------------------- */
 
@@ -72,8 +72,8 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
 {
   invoked_per_grid = update->ntimestep;
 
-  if (lambda_which == FIX && update->ntimestep % flambda->per_grid_freq)
-    error->all(FLERR,"Compute dt/grid lambda fix not computed at compatible time");
+  if (tau_which == FIX && update->ntimestep % ftau->per_grid_freq)
+    error->all(FLERR,"Compute dt/grid tau fix not computed at compatible time");
   if (temp_which == FIX && update->ntimestep % ftemp->per_grid_freq)
     error->all(FLERR,"Compute dt/grid temp fix not computed at compatible time");
   if (usq_which == FIX && update->ntimestep % fusq->per_grid_freq)
@@ -83,37 +83,37 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
   if (wsq_which == FIX && update->ntimestep % fwsq->per_grid_freq)
     error->all(FLERR,"Compute dt/grid wsq fix not computed at compatible time");
 
-  // grab per grid cell lambda from compute or fix, invoke lambda compute if needed
+  // grab per grid cell tau from compute or fix, invoke compute if needed
   // ditto for temp,us,vsq,wsq
-  if (lambda_which == COMPUTE) {
-    if (!clambda->kokkos_flag)
+  if (tau_which == COMPUTE) {
+    if (!ctau->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos computes with compute dt/grid/kk");
-    KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(clambda);
-    if (!(clambda->invoked_flag & INVOKED_PER_GRID)) {
+    KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(ctau);
+    if (!(ctau->invoked_flag & INVOKED_PER_GRID)) {
       computeKKBase->compute_per_grid_kokkos();
-      clambda->invoked_flag |= INVOKED_PER_GRID;
+      ctau->invoked_flag |= INVOKED_PER_GRID;
     }
-    if (clambda->post_process_grid_flag)
-      computeKKBase->post_process_grid_kokkos(lambda_index,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
+    if (ctau->post_process_grid_flag)
+      computeKKBase->post_process_grid_kokkos(tau_index,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
 
-    if (lambda_index == 0 || clambda->post_process_grid_flag)
-      Kokkos::deep_copy(d_lambda_vector, computeKKBase->d_vector_grid);
+    if (tau_index == 0 || ctau->post_process_grid_flag)
+      Kokkos::deep_copy(d_tau_vector, computeKKBase->d_vector_grid);
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
-      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeDtGrid_LoadLambdaVecFromArray>(0,nglocal),*this);
+      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeDtGrid_LoadTauVecFromArray>(0,nglocal),*this);
       copymode = 0;
     }
-  } else if (lambda_which == FIX) {
-    if (!flambda->kokkos_flag)
+  } else if (tau_which == FIX) {
+    if (!ftau->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute dt/grid/kk");
-    KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(flambda);
-    if (lambda_index == 0)
-      d_lambda_vector = computeKKBase->d_vector_grid;
+    KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(ftau);
+    if (tau_index == 0)
+      d_tau_vector = computeKKBase->d_vector_grid;
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
-      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeDtGrid_LoadLambdaVecFromArray>(0,nglocal),*this);
+      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeDtGrid_LoadTauVecFromArray>(0,nglocal),*this);
       copymode = 0;
     }
   }
@@ -268,8 +268,8 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
 /* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-void ComputeDtGridKokkos::operator()(TagComputeDtGrid_LoadLambdaVecFromArray, const int &i) const {
-  d_lambda_vector(i) = d_array(i,lambda_index-1);
+void ComputeDtGridKokkos::operator()(TagComputeDtGrid_LoadTauVecFromArray, const int &i) const {
+  d_tau_vector(i) = d_array(i,tau_index-1);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -315,12 +315,10 @@ void ComputeDtGridKokkos::operator()(TagComputeDtGrid_ComputePerGrid, const int 
   if (d_cellcount[i] == 0) return;
 
   // check sufficiency of cell data to calculate cell dt
-  double vrm_max = sqrt(2.0*boltz * d_temp_vector(i) / min_species_mass);
   double velmag2 = d_usq_vector(i) + d_vsq_vector(i) + d_wsq_vector(i);
-  if ( !((vrm_max > EPSILON) && (d_lambda_vector(i) > EPSILON) && (velmag2 > EPSILON)) ) return;
+  if ( !( (d_tau_vector(i) > EPSILON) && (velmag2 > EPSILON)) ) return;
 
-  double mean_collision_time = d_lambda_vector(i)/vrm_max;
-  double cell_dt_desired = collision_fraction*mean_collision_time;
+  double cell_dt_desired = collision_fraction*d_tau_vector(i);
 
   // cell size
   double dx = d_cells[i].hi[0] - d_cells[i].lo[0];
@@ -348,6 +346,7 @@ void ComputeDtGridKokkos::operator()(TagComputeDtGrid_ComputePerGrid, const int 
   }
 
   // cell dt based on transit time using maximum most probable speed
+  double vrm_max = sqrt(2.0*boltz * d_temp_vector(i) / min_species_mass);
   dt_candidate = transit_fraction*dx/vrm_max;
   cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
   dt_candidate = transit_fraction*dy/vrm_max;
@@ -373,7 +372,7 @@ void ComputeDtGridKokkos::reallocate()
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"ComputeDtGridKokkos:vector_grid");
   d_vector_grid = k_vector_grid.d_view;
 
-  d_lambda_vector = DAT::t_float_1d ("d_lambda_vector", nglocal);
+  d_tau_vector = DAT::t_float_1d ("d_tau_vector", nglocal);
   d_temp_vector = DAT::t_float_1d ("d_temp_vector", nglocal);
   d_usq_vector = DAT::t_float_1d ("d_usq_vector", nglocal);
   d_vsq_vector = DAT::t_float_1d ("d_vsq_vector", nglocal);

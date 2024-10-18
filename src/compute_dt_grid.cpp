@@ -602,7 +602,6 @@ void ComputeDtGrid::compute_per_grid()
     if (cinfo[i].count == 0) continue;
 
     // check sufficiency of cell data to calculate cell dt
-    vrm_max = sqrt(2.0*update->boltz * temp[i] / min_species_mass);
     velmag2 = usq[i] + vsq[i] + wsq[i];
     if ( !( (tau[i] > EPSILON) && (velmag2 > EPSILON)) ) continue;
 
@@ -634,6 +633,7 @@ void ComputeDtGrid::compute_per_grid()
     }
 
     // cell dt based on transit time using maximum most probable speed
+    vrm_max = sqrt(2.0*update->boltz * temp[i] / min_species_mass);
     dt_candidate = transit_fraction*dx/vrm_max;
     cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
     dt_candidate = transit_fraction*dy/vrm_max;
@@ -686,5 +686,4 @@ bigint ComputeDtGrid::memory_usage()
   return bytes;
 }
 
-TODO: remove max most probable speed calc and sort out EPSILON use
 
