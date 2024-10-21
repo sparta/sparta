@@ -837,7 +837,7 @@ void CreateISurf::sync(int which)
 void CreateISurf::sync_voxels()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner,jedge,jin;
-  int icell,jcell,njcell;
+  int icell,jcell,ncell;
   double vol_avg;
 
   comm_neigh_corners(CVAL);
@@ -865,6 +865,7 @@ void CreateISurf::sync_voxels()
       else izfirst = (i / 4) - 1;
 
       jcorner = ncorner;
+      ncell = 0;
 
       for (jz = izfirst; jz <= izfirst+1; jz++) {
         for (jy = iyfirst; jy <= iyfirst+1; jy++) {
@@ -880,14 +881,16 @@ void CreateISurf::sync_voxels()
             if (jcell < nglocal) vol_avg += tmp_cvalues[jcell][jcorner];
             else vol_avg += cghost[jcell-nglocal][jcorner];
 
+            ncell++;
+
           }
         }
       }
 
       // set corner value as average of cell volumes around stencil
 
-      if (dim == 2) vol_avg *= 0.25;
-      else vol_avg *= 0.125;
+      if (dim == 2) vol_avg /= ncell;
+      else vol_avg /= ncell;
       cvalues[icell][i] = vol_avg;
 
     }
