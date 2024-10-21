@@ -1,0 +1,129 @@
+SPARTA (4 Sep 2024)
+Running on 1 MPI task(s)
+################################################################################
+# thermal gas in a 3d box with collisions
+# compute mean free path and mean collision time
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5 comm/sort yes
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
+create_grid 	    10 10 10
+Created 1000 child grid cells
+  CPU time = 0.00100914 secs
+  create/ghost percent = 79.4648 20.5352
+
+species		    air.species N2 O2 NO N O
+mixture		    air N2 O2 NO N O temp 273.15
+mixture             air N2 frac 0.2
+mixture             air O2 frac 0.2
+mixture             air NO frac 0.2
+mixture             air N frac 0.2
+mixture             air O frac 0.2
+
+global              nrho 7.07043E22 fnum 7.07043E6
+
+collide		    vss air air.vss
+
+create_particles    air n 0 twopass
+Created 10000 particles
+  CPU time = 0.0027686 secs
+balance_grid        rcb part
+Balance grid migrated 0 cells
+  CPU time = 0.000323836 secs
+  reassign/sort/migrate/ghost percent = 56.6407 8.52963 11.0942 23.7355
+
+compute             1 grid all species nrho
+compute             2 thermal/grid all all temp
+fix                 1 ave/grid all 1 100 100 c_1[*] ave running
+fix                 2 ave/grid all 1 100 100 c_2[1] ave running
+
+compute             3c lambda/grid c_1[*] c_2[1] lambda tau knall #compute mfp and mct based on compute
+compute             3f lambda/grid f_1[*] f_2 lambda tau knall #compute mfp and mct based on fix
+#dump                1 grid all 250 tmp.grid.* id c_3c[*] c_3f[*] # choose to dump compute or fix or both
+
+compute             3c_reduced reduce ave c_3c[*]
+compute             3f_reduced reduce ave c_3f[*]
+
+stats		    100
+compute             temp temp
+stats_style	    step np nattempt ncoll c_temp c_3c_reduced[*] c_3f_reduced[*]
+
+timestep 	    7.00E-9
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.6875 1.6875 1.6875
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.78113 3.78113 3.78113
+Step Np Natt Ncoll c_temp c_3c_reduced[1] c_3c_reduced[2] c_3c_reduced[3] c_3f_reduced[1] c_3f_reduced[2] c_3f_reduced[3] 
+       0    10000        0        0    270.69137 2.4046833e-05 5.0083537e-08    2.4046833        1e+20        1e+20        1e+25 
+     100    10000     1137      701    271.00694 2.6578502e-05 5.679775e-08    2.6578502 2.4973161e-05 4.8508412e-08    2.4973161 
+     200    10000     1217      742    270.91088 2.7602666e-05 5.9179952e-08    2.7602666 2.4917434e-05 4.8384113e-08    2.4917434 
+     300    10000     1207      738     270.9678 2.6990577e-05 5.7485835e-08    2.6990577 2.4908229e-05 4.8339788e-08    2.4908229 
+     400    10000     1202      705    270.71541 2.6900353e-05 5.7504908e-08    2.6900353 2.4891008e-05 4.8337969e-08    2.4891008 
+     500    10000     1230      748    271.33447 2.6866152e-05 5.7881387e-08    2.6866152 2.4883193e-05 4.8333134e-08    2.4883193 
+     600    10000     1212      707    270.91586        1e+17        1e+17        1e+22 2.4878981e-05  4.83259e-08    2.4878981 
+     700    10000     1248      714    270.30835 2.7002412e-05 5.7666624e-08    2.7002412 2.4874832e-05 4.8320805e-08    2.4874832 
+     800    10000     1247      737    269.82604 2.6607682e-05 5.8133483e-08    2.6607682 2.4869453e-05 4.8322822e-08    2.4869453 
+     900    10000     1229      677    271.99006 2.682584e-05 5.7342389e-08     2.682584 2.486695e-05 4.8320643e-08     2.486695 
+    1000    10000     1273      725     271.8347 2.7023632e-05 5.7781688e-08    2.7023632 2.4868243e-05 4.8316497e-08    2.4868243 
+Loop time of 0.8567 on 1 procs for 1000 steps with 10000 particles
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.2881     | 0.2881     | 0.2881     |   0.0 | 33.63
+Coll    | 0.31065    | 0.31065    | 0.31065    |   0.0 | 36.26
+Sort    | 0.028549   | 0.028549   | 0.028549   |   0.0 |  3.33
+Comm    | 0.00022636 | 0.00022636 | 0.00022636 |   0.0 |  0.03
+Modify  | 0.17381    | 0.17381    | 0.17381    |   0.0 | 20.29
+Output  | 0.055089   | 0.055089   | 0.055089   |   0.0 |  6.43
+Other   |            | 0.0002694  |            |       |  0.03
+
+Particle moves    = 10000000 (10M)
+Cells touched     = 14825310 (14.8M)
+Particle comms    = 0 (0K)
+Boundary collides = 536240 (0.536M)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 1211810 (1.21M)
+Collide occurs    = 726655 (0.727M)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 1.16727e+07
+Particle-moves/step: 10000
+Cell-touches/particle/step: 1.48253
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0.053624
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.121181
+Collisions/particle/step: 0.0726655
+Reactions/particle/step: 0
+
+Particles: 10000 ave 10000 max 10000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      1000 ave 1000 max 1000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0

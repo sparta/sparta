@@ -66,6 +66,7 @@ namespace SPARTA_NS {
   private:
     t_cell_1d d_cells;
     t_cinfo_1d d_cinfo;
+    DAT::t_int_1d d_cellcount;
 
     DAT::t_float_1d d_lambda_vector;
     DAT::t_float_1d d_temp_vector;
