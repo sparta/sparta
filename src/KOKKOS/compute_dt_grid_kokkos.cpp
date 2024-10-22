@@ -34,7 +34,6 @@ enum{NONE,COMPUTE,FIX};
 
 #define INVOKED_PER_GRID 16
 #define BIG 1.0e20
-#define EPSILON 1.0e-12
 
 /* ---------------------------------------------------------------------- */
 
@@ -314,9 +313,8 @@ void ComputeDtGridKokkos::operator()(TagComputeDtGrid_ComputePerGrid, const int 
   //  (includes split cells and unsplit cells interior to surface objects)
   if (d_cellcount[i] == 0) return;
 
-  // check sufficiency of cell data to calculate cell dt
-  double velmag2 = d_usq_vector(i) + d_vsq_vector(i) + d_wsq_vector(i);
-  if ( !( (d_tau_vector(i) > EPSILON) && (velmag2 > EPSILON)) ) return;
+  // exclude cells with zero mean collision time
+  if ( !(d_tau_vector(i) > 0.) ) return;
 
   double cell_dt_desired = collision_fraction*d_tau_vector(i);
 

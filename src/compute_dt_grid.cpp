@@ -33,7 +33,6 @@ enum{NONE,COMPUTE,FIX};
 
 #define INVOKED_PER_GRID 16
 #define BIG 1.0e20
-#define EPSILON 1.0e-12
 
 /* ---------------------------------------------------------------------- */
 
@@ -586,7 +585,7 @@ void ComputeDtGrid::compute_per_grid()
   Grid::ChildInfo *cinfo = grid->cinfo;
 
   double dx,dy,dz;
-  double umag,vmag,wmag,velmag2;
+  double umag,vmag,wmag;
   double vrm_max;
   double cell_dt_desired;
   double dt_candidate;
@@ -601,9 +600,8 @@ void ComputeDtGrid::compute_per_grid()
     //  (includes split cells and unsplit cells interior to surface objects)
     if (cinfo[i].count == 0) continue;
 
-    // check sufficiency of cell data to calculate cell dt
-    velmag2 = usq[i] + vsq[i] + wsq[i];
-    if ( !( (tau[i] > EPSILON) && (velmag2 > EPSILON)) ) continue;
+    // exclude cells with zero mean collision time
+    if ( !(tau[i] > 0.) ) continue;
 
     // cell dt based on mean collision time
     cell_dt_desired = collision_fraction*tau[i];
