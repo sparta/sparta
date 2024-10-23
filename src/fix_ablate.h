@@ -52,7 +52,8 @@ class FixAblate : public Fix {
                      double **, int *, double, char *, int);
   void store_corners(int, int, int, double *, double *,
                      double ***, int *, double, char *, int);
-
+  double mindist;             // min fractional distance between any grid corner pt
+                              //   and a generated tri vertex or line segment endpt
  protected:
   int me;
   int groupbit,which,argindex,icompute,ifix,ivariable,maxrandom;
@@ -76,8 +77,6 @@ class FixAblate : public Fix {
   int *tvalues;           // per-cell type value
   int tvalues_flag;       // 1 if tvalues is defined (by ReadIsurf)
 
-  double mindist;             // min fractional distance between any grid corner pt
-                              //   and a generated tri vertex or line segment endpt
   double corner_inside_min;   // min allowed value for an inside corner point
   double corner_outside_max;  // max allowed value for an outside corner point
 
