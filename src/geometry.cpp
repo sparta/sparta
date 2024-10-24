@@ -791,6 +791,14 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
 
   while (1) {
 
+    // roundoff can cause code to miss collisions
+    //  occurs when t is epsilon greater than tdelta
+    //  set t = tdelta in this case
+
+    if (fabs(t1 - tdelta) < EPSSQ)
+      if (tdelta > 0.0 && t1 > tdelta)
+        t1 = tdelta;
+
     // test for collision time >= 0.0 and <= tdelta
 
     if (t1 > tdelta) return false;
@@ -933,6 +941,20 @@ bool axi_horizontal_line(double tdelta, double *x, double *v,
   if (x[1] == yhoriz) {
     if (fabs(t1) < fabs(t2)) t1 = t2;
     nc = 1;
+  }
+
+  // roundoff can cause code to miss collisions
+  //  occurs when t is epsilon greater than tdelta
+  //  set t = tdelta in this case
+
+  if (fabs(t1 - tdelta) < EPSSQ) {
+    if (tdelta > 0.0 && t1 > tdelta) {
+      t1 = tdelta;
+    }
+  } else if (fabs(t2 - tdelta) < EPSSQ) {
+    if (tdelta > 0.0 && t2 > tdelta) {
+      t2 = tdelta;
+    }
   }
 
   // require first collision time >= 0.0 and <= tdelta
