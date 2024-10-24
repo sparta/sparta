@@ -95,15 +95,14 @@ class FixAveHistoWeightKokkos : public FixAveHistoKokkos {
  private:
   int stridewt;
 
+  DAT::tdual_float_1d k_vectorwt;
+
   using FixAveHisto::bin_one;
   using FixAveHisto::bin_vector;
   using FixAveHisto::bin_particles;
   using FixAveHisto::bin_grid_cells;
 
   using FixAveHistoKokkos::bin_one;
-
-  // override these methods from ave/histo to use weights
-  void bin_scalar(typename minmax_type::value_type&, double);
 
   void bin_vector(minmax_type&, int, double *, int);
   void bin_particles(minmax_type&, int, int);

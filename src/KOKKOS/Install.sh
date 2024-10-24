@@ -156,6 +156,8 @@ action fix_grid_check_kokkos.cpp
 action fix_grid_check_kokkos.h
 action read_surf_kokkos.cpp
 action read_surf_kokkos.h
+action variable_kokkos.cpp
+action variable_kokkos.h
 
 action compute_fft_grid_kokkos.cpp compute_fft_grid.cpp
 action compute_fft_grid_kokkos.h compute_fft_grid.h

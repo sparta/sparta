@@ -135,6 +135,8 @@ protected:
   t_particle_1d d_particles;
   DAT::t_int_2d d_s2g;
 
+  DAT::tdual_float_1d k_vector;
+
   int index;
   int stride;
   DAT::t_float_1d_strided d_values;
@@ -149,7 +151,6 @@ protected:
   using FixAveHisto::bin_particles;
   using FixAveHisto::bin_grid_cells;
 
-  virtual void bin_scalar(mm_value_type&, double);
   virtual void bin_vector(minmax_type&, int, double *, int);
   virtual void bin_particles(minmax_type&, int, int);
   virtual void bin_particles(minmax_type&, double *, int);
