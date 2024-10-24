@@ -232,7 +232,7 @@ void FixAblate::decrement_multid_outside()
       norm[0] = norm[1] = norm[2] = 0.0;
       for (m = 0; m < nsurf; m++) {
         isurf = csurfs[m];
-        
+
         if (dim == 2) {
           line = &lines[isurf];
           dist = Geometry::distsq_point_line(pt, line->p1, line->p2);
@@ -715,7 +715,6 @@ void FixAblate::epsilon_adjust_multiv()
   } // end cells
 }
 
-
 /* ----------------------------------------------------------------------
    ensure each corner point value is not too close to threshold
    this avoids creating tiny or zero-size surface elements
@@ -974,7 +973,7 @@ void FixAblate::decrement_multiv_multid_outside()
       norm[0] = norm[1] = norm[2] = 0.0;
       for (m = 0; m < nsurf; m++) {
         isurf = csurfs[m];
-        
+
         if (dim == 2) {
           line = &lines[isurf];
           dist = Geometry::distsq_point_line(pt, line->p1, line->p2);
@@ -997,7 +996,7 @@ void FixAblate::decrement_multiv_multid_outside()
           }
         }
       } // end surfs
-      
+
       // scale values of norm so their sum is one (L1 norm over L2 norm)
 
       if (i == 0) {
@@ -1424,7 +1423,7 @@ void FixAblate::mark_corners_3d(int icell)
 int FixAblate::find_ninter()
 {
   int total = 0;
-  int add; 
+  int add;
   int *neighbors, i_cneigh;
   for (int i = 0; i < ncorner; i++) {
     if (refcorners[i] == 1) {

@@ -84,7 +84,7 @@ class CreateISurf : protected Pointers {
 
   int **sghost;
   double **cghost;
-  double ***inghost;      
+  double ***inghost;
   double ***ighost;       // ditto for my ghost cells communicated to me
   int maxgrid;            // max size of per-cell vectors/arrays
   int maxghost;           // max size of cdelta_ghost

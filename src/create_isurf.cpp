@@ -38,7 +38,7 @@ using namespace MathConst;
 #define DELTAGRID 1024            // must be bigger than split cells per cell
 #define DELTASEND 1024
 #define EPSILON_GRID 1.0e-3
-#define EPSILON 1.0e-4 
+#define EPSILON 1.0e-4
 
 enum{CVAL,SVAL,IVAL,INVAL};
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
@@ -265,7 +265,7 @@ void CreateISurf::set_corners()
     }
   }
 
-  if (ctype != VOXEL) { 
+  if (ctype != VOXEL) {
     // find intersections between edges and surfaces
 
     if (dim == 2) surface_edge2d();
@@ -695,7 +695,7 @@ void CreateISurf::surface_edge3d()
 
 /* ----------------------------------------------------------------------
    sync all copies of values associated with each corner to neighboring
-   procs to ensure consistency between procs. Below, the behavior for 
+   procs to ensure consistency between procs. Below, the behavior for
    each option is shown:
 
    1) if SVAL, sets all svalues to max value (if one is inside, all are inside)

@@ -260,8 +260,6 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   }
 }
 
-
-
 /* ---------------------------------------------------------------------- */
 
 FixAblate::~FixAblate()
@@ -311,6 +309,7 @@ int FixAblate::setmask()
    then create implicit surfaces
    called by ReadIsurf when corner point grid is read in
 ------------------------------------------------------------------------- */
+
 void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
                               double *cornerlo_caller, double *xyzsize_caller,
                               double **cvalues_caller, int *tvalues_caller,
@@ -449,7 +448,6 @@ void FixAblate::init()
 
 void FixAblate::end_of_step()
 {
-
   // set per-cell delta vector randomly or from compute/fix source
 
   if (which == RANDOM) set_delta_random();
@@ -863,7 +861,6 @@ void FixAblate::set_delta_uniform()
   MPI_Allreduce(&sum,&sum_delta,1,MPI_DOUBLE,MPI_SUM,world);
 }
 
-
 /* ----------------------------------------------------------------------
    set per-cell delta vector from compute/fix/variable source
    celldelta = nevery * scale * source-value
@@ -1096,7 +1093,7 @@ void FixAblate::epsilon_adjust()
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  for (int icell = 0; icell < nglocal; icell++) {
+  for (icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
 

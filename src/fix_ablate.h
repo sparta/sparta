@@ -108,6 +108,7 @@ class FixAblate : public Fix {
   int maxvar;
 
   // new ablate with distributed decrement
+
   int refcorners[8];
 
   class MarchingSquares *ms;
