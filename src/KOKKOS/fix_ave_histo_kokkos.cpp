@@ -78,6 +78,9 @@ FixAveHistoKokkos::~FixAveHistoKokkos()
 
   k_stats = DAT::tdual_float_1d();
   memoryKK->destroy_kokkos(k_bin, bin);
+
+  memoryKK->destroy_kokkos(k_vector, vector);
+  vector = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -129,9 +132,7 @@ void FixAveHistoKokkos::end_of_step()
   // skip if not step which requires doing something
 
   bigint ntimestep = update->ntimestep;
-  if (ntimestep != nvalid) {
-    return;
-  }
+  if (ntimestep != nvalid) return;
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device, PARTICLE_MASK|SPECIES_MASK);
@@ -143,11 +144,11 @@ void FixAveHistoKokkos::end_of_step()
 
   // zero if first step
   if (irepeat == 0) {
-    for (int i=0; i<4; i++) k_stats.h_view(i) = 0.0;
+    for (int i = 0; i < 4; i++) k_stats.h_view(i) = 0.0;
     k_stats.modify_host();
     k_stats.sync_device();
 
-    for (int i=0; i<nbins; i++) k_bin.h_view(i) = 0.0;
+    for (int i = 0; i < nbins; i++) k_bin.h_view(i) = 0.0;
     k_bin.modify_host();
     k_bin.sync_device();
   }
@@ -187,15 +188,14 @@ void FixAveHistoKokkos::end_of_step()
             compute->compute_scalar();
             compute->invoked_flag |= INVOKED_SCALAR;
           }
-          bin_scalar(minmax, compute->scalar);
-        }
-        else {
+          bin_one(minmax, compute->scalar);
+        } else {
           error->all(FLERR,"Compute kind not compatible with fix ave/histo/kk");
           if (!(compute->invoked_flag & INVOKED_VECTOR)) {
             compute->compute_vector();
             compute->invoked_flag |= INVOKED_VECTOR;
           }
-          bin_scalar(minmax, compute->vector[j-1]);
+          bin_one(minmax, compute->vector[j-1]);
         }
       } else if (kind == GLOBAL && mode == VECTOR) {
           error->all(FLERR,"Compute kind not compatible with fix ave/histo/kk");
@@ -214,6 +214,7 @@ void FixAveHistoKokkos::end_of_step()
             bin_vector(reducer, compute->size_array_rows,&compute->array[0][j-1],
                        compute->size_array_cols);
         }
+
       } else if (kind == PERPARTICLE) {
           error->all(FLERR,"Compute kind not compatible with fix ave/histo/kk");
         if (!(compute->invoked_flag & INVOKED_PER_PARTICLE)) {
@@ -225,6 +226,7 @@ void FixAveHistoKokkos::end_of_step()
         else if (compute->array_particle)
           bin_particles(reducer, &compute->array_particle[0][j-1],
                         compute->size_per_particle_cols);
+
       } else if (kind == PERGRID) {
         if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
           computeKKBase->compute_per_grid_kokkos();
@@ -259,20 +261,20 @@ void FixAveHistoKokkos::end_of_step()
 
       if (kind == GLOBAL && mode == SCALAR) {
         if (j == 0) {
-          bin_scalar(minmax, fix->compute_scalar());
+          bin_one(minmax, fix->compute_scalar());
         }
         else {
           error->all(FLERR,"Fix not compatible with fix ave/histo/kk");
-          bin_scalar(minmax, fix->compute_vector(j-1));
+          bin_one(minmax, fix->compute_vector(j-1));
         }
       } else if (kind == GLOBAL && mode == VECTOR) {
         error->all(FLERR,"Fix not compatible with fix ave/histo/kk");
         if (j == 0) {
           int n = fix->size_vector;
-          for (i = 0; i < n; i++) bin_scalar(minmax, fix->compute_vector(i));
+          for (i = 0; i < n; i++) bin_one(minmax, fix->compute_vector(i));
         } else {
           int n = fix->size_vector;
-          for (i = 0; i < n; i++) bin_scalar(minmax, fix->compute_array(i,j-1));
+          for (i = 0; i < n; i++) bin_one(minmax, fix->compute_array(i,j-1));
         }
 
       } else if (kind == PERPARTICLE) {
@@ -294,33 +296,36 @@ void FixAveHistoKokkos::end_of_step()
       }
 
     // evaluate equal-style or particle-style or grid-style variable
+
     } else if (which[i] == VARIABLE) {
-      error->all(FLERR,"Cannot (yet) use variables with fix ave/histo/kk");
       if (kind == GLOBAL && mode == SCALAR) {
-        bin_scalar(minmax, input->variable->compute_equal(m));
+        bin_one(input->variable->compute_equal(m));
 
       } else if (which[i] == VARIABLE && kind == PERPARTICLE) {
         if (particle->maxlocal > maxvector) {
-          memory->destroy(vector);
+          memoryKK->destroy_kokkos(k_vector,vector);
           maxvector = particle->maxlocal;
-          memory->create(vector,maxvector,"ave/histo:vector");
+          memoryKK->create_kokkos(k_vector,vector,maxvector,"ave/histo:vector");
         }
         input->variable->compute_particle(m,vector,1,0);
-        bin_particles(reducer, vector,1);
+        bin_particles(reducer,vector,1);
 
       } else if (which[i] == VARIABLE && kind == PERGRID) {
         if (grid->maxlocal > maxvector) {
-          memory->destroy(vector);
+          memoryKK->destroy_kokkos(k_vector,vector);
           maxvector = grid->maxlocal;
-          memory->create(vector,maxvector,"ave/histo:vector");
+          memoryKK->create_kokkos(k_vector,vector,maxvector,"ave/histo:vector");
         }
         input->variable->compute_grid(m,vector,1,0);
-        //bin_grid_cells(reducer, vector);
+        k_vector.modify_host();
+        k_vector.sync_device();
+        auto d_vector = k_vector.d_view;
+        bin_grid_cells(reducer,d_vector);
       }
-    } else {
-      // explicit per-particle attributes
-      bin_particles(reducer, which[i], j);
-    }
+
+    // explicit per-particle attributes
+
+    } else bin_particles(reducer, which[i], j);
   }
 
   k_stats.modify_device();
@@ -351,6 +356,7 @@ void FixAveHistoKokkos::end_of_step()
   modify->addstep_compute(nvalid);
 
   // merge histogram stats across procs if necessary
+
   if (kind == PERPARTICLE || kind == PERGRID) {
     MPI_Allreduce(stats,stats_all,2,MPI_DOUBLE,MPI_SUM,world);
     MPI_Allreduce(&stats[2],&stats_all[2],1,MPI_DOUBLE,MPI_MIN,world);
@@ -422,24 +428,21 @@ void FixAveHistoKokkos::end_of_step()
     if (overwrite) fseek(fp,filepos,SEEK_SET);
     fprintf(fp,BIGINT_FORMAT " %d %g %g %g %g\n",ntimestep,nbins,
             stats_total[0],stats_total[1],stats_total[2],stats_total[3]);
-    if (stats_total[0] != 0.0) {
-      for (int i = 0; i < nbins; i++) {
+    if (stats_total[0] != 0.0)
+      for (int i = 0; i < nbins; i++)
         fprintf(fp,"%d %g %g %g\n",
                 i+1,coord[i],bin_total[i],bin_total[i]/stats_total[0]);
-      }
-    } else {
+    else
       for (int i = 0; i < nbins; i++)
         fprintf(fp,"%d %g %g %g\n",i+1,coord[i],0.0,0.0);
-    }
 
-    if (ferror(fp)) {
+    if (ferror(fp))
       error->one(FLERR,"Error writing out histogram data");
-    }
 
     fflush(fp);
     if (overwrite) {
       long fileend = ftell(fp);
-      if (fileend > 0) ftruncate(fileno(fp),fileend);
+      if (fileend > 0) int tmp = ftruncate(fileno(fp),fileend);
     }
   }
   copymode = 0;
@@ -464,14 +467,6 @@ double FixAveHistoKokkos::compute_array(int i, int j)
   else if (j == 1) return bin_total[i];
   else if (stats_total[0] != 0.0) return bin_total[i]/stats_total[0];
   return 0.0;
-}
-
-/* ----------------------------------------------------------------------
-   bin a Scalar
-------------------------------------------------------------------------- */
-void FixAveHistoKokkos::bin_scalar(minmax_type::value_type& minmax, double val)
-{
-  bin_one(minmax, val);
 }
 
 /* ----------------------------------------------------------------------

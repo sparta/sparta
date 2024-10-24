@@ -34,7 +34,7 @@
 #include "compute.h"
 #include "input.h"
 #include "variable.h"
-#include "memory.h"
+#include "memory_kokkos.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
@@ -60,7 +60,7 @@ FixAveHistoWeightKokkos::FixAveHistoWeightKokkos(SPARTA *spa, int narg, char **a
 
   // nvalues = 2 required for histo/weight
 
-  if (nvalues != 2) error->all(FLERR,"Illegal fix ave/histo/weight/kokkos command");
+  if (nvalues != 2) error->all(FLERR,"Illegal fix ave/histo/weight/kk command");
 
   // check that length of 2 values is the same
 
@@ -97,19 +97,21 @@ FixAveHistoWeightKokkos::FixAveHistoWeightKokkos(SPARTA *spa, int narg, char **a
   }
 
   if (size[0] != size[1])
-    error->all(FLERR,"Fix ave/histo/weight/kokkos value and weight vector "
+    error->all(FLERR,"Fix ave/histo/weight/kk value and weight vector "
                "lengths do not match");
 
   vectorwt = NULL;
   maxvectorwt = 0;
-
-  }
+}
 
 /* ---------------------------------------------------------------------- */
 
 FixAveHistoWeightKokkos::~FixAveHistoWeightKokkos()
 {
   if (copymode) return;
+
+  memoryKK->destroy_kokkos(k_vectorwt, vectorwt);
+  vectorwt = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -149,6 +151,7 @@ void FixAveHistoWeightKokkos::calculate_weights()
         }
         weight = compute->vector[j-1];
       }
+
     } else if (kind == GLOBAL && mode == VECTOR) {
       error->all(FLERR,"Compute not compatible with fix ave/histo/kk");
       if (j == 0) {
@@ -188,14 +191,17 @@ void FixAveHistoWeightKokkos::calculate_weights()
       }
       if (j == 0) {
         d_weights = computeKKBase->d_vector_particle;
+        stridewt = 1;
       } else if (compute->array_grid) {
         d_weights = Kokkos::subview(computeKKBase->d_array_grid,Kokkos::ALL(),j-1);
+        stridewt = compute->size_per_grid_cols;
       }
     }
 
   // access fix fields, guaranteed to be ready
 
   } else if (which[i] == FIX) {
+
     Fix *fix = modify->fix[m];
     if (!fix->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with fix ave/histo/weight/kk");
@@ -209,7 +215,7 @@ void FixAveHistoWeightKokkos::calculate_weights()
         weight = fix->compute_vector(j-1);
       }
     } else if (kind == GLOBAL && mode == VECTOR) {
-      error->all(FLERR,"Fix not compatible with fix ave/histo/weight/kk");
+      error->all(FLERR,"Fix ave/histo/weight/kk option not yet supported");
       // NOTE: need to allocate local storage
       if (j == 0) {
         int n = fix->size_vector;
@@ -240,28 +246,33 @@ void FixAveHistoWeightKokkos::calculate_weights()
   // evaluate equal-style or particle-style or grid-style variable
 
   } else if (which[i] == VARIABLE) {
-    error->all(FLERR,"Cannot (yet) use variables with fix ave/histo/weight/kk");
     if (kind == GLOBAL && mode == SCALAR) {
       weight = input->variable->compute_equal(m);
 
     } else if (which[i] == VARIABLE && kind == PERPARTICLE) {
       if (particle->maxlocal > maxvectorwt) {
-        memory->destroy(vectorwt);
+        memoryKK->destroy_kokkos(k_vectorwt,vectorwt);
         maxvectorwt = particle->maxlocal;
-        memory->create(vectorwt,maxvectorwt,"ave/histo/weight:vectorwt");
+        memoryKK->create_kokkos(k_vectorwt,vectorwt,maxvectorwt,"ave/histo/weight:vectorwt");
       }
       input->variable->compute_particle(m,vectorwt,1,0);
-      weights = vectorwt;
+      k_vectorwt.modify_host();
+      k_vectorwt.sync_device();
+      auto d_vectorwt = k_vectorwt.d_view;      
+      d_weights = d_vectorwt;
       stridewt = 1;
 
     } else if (which[i] == VARIABLE && kind == PERGRID) {
       if (grid->maxlocal > maxvectorwt) {
-        memory->destroy(vectorwt);
+        memoryKK->destroy_kokkos(k_vectorwt,vectorwt);
         maxvectorwt = grid->maxlocal;
         memory->create(vectorwt,maxvectorwt,"ave/histo/weight:vectorwt");
       }
       input->variable->compute_grid(m,vectorwt,1,0);
-      weights = vectorwt;
+      k_vectorwt.modify_host();
+      k_vectorwt.sync_device();
+      auto d_vectorwt = k_vectorwt.d_view;
+      d_weights = d_vectorwt;
       stridewt = 1;
     }
 
@@ -271,16 +282,6 @@ void FixAveHistoWeightKokkos::calculate_weights()
     printf("%d, %d\n", which[i] == VARIABLE, kind == PERGRID);
     error->all(FLERR,"Fix ave/histo/weight/kokkos option not yet supported");
   }
-}
-
-/* ----------------------------------------------------------------------
-   bin a single value with weight
-------------------------------------------------------------------------- */
-void FixAveHistoWeightKokkos::bin_scalar(
-    typename minmax_type::value_type& minmax,
-    double value)
-{
-  bin_one(minmax, value, weight);
 }
 
 /* ----------------------------------------------------------------------
