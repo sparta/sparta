@@ -514,7 +514,6 @@ void CreateISurf::surface_edge2d()
             n2 = 3;
           }
 
-
           if (ivalues[icell][i][n1] > param || ivalues[icell][i][n1] < 0)
             ivalues[icell][i][n1] = param;
           ivalues[icell][j][n2] = 1.0 - ivalues[icell][i][n1];
@@ -541,7 +540,6 @@ void CreateISurf::surface_edge2d()
 
             mvalues[icell][j] = oparam;
           }
-
 
         } // end "if" hitflag
       } // end "for" for surfaces
@@ -892,7 +890,6 @@ void CreateISurf::sync_voxels()
             else vol_avg += cghost[jcell-nglocal][jcorner];
 
             ncell++;
-
           }
         }
       }
@@ -1907,13 +1904,16 @@ double CreateISurf::param2cval(double param, double v1)
   double v0;
   v0 = (thresh - v1*param) / (1.0 - param);
 
+  // make sure the inside point value is large enough such that inside points
+  // ... are not flagged as outside in fix_ablate
+
+  if (v0 >= thresh && v0 < 1.01*surfbuffer)
+    v0 = 1.01*surfbuffer;
+
   // bound by limits
 
   v0 = MIN(v0,cin);
   v0 = MAX(v0,cout);
-
-  if (v0 >= thresh && v0 < 1.01*surfbuffer)
-    v0 = 1.01*surfbuffer;
 
   return v0;
 }
@@ -1983,8 +1983,6 @@ void CreateISurf::remove_old()
   }
 
   grid->clear_surf();
-
-  //if (surf->exist) grid->surf2grid(1); // surf shouldn't exist
 
   // reassign particles in split cells to sub cell owner
 

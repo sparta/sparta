@@ -17,11 +17,9 @@ ablateID = ID of a "fix ablate"_fix_ablate.html command :l
 thresh = threshold for corner values used to generate implicit surfaces, value > 0.0 and < 255.0 :l
 mode = {inout} or {ave} or {multi} :l
   {inout} = mark corner points as either inside or outside surf
+  {voxel} = assign corner point values based on local solid fraction
   {ave} = smooth values by averaging expected corner point values based on intersections between the explicit surfaces and cell edges 
-  {multi} = mark corners using multivalues :pre
-zero or more keyword/value pairs may be appended :l
-keyword = {buffer} :l
-  {buffer} value = minimum normalized distance between a vertex and cell corner :pre
+  {multi} = mark corners using multiple values (i.e. multivalues) :pre
 :ule
 
 [Examples:]
@@ -132,20 +130,38 @@ inferred implicit surface elements will be.
 The threshold must be specified as a floating point value such that 0
 < thresh < 255.
 
-The specified {buffer} is the minimum allowable distance between the vertex
-of an implicit surface element and a corner point. The value is normalized
-by the cell length so it represents a percentage. For example, using the default
-value of 0.02, any vertex which is within two percent of any cell corner is 
-deemed too close. The vertex location is then pushed away from the corner along
-the cell edge. This approach is known as "isosurface stuffing" by
-Labelle and Shewchuck "(Labelle07)"_#Labelle07.
-
 The specified {mode} can be either {inout} or {ave}. The {inout} mode
 sets corner point values to zero if they are outside the volume or
 area enclosed by the explicit surfaces.  Conversely it sets corner
 point values to 255 if they are inside the volume or area. If the
 explicit surface exactly intersects a grid cell corner, the corner
 point is treated as outside (value = zero).
+
+The {voxel} mode sets corner point values based on the local solid
+fraction. The solid fraction is defined as the proportion of the
+grid cell volume which is solid and is a value between 0 and 1.
+For a given corner point, 
+the local solid fraction is the average solid volume 
+of the cells adjoined by that corner point. Currently, the surface
+conversion, regardless of the option, assumes all grid cells are 
+identical in size and shape. Thus, the average is taken as the sum
+of the solid fractions in each of the N surrounding cells divided by N.
+(The specific value of N is explained in the next paragraph.)
+The solid fraction is computed from the solid volume which is determined
+by the gas volume which is a per-grid cell quantity computed by SPARTA. 
+That is, (solid volume) = (grid cell volume) - (gas volume) and 
+(solid fraction) = (solid volume) / (grid cell volume)
+
+Interior corner points
+(corner points not located on the domain boundaries) average over
+four cells in 2D and eight cells in 3D (N = 4 in 2D and N = 8 in 3D).
+If a corner point is on the 
+domain boundary but not at one of the corners of the domain, the solid fraction
+is determined from two cells in 2D and four cells in 3D. Corner
+points located at the corners of the domain do not compute an 
+average but use the solid fraction of the corresponding corner
+grid cell. With the solid fraction, the corner point is calculated 
+as (corner point value) = (solid fraction) * 255.
 
 The {ave} mode is meant to generate implicit surfaces which more
 precisely represent the explicit surfaces.  As with {inout} mode,
@@ -165,7 +181,7 @@ corner point are intersected by explicit surface elements, the value
 assigned to the inside corner point is the average of the values
 computed for the individual cell edges.
 
-:c,image(JPG/inner_values_small.png)
+:c,image(JPG/multivalues_small.png)
 
 The {multi} mode utilizes multivalues. Each corner stores 4 values in 
 2D and 6 values in 3D. For each cell edge, there are two multivalues 
@@ -264,11 +280,6 @@ immediately deleted by this command.
 
 [Default:]
 
-{buffer} = 0.02
+none
 
 :line
-
-:link(Labelle07)
-[(Labelle07)] F. Labelle and J. R. Shewchuk, Isosurface stuffing: fast
-tetrahedral meshese with good dihedral angels, ACM SIGGRAPH 2007 papers
-(2007).

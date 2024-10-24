@@ -24,14 +24,9 @@
 <LI>mode = <I>inout</I> or <I>ave</I> or <I>multi</I> 
 
 <PRE>  <I>inout</I> = mark corner points as either inside or outside surf
+  <I>voxel</I> = assign corner point values based on local solid fraction
   <I>ave</I> = smooth values by averaging expected corner point values based on intersections between the explicit surfaces and cell edges 
-  <I>multi</I> = mark corners using multivalues 
-</PRE>
-<LI>zero or more keyword/value pairs may be appended 
-
-<LI>keyword = <I>buffer</I> 
-
-<PRE>  <I>buffer</I> value = minimum normalized distance between a vertex and cell corner 
+  <I>multi</I> = mark corners using multiple values (i.e. multivalues) 
 </PRE>
 
 </UL>
@@ -143,20 +138,38 @@ inferred implicit surface elements will be.
 <P>The threshold must be specified as a floating point value such that 0
 < thresh < 255.
 </P>
-<P>The specified <I>buffer</I> is the minimum allowable distance between the vertex
-of an implicit surface element and a corner point. The value is normalized
-by the cell length so it represents a percentage. For example, using the default
-value of 0.02, any vertex which is within two percent of any cell corner is 
-deemed too close. The vertex location is then pushed away from the corner along
-the cell edge. This approach is known as "isosurface stuffing" by
-Labelle and Shewchuck <A HREF = "#Labelle07">(Labelle07)</A>.
-</P>
 <P>The specified <I>mode</I> can be either <I>inout</I> or <I>ave</I>. The <I>inout</I> mode
 sets corner point values to zero if they are outside the volume or
 area enclosed by the explicit surfaces.  Conversely it sets corner
 point values to 255 if they are inside the volume or area. If the
 explicit surface exactly intersects a grid cell corner, the corner
 point is treated as outside (value = zero).
+</P>
+<P>The <I>voxel</I> mode sets corner point values based on the local solid
+fraction. The solid fraction is defined as the proportion of the
+grid cell volume which is solid and is a value between 0 and 1.
+For a given corner point, 
+the local solid fraction is the average solid volume 
+of the cells adjoined by that corner point. Currently, the surface
+conversion, regardless of the option, assumes all grid cells are 
+identical in size and shape. Thus, the average is taken as the sum
+of the solid fractions in each of the N surrounding cells divided by N.
+(The specific value of N is explained in the next paragraph.)
+The solid fraction is computed from the solid volume which is determined
+by the gas volume which is a per-grid cell quantity computed by SPARTA. 
+That is, (solid volume) = (grid cell volume) - (gas volume) and 
+(solid fraction) = (solid volume) / (grid cell volume)
+</P>
+<P>Interior corner points
+(corner points not located on the domain boundaries) average over
+four cells in 2D and eight cells in 3D (N = 4 in 2D and N = 8 in 3D).
+If a corner point is on the 
+domain boundary but not at one of the corners of the domain, the solid fraction
+is determined from two cells in 2D and four cells in 3D. Corner
+points located at the corners of the domain do not compute an 
+average but use the solid fraction of the corresponding corner
+grid cell. With the solid fraction, the corner point is calculated 
+as (corner point value) = (solid fraction) * 255.
 </P>
 <P>The <I>ave</I> mode is meant to generate implicit surfaces which more
 precisely represent the explicit surfaces.  As with <I>inout</I> mode,
@@ -176,7 +189,7 @@ corner point are intersected by explicit surface elements, the value
 assigned to the inside corner point is the average of the values
 computed for the individual cell edges.
 </P>
-<CENTER><IMG SRC = "JPG/inner_values_small.png">
+<CENTER><IMG SRC = "JPG/multivalues_small.png">
 </CENTER>
 <P>The <I>multi</I> mode utilizes multivalues. Each corner stores 4 values in 
 2D and 6 values in 3D. For each cell edge, there are two multivalues 
@@ -278,14 +291,8 @@ immediately deleted by this command.
 </P>
 <P><B>Default:</B>
 </P>
-<P><I>buffer</I> = 0.02
+<P>none
 </P>
 <HR>
 
-<A NAME = "Labelle07"></A>
-
-<P><B>(Labelle07)</B> F. Labelle and J. R. Shewchuk, Isosurface stuffing: fast
-tetrahedral meshese with good dihedral angels, ACM SIGGRAPH 2007 papers
-(2007).
-</P>
 </HTML>
