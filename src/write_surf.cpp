@@ -51,6 +51,11 @@ void WriteSurf::command(int narg, char **arg)
   if (statflag && me == 0)
     if (screen) fprintf(screen,"Writing surface file ...\n");
 
+   // renumber implicit surf IDs across all procs
+   //  because ablation can remove surfs
+
+  if (surf->implicit) renumber_implicit();
+
   // if filename contains a "*", replace with current timestep
 
   char *ptr;
@@ -1098,3 +1103,23 @@ void WriteSurf::write_custom_distributed(int i, double **cvalues)
   }
 }
 
+/* ----------------------------------------------------------------------
+   renumber surf IDs across all procs
+   called for implicit surfs because ablation can remove surfs
+---------------------------------------------------------------------- */
+
+void WriteSurf::renumber_implicit()
+{
+  bigint bnsurf = surf->nlocal;
+  bigint offset;
+  MPI_Scan(&bnsurf,&offset,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  offset -= bnsurf;
+
+  for (int i = 0; i < surf->nlocal; i++) {
+    if (dim == 2) {
+      surf->lines[i].id = static_cast<surfint> (offset + i + 1);
+    } else {
+      surf->tris[i].id = static_cast<surfint> (offset + i + 1);
+    }
+  }
+}
