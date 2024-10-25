@@ -121,7 +121,6 @@ void FixAveHistoWeightKokkos::calculate_weights()
 
   weight = 0.0;
   weights = NULL;
-  stridewt = 0;
 
   int i = 1;
   int m = value2index[i];
@@ -160,14 +159,12 @@ void FixAveHistoWeightKokkos::calculate_weights()
           compute->invoked_flag |= INVOKED_VECTOR;
         }
         weights = compute->vector;
-        stridewt = 1;
       } else {
         if (!(compute->invoked_flag & INVOKED_ARRAY)) {
           compute->compute_array();
           compute->invoked_flag |= INVOKED_ARRAY;
         }
         if (compute->array) weights = &compute->array[0][j-1];
-        stridewt = compute->size_array_cols;
       }
 
     } else if (kind == PERPARTICLE) {
@@ -178,10 +175,8 @@ void FixAveHistoWeightKokkos::calculate_weights()
       }
       if (j == 0) {
         weights = compute->vector_particle;
-        stridewt = 1;
       } else if (compute->array_particle) {
         weights = &compute->array_particle[0][j-1];
-        stridewt = compute->size_per_particle_cols;
       }
 
     } else if (kind == PERGRID) {
@@ -191,10 +186,8 @@ void FixAveHistoWeightKokkos::calculate_weights()
       }
       if (j == 0) {
         d_weights = computeKKBase->d_vector_particle;
-        stridewt = 1;
       } else if (compute->array_grid) {
         d_weights = Kokkos::subview(computeKKBase->d_array_grid,Kokkos::ALL(),j-1);
-        stridewt = compute->size_per_grid_cols;
       }
     }
 
@@ -229,10 +222,8 @@ void FixAveHistoWeightKokkos::calculate_weights()
       error->all(FLERR,"Fix not compatible with fix ave/histo/weight/kk");
       if (j == 0) {
         weights = fix->vector_particle;
-        stridewt = 1;
       } else if (fix->array_particle) {
         weights = fix->array_particle[j-1];
-        stridewt = fix->size_per_particle_cols;
       }
 
     } else if (kind == PERGRID) {
@@ -260,7 +251,6 @@ void FixAveHistoWeightKokkos::calculate_weights()
       k_vectorwt.sync_device();
       auto d_vectorwt = k_vectorwt.d_view;      
       d_weights = d_vectorwt;
-      stridewt = 1;
 
     } else if (which[i] == VARIABLE && kind == PERGRID) {
       if (grid->maxlocal > maxvectorwt) {
@@ -273,7 +263,6 @@ void FixAveHistoWeightKokkos::calculate_weights()
       k_vectorwt.sync_device();
       auto d_vectorwt = k_vectorwt.d_view;
       d_weights = d_vectorwt;
-      stridewt = 1;
     }
 
   // explicit per-particle attributes

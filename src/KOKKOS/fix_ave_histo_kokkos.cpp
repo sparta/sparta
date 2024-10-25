@@ -299,7 +299,7 @@ void FixAveHistoKokkos::end_of_step()
 
     } else if (which[i] == VARIABLE) {
       if (kind == GLOBAL && mode == SCALAR) {
-        bin_one(input->variable->compute_equal(m));
+        bin_one(minmax,input->variable->compute_equal(m));
 
       } else if (which[i] == VARIABLE && kind == PERPARTICLE) {
         if (particle->maxlocal > maxvector) {
