@@ -127,7 +127,9 @@ next 3 processors and write it to a surface file.
 
 :line
 
-[Restrictions:] none
+[Restrictions:]
+
+The {custom} keyword cannot be used with implicit surfaces.
 
 [Related commands:]
 
