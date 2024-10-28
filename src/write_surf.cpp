@@ -51,11 +51,6 @@ void WriteSurf::command(int narg, char **arg)
   if (statflag && me == 0)
     if (screen) fprintf(screen,"Writing surface file ...\n");
 
-   // renumber implicit surf IDs across all procs
-   //  because ablation can remove surfs
-
-  if (surf->implicit) renumber_implicit();
-
   // if filename contains a "*", replace with current timestep
 
   char *ptr;
@@ -605,15 +600,30 @@ void WriteSurf::write_file_distributed_points(char *file)
 
   // pack my line/tri IDs/types into sbuf
 
+  // if implicit, renumber ids 1 to N to be compatible with read_surf
+
+  bigint bnsurf = nmine;
+  bigint offset;
+  if (surf->implicit) {
+    MPI_Scan(&bnsurf,&offset,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+    offset -= bnsurf;
+  }
+
   m = 0;
   if (dim == 2) {
     for (int i = 0; i < nmine; i++) {
-      sbuf[i].id = lines_mine[i].id;
+      surfint id = lines_mine[i].id;
+      if (surf->implicit)
+        id = static_cast<surfint> (offset + i + 1);
+      sbuf[i].id = id;
       sbuf[i].type = lines_mine[i].type;
     }
   } else {
     for (int i = 0; i < nmine; i++) {
-      sbuf[i].id = tris_mine[i].id;
+      surfint id = tris_mine[i].id;
+      if (surf->implicit)
+        id = static_cast<surfint> (offset + i + 1);
+      sbuf[i].id = id;
       sbuf[i].type = tris_mine[i].type;
     }
   }
@@ -788,6 +798,15 @@ void WriteSurf::write_file_distributed_nopoints(char *file)
     buf = (char *) tris;
   }
 
+  // if implicit, renumber ids 1 to N to be compatible with read_surf
+
+  bigint bnsurf = nmine;
+  bigint offset;
+  if (surf->implicit) {
+    MPI_Scan(&bnsurf,&offset,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+    offset -= bnsurf;
+  }
+
   // pack my custom data into cvalues
 
   double **cvalues = NULL;
@@ -829,8 +848,11 @@ void WriteSurf::write_file_distributed_nopoints(char *file)
 	
 	if (typeflag)
 	  for (int i = 0; i < ncount; i++) {
+            surfint id = lines[i].id;
+            if (surf->implicit)
+              id = static_cast<surfint> (offset + i + 1);
 	    fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g %20.15g",
-		    lines[i].id,lines[i].type,
+		    id,lines[i].type,
 		    lines[i].p1[0],lines[i].p1[1],
 		    lines[i].p2[0],lines[i].p2[1]);
             if (ncustom) write_custom_distributed(i,cvalues);
@@ -838,8 +860,11 @@ void WriteSurf::write_file_distributed_nopoints(char *file)
 	  }
 	else
 	  for (int i = 0; i < ncount; i++) {
+            surfint id = lines[i].id;
+            if (surf->implicit)
+              id = static_cast<surfint> (offset + i + 1);
 	    fprintf(fp,SURFINT_FORMAT " %20.15g %20.15g %20.15g %20.15g",
-		    lines[i].id,
+		    id,
 		    lines[i].p1[0],lines[i].p1[1],
 		    lines[i].p2[0],lines[i].p2[1]);
             if (ncustom) write_custom_distributed(i,cvalues);
@@ -851,9 +876,12 @@ void WriteSurf::write_file_distributed_nopoints(char *file)
 	
 	if (typeflag)
 	  for (int i = 0; i < ncount; i++) {
+            surfint id = tris[i].id;
+            if (surf->implicit)
+              id = static_cast<surfint> (offset + i + 1);
 	    fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g "
 		    "%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g",
-		    tris[i].id,tris[i].type,
+		    id,tris[i].type,
 		    tris[i].p1[0],tris[i].p1[1],tris[i].p1[2],
 		    tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
 		    tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
@@ -862,9 +890,12 @@ void WriteSurf::write_file_distributed_nopoints(char *file)
 	  }
 	else
 	  for (int i = 0; i < ncount; i++) {
+            surfint id = tris[i].id;
+            if (surf->implicit)
+              id = static_cast<surfint> (offset + i + 1);
 	    fprintf(fp,SURFINT_FORMAT " %20.15g %20.15g %20.15g "
 		    "%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g",
-		    tris[i].id,
+		    id,
 		    tris[i].p1[0],tris[i].p1[1],tris[i].p1[2],
 		    tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
 		    tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
@@ -1099,27 +1130,6 @@ void WriteSurf::write_custom_distributed(int i, double **cvalues)
 	for (int j = 0; j < size_custom[ic]; j++)
 	  fprintf(fp," %g",cvalues[i][m++]);
       }
-    }
-  }
-}
-
-/* ----------------------------------------------------------------------
-   renumber surf IDs across all procs
-   called for implicit surfs because ablation can remove surfs
----------------------------------------------------------------------- */
-
-void WriteSurf::renumber_implicit()
-{
-  bigint bnsurf = surf->nlocal;
-  bigint offset;
-  MPI_Scan(&bnsurf,&offset,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  offset -= bnsurf;
-
-  for (int i = 0; i < surf->nlocal; i++) {
-    if (dim == 2) {
-      surf->lines[i].id = static_cast<surfint> (offset + i + 1);
-    } else {
-      surf->tris[i].id = static_cast<surfint> (offset + i + 1);
     }
   }
 }
