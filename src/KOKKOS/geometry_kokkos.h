@@ -172,9 +172,10 @@ bool axi_horizontal_line(double tdelta, double *x, double *v,
     nc = 1;
   }
 
-  // check for roundoff issue which can miss a surf collision
-  // occurs when t1 or t2 is only EPSTIME greater than tdelta
-  //   due to round-off in solution to quadratic equation above
+  // check for roundoff issue which can occur when
+  //  axisym surf is nearly exactly on grid cell edge
+  // round-off in solution to quadratic equation
+  //   can cause t1 or t2 to be EPSTIME greater than tdelta and miss collision
   // force a collision in this special case by setting t1/t2 = tdelta
 
   if (t1 > tdelta && (t1-tdelta) < EPSTIME && tdelta > 0.0)
@@ -293,9 +294,10 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
 
   while (1) {
 
-    // check for roundoff issue which can miss a surf collision
-    // occurs when t1 is only EPSTIME greater than tdelta
-    //   due to round-off in solution to quadratic equation above
+    // check for roundoff issue which can occur when
+    //  axisym surf is nearly exactly on grid cell edge
+    // round-off in solution to quadratic equation
+    //   can cause t1 to be EPSTIME greater than tdelta and miss collision
     // force a collision in this special case by setting t1 = tdelta
 
     if (t1 > tdelta && (t1-tdelta) < EPSTIME && tdelta > 0.0)
