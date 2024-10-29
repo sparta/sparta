@@ -17,6 +17,7 @@
 #define EPSSQ 1.0e-16
 #define EPSSQNEG -1.0e-16
 #define EPSSELF 1.0e-6
+#define EPSTIME 1.0e-16
 
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Update
 
@@ -171,19 +172,15 @@ bool axi_horizontal_line(double tdelta, double *x, double *v,
     nc = 1;
   }
 
-  // roundoff can cause code to miss collisions
-  //  occurs when t is epsilon greater than tdelta
-  //  set t = tdelta in this case
+  // check for roundoff issue which can miss a surf collision
+  // occurs when t1 or t2 is only EPSTIME greater than tdelta
+  //   due to round-off in solution to quadratic equation above
+  // force a collision in this special case by setting t1/t2 = tdelta
 
-  if (fabs(t1 - tdelta) < EPSSQ) {
-    if (tdelta > 0.0 && t1 > tdelta) {
-      t1 = tdelta;
-    }
-  } else if (fabs(t2 - tdelta) < EPSSQ) {
-    if (tdelta > 0.0 && t2 > tdelta) {
-      t2 = tdelta;
-    }
-  }
+  if (t1 > tdelta && (t1-tdelta) < EPSTIME && tdelta > 0.0)
+    t1 = tdelta;
+  else if (t2 > tdelta && (t2-tdelta) < EPSTIME && tdelta > 0.0)
+    t2 = tdelta;
 
   // require first collision time >= 0.0 and <= tdelta
 
@@ -296,13 +293,13 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
 
   while (1) {
 
-    // roundoff can cause code to miss collisions
-    //  occurs when t is epsilon greater than tdelta
-    //  set t = tdelta in this case
+    // check for roundoff issue which can miss a surf collision
+    // occurs when t1 is only EPSTIME greater than tdelta
+    //   due to round-off in solution to quadratic equation above
+    // force a collision in this special case by setting t1 = tdelta
 
-    if (fabs(t1 - tdelta) < EPSSQ)
-      if (tdelta > 0.0 && t1 > tdelta)
-        t1 = tdelta;
+    if (t1 > tdelta && (t1-tdelta) < EPSTIME && tdelta > 0.0)
+      t1 = tdelta;
 
     // test for collision time >= 0.0 and <= tdelta
 
