@@ -1523,17 +1523,22 @@ double tri_fraction(double *x, double *v0, double *v1, double *v2)
 }
 
 /* ----------------------------------------------------------------------
-   compute area of an arbitrary polygon
+   compute area of an arbitrary convex polygon (does not work for concave)
    npoint = number of points
    cpath = series of x,y,z triplets that define the polygon
             e.g. returned from cut2/3d clip_external() function
+   center = computed centroid of polygon
 ------------------------------------------------------------------------- */
 
-double poly_area(int npoint, double *cpath)
+double poly_area(int npoint, double *cpath, double* center)
 {
-  double sum[3] = {0.0,0.0,0.0};
+  double area = 0.0;
   double v1[3],v2[3],xproduct[3];
-  double pt0[3],pti[3],ptip1[3];
+  double pt0[3],pti[3],ptip1[3],tri_center[3];
+
+  center[0] = 0.0;
+  center[1] = 0.0;
+  center[2] = 0.0;
 
   pt0[0] = cpath[0];
   pt0[1] = cpath[1];
@@ -1551,10 +1556,16 @@ double poly_area(int npoint, double *cpath)
     MathExtra::sub3(pti,pt0,v1);
     MathExtra::sub3(ptip1,pt0,v2);
     MathExtra::cross3(v1,v2,xproduct);
-    MathExtra::add3(sum,xproduct,sum);
+    double tri_area = 0.5*sqrt(MathExtra::dot3(xproduct,xproduct));
+
+    MathExtra::add3(pt0,pti,tri_center);
+    MathExtra::add3(tri_center,ptip1,tri_center);
+    MathExtra::scale3(tri_area/3.0,tri_center);
+    MathExtra::add3(center,tri_center,center);
+    area += tri_area;
   }
 
-  double area = 0.5*sqrt(MathExtra::dot3(sum,sum));
+  MathExtra::scale3(1.0/area,center);
 
   return area;
 }

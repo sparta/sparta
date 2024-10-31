@@ -1920,6 +1920,7 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
   double minsize = MIN(hi[0]-lo[0],hi[1]-lo[1]);
   double displace = EPSSURF * minsize;
 
+  double maxlength = 0.0;
   double maxarea = 0.0;
   int setflag = 0;
 
@@ -1947,13 +1948,15 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
         if (edge == 4 and norm[1] > 0.0) continue;
       }
 
-      // use the surface with the largest clipped surface area
-      // for surfaces with a tiny interection, the point can get pushed
+      // use the surface with the largest clipped length
+      // for surfaces with a tiny intersection, the point can get pushed
       //  too far and end up inside nearby surfaces
 
-      double area = Geometry::poly_area(npoint,cpath);
-      if (area < maxarea) continue;
-      maxarea = area;
+      double x1 = cpath[2] - cpath[0];
+      double y1 = cpath[3] - cpath[1];
+      double length = sqrt(x1*x1 + y1*y1);
+      if (length < maxlength) continue;
+      maxlength = length;
 
       x[0] = 0.5*(cpath[0]+cpath[2]) + displace*norm[0];
       x[1] = 0.5*(cpath[1]+cpath[3]) + displace*norm[1];
@@ -1988,17 +1991,18 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
       }
 
       // use the surface with the largest clipped surface area
-      // for surfaces with a tiny interection, the point can get pushed
+      // for surfaces with a tiny intersection, the point can get pushed
       //  too far and end up inside nearby surfaces
 
-      double area = Geometry::poly_area(npoint,cpath);
+      double center[3];
+      double area = Geometry::poly_area(npoint,cpath,center);
       if (area < maxarea) continue;
       maxarea = area;
 
-      double onethird = 1.0/3.0;
-      x[0] = onethird*(cpath[0]+cpath[3]+cpath[6]) + displace*norm[0];
-      x[1] = onethird*(cpath[1]+cpath[4]+cpath[7]) + displace*norm[1];
-      x[2] = onethird*(cpath[2]+cpath[5]+cpath[8]) + displace*norm[2];
+
+      x[0] = center[0] + displace*norm[0];
+      x[1] = center[1] + displace*norm[1];
+      x[2] = center[2] + displace*norm[2];
       setflag = 1;
     }
   }
