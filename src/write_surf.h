@@ -70,7 +70,6 @@ class WriteSurf : protected Pointers {
   void pack_custom(int, double **);
   void write_custom_all(int);
   void write_custom_distributed(int, double **);
-  void renumber_implicit();
 
   // union data struct for packing 32-bit and 64-bit ints into double bufs
   // this avoids aliasing issues by having 2 pointers (double,int)
