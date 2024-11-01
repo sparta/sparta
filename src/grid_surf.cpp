@@ -1948,9 +1948,13 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
         if (edge == 4 and norm[1] > 0.0) continue;
       }
 
-      // use the surface with the largest clipped length
-      // for surfaces with a tiny intersection, the point can get pushed
-      //  too far and end up inside nearby surfaces
+      // for surfaces with a tiny intersection, the point to push off
+      //  from can be very close to another line
+      // if the angle between the two lines is less than 90 degrees,
+      //  the pushed-off point can end up "inside" the surface instead
+      //  of "outside"
+      // using the line with the largest clipped length makes this
+      //  issue very unlikely to occur
 
       double x1 = cpath[2] - cpath[0];
       double y1 = cpath[3] - cpath[1];
@@ -1990,10 +1994,14 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
         if (face == 6 and norm[2] > 0.0) continue;
       }
 
-      // use the surface with the largest clipped surface area
-      // for surfaces with a tiny intersection, the point can get pushed
-      //  too far and end up inside nearby surfaces
-      // push off the centroid of the polygon
+      // for surfaces with a tiny intersection, the point to push off
+      //  from can be very close to a shared edge with another triangle
+      // if the angle between the two tris is less than 90 degrees,
+      //  the pushed-off point can end up "inside" the surface instead
+      //  of "outside"
+      // using the triangle with the largest clipped area
+      //  and pushing off its centroid makes this issue very unlikely
+      //  to occur
 
       double center[3];
       double area = Geometry::poly_area(npoint,cpath,center);
