@@ -460,7 +460,7 @@ FixAveHistoWeightKokkos::operator()(TagFixAveHistoWeight_BinParticles3, const in
                                     minmax_type::value_type& lminmax) const
 {
   const int ispecies = d_particles(i).ispecies;
-  if (d_s2g(imix, ispecies) < 0)
+  if (d_s2g(imix, ispecies) >= 0)
   {
     bin_one(lminmax, d_values(i), d_weights(i));
   }
@@ -508,7 +508,7 @@ FixAveHistoWeightKokkos::operator()(TagFixAveHistoWeight_BinParticlesX1, const i
    * this code can be recommissioned.
    *
   const int ispecies = d_particles(i).ispecies;
-  if (region_kk->match(d_particles(i).x) && d_s2g(imix, ispecies) < 0)
+  if (region_kk->match(d_particles(i).x) && d_s2g(imix, ispecies) >= 0)
   {
     bin_one(lminmax, d_particles(i).x[index], d_weights(i));
   }
@@ -567,7 +567,7 @@ FixAveHistoWeightKokkos::operator()(TagFixAveHistoWeight_BinParticlesV1, const i
    * this code can be recommissioned.
    *
   const int ispecies = d_particles(i).ispecies;
-  if (region_kk->match(d_particles(i).x) && d_s2g(imix, ispecies) < 0)
+  if (region_kk->match(d_particles(i).x) && d_s2g(imix, ispecies) >= 0)
   {
     bin_one(lminmax, d_particles(i).v[index], d_weights(i));
   }
