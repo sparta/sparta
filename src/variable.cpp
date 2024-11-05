@@ -1737,7 +1737,7 @@ double Variable::evaluate(char *str, Tree **tree)
         }
 	
 	if (nbracket == 0 && size == 0) {
-	
+
 	  Tree *newtree = new Tree();
 	  if (type == INT) {
 	    newtree->type = ARRAYINT;
