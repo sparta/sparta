@@ -579,7 +579,7 @@ void ComputeDtGrid::compute_per_grid()
   }
 
   // calculate per grid cell timestep for cells in group
-  // set timestep = 0.0 for cells not in group
+  // set timestep = 0. for cells not in group and for cells with problematic input data
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -591,7 +591,7 @@ void ComputeDtGrid::compute_per_grid()
   double dt_candidate;
 
   for (int i = 0; i < nglocal; ++i) {
-    vector_grid[i] = 0.0;
+    vector_grid[i] = 0.;
 
     // exclude cells not in the specified group
     if (!(cinfo[i].mask & groupbit)) continue;
@@ -603,6 +603,17 @@ void ComputeDtGrid::compute_per_grid()
     // exclude cells with zero mean collision time
     if ( !(tau[i] > 0.) ) continue;
 
+    // exclude cells with zero temperature
+    if ( !(temp[i] > 0.) ) continue;
+
+    // exclude cells with zero speed
+    double speed_squared = 0.;
+    if (domain->dimension == 3)
+      speed_squared = usq[i] + vsq[i] + wsq[i];
+    else
+      speed_squared = usq[i] + vsq[i];
+    if ( !(speed_squared > 0.) ) continue;
+
     // cell dt based on mean collision time
     cell_dt_desired = collision_fraction*tau[i];
 
@@ -613,18 +624,18 @@ void ComputeDtGrid::compute_per_grid()
 
     // cell dt based on transit time using average velocities
     umag = sqrt(usq[i]);
-    if (umag > 0.0) {
+    if (umag > 0.) {
       dt_candidate = transit_fraction*dx/umag;
       cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
     }
     vmag = sqrt(vsq[i]);
-    if (vmag > 0.0) {
+    if (vmag > 0.) {
       dt_candidate = transit_fraction*dy/vmag;
       cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
     }
     if (domain->dimension == 3) {
       wmag = sqrt(wsq[i]);
-      if (wmag > 0.0) {
+      if (wmag > 0.) {
         dt_candidate = transit_fraction*dz/wmag;
         cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
       }

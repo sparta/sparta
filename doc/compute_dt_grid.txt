@@ -18,7 +18,7 @@ dt/grid = style name of this compute command :l
 group-ID = group ID for which grid cells to perform calculation on :l
 tfraction = fraction of grid cell transit time used to calculate timestep :l
 cfraction = fraction of grid cell mean collision time used to calculate timestep :l
-lambda = compute or fix column for mean free path, prefaced by "c_" or "f_" :l
+tau = compute or fix column for mean collision time, prefaced by "c_" or "f_" :l
 temperature = compute or fix column for temperature, prefaced by "c_" or "f_" :l
 usq = compute or fix column for x component of velocity squared, prefaced by "c_" or "f_" :l
 vsq = compute or fix column for y component of velocity squared, prefaced by "c_" or "f_" :l
@@ -29,8 +29,8 @@ wsq = compute or fix column for z component of velocity squared, prefaced by "c_
 
 compute 1 grid all mymixture nrho temp usq vsq wsq
 fix 1 ave/grid all 10 50 500 c_1\[*\]
-compute lambda lambda/grid f_1\[1\] f_1\[2\] Ar
-compute tstep dt/grid all 0.25 0.1 c_lambda f_1\[2\] f_1\[3\] f_1\[4\] f_1\[5\] :pre
+compute mct lambda/grid f_1\[1\] f_1\[2\] tau
+compute tstep dt/grid all 0.25 0.1 c_mct f_1\[2\] f_1\[3\] f_1\[4\] f_1\[5\] :pre
 
 [Description:]
 

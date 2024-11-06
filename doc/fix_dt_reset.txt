@@ -60,12 +60,11 @@ command is used as the {step} argument, it only produces output on
 timesteps that are multiples of its {Nfreq} argument.  Thus this fix
 can only be invoked on those timesteps.
 
-Note that some of the per-cell timesteps may be zero for a number of reasons.  First,
-the data used to calculate the timestep, such as maximum most probable speed and mean
-free path, may be sufficiently close to zero.  Also, some cells may not contain particles,
-either due to their type or to local flow conditions.  For example, split cells
-(in which sub cells store the particles) and cells interior to surface objects do not
-store particles.  See "Section 6.8"_Section_howto.html#howto_8 of the manual for
+Note that some of the per-cell timesteps may be zero for a couple of reasons.  First,
+data used to calculate the timestep, such as mean collision time, temperature, or particle speed, may be zero.
+Also, some cells may not contain particles, either due to their type or to local flow conditions.
+For example, split cells (in which sub cells store the particles) and cells interior to surface
+objects do not store particles.  See "Section 6.8"_Section_howto.html#howto_8 of the manual for
 details of how SPARTA defines child, unsplit, split, and sub cells.
 
 From the per-cell timesteps, 3 values are extracted by this fix.  They

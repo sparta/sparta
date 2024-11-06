@@ -316,6 +316,18 @@ void ComputeDtGridKokkos::operator()(TagComputeDtGrid_ComputePerGrid, const int 
   // exclude cells with zero mean collision time
   if ( !(d_tau_vector(i) > 0.) ) return;
 
+  // exclude cells with zero temperature
+  if ( !(d_temp_vector(i) > 0.) ) return;
+
+  // exclude cells with zero speed
+  double speed_squared = 0.;
+  if (dimension == 3)
+    speed_squared = d_usq_vector(i) + d_vsq_vector(i) + d_wsq_vector(i);
+  else
+    speed_squared = d_usq_vector(i) + d_vsq_vector(i);
+  if ( !(speed_squared > 0.) ) return;
+
+  // cell dt based on mean collision time
   double cell_dt_desired = collision_fraction*d_tau_vector(i);
 
   // cell size
