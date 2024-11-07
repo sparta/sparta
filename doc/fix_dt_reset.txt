@@ -24,8 +24,8 @@ resetflag = 1 to overwrite global timestep with new timestep, 0 to just calculat
 
 compute 1 grid all mymixture nrho temp usq vsq wsq
 fix 1 ave/grid all 10 50 500 c_1\[*\]
-compute lambda lambda/grid f_1\[1\] f_1\[2\] Ar
-compute tstep dt/grid all 0.25 0.1 c_lambda f_1\[2\] f_1\[3\] f_1\[4\] f_1\[5\] :pre
+compute mct lambda/grid f_1\[1\] f_1\[2\] tau
+compute tstep dt/grid all 0.25 0.1 c_mct f_1\[2\] f_1\[3\] f_1\[4\] f_1\[5\] :pre
 
 fix 2 dt/reset 500 c_tstep 0.1 1 :pre
 
@@ -60,7 +60,7 @@ command is used as the {step} argument, it only produces output on
 timesteps that are multiples of its {Nfreq} argument.  Thus this fix
 can only be invoked on those timesteps.
 
-Note that some of the per-cell timesteps may be zero for a couple of reasons.  First,
+Note that some of the per-cell timesteps may be zero for several reasons.  First,
 data used to calculate the timestep, such as mean collision time, temperature, or particle speed, may be zero.
 Also, some cells may not contain particles, either due to their type or to local flow conditions.
 For example, split cells (in which sub cells store the particles) and cells interior to surface
