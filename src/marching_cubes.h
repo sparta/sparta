@@ -37,7 +37,6 @@ class MarchingCubes : protected Pointers {
   double v000iso,v001iso,v010iso,v011iso,v100iso,v101iso,v110iso,v111iso;
   double inval[8][6];
   double i0,i1,i2,i3,i4,i5,i6,i7,i8,i9,i10,i11;
-  double i0u,i1u,i2u,i3u,i4u,i5u,i6u,i7u,i8u,i9u,i10u,i11u;
   int bit0,bit1,bit2,bit3,bit4,bit5,bit6,bit7;
   double pt[36][3];
 

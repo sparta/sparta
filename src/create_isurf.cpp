@@ -169,10 +169,6 @@ void CreateISurf::command(int narg, char **arg)
   else if (strcmp(arg[3],"multi") == 0) ctype = MULTI;
   else error->all(FLERR,"Create_isurf corner mode is invalid");
 
-  // process optional command line args (nothing to process for now)
-
-  //process_args(narg-4,&arg[4]);
-
   // check if grid group is a uniform grid
 
   grid->check_uniform_group(ggroup,nxyz,corner,xyzsize);
@@ -707,8 +703,8 @@ void CreateISurf::surface_edge3d()
 
 void CreateISurf::sync(int which)
 {
-  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner,jedge,jin;
-  int icell,jcell,njcell;
+  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner,jin;
+  int icell,jcell;
   double dtotal[nmulti], dtemp;
 
   comm_neigh_corners(which);
@@ -844,7 +840,7 @@ void CreateISurf::sync(int which)
 
 void CreateISurf::sync_voxels()
 {
-  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner,jedge,jin;
+  int i,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell,ncell;
   double vol_avg;
 
@@ -914,7 +910,7 @@ void CreateISurf::sync_voxels()
 
 void CreateISurf::comm_neigh_corners(int which)
 {
-  int i,j,k,m,n,ix,iy,iz,ixfirst,iyfirst,izfirst,jx,jy,jz;
+  int i,j,k,m,n,ix,iy,iz,jx,jy,jz;
   int icell,ifirst,jcell,proc,ilocal;
 
   Grid::ChildCell *cells = grid->cells;
@@ -1164,7 +1160,6 @@ void CreateISurf::set_inout()
 
   }
 }
-
 
 /* ----------------------------------------------------------------------
    resolve unknown side values (2D version)
@@ -1502,9 +1497,6 @@ int CreateISurf::find_side_3d()
 
 void CreateISurf::set_cvalues()
 {
-  Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-
   cout = 0.0;
   cin = 255.0;
 
@@ -1645,7 +1637,6 @@ void CreateISurf::set_cvalues_multi()
   // now handle the overlap cells
 
   double ival, cval;
-  int ic0, ic1, in0, in1;
 
   // value of inside corner point next to surface
 

@@ -80,7 +80,7 @@ class CreateISurf : protected Pointers {
   int **ixyz;             // ix,iy,iz indices (1 to Nxyz) of my cells
                           // in 2d/3d ablate grid (iz = 1 for 2d)
 
-  // Various arrays to pass to other processors
+  // various arrays to pass to other processors
 
   int **sghost;
   double **cghost;

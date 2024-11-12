@@ -58,10 +58,10 @@ void FixAblate::decrement_multid_outside()
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  int i,j,k,m;
+  int i,k,m;
   double total,perout,Ninterface;
 
-  int i_in,i_neigbor_corner,i_cneigh;
+  int i_in,i_cneigh;
   int *ineighbors,*neighbors;
 
   Surf::Line *line;
@@ -74,7 +74,7 @@ void FixAblate::decrement_multid_outside()
   double dist, smindist;
   int nsurf,isurf;
   int order[3];
-  double totalperout, scale, ninter;
+  double ninter;
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
@@ -319,13 +319,13 @@ void FixAblate::decrement_multid_outside()
 }
 
 /* ----------------------------------------------------------------------
-   sync and update interface corner values. some values may be negative.
-   this is ok. refer to sync() for more details about logic
+   Sync and update interface corner values. Some values may be negative,
+    this is OK. Refer to sync() for more details about logic.
 ------------------------------------------------------------------------- */
 
 void FixAblate::sync_multid_outside()
 {
-  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
+  int i,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
   double total;
 
@@ -389,7 +389,7 @@ void FixAblate::decrement_multid_inside()
 
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
-  int Nneigh,*neighbors,i_cneigh;
+  int *neighbors,i_cneigh;
   double total_remain,nvertices;
 
   // find total number of vertices around each corner point
@@ -488,7 +488,7 @@ void FixAblate::decrement_multid_inside()
 
 void FixAblate::sync_multid_inside()
 {
-  int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
+  int i,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
   double total;
 
@@ -727,7 +727,7 @@ void FixAblate::decrement_multiv()
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  int i,j,i_inner,imin;
+  int i,j,imin;
   double minvalue,total;
   double iavg;
 
@@ -780,11 +780,12 @@ void FixAblate::decrement_multiv()
 /* ----------------------------------------------------------------------
    version of sync() for inner indices
 ------------------------------------------------------------------------- */
+
 void FixAblate::sync_multiv()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
-  double total[nmultiv],inner_total;
+  double total[nmultiv];
 
   comm_neigh_corners(CDELTA);
 
@@ -890,7 +891,6 @@ void FixAblate::decrement_multiv_multid_outside()
   int order[3];
   int nsurf,isurf;
   int ninter; // inside and connected to interface point; total interface
-  double totalperout;
 
   // find total to decrement from each corner
   // total = full amount to decrement from cell
@@ -1352,7 +1352,6 @@ void FixAblate::mark_corners_2d(int icell)
 
 }
 
-
 /* ----------------------------------------------------------------------
    same as mark_corners_2d() for 3d
    - bit stores whether corner value is below or above thresh
@@ -1395,7 +1394,6 @@ void FixAblate::mark_corners_3d(int icell)
 
   // mark the outside, then inside, then interface points
 
-  int icorner;
   for (i = 0; i < ncorner; i++)
     refcorners[i] = -1;
 

@@ -828,7 +828,7 @@ void FixAblate::set_delta_uniform()
   Grid::ChildInfo *cinfo = grid->cinfo;
 
   // enforce same decrement no matter who owns which cells
-  // NOTE: could change this at some point, use differnet RNG for each proc
+  // NOTE: could change this at some point to use differnet RNG for each proc
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
@@ -1806,5 +1806,3 @@ double FixAblate::memory_usage()
   bytes += maxbuf * sizeof(double);            // sbuf
   return bytes;
 }
-
-
