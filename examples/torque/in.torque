@@ -55,9 +55,9 @@ timestep 	    1.e-7   # Mean collision time = 1.5e-7s for the free flow, but too
 
 # OUTPUT
 # images
-compute             2 surf all all n press ke
-fix                 save ave/surf all 1 50 50 c_2[*] ave running
-region              slab block INF INF INF INF INF INF 
+#compute             2 surf all all n press ke
+#fix                 save ave/surf all 1 50 50 c_2[*] ave running
+#region              slab block INF INF INF INF INF INF
 #dump                2 image all 3000 cube4_*.ppm type type pdiam 3.e-5 &
 #                    view 70 -120 size 512 512 axes yes 0.25 0.01 &
 #                    surf f_save[2] 0.0 
