@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -255,6 +255,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
   grid_kk->sync(Device,CELL_MASK);
   d_cinfo = grid_kk->k_cinfo.d_view;
   d_cells = grid_kk->k_cells.d_view;
+  d_cellcount = grid_kk->d_cellcount;
 
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeDtGrid_ComputePerGrid>(0,nglocal),*this);
@@ -311,7 +312,7 @@ void ComputeDtGridKokkos::operator()(TagComputeDtGrid_ComputePerGrid, const int 
 
   // exclude cells that have no particles
   //  (includes split cells and unsplit cells interior to surface objects)
-  if (d_cinfo[i].count == 0) return;
+  if (d_cellcount[i] == 0) return;
 
   // check sufficiency of cell data to calculate cell dt
   double vrm_max = sqrt(2.0*boltz * d_temp_vector(i) / min_species_mass);

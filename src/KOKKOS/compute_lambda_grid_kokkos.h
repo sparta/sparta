@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -24,11 +24,10 @@ ComputeStyle(lambda/grid/kk,ComputeLambdaGridKokkos)
 #include "compute_lambda_grid.h"
 #include "kokkos_base.h"
 #include "kokkos_type.h"
+#include "collide_vss_kokkos.h"
 
 namespace SPARTA_NS {
 
-  struct TagComputeLambdaGrid_LoadNrhoVecFromArray{};
-  struct TagComputeLambdaGrid_LoadTempVecFromArray{};
   struct TagComputeLambdaGrid_ComputePerGrid{};
 
   class ComputeLambdaGridKokkos : public ComputeLambdaGrid, public KokkosBase {
@@ -41,24 +40,27 @@ namespace SPARTA_NS {
     void reallocate();
 
     KOKKOS_INLINE_FUNCTION
-    void operator()(TagComputeLambdaGrid_LoadNrhoVecFromArray, const int&) const;
-
-    KOKKOS_INLINE_FUNCTION
-    void operator()(TagComputeLambdaGrid_LoadTempVecFromArray, const int&) const;
-
-    KOKKOS_INLINE_FUNCTION
     void operator()(TagComputeLambdaGrid_ComputePerGrid, const int&) const;
 
     DAT::tdual_float_1d k_vector_grid;
     DAT::tdual_float_2d_lr k_array_grid;
 
   private:
-    DAT::t_float_1d d_nrho_vector;
-    DAT::t_float_1d d_temp_vector;
+    double boltz;
 
-    int dimension;
-    t_cell_1d d_cells;
+    t_species_1d d_species;
+    CollideVSSKokkos::t_params_2d_const d_params_const;
 
+    DAT::t_float_1d d_temp;
+    DAT::t_float_2d d_array_grid1,d_lambdainv,d_tauinv;
+    DAT::t_float_2d_lr d_nrho;
+
+    DAT::t_float_2d d_diam,d_tref,d_omega;
+
+    DAT::t_float_1d d_numap;
+    DAT::t_float_2d d_umap,d_uomap;
+
+    DAT::t_int_1d d_output_order;
 };
 
 }

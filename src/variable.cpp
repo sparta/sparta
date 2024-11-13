@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -1737,7 +1737,7 @@ double Variable::evaluate(char *str, Tree **tree)
         }
 	
 	if (nbracket == 0 && size == 0) {
-	
+
 	  Tree *newtree = new Tree();
 	  if (type == INT) {
 	    newtree->type = ARRAYINT;
@@ -2712,18 +2712,18 @@ double Variable::eval_tree(Tree *tree, int i)
   double arg,arg1,arg2,arg3;
 
   if (tree->type == VALUE) return tree->value;
-  if (tree->type == ARRAY) return tree->array[i*tree->nstride];
-  if (tree->type == ARRAYINT) return tree->iarray[i*tree->nstride];
+  if (tree->type == ARRAY) return tree->array[(bigint)i*tree->nstride];
+  if (tree->type == ARRAYINT) return tree->iarray[(bigint)i*tree->nstride];
   if (tree->type == PARTARRAYDOUBLE)
-    return *((double *) &tree->carray[i*tree->nstride]);
+    return *((double *) &tree->carray[(bigint)i*tree->nstride]);
   if (tree->type == PARTARRAYINT)
-    return *((int *) &tree->carray[i*tree->nstride]);
+    return *((int *) &tree->carray[(bigint)i*tree->nstride]);
   if (tree->type == SPECARRAY)
     return *((double *)
-             &tree->carray[particle->particles[i].ispecies*tree->nstride]);
+             &tree->carray[(bigint)particle->particles[i].ispecies*tree->nstride]);
   if (tree->type == PARTGRIDARRAY) {
     int icell = particle->particles[i].icell;
-    return tree->array[icell*tree->nstride];
+    return tree->array[(bigint)icell*tree->nstride];
   }
 
   if (tree->type == ADD)
@@ -3907,9 +3907,6 @@ void Variable::particle_vector(char *word, Tree **tree,
     newtree->nstride = sizeof(Particle::Species);
     newtree->carray = (char *) &species[0].magmoment;
   }
-
-  if ((bigint)particle->nlocal*newtree->nstride > MAXSMALLINT)
-    error->all(FLERR,"Too many particles per processor for particle-style variable");
 }
 
 /* ----------------------------------------------------------------------
@@ -3964,9 +3961,6 @@ void Variable::grid_vector(char *word, Tree **tree,
     newtree->carray = (char *) &cells[0].lo[2];
   else if (strcmp(word,"czhi") == 0)
     newtree->carray = (char *) &cells[0].hi[2];
-
-  if ((bigint)grid->nlocal*newtree->nstride > MAXSMALLINT)
-    error->all(FLERR,"Too many grid cells per processor for grid-style variable");
 }
 
 /* ----------------------------------------------------------------------

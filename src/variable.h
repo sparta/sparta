@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -46,7 +46,7 @@ class Variable : protected Pointers {
   int int_between_brackets(char *&, int, const char * = "variable");
   double evaluate_boolean(char *);
 
- private:
+ protected:
   int me;
   int nvar;                // # of defined variables
   int maxvar;              // max # of variables following lists can hold
@@ -90,9 +90,9 @@ class Variable : protected Pointers {
   void remove(int);
   void grow();
   void copy(int, char **, char **);
-  double evaluate(char *, Tree **);
+  virtual double evaluate(char *, Tree **);
   double collapse_tree(Tree *);
-  double eval_tree(Tree *, int);
+  virtual double eval_tree(Tree *, int);
   void free_tree(Tree *);
   int find_matching_paren(char *, int, char *&);
   int math_function(char *, char *, Tree **, Tree **, int &, double *, int &);
@@ -100,9 +100,9 @@ class Variable : protected Pointers {
                        int &, double *, int &);
 
   int is_particle_vector(char *);
-  void particle_vector(char *, Tree **, Tree **, int &);
+  virtual void particle_vector(char *, Tree **, Tree **, int &);
   int is_grid_vector(char *);
-  void grid_vector(char *, Tree **, Tree **, int &);
+  virtual void grid_vector(char *, Tree **, Tree **, int &);
   int is_constant(char *);
   double constant(char *);
   char *find_next_comma(char *);

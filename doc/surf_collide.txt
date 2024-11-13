@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -139,7 +139,12 @@ The second is a surf-style variable with a formula which can calculate
 a different temperature for each surface element, e.g. a temperature
 which depends on the geometric location of the center point of the
 surface element.  The calculation can also be time-dependent if
-desired.
+desired.  A surf-style variable can also access a compute or fix which
+outputs per-surf quantities.  For example the "compute
+surf"_compute_surf.html and "fix ave/surf"_fix_ave_surf.html commands
+can tally or average energy transfer from particles to surface
+elements, which could be used to infer a temperature for each surface
+element.
 
 Note that the frequency at which the equal-style or surf-style
 variable is evaluated can be set using the optional {temp/freq}
@@ -577,7 +582,7 @@ SPARTA"_Section_start.html#start_3 section for more info.
 
 You can specify the accelerated styles explicitly in your input script
 by including their suffix, or you can use the "-suffix command-line
-switch"_Section_start.html#start_6 when you invoke SPARTA, or you can
+switch"_Section_start.html#start_7 when you invoke SPARTA, or you can
 use the "suffix"_suffix.html command in your input script.
 
 See the "Accelerating SPARTA"_Section_accelerate.html section of the

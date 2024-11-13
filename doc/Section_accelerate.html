@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "Section_packages.html">Previous Section</A> - <A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> -
+<CENTER><A HREF = "Section_packages.html">Previous Section</A> - <A HREF = "https://sparta.github.io">SPARTA WWW Site</A> -
 <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> - <A HREF = "Section_howto.html">Next
 Section</A> 
 </CENTER>
@@ -28,7 +28,7 @@ multi-core CPUs, GPUs, and Intel Xeon Phi coprocessors.
 
 <LI>5.3 <A HREF = "#acc_3">KOKKOS package</A> 
 </UL>
-<P>The <A HREF = "http://sparta.sandia.gov/bench.html">Benchmark page</A> of the SPARTA
+<P>The <A HREF = "https://sparta.github.io/bench.html">Benchmark page</A> of the SPARTA
 web site gives performance results for the various accelerator
 packages discussed in Section 5.2, for several of the standard SPARTA
 benchmark problems, as a function of problem size and number of
@@ -50,7 +50,7 @@ typically no need to run for 1000s of timesteps to get accurate
 timings; you can simply extrapolate from short runs.
 </P>
 <P>For the set of runs, look at the timing data printed to the screen and
-log file at the end of each SPARTA run.  <A HREF = "Section_start.html#start_7">This
+log file at the end of each SPARTA run.  <A HREF = "Section_start.html#start_8">This
 section</A> of the manual has an overview.
 </P>
 <P>Running on one (or a few processors) should give a good estimate of
@@ -141,9 +141,9 @@ it provides, follow these general steps:
 </P>
 <DIV ALIGN=center><TABLE  BORDER=1 >
 <TR><TD >prepare and test a regular SPARTA simulation </TD><TD >  lmp_kokkos_cuda -in in.script; mpirun -np 32 lmp_kokkos_cuda -in in.script </TD></TR>
-<TR><TD >enable specific accelerator support via '-k on' <A HREF = "Section_start.html#start_6">command-line switch</A>, </TD><TD >  -k on g 1 </TD></TR>
-<TR><TD >set any needed options for the package via "-pk" <A HREF = "Section_start.html#start_6">command-line switch</A> or <A HREF = "package.html">package</A> command, </TD><TD >  only if defaults need to be changed, -pk kokkos react/retry yes </TD></TR>
-<TR><TD >use accelerated styles in your input via "-sf" <A HREF = "Section_start.html#start_6">command-line switch</A> or <A HREF = "suffix.html">suffix</A> command </TD><TD > lmp_kokkos_cuda -in in.script -sf kk
+<TR><TD >enable specific accelerator support via '-k on' <A HREF = "Section_start.html#start_7">command-line switch</A>, </TD><TD >  -k on g 1 </TD></TR>
+<TR><TD >set any needed options for the package via "-pk" <A HREF = "Section_start.html#start_7">command-line switch</A> or <A HREF = "package.html">package</A> command, </TD><TD >  only if defaults need to be changed, -pk kokkos react/retry yes </TD></TR>
+<TR><TD >use accelerated styles in your input via "-sf" <A HREF = "Section_start.html#start_7">command-line switch</A> or <A HREF = "suffix.html">suffix</A> command </TD><TD > lmp_kokkos_cuda -in in.script -sf kk
 </TD></TR></TABLE></DIV>
 
 <P>Note that the first 3 steps can be done as a single command with
@@ -159,7 +159,7 @@ individual accelerator sections.  Or you can add
 <A HREF = "package.html">package</A> and <A HREF = "suffix.html">suffix</A> commands to your input
 script.
 </P>
-<P>The <A HREF = "http://sparta.sandia.gov/bench.html">Benchmark page</A> of the SPARTA
+<P>The <A HREF = "https://sparta.github.io/bench.html">Benchmark page</A> of the SPARTA
 web site gives performance results for the various accelerator
 packages for several of the standard SPARTA benchmark problems, as a
 function of problem size and number of compute nodes, on different
@@ -539,7 +539,7 @@ size.
 performance difference of a KOKKOS style and (un-accelerated) styles
 (MPI-only mode) is typically small (less than 20%).
 </P>
-<P>See the <A HREF = "http://sparta.sandia.gov/bench.html">Benchmark page</A> of the
+<P>See the <A HREF = "https://sparta.github.io/bench.html">Benchmark page</A> of the
 SPARTA web site for performance of the KOKKOS package on different
 hardware.
 </P>

@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -34,7 +34,7 @@ the same log file.
 
 The file "log.sparta" is the default log file for a SPARTA run.  The
 name of the initial log file can also be set by the command-line
-switch -log.  See "Section 2.6"_Section_start.html#start_6 for
+switch -log.  See "Section 2.6"_Section_start.html#start_7 for
 details.
 
 [Restrictions:] none

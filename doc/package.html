@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "https://sparta.github.io">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -53,7 +53,7 @@ is because it specifies settings that the accelerator package used in
 its initialization, before a simulation is defined.
 </P>
 <P>This command can also be specified from the command-line when
-launching SPARTA, using the "-pk" <A HREF = "Section_start.html#start_6">command-line
+launching SPARTA, using the "-pk" <A HREF = "Section_start.html#start_7">command-line
 switch</A>.  The syntax is exactly the same as
 when used in an input script.
 </P>
@@ -62,13 +62,13 @@ to be specified, if the package is to be used in a simulation (SPARTA
 can be built with the accelerator package without using it in a
 particular simulation).  However, a default version of the command is
 typically invoked by other accelerator settings. For example, the
-KOKKOS package requires a "-k on" <A HREF = "Section_start.html#start_6">command-line
+KOKKOS package requires a "-k on" <A HREF = "Section_start.html#start_7">command-line
 switch</A> respectively, which invokes a
 "package kokkos" command with default settings.
 </P>
 <P>NOTE: A package command for a particular style can be invoked multiple
 times when a simulation is setup, e.g. by the "-k on", "-sf", and
-"-pk" <A HREF = "Section_start.html#start_6">command-line switches</A>, and by using
+"-pk" <A HREF = "Section_start.html#start_7">command-line switches</A>, and by using
 this command in an input script.  Each time it is used all of the
 style options are set, either to default values or to specified
 settings.  I.e. settings from previous invocations do not persist
@@ -136,7 +136,7 @@ SPARTA</A> section for more info.
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "suffix.html">suffix</A>, "-pk" <A HREF = "Section_start.html#start_6">command-line
+<P><A HREF = "suffix.html">suffix</A>, "-pk" <A HREF = "Section_start.html#start_7">command-line
 setting</A>
 </P>
 <P><B>Default:</B>
@@ -144,9 +144,9 @@ setting</A>
 <P>For the KOKKOS package, the option defaults are react/extra = 1.1,
 react/retry = no, and gpu/aware yes. For CPUs: comm = serial, and for
 GPUs: comm = threaded.  These settings are made automatically by the
-required "-k on" <A HREF = "Section_start.html#start_6">command-line switch</A>. You
+required "-k on" <A HREF = "Section_start.html#start_7">command-line switch</A>. You
 can change them by using the package kokkos command in your input script
-or via the "-pk kokkos" <A HREF = "Section_start.html#start_6">command-line
+or via the "-pk kokkos" <A HREF = "Section_start.html#start_7">command-line
 switch</A>. 
 </P>
 </HTML>

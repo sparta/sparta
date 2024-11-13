@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -62,7 +62,7 @@ class Fix : protected Pointers {
   int per_grid_field;            // 0/1 if produces per-grid external field
   int field_active[3];           // 0/1 for active x,y,z components of ext field
 
-  int START_OF_STEP,END_OF_STEP;    // mask settings
+  int START_OF_STEP,END_OF_STEP,POST_RUN;    // mask settings
 
   int kokkos_flag;              // 0/1 if Kokkos fix
   int copy,uncopy,copymode;     // used by Kokkos, prevent deallocation of
@@ -81,6 +81,7 @@ class Fix : protected Pointers {
 
   virtual void start_of_step() {}
   virtual void end_of_step() {}
+  virtual void post_run() {}
   virtual void update_custom(int, double, double, double, double *) {}
   virtual void gas_react(int) {}
   virtual void surf_react(Particle::OnePart *, int &, int &) {}

@@ -1,6 +1,6 @@
 /* -*- c++ -*- ----------------------------------------------------------
    SPARTA - Large-scale Atomic/Molecular Massively Parallel Simulator
-   http://sparta.sandia.gov, Sandia National Laboratories
+   http://sparta.github.io, Sandia National Laboratories
    Steve Plimpton, sjplimp@gmail.com
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
@@ -39,7 +39,7 @@ namespace Kokkos {
   struct sparta_float3 {
     float x,y,z;
     KOKKOS_INLINE_FUNCTION
-    sparta_float3():x(0.0f),z(0.0f),y(0.0f) {}
+    sparta_float3():x(0.0f),y(0.0f),z(0.0f) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator += (const sparta_float3& tmp) {
@@ -58,7 +58,7 @@ namespace Kokkos {
   struct sparta_double3 {
     double x,y,z;
     KOKKOS_INLINE_FUNCTION
-    sparta_double3():x(0.0),z(0.0),y(0.0) {}
+    sparta_double3():x(0.0),y(0.0),z(0.0) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator += (const sparta_double3& tmp) {

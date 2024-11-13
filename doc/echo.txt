@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -26,7 +26,7 @@ command to the screen and/or log file as it is read and processed.  If
 an input script has errors, it can be useful to look at echoed output
 to see the last command processed.
 
-The "command-line switch"_Section_start.html#start_6 -echo can be used
+The "command-line switch"_Section_start.html#start_7 -echo can be used
 in place of this command.
 
 [Restrictions:] none

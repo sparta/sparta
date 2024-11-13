@@ -1,6 +1,6 @@
  /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -1920,6 +1920,10 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
   double minsize = MIN(hi[0]-lo[0],hi[1]-lo[1]);
   double displace = EPSSURF * minsize;
 
+  double maxlength = 0.0;
+  double maxarea = 0.0;
+  int setflag = 0;
+
   if (dim == 2) {
     int npoint;
     double cpath[4];
@@ -1944,10 +1948,24 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
         if (edge == 4 and norm[1] > 0.0) continue;
       }
 
+      // for surfaces with a tiny intersection, the point to push off
+      //  from can be very close to another line
+      // if the angle between the two lines is less than 90 degrees,
+      //  the pushed-off point can end up "inside" the surface instead
+      //  of "outside"
+      // using the line with the largest clipped length makes this
+      //  issue very unlikely to occur
+
+      double x1 = cpath[2] - cpath[0];
+      double y1 = cpath[3] - cpath[1];
+      double length = sqrt(x1*x1 + y1*y1);
+      if (length < maxlength) continue;
+      maxlength = length;
+
       x[0] = 0.5*(cpath[0]+cpath[2]) + displace*norm[0];
       x[1] = 0.5*(cpath[1]+cpath[3]) + displace*norm[1];
       x[2] = 0.0;
-      return 1;
+      setflag = 1;
     }
 
   } else {
@@ -1976,20 +1994,34 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
         if (face == 6 and norm[2] > 0.0) continue;
       }
 
-      double onethird = 1.0/3.0;
-      x[0] = onethird*(cpath[0]+cpath[3]+cpath[6]) + displace*norm[0];
-      x[1] = onethird*(cpath[1]+cpath[4]+cpath[7]) + displace*norm[1];
-      x[2] = onethird*(cpath[2]+cpath[5]+cpath[8]) + displace*norm[2];
-      return 1;
+      // for surfaces with a tiny intersection, the point to push off
+      //  from can be very close to a shared edge with another triangle
+      // if the angle between the two tris is less than 90 degrees,
+      //  the pushed-off point can end up "inside" the surface instead
+      //  of "outside"
+      // using the triangle with the largest clipped area
+      //  and pushing off its centroid makes this issue very unlikely
+      //  to occur
+
+      double center[3];
+      double area = Geometry::poly_area(npoint,cpath,center);
+      if (area < maxarea) continue;
+      maxarea = area;
+
+      x[0] = center[0] + displace*norm[0];
+      x[1] = center[1] + displace*norm[1];
+      x[2] = center[2] + displace*norm[2];
+      setflag = 1;
     }
   }
 
-  // unable to find a point in flow volume, all surfs invoked "continue"
-  // means entire cell is actually outside or inside, just touched by surfs
-  // if outside, caller does not need to call outside_surfs()
-  // if inside, caller can detect that its flow volume = zero
+  // if setflag equal to 0
+  //  unable to find a point in flow volume, all surfs invoked "continue"
+  //  means entire cell is actually outside or inside, just touched by surfs
+  //  if outside, caller does not need to call outside_surfs()
+  //  if inside, caller can detect that its flow volume = zero
 
-  return 0;
+  return setflag;
 }
 
 /* ----------------------------------------------------------------------
