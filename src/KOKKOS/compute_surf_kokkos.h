@@ -283,7 +283,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       }
       a_array_surf_tally(itally,k++) -= torque[2] * nfactor_inverse;
       break;
-      
+
     // pressures
 
     case PRESS:

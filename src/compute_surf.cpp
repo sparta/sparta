@@ -366,7 +366,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
 
   vec = array_surf_tally[itally];
   int k = igroup*nvalue;
-  
+
   int fflag = 0;
   int tqflag = 0;
   int nflag = 0;
@@ -492,7 +492,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       }
       vec[k++] -= torque[2] * nfactor_inverse;
       break;
-      
+
     // pressures
 
     case PRESS:
