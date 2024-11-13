@@ -50,6 +50,7 @@ if(SPARTA_ENABLE_TESTING)
       "chem_rates"
       "custom"
       "explicit2implicit"
+      "mfp_mct"
       "torque")
 
   set(SPARTA_DISABLED_TESTS

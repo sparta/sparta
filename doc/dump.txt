@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -133,7 +133,7 @@ its options.
 The {particle} and {grid} and {surf} styles create files in a simple
 text format that is self-explanatory when viewing a dump file.  Many
 of the SPARTA "post-processing tools"_Section_tools.html, including
-"Pizza.py"_http://pizza.sandia.gov, work with this format.
+"Pizza.py"_https://lammps.github.io/pizza, work with this format.
 
 For post-processing purposes the text files are self-describing in the
 following sense.

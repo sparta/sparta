@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -34,7 +34,7 @@
 #include "compute.h"
 #include "input.h"
 #include "variable.h"
-#include "memory.h"
+#include "memory_kokkos.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
@@ -60,7 +60,7 @@ FixAveHistoWeightKokkos::FixAveHistoWeightKokkos(SPARTA *spa, int narg, char **a
 
   // nvalues = 2 required for histo/weight
 
-  if (nvalues != 2) error->all(FLERR,"Illegal fix ave/histo/weight/kokkos command");
+  if (nvalues != 2) error->all(FLERR,"Illegal fix ave/histo/weight/kk command");
 
   // check that length of 2 values is the same
 
@@ -97,19 +97,21 @@ FixAveHistoWeightKokkos::FixAveHistoWeightKokkos(SPARTA *spa, int narg, char **a
   }
 
   if (size[0] != size[1])
-    error->all(FLERR,"Fix ave/histo/weight/kokkos value and weight vector "
+    error->all(FLERR,"Fix ave/histo/weight/kk value and weight vector "
                "lengths do not match");
 
   vectorwt = NULL;
   maxvectorwt = 0;
-
-  }
+}
 
 /* ---------------------------------------------------------------------- */
 
 FixAveHistoWeightKokkos::~FixAveHistoWeightKokkos()
 {
   if (copymode) return;
+
+  memoryKK->destroy_kokkos(k_vectorwt, vectorwt);
+  vectorwt = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -119,7 +121,6 @@ void FixAveHistoWeightKokkos::calculate_weights()
 
   weight = 0.0;
   weights = NULL;
-  stridewt = 0;
 
   int i = 1;
   int m = value2index[i];
@@ -149,6 +150,7 @@ void FixAveHistoWeightKokkos::calculate_weights()
         }
         weight = compute->vector[j-1];
       }
+
     } else if (kind == GLOBAL && mode == VECTOR) {
       error->all(FLERR,"Compute not compatible with fix ave/histo/kk");
       if (j == 0) {
@@ -157,14 +159,12 @@ void FixAveHistoWeightKokkos::calculate_weights()
           compute->invoked_flag |= INVOKED_VECTOR;
         }
         weights = compute->vector;
-        stridewt = 1;
       } else {
         if (!(compute->invoked_flag & INVOKED_ARRAY)) {
           compute->compute_array();
           compute->invoked_flag |= INVOKED_ARRAY;
         }
         if (compute->array) weights = &compute->array[0][j-1];
-        stridewt = compute->size_array_cols;
       }
 
     } else if (kind == PERPARTICLE) {
@@ -175,10 +175,8 @@ void FixAveHistoWeightKokkos::calculate_weights()
       }
       if (j == 0) {
         weights = compute->vector_particle;
-        stridewt = 1;
       } else if (compute->array_particle) {
         weights = &compute->array_particle[0][j-1];
-        stridewt = compute->size_per_particle_cols;
       }
 
     } else if (kind == PERGRID) {
@@ -196,6 +194,7 @@ void FixAveHistoWeightKokkos::calculate_weights()
   // access fix fields, guaranteed to be ready
 
   } else if (which[i] == FIX) {
+
     Fix *fix = modify->fix[m];
     if (!fix->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with fix ave/histo/weight/kk");
@@ -209,7 +208,7 @@ void FixAveHistoWeightKokkos::calculate_weights()
         weight = fix->compute_vector(j-1);
       }
     } else if (kind == GLOBAL && mode == VECTOR) {
-      error->all(FLERR,"Fix not compatible with fix ave/histo/weight/kk");
+      error->all(FLERR,"Fix ave/histo/weight/kk option not yet supported");
       // NOTE: need to allocate local storage
       if (j == 0) {
         int n = fix->size_vector;
@@ -223,10 +222,8 @@ void FixAveHistoWeightKokkos::calculate_weights()
       error->all(FLERR,"Fix not compatible with fix ave/histo/weight/kk");
       if (j == 0) {
         weights = fix->vector_particle;
-        stridewt = 1;
       } else if (fix->array_particle) {
         weights = fix->array_particle[j-1];
-        stridewt = fix->size_per_particle_cols;
       }
 
     } else if (kind == PERGRID) {
@@ -240,29 +237,32 @@ void FixAveHistoWeightKokkos::calculate_weights()
   // evaluate equal-style or particle-style or grid-style variable
 
   } else if (which[i] == VARIABLE) {
-    error->all(FLERR,"Cannot (yet) use variables with fix ave/histo/weight/kk");
     if (kind == GLOBAL && mode == SCALAR) {
       weight = input->variable->compute_equal(m);
 
     } else if (which[i] == VARIABLE && kind == PERPARTICLE) {
       if (particle->maxlocal > maxvectorwt) {
-        memory->destroy(vectorwt);
+        memoryKK->destroy_kokkos(k_vectorwt,vectorwt);
         maxvectorwt = particle->maxlocal;
-        memory->create(vectorwt,maxvectorwt,"ave/histo/weight:vectorwt");
+        memoryKK->create_kokkos(k_vectorwt,vectorwt,maxvectorwt,"ave/histo/weight:vectorwt");
       }
       input->variable->compute_particle(m,vectorwt,1,0);
-      weights = vectorwt;
-      stridewt = 1;
+      k_vectorwt.modify_host();
+      k_vectorwt.sync_device();
+      auto d_vectorwt = k_vectorwt.d_view;      
+      d_weights = d_vectorwt;
 
     } else if (which[i] == VARIABLE && kind == PERGRID) {
       if (grid->maxlocal > maxvectorwt) {
-        memory->destroy(vectorwt);
+        memoryKK->destroy_kokkos(k_vectorwt,vectorwt);
         maxvectorwt = grid->maxlocal;
         memory->create(vectorwt,maxvectorwt,"ave/histo/weight:vectorwt");
       }
       input->variable->compute_grid(m,vectorwt,1,0);
-      weights = vectorwt;
-      stridewt = 1;
+      k_vectorwt.modify_host();
+      k_vectorwt.sync_device();
+      auto d_vectorwt = k_vectorwt.d_view;
+      d_weights = d_vectorwt;
     }
 
   // explicit per-particle attributes
@@ -271,16 +271,6 @@ void FixAveHistoWeightKokkos::calculate_weights()
     printf("%d, %d\n", which[i] == VARIABLE, kind == PERGRID);
     error->all(FLERR,"Fix ave/histo/weight/kokkos option not yet supported");
   }
-}
-
-/* ----------------------------------------------------------------------
-   bin a single value with weight
-------------------------------------------------------------------------- */
-void FixAveHistoWeightKokkos::bin_scalar(
-    typename minmax_type::value_type& minmax,
-    double value)
-{
-  bin_one(minmax, value, weight);
 }
 
 /* ----------------------------------------------------------------------
@@ -470,7 +460,7 @@ FixAveHistoWeightKokkos::operator()(TagFixAveHistoWeight_BinParticles3, const in
                                     minmax_type::value_type& lminmax) const
 {
   const int ispecies = d_particles(i).ispecies;
-  if (d_s2g(imix, ispecies) < 0)
+  if (d_s2g(imix, ispecies) >= 0)
   {
     bin_one(lminmax, d_values(i), d_weights(i));
   }
@@ -518,7 +508,7 @@ FixAveHistoWeightKokkos::operator()(TagFixAveHistoWeight_BinParticlesX1, const i
    * this code can be recommissioned.
    *
   const int ispecies = d_particles(i).ispecies;
-  if (region_kk->match(d_particles(i).x) && d_s2g(imix, ispecies) < 0)
+  if (region_kk->match(d_particles(i).x) && d_s2g(imix, ispecies) >= 0)
   {
     bin_one(lminmax, d_particles(i).x[index], d_weights(i));
   }
@@ -577,7 +567,7 @@ FixAveHistoWeightKokkos::operator()(TagFixAveHistoWeight_BinParticlesV1, const i
    * this code can be recommissioned.
    *
   const int ispecies = d_particles(i).ispecies;
-  if (region_kk->match(d_particles(i).x) && d_s2g(imix, ispecies) < 0)
+  if (region_kk->match(d_particles(i).x) && d_s2g(imix, ispecies) >= 0)
   {
     bin_one(lminmax, d_particles(i).v[index], d_weights(i));
   }
