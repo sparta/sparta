@@ -49,13 +49,13 @@ create_isurf            all fablate 100.5 multi
 
 timestep		0.001
 
-#compute 1 property/grid all vol
-#compute 1r reduce sum c_1[*]
+compute 1 property/grid all vol
+compute 1r reduce sum c_1[*]
 
 #variable vout equal c_1r
 #fix massr print 5 "${vout}" append vol_inner_multi.dat screen no
 
 stats			1
-stats_style		step cpu np nattempt ncoll nscoll nscheck
+stats_style		step cpu c_1r
 
 run 100
