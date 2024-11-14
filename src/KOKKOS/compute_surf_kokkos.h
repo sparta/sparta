@@ -45,8 +45,8 @@ class ComputeSurfKokkos : public ComputeSurf {
   void pre_surf_tally();
   void post_surf_tally();
 
-enum{NUM,NUMWT,NFLUX,NFLUXIN,MFLUX,MFLUXIN,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
-     XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ECHEM,ETOT};
+enum{NUM,NUMWT,NFLUX,NFLUXIN,MFLUX,MFLUXIN,FX,FY,FZ,TX,TY,TZ,
+  PRESS,XPRESS,YPRESS,ZPRESS,XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ECHEM,ETOT};
 
 /* ----------------------------------------------------------------------
    tally values for a single particle in icell
@@ -116,6 +116,8 @@ void surf_tally_kk(int isurf, int icell, int reaction,
   double fluxscale = d_normflux(isurf);
 
   // tally all values associated with group into array
+  // set fflag after force computation is done once
+  // set tqflag after torque computation is done once
   // set nflag and tflag after normal and tangent computation is done once
   // particle weight used for all keywords except NUM
   // forcescale factor applied for keywords FX,FY,FZ
@@ -123,8 +125,9 @@ void surf_tally_kk(int isurf, int icell, int reaction,
   // if surf is transparent, all flux tallying is for incident particle only
 
   double vsqpre,ivsqpost,jvsqpost;
-  double oerot,ierot,jerot,oevib,ievib,jevib,iother,jother,otherpre,etot;
-  double pdelta[3],pnorm[3],ptang[3],pdelta_force[3];
+  double ierot,jerot,ievib,jevib,iother,jother,otherpre,etot;
+  double pdelta[3],pnorm[3],ptang[3],pdelta_force[3],rdelta[3],torque[3];
+  double *xcollide;
 
   double *norm;
   if (dim == 2) norm = d_lines(isurf).norm;
@@ -140,6 +143,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
   if (jp) jmass = d_species(jp->ispecies).mass * weight;
 
   double *vorig = NULL;
+  double oerot,oevib;
   if (iorig) {
     vorig = iorig->v;
     oerot = iorig->erot;
@@ -150,7 +154,9 @@ void surf_tally_kk(int isurf, int icell, int reaction,
   }
 
   int k = igroup*nvalue;
+
   int fflag = 0;
+  int tqflag = 0;
   int nflag = 0;
   int tflag = 0;
 
@@ -194,7 +200,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       k++;
       break;
 
-    // forces
+    // forces and torques
 
     case FX:
       if (!fflag) {
@@ -225,6 +231,57 @@ void surf_tally_kk(int isurf, int icell, int reaction,
         if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta_force);
       }
       a_array_surf_tally(itally,k++) -= pdelta_force[2] * nfactor_inverse;
+      break;
+
+    // for torque, xcollide should be same for any non-NULL particle
+
+    case TX:
+      if (!fflag) {
+        fflag = 1;
+        MathExtraKokkos::scale3(-origmass,vorig,pdelta_force);
+        if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta_force);
+        if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta_force);
+      }
+      if (!tqflag) {
+        tqflag = 1;
+        if (ip) xcollide = ip->x;
+        else xcollide = iorig->x;
+        MathExtraKokkos::sub3(xcollide,com,rdelta);
+        MathExtraKokkos::cross3(rdelta,pdelta_force,torque);
+      }
+      a_array_surf_tally(itally,k++) -= torque[0] * nfactor_inverse;
+      break;
+    case TY:
+      if (!fflag) {
+        fflag = 1;
+        MathExtraKokkos::scale3(-origmass,vorig,pdelta_force);
+        if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta_force);
+        if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta_force);
+      }
+      if (!tqflag) {
+        tqflag = 1;
+        if (ip) xcollide = ip->x;
+        else xcollide = iorig->x;
+        MathExtraKokkos::sub3(xcollide,com,rdelta);
+        MathExtraKokkos::cross3(rdelta,pdelta_force,torque);
+      }
+      a_array_surf_tally(itally,k++) -= torque[1] * nfactor_inverse;
+      break;
+    case TZ:
+      if (!fflag) {
+        fflag = 1;
+        MathExtraKokkos::scale3(-origmass,vorig,pdelta_force);
+        if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta_force);
+        if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta_force);
+      }
+      if (!tqflag) {
+        tqflag = 1;
+        if (ip) xcollide = ip->x;
+        else xcollide = iorig->x;
+        MathExtraKokkos::sub3(xcollide,com,rdelta);
+        MathExtraKokkos::cross3(rdelta,pdelta_force,torque);
+      }
+      a_array_surf_tally(itally,k++) -= torque[2] * nfactor_inverse;
       break;
 
     // pressures

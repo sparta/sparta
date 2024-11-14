@@ -151,7 +151,12 @@ specify a time-dependent temperature.
 a different temperature for each surface element, e.g. a temperature
 which depends on the geometric location of the center point of the
 surface element.  The calculation can also be time-dependent if
-desired.
+desired.  A surf-style variable can also access a compute or fix which
+outputs per-surf quantities.  For example the <A HREF = "compute_surf.html">compute
+surf</A> and <A HREF = "fix_ave_surf.html">fix ave/surf</A> commands
+can tally or average energy transfer from particles to surface
+elements, which could be used to infer a temperature for each surface
+element.
 </P>
 <P>Note that the frequency at which the equal-style or surf-style
 variable is evaluated can be set using the optional <I>temp/freq</I>
