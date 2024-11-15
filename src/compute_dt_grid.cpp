@@ -26,7 +26,7 @@
 #include "memory.h"
 #include "error.h"
 #include "string.h"
-#include <iostream>
+
 using namespace SPARTA_NS;
 
 enum{NONE,COMPUTE,FIX};
