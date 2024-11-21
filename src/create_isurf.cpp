@@ -180,8 +180,8 @@ void CreateISurf::command(int narg, char **arg)
   else surfbuffer = (thresh - 0.0*ablate->mindist) / (1.0-ablate->mindist);
   surfbuffer = MIN(surfbuffer,255.0);
 
-  MPI_Barrier(world);
-  double time0 = MPI_Wtime();
+  //MPI_Barrier(world);
+  //double time0 = MPI_Wtime();
 
   // set grid corner point values based on existing explicit surfs and thresh
 
@@ -216,20 +216,19 @@ void CreateISurf::command(int narg, char **arg)
 
   if (ablate->nevery == 0) modify->delete_fix(ablateID);
 
-  MPI_Barrier(world);
-  double time1 = MPI_Wtime();
+  //MPI_Barrier(world);
+  //double time1 = MPI_Wtime();
 
   if (ablate->nevery == 0) modify->delete_fix(ablateID);
 
-  double time_total = time1-time0;
+  //double time_total = time1-time0;
 
-  if (comm->me == 0) {
-    if (screen) 
-      fprintf(screen," Create CPU time = %g secs\n",time_total);
-
-    if (logfile)
-      fprintf(logfile," Create CPU time = %g secs\n",time_total);
-  }
+  //if (comm->me == 0) {
+  //  if (screen) 
+  //    fprintf(screen," Create CPU time = %g secs\n",time_total);
+  //  if (logfile)
+  //    fprintf(logfile," Create CPU time = %g secs\n",time_total);
+  //}
 }
 
 /* ----------------------------------------------------------------------
