@@ -30,16 +30,18 @@
 <PRE>  computeID = c_ID or c_ID[n] for a compute that calculates per grid cell values
   fixID = f_ID or f_ID[n] for a fix that calculates per grid cell values
   v_name = per-grid vector calculated by a grid-style variable with name
+  uniform = perform a uniform decrement
   random = perform a random decrement 
 </PRE>
-<LI>maxrandom = maximum per grid cell decrement as an integer (only specified if source = random) 
+<LI>maxrandom = maximum per grid cell decrement as an integer (only specified if source = random or uniform) 
 
 <LI>zero or more keyword/value pairs may be appended 
 
-<LI>keyword = <I>mindist</I> 
+<LI>keyword = <I>mindist</I> or <I>multiple</I> 
 
 <PRE>  <I>mindist</I> value = fraction
-    fraction = minimum fractional distance along cell edge for triangle/line vertices (value > 0 and < 0.5) 
+    fraction = minimum fractional distance along cell edge for triangle/line vertices (value > 0 and < 0.5)
+  <I>multiple</I> value = yes or no 
 </PRE>
 
 </UL>
@@ -125,6 +127,10 @@ the first random # < <I>scale</I>, then the second random integer is the
 decrement value for the cell.  Thus <I>scale</I> is effectively the
 fraction of grid cells whose corner point values are decremented.
 </P>
+<P>For basic testing of new ablation capabilities, the <I>source</I> can be 
+specified as <I>uniform</I>. Any cell which contains part of the gas and the surface
+is decremented by <I>maxrandom</I>.
+</P>
 <P>See the explanation for the optional <I>mindist</I> keyword below.
 </P>
 <HR>
@@ -135,7 +141,7 @@ surfaces.  These lines are taken from the
 examples/ablation/in.ablation.3d.reactions input script:
 </P>
 <PRE>surf_collide	    1 diffuse 300.0 1.0
-surf_react	    2 prob air.surf 
+surf_react	      2 prob air.surf 
 </PRE>
 <PRE>compute             10 react/isurf/grid all 2
 fix                 10 ave/grid all 1 100 100 c_10[*]
@@ -270,6 +276,32 @@ from the first grid corner point.
 </P>
 <HR>
 
+<CENTER><IMG SRC = "JPG/multipoint_decrement_small.png">
+</CENTER>
+<P>The <I>multiple</I> option allows a multipoint decrement to be used. In a cell,
+three types of corners are identified: inside, outside or interface. 
+An <B>inside</B> point is a point inside the surface (its values is greater than the specified threshold). An <B>outside</B> point is a point that is outside the surface and all corner points adjacent to that corner point within the cell are also 
+outside the surface.  
+An <B>interface</B> is a point outside the surface but one of its neighboring points is
+inside. Given a cell decrement, the multipoint decrement distributes that cell
+decrement evenly to each interface point. In the case the interface point 
+becomes negative, the negative value is evenly distributed to each of the
+adjoining inside points. The multipoint decrement may also be used with the multivalues.
+</P>
+<CENTER><IMG SRC = "JPG/multi_single_ablation_small.png">
+</CENTER>
+<P>Multipoint decrement is distinct from the single point decrement in SPARTA. 
+A single point decrement visits each corner point one at a time and 
+reduces the minimum corner point value found. 
+The multipoint decrement reduces all interface points. A distributed decrement
+is advantageous when one is interested in preserving cell level features. In 
+the above example, a single cell is ablated (indicated by a red arrow). With a 
+single point decrement, only one corner point is updated and only the left side
+of the affected cell ablates. With the multipoint decrement, two corner points
+are reduced and the entire surface contained within the ablated cell recedes. 
+</P>
+<HR>
+
 <P><B>Restart, output info:</B>
 </P>
 <P>No information about this fix is written to <A HREF = "restart.html">binary restart
@@ -306,6 +338,8 @@ an overview of SPARTA output options.
 </P>
 <P>The default for the <I>mindist</I> keyword = 0.0, i.e. the epsilon method
 is used.
+</P>
+<P><I>multiple</I> = no
 </P>
 <HR>
 

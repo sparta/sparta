@@ -6,6 +6,7 @@
  * @date    12/08/2002
  *
  * @brief   LookUpTable for the MarchingCubes 33 Algorithm
+ * From Thomas Lewiner: "Regarding the Marching Cubes license, it is 100% free"
  */
 //________________________________________________
 
