@@ -218,9 +218,6 @@ void CreateISurf::command(int narg, char **arg)
 
   //MPI_Barrier(world);
   //double time1 = MPI_Wtime();
-
-  if (ablate->nevery == 0) modify->delete_fix(ablateID);
-
   //double time_total = time1-time0;
 
   //if (comm->me == 0) {
