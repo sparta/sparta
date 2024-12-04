@@ -23,14 +23,15 @@
 #include "update.h"
 #include "modify.h"
 #include "domain.h"
+#include "input.h"
 #include "math_extra.h"
 #include "memory.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
 
-enum{NUM,NUMWT,NFLUX,NFLUXIN,MFLUX,MFLUXIN,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
-     XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ECHEM,ETOT};
+enum{NUM,NUMWT,NFLUX,NFLUXIN,MFLUX,MFLUXIN,FX,FY,FZ,TX,TY,TZ,
+  PRESS,XPRESS,YPRESS,ZPRESS,XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ECHEM,ETOT};
 
 #define DELTA 4096
 
@@ -66,6 +67,9 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
     else if (strcmp(arg[iarg],"fx") == 0) which[nvalue++] = FX;
     else if (strcmp(arg[iarg],"fy") == 0) which[nvalue++] = FY;
     else if (strcmp(arg[iarg],"fz") == 0) which[nvalue++] = FZ;
+    else if (strcmp(arg[iarg],"tx") == 0) which[nvalue++] = TX;
+    else if (strcmp(arg[iarg],"ty") == 0) which[nvalue++] = TY;
+    else if (strcmp(arg[iarg],"tz") == 0) which[nvalue++] = TZ;
     else if (strcmp(arg[iarg],"press") == 0) which[nvalue++] = PRESS;
     else if (strcmp(arg[iarg],"px") == 0) which[nvalue++] = XPRESS;
     else if (strcmp(arg[iarg],"py") == 0) which[nvalue++] = YPRESS;
@@ -85,6 +89,7 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
   // process optional keywords
 
   normarea = 1;
+  comflag = 0;
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"norm") == 0) {
@@ -94,8 +99,22 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
       else if (strcmp(arg[iarg+1],"flux") == 0) normarea = 1;
       else error->all(FLERR,"Invalid compute surf optional keyword");
       iarg += 2;
+    } else if (strcmp(arg[iarg],"com") == 0) {
+      if (iarg+4 > narg)
+        error->all(FLERR,"Invalid compute surf optional keyword");
+      comflag = 1;
+      com[0] = input->numeric(FLERR,arg[iarg+1]);
+      com[1] = input->numeric(FLERR,arg[iarg+2]);
+      com[2] = input->numeric(FLERR,arg[iarg+3]);
+      iarg += 4;
     } else error->all(FLERR,"Invalid compute surf value or optional keyword");
   }
+
+  // if a torque component is specified, COM must be set
+
+  for (int i = 0; i < nvalue; i++)
+    if (which[i] == TX || which[i] == TY || which[i] == TZ)
+      if (!comflag) error->all(FLERR,"Compute surf torque requires com keyword");
 
   // setup
 
@@ -328,6 +347,8 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
   }
 
   // tally all values associated with group into array
+  // set fflag after force computation is done once
+  // set tqflag after torque computation is done once
   // set nflag and tflag after normal and tangent computation is done once
   // particle weight used for all keywords except NUM
   // forcescale factor applied for keywords FX,FY,FZ
@@ -335,8 +356,9 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
   // if surf is transparent, all flux tallying is for incident particle only
 
   double vsqpre,ivsqpost,jvsqpost;
-  double oerot,ierot,jerot,oevib,ievib,jevib,iother,jother,otherpre,etot;
-  double pdelta[3],pnorm[3],ptang[3],pdelta_force[3];
+  double ierot,jerot,ievib,jevib,iother,jother,otherpre,etot;
+  double pdelta[3],pnorm[3],ptang[3],pdelta_force[3],rdelta[3],torque[3];
+  double *xcollide;
 
   double *norm;
   if (dim == 2) norm = lines[isurf].norm;
@@ -351,6 +373,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
   if (jp) jmass = particle->species[jp->ispecies].mass * weight * jswfrac;
 
   double *vorig = NULL;
+  double oerot,oevib;
   if (iorig) {
     vorig = iorig->v;
     oerot = iorig->erot;
@@ -364,7 +387,9 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
 
   vec = array_surf_tally[itally];
   int k = igroup*nvalue;
+
   int fflag = 0;
+  int tqflag = 0;
   int nflag = 0;
   int tflag = 0;
 
@@ -405,7 +430,7 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       k++;
       break;
 
-    // forces
+    // forces and torques
 
     case FX:
       if (!fflag) {
@@ -436,6 +461,57 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
         if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
       }
       vec[k++] -= pdelta_force[2] * nfactor_inverse;
+      break;
+
+    // for torque, xcollide should be same for any non-NULL particle
+
+    case TX:
+      if (!fflag) {
+        fflag = 1;
+        MathExtra::scale3(-origmass,vorig,pdelta_force);
+        if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
+        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+      }
+      if (!tqflag) {
+        tqflag = 1;
+        if (ip) xcollide = ip->x;
+        else xcollide = iorig->x;
+        MathExtra::sub3(xcollide,com,rdelta);
+        MathExtra::cross3(rdelta,pdelta_force,torque);
+      }
+      vec[k++] -= torque[0] * nfactor_inverse;
+      break;
+    case TY:
+      if (!fflag) {
+        fflag = 1;
+        MathExtra::scale3(-origmass,vorig,pdelta_force);
+        if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
+        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+      }
+      if (!tqflag) {
+        tqflag = 1;
+        if (ip) xcollide = ip->x;
+        else xcollide = iorig->x;
+        MathExtra::sub3(xcollide,com,rdelta);
+        MathExtra::cross3(rdelta,pdelta_force,torque);
+      }
+      vec[k++] -= torque[1] * nfactor_inverse;
+      break;
+    case TZ:
+      if (!fflag) {
+        fflag = 1;
+        MathExtra::scale3(-origmass,vorig,pdelta_force);
+        if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
+        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+      }
+      if (!tqflag) {
+        tqflag = 1;
+        if (ip) xcollide = ip->x;
+        else xcollide = iorig->x;
+        MathExtra::sub3(xcollide,com,rdelta);
+        MathExtra::cross3(rdelta,pdelta_force,torque);
+      }
+      vec[k++] -= torque[2] * nfactor_inverse;
       break;
 
     // pressures
