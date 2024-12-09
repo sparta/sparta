@@ -734,10 +734,10 @@ numbered from 1 to 2000 with the x-dimension varying fastest, then y,
 and finally the z-dimension slowest.  Consider the 376th level 1 cell.
 It would be the 6th cell in the x direction of the grid, 8th cell in
 y, and 4th cell in z.  I.e. 376 = (z-1)*100 + (y-1)*10 + (x-1) + 1.
-Now consider that level 2 cells use 2x2x2 sub-division (8 cells) of
-level 1 cells and consider the 4th cell within level 2 of the 376th
-cell.  This would be the 2nd cell in x, 2nd cell in y, and 1st cell in
-z.  I.e. 4 = (z-1)*4 + (y-1)*2 + (x-1) + 1.
+Now consider the case where level 2 cells use a 2x2x2 sub-division (8
+cells) of level 1 cells and consider the 4th level 2 cell within the
+376th level 1 cell.  This would be the 2nd cell in x, 2nd cell in y,
+and 1st cell in z.  I.e. 4 = (z-1)*4 + (y-1)*2 + (x-1) + 1.
 
 This level 2 cell could itself be a parent cell if it were further
 sub-divided, or a child cell if not.  In either case its ID is the
