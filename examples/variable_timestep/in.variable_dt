@@ -33,11 +33,10 @@ create_particles  mymixture n 10000 twopass
 compute           1 grid all mymixture nrho temp usq vsq wsq
 fix               1 ave/grid all 1 100 100 c_1[*]
 
-compute           lambda lambda/grid c_1[1] c_1[2] lambda
-fix               lambda ave/grid all 1 100 100 c_lambda
+compute           mct lambda/grid f_1[1] f_1[2] tau
 
 compute           tstep dt/grid all 0.25 0.1 &
-                  c_lambda f_1[2] f_1[3] f_1[4] f_1[5]
+                  c_mct f_1[2] f_1[3] f_1[4] f_1[5]
 
 fix               DT dt/reset 100 c_tstep 0.1 1
 
