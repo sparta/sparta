@@ -24,6 +24,7 @@ class Particle : protected Pointers {
  public:
   int exist;                // 1 if particles exist
   int sorted;               // 1 if particles are sorted by grid cell
+  int weightflag;           // 1 if stochastic weights used
 
   enum{MAXVIBMODE=4};       // increase value if species need more vib modes
 
@@ -90,6 +91,7 @@ class Particle : protected Pointers {
     double v[3];            // particle velocity
     double erot;            // rotational energy
     double evib;            // vibrational energy
+    double weight;          // particle or cell weight, if weighting enabled
   };
 
   bigint nglobal;           // global # of particles

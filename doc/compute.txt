@@ -71,7 +71,8 @@ available in SPARTA:
 "surf"_compute_surf.html - various explicit surface element quantities
 "thermal/grid"_compute_thermal_grid.html - thermal temperature per grid cell
 "temp"_compute_temp.html - temperature of particles
-"tvib/grid"_compute_tvib_grid.html - vibrational temperature per grid cell :ul
+"tvib/grid"_compute_tvib_grid.html - vibrational temperature per grid cell
+"vmom/grid"_compute_vmom_grid.html - velocity moment per grid cell :ul
 
 There are also additional accelerated compute styles included in the
 SPARTA distribution for faster performance on specific hardware.  The

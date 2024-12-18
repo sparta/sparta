@@ -137,6 +137,7 @@ void ComputeThermalGrid::compute_per_grid()
 
   // loop over all particles, skip species not in mixture group
 
+  double swfrac = 1.0;
   for (i = 0; i < nlocal; i++) {
     ispecies = particles[i].ispecies;
     igroup = s2g[ispecies];
@@ -145,6 +146,8 @@ void ComputeThermalGrid::compute_per_grid()
     if (!(cinfo[icell].mask & groupbit)) continue;
 
     mass = species[ispecies].mass;
+    if(particle->weightflag) swfrac = particles[i].weight;
+    mass *= swfrac;
     v = particles[i].v;
 
     // 6 tallies per particle: N, Mass, mVx, mVy, mVz, mV^2
@@ -152,12 +155,12 @@ void ComputeThermalGrid::compute_per_grid()
     vec = tally[icell];
     k = igroup*npergroup;
 
-    vec[k++] += 1.0;
+    vec[k++] += swfrac;
     vec[k++] += mass;
     vec[k++] += mass*v[0];
     vec[k++] += mass*v[1];
     vec[k++] += mass*v[2];
-    vec[k++] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+    vec[k++] += mass*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
   }
 }
 
