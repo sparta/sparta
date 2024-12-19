@@ -59,21 +59,17 @@ void FixAblate::decrement_multid_outside()
   Grid::ChildInfo *cinfo = grid->cinfo;
 
   int i,k,m;
-  double total,perout,Ninterface;
+  double total,perout,Ninterface,Nout;
 
-  int i_in,i_cneigh;
-  int *ineighbors,*neighbors;
+  int i_cneigh;
+  int *neighbors;
 
   Surf::Line *line;
   Surf::Line *lines = surf->lines;
   Surf::Tri *tri;
   Surf::Tri *tris = surf->tris;
 
-  surfint *csurfs;
-  double norm[3],pt[3],sumnorm;
-  double dist, smindist;
-  int nsurf,isurf;
-  int order[3];
+  int nsurf;
   double ninter;
 
   for (int icell = 0; icell < nglocal; icell++) {
@@ -87,7 +83,6 @@ void FixAblate::decrement_multid_outside()
 
     nsurf = cells[icell].nsurf;
     if (!nsurf) continue; // if no surfs, no interface points
-    csurfs = cells[icell].csurfs;
 
     // find which corners in the cell are inside, outside, and interface
     // output how many interface points there are
@@ -182,7 +177,6 @@ void FixAblate::decrement_multid_outside()
       // find number of interface points
 
       neighbors = corner_neighbor[i];
-      ineighbors = inner_neighbor[i];
 
       ninter = 0;
       for (k = 0; k < dim; k++)
@@ -190,129 +184,18 @@ void FixAblate::decrement_multid_outside()
 
       if (ninter == 0) continue;
 
-      // find location of inside corner point
-
-      if (i == 0) {
-        pt[0] = cells[icell].lo[0];
-        pt[1] = cells[icell].lo[1];
-        pt[2] = cells[icell].lo[2];
-      } else if (i == 1) {
-        pt[0] = cells[icell].hi[0];
-        pt[1] = cells[icell].lo[1];
-        pt[2] = cells[icell].lo[2];
-      } else if (i == 2) {
-        pt[0] = cells[icell].lo[0];
-        pt[1] = cells[icell].hi[1];
-        pt[2] = cells[icell].lo[2];
-      } else if (i == 3) {
-        pt[0] = cells[icell].hi[0];
-        pt[1] = cells[icell].hi[1];
-        pt[2] = cells[icell].lo[2];
-      } else if (i == 4) {
-        pt[0] = cells[icell].lo[0];
-        pt[1] = cells[icell].lo[1];
-        pt[2] = cells[icell].hi[2];
-      } else if (i == 5) {
-        pt[0] = cells[icell].hi[0];
-        pt[1] = cells[icell].lo[1];
-        pt[2] = cells[icell].hi[2];
-      } else if (i == 6) {
-        pt[0] = cells[icell].lo[0];
-        pt[1] = cells[icell].hi[1];
-        pt[2] = cells[icell].hi[2];
-      } else {
-        pt[0] = cells[icell].hi[0];
-        pt[1] = cells[icell].hi[1];
-        pt[2] = cells[icell].hi[2];
-      }
-
-      // find closest surface and record the norm
-
-      smindist = -1;
-      norm[0] = norm[1] = norm[2] = 0.0;
-      for (m = 0; m < nsurf; m++) {
-        isurf = csurfs[m];
-
-        if (dim == 2) {
-          line = &lines[isurf];
-          dist = Geometry::distsq_point_line(pt, line->p1, line->p2);
-          dist = fabs(dist);
-          if (smindist < 0 || dist < smindist) {
-            smindist = dist;
-            norm[0] = fabs(line->norm[0]);
-            norm[1] = fabs(line->norm[1]);
-            norm[2] = 0.0;
-          }
-        } else {
-          tri = &tris[isurf];
-          dist = Geometry::distsq_point_tri(pt, tri->p1, tri->p2, tri->p3, tri->norm);
-          dist = fabs(dist);
-          if (smindist < 0 || dist < smindist) {
-            smindist = dist;
-            norm[0] = fabs(tri->norm[0]);
-            norm[1] = fabs(tri->norm[1]);
-            norm[2] = fabs(tri->norm[2]);
-          }
-        }
-      } // end surfs
-
-      // remove norm components
-
-      if (i == 0) {
-        order[0] = 0;
-        order[1] = 1;
-        order[2] = 2;
-      } else if (i == 1) {
-        order[0] = 0;
-        order[1] = 1;
-        order[2] = 2;
-      } else if (i == 2) {
-        order[0] = 1;
-        order[1] = 0;
-        order[2] = 2;
-      } else if (i == 3) {
-        order[0] = 1;
-        order[1] = 0;
-        order[2] = 2;
-      } else if (i == 4) {
-        order[0] = 2;
-        order[1] = 0;
-        order[2] = 1;
-      } else if (i == 5) {
-        order[0] = 2;
-        order[1] = 0;
-        order[2] = 1;
-      } else if (i == 6) {
-        order[0] = 2;
-        order[1] = 1;
-        order[2] = 0;
-      } else {
-        order[0] = 2;
-        order[1] = 1;
-        order[2] = 0;
-      }
-
-      // zero out norm component if no outside interface point there
-
+      Nout = 0;
       for (k = 0; k < dim; k++)
-        if (refcorners[neighbors[k]] == 1) norm[order[k]] = 0.0;
+        if (refcorners[neighbors[k]] == 0) Nout++;
 
-      // scale values so their sum is one (L1 norm over L2 norm)
-
-      sumnorm = norm[0] + norm[1] + norm[2];
-      if (sumnorm <= 0.0) error->one(FLERR,"Bad");
-      for (k = 0; k < dim; k++) norm[k] /= sumnorm;
+      if (Nout == 0) error->one(FLERR,"No outside neghbors");
 
       for (k = 0; k < dim; k++) {
-        i_in = ineighbors[k];
         i_cneigh = neighbors[k];
 
-        if (refcorners[i_cneigh] == 0) {
-          if (i_in < 2) cdelta[icell][i_cneigh] += perout*fabs(norm[0]);
-          else if (i_in < 4) cdelta[icell][i_cneigh] += perout*fabs(norm[1]);
-          else cdelta[icell][i_cneigh] += perout*fabs(norm[2]);
-        }
-      } // end dim
+        if (refcorners[i_cneigh] == 0)
+          cdelta[icell][i_cneigh] += perout/Nout;
+      }
 
     } // end corners
   } // end cells
@@ -770,7 +653,7 @@ void FixAblate::decrement_multiv_multid_outside()
   Grid::ChildInfo *cinfo = grid->cinfo;
 
   int i,j,k,m,icell;
-  double total,perout,Ninterface;
+  double total,perout,Ninterface,Nout;
 
   int i_in,oin,i_cneigh;
   int *ineighbors,*neighbors;
@@ -780,11 +663,7 @@ void FixAblate::decrement_multiv_multid_outside()
   Surf::Tri *tri;
   Surf::Tri *tris = surf->tris;
 
-  surfint *csurfs;
-  double norm[3],pt[3],sumnorm;
-  double dist,smindist;
-  int order[3];
-  int nsurf,isurf;
+  int nsurf;
   int ninter; // inside and connected to interface point; total interface
 
   // find total to decrement from each corner
@@ -800,7 +679,6 @@ void FixAblate::decrement_multiv_multid_outside()
 
     nsurf = cells[icell].nsurf;
     if (!nsurf) continue; // if no surfs, no interface points
-    csurfs = cells[icell].csurfs;
 
     if (dim == 2) mark_corners_2d(icell);
     else mark_corners_3d(icell);
@@ -826,122 +704,18 @@ void FixAblate::decrement_multiv_multid_outside()
 
       if (ninter == 0) continue;
 
-      // find location of corner point
-
-      if (i == 0) {
-        pt[0] = cells[icell].lo[0];
-        pt[1] = cells[icell].lo[1];
-        pt[2] = cells[icell].lo[2];
-      } else if (i == 1) {
-        pt[0] = cells[icell].hi[0];
-        pt[1] = cells[icell].lo[1];
-        pt[2] = cells[icell].lo[2];
-      } else if (i == 2) {
-        pt[0] = cells[icell].lo[0];
-        pt[1] = cells[icell].hi[1];
-        pt[2] = cells[icell].lo[2];
-      } else if (i == 3) {
-        pt[0] = cells[icell].hi[0];
-        pt[1] = cells[icell].hi[1];
-        pt[2] = cells[icell].lo[2];
-      } else if (i == 4) {
-        pt[0] = cells[icell].lo[0];
-        pt[1] = cells[icell].lo[1];
-        pt[2] = cells[icell].hi[2];
-      } else if (i == 5) {
-        pt[0] = cells[icell].hi[0];
-        pt[1] = cells[icell].lo[1];
-        pt[2] = cells[icell].hi[2];
-      } else if (i == 6) {
-        pt[0] = cells[icell].lo[0];
-        pt[1] = cells[icell].hi[1];
-        pt[2] = cells[icell].hi[2];
-      } else {
-        pt[0] = cells[icell].hi[0];
-        pt[1] = cells[icell].hi[1];
-        pt[2] = cells[icell].hi[2];
-      }
-
-      // find closest surface and record the norm
-
-      smindist = -1;
-      norm[0] = norm[1] = norm[2] = 0.0;
-      for (m = 0; m < nsurf; m++) {
-        isurf = csurfs[m];
-
-        if (dim == 2) {
-          line = &lines[isurf];
-          dist = Geometry::distsq_point_line(pt, line->p1, line->p2);
-          dist = fabs(dist);
-          if (smindist < 0 || dist < smindist) {
-            smindist = dist;
-            norm[0] = fabs(line->norm[0]);
-            norm[1] = fabs(line->norm[1]);
-            norm[2] = 0.0;
-          }
-        } else {
-          tri = &tris[isurf];
-          dist = Geometry::distsq_point_tri(pt, tri->p1, tri->p2, tri->p3, tri->norm);
-          dist = fabs(dist);
-          if (smindist < 0 || dist < smindist) {
-            smindist = dist;
-            norm[0] = fabs(tri->norm[0]);
-            norm[1] = fabs(tri->norm[1]);
-            norm[2] = fabs(tri->norm[2]);
-          }
-        }
-      } // end surfs
-
-      // scale values of norm so their sum is one (L1 norm over L2 norm)
-
-      if (i == 0) {
-        order[0] = 0;
-        order[1] = 1;
-        order[2] = 2;
-      } else if (i == 1) {
-        order[0] = 0;
-        order[1] = 1;
-        order[2] = 2;
-      } else if (i == 2) {
-        order[0] = 1;
-        order[1] = 0;
-        order[2] = 2;
-      } else if (i == 3) {
-        order[0] = 1;
-        order[1] = 0;
-        order[2] = 2;
-      } else if (i == 4) {
-        order[0] = 2;
-        order[1] = 0;
-        order[2] = 1;
-      } else if (i == 5) {
-        order[0] = 2;
-        order[1] = 0;
-        order[2] = 1;
-      } else if (i == 6) {
-        order[0] = 2;
-        order[1] = 1;
-        order[2] = 0;
-      } else {
-        order[0] = 2;
-        order[1] = 1;
-        order[2] = 0;
-      }
-
       // zero out norm component if no outside interface point there
 
+      Nout = 0;
       for (k = 0; k < dim; k++)
-        if (refcorners[neighbors[k]] == 1) norm[order[k]] = 0.0;
+        if (refcorners[neighbors[k]] == 0) Nout++;
 
       // scale values so their sum is one (L1 norm over L2 norm)
 
-      sumnorm = norm[0] + norm[1] + norm[2];
-      if (sumnorm <= 0.0) error->one(FLERR,"Bad");
-      for (k = 0; k < dim; k++) norm[k] /= sumnorm;
+      if (Nout == 0) error->one(FLERR,"No outside neghbors");
 
       // update inner indices of interface point connected to inside point
 
-      sumnorm = 0.0;
       for (k = 0; k < dim; k++) {
         i_in = ineighbors[k];
         i_cneigh = neighbors[k];
@@ -953,11 +727,8 @@ void FixAblate::decrement_multiv_multid_outside()
         else if (i_in == 4) oin = 5;
         else if (i_in == 5) oin = 4;
 
-        if (refcorners[i_cneigh] == 0) {
-          if (i_in < 2) mdelta[icell][i_cneigh][oin] += perout*fabs(norm[0]);
-          else if (i_in < 4) mdelta[icell][i_cneigh][oin] += perout*fabs(norm[1]);
-          else mdelta[icell][i_cneigh][oin] += perout*fabs(norm[2]);
-        }
+        if (refcorners[i_cneigh] == 0)
+          mdelta[icell][i_cneigh][oin] += perout/Nout;
       } // end dim
 
     } // end corner
