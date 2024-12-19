@@ -51,9 +51,9 @@ class CreateISurf : protected Pointers {
   double xyzsize[3];        // size of lowest level cell (must be uniform grid)
   int nxyz[3], Nxyz;        // dimensions of grid
   double **cvalues;         // array of corner point values
-  double ***invalues;       // array of multi values
+  double ***mulvalues;      // array of multi values
   double **tmp_cvalues;     // temporary array of corner point values
-  double ***tmp_invalues;   // temporary array of multi values
+  double ***tmp_mulvalues;  // temporary array of multi values
   double **mvalues;         // minimum intersection value
   int **svalues;            // marks corners as in or out
   double ***ivalues;        // point of intersection between corner points
@@ -155,7 +155,6 @@ class CreateISurf : protected Pointers {
 
   double param2cval(double, double);
   double interpolate(double, double);
-  void set_invals(int, int, int, int, int);
 };
 
 }

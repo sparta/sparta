@@ -67,9 +67,9 @@ CreateISurf::CreateISurf(SPARTA *sparta) : Pointers(sparta)
   // for finding corner values
 
   cvalues = NULL;
-  invalues = NULL;
+  mulvalues = NULL;
   tmp_cvalues = NULL;
-  tmp_invalues = NULL;
+  tmp_mulvalues = NULL;
   svalues = NULL;
   mvalues = NULL;
   ivalues = NULL;
@@ -97,9 +97,9 @@ CreateISurf::CreateISurf(SPARTA *sparta) : Pointers(sparta)
 CreateISurf::~CreateISurf()
 {
   memory->destroy(cvalues);
-  memory->destroy(invalues);
+  memory->destroy(mulvalues);
   memory->destroy(tmp_cvalues);
-  memory->destroy(tmp_invalues);
+  memory->destroy(tmp_mulvalues);
   memory->destroy(svalues);
   memory->destroy(mvalues);
   memory->destroy(ivalues);
@@ -201,7 +201,7 @@ void CreateISurf::command(int narg, char **arg)
   int pushflag = 0;
   char *sgroupID = NULL;
   ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,cvalues,
-                        invalues,tvalues,thresh,sgroupID,pushflag);
+                        mulvalues,tvalues,thresh,sgroupID,pushflag);
 
   if (ablate->nevery == 0) modify->delete_fix(ablateID);
 
@@ -339,8 +339,8 @@ void CreateISurf::set_multi()
   // first shift everything down by thresh
   // later shift back
 
-  memory->create(invalues,nglocal,ncorner,nmulti,"createisurf:invalues");
-  memory->create(tmp_invalues,nglocal,ncorner,nmulti,"createisurf:tmp_invalues");
+  memory->create(mulvalues,nglocal,ncorner,nmulti,"createisurf:mulvalues");
+  memory->create(tmp_mulvalues,nglocal,ncorner,nmulti,"createisurf:tmp_mulvalues");
   memory->create(mvalues,nglocal,ncorner,"createisurf:mvalues");
   memory->create(svalues,nglocal,ncorner,"createisurf:svalues");
   memory->create(ivalues,nglocal,ncorner,nmulti,"createisurf:ivalues");
@@ -352,7 +352,7 @@ void CreateISurf::set_multi()
       svalues[ic][jc] = -1;
       mvalues[ic][jc] = -1.0;
       for (int kc = 0; kc < nmulti; kc++) ivalues[ic][jc][kc] = -1.0;
-      for (int kc = 0; kc < nmulti; kc++) tmp_invalues[ic][jc][kc] = -1.0;
+      for (int kc = 0; kc < nmulti; kc++) tmp_mulvalues[ic][jc][kc] = -1.0;
     }
   }
 
@@ -698,7 +698,7 @@ void CreateISurf::surface_edge3d()
    1) if SVAL, sets all svalues to max value (if one is inside, all are inside)
    2) if IVAL, sets all ivalues to min value (closest vertex to corner)
    3) if CVAL, sets all cvalues to max value (handled in previous routines)
-   4) if INVAL, sets all invalues to max value (handled in previous routines)
+   4) if INVAL, sets all mulvalues to max value (handled in previous routines)
 
    Temporary arrays are used for cvalues and ivalues to ensure so overwriting
    during the sync operation
@@ -782,7 +782,7 @@ void CreateISurf::sync(int which)
                   MAX(dtotal[0],tmp_cvalues[jcell][jcorner]);
               } else if (which == INVAL) {
                 for (jin = 0; jin < nmulti; jin++) {
-                  dtemp = tmp_invalues[jcell][jcorner][jin];
+                  dtemp = tmp_mulvalues[jcell][jcorner][jin];
                   if (dtemp >= 0) {
                     if (dtotal[jin] < 0) dtotal[jin] = dtemp;
                     else dtotal[jin] = MAX(dtotal[jin],dtemp);
@@ -829,7 +829,7 @@ void CreateISurf::sync(int which)
         cvalues[icell][i] = MAX(dtotal[0],0.0);
       } else if (which == INVAL) {
         for (jin = 0; jin < nmulti; jin++)
-          invalues[icell][i][jin] = MAX(dtotal[jin],0.0);
+          mulvalues[icell][i][jin] = MAX(dtotal[jin],0.0);
       }
 
     } // end corners
@@ -1020,7 +1020,7 @@ void CreateISurf::comm_neigh_corners(int which)
       } else if (which == INVAL) {
         for (j = 0; j < ncorner; j++)
           for (k = 0; k < nmulti; k++)
-            sbuf[m++] = tmp_invalues[icell][j][k];
+            sbuf[m++] = tmp_mulvalues[icell][j][k];
       }
       nsend++;
     }
@@ -1629,9 +1629,9 @@ void CreateISurf::set_cvalues_multi()
       for (int ic = 0; ic < ncorner; ic++) {
         for (int iin = 0; iin < nmulti; iin++) {
           if (refsval==1)
-            tmp_invalues[icell][ic][iin] = cin;
+            tmp_mulvalues[icell][ic][iin] = cin;
           else
-            tmp_invalues[icell][ic][iin] = cout;
+            tmp_mulvalues[icell][ic][iin] = cout;
         }
       }
     }
@@ -1658,59 +1658,11 @@ void CreateISurf::set_cvalues_multi()
         } else {
           cval = param2cval(ival,255.0);
         }
-        tmp_invalues[icell][ic][k] = cval;
+        tmp_mulvalues[icell][ic][k] = cval;
       } // end multi
     } // end ncorner
 
   } // end cells
-}
-
-/* ----------------------------------------------------------------------
-   find corner point values from vertex
-------------------------------------------------------------------------- */
-
-void CreateISurf::set_invals(int icell, int ic0, int in0, int ic1, int in1)
-{
-  double ivalth = (thresh-255.0)/(0.0-255.0); // probably can precompute
-  double ival = ivalues[icell][ic0][in0];
-  double oival = 1.0-ival;
-
-  if (svalues[icell][ic0] == 1) {
-    if (ival < 0) {
-      tmp_invalues[icell][ic0][in0] = cin;
-      tmp_invalues[icell][ic1][in1] = cin;
-    } else if (ival < EPSILON_GRID) {
-      tmp_invalues[icell][ic0][in0] = thresh+EPSILON_GRID;
-      tmp_invalues[icell][ic1][in1] = cout;
-    } else if (ival > (1.0 - EPSILON_GRID)) {
-      tmp_invalues[icell][ic0][in0] = cin;
-      tmp_invalues[icell][ic1][in1] = thresh-EPSILON_GRID;
-    } else if (ival <= ivalth) {
-      tmp_invalues[icell][ic0][in0] = param2cval(ival,cout);
-      tmp_invalues[icell][ic1][in1] = cout;
-    } else {
-      tmp_invalues[icell][ic0][in0] = cin;
-      tmp_invalues[icell][ic1][in1] = param2cval(oival,cin);
-    }
-  } else {
-    if (ival < 0) {
-      tmp_invalues[icell][ic0][in0] = cout;
-      tmp_invalues[icell][ic1][in1] = cout;
-    } else if (ival < EPSILON_GRID) {
-      tmp_invalues[icell][ic0][in0] = thresh-EPSILON_GRID;
-      tmp_invalues[icell][ic1][in1] = cin;
-    } else if (ival > (1.0 - EPSILON_GRID)) {
-      tmp_invalues[icell][ic0][in0] = cout;
-      tmp_invalues[icell][ic1][in1] = thresh+EPSILON_GRID;
-    } else if (ival <= ivalth) {
-      tmp_invalues[icell][ic0][in0] = param2cval(ival,cin);
-      tmp_invalues[icell][ic1][in1] = cin;
-    } else {
-      tmp_invalues[icell][ic0][in0] = cout;
-      tmp_invalues[icell][ic1][in1] = param2cval(oival,cout);
-    }
-  }
-
 }
 
 /* ----------------------------------------------------------------------
