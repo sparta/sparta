@@ -49,9 +49,7 @@ class FixAblate : public Fix {
   double memory_usage();
 
   void store_corners(int, int, int, double *, double *,
-                     double **, int *, double, char *, int);
-  void store_corners(int, int, int, double *, double *,
-                     double ***, int *, double, char *, int);
+                     double **, double ***, int *, double, char *, int);
   double mindist;             // min fractional distance between any grid corner pt
                               //   and a generated tri vertex or line segment endpt
  protected:
@@ -73,7 +71,7 @@ class FixAblate : public Fix {
   int nglocal;            // # of owned grid cells
 
   double **cvalues;       // corner point values
-  double ***ivalues;      // corner innner values
+  double ***mvalues;      // corner multi values
   int *tvalues;           // per-cell type value
   int tvalues_flag;       // 1 if tvalues is defined (by ReadIsurf)
 
@@ -88,8 +86,8 @@ class FixAblate : public Fix {
   double *celldelta;       // per-cell delta from compute or fix source
   double **cdelta;         // per-corner point deltas
   double **cdelta_ghost;   // ditto for my ghost cells communicated to me
-  double ***idelta;        // cdelta for inner indices
-  double ***idelta_ghost;  // ditto for my ghost cells (inner indices)
+  double ***mdelta;        // cdelta for multivalues
+  double ***mdelta_ghost;  // ditto for my ghost cells (multivalues)
   double **nvert;          // number of vertices around each corner
   double **nvert_ghost;    // ditto for my ghost cells communicated to me
 
@@ -143,7 +141,6 @@ class FixAblate : public Fix {
 
   void epsilon_adjust();
   void epsilon_adjust_multiv();
-  void length_adjust();
   void push_lohi();
   void comm_neigh_corners(int);
   int walk_to_neigh(int, int, int, int);

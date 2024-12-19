@@ -174,12 +174,6 @@ void CreateISurf::command(int narg, char **arg)
   grid->check_uniform_group(ggroup,nxyz,corner,xyzsize);
   nglocal = grid->nlocal;
 
-  // get surfbuffer
-
-  if (ablate->mindist == 0.0) surfbuffer = thresh + EPSILON;
-  else surfbuffer = (thresh - 0.0*ablate->mindist) / (1.0-ablate->mindist);
-  surfbuffer = MIN(surfbuffer,255.0);
-
   //MPI_Barrier(world);
   //double time0 = MPI_Wtime();
 
@@ -206,13 +200,8 @@ void CreateISurf::command(int narg, char **arg)
   tvalues = NULL;
   int pushflag = 0;
   char *sgroupID = NULL;
-  if (ctype == MULTI) {
-    ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
-                          invalues,tvalues,thresh,sgroupID,pushflag);
-  } else {
-    ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,
-                          cvalues,tvalues,thresh,sgroupID,pushflag);
-  }
+  ablate->store_corners(nxyz[0],nxyz[1],nxyz[2],corner,xyzsize,cvalues,
+                        invalues,tvalues,thresh,sgroupID,pushflag);
 
   if (ablate->nevery == 0) modify->delete_fix(ablateID);
 
@@ -1908,12 +1897,6 @@ double CreateISurf::param2cval(double param, double v1)
 
   double v0;
   v0 = (thresh - v1*param) / (1.0 - param);
-
-  // make sure the inside point value is large enough such that inside points
-  // ... are not flagged as outside in fix_ablate
-
-  if (v0 >= thresh && v0 < 1.01*surfbuffer)
-    v0 = 1.01*surfbuffer;
 
   // bound by limits
 

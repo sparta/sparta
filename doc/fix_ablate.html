@@ -243,36 +243,20 @@ proposed by Labelle and Shewchuk <A HREF = "#Labelle07">(Labelle07)</A> is used.
 The idea is as follows:
 </P>
 <P>If a generated triangle vertex or line segment end point could be
-geometrically closer to a grid corner point than <I>fraction</I>, the value
-of the grid corner point is adjusted to ensure the vertex/end-point
-will always be at least a distance <I>fraction</I> from the corner point.
+geometrically closer to a grid corner point than <I>fraction</I>, the vertex
+location is adjusted to ensure the vertex/end-point
+will always be at least a distance <I>fraction</I> from the corner point and 
+remains between the same inside and outside grid corner points.
+The grid point values themselves are not changed.
 There are two cases to consider.
 </P>
-<P>(1) The grid corner point is <I>above</I> the threshold value discussed
-previously, but is close to the threshold. If a neighboring
-grid corner point value is 0.0, then the generated vertex/end-point
-position between the two corner points would be closer than <I>fraction</I>
-to the first grid corner point.  In this case, the grid corner point
-value is <I>reduced</I> so as to be slightly <I>below</I> the threshold value.
-Note that this means the corner point is now effectively <I>outside</I> any
-generated surfaces rather than <I>inside</I>.  The grid corner point is set
-to a new value such that if another neighboring grid corner point
-value is 255.0, the generated vertex/end-point position between the 2
-corner points will be exactly a distance <I>fraction</I> away from the
-first grid corner point.
+<P>(1) The vertex is too close to a inside grid corner point. In this case, the
+vertex location is shifted towards the outside corner point such that the relative
+distance from the vertex to the inside corner point is at least <I>mindist</I>
 </P>
-<P>(2) The grid corner point is <I>below</I> the threshold value discussed
-previously, but is close enough to the threshold that if a neighboring
-grid corner point value is 255.0, then the generated vertex/end-point
-position between the 2 corner points would be closer than <I>fraction</I>
-to the first grid corner point.  In this case, the grid corner point
-value is reduced by a small amount to be slightly further <I>below</I> the
-threshold value.  Note that this means the corner point remains
-above the threshold and <I>outside</I> any generated surfaces.  The grid corner
-point is set to a new value such that if another neighboring grid
-corner point value is 255.0, the generated vertex/end-point position
-bewteen the 2 corner points will be exactly a distance <I>fraction</I> away
-from the first grid corner point.
+<P>(2) Conversely, if the vertex is too close to the outside grid corner point, 
+the vetex location is shifted towards the inside corner point such that the
+relative distance from the vertex to the outside corner point is at least <I>mindist</I>
 </P>
 <HR>
 
@@ -280,8 +264,9 @@ from the first grid corner point.
 </CENTER>
 <P>The <I>multiple</I> option allows a multipoint decrement to be used. In a cell,
 three types of corners are identified: inside, outside or interface. 
-An <B>inside</B> point is a point inside the surface (its values is greater than the specified threshold). An <B>outside</B> point is a point that is outside the surface and all corner points adjacent to that corner point within the cell are also 
-outside the surface.  
+An <B>inside</B> point is a point inside the surface (its values is greater than the specified threshold).
+An <B>outside</B> point is a point that is outside the surface and all corner points adjacent to that
+corner point within the cell are also outside the surface.  
 An <B>interface</B> is a point outside the surface but one of its neighboring points is
 inside. Given a cell decrement, the multipoint decrement distributes that cell
 decrement evenly to each interface point. In the case the interface point 

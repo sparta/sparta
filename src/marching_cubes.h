@@ -24,9 +24,9 @@ class MarchingCubes : protected Pointers {
  public:
   MarchingCubes(class SPARTA *, int, double);
   ~MarchingCubes() {}
-  void invoke(double **, int *, int **);
-  void invoke(double ***, int *, int **);
+  void invoke(double **, double ***, int *, int **);
   void cleanup();
+  double mindist;
 
  private:
   int me,ggroup;
