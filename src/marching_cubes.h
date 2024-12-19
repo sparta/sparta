@@ -24,8 +24,9 @@ class MarchingCubes : protected Pointers {
  public:
   MarchingCubes(class SPARTA *, int, double);
   ~MarchingCubes() {}
-  void invoke(double **, int *, int **);
+  void invoke(double **, double ***, int *, int **);
   void cleanup();
+  double mindist;
 
  private:
   int me,ggroup;
@@ -34,6 +35,8 @@ class MarchingCubes : protected Pointers {
   double *lo,*hi;
   int v000,v001,v010,v011,v100,v101,v110,v111;
   double v000iso,v001iso,v010iso,v011iso,v100iso,v101iso,v110iso,v111iso;
+  double inval[8][6];
+  double i0,i1,i2,i3,i4,i5,i6,i7,i8,i9,i10,i11;
   int bit0,bit1,bit2,bit3,bit4,bit5,bit6,bit7;
   double pt[36][3];
 

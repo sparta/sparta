@@ -17,8 +17,10 @@
 #include "string.h"
 #include "fix_ablate.h"
 #include "update.h"
+#include "geometry.h"
 #include "grid.h"
 #include "domain.h"
+#include "decrement_lookup_table.h"
 #include "comm.h"
 #include "modify.h"
 #include "compute.h"
@@ -36,8 +38,8 @@
 
 using namespace SPARTA_NS;
 
-enum{COMPUTE,FIX,VARIABLE,RANDOM};
-enum{CVALUE,CDELTA};
+enum{COMPUTE,FIX,VARIABLE,RANDOM,UNIFORM};
+enum{CVALUE,CDELTA,NVERT};
 
 #define INVOKED_PER_GRID 16
 #define DELTAGRID 1024            // must be bigger than split cells per cell
@@ -84,7 +86,7 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   scale = atof(arg[4]);
   if (scale < 0.0) error->all(FLERR,"Illegal fix ablate command");
 
-  int iarg;
+  int iarg = 6;
 
   if ((strncmp(arg[5],"c_",2) == 0) || (strncmp(arg[5],"f_",2) == 0)) {
     if (arg[5][0] == 'c') which = COMPUTE;
@@ -107,8 +109,6 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     strcpy(idsource,suffix);
     delete [] suffix;
 
-    iarg = 6;
-
   } else if (strncmp(arg[5],"v_",2) == 0) {
     which = VARIABLE;
 
@@ -116,16 +116,24 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     char *idsource = new char[n];
     strcpy(idsource,&arg[5][2]);
 
-    iarg = 6;
-
   } else if (strcmp(arg[5],"random") == 0) {
+    iarg++;
+
     if (narg < 7) error->all(FLERR,"Illegal fix ablate command");
     which = RANDOM;
     maxrandom = atoi(arg[6]);
 
-    iarg = 7;
+  } else if (strcmp(arg[5],"uniform") == 0) {
+    iarg++; // one additional input
+    if (narg < 7) error->all(FLERR,"Illegal fix ablate command");
+    which = UNIFORM;
+    maxrandom = atoi(arg[6]);
 
   } else error->all(FLERR,"Illegal fix ablate command");
+
+  // process optional command line args
+
+  process_args(narg-iarg,&arg[iarg]);
 
   // error check
 
@@ -175,10 +183,6 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
       error->all(FLERR,"Fix ablate variable is not grid-style variable");
   }
 
-  // process optional command line args
-
-  process_args(narg-iarg,&arg[iarg]);
-
   // this fix produces a per-grid array and a scalar
 
   dim = domain->dimension;
@@ -196,10 +200,14 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   sum_delta = 0.0;
   ndelete = 0;
 
-  storeflag = 0;
+  storeflag = multi_val_flag = 0;
   array_grid = cvalues = NULL;
+  mvalues = NULL;
   tvalues = NULL;
   ncorner = size_per_grid_cols;
+
+  if(dim == 2) nmultiv = 4;
+  else nmultiv = 6;
 
   // local storage
 
@@ -208,6 +216,11 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   celldelta = NULL;
   cdelta = NULL;
   cdelta_ghost = NULL;
+  mdelta = NULL;
+  mdelta_ghost = NULL;
+  nvert = NULL;
+  nvert_ghost = NULL;
+
   numsend = NULL;
   maxgrid = maxghost = 0;
 
@@ -253,13 +266,21 @@ FixAblate::~FixAblate()
 {
   delete [] idsource;
   memory->destroy(cvalues);
+  memory->destroy(mvalues);
   memory->destroy(tvalues);
 
   memory->destroy(ixyz);
   memory->destroy(mcflags);
+
   memory->destroy(celldelta);
   memory->destroy(cdelta);
   memory->destroy(cdelta_ghost);
+  memory->destroy(mdelta);
+  memory->destroy(mdelta_ghost);
+
+  memory->destroy(nvert);
+  memory->destroy(nvert_ghost);
+
   memory->destroy(numsend);
 
   memory->destroy(proclist);
@@ -291,10 +312,18 @@ int FixAblate::setmask()
 
 void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
                               double *cornerlo_caller, double *xyzsize_caller,
-                              double **cvalues_caller, int *tvalues_caller,
+                              double **cvalues_caller, double ***mvalues_caller,
+                              int *tvalues_caller,
                               double thresh_caller, char *sgroupID, int pushflag)
 {
   storeflag = 1;
+  if(mvalues_caller) {
+    multi_val_flag = 1;
+    cvalues = NULL; // likely not needed
+  } else {
+    multi_val_flag = 0;
+    mvalues = NULL; // likely not needed
+  }
 
   nx = nx_caller;
   ny = ny_caller;
@@ -327,9 +356,32 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   // copy caller values into local values of FixAblate
 
   for (int icell = 0; icell < nglocal; icell++) {
-    for (int m = 0; m < ncorner; m++)
-      cvalues[icell][m] = cvalues_caller[icell][m];
+    for (int m = 0; m < ncorner; m++) {
+      if(!multi_val_flag) cvalues[icell][m] = cvalues_caller[icell][m];
+      else {
+        for (int n = 0; n < nmultiv; n++)
+          mvalues[icell][m][n] = mvalues_caller[icell][m][n];
+      }
+    }
     if (tvalues_flag) tvalues[icell] = tvalues_caller[icell];
+  }
+
+  // set all values to either min or max value
+
+  if (minmaxflag) {
+    for (int icell = 0; icell < nglocal; icell++) {
+      for (int m = 0; m < ncorner; m++) {
+        if (!multi_val_flag) {
+          if (cvalues[icell][m] < thresh) cvalues[icell][m] = 0.0;
+          else cvalues[icell][m] = 255.0;
+        } else {
+          for (int n = 0; n < nmultiv; n++) {
+            if (mvalues[icell][m][n] < thresh) mvalues[icell][m][n] = 0.0;
+            else mvalues[icell][m][n] = 255.0;
+          }
+        }
+      }
+    }
   }
 
   // set ix,iy,iz indices from 1 to Nxyz for each of my owned grid cells
@@ -350,35 +402,24 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
 
-  // determine how close corner points values can be to threshold
-  // corner points inside the surface have values >= threshold
-  // corner points outside the surface (in the gas) have values < threshold
-  // corner_inside_min = min allowed value of an inside corner point
-  // corner_outside_max = max allowed value on an outside corner point
-  // use epsilon method (mindist = 0.0) or isosurface stuffing method
-
-
-  if (mindist == 0.0) {
-    corner_inside_min = thresh + EPSILON;
-    corner_outside_max = thresh - EPSILON;
-  } else {
-    corner_inside_min = (thresh - 0.0*mindist) / (1.0-mindist);
-    corner_outside_max = (thresh - 255.0*mindist) / (1.0-mindist);
-  }
-
-  corner_inside_min = MIN(corner_inside_min,255.0);
-  corner_outside_max = MAX(corner_outside_max,0.0);
-
   // push corner pt values with fully external/internal neighbors to 0 or 255
   // adjust individual corner point values too close to threshold
 
-  if (pushflag) push_lohi();
-  epsilon_adjust();
+  if (pushflag && !multi_val_flag) push_lohi();
+
+  // check for consistency
+
+  if (multi_val_flag) epsilon_adjust_multiv();
+  else epsilon_adjust();
 
   // create marching squares/cubes classes, now that have group & threshold
 
   if (dim == 2) ms = new MarchingSquares(sparta,igroup,thresh);
   else mc = new MarchingCubes(sparta,igroup,thresh);
+
+  // set minimum distance between vertex and grid point (mindist) in marching
+  if (dim == 2) ms->mindist = mindist;
+  else mc->mindist = mindist;
 
   // create implicit surfaces
 
@@ -419,17 +460,40 @@ void FixAblate::end_of_step()
   // set per-cell delta vector randomly or from compute/fix source
 
   if (which == RANDOM) set_delta_random();
+  else if (which == UNIFORM) set_delta_uniform();
   else set_delta();
 
-  // decrement corner point values for each owned grid cell
+  // various decrement and sync routines depending on:
+  // 1) are multivalues used?
+  // 2) is the decrement distributed to multiple corner points?
 
-  decrement();
+  if (multi_dec_flag) {
+    if (multi_val_flag) {
+      decrement_multiv_multid_outside();
+      sync_multiv_multid_outside();
+      decrement_multiv_multid_inside();
+      sync_multiv_multid_inside();
+    } else {
+      decrement_multid_outside();
+      sync_multid_outside();
+      decrement_multid_inside();
+      sync_multid_inside();
+    }
+  } else {
+    if (multi_val_flag) {
+      decrement_multiv();
+      sync_multiv();
+    } else {
+      decrement();
+      sync();
+    }
+  }
 
   // sync shared corner point values
   // adjust individual corner point values too close to threshold
 
-  sync();
-  epsilon_adjust();
+  if (multi_val_flag) epsilon_adjust_multiv();
+  else epsilon_adjust();
 
   // re-create implicit surfs
 
@@ -472,8 +536,8 @@ void FixAblate::create_surfs(int outflag)
   // cvalues = corner point values
   // tvalues = surf type for surfs in each grid cell
 
-  if (dim == 2) ms->invoke(cvalues,tvalues);
-  else mc->invoke(cvalues,tvalues,mcflags);
+  if (dim == 2) ms->invoke(cvalues,mvalues,tvalues);
+  else mc->invoke(cvalues,mvalues,tvalues,mcflags);
 
   // set surf->nsurf and surf->nown
 
@@ -738,8 +802,55 @@ void FixAblate::set_delta_random()
     if (hash->find(cellID) == hash->end()) continue;
     icell = (*hash)[cellID];
     if (icell >= nglocal) continue;     // ghost cell
+
     if (rn1 > scale) celldelta[icell] = 0.0;
     else celldelta[icell] = rn2;
+  }
+
+  // total decrement for output
+
+  double sum = 0.0;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+    sum += celldelta[icell];
+  }
+
+  MPI_Allreduce(&sum,&sum_delta,1,MPI_DOUBLE,MPI_SUM,world);
+}
+
+/* ----------------------------------------------------------------------
+   set per-cell delta vector uniformly
+   celldelta = maxrandom
+   scale = fraction of cells that are decremented
+------------------------------------------------------------------------- */
+
+void FixAblate::set_delta_uniform()
+{
+  int nin;
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  // enforce same decrement no matter who owns which cells
+  // NOTE: could change this at some point to use differnet RNG for each proc
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    // only ablate surfaces with a surface element (not fully inside or outside)
+
+    nin = 0;
+    for (int i = 0; i < ncorner; i++) {
+      if (multi_val_flag) {
+        if (mvalues[icell][i][0] > thresh) nin++;
+      } else {
+        if (cvalues[icell][i] > thresh) nin++;
+      }
+    }
+
+    if (nin == 0 || nin == ncorner) celldelta[icell] = 0.0;
+    else celldelta[icell] = maxrandom*scale;
   }
 
   // total decrement for output
@@ -878,6 +989,7 @@ void FixAblate::decrement()
         }
       }
       if (imin == -1) break;
+
       if (total < corners[imin]) {
         cdelta[icell][imin] += total;
         total = 0.0;
@@ -968,6 +1080,7 @@ void FixAblate::sync()
 
       if (total > cvalues[icell][i]) cvalues[icell][i] = 0.0;
       else cvalues[icell][i] -= total;
+
     }
   }
 }
@@ -981,6 +1094,8 @@ void FixAblate::sync()
 
 void FixAblate::epsilon_adjust()
 {
+  if (mindist == 0.0) return;
+
   int i,icell;
 
   Grid::ChildCell *cells = grid->cells;
@@ -991,10 +1106,10 @@ void FixAblate::epsilon_adjust()
     if (cells[icell].nsplit <= 0) continue;
 
     for (i = 0; i < ncorner; i++)
-      if (cvalues[icell][i] >= thresh && cvalues[icell][i] < corner_inside_min)
-        cvalues[icell][i] = corner_outside_max;
-      else if (cvalues[icell][i] < thresh && cvalues[icell][i] > corner_outside_max)
-        cvalues[icell][i] = corner_outside_max;;
+      if (cvalues[icell][i] >= thresh && cvalues[icell][i] < thresh + EPSILON)
+        cvalues[icell][i] = thresh - EPSILON;
+      else if (cvalues[icell][i] < thresh && cvalues[icell][i] > thresh - EPSILON)
+        cvalues[icell][i] = thresh - EPSILON;
   }
 }
 
@@ -1126,7 +1241,7 @@ void FixAblate::push_lohi()
 
 void FixAblate::comm_neigh_corners(int which)
 {
-  int i,j,m,n,ix,iy,iz,jx,jy,jz;
+  int i,j,k,m,n,ix,iy,iz,jx,jy,jz;
   int icell,ifirst,jcell,proc,ilocal;
 
   Grid::ChildCell *cells = grid->cells;
@@ -1193,7 +1308,9 @@ void FixAblate::comm_neigh_corners(int which)
   // realloc sbuf if necessary
   // ncomm = ilocal + Ncorner values
 
-  int ncomm = 1 + ncorner;
+  int ncomm;
+  if (multi_val_flag && which != NVERT) ncomm = 1 + ncorner*nmultiv;
+  else ncomm = 1 + ncorner;
 
   if (nsend*ncomm > maxbuf) {
     memory->destroy(sbuf);
@@ -1214,14 +1331,34 @@ void FixAblate::comm_neigh_corners(int which)
     n = numsend[icell];
     for (i = 0; i < n; i++) {
       sbuf[m++] = ubuf(locallist[nsend]).d;
-      if (which == CDELTA) {
+
+      if (which == NVERT) {
         for (j = 0; j < ncorner; j++)
-          sbuf[m++] = cdelta[icell][j];
-      } else if (which == CVALUE) {
-        for (j = 0; j < ncorner; j++)
-          sbuf[m++] = cvalues[icell][j];
+          sbuf[m++] = nvert[icell][j];
+      } else {
+        if (multi_val_flag) {
+          if (which == CDELTA) {
+            for (j = 0; j < ncorner; j++)
+              for (k = 0; k < nmultiv; k++)
+                sbuf[m++] = mdelta[icell][j][k];
+          } else if (which == CVALUE) {
+            for (j = 0; j < ncorner; j++)
+              for (k = 0; k < nmultiv; k++)
+               sbuf[m++] = mvalues[icell][j][k];
+          }
+        } else {
+          if (which == CDELTA) {
+            for (j = 0; j < ncorner; j++)
+              sbuf[m++] = cdelta[icell][j];
+          } else if (which == CVALUE) {
+            for (j = 0; j < ncorner; j++)
+              sbuf[m++] = cvalues[icell][j];
+          }
+        }
       }
+
       nsend++;
+
     }
   }
 
@@ -1236,9 +1373,19 @@ void FixAblate::comm_neigh_corners(int which)
   // realloc cdelta_ghost if necessary
 
   if (grid->nghost > maxghost) {
-    memory->destroy(cdelta_ghost);
+    if (multi_val_flag) {
+      memory->destroy(mdelta_ghost);
+      maxghost = grid->nghost;
+      memory->create(mdelta_ghost,maxghost,ncorner,nmultiv,"ablate:mdelta_ghost");
+    } else {
+      memory->destroy(cdelta_ghost);
+      maxghost = grid->nghost;
+      memory->create(cdelta_ghost,maxghost,ncorner,"ablate:cdelta_ghost");
+    }
+
+    memory->destroy(nvert_ghost);
     maxghost = grid->nghost;
-    memory->create(cdelta_ghost,maxghost,ncorner,"ablate:cdelta_ghost");
+    memory->create(nvert_ghost,maxghost,ncorner,"ablate:nvert_ghost");
   }
 
   // unpack received data into cdelta_ghost = ghost cell corner points
@@ -1252,8 +1399,20 @@ void FixAblate::comm_neigh_corners(int which)
     cellID = (cellint) ubuf(rbuf[m++]).u;
     ilocal = (*hash)[cellID];
     icell = ilocal - nglocal;
-    for (j = 0; j < ncorner; j++)
-      cdelta_ghost[icell][j] = rbuf[m++];
+    if (which == NVERT) {
+      for (j = 0; j < ncorner; j++)
+        nvert_ghost[icell][j] = rbuf[m++];
+    } else {
+      if (multi_val_flag) {
+        for (j = 0; j < ncorner; j++)
+          for (k = 0; k < nmultiv; k++)
+            mdelta_ghost[icell][j][k] = rbuf[m++];
+      } else {
+        for (j = 0; j < ncorner; j++)
+          cdelta_ghost[icell][j] = rbuf[m++];
+      }
+    }
+
   }
 }
 
@@ -1315,8 +1474,15 @@ int FixAblate::pack_grid_one(int icell, char *buf, int memflag)
   Grid::ChildCell *cells = grid->cells;
   Grid::SplitInfo *sinfo = grid->sinfo;
 
-  if (memflag) memcpy(ptr,cvalues[icell],ncorner*sizeof(double));
-  ptr += ncorner*sizeof(double);
+  if (!multi_val_flag) {
+    if (memflag) memcpy(ptr,cvalues[icell],ncorner*sizeof(double));
+    ptr += ncorner*sizeof(double);
+  } else {
+    for(int j = 0; j < ncorner; j++) {
+      if (memflag) memcpy(ptr,mvalues[icell][j],nmultiv*sizeof(double));
+      ptr += nmultiv*sizeof(double);
+    }
+  }
 
   if (tvalues_flag) {
     if (memflag) {
@@ -1350,8 +1516,17 @@ int FixAblate::pack_grid_one(int icell, char *buf, int memflag)
     int nsplit = cells[icell].nsplit;
     for (int i = 0; i < nsplit; i++) {
       int jcell = sinfo[isplit].csubs[i];
-      if (memflag) memcpy(ptr,cvalues[jcell],ncorner*sizeof(double));
-      ptr += ncorner*sizeof(double);
+
+      if (!multi_val_flag) {
+        if (memflag) memcpy(ptr,cvalues[jcell],ncorner*sizeof(double));
+        ptr += ncorner*sizeof(double);
+      } else {
+        for(int j = 0; j < ncorner; j++) {
+          if (memflag) memcpy(ptr,mvalues[jcell][j],nmultiv*sizeof(double));
+          ptr += nmultiv*sizeof(double);
+        }
+      }
+
     }
   }
 
@@ -1371,8 +1546,15 @@ int FixAblate::unpack_grid_one(int icell, char *buf)
 
   grow_percell(1);
 
-  memcpy(cvalues[icell],ptr,ncorner*sizeof(double));
-  ptr += ncorner*sizeof(double);
+  if (!multi_val_flag) {
+    memcpy(cvalues[icell],ptr,ncorner*sizeof(double));
+    ptr += ncorner*sizeof(double);
+  } else {
+    for(int j = 0; j < ncorner; j++) {
+      memcpy(mvalues[icell][j],ptr,nmultiv*sizeof(double));
+      ptr += nmultiv*sizeof(double);
+    }
+  }
 
   if (tvalues_flag) {
     double *dbuf = (double *) ptr;
@@ -1395,14 +1577,23 @@ int FixAblate::unpack_grid_one(int icell, char *buf)
 
   nglocal++;
 
- if (cells[icell].nsplit > 1) {
+  if (cells[icell].nsplit > 1) {
     int isplit = cells[icell].isplit;
     int nsplit = cells[icell].nsplit;
     grow_percell(nsplit);
     for (int i = 0; i < nsplit; i++) {
       int jcell = sinfo[isplit].csubs[i];
-      memcpy(cvalues[jcell],ptr,ncorner*sizeof(double));
-      ptr += ncorner*sizeof(double);
+
+      if (!multi_val_flag) {
+        memcpy(cvalues[jcell],ptr,ncorner*sizeof(double));
+        ptr += ncorner*sizeof(double);
+      } else {
+        for(int j = 0; j < ncorner; j++) {
+          memcpy(mvalues[jcell][j],ptr,nmultiv*sizeof(double));
+          ptr += nmultiv*sizeof(double);
+        }
+      }
+
     }
     nglocal += nsplit;
   }
@@ -1418,7 +1609,13 @@ int FixAblate::unpack_grid_one(int icell, char *buf)
 
 void FixAblate::copy_grid_one(int icell, int jcell)
 {
-  memcpy(cvalues[jcell],cvalues[icell],ncorner*sizeof(double));
+  if (!multi_val_flag) {
+    memcpy(cvalues[jcell],cvalues[icell],ncorner*sizeof(double));
+  } else {
+    for (int j = 0; j < ncorner; j++)
+      memcpy(mvalues[jcell][j],mvalues[icell][j],nmultiv*sizeof(double));
+  }
+
   if (tvalues_flag) tvalues[jcell] = tvalues[icell];
 
   ixyz[jcell][0] = ixyz[icell][0];
@@ -1441,7 +1638,14 @@ void FixAblate::add_grid_one()
 {
   grow_percell(1);
 
-  for (int i = 0; i < ncorner; i++) cvalues[nglocal][i] = 0.0;
+  if (!multi_val_flag) {
+    for (int i = 0; i < ncorner; i++) cvalues[nglocal][i] = 0.0;
+  } else {
+    for (int i = 0; i < ncorner; i++)
+      for (int j = 0; j < nmultiv; j++)
+        mvalues[nglocal][i][j] = 0.0;
+  }
+
   if (tvalues_flag) tvalues[nglocal] = 0;
   ixyz[nglocal][0] = 0;
   ixyz[nglocal][1] = 0;
@@ -1473,12 +1677,15 @@ void FixAblate::grow_percell(int nnew)
   if (nglocal+nnew < maxgrid) return;
   if (nnew == 0) maxgrid = nglocal;
   else maxgrid += DELTAGRID;
-  memory->grow(cvalues,maxgrid,ncorner,"ablate:cvalues");
+  if (multi_val_flag) memory->grow(mvalues,maxgrid,ncorner,nmultiv,"ablate:mvalues");
+  else memory->grow(cvalues,maxgrid,ncorner,"ablate:cvalues");
   if (tvalues_flag) memory->grow(tvalues,maxgrid,"ablate:tvalues");
   memory->grow(ixyz,maxgrid,3,"ablate:ixyz");
   memory->grow(mcflags,maxgrid,4,"ablate:mcflags");
   memory->grow(celldelta,maxgrid,"ablate:celldelta");
-  memory->grow(cdelta,maxgrid,ncorner,"ablate:celldelta");
+  if (multi_val_flag) memory->grow(mdelta,maxgrid,ncorner,nmultiv,"ablate:mdelta");
+  else memory->grow(cdelta,maxgrid,ncorner,"ablate:cdelta");
+  if (multi_dec_flag) memory->grow(nvert,maxgrid,ncorner,"ablate:nvert");
   memory->grow(numsend,maxgrid,"ablate:numsend");
 
   array_grid = cvalues;
@@ -1509,6 +1716,7 @@ double FixAblate::compute_scalar()
   Grid::ChildInfo *cinfo = grid->cinfo;
 
   double sum = 0.0;
+  double cavg;
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
@@ -1519,7 +1727,14 @@ double FixAblate::compute_scalar()
 
     if (dim == 2 && (ix == 0 || iy == 0)) continue;
     if (dim == 3 && (ix == 0 || iy == 0 || iz == 0)) continue;
-    sum += cvalues[icell][0];
+
+    if (!multi_val_flag) sum += cvalues[icell][0];
+    else {
+      cavg = 0.0;
+      for (int j = 0; j < nmultiv; j++) cavg += mvalues[icell][0][j];
+      sum += cavg/nmultiv;
+    }
+
   }
 
   double sumall;
@@ -1541,31 +1756,14 @@ double FixAblate::compute_vector(int i)
 }
 
 /* ----------------------------------------------------------------------
-   memory usage
-------------------------------------------------------------------------- */
-
-double FixAblate::memory_usage()
-{
-  double bytes = 0.0;
-  bytes += maxgrid*ncorner * sizeof(double);   // cvalues
-  if (tvalues_flag) bytes += maxgrid * sizeof(int);   // tvalues
-  bytes += maxgrid*3 * sizeof(int);            // ixyz
-  // NOTE: add for mcflags if keep
-  bytes += maxgrid * sizeof(double);           // celldelta
-  bytes += maxgrid*ncorner * sizeof(double);   // cdelta
-  bytes += maxghost*ncorner * sizeof(double);  // cdelta_ghost
-  bytes += 3*maxsend * sizeof(int);            // proclist,locallist,numsend
-  bytes += maxbuf * sizeof(double);            // sbuf
-  return bytes;
-}
-
-/* ----------------------------------------------------------------------
    process command line args
 ------------------------------------------------------------------------- */
 
 void FixAblate::process_args(int narg, char **arg)
 {
   mindist = 0.0;
+  multi_dec_flag = 0;
+  minmaxflag = 0;
 
   int iarg = 0;
   while (iarg < narg) {
@@ -1574,8 +1772,43 @@ void FixAblate::process_args(int narg, char **arg)
       mindist = atof(arg[iarg+1]);
       if (mindist < 0.0 || mindist >= 0.5)
         error->all(FLERR,"Fix ablate mindist value must be >= 0.0 and < 0.5");
-      if (mindist < EPSILON) mindist = 0.0;
+      mindist = MAX(mindist,EPSILON);
       iarg += 2;
-    } else error->all(FLERR,"Invalid read_isurf command");
+    } else if (strcmp(arg[iarg],"multiple") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
+      if (strcmp(arg[iarg+1],"no") == 0) multi_dec_flag = 0;
+      else if (strcmp(arg[iarg+1],"yes") == 0) multi_dec_flag = 1;
+      else error->all(FLERR,"Illegal fix_ablate command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"minmax") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
+      if (strcmp(arg[iarg+1],"no") == 0) minmaxflag = 0;
+      else if (strcmp(arg[iarg+1],"yes") == 0) minmaxflag = 1;
+      else error->all(FLERR,"Illegal fix_ablate command");
+      iarg += 2;
+    } else error->all(FLERR,"Illegal fix_ablate command");
   }
+
+}
+
+/* ----------------------------------------------------------------------
+   memory usage
+------------------------------------------------------------------------- */
+
+double FixAblate::memory_usage()
+{
+  double bytes = 0.0;
+  if (multi_val_flag) bytes += maxgrid*ncorner*nmultiv * sizeof(double); // mvalues
+  else bytes += maxgrid*ncorner * sizeof(double);   // cvalues
+  if (tvalues_flag) bytes += maxgrid * sizeof(int);   // tvalues
+  bytes += maxgrid*3 * sizeof(int);            // ixyz
+  // NOTE: add for mcflags if keep
+  bytes += maxgrid * sizeof(double);           // celldelta
+  if (multi_val_flag) bytes += maxgrid*ncorner*nmultiv * sizeof(double); // mdelta
+  else bytes += maxgrid*ncorner * sizeof(double);   // cdelta
+  if (multi_val_flag) bytes += maxgrid*ncorner*nmultiv * sizeof(double); // mdelta_ghost
+  else bytes += maxgrid*ncorner * sizeof(double);   // cdelta_ghost
+  bytes += 3*maxsend * sizeof(int);            // proclist,locallist,numsend
+  bytes += maxbuf * sizeof(double);            // sbuf
+  return bytes;
 }
