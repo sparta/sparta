@@ -249,7 +249,7 @@ void FixAveHistoWeightKokkos::calculate_weights()
       input->variable->compute_particle(m,vectorwt,1,0);
       k_vectorwt.modify_host();
       k_vectorwt.sync_device();
-      auto d_vectorwt = k_vectorwt.d_view;      
+      auto d_vectorwt = k_vectorwt.d_view;
       d_weights = d_vectorwt;
 
     } else if (which[i] == VARIABLE && kind == PERGRID) {

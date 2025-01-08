@@ -172,7 +172,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
             auto l_array_grid1 = d_array_grid1;
             Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
               l_nrho(i,k) = l_array_grid1(i,jm1);;
-            }); 
+            });
         }
       } else {
         const int k = umap[m][0];
@@ -180,13 +180,13 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
           auto l_compute_vector = cKKBase->d_vector_grid;
           Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
             l_nrho(i,k) = l_compute_vector[i];
-          }); 
+          });
         } else {
           const int jm1 = j - 1;
           auto l_compute_array = cKKBase->d_array_grid;
           Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
             l_nrho(i,k) = l_compute_array(i,jm1);
-          }); 
+          });
         }
       }
 
