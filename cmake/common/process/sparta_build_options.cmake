@@ -161,6 +161,25 @@ if(PKG_KOKKOS)
   be set to at least C++17")
   endif()
 
+########################################################################
+# consistency checks and Kokkos options/settings required by SPARTA
+if(Kokkos_ENABLE_HIP)
+  option(Kokkos_ENABLE_HIP_MULTIPLE_KERNEL_INSTANTIATIONS "Enable multiple kernel instantiations with HIP" ON)
+  mark_as_advanced(Kokkos_ENABLE_HIP_MULTIPLE_KERNEL_INSTANTIATIONS)
+  option(Kokkos_ENABLE_ROCTHRUST "Use RoCThrust library" ON)
+  mark_as_advanced(Kokkos_ENABLE_ROCTHRUST)
+endif()
+
+if(Kokkos_ENABLE_SERIAL)
+  if(NOT (Kokkos_ENABLE_OPENMP OR Kokkos_ENABLE_THREADS OR
+    Kokkos_ENABLE_CUDA OR Kokkos_ENABLE_HIP OR Kokkos_ENABLE_SYCL
+    OR Kokkos_ENABLE_OPENMPTARGET))
+  option(Kokkos_ENABLE_ATOMICS_BYPASS "Disable atomics for Kokkos Serial Backend" ON)
+  mark_as_advanced(Kokkos_ENABLE_ATOMICS_BYPASS)
+  endif()
+endif()
+########################################################################
+
   set(TARGET_SPARTA_PKG_KOKKOS pkg_kokkos)
   list(APPEND TARGET_SPARTA_PKGS ${TARGET_SPARTA_PKG_KOKKOS})
   set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS -DSPARTA_KOKKOS
