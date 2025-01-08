@@ -65,7 +65,7 @@ void remap_2d(FFT_SCALAR *in, FFT_SCALAR *out, FFT_SCALAR *buf,
 {
   MPI_Status status;
   int i,isend,irecv;
-  double *scratch;
+  FFT_SCALAR *scratch;
 
   if (plan->memory == 0)
     scratch = buf;
@@ -151,13 +151,13 @@ struct remap_plan_2d *remap_2d_create_plan(
 
   if (precision == 1) {
     if (me == 0) printf("Single precision not supported\n");
-    return NULL;
+    return nullptr;
   }
 
   // allocate memory for plan data struct
 
   plan = (struct remap_plan_2d *) malloc(sizeof(struct remap_plan_2d));
-  if (plan == NULL) return NULL;
+  if (plan == nullptr) return nullptr;
 
   // store parameters in local data structs
 
@@ -180,7 +180,7 @@ struct remap_plan_2d *remap_2d_create_plan(
   // combine output extents across all procs
 
   array = (struct extent_2d *) malloc(nprocs*sizeof(struct extent_2d));
-  if (array == NULL) return NULL;
+  if (array == nullptr) return nullptr;
 
   MPI_Allgather(&out,sizeof(struct extent_2d),MPI_BYTE,
                 array,sizeof(struct extent_2d),MPI_BYTE,comm);
@@ -199,7 +199,7 @@ struct remap_plan_2d *remap_2d_create_plan(
 
   if (nsend) {
     if (precision == 1)
-      plan->pack = NULL;
+      plan->pack = nullptr;
     else
       plan->pack = pack_2d;
 
@@ -209,8 +209,8 @@ struct remap_plan_2d *remap_2d_create_plan(
     plan->packplan = (struct pack_plan_2d *)
       malloc(nsend*sizeof(struct pack_plan_2d));
 
-    if (plan->send_offset == NULL || plan->send_size == NULL ||
-        plan->send_proc == NULL || plan->packplan == NULL) return NULL;
+    if (plan->send_offset == nullptr || plan->send_size == nullptr ||
+        plan->send_proc == nullptr || plan->packplan == nullptr) return nullptr;
   }
 
   // store send info, with self as last entry
@@ -260,13 +260,13 @@ struct remap_plan_2d *remap_2d_create_plan(
   if (nrecv) {
     if (precision == 1) {
       if (permute == 0)
-        plan->unpack = NULL;
+        plan->unpack = nullptr;
       else if (nqty == 1)
-        plan->unpack = NULL;
+        plan->unpack = nullptr;
       else if (nqty == 2)
-        plan->unpack = NULL;
+        plan->unpack = nullptr;
       else
-        plan->unpack = NULL;
+        plan->unpack = nullptr;
     }
     else if (precision == 2) {
       if (permute == 0)
@@ -287,9 +287,9 @@ struct remap_plan_2d *remap_2d_create_plan(
     plan->unpackplan = (struct pack_plan_2d *)
       malloc(nrecv*sizeof(struct pack_plan_2d));
 
-    if (plan->recv_offset == NULL || plan->recv_size == NULL ||
-        plan->recv_proc == NULL || plan->recv_bufloc == NULL ||
-        plan->request == NULL || plan->unpackplan == NULL) return NULL;
+    if (plan->recv_offset == nullptr || plan->recv_size == nullptr ||
+        plan->recv_proc == nullptr || plan->recv_bufloc == nullptr ||
+        plan->request == nullptr || plan->unpackplan == nullptr) return nullptr;
   }
 
   // store recv info, with self as last entry
@@ -350,7 +350,7 @@ struct remap_plan_2d *remap_2d_create_plan(
 
   // find biggest send message (not including self) and malloc space for it
 
-  plan->sendbuf = NULL;
+  plan->sendbuf = nullptr;
 
   size = 0;
   for (nsend = 0; nsend < plan->nsend; nsend++)
@@ -358,25 +358,25 @@ struct remap_plan_2d *remap_2d_create_plan(
 
   if (size) {
     if (precision == 1)
-      plan->sendbuf = NULL;
+      plan->sendbuf = nullptr;
     else
-      plan->sendbuf = (double *) malloc(size*sizeof(double));
-    if (plan->sendbuf == NULL) return NULL;
+      plan->sendbuf = (FFT_SCALAR *) malloc(size*sizeof(FFT_SCALAR));
+    if (plan->sendbuf == nullptr) return nullptr;
   }
 
   // if requested, allocate internal scratch space for recvs,
   // only need it if I will receive any data (including self)
 
-  plan->scratch = NULL;
+  plan->scratch = nullptr;
 
   if (memory == 1) {
     if (nrecv > 0) {
       if (precision == 1)
-        plan->scratch = NULL;
+        plan->scratch = nullptr;
       else
         plan->scratch =
-          (double *) malloc(nqty*out.isize*out.jsize*sizeof(double));
-      if (plan->scratch == NULL) return NULL;
+          (FFT_SCALAR *) malloc(nqty*out.isize*out.jsize*sizeof(FFT_SCALAR));
+      if (plan->scratch == nullptr) return nullptr;
     }
   }
 

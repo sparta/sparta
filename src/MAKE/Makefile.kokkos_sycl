@@ -7,12 +7,14 @@ SHELL = /bin/sh
 # specify flags and libraries needed for your compiler
 
 CC =		mpicxx
-CCFLAGS =	-g -O3 -DNDEBUG
+CCFLAGS =	-g -O3 -DNDEBUG -w
+CCFLAGS +=      -fsycl-device-code-split=per_kernel
 SHFLAGS =	-fPIC
 DEPFLAGS =	-M
 
 LINK =		mpicxx
 LINKFLAGS =	-g -O3
+LINKFLAGS +=    -flink-huge-device-code -fsycl-max-parallel-link-jobs=64
 LIB = 
 SIZE =		size
 
@@ -50,9 +52,9 @@ MPI_LIB =
 # PATH = path for FFT library
 # LIB = name of FFT library
 
-FFT_INC = 
-FFT_PATH =
-FFT_LIB = 
+FFT_INC = -DFFT_KOKKOS_MKL_GPU -DFFT_SINGLE -I${MKL_ROOT}/include
+FFT_PATH = -L${MKL_ROOT}/lib -L${TBB_ROOT}/lib/intel64/gcc4.8
+FFT_LIB = -lmkl_sycl_dft -lmkl_intel_ilp64 -lmkl_tbb_thread -lmkl_core -ltbb
 
 # JPEG library, OPTIONAL
 # see discussion in doc/Section_start.html#2_2 (step 7)

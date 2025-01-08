@@ -11,7 +11,7 @@ export OMPI_CXX = $(KOKKOS_ABSOLUTE_PATH)/bin/nvcc_wrapper
 # specify flags and libraries needed for your compiler
 
 CC =		mpicxx
-CCFLAGS =	-g -O3
+CCFLAGS =	-g -O3 -DNDEBUG -Xcudafe --diag_suppress=unrecognized_pragma,--diag_suppress=128
 SHFLAGS =	-fPIC
 DEPFLAGS =	-M
 
@@ -24,7 +24,7 @@ ARCHIVE =	ar
 ARFLAGS =	-rc
 SHLIBFLAGS =	-shared
 KOKKOS_DEVICES = Cuda
-KOKKOS_ARCH = Kepler35
+KOKKOS_ARCH = Volta70
 
 # ---------------------------------------------------------------------
 # SPARTA-specific settings
