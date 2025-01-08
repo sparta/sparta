@@ -14,13 +14,7 @@
 
 #include <mpi.h>
 
-#ifdef FFT_SINGLE
-typedef float FFT_SCALAR;
-#define MPI_FFT_SCALAR MPI_FLOAT
-#else
-typedef double FFT_SCALAR;
-#define MPI_FFT_SCALAR MPI_DOUBLE
-#endif
+#include "spafftsettings.h"
 
 // details of how to do a 2d remap
 
@@ -51,8 +45,8 @@ struct remap_plan_2d {
 // collision between 2 regions
 
 struct extent_2d {
-  int ilo,ihi,isize;
-  int jlo,jhi,jsize;
+  int ilo, ihi, isize;
+  int jlo, jhi, jsize;
 };
 
 // function prototypes
