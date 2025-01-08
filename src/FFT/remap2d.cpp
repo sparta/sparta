@@ -65,7 +65,7 @@ void remap_2d(FFT_SCALAR *in, FFT_SCALAR *out, FFT_SCALAR *buf,
 {
   MPI_Status status;
   int i,isend,irecv;
-  double *scratch;
+  FFT_SCALAR *scratch;
 
   if (plan->memory == 0)
     scratch = buf;
@@ -360,7 +360,7 @@ struct remap_plan_2d *remap_2d_create_plan(
     if (precision == 1)
       plan->sendbuf = nullptr;
     else
-      plan->sendbuf = (double *) malloc(size*sizeof(double));
+      plan->sendbuf = (FFT_SCALAR *) malloc(size*sizeof(FFT_SCALAR));
     if (plan->sendbuf == nullptr) return nullptr;
   }
 
@@ -375,7 +375,7 @@ struct remap_plan_2d *remap_2d_create_plan(
         plan->scratch = nullptr;
       else
         plan->scratch =
-          (double *) malloc(nqty*out.isize*out.jsize*sizeof(double));
+          (FFT_SCALAR *) malloc(nqty*out.isize*out.jsize*sizeof(FFT_SCALAR));
       if (plan->scratch == nullptr) return nullptr;
     }
   }

@@ -276,17 +276,17 @@ public:
 
 // define precision
 
-#ifndef PRECISION
-#define PRECISION 2
+#ifndef SPA_PRECISION
+#define SPA_PRECISION 2
 #endif
-#if PRECISION==1
+#if SPA_PRECISION==1
 typedef float SPARTA_FLOAT;
 #else
 typedef double SPARTA_FLOAT;
 #endif
 
 #ifndef PREC_FORCE
-#define PREC_FORCE PRECISION
+#define PREC_FORCE SPA_PRECISION
 #endif
 
 #if PREC_FORCE==1
@@ -296,7 +296,7 @@ typedef double F_FLOAT;
 #endif
 
 #ifndef PREC_ENERGY
-#define PREC_ENERGY PRECISION
+#define PREC_ENERGY SPA_PRECISION
 #endif
 
 #if PREC_ENERGY==1
@@ -332,7 +332,7 @@ struct s_EV_FLOAT {
 typedef struct s_EV_FLOAT EV_FLOAT;
 
 #ifndef PREC_POS
-#define PREC_POS PRECISION
+#define PREC_POS SPA_PRECISION
 #endif
 
 #if PREC_POS==1
@@ -342,7 +342,7 @@ typedef double X_FLOAT;
 #endif
 
 #ifndef PREC_VELOCITIES
-#define PREC_VELOCITIES PRECISION
+#define PREC_VELOCITIES SPA_PRECISION
 #endif
 
 #if PREC_VELOCITIES==1

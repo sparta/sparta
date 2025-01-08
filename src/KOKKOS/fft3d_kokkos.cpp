@@ -40,7 +40,7 @@ FFT3dKokkos<DeviceType>::FFT3dKokkos(SPARTA *sparta, MPI_Comm comm, int nfast, i
 {
   int nthreads = sparta->kokkos->nthreads;
 
-#if defined(LMP_KOKKOS_GPU)
+#if defined(SPARTA_KOKKOS_GPU)
   int ngpus = sparta->kokkos->ngpus;
   ExecutionSpace execution_space = ExecutionSpaceFromDevice<DeviceType>::space;
 
@@ -632,7 +632,7 @@ struct fft_plan_3d_kokkos<DeviceType>* FFT3dKokkos<DeviceType>::fft_3d_create_pl
   // and scaling normalization
 
 #if defined(FFT_KOKKOS_MKL_GPU)
-  sycl::queue queue = LMPDeviceType().sycl_queue();
+  sycl::queue queue = SPADeviceType().sycl_queue();
 
   plan->desc_fast = new descriptor_t (nfast);
   plan->desc_fast->set_value(oneapi::mkl::dft::config_param::NUMBER_OF_TRANSFORMS, plan->total1/nfast);
