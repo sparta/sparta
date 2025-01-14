@@ -252,8 +252,8 @@ point is at least {mindist}
 
 :c,image(JPG/multipoint_decrement_small.png)
 
-The {multiple} option allows a multipoint decrement to be used. In a
-cell, three types of corners are identified: inside, outside or
+The {multiple} option allows a multipoint decrement "(Hong24)"_#Hong24 to be used. 
+In a cell, three types of corners are identified: inside, outside or
 interface.  An [inside] point is a point inside the surface (its
 values is greater than the specified threshold).  An [outside] point
 is a point that is outside the surface and all corner points adjacent
@@ -322,3 +322,6 @@ is used.  The default for the {multiple} keyword = no.
 :link(Labelle07)
 [(Labelle07)] F. Labelle, and J. R.. Shewchuk, "Isosurface stuffing:
 Fast Tetrahedral Meshes with Good Dihedral Angles," SIGGRAPH (2007).
+
+:link(Hong24)
+[(Hong24)] A. Y. K. Hong, M. A. Gallis, S. G Moore, and S. J. Plimpton, "Towards physically realistic ablation modeling in direct simulation Monte Carlo," Physics of Fluids (2024).
