@@ -12,8 +12,8 @@ dimension		3
 
 boundary		p p p
 
-variable                L equal 1.0
-variable                N equal 20
+variable                L equal 1.2
+variable                N equal 10
 
 global                  gridcut 0.04
 global                  comm/sort yes
@@ -36,14 +36,17 @@ surf_collide		1 diffuse 300.0 0.0
 surf_modify		all collide 1
 
 fix			fablate ablate inner 0 0.2 random 0
-#fix			fablate ablate inner 0 0.2 random 0 buffer 0.1 
-create_isurf            inner fablate 39.5 ave
+#fix			fablate ablate inner 0 0.2 random 0 mindist 0.01 
+create_isurf            inner fablate 39.5 voxel
+#create_isurf            inner fablate 39.5 multi
 
 create_particles        air n 0 twopass
 
 collide			vss air air.vss
 
 timestep		0.001
+
+# use these dumps to visualize effect of surface conversion type on surface
 
 #dump                    1 image all 10 sphere.*.ppm type type surf one 0.02 particle no zoom 1.5 box no 0.0 view 65 140
 #dump_modify             1 scolor * gray

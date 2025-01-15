@@ -49,15 +49,20 @@ class FixAblate : public Fix {
   double memory_usage();
 
   void store_corners(int, int, int, double *, double *,
-                     double **, int *, double, char *, int);
-
+                     double **, double ***, int *, double, char *, int);
+  double mindist;             // min fractional distance between any grid corner pt
+                              //   and a generated tri vertex or line segment endpt
  protected:
   int me;
   int groupbit,which,argindex,icompute,ifix,ivariable,maxrandom;
   double scale;
   char *idsource;
   int storeflag;
+  int multi_val_flag;
+  int multi_dec_flag;
+  int minmaxflag;
   int ncorner;
+  int nmultiv;
   int sgroupbit;
   double thresh;
   double sum_delta;
@@ -66,11 +71,10 @@ class FixAblate : public Fix {
   int nglocal;            // # of owned grid cells
 
   double **cvalues;       // corner point values
+  double ***mvalues;      // corner multi values
   int *tvalues;           // per-cell type value
   int tvalues_flag;       // 1 if tvalues is defined (by ReadIsurf)
 
-  double mindist;             // min fractional distance between any grid corner pt
-                              //   and a generated tri vertex or line segment endpt
   double corner_inside_min;   // min allowed value for an inside corner point
   double corner_outside_max;  // max allowed value for an outside corner point
 
@@ -79,11 +83,16 @@ class FixAblate : public Fix {
   // DEBUG
   int **mcflags;
 
-  double *celldelta;      // per-cell delta from compute or fix source
-  double **cdelta;        // per-corner point deltas
-  double **cdelta_ghost;  // ditto for my ghost cells communicated to me
-  int maxgrid;            // max size of per-cell vectors/arrays
-  int maxghost;           // max size of cdelta_ghost
+  double *celldelta;       // per-cell delta from compute or fix source
+  double **cdelta;         // per-corner point deltas
+  double **cdelta_ghost;   // ditto for my ghost cells communicated to me
+  double ***mdelta;        // cdelta for multivalues
+  double ***mdelta_ghost;  // ditto for my ghost cells (multivalues)
+  double **nvert;          // number of vertices around each corner
+  double **nvert_ghost;    // ditto for my ghost cells communicated to me
+
+  int maxgrid;             // max size of per-cell vectors/arrays
+  int maxghost;            // max size of cdelta_ghost
 
   int *proclist;
   cellint *locallist;
@@ -96,6 +105,10 @@ class FixAblate : public Fix {
   double *vbuf;
   int maxvar;
 
+  // new ablate with distributed decrement
+
+  int refcorners[8];
+
   class MarchingSquares *ms;
   class MarchingCubes *mc;
   class RanKnuth *random;
@@ -103,11 +116,31 @@ class FixAblate : public Fix {
   void process_args(int, char **);
 
   void create_surfs(int);
-  void set_delta_random();
+
   void set_delta();
+  void set_delta_random();
+  void set_delta_uniform();
+
   void decrement();
+  void decrement_multiv();
+  void decrement_multid_inside();
+  void decrement_multid_outside();
+  void decrement_multiv_multid_outside();
+  void decrement_multiv_multid_inside();
+
   void sync();
+  void sync_multiv();
+  void sync_multid_outside();
+  void sync_multid_inside();
+  void sync_multiv_multid_outside();
+  void sync_multiv_multid_inside();
+
+  void mark_corners_2d(int);
+  void mark_corners_3d(int);
+  int find_ninter();
+
   void epsilon_adjust();
+  void epsilon_adjust_multiv();
   void push_lohi();
   void comm_neigh_corners(int);
   int walk_to_neigh(int, int, int, int);
