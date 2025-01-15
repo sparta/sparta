@@ -107,7 +107,7 @@ if(PKG_FFT)
     endif()
 
     if(FFT_KOKKOS STREQUAL "MKL_GPU" AND NOT Kokkos_ENABLE_SYCL)
-      message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} requires Kokkos_ENABLE_SYCL
+      message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} requires Kokkos_ENABLE_SYCL: ON.")
     endif()
 
     if(FFT_KOKKOS STREQUAL "FFTW3" OR FFT_KOKKOS STREQUAL "MKL")
