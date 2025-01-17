@@ -63,20 +63,10 @@ SurfKokkos::~SurfKokkos()
   mylines = NULL;
   mytris = NULL;
 
-  deallocate_views_of_views(k_eivec.h_view);
-  deallocate_views_of_views(k_eiarray.h_view);
-  deallocate_views_of_views(k_edvec.h_view);
-  deallocate_views_of_views(k_edarray.h_view);
-
   eivec = NULL;
   eiarray = NULL;
   edvec = NULL;
   edarray = NULL;
-
-  deallocate_views_of_views(k_eivec_local.h_view);
-  deallocate_views_of_views(k_eiarray_local.h_view);
-  deallocate_views_of_views(k_edvec_local.h_view);
-  deallocate_views_of_views(k_edarray_local.h_view);
 
   eivec_local = NULL;
   eiarray_local = NULL;

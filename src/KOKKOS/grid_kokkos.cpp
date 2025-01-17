@@ -81,11 +81,6 @@ GridKokkos::~GridKokkos()
   pcells = NULL;
   plevels = NULL;
 
-  deallocate_views_of_views(k_eivec.h_view);
-  deallocate_views_of_views(k_eiarray.h_view);
-  deallocate_views_of_views(k_edvec.h_view);
-  deallocate_views_of_views(k_edarray.h_view);
-
   eivec = NULL;
   eiarray = NULL;
   edvec = NULL;
