@@ -210,7 +210,7 @@ void CreateISurf::command(int narg, char **arg)
   //double time_total = time1-time0;
 
   //if (comm->me == 0) {
-  //  if (screen) 
+  //  if (screen)
   //    fprintf(screen," Create CPU time = %g secs\n",time_total);
   //  if (logfile)
   //    fprintf(logfile," Create CPU time = %g secs\n",time_total);
