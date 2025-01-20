@@ -97,17 +97,13 @@ int SurfKokkos::add_custom(char *name, int type, int size)
         memory->srealloc(eivec,ncustom_ivec*sizeof(int *),"surf:eivec");
       eivec[ncustom_ivec-1] = NULL;
       auto h_eivec = k_eivec.h_view;
-      k_eivec.resize(ncustom_ivec);
-      if (h_eivec.data() != k_eivec.h_view.data())
-        deallocate_views_of_views(h_eivec);
+      k_eivec.resize(Kokkos::view_alloc(Kokkos::SequentialHostInit),ncustom_ivec);
 
       eivec_local = (int **)
         memory->srealloc(eivec_local,ncustom_ivec*sizeof(int *),"surf:eivec_local");
       eivec_local[ncustom_ivec-1] = NULL;
       auto h_eivec_local = k_eivec_local.h_view;
-      k_eivec_local.resize(ncustom_ivec);
-      if (h_eivec_local.data() != k_eivec_local.h_view.data())
-        deallocate_views_of_views(h_eivec_local);
+      k_eivec_local.resize(Kokkos::view_alloc(Kokkos::SequentialHostInit),ncustom_ivec);
 
       memory->grow(icustom_ivec,ncustom_ivec,"surf:icustom_ivec");
       icustom_ivec[ncustom_ivec-1] = index;
@@ -119,18 +115,14 @@ int SurfKokkos::add_custom(char *name, int type, int size)
                          "surf:eiarray");
       eiarray[ncustom_iarray-1] = NULL;
       auto h_eiarray = k_eiarray.h_view;
-      k_eiarray.resize(ncustom_iarray);
-      if (h_eiarray.data() != k_eiarray.h_view.data())
-        deallocate_views_of_views(h_eiarray);
+      k_eiarray.resize(Kokkos::view_alloc(Kokkos::SequentialHostInit),ncustom_iarray);
 
       eiarray_local = (int ***)
         memory->srealloc(eiarray_local,ncustom_iarray*sizeof(int **),
                          "surf:eiarray_local");
       eiarray_local[ncustom_iarray-1] = NULL;
       auto h_eiarray_local = k_eiarray_local.h_view;
-      k_eiarray_local.resize(ncustom_iarray);
-      if (h_eiarray_local.data() != k_eiarray_local.h_view.data())
-        deallocate_views_of_views(h_eiarray_local);
+      k_eiarray_local.resize(Kokkos::view_alloc(Kokkos::SequentialHostInit),ncustom_iarray);
 
       memory->grow(icustom_iarray,ncustom_iarray,"surf:icustom_iarray");
       icustom_iarray[ncustom_iarray-1] = index;
@@ -145,17 +137,13 @@ int SurfKokkos::add_custom(char *name, int type, int size)
         memory->srealloc(edvec,ncustom_dvec*sizeof(double *),"surf:edvec");
       edvec[ncustom_dvec-1] = NULL;
       auto h_edvec = k_edvec.h_view;
-      k_edvec.resize(ncustom_dvec);
-      if (h_edvec.data() != k_edvec.h_view.data())
-        deallocate_views_of_views(h_edvec);
+      k_edvec.resize(Kokkos::view_alloc(Kokkos::SequentialHostInit),ncustom_dvec);
 
       edvec_local = (double **)
         memory->srealloc(edvec_local,ncustom_dvec*sizeof(double *),"surf:edvec_local");
       edvec_local[ncustom_dvec-1] = NULL;
       auto h_edvec_local = k_edvec_local.h_view;
-      k_edvec_local.resize(ncustom_dvec);
-      if (h_edvec_local.data() != k_edvec_local.h_view.data())
-        deallocate_views_of_views(h_edvec_local);
+      k_edvec_local.resize(Kokkos::view_alloc(Kokkos::SequentialHostInit),ncustom_dvec);
 
       memory->grow(icustom_dvec,ncustom_dvec,"surf:icustom_dvec");
       icustom_dvec[ncustom_dvec-1] = index;
@@ -167,18 +155,14 @@ int SurfKokkos::add_custom(char *name, int type, int size)
                          "surf:edarray");
       edarray[ncustom_darray-1] = NULL;
       auto h_edarray = k_edarray.h_view;
-      k_edarray.resize(ncustom_darray);
-      if (h_edarray.data() != k_edarray.h_view.data())
-        deallocate_views_of_views(h_edarray);
+      k_edarray.resize(Kokkos::view_alloc(Kokkos::SequentialHostInit),ncustom_darray);
 
       edarray_local = (double ***)
         memory->srealloc(edarray_local,ncustom_darray*sizeof(double **),
                          "surf:edarray_local");
       edarray_local[ncustom_darray-1] = NULL;
       auto h_edarray_local = k_edarray_local.h_view;
-      k_edarray_local.resize(ncustom_darray);
-      if (h_edarray_local.data() != k_edarray_local.h_view.data())
-        deallocate_views_of_views(h_edarray_local);
+      k_edarray_local.resize(Kokkos::view_alloc(Kokkos::SequentialHostInit),ncustom_darray);
 
       memory->grow(icustom_darray,ncustom_darray,"surf:icustom_darray");
       icustom_darray[ncustom_darray-1] = index;

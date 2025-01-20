@@ -58,16 +58,11 @@ void FixAblate::decrement_multid_outside()
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  int i,k,m;
+  int i,k;
   double total,perout,Ninterface,Nout;
 
   int i_cneigh;
   int *neighbors;
-
-  Surf::Line *line;
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tri;
-  Surf::Tri *tris = surf->tris;
 
   int nsurf;
   double ninter;
@@ -652,16 +647,11 @@ void FixAblate::decrement_multiv_multid_outside()
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  int i,j,k,m,icell;
+  int i,j,k,icell;
   double total,perout,Ninterface,Nout;
 
   int i_in,oin,i_cneigh;
   int *ineighbors,*neighbors;
-
-  Surf::Line *line;
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tri;
-  Surf::Tri *tris = surf->tris;
 
   int nsurf;
   int ninter; // inside and connected to interface point; total interface

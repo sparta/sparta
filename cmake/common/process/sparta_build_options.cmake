@@ -93,7 +93,7 @@ if(PKG_FFT)
 
   if(PKG_KOKKOS)
     if(FFT_KOKKOS STREQUAL "OFF")
-      set(FFT_KOKKOS "KISS" CACHE STRING "Select a FFT TPL for Kokkos from CUFFT, HIPFFT, FFTW3, MKL, or KISS. Default: KISS." FORCE)
+      set(FFT_KOKKOS "KISS" CACHE STRING "Select a FFT TPL for Kokkos from CUFFT, HIPFFT, FFTW3, MKL, MKL_GPU, or KISS. Default: KISS." FORCE)
     endif()
 
     string(TOUPPER ${FFT_KOKKOS} FFT_KOKKOS)
@@ -106,12 +106,16 @@ if(PKG_FFT)
       message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} requires Kokkos_ENABLE_HIP: ON.")
     endif()
 
+    if(FFT_KOKKOS STREQUAL "MKL_GPU" AND NOT Kokkos_ENABLE_SYCL)
+      message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} requires Kokkos_ENABLE_SYCL: ON.")
+    endif()
+
     if(FFT_KOKKOS STREQUAL "FFTW3" OR FFT_KOKKOS STREQUAL "MKL")
       if((NOT Kokkos_ENABLE_SERIAL) AND (NOT Kokkos_ENABLE_OPENMP))
         message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} requires either Kokkos_ENABLE_OPENMP or Kokkos_ENABLE_SERIAL")
       endif()
 
-      if(Kokkos_ENABLE_CUDA OR Kokkos_ENABLE_HIP OR Kokkos_ENABLE_ROCM)
+      if(Kokkos_ENABLE_CUDA OR Kokkos_ENABLE_HIP OR Kokkos_ENABLE_ROCM OR Kokkos_ENABLE_SYCL)
         message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} cannot run with a kokkos GPU backend.")
       endif()
     endif()
@@ -138,6 +142,15 @@ if(PKG_FFT)
         find_package(hipfft REQUIRED)
         link_libraries(hip::hipfft)
       endif()
+    elseif(Kokkos_ENABLE_SYCL)
+      if(NOT ((FFT_KOKKOS STREQUAL "KISS") OR (FFT_KOKKOS STREQUAL "MKL_GPU")))
+        message(FATAL_ERROR "The SYCL backend of Kokkos requires either KISS FFT or MKL_GPU.")
+      elseif(FFT_KOKKOS STREQUAL "KISS")
+        message(WARNING "Using KISS FFT with the SYCL backend of Kokkos may be sub-optimal.")
+      elseif(FFT_KOKKOS STREQUAL "MKL_GPU")
+        find_package(MKL REQUIRED)
+        target_link_libraries(lammps PRIVATE mkl_sycl_dft mkl_intel_ilp64 mkl_tbb_thread mkl_core tbb)
+      endif()
     endif()
 
     if(FFT_KOKKOS STREQUAL "FFTW3" OR FFT_KOKKOS STREQUAL "MKL")
@@ -160,6 +173,25 @@ if(PKG_KOKKOS)
     message(FATAL_ERROR "The KOKKOS package requires the C++ standard to
   be set to at least C++17")
   endif()
+
+########################################################################
+# consistency checks and Kokkos options/settings required by SPARTA
+if(Kokkos_ENABLE_HIP)
+  option(Kokkos_ENABLE_HIP_MULTIPLE_KERNEL_INSTANTIATIONS "Enable multiple kernel instantiations with HIP" ON)
+  mark_as_advanced(Kokkos_ENABLE_HIP_MULTIPLE_KERNEL_INSTANTIATIONS)
+  option(Kokkos_ENABLE_ROCTHRUST "Use RoCThrust library" ON)
+  mark_as_advanced(Kokkos_ENABLE_ROCTHRUST)
+endif()
+
+if(Kokkos_ENABLE_SERIAL)
+  if(NOT (Kokkos_ENABLE_OPENMP OR Kokkos_ENABLE_THREADS OR
+    Kokkos_ENABLE_CUDA OR Kokkos_ENABLE_HIP OR Kokkos_ENABLE_SYCL
+    OR Kokkos_ENABLE_OPENMPTARGET))
+  option(Kokkos_ENABLE_ATOMICS_BYPASS "Disable atomics for Kokkos Serial Backend" ON)
+  mark_as_advanced(Kokkos_ENABLE_ATOMICS_BYPASS)
+  endif()
+endif()
+########################################################################
 
   set(TARGET_SPARTA_PKG_KOKKOS pkg_kokkos)
   list(APPEND TARGET_SPARTA_PKGS ${TARGET_SPARTA_PKG_KOKKOS})

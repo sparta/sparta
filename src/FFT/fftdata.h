@@ -25,29 +25,33 @@
 
 #if defined(FFT_MKL)
 #include "mkl_dfti.h"
-typedef float _Complex FFT_DATA;
+typedef MKL_Complex8 FFT_DATA;
 #define FFT_MKL_PREC DFTI_SINGLE
 
 #elif defined(FFT_FFTW3)
 #include "fftw3.h"
 typedef fftwf_complex FFT_DATA;
-#define FFTW_API(function)  fftwf_ ## function
+#define FFTW_API(function) fftwf_##function
 
+#elif defined(FFT_NVPL)
+#include "nvpl_fftw.h"
+typedef fftwf_complex FFT_DATA;
+#define FFTW_API(function) fftwf_##function
 #else
 
-// use a stripped down version of kiss fft as default fft
+/* use a stripped down version of kiss fft as default fft */
 
 #ifndef FFT_KISS
 #define FFT_KISS
 #endif
 #define kiss_fft_scalar float
 typedef struct {
-    kiss_fft_scalar re;
-    kiss_fft_scalar im;
+  kiss_fft_scalar re;
+  kiss_fft_scalar im;
 } FFT_DATA;
 
 struct kiss_fft_state;
-typedef struct kiss_fft_state* kiss_fft_cfg;
+typedef struct kiss_fft_state *kiss_fft_cfg;
 #endif
 
 // -------------------------------------------------------------------------
@@ -58,32 +62,34 @@ typedef struct kiss_fft_state* kiss_fft_cfg;
 
 #if defined(FFT_MKL)
 #include "mkl_dfti.h"
-typedef double _Complex FFT_DATA;
+typedef MKL_Complex16 FFT_DATA;
 #define FFT_MKL_PREC DFTI_DOUBLE
 
 #elif defined(FFT_FFTW3)
 #include "fftw3.h"
 typedef fftw_complex FFT_DATA;
-#define FFTW_API(function)  fftw_ ## function
+#define FFTW_API(function) fftw_##function
+
+#elif defined(FFT_NVPL)
+#include "nvpl_fftw.h"
+typedef fftw_complex FFT_DATA;
+#define FFTW_API(function) fftw_##function
 
 #else
 
-// use a stripped down version of kiss fft as default fft
-
+/* use a stripped down version of kiss fft as default fft */
 #ifndef FFT_KISS
 #define FFT_KISS
 #endif
 #define kiss_fft_scalar double
 typedef struct {
-    kiss_fft_scalar re;
-    kiss_fft_scalar im;
+  kiss_fft_scalar re;
+  kiss_fft_scalar im;
 } FFT_DATA;
 
 struct kiss_fft_state;
-typedef struct kiss_fft_state* kiss_fft_cfg;
+typedef struct kiss_fft_state *kiss_fft_cfg;
 #endif
-
-// -------------------------------------------------------------------------
 
 #else
 #error "FFT_PRECISION needs to be either 1 (=single) or 2 (=double)"
