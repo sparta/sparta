@@ -1,6 +1,6 @@
 <HEAD>
 <TITLE>SPARTA Users Manual</TITLE>
-<META NAME="docnumber" CONTENT="15 Jan 2025 version">
+<META NAME="docnumber" CONTENT="20 Jan 2025 version">
 <META NAME="author" CONTENT="https://sparta.github.io - Sandia National Laboratories">
 <META NAME="copyright" CONTENT="Copyright (2014) Sandia Corporation.  This software and manual is distributed under the GNU General Public License.">
 </HEAD>
@@ -18,7 +18,7 @@
 <H1></H1>
 
 SPARTA Documentation :c,h3
-15 Jan 2025 version :c,h4
+20 Jan 2025 version :c,h4
 
 Version info: :h4
 
