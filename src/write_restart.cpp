@@ -415,30 +415,6 @@ void WriteRestart::write_less_memory(char *file)
     surf_params();
   }
 
-  // communication buffer for my per-proc info = child grid cells and particles
-  // max_size = largest buffer needed by any proc
-
-  int grid_send_size = grid->size_restart();
-  bigint particle_send_size = particle->size_restart_big();
-  bigint send_size = grid_send_size + particle_send_size;
-
-  int nbytes_particle = sizeof(Particle::OnePartRestart);
-  int nbytes_custom = particle->sizeof_custom();
-  int nbytes = nbytes_particle + nbytes_custom;
-
-  int max_size = MIN(particle_send_size,update->global_mem_limit);
-  max_size = MAX(max_size,grid_send_size);
-  max_size = MAX(max_size,nbytes);
-  max_size += 128; // extra for size and ROUNDUP(ptr)
-
-  int max_size_global;
-  MPI_Allreduce(&max_size,&max_size_global,1,MPI_INT,MPI_MAX,world);
-  max_size = max_size_global;
-
-  char *buf;
-  memory->create(buf,max_size,"write_restart:buf");
-  memset(buf,0,max_size);
-
   // finish header info with multiproc setting
   // multiproc = # of procs which write restart files
   // 0 for single file, else # of restart files
@@ -473,7 +449,31 @@ void WriteRestart::write_less_memory(char *file)
     delete [] multiname;
   }
 
-  // pack my child grid and particle data into buf
+  // communication buffer for per-proc info = child grid cells and particles
+  // max_size = largest buffer needed by any proc
+
+  int grid_send_size = grid->size_restart();
+  bigint particle_send_size = particle->size_restart_big();
+  bigint send_size = grid_send_size + particle_send_size;
+
+  int nbytes_particle = sizeof(Particle::OnePartRestart);
+  int nbytes_custom = particle->sizeof_custom();
+  int nbytes = nbytes_particle + nbytes_custom;
+
+  int max_size = MIN(particle_send_size,update->global_mem_limit);
+  max_size = MAX(max_size,grid_send_size);
+  max_size = MAX(max_size,nbytes);
+  max_size += 128; // extra for size and ROUNDUP(ptr)
+
+  int max_size_global;
+  MPI_Allreduce(&max_size,&max_size_global,1,MPI_INT,MPI_MAX,world);
+  max_size = max_size_global;
+
+  char *buf;
+  memory->create(buf,max_size,"write_restart:buf");
+  memset(buf,0,max_size);
+
+  // pack my child grid cells and particle data into buf
 
   // number of particles per pass
 
@@ -485,7 +485,7 @@ void WriteRestart::write_less_memory(char *file)
   if (particle->nlocal == 0) my_npasses = 2;
   else my_npasses = ceil((double)particle->nlocal/step_size)+1;
 
-  // output of one or more native files
+  // write grid + particle data into file(s)
   // filewriter = 1 = this proc writes to file
   // ping each proc in my cluster, receive its data, write data to file
   // else wait for ping from fileproc, send my data to fileproc
