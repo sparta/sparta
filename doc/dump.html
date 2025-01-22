@@ -19,13 +19,15 @@
 </PRE>
 <UL><LI>ID = user-assigned name for the dump 
 
-<LI>style = <I>particle</I> or <I>grid</I> or <I>surf</I> or <I>image</I> 
+<LI>style = <I>particle</I> or <I>grid</I> or <I>surf</I> or <I>tally</I> or <I>image</I> 
 
 <LI>select-ID = which particles, grid cells, surface elements to dump 
 
 <PRE>  for dump style = particle or image, use a mixture ID
   for style = grid, use a grid group ID
-  for style = surf, use a surface group ID 
+  for style = surf, use a surface group ID
+  for style = tally, select-ID is ignored
+  for style = image, see the <A HREF = "dump_image.html">dump image</A> doc page 
 </PRE>
 <LI>N = dump every this many timesteps 
 
@@ -91,6 +93,12 @@
       s_name = custom per-surf vector with name
       s_name[N] = Nth column of custom per-surf array with name, N can include wildcard (see below) 
 </PRE>
+<PRE>  <I>tally</I> args = list of tally computes
+    possible attributes = c_ID, c_ID[N] 
+</PRE>
+<PRE>      c_ID = per-tally vector calculated by a compute with ID
+      c_ID[N] = Nth column of per-tally array calculated by a compute with ID, I can include wildcard (see below) 
+</PRE>
 <PRE>  <I>image</I> args = discussed on <A HREF = "dump_image.html">dump image</A> doc page 
 </PRE>
 
@@ -100,6 +108,8 @@
 <PRE>dump 1 particle all 100 dump.myforce.* id type x y vx fx
 dump 2 particle inflow 100 dump.%.myforce id type c_myF[3] v_ke
 dump 3 grid all 1000 tmp.grid id proc xlo ylo zlo xhi yhi zhi 
+</PRE>
+<PRE>dump 4 tally all 10 tmp.tally c_surfTally[*] 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -117,10 +127,10 @@ with the <A HREF = "undump.html">undump</A> command, after which its ID can be
 re-used.
 </P>
 <P>The <I>style</I> setting determines what quantities are written to the file
-and in what format.  The <I>particle</I>, <I>grid</I>, <I>surf</I> options are for
-particles, grid cells, or surface elements.  Settings made via the
-<A HREF = "dump_modify.html">dump_modify</A> command can also alter what info is
-included in the file and the format of individual values.
+and in what format.  The <I>particle</I>, <I>grid</I>, <I>surf</I>, <I>tally</I> options
+are for particles, grid cells, surface elements, or tallies.  Settings
+made via the <A HREF = "dump_modify.html">dump_modify</A> command can also alter
+what info is included in the file and the format of individual values.
 </P>
 <P>The <I>select-ID</I> setting determines which particles, grid cells, or
 surface elements are output.  For <I>style</I> = <I>particle</I>, the
@@ -130,7 +140,10 @@ output.  For <I>style</I> = <I>grid</I>, the <I>select-ID</I> is for a grid grou
 defined by the <A HREF = "group.html">group grid</A> command.  Only grid cells in
 the group are output.  For <I>style</I> = <I>surf</I>, the <I>select-ID</I> is for a
 surface eleemnt group, as defined by the <A HREF = "group.html">group surf</A>
-command.  Only surface elements in the group are output.
+command.  Only surface elements in the group are output.  For <I>style</I>
+= <I>tally</I>, the <I>select-ID</I> setting is ignored, so a placeholder word
+like "all" can be used.  All tallies stored by the specified
+compute(s) will be output.
 </P>
 <P>As described below, the filename determines the kind of output (text
 or binary or gzipped, one big file or one per timestep, one big file
@@ -142,10 +155,11 @@ its options.
 </P>
 <HR>
 
-<P>The <I>particle</I> and <I>grid</I> and <I>surf</I> styles create files in a simple
-text format that is self-explanatory when viewing a dump file.  Many
-of the SPARTA <A HREF = "Section_tools.html">post-processing tools</A>, including
-<A HREF = "https://lammps.github.io/pizza">Pizza.py</A>, work with this format.
+<P>The <I>particle</I> and <I>grid</I> and <I>surf</I> and <I>tally</I> styles create files
+in a simple text format that is self-explanatory when viewing a dump
+file.  Many of the SPARTA <A HREF = "Section_tools.html">post-processing tools</A>,
+including <A HREF = "https://lammps.github.io/pizza">Pizza.py</A>, work with this
+format.
 </P>
 <P>For post-processing purposes the text files are self-describing in the
 following sense.
@@ -166,15 +180,16 @@ the 6 characters is either o = outflow, p = periodic, or s = specular.
 See the <A HREF = "doc/boundary.html">boundary</A> command for details.
 </P>
 <P>The "ITEM: NUMBER OF ATOMS" or "ITEM: NUMBER OF CELLS" or "ITEM:
-NUMBER OF SURFS" entry in each snapshot gives the number of particles,
-grid cells, surfaces to follow.
+NUMBER OF SURFS" or "ITEM: NUMBER OF TALLIES" entry in each snapshot
+gives the number of particles, grid cells, surfaces to follow.
 </P>
-<P>The "ITEM: ATOMS" or "ITEM: CELLS" or "ITEM: SURFS" entry in each
-snapshot lists column descriptors for the per-particle or per-grid or
-per-surf lines that follow.  The descriptors are the attributes
-specied in the dump command for the style.  Possible attributes are
-listed above and will appear in the order specified.  An explanation
-of the possible attributes is given below.
+<P>The "ITEM: ATOMS" or "ITEM: CELLS" or "ITEM: SURFS" or "ITEM: TALLIES"
+entry in each snapshot lists column descriptors for the per-particle
+or per-grid or per-surf or per-tally lines that follow.  The
+descriptors are the attributes specied in the dump command for the
+style.  Possible attributes are listed above and will appear in the
+order specified.  An explanation of the possible attributes is given
+below.
 </P>
 <HR>
 
@@ -252,11 +267,11 @@ dump 2 grid all 100 tmp.dump id c_myGrid[1] c_myGrid[2] c_myGrid[3]
 <P>This section explains the particle attributes that can be specified as
 part of the <I>particle</I> style.
 </P>
-<P><I>Id</I> is the particle ID.  <I>Type</I> is an integer index representing the
-particle species.  It is a value from 1 to Nspecies. The value
-corresponds to the order in which species were defined via the
-<A HREF = "species.html">species</A> command.  <I>Proc</I> is the ID of the processor
-which currently owns the particle.
+<P><I>Id</I> is the particle ID.  <I>Type</I> is an integer index for the particle
+species.  It is a value from 1 to Nspecies.  The value corresponds to
+the order in which species were defined via the <A HREF = "species.html">species</A>
+command.  <I>Proc</I> is the ID of the processor which currently owns the
+particle.
 </P>
 <P>The <I>x</I>, <I>y</I>, <I>z</I> attributes write particle coordinates "unscaled", in
 the appropriate distance <A HREF = "units.html">units</A>.  Use <I>xs</I>, <I>ys</I>, <I>zs</I> to
@@ -463,12 +478,12 @@ attribute should be replaced by the actual ID of the compute that has
 been defined previously in the input script.  See the
 <A HREF = "compute.html">compute</A> command for details.
 </P>
-<P>If <I>c_ID</I> is used as a attribute, and the compute calculates a per-srf
-vector, then the per-surf vector is output.  If <I>c_ID[N]</I> is used,
-then N must be in the range from 1-M, which will output the Nth column
-of the M-column per-surf array calculated by the compute.  See the
-discussion above for how N can be specified with a wildcard asterisk
-to effectively specify multiple values.
+<P>If <I>c_ID</I> is used as a attribute, and the compute calculates a
+per-surf vector, then the per-surf vector is output.  If <I>c_ID[N]</I>
+is used, then N must be in the range from 1-M, which will output the
+Nth column of the M-column per-surf array calculated by the compute.
+See the discussion above for how N can be specified with a wildcard
+asterisk to effectively specify multiple values.
 </P>
 <P>The <I>f_ID</I> and <I>f_ID[N]</I> attributes allow per-surf vectors or arrays
 calculated by a <A HREF = "fix.html">fix</A> to be output.  The ID in the attribute
@@ -511,6 +526,24 @@ effectively specify multiple values.
 <P>See <A HREF = "Section_modify.html">Section 10</A> of the manual for information on
 how to add new compute and fix styles to SPARTA to calculate per-surf
 quantities which could then be output into dump files.
+</P>
+<HR>
+
+<P>This section explains the tally attributes that can be specified as
+part of the <I>tally</I> style.
+</P>
+<P>The <I>c_ID</I> and <I>c_ID[I]</I> attributes allow per-tally vectors or
+arrays calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in
+the attribute should be replaced by the actual ID of the compute that
+has been defined previously in the input script.  See the
+<A HREF = "compute.html">compute</A> command for details.
+</P>
+<P>If <I>c_ID</I> is used as a attribute, and the compute calculates a
+per-tally vector, then the per-tally vector is output.  If <I>c_ID[I]</I>
+is used, then I must be in the range from 1-M, which will output the
+Ith column of the M-column per-tally array calculated by the compute.
+See the discussion above for how I can be specified with a wildcard
+asterisk to effectively specify multiple values.
 </P>
 <HR>
 
