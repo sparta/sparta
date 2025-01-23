@@ -30,6 +30,12 @@ class Collide : protected Pointers {
   int vibstyle;       // none/discrete/smooth vibrational modes
   int nearcp;         // 1 for near neighbor collisions
   int nearlimit;      // limit on neighbor serach for near neigh collisions
+  // Virgile - Modif Start - 29/11/2023
+  // ========================================================================
+  // Energy lost per collisions using species weighting scheme.
+  // ========================================================================
+  double Ewilost;
+  // Virgile - Modif End - 29/11/2023
 
   int ncollide_one,nattempt_one,nreact_one;
   bigint ncollide_running,nattempt_running,nreact_running;
@@ -42,13 +48,28 @@ class Collide : protected Pointers {
   virtual void collisions();
 
   virtual double vremax_init(int, int) = 0;
-  virtual double attempt_collision(int, int, double) = 0;
+  // Virgile - Modif Start - 20/10/2023
+  // ========================================================================
+  // Add count_wi in the variable definition.
+  // ========================================================================
+  // Baseline code :
+  // virtual double attempt_collision(int, int, double) = 0;
+  // virtual double attempt_collision(int, int, int, double) = 0;
+  // virtual int test_collision(int, int, int,
+	// 		     Particle::OnePart *, Particle::OnePart *) = 0;
+  // Modified code :
+  virtual double attempt_collision(int, int, double, double, double) = 0;
   virtual double attempt_collision(int, int, int, double) = 0;
   virtual int test_collision(int, int, int,
-                             Particle::OnePart *, Particle::OnePart *) = 0;
+			     Particle::OnePart *, Particle::OnePart *, double) = 0;
+  // Virgile - Modif End - 20/10/2023
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *) = 0;
+  //Takato Morimoto - Modif Start - 20/10/23
+  // virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
+  //                              Particle::OnePart *&) = 0;
   virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
-                                Particle::OnePart *&) = 0;
+                                Particle::OnePart *&,int &,int &,int &,int &) = 0;    
+  // Takato Morimoto - Modif End - 20/10/23  
 
   virtual double extract(int, int, const char *) {return 0.0;}
 
@@ -95,6 +116,11 @@ class Collide : protected Pointers {
   int vre_every;      // reset vre params every this many steps
   bigint vre_next;    // next timestep to reset vre params on
   int remainflag;     // 1 if remain defined, else use random fraction
+  
+ // Virgile - Start Modif - 21/11/2023
+  double *count_wi_group;
+  double *maxwigr;
+ // Virgile - End Modif - 21/11/2023
 
   double ***vremax;   // max relative velocity, per cell, per group pair
   double ***remain;   // collision number remainder, per cell, per group pair

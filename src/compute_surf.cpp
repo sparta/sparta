@@ -350,6 +350,15 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
   if (origspecies >= 0) origmass = particle->species[origspecies].mass * weight;
   if (ip) imass = particle->species[ip->ispecies].mass * weight;
   if (jp) jmass = particle->species[jp->ispecies].mass * weight;
+  
+  // Virgile - Modif Start - 14/01/25
+  double worig = 1.0;
+  double wi = 1.0;
+  double wj = 1.0;
+  worig = particle->species[origspecies].specwt;
+  if (ip) wi = particle->species[ip->ispecies].specwt;
+  if (jp) wj = particle->species[jp->ispecies].specwt;
+  // Virgile - Modif End - 14/01/25
 
   double *vorig = NULL;
   double oerot,oevib;
@@ -385,11 +394,20 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       vec[k++] += weight;
       break;
     case NFLUX:
-      if (iorig) vec[k] += weight * fluxscale;
+      // Virgile - Modif Start - 14/01/25
+      // Baseline code:
+      // vec[k] += weight * fluxscale;
+      // if (!transparent) {
+      //   if (ip) vec[k] -= weight * fluxscale;
+      //   if (jp) vec[k] -= weight * fluxscale;
+      // }
+      // Modified code:
+      vec[k] += weight * fluxscale * worig;
       if (!transparent) {
-        if (ip) vec[k] -= weight * fluxscale;
-        if (jp) vec[k] -= weight * fluxscale;
+        if (ip) vec[k] -= weight * fluxscale * wi;
+        if (jp) vec[k] -= weight * fluxscale * wj;
       }
+      // Virgile - Modif End - 14/01/25
       k++;
       break;
     case NFLUXIN:
@@ -397,15 +415,29 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       k++;
       break;
     case MFLUX:
-      if (iorig) vec[k] += origmass * fluxscale;
+      // Virgile - Modif Start - 14/01/25
+      // Baseline code:
+      // vec[k] += origmass * fluxscale;
+      // if (!transparent) {
+      //   if (ip) vec[k] -= imass * fluxscale;
+      //   if (jp) vec[k] -= jmass * fluxscale;
+      // }
+      // Modified code:
+      vec[k] += origmass * fluxscale * worig;
       if (!transparent) {
-        if (ip) vec[k] -= imass * fluxscale;
-        if (jp) vec[k] -= jmass * fluxscale;
+        if (ip) vec[k] -= imass * fluxscale * wi;
+        if (jp) vec[k] -= jmass * fluxscale * wj;
       }
+      // Virgile - Modif End - 14/01/25
       k++;
       break;
     case MFLUXIN:
-      vec[k] += origmass * fluxscale;
+      // Virgile - Modif Start - 14/01/25
+      // Baseline code:
+      // vec[k] += origmass * fluxscale;
+      // Modified code:
+      vec[k] += origmass * fluxscale * worig;
+      // Virgile - Modif End - 14/01/25
       k++;
       break;
 
@@ -415,9 +447,16 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       if (!fflag) {
         fflag = 1;
         pdelta_force[0] = pdelta_force[1] = pdelta_force[2] = 0.0;
-        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta_force);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+        // Virgile - Modif Start - 14/01/25
+        // Baseline code:
+        // if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta_force);
+        // if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
+        // if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+        // Modified code:
+        if (iorig) MathExtra::axpy3(-origmass*worig,vorig,pdelta_force);
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta_force);
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta_force);
+        // Virgile - Modif End - 14/01/25
       }
       vec[k++] -= pdelta_force[0] * nfactor_inverse;
       break;
@@ -425,9 +464,16 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       if (!fflag) {
         fflag = 1;
         pdelta_force[0] = pdelta_force[1] = pdelta_force[2] = 0.0;
-        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta_force);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+        // Virgile - Modif Start - 14/01/25
+        // Baseline code:
+        // if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta_force);
+        // if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
+        // if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+        // Modified code:
+        if (iorig) MathExtra::axpy3(-origmass*worig,vorig,pdelta_force);
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta_force);
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta_force);
+        // Virgile - Modif End - 14/01/25
       }
       vec[k++] -= pdelta_force[1] * nfactor_inverse;
       break;
@@ -435,9 +481,16 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       if (!fflag) {
         fflag = 1;
         pdelta_force[0] = pdelta_force[1] = pdelta_force[2] = 0.0;
-        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta_force);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+        // Virgile - Modif Start - 14/01/25
+        // Baseline code:
+        // if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta_force);
+        // if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
+        // if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+        // Modified code:
+        if (iorig) MathExtra::axpy3(-origmass*worig,vorig,pdelta_force);
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta_force);
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta_force);
+        // Virgile - Modif End - 14/01/25
       }
       vec[k++] -= pdelta_force[2] * nfactor_inverse;
       break;
@@ -447,9 +500,16 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
     case TX:
       if (!fflag) {
         fflag = 1;
-        MathExtra::scale3(-origmass,vorig,pdelta_force);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+        // Virgile - Modif Start - 14/01/25
+        // Baseline code:
+        // MathExtra::scale3(-origmass,vorig,pdelta_force);
+        // if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
+        // if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+        // Modified code:
+        MathExtra::scale3(-origmass*worig,vorig,pdelta_force);
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta_force);
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta_force);
+        // Virgile - Modif End - 14/01/25
       }
       if (!tqflag) {
         tqflag = 1;
@@ -463,9 +523,16 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
     case TY:
       if (!fflag) {
         fflag = 1;
-        MathExtra::scale3(-origmass,vorig,pdelta_force);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+        // Virgile - Modif Start - 14/01/25
+        // Baseline code:
+        // MathExtra::scale3(-origmass,vorig,pdelta_force);
+        // if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
+        // if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+        // Modified code:
+        MathExtra::scale3(-origmass*worig,vorig,pdelta_force);
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta_force);
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta_force);
+        // Virgile - Modif End - 14/01/25
       }
       if (!tqflag) {
         tqflag = 1;
@@ -479,9 +546,16 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
     case TZ:
       if (!fflag) {
         fflag = 1;
-        MathExtra::scale3(-origmass,vorig,pdelta_force);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+        // Virgile - Modif Start - 14/01/25
+        // Baseline code:
+        // MathExtra::scale3(-origmass,vorig,pdelta_force);
+        // if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
+        // if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+        // Modified code:
+        MathExtra::scale3(-origmass*worig,vorig,pdelta_force);
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta_force);
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta_force);
+        // Virgile - Modif End - 14/01/25
       }
       if (!tqflag) {
         tqflag = 1;
@@ -498,9 +572,16 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
     case PRESS:
       if (!nflag && !tflag) {
         pdelta[0] = pdelta[1] = pdelta[2] = 0.0;
-        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        // Virgile - Modif Start - 14/01/25
+        // Baseline code:
+        // if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
+        // if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
+        // if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        // Modified code:
+        if (iorig) MathExtra::axpy3(-origmass*worig,vorig,pdelta);
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta);
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta);
+        // Virgile - Modif End - 14/01/25
       }
       vec[k++] += MathExtra::dot3(pdelta,norm) * fluxscale;
       break;
@@ -509,9 +590,16 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       if (!nflag) {
         nflag = 1;
         pdelta[0] = pdelta[1] = pdelta[2] = 0.0;
-        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        // Virgile - Modif Start - 14/01/25
+        // Baseline code:
+        // if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
+        // if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
+        // if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        // Modified code:
+        if (iorig) MathExtra::axpy3(-origmass*worig,vorig,pdelta);
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta);
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta);
+        // Virgile - Modif End - 14/01/25
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
       }
       vec[k++] -= pnorm[0] * fluxscale;
@@ -520,9 +608,16 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       if (!nflag) {
         nflag = 1;
         pdelta[0] = pdelta[1] = pdelta[2] = 0.0;
-        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        // Virgile - Modif Start - 14/01/25
+        // Baseline code:
+        // if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
+        // if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
+        // if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        // Modified code:
+        if (iorig) MathExtra::axpy3(-origmass*worig,vorig,pdelta);
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta);
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta);
+        // Virgile - Modif End - 14/01/25
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
       }
       vec[k++] -= pnorm[1] * fluxscale;
@@ -531,9 +626,16 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       if (!nflag) {
         nflag = 1;
         pdelta[0] = pdelta[1] = pdelta[2] = 0.0;
-        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        // Virgile - Modif Start - 14/01/25
+        // Baseline code:
+        // if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
+        // if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
+        // if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        // Modified code:
+        if (iorig) MathExtra::axpy3(-origmass*worig,vorig,pdelta);
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta);
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta);
+        // Virgile - Modif End - 14/01/25
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
       }
       vec[k++] -= pnorm[2] * fluxscale;
@@ -543,9 +645,16 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       if (!tflag) {
         tflag = 1;
         pdelta[0] = pdelta[1] = pdelta[2] = 0.0;
-        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        // Virgile - Modif Start - 14/01/25
+        // Baseline code:
+        // if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
+        // if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
+        // if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        // Modified code:
+        if (iorig) MathExtra::axpy3(-origmass*worig,vorig,pdelta);
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta);
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta);
+        // Virgile - Modif End - 14/01/25
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
         MathExtra::sub3(pdelta,pnorm,ptang);
       }
@@ -555,9 +664,16 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       if (!tflag) {
         tflag = 1;
         pdelta[0] = pdelta[1] = pdelta[2] = 0.0;
-        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        // Virgile - Modif Start - 14/01/25
+        // Baseline code:
+        // if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
+        // if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
+        // if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        // Modified code:
+        if (iorig) MathExtra::axpy3(-origmass*worig,vorig,pdelta);
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta);
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta);
+        // Virgile - Modif End - 14/01/25
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
         MathExtra::sub3(pdelta,pnorm,ptang);
       }
@@ -567,9 +683,16 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       if (!tflag) {
         tflag = 1;
         pdelta[0] = pdelta[1] = pdelta[2] = 0.0;
-        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        // Virgile - Modif Start - 14/01/25
+        // Baseline code:
+        // if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta);
+        // if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
+        // if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        // Modified code:
+        if (iorig) MathExtra::axpy3(-origmass*worig,vorig,pdelta);
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta);
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta);
+        // Virgile - Modif End - 14/01/25
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
         MathExtra::sub3(pdelta,pnorm,ptang);
       }
@@ -585,30 +708,54 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
       else ivsqpost = 0.0;
       if (jp) jvsqpost = jmass * MathExtra::lensq3(jp->v);
       else jvsqpost = 0.0;
+      // Virgile - Modif Start - 14/01/25
+      // Baseline code:
+      // if (transparent)
+      //   vec[k++] += 0.5*mvv2e * vsqpre * fluxscale;
+      // else
+      //   vec[k++] -= 0.5*mvv2e * (ivsqpost + jvsqpost - vsqpre) * fluxscale;
+      // Modified code:
       if (transparent)
-        vec[k++] += 0.5*mvv2e * vsqpre * fluxscale;
+        vec[k++] += 0.5*mvv2e * vsqpre * fluxscale * worig;
       else
-        vec[k++] -= 0.5*mvv2e * (ivsqpost + jvsqpost - vsqpre) * fluxscale;
+        vec[k++] -= 0.5*mvv2e * (ivsqpost * wi + jvsqpost * wj - vsqpre * worig) * fluxscale;
+      // Virgile - Modif End - 14/01/25
       break;
     case EROT:
       if (ip) ierot = ip->erot;
       else ierot = 0.0;
       if (jp) jerot = jp->erot;
       else jerot = 0.0;
+      // Virgile - Modif Start - 14/01/25
+      // Baseline code:
+      // if (transparent)
+      //   vec[k++] += weight * oerot * fluxscale;
+      // else
+      //   vec[k++] -= weight * (ierot + jerot - oerot) * fluxscale;
+      // Modified code:
       if (transparent)
-        vec[k++] += weight * oerot * fluxscale;
+        vec[k++] += weight * oerot * fluxscale * worig;
       else
-        vec[k++] -= weight * (ierot + jerot - oerot) * fluxscale;
+        vec[k++] -= weight * (ierot * wi + jerot * wj - oerot * worig) * fluxscale;
+      // Virgile - Modif End - 14/01/25
       break;
     case EVIB:
       if (ip) ievib = ip->evib;
       else ievib = 0.0;
       if (jp) jevib = jp->evib;
       else jevib = 0.0;
+      // Virgile - Modif Start - 14/01/25
+      // Baseline code:
+      // if (transparent)
+      //   vec[k++] += weight * oevib * fluxscale;
+      // else
+      //   vec[k++] -= weight * (ievib + jevib - oevib) * fluxscale;
+      // Modified code:
       if (transparent)
-        vec[k++] += weight * oevib * fluxscale;
+        vec[k++] += weight * oevib * fluxscale * worig;
       else
-        vec[k++] -= weight * (ievib + jevib - oevib) * fluxscale;
+        vec[k++] -= weight * (ievib * wi + jevib * wj - oevib * worig) * fluxscale;
+      // Virgile - Modif End - 14/01/25
       break;
     case ECHEM:
       if (reaction && !transparent) {
@@ -629,11 +776,20 @@ void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
         jvsqpost = jmass * MathExtra::lensq3(jp->v);
         jother = jp->erot + jp->evib;
       } else jvsqpost = jother = 0.0;
+      // Virgile - Modif Start - 14/01/25
+      // Baseline code:
+      // if (transparent)
+      //   etot = -0.5*mvv2e*vsqpre - weight*otherpre;
+      // else {
+      //   etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
+      //     weight * (iother + jother - otherpre);
+      // Modified code:
       if (transparent)
-        etot = -0.5*mvv2e*vsqpre - weight*otherpre;
+        etot = -0.5*mvv2e*vsqpre*worig - weight*otherpre*worig;
       else {
-        etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
-          weight * (iother + jother - otherpre);
+        etot = 0.5*mvv2e*(ivsqpost*wi + jvsqpost*wj - vsqpre*worig) +
+          weight * (iother*wi + jother*wj - otherpre*worig);
+    // Virgile - Modif End - 14/01/25
         if (reaction) {
           sr = surf->sr[isr];
           r_coeff = sr->reaction_coeff(reaction-1);
