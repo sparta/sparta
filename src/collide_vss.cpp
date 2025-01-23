@@ -47,6 +47,9 @@ CollideVSS::CollideVSS(SPARTA *sparta, int narg, char **arg) :
   // optional args
 
   relaxflag = CONSTANT;
+  // Morimoto - Modif Start - 20/10/23
+  TV_MWflag = 0;
+  // Morimoto - Modif End - 20/10/23
 
   int iarg = 3;
   while (iarg < narg) {
@@ -56,7 +59,22 @@ CollideVSS::CollideVSS(SPARTA *sparta, int narg, char **arg) :
       else if (strcmp(arg[iarg+1],"variable") == 0) relaxflag = VARIABLE;
       else error->all(FLERR,"Illegal collide command");
       iarg += 2;
+      // Takato Morimoto - Modif Start - 20/10/23
+      // Optional argument of Collide is added for tv_MW 
+      //(Two Variable or Translational Vibrational millikan white with Park's high temperature correction)
+      // e.g.tv_MW yes input.tv      
+      if (strcmp(arg[iarg],"tv_mw") == 0) {
+        if (iarg+3 > narg) error->all(FLERR,"Illegal collide command");
+        if (strcmp(arg[iarg+1],"no") == 0) {
+        TV_MWflag = 0;
+        iarg += 2;
+        }
+        else if (strcmp(arg[iarg+1],"yes") == 0) 
+        TV_MWflag = 1;
+        iarg += 4;
+      }       
     } else error->all(FLERR,"Illegal collide command");
+    // Takato Morimoto - Modif End - 22/05/24
   }
 
   // proc 0 reads file to extract params for current species
@@ -69,6 +87,13 @@ CollideVSS::CollideVSS(SPARTA *sparta, int narg, char **arg) :
   memory->create(params,nparams,nparams,"collide:params");
   if (comm->me == 0) read_param_file(arg[2]);
   MPI_Bcast(params[0],nparams*nparams*sizeof(Params),MPI_BYTE,0,world);
+  // Takato Morimoto - Modif Start - 23/05/24
+  if (TV_MWflag == 1) {
+  memory->create(mwcoeff,nparams,nparams,"collide:tv_mw");
+  if (comm->me == 0) read_param_file_tv_mw(arg[7]);
+  MPI_Bcast(mwcoeff[0],nparams*nparams*sizeof(Mwcoeff),MPI_BYTE,0,world);
+  }
+  // Takato Morimoto - Modif End - 23/05/24
 
   // allocate per-species prefactor array
 
@@ -132,22 +157,76 @@ double CollideVSS::vremax_init(int igroup, int jgroup)
 
 /* ---------------------------------------------------------------------- */
 
-double CollideVSS::attempt_collision(int icell, int np, double volume)
+/* ---------------------------------------------------------------------- */
+// Virgile - Modif Start - 20/10/2023
+// ========================================================================
+// Modify the number of attempted collision to account for the species
+// weight, leading to an artificial increase of the number of 
+// trace species numerical particles. Thus, in below equations,
+// N from the conventional DSMC is lower than N from SWS methods. 
+// Conventional DSMC (sws=0): Ncoll = 1/2 N fnum (N-1)
+// SWS (sws=1): Ncoll = 1/2 count_wi fnum (N-1)
+// SWSmax (sws=2): Ncoll = 1/2 N fnum wi_max (N-1)
+// SWSprod (sws=3): Ncoll = 1/2 count_wi fnum (count_wi-1)
+// ========================================================================
+// Baseline code :
+// double CollideVSS::attempt_collision(int icell, int np, double volume)
+// Modified code :
+double CollideVSS::attempt_collision(int icell, int np, double volume, double count_wi, double maxwi)
 {
   double fnum = update->fnum;
   double dt = update->dt;
 
   double nattempt;
-
-  if (remainflag) {
-    nattempt = 0.5 * np * (np-1) *
-      vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
-    remain[icell][0][0] = nattempt - static_cast<int> (nattempt);
+  // Baseline code :
+  // if (remainflag) {
+  //   nattempt = 0.5 * np * (np-1) *
+  //     vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
+  //   remain[icell][0][0] = nattempt - static_cast<int> (nattempt);
+  // } else {
+  //   nattempt = 0.5 * np * (np-1) *
+  //     vremax[icell][0][0] * dt * fnum / volume + random->uniform();
+  // }
+  // Modified code :
+  int sws = particle->sws;
+  if (sws==1) {
+    if (remainflag) {
+      nattempt = 0.5 * count_wi * (np-1) *
+        vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
+      remain[icell][0][0] = nattempt - static_cast<int> (nattempt);
+    } else {
+      nattempt = 0.5 * count_wi * (np-1) *
+        vremax[icell][0][0] * dt * fnum / volume + random->uniform();
+    }
+  } else if (sws==2) {
+    if (remainflag) {
+      nattempt = 0.5 * np * maxwi * (np-1) *
+        vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
+      remain[icell][0][0] = nattempt - static_cast<int> (nattempt);
+    } else {
+      nattempt = 0.5 * np * maxwi * (np-1) *
+        vremax[icell][0][0] * dt * fnum / volume + random->uniform();
+    }
+  } else if (sws==3) {
+    if (remainflag) {
+      nattempt = 0.5 * count_wi * (count_wi-1) *
+        vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
+      remain[icell][0][0] = nattempt - static_cast<int> (nattempt);
+    } else {
+      nattempt = 0.5 * count_wi * (count_wi-1) *
+        vremax[icell][0][0] * dt * fnum / volume + random->uniform();
+    }
   } else {
-    nattempt = 0.5 * np * (np-1) *
-      vremax[icell][0][0] * dt * fnum / volume + random->uniform();
+    if (remainflag) {
+      nattempt = 0.5 * np * (np-1) *
+        vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
+      remain[icell][0][0] = nattempt - static_cast<int> (nattempt);
+    } else {
+      nattempt = 0.5 * np * (np-1) *
+        vremax[icell][0][0] * dt * fnum / volume + random->uniform();
+    }
   }
-
+  // Virgile - Modif End - 20/10/2023
   return nattempt;
 }
 
@@ -164,8 +243,31 @@ double CollideVSS::attempt_collision(int icell, int igroup, int jgroup,
  // return 2x the value for igroup != jgroup, since no J,I pairing
 
  double npairs;
- if (igroup == jgroup) npairs = 0.5 * ngroup[igroup] * (ngroup[igroup]-1);
- else npairs = ngroup[igroup] * (ngroup[jgroup]);
+// Virgile - Modif Start - 21/11/2023
+ // ========================================================================
+// SWS keyword: use n = count_wi * fnum instead of n = np * fnum 
+// to obtain the correct number of attempted collisions when using 
+// different species weight.
+// SWSmax keyword: use n = np * fnum * max(wi)
+ // ========================================================================
+ // Baseline code :
+ // if (igroup == jgroup) npairs = 0.5 * ngroup[igroup] * (ngroup[igroup]-1);
+ // else npairs = ngroup[igroup] * (ngroup[jgroup]);
+ // Modified code :
+ int sws = particle->sws;
+ if (igroup == jgroup) {
+  if (sws==1) npairs = 0.5 * count_wi_group[igroup] * (ngroup[igroup]-1);
+  else if (sws==2) npairs = 0.5 * ngroup[igroup] * maxwigr[igroup] * (ngroup[igroup]-1);
+  else if (sws==3) npairs = 0.5 * count_wi_group[igroup] * (ngroup[igroup]-1);
+  else npairs = 0.5 * ngroup[igroup] * (ngroup[igroup]-1);
+ }
+ else {
+  if (sws==1) npairs = count_wi_group[igroup] * (ngroup[jgroup]);
+  else if (sws==2) npairs = ngroup[igroup] * maxwigr[igroup] * (ngroup[jgroup]);
+  else if (sws==3) npairs = count_wi_group[igroup] * (ngroup[jgroup]);
+  else npairs = ngroup[igroup] * (ngroup[jgroup]);
+ }
+ // Virgile - Modif End - 21/11/2023
  //else npairs = 0.5 * ngroup[igroup] * (ngroup[jgroup]);
 
  nattempt = npairs * vremax[icell][igroup][jgroup] * dt * fnum / volume;
@@ -183,10 +285,15 @@ double CollideVSS::attempt_collision(int icell, int igroup, int jgroup,
    1 = yes, 0 = no
    update vremax either way
 ------------------------------------------------------------------------- */
-
+// Virgile - Modif Start - 19/12/2024
+// Baseline code:
+// int CollideVSS::test_collision(int icell, int igroup, int jgroup,
+//                                Particle::OnePart *ip, Particle::OnePart *jp)
+// Modified code:
 int CollideVSS::test_collision(int icell, int igroup, int jgroup,
-                               Particle::OnePart *ip, Particle::OnePart *jp)
+                               Particle::OnePart *ip, Particle::OnePart *jp, double maxwi)
 {
+// Virgile - Modif End - 19/12/2024
   double *vi = ip->v;
   double *vj = jp->v;
   int ispecies = ip->ispecies;
@@ -202,7 +309,35 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
 
   double vre = vro*prefactor[ispecies][jspecies];
   vremax[icell][igroup][jgroup] = MAX(vre,vremax[icell][igroup][jgroup]);
-  if (vre/vremax[icell][igroup][jgroup] < random->uniform()) return 0;
+  /* ---------------------------------------------------------------------- */
+  // Virgile - Modif Start - 19/12/2024
+  // ========================================================================
+  // Change the random selection process that no longer represent the
+  // correct balance of the physical particles when using SWS by adding
+  // the maximum weight filter. This filter is merged with the acceptance-rejection 
+  // method, i.e, candidate are less likely to be selected if they have
+  // both low weights and collision attempt is incremented when the pair is
+  // rejected. This filter goes along with Ncoll = 1/2 N fnum w_imax (N-1),
+  // N being increased by SWS.
+  // This method provides the best accuracy for physical particles species 
+  // collision rates with the cost of an increase in the total number of 
+  // attempted collision.
+  // Keyword to use this filter: SWSmax
+  // ========================================================================
+  // Baseline code:
+  // if (vre/vremax[icell][igroup][jgroup] < random->uniform()) return 0;
+  // Modified code:
+  int sws = particle->sws;
+  if (sws==2) {
+  Particle::Species *species = particle->species;
+  double w_ipart = species[ispecies].specwt;
+  double w_jpart = species[jspecies].specwt; 
+  if ((vre/vremax[icell][igroup][jgroup])*(MAX(w_ipart,w_jpart)/maxwi) < random->uniform()) return 0;
+  } else {
+    if (vre/vremax[icell][igroup][jgroup] < random->uniform()) return 0;
+  }
+  // Virgile - Modif End - 19/12/2024
+  /* ---------------------------------------------------------------------- */
   precoln.vr2 = vr2;
   return 1;
 }
@@ -216,6 +351,21 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
   int isp = ip->ispecies;
   int jsp = jp->ispecies;
 
+  // Virgile - Modif Start - 06/12/2023
+  // ========================================================================
+  // Set the weights according to the colliding particle species and 
+  // determine the maximum weight over all the simulated particles.
+  // ========================================================================
+  double w_i = species[isp].specwt;
+  double w_j = species[jsp].specwt;
+  int nspecies = particle->nspecies;
+  double w_max = 0.0;
+
+  for (int i = 0; i < nspecies; i++){
+    w_max = std::max(species[i].specwt,w_max);
+  }
+  // Virgile - Modif End - 06/12/2023
+
   precoln.vr = sqrt(precoln.vr2);
 
   precoln.ave_rotdof = 0.5 * (species[isp].rotdof + species[jsp].rotdof);
@@ -225,7 +375,24 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
   double imass = precoln.imass = species[isp].mass;
   double jmass = precoln.jmass = species[jsp].mass;
 
-  precoln.etrans = 0.5 * params[isp][jsp].mr * precoln.vr2;
+  // Virgile - Modif Start - 13/12/2023
+  // ========================================================================
+  // Add the stored energy lost due to differently weighted
+  // collision to the translation energy of the current collision if
+  // the colliding particles are major species.
+  // ========================================================================
+  // Baseline code:
+  // precoln.etrans = 0.5 * params[isp][jsp].mr * precoln.vr2;
+  // Modified code:
+   if ((w_i==w_max) && (w_j==w_max)){
+    precoln.etrans = 0.5 * params[isp][jsp].mr * precoln.vr2 + Ewilost;
+    Ewilost = 0.0;
+  } else {
+    precoln.etrans = 0.5 * params[isp][jsp].mr * precoln.vr2;
+  }
+  
+  // Virgile - Modif End - 13/12/2023
+  
   precoln.erot = ip->erot + jp->erot;
   precoln.evib = ip->evib + jp->evib;
 
@@ -249,14 +416,41 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 }
 
 /* ---------------------------------------------------------------------- */
-
+// Takato Morimoto - Modif Start - 27/05/24
+// This perform_collision has been modified throughout the function.
 int CollideVSS::perform_collision(Particle::OnePart *&ip,
                                   Particle::OnePart *&jp,
-                                  Particle::OnePart *&kp)
+                                  Particle::OnePart *&kp,
+                                  int &n_i,
+                                  int &n_j,
+                                  int &n_k,
+                                  int &n_pre)
 {
   int reactflag,kspecies;
   double x[3],v[3];
   Particle::OnePart *p3;
+  Particle::OnePart *p_pre;
+  
+  int i;
+  Particle::Species *species = particle->species;
+
+  //Additional parameters for Species weighting scheme
+  //All of particles are pre-collision parameters
+  int isp = ip->ispecies;
+  int jsp = jp->ispecies;
+  int ksp = kp->ispecies;
+  Particle::OnePart ip_pre = *ip;
+  Particle::OnePart jp_pre = *jp; 
+  Particle::OnePart maxp_pre = *jp;
+  //variables for weighting scheme
+  double w_i = species[isp].specwt;
+  double w_j = species[jsp].specwt;
+  double w_k = species[ksp].specwt;
+  double w_min = std::min(w_i, w_j);
+  double w_max = std::max(w_i, w_j);
+  double phi_i;
+  double phi_j;
+  double phi_k;
 
   // if gas-phase chemistry defined, attempt and perform reaction
   // if a 3rd particle is created, its kspecies >= 0 is returned
@@ -275,7 +469,33 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
   kp = NULL;
 
   if (reactflag) {
+    // compute the number of split particle（0 or 1）
+    if (w_i == w_j) n_pre = 0;
+    else n_pre = ((((w_max-w_min)/w_max)/random->uniform()>1)?1:0); 
+    maxp_pre = ((w_i > w_j) ? ip_pre : jp_pre);
 
+    // particle creation of major reactant. This should also be taken account.
+    // p_pre is the pointer for a reactant particle that continue to exist
+    if ( n_pre == 1) {
+       int id = MAXSMALLINT*random->uniform();
+       Particle::OnePart *particles = particle->particles;
+       memcpy(x,maxp_pre.x,3*sizeof(double));
+       memcpy(v,maxp_pre.v,3*sizeof(double));
+       int reallocflag = 
+       particle->add_particle(id,maxp_pre.ispecies,maxp_pre.icell,x,v,maxp_pre.erot,maxp_pre.evib);
+       if (reallocflag) {
+        ip = particle->particles + (ip - particles);
+        jp = particle->particles + (jp - particles);
+      }
+       p_pre = &particle->particles[particle->nlocal-1];
+     }          
+    isp = ip->ispecies;
+    jsp = jp->ispecies;
+    w_i = species[isp].specwt;
+    w_j = species[jsp].specwt;
+    phi_i = w_min/w_i;
+    phi_j = w_min/w_j;  
+    
     // add 3rd K particle if reaction created it
     // index of new K particle = nlocal-1
     // if add_particle() performs a realloc:
@@ -300,6 +520,22 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
       }
 
       kp = &particle->particles[particle->nlocal-1];
+      
+      ksp = kp->ispecies;
+      w_k = species[ksp].specwt;
+      phi_k = w_min/w_k;
+      
+      // !! if the reaction is impact ionization, 
+      // If the ramdom number [0:1] is lower than the creteria made by two weight,
+      // integer will be 1 , else 0
+      // we can have number of additional product here
+      if (phi_i < 1.0) n_i = (((phi_i)/random->uniform()>1)?1:0);
+      else if (phi_i >= 1.0) n_i = int(phi_i)+(((phi_i-int(phi_i))/random->uniform()>1)?1:0);          
+      if (phi_j < 1.0) n_j = (((phi_j)/random->uniform()>1)?1:0);
+      else if (phi_j >= 1.0) n_j = int(phi_j)+(((phi_j-int(phi_j))/random->uniform()>1)?1:0);   
+      if (phi_k < 1.0) n_k = (((phi_k)/random->uniform()>1)?1:0);
+      else if (phi_k >= 1.0) n_k = int(phi_k)+(((phi_k-int(phi_k))/random->uniform()>1)?1:0);
+        
       EEXCHANGE_ReactingEDisposal(ip,jp,kp);
       SCATTER_ThreeBodyScattering(ip,jp,kp);
 
@@ -349,28 +585,92 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
 
       setup_collision(ip,p3);
       postcoln.etotal += partial_energy;
+      
+      if (phi_i < 1.0) n_i = (((phi_i)/random->uniform()>1)?1:0);
+      else if (phi_i >= 1.0) n_i = int(phi_i)+(((phi_i-int(phi_i))/random->uniform()>1)?1:0); 
+      // because this reaction produce 1 particles, number of j,k particle is 0
+      n_j = n_k = 0;  
 
       if (precoln.ave_dof > 0.0) EEXCHANGE_ReactingEDisposal(ip,p3,jp);
-      SCATTER_TwoBodyScattering(ip,p3);
-
+      // Virgile - Modif Start - 24/10/2024
+      // ========================================================================
+      // Add reactflag to scattering routine as 
+      // splitting-merging should not be used when reaction
+      // with differently weighted reactant and/or product occur.
+      // Instead, the mass, momentum and energy are conserved
+      // through the probability of creation/production of the
+      // involved species.
+      // ========================================================================
+      // Baseline code:
+      // SCATTER_TwoBodyScattering(ip,p3);
+      // Modified code:
+      SCATTER_TwoBodyScattering(ip,p3,reactflag);
+      // Virgile - Modif End - 24/10/2024
     } else {
+      // exchange reaction or associative ionization
+      // compute number of particle after the reaction
+      // !! if the reaction is charge exchange or associative ionization
+      // !! reactant and product charge should be same.
+      if (phi_i < 1.0) n_i = (((phi_i)/random->uniform()>1)?1:0);
+      else n_i = int(phi_i)+(((phi_i-int(phi_i))/random->uniform()>1)?1:0);
+      if (phi_j < 1.0) n_j = (((phi_j)/random->uniform()>1)?1:0);
+      else n_j = int(phi_j)+(((phi_j-int(phi_j))/random->uniform()>1)?1:0);
+
+      // because this reaction produce 2 particles, number of k particle is 0
+      n_k = 0;
       EEXCHANGE_ReactingEDisposal(ip,jp,kp);
-      SCATTER_TwoBodyScattering(ip,jp);
+      // Virgile - Modif Start - 24/10/2024
+      // ========================================================================
+      // Add reactflag to scattering routine as 
+      // splitting-merging should not be used when reaction
+      // with differently weighted reactant and/or product occur.
+      // Instead, the mass, momentum and energy are conserved
+      // through the probability of creation/production of the
+      // involved species.
+      // ========================================================================
+      // Baseline code:
+      // SCATTER_TwoBodyScattering(ip,jp);
+      // Modified code:
+      SCATTER_TwoBodyScattering(ip,jp,reactflag);
+      // Virgile - Modif End - 24/10/2024
     }
 
   } else {
+    // no reaction
+    // if reaction is not triggered, particle creation part is skipped
     if (precoln.ave_dof > 0.0) EEXCHANGE_NonReactingEDisposal(ip,jp);
-    SCATTER_TwoBodyScattering(ip,jp);
+    // Virgile - Modif Start - 24/10/2024
+    // ========================================================================
+    // Add reactflag to scattering routine as 
+    // splitting-merging should not be used when reaction
+    // with differently weighted reactant and/or product occur.
+    // Instead, the mass, momentum and energy are conserved
+    // through the probability of creation/production of the
+    // involved species.
+    // ========================================================================
+    // Baseline code:
+    // SCATTER_TwoBodyScattering(ip,jp);
+    // Modified code:
+    SCATTER_TwoBodyScattering(ip,jp,reactflag);
+    // Virgile - Modif End - 24/10/2024
   }
 
   return reactflag;
 }
+// Takato Morimoto - Modif End - 27/05/24
 
 /* ---------------------------------------------------------------------- */
 
+// Virgile - Modif Start - 24/10/2024
+// Baseline code:
+// void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
+// 					   Particle::OnePart *jp)
+// {
+// Modified code:
 void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
-                                           Particle::OnePart *jp)
+					   Particle::OnePart *jp, int reactflag)
 {
+// Virgile - Modif End - 24/10/2024
   double ua,vb,wc;
   double vrc[3];
 
@@ -381,6 +681,37 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
   int jsp = jp->ispecies;
   double mass_i = species[isp].mass;
   double mass_j = species[jsp].mass;
+  
+  // Virgile - Modif Start - 28/11/23
+  // ========================================================================
+  // Set the weights of the colliding particles and calculate the ratio phi,
+  // store the pre-collision velocities.
+  // ========================================================================
+  double w_i = species[isp].specwt;
+  double w_j = species[jsp].specwt;
+  double phi = 1.0;
+
+  double vi_pre[3];
+  double vi_post[3];
+  double vj_pre[3];
+  double vj_post[3];
+
+  vi_pre[0]=vi[0];
+  vi_pre[1]=vi[1];
+  vi_pre[2]=vi[2];
+
+  vj_pre[0]=vj[0];
+  vj_pre[1]=vj[1];
+  vj_pre[2]=vj[2];
+
+  if ((w_i>0) && (w_j>0)){
+    if (w_i>w_j){
+      phi = w_j/w_i;
+    } else {
+      phi = w_i/w_j;
+    } 
+  }
+  // Virgile - Modif End - 28/11/23
 
   double alpha_r = 1.0 / params[isp][jsp].alpha;
 
@@ -422,6 +753,59 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
   vj[0] = precoln.ucmf - (mass_i*divisor)*ua;
   vj[1] = precoln.vcmf - (mass_i*divisor)*vb;
   vj[2] = precoln.wcmf - (mass_i*divisor)*wc;
+
+  // Virgile - Modif Start - 28/11/23
+  // ========================================================================
+  // Compute the post-collision velocity according to the conservation
+  // of momentum. 
+  // Compute and store the energy lost due to non conservation of the energy
+  // during differently weighted particles collision.
+  // If reaction occurs, the conservation is ensured by the 
+  // probobility of creation/deletion of the particles. Thus,
+  // the splitting-merging method is not used.
+  // Remark : if equally weighted particles collide phi=1.
+  // ========================================================================
+  if (!(reactflag)){   
+    if (w_i>w_j){
+      vj_post[0] = vj[0];
+      vj_post[1] = vj[1];
+      vj_post[2] = vj[2];
+      
+      vi_post[0] = (1-phi)*vi_pre[0]+phi*vi[0];
+      vi_post[1] = (1-phi)*vi_pre[1]+phi*vi[1];
+      vi_post[2] = (1-phi)*vi_pre[2]+phi*vi[2];
+  
+      Ewilost += w_i*0.5*mass_i*phi*(1-phi)*(
+      pow((vi_pre[0]-vi[0]),2.0)+
+      pow((vi_pre[1]-vi[1]),2.0)+
+      pow((vi_pre[2]-vi[2]),2.0)
+      );
+  
+      vi[0]=vi_post[0];
+      vi[1]=vi_post[1];
+      vi[2]=vi_post[2];
+  
+    } else {
+      vi_post[0] = vi[0];
+      vi_post[1] = vi[1];
+      vi_post[2] = vi[2];
+      
+      vj_post[0] = (1-phi)*vj_pre[0]+phi*vj[0];
+      vj_post[1] = (1-phi)*vj_pre[1]+phi*vj[1];
+      vj_post[2] = (1-phi)*vj_pre[2]+phi*vj[2];
+  
+      Ewilost += w_j*0.5*mass_j*phi*(1-phi)*(
+      pow((vj_pre[0]-vj[0]),2.0)+
+      pow((vj_pre[1]-vj[1]),2.0)+
+      pow((vj_pre[2]-vj[2]),2.0)
+      );
+  
+      vj[0]=vj_post[0];
+      vj[1]=vj_post[1];
+      vj[2]=vj_post[2];
+    }
+  }
+  // Virgile - Modif End - 28/11/23
 }
 
 /* ---------------------------------------------------------------------- */
@@ -433,7 +817,10 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   double State_prob,Fraction_Rot,Fraction_Vib,E_Dispose;
   int i,rotdof,vibdof,max_level,ivib;
 
-  Particle::OnePart *p;
+  // Takato Morimoto - Modif Start - 24/05/23
+  // p2 is added to consider 2 particle speices
+  Particle::OnePart *p,*p2;
+  // Takato Morimoto - Modif End - 24/05/23
   Particle::Species *species = particle->species;
 
   double AdjustFactor = 0.99999999;
@@ -453,32 +840,121 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
     E_Dispose = precoln.etrans;
 
     for (i = 0; i < 2; i++) {
-      if (i == 0) p = ip;
-      else p = jp;
+    // Takato Morimoto - Modif Start - 24/05/23
+      if (i == 0) {
+        p = ip;
+        p2 = jp;
+      }
+      else {
+        p = jp;
+        p2 = ip;
+      }  
+
+      // Virgile - Modif Start - 19/07/24
+      // ========================================================================
+      // Two different methods are used:
+      // 1) Exclusive method:
+      // Allow all exchange scenario but the one that imply internal
+      // energy exchange of a major particle when colliding with a 
+      // minor particle. In this case the energy exchanged is negligible 
+      // (proportional to phi). Particles still exchange internal energy 
+      // when colliding with identically weighted particles or 
+      // more highly weighted particles.
+      // 2) Explicit method:
+      // Use the splitting merging principle: E''_i=phi*E'_i+(1-phi)*E_i
+      // Explicit conservation of the internal energy when a major
+      // particle trigger internal energy exchange.
+      // --------------------------------
+      // NOTE: 
+      // The exclusive method is only used for discrete
+      // vibrational energy exchange of major particles, as the discrete  
+      // energy mode are proportional to integers (ivib) that 
+      // are not mergeable without loosing this integer
+      // property. All the other exchanges are handled via spitting
+      // merging method.
+      // ========================================================================
+      int psp = p->ispecies;
+      int p2sp = p2->ispecies;
+      double w_p = species[psp].specwt;
+      double w_p2 = species[p2sp].specwt;
+      double phi=1.0;
+      if ((w_p>0) && (w_p2>0)){
+        if (w_p>w_p2){
+          phi = w_p2/w_p;
+        } else {
+          phi = w_p/w_p2;
+        } 
+      }
+      // Virgile - Modif End - 19/07/24
 
       int sp = p->ispecies;
+      int sp2 = p2->ispecies; // added for sp2
       rotdof = species[sp].rotdof;
       double rotn_phi = species[sp].rotrel;
 
       if (rotdof) {
         if (relaxflag == VARIABLE) rotn_phi = rotrel(sp,E_Dispose+p->erot);
+        // Virgile - Modif Start - 19/07/24
+        // Baseline code:
+        //  if (rotn_phi >= random->uniform()) {
+        //  if (rotstyle == NONE) {
+        //    p->erot = 0.0;
+        //  } else if (rotstyle != NONE && rotdof == 2) {
+        //    E_Dispose += p->erot;
+        //    Fraction_Rot =
+        //     1- pow(random->uniform(),
+		    //  (1/(2.5-params[ip->ispecies][jp->ispecies].omega)));
+        //    p->erot = Fraction_Rot * E_Dispose;
+        //    E_Dispose -= p->erot;
+        //  } else {
+        //    E_Dispose += p->erot;
+        //    p->erot = E_Dispose *
+        //      sample_bl(random,0.5*species[sp].rotdof-1.0,
+        //                 1.5-params[ip->ispecies][jp->ispecies].omega);
+        //    E_Dispose -= p->erot;
+        //  }
+        // Modified code:
         if (rotn_phi >= random->uniform()) {
-          if (rotstyle == NONE) {
-            p->erot = 0.0;
-          } else if (rotstyle != NONE && rotdof == 2) {
-            E_Dispose += p->erot;
-            Fraction_Rot =
-              1- pow(random->uniform(),
-                     (1/(2.5-params[ip->ispecies][jp->ispecies].omega)));
-            p->erot = Fraction_Rot * E_Dispose;
-            E_Dispose -= p->erot;
+          if (w_p>w_p2) {
+            if (rotstyle == NONE) {
+              p->erot = 0.0;
+            } else if (rotstyle != NONE && rotdof == 2) {
+              double erot_pre = p->erot;
+              E_Dispose += p->erot;
+              Fraction_Rot =
+               1- pow(random->uniform(),
+		        (1/(2.5-params[ip->ispecies][jp->ispecies].omega)));
+              double erot_post = Fraction_Rot * E_Dispose;
+              E_Dispose -= erot_post;
+              p->erot = phi * erot_post + (1-phi) * erot_pre;
+            } else {
+              double erot_pre = p->erot;
+              E_Dispose += p->erot;
+              double erot_post = E_Dispose *
+                sample_bl(random,0.5*species[sp].rotdof-1.0,
+                           1.5-params[ip->ispecies][jp->ispecies].omega);
+              E_Dispose -= erot_post;
+              p->erot = phi * erot_post + (1-phi) * erot_pre;
+            } 
           } else {
-            E_Dispose += p->erot;
-            p->erot = E_Dispose *
-              sample_bl(random,0.5*species[sp].rotdof-1.0,
-                        1.5-params[ip->ispecies][jp->ispecies].omega);
-            E_Dispose -= p->erot;
+            if (rotstyle == NONE) {
+              p->erot = 0.0;
+            } else if (rotstyle != NONE && rotdof == 2) {
+              E_Dispose += p->erot;
+              Fraction_Rot =
+               1- pow(random->uniform(),
+		        (1/(2.5-params[ip->ispecies][jp->ispecies].omega)));
+              p->erot = Fraction_Rot * E_Dispose;
+              E_Dispose -= p->erot;
+            } else {
+              E_Dispose += p->erot;
+              p->erot = E_Dispose *
+                sample_bl(random,0.5*species[sp].rotdof-1.0,
+                           1.5-params[ip->ispecies][jp->ispecies].omega);
+              E_Dispose -= p->erot;
+            }
           }
+        // Virgile - Modif End - 19/07/24
         }
       }
       postcoln.erot += p->erot;
@@ -487,21 +963,43 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
       double vibn_phi = species[sp].vibrel[0];
 
       if (vibdof) {
-        if (relaxflag == VARIABLE) vibn_phi = vibrel(sp,E_Dispose+p->evib);
+        // Morimoto - Modif Start - 17/01/25
+        // Baseline code:
+        // if (relaxflag == VARIABLE) vibn_phi = vibrel(sp,E_Dispose+p->evib);
+        // Modified code:
+        if (relaxflag == VARIABLE) vibn_phi = vibrel(sp,sp2,E_Dispose+p->evib);
+        // Virgile - Modif Start - 19/07/24
         if (vibn_phi >= random->uniform()) {
           if (vibstyle == NONE) {
             p->evib = 0.0;
 
           } else if (vibdof == 2) {
             if (vibstyle == SMOOTH) {
+              // Added code:
+              double e_vib_pre =  p->evib;
+              // End added code
               E_Dispose += p->evib;
               Fraction_Vib =
                 1.0 - pow(random->uniform(),
-                          (1.0/(2.5-params[ip->ispecies][jp->ispecies].omega)));
-              p->evib= Fraction_Vib * E_Dispose;
-              E_Dispose -= p->evib;
+			  (1.0/(2.5-params[ip->ispecies][jp->ispecies].omega)));
+              // Baseline code:
+              // p->evib= Fraction_Vib * E_Dispose;
+              // E_Dispose -= p->evib;
+              // Modified code:
+              if (w_p>w_p2) {
+                double e_vib_post = Fraction_Vib * E_Dispose;
+                E_Dispose -= e_vib_post;
+                p->evib = phi * e_vib_post + (1-phi) * e_vib_pre;
+              } else {
+                p->evib= Fraction_Vib * E_Dispose;
+                E_Dispose -= p->evib;
+              }
 
             } else if (vibstyle == DISCRETE) {
+              // Added condition (Exclusive mode):
+              if (!(w_p>w_p2)) {
+              // End added code
+              // Baseline code:
               E_Dispose += p->evib;
               max_level = static_cast<int>
                 (E_Dispose / (update->boltz * species[sp].vibtemp[0]));
@@ -514,30 +1012,52 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
               } while (State_prob < random->uniform());
               E_Dispose -= p->evib;
             }
+            }
 
           } else if (vibdof > 2) {
             if (vibstyle == SMOOTH) {
+              // Added code:
+              double e_vib_pre =  p->evib;
+              // End added code
               E_Dispose += p->evib;
-              p->evib = E_Dispose *
-                sample_bl(random,0.5*species[sp].vibdof-1.0,
-                          1.5-params[ip->ispecies][jp->ispecies].omega);
-              E_Dispose -= p->evib;
+              // Baseline code:
+              // p->evib = E_Dispose *
+              //   sample_bl(random,0.5*species[sp].vibdof-1.0,
+              //             1.5-params[ip->ispecies][jp->ispecies].omega);
+              // E_Dispose -= p->evib;
+              // Modified code:
+              if (w_p>w_p2) {
+                double e_vib_post = E_Dispose *
+                  sample_bl(random,0.5*species[sp].vibdof-1.0,
+                            1.5-params[ip->ispecies][jp->ispecies].omega);
+                E_Dispose -= e_vib_post;
+                p->evib = phi * e_vib_post + (1-phi) * e_vib_pre; 
+              } else {
+                p->evib = E_Dispose *
+                  sample_bl(random,0.5*species[sp].vibdof-1.0,
+                            1.5-params[ip->ispecies][jp->ispecies].omega);
+                E_Dispose -= p->evib;
+              }
 
             } else if (vibstyle == DISCRETE) {
+              // Added condition (Exclusive mode):
+              if (!(w_p>w_p2)) {
+              // End added code
+              // Baseline code:
               p->evib = 0.0;
-
+              
               int nmode = particle->species[sp].nvibmode;
               int **vibmode =
                 particle->eiarray[particle->ewhich[index_vibmode]];
               int pindex = p - particle->particles;
-
+              
               for (int imode = 0; imode < nmode; imode++) {
                 ivib = vibmode[pindex][imode];
                 E_Dispose += ivib * update->boltz *
                   particle->species[sp].vibtemp[imode];
                 max_level = static_cast<int>
                   (E_Dispose / (update->boltz * species[sp].vibtemp[imode]));
-
+              
                 do {
                   ivib = static_cast<int>
                     (random->uniform()*(max_level+AdjustFactor));
@@ -545,13 +1065,15 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
                   State_prob = pow((1.0 - pevib / E_Dispose),
                                    (1.5 - params[ip->ispecies][jp->ispecies].omega));
                 } while (State_prob < random->uniform());
-
+              
                 vibmode[pindex][imode] = ivib;
                 p->evib += pevib;
                 E_Dispose -= pevib;
               }
+              }
             }
           } // end of vibstyle/vibdof if
+        // Virgile - Modif End - 19/07/24
         }
         postcoln.evib += p->evib;
       } // end of vibdof if
@@ -801,13 +1323,51 @@ double CollideVSS::rotrel(int isp, double Ec)
 /* ----------------------------------------------------------------------
    compute a variable vibrational relaxation parameter
 ------------------------------------------------------------------------- */
-
-double CollideVSS::vibrel(int isp, double Ec)
+  //Takato Morimoto - Modif Start - 24/05/23
+  //Two variable millikan white with Park's high temperature correction term 
+  //=== baseline code========================
+//double CollideVSS::vibrel(int isp, double Ec)
+//{
+  //double Tr = Ec /(update->boltz * (3.5-params[isp][isp].omega));
+  //double vibphi = 1.0 / (params[isp][isp].vibc1/pow(Tr,params[isp][isp].omega) *
+  //                       exp(params[isp][isp].vibc2/pow(Tr,1.0/3.0)));
+  //return vibphi;
+  //=== end baseline code========================
+double CollideVSS::vibrel(int isp, int jsp, double Ec)
 {
   double Tr = Ec /(update->boltz * (3.5-params[isp][isp].omega));
   double vibphi = 1.0 / (params[isp][isp].vibc1/pow(Tr,params[isp][isp].omega) *
                          exp(params[isp][isp].vibc2/pow(Tr,1.0/3.0)));
+
+  //If flagged, Tr, vibphi is updated 
+  if (TV_MWflag == 1) {   
+  //double boltz  =update->boltz;
+    double patm = 101325.0;
+    double sigma_park =  3.0 * pow(10.0,(-21.0)) * pow(50000.0,2.0);
+    double Tr = Ec /(update->boltz * (3.5-params[isp][isp].omega));
+    double mr = ((particle->species[isp].mass*particle->species[jsp].mass)/(particle->species[isp].mass+particle->species[jsp].mass));
+
+    //BOYD et al. 2017 p260
+    double z_vib_mw = (MY_PI*pow(params[isp][isp].diam,2.0)*sqrt(8.0/(MY_PI*mr*update->boltz*Tr))*
+                          pow((params[isp][isp].tref/Tr),(params[isp][isp].omega)-0.50))*
+                          patm*exp(mwcoeff[isp][jsp].a*(pow(Tr,-1.0/3.0)-mwcoeff[isp][jsp].b)-18.42);
+    double z_vib_park = MY_PI*pow(params[isp][isp].diam,2.0)*pow(Tr,2.0)/sigma_park*
+                           pow((params[isp][isp].tref/Tr),(params[isp][isp].omega)-0.50);
+    //Bird 1994
+    double z_vib = (params[isp][isp].vibc1/pow(Tr,params[isp][isp].omega) *
+                           exp(params[isp][isp].vibc2/pow(Tr,1.0/3.0)));
+
+    double vibphi  = 1.0 / (z_vib_mw+z_vib_park);
+    double vibphi2 = 1.0 / (z_vib+z_vib_park) ;    
+
+    if(mwcoeff[isp][jsp].a==-1){
+      if(particle->species[jsp].vibdof == 0){
+         double vibphi = vibphi2;
+      }
+    }
+  }
   return vibphi;
+  // Takato Morimoto - Modif End - 24/05/23
 }
 
 /* ----------------------------------------------------------------------
@@ -943,6 +1503,64 @@ void CollideVSS::read_param_file(char *fname)
     }
   }
 }
+
+// Takato Morimoto - Modif Start - 11/05/23
+// ========================================================================
+// Read input parameters for Millikan-White vibrational relaxation 
+// considering two chemical species for the model with High temperature correction
+// ========================================================================
+void CollideVSS::read_param_file_tv_mw(char *fname)
+{
+  FILE *fp = fopen(fname,"r");
+  if (fp == NULL) {
+    char str[128];
+    sprintf(str,"Cannot open Millikan-White Park model coefficient file %s",fname);
+    error->one(FLERR,str);
+  }
+  //// set all species coeff to -1, so can detect if not read
+
+  //for (int i = 0; i < nparams; i++) {
+  //  for ( int j = i+1; j<nparams; j++) {
+  //    mwcoeff[i][j].a = mwcoeff[i][j].b  = -1.0;
+  //  }
+  //}
+  for (int i = 0; i < nparams; i++) {
+    for ( int j = 0; j<nparams; j++) {
+      mwcoeff[i][j].a = mwcoeff[i][j].b  = -1.0;
+    }
+  }
+  // read file line by line
+  // skip blank lines or comment lines starting with '#'
+  // all other lines must have at least REQWORDS, which depends on VARIABLE flag
+
+  int REQWORDS = 4;
+  char **words = new char*[REQWORDS]; // one extra word in cross-species lines
+  char line[MAXLINE];
+  int isp,jsp;
+
+  while (fgets(line,MAXLINE,fp)) {
+    int pre = strspn(line," \t\n\r");
+    if (pre == strlen(line) || line[pre] == '#') continue;
+
+    int nwords = wordparse(REQWORDS+1,line,words);
+    if (nwords < REQWORDS)
+      error->one(FLERR,"Incorrect line format Millikan-White coefficient file");
+
+    isp = particle->find_species(words[0]);
+    jsp = particle->find_species(words[1]);
+
+    // if we don't match a species with second word, but it's not a number,
+    // skip the line (it involves a species we aren't using)
+    if ( jsp < 0 &&  !(atof(words[1]) > 0) ) continue;
+
+     mwcoeff[isp][jsp].a =  atof(words[2]);
+     mwcoeff[isp][jsp].b =  atof(words[3]);
+  }
+
+  delete [] words;
+  fclose(fp);
+}
+// Takato Morimoto - Modif End - 22/05/24
 
 /* ----------------------------------------------------------------------
    parse up to n=maxwords whitespace-delimited words in line

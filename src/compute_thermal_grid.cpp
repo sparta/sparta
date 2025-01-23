@@ -128,6 +128,9 @@ void ComputeThermalGrid::compute_per_grid()
   int i,j,k,ispecies,igroup,icell;
   double mass;
   double *v,*vec;
+  // Virgile - Modif Start - 12/10/23
+  double specwt;
+  // Virgile - Modif End - 12/10/23
 
   // zero all accumulators - could do this with memset()
 
@@ -146,18 +149,36 @@ void ComputeThermalGrid::compute_per_grid()
 
     mass = species[ispecies].mass;
     v = particles[i].v;
+    // Virgile - Modif Start - 12/10/23
+    specwt = species[ispecies].specwt;
+    // Virgile - Modif End - 12/10/23
 
     // 6 tallies per particle: N, Mass, mVx, mVy, mVz, mV^2
 
     vec = tally[icell];
     k = igroup*npergroup;
 
-    vec[k++] += 1.0;
-    vec[k++] += mass;
-    vec[k++] += mass*v[0];
-    vec[k++] += mass*v[1];
-    vec[k++] += mass*v[2];
-    vec[k++] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+    // Virgile - Modif Start - 12/10/23
+    // ========================================================================
+    // The sum of the species weight over the particles gives the 
+    // total number of physical particles. The total mass is also
+    // poundered by the weight of the particle.
+    // ========================================================================
+    // Baseline code:
+    // vec[k++] += 1.0;
+    // vec[k++] += mass;
+    // vec[k++] += mass*v[0];
+    // vec[k++] += mass*v[1];
+    // vec[k++] += mass*v[2];
+    // vec[k++] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+    // Modified code:
+    vec[k++] += specwt;
+    vec[k++] += mass*specwt;
+    vec[k++] += mass*specwt*v[0];
+    vec[k++] += mass*specwt*v[1];
+    vec[k++] += mass*specwt*v[2];
+    vec[k++] += mass*specwt * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+    // Virgile - Modif End - 12/10/23
   }
 }
 

@@ -159,8 +159,37 @@ int SurfReactProb::react(Particle::OnePart *&ip, int, double *,
         }
       case EXCHANGE:
         {
-          ip->ispecies = r->products[0];
-          return (list[i] + 1);
+          // This part is for speices weighitng scheme
+          // Currently only exchange from small weight into large numerical weight
+          // is avaliable 
+          // Takato Morimoto - Modif Start - 30/09/24
+          Particle::Species *species = particle->species;
+          int isp = ip->ispecies;
+          int jsp = r->products[0];
+          //jsp = jp->ispecies;
+          double w_i = species[isp].specwt;
+          double w_j = species[jsp].specwt;
+          double phi = w_j/w_i; 
+          if (phi == 1.0) {
+              ip->ispecies = r->products[0];
+              return (list[i] + 1);
+          } else if ( phi > 1.0) {
+              ip->ispecies = r->products[0];
+              if (phi*random->uniform()<1.0) {
+                ip->ispecies = r->products[0];
+                return (list[i] + 1);
+              } else {
+                ip = NULL;
+                return (list[i] + 1);
+              }
+          } else if ( phi < 1.0) {
+            error->one(FLERR,"Currently exchange from large numerical weigh into small weight is not supported");
+          }
+          // Takato Morimoto - Modif End - 30/09/24
+
+          // baseline code
+          // ip->ispecies = r->products[0];
+          // return (list[i] + 1);
         }
       case RECOMBINATION:
         {

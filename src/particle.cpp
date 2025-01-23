@@ -55,6 +55,10 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
   nglobal = 0;
   nlocal = maxlocal = 0;
   particles = NULL;
+  
+  // Virgile - Modif Start - 17/12/24
+  sws = 0;
+  // Virgile - Modif End - 17/12/24
 
   nspecies = maxspecies = 0;
   species = NULL;
@@ -431,17 +435,38 @@ void Particle::sort()
   for (int icell = 0; icell < nglocal; icell++) {
     cinfo[icell].first = -1;
     cinfo[icell].count = 0;
+    // Virgile - Modif start - 18/10/2023
+    // ========================================================================
+    // Initialize the wi sum to 0.
+    // ========================================================================
+    cinfo[icell].count_wi = 0;
+    // Virgile - Modif end - 18/10/2023
   }
 
   // reverse loop over partlcles to store linked lists in forward order
   // icell = global cell the particle is in
 
   int icell;
+  // Virgile - Modif start - 18/10/2023
+  // ========================================================================
+  // Add the summation of the cell wi in the computed variable.
+  // ========================================================================
+  int ispecies;
+  double wi;
+  Particle::Species *species = particle->species;
+  // Virgile - Modif end - 18/10/2023
   for (int i = nlocal-1; i >= 0; i--) {
     icell = particles[i].icell;
+    // Virgile - Modif start - 18/10/2023
+    ispecies = particles[i].ispecies;
+    wi = species[ispecies].specwt;
+    // Virgile - Modif end - 18/10/2023
     next[i] = cinfo[icell].first;
     cinfo[icell].first = i;
     cinfo[icell].count++;
+    // Virgile - Modif start - 18/10/2023
+    cinfo[icell].count_wi+=wi;
+    // Virgile - Modif end - 18/10/2023
   }
 }
 
@@ -742,6 +767,14 @@ void Particle::add_species(int narg, char **arg)
       break;
     } else if (strcmp(arg[iarg],"vibfile") == 0) {
       break;
+    // Virgile - Modif Start - 16/12/2024
+    } else if (strcmp(arg[iarg],"SWS") == 0) {
+      break;
+    } else if (strcmp(arg[iarg],"SWSmax") == 0) {
+      break;
+    } else if (strcmp(arg[iarg],"SWSprod") == 0) {
+      break;
+    // Virgile - Modif End - 16/12/2024
     } else {
       newspecies++;
     }
@@ -760,6 +793,14 @@ void Particle::add_species(int narg, char **arg)
       break;
     } else if (strcmp(arg[iarg],"vibfile") == 0) {
       break;
+    // Virgile - Modif Start - 16/12/2024
+    } else if (strcmp(arg[iarg],"SWS") == 0) {
+      break;
+    } else if (strcmp(arg[iarg],"SWSmax") == 0) {
+      break;
+    } else if (strcmp(arg[iarg],"SWSprod") == 0) {
+      break;
+    // Virgile - Modif End - 16/12/2024
     } else {
       names[newspecies++] = arg[iarg];
     }
@@ -813,6 +854,15 @@ void Particle::add_species(int narg, char **arg)
 
   int rotindex = 0;
   int vibindex = 0;
+  // Virgile - Modif Start - 16/12/24
+  // ========================================================================
+  // New input keyword for SWS pair selection routine.
+  // keywords are: SWS (standard Species Weighting Scheme), SWSmax (using
+  // the max(wi) to compute nattempt and select the collision pairs).
+  // If SWS or SWSmax are not used, species wi are reset to 1.
+  // ========================================================================
+  int pairselect = 0;
+  // Virgile - Modif End - 16/12/24
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"rotfile") == 0) {
@@ -829,8 +879,41 @@ void Particle::add_species(int narg, char **arg)
         error->all(FLERR,"Species command can only use a single vibfile");
       vibindex = iarg+1;
       iarg += 2;
-    } else error->all(FLERR,"Illegal species command");
+    } 
+    // Virgile - Modif Start - 16/12/24
+    else if (strcmp(arg[iarg],"SWS") == 0) {
+      sws=1;
+      if (pairselect)
+        error->all(FLERR,"Species Weighting Scheme models are SWS or SWSmax");
+      pairselect= iarg+1;
+      iarg += 1;
+    } 
+    else if (strcmp(arg[iarg],"SWSmax") == 0) {
+      sws=2;
+      if (pairselect)
+        error->all(FLERR,"Species Weighting Scheme models are SWS or SWSmax");
+      pairselect= iarg+1;
+      iarg += 1;
+    } 
+    else if (strcmp(arg[iarg],"SWSprod") == 0) {
+      sws=3;
+      if (pairselect)
+        error->all(FLERR,"Species Weighting Scheme models are SWS or SWSmax");
+      pairselect= iarg+1;
+      iarg += 1;
+    } 
+    // Virgile - Modif End - 16/12/24
+    else error->all(FLERR,"Illegal species command");
   }
+
+  // Virgile - Modif Start - 17/12/2024
+  // ========================================================================
+  // If sws==0 (default), don't use the species weights, so reset to 1.
+  // ========================================================================
+  if (sws==0) {
+    for (i = 0; i < newspecies; i++) species[i].specwt=1.0;
+  }
+  // Virgile - Modif End - 17/12/2024
 
   // read rotational species file and setup per-species params
 

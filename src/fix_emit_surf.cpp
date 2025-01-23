@@ -160,6 +160,9 @@ void FixEmitSurf::init()
   nspecies = particle->mixture[imix]->nspecies;
   fraction = particle->mixture[imix]->fraction;
   cummulative = particle->mixture[imix]->cummulative;
+  // Virgile - Modif Start - 26/04/2023
+  cummulative_weighted = particle->mixture[imix]->cummulative_weighted;
+  // Virgile - Modif End - 26/04/2023
 
   // subsonic prefactor
 
@@ -556,7 +559,16 @@ void FixEmitSurf::create_task(int icell)
     tasks[ntask].ntarget = 0.0;
     for (isp = 0; isp < nspecies; isp++) {
       ntargetsp = mol_inflow(indot,vscale[isp],fraction[isp]);
-      ntargetsp *= nrho*area*dt / fnum;
+      // Virgile - Modif Start - 04/12/2023
+      // ========================================================================
+      // Modify the number of numerical particle to create per species
+      // accounting for the species weights.
+      // ========================================================================
+      // Baseline code :
+      // ntargetsp *= nrho*area*dt / fnum;
+      // Modified code :
+      ntargetsp *= nrho*area*dt / (fnum*particle->species[isp].specwt);
+      // Virgile - Modif End - 04/12/2023
       ntargetsp /= cinfo[icell].weight;
       tasks[ntask].ntarget += ntargetsp;
       if (perspecies) tasks[ntask].ntargetsp[isp] = ntargetsp;
@@ -789,7 +801,12 @@ void FixEmitSurf::perform_task()
       for (int m = 0; m < ninsert; m++) {
         rn = random->uniform();
         isp = 0;
-        while (cummulative[isp] < rn) isp++;
+        // Virgile - Modif Start - 04/12/2023
+        // Baseline code:
+        // while (cummulative[isp] < rn) isp++;
+        // Modified code:
+        while (cummulative_weighted[isp] < rn) isp++;
+        // Virgile - Modif End - 04/12/2023
         ispecies = species[isp];
         scosine = indot / vscale[isp];
 
@@ -934,7 +951,16 @@ void FixEmitSurf::subsonic_inflow()
       mass = species[mspecies[isp]].mass;
       vscale = sqrt(2.0 * boltz * temp_thermal / mass);
       ntargetsp = mol_inflow(indot,vscale,fraction[isp]);
-      ntargetsp *= nrho*area*dt / fnum;
+      // Virgile - Modif Start - 04/12/2023
+      // ========================================================================
+      // Modify the number of numerical particle to create per species
+      // accounting for the species weights.
+      // ========================================================================
+      // Baseline code :
+      // ntargetsp *= nrho*area*dt / fnum;
+      // Modified code :
+      ntargetsp *= nrho*area*dt / (fnum*particle->species[isp].specwt);
+      // Virgile - Modif End - 04/12/2023
       ntargetsp /= cinfo[icell].weight;
       tasks[i].ntarget += ntargetsp;
       if (perspecies) tasks[i].ntargetsp[isp] = ntargetsp;
@@ -1015,7 +1041,13 @@ void FixEmitSurf::subsonic_grid()
   double mass_cell,gamma_cell,soundspeed_cell,vsmag;
   double mv[4];
   double *v,*vstream,*vscale,*normal;
-
+  // Virgile - Modif Start - 04/12/2023
+  // ========================================================================
+  // Add the weights variable to the accumulated variable to compute.
+  // ========================================================================
+  double specwt;
+  int npwi;
+  // Virgile - Modif End - 04/12/2023
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
 
@@ -1031,7 +1063,10 @@ void FixEmitSurf::subsonic_grid()
   for (int i = 0; i < ntask; i++) {
     icell = tasks[i].pcell;
     np = cinfo[icell].count;
-
+    // Virgile - Modif Start - 04/12/2023
+    npwi = cinfo[icell].count_wi;
+    // Virgile - Modif End - 04/12/2023
+    
     // accumulate needed per-particle quantities
     // mv = mass*velocity terms, masstot = total mass
     // gamma = rotational/tranlational DOFs
@@ -1043,13 +1078,24 @@ void FixEmitSurf::subsonic_grid()
 
     while (ip >= 0) {
       ispecies = particles[ip].ispecies;
-      mass = species[ispecies].mass;
-      v = particles[ip].v;
-      mv[0] += mass*v[0];
-      mv[1] += mass*v[1];
-      mv[2] += mass*v[2];
-      mv[3] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
-      masstot += mass;
+      // Virgile - Modif Start - 04/12/2023
+      // ========================================================================
+      // Account for the weights in the mass accumulation.
+      // ========================================================================
+      // Baseline code:
+      // mv[0] += mass*v[0];
+      // mv[1] += mass*v[1];
+      // mv[2] += mass*v[2];
+      // mv[3] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+      // masstot += mass;
+      // Modified code:
+      specwt = species[ispecies].specwt;
+      mv[0] += mass*specwt*v[0];
+      mv[1] += mass*specwt*v[1];
+      mv[2] += mass*specwt*v[2];
+      mv[3] += mass*specwt * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+      masstot += mass*specwt;
+      // Virgile - Modif End - 04/12/2023
       gamma += 1.0 + 2.0 / (3.0 + species[ispecies].rotdof);
       ip = next[ip];
     }
@@ -1071,18 +1117,41 @@ void FixEmitSurf::subsonic_grid()
       temp_thermal_cell = tsubsonic;
 
     } else {
-      nrho_cell = np * fnum / cinfo[icell].volume;
+      // Virgile - Modif Start - 04/12/2023
+      // ========================================================================
+      // Using the species weighting scheme, the total number of 
+      // physical particles is given by:
+      // Sum (wi*fnum) = cinfo[icell].count_wi * fnum = npwi * fnum
+      // and the total mass by:
+      // Sum (mi*wi*fnum) = masstot * fnum
+      // ========================================================================
+      // Baseline code:
+      // nrho_cell = np * fnum / cinfo[icell].volume;
+      // massrho_cell = masstot * fnum / cinfo[icell].volume;
+      // if (np > 1) {
+      //   ke = mv[3]/np - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
+      //   temp_thermal_cell = tprefactor * ke;
+      // } else temp_thermal_cell = particle->mixture[imix]->temp_thermal;
+      // press_cell = nrho_cell * boltz * temp_thermal_cell;
+      // if (np) {
+      //   mass_cell = masstot / np;
+      //   gamma_cell = gamma / np;
+      //   soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
+      // } else soundspeed_cell = soundspeed_mixture;
+      // Modified code:
+      nrho_cell = npwi * fnum / cinfo[icell].volume;
       massrho_cell = masstot * fnum / cinfo[icell].volume;
       if (np > 1) {
-        ke = mv[3]/np - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
+        ke = mv[3]/npwi - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/npwi/masstot;
         temp_thermal_cell = tprefactor * ke;
       } else temp_thermal_cell = particle->mixture[imix]->temp_thermal;
       press_cell = nrho_cell * boltz * temp_thermal_cell;
       if (np) {
-        mass_cell = masstot / np;
+        mass_cell = masstot / npwi;
         gamma_cell = gamma / np;
         soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
       } else soundspeed_cell = soundspeed_mixture;
+      // Virgile - Modif End - 04/12/2023
 
       tasks[i].nrho = nrho_cell +
         (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);

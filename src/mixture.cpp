@@ -62,6 +62,9 @@ Mixture::Mixture(SPARTA *sparta, char *userid) : Pointers(sparta)
   fraction = NULL;
   fraction_user = NULL;
   fraction_flag = NULL;
+  // Virgile - Modif Start - 26/04/2023
+  cummulative_weighted = NULL;
+  // Virgile - Modif End - 26/04/2023
   cummulative = NULL;
 
   ngroup = maxgroup = 0;
@@ -90,6 +93,9 @@ Mixture::~Mixture()
   memory->destroy(fraction_user);
   memory->destroy(fraction_flag);
   memory->destroy(cummulative);
+  // Virgile - Modif Start - 26/04/2023
+  memory->destroy(cummulative_weighted);
+  // Virgile - Modif End - 26/04/2023
 
   delete_groups();
   memory->sfree(groups);
@@ -217,7 +223,12 @@ void Mixture::init()
   // initialize all per-species fraction and cummulative values
   // account for both explicitly and implicitly set fractions
 
-  int err = init_fraction(fraction_flag,fraction_user,fraction,cummulative);
+  // Virgile - Modif Start - 26/04/2023
+  // Baseline code:
+  //int err = init_fraction(fraction_flag,fraction_user,fraction,cummulative);
+  // Modified code:
+  int err = init_fraction(fraction_flag,fraction_user,fraction,cummulative,cummulative_weighted);
+  // Virgile - Modif End - 26/04/2023
 
   if (err) {
     char str[128];
@@ -275,7 +286,11 @@ void Mixture::init()
    called by init() and also by FixInflowFile::interpolate()
 ------------------------------------------------------------------------- */
 
-int Mixture::init_fraction(int *fflag, double *fuser, double *f, double *c)
+// Virgile - Modif Start - 26/04/2023
+// Baseline code:
+//int Mixture::init_fraction(int *fflag, double *fuser, double *f, double *c)
+// Modified code:
+int Mixture::init_fraction(int *fflag, double *fuser, double *f, double *c, double *c_w)
 {
   // sum = total frac for species with explicity set fractions
   // nimplicit = number of unset species
@@ -299,8 +314,29 @@ int Mixture::init_fraction(int *fflag, double *fuser, double *f, double *c)
     else c[i] = f[i];
   }
   if (nspecies) c[nspecies-1] = 1.0;
+
+  // Virgile - Modif Start - 26/04/2023
+  // ========================================================================
+  // Definition of the cummulative weighted array, accounting for the 
+  // species weight. 
+  // ========================================================================
+  double sum_norm = 0.0;
+  for (int i = 0; i < nspecies; i++){
+    sum_norm += f[i]/particle->species[species[i]].specwt;
+  }
+  for (int i = 0; i < nspecies; i++){
+    if (i) {
+      c_w[i]=c_w[i-1]+f[i]/(particle->species[species[i]].specwt*sum_norm);
+    } else {
+      c_w[i]=f[i]/(particle->species[species[i]].specwt*sum_norm);
+    }
+    if (nspecies) c_w[nspecies-1] = 1.0;
+  }
+  // Virgile - Modif End - 26/04/2023
+
   return 0;
 }
+// Virgile - Modif End - 26/04/2023
 
 /* ----------------------------------------------------------------------
    process list of species appearing in a mixture command
@@ -572,6 +608,10 @@ void Mixture::allocate()
   memory->grow(mix2group,maxspecies,"mixture:cummulative");
   memory->grow(vscale,maxspecies,"mixture:vscale");
   memory->grow(active,maxspecies,"mixture:active");
+  // Virgile - Modif Start - 26/04/2023
+  memory->grow(cummulative_weighted,maxspecies,"mixture:cummulative_weighted");
+  memory->grow(mix2group,maxspecies,"mixture:cummulative_weighted");
+  // Virgile - Modif End - 26/04/2023
 
   for (int i = old; i < maxspecies; i++) {
     fraction_flag[i] = 0;

@@ -43,6 +43,9 @@ class ComputeGrid : public Compute {
   int *unique;               // unique keywords for tally, len = npergroup
   int npergroup;             // # of unique tally quantities per group
   int cellcount,cellmass;    // 1 if total cell count/mass is tallied
+  // Virgile - Modif Start - 02/10/23
+  int cellcountwi;
+  // Virgile - Modif End - 02/10/23
   int ntotal;                // total # of columns in tally array
   int nglocal;               // # of owned grid cells
 

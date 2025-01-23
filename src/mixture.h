@@ -56,6 +56,9 @@ class Mixture : protected Pointers {
   // set by init()
 
   double *cummulative;        // cummulative fraction for each species
+  // Virgile - Modif Start - 26/04/2023
+  double *cummulative_weighted;        // weighted cummulative fraction for each species
+  // Virgile - Modif End - 26/04/2023
   int *groupsize;             // # of species in each group
   int **groupspecies;         // list of particle species indices in each group
   int *species2group;         // s2g[i] = group that particle species I is in
@@ -70,7 +73,12 @@ class Mixture : protected Pointers {
   void copy(Mixture *);
   void command(int, char **);
   void init();
-  int init_fraction(int *, double *, double *, double *);
+  // Virgile - Modif Start - 26/04/2023
+  // Baseline code:
+  //int init_fraction(int *, double *, double *, double *);
+  // Modified code:
+  int init_fraction(int *, double *, double *, double *, double *);
+  // Virgile - Modif End - 26/04/2023
   void add_species_default(char *);
   int find_group(const char *);
   void write_restart(FILE *fp);
