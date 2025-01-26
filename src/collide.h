@@ -188,10 +188,10 @@ class Collide : protected Pointers {
   int split(Particle::OnePart *&, Particle::OnePart *&,
             Particle::OnePart *&, Particle::OnePart *&);
   void group_reduce();
-  void group_bt(int*, int);
-  void reduce(int*, int, double, double *, double, double);
-  void reduce(int*, int, double, double *, double, double, double *);
-  void reduce(int*, int, double, double *, double, double, double *, double [3][3]);
+  void group_bt(int,int);
+  void reduce(int, int, double, double *, double, double);
+  void reduce(int, int, double, double *, double, double, double *);
+  void reduce(int, int, double, double *, double, double, double *, double [3][3]);
   void remove_tiny();
 
   // misc
