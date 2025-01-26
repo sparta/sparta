@@ -1614,6 +1614,7 @@ void ReadRestart::read_surfs_single_file()
 void ReadRestart::read_surfs_multi_file_less_procs(char *file)
 {
   int tmp,n,flag;
+  bigint n_big;
   long filepos;
 
   int maxbuf = 0;
@@ -1644,9 +1645,14 @@ void ReadRestart::read_surfs_multi_file_less_procs(char *file)
 
     for (int i = 0; i < procsperfile; i++) {
       tmp = fread(&flag,sizeof(int),1,fp);
-      tmp = fread(&n,sizeof(int),1,fp);
+      if (mem_limit_file) {
+        tmp = fread(&n_big,sizeof(bigint),1,fp);
+      } else {
+        tmp = fread(&n,sizeof(int),1,fp);
+        n_big = n;
+      }
       filepos = ftell(fp);
-      fseek(fp,filepos + n,SEEK_SET);
+      fseek(fp,filepos + n_big,SEEK_SET);
     }
 
     // now can read PERPROC_SURF section of file
@@ -1685,6 +1691,7 @@ void ReadRestart::read_surfs_multi_file_less_procs(char *file)
 void ReadRestart::read_surfs_multi_file_more_procs(char *file)
 {
   int tmp,n,flag,procsperfile;
+  bigint n_big;
   long filepos;
 
   int maxbuf = 0;
@@ -1736,9 +1743,14 @@ void ReadRestart::read_surfs_multi_file_more_procs(char *file)
   for (int i = 0; i < procsperfile; i++) {
     if (filereader) {
       tmp = fread(&flag,sizeof(int),1,fp);
-      tmp = fread(&n,sizeof(int),1,fp);
+      if (mem_limit_file) {
+        tmp = fread(&n_big,sizeof(bigint),1,fp);
+      } else {
+        tmp = fread(&n,sizeof(int),1,fp);
+        n_big = n;
+      }
       filepos = ftell(fp);
-      fseek(fp,filepos + n,SEEK_SET);
+      fseek(fp,filepos + n_big,SEEK_SET);
     }
   }
 

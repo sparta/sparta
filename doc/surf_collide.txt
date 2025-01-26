@@ -449,7 +449,7 @@ condition by subtracting off any component of the added velocity that
 is normal to the simulation box boundary or individual surface
 element.
 
-The [temp/freq} keyword only applies to the styles which define a
+The {temp/freq} keyword only applies to the styles which define a
 {Tsurf} parameter for the temperature of the surface, and also only
 applies if {Tsurf} is specified as a variable with the syntax
 {v_name}.  The {Nfreq} value determines the frequency at which the

@@ -34,11 +34,11 @@ struct fft_plan_2d {
   int normnum;                      // # of values to rescale
   double norm;                      // normalization factor for rescaling
 
-                                    // system specific 1d FFT info
+  // system specific 1d FFT info
 #if defined(FFT_MKL)
   DFTI_DESCRIPTOR *handle_fast;
   DFTI_DESCRIPTOR *handle_slow;
-#elif defined(FFT_FFTW3)
+#elif defined(FFT_FFTW3) || defined(FFT_NVPL)
   FFTW_API(plan) plan_fast_forward;
   FFTW_API(plan) plan_fast_backward;
   FFTW_API(plan) plan_slow_forward;
