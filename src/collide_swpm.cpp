@@ -811,9 +811,9 @@ void Collide::reduce(int istart, int iend,
       maxdelete += DELTADELETE;
       memory->grow(dellist,maxdelete,"collide:dellist");
     }
-    ipart = &particles[plist[i+istart]];
+    ipart = &particles[plist[i]];
     ipart->weight = -1.0;
-    dellist[ndelete++] = plist[i+istart];
+    dellist[ndelete++] = plist[i];
   }
 
   return;
