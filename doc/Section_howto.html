@@ -1653,13 +1653,21 @@ Each custom attribute has a name, which allows them to be specified in
 input scripts as arguments to various commands.  The values each
 attricute stores can be either integer or floating point numbers.
 </P>
-<P>Here are lists of current commands (as of August 2023) which use custom
-attributes in various ways:
+<P>The <A HREF = "custom.html">custom</A> command can create and set/reset custom
+attribute values for all 3 flavors of attributes.  Either by invoking
+per-particle, per-grid, or per-surf variables, or by reading a file.
+The <A HREF = "fix_custom.html">fix custom</A> command can do the same thing
+periodically as a simulation runs.  <A HREF = "dump.html">Dump</A> commands can
+output all 3 flavors of attributes.
+</P>
+<P>Here are lists of current commands which use custom attributes in
+various ways:
 </P>
 <P><B>Per-particle custom attributes:</B>
 </P>
 <UL><LI><A HREF = "compute_reduce.html">compute reduce</A> - reduce a per-particle attribute to a scalar value
 <LI><A HREF = "custom.html">custom</A> - set the values of a per-particle attribute and optionally create it
+<LI><A HREF = "fix_custom.html">fix custom</A> - reset the values of a per-particle attribute during a simulation
 <LI><A HREF = "dump.html">dump particle</A> - output per-particle attributes to a dump file
 <LI><A HREF = "fix_ambipolar.html">fix ambipolar</A> - use a per-particle vector and array for ambipolar quantities
 <LI><A HREF = "variable.html">variable</A> - use a per-particle attribute in a particle-style variable formula 
@@ -1668,6 +1676,7 @@ attributes in various ways:
 </P>
 <UL><LI><A HREF = "compute_reduce.html">compute reduce</A> - reduce a per-grid attribute to a scalar value
 <LI><A HREF = "custom.html">custom</A> - set the values of a per-grid attribute and optionally create it
+<LI><A HREF = "fix_custom.html">fix custom</A> - reset the values of a per-grid attribute during a simulation
 <LI><A HREF = "dump.html">dump grid</A> - output per-grid attributes to a dump file
 <LI><A HREF = "fix_ave_grid.html">fix ave/grid</A> - time-average a per-grid attribute
 <LI><A HREF = "read_grid.html">read_grid</A> - define and initialize per-grid attributes
@@ -1679,8 +1688,10 @@ attributes in various ways:
 </P>
 <UL><LI><A HREF = "compute_reduce.html">compute reduce</A> - reduce a per-surf attribute to a scalar value
 <LI><A HREF = "custom.html">custom</A> - set the values of a per-surf attribute and optionally create it
+<LI><A HREF = "fix_custom.html">fix custom</A> - reset the values of a per-surf attribute during a simulation
 <LI><A HREF = "dump.html">dump surf</A> - output per-surf attributes to a dump file
 <LI><A HREF = "fix_ave_surf.html">fix ave/surf</A> - time-average a per-surf attribute
+<LI><A HREF = "fix_emit_surf.html">fix emit/surf</A> - use per-surf attributes to adjust particle emission from each surf
 <LI><A HREF = "fix_surf_temp.html">fix surf/temp</A> - use a per-surf vector for temperature
 <LI><A HREF = "read_surf.html">read_surf</A> - define and initialize per-surf attributes
 <LI><A HREF = "surf_collide.html">surf_collide</A> - use a per-surf attribute as temperature for particle/surf collisions
@@ -1693,7 +1704,7 @@ explicit/distributed surface elements, as set by the <A HREF = "global.html">glo
 surfs</A> comand.  But they cannot be used for implicit
 surface elements.  Conceptually, implicit surfaces are defined on a
 per-grid cell basis, so per-grid custom attributes can be used instead
-for attributes of those implicit surfaces.
+to define attributes of implicit surfaces.
 </P>
 <P>Note that in some cases the name for a custom attribute is specified
 by the user, e.g. for the <A HREF = "read_grid.html">read_grid</A> or

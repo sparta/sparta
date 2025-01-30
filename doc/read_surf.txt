@@ -17,8 +17,9 @@ zero or more keyword/args pairs may be appended :l
 keyword = {type} or {custom} or {origin} or {trans} or {atrans} or
 {ftrans} or {scale} or {rotate} or {transparent} or {invert} or {clip} or {group} or {typeadd} or {particle} or {file} :l
   {type} arg = none
-    NOTE: if the type or custom keywords are used, they must come first
+    NOTE: if the type or custom keywords are used, they must come first, in any order
   {custom} args = name datatype Nc
+    NOTE: if the type or custom keywords are used, they must come first, in any order
     name = name of custom per-surf vector or array
     datatype = {int} or {float} = for integer or floating point values
     Nc = 0 for a vector (single value), Nc >= 1 for an array (one or more values)

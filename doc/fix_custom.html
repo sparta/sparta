@@ -1,0 +1,189 @@
+<HTML>
+<CENTER><A HREF = "https://sparta.github.io">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix custom command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID custom Nfreq thresh bstyle args 
+</PRE>
+<PRE>custom style attribute style attribute action args ... style attribute action args ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command 
+
+<LI>custom = style name of this fix command 
+
+<LI>Nfreq = reset custom values every this many steps 
+
+<LI>style = <I>particle</I> or <I>grid</I> or <I>surf</I> 
+
+<LI>attribute = name of custom attribute 
+
+<PRE>  name = custom vector or array attribute with name
+  name[N] = Nth column of custom array attribute with name 
+</PRE>
+<LI>action = <I>set</I> or <I>file</I> 
+
+<PRE>  <I>set</I> args = v_name subset-ID region-ID
+    v_name = equal-, particle-, grid-, or surf-style variable with name
+    subset-ID = mixture ID (particles) or group ID (grid cells or surf elements)
+    region-ID = only apply to particle/grid/surf in region, NULL to not test
+  <I>file</I> args = fname
+    fname = name of file with custom attributes for grid cells or surface elements, using a "*" wildcard 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>fix 1 custom 1000 particle ivec set v_ivec air NULL
+fix 1 custom 10000 surf temp file surf.temp.* surf vstream file surf.vstream.* &
+                   grid flag file grid.flag.* grid flag2 set v_iflag2 air NULL 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Reset one or more custom attributes for particles, grid cells, or
+surface elements.  This operation is performed once every <I>Nfreq</I>
+timesteps.  For a <I>set</I> action, a variable is evaluated.  For a <I>file</I>
+action, a file is read which contains values for individual grid cells
+or surface elements.  Particle-style attributes cannot be reset with
+the <I>file</I> action.
+</P>
+<P>Custom attributes can be vectors (single value per entity) or arrays
+(mutiple values per entity).  They can also be integer or floating
+point values.  See <A HREF = "Section_howto.html#howto_17">Section 6.17</A> for more
+discussion of custom attributes.
+</P>
+<P>Each <I>style</I> setting is <I>particle</I> or <I>grid</I> or <I>surf</I> for custom
+per-particle, per-grid, or per-surf attributes.
+</P>
+<P>Each <I>attribute</I> setting specifies the name of the attribute to
+operate on.  The same name can be used for attributes of different
+styles.  E.g. there can be a custom attribute with the name "flag" for
+both particles and surface elements.  If the attribute name is
+specified without brackets, it can refer to a custom vector or array.
+If the attribute name is specified with a bracketed integer, it refers
+to a single column of a custom array.  The integer <I>N</I> must be between
+1 and M = # of columns in the array (values per entity)
+</P>
+<P>Each <I>action</I> setting is <I>set</I> or <I>file</I>.
+</P>
+<P>Note that the resetting of attributes by this fix takes place at the
+end of timesteps determined by <I>Nfreq</I>.  If custom attributes are
+output by a <A HREF = "dump.html">dump</A> command on the same timestep, that takes
+place after this fix has performed the reset.  This means that if this
+fix and a dump command both reset/output every 1000 steps, then a dump
+file snapshot for step 3000 will include custom attributes which were
+reset at the end of step 3000.  But the new attribute values will not
+influence particles or grid cells or surface elements until the
+following step 3001 and beyond.
+</P>
+<P>Also note that this command DOES NOT reset attribute values at the
+beginning of any run, even if an input script contains multiple
+<A HREF = "run.html">run</A> commands.  For example, if <I>Nfreq</I> = 1000 and the input
+script performs a series of 10000-step runs, then no resetting of
+attributes takes place (due to this command) on timestep 0, before the
+first run.  If needed, this can be done using the <A HREF = "custom.html">custom</A>
+command before the first run.
+</P>
+<P>Likewise, between runs, this command DOES reset attribute values at
+the end of the last step (10000, 20000, etc) of each run, but DOES NOT
+reset them again before the first step of the next run.  If needed,
+this can be done using the <A HREF = "custom.html">custom</A> command in between
+runs to reset attribute values as desired.
+</P>
+<HR>
+
+<P>If <I>set</I> is used as an action, a variable is used to reset values of
+the custom attribute.  This action can only be used to operate on a
+custom vector or a single column of a custom array (using a bracketed
+integer).
+</P>
+<P>The specified <I>v_name</I> is the name of a variable which is evaluated.
+It must be either an equal-style or particle-style or grid-style or
+surf-style variable.  All of these define a mathematical formula which
+is used to compute the value(s) of the variable.  See the
+<A HREF = "variable.html">variable</A> for details.
+</P>
+<P>If an equal-style variable is specified, it produces a single value
+which will be assigned as the custom value to all the particles or
+grid cells or surface elements (see subset-ID and region-ID discussion
+below).  Otherwise a particle-style variable must be used for style =
+<I>particle</I>, a grid-style variable for style = <I>grid</I>, or a surf-style
+variable for style = <I>surf</I>.  When it is evaluated it generates one
+value for each particle, grid cell, or surface element, which is
+assigned to the custom vector or to a column of the custom array.
+</P>
+<P>Note that the latter 3 variable styles can include outputs from
+<A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A> commands.  They can also
+include the current timestep or the spatial position of a particle,
+grid cell, or surface element in their formula.  So it is easy to
+calculate a value for each entity which varies in time or spatially.
+Note that the variable formula can also include a reference to the
+custom attribute it is overwrting, which means the remainder of the
+formula can increment/decrement or scale the current attribute value.
+</P>
+<P>The next two arguments, <I>subset-ID</I> and <I>region-ID</I>, can limit which
+particles, grid cells, or surface elements are assigned a custom
+value.  An individual particle, grid cell, or surface element must
+meet both criteria to have its custom value set, otherwise its value
+is unchanged.
+</P>
+<P>The <I>subset-ID</I> is the ID of a mixture for particles or the ID of a
+group of grid cells or surface elements.  Only particles in the
+mixture or grid cells/surface elements in the group will be assigned a
+value.  See the <A HREF = "mixture.html">mixture</A> and <A HREF = "group.html">group</A> commands
+for more details.  Note that "all" is a pre-defined mixture ID which
+contains all particles.  Likewise "all" is the name of a pre-defined
+group with all grid cells or all surface elements.
+</P>
+<P>The <I>region-ID</I> is the ID of a geometric region defined by the
+<A HREF = "region.html">region</A> command.  Only particles or grid cells or surface
+elements in the region will have their values set.  The center point
+of a grid cell or surface element is used for the region check.  If
+<I>region-ID</I> is specified as NULL, then the region criterion is not
+applied.
+</P>
+<HR>
+
+<P>If <I>file</I> is used as an action, a file with name <I>fname</I> is read to
+reset values of the custom attribute.  This action can only be used
+with custom attributes of style <I>grid</I> or <I>surf</I>; it cannot be used
+with custom attributes of style <I>particle</I>.
+</P>
+<P>The specified <I>fname</I> must contain a "*" character which is replaced
+by the current timestep each time this fix is invoked.  For example,
+if <I>Nfreq</I> = 1000 and <I>fname</I> is specified as surf.*.attribute, then
+then files surf.1000.attribute, surf.2000.attribute,
+surf.3000.attribute, etc will be read on timesteps 1000, 2000, 3000,
+etc.
+</P>
+<P>If the specified custom attribute is a vector or a single column of an
+array (bracketed integer), then the file must contain a single value
+for each grid cell or surface element.  If the custom attribute is an
+array (with no bracketed integer), then the file must contain M values
+for each grid cell or suface element, where M is the number of columns
+in the array.
+</P>
+<P>The format of each file is identical to the file format explained on
+the "custom" command doc page for use with a <I>file</I> action.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "custom.html">custom</A>, <A HREF = "mixture.html">mixture</A>, <A HREF = "group.html">group</A>,
+<A HREF = "region.html">region</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>
